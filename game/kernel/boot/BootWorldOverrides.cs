@@ -19,7 +19,7 @@ public static class BootWorldOverrides
         var options = args.World;
         var season = options.Season ?? map.World.Default.Season;
         var clock = options.Clock ?? map.World.Default.Clock;
-        var anim = options.AnimationTime ?? world.AnimTime;
+        var anim = options.AnimationTime ?? WorldTime.InitialAnimTime;
         var seed = options.Weather.Seed ?? options.Seed ?? map.Seed;
         var boot = new WeatherBoot(seed, options.Weather.Kind, options.Weather.Intensity,
             options.Weather.Wet, options.Weather.RemainingMinutes);

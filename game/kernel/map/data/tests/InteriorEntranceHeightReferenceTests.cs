@@ -25,6 +25,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         """;
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ConfigurePreservesAbsoluteButRejectsPadBeforeMutatingProviders()
     {
         var box = new LibraryBoxInterior();
@@ -42,6 +43,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExplicitTerrainResolvesOnceAndBuildConfiguredKeepsAbsoluteCoordinates()
     {
         var box = new LibraryBoxInterior();
@@ -60,6 +62,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         heightRef is null ? "" : ",\"heightRef\":\"" + heightRef + "\"", StringComparison.Ordinal));
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ClosedOnlyBuildPublishesIndexWithoutProvidersOrWalkableContent()
     {
         var context = Context(new Dictionary<string, IInteriorProvider>());
@@ -86,6 +89,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ClosedRegisterDoesNotChangeOpenProviderCallsOrNavigation()
     {
         var fallback = new LibraryBoxInterior();
@@ -126,6 +130,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InvalidClosedClaimsFailBeforeProviderGeneration()
     {
         var context = Context(new Dictionary<string, IInteriorProvider>());

@@ -6,10 +6,10 @@ using static GdUnit4.Assertions;
 namespace Campus.Tests;
 
 [TestSuite]
-[TestCategory("Contract")]
 public sealed class VeilWaitingTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CoverAndAuthoredDwellDoNotImplyReadinessWaiting()
     {
         var veil = new VeilTimeline();
@@ -20,6 +20,7 @@ public sealed class VeilWaitingTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OrdinaryAndFrontispieceThresholdsComeOnlyFromTheExplicitPolicy()
     {
         var ordinary = new VeilTimeline();
@@ -39,6 +40,7 @@ public sealed class VeilWaitingTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OwnersAggregateAndLateDisposalCannotClearAnotherScope()
     {
         var veil = new VeilTimeline();
@@ -57,6 +59,7 @@ public sealed class VeilWaitingTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WorkerDisposalDoesNotPublishUiEventsAndFramePublishesTheChange()
     {
         var veil = new VeilTimeline();
@@ -70,6 +73,7 @@ public sealed class VeilWaitingTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DisposingReadinessObservationsLeavesTheirOwnersCoverInPlace()
     {
         var veil = new VeilTimeline();
@@ -84,6 +88,7 @@ public sealed class VeilWaitingTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BeginningAndAdvancingFromAWorkerAreRejected()
     {
         var veil = new VeilTimeline();

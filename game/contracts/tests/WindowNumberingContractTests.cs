@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System;
 using System.Collections.Generic;
 using GdUnit4;
@@ -11,6 +12,7 @@ public sealed class WindowNumberingContractTests
     private static readonly string Fingerprint = new('a', 64);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExactCapacityKeepsLastIdAndRejectsOneMoreCell()
     {
         WindowAllocation first = new(new("fixture:a"), "grid", 0, 256, 255);
@@ -23,6 +25,7 @@ public sealed class WindowNumberingContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DimensionsAreValidatedBeforeIntMultiplicationCanWrap()
     {
         AssertThrown(() => Create(new WindowAllocation(new("fixture:a"), "grid", 0, int.MaxValue, int.MaxValue))).IsInstanceOf<ArgumentException>();
@@ -35,6 +38,7 @@ public sealed class WindowNumberingContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SnapshotCopiesInputAndDoesNotExposeWritableStorage()
     {
         WindowAllocation original = new(new("fixture:a"), "grid", 0, 3, 2);
@@ -51,6 +55,7 @@ public sealed class WindowNumberingContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void IdAtUsesRowMajorCoordinatesAndRejectsEveryEdgeOutsideTheGrid()
     {
         var snapshot = Create(new WindowAllocation(new("fixture:a"), "prefix", 0, 5, 1), new(new("fixture:b"), "grid", 5, 7, 3));
@@ -67,6 +72,7 @@ public sealed class WindowNumberingContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CompositeKeysAreUniqueAndInputOrderIsNeverSilentlyRepaired()
     {
         AssertThrown(() => Create(new WindowAllocation(new("fixture:a"), "grid", 0, 1, 1), new(new("fixture:a"), "grid", 1, 1, 1))).IsInstanceOf<ArgumentException>();
@@ -78,6 +84,7 @@ public sealed class WindowNumberingContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void GapsOverlapsAndNegativeBasesFailRatherThanRenumber()
     {
         AssertThrown(() => Create(new WindowAllocation(new("fixture:a"), "grid", 1, 1, 1))).IsInstanceOf<ArgumentException>();
@@ -87,6 +94,7 @@ public sealed class WindowNumberingContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EmptySnapshotIsExplicitAndMissingIdentityDoesNotProduceFallbacks()
     {
         var empty = Create();

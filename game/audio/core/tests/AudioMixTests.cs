@@ -9,6 +9,7 @@ namespace Campus.Tests;
 public sealed class AudioMixTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SliderUsesSquaredAmplitudeAndCompletesInEightyMilliseconds()
     {
         var mix = new AudioMix(new(Master: 1f, Ui: 1f));
@@ -18,10 +19,11 @@ public sealed class AudioMixTests
         Near(mix.Gain(AudioGroup.Ui), .625f);
         mix.Step(.04f);
         Near(mix.Gain(AudioGroup.Ui), .25f);
-        Near(AudioMix.ToDb(.25f), -12.0412f, .0002f);
+        Near(AudioMix.ToDb(.25f), -12.0412f);
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DeepestWorldDuckWinsAndNeverDucksUiOrMusic()
     {
         var mix = new AudioMix(new(Master: 1f, Ambience: 1f, Foley: 1f, Ui: 1f, Music: 1f));
@@ -38,6 +40,7 @@ public sealed class AudioMixTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BootAndBackgroundMuteApplyToEveryGroup()
     {
         var mix = new AudioMix(new(Master: 1f, Ambience: 1f, Foley: 1f, Ui: 1f, Music: 1f));
@@ -53,6 +56,7 @@ public sealed class AudioMixTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NonfiniteSettingsAreRejectedAndFiniteSlidersAreClamped()
     {
         try { AudioMix.Normalize(new(Master: float.NaN)); }
@@ -66,6 +70,7 @@ public sealed class AudioMixTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MapTravelRestoresDuringRevealAndDoesNotRestartOnHeldFrames()
     {
         var mix = new AudioMix(new(Master: 1f, Ambience: 1f));
@@ -94,6 +99,7 @@ public sealed class AudioMixTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NewCoverDuringRevealReappliesWorldDuck()
     {
         var mix = new AudioMix(new(Master: 1f, Ambience: 1f));
@@ -109,9 +115,9 @@ public sealed class AudioMixTests
         Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), -8f);
     }
 
-    private static void Near(float actual, float expected, float tolerance = .0001f)
+    private static void Near(float actual, float expected, float tolerance = TestTolerance.FloatRelative)
     {
-        if (!float.IsFinite(actual) || Math.Abs(actual - expected) > tolerance)
+        if (!float.IsFinite(actual) || Math.Abs(actual - expected) > tolerance * Math.Max(1f, Math.Abs(expected)))
             throw new InvalidOperationException($"Expected {expected}, got {actual}.");
     }
 }

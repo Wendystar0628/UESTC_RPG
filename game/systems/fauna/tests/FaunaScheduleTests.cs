@@ -1,3 +1,4 @@
+using Campus.Tests;
 using Campus.Contracts;
 using Campus.Contracts.Fauna;
 using GdUnit4;
@@ -9,6 +10,7 @@ namespace Campus.Systems.Fauna.Tests;
 public sealed class FaunaScheduleTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ScheduleFollowsTheSpeciesTable()
     {
         var clear = new WeatherVec(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);

@@ -25,8 +25,7 @@ public partial class Kernel : Node
         var bytes = Godot.FileAccess.GetFileAsBytes(ProjectSettings.GetSetting("campus/rulesets/default").AsString());
         var descriptor = JsonSerializer.Deserialize<RulesetDescriptor>(bytes, ContractJson.Options)
             ?? throw new InvalidDataException("Ruleset data is missing.");
-        if (descriptor.Characters || descriptor.ClearVoices || descriptor.Interaction != InteractionRule.None)
-            throw new InvalidDataException("Sightseeing content rules are violated.");
+        ValidateRuleset(descriptor);
         var rulesets = new RulesetService(descriptor);
         Services.Add<IRuleset>(rulesets);
         Services.Add<IRulesetActivation>(rulesets);
@@ -39,6 +38,14 @@ public partial class Kernel : Node
     {
         // Scene-owned producers and post callbacks exit before this autoload.
         Services.Get<Campus.Kernel.Renderer.IGlobalDataTextureRegistry>().Dispose();
+    }
+    private static void ValidateRuleset(RulesetDescriptor descriptor)
+    {
+        if (descriptor.Characters || descriptor.ClearVoices || descriptor.Interaction != InteractionRule.None)
+            throw new InvalidDataException("Sightseeing content rules are violated.");
+        if (!Enum.IsDefined(descriptor.DefaultViewMode) || descriptor.ViewModes is null ||
+            !descriptor.ViewModes.Contains(descriptor.DefaultViewMode))
+            throw new InvalidDataException("The default view mode must be allowed by the ruleset.");
     }
     private sealed class RulesetService(RulesetDescriptor current) : IRuleset, IRulesetActivation
     {
@@ -54,8 +61,8 @@ public partial class Kernel : Node
             if (!Godot.FileAccess.FileExists(path)) throw new FileNotFoundException("Ruleset not found: " + id.Value);
             var next = JsonSerializer.Deserialize<RulesetDescriptor>(Godot.FileAccess.GetFileAsBytes(path), ContractJson.Options)
                 ?? throw new InvalidDataException("Ruleset data is null.");
-            if (next.Id != id || next.Characters || next.ClearVoices || next.Interaction != InteractionRule.None)
-                throw new InvalidDataException("Ruleset identity or current sightseeing content rules are invalid.");
+            if (next.Id != id) throw new InvalidDataException("Ruleset identity is invalid.");
+            ValidateRuleset(next);
             Current = next;
             Rev++;
         }

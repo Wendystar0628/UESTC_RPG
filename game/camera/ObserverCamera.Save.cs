@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization.Metadata;
-using Campus.Camera.Walk;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
@@ -61,14 +60,15 @@ public partial class ObserverCamera
 
     public ViewSaveData CreateDefault(NewGameContext context)
     {
-        // D-242: a new game hands control back walking on the default spawn's stand. The catalogue resolves
-        // authored spawns before waypoints, including a target map that has not mounted yet; Restore
-        // legalizes the pose against the mounted map, as for every saved walk pose.
+        // The ruleset selects the mode; the map catalogue resolves the authored spawn before mount.
         var spawn = Services.Get<IMapService>().ResolveSpawn(context.Map);
+        if (context.Mode == ViewMode.Fly)
+            return new(context.Mode, spawn.Fly, null, Tuning.DefaultSpeedStep, Tuning.DefaultSpeedStep);
+        if (context.Mode != ViewMode.Walk) throw new InvalidDataException("Invalid default observer mode.");
         var stand = spawn.Stand ?? throw new InvalidDataException(
             $"Default spawn of {context.Map.Value} has no walk stand.");
-        var eye = new Pose(stand.Feet + N.Vector3.UnitY * WalkTuning.StandingEye, stand.YawDeg, 0);
+        var eye = new Pose(stand.Feet + N.Vector3.UnitY * WalkRules.StandingEye, stand.YawDeg, 0);
         ValidateFinite(eye);
-        return new(ViewMode.Walk, eye, null, WalkTuning.DefaultSpeedStep, Tuning.DefaultSpeedStep);
+        return new(context.Mode, eye, null, WalkRules.DefaultSpeedStep, Tuning.DefaultSpeedStep);
     }
 }

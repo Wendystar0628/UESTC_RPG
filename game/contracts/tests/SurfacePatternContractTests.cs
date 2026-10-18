@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts.Bake;
@@ -15,6 +16,7 @@ public sealed class SurfacePatternContractTests
     private static readonly Box3 Bounds = new(Vector3.Zero, Vector3.One);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ContentRoundTripAndFreezeRetainProfileMetresAndDiscreteFaces()
     {
         var source = Surface();
@@ -31,6 +33,7 @@ public sealed class SurfacePatternContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NullProfilePreservesExistingUv2AndOptionalChannels()
     {
         var legacy = Surface() with { Material = new(Plain), Uv = null, Uv2 = [65537, -1, 2, 9, 1, 8, 4, 7, 1, 6, 1, 5] };
@@ -43,6 +46,7 @@ public sealed class SurfacePatternContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ProfileDimensionsAreCheckedByGeometryAndPaletteCatalog()
     {
         var registry = new PaletteRegistry([
@@ -64,6 +68,7 @@ public sealed class SurfacePatternContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ProfileCannotReinterpretSpecialKindsShadersVariantsOrSemanticFlags()
     {
         foreach (var kind in Enum.GetValues<ToonKind>().Where(value => value != ToonKind.Static))
@@ -80,6 +85,7 @@ public sealed class SurfacePatternContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MissingNonFiniteAndFractionalGateCoordinatesAreRejected()
     {
         GeometryBundle[] missing = [Surface() with { Uv = null }, Surface() with { Uv2 = null },
@@ -100,6 +106,7 @@ public sealed class SurfacePatternContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BaseAndLodTrianglesCannotBridgeGateOrFidelityBoundaries()
     {
         var source = Surface();
@@ -113,6 +120,7 @@ public sealed class SurfacePatternContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BakedStaticSurfaceRetainsAndValidatesThePatternProfile()
     {
         _ = new BakedSurface(new(Plain), 0, BakedPrimitive.Triangles, 0, 0, default, default, default, Bounds);
@@ -124,6 +132,7 @@ public sealed class SurfacePatternContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void StaticInstanceStreamRefusesPatternsBeforeApplyingTransforms()
     {
         var prototype = new GeometryPrototype("pattern-fixture", [GeometryBuffer.Freeze(Surface())], Bounds);

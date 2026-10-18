@@ -8,6 +8,7 @@ namespace Campus.Tests;
 public sealed class GlobalDataTextureRuntimeTests
 {
     [TestCase(Timeout = 10000)]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task LeasesPreserveNativeTexturesAndShutdownDrainsTheirRelease()

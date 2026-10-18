@@ -10,15 +10,17 @@ public sealed class QualityState
     private readonly QualityCatalog _catalog;
     private float[] _values;
     private long _version;
-    private QualityPreset _basePreset = QualityPreset.Fine;
+    private QualityPreset _basePreset;
     public bool CaptureMode { get; set; }
     public float RefreshRate { get; set; } = 60;
-    public QualityProfile Requested { get; private set; } = QualityCatalog.Profile(QualityPreset.Fine);
+    public QualityProfile Requested { get; private set; }
     public QualityView Effective { get; private set; }
 
     public QualityState(QualityCatalog catalog)
     {
         _catalog = catalog;
+        _basePreset = catalog.DefaultPreset;
+        Requested = catalog.DefaultProfile;
         _values = catalog.Resolve(Requested, _basePreset);
         Effective = MakeView();
     }

@@ -19,6 +19,7 @@ public sealed partial class SaveLifecycleTests
 {
     private static long _id;
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task NewGameDefersPoseDefaultsUntilTravelAndPreservesItsExplicitContext()
     {
         using var fixture = new Fixture();
@@ -26,10 +27,11 @@ public sealed partial class SaveLifecycleTests
         fixture.Camera.BeforeDefault = () => AssertThat(fixture.Maps.HasTravelled).OverrideFailureMessage("A pose default was requested before its target map travelled.").IsTrue();
         var start = new WorldPreset(6.5, Season.Winter, WeatherKind.Snow, .4f);
         var result = await fixture.Pump(fixture.Save.NewGame(new("s1"), 733, start));
-        AssertThat(result.Status == LoadStatus.Loaded && fixture.Camera.DefaultContext == new NewGameContext(733, fixture.Maps.Default, start)).OverrideFailureMessage("Deferred pose defaults lost the requested seed, map or starting preset.").IsTrue();
+        AssertThat(result.Status == LoadStatus.Loaded && fixture.Camera.DefaultContext == new NewGameContext(733, fixture.Maps.Default, start, ViewMode.Fly)).OverrideFailureMessage("Deferred pose defaults lost the requested seed, map or starting preset.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task PreviewThenResumeRestoresPoseOnceAndCommitsWorldOnlyOnce()
     {
         using var fixture = new Fixture();
@@ -57,6 +59,7 @@ public sealed partial class SaveLifecycleTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task QuitTimeoutKeepsWriteAliveAndLateSuccessUpdatesState()
     {
         using var fixture = new Fixture();
@@ -79,6 +82,8 @@ public sealed partial class SaveLifecycleTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
+    [TestCategory("Slow")]
     public async Task OnlyIntervalRequestsSaveAndTitleNeverWrites()
     {
         using var fixture = new Fixture();
@@ -96,6 +101,7 @@ public sealed partial class SaveLifecycleTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task ForcedCaptureUsesOneMomentEvenWhenHudChangedTargetAfterWeatherTick()
     {
         using var fixture = new Fixture();
@@ -110,6 +116,7 @@ public sealed partial class SaveLifecycleTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task ActiveMapTransitionCannotWriteANewGeneration()
     {
         using var fixture = new Fixture();
@@ -123,6 +130,7 @@ public sealed partial class SaveLifecycleTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task WorldPhaseFailureAbortsInSameFrameAndBlocksWritesUntilFullRecovery()
     {
         using var fixture = new Fixture();
@@ -144,6 +152,7 @@ public sealed partial class SaveLifecycleTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task FailureAfterWorldCommitAlsoFreezesAndCanRecoverByLoading()
     {
         using var fixture = new Fixture();
@@ -170,6 +179,7 @@ public sealed partial class SaveLifecycleTests
         public bool Ready { get; set; } = true;
         public TaskCompletionSource<byte[]?>? ThumbnailBarrier { get; set; }
         private bool _inFrame;
+        private string? _directory;
         public Fixture()
         {
             World = new(() => _inFrame, Log); Camera = new(() => _inFrame, Log); Maps = new(Log);
@@ -180,7 +190,8 @@ public sealed partial class SaveLifecycleTests
         }
         public async Task Start()
         {
-            var directory = RepositoryFixture.FilePath("output", "save-tests", "lifecycle-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _id));
+            var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-save-lifecycle-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _id));
+            _directory = directory;
             var rules = new TestRuleset("test-policy", id: "test-rules");
             var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new ImmediateVeil(), _flow,
                 _ => { }, World, WaitDestination,
@@ -204,11 +215,15 @@ public sealed partial class SaveLifecycleTests
         }
         public async Task Pump(Task task)
         {
-            for (var i = 0; i < 5000 && !task.IsCompleted; i++) await Frames(1);
+            for (var i = 0; i < TestSamples.FrameLoop && !task.IsCompleted; i++) await Frames(1);
             AssertThat(task.IsCompleted).OverrideFailureMessage("Save lifecycle did not finish.").IsTrue(); await task;
         }
         public async Task<T> Pump<T>(Task<T> task) { await Pump((Task)task); return await task; }
-        public void Dispose() => Save.Dispose();
+        public void Dispose()
+        {
+            Save.Dispose();
+            if (_directory is { } directory && Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
     }
 
     private sealed class FakeWorld(Func<bool> inFrame, List<string> log) : IWorldState, IWorldRestore, ISaveSection<LifecycleWorld>
@@ -259,7 +274,7 @@ public sealed partial class SaveLifecycleTests
         public LifecycleView CreateDefault(NewGameContext context)
         {
             BeforeDefault?.Invoke(); DefaultContext = context;
-            return new(new(new Vector3(1, 2, 3), 0, 0), ViewMode.Fly, null);
+            return new(new(new Vector3(1, 2, 3), 0, 0), context.Mode, null);
         }
     }
     private sealed class FakeWeather : ISaveSection<LifecycleWeather>
@@ -307,6 +322,8 @@ public sealed partial class SaveLifecycleTests
     {
         public long Rev => 1; public MapId Map => maps.Current; public IReadOnlyList<AtlasMarker> Markers => []; public IReadOnlyList<AtlasRegion> Regions => [];
         public MapRect PageRect => maps.Maps.Single(map => map.Id == maps.Current).DataRect;
+        public float ZoomMin => throw new NotSupportedException();
+        public float ZoomMax => throw new NotSupportedException();
         public event Action? Changed { add { } remove { } }
         public AtlasMarker? Find(MarkerId id) => null;
         public UnlockState StateOf(MarkerId id) => UnlockState.Hidden;

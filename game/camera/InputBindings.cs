@@ -16,7 +16,8 @@ public sealed class InputBindings
     ];
     private const string Section = "input";
     private readonly Dictionary<string, int> _keys = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, int> _defaults = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, SettingDefinition<int>> _definitions = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, SettingDefinition<int>> Definitions => _definitions;
 
     public void Initialize(ISettingsStore? settings)
     {
@@ -26,7 +27,8 @@ public sealed class InputBindings
             foreach (var input in InputMap.ActionGetEvents(action))
             {
                 if (input is not InputEventKey key) continue;
-                _keys[action] = _defaults[action] = (int)key.PhysicalKeycode;
+                _definitions[action] = new(action, (int)key.PhysicalKeycode, "input." + action, new(1, int.MaxValue, 1));
+                _keys[action] = _definitions[action].Default;
                 break;
             }
         }
@@ -68,10 +70,10 @@ public sealed class InputBindings
     {
         var section = settings.Section(Section);
         if (!Actions.Any(section.Has)) return false;
-        var candidate = new Dictionary<string, int>(_defaults, StringComparer.Ordinal);
+        var candidate = _definitions.ToDictionary(pair => pair.Key, pair => pair.Value.Default, StringComparer.Ordinal);
         foreach (string action in Actions)
         {
-            int value = section.Int(action, 0, 1, int.MaxValue);
+            int value = section.Get(_definitions[action]);
             if (value > 0 && ValidKey(value)) candidate[action] = value;
         }
         // Aliases share a physical control across mutually exclusive fly/walk modes.

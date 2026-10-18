@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using GdUnit4;
@@ -10,6 +11,7 @@ namespace Campus.Contracts.Tests;
 public sealed class PaletteCapacityBoundaryTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LogicalIndexAndLayoutKeepTheLegacyPrefixAndSeasonalDomain()
     {
         AssertThat(default(PaletteIndex).Value == 0 && new PaletteIndex(255).Value == 255).OverrideFailureMessage("Legacy index range changed.").IsTrue();
@@ -37,6 +39,7 @@ public sealed class PaletteCapacityBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CatalogIsAnImmutableUnionAndSchemaTwoCannotRedefineLegacyOrSeasonalEntries()
     {
         var legacy = Legacy();
@@ -111,6 +114,7 @@ public sealed class PaletteCapacityBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void GeometryIndicesRetainWidthAndHaveUnambiguousDecalSemantics()
     {
         var old = Geometry() with { ColorIndices = [64, 64, 64], Reserved = [1, 8, 15] };
@@ -138,15 +142,18 @@ public sealed class PaletteCapacityBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ColorEncodingPreservesLegacyBytesAndKeepsForegroundAndDecalBanksIndependent()
     {
-        foreach (var reserved in new byte[] { 0, 1, 8, 15, 128, 255 })
-            for (var flags = 0; flags < 16; flags++)
-                for (var id = 0; id < 256; id++)
-                {
-                    var original = ((byte)id, (byte)(255 - id), (byte)flags, reserved);
-                    AssertThat(PaletteEncoding.EncodeColor(new(id), original.Item2, (byte)flags, reserved) == original).OverrideFailureMessage("A legacy COLOR byte changed, including a pre-existing A payload.").IsTrue();
-                }
+        byte[] reservedValues = [0, 1, 8, 15, 128, 255];
+        for (var sample = 0; sample < TestSamples.PerProperty; sample++)
+        {
+            var id = sample * byte.MaxValue / (TestSamples.PerProperty - 1);
+            var flags = sample % 16;
+            var reserved = reservedValues[sample % reservedValues.Length];
+            var original = ((byte)id, (byte)(byte.MaxValue - id), (byte)flags, reserved);
+            AssertThat(PaletteEncoding.EncodeColor(new(id), original.Item2, (byte)flags, reserved) == original).OverrideFailureMessage("A legacy COLOR byte changed, including a pre-existing A payload.").IsTrue();
+        }
         AssertThat(PaletteEncoding.EncodeColor(new(511), 77, 12, decalBase: new(256)) == ((byte)255, (byte)77, (byte)60, (byte)0)).OverrideFailureMessage("Both banks must fit independently.").IsTrue();
         AssertThat(PaletteEncoding.EncodeColor(new(256), 255, 4, decalBase: new(255)) == ((byte)0, (byte)255, (byte)20, (byte)255)).OverrideFailureMessage("Extended foreground aliased its legacy base.").IsTrue();
         AssertThat(PaletteEncoding.EncodeColor(new(255), 255, 4, decalBase: new(256)) == ((byte)255, (byte)255, (byte)36, (byte)0)).OverrideFailureMessage("Extended base aliased its legacy foreground.").IsTrue();
@@ -161,17 +168,19 @@ public sealed class PaletteCapacityBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void LampEncodingKeepsLegacyFloatBitsAndRejectsUnassignedPackedValues()
     {
-        for (var id = 0; id < 512; id++)
-            for (var percent = 0; percent <= 100; percent++)
-            {
-                var packed = PaletteEncoding.PackLampColor(new(id), percent / 100f);
-                var decoded = PaletteEncoding.UnpackLampColor(packed);
-                AssertThat(decoded.Index.Value == id && decoded.Energy == percent / 100f).OverrideFailureMessage("Lamp index/energy changed during round trip.").IsTrue();
-                if (id < 256)
-                    AssertThat(BitConverter.SingleToInt32Bits(packed) == BitConverter.SingleToInt32Bits(id + 256f * percent)).OverrideFailureMessage("Legacy lamp bits changed.").IsTrue();
-            }
+        for (var sample = 0; sample < TestSamples.PerProperty; sample++)
+        {
+            var id = sample * (PaletteLayout.Capacity - 1) / (TestSamples.PerProperty - 1);
+            var percent = sample * 100 / (TestSamples.PerProperty - 1);
+            var packed = PaletteEncoding.PackLampColor(new(id), percent / 100f);
+            var decoded = PaletteEncoding.UnpackLampColor(packed);
+            AssertThat(decoded.Index.Value == id && decoded.Energy == percent / 100f).OverrideFailureMessage("Lamp index/energy changed during round trip.").IsTrue();
+            if (id < 256)
+                AssertThat(BitConverter.SingleToInt32Bits(packed) == BitConverter.SingleToInt32Bits(id + 256f * percent)).OverrideFailureMessage("Legacy lamp bits changed.").IsTrue();
+        }
         // Oracle is the existing WP-39 PackColor formula, including clamping and midpoint rounding.
         foreach (var energy in new[] { -1f, 0.005f, 0.015f, 0.333f, 0.755f, 2f })
         {

@@ -19,6 +19,7 @@ namespace Campus.Kernel.Collision.Tests;
 public sealed class CollisionCoreTests
 {
     [TestCase(Timeout = 180000)]
+    [TestCategory(TestReason.Smoke)]
     [TestCategory("G15Core")]
     [RequireGodotRuntime]
     public async Task FormalMapNearbyWalking()
@@ -38,10 +39,8 @@ public sealed class CollisionCoreTests
         var input = source.ReadLoadInput(entry);
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
-        var repository = RepositoryFixture.Root;
-        var cache = System.Environment.GetEnvironmentVariable("UESTC_BAKE_CACHE")
-            ?? Path.Combine(repository, "output", "cache", "bake");
-        using var bake = new BakeService(new(cache, Live: false, Strict: false, Background: false,
+        using var cache = new TemporaryCache();
+        using var bake = new BakeService(new(cache.Path, Live: false, Strict: false, Background: false,
             MapOnly: false, LogicalProcessors: 3, SeedOverride: null));
         var map = bake.Mount(context);
         using var native = new World3D();
@@ -74,7 +73,7 @@ public sealed class CollisionCoreTests
                 var start = character.GlobalPosition.ToNumerics();
                 var destination = route[1 - index].Stand!.Feet;
                 var direction = N.Vector3.Normalize(new(destination.X - feet.X, 0, destination.Z - feet.Z));
-                await MoveFor(.5f, direction * WalkTuning.WalkSpeed, point.Id, start);
+                await MoveFor(.5f, direction * WalkRules.WalkSpeed, point.Id, start);
                 await MoveFor(.5f, N.Vector3.Zero, point.Id, start);
                 var finish = character.GlobalPosition.ToNumerics();
                 AssertThat(character.IsOnFloor()).OverrideFailureMessage(point.Id + " lost the floor after its short walk.").IsTrue();
@@ -150,5 +149,16 @@ public sealed class CollisionCoreTests
             Position = Vector3.Up * (WalkRules.StandingHeight / 2)
         });
         return character;
+    }
+
+    private sealed class TemporaryCache : IDisposable
+    {
+        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "uestc-rpg-g15-cache-" + Guid.NewGuid().ToString("N"));
+
+        public void Dispose()
+        {
+            if (Directory.Exists(Path)) Directory.Delete(Path, recursive: true);
+        }
     }
 }

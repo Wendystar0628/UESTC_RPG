@@ -25,7 +25,7 @@ public interface IWorldFrame : IWorldState, IMapAware
 public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null) : IWorldFrame, IWorldControl,
     IWorldRestore, ISaveSection<WorldSaveV1>
 {
-    private double _targetHours = 17.5;
+    private double _targetHours;
     private double _offset;
     private double _velocity;
     private double _jumpFrom;
@@ -33,8 +33,8 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     private double _jumpDuration;
     private double _dragIdle = 1;
     private bool _dragging;
-    private double _seasonFrom = 2;
-    private double _seasonTo = 2;
+    private double _seasonFrom;
+    private double _seasonTo;
     private double _seasonElapsed;
     private double _seasonDuration;
     private double _seasonStartOffset;
@@ -52,16 +52,17 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; } = 1;
     public event Action<long>? InstanceChanged;
-    public double WorldHours { get; private set; } = 17.5;
+    public double WorldHours { get; private set; }
     public double Clock => ArtEphemeris.Wrap(WorldHours + _offset, 24);
-    public double SeasonPos { get; private set; } = 2;
-    public Season SeasonTarget { get; private set; } = Season.Autumn;
-    public Body Sun { get; private set; } = ArtEphemeris.Evaluate(17.5, 2).Sun;
-    public Body Moon { get; private set; } = ArtEphemeris.Evaluate(17.5, 2).Moon;
+    public double SeasonPos { get; private set; }
+    public Season SeasonTarget { get; private set; }
+    // Valid unit directions and zero intensity keep pre-map shader writes neutral.
+    public Body Sun { get; private set; } = new(System.Numerics.Vector3.UnitY, 0, 0, 0);
+    public Body Moon { get; private set; } = new(-System.Numerics.Vector3.UnitY, 0, 0, 0);
     public float MoonPhase => 1;
     public float Omega { get; private set; }
     public WorldFlow Flow => new(_activeFlow?.Rate ?? BaseFlow.Rate);
-    public WorldFlow BaseFlow { get; private set; } = new(1);
+    public WorldFlow BaseFlow { get; private set; }
     public int LastFlowRate => _flowBeforePause;
     public bool Scrubbing => _dragging && _dragIdle < 1;
     public WorldTransition Transition =>
@@ -72,10 +73,10 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     public WeatherVec WeatherNow => weather.Now;
     public IReadOnlyList<WeatherSpan> WeatherAhead => weather.Ahead;
     public uint WeatherSeed => weather.Seed;
-    public double AnimTime { get; private set; } = WorldTime.InitialAnimTime;
+    public double AnimTime { get; private set; }
     public bool RestoreFaulted { get; private set; }
     public double Step12 => Math.Floor(AnimTime * _stepRate) / _stepRate;
-    public bool IsSettled => !RestoreFaulted && !_restorePending && !TimeMoving && !SeasonMoving && !Scrubbing;
+    public bool IsSettled => _initializationApplied && !RestoreFaulted && !_restorePending && !TimeMoving && !SeasonMoving && !Scrubbing;
     public double SeasonFrom => _seasonFrom;
     public double SeasonTo => _seasonTo;
     public double SeasonProgress => SeasonMoving ? Math.Clamp(_seasonElapsed / _seasonDuration, 0, 1) : 1;
@@ -100,6 +101,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         if (RestoreFaulted) return;
         var dt = Math.Min(delta, .1); // Suspend/resume never advances a night in the first frame.
         if (_restorePending) throw new InvalidOperationException("CompleteRestore must commit the World phase before ticking.");
+        if (!_initializationApplied) return;
         var previousSun = Sun;
         var previousMoon = Moon;
         if (!freezeAnimation) AnimTime = ArtEphemeris.Wrap(AnimTime + dt, WorldTime.AnimLoopSeconds);
@@ -341,12 +343,14 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     public WorldSaveMoment GetSaveMoment()
     {
         EnsureUsable();
+        if (!_initializationApplied) throw new InvalidOperationException("World state has not been initialized.");
         return new(TargetHours, PlannedOffset, SeasonTarget, BaseFlow.Rate);
     }
 
     public WorldSaveV1 Capture(in CaptureContext context)
     {
         EnsureUsable();
+        if (!_initializationApplied) throw new InvalidOperationException("World state has not been initialized.");
         var moment = context.Moment ?? GetSaveMoment();
         return new(moment.WorldHours, moment.ClockOffset, (int)moment.Season, moment.Season,
             moment.FlowRate, _flowBeforePause, AnimTime);
@@ -376,6 +380,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         if (!_restorePending) throw new InvalidOperationException("No restored world is pending commit.");
         _restorePending = false;
         RestoreFaulted = false;
+        _initializationApplied = true;
         Instance++;
         Rev++;
         InstanceChanged?.Invoke(Instance);

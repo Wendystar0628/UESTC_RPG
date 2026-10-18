@@ -9,6 +9,7 @@ namespace Campus.Tests;
 public sealed class ObserverCameraRuntimeTests
 {
     [TestCase]
+    [TestCategory(TestReason.Regression)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void MapMountKeepsPresentationPoseAndDoesNotRequireAnInlineSpawn()

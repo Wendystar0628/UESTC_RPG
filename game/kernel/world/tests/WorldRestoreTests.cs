@@ -1,3 +1,4 @@
+using Campus.Tests;
 using static GdUnit4.Assertions;
 using System.Numerics;
 using System.Text.Json;
@@ -15,10 +16,11 @@ namespace Campus.Tests.World;
 public sealed class WorldRestoreTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RestoreCommitsOneInstanceAndDropsAllTransitionHistory()
     {
         var weather = new TestWeatherProcess();
-        var world = CreateWorld(weather);
+        var world = CreateWorld(weather, initialize: false);
         world.Freeze(17.5, Season.Autumn, 240);
         world.Advance(24);
         world.SetSeason(Season.Winter);
@@ -48,6 +50,7 @@ public sealed class WorldRestoreTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SaveMomentUsesTheSameFreshEndpointAsWorldCaptureWithoutStepping()
     {
         var weather = new TestWeatherProcess();
@@ -76,11 +79,12 @@ public sealed class WorldRestoreTests
         AssertThat(shared.FlowRate).IsEqual(moment.FlowRate);
         moment = world.GetSaveMoment();
         AssertThat(moment.FlowRate).IsEqual(world.BaseFlow.Rate);
-        AssertThat(Math.Abs((ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24)) - (18)) <= 1e-10).OverrideFailureMessage($"Expected {18:R}, got {ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24):R}.").IsTrue();
+        AssertThat(Math.Abs((ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24)) - (18)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {18:R}, got {ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24):R}.").IsTrue();
         AssertThat(weather.Steps.Count).IsEqual(before.Count);
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FailedRestoreFreezesUntilAFreshSuccessfulRestoreCommits()
     {
         var weather = new TestWeatherProcess();
@@ -121,6 +125,7 @@ public sealed class WorldRestoreTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AbortBeforeOrAfterWorldCommitRejectsAllControlsAndSaves()
     {
         foreach (var afterCommit in new[] { false, true })
@@ -166,7 +171,7 @@ public sealed class WorldRestoreTests
             world.Tick(.1);
             AssertThat(LiveReadings(world, weather)).IsEqual(frozen);
             AssertThat(weather.Calls.Count).IsEqual(calls);
-            var fresh = world.CreateDefault(new NewGameContext(5, new("test-world"), new WorldPreset(17.5, Season.Autumn)));
+            var fresh = world.CreateDefault(new NewGameContext(5, new("test-world"), new WorldPreset(17.5, Season.Autumn), ViewMode.Walk));
             world.Restore(fresh, Restore());
             AssertThat(world.RestoreFaulted).OverrideFailureMessage("CreateDefault or Restore must not clear a failed transaction by itself.").IsTrue();
             world.CompleteRestore();
@@ -179,6 +184,7 @@ public sealed class WorldRestoreTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WorldSaveUsesIndependentContractOptionsAfterSharedOptionsAreLocked()
     {
         ContractJson.Options.MakeReadOnly(populateMissingResolver: true);
@@ -209,6 +215,7 @@ public sealed class WorldRestoreTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void JsonRoundTripIsStrictAndContinuesBitExactly()
     {
         var a = CreateWorld(new TestWeatherProcess());
@@ -233,6 +240,7 @@ public sealed class WorldRestoreTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InvalidControlsAndInvalidCoreSaveAreRejectedWithoutMutation()
     {
         var world = CreateWorld(new TestWeatherProcess());

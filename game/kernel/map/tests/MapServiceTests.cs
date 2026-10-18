@@ -18,6 +18,7 @@ namespace Campus.Tests;
 public sealed class MapServiceTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ResolveDefaultWaypointWithoutAnActiveMap()
     {
         var f = new Fixture(waypointDefault: true);
@@ -29,6 +30,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ResolveExtraSpawnUsesTheRequestedMap()
     {
         var f = new Fixture(); f.Boot();
@@ -39,6 +41,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ResolveSpawnRejectsUnknownMapAndUnknownSpawn()
     {
         var f = new Fixture(waypointDefault: true);
@@ -53,6 +56,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ResolveSpawnRequiresCatalogueInitialization()
     {
         var f = new Fixture(initialize: false);
@@ -69,6 +73,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BootWaitsForMountAndArrival()
     {
         var f = new Fixture();
@@ -90,6 +95,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SameMapRestoreWaitsForArrivalWithoutReloading()
     {
         var f = new Fixture(); f.Boot();
@@ -106,6 +112,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ReplacedArrivalCannotCompleteMapTravel()
     {
         var f = new Fixture(); f.Boot();
@@ -123,6 +130,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DisposingMapServiceCancelsItsPendingArrival()
     {
         var f = new Fixture(); f.Boot();
@@ -135,6 +143,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BootWaitsForAsyncMountPreparationBeforeArrival()
     {
         var f = new Fixture();
@@ -156,6 +165,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FailedAsyncMountDoesNotArrive()
     {
         var f = new Fixture();
@@ -170,6 +180,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SameMapPreviewKeepsCameraAndSavedVisitWithoutReload()
     {
         var f = new Fixture(); f.Boot();
@@ -191,6 +202,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LegalizedDestinationIsSharedByArrivalAndSpawn()
     {
         var f = new Fixture();
@@ -206,6 +218,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NonFiniteLegalizationResultFailsWithoutMovingCamera()
     {
         var f = new Fixture();
@@ -218,6 +231,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SameMapFullRestoreLegalizesSavedDestinationWithoutReload()
     {
         var f = new Fixture(); f.Boot();
@@ -236,6 +250,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FiniteDestinationRejectedByRoamValidatorStillFails()
     {
         var f = new Fixture();
@@ -252,6 +267,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LeavingTheTreeCompletesAcceptedTravelAndPreventsLatePublication()
     {
         var f = new Fixture();
@@ -273,6 +289,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FailedBootFinishesWithoutRetry()
     {
         var f = new Fixture(); f.Loader.Failing.Add(f.A);
@@ -282,6 +299,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MapsSaveUsesStringIdsAndVectorArraysAndRejectsUnknownFields()
     {
         var f = new Fixture(); f.Boot();
@@ -297,6 +315,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RestoreDropsDeletedMapVisitsAndPreservesKnownVisitsInMapOrder()
     {
         var f = new Fixture();
@@ -310,6 +329,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CatalogRejectsTraversalAndDerivesCentroidFromBoundary()
     {
         var f = new Fixture();
@@ -322,7 +342,7 @@ public sealed class MapServiceTests
             var entry = MapCatalog.ReadEntry(new(map.Id, "res://data/" + map.Id.Value + '/'),
                 JsonSerializer.SerializeToUtf8Bytes(file, ContractJson.Options),
                 Encoding.UTF8.GetBytes("{\"meta\":{\"origin\":[104,31],\"crs\":\"EPSG:32648\",\"bounds\":[0,0,10,10]},\"boundary\":[[[0,0],[10,0],[0,10]]] }"), []);
-            AssertThat(Vector2.Distance(entry.Descriptor.Center, new(10f / 3, 10f / 3)) < .0001f).OverrideFailureMessage("Map center used bounding-box center instead of polygon centroid.").IsTrue();
+            AssertThat(Vector2.Distance(entry.Descriptor.Center, new(10f / 3, 10f / 3)) < TestTolerance.Position).OverrideFailureMessage("Map center used bounding-box center instead of polygon centroid.").IsTrue();
             return;
         }
         throw new InvalidOperationException("Traversal map root was accepted.");

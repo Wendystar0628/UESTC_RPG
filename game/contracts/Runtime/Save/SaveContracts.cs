@@ -73,7 +73,7 @@ public sealed class RestoreContext
     }
     // 修复要用的只读查询（安全点、活动范围、点位与标记是否存在）由 WP-50 在 v1 里补全
 }
-public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start);
+public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start, ViewMode Mode);
 // Start 默认取本图 map.json 的 newGameStart（MapWorldRules.NewGameStart；清水河秋 17:05、晴，SYS-MAPS），没有时取本图默认状态；
 // 之后由 IFlowLease.FlowTo 正向推到落金初灯（SYS-SAVE、SYS-TITLE）
 

@@ -11,6 +11,7 @@ namespace Campus.Tests;
 public sealed class RestoreFailureFlowTests
 {
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task FaultedWorldRetainsCoverAndAcceptsNewGameWithoutMapContext()
     {
         var f = new Fixture();
@@ -28,6 +29,7 @@ public sealed class RestoreFailureFlowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task FaultedQuitDefersWritingAndRetainsInputLock()
     {
         var f = new Fixture();
@@ -38,6 +40,7 @@ public sealed class RestoreFailureFlowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task QuitRequestsShareOneTaskAcrossFlushReentryAndResourceShutdown()
     {
         var f = new Fixture();
@@ -57,6 +60,7 @@ public sealed class RestoreFailureFlowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task FailedFlushNeverCallsExitAndACompletedFailureCanBeRetried()
     {
         var f = new Fixture(); f.Save.FlushStatus = SaveStatus.Failed;
@@ -70,6 +74,7 @@ public sealed class RestoreFailureFlowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task FailedAutomaticPreviewCannotFallBackAndRevealDuringBoot()
     {
         var f = new Fixture();

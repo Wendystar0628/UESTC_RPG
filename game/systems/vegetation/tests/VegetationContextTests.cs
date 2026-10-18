@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Campus.Gen.World;
 using Campus.Pipeline.Map;
 using Campus.Contracts;
@@ -5,6 +6,7 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Registry;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -17,9 +19,9 @@ namespace Campus.Systems.Vegetation.Tests;
 public sealed class VegetationContextTests
 {
     private const string Module = "vegetation";
-    private const string DesignRoad = "design:center-east-riverside-walk";
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PreparedSourcePreservesTheEffectiveWorldOverlaysAndClaims()
     {
         var fixture = Fixture.Load();
@@ -36,7 +38,11 @@ public sealed class VegetationContextTests
         };
         var source = new PreparedSource(prepared);
         var context = VegetationContext.Resolve(map, Module, source)();
-        AssertThat(context.World.Network.Roads.Any(road => road.Id.Value == DesignRoad)).OverrideFailureMessage("The overlay's design footway is missing.").IsTrue();
+        var overlayRoads = fixture.Input.SourceInputs.Entries
+            .Where(pair => pair.Key.StartsWith("overlay/center-east.d/", StringComparison.Ordinal))
+            .SelectMany(pair => AddedRoadIds(pair.Value))
+            .ToArray();
+        AssertThat(overlayRoads.Length > 0 && overlayRoads.All(id => context.World.Network.Roads.Any(road => road.Id.Value == id))).OverrideFailureMessage("The overlay's design footway is missing.").IsTrue();
         AssertThat(ReferenceEquals(context.SourceInputs, fixture.Input.SourceInputs.Entries) &&
             context.SourceInputs.Keys.Any(path => path.StartsWith("overlay/center-east.d/", StringComparison.Ordinal)) &&
             context.SourceInputs.ContainsKey("vegetation/planting.json")).OverrideFailureMessage("The prepared source lost the frozen input version.").IsTrue();
@@ -48,23 +54,20 @@ public sealed class VegetationContextTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AFailingFormalSourceThrowsAndNeverFallsBackToAnotherWorld()
     {
         var fixture = Fixture.Load();
-        foreach (var failure in new Exception[] { new NotSupportedException("not prepared"), new InvalidOperationException("stale context") })
-        {
-            var source = new FailingSource(failure);
-            var thrown = false;
-            try
-            {
-                VegetationContext.Resolve(fixture.Map, Module, source);
-            }
-            catch (Exception error) when (ReferenceEquals(error, failure)) { thrown = true; }
-            AssertThat(thrown && source.Calls == 1).OverrideFailureMessage($"{failure.GetType().Name} from the formal source did not surface unchanged.").IsTrue();
-        }
+        var unsupported = new FailingSource(new NotSupportedException());
+        AssertThrown(() => VegetationContext.Resolve(fixture.Map, Module, unsupported)).IsInstanceOf<NotSupportedException>();
+        AssertThat(unsupported.Calls == 1).IsTrue();
+        var stale = new FailingSource(new InvalidOperationException());
+        AssertThrown(() => VegetationContext.Resolve(fixture.Map, Module, stale)).IsInstanceOf<InvalidOperationException>();
+        AssertThat(stale.Calls == 1).IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void APreparedContextIsReusedWithItsCatalogAndSnapshots()
     {
         var fixture = Fixture.Load();
@@ -91,6 +94,13 @@ public sealed class VegetationContextTests
     }
 
     private static Aspects Lowest(Aspects aspects) => Enum.GetValues<Aspects>().First(bit => (aspects & bit) != 0);
+    private static string[] AddedRoadIds(ReadOnlyMemory<byte> bytes)
+    {
+        using var document = JsonDocument.Parse(bytes);
+        return document.RootElement.GetProperty("ops").EnumerateArray()
+            .Where(op => op.GetProperty("op").GetString() == "add" && op.GetProperty("kind").GetString() == "road")
+            .Select(op => op.GetProperty("id").GetString()!).ToArray();
+    }
     private static PaletteCatalog Palette() => Campus.Contracts.Tests.PaletteFixture.Catalog;
 
     private sealed class FailingSource(Exception failure) : IBakeContextSource

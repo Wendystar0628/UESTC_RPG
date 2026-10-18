@@ -8,6 +8,7 @@ namespace Campus.Tests;
 public sealed class SaveReadinessObservationTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CancellationBeforeMainFrameAttachImmediatelyStopsTheLateToken()
     {
         var holder = new SaveReadinessObservation();
@@ -19,6 +20,7 @@ public sealed class SaveReadinessObservationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CancellationAfterAttachAndRepeatedDisposeReleaseOnlyTheAttachedToken()
     {
         var holder = new SaveReadinessObservation();
@@ -30,6 +32,7 @@ public sealed class SaveReadinessObservationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CancellationBetweenTokenCreationAndAttachIsDeterministic()
     {
         var holder = new SaveReadinessObservation();

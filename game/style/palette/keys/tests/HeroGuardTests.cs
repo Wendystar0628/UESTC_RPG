@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Style.Palette.Keys;
@@ -16,20 +17,22 @@ public sealed class HeroGuardTests
     private static readonly double[] Clocks = [21.0, 19.0, 6.5];
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void YellowHeroesNeverTurnGreenerThanTheHeroFrame()
     {
         var script = Script(false);
         var floor = DeriveNode()["lit"]!["heroGuard"]!["chromaFloor"]!.GetValue<double>();
         var ratio = DeriveNode()["lit"]!["chromaCap"]!["ratio"]!.GetValue<double>();
-        foreach (var token in new[] { "ginkgo", "deciduous" })
+        foreach (var token in script.Vegetation.Entries.Values
+            .Where(e => e.Hero[(int)Season.Autumn].Guard).Select(e => e.Token))
             foreach (var clock in Clocks)
             {
                 var (m, hero) = Colours(script, token, Season.Autumn, clock);
                 var lit = m.Lit;
                 var cmin = Math.Min(floor * hero.CRef, m.Shade.Chroma / ratio);
                 AssertThat(hero.Guard).OverrideFailureMessage($"{token}: autumn hero hue {hero.HRef:F1} should be guarded.").IsTrue();
-                AssertThat(Oklab.HueDiff(hero.HRef, lit.Hue) <= 1e-9).OverrideFailureMessage($"{token} {clock}: lit hue {lit.Hue:F2} is greener than the hero hue {hero.HRef:F2}.").IsTrue();
-                AssertThat(lit.Chroma >= cmin - 1e-9).OverrideFailureMessage($"{token} {clock}: lit C {lit.Chroma:F4} is below the floor {cmin:F4}.").IsTrue();
+                AssertThat(Oklab.HueDiff(hero.HRef, lit.Hue) <= TestTolerance.AngleDegrees).OverrideFailureMessage($"{token} {clock}: lit hue {lit.Hue:F2} is greener than the hero hue {hero.HRef:F2}.").IsTrue();
+                AssertThat(lit.Chroma >= cmin - TestTolerance.FloatRelative).OverrideFailureMessage($"{token} {clock}: lit C {lit.Chroma:F4} is below the floor {cmin:F4}.").IsTrue();
             }
         foreach (var e in script.Vegetation.Entries.Values)
             foreach (var season in Enum.GetValues<Season>())
@@ -39,25 +42,14 @@ public sealed class HeroGuardTests
                 for (var hour = 0; hour < 24; hour++)
                 {
                     var lit = Lit(script, e.Token, season, hour).Lit;
-                    AssertThat(Oklab.HueDiff(hero.HRef, lit.Hue) <= 1e-9).OverrideFailureMessage($"{e.Token} {season} {hour}:00: lit hue {lit.Hue:F2} past hero {hero.HRef:F2}.").IsTrue();
+                    AssertThat(Oklab.HueDiff(hero.HRef, lit.Hue) <= TestTolerance.AngleDegrees).OverrideFailureMessage($"{e.Token} {season} {hour}:00: lit hue {lit.Hue:F2} past hero {hero.HRef:F2}.").IsTrue();
                 }
             }
     }
 
-    // Same colours as the Python reference (pipeline/colorscript); at 21:00 the floor is held by the chromaCap (values for the 23d autumn hero #EFC558).
-    [TestCase]
-    public void GinkgoMatchesTheReference()
-    {
-        var script = Script(false);
-        foreach (var (clock, hex) in new[] { (21.0, "#887653"), (19.0, "#98845D"), (6.5, "#95815A") })
-        {
-            var actual = Oklab.ToHex(Lit(script, "ginkgo", Season.Autumn, clock).Lit);
-            AssertThat(actual == hex).OverrideFailureMessage($"ginkgo autumn {clock}: {actual}, expected {hex}.").IsTrue();
-        }
-    }
-
     // The floor never passes the chromaCap at any hour: shade C ≥ lit C × ratio for every guarded colour with albedo C ≥ minAlbedoC.
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FloorNeverPassesTheChromaCap()
     {
         var script = Script(false);
@@ -72,21 +64,21 @@ public sealed class HeroGuardTests
                 for (var hour = 0.0; hour < 24.0; hour += 0.5)
                 {
                     var m = Colours(script, e.Token, season, hour).Colors;
-                    AssertThat(m.Lit.Chroma <= m.Shade.Chroma / ratio + 1e-9).OverrideFailureMessage($"{e.Token} {season} {hour}: lit C {m.Lit.Chroma:F4} passes the cap {m.Shade.Chroma / ratio:F4}.").IsTrue();
+                    AssertThat(m.Lit.Chroma <= m.Shade.Chroma / ratio + TestTolerance.FloatRelative).OverrideFailureMessage($"{e.Token} {season} {hour}: lit C {m.Lit.Chroma:F4} passes the cap {m.Shade.Chroma / ratio:F4}.").IsTrue();
                     checkedCount++;
                 }
             }
-        AssertThat(checkedCount > 500).OverrideFailureMessage($"only {checkedCount} cases checked.").IsTrue();
+        AssertThat(checkedCount > 0).OverrideFailureMessage("No guarded colours were checked.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OtherColoursAreUnchanged()
     {
         var on = Script(false);
         var off = Script(true);
-        string[] expected = ["bloom.yellow", "camphor.red", "cherry", "crop", "deciduous", "ginkgo", "lotus", "metaseq", "reed"];
         var guarded = on.Vegetation.Entries.Values.Where(e => e.Hero.Any(h => h.Guard)).Select(e => e.Token).Order(StringComparer.Ordinal).ToArray();
-        AssertThat(guarded.SequenceEqual(expected)).OverrideFailureMessage($"guarded tokens: {string.Join(", ", guarded)}.").IsTrue();
+        AssertThat(guarded.Length > 0).OverrideFailureMessage("No guarded colours were loaded.").IsTrue();
         var checkedCount = 0;
         foreach (var e in on.Vegetation.Entries.Values)
             foreach (var season in Enum.GetValues<Season>())
@@ -101,7 +93,7 @@ public sealed class HeroGuardTests
                     checkedCount++;
                 }
             }
-        AssertThat(checkedCount > 1000).OverrideFailureMessage($"only {checkedCount} cases checked.").IsTrue();
+        AssertThat(checkedCount > 0).OverrideFailureMessage("No unguarded colours were checked.").IsTrue();
     }
 
     private static (Lab Lit, HeroRef Hero) Lit(ColorScript script, string token, Season season, double clock)

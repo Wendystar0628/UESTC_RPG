@@ -4,6 +4,7 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Cinematic;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
+using Campus.Contracts.Settings;
 using Campus.Contracts.Startup;
 
 namespace Campus.Kernel.Boot;
@@ -88,7 +89,9 @@ public sealed class BootArguments
         OneOf("cine", "enter_new", "enter_new_short", "enter_continue", "leave");
         Number("clock", 0, 24, exclusiveMax: true);
         Number("anim", 0, WorldTime.AnimLoopSeconds, exclusiveMax: true);
-        Number("weather-intensity", 0, 1); Number("wet", 0, 1); Number("ui-scale", .75, 1.5);
+        Number("weather-intensity", 0, 1); Number("wet", 0, 1);
+        var uiScale = UiSettingDefinitions.Scale.Range!;
+        Number("ui-scale", uiScale.Min, uiScale.Max);
         Number("weather-remaining", 0, double.MaxValue);
         foreach (var key in new[] { "seed", "weather-seed", "audio-seed" })
             if (Has(key) && !uint.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out _)) throw Invalid(key);

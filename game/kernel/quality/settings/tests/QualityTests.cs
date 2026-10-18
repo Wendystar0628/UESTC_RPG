@@ -8,6 +8,7 @@ namespace Campus.Tests;
 public sealed class QualityTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EveryPresetKeepsStyleFloorsAndHasAllKnobs()
     {
         var catalog = Catalog();
@@ -18,6 +19,7 @@ public sealed class QualityTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InvalidDiscreteAndNonFiniteValuesRejectTheWholePlan()
     {
         var state = new QualityState(Catalog());
@@ -30,6 +32,7 @@ public sealed class QualityTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ProfilesAreCopiedAndPresetSelectionClearsOverrides()
     {
         var state = new QualityState(Catalog());
@@ -44,6 +47,7 @@ public sealed class QualityTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ResolutionDependentPresetsUseOutputPixelBudget()
     {
         var catalog = Catalog();
@@ -54,6 +58,7 @@ public sealed class QualityTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ThirtyFpsCapChangesStepRate()
     {
         if (QualityCatalog.FrameLimit(2, 60) != 30) throw new InvalidOperationException("Frame pacing is inconsistent.");

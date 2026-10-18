@@ -17,6 +17,7 @@ namespace Campus.Tests;
 public sealed class MaterialWarmupRuntimeTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task ActualDrawUnlocksPoolsOnlyAfterTheirOwnCoveredWarmBatch()
@@ -32,7 +33,6 @@ public sealed class MaterialWarmupRuntimeTests
         AssertThat(fixture.Provider.FirstDrawCompleteFrame > fixture.Provider.FirstCapturedFrame).OverrideFailureMessage("Evidence must follow actual rendered frames.").IsTrue();
         await fixture.Boot.Reveal(0f);
         await fixture.Draw();
-        fixture.Capture("WP-00-material-first-visible");
         var secondSpec = fixture.Spec with { Line = LineClass.Fine };
         using var lateCover = fixture.Veil.Cover(VeilReason.Boot, 0f);
         await lateCover.Covered;
@@ -40,13 +40,11 @@ public sealed class MaterialWarmupRuntimeTests
         AssertThat(!late.Visible && !fixture.ReadyForReveal).OverrideFailureMessage("A late material inherited old readiness.").IsTrue();
         await fixture.Until(() => fixture.Veil.Opacity == 1f);
         AssertThat(!late.Visible).OverrideFailureMessage("The late pool escaped before its material was drawn.").IsTrue();
-        fixture.Capture("WP-00-material-late-cover");
         await fixture.Until(() => fixture.ReadyForReveal && late.Visible);
         AssertThat(fixture.Provider.Accepted >= 2 && fixture.Provider.Rejected == 0).OverrideFailureMessage("The late pool must complete its own real batch.").IsTrue();
         await lateCover.Reveal(0f);
         await fixture.Until(() => fixture.Veil.Opacity == 0f);
         await fixture.Draw();
-        fixture.Capture("WP-00-material-late-visible");
         using var externalCover = fixture.Veil.Cover(VeilReason.Transit, 0f);
         var externallyCovered = fixture.Mount("external-cover", fixture.Spec with { Line = LineClass.Tree });
         await fixture.Until(() => fixture.ReadyForReveal && externallyCovered.Visible);
@@ -68,6 +66,7 @@ public sealed class MaterialWarmupRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task UncoveredViewportCannotProduceWarmEvidenceOrReleaseTheBootCover()
@@ -86,6 +85,7 @@ public sealed class MaterialWarmupRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task ChangedLayoutRejectsInflightEvidenceAndResizeRequiresFreshCoveredDraws()
@@ -117,6 +117,7 @@ public sealed class MaterialWarmupRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task BankOneSamplePreservesTheFullPaletteIndexAndUnlocksItsPool()
@@ -199,14 +200,6 @@ public sealed class MaterialWarmupRuntimeTests
             if (!_warming && Veil.Opacity == 1f && Cover.IsCovered && Provider.CapturePendingWarm().Materials.Count > 0)
             { Warmup.Begin(); _warming = true; }
             if (_warming && ReadyForReveal) { Warmup.End(); _warming = false; }
-        }
-        public void Capture(string name)
-        {
-            var root = RepositoryFixture.Root;
-            var destination = Path.Combine(root, "output", "render-review");
-            Directory.CreateDirectory(destination);
-            using var image = Parent.GetViewport().GetTexture().GetImage();
-            AssertThat(image.SavePng(Path.Combine(destination, name + ".png")) == Godot.Error.Ok).OverrideFailureMessage("Could not save warmup evidence.").IsTrue();
         }
         public async Task Until(Func<bool> ready)
         {

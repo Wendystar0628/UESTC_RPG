@@ -31,7 +31,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private IWalkController? _walk;
     private ITransitDriver? _transit;
     private Pose _pose;
-    private ViewMode _mode = ViewMode.Fly;
+    private ViewMode? _mode;
     private int _flySpeedStep;
     private bool _recoverTriggered;
     private bool _automated;
@@ -87,7 +87,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         if (_worldResetPending)
         { _worldResetPending = false; ResetHistory(); SetEdgeFog(0); }
         AdvanceInput(seconds);
-        if (!IsPlaying) { _flight.Reset(); SetEdgeFog(0); return; }
+        if (!IsPlaying || _mode is null) { _flight.Reset(); SetEdgeFog(0); return; }
         if (Mode == ViewMode.Walk && _walk is { ExitRequested: true })
         {
             _ = SetMode(ViewMode.Fly, ModeSwitchVia.Key);

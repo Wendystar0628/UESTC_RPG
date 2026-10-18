@@ -5,10 +5,10 @@ using GdUnit4;
 namespace Campus.Tests;
 
 [TestSuite]
-[TestCategory("Contract")]
 public sealed class VeilTimelineTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LatestHolderPresentsAndOnlyTheFinalHolderReveals()
     {
         var veil = new VeilTimeline();
@@ -32,6 +32,7 @@ public sealed class VeilTimelineTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NewCoverDoesNotCancelAnOlderCoverAwaiter()
     {
         var veil = new VeilTimeline();
@@ -51,6 +52,7 @@ public sealed class VeilTimelineTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DisposalBeforeCoveredCancelsOnlyItsOwnWaiter()
     {
         var veil = new VeilTimeline();
@@ -69,6 +71,7 @@ public sealed class VeilTimelineTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CoverDuringRevealCancelsTheFadeWithoutLosingTheNewOwner()
     {
         var veil = new VeilTimeline();

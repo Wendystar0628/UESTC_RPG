@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,6 +12,7 @@ namespace Campus.Contracts.Tests;
 public sealed class TerrainChannelContractTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ChannelWadePreservesLegacyConstructorAndDeconstructSignatures()
     {
         var parsed = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(Fixture));
@@ -34,6 +36,7 @@ public sealed class TerrainChannelContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ChannelWadeOmittedAndEmptyListsStayEmptyForWetAndDryChannels()
     {
         foreach (var dry in new[] { false, true })
@@ -50,6 +53,7 @@ public sealed class TerrainChannelContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ChannelWadeRoundTripsIndependentPolygonsAndTheirHoles()
     {
         var root = JsonNode.Parse(Fixture)!.AsObject();
@@ -68,6 +72,7 @@ public sealed class TerrainChannelContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DryChannelsAreExplicitAndStepsRetainTheirRealStructureReference()
     {
         var root = DryFixture();
@@ -84,7 +89,7 @@ public sealed class TerrainChannelContractTests
             dryChannel.Crossings is not [TerrainUnderpassCrossing { At.X: 4, At.Y: 0 }, TerrainEndBeforeCrossing])
             throw new InvalidOperationException("Symmetric swale or crossing alternatives were conflated.");
         var steps = ((TerrainCorridorOp)roundTrip.Ops[8]).Steps;
-        if (steps.Count != 1 || steps[0].Structure != new FeatureId("design:stairs:fixture"))
+        if (steps.Count != 1 || steps[0].Structure != ((TerrainCorridorOp)parsed.Ops[8]).Steps[0].Structure)
             throw new InvalidOperationException("A steps interval lost its real stair reference.");
         using var wire = JsonDocument.Parse(encoded);
         var dry = wire.RootElement.GetProperty("ops")[5];
@@ -97,6 +102,7 @@ public sealed class TerrainChannelContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ZeroOrOmittedSwaleOuterCanonicalizesWithoutCreatingAnOuterSlope()
     {
         foreach (var omit in new[] { false, true })

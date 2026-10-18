@@ -8,7 +8,7 @@ public interface ISettingsStore
     Task SaveAsync();
 }
 
-/// <summary>Primitive settings within one section, with caller-defined defaults and ranges.</summary>
+/// <summary>Primitive settings within one section; domain definitions supply defaults and ranges through Get.</summary>
 public interface ISettingsSection
 {
     ISettingsSection Child(string name);

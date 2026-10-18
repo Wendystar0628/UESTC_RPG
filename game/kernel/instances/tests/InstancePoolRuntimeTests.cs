@@ -9,6 +9,7 @@ namespace Campus.Tests;
 public sealed class InstancePoolRuntimeTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void DynamicPoolOwnsAndReleasesEngineResources()

@@ -9,7 +9,7 @@ namespace Campus.Camera.Walk;
 public static class WalkSafetyQueries
 {
     public static WalkSave CreateDefault(IMapService maps, NewGameContext context) =>
-        new(DefaultFeet(maps, context.Map), false, WalkTuning.DefaultSpeedStep, []);
+        new(DefaultFeet(maps, context.Map), false, WalkRules.DefaultSpeedStep, []);
 
     public static Pose DefaultFeet(IMapService maps, MapId targetMap)
     {

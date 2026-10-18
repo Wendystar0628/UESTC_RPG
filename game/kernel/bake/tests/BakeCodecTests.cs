@@ -13,6 +13,7 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class BakeCodecTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CollisionRoundTripKeepsLocalCoordinatesAndFootMaterial()
     {
         var key = BakeRequestKeys.Collision(new("fixture"), "collision.world", new(-1, 2));
@@ -42,6 +43,7 @@ public sealed class BakeCodecTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EveryTruncatedPayloadAndWrongIdentityIsRejected()
     {
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
@@ -74,6 +76,7 @@ public sealed class BakeCodecTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OversizedSectionIsRejectedBeforeAllocation()
     {
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
@@ -89,6 +92,7 @@ public sealed class BakeCodecTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CompressedHeaderRejectsBombBeforeCallingEngine()
     {
         var bytes = new byte[13];
@@ -104,6 +108,7 @@ public sealed class BakeCodecTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UnloadingAnInFlightRequestKeepsItsOldHandleFailed()
     {
         using var started = new ManualResetEventSlim();
@@ -131,6 +136,7 @@ public sealed class BakeCodecTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void StoppingRejectsPendingWorkAndLateProductsWhileDisposeStillDrainsWorkers()
     {
         using var started = new ManualResetEventSlim();
@@ -168,11 +174,11 @@ public sealed class BakeCodecTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     public void CorruptCacheIsAMissAndGameVersionChangesClearProducts()
     {
-        var root = RepositoryFixture.Root;
-        var directory = Path.Combine(root, "output", "bake-cache", Guid.NewGuid().ToString("N"));
+        var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cache-" + Guid.NewGuid().ToString("N"));
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
         var writer = new BakeCacheStore(directory, "version-one");
         byte[] payload = [1, 2, 3, 4];
@@ -193,9 +199,14 @@ public sealed class BakeCodecTests
             AssertThrown(() => writer.Write(key, payload)).IsInstanceOf<OperationCanceledException>();
             AssertThrown(() => writer.TryRead(key)).IsInstanceOf<OperationCanceledException>();
         }
-        finally { new BakeCacheStore(directory, "version-two").Clear(); }
+        finally
+        {
+            new BakeCacheStore(directory, "version-two").Clear();
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NegativeTileParentsUseFloorDivision()
     {
         if (BakeRequestKeys.Parent(new(-1, -3), LodLevel.L1) != new TileKey(-1, -2))

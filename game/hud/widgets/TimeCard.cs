@@ -12,7 +12,7 @@ namespace Campus.Hud.Widgets;
 /// </summary>
 public partial class TimeCard : Control
 {
-    public static readonly int[] Rates = [0, 1, 10, 60, 360, 1440];
+    public static ReadOnlySpan<int> Rates => FlowRates.All;
     private static readonly string[] ShichenNames = ["zi", "chou", "yin", "mao", "chen", "si", "wu", "wei", "shen", "you", "xu", "hai"];
     private const float Ring = 104, Band = 12, HandleR = 98;
 
@@ -99,7 +99,7 @@ public partial class TimeCard : Control
         _plus = k.Button(this, ButtonStyle.Secondary, "+1h", new Rect2(x + 216, y, 80, 32), "data", 8, pin: pin, padY: 2,
             pressed: () => { _control.Advance(1); Sync(); });
         y += 42;
-        _flow = Segmented.Create(k, this, new Vector2(x, y), [30, 34, 40, 40, 46, 54], ["", "1×", "10×", "60×", "360×", "1440×"], pin, 32, "data",
+        _flow = Segmented.Create(k, this, new Vector2(x, y), [30, 34, 40, 40, 46, 54], FlowRates.All.ToArray().Select(rate => rate == 0 ? "" : $"{rate}×").ToArray(), pin, 32, "data",
             ["pause", null, null, null, null, null]);
         _flow.Changed += i => { _control.SetFlow(Rates[i]); Sync(); };
         _wave = k.Wave(this, new Rect2(x + 252, y + 4, 44, 24), "graphic", pin, Vector4.Zero);
@@ -129,7 +129,7 @@ public partial class TimeCard : Control
         (night ? _moon : _sun).Position = handle - new Vector2(8, 8);
         _needle.SetPointPosition(0, _center + dir * 60);
         _needle.SetPointPosition(1, _center + dir * (HandleR - 9));
-        var rateIndex = Array.IndexOf(Rates, _model.FlowRate);
+        var rateIndex = Rates.IndexOf(_model.FlowRate);
         if (rateIndex >= 0) _flow.Select(rateIndex, notify: false);
         _flowText.Text = _model.FlowRate == 0 ? "‖" : $"{_model.FlowRate}×";
         _kit.Apply(_wave, new UiFx(Role: "graphic", Pin: true, Flags: UiFlags.Wave,

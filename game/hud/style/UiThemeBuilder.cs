@@ -36,12 +36,63 @@ public sealed class UiThemeBuilder
         Theme.DefaultFont = Font("body", out var bodySize, out _);
         Theme.DefaultFontSize = bodySize;
         ThemeDB.FallbackFont = Theme.DefaultFont;
+        BuildLayout();
         BuildScrollBar();
     }
 
     public Theme Theme { get; }
 
     public static string TextType(string role) => "Text_" + role.Replace('.', '_').Replace('-', '_');
+
+    public const string LayoutMetrics = "UiLayoutMetrics";
+    public const string ScreenMargin = "UiScreenMargin", PageMargin = "UiPageMargin", PanelMargin = "UiPanelMargin", SmallMargin = "UiSmallMargin";
+    public const string Groups = "UiGroups", Rows = "UiRows", Row = "UiRow", Corners = "UiCorners";
+    public const string CardGrid = "UiCardGrid", Actions = "UiActions", Tabs = "UiTabs", Segments = "UiSegments";
+    public const string PanelContainerType = "UiPanelContainer";
+
+    private void BuildLayout()
+    {
+        foreach (var value in _t.Get("metrics", "layout").EnumerateObject())
+            if (value.Value.ValueKind == JsonValueKind.Number)
+                Theme.SetConstant(value.Name, LayoutMetrics, value.Value.GetInt32());
+        var aspect = _t.V2("metrics", "layout", "safeAspect");
+        Theme.SetConstant("safeAspectWidth", LayoutMetrics, (int)aspect.X);
+        Theme.SetConstant("safeAspectHeight", LayoutMetrics, (int)aspect.Y);
+        foreach (var name in new[] { "primary", "secondary", "compact", "segment", "dropdown", "tab", "iconButton", "icon", "iconInButton",
+                     "primaryMinWidth", "primaryPadX", "secondaryMinWidth", "dropdownMinWidth", "keycap", "tag" })
+            Theme.SetConstant(name, LayoutMetrics, (int)_t.Size(name));
+        MarginType(ScreenMargin, _t.Space("screenEdge"));
+        MarginType(PageMargin, _t.Space("pagePad"));
+        MarginType(PanelMargin, _t.Space("panelPad"));
+        MarginType(SmallMargin, _t.F("metrics", "grid", "half"));
+        BoxType(Groups, "VBoxContainer", _t.Space("group"));
+        BoxType(Rows, "VBoxContainer", _t.F("metrics", "layout", "rowGap"));
+        BoxType(Row, "HBoxContainer", _t.Space("control"));
+        BoxType(Segments, "HBoxContainer", 0);
+        BoxType(Corners, "VBoxContainer", _t.F("metrics", "layout", "cornerGap"));
+        BoxType(Actions, "HFlowContainer", _t.Space("control"));
+        BoxType(Tabs, "HFlowContainer", _t.Size("tabGap"));
+        Theme.SetTypeVariation(CardGrid, "GridContainer");
+        Theme.SetConstant("h_separation", CardGrid, _t.I("metrics", "layout", "cardGap"));
+        Theme.SetConstant("v_separation", CardGrid, _t.I("metrics", "layout", "cardGap"));
+        Theme.SetTypeVariation(PanelContainerType, "PanelContainer");
+        Theme.SetStylebox("panel", PanelContainerType, Carrier(_t.I("metrics", "shape", "expandMargin"), 0, 0, 0));
+    }
+
+    private void MarginType(string name, float margin)
+    {
+        Theme.SetTypeVariation(name, "MarginContainer");
+        foreach (var side in new[] { "left", "top", "right", "bottom" })
+            Theme.SetConstant("margin_" + side, name, (int)margin);
+    }
+
+    private void BoxType(string name, string baseType, float gap)
+    {
+        Theme.SetTypeVariation(name, baseType);
+        Theme.SetConstant("separation", name, (int)gap);
+        Theme.SetConstant("h_separation", name, (int)gap);
+        Theme.SetConstant("v_separation", name, (int)gap);
+    }
 
     // ---------- 字体（UI-VISUAL）：正文 Inter → 思源黑体 SC；数据 JetBrains Mono → 思源黑体 SC；标题 思源黑体 SC → Inter ----------
     private FontFile File(string family, string weight)

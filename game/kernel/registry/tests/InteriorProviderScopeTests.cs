@@ -17,6 +17,7 @@ namespace Campus.Tests;
 public sealed class InteriorProviderScopeTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task NewMapConfigurationDoesNotChangeAnOlderRunningMapOrTheGlobalCache()
     {
         var registry = ProviderRegistry();
@@ -71,6 +72,7 @@ public sealed class InteriorProviderScopeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NarrowFactoryRejectsUnregisteredEngineAndServiceTypes()
     {
         var registry = ProviderRegistry();
@@ -86,6 +88,7 @@ public sealed class InteriorProviderScopeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BuildContextCopiesAndOrdinallySortsTheProviderMapping()
     {
         var registry = ProviderRegistry();

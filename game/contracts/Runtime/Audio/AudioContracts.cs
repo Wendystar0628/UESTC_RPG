@@ -1,4 +1,5 @@
 using System.Numerics;
+using Campus.Contracts.Settings;
 using System;
 using System.Collections.Generic;
 
@@ -23,7 +24,41 @@ public sealed record AudioSettings(
     float Master = 0.8f, float Ambience = 1.0f, float Foley = 0.8f, float Ui = 0.6f, float Music = 0.7f,   // 滑杆值 0–1；脚步默认安静
     bool UiSounds = true, bool HoverSounds = false, bool QuietMode = false, bool Mono = false,
     SuddenSoundMode Sudden = SuddenSoundMode.Normal, BackgroundBehavior Background = BackgroundBehavior.Keep,
-    string? OutputDevice = null);
+    string? OutputDevice = null)
+{
+    public static AudioSettings Default { get; } = new();
+}
+
+/// <summary>Audio settings data shared by persistence, normalization and settings controls.</summary>
+public static class AudioSettingDefinitions
+{
+    public const string Section = "audio";
+    public static readonly SettingRange VolumeRange = new(0, 1, .05);
+    public static readonly SettingDefinition<float> Master = new("master", AudioSettings.Default.Master, "sound.master", VolumeRange);
+    public static readonly SettingDefinition<float> Ambience = new("ambience", AudioSettings.Default.Ambience, "sound.ambience", VolumeRange);
+    public static readonly SettingDefinition<float> Foley = new("foley", AudioSettings.Default.Foley, "sound.foley", VolumeRange);
+    public static readonly SettingDefinition<float> Ui = new("ui", AudioSettings.Default.Ui, "sound.ui", VolumeRange);
+    public static readonly SettingDefinition<float> Music = new("music", AudioSettings.Default.Music, "sound.music", VolumeRange);
+    public static readonly SettingDefinition<bool> UiSounds = new("ui_sounds", AudioSettings.Default.UiSounds, "sound.ui_sounds");
+    public static readonly SettingDefinition<bool> HoverSounds = new("hover_sounds", AudioSettings.Default.HoverSounds, "sound.hover");
+    public static readonly SettingDefinition<bool> QuietMode = new("quiet_mode", AudioSettings.Default.QuietMode, "sound.quiet");
+    public static readonly SettingDefinition<bool> Mono = new("mono", AudioSettings.Default.Mono, "sound.mono");
+    public static readonly SettingDefinition<int> Sudden = new("sudden", (int)AudioSettings.Default.Sudden, "sound.sudden",
+        new((int)SuddenSoundMode.Normal, (int)SuddenSoundMode.Off, 1), Options:
+    [
+        new((int)SuddenSoundMode.Normal, "sound.sudden.normal"),
+        new((int)SuddenSoundMode.Softer, "sound.sudden.softer"),
+        new((int)SuddenSoundMode.Off, "ui.common.off")
+    ]);
+    public static readonly SettingDefinition<int> Background = new("background", (int)AudioSettings.Default.Background, "sound.background",
+        new((int)BackgroundBehavior.Keep, (int)BackgroundBehavior.Mute, 1), Options:
+    [
+        new((int)BackgroundBehavior.Keep, "sound.background.keep"),
+        new((int)BackgroundBehavior.Lower, "sound.background.lower"),
+        new((int)BackgroundBehavior.Mute, "sound.background.mute")
+    ]);
+    public static readonly SettingDefinition<string?> OutputDevice = new("output_device", AudioSettings.Default.OutputDevice, "sound.output_device");
+}
 
 // ===== 界面音与音乐 =====
 public enum UiCue : byte

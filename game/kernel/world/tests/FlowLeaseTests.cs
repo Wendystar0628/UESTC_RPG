@@ -1,3 +1,4 @@
+using Campus.Tests;
 using Campus.Contracts;
 using Campus.Contracts.Save;
 using GdUnit4;
@@ -10,7 +11,7 @@ namespace Campus.Tests.World;
 public sealed class FlowLeaseTests
 {
     [TestCase]
-    [TestCategory("Contract")]
+    [TestCategory(TestReason.Contract)]
     public void FlowLeasesRestorePriorityAndAcquisitionOrderWithoutChangingTheUserRate()
     {
         var world = CreateWorld(new TestWeatherProcess());
@@ -38,7 +39,7 @@ public sealed class FlowLeaseTests
     }
 
     [TestCase]
-    [TestCategory("Contract")]
+    [TestCategory(TestReason.Contract)]
     public void SuspendedFlowDestinationResumesAndItsStopDoesNotOverwriteTheBaseRate()
     {
         var world = CreateWorld(new TestWeatherProcess());
@@ -63,7 +64,7 @@ public sealed class FlowLeaseTests
     }
 
     [TestCase]
-    [TestCategory("Contract")]
+    [TestCategory(TestReason.Contract)]
     public void TemporaryPauseSavesTheUserRateAndSurvivesLoadAndNewGame()
     {
         var world = CreateWorld(new TestWeatherProcess());
@@ -83,7 +84,7 @@ public sealed class FlowLeaseTests
         AssertThat(world.WorldHours).IsEqual(loaded.WorldHours);
         AssertThat(world.Flow.Rate).IsEqual(0);
         AssertThat(world.Capture(default).FlowRate).IsEqual(10);
-        var fresh = world.CreateDefault(new NewGameContext(5, Restore().Map, new WorldPreset(start, Season.Autumn)));
+        var fresh = world.CreateDefault(new NewGameContext(5, Restore().Map, new WorldPreset(start, Season.Autumn), ViewMode.Walk));
         world.Restore(fresh, Restore());
         world.CompleteRestore();
         AssertThat(world.Flow.Rate).IsEqual(0);

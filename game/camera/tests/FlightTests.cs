@@ -11,18 +11,20 @@ namespace Campus.Tests;
 public sealed class FlightTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FlyForwardIsHorizontalAtEveryPitch()
     {
         foreach (float pitch in new[] { -89f, 0f, 89f })
         {
             var motion = new FlightMotion(new());
             var move = motion.Step(new(new(0, 100, 0), 90, pitch), new(0, 0, 1), false, 9, 0, 1);
-            AssertThat(move.X > 10 && Math.Abs(move.Y) < .00001f && Math.Abs(move.Z) < .00001f).OverrideFailureMessage("Forward flight must follow compass heading without pitch changing altitude.")
+            AssertThat(move.X > 10 && Math.Abs(move.Y) < TestTolerance.Position && Math.Abs(move.Z) < TestTolerance.Position).OverrideFailureMessage("Forward flight must follow compass heading without pitch changing altitude.")
                 .IsTrue();
         }
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AccelerationTravelMatchesAcrossFrameRates()
     {
         Vector3 Simulate(int fps)
@@ -33,23 +35,25 @@ public sealed class FlightTests
             for (int i = 0; i < fps; i++) total += motion.Step(pose, new(0, 0, 1), false, 9, 0, 1f / fps);
             return total;
         }
-        AssertThat(Vector3.Distance(Simulate(30), Simulate(144)) < .0001f).OverrideFailureMessage("Flight depends on the render frame rate.")
+        AssertThat(Vector3.Distance(Simulate(30), Simulate(144)) < TestTolerance.Position).OverrideFailureMessage("Flight depends on the render frame rate.")
             .IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SpeedStepsAndGroundLimitKeepCloseInspectionSlow()
     {
         var tuning = new FlightTuning();
-        AssertThat(Math.Abs(tuning.SpeedAt(1) - .5f) < .0001f).OverrideFailureMessage("Lowest speed changed.").IsTrue();
-        AssertThat(Math.Abs(tuning.SpeedAt(16) - 200f) < .001f).OverrideFailureMessage("Highest speed changed.").IsTrue();
+        AssertThat(Math.Abs(tuning.SpeedAt(1) - tuning.MinSpeed) < TestTolerance.FloatRelative).OverrideFailureMessage("Lowest speed changed.").IsTrue();
+        AssertThat(Math.Abs(tuning.SpeedAt(tuning.SpeedSteps) - tuning.MaxSpeed) < TestTolerance.FloatRelative * tuning.MaxSpeed).OverrideFailureMessage("Highest speed changed.").IsTrue();
         var motion = new FlightMotion(tuning);
-        motion.Step(new(new(0, 0, 0), 0, 0), new(0, 0, 1), true, 16, 0, 1);
-        AssertThat(motion.Velocity.Length() <= 12.001f).OverrideFailureMessage("Sprint near the ground exceeded the height-based limit.")
+        motion.Step(new(new(0, 0, 0), 0, 0), new(0, 0, 1), true, tuning.SpeedSteps, 0, 1);
+        AssertThat(motion.Velocity.Length() <= tuning.GroundSpeed * tuning.SprintMultiplier + TestTolerance.FloatRelative).OverrideFailureMessage("Sprint near the ground exceeded the height-based limit.")
             .IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NestedLocksReleaseOnlyTheirOwnLease()
     {
         var locks = new InputLocks();
@@ -66,6 +70,7 @@ public sealed class FlightTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DoubleForwardSprintEndsOnReleaseAndSpaceRequiresShortTap()
     {
         var input = new ObserverInputState(new());
@@ -82,6 +87,7 @@ public sealed class FlightTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PolygonDistanceDistinguishesCampusAndInteriorHoles()
     {
         var ring = new PolygonRings([new(-10, -10), new(10, -10), new(10, 10), new(-10, 10)],
@@ -95,6 +101,7 @@ public sealed class FlightTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ViewSnapshotRoundTripsAndRejectsMissingOrUnknownFields()
     {
         var data = new ViewSaveData(ViewMode.Fly, new(new(1, 2, 3), 90, -30), null, 9, 9);

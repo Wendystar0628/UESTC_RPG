@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Vegetation;
@@ -14,6 +15,7 @@ namespace Campus.Systems.Vegetation.Tests;
 public sealed class VegetationBucketsTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BandsFollowTheDistanceAndTheTreeHeight()
     {
         foreach (var (d, level) in new[] { (10f, 0), (20f, 1), (100f, 2), (160f, 2), (300f, 3), (1500f, 3) })
@@ -24,6 +26,7 @@ public sealed class VegetationBucketsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void TreesMoveInAtOnceAndOutOnlyPastTenPercent()
     {
         AssertThat(VegetationBuckets.Target(16f, 1f, 0) == 0 && VegetationBuckets.Target(17f, 1f, 0) == 1).OverrideFailureMessage("L0+ → L0 at 16.5 m").IsTrue();
@@ -32,6 +35,7 @@ public sealed class VegetationBucketsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void TheCrossFadeBandIsInBothPools()
     {
         // The far pool covers the band at every detail factor (the shaders scale it by quality.x down to 0.7).
@@ -45,6 +49,7 @@ public sealed class VegetationBucketsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UpdateReportsMovesAndResetDropsTheHistory()
     {
         var records = new float[3 * InstanceStreamLayout.FloatsPerInstance];

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text.Json;
 using Campus.Contracts.Save;
 using GdUnit4;
@@ -9,6 +10,7 @@ namespace Campus.Contracts.Tests;
 public sealed class Core5SaveContractTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CaptureContextKeepsLegacyShapeAndCarriesOneImmutableMoment()
     {
         var map = new MapId("core5-test");

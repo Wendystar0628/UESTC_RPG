@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,6 +12,7 @@ namespace Campus.Contracts.Tests;
 public sealed class TerrainWeirContractTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void TwoStepWeirsUseAnIndependentMiddleLevelRegardlessOfListOrLineDirection()
     {
         foreach (var reverseList in new[] { false, true })
@@ -50,6 +52,7 @@ public sealed class TerrainWeirContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void TwoStepWeirsRejectOversizeDropsShortStationsAndReusedStructures()
     {
         foreach (var invalid in new[] { "drop", "station", "structure", "reverse-station", "reverse-structure" })
@@ -77,6 +80,7 @@ public sealed class TerrainWeirContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ChainedWeirRulePreservesParallelStructuresAndOtherKinds()
     {
         foreach (var kind in new[] { "parallel", "gate", "culvert" })
@@ -95,6 +99,7 @@ public sealed class TerrainWeirContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WeirNumbersRemainFiniteWithoutClamping()
     {
         var parsed = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(TwoStepFixture));

@@ -26,6 +26,7 @@ public sealed class UiKit
         Theme = theme;
         Motion = motion;
         ThemeState = themeState;
+        Layout = new UiLayout(this);
     }
 
     public UiTokens Tokens { get; }
@@ -34,6 +35,7 @@ public sealed class UiKit
     public UiThemeBuilder Theme { get; }
     public MotionPolicy Motion { get; }
     public IUiTheme ThemeState { get; }
+    public UiLayout Layout { get; }
 
     public static string T(string key) => Tr.T(key);
     public static string T(string key, params (string Name, string Value)[] args) => Tr.T(key, args);
@@ -77,6 +79,83 @@ public sealed class UiKit
     public bool ResidentFollows => _residentFollows;
 
     // ---------------- 件 ----------------
+    /// <summary>容器里的面板载体；布局容器本身不继承这份材质。</summary>
+    public PanelContainer Panel(Control parent, UiFx fx)
+    {
+        var panel = new PanelContainer
+        {
+            ThemeTypeVariation = UiThemeBuilder.PanelContainerType,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Material = Materials.Panel,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+        };
+        parent.AddChild(panel);
+        Apply(panel, fx);
+        return panel;
+    }
+
+    public Panel Box(Control parent, UiFx fx)
+    {
+        var panel = new Panel
+        {
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            ThemeTypeVariation = Theme.PanelType(fx.Margin),
+            Material = Materials.Panel,
+        };
+        parent.AddChild(panel);
+        Apply(panel, fx);
+        return panel;
+    }
+
+    public Label Text(Control parent, string text, string typeRole = "body", string colorRole = "text.1", bool pin = false,
+        bool wrap = true, HorizontalAlignment align = HorizontalAlignment.Left)
+    {
+        var label = new Label
+        {
+            Text = Theme.Upper(typeRole) ? text.ToUpperInvariant() : text,
+            ThemeTypeVariation = UiThemeBuilder.TextType(typeRole),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            HorizontalAlignment = align,
+            AutowrapMode = wrap ? TextServer.AutowrapMode.WordSmart : TextServer.AutowrapMode.Off,
+            TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            Material = Materials.Text,
+        };
+        parent.AddChild(label);
+        Apply(label, new UiFx(Role: colorRole, Pin: pin));
+        return label;
+    }
+
+    public TextureRect IconRect(Control parent, string icon, string colorRole = "text.1", bool pin = false)
+    {
+        var edge = Layout.Metric("icon");
+        var rect = new TextureRect
+        {
+            Texture = Icon(icon),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+            CustomMinimumSize = new Vector2(edge, edge),
+            SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Material = Materials.Icon,
+        };
+        parent.AddChild(rect);
+        Apply(rect, new UiFx(Role: colorRole, Pin: pin, Extra: new Vector4(1, 0, 0, 0)));
+        return rect;
+    }
+
+    public TechButton Button(Control parent, ButtonStyle style, string text, string fontRole = "body", string? icon = null,
+        bool pin = false, Action? pressed = null, HorizontalAlignment align = HorizontalAlignment.Center)
+    {
+        var button = TechButton.Create(this, style, text, icon, fontRole, pin);
+        button.Alignment = align;
+        if (pressed is not null) button.Pressed += pressed;
+        parent.AddChild(button);
+        if (pin) Remember(button);
+        return button;
+    }
+
+    // 以下坐标重载仅供尚未迁移的页面；C-135 迁完使用方后删除。
     public Panel Box(Control parent, Rect2 rect, UiFx fx)
     {
         var panel = new Panel

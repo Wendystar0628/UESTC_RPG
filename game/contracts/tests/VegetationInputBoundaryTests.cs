@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -11,6 +12,7 @@ namespace Campus.Contracts.Tests;
 public sealed class VegetationInputBoundaryTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SnapshotFreezesTheRequestedByteSliceAndLoaderMapping()
     {
         byte[] loaderBuffer = [11, 22, 33, 44, 55];
@@ -29,6 +31,7 @@ public sealed class VegetationInputBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InputPathsRejectTraversalAndDoNotNormalizeMissingKeys()
     {
         var snapshot = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
@@ -52,6 +55,7 @@ public sealed class VegetationInputBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MaskGridRejectsInvalidExtentLengthAndOverflowBeforePainting()
     {
         var grid = new GroundMaskGrid(new MapRect(new(-64, -32), new(64, 32)), 64, 32, 2);

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Style.Palette.Keys;
@@ -14,6 +15,7 @@ namespace Campus.Style.Palette.Keys.Tests;
 public sealed class PaletteBankTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CatalogFillsBothBanksAndSeasonalRows()
     {
         var (script, catalog) = Load();

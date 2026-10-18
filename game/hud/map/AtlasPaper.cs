@@ -12,8 +12,8 @@ public partial class AtlasPaper : Control
 {
     public static readonly Vector2 Origin = new(376, 104);
     public static readonly Vector2 PaperSize = new(1512, 900);
-    public const float MinPpm = 0.4f;
-    public const float MaxPpm = 3.0f;
+    public float MinPpm { get; private set; }
+    public float MaxPpm { get; private set; }
     private const float WheelStep = 1.25f;
     private const float ZoomSeconds = 0.22f;
     private const float PanSpeed = 600f;
@@ -80,7 +80,12 @@ public partial class AtlasPaper : Control
     }
 
     /// <summary>地图页范围：拖动和缩放都不让地图纸移出这个矩形（atlasRect）。</summary>
-    public void SetBounds(Rect2 world) => _bounds = world;
+    public void SetBounds(Rect2 world, float zoomMin, float zoomMax)
+    {
+        _bounds = world;
+        MinPpm = zoomMin;
+        MaxPpm = zoomMax;
+    }
 
     public void SetView(Vector2 center, float ppm)
     {

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,7 @@ namespace Campus.Contracts.Tests;
 public sealed class VegetationGeometryBoundaryTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AbsentVertexChannelsRemainAbsentAfterFreezing()
     {
         var source = Surface([]) with
@@ -34,6 +36,7 @@ public sealed class VegetationGeometryBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FreezeSurvivesReusedVertexArraysAndReplacedLodList()
     {
         int[] lodIndices = [2, 1, 0];
@@ -73,6 +76,7 @@ public sealed class VegetationGeometryBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FreezeRejectsLodIndicesOutsideTheOwningSurface()
     {
         // Three vertices: 2 is valid; 3 is already outside the source surface.
@@ -84,6 +88,7 @@ public sealed class VegetationGeometryBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InstanceRecordPreservesNegativeWorldTransformCustomAndScratchIsolation()
     {
         // Hand-specified 90-degree turn with unequal scales. No trigonometric constructor is involved.
@@ -106,6 +111,7 @@ public sealed class VegetationGeometryBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InstanceWriterRejectsInvalidInputBeforeChangingDestination()
     {
         var target = Enumerable.Repeat(123f, 16).ToArray();
@@ -131,6 +137,7 @@ public sealed class VegetationGeometryBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InstanceStreamRejectsIncompleteAndNonFiniteRecords()
     {
         var prototype = Prototype();

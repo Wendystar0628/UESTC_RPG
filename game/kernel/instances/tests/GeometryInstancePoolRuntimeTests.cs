@@ -19,6 +19,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     private static readonly StringName _shaderInstanceShadowProxy = InstanceShaderParameters.ShadowProxy;
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void SurfacePatternPrototypeIsRefusedBeforeAllocatingAnInstancePool()
@@ -41,6 +42,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task FrozenMultiSurfaceGeometryRetainsNativeChannelsSlotsAndInstanceBytes()
@@ -127,6 +129,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void MapCleanupIsIdempotentAndNeverDisposesBorrowedMaterials()
@@ -176,6 +179,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void CatalogPoolsUploadBothBanksWithoutReinterpretingTheirFrozenVersion()
@@ -213,6 +217,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void UnsupportedGeometryAndFailedPreparationNeverPublishPartialPools()
@@ -276,6 +281,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void ShadowProxyIsAValidatedScalarOnTheInstanceOnly()
@@ -381,7 +387,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         for (var i = 0; i < count; i++)
         {
             AssertThat(vertices[i] == new Vector3(source.Position.Span[i * 3], source.Position.Span[i * 3 + 1], source.Position.Span[i * 3 + 2])).OverrideFailureMessage("Frozen positions changed after the producer reused its array.").IsTrue();
-            AssertThat(MathF.Abs(normals[i].X) < .0002f && MathF.Abs(normals[i].Y) < .0002f && MathF.Abs(normals[i].Z - 1f) < .0002f).OverrideFailureMessage("Normals were omitted or altered beyond the native normal packing tolerance.").IsTrue();
+            AssertThat(MathF.Abs(normals[i].X) < TestTolerance.FloatRelative * 2 && MathF.Abs(normals[i].Y) < TestTolerance.FloatRelative * 2 && MathF.Abs(normals[i].Z - 1f) < TestTolerance.FloatRelative * 2).OverrideFailureMessage("Normals were omitted or altered beyond the native normal packing tolerance.").IsTrue();
             AssertThat(uv[i] == new Vector2(source.Uv!.Value.Span[i * 2], source.Uv.Value.Span[i * 2 + 1])).OverrideFailureMessage("UV changed.").IsTrue();
             AssertThat(uv2[i] == new Vector2(source.Uv2!.Value.Span[i * 2], source.Uv2.Value.Span[i * 2 + 1])).OverrideFailureMessage("UV2 lost fp32 integer or negative precision.").IsTrue();
             AssertThat(Byte(colors[i].R) == source.ColorIndices!.Value.Span[i] && Byte(colors[i].G) == (byte)(source.Ao!.Value.Span[i] * 255f) &&

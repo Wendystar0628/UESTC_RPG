@@ -17,7 +17,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
 {
     private readonly AudioBusTree _buses = new();
     private readonly AudioClipLibrary _clips = new();
-    private readonly AudioMix _mix = new(new());
+    private readonly AudioMix _mix = new(AudioSettings.Default);
     private readonly double[] _lastCue = Enumerable.Repeat(double.NegativeInfinity, 13).ToArray();
     private readonly long[] _uiStreams = Enumerable.Repeat(AudioStreamPlaybackPolyphonic.InvalidId, 16).ToArray();
     private AudioSettingsStore? _store;
@@ -36,7 +36,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
     public string Id => "audio";
     public int Order => 20;
 
-    public AudioSettings Settings { get; private set; } = new();
+    public AudioSettings Settings { get; private set; } = AudioSettings.Default;
     public event Action<AudioSettings>? SettingsChanged;
     public AudioSnapshot Snapshot { get; private set; } = new(0, 0, 0, 0, 0, AudioMix.SilenceDb, 0);
 
@@ -80,7 +80,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
         _enabled = audio.Enabled;
         var fixedSettings = audio.Fixed;
         _store = fixedSettings ? null : new AudioSettingsStore(RuntimeKernel.Get<ISettingsStore>());
-        Settings = _store?.Load() ?? new();
+        Settings = _store?.Load() ?? AudioSettings.Default;
         _mix.SetSettings(Settings, true);
         _mix.SetAudible(false, 0f);
         _buses.Initialize(audio.Limiter);

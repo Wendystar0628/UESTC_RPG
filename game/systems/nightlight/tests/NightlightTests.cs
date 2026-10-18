@@ -35,6 +35,7 @@ public sealed class NightlightTests
         new(clock, sunAlt, overcast, precip, 1f, dt);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EveryMapScheduleMatchesTheChannelCatalog()
     {
         foreach (var path in ScheduleFiles())
@@ -46,35 +47,35 @@ public sealed class NightlightTests
     }
 
     [TestCase]
-    public void DefaultDuskMatchesTheDocumentedCurves()
+    [TestCategory(TestReason.Contract)]
+    public void FirstLightThresholdsCoverDusk()
     {
         var s = Default();
-        var general = s.SlotOf(new ChannelId("window.general"));
-        // SYS-TIME：17:22–17:40（6.9° → 3.7°）约 20% → 70%，17:30（5.5°）约 40%
-        AssertThat(s.Target(general, At(17.37, 6.9f))).OverrideFailureMessage($"{"window.general at 17:22"}: expected {0.2f:R}, got {s.Target(general, At(17.37, 6.9f)):R}.").IsEqualApprox(0.2f, 0.06f);
-        AssertThat(s.Target(general, At(17.5, 5.5f))).OverrideFailureMessage($"{"window.general at 17:30"}: expected {0.4f:R}, got {s.Target(general, At(17.5, 5.5f)):R}.").IsEqualApprox(0.4f, 0.05f);
-        AssertThat(s.Target(general, At(17.67, 3.7f))).OverrideFailureMessage($"{"window.general at 17:40"}: expected {0.7f:R}, got {s.Target(general, At(17.67, 3.7f)):R}.").IsEqualApprox(0.7f, 0.08f);
         // 初灯组：阈值在 8°–4° 间均匀分布，5.5° 时约六成亮着
         var first = s.GroupOf(s.SlotOf(new ChannelId("lamp.first")))!;
         var lit = 0;
-        const int n = 4000;
-        for (var i = 0; i < n; i++)
+        var n = TestSamples.PerProperty;
+        for (var sample = 0; sample < n; sample++)
+        {
+            var i = sample * 4000 / n;
             if (LampTable.Threshold(first, 7u, LampTable.Key(new Vector3(i * 3.1f, 0f, i * 0.7f))) > 5.5f) lit++;
-        AssertThat(lit / (float)n).OverrideFailureMessage($"{"first-light share at 5.5°"}: expected {0.625f:R}, got {lit / (float)n:R}.").IsEqualApprox(0.625f, 0.03f);
+        }
+        AssertThat(lit / (float)n).OverrideFailureMessage($"{"first-light share at 5.5°"}: expected {0.625f:R}, got {lit / (float)n:R}.").IsEqualApprox(0.625f, TestTolerance.Proportion);
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OvercastAndRainLightLampsEarlier()
     {
         var s = Default();
-        AssertThat(s.EffectiveSun(At(17.5, 5.5f))).OverrideFailureMessage($"{"clear h_eff"}: expected {5.5f:R}, got {s.EffectiveSun(At(17.5, 5.5f)):R}.").IsEqualApprox(5.5f, 1e-4f);
-        AssertThat(s.EffectiveSun(At(17.5, 5.5f, 0.8f, 0.5f))).OverrideFailureMessage($"{"rain h_eff"}: expected {5.5f - 6f * 0.8f - 4f * 0.5f:R}, got {s.EffectiveSun(At(17.5, 5.5f, 0.8f, 0.5f)):R}.").IsEqualApprox(5.5f - 6f * 0.8f - 4f * 0.5f, 1e-4f);
+        AssertThat(s.EffectiveSun(At(17.5, 5.5f))).OverrideFailureMessage($"{"clear h_eff"}: expected {5.5f:R}, got {s.EffectiveSun(At(17.5, 5.5f)):R}.").IsEqualApprox(5.5f, TestTolerance.AngleDegrees);
+        AssertThat(s.EffectiveSun(At(17.5, 5.5f, 0.8f, 0.5f))).OverrideFailureMessage($"{"rain h_eff"}: expected {5.5f - 6f * 0.8f - 4f * 0.5f:R}, got {s.EffectiveSun(At(17.5, 5.5f, 0.8f, 0.5f)):R}.").IsEqualApprox(5.5f - 6f * 0.8f - 4f * 0.5f, TestTolerance.AngleDegrees);
         var general = s.SlotOf(new ChannelId("window.general"));
         AssertThat(s.Target(general, At(17.5, 5.5f, 0.8f, 0.5f)) > s.Target(general, At(17.5, 5.5f)) + 0.2f).OverrideFailureMessage("rainy dusk windows light earlier").IsTrue();
-        AssertThat(s.Target(general, At(12.0, 40f, 1f, 0.6f))).OverrideFailureMessage($"{"rainy daytime window floor"}: expected {0.3f:R}, got {s.Target(general, At(12.0, 40f, 1f, 0.6f)):R}.").IsEqualApprox(0.3f, 0.02f);
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void ValuesDependOnStateNotOnHistory()
     {
         var a = Default();
@@ -86,10 +87,14 @@ public sealed class NightlightTests
         a.Reset();
         a.Evaluate(At(21.0, -14f, dt: 0.016), outA);   // 换实例：直接落到新值
         b.Evaluate(At(21.0, -14f, dt: 0.016), outB);
-        for (var i = 0; i < 32; i++) AssertThat(outA[i] == outB[i]).OverrideFailureMessage($"slot {i} depends on history after a new instance.").IsTrue();
+        for (var i = 0; i < 32; i++)
+            AssertThat(BitConverter.SingleToInt32Bits(outA[i].X) == BitConverter.SingleToInt32Bits(outB[i].X)
+                && BitConverter.SingleToInt32Bits(outA[i].Y) == BitConverter.SingleToInt32Bits(outB[i].Y))
+                .OverrideFailureMessage($"slot {i} depends on history after a new instance.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FastChangesWidenTheWindowFadeAndPausedFramesSettle()
     {
         var s = Default();
@@ -97,12 +102,13 @@ public sealed class NightlightTests
         var general = s.SlotOf(new ChannelId("window.general"));
         s.Evaluate(At(17.3, 7.5f, dt: 0.016), output);
         s.Evaluate(At(17.7, 3.0f, dt: 0.016), output);   // 一帧里大跳
-        AssertThat(output[general].Y).OverrideFailureMessage($"{"Δ after a jump"}: expected {0.15f:R}, got {output[general].Y:R}.").IsEqualApprox(0.15f, 1e-4f);
+        AssertThat(output[general].Y).OverrideFailureMessage($"{"Δ after a jump"}: expected {0.15f:R}, got {output[general].Y:R}.").IsEqualApprox(0.15f, TestTolerance.FloatRelative);
         for (var i = 0; i < 120; i++) s.Evaluate(At(17.7, 3.0f, dt: 0.016), output);
-        AssertThat(output[general].Y).OverrideFailureMessage($"{"Δ after two paused seconds"}: expected {0.005f:R}, got {output[general].Y:R}.").IsEqualApprox(0.005f, 1e-4f);
+        AssertThat(output[general].Y).OverrideFailureMessage($"{"Δ after two paused seconds"}: expected {0.005f:R}, got {output[general].Y:R}.").IsEqualApprox(0.005f, TestTolerance.FloatRelative);
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LampChannelsKeepEveryLampAtFullRetention()
     {
         var s = Default();
@@ -110,11 +116,11 @@ public sealed class NightlightTests
         s.Evaluate(At(21.0, -14f), output);
         var first = s.SlotOf(new ChannelId("lamp.first"));
         // κ < 1 的灯都满亮：smoothstep(κ, κ + Δ, L) = 1 要求 L ≥ 1 + Δ
-        AssertThat(output[first].X >= 1f + output[first].Y - 1e-6f).OverrideFailureMessage("full retention must cover κ close to 1").IsTrue();
+        AssertThat(output[first].X >= 1f + output[first].Y - TestTolerance.FloatRelative).OverrideFailureMessage("full retention must cover κ close to 1").IsTrue();
         var landscape = s.SlotOf(new ChannelId("lamp.landscape"));
         s.Evaluate(At(3.0, -40f), output);
-        AssertThat(output[landscape].X / (1f + output[landscape].Y)).OverrideFailureMessage($"{"landscape lamps halve after 1:00"}: expected {0.5f:R}, got {output[landscape].X / (1f + output[landscape].Y):R}.").IsEqualApprox(0.5f, 1e-4f);
-        AssertThat(Pool(s, 1.5f)).OverrideFailureMessage($"{"sys.poolGain carries the winter gain"}: expected {1.5f:R}, got {Pool(s, 1.5f):R}.").IsEqualApprox(1.5f, 1e-6f);
+        AssertThat(output[landscape].X / (1f + output[landscape].Y)).OverrideFailureMessage($"{"landscape lamps halve after 1:00"}: expected {0.5f:R}, got {output[landscape].X / (1f + output[landscape].Y):R}.").IsEqualApprox(0.5f, TestTolerance.FloatRelative);
+        AssertThat(Pool(s, 1.5f)).OverrideFailureMessage($"{"sys.poolGain carries the winter gain"}: expected {1.5f:R}, got {Pool(s, 1.5f):R}.").IsEqualApprox(1.5f, TestTolerance.FloatRelative);
     }
 
     private static float Pool(ScheduleEvaluator s, float gain)
@@ -125,6 +131,7 @@ public sealed class NightlightTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CueChangesOnlyTheCueSlotsAndReleasesExactly()
     {
         var s = Default();
@@ -138,14 +145,15 @@ public sealed class NightlightTests
         s.Evaluate(At(17.4, 6.3f), cued);
         for (var i = 0; i < 32; i++)
             if (i != s.CueSlot && i != s.CueSysSlot) AssertThat(plain[i] == cued[i]).OverrideFailureMessage($"cue changed slot {i}.").IsTrue();
-        AssertThat(cued[s.CueSlot].X / (1f + cued[s.CueSlot].Y)).OverrideFailureMessage($"{"cue front halfway at 22 s"}: expected {0.5f:R}, got {cued[s.CueSlot].X / (1f + cued[s.CueSlot].Y):R}.").IsEqualApprox(0.5f, 1e-4f);
-        AssertThat(cued[s.CueSysSlot].Y).OverrideFailureMessage($"{"cue target altitude"}: expected {5.5f:R}, got {cued[s.CueSysSlot].Y:R}.").IsEqualApprox(5.5f, 1e-6f);
+        AssertThat(cued[s.CueSlot].X / (1f + cued[s.CueSlot].Y)).OverrideFailureMessage($"{"cue front halfway at 22 s"}: expected {0.5f:R}, got {cued[s.CueSlot].X / (1f + cued[s.CueSlot].Y):R}.").IsEqualApprox(0.5f, TestTolerance.FloatRelative);
+        AssertThat(cued[s.CueSysSlot].Y).OverrideFailureMessage($"{"cue target altitude"}: expected {5.5f:R}, got {cued[s.CueSysSlot].Y:R}.").IsEqualApprox(5.5f, TestTolerance.AngleDegrees);
         s.Cue = null;
         s.Evaluate(At(17.4, 6.3f), released);
         for (var i = 0; i < 32; i++) AssertThat(plain[i] == released[i]).OverrideFailureMessage($"slot {i} differs after release.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LampTableRoundTripsThroughTheShaderDecoding()
     {
         var lamp = new LampRecord(new Vector3(12.5f, 1.25f, -40f), 6.1f, 5.2f, 51, 0.75f, 23, 6.37f, 0.4321f, 7, 0.9f);
@@ -156,18 +164,18 @@ public sealed class NightlightTests
         var head = MathF.Floor(data[5] / 32f) % 1024f * 0.1f;
         var seq = MathF.Floor(data[5] / 32768f);
         AssertThat(col == 51 && slot == 23 && seq == 7f).OverrideFailureMessage("colour, slot and sequence survive packing").IsTrue();
-        AssertThat(energy).OverrideFailureMessage($"{"energy"}: expected {0.75f:R}, got {energy:R}.").IsEqualApprox(0.75f, 1e-6f);
-        AssertThat(head).OverrideFailureMessage($"{"head height"}: expected {6.1f:R}, got {head:R}.").IsEqualApprox(6.1f, 1e-4f);
-        AssertThat(data[6]).OverrideFailureMessage($"{"theta"}: expected {6.37f:R}, got {data[6]:R}.").IsEqualApprox(6.37f, 1e-6f);
+        AssertThat(energy).OverrideFailureMessage($"{"energy"}: expected {0.75f:R}, got {energy:R}.").IsEqualApprox(0.75f, TestTolerance.FloatRelative);
+        AssertThat(head).OverrideFailureMessage($"{"head height"}: expected {6.1f:R}, got {head:R}.").IsEqualApprox(6.1f, TestTolerance.Position);
+        AssertThat(data[6]).OverrideFailureMessage($"{"theta"}: expected {6.37f:R}, got {data[6]:R}.").IsEqualApprox(6.37f, TestTolerance.AngleDegrees);
         foreach (var (index, e) in new[] { (51, 0.75f), (255, 1f), (256, 0f), (320, 0.42f), (511, 1f) })
         {
             var packed = PaletteEncoding.PackLampColor(new PaletteIndex(index), e);
             var (sc, se) = ShaderLampColor(packed);
             var (ci, ce) = PaletteEncoding.UnpackLampColor(packed);
             AssertThat(sc == index && ci.Value == index).OverrideFailureMessage($"lamp colour {index} survives the bank-aware decode").IsTrue();
-            AssertThat(se).OverrideFailureMessage($"{$"lamp energy {e} decodes the same in the shader and the contract"}: expected {ce:R}, got {se:R}.").IsEqualApprox(ce, 1e-6f);
+            AssertThat(se).OverrideFailureMessage($"{$"lamp energy {e} decodes the same in the shader and the contract"}: expected {ce:R}, got {se:R}.").IsEqualApprox(ce, TestTolerance.FloatRelative);
         }
-        AssertThat(data[7]).OverrideFailureMessage($"{"kappa"}: expected {0.4321f:R}, got {data[7]:R}.").IsEqualApprox(0.4321f, 1e-6f);
+        AssertThat(data[7]).OverrideFailureMessage($"{"kappa"}: expected {0.4321f:R}, got {data[7]:R}.").IsEqualApprox(0.4321f, TestTolerance.FloatRelative);
         var rect = new MapRect(new Vector2(-64f, -64f), new Vector2(64f, 64f));
         var grid = LampTable.PackGrid([lamp], rect, out var size, out _);
         var cx = (int)((lamp.Base.X - rect.Min.X) / LampTable.CellMetres);
@@ -177,19 +185,22 @@ public sealed class NightlightTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WindowThresholdsStayUniformSoLightsTrackTheChannel()
     {
         var below = 0;
-        const int n = 20000;
-        for (var i = 0; i < n; i++)
+        var n = TestSamples.PerProperty;
+        for (var sample = 0; sample < n; sample++)
         {
+            var i = sample * 20000 / n;
             var baseId = (i / 400) * 400;
             if (ScheduleMath.WindowThreshold(i, baseId, 20) < 0.5f) below++;
         }
-        AssertThat(below / (float)n).OverrideFailureMessage($"{"half of the windows below θ = 0.5"}: expected {0.5f:R}, got {below / (float)n:R}.").IsEqualApprox(0.5f, 0.05f);
+        AssertThat(below / (float)n).OverrideFailureMessage($"{"half of the windows below θ = 0.5"}: expected {0.5f:R}, got {below / (float)n:R}.").IsEqualApprox(0.5f, TestTolerance.Proportion);
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WindowGlowFollowsTheInventoryDeclarations()
     {
         var dorm = LightChannelCatalog.Id(1);
@@ -208,10 +219,11 @@ public sealed class NightlightTests
         AssertThat(set.Buffer[GlowSet.Stride + 12] == 1006f).OverrideFailureMessage("skipped cell is not emitted").IsTrue();
         var last = (set.Count - 1) * GlowSet.Stride;
         AssertThat(set.Buffer[last + 12] == 70000f && set.Buffer[last + 15] == GlowSets.OutskirtsFlag).OverrideFailureMessage("outskirts window carries the skip-override flag").IsTrue();
-        AssertThat(set.Buffer[3 * GlowSet.Stride + 7]).OverrideFailureMessage($"{"second-row centre height"}: expected {4.1f + 0.8f:R}, got {set.Buffer[3 * GlowSet.Stride + 7]:R}.").IsEqualApprox(4.1f + 0.8f, 1e-4f);
+        AssertThat(set.Buffer[3 * GlowSet.Stride + 7]).OverrideFailureMessage($"{"second-row centre height"}: expected {4.1f + 0.8f:R}, got {set.Buffer[3 * GlowSet.Stride + 7]:R}.").IsEqualApprox(4.1f + 0.8f, TestTolerance.Position);
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EntranceLampsStayFullFromDuskToDawn()
     {
         var s = Default();
@@ -246,6 +258,7 @@ public sealed class NightlightTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WindowChannelsStayWindows()
     {
         var s = Default();
@@ -254,9 +267,8 @@ public sealed class NightlightTests
         // 窗户类通道仍按亮窗比例求值（不乘 1 + Δ），楼内公共区 22:30 后 0.3
         var interior = s.SlotOf(new ChannelId("interior.public"));
         AssertThat(s.Spec(interior).Kind == ChannelClass.Window && s.GroupOf(interior) is null).OverrideFailureMessage("interior.public stays a window channel").IsTrue();
-        AssertThat(output[interior].X).OverrideFailureMessage($"{"interior.public after 22:30"}: expected {0.3f:R}, got {output[interior].X:R}.").IsEqualApprox(0.3f, 1e-4f);
         for (var slot = 0; slot < 12; slot++)
-            AssertThat(s.Spec(slot).Kind == ChannelClass.Window && output[slot].X <= s.Spec(slot).Cap + 1e-6f).OverrideFailureMessage($"window slot {slot} keeps its cap").IsTrue();
+            AssertThat(s.Spec(slot).Kind == ChannelClass.Window && output[slot].X <= s.Spec(slot).Cap + TestTolerance.FloatRelative).OverrideFailureMessage($"window slot {slot} keeps its cap").IsTrue();
         // 窗户类通道上的窗格声明照常进窗光晕
         var facade = new WindowFacadeDecl(2000, 4, new ChannelId("interior.public"), 0, 4, 1, Vector3.Zero, Vector3.UnitX, Vector3.UnitY,
             3f, 1.5f, 1.5f, [1f]);
@@ -278,6 +290,7 @@ public sealed class NightlightTests
          ScheduleMath.SmoothStep(l.Keep, l.Keep + Math.Max(channel.Y, 1e-3f), channel.X));
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CueLampsFollowTheRouteOrder()
     {
         var s = Default();

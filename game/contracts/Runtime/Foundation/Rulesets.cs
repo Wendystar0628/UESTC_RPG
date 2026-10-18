@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json.Serialization;
 using Campus.Contracts.AppFlow;
 
 namespace Campus.Contracts;
@@ -8,6 +9,7 @@ public enum InteractionRule : byte { None }
 public sealed record RulesetDescriptor(
     RulesetId Id,
     IReadOnlyList<ViewMode> ViewModes,
+    [property: JsonRequired] ViewMode DefaultViewMode,
     WorldControlMask WorldControls,
     string UnlockPolicy,
     IReadOnlyList<string> Incidents,

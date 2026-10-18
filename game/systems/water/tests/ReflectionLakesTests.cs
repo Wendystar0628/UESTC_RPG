@@ -19,6 +19,7 @@ public sealed class ReflectionLakesTests
         ReflectionLakes.FromBodies([Lake("west", 0, -300f, -100f, -100f, 100f), Lake("east", 1, 100f, -100f, 300f, 100f)], 48);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     public void LargestLakeOnScreenWinsAndSwitchesOnlyPastHysteresis()
     {
@@ -31,12 +32,13 @@ public sealed class ReflectionLakesTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     public void HiddenLakesDoNotCount()
     {
         var lakes = TwoLakes();
         bool EastOnly(Vector3 p) => p.X > 0f;
         if (lakes.Select(new(-200f, 10f, 0f), EastOnly) != 1) throw new InvalidOperationException("a lake out of view must not win");
-        if (Math.Abs(lakes.WaterY(1) + 0.3f) > 1e-6f) throw new InvalidOperationException("water level lost");
+        if (Math.Abs(lakes.WaterY(1) + 0.3f) > TestTolerance.Position) throw new InvalidOperationException("water level lost");
     }
 }

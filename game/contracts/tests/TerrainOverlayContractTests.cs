@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,6 +12,7 @@ namespace Campus.Contracts.Tests;
 public sealed class TerrainOverlayContractTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AllNineOperationsRoundTripWithCanonicalDefaultsAndMetadataFirst()
     {
         var parsed = TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(Fixture));
@@ -43,6 +45,7 @@ public sealed class TerrainOverlayContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExplicitPriorityAndPolylineSlopeRemainAuthoredInputs()
     {
         var root = JsonNode.Parse(Fixture)!.AsObject();
@@ -66,6 +69,7 @@ public sealed class TerrainOverlayContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UnknownOrIncompleteContractsFailRatherThanCreatePlausibleTerrain()
     {
         List<(Action<JsonObject> Mutate, bool Dry)> candidates =

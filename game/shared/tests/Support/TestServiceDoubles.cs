@@ -6,12 +6,12 @@ namespace Campus.Tests;
 
 /// <summary>Shared IRuleset fake. Defaults: Fly and Walk, no cinematic states.</summary>
 internal sealed class TestRuleset(string policy = "all-unlocked", IReadOnlyList<ViewMode>? viewModes = null,
-    IReadOnlyList<AppState>? cinematicStates = null, string id = "test") : IRuleset
+    IReadOnlyList<AppState>? cinematicStates = null, string id = "test", ViewMode defaultViewMode = ViewMode.Fly) : IRuleset
 {
     /// <summary>The ruleset the entry flow and cinematic tests run under: Fly only, Title/Entering/Leaving cinematics.</summary>
     public static TestRuleset ForFlow() => new("none", [ViewMode.Fly], [AppState.Title, AppState.Entering, AppState.Leaving]);
     public RulesetDescriptor Current { get; } = new(new(id), viewModes ?? [ViewMode.Fly, ViewMode.Walk],
-        WorldControlMask.All, policy, [], cinematicStates ?? []);
+        defaultViewMode, WorldControlMask.All, policy, [], cinematicStates ?? []);
     public long Rev => 1;
 }
 

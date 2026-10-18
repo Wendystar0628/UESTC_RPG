@@ -16,6 +16,7 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class BakeInputTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CellInputsIgnoreExplanationsAndDistantObjectsButKeepDisplayedText()
     {
         var world = new FakeWorld { Boundary = new([]) };
@@ -47,6 +48,7 @@ public sealed class BakeInputTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SpeciesChangesOnlyItsConsumersAndWindowFingerprintIsNotACellDependency()
     {
         var world = new FakeWorld { Boundary = new([]) };
@@ -65,6 +67,7 @@ public sealed class BakeInputTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InputReaderBorrowsTheFrozenLoadingVersion()
     {
         var raw = Encoding.UTF8.GetBytes("old-campus");
@@ -81,6 +84,7 @@ public sealed class BakeInputTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WindowContextForwardsTheFrozenResourcesAndCapabilities()
     {
         var original = Context(new FakeWorld { Boundary = new([]) });

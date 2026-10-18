@@ -13,6 +13,7 @@ namespace Campus.Tests;
 public sealed class MapInputSnapshotTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     public void ProductionAndDiskCaptureAgreeWhenOptionalMapResourcesAreAbsent()
     {
@@ -25,6 +26,7 @@ public sealed class MapInputSnapshotTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ConstructionFreezesBothCallerDictionaryAndRawArrays()
     {
         var raw = new byte[] { 1, 2, 3 };
@@ -38,6 +40,7 @@ public sealed class MapInputSnapshotTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ReplacementFilesFreezeANewInputVersion()
     {
         var original = new MapLoadInput(Entry(), Files(1));
@@ -52,6 +55,7 @@ public sealed class MapInputSnapshotTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OldAndNewContextsRetainTheirOwnParsedInputVersionWithoutRefreezing()
     {
         var entry = Entry();

@@ -16,6 +16,7 @@ namespace Campus.Tests;
 public sealed class CinematicSpawnFlowTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CinematicCatalogueReadsTheFrozenMapVersionWithoutResourceFiles()
     {
         var source = Maps(out _, out _).Context!;
@@ -33,6 +34,7 @@ public sealed class CinematicSpawnFlowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task TitleAndNewGameResolveDefaultWaypointWithNoInlineSpawns()
     {
         var rig = new FlowTestRig(); var maps = Maps(out var entry, out var requests);
@@ -58,6 +60,7 @@ public sealed class CinematicSpawnFlowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NamedCinematicAnchorUsesCataloguePrecedenceAndRejectsUnknownIds()
     {
         var authored = new Pose(new(12, 18, -25), 45, -10, 65);
@@ -72,24 +75,30 @@ public sealed class CinematicSpawnFlowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task PendingResumeArrivesOnceUnderCoverAndRestoresSavedFlowAtHandoff() => await ResumeCase(pending: true);
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task LiveResumeArrivesOnceWithoutReloadingOrChangingInstance() => await ResumeCase(pending: false);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task LiveResumeRetainsItsCoveredWorldBeyondTheOrdinaryArrivalLimit() =>
         await ResumeCase(pending: false, delayDestination: true);
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task LiveResumeStillFailsOnARuntimeErrorAfterTheOrdinaryArrivalLimit() =>
         await ResumeCase(pending: false, delayDestination: true, failDestination: true);
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task QuitDuringDelayedLiveResumeWaitsForItsReadyEndpointBeforeExiting() =>
         await ResumeCase(pending: false, delayDestination: true, quitDuringWait: true);
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public async Task ClearingDelayedLiveResumeCancelsItsWaitAndAllowsEntryFailureToClearAgain() =>
         await ResumeCase(pending: false, delayDestination: true, clearDuringWait: true);
 

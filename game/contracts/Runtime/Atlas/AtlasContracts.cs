@@ -24,6 +24,8 @@ public interface IAtlasService                                    // Kernel 服�
     long Rev { get; }
     MapId Map { get; }
     MapRect PageRect { get; } // Atlas page extent from authored data; unavailable until the map is loaded.
+    float ZoomMin { get; } // Authored pixels per metre in markers.json; requires a loaded map.
+    float ZoomMax { get; }
     IReadOnlyList<AtlasMarker> Markers { get; }                   // 含运行时由室内索引生成的门口标记与自定义标记
     IReadOnlyList<AtlasRegion> Regions { get; }
     event Action? Changed;                                        // 主线程；换图、标记增删、解锁或追踪变化时发

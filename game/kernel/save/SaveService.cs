@@ -319,7 +319,7 @@ public sealed class SaveService : ISaveService, IDisposable
                 var fallback = _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
                 fallbackSpawn = fallback.DefaultSpawn;
                 repairs.Add("Missing map replaced with the default map: " + meta.Map.Value);
-                meta = meta with { Map = fallback.Id, Mode = _runtime.Ruleset.Current.ViewModes[0], Space = null };
+                meta = meta with { Map = fallback.Id, Mode = _runtime.Ruleset.Current.DefaultViewMode, Space = null };
                 prepared = prepared with
                 {
                     Document = prepared.Document with { Meta = meta },
@@ -373,7 +373,8 @@ public sealed class SaveService : ISaveService, IDisposable
             { repairs.Add("Removed section for missing map: " + item.Key); continue; }
             map ??= _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
             var dto = item.Dto ?? item.Registration.Section.CreateDefault(defaults ??
-                new(_runtime.World.WeatherSeed, item.Map, map.World.NewGameStart ?? map.World.Default));
+                new(_runtime.World.WeatherSeed, item.Map, map.World.NewGameStart ?? map.World.Default,
+                    _runtime.Ruleset.Current.DefaultViewMode));
             item.Registration.Section.Restore(dto, context);
             repairs.AddRange(context.Repairs);
         }
@@ -418,15 +419,17 @@ public sealed class SaveService : ISaveService, IDisposable
                 _restoreMutationStarted = true;
                 _runtime.SelectRuleset(_defaultRuleset);
                 var map = _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
-                var context = new NewGameContext(seed ?? _options.WeatherSeed ?? NewSeed(), map.Id, start ?? map.World.NewGameStart ?? map.World.Default);
+                var context = new NewGameContext(seed ?? _options.WeatherSeed ?? NewSeed(), map.Id,
+                    start ?? map.World.NewGameStart ?? map.World.Default, _runtime.Ruleset.Current.DefaultViewMode);
                 defaults = context;
                 var entries = _sections.Registered.Select(r => new PreparedSection(SaveSections.Key(r.Attribute, map.Id), r,
                     map.Id, r.Attribute.Phase == RestorePhase.World ? r.Section.CreateDefault(context) : null,
                     r.Attribute.Version, null)).ToArray();
                 var generation = checked(_slots[slot].MaxGeneration + 1);
                 var meta = new SaveMeta(1, _options.Build, slot, SlotKind.Auto, generation, generation, 0, map.Id,
-                    context.Start.Clock, context.Start.Clock, context.Start.Season, context.Start.Weather ?? WeatherKind.Clear,
-                    _runtime.Ruleset.Current.ViewModes[0], default, null, null, null, _runtime.UnixTime(), SaveReason.NewGame,
+                    context.Start.Clock, context.Start.Clock, context.Start.Season,
+                    context.Start.Weather ?? map.World.Default.Weather ?? throw new InvalidDataException("The map has no default weather."),
+                    context.Mode, default, null, null, null, _runtime.UnixTime(), SaveReason.NewGame,
                     _runtime.Ruleset.Current.Id.Value);
                 var save = new PreparedSave(new(meta, new Dictionary<string, RawSaveSection>(), null), entries);
                 RestorePhaseOf(save, RestorePhase.World, []); _runtime.WorldRestore.CompleteRestore();
@@ -534,7 +537,8 @@ public sealed class SaveService : ISaveService, IDisposable
         var map = _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
         foreach (var section in _sections.Registered)
         {
-            var dto = section.Section.CreateDefault(new(1, map.Id, map.World.NewGameStart ?? map.World.Default));
+            var dto = section.Section.CreateDefault(new(1, map.Id, map.World.NewGameStart ?? map.World.Default,
+                _runtime.Ruleset.Current.DefaultViewMode));
             JsonSerializer.SerializeToUtf8Bytes(dto, section.Section.TypeInfo);
         }
     }

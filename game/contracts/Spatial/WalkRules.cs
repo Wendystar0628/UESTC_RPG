@@ -1,6 +1,6 @@
 namespace Campus.Contracts;
 
-/// <summary>Shared walking dimensions and collision rules, in metres unless named otherwise.</summary>
+/// <summary>Shared walking dimensions, speed steps and collision rules.</summary>
 public static class WalkRules
 {
     public const float Radius = .3f;
@@ -17,4 +17,17 @@ public static class WalkRules
     public const float MinimumDoorHeight = 2f;
     public const float UnknownEntranceCollisionHeight = 3.2f;
     public const float OutdoorFlightMaxRise = 1.5f;
+    public const float WalkSpeed = 3.6f;
+    public const int DefaultSpeedStep = 2;
+    public const int SpeedStepCount = 5;
+
+    public static float SpeedMultiplier(int step) => step switch
+    {
+        0 => .5f,
+        1 => .7f,
+        2 => 1f,
+        3 => 1.4f,
+        4 => 2f,
+        _ => throw new ArgumentOutOfRangeException(nameof(step))
+    };
 }

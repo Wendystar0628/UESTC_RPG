@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
@@ -15,6 +16,7 @@ namespace Campus.Style.Palette.Tests;
 public sealed class PaletteCatalogLoaderTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RegisteredExtensionsJoinTheBaseBank()
     {
         var (legacy, files) = Load();
@@ -35,6 +37,7 @@ public sealed class PaletteCatalogLoaderTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InvalidExtensionsAreRefused()
     {
         var (legacy, _) = Load();

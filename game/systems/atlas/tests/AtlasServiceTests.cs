@@ -21,6 +21,7 @@ namespace Campus.Tests;
 public sealed class AtlasServiceTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SaveRoundTripRepairsBadReferencesAndPreservesMonotoneIds()
     {
         // Reproduce the integration order: another consumer has already frozen the shared options.
@@ -51,6 +52,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ProximityReadsObserverAndRevealsOnlyTheVisitedDistrict()
     {
         var test = new Fixture("proximity");
@@ -72,7 +74,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
-    [TestCategory("Contract")]
+    [TestCategory(TestReason.Contract)]
     public void TravelPassesPreferenceAndRetainsInput()
     {
         var test = new Fixture();
@@ -105,6 +107,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WalkingTravelToFlyOnlyMarkerSwitchesToFlyFirst()
     {
         var test = new Fixture();
@@ -118,6 +121,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UnreadyTransitDriverCannotPretendToArrive()
     {
         var test = new Fixture();
@@ -132,6 +136,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DisplayMetadataUsesLoadedWaypointsAndPreservesMarkerNamesAndMissingValues()
     {
         var test = new Fixture();
@@ -174,6 +179,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MapUnloadDropsMarkersRegionsAndSaveState()
     {
         var test = new Fixture();
@@ -187,6 +193,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ForcedCaptureUsesTransitDestinationWithoutCommittingCancelledVisit()
     {
         var test = new Fixture();
@@ -202,6 +209,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OpenInteriorIndexGeneratesDoorAtCenterWithOutsideLanding()
     {
         var test = new Fixture();
@@ -219,6 +227,7 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Regression)]
     public void RealCampusAndInteriorAssemblyProduceUniqueAtlasDoorMarkers()
     {
         var files = RealMapFixture.ReadFiles();

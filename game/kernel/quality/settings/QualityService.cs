@@ -49,7 +49,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
     private readonly QualityState _state;
     private readonly IGraphicsSettingsStore _store;
     private Binding? _binding;
-    private QualityProfile _durableProfile = QualityCatalog.Profile(QualityPreset.Fine);
+    private QualityProfile _durableProfile;
     private bool _initialized;
     private bool _initializing;
     private Request? _pending;
@@ -67,6 +67,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
     internal QualityService(QualityCatalog catalog, IGraphicsSettingsStore store)
     {
         _catalog = catalog;
+        _durableProfile = catalog.DefaultProfile;
         _state = new(_catalog);
         _store = store;
     }
@@ -131,8 +132,8 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
             _catalog.OutputWidth = Math.Max(1, size.X);
             _catalog.OutputHeight = Math.Max(1, size.Y);
             _state.RefreshRate = runtime.RefreshRate;
-            // settings.json > default (Fine); captures never read user://. The command line is applied after this.
-            var profile = (CaptureMode ? null : _store.Read()) ?? QualityCatalog.Profile(QualityPreset.Fine);
+            // settings.json > catalog default; captures never read user://. The command line is applied after this.
+            var profile = (CaptureMode ? null : _store.Read()) ?? _catalog.DefaultProfile;
             _durableProfile = QualityCatalog.Freeze(profile);
             await runtime.NextFrame(cancellationToken).WaitAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();

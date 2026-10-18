@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Campus.Contracts;
@@ -17,6 +18,7 @@ public sealed class WeatherProcessTests
         RepositoryFixture.FilePath("game", "data", "weather", "chengdu", "profile.json")));
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void SameSeedMapAndTimeGiveTheSameWeatherInAnyCallOrder()
     {
         var profile = Profile;
@@ -30,6 +32,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MapIdentifierSeparatesCounterStreams()
     {
         var source = new Source(Profile);
@@ -41,6 +44,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void GeneratedWeatherRespectsTwilightMinimumsAndPrecipitationLimits()
     {
         var profile = Profile;
@@ -52,7 +56,7 @@ public sealed class WeatherProcessTests
                 AssertThat(WeatherRules.IsNative(span.Kind, season)).OverrideFailureMessage("Non-native weather generated.").IsTrue();
                 AssertThat(!WeatherRules.IsProtected(span.FromHours, 0, season)).OverrideFailureMessage("Automatic start enters a twilight band.").IsTrue();
                 AssertThat(!WeatherRules.IsProtected(span.ToHours, 0, season)).OverrideFailureMessage("Automatic end enters a twilight band.").IsTrue();
-                AssertThat(span.ToHours - span.FromHours + 1e-9 >= WeatherRules.MinimumHours(span.Kind)).OverrideFailureMessage("Phase too short.").IsTrue();
+                AssertThat(span.ToHours - span.FromHours + TestTolerance.WorldHours >= WeatherRules.MinimumHours(span.Kind)).OverrideFailureMessage("Phase too short.").IsTrue();
                 if (span.Kind == WeatherKind.Fog)
                 {
                     AssertThat(WeatherRules.IsNight(span.FromHours, 0, season)).OverrideFailureMessage("Fog starts during daylight.").IsTrue();
@@ -66,22 +70,23 @@ public sealed class WeatherProcessTests
                 .GroupBy(s => Math.Floor((s.FromHours - profile.DayBoundaryClock) / 24)))
             {
                 var rain = day.ToArray();
-                for (int i = 1; i < rain.Length; i++) AssertThat(rain[i].FromHours - rain[i - 1].ToHours >= 8 - 1e-9).OverrideFailureMessage("Precipitation refractory gap violated.").IsTrue();
-                AssertThat(rain.Sum(s => s.ToHours - s.FromHours) <= 12 + 1e-9).OverrideFailureMessage("Daily precipitation exceeds 12 hours.").IsTrue();
+                for (int i = 1; i < rain.Length; i++) AssertThat(rain[i].FromHours - rain[i - 1].ToHours >= 8 - TestTolerance.WorldHours).OverrideFailureMessage("Precipitation refractory gap violated.").IsTrue();
+                AssertThat(rain.Sum(s => s.ToHours - s.FromHours) <= 12 + TestTolerance.WorldHours).OverrideFailureMessage("Daily precipitation exceeds 12 hours.").IsTrue();
             }
         }
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NewGameSeedsRemainClearAtHandoff()
     {
         var source = new Source(Profile);
         var maps = TestMaps();
-        for (uint seed = 0; seed < 500; seed++)
+        for (uint seed = 0; seed < (uint)TestSamples.WeatherSeeds; seed++)
         {
             var p = new WeatherProcess(source);
             var section = new WeatherSection(p, maps, source);
-            var dto = section.CreateDefault(new NewGameContext(seed, Map, new(17 + 5 / 60.0, Season.Autumn, WeatherKind.Clear)));
+            var dto = section.CreateDefault(new NewGameContext(seed, Map, new(17 + 5 / 60.0, Season.Autumn, WeatherKind.Clear), ViewMode.Walk));
             if (seed == 0)
             {
                 string json = JsonSerializer.Serialize(dto, section.TypeInfo);
@@ -96,6 +101,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void SaveRoundTripContinuesIdentically()
     {
         var profile = Profile;
@@ -125,6 +131,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ManualWetnessDrainsAfterReturningToAuto()
     {
         var p = Create(5, Season.Autumn, Profile);
@@ -139,6 +146,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ManualCaptureAndSeasonReplacementAreSettled()
     {
         var profile = Profile;
@@ -156,6 +164,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PinAndFastForwardCaptureUseTheLandingTime()
     {
         var p = Create(15, Season.Autumn, Profile);
@@ -170,6 +179,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PauseFreezesNaturalWeatherAndBootRejectsInvalidInput()
     {
         var p = Create(1, Season.Autumn, Profile);
@@ -184,6 +194,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void CaptureAtIsPureAndProjectsTheSaveMoment()
     {
         var profile = Profile;
@@ -212,6 +223,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void QuietWindowAndBootWetSurviveTheFirstStepAndKeepTheBlend()
     {
         var process = new WeatherProcess(new Source(Profile));
@@ -231,6 +243,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PinBeforeTheFirstStepBindsToTheSeasonAndBlendsInThreeSeconds()
     {
         var process = new WeatherProcess(new Source(Profile));
@@ -254,6 +267,7 @@ public sealed class WeatherProcessTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExplicitBootWeatherKeepsEveryParameter()
     {
         var profile = Profile;
@@ -302,7 +316,18 @@ public sealed class WeatherProcessTests
     private static WeatherTick Tick(double hours, Season season = Season.Autumn) => new(hours, hours, 0, season, 10, 60, 3);
     private static void Equal(WeatherProcess a, WeatherProcess b)
     {
-        AssertThat(a.Selection == b.Selection && a.Now == b.Now && a.Ahead.SequenceEqual(b.Ahead)).OverrideFailureMessage("Live weather or forecast differs bitwise.").IsTrue();
+        var nowA = a.Now;
+        var nowB = b.Now;
+        var liveEqual = a.Selection.Mode == b.Selection.Mode && a.Selection.Kind == b.Selection.Kind
+            && BitConverter.SingleToInt32Bits(a.Selection.Intensity) == BitConverter.SingleToInt32Bits(b.Selection.Intensity)
+            && MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref nowA, 1))
+                .SequenceEqual(MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref nowB, 1)));
+        var forecastEqual = a.Ahead.Count == b.Ahead.Count && a.Ahead.Zip(b.Ahead).All(pair =>
+            BitConverter.DoubleToInt64Bits(pair.First.FromHours) == BitConverter.DoubleToInt64Bits(pair.Second.FromHours)
+            && BitConverter.DoubleToInt64Bits(pair.First.ToHours) == BitConverter.DoubleToInt64Bits(pair.Second.ToHours)
+            && pair.First.Kind == pair.Second.Kind
+            && BitConverter.SingleToInt32Bits(pair.First.Intensity) == BitConverter.SingleToInt32Bits(pair.Second.Intensity));
+        AssertThat(liveEqual && forecastEqual).OverrideFailureMessage("Live weather or forecast differs bitwise.").IsTrue();
         AssertThat(SnapshotJson(a.Capture()) == SnapshotJson(b.Capture())).OverrideFailureMessage("Captured weather state differs.").IsTrue();
     }
     private static string SnapshotJson(WeatherProcessState state) => JsonSerializer.Serialize(state, TestJson.Contract.WeatherProcessState);

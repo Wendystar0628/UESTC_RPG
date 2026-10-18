@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Buffers.Binary;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -12,6 +13,7 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class BakeSurfaceTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void TileHeightQuantizationUsesSharedGeometryRangeThroughCacheDecode()
     {
         var catalog = Palette();
@@ -48,7 +50,7 @@ public sealed class BakeSurfaceTests
                     {
                         var encoded = BinaryPrimitives.ReadUInt16LittleEndian(surface.VertexData.Span[(vertex * 8 + 2)..]);
                         var decoded = surface.Bounds.Min.Y + encoded / 65535f * surface.Bounds.Size.Y;
-                        if (Math.Abs(decoded - source.Position[vertex * 3 + 1]) > .0001f || (planar && decoded != 0))
+                        if (Math.Abs(decoded - source.Position[vertex * 3 + 1]) > TestTolerance.Position || (planar && decoded != 0))
                             throw new InvalidOperationException("Packed tile height exceeded the geometry-range quantization error or moved a flat road.");
                     }
                 }
@@ -61,6 +63,7 @@ public sealed class BakeSurfaceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AbsentOptionalChannelsStayAbsentAndEmptyArraysRemainInvalid()
     {
         var absent = Geometry() with
@@ -103,6 +106,7 @@ public sealed class BakeSurfaceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PlacedTintOverridesExplicitColorIndicesWithoutChangingOtherVertexBytes()
     {
         var palette = new PaletteCatalog(new PaletteRegistry(new PaletteEntry[]
@@ -154,6 +158,7 @@ public sealed class BakeSurfaceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void Uv2AndSurfaceMetadataSurviveExactByteRoundTrip()
     {
         // 2^24 probes fp32 storage precision; it is not a valid campus-window allocation bound.
@@ -176,6 +181,7 @@ public sealed class BakeSurfaceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void StaticPatternBatchAndCodecRetainProfilesMetresAndGateBoundaries()
     {
         var pattern = new SurfacePatternSpec(1, new(.6f, .75f), new(.006f, .012f));
@@ -222,6 +228,7 @@ public sealed class BakeSurfaceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     [TestCategory("NativeRender")]
     public void NativeSurfaceDecoderPreservesUv2AndNormalDirections()
@@ -255,6 +262,7 @@ public sealed class BakeSurfaceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CompressedBaseAndCustomStridesAreExplicitAndDeterministic()
     {
         var input = Geometry();

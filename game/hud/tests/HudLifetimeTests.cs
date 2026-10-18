@@ -23,7 +23,7 @@ namespace Campus.Tests;
 public sealed class HudLifetimeTests
 {
     [TestCase]
-    [TestCategory("Regression")]
+    [TestCategory(TestReason.Regression)]
     [RequireGodotRuntime]
     public void ThemeClockStopsObservingSettingsUntilItReenters()
     {
@@ -56,7 +56,7 @@ public sealed class HudLifetimeTests
     }
 
     [TestCase]
-    [TestCategory("Regression")]
+    [TestCategory(TestReason.Regression)]
     [RequireGodotRuntime]
     public async Task HudRootReentryRebuildsResidentsAndOwnsOnlyItsInputLayers()
     {

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System;
 using System.Text;
 using GdUnit4;
@@ -9,6 +10,7 @@ namespace Campus.Contracts.Tests;
 public sealed class HashRngTests
 {
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void HashProtocolHasFixedGoldenValues()
     {
         // Independently calculated from the documented little-endian byte protocol.
@@ -22,6 +24,7 @@ public sealed class HashRngTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void HashUsesExactUnicodeWithoutImplicitNormalization()
     {
         AssertThat(StableHash.Hash32(42u, "e\u0301")).IsEqual(0xBDE2FFE0u);
@@ -33,6 +36,7 @@ public sealed class HashRngTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void FloatStreamsHaveFixedGoldenBits()
     {
         AssertFloatStream(0u, [0x3EC8C4A0, 0x3F59C079, 0x3F2F362E, 0x3EFF5112, 0x3F44671B, 0x3F71D2EE, 0x3F067A40, 0x3F237724]);
@@ -41,6 +45,7 @@ public sealed class HashRngTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void IntegerStreamsIncludeRejectionSamplingGoldenValues()
     {
         AssertIntegerStream(0u, 10, [8, 6, 6, 0, 3, 2, 1, 5]);
@@ -50,6 +55,7 @@ public sealed class HashRngTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void RangesAndStateCopyAreStable()
     {
         Rng zero = default;
@@ -68,7 +74,7 @@ public sealed class HashRngTests
         Rng rng = new(0xE13579BDu);
         foreach (int bound in new[] { 1, 2, 3, 10, 127, 1073741825, int.MaxValue })
         {
-            for (int i = 0; i < 4096; i++)
+            for (int i = 0; i < TestSamples.PerProperty; i++)
             {
                 int integer = rng.NextInt(bound);
                 float fraction = rng.NextFloat();
@@ -79,6 +85,7 @@ public sealed class HashRngTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void InvalidBoundsDoNotAdvanceTheStream()
     {
         Rng rng = new(123u);

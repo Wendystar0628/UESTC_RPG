@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,25 +12,30 @@ namespace Campus.Contracts.Tests;
 public sealed class TerrainBankSpanTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SnapshotOwnsShoreAndProvenanceWithoutChangingWaterLeftOrder()
     {
         var waters = new List<FeatureId> { new("water:b"), new("water:a"), new("water:b") };
         var roads = new List<FeatureId> { new("road:b"), new("road:a") };
         var bridges = new List<FeatureId> { new("bridge:a") };
+        var expectedWaters = waters.Distinct().OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
+        var expectedRoads = roads.OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
+        var expectedBridges = bridges.ToArray();
         // This cut crosses a source ring's seam without closing the exported interval.
         var points = new List<Vector2> { new(0, 1), new(0, 0), new(4, 0) };
         var span = new TerrainBankSpan("bank:a", waters, roads, bridges, new(points), 1, 4, 1, TerrainBankKind.Hard);
         waters.Clear(); roads[0] = new("road:replacement"); bridges.Clear(); points[0] = new(99, 99); points.Clear();
 
-        AssertThat(span.Waters.SequenceEqual(new FeatureId[] { new("water:a"), new("water:b") }) &&
-            span.Roads.SequenceEqual(new FeatureId[] { new("road:a"), new("road:b") }) &&
-            span.Bridges.SequenceEqual(new FeatureId[] { new("bridge:a") })).OverrideFailureMessage("Provenance must be a frozen ordinal set, including all roads.").IsTrue();
+        AssertThat(span.Waters.SequenceEqual(expectedWaters) &&
+            span.Roads.SequenceEqual(expectedRoads) &&
+            span.Bridges.SequenceEqual(expectedBridges)).OverrideFailureMessage("Provenance must be a frozen ordinal set, including all roads.").IsTrue();
         AssertThat(span.Shore.Points.SequenceEqual(new Vector2[] { new(0, 1), new(0, 0), new(4, 0) }) && span.Length == 5).OverrideFailureMessage("Publishing a shore must preserve its supplied water-left direction and seam-crossing point order.").IsTrue();
         AssertThrown(() => ((IList<Vector2>)span.Shore.Points)[0] = Vector2.One).IsInstanceOf<NotSupportedException>();
         AssertThrown(() => ((IList<FeatureId>)span.Roads)[0] = new("road:replacement")).IsInstanceOf<NotSupportedException>();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LengthAccumulatesFinalFloatPointsInDouble()
     {
         // Every coordinate is representable as float; float accumulation would round 30,000,003 to 30,000,004.
@@ -40,6 +46,7 @@ public sealed class TerrainBankSpanTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CoreTransitionsAndWholeHardRingHaveExplicitBoundaries()
     {
         var open = Open();
@@ -62,6 +69,7 @@ public sealed class TerrainBankSpanTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InvalidIdentityKindAndShoreAreRejectedAtPublication()
     {
         foreach (var id in new[] { "", " ", " bank:a", "bank:a ", "bank:\0a" })

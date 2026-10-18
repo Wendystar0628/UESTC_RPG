@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using Campus.Contracts.Parts;
 using GdUnit4;
@@ -9,6 +10,7 @@ namespace Campus.Contracts.Tests;
 public sealed class PartLodCatalogTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExistingGenericDefinitionsExposeSortedReadOnlyCapabilitiesWithoutNewMembers()
     {
         var legacy = new LegacyPart(LodLevel.L4, LodLevel.L0, LodLevel.L2);
@@ -26,6 +28,7 @@ public sealed class PartLodCatalogTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CatalogRejectsUnknownIdsDuplicatesAndInvalidDefinitions()
     {
         var valid = new LegacyPart(LodLevel.L0);
@@ -48,6 +51,7 @@ public sealed class PartLodCatalogTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CatalogCapturesOnceAndIsIndependentOfInputOrderAndLaterMutation()
     {
         var legacy = new LegacyPart(LodLevel.L2, LodLevel.L0);

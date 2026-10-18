@@ -65,7 +65,7 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     }
 
     public long Rev { get; private set; }
-    public MapId Default => _catalog?.Default ?? default;
+    public MapId Default => (_catalog ?? throw new InvalidOperationException("Map catalogue is not initialized.")).Default;
     public IReadOnlyList<MapDescriptor> Maps => _catalog?.Maps ?? [];
     public MapId Current { get; private set; }
     public IMapContext? Context { get; private set; }
@@ -405,8 +405,16 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     public MapsSave CreateDefault(NewGameContext context)
     {
         if (_catalog is null || !_catalog.TryGet(context.Map, out var map)) throw new InvalidDataException("Unknown new-game map.");
-        var pose = map.ResolveSpawn(map.Descriptor.DefaultSpawn).Fly;
-        return new(context.Map, Array.AsReadOnly(new[] { new MapVisit(context.Map, pose, ViewMode.Fly) }));
+        var spawn = map.ResolveSpawn(map.Descriptor.DefaultSpawn);
+        var pose = context.Mode switch
+        {
+            ViewMode.Fly => spawn.Fly,
+            ViewMode.Walk when spawn.Stand is { } stand =>
+                new Pose(stand.Feet + Vector3.UnitY * WalkRules.StandingEye, stand.YawDeg, 0),
+            ViewMode.Walk => throw new InvalidDataException("The default walking spawn has no stand."),
+            _ => throw new InvalidDataException("Invalid default observer mode."),
+        };
+        return new(context.Map, Array.AsReadOnly(new[] { new MapVisit(context.Map, pose, context.Mode) }));
     }
 
     private static void ValidateMode(ViewMode mode)

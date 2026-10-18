@@ -24,6 +24,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     private IMapContext? _context;
     private IUnlockPolicy _policy = AtlasPolicies.Create(ruleset.Current.UnlockPolicy);
     private MapRect? _atlasRect;
+    private float? _zoomMin, _zoomMax;
     private Func<float, float, string?>? _regionAt;
     private IMapService? _maps;
     private IAppFlow? _flow;
@@ -39,6 +40,8 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     public long Rev { get; private set; }
     public MapId Map { get; private set; }
     public MapRect PageRect => _atlasRect ?? throw new InvalidOperationException("Atlas has no active map.");
+    public float ZoomMin => _zoomMin ?? throw new InvalidOperationException("Atlas has no active map.");
+    public float ZoomMax => _zoomMax ?? throw new InvalidOperationException("Atlas has no active map.");
     public IReadOnlyList<AtlasMarker> Markers { get; private set; } = [];
     public IReadOnlyList<AtlasRegion> Regions { get; private set; } = [];
     public event Action? Changed;
@@ -135,7 +138,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         if (regions.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != regions.Length)
             throw new JsonException("Atlas region and place IDs must be unique.");
         ReleaseTransit();
-        _context = context; Map = context.Descriptor.Id; _atlasRect = file.AtlasRect; _regionAt = null;
+        _context = context; Map = context.Descriptor.Id; _atlasRect = file.AtlasRect; _zoomMin = file.ZoomMin; _zoomMax = file.ZoomMax; _regionAt = null;
         _baseMarkers = Array.AsReadOnly(visible); Regions = Array.AsReadOnly(regions);
         _policy = AtlasPolicies.Create(ruleset.Current.UnlockPolicy);
         _pins.Clear(); _unlock.Clear(); _visited.Clear(); _inside.Clear(); _nextPinId = 1; Tracked = null;
@@ -156,7 +159,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         if (_context is null || from != Map) return;
         _transit?.Cancel();
         ReleaseTransit();
-        _context = null; _atlasRect = null; _regionAt = null; _baseMarkers = []; Regions = []; Map = default;
+        _context = null; _atlasRect = null; _zoomMin = _zoomMax = null; _regionAt = null; _baseMarkers = []; Regions = []; Map = default;
         _pins.Clear(); _unlock.Clear(); _visited.Clear(); _inside.Clear(); _nextPinId = 1; Tracked = null;
         RefreshMarkers(); Publish();
     }

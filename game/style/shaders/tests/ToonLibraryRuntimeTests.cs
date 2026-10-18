@@ -19,6 +19,7 @@ public sealed class ToonLibraryRuntimeTests
     private static readonly WarmDrawLayout Layout = new(1, false);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SurfacePatternMaterialKeyRetainsEveryProfileField()
     {
         var spec = new ToonSpec(new("test.lit"), new("test.shade"))
@@ -38,6 +39,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task UnregisteredSurfacePatternsCannotReuseAnAlreadyCachedPlainMaterial()
@@ -53,6 +55,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task BakedSurfacePatternUploadsMetresGatesAndBindsItsToonStaticMaterial()
@@ -108,6 +111,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase(Timeout = 20000)]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task RealGlassDrawsCardMaskAndUnboundOrUndersizedTableFallback()
@@ -137,17 +141,21 @@ public sealed class ToonLibraryRuntimeTests
                 GeometrySurfaceUpload.Append(mesh, source, new Palettes().Catalog);
             }
             parent.AddChild(new MeshInstance3D { Mesh = mesh });
-            foreach (var state in new[] { "registered", "unbound", "undersized" })
+            var directory = Path.Combine(Path.GetTempPath(), $"uestc-rpg-window-cards-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(directory);
+            try
             {
-                if (state == "unbound") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), default(Variant));
-                if (state == "undersized") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), tiny);
-                for (var frame = 0; frame < 8; frame++)
-                    await parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-                var directory = Campus.Tests.RepositoryFixture.FilePath("output", "render-review");
-                Directory.CreateDirectory(directory);
-                using var image = parent.GetViewport().GetTexture().GetImage();
-                AssertThat(image.SavePng(Path.Combine(directory, $"WP-00-window-cards-native-{state}.png")) == Error.Ok).OverrideFailureMessage("Save real glass smoke evidence.").IsTrue();
+                foreach (var state in new[] { "registered", "unbound", "undersized" })
+                {
+                    if (state == "unbound") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), default(Variant));
+                    if (state == "undersized") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), tiny);
+                    for (var frame = 0; frame < 8; frame++)
+                        await parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+                    using var image = parent.GetViewport().GetTexture().GetImage();
+                    AssertThat(image.SavePng(Path.Combine(directory, $"WP-00-window-cards-native-{state}.png")) == Error.Ok).OverrideFailureMessage("Save real glass smoke evidence.").IsTrue();
+                }
             }
+            finally { Directory.Delete(directory, recursive: true); }
             GD.Print("WINDOW_CARDS_NATIVE exercised=real_toon_glass,type_mask,invalid_row,unbound,undersized_1x1,cols0 pixel_assertions=False");
         }
         finally
@@ -158,6 +166,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task DisposedBorrowedMaterialIsEvictedBeforeTheNextMapBatch()
@@ -187,6 +196,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task ExtensionSpecsValidateAgainstTheCatalogButNeverThroughTheLegacyByte()
@@ -202,6 +212,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task QualityResetPrunesDisposedMaterialsAndRewarmsOnlyLiveOnes()
@@ -228,6 +239,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task DisposalInvalidatesTheWholeInflightBatchWithoutPartiallyWarmingSurvivors()
@@ -253,6 +265,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task BothReadinessOverloadsEvictDisposedInstances()
@@ -281,6 +294,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task SpatialAndCanvasEvidenceRemainDistinctAndNewLayoutsInvalidateBatches()
@@ -310,6 +324,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task UnsupportedModesCannotBecomeReadyByCompletingAnEmptyBatch()
@@ -335,6 +350,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase(Timeout = 10000)]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task DisposeReleasesOwnedMaterialsAndImageButPreservesBorrowedResourcesAndTextureLeases()
@@ -378,6 +394,7 @@ public sealed class ToonLibraryRuntimeTests
     }
 
     [TestCase(Timeout = 10000)]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task ConstructorFailureRetiresRegisteredTexturesAndDisposesUntransferredTexture()

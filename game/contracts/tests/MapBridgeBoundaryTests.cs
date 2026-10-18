@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
@@ -10,6 +11,7 @@ namespace Campus.Contracts.Tests;
 public sealed class MapBridgeBoundaryTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExplicitLoadInputsSnapshotOwnership()
     {
         var feature = new FeatureId("fixture");
@@ -22,6 +24,7 @@ public sealed class MapBridgeBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AtlasPublicationOwnsInputsAndKeepsOptionalReadinessIndependent()
     {
         var pixels = new byte[16]; pixels[0] = 128;
@@ -42,6 +45,7 @@ public sealed class MapBridgeBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AtlasRejectsMalformedBuffersAndReadinessClaimsWhileSupportingAll64MaskBits()
     {
         AssertThrown(() => new AtlasBaseTexture("map_sdf_a", 2, 2, Rect(), new byte[15])).IsInstanceOf<ArgumentException>();

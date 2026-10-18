@@ -12,12 +12,7 @@ public sealed record RoamLimits(                                 // 旁观活动
     float HeightFactor, float HeightStart, float MaxRadius,      // 0.9、30 m、3000 m：水平范围 = 前沿线 + 0.9 × max(0, h − 30 m)
     float FloorY, float CeilY,                                   // −28 m、2000 m
     float Buffer, float SoftFloorClearance,                      // 30 m 缓冲带；外围上空的软地板 = 屋顶 + 40 m
-    float FallbackMargin)                                        // 没有外围数据的图：校界外扩 150 m
-{
-    public float PushRate { get; init; } = 1.5f;                 // WLD-OUTSKIRTS：缓冲带里沿法线推回的速率
-    public float PushMax { get; init; } = 15f;                   //   推回上限
-    public float EdgeFogMax { get; init; } = 1.6f;               //   边缘雾上限
-}
+    float FallbackMargin);                                       // 没有外围数据的图：校界外扩 150 m
 public sealed record MapSpawn(string Id, Pose Fly, WaypointStand? Stand);   // 点位以外的出生点
 public sealed record MapWorldRules(
     MapTimeRule Time,

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Buffers.Binary;
 using System.Numerics;
 using Campus.Contracts;
@@ -11,6 +12,7 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class PackedSurfaceBatchTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void KnownLayoutsRetainEverySourceVertexAttributeAndTriangleByte()
     {
         foreach (var uv2 in new[] { false, true })
@@ -35,6 +37,7 @@ public sealed class PackedSurfaceBatchTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EveryMetadataDifferenceFencesBatchesWithoutReorderingOtherSurfaces()
     {
         var original = Surface(0, true, 0);
@@ -55,6 +58,7 @@ public sealed class PackedSurfaceBatchTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UnsupportedShadersTopologySkinLodsAndLayoutsRemainOriginalReferences()
     {
         var original = Surface(0, true, 0);
@@ -81,6 +85,7 @@ public sealed class PackedSurfaceBatchTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void The65536VertexBoundarySplitsStablyWithoutDroppingOrWeldingVertices()
     {
         var a = RawSurface(32768, 11); var b = RawSurface(32768, 29);

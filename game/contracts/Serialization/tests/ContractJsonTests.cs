@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using GdUnit4;
@@ -8,6 +9,7 @@ namespace Campus.Contracts.Tests;
 public sealed class ContractJsonTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SceneTransformsAndIdentifiersKeepTheirWireShapes()
     {
         var matrix = Matrix4x4.CreateRotationY(.7f) * Matrix4x4.CreateTranslation(10, 2, -3);
@@ -21,6 +23,7 @@ public sealed class ContractJsonTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void VectorShapeRejectsMissingOrTrailingCoordinates()
     {
         foreach (var text in new[] { "[1,2]", "[1,2,3,4]", "{}" })

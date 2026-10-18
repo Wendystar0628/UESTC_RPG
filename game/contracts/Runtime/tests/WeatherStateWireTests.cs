@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text.Json;
 using GdUnit4;
 
@@ -7,6 +8,7 @@ namespace Campus.Contracts.Tests;
 public sealed class WeatherStateWireTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SettingsAndResidueRoundTripWithoutGeneratedWeatherState()
     {
         var state = new WeatherProcessState(new("weather-test"), new(WeatherMode.Manual, WeatherKind.Rain, .75f),

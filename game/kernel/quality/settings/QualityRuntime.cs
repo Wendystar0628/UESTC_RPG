@@ -16,6 +16,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     // Fixed style defaults written into the global quality vector (SYS-GRAPHICS): detail distance factor and grass radius.
     private const float DetailScale = 0.8f;
     private const float GrassRadius = 20f;
+    private const double DestinationWaitSeconds = 1.2;
 
     private IQualityFrame _service = null!;
     private IVeilService _veil = null!;
@@ -105,10 +106,10 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         try
         {
             var elapsed = 0d;
-            while (!arrival.Done.IsCompleted && elapsed < 1.2)
+            while (!arrival.Done.IsCompleted && elapsed < DestinationWaitSeconds)
                 elapsed += await NextFrame(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            if (!arrival.Done.IsCompleted) throw new TimeoutException("Quality destination was not ready within 1.2 seconds.");
+            if (!arrival.Done.IsCompleted) throw new TimeoutException($"Quality destination was not ready within {DestinationWaitSeconds} seconds.");
             await arrival.Done;
             if (!ReferenceEquals(runtime.Arrival, arrival)) throw new OperationCanceledException("The quality destination was replaced.");
         }

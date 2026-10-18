@@ -25,7 +25,7 @@ public sealed class GraphicsSettingsStore(ISettingsStore settings, QualityCatalo
             "balanced" => QualityPreset.Balanced,
             "fine" => QualityPreset.Fine,
             "ultra" => QualityPreset.Ultra,
-            _ => QualityPreset.Fine,
+            _ => catalog.DefaultPreset,
         };
         var overrides = new Dictionary<QualityKnob, float>();
         var knobs = _section.Child("knobs");

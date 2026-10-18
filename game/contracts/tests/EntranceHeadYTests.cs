@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text.Json;
 using Campus.Gen.Tests.Support;
 using GdUnit4;
@@ -15,6 +16,7 @@ public sealed class EntranceHeadYTests
         """;
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OldConstructorAndMissingOrZeroRawHeadRemainUnknownAfterPadTranslation()
     {
         var oldDeclaration = new EntranceDecl("entry.main", new(1, 2, 3), new(4, 5, 6), 1.25f, true);
@@ -29,6 +31,7 @@ public sealed class EntranceHeadYTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void KnownHeadFollowsRawReferenceAndSerializesOnlyItsAbsoluteResult()
     {
         var unused = new PadTerrain(20);
@@ -48,6 +51,7 @@ public sealed class EntranceHeadYTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InvalidHeadsAndKnownValuesCollidingWithUnknownSentinelAreRejected()
     {
         foreach (var value in new[] { "null", "\"3.5\"", "true", "1e999", "-1e999" })

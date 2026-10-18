@@ -6,7 +6,7 @@ namespace Campus.Camera;
 public partial class ObserverCamera
 {
     // Title and cinematics own a presentation pose while the restored walk body stays frozen.
-    public Pose Pose => !IsPlaying ? _pose : Mode switch
+    public Pose Pose => !IsPlaying || _mode is null ? _pose : Mode switch
     {
         ViewMode.Fly => _pose,
         ViewMode.Walk => _walk?.EyePose ?? throw new InvalidOperationException("Walk mode requires its physical eye pose."),
@@ -14,12 +14,20 @@ public partial class ObserverCamera
     };
     public float Speed => _mode switch
     {
+        null => 0,
         ViewMode.Fly => _flight.Velocity.Length(),
         ViewMode.Walk => _walk?.Velocity.Length() ?? 0,
         _ => throw new InvalidOperationException("Unknown view mode.")
     };
-    public ViewMode Mode => _mode;
-    public int SpeedStep => Mode switch
+    // Early UI reads can precede _Ready; the ruleset is loaded before any runtime node.
+    // The nullable field still prevents input/physics from treating this as an applied mode.
+    public ViewMode Mode => _mode ?? (_rules ?? Campus.Kernel.Registry.Kernel.Get<IRuleset>()).Current.DefaultViewMode;
+    public int SpeedStep => _mode is null ? Mode switch
+    {
+        ViewMode.Fly => Tuning.DefaultSpeedStep,
+        ViewMode.Walk => WalkRules.DefaultSpeedStep,
+        _ => throw new InvalidOperationException("Unknown default view mode.")
+    } : Mode switch
     {
         ViewMode.Fly => _flySpeedStep,
         ViewMode.Walk => _walk?.SpeedStep ?? throw new InvalidOperationException("Walk mode requires its speed setting."),
@@ -27,32 +35,36 @@ public partial class ObserverCamera
     };
     public ITransitHandle? ActiveTransit { get; private set; }
     public float EdgeFog { get; private set; }
-    public N.Vector3 Feet => Mode switch
+    public N.Vector3 Feet => _mode switch
     {
+        null => _pose.Position,
         ViewMode.Fly => Pose.Position,
         ViewMode.Walk => _walk?.BodyPose.Position ?? Pose.Position,
         _ => throw new InvalidOperationException("Unknown view mode.")
     };
-    public N.Vector3 Eye => Mode switch
+    public N.Vector3 Eye => _mode switch
     {
+        null => _pose.Position,
         ViewMode.Fly => Pose.Position,
         ViewMode.Walk => _walk?.ObserverEye ?? Pose.Position,
         _ => throw new InvalidOperationException("Unknown view mode.")
     };
-    public float YawDeg => Mode switch
+    public float YawDeg => _mode switch
     {
+        null => _pose.YawDeg,
         ViewMode.Fly => Pose.YawDeg,
         ViewMode.Walk => _walk?.BodyPose.YawDeg ?? Pose.YawDeg,
         _ => throw new InvalidOperationException("Unknown view mode.")
     };
-    public NavSpace? Space => Mode switch
+    public NavSpace? Space => _mode switch
     {
+        null => null,
         ViewMode.Fly => _map?.World.Spatial.MediumAt(Pose.Position) is { Kind: MediumKind.Interior, Feature: { } feature } medium
             ? new NavSpace(feature, checked((short)medium.Storey)) : null,
         ViewMode.Walk => _walk?.Space,
         _ => throw new InvalidOperationException("Unknown view mode.")
     };
-    public bool IsSettled => ActiveTransit is null && (Mode switch
+    public bool IsSettled => _mode is not null && ActiveTransit is null && (Mode switch
     {
         ViewMode.Fly => true,
         ViewMode.Walk => _walk?.IsSettled ?? false,
@@ -84,7 +96,7 @@ public partial class ObserverCamera
     {
         _ = mode switch { ViewMode.Fly or ViewMode.Walk => 0, _ => throw new ArgumentOutOfRangeException(nameof(mode)) };
         if (_rules is null || !_rules.Current.ViewModes.Contains(mode)) return Task.FromResult(ModeSwitchResult.Refused);
-        if (mode == Mode) return Task.FromResult(ModeSwitchResult.Ok);
+        if (mode == _mode) return Task.FromResult(ModeSwitchResult.Ok);
         ActiveTransit?.Cancel(); ActiveTransit = null; _transitDestination = null;
         ModeSwitchResult result;
         N.Vector3 inheritedVelocity = default;

@@ -11,6 +11,7 @@ namespace Campus.Tests;
 public sealed class FlightBoundsTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExteriorLowAltitudeAndHighRadiusAreProjectedInside()
     {
         var bounds = Create();
@@ -23,14 +24,16 @@ public sealed class FlightBoundsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UndergroundBoundaryPushesHorizontallyWithoutSurfacing()
     {
         var projected = Create().Project(new(110, -10, 0));
-        if (Math.Abs(projected.Y + 10) > .001f || projected.X > 100)
+        if (Math.Abs(projected.Y + 10) > TestTolerance.Position || projected.X > 100)
             throw new InvalidOperationException("Underground boundary lifted the camera out through the street.");
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BufferSlowsOnlyOutwardMovement()
     {
         var bounds = Create();

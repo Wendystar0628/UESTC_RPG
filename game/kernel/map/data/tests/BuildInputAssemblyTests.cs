@@ -13,6 +13,7 @@ namespace Campus.Tests;
 public sealed class BuildInputAssemblyTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AssetBoundaryReadsAndFreezesOnceAcrossMapConsumers()
     {
         var raw = Encoding.UTF8.GetBytes("species-version-one");
@@ -29,6 +30,7 @@ public sealed class BuildInputAssemblyTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RequiredInputsFailBeforeAnyConsumerRuns()
     {
         AssertThrown(() => BuildInputAssembly.ReadRequiredGlobalInputs(
@@ -40,6 +42,7 @@ public sealed class BuildInputAssemblyTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ContributorsAreReadOnlyAndChannelConflictsFailBeforePainting()
     {
         var first = new Contributor("z", GroundMaskChannels.CanopyShelter);
@@ -58,6 +61,7 @@ public sealed class BuildInputAssemblyTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CapturedPartCollisionKeepsRealStairAndPlatformSurfacesAndRejectsWrongParameters()
     {
         var definitions = new Dictionary<PartId, IPartDef>

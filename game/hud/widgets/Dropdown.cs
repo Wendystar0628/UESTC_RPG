@@ -8,33 +8,38 @@ namespace Campus.Hud.Widgets;
 /// 下拉框（UI-VISUAL）：引擎的 OptionButton，闭合时的外观同次按钮（1 px line.control，悬停 surface.selected，键盘焦点衍射边，
 /// 右侧箭头），由 ui_panel 载体着色；展开的 PopupMenu 用 <see cref="UiThemeBuilder.DropdownPopupType"/> 的实底面板。
 /// 用法与 <see cref="Segmented"/> 一致：Create、Selected、Changed（只在用户选择时发出）、Select(index, notify)。
-/// 键盘与手柄：确认键展开，上下选项，确认键选定，取消键收起；Tab 与方向键焦点照常走。
+/// 键盘：确认键展开，上下选项，确认键选定，取消键收起；Tab 与方向键焦点照常走。
 /// </summary>
 public partial class Dropdown : OptionButton
 {
-    private const int PadX = 12, PadY = 2;
-
     private UiKit _kit = null!;
-    private bool _hover, _focus, _open;
+    private bool _hover, _focus, _open, _pin;
 
     public event Action<int>? Changed;
 
     public static Dropdown Create(UiKit kit, Control parent, Vector2 position, string[] labels, int selected = -1,
         float minWidth = 0, float height = 36, string font = "body")
     {
+        var drop = Create(kit, parent, labels, selected, font: font);
+        drop.Position = position;
+        drop.CustomMinimumSize = new Vector2(Math.Max(drop.CustomMinimumSize.X, minWidth), Math.Max(drop.CustomMinimumSize.Y, height));
+        drop.Size = drop.GetCombinedMinimumSize();
+        return drop;
+    }
+
+    public static Dropdown Create(UiKit kit, Control parent, string[] labels, int selected = -1, bool pin = false, string font = "body")
+    {
         var arrow = kit.Icon("chevron_down");
-        var fv = kit.Theme.Font(font, out var fontSize, out _);
-        var widest = labels.Length == 0 ? 0 : labels.Max(l => fv.GetStringSize(l, HorizontalAlignment.Left, -1, fontSize).X);
-        var width = MathF.Ceiling(Math.Max(minWidth, widest + PadX * 2 + arrow.GetWidth() + 4));
         var drop = new Dropdown
         {
             _kit = kit,
-            Position = position,
-            Size = new Vector2(width, height),
-            CustomMinimumSize = new Vector2(width, height),
+            _pin = pin,
+            FitToLongestItem = true,
+            CustomMinimumSize = new Vector2(kit.Layout.Metric("dropdownMinWidth"), kit.Layout.Metric("dropdown")),
+            SizeFlagsVertical = SizeFlags.ShrinkCenter,
             FocusMode = FocusModeEnum.All,
             MouseFilter = MouseFilterEnum.Stop,
-            ThemeTypeVariation = kit.Theme.DropdownType(font, PadX, PadY, arrow),
+            ThemeTypeVariation = kit.Theme.DropdownType(font, kit.Layout.Metric("dropdownPadX"), kit.Layout.Metric("dropdownPadY"), arrow),
             Alignment = HorizontalAlignment.Left,
         };
         drop.Material = kit.Materials.Panel;
@@ -52,6 +57,7 @@ public partial class Dropdown : OptionButton
         drop.FocusExited += () => { drop._focus = false; drop.Refresh(); };
         drop.ButtonDown += drop.SyncPopupTheme;
         parent.AddChild(drop);
+        if (pin) kit.Apply(drop, new UiFx(Pin: true));
         drop.Refresh();
         return drop;
     }
@@ -65,7 +71,7 @@ public partial class Dropdown : OptionButton
     }
 
     // 展开框是独立窗口挂不了 ui_panel，打开前按界面主题钟的当前主题改写它的样式颜色（全局参数不读回，G4）
-    private void SyncPopupTheme() => _kit.Theme.SetPopupDark(_kit.ThemeState.Dark);
+    private void SyncPopupTheme() => _kit.Theme.SetPopupDark(_pin && !_kit.ResidentFollows || _kit.ThemeState.Dark);
 
     private void Refresh()
     {
@@ -75,7 +81,8 @@ public partial class Dropdown : OptionButton
             Role: Disabled ? "text.off" : "text.1",
             Flags: (Disabled ? UiFlags.Dashed : 0) | (_open ? 0 : UiFlags.HoverSelected),
             Hover: _hover && !Disabled ? 1 : 0,
-            Focus: _focus ? 1 : 0);
+            Focus: _focus ? 1 : 0,
+            Pin: _pin);
         _kit.Apply(this, fx, remember: false);
     }
 }

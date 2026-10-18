@@ -5,96 +5,95 @@ namespace Campus.Hud.Widgets;
 
 /// <summary>
 /// 分段选择（UI-VISUAL）：外框 1 px line.control，段间发丝线；选中 = 选中底 + text.1 Medium + 底边 2 px 指示条，
-/// 指示条用空间弹簧（0.22 s）滑到新项；禁用段可聚焦并读出原因；组内方向键切换。
+/// 指示条随选中态点亮，容器子件不做位移动效；禁用段可聚焦并读出原因。
 /// </summary>
-public partial class Segmented : Control
+public partial class Segmented : PanelContainer
 {
     private readonly List<TechButton> _items = [];
-    private readonly List<float> _x = [];
-    private UiKit _kit = null!;
-    private Panel _bar = null!;
-    private Tween? _slide;
+    private readonly List<Panel> _bars = [];
     private int _selected = -1;
 
     public event Action<int>? Changed;
     public IReadOnlyList<TechButton> Items => _items;
     public int Selected => _selected;
 
-    public static Segmented Create(UiKit kit, Control parent, Vector2 position, float[] widths, string[] labels, bool pin,
-        float height = 36, string font = "segment", string?[]? icons = null, int iconMax = 16, int selected = -1)
+    public static Segmented Create(UiKit kit, Control parent, string[] labels, bool pin = false,
+        string font = "segment", string?[]? icons = null, int selected = -1)
     {
-        var total = widths.Sum();
-        var seg = new Segmented { _kit = kit, Position = position, Size = new Vector2(total, height), MouseFilter = MouseFilterEnum.Ignore };
+        var seg = new Segmented
+        {
+            MouseFilter = MouseFilterEnum.Ignore,
+            ThemeTypeVariation = UiThemeBuilder.PanelContainerType,
+            Material = kit.Materials.Panel,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+        };
         parent.AddChild(seg);
-        kit.Box(seg, new Rect2(0, 0, total, height), new UiFx(Line: "line.control", Pin: pin));
+        kit.Apply(seg, new UiFx(Line: "line.control", Pin: pin));
+        var row = kit.Layout.Row(seg);
+        row.ThemeTypeVariation = UiThemeBuilder.Segments;
         var group = new ButtonGroup { AllowUnpress = false };
-        float x = 0;
         for (var i = 0; i < labels.Length; i++)
         {
-            if (i > 0) kit.Box(seg, new Rect2(x, 1, 1, height - 2), new UiFx(Fill: "line.hair", Pin: pin));
-            var b = kit.Button(seg, ButtonStyle.Segment, labels[i], new Rect2(x + 1, 1, widths[i] - 2, height - 2), font, 6,
-                icons?[i], iconMax, pin, padY: 2);
-            b.ToggleMode = true;
-            b.ButtonGroup = group;
-            b.Value = i;
+            var button = kit.Button(row, ButtonStyle.Segment, labels[i], font, icons?[i], pin);
+            button.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            button.ToggleMode = true;
+            button.ButtonGroup = group;
+            button.Value = i;
             var index = i;
-            b.Toggled += on => { if (on) seg.Select(index, notify: true); };
-            seg._items.Add(b);
-            seg._x.Add(x);
-            x += widths[i];
+            button.Toggled += on => { if (on) seg.Select(index, notify: true); };
+            seg._items.Add(button);
+            var bar = kit.Box(button, new UiFx(Fill: "primary.line", Pin: pin));
+            bar.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
+            bar.OffsetTop = -2;
+            seg._bars.Add(bar);
+            if (i > 0)
+            {
+                var line = kit.Box(button, new UiFx(Fill: "line.hair", Pin: pin));
+                line.SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide);
+                line.OffsetRight = 1;
+            }
         }
-        seg._bar = kit.Box(seg, new Rect2(1, height - 3, widths[0] - 2, 2), new UiFx(Fill: "primary.line", Pin: pin));
-        seg._bar.Visible = false;
         seg.Select(selected, notify: false);
         return seg;
     }
 
-    /// <summary>每段的字放得进格里吗（按钮两侧内边距各 6 px、边各 1 px）；放不进就该改用 <see cref="Dropdown"/>。</summary>
+    // 仅为 C-131–C-134 尚未迁移的页保留；C-135 删除宽度数组入口。
+    public static Segmented Create(UiKit kit, Control parent, Vector2 position, float[] widths, string[] labels, bool pin,
+        float height = 36, string font = "segment", string?[]? icons = null, int iconMax = 16, int selected = -1)
+    {
+        var seg = Create(kit, parent, labels, pin, font, icons, selected);
+        seg.Position = position;
+        seg.Size = new Vector2(widths.Sum(), height);
+        return seg;
+    }
+
+    public static bool Fits(UiKit kit, string[] labels, float availableWidth, string font = "segment")
+    {
+        var fv = kit.Theme.Font(font, out var size, out _);
+        var pad = kit.Layout.Metric("segmentPadX") * 2;
+        return labels.Sum(label => fv.GetStringSize(label, HorizontalAlignment.Left, -1, size).X + pad) <= availableWidth;
+    }
+
     public static bool Fits(UiKit kit, string[] labels, float[] widths, string font = "segment")
     {
         var fv = kit.Theme.Font(font, out var size, out _);
         for (var i = 0; i < labels.Length; i++)
-            if (fv.GetStringSize(labels[i], HorizontalAlignment.Left, -1, size).X + 12 > widths[i] - 2) return false;
+            if (fv.GetStringSize(labels[i], HorizontalAlignment.Left, -1, size).X + kit.Layout.Metric("segmentPadX") * 2 > widths[i]) return false;
         return true;
     }
 
     public void Select(int index, bool notify)
     {
-        if (index < 0 || index >= _items.Count)
-        {
-            _selected = -1;
-            foreach (var item in _items) { item.Selected = false; item.SetPressedNoSignal(false); }
-            _bar.Visible = false;
-            return;
-        }
-        var changed = index != _selected;
-        _selected = index;
+        var next = index >= 0 && index < _items.Count ? index : -1;
+        var changed = next != _selected;
+        _selected = next;
         for (var i = 0; i < _items.Count; i++)
         {
-            _items[i].Selected = i == index;
-            _items[i].SetPressedNoSignal(i == index);
+            _items[i].Selected = i == next;
+            _items[i].SetPressedNoSignal(i == next);
+            _bars[i].Visible = i == next;
         }
-        var target = new Vector2(_x[index] + 1, _bar.Position.Y);
-        var width = _items[index].Size.X;
-        var wasVisible = _bar.Visible;
-        _bar.Visible = true;
-        _slide?.Kill();
-        var response = _kit.Tokens.F("motion", "durations", "select", "response");
-        var seconds = wasVisible && _kit.Motion.Spatial ? Motion.UiEase.SpringSettle(response) : 0;
-        if (seconds <= 0) { _bar.Position = target; _bar.Size = new Vector2(width, 2); }
-        else
-        {
-            var fromX = _bar.Position.X;
-            var fromW = _bar.Size.X;
-            _slide = CreateTween();
-            _slide.TweenMethod(Callable.From<float>(t =>
-            {
-                var k = Motion.UiEase.Spring(t * seconds, response);
-                _bar.Position = new Vector2(fromX + (target.X - fromX) * k, target.Y);
-                _bar.Size = new Vector2(fromW + (width - fromW) * k, 2);
-            }), 0f, 1f, seconds);
-        }
-        if (changed && notify) Changed?.Invoke(index);
+        if (changed && notify) Changed?.Invoke(next);
     }
 
     public void SetOff(int index, bool off, string? reason)
@@ -108,27 +107,51 @@ public partial class Segmented : Control
 public partial class DipSwitch : Control
 {
     private UiKit _kit = null!;
+    private HBoxContainer _row = null!;
     private Panel _track = null!, _knob = null!;
     private Label _label = null!;
     private TechButton _hit = null!;
     private bool _on, _pin;
-
     public event Action<bool>? Toggled;
     public bool On => _on;
 
-    public static DipSwitch Create(UiKit kit, Control parent, Vector2 position, bool on, bool pin)
+    public override Vector2 _GetMinimumSize() => _row?.GetCombinedMinimumSize() ?? Vector2.Zero;
+
+    public static DipSwitch Create(UiKit kit, Control parent, bool on, bool pin = false)
     {
-        var sw = new DipSwitch { _kit = kit, _on = on, _pin = pin, Position = position, Size = new Vector2(80, 20), MouseFilter = MouseFilterEnum.Ignore };
+        var sw = new DipSwitch { _kit = kit, _on = on, _pin = pin, MouseFilter = MouseFilterEnum.Ignore };
         parent.AddChild(sw);
-        sw._track = kit.Box(sw, new Rect2(0, 0, 40, 20), new UiFx(Pin: pin));
-        sw._knob = kit.Box(sw, new Rect2(3, 3, 14, 14), new UiFx(Fill: "surface.raised", Line: "line.control", Pin: pin));
-        sw._label = kit.Text(sw, "", "small", "text.2", new Vector2(48, -1), pin);
-        sw._hit = kit.Button(sw, ButtonStyle.Ghost, "", new Rect2(-4, -6, 80, 32), pin: pin);
+        sw._row = kit.Layout.Row(sw);
+        sw._row.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        sw._row.MinimumSizeChanged += sw.UpdateMinimumSize;
+        var geometry = kit.Tokens.V2("metrics", "size", "switch");
+        var drawing = kit.Layout.Add(sw._row, new Control { CustomMinimumSize = geometry, SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        sw._track = kit.Box(drawing, new UiFx(Pin: pin));
+        sw._track.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        sw._knob = kit.Box(drawing, new UiFx(Fill: "surface.raised", Line: "line.control", Pin: pin));
+        sw._knob.Size = kit.Tokens.V2("metrics", "size", "switchKnob");
+        sw._label = kit.Text(sw._row, "", "small", "text.2", pin, wrap: false);
+        sw._label.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        var font = kit.Theme.Font("small", out var fontSize, out _);
+        sw._label.CustomMinimumSize = new Vector2(new[] { "ui.common.on", "ui.common.off" }
+            .Max(key => font.GetStringSize(UiKit.T(key), fontSize: fontSize).X), 0);
+        sw._hit = kit.Button(sw, ButtonStyle.Ghost, "", pin: pin);
+        sw._hit.CustomMinimumSize = new Vector2(0, kit.Layout.Metric("compact"));
+        sw._hit.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         sw._hit.SelfModulate = new Color(1, 1, 1, 0);
         sw._hit.Pressed += () => sw.Set(!sw._on, notify: true);
         sw._hit.FocusEntered += sw.Refresh;
         sw._hit.FocusExited += sw.Refresh;
+        sw.CustomMinimumSize = new Vector2(0, kit.Layout.Metric("compact"));
         sw.Refresh();
+        return sw;
+    }
+
+    public static DipSwitch Create(UiKit kit, Control parent, Vector2 position, bool on, bool pin)
+    {
+        var sw = Create(kit, parent, on, pin);
+        sw.Position = position;
+        sw.Size = sw.GetCombinedMinimumSize();
         return sw;
     }
 
@@ -144,64 +167,81 @@ public partial class DipSwitch : Control
     {
         var focus = _hit.HasFocus() && !Input.IsMouseButtonPressed(MouseButton.Left) ? 1f : 0f;
         _kit.Apply(_track, new UiFx(Fill: _on ? "primary.fill" : "surface.sunk", Line: _on ? "primary.line" : "line.control", Pin: _pin, Focus: focus));
-        _knob.Position = new Vector2(_on ? 23 : 3, 3);
+        var track = _kit.Tokens.V2("metrics", "size", "switch");
+        var inset = (track.Y - _knob.Size.Y) / 2;
+        _knob.Position = new Vector2(_on ? track.X - inset - _knob.Size.X : inset, inset);
         _label.Text = UiKit.T(_on ? "ui.common.on" : "ui.common.off");
     }
 }
 
-/// <summary>滑杆（推子，UI-VISUAL）：轨道 1 px，已选段 2 px primary.line，推子帽 12×20 加中线；离散档画 1×5 刻度；拖动 1:1 跟手；←→ 一档。</summary>
+/// <summary>推子的轨道、刻度和帽是自绘几何；读数由 HBox 排版，宽度由端点文字推导。</summary>
 public partial class Fader : Control
 {
     private UiKit _kit = null!;
-    private Panel _fill = null!, _cap = null!, _capLine = null!;
+    private HBoxContainer _row = null!;
+    private Control _drawing = null!;
+    private Panel _track = null!, _fill = null!, _cap = null!, _capLine = null!;
+    private readonly List<Panel> _ticks = [];
     private Label _value = null!;
     private Func<float, string> _format = v => v.ToString("0.##");
-    private float _min, _max, _step, _v, _width;
+    private float _min, _max, _step, _v;
     private bool _dragging, _pin;
-
     public event Action<float>? Changed;
     public float Value => _v;
+    public override Vector2 _GetMinimumSize() => _row?.GetCombinedMinimumSize() ?? Vector2.Zero;
 
-    public static Fader Create(UiKit kit, Control parent, Vector2 position, float width, float min, float max, float step, float value,
-        bool pin, Func<float, string>? format = null)
+    public static Fader Create(UiKit kit, Control parent, float min, float max, float step, float value,
+        bool pin = false, Func<float, string>? format = null)
     {
         var f = new Fader
         {
-            _kit = kit,
-            _min = min,
-            _max = max,
-            _step = step,
-            _v = value,
-            _width = width,
-            _pin = pin,
-            Position = position,
-            Size = new Vector2(width, 36),
-            MouseFilter = MouseFilterEnum.Stop,
-            FocusMode = FocusModeEnum.All,
+            _kit = kit, _min = min, _max = max, _step = step, _v = value, _pin = pin,
+            MouseFilter = MouseFilterEnum.Stop, FocusMode = FocusModeEnum.All,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
         };
         if (format is not null) f._format = format;
         parent.AddChild(f);
-        kit.Box(f, new Rect2(0, 18, width, 1), new UiFx(Fill: "line.control", Pin: pin));
-        f._fill = kit.Box(f, new Rect2(0, 17.5f, 0, 2), new UiFx(Fill: "primary.line", Pin: pin));
-        if (step > 0 && (max - min) / step <= 12)
+        f._row = kit.Layout.Row(f);
+        f._row.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        f._row.MinimumSizeChanged += f.UpdateMinimumSize;
+        f._drawing = kit.Layout.Add(f._row, new Control
         {
-            var n = (int)Math.Round((max - min) / step);
-            for (var i = 0; i <= n; i++)
-                kit.Box(f, new Rect2(Mathf.Round(width * i / n) - (i == n ? 1 : 0), 24, 1, 5), new UiFx(Fill: "line.control", Pin: pin));
-        }
-        f._cap = kit.Box(f, new Rect2(0, 8, 12, 20), new UiFx(Fill: "surface.raised", Line: "line.control", Pin: pin));
-        f._capLine = kit.Box(f, new Rect2(0, 13, 1, 10), new UiFx(Fill: "line.control", Pin: pin));
-        f._value = kit.Text(f, "", "data", "text.1", new Vector2(width + 14, 9), pin);
+            CustomMinimumSize = new Vector2(kit.Layout.Metric("faderTrackMinWidth"), kit.Layout.Metric("dropdown")),
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+        });
+        f._track = kit.Box(f._drawing, new UiFx(Fill: "line.control", Pin: pin));
+        f._fill = kit.Box(f._drawing, new UiFx(Fill: "primary.line", Pin: pin));
+        if (step > 0 && max > min && (max - min) / step <= 12)
+            for (var i = 0; i <= (int)Math.Round((max - min) / step); i++)
+                f._ticks.Add(kit.Box(f._drawing, new UiFx(Fill: "line.control", Pin: pin)));
+        f._cap = kit.Box(f._drawing, new UiFx(Fill: "surface.raised", Line: "line.control", Pin: pin));
+        f._capLine = kit.Box(f._drawing, new UiFx(Fill: "line.control", Pin: pin));
+        f._value = kit.Text(f._row, "", "data", "text.1", pin, wrap: false);
+        f._value.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        f._value.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        var font = kit.Theme.Font("data", out var size, out _);
+        f._value.CustomMinimumSize = new Vector2(new[] { min, max, value }.Max(v => font.GetStringSize(f._format(v), fontSize: size).X), 0);
+        f._drawing.Resized += f.Layout;
         f.FocusEntered += f.Layout;
         f.FocusExited += f.Layout;
         f.Layout();
         return f;
     }
 
+    public static Fader Create(UiKit kit, Control parent, Vector2 position, float width, float min, float max, float step, float value,
+        bool pin, Func<float, string>? format = null)
+    {
+        var f = Create(kit, parent, min, max, step, value, pin, format);
+        f.Position = position;
+        f._drawing.CustomMinimumSize = new Vector2(width, f._drawing.CustomMinimumSize.Y);
+        f.Size = f.GetCombinedMinimumSize();
+        return f;
+    }
+
     public void Set(float value, bool notify)
     {
         var v = Math.Clamp(value, _min, _max);
-        if (_step > 0) v = _min + MathF.Round((v - _min) / _step) * _step;
+        if (_step > 0) v = Math.Clamp(_min + MathF.Round((v - _min) / _step) * _step, _min, _max);
         if (MathF.Abs(v - _v) < 1e-5f) return;
         _v = v;
         Layout();
@@ -210,11 +250,25 @@ public partial class Fader : Control
 
     private void Layout()
     {
+        var cap = _kit.Tokens.V2("metrics", "size", "fader");
+        var half = cap.X / 2;
+        var width = Math.Max(1, _drawing.Size.X - cap.X);
+        var mid = _drawing.Size.Y / 2;
         var t = _max > _min ? (_v - _min) / (_max - _min) : 0;
-        var x = Mathf.Round(_width * t);
-        _fill.Size = new Vector2(x, 2);
-        _cap.Position = new Vector2(x - 6, 8);
-        _capLine.Position = new Vector2(x - 0.5f, 13);
+        var x = half + Mathf.Round(width * t);
+        _track.Position = new Vector2(half, mid);
+        _track.Size = new Vector2(width, 1);
+        _fill.Position = new Vector2(half, mid - 0.5f);
+        _fill.Size = new Vector2(width * t, 2);
+        _cap.Position = new Vector2(x - half, mid - cap.Y / 2);
+        _cap.Size = cap;
+        _capLine.Position = new Vector2(x - 0.5f, mid - cap.Y / 4);
+        _capLine.Size = new Vector2(1, cap.Y / 2);
+        for (var i = 0; i < _ticks.Count; i++)
+        {
+            _ticks[i].Position = new Vector2(half + width * i / Math.Max(1, _ticks.Count - 1), mid + cap.Y / 2 - 4);
+            _ticks[i].Size = new Vector2(1, 5);
+        }
         _value.Text = _format(_v);
         var focus = HasFocus() && !Input.IsMouseButtonPressed(MouseButton.Left) ? 1f : 0f;
         _kit.Apply(_cap, new UiFx(Fill: "surface.raised", Line: _dragging ? "primary.line" : "line.control", Pin: _pin, Focus: focus), remember: false);
@@ -242,12 +296,49 @@ public partial class Fader : Control
         }
     }
 
-    private void SetFromX(float x) => Set(_min + Math.Clamp(x / _width, 0, 1) * (_max - _min), true);
+    private void SetFromX(float x)
+    {
+        var half = _kit.Tokens.V2("metrics", "size", "fader").X / 2;
+        Set(_min + Math.Clamp((x - half) / Math.Max(1, _drawing.Size.X - half * 2), 0, 1) * (_max - _min), true);
+    }
 }
 
 /// <summary>小件：键帽、组标题、生效标签、LED 格。</summary>
 public static class Parts
 {
+    public static PanelContainer Keycap(UiKit kit, Control parent, string key, bool down = false, bool pin = false)
+    {
+        var panel = kit.Panel(parent, new UiFx(Fill: down ? "primary.fill" : "surface.raised", Line: "line.control", Pin: pin));
+        var edge = kit.Layout.Metric("keycap");
+        panel.CustomMinimumSize = new Vector2(edge, edge);
+        panel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+        var margin = kit.Layout.Add(panel, new MarginContainer(), UiThemeBuilder.SmallMargin);
+        kit.Text(margin, key, "keycap", down ? "primary.ink" : "text.1", pin, wrap: false, align: HorizontalAlignment.Center);
+        return panel;
+    }
+
+    public static HBoxContainer GroupHeader(UiKit kit, Control parent, string text, bool pin = false)
+    {
+        var row = kit.Layout.Row(parent);
+        var label = kit.Text(row, text, "mono-caps", "text.2", pin, wrap: false);
+        label.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+        var line = kit.Box(row, new UiFx(Fill: "line.hair", Pin: pin));
+        line.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        line.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        line.CustomMinimumSize = new Vector2(0, 1);
+        return row;
+    }
+
+    public static PanelContainer Tag(UiKit kit, Control parent, string text, bool primary, bool pin = false)
+    {
+        var panel = kit.Panel(parent, new UiFx(Line: primary ? "primary.line" : "line.control", Pin: pin));
+        panel.CustomMinimumSize = new Vector2(0, kit.Layout.Metric("tag"));
+        panel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+        var margin = kit.Layout.Add(panel, new MarginContainer(), UiThemeBuilder.SmallMargin);
+        kit.Text(margin, text, "data", "text.2", pin, wrap: false);
+        return panel;
+    }
+
     /// <summary>键帽（UI-VISUAL）：高 24、最小宽 24、1 px line.control、底边 2.5 px 键深、surface.raised；按下 = primary.fill、下沉 1.5 px。</summary>
     public static float Keycap(UiKit kit, Control parent, Vector2 at, string key, bool down = false, bool pin = false)
     {

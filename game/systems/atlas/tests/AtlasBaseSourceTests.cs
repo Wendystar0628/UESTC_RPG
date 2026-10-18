@@ -17,6 +17,7 @@ public sealed class AtlasBaseSourceTests
     [new("z-region", new("测试区", "Test Region"), null), new("a-place", new("测试地点", "Test Place"), "z-region")];
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FourSdfReadinessDoesNotInventRegionsFontMetricsOrGlyphs()
     {
         var product = Product(regionsReady: false, labelsReady: false);
@@ -31,6 +32,7 @@ public sealed class AtlasBaseSourceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ProjectionCopiesBytesOnceAndPreservesActualPartialLabelBands()
     {
         var product = Product(regionsReady: true, labelsReady: true);
@@ -48,6 +50,7 @@ public sealed class AtlasBaseSourceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MissingBoundaryEvidenceOverridesNonzeroGridAndResetDropsSnapshot()
     {
         var product = Product(regionsReady: true, labelsReady: false);
@@ -66,6 +69,7 @@ public sealed class AtlasBaseSourceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WrongMapAndMissingRequiredPlaneAreRejected()
     {
         var source = new AtlasBaseSource();

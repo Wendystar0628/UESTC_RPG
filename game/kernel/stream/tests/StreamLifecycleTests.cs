@@ -12,6 +12,7 @@ namespace Campus.Tests;
 public sealed class StreamLifecycleTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     public void ShutdownDrainsTheCatalogAndLateResultsDoNotPublish()
     {
@@ -37,6 +38,7 @@ public sealed class StreamLifecycleTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     public async Task ExitDropsPendingCatalogSuccessAndObservesLateFaultWithoutNativeWork()
     {

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using GdUnit4;
@@ -9,6 +10,7 @@ namespace Campus.Contracts.Tests;
 public sealed class SeatDeclarationTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExistingPartImplementationNeedsNoSeatsOverride()
     {
         IPartDef<int> legacy = new LegacyPart();
@@ -16,6 +18,7 @@ public sealed class SeatDeclarationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExistingContentOutputConstructorAndDeconstructionRemainCompatible()
     {
         var legacy = new ContentOutput([], []);
@@ -30,6 +33,7 @@ public sealed class SeatDeclarationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SeatJsonRoundTripContainsExactlyTheSixDeclaredFields()
     {
         var seat = Seat();
@@ -45,6 +49,7 @@ public sealed class SeatDeclarationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExistingVectorJsonBoundaryRejectsNonFiniteSeatCoordinates()
     {
         const string json = """

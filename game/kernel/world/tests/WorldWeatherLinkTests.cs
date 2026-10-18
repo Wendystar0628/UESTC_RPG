@@ -1,3 +1,4 @@
+using Campus.Tests;
 using static GdUnit4.Assertions;
 using System.Numerics;
 using System.Text.Json;
@@ -15,19 +16,23 @@ namespace Campus.Tests.World;
 public sealed class WorldWeatherLinkTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WeatherIsNotSteppedBeforeTheFirstMapEnters()
     {
         var weather = new TestWeatherProcess();
         var world = new WorldStateService(weather);
         world.Tick(.0625);
         AssertThat(weather.Steps.Count).IsEqual(0);
-        world.OnMapLoaded(PresetContext(new WorldPreset(17.5, Season.Autumn), true));
+        var context = PresetContext(new WorldPreset(17.5, Season.Autumn), true);
+        world.Freeze(context.Descriptor.World.Default.Clock, context.Descriptor.World.Default.Season, WorldTime.InitialAnimTime);
+        world.OnMapLoaded(context);
         world.Tick(.0625);
         AssertThat(weather.Steps.Count).IsEqual(1);
         AssertThat(weather.Enters).IsEqual(1);
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WinterEarlyClockInitializesWithoutWeatherTransitions()
     {
         var weather = new TestWeatherProcess();
@@ -64,6 +69,7 @@ public sealed class WorldWeatherLinkTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ApplyOrdersSeasonClockPinAndCapturesTheirCommonEndpoint()
     {
         var weather = new TestWeatherProcess();
@@ -73,16 +79,17 @@ public sealed class WorldWeatherLinkTests
         AssertThat(weather.Calls.SequenceEqual(new[] { "reseason", "pin" })).OverrideFailureMessage("Apply weather hooks are out of order.").IsTrue();
         AssertThat(weather.PinnedKind).IsEqual(WeatherKind.Snow);
         AssertThat(weather.PinnedIntensity).IsEqual(1f);
-        AssertThat(Math.Abs((weather.PinFrom) - (world.TargetHours - .5)) <= 1e-10).OverrideFailureMessage($"Expected {world.TargetHours - .5:R}, got {weather.PinFrom:R}.").IsTrue();
-        AssertThat(Math.Abs((weather.PinTo) - (world.TargetHours + 2)) <= 1e-10).OverrideFailureMessage($"Expected {world.TargetHours + 2:R}, got {weather.PinTo:R}.").IsTrue();
+        AssertThat(Math.Abs((weather.PinFrom) - (world.TargetHours - .5)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {world.TargetHours - .5:R}, got {weather.PinFrom:R}.").IsTrue();
+        AssertThat(Math.Abs((weather.PinTo) - (world.TargetHours + 2)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {world.TargetHours + 2:R}, got {weather.PinTo:R}.").IsTrue();
         var snapshot = world.Capture(default);
         for (var i = 0; i < 60; i++) world.Tick(.1);
-        AssertThat(Math.Abs((world.Clock) - (21)) <= 1e-10).OverrideFailureMessage($"Expected {21:R}, got {world.Clock:R}.").IsTrue();
+        AssertThat(Math.Abs((world.Clock) - (21)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {21:R}, got {world.Clock:R}.").IsTrue();
         AssertThat(world.SeasonTarget).IsEqual(Season.Winter);
         AssertThat(world.Capture(default)).IsEqual(snapshot with { AnimTime = world.AnimTime });
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ReducedMotionUsesHalfSecondTransitionTiming()
     {
         var world = CreateWorld(new TestWeatherProcess(), new TestMotionSettings(true));
@@ -90,15 +97,16 @@ public sealed class WorldWeatherLinkTests
         world.Apply(new WorldPreset(21, Season.Spring));
         for (var i = 0; i < 5; i++) world.Tick(.1);
         AssertThat(world.IsSettled).OverrideFailureMessage("Reduced-motion world transition exceeded half a second.").IsTrue();
-        AssertThat(Math.Abs((world.Clock) - (21)) <= 1e-10).OverrideFailureMessage($"Expected {21:R}, got {world.Clock:R}.").IsTrue();
+        AssertThat(Math.Abs((world.Clock) - (21)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {21:R}, got {world.Clock:R}.").IsTrue();
         AssertThat(world.SeasonTarget).IsEqual(Season.Spring);
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DefaultComesFromMapAndKeepsHeroBandWithoutChangingInstance()
     {
         var weather = new TestWeatherProcess();
-        var world = CreateWorld(weather);
+        var world = CreateWorld(weather, initialize: false);
         var context = PresetContext(new WorldPreset(17.5, Season.Autumn, WeatherKind.Clear), true);
         var notifications = 0;
         world.InstanceChanged += _ => notifications++;
@@ -106,8 +114,8 @@ public sealed class WorldWeatherLinkTests
         world.Freeze(17 + 35 / 60d, Season.Autumn, 240);
         var instance = world.Instance;
         world.ResetDefault();
-        AssertThat(Math.Abs((world.TargetHours) - (17 + 35 / 60d)) <= 1e-10).OverrideFailureMessage($"Expected {17 + 35 / 60d:R}, got {world.TargetHours:R}.").IsTrue();
-        AssertThat(Math.Abs((weather.QuietTo) - (ArtEphemeris.DuskEnd(Season.Autumn))) <= 1e-10).OverrideFailureMessage($"Expected {ArtEphemeris.DuskEnd(Season.Autumn):R}, got {weather.QuietTo:R}.").IsTrue();
+        AssertThat(Math.Abs((world.TargetHours) - (17 + 35 / 60d)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {17 + 35 / 60d:R}, got {world.TargetHours:R}.").IsTrue();
+        AssertThat(Math.Abs((weather.QuietTo) - (ArtEphemeris.DuskEnd(Season.Autumn))) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {ArtEphemeris.DuskEnd(Season.Autumn):R}, got {weather.QuietTo:R}.").IsTrue();
         AssertThat(world.Flow.Rate).IsEqual(1);
         AssertThat(world.Instance).IsEqual(instance);
         world.OnMapUnloading(context.Descriptor.Id);

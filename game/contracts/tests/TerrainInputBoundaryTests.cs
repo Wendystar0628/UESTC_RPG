@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts.Maps;
@@ -14,6 +15,7 @@ public sealed class TerrainInputBoundaryTests
         """;
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MapDefaultsRoundTripAndCompletePreserveExplicitValues()
     {
         var defaults = JsonSerializer.Deserialize<TerrainDefaults>(DefaultsJson, ContractJson.Options)!;
@@ -26,6 +28,7 @@ public sealed class TerrainInputBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MissingAndExplicitNullStayMissingWithoutInventedDefaults()
     {
         var json = JsonSerializer.Serialize(File(), ContractJson.Options);
@@ -39,6 +42,7 @@ public sealed class TerrainInputBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InvalidRatiosAndAllNonPositiveOrNonFiniteNumbersAreRejected()
     {
         var valid = new TerrainDefaults("1:5", 1.5f, "1:4", 1.2f, .75f);
@@ -57,6 +61,7 @@ public sealed class TerrainInputBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LocalJsonBoundaryRejectsMissingDuplicateUnknownAndInvalidValues()
     {
         foreach (var invalid in new[]
@@ -84,6 +89,7 @@ public sealed class TerrainInputBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ZoneBoundarySnapshotOwnsDictionaryPolygonsAndEveryCoordinateRing()
     {
         var outer = new[] { new Vector2(0, 0), new Vector2(8, 0), new Vector2(0, 8) };
@@ -105,6 +111,7 @@ public sealed class TerrainInputBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MissingZoneBoundariesRemainDistinctFromProvidedEmptyBoundaries()
     {
         var missing = new WorldModelLoadInputs(Complete(File()));

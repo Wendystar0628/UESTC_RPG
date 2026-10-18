@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Text.Json;
 using GdUnit4;
 using static GdUnit4.Assertions;
@@ -8,6 +9,7 @@ namespace Campus.Contracts.Tests;
 public sealed class ContentDiagnosticTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DiagnosticSeverityAndValidationSurviveRoundTripAndRejectBypassedConstruction()
     {
         AssertThat((byte)DiagnosticLevel.Info == 0 && (byte)DiagnosticLevel.Warning == 1 && (byte)DiagnosticLevel.Error == 2).OverrideFailureMessage("Diagnostic severity values are part of the contract.").IsTrue();
@@ -40,6 +42,7 @@ public sealed class ContentDiagnosticTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DiagnosticsAreAnOptionalSidecarAndDoNotChangeContentSerialization()
     {
         var legacy = new ContentOutput([], []);

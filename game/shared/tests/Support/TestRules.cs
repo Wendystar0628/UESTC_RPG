@@ -34,6 +34,9 @@ internal static class TestTolerance
     /// <summary>Relative error for float identities.</summary>
     public const float FloatRelative = 1e-4f;
 
+    /// <summary>Absolute share error for proportion and distribution-mean checks with small samples.</summary>
+    public const float Proportion = 0.1f;
+
     /// <summary>Hours: world time (3.6 s of world clock).</summary>
     public const double WorldHours = 1e-3;
 

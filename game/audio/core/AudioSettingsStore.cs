@@ -7,21 +7,21 @@ namespace Campus.Audio.Core;
 /// <summary>Audio's view of the audio section in user://settings.json; debounces writes to the registered settings store.</summary>
 internal sealed class AudioSettingsStore(ISettingsStore store)
 {
-    private const string Section = "audio";
     private AudioSettings? _pending;
     private float _remaining;
     private int _attempts;
 
     public AudioSettings Load()
     {
-        var section = store.Section(Section);
-        var defaults = new AudioSettings();
+        var section = store.Section(AudioSettingDefinitions.Section);
         return new AudioSettings(
-            section.Float("master", defaults.Master, 0, 1), section.Float("ambience", defaults.Ambience, 0, 1),
-            section.Float("foley", defaults.Foley, 0, 1), section.Float("ui", defaults.Ui, 0, 1), section.Float("music", defaults.Music, 0, 1),
-            section.Bool("ui_sounds", true), section.Bool("hover_sounds", false), section.Bool("quiet_mode", false), section.Bool("mono", false),
-            (SuddenSoundMode)section.Int("sudden", 0, 0, 2), (BackgroundBehavior)section.Int("background", 0, 0, 2),
-            section.String("output_device") is { } device && !string.IsNullOrWhiteSpace(device) ? device : null);
+            section.Get(AudioSettingDefinitions.Master), section.Get(AudioSettingDefinitions.Ambience),
+            section.Get(AudioSettingDefinitions.Foley), section.Get(AudioSettingDefinitions.Ui), section.Get(AudioSettingDefinitions.Music),
+            section.Get(AudioSettingDefinitions.UiSounds), section.Get(AudioSettingDefinitions.HoverSounds),
+            section.Get(AudioSettingDefinitions.QuietMode), section.Get(AudioSettingDefinitions.Mono),
+            (SuddenSoundMode)section.Get(AudioSettingDefinitions.Sudden), (BackgroundBehavior)section.Get(AudioSettingDefinitions.Background),
+            section.Get(AudioSettingDefinitions.OutputDevice) is { } device && !string.IsNullOrWhiteSpace(device)
+                ? device : AudioSettings.Default.OutputDevice);
     }
 
     public void Queue(AudioSettings settings)
@@ -41,13 +41,13 @@ internal sealed class AudioSettingsStore(ISettingsStore store)
     private void WritePending()
     {
         var settings = _pending!;
-        var section = store.Section(Section);
-        section.Set("master", settings.Master); section.Set("ambience", settings.Ambience);
-        section.Set("foley", settings.Foley); section.Set("ui", settings.Ui); section.Set("music", settings.Music);
-        section.Set("ui_sounds", settings.UiSounds); section.Set("hover_sounds", settings.HoverSounds);
-        section.Set("quiet_mode", settings.QuietMode); section.Set("mono", settings.Mono);
-        section.Set("sudden", (int)settings.Sudden); section.Set("background", (int)settings.Background);
-        section.Set("output_device", settings.OutputDevice ?? "");
+        var section = store.Section(AudioSettingDefinitions.Section);
+        section.Set(AudioSettingDefinitions.Master.Key, settings.Master); section.Set(AudioSettingDefinitions.Ambience.Key, settings.Ambience);
+        section.Set(AudioSettingDefinitions.Foley.Key, settings.Foley); section.Set(AudioSettingDefinitions.Ui.Key, settings.Ui); section.Set(AudioSettingDefinitions.Music.Key, settings.Music);
+        section.Set(AudioSettingDefinitions.UiSounds.Key, settings.UiSounds); section.Set(AudioSettingDefinitions.HoverSounds.Key, settings.HoverSounds);
+        section.Set(AudioSettingDefinitions.QuietMode.Key, settings.QuietMode); section.Set(AudioSettingDefinitions.Mono.Key, settings.Mono);
+        section.Set(AudioSettingDefinitions.Sudden.Key, (int)settings.Sudden); section.Set(AudioSettingDefinitions.Background.Key, (int)settings.Background);
+        section.Set(AudioSettingDefinitions.OutputDevice.Key, settings.OutputDevice ?? "");
         if (store.TrySave()) { _pending = null; return; }
         // Retries advance on real frame delta; never block the main thread for 50 ms.
         _attempts++;

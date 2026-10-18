@@ -32,7 +32,7 @@ public partial class WalkController
         _crouching = dto.Crouching;
         _restoredCrouch = dto.Crouching;
         ApplyHeight();
-        SpeedStep = Math.Clamp(dto.SpeedStep, 0, WalkTuning.SpeedStepCount - 1);
+        SpeedStep = Math.Clamp(dto.SpeedStep, 0, WalkRules.SpeedStepCount - 1);
         if (SpeedStep != dto.SpeedStep) c.Repair("walk: speed step clamped");
         var pose = dto.Feet;
         bool validAngles = float.IsFinite(pose.YawDeg) && float.IsFinite(pose.PitchDeg);

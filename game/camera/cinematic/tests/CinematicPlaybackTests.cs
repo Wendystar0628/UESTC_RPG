@@ -16,6 +16,7 @@ public sealed class CinematicPlaybackTests
     private static readonly Campus.Gen.World.MapCatalogEntry Entry = RealMapFixture.Entry();
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DelayedCameraAndCapturedCurrentPreserveStartPose()
     {
         var pose = new Pose(new(10, 40, 50), 170, -20, 62);
@@ -28,6 +29,7 @@ public sealed class CinematicPlaybackTests
         if (anchors.Resolve(new FovKey(0, Anchor: "$dest")) != 70) throw new InvalidOperationException("Missing saved FOV did not fall back to the setting.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WorldReplacementRejectsFadeRampsAndLetterbox()
     {
         var definition = Timeline() with { World = [new(0.5, WorldCueKind.NewTimeline)] };
@@ -46,6 +48,7 @@ public sealed class CinematicPlaybackTests
         AssertThat(shortVeilRejected).OverrideFailureMessage("Invalid timeline was accepted.").IsTrue();
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task CoverageRequiresARealPostDrawAfterTheRequest()
     {
         var rig = new FlowTestRig();
@@ -65,6 +68,7 @@ public sealed class CinematicPlaybackTests
         playback.FramePresented(); playback.Tick(0); await nextPose;
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ClearCancelsInfiniteWaitsAndPlaybackWithoutCancelingTheirWorldJob()
     {
         var rig = new FlowTestRig();
@@ -88,7 +92,7 @@ public sealed class CinematicPlaybackTests
             throw new InvalidOperationException("A canceled wait was polled again after Clear.");
     }
     [TestCase]
-    [TestCategory("Contract")]
+    [TestCategory(TestReason.Contract)]
     public void PlaybackCleanupReleasesOnlyItsMask()
     {
         foreach (var cleanup in new Action<CinematicPlayback>[] { p => p.Clear(), p => p.Abort(new OperationCanceledException()), p => p.Dispose() })
@@ -109,7 +113,7 @@ public sealed class CinematicPlaybackTests
         }
     }
     [TestCase]
-    [TestCategory("Contract")]
+    [TestCategory(TestReason.Contract)]
     public async Task CancelledTransitPreservesAnotherCoverWithTheSameReason()
     {
         var rig = new FlowTestRig();
@@ -124,6 +128,7 @@ public sealed class CinematicPlaybackTests
         if (rig.Veil.Opacity != 0) throw new InvalidOperationException("Cancelled transit retained its cover lease.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task ReentrantClearDuringPlaybackCancellationPreservesTheNextPlaybackAndWait()
     {
         var rig = new FlowTestRig();
@@ -158,6 +163,7 @@ public sealed class CinematicPlaybackTests
         }
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task TickDoesNotPollCanceledOrNewWaitsAfterACompletionClearsPlayback()
     {
         var rig = new FlowTestRig();
@@ -184,6 +190,7 @@ public sealed class CinematicPlaybackTests
         }
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task OldDoneCancellationCannotClearPlaybackStartedByAnOldWaitCancellation()
     {
         var rig = new FlowTestRig();
@@ -220,6 +227,7 @@ public sealed class CinematicPlaybackTests
         }
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task SkippingJoinsInFlightRestoreAndDrainsEachCueOnce()
     {
         var rig = new FlowTestRig();
@@ -242,17 +250,19 @@ public sealed class CinematicPlaybackTests
         playback.Clear();
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void VisibleOrientationUsesTheShortRouteAcrossNorth()
     {
-        if (Math.Abs(CinematicPoseMath.AngleDelta(179, -179) - 2) > 0.0001f || Math.Abs(CinematicPoseMath.AngleDelta(-179, 179) + 2) > 0.0001f)
+        if (Math.Abs(CinematicPoseMath.AngleDelta(179, -179) - 2) > TestTolerance.AngleDegrees || Math.Abs(CinematicPoseMath.AngleDelta(-179, 179) + 2) > TestTolerance.AngleDegrees)
             throw new InvalidOperationException("Camera yaw takes the long rotation path.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OrbitAzimuthUsesTheSameForwardConventionAsPose()
     {
         var definition = Timeline() with { Camera = [new(0, 2, CameraPath.Orbit, [], new(CameraLookMode.Target, Target: Vector3.Zero), [new(0, 60)], Orbit: new(Vector3.Zero, 10, 10, 0, 90, 5, 5))] };
         using var track = new CinematicTrack(definition, Anchors(default, default, 60), new FakeWorld { Boundary = new([]) });
-        if (Vector3.Distance(track.PositionAt(0), new(0, 5, -10)) > 0.001f || Vector3.Distance(track.PositionAt(2), new(10, 5, 0)) > 0.001f)
+        if (Vector3.Distance(track.PositionAt(0), new(0, 5, -10)) > TestTolerance.Position || Vector3.Distance(track.PositionAt(2), new(10, 5, 0)) > TestTolerance.Position)
             throw new InvalidOperationException("Orbit reflected the path along Z.");
     }
     private static CameraSeg Hold(double from, double to) => new(from, to, CameraPath.Hold,

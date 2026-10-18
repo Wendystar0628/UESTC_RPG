@@ -13,6 +13,7 @@ namespace Campus.Tests;
 public sealed class BackdropInputsTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AuthoredRelativeKeyAndRawBytesAreFrozenAtLoad()
     {
         var map = Descriptor("environment/far.json");
@@ -29,6 +30,7 @@ public sealed class BackdropInputsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NonJsonAuthoredPathIsReadAndExistingCaptureIsNeverReread()
     {
         var map = Descriptor("environment/backdrop.data");
@@ -51,6 +53,7 @@ public sealed class BackdropInputsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MissingIsOptionalButEmptyOrInvalidPathsFailBeforePublication()
     {
         var map = Descriptor("nested/backdrop.json");
@@ -74,6 +77,7 @@ public sealed class BackdropInputsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ConsecutiveMapsReadTheirOwnFarAndMissingPreservesTheCurrentCamera()
     {
         var far = BackdropInputs.CameraFar(Descriptor(), Snapshot("backdrop.json", "{\"farClip\":12000}"), 8000, .05f);

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using GdUnit4;
@@ -9,6 +10,7 @@ namespace Campus.Contracts.Tests;
 public sealed class LightingContentBoundaryTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ChannelNumbersAreStableAndRejectUnregisteredInputs()
     {
         // These slots are persisted in glass UV2 and consumed by independently authored shaders.
@@ -30,6 +32,7 @@ public sealed class LightingContentBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ContentOutputRoundTripPreservesWindowNumberingAndShaderPayloadBoundaries()
     {
         const int baseId = 65500, columns = 20, localColumn = 5, row = 1, columnStart = 10;

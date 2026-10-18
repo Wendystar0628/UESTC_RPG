@@ -102,7 +102,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             var context = Context(); var catalog = new CinematicCatalog(context);
             var meta = newGame ? null : Info(_request.Slot!.Value)?.Meta;
             _destination = meta?.Pose ?? maps.ResolveSpawn(context.Descriptor.Id).Fly;
-            _destinationMode = meta?.Mode ?? ViewMode.Walk;
+            _destinationMode = meta?.Mode ?? rules.Current.DefaultViewMode;
             var mode = _boot?.CinematicMode ?? settings?.Mode ?? CinematicMode.Full;
             var role = mode switch
             {

@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
-using Campus.Camera.Walk;
 using Godot;
 
 namespace Campus.Camera;
@@ -164,7 +163,7 @@ public partial class ObserverCamera
         {
             case ViewMode.Fly: _flySpeedStep = Math.Clamp(_flySpeedStep + steps, 1, Tuning.SpeedSteps); break;
             case ViewMode.Walk:
-                _walk?.SetSpeedStep(Math.Clamp(SpeedStep + steps, 0, WalkTuning.SpeedStepCount - 1)); break;
+                _walk?.SetSpeedStep(Math.Clamp(SpeedStep + steps, 0, WalkRules.SpeedStepCount - 1)); break;
             default: throw new InvalidOperationException("Unknown view mode.");
         }
     }

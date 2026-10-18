@@ -15,10 +15,17 @@ internal static class WorldTestKit
         Body Sun, Body Moon, long Rev, long Instance, int Steps) LiveReadings(WorldStateService world, TestWeatherProcess weather) =>
         (world.WorldHours, world.Clock, world.TargetHours, world.SeasonPos, world.Flow, world.AnimTime,
             world.Sun, world.Moon, world.Rev, world.Instance, weather.Steps.Count);
-    public static WorldStateService CreateWorld(TestWeatherProcess weather, IMotionSettings? motion = null)
+    public static WorldStateService CreateWorld(TestWeatherProcess weather, IMotionSettings? motion = null, bool initialize = true)
     {
         var world = new WorldStateService(weather, motion);
-        world.OnMapLoaded(PresetContext(new WorldPreset(17.5, Season.Autumn, WeatherKind.Clear), true));
+        var context = PresetContext(new WorldPreset(17.5, Season.Autumn, WeatherKind.Clear), true);
+        if (initialize)
+        {
+            var preset = context.Descriptor.World.Default;
+            world.Freeze(preset.Clock, preset.Season, WorldTime.InitialAnimTime);
+            world.SetFlow(1);
+        }
+        world.OnMapLoaded(context);
         return world;
     }
     public static IMapContext PresetContext(WorldPreset preset, bool quiet) => new TestMapContext(new MapDescriptor(

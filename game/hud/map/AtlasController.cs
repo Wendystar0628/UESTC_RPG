@@ -57,7 +57,7 @@ internal sealed class AtlasController : IDisposable
     }
 
     public void SetTitle(string zh, string en) => _page.SetTitle(zh, en);
-    public void SetBounds(Rect2 world) => _page.Paper.SetBounds(world);
+    public void SetBounds(Rect2 world) => _page.Paper.SetBounds(world, _s.Atlas.ZoomMin, _s.Atlas.ZoomMax);
     public void RedrawAll() => _page.RedrawAll();
 
     public void SetEntries(IReadOnlyList<MapEntry> entries)

@@ -1,12 +1,12 @@
 {
   "schema": 1,
+  "defaultPreset": "fine",
   "presets": {
     "balanced": {
       "display_mode": 1,
       "window_size": 0,
       "v_sync": 1,
       "frame_cap": 1,
-      "render_scale": 0.67,
       "anti_aliasing": 1,
       "shadow_quality": 0,
       "shadow_distance": 1000,
@@ -19,7 +19,6 @@
       "window_size": 0,
       "v_sync": 1,
       "frame_cap": 1,
-      "render_scale": 1,
       "anti_aliasing": 0,
       "shadow_quality": 1,
       "shadow_distance": 1600,
@@ -32,7 +31,6 @@
       "window_size": 0,
       "v_sync": 1,
       "frame_cap": 3,
-      "render_scale": 1,
       "anti_aliasing": 0,
       "shadow_quality": 2,
       "shadow_distance": 1600,

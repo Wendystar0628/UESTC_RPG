@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +12,7 @@ namespace Campus.Contracts.Tests;
 public sealed class TerrainCorridorRangeTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LegacyConstructorAndMissingRangeKeepTheFullRoadWireContract()
     {
         var legacy = new TerrainCorridorOp("design:terrain:legacy", "Synthetic range boundary", new("source:road"),
@@ -34,16 +36,18 @@ public sealed class TerrainCorridorRangeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExplicitRangeRoundTripsAbsoluteStationsAndRealStepReferences()
     {
         var parsed = Parse(RangedFixture());
         var restored = (TerrainCorridorOp)TerrainOverlayJson.Parse(TerrainOverlayJson.ToUtf8Bytes(parsed)).Ops[0];
         AssertThat(restored.Range == new TerrainStationRange(20, 80) &&
             restored.Anchors[0].S == 20 && restored.Anchors[1].S == 50 && restored.Anchors[^1].S == 80).OverrideFailureMessage("A range must preserve original source-road stations rather than rebasing its fragment to zero.").IsTrue();
-        AssertThat(restored.Steps is [{ S0: 30, S1: 35 }] && restored.Steps[0].Structure == new FeatureId("source:stairs")).OverrideFailureMessage("An in-range step lost its absolute interval or real structure reference.").IsTrue();
+        AssertThat(restored.Steps is [{ S0: 30, S1: 35 }] && restored.Steps[0].Structure == ((TerrainCorridorOp)parsed.Ops[0]).Steps[0].Structure).OverrideFailureMessage("An in-range step lost its absolute interval or real structure reference.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MalformedRangesUncoveredEndpointsAndEscapingStepsFailAtTheDtoBoundary()
     {
         foreach (var mutate in new Action<JsonObject>[]

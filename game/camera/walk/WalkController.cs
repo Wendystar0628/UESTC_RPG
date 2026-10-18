@@ -61,11 +61,11 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private float _descentElapsed;
     private bool _worldResetPending = true;
 
-    public bool Active => _view?.Mode == ViewMode.Walk;
+    public bool Active => _hasPlacement && _view?.Mode == ViewMode.Walk;
     public bool ExitRequested => _safetyFailed;
     public bool Grounded { get; private set; }
     public bool CollisionReady { get; private set; }
-    public int SpeedStep { get; private set; } = WalkTuning.DefaultSpeedStep;
+    public int SpeedStep { get; private set; } = WalkRules.DefaultSpeedStep;
     public int SafetyReturnCount { get; private set; }
     public bool IsSettled => !Active || (Grounded && CollisionReady && _descentDuration <= 0 && !_safetyFailed
         && _map is not null && !WalkSafetyQueries.InWater(_map.World.Spatial, _feet));
@@ -107,7 +107,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
             return EyeAt(N.Vector3.Lerp(_previousFeet, _feet, fraction));
         }
     }
-    private float EyeHeight => _crouching ? WalkTuning.CrouchingEye : WalkTuning.StandingEye;
+    private float EyeHeight => _crouching ? WalkRules.CrouchingEye : WalkRules.StandingEye;
 
     public WalkController()
     {
@@ -227,7 +227,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
 
     public void SetSpeedStep(int step)
     {
-        _ = WalkTuning.SpeedMultiplier(step);
+        _ = WalkRules.SpeedMultiplier(step);
         SpeedStep = step;
     }
 
@@ -305,9 +305,9 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         _jumpBuffer = _jumpQueued ? WalkTuning.JumpBufferSeconds : MathF.Max(0, _jumpBuffer - dt);
         _jumpQueued = false;
         UpdateCrouch();
-        float multiplier = WalkTuning.SpeedMultiplier(SpeedStep);
+        float multiplier = WalkRules.SpeedMultiplier(SpeedStep);
         bool sprint = _input.Sprint && !_crouching && _input.Move.Y > 0;
-        float speed = (_crouching ? WalkTuning.CrouchSpeed : sprint ? WalkTuning.SprintSpeed : WalkTuning.WalkSpeed) * multiplier;
+        float speed = (_crouching ? WalkTuning.CrouchSpeed : sprint ? WalkTuning.SprintSpeed : WalkRules.WalkSpeed) * multiplier;
         if (_map.World.Spatial.WalkClassAt(_feet.X, _feet.Z) == WalkClass.Wade) speed *= .6f;
         var direction = WalkMath.Direction(_input.Move, _yaw);
         var velocity = WalkMath.HorizontalVelocity(Velocity.ToNumerics(), direction * speed, wasGrounded, dt);

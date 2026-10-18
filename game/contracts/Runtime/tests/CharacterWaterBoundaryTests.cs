@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts.Audio;
@@ -12,6 +13,7 @@ namespace Campus.Contracts.Tests;
 public sealed class CharacterWaterBoundaryTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DiscontinuityFreezeAndUnavailableBodyDoNotInterpolateOrStimulate()
     {
         var before = Live(10);
@@ -26,6 +28,7 @@ public sealed class CharacterWaterBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MissingWaterNeverBecomesReadyAndSwimmingDepthIsNotFootImmersion()
     {
         WaterQueryResult missing = default;
@@ -33,7 +36,7 @@ public sealed class CharacterWaterBoundaryTests
         var sample = new WaterSample(new(0, -.75f, 0), new("test:water"), "volume", "swim-area", null,
             0, -1.2f, WaterBottomKind.Terrain, -2, 1, WaterAccess.SurfaceSwim);
         var hit = new WaterQueryResult(WaterQueryStatus.Ready, sample, .5f);
-        AssertThat(MathF.Abs(hit.Sample!.Value.ColumnDepth - 1.2f) < .00001f && hit.Sample.Value.DepthAtPoint == .75f).OverrideFailureMessage("Column depth and the swimming reference-point immersion were conflated.").IsTrue();
+        AssertThat(MathF.Abs(hit.Sample!.Value.ColumnDepth - 1.2f) < TestTolerance.Position && hit.Sample.Value.DepthAtPoint == .75f).OverrideFailureMessage("Column depth and the swimming reference-point immersion were conflated.").IsTrue();
         AssertThrown(() => new WaterQueryResult(WaterQueryStatus.Ready)).IsInstanceOf<ArgumentException>();
         AssertThrown(() => new WaterQueryResult(WaterQueryStatus.NotReady, sample)).IsInstanceOf<ArgumentException>();
         AssertThrown(() => new WaterQueryResult(WaterQueryStatus.Ready, sample with { SwimAreaId = null })).IsInstanceOf<ArgumentException>();
@@ -42,6 +45,7 @@ public sealed class CharacterWaterBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void VisibleTreadsRoundTripWithoutInventingMetadata()
     {
         var spec = new StairSpec(.15f, .3f, 10);
@@ -61,10 +65,11 @@ public sealed class CharacterWaterBoundaryTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LegacyRulesetConstructorAndJsonKeepBodyPermissionOffUnlessExplicit()
     {
         var legacy = new RulesetDescriptor(new("legacy"), [ViewMode.Fly, ViewMode.Walk],
-            WorldControlMask.None, "all-unlocked", [], []);
+            ViewMode.Fly, WorldControlMask.None, "all-unlocked", [], []);
         AssertThat(!legacy.PlayerBody && !legacy.Characters).OverrideFailureMessage("A legacy ruleset unexpectedly enabled a character.").IsTrue();
         string json = JsonSerializer.Serialize(legacy, ContractJson.Options);
         using var parsed = JsonDocument.Parse(json);

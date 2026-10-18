@@ -1,3 +1,4 @@
+using Campus.Tests;
 using Campus.Contracts;
 using Campus.Kernel.Renderer;
 using GdUnit4;
@@ -11,6 +12,7 @@ namespace Campus.Kernel.Instances.Tests;
 public sealed class PaletteSurfaceUploadRuntimeTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void SurfacePatternUploadPreservesMetresAndRejectsProfileChangingOverrides()
@@ -59,6 +61,7 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void ActualNativeUploadRetainsAllLegacyColorBytesAndIndependentDecalBanks()
@@ -122,6 +125,7 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void HighFallbackAndTintUseTheSharedCatalog()

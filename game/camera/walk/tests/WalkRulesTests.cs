@@ -14,6 +14,7 @@ namespace Campus.Tests;
 public sealed class WalkRulesTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CylinderDimensionsKeepStandingCrouchingAndFlatBottomShapesDistinctFromCapsules()
     {
         AssertThat(WalkMath.ValidCylinderDimensions(WalkRules.Radius, WalkRules.StandingHeight)
@@ -25,7 +26,7 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
-    [TestCategory("Regression")]
+    [TestCategory(TestReason.Regression)]
     public void NonPlayingStatesFreezeVelocityAndInterpolationWithoutMovingFeet()
     {
         var feet = new Vector3(12, 3, -8);
@@ -36,6 +37,7 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EnteringToPlayingReleasesOnlyTheStateFreezeAndKeepsNormalMotionInputs()
     {
         var feet = new Vector3(12, 3, -8);
@@ -51,37 +53,41 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DiagonalMovementHasNoSpeedBonusAndYawMatchesCamera()
     {
         var diagonal = WalkMath.Direction(new(1, 1), 0);
-        AssertThat(MathF.Abs(diagonal.Length() - 1) < .00001f).OverrideFailureMessage("Diagonal movement has a speed bonus.").IsTrue();
-        AssertThat(Vector3.Distance(WalkMath.Direction(new(0, 1), 90), Vector3.UnitX) < .00001f).OverrideFailureMessage("Walk forward disagrees with the camera's positive yaw.").IsTrue();
-        AssertThat(Vector3.Distance(WalkMath.Direction(new(1, 0), 0), Vector3.UnitX) < .00001f).OverrideFailureMessage("Strafing right uses the wrong axis.").IsTrue();
+        AssertThat(MathF.Abs(diagonal.Length() - 1) < TestTolerance.FloatRelative).OverrideFailureMessage("Diagonal movement has a speed bonus.").IsTrue();
+        AssertThat(Vector3.Distance(WalkMath.Direction(new(0, 1), 90), Vector3.UnitX) < TestTolerance.FloatRelative).OverrideFailureMessage("Walk forward disagrees with the camera's positive yaw.").IsTrue();
+        AssertThat(Vector3.Distance(WalkMath.Direction(new(1, 0), 0), Vector3.UnitX) < TestTolerance.FloatRelative).OverrideFailureMessage("Strafing right uses the wrong axis.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AccelerationDoesNotDependOnPhysicsSubdivision()
     {
-        var target = new Vector3(3.6f, 0, 0);
+        var target = new Vector3(WalkRules.WalkSpeed, 0, 0);
         var coarse = Vector3.Zero;
         var fine = Vector3.Zero;
         for (int i = 0; i < 30; i++) coarse = WalkMath.HorizontalVelocity(coarse, target, true, 1f / 60);
         for (int i = 0; i < 60; i++) fine = WalkMath.HorizontalVelocity(fine, target, true, 1f / 120);
-        AssertThat(Vector3.Distance(coarse, fine) < .00001f).OverrideFailureMessage("Exponential acceleration changed with fixed-step subdivision.").IsTrue();
-        AssertThat(fine.X > 3.58f && fine.X < 3.6f).OverrideFailureMessage("Half-second acceleration does not approach the target speed.").IsTrue();
+        AssertThat(Vector3.Distance(coarse, fine) < TestTolerance.Position).OverrideFailureMessage("Exponential acceleration changed with fixed-step subdivision.").IsTrue();
+        AssertThat(fine.X > target.X - TestTolerance.Position && fine.X < target.X).OverrideFailureMessage("Half-second acceleration does not approach the target speed.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SpeedCapPreservesVerticalJumpAndCrouchRemainsSlower()
     {
         var velocity = WalkMath.LimitHorizontal(new(20, WalkTuning.JumpSpeed, 20));
-        AssertThat(MathF.Abs(new Vector2(velocity.X, velocity.Z).Length() - 12f) < .00001f).OverrideFailureMessage("Horizontal speed cap is missing.").IsTrue();
+        AssertThat(MathF.Abs(new Vector2(velocity.X, velocity.Z).Length() - WalkTuning.MaximumHorizontalSpeed) < TestTolerance.FloatRelative).OverrideFailureMessage("Horizontal speed cap is missing.").IsTrue();
         AssertThat(velocity.Y == WalkTuning.JumpSpeed).OverrideFailureMessage("Speed multiplier changes vertical jump impulse.").IsTrue();
-        for (int step = 0; step < WalkTuning.SpeedStepCount; step++)
-            AssertThat(WalkTuning.CrouchSpeed * WalkTuning.SpeedMultiplier(step) < WalkTuning.WalkSpeed * WalkTuning.SpeedMultiplier(step)).OverrideFailureMessage("Crouch is not slower at a supported speed step.").IsTrue();
+        for (int step = 0; step < WalkRules.SpeedStepCount; step++)
+            AssertThat(WalkTuning.CrouchSpeed * WalkRules.SpeedMultiplier(step) < WalkRules.WalkSpeed * WalkRules.SpeedMultiplier(step)).OverrideFailureMessage("Crouch is not slower at a supported speed step.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SaveRoundTripKeepsLegacyFeetLookCrouchSpeedAndSafePoints()
     {
         var dto = new WalkSave(new(new(12.25f, 3, -7), 83, -12), true, 4,
@@ -95,6 +101,7 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ForbiddenSurfacesCannotBecomeLandingPoints()
     {
         foreach (var value in new[] { WalkClass.Building, WalkClass.Water, WalkClass.Forbidden, WalkClass.Outside, WalkClass.Steep })
@@ -104,6 +111,7 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RiverbedNearShoreUsesWaterSurfaceDepthAndCannotBecomeSavedFeet()
     {
         var spatial = new SafetySpatial(-1f, -.5f, WalkClass.Water, nearShore: true);
@@ -116,6 +124,7 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SupportedBridgeAboveWaterDoesNotTriggerWaterRecovery()
     {
         var feet = new Vector3(0, 2, 0);
@@ -127,6 +136,7 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DefaultFeetUsesNewGameTargetCatalogueBeforeThatWorldMounts()
     {
         var (entry, oldContext) = LoadCampusSpawnFixture();
@@ -143,12 +153,13 @@ public sealed class WalkRulesTests
         maps.Context = oldContext;
         var resolve = maps.SpawnResolver!;
         maps.SpawnResolver = (map, spawn) => { lastRequestedMap = map; return resolve(map, spawn); };
-        var dto = WalkSafetyQueries.CreateDefault(maps, new(1, target, targetEntry.Descriptor.World.Default));
+        var dto = WalkSafetyQueries.CreateDefault(maps, new(1, target, targetEntry.Descriptor.World.Default, ViewMode.Walk));
         AssertThat(lastRequestedMap == target && dto.Feet.Position == waypoint.Stand!.Feet
             && dto.Feet.YawDeg == waypoint.Stand.YawDeg).OverrideFailureMessage("CreateDefault ignored NewGameContext.Map or reused the previously mounted map.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UnknownDefaultSpawnIsNotReplacedByTheOriginOrAnotherPoint()
     {
         var (entry, context) = LoadCampusSpawnFixture();

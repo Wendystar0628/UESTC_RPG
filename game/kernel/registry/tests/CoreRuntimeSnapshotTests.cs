@@ -13,6 +13,7 @@ public sealed class CoreRuntimeSnapshotTests
         """;
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CentimetreLandingCorrectionMatches()
     {
         var restored = JsonNode.Parse(Snapshot)!.AsObject();
@@ -23,6 +24,7 @@ public sealed class CoreRuntimeSnapshotTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EveryPositionRejectsMoreThanTwoCentimetresInEuclideanDistance()
     {
         for (var index = 0; index < Positions(JsonNode.Parse(Snapshot)!.AsObject()).Length; index++)
@@ -37,6 +39,7 @@ public sealed class CoreRuntimeSnapshotTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NonPositionFieldsAndArrayStructureRemainExact()
     {
         Action<JsonObject>[] changes =

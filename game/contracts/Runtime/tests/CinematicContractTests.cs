@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts.Cinematic;
@@ -10,6 +11,7 @@ namespace Campus.Contracts.Tests;
 public sealed class CinematicContractTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LookTargetsKeepBothLegacyAndAnchorWireShapes()
     {
         var legacy = RoundTrip<CameraLook>("""{"mode":"target","target":[1,2,3]}""");
@@ -33,6 +35,7 @@ public sealed class CinematicContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MaskEnumAndFullCoverBoundariesRemainExplicit()
     {
         var mask = RoundTrip<MaskSeg>("""{"t0":0.2,"t1":2.6,"kind":"veil","fadeIn":0.8,"fadeOut":0.4,"hold":{"until":"titleReady","maxWait":2}}""");
@@ -54,6 +57,7 @@ public sealed class CinematicContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SupplementalRecordsRoundTripTheirDiscriminatorsAndVectors()
     {
         var extras = RoundTrip<CinematicExtrasFile>("""
@@ -73,6 +77,7 @@ public sealed class CinematicContractTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FullTimelineComposesLookEaseAndEndpointConverters()
     {
         const string anchoredJson = """

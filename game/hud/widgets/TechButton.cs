@@ -43,6 +43,37 @@ public partial class TechButton : Button
     /// <summary>覆盖默认的内容色，例如强调色的文字按钮。</summary>
     public string? RoleOverride { get; set; }
 
+    public static TechButton Create(UiKit kit, ButtonStyle style, string text, string? icon, string fontRole, bool pin)
+    {
+        var padX = style switch
+        {
+            ButtonStyle.Segment or ButtonStyle.Cell => kit.Layout.Metric("segmentPadX"),
+            ButtonStyle.Primary or ButtonStyle.Danger => kit.Layout.Metric("primaryPadX"),
+            ButtonStyle.Icon => (kit.Layout.Metric("iconButton") - kit.Layout.Metric("iconInButton")) / 2,
+            _ => kit.Layout.Metric("buttonPadX"),
+        };
+        var button = Create(kit, style, text, icon, fontRole, padX, kit.Layout.Metric("buttonPadY"),
+            kit.Layout.Metric("iconInButton"), pin);
+        var metric = style switch
+        {
+            ButtonStyle.Primary or ButtonStyle.Danger => "primary",
+            ButtonStyle.Icon => "iconButton",
+            ButtonStyle.Segment or ButtonStyle.Cell => "segment",
+            ButtonStyle.Tab => "tab",
+            _ => "secondary",
+        };
+        var width = style switch
+        {
+            ButtonStyle.Primary or ButtonStyle.Danger => kit.Layout.Metric("primaryMinWidth"),
+            ButtonStyle.Secondary => kit.Layout.Metric("secondaryMinWidth"),
+            ButtonStyle.Icon => kit.Layout.Metric("iconButton"),
+            _ => 0,
+        };
+        button.CustomMinimumSize = new Vector2(width, kit.Layout.Metric(metric));
+        button.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        return button;
+    }
+
     public static TechButton Create(UiKit kit, ButtonStyle style, string text, string? icon, string fontRole, int padX, int padY,
         int iconMax, bool pin)
     {
@@ -54,7 +85,8 @@ public partial class TechButton : Button
             Pin = pin,
             FocusMode = FocusModeEnum.All,
             MouseFilter = MouseFilterEnum.Stop,
-            ThemeTypeVariation = kit.Theme.ButtonType(fontRole, padX, padY, false, 6, iconMax),
+            ThemeTypeVariation = kit.Theme.ButtonType(fontRole, padX, padY, false, (int)kit.Tokens.F("metrics", "shape", "expandMargin"), iconMax,
+                kit.Layout.Metric("iconGap")),
             ClipText = false,
         };
         if (icon is not null) { button.Icon = kit.Icon(icon); button.ExpandIcon = true; }
@@ -192,14 +224,15 @@ public partial class TechButton : Button
             var size = GetThemeFontSize("font_size");
             var width = font.GetStringSize(Text, HorizontalAlignment.Left, -1, size).X;
             var y = Mathf.Round(Size.Y / 2 + font.GetAscent(size) / 2 + 5);
-            _underline = _kit.Box(this, new Rect2(GetThemeStylebox("normal").GetMargin(Side.Left), y, width, 1),
-                new UiFx(Fill: RoleOverride ?? "text.accent", Pin: Pin));
+            _underline = _kit.Box(this, new UiFx(Fill: RoleOverride ?? "text.accent", Pin: Pin));
+            _underline.Position = new Vector2(GetThemeStylebox("normal").GetMargin(Side.Left), y);
+            _underline.Size = new Vector2(width, 1);
         }
         if (_underline is not null) _underline.Visible = show;
     }
 
     public override void _Notification(int what)
     {
-        if (what == NotificationThemeChanged) Refresh();
+        if (what == NotificationThemeChanged && _kit is not null) Refresh();
     }
 }

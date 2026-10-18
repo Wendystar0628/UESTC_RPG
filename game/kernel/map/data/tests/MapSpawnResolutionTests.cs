@@ -16,6 +16,7 @@ public sealed class MapSpawnResolutionTests
 {
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ExplicitSpawnWinsOverSameNamedWaypoint()
     {
         var authored = new MapSpawn("P00", new(new Vector3(12, 50, 18), 35, -20),
@@ -27,6 +28,7 @@ public sealed class MapSpawnResolutionTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ReviewCaptureSharesDefaultOverviewAndNamedWaypointResolution()
     {
         var entry = Entry([]);

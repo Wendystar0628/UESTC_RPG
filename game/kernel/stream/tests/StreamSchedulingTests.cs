@@ -13,6 +13,7 @@ namespace Campus.Tests;
 public sealed class StreamSchedulingTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OffOriginModuleProducesOneWholeMapRootAndAnHonestEmptyBundleOnTheBakeWorker()
     {
         var context = new BuildContext
@@ -54,6 +55,7 @@ public sealed class StreamSchedulingTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ActualBakeQueueKeepsFailuresAndDiscardsForgottenSameIdResults()
     {
         using var queue = new BakeQueue(1);
@@ -80,6 +82,7 @@ public sealed class StreamSchedulingTests
         finally { release.Set(); }
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RetirementBlocksVisualsButPreservesCollisionAndResumesAfterDrain()
     {
         var retiring = true; var collisionSteps = 0; var visualSteps = 0;
@@ -96,6 +99,7 @@ public sealed class StreamSchedulingTests
         if (visualSteps != 1 || queue.Pending != 0) throw new InvalidOperationException("Visual activation did not resume after retirement.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void FailedMountCancelsAndLeavesNoQueuedWork()
     {
         var errors = new List<string>();
@@ -106,6 +110,7 @@ public sealed class StreamSchedulingTests
             throw new InvalidOperationException("Failed mount was not cancelled and removed.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SharedMountBudgetPutsOneCollisionBodyBeforeOneVisualTile()
     {
         var clock = 0d; var order = new List<StreamMountKind>();
@@ -123,6 +128,7 @@ public sealed class StreamSchedulingTests
             throw new InvalidOperationException("Shared frame ordering or limits failed.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SameMapReloadRejectsAnOldRevisionAndCancelsItOnce()
     {
         var queue = new StreamMountQueue(() => 0);
@@ -131,6 +137,7 @@ public sealed class StreamSchedulingTests
         if (old.Cancels != 1 || queue.Pending != 0) throw new InvalidOperationException("Old revision was retained.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ThreeDoubleBudgetOverrunsPauseActivationFor250Milliseconds()
     {
         var watchdog = new MountWatchdog(1);
@@ -139,6 +146,7 @@ public sealed class StreamSchedulingTests
             throw new InvalidOperationException("Mount watchdog did not preserve its cooldown and reduced budget.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CollisionWinsOverCoarseGeometryAndReplanDropsOnlyUnissuedRequests()
     {
         var queue = new StreamRequestQueue();
@@ -150,6 +158,7 @@ public sealed class StreamSchedulingTests
         if (queue.TryDequeue(out _)) throw new InvalidOperationException("A cancelled unissued request survived replan.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ParentStaysDrawnUntilComplementaryFadeFinishesAcrossClockWrap()
     {
         var visibility = new TileVisibility(.25f); var root = StreamTile.Root;

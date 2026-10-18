@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Buffers.Binary;
 using System.Numerics;
 using Campus.Contracts;
@@ -12,6 +13,7 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class BakePaletteV2Tests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OrdinaryBuildOutputUsesItsCapturedCatalogAndRejectsAReplacedSnapshot()
     {
         var catalog = Catalog();
@@ -36,6 +38,7 @@ public sealed class BakePaletteV2Tests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BankZeroBytesRemainIdenticalThroughMutableAndFrozenGeometry()
     {
         var catalog = Catalog();
@@ -77,6 +80,7 @@ public sealed class BakePaletteV2Tests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BoundaryIndicesUseBankBitsAndPreserveNonDecalReservedAndCustomBits()
     {
         var source = Geometry() with
@@ -111,6 +115,7 @@ public sealed class BakePaletteV2Tests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void AllFourDecalBankCombinationsKeepIndependentForegroundAndBaseIndices()
     {
         foreach (var foreground in new ushort[] { 255, 511 })
@@ -136,6 +141,7 @@ public sealed class BakePaletteV2Tests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void HighMaterialDefaultsAndPlacedTintUseTheCompleteCatalog()
     {
         var catalog = Catalog();
@@ -151,6 +157,7 @@ public sealed class BakePaletteV2Tests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InvalidOrCompetingStreamsAreRejectedBeforePacking()
     {
         var catalog = Catalog();
@@ -165,6 +172,7 @@ public sealed class BakePaletteV2Tests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RepeatedPrototypeStreamsRetainOrderAndCachePerReferenceWithoutDiscardingInstances()
     {
         var catalog = Catalog();

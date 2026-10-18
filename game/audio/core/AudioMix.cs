@@ -32,12 +32,12 @@ public sealed class AudioMix
             Foley = Slider(next.Foley),
             Ui = Slider(next.Ui),
             Music = Slider(next.Music),
-            OutputDevice = string.IsNullOrWhiteSpace(next.OutputDevice) ? null : next.OutputDevice
+            OutputDevice = string.IsNullOrWhiteSpace(next.OutputDevice) ? AudioSettings.Default.OutputDevice : next.OutputDevice
         };
     }
 
     private static float Slider(float value) => float.IsFinite(value)
-        ? Math.Clamp(value, 0f, 1f) : throw new ArgumentOutOfRangeException(nameof(value));
+        ? Math.Clamp(value, (float)AudioSettingDefinitions.VolumeRange.Min, (float)AudioSettingDefinitions.VolumeRange.Max) : throw new ArgumentOutOfRangeException(nameof(value));
 
     public static int GroupIndex(AudioGroup group) => group switch
     {

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Campus.Gen.Vegetation;
@@ -10,6 +11,7 @@ namespace Campus.Systems.Vegetation.Tests;
 public sealed class VegetationFadeTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ShadersMirrorTheFadeConstants()
     {
         var shaders = Campus.Tests.RepositoryFixture.FilePath("game", "style", "shaders");

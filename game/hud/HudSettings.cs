@@ -6,6 +6,18 @@ namespace Campus.Hud;
 public enum ResidentTheme : byte { Dark, Follow }
 public enum ReduceMotionMode : byte { System, On, Off }
 
+public static class HudSettingDefinitions
+{
+    public static readonly SettingDefinition<int> Theme = new("theme", (int)UiThemeMode.Auto, "settings.theme", Options: [new((int)UiThemeMode.Auto, "settings.theme.auto"), new((int)UiThemeMode.Light, "settings.theme.light"), new((int)UiThemeMode.Dark, "settings.theme.dark")]);
+    public static readonly SettingDefinition<int> Resident = new("resident", (int)ResidentTheme.Dark, "settings.resident", Options: [new((int)ResidentTheme.Dark, "settings.resident.dark"), new((int)ResidentTheme.Follow, "settings.resident.follow")]);
+    public static readonly SettingDefinition<int> ReduceMotion = new("reduce_motion", (int)ReduceMotionMode.System, "settings.reduce_motion", Options: [new((int)ReduceMotionMode.System, "settings.follow_system"), new((int)ReduceMotionMode.On, "ui.common.on"), new((int)ReduceMotionMode.Off, "ui.common.off")]);
+    public static readonly SettingDefinition<bool> ReduceTransparency = new("reduce_transparency", false, "settings.reduce_transparency");
+    public static readonly SettingDefinition<bool> Frost = new("frost", true, "settings.frost");
+    public static SettingDefinition<float> UiScale => UiSettingDefinitions.Scale;
+    public static readonly SettingDefinition<bool> SingleKeyShortcuts = new("single_key_shortcuts", true, "settings.single_keys");
+    public static readonly SettingDefinition<bool> ShowPerf = new("show_perf", false, "settings.show_perf");
+}
+
 /// <summary>
 /// 界面的观者设置（UI-NAV），存 user://settings.json 的 ui 节（档案级，不进存档）。
 /// 读写经 ISettingsStore（越界或类型不对用默认值）；改动后 0.5 s 写一次（SYS-SAVE-FORMAT）。
@@ -24,14 +36,14 @@ public sealed class HudSettings
         Load();
     }
 
-    public UiThemeMode Theme { get; private set; } = UiThemeMode.Auto;
-    public ResidentTheme Resident { get; private set; } = ResidentTheme.Dark;
-    public ReduceMotionMode ReduceMotion { get; private set; } = ReduceMotionMode.System;
-    public bool ReduceTransparency { get; private set; }
-    public bool Frost { get; private set; } = true;
-    public float UiScale { get; private set; } = 1f;
-    public bool SingleKeyShortcuts { get; private set; } = true;
-    public bool ShowPerf { get; private set; }
+    public UiThemeMode Theme { get; private set; } = (UiThemeMode)HudSettingDefinitions.Theme.Default;
+    public ResidentTheme Resident { get; private set; } = (ResidentTheme)HudSettingDefinitions.Resident.Default;
+    public ReduceMotionMode ReduceMotion { get; private set; } = (ReduceMotionMode)HudSettingDefinitions.ReduceMotion.Default;
+    public bool ReduceTransparency { get; private set; } = HudSettingDefinitions.ReduceTransparency.Default;
+    public bool Frost { get; private set; } = HudSettingDefinitions.Frost.Default;
+    public float UiScale { get; private set; } = HudSettingDefinitions.UiScale.Default;
+    public bool SingleKeyShortcuts { get; private set; } = HudSettingDefinitions.SingleKeyShortcuts.Default;
+    public bool ShowPerf { get; private set; } = HudSettingDefinitions.ShowPerf.Default;
     public long Rev { get; private set; }
     public event Action? Changed;
 
@@ -40,7 +52,7 @@ public sealed class HudSettings
     public void SetReduceMotion(ReduceMotionMode v) => Set(() => ReduceMotion = v, ReduceMotion != v);
     public void SetReduceTransparency(bool v) => Set(() => ReduceTransparency = v, ReduceTransparency != v);
     public void SetFrost(bool v) => Set(() => Frost = v, Frost != v);
-    public void SetUiScale(float v) => Set(() => UiScale = Math.Clamp(v, 0.75f, 1.5f), Math.Abs(UiScale - v) > 0.001f);
+    public void SetUiScale(float v) => Set(() => UiScale = Math.Clamp(v, (float)HudSettingDefinitions.UiScale.Range!.Min, (float)HudSettingDefinitions.UiScale.Range.Max), Math.Abs(UiScale - v) > 0.001f);
     public void SetSingleKeyShortcuts(bool v) => Set(() => SingleKeyShortcuts = v, SingleKeyShortcuts != v);
     public void SetShowPerf(bool v) => Set(() => ShowPerf = v, ShowPerf != v);
 
@@ -66,26 +78,26 @@ public sealed class HudSettings
     {
         if (_dirtyFor < 0) return;
         _dirtyFor = -1;
-        _section.Set("theme", (int)Theme);
-        _section.Set("resident", (int)Resident);
-        _section.Set("reduce_motion", (int)ReduceMotion);
-        _section.Set("reduce_transparency", ReduceTransparency);
-        _section.Set("frost", Frost);
-        _section.Set("ui_scale", UiScale);
-        _section.Set("single_key_shortcuts", SingleKeyShortcuts);
-        _section.Set("show_perf", ShowPerf);
+        _section.Set(HudSettingDefinitions.Theme.Key, (int)Theme);
+        _section.Set(HudSettingDefinitions.Resident.Key, (int)Resident);
+        _section.Set(HudSettingDefinitions.ReduceMotion.Key, (int)ReduceMotion);
+        _section.Set(HudSettingDefinitions.ReduceTransparency.Key, ReduceTransparency);
+        _section.Set(HudSettingDefinitions.Frost.Key, Frost);
+        _section.Set(HudSettingDefinitions.UiScale.Key, UiScale);
+        _section.Set(HudSettingDefinitions.SingleKeyShortcuts.Key, SingleKeyShortcuts);
+        _section.Set(HudSettingDefinitions.ShowPerf.Key, ShowPerf);
         _store.TrySave();
     }
 
     private void Load()
     {
-        Theme = (UiThemeMode)_section.Int("theme", (int)Theme, 0, 2);
-        Resident = (ResidentTheme)_section.Int("resident", (int)Resident, 0, 1);
-        ReduceMotion = (ReduceMotionMode)_section.Int("reduce_motion", (int)ReduceMotion, 0, 2);
-        ReduceTransparency = _section.Bool("reduce_transparency", ReduceTransparency);
-        Frost = _section.Bool("frost", Frost);
-        UiScale = _section.Float("ui_scale", UiScale, 0.75f, 1.5f);
-        SingleKeyShortcuts = _section.Bool("single_key_shortcuts", SingleKeyShortcuts);
-        ShowPerf = _section.Bool("show_perf", ShowPerf);
+        Theme = (UiThemeMode)_section.Get(HudSettingDefinitions.Theme);
+        Resident = (ResidentTheme)_section.Get(HudSettingDefinitions.Resident);
+        ReduceMotion = (ReduceMotionMode)_section.Get(HudSettingDefinitions.ReduceMotion);
+        ReduceTransparency = _section.Get(HudSettingDefinitions.ReduceTransparency);
+        Frost = _section.Get(HudSettingDefinitions.Frost);
+        UiScale = _section.Get(HudSettingDefinitions.UiScale);
+        SingleKeyShortcuts = _section.Get(HudSettingDefinitions.SingleKeyShortcuts);
+        ShowPerf = _section.Get(HudSettingDefinitions.ShowPerf);
     }
 }

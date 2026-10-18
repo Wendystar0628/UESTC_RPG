@@ -17,6 +17,8 @@ public sealed class QualityCatalog
     private readonly float[][] _presets;
     private readonly KnobSpec[] _specs;
     public IReadOnlyList<KnobSpec> Knobs { get; }
+    public QualityPreset DefaultPreset { get; }
+    public QualityProfile DefaultProfile => Profile(DefaultPreset);
     public int OutputWidth { get; set; } = 1920;
     public int OutputHeight { get; set; } = 1080;
     public bool PreserveOutputSize { get; set; }
@@ -41,15 +43,22 @@ public sealed class QualityCatalog
         using var document = JsonDocument.Parse(json);
         if (document.RootElement.GetProperty("schema").GetInt32() != 1)
             throw new InvalidDataException("Unsupported quality preset schema.");
+        if (!document.RootElement.TryGetProperty("defaultPreset", out var defaultPreset) ||
+            defaultPreset.ValueKind != JsonValueKind.String ||
+            !Presets.Any(preset => preset.ToString().ToLowerInvariant() == defaultPreset.GetString()))
+            throw new InvalidDataException("Quality defaultPreset must name a supported preset.");
+        DefaultPreset = Presets.Single(preset => preset.ToString().ToLowerInvariant() == defaultPreset.GetString());
         var presets = document.RootElement.GetProperty("presets");
         _presets = new float[Presets.Length][];
         foreach (var preset in Presets)
         {
             var row = presets.GetProperty(preset.ToString().ToLowerInvariant());
-            if (row.EnumerateObject().Count() != Count) throw new InvalidDataException($"Each preset must contain all {Count} knobs.");
+            if (row.EnumerateObject().Count() != Count - 1) throw new InvalidDataException($"Each preset must contain all {Count - 1} data-driven knobs.");
             var values = _presets[(int)preset] = new float[Count];
             foreach (var knob in All)
             {
+                // Render scale is derived from the output pixel budget, with manual overrides applied by Resolve.
+                if (knob == QualityKnob.RenderScale) continue;
                 var value = row.GetProperty(Name(knob)).GetSingle();
                 if (!IsValid(knob, value)) throw new InvalidDataException($"Invalid preset value: {knob}={value}.");
                 values[(int)knob] = value;

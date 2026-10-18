@@ -9,12 +9,14 @@ namespace Campus.Tests;
 public sealed class LodTreeTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NegativeCoordinatesKeepTheCorrectParent()
     {
         var child = new StreamTile(new(-1, -3), LodLevel.L0);
         if (child.Parent != new StreamTile(new(-1, -2), LodLevel.L1)) throw new InvalidOperationException("Negative tiles crossed the origin.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ParentRemainsUntilTheLastChildIsReady()
     {
         var tree = new LodTree(new(new(0, 0, 0), new(128, 10, 128)), new());
@@ -27,6 +29,7 @@ public sealed class LodTreeTests
         if (visible.Count != 4 || visible.Any(t => t.Level != LodLevel.L0)) throw new InvalidOperationException("Ready siblings did not replace their parent atomically.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SpeedRecoveryRequiresContinuousDwellBelowThreshold()
     {
         var policy = new LodSpeedPolicy(); policy.Step(46, .1f, false); policy.Step(9, .2f, false);
@@ -37,6 +40,7 @@ public sealed class LodTreeTests
         if (policy.Minimum != LodLevel.L0) throw new InvalidOperationException("LOD gate did not recover.");
     }
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CoarseRootRemainsAValidFallbackForTheWholeMap()
     {
         var tree = new LodTree(new(new(-1500, -30, -1500), new(1500, 100, 1500)), new());

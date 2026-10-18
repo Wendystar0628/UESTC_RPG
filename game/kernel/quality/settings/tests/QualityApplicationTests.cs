@@ -13,18 +13,22 @@ namespace Campus.Tests;
 public sealed partial class QualityApplicationTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task QualityTimeoutRestoresStateReleasesOwnVeilAndDoesNotSave() =>
         await VerifyFailedApplication("timeout", failDispatch: false, takeover: false, failRollback: false);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task QualityDispatchFailureRestoresStateAndReleasesOwnVeil() =>
         await VerifyFailedApplication("dispatch", failDispatch: true, takeover: false, failRollback: false);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task QualityFailureNeverRevealsAnotherFlowsVeil() =>
         await VerifyFailedApplication("takeover", failDispatch: false, takeover: true, failRollback: false);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task RollbackConsumerFailureStillReleasesOwnVeilAndReportsBothErrors() =>
         await VerifyFailedApplication("rollback", failDispatch: true, takeover: false, failRollback: true);
 
@@ -33,7 +37,7 @@ public sealed partial class QualityApplicationTests
         var runtime = new FakeRuntime();
         var baseline = new QualityProfile(QualityPreset.Fine,
             new Dictionary<QualityKnob, float> { [QualityKnob.ShadowDistance] = 1000 });
-        var store = new FileStoreSpy(name, baseline);
+        using var store = new FileStoreSpy(name, baseline);
         var service = new QualityService(Catalog(), store);
         service.Bind(runtime);
         await service.Initialize(BootPhase.AfterMapWarm, Context());
@@ -77,9 +81,11 @@ public sealed partial class QualityApplicationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task CliProfileStaysTemporaryWhileUserDeltaIsSaved()
     {
         var (service, _, store) = await CliSession("cli-user");
+        using var cleanup = store;
         var beforeHash = store.Hash;
         if (store.SaveCount != 0) throw new InvalidOperationException("CLI startup wrote settings.");
         var next = service.Requested.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
@@ -95,9 +101,11 @@ public sealed partial class QualityApplicationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task CleanPresetSelectionPersistsTheChoiceWithoutCliOverrides()
     {
         var (service, _, store) = await CliSession("cli-preset");
+        using var cleanup = store;
         await ApplyUser(service, QualityCatalog.Profile(QualityPreset.Ultra));
         await service.Initialize(BootPhase.BeforeReveal, Context());
         var saved = store.Read()!;
@@ -106,11 +114,13 @@ public sealed partial class QualityApplicationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task UnbindingCancelsApplicationWaitsAndDiscardsLateResults()
     {
         foreach (var boundary in new[] { "cover", "frame", "destination", "reveal", "save" })
         {
             var (service, runtime, store) = await CliSession($"close-{boundary}");
+            using var cleanup = store;
             var changes = new List<QualityChange>();
             service.Changed += changes.Add;
             runtime.HoldAt = boundary;
@@ -155,11 +165,13 @@ public sealed partial class QualityApplicationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task UnbindingCancelsDebouncedAndTransitionQueuedRequests()
     {
         foreach (var transitioning in new[] { false, true })
         {
             var (service, runtime, store) = await CliSession($"close-queued-{transitioning}");
+            using var cleanup = store;
             runtime.Transitioning = transitioning;
             var dispatches = runtime.DispatchCount;
             var pending = service.Apply(new(service.Requested.Preset,
@@ -177,12 +189,13 @@ public sealed partial class QualityApplicationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public async Task UnbindingCancelsInitializationAndBootApplyWithoutPublishing()
     {
         foreach (var initializing in new[] { true, false })
         {
             var runtime = new FakeRuntime();
-            var store = new FileStoreSpy($"close-boot-{initializing}", null);
+            using var store = new FileStoreSpy($"close-boot-{initializing}", null);
             var service = new QualityService(Catalog(), store);
             var token = service.Bind(runtime);
             if (!initializing) await service.Initialize(BootPhase.AfterMapWarm, Context());
@@ -203,6 +216,7 @@ public sealed partial class QualityApplicationTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     public async Task RuntimeExitCancelsFrameQueueAndRejectsNewFrames()
     {
@@ -242,22 +256,21 @@ public sealed partial class QualityApplicationTests
         return result;
     }
 
-    private static BootContext Context() => new(
-        new BootRunOptions(),
-        Path.Combine(RepositoryFixture.Root, "output", "tests", "quality"), "quality-tests");
+    private static BootContext Context() => new(new BootRunOptions(), Path.GetTempPath(), "quality-tests");
 
-    private sealed class FileStoreSpy : IGraphicsSettingsStore
+    private sealed class FileStoreSpy : IGraphicsSettingsStore, IDisposable
     {
         private static int _nextId;
         private readonly string _path;
+        private readonly string _directory;
         public int SaveCount { get; private set; }
         public TaskCompletionSource? HeldWrite { get; set; }
         public string Hash => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(_path)));
         public FileStoreSpy(string scenario, QualityProfile? baseline)
         {
-            var directory = Path.Combine(RepositoryFixture.Root, "output", "tests", "quality", $"{scenario}-{Environment.ProcessId}-{Interlocked.Increment(ref _nextId)}");
-            Directory.CreateDirectory(directory);
-            _path = Path.Combine(directory, "graphics-spy.json");
+            _directory = Path.Combine(Path.GetTempPath(), $"uestc-rpg-quality-{scenario}-{Environment.ProcessId}-{Interlocked.Increment(ref _nextId)}");
+            Directory.CreateDirectory(_directory);
+            _path = Path.Combine(_directory, "graphics-spy.json");
             File.WriteAllBytes(_path, baseline is null ? [] : JsonSerializer.SerializeToUtf8Bytes(baseline));
         }
         public QualityProfile? Read()
@@ -271,6 +284,7 @@ public sealed partial class QualityApplicationTests
             SaveCount++;
             return HeldWrite?.Task ?? Task.CompletedTask;
         }
+        public void Dispose() => Directory.Delete(_directory, recursive: true);
     }
 
     private static QualityCatalog Catalog() => new(File.ReadAllText(Path.Combine(RepositoryFixture.Root, "game", "data", "quality-presets.json")));

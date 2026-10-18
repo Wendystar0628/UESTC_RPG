@@ -19,6 +19,7 @@ public sealed class BakeWindowTests
     private static readonly WpId Owner = new("WP-16");
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MissingLayoutsRejectEveryInputOrder()
     {
         var features = new[]
@@ -42,6 +43,7 @@ public sealed class BakeWindowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ClaimedFacadeMustDeclareACompleteLayoutButMayDeclareNoWindows()
     {
         var context = Context();
@@ -59,6 +61,7 @@ public sealed class BakeWindowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void OwnerUnknownFeatureDuplicateLayoutAndDimensionsFailBeforeAllocation()
     {
         var source = new Source { Layouts = [new(Feature, [])] };
@@ -84,6 +87,7 @@ public sealed class BakeWindowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void ProviderMustBeUniqueAndMapCorrectExceptForWindowlessLegacyFixture()
     {
         var source = new Source { Layouts = [new(Feature, [])] };
@@ -102,6 +106,7 @@ public sealed class BakeWindowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PreparedSnapshotIsDefensiveAndPublishedByIdentity()
     {
         var grids = new List<WindowGridSpec> { new("main", 2, 1) };
@@ -124,6 +129,7 @@ public sealed class BakeWindowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MetadataRejectsOverlappingLogicalCellsAndAllocationMismatch()
     {
         var snapshot = Snapshot([new(Feature, "main", 0, 2, 1)]);
@@ -139,6 +145,7 @@ public sealed class BakeWindowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PreparedCatalogContextRejectsEarlyStaleUnknownAndUnloadedCallsWithoutLazyIO()
     {
         var source = new Source { Layouts = [new(Feature, [])] };
@@ -216,6 +223,7 @@ public sealed class BakeWindowTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UnloadedBuildStopsBeforeEncodingAndNeverPublishesItsOldHandle()
     {
         var context = Context();
@@ -229,8 +237,7 @@ public sealed class BakeWindowTests
             new(() => new(context.World, [])), (_, _) => null, new(() => new(9, snapshot.Entries, [],
                 new Dictionary<string, IInteriorProvider>(), new(null, new([], [])))),
             context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog);
-        var root = RepositoryFixture.Root;
-        var cache = Path.Combine(root, "output", "bake-cancel", Guid.NewGuid().ToString("N"));
+        var cache = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cancel-" + Guid.NewGuid().ToString("N"));
         using var service = new BakeService(new(cache, true, false, false, false, 1, null));
         var queue = new BakeQueue(1);
         Exception? stopped = null;
@@ -252,7 +259,11 @@ public sealed class BakeWindowTests
                 !queue.Failures.IsEmpty || Directory.Exists(cache))
                 throw new InvalidOperationException("An unloaded build entered encoding, published Ready, or wrote cache data.");
         }
-        finally { release.Set(); queue.Dispose(); map.Lifetime.Dispose(); }
+        finally
+        {
+            release.Set(); queue.Dispose(); map.Lifetime.Dispose();
+            if (Directory.Exists(cache)) Directory.Delete(cache, recursive: true);
+        }
     }
 
     private sealed class PausedProducer(ManualResetEventSlim started, ManualResetEventSlim release) : IBakeProducer

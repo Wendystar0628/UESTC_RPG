@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Buffers.Binary;
 using System.Numerics;
 using System.Text.Json;
@@ -12,6 +13,7 @@ namespace Campus.Kernel.Bake.Tests;
 public sealed class BakeInstanceTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void MultipleSurfacesAndSubBlocksKeepWorldRecordsAndCacheBytes()
     {
         var firstSource = Surface("fixture.first", "fixture.first.shade");
@@ -87,6 +89,7 @@ public sealed class BakeInstanceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PlanarPrototypeBoundsRemainExact()
     {
         var bounds = new Box3(Vector3.Zero, new(1, 1, 0));
@@ -103,6 +106,7 @@ public sealed class BakeInstanceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UnsupportedInstanceSurfaceStatesAreExplicitFailures()
     {
         var source = Surface("fixture.first", "fixture.first.shade");
@@ -127,7 +131,7 @@ public sealed class BakeInstanceTests
         var point = new Vector3(.5f, 2, -1);
         var actual = new Vector3(Row(0), Row(4), Row(8));
         var expected = Vector3.Transform(point, firstTransform);
-        if (Vector3.Distance(actual, expected) > .0001f)
+        if (Vector3.Distance(actual, expected) > TestTolerance.Position)
             throw new InvalidOperationException("Prototype-local to world transform gained a tile origin or changed convention.");
         float Row(int offset) => Read(offset) * point.X + Read(offset + 1) * point.Y + Read(offset + 2) * point.Z + Read(offset + 3);
         float Read(int index) => BinaryPrimitives.ReadSingleLittleEndian(multi.InstanceData.Span[(index * 4)..]);

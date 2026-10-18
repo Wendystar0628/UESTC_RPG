@@ -184,7 +184,6 @@ public partial class SpeedBar : Control
 {
     private static readonly int[] Anchors = [4, 7, 9, 12, 16];
     private static readonly string[] AnchorKeys = ["stroll", "cycle", "cruise", "bird", "cloud"];
-    private static readonly float[] WalkSteps = [0.5f, 0.7f, 1f, 1.4f, 2f];
 
     private readonly List<Panel> _leds = [];
     private UiKit _kit = null!;
@@ -238,13 +237,13 @@ public partial class SpeedBar : Control
         }
         else
         {
-            var ratio = _model.Speed / 1.4f;
+            var ratio = _model.Speed / WalkRules.WalkSpeed;
             var step = 0;
-            for (var i = 0; i < WalkSteps.Length; i++) if (MathF.Abs(WalkSteps[i] - ratio) < MathF.Abs(WalkSteps[step] - ratio)) step = i;
+            for (var i = 0; i < WalkRules.SpeedStepCount; i++) if (MathF.Abs(WalkRules.SpeedMultiplier(i) - ratio) < MathF.Abs(WalkRules.SpeedMultiplier(step) - ratio)) step = i;
             for (var i = 0; i < 16; i++)
             {
                 var led = _leds[i];
-                led.Visible = i < WalkSteps.Length;
+                led.Visible = i < WalkRules.SpeedStepCount;
                 if (!led.Visible) continue;
                 led.Position = new Vector2(120 + i * 18, i == step ? 13 : 15);
                 led.Size = new Vector2(16, i == step ? 18 : 14);
@@ -252,7 +251,7 @@ public partial class SpeedBar : Control
                     : i < step ? new UiFx(Fill: "graphic", Pin: true) : new UiFx(Fill: "surface.sunk", Line: "line.hair", Pin: true), remember: false);
             }
             _actual.Size = new Vector2((step + 1) * 18 - 2, 2);
-            _readout.Text = $"{WalkSteps[step]:0.0#}× · {_model.Speed:0.0} m/s";
+            _readout.Text = $"{WalkRules.SpeedMultiplier(step):0.0#}× · {_model.Speed:0.0} m/s";
         }
     }
 }

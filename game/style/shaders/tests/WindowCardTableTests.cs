@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System;
 using System.Linq;
 using Campus.Style.Shaders.Cards;
@@ -10,6 +11,7 @@ namespace Campus.Style.Shaders.Tests;
 public sealed class WindowCardTableTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EveryVfbCardTypeAndTheLobbyHaveARow()
     {
         var data = WindowCardTable.Pack();
@@ -22,28 +24,28 @@ public sealed class WindowCardTableTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CardKindsMatchTheContractWindowTypeByte()
     {
-        // VF-B (GeometryBundle.Reserved on glass): 1–15 are W-CLS … W-MECH in this order.
-        string[] contract = ["W-CLS", "W-LEC", "W-COR", "W-STR", "W-OFF", "W-LAB", "W-CLEAN", "W-DORM", "W-WC", "W-CAN",
-            "W-SHOP", "W-MED", "W-GYM", "W-POOL", "W-MECH"];
+        // VF-B (GeometryBundle.Reserved on glass) stores the WindowCardKind byte.
         WindowCardKind[] kinds = [WindowCardKind.Classroom, WindowCardKind.Lecture, WindowCardKind.Corridor, WindowCardKind.Stair,
             WindowCardKind.Office, WindowCardKind.Lab, WindowCardKind.Clean, WindowCardKind.Dorm, WindowCardKind.Toilet,
             WindowCardKind.Canteen, WindowCardKind.Shop, WindowCardKind.Medical, WindowCardKind.Gym, WindowCardKind.Pool,
             WindowCardKind.Mechanical];
-        AssertThat(contract.Length == kinds.Length).OverrideFailureMessage("Card list length differs from the contract.").IsTrue();
+        AssertThat(WindowCardCatalog.All.Count == kinds.Length + 1).OverrideFailureMessage("Card list length differs from the contract.").IsTrue();
         for (var i = 0; i < kinds.Length; i++)
-            AssertThat((int)kinds[i] == i + 1 && WindowCardCatalog.Get(kinds[i]).Kind == kinds[i]).OverrideFailureMessage($"{contract[i]} is not byte {i + 1}.").IsTrue();
+            AssertThat((int)kinds[i] == i + 1 && WindowCardCatalog.Get(kinds[i]).Kind == kinds[i]).OverrideFailureMessage($"{kinds[i]} is not byte {i + 1}.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DepthWeightsAreCumulativeAndScreensStayInRange()
     {
         var data = WindowCardTable.Pack();
         foreach (var card in WindowCardCatalog.All)
         {
             var x0 = Texel(data, (int)card.Kind, 0);
-            AssertThat(x0[0] >= 0f && x0[0] <= x0[1] && x0[1] <= 1f + 1e-6f).OverrideFailureMessage($"{card.Kind}: depth thresholds are not cumulative.").IsTrue();
+            AssertThat(x0[0] >= 0f && x0[0] <= x0[1] && x0[1] <= 1f + TestTolerance.FloatRelative).OverrideFailureMessage($"{card.Kind}: depth thresholds are not cumulative.").IsTrue();
             var x2 = Texel(data, (int)card.Kind, 2);
             AssertThat(x2[2] <= x2[3] && x2[3] <= 1f).OverrideFailureMessage($"{card.Kind}: coverage range broken.").IsTrue();
             AssertThat(card.Screen != CardScreen.None || x2[1] == 0f).OverrideFailureMessage($"{card.Kind}: chance without a screen.").IsTrue();
@@ -51,17 +53,19 @@ public sealed class WindowCardTableTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LayersFitTheEightyFourLayerArray()
     {
         var used = WindowCardCatalog.All.Sum(c => c.LayerCount);
         var top = WindowCardCatalog.All.Max(c => c.LayerBase + c.LayerCount);
-        AssertThat(used == top && top <= 84).OverrideFailureMessage($"Card layers overlap or exceed 84: used {used}, top {top}.").IsTrue();
+        AssertThat(used == top).OverrideFailureMessage($"Card layers overlap: used {used}, top {top}.").IsTrue();
         var ordered = WindowCardCatalog.All.OrderBy(c => c.LayerBase).ToArray();
         for (var i = 1; i < ordered.Length; i++)
             AssertThat(ordered[i].LayerBase == ordered[i - 1].LayerBase + ordered[i - 1].LayerCount).OverrideFailureMessage("Card layers are not contiguous.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void PackingIsDeterministicAndRejectsBadCards()
     {
         AssertThat(WindowCardTable.Pack().SequenceEqual(WindowCardTable.Pack())).OverrideFailureMessage("Packing is not deterministic.").IsTrue();

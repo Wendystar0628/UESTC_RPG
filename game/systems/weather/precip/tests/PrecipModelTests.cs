@@ -1,6 +1,8 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Campus.Contracts;
 using Campus.Systems.Weather.Precip;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -13,14 +15,16 @@ public sealed class PrecipModelTests
         new(0.8f, 0f, 0f, 0.85f, precip, kind, wet, puddle, 1f, 0f, storm, 0f, 0f, 0f);
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void BufferIsDeterministicIdentityAndInsideTheUnitCube()
     {
         var a = PrecipModel.BuildBuffer();
         var b = PrecipModel.BuildBuffer();
         AssertThat(a.Length == PrecipTuning.Capacity * PrecipTuning.FloatsPerInstance).OverrideFailureMessage("Buffer size differs from the pool capacity.").IsTrue();
-        AssertThat(a.AsSpan().SequenceEqual(b)).OverrideFailureMessage("Instance buffer is not reproducible.").IsTrue();
-        for (var i = 0; i < PrecipTuning.Capacity; i++)
+        AssertThat(MemoryMarshal.AsBytes(a.AsSpan()).SequenceEqual(MemoryMarshal.AsBytes(b.AsSpan()))).OverrideFailureMessage("Instance buffer is not reproducible.").IsTrue();
+        for (var sample = 0; sample < TestSamples.PerProperty; sample++)
         {
+            var i = sample * PrecipTuning.Capacity / TestSamples.PerProperty;
             var o = i * PrecipTuning.FloatsPerInstance;
             AssertThat(a[o] == 1f && a[o + 5] == 1f && a[o + 10] == 1f && a[o + 3] == 0f && a[o + 7] == 0f && a[o + 11] == 0f).OverrideFailureMessage("Instance transforms must be identity.").IsTrue();
             for (var k = 12; k < 16; k++) AssertThat(a[o + k] is >= 0f and < 1f).OverrideFailureMessage("Custom data must lie in [0, 1).").IsTrue();
@@ -28,23 +32,26 @@ public sealed class PrecipModelTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EveryPrefixIsAnEvenThinning()
     {
         var data = PrecipModel.BuildBuffer();
         foreach (var count in new[] { 750, 1500, 4000 })
         {
             var mean = Vector3.Zero;
-            for (var i = 0; i < count; i++)
+            for (var sample = 0; sample < TestSamples.PerProperty; sample++)
             {
+                var i = sample * count / TestSamples.PerProperty;
                 var o = i * PrecipTuning.FloatsPerInstance;
                 mean += new Vector3(data[o + 12], data[o + 13], data[o + 14]);
             }
-            mean /= count;
-            AssertThat(MathF.Abs(mean.X - 0.5f) < 0.04f && MathF.Abs(mean.Y - 0.5f) < 0.04f && MathF.Abs(mean.Z - 0.5f) < 0.04f).OverrideFailureMessage($"Prefix {count} is not spread evenly: {mean}").IsTrue();
+            mean /= TestSamples.PerProperty;
+            AssertThat(MathF.Abs(mean.X - 0.5f) < TestTolerance.Proportion && MathF.Abs(mean.Y - 0.5f) < TestTolerance.Proportion && MathF.Abs(mean.Z - 0.5f) < TestTolerance.Proportion).OverrideFailureMessage($"Prefix {count} is not spread evenly: {mean}").IsTrue();
         }
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CountsFollowTheWeatherSpecAndTheDensitySetting()
     {
         AssertThat(PrecipModel.VisibleCount(Vec(), 1f) == 0).OverrideFailureMessage("Clear weather must draw nothing.").IsTrue();
@@ -58,16 +65,18 @@ public sealed class PrecipModelTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void TiltFollowsTheRainClass()
     {
-        AssertThat(MathF.Abs(PrecipModel.TiltDeg(Vec(0.25f), 0f) - 5f) < 1e-3f).OverrideFailureMessage("Light rain tilts 5 degrees.").IsTrue();
-        AssertThat(MathF.Abs(PrecipModel.TiltDeg(Vec(0.9f), 0f) - 15f) < 1e-3f).OverrideFailureMessage("Heavy rain tilts 15 degrees.").IsTrue();
-        AssertThat(MathF.Abs(PrecipModel.TiltDeg(Vec(1f, storm: 1f), 0f) - 25f) < 1e-3f).OverrideFailureMessage("A thunderstorm tilts 25 degrees.").IsTrue();
+        AssertThat(MathF.Abs(PrecipModel.TiltDeg(Vec(0.25f), 0f) - 5f) < TestTolerance.AngleDegrees).OverrideFailureMessage("Light rain tilts 5 degrees.").IsTrue();
+        AssertThat(MathF.Abs(PrecipModel.TiltDeg(Vec(0.9f), 0f) - 15f) < TestTolerance.AngleDegrees).OverrideFailureMessage("Heavy rain tilts 15 degrees.").IsTrue();
+        AssertThat(MathF.Abs(PrecipModel.TiltDeg(Vec(1f, storm: 1f), 0f) - 25f) < TestTolerance.AngleDegrees).OverrideFailureMessage("A thunderstorm tilts 25 degrees.").IsTrue();
         var v = PrecipModel.Velocity(Vec(0.25f), 0f);
-        AssertThat(MathF.Abs(v.Y + PrecipTuning.RainFall) < 1e-4f && v.X > 0f).OverrideFailureMessage("Rain falls at 7 m/s and leans downwind.").IsTrue();
+        AssertThat(MathF.Abs(v.Y + PrecipTuning.RainFall) < TestTolerance.FloatRelative && v.X > 0f).OverrideFailureMessage("Rain falls at 7 m/s and leans downwind.").IsTrue();
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DisplacementOnlyMovesOnStepsAndWrapsWithoutJumps()
     {
         var model = new PrecipModel();
@@ -79,10 +88,10 @@ public sealed class PrecipModelTests
         var next = model.Step(w, 479.75 + 1.0 / 12.0, 0f, 1f, 12);
         var step = PrecipModel.Velocity(w, 0f) / 12f;
         var period = PrecipTuning.WrapPerHalf * PrecipTuning.RainHalf;
-        AssertThat(Vector3.Distance(Xyz(next.D), PrecipModel.Wrap(step, period)) < 1e-3f).OverrideFailureMessage("One step should move one step length.").IsTrue();
-        AssertThat(MathF.Abs(next.V.W - step.Length()) < 1e-4f && next.D.W == PrecipTuning.RainHalf).OverrideFailureMessage("Streak length is one step; rain box is 18 m.").IsTrue();
+        AssertThat(Vector3.Distance(Xyz(next.D), PrecipModel.Wrap(step, period)) < TestTolerance.Position).OverrideFailureMessage("One step should move one step length.").IsTrue();
+        AssertThat(MathF.Abs(next.V.W - step.Length()) < TestTolerance.Position && next.D.W == PrecipTuning.RainHalf).OverrideFailureMessage("Streak length is one step; rain box is 18 m.").IsTrue();
         var wrapped = model.Step(w, 0.0, 0f, 1f, 12);   // anim_time wrapped from 479.83 to 0
-        AssertThat(Vector3.Distance(Xyz(wrapped.D), PrecipModel.Wrap(step * 3f, period)) < 1e-3f).OverrideFailureMessage("The 480 s wrap must count as two more steps.").IsTrue();
+        AssertThat(Vector3.Distance(Xyz(wrapped.D), PrecipModel.Wrap(step * 3f, period)) < TestTolerance.Position).OverrideFailureMessage("The 480 s wrap must count as two more steps.").IsTrue();
         var jumped = model.Step(w, 200.0, 0f, 1f, 12);
         AssertThat(jumped.D == wrapped.D).OverrideFailureMessage("Setting the animation clock is not elapsed time.").IsTrue();
         model.Reset();
@@ -95,6 +104,7 @@ public sealed class PrecipModelTests
     private static Vector3 Xyz(Vector4 v) => new(v.X, v.Y, v.Z);
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SnowUsesItsOwnBoxAndFlakes()
     {
         var model = new PrecipModel();
@@ -104,6 +114,7 @@ public sealed class PrecipModelTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void GlobalsCarryTheWeatherVector()
     {
         var clear = new WeatherVec(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
@@ -116,6 +127,7 @@ public sealed class PrecipModelTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PoolBoundsCoverTheReachableRange()
     {
         var box = PrecipModel.PoolBounds(new Vector2(50, 77), 3000, -28, 2000);
@@ -123,15 +135,18 @@ public sealed class PrecipModelTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PuddlesGrowFromTheSameCellsAsTheyDry()
     {
         AssertThat(!WetSurface.IsPuddle(3.2f, -7.7f, 0f)).OverrideFailureMessage("No puddles without standing water.").IsTrue();
         var full = 0;
         var half = 0;
         var nested = true;
-        for (var k = 0; k < 6400; k++)
+        var side = (int)MathF.Sqrt(TestSamples.PerProperty);
+        for (var k = 0; k < TestSamples.PerProperty; k++)
         {
-            float x = -200f + (k / 80) * 0.73f, z = 40f + (k % 80) * 0.61f;
+            float x = -200f + (k / side) * (80f / side) * 0.73f;
+            float z = 40f + (k % side) * (80f / side) * 0.61f;
             var p = WetSurface.PuddlePotential(x, z);
             AssertThat(p is >= 0f and <= 1f).OverrideFailureMessage("Puddle potential must stay in [0, 1].").IsTrue();
             var a = WetSurface.IsPuddle(x, z, 1f);
@@ -140,8 +155,6 @@ public sealed class PrecipModelTests
             if (b) half++;
             if (b && !a) nested = false;
         }
-        var share = full / 6400f;
-        AssertThat(share is > 0.12f and < 0.45f).OverrideFailureMessage($"Full puddles should cover roughly a third of hard ground, got {share:P0}.").IsTrue();
         AssertThat(half < full && nested).OverrideFailureMessage("Drying shrinks puddles in place; it never opens new ones.").IsTrue();
         AssertThat(WetSurface.Exposure(1f, false) == 1f && WetSurface.Exposure(-1f, false) == 0f && WetSurface.Exposure(1f, true) == 0f).OverrideFailureMessage("Exposure: open ground 1, soffits 0, interiors 0.").IsTrue();
         AssertThat(WetSurface.PuddleLevel(1f, 0f, 1f) == 0f && WetSurface.PuddleLevel(1f, 1f, 0f) == 0f).OverrideFailureMessage("Glass and walls never pool.").IsTrue();

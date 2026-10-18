@@ -117,7 +117,7 @@ public sealed class MapCatalog
         if (size.X % TileGrid.BaseEdge != 0 || size.Y % TileGrid.BaseEdge != 0) throw new InvalidDataException("Data rectangle dimensions must be multiples of 64 metres.");
         var r = file.Roam;
         float[] limits = [r.HeightFactor, r.HeightStart, r.MaxRadius, r.FloorY, r.CeilY, r.Buffer,
-            r.SoftFloorClearance, r.FallbackMargin, r.PushRate, r.PushMax, r.EdgeFogMax];
+            r.SoftFloorClearance, r.FallbackMargin];
         if (limits.Any(v => !float.IsFinite(v)) || r.MaxRadius <= 0 || r.MaxRadius > 8000 || r.FloorY >= r.CeilY ||
             r.HeightFactor < 0 || r.Buffer < 0 || r.FallbackMargin < 0 || r.SoftFloorClearance < 0)
             throw new InvalidDataException("Invalid map roam limits.");

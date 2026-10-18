@@ -8,6 +8,7 @@ namespace Campus.Tests;
 public sealed class BootArgumentsTests
 {
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CaptureDefaultsRemainSeparateFromExplicitArguments()
     {
         var options = BootArguments.Parse(["--frames=30"], true);
@@ -18,6 +19,7 @@ public sealed class BootArgumentsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CaptureDefaultsNeverOverrideLoadedWorld()
     {
         var options = BootArguments.Parse(["--slot=1", "--frames=120"], true);
@@ -26,6 +28,7 @@ public sealed class BootArgumentsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void BadOrConflictingArgumentsFailBeforeStartingServices()
     {
         string[][] invalid = [["--unknown=1"], ["--weather-queue=rain:3"], ["--flow=2"], ["--clock=NaN"], ["--clock=24"], ["--anim=480"],
@@ -43,6 +46,7 @@ public sealed class BootArgumentsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void WithoutExplicitlyRejectsUnsupportedModuleFiltering()
     {
         foreach (var development in new[] { true, false })
@@ -56,6 +60,7 @@ public sealed class BootArgumentsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Smoke)]
     public void NormalBootKeepsTitle()
     {
         var normal = BootArguments.Parse([], true);
@@ -67,6 +72,7 @@ public sealed class BootArgumentsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void CpuBakeHasOneExecutionOwner()
     {
         if (!BootArguments.Parse(["--bake=all", "--map=*"], true).CpuBakeMode)

@@ -25,10 +25,15 @@ public sealed class SaveFormatTests
         { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":17.5}}"u8.ToArray()) }, null);
     private static SaveSections Sections(TestSection? section = null, int version = 1, RestorePhase phase = RestorePhase.World) =>
         new([new(new("world") { Owner = "WP-50", Version = version, Phase = phase, Order = 10 }, section ?? new())]);
-    private static string TestDirectory()
+    private sealed class TempSaveDirectory : IDisposable
     {
-        var root = RepositoryFixture.Root;
-        return Path.GetFullPath(Path.Combine(root, "output", "save-tests", "case-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _testId)));
+        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "uestc-rpg-save-case-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _testId));
+
+        public void Dispose()
+        {
+            if (Directory.Exists(Path)) Directory.Delete(Path, recursive: true);
+        }
     }
 
     private static void Rehash(byte[] bytes)
@@ -48,6 +53,7 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Determinism)]
     public void RoundTripsPreserveNumericBitsAndUnknownEnvelopes()
     {
         var rng = new Rng(50);
@@ -67,6 +73,7 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void TruncationAndBitFlipAreRejected()
     {
         var original = SaveContainer.Encode(Document());
@@ -86,6 +93,7 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LengthGenerationFlagsAndNewerVersionsAreRejected()
     {
         var original = SaveContainer.Encode(Document());
@@ -132,6 +140,7 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void InvalidBrotliAndBadThumbnailAreContained()
     {
         {
@@ -147,6 +156,7 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void DuplicateUnknownMissingAndDeepJsonAreRejectedBeforeRestore()
     {
         foreach (var data in new[] { "{\"hours\":1,\"hours\":2}", "{\"hours\":1,\"surprise\":2}", "{}", "{\"hours\":\"wrong\"}" })
@@ -166,6 +176,7 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NoncoreErrorsAndVersionMismatchBecomeDefaults()
     {
         var older = Sections(null, 3, RestorePhase.Content).Prepare(Document());
@@ -182,9 +193,11 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void IncompleteWritePreservesOldGenerationAndReadbackMustPass()
     {
-        using var repository = new SaveRepository(TestDirectory(), true, Sections());
+        using var temp = new TempSaveDirectory();
+        using var repository = new SaveRepository(temp.Path, true, Sections());
         repository.Write(Document());
         try { repository.Write(Document(2), (stream, bytes) => { stream.Write(bytes.AsSpan(0, 40)); throw new IOException("disk full"); }); }
         catch (IOException) { }
@@ -195,9 +208,11 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RecoveryLockLineBoundariesAndRetentionAreEnforced()
     {
-        var root = TestDirectory();
+        using var temp = new TempSaveDirectory();
+        var root = temp.Path;
         using var repository = new SaveRepository(root, true, Sections());
         using var second = new SaveRepository(root, true, Sections());
         AssertThat(!second.Enabled && second.ReadOnly == ReadOnlyReason.OtherWindow).OverrideFailureMessage("Second writer acquired lock.").IsTrue();
@@ -215,13 +230,16 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void SaveOffDoesNotCreateDirectoryAndAllCorruptFilesStayPut()
     {
-        var offRoot = TestDirectory();
+        using var offTemp = new TempSaveDirectory();
+        var offRoot = offTemp.Path;
         using (var off = new SaveRepository(offRoot, false, Sections()))
         { AssertThat(off.Scan(new("s1")).Info.Health == SlotHealth.Empty).OverrideFailureMessage("Empty readonly scan failed.").IsTrue(); }
         AssertThat(!Directory.Exists(offRoot)).OverrideFailureMessage("Save-off created its root.").IsTrue();
-        var root = TestDirectory();
+        using var temp = new TempSaveDirectory();
+        var root = temp.Path;
         using var repository = new SaveRepository(root, true, Sections());
         Directory.CreateDirectory(Path.Combine(root, "s1"));
         var file = Path.Combine(root, "s1", "g000001.sav"); File.WriteAllBytes(file, [0]);
@@ -229,9 +247,11 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NewerGenerationFallsBackAndUnreadableNewLineCannotBeWrittenOver()
     {
-        var root = TestDirectory();
+        using var temp = new TempSaveDirectory();
+        var root = temp.Path;
         using var repository = new SaveRepository(root, true, Sections());
         repository.Write(Document());
         var newer = SaveContainer.Encode(Document(2)); newer[8] = 2; Rehash(newer);

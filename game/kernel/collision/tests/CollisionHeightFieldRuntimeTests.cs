@@ -15,6 +15,7 @@ namespace Campus.Tests;
 public sealed class CollisionHeightFieldRuntimeTests
 {
     [TestCase(Timeout = 30000)]
+    [TestCategory(TestReason.Smoke)]
     [TestCategory("G15Core")]
     [RequireGodotRuntime]
     public async Task WorldBoxesMountAtTheirActualTiles()
@@ -48,6 +49,7 @@ public sealed class CollisionHeightFieldRuntimeTests
     }
 
     [TestCase(Timeout = 30000)]
+    [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public async Task NativeShapesWaitForCompleteNeighborhoodAndUnloadTogether()
@@ -106,7 +108,7 @@ public sealed class CollisionHeightFieldRuntimeTests
                 character.MoveAndSlide();
                 AssertThat(character.Position.Y >= -.02f).OverrideFailureMessage("The walking cylinder penetrated the mounted ground.").IsTrue();
             }
-            AssertThat(character.IsOnFloor() && MathF.Abs(character.Position.Y) <= .02f).OverrideFailureMessage("The walking cylinder did not settle on native ground within one second.").IsTrue();
+            AssertThat(character.IsOnFloor() && MathF.Abs(character.Position.Y) <= TestTolerance.Position).OverrideFailureMessage("The walking cylinder did not settle on native ground within one second.").IsTrue();
             character.Free();
             CheckSweep(new(18, .01f, 24), new(22, .01f, 24), SurfaceTag.Wall);
             CheckSweep(new(28, .01f, 24), new(32, .01f, 24), SurfaceTag.Barrier);
@@ -132,7 +134,7 @@ public sealed class CollisionHeightFieldRuntimeTests
             void CheckSupport(float x, float z, float y, SurfaceTag tag)
             {
                 var hit = world.SupportY(x, z, y + .1f);
-                AssertThat(hit is { } support && support.Tag == tag && MathF.Abs(support.Y - y) <= .02f).OverrideFailureMessage($"Incorrect {tag} support at ({x}, {z}): expected {y}, actual {hit?.Y}.").IsTrue();
+                AssertThat(hit is { } support && support.Tag == tag && MathF.Abs(support.Y - y) <= TestTolerance.Position).OverrideFailureMessage($"Incorrect {tag} support at ({x}, {z}): expected {y}, actual {hit?.Y}.").IsTrue();
             }
             void CheckSweep(N.Vector3 from, N.Vector3 to, SurfaceTag tag)
             {

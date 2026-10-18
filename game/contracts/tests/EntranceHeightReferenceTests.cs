@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using GdUnit4;
@@ -17,6 +18,7 @@ public sealed class EntranceHeightReferenceTests
     { Center = new(5, .75f, 6), YawDeg = 127 };
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void LegacyAndAbsolutePreserveAllFieldsWithoutQueryingTerrain()
     {
         var terrain = new ProbeTerrain(9, new NotSupportedException("Pad lookup must not run."));
@@ -25,6 +27,7 @@ public sealed class EntranceHeightReferenceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PositiveAndNegativePadsMoveThreePointsOnceAndPreserveRelativeOffsets()
     {
         foreach (var padY in new[] { 2f, -1.5f, 0f })
@@ -47,6 +50,7 @@ public sealed class EntranceHeightReferenceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void PadRequiresExplicitInputAndPropagatesUnsupportedOrUnknownFeatures()
     {
         {
@@ -76,6 +80,7 @@ public sealed class EntranceHeightReferenceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void UnknownNullDuplicateAndMalformedReferencesAreRejected()
     {
         foreach (var reference in new[] { "\"ground\"", "\"PAD\"", "\"\"", "null", "0", "[\"pad\"]", "{}" })
@@ -100,6 +105,7 @@ public sealed class EntranceHeightReferenceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void NonFiniteRawPadAndResolvedHeightsAreRejected()
     {
         foreach (var padY in new[] { float.NaN, float.PositiveInfinity, float.NegativeInfinity })
@@ -131,6 +137,7 @@ public sealed class EntranceHeightReferenceTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void RequiredEntranceFieldsAndMalformedClosedDoorsAreRejected()
     {
         using var entry = JsonDocument.Parse(Entry);
