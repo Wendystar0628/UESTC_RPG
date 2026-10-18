@@ -5,6 +5,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
+using Campus.Gen.Vegetation;
 
 namespace Campus.Kernel.Bake;
 
@@ -80,7 +81,7 @@ internal static class BakeInputFingerprint
         AddBoundary(input, context.World.Boundary, area);
         AddTerrain(context, key, input, area);
         var vegetation = key.Module == "vegetation" || key.Module == "collision.world" && dependencyCodes?.ContainsKey("vegetation") == true;
-        if (vegetation) AddGlobalVegetation(context, input);
+        if (vegetation) AddVegetation(context, input, area);
         if (key.Module == "furniture" || key.Module == "collision.world" && dependencyCodes?.ContainsKey("furniture") == true)
             AddFurniturePlanting(context, input, area);
         if (vegetation)
@@ -104,32 +105,130 @@ internal static class BakeInputFingerprint
         }
     }
 
-    private static void AddGlobalVegetation(BuildContext context, InputHash input)
+    private static void AddVegetation(BuildContext context, InputHash input, MapRect area)
     {
-        // PlantGroves currently has one map-wide weighted quota/RNG. Keep its real shared inputs until placement is local.
-        var names = new HashSet<string>(StringComparer.Ordinal);
-        if (context.SourceInputs.TryGetValue("vegetation/planting.json", out var bytes))
+        if (!context.SourceInputs.TryGetValue("vegetation/planting.json", out var bytes)) { input.Add(false); return; }
+        using var document = JsonDocument.Parse(bytes);
+        var root = document.RootElement;
+        var rules = new SortedDictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var key in new[] { "roads", "osmTrees", "groves", "pits" })
+            if (root.TryGetProperty(key, out var value)) rules.Add(key, value);
+        input.Add(rules);
+
+        // A parcel's accepted count can change a later candidate anywhere in that parcel. Crown spacing also
+        // couples neighbouring parcels, transitively. Keep whole entities and their connected neighbourhood,
+        // rather than clipping vertices or candidate positions to the requested cell.
+        var regions = new List<MapRect> { area };
+        // A long pit is held if any earlier tree stands anywhere in it; design trees also suppress later
+        // design trees. Include these complete entities before resolving their upstream grove neighbourhood.
+        var remaining = context.World.Features.Values.Where(feature => HasKind(feature, "green") ||
+            feature.Kind.Value is "tree-pit" or "tree")
+            .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToList();
+        for (var changed = true; changed;)
         {
-            using var document = JsonDocument.Parse(bytes);
-            var root = document.RootElement;
-            var rules = new SortedDictionary<string, JsonElement>(StringComparer.Ordinal);
-            foreach (var key in new[] { "roads", "osmTrees", "groves", "pits" })
-                if (root.TryGetProperty(key, out var value)) rules.Add(key, value);
-            input.Add(rules);
-            if (root.TryGetProperty("groves", out var groves))
-                foreach (var key in new[] { "areas", "washNear" })
-                    if (groves.TryGetProperty(key, out var places))
-                        foreach (var place in places.EnumerateArray())
-                            if (place.TryGetProperty("name", out var name) && name.GetString() is { } text) names.Add(text);
+            changed = false;
+            for (var i = remaining.Count - 1; i >= 0; i--)
+            {
+                var box = VegetationBounds(remaining[i]);
+                if (!regions.Any(region => Intersects(box, region))) continue;
+                // Spaced reads the adjacent 32 m occupation buckets: their full reach fits this guard band.
+                regions.Add(Expand(box, BakeRequestKeys.BaseTileMetres));
+                remaining.RemoveAt(i);
+                changed = true;
+            }
         }
-        string[] kinds = ["building", "water", "sport", "parking", "green", "road", "tree-pit"];
-        input.Add(context.World.Features.Values.Where(feature => kinds.Contains(feature.Kind.Value, StringComparer.Ordinal) ||
-            feature.Name is { } name && names.Contains(name) || feature.Parts.Any(part => part.Props is { ValueKind: JsonValueKind.Object } props &&
-                props.TryGetProperty("kind", out var kind) && kinds.Contains(kind.GetString() ?? "", StringComparer.Ordinal)))
-            .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray());
-        input.Add(new { context.World.Boundary, context.World.Network.Roads, context.World.Network.Trees, context.Map.TerrainDefaults });
+
+        // OSM duplicates are suppressed in ID order. An earlier point can suppress another earlier point,
+        // so follow that chain as well as the trees directly beside the relevant parcels.
+        var trees = context.World.Network.Trees.OrderBy(tree => tree.Id.Value, StringComparer.Ordinal).ToArray();
+        var selectedTrees = new bool[trees.Length];
+        for (var i = trees.Length - 1; i >= 0; i--)
+        {
+            var point = new Vector2(trees[i].Position.X, trees[i].Position.Z);
+            if (!selectedTrees[i] && !regions.Any(region => Contains(region, point))) continue;
+            selectedTrees[i] = true;
+            for (var j = 0; j < i; j++)
+                if (Vector2.Distance(point, new(trees[j].Position.X, trees[j].Position.Z)) < Planting.SameTree)
+                    selectedTrees[j] = true;
+        }
+        var selected = trees.Where((_, index) => selectedTrees[index]).ToArray();
+        foreach (var tree in selected)
+        {
+            var point = new Vector2(tree.Position.X, tree.Position.Z);
+            regions.Add(Expand(new(point, point), BakeRequestKeys.BaseTileMetres));
+        }
+        input.Add(selected);
+
+        string[] kinds = ["building", "water", "sport", "parking", "green", "road", "tree-pit", "tree"];
+        var features = context.World.Features.Values.Where(feature => kinds.Any(kind => HasKind(feature, kind)) &&
+            regions.Any(region => Intersects(VegetationBounds(feature), region)))
+            .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();
+        input.Add(features);
+
+        // PlantRoads chains all segments of a rule's name and uses the chain ordinal in every tree key.
+        // Even a disconnected earlier chain can change that ordinal: its complete road input remains shared.
+        var roadNames = root.TryGetProperty("roads", out var roads) ? roads.EnumerateArray()
+            .Select(road => road.GetProperty("name").GetString()).ToHashSet(StringComparer.Ordinal) : [];
+        input.Add(context.World.Network.Roads.Where(road => roadNames.Contains(RoadName(road.Props)) ||
+                regions.Any(region => Intersects(Bounds(road.Line.Points, road.Width * .5f), region)))
+            .OrderBy(road => road.Id.Value, StringComparer.Ordinal).ToArray());
+
+        if (root.TryGetProperty("groves", out var groves))
+            foreach (var key in new[] { "areas", "washNear" })
+                if (groves.TryGetProperty(key, out var places))
+                    foreach (var place in places.EnumerateArray())
+                    {
+                        var name = place.GetProperty("name").GetString();
+                        var named = context.World.Features.Values.Where(feature => feature.Name == name).ToArray();
+                        if (named.Length == 0) continue;
+                        var envelope = new MapRect(
+                            named.Aggregate(new Vector2(float.MaxValue), (min, feature) => Vector2.Min(min, new(feature.Bounds.Min.X, feature.Bounds.Min.Z))),
+                            named.Aggregate(new Vector2(float.MinValue), (max, feature) => Vector2.Max(max, new(feature.Bounds.Max.X, feature.Bounds.Max.Z))));
+                        if (regions.Any(region => Intersects(Expand(envelope, place.GetProperty("radius").GetSingle()), region)))
+                            input.Add(new { name, envelope });
+                    }
+        var outer = context.World.Boundary.Outer;
+        input.Add(new { windMin = outer.Count > 0 ? outer.Min(point => point.X) : -1000f,
+            windMax = outer.Count > 0 ? outer.Max(point => point.X) : 1000f, context.Map.TerrainDefaults });
+        foreach (var feature in features)
+        {
+            input.Number(context.World.Terrain.PadY(feature.Id));
+            input.Add(context.World.Terrain.WaterY(feature.Id));
+            foreach (var point in Points(feature.Geometry)) Sample(context, input, point);
+            foreach (var part in feature.Parts)
+                foreach (var point in Points(part.FacadeGeometry ?? part.Geometry)) Sample(context, input, point);
+            Sample(context, input, new(feature.Bounds.Center.X, feature.Bounds.Center.Z));
+        }
+        foreach (var tree in selected) Sample(context, input, new(tree.Position.X, tree.Position.Z));
+        foreach (var region in regions) AddBoundary(input, context.World.Boundary, region);
+        // Terrain is analytic at candidate positions; retain its authored program rather than treating metre
+        // samples as an exact substitute. This is independent of the removed map-wide grove quota.
         foreach (var file in context.SourceInputs.Keys.Where(path => path.StartsWith("overlay/terrain", StringComparison.Ordinal)).Order(StringComparer.Ordinal))
             input.File(context.SourceInputs, file);
+    }
+
+    private static bool HasKind(WorldFeature feature, string kind) => feature.Kind.Value == kind || feature.Parts.Any(part =>
+        part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var value) && value.GetString() == kind);
+
+    private static MapRect VegetationBounds(WorldFeature feature)
+    {
+        var points = Points(feature.Geometry).Concat(feature.Parts.SelectMany(part => Points(part.FacadeGeometry ?? part.Geometry)))
+            .Append(new(feature.Bounds.Min.X, feature.Bounds.Min.Z)).Append(new(feature.Bounds.Max.X, feature.Bounds.Max.Z)).ToArray();
+        var margin = 0f;
+        foreach (var props in feature.Parts.Select(part => part.Props).Prepend(feature.Props))
+            foreach (var key in new[] { "radius", "size", "width" })
+                if (props is { ValueKind: JsonValueKind.Object } value && value.TryGetProperty(key, out var number) &&
+                    number.ValueKind == JsonValueKind.Number && number.TryGetSingle(out var n))
+                    margin = MathF.Max(margin, key == "radius" ? n : n * .5f);
+        return Bounds(points, margin);
+    }
+
+    private static string? RoadName(JsonElement? props)
+    {
+        if (props is not { ValueKind: JsonValueKind.Object } value) return null;
+        foreach (var key in new[] { "name:zh", "name" })
+            if (value.TryGetProperty(key, out var name) && name.ValueKind == JsonValueKind.String) return name.GetString();
+        return null;
     }
 
     private static void AddFurniturePlanting(BuildContext context, InputHash input, MapRect area)

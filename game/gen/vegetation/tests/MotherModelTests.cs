@@ -259,7 +259,7 @@ public sealed class MotherModelTests
                     for (var j = 0; j < 12; j++)
                     {
                         var a = j * 6.2831853f / 12f;
-                        var dir = new Vector3(DetMath.Cos(a), 0f, DetMath.Sin(a));
+                        var dir = new Vector3(MathF.Cos(a), 0f, MathF.Sin(a));
                         var through = new Vector3(axis.X, y, axis.Z);
                         // A sight line through the axis point meets a sphere when the sphere comes within its radius of the line.
                         bool Meets((Vector3 Center, float Radius) m)

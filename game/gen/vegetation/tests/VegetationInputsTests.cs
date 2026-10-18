@@ -16,14 +16,6 @@ namespace Campus.Gen.Vegetation.Tests;
 [TestSuite]
 public sealed class VegetationInputsTests
 {
-    /// <summary>
-    /// The raw campus layout read before the input-boundary move (23b, ceae168), without any authored overlays:
-    /// tree count and a SHA-256 over every tree's key, species, variant, position, yaw, scale, wash and source, in order.
-    /// Hard pavement has taken trees since (23c2a): the fingerprint is of the order before they gave way.
-    /// </summary>
-    private const int CampusTrees = 2258;
-    private const string CampusFingerprint = PavementTests.BareFingerprint;
-
     private static readonly Lazy<(string Root, IWorldModel World)> Data = new(() =>
     {
         var root = FindRepository();
@@ -32,15 +24,6 @@ public sealed class VegetationInputsTests
             .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
         return (root, WorldModelLoader.Load(new("qingshuihe"), files).World);
     });
-
-    [TestCase]
-    public void TheMovedInputsPlantTheSameCampus()
-    {
-        var layout = VegetationInputs.Layout(Context(withPlanting: true)).Layout;
-        var before = layout.BeforeGivingWay();
-        if (before.Count != CampusTrees || PavementTests.Fingerprint(before) != CampusFingerprint || layout.Trees.Count != CampusTrees - layout.Avoided.Count)
-            throw new InvalidOperationException($"layout changed by the move: {before.Count} trees, {PavementTests.Fingerprint(before)}");
-    }
 
     [TestCase]
     public void InputsComeOnlyFromTheBoundary()

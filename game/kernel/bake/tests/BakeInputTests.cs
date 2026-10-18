@@ -28,6 +28,22 @@ public sealed class BakeInputTests
         if (Hash(Context(world), "furniture") == baseline) throw new InvalidOperationException("Displayed name did not invalidate its cell.");
         world.Configure([Feature("fixture:local", 10, "校门", "旧说明", "出口"), distant]);
         if (Hash(Context(world), "furniture") == baseline) throw new InvalidOperationException("Displayed text did not invalidate its cell.");
+
+        var parcel = Green("fixture:green", 10, 300);
+        var remoteParcel = Green("fixture:remote-green", 1000, 60);
+        const string planting = """{"roads":[],"groves":{"mix":{},"areas":[],"washNear":[]}}""";
+        world.Configure([parcel, remoteParcel]);
+        baseline = Hash(Context(world, planting: planting), "vegetation");
+        world.Configure([parcel, Green("fixture:remote-green", 1000, 80)]);
+        if (Hash(Context(world, planting: planting), "vegetation") != baseline)
+            throw new InvalidOperationException("An independent distant green parcel invalidated this vegetation cell.");
+        world.Configure([Green("fixture:green", 10, 320), remoteParcel]);
+        if (Hash(Context(world, planting: planting), "vegetation") == baseline)
+            throw new InvalidOperationException("The far end of this cell's green parcel did not invalidate its vegetation.");
+
+        static WorldFeature Green(string id, float x, float length) => new(new(id), FeatureSource.Design, new("green"),
+            new PolygonGeometry(new([new(x, 10), new(x + length, 10), new(x + length, 50), new(x, 50)])))
+        { Bounds = new(new(x, 0, 10), new(x + length, 0, 50)) };
     }
 
     [TestCase]
@@ -83,7 +99,7 @@ public sealed class BakeInputTests
             Bounds = new(new(x, 0, 10), new(x + 1, 2, 11)), Name = name,
             Props = JsonSerializer.SerializeToElement(new { note, text }, ContractJson.Options)
         };
-    private static BuildContext Context(IWorldModel world, string species = "one", WindowNumberingSnapshot? numbering = null) => new()
+    private static BuildContext Context(IWorldModel world, string species = "one", WindowNumberingSnapshot? numbering = null, string? planting = null) => new()
     {
         Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, WorldSeed = 1, CodeHash = "module-code", WindowNumbering = numbering,
         Map = new(new("fixture"), new("Fixture", "Fixture"), MapKind.Outdoor, 1, 1,
@@ -93,6 +109,8 @@ public sealed class BakeInputTests
             new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []),
         GlobalInputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
             { ["vegetation/species.json"] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { species })) }),
+        SourceInputs = planting is null ? new Dictionary<string, ReadOnlyMemory<byte>>() :
+            new Dictionary<string, ReadOnlyMemory<byte>> { ["vegetation/planting.json"] = Encoding.UTF8.GetBytes(planting) },
         PartLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())])
     };
     private sealed record TestContext(MapDescriptor Descriptor, IWorldModel World, BuildInputSnapshot SourceInputs) : IMapContext

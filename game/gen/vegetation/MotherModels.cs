@@ -618,14 +618,14 @@ public static class MotherModels
             for (var s = 0; s < sides; s++)
             {
                 var a = s * 6.2831853f / sides;
-                var c = DetMath.Cos(a);
-                var sn = DetMath.Sin(a);
+                var c = MathF.Cos(a);
+                var sn = MathF.Sin(a);
                 var radial = normal * c + binormal * sn;
                 var r = radii[i];
                 if (flare > 0f)
                 {
                     var k = 1f - Math.Clamp(y / 0.9f, 0f, 1f);
-                    r *= 1f + flare * k * k * (1f + 0.35f * DetMath.Cos(5f * a + flarePhase));
+                    r *= 1f + flare * k * k * (1f + 0.35f * MathF.Cos(5f * a + flarePhase));
                 }
                 w.Add(points[i] + radial * r, radial, ao: 1f, ids.Bark, trunk ? checked((byte)ids.Whitewash) : (byte)0,
                     new Vector4(0f, 0f, 0f, -1f), Vector4.Zero, new Vector4(0f, 0f, 0f, tag), Vector2.Zero);
@@ -690,7 +690,7 @@ public static class MotherModels
             var z = rng.NextFloat() * 2f - 1f;
             var phi = rng.NextFloat() * 6.2831853f;
             var s = MathF.Sqrt(MathF.Max(0f, 1f - z * z));
-            bumps[i] = new Vector4(s * DetMath.Cos(phi), z, s * DetMath.Sin(phi), 0.6f + 0.8f * rng.NextFloat());
+            bumps[i] = new Vector4(s * MathF.Cos(phi), z, s * MathF.Sin(phi), 0.6f + 0.8f * rng.NextFloat());
         }
         return bumps;
     }
@@ -727,7 +727,7 @@ public static class MotherModels
             var z = 1f - 2f * Halton(i, 2);
             var phi = 6.2831853f * Halton(i, 3);
             var s = MathF.Sqrt(MathF.Max(0f, 1f - z * z));
-            var d = new Vector3(s * DetMath.Cos(phi), z, s * DetMath.Sin(phi));
+            var d = new Vector3(s * MathF.Cos(phi), z, s * MathF.Sin(phi));
             // The underside carries half the density: it is seen less and holds the hanging fringe.
             if (d.Y < -0.5f && (i & 1) == 0) continue;
             var target = shell.EllipsoidPoint(d);
@@ -759,7 +759,7 @@ public static class MotherModels
         {
             var r = reach * MathF.Sqrt(Halton(i, 2));
             var phi = 6.2831853f * Halton(i, 3);
-            var origin = new Vector3(shell.Center.X + r * DetMath.Cos(phi), low, shell.Center.Z + r * DetMath.Sin(phi));
+            var origin = new Vector3(shell.Center.X + r * MathF.Cos(phi), low, shell.Center.Z + r * MathF.Sin(phi));
             if (!OuterHit(plan, bumps, origin, Vector3.UnitY, out var hit, out var owner)) continue;
             if (shell.Normal(hit).Y > UnderFacing) continue;
             var start = cards.Count;
@@ -804,7 +804,7 @@ public static class MotherModels
             // Members ring the centre (the first one on it), never further out than the centre itself.
             var a = turn + k * 6.2831853f / members;
             var r = k == 0 ? 0f : size * ClusterSpread * plan.Range(0.6f, 1f);
-            var center = clusterCenter + (tangent * DetMath.Cos(a) + bitangent * DetMath.Sin(a)) * r
+            var center = clusterCenter + (tangent * MathF.Cos(a) + bitangent * MathF.Sin(a)) * r
                 - m * (radius * plan.Range(0f, 0.15f) + r * r / MathF.Max(0.2f, 2f * blob.Radius));
             var cn = shell.Normal(center);
             var droop = plan.Form.Droop;
@@ -863,7 +863,7 @@ public static class MotherModels
             var f = (i + 0.5f) / count;
             var azimuth = i * 2.3999632f + plan.Range(-0.2f, 0.2f);
             var pitch = (0.75f - 1.35f * f) + plan.Range(-0.12f, 0.12f);
-            var along = Vector3.Normalize(TreePlan.Azimuth(azimuth) * DetMath.Cos(pitch) + Vector3.UnitY * DetMath.Sin(pitch));
+            var along = Vector3.Normalize(TreePlan.Azimuth(azimuth) * MathF.Cos(pitch) + Vector3.UnitY * MathF.Sin(pitch));
             var size = plan.Form.CardSize * plan.Range(0.85f, 1.1f);
             var side = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, along) + new Vector3(0f, 0f, 1e-4f));
             var normal = Vector3.Normalize(Vector3.Cross(side, along));
@@ -883,8 +883,8 @@ public static class MotherModels
         var t0 = Vector3.Cross(Vector3.UnitY, d);
         t0 = t0.LengthSquared() > 1e-6f ? Vector3.Normalize(t0) : Vector3.UnitX;
         var b0 = Vector3.Cross(d, t0);
-        var c = DetMath.Cos(psi);
-        var s = DetMath.Sin(psi);
+        var c = MathF.Cos(psi);
+        var s = MathF.Sin(psi);
         var u = t0 * c + b0 * s;
         var v = Vector3.Cross(d, u);
         if (droop > 0f)

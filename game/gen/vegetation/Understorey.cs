@@ -192,7 +192,7 @@ public static class Understorey
                     var model = Model(info, variant);
                     var half = rule.Spacing * HedgeOverlap;
                     var size = new Vector3(half / model.Radius, HedgeHeight / model.Height, HedgeHalfWidth / model.Radius);
-                    Add(site, plants, key, info, variant, c, 0f, DetMath.Atan2(-tangent.Y, tangent.X), size, UnderKind.Hedge);
+                    Add(site, plants, key, info, variant, c, 0f, MathF.Atan2(-tangent.Y, tangent.X), size, UnderKind.Hedge);
                 }
                 else
                 {

@@ -69,7 +69,7 @@ public static class VegetationPrototypes
     public static Matrix4x4 Transform(PlantedTree tree)
     {
         ArgumentNullException.ThrowIfNull(tree);
-        return Matrix4x4.CreateScale(tree.Scale) * DetMath.RotationY(tree.Yaw) * Matrix4x4.CreateTranslation(tree.Position);
+        return Matrix4x4.CreateScale(tree.Scale) * Matrix4x4.CreateRotationY(tree.Yaw) * Matrix4x4.CreateTranslation(tree.Position);
     }
 
     /// <summary>Writes one 16-float instance record (<see cref="InstanceStreamLayout"/>).</summary>

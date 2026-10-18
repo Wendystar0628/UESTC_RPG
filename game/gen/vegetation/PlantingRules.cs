@@ -15,7 +15,7 @@ public sealed record RoadPlanting(string Name, IReadOnlyList<string> Species, IR
 /// <summary>A named place: within Radius of its plan envelope, groves take Mix instead of the default (WLD-VEGETATION).</summary>
 public sealed record PlantingArea(string Name, float Radius, IReadOnlyList<(string Species, float Weight)> Mix);
 
-public sealed record GrovePlanting(int Target, float AreaPerTree, IReadOnlyList<(string Species, float Weight)> Mix,
+public sealed record GrovePlanting(IReadOnlyList<(string Species, float Weight)> Mix,
     IReadOnlyList<PlantingArea> Areas, IReadOnlyList<PlantingArea> WashNear);
 
 /// <summary>Species of the trees planted in empty tree pits: square pits and strips, and round beds (WLD-VEGETATION 栾树: 方树池).</summary>
@@ -115,8 +115,7 @@ public sealed record PlantingRules(IReadOnlyList<RoadPlanting> Roads, float OsmN
             if (under.Borders is { Hedge.Count: 0 }) throw new InvalidDataException("planting: border hedges need a species.");
         }
         return new PlantingRules(roads, osm.GetProperty("near").GetSingle(), osmDefault,
-            new GrovePlanting(groves.GetProperty("target").GetInt32(), groves.GetProperty("areaPerTree").GetSingle(),
-                Mix(groves.GetProperty("mix")), Areas(groves.GetProperty("areas"), true), Areas(groves.GetProperty("washNear"), false)))
+            new GrovePlanting(Mix(groves.GetProperty("mix")), Areas(groves.GetProperty("areas"), true), Areas(groves.GetProperty("washNear"), false)))
         { Pits = pits, Understorey = under };
     }
 }

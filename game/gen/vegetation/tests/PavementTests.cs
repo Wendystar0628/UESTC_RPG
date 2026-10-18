@@ -21,9 +21,6 @@ namespace Campus.Gen.Vegetation.Tests;
 [TestSuite]
 public sealed class PavementTests
 {
-    /// <summary>The original campus inputs, without authored overlays (23d avenue row spacing).</summary>
-    internal const string BareFingerprint = "94e2842de8f1fd7762a43347af67f29306d4d13ae7bf403586e7dd4e6d417ea5";
-
     /// <summary>
     /// The centre line of 0h-b's second Dangui Road walk (design:north-dangui-walk-w2, 021ba14), copied as a fixture so the case is
     /// covered whether or not that overlay is in the map yet.
@@ -286,7 +283,7 @@ public sealed class PavementTests
         a.Avoided.Select(t => t.Index).SequenceEqual(b.Avoided.Select(t => t.Index)) &&
         SameRecords(a.Avoided.Select(a => a.Tree), b.Avoided.Select(a => a.Tree)) && a.PitsHeld == b.PitsHeld;
 
-    // Preserve the legacy raw-input fingerprint while comparing the additional instance fields in local invariants too.
+    // Compare every stored field of the planted instances.
     internal static bool SameRecords(IEnumerable<PlantedTree> a, IEnumerable<PlantedTree> b) => Fingerprint(a) == Fingerprint(b) &&
         a.Select(t => (Bits(t.Height), Bits(t.Seed), Bits(t.WindPos))).SequenceEqual(b.Select(t => (Bits(t.Height), Bits(t.Seed), Bits(t.WindPos))));
 
@@ -349,7 +346,7 @@ public sealed class PavementTests
 
     internal static PlantingRules FixtureRules { get; } = new(
         [new("fixture-avenue", ["ginkgo"], [new(7f, false)], 6f, false, new(["cherry", "plum"], 13f, 7f))],
-        15f, "camphor", new(20, 400f, [("camphor", 1f)], [], []))
+        15f, "camphor", new([("camphor", 1f)], [], []))
     {
         Pits = new("koelreuteria", "camphor"),
         Understorey = new(new("loropetalum", 0.42f, 1f),

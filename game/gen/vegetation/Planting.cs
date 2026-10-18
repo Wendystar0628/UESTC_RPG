@@ -100,6 +100,10 @@ public static class Planting
     /// <summary>Grove crowns are spaced at this share of their radius, so neighbouring crowns interlock into stands.</summary>
     public const float StandOverlap = 0.7f;
 
+    /// <summary>Fixed density for each green parcel's area^0.84 quota (area in m²).</summary>
+    public const float GroveDensityCoefficient = 0.006077f;
+    public const float GroveAreaExponent = 0.84f;
+
     private static readonly string[] Blocking = ["building", "water", "sport", "parking"];
 
     public static PlantingLayout Build(IWorldModel world, SpeciesTable species, PlantingRules rules, uint seed)
@@ -323,42 +327,38 @@ public static class Planting
     }
 
     // ---------------------------------------------------------------------------------------------------------
-    // Groves (§4, landscape.ts): green parcels weighted by area^0.84; open lawns kept; species by place and stand.
+    // Groves: each green parcel has its own area^0.84 quota, candidate stream and keys.
     // ---------------------------------------------------------------------------------------------------------
 
     private static void PlantGroves(Site site, SpeciesTable species, PlantingRules rules, List<PlantedTree> trees)
     {
-        var parcels = site.Green.Where(p => p.Area > 35f).ToList();
-        if (parcels.Count == 0) return;
-        var weights = new float[parcels.Count];
-        var sum = 0f;
-        for (var i = 0; i < parcels.Count; i++) weights[i] = sum += DetMath.Pow(parcels[i].Area, 0.84f);
-        var target = Math.Min(rules.Groves.Target, (int)MathF.Round(parcels.Sum(p => p.Area) / rules.Groves.AreaPerTree));
         var areas = rules.Groves.Areas.Select(a => (Area: a, Box: site.Envelope(a.Name))).Where(a => a.Box is not null).ToList();
         var wash = rules.Groves.WashNear.Select(a => (Area: a, Box: site.Envelope(a.Name))).Where(a => a.Box is not null).ToList();
-        var rng = new Rng(StableHash.Hash32(site.Seed, "veg", "groves"));
-        var planted = 0;
-        for (var attempt = 0; attempt < target * 90 && planted < target; attempt++)
+        foreach (var parcel in site.Green.Where(p => p.Area > 35f))
         {
-            var choice = rng.NextFloat() * sum;
-            var parcel = parcels[Math.Max(0, Array.FindIndex(weights, w => w >= choice))];
-            var x = parcel.Min.X + rng.NextFloat() * (parcel.Max.X - parcel.Min.X);
-            var z = parcel.Min.Y + rng.NextFloat() * (parcel.Max.Y - parcel.Min.Y);
-            var draw = rng.NextFloat();
-            var p = new Vector2(x, z);
-            if (!PlanGeometry.Contains(parcel.Rings, p) || !PlanGeometry.Contains(site.World.Boundary, p)) continue;
-            var edge = Edge(parcel.Rings, p);
-            var cluster = (DetMath.Sin(x / 53f + DetMath.Cos(z / 47f)) + DetMath.Cos(z / 59f - x / 139f) + 2f) / 4f;
-            if (parcel.Area > BigLawn && edge > EdgeKeep && cluster < OpenNoise) continue;
-            var mix = areas.FirstOrDefault(a => Near(a.Box!.Value, p, a.Area.Radius)).Area?.Mix ?? rules.Groves.Mix;
-            var stand = Hash01(site.Seed, "stand", (int)MathF.Floor(x / StandCell), (int)MathF.Floor(z / StandCell));
-            var info = species.Get(Pick(mix, StandWeight * stand + (1f - StandWeight) * draw));
-            var key = "grove:" + planted.ToString(CultureInfo.InvariantCulture) + ":" + attempt.ToString(CultureInfo.InvariantCulture);
-            var washed = wash.Any(a => Near(a.Box!.Value, p, a.Area.Radius));
-            // Crowns include their envelope: keep the crown inside the parcel's edge band (landscape.ts: 0.7 r).
-            var probe = Probe(site, info, key);
-            if (edge < probe.CrownRadius * 0.7f) continue;
-            if (Try(site, info, p, key, washed, PlantSource.Grove, trees, crownClear: true)) planted++;
+            var target = (int)MathF.Round(GroveDensityCoefficient * MathF.Pow(parcel.Area, GroveAreaExponent));
+            var rng = new Rng(StableHash.Hash32(site.Seed, "veg", "groves", parcel.Id));
+            var planted = 0;
+            for (var attempt = 0; attempt < target * 90 && planted < target; attempt++)
+            {
+                var x = parcel.Min.X + rng.NextFloat() * (parcel.Max.X - parcel.Min.X);
+                var z = parcel.Min.Y + rng.NextFloat() * (parcel.Max.Y - parcel.Min.Y);
+                var draw = rng.NextFloat();
+                var p = new Vector2(x, z);
+                if (!PlanGeometry.Contains(parcel.Rings, p) || !PlanGeometry.Contains(site.World.Boundary, p)) continue;
+                var edge = Edge(parcel.Rings, p);
+                var cluster = (MathF.Sin(x / 53f + MathF.Cos(z / 47f)) + MathF.Cos(z / 59f - x / 139f) + 2f) / 4f;
+                if (parcel.Area > BigLawn && edge > EdgeKeep && cluster < OpenNoise) continue;
+                var mix = areas.FirstOrDefault(a => Near(a.Box!.Value, p, a.Area.Radius)).Area?.Mix ?? rules.Groves.Mix;
+                var stand = Hash01(site.Seed, "stand", (int)MathF.Floor(x / StandCell), (int)MathF.Floor(z / StandCell));
+                var info = species.Get(Pick(mix, StandWeight * stand + (1f - StandWeight) * draw));
+                var key = "grove:" + parcel.Id + ":" + attempt.ToString(CultureInfo.InvariantCulture);
+                var washed = wash.Any(a => Near(a.Box!.Value, p, a.Area.Radius));
+                // Crowns include their envelope: keep the crown inside the parcel's edge band (landscape.ts: 0.7 r).
+                var probe = Probe(site, info, key);
+                if (edge < probe.CrownRadius * 0.7f) continue;
+                if (Try(site, info, p, key, washed, PlantSource.Grove, trees, crownClear: true)) planted++;
+            }
         }
     }
 
@@ -436,7 +436,7 @@ public static class Planting
         return best;
     }
 
-    internal sealed record Parcel(PolygonRings Rings, Vector2 Min, Vector2 Max, float Area);
+    internal sealed record Parcel(string Id, PolygonRings Rings, Vector2 Min, Vector2 Max, float Area);
 
     /// <summary>One piece of hard pavement: an area, or a centre line with its half width. Min and Max box it (without the clearance).</summary>
     private sealed record Pave(PolygonRings? Rings, IReadOnlyList<Vector2>? Line, float Half, Vector2 Min, Vector2 Max);
@@ -711,13 +711,14 @@ public static class Planting
                     MultiPolygonGeometry multi => multi.Polygons,
                     _ => []
                 };
-                foreach (var rings in polygons)
+                foreach (var (rings, index) in polygons.Select((rings, index) => (rings, index)))
                 {
                     if (rings.Outer.Count < 3) continue;
                     var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
                     var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
                     var area = MathF.Abs((float)PlanGeometry.SignedArea(rings.Outer)) - rings.Holes.Sum(h => MathF.Abs((float)PlanGeometry.SignedArea(h)));
-                    yield return new Parcel(rings, min, max, area);
+                    var id = feature.Id.Value + ":" + part.SourceId + ":" + index.ToString(CultureInfo.InvariantCulture);
+                    yield return new Parcel(id, rings, min, max, area);
                 }
             }
         }

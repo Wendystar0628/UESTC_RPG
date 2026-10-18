@@ -23,7 +23,7 @@ internal sealed record Blob(Vector3 Center, float Radius, float Lump, int Bumps,
 
 /// <summary>
 /// Branch skeleton and crown masses of one mother model, decided once from the species and variant and then meshed
-/// per level. Everything is drawn from one seeded stream, so a mother model is identical on every machine.
+/// per level. Everything is drawn from one seeded stream, so repeated builds on the same machine produce identical mother models.
 /// </summary>
 internal sealed class TreePlan
 {
@@ -100,7 +100,7 @@ internal sealed class TreePlan
             if (z < -0.3f) continue;
             var s = MathF.Sqrt(MathF.Max(0f, 1f - z * z));
             var phi = i * 2.3999632f;
-            var e = shell.EllipsoidPoint(new Vector3(s * DetMath.Cos(phi), z, s * DetMath.Sin(phi)));
+            var e = shell.EllipsoidPoint(new Vector3(s * MathF.Cos(phi), z, s * MathF.Sin(phi)));
             var probe = shell.Center + (e - shell.Center) * 0.78f;
             if (Blobs.Any(b => Vector3.Distance(probe, b.Center) < b.Radius * 0.92f)) continue;
             // Slide the filler along the ray until it is big enough to swallow the probe (narrow cone tops need it outward).
@@ -190,10 +190,10 @@ internal sealed class TreePlan
         var z = Range(-1f, 1f);
         var phi = Range(0f, Tau);
         var s = MathF.Sqrt(MathF.Max(0f, 1f - z * z));
-        return new Vector3(s * DetMath.Cos(phi), z, s * DetMath.Sin(phi));
+        return new Vector3(s * MathF.Cos(phi), z, s * MathF.Sin(phi));
     }
 
-    public static Vector3 Azimuth(float angle) => new(DetMath.Cos(angle), 0f, DetMath.Sin(angle));
+    public static Vector3 Azimuth(float angle) => new(MathF.Cos(angle), 0f, MathF.Sin(angle));
 
     private static float Smooth(float x)
     {
@@ -219,7 +219,7 @@ internal sealed class TreePlan
             {
                 var y = trunkTop * i / steps;
                 var f = y / trunkTop;
-                var offset = splay * (f * f * 0.8f + f * 0.2f) + wander * DetMath.Sin(f * 3.1f) + (CrownCenter with { Y = 0f }) * (f * f * 0.5f);
+                var offset = splay * (f * f * 0.8f + f * 0.2f) + wander * MathF.Sin(f * 3.1f) + (CrownCenter with { Y = 0f }) * (f * f * 0.5f);
                 var radius = Form.Leader
                     ? (y < BranchY ? 1f - 0.35f * y / BranchY : 0.65f - 0.53f * (y - BranchY) / MathF.Max(0.1f, trunkTop - BranchY))
                     : 1f - 0.4f * f;
@@ -233,7 +233,7 @@ internal sealed class TreePlan
         var mains = Count(Form.MainMin, Form.MainMax);
         var phase = Next() * Tau;
         var asym = TreeForms.Asymmetry(Variant);
-        var leanAngle = MathF.Abs(CrownCenter.X) + MathF.Abs(CrownCenter.Z) > 1e-4f ? DetMath.Atan2(CrownCenter.Z, CrownCenter.X) : 0f;
+        var leanAngle = MathF.Abs(CrownCenter.X) + MathF.Abs(CrownCenter.Z) > 1e-4f ? MathF.Atan2(CrownCenter.Z, CrownCenter.X) : 0f;
         for (var i = 0; i < mains; i++)
         {
             var angle = phase + (i + Range(-0.3f, 0.3f)) * Tau / mains;
@@ -250,8 +250,8 @@ internal sealed class TreePlan
                 var t = (y - CrownCenter.Y) / CrownRy;
                 var reach = Envelope(t + 0.12f) * Range(0.78f, 0.92f);
                 var pitch = (Form.MainPitchDeg + Range(-8f, 8f)) * (MathF.PI / 180f);
-                var dir = Azimuth(angle) * DetMath.Cos(pitch) + Vector3.UnitY * DetMath.Sin(pitch);
-                tip = origin + dir * (reach / MathF.Max(0.35f, DetMath.Cos(pitch)));
+                var dir = Azimuth(angle) * MathF.Cos(pitch) + Vector3.UnitY * MathF.Sin(pitch);
+                tip = origin + dir * (reach / MathF.Max(0.35f, MathF.Cos(pitch)));
                 baseRadius = RadiusAtHeight(trunk, y) * Range(0.45f, 0.6f);
             }
             else
@@ -323,7 +323,7 @@ internal sealed class TreePlan
             case CrownType.Mixed:
                 {
                     var mains = Math.Max(1, Form.MainMax);
-                    var rm = MathF.Max(0.4f, (Form.Leader ? Envelope((mainTip.Y - CrownCenter.Y) / CrownRy) * 0.78f : CrownRx * 0.92f / DetMath.Cbrt(mains)))
+                    var rm = MathF.Max(0.4f, (Form.Leader ? Envelope((mainTip.Y - CrownCenter.Y) / CrownRy) * 0.78f : CrownRx * 0.92f / MathF.Cbrt(mains)))
                         * (Species.Crown == CrownType.Mixed ? 1.12f : 1f);
                     var center = mainTip + outward * (rm * 0.15f) + Vector3.UnitY * (rm * 0.1f);
                     AddBlob(center, rm, mainTip, index, true);
@@ -358,7 +358,7 @@ internal sealed class TreePlan
         // One big cloud: a core ball (0.8r) and 6–8 satellites (0.40–0.58r at 0.55–0.78r, leaning out and up),
         // all with 10–14 bumps of 0.13 and bottoms squashed to 0.7 (WLD-VEGETATION, ART-MODELING).
         var mains = Math.Max(1, Form.MainMax);
-        var r = CrownRx * 0.8f / DetMath.Cbrt(mains);
+        var r = CrownRx * 0.8f / MathF.Cbrt(mains);
         var center = Vector3.Lerp(mainTip, CrownCenter, 0.1f) + Vector3.UnitY * (r * 0.1f);
         AddBall(center, r * 0.8f, mainTip, index, true);
         _clusters.Add((center, r, mainTip));
@@ -438,7 +438,7 @@ internal sealed class TreePlan
         var span = tip - origin;
         var flat = Horizontal(span);
         var pitch = pitchDeg * (MathF.PI / 180f);
-        var leave = Vector3.Normalize(flat * DetMath.Cos(pitch) + Vector3.UnitY * DetMath.Sin(pitch));
+        var leave = Vector3.Normalize(flat * MathF.Cos(pitch) + Vector3.UnitY * MathF.Sin(pitch));
         var control = origin + leave * (span.Length() * 0.45f);
         for (var i = 0; i < points; i++)
         {

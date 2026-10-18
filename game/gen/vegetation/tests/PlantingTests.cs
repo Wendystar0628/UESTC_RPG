@@ -55,6 +55,27 @@ public sealed class PlantingTests
     }
 
     [TestCase]
+    public void EditingADistantGreenParcelKeepsLocalTrees()
+    {
+        var original = PavementTests.PlantFixture(PavementTests.Fixture()).BeforeGivingWay();
+        if (!original.Any(t => t.Source == PlantSource.Grove)) throw new InvalidOperationException("the local parcel has no grove trees");
+        var keys = original.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
+        var small = PavementTests.PlantFixture(PavementTests.Fixture(RemoteGreen(-75f))).BeforeGivingWay();
+        var enlarged = PavementTests.PlantFixture(PavementTests.Fixture(RemoteGreen(-50f))).BeforeGivingWay();
+        if (!small.Any(t => !keys.Contains(t.Key)) || !enlarged.Any(t => !keys.Contains(t.Key)))
+            throw new InvalidOperationException("the distant parcel has no grove trees");
+        if (!PavementTests.SameRecords(original, small.Where(t => keys.Contains(t.Key))) ||
+            !PavementTests.SameRecords(original, enlarged.Where(t => keys.Contains(t.Key))))
+            throw new InvalidOperationException("a distant green edit changed a local tree or its order");
+        if (PavementTests.SameRecords(small.Where(t => !keys.Contains(t.Key)), enlarged.Where(t => !keys.Contains(t.Key))))
+            throw new InvalidOperationException("enlarging the distant parcel did not exercise a planting change");
+
+        static string RemoteGreen(float east) =>
+            "{\"op\":\"add\",\"id\":\"design:fixture-remote-green\",\"kind\":\"green\",\"geometry\":{\"type\":\"polygon\",\"rings\":{\"outer\":[[-95,-70],[" +
+            PavementTests.F(east) + ",-70],[" + PavementTests.F(east) + ",70],[-95,70]],\"holes\":[]}},\"reason\":\"Fixture: a distant green parcel.\"}";
+    }
+
+    [TestCase]
     public void GinkgosStayWhereTheyAreRegistered()
     {
         // WLD-VEGETATION: ginkgo only on the avenue (with its OSM street trees), beside the main building and at the
@@ -133,8 +154,8 @@ public sealed class PlantingTests
             var post = (PostCollider)TreeColliders.For(new([moved]), cell, world.Terrain).Single();
             if (post.C != new Vector2(moved.Position.X, moved.Position.Z))
                 throw new InvalidOperationException("Tree collision did not retain world coordinates: " + cell);
-            var local = (PostCollider)Campus.Gen.Collision.CollisionGeometry.Localize([post], cell).Single();
-            if (local.C != new Vector2(12, 24))
+            var local = (BoxCollider)Campus.Gen.Collision.CollisionGeometry.Localize([post], cell).Single();
+            if (new Vector2(local.At.Translation.X, local.At.Translation.Z) != new Vector2(12, 24))
                 throw new InvalidOperationException("The kernel did not localize the tree exactly once: " + cell);
         }
     }

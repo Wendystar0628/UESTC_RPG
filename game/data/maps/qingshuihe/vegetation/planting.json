@@ -36,8 +36,6 @@
     "tufts": { "species": "grass", "cell": 2.5, "edge": 5.0, "share": 0.14, "perTree": 2 }
   },
   "groves": {
-    "target": 1120,
-    "areaPerTree": 400.0,
     "mix": {
       "camphor": 0.5, "nanmu": 0.1, "osmanthus": 0.08, "koelreuteria": 0.08, "maple": 0.06, "cherry": 0.06,
       "magnolia": 0.04, "crabapple": 0.04, "jacaranda": 0.03, "willow": 0.03, "wintersweet": 0.01, "redplum": 0.01
