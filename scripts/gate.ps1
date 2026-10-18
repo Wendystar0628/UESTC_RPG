@@ -13,6 +13,13 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'lib/common.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-source.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-naming.ps1')
+# Test budget (D-246): quick-check tests over this many seconds are listed; the record keeps the recent runs only.
+$slowTestSeconds = 2
+$testRecordMaxRuns = 30
+$testRecordMaxDays = 14
+$testCutCandidateCount = 20
+# Shared layer (contracts, planar geometry, zone common tools, shared test fixtures): a change here selects every quick test.
+$publicLayerPattern = '^game/(contracts|gen/geometry|gen/zones/common|shared/tests)/'
 function Get-UESTCMainStage {
     param([string]$Root)
     $project = [IO.File]::ReadAllText((Join-Path $Root 'game/project.godot'))
@@ -96,6 +103,8 @@ function Get-UESTCG2ProjectSelection {
                 ($project -eq 'game/Campus.Tests.csproj' -and $path -eq 'game/Campus.csproj')) { $reasons.Add("Test host changed: $path") }
         }
         foreach ($path in $shared) { $reasons.Add("Shared dependency/project changed: $path") }
+        $publicChanges = @($normalizedChanges | Where-Object { $_ -match $publicLayerPattern })
+        if ($publicChanges.Count) { $reasons.Add("Shared layer changed: $($publicChanges[0]) ($($publicChanges.Count) files)") }
         if ($project -eq 'game/Campus.Tests.csproj') {
             foreach ($path in @($normalizedChanges | Where-Object { $_ -match '^game/contracts/Runtime/' -and $_ -notmatch '/tests/' })) {
                 $reasons.Add("Runtime contract changed: $path")
@@ -147,11 +156,63 @@ function Get-UESTCG2ProjectSelection {
     }
 }
 
+function Get-UESTCTrxTests {
+    param([string[]]$TrxPaths)
+    foreach ($trxPath in $TrxPaths) {
+        [xml]$trx = Get-Content -Raw -LiteralPath $trxPath
+        foreach ($item in $trx.SelectNodes('//*[local-name()="UnitTestResult"]')) {
+            $duration = $item.GetAttribute('duration')
+            $seconds = if ($duration) { [TimeSpan]::Parse($duration, [Globalization.CultureInfo]::InvariantCulture).TotalSeconds } else { 0 }
+            [pscustomobject]@{ Name=$item.GetAttribute('testName').Replace("`t",' '); Seconds=$seconds; Outcome=$item.GetAttribute('outcome') }
+        }
+    }
+}
+
+# Appends this run to the test record (time, name, seconds, outcome per row) and drops runs beyond the caps.
+function Add-UESTCTestRecord {
+    param([string]$Path, [object[]]$Tests)
+    $encoding = New-Object Text.UTF8Encoding $false
+    $stamp = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $cutoff = [DateTime]::UtcNow.AddDays(-$testRecordMaxDays).ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $old = if (Test-Path -LiteralPath $Path -PathType Leaf) { @([IO.File]::ReadAllLines($Path, $encoding)) } else { @() }
+    $new = @($Tests | ForEach-Object { $stamp + "`t" + $_.Name + "`t" + $_.Seconds.ToString('0.###', [Globalization.CultureInfo]::InvariantCulture) + "`t" + $_.Outcome })
+    $rows = @(@($old) + $new | Where-Object { $_ -match "`t" })
+    $runs = @($rows | ForEach-Object { $_.Substring(0, $_.IndexOf("`t")) } | Sort-Object -Unique -Descending | Select-Object -First $testRecordMaxRuns)
+    $kept = New-Object 'Collections.Generic.HashSet[string]' (, [string[]]@($runs | Where-Object { $_ -ge $cutoff }))
+    $rows = @($rows | Where-Object { $kept.Contains($_.Substring(0, $_.IndexOf("`t"))) })
+    [IO.File]::WriteAllText($Path, (($rows -join "`n") + "`n"), $encoding)
+}
+
+function Write-UESTCSlowTests {
+    param([object[]]$Tests)
+    $slow = @($Tests | Where-Object { $_.Seconds -gt $slowTestSeconds } | Sort-Object Seconds -Descending)
+    if (-not $slow.Count) { return }
+    Write-Host "[G2] Tests over ${slowTestSeconds}s ($($slow.Count), notice only):"
+    foreach ($test in $slow) { Write-Host ("  {0,7:N1}s  {1}" -f $test.Seconds, $test.Name) }
+}
+
+# Centralized run only: tests that never failed in the record, slowest on average first. Printed for the main session to decide; nothing is deleted.
+function Write-UESTCCutCandidates {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
+    $rows = @([IO.File]::ReadAllLines($Path, (New-Object Text.UTF8Encoding $false)) | Where-Object { $_ -match "`t" } | ForEach-Object {
+        $cells = $_.Split("`t")
+        [pscustomobject]@{ Run=$cells[0]; Name=$cells[1]; Seconds=[double]::Parse($cells[2], [Globalization.CultureInfo]::InvariantCulture); Outcome=$cells[3] }
+    })
+    $runCount = @($rows | Select-Object -ExpandProperty Run -Unique).Count
+    $candidates = @($rows | Group-Object Name | Where-Object { -not @($_.Group | Where-Object { $_.Outcome -ne 'Passed' }).Count } |
+        ForEach-Object { [pscustomobject]@{ Name=$_.Name; Average=($_.Group | Measure-Object Seconds -Average).Average; Runs=$_.Count } } |
+        Sort-Object Average -Descending | Select-Object -First $testCutCandidateCount)
+    Write-Host "[G2] Cut candidates: never failed in $runCount recorded runs, slowest $testCutCandidateCount on average (main session decides):"
+    foreach ($candidate in $candidates) { Write-Host ("  {0,7:N2}s  x{1,-3} {2}" -f $candidate.Average, $candidate.Runs, $candidate.Name) }
+}
+
 $root = Split-Path $PSScriptRoot -Parent
 $layout = Get-UESTCLayout $root
 $game = Join-Path $root 'game'
 $godot = Get-UESTCGodot
 $work = Join-Path $root 'output/build/gates'
+$testRecordPath = Join-Path $root 'output/build/test-record.tsv'
 $branch = (Invoke-UESTCGit $root @('branch', '--show-current')).StdOut.Trim()
 if (-not $BaseRef) {
     $BaseRef = 'main'
@@ -232,6 +293,7 @@ try {
 $null = [IO.Directory]::CreateDirectory($work)
 $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
+$g2TrxPaths = New-Object 'Collections.Generic.List[string]'
 if ($runtimeChanges.Count -and $selected.Count -eq 0) {
     $results.Add([pscustomobject]@{ Gate='Selection'; Status='Incomplete'; Scope=$scope; Detail='Runtime changes selected no gates.' })
 }
@@ -254,6 +316,8 @@ function Invoke-GateProcess {
     try {
         $result = Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -AllowFailure:$isTest -TimeoutSeconds $TimeoutSeconds
         if ($isTest) {
+            # Failed runs still leave a TRX; the test record needs them.
+            if ($Name -like 'G2-*' -and (Test-Path -LiteralPath $trxPath -PathType Leaf)) { $g2TrxPaths.Add($trxPath) }
             if ($result.ExitCode -ne 0) { throw "${Name}: test process exited $($result.ExitCode). See $($result.Log)" }
             $executed = 0
             if (Test-Path -LiteralPath $trxPath -PathType Leaf) {
@@ -324,6 +388,7 @@ foreach ($id in $selected) {
                 $runCount = 0
                 $testCount = 0
                 $notes = @()
+                try {
                 foreach ($selection in @($g2Selection | Where-Object { $_.Selected })) {
                     $test = $selection.Name
                     $project = Join-Path $root $selection.Project
@@ -335,8 +400,14 @@ foreach ($id in $selected) {
                     $runCount++
                     $testCount += $testRun.Tests
                 }
+                } finally {
+                    $g2Tests = @(Get-UESTCTrxTests $g2TrxPaths.ToArray())
+                    if ($g2Tests.Count) { Add-UESTCTestRecord $testRecordPath $g2Tests }
+                    Write-UESTCSlowTests $g2Tests
+                }
                 if ($runCount -eq 0) { $status = 'Incomplete' }
                 if ($Full) {
+                    Write-UESTCCutCandidates $testRecordPath
                     $native = & (Join-Path $PSScriptRoot 'gates/native-render.ps1') -Root $root -BuildLease $gateLease
                     $testCount += $native.Tests
                     $notes += "NativeRender: $($native.Tests) tests; $($native.Log)"
