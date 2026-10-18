@@ -49,7 +49,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 7. **顶点格式**：内核或烘焙器打包成压缩 20 B/顶点，每个表面 ≤ 65 536 个顶点，只用 ENG-PERF §2 登记的格式。
 8. **discard**：不透明着色器里的 `discard` 与 `ALPHA_SCISSOR_THRESHOLD` 只用于白名单里的镂空类和抖动淡化。
 9. **运行时不得改动会触发管线重编译的设置**：阴影开关、`LightAngularDistance` 与 `ShadowBlur` 的有无、软影滤波档位、阴影深度 16 位、MSAA、TAA、FSR2、CompositorEffect 的 `Needs*`、深度预通道、Environment 的各项 `*Enabled` 启动时定，四预设相同；画面设置按即时、雾幕、重启三类生效（SYS-GRAPHICS §3），会清空管线的设置不做成选项；启动预热覆盖所有可达组合；时间、季节、天气、介质只经全局参数与全局纹理；每次雾幕淡出之后 SURFACE、DRAW、Canvas 编译计数不增，新 MSDF 字形为 0。
-10. **版本锁定**：Godot 4.7.2-stable .NET；升级经主代理评审，并重跑表面字节格式比对门禁。
+10. **版本锁定**：Godot 4.7.2-stable .NET；升级经主会话评审，升级后跑一次快检和固定机位截图。
 
 ### 1.2 烘焙、线程、存档与音频（第 11–23 条）
 

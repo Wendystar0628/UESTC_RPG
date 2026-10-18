@@ -198,9 +198,9 @@
 - WF-MODEL §5 升级、派单与直接做 · L93 · 425
 - WF-MODEL §6 怎么开子代理 · L100 · 649
 - WF-MODEL §7 子代理的生命周期：默认新开，靠任务单交接 · L108 · 447
-- WF-MODEL §8 简报模板与"接续"段 · L118 · 812
+- WF-MODEL §8 简报模板与"接续"段 · L118 · 807
   - WF-MODEL §8.1 简报模板 · L120 · 512
-  - WF-MODEL §8.2 "接续"段 · L137 · 283
+  - WF-MODEL §8.2 "接续"段 · L137 · 278
 - WF-MODEL §9 额度与并发 · L147 · 1.1k
   - WF-MODEL §9.1 口径、开多少与刹车 · L149 · 429
   - WF-MODEL §9.2 节奏（D-196） · L157 · 207
@@ -334,7 +334,7 @@
 - ART-MODELING-PROPORTION §3 植被、水面与地面 · L65 · 708
 - ART-MODELING-PROPORTION §4 道具与小物件 · L75 · 625
 - ART-MODELING-PROPORTION §5 颜色 · L86 · 277
-- ART-MODELING-PROPORTION §6 让 20 多个建模者风格一致 · L93 · 897
+- ART-MODELING-PROPORTION §6 让 20 多个建模者风格一致 · L93 · 890
 - ART-MODELING-PROPORTION §7 待验证 · L109 · 138
 
 ## ART-MODELING · 风格化造型规则：比例、形体、部件与风格一致性
@@ -342,15 +342,15 @@
 `docs/art/ART-MODELING-风格化造型规则.md` · 7.1k 字 · 每类对象的最低合格构件，几何细节的三道门槛、收边倒角、深度层、模块修边条、贴面几何、法线与换级；比例颜色与金样在子文档
 关键词：最低合格构件、三道门槛、收边构件、倒角做法、自定义法线、硬边法线、解析法线、修边条、贴面几何、换级不跳变、深度层、避开描线临界角
 
-- ART-MODELING §0 结论 · L21 · 834
-  - ★ ART-MODELING §0.1 接入要点 · L33 · 360
+- ART-MODELING §0 结论 · L21 · 832
+  - ★ ART-MODELING §0.1 接入要点 · L33 · 358
 - ART-MODELING §1 最低合格构件与法线规则 · L42 · 5.1k
   - ART-MODELING §1.1 三道门槛 · L48 · 483
   - ART-MODELING §1.2 收边与倒角 · L57 · 567
   - ART-MODELING §1.3 轮廓、深度层与截面 · L66 · 467
-  - ART-MODELING §1.4 模块与修边条 · L76 · 560
+  - ART-MODELING §1.4 模块与修边条 · L76 · 558
   - ART-MODELING §1.5 贴面几何与顶点数据 · L87 · 496
-  - ART-MODELING §1.6 法线 · L95 · 585
+  - ART-MODELING §1.6 法线 · L95 · 583
   - ART-MODELING §1.7 换级不跳变 · L107 · 382
   - ART-MODELING §1.8 每类对象的最低合格构件 · L118 · 1.3k
 - ART-MODELING §2 待验证 · L132 · 171
@@ -501,7 +501,7 @@
   - ART-STYLE §2.2 大面积色与跳色 · L66 · 379
   - ART-STYLE §2.3 固有色与推导 · L78 · 188
   - ART-STYLE §2.4 界面色 · L84 · 145
-  - ART-STYLE §2.5 色名登记 · L89 · 396
+  - ART-STYLE §2.5 色名登记 · L89 · 400
   - ART-STYLE §2.6 天气色 · L96 · 126
 - ART-STYLE §3 排除元素 · L101 · 913
   - ART-STYLE §3.1 日本元素的边界 · L103 · 701
@@ -655,14 +655,14 @@
 
 ## WLD-TERRAIN-APPLY · 地形落地：表达合成、贴地、可走性、着色
 
-`docs/world/WLD-TERRAIN-APPLY-地形落地.md` · 6.5k 字 · 地形落到画面和碰撞的规则：矢量操作与合成、贴地与楼宇垫层、可走性与碰撞、着色
+`docs/world/WLD-TERRAIN-APPLY-地形落地.md` · 6.6k 字 · 地形落到画面和碰撞的规则：矢量操作与合成、贴地与楼宇垫层、可走性与碰撞、着色
 关键词：地形操作、地形覆盖层、terrain.json、合成顺序、先平后贴、贴地、垫层、勒脚、散水、PadY、Steep、碰撞带、分面平法线、地面着色
 
-- WLD-TERRAIN-APPLY §0 结论 · L23 · 721
-  - ★ WLD-TERRAIN-APPLY §0.1 接入要点 · L30 · 442
-- WLD-TERRAIN-APPLY §1 地形的表达与合成 · L39 · 1.3k
-- WLD-TERRAIN-APPLY §2 贴地 · L54 · 1.5k
-  - WLD-TERRAIN-APPLY §2.1 先平后贴 · L56 · 333
+- WLD-TERRAIN-APPLY §0 结论 · L23 · 732
+  - ★ WLD-TERRAIN-APPLY §0.1 接入要点 · L30 · 453
+- WLD-TERRAIN-APPLY §1 地形的表达与合成 · L39 · 1.4k
+- WLD-TERRAIN-APPLY §2 贴地 · L54 · 1.4k
+  - WLD-TERRAIN-APPLY §2.1 先平后贴 · L56 · 322
   - WLD-TERRAIN-APPLY §2.2 道路与铺装 · L69 · 269
   - WLD-TERRAIN-APPLY §2.3 楼宇：垫层、勒脚与入口 · L76 · 590
   - WLD-TERRAIN-APPLY §2.4 树与道具落地 · L85 · 257
@@ -796,7 +796,7 @@
 
 - MAP-QSH-ADDITIONS §0 结论 · L22 · 1.0k
   - ★ MAP-QSH-ADDITIONS §0.1 接入要点 · L39 · 328
-- MAP-QSH-ADDITIONS §1 通用规则 · L46 · 428
+- MAP-QSH-ADDITIONS §1 通用规则 · L46 · 407
 - MAP-QSH-ADDITIONS §2 默认状态规则与作用代号 · L53 · 891
 - MAP-QSH-ADDITIONS §3 大片空地的整理 · L79 · 497
 - MAP-QSH-ADDITIONS §4 参照与转译规则 · L88 · 709
@@ -1552,18 +1552,18 @@
 
 ## SYS-WALK-BOUNDS · 可行走范围、边界与碰撞
 
-`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.2k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
+`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.1k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
 关键词：可行走范围、可行走数据、禁行区、高度场地面、边界收口、隐形墙、校界缓停、碰撞顶加高、水平外扩、安全点、回位、涉水、开放泳区、游泳、碰撞就绪、自动门、电梯关门换位、行走走廊、推荐路线、碰撞级 C、SurfaceTag、FootMat、WalkClass、Collider、ICollisionWorld
 
 - SYS-WALK-BOUNDS §0 结论 · L23 · 547
   - ★ SYS-WALK-BOUNDS §0.1 接入要点 · L31 · 289
 - SYS-WALK-BOUNDS §1 可行走范围 · L39 · 824
 - SYS-WALK-BOUNDS §2 边界收口 · L58 · 816
-- SYS-WALK-BOUNDS §3 楼内的门与电梯 · L79 · 623
+- SYS-WALK-BOUNDS §3 楼内的门与电梯 · L79 · 601
 - SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L93 · 935
 - SYS-WALK-BOUNDS §5 行走走廊与节奏 · L118 · 212
 - SYS-WALK-BOUNDS §6 推荐路线 · L124 · 193
-- SYS-WALK-BOUNDS §7 碰撞与就绪 · L128 · 1.4k
+- SYS-WALK-BOUNDS §7 碰撞与就绪 · L128 · 1.3k
 
 ## SYS-WALK · 行走模式：身体、手感、视角与切换
 
@@ -1572,7 +1572,7 @@
 
 - SYS-WALK §0 结论 · L22 · 652
   - ★ SYS-WALK §0.1 接入要点 · L34 · 247
-- SYS-WALK §1 身体、声音与步相 · L41 · 678
+- SYS-WALK §1 身体、声音与步相 · L41 · 658
 - SYS-WALK §2 手感目标 · L52 · 620
 - SYS-WALK §3 视角、镜头与舒适度 · L66 · 2.1k
   - SYS-WALK §3.1 视场角、舒适度与键位 · L68 · 668
@@ -1747,7 +1747,7 @@
   - ★ ENG-BUDGET-LOD §0.1 接入要点 · L29 · 278
 - ENG-BUDGET-LOD §1 细节级别与分块 · L35 · 1.3k
 - ENG-BUDGET-LOD §2 流式加载与速度 · L59 · 480
-- ENG-BUDGET-LOD §3 深度与近裁剪面 · L66 · 387
+- ENG-BUDGET-LOD §3 深度与近裁剪面 · L66 · 360
 - ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L74 · 633
 - ENG-BUDGET-LOD §5 待验证（P0） · L84 · 139
 
@@ -1778,7 +1778,7 @@
 
 ## ENG-CODE · 代码结构准则
 
-`docs/engineering/ENG-CODE-代码结构准则.md` · 4.5k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法
+`docs/engineering/ENG-CODE-代码结构准则.md` · 4.6k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法
 关键词：代码结构准则、软件工程、坏味道、屎山、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、魔法数、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、复制粘贴、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、钉哈希、输入哈希、提交后提醒
 
 - ENG-CODE §0 结论 · L22 · 879
@@ -1788,7 +1788,7 @@
 - ENG-CODE §3 先用现成，再复用，不复制 · L62 · 678
 - ENG-CODE §4 不留死代码 · L71 · 209
 - ENG-CODE §5 规模 · L78 · 160
-- ENG-CODE §6 测试代码怎么写 · L84 · 740
+- ENG-CODE §6 测试代码怎么写 · L84 · 776
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
@@ -1812,7 +1812,7 @@
 
 - ENG-GATES-VETO §0 结论 · L22 · 346
   - ★ ENG-GATES-VETO §0.1 接入要点 · L28 · 85
-- ENG-GATES-VETO §1 一票否决 · L32 · 1.4k
+- ENG-GATES-VETO §1 一票否决 · L32 · 1.5k
 - ENG-GATES-VETO §2 全局清单 · L60 · 532
 
 ## ENG-GATES · 验收：测试三档与门禁
