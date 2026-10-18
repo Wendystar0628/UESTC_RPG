@@ -1,8 +1,7 @@
-"""Refresh the NuGet inventory with the .NET CLI and nuget-license.
+"""用 .NET CLI 和 nuget-license 刷新 third_party.json 里的 NuGet 清单。
 
-Run dotnet tool restore and restore the projects first. This script never restores
-or builds projects. Non-NuGet entries and their existing license reviews remain
-manual inventory; refreshing them does not approve pending reviews.
+用法：python scripts/setup/refresh_third_party.py；先跑 dotnet tool restore 并还原各项目，脚本自己不还原也不编译。
+非 NuGet 条目及其已有的许可审查仍是手工清单，刷新不会批准待审的条目。
 """
 
 import json

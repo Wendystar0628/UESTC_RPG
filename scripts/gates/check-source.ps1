@@ -1,3 +1,5 @@
+﻿# 源码与归属检查函数库：列出改动文件，按 ownership.json 核对归属与 UID，并检查源码边界规则（颜色、着色器白名单、路径与 ID 耦合等）。
+# 用法：由 scripts\gate.ps1 点引用（. scripts\gates\check-source.ps1）后调用其中的 Test-UESTCOwnership、Test-UESTCSourceBoundaries 等函数，不单独运行
 function Get-UESTCFiles {
     param([string]$Root)
     Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached', '--others', '--exclude-standard') | Sort-Object -Unique

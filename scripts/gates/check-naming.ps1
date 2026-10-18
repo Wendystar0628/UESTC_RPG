@@ -1,3 +1,5 @@
+﻿# 命名检查函数库（Test-UESTCSourceNaming）：C# 文件名按 PascalCase 分段，命名空间要以 Campus 开头并符合所在程序集的职责。
+# 用法：由 scripts\gate.ps1 点引用（. scripts\gates\check-naming.ps1）后调用 Test-UESTCSourceNaming -Root <仓库根>，不单独运行
 function Test-UESTCNamespaceRole {
     param([string]$Path, [string]$Namespace, [string]$ProjectNamespace = '')
     if ($Namespace -cnotmatch '^Campus(?:\.[A-Z][A-Za-z0-9]*)+$') { return $false }

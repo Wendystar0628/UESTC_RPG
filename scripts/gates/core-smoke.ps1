@@ -1,5 +1,5 @@
-# Existing G5 startup/exit and G20 core scopes run against the production main scene.
-# The result is shared only inside this gate invocation, so G20 never repeats G5's window pair.
+﻿# 核心冒烟：用正式主场景开窗口跑一轮存档、关闭、再读档恢复，供 G5 启动与退出和 G20 存档核心共用；结果只在同一次门禁调用内共享，G20 不重复 G5 的窗口对。
+# 用法：由 scripts\gate.ps1 点引用（. scripts\gates\core-smoke.ps1）后调用 Invoke-UESTCMainlineSmoke 与 Invoke-UESTCSaveCore，不单独运行
 if (-not (Get-Variable UESTCCoreSmokeResults -Scope Script -ErrorAction SilentlyContinue)) {
     $script:UESTCCoreSmokeResults = @{}
 }

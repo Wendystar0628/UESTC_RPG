@@ -1,4 +1,7 @@
-"""Bind authored photo/family groups without assigning materials."""
+"""按人工整理的照片组与同族组，给建筑要素绑定风格档案，生成 pipeline/building-profiles.json，不指派材质。
+
+用法：python pipeline/prepare_building_profiles.py --map <地图 ID，须在 pipeline/building-profile-groups.json 有分组>
+"""
 from pathlib import Path
 import argparse
 import json

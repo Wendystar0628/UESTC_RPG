@@ -1,7 +1,7 @@
-"""Fetch pinned official D0 tools without building or importing the project.
+"""下载并安装固定版本的官方 D0 工具（gdUnit4 插件与 Godot 导出模板），校验通过才装，不编译也不导入工程。
 
-Run with Python 3: python scripts/setup/install_d0_tools.py
-Archives and verification evidence remain in the ignored output/downloads directory.
+用法：python scripts/setup/install_d0_tools.py
+压缩包与校验记录留在被忽略的 output/downloads 目录。
 """
 
 import hashlib

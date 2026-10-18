@@ -1,4 +1,7 @@
-"""Export source centerlines omitted by the original polygon-only renderer."""
+"""从 OSM 元素导出道路、水系、桥、涵洞、树与过街点等中心线数据（只保留源线与源 ID，边界裁剪留给使用方）。
+
+用法：不单独运行，由 pipeline/build_dataset.py 调用 build_network
+"""
 from __future__ import annotations
 
 

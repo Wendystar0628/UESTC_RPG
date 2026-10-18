@@ -1,9 +1,8 @@
-"""Build the campus viewer's data from an OSM snapshot. Run --fetch to refresh it.
+"""用 OSM 快照生成某张地图的校园数据（campus.json 与 network.json）。
 
-Only source geometry is used. Roads without widths are marked as estimates.
-Building heights come from OSM tags, or from pipeline/building-levels.json where OSM
-lacks or misrecords them (each entry records its basis); storey counts are turned
-into heights with per-category storey heights. No fabricated campus objects are added.
+用法：python pipeline/build_dataset.py --map <地图 ID，须已在 pipeline/maps.json 配置> [--fetch]；--fetch 重新下载 OSM 快照，不加则用已提交的快照
+只用源数据的几何，没标宽度的道路标为估算；楼高取 OSM 标签，OSM 缺失或记错的取 pipeline/building-levels.json（每条记依据），
+只有层数的按类别层高折成高度；不添加编造的校园物体。
 """
 from __future__ import annotations
 

@@ -1,3 +1,5 @@
+﻿# 用真实窗口的 Godot（d3d12，640x360）跑标了 NativeRender 分类的原生渲染测试；一个测试都没执行算未完成。
+# 用法：powershell scripts\gates\native-render.ps1 -Root <仓库根> [-BuildLease <已持有的构建锁>]；平时由 scripts\gate.ps1 的 G2 调用
 param([Parameter(Mandatory)][string]$Root, [IO.FileStream]$BuildLease = $null)
 $ErrorActionPreference = 'Stop'
 $rootPath = [IO.Path]::GetFullPath($Root)
