@@ -43,8 +43,7 @@ public partial class PerfReadout : PanelContainer
         kit.Apply(bar, new UiFx(Fill: "surface.panel", Line: "line.panel", Pin: true));
         var margin = kit.Layout.Add(bar, new MarginContainer(), UiThemeBuilder.SmallMargin);
         bar._label = kit.Text(margin, "", "data", "text.1", true);
-        parent.Resized += bar.Fit;
-        bar.TreeExiting += () => parent.Resized -= bar.Fit;
+        UiLayout.BindResize(parent, bar, bar.Fit);
 
         bar._viewport = bar.GetViewport().GetViewportRid();
         RenderingServer.ViewportSetMeasureRenderTime(bar._viewport, true);

@@ -7,7 +7,7 @@ namespace Campus.Hud.Pages;
 
 public enum SettingsPage : byte { Keys, General, Graphics, Sound, Rebind, Licenses }
 
-/// <summary>贴左的设置页：容器安排页头、可换行页签、滚动正文和始终可见的操作栏；关闭即释放。</summary>
+/// <summary>贴左的设置页：容器安排页头、单行横滚页签、滚动正文和始终可见的操作栏；关闭即释放。</summary>
 public partial class SettingsCard : Control
 {
     private static readonly SettingsPage[] Order = [SettingsPage.Keys, SettingsPage.General, SettingsPage.Graphics, SettingsPage.Sound, SettingsPage.Rebind, SettingsPage.Licenses];
@@ -71,10 +71,22 @@ public partial class SettingsCard : Control
         var close = k.Button(_frame.Header, ButtonStyle.Icon, "", icon: "close", pressed: () => CloseRequested?.Invoke());
         close.TooltipText = UiKit.T("ui.common.close") + " · Esc";
         close.AccessibilityName = UiKit.T("ui.common.close");
+        var tabScroll = k.Layout.Scroll(_frame.Tabs);
+        tabScroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Auto;
+        tabScroll.VerticalScrollMode = ScrollContainer.ScrollMode.Disabled;
+        tabScroll.SizeFlagsVertical = SizeFlags.Fill;
+        tabScroll.FollowFocus = true;
+        tabScroll.ScrollHorizontalByDefault = true;
+        var horizontalBar = tabScroll.GetHScrollBar();
+        horizontalBar.ThemeTypeVariation = "ScrollThinHorizontal";
+        horizontalBar.Material = k.Materials.Text;
+        k.Recolor(horizontalBar, "line.scroll");
+        var tabRow = k.Layout.Row(tabScroll);
+        tabRow.ThemeTypeVariation = UiThemeBuilder.Segments;
         for (var i = 0; i < Order.Length; i++)
         {
             var page = Order[i];
-            var tab = k.Button(_frame.Tabs, ButtonStyle.Tab, UiKit.T("settings.tab." + Key(page)) + " " + (i + 1));
+            var tab = k.Button(tabRow, ButtonStyle.Tab, UiKit.T("settings.tab." + Key(page)) + " " + (i + 1));
             tab.Pressed += () => Show(page);
             _tabs.Add(tab);
             var content = k.Layout.Stack(_frame.Body);

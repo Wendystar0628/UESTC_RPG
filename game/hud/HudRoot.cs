@@ -36,6 +36,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     private IWorldControl _control = null!;
     private IAppFlow _flow = null!;
     private IAudioService _audio = null!;
+    private IVeilState _veil = null!;
     private UiThemeClock _clock = null!;
     private Control _root = null!, _safeFrame = null!, _corners = null!, _minimapSlot = null!;
     private Control _backgroundHost = null!, _pageHost = null!, _dialogHost = null!, _hintHost = null!;
@@ -92,6 +93,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         _control = Services.Get<IWorldControl>();
         _flow = Services.Get<IAppFlow>();
         _audio = Services.Get<IAudioService>();
+        _veil = Services.Get<IVeilState>();
 
         var tokens = UiTokens.Load();
         var colors = UiColors.Load();
@@ -164,8 +166,10 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         SyncCorners();
         _refreshClock += delta;
         if (_refreshClock >= RefreshInterval) RefreshHud();
-        // 自动隐藏只作用于没人在用的普通 HUD（UI-NAV）：焦点、大页、改键、读屏都让它保持显示
-        if (Playing && InterfaceState && !BigPage && _root.GetViewport().GuiGetFocusOwner() is null && DisplayServer.AccessibilityScreenReaderActive() == 0)
+        // 只把真正交给玩家、未被遮住的界面时间算作空闲；图库保留待评审的 HUD。
+        if (Playing && InterfaceState && _corners.IsVisibleInTree() && _veil.Opacity == 0
+            && _flow.Activity == AppActivity.None && _args.Gallery != "hud" && !BigPage
+            && _root.GetViewport().GuiGetFocusOwner() is null && DisplayServer.AccessibilityScreenReaderActive() == 0)
             _idle += (float)delta;
         else _idle = 0;
         var target = _idle >= IdleFade ? 0f : 1f;

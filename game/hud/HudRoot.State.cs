@@ -27,6 +27,7 @@ public partial class HudRoot
             case AppState.Playing:
                 BuildResident();
                 if (!_galleryTitle) _title.Close();
+                if (_args.Gallery == "hud") SetInterface(true);
                 break;
             case AppState.Entering:
             case AppState.Leaving:
@@ -121,9 +122,24 @@ public partial class HudRoot
         if (_settingsCard.Visible || _savePage.Visible || _kit.ResidentFollows) _audio.PlayUi(UiCue.ShiftDayNight);
     }
 
-    private void OnFlowChanged(AppState previous, AppState current) => SyncState();
+    private void OnFlowChanged(AppState previous, AppState current)
+    {
+        if (current == AppState.Playing) ResetIdleFade();
+        SyncState();
+    }
 
-    private void OnInterfaceModeChanged(bool enabled) => SyncCorners();
+    private void OnInterfaceModeChanged(bool enabled)
+    {
+        if (enabled) ResetIdleFade();
+        SyncCorners();
+    }
+
+    private void ResetIdleFade()
+    {
+        _idle = 0;
+        _cornerAlpha = 1;
+        FadeResidents(1, interactive: true);
+    }
 
     // ---------------- 界面缩放（UI-VISUAL）：不乘 DPI ----------------
     private void ApplyScale()

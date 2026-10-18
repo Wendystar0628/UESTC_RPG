@@ -365,8 +365,7 @@ public partial class Toast : PanelContainer
         toast._bar = kit.Box(decoration, new UiFx(Fill: "primary.line", Pin: true));
         toast._bar.SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide);
         toast._bar.OffsetRight = kit.Tokens.F("metrics", "line", "toastBar");
-        parent.Resized += toast.Fit;
-        toast.TreeExiting += () => parent.Resized -= toast.Fit;
+        UiLayout.BindResize(parent, toast, toast.Fit);
         return toast;
     }
 

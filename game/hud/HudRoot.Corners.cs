@@ -40,6 +40,7 @@ public partial class HudRoot
         var strip = TimeStrip.Create(_kit, _bottomRight, _model);
         strip.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) ToggleTime(true); };
         _resident = new Resident(speed, weather, time, strip, BuildTopRight());
+        ResetIdleFade();
         Layout();
     }
 

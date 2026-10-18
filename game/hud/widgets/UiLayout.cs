@@ -191,12 +191,24 @@ public sealed class UiLayout(UiKit kit)
         });
     }
 
-    private static void BindResize(Control source, Control lifetime, Action layout)
+    internal static void BindResize(Control source, Control lifetime, Action layout)
     {
-        source.Resized += layout;
-        lifetime.Ready += layout;
-        lifetime.TreeExiting += () => source.Resized -= layout;
-        layout();
+        var resized = Callable.From(layout);
+        void Bind()
+        {
+            if (!source.IsConnected(Control.SignalName.Resized, resized))
+                source.Connect(Control.SignalName.Resized, resized);
+            layout();
+        }
+        void Unbind()
+        {
+            if (GodotObject.IsInstanceValid(source) && source.IsConnected(Control.SignalName.Resized, resized))
+                source.Disconnect(Control.SignalName.Resized, resized);
+        }
+        lifetime.TreeEntered += Bind;
+        lifetime.TreeExiting += Unbind;
+        if (lifetime.IsInsideTree()) Bind();
+        else layout();
     }
 }
 

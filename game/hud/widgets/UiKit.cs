@@ -117,11 +117,22 @@ public sealed class UiKit
             MouseFilter = Control.MouseFilterEnum.Ignore,
             HorizontalAlignment = align,
             AutowrapMode = wrap ? TextServer.AutowrapMode.WordSmart : TextServer.AutowrapMode.Off,
-            TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
+            TextOverrunBehavior = TextServer.OverrunBehavior.NoTrimming,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             Material = Materials.Text,
         };
+        void FitText()
+        {
+            // 自动换行的 Label 需要有限宽度；行高由当前字体得出，不能在首轮容器排版时塌成零。
+            var font = label.GetThemeFont("font");
+            var fontSize = label.GetThemeFontSize("font_size");
+            label.CustomMinimumSize = new Vector2(label.CustomMinimumSize.X, MathF.Ceiling(font.GetHeight(fontSize)));
+            if (label.AutowrapMode != TextServer.AutowrapMode.Off && parent.Size.X > 0)
+                label.CustomMaximumSize = new Vector2(parent.Size.X, -1);
+        }
+        label.ThemeChanged += FitText;
         parent.AddChild(label);
+        UiLayout.BindResize(parent, label, FitText);
         Apply(label, new UiFx(Role: colorRole, Pin: pin));
         return label;
     }

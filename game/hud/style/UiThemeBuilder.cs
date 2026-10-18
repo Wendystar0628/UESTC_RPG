@@ -272,14 +272,26 @@ public sealed class UiThemeBuilder
     // 滚动条：宽 4，轨道不画，拇指是白色载体，由 ui_panel kind 3 换成 line.scroll（UI-VISUAL）
     private void BuildScrollBar()
     {
+        var halfThickness = _t.V2("metrics", "size", "scrollbar").X / 2;
         var grabber = new StyleBoxFlat { BgColor = Colors.White, AntiAliasing = false };
-        grabber.ContentMarginLeft = grabber.ContentMarginRight = _t.V2("metrics", "size", "scrollbar").X / 2;
+        grabber.ContentMarginLeft = grabber.ContentMarginRight = halfThickness;
         Theme.SetTypeVariation("ScrollThin", "VScrollBar");
-        Theme.SetStylebox("scroll", "ScrollThin", new StyleBoxEmpty { ContentMarginLeft = 2, ContentMarginRight = 2 });
+        Theme.SetStylebox("scroll", "ScrollThin", new StyleBoxEmpty { ContentMarginLeft = halfThickness, ContentMarginRight = halfThickness });
         Theme.SetStylebox("scroll_focus", "ScrollThin", new StyleBoxEmpty());
         Theme.SetStylebox("grabber", "ScrollThin", grabber);
         Theme.SetStylebox("grabber_highlight", "ScrollThin", grabber);
         Theme.SetStylebox("grabber_pressed", "ScrollThin", grabber);
+        var horizontalGrabber = new StyleBoxFlat
+        {
+            BgColor = Colors.White, AntiAliasing = false,
+            ContentMarginTop = halfThickness, ContentMarginBottom = halfThickness,
+        };
+        Theme.SetTypeVariation("ScrollThinHorizontal", "HScrollBar");
+        Theme.SetStylebox("scroll", "ScrollThinHorizontal", new StyleBoxEmpty { ContentMarginTop = halfThickness, ContentMarginBottom = halfThickness });
+        Theme.SetStylebox("scroll_focus", "ScrollThinHorizontal", new StyleBoxEmpty());
+        Theme.SetStylebox("grabber", "ScrollThinHorizontal", horizontalGrabber);
+        Theme.SetStylebox("grabber_highlight", "ScrollThinHorizontal", horizontalGrabber);
+        Theme.SetStylebox("grabber_pressed", "ScrollThinHorizontal", horizontalGrabber);
     }
 
     /// <summary>--ui-export-theme：把生成结果另存为 ui_theme.tres，只作预览与差异审查，运行时不读（UI-VISUAL）。</summary>

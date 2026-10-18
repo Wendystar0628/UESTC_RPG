@@ -110,7 +110,8 @@ public partial class SavePage : Control
         var empty = slot.Health == SlotHealth.Empty || slot.Meta is null;
         var corrupt = slot.Health == SlotHealth.Corrupt;
         var panel = _kit.Panel(parent, CardFx(empty, selected: false));
-        var content = _kit.Layout.Stack(_kit.Layout.Margin(panel), groups: false);
+        var margin = _kit.Layout.Margin(panel);
+        var content = _kit.Layout.Stack(margin, groups: false);
         var header = _kit.Layout.Row(content);
         _kit.Text(header, $"SLOT {slot.Slot.Value.TrimStart('s').PadLeft(2, '0')}", "mono-caps", "text.2");
         if (latest)
@@ -121,21 +122,35 @@ public partial class SavePage : Control
             lamp.SizeFlagsVertical = SizeFlags.ShrinkCenter;
             _kit.Text(header, UiKit.T("saves.latest"), "small", "text.accent").SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         }
+        // 所有槽共用同一内容区；空槽也保留缩略图占位和槽状态，不缩成只有接点的细条。
+        var body = _kit.Layout.Row(content);
+        var aspect = _kit.Layout.Add(body, new AspectRatioContainer
+        {
+            Ratio = 16f / 9f,
+            StretchMode = AspectRatioContainer.StretchModeEnum.WidthControlsHeight,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ShrinkBegin,
+        });
+        // AspectRatioContainer 只调整孩子的比例，不把宽度推导的高度交给外层 HBox。
+        // 首次排版按卡宽令牌估出内容最小高度，随后只从实际分配宽度更新，不写位置。
+        var padding = margin.GetThemeConstant("margin_left") + margin.GetThemeConstant("margin_right");
+        var previewWidth = Math.Max(0, (_kit.Layout.Metric("cardMinWidth") - padding - body.GetThemeConstant("separation")) / 2f);
+        aspect.CustomMinimumSize = new Vector2(0, previewWidth / aspect.Ratio);
+        void FitPreviewHeight()
+        {
+            if (aspect.Size.X > 0) aspect.CustomMinimumSize = new Vector2(0, aspect.Size.X / aspect.Ratio);
+        }
+        aspect.Resized += FitPreviewHeight;
+        var thumbnail = _kit.Panel(aspect, new UiFx(Fill: corrupt ? "danger.fill" : "surface.sunk", Line: "line.hair"));
+        if (!empty && !corrupt) TryThumbnail(thumbnail, slot.Slot);
+        var data = _kit.Layout.Stack(body, groups: false);
         if (empty)
-            _kit.Text(content, UiKit.T("saves.empty"), "body", "text.2", align: HorizontalAlignment.Center);
+        {
+            data.Alignment = BoxContainer.AlignmentMode.Center;
+            _kit.Text(data, UiKit.T("saves.empty"), "body", "text.2", align: HorizontalAlignment.Center);
+        }
         else
         {
-            var body = _kit.Layout.Row(content);
-            var aspect = _kit.Layout.Add(body, new AspectRatioContainer
-            {
-                Ratio = 16f / 9f,
-                StretchMode = AspectRatioContainer.StretchModeEnum.WidthControlsHeight,
-                SizeFlagsHorizontal = SizeFlags.ExpandFill,
-                SizeFlagsVertical = SizeFlags.ShrinkBegin,
-            });
-            var thumbnail = _kit.Panel(aspect, new UiFx(Fill: corrupt ? "danger.fill" : "surface.sunk", Line: "line.hair"));
-            if (!corrupt) TryThumbnail(thumbnail, slot.Slot);
-            var data = _kit.Layout.Stack(body, groups: false);
             var meta = slot.Meta!;
             _kit.Text(data, corrupt ? UiKit.T("saves.corrupt") : Place(meta), "h3", corrupt ? "danger.text" : "text.1");
             _kit.Text(data, Summary(meta), "small", "text.2");
