@@ -12,7 +12,7 @@ public sealed class InputBindings
         "jump", "crouch", "map", "atlas_index", "minimap", "toggle_mode", "time_panel", "time_forward",
         "toggle_flow", "next_season", "weather", "help", "clean_view", "recover", "waypoint_previous",
         "waypoint_next", "waypoint_0", "waypoint_1", "waypoint_2", "waypoint_3", "waypoint_4",
-        "waypoint_5", "waypoint_6", "waypoint_7", "waypoint_8", "waypoint_9"
+        "waypoint_5", "waypoint_6", "waypoint_7", "waypoint_8", "waypoint_9", "photo_export"
     ];
     private const string Section = "input";
     private readonly Dictionary<string, int> _keys = new(StringComparer.Ordinal);
