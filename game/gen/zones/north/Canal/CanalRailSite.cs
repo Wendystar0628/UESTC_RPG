@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.North.Framework;
 using B = Campus.Gen.Zones.North.NorthTune.Bank;
 using L = Campus.Gen.Zones.North.NorthTune.Look;
 
@@ -21,32 +22,54 @@ public sealed class CanalRailSite : ZoneSite
 {
     public override string Id => "20a4.canal-rail";
 
-    /// <summary>The bank frame: origin on the straight water edge, X along the bank, +Z off the water.</summary>
-    public static PlanFrame Frame { get; } = PlanFrame.Along(B.EdgeOrigin, B.EdgeDirection);
+    /// <summary>
+    /// The bank frame (D-239): the longest edge of the channel's outline is its straight east bank; origin on that edge's north end
+    /// (the smaller z), X along the bank toward that end, +Z off the water. Null when the channel is not in the map.
+    /// </summary>
+    public static PlanFrame? FrameOf(IWorldModel world)
+    {
+        if (!world.Features.TryGetValue(new(B.Water), out var water)) return null;
+        var ring = Plan.Polygons(water.Geometry).FirstOrDefault()?.Outer;
+        if (ring is null || ring.Count < 3) return null;
+        Vector2 a = default, b = default;
+        var longest = 0f;
+        for (var i = 0; i < ring.Count; i++)
+        {
+            Vector2 p = ring[i], q = ring[(i + 1) % ring.Count];
+            var d = Vector2.DistanceSquared(p, q);
+            if (d <= longest) continue;
+            longest = d;
+            a = p;
+            b = q;
+        }
+        if (longest <= 0f) return null;
+        return b.Y <= a.Y ? PlanFrame.Along(b, b - a) : PlanFrame.Along(a, a - b);
+    }
 
     /// <summary>Panels from the joint post to the end post, at most <see cref="B.PostPitch"/> apart.</summary>
     public static int Panels => (int)MathF.Ceiling((B.JointT - B.EndT) / B.PostPitch);
 
     /// <summary>Post k's centre on the rail line; k = 0 is the plaza's end post, k = <see cref="Panels"/> the end post of this run.</summary>
-    public static Vector2 Post(int k) => Frame.P(B.JointT + (B.EndT - B.JointT) * k / Panels, B.RailN);
+    public static Vector2 Post(PlanFrame frame, int k) => frame.P(B.JointT + (B.EndT - B.JointT) * k / Panels, B.RailN);
 
     /// <summary>Where panel k's handrail starts: post centre, except at the joint, where it starts on the shared post's campus-side face.</summary>
-    private static Vector2 PanelStart(int k) => k == 0 ? Frame.P(B.JointT - B.JointPost * 0.5f, B.RailN) : Post(k);
+    private static Vector2 PanelStart(PlanFrame frame, int k) => k == 0 ? frame.P(B.JointT - B.JointPost * 0.5f, B.RailN) : Post(frame, k);
 
     public override void Build(SiteBuilder b)
     {
+        if (FrameOf(b.Context.World) is not { } frame) return;
         var panels = Panels;
-        var u = Frame.U;
+        var u = frame.U;
         var y = new float[panels];
-        for (var k = 0; k < panels; k++) y[k] = MathF.Min(b.Ground(Post(k)), b.Ground(Post(k + 1))) + B.PavingTop;
+        for (var k = 0; k < panels; k++) y[k] = MathF.Min(b.Ground(Post(frame, k)), b.Ground(Post(frame, k + 1))) + B.PavingTop;
         for (var k = 0; k < panels; k++)
-            b.Run(L.LightSteel, PanelStart(k), Post(k + 1), B.HandRail, y[k] + B.Height - B.HandRail * 0.7f, y[k] + B.Height);
+            b.Run(L.LightSteel, PanelStart(frame, k), Post(frame, k + 1), B.HandRail, y[k] + B.Height - B.HandRail * 0.7f, y[k] + B.Height);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
         for (var k = 0; k < panels; k++)
-            b.Run(L.LightSteel, PanelStart(k), Post(k + 1), 0.04f, y[k] + B.BottomRail, y[k] + B.BottomRail + 0.04f);
+            b.Run(L.LightSteel, PanelStart(frame, k), Post(frame, k + 1), 0.04f, y[k] + B.BottomRail, y[k] + B.BottomRail + 0.04f);
         for (var k = 1; k <= panels; k++)
         {
-            var at = Post(k);
+            var at = Post(frame, k);
             var end = k == panels;
             var size = end ? B.PostSize + 0.02f : B.PostSize;
             var base0 = end ? y[k - 1] : MathF.Min(y[k - 1], y[k]);
@@ -66,7 +89,7 @@ public sealed class CanalRailSite : ZoneSite
             if (count < 1) continue;
             var start = s0 + (s1 - s0 - (count - 1) * pitch) * 0.5f;
             for (var i = 0; i < count; i++)
-                b.Box(L.LightBar, Frame.P(B.JointT - (start + i * pitch), B.RailN), u, B.BarSize, B.BarSize,
+                b.Box(L.LightBar, frame.P(B.JointT - (start + i * pitch), B.RailN), u, B.BarSize, B.BarSize,
                     y[k] + B.BottomRail + 0.04f, y[k] + B.Height - B.HandRail * 0.7f, caps: false, noShadow: true);
         }
     }
@@ -75,9 +98,10 @@ public sealed class CanalRailSite : ZoneSite
     {
         // An ordinary waterside barrier, not the boundary (WLD-OUTSKIRTS); one wall per panel, the first from the joint
         // post's centre so it overlaps the plaza's last collider instead of leaving a seam.
+        if (FrameOf(c.Context.World) is not { } frame) return;
         for (var k = 0; k < Panels; k++)
         {
-            Vector2 a = k == 0 ? Post(0) : Post(k), d = Post(k + 1);
+            Vector2 a = Post(frame, k), d = Post(frame, k + 1);
             var y = MathF.Min(c.Ground(a), c.Ground(d)) + B.PavingTop;
             c.Wall(a, d, B.ColliderHalf, y - 0.6f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);
         }

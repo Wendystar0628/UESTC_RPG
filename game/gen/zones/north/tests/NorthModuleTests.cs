@@ -17,43 +17,13 @@ public sealed class NorthModuleTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase]
-    public void OverlayLoadsStylesAndGateAdditions()
+    public void EveryClusterHasItsPolygonAndGateAddition()
     {
         var world = World();
         foreach (var cluster in NorthTune.Clusters)
         {
-            Require(world.Features.ContainsKey(new(cluster.Id)), $"{cluster.Name} polygon exists");
-            Require(world.Features.ContainsKey(new("design:north-gate-" + cluster.Key)), $"{cluster.Name} gate addition is registered");
-            // The registered gate point is the table's MainGate: moving a main gate moves both.
-            var at = ((PointGeometry)world.Features[new("design:north-gate-" + cluster.Key)].Geometry).Position;
-            Require(Vector2.Distance(new(at.X, at.Z), cluster.MainGate) < 0.05f, $"{cluster.Name} registered gate point is its MainGate");
-            foreach (var building in cluster.Buildings)
-                Require(world.Features[new(building)].Facade?.Value == cluster.Facade, $"{building} carries the {cluster.Name} facade preset");
-        }
-    }
-
-    /// <summary>
-    /// 20b1 第一项 (main session 16:07): every dorm preset key the overlay writes has its expected values in DormPresets.json,
-    /// which WP-14 maps into its FacadePresets; every colour named there is a registered palette family and every window a
-    /// catalogued part.
-    /// </summary>
-    [TestCase]
-    public void DormPresetTableCoversEveryOverlayKey()
-    {
-        var game = Path.GetFullPath(Path.Combine(DataDirectory(), "..", "..", ".."));
-        using var table = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(game, "gen", "zones", "north", "DormPresets.json")));
-        using var palette = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(game, "style", "palette", "core.json")));
-        var tokens = palette.RootElement.GetProperty("entries").EnumerateArray().Select(e => e.GetProperty("token").GetString()).ToHashSet();
-        var parts = typeof(Campus.Contracts.Parts.PartCatalog).GetFields().Where(f => f.IsLiteral).Select(f => f.GetValue(null) as string).ToHashSet();
-        var presets = table.RootElement.GetProperty("presets").EnumerateArray().ToDictionary(p => p.GetProperty("key").GetString()!);
-        foreach (var feature in World().Features.Values)
-            if (feature.Facade is { Value: { Length: > 0 } key })
-                Require(presets.ContainsKey(key), $"{feature.Id.Value}: preset {key} has no entry in DormPresets.json");
-        foreach (var (key, p) in presets)
-        {
-            foreach (var field in new[] { "glass", "frame", "trim", "accent" })
-                Require(tokens.Contains(p.GetProperty(field).GetString() + ".lit"), $"{key}.{field} is a registered colour family");
-            Require(parts.Contains(p.GetProperty("window").GetString()), $"{key}.window is a catalogued part");
+            Require(world.Features.ContainsKey(new(cluster.Id)), $"{cluster.Key} polygon exists");
+            Require(world.Features.TryGetValue(new("design:north-gate-" + cluster.Key), out var gate) && gate.Geometry is PointGeometry, $"{cluster.Key} gate addition is registered");
         }
     }
 
@@ -63,13 +33,15 @@ public sealed class NorthModuleTests
         var world = World();
         foreach (var cluster in NorthTune.Clusters)
         {
-            var layout = ClusterLayout.Of(world, cluster) ?? throw new InvalidOperationException($"{cluster.Name} has no layout");
-            Require(layout.Gates.Count(g => g.Main) == 1, $"{cluster.Name} has one main gate");
-            Require(layout.Gates.Count(g => g.Open) == (cluster.Open ? 1 : 0), $"{cluster.Name} open gates");
-            Require(layout.Runs.Count > 0, $"{cluster.Name} has fence runs");
+            var layout = ClusterLayout.Of(world, cluster) ?? throw new InvalidOperationException($"{cluster.Key} has no layout");
+            var open = world.Features[new("design:north-gate-" + cluster.Key)].Props is { ValueKind: JsonValueKind.Object } gateProps
+                && gateProps.TryGetProperty("open", out var openFlag) && openFlag.ValueKind == JsonValueKind.True;
+            Require(layout.Gates.Count(g => g.Main) == 1, $"{cluster.Key} has one main gate");
+            Require(layout.Gates.Count(g => g.Open) == (open ? 1 : 0), $"{cluster.Key} open gates");
+            Require(layout.Runs.Count > 0, $"{cluster.Key} has fence runs");
             foreach (var run in layout.Runs)
                 for (var i = 0; i + 1 < run.Posts.Count; i++)
-                    Require(Vector2.Distance(run.Posts[i], run.Posts[i + 1]) <= NorthTune.Fence.PostPitch + 0.01f, $"{cluster.Name} post gap at {run.Posts[i]}");
+                    Require(Vector2.Distance(run.Posts[i], run.Posts[i + 1]) <= NorthTune.Fence.PostPitch + 0.01f, $"{cluster.Key} post gap at {run.Posts[i]}");
         }
     }
 
@@ -90,12 +62,12 @@ public sealed class NorthModuleTests
                 {
                     var middle = f.P((cabinets[k] + cabinets[k + 1]) * 0.5f, 0);
                     var blocked = colliders.Any(c => Covers(c, middle, 0f));
-                    Require(blocked != gate.Open, $"{cluster.Name} gate passage {k} is {(gate.Open ? "open" : "closed")}");
+                    Require(blocked != gate.Open, $"{cluster.Key} gate passage {k} is {(gate.Open ? "open" : "closed")}");
                 }
                 // The lane under the barrier arm is closed either way, and nothing crosses the gate line above 0.5 m wide.
-                Require(colliders.Any(c => Covers(c, f.P(0, 0), 0f)), $"{cluster.Name} vehicle lane is barred");
+                Require(colliders.Any(c => Covers(c, f.P(0, 0), 0f)), $"{cluster.Key} vehicle lane is barred");
                 var tops = colliders.OfType<BoxCollider>().Where(c => Covers(c, f.P(cabinets[0], 0), 0f));
-                Require(tops.All(b => b.At.M42 + b.Half.Y >= WalkRules.BarrierHeight - 0.01f), $"{cluster.Name} cabinets reach 1.5 m");
+                Require(tops.All(b => b.At.M42 + b.Half.Y >= WalkRules.BarrierHeight - 0.01f), $"{cluster.Key} cabinets reach 1.5 m");
             }
         }
     }

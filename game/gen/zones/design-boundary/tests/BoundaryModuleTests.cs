@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Gen.Geometry;
 using Campus.Gen.World;
 using Campus.Gen.Zones.DesignBoundary.Framework;
 using Campus.Gen.Zones.DesignBoundary.Gates;
@@ -30,18 +31,9 @@ public sealed class BoundaryModuleTests
     {
         var world = World();
         var ring = new BoundaryRing(world.Boundary.Outer);
-        var expected = new Dictionary<string, Vector2>
-        {
-            ["north"] = new(-106.66f, -827.23f),
-            ["west"] = new(-370.78f, -507.43f),
-            ["northwest"] = new(-195.71f, -733.83f),
-            ["west2"] = new(-619.65f, -192.53f),
-            ["southeast"] = new(602.32f, 581.34f),
-        };
         foreach (var spec in BoundaryTune.Gates)
         {
             var g = GateSite.Of(world, spec) ?? throw new InvalidOperationException($"{spec.Name} not resolved");
-            Require(Vector2.Distance(g.Frame.Origin, expected[spec.Key]) < 0.2f, $"{spec.Name} origin {g.Frame.Origin}");
             Require(!ring.Contains(g.Frame.P(0, 2f)) && ring.Contains(g.Frame.P(0, -2f)), $"{spec.Name} +Z leaves the campus");
             Require(g.OpeningLength > 2 * g.Carriage && g.OpeningLength < 40f, $"{spec.Name} opening {g.OpeningLength:F1} m");
             var origin = ring.Arc(g.Frame.Origin);
@@ -171,7 +163,7 @@ public sealed class BoundaryModuleTests
         var colliders = new BoundaryModule().CollidersFor(ctx).Select(i => i.Collider).ToArray();
         Require(colliders.Length > 0, "colliders exist");
         Require(colliders.All(c => c.Foot != FootMat.Auto), "every collider fills Foot");
-        var rail = NorthPlazaSite.Frame.P((P.RailT0 + P.RailT1) * 0.5f, P.RailN);
+        var rail = NorthPlazaSite.FrameOf(ctx.World)!.Value.P((P.RailT0 + P.RailT1) * 0.5f, P.RailN);
         Require(colliders.Any(c => c.Tag == SurfaceTag.Barrier && Covers(c, rail, 0f)), "the waterside railing is an ordinary barrier");
         Require(colliders.Where(c => c is WallCollider { Tag: SurfaceTag.Barrier }).All(c => ((WallCollider)c).Y1 >= WalkRules.BarrierHeight), "barrier tops reach 1.5 m");
     }
@@ -180,12 +172,14 @@ public sealed class BoundaryModuleTests
     public void PlazaKeepsTheKioskSpotClearOfTheLaneAndTheRailing()
     {
         var world = World();
-        var kiosk = NorthPlazaSite.Frame.P(P.Kiosk.X, P.Kiosk.Y);
+        var frame = NorthPlazaSite.FrameOf(world)!.Value;
+        var kiosk = frame.P(P.Kiosk.X, P.Kiosk.Y);
         var lane = world.Network.Roads.First(r => r.Id.Value == "qsh:source:way:987943170");
         var laneEdge = PolylineDistance(kiosk, lane.Line.Points) - lane.Width * 0.5f;
         Require(laneEdge >= 4f, $"kiosk is {laneEdge:F2} m from the lane edge (≥ 3 m plus its half length)");
         Require(P.Kiosk.Y - P.RailN >= 2f, "kiosk stays clear of the railing");
-        Require(P.Kiosk.X > P.T0 + 2f && P.Kiosk.X < P.T1 - 1f && P.Kiosk.Y < P.N1 - 1f, "kiosk inside the plaza");
+        var paving = Outers(world.Features[new(P.Feature)].Geometry).First();
+        Require(PlanGeometry.InsideByCrossings(paving, kiosk), "kiosk inside the plaza");
         foreach (var bench in P.Benches) Require(Vector2.Distance(bench, P.Kiosk) > 5f, "benches leave the kiosk front free");
         var water = world.Features.Values.Where(f => f.Kind.Value == "water").ToArray();
         Require(water.Length > 0, "water features present");

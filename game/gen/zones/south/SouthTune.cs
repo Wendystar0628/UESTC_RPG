@@ -5,9 +5,11 @@ using Campus.Contracts.Parts;
 namespace Campus.Gen.Zones.South;
 
 /// <summary>
-/// Every tunable value of the south zone in one place, for review (WF-FLOW): materials as colour names, and the
-/// dimensions of each site. Coordinates are world (x, z) in metres taken from the OSM footprints in campus.json;
-/// local frames are described per block. Values marked "初值" are starting values awaiting the main session's call.
+/// Every tunable value of the south zone in one place, for review (WF-FLOW): materials as colour names, and the shaping
+/// dimensions of each site. Positions, outlines, storey counts, heights and sizes the map data already carries are read from the
+/// world model by feature ID (D-239), not copied here; what stays is the zone's own shaping, with a note where a value is near
+/// the data but kept for a reason. Local frames are described per block. Values marked "初值" are starting values awaiting the
+/// main session's call.
 /// </summary>
 public static class SouthTune
 {
@@ -150,16 +152,14 @@ public static class SouthTune
 
     /// <summary>
     /// South gate (MAP-QSH-SOUTH). Frame: origin midway between the two guard houses, X from the west house to the east
-    /// house (bearing ≈ 126°), local +Z outward to the street (≈ 216°), so the campus side is −Z.
+    /// house (bearing ≈ 126°), local +Z outward to the street (≈ 216°), so the campus side is −Z. The frame, the houses' places and
+    /// the islands' places and sizes are read from the relation's footprints (SouthGateSite.Layout).
     /// </summary>
     public static class Gate
     {
-        public static readonly Vector2 HouseWest = new(-532.535f, 719.865f);
-        public static readonly Vector2 HouseEast = new(-510.945f, 735.3575f);
-        /// <summary>Traffic islands (OSM parts of relation 8407525), local x of their centres.</summary>
-        public const float IslandWestX = -5.71f, IslandEastX = 5.96f, IslandZ = -0.26f;
-        public const float IslandWidth = 1.9f, IslandLength = 7.3f, IslandRise = 0.15f;
+        public const float IslandRise = 0.15f;
 
+        /// <summary>The guard house is 5.6 m square: its footprint is 6.0 × 6.2 m, but the house is drawn with a stone plinth and roof eave round it.</summary>
         public const float HouseSize = 5.6f, HouseHeight = 3.4f, HousePlinth = 0.45f;
         public const float HouseRoof = 0.36f, HouseEave = 0.45f;
         public const float HouseWindowSill = 1.0f, HouseWindowHead = 2.6f;
@@ -197,19 +197,15 @@ public static class SouthTune
         public static readonly FurnitureParams BenchSize = new(1.8f, 0.8f, 0.62f);
         public const float BenchAlong = 5.2f;
         public static readonly float[] BenchAcross = [-1.9f, 1.9f];
-        /// <summary>
-        /// The A01 kiosk spot the plaza keeps free (WP-48c registers the anchor, WP-13 places the kiosk): 3.95 m from the nearest
-        /// carriageway edge, facing 35°. From 3 m in front of its face, looking 215°, the west guard house and the name wall stand
-        /// behind and beside the panel.
-        /// </summary>
-        public static readonly Vector2 KioskSpot = new(-500.64f, 687.0f);
-        public const float KioskYaw = 35f;
     }
 
     /// <summary>Entrance axis between the gate and the main building (§2.5).</summary>
     public static class Axis
     {
-        /// <summary>National flagpole at the centre of the front lawn (osm:way:568303118, its paved inner square).</summary>
+        /// <summary>
+        /// National flagpole at the centre of the front lawn's paved inner square. The lawn (osm:way:568303118) carries the square
+        /// only as a notch in one outline, with no entity of its own to read, so the place stays here.
+        /// </summary>
         public static readonly Vector2 Flagpole = new(-394.17f, 557.41f);
         public static readonly Vector2 FlagpoleFacing = new(0.802f, 0.597f);
         public const float PoleHeight = 22f, PoleFootRadius = 0.15f, PoleTopRadius = 0.08f;
@@ -217,17 +213,16 @@ public static class SouthTune
 
     /// <summary>
     /// Main building (§2). Frame: origin at the west end of B2's south-west facade (osm:way:687370085), X along the facade
-    /// (≈ 126°), local +Z outward toward the gate (≈ 216°). B2 is about 72 m along X and 40 m deep (z −40…0).
+    /// (≈ 126°), local +Z outward toward the gate (≈ 216°). B2 is about 72 m along X and 40 m deep (z −40…0). The frames, the
+    /// front steps zone, the rear door's place and the roof level are read from the map data (MainBuildingSite.Layout).
     /// </summary>
     public static class Main
     {
-        public static readonly Vector2 FrontA = new(-374.74f, 476.82f);
-        public static readonly Vector2 FrontB = new(-316.62f, 519.34f);
-
-        /// <summary>First-floor level of B2, the portico platform (WLD-INTERIORS).</summary>
+        /// <summary>
+        /// First-floor level of B2, the portico platform (WLD-INTERIORS). The interior index gives the doors' y in absolute metres,
+        /// so the level above the local ground is kept here.
+        /// </summary>
         public const float FloorY = 2.6f;
-        /// <summary>Front steps zone (osm:way:618752446): x from StepsX0 to StepsX1, out to StepsZ.</summary>
-        public const float StepsX0 = 12.15f, StepsX1 = 60.65f, StepsZ = 17.4f;
         public const int RisersLower = 9, RisersUpper = 8;
         public const float Tread = 0.36f, MidLanding = 2.0f;
 
@@ -240,36 +235,37 @@ public static class SouthTune
         public static readonly float[] ArchWindows = [-15.3f, -8f, 8f, 15.3f];
         public const float ArchWidth = 3.0f, ArchSill = 1.1f, ArchSpring = 7.0f, DoorWidth = 3.6f, DoorSpring = 5.0f;
 
-        /// <summary>Roof gallery (空廊, §2.3): a colonnaded walkway ring on B2's roof, columns on the outer edge (初值).</summary>
-        public const float RoofY = 34.4f, TopY = 46.1f;
+        /// <summary>
+        /// Roof gallery (空廊, §2.3): a colonnaded walkway ring on B2's roof (its level is B2's height in the data), columns on the
+        /// outer edge (初值). TopY, the gallery's crown at 46.1 m, is the building's own proportion; the data has no such value.
+        /// </summary>
+        public const float TopY = 46.1f;
         public const float GalleryX0 = 10f, GalleryX1 = 62f, GalleryZ0 = -34f, GalleryZ1 = -10f;
         public const float GalleryWalk = 4.0f, GalleryPitch = 4.0f, GalleryColumn = 0.8f, GalleryFascia = 1.4f;
 
-        /// <summary>Rear door (b2.rear) on B2's north-east facade, local x and z in the front frame.</summary>
-        public const float RearX = 35.6f, RearZ = -40.3f;
+        /// <summary>Rear door (b2.rear) on B2's north-east facade: the porch's sizes.</summary>
         public const float RearLandingWidth = 9f, RearLandingDepth = 3f, RearStepsWidth = 6f, RearTread = 0.33f;
         public const float RearCanopyY = 7.0f, RearColumnRadius = 0.26f;
-
-        /// <summary>Wing heights through overlay/south.d/ HeightOps: one storey height (≈ 4.28 m) across all wings.</summary>
-        public const float StoreyHeight = 4.28f;
     }
 
     /// <summary>Forest park (§3.2; MAP-QSH-TERRAIN).</summary>
     public static class Park
     {
-        /// <summary>Peacock house on the hill's south-east foot (MAP-QSH-TERRAIN), between the two woodland paths.</summary>
+        /// <summary>Peacock house on the hill's south-east foot (MAP-QSH-TERRAIN), between the two woodland paths; the map data has no entity for it.</summary>
         public static readonly Vector2 PeacockHouse = new(-302f, 305f);
         public const float CageWidth = 9f, CageDepth = 7f, CageWall = 3.2f, CageRoofRise = 1.6f, CageMesh = 0.5f;
 
-        /// <summary>Hill-top pavilion and seat wall (design:south-hongfeng-pavilion); y follows the terrain at the top.</summary>
-        public static readonly Vector2 HillTop = new(-352f, 238f);
-        public const float PavilionSize = 4.2f, PavilionPost = 0.3f, PavilionEave = 2.9f, PavilionRoofRise = 1.5f;
-        public const float SeatWallRadius = 5.4f, SeatWallHeight = 0.45f;
+        /// <summary>
+        /// Hill-top pavilion (design:south-hongfeng-pavilion; its place, side, seat wall radius, height and bearings are read from that
+        /// feature); y follows the terrain at the top.
+        /// </summary>
+        public const float PavilionPost = 0.3f, PavilionEave = 2.9f, PavilionRoofRise = 1.5f;
     }
 
     /// <summary>
-    /// Xuanbang (MAP-QSH-SOUTH, WLD-INTERIORS). The zone builds all three parts: main wing and south annex 8
-    /// storeys to 35.7 m, tower 18 storeys to 73.85 m, clock tower 66.65 m. Footprints come from the world model.
+    /// Xuanbang (MAP-QSH-SOUTH, WLD-INTERIORS). The zone builds all three parts: main wing and south annex to 35.7 m, tower to
+    /// 73.85 m, clock tower to 66.65 m. Footprints, the wing's and tower's storey counts, the clock tower's height and the
+    /// skylight's centre come from the world model (XuanbangSite.Footprints).
     /// </summary>
     public static class Xuanbang
     {
@@ -290,8 +286,7 @@ public static class SouthTune
         public const float DoorWidth = 3.2f, DoorSpring = 3.4f, UpperWindowSill = 7.0f, UpperWindowWidth = 2.6f, UpperWindowSpring = 3.0f;
         /// <summary>Small gables on the two projecting end blocks of the main wing (§5.7).</summary>
         public const float EndGableRise = 2.6f;
-        /// <summary>Atrium skylight on the main wing (WLD-INTERIORS: the 2019 rendering's roof light), centre at the entity anchor.</summary>
-        public static readonly Vector2 Skylight = new(241.6f, 476.9f);
+        /// <summary>Atrium skylight on the main wing (WLD-INTERIORS: the 2019 rendering's roof light), centred on the entity anchor.</summary>
         public const float SkylightSize = 14f, SkylightRise = 2.2f;
 
         /// <summary>
@@ -299,7 +294,7 @@ public static class SouthTune
         /// lantern floor at 56.4 m (P18 eye 58.0 m), slit columns to 60.6 m, entablature, bullet dome 61.1–66.2 m, finial to 66.65 m.
         /// </summary>
         public const float ClockAxis = 42.3f;
-        public const float ShaftTop = 46.0f, StageTop = 54.6f, LanternFloor = 56.4f, LanternTop = 60.6f, DomeBase = 61.1f, DomeTop = 66.2f, Top = 66.65f;
+        public const float ShaftTop = 46.0f, StageTop = 54.6f, LanternFloor = 56.4f, LanternTop = 60.6f, DomeBase = 61.1f, DomeTop = 66.2f;
         public const float Quoin = 1.7f, StageInset = 1.6f, DialRadius = 2.5f, DialY = 50.7f, DialProud = 0.4f;
         public const int LanternColumns = 20;
         public const float LanternRadius = 4.3f, LanternColumn = 0.45f, CoreRadius = 1.7f, DomeRadius = 4.4f;
@@ -319,7 +314,8 @@ public static class SouthTune
 
     /// <summary>
     /// Liren corner gateway (§6.3, 初值): two pier blocks and a fourth-storey bridge over a three-storey void on square columns,
-    /// plus the two-storey east link. Storeys follow WP-14's A and B at 15.6 m: wall top 15.1 m, coping 16.57 m.
+    /// plus the east link. The pier and link storey counts come from the map data; the storeys follow WP-14's A and B at 15.6 m:
+    /// wall top 15.1 m, coping 16.57 m (the data's height is the 15.6 m).
     /// </summary>
     public static class Liren
     {
@@ -330,15 +326,15 @@ public static class SouthTune
     /// <summary>
     /// Sports venues (MAP-QSH-SOUTH; WLD-INTERIORS), 初值. Plans are fitted to the OSM footprints: the gym's circle
     /// by area about its centroid, the natatorium's ellipse by the footprint's second moments. Heights are above the ground at
-    /// the plan's centre.
+    /// the plan's centre. The natatorium's dome profile reaches 15.6 m against the data's 15.0 m estimate, so it stays the profile's own.
     /// </summary>
     public static class Sports
     {
-        /// <summary>The platform storey (大平台二层) of both venues' public entrances (WLD-INTERIORS, gym.deck in interiors.json).</summary>
-        public const float PlatformTop = 5.0f;
-
-        /// <summary>Gym drum to 26 m (§7.1): ochre base band to the platform storey, tea glass ring hall, silver rib ring, roof.</summary>
-        public const float GymTop = 26f;
+        /// <summary>
+        /// Gym drum (§7.1): ochre base band to the platform storey, tea glass ring hall, silver rib ring, roof. The platform storey
+        /// (大平台二层, both venues' public entrances) is the platform feature's height and the drum's top the gym's height, both
+        /// in the map data.
+        /// </summary>
         /// <summary>Insets from the fitted radius: base band, glass ring; the rib ring bulges out to about the footprint.</summary>
         public const float GymBaseInset = 2.2f, GymGlassInset = 3.0f;
         public const float GymGlassTop = 13.0f, GymTransom = 9.0f, GymBay = 3.6f;
@@ -387,7 +383,8 @@ public static class SouthTune
     /// Sports platform (大平台, MAP-QSH-SOUTH, 初值): the deck over qsh:way:601600526, its top at
     /// <see cref="Sports.PlatformTop"/>. Under the deck a round-column street arcade runs along every free edge; behind it the closed
     /// shops (§7.4, WLD-INTERIORS) fill a core block. Service roads keep running under the deck between the core and the gym
-    /// and the stand. Heights are above the ground at the footprint's centroid.
+    /// and the stand. Heights are above the ground at the footprint's centroid. The deck's height and the north steps' place and
+    /// direction are read from the map data.
     /// </summary>
     public static class Platform
     {
@@ -403,8 +400,8 @@ public static class SouthTune
         public const float AbutProbe = 0.8f;
 
         /// <summary>
-        /// The closed shop block under the deck: the footprint set in 7 m from its edges (the arcade depth), simplified, kept west
-        /// of the service roads that run under the deck along the stand.
+        /// The closed shop block under the deck: the footprint set in 7 m from its edges (the arcade depth), simplified by hand and
+        /// kept west of the service roads that run under the deck along the stand. A drawn shape of the zone's own, not a data copy.
         /// </summary>
         public static readonly Vector2[] Core =
         [
@@ -417,12 +414,14 @@ public static class SouthTune
         public const float ShopBay = 4.6f, ShopSill = 0.45f, ShopHead = 3.2f, SignBottom = 3.35f, SignTop = 4.05f, Pilaster = 0.5f;
         public const float DoorWidth = 1.8f, DoorHeight = 2.5f;
 
-        /// <summary>Grand steps (一组宽大台阶) in the south edge's notch: two flights and a landing, centred on the notch edge.</summary>
+        /// <summary>
+        /// Grand steps (一组宽大台阶) in the south edge's notch: two flights and a landing, centred on the notch edge. The place is the
+        /// zone's choice of edge (the data has no steps there).
+        /// </summary>
         public static readonly Vector2 GrandStairAt = new(-54.35f, 822.0f);
         public const float GrandStairWidth = 13f, StairTread = 0.32f, StairLanding = 2.4f;
         public const int RisersPerFlight = 16;
-        /// <summary>The OSM steps at the north tip (osm:way:988857939): their top centre and the direction they run down.</summary>
-        public static readonly Vector2 NorthStairTop = new(-178.9f, 714.9f), NorthStairDown = new(-0.684f, -0.730f);
+        /// <summary>The OSM steps at the north tip (their place and direction are read from the footprint): drawn 3.0 m wide against its 2.5 m.</summary>
         public const float NorthStairWidth = 3.0f;
     }
 
@@ -461,32 +460,31 @@ public static class SouthTune
     /// <summary>
     /// The west lawn by the innovation centre (MAP-QSH-ADDITIONS R6, 初值): a transition green between the boundary and the
     /// north–south footpath, regrouped as a low grass mound (south.terrain.json) with a stone seat-wall arc on its crest facing
-    /// north-east over the Zouma river to the core's research blocks.
+    /// north-east over the Zouma river to the core's research blocks. The crest, the arc's radius and bearings, its height and
+    /// thickness are read from design:south-west-lawn-seat.
     /// </summary>
     public static class Lawn
     {
-        public static readonly Vector2 Crest = new(-785.5f, 343.0f);
-        public const float SeatRadius = 3.2f, SeatHeight = 0.45f, SeatThickness = 0.45f, SeatFrom = 0f, SeatTo = 100f;
         public const int SeatChords = 6;
     }
 
     /// <summary>East lake shore (§4).</summary>
     public static class Lake
     {
-        /// <summary>Liren-side hard bank: the rectilinear north edge of osm:relation:7849760, west to east (water to the south).</summary>
-        public static readonly Vector2[] HardBank =
-        [
-            new(105.86f, 299.29f), new(143.19f, 306.07f), new(144.75f, 297.54f), new(167.68f, 301.71f), new(166.68f, 307.16f), new(178.49f, 309.32f),
-            new(177.95f, 312.26f), new(182.08f, 313.01f), new(180.27f, 322.82f), new(222.79f, 330.57f), new(223.39f, 327.30f),
-        ];
+        /// <summary>
+        /// Liren-side hard bank: the rectilinear north edge of osm:relation:7849760 is the last BankVertices vertices of its outline,
+        /// read west to east (water to the south).
+        /// </summary>
+        public const int BankVertices = 11;
         /// <summary>Retaining wall foot, coping top and balustrade top above the platform (≥ 1.05 m, SYS-WALK); balustrade line set back from the water.</summary>
         public const float WallBottom = -1.1f, CopingTop = 0.12f, RailTop = 1.08f, RailSetback = 0.25f, BalusterPitch = 0.32f, NewelPitch = 3.0f;
-        /// <summary>The wade step fills the middle of the bay's back edge (segment WadeSegment); its second tread is 0.15 m under the −0.5 m water.</summary>
-        public const int WadeSegment = 2;
-        public const float WadeWidth = 10f, Tread1 = -0.30f, Tread2 = -0.65f, Tread1Depth = 0.6f, Tread2Depth = 1.2f;
+        /// <summary>
+        /// The wade step (design:south-eastlake-wade-step: its width and tread levels are read from it, and it lies on the nearest
+        /// bank segment) fills the middle of that segment; its second tread is 0.15 m under the −0.5 m water. The treads' depths are the zone's own.
+        /// </summary>
+        public const float Tread1Depth = 0.6f, Tread2Depth = 1.2f;
         public const float BoatLength = 4.2f, BoatBeam = 1.35f, BoatDepth = 0.55f, BoatKeel = -0.80f;
-        /// <summary>Wu Liren statue (qsh:node:7867995301), facing the lake; the figure is 1.25 × a 2 m model, about 2.5 m.</summary>
-        public static readonly Vector2 Statue = new(199.79f, 292.15f);
+        /// <summary>Wu Liren statue (qsh:node:7867995301, its place is read from the entity), facing the lake; the figure is 1.25 × a 2 m model, about 2.5 m.</summary>
         public const float StatueFacing = 190f, StatueScale = 1.25f;
         /// <summary>Top of the pedestal above the ground: the figure's base plate stands here.</summary>
         public const float PedestalTop = 1.95f;
@@ -496,7 +494,7 @@ public static class SouthTune
         /// </summary>
         public static readonly Vector3 StatueLeaf = new(0.25f, 2.0f, 0f);
         public static readonly Vector3[] StatueUplights = [new(-0.9f, -PedestalTop, 1.7f), new(0.9f, -PedestalTop, 1.7f)];
-        /// <summary>Hexagonal pavilion on the south-bank hill top (MAP-QSH-TERRAIN, +3.0 m once the terrain lands).</summary>
+        /// <summary>Hexagonal pavilion on the south-bank hill top (MAP-QSH-TERRAIN, +3.0 m once the terrain lands); the map data has no entity for it.</summary>
         public static readonly Vector2 Pavilion = new(30f, 592f);
         public const float PavilionFloor = 0.45f, PavilionPlatform = 3.4f, PavilionColumns = 2.5f, PavilionColumnHeight = 3.0f;
         public const float LowerEave = 3.7f, LowerRise = 1.0f, DrumRadius = 2.0f, UpperEave = 2.75f, UpperRise = 1.8f;

@@ -21,26 +21,35 @@ public sealed class CourtyardSite : ZoneSite
 {
     public override string Id => "20a2.xz1-court";
 
-    /// <summary>The wall's centreline: a quadratic bow from start to end through the tuned mid point, evenly sampled.</summary>
-    internal static Vector2[] Path(int segments, float holdBack = 0f)
+    /// <summary>The wall's start, mid and end points: the overlay polyline (D-239).</summary>
+    internal readonly record struct Wall(Vector2 Start, Vector2 Mid, Vector2 End);
+
+    /// <summary>The seat wall, or null when the world has no such overlay feature or it is not a three-point line.</summary>
+    internal static Wall? Locate(IWorldModel world) =>
+        world.Features.TryGetValue(new(C.Feature), out var feature) && feature.Geometry is PolylineGeometry { Line.Points: { Count: 3 } points }
+            ? new Wall(points[0], points[1], points[2])
+            : null;
+
+    /// <summary>The wall's centreline: a quadratic bow from start to end through the mid point, evenly sampled.</summary>
+    internal static Vector2[] Path(Wall wall, int segments, float holdBack = 0f)
     {
-        var control = 2f * C.SeatMid - 0.5f * (C.SeatStart + C.SeatEnd);
-        var chord = Vector2.Distance(C.SeatStart, C.SeatEnd);
+        var control = 2f * wall.Mid - 0.5f * (wall.Start + wall.End);
+        var chord = Vector2.Distance(wall.Start, wall.End);
         float t0 = holdBack / chord, t1 = 1f - t0;
         var points = new Vector2[segments + 1];
         for (var i = 0; i <= segments; i++)
         {
             var t = t0 + (t1 - t0) * i / segments;
             var u = 1f - t;
-            points[i] = u * u * C.SeatStart + 2f * u * t * control + t * t * C.SeatEnd;
+            points[i] = u * u * wall.Start + 2f * u * t * control + t * t * wall.End;
         }
         return points;
     }
 
     /// <summary>Unit plan direction from the chord toward the walk: the sweep's positive lateral (t.z, −t.x).</summary>
-    internal static Vector2 Front()
+    internal static Vector2 Front(Wall wall)
     {
-        var t = Vector2.Normalize(C.SeatEnd - C.SeatStart);
+        var t = Vector2.Normalize(wall.End - wall.Start);
         return new(t.Y, -t.X);
     }
 
@@ -48,17 +57,17 @@ public sealed class CourtyardSite : ZoneSite
     /// The pad's plan outline, counter-clockwise and convex: the wall's front face (1 cm inside the stone, hidden under it)
     /// along the bow, then straight across at <see cref="C.PadReach"/> from the chord.
     /// </summary>
-    internal static Vector2[] PadOutline()
+    internal static Vector2[] PadOutline(Wall wall)
     {
-        var path = Path(C.SeatSegments);
-        var front = Front();
+        var path = Path(wall, C.SeatSegments);
+        var front = Front(wall);
         var face = new Vector2[path.Length];
         for (var i = 0; i < path.Length; i++)
         {
             var t = Vector2.Normalize(path[Math.Min(i + 1, path.Length - 1)] - path[Math.Max(i - 1, 0)]);
             face[i] = path[i] + new Vector2(t.Y, -t.X) * (C.BodyWidth * 0.5f - 0.01f);
         }
-        Vector2 Edge(Vector2 p) => p + front * (C.PadReach - Vector2.Dot(p - C.SeatStart, front));
+        Vector2 Edge(Vector2 p) => p + front * (C.PadReach - Vector2.Dot(p - wall.Start, front));
         Vector2[] ring = [.. face, Edge(face[^1]), Edge(face[0])];
         if (PlanGeometry.SignedArea(ring) < 0) Array.Reverse(ring);
         return ring;
@@ -69,21 +78,23 @@ public sealed class CourtyardSite : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        var path = Path(b.Detail == SiteDetail.Mass ? C.SeatSegments / 2 : C.SeatSegments);
+        if (Locate(b.Context.World) is not { } wall) return;
+        var path = Path(wall, b.Detail == SiteDetail.Mass ? C.SeatSegments / 2 : C.SeatSegments);
         var g = Base(b.Ground, path);
         var top = g + C.PavingLevel + C.BodyHeight;
         var body = PartGeometryKernel.BeveledRectangleProfile(C.BodyWidth, top - g + C.Sink, C.BodyBevel);
         b.Add(PartGeometryKernel.Sweep(body, path, L.Granite, baseY: g - C.Sink), Matrix4x4.Identity);
         if (b.Detail == SiteDetail.Mass) return;
         var seat = PartGeometryKernel.BeveledRectangleProfile(C.SeatWidth, C.SeatThickness, C.SeatBevel);
-        b.Add(PartGeometryKernel.Sweep(seat, Path(C.SeatSegments, C.SeatHoldBack), L.Wood, baseY: top), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.BeveledExtrude(PadOutline(), C.PadThickness, 0.01f, C.Pad, g + C.PavingLevel + C.PadLift - C.PadThickness), Matrix4x4.Identity);
+        b.Add(PartGeometryKernel.Sweep(seat, Path(wall, C.SeatSegments, C.SeatHoldBack), L.Wood, baseY: top), Matrix4x4.Identity);
+        b.Add(PartGeometryKernel.BeveledExtrude(PadOutline(wall), C.PadThickness, 0.01f, C.Pad, g + C.PavingLevel + C.PadLift - C.PadThickness), Matrix4x4.Identity);
     }
 
     /// <summary>One box per chord, body and seat together: 0.45 m above the pad, a prop the player can step onto.</summary>
     public override void Collide(SiteColliders c)
     {
-        var path = Path(C.SeatSegments);
+        if (Locate(c.Context.World) is not { } wall) return;
+        var path = Path(wall, C.SeatSegments);
         var g = Base(c.Ground, path);
         var half = (C.Sink + C.PavingLevel + C.BodyHeight + C.SeatThickness) * 0.5f;
         for (var i = 0; i + 1 < path.Length; i++)

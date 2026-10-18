@@ -19,12 +19,17 @@ public sealed class CarvingSite : ZoneSite
 {
     public override string Id => "19c.carving";
 
-    internal static PlanFrame Frame => PlanMath.Facing(C.At, C.Facing);
+    /// <summary>The carving's position: its node's anchor in the world model.</summary>
+    internal static Vector2 At(IWorldModel world) =>
+        world.Features.TryGetValue(new(C.Entity), out var feature) && feature.Geometry is PointGeometry point
+            ? new(point.Position.X, point.Position.Z)
+            : throw new InvalidOperationException($"国防科技园石刻 {C.Entity} is missing from the world model.");
 
     public override void Build(SiteBuilder b)
     {
-        var f = Frame;
-        var y = b.Ground(C.At);
+        var at = At(b.Context.World);
+        var f = PlanMath.Facing(at, C.Facing);
+        var y = b.Ground(at);
         var around = b.Detail switch { SiteDetail.Full => 36, SiteDetail.Plain => 24, _ => 12 };
         // The pebble oval rises a little over WP-15's grass (GroundSection.GrassY 0.10), the stone sinks into it.
         Vector2[] dome = [new(1f, 0f), new(0.95f, 0.08f), new(0.7f, 0.15f), new(0f, 0.18f)];
@@ -56,7 +61,8 @@ public sealed class CarvingSite : ZoneSite
     /// <summary>One box with a top (SYS-WALK).</summary>
     public override void Collide(SiteColliders c)
     {
-        var y = c.Ground(C.At.X, C.At.Y);
-        c.Box(Frame.At(0, y + C.Height * 0.5f, 0), new(C.Length * 0.5f, C.Height * 0.5f, C.Depth * 0.5f), SurfaceTag.Prop, FootMat.StonePaving);
+        var at = At(c.Context.World);
+        var y = c.Ground(at.X, at.Y);
+        c.Box(PlanMath.Facing(at, C.Facing).At(0, y + C.Height * 0.5f, 0), new(C.Length * 0.5f, C.Height * 0.5f, C.Depth * 0.5f), SurfaceTag.Prop, FootMat.StonePaving);
     }
 }

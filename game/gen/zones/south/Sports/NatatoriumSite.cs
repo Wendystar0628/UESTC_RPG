@@ -31,8 +31,8 @@ public sealed class NatatoriumSite : ZoneSite
 
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
-    /// <summary>The dome's LOD-free plan: the fitted ellipse (local X along the major axis) and the glass band's facet count.</summary>
-    internal sealed record Plan(PlanFrame Frame, float A, float B, int Bays)
+    /// <summary>The dome's LOD-free plan: the fitted ellipse (local X along the major axis), the glass band's facet count and the platform storey's height (the platform feature's, D-239).</summary>
+    internal sealed record Plan(PlanFrame Frame, float A, float B, int Bays, float DeckTop)
     {
         /// <summary>Plan point at parameter t (radians) on the ellipse scaled by rho.</summary>
         public Vector2 At(float t, float rho) => Frame.P(A * rho * MathF.Cos(t), B * rho * MathF.Sin(t));
@@ -77,7 +77,8 @@ public sealed class NatatoriumSite : ZoneSite
         var scale = MathF.Sqrt((float)Math.Abs(area) / (MathF.PI * a * b));
         a *= scale; b *= scale;
         var drum = MathF.PI * (3 * (a + b) - MathF.Sqrt((3 * a + b) * (a + 3 * b))) * S.PoolDrum;
-        return new(new(centre, new(MathF.Cos(theta), MathF.Sin(theta))), a, b, (int)MathF.Round(drum / S.PoolBay));
+        var deckTop = world.Feature(PlatformSite.Feature).Height ?? throw new InvalidOperationException($"Platform {PlatformSite.Feature} has no height.");
+        return new(new(centre, new(MathF.Cos(theta), MathF.Sin(theta))), a, b, (int)MathF.Round(drum / S.PoolBay), deckTop);
     }
 
     internal static GlazedOpening[] Openings(Plan p, float y)
@@ -191,7 +192,7 @@ public sealed class NatatoriumSite : ZoneSite
         var d = PlanMath.Heading(S.PoolDoorBearing);
         var local = p.Frame.Local(p.Frame.Origin + d);
         // Distance from the centre to the dome's face along d at the platform storey.
-        var rho = Rho(S.PlatformTop);
+        var rho = Rho(p.DeckTop);
         var k = 1f / MathF.Sqrt(local.X * local.X / (p.A * p.A) + local.Y * local.Y / (p.B * p.B));
         reach = k * rho;
         return new(p.Frame.Origin, new(d.Y, -d.X));
@@ -214,7 +215,7 @@ public sealed class NatatoriumSite : ZoneSite
     private static void Entry(SiteBuilder b, Plan p, float y)
     {
         var f = EntryFrame(p, out var reach);
-        float floor = y + S.PlatformTop, hw = S.PoolEntryWidth * 0.5f, h = S.PoolEntryHeight, front = reach + S.PoolEntryDepth, back = reach - 3f;
+        float floor = y + p.DeckTop, hw = S.PoolEntryWidth * 0.5f, h = S.PoolEntryHeight, front = reach + S.PoolEntryDepth, back = reach - 3f;
         var face = front - 0.5f;
         GridFacade.Box(b, f, -hw, hw, floor - 0.3f, floor + h, back, face, L.White, 0.04f);
         // Cheeks either side frame the glass in a 0.5 m reveal; the canopy slab runs out over the landing.
@@ -241,7 +242,7 @@ public sealed class NatatoriumSite : ZoneSite
         }
         // The entrance hall's glazed front on the platform storey: closed for now.
         var f = EntryFrame(p, out var reach);
-        float floor = y + S.PlatformTop, hw = S.PoolEntryWidth * 0.5f, front = reach + S.PoolEntryDepth - 0.45f;
+        float floor = y + p.DeckTop, hw = S.PoolEntryWidth * 0.5f, front = reach + S.PoolEntryDepth - 0.45f;
         c.Wall(f.P(-hw, front), f.P(hw, front), 0.12f, floor, floor + S.PoolEntryHeight, SurfaceTag.DoorClosed, FootMat.Glass);
         foreach (var side in new[] { -hw, hw })
             c.Wall(f.P(side, reach - 1f), f.P(side, front), 0.12f, floor, floor + S.PoolEntryHeight, SurfaceTag.Wall, FootMat.Concrete);

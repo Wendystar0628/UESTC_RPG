@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
+using Campus.Gen.Zones.CenterEast.Framework;
 using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using P = Campus.Gen.Zones.CenterEast.CenterEastTune.Pinxue;
@@ -20,27 +21,52 @@ namespace Campus.Gen.Zones.CenterEast.Pinxue;
 /// </summary>
 public sealed class PinxueFrameSite : ZoneSite
 {
-    /// <summary>Frame of the bar: X south along it from A's wall, +Z west out to the forecourt.</summary>
-    internal static readonly PlanFrame F = PlanFrame.Toward(P.FrameNorthWest, P.FrameSouthWest);
-    internal static float Length => Vector2.Distance(P.FrameNorthWest, P.FrameSouthWest);
-    internal static float Axis => Length * 0.5f;
+    /// <summary>
+    /// The gate read from the world model (D-239): the frame of the bar (X south along its west edge from A's wall, +Z west out
+    /// to the forecourt), its length and depth from the bar part, and the storey height and top from A's main body.
+    /// </summary>
+    internal sealed record Gate(PlanFrame F, float Length, float Depth, float StoreyHeight, float BeamTop)
+    {
+        public float Axis => Length * 0.5f;
+        public float BeamBottom => P.PassageStoreys * StoreyHeight;
+        public float BridgeBottom => (P.BridgeFromStorey - 1) * StoreyHeight;
+        public float BridgeTop => P.BridgeToStorey * StoreyHeight;
+    }
+
+    internal static Gate GateOf(IWorldModel world)
+    {
+        var ring = RingOf(world, P.FrameBar);
+        var n = ring.Count;
+        float Edge(int i) => Vector2.Distance(ring[i], ring[(i + 1) % n]);
+        var longest = Enumerable.Range(0, n).Max(i => Edge(i));
+        // The bar's west long edge (forecourt side), run from its north end to its south end.
+        var west = Enumerable.Range(0, n).Where(i => Edge(i) > longest * 0.9f).MinBy(i => ring[i].X + ring[(i + 1) % n].X);
+        Vector2 a = ring[west], b = ring[(west + 1) % n];
+        if (a.Y > b.Y) (a, b) = (b, a);
+        var f = PlanFrame.Toward(a, b);
+        var depth = ring.Max(p => -f.Local(p).Y);
+        var (height, storeys) = world.Feature(P.WingA).Part(P.WingAMain).Levels();
+        return new(f, Vector2.Distance(a, b), depth, height / storeys, height);
+    }
 
     public override string Id => "21a.pinxue-frame";
 
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(P.Complex), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
-    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod) =>
-        [.. Bridges(world).Select(box => new PolygonRings(box.Frame.Rect(box.X0, box.Z0, box.X1, box.Z1))),
-         .. P.ColumnX.Select(x => new PolygonRings(F.Rect(x - P.ColumnSize * 0.5f, -P.FrameDepth * 0.5f - P.ColumnSize * 0.5f,
-             x + P.ColumnSize * 0.5f, -P.FrameDepth * 0.5f + P.ColumnSize * 0.5f)))];
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
+    {
+        var g = GateOf(world);
+        return [.. Bridges(world).Select(box => new PolygonRings(box.Frame.Rect(box.X0, box.Z0, box.X1, box.Z1))),
+                .. P.ColumnX.Select(x => new PolygonRings(g.F.Rect(x - P.ColumnSize * 0.5f, -g.Depth * 0.5f - P.ColumnSize * 0.5f,
+                    x + P.ColumnSize * 0.5f, -g.Depth * 0.5f + P.ColumnSize * 0.5f)))];
+    }
 
     public override IReadOnlyList<InspectionProbe> Probes
     {
         get
         {
             // Q1 (walk, K1): under the calligraphy beam's forecourt edge, looking up at the soffit and the plaque.
-            var eye = F.P(Axis - 4f, 3.5f);
-            return [Probe("Q1", P.Complex, new(eye.X, P.PlatformY + 1.62f, eye.Y), -F.W, 26f, 5f)];
+            return [Probe("Q1", P.Complex, new(P.Q1Eye.X, P.PlatformY + 1.62f, P.Q1Eye.Y), P.Q1Look, 26f, 5f)];
         }
     }
 
@@ -48,13 +74,15 @@ public sealed class PinxueFrameSite : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
+        var world = b.Context.World;
+        var g = GateOf(world);
         var y = BaseY(b.Context);
-        Passage(b, y);
-        foreach (var x in P.ColumnX) Column(b, x, y);
-        var bridges = Bridges(b.Context.World);
+        Passage(b, g, y);
+        foreach (var x in P.ColumnX) Column(b, g, x, y);
+        var bridges = Bridges(world);
         foreach (var box in bridges) Bridge(b, box, y, WindowNumbers.Allocation(b.Context, new(P.Complex), box.Key));
-        Beam(b, y);
-        foreach (var source in new[] { P.BridgeAC, P.BridgeBC }) LinkColumns(b, Bar(b.Context.World, source), y);
+        Beam(b, g, y);
+        foreach (var source in new[] { P.BridgeAC, P.BridgeBC }) LinkColumns(b, Bar(world, source), g, y);
     }
 
     // ---- Windows (contract-29) ----
@@ -92,19 +120,20 @@ public sealed class PinxueFrameSite : ZoneSite
     /// A two-storey bridge box between X0 and X1 (local), Z0 (back) to Z1 (front), from Bottom to Top above the platform;
     /// a solid front keeps the forecourt face plain for the plaque.
     /// </summary>
-    internal sealed record BridgeBox(string Key, PlanFrame Frame, float X0, float X1, float Z0, float Z1, float Bottom, float Top, bool FrontSolid);
+    internal sealed record BridgeBox(string Key, PlanFrame Frame, float X0, float X1, float Z0, float Z1, float Bottom, float Top, bool FrontSolid, float StoreyHeight);
 
     private const float BridgeWall = 0.45f, Soffit = 0.6f, RibbonInset = 1.2f, MullionPitch = 1.8f;
 
     /// <summary>The beam bridge over the passage and the A–C, B–C link bridges, read from the entity's parts.</summary>
     internal static IReadOnlyList<BridgeBox> Bridges(IWorldModel world)
     {
-        var len = Length + 0.4f; // the ends sink into A's and B's walls
-        var list = new List<BridgeBox> { new("beam", F, Axis - len * 0.5f, Axis + len * 0.5f, -P.FrameDepth, 0f, P.BeamBottom, P.BeamTop, true) };
+        var g = GateOf(world);
+        var len = g.Length + 0.4f; // the ends sink into A's and B's walls
+        var list = new List<BridgeBox> { new("beam", g.F, g.Axis - len * 0.5f, g.Axis + len * 0.5f, -g.Depth, 0f, g.BeamBottom, g.BeamTop, true, g.StoreyHeight) };
         foreach (var (key, source) in new[] { ("bridge-ac", P.BridgeAC), ("bridge-bc", P.BridgeBC) })
         {
             var (f, x0, x1, z0, z1) = Bar(world, source);
-            list.Add(new(key, f, x0 - 0.3f, x1 + 0.3f, z0, z1, P.BridgeBottom, P.BridgeTop, false));
+            list.Add(new(key, f, x0 - 0.3f, x1 + 0.3f, z0, z1, g.BridgeBottom, g.BridgeTop, false, g.StoreyHeight));
         }
         return list;
     }
@@ -113,11 +142,11 @@ public sealed class PinxueFrameSite : ZoneSite
     internal static (IReadOnlyList<(float Sill, float Head)> Bands, int Bays, int Faces) Ribbon(BridgeBox box)
     {
         var h = box.Top - box.Bottom - Soffit;
-        var storeys = Math.Max(1, (int)MathF.Round((h + Soffit) / P.StoreyHeight));
+        var storeys = Math.Max(1, (int)MathF.Round((h + Soffit) / box.StoreyHeight));
         var bands = new List<(float Sill, float Head)>();
         for (var k = 0; k < storeys; k++)
         {
-            float sill = k * P.StoreyHeight + 1.0f - Soffit, head = k * P.StoreyHeight + 3.1f - Soffit;
+            float sill = k * box.StoreyHeight + 1.0f - Soffit, head = k * box.StoreyHeight + 3.1f - Soffit;
             if (head > h - 0.3f) break;
             bands.Add((sill, head));
         }
@@ -156,40 +185,40 @@ public sealed class PinxueFrameSite : ZoneSite
     // ---- Passage floor and columns ----
 
     /// <summary>Paving under the frame: the bar is a building in OSM, so the ground leaves its footprint unpaved.</summary>
-    private static void Passage(SiteBuilder b, float y)
+    private static void Passage(SiteBuilder b, Gate g, float y)
     {
-        var d = P.FrameDepth;
-        b.Add(PartGeometryKernel.BeveledBox(Length, 0.14f, d, 0.01f, L.Paving), F.At(Axis, y - 0.12f, -d * 0.5f));
+        var d = g.Depth;
+        b.Add(PartGeometryKernel.BeveledBox(g.Length, 0.14f, d, 0.01f, L.Paving), g.F.At(g.Axis, y - 0.12f, -d * 0.5f));
     }
 
-    private static void Column(SiteBuilder b, float x, float y)
+    private static void Column(SiteBuilder b, Gate g, float x, float y)
     {
-        float s = P.ColumnSize, z = -P.FrameDepth * 0.5f;
-        b.Add(PartGeometryKernel.BeveledBox(s + 0.3f, P.ColumnPlinth + 0.1f, s + 0.3f, 0.03f, L.DarkGranite), F.At(x, y - 0.1f, z));
+        float s = P.ColumnSize, z = -g.Depth * 0.5f;
+        b.Add(PartGeometryKernel.BeveledBox(s + 0.3f, P.ColumnPlinth + 0.1f, s + 0.3f, 0.03f, L.DarkGranite), g.F.At(x, y - 0.1f, z));
         // A shadow joint where the column meets the soffit: the beam reads as carried, not welded on.
         var joint = b.Detail == SiteDetail.Mass ? 0f : 0.12f;
-        b.Add(PartGeometryKernel.BeveledBox(s, P.BeamBottom - P.ColumnPlinth - joint, s, 0.05f, L.Wall), F.At(x, y + P.ColumnPlinth, z));
-        if (joint > 0) b.Add(PartGeometryKernel.BeveledBox(s - 0.16f, joint, s - 0.16f, 0.01f, L.Metal), F.At(x, y + P.BeamBottom - joint, z));
+        b.Add(PartGeometryKernel.BeveledBox(s, g.BeamBottom - P.ColumnPlinth - joint, s, 0.05f, L.Wall), g.F.At(x, y + P.ColumnPlinth, z));
+        if (joint > 0) b.Add(PartGeometryKernel.BeveledBox(s - 0.16f, joint, s - 0.16f, 0.01f, L.Metal), g.F.At(x, y + g.BeamBottom - joint, z));
     }
 
     // ---- Beam bridge (storeys 3–4) with the inscription plaque ----
 
     /// <summary>The beam bridge's plaque and soffit lights; the bridge box itself is one of <see cref="Bridges"/>.</summary>
-    private static void Beam(SiteBuilder b, float y)
+    private static void Beam(SiteBuilder b, Gate g, float y)
     {
         if (b.Detail == SiteDetail.Mass) return;
         // Plaque: a slightly proud stone panel with a fine frame; the calligraphy "求实求真 大气大为" waits for the
         // scene text atlas (contract-26 follow-up) and is not painted on as a texture here.
-        var mid = y + (P.BeamBottom + P.BeamTop) * 0.5f + 0.2f;
-        b.Add(PartGeometryKernel.BeveledBox(P.PlaqueWidth + 0.3f, P.PlaqueHeight + 0.3f, P.PlaqueProud, 0.01f, L.Trim), F.At(Axis, mid - (P.PlaqueHeight + 0.3f) * 0.5f, P.PlaqueProud * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(P.PlaqueWidth, P.PlaqueHeight, 0.04f, 0.005f, L.Stone), F.At(Axis, mid - P.PlaqueHeight * 0.5f, P.PlaqueProud + 0.02f));
+        var mid = y + (g.BeamBottom + g.BeamTop) * 0.5f + 0.2f;
+        b.Add(PartGeometryKernel.BeveledBox(P.PlaqueWidth + 0.3f, P.PlaqueHeight + 0.3f, P.PlaqueProud, 0.01f, L.Trim), g.F.At(g.Axis, mid - (P.PlaqueHeight + 0.3f) * 0.5f, P.PlaqueProud * 0.5f));
+        b.Add(PartGeometryKernel.BeveledBox(P.PlaqueWidth, P.PlaqueHeight, 0.04f, 0.005f, L.Stone), g.F.At(g.Axis, mid - P.PlaqueHeight * 0.5f, P.PlaqueProud + 0.02f));
         if (b.Detail != SiteDetail.Full) return;
         // Two rows of soffit downlights over the passage, skipping the columns.
-        for (var x = P.DownlightPitch * 0.5f; x < Length; x += P.DownlightPitch)
+        for (var x = P.DownlightPitch * 0.5f; x < g.Length; x += P.DownlightPitch)
         {
             if (P.ColumnX.Any(c => MathF.Abs(c - x) < P.ColumnSize * 0.5f + 0.4f)) continue;
-            foreach (var z in new[] { -P.FrameDepth * 0.25f, -P.FrameDepth * 0.75f })
-                b.Add(Shapes.Shaft(P.DownlightRadius, P.DownlightRadius, 0.05f, 12, L.Metal), F.At(x, y + P.BeamBottom - 0.05f, z));
+            foreach (var z in new[] { -g.Depth * 0.25f, -g.Depth * 0.75f })
+                b.Add(Shapes.Shaft(P.DownlightRadius, P.DownlightRadius, 0.05f, 12, L.Metal), g.F.At(x, y + g.BeamBottom - 0.05f, z));
         }
     }
 
@@ -243,12 +272,14 @@ public sealed class PinxueFrameSite : ZoneSite
 
     // ---- Link bridges A–C, B–C (storeys 2–3) ----
 
+    private static IReadOnlyList<Vector2> RingOf(IWorldModel world, string sourceId) =>
+        WorldFeatureGeometry.FacadeGeometryOf(world.Feature(P.Complex).Part(sourceId)) is PolygonGeometry polygon ? polygon.Rings.Outer
+            : throw new InvalidOperationException($"Part {sourceId} is not a single polygon.");
+
     /// <summary>Plan frame and local extents of a four-sided bar footprint: X along its longest edge.</summary>
     internal static (PlanFrame Frame, float X0, float X1, float Z0, float Z1) Bar(IWorldModel world, string sourceId)
     {
-        var part = world.Features[new(P.Complex)].Parts.First(p => p.SourceId == sourceId);
-        var ring = WorldFeatureGeometry.FacadeGeometryOf(part) is PolygonGeometry polygon ? polygon.Rings.Outer
-            : throw new InvalidOperationException($"Bridge part {sourceId} is not a single polygon.");
+        var ring = RingOf(world, sourceId);
         var best = 0;
         for (var i = 1; i < ring.Count; i++)
             if (Vector2.Distance(ring[i], ring[(i + 1) % ring.Count]) > Vector2.Distance(ring[best], ring[(best + 1) % ring.Count])) best = i;
@@ -263,14 +294,14 @@ public sealed class PinxueFrameSite : ZoneSite
     }
 
     /// <summary>A link bridge's round columns; the bridge box itself is one of <see cref="Bridges"/>.</summary>
-    private static void LinkColumns(SiteBuilder b, (PlanFrame Frame, float X0, float X1, float Z0, float Z1) bar, float y)
+    private static void LinkColumns(SiteBuilder b, (PlanFrame Frame, float X0, float X1, float Z0, float Z1) bar, Gate g, float y)
     {
         var f = bar.Frame;
         var segments = b.Detail == SiteDetail.Full ? 16 : 8;
         foreach (var (x, z) in BridgeColumns(bar))
         {
             b.Add(PartGeometryKernel.BeveledBox(0.8f, 0.35f, 0.8f, 0.02f, L.DarkGranite), f.At(x, y - 0.1f, z));
-            b.Add(Shapes.Shaft(P.BridgeColumnRadius, P.BridgeColumnRadius * 0.9f, P.BridgeBottom - 0.25f, segments, L.Wall), f.At(x, y + 0.25f, z));
+            b.Add(Shapes.Shaft(P.BridgeColumnRadius, P.BridgeColumnRadius * 0.9f, g.BridgeBottom - 0.25f, segments, L.Wall), f.At(x, y + 0.25f, z));
         }
     }
 
@@ -285,10 +316,11 @@ public sealed class PinxueFrameSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
+        var g = GateOf(c.Context.World);
         var y = BaseY(c.Context);
-        var z = -P.FrameDepth * 0.5f;
+        var z = -g.Depth * 0.5f;
         foreach (var x in P.ColumnX)
-            c.Box(F.At(x, y + P.BeamBottom * 0.5f, z), new(P.ColumnSize * 0.5f + 0.05f, P.BeamBottom * 0.5f, P.ColumnSize * 0.5f + 0.05f), SurfaceTag.Wall, FootMat.StonePaving);
+            c.Box(g.F.At(x, y + g.BeamBottom * 0.5f, z), new(P.ColumnSize * 0.5f + 0.05f, g.BeamBottom * 0.5f, P.ColumnSize * 0.5f + 0.05f), SurfaceTag.Wall, FootMat.StonePaving);
         foreach (var box in Bridges(c.Context.World))
             c.Box(box.Frame.At((box.X0 + box.X1) * 0.5f, y + (box.Bottom + box.Top) * 0.5f, (box.Z0 + box.Z1) * 0.5f),
                 new((box.X1 - box.X0) * 0.5f, (box.Top - box.Bottom) * 0.5f, (box.Z1 - box.Z0) * 0.5f), SurfaceTag.Wall, FootMat.Concrete);
@@ -296,7 +328,7 @@ public sealed class PinxueFrameSite : ZoneSite
         {
             var bar = Bar(c.Context.World, source);
             foreach (var (x, zc) in BridgeColumns(bar))
-                c.Add(new PostCollider(bar.Frame.P(x, zc), P.BridgeColumnRadius + 0.05f, y, y + P.BridgeBottom, SurfaceTag.Prop) { Foot = FootMat.Concrete });
+                c.Add(new PostCollider(bar.Frame.P(x, zc), P.BridgeColumnRadius + 0.05f, y, y + g.BridgeBottom, SurfaceTag.Prop) { Foot = FootMat.Concrete });
         }
     }
 }

@@ -26,8 +26,11 @@ public sealed class LirenSite : ZoneSite
     /// <summary>Window grids (contract-29): both pier blocks in one grid (in part order), the bridge storey and the east link.</summary>
     public const string PierKey = "piers", BridgeKey = "bridge", LinkKey = "east-link";
 
-    /// <summary>Pier blocks: storeys and cornice line as WP-14 builds A and B at 15.6 m (wall top 15.1, coping 16.57).</summary>
-    internal static readonly GridStyle PierStyle = new(L.White, L.WhiteTrim, L.GreyPlinth, L.Glass, L.Metal, L.RoofSlab)
+    /// <summary>
+    /// Pier blocks: the cornice line as WP-14 builds A and B at 15.6 m (wall top 15.1, coping 16.57; the data's height is the
+    /// 15.6 m, so the wall tops stay the proportions' own). The storey count comes from the map data (<see cref="Footprints.PierStyle"/>).
+    /// </summary>
+    private static readonly GridStyle PierBase = new(L.White, L.WhiteTrim, L.GreyPlinth, L.Glass, L.Metal, L.RoofSlab)
     {
         Bay = 3.6f,
         Pier = 1.6f,
@@ -35,7 +38,6 @@ public sealed class LirenSite : ZoneSite
         BandDepth = 0.3f,
         GroundStorey = T.GroundStorey,
         Storey = T.Storey,
-        Storeys = 4,
         GroundSill = 0.9f,
         GroundWindow = 2.3f,
         Sill = 0.9f,
@@ -46,24 +48,12 @@ public sealed class LirenSite : ZoneSite
         Parapet = T.Parapet,
     };
 
-    /// <summary>The bridge storey: built from the bridge floor, its "plinth" is the fascia beam over the void.</summary>
-    internal static readonly GridStyle BridgeStyle = PierStyle with
-    {
-        GroundStorey = PierStyle.WallTop - T.BridgeFloor,
-        Storeys = 1,
-        GroundSill = 0.9f,
-        GroundWindow = 2.0f,
-        PlinthHeight = 0.8f,
-        Plinth = L.WhiteTrim,
-    };
-
-    /// <summary>The east link: two glazed storeys between A and B.</summary>
-    internal static readonly GridStyle LinkStyle = PierStyle with
+    /// <summary>The east link: glazed storeys between A and B; the storey count comes from the map data (<see cref="Footprints.LinkStyle"/>).</summary>
+    private static readonly GridStyle LinkBase = PierBase with
     {
         Bay = 3.0f,
         Pier = 0.7f,
         PierDepth = 0.35f,
-        Storeys = 2,
         GroundWindow = 2.5f,
         Window = 2.5f,
         Cornice = 0.4f,
@@ -76,8 +66,23 @@ public sealed class LirenSite : ZoneSite
 
     /// <summary>The connector's parts and, for each, the volumes its faces may lie against (the void under the bridge is open).</summary>
     internal sealed record Footprints(IReadOnlyList<IReadOnlyList<Vector2>> Piers, IReadOnlyList<Vector2> Bridge, IReadOnlyList<Vector2> Link,
-        IReadOnlyList<IReadOnlyList<Vector2>> A, IReadOnlyList<IReadOnlyList<Vector2>> B)
+        IReadOnlyList<IReadOnlyList<Vector2>> A, IReadOnlyList<IReadOnlyList<Vector2>> B, int PierStoreys, int LinkStoreys)
     {
+        public GridStyle PierStyle => PierBase with { Storeys = PierStoreys };
+
+        /// <summary>The bridge storey: one storey built from the bridge floor, its "plinth" is the fascia beam over the void.</summary>
+        public GridStyle BridgeStyle => PierStyle with
+        {
+            GroundStorey = PierStyle.WallTop - T.BridgeFloor,
+            Storeys = 1,
+            GroundSill = 0.9f,
+            GroundWindow = 2.0f,
+            PlinthHeight = 0.8f,
+            Plinth = L.WhiteTrim,
+        };
+
+        public GridStyle LinkStyle => LinkBase with { Storeys = LinkStoreys };
+
         public IReadOnlyList<IReadOnlyList<Vector2>> PierNeighbours => [.. A, .. B, Link];
         public IReadOnlyList<IReadOnlyList<Vector2>> LinkNeighbours => [.. A, .. B];
         public IReadOnlyList<IReadOnlyList<Vector2>> BridgeNeighbours => Piers;
@@ -96,10 +101,11 @@ public sealed class LirenSite : ZoneSite
                 _ => throw new InvalidOperationException($"Liren part {source} is missing."),
             }
             : throw new InvalidOperationException($"Liren part {source} is missing.");
+        int Storeys(string source) => connector.Parts.FirstOrDefault(p => p.SourceId == source)?.Storeys ?? throw new InvalidOperationException($"Liren part {source} has no storeys.");
         var bridge = Polygons(BridgePart)[0];
         var piers = Polygons(PierPart);
         var link = Polygons(LinkPart)[0];
-        return new(piers, bridge, link, Block(world, BlockA), Block(world, BlockB));
+        return new(piers, bridge, link, Block(world, BlockA), Block(world, BlockB), Storeys(PierPart), Storeys(LinkPart));
     }
 
     /// <summary>
@@ -135,11 +141,11 @@ public sealed class LirenSite : ZoneSite
         foreach (var pier in f.Piers)
         {
             Func<GridEdgeInfo, GridEdge> dress = e => Dress(e, f.PierNeighbours);
-            yield return (pier, PierStyle, dress, 0f, new(feature, PierKey, offset, W.Teaching, W.Classroom));
-            offset += GridFacade.Layout(pier, PierStyle, dress).Columns;
+            yield return (pier, f.PierStyle, dress, 0f, new(feature, PierKey, offset, W.Teaching, W.Classroom));
+            offset += GridFacade.Layout(pier, f.PierStyle, dress).Columns;
         }
-        yield return (f.Link, LinkStyle, e => Dress(e, f.LinkNeighbours), 0f, new(feature, LinkKey, 0, W.Teaching, W.Corridor));
-        yield return (f.Bridge, BridgeStyle, e => Dress(e, f.BridgeNeighbours), T.BridgeFloor, new(feature, BridgeKey, 0, W.Teaching, W.Corridor));
+        yield return (f.Link, f.LinkStyle, e => Dress(e, f.LinkNeighbours), 0f, new(feature, LinkKey, 0, W.Teaching, W.Corridor));
+        yield return (f.Bridge, f.BridgeStyle, e => Dress(e, f.BridgeNeighbours), T.BridgeFloor, new(feature, BridgeKey, 0, W.Teaching, W.Corridor));
     }
 
     public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world)
@@ -209,8 +215,8 @@ public sealed class LirenSite : ZoneSite
         var f = Rings(c.Context.World);
         var centre = PlanMath.Centroid(f.Bridge);
         var y = c.Ground(centre.X, centre.Y);
-        foreach (var pier in f.Piers) GridFacade.Collide(c, pier, y, PierStyle, e => Dress(e, f.PierNeighbours), FootMat.Concrete);
-        GridFacade.Collide(c, f.Link, y, LinkStyle, e => Dress(e, f.LinkNeighbours), FootMat.Concrete);
+        foreach (var pier in f.Piers) GridFacade.Collide(c, pier, y, f.PierStyle, e => Dress(e, f.PierNeighbours), FootMat.Concrete);
+        GridFacade.Collide(c, f.Link, y, f.LinkStyle, e => Dress(e, f.LinkNeighbours), FootMat.Concrete);
         foreach (var (point, along) in Columns(f))
             c.Box(new PlanFrame(point, along).At(0, y + T.Soffit * 0.5f, 0), new(T.ColumnSize * 0.5f + 0.05f, T.Soffit * 0.5f, T.ColumnSize * 0.5f + 0.05f), SurfaceTag.Wall, FootMat.Concrete);
     }

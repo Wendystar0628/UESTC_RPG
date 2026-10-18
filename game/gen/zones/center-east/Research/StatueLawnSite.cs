@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
+using Campus.Gen.Zones.CenterEast.Framework;
 using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using M = Campus.Gen.Zones.CenterEast.CenterEastTune.Monuments;
@@ -22,19 +23,23 @@ namespace Campus.Gen.Zones.CenterEast.Research;
 public sealed class StatueLawnSite : ZoneSite
 {
     internal static PlanFrame LinFrame => PlanMath.Facing(M.LinAt, M.LinFacing);
-    internal static PlanFrame MaxwellFrame => PlanMath.Facing(M.MaxwellAt, M.MaxwellFacing);
-    internal static PlanFrame StoneFrame => PlanMath.Facing(M.StoneAt, M.StoneFacing);
+    /// <summary>Maxwell stands at his OSM point and the equation stone at its registered point, both read by ID.</summary>
+    internal static PlanFrame MaxwellFrame(IWorldModel world) => PlanMath.Facing(world.Feature(M.Maxwell).Point(), M.MaxwellFacing);
+    internal static PlanFrame StoneFrame(IWorldModel world) => PlanMath.Facing(world.Feature(M.StoneId).Point(), M.StoneFacing);
     private static PlanFrame R => ResearchSite.Frame;
 
     public override string Id => "21b2.statue-lawn";
 
     public override void Build(SiteBuilder b)
     {
+        var world = b.Context.World;
+        var maxwell = MaxwellFrame(world);
+        var stone = StoneFrame(world);
         IslandKerb(b);
         LinBust(b, b.Ground(M.LinAt));
         Apron(b);
-        Maxwell(b, b.Ground(M.MaxwellAt));
-        EquationStone(b, b.Ground(M.StoneAt));
+        Maxwell(b, maxwell, b.Ground(maxwell.Origin));
+        EquationStone(b, stone, b.Ground(stone.Origin));
     }
 
     private static int Segments(SiteDetail detail) => detail switch { SiteDetail.Full => 48, SiteDetail.Plain => 28, _ => 16 };
@@ -110,17 +115,25 @@ public sealed class StatueLawnSite : ZoneSite
 
     // ---- 麦克斯韦像 (§1.3) on its granite apron ----
 
+    /// <summary>The registered apron squared to the research frame: its local (u, w) corners.</summary>
+    private static (Vector2 Min, Vector2 Max) ApronRect(IWorldModel world) => Registered.LocalBounds(R, world.Feature(M.ApronId).Outer());
+
     /// <summary>The apron's research-frame rectangle as a world ring (outside on the right).</summary>
-    internal static Vector2[] ApronRing => PlanMath.OutsideRight(R.Rect(M.ApronMin.X, M.ApronMin.Y, M.ApronMax.X, M.ApronMax.Y));
+    internal static Vector2[] ApronRing(IWorldModel world)
+    {
+        var (min, max) = ApronRect(world);
+        return PlanMath.OutsideRight(R.Rect(min.X, min.Y, max.X, max.Y));
+    }
 
     private static void Apron(SiteBuilder b)
     {
-        Vector2 min = M.ApronMin, max = M.ApronMax, mid = (min + max) * 0.5f;
+        var (min, max) = ApronRect(b.Context.World);
+        var mid = (min + max) * 0.5f;
         var g = b.Ground(R.P(mid.X, mid.Y));
         b.Add(PartGeometryKernel.BeveledBox(max.X - min.X, M.ApronTop + 0.1f, max.Y - min.Y, b.Detail == SiteDetail.Mass ? 0f : 0.01f, L.Paving), R.At(mid.X, g - 0.1f, mid.Y));
         if (b.Detail == SiteDetail.Mass) return;
         var kerb = PartGeometryKernel.BeveledRectangleProfile(M.ApronKerb, M.ApronTop + 0.12f, 0.015f);
-        b.Add(PartGeometryKernel.Sweep(kerb, ApronRing, L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.1f, 0));
+        b.Add(PartGeometryKernel.Sweep(kerb, ApronRing(b.Context.World), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.1f, 0));
     }
 
     /// <summary>
@@ -130,9 +143,8 @@ public sealed class StatueLawnSite : ZoneSite
     /// forearm is raised across the chest holding a scroll upright against it. The head is an ovoid with a hair mass and a
     /// full beard round the jaw.
     /// </summary>
-    private static void Maxwell(SiteBuilder b, float y)
+    private static void Maxwell(SiteBuilder b, PlanFrame f, float y)
     {
-        var f = MaxwellFrame;
         var detail = b.Detail;
         var bevel = detail == SiteDetail.Full ? 0.03f : 0f;
         b.Add(PartGeometryKernel.BeveledBox(2.0f, 0.3f, 2.0f, bevel, L.PaleGranite), f.At(0, y - 0.05f, 0));
@@ -223,9 +235,9 @@ public sealed class StatueLawnSite : ZoneSite
     /// The rounded stone sunk 8 cm into the apron, its dressed face toward the approach. The four equations are filled
     /// line blocks of their lengths, left-aligned on the face, until the scene text atlas carries the formulae (contract-26).
     /// </summary>
-    private static void EquationStone(SiteBuilder b, float y)
+    private static void EquationStone(SiteBuilder b, PlanFrame f, float y)
     {
-        var at = StoneFrame.At(0, y - 0.08f, 0);
+        var at = f.At(0, y - 0.08f, 0);
         var (segments, rings) = b.Detail switch { SiteDetail.Full => (40, 12), SiteDetail.Plain => (24, 8), _ => (14, 5) };
         b.Add(Solids.Boulder(M.Stone, segments, rings, L.FieldStone), at);
         if (b.Detail == SiteDetail.Mass) return;
@@ -245,20 +257,25 @@ public sealed class StatueLawnSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
+        var world = c.Context.World;
+        var maxwellFrame = MaxwellFrame(world);
+        var stoneFrame = StoneFrame(world);
         var lg = c.Ground(M.LinAt.X, M.LinAt.Y);
         var lt = LinPedestalTop;
         c.Box(LinFrame.At(0, lg + (lt - 0.05f) * 0.5f, 0), new(0.55f, (lt + 0.05f) * 0.5f, 0.55f), SurfaceTag.Prop, FootMat.PolishedStone);
-        var mg = c.Ground(M.MaxwellAt.X, M.MaxwellAt.Y);
+        var mg = c.Ground(maxwellFrame.Origin.X, maxwellFrame.Origin.Y);
         var mt = M.MaxwellPedestalTop;
-        c.Box(MaxwellFrame.At(0, mg + (mt - 0.05f) * 0.5f, 0), new(1.0f, (mt + 0.05f) * 0.5f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);
-        Vector2 min = M.ApronMin, max = M.ApronMax, mid = (min + max) * 0.5f, apron = R.P(mid.X, mid.Y);
+        c.Box(maxwellFrame.At(0, mg + (mt - 0.05f) * 0.5f, 0), new(1.0f, (mt + 0.05f) * 0.5f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);
+        var (min, max) = ApronRect(world);
+        var mid = (min + max) * 0.5f;
+        var apron = R.P(mid.X, mid.Y);
         var ag = c.Ground(apron.X, apron.Y);
         c.Box(R.At(mid.X, ag + (M.ApronTop - 0.1f) * 0.5f, mid.Y), new((max.X - min.X) * 0.5f, (M.ApronTop + 0.1f) * 0.5f, (max.Y - min.Y) * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
         // The stone: its body behind the dressed face, kept within 0.3 m of the rounded outline (SYS-WALK).
         var st = M.Stone;
-        var sg = c.Ground(M.StoneAt.X, M.StoneAt.Y);
+        var sg = c.Ground(stoneFrame.Origin.X, stoneFrame.Origin.Y);
         var back = st.Depth * 0.5f;
-        c.Box(StoneFrame.At(st.Shear * 0.5f, sg + st.Height * 0.5f - 0.08f, (st.FaceOut - back) * 0.5f),
+        c.Box(stoneFrame.At(st.Shear * 0.5f, sg + st.Height * 0.5f - 0.08f, (st.FaceOut - back) * 0.5f),
             new(st.Length * 0.475f, st.Height * 0.5f, (st.FaceOut + back) * 0.5f), SurfaceTag.Prop, FootMat.StonePaving);
     }
 }

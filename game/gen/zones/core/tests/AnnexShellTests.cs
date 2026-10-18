@@ -25,7 +25,7 @@ public sealed class AnnexShellTests
         var library = CoreSite.Pieces(world).OfType<LibraryShell>().Single();
         foreach (var shell in shells)
         {
-            Require(shell.Frame.StoreyHeights.Count == CoreStyle.AnnexStoreysOf(shell.Kind), $"{shell.Id}: storeys");
+            Require(shell.Frame.StoreyHeights.Count == world.Features[shell.Feature].Storeys, $"{shell.Id}: storeys follow the data");
             for (var k = 0; k <= shell.Rows; k++)
                 Require(MathF.Abs(shell.Frame.StoreyY(k) - library.Plan.StoreyY(k)) < 0.01f, $"{shell.Id}: floor line {k} runs on from the library");
             Require(shell.Openings.Count > 0, $"{shell.Id}: has windows");

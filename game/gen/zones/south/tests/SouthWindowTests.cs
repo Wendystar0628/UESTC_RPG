@@ -102,12 +102,13 @@ public sealed class SouthWindowTests
     public void GuardHouseAndPorticoGlassIsNumberedOutward()
     {
         var world = World();
-        var houses = Gate.SouthGateSite.Openings(0f);
+        var gate = Gate.SouthGateSite.LayoutOf(world);
+        var houses = Gate.SouthGateSite.Openings(gate, 0f);
         Require(houses.Length == 6 && houses.Select(o => (o.Column, o.Row)).Distinct().Count() == 6, "six guard-house windows, one cell each");
         foreach (var o in houses)
         {
             // One-sided glass: each pane must face away from its own house's centre.
-            var house = o.Row == 0 ? SouthTune.Gate.HouseWest : SouthTune.Gate.HouseEast;
+            var house = o.Row == 0 ? gate.HouseWest : gate.HouseEast;
             var d = new Vector2(o.Origin.X, o.Origin.Z) - house;
             Require(Vector2.Dot(d, new(o.Outward.X, o.Outward.Z)) > 2.5f, $"guard-house pane ({o.Column}, {o.Row}) faces out of its house");
         }

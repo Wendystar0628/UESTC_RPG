@@ -6,7 +6,6 @@ using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.Zones.Common;
 using P = Campus.Gen.Zones.South.SouthTune.Plaza;
-using T = Campus.Gen.Zones.South.SouthTune.Gate;
 
 namespace Campus.Gen.Zones.South.Gate;
 
@@ -15,7 +14,7 @@ namespace Campus.Gen.Zones.South.Gate;
 /// the A01 atlas kiosk, in the corner north of the crossroad on the north-west side of the main axis. The paving, its border band,
 /// kerbs and edging are WP-15 ground drawn from the overlay polygon; this site furnishes it with a planter at the far end and two
 /// benches in front of it, their backs to the shrubs, facing back across the plaza toward the gate. The kiosk is WP-13's on WP-48c's
-/// anchor; <see cref="SouthTune.Plaza.KioskSpot"/> is the spot the plaza keeps free for it.
+/// anchor A01, which sits on this paving.
 /// </summary>
 public sealed class GatePlazaSite : ZoneSite
 {
@@ -37,7 +36,8 @@ public sealed class GatePlazaSite : ZoneSite
             throw new InvalidOperationException($"{Feature} is expected to be a four-cornered polygon.");
         var centre = (ring[0] + ring[1] + ring[2] + ring[3]) * 0.25f;
         var (a, b) = Vector2.Distance(ring[0], ring[1]) >= Vector2.Distance(ring[1], ring[2]) ? (ring[1] - ring[0], ring[2] - ring[1]) : (ring[2] - ring[1], ring[1] - ring[0]);
-        var inward = new Vector2(T.HouseEast.Y - T.HouseWest.Y, T.HouseWest.X - T.HouseEast.X);
+        var gate = SouthGateSite.LayoutOf(world);
+        var inward = new Vector2(gate.HouseEast.Y - gate.HouseWest.Y, gate.HouseWest.X - gate.HouseEast.X);
         var along = Vector2.Dot(a, inward) >= 0 ? a : -a;
         // X is Z turned a quarter clockwise in plan, so local +Z (PlanFrame.W) runs along the axis.
         return (PlanFrame.Along(centre, new(along.Y, -along.X)), b.Length() * 0.5f, a.Length() * 0.5f);

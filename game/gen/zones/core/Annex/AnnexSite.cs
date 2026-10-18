@@ -54,8 +54,11 @@ public sealed class AnnexSite
         var annexes = new SortedDictionary<string, (AnnexKind, BuildingFrame)>(StringComparer.Ordinal);
         foreach (var (feature, kind) in Members)
         {
-            if (!world.Features.ContainsKey(feature)) continue;
-            var frame = BuildingFrame.Of(world, feature, S.AnnexStoreys.Take(S.AnnexStoreysOf(kind)).ToArray());
+            if (!world.Features.TryGetValue(feature, out var source)) continue;
+            // D-239: the storey count is the data's; each storey's height is the library's own table (the data's 3.5 m a storey would break the shared floor lines).
+            var count = source.Storeys is > 0 and var n ? n : throw new InvalidOperationException($"北辅楼 {feature.Value} has no storey count in the world model.");
+            var heights = Enumerable.Range(0, count).Select(i => S.AnnexStoreys[Math.Min(i, S.AnnexStoreys.Length - 1)]).ToArray();
+            var frame = BuildingFrame.Of(world, feature, heights);
             annexes.Add(feature.Value, (kind, frame));
             blocks.AddRange(frame.Footprints.Select(r => new Block(feature.Value, BlockKind.Annex, LibraryPlan.Ccw(r.Outer), frame.WallBaseY, frame.EavesY)));
         }

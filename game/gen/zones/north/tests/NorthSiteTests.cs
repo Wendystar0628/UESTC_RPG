@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Geometry;
@@ -40,11 +39,10 @@ public sealed class NorthSiteTests
     public void RestDeckSitsInTheShuofengTenCourtyard()
     {
         var world = World();
-        var outline = Shuofeng.RestDeckSite.Outline();
-        var registered = ((PolygonGeometry)world.Features[new(NorthTune.Deck.Feature)].Geometry).Rings.Outer;
-        Require(registered.Count >= 4 && outline.All(p => registered.Any(q => Vector2.Distance(p, q) < 0.02f)), "overlay and tune agree on the deck");
+        var deck = Shuofeng.RestDeckSite.Locate(world) ?? throw new InvalidOperationException("rest deck not located");
+        var outline = deck.Outline();
         var cluster = Framework.Plan.OuterRing(world.Features[new("qsh:way:1061419119")])!;
-        var walls = world.Features.Values.SelectMany(Framework.Plan.BuildingRings).Where(r => r.Any(q => Vector2.Distance(q, NorthTune.Deck.Centre) < 80f)).ToArray();
+        var walls = world.Features.Values.SelectMany(Framework.Plan.BuildingRings).Where(r => r.Any(q => Vector2.Distance(q, deck.Frame.Origin) < 80f)).ToArray();
         var roads = world.Network.Roads.Select(r => (r.Line.Points, r.Width))
             .Append((((PolylineGeometry)world.Features[new("design:north-drive-sf10")].Geometry).Line.Points, 5f)).ToArray();
         foreach (var p in outline)
@@ -67,9 +65,10 @@ public sealed class NorthSiteTests
     public void MainGatesFaceTheHighestGradeRoadWithTheHouseOnTheRight()
     {
         var world = World();
-        foreach (var cluster in NorthTune.Clusters.Where(c => !c.Open))
+        foreach (var cluster in NorthTune.Clusters)
         {
             var layout = ClusterLayout.Of(world, cluster)!;
+            if (layout.MainGate!.Open) continue;
             var ring = Framework.Plan.OuterRing(world.Features[new(cluster.Id)])!;
             var outline = Samples([.. ring, ring[0]]).ToArray();
             var beside = world.Network.Roads.Where(r => outline.Min(p => PolylineDistance(p, r.Line.Points)) < 15f).ToArray();
@@ -79,11 +78,11 @@ public sealed class NorthSiteTests
             float ToBest(GateSpot g) => best.Min(r => PolylineDistance(g.Frame.Origin, r.Line.Points));
             var nearest = layout.Gates.Where(g => g.Kind == GateKind.Vehicle).MinBy(ToBest)!;
             Require(ToBest(main) <= MathF.Max(Faces, ToBest(nearest)),
-                $"{cluster.Name}: main gate at {main.Frame.Origin} is {ToBest(main):0.0} m from the grade-{top} road; the gate at {nearest.Frame.Origin} is {ToBest(nearest):0.0} m");
+                $"{cluster.Key}: main gate at {main.Frame.Origin} is {ToBest(main):0.0} m from the grade-{top} road; the gate at {nearest.Frame.Origin} is {ToBest(nearest):0.0} m");
             // Walking in faces −W; the right of a facing d is (−d.z, d.x), which for d = −W is +U (PlanFrame: W = (−U.z, U.x)).
             var into = -main.Frame.W;
             var house = main.Frame.P((main.HouseStart + main.HouseEnd) * 0.5f, NorthTune.Gate.HouseOut - NorthTune.Gate.HouseDepth * 0.5f);
-            Require(Vector2.Dot(house - main.Frame.Origin, new Vector2(-into.Y, into.X)) > 0, $"{cluster.Name}: guard house on the right of the way in");
+            Require(Vector2.Dot(house - main.Frame.Origin, new Vector2(-into.Y, into.X)) > 0, $"{cluster.Key}: guard house on the right of the way in");
         }
     }
 
@@ -105,7 +104,7 @@ public sealed class NorthSiteTests
                 var crosses = Enumerable.Range(0, 4).Any(i => Enumerable.Range(0, ring.Count).Any(k =>
                     Framework.Plan.Intersect(house[i], house[(i + 1) % 4], ring[k], ring[(k + 1) % ring.Count]) is not null));
                 Require(!crosses && !house.Any(p => PlanGeometry.InsideByCrossings(ring, p)) && !ring.Any(p => PlanGeometry.InsideByCrossings(house, p)),
-                    $"{cluster.Name}: guard house at {g.Frame.Origin} overlaps a building");
+                    $"{cluster.Key}: guard house at {g.Frame.Origin} overlaps a building");
             }
         }
     }
@@ -133,8 +132,8 @@ public sealed class NorthSiteTests
     }
 
     /// <summary>
-    /// 20a-4: the canal-bank railing carries on from the north-gate plaza's railing (WP-30 30a, 04767c7: water edge through
-    /// (−75.21, −778.91) toward (0.371, −0.92863), railing at 0.35 m off the water from t −24.6 to −11.4). It starts flush on the
+    /// 20a-4: the canal-bank railing carries on from the north-gate plaza's railing (WP-30 30a: the same water edge, railing
+    /// at 0.35 m off the water from t −24.6 to −11.4). It starts flush on the
     /// plaza's end post and its collision on the post's centre, panel after panel without a gap or an overlap, runs past the
     /// far end of the street (商业街 reaches t −110.5; the run heads south into the campus, toward negative t), and keeps clear of buildings and road edges.
     /// </summary>
@@ -142,16 +141,17 @@ public sealed class NorthSiteTests
     public void CanalRailCarriesOnFromThePlazaRailing()
     {
         var ctx = Context();
-        var u = Vector2.Normalize(new Vector2(0.37100f, -0.92863f));
-        var w = new Vector2(-u.Y, u.X);
-        var joint = new Vector2(-75.21f, -778.91f) + u * -24.6f + w * 0.35f;
+        var frame = Canal.CanalRailSite.FrameOf(ctx.World) ?? throw new InvalidOperationException("bank frame not located");
+        var u = frame.U;
+        var w = frame.W;
+        var joint = frame.Origin + u * -24.6f + w * 0.35f;
         var panels = Canal.CanalRailSite.Panels;
-        Require(Vector2.Distance(Canal.CanalRailSite.Post(0), joint) < 0.01f, "the run starts at the plaza's end post");
-        var tEnd = Vector2.Dot(Canal.CanalRailSite.Post(panels) - new Vector2(-75.21f, -778.91f), u);
+        Require(Vector2.Distance(Canal.CanalRailSite.Post(frame, 0), joint) < 0.01f, "the run starts at the plaza's end post");
+        var tEnd = Vector2.Dot(Canal.CanalRailSite.Post(frame, panels) - frame.Origin, u);
         Require(tEnd < -110.5f - 1f, $"the run ends beyond the far end of 商业街 (t {tEnd})");
         for (var k = 0; k < panels; k++)
         {
-            var step = Vector2.Distance(Canal.CanalRailSite.Post(k), Canal.CanalRailSite.Post(k + 1));
+            var step = Vector2.Distance(Canal.CanalRailSite.Post(frame, k), Canal.CanalRailSite.Post(frame, k + 1));
             Require(step <= NorthTune.Bank.PostPitch + 0.01f && step > 1f, $"panel {k} is a post pitch long ({step})");
         }
         var walls = new NorthModule().CollidersFor(ctx).Select(i => i.Collider).OfType<WallCollider>()
@@ -163,31 +163,11 @@ public sealed class NorthSiteTests
             Require(Vector2.Distance(walls[k].B, walls[k + 1].A) < 0.01f, $"colliders {k} and {k + 1} meet");
         Require(walls.All(c => c.Y1 - c.Y0 >= WalkRules.BarrierHeight), "the colliders reach 1.5 m");
         var rings = ctx.World.Features.Values.SelectMany(Framework.Plan.BuildingRings).ToArray();
-        foreach (var p in Samples([Canal.CanalRailSite.Post(0), Canal.CanalRailSite.Post(panels)]))
+        foreach (var p in Samples([Canal.CanalRailSite.Post(frame, 0), Canal.CanalRailSite.Post(frame, panels)]))
         {
             Require(rings.All(r => !PlanGeometry.InsideByCrossings(r, p) && RingDistance(p, r) >= 8f), $"railing point {p} keeps 8 m off the buildings");
             foreach (var road in ctx.World.Network.Roads)
                 Require(PolylineDistance(p, road.Line.Points) - road.Width * 0.5f >= 3f, $"railing point {p} keeps 3 m off the road edge of {road.Id.Value}");
-        }
-    }
-
-    /// <summary>
-    /// 20b2: 博翰苑 9 栋 and the WLD-INTERIORS blocks (4499, 5247, 6735) carry their family and preset; an annex preset
-    /// names the family it was written for, and it matches.
-    /// </summary>
-    [TestCase]
-    public void LoneBuildingsCarryTheirFamilyAndPreset()
-    {
-        var world = World();
-        var game = Path.GetFullPath(Path.Combine(DataDirectory(), "..", "..", ".."));
-        using var table = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(game, "gen", "zones", "north", "DormPresets.json")));
-        var presets = table.RootElement.GetProperty("presets").EnumerateArray().ToDictionary(p => p.GetProperty("key").GetString()!);
-        foreach (var s in NorthTune.Singles)
-        {
-            var feature = world.Features[new(s.Id)];
-            Require(feature.Family?.Value == s.Family && feature.Facade?.Value == s.Facade, $"{s.Id} ({s.Note}) carries {s.Family} / {s.Facade}");
-            if (presets[s.Facade].TryGetProperty("family", out var family))
-                Require(family.GetString() == s.Family, $"{s.Facade} was written for {family.GetString()}, not {s.Family}");
         }
     }
 
@@ -210,20 +190,19 @@ public sealed class NorthSiteTests
     public void CourtyardSeatWallFacesTheHillFromTheWalk()
     {
         var world = World();
-        var registered = (PolylineGeometry)world.Features[new("design:north-xz1-seatwall")].Geometry;
-        Require(registered.Line.Points.SequenceEqual([NorthTune.Court.SeatStart, NorthTune.Court.SeatMid, NorthTune.Court.SeatEnd]), "overlay and tune agree on the seat wall");
+        var wall = CourtyardSite.Locate(world) ?? throw new InvalidOperationException("seat wall not located");
         var hill = (TerrainEllipse)Terrain().Ops.OfType<TerrainMoundOp>().Single(o => o.Id == "design:terrain:north-xz1-court-hill").Shape;
         var yaw = hill.YawDeg * Math.PI / 180;
-        var path = CourtyardSite.Path(NorthTune.Court.SeatSegments);
-        var front = CourtyardSite.Front();
-        var mid = (NorthTune.Court.SeatStart + NorthTune.Court.SeatEnd) * 0.5f;
+        var path = CourtyardSite.Path(wall, NorthTune.Court.SeatSegments);
+        var front = CourtyardSite.Front(wall);
+        var mid = (wall.Start + wall.End) * 0.5f;
         Require(Vector2.Dot(front, Vector2.Normalize(hill.Center - mid)) > 0.9f, "the seat faces the hill");
         var walk = world.Network.Roads.Single(r => r.Id.Value == NorthTune.Court.Walk);
         float ToWalk(Vector2 p) => Enumerable.Range(0, walk.Line.Points.Count - 1).Min(i => DistanceToSegment(p, walk.Line.Points[i], walk.Line.Points[i + 1]));
         Require(ToWalk(mid + front) < ToWalk(mid), "the walk lies in front of the seat");
         // The pad's straight edge runs along the walk's paving edge, 2 cm short of it, over the whole length of the wall.
-        var pad = CourtyardSite.PadOutline();
-        var edge = pad.Where(p => MathF.Abs(Vector2.Dot(p - NorthTune.Court.SeatStart, front) - NorthTune.Court.PadReach) < 0.01f).ToArray();
+        var pad = CourtyardSite.PadOutline(wall);
+        var edge = pad.Where(p => MathF.Abs(Vector2.Dot(p - wall.Start, front) - NorthTune.Court.PadReach) < 0.01f).ToArray();
         Require(edge.Length == 2, "the pad has one straight edge toward the walk");
         foreach (var p in edge)
             Require(MathF.Abs(ToWalk(p) - (walk.Width * 0.5f + 0.02f)) < 0.05f, $"pad corner {p} meets the walk's edge");

@@ -6,6 +6,7 @@ using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
+using Campus.Gen.Zones.CenterEast.Framework;
 using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using R = Campus.Gen.Zones.CenterEast.CenterEastTune.Research;
@@ -57,7 +58,8 @@ public abstract class ResearchSite : ZoneSite
     internal virtual IReadOnlyList<string> Neighbours => [];
     internal abstract IReadOnlyList<Vector2> HallBack { get; }
     internal abstract float HallSagitta { get; }
-    internal abstract int HallStoreys { get; }
+    /// <summary>The hall's part, whose OSM levels are the hall's storeys.</summary>
+    internal abstract string HallPart { get; }
     /// <summary>Local door point on a block face, or null when the door is in the hall's arc.</summary>
     internal abstract Vector2? BlockDoor { get; }
     internal abstract IReadOnlyList<Vector2> Stairs { get; }
@@ -73,15 +75,23 @@ public abstract class ResearchSite : ZoneSite
 
     // ---- Plan ----
 
-    /// <summary>World rings of this building's blocks, of every block that may hide or face them, and of its lens hall.</summary>
-    internal sealed record Plan(IReadOnlyList<IReadOnlyList<Vector2>> Blocks, IReadOnlyList<IReadOnlyList<Vector2>> AllBlocks, Vector2[] Hall);
+    /// <summary>
+    /// World rings of this building's blocks, of every block that may hide or face them, and of its lens hall with the hall's
+    /// storeys, and the ring of a raised block over them when the building has one (科 B's attic).
+    /// </summary>
+    internal sealed record Plan(IReadOnlyList<IReadOnlyList<Vector2>> Blocks, IReadOnlyList<IReadOnlyList<Vector2>> AllBlocks, Vector2[] Hall,
+        int HallStoreys, IReadOnlyList<Vector2>? Raised);
 
     internal Plan Footprints(IWorldModel world)
     {
         var own = Blocks.Select(block => Ring(world, Entity, block.Source)).ToArray();
         var all = own.Concat(Neighbours.SelectMany(n => NeighbourBlocks(world, n))).ToArray();
-        return new(own, all, HallRing(HallBack, HallSagitta, 16));
+        var (_, hallStoreys) = world.Feature(Entity).Part(HallPart).Levels();
+        return new(own, all, HallRing(HallBack, HallSagitta, 16), hallStoreys, RaisedRing(world));
     }
+
+    /// <summary>The ring of a block raised over the main ones, in world plan, or null.</summary>
+    internal virtual IReadOnlyList<Vector2>? RaisedRing(IWorldModel world) => null;
 
     internal static IReadOnlyList<Vector2> Ring(IWorldModel world, string entity, string source)
     {
@@ -267,7 +277,7 @@ public abstract class ResearchSite : ZoneSite
 
     // ---- Lens hall ----
 
-    private float HallHeight => HallStoreys * R.HallStorey + R.HallAttic;
+    private static float HallHeight(Plan plan) => plan.HallStoreys * R.HallStorey + R.HallAttic;
 
     private static SweepProfile Section(float in0, float out1, float height) =>
         new([new(in0, 0), new(out1, 0), new(out1, height), new(in0, height)]);
@@ -275,13 +285,13 @@ public abstract class ResearchSite : ZoneSite
     private void Hall(SiteBuilder b, Plan plan, float y)
     {
         var ring = plan.Hall;
-        var h = HallHeight;
+        var h = HallHeight(plan);
         var glassTop = y + h - R.HallAttic;
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
         b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), glassTop - y + 0.1f, coarse ? L.LightTrim : L.Glass, y - 0.1f), Matrix4x4.Identity);
         b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), 0.3f, L.RoofSlab, y + h - 0.3f), Matrix4x4.Identity);
         Band(b, ring, Section(-0.4f, 0.08f, R.FloorLevel + 0.1f), L.DarkGranite, y - 0.1f);
-        for (var k = 1; k < HallStoreys; k++)
+        for (var k = 1; k < plan.HallStoreys; k++)
             Band(b, ring, Section(-0.4f, 0.16f, 0.5f), L.LightTrim, y + R.FloorLevel + k * R.HallStorey - 0.25f);
         Band(b, ring, Section(-0.4f, 0.12f, R.HallAttic), L.Wall, glassTop);
         if (b.Detail != SiteDetail.Mass) Band(b, ring, Section(-0.5f, 0.22f, 0.14f), L.Stone, y + h);
@@ -321,7 +331,7 @@ public abstract class ResearchSite : ZoneSite
                 if (door is { } d && Vector2.Distance(f.P(x, 0), d.Apex) < R.HallDoorWidth * 0.5f + 0.4f) continue;
                 b.Add(PartGeometryKernel.BeveledBox(0.07f, y1 - y0, 0.12f, 0, L.Metal), f.At(x, y0, -0.06f));
             }
-            for (var k = 0; k < HallStoreys; k++)
+            for (var k = 0; k < plan.HallStoreys; k++)
                 b.Add(PartGeometryKernel.BeveledBox(length, 0.07f, 0.1f, 0, L.Metal), f.At(length * 0.5f, y0 + k * R.HallStorey + 3.0f, -0.05f));
         }
     }
@@ -387,7 +397,7 @@ public abstract class ResearchSite : ZoneSite
             var atDoor = door is { } dd && MathF.Min(Vector2.Distance(a, dd.Item1), Vector2.Distance(e, dd.Item1)) < 0.01f;
             var t = Vector2.Normalize(e - a);
             var inward = new Vector2(-t.Y, t.X) * 0.15f;
-            c.Wall(a + inward, e + inward, 0.15f, y, y + HallHeight, atDoor ? SurfaceTag.DoorClosed : SurfaceTag.Wall, FootMat.Glass);
+            c.Wall(a + inward, e + inward, 0.15f, y, y + HallHeight(plan), atDoor ? SurfaceTag.DoorClosed : SurfaceTag.Wall, FootMat.Glass);
         }
         if (door is not { } d) return;
         var f = DoorFrame(d.Item1, d.Item2);

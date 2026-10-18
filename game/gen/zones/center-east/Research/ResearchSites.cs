@@ -3,6 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.Zones.CenterEast.Framework;
 using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.CenterEast.CenterEastTune.Look;
 using R = Campus.Gen.Zones.CenterEast.CenterEastTune.Research;
@@ -21,7 +22,7 @@ public sealed class KeASite : ResearchSite
     internal override IReadOnlyList<(string Source, string Key)> Blocks => [(R.KeAMain, "main"), (R.KeAWest, "west")];
     internal override IReadOnlyList<Vector2> HallBack => R.KeAHallBack;
     internal override float HallSagitta => R.KeAHallSagitta;
-    internal override int HallStoreys => 1;
+    internal override string HallPart => R.KeAHall;
     internal override Vector2? BlockDoor => R.KeADoor;
     internal override IReadOnlyList<Vector2> Stairs => R.KeAStairs;
     internal override IReadOnlyList<Vector2> Plants => R.KeAPlant;
@@ -29,7 +30,9 @@ public sealed class KeASite : ResearchSite
     private protected override void Roof(SiteBuilder b, Plan plan, float y)
     {
         var roof = y + Style.RoofTop;
-        var t = R.KeATank;
+        var world = b.Context.World;
+        // The tank's spot is registered (world) in the roof feature's props; the fence runs round its ring.
+        var t = Frame.Local(Registered.Pair(world.Feature(R.KeARoofId).RequiredProps().GetProperty("tank").GetProperty("at")));
         var size = R.KeATankSize;
         if (b.Detail == SiteDetail.Mass)
         {
@@ -38,7 +41,7 @@ public sealed class KeASite : ResearchSite
         }
         b.Place(PartCatalog.WaterTank, new EquipmentParams(size.X, size.Y, size.Z) { Variation = 1 }, Frame.At(t.X, roof, t.Y));
         // The fence: grey aluminium bars between posts, drawn as a frame only (ART-STYLE), in runs of at most 6 m.
-        Vector2 min = R.KeAFenceMin, max = R.KeAFenceMax;
+        var (min, max) = Registered.LocalBounds(Frame, world.Feature(R.KeARoofId).Outer());
         foreach (var (a, e) in new[] { (min, new Vector2(max.X, min.Y)), (new Vector2(max.X, min.Y), max), (max, new Vector2(min.X, max.Y)), (new Vector2(min.X, max.Y), min) })
         {
             var length = Vector2.Distance(a, e);
@@ -80,12 +83,17 @@ public sealed class KeBSite : ResearchSite
     internal override IReadOnlyList<string> Neighbours => [R.KeC];
     internal override IReadOnlyList<Vector2> HallBack => R.KeBHallBack;
     internal override float HallSagitta => R.KeBHallSagitta;
-    internal override int HallStoreys => 1;
+    internal override string HallPart => R.KeBHall;
     internal override Vector2? BlockDoor => R.KeBDoor;
     internal override IReadOnlyList<Vector2> Stairs => R.KeBStairs;
     internal override IReadOnlyList<Vector2> Plants => R.KeBPlant;
 
-    internal static Vector2[] AtticRing => Frame.Rect(R.KeBAtticMin.X, R.KeBAtticMin.Y, R.KeBAtticMax.X, R.KeBAtticMax.Y);
+    /// <summary>The attic over the east wing: the registered roof ring squared to the research frame.</summary>
+    internal override IReadOnlyList<Vector2>? RaisedRing(IWorldModel world)
+    {
+        var (min, max) = Registered.LocalBounds(Frame, world.Feature(R.KeBRoofId).Outer());
+        return Frame.Rect(min.X, min.Y, max.X, max.Y);
+    }
 
     public override IReadOnlyList<InspectionProbe> Probes
     {
@@ -104,7 +112,7 @@ public sealed class KeBSite : ResearchSite
 
     /// <summary>The five-storey blocks and the set-back attic over the east wing, its own window grid one row high.</summary>
     internal override IEnumerable<(string Key, IReadOnlyList<Vector2> Ring, GridStyle Style, float Lift, Func<GridEdgeInfo, GridEdge> Dress)> GridBlocks(Plan plan) =>
-        base.GridBlocks(plan).Append(("attic", AtticRing, AtticStyle, Style.RoofTop, _ => new(EdgeKind.Plain)));
+        base.GridBlocks(plan).Append(("attic", plan.Raised!, AtticStyle, Style.RoofTop, _ => new(EdgeKind.Plain)));
 
     private protected override void Roof(SiteBuilder b, Plan plan, float y)
     {
@@ -112,10 +120,11 @@ public sealed class KeBSite : ResearchSite
         if (b.Detail == SiteDetail.Mass) return;
         // Dishes turned so their faces look east (the part tilts its dish towards −Z; AtTurned sends −Z along +X).
         var top = roof + AtticStyle.RoofTop;
-        for (var i = 0; i < R.KeBDishes.Length; i++)
+        foreach (var dish in b.Context.World.Feature(R.KeBRoofId).RequiredProps().GetProperty("dishes").EnumerateArray())
         {
-            var d = R.KeBDishDiameters[i];
-            b.Place(PartCatalog.Antenna, new EquipmentParams(d, 0.95f * d + 0.6f, d), Frame.AtTurned(R.KeBDishes[i].X, top, R.KeBDishes[i].Y));
+            var d = dish.GetProperty("diameter").GetSingle();
+            var at = Frame.Local(Registered.Pair(dish.GetProperty("at")));
+            b.Place(PartCatalog.Antenna, new EquipmentParams(d, 0.95f * d + 0.6f, d), Frame.AtTurned(at.X, top, at.Y));
         }
     }
 }
@@ -133,7 +142,7 @@ public sealed class KeCSite : ResearchSite
     internal override IReadOnlyList<string> Neighbours => [R.KeB];
     internal override IReadOnlyList<Vector2> HallBack => R.KeCHallBack;
     internal override float HallSagitta => R.KeCHallSagitta;
-    internal override int HallStoreys => 2;
+    internal override string HallPart => R.KeCHall;
     internal override Vector2? BlockDoor => null;
     internal override IReadOnlyList<Vector2> Stairs => R.KeCStairs;
     internal override IReadOnlyList<Vector2> Plants => R.KeCPlant;
@@ -141,7 +150,7 @@ public sealed class KeCSite : ResearchSite
     private protected override void Roof(SiteBuilder b, Plan plan, float y)
     {
         var roof = y + Style.RoofTop;
-        Vector2 min = R.KeCGardenMin, max = R.KeCGardenMax;
+        var (min, max) = Registered.LocalBounds(Frame, b.Context.World.Feature(R.KeCGardenId).Outer());
         float midU = (min.X + max.X) * 0.5f, midW = (min.Y + max.Y) * 0.5f, lu = max.X - min.X, lw = max.Y - min.Y;
         if (b.Detail == SiteDetail.Mass)
         {

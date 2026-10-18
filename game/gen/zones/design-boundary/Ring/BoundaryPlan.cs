@@ -6,6 +6,7 @@ using Campus.Gen.Zones.DesignBoundary.Fence;
 using Campus.Gen.Zones.DesignBoundary.Framework;
 using Campus.Gen.Zones.DesignBoundary.Gates;
 using Campus.Gen.World;
+using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Fence;
 using H = Campus.Gen.Zones.DesignBoundary.BoundaryTune.HedgeClear;
 
@@ -85,7 +86,7 @@ public sealed class BoundaryPlan
             gateRoads.Add(spec.Road);
             openings.Add(new(spec.Key, OpeningKind.Gate, g.OpeningStart, g.OpeningLength, g.StartPost, g.EndPost));
         }
-        if (South(ring) is { } south) openings.Add(south);
+        if (South(world, ring) is { } south) openings.Add(south);
         var detours = FindDetours(world, ring);
         openings.AddRange(Grates(world, ring, openings));
         openings.AddRange(SideGates(world, ring, openings, detours, gateRoads));
@@ -110,11 +111,14 @@ public sealed class BoundaryPlan
 
     // ---- Openings ----
 
-    /// <summary>WP-18's south gate: the ring stays open between the outer walls of its two guard houses.</summary>
-    private static Opening? South(BoundaryRing ring)
+    /// <summary>WP-18's south gate: the ring stays open between the outer walls of its two guard houses (the two largest
+    /// footprints of the gate entity; the other two are its islands).</summary>
+    private static Opening? South(IWorldModel world, BoundaryRing ring)
     {
-        var west = BoundaryTune.SouthGate.HouseWest;
-        var east = BoundaryTune.SouthGate.HouseEast;
+        if (!world.Features.TryGetValue(new(BoundaryTune.SouthGate.Feature), out var gate)) return null;
+        var houses = gate.Outers().OrderByDescending(r => Math.Abs(PlanGeometry.SignedArea(r))).Take(2).Select(PlanMath.Centroid).OrderBy(c => c.X).ToArray();
+        if (houses.Length != 2) return null;
+        var (west, east) = (houses[0], houses[1]);
         var u = Vector2.Normalize(east - west);
         var reach = BoundaryTune.SouthGate.HouseSize * 0.5f - 0.05f;
         var a = ring.Arc(west - u * reach);

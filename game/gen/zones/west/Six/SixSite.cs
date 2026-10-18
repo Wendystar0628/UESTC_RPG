@@ -25,11 +25,21 @@ namespace Campus.Gen.Zones.West.Six;
 /// </summary>
 public sealed class SixSite : ZoneSite
 {
-    /// <summary>One stone block: its entity, its source part, its window grid key and its floors above the base.</summary>
-    internal sealed record Block(string Entity, string Part, string Key, int Upper);
+    /// <summary>One stone block: its entity, its source part, its window grid key and, for C only, its own floors above the base.</summary>
+    internal sealed record Block(string Entity, string Part, string Key, int? Fixed = null)
+    {
+        /// <summary>Floors above the glass base: the entity's storeys in the world model less the base (D-239), or C's own count.</summary>
+        public int Upper(IWorldModel world)
+        {
+            if (Fixed is { } floors) return floors;
+            return world.Features.TryGetValue(new(Entity), out var feature) && feature.Storeys is { } storeys
+                ? storeys - S.BaseStoreys
+                : throw new InvalidOperationException($"六号科研楼 entity {Entity} has no storeys in the world model.");
+        }
+    }
 
     internal static readonly IReadOnlyList<Block> Blocks =
-        [new(S.EntityA, S.PartA, "a", S.UpperA), new(S.EntityB, S.PartB, "b", S.UpperB), new(S.EntityC, S.PartC, "c", S.UpperC)];
+        [new(S.EntityA, S.PartA, "a"), new(S.EntityB, S.PartB, "b"), new(S.EntityC, S.PartC, "c", S.UpperC)];
 
     /// <summary>The blocks' plan frame, X along <see cref="S.Axis"/>.</summary>
     internal static readonly PlanFrame Frame = PlanFrame.Along(Vector2.Zero, S.Axis);
@@ -113,11 +123,19 @@ public sealed class SixSite : ZoneSite
         return MathF.Abs(local.Y) < 0.6f && local.X > halfWidth && local.X < e.Length - halfWidth ? local.X : null;
     }
 
+    /// <summary>The C east door's centre, from C's entrance record in the world model (interiors.json).</summary>
+    internal static Vector2 EastDoor(IWorldModel world)
+    {
+        var entrance = world.Interiors.Get(new(S.EntityC))?.Entrances.FirstOrDefault(e => e.Id == S.EastDoorId)
+            ?? throw new InvalidOperationException($"Entrance {S.EastDoorId} is missing from the world model.");
+        return new(entrance.Center.X, entrance.Center.Z);
+    }
+
     /// <summary>The outer face carrying the east door, and the door's local x on it.</summary>
-    internal static (GridEdgeInfo Face, float X) EastFace(PolygonRings c)
+    internal static (GridEdgeInfo Face, float X) EastFace(PolygonRings c, Vector2 door)
     {
         foreach (var (e, _, _) in GridFacade.Edges(c.Outer))
-            if (On(e, S.EastDoor, S.VestibuleWidth * 0.5f) is { } x) return (e, x);
+            if (On(e, door, S.VestibuleWidth * 0.5f) is { } x) return (e, x);
         throw new InvalidOperationException("The C east door does not lie on C's stone line.");
     }
 
@@ -130,7 +148,7 @@ public sealed class SixSite : ZoneSite
         var volumes = Volumes(world);
         foreach (var k in Blocks)
         {
-            var layout = GridFacade.Layout(Plan(world, k.Entity, k.Part), Style(k.Upper), e => Dress(e, volumes));
+            var layout = GridFacade.Layout(Plan(world, k.Entity, k.Part), Style(k.Upper(world)), e => Dress(e, volumes));
             if (layout.Columns > 0) yield return (new(k.Entity), new(k.Key, layout.Columns, layout.Rows));
         }
     }
@@ -141,8 +159,9 @@ public sealed class SixSite : ZoneSite
         foreach (var k in Blocks)
         {
             var plan = Plan(ctx.World, k.Entity, k.Part);
-            if (GridFacade.Layout(plan, Style(k.Upper), e => Dress(e, volumes)).Columns == 0) continue;
-            GridFacade.Declare(facades, plan, BaseY(ctx, k.Entity) + S.BaseHeight, Style(k.Upper), e => Dress(e, volumes), Numbering(k),
+            var style = Style(k.Upper(ctx.World));
+            if (GridFacade.Layout(plan, style, e => Dress(e, volumes)).Columns == 0) continue;
+            GridFacade.Declare(facades, plan, BaseY(ctx, k.Entity) + S.BaseHeight, style, e => Dress(e, volumes), Numbering(k),
                 WindowNumbers.Required(ctx, new(k.Entity), k.Key));
         }
     }
@@ -159,7 +178,7 @@ public sealed class SixSite : ZoneSite
         {
             var plan = Plan(world, k.Entity, k.Part);
             var y = BaseY(b.Context, k.Entity);
-            var style = Style(k.Upper);
+            var style = Style(k.Upper(world));
             var windowed = GridFacade.Layout(plan, style, e => Dress(e, volumes)).Columns > 0;
             GridFacade.Build(b, plan, y + S.BaseHeight, style, e => Dress(e, volumes), windowed ? Numbering(k) : null);
             GlassBase(b, plan, y, style, volumes);
@@ -173,7 +192,7 @@ public sealed class SixSite : ZoneSite
         }
         var c = Plan(world, S.EntityC, S.PartC);
         var yc = BaseY(b.Context, S.EntityC);
-        var (face, door) = EastFace(c);
+        var (face, door) = EastFace(c, EastDoor(world));
         Vestibule(b, face, door, yc);
         Sign(b, face, yc + S.BaseHeight + Style(S.UpperC).Top);
         foreach (var at in S.ShutDoors.Where(at => entity is null || ShutEntity(world, at) == entity)) ShutDoor(b, at);
@@ -231,7 +250,8 @@ public sealed class SixSite : ZoneSite
         foreach (var (e, _, _) in GridFacade.Edges(plan))
             if (Dress(e, volumes).Kind != EdgeKind.Hidden)
                 GridFacade.Box(b, e.Frame, -S.Recess, e.Length + S.Recess, y - 0.1f, y + S.PavingTop + 0.01f, -S.Recess - 0.1f, 0.05f, L.Granite, 0);
-        var doors = S.ShutDoors.Append(S.EastDoor).ToArray();
+        var east = EastDoor(b.Context.World);
+        var doors = S.ShutDoors.Append(east).ToArray();
         foreach (var (e, _, _) in GridFacade.Edges(inner))
         {
             if (Dress(e, volumes, S.Recess).Kind == EdgeKind.Hidden) continue;
@@ -248,7 +268,7 @@ public sealed class SixSite : ZoneSite
             }
             GridFacade.Box(b, f, 0, e.Length, y + 3.1f, y + 3.17f, 0, 0.1f, L.Metal, 0);
         }
-        foreach (var (x, f) in Columns(plan, style, volumes))
+        foreach (var (x, f) in Columns(plan, style, volumes, east))
         {
             var bevel = b.Detail == SiteDetail.Full ? 0.04f : 0f;
             var z = S.PierDepth * 0.5f - 0.1f;
@@ -259,9 +279,9 @@ public sealed class SixSite : ZoneSite
     }
 
     /// <summary>Base columns: local x on each built outer face's frame, under every <see cref="S.ColumnEvery"/>th pier, clear of the doors.</summary>
-    internal static IEnumerable<(float X, PlanFrame Frame)> Columns(PolygonRings plan, GridStyle style, IReadOnlyList<PolygonRings> volumes)
+    internal static IEnumerable<(float X, PlanFrame Frame)> Columns(PolygonRings plan, GridStyle style, IReadOnlyList<PolygonRings> volumes, Vector2 eastDoor)
     {
-        var doors = S.ShutDoors.Append(S.EastDoor).ToArray();
+        var doors = S.ShutDoors.Append(eastDoor).ToArray();
         foreach (var run in GridFacade.Layout(plan, style, e => Dress(e, volumes)).Runs)
         {
             if (run.Edge.Kind == EdgeKind.Hidden) continue;
@@ -523,20 +543,21 @@ public sealed class SixSite : ZoneSite
     {
         var world = c.Context.World;
         var volumes = Volumes(world);
+        var eastDoor = EastDoor(world);
         var east = (Face: default(GridEdgeInfo), X: 0f);
         foreach (var k in Blocks.Where(k => entity is null || k.Entity == entity))
         {
             var plan = Plan(world, k.Entity, k.Part);
             var y = BaseY(c.Context, k.Entity);
-            var style = Style(k.Upper);
+            var style = Style(k.Upper(world));
             GridFacade.Collide(c, plan, y + S.BaseHeight, style, e => Dress(e, volumes), FootMat.StonePaving);
-            if (k.Entity == S.EntityC) east = EastFace(plan);
+            if (k.Entity == S.EntityC) east = EastFace(plan, eastDoor);
             // The set-back glass at walking height: open between the vestibule cheeks, DoorClosed across each shut door.
             foreach (var (e, _, _) in GridFacade.Edges(BasePlan(plan)))
             {
                 if (Dress(e, volumes, S.Recess).Kind == EdgeKind.Hidden) continue;
                 var cuts = new List<(float U0, float U1, SurfaceTag Tag)>();
-                var door = e.Frame.Local(S.EastDoor);
+                var door = e.Frame.Local(eastDoor);
                 if (k.Entity == S.EntityC && MathF.Abs(door.Y - S.Recess) < 1.2f && door.X > 0 && door.X < e.Length)
                     cuts.Add((door.X - S.VestibuleWidth * 0.5f, door.X + S.VestibuleWidth * 0.5f, SurfaceTag.Ground));
                 foreach (var shut in S.ShutDoors)
@@ -550,7 +571,7 @@ public sealed class SixSite : ZoneSite
                 foreach (var cut in cuts.Where(cut => cut.Tag == SurfaceTag.DoorClosed))
                     c.Wall(e.Frame.P(cut.U0, 0.1f), e.Frame.P(cut.U1, 0.1f), 0.15f, y, y + S.BaseHeight, SurfaceTag.DoorClosed, FootMat.Glass);
             }
-            foreach (var (x, f) in Columns(plan, style, volumes))
+            foreach (var (x, f) in Columns(plan, style, volumes, eastDoor))
                 c.Box(f.At(x, y + S.BaseHeight * 0.5f, S.PierDepth * 0.5f - 0.1f), new(S.ColumnSize * 0.5f + 0.06f, S.BaseHeight * 0.5f, S.ColumnSize * 0.5f + 0.06f), SurfaceTag.Wall, FootMat.StonePaving);
         }
         if (entity is not null && entity != S.EntityC) return;
@@ -574,8 +595,9 @@ public sealed class SixSite : ZoneSite
     {
         get
         {
-            // Q4 (ground-floor close-up, K1): 0.5 m from C's set-back glass beside the east door, on the walk, looking along it.
-            var door = S.EastDoor;
+            // Probe pins are fixed coordinates (no world access here). Q4 (ground-floor close-up, K1): 0.5 m from C's set-back
+            // glass beside the east door (six.c.east), on the walk, looking along it.
+            var door = new Vector2(-588.3f, 230f);
             var outward = PlanMath.Heading(77f);
             var along = new Vector2(-outward.Y, outward.X);
             var eye4 = door + outward * (-S.Recess + 0.5f) + along * (S.VestibuleWidth * 0.5f + 2.0f);

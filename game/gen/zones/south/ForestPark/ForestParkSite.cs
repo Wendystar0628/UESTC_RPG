@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.South.Framework;
 using P = Campus.Gen.Zones.South.SouthTune.Park;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 
@@ -21,14 +22,27 @@ public sealed class ForestParkSite : ZoneSite
     public const string Pavilion = "design:south-hongfeng-pavilion";
 
     private static readonly PlanFrame Cage = new(P.PeacockHouse, Vector2.UnitX);
-    private static readonly PlanFrame Hill = new(P.HillTop, Vector2.UnitX);
+
+    /// <summary>The pavilion's placement from its overlay feature (D-239): the hill top, the pavilion's side, the seat wall's radius, height and bearing range.</summary>
+    private readonly record struct Hilltop(Vector2 At, float Size, float SeatRadius, float SeatHeight, float SeatFrom, float SeatTo)
+    {
+        public PlanFrame Frame => new(At, Vector2.UnitX);
+    }
+
+    private static Hilltop HilltopOf(IWorldModel world)
+    {
+        var f = world.Feature(Pavilion);
+        var bearings = f.Numbers("seatWall", "bearings");
+        return new(f.Point(), f.Number("size"), f.Number("seatWall", "radius"), f.Number("seatWall", "height"), bearings[0], bearings[1]);
+    }
 
     public override string Id => "18a.forest-park";
 
     public override void Build(SiteBuilder b)
     {
+        var hill = HilltopOf(b.Context.World);
         PeacockHouse(b, b.Ground(P.PeacockHouse));
-        HillPavilion(b, b.Ground(P.HillTop));
+        HillPavilion(b, hill, b.Ground(hill.At));
     }
 
     // ---- Peacock house (孔雀之家) ----
@@ -126,41 +140,42 @@ public sealed class ForestParkSite : ZoneSite
 
     // ---- Hill-top pavilion and seat wall (MAP-QSH-TERRAIN) ----
 
-    private static void HillPavilion(SiteBuilder b, float y)
+    private static void HillPavilion(SiteBuilder b, Hilltop hill, float y)
     {
-        float s = P.PavilionSize, post = P.PavilionPost, eave = P.PavilionEave;
-        b.Add(PartGeometryKernel.BeveledBox(s + 0.8f, 0.4f, s + 0.8f, 0.03f, L.Granite), Hill.At(0, y - 0.1f, 0));
+        var pad = hill.Frame;
+        float s = hill.Size, post = P.PavilionPost, eave = P.PavilionEave;
+        b.Add(PartGeometryKernel.BeveledBox(s + 0.8f, 0.4f, s + 0.8f, 0.03f, L.Granite), pad.At(0, y - 0.1f, 0));
         var floor = y + 0.3f;
         var half = s * 0.5f - post * 0.5f;
         foreach (var x in new[] { -half, half })
             foreach (var z in new[] { -half, half })
             {
-                b.Add(PartGeometryKernel.BeveledBox(post, eave, post, 0.02f, L.Wood), Hill.At(x, floor, z));
-                b.Add(PartGeometryKernel.BeveledBox(post + 0.12f, 0.2f, post + 0.12f, 0.015f, L.StoneTrim), Hill.At(x, floor, z));
+                b.Add(PartGeometryKernel.BeveledBox(post, eave, post, 0.02f, L.Wood), pad.At(x, floor, z));
+                b.Add(PartGeometryKernel.BeveledBox(post + 0.12f, 0.2f, post + 0.12f, 0.015f, L.StoneTrim), pad.At(x, floor, z));
             }
         foreach (var (a, e) in Edges(s - post, s - post))
-            Strut(b, Hill, new(a.X, floor + eave - 0.32f, a.Y), new(e.X, floor + eave - 0.32f, e.Y), 0.3f, L.Wood);
-        b.Add(PartGeometryKernel.BeveledBox(s + 1.2f, 0.12f, s + 1.2f, 0.02f, L.Wood), Hill.At(0, floor + eave - 0.02f, 0));
-        b.Add(Shapes.Hip(s + 1.1f, s + 1.1f, P.PavilionRoofRise, 0, L.RoofSlab), Hill.At(0, floor + eave + 0.1f, 0));
+            Strut(b, pad, new(a.X, floor + eave - 0.32f, a.Y), new(e.X, floor + eave - 0.32f, e.Y), 0.3f, L.Wood);
+        b.Add(PartGeometryKernel.BeveledBox(s + 1.2f, 0.12f, s + 1.2f, 0.02f, L.Wood), pad.At(0, floor + eave - 0.02f, 0));
+        b.Add(Shapes.Hip(s + 1.1f, s + 1.1f, P.PavilionRoofRise, 0, L.RoofSlab), pad.At(0, floor + eave + 0.1f, 0));
         if (b.Detail != SiteDetail.Mass)
-            b.Add(Shapes.Shaft(0.1f, 0.03f, 0.35f, 10, L.Metal), Hill.At(0, floor + eave + 0.1f + P.PavilionRoofRise - 0.02f, 0));
+            b.Add(Shapes.Shaft(0.1f, 0.03f, 0.35f, 10, L.Metal), pad.At(0, floor + eave + 0.1f + P.PavilionRoofRise - 0.02f, 0));
         // Stone seat wall on the north rim, facing the lake and the museum: a polygonal arc of 0.45 m blocks.
-        foreach (var (a, e) in SeatArc())
+        foreach (var (a, e) in SeatArc(hill))
         {
             var seg = PlanFrame.Along((a + e) * 0.5f, e - a);
             var ground = b.Ground(seg.Origin);
-            b.Add(PartGeometryKernel.BeveledBox(Vector2.Distance(a, e) + 0.02f, P.SeatWallHeight + 0.1f, 0.42f, 0.025f, L.Granite), seg.At(0, ground - 0.1f, 0));
+            b.Add(PartGeometryKernel.BeveledBox(Vector2.Distance(a, e) + 0.02f, hill.SeatHeight + 0.1f, 0.42f, 0.025f, L.Granite), seg.At(0, ground - 0.1f, 0));
         }
     }
 
-    /// <summary>Seven chords of the seat-wall arc, bearings −60°…60° around the hill top (north rim).</summary>
-    private static IEnumerable<(Vector2 A, Vector2 B)> SeatArc()
+    /// <summary>Seven chords of the seat-wall arc round the hill top, over the bearing range the overlay gives (north rim).</summary>
+    private static IEnumerable<(Vector2 A, Vector2 B)> SeatArc(Hilltop hill)
     {
         const int n = 7;
         Vector2 At(int k)
         {
-            var bearing = (-60f + 120f * k / n) * MathF.PI / 180f;
-            return P.HillTop + new Vector2(MathF.Sin(bearing), -MathF.Cos(bearing)) * P.SeatWallRadius;
+            var bearing = (hill.SeatFrom + (hill.SeatTo - hill.SeatFrom) * k / n) * MathF.PI / 180f;
+            return hill.At + new Vector2(MathF.Sin(bearing), -MathF.Cos(bearing)) * hill.SeatRadius;
         }
         for (var k = 0; k < n; k++) yield return (At(k), At(k + 1));
     }
@@ -170,16 +185,18 @@ public sealed class ForestParkSite : ZoneSite
         var y = c.Ground(P.PeacockHouse.X, P.PeacockHouse.Y);
         var ring = Cage.Rect(-P.CageWidth * 0.5f, -P.CageDepth * 0.5f, P.CageWidth * 0.5f, P.CageDepth * 0.5f);
         for (var i = 0; i < 4; i++) c.Wall(ring[i], ring[(i + 1) % 4], 0.08f, y, y + 0.3f + P.CageWall + P.CageRoofRise, SurfaceTag.Wall, FootMat.Metal);
-        var hy = c.Ground(P.HillTop.X, P.HillTop.Y);
-        var half = P.PavilionSize * 0.5f - P.PavilionPost * 0.5f;
+        var hill = HilltopOf(c.Context.World);
+        var pad = hill.Frame;
+        var hy = c.Ground(hill.At.X, hill.At.Y);
+        var half = hill.Size * 0.5f - P.PavilionPost * 0.5f;
         foreach (var x in new[] { -half, half })
             foreach (var z in new[] { -half, half })
-                c.Add(new PostCollider(Hill.P(x, z), P.PavilionPost * 0.75f, hy, hy + 0.3f + P.PavilionEave, SurfaceTag.Prop) { Foot = FootMat.WoodDeck });
-        foreach (var (a, e) in SeatArc())
+                c.Add(new PostCollider(pad.P(x, z), P.PavilionPost * 0.75f, hy, hy + 0.3f + P.PavilionEave, SurfaceTag.Prop) { Foot = FootMat.WoodDeck });
+        foreach (var (a, e) in SeatArc(hill))
         {
             var seg = PlanFrame.Along((a + e) * 0.5f, e - a);
             var ground = c.Ground(seg.Origin.X, seg.Origin.Y);
-            c.Box(seg.At(0, ground + P.SeatWallHeight * 0.5f, 0), new(Vector2.Distance(a, e) * 0.5f, P.SeatWallHeight * 0.5f, 0.21f), SurfaceTag.Prop, FootMat.StonePaving);
+            c.Box(seg.At(0, ground + hill.SeatHeight * 0.5f, 0), new(Vector2.Distance(a, e) * 0.5f, hill.SeatHeight * 0.5f, 0.21f), SurfaceTag.Prop, FootMat.StonePaving);
         }
     }
 }

@@ -1,10 +1,12 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.South.Framework;
 using T = Campus.Gen.Zones.South.SouthTune.Gate;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
@@ -27,49 +29,75 @@ public sealed class SouthGateSite : ZoneSite
     public const string HouseKey = "guard-houses";
     private const int HouseColumns = 3;
 
-    private static readonly PlanFrame Frame = PlanFrame.Along((T.HouseWest + T.HouseEast) * 0.5f, T.HouseEast - T.HouseWest);
-    private static readonly float HouseX = Vector2.Distance(T.HouseWest, T.HouseEast) * 0.5f;
+    /// <summary>
+    /// The gate's plan, read from the relation's four footprints (D-239): the two larger are the guard houses, the two smaller the
+    /// traffic islands. Frame: origin midway between the houses, X from the west house to the east one, +Z outward to the street.
+    /// </summary>
+    internal sealed record Layout(PlanFrame Frame, float HouseX, float IslandWestX, float IslandEastX, float IslandZ, float IslandWidth, float IslandLength)
+    {
+        public Vector2 HouseWest => Frame.P(-HouseX, 0);
+
+        public Vector2 HouseEast => Frame.P(HouseX, 0);
+
+        public float CarriageA => IslandWestX + IslandWidth * 0.5f;
+
+        public float CarriageB => IslandEastX - IslandWidth * 0.5f;
+
+        /// <summary>Pedestrian lane between a guard house and its island, local x range; side −1 west, +1 east.</summary>
+        public (float A, float B) Lane(int side) => side < 0
+            ? (-HouseX + T.HouseSize * 0.5f, IslandWestX - IslandWidth * 0.5f)
+            : (IslandEastX + IslandWidth * 0.5f, HouseX - T.HouseSize * 0.5f);
+    }
+
+    private static readonly ConditionalWeakTable<IWorldModel, Layout> Layouts = new();
+
+    internal static Layout LayoutOf(IWorldModel world) => Layouts.GetValue(world, Read);
+
+    private static Layout Read(IWorldModel world)
+    {
+        var rings = world.Feature(Feature).Outers().OrderByDescending(r => Math.Abs(PlanGeometry.SignedArea(r))).ToArray();
+        if (rings.Length != 4) throw new InvalidOperationException($"{Feature} is expected to hold two guard houses and two islands, found {rings.Length} footprints.");
+        var houses = rings.Take(2).Select(PlanMath.Centroid).OrderBy(c => c.X).ToArray();
+        var frame = PlanFrame.Along((houses[0] + houses[1]) * 0.5f, houses[1] - houses[0]);
+        var islands = rings.Skip(2).OrderBy(r => frame.Local(PlanMath.Centroid(r)).X).ToArray();
+        var at = islands.Select(r => frame.Local(PlanMath.Centroid(r))).ToArray();
+        // An island is a thin rotated rectangle: its width and length are the means of its short and long sides.
+        static float[] Sides(IReadOnlyList<Vector2> r) => [.. Enumerable.Range(0, r.Count).Select(i => Vector2.Distance(r[i], r[(i + 1) % r.Count])).Order()];
+        var sides = islands.Select(Sides).ToArray();
+        return new(frame, Vector2.Distance(houses[0], houses[1]) * 0.5f, at[0].X, at[1].X, (at[0].Y + at[1].Y) * 0.5f,
+            sides.Average(e => (e[0] + e[1]) * 0.5f), sides.Average(e => (e[^1] + e[^2]) * 0.5f));
+    }
 
     public override string Id => "18a.gate";
 
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
-    public override IReadOnlyList<InspectionProbe> Probes
+    public override IReadOnlyList<InspectionProbe> Probes =>
+        // Q2: the west pedestrian lane, 1 m behind the turnstile row, looking out to the street (a stand, not map data).
+        [Probe("Q2", Feature, new(-527.33f, 1.62f, 720.70f), new(-0.583f, 0.812f), -2f, 1f)];
+
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
     {
-        get
-        {
-            var (a, b) = Lane(-1);
-            var eye = Frame.P((a + b) * 0.5f, T.TurnstileZ - T.CabinetDepth * 0.5f - 1f);
-            return [Probe("Q2", Feature, new(eye.X, 1.62f, eye.Y), Frame.W, -2f, 1f)];
-        }
-    }
-
-    /// <summary>Pedestrian lane between a guard house and its island, local x range; side −1 west, +1 east.</summary>
-    internal static (float A, float B) Lane(int side) => side < 0
-        ? (-HouseX + T.HouseSize * 0.5f, T.IslandWestX - T.IslandWidth * 0.5f)
-        : (T.IslandEastX + T.IslandWidth * 0.5f, HouseX - T.HouseSize * 0.5f);
-
-    private static float CarriageA => T.IslandWestX + T.IslandWidth * 0.5f;
-    private static float CarriageB => T.IslandEastX - T.IslandWidth * 0.5f;
-
-    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod) =>
-        [.. new[] { -1, 1 }.Select(side => new PolygonRings(Frame.Shift(side * HouseX, 0).Rect(
+        var g = LayoutOf(world);
+        return [.. new[] { -1, 1 }.Select(side => new PolygonRings(g.Frame.Shift(side * g.HouseX, 0).Rect(
             -T.HouseSize * 0.5f, -T.HouseSize * 0.5f, T.HouseSize * 0.5f, T.HouseSize * 0.5f)))];
+    }
 
     public override void Build(SiteBuilder b)
     {
-        var y = b.Ground(Frame.Origin);
-        foreach (var side in new[] { -1, 1 }) GuardHouse(b, side, y);
-        foreach (var x in new[] { T.IslandWestX, T.IslandEastX }) Island(b, x, y);
-        Barriers(b, y);
-        foreach (var side in new[] { -1, 1 }) Turnstiles(b, side, y);
-        NameWall(b, y);
-        Forecourt(b, y);
+        var g = LayoutOf(b.Context.World);
+        var y = b.Ground(g.Frame.Origin);
+        foreach (var side in new[] { -1, 1 }) GuardHouse(b, g, side, y);
+        foreach (var x in new[] { g.IslandWestX, g.IslandEastX }) Island(b, g, x, y);
+        Barriers(b, g, y);
+        foreach (var side in new[] { -1, 1 }) Turnstiles(b, g, side, y);
+        NameWall(b, g, y);
+        Forecourt(b, g, y);
     }
 
-    private static void GuardHouse(SiteBuilder b, int side, float y)
+    private static void GuardHouse(SiteBuilder b, Layout g, int side, float y)
     {
-        var f = Frame.Shift(side * HouseX, 0);
+        var f = g.Frame.Shift(side * g.HouseX, 0);
         float s = T.HouseSize, h = T.HouseHeight;
         b.Add(PartGeometryKernel.BeveledBox(s + 0.14f, T.HousePlinth + 0.1f, s + 0.14f, 0.02f, L.Granite), f.At(0, y - 0.1f, 0));
         b.Add(PartGeometryKernel.BeveledBox(s, h - T.HousePlinth, s, 0.03f, L.Stone), f.At(0, y + T.HousePlinth, 0));
@@ -81,7 +109,7 @@ public sealed class SouthGateSite : ZoneSite
         // Glass: numbered panes once the map's window numbering is in the context (lit all night), plain glass without one.
         var numbered = Allocation(b.Context);
         foreach (var pane in Panes(side)) Pane(b, f, pane, y, numbered is null);
-        if (numbered is { } allocation) WindowNumbers.Panes(b, Openings(y).Where(o => o.Row == (side < 0 ? 0 : 1)), allocation, W.AllNight, W.Office);
+        if (numbered is { } allocation) WindowNumbers.Panes(b, Openings(g, y).Where(o => o.Row == (side < 0 ? 0 : 1)), allocation, W.AllNight, W.Office);
         Door(b, f, -side * 1.6f, -T.HouseSize * 0.5f, y);
     }
 
@@ -99,11 +127,11 @@ public sealed class SouthGateSite : ZoneSite
     /// The guard-house windows as the gate's one grid (contract-29): row 0 the west house, row 1 the east one, columns as in
     /// <see cref="Panes"/>; each pane's bottom centre on the glass plane just proud of the stone face.
     /// </summary>
-    internal static GlazedOpening[] Openings(float y) =>
+    internal static GlazedOpening[] Openings(Layout g, float y) =>
     [
         .. new[] { -1, 1 }.SelectMany((side, row) => Panes(side).Select((p, column) =>
         {
-            var f = Frame.Shift(side * HouseX, 0);
+            var f = g.Frame.Shift(side * g.HouseX, 0);
             var outward = p.Turned ? MathF.Sign(p.X) : MathF.Sign(p.Z);
             var at = p.Turned ? f.P(p.X + outward * PaneZ, p.Z) : f.P(p.X, p.Z + outward * PaneZ);
             var normal = (p.Turned ? f.U : f.W) * outward;
@@ -125,8 +153,11 @@ public sealed class SouthGateSite : ZoneSite
 
     public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world) => [(new(Feature), new(HouseKey, HouseColumns, 2))];
 
-    public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows) =>
-        WindowNumbers.Declare(windows, Openings(ctx.World.Terrain.HeightAt(Frame.Origin.X, Frame.Origin.Y)), Allocation(ctx, true)!.Value, W.AllNight);
+    public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
+    {
+        var g = LayoutOf(ctx.World);
+        WindowNumbers.Declare(windows, Openings(g, ctx.World.Terrain.HeightAt(g.Frame.Origin.X, g.Frame.Origin.Y)), Allocation(ctx, true)!.Value, W.AllNight);
+    }
 
     /// <summary>A window on a house face: dark glass in an aluminium surround over a stone sill. Turned panes sit on ±X faces.</summary>
     private static void Pane(SiteBuilder b, PlanFrame f, (float X, float Z, bool Turned, float Width) pane, float y, bool glass)
@@ -154,52 +185,52 @@ public sealed class SouthGateSite : ZoneSite
     }
 
     /// <summary>Traffic island with its stone pillar on the street end and the barrier cabinet on the campus end.</summary>
-    private static void Island(SiteBuilder b, float x, float y)
+    private static void Island(SiteBuilder b, Layout g, float x, float y)
     {
-        b.Add(PartGeometryKernel.BeveledBox(T.IslandWidth, T.IslandRise + 0.1f, T.IslandLength, 0.03f, L.Granite), Frame.At(x, y - 0.1f, T.IslandZ));
+        b.Add(PartGeometryKernel.BeveledBox(g.IslandWidth, T.IslandRise + 0.1f, g.IslandLength, 0.03f, L.Granite), g.Frame.At(x, y - 0.1f, g.IslandZ));
         var top = y + T.IslandRise;
-        b.Add(PartGeometryKernel.BeveledBox(T.PillarSize + 0.3f, 0.5f, T.PillarSize + 0.3f, 0.03f, L.Granite), Frame.At(x, top, T.PillarZ));
-        b.Add(PartGeometryKernel.BeveledBox(T.PillarSize, T.PillarHeight - 0.9f, T.PillarSize, 0.04f, L.Stone), Frame.At(x, top + 0.5f, T.PillarZ));
-        b.Add(PartGeometryKernel.BeveledBox(T.PillarSize + 0.24f, 0.4f, T.PillarSize + 0.24f, 0.03f, L.StoneTrim), Frame.At(x, top + T.PillarHeight - 0.4f, T.PillarZ));
+        b.Add(PartGeometryKernel.BeveledBox(T.PillarSize + 0.3f, 0.5f, T.PillarSize + 0.3f, 0.03f, L.Granite), g.Frame.At(x, top, T.PillarZ));
+        b.Add(PartGeometryKernel.BeveledBox(T.PillarSize, T.PillarHeight - 0.9f, T.PillarSize, 0.04f, L.Stone), g.Frame.At(x, top + 0.5f, T.PillarZ));
+        b.Add(PartGeometryKernel.BeveledBox(T.PillarSize + 0.24f, 0.4f, T.PillarSize + 0.24f, 0.03f, L.StoneTrim), g.Frame.At(x, top + T.PillarHeight - 0.4f, T.PillarZ));
         if (b.Detail == SiteDetail.Mass) return;
         // Two shallow joint bands keep the pillar from reading as one bare extrusion (ART-FIDELITY).
         foreach (var k in new[] { 0.36f, 0.68f })
-            b.Add(PartGeometryKernel.BeveledBox(T.PillarSize + 0.04f, 0.05f, T.PillarSize + 0.04f, 0.01f, L.StoneTrim), Frame.At(x, top + 0.5f + (T.PillarHeight - 0.9f) * k, T.PillarZ));
+            b.Add(PartGeometryKernel.BeveledBox(T.PillarSize + 0.04f, 0.05f, T.PillarSize + 0.04f, 0.01f, L.StoneTrim), g.Frame.At(x, top + 0.5f + (T.PillarHeight - 0.9f) * k, T.PillarZ));
     }
 
     /// <summary>Barrier cabinets on the islands' inner edges, arms down across the carriageway, meeting with a small gap.</summary>
-    private static void Barriers(SiteBuilder b, float y)
+    private static void Barriers(SiteBuilder b, Layout g, float y)
     {
         if (b.Detail == SiteDetail.Mass) return;
         var top = y + T.IslandRise;
-        var mid = (CarriageA + CarriageB) * 0.5f;
+        var mid = (g.CarriageA + g.CarriageB) * 0.5f;
         foreach (var side in new[] { -1, 1 })
         {
-            var cabinet = side < 0 ? CarriageA - 0.3f : CarriageB + 0.3f;
-            b.Add(PartGeometryKernel.BeveledBox(0.36f, 1.05f, 0.36f, 0.02f, L.Metal), Frame.At(cabinet, top, T.BarrierZ));
+            var cabinet = side < 0 ? g.CarriageA - 0.3f : g.CarriageB + 0.3f;
+            b.Add(PartGeometryKernel.BeveledBox(0.36f, 1.05f, 0.36f, 0.02f, L.Metal), g.Frame.At(cabinet, top, T.BarrierZ));
             var tip = mid + side * T.BarrierGap * 0.5f;
             var root = cabinet + side * -0.18f;
             var length = MathF.Abs(tip - root);
-            b.Add(PartGeometryKernel.BeveledBox(length, 0.1f, 0.07f, 0.012f, L.WhiteSteel), Frame.At((tip + root) * 0.5f, y + T.BarrierHeight, T.BarrierZ));
+            b.Add(PartGeometryKernel.BeveledBox(length, 0.1f, 0.07f, 0.012f, L.WhiteSteel), g.Frame.At((tip + root) * 0.5f, y + T.BarrierHeight, T.BarrierZ));
             // A drop foot under the tip keeps the arm level.
-            b.Add(PartGeometryKernel.BeveledBox(0.06f, T.BarrierHeight, 0.06f, 0.01f, L.Metal), Frame.At(tip + side * 0.15f, y, T.BarrierZ));
+            b.Add(PartGeometryKernel.BeveledBox(0.06f, T.BarrierHeight, 0.06f, 0.01f, L.Metal), g.Frame.At(tip + side * 0.15f, y, T.BarrierZ));
         }
     }
 
     /// <summary>Flap turnstiles: cabinets at both lane edges and between passages, glass flaps closed (gaps under 0.5 m).</summary>
-    private static void Turnstiles(SiteBuilder b, int side, float y)
+    private static void Turnstiles(SiteBuilder b, Layout g, int side, float y)
     {
-        var (a, c) = Lane(side);
+        var (a, c) = g.Lane(side);
         var cabinets = new float[T.TurnstilePassages + 1];
         var first = a + 0.1f + T.CabinetWidth * 0.5f;
         var last = c - 0.1f - T.CabinetWidth * 0.5f;
         for (var i = 0; i <= T.TurnstilePassages; i++) cabinets[i] = first + (last - first) * i / T.TurnstilePassages;
-        b.Add(PartGeometryKernel.BeveledBox(c - a, 0.06f, T.CabinetDepth + 0.6f, 0.015f, L.Granite), Frame.At((a + c) * 0.5f, y - 0.04f, T.TurnstileZ));
+        b.Add(PartGeometryKernel.BeveledBox(c - a, 0.06f, T.CabinetDepth + 0.6f, 0.015f, L.Granite), g.Frame.At((a + c) * 0.5f, y - 0.04f, T.TurnstileZ));
         foreach (var x in cabinets)
         {
-            b.Add(PartGeometryKernel.BeveledBox(T.CabinetWidth, T.CabinetHeight, T.CabinetDepth, 0.03f, L.Metal), Frame.At(x, y, T.TurnstileZ));
+            b.Add(PartGeometryKernel.BeveledBox(T.CabinetWidth, T.CabinetHeight, T.CabinetDepth, 0.03f, L.Metal), g.Frame.At(x, y, T.TurnstileZ));
             if (b.Detail == SiteDetail.Full)
-                b.Add(PartGeometryKernel.BeveledBox(T.CabinetWidth - 0.04f, 0.02f, 0.5f, 0, L.Glass), Frame.At(x, y + T.CabinetHeight, T.TurnstileZ + 0.35f));
+                b.Add(PartGeometryKernel.BeveledBox(T.CabinetWidth - 0.04f, 0.02f, 0.5f, 0, L.Glass), g.Frame.At(x, y + T.CabinetHeight, T.TurnstileZ + 0.35f));
         }
         if (b.Detail == SiteDetail.Mass) return;
         for (var i = 0; i < T.TurnstilePassages; i++)
@@ -207,8 +238,8 @@ public sealed class SouthGateSite : ZoneSite
             var x0 = cabinets[i] + T.CabinetWidth * 0.5f;
             var x1 = cabinets[i + 1] - T.CabinetWidth * 0.5f;
             var flap = (x1 - x0 - 0.08f) * 0.5f;
-            b.Add(PartGeometryKernel.BeveledBox(flap, 0.55f, 0.02f, 0, L.Glass), Frame.At(x0 + flap * 0.5f, y + 0.38f, T.TurnstileZ));
-            b.Add(PartGeometryKernel.BeveledBox(flap, 0.55f, 0.02f, 0, L.Glass), Frame.At(x1 - flap * 0.5f, y + 0.38f, T.TurnstileZ));
+            b.Add(PartGeometryKernel.BeveledBox(flap, 0.55f, 0.02f, 0, L.Glass), g.Frame.At(x0 + flap * 0.5f, y + 0.38f, T.TurnstileZ));
+            b.Add(PartGeometryKernel.BeveledBox(flap, 0.55f, 0.02f, 0, L.Glass), g.Frame.At(x1 - flap * 0.5f, y + 0.38f, T.TurnstileZ));
         }
     }
 
@@ -216,20 +247,20 @@ public sealed class SouthGateSite : ZoneSite
     /// Name wall (§1.3): a low granite wall with one square slab per character on its street face. The characters
     /// (Guo Moruo's hand, ink green) need a glyph decal and a registered colour; the slabs stand blank until then.
     /// </summary>
-    private static void NameWall(SiteBuilder b, float y)
+    private static void NameWall(SiteBuilder b, Layout g, float y)
     {
         var length = T.NameWallX1 - T.NameWallX0;
         var cx = (T.NameWallX0 + T.NameWallX1) * 0.5f;
         float t = T.NameWallThickness, h = T.NameWallHeight;
-        b.Add(PartGeometryKernel.BeveledBox(length + 0.12f, 0.35f, t + 0.16f, 0.02f, L.Granite), Frame.At(cx, y - 0.1f, T.NameWallZ));
-        b.Add(PartGeometryKernel.BeveledBox(length, h - 0.25f - 0.1f, t, 0.03f, L.Stone), Frame.At(cx, y + 0.25f, T.NameWallZ));
-        b.Add(PartGeometryKernel.BeveledBox(length + 0.1f, 0.1f, t + 0.1f, 0.02f, L.StoneTrim), Frame.At(cx, y + h - 0.1f, T.NameWallZ));
+        b.Add(PartGeometryKernel.BeveledBox(length + 0.12f, 0.35f, t + 0.16f, 0.02f, L.Granite), g.Frame.At(cx, y - 0.1f, T.NameWallZ));
+        b.Add(PartGeometryKernel.BeveledBox(length, h - 0.25f - 0.1f, t, 0.03f, L.Stone), g.Frame.At(cx, y + 0.25f, T.NameWallZ));
+        b.Add(PartGeometryKernel.BeveledBox(length + 0.1f, 0.1f, t + 0.1f, 0.02f, L.StoneTrim), g.Frame.At(cx, y + h - 0.1f, T.NameWallZ));
         if (b.Detail == SiteDetail.Mass) return;
         var slabY = y + 0.25f + (h - 0.35f - T.NameSlab) * 0.5f;
         for (var i = 0; i < T.NameCharacters; i++)
         {
             var x = cx + (i - (T.NameCharacters - 1) * 0.5f) * T.NameSlabPitch;
-            b.Add(PartGeometryKernel.BeveledBox(T.NameSlab, T.NameSlab, 0.06f, 0.012f, L.StoneTrim), Frame.At(x, slabY, T.NameWallZ + t * 0.5f + 0.03f));
+            b.Add(PartGeometryKernel.BeveledBox(T.NameSlab, T.NameSlab, 0.06f, 0.012f, L.StoneTrim), g.Frame.At(x, slabY, T.NameWallZ + t * 0.5f + 0.03f));
         }
     }
 
@@ -237,73 +268,74 @@ public sealed class SouthGateSite : ZoneSite
     /// Forecourt (§1.4): stone spheres before the guard houses, yellow-and-black crash bollards off the island noses (WP-13's
     /// variation 1 in its own colours: a tint or material would paint the black stripe yellow too), yellow grid lines.
     /// </summary>
-    private static void Forecourt(SiteBuilder b, float y)
+    private static void Forecourt(SiteBuilder b, Layout g, float y)
     {
         if (b.Detail == SiteDetail.Mass) return;
         var sphere = new FurnitureParams(T.SphereSize, T.SphereSize, T.SphereSize) { Material = L.Granite };
         foreach (var side in new[] { -1, 1 })
             for (var k = 0; k < 4; k++)
             {
-                var x = side * (HouseX + T.HouseSize * 0.5f - 0.3f - k * T.SpherePitch);
-                b.Place(PartCatalog.StoneSphere, sphere, Frame.At(x, y, T.SphereRowZ));
+                var x = side * (g.HouseX + T.HouseSize * 0.5f - 0.3f - k * T.SpherePitch);
+                b.Place(PartCatalog.StoneSphere, sphere, g.Frame.At(x, y, T.SphereRowZ));
             }
         var bollard = new ColumnParams(0.18f, 0.8f, 0.18f) { Variation = 1 };
-        foreach (var x in new[] { T.IslandWestX, T.IslandEastX })
+        foreach (var x in new[] { g.IslandWestX, g.IslandEastX })
             foreach (var d in new[] { -0.6f, 0f, 0.6f })
-                b.Place(PartCatalog.Bollard, bollard, Frame.At(x + d, y, T.IslandZ + T.IslandLength * 0.5f + 0.7f));
-        GridLines(b, y);
+                b.Place(PartCatalog.Bollard, bollard, g.Frame.At(x + d, y, g.IslandZ + g.IslandLength * 0.5f + 0.7f));
+        GridLines(b, g, y);
     }
 
-    private static void GridLines(SiteBuilder b, float y)
+    private static void GridLines(SiteBuilder b, Layout g, float y)
     {
         float x0 = T.GridX0, x1 = T.GridX1, z0 = T.GridZ0, z1 = T.GridZ1, w = T.GridLine;
-        Line(b, new(x0, z0), new(x1, z0), y, w);
-        Line(b, new(x1, z0), new(x1, z1), y, w);
-        Line(b, new(x1, z1), new(x0, z1), y, w);
-        Line(b, new(x0, z1), new(x0, z0), y, w);
+        Line(b, g, new(x0, z0), new(x1, z0), y, w);
+        Line(b, g, new(x1, z0), new(x1, z1), y, w);
+        Line(b, g, new(x1, z1), new(x0, z1), y, w);
+        Line(b, g, new(x0, z1), new(x0, z0), y, w);
         var step = T.GridPitch * MathF.Sqrt(2f);
         // x − z = c (rising diagonals) and x + z = c (falling diagonals), clipped to the box.
         for (var c = x0 - z1 + step * 0.5f; c < x1 - z0; c += step)
         {
             float za = MathF.Max(z0, x0 - c), zb = MathF.Min(z1, x1 - c);
-            if (zb - za > 0.3f) Line(b, new(za + c, za), new(zb + c, zb), y, w * 0.8f);
+            if (zb - za > 0.3f) Line(b, g, new(za + c, za), new(zb + c, zb), y, w * 0.8f);
         }
         for (var c = x0 + z0 + step * 0.5f; c < x1 + z1; c += step)
         {
             float za = MathF.Max(z0, c - x1), zb = MathF.Min(z1, c - x0);
-            if (zb - za > 0.3f) Line(b, new(c - za, za), new(c - zb, zb), y, w * 0.8f);
+            if (zb - za > 0.3f) Line(b, g, new(c - za, za), new(c - zb, zb), y, w * 0.8f);
         }
     }
 
     /// <summary>A painted strip between two local points, 2 cm proud of the paving.</summary>
-    private static void Line(SiteBuilder b, Vector2 p, Vector2 q, float y, float width)
+    private static void Line(SiteBuilder b, Layout g, Vector2 p, Vector2 q, float y, float width)
     {
-        var a = Frame.P(p.X, p.Y);
-        var c = Frame.P(q.X, q.Y);
+        var a = g.Frame.P(p.X, p.Y);
+        var c = g.Frame.P(q.X, q.Y);
         var strip = PlanFrame.Along((a + c) * 0.5f, c - a);
         b.Add(PartGeometryKernel.BeveledBox(Vector2.Distance(a, c), 0.02f, width, 0, L.Marking), strip.At(0, y, 0));
     }
 
     public override void Collide(SiteColliders c)
     {
-        var y = c.Ground(Frame.Origin.X, Frame.Origin.Y);
+        var g = LayoutOf(c.Context.World);
+        var y = c.Ground(g.Frame.Origin.X, g.Frame.Origin.Y);
         // Guard houses: their four walls are part of the closure.
         foreach (var side in new[] { -1, 1 })
         {
-            var ring = Frame.Shift(side * HouseX, 0).Rect(-T.HouseSize * 0.5f, -T.HouseSize * 0.5f, T.HouseSize * 0.5f, T.HouseSize * 0.5f);
+            var ring = g.Frame.Shift(side * g.HouseX, 0).Rect(-T.HouseSize * 0.5f, -T.HouseSize * 0.5f, T.HouseSize * 0.5f, T.HouseSize * 0.5f);
             for (var i = 0; i < 4; i++)
                 c.Wall(ring[i], ring[(i + 1) % 4], 0.15f, y, y + T.HouseHeight + T.HouseRoof, SurfaceTag.Boundary, FootMat.StonePaving);
         }
         // Islands with their pillars, the carriageway behind the barrier arms, and the two turnstile rows.
-        foreach (var x in new[] { T.IslandWestX, T.IslandEastX })
-            c.Box(Frame.At(x, y + WalkRules.BoundaryHeight * 0.5f, T.IslandZ), new(T.IslandWidth * 0.5f, WalkRules.BoundaryHeight * 0.5f, T.IslandLength * 0.5f), SurfaceTag.Boundary, FootMat.StonePaving);
-        c.Box(Frame.At((CarriageA + CarriageB) * 0.5f, y + WalkRules.BoundaryHeight * 0.5f, T.BarrierZ), new((CarriageB - CarriageA) * 0.5f + 0.05f, WalkRules.BoundaryHeight * 0.5f, 0.15f), SurfaceTag.Boundary, FootMat.Metal);
+        foreach (var x in new[] { g.IslandWestX, g.IslandEastX })
+            c.Box(g.Frame.At(x, y + WalkRules.BoundaryHeight * 0.5f, g.IslandZ), new(g.IslandWidth * 0.5f, WalkRules.BoundaryHeight * 0.5f, g.IslandLength * 0.5f), SurfaceTag.Boundary, FootMat.StonePaving);
+        c.Box(g.Frame.At((g.CarriageA + g.CarriageB) * 0.5f, y + WalkRules.BoundaryHeight * 0.5f, T.BarrierZ), new((g.CarriageB - g.CarriageA) * 0.5f + 0.05f, WalkRules.BoundaryHeight * 0.5f, 0.15f), SurfaceTag.Boundary, FootMat.Metal);
         foreach (var side in new[] { -1, 1 })
         {
-            var (a, b) = Lane(side);
-            c.Box(Frame.At((a + b) * 0.5f, y + WalkRules.BoundaryHeight * 0.5f, T.TurnstileZ), new((b - a) * 0.5f + 0.05f, WalkRules.BoundaryHeight * 0.5f, T.CabinetDepth * 0.5f), SurfaceTag.Boundary, FootMat.Metal);
+            var (a, b) = g.Lane(side);
+            c.Box(g.Frame.At((a + b) * 0.5f, y + WalkRules.BoundaryHeight * 0.5f, T.TurnstileZ), new((b - a) * 0.5f + 0.05f, WalkRules.BoundaryHeight * 0.5f, T.CabinetDepth * 0.5f), SurfaceTag.Boundary, FootMat.Metal);
         }
         // Name wall: an ordinary wall outside the closure.
-        c.Wall(Frame.P(T.NameWallX0, T.NameWallZ), Frame.P(T.NameWallX1, T.NameWallZ), T.NameWallThickness * 0.5f, y, y + T.NameWallHeight, SurfaceTag.Wall, FootMat.StonePaving);
+        c.Wall(g.Frame.P(T.NameWallX0, T.NameWallZ), g.Frame.P(T.NameWallX1, T.NameWallZ), T.NameWallThickness * 0.5f, y, y + T.NameWallHeight, SurfaceTag.Wall, FootMat.StonePaving);
     }
 }

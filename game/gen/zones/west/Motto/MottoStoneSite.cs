@@ -19,8 +19,11 @@ namespace Campus.Gen.Zones.West.Motto;
 /// </summary>
 public sealed class MottoStoneSite : ZoneSite
 {
-    /// <summary>The stone's frame: origin at its plan centre, local +Z toward its face's bearing.</summary>
-    internal static PlanFrame Frame => PlanMath.Facing(M.At, M.Facing);
+    /// <summary>The stone's plan centre: its node's anchor in the world model.</summary>
+    internal static Vector2 At(IWorldModel world) =>
+        world.Features.TryGetValue(new(M.Entity), out var feature) && feature.Geometry is PointGeometry point
+            ? new(point.Position.X, point.Position.Z)
+            : throw new InvalidOperationException($"校训石 {M.Entity} is missing from the world model.");
 
     /// <summary>Half axes of the kerb's centreline (local x along the stone, z across it).</summary>
     internal static Vector2 Kerb => new(M.Length * 0.5f + M.BedMarginX, M.Depth * 0.5f + M.BedMarginZ);
@@ -29,8 +32,9 @@ public sealed class MottoStoneSite : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        var f = Frame;
-        var y = b.Ground(M.At);
+        var at = At(b.Context.World);
+        var f = PlanMath.Facing(at, M.Facing);   // origin at the stone's plan centre, local +Z toward its face's bearing
+        var y = b.Ground(at);
         var around = b.Detail switch { SiteDetail.Full => 48, SiteDetail.Plain => 32, _ => 16 };
         // The bed: a low dome of pebbles inside the kerb; the stone sinks into it so its foot has a soft line, not a cut.
         var bed = Kerb - new Vector2(M.KerbWidth * 0.5f);
@@ -78,8 +82,9 @@ public sealed class MottoStoneSite : ZoneSite
     /// <summary>One box with a top (SYS-WALK): the stone is about 2 m high, not climbable.</summary>
     public override void Collide(SiteColliders c)
     {
-        var y = c.Ground(M.At.X, M.At.Y);
-        c.Box(Frame.At(0, y + M.Height * 0.5f, 0), new(M.Length * 0.5f, M.Height * 0.5f, M.Depth * 0.5f), SurfaceTag.Prop, FootMat.StonePaving);
+        var at = At(c.Context.World);
+        var y = c.Ground(at.X, at.Y);
+        c.Box(PlanMath.Facing(at, M.Facing).At(0, y + M.Height * 0.5f, 0), new(M.Length * 0.5f, M.Height * 0.5f, M.Depth * 0.5f), SurfaceTag.Prop, FootMat.StonePaving);
     }
 
     /// <summary>Q1 (walk, K1): 3 m in front of the face, eye height, looking at the characters and the stone's foot.</summary>
@@ -87,8 +92,9 @@ public sealed class MottoStoneSite : ZoneSite
     {
         get
         {
+            // Probe pins are fixed coordinates (no world access here): the stone's node anchor.
             var out1 = PlanMath.Heading(M.Facing);
-            var eye = M.At + out1 * (M.Depth * 0.5f + 3f);
+            var eye = new Vector2(-554.76f, 233.83f) + out1 * (M.Depth * 0.5f + 3f);
             return [Probe("Q1", M.Entity, new(eye.X, 1.62f, eye.Y), -out1, -8f, 3f)];
         }
     }

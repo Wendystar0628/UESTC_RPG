@@ -62,8 +62,15 @@ public sealed class WenkeSite : ZoneSite
 
     internal static float BaseY(BuildContext ctx) => ctx.World.Terrain.PadY(new(K.Entity));
 
-    /// <summary>The door frame: origin at the door on the hub's south-east face, +Z out to the forecourt, +X toward the tower.</summary>
-    internal static PlanFrame Door => PlanMath.Facing(K.DoorAt, K.DoorFacing);
+    /// <summary>
+    /// The door frame: origin at the door on the hub's south-east face, +Z out to the forecourt, +X toward the tower. The door's
+    /// spot and facing are registered in the forecourt feature's props.
+    /// </summary>
+    internal static PlanFrame Door(IWorldModel world)
+    {
+        var props = world.Feature(K.ForecourtId).RequiredProps();
+        return PlanMath.Facing(Registered.Pair(props.GetProperty("door")), props.GetProperty("doorFacing").GetSingle());
+    }
 
     internal static Plan Footprints(IWorldModel world)
     {
@@ -83,8 +90,10 @@ public sealed class WenkeSite : ZoneSite
         IReadOnlyList<Vector2> Ring(string part) => feature.Parts.FirstOrDefault(p => p.SourceId == part) is { } src && WorldFeatureGeometry.FacadeGeometryOf(src) is PolygonGeometry g
             ? g.Rings.Outer
             : throw new InvalidOperationException($"文科楼群 part {part} is missing or not a single polygon.");
+        // Storeys per block: the zone's own terraced counts, and the tower's from its part's OSM levels.
+        var counts = K.Blocks.Select(b => b.Storeys ?? world.Feature(K.Entity).Part(b.Part).Levels().Storeys).ToArray();
         // Clipped (set-back) outlines first, then the rounding, which keeps sharp the corners where another block meets.
-        var clipped = K.Blocks.Select(b => Enumerable.Range(0, b.Storeys).Select(k =>
+        var clipped = K.Blocks.Select((b, i) => Enumerable.Range(0, counts[i]).Select(k =>
         {
             var ring = Contour.Clean(Ring(b.Part), 0.05f);
             foreach (var s in K.SetBacks)
@@ -94,21 +103,22 @@ public sealed class WenkeSite : ZoneSite
         var outlines = new Vector2[K.Blocks.Length][][];
         for (var i = 0; i < K.Blocks.Length; i++)
         {
-            outlines[i] = new Vector2[K.Blocks[i].Storeys][];
-            for (var k = 0; k < K.Blocks[i].Storeys; k++)
+            outlines[i] = new Vector2[counts[i]][];
+            for (var k = 0; k < counts[i]; k++)
             {
-                var others = Enumerable.Range(0, K.Blocks.Length).Where(j => j != i && k < K.Blocks[j].Storeys).Select(j => clipped[j][k]).ToArray();
+                var others = Enumerable.Range(0, K.Blocks.Length).Where(j => j != i && k < counts[j]).Select(j => clipped[j][k]).ToArray();
                 outlines[i][k] = Contour.Fillet(clipped[i][k], K.CornerRadius, K.MinTurn, q => others.Any(o => Near(o, q, 0.6f)));
             }
         }
         var blocks = new Block[K.Blocks.Length];
         for (var i = 0; i < K.Blocks.Length; i++)
         {
-            var (part, storeys) = K.Blocks[i];
+            var part = K.Blocks[i].Part;
+            var storeys = counts[i];
             var rows = new Cell[storeys][];
             for (var k = 0; k < storeys; k++)
             {
-                var others = Enumerable.Range(0, K.Blocks.Length).Where(j => j != i && k < K.Blocks[j].Storeys).Select(j => outlines[j][k]).ToArray();
+                var others = Enumerable.Range(0, K.Blocks.Length).Where(j => j != i && k < counts[j]).Select(j => outlines[j][k]).ToArray();
                 var cells = Contour.Cells(outlines[i][k], K.MullionPitch);
                 rows[k] = [.. cells.Select((path, c) => new Cell(c, k, path, Kind(part, k, path, others)))];
             }
@@ -190,8 +200,8 @@ public sealed class WenkeSite : ZoneSite
         var plan = Footprints(b.Context.World);
         var y = BaseY(b.Context);
         foreach (var block in plan.Blocks) BuildBlock(b, plan, block, y);
-        Porch(b, y);
-        Atrium(b, y);
+        Porch(b, Door(b.Context.World), y);
+        Atrium(b, AtriumOf(b.Context.World), y);
         TowerRoof(b, plan.Blocks.Single(k => k.Part == K.Tower), y);
     }
 
@@ -341,9 +351,8 @@ public sealed class WenkeSite : ZoneSite
     /// granite threshold, and on the porch's glass plane the shut glass doors, side lights, a transom beam and the upper
     /// glazing. The threshold stands 3 cm over the forecourt paving (no steps).
     /// </summary>
-    private static void Porch(SiteBuilder b, float y)
+    private static void Porch(SiteBuilder b, PlanFrame f, float y)
     {
-        var f = Door;
         float hw = K.PorchHalfWidth, j = K.PorchJamb, d = K.PorchDepth, top = y + PorchTop, floor = y + K.PavingTop + 0.03f;
         var bevel = b.Detail == SiteDetail.Full ? 0.04f : 0f;
         GridFacade.Box(b, f, -hw - j, -hw, y - 0.1f, top, -0.4f, d, L.YellowGreen, bevel);
@@ -375,32 +384,37 @@ public sealed class WenkeSite : ZoneSite
         [new(1f, 0f), new(0.96f, 0.28f * K.AtriumRise), new(0.86f, 0.52f * K.AtriumRise), new(0.7f, 0.74f * K.AtriumRise),
             new(0.48f, 0.9f * K.AtriumRise), new(0.24f, 0.98f * K.AtriumRise), new(0f, K.AtriumRise)];
 
-    internal static PlanFrame AtriumFrame => PlanFrame.Along(K.AtriumCentre, K.AtriumAxis);
+    /// <summary>The vault's frame (centre, long axis) and semi-axes, registered in the atrium roof feature's props.</summary>
+    internal static (PlanFrame Frame, Vector2 Half) AtriumOf(IWorldModel world)
+    {
+        var props = world.Feature(K.AtriumRoofId).RequiredProps();
+        return (PlanFrame.Along(Registered.Pair(props.GetProperty("centre")), Registered.Pair(props.GetProperty("axis"))), Registered.Pair(props.GetProperty("half")));
+    }
 
     /// <summary>The hub roof the vault stands on (its top band).</summary>
-    internal static float AtriumBase(float y) => y + Floor(K.Blocks.Single(k => k.Part == K.Hub).Storeys) + K.RoofBand;
+    internal static float AtriumBase(float y) => y + Floor(K.HubStoreys) + K.RoofBand;
 
-    private static Vector2[] Ellipse(float scale, int segments)
+    private static Vector2[] Ellipse((PlanFrame Frame, Vector2 Half) atrium, float scale, int segments)
     {
-        var f = AtriumFrame;
+        var f = atrium.Frame;
         var points = new Vector2[segments];
         for (var i = 0; i < segments; i++)
         {
             var a = 2f * MathF.PI * i / segments;
-            points[i] = f.P(MathF.Cos(a) * K.AtriumHalf.X * scale, MathF.Sin(a) * K.AtriumHalf.Y * scale);
+            points[i] = f.P(MathF.Cos(a) * atrium.Half.X * scale, MathF.Sin(a) * atrium.Half.Y * scale);
         }
         return points;
     }
 
-    private static void Atrium(SiteBuilder b, float y)
+    private static void Atrium(SiteBuilder b, (PlanFrame Frame, Vector2 Half) atrium, float y)
     {
-        var f = AtriumFrame;
+        var f = atrium.Frame;
         var floor = AtriumBase(y);
         var segments = b.Detail switch { SiteDetail.Full => 64, SiteDetail.Plain => 40, _ => 24 };
         var curb = PartGeometryKernel.BeveledRectangleProfile(0.5f, K.AtriumCurb, b.Detail == SiteDetail.Full ? 0.04f : 0f);
-        b.Add(PartGeometryKernel.Sweep(curb, Ellipse(1f, segments), L.Wall, closed: true), Matrix4x4.CreateTranslation(0, floor, 0));
+        b.Add(PartGeometryKernel.Sweep(curb, Ellipse(atrium, 1f, segments), L.Wall, closed: true), Matrix4x4.CreateTranslation(0, floor, 0));
         var spring = floor + K.AtriumCurb;
-        b.Add(Solids.Lathe(VaultProfile, segments, L.Glass, K.AtriumHalf.X, K.AtriumHalf.Y), f.At(0, spring, 0));
+        b.Add(Solids.Lathe(VaultProfile, segments, L.Glass, atrium.Half.X, atrium.Half.Y), f.At(0, spring, 0));
         if (b.Detail == SiteDetail.Mass) return;
         // Ribs: meridians from the curb to the crown, and two horizontal rings, in the aluminium frame colour.
         var profile = VaultProfile;
@@ -412,7 +426,7 @@ public sealed class WenkeSite : ZoneSite
             {
                 Vector3 Point(Vector2 q)
                 {
-                    var p = f.P(c * q.X * K.AtriumHalf.X, s * q.X * K.AtriumHalf.Y);
+                    var p = f.P(c * q.X * atrium.Half.X, s * q.X * atrium.Half.Y);
                     return new(p.X, spring + q.Y + 0.04f, p.Y);
                 }
                 Strut(b, Point(profile[k]), Point(profile[k + 1]), K.AtriumRib, L.Metal);
@@ -421,7 +435,7 @@ public sealed class WenkeSite : ZoneSite
         if (b.Detail != SiteDetail.Full) return;
         var bar = PartGeometryKernel.BeveledRectangleProfile(K.AtriumRib, K.AtriumRib, 0);
         foreach (var k in new[] { 2, 4 })
-            b.Add(PartGeometryKernel.Sweep(bar, Ellipse(profile[k].X + 0.004f, segments), L.Metal, closed: true), Matrix4x4.CreateTranslation(0, spring + profile[k].Y, 0));
+            b.Add(PartGeometryKernel.Sweep(bar, Ellipse(atrium, profile[k].X + 0.004f, segments), L.Metal, closed: true), Matrix4x4.CreateTranslation(0, spring + profile[k].Y, 0));
     }
 
     /// <summary>A square bar between two world points.</summary>
@@ -485,7 +499,7 @@ public sealed class WenkeSite : ZoneSite
                 c.Wall(a + shift, e + shift, K.BandOut * 0.5f + 0.1f, y, top, SurfaceTag.Wall, FootMat.Glass);
             }
         }
-        var f = Door;
+        var f = Door(c.Context.World);
         float hw = K.PorchHalfWidth, j = K.PorchJamb, d = K.PorchDepth, porchTop = y + PorchTop;
         foreach (var s in new[] { -1f, 1f })
             c.Box(f.At(s * (hw + j * 0.5f), (y + porchTop) * 0.5f, (d - 0.4f) * 0.5f), new(j * 0.5f, (porchTop - y) * 0.5f, (d + 0.4f) * 0.5f), SurfaceTag.Wall, FootMat.StonePaving);
@@ -502,7 +516,7 @@ public sealed class WenkeSite : ZoneSite
         {
             // Q2 (walk, K1): P14's proposed stand, eye height, looking past the tree and stone at the tower and the shut door.
             var stand = CenterEastTune.Friendship.StandAt;
-            var q2 = Probe("Q2", K.Entity, new(stand.X, 1.62f, stand.Y), K.DoorAt - stand, 6f, 7f);
+            var q2 = Probe("Q2", K.Entity, new(stand.X, 1.62f, stand.Y), CenterEastTune.Friendship.StandLookAt - stand, 6f, 7f);
             // Q8b (baseline, fly only): 0.5 m off the tower's dark glass ribbon on its east face above the tenth storey.
             Vector2 a = new(421.27f, 54.7f), e = new(430.27f, 100.87f);
             var outward = Contour.Outward(a, e);

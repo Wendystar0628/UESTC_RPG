@@ -9,7 +9,6 @@ using Campus.Gen.Zones.West.Framework;
 using Campus.Gen.Zones.West.Motto;
 using Campus.Gen.Zones.West.Six;
 using GdUnit4;
-using A = Campus.Gen.Zones.West.WestTune.A10;
 using F4 = Campus.Gen.Zones.West.WestTune.Four;
 using I = Campus.Gen.Zones.West.WestTune.Innovation;
 using M = Campus.Gen.Zones.West.WestTune.Motto;
@@ -82,9 +81,7 @@ public sealed class WestModuleTests
         Require(institute.Min() == 4 && institute.Max() == 7, "研究院大楼 parts stay 4–7 storeys");
         Require(!world.Features.ContainsKey(new("qsh:way:779496166")), "六号's duplicate C shell stays hidden");
         var plaza = world.Features[new("design:west-a10-plaza")];
-        Require(plaza.Kind.Value == "road" && plaza.Geometry is PolygonGeometry g && g.Rings.Outer.Zip(A.Plaza).All(p => Vector2.Distance(p.First, p.Second) < 0.01f),
-            "the A10 plaza is registered as the tune's polygon");
-        Require(PlanGeometry.InsideByCrossings(A.Plaza, A.Post), "the A10 post stands on its plaza");
+        Require(plaza.Kind.Value == "road" && plaza.Geometry is PolygonGeometry, "the A10 plaza is registered as paving");
     }
 
     [TestCase]
@@ -103,14 +100,13 @@ public sealed class WestModuleTests
     [TestCase]
     public void BlocksStandAtTheirHeightsWithATallestA()
     {
-        var a = S.BaseHeight + SixSite.Style(S.UpperA).Top;
-        var b = S.BaseHeight + SixSite.Style(S.UpperB).Top;
-        var c = S.BaseHeight + SixSite.Style(S.UpperC).Top;
-        Require(MathF.Abs(a - 41.5f) < 0.6f, $"A reaches about 41.5 m, got {a}");
-        Require(MathF.Abs(b - 32.5f) < 0.6f && MathF.Abs(c - 32.5f) < 0.6f, $"B and C reach about 32.5 m, got {b}, {c}");
+        var world = World();
+        float Reach(string key) => S.BaseHeight + SixSite.Style(SixSite.Blocks.Single(k => k.Key == key).Upper(world)).Top;
+        float a = Reach("a"), b = Reach("b"), c = Reach("c");
+        Require(MathF.Abs(a - world.Features[new(S.EntityA)].Height!.Value) < 0.6f, $"A reaches its data height, got {a}");
+        Require(MathF.Abs(b - world.Features[new(S.EntityB)].Height!.Value) < 0.6f && MathF.Abs(c - 32.5f) < 0.6f, $"B reaches its data height and C about 32.5 m, got {b}, {c}");
         Require(a > b && a > c + S.SignRise, "A stays the tallest, above C's crown sign");
         // The glass base sits back from the stone line by the recess on every face.
-        var world = World();
         foreach (var k in SixSite.Blocks)
         {
             var plan = SixSite.Plan(world, k.Entity, k.Part);
@@ -191,7 +187,7 @@ public sealed class WestModuleTests
         var outward = PlanMath.Heading(77f);
         for (var d = -S.Recess - 1f; d <= 0.5f; d += 0.25f)
         {
-            var p = S.EastDoor + outward * d;
+            var p = SixSite.EastDoor(ctx.World) + outward * d;
             Require(!colliders.OfType<WallCollider>().Any(w => w.Y0 < 1.0f && w.Y1 > 1.0f && Near(w.A, w.B, p, w.HalfT + 0.05f)),
                 $"the east doorway is open {d:0.00} m along its axis");
         }
@@ -211,8 +207,9 @@ public sealed class WestModuleTests
         var layouts = new WestModule().DescribeWindowLayouts(world, 1).ToDictionary(l => l.Feature.Value, l => l.Grids, StringComparer.Ordinal);
         Require(layouts.Count == 4, $"four Facade-claimed features declare layouts, got {layouts.Count}");
         Require(layouts[WestTune.Shelter.Entity].Count == 0, "the bus shelter declares an empty window layout");
-        Require(layouts[S.EntityA].Single().Key == "a" && layouts[S.EntityA].Single().Rows == S.UpperA, "A: one grid over its upper floors");
-        Require(layouts[S.EntityB].Single().Rows == S.UpperB && layouts[S.EntityC].Single().Rows == S.UpperC, "B and C: one grid each");
+        int Upper(string key) => SixSite.Blocks.Single(k => k.Key == key).Upper(world);
+        Require(layouts[S.EntityA].Single().Key == "a" && layouts[S.EntityA].Single().Rows == Upper("a"), "A: one grid over its upper floors");
+        Require(layouts[S.EntityB].Single().Rows == Upper("b") && layouts[S.EntityC].Single().Rows == S.UpperC, "B and C: one grid each");
         Require(layouts.Values.SelectMany(g => g).All(g => g.Columns > 0), "every grid has cells");
     }
 
@@ -283,8 +280,8 @@ public sealed class WestModuleTests
         Require(file.Zone.Value == "west" && file.Owner.Value == "WP-19", "the file belongs to WP-19's west zone");
         Require(file.Ops.All(o => o.Id.StartsWith("design:terrain:west-", StringComparison.Ordinal) && o.Zone.Value == "west"), "ids and zones");
         var low = file.Ops.OfType<TerrainPlatformOp>().Single(o => o.Id == "design:terrain:west-wetland-low");
-        Require(low.Rings.Holes.Count == 1 && low.Rings.Holes[0].Zip(A.Dry).All(p => Vector2.Distance(p.First, p.Second) < 0.01f), "the low ground leaves the plaza's dry hole");
-        Require(A.Plaza.All(p => PlanGeometry.InsideByCrossings(A.Dry, p)) && PlanGeometry.InsideByCrossings(A.Dry, A.Post), "the plaza and its post lie inside the dry hole");
+        var plaza = ((PolygonGeometry)World().Features[new("design:west-a10-plaza")].Geometry).Rings.Outer;
+        Require(low.Rings.Holes.Count == 1 && plaza.All(p => PlanGeometry.InsideByCrossings(low.Rings.Holes[0], p)), "the low ground leaves a dry hole round the plaza");
         var stream = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-wetland-stream");
         var canal = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-hongguang-north");
         Require(stream.WaterY is -0.5 && canal.WaterY is -1.2, "the wetland stream keeps the lake level, the canal runs 0.7 m lower");

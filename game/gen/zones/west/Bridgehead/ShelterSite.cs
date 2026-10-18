@@ -2,6 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Gen.World;
 using StreetStyle = Campus.Gen.Parts.Street.StreetStyle;
 using Campus.Gen.Zones.Common;
 using L = Campus.Gen.Zones.West.WestTune.Look;
@@ -24,31 +25,61 @@ public sealed class ShelterSite : ZoneSite, ILightMetadataSource
 
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(H.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
-    internal static PlanFrame Frame => PlanFrame.Toward(H.BackA, H.BackB);
+    /// <summary>
+    /// The back line: the footprint's west edge in the world model, south end then north end (the platform opens to its right,
+    /// toward the road). The footprint is a rectangle; its two long sides are the candidates and the western one is the back.
+    /// </summary>
+    internal static (Vector2 A, Vector2 B) Back(IWorldModel world)
+    {
+        if (!world.Features.TryGetValue(new(H.Entity), out var feature))
+            throw new InvalidOperationException($"候车亭 {H.Entity} is missing from the world model.");
+        if (feature.Parts.FirstOrDefault() is not { } part || WorldFeatureGeometry.FacadeGeometryOf(part) is not PolygonGeometry g)
+            throw new InvalidOperationException($"候车亭 {H.Entity} has no single polygon footprint.");
+        var ring = g.Rings.Outer;
+        var back = Enumerable.Range(0, ring.Count).Select(i => (A: ring[i], B: ring[(i + 1) % ring.Count]))
+            .Where(edge => Vector2.Distance(edge.A, edge.B) > 8f)
+            .MinBy(edge => edge.A.X + edge.B.X);
+        return back.A.Y >= back.B.Y ? back : (back.B, back.A);
+    }
 
-    internal static float Length => Vector2.Distance(H.BackA, H.BackB);
+    internal static PlanFrame Frame(IWorldModel world)
+    {
+        var (a, b) = Back(world);
+        return PlanFrame.Toward(a, b);
+    }
+
+    internal static float Length(IWorldModel world)
+    {
+        var (a, b) = Back(world);
+        return Vector2.Distance(a, b);
+    }
 
     /// <summary>Post positions along the back (local x), inset from the ends.</summary>
-    internal static float[] PostsX => [.. Enumerable.Range(0, H.Posts).Select(i => 0.3f + i * (Length - 0.6f) / (H.Posts - 1))];
+    internal static float[] PostsX(float length) => [.. Enumerable.Range(0, H.Posts).Select(i => 0.3f + i * (length - 0.6f) / (H.Posts - 1))];
 
-    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod) =>
-        [new(Frame.Rect(-H.PlatformMargin, -0.25f, Length + H.PlatformMargin, H.Depth - 0.22f)),
-         new(Frame.Rect(-H.PlatformMargin, H.Depth - 0.24f, Length + H.PlatformMargin, H.Depth)),
-         new(Frame.Rect(-0.45f, -H.RoofBack, Length + 0.45f, H.Depth + H.RoofFront))];
+    protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
+    {
+        var frame = Frame(world);
+        var length = Length(world);
+        return [new(frame.Rect(-H.PlatformMargin, -0.25f, length + H.PlatformMargin, H.Depth - 0.22f)),
+                new(frame.Rect(-H.PlatformMargin, H.Depth - 0.24f, length + H.PlatformMargin, H.Depth)),
+                new(frame.Rect(-0.45f, -H.RoofBack, length + 0.45f, H.Depth + H.RoofFront))];
+    }
 
     private const float PostZ = 0.25f;
 
-    internal static float Ground(Func<float, float, float> ground)
+    internal static float Ground(IWorldModel world, Func<float, float, float> ground)
     {
-        var c = Frame.P(Length * 0.5f, H.Depth * 0.5f);
+        var c = Frame(world).P(Length(world) * 0.5f, H.Depth * 0.5f);
         return ground(c.X, c.Y);
     }
 
     public override void Build(SiteBuilder b)
     {
-        var f = Frame;
-        var y = Ground(b.Ground);
-        var len = Length;
+        var world = b.Context.World;
+        var f = Frame(world);
+        var y = Ground(world, b.Ground);
+        var len = Length(world);
         var top = y + H.PlatformRise;
         var under = top + H.Clear;
         var fine = b.Detail == SiteDetail.Full;
@@ -65,7 +96,7 @@ public sealed class ShelterSite : ZoneSite, ILightMetadataSource
             return;
         }
         Box(b, f, -0.4f, len + 0.4f, under - H.Band, under, front - 0.14f, front - 0.04f, L.ShelterBand, 0.01f);
-        var xs = PostsX;
+        var xs = PostsX(len);
         foreach (var x in xs)
         {
             Box(b, f, x - H.PostSize * 0.5f, x + H.PostSize * 0.5f, top - 0.02f, under + 0.01f, PostZ - H.PostSize * 0.5f, PostZ + H.PostSize * 0.5f, L.Metal, fine ? 0.012f : 0);
@@ -91,20 +122,20 @@ public sealed class ShelterSite : ZoneSite, ILightMetadataSource
             Box(b, f, x - 0.03f, x + 0.03f, top, top + H.SeatHeight - 0.055f, z0 + 0.04f, z1 - 0.06f, L.Metal, 0);
         // Downlight strip under the roof and its markers, one per bay (contract-12).
         Box(b, f, xs[0] + 0.4f, xs[^1] - 0.4f, under - 0.03f, under, H.Depth * 0.45f - 0.05f, H.Depth * 0.45f + 0.05f, L.LampLens, 0);
-        foreach (var light in Lights(under)) b.Light(light);
+        foreach (var light in Lights(world, under)) b.Light(light);
     }
 
     public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var top = Ground(context.World.Terrain.HeightAt) + H.PlatformRise;
-        return Lights(top + H.Clear);
+        var top = Ground(context.World, context.World.Terrain.HeightAt) + H.PlatformRise;
+        return Lights(context.World, top + H.Clear);
     }
 
-    private static IReadOnlyList<LightEmitter> Lights(float under)
+    private static IReadOnlyList<LightEmitter> Lights(IWorldModel world, float under)
     {
-        var f = Frame;
-        var xs = PostsX;
+        var f = Frame(world);
+        var xs = PostsX(Length(world));
         var lights = new List<LightEmitter>();
         for (var i = 0; i + 1 < xs.Length; i++)
         {
@@ -119,16 +150,17 @@ public sealed class ShelterSite : ZoneSite, ILightMetadataSource
 
     public override void Collide(SiteColliders c)
     {
-        var f = Frame;
-        var y = Ground(c.Ground);
-        var len = Length;
+        var world = c.Context.World;
+        var f = Frame(world);
+        var y = Ground(world, c.Ground);
+        var len = Length(world);
         var top = y + H.PlatformRise;
         var under = top + H.Clear;
         // Platform (a 0.18 m step up, auto-stepped), roof slab, posts as cylinders, the glass screens as walls, the bench.
         c.Box(f.At(len * 0.5f, (y - 0.12f + top) * 0.5f, (H.Depth - 0.25f) * 0.5f), new(len * 0.5f + H.PlatformMargin, (top - y + 0.12f) * 0.5f, (H.Depth + 0.25f) * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
         c.Box(f.At(len * 0.5f, under + H.RoofThick * 0.5f, (H.Depth + H.RoofFront - H.RoofBack) * 0.5f),
             new(len * 0.5f + 0.45f, H.RoofThick * 0.5f, (H.Depth + H.RoofFront + H.RoofBack) * 0.5f), SurfaceTag.Wall, FootMat.Metal);
-        var xs = PostsX;
+        var xs = PostsX(len);
         foreach (var x in xs) c.Add(new PostCollider(f.P(x, PostZ), H.PostSize * 0.6f, top, under, SurfaceTag.Prop) { Foot = FootMat.Metal });
         c.Wall(f.P(xs[0], PostZ), f.P(xs[^1], PostZ), 0.03f, top, top + H.ScreenTop, SurfaceTag.Wall, FootMat.Glass);
         foreach (var x in new[] { xs[0], xs[^1] })

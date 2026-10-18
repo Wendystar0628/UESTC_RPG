@@ -1,5 +1,6 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -33,31 +34,62 @@ public sealed class EastLakeSite : ZoneSite
 
     public override string Id => "18b.east-lake";
 
-    /// <summary>The wade step bay: x along the bank back edge, +Z out over the water.</summary>
-    internal static PlanFrame WadeFrame => PlanFrame.Toward(K.HardBank[K.WadeSegment], K.HardBank[K.WadeSegment + 1]);
-
-    internal static float WadeLength => Vector2.Distance(K.HardBank[K.WadeSegment], K.HardBank[K.WadeSegment + 1]);
-
-    public override IReadOnlyList<InspectionProbe> Probes
+    /// <summary>
+    /// The shore read from the map data (D-239): the Liren-side hard bank (the lake outline's last <see cref="K.BankVertices"/>
+    /// vertices, the rectilinear north edge, west to east), the bank segment the wade step lies on, the step's width and two
+    /// tread levels (design:south-eastlake-wade-step), and the statue's place.
+    /// </summary>
+    internal sealed record Shore(Vector2[] Bank, int WadeSegment, float WadeWidth, float Tread1, float Tread2, Vector2 StatueAt)
     {
-        get
-        {
-            var eye = WadeFrame.P(WadeLength * 0.5f - 1.5f, K.Tread1Depth + K.Tread2Depth * 0.5f);
-            return [Probe("Q3", Lake, new(eye.X, K.Tread2 + 1.62f, eye.Y), WadeFrame.W, -12f, 2f)];
-        }
+        /// <summary>The wade step bay: x along the bank back edge, +Z out over the water.</summary>
+        public PlanFrame WadeFrame => PlanFrame.Toward(Bank[WadeSegment], Bank[WadeSegment + 1]);
+
+        public float WadeLength => Vector2.Distance(Bank[WadeSegment], Bank[WadeSegment + 1]);
+
+        /// <summary>The wade opening along a segment (local x), empty elsewhere.</summary>
+        public (float U0, float U1)[] Openings(int index, float length) =>
+            index == WadeSegment ? [(length * 0.5f - WadeWidth * 0.5f, length * 0.5f + WadeWidth * 0.5f)] : [];
     }
+
+    private static readonly ConditionalWeakTable<IWorldModel, Shore> Shores = new();
+
+    internal static Shore ShoreOf(IWorldModel world) => Shores.GetValue(world, ReadShore);
+
+    private static Shore ReadShore(IWorldModel world)
+    {
+        var outline = Water(world).Outer;
+        var bank = outline.Skip(outline.Count - K.BankVertices).ToArray();
+        if (bank[0].X > bank[^1].X) Array.Reverse(bank);
+        var step = world.Feature(WadeStep);
+        var at = step.Point();
+        var wade = Enumerable.Range(0, bank.Length - 1).MinBy(i => DistanceToSegment(at, bank[i], bank[i + 1]));
+        var treads = step.Numbers("treads");
+        return new(bank, wade, step.Number("width"), treads[0], treads[1], world.Feature(Statue).Point());
+    }
+
+    private static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
+    {
+        var ab = b - a;
+        var t = Math.Clamp(Vector2.Dot(p - a, ab) / MathF.Max(Vector2.Dot(ab, ab), 1e-9f), 0f, 1f);
+        return Vector2.Distance(p, a + ab * t);
+    }
+
+    public override IReadOnlyList<InspectionProbe> Probes =>
+        // Q3: on the wade step's second tread, looking out over the water at the boats (a stand, not map data).
+        [Probe("Q3", Lake, new(154.52f, -0.65f + 1.62f, 300.54f), new(-0.1789f, 0.9839f), -12f, 2f)];
 
     public override void Build(SiteBuilder b)
     {
+        var shore = ShoreOf(b.Context.World);
         var water = Water(b.Context.World);
-        var y = b.Ground(K.HardBank[K.WadeSegment]);
-        var segments = BankSegments(water).ToArray();
-        var rail = RailLine(segments);
+        var y = b.Ground(shore.Bank[shore.WadeSegment]);
+        var segments = BankSegments(shore, water).ToArray();
+        var rail = RailLine(shore, segments);
         var bevel = b.Detail == SiteDetail.Full ? 0.02f : 0f;
         foreach (var (f, l, i) in segments)
         {
-            Bank(b, f, l, i, y);
-            Balustrade(b, rail[i], rail[i + 1], RailOpenings(f, l, i, rail[i], rail[i + 1]), y + K.CopingTop, b.Detail);
+            Bank(b, shore, f, l, i, y);
+            Balustrade(b, rail[i], rail[i + 1], RailOpenings(shore, f, l, i, rail[i], rail[i + 1]), y + K.CopingTop, b.Detail);
         }
         // A raised coping block and a newel at every bank vertex: the mitred segments meet under it.
         foreach (var p in rail)
@@ -66,9 +98,9 @@ public sealed class EastLakeSite : ZoneSite
             b.Add(PartGeometryKernel.BeveledBox(0.85f, K.CopingTop + 0.14f, 0.85f, bevel, L.Sandstone), corner.At(0, y - 0.1f, 0));
             Newel(b, corner, 0, y + K.CopingTop + 0.03f, bevel);
         }
-        WadeSteps(b, y);
-        Boats(b, y);
-        WuLiren(b, b.Ground(K.Statue));
+        WadeSteps(b, shore, y);
+        Boats(b, shore, y);
+        WuLiren(b, shore, b.Ground(shore.StatueAt));
         Pavilion(b, b.Ground(K.Pavilion));
     }
 
@@ -86,11 +118,11 @@ public sealed class EastLakeSite : ZoneSite
     internal static bool InWater(PolygonRings water, Vector2 p) => PlanGeometry.InsideByCrossings(water.Outer, p) && !water.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p));
 
     /// <summary>Hard-bank segments as frames with +Z over the water, x from 0 to the segment length.</summary>
-    internal static IEnumerable<(PlanFrame Frame, float Length, int Index)> BankSegments(PolygonRings water)
+    internal static IEnumerable<(PlanFrame Frame, float Length, int Index)> BankSegments(Shore shore, PolygonRings water)
     {
-        for (var i = 0; i + 1 < K.HardBank.Length; i++)
+        for (var i = 0; i + 1 < shore.Bank.Length; i++)
         {
-            Vector2 a = K.HardBank[i], c = K.HardBank[i + 1];
+            Vector2 a = shore.Bank[i], c = shore.Bank[i + 1];
             var f = PlanFrame.Toward(a, c);
             var l = Vector2.Distance(a, c);
             if (!InWater(water, f.P(l * 0.5f, 0.6f))) f = PlanFrame.Toward(c, a);
@@ -98,17 +130,13 @@ public sealed class EastLakeSite : ZoneSite
         }
     }
 
-    /// <summary>The wade opening along a segment (local x), empty elsewhere.</summary>
-    internal static (float U0, float U1)[] Openings(int index, float length) =>
-        index == K.WadeSegment ? [(length * 0.5f - K.WadeWidth * 0.5f, length * 0.5f + K.WadeWidth * 0.5f)] : [];
-
     /// <summary>
     /// Points on the balustrade line, RailSetback back from the waterline, at every bank vertex: mitred between the two
     /// segments' water normals, so the rails of neighbouring segments meet on one newel.
     /// </summary>
-    internal static Vector2[] RailLine((PlanFrame Frame, float Length, int Index)[] segments)
+    internal static Vector2[] RailLine(Shore shore, (PlanFrame Frame, float Length, int Index)[] segments)
     {
-        var n = K.HardBank.Length;
+        var n = shore.Bank.Length;
         var points = new Vector2[n];
         for (var v = 0; v < n; v++)
         {
@@ -120,16 +148,16 @@ public sealed class EastLakeSite : ZoneSite
                 Vector2 n1 = segments[v - 1].Frame.W, n2 = segments[v].Frame.W;
                 offset = (n1 + n2) / (1f + n1.X * n2.X + n1.Y * n2.Y);
             }
-            points[v] = K.HardBank[v] - offset * K.RailSetback;
+            points[v] = shore.Bank[v] - offset * K.RailSetback;
         }
         return points;
     }
 
     /// <summary>A segment's openings carried over to its balustrade line from a to c.</summary>
-    private static (float U0, float U1)[] RailOpenings(PlanFrame segment, float length, int index, Vector2 a, Vector2 c)
+    private static (float U0, float U1)[] RailOpenings(Shore shore, PlanFrame segment, float length, int index, Vector2 a, Vector2 c)
     {
         var line = PlanFrame.Toward(a, c);
-        return [.. Openings(index, length).Select(o =>
+        return [.. shore.Openings(index, length).Select(o =>
         {
             var u0 = line.Local(segment.P(o.U0, 0)).X;
             var u1 = line.Local(segment.P(o.U1, 0)).X;
@@ -139,10 +167,10 @@ public sealed class EastLakeSite : ZoneSite
 
     // ---- Hard bank (§4.3) ----
 
-    private static void Bank(SiteBuilder b, PlanFrame f, float l, int index, float y)
+    private static void Bank(SiteBuilder b, Shore shore, PlanFrame f, float l, int index, float y)
     {
         var bevel = b.Detail == SiteDetail.Full ? 0.02f : 0f;
-        foreach (var (u0, u1) in GridFacade.Open(0, l, Openings(index, l)))
+        foreach (var (u0, u1) in GridFacade.Open(0, l, shore.Openings(index, l)))
         {
             // Retaining wall from below the water to the coping, its face on the waterline; the coping overhangs 8 cm.
             GridFacade.Box(b, f, u0 - 0.2f, u1 + 0.2f, y + K.WallBottom, y - 0.1f, -0.5f, 0, L.BrickRed, 0);
@@ -207,26 +235,27 @@ public sealed class EastLakeSite : ZoneSite
 
     // ---- Wade step (design:south-eastlake-wade-step) and the boats (§4.3, §4.6) ----
 
-    private static void WadeSteps(SiteBuilder b, float y)
+    private static void WadeSteps(SiteBuilder b, Shore shore, float y)
     {
-        var f = WadeFrame;
-        var (u0, u1) = Openings(K.WadeSegment, WadeLength)[0];
+        var f = shore.WadeFrame;
+        var (u0, u1) = shore.Openings(shore.WadeSegment, shore.WadeLength)[0];
         var bevel = b.Detail == SiteDetail.Full ? 0.02f : 0f;
         // Riser from the platform down to the first tread, then the two treads; no per-step outline (18a review).
-        GridFacade.Box(b, f, u0, u1, y + K.Tread1, y, -0.45f, 0, L.StepStone, 0);
-        GridFacade.Box(b, f, u0, u1, y + K.WallBottom, y + K.Tread1, 0, K.Tread1Depth, L.StepStone, bevel);
-        GridFacade.Box(b, f, u0, u1, y + K.WallBottom, y + K.Tread2, K.Tread1Depth, K.Tread1Depth + K.Tread2Depth, L.StepStone, bevel);
+        GridFacade.Box(b, f, u0, u1, y + shore.Tread1, y, -0.45f, 0, L.StepStone, 0);
+        GridFacade.Box(b, f, u0, u1, y + K.WallBottom, y + shore.Tread1, 0, K.Tread1Depth, L.StepStone, bevel);
+        GridFacade.Box(b, f, u0, u1, y + K.WallBottom, y + shore.Tread2, K.Tread1Depth, K.Tread1Depth + K.Tread2Depth, L.StepStone, bevel);
         // Mooring posts on the platform at the opening ends.
         foreach (var u in new[] { u0 - 0.6f, u1 + 0.6f })
             GridFacade.Box(b, f, u - 0.15f, u + 0.15f, y, y + 0.65f, -0.75f, -0.45f, L.Granite, bevel);
     }
 
-    private static void Boats(SiteBuilder b, float y)
+    private static void Boats(SiteBuilder b, Shore shore, float y)
     {
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
-        var f = WadeFrame;
+        var f = shore.WadeFrame;
+        var wadeLength = shore.WadeLength;
         var z = K.Tread1Depth + K.Tread2Depth + 0.35f + K.BoatBeam * 0.5f;
-        foreach (var x in new[] { WadeLength * 0.5f - K.BoatLength * 0.6f, WadeLength * 0.5f + K.BoatLength * 0.6f })
+        foreach (var x in new[] { wadeLength * 0.5f - K.BoatLength * 0.6f, wadeLength * 0.5f + K.BoatLength * 0.6f })
         {
             var keel = y + K.BoatKeel;
             b.Add(LandmarkSolids.Hull(K.BoatLength, K.BoatBeam, K.BoatDepth, L.BoatWood, L.BoatInside), f.AtTurned(x, keel, z));
@@ -239,15 +268,15 @@ public sealed class EastLakeSite : ZoneSite
 
     // ---- Wu Liren statue (§4.9) ----
 
-    internal static PlanFrame StatueFrame => PlanMath.Facing(K.Statue, K.StatueFacing);
+    internal static PlanFrame StatueFrame(Shore shore) => PlanMath.Facing(shore.StatueAt, K.StatueFacing);
 
     /// <summary>
     /// Hook points for the detail pass (§4.9), world space: the seasonal leaf on the left shoulder (one season-masked instance
     /// set, SYS-TIME item 5) and the in-ground uplights in front of the pedestal (lamp.statue, off 1:00–5:30, §11).
     /// </summary>
-    internal static (Vector3 Leaf, Vector3[] Uplights) StatueHooks(float y)
+    internal static (Vector3 Leaf, Vector3[] Uplights) StatueHooks(Shore shore, float y)
     {
-        var f = StatueFrame;
+        var f = StatueFrame(shore);
         Vector3 W(Vector3 local)
         {
             var p = f.P(local.X, local.Z);
@@ -263,9 +292,9 @@ public sealed class EastLakeSite : ZoneSite
     /// bent across the waist holding a rolled document. The head is an ovoid with a hair mass only: no
     /// features and no likeness (CORE-INDEX).
     /// </summary>
-    private static void WuLiren(SiteBuilder b, float y)
+    private static void WuLiren(SiteBuilder b, Shore shore, float y)
     {
-        var f = StatueFrame;
+        var f = StatueFrame(shore);
         var detail = b.Detail;
         var bevel = detail == SiteDetail.Full ? 0.03f : 0f;
         b.Add(PartGeometryKernel.BeveledBox(2.0f, 0.3f, 2.0f, bevel, L.DarkStone), f.At(0, y - 0.05f, 0));
@@ -428,28 +457,29 @@ public sealed class EastLakeSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
+        var shore = ShoreOf(c.Context.World);
         var water = Water(c.Context.World);
-        var y = c.Ground(K.HardBank[K.WadeSegment].X, K.HardBank[K.WadeSegment].Y);
-        var segments = BankSegments(water).ToArray();
-        var rail = RailLine(segments);
+        var y = c.Ground(shore.Bank[shore.WadeSegment].X, shore.Bank[shore.WadeSegment].Y);
+        var segments = BankSegments(shore, water).ToArray();
+        var rail = RailLine(shore, segments);
         foreach (var (f, l, i) in segments)
         {
             var line = PlanFrame.Toward(rail[i], rail[i + 1]);
-            foreach (var (u0, u1) in GridFacade.Open(-0.17f, Vector2.Distance(rail[i], rail[i + 1]) + 0.17f, RailOpenings(f, l, i, rail[i], rail[i + 1])))
+            foreach (var (u0, u1) in GridFacade.Open(-0.17f, Vector2.Distance(rail[i], rail[i + 1]) + 0.17f, RailOpenings(shore, f, l, i, rail[i], rail[i + 1])))
                 c.Wall(line.P(u0, 0), line.P(u1, 0), 0.17f, y - 1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
         }
         // Wade treads (auto-step 0.30 and 0.35 m) and the mooring posts.
-        var w = WadeFrame;
-        var (o0, o1) = Openings(K.WadeSegment, WadeLength)[0];
+        var w = shore.WadeFrame;
+        var (o0, o1) = shore.Openings(shore.WadeSegment, shore.WadeLength)[0];
         var half = (o1 - o0) * 0.5f;
         var mid = (o0 + o1) * 0.5f;
-        c.Box(w.At(mid, y + K.Tread1 - 0.15f, K.Tread1Depth * 0.5f), new(half, 0.15f, K.Tread1Depth * 0.5f), SurfaceTag.Stair, FootMat.StonePaving);
-        c.Box(w.At(mid, y + K.Tread2 - 0.15f, K.Tread1Depth + K.Tread2Depth * 0.5f), new(half, 0.15f, K.Tread2Depth * 0.5f), SurfaceTag.Stair, FootMat.StonePaving);
+        c.Box(w.At(mid, y + shore.Tread1 - 0.15f, K.Tread1Depth * 0.5f), new(half, 0.15f, K.Tread1Depth * 0.5f), SurfaceTag.Stair, FootMat.StonePaving);
+        c.Box(w.At(mid, y + shore.Tread2 - 0.15f, K.Tread1Depth + K.Tread2Depth * 0.5f), new(half, 0.15f, K.Tread2Depth * 0.5f), SurfaceTag.Stair, FootMat.StonePaving);
         foreach (var u in new[] { o0 - 0.6f, o1 + 0.6f })
             c.Add(new PostCollider(w.P(u, -0.6f), 0.2f, y, y + 0.65f, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
         // Statue pedestal.
-        var sy = c.Ground(K.Statue.X, K.Statue.Y);
-        c.Box(PlanMath.Facing(K.Statue, K.StatueFacing).At(0, sy + 1.0f, 0), new(1.0f, 1.0f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);
+        var sy = c.Ground(shore.StatueAt.X, shore.StatueAt.Y);
+        c.Box(StatueFrame(shore).At(0, sy + 1.0f, 0), new(1.0f, 1.0f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);
         // Pavilion: platform, steps, columns, benches.
         var p = PavilionFrame;
         var py = c.Ground(K.Pavilion.X, K.Pavilion.Y);

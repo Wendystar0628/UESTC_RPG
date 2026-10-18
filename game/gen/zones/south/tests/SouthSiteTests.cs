@@ -5,6 +5,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.World;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.South.Framework;
 using Campus.Gen.Tests.Support;
 using GdUnit4;
 
@@ -39,9 +40,10 @@ public sealed class SouthSiteTests
         var boundary = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).Where(c => c.Tag == SurfaceTag.Boundary).ToArray();
         Require(boundary.Length >= 11, "houses, islands, carriageway and both turnstile rows are boundary colliders");
         // March along the gate line between the guard houses' walls: every 0.25 m sample is inside some boundary primitive.
-        var along = Vector2.Normalize(SouthTune.Gate.HouseEast - SouthTune.Gate.HouseWest);
-        var west = SouthTune.Gate.HouseWest + along * (SouthTune.Gate.HouseSize * 0.5f);
-        var east = SouthTune.Gate.HouseEast - along * (SouthTune.Gate.HouseSize * 0.5f);
+        var gate = Gate.SouthGateSite.LayoutOf(ctx.World);
+        var along = Vector2.Normalize(gate.HouseEast - gate.HouseWest);
+        var west = gate.HouseWest + along * (SouthTune.Gate.HouseSize * 0.5f);
+        var east = gate.HouseEast - along * (SouthTune.Gate.HouseSize * 0.5f);
         // The barrier arms stand 1.4 m inside the turnstile rows; sample on the arms' line, which crosses every element.
         var inward = new Vector2(-along.Y, along.X) * SouthTune.Gate.BarrierZ;
         for (var s = 0f; s <= 1f; s += 0.25f / Vector2.Distance(west, east))
@@ -96,11 +98,13 @@ public sealed class SouthSiteTests
         Require(MathF.Abs(along * 2f - 18f) < 0.1f && MathF.Abs(across * 2f - 12f) < 0.1f, $"about 18 × 12 m ({along * 2f:0.0} × {across * 2f:0.0})");
         Require(MathF.Abs(ZoneSite.Bearing(frame.W) - 36.8f) < 1f, $"the long side runs along the main axis ({ZoneSite.Bearing(frame.W):0.0}°)");
         var ring = ((PolygonGeometry)plaza.Geometry).Rings;
-        // WP-13's kiosk (2 × 0.8 m) on the spot the plaza keeps for A01: on the paving, at least 3 m from every carriageway edge.
-        var yaw = SouthTune.Plaza.KioskYaw * MathF.PI / 180f;
+        // WP-13's kiosk (2 × 0.8 m) on the A01 anchor (WP-48c's overlay): on the paving, at least 3 m from every carriageway edge.
+        var a01 = FullWorld().Features[new("design:anchor:A01")];
+        var kioskSpot = Common.PlanMath.Centroid(((PolygonGeometry)a01.Geometry).Rings.Outer);
+        var yaw = a01.Number("yawDeg") * MathF.PI / 180f;
         var face = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
         var side = new Vector2(-face.Y, face.X);
-        var corners = new[] { -1f, 1f }.SelectMany(u => new[] { -1f, 1f }.Select(v => SouthTune.Plaza.KioskSpot + face * (0.4f * u) + side * (1.0f * v))).ToArray();
+        var corners = new[] { -1f, 1f }.SelectMany(u => new[] { -1f, 1f }.Select(v => kioskSpot + face * (0.4f * u) + side * (1.0f * v))).ToArray();
         Require(corners.All(p => PlanGeometry.Contains(ring, p)), "the kiosk stands on the plaza");
         var lanes = world.Network.Roads.Where(r => Text(r.Props, "highway") is "residential" or "service" or "tertiary" or "secondary" or "unclassified").ToArray();
         var clearance = corners.Min(p => lanes.Min(r => PolylineDistance(p, r.Line.Points) - r.Width * 0.5f));
@@ -108,7 +112,7 @@ public sealed class SouthSiteTests
         // The planter and benches stay on the paving and clear of the kiosk and the space in front of its panel.
         var items = new SouthModule().ItemsFor(Context(), LodLevel.L0).Where(i => i.Part?.Part.Value is PartCatalog.Bench or PartCatalog.Planter).ToArray();
         Require(items.Length == 3, $"a planter and two benches ({items.Length})");
-        Require(items.All(i => PlanGeometry.Contains(ring, i.Anchor) && Vector2.Distance(i.Anchor, SouthTune.Plaza.KioskSpot) > 6f), "furniture on the plaza, clear of the kiosk");
+        Require(items.All(i => PlanGeometry.Contains(ring, i.Anchor) && Vector2.Distance(i.Anchor, kioskSpot) > 6f), "furniture on the plaza, clear of the kiosk");
     }
 
     [TestCase]
@@ -118,13 +122,14 @@ public sealed class SouthSiteTests
         var items = new SouthModule().ItemsFor(ctx, LodLevel.L0).Where(i => i.Mesh is not null).ToArray();
         var f = Xuanbang.XuanbangSite.Rings(ctx.World);
         float Top(IReadOnlyList<Vector2> ring) => items.Where(i => Near(ring, i.Anchor, 3f)).Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
-        Require(MathF.Abs(Top(f.Clock) - SouthTune.Xuanbang.Top) < 0.05f, $"clock tower top {Top(f.Clock)}");
-        Require(MathF.Abs(Top(f.Tower) - 73.85f) < 0.05f, $"tower top {Top(f.Tower)}");
+        Require(MathF.Abs(Top(f.Clock) - f.ClockTop) < 0.05f, $"clock tower top {Top(f.Clock)}");
+        var towerTop = ctx.World.Feature(Xuanbang.XuanbangSite.Feature).Part(Xuanbang.XuanbangSite.TowerPart).Height!.Value;
+        Require(MathF.Abs(Top(f.Tower) - towerTop) < 0.05f, $"tower top {Top(f.Tower)}");
         var main = items.Where(i => Near(f.Main, i.Anchor, 1f) && !Near(f.Tower, i.Anchor, 3f) && !Near(f.Clock, i.Anchor, 3f)
-            && Vector2.Distance(i.Anchor, SouthTune.Xuanbang.Skylight) > 10f).Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
+            && Vector2.Distance(i.Anchor, f.Skylight) > 10f).Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
         Require(main > 35.6f && main < 38.8f, $"main wing roof line {main} (35.7 m, gables up to 38.3 m)");
         var all = items.Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
-        Require(all < 73.9f, $"the Xuanbang tower stays the highest point of the zone ({all})");
+        Require(all < towerTop + 0.05f, $"the Xuanbang tower stays the highest point of the zone ({all})");
     }
 
     [TestCase]
@@ -151,12 +156,13 @@ public sealed class SouthSiteTests
         var module = new SouthModule();
         var barriers = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.Barrier).ToArray();
         var water = EastLake.EastLakeSite.Water(ctx.World);
-        Require(EastLake.EastLakeSite.InWater(water, EastLake.EastLakeSite.WadeFrame.P(EastLake.EastLakeSite.WadeLength * 0.5f, 1f)), "the wade frame looks over the water");
-        Require(SouthTune.Lake.Tread2 < -0.5f && SouthTune.Lake.Tread2 > -0.8f, "the wade tread is under the -0.5 m water by less than 0.3 m");
+        var shore = EastLake.EastLakeSite.ShoreOf(ctx.World);
+        Require(EastLake.EastLakeSite.InWater(water, shore.WadeFrame.P(shore.WadeLength * 0.5f, 1f)), "the wade frame looks over the water");
+        Require(shore.Tread2 < -0.5f && shore.Tread2 > -0.8f, "the wade tread is under the -0.5 m water by less than 0.3 m");
         Require(SouthTune.Lake.RailTop >= 1.05f, "balustrade at least 1.05 m");
-        foreach (var (f, l, i) in EastLake.EastLakeSite.BankSegments(water))
+        foreach (var (f, l, i) in EastLake.EastLakeSite.BankSegments(shore, water))
         {
-            var openings = EastLake.EastLakeSite.Openings(i, l);
+            var openings = shore.Openings(i, l);
             for (var u = 0.3f; u <= l - 0.3f; u += 0.25f)
             {
                 var p = f.P(u, -SouthTune.Lake.RailSetback);
@@ -179,7 +185,8 @@ public sealed class SouthSiteTests
         var ctx = Context();
         var p = Sports.PlatformSite.PlanOf(ctx.World);
         Require(p.Decks.Count == 1, "one deck: A06 moves onto it, no terrace is added");
-        Require(SouthTune.Sports.PlatformTop == 5.0f && MathF.Abs(p.Top - p.Y - SouthTune.Sports.PlatformTop) < 0.01f, "the deck top, A06's y, is the 5.0 m platform storey");
+        var a06 = FullWorld().Features[new("design:anchor:A06")];
+        Require(MathF.Abs(p.Top - p.Y - a06.Number("groundY")) < 0.01f, "the deck top is A06's y, the platform storey");
         // A06's kiosk (2 × 0.8 m, WP-13's) on the deck between the gym and the natatorium, its panel toward the stadium: every corner
         // on the deck and at least 3 m from the deck's edges and the parapets' inner faces. The anchor data stays as it is until
         // Astra moves it after the merge.
@@ -218,16 +225,16 @@ public sealed class SouthSiteTests
         Require(pool.A >= pool.B && pool.B > 35f && pool.A < 60f, $"natatorium ellipse {pool.A} × {pool.B}");
         float Top(Vector2 centre, float radius) => items.Where(i => Vector2.Distance(i.Anchor, centre) < radius).Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
         var gymTop = Top(gym.Centre, gym.Radius);
-        Require(gymTop > SouthTune.Sports.GymTop - 0.1f && gymTop < SouthTune.Sports.GymTop + 1.2f, $"gym roof at 26 m, vent caps above it ({gymTop})");
+        Require(gymTop > gym.Top - 0.1f && gymTop < gym.Top + 1.2f, $"gym roof at the data's height, vent caps above it ({gymTop} against {gym.Top})");
         var poolTop = Top(pool.Frame.Origin, pool.B);
         Require(poolTop is > 14.5f and < 16f, $"natatorium a low dome near 15 m ({poolTop})");
         // The platform-storey doorway (gym.deck) is open between the platform and the door head; the drum is walled elsewhere.
         var walls = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).OfType<WallCollider>().ToArray();
         var deck = gym.Centre + Common.PlanMath.Heading(SouthTune.Sports.GymDoorBearing) * (gym.Radius - SouthTune.Sports.GymBaseInset);
-        Require(!walls.Any(w => Covers(w, deck, SouthTune.Sports.PlatformTop + 1.5f)), "the gym's deck doorway is open");
-        Require(walls.Any(w => Covers(w, deck, SouthTune.Sports.PlatformTop - 1f)), "the drum is closed below the platform storey");
+        Require(!walls.Any(w => Covers(w, deck, gym.DeckTop + 1.5f)), "the gym's deck doorway is open");
+        Require(walls.Any(w => Covers(w, deck, gym.DeckTop - 1f)), "the drum is closed below the platform storey");
         var back = gym.Centre - Common.PlanMath.Heading(SouthTune.Sports.GymDoorBearing) * (gym.Radius - SouthTune.Sports.GymBaseInset);
-        Require(walls.Any(w => Covers(w, back, SouthTune.Sports.PlatformTop + 1.5f)), "the drum is closed opposite the door");
+        Require(walls.Any(w => Covers(w, back, gym.DeckTop + 1.5f)), "the drum is closed opposite the door");
     }
 
     private static float PolylineDistance(Vector2 p, IReadOnlyList<Vector2> line)

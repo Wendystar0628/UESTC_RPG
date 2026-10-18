@@ -29,7 +29,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
     public override string Id => "cluster." + Cluster.Key;
 
     /// <summary>Q1 (walk, K1) outside the open main gate and Q6 (45° down, K2–K3) over its courtyard.</summary>
-    public override IReadOnlyList<InspectionProbe> Probes => Cluster.Open
+    public override IReadOnlyList<InspectionProbe> Probes => Cluster.Key == NorthTune.Probes.OpenCluster
         ?
         [
             Probe("Q1", Cluster.Id, NorthTune.Probes.GateEye, NorthTune.Probes.GateLook, 3f, 1f),

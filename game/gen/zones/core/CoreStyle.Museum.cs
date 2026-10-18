@@ -11,7 +11,7 @@ public static partial class CoreStyle
 {
     // ---- Section: one tall gallery storey under a flat roof that runs out over the colonnade ring to the eave, the white
     //      central hall (序厅) rising from its middle under a low pyramid roof (review). ----
-    /// <summary>Gallery storey: floor to the flat roof's top (BuildingFrame storeys).</summary>
+    /// <summary>Gallery storey: floor to the flat roof's top (BuildingFrame storeys). Not the data's (8401 two storeys 7.2 m, 8402 one storey 3.6 m): the gallery is one tall storey (D-239).</summary>
     public static readonly float[] MuseumStoreys = [5.4f];
     /// <summary>Colonnade ceiling, and the top of the granite gallery walls under it.</summary>
     public const float MuseumSoffit = 4.6f;

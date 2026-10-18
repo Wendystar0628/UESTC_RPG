@@ -81,6 +81,10 @@ public sealed class ClusterLayout
     private static ClusterLayout? Compute(IWorldModel world, NorthTune.Cluster cluster)
     {
         if (!world.Features.TryGetValue(new(cluster.Id), out var feature)) return null;
+        // The main gate point and whether it is open are the overlay's gate feature (D-239).
+        if (!world.Features.TryGetValue(new("design:north-gate-" + cluster.Key), out var gateFeature) || gateFeature.Geometry is not PointGeometry gatePoint) return null;
+        var mainGate = new Vector2(gatePoint.Position.X, gatePoint.Position.Z);
+        var clusterOpen = gateFeature.Props is { ValueKind: JsonValueKind.Object } gateProps && gateProps.TryGetProperty("open", out var openFlag) && openFlag.ValueKind == JsonValueKind.True;
         var ring = Plan.OuterRing(feature);
         if (ring is null || ring.Count < 3) return null;
         var sign = PlanGeometry.SignedArea(ring) > 0 ? 1f : -1f;
@@ -203,7 +207,7 @@ public sealed class ClusterLayout
         var best = 15f;
         for (var c = 0; c < crossings.Count; c++)
         {
-            var d = Vector2.Distance(crossings[c].Point, cluster.MainGate);
+            var d = Vector2.Distance(crossings[c].Point, mainGate);
             if (crossings[c].RoadWidth >= G.VehicleRoad && d < best) { best = d; mainIndex = c; }
         }
         for (var c = 0; c < crossings.Count; c++)
@@ -216,7 +220,7 @@ public sealed class ClusterLayout
             if (!forward) frame = PlanFrame.Along(crossing.Point, -crossing.Along);
             var kind = crossing.RoadWidth >= G.VehicleRoad ? GateKind.Vehicle : GateKind.Footway;
             var main = c == mainIndex;
-            var open = main && cluster.Open;
+            var open = main && clusterOpen;
             var probe = new GateSpot(frame, kind, crossing.Width, main, open, 0, 0);
             float minus, plus;
             if (kind == GateKind.Footway) { minus = plus = crossing.Width * 0.5f + 0.15f + G.PierSize; }

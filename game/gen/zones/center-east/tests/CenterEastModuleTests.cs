@@ -87,16 +87,6 @@ public sealed class CenterEastModuleTests
                      "design:center-east-pinxue-ramp-seatwall-north", "design:center-east-pinxue-ramp-seatwall-south", "design:center-east-pinxue-arc-end",
                      "design:center-east-riverside-walk" })
             Require(world.Features.ContainsKey(new(id)), $"{id} is registered");
-        var fountain = (PointGeometry)world.Features[new("design:center-east-pinxue-fountain")].Geometry;
-        Require(Vector2.Distance(new(fountain.Position.X, fountain.Position.Z), P.Fountain) < 0.01f, "overlay and tune agree on the fountain");
-        var pits = (MultiPolygonGeometry)world.Features[new("design:center-east-pinxue-tree-pits")].Geometry;
-        var centres = PinxueForecourtSite.TreePitCentres().ToArray();
-        Require(pits.Polygons.Count == centres.Length, "one registered polygon per tree pit");
-        foreach (var polygon in pits.Polygons)
-        {
-            var mid = polygon.Outer.Aggregate(Vector2.Zero, (s, p) => s + p) / polygon.Outer.Count;
-            Require(centres.Any(c2 => Vector2.Distance(c2, mid) < 0.02f), $"registered pit at {mid} is built");
-        }
     }
 
     [TestCase]
@@ -137,12 +127,6 @@ public sealed class CenterEastModuleTests
         {
             var built = Area(ResearchSite.HallRing(back, sagitta, 16));
             Require(MathF.Abs(Area(Outline(id)) - built) < 0.03f * built, $"{id} outline matches the built hall");
-        }
-        foreach (var (id, min, max) in new[] { ("design:center-east-ke-a-roof", R.KeAFenceMin, R.KeAFenceMax),
-                     ("design:center-east-ke-b-roof", R.KeBAtticMin, R.KeBAtticMax), ("design:center-east-ke-c-roof-garden", R.KeCGardenMin, R.KeCGardenMax) })
-        {
-            var corners = ResearchSite.Frame.Rect(min.X, min.Y, max.X, max.Y);
-            Require(Outline(id).Count == 4 && Outline(id).Zip(corners).All(p => Vector2.Distance(p.First, p.Second) < 0.05f), $"{id} outline matches the built rectangle");
         }
         Require(Area(Outline("design:center-east-ke-c-roof-garden")) <= 300f, "the roof garden stays within 300 m²");
     }
@@ -242,32 +226,35 @@ public sealed class CenterEastModuleTests
         var ctx = Context();
         var module = new CenterEastModule();
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
+        var gate = PinxueFrameSite.GateOf(ctx.World);
         Require(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every collider fills its foot material");
         var boxes = colliders.OfType<BoxCollider>().Where(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y > 1f).ToArray();
         Require(boxes.Length == 3, $"the beam and the two bridges are lifted boxes, got {boxes.Length}");
-        Require(boxes.All(b => b.At.M42 - b.Half.Y >= P.BridgeBottom - 0.01f), "nothing walls off the passage or the paths under the bridges");
-        var frame = PinxueFrameSite.F.P(PinxueFrameSite.Axis, -P.FrameDepth * 0.5f);
-        var columns = colliders.OfType<BoxCollider>().Count(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y < 0.01f && b.Half.Y * 2 >= P.BeamBottom - 0.01f
+        Require(boxes.All(b => b.At.M42 - b.Half.Y >= gate.BridgeBottom - 0.01f), "nothing walls off the passage or the paths under the bridges");
+        var frame = gate.F.P(gate.Axis, -gate.Depth * 0.5f);
+        var columns = colliders.OfType<BoxCollider>().Count(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y < 0.01f && b.Half.Y * 2 >= gate.BeamBottom - 0.01f
             && Vector2.Distance(new(b.At.M41, b.At.M43), frame) < 25f);
         Require(columns == P.ColumnX.Length, "the four columns reach the beam soffit");
         // The beam leaves the two-storey passage open between the columns.
         var beam = boxes.OrderByDescending(b => b.At.M42).First();
-        Require(MathF.Abs(beam.At.M42 - beam.Half.Y - P.BeamBottom) < 0.01f, "the beam soffit sits at two storeys");
+        Require(MathF.Abs(beam.At.M42 - beam.Half.Y - gate.BeamBottom) < 0.01f, "the beam soffit sits at two storeys");
     }
 
     [TestCase]
     public void RampWallsStepWithTheGround()
     {
+        var world = World();
+        var frame = PinxueFrameSite.GateOf(world).F;
+        var walls = PinxueForecourtSite.RampWalls(world);
         // Flat stub: each wall is one run at seat height.
-        foreach (var x in P.RampWallX)
+        foreach (var (x, z0, z1) in walls)
         {
-            var runs = PinxueForecourtSite.RampRuns(_ => 0f, x);
+            var runs = PinxueForecourtSite.RampRuns(_ => 0f, frame, x, z0, z1);
             Require(runs.Count == 1 && MathF.Abs(runs[0].Top - P.SeatHeight) < 0.01f, "flat ground gives one continuous wall");
         }
         // The designed 5 % ramp along the frame's z: the wall steps once per segment, each top above the ground under it.
-        var frame = PinxueFrameSite.F;
-        float Ramp(Vector2 p) => Math.Clamp((P.RampWallZ1 - frame.Local(p).Y) * 0.05f, 0f, 1.5f);
-        var stepped = PinxueForecourtSite.RampRuns(Ramp, P.RampWallX[0]);
+        float Ramp(Vector2 p) => Math.Clamp((walls[0].Z1 - frame.Local(p).Y) * 0.05f, 0f, 1.5f);
+        var stepped = PinxueForecourtSite.RampRuns(Ramp, frame, walls[0].X, walls[0].Z0, walls[0].Z1);
         Require(stepped.Count == 5, $"the ramp wall steps in five runs, got {stepped.Count}");
         for (var i = 1; i < stepped.Count; i++)
             Require(stepped[i - 1].Top - stepped[i].Top is > 0.25f and < 0.35f, "each step drops about 0.3 m toward the foot");
@@ -276,13 +263,14 @@ public sealed class CenterEastModuleTests
     [TestCase]
     public void FountainTiersMatchTheRegisteredWaterLevels()
     {
-        var props = World().Features[new("design:center-east-pinxue-fountain")].Props!.Value;
+        var world = World();
+        var props = world.Features[new("design:center-east-pinxue-fountain")].Props!.Value;
         var registered = props.GetProperty("tiers").EnumerateArray().ToArray();
         var tiers = PinxueForecourtSite.FountainTiers();
         Require(registered.Length == tiers.Count, "one registered tier per built tier");
         static Vector2 Pair(System.Text.Json.JsonElement e) => new(e[0].GetSingle(), e[1].GetSingle());
         var axis = Pair(props.GetProperty("axis"));
-        Require(Vector2.Distance(axis, PinxueForecourtSite.FountainFrame.U) < 0.01f, "the registered long axis runs along the bar");
+        Require(Vector2.Distance(axis, PinxueForecourtSite.FountainFrame(world).U) < 0.01f, "the registered long axis runs along the bar");
         for (var i = 0; i < tiers.Count; i++)
         {
             var (half, coping, rim, water) = tiers[i];
@@ -323,16 +311,13 @@ public sealed class CenterEastModuleTests
     {
         var world = World();
         Vector2 Point(string id) => world.Features[new(id)].Geometry is PointGeometry p ? new(p.Position.X, p.Position.Z) : throw new InvalidOperationException($"{id} is a point");
-        // The OSM points move by less than 4 m (a minor adjustment with no reshape, MAP-QSH-CENTER-EAST "定位").
-        foreach (var (id, at) in new[] { (M.Lin, M.LinAt), (M.Maxwell, M.MaxwellAt), (M.Stele, M.SteleAt) })
-            Require(Vector2.Distance(Point(id), at) < 4f, $"{id} stays within 4 m of its OSM point");
+        // 林为干像 moves less than 4 m off its OSM point (a minor adjustment with no reshape, MAP-QSH-CENTER-EAST "定位").
+        Require(Vector2.Distance(Point(M.Lin), M.LinAt) < 4f, $"{M.Lin} stays within 4 m of its OSM point");
         Require(StatueLawnSite.Island(world) is { } island && PlanGeometry.InsideByCrossings(island, M.LinAt), "林为干像 stands on the plaza's tree island");
-        // The design additions agree with what is built.
-        Require(Vector2.Distance(Point("design:center-east-maxwell-equation-stone"), M.StoneAt) < 0.02f, "overlay and tune agree on the equation stone");
-        var apron = ((PolygonGeometry)world.Features[new("design:center-east-maxwell-apron")].Geometry).Rings.Outer;
-        Require(apron.Count == 4 && apron.Zip(StatueLawnSite.ApronRing).All(p => Vector2.Distance(p.First, p.Second) < 0.05f), "overlay and tune agree on the apron");
-        foreach (var at in new[] { M.MaxwellAt, M.StoneAt })
-            Require(PlanGeometry.InsideByCrossings(StatueLawnSite.ApronRing, at), $"{at} stands on the apron");
+        var maxwellAt = StatueLawnSite.MaxwellFrame(world).Origin;
+        var stoneAt = StatueLawnSite.StoneFrame(world).Origin;
+        foreach (var at in new[] { maxwellAt, stoneAt })
+            Require(PlanGeometry.InsideByCrossings(StatueLawnSite.ApronRing(world), at), $"{at} stands on the apron");
         // Every inscription line lies on the dressed face with stone round it.
         foreach (var (x, y, length) in StatueLawnSite.StoneLines())
             foreach (var (fx, fy) in new[] { (x - length * 0.5f, y), (x + length * 0.5f, y), (x - length * 0.5f, y + M.StoneLineHeight), (x + length * 0.5f, y + M.StoneLineHeight) })
@@ -343,7 +328,7 @@ public sealed class CenterEastModuleTests
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
         Require(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every monument collider fills its foot material");
         var boxes = colliders.OfType<BoxCollider>().ToArray();
-        foreach (var (at, top) in new[] { (M.LinAt, StatueLawnSite.LinPedestalTop), (M.MaxwellAt, M.MaxwellPedestalTop), (M.StoneAt, M.Stone.Height - 0.08f) })
+        foreach (var (at, top) in new[] { (M.LinAt, StatueLawnSite.LinPedestalTop), (maxwellAt, M.MaxwellPedestalTop), (stoneAt, M.Stone.Height - 0.08f) })
             Require(boxes.Any(b => Vector2.Distance(new(b.At.M41, b.At.M43), at) < 0.6f && MathF.Abs(b.At.M42 + b.Half.Y - top) < 0.02f), $"the box at {at} reaches its top {top}");
         var doors = new[] { ResearchSite.Frame.P(R.KeADoor.X, R.KeADoor.Y), ResearchSite.Frame.P(R.KeBDoor.X, R.KeBDoor.Y), new KeCSite().HallApex().Apex };
         var clear = 2.5f + R.PortalDepth + 3 * R.TreadDepth;
@@ -386,23 +371,13 @@ public sealed class CenterEastModuleTests
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
         Require(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto), "every 文科楼 collider fills its foot material");
         var shut = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed).ToArray();
-        Require(shut.Length == 1 && Vector2.Distance((shut[0].A + shut[0].B) * 0.5f, K.DoorAt) < K.PorchDepth + 0.5f, "one shut glass entrance at the atrium porch");
-        var outside = WenkeSite.Door.P(0, K.PorchDepth);
+        Require(shut.Length == 1 && Vector2.Distance((shut[0].A + shut[0].B) * 0.5f, WenkeSite.Door(ctx.World).Origin) < K.PorchDepth + 0.5f, "one shut glass entrance at the atrium porch");
+        var outside = WenkeSite.Door(ctx.World).P(0, K.PorchDepth);
         foreach (var box in colliders.OfType<BoxCollider>().Where(b => b.Tag == SurfaceTag.Prop))
             Require(Vector2.Distance(new(box.At.M41, box.At.M43), outside) > 2.5f + box.Half.X + box.Half.Z, "nothing stands within 2.5 m outside the door");
         foreach (var post in colliders.OfType<PostCollider>())
             Require(Vector2.Distance(post.C, outside) > 2.5f + post.R, "no stake within 2.5 m outside the door");
-        // The overlay registers what is built.
-        var world = ctx.World;
-        IReadOnlyList<Vector2> Outline(string id) => ((PolygonGeometry)world.Features[new(id)].Geometry).Rings.Outer;
-        Vector2 Point(string id) => world.Features[new(id)].Geometry is PointGeometry p ? new(p.Position.X, p.Position.Z) : throw new InvalidOperationException($"{id} is a point");
-        foreach (var (id, ring) in new[] { ("design:center-east-wenke-forecourt", WenkeForecourtSite.ForecourtRing), ("design:center-east-wenke-walk", WenkeForecourtSite.WalkRing) })
-            Require(Outline(id).Count == 4 && Outline(id).All(p => ring.Any(q => Vector2.Distance(p, q) < 0.05f)), $"{id} outline matches the built paving");
-        Require(Vector2.Distance(Point("design:center-east-wenke-friendship-tree"), F.TreeAt) < 0.02f, "overlay and tune agree on the friendship tree");
-        Require(Vector2.Distance(Point("design:center-east-wenke-friendship-stone"), F.StoneAt) < 0.02f, "overlay and tune agree on the stone");
-        var vault = Outline("design:center-east-wenke-atrium-roof");
-        Require(MathF.Abs(Area(vault) - MathF.PI * K.AtriumHalf.X * K.AtriumHalf.Y) < 0.05f * Area(vault), "the registered atrium roof matches the vault");
-        Require(PlanGeometry.InsideByCrossings(Block(K.Hub).Outlines[^1], K.AtriumCentre), "the vault stands on the hub");
+        Require(PlanGeometry.InsideByCrossings(Block(K.Hub).Outlines[^1], WenkeSite.AtriumOf(ctx.World).Frame.Origin), "the vault stands on the hub");
         // The emblem sits on the stone's dressed face with stone round it.
         foreach (var (x, y) in new[] { (-F.EmblemRadius, F.EmblemY), (F.EmblemRadius, F.EmblemY), (0f, F.EmblemY - F.EmblemRadius), (0f, F.EmblemY + F.EmblemRadius) })
             Require(F.Stone.OnDressedFace(x, y, 0.03f), $"emblem edge ({x}, {y}) is on the dressed face");

@@ -57,8 +57,11 @@ public sealed class LeveeStepsSite : ZoneSite
         return MathF.Abs(t.X * d.Y - t.Y * d.X);
     }
 
-    /// <summary>The levee centreline near the two junctions (west.terrain.json design:terrain:west-levee, first points).</summary>
-    private static readonly Vector2[] Levee =
+    /// <summary>
+    /// The levee centreline near the two junctions (west.terrain.json design:terrain:west-levee, first points). Kept here: terrain
+    /// operations are not in the world model, so there is no ID to read it by.
+    /// </summary>
+    internal static readonly Vector2[] Levee =
         [new(-308.84f, -147.52f), new(-307.28f, -150.63f), new(-303.98f, -154.91f), new(-296.28f, -164.94f), new(-293.69f, -168.33f), new(-281.59f, -184.05f)];
 
     public override void Build(SiteBuilder b)

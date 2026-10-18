@@ -19,24 +19,37 @@ public sealed class RestDeckSite : ZoneSite
 {
     public override string Id => "20b1.sf10-deck";
 
-    internal static PlanFrame Frame => PlanFrame.Along(D.Centre, D.Along);
+    /// <summary>The deck's plan from the overlay polygon (D-239): centre, long axis, length and width, and the height above the ground.</summary>
+    internal sealed record Layout(PlanFrame Frame, float Length, float Width, float Height)
+    {
+        /// <summary>The deck's plan outline (the overlay polygon), counter-clockwise in the frame.</summary>
+        public Vector2[] Outline() => Frame.Rect(-Length * 0.5f, -Width * 0.5f, Length * 0.5f, Width * 0.5f);
+    }
 
-    /// <summary>The deck's plan outline (the overlay polygon), counter-clockwise in the frame.</summary>
-    internal static Vector2[] Outline() => Frame.Rect(-D.Length * 0.5f, -D.Width * 0.5f, D.Length * 0.5f, D.Width * 0.5f);
+    /// <summary>The deck, or null when the world has no such overlay feature or it is not a quadrilateral.</summary>
+    internal static Layout? Locate(IWorldModel world)
+    {
+        if (!world.Features.TryGetValue(new(D.Feature), out var feature) || feature.Geometry is not PolygonGeometry { Rings.Outer: { Count: 4 } ring }) return null;
+        // Corner order is the overlay's: edge 0 → 1 is the long side, edge 1 → 2 the short one.
+        var centre = (ring[0] + ring[1] + ring[2] + ring[3]) * 0.25f;
+        return new(PlanFrame.Along(centre, ring[1] - ring[0]), Vector2.Distance(ring[0], ring[1]), Vector2.Distance(ring[1], ring[2]), feature.Height ?? 0f);
+    }
 
-    private static float Base(Func<Vector2, float> ground) => Outline().Min(ground);
+    private static float Base(Layout plan, Func<Vector2, float> ground) => plan.Outline().Min(ground);
 
     public override void Build(SiteBuilder b)
     {
-        var f = Frame;
-        var g = Base(b.Ground);
-        var deck = g + D.Height;
-        float hl = D.Length * 0.5f, hw = D.Width * 0.5f, hp = D.Pit * 0.5f;
+        if (Locate(b.Context.World) is not { } plan) return;
+        var f = plan.Frame;
+        float length = plan.Length, width = plan.Width, height = plan.Height;
+        var g = Base(plan, b.Ground);
+        var deck = g + height;
+        float hl = length * 0.5f, hw = width * 0.5f, hp = D.Pit * 0.5f;
         // Steel frame from below the ground up to the underside of the boards.
-        b.Add(PartGeometryKernel.BeveledBox(D.Length, D.Height - D.Top + D.Sink, D.Width, 0.02f, L.Steel), f.At(0, g - D.Sink, 0));
+        b.Add(PartGeometryKernel.BeveledBox(length, height - D.Top + D.Sink, width, 0.02f, L.Steel), f.At(0, g - D.Sink, 0));
         if (b.Detail == SiteDetail.Mass)
         {
-            b.Add(PartGeometryKernel.BeveledBox(D.Length + 2 * D.Overhang, D.Top, D.Width + 2 * D.Overhang, 0, L.Wood), f.At(0, deck - D.Top, 0));
+            b.Add(PartGeometryKernel.BeveledBox(length + 2 * D.Overhang, D.Top, width + 2 * D.Overhang, 0, L.Wood), f.At(0, deck - D.Top, 0));
             return;
         }
         // Four boards round the pit: two full-width ends, two side boards between them; seams leave thin dark lines.
@@ -61,8 +74,9 @@ public sealed class RestDeckSite : ZoneSite
     /// <summary>One box for the deck, a prop the player could step onto (the cluster is closed, so nobody reaches it on foot).</summary>
     public override void Collide(SiteColliders c)
     {
-        var g = Base(c.Ground);
-        var half = (D.Height + D.Sink) * 0.5f;
-        c.Box(Frame.At(0, g - D.Sink + half, 0), new(D.Length * 0.5f + D.Overhang, half, D.Width * 0.5f + D.Overhang), SurfaceTag.Prop, FootMat.WoodDeck);
+        if (Locate(c.Context.World) is not { } plan) return;
+        var g = Base(plan, c.Ground);
+        var half = (plan.Height + D.Sink) * 0.5f;
+        c.Box(plan.Frame.At(0, g - D.Sink + half, 0), new(plan.Length * 0.5f + D.Overhang, half, plan.Width * 0.5f + D.Overhang), SurfaceTag.Prop, FootMat.WoodDeck);
     }
 }

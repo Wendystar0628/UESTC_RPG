@@ -127,12 +127,12 @@ public static class BoundaryTune
     ];
 
     /// <summary>
-    /// The south gate (WP-18, SouthTune.Gate): its two guard houses close the line, so the ring fence stops on their outer
-    /// walls. Copied from SouthTune.Gate (HouseWest, HouseEast, HouseSize); keep in step if 18 moves them.
+    /// The south gate (WP-18): its two guard houses close the line, so the ring fence stops on their outer walls. The house
+    /// positions are read from the gate entity; the side length is the south zone's modelled house (SouthTune.Gate.HouseSize).
     /// </summary>
     public static class SouthGate
     {
-        public static readonly Vector2 HouseWest = new(-532.535f, 719.865f), HouseEast = new(-510.945f, 735.3575f);
+        public const string Feature = "qsh:relation:8407525";
         public const float HouseSize = 5.6f;
     }
 
@@ -185,17 +185,16 @@ public static class BoundaryTune
     /// <summary>
     /// North waterside plaza (design:boundary-north-a05-plaza, 初值): 14 × 8.6 m of paving on the channel's east bank between the
     /// water and the east service road, over the end of cycleway 950008623. Local frame: t along the bank (toward 21.8°), n off
-    /// the water edge toward the road. The paving is WP-15 ground from the overlay polygon; this site adds the light railing on
+    /// the water edge toward the road; its origin and direction come from the water feature's bank edge (NorthPlazaSite.FrameOf,
+    /// D-239). The paving is WP-15 ground from the overlay polygon; this site adds the light railing on
     /// the water side and two benches facing the water. The A05 kiosk is WP-13's on WP-48c's anchor: <see cref="Kiosk"/> is the
     /// spot the plaza keeps for it (4.2 m off the water, 5.8 m from the lane edge, facing 165°).
     /// </summary>
     public static class Plaza
     {
         public const string Feature = "design:boundary-north-a05-plaza";
-        /// <summary>A point on the straight water edge and its direction (osm:way:687770522's east bank).</summary>
-        public static readonly Vector2 EdgeOrigin = new(-75.21f, -778.91f);
-        public static readonly Vector2 EdgeDirection = new(0.37100f, -0.92863f);
-        public const float T0 = -25f, T1 = -11f, N0 = 0.1f, N1 = 8.7f;
+        /// <summary>The channel whose east bank edge anchors the plaza frame.</summary>
+        public const string Water = "qsh:source:way:687770522";
         public const float PavingTop = 0.15f;
         /// <summary>Railing: 1.1 m, posts every ≤ 1.6 m, handrail and bottom rail, 20 mm bars at 0.12 m; collision 1.5 m.</summary>
         public const float RailN = 0.35f, RailHeight = 1.1f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f;

@@ -11,7 +11,8 @@ namespace Campus.Gen.Zones.Core;
 public static partial class CoreStyle
 {
     // ---- Plan across the door axis (w = 0 on the front tower's door, symmetric): main stair, lawn terraces, side stairs,
-    //      outer guard walls. The total, 2 × 13.78 m, is the OSM base's 27.7 m width (review). ----
+    //      outer guard walls. The total, 2 × 13.78 m, is the OSM base's 27.7 m width (review); the overlay reshape of 8398
+    //      (27.56 m) is drawn from these widths, so they stay here and the overlay follows them (D-239). ----
     /// <summary>Central grand stair, outer width including its cheek walls (two slot widths, review).</summary>
     public const float MainStairWidth = 9.0f;
     /// <summary>Lawn terrace (草坪台地) between the main stair and each side stair.</summary>

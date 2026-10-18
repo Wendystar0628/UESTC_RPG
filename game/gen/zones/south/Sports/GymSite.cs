@@ -38,8 +38,9 @@ public sealed class GymSite : ZoneSite
     /// <summary>
     /// The drum's LOD-free plan: centre and radius fitted to the footprint, the glass facets (column i spans angles
     /// Phase + 2πi/Bays … Phase + 2π(i+1)/Bays, angle from +x toward +z), column 0 centred on the platform-storey door.
+    /// DeckTop is the platform storey's height (the platform feature's, D-239), Top the drum's own height from the map data.
     /// </summary>
-    internal sealed record Plan(Vector2 Centre, float Radius, float Phase, int Bays)
+    internal sealed record Plan(Vector2 Centre, float Radius, float Phase, int Bays, float DeckTop, float Top)
     {
         public float GlassRadius => Radius - S.GymGlassInset;
 
@@ -72,7 +73,9 @@ public sealed class GymSite : ZoneSite
         var radius = MathF.Sqrt(MathF.Abs(Area(ring)) / MathF.PI);
         var bays = (int)MathF.Round(2f * MathF.PI * (radius - S.GymGlassInset) / S.GymBay);
         var door = PlanMath.Heading(S.GymDoorBearing);
-        return new(PlanMath.Centroid(ring), radius, MathF.Atan2(door.Y, door.X) - MathF.PI / bays, bays);
+        var deckTop = world.Feature(PlatformSite.Feature).Height ?? throw new InvalidOperationException($"Platform {PlatformSite.Feature} has no height.");
+        var top = feature.Height ?? throw new InvalidOperationException($"Gym {Feature} has no height.");
+        return new(PlanMath.Centroid(ring), radius, MathF.Atan2(door.Y, door.X) - MathF.PI / bays, bays, deckTop, top);
     }
 
     internal static float Area(IReadOnlyList<Vector2> ring)
@@ -83,26 +86,29 @@ public sealed class GymSite : ZoneSite
     }
 
     /// <summary>Row sills and heights of the ring hall's glass, above the ground: the platform storey, then the upper hall over the transom.</summary>
-    private static readonly (float Sill, float Height)[] Rows =
-        [(S.PlatformTop + 0.05f, S.GymTransom - S.PlatformTop - 0.1f), (S.GymTransom + 0.05f, S.GymGlassTop - S.GymTransom - 0.15f)];
+    private static (float Sill, float Height)[] Rows(Plan p) =>
+        [(p.DeckTop + 0.05f, S.GymTransom - p.DeckTop - 0.1f), (S.GymTransom + 0.05f, S.GymGlassTop - S.GymTransom - 0.15f)];
+
+    private const int RowCount = 2;
 
     /// <summary>The ring hall's panes in grid order, one per facet and row; the door cell (0, 0) carries the open doorway instead.</summary>
     internal static GlazedOpening[] Openings(Plan p, float y)
     {
         var list = new List<GlazedOpening>();
-        for (var row = 0; row < Rows.Length; row++)
+        var rows = Rows(p);
+        for (var row = 0; row < rows.Length; row++)
             for (var i = 0; i < p.Bays; i++)
             {
                 if (i == 0 && row == 0) continue;
                 var (f, width) = p.Facet(i);
                 var o = f.P(0, PaneZ);
-                list.Add(new(i, row, new(o.X, y + Rows[row].Sill, o.Y), new(f.W.X, 0, f.W.Y), width - 0.02f, Rows[row].Height));
+                list.Add(new(i, row, new(o.X, y + rows[row].Sill, o.Y), new(f.W.X, 0, f.W.Y), width - 0.02f, rows[row].Height));
             }
         return [.. list];
     }
 
     public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world) =>
-        [(new(Feature), new(GlassKey, PlanOf(world).Bays, Rows.Length))];
+        [(new(Feature), new(GlassKey, PlanOf(world).Bays, RowCount))];
 
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
@@ -114,7 +120,7 @@ public sealed class GymSite : ZoneSite
     {
         var feature = new FeatureId(Feature);
         var allocation = required ? WindowNumbers.Required(ctx, feature, GlassKey) : WindowNumbers.Allocation(ctx, feature, GlassKey);
-        if (allocation is { } a) WindowNumbers.Fit(p.Bays, Rows.Length, feature, GlassKey, a);
+        if (allocation is { } a) WindowNumbers.Fit(p.Bays, RowCount, feature, GlassKey, a);
         return allocation;
     }
 
@@ -146,7 +152,7 @@ public sealed class GymSite : ZoneSite
 
     private static void Base(SiteBuilder b, Plan p, float y, Matrix4x4 at, int segments)
     {
-        float r = p.Radius - S.GymBaseInset, top = S.PlatformTop;
+        float r = p.Radius - S.GymBaseInset, top = p.DeckTop;
         b.Add(Solids.Lathe([new(r + 0.12f, -0.1f), new(r + 0.12f, 0.55f)], segments, Round(L.Granite)), at);
         b.Add(Solids.Lathe([new(r, 0.5f), new(r, top - 0.28f)], segments, L.Ochre), at);
         // The coping is the ring hall's outer floor edge: its top is the platform storey.
@@ -161,7 +167,7 @@ public sealed class GymSite : ZoneSite
 
     private static void Glass(SiteBuilder b, Plan p, float y, Matrix4x4 at, int segments)
     {
-        float y0 = y + S.PlatformTop - 0.3f, height = S.GymGlassTop - S.PlatformTop + 0.4f;
+        float y0 = y + p.DeckTop - 0.3f, height = S.GymGlassTop - p.DeckTop + 0.4f;
         for (var i = 0; i < p.Bays; i++)
         {
             var (f, width) = p.Facet(i);
@@ -191,7 +197,7 @@ public sealed class GymSite : ZoneSite
             var a0 = p.Angle(i);
             var (lo, hi) = (p.At(a0, r), p.At(a0 + lean, r));
             var n = new Vector3(MathF.Cos(a0 + lean * 0.5f), 0, MathF.Sin(a0 + lean * 0.5f));
-            var foot = new Vector3(lo.X, y + S.PlatformTop, lo.Y);
+            var foot = new Vector3(lo.X, y + p.DeckTop, lo.Y);
             var head = new Vector3(hi.X, y + S.GymGlassTop - 0.1f, hi.Y);
             b.Add(PartGeometryKernel.BeveledBox(0.14f, Vector3.Distance(foot, head), 0.16f, 0.02f, L.DarkFrame), LandmarkSolids.Along(foot, head, n));
         }
@@ -278,7 +284,7 @@ public sealed class GymSite : ZoneSite
     private static void Entrance(SiteBuilder b, Plan p, float y)
     {
         var (f, bay) = p.Facet(0);
-        float floor = y + S.PlatformTop, w = S.GymDoorWidth, h = S.GymDoorHeight, head = y + S.GymTransom;
+        float floor = y + p.DeckTop, w = S.GymDoorWidth, h = S.GymDoorHeight, head = y + S.GymTransom;
         // Portal: jambs to the transom, a head bar, a metal panel filling the bay between the door head and the transom.
         foreach (var side in new[] { -1f, 1f })
             GridFacade.Box(b, f, side * (w * 0.5f + 0.06f) - 0.09f, side * (w * 0.5f + 0.06f) + 0.09f, floor, head, -0.1f, 0.2f, L.DarkFrame, 0.015f);
@@ -329,18 +335,18 @@ public sealed class GymSite : ZoneSite
             var (pa, pb) = (p.At(a0, r), p.At(a1, r));
             if (k == 0)
             {
-                c.Wall(pa, pb, 0.25f, y, y + S.PlatformTop, SurfaceTag.Wall, FootMat.Concrete);
-                c.Wall(pa, pb, 0.25f, y + S.PlatformTop + S.GymDoorHeight, y + S.GymTop, SurfaceTag.Wall, FootMat.Concrete);
+                c.Wall(pa, pb, 0.25f, y, y + p.DeckTop, SurfaceTag.Wall, FootMat.Concrete);
+                c.Wall(pa, pb, 0.25f, y + p.DeckTop + S.GymDoorHeight, y + p.Top, SurfaceTag.Wall, FootMat.Concrete);
                 continue;
             }
             var mid = (a0 + a1) * 0.5f;
             if (services.Any(s => MathF.Abs(PlanMath.Turn((s - mid) * 180f / MathF.PI)) < 180f / segments))
             {
                 c.Wall(pa, pb, 0.25f, y, y + 2.4f, SurfaceTag.DoorClosed, FootMat.Concrete);
-                c.Wall(pa, pb, 0.25f, y + 2.4f, y + S.GymTop, SurfaceTag.Wall, FootMat.Concrete);
+                c.Wall(pa, pb, 0.25f, y + 2.4f, y + p.Top, SurfaceTag.Wall, FootMat.Concrete);
                 continue;
             }
-            c.Wall(pa, pb, 0.25f, y, y + S.GymTop, SurfaceTag.Wall, FootMat.Concrete);
+            c.Wall(pa, pb, 0.25f, y, y + p.Top, SurfaceTag.Wall, FootMat.Concrete);
         }
     }
 }

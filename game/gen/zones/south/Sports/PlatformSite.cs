@@ -8,8 +8,8 @@ using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.South.Framework;
 using P = Campus.Gen.Zones.South.SouthTune.Platform;
-using S = Campus.Gen.Zones.South.SouthTune.Sports;
 using L = Campus.Gen.Zones.South.SouthTune.Look;
 using W = Campus.Gen.Zones.South.SouthTune.Windows;
 
@@ -30,6 +30,8 @@ public sealed class PlatformSite : ZoneSite
     public const string Feature = "qsh:way:601600526";
     private const string Part = "osm:way:601600526";
     public const string ShopKey = "arcade-shops";
+    /// <summary>The OSM steps at the deck's north tip (an anonymous source footprint).</summary>
+    public const string NorthSteps = "qsh:source:way:988857939";
     /// <summary>The venues the deck meets: their footprints close the deck's edge.</summary>
     private static readonly string[] Neighbours = [GymSite.Feature, NatatoriumSite.Feature, "qsh:way:217855276"];
 
@@ -56,10 +58,11 @@ public sealed class PlatformSite : ZoneSite
     internal readonly record struct Stair(PlanFrame Frame, float Width);
 
     /// <summary>The LOD-free plan every output shares.</summary>
-    internal sealed record Plan(float Y, IReadOnlyList<Vector2[]> Decks, IReadOnlyList<Edge> Edges, Vector2[] Core, IReadOnlyList<Bay> Bays,
+    internal sealed record Plan(float Y, float Rise, IReadOnlyList<Vector2[]> Decks, IReadOnlyList<Edge> Edges, Vector2[] Core, IReadOnlyList<Bay> Bays,
         IReadOnlyList<Vector2> Columns, IReadOnlyList<Stair> Stairs)
     {
-        public float Top => Y + S.PlatformTop;
+        /// <summary>The deck top above the ground, the feature's height set in overlay/south.d/ (D-239).</summary>
+        public float Top => Y + Rise;
         public float Soffit => Top - P.Slab;
     }
 
@@ -71,6 +74,7 @@ public sealed class PlatformSite : ZoneSite
             ?? throw new InvalidOperationException($"Platform {Feature} is not a polygon."));
         var decks = new List<Vector2[]> { deck };
         var y = world.Terrain.HeightAt(PlanMath.Centroid(deck).X, PlanMath.Centroid(deck).Y);
+        var rise = feature.Height ?? throw new InvalidOperationException($"Platform {Feature} has no height.");
 
         var closed = new List<Vector2[]>(decks);
         foreach (var id in Neighbours)
@@ -89,8 +93,8 @@ public sealed class PlatformSite : ZoneSite
 
         var stairs = new List<Stair>();
         if (Nearest(edges, P.GrandStairAt) is { } grand) stairs.Add(new(grand.Frame.Shift(grand.Frame.Local(P.GrandStairAt).X, 0), P.GrandStairWidth));
-        var down = Vector2.Normalize(P.NorthStairDown);
-        stairs.Add(new(new(P.NorthStairTop, new(down.Y, -down.X)), P.NorthStairWidth));
+        var (northTop, down) = NorthStair(world, PlanMath.Centroid(deck));
+        stairs.Add(new(new(northTop, new(down.Y, -down.X)), P.NorthStairWidth));
 
         var core = Ccw(P.Core);
         var bays = new List<Bay>();
@@ -122,7 +126,19 @@ public sealed class PlatformSite : ZoneSite
                 columns.Add(c);
             }
         }
-        return new(y, decks, edges, core, bays, columns, stairs);
+        return new(y, rise, decks, edges, core, bays, columns, stairs);
+    }
+
+    /// <summary>
+    /// The north steps from the OSM footprint (a thin quad): the top centre is the midpoint of the short end nearer the deck, and the
+    /// flight runs down toward the other end.
+    /// </summary>
+    private static (Vector2 Top, Vector2 Down) NorthStair(IWorldModel world, Vector2 deckCentre)
+    {
+        var ring = world.Feature(NorthSteps).Outers()[0];
+        var ends = Enumerable.Range(0, ring.Count).OrderBy(i => Vector2.DistanceSquared(ring[i], ring[(i + 1) % ring.Count])).Take(2)
+            .Select(i => (ring[i] + ring[(i + 1) % ring.Count]) * 0.5f).OrderBy(m => Vector2.DistanceSquared(m, deckCentre)).ToArray();
+        return (ends[0], Vector2.Normalize(ends[1] - ends[0]));
     }
 
     // ---- Window grid: one pane per shopfront bay (the transom light over a door bay) ----
@@ -286,8 +302,8 @@ public sealed class PlatformSite : ZoneSite
 
     private static readonly StepsPart Steps = new();
 
-    private static StairParams Flight(float width) =>
-        new(width, S.PlatformTop * 0.5f, P.RisersPerFlight * P.StairTread, P.RisersPerFlight) { Variation = 0, Material = L.Granite, Foot = FootMat.StonePaving };
+    private static StairParams Flight(float width, float rise) =>
+        new(width, rise * 0.5f, P.RisersPerFlight * P.StairTread, P.RisersPerFlight) { Variation = 0, Material = L.Granite, Foot = FootMat.StonePaving };
 
     private static float FlightDepth => P.RisersPerFlight * P.StairTread;
 
@@ -298,8 +314,8 @@ public sealed class PlatformSite : ZoneSite
     private static void Flights(SiteBuilder b, Plan p, Stair s)
     {
         var f = s.Frame;
-        var flight = Flight(s.Width);
-        float d = FlightDepth, half = S.PlatformTop * 0.5f;
+        var flight = Flight(s.Width, p.Rise);
+        float d = FlightDepth, half = p.Rise * 0.5f;
         var full = b.Detail == SiteDetail.Full;
         b.Place(PartCatalog.Steps, flight, f.AtReversed(0, p.Y + half, d * 0.5f));
         b.Add(PartGeometryKernel.BeveledBox(s.Width, half, d + P.StairLanding, full ? 0.03f : 0, L.Granite), f.At(0, p.Y - 0.1f, (d + P.StairLanding) * 0.5f));
@@ -373,11 +389,11 @@ public sealed class PlatformSite : ZoneSite
             Vector2 a = p.Core[i], e = p.Core[(i + 1) % p.Core.Length];
             if (Vector2.Distance(a, e) < 3.5f) c.Wall(a, e, 0.15f, p.Y - 0.2f, p.Soffit, SurfaceTag.Wall, FootMat.Concrete);
         }
-        float d = FlightDepth, half = S.PlatformTop * 0.5f;
+        float d = FlightDepth, half = p.Rise * 0.5f;
         foreach (var s in p.Stairs)
         {
             var f = s.Frame;
-            var fl = Flight(s.Width);
+            var fl = Flight(s.Width, p.Rise);
             c.Add(Steps.Collision(fl), f.AtReversed(0, p.Y + half, d * 0.5f));
             c.Box(f.At(0, p.Y + half - 0.15f, d + P.StairLanding * 0.5f), new(s.Width * 0.5f, 0.15f, P.StairLanding * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
             c.Add(Steps.Collision(fl), f.AtReversed(0, p.Y, d + P.StairLanding + d * 0.5f));

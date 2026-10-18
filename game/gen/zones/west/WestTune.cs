@@ -5,7 +5,8 @@ namespace Campus.Gen.Zones.West;
 
 /// <summary>
 /// Every tunable value of the west zone in one place, for review (WF-FLOW): materials as colour names, and the
-/// dimensions of each site. Coordinates are world (x, z) in metres from the OSM footprints in campus.json. Values marked
+/// dimensions of each site. Footprints, storeys and entity positions are read from the world model by ID (D-239); the
+/// coordinates left here are this zone's own picks (door and shaft spots, routes), world (x, z) in metres. Values marked
 /// "初值" are starting values awaiting the main session's call. 19b and 19c add their own nested classes after these.
 /// </summary>
 public static class WestTune
@@ -112,8 +113,16 @@ public static class WestTune
         public const float BaseHeight = 9.0f;
         public const float BaseStorey = 4.5f;
         public const float Recess = 2.2f;
-        /// <summary>Upper storeys above the base: A 9 floors in all (41.5 m), B and C 7 (32.5 m) (§1.1, 数据定位).</summary>
-        public const int UpperA = 7, UpperB = 5, UpperC = 5;
+        /// <summary>
+        /// Storeys of the glass base. A and B take their upper floors from the world model (storeys minus this: A 9 → 7, B 7 → 5;
+        /// D-239).
+        /// </summary>
+        public const int BaseStoreys = 2;
+        /// <summary>
+        /// C's upper floors: 5, 7 in all, 32.5 m (§1.1, 数据定位). Not read from data: the OSM block osm:relation:10807930 carries
+        /// 4 floors and 24 m, and the entity's storeys are the tower's.
+        /// </summary>
+        public const int UpperC = 5;
         public const float Storey = 4.4f;
         public const float Bay = 3.9f;
         public const float Pier = 1.0f;
@@ -128,10 +137,11 @@ public static class WestTune
         public const float MullionPitch = 1.5f;
 
         /// <summary>
-        /// C 区东门 (WLD-INTERIORS, interiors.json six.c.east): door centre on the stone line, facing 77°, floor ±0 as the
-        /// entrance record says. A glass vestibule reaches from the set-back glass out to the stone line; its doors stand open.
+        /// C 区东门 (WLD-INTERIORS): the entrance record of C (interiors.json) gives the door centre on the stone line, facing 77°,
+        /// floor ±0; the site reads it from the world model. A glass vestibule reaches from the set-back glass out to the stone
+        /// line; its doors stand open.
         /// </summary>
-        public static readonly Vector2 EastDoor = new(-588.3f, 230f);
+        public const string EastDoorId = "six.c.east";
         public const float VestibuleWidth = 5.2f;
         public const float VestibuleHeight = 4.2f;
         public const float DoorWidth = 2.4f;
@@ -174,7 +184,10 @@ public static class WestTune
         public const float RailHeight = 1.1f;
         /// <summary>A–B link: two-storey glass with a stone fascia.</summary>
         public const float LinkFascia = 1.1f;
-        /// <summary>North tower height (数据定位: 7 storeys, 23.1 m).</summary>
+        /// <summary>
+        /// North tower height (数据定位: 7 storeys, 23.1 m). Not read from data: the OSM part (osm:way:779496167) estimates 27.3 m
+        /// at 3.9 m a storey, but a stair core's flights are lower than a research storey.
+        /// </summary>
         public const float TowerHeight = 23.1f;
 
         /// <summary>The blocks' common plan axis (A's south wing, B's first wing; C's faces run square to it).</summary>
@@ -191,8 +204,8 @@ public static class WestTune
     /// </summary>
     public static class Motto
     {
+        /// <summary>The stone's node; it stands at the node's anchor in the world model.</summary>
         public const string Entity = "qsh:node:11361252903";
-        public static readonly Vector2 At = new(-554.76f, 233.83f);
         /// <summary>Bearing its inscribed face looks along (toward P10).</summary>
         public const float Facing = 112f;
         public const float Length = 6.6f;
@@ -306,26 +319,8 @@ public static class WestTune
     }
 
     /// <summary>
-    /// A10 湿地 (MAP-QSH-WEST 锚点表; 设计增补): a small paved plaza at the boardwalk's south mouth, where the wetland loop
-    /// path meets the stone-bridge approach (−239.8, −155.1), on dry ground east of the low ground. The post stands on the
-    /// plaza's east edge facing 250° over the reeds, so its warm lamp falls on the paving and leaves the water side dark.
-    /// </summary>
-    public static class A10
-    {
-        /// <summary>Plaza centre and its long axis (bearing 250°), 9.8 × 7 m with chamfered corners.</summary>
-        public static readonly Vector2 Centre = new(-236.5f, -158.1f);
-        public static readonly Vector2 Post = new(-232.46f, -159.57f);
-        public const float Facing = 250f;
-        public static readonly Vector2[] Plaza =
-            [new(-241.01f, -156.46f), new(-240.7f, -160.29f), new(-234.31f, -162.62f), new(-232.35f, -161.31f), new(-231.25f, -158.31f), new(-231.92f, -156.04f), new(-238.31f, -153.72f)];
-        /// <summary>The plaza grown by 1.5 m: the hole left in the wetland low ground, so the plaza and its rim stay at 0 m.</summary>
-        public static readonly Vector2[] Dry =
-            [new(-242.51f, -155.91f), new(-242.0f, -161.52f), new(-234.2f, -164.36f), new(-231.05f, -162.42f), new(-229.55f, -158.29f), new(-230.72f, -154.78f), new(-238.51f, -151.94f)];
-    }
-
-    /// <summary>
     /// 湿地栈道 (MAP-QSH-WEST; 19c): a timber boardwalk through the wetland low ground east of the levee and the wetland
-    /// stream, from the A10 plaza (south mouth) to the footway at the 西门车行桥's east head (north mouth), on the main network.
+    /// stream, from the A10 plaza (south mouth; design:west-a10-plaza in overlay/west.d/) to the footway at the 西门车行桥's east head (north mouth), on the main network.
     /// No OSM line: the route is drawn here (初值), kept 10 m and more inside the low ground's east edge, swinging west to the
     /// stream once (the turn, with the pebble wading beach), and passing P11's spot (−193, −300) so the 250° view opens over
     /// the reeds. The bridges (湿地石桥 692240860, 西门车行桥) and the canal banks are WP-28's (r005); this route touches neither.
@@ -410,16 +405,15 @@ public static class WestTune
 
     /// <summary>
     /// 西门桥头候车亭 (MAP-QSH-WEST 天气要点): the OSM shelter footprint qsh:way:604832425 (14 × 3.2 m, west of the
-    /// bridgehead service road) built here instead of WP-14's box: a raised granite platform, slim aluminium posts along the
+    /// bridgehead service road; its west edge is the back line, read from the world model) built here instead of WP-14's
+    /// box: a raised granite platform, slim aluminium posts along the
     /// back, a thin flat roof cantilevered over the platform with front and back eaves (rain curtains hang from both), a glass
     /// back screen, a timber bench, a downlight strip under the roof. Open to the road (east). The stop sign is WP-13's.
     /// </summary>
     public static class Shelter
     {
         public const string Entity = "qsh:way:604832425";
-        /// <summary>The back line (west edge of the footprint), south end then north end; the platform opens to its right (the road).</summary>
-        public static readonly Vector2 BackA = new(-214.98f, -417.82f), BackB = new(-210.09f, -430.99f);
-        /// <summary>Platform depth from the back line toward the road, its rise over the ground and its margin past the roof ends.</summary>
+        /// <summary>Platform depth from the back line (the footprint's west edge) toward the road, its rise over the ground and its margin past the roof ends.</summary>
         public const float Depth = 3.25f, PlatformRise = 0.18f, PlatformMargin = 0.35f;
         /// <summary>Posts along the back and their section; roof underside over the platform, slab, overhangs, fascia band.</summary>
         public const int Posts = 5;
@@ -440,8 +434,8 @@ public static class WestTune
     /// </summary>
     public static class Carving
     {
+        /// <summary>The carving's node; the stone lies at the node's anchor in the world model.</summary>
         public const string Entity = "qsh:node:6784744448";
-        public static readonly Vector2 At = new(-247.0f, -423.0f);
         public const float Facing = 200f;
         /// <summary>Scale of the motto stone's faceted body: about 3.0 × 1.15 m in plan and 1.1 m high.</summary>
         public static readonly Vector3 Scale = new(0.45f, 0.62f, 0.62f);

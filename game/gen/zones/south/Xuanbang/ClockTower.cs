@@ -160,7 +160,8 @@ internal static class ClockTower
         }
     }
 
-    internal static void Build(SiteBuilder b, IReadOnlyList<Vector2> ring, float y)
+    /// <summary><paramref name="top"/> is the tower's height from the map data: the finial's tip.</summary>
+    internal static void Build(SiteBuilder b, IReadOnlyList<Vector2> ring, float top, float y)
     {
         var (f, hx, hz) = FrameOf(ring);
         var shaft = XuanbangSite.ClockAllocation(b.Context, XuanbangSite.ShaftKey);
@@ -226,7 +227,7 @@ internal static class ClockTower
         var dome = X.DomeProfile.Select(p => new Vector2(p.X * X.DomeRadius, p.Y * (X.DomeTop - X.DomeBase))).ToArray();
         b.Add(Solids.Lathe(dome, segments, L.DomeMetal), f.At(0, y + X.DomeBase, 0));
         if (detail != SiteDetail.Mass)
-            b.Add(Solids.Lathe([new(0.32f, 0), new(0.2f, 0.1f), new(0.11f, 0.24f), new(0.16f, 0.3f), new(0.05f, 0.42f), new(0, X.Top - X.DomeTop)], 12, L.DomeMetal),
+            b.Add(Solids.Lathe([new(0.32f, 0), new(0.2f, 0.1f), new(0.11f, 0.24f), new(0.16f, 0.3f), new(0.05f, 0.42f), new(0, top - X.DomeTop)], 12, L.DomeMetal),
                 f.At(0, y + X.DomeTop - 0.02f, 0));
     }
 

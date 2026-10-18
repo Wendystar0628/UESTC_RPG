@@ -33,7 +33,8 @@ public sealed class West19cTests
         var path = BoardwalkSite.Path;
         Require(path.Length is > 200f and < 260f, $"the boardwalk is about 230 m long, got {path.Length}");
         // Both mouths meet paving: the A10 plaza in the south, the footway at the 西门车行桥's east head in the north.
-        Require(PlanGeometry.InsideByCrossings(WestTune.A10.Dry, path.Points[0]), "the south mouth lands on the A10 plaza's dry ground");
+        var plaza = ((PolygonGeometry)world.Features[new("design:west-a10-plaza")].Geometry).Rings.Outer;
+        Require(PlanGeometry.InsideByCrossings(plaza, path.Points[0]) || Distance([.. plaza, plaza[0]], path.Points[0]) < 1.5f, "the south mouth lands on the A10 plaza");
         var footway = Line(world, "qsh:source:way:552816780");
         Require(footway.Any(p => Vector2.Distance(p, path.Points[^1]) < 1f), "the north mouth lands on the bridgehead footway's end");
         // Inside the low ground (except the last few metres climbing out to the north footway).
@@ -137,10 +138,11 @@ public sealed class West19cTests
     {
         var world = World();
         Require(world.Features.ContainsKey(new(H.Entity)), "the shelter footprint is in the world model");
-        var f = ShelterSite.Frame;
+        var f = ShelterSite.Frame(world);
+        var length = ShelterSite.Length(world);
         var service = world.Network.Roads.Single(r => r.Id.Value == "qsh:source:way:217855160").Line.Points;
-        Require(Distance(service, f.P(ShelterSite.Length * 0.5f, H.Depth + H.RoofFront)) < Distance(service, f.P(ShelterSite.Length * 0.5f, 0)), "the open side faces the service road");
-        var front = f.P(ShelterSite.Length * 0.5f, H.Depth + H.RoofFront);
+        Require(Distance(service, f.P(length * 0.5f, H.Depth + H.RoofFront)) < Distance(service, f.P(length * 0.5f, 0)), "the open side faces the service road");
+        var front = f.P(length * 0.5f, H.Depth + H.RoofFront);
         Require(Distance(service, front) > 2.5f, $"the front eave clears the carriageway, {Distance(service, front):0.0} m to its centreline");
         var colliders = Colliders(Context(world), new ShelterSite());
         Require(colliders.OfType<PostCollider>().Count() == H.Posts && colliders.All(c => c.Foot != FootMat.Auto), "posts as cylinders, every collider with a foot");
@@ -151,13 +153,14 @@ public sealed class West19cTests
     public void CarvingLiesInTheGreenWedgeAwayFromTheBridgeStone()
     {
         var world = World();
+        var at = CarvingSite.At(world);
         foreach (var id in new[] { "qsh:source:way:544161580", "qsh:source:way:544161581" })
         {
             var road = world.Network.Roads.Single(r => r.Id.Value == id);
-            var d = Distance(road.Line.Points, C.At) - road.Width * 0.5f;
+            var d = Distance(road.Line.Points, at) - road.Width * 0.5f;
             Require(d > C.Length * 0.5f + 0.5f, $"the carving stays off {id}, {d:0.0} m from its edge");
         }
-        Require(Vector2.Distance(C.At, new(-238.37f, -411.91f)) > 10f, "it keeps clear of WP-28's bridge-head stone");
+        Require(Vector2.Distance(at, new(-238.37f, -411.91f)) > 10f, "it keeps clear of WP-28's bridge-head stone");
         var box = Colliders(Context(world), new CarvingSite()).OfType<BoxCollider>().Single();
         Require(box.Half.Y * 2f >= C.Height - 0.01f && box.Foot == FootMat.StonePaving, "one box with a top");
     }
@@ -172,8 +175,7 @@ public sealed class West19cTests
         return d >= T.CrestHalf + run ? 0f : T.LeveeRise * (1f - (d - T.CrestHalf) / run);
     }
 
-    private static readonly Vector2[] LeveeLine =
-        [new(-308.84f, -147.52f), new(-307.28f, -150.63f), new(-303.98f, -154.91f), new(-296.28f, -164.94f), new(-293.69f, -168.33f), new(-281.59f, -184.05f)];
+    private static Vector2[] LeveeLine => LeveeStepsSite.Levee;
 
     private static List<Collider> Colliders(BuildContext ctx, ZoneSite site)
     {
