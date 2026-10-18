@@ -6,7 +6,6 @@ using Campus.Contracts.Maps;
 
 namespace Campus.Systems.Atlas;
 
-// Local DTOs mirror atlas.schema.json; no new data fields or shared contracts.
 public sealed record AtlasMarkerFile(int Version, MapRect AtlasRect, IReadOnlyList<AtlasMarker> Markers)
 {
     public float ZoomMin { get; init; }

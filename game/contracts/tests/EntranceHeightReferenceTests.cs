@@ -87,6 +87,32 @@ public sealed class EntranceHeightReferenceTests
         Throws<JsonException>(() => Parse(Entry.Replace("[1,0.25,2]", "[1,2]", StringComparison.Ordinal)));
     }
 
+    [TestCase]
+    public void RequiredEntranceFieldsAndClosedDoorDiagnosticsArePreserved()
+    {
+        using var entry = JsonDocument.Parse(Entry);
+        foreach (var field in entry.RootElement.EnumerateObject())
+        {
+            var missing = "{" + string.Join(",", entry.RootElement.EnumerateObject()
+                .Where(property => property.Name != field.Name)
+                .Select(property => JsonSerializer.Serialize(property.Name) + ":" + property.Value.GetRawText())) + "}";
+            Throws<JsonException>(() => Parse(missing));
+        }
+        Throws<JsonException>(() => Parse(Entry.Replace("\"open\":true", "\"open\":null", StringComparison.Ordinal)));
+        Throws<JsonException>(() => Parse(Entry.Replace("\"clearWidth\":1.25", "\"clearWidth\":\"1.25\"", StringComparison.Ordinal)));
+        foreach (var (door, path) in new[]
+        {
+            ("null", "closedEntrances[0]"),
+            ("{}", "closedEntrances[0]"),
+            (Entry.Replace("\"open\":true", "\"open\":false,\"heightRef\":\"pad\"", StringComparison.Ordinal), "entry.main")
+        })
+        {
+            using var catalog = JsonDocument.Parse("{\"interiors\":[],\"closedEntrances\":[" + door + "]}");
+            var error = Throws<JsonException>(() => InteriorEntranceJson.ParseClosedEntrances(catalog.RootElement));
+            Require(error.Path == path, "Closed entrance failure lost its authored ID or array position.");
+        }
+    }
+
     private static string WithRef(string literal) => Entry.Insert(Entry.Length - 1, ",\"heightRef\":" + literal);
     private static EntranceDecl Parse(string text, ITerrain? terrain = null)
     {

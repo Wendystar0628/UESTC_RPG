@@ -11,7 +11,7 @@ using Campus.Contracts.Save;
 namespace Campus.Kernel.Registry;
 
 public sealed record RegistryGateReport(string Scope, int Maps, int Services, int Declarations,
-    int Entities, int Schemas, int FramePriorities, int QualityKnobs, IReadOnlyList<string> NotImplemented);
+    int Entities, int FramePriorities, int QualityKnobs, IReadOnlyList<string> NotImplemented);
 
 /// <summary>Headless declaration checks (this file) plus the command-line test drivers (RegistryGateRunner.Stage.cs, StageGateDriver*.cs). Declaration checks never construct services, nodes, or geometry.</summary>
 public static partial class RegistryGateRunner
@@ -94,19 +94,9 @@ public static partial class RegistryGateRunner
         var knobs = Enum.GetValues<QualityKnob>();
         if (knobs.Distinct().Count() != knobs.Length || knobs.Select(knob => (int)knob).Where((value, indexValue) => value != indexValue).Any())
             throw new InvalidDataException("Quality knob values must be unique and contiguous.");
-        var assembly = typeof(ContractJson).Assembly;
-        var schemas = assembly.GetManifestResourceNames().Where(name => name.EndsWith(".schema.json", StringComparison.Ordinal)).ToArray();
-        if (!schemas.Any(name => name.EndsWith("map.schema.json", StringComparison.Ordinal)))
-            throw new InvalidDataException("Embedded map schema is missing.");
-        foreach (var name in schemas)
-        {
-            using var stream = assembly.GetManifestResourceStream(name) ?? throw new InvalidDataException($"Embedded schema missing: {name}");
-            using var document = JsonDocument.Parse(stream);
-            if (document.RootElement.ValueKind != JsonValueKind.Object) throw new InvalidDataException($"Schema is not a JSON object: {name}");
-        }
         return new("declarations + constructor graph + map data; runtime core reported separately", selected.Length,
             registry.Entries.Count(entry => entry.Kind == "service"), registry.Entries.Count, entityCount,
-            schemas.Length, priorities.Length, knobs.Length,
+            priorities.Length, knobs.Length,
             [
                 "WP-27/WP-08: evaluate runtime Claims against each loaded world, including generic FeatureClaim rejection and overlapping claims.",
                 "WP-27/WP-08/WP-44: overlay difference reports and fidelity input freshness/coverage.",

@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../contracts/schemas/ui-tokens.schema.json",
   "ramps": {
     "blue": {
       "50": "#EFF9FE", "100": "#DDF2FE", "200": "#C0E8FF", "300": "#9CDAFE", "400": "#73C9F9", "500": "#4FAFE8",

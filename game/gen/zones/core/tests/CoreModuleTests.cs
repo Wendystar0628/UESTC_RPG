@@ -212,7 +212,7 @@ public sealed class CoreModuleTests
     public void TerrainOverlayIsWellFormed()
     {
         var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "overlay", "terrain", "core.terrain.json");
-        // The contract parser checks field names, discriminators and numeric bounds (terrain.schema.json).
+        // The contract parser checks field names, discriminators and numeric bounds.
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(path));
         Require(file.Zone.Value == "core" && file.Owner.Value == "WP-16", "zone and owner");
         var world = RealWorld();

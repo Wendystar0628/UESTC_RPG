@@ -1,11 +1,22 @@
 using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Campus.Contracts;
 
 /// <summary>Pure parsing of one authored interiors.json entrance into absolute world coordinates.</summary>
 public static class InteriorEntranceJson
 {
+    private static readonly InteriorEntranceJsonContext Context = new(new JsonSerializerOptions(ContractJson.Options)
+    {
+        PropertyNameCaseInsensitive = false,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        RespectRequiredConstructorParameters = true,
+        RespectNullableAnnotations = true,
+        AllowDuplicateProperties = false,
+        NumberHandling = JsonNumberHandling.Strict
+    });
+
     /// <summary>
     /// Parse the optional closed entrance register without creating providers or opening buildings.
     /// Validates IDs across both registers and rejects claims on an open-catalog feature.
@@ -16,43 +27,44 @@ public static class InteriorEntranceJson
     {
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var openFeatures = new HashSet<FeatureId>();
-        foreach (var interior in Required(catalog, "interiors").EnumerateArray())
+        var register = JsonSerializer.Deserialize(catalog, Context.InteriorEntranceRegister)
+            ?? throw new JsonException("An interior catalog must be an object.");
+        foreach (var interior in register.Interiors)
         {
-            var features = interior.GetProperty("featureIds").EnumerateArray()
-                .Select(value => new FeatureId(Text(value, "featureIds"))).ToHashSet();
+            if (interior is null) throw new JsonException("An interior must be an object.");
+            var features = interior.FeatureIds.Select(value => new FeatureId(Text(value, "featureIds"))).ToHashSet();
             openFeatures.UnionWith(features);
-            foreach (var entrance in interior.GetProperty("entrances").EnumerateArray())
+            foreach (var entrance in interior.Entrances)
             {
-                var id = Text(Required(entrance, "id"), "id");
+                if (entrance is null) throw new JsonException("An entrance must be an object.");
+                var id = Text(entrance.Id, "id");
                 if (!ids.Add(id)) throw new JsonException($"Duplicate entrance ID: '{id}'.", id, null, null);
-                if (!features.Contains(new(Text(Required(entrance, "featureId"), "featureId"))))
+                if (!features.Contains(new(Text(entrance.FeatureId, "featureId"))))
                     throw new JsonException($"Entrance '{id}' belongs to a feature outside its interior.", id, null, null);
             }
         }
         var result = new Dictionary<FeatureId, List<EntranceDecl>>();
-        if (catalog.TryGetProperty("closedEntrances", out var closed))
+        var index = 0;
+        foreach (var raw in register.ClosedEntrances)
         {
-            if (closed.ValueKind != JsonValueKind.Array) throw new JsonException("closedEntrances must be an array.");
-            var index = 0;
-            foreach (var raw in closed.EnumerateArray())
+            var path = $"closedEntrances[{index++}]";
+            try
             {
-                var path = $"closedEntrances[{index++}]";
-                try
-                {
-                    if (raw.ValueKind != JsonValueKind.Object) throw new JsonException("A closed entrance must be an object.");
-                    var id = Text(Required(raw, "id"), "id");
-                    path = id;
-                    if (!ids.Add(id)) throw new JsonException($"Duplicate entrance ID: '{id}'.");
-                    var feature = new FeatureId(Text(Required(raw, "featureId"), "featureId"));
-                    if (openFeatures.Contains(feature))
-                        throw new JsonException($"Closed entrance '{id}' claims open interior feature '{feature.Value}'.");
-                    var entrance = Parse(raw, feature, terrain);
-                    if (entrance.Open) throw new JsonException($"Closed entrance '{id}' must have open=false.");
-                    if (!result.TryGetValue(feature, out var list)) result.Add(feature, list = []);
-                    list.Add(entrance);
-                }
-                catch (JsonException error) { throw new JsonException(error.Message, path, null, null, error); }
+                // Read identity first so malformed door data still reports its authored ID.
+                var identity = JsonSerializer.Deserialize(raw, Context.InteriorEntranceIdentity)
+                    ?? throw new JsonException("A closed entrance must be an object.");
+                var id = Text(identity.Id, "id");
+                path = id;
+                if (!ids.Add(id)) throw new JsonException($"Duplicate entrance ID: '{id}'.");
+                var feature = new FeatureId(Text(identity.FeatureId, "featureId"));
+                if (openFeatures.Contains(feature))
+                    throw new JsonException($"Closed entrance '{id}' claims open interior feature '{feature.Value}'.");
+                var entrance = Parse(raw, feature, terrain);
+                if (entrance.Open) throw new JsonException($"Closed entrance '{id}' must have open=false.");
+                if (!result.TryGetValue(feature, out var list)) result.Add(feature, list = []);
+                list.Add(entrance);
             }
+            catch (JsonException error) { throw new JsonException(error.Message, path, null, null, error); }
         }
         return new System.Collections.ObjectModel.ReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>>(
             result.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<EntranceDecl>)pair.Value.AsReadOnly()));
@@ -71,32 +83,20 @@ public static class InteriorEntranceJson
     /// </remarks>
     public static EntranceDecl Parse(JsonElement entrance, FeatureId feature, ITerrain? terrain = null)
     {
-        if (entrance.ValueKind != JsonValueKind.Object) throw new JsonException("An entrance must be an object.");
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var property in entrance.EnumerateObject())
-        {
-            if (property.Name is not ("id" or "featureId" or "doorCenter" or "facingDeg" or
-                "outsideLanding" or "insideLanding" or "clearWidth" or "open" or "heightRef" or "headY"))
-                throw new JsonException($"Unknown entrance field: {property.Name}.");
-            if (!seen.Add(property.Name)) throw new JsonException($"Duplicate entrance field: {property.Name}.");
-        }
-
-        var id = Text(Required(entrance, "id"), "id");
-        var featureId = Text(Required(entrance, "featureId"), "featureId");
+        var data = JsonSerializer.Deserialize(entrance, Context.InteriorEntranceRecord)
+            ?? throw new JsonException("An entrance must be an object.");
+        var id = Text(data.Id, "id");
+        var featureId = Text(data.FeatureId, "featureId");
         if (!StringComparer.Ordinal.Equals(featureId, feature.Value))
             throw new JsonException($"Entrance '{id}' belongs to '{featureId}', not '{feature.Value}'.");
-        var outside = Vector(Required(entrance, "outsideLanding"), "outsideLanding");
-        var inside = Vector(Required(entrance, "insideLanding"), "insideLanding");
-        var center = Vector(Required(entrance, "doorCenter"), "doorCenter");
-        var width = Number(Required(entrance, "clearWidth"), "clearWidth");
-        var yaw = Number(Required(entrance, "facingDeg"), "facingDeg");
-        var headY = entrance.TryGetProperty("headY", out var head) ? Number(head, "headY") : 0f;
+        var outside = data.OutsideLanding;
+        var inside = data.InsideLanding;
+        var center = data.DoorCenter;
+        var width = Number(data.ClearWidth, "clearWidth");
+        var yaw = Number(data.FacingDeg, "facingDeg");
+        var headY = Number(data.HeadY, "headY");
         if (width < 1.1f) throw new JsonException($"Entrance '{id}' clearWidth must be at least 1.1 m.");
-        var open = Required(entrance, "open");
-        if (open.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
-            throw new JsonException($"Entrance '{id}' open must be a boolean.");
-        var heightRef = entrance.TryGetProperty("heightRef", out var reference)
-            ? Text(reference, "heightRef") : "absolute";
+        var heightRef = Text(data.HeightRef, "heightRef");
         switch (heightRef)
         {
             case "absolute":
@@ -125,25 +125,14 @@ public static class InteriorEntranceJson
             default:
                 throw new JsonException($"Unknown heightRef '{heightRef}' for entrance '{id}'; expected 'absolute' or 'pad'.");
         }
-        return new(id, outside, inside, width, open.GetBoolean()) { Center = center, YawDeg = yaw, HeadY = headY };
+        return new(id, outside, inside, width, data.Open) { Center = center, YawDeg = yaw, HeadY = headY };
     }
 
-    private static JsonElement Required(JsonElement value, string name) => value.TryGetProperty(name, out var field)
-        ? field : throw new JsonException($"Missing entrance field: {name}.");
+    private static string Text(string? value, string name) => value is { Length: > 0 }
+        ? value : throw new JsonException($"Entrance {name} must be a nonempty string.");
 
-    private static string Text(JsonElement value, string name) => value.ValueKind == JsonValueKind.String
-        && value.GetString() is { Length: > 0 } text ? text : throw new JsonException($"Entrance {name} must be a nonempty string.");
-
-    private static float Number(JsonElement value, string name) => value.ValueKind == JsonValueKind.Number
-        && value.TryGetSingle(out var number) && float.IsFinite(number) ? number
+    private static float Number(float value, string name) => float.IsFinite(value) ? value
         : throw new JsonException($"Entrance {name} must be a finite number.");
-
-    private static Vector3 Vector(JsonElement value, string name)
-    {
-        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != 3)
-            throw new JsonException($"Entrance {name} must contain exactly three numbers.");
-        return new(Number(value[0], name), Number(value[1], name), Number(value[2], name));
-    }
 
     private static Vector3 Raise(Vector3 point, float padY, string id, string name)
     {
@@ -152,3 +141,29 @@ public static class InteriorEntranceJson
         return point;
     }
 }
+
+internal sealed record InteriorEntranceRecord(string Id, string FeatureId, Vector3 DoorCenter,
+    float FacingDeg, Vector3 OutsideLanding, Vector3 InsideLanding, float ClearWidth, bool Open,
+    string HeightRef = "absolute", float HeadY = 0);
+
+// These register projections read ownership/identity only; provider metadata and open-door geometry
+// are validated by their owning parser. Closed-door geometry uses the strict record above.
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
+internal sealed record InteriorEntranceRegister
+{
+    public required IReadOnlyList<InteriorOpenEntranceRegister> Interiors { get; init; }
+    public IReadOnlyList<JsonElement> ClosedEntrances { get; set; } = [];
+}
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
+internal sealed record InteriorOpenEntranceRegister(IReadOnlyList<string> FeatureIds,
+    IReadOnlyList<InteriorEntranceIdentity> Entrances);
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
+internal sealed record InteriorEntranceIdentity(string Id, string? FeatureId = null);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(InteriorEntranceRecord))]
+[JsonSerializable(typeof(InteriorEntranceRegister))]
+[JsonSerializable(typeof(InteriorEntranceIdentity))]
+internal partial class InteriorEntranceJsonContext : JsonSerializerContext { }
