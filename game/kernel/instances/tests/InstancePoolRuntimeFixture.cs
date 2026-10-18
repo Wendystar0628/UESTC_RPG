@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using static GdUnit4.Assertions;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Renderer;
@@ -13,6 +14,11 @@ namespace Campus.Tests;
 /// </summary>
 public static class InstancePoolRuntimeFixture
 {
+    private static readonly StringName _shaderInstanceFogExempt = InstanceShaderParameters.FogExempt;
+    private static readonly StringName _shaderInstancePrecipD = InstanceShaderParameters.PrecipD;
+    private static readonly StringName _shaderInstancePrecipK = InstanceShaderParameters.PrecipK;
+    private static readonly StringName _shaderInstancePrecipV = InstanceShaderParameters.PrecipV;
+
     public static void Run(Node parent, ShaderMaterial material)
     {
         if (!parent.IsInsideTree()) throw new ArgumentException("Fixture parent must be in the scene tree.", nameof(parent));
@@ -160,21 +166,21 @@ public static class InstancePoolRuntimeFixture
             }
             {
                 var thrown = false;
-                try { pool.SetParameter(InstanceShaderNames.FogExempt, new Vector4(0, 0, 0, 0)); }
+                try { pool.SetParameter(_shaderInstanceFogExempt, new Vector4(0, 0, 0, 0)); }
                 catch (ArgumentException) { thrown = true; }
                 AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
             }
             {
                 var thrown = false;
-                try { pool.SetParameter(InstanceShaderNames.PrecipD, new Vector4(float.NaN, 0, 0, 1)); }
+                try { pool.SetParameter(_shaderInstancePrecipD, new Vector4(float.NaN, 0, 0, 1)); }
                 catch (ArgumentException) { thrown = true; }
                 AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
             }
             var displacement = new Vector4(1, 2, 3, 18);
-            pool.SetParameter(InstanceShaderNames.PrecipD, displacement);
-            pool.SetParameter(InstanceShaderNames.PrecipV, new Vector4(0, -1, 0, .58f));
-            pool.SetParameter(InstanceShaderNames.PrecipK, new Vector4(0, 0, 0, 0));
-            AssertThat(node.GetInstanceShaderParameter(InstanceShaderNames.PrecipD).AsVector4() == displacement).OverrideFailureMessage("The registered vec4 did not reach the instance.").IsTrue();
+            pool.SetParameter(_shaderInstancePrecipD, displacement);
+            pool.SetParameter(_shaderInstancePrecipV, new Vector4(0, -1, 0, .58f));
+            pool.SetParameter(_shaderInstancePrecipK, new Vector4(0, 0, 0, 0));
+            AssertThat(node.GetInstanceShaderParameter(_shaderInstancePrecipD).AsVector4() == displacement).OverrideFailureMessage("The registered vec4 did not reach the instance.").IsTrue();
             {
                 var thrown = false;
                 try { Task.Run(() => pool.VisibleCount = 1).GetAwaiter().GetResult(); }

@@ -17,6 +17,10 @@ namespace Campus.Systems.Sky;
 [KernelNode("systems.sky", Owner = "WP-40")]
 public partial class SkyNode : Node, IMapAware, IViewContentReadiness
 {
+    private static readonly StringName _shaderGlobalCloud = ShaderGlobals.Cloud;
+    private static readonly StringName _shaderGlobalCloudNoise = ShaderGlobals.CloudNoise;
+    private static readonly StringName _shaderGlobalStars = ShaderGlobals.Stars;
+
     private static readonly StringName CloudCoverParam = new("cloud_cover");
     private static readonly StringName CloudThrParam = new("cloud_thr");
 
@@ -93,13 +97,13 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         var frame = _script.Current;
 
         var drift = Drift(_world.WorldHours, _world.AnimTime, _map.CloudDrift);
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.Cloud,
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalCloud,
             new Vector4(drift.X, drift.Y, Clamp01(weather.CloudType), Clamp01(weather.Cb)));
 
         // 星空：色彩脚本给的可见度，再按阴度与雾淡出；被云挡住的部分在着色器里逐像素处理（ART-SKYLIGHT）
         var stars = Clamp01(frame.Stars) * (1f - Clamp01(weather.Overcast))
             * (1f - Mathf.SmoothStep(1f, SkyTuning.StarsFogHide, weather.Fog));
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.Stars, stars);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalStars, stars);
 
         if (_material is null || _thresholds is null) return;
         var cover = Clamp01(frame.CloudCover);
@@ -180,7 +184,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         var image = Image.CreateFromData(CloudNoise.Size, CloudNoise.Size, false, Image.Format.Rgba8, result.Rgba);
         image.GenerateMipmaps();
         _noiseTexture = ImageTexture.CreateFromImage(image);
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.CloudNoise, _noiseTexture);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalCloudNoise, _noiseTexture);
         _thresholds = result.CoverageThreshold;
     }
 

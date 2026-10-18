@@ -46,7 +46,7 @@ public readonly record struct TerrainSampleGrid(Vector2 Origin, Vector2 Step, in
 
 public static class TerrainSampling
 {
-    public const int TileQuads = 64;
+    public const int TileQuads = TileGrid.BaseEdge;
     public const int TileSamples = 65;
     public const int WholeMapSamples = 81;
     public const short HoleCm = short.MinValue;
@@ -67,20 +67,18 @@ public static class TerrainSampling
     {
         _ = SampleCount(level);
         ArgumentNullException.ThrowIfNull(dataRect);
-        if (!Finite(dataRect.Min) || !Finite(dataRect.Max) || dataRect.Max.X <= dataRect.Min.X || dataRect.Max.Y <= dataRect.Min.Y)
+        if (!VectorMath.Finite(dataRect.Min) || !VectorMath.Finite(dataRect.Max) || dataRect.Max.X <= dataRect.Min.X || dataRect.Max.Y <= dataRect.Min.Y)
             throw new ArgumentException("Terrain map rectangle must be finite and have positive extent.", nameof(dataRect));
         if (level == 4)
             return new(dataRect.Min, (dataRect.Max - dataRect.Min) / (WholeMapSamples - 1), WholeMapSamples, WholeMapSamples);
         int step = 1 << level;
-        double edge = TileQuads * step;
-        var origin = new Vector2((float)(tile.X * edge), (float)(tile.Z * edge));
+        var origin = TileGrid.Origin(tile, (LodLevel)level);
         return new(origin, new Vector2(step), TileSamples, TileSamples);
     }
 
     /// <summary>HeightFieldCollider decoding: a hole becomes NaN for the physics boundary; other samples are centimetres.</summary>
     public static float DecodeHeight(short cm) => cm == HoleCm ? float.NaN : cm * Centimetre;
 
-    private static bool Finite(Vector2 p) => float.IsFinite(p.X) && float.IsFinite(p.Y);
 }
 
 /// <summary>Immutable, pure flat fallback for maps whose terrain evaluator is not attached yet.</summary>

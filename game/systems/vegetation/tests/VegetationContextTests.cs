@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using Campus.Pipeline.Map;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -129,7 +130,7 @@ public sealed class VegetationContextTests
                 .ToDictionary(name => name, name => all[name], StringComparer.Ordinal);
             var loader = new WorldModelLoaderAdapter();
             var baseInput = new MapLoadInput(entry, baseFiles);
-            var map = entry.CreateContext(MapWorldLoading.LoadPrepared(loader, baseInput), baseInput.SourceInputs);
+            var map = MapWorldLoading.CreateContext(entry, MapWorldLoading.LoadPrepared(loader, baseInput), baseInput.SourceInputs);
             var assemblies = new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }
                 .Select(System.Reflection.Assembly.Load).ToArray();
             var registry = new ServiceRegistry();

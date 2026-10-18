@@ -7,6 +7,8 @@ namespace Campus.Kernel.Frame;
 [KernelNode("frame-clock", Owner = "WP-01")]
 public partial class FrameClockNode : Node
 {
+    private static readonly StringName _shaderGlobalFadeClock = ShaderGlobals.FadeClock;
+
     private double _elapsed;
     public override void _Ready()
     {
@@ -18,6 +20,6 @@ public partial class FrameClockNode : Node
     {
         _elapsed = (_elapsed + delta) % 480d;
         FrameClock.FadeSeconds = (float)_elapsed;
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.FadeClock, FrameClock.FadeSeconds);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalFadeClock, FrameClock.FadeSeconds);
     }
 }

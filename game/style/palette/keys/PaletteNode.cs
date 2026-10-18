@@ -19,6 +19,10 @@ namespace Campus.Style.Palette.Keys;
 [KernelService(typeof(IPaletteProbe), Owner = "WP-37")]
 public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
 {
+    private static readonly StringName _shaderGlobalFog = ShaderGlobals.Fog;
+    private static readonly StringName _shaderGlobalFogLow = ShaderGlobals.FogLow;
+    private static readonly StringName _shaderGlobalPalette = ShaderGlobals.Palette;
+
     private const string KeysDir = "res://style/palette/keys/";
 
     private readonly ColorScript _script;
@@ -54,8 +58,8 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         _image = Image.CreateFromData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
         _texture = ImageTexture.CreateFromImage(_image);
         // WP-37 produces the palette (ENG-PERF); once published the registry owns its lifetime: never Dispose it here.
-        _registration = Services.Get<IGlobalDataTextureRegistry>().RegisterOwned(ShaderGlobals.Palette, _texture, _texture.GetRid());
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.Palette, _texture);
+        _registration = Services.Get<IGlobalDataTextureRegistry>().RegisterOwned(_shaderGlobalPalette, _texture, _texture.GetRid());
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalPalette, _texture);
         Current = _composer.Snapshot(first, ++_rev);
         WriteGlobals(first);
     }
@@ -109,7 +113,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
     {
         // Stop producing, unbind the global, then hand the texture back to the registry (it releases the native resource).
         SetProcess(false);
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.Palette, default(Variant));
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalPalette, default(Variant));
         _registration?.Dispose();
         _registration = null;
     }
@@ -117,9 +121,9 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
     private static void WriteGlobals(WorldFrame w)
     {
         var v = w.Frame.V;
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.Fog, new Vector4((float)v[FrameLayout.FogDensity],
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalFog, new Vector4((float)v[FrameLayout.FogDensity],
             (float)v[FrameLayout.HazeDeg], (float)v[FrameLayout.FogStart], (float)v[FrameLayout.FogSilhouette]));
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.FogLow, new Vector4((float)v[FrameLayout.FogLowTop],
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalFogLow, new Vector4((float)v[FrameLayout.FogLowTop],
             (float)v[FrameLayout.FogLowDensity], (float)v[FrameLayout.FogLake], 0f));
     }
 

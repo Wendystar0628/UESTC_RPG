@@ -110,9 +110,6 @@ public partial class MapRuntime : Node, IMapRuntime
         WarmReady = false;
         try
         {
-            var rect = context.Descriptor.DataRect;
-            RenderingServer.GlobalShaderParameterSet(ShaderGlobals.MapRect,
-                new Vector4(rect.Min.X, rect.Min.Y, 1f / (rect.Max.X - rect.Min.X), 1f / (rect.Max.Y - rect.Min.Y)));
             var camera = Services.Get<Camera3D>();
             camera.Far = BackdropInputs.CameraFar(context.Descriptor, context.SourceInputs, BootTuning.CameraFar, camera.Near);
             var nodes = Services.Services.ForMap(context.Descriptor.Id.Value)

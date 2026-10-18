@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Tests.Support;
 
 /// <summary>
-/// The one fake <see cref="IWorldModel"/> of the generation tests: an empty flat world whose parts a test replaces by
+/// The shared fake <see cref="IWorldModel"/> of both test hosts: an empty flat world whose parts a test replaces by
 /// property, or a copy of a real world with only the replaced parts different (<c>new FakeWorld(real) { Terrain = t }</c>).
 /// </summary>
 internal class FakeWorld : IWorldModel

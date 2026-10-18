@@ -31,6 +31,11 @@ namespace Campus.Systems.Nightlight;
 [KernelService(typeof(ILampCueHook), Owner = "WP-39")]
 public partial class NightlightNode : Node, IMapAware, ILampCueHook
 {
+    private static readonly StringName _shaderGlobalLampGrid = ShaderGlobals.LampGrid;
+    private static readonly StringName _shaderGlobalLampTable = ShaderGlobals.LampTable;
+    private static readonly StringName _shaderGlobalShaft = ShaderGlobals.Shaft;
+    private static readonly StringName _shaderGlobalWindowOverride = ShaderGlobals.WindowOverride;
+
     private const string ScheduleFile = "lighting-schedule.json";
     private const string ExtrasFile = "cinematics/extras.json";
     private const uint LampSeed = 0x39u;
@@ -134,7 +139,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         var input = new ScheduleInput(_world.Clock, _world.Sun.AltDeg, weather.Overcast, weather.Precip, gain, delta, _world.Instance);
         _schedule.Evaluate(input, _channels);
         _sink.Submit(_channels);
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.Shaft,
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalShaft,
             new Vector4(ShaftStrength(_world.Sun.AltDeg, weather), ShaftNear, ShaftFar, ShaftAxisFalloff));
         if (_windows.TakeUpload(delta) && _overrideImage is not null && _overrideTexture is not null)
         {
@@ -222,8 +227,8 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         else _tableTexture.SetImage(tableImage);
         if (_gridTexture is null) _gridTexture = ImageTexture.CreateFromImage(gridImage);
         else _gridTexture.SetImage(gridImage);
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.LampTable, _tableTexture);
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.LampGrid, _gridTexture);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalLampTable, _tableTexture);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalLampGrid, _gridTexture);
 
         var windowSet = GlowSets.Windows(_inventory?.Facades ?? [], _inventory?.Windows ?? [], out var windowReport);
         if (_pools is not null && _materials is not null)
@@ -242,7 +247,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         if (_overrideTexture is not null) return;
         _overrideImage = Image.CreateFromData(WindowOverrides.Side, WindowOverrides.Side, false, Image.Format.Rgba8, _windows.Data);
         _overrideTexture = ImageTexture.CreateFromImage(_overrideImage);
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.WindowOverride, _overrideTexture);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalWindowOverride, _overrideTexture);
     }
 
     /// <summary>光柱的整体强度：太阳 2°–30° 之间才有；雨中的白天不画（太阳雨由 WP-45 的判定另算）；雾天 ×1.5。</summary>

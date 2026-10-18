@@ -45,8 +45,8 @@ public sealed class AtlasLabelBand
         {
             ArgumentNullException.ThrowIfNull(label);
             if (string.IsNullOrWhiteSpace(label.Id) || !ids.Add(label.Id) || string.IsNullOrWhiteSpace(label.Text) ||
-                !AtlasBaseValidation.Finite(label.At) || !AtlasBaseValidation.Finite(label.OffsetPixels) ||
-                !AtlasBaseValidation.Finite(label.Size) || label.Size.X <= 0 || label.Size.Y <= 0)
+                !VectorMath.Finite(label.At) || !VectorMath.Finite(label.OffsetPixels) ||
+                !VectorMath.Finite(label.Size) || label.Size.X <= 0 || label.Size.Y <= 0)
                 throw new ArgumentException("Labels require unique IDs, text, finite coordinates and positive measured bounds.", nameof(labels));
         }
         Language = language; ZoomBand = zoomBand; PixelsPerMetre = pixelsPerMetre;
@@ -154,11 +154,10 @@ public sealed class AtlasBaseSnapshot
 // Out/Ring: outskirts block / road / water / cut-line SDF. No glyph atlas is implied by these four textures.
 internal static class AtlasBaseValidation
 {
-    internal static bool Finite(Vector2 value) => float.IsFinite(value.X) && float.IsFinite(value.Y);
     internal static void Rect(MapRect rect)
     {
         ArgumentNullException.ThrowIfNull(rect);
-        if (!Finite(rect.Min) || !Finite(rect.Max) || rect.Min.X >= rect.Max.X || rect.Min.Y >= rect.Max.Y)
+        if (!VectorMath.Finite(rect.Min) || !VectorMath.Finite(rect.Max) || rect.Min.X >= rect.Max.X || rect.Min.Y >= rect.Max.Y)
             throw new ArgumentException("Atlas rectangles must be finite and nonempty.", nameof(rect));
     }
 }

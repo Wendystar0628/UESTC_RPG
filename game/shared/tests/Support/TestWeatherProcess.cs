@@ -19,6 +19,18 @@ internal sealed class TestWeatherProcess : IWeatherProcess
     public IReadOnlyList<WeatherSpan> Ahead => Array.Empty<WeatherSpan>();
     public uint Seed { get; private set; }
     public bool Transitioning => false;
+    public List<WeatherTick> Steps { get; } = [];
+    public List<string> Calls { get; } = [];
+    public int Resets { get; private set; }
+    public int Reseasons { get; private set; }
+    public int Quiets { get; private set; }
+    public int Enters { get; private set; }
+    public double PinFrom { get; private set; }
+    public double PinTo { get; private set; }
+    public double QuietTo { get; private set; }
+    public double LastEnterHours { get; private set; }
+    public WeatherKind PinnedKind { get; private set; }
+    public float? PinnedIntensity { get; private set; }
 
     public WeatherBoot ParseBootOptions(IReadOnlyDictionary<string, string> arguments, uint seed, Season season) => throw new NotSupportedException();
     public WeatherKind MapToSeason(WeatherKind kind, Season season) => throw new NotSupportedException();
@@ -26,18 +38,20 @@ internal sealed class TestWeatherProcess : IWeatherProcess
     public void Reset(WeatherBoot b)
     {
         ArgumentNullException.ThrowIfNull(b);
+        Resets++;
         Seed = b.Seed;
         _state = null;
         _worldHours = 17.5;
         _season = Season.Autumn;
         _clockOffset = 0;
-        Select(new WeatherSel(b.Kind.HasValue ? WeatherMode.Manual : WeatherMode.Auto,
+        ApplySelection(new WeatherSel(b.Kind.HasValue ? WeatherMode.Manual : WeatherMode.Auto,
             b.Kind ?? WeatherKind.Clear, b.Intensity ?? 0.5f));
         _wetOverride = b.Wet;
     }
 
     public void Step(in WeatherTick t)
     {
+        Steps.Add(t);
         _worldHours = t.WorldHours;
         _season = t.Season;
         _clockOffset = t.ClockOffset;
@@ -58,6 +72,12 @@ internal sealed class TestWeatherProcess : IWeatherProcess
 
     public void Select(WeatherSel sel)
     {
+        ApplySelection(sel);
+        Calls.Add("select");
+    }
+
+    private void ApplySelection(WeatherSel sel)
+    {
         if (!Enum.IsDefined(sel.Mode) || !Enum.IsDefined(sel.Kind))
             throw new ArgumentOutOfRangeException(nameof(sel));
         if (!float.IsFinite(sel.Intensity) || sel.Intensity is < 0 or > 1)
@@ -69,6 +89,8 @@ internal sealed class TestWeatherProcess : IWeatherProcess
     public void Reseason(double worldHours, Season to, double clockOffset)
     {
         var native = IsNative(Selection.Kind, to);
+        Reseasons++;
+        Calls.Add("reseason");
         _worldHours = worldHours;
         _season = to;
         _clockOffset = clockOffset;
@@ -88,20 +110,28 @@ internal sealed class TestWeatherProcess : IWeatherProcess
             },
             _ => throw new InvalidOperationException("Unexpected non-native weather."),
         };
-        Select(Selection with { Kind = kind });
+        ApplySelection(Selection with { Kind = kind });
     }
 
     public void Quiet(double worldHours, double untilHours)
     {
+        Quiets++;
+        QuietTo = untilHours;
+        Calls.Add("quiet");
         _worldHours = worldHours;
-        Select(ClearSelection);
+        ApplySelection(ClearSelection);
         _state = Capture() with { QuietUntilHours = untilHours };
     }
 
     public void Pin(double worldHours, WeatherKind k, float? intensity, double fromHours, double toHours)
     {
+        PinnedKind = k;
+        PinnedIntensity = intensity;
+        PinFrom = fromHours;
+        PinTo = toHours;
+        Calls.Add("pin");
         _worldHours = worldHours;
-        Select(new WeatherSel(WeatherMode.Auto, k, intensity ?? 0.5f));
+        ApplySelection(new WeatherSel(WeatherMode.Auto, k, intensity ?? 0.5f));
         _state = Capture() with
         {
             PinFromHours = fromHours,
@@ -113,6 +143,8 @@ internal sealed class TestWeatherProcess : IWeatherProcess
 
     public void Enter(MapId map, string profile, double worldHours)
     {
+        Enters++;
+        LastEnterHours = worldHours;
         _activeMap = map;
         _worldHours = worldHours;
     }

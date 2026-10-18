@@ -72,14 +72,13 @@ public sealed class GeometryPrototype
         ArgumentNullException.ThrowIfNull(surfaces);
         if (surfaces.Count == 0) throw new ArgumentException("A prototype requires at least one surface.", nameof(surfaces));
         foreach (var surface in surfaces) ArgumentNullException.ThrowIfNull(surface);
-        if (!Finite(bounds.Min) || !Finite(bounds.Max) || bounds.Min.X > bounds.Max.X || bounds.Min.Y > bounds.Max.Y || bounds.Min.Z > bounds.Max.Z)
+        if (!VectorMath.Finite(bounds.Min) || !VectorMath.Finite(bounds.Max) || bounds.Min.X > bounds.Max.X || bounds.Min.Y > bounds.Max.Y || bounds.Min.Z > bounds.Max.Z)
             throw new ArgumentException("Prototype bounds must be finite and ordered.", nameof(bounds));
         Id = id; Surfaces = Array.AsReadOnly(surfaces.ToArray()); Bounds = bounds;
     }
     public string Id { get; }
     public IReadOnlyList<GeometryBuffer> Surfaces { get; }
     public Box3 Bounds { get; }
-    private static bool Finite(Vector3 p) => float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
 }
 
 /// <summary>One CPU-generated static stream. The prototype is shared; only this stream's mutable instance input is frozen once.</summary>

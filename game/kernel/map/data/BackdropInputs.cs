@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;

@@ -1,5 +1,5 @@
 using Campus.Pipeline.Map;
-using System.Collections.ObjectModel;
+using Campus.Gen.World;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Registry;
@@ -10,6 +10,8 @@ namespace Campus.Kernel.Maps;
 /// <summary>All resource I/O stays on the engine side; workers receive detached byte arrays.</summary>
 public class MapDataSource
 {
+    private static readonly StringName _shaderGlobalMapRect = ShaderGlobals.MapRect;
+
     public virtual Task<MapCatalog> ReadCatalog()
     {
         var indexPath = ProjectSettings.GetSetting("campus/maps/index").AsString();
@@ -21,59 +23,32 @@ public class MapDataSource
             MapCatalog.ReadEntry(b.Entry, b.Map, b.Campus, b.Waypoints)).ToArray()));
     }
 
-    public virtual IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadWorldFiles(MapCatalogEntry entry)
-    {
-        var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
-        {
-            ["campus.json"] = ReadRequired(entry.DataRoot + "campus.json")
-        };
-        foreach (var name in new[] { "map.json", "network.json", "zones.json", "interiors.json", "fidelity.json" })
-            AddOptional(entry.DataRoot, name, files);
-        if (entry.Descriptor.Env.Outskirts is { } outskirts)
-            files[outskirts] = ReadRequired(entry.DataRoot + outskirts);
-        ReadJsonDirectory(entry.DataRoot, "overlay/", files);
-        return new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(files);
-    }
+    public virtual IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadWorldFiles(MapCatalogEntry entry) =>
+        WorldInputFiles.ReadWorldFiles(entry.Descriptor, new ResourceInputs(entry.DataRoot));
 
     /// <summary>Capture authored map resources on the engine thread before worker loading.</summary>
-    public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry)
-    {
-        var worldFiles = ReadWorldFiles(entry);
-        var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
-        foreach (var pair in worldFiles) files.Add(pair.Key, pair.Value);
-        // Capture the complete map input coverage before world parsing.
-        // Global assets are captured separately. The bake hasher selects only its dependencies.
-        ReadJsonDirectory(entry.DataRoot, "", files);
-        // Env.Backdrop is an authored relative path, not an extension convention. Preserve already read JSON bytes.
-        BackdropInputs.AddOptional(entry.Descriptor, entry.DataRoot, files,
-            Godot.FileAccess.FileExists, path => ReadRequired(path));
-        return new(entry, files);
-    }
+    public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry) =>
+        new(entry, WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot), ReadWorldFiles(entry)));
 
     public virtual MapClaimSnapshot? ReadClaims(MapId map) => MapClaimCapture.Capture(Campus.Kernel.Registry.Kernel.Services, map);
 
     public virtual void WriteMapRect(MapRect rect) => RenderingServer.GlobalShaderParameterSet(
-        Campus.Kernel.Renderer.ShaderNames.MapRect,
+        _shaderGlobalMapRect,
         new Godot.Vector4(rect.Min.X, rect.Min.Y, 1f / (rect.Max.X - rect.Min.X), 1f / (rect.Max.Y - rect.Min.Y)));
 
     public virtual void ReportError(string message) => GD.PushError(message);
 
-    private static void ReadJsonDirectory(string root, string relative, IDictionary<string, ReadOnlyMemory<byte>> output)
+    private sealed class ResourceInputs(string root) : IWorldInputSource
     {
-        if (!DirAccess.DirExistsAbsolute(root + relative)) return;
-        foreach (var name in DirAccess.GetFilesAt(root + relative).Order(StringComparer.Ordinal))
-            if (name.EndsWith(".json", StringComparison.Ordinal) && !output.ContainsKey(relative + name))
-                output[relative + name] = ReadRequired(root + relative + name);
-        foreach (var name in DirAccess.GetDirectoriesAt(root + relative).Order(StringComparer.Ordinal))
+        public ReadOnlyMemory<byte>? Read(string relativePath)
         {
-            MapCatalog.ValidateRelative(name);
-            ReadJsonDirectory(root, relative + name + '/', output);
+            if (!Godot.FileAccess.FileExists(root + relativePath)) return null;
+            return ReadRequired(root + relativePath);
         }
-    }
-
-    private static void AddOptional(string root, string name, IDictionary<string, ReadOnlyMemory<byte>> output)
-    {
-        if (Godot.FileAccess.FileExists(root + name)) output[name] = ReadRequired(root + name);
+        public IEnumerable<string> Files(string relativeDirectory) =>
+            DirAccess.DirExistsAbsolute(root + relativeDirectory) ? DirAccess.GetFilesAt(root + relativeDirectory) : [];
+        public IEnumerable<string> Directories(string relativeDirectory) =>
+            DirAccess.DirExistsAbsolute(root + relativeDirectory) ? DirAccess.GetDirectoriesAt(root + relativeDirectory) : [];
     }
 
     private static byte[] ReadOptional(string path) => Godot.FileAccess.FileExists(path) ? ReadRequired(path) : [];

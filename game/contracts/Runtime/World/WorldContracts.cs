@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Campus.Contracts;
 public enum ClockPreset { Morning, Noon, Dusk, Night }
-public readonly record struct Flow(int Rate);   // 世界秒 / 真实秒，Rate ∈ {0, 1, 10, 60, 360, 1440}，0 = 暂停；默认 1
+public readonly record struct Flow(int Rate);   // 世界秒 / 真实秒；取值见 FlowRates，0 = 暂停
 [Flags] public enum WorldTransition : byte { None = 0, Time = 1, Season = 2, Weather = 4 }   // 几种过渡可以同时进行
 public enum WeatherMode : byte { Auto, Manual }
 public readonly record struct WeatherSel(WeatherMode Mode, WeatherKind Kind, float Intensity);

@@ -176,7 +176,7 @@ public sealed class WalkRulesTests
         foreach (var name in new[] { "campus.json", "network.json", "interiors.json", "map.json" })
             files.Add(name, File.ReadAllText(Path.Combine(data, name)));
         var loaded = WorldModelLoader.Load(indexed.Id, files);
-        return (entry, entry.CreateContext(loaded, BuildInputSnapshot.Freeze(files.ToDictionary(p => p.Key, p => (ReadOnlyMemory<byte>)System.Text.Encoding.UTF8.GetBytes(p.Value), StringComparer.Ordinal))));
+        return (entry, MapWorldLoading.CreateContext(entry, loaded, BuildInputSnapshot.Freeze(files.ToDictionary(p => p.Key, p => (ReadOnlyMemory<byte>)System.Text.Encoding.UTF8.GetBytes(p.Value), StringComparer.Ordinal))));
     }
 
     private sealed class SpawnMaps(MapCatalogEntry entry) : IMapService

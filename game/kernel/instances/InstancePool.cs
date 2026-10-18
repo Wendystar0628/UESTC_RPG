@@ -10,6 +10,11 @@ internal sealed class InstancePool(
     GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, int surfaceCount,
     MultiMeshInstance3D instance, MultiMesh multiMesh, ArrayMesh mesh, Func<bool>? preparation) : IInstancePool
 {
+    private static readonly StringName _shaderInstancePrecipD = InstanceShaderParameters.PrecipD;
+    private static readonly StringName _shaderInstancePrecipK = InstanceShaderParameters.PrecipK;
+    private static readonly StringName _shaderInstancePrecipV = InstanceShaderParameters.PrecipV;
+    private static readonly StringName _shaderInstanceShadowProxy = InstanceShaderParameters.ShadowProxy;
+
     private MultiMeshInstance3D? _instance = instance;
     private MultiMesh? _multiMesh = multiMesh;
     private ArrayMesh? _mesh = mesh;
@@ -78,7 +83,7 @@ internal sealed class InstancePool(
     {
         RequireLive();
         ArgumentNullException.ThrowIfNull(name);
-        if (name != InstanceShaderNames.PrecipD && name != InstanceShaderNames.PrecipV && name != InstanceShaderNames.PrecipK)
+        if (name != _shaderInstancePrecipD && name != _shaderInstancePrecipV && name != _shaderInstancePrecipK)
             throw new ArgumentException("The name is not a registered vec4 instance parameter.", nameof(name));
         if (!value.IsFinite()) throw new ArgumentException("Instance parameters must be finite.", nameof(value));
         _instance!.SetInstanceShaderParameter(name, value);
@@ -88,7 +93,7 @@ internal sealed class InstancePool(
     {
         RequireLive();
         ArgumentNullException.ThrowIfNull(name);
-        if (name != InstanceShaderNames.ShadowProxy)
+        if (name != _shaderInstanceShadowProxy)
             throw new ArgumentException("Only the registered shadow_proxy scalar is supported by instance pools.", nameof(name));
         if (!float.IsFinite(value)) throw new ArgumentException("Instance parameters must be finite.", nameof(value));
         _instance!.SetInstanceShaderParameter(name, value);

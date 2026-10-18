@@ -14,6 +14,10 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class GeometryInstancePoolRuntimeTests
 {
+    private static readonly StringName _shaderInstanceFadeT0 = InstanceShaderParameters.FadeT0;
+    private static readonly StringName _shaderInstancePrecipD = InstanceShaderParameters.PrecipD;
+    private static readonly StringName _shaderInstanceShadowProxy = InstanceShaderParameters.ShadowProxy;
+
     [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
@@ -284,43 +288,43 @@ public sealed class GeometryInstancePoolRuntimeTests
         var bodyNode = FindPool(fixture.Host, "body");
         AssertThat(proxyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.ShadowsOnly &&
             bodyNode.CastShadow == GeometryInstance3D.ShadowCastingSetting.Off).OverrideFailureMessage("Explicit body/proxy shadow policy changed.").IsTrue();
-        proxy.SetParameter(InstanceShaderNames.ShadowProxy, 1f);
-        AssertThat(proxyNode.GetInstanceShaderParameter(InstanceShaderNames.ShadowProxy).AsSingle() == 1f).OverrideFailureMessage("The scalar instance parameter did not reach the native proxy.").IsTrue();
-        AssertThat(bodyNode.GetInstanceShaderParameter(InstanceShaderNames.ShadowProxy).AsSingle() == 0f).OverrideFailureMessage("Changing a proxy contaminated a body sharing its material.").IsTrue();
+        proxy.SetParameter(_shaderInstanceShadowProxy, 1f);
+        AssertThat(proxyNode.GetInstanceShaderParameter(_shaderInstanceShadowProxy).AsSingle() == 1f).OverrideFailureMessage("The scalar instance parameter did not reach the native proxy.").IsTrue();
+        AssertThat(bodyNode.GetInstanceShaderParameter(_shaderInstanceShadowProxy).AsSingle() == 0f).OverrideFailureMessage("Changing a proxy contaminated a body sharing its material.").IsTrue();
         {
             var thrown = false;
-            try { proxy.SetParameter(InstanceShaderNames.ShadowProxy, float.NaN); }
+            try { proxy.SetParameter(_shaderInstanceShadowProxy, float.NaN); }
             catch (ArgumentException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
         }
         {
             var thrown = false;
-            try { proxy.SetParameter(InstanceShaderNames.ShadowProxy, float.PositiveInfinity); }
+            try { proxy.SetParameter(_shaderInstanceShadowProxy, float.PositiveInfinity); }
             catch (ArgumentException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
         }
         {
             var thrown = false;
-            try { proxy.SetParameter(InstanceShaderNames.FadeT0, 1f); }
+            try { proxy.SetParameter(_shaderInstanceFadeT0, 1f); }
             catch (ArgumentException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
         }
         {
             var thrown = false;
-            try { proxy.SetParameter(InstanceShaderNames.PrecipD, 1f); }
+            try { proxy.SetParameter(_shaderInstancePrecipD, 1f); }
             catch (ArgumentException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
         }
         {
             var thrown = false;
-            try { proxy.SetParameter(InstanceShaderNames.ShadowProxy, new Godot.Vector4(1, 0, 0, 0)); }
+            try { proxy.SetParameter(_shaderInstanceShadowProxy, new Godot.Vector4(1, 0, 0, 0)); }
             catch (ArgumentException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
         }
         proxy.Free();
         {
             var thrown = false;
-            try { proxy.SetParameter(InstanceShaderNames.ShadowProxy, 0f); }
+            try { proxy.SetParameter(_shaderInstanceShadowProxy, 0f); }
             catch (ObjectDisposedException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ObjectDisposedException).Name}.").IsTrue();
         }

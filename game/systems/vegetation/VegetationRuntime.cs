@@ -27,6 +27,8 @@ namespace Campus.Systems.Vegetation;
 [KernelNode("systems.vegetation", Owner = "WP-23")]
 public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentReadiness, IViewCapturePreparation
 {
+    private static readonly StringName _shaderInstanceShadowProxy = InstanceShaderParameters.ShadowProxy;
+
     private const string ModuleId = "vegetation";
     private const uint VisibleLayer = 1u << 3;   // layer 4: vegetation visible geometry (ENG-PERF)
     private const uint ProxyLayer = 1u << 4;     // layer 5: ShadowsOnly proxies
@@ -201,7 +203,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
                 { Map = map };
                 var pool = host.Mount(spec);
                 _pools[p] = pool;
-                if (shadow) pool.SetParameter(InstanceShaderNames.ShadowProxy, 1f);
+                if (shadow) pool.SetParameter(_shaderInstanceShadowProxy, 1f);
             }
         }
 

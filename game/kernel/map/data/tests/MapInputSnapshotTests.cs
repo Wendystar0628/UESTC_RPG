@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using static GdUnit4.Assertions;
 using System.Numerics;
 using Campus.Contracts;
@@ -10,6 +11,18 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class MapInputSnapshotTests
 {
+    [TestCase]
+    [RequireGodotRuntime]
+    public void ProductionAndDiskCaptureAgreeWhenOptionalMapResourcesAreAbsent()
+    {
+        var entry = RealMapFixture.Entry();
+        var expected = RealMapFixture.ReadFiles();
+        var actual = new MapDataSource().ReadLoadInput(entry).Files;
+        AssertThat(actual.Keys.Order(StringComparer.Ordinal).SequenceEqual(expected.Keys.Order(StringComparer.Ordinal))).IsTrue();
+        foreach (var (name, bytes) in expected)
+            AssertThat(actual[name].Span.SequenceEqual(bytes.Span)).IsTrue();
+    }
+
     [TestCase]
     public void ConstructionFreezesBothCallerDictionaryAndRawArrays()
     {
@@ -45,8 +58,8 @@ public sealed class MapInputSnapshotTests
         var newInput = new MapLoadInput(entry, Files(2));
         var oldWorld = Loaded(entry);
         var newWorld = Loaded(entry);
-        var oldContext = entry.CreateContext(oldWorld, oldInput.SourceInputs);
-        var newContext = entry.CreateContext(newWorld, newInput.SourceInputs);
+        var oldContext = MapWorldLoading.CreateContext(entry, oldWorld, oldInput.SourceInputs);
+        var newContext = MapWorldLoading.CreateContext(entry, newWorld, newInput.SourceInputs);
         AssertThat(ReferenceEquals(oldContext.World, oldWorld.World) && ReferenceEquals(newContext.World, newWorld.World)).OverrideFailureMessage("A context changed the world to which its source version belongs.").IsTrue();
         AssertThat(ReferenceEquals(oldContext.SourceInputs, oldInput.SourceInputs) &&
             ReferenceEquals(newContext.SourceInputs, newInput.SourceInputs) &&

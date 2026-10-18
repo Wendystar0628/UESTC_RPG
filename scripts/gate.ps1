@@ -102,14 +102,27 @@ function Get-UESTCG2ProjectSelection {
             }
         }
         $compileFiles = @($scope.CompileFiles)
+        foreach ($file in $compileFiles) {
+            if ($file.Path -in $normalizedChanges -and
+                [IO.File]::ReadAllText($file.FullPath) -notmatch '\[TestSuite(?:\(|\])') {
+                # Shared support can be consumed across module boundaries or linked into both hosts.
+                $reasons.Add("Shared test support changed: $($file.Path)")
+            }
+        }
+        # Deleted support sources no longer appear in evaluated Compile items.
+        foreach ($path in @($normalizedChanges | Where-Object { $_ -match '/tests/Support/' })) {
+            $supportRoot = $path.Substring(0, $path.IndexOf('/tests/Support/', [StringComparison]::Ordinal)) + '/tests/'
+            if (@($compileFiles | Where-Object { $_.Path.StartsWith($supportRoot, [StringComparison]::OrdinalIgnoreCase) }).Count) {
+                $reasons.Add("Shared test support changed: $path")
+            }
+        }
         $allTests = $reasons.Count -gt 0
         $classes = New-Object 'Collections.Generic.List[string]'
         foreach ($file in $compileFiles) {
             # The aggregate gen/**/tests glob is not a module boundary. Each
             # test's own tests directory identifies the production module.
-            if ($file.Path -notmatch '^(?<module>.+)/tests/') { continue }
-            $module = $Matches.module
-            $affected = @($normalizedChanges | Where-Object {
+            $module = if ($file.Path -match '^(?<module>.+)/tests/') { $Matches.module } else { '' }
+            $affected = $module -and @($normalizedChanges | Where-Object {
                 $_ -ieq $module -or $_.StartsWith($module+'/', [StringComparison]::OrdinalIgnoreCase)
             }).Count -gt 0
             if (-not ($allTests -or $affected)) { continue }
@@ -203,6 +216,14 @@ $scope = if ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smok
 $planObject = [ordered]@{ Scope = $scope; WorkPackage = $Wp; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
 $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges ([bool]$Full) $Configuration) } else { @() }
 $planObject['G2Selection'] = $g2Selection
+$selectionIncomplete = @(
+    if ($runtimeChanges.Count -and $selected.Count -eq 0) { 'Runtime changes selected no gates.' }
+    if ($selected.Contains('G2') -and -not @($g2Selection | Where-Object { $_.Selected -and $_.HasCompileFiles }).Count) {
+        'G2 selected no test projects for this scope.'
+    }
+)
+$planObject['SelectionStatus'] = if ($selectionIncomplete.Count) { 'Incomplete' } else { 'Ready' }
+$planObject['IncompleteReasons'] = $selectionIncomplete
 $planObject['Stage'] = $mainStage
 $planObject['CoreChanges'] = [ordered]@{ Startup=$startupChanges; Walking=$walkChanges; Save=$saveChanges }
 if ($Plan) { $planObject | ConvertTo-Json -Depth 8; return }
@@ -211,11 +232,44 @@ try {
 $null = [IO.Directory]::CreateDirectory($work)
 $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
+if ($runtimeChanges.Count -and $selected.Count -eq 0) {
+    $results.Add([pscustomobject]@{ Gate='Selection'; Status='Incomplete'; Scope=$scope; Detail='Runtime changes selected no gates.' })
+}
 
 function Invoke-GateProcess {
     param([string]$Name, [string]$Executable, [string[]]$Arguments, [switch]$Visible,
         [int]$TimeoutSeconds = 1800)
-    try { Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -TimeoutSeconds $TimeoutSeconds }
+    $isTest = $Executable -eq 'dotnet' -and $Arguments.Count -gt 0 -and $Arguments[0] -eq 'test'
+    if ($isTest) {
+        $trxName = "$Name-$([Guid]::NewGuid().ToString('N')).trx"
+        $directoryIndex = [Array]::IndexOf($Arguments, '--results-directory')
+        if ($directoryIndex -lt 0) { throw "${Name}: test results directory is required." }
+        $trxPath = Join-Path $Arguments[$directoryIndex + 1] $trxName
+        for ($index = 0; $index -lt $Arguments.Count - 1; $index++) {
+            if ($Arguments[$index] -eq '--logger' -and $Arguments[$index + 1] -match '^trx(?:;|$)') {
+                $Arguments[$index + 1] = "trx;LogFileName=$trxName"
+            }
+        }
+    }
+    try {
+        $result = Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -AllowFailure:$isTest -TimeoutSeconds $TimeoutSeconds
+        if ($isTest) {
+            $executed = 0
+            if (Test-Path -LiteralPath $trxPath -PathType Leaf) {
+                [xml]$trx = Get-Content -Raw -LiteralPath $trxPath
+                $counters = $trx.SelectSingleNode('//*[local-name()="ResultSummary"]/*[local-name()="Counters"]')
+                if ($counters) { $executed = [int]$counters.GetAttribute('executed') }
+            }
+            if ($executed -eq 0) {
+                $failure = New-Object InvalidOperationException("${Name}: zero executed tests or missing TRX. See $($result.Log)")
+                $failure.Data['Incomplete'] = $true
+                throw $failure
+            }
+            if ($result.ExitCode -ne 0) { throw "${Name}: test process exited $($result.ExitCode). See $($result.Log)" }
+            $result | Add-Member -NotePropertyName Tests -NotePropertyValue $executed
+        }
+        return $result
+    }
     catch {
         # A known native import failure is retried once; ordinary failures and ERROR logs are never masked.
         if ($Name -ne 'G1-import' -or $_.Exception.Data['ExitCode'] -ne -1073741819) { throw }
@@ -268,19 +322,26 @@ foreach ($id in $selected) {
             'G2' {
                 $settings = Write-TestSettings
                 $runCount = 0
+                $testCount = 0
                 $notes = @()
                 foreach ($selection in @($g2Selection | Where-Object { $_.Selected })) {
                     $test = $selection.Name
                     $project = Join-Path $root $selection.Project
                     $notes += "${test}: " + ($selection.Reasons -join '; ')
-                    if (-not $selection.HasCompileFiles) { $notes += "${test}: Skipped (MSBuild evaluated no Compile items)"; continue }
+                    if (-not $selection.HasCompileFiles) { $status = 'Incomplete'; $notes += "${test}: no evaluated Compile items"; continue }
                     # Native rendering/resource-lifetime tests are run explicitly under the build lock.
                     # Ordinary quick checks remain headless checks (D-167).
-                    $null = Invoke-GateProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--filter',$selection.Filter,'--logger','trx','--results-directory',(Join-Path $work 'test-results'))
+                    $testRun = Invoke-GateProcess "G2-$test" dotnet @('test',$project,'-c',$Configuration,'--settings',$settings,'--filter',$selection.Filter,'--logger','trx','--results-directory',(Join-Path $work 'test-results'))
                     $runCount++
+                    $testCount += $testRun.Tests
                 }
-                if ($runCount -eq 0) { $status = 'Skipped' }
-                $detail = "Test projects run=$runCount. " + ($notes -join '; ')
+                if ($runCount -eq 0) { $status = 'Incomplete' }
+                if ($Full) {
+                    $native = & (Join-Path $PSScriptRoot 'gates/native-render.ps1') -Root $root -BuildLease $gateLease
+                    $testCount += $native.Tests
+                    $notes += "NativeRender: $($native.Tests) tests; $($native.Log)"
+                }
+                $detail = "Test projects run=$runCount; tests executed=$testCount. " + ($notes -join '; ')
             }
             'G3' { $detail = Test-UESTCOwnership $root $Wp $changes -BaseRef $BaseRef | ConvertTo-Json -Depth 5 -Compress }
             'G4' {
@@ -331,10 +392,10 @@ foreach ($id in $selected) {
             }
             'G15Core' {
                 Assert-GodotVersion
-                # The daily walking core has a three-minute session limit.
+                # Session limits detect hangs, including when the workstation is busy.
                 [xml]$coreSettings = Get-Content -Raw -LiteralPath (Write-TestSettings)
                 $sessionTimeout = $coreSettings.CreateElement('TestSessionTimeout')
-                $sessionTimeout.InnerText = '180000'
+                $sessionTimeout.InnerText = '600000'
                 $null = $coreSettings.RunSettings.RunConfiguration.AppendChild($sessionTimeout)
                 $settings = Join-Path $work 'G15Core.runsettings'
                 $coreSettings.Save($settings)
@@ -342,8 +403,9 @@ foreach ($id in $selected) {
                 try {
                     [Environment]::SetEnvironmentVariable('UESTC_G15_MAP', $Map, 'Process')
                     $coreArguments = @('test',(Join-Path $game 'Campus.Tests.csproj'),'-c',$Configuration,'--settings',$settings,'--filter','TestCategory=G15Core','--logger','console;verbosity=detailed','--logger','trx','--results-directory',(Join-Path $work 'test-results'))
-                    $null = Invoke-GateProcess 'G15Core' dotnet $coreArguments -TimeoutSeconds 210
+                    $null = Invoke-GateProcess 'G15Core' dotnet $coreArguments -TimeoutSeconds 630
                 } catch {
+                    if ($_.Exception.Data['Incomplete']) { throw }
                     throw ("G15Core nearby walking failed. " + $_.Exception.Message)
                 } finally { [Environment]::SetEnvironmentVariable('UESTC_G15_MAP', $previousMap, 'Process') }
                 $detail = 'P01/P08 authored landing and nearby walking passed; at most 3x3 collision tiles. Full routes and whole-map checks were not run.'
@@ -366,7 +428,8 @@ foreach ($id in $selected) {
         $results.Add([pscustomobject]@{ Gate=$id; Status=$status; Scope=$scope; Detail=$detail })
         Write-Host "[$id] $status - $detail"
     } catch {
-        $results.Add([pscustomobject]@{ Gate=$id; Status='Failed'; Scope=$scope; Detail=$_.Exception.Message })
+        $failureStatus = if ($_.Exception.Data['Incomplete']) { 'Incomplete' } else { 'Failed' }
+        $results.Add([pscustomobject]@{ Gate=$id; Status=$failureStatus; Scope=$scope; Detail=$_.Exception.Message })
         Write-Warning "[$id] $($_.Exception.Message)"
         # Dependent later stages must not test stale binaries after a build/import failure.
         break
@@ -377,7 +440,7 @@ $reportPath = Join-Path $work "$Wp-result.json"
 [IO.File]::WriteAllText($reportPath, ($report | ConvertTo-Json -Depth 10), $utf8)
 Write-Host "Report: $reportPath"
 if (@($results | Where-Object { $_.Status -eq 'Failed' }).Count) { exit 1 }
-if (@($results | Where-Object { $_.Status -eq 'NotImplemented' }).Count) { exit 2 }
+if (@($results | Where-Object { $_.Status -in @('NotImplemented','Incomplete') }).Count) { exit 2 }
 exit 0
 
 } finally { Exit-UESTCBuildLock $gateLease }

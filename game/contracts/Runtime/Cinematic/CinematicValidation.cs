@@ -29,9 +29,9 @@ public static class CinematicValidation
             {
                 Require((point.Anchor is null) != (point.P is null), "Camera point needs exactly one position source.");
                 if (point.Anchor is not null) Require(CinematicAnchors.IsPoseAnchor(point.Anchor), "Invalid point anchor.");
-                if (point.P is { } p) Require(Finite(p), "Non-finite camera point.");
-                if (point.In is { } incoming) Require(Finite(incoming), "Non-finite incoming handle.");
-                if (point.Out is { } outgoing) Require(Finite(outgoing), "Non-finite outgoing handle.");
+                if (point.P is { } p) Require(VectorMath.Finite(p), "Non-finite camera point.");
+                if (point.In is { } incoming) Require(VectorMath.Finite(incoming), "Non-finite incoming handle.");
+                if (point.Out is { } outgoing) Require(VectorMath.Finite(outgoing), "Non-finite outgoing handle.");
             }
             Require(segment.Fov.Count > 0, "FOV track is empty.");
             double keyTime = -1;
@@ -99,8 +99,7 @@ public static class CinematicValidation
             };
         }
     }
-    private static void ValidRate(int? rate) => Require(rate is 0 or 1 or 10 or 60 or 360 or 1440, "Invalid world flow rate.");
-    private static bool Finite(System.Numerics.Vector3 p) => float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
+    private static void ValidRate(int? rate) => Require(rate is { } value && FlowRates.IsValid(value), "Invalid world flow rate.");
     private static void Range(double from, double to, double duration) => Require(double.IsFinite(from) && double.IsFinite(to) && from >= 0 && to > from && to <= duration, "Invalid track interval.");
     private static void Require(bool value, string reason) { if (!value) throw new InvalidDataException(reason); }
 }

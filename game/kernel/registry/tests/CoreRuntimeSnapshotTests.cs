@@ -9,7 +9,7 @@ namespace Campus.Tests;
 public sealed class CoreRuntimeSnapshotTests
 {
     private const string Snapshot = """
-        {"maps":{"current":"fixture-map","visits":[{"map":"fixture-map","lastPose":{"position":[10,1.72,20],"yawDeg":30,"pitchDeg":0},"mode":"walk"}]},"view":{"mode":"walk","pose":{"position":[10,1.72,20],"yawDeg":30,"pitchDeg":0},"space":{"feature":"fixture:room","storey":1},"speedStep":2},"walk":{"feet":{"position":[10,0.1,20],"yawDeg":30,"pitchDeg":0},"crouching":false,"speedStep":2,"safePoints":[{"position":[10,0.1,20],"yawDeg":30,"pitchDeg":0},{"position":[40,0.1,50],"yawDeg":60,"pitchDeg":0}]},"world":{"worldHours":17.5,"season":"autumn","rate":0},"weather":{"seed":1,"automatic":true,"wetness":0.25}}
+        {"maps":{"current":"fixture-map","visits":[{"map":"fixture-map","lastPose":{"position":[10,1.72,20],"yawDeg":30,"pitchDeg":0},"mode":"walk"}]},"view":{"mode":"walk","pose":{"position":[10,1.72,20],"yawDeg":30,"pitchDeg":0},"space":{"feature":"fixture:room","storey":1},"speedStep":2},"walk":{"feet":{"position":[10,0.1,20],"yawDeg":30,"pitchDeg":0},"crouching":false,"speedStep":2,"safePoints":[{"position":[10,0.1,20],"yawDeg":30,"pitchDeg":0},{"position":[40,0.1,50],"yawDeg":60,"pitchDeg":0}]},"world":{"worldHours":17.5,"season":"autumn","rate":0},"weather":{"seed":1,"automatic":true,"wetness":0.25},"extensions":{"anchors":[{"position":[1,2,3],"weight":1}]}}
         """;
 
     [TestCase]
@@ -23,7 +23,7 @@ public sealed class CoreRuntimeSnapshotTests
     }
 
     [TestCase]
-    public void EveryAllowedPositionRejectsMoreThanTwoCentimetresInEuclideanDistance()
+    public void EveryPositionRejectsMoreThanTwoCentimetresInEuclideanDistance()
     {
         for (var index = 0; index < Positions(JsonNode.Parse(Snapshot)!.AsObject()).Length; index++)
         {
@@ -55,6 +55,8 @@ public sealed class CoreRuntimeSnapshotTests
             state => state["world"]!["rate"] = .00001,
             state => state["weather"]!["seed"] = 2,
             state => state["weather"]!["wetness"] = .25001,
+            state => state["extensions"]!["anchors"]![0]!["weight"] = 1.00001,
+            state => state["extensions"]!["anchors"]![0]!["position"]!.AsArray().RemoveAt(2),
             state => state["walk"]!["safePoints"]!.AsArray().RemoveAt(1),
             state =>
             {
@@ -71,13 +73,15 @@ public sealed class CoreRuntimeSnapshotTests
             AssertThat(!StageGateDriver.CoreSnapshotsMatch(Snapshot, restored.ToJsonString()))
                 .OverrideFailureMessage("Non-position or array change " + i + " must not match.").IsTrue();
         }
+        AssertThat(StageGateDriver.CoreSnapshotsMatch(Snapshot, Snapshot.Replace("\"rate\":0", "\"rate\":0.0", StringComparison.Ordinal)))
+            .OverrideFailureMessage("Non-position numeric spelling must remain exact.").IsFalse();
     }
 
-    private static JsonArray[] Positions(JsonObject state) =>
-    [
-        state["walk"]!["feet"]!["position"]!.AsArray(),
-        state["view"]!["pose"]!["position"]!.AsArray(),
-        state["maps"]!["visits"]![0]!["lastPose"]!["position"]!.AsArray(),
-        .. state["walk"]!["safePoints"]!.AsArray().Select(point => point!["position"]!.AsArray())
-    ];
+    private static JsonArray[] Positions(JsonNode state) => state switch
+    {
+        JsonObject obj => obj.SelectMany(property => property.Key == "position"
+            ? new[] { property.Value!.AsArray() } : Positions(property.Value!)).ToArray(),
+        JsonArray array => array.SelectMany(item => Positions(item!)).ToArray(),
+        _ => []
+    };
 }

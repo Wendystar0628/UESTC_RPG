@@ -3,59 +3,111 @@ namespace Campus.Contracts;
 /// <summary>Global shader parameter names from ENG-PERF 1.5; values are owned by their registered systems.</summary>
 public static class ShaderGlobals
 {
+    /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string Clock = "clock";
+    /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string AnimTime = "anim_time";
+    /// <summary>Sole writer: Campus.Kernel.Frame.FrameClockNode.</summary>
     public const string FadeClock = "fade_clock";
+    /// <summary>Sole writer: Campus.Kernel.Quality.Settings.QualityRuntime.</summary>
     public const string StepRate = "step_rate";
+    /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string Season = "season";
+    /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string SunDir = "sun_dir";
+    /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string MoonDir = "moon_dir";
+    /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string MoonLit = "moon_lit";
+    /// <summary>Sole writer: Campus.Kernel.Lighting.KeyLightDirector.</summary>
     public const string KeyDir = "key_dir";
+    /// <summary>Sole writer: Campus.Kernel.Lighting.KeyLightDirector.</summary>
     public const string KeyStrength = "key_strength";
+    /// <summary>Sole writer: Campus.Kernel.Lighting.KeyLightDirector.</summary>
     public const string ShadowStrength = "shadow_strength";
+    /// <summary>Sole writer: Campus.Kernel.Lighting.KeyLightDirector.</summary>
     public const string RetreatY = "retreat_y";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string Wind = "wind";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string Snow = "snow";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string GroundAmt = "ground_amt";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string Veil = "veil";
+    /// <summary>Sole writer: Campus.Systems.Sky.SkyNode.</summary>
     public const string Stars = "stars";
+    /// <summary>Sole writer: Campus.Style.Palette.Keys.PaletteNode.</summary>
     public const string Fog = "fog";
-    /// <summary>Ground fog ceiling, density, lake fog strength and reserved value; written by WP-37.</summary>
+    /// <summary>Sole writer: Campus.Style.Palette.Keys.PaletteNode.</summary>
     public const string FogLow = "fog_low";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string Medium = "medium";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string MediumColor = "medium_color";
+    /// <summary>Sole writer: Campus.Hud.Style.UiThemeClock.</summary>
     public const string UiNight = "ui_night";
+    /// <summary>Sole writer: Campus.Systems.Water.WaterSystem.</summary>
     public const string ReflectVp = "reflect_vp";
+    /// <summary>Sole writer: Campus.Systems.Water.WaterSystem.</summary>
     public const string ReflectLake = "reflect_lake";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string Incident = "incident";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string IncidentRoute = "incident_route";
+    /// <summary>Sole writer: Campus.Systems.Weather.Precip.PrecipNode.</summary>
     public const string WeatherA = "weather_a";
+    /// <summary>Sole writer: Campus.Systems.Weather.Precip.PrecipNode.</summary>
     public const string WeatherB = "weather_b";
+    /// <summary>Sole writer: Campus.Systems.Weather.Precip.PrecipNode.</summary>
     public const string WeatherFog = "weather_fog";
+    /// <summary>Sole writer: Campus.Systems.Sky.SkyNode.</summary>
     public const string Cloud = "cloud";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string Lightning = "lightning";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string SnowFx = "snow_fx";
+    /// <summary>Sole writer: Campus.Kernel.Lighting.KeyLightDirector.</summary>
     public const string OvercastDir = "overcast_dir";
+    /// <summary>Sole writer: Campus.Kernel.Quality.Settings.QualityRuntime.</summary>
     public const string Quality = "quality";
+    /// <summary>Sole writer: Campus.Kernel.Maps.MapDataSource.</summary>
     public const string MapRect = "map_rect";
+    /// <summary>Sole writer: Campus.Camera.ObserverCamera.</summary>
     public const string EdgeFog = "edge_fog";
+    /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
     public const string Shaft = "shaft";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string InteriorLight = "interior_light";
+    /// <summary>Sole writer: Campus.Style.Palette.Keys.PaletteNode.</summary>
     public const string Palette = "palette";
+    /// <summary>Sole writer: Campus.Kernel.Lighting.LightChannelService.</summary>
     public const string LightChannels = "light_channels";
+    /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
     public const string WindowOverride = "window_override";
+    /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
     public const string LampGrid = "lamp_grid";
+    /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
     public const string LampTable = "lamp_table";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string TreeSpecies = "tree_species";
+    /// <summary>Sole writer: Campus.Style.Materials.ToonLibrary.</summary>
     public const string MatTable = "mat_table";
+    /// <summary>Sole writer: Campus.Style.Materials.ToonLibrary.</summary>
     public const string WindowCards = "window_cards";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string GroundMask = "ground_mask";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string TerrainHeight = "terrain_height";
+    /// <summary>Sole writer: Campus.Systems.Water.WaterSystem.</summary>
     public const string ReflectTex = "reflect_tex";
+    /// <summary>Sole writer: Campus.Systems.Sky.SkyNode.</summary>
     public const string CloudNoise = "cloud_noise";
+    /// <summary>Sole writer: Campus.Systems.Weather.Precip.PrecipNode.</summary>
     public const string PrecipOcc = "precip_occ";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string ReflLamps = "refl_lamps";
+    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string GroundMask2 = "ground_mask2";
 }
 

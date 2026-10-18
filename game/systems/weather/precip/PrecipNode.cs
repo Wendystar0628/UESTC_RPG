@@ -21,6 +21,14 @@ namespace Campus.Systems.Weather.Precip;
 [QualityResponsive(Owns = [QualityKnob.ParticleDensity])]
 public partial class PrecipNode : Node, IQualityAware, IMapAware
 {
+    private static readonly StringName _shaderInstancePrecipD = InstanceShaderParameters.PrecipD;
+    private static readonly StringName _shaderInstancePrecipK = InstanceShaderParameters.PrecipK;
+    private static readonly StringName _shaderInstancePrecipV = InstanceShaderParameters.PrecipV;
+    private static readonly StringName _shaderGlobalPrecipOcc = ShaderGlobals.PrecipOcc;
+    private static readonly StringName _shaderGlobalWeatherA = ShaderGlobals.WeatherA;
+    private static readonly StringName _shaderGlobalWeatherB = ShaderGlobals.WeatherB;
+    private static readonly StringName _shaderGlobalWeatherFog = ShaderGlobals.WeatherFog;
+
     /// <summary>降水池在 ENG-PERF 图层登记里的第 6 层（粒子）：相机可见、不投影、不进倒影世界。</summary>
     private const uint PoolLayers = 1u << 5;
 
@@ -66,16 +74,16 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
     {
         if (_world is null || _wind is null || _camera is null || _pool is null) return;
         var w = _world.WeatherNow;
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.WeatherA, ToGodot(WeatherGlobalsMap.A(w)));
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.WeatherB, ToGodot(WeatherGlobalsMap.B(w)));
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.WeatherFog, ToGodot(WeatherGlobalsMap.Fog(w)));
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalWeatherA, ToGodot(WeatherGlobalsMap.A(w)));
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalWeatherB, ToGodot(WeatherGlobalsMap.B(w)));
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalWeatherFog, ToGodot(WeatherGlobalsMap.Fog(w)));
         var eye = _camera.Pose.Position;
         var gust = _wind.Sample(eye.X, eye.Z, _world.AnimTime).Gust;
         Frame = _model.Step(w, _world.Instance, _world.Step12, gust, _density, _stepRate);
         _pool.VisibleCount = Frame.VisibleCount;
-        _pool.SetParameter(InstanceShaderNames.PrecipD, ToGodot(Frame.D));
-        _pool.SetParameter(InstanceShaderNames.PrecipV, ToGodot(Frame.V));
-        _pool.SetParameter(InstanceShaderNames.PrecipK, ToGodot(Frame.K));
+        _pool.SetParameter(_shaderInstancePrecipD, ToGodot(Frame.D));
+        _pool.SetParameter(_shaderInstancePrecipV, ToGodot(Frame.V));
+        _pool.SetParameter(_shaderInstancePrecipK, ToGodot(Frame.K));
     }
 
     public void ApplyQuality(QualityView view, in QualityChange change)
@@ -103,7 +111,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
         if (_occ is null)
         {
             _occ = ImageTexture.CreateFromImage(_occImage);
-            RenderingServer.GlobalShaderParameterSet(ShaderNames.PrecipOcc, _occ);
+            RenderingServer.GlobalShaderParameterSet(_shaderGlobalPrecipOcc, _occ);
         }
         else
         {

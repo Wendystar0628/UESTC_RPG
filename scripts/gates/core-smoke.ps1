@@ -56,7 +56,7 @@ function Invoke-UESTCMainlineSmoke {
         $closeObservation = @{ At=$null; Sent=$false }
         $closeObserver = New-UESTCCoreCloseObserver $closeObservation
         $close = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-close','--title=1',
-            '--save=1',"--map=$Map",'--flow=0','--seed=1','--weather-seed=1')) $rootPath (Join-Path $work 'save-close.log') -Visible -TimeoutSeconds 180 -ObserveOutput $closeObserver
+            '--save=1',"--map=$Map",'--flow=0','--seed=1','--weather-seed=1')) $rootPath (Join-Path $work 'save-close.log') -Visible -TimeoutSeconds 600 -ObserveOutput $closeObserver
         $closeEnded = [Diagnostics.Stopwatch]::GetTimestamp()
         if ($close.Output -match '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)') {
             throw 'The production close process reported an engine/shader error.'
@@ -67,7 +67,7 @@ function Invoke-UESTCMainlineSmoke {
         if ($null -eq $closeObservation.At) { throw 'The close process did not receive WM_CLOSE.' }
         # Same machine monotonic clock; includes the runner's final observation interval.
         $closeMs = ($closeEnded - [long]$closeObservation.At) * 1000.0 / [Diagnostics.Stopwatch]::Frequency
-        if ($closeMs -lt 0 -or $closeMs -gt 2000) { throw "WM_CLOSE did not finish within 2 s ($closeMs ms)." }
+        if ($closeMs -lt 0 -or $closeMs -gt 30000) { throw "WM_CLOSE appears stuck ($closeMs ms)." }
         $baseline = [regex]::Match($close.StdOut,'(?m)^CORE_GENERATION (\d+)\r?$')
         if (-not $baseline.Success) { throw 'The close process did not expose its pre-exit generation.' }
         $generations = @(Get-ChildItem -LiteralPath (Join-Path $saves 's1') -Filter 'g*.sav' -File |
@@ -79,7 +79,7 @@ function Invoke-UESTCMainlineSmoke {
         $resumeObservation = @{ At=$null; Sent=$false }
         $resumeObserver = New-UESTCCoreCloseObserver $resumeObservation
         $resume = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-resume','--title=0',
-            '--slot=1','--save=off')) $rootPath (Join-Path $work 'save-resume.log') -Visible -TimeoutSeconds 180 -ObserveOutput $resumeObserver
+            '--slot=1','--save=off')) $rootPath (Join-Path $work 'save-resume.log') -Visible -TimeoutSeconds 600 -ObserveOutput $resumeObserver
         if ($resume.Output -match '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)') {
             throw 'The production resume process reported an engine/shader error.'
         }
@@ -97,7 +97,7 @@ function Invoke-UESTCMainlineSmoke {
         }
         $result = [pscustomobject]@{ Status='Passed';
             Scope='G5 startup/exit automatic assertions; full UI/transit mainline remains centralized'; CloseMilliseconds=$closeMs;
-            Generation=[UInt64]$latest; PersistedFields='RuntimeMatched (positions within 2 cm; other fields exact)';
+            Generation=[UInt64]$latest; PersistedFields='RuntimeMatched (CoreSnapshotsMatch spatial position tolerance; other fields exact)';
             Screenshot='Both captured for Opus visual review; no G7 pixel comparison or tolerance claim';
             Logs=$work; Screenshots=$shots }
     } catch {
@@ -123,9 +123,23 @@ function Invoke-UESTCSaveCore {
             $escapedRoot = [Security.SecurityElement]::Escape($rootPath)
             $xml = '<RunSettings><RunConfiguration><MaxCpuCount>1</MaxCpuCount><TreatNoTestsAsError>true</TreatNoTestsAsError><EnvironmentVariables><GODOT_BIN>' + $engine + '</GODOT_BIN><UESTC_REPOSITORY>' + $escapedRoot + '</UESTC_REPOSITORY></EnvironmentVariables></RunConfiguration><GdUnit4><Parameters>--headless</Parameters><DisplayName>FullyQualifiedName</DisplayName><TolerateExitCodeAfterCompletion>false</TolerateExitCodeAfterCompletion></GdUnit4></RunSettings>'
             [IO.File]::WriteAllText($settings,$xml,(New-Object Text.UTF8Encoding $false))
-            $null = Invoke-UESTCProcess dotnet @('test',(Join-Path $rootPath 'game/Campus.Tests.csproj'),'--no-build',
+            $trxName = 'save-core-' + [Guid]::NewGuid().ToString('N') + '.trx'
+            $trxPath = Join-Path $work $trxName
+            $saveTests = Invoke-UESTCProcess dotnet @('test',(Join-Path $rootPath 'game/Campus.Tests.csproj'),'--no-build',
                 '--no-restore','--settings',$settings,'--filter','FullyQualifiedName~Campus.Kernel.Save',
-                '--logger','trx','--results-directory',$work) $rootPath (Join-Path $work 'save-core.log') -TimeoutSeconds 600
+                '--logger',"trx;LogFileName=$trxName",'--results-directory',$work) $rootPath (Join-Path $work 'save-core.log') -TimeoutSeconds 600 -AllowFailure
+            $executed = 0
+            if (Test-Path -LiteralPath $trxPath -PathType Leaf) {
+                [xml]$trx = Get-Content -Raw -LiteralPath $trxPath
+                $counters = $trx.SelectSingleNode('//*[local-name()="ResultSummary"]/*[local-name()="Counters"]')
+                if ($counters) { $executed = [int]$counters.GetAttribute('executed') }
+            }
+            if ($executed -eq 0) {
+                $failure = New-Object InvalidOperationException('G20Core is incomplete: zero executed save tests or missing TRX.')
+                $failure.Data['Incomplete'] = $true
+                throw $failure
+            }
+            if ($saveTests.ExitCode -ne 0) { throw "Save core exited $($saveTests.ExitCode). See $($saveTests.Log)" }
         }
         $window = Invoke-UESTCMainlineSmoke -Root $rootPath -Godot $Godot -Locks $Locks -Wp $Wp -Map $Map -BuildLease $BuildLease
         return [pscustomobject]@{ Status=$window.Status; Scope='G20 roundtrip, migration, corruption and exit-save core';

@@ -10,7 +10,7 @@ public readonly record struct StairFrame(Vector3 Nosing0, Vector3 Run, Vector3 U
     /// <summary>Checks the straight-flight frame and its existing StairSpec; does not infer an absent visual origin.</summary>
     public void Validate(StairSpec spec)
     {
-        if (!Finite(Nosing0) || !Finite(Run) || !Finite(Up) || !float.IsFinite(Width) || Width <= 0)
+        if (!VectorMath.Finite(Nosing0) || !VectorMath.Finite(Run) || !VectorMath.Finite(Up) || !float.IsFinite(Width) || Width <= 0)
             throw new ArgumentException("Stair frame must contain finite geometry and positive width.");
         if (MathF.Abs(Run.Y) > .0001f || MathF.Abs(Run.LengthSquared() - 1) > .0001f ||
             Vector3.DistanceSquared(Up, Vector3.UnitY) > .00000001f)
@@ -19,7 +19,6 @@ public readonly record struct StairFrame(Vector3 Nosing0, Vector3 Run, Vector3 U
             throw new ArgumentException("Stair specification requires positive riser, tread and count.", nameof(spec));
     }
 
-    private static bool Finite(Vector3 p) => float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
 }
 
 /// <summary>A mounted analytical flight selected for the requested support layer; no native body or RID escapes the boundary.</summary>

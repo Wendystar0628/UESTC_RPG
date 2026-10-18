@@ -5,8 +5,8 @@ namespace Campus.Tests;
 
 /// <summary>
 /// Shared IMapService fake. Defaults describe a service with no maps; tests set the properties they need
-/// and subclass only to override Travel, Transition or Visits. It does not implement ResolveSpawn, so the
-/// interface's default NotSupported method stays observable.
+/// and subclass only to override Travel, Transition or Visits. Spawn resolution is opt-in and can use a
+/// real catalogue resolver without introducing another IMapService implementation.
 /// </summary>
 internal class TestMapService : IMapService
 {
@@ -18,8 +18,11 @@ internal class TestMapService : IMapService
     public virtual IReadOnlyList<MapVisit> Visits => [];
     public virtual IMapTransition? Transition => LastTransition;
     protected IMapTransition? LastTransition { get; set; }
+    public Func<MapId, string?, MapSpawn>? SpawnResolver { get; set; }
     public event Action<MapId, MapTravelCause>? Arrived;
     protected void RaiseArrived(MapId map, MapTravelCause cause) => Arrived?.Invoke(map, cause);
+    public virtual MapSpawn ResolveSpawn(MapId map, string? spawn = null) =>
+        SpawnResolver is { } resolve ? resolve(map, spawn) : throw new NotSupportedException();
     public virtual IMapTransition Travel(MapTravelRequest request) => throw new NotSupportedException();
 }
 

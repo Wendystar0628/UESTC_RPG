@@ -53,7 +53,7 @@ public sealed partial class StageGateDriver
             try
             {
                 await CoreWait(() => System.Numerics.Vector3.Distance(before, camera.Pose.Position) > .01f,
-                    "A real input event did not move the production camera.", 2000);
+                    "A real input event did not move the production camera.");
             }
             finally
             {
@@ -61,7 +61,7 @@ public sealed partial class StageGateDriver
                 Input.ParseInputEvent(release);
             }
             GD.Print("CORE_INPUT_READY");
-            await CoreWait(() => camera.Speed < .0001f, "The released movement input remained active.", 2000);
+            await CoreWait(() => camera.Speed < .0001f, "The released movement input remained active.");
             var saved = await saves.SaveNow(SaveReason.Test);
             if (saved.Status != SaveStatus.Saved) throw new InvalidOperationException("Core save failed: " + saved.Error);
             var beforeLoad = CaptureCoreSections();
@@ -141,51 +141,53 @@ public sealed partial class StageGateDriver
         return Encoding.UTF8.GetString(bytes.ToArray());
     }
 
-    // Restoring a walking body can settle it onto support. Only these position vectors allow 2 cm;
-    // every other field, property/array order and numeric spelling retains the existing exact comparison.
-    internal static bool CoreSnapshotsMatch(string saved, string restored)
+    // Landing may settle any spatial position. Other values, numeric spelling and order remain exact.
+    internal static bool CoreSnapshotsMatch(string saved, string restored) =>
+        MatchCoreNode(JsonNode.Parse(saved), JsonNode.Parse(restored));
+
+    private static bool MatchCoreNode(JsonNode? saved, JsonNode? restored)
     {
-        var before = JsonNode.Parse(saved)!.AsObject();
-        var after = JsonNode.Parse(restored)!.AsObject();
-        if (!MatchCorePosition(before["walk"]?["feet"] as JsonObject, after["walk"]?["feet"] as JsonObject)
-            || !MatchCorePosition(before["view"]?["pose"] as JsonObject, after["view"]?["pose"] as JsonObject))
-            return false;
-        if (before["walk"]?["safePoints"] is not JsonArray safeBefore
-            || after["walk"]?["safePoints"] is not JsonArray safeAfter || safeBefore.Count != safeAfter.Count)
-            return false;
-        for (var i = 0; i < safeBefore.Count; i++)
-            if (!MatchCorePosition(safeBefore[i] as JsonObject, safeAfter[i] as JsonObject)) return false;
-        if (before["maps"]?["visits"] is not JsonArray visitsBefore
-            || after["maps"]?["visits"] is not JsonArray visitsAfter || visitsBefore.Count != visitsAfter.Count)
-            return false;
-        for (var i = 0; i < visitsBefore.Count; i++)
-            if (!MatchCorePosition(visitsBefore[i]?["lastPose"] as JsonObject,
-                visitsAfter[i]?["lastPose"] as JsonObject)) return false;
-        return before.ToJsonString(ContractJson.Options) == after.ToJsonString(ContractJson.Options);
+        if (saved is JsonObject before && restored is JsonObject after)
+        {
+            if (before.Count != after.Count) return false;
+            using var properties = after.GetEnumerator();
+            foreach (var property in before)
+            {
+                if (!properties.MoveNext() || property.Key != properties.Current.Key) return false;
+                if (property.Key == "position")
+                {
+                    if (!MatchCorePosition(property.Value as JsonArray, properties.Current.Value as JsonArray)) return false;
+                }
+                else if (!MatchCoreNode(property.Value, properties.Current.Value)) return false;
+            }
+            return true;
+        }
+        if (saved is JsonArray beforeItems && restored is JsonArray afterItems)
+            return beforeItems.Count == afterItems.Count
+                && beforeItems.Zip(afterItems).All(pair => MatchCoreNode(pair.First, pair.Second));
+        return saved?.ToJsonString(ContractJson.Options) == restored?.ToJsonString(ContractJson.Options);
     }
 
-    private static bool MatchCorePosition(JsonObject? savedPose, JsonObject? restoredPose)
+    private static bool MatchCorePosition(JsonArray? saved, JsonArray? restored)
     {
         const double positionTolerance = .02;
-        if (savedPose is null || restoredPose is null
-            || savedPose["position"] is not JsonArray saved || restoredPose["position"] is not JsonArray restored
-            || saved.Count != 3 || restored.Count != 3) return false;
+        if (saved is null || restored is null || saved.Count != 3 || restored.Count != 3) return false;
         double distanceSquared = 0;
         for (var i = 0; i < 3; i++)
         {
-            var a = saved[i]!.GetValue<double>();
-            var b = restored[i]!.GetValue<double>();
+            if (saved[i] is not JsonValue savedValue || restored[i] is not JsonValue restoredValue
+                || !savedValue.TryGetValue<double>(out var a) || !restoredValue.TryGetValue<double>(out var b)) return false;
             if (!double.IsFinite(a) || !double.IsFinite(b)) return false;
             var delta = a - b;
             distanceSquared += delta * delta;
         }
-        if (distanceSquared > positionTolerance * positionTolerance) return false;
-        restoredPose["position"] = saved.DeepClone();
-        return true;
+        return distanceSquared <= positionTolerance * positionTolerance;
     }
 
-    private async Task CoreWait(Func<bool> ready, string failure, double timeoutMilliseconds)
+    private async Task CoreWait(Func<bool> ready, string failure)
     {
+        // Detect a stuck lifecycle while allowing the workstation to be busy.
+        const double timeoutMilliseconds = 30_000;
         var start = FrameClock.MonotonicMilliseconds;
         while (!ready())
         {

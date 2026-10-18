@@ -9,6 +9,8 @@ namespace Campus.Kernel.Stream;
 /// <summary>Owns its meshes, multimeshes and instances. Scenario and material RIDs remain borrowed.</summary>
 public sealed class PreparedTile : IDisposable
 {
+    private static readonly StringName _shaderInstanceFadeT0 = InstanceShaderParameters.FadeT0;
+
     public sealed record Draw(Rid Base, Rid Mesh, Transform3D At, ToonRef Material,
         bool IgnoreOcclusionCulling, ShaderId? Shader, bool Reflect, ulong Format, bool Instanced, BakedPrimitive Primitive, bool Resident = false)
     {
@@ -181,7 +183,7 @@ public sealed class PreparedTile : IDisposable
             var instance = _instances[i];
             if (_draws[i].Shader is null)
             {
-                RenderingServer.InstanceGeometrySetShaderParameter(instance, InstanceShaderNames.FadeT0, fadeStart);
+                RenderingServer.InstanceGeometrySetShaderParameter(instance, _shaderInstanceFadeT0, fadeStart);
                 RenderingServer.InstanceSetVisible(instance, visible);
                 _mainVisible[i] = visible;
             }

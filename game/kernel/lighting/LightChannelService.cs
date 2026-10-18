@@ -16,6 +16,8 @@ namespace Campus.Kernel.Lighting;
 [KernelService(typeof(ILightChannelSink), Owner = "WP-03")]
 public sealed class LightChannelService : IChannelReader, ILightChannelSink
 {
+    private static readonly StringName _shaderGlobalLightChannels = ShaderGlobals.LightChannels;
+
     private readonly N.Vector2[] _slots = new N.Vector2[LightChannelCatalog.Count];
     private Image? _image;
     private ImageTexture? _texture;
@@ -41,7 +43,7 @@ public sealed class LightChannelService : IChannelReader, ILightChannelSink
         {
             _image = Image.CreateFromData(LightChannelCatalog.Count, 1, false, Image.Format.Rgf, bytes);
             _texture = ImageTexture.CreateFromImage(_image);
-            RenderingServer.GlobalShaderParameterSet(ShaderNames.LightChannels, _texture);
+            RenderingServer.GlobalShaderParameterSet(_shaderGlobalLightChannels, _texture);
         }
         else
         {

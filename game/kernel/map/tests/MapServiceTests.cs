@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using static GdUnit4.Assertions;
 using Campus.Pipeline.Map;
 using System.Numerics;

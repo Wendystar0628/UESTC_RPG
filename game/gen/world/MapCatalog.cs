@@ -5,7 +5,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 
-namespace Campus.Kernel.Maps;
+namespace Campus.Gen.World;
 
 /// <summary>Immutable authored map catalogue. Parsing never reads files or retains a world model.</summary>
 public sealed class MapCatalog
@@ -191,9 +191,6 @@ public sealed class MapCatalog
 public sealed record MapCatalogEntry(MapDescriptor Descriptor, string DataRoot,
     IReadOnlyList<Waypoint> Waypoints)
 {
-    public IMapContext CreateContext(WorldModelLoadResult loaded, BuildInputSnapshot sourceInputs) =>
-        MapWorldLoading.CreateContext(this, loaded, sourceInputs);
-
     public MapSpawn ResolveSpawn(string id)
     {
         var spawn = Descriptor.Spawns.FirstOrDefault(s => s.Id == id);

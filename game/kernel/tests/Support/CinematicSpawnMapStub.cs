@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;

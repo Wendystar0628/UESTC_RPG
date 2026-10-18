@@ -17,6 +17,12 @@ namespace Campus.Kernel.Lighting;
 [QualityResponsive(Owns = [QualityKnob.ShadowQuality, QualityKnob.ShadowDistance])]
 public partial class KeyLightDirector : Node, IQualityAware
 {
+    private static readonly StringName _shaderGlobalKeyDir = ShaderGlobals.KeyDir;
+    private static readonly StringName _shaderGlobalKeyStrength = ShaderGlobals.KeyStrength;
+    private static readonly StringName _shaderGlobalOvercastDir = ShaderGlobals.OvercastDir;
+    private static readonly StringName _shaderGlobalRetreatY = ShaderGlobals.RetreatY;
+    private static readonly StringName _shaderGlobalShadowStrength = ShaderGlobals.ShadowStrength;
+
     /// <summary>
     /// PCSS light size, 0 = PCSS off. Compared in the D0 scene at 0 / 0.1 / 0.2 / 0.45° under the toon
     /// threshold: any PCSS turns edges grainy (0.45°) or lumpy (0.1–0.2°), and long low-sun shadows
@@ -120,16 +126,16 @@ public partial class KeyLightDirector : Node, IQualityAware
             var dir = frame.LightDir.ToGodot();
             var up = Mathf.Abs(dir.Y) > 0.999f ? Vector3.Back : Vector3.Up;
             _light.GlobalTransform = new Transform3D(Basis.LookingAt(-dir, up), Vector3.Zero);
-            RenderingServer.GlobalShaderParameterSet(ShaderNames.KeyDir, dir);
+            RenderingServer.GlobalShaderParameterSet(_shaderGlobalKeyDir, dir);
         }
         if (frame.OvercastDir != _writtenOvercast)
         {
             _writtenOvercast = frame.OvercastDir;
-            RenderingServer.GlobalShaderParameterSet(ShaderNames.OvercastDir, frame.OvercastDir.ToGodot());
+            RenderingServer.GlobalShaderParameterSet(_shaderGlobalOvercastDir, frame.OvercastDir.ToGodot());
         }
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.KeyStrength, frame.KeyStrength);
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.ShadowStrength, frame.ShadowStrength);
-        RenderingServer.GlobalShaderParameterSet(ShaderNames.RetreatY, frame.RetreatY);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalKeyStrength, frame.KeyStrength);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalShadowStrength, frame.ShadowStrength);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalRetreatY, frame.RetreatY);
 
         // Idle pass: opacity 0 skips shadow sampling, mask 0 culls every caster (neither is a
         // specialization constant). Restoring happens in a frame whose shadow_strength is still 0.

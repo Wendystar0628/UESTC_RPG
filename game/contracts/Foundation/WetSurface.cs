@@ -19,7 +19,7 @@ public static class WetSurface
 
     /// <summary>积水潜势 0–1，与着色器 precip_puddle_potential 相同。</summary>
     public static float PuddlePotential(float x, float z) =>
-        WeightA * ValueNoise(x / ScaleA, z / ScaleA) + (1f - WeightA) * ValueNoise(x / ScaleB + 17f, z / ScaleB + 5f);
+        WeightA * IntegerNoise.PuddleValue2D(x / ScaleA, z / ScaleA) + (1f - WeightA) * IntegerNoise.PuddleValue2D(x / ScaleB + 17f, z / ScaleB + 5f);
 
     /// <summary>积水阈值：积水量越大阈值越低；积水量为 0 时不积水（由 IsPuddle 判断）。</summary>
     public static float PuddleThreshold(float level) => PuddleTop - PuddleSpan * Math.Clamp(level, 0f, 1f);
@@ -29,7 +29,7 @@ public static class WetSurface
     {
         if (interior) return 0f;
         var ny = Math.Clamp(normalY, -1f, 1f);
-        return SmoothStep(-0.6f, 0f, ny) * (0.6f + 0.4f * SmoothStep(0f, 0.7f, ny));
+        return ScalarMath.Smoothstep(-0.6f, 0f, ny) * (0.6f + 0.4f * ScalarMath.Smoothstep(0f, 0.7f, ny));
     }
 
     /// <summary>湿润量 = 天气湿润 × 暴露 × 材质响应（材质线表的湿润响应：沥青 1、默认 0.6、玻璃 0）。</summary>
@@ -38,55 +38,10 @@ public static class WetSurface
 
     /// <summary>朝天地面上的积水级别：天气积水量 × 材质门限 × 平面门限。</summary>
     public static float PuddleLevel(float weatherPuddle, float response, float normalY) =>
-        Math.Clamp(weatherPuddle, 0f, 1f) * SmoothStep(ResponseFrom, ResponseTo, response) * SmoothStep(FlatFrom, FlatTo, normalY);
+        Math.Clamp(weatherPuddle, 0f, 1f) * ScalarMath.Smoothstep(ResponseFrom, ResponseTo, response) * ScalarMath.Smoothstep(FlatFrom, FlatTo, normalY);
 
     /// <summary>这一点有没有积水（硬边：着色器在阈值两侧只做一像素的抗锯齿）。</summary>
     public static bool IsPuddle(float x, float z, float level) =>
         level > 0f && PuddlePotential(x, z) > PuddleThreshold(level);
 
-    internal static uint Hash(uint x)
-    {
-        unchecked
-        {
-            x ^= x >> 16;
-            x *= 2146121005u;
-            x ^= x >> 15;
-            x *= 2221713035u;
-            x ^= x >> 16;
-            return x;
-        }
-    }
-
-    internal static float Cell(int cx, int cz)
-    {
-        unchecked
-        {
-            var h = Hash(((uint)cx * 73856093u) ^ Hash((uint)cz * 19349663u + 1u));
-            return (h >> 8) / 16777216f;
-        }
-    }
-
-    internal static float ValueNoise(float x, float z)
-    {
-        var ix = MathF.Floor(x);
-        var iz = MathF.Floor(z);
-        var fx = x - ix;
-        var fz = z - iz;
-        var ux = fx * fx * (3f - 2f * fx);
-        var uz = fz * fz * (3f - 2f * fz);
-        int cx = (int)ix, cz = (int)iz;
-        var a = Cell(cx, cz);
-        var b = Cell(cx + 1, cz);
-        var d = Cell(cx, cz + 1);
-        var e = Cell(cx + 1, cz + 1);
-        var top = a + (b - a) * ux;
-        var bottom = d + (e - d) * ux;
-        return top + (bottom - top) * uz;
-    }
-
-    private static float SmoothStep(float a, float b, float x)
-    {
-        var t = Math.Clamp((x - a) / (b - a), 0f, 1f);
-        return t * t * (3f - 2f * t);
-    }
 }
