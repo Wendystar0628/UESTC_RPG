@@ -29,13 +29,13 @@ window.DashManifest = {
   ],
   data: [
     { name: 'live',       label: '运行状态', path: 'data/auto/live.js',         every: 15,  stale: 90 },
-    { name: 'queue',      label: '施工队列', path: 'data/auto/queue.js',        every: 600, stale: 2400 },
-    { name: 'structure',  label: '项目结构', path: 'data/auto/structure.js',    every: 600, stale: 2400 },
-    { name: 'docs',       label: '文档地图', path: 'data/auto/docs.js',         every: 600, stale: 2400 },
-    { name: 'decisions',  label: '决策',     path: 'data/auto/decisions.js',    every: 600, stale: 2400 },
+    { name: 'queue',      label: '施工队列', path: 'data/auto/queue.js',        every: 15, stale: 600 },
+    { name: 'structure',  label: '项目结构', path: 'data/auto/structure.js',    every: 15, stale: 600 },
+    { name: 'docs',       label: '文档地图', path: 'data/auto/docs.js',         every: 15, stale: 600 },
+    { name: 'decisions',  label: '决策',     path: 'data/auto/decisions.js',    every: 15, stale: 600 },
     { name: 'catalog',    label: '脚本目录', path: 'data/auto/catalog.js',      every: 60,  stale: 300 },
-    { name: 'health',     label: '健康状态', path: 'data/auto/health.js',       every: 600, stale: 2400 },
-    { name: 'audit-auto', label: '自动待审', path: 'data/auto/audit-auto.js',   every: 600, stale: 2400 },
+    { name: 'health',     label: '健康状态', path: 'data/auto/health.js',       every: 15, stale: 600 },
+    { name: 'audit-auto', label: '自动待审', path: 'data/auto/audit-auto.js',   every: 15, stale: 600 },
     { name: 'notices',    label: '通知',     path: 'data/curated/notices.js',   every: 30,  stale: null },
     { name: 'audit',      label: '审计项',   path: 'data/curated/audit.js',     every: 30,  stale: null }
   ]
