@@ -15,7 +15,7 @@
 
 ## CORE-CONVENTIONS · 约定
 
-`docs/core/CORE-CONVENTIONS-约定.md` · 10.4k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法、编号与命名、实体 ID 规则、确定性原则
+`docs/core/CORE-CONVENTIONS-约定.md` · 10.5k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法、编号与命名、实体 ID 规则、确定性原则
 关键词：约定、坐标系、单位、角度、方位角、时间写法、编号体系、命名、实体 ID、色名、枚举纪律、持久化 ID、确定性
 
 - CORE-CONVENTIONS §0 结论 · L22 · 807
@@ -26,7 +26,7 @@
   - CORE-CONVENTIONS §1.3 清水河的范围数 · L60 · 278
   - CORE-CONVENTIONS §1.4 其他单位 · L68 · 267
 - CORE-CONVENTIONS §2 时间写法 · L76 · 831
-- CORE-CONVENTIONS §3 标识与命名 · L94 · 6.0k
+- CORE-CONVENTIONS §3 标识与命名 · L94 · 6.1k
   - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L96 · 923
   - CORE-CONVENTIONS §3.2 编号体系 · L112 · 873
   - CORE-CONVENTIONS §3.3 同号不同义的读法 · L135 · 687
@@ -34,7 +34,7 @@
   - CORE-CONVENTIONS §3.5 色名 · L170 · 364
   - CORE-CONVENTIONS §3.6 枚举与扩展纪律 · L177 · 567
   - CORE-CONVENTIONS §3.7 持久化 ID 的稳定 · L188 · 426
-  - CORE-CONVENTIONS §3.8 文件与编号的命名格式 · L197 · 1.0k
+  - CORE-CONVENTIONS §3.8 文件与编号的命名格式 · L197 · 1.1k
 - CORE-CONVENTIONS §4 确定性 · L217 · 294
 - CORE-CONVENTIONS §5 路径 · L225 · 258
 
@@ -109,30 +109,30 @@
 `docs/workflow/WF-BUILD-施工边界.md` · 3.5k 字 · 施工时能改哪里、共享文件、契约申请与冻结、构建与测试排队、新模块怎么接入、Godot API 先查签名，以及禁用写法门禁拦不住的两条约定
 关键词：独占目录、共享文件、契约申请、契约冻结、构建锁、构建与测试排队、.uid、特性接入、穷举 switch、几何不随时季天气变、GDScript、uid、signatures.txt、Godot API
 
-- WF-BUILD §0 结论 · L23 · 847
-  - ★ WF-BUILD §0.1 接入要点 · L32 · 433
+- WF-BUILD §0 结论 · L23 · 851
+  - ★ WF-BUILD §0.1 接入要点 · L32 · 435
 - WF-BUILD §1 改哪里 · L40 · 518
 - WF-BUILD §2 G4 拦不住的约定 · L48 · 170
-- WF-BUILD §3 契约申请与冻结 · L53 · 329
+- WF-BUILD §3 契约申请与冻结 · L53 · 331
 - WF-BUILD §4 构建与测试排队 · L60 · 760
 
 ## WF-COMMS · 交接与通信
 
-`docs/workflow/WF-COMMS-交接与通信.md` · 6.7k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
+`docs/workflow/WF-COMMS-交接与通信.md` · 6.5k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
 关键词：.collab、交接目录、文件布局、结案即删、D-228、不归档、下一个编号、任务单、施工单、旁路单、调研目录、契约申请、评审请求、六行短头部、完成回报、回报格式、截图命名、文件命名、来信、收件箱、notes、一条一个文件、【需定】【待审】【知会】、Codex 会话、codex queue、引导信箱、steer、HANDOVER.md、D-207、D-208、作者观察台、dashboard、post.py、审计项、通知
 
 - WF-COMMS §0 结论 · L23 · 717
   - ★ WF-COMMS §0.1 接入要点 · L33 · 217
 - WF-COMMS §1 交接目录与文件 · L40 · 1.1k
-- WF-COMMS §2 命名与写法 · L61 · 505
-- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L68 · 974
-  - WF-COMMS §3.1 施工单与旁路单 · L70 · 238
+- WF-COMMS §2 命名与写法 · L61 · 391
+- WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L68 · 977
+  - WF-COMMS §3.1 施工单与旁路单 · L70 · 236
   - WF-COMMS §3.2 请求文件 · L75 · 50
   - WF-COMMS §3.3 契约申请的短头部（D-201） · L79 · 170
-  - WF-COMMS §3.4 完成回报 · L89 · 491
-- WF-COMMS §4 来信与消息 · L107 · 1.4k
-  - WF-COMMS §4.1 什么时候发 · L109 · 251
-  - WF-COMMS §4.2 一条来信一个新文件（D-207） · L118 · 199
+  - WF-COMMS §3.4 完成回报 · L89 · 496
+- WF-COMMS §4 来信与消息 · L107 · 1.3k
+  - WF-COMMS §4.1 什么时候发 · L109 · 253
+  - WF-COMMS §4.2 一条来信一个新文件（D-207） · L118 · 169
   - WF-COMMS §4.3 三级标记与写法 · L122 · 429
   - WF-COMMS §4.4 来信、排队消息与引导信箱 · L130 · 480
 - WF-COMMS §5 Codex 会话与引导信箱 · L142 · 302
@@ -182,7 +182,7 @@
   - WF-FLOW §2.1 防打架（D-211） · L62 · 372
 - WF-FLOW §3 施工与回报 · L71 · 1.0k
   - WF-FLOW §3.1 统一编译（D-219） · L83 · 500
-- WF-FLOW §4 评审：审美与契约的交叉评审 · L92 · 713
+- WF-FLOW §4 评审：审美与契约的交叉评审 · L92 · 715
 
 ## WF-MODEL · 模型、子代理与额度
 
@@ -196,7 +196,7 @@
 - WF-MODEL §3 机械活交谁 · L69 · 535
 - WF-MODEL §4 推理强度按难度选 · L78 · 673
 - WF-MODEL §5 升级、派单与直接做 · L93 · 425
-- WF-MODEL §6 怎么开子代理 · L100 · 668
+- WF-MODEL §6 怎么开子代理 · L100 · 649
 - WF-MODEL §7 子代理的生命周期：默认新开，靠任务单交接 · L108 · 447
 - WF-MODEL §8 简报模板与"接续"段 · L118 · 812
   - WF-MODEL §8.1 简报模板 · L120 · 512
@@ -212,13 +212,13 @@
 `docs/workflow/WF-ROLE-参与者与分工.md` · 4.8k 字 · 角色表与汇报关系，会话的运行方式，各模型的长短板，GPT 模型不做审美，决定权与事归谁，总指挥只做什么，Codex 主线当指挥
 关键词：角色表、汇报给、决定权、执行人、会话、运行方式、单 Claude 账户、模型能力、长短板、Opus、Sonnet、gpt-6-astra、gpt-6.1-sol、GPT 不做审美、视觉风格归属、事归谁、交叉、总指挥、主代理、风格负责人、集中测试、Codex 主线、工程指挥、元规则、D-179
 
-- WF-ROLE §0 结论 · L22 · 579
-  - ★ WF-ROLE §0.1 接入要点 · L29 · 221
-- WF-ROLE §1 角色与运行方式 · L35 · 627
+- WF-ROLE §0 结论 · L22 · 585
+  - ★ WF-ROLE §0.1 接入要点 · L29 · 225
+- WF-ROLE §1 角色与运行方式 · L35 · 629
 - WF-ROLE §2 模型的长处与短板 · L49 · 501
-- WF-ROLE §3 GPT 模型不做审美工作 · L58 · 354
-- WF-ROLE §4 决定权与事归谁 · L65 · 524
-- WF-ROLE §5 总指挥只做什么 · L74 · 670
+- WF-ROLE §3 GPT 模型不做审美工作 · L58 · 358
+- WF-ROLE §4 决定权与事归谁 · L65 · 526
+- WF-ROLE §5 总指挥只做什么 · L74 · 672
 - WF-ROLE §6 Codex 主线当指挥，施工默认交 gpt-6.1-sol 子代理 · L88 · 839
 
 ## WF-RULE · 全员守则
@@ -229,12 +229,12 @@
 - WF-RULE §0 结论 · L22 · 250
   - ★ WF-RULE §0.1 接入要点 · L26 · 59
 - WF-RULE §1 不过度工程化（D-201） · L30 · 308
-- WF-RULE §2 不向作者出选项 · L37 · 233
+- WF-RULE §2 不向作者出选项 · L37 · 235
 - WF-RULE §3 不预判时间 · L43 · 190
 - WF-RULE §4 不短轮询、不干等、不重复复核 · L49 · 290
 - WF-RULE §5 来信 · L55 · 74
 - WF-RULE §6 文件操作 · L59 · 523
-- WF-RULE §7 git 与直接改主线（D-211） · L69 · 816
+- WF-RULE §7 git 与直接改主线（D-211） · L69 · 804
 - WF-RULE §8 主线优先（D-168） · L79 · 292
 - WF-RULE §9 测试最小（D-167） · L86 · 443
 - WF-RULE §10 少和别人打架（D-199） · L94 · 582
@@ -255,7 +255,7 @@
 - WF-STATUS §2 施工队列与队列平衡 · L47 · 1.0k
 - WF-STATUS §3 交接单 · L76 · 89
 - WF-STATUS §4 调研入队流水线 · L80 · 1.4k
-  - WF-STATUS §4.1 调研与旁路单 · L94 · 761
+  - WF-STATUS §4.1 调研与旁路单 · L94 · 762
 
 ## ART-AMBIENCE · 日式日常街景：元素、分区与做法
 
@@ -276,7 +276,7 @@
 - ART-AMBIENCE §6 道路标线、凸面镜、护栏、路缘与排水 · L120 · 851
 - ART-AMBIENCE §7 绿化 · L134 · 386
 - ART-AMBIENCE §8 照明与夜景 · L142 · 468
-- ART-AMBIENCE §10 河堤、球场设施、店头、外围街道与飞机云 · L151 · 720
+- ART-AMBIENCE §10 河堤、球场设施、店头、外围街道与飞机云 · L151 · 725
 - ART-AMBIENCE §11 声音 · L165 · 358
 - ART-AMBIENCE §13 待验证 · L177 · 260
 
@@ -305,7 +305,7 @@
 关键词：视觉精度、精度区、K1–K5、判定距离、底线清单、B1–B13、不粗糙、一票否决、区界规则、可读规则、巡检点、行走走廊、外围分级
 
 - ART-FIDELITY §0 结论 · L21 · 1.1k
-  - ★ ART-FIDELITY §0.1 接入要点 · L37 · 398
+  - ★ ART-FIDELITY §0.1 接入要点 · L37 · 400
 - ART-FIDELITY §1 精度区与换算基准 · L46 · 2.0k
   - ART-FIDELITY §1.1 五个精度区 · L48 · 773
   - ART-FIDELITY §1.2 区界规则 · L60 · 187
@@ -315,7 +315,7 @@
 - ART-FIDELITY §2 底线 · L90 · 1.1k
   - ART-FIDELITY §2.0 底线清单（B1–B13） · L94 · 1.1k
 - ART-FIDELITY §3 一票否决清单 · L114 · 857
-- ART-FIDELITY §4 巡检点 · L140 · 230
+- ART-FIDELITY §4 巡检点 · L140 · 232
 - ART-FIDELITY §5 行走走廊 · L145 · 761
   - ART-FIDELITY §5.1 范围与画面构成 · L147 · 162
   - ART-FIDELITY §5.2 走廊里的加密 · L152 · 203
@@ -398,24 +398,24 @@
 - ART-RENOVATION §8 验收 · L248 · 163
 - ART-RENOVATION §9 待验证 · L254 · 233
 
-## ART-SKYLIGHT-ATMOS · 天空、月亮与雾
+## ART-SKYLIGHT-ATMOSPHERE · 天空、月亮与雾
 
-`docs/art/ART-SKYLIGHT-ATMOS-天空月亮与雾.md` · 5.2k 字 · 天空渐变、霾带、云、星空、银河、城市天光、日月盘，月亮外观，雾与大气透视的共用雾函数、边缘雾、雾幕与地标豁免
+`docs/art/ART-SKYLIGHT-ATMOSPHERE-天空月亮与雾.md` · 5.2k 字 · 天空渐变、霾带、云、星空、银河、城市天光、日月盘，月亮外观，雾与大气透视的共用雾函数、边缘雾、雾幕与地标豁免
 关键词：天空、sky shader、天空渐变、霾带、云、飞机云、星空、银河、城市天光、夜空明度下限、阴天云盖、雨幕、闪电、彩虹、日月盘、月亮外观、月相、雾、大气透视、共用雾函数、边缘雾、雾幕、雾海、地标豁免
 
-- ART-SKYLIGHT-ATMOS §0 结论 · L22 · 753
-  - ★ ART-SKYLIGHT-ATMOS §0.1 接入要点 · L30 · 406
-- ART-SKYLIGHT-ATMOS §1 天空 · L39 · 2.0k
-- ART-SKYLIGHT-ATMOS §2 月亮 · L65 · 253
-- ART-SKYLIGHT-ATMOS §3 雾与大气透视 · L73 · 1.3k
+- ART-SKYLIGHT-ATMOSPHERE §0 结论 · L22 · 753
+  - ★ ART-SKYLIGHT-ATMOSPHERE §0.1 接入要点 · L30 · 406
+- ART-SKYLIGHT-ATMOSPHERE §1 天空 · L39 · 2.0k
+- ART-SKYLIGHT-ATMOSPHERE §2 月亮 · L65 · 253
+- ART-SKYLIGHT-ATMOSPHERE §3 雾与大气透视 · L73 · 1.3k
 
 ## ART-SKYLIGHT · 天空、光照与大气
 
 `docs/art/ART-SKYLIGHT-天空光照与大气.md` · 8.4k 字 · 默认状态的光与太阳、主光与阴影、天光、受光退场、人造光、光效清单与冷暖对照；天空与雾见子文档
 关键词：主光、日月交接、无影蓝调、阴影、月影、天光、天光方向、退光线、受光退场、人造光、路灯光斑、窗灯、光效清单、光柱、镜头光斑、冷暖对照
 
-- ART-SKYLIGHT §0 结论 · L21 · 1.1k
-  - ★ ART-SKYLIGHT §0.1 接入要点 · L38 · 471
+- ART-SKYLIGHT §0 结论 · L21 · 1.2k
+  - ★ ART-SKYLIGHT §0.1 接入要点 · L38 · 476
 - ART-SKYLIGHT §1 默认状态的光 · L48 · 321
 - ART-SKYLIGHT §2 太阳本体与主光色 · L56 · 384
 - ART-SKYLIGHT §3 光照骨架 · L63 · 3.0k
@@ -515,14 +515,14 @@
 关键词：箱庭边界、地层截面、剖面、截面上缘、地下水线、卵石层、河渠水柱截面、雾海、雾海顶面、雾天雾海上升、清水河银带、深夜雾海微光、远景、远景视差、色调层、坡向层、发光层、雪山、日照金山、雪线、雪山可见度、backdrop.json、diorama_section、diorama_far、Camera3D.Far
 
 - WLD-DIORAMA §0 结论 · L21 · 1.6k
-  - ★ WLD-DIORAMA §0.1 接入要点 · L34 · 687
+  - ★ WLD-DIORAMA §0.1 接入要点 · L34 · 692
 - WLD-DIORAMA §1 截面线与校界 · L46 · 135
 - WLD-DIORAMA §2 地层截面 · L50 · 1.3k
   - WLD-DIORAMA §2.1 截面的受光与阴影 · L68 · 307
 - WLD-DIORAMA §3 河渠水柱截面 · L76 · 388
 - WLD-DIORAMA §4 截面下缘与雾海 · L82 · 1.0k
 - WLD-DIORAMA §5 远景（360° 不留空白） · L93 · 1.7k
-- WLD-DIORAMA §6 雪山 · L124 · 981
+- WLD-DIORAMA §6 雪山 · L124 · 986
 - WLD-DIORAMA §7 待验证（P0） · L135 · 251
 
 ## WLD-INTERIORS-ACCESS · 室内开放：原则、门、关着的楼、新开一栋
@@ -843,7 +843,7 @@
 - MAP-QSH-CENTER-EAST §3 文科楼群 · L59 · 553
 - MAP-QSH-CENTER-EAST §4 综合训练馆与球场 · L66 · 1.0k
 - MAP-QSH-CENTER-EAST §5 东缘 · L75 · 556
-- MAP-QSH-CENTER-EAST §6 本区身份特征、设计增补与近景要求 · L82 · 783
+- MAP-QSH-CENTER-EAST §6 本区身份特征、设计增补与近景要求 · L82 · 785
 - MAP-QSH-CENTER-EAST §7 待验证 · L103 · 357
 
 ## MAP-QSH-CORE-SEASONS · 核心区灯光、四季昼夜与天气
@@ -886,7 +886,7 @@
 - MAP-QSH-CORE §6 西湖的岸线与构筑物 · L84 · 1.0k
 - MAP-QSH-CORE §7 西湖喷泉 · L97 · 484
 - MAP-QSH-CORE §8 本区的构图关系 · L111 · 375
-- MAP-QSH-CORE §9 本区身份特征、设计增补与近景要求 · L118 · 751
+- MAP-QSH-CORE §9 本区身份特征、设计增补与近景要求 · L118 · 753
 - MAP-QSH-CORE §10 待验证 · L138 · 389
 
 ## MAP-QSH-INTERIORS · 其余开放楼室内与开放的高处
@@ -960,7 +960,7 @@
 - MAP-QSH-NORTH §5 餐厅 · L80 · 984
 - MAP-QSH-NORTH §6 文化地标与丹桂路 · L94 · 182
 - MAP-QSH-NORTH §7 风雨连廊与本区增补 · L99 · 315
-- MAP-QSH-NORTH §8 本区身份特征、设计增补与近景要求 · L109 · 567
+- MAP-QSH-NORTH §8 本区身份特征、设计增补与近景要求 · L109 · 569
 - MAP-QSH-NORTH §9 待验证 · L129 · 116
 
 ## MAP-QSH-OUTSKIRTS · 清水河外围街区：周边结构、地标、灯光、农田与氛围增补
@@ -1047,7 +1047,7 @@
 - MAP-QSH-SOUTH §8 西南角：国际创新中心与科创餐厅 · L114 · 370
 - MAP-QSH-SOUTH §9 南区中部的 1–8 号楼 · L120 · 321
 - MAP-QSH-SOUTH §10 本区的水道 · L124 · 273
-- MAP-QSH-SOUTH §11 本区身份特征、设计增补与近景要求 · L130 · 797
+- MAP-QSH-SOUTH §11 本区身份特征、设计增补与近景要求 · L130 · 799
 - MAP-QSH-SOUTH §12 待验证 · L153 · 364
 
 ## MAP-QSH-TERRAIN-CHECKS · 地形验收镜头、冲突检查与点位标高
@@ -1081,9 +1081,9 @@
 - MAP-QSH-TERRAIN-DISTRICTS §10 教学科研区 · L120 · 970
 - MAP-QSH-TERRAIN-DISTRICTS §11 校门与校界 · L128 · 304
 
-## MAP-QSH-TERRAIN · 分区地形：全图骨架、地标丘、揭示路线与常水位
+## MAP-QSH-TERRAIN · 全图地形骨架：层分布、地标丘、揭示路线与常水位
 
-`docs/maps/qingshuihe/MAP-QSH-TERRAIN-分区地形.md` · 5.7k 字 · 清水河地形的全图骨架：层分布、红枫丘、遮挡与揭示路线、各水体常水位、坡度与着色的本图实例
+`docs/maps/qingshuihe/MAP-QSH-TERRAIN-全图地形骨架.md` · 5.7k 字 · 清水河地形的全图骨架：层分布、红枫丘、遮挡与揭示路线、各水体常水位、坡度与着色的本图实例
 关键词：地形骨架、红枫丘、地标丘、下沉时间广场、常水位表、湖口跌水、箱涵堰口、遮挡与揭示、揭示路线、中轴落金线、湿地堤、起伏的理由、水位阶梯、分面平法线
 
 - MAP-QSH-TERRAIN §0 结论 · L22 · 1.2k
@@ -1170,7 +1170,7 @@
 - MAP-QSH-WEST §8 荟文楼（综合楼） · L79 · 68
 - MAP-QSH-WEST §9 石刻 · L83 · 65
 - MAP-QSH-WEST §10 湿地公园与西门桥头 · L87 · 651
-- MAP-QSH-WEST §11 本区身份特征、设计增补与近景要求 · L97 · 798
+- MAP-QSH-WEST §11 本区身份特征、设计增补与近景要求 · L97 · 800
 - MAP-QSH-WEST §12 待验证 · L118 · 134
 
 ## SYS-ATLAS-TRAVEL · 标记、锚点与传送
@@ -1369,9 +1369,9 @@
   - SYS-MOTION §1.3 各档流逝的表现 · L60 · 126
   - SYS-MOTION §1.4 镜头 · L64 · 106
 - SYS-MOTION §2 节奏规则 · L68 · 710
-- SYS-MOTION §3 转场 · L79 · 2.4k
+- SYS-MOTION §3 转场 · L79 · 2.5k
   - SYS-MOTION §3.1 改时间 · L83 · 227
-  - SYS-MOTION §3.2 换季 · L91 · 716
+  - SYS-MOTION §3.2 换季 · L91 · 721
   - SYS-MOTION §3.3 跳转、传送与模式切换 · L107 · 175
   - SYS-MOTION §3.4 换天气 · L111 · 559
   - SYS-MOTION §3.5 叠加与优先级 · L119 · 210
@@ -1456,10 +1456,10 @@
 - SYS-TIME §1 世界状态与时间规则 · L47 · 1.7k
   - SYS-TIME §1.1 默认状态 · L49 · 478
   - SYS-TIME §1.2 三个量与时间规则 · L57 · 1.2k
-- SYS-TIME §2 美术太阳与月亮 · L72 · 748
+- SYS-TIME §2 美术太阳与月亮 · L72 · 758
   - SYS-TIME §2.1 太阳 · L74 · 483
-  - SYS-TIME §2.2 月亮 · L89 · 175
-  - SYS-TIME §2.3 与主光的关系 · L93 · 76
+  - SYS-TIME §2.2 月亮 · L89 · 180
+  - SYS-TIME §2.3 与主光的关系 · L93 · 81
 - SYS-TIME §3 过渡 · L97 · 243
 - SYS-TIME §4 质量底线 · L104 · 443
 
@@ -1481,7 +1481,7 @@
 - SYS-TITLE-CINEMATIC §3 跳过、安全落点与设置项 · L99 · 744
 - SYS-TITLE-CINEMATIC §4 与时间不可逆的关系 · L116 · 390
 - SYS-TITLE-CINEMATIC §5 过场的规则 · L123 · 640
-- SYS-TITLE-CINEMATIC §6 云卡 · L131 · 301
+- SYS-TITLE-CINEMATIC §6 云卡 · L131 · 306
 - SYS-TITLE-CINEMATIC §7 流式预取 · L137 · 333
 - SYS-TITLE-CINEMATIC §8 待验证 · L145 · 87
 
@@ -1610,7 +1610,7 @@
 - SYS-WEATHER §2 每种天气的画面规则 · L64 · 1.7k
 - SYS-WEATHER §3 雨的可读性规则 · L91 · 550
 - SYS-WEATHER §4 与四季、昼夜的配合 · L103 · 247
-- SYS-WEATHER §5 闪电与彩虹 · L111 · 527
+- SYS-WEATHER §5 闪电与彩虹 · L111 · 532
 - SYS-WEATHER §6 湿润、积水与降水的规则 · L122 · 1.1k
 - SYS-WEATHER §7 质量底线 · L139 · 375
 - SYS-WEATHER §8 待验证 · L149 · 72
@@ -1751,10 +1751,10 @@
 - ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L74 · 633
 - ENG-BUDGET-LOD §5 待验证（P0） · L84 · 125
 
-## ENG-BUDGET-RULES · 推送硬规则与工程设置
+## ENG-BUDGET-RULES · 性能硬规则与工程设置
 
-`docs/engineering/ENG-BUDGET-RULES-推送硬规则.md` · 5.8k 字 · 23 条推送硬规则与 project.godot、导出、Environment 等工程设置的规则
-关键词：硬规则、推送规则、白名单着色器、不得新增光源、线程边界、全局着色器参数登记、风格底线不可关、存档只走一条路、本机烘焙同机确定、工程设置、渲染器、Shader Baker、版本锁定
+`docs/engineering/ENG-BUDGET-RULES-性能硬规则.md` · 5.8k 字 · 23 条性能硬规则与 project.godot、导出、Environment 等工程设置的规则
+关键词：硬规则、性能规则、白名单着色器、不得新增光源、线程边界、全局着色器参数登记、风格底线不可关、存档只走一条路、本机烘焙同机确定、工程设置、渲染器、Shader Baker、版本锁定
 
 - ENG-BUDGET-RULES §0 结论 · L23 · 846
   - ★ ENG-BUDGET-RULES §0.1 接入要点 · L29 · 570
@@ -1765,7 +1765,7 @@
 
 ## ENG-BUDGET · 性能预算
 
-`docs/engineering/ENG-BUDGET-性能预算.md` · 4.5k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、额度怎么分与超了怎么办、怎么测；细节级别、速度律与推送硬规则在子文档
+`docs/engineering/ENG-BUDGET-性能预算.md` · 4.5k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、额度怎么分与超了怎么办、怎么测；细节级别、速度律与性能硬规则在子文档
 关键词：性能预算、额度、额度分配、budgets.json、KernelBudgets、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、阴影图档位、纹理上限
 
 - ENG-BUDGET §0 结论 · L21 · 770
@@ -1792,7 +1792,7 @@
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
-`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 5.6k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
+`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 5.7k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
 关键词：审查视角、截图默认串、命令行规则、截图方式、截图就绪、流式屏障、录像、视角表、V1、E1、T0、飞行路线、压力路线、点位 P00–P23、行走路线 W1–W14、时季抽样、巡检点轮换、review.json
 
 - ENG-GATES-SHOTS §0 结论 · L22 · 505
@@ -1802,7 +1802,7 @@
   - ENG-GATES-SHOTS §1.2 截图方式 · L55 · 501
   - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L67 · 1.8k
   - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L99 · 660
-  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L108 · 365
+  - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L108 · 366
 - ENG-GATES-SHOTS §2 待验证（P0） · L117 · 144
 
 ## ENG-GATES-VETO · 一票否决与收尾清单
@@ -1924,7 +1924,7 @@
 `docs/engineering/ENG-WP-工作包派工单.md` · 6.2k 字 · 56 个工作包的划分、开发阶段与闸口、开工波次与推送顺序，主代理的工程维护事项；包表与子包拆法在 ENG-WP-LIST
 关键词：工作包、派工单、派工、开工波次、推送顺序、依赖、主线版、主线可见结果、后置细节、阶段与闸口、主线闸口、D0、阶段名 P0–P3、主代理工程维护、开放室内清单审批、插件清单、ownership.json、third_party.json、目标框架
 
-- ENG-WP §0 结论 · L24 · 996
+- ENG-WP §0 结论 · L24 · 998
   - ★ ENG-WP §0.1 接入要点 · L37 · 293
 - ENG-WP §1 阶段与闸口 · L44 · 2.4k
   - ENG-WP §1.1 开工波次与推送顺序 · L66 · 1.0k

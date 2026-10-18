@@ -1,5 +1,5 @@
 ---
-id: ART-SKYLIGHT-ATMOS
+id: ART-SKYLIGHT-ATMOSPHERE
 title: 天空、月亮与雾
 category: art
 parent: ART-SKYLIGHT
@@ -13,7 +13,7 @@ contracts: []
 data: ["game/data/maps/qingshuihe/sky.json"]
 gates: [G7]
 ---
-# ART-SKYLIGHT-ATMOS · 天空、月亮与雾
+# ART-SKYLIGHT-ATMOSPHERE · 天空、月亮与雾
 
 > **范围**：本文规定天空（渐变、霾带、云、星空、银河、城市天光、天气天象、日月盘）、月亮外观，以及雾与大气透视（共用雾函数、边缘雾、雾幕、天气雾与地标豁免）的观感与取值。数值是默认状态（秋 17:30，晴）的参考值，其他格来自关键帧。
 > **不在本文**：主光、阴影、天光、受光退场、人造光、光效清单与冷暖对照（ART-SKYLIGHT）；日月的轨迹、关键帧与色彩脚本（SYS-TIME）；天气清单与每种天气的画面规则（SYS-WEATHER）；远山、城市剪影与雾海的形态（WLD-DIORAMA）；外围街区与边缘（WLD-OUTSKIRTS）。

@@ -7,7 +7,7 @@
   "ART-MODELING-PROPORTION": "docs/art/ART-MODELING-PROPORTION-风格化比例颜色与金样.md",
   "ART-RENOVATION": "docs/art/ART-RENOVATION-老楼翻新.md",
   "ART-SKYLIGHT": "docs/art/ART-SKYLIGHT-天空光照与大气.md",
-  "ART-SKYLIGHT-ATMOS": "docs/art/ART-SKYLIGHT-ATMOS-天空月亮与雾.md",
+  "ART-SKYLIGHT-ATMOSPHERE": "docs/art/ART-SKYLIGHT-ATMOSPHERE-天空月亮与雾.md",
   "ART-STYLE": "docs/art/ART-STYLE-风格基础.md",
   "ART-STYLE-LINES": "docs/art/ART-STYLE-LINES-描线与后期.md",
   "ART-STYLE-SHADING": "docs/art/ART-STYLE-SHADING-明暗影色与材质.md",
@@ -21,7 +21,7 @@
   "ENG-ARCH": "docs/engineering/ENG-ARCH-工程架构.md",
   "ENG-BUDGET": "docs/engineering/ENG-BUDGET-性能预算.md",
   "ENG-BUDGET-LOD": "docs/engineering/ENG-BUDGET-LOD-细节级别与速度律.md",
-  "ENG-BUDGET-RULES": "docs/engineering/ENG-BUDGET-RULES-推送硬规则.md",
+  "ENG-BUDGET-RULES": "docs/engineering/ENG-BUDGET-RULES-性能硬规则.md",
   "ENG-CODE": "docs/engineering/ENG-CODE-代码结构准则.md",
   "ENG-GATES": "docs/engineering/ENG-GATES-验收与门禁.md",
   "ENG-GATES-SHOTS": "docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md",
@@ -52,7 +52,7 @@
   "MAP-QSH-SOUTH": "docs/maps/qingshuihe/MAP-QSH-SOUTH-南区.md",
   "MAP-QSH-SOUTH-SEASONS": "docs/maps/qingshuihe/MAP-QSH-SOUTH-SEASONS-南区四季昼夜与天气.md",
   "MAP-QSH-SOUTH-WALK": "docs/maps/qingshuihe/MAP-QSH-SOUTH-WALK-南区行走与声音.md",
-  "MAP-QSH-TERRAIN": "docs/maps/qingshuihe/MAP-QSH-TERRAIN-分区地形.md",
+  "MAP-QSH-TERRAIN": "docs/maps/qingshuihe/MAP-QSH-TERRAIN-全图地形骨架.md",
   "MAP-QSH-TERRAIN-CHECKS": "docs/maps/qingshuihe/MAP-QSH-TERRAIN-CHECKS-验收镜头冲突与点位标高.md",
   "MAP-QSH-TERRAIN-DISTRICTS": "docs/maps/qingshuihe/MAP-QSH-TERRAIN-DISTRICTS-十处分区地形.md",
   "MAP-QSH-VEGETATION": "docs/maps/qingshuihe/MAP-QSH-VEGETATION-清水河树种与种植.md",
@@ -434,7 +434,7 @@
    "SYS-TIME-LOOK"
   ],
   "WP-40": [
-   "ART-SKYLIGHT-ATMOS"
+   "ART-SKYLIGHT-ATMOSPHERE"
   ],
   "WP-41": [
    "SYS-TIME"

@@ -319,9 +319,9 @@ def research_items():
 
 
 def decision_notes():
-    """给 Opus 的来信里含【需定】的，标题取第一行。"""
+    """给主会话的来信里含【需定】的，标题取第一行。"""
     out = []
-    for n in collab.notes('opus'):
+    for n in collab.notes('claude'):
         if '【需定】' in n['text']:
             rel_path = os.path.relpath(n['path'], ROOT).replace(os.sep, '/')
             out.append(file_item('decision', rel_path, brief(n['text'].strip().splitlines()[0].lstrip('# '))))

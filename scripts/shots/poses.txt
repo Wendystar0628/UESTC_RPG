@@ -1,9 +1,9 @@
 # 固定机位：名字 | 点位（game/data/maps/qingshuihe/waypoints.json）| 时刻季节天气
 # 默认 17:30 秋晴；看一眼用，不做像素比对
-d-P00-全景 | P00 | --clock=17.5 --season=autumn --weather=clear
-d-P02-图书馆门前 | P02 | --clock=17.5 --season=autumn --weather=clear
-d-P03-八角楼 | P03 | --clock=17.5 --season=autumn --weather=clear
-d-P17-南门主轴 | P17 | --clock=17.5 --season=autumn --weather=clear
-d-P10-西区 | P10 | --clock=17.5 --season=autumn --weather=clear
-d-P14-东区 | P14 | --clock=17.5 --season=autumn --weather=clear
-n-P00-夜景全景 | P00 | --clock=22 --season=autumn --weather=clear
+昼-P00-全景 | P00 | --clock=17.5 --season=autumn --weather=clear
+昼-P02-图书馆门前 | P02 | --clock=17.5 --season=autumn --weather=clear
+昼-P03-八角楼 | P03 | --clock=17.5 --season=autumn --weather=clear
+昼-P17-主楼屋顶空廊 | P17 | --clock=17.5 --season=autumn --weather=clear
+昼-P10-西区 | P10 | --clock=17.5 --season=autumn --weather=clear
+昼-P14-东区 | P14 | --clock=17.5 --season=autumn --weather=clear
+夜-P00-全景 | P00 | --clock=22 --season=autumn --weather=clear

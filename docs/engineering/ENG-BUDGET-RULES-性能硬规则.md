@@ -1,10 +1,10 @@
 ---
 id: ENG-BUDGET-RULES
-title: 推送硬规则与工程设置
+title: 性能硬规则与工程设置
 category: engineering
 parent: ENG-BUDGET
-summary: 23 条推送硬规则与 project.godot、导出、Environment 等工程设置的规则
-keywords: [硬规则, 推送规则, 白名单着色器, 不得新增光源, 线程边界, 全局着色器参数登记, 风格底线不可关, 存档只走一条路, 本机烘焙同机确定, 工程设置, 渲染器, Shader Baker, 版本锁定]
+summary: 23 条性能硬规则与 project.godot、导出、Environment 等工程设置的规则
+keywords: [硬规则, 性能规则, 白名单着色器, 不得新增光源, 线程边界, 全局着色器参数登记, 风格底线不可关, 存档只走一条路, 本机烘焙同机确定, 工程设置, 渲染器, Shader Baker, 版本锁定]
 owners: [WP-00]
 contributors: []
 depends: [CORE-INDEX, ENG-BUDGET, ENG-ARCH, ENG-PERF, SYS-GRAPHICS, SYS-SAVE, SYS-AUDIO, WLD-INTERIORS, ART-STYLE]
@@ -14,9 +14,9 @@ data: []
 gates: [G4, G5, G7, G20, G21]
 paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"]
 ---
-# ENG-BUDGET-RULES · 推送硬规则与工程设置
+# ENG-BUDGET-RULES · 性能硬规则与工程设置
 
-> **范围**：推送硬规则 23 条（§1，条号不变，引用写"第 n 条"）与工程设置的规则（§2）。所有包交付前必须满足。
+> **范围**：性能硬规则 23 条（§1，条号不变，引用写"第 n 条"）与工程设置的规则（§2）。所有包交付前必须满足。
 > **不在本文**：额度与设备档（ENG-BUDGET）；细节级别与速度律（ENG-BUDGET-LOD）；各条规则背后的策略（ENG-PERF）；已在 `game/project.godot` 里的值，以该文件为准。
 > **查阅**：先读 §0；第 1–10 条（渲染、材质与时间）看 §1.1；第 11–23 条（烘焙、线程、存档与音频）看 §1.2；工程设置看 §2
 

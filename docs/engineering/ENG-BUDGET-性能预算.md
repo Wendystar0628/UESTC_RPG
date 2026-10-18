@@ -2,7 +2,7 @@
 id: ENG-BUDGET
 title: 性能预算
 category: engineering
-summary: 性能预算的口径：设备档与预设、GPU 帧时分配、额度怎么分与超了怎么办、怎么测；细节级别、速度律与推送硬规则在子文档
+summary: 性能预算的口径：设备档与预设、GPU 帧时分配、额度怎么分与超了怎么办、怎么测；细节级别、速度律与性能硬规则在子文档
 keywords: [性能预算, 额度, 额度分配, budgets.json, KernelBudgets, 主代理余量, 预设资源上限, 设备档目标, 帧率目标, 最低配置, 独显中, 独显高, 楼内视角额度, GPU 帧时分配, 阴影图档位, 纹理上限]
 owners: [WP-00]
 contributors: [WP-02, WP-27, WP-32, WP-36, WP-47]
@@ -15,7 +15,7 @@ gates: [G10, G14, G15]
 # ENG-BUDGET · 性能预算
 
 > **范围**：性能预算的口径：设备档与预设（§2）、GPU 帧时分配、额度怎么分与超了怎么办（§3）、怎么测（§4）。所有包交付前必须满足 §3 与 ENG-BUDGET-RULES 的硬规则。
-> **不在本文**：细节级别、分块、速度律、深度与阴影参数（ENG-BUDGET-LOD）；推送硬规则与工程设置（ENG-BUDGET-RULES）；性能策略与原则（ENG-PERF）；具体数值不在本文：运行时预算在 `game/kernel/frame/KernelBudgets.cs`，离线门禁用的体积与帧时目标在 `budgets.json`，引擎设置在 `game/project.godot`，各以该文件为准；命令行与截图默认串（ENG-GATES-SHOTS §1）；各包分工（ENG-WP）。
+> **不在本文**：细节级别、分块、速度律、深度与阴影参数（ENG-BUDGET-LOD）；性能硬规则与工程设置（ENG-BUDGET-RULES）；性能策略与原则（ENG-PERF）；具体数值不在本文：运行时预算在 `game/kernel/frame/KernelBudgets.cs`，离线门禁用的体积与帧时目标在 `budgets.json`，引擎设置在 `game/project.godot`，各以该文件为准；命令行与截图默认串（ENG-GATES-SHOTS §1）；各包分工（ENG-WP）。
 > **查阅**：先读 §0；额度怎么分看 §3；设备档与预设看 §2；怎么测看 §4
 
 ## 0 结论
@@ -30,7 +30,7 @@ gates: [G10, G14, G15]
 子文档：
 
 - **ENG-BUDGET-LOD**（细节级别、速度律与渲染参数）：选级、分块、速度律、深度与阴影参数时读。
-- **ENG-BUDGET-RULES**（推送硬规则与工程设置）：每个包推送前对一遍；碰 `project.godot` 时读。
+- **ENG-BUDGET-RULES**（性能硬规则与工程设置）：每个包推送前对一遍；碰 `project.godot` 时读。
 
 ### 0.1 接入要点
 

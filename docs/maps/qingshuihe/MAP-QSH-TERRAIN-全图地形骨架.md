@@ -1,6 +1,6 @@
 ---
 id: MAP-QSH-TERRAIN
-title: 分区地形：全图骨架、地标丘、揭示路线与常水位
+title: 全图地形骨架：层分布、地标丘、揭示路线与常水位
 category: maps
 summary: 清水河地形的全图骨架：层分布、红枫丘、遮挡与揭示路线、各水体常水位、坡度与着色的本图实例
 keywords: [地形骨架, 红枫丘, 地标丘, 下沉时间广场, 常水位表, 湖口跌水, 箱涵堰口, 遮挡与揭示, 揭示路线, 中轴落金线, 湿地堤, 起伏的理由, 水位阶梯, 分面平法线]
@@ -13,7 +13,7 @@ data: ["game/data/maps/qingshuihe/overlay/terrain/"]
 gates: [G2, G7, G15, G19]
 ---
 
-# MAP-QSH-TERRAIN · 分区地形：全图骨架、地标丘、揭示路线与常水位
+# MAP-QSH-TERRAIN · 全图地形骨架：层分布、地标丘、揭示路线与常水位
 
 > **范围**：本文规定清水河地形的全图骨架：各层放在哪、全校唯一的地标丘、遮挡与揭示的三条路线、各水体的常水位与跌水连接，以及坡度与着色在本图的实例。十处分区的标高、坡度和连接在 MAP-QSH-TERRAIN-DISTRICTS，验收镜头、冲突检查与点位标高在 MAP-QSH-TERRAIN-CHECKS。
 > **不在本文**：地形的通用规则（分层、手感刻度、坡度类、合成与竖直落差做法，WLD-TERRAIN）；各操作的坐标与实体 ID（`game/data/maps/qingshuihe/overlay/terrain/` 的五份地形文件，以它们为准）；各区楼与构筑物的外观（MAP-QSH-CORE 至 MAP-QSH-CENTER-EAST）；水面画法（WLD-WATER）；行走规则（SYS-WALK）；点位清单（UI-NAV）。
