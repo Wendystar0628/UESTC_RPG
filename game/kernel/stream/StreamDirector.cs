@@ -115,7 +115,6 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _destinationConsumed = false;
         _haveCamera = false; _velocity = N.Vector3.Zero;
         _reflectionDirty = true;
-        _interiors!.Load(context);
         _tree = new(context.Descriptor.Bounds, _settings);
         _visibility = new(_settings.FadeSeconds);
         var modules = Services.Services.ForMap(context.Descriptor.Id.Value).Where(entry => entry.Kind == "content")
@@ -125,6 +124,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         var contextSource = Services.Get<IBakeContextSource>();
         var preparedContexts = new ReadOnlyDictionary<string, BuildContext>(modules.ToDictionary(
             module => module.Id, module => contextSource.GetPreparedContext(context, module.Id), StringComparer.Ordinal));
+        _interiors!.Load(context, preparedContexts.Values.FirstOrDefault());
         _catalogGeneration = _mapGeneration;
         _catalogTask = RunWorker(() => ModuleTileCatalog.Build(preparedContexts, modules));
         _replan = _settings.ReplanSeconds;

@@ -1189,6 +1189,14 @@
       "owner": "WP-23"
     },
     {
+      "pattern": "game/gen/zones/core/LibraryInterior/**",
+      "owner": "WP-17"
+    },
+    {
+      "pattern": "game/gen/zones/core/tests/LibraryInteriorTests.cs",
+      "owner": "WP-17"
+    },
+    {
       "pattern": "game/gen/zones/core/**",
       "owner": "WP-16"
     },

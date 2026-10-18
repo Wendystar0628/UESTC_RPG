@@ -29,7 +29,7 @@ public sealed class CollisionTileBuilder(
         foreach (var feature in context.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             var entry = context.World.Interiors.Get(feature.Id);
-            foreach (var footprint in BuildingFootprints(feature))
+            foreach (var footprint in BuildingFootprints(feature, entry is { Open: true }))
             {
                 var origin = TileGrid.Origin(tile);
                 var minimum = footprint.Rings.Outer.Aggregate(Vector2.Min) - new Vector2(.3f);
@@ -77,7 +77,7 @@ public sealed class CollisionTileBuilder(
     }
 
     /// <summary>Parts replace the aggregate query envelope, including for mixed POI parents.</summary>
-    public static IReadOnlyList<CollisionBuildingFootprint> BuildingFootprints(WorldFeature feature)
+    public static IReadOnlyList<CollisionBuildingFootprint> BuildingFootprints(WorldFeature feature, bool exteriorOnly = false)
     {
         var result = new List<CollisionBuildingFootprint>();
         if (feature.Parts.Count > 0)
@@ -90,7 +90,11 @@ public sealed class CollisionTileBuilder(
         }
         else if (feature.Kind.Value == "building")
             Add(feature.Id.Value, feature.Geometry, feature.Height, feature.Storeys);
-        return result;
+        if (!exteriorOnly || result.Count < 2) return result;
+        // Open interiors connect their overlapping/adjacent massing blocks. Only the union perimeter is an exterior wall.
+        var exterior = TerrainUnion.Build(result.Select(part => new TerrainRegion([part.Rings])));
+        return exterior.Polygons.Select(rings => new CollisionBuildingFootprint(feature.Id.Value, rings,
+            result.Max(part => part.Height), result.Max(part => part.Storeys))).ToArray();
 
         void Add(string sourceId, OverlayGeometry geometry, float? height, int? storeys)
         {

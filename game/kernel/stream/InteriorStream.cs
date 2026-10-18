@@ -15,13 +15,21 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     private readonly List<Layer> _draining = [];
     private readonly HashSet<BakeKey> _destination = [], _visible = [];
     private IMapContext? _context;
+    private readonly Dictionary<FeatureId, IReadOnlyList<int>> _atriumStoreys = [];
     public string? Error { get; private set; }
     public int Preparations => _layers.Values.Concat(_draining).Count(layer => layer.Preparing is not null);
     public bool IsUnloaded => _context is null && _layers.Count == 0 && _draining.Count == 0;
     public IEnumerable<PreparedTile> Prepared => _layers.OrderBy(pair => pair.Key.Detail, StringComparer.Ordinal)
         .Select(pair => pair.Value.Prepared).OfType<PreparedTile>();
     public bool DestinationReady => Error is null && _destination.All(key => Ready(_layers[key]));
-    public void Load(IMapContext context) { _context = context; Error = null; }
+    public void Load(IMapContext context, BuildContext? generation = null)
+    {
+        _context = context; Error = null; _atriumStoreys.Clear();
+        if (generation is null) return;
+        foreach (var provider in generation.InteriorProviders.Values)
+            foreach (var feature in provider.FeatureIds)
+                _atriumStoreys.Add(feature, provider.Layout(generation, feature).AtriumVisibleStoreys);
+    }
     public void Prefetch(NavSpace? space)
     {
         _destination.Clear(); Error = null;
@@ -47,7 +55,9 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             if (blocking) Error = $"Interior destination storey is not open: {building.Value}/{space.Floor}.";
             return;
         }
-        foreach (var storey in entry.OpenStoreys.Where(storey => Math.Abs(storey - space.Floor) <= 1).Order())
+        var atrium = _atriumStoreys.GetValueOrDefault(building);
+        foreach (var storey in entry.OpenStoreys.Where(storey => Math.Abs(storey - space.Floor) <= 1 ||
+                     atrium is not null && atrium.Contains(space.Floor) && atrium.Contains(storey)).Order())
         {
             var detail = storey == space.Floor ? "IF" : "IS";
             var key = new BakeKey(_context.Descriptor.Id, "interior." + entry.ProviderId,
@@ -156,7 +166,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     }
     public void Unload()
     {
-        _context = null; _destination.Clear(); _visible.Clear(); Error = null;
+        _context = null; _destination.Clear(); _visible.Clear(); _atriumStoreys.Clear(); Error = null;
         foreach (var layer in _layers.Values)
         {
             layer.Work?.Abandon();

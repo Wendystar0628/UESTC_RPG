@@ -8,7 +8,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
 using Campus.Contracts.Save;
-using Campus.Gen.Interior.Shell.Box;
+using Campus.Gen.Zones.Core.LibraryInterior;
 using Campus.Gen.Tests.Support;
 using Campus.Hud.Map;
 using Campus.Systems.Atlas;
@@ -251,7 +251,7 @@ public sealed class AtlasServiceTests
             Spatial = new FlatSpatial(),
         };
         var descriptor = RealMapFixture.Entry().Descriptor;
-        var providers = typeof(LibraryBoxInterior).Assembly.GetTypes()
+        var providers = typeof(LibraryInteriorProvider).Assembly.GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && typeof(IInteriorProvider).IsAssignableFrom(type))
             .Select(type => (Type: type, Registration: type.GetCustomAttribute<InteriorProviderAttribute>()))
             .Where(item => item.Registration is not null)

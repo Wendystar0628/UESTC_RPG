@@ -2,9 +2,6 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Interior.Shell.Box;
 
-[InteriorProvider("interior.box.library", Owner = "WP-51")]
-public sealed class LibraryBoxInterior : BoxInteriorProvider { }
-
 [InteriorProvider("interior.box.museum", Owner = "WP-51")]
 public sealed class MuseumBoxInterior : BoxInteriorProvider { }
 

@@ -105,6 +105,12 @@ public sealed class CollisionGeometryTests
         AssertThat(walls.Any(w => Blocks(w, new(10, 1, 15))) && walls.Any(w => Blocks(w, new(40, 1, 15)))).OverrideFailureMessage("A building perimeter is missing.").IsTrue();
         AssertThat(!walls.Any(w => Blocks(w, new(0, 1, 20))) && !walls.Any(w => Blocks(w, new(30, 1, 15)))).OverrideFailureMessage("Open park ground or the aggregate perimeter was walled off.").IsTrue();
         AssertThat(walls.All(w => MathF.Abs(w.Y1 - WalkRules.BuildingCollisionHeight) < TestTolerance.Position)).OverrideFailureMessage("Aggregate parent height leaked into its building parts.").IsTrue();
+        var joined = parent with { Parts = [Part("source:a", buildingA, "building", 6), Part("source:b", Rectangle(15, 10, 25, 20), "building", 9)] };
+        var exteriorWalls = CollisionTileBuilder.BuildingFootprints(joined, exteriorOnly: true)
+            .SelectMany(p => CollisionTileBuilder.BuildingWalls(p.Rings, new FlatSpatial(), null, p.Height)).ToArray();
+        AssertThat(!exteriorWalls.Any(w => Blocks(w, new(15, 1, 15)) || Blocks(w, new(20, 1, 15))) &&
+            exteriorWalls.Any(w => Blocks(w, new(10, 1, 15))) && exteriorWalls.Any(w => Blocks(w, new(25, 1, 15))))
+            .OverrideFailureMessage("An open interior must connect overlapping building blocks while retaining its exterior walls.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Regression)]

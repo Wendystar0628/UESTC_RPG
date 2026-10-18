@@ -24,7 +24,7 @@
         "zh": "1F 中厅与品·悦吧；2F 门厅与回廊；3F–5F 回廊；5F 西窗带；2F、3F 露台",
         "en": "1F atrium and cafe; 2F entrance and gallery; 3F–5F galleries; 5F west windows; 2F and 3F terraces"
       },
-      "providerId": "interior.box.library",
+      "providerId": "interior.library",
       "openFloors": [
         1,
         2,

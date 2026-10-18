@@ -7,12 +7,46 @@ using Campus.Kernel.Bake;
 using Campus.Kernel.Registry;
 using GdUnit4;
 using System.Text.Json;
+using Campus.Gen.Zones.Core.LibraryInterior;
 
 namespace Campus.Tests;
 
 [TestSuite]
 public sealed class StreamSchedulingTests
 {
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void LibraryAtriumRequestsAllDeclaredOpenStoreysAndClearsThemOnReload()
+    {
+        var world = RealMapFixture.Load().World;
+        var providerId = typeof(LibraryInteriorProvider).GetCustomAttributes(typeof(InteriorProviderAttribute), false)
+            .Cast<InteriorProviderAttribute>().Single().Id;
+        using var file = JsonDocument.Parse(RealMapFixture.ReadFiles()["interiors.json"]);
+        var entry = file.RootElement.GetProperty("interiors").EnumerateArray()
+            .Single(item => item.GetProperty("providerId").GetString() == providerId);
+        var features = entry.GetProperty("featureIds").EnumerateArray().Select(item => new FeatureId(item.GetString()!)).ToArray();
+        var floors = entry.GetProperty("openFloors").EnumerateArray().Select(item => item.GetInt32()).ToArray();
+        var provider = new LibraryInteriorProvider();
+        provider.Configure(features, floors, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
+        var context = new TestMapContext(RealMapFixture.Entry().Descriptor, world);
+        var generation = new BuildContext { Map = context.Descriptor, World = world, WorldSeed = 1,
+            Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
+            InteriorProviders = new Dictionary<string, IInteriorProvider> { [providerId] = provider } };
+        var layout = features.Select(feature => provider.Layout(generation, feature)).Single(item => item.AtriumVisibleStoreys.Count > 0);
+        var atriumFloor = layout.AtriumVisibleStoreys.Min();
+        var bake = new InteriorRequests();
+        var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { });
+        stream.Load(context, generation);
+        stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)));
+        var expected = layout.OpenStoreys.Where(floor => Math.Abs(floor - atriumFloor) <= 1 || layout.AtriumVisibleStoreys.Contains(floor)).Order()
+            .Select(floor => new BakeKey(context.Descriptor.Id, "interior." + providerId,
+                FormattableString.Invariant($"{layout.Feature.Value}/{floor}/{(floor == atriumFloor ? "IF" : "IS")}"))).ToArray();
+        if (!bake.Keys.SequenceEqual(expected)) throw new InvalidOperationException("Atrium-visible open storeys did not reach the baker.");
+        stream.Unload(); bake.Clear(); stream.Load(context);
+        stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)));
+        if (bake.Keys.Count != layout.OpenStoreys.Count(floor => Math.Abs(floor - atriumFloor) <= 1))
+            throw new InvalidOperationException("Atrium selection leaked into another map load.");
+    }
+
     [TestCase]
     [TestCategory(TestReason.Regression)]
     public void OpenTopFloorPrefetchAndSelectionNeverRequestItsClosedNeighbour()

@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
-using Campus.Gen.Interior.Shell.Box;
 using GdUnit4;
 using Campus.Kernel.Maps;
 
@@ -16,9 +15,9 @@ namespace Campus.Tests;
 public sealed class InteriorEntranceHeightReferenceTests
 {
     private static readonly FeatureId Feature = new("fixture:building");
-    private const string Provider = "interior.box.library";
+    private const string Provider = "fixture.box";
     private const string Catalog = """
-        {"version":1,"interiors":[{"providerId":"interior.box.library",
+        {"version":1,"interiors":[{"providerId":"fixture.box",
          "featureIds":["fixture:building"],"openFloors":[1],"entrances":[
          {"id":"entry.main","featureId":"fixture:building","outsideLanding":[0,0.25,-2.5],
           "insideLanding":[0,0.5,3],"doorCenter":[0,0.75,0],"facingDeg":0,"clearWidth":1.25,"open":true@HEIGHT@}]}]}
@@ -28,7 +27,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCategory(TestReason.Contract)]
     public void ConfigurePreservesAbsoluteButRejectsPadBeforeMutatingProviders()
     {
-        var box = new LibraryBoxInterior();
+        var box = new InteriorProviderScopeTests.FixtureBoxInterior();
         var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
         AssertThrown(() => InteriorAssembly.Configure(Bytes("pad"), providers)).IsInstanceOf<JsonException>();
         AssertThat(box.FeatureIds.Count == 0).OverrideFailureMessage("Missing terrain partially configured the provider.").IsTrue();
@@ -46,7 +45,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCategory(TestReason.Contract)]
     public void ExplicitTerrainResolvesOnceAndBuildConfiguredKeepsAbsoluteCoordinates()
     {
-        var box = new LibraryBoxInterior();
+        var box = new InteriorProviderScopeTests.FixtureBoxInterior();
         var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
         var terrain = new ProbeTerrain();
         var bindings = InteriorAssembly.Configure(Bytes("pad"), providers, terrain);
@@ -96,7 +95,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCategory(TestReason.Contract)]
     public void ClosedRegisterDoesNotChangeOpenProviderCallsOrNavigation()
     {
-        var fallback = new LibraryBoxInterior();
+        var fallback = new InteriorProviderScopeTests.FixtureBoxInterior();
         var sourceProviders = new Dictionary<string, IInteriorProvider> { [Provider] = fallback };
         var bindings = InteriorAssembly.Configure(Bytes(null), sourceProviders);
         var probe = new CountingProvider(fallback);
