@@ -410,12 +410,12 @@
 
 ## ART-SKYLIGHT · 天空、光照与大气
 
-`docs/art/ART-SKYLIGHT-天空光照与大气.md` · 8.5k 字 · 默认状态的光与太阳、主光与阴影、天光、受光退场、人造光、光效清单与冷暖对照；天空与雾见子文档
+`docs/art/ART-SKYLIGHT-天空光照与大气.md` · 8.4k 字 · 默认状态的光与太阳、主光与阴影、天光、受光退场、人造光、光效清单与冷暖对照；天空与雾见子文档
 关键词：主光、日月交接、无影蓝调、阴影、月影、天光、天光方向、退光线、受光退场、人造光、路灯光斑、窗灯、光效清单、光柱、镜头光斑、冷暖对照
 
-- ART-SKYLIGHT §0 结论 · L21 · 1.1k
+- ART-SKYLIGHT §0 结论 · L21 · 1.2k
   - ★ ART-SKYLIGHT §0.1 接入要点 · L38 · 489
-- ART-SKYLIGHT §1 默认状态的光 · L48 · 382
+- ART-SKYLIGHT §1 默认状态的光 · L48 · 321
 - ART-SKYLIGHT §2 太阳本体与主光色 · L56 · 384
 - ART-SKYLIGHT §3 光照骨架 · L63 · 3.0k
   - ART-SKYLIGHT §3.1 主光 · L65 · 1.3k
@@ -587,7 +587,7 @@
   - ★ WLD-LIFE-STREET §0.1 接入要点 · L28 · 470
 - WLD-LIFE-STREET §1 停着的车 · L37 · 788
 - WLD-LIFE-STREET §2 街道家具 · L47 · 1.6k
-- WLD-LIFE-STREET §3 行走模式下的碰撞 · L60 · 684
+- WLD-LIFE-STREET §3 行走模式下的碰撞 · L60 · 679
 - WLD-LIFE-STREET §4 待验证（P0） · L75 · 59
 
 ## WLD-LIFE · 动物、生活痕迹与街道家具
@@ -679,9 +679,9 @@
 - WLD-TERRAIN-SHAPE §1 设计原则 · L36 · 929
   - WLD-TERRAIN-SHAPE §1.1 总骨架 · L38 · 189
   - WLD-TERRAIN-SHAPE §1.2 规则 · L44 · 729
-- WLD-TERRAIN-SHAPE §2 高度预算与分层 · L58 · 1.7k
+- WLD-TERRAIN-SHAPE §2 高度预算与分层 · L58 · 1.8k
   - WLD-TERRAIN-SHAPE §2.1 分层 · L60 · 493
-  - WLD-TERRAIN-SHAPE §2.2 手感刻度 · L73 · 488
+  - WLD-TERRAIN-SHAPE §2.2 手感刻度 · L73 · 499
   - WLD-TERRAIN-SHAPE §2.3 坡度类 · L88 · 494
   - WLD-TERRAIN-SHAPE §2.4 全图范围与零带 · L101 · 258
 - WLD-TERRAIN-SHAPE §3 竖直落差 · L108 · 1.2k
@@ -804,7 +804,7 @@
 - MAP-QSH-ADDITIONS §4 参照与转译规则 · L88 · 709
 - MAP-QSH-ADDITIONS §5 不建议增补（禁做清单） · L99 · 812
 - MAP-QSH-ADDITIONS §6 需要登记的新颜色 · L121 · 573
-- MAP-QSH-ADDITIONS §7 增补物的行走分类 · L141 · 553
+- MAP-QSH-ADDITIONS §7 增补物的行走分类 · L141 · 571
 - MAP-QSH-ADDITIONS §8 区文档共同口径 · L151 · 830
   - MAP-QSH-ADDITIONS §8.1 身份特征与近景要求 · L155 · 393
   - MAP-QSH-ADDITIONS §8.2 四季与昼夜 · L161 · 294
@@ -1069,18 +1069,18 @@
 `docs/maps/qingshuihe/MAP-QSH-TERRAIN-DISTRICTS-十处分区地形.md` · 9.0k 字 · 清水河十处分区（中轴广场、银杏大道、西湖、东湖、河渠、宿舍、运动场、食堂商业街、教学科研区、校门校界）的标高、坡度、连接与对点位的约束，以及地形文件归属
 关键词：分区地形、下沉时间广场、落金沟、湖岸丘链、草阶看台台地、东湖亭丘、岛丘、品学楼台基、坡广场、宿舍台原、上台、下台、台口、通学坡、看月台、堤上路、球场堤路、下沉草阶草坪、河岸低步道、渠堤、湿地低地、扇形草坪浅碟、中庭草丘、零带、terrain.json
 
-- MAP-QSH-TERRAIN-DISTRICTS §0 结论 · L23 · 856
+- MAP-QSH-TERRAIN-DISTRICTS §0 结论 · L23 · 849
   - ★ MAP-QSH-TERRAIN-DISTRICTS §0.1 接入要点 · L34 · 370
 - MAP-QSH-TERRAIN-DISTRICTS §1 文件归属 · L41 · 503
-- MAP-QSH-TERRAIN-DISTRICTS §2 中轴广场与图书馆 · L53 · 466
+- MAP-QSH-TERRAIN-DISTRICTS §2 中轴广场与图书馆 · L53 · 483
 - MAP-QSH-TERRAIN-DISTRICTS §3 银杏大道 · L62 · 359
-- MAP-QSH-TERRAIN-DISTRICTS §4 西湖与红枫丘 · L69 · 740
-- MAP-QSH-TERRAIN-DISTRICTS §5 东湖 · L78 · 551
-- MAP-QSH-TERRAIN-DISTRICTS §6 河渠与箱涵 · L85 · 771
+- MAP-QSH-TERRAIN-DISTRICTS §4 西湖与红枫丘 · L69 · 715
+- MAP-QSH-TERRAIN-DISTRICTS §5 东湖 · L78 · 553
+- MAP-QSH-TERRAIN-DISTRICTS §6 河渠与箱涵 · L85 · 711
 - MAP-QSH-TERRAIN-DISTRICTS §7 宿舍区 · L94 · 1.3k
 - MAP-QSH-TERRAIN-DISTRICTS §8 运动场与体育区 · L106 · 645
 - MAP-QSH-TERRAIN-DISTRICTS §9 食堂与商业街 · L114 · 350
-- MAP-QSH-TERRAIN-DISTRICTS §10 教学科研区 · L120 · 965
+- MAP-QSH-TERRAIN-DISTRICTS §10 教学科研区 · L120 · 970
 - MAP-QSH-TERRAIN-DISTRICTS §11 校门与校界 · L128 · 304
 
 ## MAP-QSH-TERRAIN · 分区地形：全图骨架、地标丘、揭示路线与常水位
@@ -1274,7 +1274,7 @@
 
 - SYS-AUDIO §0 结论 · L21 · 1.1k
   - ★ SYS-AUDIO §0.1 接入要点 · L38 · 388
-- SYS-AUDIO §1 总体与生命周期 · L44 · 722
+- SYS-AUDIO §1 总体与生命周期 · L44 · 757
 - SYS-AUDIO §2 混音与响度 · L56 · 497
 - SYS-AUDIO §3 加速流逝的节制与转场 · L75 · 487
 - SYS-AUDIO §4 人迹声：确保不出现清晰人声 · L87 · 511
@@ -1282,25 +1282,25 @@
 - SYS-AUDIO §6 开场音乐 · L106 · 301
 - SYS-AUDIO §7 设置 · L111 · 376
 - SYS-AUDIO §8 素材策略与许可 · L117 · 504
-- SYS-AUDIO §9 预算（设计目标） · L124 · 168
+- SYS-AUDIO §9 预算（设计目标） · L124 · 167
 - SYS-AUDIO §10 验收 · L131 · 234
 - SYS-AUDIO §11 待验证（P0） · L137 · 110
 
 ## SYS-GRAPHICS · 画面设置：预设、单项、风格底线、应用与持久化
 
-`docs/systems/SYS-GRAPHICS-画面设置.md` · 8.0k 字 · 主线三个画面预设与约 10 个单项、风格底线、应用方式、持久化；自动调节、首次分档、15 秒确认等在主线之后
+`docs/systems/SYS-GRAPHICS-画面设置.md` · 8.1k 字 · 主线三个画面预设与约 10 个单项、风格底线、应用方式、持久化；自动调节、首次分档、15 秒确认等在主线之后
 关键词：画面设置、画质、画面预设、设备档、均衡、精致、极致、单项、风格底线、风格默认、渲染比例、雾幕类设置、画面页、IQualityService、IQualityAware、QualityResponsive、QualityKnob、quality-presets.json、settings.json
 
 - SYS-GRAPHICS §0 结论 · L22 · 1.6k
   - ★ SYS-GRAPHICS §0.1 接入要点 · L33 · 850
-- SYS-GRAPHICS §1 预设 · L46 · 832
-- SYS-GRAPHICS §2 风格底线与风格默认 · L66 · 733
+- SYS-GRAPHICS §1 预设 · L46 · 900
+- SYS-GRAPHICS §2 风格底线与风格默认 · L66 · 778
 - SYS-GRAPHICS §3 单项与生效方式 · L81 · 979
 - SYS-GRAPHICS §4 应用方式 · L105 · 441
 - SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L115 · 796
 - SYS-GRAPHICS §6 持久化与恢复 · L134 · 305
 - SYS-GRAPHICS §7 画面页（WP-35，视觉见 UI-VISUAL-COMPONENTS §5） · L140 · 555
-- SYS-GRAPHICS §8 待验证（P0） · L152 · 224
+- SYS-GRAPHICS §8 待验证（P0） · L152 · 243
 
 ## SYS-MAPS · 多地图：按图数据、`IMapService` 与切换
 
@@ -1453,13 +1453,13 @@
 `docs/systems/SYS-TIME-时间与季节.md` · 5.2k 字 · 世界状态三个量与只向前的时间规则、默认状态落金初灯、美术太阳与月亮、过渡的定目标顺序与用时、质量底线
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、只向前、美术太阳、美术月亮、满月、定目标顺序、质量底线
 
-- SYS-TIME §0 结论 · L22 · 1.0k
+- SYS-TIME §0 结论 · L22 · 1.1k
   - ★ SYS-TIME §0.1 接入要点 · L38 · 480
 - SYS-TIME §1 世界状态与时间规则 · L47 · 1.7k
   - SYS-TIME §1.1 默认状态 · L49 · 478
   - SYS-TIME §1.2 三个量与时间规则 · L57 · 1.2k
-- SYS-TIME §2 美术太阳与月亮 · L72 · 766
-  - SYS-TIME §2.1 太阳 · L74 · 501
+- SYS-TIME §2 美术太阳与月亮 · L72 · 745
+  - SYS-TIME §2.1 太阳 · L74 · 480
   - SYS-TIME §2.2 月亮 · L89 · 175
   - SYS-TIME §2.3 与主光的关系 · L93 · 76
 - SYS-TIME §3 过渡 · L97 · 243
@@ -1569,19 +1569,19 @@
 
 ## SYS-WALK · 行走模式：身体、手感、视角与切换
 
-`docs/systems/SYS-WALK-行走模式.md` · 7.5k 字 · 行走模式的玩家身体与步相、手感目标、第一与第三人称镜头与舒适度、旁观与行走的切换、控制器的规则
+`docs/systems/SYS-WALK-行走模式.md` · 7.4k 字 · 行走模式的玩家身体与步相、手感目标、第一与第三人称镜头与舒适度、旁观与行走的切换、控制器的规则
 关键词：行走模式、手感、模式切换、玩家身体、步相、自动登阶、视角舒适度、视角晃动、第一人称、第三人称、吊杆、身体淡入淡出、控制器规则、运动快照、土狼时间、IViewControl、ModeSwitchVia、ModeSwitchResult、IWalkTelemetry
 
-- SYS-WALK §0 结论 · L22 · 643
+- SYS-WALK §0 结论 · L22 · 657
   - ★ SYS-WALK §0.1 接入要点 · L34 · 252
 - SYS-WALK §1 身体、声音与步相 · L41 · 715
-- SYS-WALK §2 手感目标 · L52 · 699
-- SYS-WALK §3 视角、镜头与舒适度 · L70 · 2.0k
-  - SYS-WALK §3.1 视场角、舒适度与键位 · L72 · 605
-  - SYS-WALK §3.2 行走模式的镜头 · L82 · 1.4k
-- SYS-WALK §4 模式切换 · L115 · 872
-- SYS-WALK §5 控制器的规则 · L130 · 778
-- SYS-WALK §6 待验证 · L141 · 328
+- SYS-WALK §2 手感目标 · L52 · 630
+- SYS-WALK §3 视角、镜头与舒适度 · L66 · 2.0k
+  - SYS-WALK §3.1 视场角、舒适度与键位 · L68 · 598
+  - SYS-WALK §3.2 行走模式的镜头 · L78 · 1.4k
+- SYS-WALK §4 模式切换 · L111 · 872
+- SYS-WALK §5 控制器的规则 · L126 · 778
+- SYS-WALK §6 待验证 · L137 · 328
 
 ## SYS-WEATHER-PROCESS · 自动天气与存档语义
 
@@ -1748,7 +1748,7 @@
 - ENG-BUDGET-LOD §0 结论 · L22 · 609
   - ★ ENG-BUDGET-LOD §0.1 接入要点 · L29 · 278
 - ENG-BUDGET-LOD §1 细节级别与分块 · L35 · 1.3k
-- ENG-BUDGET-LOD §2 流式加载与速度 · L59 · 457
+- ENG-BUDGET-LOD §2 流式加载与速度 · L59 · 454
 - ENG-BUDGET-LOD §3 深度与近裁剪面 · L66 · 387
 - ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L74 · 650
 - ENG-BUDGET-LOD §5 待验证（P0） · L84 · 125
@@ -1819,7 +1819,7 @@
 
 ## ENG-GATES · 验收：测试三档与门禁
 
-`docs/engineering/ENG-GATES-验收与门禁.md` · 4.9k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、14 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
+`docs/engineering/ENG-GATES-验收与门禁.md` · 5.0k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、14 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 关键词：门禁、验收、测试三档、快检、核心专项、集中测试、gate.ps1、门禁表、门禁编号、D-238、入口与交付分工、测试只锁本包输出、构建锁
 
 - ENG-GATES §0 结论 · L21 · 808

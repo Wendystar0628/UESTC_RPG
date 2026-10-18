@@ -63,7 +63,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 18. **画面设置不改烘焙、碰撞和世界状态**：`Build()` 与 `Campus.Gen.*` 不感知画面设置；各包只经 `IQualityService` 与 `[QualityResponsive]` 接收设置，不直接读设置文件；每个单项恰有一个负责方（G5）。
 19. **存档只走一条路**：只经 `ISaveService` 与 `[SaveSection]`，禁用 Godot Resource、ConfigFile、`StrToVar`、`BytesToVar*`、`GetVar`；只有 `Campus.Kernel.Save` 写 `user://saves`；快照不造成可见卡顿（主线程单帧 ≲ 1 ms），其余在线程池（SYS-SAVE-FORMAT §3）。
 20. **室内只在开放清单里**（WLD-INTERIORS-BUILD §5）：清单外的楼没有完整室内和楼内碰撞；可走性不随钟点、季节、天气变；会动的门只由观者位置触发，剧情锁门也只走运行时门体。
-21. **音频硬上限**：在播 `AudioStreamPlayer3D` ≤ 32，开 `AreaMask` 的 ≤ 12；真实声部 ≤ 72；不在主线程同步加载素材；只有 `Campus.Audio.*` 能建播放器和改总线（SYS-AUDIO §1、§9）。
+21. **音频硬上限**：同时在播的声源数以 `game/audio/core/AudioVoicePool.cs` 为准；不在主线程同步加载素材；只有 `Campus.Audio.*` 能建播放器和改总线（SYS-AUDIO §1、§9）。
 22. **本机烘焙要确定**（D-165、D-232）：同一台机器上同一输入烘出同样的字节，不要求本机与别的机器逐字节一致；gen 与烘焙子任务的随机和哈希只用契约的 `Rng`、`StableHash`，不用 `System.Random`、系统时钟、`string.GetHashCode`、`Guid.NewGuid`，遍历字典、集合先排序。
 23. **`user://` 不用 Godot 资源格式**（D-165）：`ResourceLoader`、`ResourceSaver` 不得读写 `user://`；本机缓存用自定义 `.tbin`，每格按它用到的输入判鲜，不符就重烘（ENG-ARCH §4、ENG-PERF-STREAM §1）。
 

@@ -55,7 +55,7 @@ gates: []
 | D-087 | 新游戏过场约 44 s，从秋 17:05 以 60× 推到 17:30，在 P00 全景出标题卡并转 1×；继续与返回标题的过场推迟到主线之后（D-233） | 过场 | SYS-TITLE-CINEMATIC §1；SYS-TITLE-CINEMATIC §2 | 生效 |
 | D-088 | 跳过是按住 Esc 0.8 s，跳过后的终态与完整播放一致；设置里"开场过场"主线只有完整、关，简短版推迟（D-233） | 过场 | SYS-TITLE-CINEMATIC §3 | 生效 |
 | D-089 | 应用流程由 `IAppFlow` 状态机管理：Boot → Title → Entering → Playing → Leaving → Title，另有 Quitting；Leaving 是返回标题，Quitting 是退出程序 | 开始页 | SYS-TITLE §3；SYS-SAVE-FLOW §1.4 | 生效 |
-| D-090 | 界面缩放 75–150%，不乘系统 DPI | 界面 | UI-VISUAL §4 | 生效 |
+| D-090 | 界面缩放范围见 UI-NAV §3.5，不乘系统 DPI | 界面 | UI-VISUAL §4 | 生效 |
 
 ## 2 存档
 
@@ -94,7 +94,7 @@ gates: []
 | D-113 | 不用 `AudioStreamRandomizer`，改用自研的洗牌选择器；不给 `AudioStreamPlaylist.Shuffle` 和 `AudioServer.PlaybackSpeedScale` 赋值 | 音频实现 | SYS-AUDIO-FOLEY §1.4；ENG-ARCH §2 | 生效 |
 | D-114 | 没有听得清的人声：人迹只用远处、听不清、来自看不见处的群声；界面悬停默认无声，不加语音提示 | 全项目 | SYS-AUDIO §4；SYS-AUDIO §5；INV-3 | 生效 |
 | D-115 | 一次性声一律按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个 | 全项目 | SYS-AUDIO §3；INV-10 | 生效 |
-| D-116 | 音频预算：主线程不到 1 ms（从帧时余量里划出），在播 3D 声源 ≤ 32（核显档默认 24），常驻内存与导出包里的音频都在百兆级 | 性能 | SYS-AUDIO §9 | 生效 |
+| D-116 | 音频预算：主线程不到 1 ms（从帧时余量里划出），同时在播的声源有上限（以 `AudioVoicePool` 为准），常驻内存与导出包里的音频都在百兆级 | 性能 | SYS-AUDIO §9 | 生效 |
 | D-159 | 空间声学（WP-53c）的主线程占用含在音频合计里，不另列额度 | 音频 | SYS-AUDIO §9；SYS-AUDIO §10 | 生效 |
 
 ## 4 性能与画面设置
