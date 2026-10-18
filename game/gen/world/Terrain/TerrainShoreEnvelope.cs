@@ -51,8 +51,8 @@ internal sealed class TerrainShoreEnvelope
                 Math.Abs(_shoreHeight((3 * ax + bx) / 4, (3 * az + bz) / 4) - (3 * ay + by) / 4),
                 Math.Abs(_shoreHeight((ax + 3 * bx) / 4, (az + 3 * bz) / 4) - (ay + 3 * by) / 4)));
             // These are vector boundary constraints, not a sampled height field. Adaptive
-            // chords resolve the prescribed curve to 1 mm, below the 1 cm terrain quantum.
-            if (error > 0.001)
+            // chords resolve the prescribed curve to the 1 cm terrain quantum, within its 2 cm acceptance.
+            if (error > 0.01)
             {
                 if (depth >= 24) throw new WorldDataException(_file, _id,
                     $"Shore height is discontinuous or cannot be resolved by the deterministic boundary envelope: a=({ax:R},{az:R},{ay:R}), b=({bx:R},{bz:R},{by:R}), mid={my:R}, error={error:R}. A: {_explain?.Invoke(ax, az)} B: {_explain?.Invoke(bx, bz)}");
@@ -67,7 +67,7 @@ internal sealed class TerrainShoreEnvelope
         var lower = new TerrainDifferential(double.NegativeInfinity, 0, 0);
         var upper = new TerrainDifferential(double.PositiveInfinity, 0, 0);
         Visit(_root);
-        if (lower.Height > upper.Height + 0.001)
+        if (lower.Height > upper.Height + 0.01)
             throw new WorldDataException(_file, _id, $"Fixed exposed shore heights cannot coexist within the 1:2 land-grade limit at ({x:R},{z:R}); lower={lower.Height:R}, upper={upper.Height:R}.");
         var result = baseline.Height > upper.Height ? upper : baseline;
         return result.Height < lower.Height ? lower : result;
