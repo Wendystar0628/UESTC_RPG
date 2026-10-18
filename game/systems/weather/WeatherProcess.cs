@@ -175,19 +175,10 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         }
     }
 
-    public void Leave(MapId map, double worldHours)
-    {
-        ValidateHours(worldHours);
-        if (_map != map) return;
-        _map = null;
-        _profile = null;
-        _line = null;
-    }
-
-    public WeatherProcessState Capture(MapId map) => Snapshot(map, _set, _jumpTo ?? _hours);
+    public WeatherProcessState Capture() => Snapshot(_set, _jumpTo ?? _hours);
 
     /// <summary>The settings at a save moment, without touching the live process.</summary>
-    public WeatherProcessState CaptureAt(MapId map, in WorldSaveMoment moment)
+    public WeatherProcessState CaptureAt(in WorldSaveMoment moment)
     {
         ValidateHours(moment.WorldHours);
         if (!double.IsFinite(moment.ClockOffset) || moment.FlowRate is not (0 or 1 or 10 or 60 or 360 or 1440))
@@ -196,10 +187,10 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         var copy = _set.Copy();
         if (!copy.FrameBound || copy.Season != moment.Season || copy.ClockOffset != moment.ClockOffset)
             copy.Reseason(moment.Season, moment.ClockOffset);
-        return Snapshot(map, copy, moment.WorldHours);
+        return Snapshot(copy, moment.WorldHours);
     }
 
-    public void Restore(MapId map, WeatherProcessState saved)
+    public void Restore(WeatherProcessState saved)
     {
         ValidateSaved(saved);
         _set = new()
@@ -234,11 +225,12 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         Refresh(line);
     }
 
-    /// <summary>Contract shape of the saved settings. The queue, epoch and segment fields belong to the removed per-map queue and stay empty.</summary>
-    private static WeatherProcessState Snapshot(MapId map, WeatherSettings s, double hours)
+    /// <summary>Only settings and settled residue are saved; automatic weather is reconstructed.</summary>
+    private WeatherProcessState Snapshot(WeatherSettings s, double hours)
     {
         var residue = s.ResidueNow(hours);
-        return new(map, 0, 0, s.Manual ?? new WeatherSel(WeatherMode.Auto, WeatherKind.Clear, 1), Array.Empty<WeatherQueueItem>(), hours,
+        return new(_map ?? throw new InvalidOperationException("Enter a map before capturing weather."),
+            s.Manual ?? new WeatherSel(WeatherMode.Auto, WeatherKind.Clear, 1),
             s.PinFrom, s.PinTo, s.PinKind, s.PinIntensity, s.QuietUntil, residue.Wet, residue.Puddle, hours)
         {
             Season = s.Season,

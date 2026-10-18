@@ -18,17 +18,16 @@ internal sealed class CinematicTestPresentation : IVeilPresentation
 
 internal sealed class CinematicRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMapStreamState
 {
+    bool IMapStreamState.IsUnloaded => false;
     public int Prefetches { get; private set; }
     public int Warms { get; private set; }
-    public bool IsUnloaded { get; private set; }
     public bool ResidentReady { get; private set; } = true;
     public bool DestinationReady { get; private set; }
     public bool CompletePrefetchImmediately { get; set; } = true;
     public bool WarmReady { get; private set; } = true;
     public string? Error { get; set; }
     public MapStreamDestination? Destination { get; private set; }
-    public void Unload(MapId from) { IsUnloaded = true; ResidentReady = false; DestinationReady = false; WarmReady = false; Destination = null; }
-    public void Mount(IMapContext context) { IsUnloaded = false; ResidentReady = true; }
+    public void Mount(IMapContext context) { ResidentReady = true; }
     public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null)
     {
         Prefetches++; Destination = new(destination, mode, space); DestinationReady = CompletePrefetchImmediately; WarmReady = false;

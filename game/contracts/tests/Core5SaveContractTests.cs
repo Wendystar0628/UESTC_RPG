@@ -34,7 +34,7 @@ public sealed class Core5SaveContractTests
         var implementation = new LegacyWeather();
         IWeatherProcess weather = implementation;
         var moment = new WorldSaveMoment(24, 0, Season.Autumn, 1);
-        Throws<NotSupportedException>(() => weather.CaptureAt(new MapId("core5-test"), moment));
+        Throws<NotSupportedException>(() => weather.CaptureAt(moment));
         Check(implementation.Captures == 0 && implementation.Steps == 0,
             "The default CaptureAt must not silently capture the old moment or advance weather.");
     }
@@ -61,13 +61,12 @@ public sealed class Core5SaveContractTests
         public void Quiet(double hours, double until) { }
         public void Pin(double hours, WeatherKind kind, float? intensity, double from, double to) { }
         public void Enter(MapId map, string profile, double hours) { }
-        public void Leave(MapId map, double hours) { }
-        public WeatherProcessState Capture(MapId map)
+        public WeatherProcessState Capture()
         {
             Captures++;
-            return new(map, 0, 0, Selection, [], 0, null, null, null, null, 0, 0, 0, 0);
+            return new(new MapId("core5-test"), Selection, null, null, null, null, 0, 0, 0, 0);
         }
-        public void Restore(MapId map, WeatherProcessState state) { }
+        public void Restore(WeatherProcessState state) { }
     }
 
     private static void Check(bool condition, string message)

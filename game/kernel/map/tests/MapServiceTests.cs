@@ -119,7 +119,7 @@ public sealed class MapServiceTests
         f.Runtime.WarmReady = true;
         f.Until(() => travel.Done.IsCompleted);
         Require(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
-            f.Runtime.Unloads == 0, "Warming a same-map restore rebuilt the map.");
+            f.Loader.Loads == 1, "Warming a same-map restore rebuilt the map.");
     }
 
     [TestCase]
@@ -135,7 +135,7 @@ public sealed class MapServiceTests
             "Same-map NewGame introduced another warm operation.");
         f.Runtime.DestinationReady = true;
         f.Until(() => travel.Done.IsCompleted);
-        Require(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) && f.Runtime.Unloads == 0,
+        Require(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context),
             "Same-map NewGame rebuilt the map.");
     }
 
@@ -193,7 +193,7 @@ public sealed class MapServiceTests
         var legalizeCalls = f.Poses.LegalizeCalls;
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.LoadSave));
         f.Until(() => travel.Done.IsCompleted);
-        Require(ReferenceEquals(context, f.Service.Context) && f.Loader.Loads == 1 && f.Runtime.Unloads == 0,
+        Require(ReferenceEquals(context, f.Service.Context) && f.Loader.Loads == 1,
             "Same-map LoadSave rebuilt the world.");
         Require(f.Camera.Pose == titlePose && f.Service.Visits.Single().LastPose == savedPose,
             "Preview replaced the title camera or saved destination.");
@@ -285,7 +285,7 @@ public sealed class MapServiceTests
             f.Loader.ReleaseDelayed();
             f.Until(() => f.Loader.CompletedLoads == 1);
             Require(f.Service.Context is null && f.Runtime.Mounted.Count == 0 && arrivals == 0 &&
-                f.Service.Travel(new(f.C, Cause: MapTravelCause.Test)).Done.Result == MapTravelResult.Rejected,
+                f.Service.Travel(new(f.C, Cause: MapTravelCause.LoadSave)).Done.Result == MapTravelResult.Rejected,
                 "A stopped map service published or accepted new work.");
         }
         finally { f.Loader.ReleaseDelayed(); }
@@ -487,7 +487,6 @@ public sealed class MapServiceTests
         private bool _residentReady = true;
         private bool _destinationReady = true;
         private bool _hasDestination;
-        public bool IsUnloaded { get; set; } = true;
         public bool ResidentReady { get => _mountPrepared && _residentReady && Error is null; set => _residentReady = value; }
         public bool DestinationReady { get => _mountPrepared && _hasDestination && _destinationReady && Error is null; set => _destinationReady = value; }
         public bool WarmReady { get; set; } = true;
@@ -495,15 +494,12 @@ public sealed class MapServiceTests
         public bool MountPending => _preparing is { IsCompleted: false };
         public int PrefetchCalls { get; private set; }
         public Pose? LastPrefetch { get; private set; }
-        public int Unloads { get; private set; }
         public int WarmStarts { get; private set; }
         public List<MapId> Mounted { get; } = [];
         public List<IMapContext> Contexts { get; } = [];
         public void DelayMount() => _mountGate = new();
         public void ReleaseMount() => _mountGate!.TrySetResult();
         public void FailMount(string message) => _mountGate!.TrySetException(new InvalidDataException(message));
-        public void Unload(MapId map)
-        { Unloads++; _mountPrepared = false; _hasDestination = false; Error = null; }
         public void Mount(IMapContext context)
         {
             Mounted.Add(context.Descriptor.Id);

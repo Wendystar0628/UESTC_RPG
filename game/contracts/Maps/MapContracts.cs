@@ -59,10 +59,10 @@ public interface IMapContext                 // 纯数据；场景 RID 和物理
     IWorldModel World { get; }               // 切图后失效，任何节点都不得跨图持有
     string DataRoot { get; }                 // "res://data/maps/qingshuihe/"
 }
-public enum MapTravelCause : byte { Boot, NewGame, LoadSave, Ui, Portal, Teleport, Test }
+public enum MapTravelCause : byte { Boot, NewGame, LoadSave }
 public sealed record MapTravelRequest(MapId Target, string? Spawn = null, Pose? Pose = null,
-    ViewMode? Mode = null, MapTravelCause Cause = MapTravelCause.Ui);
-public enum MapStage : byte { VeilIn, Snapshot, Unload, LoadData, Mount, Warm, Spawn, VeilOut, Done }
+    ViewMode? Mode = null, MapTravelCause Cause = MapTravelCause.Boot);
+public enum MapStage : byte { LoadData, Mount, Warm, Spawn, Done }
 public enum MapTravelResult : byte { Arrived, Rejected, Failed }
 public interface IMapTransition
 {
@@ -80,7 +80,7 @@ public interface IMapService                 // Kernel 服务（WP-46）
     IReadOnlyList<MapDescriptor> Maps { get; }
     IReadOnlyList<MapVisit> Visits { get; }   // All visited maps, including the current one; save enumerates per-map sections.
     MapId Current { get; }
-    IMapContext? Context { get; }            // Unload 到 Mount 之间为 null
+    IMapContext? Context { get; }            // 启动加载完成前为 null
     IMapTransition? Transition { get; }
     event Action<MapId, MapTravelCause>? Arrived;   // Main thread, after successful Spawn; subscribers must not block the transition.
     /// <summary>
@@ -93,7 +93,7 @@ public interface IMapService                 // Kernel 服务（WP-46）
     /// <exception cref="NotSupportedException">The implementation does not support catalogue spawn lookup.</exception>
     MapSpawn ResolveSpawn(MapId map, string? spawn = null) =>
         throw new NotSupportedException("This map service does not support catalogue spawn lookup.");
-    IMapTransition Travel(MapTravelRequest r);   // 跨图切换走雾幕加载；同图内移动交给 ICameraRig.Transit 和 IAtlasService
+    IMapTransition Travel(MapTravelRequest r);   // 仅用于启动加载与同图的新游戏/读档落点；同图传送交给 ICameraRig.Transit 和 IAtlasService
 }
 public interface IMapAware                   // [KernelNode] 可选实现；雾幕全黑时按节点 ID 顺序调用
 {
@@ -102,4 +102,4 @@ public interface IMapAware                   // [KernelNode] 可选实现；雾�
 }
 public sealed record MapVisit(MapId Map, Pose LastPose, ViewMode Mode);
 // 存档只需记：MapId CurrentMap、各图的 MapVisit；段的格式由 SYS-SAVE定（按图的段名是 "map:<id>/…"）
-// 其他契约里与多地图有关的部分（在 §3 世界状态块和全局着色器参数）：IWeatherProcess.Enter/Leave；FramePriority.Map；ResetDefault 即"回到本图默认状态"；ShaderGlobals.MapRect
+// 其他契约里与多地图有关的部分（在 §3 世界状态块和全局着色器参数）：IWeatherProcess.Enter；FramePriority.Map；ResetDefault 即"回到本图默认状态"；ShaderGlobals.MapRect

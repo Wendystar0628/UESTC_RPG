@@ -24,7 +24,7 @@ public static class BootWorldOverrides
         var seed = args.Values.TryGetValue("seed", out var seedText) ? uint.Parse(seedText, CultureInfo.InvariantCulture) : map.Seed;
         var boot = WeatherBootOptions.Parse(args.Values, seed, season);
         // Effective capture defaults count as weather choices too. Seed/clock/season alone do not override policy.
-        var useMapWeather = !new[] { "weather", "weather-queue", "weather-intensity", "weather-remaining", "wet" }
+        var useMapWeather = !new[] { "weather", "weather-intensity", "weather-remaining", "wet" }
             .Any(args.Values.ContainsKey);
         if (useMapWeather && !string.Equals(map.World.SunProfile, "default", StringComparison.Ordinal))
             throw new NotSupportedException($"Boot weather policy does not support sun profile {map.World.SunProfile}.");

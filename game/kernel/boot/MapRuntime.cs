@@ -21,7 +21,7 @@ public partial class MapRuntime : Node, IMapRuntime
     private MapId? _loaded;
     private Task? _preparing;
     private bool _mountPrepared;
-    private bool _unloading;
+    private Task? _shutdown;
     private bool _stopping;
     private long _mapGeneration;
     private string? _error;
@@ -32,7 +32,6 @@ public partial class MapRuntime : Node, IMapRuntime
     private int _stable;
     private PipelineCounts _previous;
     private ViewContentReadiness? _contentReadiness;
-    public bool IsUnloaded => !_unloading && (_preparing is null || _preparing.IsCompleted) && _stream?.IsUnloaded == true && _scoped.Count == 0;
     public bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Error is null;
     public bool DestinationReady => _mountPrepared && _stream?.DestinationReady == true && _renderer?.PipelineReady == true && Error is null;
     public bool WarmReady { get; private set; }
@@ -49,21 +48,26 @@ public partial class MapRuntime : Node, IMapRuntime
         RenderingServer.Singleton.FramePostDraw += CountDraw;
     }
 
-    public void Unload(MapId from)
+    /// <summary>Stage exit only: stop producers, drain preparation and release every map-owned resource.</summary>
+    public Task ShutdownAsync(MapId map) => _shutdown ??= ShutdownMap(map);
+
+    private async Task ShutdownMap(MapId from)
     {
-        if (_unloading) return;
+        StopNewWork();
         _error = null;
         _mountPrepared = false;
         _contentReadiness = null;
-        _unloading = true;
         _mapGeneration++;
         _warming = false;
         WarmReady = false;
         _materials?.End(reset: true);
-        _ = UnloadAfterPreparation(from, _preparing);
+        await ReleaseAfterPreparation(from, _preparing);
+        while (_stream?.IsUnloaded == false)
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        if (Error is { } error) throw new InvalidOperationException("Map shutdown failed: " + error);
     }
 
-    private async Task UnloadAfterPreparation(MapId from, Task? preparation)
+    private async Task ReleaseAfterPreparation(MapId from, Task? preparation)
     {
         var failures = new List<Exception>();
         try
@@ -90,7 +94,6 @@ public partial class MapRuntime : Node, IMapRuntime
         finally
         {
             _preparing = null;
-            _unloading = false;
             if (failures.Count > 0) _error = string.Join("; ", failures.Select(error => error.GetBaseException().Message));
         }
     }
@@ -99,8 +102,8 @@ public partial class MapRuntime : Node, IMapRuntime
     {
         ArgumentNullException.ThrowIfNull(context);
         if (_stopping) throw new InvalidOperationException("The map runtime is shutting down.");
-        if (_loaded.HasValue || _unloading || _preparing is { IsCompleted: false })
-            throw new InvalidOperationException("Unload the current map before mounting another.");
+        if (_loaded.HasValue || _preparing is not null)
+            throw new InvalidOperationException("The map runtime mounts once at startup.");
         _error = null;
         _mountPrepared = false;
         _contentReadiness = null;
@@ -183,7 +186,7 @@ public partial class MapRuntime : Node, IMapRuntime
     }
     public string DescribeReadiness() =>
         $"map={_loaded?.Value ?? "none"},mountPrepared={_mountPrepared},preparation={_preparing?.Status}," +
-        $"unloading={_unloading},stopping={_stopping},resident={ResidentReady},destination={DestinationReady},warm={WarmReady}," +
+        $"stopping={_stopping},resident={ResidentReady},destination={DestinationReady},warm={WarmReady}," +
         $"warming={_warming},samplesStarted={_samplesStarted},stable={_stable}/{BootTuning.WarmFrames}," +
         $"drawFrames={_drawFrames},lastWarmDraw={_lastWarmDraw},pipeline={_previous},error={Error ?? "none"}; " +
         $"stream[resident={_stream?.ResidentReady},destination={_stream?.DestinationReady},unloaded={_stream?.IsUnloaded}," +

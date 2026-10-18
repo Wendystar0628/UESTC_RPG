@@ -343,7 +343,6 @@ public sealed class WorldStateTests
         Check(world.WorldHours > before && weather.Steps.Count == calls, "Map unload must not stop the shared clock or step an absent map.");
         world.OnMapLoaded(context);
         Equal(world.Instance, instance);
-        Equal(weather.Leaves, 1);
         Equal(weather.Enters, 2);
     }
 
@@ -610,7 +609,7 @@ public sealed class WorldStateTests
     {
         public readonly List<WeatherTick> Steps = [];
         public readonly List<string> Calls = [];
-        public int Reseasons, Resets, Quiets, Enters, Leaves;
+        public int Reseasons, Resets, Quiets, Enters;
         public double PinFrom, PinTo, QuietTo, LastEnterHours;
         public WeatherKind PinnedKind;
         public float? PinnedIntensity;
@@ -628,8 +627,7 @@ public sealed class WorldStateTests
         public void Pin(double hours, WeatherKind kind, float? intensity, double from, double to)
         { PinnedKind = kind; PinnedIntensity = intensity; PinFrom = from; PinTo = to; Calls.Add("pin"); }
         public void Enter(MapId map, string profile, double hours) { Enters++; LastEnterHours = hours; }
-        public void Leave(MapId map, double hours) => Leaves++;
-        public WeatherProcessState Capture(MapId map) => throw new NotSupportedException();
-        public void Restore(MapId map, WeatherProcessState state) => throw new NotSupportedException();
+        public WeatherProcessState Capture() => throw new NotSupportedException();
+        public void Restore(WeatherProcessState state) => throw new NotSupportedException();
     }
 }

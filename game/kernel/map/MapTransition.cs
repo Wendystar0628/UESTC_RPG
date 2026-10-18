@@ -11,17 +11,13 @@ public sealed class MapTransition(MapId from, MapTravelRequest request) : IMapTr
     public MapId From { get; } = from;
     public MapId To => Request.Target;
     public MapTravelCause Cause => Request.Cause;
-    public MapStage Stage { get; private set; } = MapStage.VeilIn;
+    public MapStage Stage { get; private set; } = MapStage.LoadData;
     public float Progress => Stage switch
     {
-        MapStage.VeilIn => 0,
-        MapStage.Snapshot => 1f / 8,
-        MapStage.Unload => 2f / 8,
-        MapStage.LoadData => 3f / 8,
-        MapStage.Mount => 4f / 8,
-        MapStage.Warm => 5f / 8,
-        MapStage.Spawn => 6f / 8,
-        MapStage.VeilOut => 7f / 8,
+        MapStage.LoadData => 0,
+        MapStage.Mount => 1f / 4,
+        MapStage.Warm => 2f / 4,
+        MapStage.Spawn => 3f / 4,
         MapStage.Done => 1,
         _ => throw new ArgumentOutOfRangeException(nameof(Stage))
     };

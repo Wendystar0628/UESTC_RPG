@@ -2,7 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Godot;
-using AppBoot = Campus.Kernel.Boot.Boot;
+using Campus.Kernel.Registry;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.World;
@@ -29,9 +29,7 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
     {
         if (_world is null || _view is null) return;
         _world.SetFrameReadouts(_view.Mode, _stepRate);
-        var freezeAnimation = AppBoot.Arguments.ContainsKey("shots") &&
-            !AppBoot.Arguments.ContainsKey("cine") && !AppBoot.Arguments.ContainsKey("bench");
-        _world.Tick(delta, freezeAnimation);
+        _world.Tick(delta, RegistryGateRunner.FreezesAnimation);
         WriteGlobals();
     }
 

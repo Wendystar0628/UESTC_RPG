@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
@@ -19,7 +18,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 namespace Campus.Stage;
 
 /// <summary>The production composition root. Map data, world state and flow are supplied exclusively through services.</summary>
-public partial class KernelStage : Node3D, IAppExit
+public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 {
     private StageCamera? _view;
     private readonly List<object> _runtimeObjects = [];
@@ -28,13 +27,12 @@ public partial class KernelStage : Node3D, IAppExit
     private IMapRuntime? _mapRuntime;
     private bool _ready;
     private bool _closing;
-    private bool _finishing;
     private bool _cpuCommand;
     private bool _shutdownStarted;
     private Task? _shutdownTask;
     private readonly CancellationTokenSource _captureLifetime = new();
     private ViewContentReadiness? _contentReadiness;
-    private int _frames;
+    private readonly StageGateDriver _gate;
     private string _phase = "compose";
     public string Phase
     {
@@ -42,18 +40,19 @@ public partial class KernelStage : Node3D, IAppExit
         private set
         {
             _phase = value;
-            if (AppBoot.Value("gate") is "save-close" or "save-resume")
-                GD.Print($"CORE_BOOT_PHASE {value} {FrameClock.MonotonicMilliseconds:R}");
+            RegistryGateRunner.TraceBootPhase(value);
         }
     }
     public string? Failure { get; private set; }
+
+    public KernelStage() => _gate = new(this);
 
     public override async void _Ready()
     {
         if (AppBoot.Failed) return;
         try
         {
-            if (AppBoot.Value("gate") == "registry") { RunRegistryGate(); return; }
+            if (RegistryGateRunner.TryRun(this)) return;
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
             Compose();
             await StartWorld();
@@ -196,21 +195,11 @@ public partial class KernelStage : Node3D, IAppExit
         await veil.Reveal(VeilReason.Boot, showTitle ? BootTuning.TitleRevealSeconds : BootTuning.WorldRevealSeconds);
         CheckStartupActive();
         await appBoot.CompleteBoot();
-        if (options.Has("cine"))
-        {
-            Phase = "named-cinematic";
-            await RunRequestedCinematic(options.Value("cine"));
-            CheckStartupActive();
-        }
+        await _gate.RunNamedCinematic();
         _ready = true;
         Phase = "realtime";
         GD.Print($"[WP-01][map={maps.Current.Value}][phase=realtime] flow={_flow!.State}; startup complete");
-        if (options.Value("gate") is "save-close" or "save-resume")
-        {
-            await RunCoreLifecycle(options.Value("gate"));
-            return;
-        }
-        if (!options.Has("gate") && options.Has("shots") && !options.Has("frames")) { _finishing = true; _ = FinishRun(); }
+        await _gate.OnRealtime();
 
         async Task Initialize(BootPhase phase)
         {
@@ -224,45 +213,9 @@ public partial class KernelStage : Node3D, IAppExit
         }
     }
 
-    private async Task RunRequestedCinematic(string name)
-    {
-        var saves = Services.Get<ISaveService>();
-        switch (name)
-        {
-            case "enter_new":
-            case "enter_new_short":
-                var options = AppBoot.Options;
-                SlotId? selected = options.Has("save") && options.Value("save") != "off"
-                    ? new SlotId("s" + options.Value("save"))
-                    : options.Has("slot") ? new SlotId("s" + options.Value("slot").TrimStart('s')) : null;
-                var slot = selected ?? saves.Slots.FirstOrDefault(info => info.Health == SlotHealth.Empty)?.Slot
-                    ?? throw new InvalidOperationException("Named new-game playback requires an empty or explicitly selected slot.");
-                if (await _flow!.Enter(new(EnterKind.NewGame, slot)) != EnterResult.Entered)
-                    throw new InvalidOperationException("Named new-game playback failed.");
-                break;
-            case "enter_continue":
-                if (await _flow!.Enter(new(EnterKind.Continue, saves.Active ?? saves.Continue)) != EnterResult.Entered)
-                    throw new InvalidOperationException("Named continue playback requires a readable slot.");
-                break;
-            case "leave":
-                await _flow!.ReturnToTitle();
-                if (_flow.State != AppState.Title) throw new InvalidOperationException("Named return-to-title playback failed.");
-                break;
-            default: throw new ArgumentException("Unknown named cinematic: " + name);
-        }
-    }
-
     private void CheckStartupActive()
     {
         if (_closing || _shutdownStarted) throw new OperationCanceledException("Startup stopped by the exit request.");
-    }
-
-    private void RunRegistryGate()
-    {
-        var report = RegistryGateRunner.Run(Services.Services, ProjectSettings.GetSetting("campus/maps/index").AsString(),
-            AppBoot.Value("map"), Read, [typeof(IRuleset), typeof(IRulesetActivation), typeof(PaletteCatalog), typeof(IAppExit), typeof(Camera3D), typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)]);
-        GD.Print("G5_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
-        GetTree().Quit();
     }
 
     private async Task RunBakeCommand()
@@ -287,37 +240,14 @@ public partial class KernelStage : Node3D, IAppExit
     public override void _Process(double delta)
     {
         _statistics?.Sample();
-        if (!_ready || _closing || _finishing) return;
-        _frames++;
-        if (!AppBoot.Options.Has("gate") && int.TryParse(AppBoot.Value("frames"), NumberStyles.None, CultureInfo.InvariantCulture, out var limit) && _frames >= limit)
-        { _finishing = true; _ = FinishRun(); }
+        _gate.OnProcess();
     }
 
-    private async Task FinishRun()
-    {
-        try
-        {
-            if (AppBoot.Options.Has("shots"))
-                await CaptureSequence.RunAsync(this, _contentReadiness!, AppBoot.Options, _view!.Sync, () =>
-                {
-                    CheckStartupActive();
-                    return _ready &&
-                        _mapRuntime!.ResidentReady && _mapRuntime.DestinationReady && _mapRuntime.WarmReady;
-                }, _captureLifetime.Token, pose =>
-                {
-                    if (!Services.Get<ICameraPoseValidator>().IsLegal(pose, outsideBuffer: true))
-                        throw new ArgumentException("Capture pose is outside the reachable space or inside its buffer.");
-                });
-            await CloseAsync();
-        }
-        catch (OperationCanceledException) when (_closing) { }
-        catch (Exception error) { Fail(error); }
-    }
     public override void _Notification(int what)
     {
         if (what == NotificationWMCloseRequest)
         {
-            if (_coreAwaitingClose) { _coreAwaitingClose = false; _coreCloseAt = FrameClock.MonotonicMilliseconds; }
+            _gate.OnCloseRequest();
             _ = CloseAsync();
         }
     }
@@ -372,25 +302,21 @@ public partial class KernelStage : Node3D, IAppExit
         _ready = false;
         _statistics = null;
         Phase = "shutdown-map";
-        TraceCoreClose(Phase);
+        _gate.TraceClose(Phase);
         var failures = new List<Exception>();
         var textures = _runtimeObjects.OfType<IGlobalDataTextureRegistry>().SingleOrDefault();
         try
         {
-            if (_mapRuntime is MapRuntime runtime) runtime.StopNewWork();
-            if (_mapRuntime is not null && !_mapRuntime.IsUnloaded)
+            if (_mapRuntime is MapRuntime runtime)
             {
                 var maps = Services.Get<IMapService>();
-                _mapRuntime.Unload(maps.Context?.Descriptor.Id ?? maps.Current);
-                while (!_mapRuntime.IsUnloaded)
-                    await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-                if (_mapRuntime.Error is { } error) throw new InvalidOperationException("Map shutdown failed: " + error);
+                await runtime.ShutdownAsync(maps.Context?.Descriptor.Id ?? maps.Current);
             }
         }
         catch (Exception error) { failures.Add(error); }
 
         Phase = "shutdown-nodes";
-        TraceCoreClose(Phase);
+        _gate.TraceClose(Phase);
         var children = GetChildren();
         Node[] owned;
         // Array<Node> is not IDisposable; its explicit untyped conversion provides deterministic disposal.
@@ -406,10 +332,10 @@ public partial class KernelStage : Node3D, IAppExit
             try
             {
                 RemoveChild(node); node.Free();
-                TraceCoreClose("node:" + node.GetType().Name);
+                _gate.TraceClose("node:" + node.GetType().Name);
             }
             catch (Exception error) { failures.Add(error); }
-        TraceCoreClose("shutdown-services");
+        _gate.TraceClose("shutdown-services");
         foreach (var instance in _runtimeObjects)
         {
             if (instance is GodotObject || ReferenceEquals(instance, textures) || instance is not IDisposable disposable) continue;
@@ -417,13 +343,12 @@ public partial class KernelStage : Node3D, IAppExit
         }
         _runtimeObjects.Clear();
         Phase = "shutdown-textures";
-        TraceCoreClose(Phase);
+        _gate.TraceClose(Phase);
         try { if (textures is not null) await textures.ShutdownAsync(); }
         catch (Exception error) { failures.Add(error); }
-        TraceCoreClose("shutdown-complete");
+        _gate.TraceClose("shutdown-complete");
         foreach (var error in failures) GD.PushError("[WP-01][phase=shutdown] " + error);
-        if (_coreCloseAt is { } closeAt)
-            GD.Print($"CORE_SHUTDOWN_MS {FrameClock.MonotonicMilliseconds - closeAt:R}");
+        _gate.ReportShutdown();
         GetTree().Quit(failures.Count == 0 ? exitCode : 2);
     }
     private void Fail(Exception error)
@@ -440,10 +365,17 @@ public partial class KernelStage : Node3D, IAppExit
         // Automated runs must never turn an incomplete startup or a failed screenshot into success.
         if (_cpuCommand || AppBoot.Options.CaptureMode || !AppBoot.Options.Title) GetTree().Quit(2);
     }
-    private static byte[] Read(string path)
-    {
-        var bytes = Godot.FileAccess.GetFileAsBytes(path);
-        if (bytes.Length == 0) throw new FileNotFoundException($"Missing required data: {path}");
-        return bytes;
-    }
+
+    Node IStageGateHost.Stage => this;
+    IAppFlow IStageGateHost.Flow => _flow!;
+    IMapRuntime IStageGateHost.MapRuntime => _mapRuntime!;
+    ViewContentReadiness IStageGateHost.Readiness => _contentReadiness!;
+    CancellationToken IStageGateHost.Lifetime => _captureLifetime.Token;
+    bool IStageGateHost.Ready => _ready;
+    bool IStageGateHost.Closing => _closing;
+    string IStageGateHost.Phase { set => Phase = value; }
+    void IStageGateHost.CheckActive() => CheckStartupActive();
+    void IStageGateHost.SyncView() => _view!.Sync();
+    Task IStageGateHost.Close() => CloseAsync();
+    void IStageGateHost.Fail(Exception error) => Fail(error);
 }

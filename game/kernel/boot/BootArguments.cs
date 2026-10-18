@@ -9,7 +9,7 @@ public sealed class BootArguments
     private static readonly HashSet<string> Allowed = new(StringComparer.Ordinal)
     {
         "gate", "map", "spawn", "pose", "clock", "season", "anim", "flow", "mode", "ui", "seed",
-        "weather", "weather-intensity", "wet", "weather-seed", "weather-remaining", "weather-queue", "sunshower",
+        "weather", "weather-intensity", "wet", "weather-seed", "weather-remaining", "sunshower",
         "quality", "quality-set", "bench", "without", "inspect", "shots", "frames", "out",
         "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "cine", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
@@ -18,7 +18,7 @@ public sealed class BootArguments
     };
     private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "audio-probe" };
     private static readonly string[] WorldKeys = ["clock", "season", "anim", "flow", "seed", "weather", "weather-intensity",
-        "weather-seed", "weather-remaining", "weather-queue", "sunshower", "wet", "pose", "mode", "map", "spawn", "focus", "pose-file"];
+        "weather-seed", "weather-remaining", "sunshower", "wet", "pose", "mode", "map", "spawn", "focus", "pose-file"];
     private readonly Dictionary<string, string> _values;
     private readonly HashSet<string> _provided;
 

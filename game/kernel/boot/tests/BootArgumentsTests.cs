@@ -25,7 +25,7 @@ public sealed class BootArgumentsTests
     [TestCase]
     public void BadOrConflictingArgumentsFailBeforeStartingServices()
     {
-        string[][] invalid = [["--unknown=1"], ["--flow=2"], ["--clock=NaN"], ["--clock=24"], ["--anim=480"],
+        string[][] invalid = [["--unknown=1"], ["--weather-queue=rain:3"], ["--flow=2"], ["--clock=NaN"], ["--clock=24"], ["--anim=480"],
             ["--slot=1", "--weather-seed=1"], ["--load=C:\\test.sav", "--map=map"], ["--load=C:\\test.sav", "--clock=6"],
             ["--slot=1", "--clock=6"], ["--pose=V1", "--focus=entity"],
             ["--title=0", "--pose=T0"], ["--quality-set=not_a_knob=1"], ["--frames=0"], ["--shots=../escape", "--out=C:\\shots"],

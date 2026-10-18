@@ -12,7 +12,7 @@ public sealed class StreamLifecycleTests
 {
     [TestCase]
     [RequireGodotRuntime]
-    public void SameIdCannotRemountBeforeTheOldCatalogDrainsAndLateResultsDoNotPublish()
+    public void ShutdownDrainsTheCatalogAndLateResultsDoNotPublish()
     {
         foreach (var fail in new[] { false, true })
         {
@@ -24,8 +24,6 @@ public sealed class StreamLifecycleTests
                 BindUnrenderedCatalog(director, context, work.Task);
                 director.OnMapUnloading(context.Descriptor.Id);
                 if (director.IsUnloaded) throw new InvalidOperationException("Unload did not retain its real pending CPU task.");
-                try { director.OnMapLoaded(context); throw new InvalidOperationException("Same-ID reentry overlapped the old catalog."); }
-                catch (InvalidOperationException error) when (error.Message.Contains("finish unloading", StringComparison.Ordinal)) { }
                 if (fail) work.SetException(new InvalidOperationException("Retired catalog failed."));
                 else work.SetResult(ModuleTileCatalog.Build(Build(context), []));
                 director._Process(0);

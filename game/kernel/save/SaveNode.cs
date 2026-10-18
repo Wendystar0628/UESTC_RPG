@@ -5,6 +5,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Contracts.Startup;
+using Campus.Kernel.Registry;
 using RuntimeKernel = Campus.Kernel.Registry.Kernel;
 using Campus.Kernel.Renderer;
 using Campus.Kernel.Save.Format;
@@ -42,11 +43,9 @@ public partial class SaveNode : Node, IBootParticipant
                 {
                     var args = context.Arguments;
                     var explicitWrite = args.TryGetValue("save", out var saveArg) && saveArg != "off";
-                    var enabled = saveArg != "off" && (!context.CaptureMode || explicitWrite) && (!args.ContainsKey("load") || explicitWrite);
+                    var enabled = saveArg != "off" && (!args.ContainsKey("load") || explicitWrite);
                     var slot = explicitWrite ? ParseSlot(saveArg!) : (SlotId?)null;
-                    var at = args.TryGetValue("save-at", out var value) ? int.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : (int?)null;
-                    if (at < 0) throw new ArgumentException("save-at cannot be negative.");
-                    var seed = args.TryGetValue("weather-seed", out value) ? uint.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : (uint?)null;
+                    var seed = args.TryGetValue("weather-seed", out var value) ? uint.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : (uint?)null;
                     _mapRuntime = RuntimeKernel.Get<IMapRuntime>();
                     _collision = RuntimeKernel.Get<ICollisionWorld>();
                     _veilPresentation = RuntimeKernel.Get<IVeilPresentation>();
@@ -59,7 +58,7 @@ public partial class SaveNode : Node, IBootParticipant
                         () => RuntimeKernel.Get<IAppFlow>().State, id => RuntimeKernel.Get<IRulesetActivation>().Select(id),
                         RuntimeKernel.Get<IWorldRestore>(), WaitDestination, CaptureThumbnail,
                         () => (long)Time.GetUnixTimeFromSystem());
-                    await _save.Initialize(new(context.SaveDirectory, context.Build, enabled, slot, at, seed), bindings, new(sections));
+                    await _save.Initialize(new(context.SaveDirectory, context.Build, enabled, slot, RegistryGateRunner.SaveAtFrame(args), seed), bindings, new(sections));
                     break;
                 }
             case BootPhase.AfterMapWarm: break;

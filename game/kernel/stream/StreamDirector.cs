@@ -144,7 +144,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
         _destination = destination; _destinationMode = mode; _destinationState = new(destination, mode, space); _error = null;
         _destinationPlanned = false; _destinationConsumed = false; _destinationRequired.Clear(); _destinationRefined.Clear();
         _destinationSequence++; _requests.Clear();
-        var targetTransition = _maps.Transition is { Stage: MapStage.Mount or MapStage.Warm or MapStage.Spawn or MapStage.VeilOut } transition ? transition : null;
+        var targetTransition = _maps.Transition is { Stage: MapStage.Mount or MapStage.Warm or MapStage.Spawn } transition ? transition : null;
         if (!ReferenceEquals(targetTransition, _destinationTransition))
         {
             _destinationTransition = targetTransition; _arrivedSequence = 0;
@@ -361,15 +361,15 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
         _groups.TryGetValue(tile, out var current) && ReferenceEquals(current, group);
     private bool CanUseLiveCamera() => _maps.Transition?.Stage switch
     {
-        null or MapStage.VeilOut or MapStage.Done => true,
-        MapStage.VeilIn or MapStage.Snapshot or MapStage.Unload or MapStage.LoadData or MapStage.Mount or MapStage.Warm or MapStage.Spawn => false,
+        null or MapStage.Done => true,
+        MapStage.LoadData or MapStage.Mount or MapStage.Warm or MapStage.Spawn => false,
         _ => throw new InvalidOperationException("Unknown map transition stage.")
     };
     private void OnMapArrived(MapId map, MapTravelCause cause)
     {
         // MapService emits this only after a successful Spawn/mode completion. The captured operation and
         // request sequence prevent an earlier arrival from consuming a later Prefetch request.
-        if (_destinationTransition is { Stage: MapStage.Spawn or MapStage.VeilOut or MapStage.Done } transition &&
+        if (_destinationTransition is { Stage: MapStage.Spawn or MapStage.Done } transition &&
             transition.To == map && transition.Cause == cause && _mapRequestSequence > 0)
             _arrivedSequence = _mapRequestSequence;
     }

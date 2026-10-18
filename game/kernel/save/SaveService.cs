@@ -463,7 +463,7 @@ public sealed class SaveService : ISaveService, IDisposable
             _restoreInput ??= _runtime.Camera.LockInput(InputLockReason.MapTravel);
             return _runtime.Maps.Transition?.Done;
         }).ConfigureAwait(false);
-        // A new restore must not race the previous transition's Snapshot/Unload stages.
+        // A new restore must not race the previous entry's pending map or pose work.
         // Its Arrived/Failed outcome belongs to the old request; either terminal result allows reconstruction.
         if (previousMap is { IsCompleted: false }) await Task.WhenAny(previousMap).ConfigureAwait(false);
     }

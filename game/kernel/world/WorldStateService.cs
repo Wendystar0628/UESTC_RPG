@@ -317,7 +317,6 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     public void OnMapUnloading(MapId map)
     {
-        weather.Leave(map, WorldHours);
         _map = null;
         _rules = null;
         _mapUnavailable = true;

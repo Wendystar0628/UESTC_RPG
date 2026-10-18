@@ -13,8 +13,8 @@ namespace Campus.Kernel.Registry;
 public sealed record RegistryGateReport(string Scope, int Maps, int Services, int Declarations,
     int Entities, int Schemas, int FramePriorities, int QualityKnobs, IReadOnlyList<string> NotImplemented);
 
-/// <summary>Headless declaration checks. Never constructs services, nodes, or geometry.</summary>
-public static class RegistryGateRunner
+/// <summary>Headless declaration checks (this file) plus the command-line test drivers (RegistryGateRunner.Stage.cs, StageGateDriver*.cs). Declaration checks never construct services, nodes, or geometry.</summary>
+public static partial class RegistryGateRunner
 {
     public static RegistryGateReport Run(ServiceRegistry registry, string indexPath, string requestedMap,
         Func<string, byte[]> read, IReadOnlyCollection<Type> compositionInputs)

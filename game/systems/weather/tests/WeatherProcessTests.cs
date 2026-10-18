@@ -89,7 +89,7 @@ public sealed class WeatherProcessTests
                 Check(json.Contains("\"pinFromHours\":null", StringComparison.Ordinal), "Strict nullable constructor fields must be written.");
                 dto = JsonSerializer.Deserialize(json, section.TypeInfo)!;
             }
-            section.Restore(dto, new RestoreContext { Map = Map, FromVersion = 1, Missing = false });
+            section.Restore(dto, new RestoreContext { Map = Map, FromVersion = 2, Missing = false });
             p.Enter(Map, "test", 17.5);
             p.Step(Tick(17.5));
             Check(p.Seed == seed && p.Selection.Kind == WeatherKind.Clear && p.Selection.Mode == WeatherMode.Auto && p.Now.Precip == 0,
@@ -113,7 +113,7 @@ public sealed class WeatherProcessTests
             var saved = section.Capture(new CaptureContext(SaveReason.Quit, Map, true));
             var restored = JsonSerializer.Deserialize(JsonSerializer.Serialize(saved, section.TypeInfo), section.TypeInfo)!;
             var b = new WeatherProcess(source);
-            new WeatherSection(b, new TestMaps(), source).Restore(restored, new RestoreContext { Map = Map, FromVersion = 1, Missing = false });
+            new WeatherSection(b, new TestMaps(), source).Restore(restored, new RestoreContext { Map = Map, FromVersion = 2, Missing = false });
             b.Enter(Map, "test", 150.5);
             Equal(a, b);
             a.Select(new(WeatherMode.Auto, rain, .6f)); b.Select(new(WeatherMode.Auto, rain, .6f));
@@ -134,9 +134,9 @@ public sealed class WeatherProcessTests
         p.Step(Tick(10));
         p.Select(new(WeatherMode.Auto, WeatherKind.Rain, .6f));
         p.Step(Tick(10.5));
-        Check(p.Capture(Map).Wet > 0, "Leftover wetness was not kept.");
+        Check(p.Capture().Wet > 0, "Leftover wetness was not kept.");
         p.Step(Tick(13));
-        var saved = p.Capture(Map);
+        var saved = p.Capture();
         Check(saved.Wet == 0 && saved.Puddle == 0, "Leftover wetness did not drain.");
     }
 
@@ -149,9 +149,9 @@ public sealed class WeatherProcessTests
         a.Step(Tick(0, Season.Summer) with { RealDt = .1 });
         Check(a.Transitioning, "Manual selection should transition.");
         a.Reseason(0, Season.Winter, 0);
-        var saved = a.Capture(Map);
+        var saved = a.Capture();
         Check(saved.Selection.Kind == WeatherKind.Snow && saved.Selection.Intensity == 1, "Winter storm should become heavy snow.");
-        var b = Create(9, Season.Winter, profile); b.Restore(Map, saved);
+        var b = Create(9, Season.Winter, profile); b.Restore(saved);
         Check(!b.Transitioning && b.Now.PrecipKind == 1, "Restore must land immediately on the replacement.");
         b.Reseason(0, Season.Autumn, 0);
         Check(b.Selection.Kind == WeatherKind.Rain, "Snow should become rain outside winter.");
@@ -163,9 +163,9 @@ public sealed class WeatherProcessTests
         var p = Create(15, Season.Autumn, Profile);
         p.Pin(0, WeatherKind.Fog, .5f, 4.5, 7);
         p.Step(Tick(1) with { TargetHours = 5 });
-        var saved = p.Capture(Map);
+        var saved = p.Capture();
         Check(saved.LeftAtHours == 5 && saved.PinKind == WeatherKind.Fog && saved.PinToHours == 7, "Forced capture must match the world landing time.");
-        var restored = Create(15, Season.Autumn, Profile); restored.Restore(Map, saved);
+        var restored = Create(15, Season.Autumn, Profile); restored.Restore(saved);
         Check(restored.Selection.Kind == WeatherKind.Fog && !restored.Transitioning, "Pinned weather must restore settled.");
         restored.Step(Tick(5));
         Check(restored.Now.Fog > 1, "First restored step must preserve the pin.");
@@ -180,11 +180,10 @@ public sealed class WeatherProcessTests
         Check(p.Now == before, "Paused natural weather changed.");
         Reject(() => WeatherBootOptions.Parse(new Dictionary<string, string> { ["weather"] = "snow" }, 1, Season.Summer));
         Reject(() => WeatherBootOptions.Parse(new Dictionary<string, string> { ["weather-seed"] = "4", ["load"] = "save.sav" }, 1, Season.Autumn));
-        Reject(() => WeatherBootOptions.Parse(new Dictionary<string, string> { ["weather-queue"] = "rain:3" }, 1, Season.Autumn));
         Reject(() => WeatherBootOptions.Parse(new Dictionary<string, string> { ["wet"] = "NaN" }, 1, Season.Autumn));
         p.Reset(new(4));
         p.Step(Tick(0));
-        Check(p.Seed == 4 && p.Capture(Map).LeftAtHours == 0, "New-game Reset retained the previous instance's clock.");
+        Check(p.Seed == 4 && p.Capture().LeftAtHours == 0, "New-game Reset retained the previous instance's clock.");
     }
 
     [TestCase]
@@ -194,18 +193,18 @@ public sealed class WeatherProcessTests
         var process = Create(9, Season.Summer, profile);
         process.Select(new(WeatherMode.Manual, WeatherKind.Thunderstorm, .8f));
         process.Step(Tick(0, Season.Summer) with { RealDt = .1 });
-        string before = SnapshotJson(process.Capture(Map));
+        string before = SnapshotJson(process.Capture());
         var beforeNow = process.Now;
         var beforeAhead = process.Ahead.ToArray();
         var moment = new WorldSaveMoment(2, 1.25, Season.Winter, 0);
-        var saved = process.CaptureAt(Map, in moment);
+        var saved = process.CaptureAt(in moment);
         Check(saved.LeftAtHours == 2 && saved.Season == Season.Winter && saved.ClockOffset == 1.25 &&
             saved.Selection.Kind == WeatherKind.Snow && saved.Selection.Intensity == 1,
             "Save moment's season/offset were not applied to the private snapshot.");
-        Check(before == SnapshotJson(process.Capture(Map)) && process.Now == beforeNow && process.Ahead.SequenceEqual(beforeAhead) && process.Transitioning,
+        Check(before == SnapshotJson(process.Capture()) && process.Now == beforeNow && process.Ahead.SequenceEqual(beforeAhead) && process.Transitioning,
             "CaptureAt changed live state.");
         var resumed = Create(9, Season.Winter, profile);
-        resumed.Restore(Map, JsonSerializer.Deserialize(SnapshotJson(saved), TestJson.Contract.WeatherProcessState)!);
+        resumed.Restore(JsonSerializer.Deserialize(SnapshotJson(saved), TestJson.Contract.WeatherProcessState)!);
         process.Reseason(0, Season.Winter, 1.25);
         var first = Tick(2, Season.Winter) with { ClockOffset = 1.25 };
         process.Step(first); resumed.Step(first);
@@ -227,7 +226,7 @@ public sealed class WeatherProcessTests
         process.Quiet(6, until);
         var tick = Tick(6, Season.Winter) with { ClockOffset = .75, FlowRate = 0, RealDt = .1 };
         process.Step(tick);
-        var saved = process.Capture(Map);
+        var saved = process.Capture();
         Check(saved.Season == Season.Winter && saved.ClockOffset == .75 && saved.QuietUntilHours == until && saved.WetOverride == .37f &&
             process.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Clear }, "Boot options overwrote Quiet or lost the explicit wet value.");
         process.Step(tick with { RealDt = 2.8 });
@@ -267,14 +266,14 @@ public sealed class WeatherProcessTests
         manual.Reset(new(85, WeatherKind.Snow, .82f, .27f)); manual.Enter(Map, "test", 6);
         manual.Quiet(6, WeatherRules.QuietEnd(6, 0, Season.Winter));
         manual.Step(Tick(6, Season.Winter));
-        var saved = manual.Capture(Map);
+        var saved = manual.Capture();
         Check(saved.Selection is { Mode: WeatherMode.Manual, Kind: WeatherKind.Snow, Intensity: .82f } && saved.WetOverride == .27f &&
             saved.QuietUntilHours == 0, "A map default consumed explicit boot weather or scalar arguments.");
 
         var timed = new WeatherProcess(new Source(profile));
         timed.Reset(new(85, WeatherKind.Snow, .82f, .27f, 90)); timed.Enter(Map, "test", 6);
         timed.Step(Tick(6, Season.Winter));
-        saved = timed.Capture(Map);
+        saved = timed.Capture();
         Check(timed.Selection is { Mode: WeatherMode.Auto, Kind: WeatherKind.Snow, Intensity: .82f } &&
             saved.PinKind == WeatherKind.Snow && saved.PinFromHours == 6 && saved.PinToHours == 7.5, "--weather-remaining did not become a pinned window.");
     }
@@ -302,7 +301,7 @@ public sealed class WeatherProcessTests
     private static void Equal(WeatherProcess a, WeatherProcess b)
     {
         Check(a.Selection == b.Selection && a.Now == b.Now && a.Ahead.SequenceEqual(b.Ahead), "Live weather or forecast differs bitwise.");
-        Check(SnapshotJson(a.Capture(Map)) == SnapshotJson(b.Capture(Map)), "Captured weather state differs.");
+        Check(SnapshotJson(a.Capture()) == SnapshotJson(b.Capture()), "Captured weather state differs.");
     }
     private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     private static string SnapshotJson(WeatherProcessState state) => JsonSerializer.Serialize(state, TestJson.Contract.WeatherProcessState);

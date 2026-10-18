@@ -7,7 +7,7 @@ internal sealed class TestWeatherProcess : IWeatherProcess
 {
     private static readonly WeatherSel ClearSelection = new(WeatherMode.Auto, WeatherKind.Clear, 0.5f);
     private static readonly WeatherVec ClearVector = new(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);
-    private readonly Dictionary<MapId, WeatherProcessState> _states = [];
+    private WeatherProcessState? _state;
     private MapId? _activeMap;
     private double _worldHours = 17.5;
     private Season _season = Season.Autumn;
@@ -24,8 +24,7 @@ internal sealed class TestWeatherProcess : IWeatherProcess
     {
         ArgumentNullException.ThrowIfNull(b);
         Seed = b.Seed;
-        _states.Clear();
-        _activeMap = null;
+        _state = null;
         _worldHours = 17.5;
         _season = Season.Autumn;
         _clockOffset = 0;
@@ -93,68 +92,47 @@ internal sealed class TestWeatherProcess : IWeatherProcess
     {
         _worldHours = worldHours;
         Select(ClearSelection);
-        if (_activeMap is { } map)
-            _states[map] = Capture(map) with { QuietUntilHours = untilHours };
+        _state = Capture() with { QuietUntilHours = untilHours };
     }
 
     public void Pin(double worldHours, WeatherKind k, float? intensity, double fromHours, double toHours)
     {
         _worldHours = worldHours;
         Select(new WeatherSel(WeatherMode.Auto, k, intensity ?? 0.5f));
-        if (_activeMap is { } map)
-            _states[map] = Capture(map) with
-            {
-                PinFromHours = fromHours,
-                PinToHours = toHours,
-                PinKind = k,
-                PinIntensity = Selection.Intensity,
-            };
+        _state = Capture() with
+        {
+            PinFromHours = fromHours,
+            PinToHours = toHours,
+            PinKind = k,
+            PinIntensity = Selection.Intensity,
+        };
     }
 
     public void Enter(MapId map, string profile, double worldHours)
     {
         _activeMap = map;
-        if (_states.TryGetValue(map, out var state)) RestoreReadouts(state);
-        else if (_states.Count > 0) Select(ClearSelection);
         _worldHours = worldHours;
     }
 
-    public void Leave(MapId map, double worldHours)
-    {
-        if (_activeMap != map) return;
-        _worldHours = worldHours;
-        _states[map] = Capture(map);
-        _activeMap = null;
-    }
+    public WeatherProcessState Capture() =>
+        (_state ?? new WeatherProcessState(_activeMap ?? default, ClearSelection,
+            null, null, null, null, 0, 0, 0, _worldHours)) with
+        {
+            Map = _activeMap ?? _state?.Map ?? default,
+            Selection = Selection,
+            LeftAtHours = _worldHours,
+            Season = _season,
+            ClockOffset = _clockOffset,
+            WetOverride = _wetOverride,
+        };
 
-    public WeatherProcessState Capture(MapId map)
-    {
-        var known = _states.TryGetValue(map, out var stored);
-        var state = known ? stored! : new WeatherProcessState(
-            map, 0, 0, ClearSelection, Array.Empty<WeatherQueueItem>(), 0,
-            null, null, null, null, 0, 0, 0, _worldHours);
-        if (_activeMap == map || (_activeMap is null && !known))
-            state = state with
-            {
-                Selection = Selection,
-                LeftAtHours = _worldHours,
-                Season = _season,
-                ClockOffset = _clockOffset,
-                WetOverride = _wetOverride,
-            };
-        return Copy(state);
-    }
-
-    public WeatherProcessState CaptureAt(MapId map, in WorldSaveMoment moment)
+    public WeatherProcessState CaptureAt(in WorldSaveMoment moment)
     {
         if (!double.IsFinite(moment.WorldHours) || moment.WorldHours < 0 ||
             !double.IsFinite(moment.ClockOffset) || !double.IsFinite(moment.WorldHours + moment.ClockOffset) ||
             !Enum.IsDefined(moment.Season) || moment.FlowRate is not (0 or 1 or 10 or 60 or 360 or 1440))
             throw new ArgumentOutOfRangeException(nameof(moment));
-        if (_activeMap != map) return Capture(map);
-        // Test fixture has no evolving weather model. Preserve its settled DTO and change only the copy's endpoint.
-        // Capture already copies Queue; neither this operation nor the caller can mutate live state.
-        return Capture(map) with
+        return Capture() with
         {
             LeftAtHours = moment.WorldHours,
             ClockOffset = moment.ClockOffset,
@@ -162,21 +140,10 @@ internal sealed class TestWeatherProcess : IWeatherProcess
         };
     }
 
-    public void Restore(MapId map, WeatherProcessState s)
+    public void Restore(WeatherProcessState state)
     {
-        ArgumentNullException.ThrowIfNull(s);
-        if (s.Map != map) throw new ArgumentException("Weather snapshot belongs to a different map.", nameof(s));
-        var state = Copy(s);
-        _states[map] = state;
-        if (_activeMap is null || _activeMap == map)
-        {
-            _activeMap = map;
-            RestoreReadouts(state);
-        }
-    }
-
-    private void RestoreReadouts(WeatherProcessState state)
-    {
+        ArgumentNullException.ThrowIfNull(state);
+        _state = state;
         // Restore does not call Select: that user operation would clear WetOverride.
         Selection = state.Selection;
         _worldHours = state.LeftAtHours;
@@ -184,10 +151,4 @@ internal sealed class TestWeatherProcess : IWeatherProcess
         _clockOffset = state.ClockOffset;
         _wetOverride = state.WetOverride;
     }
-
-    private static WeatherProcessState Copy(WeatherProcessState state) => state with
-    {
-        // Snapshot callers cannot mutate the fixture through a mutable IReadOnlyList implementation.
-        Queue = Array.AsReadOnly(state.Queue.ToArray()),
-    };
 }

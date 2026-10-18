@@ -94,7 +94,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
             foreach (var door in interior.Entrances.Where(e => e.Open).OrderBy(e => e.Id, StringComparer.Ordinal))
             {
                 var angle = door.YawDeg * float.Pi / 180f;
-                var outward = new Vector3(DetMath.Sin(angle), 0, -DetMath.Cos(angle));
+                var outward = new Vector3(MathF.Sin(angle), 0, -MathF.Cos(angle));
                 var yaw = (door.YawDeg + 180f) % 360f;
                 var fly = new Pose(door.Outside + outward * 8f + Vector3.UnitY * 6f, yaw, -12f);
                 var name = feature.Name ?? door.Id;
@@ -443,8 +443,8 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     private bool MapTransitioning() => _maps?.Transition?.Stage switch
     {
         null or MapStage.Done => false,
-        MapStage.VeilIn or MapStage.Snapshot or MapStage.Unload or MapStage.LoadData or MapStage.Mount
-            or MapStage.Warm or MapStage.Spawn or MapStage.VeilOut => true,
+        MapStage.LoadData or MapStage.Mount
+            or MapStage.Warm or MapStage.Spawn => true,
         _ => throw new InvalidOperationException("Unknown map transition stage."),
     };
     private static void ValidateStyle(TravelStyle style) => _ = style switch

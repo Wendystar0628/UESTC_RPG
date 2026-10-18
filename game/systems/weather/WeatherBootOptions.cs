@@ -22,8 +22,6 @@ public static class WeatherBootOptions
                 throw new ArgumentException("--weather-remaining requires positive finite minutes.");
             remaining = value;
         }
-        if (arguments.ContainsKey("weather-queue"))
-            throw new ArgumentException("--weather-queue is no longer supported; use --weather with --weather-remaining.");
         var boot = new WeatherBoot(seed, kind, intensity, wet, remaining);
         Validate(boot, season);
         return boot;
@@ -35,7 +33,6 @@ public static class WeatherBootOptions
         if (boot.Wet is { } wet) WeatherRules.ValidateIntensity(wet);
         if (boot.RemainingMinutes is { } minutes && (!double.IsFinite(minutes) || minutes <= 0 || !boot.Kind.HasValue))
             throw new ArgumentException("A positive --weather-remaining requires an explicit weather kind.");
-        if (boot.Queue is not null) throw new ArgumentException("A weather queue is no longer supported.");
         if (boot.Kind is { } kind)
         {
             _ = WeatherRules.DefaultIntensity(kind);
