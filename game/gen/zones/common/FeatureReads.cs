@@ -9,7 +9,7 @@ namespace Campus.Gen.Zones.Common;
 /// Reads of the map data by feature ID (D-239): the sites keep IDs and their own shaping values, never a copy of a coordinate,
 /// outline, storey count, height or name the map data already carries. Every read throws when the data is missing.
 /// </summary>
-public static class FeatureReads
+public static partial class FeatureReads
 {
     public static WorldFeature Feature(this IWorldModel world, string id) =>
         world.Features.TryGetValue(new(id), out var feature) ? feature : throw new InvalidOperationException($"{id} is missing from the world model.");
