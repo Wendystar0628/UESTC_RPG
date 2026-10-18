@@ -16,9 +16,11 @@ public sealed class QualityCatalog
         [(1920, 1080), (1280, 720), (1600, 900), (2560, 1440), (3840, 2160)];
     private static readonly QualityPreset[] Presets = [QualityPreset.Balanced, QualityPreset.Fine, QualityPreset.Ultra];
     private readonly float[][] _presets;
+    private readonly float[] _grassRadii;
     private readonly KnobSpec[] _specs;
     public IReadOnlyList<KnobSpec> Knobs { get; }
     public QualityPreset DefaultPreset { get; }
+    public float FoliageTransitionSeconds { get; }
     public QualityProfile DefaultProfile => Profile(DefaultPreset);
     public int OutputWidth { get; set; } = 1920;
     public int OutputHeight { get; set; } = 1080;
@@ -38,7 +40,7 @@ public sealed class QualityCatalog
             Spec(QualityKnob.ShadowQuality, "WP-03", ApplyClass.Immediate, KnobKind.Floor, 0, 2, 1, 0),
             Spec(QualityKnob.ShadowDistance, "WP-03", ApplyClass.Immediate, KnobKind.Performance,
                 ShadowDistances[0], ShadowDistances[^1], 0, ShadowDistances[0], values: ShadowDistances),
-            Spec(QualityKnob.FoliageDensity, "WP-23", ApplyClass.Immediate, KnobKind.Performance, 0.75f, 1, 0.25f, 0.75f),
+            Spec(QualityKnob.FoliageDensity, "WP-32", ApplyClass.Immediate, KnobKind.Performance, 0.75f, 1, 0.25f, 0.75f),
             Spec(QualityKnob.ReflectionInterval, "WP-24", ApplyClass.Immediate, KnobKind.Floor, 2, 4, 1, 4, false),
             Spec(QualityKnob.ParticleDensity, "WP-45b", ApplyClass.Immediate, KnobKind.Performance, 0.5f, 1, 0.25f, 0.5f),
         ];
@@ -51,12 +53,20 @@ public sealed class QualityCatalog
             !Presets.Any(preset => preset.ToString().ToLowerInvariant() == defaultPreset.GetString()))
             throw new InvalidDataException("Quality defaultPreset must name a supported preset.");
         DefaultPreset = Presets.Single(preset => preset.ToString().ToLowerInvariant() == defaultPreset.GetString());
+        FoliageTransitionSeconds = document.RootElement.GetProperty("foliageTransitionSeconds").GetSingle();
+        if (!float.IsFinite(FoliageTransitionSeconds) || FoliageTransitionSeconds is < 0.5f or > 1f)
+            throw new InvalidDataException("Foliage transition must take 0.5–1 seconds.");
         var presets = document.RootElement.GetProperty("presets");
         _presets = new float[Presets.Length][];
+        _grassRadii = new float[Presets.Length];
         foreach (var preset in Presets)
         {
             var row = presets.GetProperty(preset.ToString().ToLowerInvariant());
-            if (row.EnumerateObject().Count() != Count - 1) throw new InvalidDataException($"Each preset must contain all {Count - 1} data-driven knobs.");
+            if (row.EnumerateObject().Count() != Count) throw new InvalidDataException($"Each preset must contain all {Count - 1} data-driven knobs and grass_radius.");
+            var grassRadius = row.GetProperty("grass_radius").GetSingle();
+            if (!float.IsFinite(grassRadius) || grassRadius <= 0)
+                throw new InvalidDataException($"Invalid preset grass radius: {grassRadius}.");
+            _grassRadii[(int)preset] = grassRadius;
             var values = _presets[(int)preset] = new float[Count];
             foreach (var knob in All)
             {
@@ -85,6 +95,10 @@ public sealed class QualityCatalog
         if (knob != QualityKnob.RenderScale) return _presets[(int)preset][(int)knob];
         return ScaleForOutput(preset, OutputWidth, OutputHeight);
     }
+
+    // Fixed by the base preset; custom single-item overrides keep that preset's grass range.
+    public float GrassRadius(QualityPreset preset) => preset is >= QualityPreset.Balanced and <= QualityPreset.Ultra
+        ? _grassRadii[(int)preset] : throw new ArgumentOutOfRangeException(nameof(preset));
 
     private static float ScaleForOutput(QualityPreset preset, int width, int height)
     {

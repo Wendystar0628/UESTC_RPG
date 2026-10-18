@@ -25,6 +25,8 @@ public interface IQualityRuntime
 public interface IQualityFrame : IQualityService
 {
     bool CaptureMode { get; }
+    float GrassRadius { get; }
+    float FoliageTransitionSeconds { get; }
     CancellationToken Bind(IQualityRuntime runtime);
     void Unbind(IQualityRuntime runtime);
     void Tick(double delta);
@@ -76,6 +78,8 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
     public QualityView Effective => _state.Effective;
     public IReadOnlyList<KnobSpec> Knobs => _catalog.Knobs;
     public bool CaptureMode => _state.CaptureMode;
+    public float GrassRadius => _state.GrassRadius;
+    public float FoliageTransitionSeconds => _catalog.FoliageTransitionSeconds;
     public event Action<QualityChange>? Changed;
     public string Id => "quality";
     public int Order => 100;

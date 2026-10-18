@@ -10,16 +10,21 @@ namespace Campus.Kernel.Quality.Settings;
 
 [KernelNode("quality", Owner = "WP-32")]
 [QualityResponsive(Owns = [QualityKnob.DisplayMode, QualityKnob.WindowSize, QualityKnob.VSync,
-    QualityKnob.FrameCap, QualityKnob.RenderScale])]
+    QualityKnob.FrameCap, QualityKnob.RenderScale, QualityKnob.FoliageDensity])]
 public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
 {
-    // Fixed style defaults written into the global quality vector (SYS-GRAPHICS): detail distance factor and grass radius.
+    // Fixed detail distance factor; grass range and transition duration come from the preset catalog.
     private const float DetailScale = 0.8f;
-    private const float GrassRadius = 20f;
     private const double DestinationWaitSeconds = 1.2;
 
     private IQualityFrame _service = null!;
     private IVeilService _veil = null!;
+    private IWorldState _world = null!;
+    private Vector4 _quality;
+    private Vector4 _qualityFrom;
+    private Vector4 _qualityTarget;
+    private double _qualityElapsed;
+    private bool _qualityInitialized;
     private CancellationToken _lifetime;
     private bool _closed;
     private List<TaskCompletionSource<double>> _frames = [];
@@ -28,7 +33,10 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         ProcessPriority = FramePriority.Quality;
         _service = RuntimeKernel.Get<IQualityFrame>();
         _veil = RuntimeKernel.Get<IVeilService>();
+        _world = RuntimeKernel.Get<IWorldState>();
+        _world.InstanceChanged += OnWorldInstanceChanged;
         _closed = false;
+        _qualityInitialized = false;
         _lifetime = _service.Bind(this);
         ApplyStepRate(_service.Effective);
     }
@@ -36,6 +44,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     public override void _ExitTree()
     {
         _closed = true;
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _service?.Unbind(this);
         foreach (var frame in _frames) frame.TrySetCanceled();
         _frames.Clear();
@@ -45,6 +54,13 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     {
         if (_closed) return;
         _service.Tick(delta);
+        if (_qualityInitialized && _quality != _qualityTarget)
+        {
+            _qualityElapsed += Math.Max(0, delta);
+            var weight = (float)Math.Min(1, _qualityElapsed / _service.FoliageTransitionSeconds);
+            _quality = weight >= 1 ? _qualityTarget : _qualityFrom.Lerp(_qualityTarget, weight);
+            RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Quality, _quality);
+        }
         if (_frames.Count == 0) return;
         var frames = _frames;
         _frames = [];
@@ -144,8 +160,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         _lifetime.ThrowIfCancellationRequested();
         try
         {
-            RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Quality, new Vector4(DetailScale,
-                view[QualityKnob.FoliageDensity], GrassRadius, 0));
+            SetVegetationQuality(view, change);
             ApplyStepRate(view);
         }
         catch (Exception error) { errors.Add(error); }
@@ -154,6 +169,30 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
 
     private static void ApplyStepRate(QualityView view) =>
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.StepRate, (float)view.StepRate);
+
+    private void SetVegetationQuality(QualityView view, in QualityChange change)
+    {
+        var target = new Vector4(DetailScale, view[QualityKnob.FoliageDensity], _service.GrassRadius, 0);
+        if (!_qualityInitialized || change.Origin == ApplyOrigin.Startup || Booting)
+        {
+            _qualityInitialized = true;
+            _quality = _qualityFrom = _qualityTarget = target;
+            RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Quality, _quality);
+        }
+        else if (_qualityTarget != target)
+        {
+            _qualityFrom = _quality;
+            _qualityTarget = target;
+            _qualityElapsed = 0;
+        }
+    }
+
+    private void OnWorldInstanceChanged(long _)
+    {
+        if (!_qualityInitialized) return;
+        _quality = _qualityFrom = _qualityTarget;
+        RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Quality, _quality);
+    }
 
     public void ApplyQuality(QualityView view, in QualityChange change)
     {

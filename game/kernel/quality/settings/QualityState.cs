@@ -15,6 +15,7 @@ public sealed class QualityState
     public float RefreshRate { get; set; } = 60;
     public QualityProfile Requested { get; private set; }
     public QualityView Effective { get; private set; }
+    public float GrassRadius => _catalog.GrassRadius(_basePreset);
 
     public QualityState(QualityCatalog catalog)
     {
@@ -34,7 +35,10 @@ public sealed class QualityState
         var frozen = QualityCatalog.Freeze(next);
         if (rejected.Length != 0) return new(frozen, [], ApplyClass.Immediate, 0, 0, rejected);
         var values = _catalog.Resolve(frozen, _basePreset);
-        var deltas = QualityCatalog.All.Where(knob => values[(int)knob] != _values[(int)knob])
+        var preset = frozen.Preset == QualityPreset.Custom ? _basePreset : frozen.Preset;
+        var grassRangeChanged = _catalog.GrassRadius(preset) != GrassRadius;
+        var deltas = QualityCatalog.All.Where(knob => values[(int)knob] != _values[(int)knob] ||
+                knob == QualityKnob.FoliageDensity && grassRangeChanged)
             .Select(knob => new KnobDelta(knob, _values[(int)knob], values[(int)knob], _catalog[knob].Apply)).ToArray();
         var heaviest = deltas.Length == 0 ? ApplyClass.Immediate : deltas.Max(delta => delta.Apply);
         return new(frozen, Array.AsReadOnly(deltas), heaviest, 0, 0, []);
@@ -45,6 +49,7 @@ public sealed class QualityState
         var plan = Plan(next);
         if (plan.Rejected.Count != 0) throw new ArgumentException("Cannot commit invalid quality values.", nameof(next));
         var values = _catalog.Resolve(next, _basePreset);
+        var previousGrassRadius = GrassRadius;
         if (next.Preset != QualityPreset.Custom) _basePreset = next.Preset;
         var baselineOverrides = next.Overrides.Where(pair => pair.Key is QualityKnob.DisplayMode or QualityKnob.WindowSize)
             .ToDictionary(pair => pair.Key, pair => pair.Value);
@@ -54,6 +59,8 @@ public sealed class QualityState
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         Requested = QualityCatalog.Freeze(new(_basePreset, overrides));
         ulong mask = 0;
+        // The fixed grass range belongs to the vegetation preset effect, including when all public knobs match.
+        if (GrassRadius != previousGrassRadius) mask |= 1UL << (int)QualityKnob.FoliageDensity;
         foreach (var knob in QualityCatalog.All)
             if (_values[(int)knob] != values[(int)knob]) mask |= 1UL << (int)knob;
         _values = values;

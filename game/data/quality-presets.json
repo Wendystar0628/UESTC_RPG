@@ -1,6 +1,7 @@
 {
   "schema": 1,
   "defaultPreset": "fine",
+  "foliageTransitionSeconds": 0.75,
   "presets": {
     "balanced": {
       "display_mode": 1,
@@ -10,7 +11,8 @@
       "anti_aliasing": 1,
       "shadow_quality": 0,
       "shadow_distance": 1000,
-      "foliage_density": 1,
+      "foliage_density": 0.75,
+      "grass_radius": 12,
       "reflection_interval": 3,
       "particle_density": 0.75
     },
@@ -23,6 +25,7 @@
       "shadow_quality": 1,
       "shadow_distance": 1600,
       "foliage_density": 1,
+      "grass_radius": 20,
       "reflection_interval": 2,
       "particle_density": 1
     },
@@ -35,6 +38,7 @@
       "shadow_quality": 2,
       "shadow_distance": 1600,
       "foliage_density": 1,
+      "grass_radius": 20,
       "reflection_interval": 2,
       "particle_density": 1
     }

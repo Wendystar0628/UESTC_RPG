@@ -20,7 +20,7 @@ internal sealed class GrassPool
 
     private const uint Layer = 1u << 5;   // layer 6: grass, leaves, particles (ENG-PERF)
     private const float Cell = 8f;
-    private const float Reach = 24f;      // ≥ the widest quality.z (QualityRuntime.GrassRadius, SYS-GRAPHICS 20 m) plus the clump sway
+    private const float Reach = 24f;      // Capacity envelope covering all preset grass ranges plus clump sway; visibility reads quality.z.
     private const float Step = 2f;
     private const int Stride = InstanceStreamLayout.FloatsPerInstance;
 
