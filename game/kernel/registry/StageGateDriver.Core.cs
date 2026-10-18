@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
@@ -67,8 +68,8 @@ public sealed partial class StageGateDriver
             await veil.Cover(VeilReason.Cinematic, 0);
             await stage.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             var loaded = await saves.Load(new("s1"));
-            if (loaded.Status != LoadStatus.Loaded || beforeLoad != CaptureCoreSections())
-                throw new InvalidOperationException("Production save/load changed a persisted field.");
+            if (loaded.Status != LoadStatus.Loaded || !CoreSnapshotsMatch(beforeLoad, CaptureCoreSections()))
+                throw new InvalidOperationException("Production save/load did not restore the core runtime state.");
             await veil.Reveal(VeilReason.Cinematic, 0);
             GD.Print("CORE_ROUNDTRIP_READY");
         }
@@ -89,7 +90,15 @@ public sealed partial class StageGateDriver
             if (image.IsEmpty() || image.SavePng(Path.Combine(output, gate + ".png")) != Error.Ok)
                 throw new IOException("Core lifecycle screenshot failed.");
         }
-        GD.Print("CORE_STATE " + CaptureCoreSections());
+        var snapshot = CaptureCoreSections();
+        var baseline = Path.Combine(output, "save-close-state.json");
+        if (gate == "save-close") File.WriteAllText(baseline, snapshot);
+        else
+        {
+            if (!CoreSnapshotsMatch(File.ReadAllText(baseline), snapshot))
+                throw new InvalidOperationException("The second process did not restore the core runtime state.");
+            GD.Print("CORE_RUNTIME_MATCH");
+        }
         var gen = saves.Slots.Single(info => info.Slot == new SlotId("s1")).Meta?.Gen
             ?? throw new InvalidOperationException("Core lifecycle has no readable saved generation.");
         GD.Print("CORE_GENERATION " + gen);
@@ -130,6 +139,49 @@ public sealed partial class StageGateDriver
             writer.WriteEndObject();
         }
         return Encoding.UTF8.GetString(bytes.ToArray());
+    }
+
+    // Restoring a walking body can settle it onto support. Only these position vectors allow 2 cm;
+    // every other field, property/array order and numeric spelling retains the existing exact comparison.
+    internal static bool CoreSnapshotsMatch(string saved, string restored)
+    {
+        var before = JsonNode.Parse(saved)!.AsObject();
+        var after = JsonNode.Parse(restored)!.AsObject();
+        if (!MatchCorePosition(before["walk"]?["feet"] as JsonObject, after["walk"]?["feet"] as JsonObject)
+            || !MatchCorePosition(before["view"]?["pose"] as JsonObject, after["view"]?["pose"] as JsonObject))
+            return false;
+        if (before["walk"]?["safePoints"] is not JsonArray safeBefore
+            || after["walk"]?["safePoints"] is not JsonArray safeAfter || safeBefore.Count != safeAfter.Count)
+            return false;
+        for (var i = 0; i < safeBefore.Count; i++)
+            if (!MatchCorePosition(safeBefore[i] as JsonObject, safeAfter[i] as JsonObject)) return false;
+        if (before["maps"]?["visits"] is not JsonArray visitsBefore
+            || after["maps"]?["visits"] is not JsonArray visitsAfter || visitsBefore.Count != visitsAfter.Count)
+            return false;
+        for (var i = 0; i < visitsBefore.Count; i++)
+            if (!MatchCorePosition(visitsBefore[i]?["lastPose"] as JsonObject,
+                visitsAfter[i]?["lastPose"] as JsonObject)) return false;
+        return before.ToJsonString(ContractJson.Options) == after.ToJsonString(ContractJson.Options);
+    }
+
+    private static bool MatchCorePosition(JsonObject? savedPose, JsonObject? restoredPose)
+    {
+        const double positionTolerance = .02;
+        if (savedPose is null || restoredPose is null
+            || savedPose["position"] is not JsonArray saved || restoredPose["position"] is not JsonArray restored
+            || saved.Count != 3 || restored.Count != 3) return false;
+        double distanceSquared = 0;
+        for (var i = 0; i < 3; i++)
+        {
+            var a = saved[i]!.GetValue<double>();
+            var b = restored[i]!.GetValue<double>();
+            if (!double.IsFinite(a) || !double.IsFinite(b)) return false;
+            var delta = a - b;
+            distanceSquared += delta * delta;
+        }
+        if (distanceSquared > positionTolerance * positionTolerance) return false;
+        restoredPose["position"] = saved.DeepClone();
+        return true;
     }
 
     private async Task CoreWait(Func<bool> ready, string failure, double timeoutMilliseconds)
