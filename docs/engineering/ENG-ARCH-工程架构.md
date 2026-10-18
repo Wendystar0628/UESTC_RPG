@@ -36,7 +36,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 - **写契约、生成层或烘焙子任务**：不引用 GodotSharp，不读文件路径和运行时状态，不引用其他内容包的命名空间（§2）。
 - **要显示、用材质或出声**：显示经 `IRenderHost`，材质经 `ToonSpec`，声音经音频服务；不自己创建网格实例、`ShaderMaterial` 和音频播放器（§2）。
 - **接入新模块、节点、服务或存档段**：打对应的特性，不加 Autoload，不改 `main.tscn`（§2）。
-- **写随机、计时或哈希**：用契约的 `Rng`、`StableHash`，遍历字典先排序；禁用写法以仓库根的 `BannedSymbols.txt` 和 G4 为准（§2）。
+- **写随机、计时或哈希**：用契约的 `Rng`、`StableHash`，遍历字典先排序；禁用写法以各程序集的 `BannedSymbols.txt` 和 G4 为准（§2）。
 - **读写 `user://`**：每个文件只有一个读写方；任何代码都不用 `ResourceLoader`、`ResourceSaver` 读写 `user://`（§2）。
 - **用到契约**：签名看 `game/contracts/` 源码；会追加值的枚举写穷举 `switch`；JSON 用 `ContractJson.Options`（§3）。
 - **要改契约，或加着色器全局参数、着色器文件、项目引用、NuGet 包**：向 Astra 申请（§3）。
@@ -84,7 +84,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 
 ### 确定性与禁用写法
 
-禁用写法由 BannedApiAnalyzers（仓库根一份 `BannedSymbols.txt`）和 G4 的架构规则挡住，清单以它们为准。背后的原则：
+禁用写法由 BannedApiAnalyzers（各程序集一份 `BannedSymbols.txt`）和 G4 的架构规则挡住，清单以它们为准。背后的原则：
 
 - 随机只用契约的带种子 `Rng`；种子由 `StableHash` 把世界种子与 ID、用途组合起来，与生成顺序无关。
 - 不读系统时钟，不用进程间不稳定的哈希。
