@@ -32,6 +32,7 @@ hud.perf.frame,帧时,Frame time
 hud.perf.cpu_render,CPU 渲染,CPU render
 hud.perf.gpu_render,GPU 渲染,GPU render
 hud.perf.cpu_usage,CPU 占用,CPU use
+hud.wait.preparing,正在准备画面,Preparing the view
 time.shichen.zi,子时,Zi hour
 time.shichen.chou,丑时,Chou hour
 time.shichen.yin,寅时,Yin hour

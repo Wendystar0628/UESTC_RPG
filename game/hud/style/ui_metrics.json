@@ -218,7 +218,7 @@
       "title": { "in": 900, "out": 600, "hold": 2400, "perGlyph": 50 },
       "dayNight": { "sweep": 600, "handleTurnDeg": 6 },
       "statusLamp": { "period": 2400, "min": 0.55, "endFade": 300 },
-      "waitLamps": { "period": 1600, "allOff": 400, "showAfter": 1500, "showAfterColdBoot": 4000 },
+      "waitLamps": { "fade": 200, "period": 1600, "allOff": 400, "showAfter": 1500, "showAfterColdBoot": 4000 },
       "trace": { "panel": 400, "route": [400, 600], "saved": 450, "connector": 240, "land": 120, "head": 8, "tail": 120 },
       "scan": { "atlas": 420, "frontPhys": 1, "fadeBand": 12 },
       "grid": { "wave": 450, "cell": 16, "alpha": 0.08, "steps": 4, "lastStart": 0.78 },

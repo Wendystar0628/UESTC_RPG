@@ -45,6 +45,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     private Resident? _resident;
     private PerfReadout? _perf;
     private Toast _toast = null!;
+    private WaitLamps _wait = null!;
     private SettingsCard _settingsCard = null!;
     private SavePage _savePage = null!;
     private TitleMenu _title = null!;
@@ -148,6 +149,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         _savePage = SavePage.Create(_kit, _pageHost, _dialogHost);
         _savePage.CloseRequested += CloseSaves;
         _toast = Toast.Create(_kit, _hintHost);
+        _wait = WaitLamps.Create(_kit, _hintHost, _veil);
         _initialized = true;
         BindHostInput();
         BindEvents();
@@ -164,6 +166,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         _settings.Tick(delta);
         if (_scaleDebounce >= 0 && (_scaleDebounce += (float)delta) >= 0.2f) { _scaleDebounce = -1; ApplyScale(); }
         SyncCorners();
+        _wait.Tick(delta, atCorner: !Playing);
         _refreshClock += delta;
         if (_refreshClock >= RefreshInterval) RefreshHud();
         // 只把真正交给玩家、未被遮住的界面时间算作空闲；图库保留待评审的 HUD。
