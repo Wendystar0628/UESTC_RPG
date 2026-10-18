@@ -110,6 +110,6 @@ Dash.chip(text, tone)         状态小签：tone 取 "ok" "warn" "risk" "claude
 
 ## 6 采集与维护
 
-- `collect.py`：巡逻每 10 分钟跑一次（也可手动 `python -I -X utf8 dashboard/tools/collect.py`），只读权威来源：`.collab/status/施工状态.md`、`docs/`（各文档头部与 `docs/SECTIONS.md`）、`docs/core/CORE-DECISIONS-*`、`output/build/test-record.tsv`、门禁结果、`git`、`output/shots`、`output/posters`、`output/reports`、`.collab/research/INDEX.md`、收件箱。顺手删掉过期的通知。
+- `collect.py`：由 `live.py --loop` 每 10 分钟跑一次（也可手动 `python -I -X utf8 dashboard/tools/collect.py`），只读权威来源：`.collab/status/施工状态.md`、`docs/`（各文档头部与 `docs/SECTIONS.md`）、`docs/core/CORE-DECISIONS-*`、`output/build/test-record.tsv`、门禁结果、`git`、`output/shots`、`output/posters`、`output/reports`、`.collab/research/INDEX.md`、收件箱。顺手删掉过期的通知。
 - `live.py --loop`：主会话开局与重启后在后台起（来信监视同一套做法），巡逻发现没在跑会提醒；`打开观察台.cmd` 也会在它没跑时起一个。
 - `post.py`：所有会话与子代理改了高层信息时用它发布或结项，规则见 WF-COMMS。

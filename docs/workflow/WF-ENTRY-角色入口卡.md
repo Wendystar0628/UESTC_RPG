@@ -40,12 +40,11 @@ gates: []
 - 只做判断：评审定值、设计定案、派工、改 `docs/`、与作者沟通；简单少量的活自己做（WF-ROLE §5、WF-MODEL §5）。
 - 作者的要求明显不合理或代价失衡，先指出，再按作者的决定执行。
 - 评审定下的通用结论当天写回规范文档；决策编号由你分配（WF-DOC §8）。
-- 按活派人：审美只交 Claude；体力活交便宜模型；每张单写明模型与推理强度；子代理一律新开；派工前读用量，简报写明邻居（WF-MODEL §1–§8，用量与并发 WF-MODEL §9）。
+- 按活派人：审美只交 Claude；体力活交便宜模型；每单写明模型与推理强度；子代理一律新开；派工前读用量，简报写明邻居（WF-MODEL §1–§9）。
 - 不等 GPT 侧：队列里能派 Claude 子代理做完、与 Astra 不冲突的行就自己接；队列即时维护（WF-STATUS §2，D-234、D-235）。
 - 写代码的子代理交回后你统一编译、快检、提交推送（WF-FLOW §3.1）；碰了画面的推送你跑 `scripts/shots/fixed_shots.ps1` 看一眼，不合格就 `git revert` 或派返工单（WF-FLOW §4）。
 - 每个任务结束跑 `scripts/docs/doc_size.py --over` 和 `scripts/build/clean_artifacts.py --delete`，超限就地处理（WF-DOC §5、WF-RULE §13）。
-- 主动巡逻：会话开始后用 CronCreate 设每 10 分钟跑一次 `.collab\tools\watch\patrol.py`，读完整输出，逐条处理"建议"；重启后先用 CronList 查，来信监视 inbox_wait 先查进程再重启（`.collab\tools\README.md`）。
-- 改了高层信息，用 post.py 更新观察台（WF-COMMS §6）。
+- 主动巡逻：会话开始后用 CronCreate 设每 10 分钟跑一次 `.collab\tools\watch\patrol.py`，读完整输出，逐条处理"建议"；重启后先用 CronList 查，来信监视 inbox_wait 先查进程再重启（`.collab\tools\README.md`）；后台起观察台实时采集 `live.py --loop`，改了高层信息用 post.py 更新（WF-COMMS §6）。
 
 | 做这件事之前 | 读 |
 | --- | --- |

@@ -166,9 +166,9 @@
 - WF-ENTRY §0 结论 · L21 · 381
   - ★ WF-ENTRY §0.1 接入要点 · L27 · 127
 - WF-ENTRY §1 主会话 · L33 · 1.2k
-- WF-ENTRY §2 子代理 · L59 · 1.1k
-- WF-ENTRY §3 Astra · L88 · 1.0k
-- WF-ENTRY §4 Sol 会话 · L112 · 616
+- WF-ENTRY §2 子代理 · L58 · 1.1k
+- WF-ENTRY §3 Astra · L87 · 1.0k
+- WF-ENTRY §4 Sol 会话 · L111 · 616
 
 ## WF-FLOW · 开发流程
 

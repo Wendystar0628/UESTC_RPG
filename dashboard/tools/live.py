@@ -284,6 +284,9 @@ def collect():
     return {"sessions": a_sessions + c_sessions, "agents": agents, "scripts": scripts, "build": build, "errors": errors}
 
 
+COLLECT_EVERY_S = 600  # 项目采集（collect.py）的间隔
+
+
 def write_once():
     return write("auto", "live", collect(), source="live.py")
 
@@ -310,12 +313,23 @@ def main():
     if lock is None:
         print("live.py --loop 已经在跑，退出")
         return
+    last_collect = 0.0
     while True:
         t = time.time()
         try:
             write_once()
         except Exception as e:   # 写失败（磁盘、占用）下一轮再试
             print(f"{iso(t)} 写 live.js 失败：{type(e).__name__} {e}", file=sys.stderr)
+        # 项目数据也由这个循环定时刷新：没有 Claude 会话（巡逻停了）时观察台照样更新
+        if t - last_collect >= COLLECT_EVERY_S:
+            last_collect = t
+            try:
+                import collect
+                collect.main()
+            except BaseException as e:  # 采集出错不影响实时数据
+                if isinstance(e, KeyboardInterrupt):
+                    raise
+                print(f"{iso(t)} 项目采集失败：{type(e).__name__} {e}", file=sys.stderr)
         time.sleep(max(1.0, EVERY_S - (time.time() - t)))
 
 
