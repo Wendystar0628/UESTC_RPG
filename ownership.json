@@ -2249,6 +2249,10 @@
       "owner": "WP-00"
     },
     {
+      "pattern": "启动游戏.cmd",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/hud/**",
       "owner": "WP-35"
     },
