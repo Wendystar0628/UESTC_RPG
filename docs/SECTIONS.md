@@ -1562,7 +1562,7 @@
 - SYS-WALK-BOUNDS §1 可行走范围 · L39 · 850
 - SYS-WALK-BOUNDS §2 边界收口 · L58 · 1.2k
 - SYS-WALK-BOUNDS §3 楼内的门与电梯 · L86 · 623
-- SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L100 · 999
+- SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L100 · 983
 - SYS-WALK-BOUNDS §5 行走走廊与节奏 · L124 · 212
 - SYS-WALK-BOUNDS §6 推荐路线 · L130 · 193
 - SYS-WALK-BOUNDS §7 碰撞与就绪 · L134 · 1.4k
@@ -1742,13 +1742,13 @@
 
 ## ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
 
-`docs/engineering/ENG-BUDGET-LOD-细节级别与速度律.md` · 4.3k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
+`docs/engineering/ENG-BUDGET-LOD-细节级别与速度律.md` · 4.4k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
 关键词：细节级别、L0+、L4、分块、四叉树、屏幕误差、速度律、目的地预取、到达保证、近裁剪面、远裁剪面、反向 Z、坐标精度、PSSM、光柱数量、倒影分辨率、灯盏数
 
 - ENG-BUDGET-LOD §0 结论 · L22 · 609
   - ★ ENG-BUDGET-LOD §0.1 接入要点 · L29 · 278
 - ENG-BUDGET-LOD §1 细节级别与分块 · L35 · 1.3k
-- ENG-BUDGET-LOD §2 流式加载与速度 · L59 · 454
+- ENG-BUDGET-LOD §2 流式加载与速度 · L59 · 480
 - ENG-BUDGET-LOD §3 深度与近裁剪面 · L66 · 387
 - ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L74 · 650
 - ENG-BUDGET-LOD §5 待验证（P0） · L84 · 125
