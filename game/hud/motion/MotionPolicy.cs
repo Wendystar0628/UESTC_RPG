@@ -13,13 +13,12 @@ public enum MotionLevel : byte { Full, Reduced, Instant }
 public sealed class MotionPolicy : IMotionSettings
 {
     private readonly HudSettings _settings;
-    private readonly MotionLevel? _forced;
+    private MotionLevel? _forced;
     private MotionLevel _level;
 
     public MotionPolicy(HudSettings settings)
     {
         _settings = settings;
-        _forced = ReadArgument();
         _level = Evaluate();
         settings.Changed += Refresh;
     }
@@ -66,21 +65,10 @@ public sealed class MotionPolicy : IMotionSettings
         };
     }
 
-    private static MotionLevel? ReadArgument()
+    /// <summary>启动参数到位（BeforeMap）后由 HudRoot 调用一次：--motion 优先，其次 --ui=1 的截图默认 instant（UI-VISUAL）。</summary>
+    public void Apply(HudArguments args)
     {
-        foreach (var arg in OS.GetCmdlineUserArgs())
-        {
-            if (!arg.StartsWith("--motion=", StringComparison.Ordinal)) continue;
-            return arg["--motion=".Length..] switch
-            {
-                "full" => MotionLevel.Full,
-                "reduced" => MotionLevel.Reduced,
-                "instant" => MotionLevel.Instant,
-                var other => throw new ArgumentException($"Unknown --motion value: {other}"),
-            };
-        }
-        foreach (var arg in OS.GetCmdlineUserArgs())
-            if (arg == "--ui=1") return MotionLevel.Instant;   // --ui=1 的截图默认 instant（UI-VISUAL）
-        return null;
+        _forced = args.Motion ?? (args.Ui == "1" ? MotionLevel.Instant : null);
+        Refresh();
     }
 }

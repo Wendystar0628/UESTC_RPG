@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
 using Campus.Hud.Motion;
 using Campus.Hud.Pages;
 using Campus.Hud.Style;
@@ -19,9 +20,12 @@ namespace Campus.Hud;
 /// 四角的常驻件在进入漫游时建、回到开始页时释放。
 /// </summary>
 [KernelNode("hud", Owner = "WP-35")]
-public partial class HudRoot : CanvasLayer
+public partial class HudRoot : CanvasLayer, IBootParticipant
 {
     private const float IdleFade = 4f;
+
+    private HudArguments _args = HudArguments.None;
+    private UiThemeBuilder _theme = null!;
 
     private UiKit _kit = null!;
     private HudSettings _settings = null!;
@@ -77,13 +81,7 @@ public partial class HudRoot : CanvasLayer
         var materials = new UiMaterials(tokens, colors);
         var theme = new UiThemeBuilder(tokens, colors, materials.Available);
         _kit = new UiKit(tokens, colors, materials, theme, _motion);
-        if (ExportThemeArgument() is { } exportPath)
-        {
-            var error = theme.Export(exportPath);
-            GD.Print($"UI theme exported: {exportPath} ({error})");
-            GetTree().Quit(error == Error.Ok ? 0 : 2);
-            return;
-        }
+        _theme = theme;
 
         _clock = new UiThemeClock(Services.Get<IWorldState>(), _settings, _motion, tokens);
         AddChild(_clock);
@@ -124,11 +122,33 @@ public partial class HudRoot : CanvasLayer
         _kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
         _lastMode = _model.Mode;
         _lastSeason = _model.Season;
-        _hidden = Argument("ui") == "0";
         ApplyScale();
         Layout();
         SyncState();
-        if (Argument("ui-gallery") is { } gallery) CallDeferred(MethodName.OpenGallery, gallery);
+    }
+
+    public string Id => "hud";
+    public int Order => 0;
+
+    /// <summary>启动参数在 BeforeMap 才到：_Ready 时先按默认搭好，这里把 --ui、--ui-scale、--ui-gallery、--ui-export-theme 和交给动效、主题时钟的参数补上。</summary>
+    public Task Initialize(BootPhase phase, BootContext context)
+    {
+        if (phase != BootPhase.BeforeMap) return Task.CompletedTask;
+        _args = HudArguments.From(context);
+        _motion.Apply(_args);
+        if (_args.ExportTheme is { } exportPath)
+        {
+            var error = _theme.Export(exportPath);
+            GD.Print($"UI theme exported: {exportPath} ({error})");
+            GetTree().Quit(error == Error.Ok ? 0 : 2);
+            return Task.CompletedTask;
+        }
+        _clock.Apply(_args);
+        _hidden = _args.UiHidden;
+        _root.Visible = !_hidden;
+        ApplyScale();
+        if (_args.UiGallery is { } gallery) CallDeferred(MethodName.OpenGallery, gallery);
+        return Task.CompletedTask;
     }
 
     /// <summary>--ui-gallery=&lt;页名&gt;：启动时直接打开一页，供截图与评审（UI-VISUAL；完整的组件画廊归 35c）。</summary>
@@ -187,23 +207,6 @@ public partial class HudRoot : CanvasLayer
     private SignalAwaiter NextFrame() => ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 
     private void CensusLine(string step) => GD.Print($"UI census - {step}: {_kit.Holders(_root)} items hold shader instance slots");
-
-    private static string? Argument(string name)
-    {
-        foreach (var arg in OS.GetCmdlineUserArgs())
-        {
-            if (arg == "--" + name) return "1";
-            if (arg.StartsWith("--" + name + "=", StringComparison.Ordinal)) return arg[(name.Length + 3)..];
-        }
-        return null;
-    }
-
-    private static string? ExportThemeArgument() => Argument("ui-export-theme") switch
-    {
-        null => null,
-        "1" => "res://hud/ui_theme.tres",
-        var path => path,
-    };
 
     private string ResetName()
     {
@@ -412,8 +415,7 @@ public partial class HudRoot : CanvasLayer
         var s = Math.Min(window.X / 1920f, window.Y / 1080f);
         var lo = 0.85f / s;
         var hi = Math.Min(window.X / 1280f, window.Y / 720f) / s;
-        var user = float.TryParse(Argument("ui-scale"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var forced)
-            ? forced : _settings.UiScale;
+        var user = _args.UiScale ?? _settings.UiScale;
         GetTree().Root.ContentScaleFactor = Math.Clamp(user, lo, Math.Max(lo, hi));
     }
 

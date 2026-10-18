@@ -15,7 +15,7 @@ public partial class UiThemeClock : Node
     private readonly HudSettings _settings;
     private readonly MotionPolicy _motion;
     private readonly float _toDark, _toLight, _sweep;
-    private readonly UiThemeMode? _forced;
+    private UiThemeMode? _forced;
     private bool _dark;
     private float _front;
     private float _target;
@@ -29,7 +29,6 @@ public partial class UiThemeClock : Node
         _toDark = tokens.F("themeSwitch", "toDarkBelowDeg");
         _toLight = tokens.F("themeSwitch", "toLightAboveDeg");
         _sweep = tokens.F("themeSwitch", "sweepMs") / 1000f;
-        _forced = ReadArgument();
         ProcessPriority = FramePriority.Hud;
         Name = "UiThemeClock";
     }
@@ -101,19 +100,12 @@ public partial class UiThemeClock : Node
         }
     }
 
-    private static UiThemeMode? ReadArgument()
+    /// <summary>启动参数到位（BeforeMap）后由 HudRoot 调用一次：--ui-theme 压过设置，直接落到该主题，不扫。</summary>
+    public void Apply(HudArguments args)
     {
-        foreach (var arg in OS.GetCmdlineUserArgs())
-        {
-            if (!arg.StartsWith("--ui-theme=", StringComparison.Ordinal)) continue;
-            return arg["--ui-theme=".Length..] switch
-            {
-                "auto" => UiThemeMode.Auto,
-                "light" => UiThemeMode.Light,
-                "dark" => UiThemeMode.Dark,
-                var other => throw new ArgumentException($"Unknown --ui-theme value: {other}"),
-            };
-        }
-        return null;
+        _forced = args.UiTheme;
+        if (_forced is null || !IsInsideTree()) return;
+        _dark = Decide(initial: true);
+        Snap();
     }
 }

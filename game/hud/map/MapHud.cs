@@ -2,6 +2,8 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
+using Campus.Hud.Motion;
 using Godot;
 
 namespace Campus.Hud.Map;
@@ -15,7 +17,7 @@ namespace Campus.Hud.Map;
 /// WP-35 的左上角槽位与全屏页槽位合入后改挂到槽位里。
 /// </summary>
 [KernelNode("hud-map", Owner = "WP-48b")]
-public partial class MapHud : Node, IMapAware
+public partial class MapHud : Node, IMapAware, IBootParticipant
 {
     private MapStyle? _style;
     private MapHudServices? _services;
@@ -34,7 +36,7 @@ public partial class MapHud : Node, IMapAware
     private long _atlasRev = -1;
 
     private bool _uiEnabled = true;
-    private string _themeArg = "auto";
+    private UiThemeMode _theme = UiThemeMode.Auto;
     private bool _night;
     private bool _pure;
 
@@ -56,7 +58,6 @@ public partial class MapHud : Node, IMapAware
         if (_style is null) { SetProcess(false); return; }
         _services = new MapHudServices();
         var atlas = _services.Atlas;
-        ReadArguments();
 
         _ctx = new MapHudContext(_style);
         _ctx.PinShapeLookup = id => atlas.Pins.FirstOrDefault(p => "pin:" + p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) == id.Value)?.Shape ?? PinShape.Diamond;
@@ -166,21 +167,27 @@ public partial class MapHud : Node, IMapAware
 
     // ------------------------------------------------------------------ 主题
 
-    private void ReadArguments()
+    public string Id => "hud-map";
+    public int Order => 0;
+
+    /// <summary>启动参数在 BeforeMap 才到：_Ready 时先按默认搭好，这里补上 --ui、--ui-theme、--motion，并按强制主题重定初始昼夜。</summary>
+    public Task Initialize(BootPhase phase, BootContext context)
     {
-        foreach (var arg in OS.GetCmdlineUserArgs())
-        {
-            if (arg.StartsWith("--ui=", StringComparison.Ordinal)) _uiEnabled = arg[5..] != "0";
-            else if (arg.StartsWith("--ui-theme=", StringComparison.Ordinal)) _themeArg = arg[11..];
-            else if (arg.StartsWith("--motion=", StringComparison.Ordinal)) Instant = arg[9..] == "instant";   // 界面截图用 instant（ENG-GATES）
-        }
+        if (phase != BootPhase.BeforeMap) return Task.CompletedTask;
+        var args = HudArguments.From(context);
+        _uiEnabled = !args.UiHidden;
+        _theme = args.UiTheme ?? UiThemeMode.Auto;
+        Instant = args.Motion == MotionLevel.Instant;   // 界面截图用 instant（ENG-GATES）
+        if (_style is not null) ApplyNight(InitialNight());
+        return Task.CompletedTask;
     }
 
-    private bool InitialNight() => _themeArg switch
+    private bool InitialNight() => _theme switch
     {
-        "light" => false,
-        "dark" => true,
-        _ => _services!.World.Sun.AltDeg < 0,
+        UiThemeMode.Light => false,
+        UiThemeMode.Dark => true,
+        UiThemeMode.Auto => _services!.World.Sun.AltDeg < 0,
+        _ => throw new InvalidOperationException("Unknown UI theme mode."),
     };
 
     /// <summary>
@@ -191,12 +198,17 @@ public partial class MapHud : Node, IMapAware
     {
         var world = _services!.World;
         var night = _night;
-        if (_themeArg is "auto" && (world.Transition & WorldTransition.Time) == 0)
+        if (_theme == UiThemeMode.Auto && (world.Transition & WorldTransition.Time) == 0)
         {
             var alt = world.Sun.AltDeg;
             if (!night && alt < _style!.Metrics.ToDarkBelowDeg) night = true;
             else if (night && alt > _style!.Metrics.ToLightAboveDeg) night = false;
         }
+        ApplyNight(night);
+    }
+
+    private void ApplyNight(bool night)
+    {
         if (night == _night) return;
         _night = night;
         _ctx.ThemeFront = night ? 1 : 0;
