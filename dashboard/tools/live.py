@@ -1,5 +1,5 @@
 """实时采集：谁在跑（会话、子代理）、在做的工作、后台脚本、构建锁、临时工作树、钩子，写 data/auto/live.js，作者观察台的总览、施工、模型页读它；
-另每 60 s 写一次脚本目录 data/auto/catalog.js（所有脚本与开头说明，脚本页读它）。
+另每 60 s 写一次脚本目录 data/auto/catalog.js（所有脚本与开头说明，脚本页读它）；施工队列文件一改就重写 data/auto/queue.js。
 用法：python -I -X utf8 dashboard/tools/live.py          写一次
       python -I -X utf8 dashboard/tools/live.py --loop   每 15 s 写一次；已有一个在跑就直接退出；每 10 分钟顺带跑一次 collect.py
 入口只组装：数据都经监控库（.collab/tools/monitor/，与巡逻共用，只读）的 view/ 取，不在这里另写读法；本机协作数据（.collab）经它读，
@@ -72,6 +72,8 @@ def collect():
 
 
 _last_catalog = 0.0
+_queue_mtime = 0.0
+QUEUE_FILE = U.COLLAB + "/status/施工状态.md"
 
 
 def write_catalog(procs):
@@ -82,10 +84,25 @@ def write_catalog(procs):
         print(f"{U.iso(time.time())} 写 catalog.js 失败：{type(e).__name__} {e}", file=sys.stderr)
 
 
+def write_queue_if_changed():
+    """施工队列文件一改就重写 queue.js，不等 10 分钟一次的项目采集；失败只在 stderr 说一句。"""
+    global _queue_mtime
+    try:
+        m = os.path.getmtime(QUEUE_FILE)
+        if m == _queue_mtime:
+            return
+        import collect
+        write("auto", "queue", wpnames.annotate_tree(collect.queue_data()), source="live.py")
+        _queue_mtime = m
+    except Exception as e:
+        print(f"{U.iso(time.time())} 写 queue.js 失败：{type(e).__name__} {e}", file=sys.stderr)
+
+
 def write_once():
     global _last_catalog
     live, procs = collect()
     path = write("auto", "live", wpnames.annotate_tree(live), source="live.py")   # 工作包号在写文件处配中文包名
+    write_queue_if_changed()
     if time.time() - _last_catalog >= CATALOG_EVERY_S:
         _last_catalog = time.time()
         write_catalog(procs)
