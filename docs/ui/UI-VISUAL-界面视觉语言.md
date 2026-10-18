@@ -121,6 +121,7 @@ gates: [G4, G5, G14]
 ## 4 实现边界
 
 - **一个 Theme，由代码生成**：`UiThemeBuilder` 从 `ui.json`（色名）和 `ui_metrics.json`（尺寸、字号、时长）生成唯一的 Theme，运行时不修改；唯一例外是下拉框的展开列表，它是独立窗口挂不了 `ui_panel`，打开前按当前主题改写它那几个样式的颜色。G4 禁止代码里写十六进制色值和 `main.tscn` 以外的共享 `.tres`。随主题变的颜色全部由 `ui_panel` 按全局参数 `ui_night` 取日、夜两值；悬停、流光、焦点、量化、常驻件的固定主题用 instance uniform。
+- **界面缩放只用一个系数**：`Window.ContentScaleFactor`，锚点与容器按缩放后的逻辑视口自动重排；不另缩 Theme 字号或根节点（D-245）。
 - **两个白名单着色器分成两个文件**：`ui_panel`（切角、发丝线、辉光、M1/M5/M6/M7、交班前沿，不读屏幕）与 `ui_screen`（整页揭示与大页磨砂，读屏幕纹理）；着色器一旦出现屏幕纹理就会触发一次背景拷贝，不管分支走没走到。发丝线与辉光不用 `StyleBoxFlat` 的整数边框，也不走 3D 的 bloom。
 - **主题切换**：唯一写 `ui_night` 的是 WP-35 的 `UiThemeClock`，它是扫描前沿的位置，不是颜色插值量；常驻件的材质写 instance uniform `pin_night = 1`，始终是夜值。凡是画面板和文字的地方都必须走这个机制，否则夜里会出现"浅底浅字"（G14 要抓的典型错误）。
 - **`hdr_2d` 固定为关**：界面画在后期之后，颜色逐像素原样上屏。动效只改 `Modulate`、不在容器里的 `Position` 与 `Rotation`、instance uniform 和 `ui_night`。

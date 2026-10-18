@@ -48,16 +48,16 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 13.1k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 13.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
   - ★ CORE-DECISIONS-SYSTEMS §0.1 接入要点 · L27 · 75
-- CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
-- CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.4k
-- CORE-DECISIONS-SYSTEMS §3 音频 · L78 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L100 · 3.0k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L128 · 2.8k
+- CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.2k
+- CORE-DECISIONS-SYSTEMS §2 存档 · L61 · 1.4k
+- CORE-DECISIONS-SYSTEMS §3 音频 · L79 · 2.1k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.0k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L129 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -1653,12 +1653,12 @@
   - UI-NAV §4.1 Esc 与单键快捷键 · L126 · 318
   - UI-NAV §4.2 关键键位 · L132 · 575
   - UI-NAV §4.3 输入优先级 · L150 · 504
-- UI-NAV §5 无障碍与语言 · L164 · 777
+- UI-NAV §5 无障碍与语言 · L164 · 821
 - UI-NAV §6 待验证 · L177 · 92
 
 ## UI-VISUAL-COMPONENTS · 界面字体、形状、图标、组件外观与画面布局
 
-`docs/ui/UI-VISUAL-COMPONENTS-字体形状图标与组件.md` · 5.6k 字 · 界面字体与字号、形状与材质、图标体系、组件六种状态与时间环等外观、画面布局
+`docs/ui/UI-VISUAL-COMPONENTS-字体形状图标与组件.md` · 5.9k 字 · 界面字体与字号、形状与材质、图标体系、组件六种状态与时间环等外观、画面布局
 关键词：界面字体、思源黑体、字号阶梯、切角、1号脚、发丝线、过孔灯、走线、衍射光边、面板材质、轻度磨砂、图标体系、窗口图标、八角晶片、气象填图符号、通电隐喻、时间环外观、天气签条、速度LED条、存档卡、存储模组、等待灯、画面布局、中央60%、ui_metrics.json、IPaletteProbe
 
 - UI-VISUAL-COMPONENTS §0 结论 · L22 · 528
@@ -1675,28 +1675,28 @@
   - UI-VISUAL-COMPONENTS §4.3 时间环 · L81 · 351
   - UI-VISUAL-COMPONENTS §4.4 天气签条、速度条与到达标题 · L90 · 306
   - UI-VISUAL-COMPONENTS §4.5 存档卡"存储模组"与等待灯 · L96 · 363
-- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 501
-- UI-VISUAL-COMPONENTS §6 待验证 · L114 · 162
+- UI-VISUAL-COMPONENTS §5 画面布局 · L103 · 817
+- UI-VISUAL-COMPONENTS §6 待验证 · L120 · 162
 
 ## UI-VISUAL-MOTION · 界面动效与减少动态效果
 
-`docs/ui/UI-VISUAL-MOTION-动效与减少动态效果.md` · 3.5k 字 · 界面动效原则、八个母题、频率分级、曲线时长与辉光闪烁上限，减少动态效果下的替代与无障碍
+`docs/ui/UI-VISUAL-MOTION-动效与减少动态效果.md` · 3.6k 字 · 界面动效原则、八个母题、频率分级、曲线时长与辉光闪烁上限，减少动态效果下的替代与无障碍
 关键词：动效语言、动效母题、M1走线流光、M2扫描揭示、M3网格逐格点亮、M4数值滚动、M5衍射边、M6量化出入场、M7示波器、M8呼吸灯、频率分级、辉光上限、闪烁上限、减少动态效果、MotionPolicy、IMotionSettings、降低透明度、主题锁定
 
 - UI-VISUAL-MOTION §0 结论 · L22 · 489
   - ★ UI-VISUAL-MOTION §0.1 接入要点 · L30 · 148
-- UI-VISUAL-MOTION §1 动效语言 · L35 · 1.7k
+- UI-VISUAL-MOTION §1 动效语言 · L35 · 1.8k
   - UI-VISUAL-MOTION §1.1 原则与两种时间 · L37 · 321
   - UI-VISUAL-MOTION §1.2 八个母题 · L45 · 659
   - UI-VISUAL-MOTION §1.3 频率分级与声音 · L58 · 329
-  - UI-VISUAL-MOTION §1.4 曲线、时长与上限 · L64 · 408
-- UI-VISUAL-MOTION §2 减少动态效果与无障碍 · L70 · 509
-  - UI-VISUAL-MOTION §2.1 "减少动态效果"下的替代 · L72 · 336
-  - UI-VISUAL-MOTION §2.2 无障碍 · L80 · 156
+  - UI-VISUAL-MOTION §1.4 曲线、时长与上限 · L64 · 478
+- UI-VISUAL-MOTION §2 减少动态效果与无障碍 · L71 · 509
+  - UI-VISUAL-MOTION §2.1 "减少动态效果"下的替代 · L73 · 336
+  - UI-VISUAL-MOTION §2.2 无障碍 · L81 · 156
 
 ## UI-VISUAL · 界面视觉语言：设计原则、色彩令牌、主题与实现边界
 
-`docs/ui/UI-VISUAL-界面视觉语言.md` · 6.3k 字 · 界面设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界；字体形状图标组件布局与动效见子文档
+`docs/ui/UI-VISUAL-界面视觉语言.md` · 6.4k 字 · 界面设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界；字体形状图标组件布局与动效见子文档
 关键词：界面视觉、色彩令牌、清蓝、晶白、深屏、昼夜交班、常驻件、对比度规则、ui.json、ui_night、UiThemeBuilder、UiThemeClock、ui_panel、ui_screen
 
 - UI-VISUAL §0 结论 · L21 · 1.0k
@@ -1713,7 +1713,7 @@
   - UI-VISUAL §3.4 昼夜切换 · L102 · 427
   - UI-VISUAL §3.5 对比度规则 · L110 · 248
   - UI-VISUAL §3.6 登记 · L117 · 150
-- UI-VISUAL §4 实现边界 · L121 · 940
+- UI-VISUAL §4 实现边界 · L121 · 1.0k
 
 ## ENG-ARCH · 工程架构
 

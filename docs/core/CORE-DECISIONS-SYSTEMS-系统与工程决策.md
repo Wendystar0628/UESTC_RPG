@@ -56,6 +56,7 @@ gates: []
 | D-088 | 跳过是按住 Esc 0.8 s，跳过后的终态与完整播放一致；设置里"开场过场"主线只有完整、关，简短版推迟（D-233） | 过场 | SYS-TITLE-CINEMATIC §3 | 生效 |
 | D-089 | 应用流程由 `IAppFlow` 状态机管理：Boot → Title → Entering → Playing → Leaving → Title，另有 Quitting；Leaving 是返回标题，Quitting 是退出程序 | 开始页 | SYS-TITLE §3；SYS-SAVE-FLOW §1.4 | 生效 |
 | D-090 | 界面缩放范围见 UI-NAV §3.5，不乘系统 DPI | 界面 | UI-VISUAL §4 | 生效 |
+| D-245 | 界面布局一律由锚点与容器推导：全屏根下设最宽 16:9 的安全框，四角件锚角，页面套标准骨架，位置不写坐标，尺寸来自内容与 ui_metrics 令牌并经 Theme 下发；界面缩放只用 ContentScaleFactor；绝对坐标只留在自绘件与地图画布内部 | 全部界面 | UI-VISUAL-COMPONENTS §5，UI-VISUAL §4，UI-NAV §5 | 生效 |
 
 ## 2 存档
 
