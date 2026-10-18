@@ -31,7 +31,7 @@ foreach ($line in Get-Content -Encoding UTF8 (Join-Path $PSScriptRoot 'poses.txt
     if ($Only.Count -and $name -notin $Only) { continue }
     $tmp = Join-Path $out "_$name"; $null = [IO.Directory]::CreateDirectory($tmp)
     $args = @('--path', "$repo\game", '--windowed', '--resolution', '1920x1080', '--rendering-driver', 'd3d12', '--fixed-fps', '60',
-        '--', "--shots=$pose", "--out=$tmp", '--frames=1500') + $extra + $common
+        '--', "--shots=$pose", "--out=$tmp", '--frames=300') + $extra + $common
     $lease = Enter-UESTCBuildLock $layout.Locks
     try { $r = Invoke-UESTCProcess $godot $args $repo (Join-Path $out "$name.log") -AllowFailure -Visible -TimeoutSeconds $timeout; $code = $r.ExitCode }
     catch { $code = '超时' }
