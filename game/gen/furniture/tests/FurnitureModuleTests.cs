@@ -46,13 +46,29 @@ public sealed class FurnitureModuleTests
             var bin = gentle.Items.SingleOrDefault(i => i.Key == bench.Key.Replace(":bench", ":bin", StringComparison.Ordinal));
             AssertThat(bin is null || bin.Pad is { Plinth: true } own && MathF.Abs(bin.Part.At.M42 - own.Top) < 0.01f).OverrideFailureMessage($"{bench.Key}: the bin is off its own plinth").IsTrue();
         }
-        // Flat: rest stops stand on paved bays just proud of the paving; the kiosk on the A06 deck stays on its deck.
-        var flat = Build(World.Value);
+        // Flat: rest stops stand on paved bays; authored deck kiosks stay at their declared elevation.
+        var flatWorld = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
+        var flat = Build(flatWorld);
         var top = GroundLevels.Paving + FurnitureStyle.PadProud;
         AssertThat(flat.Items.Where(i => i.Pad is not null).All(i => !i.Pad!.Plinth)).OverrideFailureMessage("plinths on flat ground").IsTrue();
         AssertThat(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - (i.Pad is null ? GroundLevels.Paving : top)) < 0.01f)).OverrideFailureMessage("benches off their bays (or, on a plaza, off its paving)").IsTrue();
         var kiosks = flat.Items.Where(i => i.Kind == FurnitureKind.AtlasKiosk).ToList();
-        AssertThat(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 0.01f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 0.01f) == kiosks.Count - 1).OverrideFailureMessage("kiosks: one on the A06 deck, the others on their pads").IsTrue();
+        var deckAnchors = flatWorld.Features.Values.Where(f => f.Kind.Value == "anchor" && f.TryText("form") == "kiosk"
+            && f.TryNumber("groundY") is > FurnitureStyle.DeckAbove).ToArray();
+        AssertThat(deckAnchors.Length > 0).OverrideFailureMessage("the map has no elevated kiosk landing to exercise").IsTrue();
+        foreach (var anchor in deckAnchors)
+        {
+            var kiosk = kiosks.Single(k => k.Key == "anchor:" + anchor.Id.Value);
+            var ring = ((PolygonGeometry)anchor.Geometry).Rings.Outer;
+            var centre = ring.Aggregate(Vector2.Zero, (a, point) => a + point) / ring.Count;
+            AssertThat(Vector2.Distance(kiosk.Anchor, centre) < 0.01f).OverrideFailureMessage($"{anchor.Id}: deck kiosk moved off its authored footprint").IsTrue();
+        }
+        foreach (var kiosk in kiosks)
+        {
+            var anchor = flatWorld.Features[new(kiosk.Key["anchor:".Length..])];
+            var level = anchor.TryNumber("groundY") ?? flatWorld.Terrain.PadY(anchor.Id);
+            AssertThat(MathF.Abs(kiosk.Part.At.M42 - level - top) < 0.01f).OverrideFailureMessage($"{anchor.Id}: kiosk is off its authored landing").IsTrue();
+        }
         // 30%: no pole stands.
         var steep = Build(new FakeWorld(World.Value) { Terrain = Tilted(0.3f) });
         AssertThat(steep.Count(FurnitureKind.StreetLamp) == 0 && steep.Count(FurnitureKind.AtlasPost) == 0).OverrideFailureMessage("poles on a 30% grade").IsTrue();

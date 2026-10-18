@@ -32,6 +32,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private Task? _shutdownTask;
     private readonly CancellationTokenSource _captureLifetime = new();
     private ViewContentReadiness? _contentReadiness;
+    private IVeilLease? _failureVeil;
+    private IFlowLease? _failureFlow;
     private readonly StageGateDriver _gate;
     private string _phase = "compose";
     public string Phase
@@ -121,6 +123,21 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private async Task StartWorld()
     {
+        var registry = Services.Services;
+        using var bootVeil = registry.Get<IVeilService>().Cover(VeilReason.Boot, 0,
+            AppBoot.Options.Title ? VeilContent.Frontispiece : VeilContent.Fog);
+        using var startupFlow = registry.Get<IWorldControl>().AcquireFlow(FlowPriority.Pause, 0);
+        try { await StartWorld(bootVeil, startupFlow); }
+        catch (OperationCanceledException) when (_closing) { throw; }
+        catch
+        {
+            HoldFailure();
+            throw;
+        }
+    }
+
+    private async Task StartWorld(IVeilLease bootVeil, IFlowLease startupFlow)
+    {
         var options = AppBoot.Options;
         var showTitle = options.Title && options.Value("cine") != "leave";
         var registry = Services.Services;
@@ -130,7 +147,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             throw new InvalidOperationException("Boot participant IDs must be unique.");
         var context = CreateBootContext();
         var veil = registry.Get<IVeilService>();
-        await veil.Cover(VeilReason.Boot, 0, options.Title ? VeilContent.Frontispiece : VeilContent.Fog);
+        await bootVeil.Covered;
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         CheckStartupActive();
         if (!registry.Get<IVeilPresentation>().IsCovered)
@@ -152,12 +169,11 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
                 : options.Values.TryGetValue("seed", out seed) ? uint.Parse(seed, CultureInfo.InvariantCulture) : null));
         CheckStartupActive();
         var maps = registry.Get<IMapService>();
-        int? initialFlow = null;
         if (!appBoot.WillRestoreWorld)
         {
             Phase = "initialize-world";
             var initialMap = maps.Maps.Single(map => map.Id == target);
-            initialFlow = BootWorldOverrides.InitializeFreshWorld(options, registry, initialMap);
+            BootWorldOverrides.InitializeFreshWorld(options, registry, initialMap);
         }
         Phase = "travel-boot";
         // First classification measures the map's default overview (V1); PrepareWorld places T0 afterwards.
@@ -170,8 +186,9 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         await BootWorldOverrides.ApplyQuality(options, registry.Get<IQualityService>());
         CheckStartupActive();
         Phase = "prepare-world";
-        // Preview can capture its desired resume rate, while the initial warmup itself stayed paused.
-        if (initialFlow is { } flowRate) registry.Get<IWorldControl>().SetFlow(flowRate);
+        // The user's base flow is already set; only the initial warmup pause ends here.
+        // Lifecycle checks also keep loaded world time fixed until their own test lease takes over.
+        if (options.Value("gate") is not ("save-close" or "save-resume")) startupFlow.Dispose();
         await appBoot.PrepareWorld();
         CheckStartupActive();
         await BootWorldOverrides.ApplyView(options, registry, appBoot.WillRestoreWorld, showTitle);
@@ -191,7 +208,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         Phase = "reveal";
         readinessWait.Dispose(); // Preparation ended; the authored reveal duration is not loading.
         _statistics!.MarkRealtime();
-        await veil.Reveal(VeilReason.Boot, showTitle ? BootTuning.TitleRevealSeconds : BootTuning.WorldRevealSeconds);
+        await bootVeil.Reveal(showTitle ? BootTuning.TitleRevealSeconds : BootTuning.WorldRevealSeconds);
         CheckStartupActive();
         await appBoot.CompleteBoot();
         await _gate.RunNamedCinematic();
@@ -276,7 +293,13 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         }
         catch (Exception error) { _closing = false; Fail(error); }
     }
-    public override void _ExitTree() { _closing = true; _captureLifetime.Cancel(); }
+    public override void _ExitTree()
+    {
+        _closing = true;
+        _captureLifetime.Cancel();
+        _failureVeil?.Dispose();
+        _failureFlow?.Dispose();
+    }
 
     public Task FinishQuit()
     {
@@ -359,14 +382,25 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _ready = false;
         Failure = error.GetBaseException().Message;
         GD.PushError($"[WP-01][phase={Phase}] {error}");
+        HoldFailure();
+        // Automated runs must never turn an incomplete startup or a failed screenshot into success.
+        if (_cpuCommand || AppBoot.Options.CaptureMode || !AppBoot.Options.Title) GetTree().Quit(2);
+    }
+
+    private void HoldFailure()
+    {
         var veil = _runtimeObjects.OfType<IVeilService>().SingleOrDefault();
         if (veil is not null)
         {
-            try { _ = veil.Cover(VeilReason.Boot, 0, AppBoot.Options.Title ? VeilContent.Frontispiece : VeilContent.Fog); }
+            try { _failureVeil ??= veil.Cover(VeilReason.Boot, 0, AppBoot.Options.Title ? VeilContent.Frontispiece : VeilContent.Fog); }
             catch (Exception coverError) { GD.PushError($"[WP-01][phase=failure-cover] {coverError}"); }
         }
-        // Automated runs must never turn an incomplete startup or a failed screenshot into success.
-        if (_cpuCommand || AppBoot.Options.CaptureMode || !AppBoot.Options.Title) GetTree().Quit(2);
+        var world = _runtimeObjects.OfType<IWorldControl>().SingleOrDefault();
+        if (world is not null)
+        {
+            try { _failureFlow ??= world.AcquireFlow(FlowPriority.Cinematic, 0); }
+            catch (Exception flowError) { GD.PushError($"[WP-01][phase=failure-flow] {flowError}"); }
+        }
     }
 
     Node IStageGateHost.Stage => this;

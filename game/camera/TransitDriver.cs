@@ -38,11 +38,10 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
 
     private async Task Execute(TransitRun run)
     {
-        var reason = VeilReason.Boot;
-        var covered = false;
+        IVeilLease? cover = null;
         try
         {
-            reason = run.Kind switch
+            var reason = run.Kind switch
             {
                 TransitKind.Teleport => VeilReason.Teleport,
                 TransitKind.Veil => VeilReason.Transit,
@@ -52,8 +51,9 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
             var body = camera.Mode == ViewMode.Walk && walk is { Active: true } ? walk : null;
             body?.SetInput(default);
 
-            await veil.Cover(reason, TransitTuning.CoverSeconds);
-            covered = true;
+            cover = veil.Cover(reason, TransitTuning.CoverSeconds);
+            run.Cover = cover;
+            await cover.Covered;
             run.Progress = 0.25f;
             if (run.Cancelled) return;
             // The move must follow a presented opaque frame, not just a veil opacity of one.
@@ -100,13 +100,9 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
 
             RequireCurrentArrival(destination);
             run.Progress = 0.75f;
-            // Another veil owner (map travel, quality) has taken over; leave the veil to it.
-            if (veil.Reason == reason)
-            {
-                // A newer veil request replaces this reveal; the observer has still arrived.
-                try { await veil.Reveal(reason, TransitTuning.RevealSeconds); }
-                catch (OperationCanceledException) { }
-            }
+            // Releasing this run leaves all other veil owners in place.
+            try { await cover.Reveal(TransitTuning.RevealSeconds); }
+            catch (OperationCanceledException) { }
             if (run.Cancelled) return;
             run.Progress = 1;
             run.Finish(TransitResult.Arrived);
@@ -120,17 +116,10 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
         {
             if (run.Arrival is { } pending && !pending.Done.IsCompleted) pending.Cancel();
             run.Finish(TransitResult.Cancelled);
-            await ReleaseVeil(run, reason, covered);
+            cover?.Dispose();
+            run.Cover = null;
             if (ReferenceEquals(_active, run)) _active = null;
         }
-    }
-
-    // A cancelled or failed run lifts its own veil, unless a newer run or another veil owner holds it.
-    private async Task ReleaseVeil(TransitRun run, VeilReason reason, bool covered)
-    {
-        if (!covered || !ReferenceEquals(_active, run) || veil.Reason != reason || veil.Opacity <= 0) return;
-        try { await veil.Reveal(reason, TransitTuning.RevealSeconds); }
-        catch (Exception error) { GD.PushError($"[WP-36] veil reveal failed: {error}"); }
     }
 
     private void RequireCurrentArrival(IMapArrival arrival)
@@ -149,12 +138,14 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
         public bool Cancelled { get; private set; }
         public bool Finished => _done.Task.IsCompleted;
         public IMapArrival? Arrival { get; set; }
+        public IVeilLease? Cover { get; set; }
 
         public void Cancel()
         {
             if (_done.Task.IsCompleted) return;
             Cancelled = true;
             Arrival?.Cancel();
+            Cover?.Dispose();
             _done.TrySetResult(TransitResult.Cancelled);
         }
 

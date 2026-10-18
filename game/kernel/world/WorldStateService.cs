@@ -12,7 +12,7 @@ namespace Campus.Kernel.World;
 [KernelService(typeof(IWorldControl), Owner = "WP-34")]
 [KernelService(typeof(IWorldRestore), Owner = "WP-34")]
 [SaveSection("world", Owner = "WP-34", Version = 1, Phase = RestorePhase.World, Order = 10)]
-public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null) : IWorldState, IWorldControl,
+public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null) : IWorldState, IWorldControl,
     IWorldRestore, ISaveSection<WorldSaveV1>
 {
     private double _targetHours = 17.5;
@@ -21,8 +21,6 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     private double _jumpFrom;
     private double _jumpElapsed;
     private double _jumpDuration;
-    private double? _flowStop;
-    private double? _flowClock;
     private double _dragIdle = 1;
     private bool _dragging;
     private double _seasonFrom = 2;
@@ -51,7 +49,9 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public Body Moon { get; private set; } = ArtEphemeris.Evaluate(17.5, 2).Moon;
     public float MoonPhase => 1;
     public float Omega { get; private set; }
-    public WorldFlow Flow { get; private set; } = new(1);
+    public WorldFlow Flow => new(_activeFlow?.Rate ?? BaseFlow.Rate);
+    public WorldFlow BaseFlow { get; private set; } = new(1);
+    public int LastFlowRate => _flowBeforePause;
     public bool Scrubbing => _dragging && _dragIdle < 1;
     public WorldTransition Transition =>
         (TimeMoving ? WorldTransition.Time : WorldTransition.None) |
@@ -69,10 +69,10 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public double SeasonTo => _seasonTo;
     public double SeasonProgress => SeasonMoving ? Math.Clamp(_seasonElapsed / _seasonDuration, 0, 1) : 1;
     public double ClockOffset => _offset;
-    public double TargetHours => _flowStop ?? _targetHours;
+    public double TargetHours => _activeFlow?.Stop ?? _targetHours;
     public JsonTypeInfo<WorldSaveV1> TypeInfo => WorldSaveJson.Contract.WorldSaveV1;
     private bool SeasonMoving => _seasonDuration > 0;
-    private bool TimeMoving => _targetHours > WorldHours || _flowStop.HasValue;
+    private bool TimeMoving => _targetHours > WorldHours || _activeFlow?.Stop is not null;
 
     public double PresetClock(ClockPreset preset, Season season) => ArtEphemeris.Preset(preset, season);
     public float SunAltDegAt(double clock, Season season)
@@ -122,11 +122,10 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         else if (!Scrubbing && Flow.Rate > 0)
         {
             var next = WorldHours + dt * Flow.Rate / 3600;
-            if (_flowStop is { } stop && next >= stop)
+            if (_activeFlow?.Stop is { } stop && next >= stop)
             {
                 WorldHours = stop;
-                _flowStop = null;
-                SetFlow(0);
+                StopFlow(_activeFlow!);
             }
             else WorldHours = next;
             _targetHours = WorldHours;
@@ -169,8 +168,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
                 // The pointer can cross midnight. Counterclockwise samples cannot rewind or add a day.
                 if (delta > 0) _targetHours += delta;
                 _jumpDuration = 0;
-                _flowStop = null;
-                _flowClock = null;
+                ClearFlowTargets();
                 _dragging = true;
                 _dragIdle = 0;
                 break;
@@ -188,31 +186,12 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         Rev++;
     }
 
-    public void FlowTo(double clock, int rate)
-    {
-        EnsureUsable();
-        ValidateClock(clock);
-        ValidateRate(rate);
-        var stop = _targetHours + ForwardHours(clock, ArtEphemeris.Wrap(_targetHours + PlannedOffset, 24));
-        SetFlow(rate);
-        if (stop == WorldHours && !TimeMoving) SetFlow(0);
-        else
-        {
-            _flowClock = clock;
-            _flowStop = stop;
-        }
-        Rev++;
-    }
-
     public void SetFlow(int rate)
     {
         EnsureUsable();
         ValidateRate(rate);
         if (rate > 0) _flowBeforePause = rate;
-        else if (Flow.Rate > 0) _flowBeforePause = Flow.Rate;
-        Flow = new(rate);
-        _flowStop = null;
-        _flowClock = null;
+        BaseFlow = new(rate);
         Rev++;
     }
 
@@ -231,11 +210,12 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         _seasonStartArcClock = ArtEphemeris.ClockAtPhase(_seasonArc, SeasonPos);
         _finalOffset = _offset + ArtEphemeris.ClockAtPhase(_seasonArc, (int)season) - _seasonStartArcClock;
         SeasonTarget = season;
-        if (_flowClock is { } clock)
+        foreach (var lease in _flowLeases)
         {
+            if (lease.Clock is not { } clock) continue;
             // FlowTo owns a clock destination, not an absolute hour from the previous season's offset.
-            _flowStop = _targetHours + ForwardHours(clock, ArtEphemeris.Wrap(_targetHours + _finalOffset, 24));
-            if (_flowStop == WorldHours && _targetHours == WorldHours) SetFlow(0);
+            lease.Stop = _targetHours + ForwardHours(clock, ArtEphemeris.Wrap(_targetHours + _finalOffset, 24));
+            if (lease.Stop == WorldHours && _targetHours == WorldHours) StopFlow(lease);
         }
         weather.Reseason(WorldHours, season, _finalOffset);
         Rev++;
@@ -350,7 +330,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public WorldSaveMoment GetSaveMoment()
     {
         EnsureUsable();
-        return new(TargetHours, PlannedOffset, SeasonTarget, _flowStop.HasValue ? 0 : Flow.Rate);
+        return new(TargetHours, PlannedOffset, SeasonTarget, BaseFlow.Rate);
     }
 
     public WorldSaveV1 Capture(in CaptureContext context)
@@ -410,12 +390,12 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         _offset = _finalOffset = dto.ClockOffset;
         SeasonPos = _seasonFrom = _seasonTo = dto.SeasonPos;
         SeasonTarget = dto.SeasonTarget;
-        Flow = new(dto.FlowRate);
+        BaseFlow = new(dto.FlowRate);
         _flowBeforePause = dto.FlowRateBeforePause;
         AnimTime = dto.AnimTime;
         _velocity = _jumpDuration = _jumpElapsed = _seasonDuration = _seasonElapsed = 0;
-        _flowStop = null;
-        _flowClock = null;
+        // The caller's pause spans this restore transaction; discard old destinations, not owners.
+        ClearFlowTargets();
         _dragging = false;
         _dragIdle = 1;
         (Sun, Moon) = ArtEphemeris.Evaluate(Clock, SeasonPos);
@@ -424,8 +404,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
 
     private void StartJump(double target)
     {
-        _flowStop = null;
-        _flowClock = null;
+        ClearFlowTargets();
         _dragging = false;
         _dragIdle = 1;
         _targetHours = Math.Max(_targetHours, target);
@@ -475,8 +454,8 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 
-    private static bool IsRate(int rate) => rate is 0 or 1 or 10 or 60 or 360 or 1440;
-    private static void ValidateRate(int rate) { if (!IsRate(rate)) throw new ArgumentOutOfRangeException(nameof(rate)); }
+    private static bool IsRate(int rate) => FlowRates.IsValid(rate);
+    private static void ValidateRate(int rate) => FlowRates.Validate(rate);
     private static void ValidateClock(double clock)
     {
         if (!double.IsFinite(clock) || clock is < 0 or >= 24) throw new ArgumentOutOfRangeException(nameof(clock));

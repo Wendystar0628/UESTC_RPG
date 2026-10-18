@@ -59,14 +59,15 @@ public sealed class WorldRestoreTests
         AssertThat((world.WorldHours, world.Clock, world.SeasonPos, world.AnimTime,
             world.Rev, world.Instance, weather.Steps.Count)).IsEqual(before);
         var context = new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment };
-        world.FlowTo(18, 60);
+        using var flow = world.AcquireFlow(FlowPriority.Cinematic, 0);
+        flow.FlowTo(18, 60);
         var shared = world.Capture(in context);
         AssertThat(shared.WorldHours).IsEqual(moment.WorldHours);
         AssertThat(shared.ClockOffset).IsEqual(moment.ClockOffset);
         AssertThat(shared.SeasonTarget).IsEqual(moment.Season);
         AssertThat(shared.FlowRate).IsEqual(moment.FlowRate);
         moment = world.GetSaveMoment();
-        AssertThat(moment.FlowRate).IsEqual(0);
+        AssertThat(moment.FlowRate).IsEqual(world.BaseFlow.Rate);
         AssertThat(Math.Abs((ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24)) - (18)) <= 1e-10).OverrideFailureMessage($"Expected {18:R}, got {ArtEphemeris.Wrap(moment.WorldHours + moment.ClockOffset, 24):R}.").IsTrue();
         AssertThat(weather.Steps.Count).IsEqual(before.Count);
     }
@@ -118,6 +119,7 @@ public sealed class WorldRestoreTests
                 world.Restore(new WorldSaveV1(7, .2, 0, Season.Spring, 10, 10, 10.25), Restore());
                 world.CompleteRestore();
             }
+            using var flow = world.AcquireFlow(FlowPriority.Cinematic, world.Flow.Rate);
             var moment = world.GetSaveMoment();
             var instance = world.Instance;
             world.AbortRestore();
@@ -131,7 +133,9 @@ public sealed class WorldRestoreTests
                 () => world.SetClock(8),
                 () => world.SetClock(8, ClockSetMode.Drag),
                 () => world.Advance(1),
-                () => world.FlowTo(18, 60),
+                () => flow.FlowTo(18, 60),
+                () => flow.SetRate(60),
+                () => world.AcquireFlow(FlowPriority.Pause, 0),
                 () => world.SetFlow(0),
                 () => world.SetSeason(Season.Winter),
                 () => world.SetWeather(WeatherKind.Rain),
@@ -154,6 +158,7 @@ public sealed class WorldRestoreTests
             AssertThat(world.RestoreFaulted).OverrideFailureMessage("CreateDefault or Restore must not clear a failed transaction by itself.").IsTrue();
             world.CompleteRestore();
             AssertThat(!world.RestoreFaulted).OverrideFailureMessage("A complete fresh new game must remain available from the fault screen.").IsTrue();
+            flow.Dispose();
             world.SetFlow(1);
             world.Tick(.1);
             AssertThat(world.WorldHours > fresh.WorldHours).OverrideFailureMessage("Controls did not resume after successful new game recovery.").IsTrue();
@@ -219,10 +224,11 @@ public sealed class WorldRestoreTests
     {
         var world = CreateWorld(new TestWeatherProcess());
         var initial = world.Capture(default);
+        using var flow = world.AcquireFlow(FlowPriority.Cinematic, world.Flow.Rate);
         AssertThrown(() => world.Advance(0)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.Advance(double.NaN)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.SetFlow(2)).IsInstanceOf<ArgumentOutOfRangeException>();
-        AssertThrown(() => world.FlowTo(24, 60)).IsInstanceOf<ArgumentOutOfRangeException>();
+        AssertThrown(() => flow.FlowTo(24, 60)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.SetClock(-1)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.SetSeason((Season)9)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.Restore(initial with { WorldHours = double.NaN }, Restore())).IsInstanceOf<JsonException>();

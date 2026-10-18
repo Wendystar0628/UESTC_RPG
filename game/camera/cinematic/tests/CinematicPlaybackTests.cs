@@ -1,4 +1,5 @@
 using System.Numerics;
+using Campus.Camera;
 using Campus.Camera.Cinematic;
 using Campus.Gen.Tests.Support;
 using Campus.Contracts;
@@ -49,7 +50,8 @@ public sealed class CinematicPlaybackTests
     {
         var rig = new FlowTestRig();
         var veil = rig.Veil; var presentation = rig.Presentation; var playback = rig.Playback;
-        await veil.Cover(VeilReason.Cinematic, 0);
+        using var cover = veil.Cover(VeilReason.Cinematic, 0);
+        await cover.Covered;
         var covered = playback.WaitForPresentedCoverage();
         playback.Tick(0);
         if (covered.IsCompleted) throw new InvalidOperationException("Numeric opacity incorrectly counted as a presented cover.");
@@ -84,6 +86,42 @@ public sealed class CinematicPlaybackTests
         worldJob.SetResult(); playback.Tick(10);
         if (predicateCalls != 1)
             throw new InvalidOperationException("A canceled wait was polled again after Clear.");
+    }
+    [TestCase]
+    [TestCategory("Contract")]
+    public void PlaybackCleanupReleasesOnlyItsMask()
+    {
+        foreach (var cleanup in new Action<CinematicPlayback>[] { p => p.Clear(), p => p.Abort(new OperationCanceledException()), p => p.Dispose() })
+        {
+            var rig = new FlowTestRig();
+            var definition = Timeline() with { Masks = [new(0, 2, MaskKind.Veil)] };
+            var playing = rig.Playback.Play(definition, Start(rig.Camera.Pose, default, 70), Maps(), new FakeWorld { Boundary = new([]) },
+                AppState.Entering, (_, _) => Task.CompletedTask);
+            rig.Playback.Tick(0);
+            using var faultCover = rig.Veil.Cover(VeilReason.Cinematic, 0);
+            cleanup(rig.Playback);
+            if (!faultCover.IsCurrent || rig.Veil.Opacity < 1 || !playing.IsCompleted)
+                throw new InvalidOperationException("Playback cleanup released another owner's cover or left playback running.");
+            _ = playing.Exception;
+            faultCover.Dispose();
+            if (rig.Veil.Opacity != 0)
+                throw new InvalidOperationException("Playback cleanup retained its mask lease.");
+        }
+    }
+    [TestCase]
+    [TestCategory("Contract")]
+    public async Task CancelledTransitPreservesAnotherCoverWithTheSameReason()
+    {
+        var rig = new FlowTestRig();
+        var transit = new TransitDriver(rig.Camera, rig.Veil, rig.Runtime, rig.Playback);
+        var run = transit.Start(rig.Camera.Pose, rig.Camera.Pose);
+        using var faultCover = rig.Veil.Cover(VeilReason.Transit, 0);
+        run.Cancel();
+        rig.Presentation.Draw(rig.Playback, rig.Veil); rig.Playback.Tick(0);
+        if (await run.Done != TransitResult.Cancelled || !faultCover.IsCurrent || rig.Veil.Opacity < 1)
+            throw new InvalidOperationException("Cancelled transit released another owner's cover.");
+        faultCover.Dispose();
+        if (rig.Veil.Opacity != 0) throw new InvalidOperationException("Cancelled transit retained its cover lease.");
     }
     [TestCase]
     public async Task ReentrantClearDuringPlaybackCancellationPreservesTheNextPlaybackAndWait()

@@ -216,6 +216,8 @@ public sealed partial class SaveLifecycleTests
         public long Rev => 1; public double WorldHours => Hours; public double Clock => Hours % 24;
         public double SeasonPos => 2; public Season SeasonTarget => Season.Autumn; public Body Sun => default; public Body Moon => default;
         public float MoonPhase => 1; public float Omega => 0; public Campus.Contracts.Flow Flow => new(1); public bool Scrubbing => false;
+        public Campus.Contracts.Flow BaseFlow => Flow;
+        public int LastFlowRate => BaseFlow.Rate;
         public WorldTransition Transition => WorldTransition.None;
         public WeatherSel Weather => new(WeatherMode.Auto, WeatherKind.Clear, 0); public WeatherVec WeatherNow => default;
         public IReadOnlyList<WeatherSpan> WeatherAhead => []; public uint WeatherSeed => 1; public double AnimTime => 240; public double Step12 => 240;

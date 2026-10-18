@@ -75,7 +75,7 @@ public sealed class RestoreContext
 }
 public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start);
 // Start 默认取本图 map.json 的 newGameStart（MapWorldRules.NewGameStart；清水河秋 17:05、晴，SYS-MAPS），没有时取本图默认状态；
-// 之后由 IWorldControl.FlowTo 正向推到落金初灯（SYS-SAVE、SYS-TITLE）
+// 之后由 IFlowLease.FlowTo 正向推到落金初灯（SYS-SAVE、SYS-TITLE）
 
 public interface ISaveSection                         // 注册器只认这个非泛型接口；各包实现下面的泛型版
 {

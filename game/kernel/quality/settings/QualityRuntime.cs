@@ -78,20 +78,14 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
             return appBusy || RuntimeKernel.Get<ICameraRig>().ActiveTransit is { Done.IsCompleted: false } ||
                 RuntimeKernel.Get<IMapService>().Transition is { Done.IsCompleted: false } ||
                 RuntimeKernel.Get<ISaveService>().Busy || RuntimeKernel.Get<IWorldState>().Transition.HasFlag(WorldTransition.Season) ||
-                _veil.Opacity > 0 && OtherVeil(_veil.Reason);
+                _veil.Opacity > 0;
         }
     }
 
-    public Task Cover(CancellationToken cancellationToken)
+    public IVeilLease Cover(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return _veil.Cover(VeilReason.Quality, 0.3f).WaitAsync(cancellationToken);
-    }
-    public bool OwnsQualityVeil => _veil.Opacity > 0 && !OtherVeil(_veil.Reason);
-    public Task Reveal(CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        return OwnsQualityVeil ? _veil.Reveal(VeilReason.Quality, 0.3f).WaitAsync(cancellationToken) : Task.CompletedTask;
+        return _veil.Cover(VeilReason.Quality, QualityService.VeilSeconds);
     }
     public void ReportError(string message) => GD.PushError(message);
     public void ReportInfo(string message) => GD.Print(message);
@@ -197,11 +191,4 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         _ => 3,
     };
 
-    private static bool OtherVeil(VeilReason reason) => reason switch
-    {
-        VeilReason.Quality => false,
-        VeilReason.Boot or VeilReason.Transit or VeilReason.Teleport or VeilReason.Season or
-            VeilReason.Respawn or VeilReason.Cinematic or VeilReason.MapTravel => true,
-        _ => throw new ArgumentOutOfRangeException(nameof(reason)),
-    };
 }

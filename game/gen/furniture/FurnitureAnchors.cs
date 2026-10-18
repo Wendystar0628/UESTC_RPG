@@ -28,9 +28,12 @@ public static partial class FurniturePlanner
             var width = Extent(ring, right);
             var depth = Extent(ring, facing);
             var key = "anchor:" + feature.Id.Value;
+            var ground = terrain.HeightAt(centre.X, centre.Y);
+            var deck = form == "kiosk" && WorldProps.TryNumber(feature.Props, "groundY") is { } groundY && groundY > ground + S.DeckAbove
+                ? groundY : (float?)null;
             // Fallback while anchor data is under review: nothing stands on a carriageway, in water or in a building (A01 and A05
-            // wait for the gate plazas of 18c3 and WP-30).
-            var landing = site.LandingAt(centre);
+            // wait for the gate plazas of 18c3 and WP-30). An authored elevated deck is above those ground-level outlines.
+            var landing = deck is not null ? Landing.Open : site.LandingAt(centre);
             if (landing != Landing.Open)
             {
                 diagnostics.Add(new(DiagnosticLevel.Warning, "wp13.anchor.not-placed", $"anchor {feature.Id.Value} ({form}) not placed: its point lands {Where(landing)}", feature.Id));
@@ -43,8 +46,6 @@ public static partial class FurniturePlanner
                         var p = S.Kiosk with { Width = width >= 1.4f ? width : S.Kiosk.Width, Depth = depth >= 0.4f ? depth : S.Kiosk.Depth, Height = feature.Height is float h && h >= 2.2f ? h : S.Kiosk.Height };
                         // Large entity (WLD-TERRAIN): on its pad, with a paved apron; a deck the height field does not carry (A06)
                         // comes from the overlay's groundY. An apron off the paving moves to its edge (a deck is paving already).
-                        var ground = terrain.HeightAt(centre.X, centre.Y);
-                        var deck = WorldProps.TryNumber(feature.Props, "groundY") is { } y && y > ground + S.DeckAbove ? y : (float?)null;
                         if (deck is null) (centre, facing) = KioskOnPaving(site, centre, facing, p.Width * 0.5f + S.ApronMargin, p.Depth * 0.5f + S.ApronMargin, diagnostics, feature.Id);
                         var level = deck ?? terrain.PadY(feature.Id);
                         var plan = Frame(centre, facing, 0f);

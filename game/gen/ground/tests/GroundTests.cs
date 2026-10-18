@@ -240,10 +240,7 @@ public sealed class GroundTests
     [TestCase]
     public void PaletteColumnsMatchTheRegistry()
     {
-        var root = AppContext.BaseDirectory;
-        while (root is not null && !System.IO.Directory.Exists(System.IO.Path.Combine(root, "game", "style", "palette"))) root = System.IO.Path.GetDirectoryName(root);
-        AssertThat(root is not null).OverrideFailureMessage("Repository root not found.").IsTrue();
-        var palette = System.IO.Path.Combine(root!, "game", "style", "palette");
+        var palette = RepositoryFixture.FilePath("game", "style", "palette");
         var ids = new Dictionary<string, int>();
         var core = System.IO.Path.Combine(palette, "core.json");
         foreach (var path in new[] { System.IO.File.Exists(core) ? core : System.IO.Path.Combine(palette, "keys", "registry.fallback.json"),

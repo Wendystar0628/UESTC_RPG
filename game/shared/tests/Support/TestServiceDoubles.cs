@@ -24,20 +24,50 @@ internal sealed class TestMotionSettings(bool reduceMotion = false) : IMotionSet
 /// <summary>Veil that covers and reveals instantly and counts readiness observations. Timing belongs to the veil timeline tests.</summary>
 internal sealed class ImmediateVeil : IVeilService
 {
+    private readonly List<Lease> _leases = [];
     public float Opacity { get; private set; }
     public VeilReason Reason { get; private set; }
+    public VeilContent Content { get; private set; }
+    public bool Waiting => false;
     public int Reveals { get; private set; }
     public int ActiveObservations;
     public int ObservationCount;
-    public Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog) { Reason = reason; Opacity = 1; return Task.CompletedTask; }
-    public Task Reveal(VeilReason reason, float seconds) { Reason = reason; Opacity = 0; Reveals++; return Task.CompletedTask; }
+    public IVeilLease Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog)
+    {
+        var lease = new Lease(this, reason, content);
+        _leases.Add(lease);
+        Reason = reason; Content = content; Opacity = 1;
+        return lease;
+    }
     public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness)
     {
         Interlocked.Increment(ref ActiveObservations);
         Interlocked.Increment(ref ObservationCount);
         return new Observation(() => Interlocked.Decrement(ref ActiveObservations));
     }
-    public void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds) { }
+    private sealed class Lease(ImmediateVeil owner, VeilReason reason, VeilContent content) : IVeilLease
+    {
+        private bool _active = true;
+        public Task Covered => Task.CompletedTask;
+        public bool IsCurrent => _active && owner._leases.Count > 0 && ReferenceEquals(owner._leases[^1], this);
+        public Task Reveal(float seconds)
+        {
+            if (!_active) return Task.CompletedTask;
+            _active = false;
+            owner._leases.Remove(this);
+            if (owner._leases.Count == 0) { owner.Opacity = 0; owner.Reveals++; }
+            else
+            {
+                var current = owner._leases[^1];
+                owner.Reason = current.Reason;
+                owner.Content = current.Content;
+            }
+            return Task.CompletedTask;
+        }
+        private VeilReason Reason => reason;
+        private VeilContent Content => content;
+        public void Dispose() => _ = Reveal(0);
+    }
     private sealed class Observation(Action release) : IDisposable
     {
         private int _disposed;

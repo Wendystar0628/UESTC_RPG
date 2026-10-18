@@ -30,7 +30,8 @@ public static class CaptureSequence
                     : throw new ArgumentException("T0 requires --title=1.")
                 : ReviewPoseResolver.Resolve(id, context);
             if (id != "T0") validatePose?.Invoke(pose);
-            await veil.Cover(VeilReason.Boot, 0);
+            using var cover = veil.Cover(VeilReason.Boot, 0);
+            await cover.Covered.WaitAsync(cancellationToken);
             rig.SetPose(pose);
             syncCamera();
             var appliedPose = rig.Pose;
@@ -47,7 +48,7 @@ public static class CaptureSequence
             var arrival = runtime.Arrive(appliedPose, rig.Mode);
             await CaptureBarrier.WaitForReadyAsync(host, producers, arrival, () => rig.Pose == appliedPose && contentReady(),
                 cancellationToken, includeCanvas: options.Value("ui") == "1");
-            await veil.Reveal(VeilReason.Boot, 0);
+            await cover.Reveal(0).WaitAsync(cancellationToken);
             await CaptureBarrier.WaitForReadyAsync(host, producers, arrival, () => rig.Pose == appliedPose && contentReady() && veil.Opacity == 0,
                 cancellationToken, includeCanvas: options.Value("ui") == "1");
             cancellationToken.ThrowIfCancellationRequested();

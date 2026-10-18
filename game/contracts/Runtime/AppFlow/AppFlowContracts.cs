@@ -30,5 +30,5 @@ public interface IAppFlow                     // Kernel 服务（WP-49a），主
 // 数据放在 game/data/maps/<地图>/cinematics/<id>.json，format 只增；遇到不认识的轨由 SYS-TITLE 的检查报错，不静默忽略。
 // 现在没有"角色轨"
 // CinematicPlayer 不是契约：它是 WP-49a 在 game/camera/cinematic 里的 [KernelNode]，ProcessPriority = FramePriority.Camera（−1100），
-// 只在 Title、Entering、Leaving 状态里做事；镜头只经 ICameraRig.SetPose，世界只经 ISaveService 和 IWorldControl（FlowTo、SetFlow），
+// 只在 Title、Entering、Leaving 状态里做事；镜头只经 ICameraRig.SetPose，世界经 ISaveService、IWorldControl 与 IFlowLease，
 // 黑边、字幕、标题卡经 WP-35d 的放映层接口，雾幕经 IVeilService，音频经 IAudioService.Cine（SYS-TITLE）

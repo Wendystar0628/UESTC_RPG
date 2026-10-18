@@ -117,7 +117,8 @@ public sealed class WorldStateTests
         {
             var world = CreateWorld(new TestWeatherProcess());
             world.Freeze(17 + 5 / 60d, Season.Autumn, 240);
-            world.FlowTo(17.5, rate);
+            using var flow = world.AcquireFlow(FlowPriority.Cinematic, 0);
+            flow.FlowTo(17.5, rate);
             for (var i = 0; i < 400 && world.Flow.Rate != 0; i++) world.Tick(.1);
             AssertThat(world.WorldHours).IsEqual(17.5);
             AssertThat(world.Clock).IsEqual(17.5);
@@ -127,20 +128,21 @@ public sealed class WorldStateTests
     }
 
     [TestCase]
-    public void SetFlowAndSecondFlowToCancelThePreviousStop()
+    public void LeaseRateAndSecondFlowToCancelThePreviousStop()
     {
         var world = CreateWorld(new TestWeatherProcess());
-        world.FlowTo(17.51, 1440);
-        world.SetFlow(1440);
+        using var flow = world.AcquireFlow(FlowPriority.Cinematic, 0);
+        flow.FlowTo(17.51, 1440);
+        flow.SetRate(1440);
         world.Tick(.1);
-        AssertThat(world.Clock > 17.51 && world.Flow.Rate == 1440).OverrideFailureMessage("SetFlow left the previous stop active.").IsTrue();
-        world.FlowTo(17.56, 1440);
-        world.FlowTo(17.6, 1440);
+        AssertThat(world.Clock > 17.51 && world.Flow.Rate == 1440).OverrideFailureMessage("Lease rate left the previous stop active.").IsTrue();
+        flow.FlowTo(17.56, 1440);
+        flow.FlowTo(17.6, 1440);
         world.Tick(.1);
         world.Tick(.1);
         AssertThat(world.Clock).IsEqual(17.6);
         AssertThat(world.Flow.Rate).IsEqual(0);
-        world.FlowTo(world.Clock, 1);
+        flow.FlowTo(world.Clock, 1);
         AssertThat(world.Flow.Rate).IsEqual(0);
     }
 
@@ -149,7 +151,8 @@ public sealed class WorldStateTests
     {
         var world = CreateWorld(new TestWeatherProcess());
         var instance = world.Instance;
-        world.FlowTo(18, 60);
+        using var flow = world.AcquireFlow(FlowPriority.Cinematic, 0);
+        flow.FlowTo(18, 60);
         world.SetSeason(Season.Summer);
         var endpoint = world.Capture(default);
         AssertThat(Math.Abs((ArtEphemeris.Wrap(endpoint.WorldHours + endpoint.ClockOffset, 24)) - (18)) <= 1e-10).OverrideFailureMessage($"Expected {18:R}, got {ArtEphemeris.Wrap(endpoint.WorldHours + endpoint.ClockOffset, 24):R}.").IsTrue();

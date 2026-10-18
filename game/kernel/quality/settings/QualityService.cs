@@ -12,12 +12,10 @@ public interface IQualityRuntime
     Task<double> NextFrame(CancellationToken cancellationToken);
     bool Transitioning { get; }
     bool Booting { get; }
-    bool OwnsQualityVeil { get; }
     float RefreshRate { get; }
     Vector2I OutputSize { get; }
     Vector2I ScreenSize { get; }
-    Task Cover(CancellationToken cancellationToken);
-    Task Reveal(CancellationToken cancellationToken);
+    IVeilLease Cover(CancellationToken cancellationToken);
     Task WaitForDestination(CancellationToken cancellationToken);
     void Dispatch(QualityView view, in QualityChange change);
     void ReportError(string message);
@@ -27,6 +25,7 @@ public interface IQualityRuntime
 [KernelService(typeof(IQualityService), Owner = "WP-32")]
 public sealed class QualityService : IQualityService, IBootParticipant
 {
+    internal const float VeilSeconds = 0.3f;
     private sealed class Binding
     {
         public IQualityRuntime Runtime { get; }
@@ -188,7 +187,7 @@ public sealed class QualityService : IQualityService, IBootParticipant
         var snapshot = _state.Capture();
         var previousDurable = _durableProfile;
         var applied = false;
-        var coverRequested = false;
+        IVeilLease? veil = null;
         var persistenceAttempted = false;
         try
         {
@@ -196,13 +195,13 @@ public sealed class QualityService : IQualityService, IBootParticipant
             var veiled = plan.Deltas.Any(delta => delta.Apply == ApplyClass.UnderVeil);
             if (veiled)
             {
-                coverRequested = true;
-                await runtime.Cover(cancellationToken).WaitAsync(cancellationToken);
+                veil = runtime.Cover(cancellationToken);
+                await veil.Covered.WaitAsync(cancellationToken);
             }
             cancellationToken.ThrowIfCancellationRequested();
             await runtime.NextFrame(cancellationToken).WaitAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            if (veiled && !runtime.OwnsQualityVeil) throw new InvalidOperationException("Quality veil was taken over before application.");
+            if (veil is { IsCurrent: false }) throw new InvalidOperationException("Quality veil was taken over before application.");
             applied = true;
             var change = _state.Commit(request.Profile, request.Origin, veiled);
             if (change.Knobs != 0) runtime.Dispatch(Effective, change);
@@ -211,8 +210,8 @@ public sealed class QualityService : IQualityService, IBootParticipant
             {
                 await runtime.WaitForDestination(cancellationToken).WaitAsync(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!runtime.OwnsQualityVeil) throw new InvalidOperationException("Quality veil was taken over during application.");
-                await runtime.Reveal(cancellationToken).WaitAsync(cancellationToken);
+                if (!veil!.IsCurrent) throw new InvalidOperationException("Quality veil was taken over during application.");
+                await veil.Reveal(VeilSeconds).WaitAsync(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
             }
             // No failed dispatch/readiness/reveal operation is ever written to settings.json.
@@ -237,17 +236,16 @@ public sealed class QualityService : IQualityService, IBootParticipant
             _durableProfile = previousDurable;
             if (applied)
             {
-                var rollback = _state.Restore(snapshot, request.Origin, runtime.OwnsQualityVeil);
+                var rollback = _state.Restore(snapshot, request.Origin, veil?.IsCurrent == true);
                 try { runtime.Dispatch(Effective, rollback); }
                 catch (Exception recovery) { recoveryErrors.Add(recovery); }
                 if (cancellationToken.IsCancellationRequested) return;
                 Notify(binding, rollback);
             }
             if (cancellationToken.IsCancellationRequested) return;
-            // The reason is checked again at the engine boundary; never reveal another flow's cover.
-            if (coverRequested && runtime.OwnsQualityVeil)
+            if (veil is not null)
             {
-                try { await runtime.Reveal(cancellationToken).WaitAsync(cancellationToken); }
+                try { await veil.Reveal(VeilSeconds).WaitAsync(cancellationToken); }
                 catch (Exception recovery) { recoveryErrors.Add(recovery); }
             }
             if (cancellationToken.IsCancellationRequested) return;
@@ -266,6 +264,7 @@ public sealed class QualityService : IQualityService, IBootParticipant
             request.Completion?.TrySetException(error);
             throw;
         }
+        finally { veil?.Dispose(); }
     }
 
     private void Publish(Binding binding, in QualityChange change)

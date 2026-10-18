@@ -20,7 +20,7 @@ public sealed class HudModel(IWorldState world, ICameraRig rig, IRuleset ruleset
     public IRuleset Ruleset => ruleset;
     public double Clock { get; private set; }
     public Season Season { get; private set; }
-    public int FlowRate { get; private set; }
+    public int FlowRate => world.BaseFlow.Rate;
     public WeatherSel Weather { get; private set; }
     public ViewMode Mode => _mode;
     public float Speed => _speed;
@@ -45,7 +45,6 @@ public sealed class HudModel(IWorldState world, ICameraRig rig, IRuleset ruleset
         _transition = world.Transition;
         Clock = world.Clock;
         Season = world.SeasonTarget;
-        FlowRate = world.Flow.Rate;
         Weather = world.Weather;
         Rev++;
         Changed?.Invoke();

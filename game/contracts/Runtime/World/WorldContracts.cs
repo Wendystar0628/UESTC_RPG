@@ -2,6 +2,14 @@ using System.Numerics;
 
 namespace Campus.Contracts;
 public readonly record struct Flow(int Rate);   // 世界秒 / 真实秒；取值见 FlowRates，0 = 暂停
+public enum FlowPriority : byte { Pause, Cinematic }
+public interface IFlowLease : IDisposable
+{
+    // Updates only this lease; either command cancels its preceding destination.
+    void SetRate(int rate);
+    // Advance to the next occurrence, then hold this lease at zero until changed or disposed.
+    void FlowTo(double clock, int rate);
+}
 [Flags] public enum WorldTransition : byte { None = 0, Time = 1, Season = 2, Weather = 4 }   // 几种过渡可以同时进行
 public enum WeatherMode : byte { Auto, Manual }
 public readonly record struct WeatherSel(WeatherMode Mode, WeatherKind Kind, float Intensity);
@@ -24,6 +32,8 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
     float MoonPhase { get; }                // 默认 1 = 满月
     float Omega { get; }                    // 主光角速度 °/s；WP-03 据此决定量化转灯还是连续转动（ENG-PERF）
     Flow Flow { get; }
+    Flow BaseFlow { get; }                  // 用户基础倍率；临时租约不改它，存档保存它
+    int LastFlowRate { get; }               // 用户最近一次非零基础倍率，供暂停后恢复
     bool Scrubbing { get; }                 // 正在拖动时间环（UI-VISUAL）
     WorldTransition Transition { get; }     // 位标志：快进、换季转场、换天气的过渡
     WeatherSel Weather { get; }             // 生效的天气选择（换季替换之后的值）
@@ -41,12 +51,10 @@ public interface IWorldControl              // 没有任何让世界时间倒退
 {
     void SetClock(double hours, ClockSetMode mode = ClockSetMode.Jump);   // 跳到"下一次出现"的 hours（见 §3"世界时间与天气的语义"）
     void Advance(double hours);                                // 前推 hours 小时（> 0，否则抛 ArgumentOutOfRangeException）：句点键 +1 h、脚本"前推 24 小时"
-    void FlowTo(double clock, int rate);                       // SYS-TITLE：以 rate 正向流逝，到下一次出现的 clock 正好停住（流逝变为 0）；
-                                                               // clock 取 [0, 24)，"下一次出现"与 SetClock 同一语义；rate 必须是 Flow 的取值之一，否则抛 ArgumentOutOfRangeException；
-                                                               // 停点由 WorldState 在推进那一步里夹住，不越过一帧；SetFlow 或再次 FlowTo 取消上一次未到点的 FlowTo。
-                                                               // 新游戏过场用它（60×，简短 360×，关与跳过 1440×），终态与播放速度无关
     void SetSeason(Season s);                                  // 季节任选，一律正向转场（SYS-TIME）
-    void SetFlow(int rate);                                    // rate 必须是 Flow 的取值之一，否则抛 ArgumentOutOfRangeException
+    void SetFlow(int rate);                                    // 只改用户基础倍率；rate 经 FlowRates 校验
+    // Highest priority wins; within one priority the last acquired lease wins. Release restores the next owner or BaseFlow.
+    IFlowLease AcquireFlow(FlowPriority priority, int rate);
     void SetWeather(WeatherKind kind, float? intensity = null);   // 进入手动；不合季节的格不生效（界面先用 IsNative 判断并提示）
     void SetWeatherIntensity(float intensity);
     void SetWeatherAuto();
@@ -62,7 +70,7 @@ public readonly record struct WorldSaveMoment(double WorldHours, double ClockOff
 public interface IWorldRestore
 {
     // Get once per capture on the main Save frame, after all control requests for that frame.
-    // WorldHours/ClockOffset/Season are the settled target; FlowRate is 0 at a pending FlowTo stop.
+    // WorldHours/ClockOffset/Season are the settled target; FlowRate is BaseFlow, never a temporary lease rate.
     // No time advancement, weather Step, random draws, or live-state mutation is permitted.
     WorldSaveMoment GetSaveMoment() => throw new NotSupportedException("This world provider does not support a shared save moment.");
 

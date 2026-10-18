@@ -28,7 +28,6 @@ public partial class TimeCard : Control
     private ColorRect _wave = null!;
     private TechButton _reset = null!, _plus = null!;
     private Vector2 _center;
-    private int _lastFlow = 1;
     private (Season, WeatherMode, WeatherKind)? _spectrumKey;
     private bool _dragging;
     private float _dragAngle;
@@ -133,7 +132,6 @@ public partial class TimeCard : Control
         _needle.Points = [_center + dir * 60, _center + dir * (HandleR - 9)];
         var rateIndex = Array.IndexOf(Rates, _model.FlowRate);
         if (rateIndex >= 0) _flow.Select(rateIndex, notify: false);
-        if (_model.FlowRate > 0) _lastFlow = _model.FlowRate;
         _flowText.Text = _model.FlowRate == 0 ? "‖" : $"{_model.FlowRate}×";
         _kit.Apply(_wave, new UiFx(Role: "graphic", Pin: true, Flags: UiFlags.Wave,
             Extra: _model.FlowRate == 0 ? new Vector4(0, 1, 0, 1.2f)
@@ -148,8 +146,6 @@ public partial class TimeCard : Control
         _seasons.Visible = _model.Allows(WorldControlMask.Season);
         UpdateSpectrum();
     }
-
-    public int LastFlow => _lastFlow;
 
     private void UpdateSpectrum()
     {

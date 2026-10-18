@@ -10,7 +10,7 @@ using static GdUnit4.Assertions;
 namespace Campus.Tests;
 
 [TestSuite]
-public sealed class QualityApplicationTests
+public sealed partial class QualityApplicationTests
 {
     [TestCase]
     public async Task QualityTimeoutRestoresStateReleasesOwnVeilAndDoesNotSave() =>
@@ -69,10 +69,10 @@ public sealed class QualityApplicationTests
         if (store.SaveCount != 0 || store.Hash != beforeHash) throw new InvalidOperationException("Failed application reached persistent storage.");
         if (takeover)
         {
-            if (runtime.RevealCount != 0 || runtime.Reason != VeilReason.MapTravel)
+            if (runtime.RevealCount != 1 || !runtime.OtherVeilActive || runtime.QualityVeilActive)
                 throw new InvalidOperationException("Recovery revealed another flow's veil.");
         }
-        else if (runtime.RevealCount != 1 || runtime.OwnsQualityVeil)
+        else if (runtime.RevealCount != 1 || runtime.QualityVeilActive)
             throw new InvalidOperationException("Recovery left its quality veil covering the player.");
     }
 
@@ -245,57 +245,6 @@ public sealed class QualityApplicationTests
     private static BootContext Context() => new(
         new Dictionary<string, string>(), new HashSet<string>(StringComparer.Ordinal),
         Path.Combine(RepositoryFixture.Root, "output", "tests", "quality"), "quality-tests", false);
-
-    private sealed class FakeRuntime : IQualityRuntime
-    {
-        public bool Booting { get; set; } = true;
-        public bool Transitioning { get; set; }
-        public bool OwnsQualityVeil => Reason == VeilReason.Quality;
-        public VeilReason? Reason { get; private set; }
-        public float RefreshRate => 60;
-        public Godot.Vector2I OutputSize => new(1920, 1080);
-        public Godot.Vector2I ScreenSize => OutputSize;
-        public bool FailDispatch { get; set; }
-        public bool FailRollback { get; set; }
-        public bool FailReadiness { get; set; }
-        public bool Takeover { get; set; }
-        public int RevealCount { get; private set; }
-        public QualityView? EngineView { get; private set; }
-        public List<string> Errors { get; } = [];
-        public string? HoldAt { get; set; }
-        public TaskCompletionSource<double> Held { get; } = new();
-        public int HeldCalls { get; private set; }
-        public int DispatchCount { get; private set; }
-        // Deliberately ignore cancellation: the service must reject a boundary's late result itself.
-        private Task Wait(string boundary)
-        {
-            if (HoldAt != boundary) return Task.CompletedTask;
-            HeldCalls++;
-            return Held.Task;
-        }
-        public Task<double> NextFrame(CancellationToken cancellationToken)
-        {
-            if (HoldAt != "frame") return Task.FromResult(.1);
-            HeldCalls++;
-            return Held.Task;
-        }
-        public Task Cover(CancellationToken cancellationToken) { Reason = VeilReason.Quality; return Wait("cover"); }
-        public Task Reveal(CancellationToken cancellationToken) { RevealCount++; Reason = null; return Wait("reveal"); }
-        public Task WaitForDestination(CancellationToken cancellationToken)
-        {
-            if (Takeover) Reason = VeilReason.MapTravel;
-            return FailReadiness ? Task.FromException(new TimeoutException("Fake destination exceeded 1.2 seconds.")) : Wait("destination");
-        }
-        public void Dispatch(QualityView view, in QualityChange change)
-        {
-            DispatchCount++;
-            EngineView = view; // Model a consumer that mutates before it fails.
-            if (FailDispatch) { FailDispatch = false; throw new InvalidOperationException("Fake apply consumer failed."); }
-            if (FailRollback) throw new InvalidOperationException("Fake rollback consumer failed.");
-        }
-        public void ReportError(string message) => Errors.Add(message);
-        public void ReportInfo(string message) { }
-    }
 
     private sealed class FileStoreSpy : IGraphicsSettingsStore
     {

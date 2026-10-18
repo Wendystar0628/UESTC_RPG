@@ -30,11 +30,12 @@ public sealed class MaterialWarmupRuntimeTests
         await fixture.Draw();
         AssertThat(first.Visible && fixture.Warmup.SamplesReleased).OverrideFailureMessage("The real provider did not unlock the pool after warm draws.").IsTrue();
         AssertThat(fixture.Provider.FirstDrawCompleteFrame > fixture.Provider.FirstCapturedFrame).OverrideFailureMessage("Evidence must follow actual rendered frames.").IsTrue();
-        await fixture.Veil.Reveal(VeilReason.Boot, 0f);
+        await fixture.Boot.Reveal(0f);
         await fixture.Draw();
         fixture.Capture("WP-00-material-first-visible");
         var secondSpec = fixture.Spec with { Line = LineClass.Fine };
-        await fixture.Veil.Cover(VeilReason.Boot, 0f);
+        using var lateCover = fixture.Veil.Cover(VeilReason.Boot, 0f);
+        await lateCover.Covered;
         var late = fixture.Mount("late", secondSpec);
         AssertThat(!late.Visible && !fixture.ReadyForReveal).OverrideFailureMessage("A late material inherited old readiness.").IsTrue();
         await fixture.Until(() => fixture.Veil.Opacity == 1f);
@@ -42,21 +43,23 @@ public sealed class MaterialWarmupRuntimeTests
         fixture.Capture("WP-00-material-late-cover");
         await fixture.Until(() => fixture.ReadyForReveal && late.Visible);
         AssertThat(fixture.Provider.Accepted >= 2 && fixture.Provider.Rejected == 0).OverrideFailureMessage("The late pool must complete its own real batch.").IsTrue();
-        await fixture.Veil.Reveal(VeilReason.Boot, 0f);
+        await lateCover.Reveal(0f);
         await fixture.Until(() => fixture.Veil.Opacity == 0f);
         await fixture.Draw();
         fixture.Capture("WP-00-material-late-visible");
-        var externalCover = fixture.Veil.Cover(VeilReason.Transit, 0f);
+        using var externalCover = fixture.Veil.Cover(VeilReason.Transit, 0f);
         var externallyCovered = fixture.Mount("external-cover", fixture.Spec with { Line = LineClass.Tree });
         await fixture.Until(() => fixture.ReadyForReveal && externallyCovered.Visible);
-        await externalCover;
+        await externalCover.Covered;
         AssertThat(fixture.Veil.Opacity == 1f && fixture.Veil.Reason == VeilReason.Transit).OverrideFailureMessage("Warmup revealed an external Cover that started from the previously visible viewport.").IsTrue();
-        await fixture.Veil.Reveal(VeilReason.Transit, 0f);
+        await externalCover.Reveal(0f);
         await fixture.Draw();
-        await fixture.Veil.Cover(VeilReason.Boot, 0f);
+        using var warmCover = fixture.Veil.Cover(VeilReason.Boot, 0f);
+        await warmCover.Covered;
         var coveredDuringWarm = fixture.Mount("cover-during-warm", fixture.Spec with { Line = LineClass.None });
         await fixture.Until(() => !fixture.Warmup.SamplesReleased);
-        await fixture.Veil.Cover(VeilReason.Teleport, 0f);
+        using var teleportCover = fixture.Veil.Cover(VeilReason.Teleport, 0f);
+        await teleportCover.Covered;
         await fixture.Until(() => fixture.ReadyForReveal && coveredDuringWarm.Visible);
         for (var i = 0; i < 5; i++) await fixture.Draw();
         AssertThat(fixture.Veil.Opacity == 1f && fixture.Veil.Reason == VeilReason.Teleport).OverrideFailureMessage("An explicit Cover during warmup was replaced by an older automatic reveal intent.").IsTrue();
@@ -67,21 +70,19 @@ public sealed class MaterialWarmupRuntimeTests
     [TestCase]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public async Task UncoveredViewportAndZeroSecondRevealCannotProduceWarmEvidence()
+    public async Task UncoveredViewportCannotProduceWarmEvidenceOrReleaseTheBootCover()
     {
         await using var fixture = new Fixture();
         fixture.Cover.Visible = false;
         var pool = fixture.Mount("uncovered", fixture.Spec);
-        fixture.Veil.HoldUntil(VeilReason.Boot, () => fixture.ReadyForReveal, 60f);
-        var reveal = fixture.Veil.Reveal(VeilReason.Boot, 0f);
         for (var i = 0; i < MaterialWarmup.StableFrames + 5; i++) await fixture.Draw();
         AssertThat(!fixture.Cover.IsCovered && !fixture.ReadyForReveal && fixture.Warmup.SamplesReleased &&
-            fixture.Provider.Accepted == 0 && !pool.Visible && !reveal.IsCompleted).OverrideFailureMessage("Uncovered/zero-second reveal fabricated a warm or visibility result.").IsTrue();
+            fixture.Provider.Accepted == 0 && !pool.Visible && fixture.Boot.IsCurrent).OverrideFailureMessage("An uncovered viewport fabricated a warm or visibility result or lost its boot cover.").IsTrue();
         fixture.Cover.Visible = true;
         await fixture.Until(() => fixture.ReadyForReveal && pool.Visible);
         await fixture.Draw();
-        await reveal;
-        GD.Print("MATERIAL_WARMUP_EVIDENCE uncoveredAccepted=0 zeroRevealBlocked=True recovered=True");
+        await fixture.Boot.Reveal(0f);
+        GD.Print("MATERIAL_WARMUP_EVIDENCE uncoveredAccepted=0 bootCoverRetained=True recovered=True");
     }
 
     [TestCase]
@@ -144,6 +145,7 @@ public sealed class MaterialWarmupRuntimeTests
         public ToonLibrary Library { get; }
         public RecordingProvider Provider { get; }
         public VeilTimeline Veil { get; } = new();
+        public IVeilLease Boot { get; }
         public VeilLayer Cover { get; } = new();
         public MaterialWarmup Warmup { get; } = new();
         public Camera3D Camera { get; } = new() { Current = true, Near = .05f, Far = 100f };
@@ -154,6 +156,7 @@ public sealed class MaterialWarmupRuntimeTests
 
         public Fixture()
         {
+            Boot = Veil.Cover(VeilReason.Boot, 0f);
             var tree = Engine.GetMainLoop() as SceneTree ?? throw new InvalidOperationException("Godot runtime required.");
             var palettes = new Palettes();
             var source = new ShaderMaterialSource();
@@ -217,6 +220,7 @@ public sealed class MaterialWarmupRuntimeTests
         }
         public async ValueTask DisposeAsync()
         {
+            Boot.Dispose();
             Parent.Free();
             Library.Dispose();
             await Textures.ShutdownAsync();

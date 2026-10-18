@@ -97,9 +97,9 @@ public partial class HudRoot
                 return true;
             case "toggle_flow":
                 if (!_model.Allows(WorldControlMask.Flow)) return false;
-                _control.SetFlow(_model.FlowRate == 0 ? _resident?.Time.LastFlow ?? 1 : 0);
+                _control.SetFlow(_model.World.BaseFlow.Rate == 0 ? _model.World.LastFlowRate : 0);
                 _model.Poke();
-                _toast.Show(UiKit.T(_model.World.Flow.Rate == 0 ? "toast.flow.paused" : "toast.flow.resumed"), _model.World.Flow.Rate == 0 ? "pause" : null);
+                _toast.Show(UiKit.T(_model.World.BaseFlow.Rate == 0 ? "toast.flow.paused" : "toast.flow.resumed"), _model.World.BaseFlow.Rate == 0 ? "pause" : null);
                 return true;
             case "next_season":
                 if (!_model.Allows(WorldControlMask.Season)) return false;

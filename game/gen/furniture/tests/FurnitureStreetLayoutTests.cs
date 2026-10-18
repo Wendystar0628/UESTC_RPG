@@ -43,7 +43,7 @@ public sealed class FurnitureStreetLayoutTests
         var onDesign = a.Items.Where(i => i.Kind == FurnitureKind.Bench && site.PavingEdgeFacing(i.Anchor + Front(i.Part.At) * (((FurnitureParams)i.Part.Params).Depth * 0.5f + 0.4f)) is { Road: { } w } && w.Id.Value.StartsWith("design:", StringComparison.Ordinal)).ToList();
         Console.WriteLine($"benches facing a design walk: {onDesign.Count} " + string.Join(", ", onDesign.Select(b => $"{b.Key} ({b.Anchor.X:F1}, {b.Anchor.Y:F1})")));
         AssertThat(a.Count(FurnitureKind.Bin) * 2 >= rest - 2 && a.Count(FurnitureKind.Bin) <= rest).OverrideFailureMessage("a bin at every other rest stop").IsTrue();
-        // SYS-ATLAS: a kiosk or a post on every anchor whose point lands on open ground. The counts follow the anchor data, so
+        // SYS-ATLAS: a kiosk or a post on every anchor on open ground or an authored elevated deck. The counts follow the anchor data, so
         // moving an anchor (WP-48c) never needs a new number here.
         var landings = AnchorLandings(World.Value);
         var kiosks = landings.Count(l => l.Form == "kiosk" && l.Landing == Landing.Open);
@@ -208,7 +208,9 @@ public sealed class FurnitureStreetLayoutTests
             var form = value.GetString();
             if (form is not ("kiosk" or "post")) continue;
             var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
-            found.Add((feature, form, centre, site.LandingAt(centre)));
+            var deck = form == "kiosk" && feature.TryNumber("groundY") is { } groundY
+                && groundY > world.Terrain.HeightAt(centre.X, centre.Y) + FurnitureStyle.DeckAbove;
+            found.Add((feature, form, centre, deck ? Landing.Open : site.LandingAt(centre)));
         }
         return found;
     }

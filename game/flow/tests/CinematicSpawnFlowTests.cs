@@ -99,18 +99,23 @@ public sealed class CinematicSpawnFlowTests
         var rig = new FlowTestRig(completeArrivalImmediately: !delayDestination);
         var world = rig.World; var camera = rig.Camera; var veil = rig.Veil; var presentation = rig.Presentation;
         var runtime = rig.Runtime; var playback = rig.Playback; var diagnostics = rig.Diagnostics;
-        world.SetFlow(60);
+        const int savedFlow = 60;
+        world.SetFlow(savedFlow);
         var maps = Maps(out _, out _);
         var saves = new ResumeSaveService(camera, world, runtime, maps.Current, () => presentation.IsCovered);
         var exit = new TestAppExit(quitDuringWait);
         var flow = rig.CreateFlow(saves, maps, exit);
         await flow.PrepareBoot(new(ShowTitle: pending)); await flow.PrepareWorld(); await flow.CompleteBoot();
+        if (world.BaseFlow.Rate != savedFlow || pending && world.Flow.Rate != 0)
+            throw new InvalidOperationException("Title preparation changed the saved base flow instead of holding it.");
         if (!pending)
         {
             camera.SetPose(saves.Meta.Pose);
             runtime.CompleteArrivalImmediately = true;
             var leaving = flow.ReturnToTitle();
             await CinematicTestFrames.Complete(leaving, playback, presentation, veil);
+            if (world.BaseFlow.Rate != savedFlow || world.Flow.Rate != 0)
+                throw new InvalidOperationException("Returning to title changed the saved base flow instead of holding it.");
             runtime.CompleteArrivalImmediately = !delayDestination;
         }
         var previousArrivals = runtime.Arrivals;
@@ -135,7 +140,7 @@ public sealed class CinematicSpawnFlowTests
                 await Task.Yield();
                 if (entering.IsCompleted || flow.State != AppState.Entering || !camera.InputLocked ||
                     veil.Opacity != 1 || !presentation.IsCovered || world.Instance != instance ||
-                    world.WorldHours != hours || world.Flow.Rate != 0 || runtime.Arrival?.Destination != destination ||
+                    world.WorldHours != hours || world.Flow.Rate != 0 || world.BaseFlow.Rate != savedFlow || runtime.Arrival?.Destination != destination ||
                     runtime.Arrivals != previousArrivals + 1 || saves.Loads != 0 || exit.Calls != 0)
                     throw new InvalidOperationException("A delayed resume timed out, uncovered, replaced its world or duplicated preparation.");
             }
@@ -179,7 +184,7 @@ public sealed class CinematicSpawnFlowTests
                 await CinematicTestFrames.Complete(Task.WhenAll(entering, quitting), playback, presentation, veil);
                 if (await entering != EnterResult.Entered || flow.State != AppState.Quitting || exit.Calls != 1 ||
                     diagnostics.Count != 0 || !camera.InputLocked || veil.Opacity != 1 ||
-                    world.Instance != instance || world.WorldHours != hours || world.Flow.Rate != 60)
+                    world.Instance != instance || world.WorldHours != hours || world.Flow.Rate != savedFlow)
                     throw new InvalidOperationException("Quit failed to join the ready resume or lost its saved world state.");
                 if (veil.ActiveObservations != 0)
                     throw new InvalidOperationException("Resume completion retained a readiness observation.");
@@ -194,7 +199,7 @@ public sealed class CinematicSpawnFlowTests
             throw new InvalidOperationException("Resume duplicated or bypassed its covered preparation owner.");
         if (veil.ActiveObservations != 0 || veil.ObservationCount != previousObservations + (pending ? 0 : 1))
             throw new InvalidOperationException("Flow duplicated WP-50's pending-pose observation or leaked its own live observation.");
-        if (world.Instance != instance || world.WorldHours != hours || world.Flow.Rate != 60 ||
+        if (world.Instance != instance || world.WorldHours != hours || world.Flow.Rate != savedFlow ||
             camera.Pose != saves.Meta.Pose || camera.InputLocked || saves.HasPendingPose)
             throw new InvalidOperationException("Continue lost the saved flow, world identity, endpoint or input handoff.");
     }

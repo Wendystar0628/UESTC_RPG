@@ -16,8 +16,6 @@ public partial class VeilService : Node, IVeilService
     public VeilReason Reason => _timeline.Reason;
     public bool Waiting => _timeline.Waiting;
     public bool Busy => _timeline.Busy;
-    public Exception? Failure => _timeline.Failure;
-    public event Action<Exception>? Failed;
 
     public override void _Ready()
     {
@@ -25,13 +23,10 @@ public partial class VeilService : Node, IVeilService
         ProcessMode = ProcessModeEnum.Always;
         _presentation = Services.Get<IVeilPresentation>();
         _timeline.Changed += Present;
-        _timeline.Failed += error => Failed?.Invoke(error);
         Present();
     }
     public override void _Process(double delta) => _timeline.Advance(delta);
-    public Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog) => _timeline.Cover(reason, seconds, content);
-    public void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds) => _timeline.HoldUntil(reason, ready, maxWaitSeconds);
-    public Task Reveal(VeilReason reason, float seconds) => _timeline.Reveal(reason, seconds);
+    public IVeilLease Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog) => _timeline.Cover(reason, seconds, content);
     public IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness)
     {
         if (OS.GetThreadCallerId() != OS.GetMainThreadId())
@@ -41,7 +36,7 @@ public partial class VeilService : Node, IVeilService
     public override void _ExitTree()
     {
         _timeline.Changed -= Present;
-        _timeline.StopObservingReadiness();
+        _timeline.Stop();
     }
     public void SetFrontispiece(Texture2D? texture)
     {

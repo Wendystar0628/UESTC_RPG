@@ -371,7 +371,10 @@ public sealed class PavementTests
         if (!overlays)
             foreach (var key in files.Keys.Where(key => key.StartsWith("overlay/", StringComparison.Ordinal)).ToArray()) files.Remove(key);
         foreach (var (name, text) in extra) files["overlay/" + name] = text;
-        return WorldModelLoader.Load(RealMapFixture.Entry().Descriptor.Id, files).World;
+        return RealMapFixture.LoadPrepared(files, options: overlays ? null : new WorldLoadOptions
+        {
+            ClaimedBy = new Dictionary<FeatureId, WpId>(),
+        }).World;
     }
 
     internal static string Overlay(params string[] ops) =>

@@ -35,6 +35,9 @@ public sealed partial class StageGateDriver
             if (registration is null || registration.IsStub)
                 throw new InvalidOperationException("Core lifecycle requires the formal service: " + service.Name);
         }
+        // Keep the test freeze through the later close/save sequence without changing the user's saved rate.
+        var testFreeze = control.AcquireFlow(FlowPriority.Pause, 0);
+        stage.TreeExiting += testFreeze.Dispose;
 
         if (gate == "save-close")
         {
@@ -43,7 +46,6 @@ public sealed partial class StageGateDriver
             if (await flow.Enter(new(EnterKind.NewGame, new SlotId("s1"))) != EnterResult.Entered)
                 throw new InvalidOperationException("The production flow could not enter a new game.");
             host.CheckActive();
-            control.SetFlow(0);
             input.SetInterfaceMode(false);
             if (Input.MouseMode != Input.MouseModeEnum.Captured)
                 throw new InvalidOperationException("Playing did not capture input.");
@@ -65,18 +67,19 @@ public sealed partial class StageGateDriver
             var saved = await saves.SaveNow(SaveReason.Test);
             if (saved.Status != SaveStatus.Saved) throw new InvalidOperationException("Core save failed: " + saved.Error);
             var beforeLoad = CaptureCoreSections();
-            await veil.Cover(VeilReason.Cinematic, 0);
+            using var cover = veil.Cover(VeilReason.Cinematic, 0);
+            await cover.Covered;
             await stage.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             var loaded = await saves.Load(new("s1"));
             if (loaded.Status != LoadStatus.Loaded || !CoreSnapshotsMatch(beforeLoad, CaptureCoreSections()))
                 throw new InvalidOperationException("Production save/load did not restore the core runtime state.");
-            await veil.Reveal(VeilReason.Cinematic, 0);
+            await cover.Reveal(0);
             GD.Print("CORE_ROUNDTRIP_READY");
         }
         else if (flow.State != AppState.Playing || saves.HasPendingPose || saves.Active != new SlotId("s1"))
             throw new InvalidOperationException("The second process did not fully restore its saved world.");
 
-        if (world.Flow.Rate != 0) throw new InvalidOperationException("The restored core snapshot is not paused.");
+        if (world.Flow.Rate != 0) throw new InvalidOperationException("The core lifecycle lease did not pause the world.");
         var arrival = host.MapRuntime.Arrival ?? throw new InvalidOperationException("Core lifecycle has no map arrival.");
         await CaptureBarrier.WaitForReadyAsync(stage, host.Readiness, arrival, () =>
         {

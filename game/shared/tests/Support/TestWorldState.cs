@@ -8,6 +8,8 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
 {
     private double _clockOffset;
     private bool _restorePending;
+    private readonly List<TestFlowLease> _flows = [];
+    private TestFlowLease? _activeFlow;
     public bool RestoreFaulted { get; private set; }
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; } = 1;
@@ -25,7 +27,9 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
         return Sun.AltDeg; // Test fixture deliberately exposes a settled, fixed celestial state.
     }
-    public Campus.Contracts.Flow Flow { get; private set; } = new(1);
+    public Campus.Contracts.Flow Flow => new(_activeFlow?.Rate ?? BaseFlow.Rate);
+    public Campus.Contracts.Flow BaseFlow { get; private set; } = new(1);
+    public int LastFlowRate { get; private set; } = 1;
     public bool Scrubbing => false;
     public WorldTransition Transition => WorldTransition.None;
     public ViewMode Mode { get; private set; } = ViewMode.Fly;
@@ -64,6 +68,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         ValidateClock(hours);
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
         WorldHours += (hours - Clock + 24) % 24;
+        foreach (var lease in _flows) lease.Clock = null;
         Rev++;
     }
 
@@ -73,15 +78,8 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         if (!double.IsFinite(hours) || hours <= 0 || !double.IsFinite(WorldHours + hours))
             throw new ArgumentOutOfRangeException(nameof(hours));
         WorldHours += hours;
+        foreach (var lease in _flows) lease.Clock = null;
         Rev++;
-    }
-
-    public void FlowTo(double clock, int rate)
-    {
-        EnsureControlsAvailable();
-        ValidateRate(rate);
-        SetClock(clock);
-        Flow = new Campus.Contracts.Flow(0);
     }
 
     public void SetSeason(Season s)
@@ -97,8 +95,71 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     {
         EnsureControlsAvailable();
         ValidateRate(rate);
-        Flow = new Campus.Contracts.Flow(rate);
+        BaseFlow = new Campus.Contracts.Flow(rate);
+        if (rate > 0) LastFlowRate = rate;
         Rev++;
+    }
+
+    public IFlowLease AcquireFlow(FlowPriority priority, int rate)
+    {
+        EnsureControlsAvailable();
+        if (!Enum.IsDefined(priority)) throw new ArgumentOutOfRangeException(nameof(priority));
+        ValidateRate(rate);
+        var lease = new TestFlowLease(this, priority, rate);
+        _flows.Add(lease);
+        SelectFlow();
+        Rev++;
+        return lease;
+    }
+
+    private void SelectFlow()
+    {
+        _activeFlow = null;
+        foreach (var lease in _flows)
+            if (_activeFlow is null || (byte)lease.Priority >= (byte)_activeFlow.Priority) _activeFlow = lease;
+        if (RestoreFaulted || _restorePending || _activeFlow?.Clock is not { } clock) return;
+        // Explicit fixture commands settle immediately, including a previously suspended owner.
+        WorldHours += (clock - Clock + 24) % 24;
+        _activeFlow.Clock = null;
+        _activeFlow.Rate = 0;
+    }
+
+    private sealed class TestFlowLease(TestWorldState world, FlowPriority priority, int rate) : IFlowLease
+    {
+        private TestWorldState? _world = world;
+        public FlowPriority Priority { get; } = priority;
+        public int Rate { get; set; } = rate;
+        public double? Clock { get; set; }
+        public void SetRate(int rate)
+        {
+            var owner = Owner;
+            owner.EnsureControlsAvailable();
+            ValidateRate(rate);
+            Rate = rate;
+            Clock = null;
+            owner.Rev++;
+        }
+        public void FlowTo(double clock, int rate)
+        {
+            var owner = Owner;
+            owner.EnsureControlsAvailable();
+            ValidateClock(clock);
+            ValidateRate(rate);
+            Rate = rate;
+            Clock = clock;
+            owner.SelectFlow();
+            owner.Rev++;
+        }
+        public void Dispose()
+        {
+            var owner = _world;
+            if (owner is null) return;
+            _world = null;
+            owner._flows.Remove(this);
+            owner.SelectFlow();
+            owner.Rev++;
+        }
+        private TestWorldState Owner => _world ?? throw new ObjectDisposedException(nameof(IFlowLease));
     }
 
     public void SetWeather(WeatherKind kind, float? intensity = null)
@@ -159,7 +220,9 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         _clockOffset = 0;
         SeasonTarget = season;
         AnimTime = anim % 480;
-        Flow = new Campus.Contracts.Flow(0);
+        BaseFlow = new Campus.Contracts.Flow(0);
+        LastFlowRate = 1;
+        foreach (var lease in _flows) lease.Clock = null;
         // Boot initialization only: the startup owner resets/enters weather after these values exist.
         Rev++;
     }
@@ -176,7 +239,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     public WorldSaveMoment GetSaveMoment()
     {
         EnsureControlsAvailable();
-        return new(WorldHours, _clockOffset, SeasonTarget, Flow.Rate);
+        return new(WorldHours, _clockOffset, SeasonTarget, BaseFlow.Rate);
     }
 
     public void AbortRestore()
@@ -198,7 +261,9 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         WorldHours = moment.WorldHours;
         _clockOffset = moment.ClockOffset;
         SeasonTarget = moment.Season;
-        Flow = new Campus.Contracts.Flow(moment.FlowRate);
+        BaseFlow = new Campus.Contracts.Flow(moment.FlowRate);
+        if (moment.FlowRate > 0) LastFlowRate = moment.FlowRate;
+        foreach (var lease in _flows) lease.Clock = null;
         _restorePending = true;
         // Keep the fault latch until the coordinator successfully commits all World sections.
     }
@@ -236,9 +301,5 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
             throw new ArgumentOutOfRangeException(nameof(hours));
     }
 
-    private static void ValidateRate(int rate)
-    {
-        if (rate is not (0 or 1 or 10 or 60 or 360 or 1440))
-            throw new ArgumentOutOfRangeException(nameof(rate));
-    }
+    private static void ValidateRate(int rate) => FlowRates.Validate(rate);
 }

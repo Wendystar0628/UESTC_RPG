@@ -15,8 +15,8 @@ public sealed partial class AppFlowService
         if (_resumeEndpoint is not null) { RequirePreparedResume(); return; }
         var slot = _request!.Slot!.Value;
         var context = Context(); var instance = world.Instance;
-        var savedFlow = _resumeFlow;
-        control.SetFlow(0);
+        var savedFlow = world.BaseFlow;
+        HoldCinematicFlow();
         var frozenHours = world.WorldHours;
         camera.SetPose(_destination);
         IMapArrival arrival;
@@ -45,7 +45,7 @@ public sealed partial class AppFlowService
         RequireHealthyWorld();
         if (!ReferenceEquals(maps.Context, context) || maps.Current != context.Descriptor.Id || world.Instance != instance)
             throw new InvalidOperationException("World or map changed while preparing the resume destination.");
-        if (world.Flow.Rate != 0 || world.WorldHours != frozenHours || _resumeFlow != savedFlow)
+        if (world.Flow.Rate != 0 || world.WorldHours != frozenHours || world.BaseFlow != savedFlow)
             throw new InvalidOperationException("Continue preparation changed the frozen world time or saved flow.");
         if (saves.HasPendingPose) throw new InvalidOperationException("Resume preparation left the saved pose pending.");
         _destination = camera.Pose; _destinationMode = camera.Mode;
@@ -71,7 +71,7 @@ public sealed partial class AppFlowService
     {
         if (TitlePrepared) return;
         using var readinessWait = veil.ObserveReadinessWait();
-        await veil.Cover(VeilReason.Cinematic, 0);
+        await CoverFlow(0);
         var pose = TitlePose();
         camera.SetPose(pose);
         var arrival = mapRuntime.Arrive(pose, ViewMode.Fly);

@@ -8,7 +8,7 @@ namespace Campus.Camera.Cinematic;
 
 /// <summary>Single playback owner, advanced only by the camera-priority node.</summary>
 [KernelService(typeof(ICinematicPlayback), Owner = "WP-49a")]
-public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRuleset rules, IVeilPresentation presentation) : ICinematicPlayback
+public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRuleset rules, IVeilPresentation presentation) : ICinematicPlayback, IDisposable
 {
     private readonly List<FrameWait> _waits = [];
     private CinematicDef? _definition;
@@ -17,10 +17,10 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
     private TaskCompletionSource? _done;
     private Task? _pending;
     private Task? _veilTask;
+    private IVeilLease? _maskLease;
     private Task? _finish;
     private int _worldIndex;
     private bool _paused;
-    private bool _covered;
     private bool _stopping;
     private bool _clearInProgress;
     private double _carry;
@@ -52,8 +52,9 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
         if (IsPlaying) throw new InvalidOperationException("A cinematic is already playing.");
         if (!rules.Current.CinematicStates.Contains(state)) throw new InvalidOperationException("Ruleset forbids cinematic playback in this state.");
         _track?.Dispose(); _track = new(definition, Anchors(start, maps), world);
+        ReleaseMask();
         _definition = definition; _worldCue = worldCue; _worldIndex = 0; Time = 0;
-        _paused = false; _covered = false; _stopping = false; _pending = null; _finish = null; _veilTask = null; _carry = 0;
+        _paused = false; _stopping = false; _pending = null; _finish = null; _veilTask = null; _carry = 0;
         _done = new();
         return _done.Task;
     }
@@ -136,7 +137,8 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
             var waits = _waits.ToArray(); _waits.Clear();
             var done = _done; _done = null;
             var track = _track; _track = null; _definition = null; _worldCue = null;
-            _pending = null; _veilTask = null; _covered = false;
+            _pending = null; _veilTask = null;
+            ReleaseMask();
             track?.Dispose();
             // Only detached waits belong to this operation; underlying world jobs keep running.
             foreach (var wait in waits) wait.Done.TrySetCanceled();
@@ -144,6 +146,7 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
         }
         finally { _clearInProgress = false; }
     }
+    public void Dispose() => Clear();
     public Task WaitUntil(Func<bool> ready, double timeout, string reason)
     {
         if (ready()) return Task.CompletedTask;
@@ -168,12 +171,25 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
             if (time >= mask.T0 && time < mask.T1 - mask.FadeOut) { needsCover = true; fadeIn = (float)mask.FadeIn; }
             if (time >= mask.T1 - mask.FadeOut && time <= mask.T1) fadeOut = (float)mask.FadeOut;
         }
-        if (_covered == needsCover) return;
-        _covered = needsCover;
-        _veilTask = needsCover ? veil.Cover(VeilReason.Cinematic, fadeIn) : veil.Reveal(VeilReason.Cinematic, fadeOut);
+        if ((_maskLease is not null) == needsCover) return;
+        if (needsCover)
+        {
+            _maskLease = veil.Cover(VeilReason.Cinematic, fadeIn);
+            _veilTask = _maskLease.Covered;
+        }
+        else
+        {
+            var mask = _maskLease!; _maskLease = null;
+            _veilTask = mask.Reveal(fadeOut);
+        }
     }
     private void Complete() { _paused = true; _done?.TrySetResult(); }
-    private void Fail(Exception error) { _paused = true; _done?.TrySetException(error); }
+    private void Fail(Exception error) { _paused = true; ReleaseMask(); _done?.TrySetException(error); }
+    private void ReleaseMask()
+    {
+        var mask = _maskLease; _maskLease = null;
+        mask?.Dispose();
+    }
     private sealed class FrameWait(Func<bool> ready, double timeout, string reason)
     {
         public Func<bool> Ready { get; } = ready;

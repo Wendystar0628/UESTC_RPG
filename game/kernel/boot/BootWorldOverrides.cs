@@ -10,8 +10,7 @@ namespace Campus.Kernel.Boot;
 /// <summary>Initial world values precede the first weather Enter; loaded worlds only use the save restore path.</summary>
 public static class BootWorldOverrides
 {
-    /// <returns>The requested flow rate to restore after initial map warming, before the flow captures its preview state.</returns>
-    public static int InitializeFreshWorld(BootArguments args, ServiceRegistry services, MapDescriptor map)
+    public static void InitializeFreshWorld(BootArguments args, ServiceRegistry services, MapDescriptor map)
     {
         if (args.HasLoad) throw new InvalidOperationException("A loaded world cannot use boot Freeze or weather Reset.");
         var world = services.Get<IWorldState>();
@@ -30,7 +29,7 @@ public static class BootWorldOverrides
 
         // No await or weather call may split this initial state ordering. Freeze itself must be world-only.
         control.Freeze(clock, season, anim);
-        control.SetFlow(0);
+        control.SetFlow((int)Number(args, "flow", 1));
         weather.Reset(boot);
         weather.Enter(map.Id, map.World.WeatherProfile, world.WorldHours);
         if (useMapWeather)
@@ -47,7 +46,6 @@ public static class BootWorldOverrides
                     world.WorldHours - .5, world.WorldHours + 2);
             }
         }
-        return (int)Number(args, "flow", 1);
     }
 
     /// <summary>Only view/flow overrides remain after PrepareWorld. Never Freeze, Reset or reseason a live process here.</summary>

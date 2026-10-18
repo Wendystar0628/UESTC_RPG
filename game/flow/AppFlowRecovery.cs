@@ -31,8 +31,9 @@ public sealed partial class AppFlowService
             _preview = null; _livePreview = false; _previewNeedsVeil = true;
             _flowTarget = null; _newTimeline = false;
             _resumeEndpoint = null;
-            HoldInput(); playback.Clear();
-            await veil.Cover(VeilReason.Cinematic, 0);
+            HoldInput();
+            await CoverFlow(0);
+            playback.Clear();
             // Runtime recovery can use the title menu; a failed boot remains Boot
             // for the stage's failure handler, without claiming a prepared title.
             // The partially restored world and camera must remain completely hidden.
@@ -58,7 +59,7 @@ public sealed partial class AppFlowService
     {
         _path = EnterPath.Veil; _skipped = true;
         _preview = null; _livePreview = false;
-        await veil.Cover(VeilReason.Cinematic, 0);
+        await CoverFlow(0);
         // These are the only operations allowed to clear the fault. Save performs
         // World -> map travel -> Content/Pose even when Context was previously null.
         if (newGame) await StartNewTimeline(); else await RestoreRequested();

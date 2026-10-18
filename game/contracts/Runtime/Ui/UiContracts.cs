@@ -31,16 +31,21 @@ public interface IVeilState
     // Default false is compatibility only; it does not attest that an implementation supports observations.
     bool Waiting => false;
 }   // 只读；音频据此压低 World 组（SYS-AUDIO）
-public interface IVeilService : IVeilState             // 草案：签名由 WP-01 在 v1 里补全
+public interface IVeilLease : IDisposable
 {
-    Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog);   // 盖满时完成
-    void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds);            // 保持不透明直到条件满足（SYS-TITLE 的 hold）
-    Task Reveal(VeilReason reason, float seconds);
+    Task Covered { get; }                  // 本租约要求的遮挡已经盖满
+    bool IsCurrent { get; }                // 雾幕服务选中的持有者；不用 Reason 推断所有权
+    // Releases only this lease. Other covers remain; the final release fades out over seconds.
+    Task Reveal(float seconds);
+}
+public interface IVeilService : IVeilState
+{
+    // Ownership is returned synchronously, before awaiting Covered. Dispose releases immediately and is idempotent.
+    IVeilLease Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog);
     // Observe actual readiness work only. Main-thread begin; Dispose may run on a worker and is idempotent.
     // Does not cover/reveal, change Reason, evaluate Ready, cancel work, or impose any timeout.
     // Each scope owns only itself; simultaneous live scopes aggregate with OR.
-    IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness)
-        => throw new NotSupportedException("This veil implementation does not support readiness observations.");
+    IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness);
 }
 
 // 其他包补的只读状态（SYS-AUDIO）

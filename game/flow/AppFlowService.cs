@@ -20,7 +20,6 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     private Task? _leaving;
     private bool _leaveSaved;
     private Pose _leavePose;
-    private int _leaveFlow;
     private IMapArrival? _titleArrival;
     private bool TitlePrepared => _titleArrival is { } arrival &&
         ReferenceEquals(mapRuntime.Arrival, arrival) && arrival.Done.IsCompletedSuccessfully;
@@ -29,8 +28,6 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     private bool _previewNeedsVeil;
     private Pose _destination;
     private ViewMode _destinationMode;
-    private int _resumeFlow = 1;
-    private int _endFlow = 1;
     // WP-06's default until the settings-owned camera preference contract is available.
     private readonly float _userFov = FlowTuning.DefaultUserFov;
     private double? _flowTarget;
@@ -73,7 +70,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         _request = request with { Slot = slot }; _finishing = false; _quitting = false; _skipped = false;
         LastError = null;
         _faultHold = null;
-        _newTimeline = false; _flowTarget = null; _skip = null; _endFlow = _resumeFlow;
+        _newTimeline = false; _flowTarget = null; _skip = null;
         _definition = null; _playbackStart = null; _path = null;
         _resumeEndpoint = null; _resumeRequested = false;
         HoldInput(); Change(AppState.Entering);
@@ -90,6 +87,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
                 _ => throw new ArgumentOutOfRangeException(nameof(_request)),
             };
             if (restore.RestoreFaulted) return await RecoverEntry(newGame);
+            HoldCinematicFlow();
             var context = Context(); var catalog = new CinematicCatalog(context);
             var meta = newGame ? null : Info(_request.Slot!.Value)?.Meta;
             _destination = meta?.Pose ?? maps.ResolveSpawn(context.Descriptor.Id).Fly;
@@ -114,7 +112,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             if (direct)
             {
                 _path = EnterPath.Veil; _skipped = true;
-                await veil.Cover(VeilReason.Cinematic, motion.ReduceMotion ? FlowTuning.ReducedMotionSeconds : FlowTuning.CoverSeconds);
+                await CoverFlow(motion.ReduceMotion ? FlowTuning.ReducedMotionSeconds : FlowTuning.CoverSeconds);
                 if (newGame) await StartNewTimeline(); else await RestoreRequested();
                 if (newGame) await AdvanceToDefault();
                 _finishing = true;
@@ -132,8 +130,9 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         {
             CaptureFailure(error);
             if (restore.RestoreFaulted) { await HoldRestoreFailure(); return EnterResult.Failed; }
-            HoldInput(); playback.Clear(); control.SetFlow(0);
-            await veil.Cover(VeilReason.Cinematic, 0);
+            HoldInput(); HoldTitleFlow(); HoldCinematicFlow();
+            await CoverFlow(0);
+            playback.Clear();
             if (maps.Context is not null) camera.SetPose(TitlePose());
             if (!_quitting)
             {
@@ -153,13 +152,13 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             case WorldCueKind.RestoreSlot: await RestoreRequested(); break;
             case WorldCueKind.FlowTo:
                 _flowTarget = cue.Clock ?? throw new InvalidDataException("Flow cue has no clock.");
-                if (!AtClock(_flowTarget.Value)) control.FlowTo(_flowTarget.Value, skipping ? FlowTuning.SkipFlowRate : cue.Rate!.Value);
+                if (!AtClock(_flowTarget.Value)) CinematicFlow.FlowTo(_flowTarget.Value, skipping ? FlowTuning.SkipFlowRate : cue.Rate!.Value);
                 if (skipping) await FinishFlow(true);
                 break;
             case WorldCueKind.SetFlow:
                 if (skipping) await FinishFlow(true);
-                _endFlow = cue.Rate ?? throw new InvalidDataException("Flow cue has no rate.");
-                if (_definition is not null && cue.T < _definition.Duration) control.SetFlow(_endFlow);
+                var rate = cue.Rate ?? throw new InvalidDataException("Flow cue has no rate.");
+                if (_definition is not null && cue.T < _definition.Duration) CinematicFlow.SetRate(rate);
                 break;
             default: throw new InvalidDataException("Unknown world cue.");
         }
@@ -171,9 +170,9 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         // Save owns the destination descriptor and the entire restore transaction,
         // including recovery when the previous map Context has already unloaded.
         var result = await saves.NewGame(_request!.Slot!.Value, seed: _boot?.Seed);
-        RequireLoaded(result); _newTimeline = true; _preview = null; _livePreview = false; _endFlow = 1;
+        RequireLoaded(result); _newTimeline = true; _preview = null; _livePreview = false;
         RequireHealthyWorld();
-        control.SetFlow(0);
+        HoldCinematicFlow();
         // NewGame restores the view default as well (D-242): walking on the spawn's stand is the landing.
         // The cinematic still owns the camera until handoff.
         _destination = camera.Pose; _destinationMode = camera.Mode;
@@ -187,12 +186,12 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         {
             using var readinessWait = veil.ObserveReadinessWait();
             var result = await saves.Load(slot, LoadScope.Preview); RequireLoaded(result);
-            _resumeFlow = world.Flow.Rate; _preview = slot; _livePreview = false;
+            _preview = slot; _livePreview = false;
             _previewNeedsVeil = result.Repairs.Count > 0;
             if (_previewNeedsVeil && playback.IsPlaying) Skip();
         }
         RequireHealthyWorld();
-        _endFlow = _resumeFlow; control.SetFlow(0);
+        HoldCinematicFlow();
         _destination = Info(slot)?.Meta?.Pose ?? _destination;
         // Preview restores World/Content only. Pose stays pending throughout the
         // authored descent and is completed at the final, covered handoff.
@@ -207,7 +206,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     {
         RequireHealthyWorld();
         if (_flowTarget is not { } target || AtClock(target)) return;
-        if (fast) control.FlowTo(target, FlowTuning.SkipFlowRate);
+        if (fast) CinematicFlow.FlowTo(target, FlowTuning.SkipFlowRate);
         await playback.WaitUntil(() => AtClock(target), FlowTuning.WorldEndpointTimeoutSeconds, "World timeline did not reach its endpoint.");
     }
     private bool AtClock(double target) => Math.Abs(world.Clock - target) <= FlowTuning.ClockTolerance;
@@ -219,7 +218,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         if (!newGame)
         {
             if (!_resumeRequested) throw new InvalidOperationException("Continue timeline did not request its saved world.");
-            await veil.Cover(VeilReason.Cinematic, underVeil ? 0 : FlowTuning.CoverSeconds);
+            await CoverFlow(underVeil ? 0 : FlowTuning.CoverSeconds);
             underVeil = true;
             await PrepareResumeEndpoint();
             RequirePreparedResume();
@@ -228,17 +227,18 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         {
             // The endpoint's actual destination must be warm before its first
             // playable draw, including a skip or a missing cinematic file.
-            await veil.Cover(VeilReason.Cinematic, underVeil ? 0 : FlowTuning.CoverSeconds);
+            await CoverFlow(underVeil ? 0 : FlowTuning.CoverSeconds);
             underVeil = true;
         }
         camera.SetPose(_destination);
         if (newGame) await PreparePlayableDestination();
         RequireHealthyWorld();
         playback.Clear();
-        if (_quitting) return;
-        if (underVeil) await veil.Reveal(VeilReason.Cinematic, FlowTuning.RevealSeconds);
+        CommitEntryFlow(newGame);
+        if (_quitting) { ReleaseFlow(); return; }
+        if (underVeil) await RevealFlow();
         RequireHealthyWorld();
-        control.SetFlow(_definition?.End.Flow ?? _endFlow);
+        ReleaseFlow();
         Change(AppState.Playing); ReleaseInput();
         if (newGame) await saves.SaveNow(SaveReason.NewGame);
     }
@@ -253,7 +253,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         playback.Pause();
         try
         {
-            await veil.Cover(VeilReason.Cinematic, FlowTuning.CoverSeconds);
+            await CoverFlow(FlowTuning.CoverSeconds);
             await playback.FinishWorld();
         }
         catch (Exception error) when (error is not OutOfMemoryException) { playback.Abort(error); }
@@ -262,7 +262,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     {
         if (restore.RestoreFaulted) return HoldRestoreFailure();
         if (!In(AppState.Playing)) return Task.CompletedTask;
-        _leaveSaved = false; _titleArrival = null; _leavePose = camera.Pose; _leaveFlow = world.Flow.Rate; HoldInput(); Change(AppState.Leaving);
+        _leaveSaved = false; _titleArrival = null; _leavePose = camera.Pose; HoldInput(); Change(AppState.Leaving);
         _leaving = ReturnToTitleCore(); return _leaving;
     }
     private async Task ReturnToTitleCore()
@@ -270,22 +270,23 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         try { await LeaveCore(); }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
-            CaptureFailure(error); playback.Clear();
+            CaptureFailure(error);
             if (restore.RestoreFaulted) { await HoldRestoreFailure(); return; }
-            await veil.Cover(VeilReason.Cinematic, 0);
+            await CoverFlow(0);
+            playback.Clear();
             if (!_leaveSaved)
             {
-                camera.SetPose(_leavePose); control.SetFlow(_leaveFlow);
+                camera.SetPose(_leavePose); ReleaseFlow();
                 if (!_quitting) { Change(AppState.Playing); ReleaseInput(); }
             }
             else
             {
                 if (maps.Context is not null) camera.SetPose(TitlePose());
-                control.SetFlow(0);
+                HoldTitleFlow(); ReleaseCinematicFlow();
                 if (!_quitting) Change(AppState.Title);
             }
             if (!_quitting && (!_leaveSaved || TitlePrepared) && mapRuntime.Arrival?.Done.IsCompletedSuccessfully == true)
-                await veil.Reveal(VeilReason.Cinematic, FlowTuning.RevealSeconds);
+                await RevealFlow();
         }
     }
     private async Task LeaveCore()
@@ -294,7 +295,8 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         if (restore.RestoreFaulted) { await HoldRestoreFailure(); return; }
         if (!CanLeave(saved.Status)) { Change(AppState.Playing); ReleaseInput(); return; }
         _leaveSaved = true;
-        _resumeFlow = world.Flow.Rate; _preview = saves.Active; _livePreview = true; _previewNeedsVeil = false; control.SetFlow(0);
+        _preview = saves.Active; _livePreview = true; _previewNeedsVeil = false;
+        HoldTitleFlow(); HoldCinematicFlow();
         var context = Context(); var catalog = new CinematicCatalog(context);
         var definition = _cinematicOverride is { } forced ? catalog.Read(forced) : catalog.Find("leave");
         _cinematicOverride = null;
@@ -302,17 +304,18 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         {
             var start = new CinematicPlaybackStart(TitlePose(), camera.Pose, TitlePose(), _userFov, context.Descriptor.Id);
             await playback.Play(definition, start, maps, context.World, State, ExecuteLeaveCue);
+            await CoverFlow(0);
             playback.Clear();
         }
-        else await veil.Cover(VeilReason.Cinematic, FlowTuning.CoverSeconds);
+        else await CoverFlow(FlowTuning.CoverSeconds);
         if (!TitlePrepared) await PrepareTitleDestination();
-        camera.SetPose(TitlePose());
+        camera.SetPose(TitlePose()); ReleaseCinematicFlow();
         // This is the existing world instance: do not reload it just to display T0.
         // Quit from Title never flushes; the playable pose remains in the saved metadata.
         if (!_quitting)
         {
             Change(AppState.Title);
-            await veil.Reveal(VeilReason.Cinematic, FlowTuning.RevealSeconds);
+            await RevealFlow();
         }
     }
     private async Task ExecuteLeaveCue(WorldCue cue, bool skipping)
@@ -320,10 +323,10 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         switch (cue.Cue)
         {
             case WorldCueKind.SetFlow:
-                control.SetFlow(cue.Rate!.Value);
+                CinematicFlow.SetRate(cue.Rate!.Value);
                 if (cue.Rate == 0) await PrepareTitleDestination();
                 break;
-            case WorldCueKind.FlowTo: control.FlowTo(cue.Clock!.Value, cue.Rate!.Value); break;
+            case WorldCueKind.FlowTo: CinematicFlow.FlowTo(cue.Clock!.Value, cue.Rate!.Value); break;
             case WorldCueKind.NewTimeline: case WorldCueKind.RestoreSlot: throw new InvalidDataException("A return-to-title timeline cannot replace the world.");
             default: throw new InvalidDataException("Unknown world cue.");
         }
@@ -364,11 +367,10 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             _skipped = true; _finishing = true;
             _skip ??= SkipCore(); await _skip;
             if (_entry is not null) save = await _entry == EnterResult.Entered;
-            if (!restore.RestoreFaulted) control.SetFlow(_definition?.End.Flow ?? _endFlow);
         }
         if (previous == AppState.Leaving && _leaving is not null)
         {
-            if (playback.IsPlaying) { await veil.Cover(VeilReason.Cinematic, 0); await playback.FinishWorld(); }
+            if (playback.IsPlaying) { await CoverFlow(0); await playback.FinishWorld(); }
             await _leaving;
             save = !_leaveSaved;
         }
@@ -385,7 +387,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             {
                 if (restore.RestoreFaulted) { _quitting = false; await HoldRestoreFailure(); return; }
                 _quitting = false; Change(AppState.Playing); ReleaseInput();
-                await veil.Reveal(VeilReason.Cinematic, FlowTuning.RevealSeconds);
+                await RevealFlow();
                 return;
             }
         }

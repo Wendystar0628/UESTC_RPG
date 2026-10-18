@@ -65,8 +65,7 @@ public sealed partial class AppFlowService : IAppBootFlow, IBootParticipant
             else _preview = null; // An unreadable automatic Continue falls back to the map preview.
         }
         RequireHealthyWorld();
-        _resumeFlow = world.Flow.Rate;
-        if (request.ShowTitle) { control.SetFlow(0); camera.SetPose(TitlePose()); }
+        if (request.ShowTitle) { HoldTitleFlow(); camera.SetPose(TitlePose()); }
         // Stage owns no-load world initialization before Travel and supplies desired
         // flow before this method. This branch never reconstructs a default world.
         _worldPrepared = true;

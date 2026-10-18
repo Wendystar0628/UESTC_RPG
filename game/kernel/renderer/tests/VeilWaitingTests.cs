@@ -6,28 +6,17 @@ using static GdUnit4.Assertions;
 namespace Campus.Tests;
 
 [TestSuite]
+[TestCategory("Contract")]
 public sealed class VeilWaitingTests
 {
     [TestCase]
-    public void LegacyCompatibilityDoesNotClaimObservationSupport()
-    {
-        IVeilService legacy = new LegacyVeil();
-        AssertThat(!legacy.Waiting).OverrideFailureMessage("An old implementation must default to hidden.").IsTrue();
-        try { legacy.ObserveReadinessWait(); }
-        catch (NotSupportedException) { return; }
-        throw new InvalidOperationException("An unimplemented production observation API silently reported support.");
-    }
-
-    [TestCase]
-    public void CoverAndAuthoredHoldDoNotImplyReadinessWaiting()
+    public void CoverAndAuthoredDwellDoNotImplyReadinessWaiting()
     {
         var veil = new VeilTimeline();
-        veil.Cover(VeilReason.Cinematic, 0).GetAwaiter().GetResult();
+        using var cover = veil.Cover(VeilReason.Cinematic, 0);
+        cover.Covered.GetAwaiter().GetResult();
         veil.Advance(10);
-        AssertThat(!veil.Waiting).OverrideFailureMessage("Authored opaque dwell became loading.").IsTrue();
-        veil.HoldUntil(VeilReason.Teleport, () => false, 30);
-        veil.Advance(10);
-        AssertThat(!veil.Waiting && veil.Opacity == 1).OverrideFailureMessage("HoldUntil silently acquired a readiness observation.").IsTrue();
+        AssertThat(!veil.Waiting && veil.Opacity == 1).OverrideFailureMessage("Authored opaque dwell became loading.").IsTrue();
     }
 
     [TestCase]
@@ -41,7 +30,8 @@ public sealed class VeilWaitingTests
         AssertThat(ordinary.Waiting).OverrideFailureMessage("Ordinary wait never became visible.").IsTrue();
         var boot = new VeilTimeline();
         using var frontispiece = boot.ObserveReadinessWait(VeilWaitKind.BootFrontispiece);
-        boot.Cover(VeilReason.Cinematic, 0).GetAwaiter().GetResult(); // Reason cannot reclassify this scope.
+        using var cover = boot.Cover(VeilReason.Cinematic, 0); // Reason cannot reclassify this scope.
+        cover.Covered.GetAwaiter().GetResult();
         boot.Advance(3.999);
         AssertThat(!boot.Waiting).OverrideFailureMessage("Frontispiece wait became visible before four seconds.").IsTrue();
         boot.Advance(.001);
@@ -80,20 +70,15 @@ public sealed class VeilWaitingTests
     }
 
     [TestCase]
-    public void ReadinessFailureAndCancellationStillLeaveTheWorldCovered()
+    public void DisposingReadinessObservationsLeavesTheirOwnersCoverInPlace()
     {
         var veil = new VeilTimeline();
         var scope = veil.ObserveReadinessWait();
-        veil.HoldUntil(VeilReason.Cinematic, () => false, 2);
-        var reveal = veil.Reveal(VeilReason.Cinematic, 1);
-        try { veil.Advance(3); }
-        finally { scope.Dispose(); }
-        AssertThat(!veil.Waiting && veil.Opacity == 1 && reveal.IsFaulted).OverrideFailureMessage("Failure cleared protection or retained the wait indicator.").IsTrue();
-        _ = reveal.Exception;
+        using var cover = veil.Cover(VeilReason.Cinematic, 0);
+        scope.Dispose();
+        AssertThat(!veil.Waiting && veil.Opacity == 1 && cover.IsCurrent).OverrideFailureMessage("Observation disposal cleared protection or retained the wait indicator.").IsTrue();
         var cancelled = veil.ObserveReadinessWait();
-        try { throw new OperationCanceledException(); }
-        catch (OperationCanceledException) { }
-        finally { cancelled.Dispose(); }
+        cancelled.Dispose();
         veil.Advance(10);
         AssertThat(!veil.Waiting).OverrideFailureMessage("Cancelled observation resurfaced after later frames.").IsTrue();
     }
@@ -130,15 +115,6 @@ public sealed class VeilWaitingTests
         AssertThat(workerThreadId != 0 && workerThreadId != ownerThreadId).OverrideFailureMessage($"Test did not cross a thread boundary: owner={ownerThreadId}, worker={workerThreadId}.").IsTrue();
         Console.WriteLine($"VeilWaitingTests threads: owner={ownerThreadId}, worker={workerThreadId}.");
         if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
-    }
-
-    private sealed class LegacyVeil : IVeilService
-    {
-        public float Opacity => 1;
-        public VeilReason Reason => VeilReason.Boot;
-        public Task Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog) => Task.CompletedTask;
-        public void HoldUntil(VeilReason reason, Func<bool> ready, float maxWaitSeconds) { }
-        public Task Reveal(VeilReason reason, float seconds) => Task.CompletedTask;
     }
 
 }

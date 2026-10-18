@@ -271,7 +271,7 @@ public sealed class NodeBenchTests
         var ops = new List<OverlayOp> { new AddOp(feature.Id, feature.Kind, feature.Geometry, null, feature.Props, "furniture test walk") };
         if (hide) ops.Add(new HideOp(feature.Id, "furniture test: hidden again"));
         files["overlay/zz-furniture-test.d/0000-fixture.json"] = JsonSerializer.Serialize(new OverlayFile(new("furniture-test"), new("WP-13"), ops) { Map = entry.Descriptor.Id }, ContractJson.Options);
-        return WorldModelLoader.Load(entry.Descriptor.Id, files).World;
+        return RealMapFixture.LoadPrepared(files, entry.Descriptor.Id).World;
     }
 
     /// <summary>The world with a walk filed the way the effective network files a design walk: as a network line, as a feature, or both (null leaves that stack alone).</summary>
