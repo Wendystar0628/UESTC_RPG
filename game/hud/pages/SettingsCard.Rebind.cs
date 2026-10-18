@@ -8,7 +8,7 @@ public partial class SettingsCard
 {
     private readonly Dictionary<string, TechButton> _rebindRows = [];
 
-    private void BuildRebind(Control page)
+    private System.Collections.IEnumerable BuildRebind(Control page)
     {
         var group = _kit.Layout.SettingGroup(page, UiKit.T("rebind.group"));
         foreach (var action in KeyboardActions())
@@ -17,6 +17,7 @@ public partial class SettingsCard
             var button = _kit.Button(row, ButtonStyle.Secondary, KeyLabel(action), "keycap", pressed: () => BeginCapture(action));
             button.AccessibilityName = UiKit.T("rebind.action." + action);
             _rebindRows[action] = button;
+            yield return null;
         }
         _kit.Text(page, UiKit.T("rebind.note"), "small", "text.2");
     }

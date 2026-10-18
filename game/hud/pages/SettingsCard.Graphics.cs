@@ -15,7 +15,7 @@ public partial class SettingsCard
     private VBoxContainer? _graphicsActions;
     private QualityProfile? _planned;
 
-    private void BuildGraphics(Control page)
+    private System.Collections.IEnumerable BuildGraphics(Control page)
     {
         var quality = Svc<IQualityService>();
         var presets = Enum.GetValues<QualityPreset>();
@@ -29,6 +29,7 @@ public partial class SettingsCard
             Plan(new QualityProfile(presets[index], new Dictionary<QualityKnob, float>()));
             SyncKnobs();
         };
+        yield return null;
         foreach (var group in quality.Knobs.GroupBy(spec => GraphicsGroup(spec.Knob)))
         {
             var content = _kit.Layout.SettingGroup(page, UiKit.T("quality.group." + group.Key));
@@ -39,6 +40,7 @@ public partial class SettingsCard
                 KnobControl(editor, spec, RequestedValue(spec.Knob));
                 if (spec.Apply is ApplyClass.UnderVeil or ApplyClass.Restart)
                     Parts.Tag(_kit, editor, UiKit.T(spec.Apply == ApplyClass.Restart ? "quality.tag.restart" : "quality.tag.veil"), spec.Apply == ApplyClass.UnderVeil);
+                yield return null;
             }
         }
         _kit.Text(page, UiKit.T("quality.footnote"), "small", "text.2");

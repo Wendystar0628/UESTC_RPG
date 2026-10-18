@@ -1,3 +1,4 @@
+using System.Collections;
 using Campus.Contracts;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
@@ -10,9 +11,11 @@ public enum SettingsPage : byte { Keys, General, Graphics, Sound, Rebind, Licens
 /// <summary>贴左的设置页：容器安排页头、单行横滚页签、滚动正文和始终可见的操作栏；关闭即释放。</summary>
 public partial class SettingsCard : Control
 {
+    private const int RowsPerFrame = 4;
     private static readonly SettingsPage[] Order = [SettingsPage.Keys, SettingsPage.General, SettingsPage.Graphics, SettingsPage.Sound, SettingsPage.Rebind, SettingsPage.Licenses];
     private readonly Dictionary<SettingsPage, VBoxContainer> _pages = [];
     private readonly HashSet<SettingsPage> _filled = [];
+    private readonly Dictionary<SettingsPage, IEnumerator> _builders = [];
     private readonly List<TechButton> _tabs = [];
     private UiKit _kit = null!;
     private IInputRouter _router = null!;
@@ -26,6 +29,7 @@ public partial class SettingsCard : Control
     private IDisposable? _rebindLock;
     private Tween? _opening;
     private bool _built;
+    private int _fillRevision;
 
     public event Action? CloseRequested;
     public event Action? QuitRequested;
@@ -132,6 +136,9 @@ public partial class SettingsCard : Control
 
     private void Release()
     {
+        _fillRevision++;
+        foreach (var builder in _builders.Values) (builder as IDisposable)?.Dispose();
+        _builders.Clear();
         // 当帧再次打开也不能让待释放的旧页参与排版、焦点和绘制。
         foreach (var child in GetChildren())
         {
@@ -150,31 +157,54 @@ public partial class SettingsCard : Control
         _built = false;
     }
 
-    private void Fill(SettingsPage page)
+    private async Task Fill(SettingsPage page, int revision)
     {
-        if (!_filled.Add(page)) return;
+        if (_filled.Contains(page)) return;
         var content = _pages[page];
-        switch (page)
+        if (!_builders.TryGetValue(page, out var builder))
         {
-            case SettingsPage.Keys: BuildKeys(content); break;
-            case SettingsPage.General: BuildGeneral(content); break;
-            case SettingsPage.Graphics: BuildGraphics(content); break;
-            case SettingsPage.Sound: BuildSound(content); break;
-            case SettingsPage.Rebind: BuildRebind(content); break;
-            case SettingsPage.Licenses: BuildLicenses(content); break;
-            default: throw new InvalidOperationException("Unknown settings page.");
+            IEnumerable steps = page switch
+            {
+                SettingsPage.Keys => BuildKeys(content),
+                SettingsPage.General => BuildGeneral(content),
+                SettingsPage.Graphics => BuildGraphics(content),
+                SettingsPage.Sound => BuildSound(content),
+                SettingsPage.Rebind => BuildRebind(content),
+                SettingsPage.Licenses => BuildLicenses(content),
+                _ => throw new InvalidOperationException("Unknown settings page."),
+            };
+            _builders[page] = builder = steps.GetEnumerator();
+        }
+        // 先呈现卡片外框，每帧再建少量设置行；切页保留进度，关闭沿原生命周期释放。
+        while (true)
+        {
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            if (revision != _fillRevision || !IsInsideTree() || !Visible) return;
+            for (var row = 0; row < RowsPerFrame; row++)
+            {
+                if (builder.MoveNext()) continue;
+                (builder as IDisposable)?.Dispose();
+                _builders.Remove(page);
+                _filled.Add(page);
+                content.Visible = true;
+                _pageActions.Visible = page == SettingsPage.Graphics;
+                RefreshGraphics();
+                return;
+            }
         }
     }
+
+    public override void _ExitTree() => _fillRevision++;
 
     private void Show(SettingsPage page)
     {
         if (_page != page) EndCapture();
         _page = page;
-        Fill(page);
-        foreach (var (p, content) in _pages) content.Visible = p == page;
+        _ = Fill(page, ++_fillRevision);
+        foreach (var (p, content) in _pages) content.Visible = p == page && _filled.Contains(p);
         for (var i = 0; i < _tabs.Count; i++) _tabs[i].Selected = Order[i] == page;
         if (_graphicsActions is not null) _graphicsActions.Visible = page == SettingsPage.Graphics;
-        _pageActions.Visible = page == SettingsPage.Graphics;
+        _pageActions.Visible = page == SettingsPage.Graphics && _filled.Contains(page);
         _frame.Scroll.ScrollVertical = 0;
     }
 }
