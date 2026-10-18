@@ -54,10 +54,10 @@
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
   - ★ CORE-DECISIONS-SYSTEMS §0.1 接入要点 · L27 · 75
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
-- CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.1k
-- CORE-DECISIONS-SYSTEMS §3 音频 · L75 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L97 · 2.7k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L123 · 2.8k
+- CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.2k
+- CORE-DECISIONS-SYSTEMS §3 音频 · L76 · 2.1k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L98 · 2.7k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L124 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -1388,7 +1388,7 @@
 `docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md` · 6.2k 字 · 保存时机与限频、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏、校验修复
 关键词：保存、读档、自动保存、安全时刻、落定快照、续跑等价、世界实例、校验修复、退出保存、现实时间不计、SaveReason、LoadScope、CaptureContext、RestoreContext、NewGameContext、SaveStatus、SaveResult、LoadStatus、LoadResult、SaveState、IWorldState.Instance
 
-- SYS-SAVE-FLOW §0 结论 · L23 · 516
+- SYS-SAVE-FLOW §0 结论 · L23 · 521
   - ★ SYS-SAVE-FLOW §0.1 接入要点 · L30 · 277
 - SYS-SAVE-FLOW §1 保存时机与可靠性 · L36 · 1.2k
   - SYS-SAVE-FLOW §1.1 时机 · L38 · 379

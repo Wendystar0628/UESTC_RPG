@@ -71,6 +71,7 @@ gates: []
 | D-098 | 自定义标记存进存档，ID 用本图内递增的整数，不用 `Guid.NewGuid`；存档以外只存筛选偏好 | 平面地图 | SYS-ATLAS-UI §3.5；SYS-ATLAS §3 | 生效 |
 | D-099 | 门禁、`--shots`、`--bench` 下默认不写存档（`--save=off`） | 门禁 | ENG-GATES-SHOTS §1 | 生效 |
 | D-100 | 存档按以后的 RPG 可扩展：各系统用 `[SaveSection]` 声明自己的段，字段有增减就升版本并写迁移函数 | 有状态的包 | SYS-SAVE-FORMAT §1.4 | 生效 |
+| D-240 | 读档恢复存档时的模式（旁观或行走），行走位置落不了地才按修正表切旁观 | 存档 | SYS-SAVE-FLOW §2.3 | 生效 |
 
 ## 3 音频
 
