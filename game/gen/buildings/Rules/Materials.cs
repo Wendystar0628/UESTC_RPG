@@ -36,11 +36,12 @@ public static class Materials
 
     /// <summary>
     /// ToonSpec for a material class with the given colour family as Lit/Shade.
-    /// The non-colour fields define the material class (WP-04 ToonLibrary), so each kind maps to one material ID.
+    /// The non-colour fields define the material class (WP-04 ToonLibrary), so each kind maps to one material ID;
+    /// the wall's construction pattern (<see cref="WallPatterns"/>) is part of that class.
     /// </summary>
-    public static ToonSpec Spec(MaterialKind kind, string family) => kind switch
+    public static ToonSpec Spec(MaterialKind kind, string family, WallPattern pattern = WallPattern.None) => kind switch
     {
-        MaterialKind.Wall => new(Lit(family), Shade(family)) { Fx = ToonFx.BevelLift | ToonFx.Mottle, Wet = 0.6f },
+        MaterialKind.Wall => new(Lit(family), Shade(family)) { Fx = ToonFx.BevelLift | ToonFx.Mottle, Wet = 0.6f, SurfacePattern = WallPatterns.Spec(pattern) },
         MaterialKind.Trim => new(Lit(family), Shade(family)) { Fx = ToonFx.BevelLift, Wet = 0.55f },
         MaterialKind.Roof => new(Lit(family), Shade(family)) { Fx = ToonFx.Mottle, Wet = 0.85f },
         MaterialKind.Glass => new(Lit(family), Shade(family)) { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0f },

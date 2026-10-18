@@ -49,8 +49,11 @@ public sealed partial class BuildingMesher
                         // Apron only: the panel from the floor to the sill of a window of the column, the lintel stays wall.
                         var accent = accentColumn && yc > _p.PlinthTopY && yc < _p.RoofY - 0.3f &&
                             (!_prof.AccentApron || openings.Any(o => o.Kind == BayKind.Window && o.U0 <= uc && uc <= o.U1 && _p.FloorY(o.Row) <= yc && yc <= o.Y0));
-                        var face = accent ? _accent : _wall;
-                        frame.Panel(_sink, face, u0, u1, 0f, y0, y1, frame.Out, new(u0, y0), new(u1, y1));
+                        // Pattern UV: metres along the wall and up from the plinth top; the gate follows the precision zone (K4, K5 stay plain).
+                        var face = (accent ? _accent : _wall) with { Uv2 = WallPatterns.Uv2Of(_p.WallZoneAt(fi, uc, yc < _p.GroundRowTopY)) };
+                        var v0 = y0 - _p.PlinthTopY;
+                        var v1 = y1 - _p.PlinthTopY;
+                        frame.Panel(_sink, face, u0, u1, 0f, y0, y1, frame.Out, new(u0, v0), new(u1, v1));
                     }
                 }
             }

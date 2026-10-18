@@ -41,8 +41,11 @@ public sealed partial class BuildingMesher
         _openings = new FacadeOpenings(plan, block, lod, sink);
         _roofParts = new RoofParts(plan, lod, sink);
         _fittings = new FacadeFittings(plan, lod, sink);
-        _wall = new Face(MaterialKind.Wall, _prof.Wall);
-        _accent = new Face(MaterialKind.Wall, _prof.Accent ?? _prof.Wall);
+        // Every wall-class face of a building carries the same pattern, so walls, reveals and far massing stay one material;
+        // only the main wall panels turn it on (UV2 gate in Walls).
+        var pattern = WallPatterns.Of(_prof.Wall);
+        _wall = new Face(MaterialKind.Wall, _prof.Wall, Pattern: pattern);
+        _accent = new Face(MaterialKind.Wall, _prof.Accent ?? _prof.Wall, Pattern: pattern);
         _trim = new Face(MaterialKind.Trim, _prof.Trim);
         _plinth = new Face(MaterialKind.Trim, _prof.Plinth);
         _stone = new Face(MaterialKind.Trim, Families.StoneBeige);

@@ -75,6 +75,8 @@ public sealed class BuildingPlan
     /// the ground-floor row takes its facade segment's ground band. Empty without fidelity data: everything is K3.
     /// </summary>
     public IReadOnlyList<FidelityZone[]> OpeningZones { get; init; } = [];
+    /// <summary>The exported facade segments of this building (IFidelityModel.Facades), for the zone of a wall panel; empty without fidelity data.</summary>
+    public IReadOnlyList<FacadeSegment> FacadeSegments { get; init; } = [];
     /// <summary>Precision zone of the roof from the fidelity data (IFidelityModel.Roof); without data the default K4 (a).</summary>
     public FidelityZone RoofZone { get; init; } = FidelityZone.K4;
     /// <summary>Columns of the building window grid (all bays of all rings, blank ones included).</summary>
@@ -94,6 +96,14 @@ public sealed class BuildingPlan
     public FidelityZone ZoneOf(int facade, int opening) =>
         facade < OpeningZones.Count ? OpeningZones[facade][opening] : FidelityZone.K3;
 
+    /// <summary>Precision zone of the wall at skin u of a facade (the segment's ground band for the ground-floor row); no segment: K3.</summary>
+    public FidelityZone WallZoneAt(int facade, float uSkin, bool groundRow)
+    {
+        var f = Facades[facade];
+        var segment = FacadeSegments.Count == 0 ? null : PlanFacades.SegmentAt(FacadeSegments, FootAt(f.Ring), f, uSkin);
+        return segment is null ? FidelityZone.K3 : groundRow ? segment.GroundBand : segment.Zone;
+    }
+
     public PlanRing SkinAt(int ring) => ring == 0 ? SkinOuter : SkinHoles[ring - 1];
     public PlanRing FootAt(int ring) => ring == 0 ? Outer : Holes[ring - 1];
 
@@ -111,6 +121,8 @@ public sealed class BuildingPlan
     public float RoofY => BaseY + Height;
     public float SunkY => BaseY - FacadeRules.WallBelowPad;
     public float PlinthTopY => BaseY + FacadeRules.PlinthTop;
+    /// <summary>Top of the ground-floor row of the wall (the first floor level; a single-storey building: the wall top).</summary>
+    public float GroundRowTopY => Storeys > 1 ? FloorY(1) : WallTopY;
     /// <summary>Floor level of storey k; storey 0 is the ground floor at pad + 0.15 m.</summary>
     public float FloorY(int k) => BaseY + FacadeRules.FloorAbovePad + k * StoreyHeight;
     public float CorniceDrop => Small ? 0.3f : 0.5f;

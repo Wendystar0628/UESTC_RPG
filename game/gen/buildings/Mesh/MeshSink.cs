@@ -12,8 +12,13 @@ namespace Campus.Gen.Buildings.Mesh;
 /// </summary>
 public readonly record struct V(Vector3 P, Vector3 N, Vector2 Uv, float Ao = 0f);
 
-/// <summary>Per-face attributes written into the VF-A COLOR bytes and the VF-B UV2.</summary>
-public readonly record struct Face(MaterialKind Kind, string Family, byte Flags = 0, byte Spare = 0, Vector2 Uv2 = default);
+/// <summary>
+/// Per-face attributes written into the VF-A COLOR bytes and the VF-B UV2. A <see cref="WallPattern"/> on a wall face puts it
+/// in the patterned wall class: UV2 is then (gate, K) (default (0, 0) = no pattern drawn), and only the main wall panels,
+/// whose UV is metres along the wall and up, set gate 1.
+/// </summary>
+public readonly record struct Face(MaterialKind Kind, string Family, byte Flags = 0, byte Spare = 0, Vector2 Uv2 = default,
+    WallPattern Pattern = WallPattern.None);
 
 public static class VertexFlags
 {
@@ -141,14 +146,14 @@ public sealed class MeshSink(PaletteCatalog catalog)
     }
 
     private Stream Get(in Face f, int extra) =>
-        Get(Materials.Spec(f.Kind, Materials.DefaultFamily(f.Kind)), extra);
+        Get(Materials.Spec(f.Kind, Materials.DefaultFamily(f.Kind), f.Pattern), extra);
 
     private Stream Get(ToonSpec spec, int extra)
     {
         var key = ClassKey(spec);
         if (!_streams.TryGetValue(key, out var s))
         {
-            s = new Stream(spec, spec.Kind == ToonKind.Glass, catalog);
+            s = new Stream(spec, spec.Kind == ToonKind.Glass || spec.SurfacePattern is not null, catalog);
             _streams.Add(key, s);
         }
         if (s.Count + extra > MaxVertices)
@@ -167,7 +172,9 @@ public sealed class MeshSink(PaletteCatalog catalog)
             ((int)spec.Kind).ToString("D2", c), ((int)spec.Fx).ToString("D3", c), ((int)spec.Line).ToString(c),
             ((int)spec.Steps).ToString(c), ((int)spec.Normal).ToString(c), spec.Band.ToString("R", c),
             spec.Translucency.ToString("R", c), spec.Wet.ToString("R", c), spec.Deep?.Value ?? "-", spec.Backface?.Value ?? "-",
-            spec.Emissive?.Value ?? "-");
+            spec.Emissive?.Value ?? "-",
+            spec.SurfacePattern is { } p ? string.Join(",", p.Layer.ToString(c), p.PeriodMeters.X.ToString("R", c), p.PeriodMeters.Y.ToString("R", c),
+                p.JointMeters.X.ToString("R", c), p.JointMeters.Y.ToString("R", c)) : "-");
     }
 
     private void Flush(string key, Stream s)

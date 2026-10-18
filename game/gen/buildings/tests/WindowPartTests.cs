@@ -79,7 +79,7 @@ public sealed class WindowPartTests
         // Without window gaskets the dark steel is only the astragal between the entrance leaves (two boxes).
         var dark = near.Where(Gasket).Sum(b => b.Index.Length / 3);
         AssertThat(Rules.OpeningRules.Gaskets || dark <= 24).OverrideFailureMessage("Expected: " + ("window gaskets follow OpeningRules.Gaskets")).IsTrue();
-        AssertThat(near.Concat(mid).All(b => b.Uv2 is null || b.Uv2.Where((_, i) => i % 2 == 0).All(x => x == set.Blocks[0].Base))).OverrideFailureMessage("Expected: " + ("no part glass keeps WP-10's placeholder numbering")).IsTrue();
+        AssertThat(near.Concat(mid).All(b => b.Uv2 is null || b.Material.Spec.SurfacePattern is not null || b.Uv2.Where((_, i) => i % 2 == 0).All(x => x == set.Blocks[0].Base))).OverrideFailureMessage("Expected: " + ("no part glass keeps WP-10's placeholder numbering")).IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

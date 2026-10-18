@@ -178,28 +178,34 @@ internal static class PlanFacades
         for (var fi = 0; fi < facades.Count; fi++)
         {
             var f = facades[fi];
-            var ring = rings[f.Ring];
-            var dir = ring.Dir[f.Edge];
             zones[fi] = new FidelityZone[openings[fi].Length];
             for (var k = 0; k < openings[fi].Length; k++)
             {
                 var o = openings[fi][k];
-                var centre = ring.Points[f.Edge] + dir * ((o.U0 + o.U1) * 0.5f + f.SkinShift);
-                FacadeSegment? best = null;
-                var bestDistance = OpeningRules.ZoneMatchDistance;
-                foreach (var s in segments)
-                {
-                    var ab = s.B - s.A;
-                    var length = ab.Length();
-                    if (length < 1e-3f || MathF.Abs(Vector2.Dot(ab / length, dir)) < 0.95f) continue;
-                    var t = Math.Clamp(Vector2.Dot(centre - s.A, ab) / (length * length), 0f, 1f);
-                    var distance = Vector2.Distance(centre, s.A + ab * t);
-                    if (distance < bestDistance) { best = s; bestDistance = distance; }
-                }
+                var best = SegmentAt(segments, rings[f.Ring], f, (o.U0 + o.U1) * 0.5f);
                 zones[fi][k] = best is null ? FidelityZone.K3 : o.Row == 0 ? best.GroundBand : best.Zone;
             }
         }
         return zones;
+    }
+
+    /// <summary>The facade segment a point of a facade lies on (skin u): parallel and within OpeningRules.ZoneMatchDistance of the footprint line; null when none.</summary>
+    public static FacadeSegment? SegmentAt(IReadOnlyList<FacadeSegment> segments, PlanRing ring, FacadeLayout f, float uSkin)
+    {
+        var dir = ring.Dir[f.Edge];
+        var centre = ring.Points[f.Edge] + dir * (uSkin + f.SkinShift);
+        FacadeSegment? best = null;
+        var bestDistance = OpeningRules.ZoneMatchDistance;
+        foreach (var s in segments)
+        {
+            var ab = s.B - s.A;
+            var length = ab.Length();
+            if (length < 1e-3f || MathF.Abs(Vector2.Dot(ab / length, dir)) < 0.95f) continue;
+            var t = Math.Clamp(Vector2.Dot(centre - s.A, ab) / (length * length), 0f, 1f);
+            var distance = Vector2.Distance(centre, s.A + ab * t);
+            if (distance < bestDistance) { best = s; bestDistance = distance; }
+        }
+        return best;
     }
 
     /// <summary>Where openings may sit on a skin edge: clear of its corner chamfers by 0.2 m.</summary>
