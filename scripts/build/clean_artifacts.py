@@ -21,7 +21,7 @@ import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 OUT = os.path.join(ROOT, 'output')
-KEEP = {'.locks', 'cache', 'shots', 'pipeline-wheels'}  # 构建锁、缓存（下面单独查）、固定机位截图、管线安装包
+KEEP = {'.locks', 'cache', 'shots', 'pipeline-wheels', 'posters'}  # 构建锁、缓存（下面单独查）、固定机位截图、管线安装包、交给作者的海报
 CACHE_KEEP = {'bake'}  # output/cache 下长期保留的只有烘焙缓存
 BUILD_ROOTS = ('game', 'scripts', 'pipeline')  # 找已删工程的 bin/obj
 DEPTH = 3
