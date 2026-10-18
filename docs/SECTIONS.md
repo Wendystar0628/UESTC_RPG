@@ -222,7 +222,7 @@
 
 ## WF-RULE · 全员守则
 
-`docs/workflow/WF-RULE-全员守则.md` · 6.8k 字 · 所有会话和子代理都要守的规则：不过度工程化、不向作者出选项、不预判时间、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、拿不准就问、写文档、一次性产物、bug 按严重程度修、精度按 demo 阶段定
+`docs/workflow/WF-RULE-全员守则.md` · 6.9k 字 · 所有会话和子代理都要守的规则：不过度工程化、不向作者出选项、不预判时间、不干等、文件操作、git 与直接改主线、主线优先、测试最小、少打架、拿不准就问、写文档、一次性产物、bug 按严重程度修、精度按 demo 阶段定
 关键词：全员守则、不过度工程化、不向作者出选项、不预判时间、不短轮询、不干等、不重复复核、文件操作、删除规则、git、直接改主线、只提交自己的文件、回滚只用 revert、不 stash、主线优先、测试最小、少和别人打架、一次迁完、拿不准就问、写文档、写记忆、D-201、D-168、D-167、D-199、D-209、D-211、一次性产物、用完就删、bug 分级、阻断、先提交后修、修不收敛就停、数量级判断、主观阈值、硬约束、demo 阶段、不照上线大型游戏、精度与画面相称、看得出差别、专项几分钟
 
 - WF-RULE §0 结论 · L22 · 250
@@ -239,7 +239,7 @@
 - WF-RULE §10 少和别人打架（D-199） · L94 · 580
 - WF-RULE §11 拿不准就问 · L104 · 137
 - WF-RULE §12 写文档与记忆 · L109 · 247
-- WF-RULE §13 一次性产物（D-221） · L117 · 669
+- WF-RULE §13 一次性产物（D-221） · L117 · 692
 - WF-RULE §14 按严重程度修 bug（D-223） · L126 · 384
 - WF-RULE §15 精度按 demo 阶段定（D-225、D-231） · L135 · 496
 
@@ -330,7 +330,7 @@
   - ★ ART-MODELING-PROPORTION §0.1 接入要点 · L30 · 288
 - ART-MODELING-PROPORTION §1 先定身份，再放开 · L38 · 369
 - ART-MODELING-PROPORTION §2 现代混凝土和石材楼的比例规则 · L44 · 813
-- ART-MODELING-PROPORTION §3 植被、水面与地面 · L65 · 671
+- ART-MODELING-PROPORTION §3 植被、水面与地面 · L65 · 708
 - ART-MODELING-PROPORTION §4 道具与小物件 · L75 · 625
 - ART-MODELING-PROPORTION §5 颜色 · L86 · 277
 - ART-MODELING-PROPORTION §6 让 20 多个建模者风格一致 · L93 · 887
@@ -413,8 +413,8 @@
 `docs/art/ART-SKYLIGHT-天空光照与大气.md` · 8.4k 字 · 默认状态的光与太阳、主光与阴影、天光、受光退场、人造光、光效清单与冷暖对照；天空与雾见子文档
 关键词：主光、日月交接、无影蓝调、阴影、月影、天光、天光方向、退光线、受光退场、人造光、路灯光斑、窗灯、光效清单、光柱、镜头光斑、冷暖对照
 
-- ART-SKYLIGHT §0 结论 · L21 · 1.2k
-  - ★ ART-SKYLIGHT §0.1 接入要点 · L38 · 489
+- ART-SKYLIGHT §0 结论 · L21 · 1.1k
+  - ★ ART-SKYLIGHT §0.1 接入要点 · L38 · 471
 - ART-SKYLIGHT §1 默认状态的光 · L48 · 321
 - ART-SKYLIGHT §2 太阳本体与主光色 · L56 · 384
 - ART-SKYLIGHT §3 光照骨架 · L63 · 3.0k
@@ -422,7 +422,7 @@
   - ART-SKYLIGHT §3.2 天光（环境光） · L79 · 212
   - ART-SKYLIGHT §3.3 受光分布 · L83 · 452
   - ART-SKYLIGHT §3.4 受光退场的顺序 · L90 · 192
-  - ART-SKYLIGHT §3.5 人造光 · L96 · 796
+  - ART-SKYLIGHT §3.5 人造光 · L96 · 756
 - ART-SKYLIGHT §4 光效清单 · L115 · 1.5k
 - ART-SKYLIGHT §5 冷暖对照 · L134 · 580
 - ART-SKYLIGHT §6 待验证 · L158 · 243
@@ -549,8 +549,8 @@
   - WLD-INTERIORS-BUILD §1.2 触发 · L45 · 274
   - WLD-INTERIORS-BUILD §1.3 进楼与出楼，以及衔接保证（ENG-PERF-STREAM §1.2 第 6 条） · L52 · 407
 - WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L60 · 734
-- WLD-INTERIORS-BUILD §3 风格 · L69 · 1.4k
-  - WLD-INTERIORS-BUILD §3.1 明暗与暖影 · L73 · 224
+- WLD-INTERIORS-BUILD §3 风格 · L69 · 1.3k
+  - WLD-INTERIORS-BUILD §3.1 明暗与暖影 · L73 · 195
   - WLD-INTERIORS-BUILD §3.2 窗光斑与光（最重要的室内画面） · L77 · 418
   - WLD-INTERIORS-BUILD §3.3 色名、识别要素与夜间 · L85 · 597
 - WLD-INTERIORS-BUILD §4 生活痕迹规则 · L91 · 613
@@ -674,8 +674,8 @@
 `docs/world/WLD-TERRAIN-SHAPE-地形设计.md` · 7.1k 字 · 地形设计规则：设计原则、高度预算与分层、手感刻度、坡度类、竖直落差、水位与岸型
 关键词：地形设计原则、地形分层、高度预算、主模数、手感刻度、灰区、坡度类、零带、竖直落差、台缘带、退台、常水位、岸型、涉水带、开放泳区出口岸型、遮挡与揭示
 
-- WLD-TERRAIN-SHAPE §0 结论 · L23 · 573
-  - ★ WLD-TERRAIN-SHAPE §0.1 接入要点 · L30 · 240
+- WLD-TERRAIN-SHAPE §0 结论 · L23 · 615
+  - ★ WLD-TERRAIN-SHAPE §0.1 接入要点 · L30 · 282
 - WLD-TERRAIN-SHAPE §1 设计原则 · L36 · 929
   - WLD-TERRAIN-SHAPE §1.1 总骨架 · L38 · 189
   - WLD-TERRAIN-SHAPE §1.2 规则 · L44 · 729
@@ -684,14 +684,14 @@
   - WLD-TERRAIN-SHAPE §2.2 手感刻度 · L73 · 499
   - WLD-TERRAIN-SHAPE §2.3 坡度类 · L88 · 494
   - WLD-TERRAIN-SHAPE §2.4 全图范围与零带 · L101 · 258
-- WLD-TERRAIN-SHAPE §3 竖直落差 · L108 · 1.2k
+- WLD-TERRAIN-SHAPE §3 竖直落差 · L108 · 1.3k
   - WLD-TERRAIN-SHAPE §3.1 连接规则 · L110 · 509
   - WLD-TERRAIN-SHAPE §3.2 台缘带（v1 的挡墙） · L126 · 337
   - WLD-TERRAIN-SHAPE §3.3 退台与高墙 · L133 · 184
-  - WLD-TERRAIN-SHAPE §3.4 防护与谁来做 · L138 · 196
+  - WLD-TERRAIN-SHAPE §3.4 防护与谁来做 · L138 · 231
 - WLD-TERRAIN-SHAPE §4 水位与岸型 · L143 · 1.6k
   - WLD-TERRAIN-SHAPE §4.1 常水位 · L145 · 271
-  - WLD-TERRAIN-SHAPE §4.2 岸型 · L151 · 550
+  - WLD-TERRAIN-SHAPE §4.2 岸型 · L151 · 554
   - WLD-TERRAIN-SHAPE §4.3 涉水带、湖盆与河渠 · L162 · 346
   - WLD-TERRAIN-SHAPE §4.4 穿出校界 · L168 · 110
   - WLD-TERRAIN-SHAPE §4.5 开放泳区的出口岸型与支撑面 · L172 · 277
@@ -909,7 +909,7 @@
 关键词：图书馆室内、中庭、回廊、八字楼梯、塔楼梯、交通核、开放范围、封口、门斗、闸机、二楼门厅、看进去的路径、品·悦吧室内、光条、顶棚波光、红桌、视觉落点、八瓣光、台灯、校训木匾、五楼西窗阅览带、北侧露台、博物馆展厅、环形展线、interiors.json、lib.main
 
 - MAP-QSH-LIBRARY §0 结论 · L24 · 1.3k
-  - ★ MAP-QSH-LIBRARY §0.1 接入要点 · L35 · 777
+  - ★ MAP-QSH-LIBRARY §0.1 接入要点 · L35 · 778
 - MAP-QSH-LIBRARY §1 平面、交通核与开放范围 · L48 · 1.4k
 - MAP-QSH-LIBRARY §2 三条看进去的路径 · L76 · 621
 - MAP-QSH-LIBRARY §3 中庭与回廊 · L88 · 384
@@ -1187,14 +1187,14 @@
 - SYS-ATLAS-TRAVEL §3 传送流程 · L70 · 1.4k
   - SYS-ATLAS-TRAVEL §3.1 两种方式 · L72 · 267
   - SYS-ATLAS-TRAVEL §3.2 传送的时序 · L78 · 413
-  - SYS-ATLAS-TRAVEL §3.3 落点 · L89 · 445
+  - SYS-ATLAS-TRAVEL §3.3 落点 · L89 · 436
   - SYS-ATLAS-TRAVEL §3.4 预取、打断与边界情况 · L101 · 266
 - SYS-ATLAS-TRAVEL §4 解锁 · L106 · 439
 - SYS-ATLAS-TRAVEL §5 待验证 · L117 · 77
 
 ## SYS-ATLAS-UI · 地图界面：底图、小地图与大地图
 
-`docs/systems/SYS-ATLAS-UI-地图界面.md` · 6.3k 字 · 平面地图的界面：底图内容与上色、外围与校界画法、文字与标注、小地图、大地图的布局缩放图层目录传送卡；自定义标记与追踪在主线之后
+`docs/systems/SYS-ATLAS-UI-地图界面.md` · 6.4k 字 · 平面地图的界面：底图内容与上色、外围与校界画法、文字与标注、小地图、大地图的布局缩放图层目录传送卡；自定义标记与追踪在主线之后
 关键词：底图、小地图、大地图、地图页、atlasRect、距离场、map.* 色值、区域名、地名标注、labels.json、缩放档、目录页、传送卡、图层
 
 - SYS-ATLAS-UI §0 结论 · L23 · 372
@@ -1204,12 +1204,12 @@
   - SYS-ATLAS-UI §1.2 上色 · L45 · 497
   - SYS-ATLAS-UI §1.3 外围、校界与箱庭外缘 · L51 · 426
   - SYS-ATLAS-UI §1.4 季节与昼夜：只做轻微变化 · L58 · 193
-  - SYS-ATLAS-UI §1.5 文字与标注 · L63 · 349
+  - SYS-ATLAS-UI §1.5 文字与标注 · L63 · 388
 - SYS-ATLAS-UI §2 小地图 · L70 · 903
-- SYS-ATLAS-UI §3 大地图 · L82 · 1.8k
+- SYS-ATLAS-UI §3 大地图 · L82 · 1.9k
   - SYS-ATLAS-UI §3.1 布局与开合 · L84 · 454
-  - SYS-ATLAS-UI §3.2 缩放与平移 · L91 · 260
-  - SYS-ATLAS-UI §3.3 图层与目录 · L96 · 309
+  - SYS-ATLAS-UI §3.2 缩放与平移 · L91 · 294
+  - SYS-ATLAS-UI §3.3 图层与目录 · L96 · 343
   - SYS-ATLAS-UI §3.4 传送卡 · L101 · 354
   - SYS-ATLAS-UI §3.5 自定义标记与追踪（主线之后） · L107 · 285
   - SYS-ATLAS-UI §3.6 按键 · L112 · 114
@@ -1453,8 +1453,8 @@
 `docs/systems/SYS-TIME-时间与季节.md` · 5.2k 字 · 世界状态三个量与只向前的时间规则、默认状态落金初灯、美术太阳与月亮、过渡的定目标顺序与用时、质量底线
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、只向前、美术太阳、美术月亮、满月、定目标顺序、质量底线
 
-- SYS-TIME §0 结论 · L22 · 1.1k
-  - ★ SYS-TIME §0.1 接入要点 · L38 · 480
+- SYS-TIME §0 结论 · L22 · 1.0k
+  - ★ SYS-TIME §0.1 接入要点 · L38 · 468
 - SYS-TIME §1 世界状态与时间规则 · L47 · 1.7k
   - SYS-TIME §1.1 默认状态 · L49 · 478
   - SYS-TIME §1.2 三个量与时间规则 · L57 · 1.2k
@@ -1607,7 +1607,7 @@
 关键词：天气、天气格、手动天气、天气向量、太阳雨、雨的可读性、闪电、彩虹、降水池、湿润、积水、天光方向、钉住天气、保持晴、天气巡回
 
 - SYS-WEATHER §0 结论 · L22 · 1.1k
-  - ★ SYS-WEATHER §0.1 接入要点 · L36 · 573
+  - ★ SYS-WEATHER §0.1 接入要点 · L36 · 579
 - SYS-WEATHER §1 天气清单与界面格 · L47 · 630
 - SYS-WEATHER §2 每种天气的画面规则 · L64 · 1.7k
 - SYS-WEATHER §3 雨的可读性规则 · L91 · 550
@@ -1619,12 +1619,12 @@
 
 ## UI-NAV-WAYPOINTS · 点位、跳转与传送
 
-`docs/ui/UI-NAV-WAYPOINTS-点位跳转与传送.md` · 3.3k 字 · 24 个观景点位的设计意图与合法性，飞过去的方式与到达打断，预取与传送的界面侧约定
+`docs/ui/UI-NAV-WAYPOINTS-点位跳转与传送.md` · 3.3k 字 · 观景点位的设计意图与合法性，飞过去的方式与到达打断，预取与传送的界面侧约定
 关键词：点位、观景点、点位目录编号、waypoints.json、锚点不是点位、推荐状态、进场路径、飞过去、滑移、弧线飞行、雾幕弧线、到达与打断、传送、跳转压力
 
-- UI-NAV-WAYPOINTS §0 结论 · L22 · 533
+- UI-NAV-WAYPOINTS §0 结论 · L22 · 554
   - ★ UI-NAV-WAYPOINTS §0.1 接入要点 · L30 · 171
-- UI-NAV-WAYPOINTS §1 点位 · L35 · 808
+- UI-NAV-WAYPOINTS §1 点位 · L35 · 802
 - UI-NAV-WAYPOINTS §2 跳转与传送 · L46 · 1.0k
   - UI-NAV-WAYPOINTS §2.1 飞过去 · L48 · 255
   - UI-NAV-WAYPOINTS §2.2 到达与打断 · L54 · 246
@@ -1750,12 +1750,12 @@
 - ENG-BUDGET-LOD §1 细节级别与分块 · L35 · 1.3k
 - ENG-BUDGET-LOD §2 流式加载与速度 · L59 · 480
 - ENG-BUDGET-LOD §3 深度与近裁剪面 · L66 · 387
-- ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L74 · 650
+- ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L74 · 633
 - ENG-BUDGET-LOD §5 待验证（P0） · L84 · 125
 
 ## ENG-BUDGET-RULES · 推送硬规则与工程设置
 
-`docs/engineering/ENG-BUDGET-RULES-推送硬规则.md` · 5.9k 字 · 23 条推送硬规则与 project.godot、导出、Environment 等工程设置的规则
+`docs/engineering/ENG-BUDGET-RULES-推送硬规则.md` · 5.8k 字 · 23 条推送硬规则与 project.godot、导出、Environment 等工程设置的规则
 关键词：硬规则、推送规则、白名单着色器、不得新增光源、线程边界、全局着色器参数登记、风格底线不可关、存档只走一条路、本机烘焙同机确定、工程设置、渲染器、Shader Baker、版本锁定
 
 - ENG-BUDGET-RULES §0 结论 · L23 · 846
@@ -1856,7 +1856,7 @@
 - ENG-PERF-LIGHT §2 阴影、光照与后期 · L43 · 1.9k
   - ENG-PERF-LIGHT §2.1 阴影 · L45 · 657
   - ENG-PERF-LIGHT §2.2 后期链 · L56 · 662
-  - ENG-PERF-LIGHT §2.3 窗灯与路灯 · L65 · 358
+  - ENG-PERF-LIGHT §2.3 窗灯与路灯 · L65 · 325
   - ENG-PERF-LIGHT §2.4 倒影 · L71 · 204
 - ENG-PERF-LIGHT §3 待验证（P0） · L75 · 140
 
@@ -1872,7 +1872,7 @@
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L46 · 474
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L59 · 168
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L63 · 179
-- ENG-PERF-STREAM §2 主线程与 C# · L67 · 319
+- ENG-PERF-STREAM §2 主线程与 C# · L67 · 315
 - ENG-PERF-STREAM §3 内存与显存 · L73 · 264
 - ENG-PERF-STREAM §4 安装包与磁盘布局 · L77 · 155
 - ENG-PERF-STREAM §5 待验证（P0） · L81 · 79

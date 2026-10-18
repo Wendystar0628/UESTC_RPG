@@ -41,7 +41,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 ### 1.1 渲染、材质与时间（第 1–10 条）
 
 1. **材质只用白名单着色器**：只经 `ToonSpec` 和调色板色名获得；白名单以 `ownership.json` 的 `shaderWhitelist` 为准，新增文件要主代理批准；禁止逐物体建材质，逐物体变化放顶点属性、`INSTANCE_CUSTOM` 或 instance uniform（ENG-ARCH §2）。
-2. **不得新增**光源、SubViewport、CompositorEffect、全屏通道、WorldEnvironment、Environment；只有 WP-01、03、05 可以，先申请；WP-24 倒影视口与 WP-03 的 ≤ 32 盏重点 OmniLight3D 已登记。
+2. **不得新增**光源、SubViewport、CompositorEffect、全屏通道、WorldEnvironment、Environment；只有 WP-01、03、05 可以，先申请；WP-24 倒影视口已登记。
 3. **几何经登记处按格交付**，烘焙器按级别给一个典型误差，不逐件上报；全部级别烘焙成 TileBundle，`Build()` 在工作线程上跑，主线程不生成几何；只有内核创建渲染实例（`MeshInstance3D`、`MultiMeshInstance3D`、`OccluderInstance3D`，ENG-ARCH §2），静态几何经 RenderingServer 挂载。
 4. **计时与逐帧路径**：计时只由 WP-26 的通道驱动（世界时间例外）；钟点、季节、天气只在 WorldState 那一步推进；风、水、一拍二、雨丝只读 `anim_time`；`Engine.TimeScale` 固定 1，着色器不用 `TIME`；随机与计时的禁用写法见 ENG-ARCH §2（G4），例外是新游戏时取一次的天气种子；逐帧零托管分配，不在 `_Process` 里 `GetNode`；界面每秒刷新 ≤ 10 次，动效只改 `Modulate`、非容器的 `Position` / `Rotation`、instance uniform 和 `ui_night`，小地图与大地图是登记例外。
 5. **纹理**：导入为 VRAM Compressed，数据纹理运行时创建；区域包不得自带大于 512² 的贴图。
