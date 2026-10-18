@@ -17,6 +17,7 @@ public partial class WaitLamps : Control
     private UiKit _kit = null!;
     private IVeilState _veil = null!;
     private PanelContainer? _panel;
+    private Label? _label;
     private readonly Panel[] _lamps = new Panel[LampCount];
     private int _lit = -1;
     private bool _atCorner = true;
@@ -36,6 +37,12 @@ public partial class WaitLamps : Control
         var waiting = _veil.Waiting;
         if (waiting && _panel is null) Build();
         if (_panel is null) return;
+        // 只在等待期间、且服务报告本次是首次编译时换成说明；淡出期间保持原样不再跳字
+        if (waiting)
+        {
+            var text = UiKit.T(_veil.FirstShaderCompilation ? "hud.wait.first_shader" : "hud.wait.preparing");
+            _label!.Text = _kit.Theme.Upper("data") ? text.ToUpperInvariant() : text;
+        }
         if (atCorner != _atCorner) { _atCorner = atCorner; Place(); }
 
         var fade = _kit.Motion.Fade(_kit.Tokens.Ms("waitLamps", "fade"));
@@ -95,8 +102,8 @@ public partial class WaitLamps : Control
             _lamps[i].CustomMinimumSize = new Vector2(via, via);
             _lamps[i].SizeFlagsVertical = SizeFlags.ShrinkCenter;
         }
-        var label = k.Text(row, UiKit.T("hud.wait.preparing"), "data", "text.2", true, wrap: false);
-        label.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        _label = k.Text(row, UiKit.T("hud.wait.preparing"), "data", "text.2", true, wrap: false);
+        _label.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         Place();
     }
 

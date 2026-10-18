@@ -33,6 +33,7 @@ hud.perf.cpu_render,CPU 渲染,CPU render
 hud.perf.gpu_render,GPU 渲染,GPU render
 hud.perf.cpu_usage,CPU 占用,CPU use
 hud.wait.preparing,正在准备画面,Preparing the view
+hud.wait.first_shader,首次启动需要编译着色器，只会发生一次,First launch needs to compile shaders. This only happens once.
 time.shichen.zi,子时,Zi hour
 time.shichen.chou,丑时,Chou hour
 time.shichen.yin,寅时,Yin hour
@@ -83,6 +84,8 @@ toast.walk.cannot_land,这里无法落地,Cannot land here
 toast.time_forward,+1 h · {clock},+1 h · {clock}
 toast.flow.paused,流逝暂停 · P 继续,Time paused · P to resume
 toast.flow.resumed,流逝继续,Time resumed
+toast.photo.saved,已保存照片 · {folder},Photo saved · {folder}
+toast.photo.failed,照片没存下,Could not save the photo
 settings.title,设置,Settings
 settings.tab.keys,键位,Controls
 settings.tab.general,设置,General
@@ -236,6 +239,7 @@ rebind.action.atlas_index,点位目录,Point index
 rebind.action.minimap,小地图,Minimap
 rebind.action.help,操作说明,Help
 rebind.action.clean_view,纯净模式,Clean view
+rebind.action.photo_export,保存照片,Save photo
 licenses.name.self,电光年华,ELECTRIC YEARS
 licenses.name.osm,地图数据 · MAP DATA,Map data
 licenses.name.fonts,字体 · FONTS,Fonts

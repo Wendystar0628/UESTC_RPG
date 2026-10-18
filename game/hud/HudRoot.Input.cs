@@ -3,6 +3,7 @@ using Campus.Contracts.AppFlow;
 using Campus.Hud.Pages;
 using Campus.Hud.Widgets;
 using Godot;
+using System.Threading.Tasks;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud;
@@ -135,6 +136,12 @@ public partial class HudRoot
             else SetInterface(!InterfaceState);
             return true;
         }
+        // F12 不是单字符键，不受单键快捷键总开关约束（UI-NAV §4.2）；纯净模式下同样可用
+        if (e.Action == "photo_export")
+        {
+            if (!e.Echo) _ = ExportPhoto();
+            return true;
+        }
         if (!_settings.SingleKeyShortcuts) return false;
         // 只有 . 可以按住连续前进；其余键的自动重复直接吞掉
         if (e.Echo && e.Action != "time_forward") return Array.IndexOf(Actions, e.Action) >= 0;
@@ -200,6 +207,31 @@ public partial class HudRoot
             Handled();
             return;
         }
+    }
+
+    private bool _photoPending;
+
+    // 照片导出（UI-NAV §3.6）：后端忙、不可用时不提示；成功或失败各出一条临时提示
+    private async Task ExportPhoto()
+    {
+        if (_photoPending) return;
+        _photoPending = true;
+        try
+        {
+            var result = await Services.Get<IPhotoExport>().ExportCurrentAsync();
+            if (!IsInstanceValid(this) || !IsInsideTree()) return;
+            switch (result.Status)
+            {
+                case PhotoExportStatus.Saved:
+                    var folder = result.Path is { Length: > 0 } path ? System.IO.Path.GetDirectoryName(path) ?? path : "";
+                    _toast.Show(UiKit.T("toast.photo.saved", ("folder", folder)));
+                    break;
+                case PhotoExportStatus.Failed:
+                    _toast.Show(UiKit.T("toast.photo.failed"), bar: "warning.fill");
+                    break;
+            }
+        }
+        finally { _photoPending = false; }
     }
 
     private void Handled() => GetViewport().SetInputAsHandled();
