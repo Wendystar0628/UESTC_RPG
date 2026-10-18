@@ -91,6 +91,19 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    public void WalkingTravelToFlyOnlyMarkerSwitchesToFlyFirst()
+    {
+        var test = new Fixture();
+        test.Observer.Feet = new(100, 0, 100);
+        AssertThat(test.Atlas.Travel(new("test-roof"), TravelStyle.Teleport) is not null && test.View.Switches == 1
+            && test.Observer.Mode == ViewMode.Fly && test.Camera.Options?.LandOn is null).OverrideFailureMessage("Fly-only marker was not entered from the fly camera.").IsTrue();
+        test.Camera.Handle!.Completion.SetResult(TransitResult.Cancelled);
+        test.Atlas.Tick();
+        test.Observer.Mode = ViewMode.Walk; test.View.Refuse = true;
+        AssertThat(test.Atlas.Travel(new("test-roof"), TravelStyle.Teleport) is null && test.Camera.Locks == 0).OverrideFailureMessage("Refused mode switch still started travel.").IsTrue();
+    }
+
+    [TestCase]
     public void UnreadyTransitDriverCannotPretendToArrive()
     {
         var test = new Fixture();
@@ -264,6 +277,7 @@ public sealed class AtlasServiceTests
     {
         internal TestCameraRig Camera { get; } = NewCamera();
         internal Driver Driver { get; } = new();
+        internal TestView View { get; }
         internal Observer Observer { get; } = new();
         internal TestInteriorIndex Interiors { get; } = new();
         internal MutableWorldFixture World { get; }
@@ -280,12 +294,14 @@ public sealed class AtlasServiceTests
                 new("test", "test", []), new Dictionary<string, string>(), []);
             Context = new(map, World);
             var maps = new SingleMapService(Context, Camera);
+            View = new(Observer);
             Atlas = new(Camera, Observer, new TestRuleset(policy), Driver);
-            Atlas.Connect(maps, new TestAppFlow(), new TestAudio());
+            Atlas.Connect(maps, new TestAppFlow(), new TestAudio(), View);
             Reload();
         }
         internal void Reload() => Atlas.LoadMap(Context, new(1, Context.Descriptor.DataRect,
-            [Anchor("test-kiosk", Vector2.Zero, AnchorForm.Kiosk), Anchor("test-post", new(50, 0), AnchorForm.Post)]),
+            [Anchor("test-kiosk", Vector2.Zero, AnchorForm.Kiosk), Anchor("test-post", new(50, 0), AnchorForm.Post),
+                Anchor("test-roof", new(600, 600), AnchorForm.Post) with { Teleport = new(new(new(600, 30, 600), 0, -12), null) }]),
             new(1, [new("test-district", new("测试区", "Test District"), null)], []), new(1, []));
         internal RestoreContext RestoreContext() => new() { Map = Context.Descriptor.Id, FromVersion = 1, Missing = false };
         private static AtlasMarker Anchor(string id, Vector2 at, AnchorForm form) => new(new(id), MarkerKind.Anchor,
@@ -331,6 +347,17 @@ public sealed class AtlasServiceTests
 
         private IMapTransition Finish(MapId from, MapId to, MapTravelCause cause, MapTravelResult result) =>
             LastTransition = TestMapTransition.Completed(from, to, cause, result);
+    }
+    private sealed class TestView(Observer observer) : IViewControl
+    {
+        public int Switches { get; private set; }
+        public bool Refuse { get; set; }
+        public ViewMode Mode => observer.Mode;
+        public Task<ModeSwitchResult> SetMode(ViewMode m, ModeSwitchVia via)
+        {
+            if (Refuse) return Task.FromResult(ModeSwitchResult.Refused);
+            Switches++; observer.Mode = m; return Task.FromResult(ModeSwitchResult.Ok);
+        }
     }
     private sealed class Driver : ITransitDriver
     {

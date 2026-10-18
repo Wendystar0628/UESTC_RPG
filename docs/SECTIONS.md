@@ -48,16 +48,16 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.5k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 12.6k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
   - ★ CORE-DECISIONS-SYSTEMS §0.1 接入要点 · L27 · 75
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.0k
-- CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.2k
-- CORE-DECISIONS-SYSTEMS §3 音频 · L76 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L98 · 2.7k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L124 · 2.8k
+- CORE-DECISIONS-SYSTEMS §2 存档 · L60 · 1.3k
+- CORE-DECISIONS-SYSTEMS §3 音频 · L77 · 2.1k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L99 · 2.7k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L125 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -1186,7 +1186,7 @@
 - SYS-ATLAS-TRAVEL §2 锚点实体：导览亭与导览桩 · L54 · 1.2k
 - SYS-ATLAS-TRAVEL §3 传送流程 · L70 · 1.4k
   - SYS-ATLAS-TRAVEL §3.1 两种方式 · L72 · 267
-  - SYS-ATLAS-TRAVEL §3.2 传送的时序 · L78 · 417
+  - SYS-ATLAS-TRAVEL §3.2 传送的时序 · L78 · 413
   - SYS-ATLAS-TRAVEL §3.3 落点 · L89 · 445
   - SYS-ATLAS-TRAVEL §3.4 预取、打断与边界情况 · L101 · 266
 - SYS-ATLAS-TRAVEL §4 解锁 · L106 · 439

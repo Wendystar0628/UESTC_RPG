@@ -28,6 +28,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     private IMapService? _maps;
     private IAppFlow? _flow;
     private IAudioService? _audio;
+    private IViewControl? _view;
     private ITransitHandle? _transit;
     private IDisposable? _transitInput;
     private MarkerId? _destination;
@@ -48,9 +49,9 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     public JsonTypeInfo<AtlasSave> TypeInfo => AtlasJsonContext.Contract.AtlasSave;
 
     // Runtime-only services are connected after discovery to avoid Save -> Atlas -> Save cycles.
-    public void Connect(IMapService maps, IAppFlow flow, IAudioService audio)
+    public void Connect(IMapService maps, IAppFlow flow, IAudioService audio, IViewControl? view = null)
     {
-        _maps = maps; _flow = flow; _audio = audio;
+        _maps = maps; _flow = flow; _audio = audio; _view = view;
     }
 
     public void OnMapLoaded(IMapContext context)
@@ -187,14 +188,20 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
 
     public void Prefetch(MarkerId id)
     {
-        // Destination streaming belongs to WP-36/WP-02. Do not invent a bake key or report readiness here.
-        if (Find(id)?.Teleport is null) return;
+        // The transit driver prefetches and warms the destination itself; a hover prefetch would reset WarmReady.
     }
 
     public ITransitHandle? Travel(MarkerId id, TravelStyle style)
     {
         if (!CanTravel(id, style, out _)) return null;
         var spec = Find(id)!.Teleport!;
+        // A walking observer cannot land on a viewpoint without a standing pose: change to the fly camera first.
+        if (observer.Mode == ViewMode.Walk && spec.Stand is null)
+        {
+            var switched = _view?.SetMode(ViewMode.Fly, ModeSwitchVia.Ui);
+            if (switched is not { IsCompletedSuccessfully: true } || switched.Result == ModeSwitchResult.Refused
+                || observer.Mode != ViewMode.Fly) return null;
+        }
         var stand = observer.Mode switch
         {
             ViewMode.Walk => spec.Stand,

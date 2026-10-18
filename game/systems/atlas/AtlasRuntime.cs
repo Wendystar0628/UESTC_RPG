@@ -17,12 +17,12 @@ public partial class AtlasRuntime : Godot.Node, IMapAware
     private bool _productPublished;
 
     public AtlasRuntime(IAtlasService atlas, IAtlasBaseSource baseSource, IMapService maps, IAppFlow flow,
-        IAudioService audio, IBakeService bake)
+        IAudioService audio, IBakeService bake, IViewControl view)
     {
         _atlas = (AtlasService)atlas;
         _bake = bake;
         _baseSource = (AtlasBaseSource)baseSource;
-        _atlas.Connect(maps, flow, audio);
+        _atlas.Connect(maps, flow, audio, view);
     }
 
     public override void _Ready() => ProcessPriority = FramePriority.Systems;
