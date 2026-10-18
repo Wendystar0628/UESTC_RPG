@@ -48,7 +48,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 13.8k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 13.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
@@ -56,8 +56,8 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.2k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L61 · 1.4k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L79 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.5k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L131 · 2.8k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.6k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L132 · 2.8k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -1555,7 +1555,7 @@
 
 ## SYS-WALK-BOUNDS · 可行走范围、边界与碰撞
 
-`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.3k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
+`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.2k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
 关键词：可行走范围、可行走数据、禁行区、高度场地面、边界收口、隐形墙、校界缓停、碰撞顶加高、水平外扩、安全点、回位、涉水、开放泳区、游泳出口、碰撞就绪、自动门、电梯关门换位、行走走廊、推荐路线、碰撞级 C、SurfaceTag、FootMat、WalkClass、Collider、ICollisionWorld
 
 - SYS-WALK-BOUNDS §0 结论 · L23 · 553
@@ -1563,7 +1563,7 @@
 - SYS-WALK-BOUNDS §1 可行走范围 · L39 · 850
 - SYS-WALK-BOUNDS §2 边界收口 · L58 · 816
 - SYS-WALK-BOUNDS §3 楼内的门与电梯 · L79 · 623
-- SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L93 · 983
+- SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L93 · 962
 - SYS-WALK-BOUNDS §5 行走走廊与节奏 · L117 · 212
 - SYS-WALK-BOUNDS §6 推荐路线 · L123 · 193
 - SYS-WALK-BOUNDS §7 碰撞与就绪 · L127 · 1.4k
@@ -1580,7 +1580,7 @@
 - SYS-WALK §3 视角、镜头与舒适度 · L66 · 2.1k
   - SYS-WALK §3.1 视场角、舒适度与键位 · L68 · 668
   - SYS-WALK §3.2 行走模式的镜头 · L78 · 1.4k
-- SYS-WALK §4 模式切换 · L111 · 872
+- SYS-WALK §4 模式切换 · L111 · 850
 - SYS-WALK §5 控制器的规则 · L126 · 778
 - SYS-WALK §6 待验证 · L137 · 328
 
