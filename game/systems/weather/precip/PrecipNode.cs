@@ -49,11 +49,17 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
     /// <summary>本图降水池的 CustomAabb（可达范围"中心 ± 3 km"）；没有地图时罩住原点 ± 3 km。</summary>
     public Box3 PoolBounds { get; private set; } = PrecipModel.PoolBounds(System.Numerics.Vector2.Zero, 3000f, -100f, 2000f);
 
-    public override void _EnterTree() => ProcessPriority = FramePriority.Motion;
+    public override void _EnterTree()
+    {
+        ProcessPriority = FramePriority.Motion;
+        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        _model.Reset();
+    }
 
     public override void _Ready()
     {
         _world = Services.Get<IWorldState>();
+        _world.InstanceChanged += OnWorldInstanceChanged;
         _wind = Services.Get<IWindField>();
         _camera = Services.Get<ICameraRig>();
         _material = Services.Get<IShaderMaterialSource>().Create(ShaderId.Precip);
@@ -66,6 +72,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
 
     public override void _ExitTree()
     {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _pool?.Free();
         _pool = null;
     }
@@ -79,12 +86,14 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalWeatherFog, ToGodot(WeatherGlobalsMap.Fog(w)));
         var eye = _camera.Pose.Position;
         var gust = _wind.Sample(eye.X, eye.Z, _world.AnimTime).Gust;
-        Frame = _model.Step(w, _world.Instance, _world.Step12, gust, _density, _stepRate);
+        Frame = _model.Step(w, _world.Step12, gust, _density, _stepRate);
         _pool.VisibleCount = Frame.VisibleCount;
         _pool.SetParameter(_shaderInstancePrecipD, ToGodot(Frame.D));
         _pool.SetParameter(_shaderInstancePrecipV, ToGodot(Frame.V));
         _pool.SetParameter(_shaderInstancePrecipK, ToGodot(Frame.K));
     }
+
+    private void OnWorldInstanceChanged(long _) => _model.Reset();
 
     public void ApplyQuality(QualityView view, in QualityChange change)
     {
@@ -101,6 +110,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
     public void OnMapLoaded(IMapContext ctx)
     {
         ArgumentNullException.ThrowIfNull(ctx);
+        _model.Reset();
         var d = ctx.Descriptor;
         PoolBounds = PrecipModel.PoolBounds(d.Center, d.Roam.MaxRadius, d.Roam.FloorY, d.Roam.CeilY);
         _pool?.SetAabb(ToAabb(PoolBounds));

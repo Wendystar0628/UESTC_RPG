@@ -43,7 +43,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private MapId? _map;
     private int _mounted;
     private double _since = Interval;
-    private long _instance = long.MinValue;
+    private bool _worldReset = true;
     private N.Vector3? _appliedEye;
     private bool _resetForCapture;
     public string? Error { get; private set; }
@@ -60,16 +60,32 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     public int Trees => _mothers.Sum(m => m.Buckets.Count);
     public int Pools => _mounted * Mother.PoolCount;
 
-    public override void _EnterTree() => ProcessPriority = FramePriority.Systems;
+    public override void _EnterTree()
+    {
+        ProcessPriority = FramePriority.Systems;
+        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        OnWorldInstanceChanged(0);
+    }
 
     public override void _Ready()
     {
         _host = Services.Get<IInstancePoolHost>();
         _rig = Services.Get<ICameraRig>();
         _world = Services.Get<IWorldState>();
+        _world.InstanceChanged += OnWorldInstanceChanged;
     }
 
-    public override void _ExitTree() => FreeAll();
+    public override void _ExitTree()
+    {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        FreeAll();
+    }
+
+    private void OnWorldInstanceChanged(long _)
+    {
+        _worldReset = true;
+        _appliedEye = null;
+    }
 
     public void OnMapUnloading(MapId from)
     {
@@ -133,15 +149,14 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             if (_pending is null) _appliedEye = _rig.Pose.Position;
             return;
         }
-        var instance = _world?.Instance ?? 0;
         var eye = _rig.Pose.Position;
-        var reset = instance != _instance || _resetForCapture;
+        var reset = _worldReset || _resetForCapture;
         _since += delta;
         if (!reset && _since < Interval) return;
         _since = 0;
-        _instance = instance;
         for (var i = 0; i < _mounted; i++) _mothers[i].Refresh(eye, reset);
         _resetForCapture = false;
+        _worldReset = false;
         _appliedEye = eye;
     }
 
@@ -151,7 +166,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         foreach (var mother in _mothers) mother.Free();
         _mothers.Clear();
         _mounted = 0;
-        _instance = long.MinValue;
+        _worldReset = true;
         _appliedEye = null;
         _resetForCapture = false;
     }

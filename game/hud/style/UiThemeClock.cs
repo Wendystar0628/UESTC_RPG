@@ -22,7 +22,7 @@ public partial class UiThemeClock : Node, IUiTheme
     private bool _dark;
     private float _front;
     private float _target;
-    private long _instance;
+    private bool _resetWorld;
 
     public UiThemeClock(IWorldState world, HudSettings settings, MotionPolicy motion)
     {
@@ -45,23 +45,29 @@ public partial class UiThemeClock : Node, IUiTheme
 
     public override void _EnterTree()
     {
-        _instance = _world.Instance;
+        _resetWorld = false;
         _dark = Decide(initial: true);
         _front = _target = _dark ? 1 : 0;
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.UiNight, _front);
         _settings.Changed += OnSettingsChanged;
+        _world.InstanceChanged += OnWorldChanged;
     }
 
-    public override void _ExitTree() => _settings.Changed -= OnSettingsChanged;
+    public override void _ExitTree()
+    {
+        _settings.Changed -= OnSettingsChanged;
+        _world.InstanceChanged -= OnWorldChanged;
+    }
 
     private void OnSettingsChanged() => Judge(force: true);
+    private void OnWorldChanged(long instance) => _resetWorld = true;
 
     public override void _Process(double delta)
     {
-        if (_world.Instance != _instance)
+        if (_resetWorld)
         {
             // 换了世界实例（读档、新游戏）：直接落到新值，不扫
-            _instance = _world.Instance;
+            _resetWorld = false;
             _dark = Decide(initial: true);
             Snap();
             return;

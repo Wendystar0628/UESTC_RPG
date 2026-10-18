@@ -20,6 +20,9 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
     long Rev { get; }
     long Instance { get; }                  // 世界实例号。启动后第一次得到世界状态为 1，此后每次 Load、LoadFile、NewGame 加 1；
                                             // 切图不变（SYS-SAVE、SYS-MAPS）。做平滑、带回差或保留历史的系统，看到它变了就直接落到新值
+    // Main thread, once after a successful world commit. Only invalidate/reset local history here;
+    // read camera/map-dependent values in the consumer's normal phase. Aborted World phases, map travel and ResetDefault do not notify.
+    event Action<long>? InstanceChanged;
     double WorldHours { get; }              // 世界时间（h）：同一世界实例内单调递增，只增不减；暂停时不动
     double Clock { get; }                   // 美术钟点 0–24 h = (WorldHours + offset) mod 24（offset 见 §3"世界时间与天气的语义"）
     double PresetClock(ClockPreset preset, Season season);   // 只读查询该季美术预设钟点，不修改世界；晨=日出+40 min，午=日出日落中点，昏=日落-35 min，夜=21:00（SYS-TIME）

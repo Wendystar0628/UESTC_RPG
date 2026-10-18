@@ -70,6 +70,6 @@ public partial class HudRoot
     private async Task SetMode(ViewMode mode)
     {
         await Services.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Ui);
-        _model.Poke();
+        RefreshHud();
     }
 }

@@ -36,7 +36,6 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
     private Task<FaunaContent>? _job;
     private FaunaContent? _prepared;
     private Latch[] _latches = [];
-    private long _instance = long.MinValue;
     private double _sinceCheck;
     private bool _force;
     public string? Error { get; private set; }
@@ -47,14 +46,26 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
         _prepared is null ? new Dictionary<string, FaunaSet?>() :
         _prepared.Sites.Select((s, i) => (s.Key, _latches[i].Set)).ToDictionary(p => p.Key, p => p.Set, StringComparer.Ordinal);
 
-    public override void _EnterTree() => ProcessPriority = FramePriority.Systems;
+    public override void _EnterTree()
+    {
+        ProcessPriority = FramePriority.Systems;
+        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        _force = true;
+    }
 
-    public override void _Ready() => _world = Services.Get<IWorldState>();
+    public override void _Ready()
+    {
+        _world = Services.Get<IWorldState>();
+        _world.InstanceChanged += OnWorldInstanceChanged;
+    }
+
+    private void OnWorldInstanceChanged(long _) => _force = true;
 
     // Leaving the tree: the render host releases its owned nodes when the stage exits, and the
     // stage is busy removing children, so only drop the references here; map unloads release through the host.
     public override void _ExitTree()
     {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _latches = [];
         _prepared = null;
         _job = null;
@@ -100,7 +111,6 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
             _force = true;
         }
         if (_prepared is null) return;
-        if (_world.Instance != _instance) { _instance = _world.Instance; _force = true; }
         _sinceCheck += Math.Min(delta, 0.1);
         if (!_force && _sinceCheck < CheckSeconds) return;
         _sinceCheck = 0;

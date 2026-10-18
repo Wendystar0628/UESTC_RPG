@@ -1,6 +1,5 @@
 using System.Numerics;
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 
 namespace Campus.Camera.Walk;
 
@@ -10,15 +9,9 @@ public static class WalkMath
     public static bool ValidCylinderDimensions(float radius, float height) =>
         float.IsFinite(radius) && float.IsFinite(height) && radius > 0 && height > 0;
 
-    public static bool FreezeForAppState(AppState state, Vector3 feet, ref Vector3 previousFeet, ref Vector3 velocity)
+    public static bool FreezeUnlessPlaying(bool isPlaying, Vector3 feet, ref Vector3 previousFeet, ref Vector3 velocity)
     {
-        bool frozen = state switch
-        {
-            AppState.Boot or AppState.Title or AppState.Entering or AppState.Leaving or AppState.Quitting => true,
-            AppState.Playing => false,
-            _ => throw new ArgumentOutOfRangeException(nameof(state))
-        };
-        if (!frozen) return false;
+        if (isPlaying) return false;
         previousFeet = feet;
         velocity = Vector3.Zero;
         return true;

@@ -34,12 +34,9 @@ public partial class WeatherStrip : Control
         };
         parent.AddChild(strip);
         strip.Build();
-        model.Changed += strip.Sync;
         strip.Sync();
         return strip;
     }
-
-    public override void _ExitTree() => _model.Changed -= Sync;
 
     private void Build()
     {
@@ -65,7 +62,7 @@ public partial class WeatherStrip : Control
             _intensity.Add(square);
             var hit = _kit.Button(this, ButtonStyle.Ghost, "", new Rect2(396 + i * 13, 17, 14, 18), pin: true);
             hit.SelfModulate = new Color(1, 1, 1, 0);
-            hit.Pressed += () => { _control.SetWeatherIntensity((level + 1) / 3f); _model.Poke(); };
+            hit.Pressed += () => { _control.SetWeatherIntensity((level + 1) / 3f); Sync(); };
         }
     }
 
@@ -101,11 +98,11 @@ public partial class WeatherStrip : Control
 
     private void Pick(int cell)
     {
-        if (cell == Auto) { _control.SetWeatherAuto(); _model.Poke(); return; }
+        if (cell == Auto) { _control.SetWeatherAuto(); Sync(); return; }
         var kind = Kind(cell, _model.Season);
         if (!_model.World.IsNative(kind)) { Toast?.Invoke(UiKit.T("weather.thunder.off_season_toast")); return; }
         _control.SetWeather(kind);
-        _model.Poke();
+        Sync();
         Toast?.Invoke(UiKit.T("weather.manual_toast", ("name", UiKit.T("weather.cell." + CellKey(cell)))));
     }
 
@@ -211,12 +208,9 @@ public partial class SpeedBar : Control
         for (var i = 0; i < 16; i++) bar._leds.Add(kit.Box(bar, new Rect2(120 + i * 9, 15, 7, 14), new UiFx(Pin: true)));
         bar._actual = kit.Box(bar, new Rect2(120, 34, 0, 2), new UiFx(Fill: "graphic", Pin: true));
         bar._readout = kit.Text(bar, "", "data", "text.1", new Vector2(120, 40), true);
-        model.Changed += bar.Sync;
         bar.Sync();
         return bar;
     }
-
-    public override void _ExitTree() => _model.Changed -= Sync;
 
     public static int Gear(float speed) => Math.Clamp((int)Math.Round(1 + 15 * Math.Log(Math.Max(speed, 0.01) / 0.5) / Math.Log(400)), 1, 16);
 
@@ -280,12 +274,9 @@ public partial class TimeStrip : Control
         strip._clock = kit.Text(strip, "", "readout.strip", "text.1", new Vector2(20, 13), true);
         strip._text = kit.Text(strip, "", "small", "text.2", new Vector2(104, 18), true);
         strip._via = kit.Dot(strip, Vector2.Zero, 6, new UiFx(Line: "graphic", Pin: true));
-        model.Changed += strip.Sync;
         strip.Sync();
         return strip;
     }
-
-    public override void _ExitTree() => _model.Changed -= Sync;
 
     public void Sync()
     {

@@ -60,7 +60,6 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private ViewMode _destinationMode;
     private MapStreamDestination? _destinationState;
     private float _replan;
-    private long _instance;
     private bool _exiting;
     private bool _destinationPlanned;
     private bool _destinationConsumed, _checkRetention;
@@ -88,11 +87,19 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     /// <summary>Raw packed-buffer bytes from TileBundle stats; not compressed disk size or measured VRAM.</summary>
     public long ResidentBytes => _groups.Values.Sum(group => group.Bundles.Sum(bundle => bundle.Bytes));
 
+    public override void _EnterTree()
+    {
+        _exiting = false;
+        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        OnWorldInstanceChanged(0);
+    }
+
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Stream;
         _bake = Services.Get<IBakeService>(); _mount = Services.Get<IStreamMountQueue>();
         _camera = Services.Get<ICameraRig>(); _world = Services.Get<IWorldState>();
+        _world.InstanceChanged += OnWorldInstanceChanged;
         _maps = Services.Get<IMapService>(); // Resolve at node Ready, never from a constructor dependency cycle.
         _maps.Arrived += OnMapArrived;
         _collision = Services.Get<ICollisionWorld>();
@@ -104,7 +111,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         if (!IsUnloaded) throw new InvalidOperationException("Stream map must finish unloading before the next mount.");
         _mapGeneration++;
-        _context = context; _error = null; _speed.Reset(); _instance = _world.Instance;
+        _context = context; _error = null; _speed.Reset();
         _destinationConsumed = false;
         _haveCamera = false; _velocity = N.Vector3.Zero;
         _reflectionDirty = true;
@@ -178,11 +185,6 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             _destinationConsumed = true; _destinationRequired.Clear(); _destinationRefined.Clear();
             _interiors?.Prefetch(null); _replan = _settings.ReplanSeconds;
         }
-        if (_instance != _world.Instance)
-        {
-            _instance = _world.Instance; _speed.Reset(); _replan = _settings.ReplanSeconds;
-            _haveCamera = false; _velocity = N.Vector3.Zero;
-        }
         var step = (float)Math.Min(delta, .1);
         if (_haveCamera && step > 0)
         {
@@ -214,6 +216,14 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         }
         _interiors?.AdvanceRetention(delta, _camera.Pose.Position);
     }
+    private void OnWorldInstanceChanged(long _)
+    {
+        _speed.Reset();
+        _replan = _settings.ReplanSeconds;
+        _haveCamera = false;
+        _velocity = N.Vector3.Zero;
+    }
+
     private void HarvestCatalog()
     {
         if (_catalogTask is not { IsCompleted: true } task) return;
@@ -461,6 +471,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     public override void _ExitTree()
     {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _exiting = true;
         if (_context is { } context) OnMapUnloading(context.Descriptor.Id);
         if (_catalogTask is { } catalog)

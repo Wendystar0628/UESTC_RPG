@@ -5,7 +5,7 @@ namespace Campus.Systems.Nightlight.Schedule;
 
 /// <summary>一帧的输入：都取自 IWorldState、IColorScriptFrame 与真实帧间隔，不读回任何全局参数。</summary>
 public readonly record struct ScheduleInput(
-    double Clock, float SunAltDeg, float Overcast, float Precip, float PoolGain, double RealDt, long Instance);
+    double Clock, float SunAltDeg, float Overcast, float Precip, float PoolGain, double RealDt);
 
 /// <summary>过场"初灯追镜头"的覆盖：前沿位置与软边都是相对路线全长的比例，目标高度是覆盖期间判开灯用的 h_eff。</summary>
 public readonly record struct CueOverride(float Front, float Band, float TargetSunDeg);
@@ -13,7 +13,7 @@ public readonly record struct CueOverride(float Front, float Band, float TargetS
 /// <summary>
 /// 32 个灯光通道的每帧求值（ENG-PERF）。只算数：结果交给 WP-03 的通道写入接口。
 /// 目标值只由钟点、h_eff 与季节决定（可复现）；过渡宽度 Δ 随通道的变化速率自适应，
-/// 世界实例变了（IWorldState.Instance）就直接落到新值，不带历史。
+/// 世界实例通知触发 Reset 后直接落到新值，不带历史。
 /// </summary>
 public sealed class ScheduleEvaluator
 {
@@ -23,7 +23,7 @@ public sealed class ScheduleEvaluator
     private readonly ThresholdGroup?[] _groupBySlot = new ThresholdGroup?[LightingScheduleFile.ChannelCount];
     private readonly float[] _prev = new float[LightingScheduleFile.ChannelCount];
     private readonly float[] _delta = new float[LightingScheduleFile.ChannelCount];
-    private long _instance = long.MinValue;
+    private bool _reset = true;
 
     public ScheduleEvaluator(LightingScheduleFile file)
     {
@@ -79,13 +79,15 @@ public sealed class ScheduleEvaluator
         }
     }
 
+    public void Reset() => _reset = true;
+
     /// <summary>求本帧 32 个通道的 (L, Δ)。</summary>
     public void Evaluate(in ScheduleInput input, Span<Vector2> output)
     {
         if (output.Length != LightingScheduleFile.ChannelCount)
             throw new ArgumentException($"Expected {LightingScheduleFile.ChannelCount} channel slots.", nameof(output));
-        var reset = input.Instance != _instance;
-        _instance = input.Instance;
+        var reset = _reset;
+        _reset = false;
         var deltaSpec = _file.Delta;
         var dt = Math.Max(input.RealDt, 0.0);
         var decay = dt > 0 ? (float)Math.Exp(-dt / Math.Max(deltaSpec.Seconds, 1e-3)) : 1f;

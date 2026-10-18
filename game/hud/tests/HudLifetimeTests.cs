@@ -23,6 +23,7 @@ namespace Campus.Tests;
 public sealed class HudLifetimeTests
 {
     [TestCase]
+    [TestCategory("Regression")]
     [RequireGodotRuntime]
     public void ThemeClockStopsObservingSettingsUntilItReenters()
     {
@@ -32,6 +33,7 @@ public sealed class HudLifetimeTests
         var world = new WorldStateService(new WeatherProcess(Services.Get<IWeatherProfileSource>()));
         var motion = new MotionPolicy(settings);
         var baseline = Subscribers(settings, "Changed");
+        var worldBaseline = Subscribers(world, "InstanceChanged");
         var clock = new UiThemeClock(world, settings, motion);
         var parent = ((SceneTree)Engine.GetMainLoop()).Root;
         try
@@ -40,18 +42,21 @@ public sealed class HudLifetimeTests
             {
                 parent.AddChild(clock);
                 AssertThat(!clock.Dark && Subscribers(settings, "Changed") == baseline + 1).OverrideFailureMessage("Clock did not bind exactly once on entry.").IsTrue();
+                AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline + 1).OverrideFailureMessage("Clock did not bind world notification exactly once on entry.").IsTrue();
                 settings.SetTheme(UiThemeMode.Dark);
                 AssertThat(clock.Dark).OverrideFailureMessage("Attached clock stopped responding to theme settings.").IsTrue();
                 parent.RemoveChild(clock);
                 var front = clock.Front;
                 settings.SetTheme(UiThemeMode.Light);
                 AssertThat(clock.Dark && clock.Front == front && Subscribers(settings, "Changed") == baseline).OverrideFailureMessage("Detached clock still observed settings or retained a service subscription.").IsTrue();
+                AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline).OverrideFailureMessage("Detached clock retained a world observer.").IsTrue();
             }
         }
         finally { clock.Free(); }
     }
 
     [TestCase]
+    [TestCategory("Regression")]
     [RequireGodotRuntime]
     public async Task HudRootReentryRebuildsResidentsAndOwnsOnlyItsInputLayers()
     {
@@ -66,7 +71,12 @@ public sealed class HudLifetimeTests
         var model = new HudModel(world, camera, previousRegistry.Get<IRuleset>());
         var motion = new MotionPolicy(settings);
         var settingsBaseline = Subscribers(settings, "Changed");
-        var modelBaseline = Subscribers(model, "Changed");
+        var worldBaseline = Subscribers(world, "InstanceChanged");
+        camera.Mode = ViewMode.Walk;
+        world.Freeze(13, Season.Summer, 0);
+        AssertThat(model.Mode == camera.Mode && model.Clock == world.Clock && model.Season == world.SeasonTarget && model.Speed == camera.Speed)
+            .OverrideFailureMessage("HUD readouts required a refresh before exposing the current source values.").IsTrue();
+        camera.Mode = ViewMode.Fly;
         var parent = ((SceneTree)Engine.GetMainLoop()).Root;
         HudRoot? hud = null;
         try
@@ -97,10 +107,10 @@ public sealed class HudLifetimeTests
             for (var cycle = 0; cycle < 3; cycle++)
             {
                 AssertThat(router.Layers == 3 && router.Observers == 1 && flow.Observers == 1).OverrideFailureMessage("HUD registered duplicate input layers or flow observers.").IsTrue();
-                AssertThat(Subscribers(model, "Changed") == modelBaseline + 5).OverrideFailureMessage($"Root and four resident controls did not bind exactly once (got {Subscribers(model, "Changed") - modelBaseline}).").IsTrue();
+                AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline + 2).OverrideFailureMessage("HUD root and theme clock did not bind world notifications exactly once.").IsTrue();
                 parent.RemoveChild(hud);
                 AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0).OverrideFailureMessage("Tree exit retained input layers or service observers.").IsTrue();
-                AssertThat(Subscribers(settings, "Changed") == settingsBaseline && Subscribers(model, "Changed") == modelBaseline).OverrideFailureMessage("Tree exit retained settings/model observers.").IsTrue();
+                AssertThat(Subscribers(settings, "Changed") == settingsBaseline && Subscribers(world, "InstanceChanged") == worldBaseline).OverrideFailureMessage("Tree exit retained settings/world observers.").IsTrue();
                 AssertThat(corners.GetChildCount() == 0).OverrideFailureMessage("Queued residents remained parented and could reenter before deletion.").IsTrue();
                 router.SetInterfaceMode(!router.InterfaceMode);
                 flow.SetState(AppState.Boot);

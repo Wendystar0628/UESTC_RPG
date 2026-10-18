@@ -40,7 +40,6 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
     private int _interval = 4;
     private long _frame;
     private int _lake = -1;
-    private long _instance = -1;
     private Camera3D? _frustum;
     private readonly Func<System.Numerics.Vector3, bool> _inFrustum;
 
@@ -67,6 +66,12 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
     /// so fragments under the water plane are dropped (4.7 has no oblique near plane, ENG-PERF).
     /// </summary>
     public ShaderMaterial? ReflectionProxyMaterial => _proxyMaterial;
+
+    public override void _EnterTree()
+    {
+        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        _lakes.Reset();
+    }
 
     public override void _Ready()
     {
@@ -105,6 +110,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
 
     public override void _ExitTree()
     {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         GetViewport().SizeChanged -= OnSizeChanged;
         RenderingServer.GlobalShaderParameterSet(ReflectLake, -1);
     }
@@ -128,6 +134,8 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
         _frame = 0;
     }
 
+    private void OnWorldInstanceChanged(long _) => _lakes.Reset();
+
     public void ApplyQuality(QualityView view, in QualityChange change)
     {
         ArgumentNullException.ThrowIfNull(view);
@@ -139,11 +147,6 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
     public override void _Process(double delta)
     {
         if (_viewport is null || _mirror is null) return;
-        if (_world is not null && _world.Instance != _instance)
-        {
-            _instance = _world.Instance;
-            _lakes.Reset();
-        }
         // Underground and underwater the reflection is invisible: stop rendering it (SYS-VIEW). Not a quality option.
         var kind = _medium?.Current.Kind ?? MediumKind.Air;
         if (kind is MediumKind.Underwater or MediumKind.Underground)

@@ -3,7 +3,6 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
-using Campus.Contracts.Save;
 using RuntimeKernel = Campus.Kernel.Registry.Kernel;
 using Godot;
 
@@ -68,17 +67,15 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     {
         get
         {
-            var app = RuntimeKernel.Get<IAppFlow>().State;
+            var flow = RuntimeKernel.Get<IAppFlow>();
+            var app = flow.State;
             var appBusy = app switch
             {
                 AppState.Boot or AppState.Entering or AppState.Leaving or AppState.Quitting => true,
                 AppState.Title or AppState.Playing => false,
                 _ => throw new ArgumentOutOfRangeException(nameof(app)),
             };
-            return appBusy || RuntimeKernel.Get<ICameraRig>().ActiveTransit is { Done.IsCompleted: false } ||
-                RuntimeKernel.Get<IMapService>().Transition is { Done.IsCompleted: false } ||
-                RuntimeKernel.Get<ISaveService>().Busy || RuntimeKernel.Get<IWorldState>().Transition.HasFlag(WorldTransition.Season) ||
-                _veil.Opacity > 0;
+            return appBusy || flow.Activity != AppActivity.None || _veil.Opacity > 0;
         }
     }
 

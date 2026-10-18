@@ -42,13 +42,13 @@ public sealed class CinematicSpawnFlowTests
         var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
         if (maps.Context!.Descriptor.Spawns.Count != 0) throw new InvalidOperationException("Fixture must use waypoint-only spawns.");
         await flow.PrepareBoot(new()); await flow.PrepareWorld(); await flow.CompleteBoot();
-        if (flow.State != AppState.Title || camera.Pose != entry.ResolveSpawn(entry.Descriptor.DefaultSpawn).Fly)
+        if (flow.State != AppState.Title || flow.IsPlaying || camera.Pose != entry.ResolveSpawn(entry.Descriptor.DefaultSpawn).Fly)
             throw new InvalidOperationException("Title fallback did not use the catalogue's default waypoint.");
         var entering = flow.Enter(new(EnterKind.NewGame, new("s1")));
         await CinematicTestFrames.Complete(entering, playback, presentation, veil);
         var result = await entering;
         if (diagnostics.Count != 0) throw new InvalidOperationException(string.Join(Environment.NewLine, diagnostics));
-        if (result != EnterResult.Entered || flow.State != AppState.Playing || saves.NewGames != 1 || saves.Saves != 1)
+        if (result != EnterResult.Entered || !flow.IsPlaying || saves.NewGames != 1 || saves.Saves != 1)
             throw new InvalidOperationException("New game failed or lost the authored default waypoint.");
         if (camera.Mode != ViewMode.Walk || camera.Pose != SaveService.Landing ||
             rig.Runtime.Arrival?.Destination is not { Mode: ViewMode.Walk } landing || landing.Pose != SaveService.Landing)

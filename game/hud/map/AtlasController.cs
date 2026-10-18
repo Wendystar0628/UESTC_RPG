@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Contracts.Atlas;
 using Godot;
 
@@ -113,7 +112,7 @@ internal sealed class AtlasController : IDisposable
     public void Open(AtlasTab tab)
     {
         if (_open || _host.Map is null || _pending is not null) return;
-        if (_s.Flow.State != AppState.Playing) return;
+        if (!_s.Flow.IsPlaying) return;
         _open = true;
         _fromRoam = Input.MouseMode == Input.MouseModeEnum.Captured;
         Input.MouseMode = Input.MouseModeEnum.Visible;

@@ -7,15 +7,14 @@ namespace Campus.Kernel.Lighting;
 public readonly record struct KeyLightInput(
     Vector3 SunDir, float SunAltDeg,
     Vector3 MoonDir, float MoonAltDeg,
-    float Overcast, float Precip, float PrecipKind,
-    long Instance)
+    float Overcast, float Precip, float PrecipKind)
 {
     public static KeyLightInput From(IWorldState world)
     {
         ArgumentNullException.ThrowIfNull(world);
         var weather = world.WeatherNow;
         return new(world.Sun.Dir, world.Sun.AltDeg, world.Moon.Dir, world.Moon.AltDeg,
-            weather.Overcast, weather.Precip, weather.PrecipKind, world.Instance);
+            weather.Overcast, weather.Precip, weather.PrecipKind);
     }
 }
 
@@ -47,14 +46,16 @@ public sealed class KeyLightModel
     public const float RetreatLow = -10f;
     public const float RetreatHigh = 80f;
 
-    private long _instance = long.MinValue;
+    private bool _fresh = true;
     private KeyBody _body;
     private bool _passOn;
 
+    public void Reset() => _fresh = true;
+
     public KeyLightFrame Step(in KeyLightInput input)
     {
-        var fresh = input.Instance != _instance;
-        _instance = input.Instance;
+        var fresh = _fresh;
+        _fresh = false;
         var body = input.SunAltDeg < HandoffSunAltDeg ? KeyBody.Moon : KeyBody.Sun;
         var switched = !fresh && body != _body;
         _body = body;

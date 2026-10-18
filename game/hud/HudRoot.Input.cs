@@ -91,20 +91,20 @@ public partial class HudRoot
             case "time_forward":
                 if (!_model.Allows(WorldControlMask.Clock)) return false;
                 _control.Advance(1);
-                _model.Poke();
+                RefreshHud();
                 var clock = _model.World.Clock % 24;
                 _toast.Show(UiKit.T("toast.time_forward", ("clock", WorldTime.FormatClock(clock))));
                 return true;
             case "toggle_flow":
                 if (!_model.Allows(WorldControlMask.Flow)) return false;
                 _control.SetFlow(_model.World.BaseFlow.Rate == 0 ? _model.World.LastFlowRate : 0);
-                _model.Poke();
+                RefreshHud();
                 _toast.Show(UiKit.T(_model.World.BaseFlow.Rate == 0 ? "toast.flow.paused" : "toast.flow.resumed"), _model.World.BaseFlow.Rate == 0 ? "pause" : null);
                 return true;
             case "next_season":
                 if (!_model.Allows(WorldControlMask.Season)) return false;
                 _control.SetSeason((Season)(((int)_model.World.SeasonTarget + 1) % 4));
-                _model.Poke();
+                RefreshHud();
                 return true;
             case "weather":
                 if (!_model.Allows(WorldControlMask.Weather)) return false;

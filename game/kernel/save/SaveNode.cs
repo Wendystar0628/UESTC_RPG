@@ -49,7 +49,7 @@ public partial class SaveNode : Node, IBootParticipant
                             (ISaveSection)RuntimeKernel.Services.Create(e.Type))).ToArray();
                     var bindings = new SaveRuntimeBindings(RuntimeKernel.Get<IWorldState>(), RuntimeKernel.Get<IMapService>(), RuntimeKernel.Get<ICameraRig>(),
                         RuntimeKernel.Get<IObserverState>(), RuntimeKernel.Get<IRuleset>(), RuntimeKernel.Get<IAtlasService>(), RuntimeKernel.Get<IVeilState>(),
-                        () => RuntimeKernel.Get<IAppFlow>().State, id => RuntimeKernel.Get<IRulesetActivation>().Select(id),
+                        RuntimeKernel.Get<IAppFlow>(), id => RuntimeKernel.Get<IRulesetActivation>().Select(id),
                         RuntimeKernel.Get<IWorldRestore>(), WaitDestination, CaptureThumbnail,
                         () => (long)Time.GetUnixTimeFromSystem());
                     await _save.Initialize(new(context.SaveDirectory, context.Build, save.Enabled, save.WriteSlot, save.AtFrame, save.WeatherSeed), bindings, new(sections));

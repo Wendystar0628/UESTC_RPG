@@ -164,7 +164,8 @@ public sealed partial class SaveLifecycleTests
         public FakeCamera Camera { get; }
         public FakeMaps Maps { get; }
         public FakeWeather Weather { get; } = new();
-        public AppState Flow { get; set; } = AppState.Title;
+        private readonly TestAppFlow _flow = new();
+        public AppState Flow { get => _flow.State; set => _flow.SetState(value); }
         public List<string> Log { get; } = [];
         public bool Ready { get; set; } = true;
         public TaskCompletionSource<byte[]?>? ThumbnailBarrier { get; set; }
@@ -172,12 +173,16 @@ public sealed partial class SaveLifecycleTests
         public Fixture()
         {
             World = new(() => _inFrame, Log); Camera = new(() => _inFrame, Log); Maps = new(Log);
+            Flow = AppState.Title;
+            _flow.ActivitySource = () =>
+                (Maps.Transition is { Done.IsCompleted: false } ? AppActivity.MapTransition : AppActivity.None) |
+                (Save.Busy ? AppActivity.SaveWrite : AppActivity.None);
         }
         public async Task Start()
         {
             var directory = RepositoryFixture.FilePath("output", "save-tests", "lifecycle-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _id));
             var rules = new TestRuleset("test-policy", id: "test-rules");
-            var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new ImmediateVeil(), () => Flow,
+            var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new ImmediateVeil(), _flow,
                 _ => { }, World, WaitDestination,
                 () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400);
             var sections = new SaveSections([
@@ -213,6 +218,7 @@ public sealed partial class SaveLifecycleTests
         public bool RestoreFaulted { get; private set; }
         private bool _pending;
         public long Instance { get; set; } = 1;
+        public event Action<long>? InstanceChanged;
         public long Rev => 1; public double WorldHours => Hours; public double Clock => Hours % 24;
         public double SeasonPos => 2; public Season SeasonTarget => Season.Autumn; public Body Sun => default; public Body Moon => default;
         public float SunAltDegAt(double clock, Season season) => Sun.AltDeg;
@@ -229,6 +235,7 @@ public sealed partial class SaveLifecycleTests
         public void CompleteRestore()
         {
             AssertThat(_pending).OverrideFailureMessage("Commit without a fresh restore.").IsTrue(); _pending = false; RestoreFaulted = false; Instance++; log.Add("instance");
+            InstanceChanged?.Invoke(Instance);
         }
         public void Tick() { if (!RestoreFaulted) AssertThat(!_pending).OverrideFailureMessage("An uncommitted World phase escaped into the next frame.").IsTrue(); }
         public LifecycleWorld Capture(in CaptureContext context)

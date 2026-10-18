@@ -72,20 +72,21 @@ public sealed class PrecipModelTests
     {
         var model = new PrecipModel();
         var w = Vec(0.25f);
-        var first = model.Step(w, 1, 479.75, 0f, 1f, 12);
+        var first = model.Step(w, 479.75, 0f, 1f, 12);
         AssertThat(first.D.X == 0f && first.D.Y == 0f && first.D.Z == 0f).OverrideFailureMessage("The first frame only records the step.").IsTrue();
-        var same = model.Step(w, 1, 479.75, 0f, 1f, 12);
+        var same = model.Step(w, 479.75, 0f, 1f, 12);
         AssertThat(same.D == first.D).OverrideFailureMessage("Displacement moved without a step change.").IsTrue();
-        var next = model.Step(w, 1, 479.75 + 1.0 / 12.0, 0f, 1f, 12);
+        var next = model.Step(w, 479.75 + 1.0 / 12.0, 0f, 1f, 12);
         var step = PrecipModel.Velocity(w, 0f) / 12f;
         var period = PrecipTuning.WrapPerHalf * PrecipTuning.RainHalf;
         AssertThat(Vector3.Distance(Xyz(next.D), PrecipModel.Wrap(step, period)) < 1e-3f).OverrideFailureMessage("One step should move one step length.").IsTrue();
         AssertThat(MathF.Abs(next.V.W - step.Length()) < 1e-4f && next.D.W == PrecipTuning.RainHalf).OverrideFailureMessage("Streak length is one step; rain box is 18 m.").IsTrue();
-        var wrapped = model.Step(w, 1, 0.0, 0f, 1f, 12);   // anim_time wrapped from 479.83 to 0
+        var wrapped = model.Step(w, 0.0, 0f, 1f, 12);   // anim_time wrapped from 479.83 to 0
         AssertThat(Vector3.Distance(Xyz(wrapped.D), PrecipModel.Wrap(step * 3f, period)) < 1e-3f).OverrideFailureMessage("The 480 s wrap must count as two more steps.").IsTrue();
-        var jumped = model.Step(w, 1, 200.0, 0f, 1f, 12);
+        var jumped = model.Step(w, 200.0, 0f, 1f, 12);
         AssertThat(jumped.D == wrapped.D).OverrideFailureMessage("Setting the animation clock is not elapsed time.").IsTrue();
-        var reloaded = model.Step(w, 2, 300.0, 0f, 1f, 12);
+        model.Reset();
+        var reloaded = model.Step(w, 200.0 + 1.0 / 12.0, 0f, 1f, 12);
         AssertThat(reloaded.D == wrapped.D).OverrideFailureMessage("A new world instance restarts from the current step without moving.").IsTrue();
         for (var k = 0; k < 3; k++)
             AssertThat(reloaded.D[k] >= 0f && reloaded.D[k] < period).OverrideFailureMessage("Displacement is wrapped to 8h.").IsTrue();
@@ -97,7 +98,7 @@ public sealed class PrecipModelTests
     public void SnowUsesItsOwnBoxAndFlakes()
     {
         var model = new PrecipModel();
-        var frame = model.Step(Vec(0.6f, kind: 1f), 1, 10.0, 0.5f, 1f, 15);
+        var frame = model.Step(Vec(0.6f, kind: 1f), 10.0, 0.5f, 1f, 15);
         AssertThat(frame.D.W == PrecipTuning.SnowHalf && frame.K.X == 1f && frame.V.W == 0f).OverrideFailureMessage("Snow uses the 14 m box and flat flakes.").IsTrue();
         AssertThat(frame.VisibleCount == 2400).OverrideFailureMessage("Moderate snow draws 2400 flakes.").IsTrue();
     }

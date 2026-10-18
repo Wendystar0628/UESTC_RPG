@@ -18,8 +18,8 @@ public sealed class KeyLightTests
     }
 
     private static KeyLightInput Input(float sunAlt, float moonAlt = 30f, float overcast = 0f,
-        float precip = 0f, float kind = 0f, long instance = 1) =>
-        new(Dir(sunAlt, 241f), sunAlt, Dir(moonAlt, 120f), moonAlt, overcast, precip, kind, instance);
+        float precip = 0f, float kind = 0f) =>
+        new(Dir(sunAlt, 241f), sunAlt, Dir(moonAlt, 120f), moonAlt, overcast, precip, kind);
 
     private static float AltitudeOf(Vector3 d) => MathF.Asin(d.Y) * 180f / MathF.PI;
 
@@ -96,7 +96,8 @@ public sealed class KeyLightTests
     {
         var model = new KeyLightModel();
         model.Step(Input(-4f));
-        var frame = model.Step(Input(30f, instance: 2));
+        model.Reset();
+        var frame = model.Step(Input(30f));
         AssertThat(!frame.Switched && frame.ShadowPass && frame.ShadowStrength == 1f).OverrideFailureMessage("new instance must settle immediately").IsTrue();
     }
 

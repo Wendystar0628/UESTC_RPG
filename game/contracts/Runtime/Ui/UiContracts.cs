@@ -10,7 +10,7 @@ public interface IMotionSettings
     event Action? Changed;
 }
 
-// 时间环的天色光谱：WP-37 实现；HudModel 在换季、换天气模式时取一次，不逐帧
+// 时间环的天色光谱：WP-37 实现；界面从服务源读取季节与天气，在相关选择变化时取一次，不逐帧
 public interface IPaletteProbe
 {
     // 24 个整点的太阳侧与背阳侧地平线天色平均值，sRGB 0–1；长度必须恰为 24，否则抛 ArgumentException。

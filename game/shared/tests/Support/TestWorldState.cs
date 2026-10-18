@@ -13,6 +13,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     public bool RestoreFaulted { get; private set; }
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; } = 1;
+    public event Action<long>? InstanceChanged;
     public double WorldHours { get; private set; } = 17.5;
     public double Clock => ((WorldHours + _clockOffset) % 24 + 24) % 24;
     public double SeasonPos => (int)SeasonTarget;
@@ -276,6 +277,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         // Test fixture celestial readouts are already settled; leave restored weather untouched.
         Instance++;
         Rev++;
+        InstanceChanged?.Invoke(Instance);
     }
 
     public Task<ModeSwitchResult> SetMode(ViewMode m, ModeSwitchVia via)

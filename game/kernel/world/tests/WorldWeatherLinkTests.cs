@@ -100,6 +100,8 @@ public sealed class WorldWeatherLinkTests
         var weather = new TestWeatherProcess();
         var world = CreateWorld(weather);
         var context = PresetContext(new WorldPreset(17.5, Season.Autumn, WeatherKind.Clear), true);
+        var notifications = 0;
+        world.InstanceChanged += _ => notifications++;
         world.OnMapLoaded(context);
         world.Freeze(17 + 35 / 60d, Season.Autumn, 240);
         var instance = world.Instance;
@@ -116,5 +118,6 @@ public sealed class WorldWeatherLinkTests
         world.OnMapLoaded(context);
         AssertThat(world.Instance).IsEqual(instance);
         AssertThat(weather.Enters).IsEqual(2);
+        AssertThat(notifications).IsEqual(0);
     }
 }

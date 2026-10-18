@@ -170,9 +170,9 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     {
         ValidateStyle(style);
         // Travel requires a ready driver that evaluates the requested transition.
-        if (transitDriver?.IsReady != true || !IsPlaying() || _context is null || _maps?.Context is null || _maps.Current != Map
-            || MapTransitioning()) return Refuse(TravelRefusal.Unavailable, out why);
-        if (_transit is not null || camera.ActiveTransit is { Done.IsCompleted: false }) return Refuse(TravelRefusal.Busy, out why);
+        if (transitDriver?.IsReady != true || _flow?.IsPlaying != true || _context is null || _maps?.Context is null || _maps.Current != Map
+            || (_flow.Activity & AppActivity.MapTransition) != 0) return Refuse(TravelRefusal.Unavailable, out why);
+        if (_transit is not null || (_flow.Activity & AppActivity.CameraTransition) != 0) return Refuse(TravelRefusal.Busy, out why);
         var marker = Find(id);
         if (marker?.Teleport is null || !Travelable(marker.Kind)) return Refuse(TravelRefusal.NotTravelable, out why);
         if (StateOf(id) != UnlockState.Unlocked) return Refuse(TravelRefusal.Locked, out why);
@@ -250,7 +250,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
                 if (style == TravelStyle.Teleport) _audio?.PlayUi(UiCue.TeleportArrive);
             }
         }
-        if (_context is null || !IsPlaying() || _transit is not null || MapTransitioning()) return;
+        if (_context is null || _flow?.IsPlaying != true || _transit is not null || (_flow.Activity & AppActivity.MapTransition) != 0) return;
         var walk = observer.Mode switch
         {
             ViewMode.Walk => true,
@@ -435,19 +435,6 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     private static Vector2 Plan(Vector3 at) => new(at.X, at.Z);
     private static MarkerId PinId(int id) => new("pin:" + id.ToString(System.Globalization.CultureInfo.InvariantCulture));
     private static bool Refuse(TravelRefusal value, out TravelRefusal why) { why = value; return false; }
-    private bool IsPlaying() => _flow?.State switch
-    {
-        AppState.Playing => true,
-        null or AppState.Boot or AppState.Title or AppState.Entering or AppState.Leaving or AppState.Quitting => false,
-        _ => throw new InvalidOperationException("Unknown application state."),
-    };
-    private bool MapTransitioning() => _maps?.Transition?.Stage switch
-    {
-        null or MapStage.Done => false,
-        MapStage.LoadData or MapStage.Mount
-            or MapStage.Warm or MapStage.Spawn => true,
-        _ => throw new InvalidOperationException("Unknown map transition stage."),
-    };
     private static void ValidateStyle(TravelStyle style) => _ = style switch
     { TravelStyle.Teleport or TravelStyle.Fly => 0, _ => throw new ArgumentOutOfRangeException(nameof(style)) };
     private static bool Travelable(MarkerKind kind) => kind switch

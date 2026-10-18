@@ -40,6 +40,17 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     private CinematicPlaybackStart? _playbackStart;
     private EnterPath? _path;
     public AppState State { get; private set; } = AppState.Boot;
+    public bool IsPlaying => State switch
+    {
+        AppState.Playing => true,
+        AppState.Boot or AppState.Title or AppState.Entering or AppState.Leaving or AppState.Quitting => false,
+        _ => throw new InvalidOperationException("Unknown application state."),
+    };
+    public AppActivity Activity =>
+        (maps.Transition is { Done.IsCompleted: false } ? AppActivity.MapTransition : AppActivity.None) |
+        (camera.ActiveTransit is { Done.IsCompleted: false } ? AppActivity.CameraTransition : AppActivity.None) |
+        (saves.Busy ? AppActivity.SaveWrite : AppActivity.None) |
+        ((world.Transition & WorldTransition.Season) != 0 ? AppActivity.SeasonTransition : AppActivity.None);
     public long Rev { get; private set; }
     public event Action<AppState, AppState>? Changed;
     public EnterPath? Path => State switch

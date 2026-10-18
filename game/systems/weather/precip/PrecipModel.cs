@@ -14,7 +14,6 @@ public sealed class PrecipModel
 {
     private Vector3 _d;
     private double _lastStep;
-    private long _instance;
     private bool _started;
 
     /// <summary>当前的循环盒位移（m），已对 8h 取模。</summary>
@@ -92,20 +91,22 @@ public sealed class PrecipModel
         return PrecipTuning.WindDir * (PrecipTuning.RainFall * tan) - Vector3.UnitY * PrecipTuning.RainFall;
     }
 
+    /// <summary>世界实例通知后从下一帧的当前拍重新起算，不把时钟跳变当作位移。</summary>
+    public void Reset() => _started = false;
+
     /// <summary>
     /// 每帧调用一次。位移只在一拍二跨步时按跨过的时长累加（ENG-PERF），所以改风、换强度时雨丝不跳，
     /// anim_time 回绕时也不跳；世界实例变了（读档、新游戏）就从当前拍重新起算。
     /// </summary>
-    public PrecipFrame Step(in WeatherVec w, long instance, double step12, float gust, float density, int stepRate)
+    public PrecipFrame Step(in WeatherVec w, double step12, float gust, float density, int stepRate)
     {
         if (!double.IsFinite(step12)) throw new ArgumentOutOfRangeException(nameof(step12));
         if (!WorldTime.IsStepRate(stepRate)) throw new ArgumentOutOfRangeException(nameof(stepRate));
         var h = HalfSize(w);
         var v = Velocity(w, gust);
-        if (!_started || instance != _instance)
+        if (!_started)
         {
             _started = true;
-            _instance = instance;
             _lastStep = step12;
         }
         var dt = step12 - _lastStep;

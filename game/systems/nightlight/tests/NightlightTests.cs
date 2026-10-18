@@ -31,8 +31,8 @@ public sealed class NightlightTests
 
     private static ScheduleEvaluator Default() => Load(ScheduleFiles().First());
 
-    private static ScheduleInput At(double clock, float sunAlt, float overcast = 0f, float precip = 0f, double dt = 0, long instance = 1) =>
-        new(clock, sunAlt, overcast, precip, 1f, dt, instance);
+    private static ScheduleInput At(double clock, float sunAlt, float overcast = 0f, float precip = 0f, double dt = 0) =>
+        new(clock, sunAlt, overcast, precip, 1f, dt);
 
     [TestCase]
     public void EveryMapScheduleMatchesTheChannelCatalog()
@@ -83,8 +83,9 @@ public sealed class NightlightTests
         var outB = new Vector2[32];
         a.Evaluate(At(23.0, -30f, dt: 0.016), outA);
         a.Evaluate(At(23.4, -31f, dt: 0.016), outA);
-        a.Evaluate(At(21.0, -14f, dt: 0.016, instance: 2), outA);   // 换实例：直接落到新值
-        b.Evaluate(At(21.0, -14f, dt: 0.016, instance: 7), outB);
+        a.Reset();
+        a.Evaluate(At(21.0, -14f, dt: 0.016), outA);   // 换实例：直接落到新值
+        b.Evaluate(At(21.0, -14f, dt: 0.016), outB);
         for (var i = 0; i < 32; i++) AssertThat(outA[i] == outB[i]).OverrideFailureMessage($"slot {i} depends on history after a new instance.").IsTrue();
     }
 
@@ -119,7 +120,7 @@ public sealed class NightlightTests
     private static float Pool(ScheduleEvaluator s, float gain)
     {
         var output = new Vector2[32];
-        s.Evaluate(new ScheduleInput(21.0, -14f, 0f, 0f, gain, 0, 1), output);
+        s.Evaluate(new ScheduleInput(21.0, -14f, 0f, 0f, gain, 0), output);
         return output[s.PoolGainSlot].X;
     }
 

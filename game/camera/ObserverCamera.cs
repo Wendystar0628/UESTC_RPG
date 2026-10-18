@@ -35,7 +35,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private int _flySpeedStep;
     private bool _recoverTriggered;
     private bool _automated;
-    private long _worldInstance = long.MinValue;
+    private bool _worldResetPending = true;
     private IWorldState? _world;
     private Pose? _transitDestination;
     private ObserverListener? _listener;
@@ -53,6 +53,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     {
         _flow = Services.Get<IAppFlow>(); _rules = Services.Get<IRuleset>();
         _world = Services.Get<IWorldState>();
+        _world.InstanceChanged += OnWorldInstanceChanged;
         if (Services.Services.Entries.Any(e => e.Kind == "service" && e.Id == typeof(IWalkController).FullName && !e.IsStub))
             _walk = Services.Get<IWalkController>();
         _transit = Services.Get<ITransitDriver>();
@@ -65,17 +66,26 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         SetInterfaceMode(true);
     }
 
+    public override void _EnterTree()
+    {
+        if (_world is null) return;
+        _world.InstanceChanged += OnWorldInstanceChanged;
+        if (_flow is not null) _flow.Changed += OnFlowChanged;
+        _worldResetPending = true;
+    }
+
     public override void _ExitTree()
     {
         if (_flow is not null) _flow.Changed -= OnFlowChanged;
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         Input.MouseMode = Input.MouseModeEnum.Visible;
     }
 
     public override void _Process(double delta)
     {
         float seconds = (float)Math.Min(delta, Tuning.MaxFrameStep);
-        if (_world is not null && _world.Instance != _worldInstance)
-        { _worldInstance = _world.Instance; ResetHistory(); SetEdgeFog(0); }
+        if (_worldResetPending)
+        { _worldResetPending = false; ResetHistory(); SetEdgeFog(0); }
         AdvanceInput(seconds);
         if (!IsPlaying) { _flight.Reset(); SetEdgeFog(0); return; }
         if (Mode == ViewMode.Walk && _walk is { ExitRequested: true })
@@ -136,17 +146,13 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _bounds = null; _map = null; SetEdgeFog(0);
     }
 
-    private bool IsPlaying => _flow?.State switch
-    {
-        AppState.Playing => true,
-        null or AppState.Boot or AppState.Title or AppState.Entering or AppState.Leaving or AppState.Quitting => false,
-        _ => throw new InvalidOperationException("Unknown application state.")
-    };
+    private bool IsPlaying => _flow?.IsPlaying == true;
+    private void OnWorldInstanceChanged(long instance) => _worldResetPending = true;
     private void OnFlowChanged(AppState previous, AppState next)
     {
         _input.Clear(); _flight.Reset(); _walk?.SetInput(default); SetInterfaceMode(true); SetEdgeFog(0);
         ResetSkipHold(); _skipHintVisible = false;
-        if (next == AppState.Playing && Mode == ViewMode.Fly) _pose = Legalize(Pose);
+        if (IsPlaying && Mode == ViewMode.Fly) _pose = Legalize(Pose);
     }
     private void SetEdgeFog(float value)
     {

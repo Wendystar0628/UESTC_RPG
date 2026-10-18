@@ -65,16 +65,21 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     private ImageTexture? _gridTexture;
     private IReadOnlyList<LampCueDef> _cueDefs = [];
     private LampCue? _cue;
-    private long _instance = long.MinValue;
 
     /// <summary>本图灯表里的灯（只读，给日志、门禁和以后的倒影选灯用）。</summary>
     public IReadOnlyList<LampRecord> Lamps { get; private set; } = [];
 
-    public override void _EnterTree() => ProcessPriority = FramePriority.Channels;
+    public override void _EnterTree()
+    {
+        ProcessPriority = FramePriority.Channels;
+        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        OnWorldInstanceChanged(0);
+    }
 
     public override void _Ready()
     {
         _world = Services.Get<IWorldState>();
+        _world.InstanceChanged += OnWorldInstanceChanged;
         _sink = Services.Get<ILightChannelSink>();
         _colors = Services.Get<IColorScriptFrame>();
         _flow = Services.Get<IAppFlow>();
@@ -86,6 +91,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
 
     public override void _ExitTree()
     {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _lampGlow.Free();
         _windowGlow.Free();
     }
@@ -128,15 +134,10 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         if (_schedule is null || _world is null || _sink is null) return;
         // 后台烘焙补完、换图后清单 Rev 加 1：重建灯表与光晕（与清单的顺序无关）
         if (_map is not null && _inventory is not null && _inventory.Rev != _inventoryRev) RebuildFromInventory(_map, _schedule);
-        if (_world.Instance != _instance)
-        {
-            _instance = _world.Instance;
-            EndCue();
-        }
         if (_cue is not null && !CueAllowed()) EndCue();
         var weather = _world.WeatherNow;
         var gain = _colors?.Current.LampPoolGain ?? 1f;
-        var input = new ScheduleInput(_world.Clock, _world.Sun.AltDeg, weather.Overcast, weather.Precip, gain, delta, _world.Instance);
+        var input = new ScheduleInput(_world.Clock, _world.Sun.AltDeg, weather.Overcast, weather.Precip, gain, delta);
         _schedule.Evaluate(input, _channels);
         _sink.Submit(_channels);
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalShaft,
@@ -146,6 +147,12 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
             _overrideImage.SetData(WindowOverrides.Side, WindowOverrides.Side, false, Image.Format.Rgba8, _windows.Data);
             _overrideTexture.Update(_overrideImage);
         }
+    }
+
+    private void OnWorldInstanceChanged(long _)
+    {
+        EndCue();
+        _schedule?.Reset();
     }
 
     // ------------------------------------------------------------------

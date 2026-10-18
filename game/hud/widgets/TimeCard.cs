@@ -13,6 +13,7 @@ namespace Campus.Hud.Widgets;
 public partial class TimeCard : Control
 {
     public static readonly int[] Rates = [0, 1, 10, 60, 360, 1440];
+    private static readonly string[] ShichenNames = ["zi", "chou", "yin", "mao", "chen", "si", "wu", "wei", "shen", "you", "xu", "hai"];
     private const float Ring = 104, Band = 12, HandleR = 98;
 
     private UiKit _kit = null!;
@@ -49,12 +50,9 @@ public partial class TimeCard : Control
         };
         parent.AddChild(card);
         card.Build();
-        model.Changed += card.Sync;
         card.Sync();
         return card;
     }
-
-    public override void _ExitTree() => _model.Changed -= Sync;
 
     private void Build()
     {
@@ -96,24 +94,24 @@ public partial class TimeCard : Control
             var preset = (ClockPreset)i;
             _control.SetClock(_model.World.PresetClock(preset, _model.Season), ClockSetMode.Jump);
             _presets.Select(-1, notify: false);
-            _model.Poke();
+            Sync();
         };
         _plus = k.Button(this, ButtonStyle.Secondary, "+1h", new Rect2(x + 216, y, 80, 32), "data", 8, pin: pin, padY: 2,
-            pressed: () => { _control.Advance(1); _model.Poke(); });
+            pressed: () => { _control.Advance(1); Sync(); });
         y += 42;
         _flow = Segmented.Create(k, this, new Vector2(x, y), [30, 34, 40, 40, 46, 54], ["", "1×", "10×", "60×", "360×", "1440×"], pin, 32, "data",
             ["pause", null, null, null, null, null]);
-        _flow.Changed += i => { _control.SetFlow(Rates[i]); _model.Poke(); };
+        _flow.Changed += i => { _control.SetFlow(Rates[i]); Sync(); };
         _wave = k.Wave(this, new Rect2(x + 252, y + 4, 44, 24), "graphic", pin, Vector4.Zero);
         y += 42;
         _seasons = Segmented.Create(k, this, new Vector2(x, y), [74, 74, 74, 74],
             [UiKit.T("hud.season.spring"), UiKit.T("hud.season.summer"), UiKit.T("hud.season.autumn"), UiKit.T("hud.season.winter")], pin, 32,
             icons: ["season_spring", "season_summer", "season_autumn", "season_winter"]);
-        _seasons.Changed += i => { _control.SetSeason((Season)i); _model.Poke(); };
+        _seasons.Changed += i => { _control.SetSeason((Season)i); Sync(); };
         y += 46;
         _forecast = k.Text(this, "", "small", "text.2", new Vector2(x, y), pin);
         _reset = k.Button(this, ButtonStyle.Text, "", new Rect2(Size.X - 24 - 150, y - 6, 150, 32), "small", 0, pin: pin,
-            align: HorizontalAlignment.Right, pressed: () => { _control.ResetDefault(); _model.Poke(); });
+            align: HorizontalAlignment.Right, pressed: () => { _control.ResetDefault(); Sync(); });
     }
 
     public void Sync()
@@ -129,7 +127,8 @@ public partial class TimeCard : Control
         _sun.Visible = !night;
         _moon.Visible = night;
         (night ? _moon : _sun).Position = handle - new Vector2(8, 8);
-        _needle.Points = [_center + dir * 60, _center + dir * (HandleR - 9)];
+        _needle.SetPointPosition(0, _center + dir * 60);
+        _needle.SetPointPosition(1, _center + dir * (HandleR - 9));
         var rateIndex = Array.IndexOf(Rates, _model.FlowRate);
         if (rateIndex >= 0) _flow.Select(rateIndex, notify: false);
         _flowText.Text = _model.FlowRate == 0 ? "‖" : $"{_model.FlowRate}×";
@@ -201,7 +200,7 @@ public partial class TimeCard : Control
                 {
                     _dragTarget = (_dragTarget + delta / Math.Tau * 24 + 24) % 24;
                     _control.SetClock(_dragTarget, ClockSetMode.Drag);
-                    _model.Poke();
+                    Sync();
                 }
                 else if (delta < -0.02f) Toast?.Invoke(UiKit.T("hud.time.forward_only"));
                 if (delta > 0) _dragAngle = a;
@@ -230,8 +229,7 @@ public partial class TimeCard : Control
 
     public static string Shichen(double clock)
     {
-        string[] names = ["zi", "chou", "yin", "mao", "chen", "si", "wu", "wei", "shen", "you", "xu", "hai"];
-        return names[(int)Math.Floor(((clock + 1) % 24) / 2)];
+        return ShichenNames[(int)Math.Floor(((clock + 1) % 24) / 2)];
     }
 
     public static string Period(double clock) => clock switch

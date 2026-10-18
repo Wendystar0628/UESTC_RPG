@@ -18,7 +18,6 @@ internal sealed class MinimapController
 
     private Spring _halfWidth = new(WalkHalfWidth, 0.6f);
     private Vector2 _lastFeet;
-    private long _instance = -1;
     private float _speed;
     private bool _resetView = true;
     private float _regionClock;
@@ -53,6 +52,13 @@ internal sealed class MinimapController
 
     public void SyncTheme() => _minimap.SyncTheme();
 
+    public void ResetWorld()
+    {
+        _resetView = true;
+        _regionClock = _regionCandidateAge = 0;
+        _regionShown = _regionCandidate = null;
+    }
+
     /// <summary>每帧。离开 Playing 期间（标题页、进出过场）机位会动而 Instance 不变，回到 Playing 的第一帧要重置一次。</summary>
     public void Frame(float dt, bool playing, bool hidden)
     {
@@ -66,11 +72,10 @@ internal sealed class MinimapController
     {
         var feet = _s.Observer.Feet;
         var at = new Vector2(feet.X, feet.Z);
-        if (_s.World.Instance != _instance || _resetView)
+        if (_resetView)
         {
             // 新的世界实例（读档、新游戏），或不连续地回到 Playing（同一世界继续）：
             // 平滑量与标记参考直接落到新值，与冷启动恢复同一起点（ENG-ARCH）
-            _instance = _s.World.Instance;
             _lastFeet = at;
             _speed = 0;
             _halfWidth.Snap(TargetHalfWidth(0));

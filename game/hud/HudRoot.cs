@@ -24,6 +24,7 @@ namespace Campus.Hud;
 public partial class HudRoot : CanvasLayer, IBootParticipant
 {
     private const float IdleFade = 4f;
+    private const double RefreshInterval = 0.1;
 
     private UiBootOptions _args = new();
     private UiThemeBuilder _theme = null!;
@@ -48,6 +49,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     private ViewMode _lastMode;
     private Season _lastSeason;
     private bool _initialized, _bound;
+    private double _refreshClock = RefreshInterval;
 
     public Control MinimapSlot => _minimapSlot;
 
@@ -135,9 +137,10 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     public override void _Process(double delta)
     {
         _settings.Tick(delta);
-        _model.Tick(delta);
         if (_scaleDebounce >= 0 && (_scaleDebounce += (float)delta) >= 0.2f) { _scaleDebounce = -1; ApplyScale(); }
         SyncCorners();
+        _refreshClock += delta;
+        if (_refreshClock >= RefreshInterval) RefreshHud();
         // 自动隐藏只作用于没人在用的普通 HUD（UI-NAV）：焦点、大页、改键、读屏都让它保持显示
         if (Playing && InterfaceState && !BigPage && _root.GetViewport().GuiGetFocusOwner() is null && DisplayServer.AccessibilityScreenReaderActive() == 0)
             _idle += (float)delta;
@@ -153,7 +156,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
             {
                 _weatherHeld = false;
                 _control.SetWeatherAuto();
-                _model.Poke();
+                RefreshHud();
                 _toast.Show(UiKit.T("weather.auto_toast"), "weather_auto");
             }
         }
@@ -168,7 +171,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
             _root.Resized -= Layout;
             _settings.Changed -= OnSettingsChanged;
             _flow.Changed -= OnFlowChanged;
-            _model.Changed -= OnModelChanged;
+            _model.World.InstanceChanged -= OnWorldChanged;
         }
         _router.InterfaceModeChanged -= OnInterfaceModeChanged;
         foreach (var layer in _layers) layer.Dispose();

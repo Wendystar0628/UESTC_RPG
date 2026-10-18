@@ -43,11 +43,17 @@ public partial class KeyLightDirector : Node, IQualityAware
 
     public KeyLightFrame Last { get; private set; }
 
-    public override void _EnterTree() => ProcessPriority = FramePriority.KeyLight;
+    public override void _EnterTree()
+    {
+        ProcessPriority = FramePriority.KeyLight;
+        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        _model.Reset();
+    }
 
     public override void _Ready()
     {
         _world = Services.Get<IWorldState>();
+        _world.InstanceChanged += OnWorldInstanceChanged;
         _state = Services.Get<IKeyLightPublisher>();
         EnsureLight();
         RetireOtherDirectionalLights();
@@ -55,6 +61,13 @@ public partial class KeyLightDirector : Node, IQualityAware
     }
 
     public override void _Process(double delta) => Step();
+
+    public override void _ExitTree()
+    {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+    }
+
+    private void OnWorldInstanceChanged(long _) => _model.Reset();
 
     public void ApplyQuality(QualityView view, in QualityChange change)
     {

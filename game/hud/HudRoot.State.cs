@@ -9,7 +9,7 @@ namespace Campus.Hud;
 public partial class HudRoot
 {
     // ---------------- 状态 ----------------
-    private bool Playing => _flow.State == AppState.Playing;
+    private bool Playing => _flow.IsPlaying;
     private bool InterfaceState => _router.InterfaceMode;
     private bool BigPage => _settingsCard.Visible || _savePage.Visible;
 
@@ -57,11 +57,28 @@ public partial class HudRoot
         r.Strip.Visible = !_timeOpen;
     }
 
-    private void OnModelChanged()
+    private void RefreshHud()
+    {
+        _refreshClock = 0;
+        SyncNotices();
+        if (_resident is not { } r) return;
+        if (r.Speed.IsVisibleInTree()) r.Speed.Sync();
+        if (r.Time.IsVisibleInTree()) r.Time.Sync();
+        if (r.Weather.IsVisibleInTree()) r.Weather.Sync();
+        if (r.Strip.IsVisibleInTree()) r.Strip.Sync();
+    }
+
+    private void OnWorldChanged(long instance)
+    {
+        _primed = false;
+        _refreshClock = RefreshInterval;
+    }
+
+    private void SyncNotices()
     {
         if (!_primed)
         {
-            // 第一次采样只记下当前值，不出提示
+            // 首次刷新或换世界后只记下当前值，不出提示
             _primed = true;
             _lastMode = _model.Mode;
             _lastSeason = _model.Season;
@@ -93,7 +110,7 @@ public partial class HudRoot
         _root.Resized += Layout;
         _settings.Changed += OnSettingsChanged;
         _flow.Changed += OnFlowChanged;
-        _model.Changed += OnModelChanged;
+        _model.World.InstanceChanged += OnWorldChanged;
     }
 
     private void OnThemeSwitched(bool dark)

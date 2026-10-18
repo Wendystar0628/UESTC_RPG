@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
@@ -51,6 +50,13 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     internal bool Instant { get; private set; }
     internal bool MinimapOff { get; set; }
 
+    public override void _EnterTree()
+    {
+        if (_services is null) return;
+        _minimapCtl.ResetWorld();
+        _services.World.InstanceChanged += OnWorldChanged;
+    }
+
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Hud;
@@ -84,6 +90,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
 
         _atlasCtl = new AtlasController(this, _page);
         _minimapCtl = new MinimapController(this, _minimap, () => _atlasCtl.Open(AtlasTab.Layers), () => _atlasCtl.Open(AtlasTab.Index));
+        _services.World.InstanceChanged += OnWorldChanged;
         atlas.Changed += RebuildEntries;
         RebuildEntries();
     }
@@ -94,7 +101,10 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         _atlasCtl.Dispose();
         _base?.Dispose();
         _services!.Atlas.Changed -= RebuildEntries;
+        _services.World.InstanceChanged -= OnWorldChanged;
     }
+
+    private void OnWorldChanged(long instance) => _minimapCtl.ResetWorld();
 
     private void MountMinimap() => _minimapCtl.Mount(Hud.MinimapSlot);
 
@@ -144,12 +154,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         var dt = (float)Math.Min(delta, 0.1);
         ApplyNight(_services!.Theme.Dark);
         _base!.Poll(_map?.Id);
-        var playing = _services!.Flow.State switch
-        {
-            AppState.Playing => true,
-            AppState.Boot or AppState.Title or AppState.Entering or AppState.Leaving or AppState.Quitting => false,
-            _ => throw new InvalidOperationException(_services.Flow.State.ToString()),
-        };
+        var playing = _services!.Flow.IsPlaying;
         _atlasCtl.Frame(dt, playing);
         _minimapCtl.Frame(dt, playing, hidden: !_uiEnabled || _pure || MinimapOff || _atlasCtl.IsOpen || _map is null);
     }
@@ -191,7 +196,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (_style is null || _services!.Flow.State != AppState.Playing) return;
+        if (_style is null || !_services!.Flow.IsPlaying) return;
         if (_atlasCtl.IsOpen) { _atlasCtl.HandleInput(e); return; }
         if (e.IsActionPressed("map")) { _atlasCtl.Open(AtlasTab.Layers); Handled(); }
         else if (e.IsActionPressed("atlas_index")) { _atlasCtl.Open(AtlasTab.Index); Handled(); }

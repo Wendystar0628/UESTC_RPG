@@ -2,7 +2,6 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Camera.Walk;
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Gen.World;
@@ -26,16 +25,14 @@ public sealed class WalkRulesTests
     }
 
     [TestCase]
+    [TestCategory("Regression")]
     public void NonPlayingStatesFreezeVelocityAndInterpolationWithoutMovingFeet()
     {
         var feet = new Vector3(12, 3, -8);
-        foreach (var state in new[] { AppState.Boot, AppState.Title, AppState.Entering, AppState.Leaving, AppState.Quitting })
-        {
-            var previous = new Vector3(-20, 40, 50);
-            var velocity = new Vector3(3, -8, 2);
-            AssertThat(WalkMath.FreezeForAppState(state, feet, ref previous, ref velocity)).OverrideFailureMessage("Non-playing state did not freeze physics: " + state).IsTrue();
-            AssertThat(previous == feet && velocity == Vector3.Zero && feet == new Vector3(12, 3, -8)).OverrideFailureMessage("Freeze moved the restored body or retained velocity/interpolation drift.").IsTrue();
-        }
+        var previous = new Vector3(-20, 40, 50);
+        var velocity = new Vector3(3, -8, 2);
+        AssertThat(WalkMath.FreezeUnlessPlaying(false, feet, ref previous, ref velocity)).OverrideFailureMessage("Non-playing state did not freeze physics.").IsTrue();
+        AssertThat(previous == feet && velocity == Vector3.Zero && feet == new Vector3(12, 3, -8)).OverrideFailureMessage("Freeze moved the restored body or retained velocity/interpolation drift.").IsTrue();
     }
 
     [TestCase]
@@ -44,12 +41,12 @@ public sealed class WalkRulesTests
         var feet = new Vector3(12, 3, -8);
         var previous = feet + Vector3.UnitX;
         var velocity = new Vector3(4, -9, 2);
-        AssertThat(WalkMath.FreezeForAppState(AppState.Entering, feet, ref previous, ref velocity)).OverrideFailureMessage("Entering did not freeze.").IsTrue();
-        AssertThat(!WalkMath.FreezeForAppState(AppState.Playing, feet, ref previous, ref velocity)
+        AssertThat(WalkMath.FreezeUnlessPlaying(false, feet, ref previous, ref velocity)).OverrideFailureMessage("Entering did not freeze.").IsTrue();
+        AssertThat(!WalkMath.FreezeUnlessPlaying(true, feet, ref previous, ref velocity)
             && previous == feet && velocity == Vector3.Zero).OverrideFailureMessage("Playing teleported or injected a resume impulse.").IsTrue();
         previous = feet - Vector3.UnitX;
         velocity = new Vector3(2, -3, 1);
-        AssertThat(!WalkMath.FreezeForAppState(AppState.Playing, feet, ref previous, ref velocity)
+        AssertThat(!WalkMath.FreezeUnlessPlaying(true, feet, ref previous, ref velocity)
             && previous == feet - Vector3.UnitX && velocity == new Vector3(2, -3, 1)).OverrideFailureMessage("Playing motion was frozen; Menu/Atlas input ownership must not become a physics pause.").IsTrue();
     }
 

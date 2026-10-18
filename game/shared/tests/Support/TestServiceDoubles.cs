@@ -79,6 +79,10 @@ internal sealed class ImmediateVeil : IVeilService
 internal sealed class TestAppFlow : IAppFlow
 {
     public AppState State { get; private set; } = AppState.Playing;
+    public bool IsPlaying => State == AppState.Playing;
+    private AppActivity _activity;
+    public Func<AppActivity>? ActivitySource { get; set; }
+    public AppActivity Activity { get => ActivitySource?.Invoke() ?? _activity; set => _activity = value; }
     public long Rev { get; private set; }
     public EnterPath? Path => null;
     public bool Skippable => false;

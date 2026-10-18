@@ -16,7 +16,7 @@ public sealed record SaveRuntimeOptions(string Directory, string Build, bool Ena
 /// <summary>Engine adapters are supplied once at boot. None are called on the disk worker.</summary>
 public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, ICameraRig Camera,
     IObserverState Observer, IRuleset Ruleset, IAtlasService Atlas, IVeilState Veil,
-    Func<AppState> AppState, Action<RulesetId> SelectRuleset, IWorldRestore WorldRestore,
+    IAppFlow AppFlow, Action<RulesetId> SelectRuleset, IWorldRestore WorldRestore,
     Func<Pose, NavSpace?, ViewMode, Task> WaitDestination, Func<Task<byte[]?>> CaptureThumbnail, Func<long> UnixTime);
 
 [KernelService(typeof(SaveService), Owner = "WP-50")]
@@ -102,18 +102,14 @@ public sealed class SaveService : ISaveService, IDisposable
         }
     }
     private bool _saveAtDone;
-    private bool Playing => _runtime.AppState() switch
-    {
-        AppState.Playing => true,
-        AppState.Boot or AppState.Title or AppState.Entering or AppState.Leaving or AppState.Quitting => false,
-        _ => throw new ArgumentOutOfRangeException(nameof(_runtime.AppState))
-    };
+    private bool Playing => _runtime.AppFlow.IsPlaying;
+    private bool MapTransitioning => (_runtime.AppFlow.Activity & AppActivity.MapTransition) != 0;
 
     private bool Safe
     {
         get
         {
-            if (RestoreFaulted || _restoring || !Playing || _runtime.Veil.Opacity > 0 || _runtime.Maps.Transition is { Done.IsCompleted: false }) return false;
+            if (RestoreFaulted || _restoring || !Playing || _runtime.Veil.Opacity > 0 || MapTransitioning) return false;
             foreach (var registration in _sections.Registered) if (!registration.Section.IsSettled) return false;
             return true;
         }
@@ -126,7 +122,7 @@ public sealed class SaveService : ISaveService, IDisposable
         if (reason is SaveReason.Quit or SaveReason.ToTitle) throw new ArgumentException("Use FlushForQuit.", nameof(reason));
         if (reason is not (SaveReason.Interval or SaveReason.Test)) return;
         if (!_initialized || !Enabled || Active is null || _restoring || RestoreFaulted || HasPendingPose ||
-            !Playing || _runtime.Maps.Transition is { Done.IsCompleted: false }) return;
+            !Playing || MapTransitioning) return;
         if (_request is null) _requestAge = 0;
         _request = reason;
     }
@@ -213,7 +209,7 @@ public sealed class SaveService : ISaveService, IDisposable
     {
         if (RestoreFaulted) throw new InvalidOperationException("save.error.restore_world");
         // Never combine the old map's stable maps segment with a new map's observer/weather state.
-        if (_runtime.Maps.Transition is { Done.IsCompleted: false } ||
+        if (MapTransitioning ||
             reason == SaveReason.Interval && !Playing)
             return null;
         var map = _runtime.Maps.Current;

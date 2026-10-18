@@ -59,7 +59,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private Pose _descentFrom;
     private float _descentDuration;
     private float _descentElapsed;
-    private long _worldInstance = -1;
+    private bool _worldResetPending = true;
 
     public bool Active => _view?.Mode == ViewMode.Walk;
     public bool ExitRequested => _safetyFailed;
@@ -130,6 +130,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     public override void _Ready()
     {
         ResolveServices();
+        _world!.InstanceChanged += OnWorldInstanceChanged;
         _shape = new CollisionShape3D { Shape = _cylinder, Position = Vector3.Up * (_cylinder.Height * .5f) };
         AddChild(_shape);
         _probe.Margin = WalkTuning.SafeMargin;
@@ -144,11 +145,22 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         _previousFeet = _feet = GlobalPosition.ToNumerics();
     }
 
+    public override void _EnterTree()
+    {
+        if (_shape is null) return;
+        _world!.InstanceChanged += OnWorldInstanceChanged;
+        _admission = new(this);
+        _worldResetPending = true;
+    }
+
     public override void _ExitTree()
     {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _admission?.Dispose();
         _admission = null;
     }
+
+    private void OnWorldInstanceChanged(long instance) => _worldResetPending = true;
 
     private void ResolveServices()
     {
@@ -259,7 +271,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
             if (!CollisionReady || !ResolvePlacement()) { CollisionReady = false; _previousFeet = _feet; return; }
         }
         var runtimeVelocity = Velocity.ToNumerics();
-        _appFrozen = WalkMath.FreezeForAppState(_appFlow.State, _feet, ref _previousFeet, ref runtimeVelocity);
+        _appFrozen = WalkMath.FreezeUnlessPlaying(_appFlow.IsPlaying, _feet, ref _previousFeet, ref runtimeVelocity);
         if (_appFrozen)
         {
             Velocity = runtimeVelocity.ToGodot();
@@ -270,9 +282,9 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         }
         float dt = (float)delta;
         if (!(dt > 0) || !float.IsFinite(dt)) return;
-        if (_world is { } world && world.Instance != _worldInstance)
+        if (_worldResetPending)
         {
-            _worldInstance = world.Instance;
+            _worldResetPending = false;
             _previousFeet = _feet;
             _fov = WalkTuning.WalkFov;
         }

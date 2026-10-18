@@ -5,6 +5,7 @@ using Campus.Contracts.Save;
 namespace Campus.Contracts.AppFlow;
 
 public enum AppState : byte { Boot, Title, Entering, Playing, Leaving, Quitting }
+[Flags] public enum AppActivity : byte { None = 0, MapTransition = 1, CameraTransition = 2, SaveWrite = 4, SeasonTransition = 8 }
 public enum EnterKind : byte { NewGame, Continue, LoadSlot }
 public enum CinematicMode : byte { Full, Short, Off }            // 设置项"开场过场"（SYS-TITLE）
 public enum EnterPath : byte { Cinematic, ShortCinematic, Veil } // 本次实际走的路径；减少动态效果时为 Veil
@@ -16,6 +17,9 @@ public interface IAppFlow                     // Kernel 服务（WP-49a），主
     AppState State { get; }                   // Boot → Title → Entering → Playing → Leaving → Title；任何状态都能走到 Quitting；
                                               // 退出时保存明确失败、观者选"返回游戏"，Quitting 回到 Playing（SYS-SAVE，D-171）
     long Rev { get; }
+    bool IsPlaying { get; }
+    // Read directly from the owning services on every access; callers select the reasons relevant to their operation.
+    AppActivity Activity { get; }
     event Action<AppState, AppState>? Changed; // (旧, 新)，值变才发
     EnterPath? Path { get; }                   // 只在 Entering 时有值
     bool Skippable { get; }                    // Entering 且还没开始收尾

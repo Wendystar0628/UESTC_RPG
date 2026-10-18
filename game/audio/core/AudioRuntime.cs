@@ -27,7 +27,8 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
     private IVeilState? _veil;
     private IAppFlow? _app;
     private bool _initialized, _enabled, _enteredTree, _audible, _background;
-    private long _instance, _frame;
+    private long _frame;
+    private bool _worldReset;
     private double _seconds;
     private float _routeChangeDelay = -1f;
     private int _bootPhases;
@@ -38,6 +39,13 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
     public AudioSettings Settings { get; private set; } = new();
     public event Action<AudioSettings>? SettingsChanged;
     public AudioSnapshot Snapshot { get; private set; } = new(0, 0, 0, 0, 0, AudioMix.SilenceDb, 0);
+
+    public override void _EnterTree()
+    {
+        _enteredTree = true;
+        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        _worldReset = true;
+    }
 
     public override void _Ready()
     {
@@ -91,9 +99,9 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
         AddChild(_ui);
         if (_enteredTree) _ui.Play();
         _world = RuntimeKernel.Get<IWorldState>();
+        if (_enteredTree) _world.InstanceChanged += OnWorldInstanceChanged;
         _veil = RuntimeKernel.Get<IVeilState>();
         _app = RuntimeKernel.Get<IAppFlow>();
-        _instance = _world.Instance;
         _initialized = true;
         GD.Print($"Audio ready: {AudioBusTree.Layout.Length} buses, {_clips.UiClipCount}/13 licensed UI clips, output {(_enabled ? "enabled" : "off")}");
     }
@@ -180,9 +188,9 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
         var dt = (float)Math.Clamp(delta, 0d, .1d);
         _seconds += dt;
         _frame++;
-        if (_instance != _world!.Instance)
+        if (_worldReset)
         {
-            _instance = _world.Instance;
+            _worldReset = false;
             _pool!.StopMapVoices();
             _mix.ResetWorldAutomation();
             Array.Fill(_lastCue, double.NegativeInfinity);
@@ -244,5 +252,12 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
         _pool?.StopMapVoices();
     }
     public void OnMapLoaded(IMapContext ctx) { }
-    public override void _ExitTree() { _store?.Flush(); _enteredTree = false; }
+    private void OnWorldInstanceChanged(long _) => _worldReset = true;
+
+    public override void _ExitTree()
+    {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        _store?.Flush();
+        _enteredTree = false;
+    }
 }

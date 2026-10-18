@@ -51,6 +51,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
 
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; } = 1;
+    public event Action<long>? InstanceChanged;
     public double WorldHours { get; private set; } = 17.5;
     public double Clock => ArtEphemeris.Wrap(WorldHours + _offset, 24);
     public double SeasonPos { get; private set; } = 2;
@@ -377,6 +378,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         RestoreFaulted = false;
         Instance++;
         Rev++;
+        InstanceChanged?.Invoke(Instance);
     }
 
     public void AbortRestore()

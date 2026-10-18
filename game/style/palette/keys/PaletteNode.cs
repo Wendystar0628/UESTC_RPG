@@ -33,7 +33,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
     private IDisposable? _registration;
     private IWorldState? _world;
     private long _rev;
-    private long _instance = long.MinValue;
+    private bool _worldReset = true;
     private double _lastClock = double.NaN, _lastSeason = double.NaN;
     private int _frames;
     private PaletteInspector? _inspector;
@@ -76,6 +76,12 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         return bytes;
     }
 
+    public override void _EnterTree()
+    {
+        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        _worldReset = true;
+    }
+
     public override void _Ready()
     {
         if (AppBoot.Options.Capture.Inspect == "palette")
@@ -87,30 +93,37 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
 
     public override void _Process(double delta)
     {
-        _world ??= Services.Get<IWorldState>();
+        if (_world is null)
+        {
+            _world = Services.Get<IWorldState>();
+            _world.InstanceChanged += OnWorldInstanceChanged;
+        }
         var clock = _world.Clock;
         var season = _world.SeasonPos;
         var weather = _world.WeatherNow;
         var w = _script.EvaluateWorld(clock, season, _world.Sun.AltDeg, weather);
         _composer.ComposeCurrent(w);
         var jump = double.IsNaN(_lastClock) || Math.Abs(Oklab.HueDiff(_lastClock * 15.0, clock * 15.0)) > 7.5;   // > 0.5 h
-        var full = _world.Instance != _instance || season != _lastSeason || jump;
+        var full = _worldReset || season != _lastSeason || jump;
         _composer.StepSeasonal(w, full);
         _image.SetData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
         _texture.Update(_image);
         WriteGlobals(w);
         var snapshot = _composer.Snapshot(w, _rev);
-        if (snapshot != Current || _world.Instance != _instance) snapshot = snapshot with { Rev = ++_rev };
+        if (snapshot != Current || _worldReset) snapshot = snapshot with { Rev = ++_rev };
         Current = snapshot;
-        _instance = _world.Instance;
+        _worldReset = false;
         _lastClock = clock;
         _lastSeason = season;
         _inspector?.Refresh(w, clock, season);
         if (_inspector is not null && ++_frames == 30) PrintParity(w, clock, season);
     }
 
+    private void OnWorldInstanceChanged(long _) => _worldReset = true;
+
     public override void _ExitTree()
     {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         // Stop producing, unbind the global, then hand the texture back to the registry (it releases the native resource).
         SetProcess(false);
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalPalette, default(Variant));

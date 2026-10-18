@@ -72,10 +72,23 @@ public sealed class AtlasServiceTests
     }
 
     [TestCase]
+    [TestCategory("Contract")]
     public void TravelPassesPreferenceAndRetainsInput()
     {
         var test = new Fixture();
         test.Observer.Feet = new(100, 0, 100);
+        var activitySource = test.Flow.ActivitySource;
+        test.Flow.ActivitySource = null;
+        test.Flow.Activity = AppActivity.MapTransition;
+        AssertThat(!test.Atlas.CanTravel(new("test-kiosk"), TravelStyle.Teleport, out var refusal)
+            && refusal == TravelRefusal.Unavailable).OverrideFailureMessage("Map transition changed its travel refusal.").IsTrue();
+        test.Flow.Activity = AppActivity.CameraTransition;
+        AssertThat(!test.Atlas.CanTravel(new("test-kiosk"), TravelStyle.Teleport, out refusal)
+            && refusal == TravelRefusal.Busy).OverrideFailureMessage("Camera transition changed its travel refusal.").IsTrue();
+        test.Flow.Activity = AppActivity.SaveWrite | AppActivity.SeasonTransition;
+        AssertThat(test.Atlas.CanTravel(new("test-kiosk"), TravelStyle.Teleport, out _)).OverrideFailureMessage("Unrelated activity blocked Atlas travel.").IsTrue();
+        test.Flow.Activity = AppActivity.None;
+        test.Flow.ActivitySource = activitySource;
         test.Atlas.Travel(new("test-kiosk"), TravelStyle.Teleport);
         AssertThat(test.Camera.Options?.Prefer == TransitPreference.Teleport && test.Camera.Options.Entry is null).OverrideFailureMessage("Teleport used flight path options.").IsTrue();
         AssertThat(test.Camera.Locks == 1 && !test.Atlas.IsSettled).OverrideFailureMessage("Travel lock or unsettled state missing.").IsTrue();
@@ -275,6 +288,7 @@ public sealed class AtlasServiceTests
         internal TestCameraRig Camera { get; } = NewCamera();
         internal Driver Driver { get; } = new();
         internal TestView View { get; }
+        internal TestAppFlow Flow { get; } = new();
         internal Observer Observer { get; } = new();
         internal FakeWorld World { get; }
         internal TestMapContext Context { get; }
@@ -292,7 +306,10 @@ public sealed class AtlasServiceTests
             var maps = new SingleMapService(Context, Camera);
             View = new(Observer);
             Atlas = new(Camera, Observer, new TestRuleset(policy), Driver);
-            Atlas.Connect(maps, new TestAppFlow(), new TestAudio(), View);
+            Flow.ActivitySource = () =>
+                (maps.Transition is { Done.IsCompleted: false } ? AppActivity.MapTransition : AppActivity.None) |
+                (Camera.ActiveTransit is { Done.IsCompleted: false } ? AppActivity.CameraTransition : AppActivity.None);
+            Atlas.Connect(maps, Flow, new TestAudio(), View);
             Reload();
         }
         internal void Reload() => Atlas.LoadMap(Context, new(1, Context.Descriptor.DataRect,
