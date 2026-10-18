@@ -36,13 +36,6 @@ public sealed class InputBindings
     }
 
     public int PhysicalKey(string action) => _keys.GetValueOrDefault(action);
-    public string KeyLabel(string action)
-    {
-        var label = DisplayServer.KeyboardGetLabelFromPhysical((Key)PhysicalKey(action));
-        using var input = new InputEventKey { PhysicalKeycode = label };
-        return input.AsTextPhysicalKeycode();
-    }
-
     public bool Rebind(string action, int physicalKey, out string? conflict)
     {
         conflict = null;

@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
-using Campus.Contracts.Save;
 using Godot;
 
 namespace Campus.Camera;
@@ -15,11 +14,10 @@ public partial class ObserverCamera
     private float _menuSeconds;
     private bool _skipSent;
     private bool _skipHintVisible;
+    // ISkipInputState: hold-menu skip of the Entering sequence.
     public float Progress => _flow?.State == AppState.Entering && _menuHeld
         ? Math.Clamp(_menuSeconds / Tuning.SkipHoldSeconds, 0, 1) : 0;
     public bool HintVisible => _flow?.State == AppState.Entering && _skipHintVisible;
-    public bool InterfaceMode { get; private set; } = true;
-    public event Action<bool>? InterfaceModeChanged;
 
     public IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler)
     {
@@ -31,30 +29,13 @@ public partial class ObserverCamera
         return new LayerLease(this, layer.Id);
     }
 
-    public void SetInterfaceMode(bool enabled)
-    {
-        if (!enabled && (!IsPlaying || _locks.Locked)) enabled = true;
-        bool changed = InterfaceMode != enabled;
-        InterfaceMode = enabled;
-        Input.MouseMode = enabled ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
-        if (changed) InterfaceModeChanged?.Invoke(enabled);
-    }
-    public bool TryRebind(string action, int physicalKey, out string? conflict)
-    {
-        bool changed = _bindings.Rebind(action, physicalKey, out conflict);
-        if (changed) { _input.Clear(); _flight.Reset(); SaveBindings(); }
-        return changed;
-    }
-    public int PhysicalKey(string action) => action == "menu" ? (int)Key.Escape : _bindings.PhysicalKey(action);
-    public void SaveBindings() { if (!_automated) _ = _bindings.Save(); }
-
     public override void _Input(InputEvent input)
     {
         if (_flow?.State == AppState.Entering) _skipHintVisible = true;
         // Releases always clear held state, including when a newly opened GUI consumes the release.
         foreach (string action in InputBindings.Actions)
             if (input.IsActionReleased(action)) _input.Release(action);
-        if (input.IsActionReleased("menu")) { _menuHeld = false; _menuSeconds = 0; _skipSent = false; }
+        if (input.IsActionReleased("menu")) ResetSkipHold();
     }
 
     public override void _UnhandledInput(InputEvent input)
@@ -142,9 +123,11 @@ public partial class ObserverCamera
     {
         if (what != NotificationApplicationFocusOut) return;
         _input.Clear(); _flight.Reset(); _walk?.SetInput(default);
-        _menuHeld = false; _menuSeconds = 0; _skipSent = false;
+        ResetSkipHold();
         SetInterfaceMode(true);
     }
+
+    private void ResetSkipHold() { _menuHeld = false; _menuSeconds = 0; _skipSent = false; }
 
     private bool Dispatch(InputActionEvent action)
     {
