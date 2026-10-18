@@ -15,7 +15,7 @@
 
 ## CORE-CONVENTIONS · 约定
 
-`docs/core/CORE-CONVENTIONS-约定.md` · 8.9k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法、编号与命名、实体 ID 规则、确定性原则
+`docs/core/CORE-CONVENTIONS-约定.md` · 10.4k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法、编号与命名、实体 ID 规则、确定性原则
 关键词：约定、坐标系、单位、角度、方位角、时间写法、编号体系、命名、实体 ID、色名、枚举纪律、持久化 ID、确定性
 
 - CORE-CONVENTIONS §0 结论 · L22 · 807
@@ -26,25 +26,26 @@
   - CORE-CONVENTIONS §1.3 清水河的范围数 · L60 · 278
   - CORE-CONVENTIONS §1.4 其他单位 · L68 · 267
 - CORE-CONVENTIONS §2 时间写法 · L76 · 831
-- CORE-CONVENTIONS §3 标识与命名 · L94 · 4.5k
-  - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L96 · 826
-  - CORE-CONVENTIONS §3.2 编号体系 · L111 · 950
-  - CORE-CONVENTIONS §3.3 同号不同义的读法 · L135 · 716
-  - CORE-CONVENTIONS §3.4 命名写法 · L148 · 682
-  - CORE-CONVENTIONS §3.5 色名 · L158 · 364
-  - CORE-CONVENTIONS §3.6 枚举与扩展纪律 · L165 · 567
-  - CORE-CONVENTIONS §3.7 持久化 ID 的稳定 · L176 · 426
-- CORE-CONVENTIONS §4 确定性 · L185 · 294
-- CORE-CONVENTIONS §5 路径 · L193 · 258
+- CORE-CONVENTIONS §3 标识与命名 · L94 · 6.0k
+  - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L96 · 923
+  - CORE-CONVENTIONS §3.2 编号体系 · L112 · 873
+  - CORE-CONVENTIONS §3.3 同号不同义的读法 · L135 · 687
+  - CORE-CONVENTIONS §3.4 命名写法 · L148 · 1.1k
+  - CORE-CONVENTIONS §3.5 色名 · L170 · 364
+  - CORE-CONVENTIONS §3.6 枚举与扩展纪律 · L177 · 567
+  - CORE-CONVENTIONS §3.7 持久化 ID 的稳定 · L188 · 426
+  - CORE-CONVENTIONS §3.8 文件与编号的命名格式 · L197 · 1.0k
+- CORE-CONVENTIONS §4 确定性 · L217 · 294
+- CORE-CONVENTIONS §5 路径 · L225 · 258
 
 ## CORE-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 10.3k 字 · 协作、流程、文档规则与门禁流程类的已定决策
+`docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md` · 10.5k 字 · 协作、流程、文档规则与门禁流程类的已定决策
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主代理、子代理
 
 - CORE-DECISIONS-PROCESS §0 结论 · L23 · 173
   - ★ CORE-DECISIONS-PROCESS §0.1 接入要点 · L27 · 75
-- CORE-DECISIONS-PROCESS §1 流程 · L31 · 9.6k
+- CORE-DECISIONS-PROCESS §1 流程 · L31 · 9.8k
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
