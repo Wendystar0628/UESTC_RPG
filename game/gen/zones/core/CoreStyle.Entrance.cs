@@ -19,8 +19,9 @@ public static partial class CoreStyle
     public const float TerraceWidth = 4.78f;
     /// <summary>Side stair (侧梯) on each flank, outer width including cheeks (review).</summary>
     public const float SideStairWidth = 4.2f;
-    /// <summary>Solid stone guard wall outside each side stair, its top 1.05 m over the walking line (SYS-WALK).</summary>
-    public const float GuardWallWidth = 0.3f, GuardHeight = 1.05f;
+    /// <summary>Solid stone guard wall outside each side stair, its top at the railing part's height over the walking line (SYS-WALK).</summary>
+    public const float GuardWallWidth = 0.3f;
+    public static readonly float GuardHeight = new Campus.Contracts.Parts.RailingParams().Height;
     /// <summary>Top landing depth in front of the podium edge (the OSM base's 3.45 m back strip).</summary>
     public const float TopLandingDepth = 3.45f;
 

@@ -30,6 +30,11 @@ public sealed class WorldDataException(string file, string entry, string message
 /// <summary>Pure parser. The kernel supplies only the active map's relative filenames and bytes.</summary>
 public static class WorldModelLoader
 {
+    /// <summary>
+    /// Storey height for a building the world data gives no height for. This layer is below the building styles, which supply
+    /// their own storey height once a footprint is planned (FacadeRules); everything in the world layer that needs one reads this.
+    /// </summary>
+    public const float DefaultStoreyHeight = 3.6f;
     private static readonly Encoding Utf8 = new UTF8Encoding(false, true);
     public static WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, WorldLoadOptions? options = null) =>
         Load(map, files.ToDictionary(p => p.Key, p => Decode(p.Key, p.Value), StringComparer.Ordinal), options);
@@ -356,8 +361,8 @@ public static class WorldModelLoader
                         case HeightOp height:
                             RequireReason(height.Reason);
                             if (height.Height is <= 0 || height.Storeys is <= 0) throw new ArgumentException("Height and storeys must be positive.");
-                            var newHeight = height.Height ?? (height.Storeys is { } count ? count * (current.Height / current.Storeys ?? 3.6f) : current.Height);
-                            features[key] = current with { Height = newHeight, Storeys = height.Storeys ?? current.Storeys, Parts = current.Parts.Select(p => p with { Height = height.Height ?? (height.Storeys is { } floors ? floors * (p.Height / p.Storeys ?? 3.6f) : p.Height), Storeys = height.Storeys ?? p.Storeys }).ToArray(), Source = FeatureSource.OsmOverlay, Bounds = BoundsOf(current.Geometry, newHeight ?? 0) };
+                            var newHeight = height.Height ?? (height.Storeys is { } count ? count * (current.Height / current.Storeys ?? DefaultStoreyHeight) : current.Height);
+                            features[key] = current with { Height = newHeight, Storeys = height.Storeys ?? current.Storeys, Parts = current.Parts.Select(p => p with { Height = height.Height ?? (height.Storeys is { } floors ? floors * (p.Height / p.Storeys ?? DefaultStoreyHeight) : p.Height), Storeys = height.Storeys ?? p.Storeys }).ToArray(), Source = FeatureSource.OsmOverlay, Bounds = BoundsOf(current.Geometry, newHeight ?? 0) };
                             break;
                         case StyleOp style:
                             features[key] = current with { Family = style.Family, Facade = style.Facade, Source = FeatureSource.OsmOverlay }; break;

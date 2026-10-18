@@ -143,7 +143,7 @@ public sealed class SouthSiteTests
         var shore = EastLake.EastLakeSite.ShoreOf(ctx.World);
         AssertThat(EastLake.EastLakeSite.InWater(water, shore.WadeFrame.P(shore.WadeLength * 0.5f, 1f))).OverrideFailureMessage("the wade frame looks over the water").IsTrue();
         AssertThat(shore.Tread2 < -0.5f && shore.Tread2 > -0.8f).OverrideFailureMessage("the wade tread is under the -0.5 m water by less than 0.3 m").IsTrue();
-        AssertThat(SouthTune.Lake.RailTop >= 1.05f).OverrideFailureMessage("balustrade at least 1.05 m").IsTrue();
+        AssertThat(SouthTune.Lake.RailTop >= new Campus.Contracts.Parts.RailingParams().Height).OverrideFailureMessage("balustrade at least the railing part's height").IsTrue();
         foreach (var (f, l, i) in EastLake.EastLakeSite.BankSegments(shore, water))
         {
             var openings = shore.Openings(i, l);

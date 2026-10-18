@@ -62,8 +62,8 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
             var storeys = new List<StoreyInfo>();
             foreach (var part in WorldFeatureKinds.Parts(feature, "building"))
             {
-                var count = Math.Max(1, part.Storeys ?? (int)MathF.Ceiling((part.Height ?? 3.6f) / 3.6f));
-                var height = (part.Height ?? count * 3.6f) / count;
+                var count = Math.Max(1, part.Storeys ?? (int)MathF.Ceiling((part.Height ?? WorldModelLoader.DefaultStoreyHeight) / WorldModelLoader.DefaultStoreyHeight));
+                var height = (part.Height ?? count * WorldModelLoader.DefaultStoreyHeight) / count;
                 foreach (var polygon in WorldFeatureGeometry.PolygonsOf(part.Geometry))
                     for (var floor = 1; floor <= count; floor++)
                         storeys.Add(new(floor, (floor - 1) * height, height, polygon.Outer));
@@ -161,7 +161,7 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
         foreach (var feature in At(p.X, p.Z))
         {
             var point = new Vector2(p.X, p.Z);
-            var part = WorldFeatureKinds.Parts(feature, "building").FirstOrDefault(part => p.Y >= ground && p.Y < ground + (part.Height ?? 3.6f)
+            var part = WorldFeatureKinds.Parts(feature, "building").FirstOrDefault(part => p.Y >= ground && p.Y < ground + (part.Height ?? WorldModelLoader.DefaultStoreyHeight)
                 && WorldFeatureGeometry.PolygonsOf(part.Geometry).Any(r => PlanGeometry.Contains(r, point)));
             if (part is not null)
             {
@@ -170,7 +170,7 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
                 var distance = WorldFeatureGeometry.PolygonsOf(part.Geometry).Where(r => PlanGeometry.Contains(r, point))
                     .SelectMany(r => new[] { r.Outer }.Concat(r.Holes)).Min(r => PlanGeometry.DistanceToRing(new(p.X, p.Z), r));
                 var localFloor = _interiors is WorldInteriorIndex
-                    ? 1 + (int)MathF.Floor((p.Y - ground) / ((part.Height ?? 3.6f) / Math.Max(1, part.Storeys ?? 1)))
+                    ? 1 + (int)MathF.Floor((p.Y - ground) / ((part.Height ?? WorldModelLoader.DefaultStoreyHeight) / Math.Max(1, part.Storeys ?? 1)))
                     : storey?.Index ?? 1;
                 return new(MediumKind.Interior, feature.Id, localFloor, distance);
             }

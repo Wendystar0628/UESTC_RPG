@@ -30,8 +30,9 @@ public static class WaterfrontTune
     // ---- Railing (MAP-QSH-ADDITIONS 护栏细部: 灰白石望柱、两道不锈钢细横管) ----
     /// <summary>Continuous stone base (地栿) under the posts: width and rise above the walking surface.</summary>
     public const float BaseWidth = 0.34f, BaseRise = 0.14f, BaseDrop = 0.12f, BaseBevel = 0.02f;
-    /// <summary>Post: 0.25 m square, top 1.05 m above the walking surface (ART-FIDELITY 第 6 条, SYS-WALK 第 1 条).</summary>
-    public const float PostSize = 0.25f, PostTop = 1.05f, PostBevel = 0.02f, PostSpacing = 2.0f;
+    /// <summary>Post: 0.25 m square, top at the railing part's height above the walking surface (ART-FIDELITY 第 6 条, SYS-WALK 第 1 条).</summary>
+    public const float PostSize = 0.25f, PostBevel = 0.02f, PostSpacing = 2.0f;
+    public static readonly float PostTop = new Campus.Contracts.Parts.RailingParams().Height;
     /// <summary>Plain square post head (望柱头做成素方，不雕兽): a slightly wider cap.</summary>
     public const float CapSize = 0.29f, CapHeight = 0.08f, CapBevel = 0.015f;
     /// <summary>Bridge-head posts at the four deck corners.</summary>

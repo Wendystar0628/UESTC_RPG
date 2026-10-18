@@ -70,7 +70,7 @@ public sealed class West19cTests
         AssertThat(MathF.Abs(BoardwalkSite.DeckTop(world, (_, _) => 0f) - (W.PavingTop + W.Lip)) < TestTolerance.Position).OverrideFailureMessage("on flat ground the deck sits a lip above the paving").IsTrue();
         var rails = colliders.OfType<WallCollider>().Where(c => c.Tag == SurfaceTag.Barrier).ToArray();
         AssertThat(rails.Length > 0 && rails.All(r => r.Y1 - y >= WalkRules.BarrierHeight - TestTolerance.Position)).OverrideFailureMessage("every rail barrier tops out at 1.5 m over the deck").IsTrue();
-        AssertThat(W.RailHeight >= 1.05f).OverrideFailureMessage("the visible rail is at least 1.05 m").IsTrue();
+        AssertThat(W.RailHeight >= new Campus.Contracts.Parts.RailingParams().Height).OverrideFailureMessage("the visible rail is at least the railing part's height").IsTrue();
         // One gap, on the water side, opposite the beach.
         var path = BoardwalkSite.Path(world);
         var (s, side) = BoardwalkSite.Beach(world);

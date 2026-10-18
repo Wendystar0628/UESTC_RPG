@@ -188,6 +188,10 @@ public static class BuildingPlanner
         return true;
     }
 
+    /// <summary>A footprint's roof height above its pad: its own height, else its storeys (one when unknown) at its style's storey height.</summary>
+    public static float TopOf(BuildingSource src) =>
+        src.Height ?? (src.Storeys ?? 1) * FacadeRules.ProfileFor(FacadeRules.StyleOf(src.Feature.Family, src.Props, src.Feature.Props), 0).StoreyHeight;
+
     /// <summary>Total height, storey count and storey height: the source's own values, else the family's storey height.</summary>
     private static (float Height, int Storeys, float StoreyHeight) Heights(BuildingSource src, FacadeProfile profile)
     {
@@ -221,7 +225,7 @@ public static class BuildingPlanner
             if (id == self || !world.Features.TryGetValue(id, out var f)) continue;
             foreach (var src in Sources(f))
                 if (PlanGeometry.InsideByCrossings(src.Rings.Outer, p) && !src.Rings.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p)) &&
-                    MathF.Abs(PadY(world, f) + (src.Height ?? (src.Storeys ?? 1) * 3f) - y) <= EntranceRules.DeckAbove) return id;
+                    MathF.Abs(PadY(world, f) + TopOf(src) - y) <= EntranceRules.DeckAbove) return id;
         }
         return null;
     }

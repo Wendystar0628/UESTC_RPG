@@ -45,10 +45,10 @@ public static class EntranceRules
     /// <summary>The outside landing level is the terrain this far beyond the landing's front edge.</summary>
     public const float GroundProbe = 1.0f;
     /// <summary>
-    /// A landing standing more than this above the ground gets WP-11 guard railings (balusters) on its open sides, this
-    /// high and this far in from its edges (WLD-TERRAIN: 临空 > 1.0 m, 1.05 m railing).
+    /// A landing standing more than this above the ground gets WP-11 guard railings (balusters) on its open sides (the railing
+    /// part's own height), this far in from its edges (WLD-TERRAIN: 临空 > 1.0 m).
     /// </summary>
-    public const float GuardFrom = 1.0f, GuardHeight = 1.05f, GuardInset = 0.1f;
+    public const float GuardFrom = 1.0f, GuardInset = 0.1f;
     /// <summary>Below this landing height nothing is built in front of the door (the stone threshold alone).</summary>
     public const float MinLanding = 0.02f;
 }

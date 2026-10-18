@@ -336,7 +336,8 @@ public static class CenterEastTune
         public const float RoofBand = 0.35f, Parapet = 1.15f, ParapetThickness = 0.3f;
         /// <summary>Terraces and podium roofs are planted (退台屋面是绿化露台): the soil stands this far in from the band face.</summary>
         public const float TerraceRim = 0.6f, TerraceSoil = 0.12f;
-        public const float RailHeight = 1.1f, RailPosts = 1.8f;
+        public static readonly float RailHeight = new Campus.Contracts.Parts.RailingParams().Height;
+        public const float RailPosts = 1.8f;
 
         /// <summary>Corner rounding of every storey outline (楼体带圆角): fillet radius and the smallest corner turn it rounds.</summary>
         public const float CornerRadius = 4.5f, MinTurn = 10f;

@@ -57,7 +57,7 @@ public static class EntranceKit
         // Guard railings along the landing's open sides once it stands high (the front is the flight's).
         if (rise > EntranceRules.GuardFrom)
         {
-            var guard = new RailingParams(depth - 2f * EntranceRules.GuardInset, EntranceRules.GuardHeight, 0.08f);
+            var guard = new RailingParams(Width: depth - 2f * EntranceRules.GuardInset, Depth: 0.08f);
             foreach (var u in new[] { u0 + EntranceRules.GuardInset, u1 - EntranceRules.GuardInset })
                 pieces.Add(new(PartCatalog.Railing, guard, Outward(f, u, depth * 0.5f, door.Y0)));
         }

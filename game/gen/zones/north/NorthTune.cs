@@ -186,7 +186,8 @@ public static class NorthTune
         public const float JointT = BoundaryTune.Plaza.RailT0, RailN = BoundaryTune.Plaza.RailN, JointPost = BoundaryTune.Plaza.EndPostSize;
         /// <summary>Where the run ends: 商业街's far end is at t −110.5; the end post stands just beyond it.</summary>
         public const float EndT = -115f;
-        public const float Height = 1.1f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f, BarSize = 0.02f, BarPitch = 0.12f;
+        public static readonly float Height = new Campus.Contracts.Parts.RailingParams().Height;
+        public const float PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f, BarSize = 0.02f, BarPitch = 0.12f;
         public const float ColliderHalf = 0.08f;
     }
 

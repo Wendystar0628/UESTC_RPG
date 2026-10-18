@@ -180,8 +180,9 @@ public static class BoundaryTune
     /// </summary>
     public static class Plaza
     {
-        /// <summary>Railing: 1.1 m, posts every ≤ 1.6 m, handrail and bottom rail, 20 mm bars at 0.12 m; collision 1.5 m.</summary>
-        public const float RailN = 0.35f, RailHeight = 1.1f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f;
+        /// <summary>Railing: the railing part's height, posts every ≤ 1.6 m, handrail and bottom rail, 20 mm bars at 0.12 m; collision 1.5 m.</summary>
+        public static readonly float RailHeight = new Campus.Contracts.Parts.RailingParams().Height;
+        public const float RailN = 0.35f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f;
         public const float EndPostSize = PostSize + 0.02f;
         public const float BarSize = 0.02f, BarPitch = 0.12f;
         public const float RailT0 = -24.6f, RailT1 = -11.4f;

@@ -106,7 +106,7 @@ internal static class PlanEntrances
             if (!world.Features.TryGetValue(id, out var f)) continue;
             foreach (var src in BuildingPlanner.Sources(f))
                 if (PlanGeometry.InsideByCrossings(src.Rings.Outer, p) && !src.Rings.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p)) &&
-                    BuildingPlanner.PadY(world, f) + (src.Height ?? (src.Storeys ?? 1) * 3f) > y + EntranceRules.DeckAbove) return true;
+                    BuildingPlanner.PadY(world, f) + BuildingPlanner.TopOf(src) > y + EntranceRules.DeckAbove) return true;
         }
         return false;
     }

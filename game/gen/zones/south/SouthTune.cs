@@ -448,8 +448,9 @@ public static class SouthTune
     /// <summary>East lake shore (§4).</summary>
     public static class Lake
     {
-        /// <summary>Retaining wall foot, coping top and balustrade top above the platform (≥ 1.05 m, SYS-WALK); balustrade line set back from the water.</summary>
-        public const float WallBottom = -1.1f, CopingTop = 0.12f, RailTop = 1.08f, RailSetback = 0.25f, BalusterPitch = 0.32f, NewelPitch = 3.0f;
+        /// <summary>Retaining wall foot, coping top and balustrade top (the railing part's height) above the platform; balustrade line set back from the water.</summary>
+        public static readonly float RailTop = new Campus.Contracts.Parts.RailingParams().Height;
+        public const float WallBottom = -1.1f, CopingTop = 0.12f, RailSetback = 0.25f, BalusterPitch = 0.32f, NewelPitch = 3.0f;
         /// <summary>
         /// The wade step (design:south-eastlake-wade-step: its width and tread levels are read from it, and it lies on the nearest
         /// bank segment) fills the middle of that segment; its second tread is 0.15 m under the −0.5 m water. The treads' depths are the zone's own.
