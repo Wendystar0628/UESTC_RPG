@@ -200,7 +200,7 @@ gates: [G1, G5]
 
 | 类 | 格式 | 例子 |
 | --- | --- | --- |
-| 规范文档 | `编码-中文简题.md`，简题 ≤10 字；编码规则见 WF-DOC §3 | `SYS-WEATHER-天气.md` |
+| 规范文档 | `编码-中文简题.md`，简题 ≤14 字；编码规则见 WF-DOC §3；`docs/godot-api/` 下生成的 API 参考不在此列 | `SYS-WEATHER-天气.md` |
 | 任务单 | `tasks/<claude 或 codex>/<队列行号>-<主题>.md`；一张单管几行时用主行的号 | `Q-036-广场图样稳定性采集.md` |
 | 旁路单 | `side/cards/S-<nnn>-<主题>.md` | `S-007-清点外围楼名.md` |
 | 调研 | `research/r<nnn>-<主题>/`，日期只记在 INDEX | `r025-命名规范/` |
