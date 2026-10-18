@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using Campus.Contracts.Quality;
+using Campus.Kernel.Frame;
 
 namespace Campus.Kernel.Quality.Settings;
 
@@ -78,9 +79,9 @@ public sealed class QualityCatalog
         var pixels = (double)Math.Max(1, width) * Math.Max(1, height);
         var cap = preset switch
         {
-            QualityPreset.Balanced => 1_000_000d,
-            QualityPreset.Fine => 2_100_000d,
-            QualityPreset.Ultra => pixels >= 8_000_000 ? 4_900_000d : 3_700_000d,
+            QualityPreset.Balanced => KernelBudgets.BalancedInternalPixels,
+            QualityPreset.Fine => KernelBudgets.FineInternalPixels,
+            QualityPreset.Ultra => pixels >= 8_000_000 ? KernelBudgets.UltraInternalPixelsAt4k : KernelBudgets.UltraInternalPixels,
             _ => throw new ArgumentOutOfRangeException(nameof(preset)),
         };
         var target = Math.Min(1, Math.Sqrt(cap / pixels));

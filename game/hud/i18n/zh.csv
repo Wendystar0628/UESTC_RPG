@@ -112,7 +112,6 @@ settings.save.failed,最近一次保存失败
 settings.save.none,还没有存档
 settings.save.off,不保存 · 已关闭存档
 settings.save.other_window,不保存 · 另一个窗口正在运行
-settings.graphics.unavailable,画面设置暂不可用
 keys.menu,界面态 / 漫游态
 keys.move,移动
 keys.updown,上升 / 下降

@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
-using Campus.Gen.Parts.Stubs;
+using Campus.Gen.Interior.Shell.Box;
 using GdUnit4;
 using Campus.Kernel.Maps;
 
@@ -14,9 +14,9 @@ namespace Campus.Tests;
 public sealed class InteriorEntranceHeightReferenceTests
 {
     private static readonly FeatureId Feature = new("fixture:building");
-    private const string Provider = "interior.stub.library";
+    private const string Provider = "interior.box.library";
     private const string Catalog = """
-        {"version":1,"interiors":[{"providerId":"interior.stub.library",
+        {"version":1,"interiors":[{"providerId":"interior.box.library",
          "featureIds":["fixture:building"],"openFloors":[1],"entrances":[
          {"id":"entry.main","featureId":"fixture:building","outsideLanding":[0,0.25,-2.5],
           "insideLanding":[0,0.5,3],"doorCenter":[0,0.75,0],"facingDeg":0,"clearWidth":1.25,"open":true@HEIGHT@}]}]}
@@ -25,14 +25,14 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCase]
     public void ConfigurePreservesAbsoluteButRejectsPadBeforeMutatingProviders()
     {
-        var stub = new LibraryInteriorStub();
-        var providers = new Dictionary<string, IInteriorProvider> { [Provider] = stub };
+        var box = new LibraryBoxInterior();
+        var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
         Throws<JsonException>(() => InteriorAssembly.Configure(Bytes("pad"), providers));
-        Require(stub.FeatureIds.Count == 0, "Missing terrain partially configured the provider.");
+        Require(box.FeatureIds.Count == 0, "Missing terrain partially configured the provider.");
         foreach (var reference in new string?[] { null, "absolute" })
         {
             var bindings = InteriorAssembly.Configure(Bytes(reference), providers);
-            var layout = stub.Layout(Context(providers), Feature);
+            var layout = box.Layout(Context(providers), Feature);
             Require(bindings.Single().AuthoredEntranceCount == 1 && layout.Entrances.Single().Center.Y == .75f &&
                 layout.Entrances.Single().Outside.Y == .25f && layout.Entrances.Single().Inside.Y == .5f,
                 "The terrain-free configuration moved absolute coordinates.");
@@ -43,8 +43,8 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCase]
     public void ExplicitTerrainResolvesOnceAndBuildConfiguredKeepsAbsoluteCoordinates()
     {
-        var stub = new LibraryInteriorStub();
-        var providers = new Dictionary<string, IInteriorProvider> { [Provider] = stub };
+        var box = new LibraryBoxInterior();
+        var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
         var terrain = new ProbeTerrain();
         var bindings = InteriorAssembly.Configure(Bytes("pad"), providers, terrain);
         Require(terrain.Calls == 1, "One entrance should query its feature pad once during configuration.");
@@ -92,7 +92,7 @@ public sealed class InteriorEntranceHeightReferenceTests
     [TestCase]
     public void ClosedRegisterDoesNotChangeOpenProviderCallsOrNavigation()
     {
-        var fallback = new LibraryInteriorStub();
+        var fallback = new LibraryBoxInterior();
         var sourceProviders = new Dictionary<string, IInteriorProvider> { [Provider] = fallback };
         var bindings = InteriorAssembly.Configure(Bytes(null), sourceProviders);
         var probe = new CountingProvider(fallback);

@@ -20,11 +20,7 @@ public partial class SettingsCard
         _ => throw new ArgumentOutOfRangeException(nameof(page)),
     };
 
-    private static IDisposable? TryLock(InputLockReason reason)
-    {
-        try { return Svc<ICameraRig>().LockInput(reason); }
-        catch (InvalidOperationException) { return null; }
-    }
+    private static IDisposable Lock(InputLockReason reason) => Svc<ICameraRig>().LockInput(reason);
 
     // ---------------- 行 ----------------
     private float Row(Control page, float y, string name, bool hint = false)
@@ -38,17 +34,8 @@ public partial class SettingsCard
     /// <summary>键名按当前键盘布局显示（UI-NAV）：物理键码经 KeyboardGetLabelFromPhysical 换成布局上的字。</summary>
     public string KeyLabel(string action)
     {
-        if (_router is not null)
-        {
-            var physical = _router.PhysicalKey(action);
-            return physical == 0 ? "—" : KeyName((Key)physical);
-        }
-        foreach (var e in InputMap.ActionGetEvents(action))
-        {
-            if (e is not InputEventKey key) continue;
-            return KeyName(key.PhysicalKeycode != Godot.Key.None ? key.PhysicalKeycode : key.Keycode);
-        }
-        return "—";
+        var physical = _router.PhysicalKey(action);
+        return physical == 0 ? "—" : KeyName((Key)physical);
     }
 
     private static string KeyName(Key code)

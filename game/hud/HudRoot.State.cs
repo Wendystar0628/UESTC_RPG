@@ -9,13 +9,13 @@ namespace Campus.Hud;
 public partial class HudRoot
 {
     // ---------------- 状态 ----------------
-    private bool Playing => _flow is null || _flow.State == AppState.Playing;
-    private bool InterfaceState => _router?.InterfaceMode ?? Input.MouseMode != Input.MouseModeEnum.Captured;
+    private bool Playing => _flow.State == AppState.Playing;
+    private bool InterfaceState => _router.InterfaceMode;
     private bool BigPage => _settingsCard.Visible || _savePage.Visible;
 
     private void SyncState()
     {
-        var state = _flow?.State ?? AppState.Playing;
+        var state = _flow.State;
         _root.Visible = !_hidden;
         switch (state)
         {
@@ -91,13 +91,13 @@ public partial class HudRoot
         _clock.Switched += OnThemeSwitched;
         _root.Resized += Layout;
         _settings.Changed += OnSettingsChanged;
-        if (_flow is not null) _flow.Changed += OnFlowChanged;
+        _flow.Changed += OnFlowChanged;
         _model.Changed += OnModelChanged;
     }
 
     private void OnThemeSwitched(bool dark)
     {
-        if (_settingsCard.Visible || _savePage.Visible || _kit.ResidentFollows) _audio?.PlayUi(UiCue.ShiftDayNight);
+        if (_settingsCard.Visible || _savePage.Visible || _kit.ResidentFollows) _audio.PlayUi(UiCue.ShiftDayNight);
     }
 
     private void OnFlowChanged(AppState previous, AppState current) => SyncState();

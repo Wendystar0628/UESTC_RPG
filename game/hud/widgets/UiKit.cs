@@ -47,7 +47,6 @@ public sealed class UiKit
     public void Apply(CanvasItem item, UiFx fx, bool remember = true)
     {
         if (fx.Pin && remember) Remember(item);
-        if (!Materials.Available) return;
         (fx with { Pin = fx.Pin && !_residentFollows }).Write(item, Tokens);
     }
 
@@ -67,7 +66,6 @@ public sealed class UiKit
     {
         if (_residentFollows == follows) return;
         _residentFollows = follows;
-        if (!Materials.Available) return;
         _pinned.RemoveAll(weak => !weak.TryGetTarget(out var item) || !GodotObject.IsInstanceValid(item));
         foreach (var weak in _pinned)
             if (weak.TryGetTarget(out var item)) item.SetInstanceShaderParameter(UiFx.PPin, follows ? 0f : 1f);
@@ -85,7 +83,7 @@ public sealed class UiKit
             MouseFilter = Control.MouseFilterEnum.Ignore,
             ThemeTypeVariation = Theme.PanelType(fx.Margin),
         };
-        if (Materials.Panel is { } m) panel.Material = m;
+        panel.Material = Materials.Panel;
         parent.AddChild(panel);
         Apply(panel, fx);
         return panel;
@@ -106,7 +104,7 @@ public sealed class UiKit
             HorizontalAlignment = align,
         };
         if (wrap) { label.AutowrapMode = TextServer.AutowrapMode.WordSmart; label.CustomMinimumSize = new Vector2(width, 0); }
-        if (Materials.Text is { } m) label.Material = m;
+        label.Material = Materials.Text;
         parent.AddChild(label);
         if (width > 0) label.Size = new Vector2(width, label.GetCombinedMinimumSize().Y);
         Apply(label, new UiFx(Role: colorRole, Pin: pin));
@@ -126,7 +124,7 @@ public sealed class UiKit
             Size = rect.Size,
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
-        if (Materials.Icon is { } m) t.Material = m;
+        t.Material = Materials.Icon;
         parent.AddChild(t);
         Apply(t, new UiFx(Role: colorRole, Pin: pin, Extra: new Vector4(1, 0, 0, 0)));
         return t;
@@ -144,7 +142,7 @@ public sealed class UiKit
             Antialiased = false,
             DefaultColor = Godot.Colors.White,
         };
-        if (Materials.Line is { } m) line.Material = m;
+        line.Material = Materials.Line;
         parent.AddChild(line);
         Apply(line, new UiFx(Role: colorRole, Pin: pin, Flags: flags, Extra: extra ?? new Vector4(1, 0, 0, 0)));
         return line;
@@ -154,8 +152,7 @@ public sealed class UiKit
     public ColorRect Wave(Control parent, Rect2 rect, string colorRole, bool pin, Vector4 extra)
     {
         var wave = new ColorRect { Position = rect.Position, Size = rect.Size, Color = Godot.Colors.White, MouseFilter = Control.MouseFilterEnum.Ignore };
-        if (Materials.Line is { } m) wave.Material = m;
-        else wave.Visible = false;
+        wave.Material = Materials.Line;
         parent.AddChild(wave);
         Apply(wave, new UiFx(Role: colorRole, Pin: pin, Flags: UiFlags.Wave, Extra: extra));
         return wave;

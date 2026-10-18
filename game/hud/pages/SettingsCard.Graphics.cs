@@ -22,9 +22,7 @@ public partial class SettingsCard
 
     private float BuildGraphics(Control page, float width)
     {
-        IQualityService quality;
-        try { quality = Svc<IQualityService>(); }
-        catch (InvalidOperationException) { _kit.Text(page, UiKit.T("settings.graphics.unavailable"), "small", "text.2", new Vector2(8, 8)); return 48; }
+        var quality = Svc<IQualityService>();
         float y = 8;
         _preset = Segmented.Create(_kit, page, new Vector2(8, y), [112, 114, 112, 122],
             [UiKit.T("quality.preset.balanced"), UiKit.T("quality.preset.fine"), UiKit.T("quality.preset.ultra"), UiKit.T("quality.preset.custom")],
@@ -96,9 +94,7 @@ public partial class SettingsCard
 
     private void Change(QualityKnob knob, float value)
     {
-        IQualityService quality;
-        try { quality = Svc<IQualityService>(); }
-        catch (InvalidOperationException) { return; }
+        var quality = Svc<IQualityService>();
         _pending[knob] = value;
         _preset?.Select((int)QualityPreset.Custom, notify: false);
         var overrides = new Dictionary<QualityKnob, float>(quality.Requested.Overrides);
@@ -146,7 +142,6 @@ public partial class SettingsCard
     private void RefreshGraphics()
     {
         if (_preset is null || _pending.Count > 0) return;
-        try { _preset.Select((int)Svc<IQualityService>().Requested.Preset, notify: false); }
-        catch (InvalidOperationException) { }
+        _preset.Select((int)Svc<IQualityService>().Requested.Preset, notify: false);
     }
 }

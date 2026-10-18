@@ -14,7 +14,7 @@ public partial class HudRoot
     {
         if (_savePage.Visible) CloseSaves();
         _settingsCard.Open(page, fromTitle);
-        _audio?.PlayUi(UiCue.PageOpen);
+        _audio.PlayUi(UiCue.PageOpen);
         if (Playing) SetInterface(true);
         SyncCorners();
     }
@@ -30,8 +30,8 @@ public partial class HudRoot
         if (!_settingsCard.Visible) return;
         _settingsCard.Close();
         _settings.Flush();
-        _audio?.PlayUi(UiCue.PageClose);
-        if (_flow?.State == AppState.Title) _title.Open();
+        _audio.PlayUi(UiCue.PageClose);
+        if (_flow.State == AppState.Title) _title.Open();
         SyncCorners();
     }
 
@@ -39,7 +39,7 @@ public partial class HudRoot
     {
         if (_settingsCard.Visible) CloseSettings();
         _savePage.Open(fromTitle);
-        _audio?.PlayUi(UiCue.PageOpen);
+        _audio.PlayUi(UiCue.PageOpen);
         if (Playing) SetInterface(true);
         SyncCorners();
     }
@@ -48,15 +48,15 @@ public partial class HudRoot
     {
         if (!_savePage.Visible) return;
         _savePage.Close();
-        _audio?.PlayUi(UiCue.PageClose);
-        if (_flow?.State == AppState.Title) _title.Open();
+        _audio.PlayUi(UiCue.PageClose);
+        if (_flow.State == AppState.Title) _title.Open();
         SyncCorners();
     }
 
     private void ToggleTime(bool open)
     {
         _timeOpen = open;
-        _audio?.PlayUi(open ? UiCue.PageOpen : UiCue.PageClose);
+        _audio.PlayUi(open ? UiCue.PageOpen : UiCue.PageClose);
         SyncCorners();
     }
 
@@ -69,8 +69,7 @@ public partial class HudRoot
 
     private async Task SetMode(ViewMode mode)
     {
-        try { await Services.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Ui); }
-        catch (InvalidOperationException) { }
+        await Services.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Ui);
         _model.Poke();
     }
 }

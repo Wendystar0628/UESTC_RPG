@@ -44,27 +44,25 @@ public partial class HudRoot
             case "saves": OpenSaves(fromTitle: true); break;
             case "title": _clean = _galleryTitle = true; _title.Open(); break;
             case "hud": break;
-            case "census": _ = Census(3); break;
+            case "census": Census(3); break;
             default: throw new ArgumentException($"Unknown --ui-gallery page: {page}");
         }
     }
 
     /// <summary>
-    /// --ui-gallery=census：数界面占着实例参数槽的件数（<see cref="UiKit.Holders"/>）。先在漫游中数一次，再经 IAppFlow 回到开始页
-    /// （没有 IAppFlow 时像 --ui-gallery=title 一样把开始页压在画面上），然后把设置卡、存档页各开关 <paramref name="cycles"/> 次，
+    /// --ui-gallery=census：数界面占着实例参数槽的件数（<see cref="UiKit.Holders"/>）。先在漫游中数一次，再经 IAppFlow 回到开始页，然后把设置卡、存档页各开关 <paramref name="cycles"/> 次，
     /// 每步记一行日志，最后走正常退出。
     /// </summary>
-    private async Task Census(int cycles)
+    private async void Census(int cycles)
     {
         try
         {
             for (var i = 0; i < 600 && !Playing; i++) await NextFrame();
             for (var i = 0; i < 10; i++) await NextFrame();
             CensusLine("playing");
-            if (_flow is not null) await _flow.ReturnToTitle();
-            else { _clean = _galleryTitle = true; _title.Open(); }
+            await _flow.ReturnToTitle();
             for (var i = 0; i < 10; i++) await NextFrame();
-            CensusLine($"title ({_flow?.State.ToString() ?? "no flow"})");
+            CensusLine($"title ({_flow.State})");
             for (var i = 1; i <= cycles; i++)
             {
                 OpenSettings(SettingsPage.Graphics, fromTitle: true);
@@ -79,8 +77,7 @@ public partial class HudRoot
                 CensusLine($"closed #{i}");
             }
         }
-        catch (Exception error) { GD.PushError($"UI census failed: {error}"); }
-        RequestQuit();
+        finally { RequestQuit(); }
     }
 
     private SignalAwaiter NextFrame() => ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);

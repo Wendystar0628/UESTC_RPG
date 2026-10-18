@@ -52,17 +52,13 @@ public partial class SettingsCard
         var clear = _kit.Button(page, ButtonStyle.Secondary, UiKit.T("settings.storage.clear"), new Rect2(width - 132 + 8, y, 132, 40));
         void SyncStorage()
         {
-            try
-            {
-                var bake = Svc<IBakeService>();
-                var p = bake.Progress;
-                var state = p.Total == 0 || p.Done >= p.Total ? UiKit.T("settings.storage.done")
-                    : UiKit.T("settings.storage.running", ("pct", $"{p.Done * 100 / Math.Max(1, p.Total)}"));
-                storage.Text = $"{bake.CacheBytes / 1048576.0:0.0} MB · {state}";
-            }
-            catch (InvalidOperationException) { storage.Text = "—"; }
+            var bake = Svc<IBakeService>();
+            var p = bake.Progress;
+            var state = p.Total == 0 || p.Done >= p.Total ? UiKit.T("settings.storage.done")
+                : UiKit.T("settings.storage.running", ("pct", $"{p.Done * 100 / Math.Max(1, p.Total)}"));
+            storage.Text = $"{bake.CacheBytes / 1048576.0:0.0} MB · {state}";
         }
-        clear.Pressed += () => { try { Svc<IBakeService>().Clear(); } catch (InvalidOperationException) { } SyncStorage(); };
+        clear.Pressed += () => { Svc<IBakeService>().Clear(); SyncStorage(); };
         SyncStorage();
         page.VisibilityChanged += SyncStorage;
         y += 40;
@@ -70,19 +66,15 @@ public partial class SettingsCard
         var save = _kit.Text(page, "", "data", "text.2", new Vector2(ControlX, y + 11));
         void SyncSave()
         {
-            try
+            var s = Svc<ISaveService>().State;
+            save.Text = s.ReadOnly switch
             {
-                var s = Svc<ISaveService>().State;
-                save.Text = s.ReadOnly switch
-                {
-                    ReadOnlyReason.None => s.Slot is { } slot ? $"{slot.Value.ToUpperInvariant()} · {(s.Last == SaveStatus.Failed ? UiKit.T("settings.save.failed") : UiKit.T("settings.save.ok"))}" : UiKit.T("settings.save.none"),
-                    ReadOnlyReason.SaveOff => UiKit.T("settings.save.off"),
-                    ReadOnlyReason.OtherWindow => UiKit.T("settings.save.other_window"),
-                    _ => throw new InvalidOperationException("Unknown read-only reason."),
-                };
-                _kit.Recolor(save, s.Last == SaveStatus.Failed ? "danger.text" : "text.2");
-            }
-            catch (InvalidOperationException) { save.Text = "—"; }
+                ReadOnlyReason.None => s.Slot is { } slot ? $"{slot.Value.ToUpperInvariant()} · {(s.Last == SaveStatus.Failed ? UiKit.T("settings.save.failed") : UiKit.T("settings.save.ok"))}" : UiKit.T("settings.save.none"),
+                ReadOnlyReason.SaveOff => UiKit.T("settings.save.off"),
+                ReadOnlyReason.OtherWindow => UiKit.T("settings.save.other_window"),
+                _ => throw new InvalidOperationException("Unknown read-only reason."),
+            };
+            _kit.Recolor(save, s.Last == SaveStatus.Failed ? "danger.text" : "text.2");
         }
         SyncSave();
         page.VisibilityChanged += SyncSave;

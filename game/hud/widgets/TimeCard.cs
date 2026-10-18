@@ -73,7 +73,7 @@ public partial class TimeCard : Control
         k.Dot(this, _center, (Ring + 1) * 2, new UiFx(Line: "line.hair", Pin: pin));
         k.Dot(this, _center, (Ring - Band - 1) * 2, new UiFx(Line: "line.hair", Pin: pin));
         var ticks = new TickRing { Position = _center - new Vector2(110, 110), Size = new Vector2(220, 220), MouseFilter = MouseFilterEnum.Ignore };
-        if (k.Materials.Text is { } textMaterial) ticks.Material = textMaterial;
+        ticks.Material = k.Materials.Text;
         AddChild(ticks);
         k.Recolor(ticks, "line.control", pin);
         foreach (var (h, label) in new[] { (12, "12"), (18, "18"), (0, "00"), (6, "06") })

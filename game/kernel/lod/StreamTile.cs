@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Kernel.Frame;
 
 namespace Campus.Kernel.Lod;
 
@@ -32,7 +33,7 @@ public sealed record StreamSettings
 {
     public float ReplanSeconds { get; init; } = .1f;
     public float FadeSeconds { get; init; } = .25f;
-    public double MountMilliseconds { get; init; } = 1;
+    public double MountMilliseconds { get; init; } = KernelBudgets.StreamMountMilliseconds;
     public int MaximumPreparations { get; init; } = 2;
     public float BaseErrorPixels { get; init; } = 1.5f;
     public float ReferenceHeight { get; init; } = 1080;

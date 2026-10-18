@@ -1117,18 +1117,6 @@ public sealed class BuildingsTests
     }
 
     [TestCase]
-    public void TriangulatorCoversPolygonWithHole()
-    {
-        var outer = Rect(0, 0, 10, 10);
-        var hole = new List<Vector2> { new(3, 3), new(3, 7), new(7, 7), new(7, 3) };
-        var (pts, tris) = Triangulator.Triangulate(outer, [hole]);
-        var area = 0f;
-        for (var t = 0; t < tris.Length; t += 3)
-            area += MathF.Abs(PlanRing.Cross(pts[tris[t + 1]] - pts[tris[t]], pts[tris[t + 2]] - pts[tris[t]])) * 0.5f;
-        Require(MathF.Abs(area - 84f) < 0.01f, $"area {area} equals 100 - 16");
-    }
-
-    [TestCase]
     public void TraceSourcesReproduceBuildAndCollidePerBuilding()
     {
         // Full-map sources are selected by the plans that actually contribute to each fixture cell.

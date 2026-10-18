@@ -9,9 +9,7 @@ public partial class SettingsCard
 {
     private float BuildSound(Control page, float width)
     {
-        IAudioService audio;
-        try { audio = Svc<IAudioService>(); }
-        catch (InvalidOperationException) { return 48; }
+        var audio = Svc<IAudioService>();
         float y = 8;
         Parts.GroupHeader(_kit, page, new Vector2(8, y), width, UiKit.T("sound.group.volume"));
         y += 24;

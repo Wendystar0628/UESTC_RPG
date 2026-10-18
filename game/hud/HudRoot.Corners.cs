@@ -11,8 +11,7 @@ public partial class HudRoot
 {
     private string ResetName()
     {
-        try { return Services.Get<IMapService>().Context?.Descriptor.World.DefaultName.Zh ?? ""; }
-        catch (InvalidOperationException) { return ""; }
+        return Services.Get<IMapService>().Context?.Descriptor.World.DefaultName.Zh ?? "";
     }
 
     // ---------------- 布局：四角贴角，中间留空（UI-VISUAL） ----------------

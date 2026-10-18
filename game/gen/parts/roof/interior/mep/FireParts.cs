@@ -43,7 +43,7 @@ public sealed class HydrantPart() : MepPart<EquipmentParams>(new(700, 120))
         if (!near) return;
         b.AddBox(new(hx - fw * 0.5f - 0.009f, p.Height * 0.4f, -hz), new(hx - fw * 0.5f + 0.009f, p.Height * 0.6f, face + 0.002f), 0.004f, MepStyle.Metal(MepStyle.Aluminium), f);
         var lettering = MepStyle.Insert(v == 2 ? MepStyle.FireRed : MepStyle.White);
-        var h = Math.Min(p.Height * MepStyle.HydrantLabelRatio, (p.Width - 2 * fw - 0.06f) / StrokeFont.Width(MepStyle.HydrantLabel, 1));
+        var h = Math.Min(p.Height * MepStyle.HydrantLabelRatio, (p.Width - 2 * fw - 0.06f) / StrokeText.Width(MepStyle.HydrantLabel, 1));
         var zText = v == 1 ? pane : pane - 0.0005f;
         StrokeFont.Write(b, MepStyle.HydrantLabel, 0, p.Height - fw - 0.04f - h * 0.6f, zText, h, lettering);
     }

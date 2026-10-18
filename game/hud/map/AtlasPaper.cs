@@ -36,7 +36,7 @@ public partial class AtlasPaper : Control
         ClipContents = true;
         MouseFilter = MouseFilterEnum.Stop;
         AccessibilityName = "地图页";
-        Base = new MapBase(ctx, crosses: true, chamfer: ctx.Style.Metrics.ChamferPage) { Size = PaperSize };
+        Base = new MapBase(crosses: true, chamfer: ctx.Style.Metrics.ChamferPage) { Size = PaperSize };
         AddChild(Base);
         Markers = new MarkerLayer(ctx, atlas: true) { IconSize = 20 };
         AddChild(Markers);

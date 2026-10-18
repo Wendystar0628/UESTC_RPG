@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Campus.Contracts;
 
 namespace Campus.Gen.Vegetation;
@@ -71,23 +70,20 @@ public sealed class SpeciesTable
 
     public static SpeciesTable Parse(ReadOnlySpan<byte> json)
     {
-        using var document = JsonDocument.Parse(json.ToArray());
-        var root = document.RootElement;
-        if (root.GetProperty("format").GetString() != "campus.vegetation.species/1")
-            throw new InvalidDataException("species.json: unsupported format.");
+        var file = VegetationJson.Read(json, VegetationJson.Context.SpeciesFile, "species.json");
+        if (file.Format != "campus.vegetation.species/1") throw new InvalidDataException("species.json: unsupported format.");
         var list = new List<SpeciesInfo>();
         var rows = new HashSet<int>();
-        foreach (var e in root.GetProperty("species").EnumerateArray())
+        foreach (var (e, index) in file.Species.Select((row, i) => (row, i)))
         {
-            var height = Floats(e, "height", 2);
+            var at = $"species[{index}]";
+            if (e.Height.Count != 2) throw new InvalidDataException($"species.json: {at}.height needs 2 values.");
+            if (e.LeafAmount.Count != 4) throw new InvalidDataException($"species.json: {at}.leafAmount needs 4 values.");
+            if (e.BloomAmount.Count != 4) throw new InvalidDataException($"species.json: {at}.bloomAmount needs 4 values.");
             var info = new SpeciesInfo(
-                Text(e, "id"), Text(e, "name"), e.GetProperty("row").GetInt32(),
-                Crown(Text(e, "crown")), Text(e, "form"), height[0], height[1],
-                Text(e, "leaf"), e.GetProperty("bloom").ValueKind == JsonValueKind.Null ? null : Text(e, "bloom"),
-                Shape(Text(e, "card")), Shape(Text(e, "bloomCard")),
-                e.GetProperty("deciduous").GetBoolean(), e.GetProperty("bloomOnBlobs").GetBoolean(),
-                Floats(e, "leafAmount", 4), Floats(e, "bloomAmount", 4),
-                e.GetProperty("swayDeg").GetSingle(), Text(e, "sound"));
+                Text(e.Id, $"{at}.id"), Text(e.Name, $"{at}.name"), e.Row, e.Crown, Text(e.Form, $"{at}.form"), e.Height[0], e.Height[1],
+                Text(e.Leaf, $"{at}.leaf"), e.Bloom is null ? null : Text(e.Bloom, $"{at}.bloom"), e.Card, e.BloomCard,
+                e.Deciduous, e.BloomOnBlobs, e.LeafAmount.ToArray(), e.BloomAmount.ToArray(), e.SwayDeg, Text(e.Sound, $"{at}.sound"));
             if (info.Row is < 0 or >= Rows || !rows.Add(info.Row))
                 throw new InvalidDataException($"species.json: '{info.Id}' has an invalid or duplicate row {info.Row}.");
             if (info.HeightMin <= 0f || info.HeightMax < info.HeightMin)
@@ -132,35 +128,6 @@ public sealed class SpeciesTable
         data[i + 3] = a;
     }
 
-    private static string Text(JsonElement e, string name) =>
-        e.GetProperty(name).GetString() is { Length: > 0 } value ? value : throw new InvalidDataException($"species.json: empty '{name}'.");
-
-    private static float[] Floats(JsonElement e, string name, int count)
-    {
-        var values = e.GetProperty(name).EnumerateArray().Select(v => v.GetSingle()).ToArray();
-        return values.Length == count ? values : throw new InvalidDataException($"species.json: '{name}' needs {count} values.");
-    }
-
-    private static CrownType Crown(string value) => value switch
-    {
-        "card" => CrownType.Card,
-        "cloud" => CrownType.Cloud,
-        "mixed" => CrownType.Mixed,
-        _ => throw new InvalidDataException($"species.json: unknown crown '{value}'.")
-    };
-
-    private static CardShape Shape(string value) => value switch
-    {
-        "fan" => CardShape.Fan,
-        "needle" => CardShape.Needle,
-        "strand" => CardShape.Strand,
-        "palmate" => CardShape.Palmate,
-        "ovate" => CardShape.Ovate,
-        "pinnate" => CardShape.Pinnate,
-        "blossom" => CardShape.Blossom,
-        "spray" => CardShape.Spray,
-        "twig" => CardShape.Twig,
-        "frond" => CardShape.Frond,
-        _ => throw new InvalidDataException($"species.json: unknown card '{value}'.")
-    };
+    private static string Text(string value, string at) =>
+        value.Length > 0 ? value : throw new InvalidDataException($"species.json: empty '{at}'.");
 }

@@ -66,8 +66,8 @@ public sealed class ExitSignPart() : MepPart<SignParams>(new(900, 60))
                 throw new ArgumentOutOfRangeException(nameof(p), v, "Unknown exit-sign variation.");
         }
         var width = tx1 - tx0; var cx = (tx0 + tx1) * 0.5f;
-        var hc = Math.Min(ih * 0.4f, width / StrokeFont.Width(MepStyle.ExitChinese, 1));
-        var hl = Math.Min(ih * 0.25f, width / StrokeFont.Width(MepStyle.ExitLatin, 1));
+        var hc = Math.Min(ih * 0.4f, width / StrokeText.Width(MepStyle.ExitChinese, 1));
+        var hl = Math.Min(ih * 0.25f, width / StrokeText.Width(MepStyle.ExitLatin, 1));
         StrokeFont.Write(b, MepStyle.ExitChinese, cx, e + ih * 0.7f, face, hc, ink, MepStyle.ExitWeight);
         StrokeFont.Write(b, MepStyle.ExitLatin, cx, e + ih * 0.24f, face, hl, ink, MepStyle.ExitWeight);
     }
@@ -126,7 +126,7 @@ public sealed class RoomSignPart() : MepPart<SignParams>(new(500, 60))
         var hx = p.Width * 0.5f; var face = -p.Depth * 0.5f + MepStyle.Relief;
         var left = v == 0 ? -hx + p.Width * MepStyle.RoomSignHeader : -hx;   // face u: the band takes the viewer's left
         var room = hx - left - 0.03f;
-        var h = Math.Min(p.Height * MepStyle.RoomSignTextRatio, room / StrokeFont.Width(number, 1));
+        var h = Math.Min(p.Height * MepStyle.RoomSignTextRatio, room / StrokeText.Width(number, 1));
         var ink = MepStyle.Insert(v == 2 ? MepStyle.White : MepStyle.Dark);
         StrokeFont.Write(b, number, (left + hx) * 0.5f, p.Height * (v == 1 ? 0.44f : 0.5f), face, h, ink);
     }

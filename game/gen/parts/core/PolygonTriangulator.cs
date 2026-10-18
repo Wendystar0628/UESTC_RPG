@@ -51,6 +51,27 @@ public static class PolygonTriangulator
         return new(vertices, indices, starts);
     }
 
+    /// <summary>
+    /// Earcut without the topology pre-check: for rings that touch or self-touch (shared corners, zero-width necks),
+    /// which <see cref="Triangulate"/> rejects. Degenerate holes are skipped; coverage is not verified.
+    /// </summary>
+    public static TriangulatedPolygon TriangulateUnchecked(PolygonRings polygon)
+    {
+        ArgumentNullException.ThrowIfNull(polygon);
+        ArgumentNullException.ThrowIfNull(polygon.Holes);
+        var rings = new List<Vector2[]> { Clean(polygon.Outer, true) };
+        foreach (var hole in polygon.Holes)
+        {
+            try { rings.Add(Clean(hole, false)); }
+            catch (ArgumentException) { }
+        }
+        var starts = new int[rings.Count];
+        var points = new List<Vector2>();
+        for (var i = 0; i < rings.Count; i++) { starts[i] = points.Count; points.AddRange(rings[i]); }
+        var vertices = points.ToArray();
+        return new(vertices, Earcut.Triangulate(vertices, starts), starts);
+    }
+
     internal static double Cross(Vector2 a, Vector2 b, Vector2 c) =>
         ((double)b.X - a.X) * ((double)c.Y - a.Y) - ((double)b.Y - a.Y) * ((double)c.X - a.X);
 

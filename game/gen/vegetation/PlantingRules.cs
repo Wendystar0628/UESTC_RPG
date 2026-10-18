@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace Campus.Gen.Vegetation;
 
 /// <summary>One tree row parallel to a road: its distance from the centre line on both sides; Stagger shifts it half a spacing.</summary>
@@ -60,62 +58,51 @@ public sealed record PlantingRules(IReadOnlyList<RoadPlanting> Roads, float OsmN
     public static PlantingRules Parse(ReadOnlySpan<byte> json, SpeciesTable species)
     {
         ArgumentNullException.ThrowIfNull(species);
-        using var document = JsonDocument.Parse(json.ToArray());
-        var root = document.RootElement;
-        if (root.GetProperty("format").GetString() != "campus.vegetation.planting/1")
-            throw new InvalidDataException("planting: unsupported format.");
-        string Known(string? id) => id is not null && species.TryGet(id, out _) ? id
-            : throw new InvalidDataException($"planting: unknown species '{id}'.");
-        IReadOnlyList<string> Ids(JsonElement e) => e.EnumerateArray().Select(v => Known(v.GetString())).ToArray();
-        IReadOnlyList<(string, float)> Mix(JsonElement e)
+        var file = VegetationJson.Read(json, VegetationJson.Context.PlantingFile, "planting");
+        if (file.Format != "campus.vegetation.planting/1") throw new InvalidDataException("planting: unsupported format.");
+        string Known(string id, string at) => species.TryGet(id, out _) ? id
+            : throw new InvalidDataException($"planting: {at}: unknown species '{id}'.");
+        IReadOnlyList<string> Ids(IReadOnlyList<string> ids, string at) => ids.Select((id, i) => Known(id, $"{at}[{i}]")).ToArray();
+        IReadOnlyList<(string, float)> Mix(Dictionary<string, float> mix, string at)
         {
-            var mix = e.EnumerateObject().Select(p => (Known(p.Name), p.Value.GetSingle())).ToArray();
-            if (mix.Length == 0 || mix.Any(m => !(m.Item2 > 0f))) throw new InvalidDataException("planting: a mix needs positive weights.");
-            return mix;
+            if (mix.Count == 0 || mix.Values.Any(w => !(w > 0f))) throw new InvalidDataException($"planting: {at}: a mix needs positive weights.");
+            return mix.Select(m => (Known(m.Key, $"{at}.{m.Key}"), m.Value)).ToArray();
         }
-        IReadOnlyList<PlantingArea> Areas(JsonElement e, bool withMix) => e.EnumerateArray().Select(a => new PlantingArea(
-            a.GetProperty("name").GetString() ?? throw new InvalidDataException("planting: unnamed area."),
-            a.GetProperty("radius").GetSingle(), withMix ? Mix(a.GetProperty("mix")) : [])).ToArray();
+        float Positive(float v, string at) => v > 0f ? v : throw new InvalidDataException($"planting: {at} must be positive.");
+        float Share(float v, string at) => v is >= 0f and <= 1f ? v : throw new InvalidDataException($"planting: {at} must lie in [0, 1].");
 
-        var roads = root.GetProperty("roads").EnumerateArray().Select(r => new RoadPlanting(
-            r.GetProperty("name").GetString() ?? throw new InvalidDataException("planting: unnamed road."),
-            Ids(r.GetProperty("species")),
-            r.GetProperty("rows").EnumerateArray().Select(row => new PlantingRow(row.GetProperty("offset").GetSingle(),
-                row.TryGetProperty("stagger", out var s) && s.GetBoolean())).ToArray(),
-            r.GetProperty("spacing").GetSingle(),
-            r.GetProperty("wash").GetBoolean(),
-            r.TryGetProperty("band", out var band)
-                ? new PlantingBand(Ids(band.GetProperty("species")), band.GetProperty("offset").GetSingle(), band.GetProperty("spacing").GetSingle())
-                : null)).ToArray();
+        var roads = file.Roads.Select((r, i) => new RoadPlanting(r.Name, Ids(r.Species, $"roads[{i}].species"),
+            r.Rows.Select(row => new PlantingRow(row.Offset, row.Stagger)).ToArray(), r.Spacing, r.Wash,
+            r.Band is { } band ? new PlantingBand(Ids(band.Species, $"roads[{i}].band.species"), band.Offset, band.Spacing) : null)).ToArray();
         foreach (var road in roads)
             if (road.Species.Count == 0 || road.Rows.Count == 0 || !(road.Spacing > 0.5f) || road.Band is { Spacing: <= 0.5f })
                 throw new InvalidDataException($"planting: road '{road.Name}' needs species, rows and a spacing.");
-        var osm = root.GetProperty("osmTrees");
-        var groves = root.GetProperty("groves");
-        var osmDefault = Known(osm.GetProperty("default").GetString());
-        var pits = root.TryGetProperty("pits", out var p)
-            ? new PitPlanting(Known(p.GetProperty("square").GetString()), Known(p.GetProperty("round").GetString()))
+        var osmDefault = Known(file.OsmTrees.Default, "osmTrees.default");
+        var pits = file.Pits is { } p
+            ? new PitPlanting(Known(p.Square, "pits.square"), Known(p.Round, "pits.round"))
             : new PitPlanting(osmDefault, osmDefault);
         var under = UnderstoreyRules.None;
-        if (root.TryGetProperty("understorey", out var u))
+        if (file.Understorey is { } u)
         {
-            float Positive(JsonElement e, string name) => e.GetProperty(name).GetSingle() is var v && v > 0f ? v
-                : throw new InvalidDataException($"planting: understorey '{name}' must be positive.");
-            float Share(JsonElement e, string name) => e.GetProperty(name).GetSingle() is var v && v is >= 0f and <= 1f ? v
-                : throw new InvalidDataException($"planting: understorey '{name}' must lie in [0, 1].");
             under = new UnderstoreyRules(
-                u.TryGetProperty("pitCover", out var c)
-                    ? new PitCover(Known(c.GetProperty("species").GetString()), Positive(c, "height"), Positive(c, "spacing")) : null,
-                u.TryGetProperty("borders", out var b)
-                    ? new BorderPlanting(Positive(b, "spacing"), Positive(b, "inset"), Positive(b, "run"), Share(b, "share"), Share(b, "hedgeShare"),
-                        Positive(b, "reach"), Ids(b.GetProperty("hedge")), Mix(b.GetProperty("mix"))) : null,
-                u.TryGetProperty("tufts", out var t)
-                    ? new TuftPlanting(Known(t.GetProperty("species").GetString()), Positive(t, "cell"), Positive(t, "edge"), Share(t, "share"),
-                        t.GetProperty("perTree").GetInt32()) : null);
+                u.PitCover is { } c
+                    ? new PitCover(Known(c.Species, "understorey.pitCover.species"), Positive(c.Height, "understorey.pitCover.height"),
+                        Positive(c.Spacing, "understorey.pitCover.spacing")) : null,
+                u.Borders is { } b
+                    ? new BorderPlanting(Positive(b.Spacing, "understorey.borders.spacing"), Positive(b.Inset, "understorey.borders.inset"),
+                        Positive(b.Run, "understorey.borders.run"), Share(b.Share, "understorey.borders.share"),
+                        Share(b.HedgeShare, "understorey.borders.hedgeShare"), Positive(b.Reach, "understorey.borders.reach"),
+                        Ids(b.Hedge, "understorey.borders.hedge"), Mix(b.Mix, "understorey.borders.mix")) : null,
+                u.Tufts is { } t
+                    ? new TuftPlanting(Known(t.Species, "understorey.tufts.species"), Positive(t.Cell, "understorey.tufts.cell"),
+                        Positive(t.Edge, "understorey.tufts.edge"), Share(t.Share, "understorey.tufts.share"), t.PerTree) : null);
             if (under.Borders is { Hedge.Count: 0 }) throw new InvalidDataException("planting: border hedges need a species.");
         }
-        return new PlantingRules(roads, osm.GetProperty("near").GetSingle(), osmDefault,
-            new GrovePlanting(Mix(groves.GetProperty("mix")), Areas(groves.GetProperty("areas"), true), Areas(groves.GetProperty("washNear"), false)))
+        var groves = file.Groves;
+        return new PlantingRules(roads, file.OsmTrees.Near, osmDefault,
+            new GrovePlanting(Mix(groves.Mix, "groves.mix"),
+                groves.Areas.Select((a, i) => new PlantingArea(a.Name, a.Radius, Mix(a.Mix, $"groves.areas[{i}].mix"))).ToArray(),
+                groves.WashNear.Select(a => new PlantingArea(a.Name, a.Radius, [])).ToArray()))
         { Pits = pits, Understorey = under };
     }
 }

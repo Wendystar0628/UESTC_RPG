@@ -68,7 +68,7 @@ public sealed class BusStopPart : IPartDef<SignParams>
         b.AddBox(new(x0, fy, back - 0.002f), new(x1, fy + fh, back + 0.004f), 0, blue);
         var ink = S.Ink(S.PaintWhite);
         var fw = x1 - x0; var cx = (x0 + x1) * 0.5f;
-        var titleHeight = Math.Min(fh * 0.32f, fw / (Lettering.Width(S.StopTitle, 1) * 1.15f)); var titleY = fy + fh * 0.74f;
+        var titleHeight = Math.Min(fh * 0.32f, fw / (StrokeText.Width(S.StopTitle, 1) * 1.15f)); var titleY = fy + fh * 0.74f;
         var ruleWidth = fw * 0.72f; var rule = Math.Max(0.022f, fh * 0.03f);
         foreach (var (z, isBack) in new[] { (front - 0.004f, false), (back + 0.004f, true) })
         {
@@ -85,7 +85,7 @@ public sealed class BusStopPart : IPartDef<SignParams>
             else
             {
                 // Beyond the near level the strokes are under 4 px: one light block per label (ART-MODELING "干净" 2).
-                var w = Lettering.Width(S.StopTitle, titleHeight) * 0.9f;
+                var w = StrokeText.Width(S.StopTitle, titleHeight) * 0.9f;
                 Lettering.Segment(b, new(u - w * 0.5f, titleY), new(u + w * 0.5f, titleY), titleHeight * 0.55f, z, isBack, ink);
             }
         }

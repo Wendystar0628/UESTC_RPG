@@ -121,12 +121,6 @@ public sealed class MapTone
     {
         Color T(string token) => MapStyle.ToColor(p.ResolveTheme(theme, token));
         Color M(string token, params string[] parts) => MapStyle.ToColor(p.ResolveMap(theme, token, parts));
-        // now 借自场景色 window.warm，要经场景色名登记表解析；登记表还没入库时不画暖色点（只少一枚点，不影响读数）
-        static Color Scene(Func<Color> resolve)
-        {
-            try { return resolve(); }
-            catch (FormatException) { return new Color(0, 0, 0, 0); }
-        }
         return new MapTone
         {
             IsNight = night,
@@ -161,7 +155,7 @@ public sealed class MapTone
             IrisB = T("iris.b"),
             FocusBacking = T("focus.backing"),
             Trace = T("trace"),
-            Now = Scene(() => T("now")),
+            Now = T("now"),
             NowOutline = T("now.outline"),
             Land = M("map.land"),
             Base = M("map.base", "fill"),

@@ -94,21 +94,13 @@ public partial class TitleMenu : Control
 
     public void Sync()
     {
-        try
-        {
-            var world = Svc<IWorldState>();
-            _data.Text = $"{UiKit.T("hud.season." + TimeCard.SeasonCode(world.SeasonTarget).ToLowerInvariant())} · " +
-                         $"{(int)world.Clock:00}:{(int)(world.Clock % 1 * 60):00} · " +
-                         $"{UiKit.T("weather.cell." + WeatherStrip.CellKey(WeatherStrip.CellOf(world.Weather.Kind)))}";
-        }
-        catch (InvalidOperationException) { _data.Text = ""; }
+        var world = Svc<IWorldState>();
+        _data.Text = $"{UiKit.T("hud.season." + TimeCard.SeasonCode(world.SeasonTarget).ToLowerInvariant())} · " +
+                     $"{(int)world.Clock:00}:{(int)(world.Clock % 1 * 60):00} · " +
+                     $"{UiKit.T("weather.cell." + WeatherStrip.CellKey(WeatherStrip.CellOf(world.Weather.Kind)))}";
         SlotInfo? latest = null;
-        try
-        {
-            var saves = Svc<ISaveService>();
-            if (saves.Continue is { } id) latest = saves.Slots.FirstOrDefault(s => s.Slot == id);
-        }
-        catch (InvalidOperationException) { }
+        var saves = Svc<ISaveService>();
+        if (saves.Continue is { } id) latest = saves.Slots.FirstOrDefault(s => s.Slot == id);
         _continue.Off = latest?.Meta is null;
         _continueInfo.Visible = latest?.Meta is not null;
         if (latest?.Meta is { } meta) _continueInfo.Text = SavePage.Summary(meta);
@@ -133,12 +125,8 @@ public partial class TitleMenu : Control
 
     private static SlotId? FirstSlot()
     {
-        try
-        {
-            var slots = Svc<ISaveService>().Slots;
-            return (slots.FirstOrDefault(s => s.Health == SlotHealth.Empty) ?? slots.FirstOrDefault())?.Slot;
-        }
-        catch (InvalidOperationException) { return null; }
+        var slots = Svc<ISaveService>().Slots;
+        return (slots.FirstOrDefault(s => s.Health == SlotHealth.Empty) ?? slots.FirstOrDefault())?.Slot;
     }
 
     private async Task Enter(EnterRequest request)

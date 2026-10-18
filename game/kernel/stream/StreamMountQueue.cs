@@ -63,7 +63,7 @@ public sealed class StreamMountQueue : IStreamMountQueue
     {
         var start = _clock();
         var retiring = canActivateVisual is not null && !canActivateVisual();
-        release?.Invoke(retiring ? Math.Max(0, _settings.MountMilliseconds - .3) : Math.Min(.25, _settings.MountMilliseconds));
+        release?.Invoke(retiring ? Math.Max(0, _settings.MountMilliseconds - KernelBudgets.CollisionMountMilliseconds) : Math.Min(.25, _settings.MountMilliseconds));
         var collisionUsed = false; var visualUsed = false;
         var blockedByRetirement = false;
         for (var i = 0; i < _pending.Count;)
@@ -79,7 +79,7 @@ public sealed class StreamMountQueue : IStreamMountQueue
             {
                 case StreamMountKind.Collision:
                     if (collisionUsed) { i++; continue; }
-                    collisionUsed = true; budget = Math.Min(.3, remaining); break;
+                    collisionUsed = true; budget = Math.Min(KernelBudgets.CollisionMountMilliseconds, remaining); break;
                 case StreamMountKind.Visual:
                     if (canActivateVisual is not null && !canActivateVisual()) { blockedByRetirement = true; i++; continue; }
                     if (visualUsed || !_watchdog.CanActivate(start)) { i++; continue; }

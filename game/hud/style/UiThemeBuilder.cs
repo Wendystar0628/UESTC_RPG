@@ -5,7 +5,7 @@ namespace Campus.Hud.Style;
 
 /// <summary>
 /// 生成界面唯一的 Theme（UI-VISUAL）：字体链、字号阶梯、类型变体、StyleBox 载体。
-/// 颜色走 ui_panel 着色器按 ui_night 取日夜两值；Theme 里的颜色只作无着色器时的兜底，取晶白值。
+/// 颜色走 ui_panel 着色器按 ui_night 取日夜两值；载体与图标色一律取白，由着色器换色。
 /// 不写零散的 theme_override_*，不另存共享 .tres。
 /// </summary>
 public sealed class UiThemeBuilder
@@ -16,13 +16,11 @@ public sealed class UiThemeBuilder
     private readonly UiColors _c;
     private readonly Dictionary<string, FontFile> _files = new(StringComparer.Ordinal);
     private readonly HashSet<string> _types = new(StringComparer.Ordinal);
-    private readonly bool _shaded;
 
-    public UiThemeBuilder(UiTokens tokens, UiColors colors, bool shaded)
+    public UiThemeBuilder(UiTokens tokens, UiColors colors)
     {
         _t = tokens;
         _c = colors;
-        _shaded = shaded;
         Theme = new Theme();
         foreach (var role in _t.Get("metrics", "type", "roles").EnumerateObject())
         {
@@ -85,24 +83,8 @@ public sealed class UiThemeBuilder
         _t.Get("metrics", "type", "roles", role).TryGetProperty("upper", out var up) && up.GetBoolean();
 
     // ---------- StyleBox 载体（UI-VISUAL）：着色器在载体上画切角 SDF 与发丝线 ----------
-    private StyleBox Carrier(int expand, float padX, float padY, float shiftY, string fallbackFill)
+    private static StyleBox Carrier(int expand, float padX, float padY, float shiftY)
     {
-        if (!_shaded)
-        {
-            // 兜底：没有界面材质时用晶白值画一个平涂块，保证能读。
-            var plain = new StyleBoxFlat
-            {
-                BgColor = _c.Theme("light", fallbackFill),
-                BorderColor = _c.Theme("light", "line.control"),
-                CornerDetail = 1,
-                AntiAliasing = false
-            };
-            plain.SetBorderWidthAll(fallbackFill == "surface.panel" ? 0 : 1);
-            plain.ContentMarginLeft = plain.ContentMarginRight = padX;
-            plain.ContentMarginTop = padY + shiftY;
-            plain.ContentMarginBottom = padY - shiftY;
-            return plain;
-        }
         var sb = new StyleBoxFlat { BgColor = Colors.White, DrawCenter = true, AntiAliasing = false };
         sb.ExpandMarginLeft = sb.ExpandMarginRight = sb.ExpandMarginTop = sb.ExpandMarginBottom = expand;
         sb.ContentMarginLeft = sb.ContentMarginRight = padX;
@@ -117,7 +99,7 @@ public sealed class UiThemeBuilder
         if (_types.Add(name))
         {
             Theme.SetTypeVariation(name, "Panel");
-            Theme.SetStylebox("panel", name, Carrier(expand, 0, 0, 0, "surface.panel"));
+            Theme.SetStylebox("panel", name, Carrier(expand, 0, 0, 0));
         }
         return name;
     }
@@ -127,7 +109,7 @@ public sealed class UiThemeBuilder
         var name = $"Btn_{fontRole.Replace('.', '_').Replace('-', '_')}_{padX}_{padY}_{(sunk ? 1 : 0)}_{expand}_{iconMax}_{separation}";
         if (!_types.Add(name)) return name;
         Theme.SetTypeVariation(name, "Button");
-        var box = Carrier(expand, padX, padY, sunk ? 1 : 0, "surface.solid");
+        var box = Carrier(expand, padX, padY, sunk ? 1 : 0);
         foreach (var state in new[] { "normal", "hover", "pressed", "disabled", "hover_pressed", "normal_mirrored", "hover_mirrored",
                      "pressed_mirrored", "disabled_mirrored", "hover_pressed_mirrored" })
             Theme.SetStylebox(state, name, box);
@@ -139,7 +121,7 @@ public sealed class UiThemeBuilder
         foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_disabled_color", "font_focus_color", "font_hover_pressed_color" })
             Theme.SetColor(state, name, ink);
         foreach (var state in new[] { "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_disabled_color", "icon_focus_color", "icon_hover_pressed_color" })
-            Theme.SetColor(state, name, _shaded ? Colors.White : ink);
+            Theme.SetColor(state, name, Colors.White);
         Theme.SetConstant("icon_max_width", name, iconMax);
         Theme.SetConstant("h_separation", name, separation);
         return name;
@@ -148,7 +130,7 @@ public sealed class UiThemeBuilder
     // 滚动条：宽 4，轨道不画，拇指是白色载体，由 ui_panel kind 3 换成 line.scroll（UI-VISUAL）
     private void BuildScrollBar()
     {
-        var grabber = new StyleBoxFlat { BgColor = _shaded ? Colors.White : _c.Theme("light", "line.scroll"), AntiAliasing = false };
+        var grabber = new StyleBoxFlat { BgColor = Colors.White, AntiAliasing = false };
         grabber.ContentMarginLeft = grabber.ContentMarginRight = _t.V2("metrics", "size", "scrollbar").X / 2;
         Theme.SetTypeVariation("ScrollThin", "VScrollBar");
         Theme.SetStylebox("scroll", "ScrollThin", new StyleBoxEmpty { ContentMarginLeft = 2, ContentMarginRight = 2 });

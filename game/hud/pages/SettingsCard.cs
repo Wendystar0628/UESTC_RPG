@@ -21,7 +21,7 @@ public partial class SettingsCard : Control
     private readonly HashSet<SettingsPage> _filled = [];
     private readonly List<TechButton> _tabs = [];
     private UiKit _kit = null!;
-    private IInputRouter? _router;   // 改键与键名经 IInputRouter（WP-06）；还没注册时退回 InputMap，只在内存里生效
+    private IInputRouter _router = null!;   // 改键与键名经 IInputRouter（WP-06）
     private HudSettings _settings = null!;
     private Panel _tabBar = null!;
     private ScrollContainer _scroll = null!;
@@ -38,7 +38,7 @@ public partial class SettingsCard : Control
     public SettingsPage Page => _page;
     public bool Capturing => _rebindAction is not null;
 
-    public static SettingsCard Create(UiKit kit, Control parent, HudSettings settings, IInputRouter? router)
+    public static SettingsCard Create(UiKit kit, Control parent, HudSettings settings, IInputRouter router)
     {
         var card = new SettingsCard
         {
@@ -59,7 +59,7 @@ public partial class SettingsCard : Control
         _built = true;
         var k = _kit;
         var chamfer = k.Tokens.Chamfer("page");
-        var frost = k.Materials.Frost is { } frostMaterial && _settings.Frost && !_settings.ReduceTransparency;
+        var frost = _settings.Frost && !_settings.ReduceTransparency;
         if (frost)
         {
             AddChild(new BackBufferCopy { CopyMode = BackBufferCopy.CopyModeEnum.Rect, Rect = new Rect2(Vector2.Zero, Size) });
@@ -103,7 +103,7 @@ public partial class SettingsCard : Control
         };
         AddChild(_scroll);
         _scroll.GetVScrollBar().ThemeTypeVariation = "ScrollThin";
-        if (k.Materials.Text is { } scrollMaterial) _scroll.GetVScrollBar().Material = scrollMaterial;
+        _scroll.GetVScrollBar().Material = k.Materials.Text;
         k.Recolor(_scroll.GetVScrollBar(), "line.scroll");
         var stack = new VBoxContainer { CustomMinimumSize = new Vector2(width + 8, 0) };
         _scroll.AddChild(stack);
@@ -130,7 +130,7 @@ public partial class SettingsCard : Control
         if (!Visible)
         {
             Visible = true;
-            _lock ??= TryLock(InputLockReason.Menu);
+            _lock ??= Lock(InputLockReason.Menu);
             Modulate = new Color(1, 1, 1, 0);
             var t = CreateTween();
             t.TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.26f));

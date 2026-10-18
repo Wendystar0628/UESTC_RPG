@@ -353,5 +353,4 @@ public static class StreetStyle
     // ---- Lettering (ART-MODELING: vector type is a part constant at every level; §7.5: printed as face geometry) ----
     /// <summary>Print quads float this far off their face (reverse-Z D32F separates 1–2 mm within 400 m, ART-MODELING).</summary>
     public const float PrintLift = 0.0015f;
-    public const float CjkStroke = 0.1f;
 }

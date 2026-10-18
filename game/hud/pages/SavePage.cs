@@ -39,7 +39,7 @@ public partial class SavePage : Control
         _fromTitle = fromTitle;
         Rebuild();
         Visible = true;
-        _lock ??= TryLock();
+        _lock ??= Lock();
         Modulate = new Color(1, 1, 1, 0);
         CreateTween().TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.36f));
         if (_cards.Count > 0) _cards[_selected].Hit.GrabFocus();
@@ -55,11 +55,7 @@ public partial class SavePage : Control
         _cards.Clear();
     }
 
-    private static IDisposable? TryLock()
-    {
-        try { return Svc<ICameraRig>().LockInput(InputLockReason.Menu); }
-        catch (InvalidOperationException) { return null; }
-    }
+    private static IDisposable Lock() => Svc<ICameraRig>().LockInput(InputLockReason.Menu);
 
     private void Rebuild()
     {
@@ -77,10 +73,9 @@ public partial class SavePage : Control
         _kit.Button(_panel, ButtonStyle.Icon, "", new Rect2(size.X - 32 - 32, 24, 32, 32), padX: 4, icon: "close", iconMax: 20,
             pressed: () => CloseRequested?.Invoke());
 
-        IReadOnlyList<SlotInfo> slots;
-        SlotId? latest = null;
-        try { var s = Svc<ISaveService>(); slots = s.Slots; latest = s.Continue; }
-        catch (InvalidOperationException) { slots = []; }
+        var saves = Svc<ISaveService>();
+        var slots = saves.Slots;
+        var latest = saves.Continue;
         var card = _kit.Tokens.V2("metrics", "size", "memoryCard");
         var gap = 24f;
         var x0 = (size.X - (card.X * 3 + gap * 2)) / 2;
@@ -141,9 +136,7 @@ public partial class SavePage : Control
 
     private void TryThumbnail(Control holder, SlotId slot, Rect2 rect)
     {
-        byte[]? bytes;
-        try { bytes = Svc<ISaveService>().Thumbnail(slot); }
-        catch (InvalidOperationException) { return; }
+        var bytes = Svc<ISaveService>().Thumbnail(slot);
         if (bytes is null || bytes.Length == 0) return;
         var image = new Image();
         if (image.LoadWebpFromBuffer(bytes) != Error.Ok) return;
@@ -160,10 +153,9 @@ public partial class SavePage : Control
 
     private void Select(int index)
     {
-        IReadOnlyList<SlotInfo> slots;
-        SlotId? latest;
-        try { var s = Svc<ISaveService>(); slots = s.Slots; latest = s.Continue; }
-        catch (InvalidOperationException) { return; }
+        var saves = Svc<ISaveService>();
+        var slots = saves.Slots;
+        var latest = saves.Continue;
         _selected = index;
         for (var i = 0; i < _cards.Count && i < slots.Count; i++) BuildCard(_cards[i].Card, slots[i], slots[i].Slot == latest, i == index);
         var slot = slots[index];

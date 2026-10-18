@@ -32,8 +32,8 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     private HudModel _model = null!;
     private MotionPolicy _motion = null!;
     private IWorldControl _control = null!;
-    private IAppFlow? _flow;
-    private IAudioService? _audio;
+    private IAppFlow _flow = null!;
+    private IAudioService _audio = null!;
     private UiThemeClock _clock = null!;
     private Control _root = null!, _corners = null!, _minimapSlot = null!;
     private Resident? _resident;
@@ -73,13 +73,13 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         _model = Services.Get<HudModel>();
         _motion = (MotionPolicy)Services.Get<IMotionSettings>();
         _control = Services.Get<IWorldControl>();
-        try { _flow = Services.Get<IAppFlow>(); } catch (InvalidOperationException) { _flow = null; }
-        try { _audio = Services.Get<IAudioService>(); } catch (InvalidOperationException) { _audio = null; }
+        _flow = Services.Get<IAppFlow>();
+        _audio = Services.Get<IAudioService>();
 
         var tokens = UiTokens.Load();
         var colors = UiColors.Load();
         var materials = new UiMaterials(tokens, colors);
-        var theme = new UiThemeBuilder(tokens, colors, materials.Available);
+        var theme = new UiThemeBuilder(tokens, colors);
         _kit = new UiKit(tokens, colors, materials, theme, _motion);
         _theme = theme;
 
@@ -112,7 +112,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         _settingsCard = SettingsCard.Create(_kit, _root, _settings, _router);
         _settingsCard.CloseRequested += CloseSettings;
         _settingsCard.QuitRequested += RequestQuit;
-        _settingsCard.ToTitleRequested += () => { CloseSettings(); _ = _flow?.ReturnToTitle(); };
+        _settingsCard.ToTitleRequested += () => { CloseSettings(); _ = _flow.ReturnToTitle(); };
         _savePage = SavePage.Create(_kit, _root);
         _savePage.CloseRequested += CloseSaves;
         _toast = Toast.Create(_kit, _root);
@@ -162,10 +162,10 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
             _clock.Switched -= OnThemeSwitched;
             _root.Resized -= Layout;
             _settings.Changed -= OnSettingsChanged;
-            if (_flow is not null) _flow.Changed -= OnFlowChanged;
+            _flow.Changed -= OnFlowChanged;
             _model.Changed -= OnModelChanged;
         }
-        if (_router is not null) _router.InterfaceModeChanged -= OnInterfaceModeChanged;
+        _router.InterfaceModeChanged -= OnInterfaceModeChanged;
         foreach (var layer in _layers) layer.Dispose();
         _layers.Clear();
         if (_initialized)
@@ -181,10 +181,8 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
 
     public override void _Notification(int what)
     {
-        // 失焦时主动切到界面态（UI-NAV）；有路由时这件事归 WP-06
-        if (what == NotificationApplicationFocusOut && _router is null && Playing && Input.MouseMode == Input.MouseModeEnum.Captured)
-            Input.MouseMode = Input.MouseModeEnum.Visible;
-        else if (what == NotificationApplicationFocusIn) _motion.Refresh();
+        // 失焦切到界面态归 WP-06 的 IInputRouter
+        if (what == NotificationApplicationFocusIn) _motion.Refresh();
         else if (what == NotificationWMCloseRequest) _settings.Flush();
     }
 }

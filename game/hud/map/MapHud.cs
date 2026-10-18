@@ -22,7 +22,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     private MapStyle? _style;
     private MapHudServices? _services;
     private MapHudContext _ctx = null!;
-    private ShaderMaterial? _material;
+    private ShaderMaterial _material = null!;
     private MapBaseBinding? _base;
     private CanvasLayer? _layer;
     private Minimap _minimap = null!;
@@ -78,11 +78,8 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         root.AddChild(_page);
 
         _material = MapMaterial.Acquire();
-        if (_material is not null)
-        {
-            MapMaterial.Configure(_material, _style);
-            MapMaterial.SetThemeFront(_material, _ctx.ThemeFront);
-        }
+        MapMaterial.Configure(_material, _style);
+        MapMaterial.SetThemeFront(_material, _ctx.ThemeFront);
         _base = new MapBaseBinding(_services.AtlasBase, _material);
         _minimap.Base.Bind(_material, _ctx.ResidentNight);
         _page.Paper.Base.Bind(_material, false);
@@ -212,7 +209,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         if (night == _night) return;
         _night = night;
         _ctx.ThemeFront = night ? 1 : 0;
-        if (_material is not null) MapMaterial.SetThemeFront(_material, _ctx.ThemeFront);
+        MapMaterial.SetThemeFront(_material, _ctx.ThemeFront);
         _minimapCtl.SyncTheme();
         _atlasCtl.RedrawAll();
     }

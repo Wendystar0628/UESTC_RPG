@@ -197,27 +197,22 @@ public static class Prims
     }
 
     /// <summary>
-    /// WP-09's earcut (parts kernel) first; it rejects touching or degenerate rings, in which case the
-    /// local ear clipper keeps the cap closed instead of dropping it.
+    /// Strict earcut (parts kernel) first; it rejects touching or self-touching rings, in which case the
+    /// unchecked earcut entry keeps the cap closed instead of dropping it.
     /// </summary>
     public static (Vector2[] Points, int[] Triangles) Triangulate(IReadOnlyList<Vector2> outer, IReadOnlyList<IReadOnlyList<Vector2>> holes)
     {
+        // PolygonTriangulator orients the rings itself.
+        var rings = new Campus.Contracts.PolygonRings(outer, holes);
         try
         {
-            var o = new List<Vector2>(outer);
-            if (PlanRing.SignedArea(o) < 0f) o.Reverse();
-            var hs = holes.Select(h =>
-            {
-                var l = new List<Vector2>(h);
-                if (PlanRing.SignedArea(l) > 0f) l.Reverse();
-                return (IReadOnlyList<Vector2>)l;
-            }).ToArray();
-            var t = Campus.Gen.Parts.Core.PolygonTriangulator.Triangulate(new Campus.Contracts.PolygonRings(o, hs));
+            var t = Campus.Gen.Parts.Core.PolygonTriangulator.Triangulate(rings);
             return (t.Vertices, t.Indices);
         }
         catch (ArgumentException)
         {
-            return Triangulator.Triangulate(outer, holes);
+            var t = Campus.Gen.Parts.Core.PolygonTriangulator.TriangulateUnchecked(rings);
+            return (t.Vertices, t.Indices);
         }
     }
 

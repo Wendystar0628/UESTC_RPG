@@ -24,7 +24,7 @@
         "zh": "1F 中厅与品·悦吧；2F 门厅与回廊；3F–5F 回廊；5F 西窗带；2F、3F 露台",
         "en": "1F atrium and cafe; 2F entrance and gallery; 3F–5F galleries; 5F west windows; 2F and 3F terraces"
       },
-      "providerId": "interior.stub.library",
+      "providerId": "interior.box.library",
       "openFloors": [
         1,
         2,
@@ -96,7 +96,7 @@
         "zh": "单层全展线",
         "en": "Single-floor exhibition route"
       },
-      "providerId": "interior.stub.museum",
+      "providerId": "interior.box.museum",
       "openFloors": [
         1
       ],
@@ -164,7 +164,7 @@
         "zh": "1F 柱厅、2F 校史馆；屋顶空廊",
         "en": "1F column hall; 2F university history exhibition; rooftop colonnade"
       },
-      "providerId": "interior.stub.main-b2",
+      "providerId": "interior.box.main-b2",
       "openFloors": [
         1,
         2
@@ -234,7 +234,7 @@
         "zh": "中厅 1F–2F；钟楼楼梯、钟室、灯笼观景环",
         "en": "1F–2F atrium; clock tower stairs, clock room and lantern gallery"
       },
-      "providerId": "interior.stub.xuanbang",
+      "providerId": "interior.box.xuanbang",
       "openFloors": [
         1,
         2
@@ -283,7 +283,7 @@
         "zh": "体育馆环厅、看台、场地；游泳馆门厅、池岸",
         "en": "Gymnasium concourse, stands and court; pool entrance hall and poolside"
       },
-      "providerId": "interior.stub.sports",
+      "providerId": "interior.box.sports",
       "openFloors": [
         1,
         2
@@ -333,7 +333,7 @@
         "zh": "C 区 1F 门厅、公式台阶、2F 连廊及 B 区 2F 一小段公共区",
         "en": "C block entrance hall and formula stairs; 2F bridge and a short public section of B block"
       },
-      "providerId": "interior.stub.research-six",
+      "providerId": "interior.box.research-six",
       "openFloors": [
         1,
         2
@@ -380,7 +380,7 @@
         "zh": "1F 大厅、工训车间、暗室控制室",
         "en": "1F lobby, engineering workshop and anechoic chamber control room"
       },
-      "providerId": "interior.stub.research-institute",
+      "providerId": "interior.box.research-institute",
       "openFloors": [
         1
       ],
@@ -403,7 +403,7 @@
         "zh": "1F–2F 公共部分与一间 4 人间；2F–3F 楼梯口封闭",
         "en": "1F–2F public areas and one four-bed dormitory; stairs to 3F closed"
       },
-      "providerId": "interior.stub.xuezhi-1",
+      "providerId": "interior.box.xuezhi-1",
       "openFloors": [
         1,
         2
@@ -453,7 +453,7 @@
         "zh": "1F 银桦、室外扶梯、2F 紫荆、3F 芙蓉一角",
         "en": "1F Yinhua, outdoor escalator, 2F Zijing and one corner of 3F Furong"
       },
-      "providerId": "interior.stub.yinxing",
+      "providerId": "interior.box.yinxing",
       "openFloors": [
         1,
         2,
@@ -506,7 +506,7 @@
         "zh": "门厅、会堂与一间排练厅；楼上不开放",
         "en": "Entrance hall, auditorium and one rehearsal room; upper floors closed"
       },
-      "providerId": "interior.stub.student-center",
+      "providerId": "interior.box.student-center",
       "openFloors": [
         1
       ],
@@ -529,7 +529,7 @@
         "zh": "一层步行街、一家茶饮店与一家快递驿站",
         "en": "1F shopping arcade, one tea shop and one parcel station"
       },
-      "providerId": "interior.stub.commercial",
+      "providerId": "interior.box.commercial",
       "openFloors": [
         1
       ],
@@ -554,7 +554,7 @@
         "zh": "A 区大厅及 2F 楼梯平台、一间阶梯教室；C 区一层",
         "en": "A block lobby and 2F stair landing, one lecture room; C block 1F"
       },
-      "providerId": "interior.stub.pinxue",
+      "providerId": "interior.box.pinxue",
       "openFloors": [
         1,
         2
@@ -602,7 +602,7 @@
         "zh": "主馆、北附楼门厅与 2F 内走廊",
         "en": "Main hall, north annex lobby and 2F interior corridor"
       },
-      "providerId": "interior.stub.training",
+      "providerId": "interior.box.training",
       "openFloors": [
         1,
         2
@@ -626,7 +626,7 @@
         "zh": "1F 就餐区与档口前；2F 暂不开放",
         "en": "1F dining and serving areas; 2F closed"
       },
-      "providerId": "interior.stub.chaoyang",
+      "providerId": "interior.box.chaoyang",
       "openFloors": [
         1
       ],
@@ -649,7 +649,7 @@
         "zh": "B 区一层外廊、部分教室与南门门厅",
         "en": "B block 1F exterior corridor, selected classrooms and south entrance hall"
       },
-      "providerId": "interior.stub.liren",
+      "providerId": "interior.box.liren",
       "openFloors": [
         1
       ],

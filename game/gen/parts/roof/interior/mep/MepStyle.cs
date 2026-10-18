@@ -68,9 +68,6 @@ public static class MepStyle
     public const float SmallBevel = 0.004f;
     /// <summary>How far applied details stand proud of the face they sit on; bodies are inset by this much so details stay in bounds.</summary>
     public const float Relief = 0.003f;
-    /// <summary>Stroke width of lettering, as a share of the glyph height (CJK; Latin and digits use LatinStroke).</summary>
-    public const float CjkStroke = 0.1f;
-    public const float LatinStroke = 0.13f;
 
     // ---- Boiler (电开水器, WLD-INTERIORS: stainless cabinet, "小心烫伤" in red) ----
     public const float BoilerFoot = 0.08f;

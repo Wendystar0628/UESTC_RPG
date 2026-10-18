@@ -1,9 +1,9 @@
 using System.Numerics;
 using Campus.Contracts;
 
-namespace Campus.Gen.Parts.Stubs;
+namespace Campus.Gen.Interior.Shell.Box;
 
-internal sealed class StubSpatialMeshBuilder
+internal sealed class BoxInteriorMeshBuilder
 {
     private readonly List<float> _positions = [];
     private readonly List<float> _normals = [];
@@ -39,7 +39,7 @@ internal sealed class StubSpatialMeshBuilder
                 Prism([ramp.P0, ramp.P1, ramp.P2, ramp.P3], ramp.Thick);
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(collider), collider.GetType().Name, "Unsupported D0 mesh primitive.");
+                throw new ArgumentOutOfRangeException(nameof(collider), collider.GetType().Name, "Unsupported box interior mesh primitive.");
         }
     }
 

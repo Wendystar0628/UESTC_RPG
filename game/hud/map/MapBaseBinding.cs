@@ -9,7 +9,7 @@ namespace Campus.Hud.Map;
 /// 把 IAtlasBaseSource 发布的四张 SDF 绑到 map_base 材质（SYS-ATLAS-UI）：每帧只比 Rev，变了才释放旧图、建新图；
 /// 就绪只指四张 SDF，标签、字形、区域各自的能力不在这里等。纹理与它们的 Rect 都取自快照，本类拥有创建出的纹理并负责释放。
 /// </summary>
-internal sealed class MapBaseBinding(IAtlasBaseSource source, ShaderMaterial? material) : IDisposable
+internal sealed class MapBaseBinding(IAtlasBaseSource source, ShaderMaterial material) : IDisposable
 {
     private static readonly StringName SdfA = new("map_sdf_a");
     private static readonly StringName SdfB = new("map_sdf_b");
@@ -42,7 +42,6 @@ internal sealed class MapBaseBinding(IAtlasBaseSource source, ShaderMaterial? ma
         var snapshot = source.Ready ? source.Snapshot : null;
         if (snapshot is null || snapshot.Map != map.Value) return true;
         PageRect = ToRect(snapshot.PageRect);
-        if (material is null) return true;
         material.SetShaderParameter(SdfA, Own(snapshot.SdfA));
         material.SetShaderParameter(SdfB, Own(snapshot.SdfB));
         material.SetShaderParameter(SdfOut, Own(snapshot.SdfOut));
@@ -59,7 +58,7 @@ internal sealed class MapBaseBinding(IAtlasBaseSource source, ShaderMaterial? ma
     private void Release()
     {
         PageRect = null;
-        if (material is not null && GodotObject.IsInstanceValid(material))
+        if (GodotObject.IsInstanceValid(material))
         {
             material.SetShaderParameter(DataReady, 0f);
             foreach (var name in new[] { SdfA, SdfB, SdfOut, SdfRing }) material.SetShaderParameter(name, new Variant());

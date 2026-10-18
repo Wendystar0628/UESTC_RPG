@@ -83,9 +83,9 @@ public sealed class BoilerPart() : MepPart<EquipmentParams>(new(1300, 160))
             b.AddBox(new(-tw + 0.025f, trayTop - 0.003f, z), new(tw - 0.025f, trayTop + 0.0015f, z + 0.008f), 0, dark, f);
         }
         // Scald warning: white sticker, red lettering.
-        var h = Math.Min(MepStyle.BoilerWarningHeight, (2 * hx - 0.08f) / StrokeFont.Width(MepStyle.BoilerWarning, 1));
+        var h = Math.Min(MepStyle.BoilerWarningHeight, (2 * hx - 0.08f) / StrokeText.Width(MepStyle.BoilerWarning, 1));
         var sy = Math.Min(yt + 0.11f + 0.02f + h * 0.8f, py0 - h);
-        var sw = StrokeFont.Width(MepStyle.BoilerWarning, h) * 0.5f + 0.015f;
+        var sw = StrokeText.Width(MepStyle.BoilerWarning, h) * 0.5f + 0.015f;
         b.AddBox(new(-sw, sy - h * 0.8f, front - 0.0015f), new(sw, sy + h * 0.8f, front + 0.002f), 0, MepStyle.Insert(MepStyle.White), f);
         StrokeFont.Write(b, MepStyle.BoilerWarning, 0, sy, front - 0.0015f, h, MepStyle.Insert(MepStyle.FireRed));
     }

@@ -43,7 +43,7 @@ public partial class SettingsCard
     {
         EndCapture();
         _rebindAction = action;
-        _rebindLock = TryLock(InputLockReason.Rebind);
+        _rebindLock = Lock(InputLockReason.Rebind);
         BuildRebindRow(_rebindRows[action], action, capturing: true);
     }
 
@@ -60,27 +60,12 @@ public partial class SettingsCard
     {
         if (_rebindAction is not { } action) return null;
         if (key.PhysicalKeycode == Godot.Key.Escape) { EndCapture(); return null; }
-        if (_router is not null)
-        {
-            // 一个物理键只能绑一个动作，冲突时拒绝；成功后由 WP-06 写 settings.json 的 input 节
-            if (!_router.TryRebind(action, (int)key.PhysicalKeycode, out var conflict))
-                return conflict is not null && Campus.Hud.I18n.Tr.Has("rebind.action." + conflict)
-                    ? UiKit.T("rebind.conflict", ("action", UiKit.T("rebind.action." + conflict)))
-                    : UiKit.T("rebind.rejected", ("reason", conflict ?? ""));
-            _router.SaveBindings();
-            EndCapture();
-            return null;
-        }
-        foreach (var other in InputMap.GetActions())
-        {
-            var name = other.ToString();
-            if (name == action || name.StartsWith("ui_", StringComparison.Ordinal)) continue;
-            foreach (var e in InputMap.ActionGetEvents(name))
-                if (e is InputEventKey k && k.PhysicalKeycode == key.PhysicalKeycode)
-                    return UiKit.T("rebind.conflict", ("action", UiKit.T("rebind.action." + name)));
-        }
-        InputMap.ActionEraseEvents(action);
-        InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = key.PhysicalKeycode });
+        // 一个物理键只能绑一个动作，冲突时拒绝；成功后由 WP-06 写 settings.json 的 input 节
+        if (!_router.TryRebind(action, (int)key.PhysicalKeycode, out var conflict))
+            return conflict is not null && Campus.Hud.I18n.Tr.Has("rebind.action." + conflict)
+                ? UiKit.T("rebind.conflict", ("action", UiKit.T("rebind.action." + conflict)))
+                : UiKit.T("rebind.rejected", ("reason", conflict ?? ""));
+        _router.SaveBindings();
         EndCapture();
         return null;
     }

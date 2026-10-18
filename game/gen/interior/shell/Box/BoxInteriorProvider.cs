@@ -2,10 +2,10 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 
-namespace Campus.Gen.Parts.Stubs;
+namespace Campus.Gen.Interior.Shell.Box;
 
-/// <summary>D0 only: one rectangular plan, an open entry and straight stairs per registered building.</summary>
-public abstract class BoxInteriorProviderStub : IInteriorProvider, IInteriorCatalogConfigurable
+/// <summary>Demo box interior: one rectangular plan, an open entry and straight stairs per registered building.</summary>
+public abstract class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurable
 {
     private FeatureId[] _features = [];
     private int[] _floors = [1];
@@ -21,7 +21,7 @@ public abstract class BoxInteriorProviderStub : IInteriorProvider, IInteriorCata
     {
         _features = features.Distinct().OrderBy(x => x.Value, StringComparer.Ordinal).ToArray();
         _floors = openFloors.Distinct().Order().ToArray();
-        if (_features.Length == 0 || _floors.Length == 0) throw new ArgumentException("Interior stub requires features and open floors.");
+        if (_features.Length == 0 || _floors.Length == 0) throw new ArgumentException("Box interior requires features and open floors.");
         if (_floors.Any(f => f < short.MinValue || f > short.MaxValue)) throw new ArgumentOutOfRangeException(nameof(openFloors));
         _entrances = entrances;
     }
@@ -85,7 +85,7 @@ public abstract class BoxInteriorProviderStub : IInteriorProvider, IInteriorCata
         {
             float top = p.Y(_floors[next]);
             const float run = 8.5f;
-            if (top - y > 5) throw new InvalidOperationException("D0 straight stair requires consecutive open storeys.");
+            if (top - y > 5) throw new InvalidOperationException("Box interior straight stair requires consecutive open storeys.");
             result.Add(new RampCollider(p.P(stairLeft, y - 0.2f, 3), p.P(stairRight, y - 0.2f, 3),
                 p.P(stairRight, top, 3 + run), p.P(stairLeft, top, 3 + run), 0.2f, SurfaceTag.Stair)
             { Foot = FootMat.Concrete, Stair = new((top - y) / 24, run / 24, 24) });
@@ -102,29 +102,13 @@ public abstract class BoxInteriorProviderStub : IInteriorProvider, IInteriorCata
             InteriorDetail.Proxy or InteriorDetail.Shell or InteriorDetail.Full => 0,
             _ => throw new ArgumentOutOfRangeException(nameof(detail))
         };
-        var builder = new StubSpatialMeshBuilder();
+        var builder = new BoxInteriorMeshBuilder();
         foreach (Collider collider in CollisionStorey(ctx, id, storey))
         {
             if (collider is RampCollider ramp) builder.AddSteps(ramp);
             else builder.Add(collider);
         }
         return new([builder.Build(ctx.Toon(new(new("wall.lit"), new("wall.shade"))))], []);
-    }
-
-    /// <summary>0.5 m plan occupancy; excludes the upper-floor stair well.</summary>
-    public InteriorPlanGridStub PlanGrid(BuildContext ctx, FeatureId id, int storey)
-    {
-        var p = Plan(ctx, id);
-        int width = (int)(p.Width * 2), depth = (int)(p.Depth * 2);
-        var cells = new bool[width * depth];
-        for (int z = 0; z < depth; z++)
-            for (int x = 0; x < width; x++)
-            {
-                float px = -p.Width / 2 + (x + 0.5f) * 0.5f, pz = (z + 0.5f) * 0.5f;
-                cells[z * width + x] = Array.IndexOf(_floors, storey) >= 0 &&
-                    !(storey != _floors[0] && px > p.Width / 2 - 4 && px < p.Width / 2 - 1 && pz > 3 && pz < 11.5f);
-            }
-        return new(p.P(-p.Width / 2, p.Y(storey), 0), p.Right, p.Inward, width, depth, 0.5f, cells);
     }
 
     public NavFloorGraph Nav(BuildContext ctx, FeatureId id, int storey)
@@ -167,7 +151,7 @@ public abstract class BoxInteriorProviderStub : IInteriorProvider, IInteriorCata
         if (entrances.Count == 0)
         {
             var center = new Vector3((feature.Bounds.Min.X + feature.Bounds.Max.X) / 2, feature.Bounds.Min.Y, feature.Bounds.Min.Z);
-            entrances = [new(id.Value + "/stub-entry", center - new Vector3(0, 0, 2.5f), center + new Vector3(0, 0, 3), 2.4f, true)
+            entrances = [new(id.Value + "/box-entry", center - new Vector3(0, 0, 2.5f), center + new Vector3(0, 0, 3), 2.4f, true)
                 { Center = center, YawDeg = 0 }];
         }
         float angle = entrances[0].YawDeg * (float.Pi / 180f);
@@ -184,6 +168,3 @@ public abstract class BoxInteriorProviderStub : IInteriorProvider, IInteriorCata
         public IReadOnlyList<Vector2> Ring(float x0, float z0, float x1, float z1) => [Xz(x0, z0), Xz(x1, z0), Xz(x1, z1), Xz(x0, z1)];
     }
 }
-
-public sealed record InteriorPlanGridStub(Vector3 Origin, Vector3 Right, Vector3 Inward,
-    int Width, int Depth, float CellSize, bool[] Walkable);

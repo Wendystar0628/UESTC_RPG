@@ -1,6 +1,8 @@
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Contracts.Maps;
+using Campus.Contracts.Audio;
 using Campus.Contracts.Settings;
 using Campus.Hud;
 using Campus.Hud.Motion;
@@ -79,6 +81,8 @@ public sealed class HudLifetimeTests
             registry.Add<IPaletteCatalogSource>(previousRegistry.Get<IPaletteCatalogSource>());
             registry.Add<IShaderMaterialSource>(new ShaderMaterialSource());
             registry.Add<IPaletteProbe>(new Probe());
+            registry.Add<IAudioService>(previousRegistry.Get<IAudioService>());
+            registry.Add<IMapService>(previousRegistry.Get<IMapService>());
             registry.Add<IAppFlow>(flow);
             registry.Add<IInputRouter>(router);
             servicesProperty.SetValue(null, registry);
@@ -91,7 +95,7 @@ public sealed class HudLifetimeTests
             for (var cycle = 0; cycle < 3; cycle++)
             {
                 Check(router.Layers == 3 && router.Observers == 1 && flow.Observers == 1, "HUD registered duplicate input layers or flow observers.");
-                Check(Subscribers(model, "Changed") == modelBaseline + 5, "Root and four resident controls did not bind exactly once.");
+                Check(Subscribers(model, "Changed") == modelBaseline + 5, $"Root and four resident controls did not bind exactly once (got {Subscribers(model, "Changed") - modelBaseline}).");
                 parent.RemoveChild(hud);
                 Check(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0, "Tree exit retained input layers or service observers.");
                 Check(Subscribers(settings, "Changed") == settingsBaseline && Subscribers(model, "Changed") == modelBaseline,

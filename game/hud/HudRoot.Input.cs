@@ -9,19 +9,17 @@ namespace Campus.Hud;
 
 public partial class HudRoot
 {
-    // ---------------- 输入（UI-NAV）：三层，经 IInputRouter 分发；路由还没注册时由本节点按同样的层次自己分发 ----------------
+    // ---------------- 输入（UI-NAV）：三层，经 IInputRouter 分发 ----------------
     // 层的先后：数值小的先跑（IInputRouter.RegisterLayer）。第 4 层"漫游"归 WP-06。
     public const int LayerDialog = 100, LayerPage = 200, LayerHud = 300;
     private static readonly string[] Actions = ["menu", "help", "time_panel", "time_forward", "toggle_flow", "next_season", "weather", "clean_view"];
     private readonly List<IDisposable> _layers = [];
-    private IInputRouter? _router;
+    private IInputRouter _router = null!;
 
     private void ConnectInput()
     {
         if (_layers.Count > 0) return;
-        try { _router = Services.Get<IInputRouter>(); }
-        catch (InvalidOperationException) { _router = null; }
-        if (_router is null) return;
+        _router = Services.Get<IInputRouter>();
         _layers.Add(_router.RegisterLayer("WP-35.dialog", LayerDialog, DialogLayer));
         _layers.Add(_router.RegisterLayer("WP-35.page", LayerPage, PageLayer));
         _layers.Add(_router.RegisterLayer("WP-35.hud", LayerHud, HudLayer));
@@ -30,12 +28,8 @@ public partial class HudRoot
 
     private void Touch() => _idle = 0;
 
-    /// <summary>漫游态 ⇄ 界面态：有路由时经 IInputRouter.SetInterfaceMode，由 WP-06 统一改鼠标捕获。</summary>
-    private void SetInterface(bool on)
-    {
-        if (_router is not null) _router.SetInterfaceMode(on);
-        else Input.MouseMode = on ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
-    }
+    /// <summary>漫游态 ⇄ 界面态：经 IInputRouter.SetInterfaceMode，由 WP-06 统一改鼠标捕获。</summary>
+    private void SetInterface(bool on) => _router.SetInterfaceMode(on);
 
     // 第 1 层：改键捕获期间吞掉所有动作；具体按下的物理键由 _Input 交给设置卡
     private bool DialogLayer(InputActionEvent e) => _settingsCard.Visible && _settingsCard.Capturing;
@@ -63,7 +57,7 @@ public partial class HudRoot
     // 第 3 层：普通 HUD：Esc 在漫游态与界面态之间切换（有面板展开时先收面板），单键快捷键受总开关约束
     private bool HudLayer(InputActionEvent e)
     {
-        if (_flow?.State == AppState.Title) return e.Action == "menu";   // 开始页主菜单上按 Esc 什么也不做
+        if (_flow.State == AppState.Title) return e.Action == "menu";   // 开始页主菜单上按 Esc 什么也不做
         if (!Playing) return false;
         if (e.Action == "weather" && !e.Pressed)
         {
@@ -144,16 +138,6 @@ public partial class HudRoot
             ToggleTime(false);
             Handled();
             return;
-        }
-        if (_router is not null) return;
-        // 路由还没注册（D0）：把按键换成同样的动作事件，按第 1、2、3 层依次分发
-        foreach (var action in Actions)
-        {
-            InputActionEvent ev;
-            if (e.IsActionPressed(action, true)) ev = new InputActionEvent(action, true, e.IsEcho());
-            else if (e.IsActionReleased(action)) ev = new InputActionEvent(action, false, false);
-            else continue;
-            if (DialogLayer(ev) || PageLayer(ev) || HudLayer(ev)) { Handled(); return; }
         }
     }
 

@@ -30,7 +30,7 @@ public partial class Minimap : Control
         ctx.Resident.Add(this);
         Viewport = new Control { Position = new(Inset, Inset), Size = new(ViewportSide, ViewportSide), ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(Viewport);
-        Base = new MapBase(ctx, crosses: false) { Size = Viewport.Size };
+        Base = new MapBase(crosses: false) { Size = Viewport.Size };
         Viewport.AddChild(Base);
         Markers = new MarkerLayer(ctx, atlas: false) { IconSize = 16 };
         Viewport.AddChild(Markers);

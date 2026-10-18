@@ -8,24 +8,16 @@ namespace Campus.Hud.Style;
 /// <summary>
 /// 经 IShaderMaterialSource 向 Campus.Style 的材质库申请 ui_panel、ui_screen（UI-VISUAL），只写 uniform：色表 pal_day / pal_night、
 /// 数值令牌、kind / mode。逐控件的效果一律写 instance uniform（见 <see cref="UiFx"/>）。
-/// 材质来源还没注册时 <see cref="Available"/> 为 false，界面退回 Theme 的晶白兜底。
 /// </summary>
 public sealed class UiMaterials
 {
     public const int KindPanel = 0, KindLine = 1, KindIcon = 2, KindText = 3;
 
-    private readonly ShaderMaterial?[] _panel = new ShaderMaterial?[4];
+    private readonly ShaderMaterial[] _panel = new ShaderMaterial[4];
 
     public UiMaterials(UiTokens tokens, UiColors colors)
     {
-        IShaderMaterialSource? source;
-        try { source = Services.Get<IShaderMaterialSource>(); }
-        catch (InvalidOperationException)
-        {
-            source = null;
-            GD.PushWarning("UI materials: IShaderMaterialSource is not registered; HUD falls back to plain theme colours.");
-        }
-        if (source is null) return;
+        var source = Services.Get<IShaderMaterialSource>();
         var day = colors.RoleTable(tokens, "light");
         var night = colors.RoleTable(tokens, "dark");
         for (var kind = 0; kind < _panel.Length; kind++)
@@ -53,16 +45,14 @@ public sealed class UiMaterials
             m.SetShaderParameter("corner_minor", tokens.F("metrics", "shape", "cornerMinor"));
             m.SetShaderParameter("front_width", tokens.F("themeSwitch", "frontWidth"));
         }
-        Available = true;
     }
 
-    public bool Available { get; }
-    public ShaderMaterial? Panel => _panel[KindPanel];
-    public ShaderMaterial? Line => _panel[KindLine];
-    public ShaderMaterial? Icon => _panel[KindIcon];
-    public ShaderMaterial? Text => _panel[KindText];
-    public ShaderMaterial? Reveal { get; }
-    public ShaderMaterial? Frost { get; }
+    public ShaderMaterial Panel => _panel[KindPanel];
+    public ShaderMaterial Line => _panel[KindLine];
+    public ShaderMaterial Icon => _panel[KindIcon];
+    public ShaderMaterial Text => _panel[KindText];
+    public ShaderMaterial Reveal { get; }
+    public ShaderMaterial Frost { get; }
 
     /// <summary>是不是这里发出的界面材质（ui_panel 四种 kind 与 ui_screen 两种 mode）。</summary>
     public bool Owns(Material? material) =>

@@ -58,7 +58,7 @@ public partial class TechButton : Button
             ClipText = false,
         };
         if (icon is not null) { button.Icon = kit.Icon(icon); button.ExpandIcon = true; }
-        if (kit.Materials.Panel is { } m) button.Material = m;
+        button.Material = kit.Materials.Panel;
         button.Chamfer = style switch
         {
             ButtonStyle.Primary or ButtonStyle.Danger => kit.Tokens.Chamfer("primary"),
@@ -101,7 +101,6 @@ public partial class TechButton : Button
 
     public void Refresh()
     {
-        if (!_kit.Materials.Available) return;
         var fx = Compute();
         _kit.Apply(this, fx, remember: false);
         if (Style == ButtonStyle.Text) RefreshTextStyle();

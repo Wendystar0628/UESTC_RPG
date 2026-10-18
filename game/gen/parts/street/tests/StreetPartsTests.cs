@@ -229,7 +229,7 @@ public sealed class StreetPartsTests
         var granite = new ToonSpec(new("stone.beige.lit"), new("stone.beige.shade"));
         var sphere = new StoneSpherePart().Lods[LodLevel.L0](new FurnitureParams(0.6f, 0.6f, 0.6f) { Material = granite });
         Check(sphere.Meshes.All(m => m.Material.Spec.Lit.Value == "stone.beige.lit"), "A caller's stone colours the sphere.");
-        Check(Lettering.Covers(StreetStyle.StopTitle) && Lettering.Covers(StreetStyle.OpenTitle), "Fixed labels have stroke glyphs.");
+        Check(StrokeText.Covers(StreetStyle.StopTitle) && StrokeText.Covers(StreetStyle.OpenTitle), "Fixed labels have stroke glyphs.");
         Check(StreetStyle.BinDoors.Length == 4 && StreetStyle.BinDoors.Distinct().Count() == 4, "Four distinct sorting colours.");
         Check(StreetStyle.BinDoors[2] == "equip.fireRed" && StreetStyle.BinDoors[1] == StreetStyle.SignBlue, "Bin red is the campus red; bin and stop share the street blue (Opus review 10:07).");
         // Review caps (Opus 10:07): round bollards ≤ 120 triangles near, the shuttle stop ≤ 400.
@@ -286,7 +286,7 @@ public sealed class StreetPartsTests
         // Sizes from MAP-QSH-ADDITIONS: the fountain's top at 1.1 m on 0.6 × 0.45, the signpost 2.6 m with 3–5 boards.
         var fountain = new DrinkingFountainPart().Bounds(new EquipmentParams(0.6f, 1.1f, 0.45f));
         Check(Math.Abs(fountain.Max.Y - 1.1f) < 0.01f, "The fountain's top is not at 1.1 m.");
-        Check(Lettering.Covers(StreetStyle.FountainTitle), "The fountain's plate has no glyphs.");
+        Check(StrokeText.Covers(StreetStyle.FountainTitle), "The fountain's plate has no glyphs.");
         foreach (var boards in new[] { 0, 1, 2 })
         {
             var sign = new SignpostPart();

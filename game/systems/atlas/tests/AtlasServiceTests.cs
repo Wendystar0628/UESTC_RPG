@@ -8,7 +8,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
 using Campus.Contracts.Save;
-using Campus.Gen.Parts.Stubs;
+using Campus.Gen.Interior.Shell.Box;
 using Campus.Hud.Map;
 using Campus.Systems.Atlas;
 using GdUnit4;
@@ -223,7 +223,7 @@ public sealed class AtlasServiceTests
         world.Configure(campus.World.Features.Values, campus.World.Boundary);
         var mapFile = JsonSerializer.Deserialize<MapFile>(File.ReadAllBytes(Path.Combine(root, "map.json")), ContractJson.Options)!;
         var descriptor = mapFile.Complete(campus.Geo, campus.Center, campus.Bounds, campus.TileMin, campus.TileMax);
-        var providers = typeof(BoxInteriorProviderStub).Assembly.GetTypes()
+        var providers = typeof(BoxInteriorProvider).Assembly.GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && typeof(IInteriorProvider).IsAssignableFrom(type))
             .Select(type => (Type: type, Registration: type.GetCustomAttribute<InteriorProviderAttribute>()))
             .Where(item => item.Registration is not null)
