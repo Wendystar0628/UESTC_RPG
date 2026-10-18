@@ -38,9 +38,10 @@ function Get-UESTCCachePaths {
                 # Campus and the test hosts aggregate every generator. Their
                 # wildcard is not an upstream dependency of each individual package.
                 if ($aggregate -and $include -match '[*?]') { continue }
-                $pattern = ConvertTo-UESTCG2RelativePath $directory $include
+                $referencePath = Join-Path (Join-Path $Root $directory) $include
+                $referencePaths = @(Resolve-Path -Path $referencePath -ErrorAction SilentlyContinue | ForEach-Object { $_.ProviderPath })
                 foreach ($dependency in $projects) {
-                    if (Test-UESTCGlob $dependency $pattern) { $pending.Enqueue($dependency) }
+                    if ([IO.Path]::GetFullPath((Join-Path $Root $dependency)) -in $referencePaths) { $pending.Enqueue($dependency) }
                 }
             }
         }

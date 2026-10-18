@@ -3,7 +3,7 @@ function Test-UESTCNamespaceRole {
     if ($Namespace -cnotmatch '^Campus(?:\.[A-Z][A-Za-z0-9]*)+$') { return $false }
     if ($Path -match '/tests/|^scripts/gates/arch/') { return $true }
     if ($Path -match '^game/contracts/') {
-        return $Namespace -cmatch '^Campus\.Contracts(?:\.(?:Quality|Maps|Atlas|AppFlow|Cinematic|Save|Audio|Bake|Parts|Entities|Startup)(?:\.[A-Z][A-Za-z0-9]*)*)?$'
+        return $Namespace -cmatch '^Campus\.Contracts(?:\.(?:Quality|Maps|Atlas|AppFlow|Cinematic|Save|Audio|Bake|Parts|Entities|Startup|Settings)(?:\.[A-Z][A-Za-z0-9]*)*)?$'
     }
     if ($Path -match '^game/gen/|^pipeline/') {
         return $ProjectNamespace -and ($Namespace -ceq $ProjectNamespace -or $Namespace.StartsWith($ProjectNamespace + '.', [StringComparison]::Ordinal))
