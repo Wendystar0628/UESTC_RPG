@@ -14,6 +14,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; } = 1;
     public event Action<long>? InstanceChanged;
+    public event Action? WalkEntryRefused { add { } remove { } }
     public double WorldHours { get; private set; } = 17.5;
     public double Clock => ((WorldHours + _clockOffset) % 24 + 24) % 24;
     public double SeasonPos => (int)SeasonTarget;

@@ -246,7 +246,7 @@ public sealed class MapServiceTests
         f.Until(() => travel.Done.IsCompleted);
         AssertThat(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
             f.Loader.Loads == 1 && f.Runtime.LastArrival == legal && f.Camera.Pose == legal &&
-            f.Service.Visits.Single().LastPose == legal).OverrideFailureMessage("Full restore retained an obsolete saved pose or unnecessarily rebuilt the current world.").IsTrue();
+            f.Service.Visits.Single().LastPose == (legal with { FovDeg = null })).OverrideFailureMessage("Full restore retained an obsolete saved pose or unnecessarily rebuilt the current world.").IsTrue();
     }
 
     [TestCase]

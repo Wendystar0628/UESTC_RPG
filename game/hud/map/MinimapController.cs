@@ -65,6 +65,7 @@ internal sealed class MinimapController
         if (!playing) _resetView = true;
         var visible = playing && !hidden;
         _minimap.Visible = visible;
+        _s.Surfaces.Report(UiSurface.Minimap, _minimap.IsVisibleInTree());
         if (visible) Update(dt);
     }
 

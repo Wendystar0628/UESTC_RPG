@@ -6,6 +6,18 @@ namespace Campus.Camera.Walk;
 /// <summary>Engine-independent movement and safety rules, shared by the live controller and focused checks.</summary>
 public static class WalkMath
 {
+    public static float StepFrequency(float speed) => Math.Clamp(
+        WalkTuning.StepFrequencyScale * MathF.Pow(speed, WalkTuning.StepFrequencyPower),
+        WalkTuning.MinimumStepFrequency, WalkTuning.MaximumStepFrequency);
+
+    /// <summary>X is lateral metres, Y is vertical metres, Z is presentation roll in degrees.</summary>
+    public static Vector3 BobOffset(float phase, bool nextFootRight, float scale)
+    {
+        float side = MathF.Sin((phase + (nextFootRight ? 1f : 0f)) * float.Pi);
+        return new(side * WalkTuning.BobLateralMetres * scale,
+            -MathF.Cos(phase * float.Tau) * WalkTuning.BobVerticalMetres * scale,
+            side * WalkTuning.BobRollDegrees * scale);
+    }
     public static bool ValidCylinderDimensions(float radius, float height) =>
         float.IsFinite(radius) && float.IsFinite(height) && radius > 0 && height > 0;
 
@@ -50,5 +62,17 @@ public static class WalkMath
         return new(value.X * scale, value.Y, value.Z * scale);
     }
 
-    public static float DescentSeconds(float height) => Math.Clamp(.4f + .4f * MathF.Log10(MathF.Max(height, 1f)), .5f, 1.6f);
+    public static Vector3 SlowAtBoundaries(Vector3 velocity, ReadOnlySpan<BoundaryHit> hits)
+    {
+        foreach (var hit in hits)
+        {
+            float inward = Vector3.Dot(velocity, hit.Inward);
+            if (inward >= 0) continue;
+            float retained = ScalarMath.Smoothstep(0, WalkRules.BoundarySlowdownDistance, hit.Distance);
+            velocity -= hit.Inward * (inward * (1f - retained));
+        }
+        return velocity;
+    }
+
+    public static float DescentSeconds(float height) => Math.Clamp(.4f + .4f * MathF.Log10(MathF.Max(height, 1f)), WalkTuning.NearLandingSeconds, 1.6f);
 }

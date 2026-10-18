@@ -202,6 +202,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
             _settings.Changed -= OnSettingsChanged;
             _flow.Changed -= OnFlowChanged;
             _model.World.InstanceChanged -= OnWorldChanged;
+            Services.Get<IViewControl>().WalkEntryRefused -= OnWalkEntryRefused;
         }
         _router.InterfaceModeChanged -= OnInterfaceModeChanged;
         foreach (var layer in _layers) layer.Dispose();

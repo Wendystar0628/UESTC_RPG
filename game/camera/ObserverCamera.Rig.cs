@@ -5,6 +5,7 @@ namespace Campus.Camera;
 
 public partial class ObserverCamera
 {
+    public float RollDeg => IsPlaying && _mode == ViewMode.Walk ? _walk?.EyeRollDeg ?? 0 : 0;
     // Title and cinematics own a presentation pose while the restored walk body stays frozen.
     public Pose Pose => !IsPlaying || _mode is null ? _pose : Mode switch
     {
@@ -74,7 +75,15 @@ public partial class ObserverCamera
     public void SetPose(Pose pose)
     {
         ValidateFinite(pose);
-        _pose = pose with { FovDeg = pose.FovDeg ?? Tuning.FlyFov };
+        _pose = pose with { FovDeg = pose.FovDeg ?? (Mode switch
+        {
+            ViewMode.Fly => FlyFov,
+            ViewMode.Walk => WalkFov,
+            _ => throw new InvalidOperationException("Unknown view mode.")
+        }) };
+        _flyFovFrom = _pose.FovDeg.Value;
+        _flyFovTarget = FlyFov;
+        _flyFovElapsed = Tuning.ModeFovSeconds;
         _flight.Reset();
         _listener?.Sync(reset: true);
     }
@@ -95,6 +104,11 @@ public partial class ObserverCamera
     public Task<ModeSwitchResult> SetMode(ViewMode mode, ModeSwitchVia via)
     {
         _ = mode switch { ViewMode.Fly or ViewMode.Walk => 0, _ => throw new ArgumentOutOfRangeException(nameof(mode)) };
+        if (_walkEntry is not null)
+        {
+            CancelWalkEntry();
+            return Task.FromResult(ModeSwitchResult.Refused);
+        }
         if (_rules is null || !_rules.Current.ViewModes.Contains(mode)) return Task.FromResult(ModeSwitchResult.Refused);
         if (mode == _mode) return Task.FromResult(ModeSwitchResult.Ok);
         ActiveTransit?.Cancel(); ActiveTransit = null; _transitDestination = null;
@@ -105,13 +119,21 @@ public partial class ObserverCamera
             case ViewMode.Walk:
                 if (_walk is null) return Task.FromResult(ModeSwitchResult.Refused);
                 result = _walk.Enter(Pose);
-                if (result == ModeSwitchResult.Refused) return Task.FromResult(result);
-                break;
+                if (result == ModeSwitchResult.Refused)
+                { WalkEntryRefused?.Invoke(); return Task.FromResult(result); }
+                _walkEntry = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                _flight.Reset(); _input.Clear(); SetEdgeFog(0);
+                return _walkEntry.Task;
             case ViewMode.Fly:
-                _pose = (_walk is { Active: true } ? _walk.EyePose : Pose) with { FovDeg = Tuning.FlyFov };
+                bool landingRefused = _walk?.ExitRequested == true && !PlacementReadFailed();
+                _pose = _walk is { Active: true } ? _walk.EyePose : Pose;
+                _flyFovFrom = _pose.FovDeg ?? FlyFov;
+                _flyFovTarget = FlyFov;
+                _flyFovElapsed = 0;
                 if (_walk is { Active: true }) inheritedVelocity = new(_walk.Velocity.X, 0, _walk.Velocity.Z);
                 _walk?.Leave();
                 _pose = Legalize(_pose);
+                if (landingRefused) WalkEntryRefused?.Invoke();
                 result = ModeSwitchResult.Ok;
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(mode));
@@ -120,4 +142,36 @@ public partial class ObserverCamera
         _flight.ConstrainVelocity(inheritedVelocity);
         return Task.FromResult(result);
     }
+
+    private bool AdvanceWalkEntry()
+    {
+        if (_walkEntry is not { } completion || _walk is null) return false;
+        _walk.SetLook(_pose.YawDeg, _pose.PitchDeg);
+        if (_walk.ExitRequested)
+        {
+            bool readFailed = PlacementReadFailed();
+            _walkEntry = null;
+            _walk.Leave();
+            completion.TrySetResult(ModeSwitchResult.Refused);
+            if (!readFailed) WalkEntryRefused?.Invoke();
+            return false;
+        }
+        if (!_walk.CollisionReady) return true;
+        _walkEntry = null;
+        _mode = ViewMode.Walk;
+        _flight.Reset(); SetEdgeFog(0);
+        bool relocated = _walk.BodyPose.Position.X != _pose.Position.X || _walk.BodyPose.Position.Z != _pose.Position.Z;
+        completion.TrySetResult(relocated ? ModeSwitchResult.Relocated : ModeSwitchResult.Ok);
+        return false;
+    }
+
+    private void CancelWalkEntry()
+    {
+        if (_walkEntry is not { } completion) return;
+        _walkEntry = null;
+        _walk?.Leave();
+        completion.TrySetResult(ModeSwitchResult.Refused);
+    }
+
+    private bool PlacementReadFailed() => _walk?.PlacementArrival?.Done is { IsFaulted: true } or { IsCanceled: true };
 }

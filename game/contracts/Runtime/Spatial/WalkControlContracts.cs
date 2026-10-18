@@ -1,4 +1,5 @@
 using System.Numerics;
+using Campus.Contracts.Maps;
 
 namespace Campus.Contracts;
 
@@ -11,6 +12,8 @@ public interface IWalkController
 {
     /// <summary>Interpolated render eye pose, including current eye height and stair smoothing.</summary>
     Pose EyePose { get; }
+    /// <summary>Presentation-only lateral gait roll; never part of physical look or a saved pose.</summary>
+    float EyeRollDeg { get; }
     /// <summary>Uninterpolated physical eye position, including current standing or crouching eye height.</summary>
     Vector3 ObserverEye { get; }
     /// <summary>Uninterpolated physical feet pose. Yaw and pitch retain the current look direction.</summary>
@@ -22,6 +25,8 @@ public interface IWalkController
     /// <summary>Terminal placement failure: physics is frozen until the camera handles the exit request.</summary>
     bool ExitRequested { get; }
     bool CollisionReady { get; }
+    /// <summary>The actual arrival handle owned or adopted by the current placement, never an independent readiness flag.</summary>
+    IMapArrival? PlacementArrival { get; }
     NavSpace? Space { get; }
     /// <summary>Zero-based speed setting, 0 through 4; 2 is the default 1x speed.</summary>
     int SpeedStep { get; }

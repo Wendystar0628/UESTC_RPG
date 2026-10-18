@@ -7,6 +7,8 @@ namespace Campus.Contracts;
 public interface ICameraRig
 {
     Pose Pose { get; }
+    /// <summary>Presentation-only roll, zero for explicit poses and outside live walking.</summary>
+    float RollDeg { get; }
     float Speed { get; }
     ViewMode Mode { get; }                   // Fly 由 WP-06 驱动，Walk 由 WP-42 驱动
     void SetPose(Pose p);                    // 只用于启动/地图出生、过渡的旁观落位、审查/测试，以及 Title、Entering、Leaving 的过场展示；

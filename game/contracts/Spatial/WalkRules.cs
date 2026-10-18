@@ -12,6 +12,7 @@ public static class WalkRules
     public const float FloorAngleDegrees = 45f;
     public const float BarrierHeight = 1.5f;
     public const float BoundaryHeight = 2.2f;
+    public const float BoundarySlowdownDistance = .6f;
     public const float BuildingCollisionHeight = 300f;
     public const float DefaultDoorHeight = 2.1f;
     public const float MinimumDoorHeight = 2f;

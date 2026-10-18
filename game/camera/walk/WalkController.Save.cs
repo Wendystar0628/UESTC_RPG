@@ -15,19 +15,23 @@ public partial class WalkController
     public WalkSave Capture(in CaptureContext c)
     {
         RequireMap(c.Map);
-        return new(ResolveSettledFeet(), _crouching, SpeedStep, _lastStable is { } stable ? [stable] : []);
+        return new(ResolveSettledFeet(), _crouching, SpeedStep, _safePoints.Capture());
     }
 
     public void Restore(WalkSave dto, RestoreContext c)
     {
         ArgumentNullException.ThrowIfNull(dto);
         RequireMap(c.Map);
-        _lastStable = null;
+        _safePoints.Clear();
         foreach (var saved in dto.SafePoints ?? [])
         {
-            if (!WalkSafetyQueries.ValidPose(saved)) continue;
-            _lastStable = saved;
-            break;
+            if (!WalkSafetyQueries.ValidPose(saved)) { c.Repair("walk: invalid history point removed"); continue; }
+            if (WalkSafetyQueries.InWater(_map!.World.Spatial, saved.Position)
+                || !WalkSafetyQueries.AllowsFeet(_map.World.Spatial, saved.Position))
+            { c.Repair("walk: unsafe history point removed"); continue; }
+            float boundary = FlightBounds.RingDistance(new(saved.Position.X, saved.Position.Z), _map.World.Boundary, out _);
+            if (boundary > -WalkTuning.BoundaryClearance) { c.Repair("walk: boundary history point removed"); continue; }
+            _safePoints.Record(saved);
         }
         _crouching = dto.Crouching;
         _restoredCrouch = dto.Crouching;
@@ -41,13 +45,14 @@ public partial class WalkController
         if (!validAngles || pitch != pose.PitchDeg) c.Repair("walk: look angles repaired");
         if (!VectorMath.Finite(pose.Position))
         {
-            pose = (_lastStable ?? DefaultFeet(c.Map)) with { YawDeg = yaw, PitchDeg = pitch };
+            pose = (_safePoints.Count > 0 ? _safePoints.Points.Last() : DefaultFeet(c.Map)) with { YawDeg = yaw, PitchDeg = pitch };
             c.Repair("walk: invalid feet replaced by a pending landing origin");
         }
         else pose = new(pose.Position, yaw, pitch);
-        Warp(pose);
+        Place(pose, 0, WalkTuning.SaveRepairRadius);
         // view/Pose60 owns the mode; this section owns physical placement and walking speed.
-        // Warp clears velocity, jump timers and interpolation. Physics stays frozen until real collision Ready.
+        // Placement clears velocity, jump timers and interpolation; save repairs stay within their own radius.
+        // Physics stays frozen until the actual arrival and collision are ready.
     }
 
     public WalkSave CreateDefault(NewGameContext c) =>

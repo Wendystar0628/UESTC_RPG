@@ -368,7 +368,7 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     private void RememberCurrent()
     {
         if (Context is null || string.IsNullOrEmpty(Current.Value)) return;
-        _visits[Current] = new(Current, _camera.Pose, _camera.Mode);
+        _visits[Current] = new(Current, _camera.Pose with { FovDeg = null }, _camera.Mode);
     }
 
     private IReadOnlyList<MapVisit> SnapshotVisits() => Array.AsReadOnly(_visits.Values

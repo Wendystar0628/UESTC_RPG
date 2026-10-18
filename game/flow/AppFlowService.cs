@@ -3,6 +3,7 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using Campus.Contracts.Settings;
 
 namespace Campus.Flow;
 
@@ -10,7 +11,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     IMapService maps, IWorldState world, IWorldControl control, IRuleset rules,
     IMotionSettings motion, IViewControl view, ICinematicPlayback playback,
     IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime,
-    ICinematicSettings? settings = null) : IAppFlow
+    ICinematicSettings? settings = null, ISettingsStore? profileSettings = null) : IAppFlow
 {
     internal Action<string>? DiagnosticSink { get; init; }
     private IDisposable? _input;
@@ -28,8 +29,17 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     private bool _previewNeedsVeil;
     private Pose _destination;
     private ViewMode _destinationMode;
-    // WP-06's default until the settings-owned camera preference contract is available.
-    private readonly float _userFov = FlowTuning.DefaultUserFov;
+    private readonly ISettingsSection? _cameraSettings = profileSettings?.Section("ui");
+    private float UserFov(ViewMode mode)
+    {
+        var definition = mode switch
+        {
+            ViewMode.Fly => UiSettingDefinitions.FlyFov,
+            ViewMode.Walk => UiSettingDefinitions.WalkFov,
+            _ => throw new ArgumentOutOfRangeException(nameof(mode))
+        };
+        return _captureMode ? definition.Default : _cameraSettings?.Get(definition) ?? definition.Default;
+    }
     private double? _flowTarget;
     private bool _newTimeline;
     private bool _finishing;
@@ -113,7 +123,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             };
             _definition = _cinematicOverride is { } forced ? catalog.Read(forced) : catalog.Find(role);
             _cinematicOverride = null;
-            _playbackStart = new(TitlePose(), camera.Pose, _destination, _userFov, context.Descriptor.Id);
+            _playbackStart = new(TitlePose(), camera.Pose, _destination, UserFov(_destinationMode), context.Descriptor.Id);
             if (!newGame && _definition is not null) _destination = playback.ResolvePose(_definition.End.Pose, _playbackStart, maps);
             _path = mode switch { CinematicMode.Full or CinematicMode.Off => EnterPath.Cinematic, CinematicMode.Short => EnterPath.ShortCinematic, _ => throw new InvalidOperationException("Unknown cinematic setting.") };
             if (_definition?.Kind is CinematicKind.EnterNewShort) _path = EnterPath.ShortCinematic;
@@ -313,7 +323,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
         _cinematicOverride = null;
         if (definition is not null && !motion.ReduceMotion && !_quitting && rules.Current.CinematicStates.Contains(AppState.Leaving))
         {
-            var start = new CinematicPlaybackStart(TitlePose(), camera.Pose, TitlePose(), _userFov, context.Descriptor.Id);
+            var start = new CinematicPlaybackStart(TitlePose(), camera.Pose, TitlePose(), UserFov(camera.Mode), context.Descriptor.Id);
             await playback.Play(definition, start, maps, context.World, State, ExecuteLeaveCue);
             await CoverFlow(0);
             playback.Clear();

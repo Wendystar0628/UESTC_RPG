@@ -35,6 +35,7 @@ internal sealed class AtlasController : IDisposable
     {
         var page = new AtlasPage(_host.Ctx);
         _page = page;
+        page.TabChanged += ReportPage;
         _host.Hud.PageHost.AddChild(page);
         _host.BindPage(page);
         page.SetTitle(_title, _titleEn);
@@ -161,6 +162,8 @@ internal sealed class AtlasController : IDisposable
     {
         if (!_open) return;
         _open = false;
+        _s.Surfaces.Report(UiSurface.AtlasIndex, false);
+        _s.Surfaces.Report(UiSurface.Atlas, false);
         Page.Visible = false;
         CoverOthers(false);
         CloseCard();
@@ -168,6 +171,17 @@ internal sealed class AtlasController : IDisposable
         _page = null;
         if (_pending is null) { _lease?.Dispose(); _lease = null; }
         if (restoreRoam && _fromRoam && _pending is null) Input.MouseMode = Input.MouseModeEnum.Captured;
+    }
+
+    private void ReportPage(AtlasTab tab)
+    {
+        _s.Surfaces.Report(UiSurface.Atlas, _open);
+        _s.Surfaces.Report(UiSurface.AtlasIndex, _open && (tab switch
+        {
+            AtlasTab.Layers => false,
+            AtlasTab.Index => true,
+            _ => throw new ArgumentOutOfRangeException(nameof(tab))
+        }));
     }
 
     private void FitAll()

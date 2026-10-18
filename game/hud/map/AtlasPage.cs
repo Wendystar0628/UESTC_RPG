@@ -57,6 +57,7 @@ public partial class AtlasPage : Control
     public AtlasPaper Paper { get; }
     public TechButton Close { get; }
     public AtlasTab Tab { get; private set; }
+    public event Action<AtlasTab>? TabChanged;
 
     public void ShowTab(AtlasTab tab)
     {
@@ -74,6 +75,7 @@ public partial class AtlasPage : Control
                 break;
             default: throw new ArgumentOutOfRangeException(nameof(tab));
         }
+        TabChanged?.Invoke(tab);
     }
 
     public void SetTitle(string zh, string en)

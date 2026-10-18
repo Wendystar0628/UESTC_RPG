@@ -7,6 +7,8 @@ namespace Campus.Audio.Core;
 public sealed class AudioMix
 {
     public const float SilenceDb = -80f;
+    public const float PageOpenDuckDb = -4f;
+    public const float PageFadeSeconds = .5f;
     private readonly Ramp[] _groups = [new(), new(), new(), new(), new()];
     private readonly Ramp[] _ducks = [new(1), new(1), new(1), new(1), new(1)];
     private readonly float[] _release = new float[5];
@@ -93,6 +95,14 @@ public sealed class AudioMix
     {
         var index = DuckIndex(reason);
         _ducks[index].To(1f, _release[index]);
+    }
+
+    public void UpdatePages(UiSurface open)
+    {
+        const UiSurface pages = UiSurface.Atlas | UiSurface.AtlasIndex | UiSurface.SettingsCard | UiSurface.SavePage;
+        if ((open & pages) != 0)
+            Duck(DuckReason.PageOpen, PageOpenDuckDb, PageFadeSeconds, PageFadeSeconds);
+        else ReleaseDuck(DuckReason.PageOpen);
     }
 
     public void BeginMapUnload()

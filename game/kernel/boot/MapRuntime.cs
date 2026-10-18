@@ -25,8 +25,12 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private bool _mountPrepared;
     private TaskCompletionSource? _mountCompletion;
     private ArrivalRun? _arrival;
+    private ICameraRig? _camera;
+    private IVeilService? _veil;
+    private IVeilLease? _readinessCover;
     private IVeilPresentation? _presentation;
     private ulong _arrivalFrame;
+    private long _arrivalDraw;
     private ulong _coveredDrawFrame;
     private bool _reuseWarmth;
     private Task? _shutdown;
@@ -60,6 +64,8 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _renderer = Services.Get<IRenderReadiness>();
         _materials = Services.Get<MaterialWarmup>();
         _materialSource = Services.Get<IToonMaterialProvider>();
+        _camera = Services.Get<ICameraRig>();
+        _veil = Services.Get<IVeilService>();
         _presentation = Services.Get<IVeilPresentation>();
         RenderingServer.Singleton.FramePostDraw += CountDraw;
     }
@@ -189,18 +195,19 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _arrival?.Cancel();
         var arrival = new ArrivalRun(new(destination, mode, space), CancelArrival);
         _arrival = arrival;
-        // Every arrival resets its own readiness once. Sampling starts only after a later covered camera draw.
+        // Every arrival needs a later real draw; new warm samples also require presented coverage.
         WarmReady = false;
         _warming = true;
         _samplesStarted = false;
         _stable = 0;
         _arrivalFrame = Engine.GetProcessFrames();
+        _arrivalDraw = _drawFrames;
         _lastWarmDraw = _drawFrames;
         _previous = PipelineCounts.Read();
         _reuseWarmth = _materials!.IsReady;
         if (!_reuseWarmth) _materials.End(reset: true);
         try { _stream!.Prefetch(destination, mode, space); }
-        catch (Exception error) { arrival.Fail(error); _warming = false; }
+        catch (Exception error) { FailArrival(error); }
         return arrival;
     }
 
@@ -209,6 +216,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (!ReferenceEquals(_arrival, arrival)) return;
         _warming = false;
         _materials?.End();
+        ReleaseReadinessCover();
     }
 
     public string DescribeReadiness() =>
@@ -245,31 +253,46 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _arrival?.Fail(error);
         _warming = false;
         _materials?.End();
+        ReleaseReadinessCover();
     }
 
     private void AdvanceArrival()
     {
         if (!_warming || _arrival is not { } arrival || arrival.Done.IsCompleted) return;
-        if (!ResidentReady || _coveredDrawFrame <= _arrivalFrame || _presentation?.IsCovered != true) return;
+        if (!ResidentReady) return;
         if (!_samplesStarted)
         {
-            if (_contentReadiness?.IsReady(Services.Get<ICameraRig>().Pose) != true) return;
             // Existing warm pipelines keep the same-map fast path. Newly required variants must be sampled.
             if (_reuseWarmth && _renderer!.PipelineReady && _materialSource!.CapturePendingWarm().Materials.Count == 0)
             {
-                if (DestinationReady) CompleteArrival(arrival);
+                if (_drawFrames > _arrivalDraw && _materials!.SamplesReleased && ContentReady && DestinationReady)
+                    CompleteArrival(arrival);
                 return;
             }
+            // Visible arrivals own only their temporary cover; external transit/boot covers stay with their callers.
+            if (_presentation?.IsCovered != true)
+                _readinessCover ??= _veil!.Cover(VeilReason.Transit, 0f);
+            if (_coveredDrawFrame <= _arrivalFrame || _presentation?.IsCovered != true || !ContentReady) return;
             _reuseWarmth = false;
             _materials!.Begin();
             _samplesStarted = true;
         }
+        if (_coveredDrawFrame <= _arrivalFrame || _presentation?.IsCovered != true) return;
         if (_drawFrames == _lastWarmDraw) return;
         _lastWarmDraw = _drawFrames;
         var counts = PipelineCounts.Read();
-        _stable = ResidentReady && _materials!.IsReady && counts == _previous ? _stable + 1 : 0;
+        _stable = ResidentReady && _materials!.IsReady && _materials.SamplesReleased && counts == _previous ? _stable + 1 : 0;
         _previous = counts;
-        if (_stable >= BootTuning.WarmFrames && DestinationReady) CompleteArrival(arrival);
+        if (_stable >= BootTuning.WarmFrames && ContentReady && DestinationReady) CompleteArrival(arrival);
+    }
+
+    // Visible-content producers apply the presented camera. Stream/collision separately certify the arrival destination.
+    private bool ContentReady => _contentReadiness?.IsReady(_camera!.Pose) == true;
+
+    private void ReleaseReadinessCover()
+    {
+        _readinessCover?.Dispose();
+        _readinessCover = null;
     }
 
     private void CompleteArrival(ArrivalRun arrival)
@@ -277,6 +300,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         WarmReady = true;
         _materials!.End();
         _warming = false;
+        ReleaseReadinessCover();
         arrival.Complete();
     }
 
@@ -294,6 +318,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _arrival = null;
         _warming = false;
         _materials?.End(reset: true);
+        ReleaseReadinessCover();
     }
     public override void _ExitTree()
     {

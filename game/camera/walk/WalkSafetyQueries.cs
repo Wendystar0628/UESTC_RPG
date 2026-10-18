@@ -22,21 +22,7 @@ public static class WalkSafetyQueries
         }
         if (!ValidPose(spawn.Fly)) throw new InvalidDataException($"Walk default for {targetMap.Value} has an invalid fly pose.");
         // A fly-only default is a pending ray origin, never a claim that its feet have support.
-        return maps.Context is { } context && maps.Current == targetMap && context.Descriptor.Id == targetMap
-            ? PlacementHint(context, spawn.Fly) : spawn.Fly;
-    }
-
-    public static Pose PlacementHint(IMapContext map, Pose pose)
-    {
-        var point = new Vector2(pose.Position.X, pose.Position.Z);
-        for (int i = 0; i < 8; i++)
-        {
-            float distance = FlightBounds.RingDistance(point, map.World.Boundary, out var outward);
-            if (distance <= -WalkTuning.BoundaryClearance) break;
-            point -= outward * (distance + WalkTuning.BoundaryClearance);
-        }
-        // Preserve the supplied layer hint, including upper floors and high-altitude entry.
-        return pose with { Position = new(point.X, pose.Position.Y, point.Y) };
+        return spawn.Fly;
     }
 
     public static bool ValidPose(Pose pose) => VectorMath.Finite(pose.Position)
@@ -58,7 +44,7 @@ public static class WalkSafetyQueries
         if (!VectorMath.Finite(feet) || !AllowsFeet(spatial, feet)) return true;
         var medium = spatial.MediumAt(feet);
         if (spatial.WalkClassAt(feet.X, feet.Z) != WalkClass.Wade && medium.Kind == MediumKind.Underwater
-            && (!float.IsFinite(medium.Depth) || medium.Depth > WalkTuning.WaterRecoveryDepth)) return true;
+            && (!float.IsFinite(medium.Depth) || medium.Depth > WaterMotionRules.ShallowWadeDepth)) return true;
         return feet.Y < spatial.GroundY(feet.X, feet.Z) - WalkTuning.BelowSupportLimit;
     }
 }

@@ -88,7 +88,29 @@ public sealed class WalkRulesTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void SaveRoundTripKeepsLegacyFeetLookCrouchSpeedAndSafePoints()
+    public void CampusBoundarySlowsOnlyOutwardMotionAndPreservesSlidingAndJumping()
+    {
+        var inward = -Vector3.UnitX;
+        var incoming = new Vector3(WalkRules.WalkSpeed, WalkTuning.JumpSpeed, WalkRules.WalkSpeed);
+        BoundaryHit[] contacts = [new(0, inward)];
+        var stopped = WalkMath.SlowAtBoundaries(incoming, contacts);
+        AssertThat(stopped.X == 0 && stopped.Y == incoming.Y && stopped.Z == incoming.Z)
+            .OverrideFailureMessage("Boundary contact changed tangential or vertical motion instead of stopping only outward motion.").IsTrue();
+        contacts[0] = new(WalkRules.BoundarySlowdownDistance * .5f, inward);
+        var slowed = WalkMath.SlowAtBoundaries(incoming, contacts);
+        AssertThat(slowed.X > stopped.X && slowed.X < incoming.X && slowed.Y == incoming.Y && slowed.Z == incoming.Z)
+            .OverrideFailureMessage("Approaching the campus boundary does not preserve sliding and jumping while slowing outward motion.").IsTrue();
+        var retreat = incoming with { X = -incoming.X };
+        AssertThat(WalkMath.SlowAtBoundaries(retreat, contacts) == retreat)
+            .OverrideFailureMessage("The campus boundary slows movement back into campus.").IsTrue();
+        contacts[0] = new(WalkRules.BoundarySlowdownDistance, inward);
+        AssertThat(WalkMath.SlowAtBoundaries(incoming, contacts) == incoming)
+            .OverrideFailureMessage("Boundary slowing extends beyond its declared approach distance.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void SaveRoundTripKeepsFeetLookCrouchSpeedAndSafePoints()
     {
         var dto = new WalkSave(new(new(12.25f, 3, -7), 83, -12), true, 4,
             [new(new(11, 3, -7), 45, 9), new(new(10, 3, -7), 0, 0)]);
@@ -98,6 +120,28 @@ public sealed class WalkRulesTests
         AssertThat(restored.Feet == dto.Feet && restored.Crouching && restored.SpeedStep == 4).OverrideFailureMessage("Walk save lost its physical state.").IsTrue();
         AssertThat(restored.SafePoints.SequenceEqual(dto.SafePoints)).OverrideFailureMessage("Walk save lost the existing safePoints field.").IsTrue();
         AssertThat(!json.Contains("velocity", StringComparison.OrdinalIgnoreCase)).OverrideFailureMessage("Transient velocity leaked into the save.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void SafetyHistoryKeepsRecentRingAndChoosesNearestEligiblePoint()
+    {
+        var points = new WalkSafePoints();
+        for (int i = 0; i < WalkTuning.SafetyPointCapacity + 2; i++) points.Record(new(new(i, 0, 0), i, 0));
+        var saved = points.Capture();
+        AssertThat(saved.Length == WalkTuning.SafetyPointCapacity && saved[0].Position.X == 2
+            && saved[^1].Position.X == WalkTuning.SafetyPointCapacity + 1)
+            .OverrideFailureMessage("Safety history did not retain the most recent chronological ring.").IsTrue();
+        var roundTrip = new WalkSafePoints();
+        foreach (var pose in saved) roundTrip.Record(pose);
+        AssertThat(roundTrip.Capture().SequenceEqual(saved)
+            && roundTrip.Nearest(new(8.5f, 0, 0), WalkTuning.SafetyReturnMinimumDistance)?.Position.X == 5)
+            .OverrideFailureMessage("Restored safety history lost order or selected a point inside the recovery exclusion distance.").IsTrue();
+        var nearest = roundTrip.Nearest(new(8.5f, 0, 0), WalkTuning.SafetyReturnMinimumDistance)!.Value;
+        int skip = saved.Length - Array.LastIndexOf(saved, nearest);
+        var earlier = roundTrip.Nearest(nearest.Position, WalkTuning.SafetyReturnMinimumDistance, skip);
+        AssertThat(earlier is { } older && Array.IndexOf(saved, older) < Array.IndexOf(saved, nearest))
+            .OverrideFailureMessage("Repeated recovery did not select an earlier history point.").IsTrue();
     }
 
     [TestCase]

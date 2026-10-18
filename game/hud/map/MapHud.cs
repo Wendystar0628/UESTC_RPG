@@ -86,6 +86,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     {
         if (_style is null) return;
         _atlasCtl.Dispose();
+        _services!.Surfaces.Report(UiSurface.Minimap, false);
         _base?.Dispose();
         _services!.Atlas.Changed -= RebuildEntries;
         _services.World.InstanceChanged -= OnWorldChanged;

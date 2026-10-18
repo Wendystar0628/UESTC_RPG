@@ -32,7 +32,7 @@ public partial class StageCamera : Node
         if (_rig is null) return;
         var pose = _rig.Pose;
         Camera.GlobalPosition = pose.Position.ToGodot();
-        Camera.GlobalRotationDegrees = new(pose.PitchDeg, -pose.YawDeg, 0f);
+        Camera.GlobalRotationDegrees = new(pose.PitchDeg, -pose.YawDeg, _rig.RollDeg);
         Camera.Fov = pose.FovDeg ?? 60f;
     }
 }

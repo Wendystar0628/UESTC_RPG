@@ -28,7 +28,9 @@ public sealed class AudioMixTests
     {
         var mix = new AudioMix(new(Master: 1f, Ambience: 1f, Foley: 1f, Ui: 1f, Music: 1f));
         mix.SetAudible(true, 0f);
-        mix.Duck(DuckReason.PageOpen, -4f, 0f, .4f);
+        mix.UpdatePages(UiSurface.Atlas);
+        mix.Step(AudioMix.PageFadeSeconds);
+        Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), AudioMix.PageOpenDuckDb);
         mix.Duck(DuckReason.Veil, -8f, 0f, .8f);
         Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), -8f);
         Near(AudioMix.ToDb(mix.Gain(AudioGroup.Foley)), -8f);
@@ -36,7 +38,14 @@ public sealed class AudioMixTests
         Near(mix.Gain(AudioGroup.Music), 1f);
         mix.ReleaseDuck(DuckReason.Veil);
         mix.Step(.8f);
-        Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), -4f);
+        Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), AudioMix.PageOpenDuckDb);
+        mix.UpdatePages(UiSurface.AtlasIndex);
+        mix.Step(AudioMix.PageFadeSeconds);
+        Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), AudioMix.PageOpenDuckDb);
+        mix.UpdatePages(UiSurface.Minimap);
+        mix.Step(AudioMix.PageFadeSeconds);
+        Near(mix.Gain(AudioGroup.Ambience), 1f);
+        Near(mix.Gain(AudioGroup.Foley), 1f);
     }
 
     [TestCase]

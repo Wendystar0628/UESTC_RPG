@@ -78,6 +78,7 @@ weather.manual_toast,{name} · 按住 Y 自动,{name} · Hold Y for automatic we
 weather.auto_toast,自动天气,Automatic weather
 toast.mode.walk,行走 · F 切回旁观,Walk · F to fly
 toast.mode.fly,旁观 · F 切回行走,Fly · F to walk
+toast.walk.cannot_land,这里无法落地,Cannot land here
 toast.time_forward,+1 h · {clock},+1 h · {clock}
 toast.flow.paused,流逝暂停 · P 继续,Time paused · P to resume
 toast.flow.resumed,流逝继续,Time resumed
@@ -106,6 +107,12 @@ settings.reduce_transparency,降低透明度,Reduce transparency
 settings.reduce_motion,减少动态效果,Reduce motion
 settings.follow_system,跟随系统,Follow system
 settings.ui_scale,界面缩放,Interface scale
+settings.fly_fov,旁观视场角,Fly field of view
+settings.walk_fov,行走视场角,Walk field of view
+settings.view_bobbing,视角晃动,View bobbing
+settings.view_bobbing.half,50%,50%
+settings.view_bobbing.full,100%,100%
+settings.auto_jump,自动跳跃,Auto jump
 settings.single_keys,单键快捷键,Single-key shortcuts
 settings.show_perf,显示性能信息,Show performance
 settings.storage,本机缓存,Local cache

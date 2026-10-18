@@ -26,8 +26,10 @@ public sealed class WalkPlacementAdmission(CharacterBody3D body) : IDisposable
         var feet = new N.Vector3(candidate.X, hit.Y, candidate.Z);
         if (!WalkSafetyQueries.AllowsFeet(spatial, feet)
             || (WalkSafetyQueries.InWater(spatial, feet) && spatial.WalkClassAt(feet.X, feet.Z) != WalkClass.Wade)) return null;
+        _shape.Radius = WalkRules.Radius;
         _shape.Height = height - WalkTuning.SafeMargin;
         _query.Shape = _shape;
+        _query.CollisionMask = body.CollisionMask;
         // A flat cylinder touches an uphill floor above its centre ray. Lift within the existing step
         // height until its volume clears; ordinary gravity then settles it onto the native slope.
         for (int step = 0; step <= 4; step++)
@@ -40,18 +42,14 @@ public sealed class WalkPlacementAdmission(CharacterBody3D body) : IDisposable
         return null;
     }
 
-    public N.Vector3? Nearby(ISpatialIndex spatial, ICollisionWorld collision, N.Vector3 from, float height)
+    public bool ClearOfBoundary(N.Vector3 feet, float height)
     {
-        for (int radius = 1; radius <= WalkTuning.LandingSearchRadius; radius++)
-        {
-            for (int sample = 0; sample < 8; sample++)
-            {
-                float angle = sample * (float.Pi / 4f);
-                var candidate = from + new N.Vector3(MathF.Cos(angle), 0, MathF.Sin(angle)) * radius;
-                if (Resolve(spatial, collision, candidate, height) is { } feet) return feet;
-            }
-        }
-        return null;
+        _shape.Radius = WalkTuning.BoundaryClearance;
+        _shape.Height = height - WalkTuning.SafeMargin;
+        _query.Shape = _shape;
+        _query.CollisionMask = 1u << (int)SurfaceTag.Boundary;
+        _query.Transform = new(Basis.Identity, (feet + N.Vector3.UnitY * (height * .5f)).ToGodot());
+        return body.GetWorld3D().DirectSpaceState.IntersectShape(_query, 1).Count == 0;
     }
 
     public void Dispose()

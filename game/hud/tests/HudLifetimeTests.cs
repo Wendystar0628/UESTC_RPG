@@ -68,7 +68,8 @@ public sealed class HudLifetimeTests
         var router = new Router();
         var settings = new HudSettings(Services.Get<ISettingsStore>());
         var world = new WorldStateService(new TestWeatherProcess());
-        var camera = new TestCameraRig();
+        var view = new TestWorldState(new TestWeatherProcess(), previousRegistry.Get<IRuleset>());
+        var camera = new TestCameraRig(view);
         var model = new HudModel(world, camera, previousRegistry.Get<IRuleset>());
         var motion = new MotionPolicy(settings);
         var settingsBaseline = Subscribers(settings, "Changed");
@@ -90,6 +91,7 @@ public sealed class HudLifetimeTests
             registry.Add(new UiThemeClock(world, settings, motion));
             registry.Add<IWorldState>(world);
             registry.Add<IWorldControl>(world);
+            registry.Add<IViewControl>(view);
             registry.Add<ICameraRig>(camera);
             registry.Add<IPaletteCatalogSource>(previousRegistry.Get<IPaletteCatalogSource>());
             registry.Add<IShaderMaterialSource>(new ShaderMaterialSource());

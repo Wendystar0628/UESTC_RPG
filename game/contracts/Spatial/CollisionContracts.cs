@@ -8,8 +8,8 @@ namespace Campus.Contracts;
 public enum WalkClass { Walk, Interior, Wade, Building, Water, Forbidden, Outside, Steep }
 public enum SurfaceTag { Ground, Stair, Barrier, Wall, Prop, Water, Invisible, Boundary, DoorClosed }
 // Invisible：可行走遮罩边界的隐形墙（SYS-WALK）
-// Boundary（WLD-OUTSKIRTS）：校界栏杆、关闭的校门与闸机、车道抬杆、河渠格栅、校门处的隐形墙；离它 0.6 m 内缓停，顶住 0.8 s 提示"校外暂未开放"
-// DoorClosed（WLD-INTERIORS）：关着的门所在的楼体墙段，以及开放楼里锁着的房门、封口的防火门；顶住 0.8 s 提示"此处暂不开放"
+// Boundary（WLD-OUTSKIRTS）：校界栏杆、关闭的校门与闸机、车道抬杆、河渠格栅、校门处的隐形墙；按 WalkRules.BoundarySlowdownDistance 缓停
+// DoorClosed（WLD-INTERIORS）：关着的门所在的楼体墙段，以及开放楼里锁着的房门、封口的防火门
 // 自动门（DoorLeafDecl）关好时的运行时门体用 Wall，Foot 按门扇材质（WoodDoor、Metal、Glass），WLD-INTERIORS
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]

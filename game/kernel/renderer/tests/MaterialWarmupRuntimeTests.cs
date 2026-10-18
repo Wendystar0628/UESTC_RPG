@@ -14,7 +14,7 @@ using N = System.Numerics;
 namespace Campus.Tests;
 
 [TestSuite]
-public sealed class MaterialWarmupRuntimeTests
+public sealed partial class MaterialWarmupRuntimeTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
@@ -139,7 +139,7 @@ public sealed class MaterialWarmupRuntimeTests
         GD.Print("MATERIAL_WARMUP_EVIDENCE paletteIndex=510 nativeBankFlag=True poolVisible=True");
     }
 
-    private sealed class Fixture : IAsyncDisposable
+    private sealed partial class Fixture : IAsyncDisposable
     {
         public Node3D Parent { get; } = new();
         public GlobalDataTextureRegistry Textures { get; } = new();
@@ -196,6 +196,7 @@ public sealed class MaterialWarmupRuntimeTests
             Veil.Advance(1d / 60);
             Cover.Present(new VeilFrame(Veil.Opacity, Veil.Content, null));
             await Parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            if (_runtime is not null) { _runtime._Process(0); return; }
             // Test composition explicitly starts each production warm batch after a real covered draw.
             if (!_warming && Veil.Opacity == 1f && Cover.IsCovered && Provider.CapturePendingWarm().Materials.Count > 0)
             { Warmup.Begin(); _warming = true; }
@@ -213,6 +214,9 @@ public sealed class MaterialWarmupRuntimeTests
         }
         public async ValueTask DisposeAsync()
         {
+            if (_arrivalDraw is not null) RenderingServer.Singleton.FramePostDraw -= _arrivalDraw;
+            _runtime?.StopNewWork();
+            _runtime?.Free();
             Boot.Dispose();
             Parent.Free();
             Library.Dispose();

@@ -62,8 +62,8 @@ public sealed class CollisionCoreTests
                 var stand = point.Stand!;
                 await LoadNearby(stand.Feet);
                 AssertThat(collision.Ready(stand.Feet, WalkRules.Radius)).OverrideFailureMessage(point.Id + " collision is not Ready.").IsTrue();
-                var landing = admission.Resolve(context.World.Spatial, collision, stand.Feet, WalkRules.StandingHeight)
-                    ?? admission.Nearby(context.World.Spatial, collision, stand.Feet, WalkRules.StandingHeight);
+                // Each authored Stand is the registered safety candidate; validate its native support directly.
+                var landing = admission.Resolve(context.World.Spatial, collision, stand.Feet, WalkRules.StandingHeight);
                 AssertThat(landing is not null).OverrideFailureMessage(point.Id + " has no legal raycast landing with cylinder clearance.").IsTrue();
                 var feet = landing!.Value;
                 character.GlobalPosition = feet.ToGodot();

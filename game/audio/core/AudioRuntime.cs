@@ -26,6 +26,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
     private IWorldState? _world;
     private IVeilState? _veil;
     private IAppFlow? _app;
+    private IUiSurfaceState? _surfaces;
     private bool _initialized, _enabled, _enteredTree, _audible, _background;
     private long _frame;
     private bool _worldReset;
@@ -102,6 +103,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
         if (_enteredTree) _world.InstanceChanged += OnWorldInstanceChanged;
         _veil = RuntimeKernel.Get<IVeilState>();
         _app = RuntimeKernel.Get<IAppFlow>();
+        _surfaces = RuntimeKernel.Get<IUiSurfaceState>();
         _initialized = true;
         GD.Print($"Audio ready: {AudioBusTree.Layout.Length} buses, {_clips.UiClipCount}/13 licensed UI clips, output {(_enabled ? "enabled" : "off")}");
     }
@@ -210,6 +212,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
             if (quitting) _store?.Flush();
         }
         _mix.UpdateVeil(_veil!.Opacity, _veil.Reason);
+        _mix.UpdatePages(_surfaces!.Open);
         _mix.Step(dt);
         _store?.Step(dt);
         if (_routeChangeDelay >= 0f)

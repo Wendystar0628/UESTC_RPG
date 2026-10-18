@@ -117,6 +117,26 @@ public sealed class CollisionHeightFieldRuntimeTests
             CheckSupport(22, 42, 2, SurfaceTag.Ground);
             CheckSupport(31, 42, 1, SurfaceTag.Stair);
             CheckSweep(new(33, .01f, 42), new(37, .01f, 42), SurfaceTag.Barrier);
+            var boundary = Fixture().OfType<WallCollider>().Single(wall => wall.Tag == SurfaceTag.Boundary);
+            var boundaryMiddle = (boundary.A + boundary.B) * .5f;
+            float clearance = WalkRules.BoundarySlowdownDistance * .5f;
+            var approaching = new N.Vector3(boundaryMiddle.X - boundary.HalfT - WalkRules.Radius - clearance,
+                boundary.Y0 + WalkRules.StepHeight, boundaryMiddle.Y);
+            var boundaryHits = new BoundaryHit[8];
+            int boundaryCount = world.NearbyBoundaries(approaching, WalkRules.Radius, WalkRules.StandingHeight, boundaryHits);
+            AssertThat(boundaryCount > 0 && boundaryHits.Take(boundaryCount).Any(hit =>
+                MathF.Abs(hit.Distance - clearance) <= TestTolerance.Position
+                && N.Vector3.Distance(hit.Inward, -N.Vector3.UnitX) <= TestTolerance.FloatRelative))
+                .OverrideFailureMessage("The native Boundary probe missed the actual surface clearance and inward normal.").IsTrue();
+            AssertThat(world.NearbyBoundaries(approaching with { Y = boundary.Y1 + WalkRules.StepHeight },
+                WalkRules.Radius, WalkRules.StandingHeight, boundaryHits) == 0)
+                .OverrideFailureMessage("A Boundary below the cylinder still slowed airborne motion.").IsTrue();
+            var barrier = Fixture().OfType<WallCollider>().Single(wall => wall.Tag == SurfaceTag.Barrier);
+            var barrierMiddle = (barrier.A + barrier.B) * .5f;
+            var ordinaryBarrier = new N.Vector3(barrierMiddle.X - barrier.HalfT - WalkRules.Radius - clearance,
+                barrier.Y0 + WalkRules.StepHeight, barrierMiddle.Y);
+            AssertThat(world.NearbyBoundaries(ordinaryBarrier, WalkRules.Radius, WalkRules.StandingHeight, boundaryHits) == 0)
+                .OverrideFailureMessage("An ordinary campus Barrier was classified as a slowdown boundary.").IsTrue();
             var mounted = world.Diagnostics;
             AssertThat(mounted.Bodies > 0 && mounted.MaxBodyShapes <= 250 && mounted.RegisteredBodies == mounted.Bodies
                 && mounted.MainThreadViolations == 0 && mounted.IncompleteMounts == 0).OverrideFailureMessage("Invalid atomic collision mounting.").IsTrue();
@@ -153,6 +173,7 @@ public sealed class CollisionHeightFieldRuntimeTests
     [
         new HeightFieldCollider(new(0, 0), new short[65 * 65], SurfaceTag.Ground),
         new WallCollider(new(20, 20), new(20, 28), .1f, 0, 3, SurfaceTag.Wall),
+        new WallCollider(new(12, 20), new(12, 28), .1f, 0, WalkRules.BoundaryHeight, SurfaceTag.Boundary),
         new WallCollider(new(30, 20), new(30, 28), .1f, 0, 1.5f, SurfaceTag.Barrier),
         new PostCollider(new(40, 24), .4f, 0, 3, SurfaceTag.Prop),
         new BoxCollider(N.Matrix4x4.CreateTranslation(50, .5f, 24), new(1, .5f, 1), SurfaceTag.Prop),

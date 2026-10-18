@@ -1,16 +1,20 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
+using Campus.Contracts.Settings;
 using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
+using AppBoot = Campus.Kernel.Boot.Boot;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera.Walk;
 
 /// <summary>Feet-origin cylinder; input ownership and camera orientation remain with WP-06.</summary>
 [KernelService(typeof(IWalkController), Owner = "WP-42")]
+[KernelService(typeof(IWalkTelemetry), Owner = "WP-42")]
 [KernelNode("walk-controller", Owner = "WP-42")]
 [SaveSection("walk", Owner = "WP-42", Version = 1, Phase = RestorePhase.Pose, Order = 61)]
 public partial class WalkController : CharacterBody3D, IWalkController, IMapAware, ISaveSection<WalkSave>
@@ -33,6 +37,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private IWorldState? _world;
     private IViewControl? _view;
     private IAppFlow? _appFlow;
+    private ISettingsSection? _uiSettings;
     private bool _appFrozen;
     private WalkInput _input;
     private N.Vector3 _feet;
@@ -46,16 +51,23 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private float _jumpBuffer;
     private float _sinceJump = WalkTuning.HeldJumpInterval;
     private float _sinceSafe;
-    private Pose? _lastStable;
+    private readonly WalkSafePoints _safePoints = new();
+    private readonly List<Pose> _placementAlternatives = [];
+    private int _placementAlternative;
+    private IMapRuntime? _mapRuntime;
+    private IMapArrival? _placementArrival;
+    private bool _placementRelocated;
+    private float _placementSearchRadius;
+    private bool _entrySightPending;
+    private float _sinceReturn = float.PositiveInfinity;
+    private int _returnSkip;
     private Pose _placementTarget;
     private bool _hasPlacement;
     private bool _placementNeedsCheck;
     private float _placementLift;
-    private bool _placementStableTried;
-    private bool _placementFallbackTried;
     private Pose? _entryFrom;
     private bool _safetyFailed;
-    private float _fov = WalkTuning.WalkFov;
+    private float _fov = UiSettingDefinitions.WalkFov.Default;
     private Pose _descentFrom;
     private float _descentDuration;
     private float _descentElapsed;
@@ -65,6 +77,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     public bool ExitRequested => _safetyFailed;
     public bool Grounded { get; private set; }
     public bool CollisionReady { get; private set; }
+    public IMapArrival? PlacementArrival => _placementArrival;
     public int SpeedStep { get; private set; } = WalkRules.DefaultSpeedStep;
     public int SafetyReturnCount { get; private set; }
     public bool IsSettled => !Active || (Grounded && CollisionReady && _descentDuration <= 0 && !_safetyFailed
@@ -92,22 +105,21 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     {
         get
         {
+            if (_entryFrom is { } pending) return pending with { YawDeg = _yaw, PitchDeg = _pitch };
             if (_appFrozen) return EyeAt(_feet);
             if (_descentDuration > 0)
             {
                 float t = ScalarMath.Smootherstep(_descentElapsed / _descentDuration);
                 var destination = _feet + N.Vector3.UnitY * EyeHeight;
                 var position = N.Vector3.Lerp(_descentFrom.Position, destination, t);
-                // Height approaches the landing point logarithmically; the final .3 m uses real physics.
-                float height = _descentFrom.Position.Y - destination.Y;
-                if (height > 0) position.Y = destination.Y + MathF.Exp(MathF.Log(1f + height) * (1f - t)) - 1f;
-                return new(position, _yaw, _pitch, _fov);
+                float fromFov = _descentFrom.FovDeg ?? UiSettingDefinitions.FlyFov.Default;
+                return new(position, _yaw, _pitch, fromFov + (WalkFov - fromFov) * t);
             }
-            float fraction = (float)Math.Clamp(Engine.GetPhysicsInterpolationFraction(), 0, 1);
-            return EyeAt(N.Vector3.Lerp(_previousFeet, _feet, fraction));
+            return RenderEye();
         }
     }
     private float EyeHeight => _crouching ? WalkRules.CrouchingEye : WalkRules.StandingEye;
+    private float WalkFov => _uiSettings?.Get(UiSettingDefinitions.WalkFov) ?? UiSettingDefinitions.WalkFov.Default;
 
     public WalkController()
     {
@@ -130,6 +142,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     public override void _Ready()
     {
         ResolveServices();
+        _uiSettings = AppBoot.Options.Automated ? null : Services.Get<ISettingsStore>().Section("ui");
         _world!.InstanceChanged += OnWorldInstanceChanged;
         _shape = new CollisionShape3D { Shape = _cylinder, Position = Vector3.Up * (_cylinder.Height * .5f) };
         AddChild(_shape);
@@ -160,7 +173,13 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         _admission = null;
     }
 
-    private void OnWorldInstanceChanged(long instance) => _worldResetPending = true;
+    private void OnWorldInstanceChanged(long instance)
+    {
+        _worldResetPending = true;
+        ResetGait();
+        _safePoints.Clear();
+        _placementArrival = null;
+    }
 
     private void ResolveServices()
     {
@@ -175,23 +194,29 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         ValidatePose(from);
         ResolveServices();
         if (_map is null) return ModeSwitchResult.Refused;
-        var target = WalkSafetyQueries.PlacementHint(_map, from);
         _appFrozen = false;
         _safetyFailed = false;
         _crouching = false;
         _restoredCrouch = false;
         ApplyHeight();
-        Place(target, WalkTuning.LandingLift);
+        Place(from, WalkTuning.LandingLift);
         _entryFrom = from;
+        var target = EntryCandidate(from);
+        if (target.Position != from.Position) MovePlacementFocus(target);
+        _fov = from.FovDeg ?? UiSettingDefinitions.FlyFov.Default;
         return target.Position == from.Position ? ModeSwitchResult.Ok : ModeSwitchResult.Relocated;
     }
 
     public void Leave()
     {
+        _takeoffPending |= Active;
+        ResetGait();
         _appFrozen = false;
         _input = default;
         _jumpQueued = false;
         _descentDuration = 0;
+        _placementArrival = null;
+        _entrySightPending = false;
         _entryFrom = null;
         Velocity = Vector3.Zero;
         Grounded = false;
@@ -200,6 +225,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
 
     private void RequestExit()
     {
+        ResetGait();
         _safetyFailed = true;
         _input = default;
         _jumpQueued = false;
@@ -231,13 +257,19 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         SpeedStep = step;
     }
 
-    public void Warp(Pose feet) => Place(feet, 0);
+    public void Warp(Pose feet)
+    {
+        Place(feet, 0);
+        _teleportPending = true;
+    }
 
-    private void Place(Pose feet, float lift)
+    private void Place(Pose feet, float lift, float searchRadius = float.PositiveInfinity)
     {
         ValidatePose(feet);
         SetLook(feet.YawDeg, feet.PitchDeg);
-        _placementTarget = _map is { } map ? WalkSafetyQueries.PlacementHint(map, feet) : feet;
+        ResetGait();
+        _touchdownPending = false;
+        _placementTarget = feet;
         _hasPlacement = true;
         _feet = _previousFeet = _placementTarget.Position;
         if (IsInsideTree()) GlobalPosition = _feet.ToGodot();
@@ -250,30 +282,46 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         _sinceJump = WalkTuning.HeldJumpInterval;
         _sinceSafe = 0;
         _jumpQueued = false;
+        _input = default;
+        _descentFrom = default;
         _descentDuration = _descentElapsed = 0;
         _placementNeedsCheck = true;
         _placementLift = lift;
-        _placementStableTried = false;
-        _placementFallbackTried = false;
+        _placementSearchRadius = searchRadius;
+        _placementArrival = null;
+        _placementRelocated = false;
+        _entrySightPending = false;
+        _placementAlternatives.Clear();
+        _placementAlternative = -1;
         _entryFrom = null;
         _safetyFailed = false;
-        _fov = WalkTuning.WalkFov;
+        _fov = WalkFov;
     }
 
     public override void _PhysicsProcess(double delta)
     {
-        if (!Active || _shape is null || _map is null || _collision is null || _safetyFailed) return;
+        _telemetryTick++;
+        FlushPlacementEvents();
+        StepPhysics(delta);
+    }
+
+    private void StepPhysics(double delta)
+    {
+        if ((!Active && _entryFrom is null) || _shape is null || _map is null || _collision is null || _safetyFailed) return;
         // Resolve only after the node is live, never while constructing the flow/save/view dependency graph.
         _appFlow ??= Services.Get<IAppFlow>();
         CollisionReady = _collision.Ready(_feet, WalkRules.Radius);
         if (_placementNeedsCheck)
         {
-            if (!CollisionReady || !ResolvePlacement()) { CollisionReady = false; _previousFeet = _feet; return; }
+            if (!ResolvePlacement()) { CollisionReady = false; _previousFeet = _feet; return; }
         }
+        // The camera commits Walk only after the candidate has passed real placement admission.
+        if (!Active) return;
         var runtimeVelocity = Velocity.ToNumerics();
         _appFrozen = WalkMath.FreezeUnlessPlaying(_appFlow.IsPlaying, _feet, ref _previousFeet, ref runtimeVelocity);
         if (_appFrozen)
         {
+            ResetComfort();
             Velocity = runtimeVelocity.ToGodot();
             _input = default;
             _jumpQueued = false;
@@ -285,21 +333,26 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         if (_worldResetPending)
         {
             _worldResetPending = false;
+            ResetGait();
             _previousFeet = _feet;
-            _fov = WalkTuning.WalkFov;
+            if (_descentDuration <= 0 && _entryFrom is null) _fov = WalkFov;
         }
         // Ready covers the current 64 m tile plus eight neighbours. Never integrate into an unmounted tile.
-        if (!CollisionReady) { _previousFeet = _feet; return; }
+        if (!CollisionReady) { _previousFeet = _feet; ResetComfort(); return; }
         if (_descentDuration > 0)
         {
             _descentElapsed += dt;
-            if (_descentElapsed < _descentDuration) return;
+            if (_descentElapsed < _descentDuration) { ResetComfort(); return; }
             _descentDuration = 0;
+            _fov = WalkFov;
             _previousFeet = _feet;
+            ResetGait();
+            _touchdownPending = true;
             Velocity = Vector3.Down * WalkTuning.LandingSpeed;
         }
         _sinceJump += dt;
         _sinceSafe += dt;
+        _sinceReturn += dt;
         bool wasGrounded = Grounded;
         _coyote = wasGrounded ? WalkTuning.CoyoteSeconds : MathF.Max(0, _coyote - dt);
         _jumpBuffer = _jumpQueued ? WalkTuning.JumpBufferSeconds : MathF.Max(0, _jumpBuffer - dt);
@@ -308,10 +361,12 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         float multiplier = WalkRules.SpeedMultiplier(SpeedStep);
         bool sprint = _input.Sprint && !_crouching && _input.Move.Y > 0;
         float speed = (_crouching ? WalkTuning.CrouchSpeed : sprint ? WalkTuning.SprintSpeed : WalkRules.WalkSpeed) * multiplier;
-        if (_map.World.Spatial.WalkClassAt(_feet.X, _feet.Z) == WalkClass.Wade) speed *= .6f;
+        if (_map.World.Spatial.WalkClassAt(_feet.X, _feet.Z) == WalkClass.Wade) speed *= WaterMotionRules.WadeSpeedMultiplier;
         var direction = WalkMath.Direction(_input.Move, _yaw);
+        float previousSpeed = new N.Vector2(Velocity.X, Velocity.Z).Length();
         var velocity = WalkMath.HorizontalVelocity(Velocity.ToNumerics(), direction * speed, wasGrounded, dt);
-        bool jump = _coyote > 0 && (_jumpBuffer > 0 || (_input.JumpHeld && _sinceJump >= WalkTuning.HeldJumpInterval));
+        bool jump = _coyote > 0 && (_jumpBuffer > 0 || (_input.JumpHeld && _sinceJump >= WalkTuning.HeldJumpInterval)
+            || (wasGrounded && WantsAutoJump(velocity, dt)));
         if (jump)
         {
             velocity.Y = WalkTuning.JumpSpeed;
@@ -320,6 +375,9 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
             _coyote = _jumpBuffer = _sinceJump = 0;
         }
         else velocity.Y = MathF.Max(-WalkTuning.TerminalFallSpeed, velocity.Y - WalkTuning.Gravity * dt);
+        Span<BoundaryHit> boundaries = stackalloc BoundaryHit[8];
+        int boundaryCount = _collision.NearbyBoundaries(_feet, WalkRules.Radius, _cylinder.Height, boundaries);
+        velocity = WalkMath.SlowAtBoundaries(velocity, boundaries[..boundaryCount]);
         var requested = new Vector3(velocity.X * dt, 0, velocity.Z * dt);
         requested = LimitRegions(requested);
         if (_crouching && wasGrounded && !jump) requested = LimitCrouchEdge(requested);
@@ -339,12 +397,14 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         Grounded = IsOnFloor() || stepped;
         _feet = GlobalPosition.ToNumerics();
         if (NeedsRecovery()) { Recover(); return; }
+        PublishMovement(dt, wasGrounded, jump, stepped, velocity, previousSpeed);
+        AdvanceComfort(dt, wasGrounded, jump, stepped, sprint);
         if (Grounded && _sinceSafe >= WalkTuning.SafetyRecordSeconds && IsSafeRecordPoint())
         {
-            _lastStable = BodyPose;
+            _safePoints.Record(BodyPose);
             _sinceSafe = 0;
         }
-        float desiredFov = WalkTuning.WalkFov * (sprint && Grounded && requested.LengthSquared() > 0 ? WalkTuning.SprintFovMultiplier : 1f);
+        float desiredFov = WalkFov * (sprint && Grounded && requested.LengthSquared() > 0 ? WalkTuning.SprintFovMultiplier : 1f);
         _fov += (desiredFov - _fov) * (1f - MathF.Exp(-dt / WalkTuning.FovResponseSeconds));
     }
 
@@ -451,7 +511,9 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     {
         Leave();
         _map = null;
-        _lastStable = null;
+        _safePoints.Clear();
+        _placementAlternatives.Clear();
+        _placementArrival = null;
         _entryFrom = null;
         _placementNeedsCheck = false;
         _hasPlacement = false;

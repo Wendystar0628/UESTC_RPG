@@ -372,6 +372,7 @@ public sealed class AtlasServiceTests
     }
     private sealed class TestView(Observer observer) : IViewControl
     {
+        public event Action? WalkEntryRefused { add { } remove { } }
         public int Switches { get; private set; }
         public bool Refuse { get; set; }
         public ViewMode Mode => observer.Mode;

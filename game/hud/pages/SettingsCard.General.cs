@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Save;
+using Campus.Contracts.Settings;
 using Campus.Hud.Widgets;
 using Godot;
 
@@ -17,6 +18,24 @@ public partial class SettingsCard
         Toggle(ui, HudSettingDefinitions.ReduceTransparency, _settings.ReduceTransparency, _settings.SetReduceTransparency);
         Choice(ui, HudSettingDefinitions.ReduceMotion, (int)_settings.ReduceMotion, value => _settings.SetReduceMotion((ReduceMotionMode)value));
         Slider(ui, HudSettingDefinitions.UiScale, _settings.UiScale, _settings.SetUiScale, value => $"{value * 100:0}%");
+        var store = Svc<ISettingsStore>();
+        var viewSettings = store.Section("ui");
+        foreach (var definition in new[] { UiSettingDefinitions.FlyFov, UiSettingDefinitions.WalkFov })
+            Slider(ui, definition, viewSettings.Get(definition), value =>
+            {
+                viewSettings.Set(definition.Key, value);
+                store.TrySave();
+            }, value => $"{value:0}°");
+        Choice(ui, UiSettingDefinitions.ViewBobbing, viewSettings.Get(UiSettingDefinitions.ViewBobbing), value =>
+        {
+            viewSettings.Set(UiSettingDefinitions.ViewBobbing.Key, value);
+            store.TrySave();
+        });
+        Toggle(ui, UiSettingDefinitions.AutoJump, viewSettings.Get(UiSettingDefinitions.AutoJump), value =>
+        {
+            viewSettings.Set(UiSettingDefinitions.AutoJump.Key, value);
+            store.TrySave();
+        });
         Toggle(ui, HudSettingDefinitions.SingleKeyShortcuts, _settings.SingleKeyShortcuts, _settings.SetSingleKeyShortcuts);
         Toggle(ui, HudSettingDefinitions.ShowPerf, _settings.ShowPerf, _settings.SetShowPerf);
 

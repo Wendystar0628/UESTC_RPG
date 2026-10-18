@@ -9,6 +9,7 @@ namespace Campus.Tests;
 /// </summary>
 internal class TestCameraRig(IViewControl? view = null, Pose? pose = null, bool transit = false) : ICameraRig
 {
+    public float RollDeg => 0;
     private readonly Dictionary<InputLockReason, int> _locks = [];
     private ViewMode? _mode;
     public Pose Pose { get; private set; } = pose ?? new Pose(new(0, 30, 60), 0, -15, 70);

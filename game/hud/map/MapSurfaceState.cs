@@ -1,11 +1,11 @@
 using Campus.Contracts;
 
-namespace Campus.Kernel.Stubs.AudioUi;
+namespace Campus.Hud.Map;
 
-/// <summary>D0 reports only map surface flags; creates no real interface.</summary>
-[KernelService(typeof(IUiSurfaceState), Owner = "WP-00", IsStub = true)]
-[KernelService(typeof(IUiSurfaceSink), Owner = "WP-00", IsStub = true)]
-public sealed class UiSurfaceStateStub : IUiSurfaceState, IUiSurfaceSink
+/// <summary>Published map surfaces; controllers report their existing page and minimap visibility.</summary>
+[KernelService(typeof(IUiSurfaceState), Owner = "WP-48b")]
+[KernelService(typeof(IUiSurfaceSink), Owner = "WP-48b")]
+public sealed class MapSurfaceState : IUiSurfaceState, IUiSurfaceSink
 {
     public UiSurface Open { get; private set; }
     public bool InterfaceMode => false;

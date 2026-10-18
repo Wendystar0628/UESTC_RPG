@@ -38,7 +38,16 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private bool _worldResetPending = true;
     private IWorldState? _world;
     private Pose? _transitDestination;
+    private TaskCompletionSource<ModeSwitchResult>? _walkEntry;
     private ObserverListener? _listener;
+    private ISettingsSection? _uiSettings;
+    private float _flyFovFrom;
+    private float _flyFovTarget;
+    private float _flyFovElapsed;
+
+    private float FlyFov => _uiSettings?.Get(UiSettingDefinitions.FlyFov) ?? UiSettingDefinitions.FlyFov.Default;
+    private float WalkFov => _uiSettings?.Get(UiSettingDefinitions.WalkFov) ?? UiSettingDefinitions.WalkFov.Default;
+    public event Action? WalkEntryRefused;
 
     public FlightTuning Tuning { get; } = new();
 
@@ -58,7 +67,9 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
             _walk = Services.Get<IWalkController>();
         _transit = Services.Get<ITransitDriver>();
         _automated = AppBoot.Options.Automated;
-        _bindings.Initialize(_automated ? null : Services.Get<ISettingsStore>());
+        var settings = _automated ? null : Services.Get<ISettingsStore>();
+        _bindings.Initialize(settings);
+        _uiSettings = settings?.Section("ui");
         Input.UseAccumulatedInput = false;
         _flow.Changed += OnFlowChanged;
         _listener = new ObserverListener { Observer = this };
@@ -76,6 +87,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     public override void _ExitTree()
     {
+        CancelWalkEntry();
         if (_flow is not null) _flow.Changed -= OnFlowChanged;
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         Input.MouseMode = Input.MouseModeEnum.Visible;
@@ -87,7 +99,9 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         if (_worldResetPending)
         { _worldResetPending = false; ResetHistory(); SetEdgeFog(0); }
         AdvanceInput(seconds);
+        if (AdvanceWalkEntry()) { _flight.Reset(); SetEdgeFog(0); return; }
         if (!IsPlaying || _mode is null) { _flight.Reset(); SetEdgeFog(0); return; }
+        if (Mode == ViewMode.Fly && ActiveTransit is null) AdvanceFlyFov(seconds);
         if (Mode == ViewMode.Walk && _walk is { ExitRequested: true })
         {
             _ = SetMode(ViewMode.Fly, ModeSwitchVia.Key);
@@ -141,13 +155,14 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     }
     public void OnMapUnloading(MapId from)
     {
+        CancelWalkEntry();
         ActiveTransit?.Cancel(); ActiveTransit = null; _transitDestination = null;
         ResetHistory();
         _bounds = null; _map = null; SetEdgeFog(0);
     }
 
     private bool IsPlaying => _flow?.IsPlaying == true;
-    private void OnWorldInstanceChanged(long instance) => _worldResetPending = true;
+    private void OnWorldInstanceChanged(long instance) { CancelWalkEntry(); _worldResetPending = true; }
     private void OnFlowChanged(AppState previous, AppState next)
     {
         _input.Clear(); _flight.Reset(); _walk?.SetInput(default); SetInterfaceMode(true); SetEdgeFog(0);
@@ -166,5 +181,21 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _recoverTriggered = false;
         _wheel = 0; ResetSkipHold(); _skipHintVisible = false;
         _listener?.Sync(reset: true);
+    }
+
+    private void AdvanceFlyFov(float seconds)
+    {
+        float target = FlyFov;
+        if (target != _flyFovTarget)
+        {
+            _flyFovFrom = _pose.FovDeg ?? target;
+            _flyFovTarget = target;
+            _flyFovElapsed = 0;
+        }
+        // Keep an explicitly supplied review/cinematic FOV until a mode or preference change.
+        if (_flyFovElapsed >= Tuning.ModeFovSeconds) return;
+        _flyFovElapsed = MathF.Min(_flyFovElapsed + seconds, Tuning.ModeFovSeconds);
+        float t = ScalarMath.Smootherstep(_flyFovElapsed / Tuning.ModeFovSeconds);
+        _pose = _pose with { FovDeg = _flyFovFrom + (_flyFovTarget - _flyFovFrom) * t };
     }
 }

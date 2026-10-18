@@ -39,6 +39,7 @@ public sealed class CollisionWorld : ICollisionMountRuntime
     private readonly Dictionary<Rid, SurfaceTag> _bodySurfaces = [];
     private Node3D? _root;
     private IMapContext? _context;
+    private CollisionBoundaryProbe? _boundaryProbe;
     private int _threadViolations;
     private int _incompleteMounts;
     private int _unclassifiedHits;
@@ -179,6 +180,8 @@ public sealed class CollisionWorld : ICollisionMountRuntime
     public void Unload()
     {
         MainThread();
+        _boundaryProbe?.Dispose();
+        _boundaryProbe = null;
         foreach (var tile in _tiles.Keys.OrderBy(t => t.X).ThenBy(t => t.Z).ToArray()) RemoveTile(tile);
         _bodySurfaces.Clear();
         _context = null; _root = null; Error = null; Revision++;
@@ -187,8 +190,16 @@ public sealed class CollisionWorld : ICollisionMountRuntime
     public SupportHit? SupportY(float x, float z, float yHint)
     {
         MainThread();
-        if (_root is null || !_root.IsInsideTree() || !float.IsFinite(x) || !float.IsFinite(z) || !float.IsFinite(yHint)) return null;
-        using var query = PhysicsRayQueryParameters3D.Create(new(x, yHint + 0.4f, z), new(x, MathF.Min(yHint - 1, (_context?.Descriptor.Bounds.Min.Y ?? -300) - 1), z), SupportMask);
+        if (!float.IsFinite(x) || !float.IsFinite(z) || !float.IsFinite(yHint)) return null;
+        var hit = SupportRay(new(x, yHint + 0.4f, z), new(x, MathF.Min(yHint - 1, (_context?.Descriptor.Bounds.Min.Y ?? -300) - 1), z));
+        return hit is { } support ? new(support.Point.Y, support.Tag) : null;
+    }
+
+    public SweepHit? SupportRay(N.Vector3 from, N.Vector3 to)
+    {
+        MainThread();
+        if (_root is null || !_root.IsInsideTree() || !VectorMath.Finite(from) || !VectorMath.Finite(to)) return null;
+        using var query = PhysicsRayQueryParameters3D.Create(from.ToGodot(), to.ToGodot(), SupportMask);
         query.CollideWithAreas = false;
         query.HitBackFaces = false;
         var hit = _root.GetWorld3D().DirectSpaceState.IntersectRay(query);
@@ -197,7 +208,20 @@ public sealed class CollisionWorld : ICollisionMountRuntime
         var rid = hit["rid"].AsRid();
         var tag = SurfaceForHit(rid, hit["collider"].AsGodotObject());
         // An unclassified external body cannot establish a safe walking support.
-        return tag is { } known ? new(position.Y, known) : null;
+        float length = N.Vector3.Distance(from, to);
+        return tag is { } known ? new(position.ToNumerics(), hit["normal"].AsVector3().ToNumerics(),
+            length > 0 ? N.Vector3.Distance(from, position.ToNumerics()) / length : 0, known) : null;
+    }
+
+    public int NearbyBoundaries(N.Vector3 feet, float r, float h, Span<BoundaryHit> hits)
+    {
+        MainThread();
+        if (_root is null || !_root.IsInsideTree()) return 0;
+        if (!VectorMath.Finite(feet) || !float.IsFinite(r) || !float.IsFinite(h) || r <= 0 || h <= 0)
+            throw new ArgumentException("Invalid boundary query cylinder.");
+        if (hits.IsEmpty) return 0;
+        _boundaryProbe ??= new(_root.GetWorld3D().Space);
+        return _boundaryProbe.Nearby(feet, r, h, hits);
     }
 
     public SweepHit? Sweep(N.Vector3 from, N.Vector3 to, float r, float h)
