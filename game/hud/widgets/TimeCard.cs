@@ -10,7 +10,7 @@ namespace Campus.Hud.Widgets;
 /// 只能顺时针拨：拖动按 ClockSetMode.Drag 累计顺时针角度，逆时针时把手不动；点刻度按 Jump 跳到下一次出现。
 /// 拆三层：静态环与刻度只画一次；把手与细针只改变换；读数 10 Hz。常驻件，默认固定深屏。
 /// </summary>
-public partial class TimeCard : Control
+public partial class TimeCard : PanelContainer
 {
     public static ReadOnlySpan<int> Rates => FlowRates.All;
     private static readonly string[] ShichenNames = ["zi", "chou", "yin", "mao", "chen", "si", "wu", "wei", "shen", "you", "xu", "hai"];
@@ -45,8 +45,11 @@ public partial class TimeCard : Control
             _control = control,
             _probe = probe,
             _resetName = resetName,
-            Size = kit.Tokens.V2("metrics", "size", "timeCard"),
-            MouseFilter = MouseFilterEnum.Stop,
+            CustomMinimumSize = new Vector2(kit.Tokens.V2("metrics", "size", "timeCard").X, 0),
+            ThemeTypeVariation = UiThemeBuilder.PanelContainerType,
+            Material = kit.Materials.Panel,
+            SizeFlagsHorizontal = SizeFlags.ShrinkEnd,
+            MouseFilter = MouseFilterEnum.Ignore,
         };
         parent.AddChild(card);
         card.Build();
@@ -58,37 +61,56 @@ public partial class TimeCard : Control
     {
         var k = _kit;
         var pin = true;
-        k.Box(this, new Rect2(Vector2.Zero, Size), new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: k.Tokens.Chamfer("panel"),
+        k.Apply(this, new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: k.Tokens.Chamfer("panel"),
             Flags: UiFlags.Highlight | UiFlags.Via, Pin: pin));
-        k.Text(this, UiKit.T("hud.time.title"), "mono-caps", "text.2", new Vector2(30, 14), pin);
-        k.Dot(this, new Vector2(Size.X - 52, 22), 6, new UiFx(Fill: "led.on", Pin: pin));
-        _flowText = k.Text(this, "1×", "data", "text.1", new Vector2(Size.X - 42, 13), pin);
+        var scroll = k.Layout.Scroll(k.Layout.Margin(this));
+        scroll.VerticalScrollMode = ScrollContainer.ScrollMode.MaximizeFirst;
+        scroll.CustomMaximumSize = new Vector2(-1,
+            k.Tokens.V2("metrics", "size", "timeCard").Y - 2 * k.Tokens.Space("panelPad"));
+        var stack = k.Layout.Stack(scroll, groups: false);
+        var header = k.Layout.Row(stack);
+        k.Text(header, UiKit.T("hud.time.title"), "mono-caps", "text.2", pin);
+        var lamp = k.Box(header, new UiFx(Fill: "led.on", Flags: UiFlags.Circle, Pin: pin));
+        lamp.CustomMinimumSize = new Vector2(k.Tokens.F("metrics", "via", "core"), k.Tokens.F("metrics", "via", "core"));
+        lamp.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        _flowText = k.Text(header, "1×", "data", "text.1", pin, wrap: false);
+        _flowText.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
 
-        _center = new Vector2(Size.X / 2, 166);
+        var center = k.Layout.Add(stack, new CenterContainer());
+        var dial = k.Layout.Add(center, new Control { CustomMinimumSize = new Vector2((Ring + 26) * 2, (Ring + 26) * 2) });
+        dial.MouseFilter = MouseFilterEnum.Stop;
+        dial.GuiInput += HandleRingInput;
+        _center = dial.CustomMinimumSize / 2;
         _spectrum = new SpectrumRing { Position = _center - new Vector2(110, 110), Size = new Vector2(220, 220), MouseFilter = MouseFilterEnum.Ignore };
-        AddChild(_spectrum);
-        k.Dot(this, _center, (Ring + 1) * 2, new UiFx(Line: "line.hair", Pin: pin));
-        k.Dot(this, _center, (Ring - Band - 1) * 2, new UiFx(Line: "line.hair", Pin: pin));
+        dial.AddChild(_spectrum);
+        k.Dot(dial, _center, (Ring + 1) * 2, new UiFx(Line: "line.hair", Pin: pin));
+        k.Dot(dial, _center, (Ring - Band - 1) * 2, new UiFx(Line: "line.hair", Pin: pin));
         var ticks = new TickRing { Position = _center - new Vector2(110, 110), Size = new Vector2(220, 220), MouseFilter = MouseFilterEnum.Ignore };
         ticks.Material = k.Materials.Text;
-        AddChild(ticks);
+        dial.AddChild(ticks);
         k.Recolor(ticks, "line.control", pin);
         foreach (var (h, label) in new[] { (12, "12"), (18, "18"), (0, "00"), (6, "06") })
         {
             var p = Dir(h) * (Ring + 16) + _center;
-            k.Text(this, label, "tick", "text.2", new Vector2(p.X - 12, p.Y - 7), pin, 24, HorizontalAlignment.Center);
+            var tick = k.Text(dial, label, "tick", "text.2", pin, wrap: false, align: HorizontalAlignment.Center);
+            tick.Position = p - new Vector2(12, 7);
+            tick.Size = new Vector2(24, tick.GetCombinedMinimumSize().Y);
         }
-        _needle = k.Line(this, [Vector2.Zero, Vector2.One], "graphic", pin);
-        _sun = k.Dot(this, Vector2.Zero, 16, new UiFx(Fill: "now", Line: "now.outline", Pin: pin));
-        _moon = k.Dot(this, Vector2.Zero, 16, new UiFx(Fill: "moon.fill", Flags: UiFlags.Glow, Pin: pin));
+        _needle = k.Line(dial, [Vector2.Zero, Vector2.One], "graphic", pin);
+        _sun = k.Dot(dial, Vector2.Zero, 16, new UiFx(Fill: "now", Line: "now.outline", Pin: pin));
+        _moon = k.Dot(dial, Vector2.Zero, 16, new UiFx(Fill: "moon.fill", Flags: UiFlags.Glow, Pin: pin));
 
-        _readout = k.Text(this, "", "readout", "text.1", new Vector2(_center.X - 90, _center.Y - 40), pin, 180, HorizontalAlignment.Center);
-        _period = k.Text(this, "", "small", "text.2", new Vector2(_center.X - 90, _center.Y + 8), pin, 180, HorizontalAlignment.Center);
-        _tag = k.Text(this, "", "mono-caps", "text.2", new Vector2(_center.X - 90, _center.Y + 32), pin, 180, HorizontalAlignment.Center);
+        var readouts = k.Layout.Stack(dial, groups: false);
+        readouts.SetAnchorsAndOffsetsPreset(LayoutPreset.Center);
+        readouts.GrowHorizontal = GrowDirection.Both;
+        readouts.GrowVertical = GrowDirection.Both;
+        _readout = k.Text(readouts, "", "readout", "text.1", pin, wrap: false, align: HorizontalAlignment.Center);
+        _period = k.Text(readouts, "", "small", "text.2", pin, wrap: false, align: HorizontalAlignment.Center);
+        _tag = k.Text(readouts, "", "mono-caps", "text.2", pin, wrap: false, align: HorizontalAlignment.Center);
 
-        float x = 24, y = 300;
-        _presets = Segmented.Create(k, this, new Vector2(x, y), [52, 52, 52, 52],
-            [UiKit.T("hud.time.preset.morning"), UiKit.T("hud.time.preset.noon"), UiKit.T("hud.time.preset.dusk"), UiKit.T("hud.time.preset.night")], pin, 32);
+        var presets = k.Layout.Flow(stack);
+        _presets = Segmented.Create(k, presets,
+            [UiKit.T("hud.time.preset.morning"), UiKit.T("hud.time.preset.noon"), UiKit.T("hud.time.preset.dusk"), UiKit.T("hud.time.preset.night")], pin);
         _presets.Changed += i =>
         {
             var preset = (ClockPreset)i;
@@ -96,21 +118,24 @@ public partial class TimeCard : Control
             _presets.Select(-1, notify: false);
             Sync();
         };
-        _plus = k.Button(this, ButtonStyle.Secondary, "+1h", new Rect2(x + 216, y, 80, 32), "data", 8, pin: pin, padY: 2,
+        _plus = k.Button(presets, ButtonStyle.Ghost, "+1h", "data", pin: pin,
             pressed: () => { _control.Advance(1); Sync(); });
-        y += 42;
-        _flow = Segmented.Create(k, this, new Vector2(x, y), [30, 34, 40, 40, 46, 54], FlowRates.All.ToArray().Select(rate => rate == 0 ? "" : $"{rate}×").ToArray(), pin, 32, "data",
-            ["pause", null, null, null, null, null]);
+        var flow = k.Layout.Flow(stack);
+        _flow = Segmented.Create(k, flow, FlowRates.All.ToArray().Select(rate => rate == 0 ? "" : $"{rate}×").ToArray(), pin, "data",
+            icons: ["pause", null, null, null, null, null]);
         _flow.Changed += i => { _control.SetFlow(Rates[i]); Sync(); };
-        _wave = k.Wave(this, new Rect2(x + 252, y + 4, 44, 24), "graphic", pin, Vector4.Zero);
-        y += 42;
-        _seasons = Segmented.Create(k, this, new Vector2(x, y), [74, 74, 74, 74],
-            [UiKit.T("hud.season.spring"), UiKit.T("hud.season.summer"), UiKit.T("hud.season.autumn"), UiKit.T("hud.season.winter")], pin, 32,
+        _wave = k.Layout.Add(flow, new ColorRect
+        {
+            CustomMinimumSize = new Vector2(44, 24), Color = Colors.White,
+            Material = k.Materials.Line, SizeFlagsVertical = SizeFlags.ShrinkCenter
+        });
+        k.Apply(_wave, new UiFx(Role: "graphic", Pin: pin, Flags: UiFlags.Wave));
+        _seasons = Segmented.Create(k, stack,
+            [UiKit.T("hud.season.spring"), UiKit.T("hud.season.summer"), UiKit.T("hud.season.autumn"), UiKit.T("hud.season.winter")], pin,
             icons: ["season_spring", "season_summer", "season_autumn", "season_winter"]);
         _seasons.Changed += i => { _control.SetSeason((Season)i); Sync(); };
-        y += 46;
-        _forecast = k.Text(this, "", "small", "text.2", new Vector2(x, y), pin);
-        _reset = k.Button(this, ButtonStyle.Text, "", new Rect2(Size.X - 24 - 150, y - 6, 150, 32), "small", 0, pin: pin,
+        _forecast = k.Text(stack, "", "small", "text.2", pin);
+        _reset = k.Button(stack, ButtonStyle.Text, "", "small", pin: pin,
             align: HorizontalAlignment.Right, pressed: () => { _control.ResetDefault(); Sync(); });
     }
 
@@ -178,7 +203,7 @@ public partial class TimeCard : Control
     }
 
     // ---- 拖动：只能顺时针 ----
-    public override void _GuiInput(InputEvent e)
+    private void HandleRingInput(InputEvent e)
     {
         if (!_model.Allows(WorldControlMask.Clock)) return;
         switch (e)

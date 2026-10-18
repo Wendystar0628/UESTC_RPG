@@ -14,7 +14,11 @@ public enum QualityKnob : byte                      // 共 11 项，连续序号
 
 public sealed record KnobSpec(QualityKnob Knob, string OwnerWp, ApplyClass Apply, KnobKind Kind,
     float Min, float Max, float Step, float WorstAllowed, bool HigherIsBetter,
-    string LabelKey);                              // 界面按它自动生成控件；枚举类的项按序号编码成 float
+    string LabelKey)                               // 界面按它自动生成控件；枚举类的项按序号编码成 float
+{
+    /// <summary>When present, only these discrete values are selectable and valid.</summary>
+    public IReadOnlyList<float>? Values { get; init; }
+}
 
 public sealed record QualityProfile(QualityPreset Preset,
     IReadOnlyDictionary<QualityKnob, float> Overrides, int Schema = 1);   // Overrides 只存与预设不同的项

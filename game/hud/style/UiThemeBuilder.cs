@@ -49,6 +49,7 @@ public sealed class UiThemeBuilder
     public const string Groups = "UiGroups", Rows = "UiRows", Row = "UiRow", Corners = "UiCorners";
     public const string CardGrid = "UiCardGrid", Actions = "UiActions", Tabs = "UiTabs", Segments = "UiSegments";
     public const string PanelContainerType = "UiPanelContainer";
+    public const string MinimapMargin = "UiMinimapMargin", MinimapBody = "UiMinimapBody";
 
     private void BuildLayout()
     {
@@ -65,6 +66,8 @@ public sealed class UiThemeBuilder
         MarginType(PageMargin, _t.Space("pagePad"));
         MarginType(PanelMargin, _t.Space("panelPad"));
         MarginType(SmallMargin, _t.F("metrics", "grid", "half"));
+        MarginType(MinimapMargin, _t.F("metrics", "map", "minimapInset"));
+        BoxType(MinimapBody, "VBoxContainer", 0);
         BoxType(Groups, "VBoxContainer", _t.Space("group"));
         BoxType(Rows, "VBoxContainer", _t.F("metrics", "layout", "rowGap"));
         BoxType(Row, "HBoxContainer", _t.Space("control"));

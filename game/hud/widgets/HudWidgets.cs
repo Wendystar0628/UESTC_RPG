@@ -8,12 +8,13 @@ namespace Campus.Hud.Widgets;
 /// 天气签条（UI-VISUAL、UI-NAV）：自动 + 8 格，36 px 图标钮放在一条签条里；不合季节的雷雨格呈禁用态、可聚焦；
 /// 强度三枚小方块只在雾、降水、雷雨下出现；自动时当前实际天气所在的格下方一枚 4 px 过孔点。常驻件，默认固定深屏。
 /// </summary>
-public partial class WeatherStrip : Control
+public partial class WeatherStrip : PanelContainer
 {
     public const int Auto = 0, Clear = 1, Few = 2, Cloudy = 3, Overcast = 4, Fog = 5, Precip = 6, Thunder = 7, After = 8;
 
     private readonly List<TechButton> _cells = [];
     private readonly List<Panel> _intensity = [];
+    private readonly List<TechButton> _intensityHits = [];
     private UiKit _kit = null!;
     private HudModel _model = null!;
     private IWorldControl _control = null!;
@@ -29,8 +30,11 @@ public partial class WeatherStrip : Control
             _kit = kit,
             _model = model,
             _control = control,
-            Size = kit.Tokens.V2("metrics", "size", "weatherStrip"),
-            MouseFilter = MouseFilterEnum.Stop
+            CustomMinimumSize = new Vector2(kit.Tokens.V2("metrics", "size", "weatherStrip").X, 0),
+            ThemeTypeVariation = UiThemeBuilder.PanelContainerType,
+            Material = kit.Materials.Panel,
+            SizeFlagsHorizontal = SizeFlags.ShrinkEnd,
+            MouseFilter = MouseFilterEnum.Ignore
         };
         parent.AddChild(strip);
         strip.Build();
@@ -41,27 +45,33 @@ public partial class WeatherStrip : Control
     private void Build()
     {
         var cell = _kit.Tokens.Size("weatherCell");
-        _kit.Box(this, new Rect2(Vector2.Zero, Size), new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: _kit.Tokens.Chamfer("card"),
+        _kit.Apply(this, new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: _kit.Tokens.Chamfer("card"),
             Flags: UiFlags.Highlight, Pin: true));
+        var row = _kit.Layout.Flow(_kit.Layout.Margin(this));
         for (var i = 0; i <= After; i++)
         {
-            var x = 12 + i * 40 + (i > 0 ? 6 : 0);
-            var b = _kit.Button(this, ButtonStyle.Cell, "", new Rect2(x, 8, cell, cell), "body", 8, Icon(i, Season.Autumn), 20, true, 8);
+            var b = _kit.Button(row, ButtonStyle.Cell, "", icon: Icon(i, Season.Autumn), pin: true);
+            b.CustomMinimumSize = new Vector2(cell, cell);
             b.Value = i;
             b.TooltipText = UiKit.T("weather.cell." + CellKey(i));
             var index = i;
             b.Pressed += () => Pick(index);
             _cells.Add(b);
         }
-        _kit.Box(this, new Rect2(51, 12, 1, 28), new UiFx(Fill: "line.hair", Pin: true));
-        _actual = _kit.Dot(this, Vector2.Zero, 4, new UiFx(Fill: "graphic", Pin: true));
+        _actual = _kit.Box(_cells[Clear], new UiFx(Fill: "graphic", Flags: UiFlags.Circle, Pin: true));
+        PlaceActual();
         for (var i = 0; i < 3; i++)
         {
-            var square = _kit.Box(this, new Rect2(398 + i * 13, 21, 10, 10), new UiFx(Line: "line.control", Pin: true));
             var level = i;
+            var hit = _kit.Button(row, ButtonStyle.Cell, "", pin: true);
+            hit.CustomMinimumSize = new Vector2(cell / 2, cell);
+            var square = _kit.Box(hit, new UiFx(Line: "line.control", Pin: true));
+            square.SetAnchorsAndOffsetsPreset(LayoutPreset.Center);
+            var edge = _kit.Tokens.F("metrics", "via", "small") * 2;
+            square.OffsetLeft = square.OffsetTop = -edge / 2;
+            square.OffsetRight = square.OffsetBottom = edge / 2;
             _intensity.Add(square);
-            var hit = _kit.Button(this, ButtonStyle.Ghost, "", new Rect2(396 + i * 13, 17, 14, 18), pin: true);
-            hit.SelfModulate = new Color(1, 1, 1, 0);
+            _intensityHits.Add(hit);
             hit.Pressed += () => { _control.SetWeatherIntensity((level + 1) / 3f); Sync(); };
         }
     }
@@ -84,16 +94,27 @@ public partial class WeatherStrip : Control
             _cells[i].Selected = sel.Mode == WeatherMode.Auto ? i == Auto : i == current;
         }
         _actual.Visible = sel.Mode == WeatherMode.Auto;
-        _actual.Position = new Vector2(_cells[current].Position.X + 18 - 2, 45);
+        if (_actual.GetParent() != _cells[current]) { _actual.Reparent(_cells[current], false); PlaceActual(); }
         var showIntensity = current is Fog or Precip or Thunder;
         var level = Math.Clamp((int)MathF.Ceiling(sel.Intensity * 3) - 1, 0, 2);
         for (var i = 0; i < 3; i++)
         {
             _intensity[i].Visible = showIntensity;
+            _intensityHits[i].Visible = showIntensity;
             var on = i == level;
             var role = sel.Mode == WeatherMode.Auto ? "text.2" : "graphic";
             _kit.Apply(_intensity[i], new UiFx(Fill: on ? role : null, Line: on ? null : "line.control", Pin: true), remember: false);
         }
+    }
+
+    private void PlaceActual()
+    {
+        var edge = _kit.Tokens.F("metrics", "via", "small");
+        _actual.SetAnchorsAndOffsetsPreset(LayoutPreset.CenterBottom);
+        _actual.OffsetLeft = -edge / 2;
+        _actual.OffsetRight = edge / 2;
+        _actual.OffsetTop = -edge;
+        _actual.OffsetBottom = 0;
     }
 
     private void Pick(int cell)
@@ -180,7 +201,7 @@ public partial class WeatherStrip : Control
 /// 观察模式与速度 LED 条（UI-VISUAL、UI-NAV）：[旁观 | 行走] 两段；旁观 16 格 7×14，已到达 graphic 实心，
 /// 当前档 primary.fill + primary.line 加高到 18；格子下方 2 px 光条是贴地限速后的实际速度；行走换成 5 个宽格。常驻件。
 /// </summary>
-public partial class SpeedBar : Control
+public partial class SpeedBar : PanelContainer
 {
     private static readonly int[] Anchors = [4, 7, 9, 12, 16];
     private static readonly string[] AnchorKeys = ["stroll", "cycle", "cruise", "bird", "cloud"];
@@ -196,17 +217,28 @@ public partial class SpeedBar : Control
 
     public static SpeedBar Create(UiKit kit, Control parent, HudModel model)
     {
-        var bar = new SpeedBar { _kit = kit, _model = model, Size = kit.Tokens.V2("metrics", "size", "speedBar"), MouseFilter = MouseFilterEnum.Stop };
+        var bar = new SpeedBar
+        {
+            _kit = kit, _model = model,
+            CustomMinimumSize = new Vector2(kit.Tokens.V2("metrics", "size", "speedBar").X, 0),
+            ThemeTypeVariation = UiThemeBuilder.PanelContainerType, Material = kit.Materials.Panel,
+            SizeFlagsHorizontal = SizeFlags.ShrinkBegin, MouseFilter = MouseFilterEnum.Ignore
+        };
         parent.AddChild(bar);
-        kit.Box(bar, new Rect2(Vector2.Zero, bar.Size), new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: kit.Tokens.Chamfer("panel"),
+        kit.Apply(bar, new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: kit.Tokens.Chamfer("panel"),
             Flags: UiFlags.Highlight | UiFlags.Via, Pin: true));
-        bar._mode = Segmented.Create(kit, bar, new Vector2(16, 14), [42, 42], ["", ""], true, 36, icons: ["view_free", "view_eye"], iconMax: 24);
+        var row = kit.Layout.Row(kit.Layout.Margin(bar));
+        bar._mode = Segmented.Create(kit, row, ["", ""], true, icons: ["view_free", "view_eye"]);
+        bar._mode.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         bar._mode.Items[0].TooltipText = UiKit.T("hud.mode.fly");
         bar._mode.Items[1].TooltipText = UiKit.T("hud.mode.walk");
         bar._mode.Changed += i => bar.ModePicked?.Invoke(i == 0 ? ViewMode.Fly : ViewMode.Walk);
-        for (var i = 0; i < 16; i++) bar._leds.Add(kit.Box(bar, new Rect2(120 + i * 9, 15, 7, 14), new UiFx(Pin: true)));
-        bar._actual = kit.Box(bar, new Rect2(120, 34, 0, 2), new UiFx(Fill: "graphic", Pin: true));
-        bar._readout = kit.Text(bar, "", "data", "text.1", new Vector2(120, 40), true);
+        var readout = kit.Layout.Stack(row, groups: false);
+        var leds = kit.Layout.Add(readout, new Control { CustomMinimumSize = new Vector2(16 * 9, 24) });
+        for (var i = 0; i < 16; i++) bar._leds.Add(kit.Box(leds, new UiFx(Pin: true)));
+        bar._actual = kit.Box(leds, new UiFx(Fill: "graphic", Pin: true));
+        bar._actual.Position = new Vector2(0, 21);
+        bar._readout = kit.Text(readout, "", "data", "text.1", true);
         bar.Sync();
         return bar;
     }
@@ -225,7 +257,7 @@ public partial class SpeedBar : Control
                 var led = _leds[i];
                 led.Visible = true;
                 var current = i == gear - 1;
-                led.Position = new Vector2(120 + i * 9, current ? 13 : 15);
+                led.Position = new Vector2(i * 9, current ? 0 : 2);
                 led.Size = new Vector2(7, current ? 18 : 14);
                 _kit.Apply(led, current ? new UiFx(Fill: "primary.fill", Line: "primary.line", Pin: true)
                     : i < gear - 1 ? new UiFx(Fill: "graphic", Pin: true) : new UiFx(Fill: "surface.sunk", Line: "line.hair", Pin: true), remember: false);
@@ -245,7 +277,7 @@ public partial class SpeedBar : Control
                 var led = _leds[i];
                 led.Visible = i < WalkRules.SpeedStepCount;
                 if (!led.Visible) continue;
-                led.Position = new Vector2(120 + i * 18, i == step ? 13 : 15);
+                led.Position = new Vector2(i * 18, i == step ? 0 : 2);
                 led.Size = new Vector2(16, i == step ? 18 : 14);
                 _kit.Apply(led, i == step ? new UiFx(Fill: "primary.fill", Line: "primary.line", Pin: true)
                     : i < step ? new UiFx(Fill: "graphic", Pin: true) : new UiFx(Fill: "surface.sunk", Line: "line.hair", Pin: true), remember: false);
@@ -257,7 +289,7 @@ public partial class SpeedBar : Control
 }
 
 /// <summary>收起态的时间读数条（UI-VISUAL）：钟点（Inter Light 26，tnum）+ 时辰 + 季 · 天气 + 过孔（自动空心、手动实心）。界面态显示，漫游态不显示。</summary>
-public partial class TimeStrip : Control
+public partial class TimeStrip : PanelContainer
 {
     private UiKit _kit = null!;
     private HudModel _model = null!;
@@ -266,13 +298,25 @@ public partial class TimeStrip : Control
 
     public static TimeStrip Create(UiKit kit, Control parent, HudModel model)
     {
-        var strip = new TimeStrip { _kit = kit, _model = model, Size = kit.Tokens.V2("metrics", "size", "timeStrip"), MouseFilter = MouseFilterEnum.Stop };
+        var strip = new TimeStrip
+        {
+            _kit = kit, _model = model,
+            CustomMinimumSize = new Vector2(kit.Tokens.V2("metrics", "size", "timeStrip").X, 0),
+            ThemeTypeVariation = UiThemeBuilder.PanelContainerType, Material = kit.Materials.Panel,
+            SizeFlagsHorizontal = SizeFlags.ShrinkEnd, MouseFilter = MouseFilterEnum.Stop
+        };
         parent.AddChild(strip);
-        kit.Box(strip, new Rect2(Vector2.Zero, strip.Size), new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: kit.Tokens.Chamfer("panel"),
+        kit.Apply(strip, new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: kit.Tokens.Chamfer("panel"),
             Flags: UiFlags.Highlight, Pin: true));
-        strip._clock = kit.Text(strip, "", "readout.strip", "text.1", new Vector2(20, 13), true);
-        strip._text = kit.Text(strip, "", "small", "text.2", new Vector2(104, 18), true);
-        strip._via = kit.Dot(strip, Vector2.Zero, 6, new UiFx(Line: "graphic", Pin: true));
+        var row = kit.Layout.Row(kit.Layout.Margin(strip));
+        strip._clock = kit.Text(row, "", "readout.strip", "text.1", true, wrap: false);
+        strip._clock.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+        strip._text = kit.Text(row, "", "small", "text.2", true);
+        strip._text.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        strip._via = kit.Box(row, new UiFx(Line: "graphic", Flags: UiFlags.Circle, Pin: true));
+        var via = kit.Tokens.F("metrics", "via", "core");
+        strip._via.CustomMinimumSize = new Vector2(via, via);
+        strip._via.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         strip.Sync();
         return strip;
     }
@@ -283,7 +327,6 @@ public partial class TimeStrip : Control
         _clock.Text = WorldTime.FormatClock(clock);
         _text.Text = $"{UiKit.T("time.shichen." + TimeCard.Shichen(clock))} · {UiKit.T("hud.season." + TimeCard.SeasonCode(_model.Season).ToLowerInvariant())} · " +
                      UiKit.T("weather.cell." + WeatherStrip.CellKey(WeatherStrip.CellOf(_model.Weather.Kind)));
-        _via.Position = new Vector2(104 + _kit.Width(_text) + 10, 25);
         var manual = _model.Weather.Mode == WeatherMode.Manual;
         _kit.Apply(_via, new UiFx(Fill: manual ? "graphic" : null, Line: manual ? null : "graphic", Flags: UiFlags.Circle, Pin: true), remember: false);
     }
@@ -293,35 +336,47 @@ public partial class TimeStrip : Control
 /// 临时提示（UI-VISUAL、UI-NAV）：高 40、surface.panel、左侧 3 px 类型条、20 px 图标、Medium 16；
 /// 同时只显示 1 条，新的顶替旧的，2 s 内淡出；底部居中、离底边 150 px。常驻件，固定深屏；不配提示音。
 /// </summary>
-public partial class Toast : Control
+public partial class Toast : PanelContainer
 {
     private UiKit _kit = null!;
-    private Panel _panel = null!, _bar = null!;
+    private Panel _bar = null!;
     private Label _label = null!;
     private TextureRect? _icon;
     private Tween? _fade;
 
     public static Toast Create(UiKit kit, Control parent)
     {
-        var toast = new Toast { _kit = kit, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        var toast = new Toast
+        {
+            _kit = kit, MouseFilter = MouseFilterEnum.Ignore, Visible = false,
+            ThemeTypeVariation = UiThemeBuilder.PanelContainerType, Material = kit.Materials.Panel,
+            GrowHorizontal = GrowDirection.Both, GrowVertical = GrowDirection.Begin
+        };
         parent.AddChild(toast);
-        toast._panel = kit.Box(toast, new Rect2(0, 0, 200, 40), new UiFx(Fill: "surface.panel", Line: "line.panel", Pin: true));
-        toast._bar = kit.Box(toast, new Rect2(0, 0, 3, 40), new UiFx(Fill: "primary.line", Pin: true));
-        toast._label = kit.Text(toast, "", "body.strong", "text.1", new Vector2(44, 7), true);
+        kit.Apply(toast, new UiFx(Fill: "surface.panel", Line: "line.panel", Pin: true));
+        toast.SetAnchorsAndOffsetsPreset(LayoutPreset.CenterBottom);
+        toast.OffsetTop = toast.OffsetBottom = -kit.Tokens.Size("toastBottom");
+        var row = kit.Layout.Row(kit.Layout.Margin(toast));
+        toast._icon = kit.IconRect(row, "help", pin: true);
+        toast._icon.Visible = false;
+        toast._label = kit.Text(row, "", "body.strong", "text.1", true);
+        // 类型条是面板自己的装饰，不参加内容排版。
+        var decoration = kit.Layout.Host(toast, "ToastDecoration");
+        toast._bar = kit.Box(decoration, new UiFx(Fill: "primary.line", Pin: true));
+        toast._bar.SetAnchorsAndOffsetsPreset(LayoutPreset.LeftWide);
+        toast._bar.OffsetRight = kit.Tokens.F("metrics", "line", "toastBar");
+        parent.Resized += toast.Fit;
+        toast.TreeExiting += () => parent.Resized -= toast.Fit;
         return toast;
     }
 
     public void Show(string text, string? icon = null, string bar = "primary.line", float hold = 1.4f)
     {
         _label.Text = text;
-        _icon?.QueueFree();
-        _icon = icon is null ? null : _kit.IconRect(this, icon, new Rect2(14, 10, 20, 20), "text.1", true);
-        _label.Position = new Vector2(icon is null ? 18 : 44, 7);
-        var width = _label.Position.X + _kit.Width(_label) + 20;
-        _panel.Size = new Vector2(width, 40);
+        _icon!.Visible = icon is not null;
+        if (icon is not null) _icon.Texture = _kit.Icon(icon);
+        Fit();
         _kit.Apply(_bar, new UiFx(Fill: bar, Pin: true), remember: false);
-        var vp = GetViewportRect().Size;
-        Position = new Vector2(Mathf.Round((vp.X - width) / 2), vp.Y - _kit.Tokens.Size("toastBottom") - 40);
         Visible = true;
         Modulate = Colors.White;
         _fade?.Kill();
@@ -329,5 +384,15 @@ public partial class Toast : Control
         _fade.TweenInterval(hold);
         _fade.TweenProperty(this, "modulate:a", 0f, _kit.Motion.Fade(0.6f));
         _fade.TweenCallback(Callable.From(() => Visible = false));
+    }
+
+    private void Fit()
+    {
+        var font = _kit.Theme.Font("body.strong", out var size, out _);
+        var icon = _icon!.Visible ? _kit.Layout.Metric("icon") + _kit.Layout.Metric("rowGap") : 0;
+        var width = font.GetStringSize(_label.Text, HorizontalAlignment.Left, -1, size).X + icon + _kit.Tokens.Space("panelPad") * 2;
+        CustomMinimumSize = new Vector2(Math.Min(width, GetParentControl().Size.X), 0);
+        CustomMaximumSize = GetParentControl().Size;
+        ResetSize();
     }
 }

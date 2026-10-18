@@ -57,31 +57,6 @@ public partial class Segmented : PanelContainer
         return seg;
     }
 
-    // 仅为 C-131–C-134 尚未迁移的页保留；C-135 删除宽度数组入口。
-    public static Segmented Create(UiKit kit, Control parent, Vector2 position, float[] widths, string[] labels, bool pin,
-        float height = 36, string font = "segment", string?[]? icons = null, int iconMax = 16, int selected = -1)
-    {
-        var seg = Create(kit, parent, labels, pin, font, icons, selected);
-        seg.Position = position;
-        seg.Size = new Vector2(widths.Sum(), height);
-        return seg;
-    }
-
-    public static bool Fits(UiKit kit, string[] labels, float availableWidth, string font = "segment")
-    {
-        var fv = kit.Theme.Font(font, out var size, out _);
-        var pad = kit.Layout.Metric("segmentPadX") * 2;
-        return labels.Sum(label => fv.GetStringSize(label, HorizontalAlignment.Left, -1, size).X + pad) <= availableWidth;
-    }
-
-    public static bool Fits(UiKit kit, string[] labels, float[] widths, string font = "segment")
-    {
-        var fv = kit.Theme.Font(font, out var size, out _);
-        for (var i = 0; i < labels.Length; i++)
-            if (fv.GetStringSize(labels[i], HorizontalAlignment.Left, -1, size).X + kit.Layout.Metric("segmentPadX") * 2 > widths[i]) return false;
-        return true;
-    }
-
     public void Select(int index, bool notify)
     {
         var next = index >= 0 && index < _items.Count ? index : -1;
@@ -144,14 +119,6 @@ public partial class DipSwitch : Control
         sw._hit.FocusExited += sw.Refresh;
         sw.CustomMinimumSize = new Vector2(0, kit.Layout.Metric("compact"));
         sw.Refresh();
-        return sw;
-    }
-
-    public static DipSwitch Create(UiKit kit, Control parent, Vector2 position, bool on, bool pin)
-    {
-        var sw = Create(kit, parent, on, pin);
-        sw.Position = position;
-        sw.Size = sw.GetCombinedMinimumSize();
         return sw;
     }
 
@@ -225,16 +192,6 @@ public partial class Fader : Control
         f.FocusEntered += f.Layout;
         f.FocusExited += f.Layout;
         f.Layout();
-        return f;
-    }
-
-    public static Fader Create(UiKit kit, Control parent, Vector2 position, float width, float min, float max, float step, float value,
-        bool pin, Func<float, string>? format = null)
-    {
-        var f = Create(kit, parent, min, max, step, value, pin, format);
-        f.Position = position;
-        f._drawing.CustomMinimumSize = new Vector2(width, f._drawing.CustomMinimumSize.Y);
-        f.Size = f.GetCombinedMinimumSize();
         return f;
     }
 
@@ -337,42 +294,5 @@ public static class Parts
         var margin = kit.Layout.Add(panel, new MarginContainer(), UiThemeBuilder.SmallMargin);
         kit.Text(margin, text, "data", "text.2", pin, wrap: false);
         return panel;
-    }
-
-    /// <summary>键帽（UI-VISUAL）：高 24、最小宽 24、1 px line.control、底边 2.5 px 键深、surface.raised；按下 = primary.fill、下沉 1.5 px。</summary>
-    public static float Keycap(UiKit kit, Control parent, Vector2 at, string key, bool down = false, bool pin = false)
-    {
-        var probe = kit.Text(parent, key, "keycap", "text.1", Vector2.Zero, pin);
-        var w = Math.Max(24, kit.Width(probe) + 14);
-        probe.QueueFree();
-        var sink = down ? 1.5f : 0;
-        kit.Box(parent, new Rect2(at.X, at.Y + sink, w, 24 - sink), new UiFx(Fill: "line.control", Pin: pin));
-        kit.Box(parent, new Rect2(at.X, at.Y + sink, w, 21.5f), new UiFx(Fill: down ? "primary.fill" : "surface.raised", Line: "line.control", Pin: pin));
-        kit.Text(parent, key, "keycap", down ? "primary.ink" : "text.1", new Vector2(at.X, at.Y + sink + 2), pin, w, HorizontalAlignment.Center);
-        return w;
-    }
-
-    /// <summary>组标题："mono-caps 小标签 + 发丝线"（UI-VISUAL）。</summary>
-    public static void GroupHeader(UiKit kit, Control parent, Vector2 at, float width, string text, bool pin = false)
-    {
-        var label = kit.Text(parent, text, "mono-caps", "text.2", at, pin);
-        var w = kit.Width(label) + 12;
-        kit.Box(parent, new Rect2(at.X + w, at.Y + 8, width - w, 1), new UiFx(Fill: "line.hair", Pin: pin));
-    }
-
-    /// <summary>生效标签：等宽的"雾幕""重启"，发丝边；雾幕用 primary.line 边（UI-VISUAL）。</summary>
-    public static float Tag(UiKit kit, Control parent, Vector2 at, string text, bool primary, bool pin = false)
-    {
-        var label = kit.Text(parent, text, "data", "text.2", at + new Vector2(6, 3), pin);
-        var w = kit.Width(label) + 12;
-        kit.Box(parent, new Rect2(at, new Vector2(w, 24)), new UiFx(Line: primary ? "primary.line" : "line.control", Pin: pin));
-        return w;
-    }
-
-    /// <summary>三格负载 LED（UI-VISUAL）。</summary>
-    public static void Leds(UiKit kit, Control parent, Vector2 at, int lit, int count = 3, bool pin = false)
-    {
-        for (var i = 0; i < count; i++)
-            kit.Box(parent, new Rect2(at.X + i * 10, at.Y, 8, 8), new UiFx(Fill: i < lit ? "graphic" : null, Line: i < lit ? null : "line.control", Pin: pin));
     }
 }

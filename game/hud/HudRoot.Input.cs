@@ -14,6 +14,8 @@ public partial class HudRoot
     public const int LayerDialog = 100, LayerPage = 200, LayerHud = 300;
     private static readonly string[] Actions = ["menu", "help", "time_panel", "time_forward", "toggle_flow", "next_season", "weather", "clean_view"];
     private readonly List<IDisposable> _layers = [];
+    private readonly HashSet<Control> _hostChildren = [];
+    private bool _hostInputBound;
     private IInputRouter _router = null!;
 
     private void ConnectInput()
@@ -27,6 +29,63 @@ public partial class HudRoot
     }
 
     private void Touch() => _idle = 0;
+
+    // 引擎递归禁用保留每个控件自身的 FocusMode/MouseFilter，重新启用时无需恢复镜像。
+    private void SyncHostInput()
+    {
+        if (!_hostInputBound) return;
+        var dialog = HasVisibleContent(_dialogHost);
+        var page = HasVisibleContent(_pageHost);
+        _corners.Visible = Playing && !_clean && !dialog && !page;
+        UiLayout.SetInteractive(_dialogHost, dialog && !_hidden);
+        UiLayout.SetInteractive(_pageHost, !dialog && !_hidden);
+        UiLayout.SetInteractive(_corners, !dialog && !page && InterfaceState && !_hidden);
+        // 开始菜单与设置/存档共用页面层，大页打开时菜单退出阅读顺序。
+        UiLayout.SetInteractive(_title, !BigPage && !dialog);
+    }
+
+    private void BindHostChild(Node child)
+    {
+        if (!_hostInputBound || child is not Control control || !_hostChildren.Add(control)) return;
+        control.VisibilityChanged += SyncHostInput;
+    }
+
+    private void UnbindHostChild(Node child)
+    {
+        if (child is Control control && _hostChildren.Remove(control))
+            control.VisibilityChanged -= SyncHostInput;
+    }
+
+    private void BindHostInput()
+    {
+        if (_hostInputBound) return;
+        _hostInputBound = true;
+        foreach (var host in new[] { _pageHost, _dialogHost })
+        {
+            host.ChildOrderChanged += SyncHostInput;
+            host.ChildEnteredTree += BindHostChild;
+            host.ChildExitingTree += UnbindHostChild;
+            foreach (var child in host.GetChildren()) BindHostChild(child);
+        }
+    }
+
+    private void UnbindHostInput()
+    {
+        if (!_hostInputBound) return;
+        // 先停止仲裁，再解除所有观察，最后才由 _ExitTree 清理页面和居民件。
+        _hostInputBound = false;
+        foreach (var host in new[] { _pageHost, _dialogHost })
+        {
+            host.ChildOrderChanged -= SyncHostInput;
+            host.ChildEnteredTree -= BindHostChild;
+            host.ChildExitingTree -= UnbindHostChild;
+        }
+        foreach (var child in _hostChildren) child.VisibilityChanged -= SyncHostInput;
+        _hostChildren.Clear();
+    }
+
+    private static bool HasVisibleContent(Control host) => host.GetChildren()
+        .OfType<Control>().Any(child => !child.IsQueuedForDeletion() && child.IsVisibleInTree());
 
     /// <summary>漫游态 ⇄ 界面态：经 IInputRouter.SetInterfaceMode，由 WP-06 统一改鼠标捕获。</summary>
     private void SetInterface(bool on) => _router.SetInterfaceMode(on);
@@ -59,6 +118,7 @@ public partial class HudRoot
     {
         if (_flow.State == AppState.Title) return e.Action == "menu";   // 开始页主菜单上按 Esc 什么也不做
         if (!Playing) return false;
+        if (HasVisibleContent(_pageHost) || HasVisibleContent(_dialogHost)) return false;
         if (e.Action == "weather" && !e.Pressed)
         {
             // Y 单击：松开时还没满 0.6 s，就切到下一种天气（UI-NAV）
@@ -133,7 +193,8 @@ public partial class HudRoot
     public override void _UnhandledInput(InputEvent e)
     {
         // 有面板展开时，第一次单击画面只收起面板（UI-NAV）；单击是鼠标事件，不走动作路由
-        if (Playing && e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _timeOpen && InterfaceState && !BigPage)
+        if (Playing && e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && _timeOpen && InterfaceState
+            && !HasVisibleContent(_pageHost) && !HasVisibleContent(_dialogHost))
         {
             ToggleTime(false);
             Handled();

@@ -41,7 +41,7 @@ internal sealed class MinimapController
     public void Mount(Control slot)
     {
         _minimap.Reparent(slot, keepGlobalTransform: false);
-        _minimap.Position = Vector2.Zero;
+        _minimap.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
     }
 
     public void SetEntries(IReadOnlyList<MapEntry> entries)
@@ -149,9 +149,9 @@ internal sealed class MinimapController
         var regions = _s.Atlas.Regions;
         if (id is { Length: > 0 } && regions.FirstOrDefault(region => region.Id == id) is { } place)
         {
-            if (place.Parent is { } p && regions.FirstOrDefault(region => region.Id == p) is { } parent) return parent.Name.Zh + " · " + place.Name.Zh;
-            return place.Name.Zh;
+            if (place.Parent is { } p && regions.FirstOrDefault(region => region.Id == p) is { } parent) return _host.Ctx.Name(parent.Name) + " · " + _host.Ctx.Name(place.Name);
+            return _host.Ctx.Name(place.Name);
         }
-        return _host.Map?.Name.Zh ?? "";
+        return _host.Map is { } map ? _host.Ctx.Name(map.Name) : "";
     }
 }

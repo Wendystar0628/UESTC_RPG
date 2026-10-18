@@ -74,7 +74,7 @@ public partial class TechButton : Button
         return button;
     }
 
-    public static TechButton Create(UiKit kit, ButtonStyle style, string text, string? icon, string fontRole, int padX, int padY,
+    private static TechButton Create(UiKit kit, ButtonStyle style, string text, string? icon, string fontRole, int padX, int padY,
         int iconMax, bool pin)
     {
         var button = new TechButton

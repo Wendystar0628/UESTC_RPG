@@ -18,9 +18,11 @@ public partial class TitleMenu : Control
     private UiKit _kit = null!;
     private Label _data = null!, _continueInfo = null!;
     private TechButton _continue = null!;
+    private Control _backgroundParent = null!;
+    private Control? _shade;
 
     public event Action? SavesRequested;
-    /// <summary>三个存档位都占着时的"新游戏"：由界面根以新游戏方式打开存档页，选位并确认覆盖（SYS-TITLE §2.2）。</summary>
+    /// <summary>三个存档位都占着时的"新游戏"：由界面根以新游戏方式打开存档页，选位并确认覆盖（SYS-TITLE）。</summary>
     public event Action? OverwriteRequested;
     public event Action? SettingsRequested;
     public event Action? CreditsRequested;
@@ -29,9 +31,9 @@ public partial class TitleMenu : Control
 
     private static T Svc<T>() where T : class => Campus.Kernel.Registry.Kernel.Get<T>();
 
-    public static TitleMenu Create(UiKit kit, Control parent)
+    public static TitleMenu Create(UiKit kit, Control parent, Control backgroundParent)
     {
-        var menu = new TitleMenu { _kit = kit, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        var menu = new TitleMenu { _kit = kit, _backgroundParent = backgroundParent, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         parent.AddChild(menu);
         menu.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         return menu;
@@ -41,40 +43,64 @@ public partial class TitleMenu : Control
     {
         var band = _kit.Colors.Theme("light", "over.title.band");
         var gradient = new Gradient { Offsets = [0f, 0.62f, 1f], Colors = [band, band with { A = band.A * 0.6f }, band with { A = 0 }] };
-        var shade = new TextureRect
+        _shade = new TextureRect
         {
-            Texture = new GradientTexture2D { Gradient = gradient, Width = 256, Height = 4, FillFrom = Vector2.Zero, FillTo = new Vector2(1, 0) },
+            Texture = new GradientTexture2D { Gradient = gradient, FillFrom = Vector2.Zero, FillTo = new Vector2(1, 0) },
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.Scale,
             MouseFilter = MouseFilterEnum.Ignore,
-            Size = new Vector2(760, 1080),
         };
-        AddChild(shade);
-        _kit.Text(this, UiKit.T("title.name"), "display-1", "over.title.text", new Vector2(112, 300));
-        _kit.Box(this, new Rect2(112, 432, 360, 1), new UiFx(Fill: "over.title.text"));
-        _kit.Dot(this, new Vector2(112, 432.5f), 4, new UiFx(Fill: "over.title.text"));
-        _data = _kit.Text(this, "", "data", "over.title.text", new Vector2(112, 444));
-        _kit.Text(this, UiKit.T("title.english"), "mono-caps", "over.title.text", new Vector2(112, 470));
+        _backgroundParent.AddChild(_shade);
+        _shade.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
+        // 片名和菜单在安全框左侧带内；高度不够时整列滚动，避免菜单推出窗口。
+        var column = _kit.Layout.Host(this, "TitleColumn");
+        var bounds = _kit.Tokens.Get("metrics", "base", "centralFree");
+        column.AnchorRight = bounds[0].GetSingle() / _kit.Tokens.F("metrics", "base", "width");
+        var scroll = _kit.Layout.Scroll(column);
+        scroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        var content = _kit.Layout.Stack(scroll);
+        content.SizeFlagsVertical = SizeFlags.ExpandFill;
+        content.Alignment = BoxContainer.AlignmentMode.End;
+        var heading = _kit.Layout.Stack(content, groups: false);
+        var title = _kit.Text(heading, UiKit.T("title.name"), "display-1", "over.title.text");
+        void FitTitle()
+        {
+            // 从既有字号阶梯选可放下的片名字号，不额外维护像素断点。
+            var fitted = UiThemeBuilder.TextType("h2");
+            foreach (var role in new[] { "display-1", "display-2", "h1", "h2" })
+            {
+                fitted = UiThemeBuilder.TextType(role);
+                var font = _kit.Theme.Theme.GetFont("font", fitted);
+                var size = _kit.Theme.Theme.GetFontSize("font_size", fitted);
+                if (font.GetStringSize(title.Text, fontSize: size).X <= title.Size.X) break;
+            }
+            if (title.ThemeTypeVariation != fitted) title.ThemeTypeVariation = fitted;
+        }
+        title.Resized += FitTitle;
+        title.Ready += FitTitle;
+        var rule = _kit.Box(heading, new UiFx(Fill: "over.title.text"));
+        rule.CustomMinimumSize = new Vector2(0, _kit.Tokens.F("metrics", "line", "hairPhys"));
+        rule.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _data = _kit.Text(heading, "", "data", "over.title.text");
+        _kit.Text(heading, UiKit.T("title.english"), "mono-caps", "over.title.text");
+
+        var menu = _kit.Layout.Stack(content, groups: false);
         string[] keys = ["title.continue", "title.new", "title.saves", "title.settings", "title.credits", "title.quit"];
-        float y = 540;
         for (var i = 0; i < keys.Length; i++)
         {
-            var item = _kit.Button(this, ButtonStyle.Item, UiKit.T(keys[i]), new Rect2(104, y, 300, 44), "h3", 16, align: HorizontalAlignment.Left);
-            item.RoleOverride = "over.title.text";
             var index = i;
-            item.Pressed += () => Pick(index);
+            var item = _kit.Button(menu, ButtonStyle.Item, UiKit.T(keys[i]), "h3", pressed: () => Pick(index), align: HorizontalAlignment.Left);
+            item.RoleOverride = "over.title.text";
+            item.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            item.ClipText = true;
+            item.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            item.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             _items.Add(item);
-            y += i == 0 ? 64 : 48;
+            if (i == 0) _continueInfo = _kit.Text(menu, "", "data", "over.title.text");
         }
         _continue = _items[0];
         _continue.OffReason = UiKit.T("title.continue.none");
-        _continueInfo = _kit.Text(this, "", "data", "over.title.text", new Vector2(120, 584));
-        for (var i = 0; i < _items.Count; i++)
-        {
-            _items[i].FocusNeighborTop = _items[(i + _items.Count - 1) % _items.Count].GetPath();
-            _items[i].FocusNeighborBottom = _items[(i + 1) % _items.Count].GetPath();
-        }
     }
 
     /// <summary>打开时才建，<see cref="Close"/> 时释放：离开开始页以后它不再占实例参数槽（<see cref="UiKit.Holders"/>）。</summary>
@@ -84,13 +110,24 @@ public partial class TitleMenu : Control
         Visible = true;
         Sync();
         var focus = _continue.Off ? _items[1] : _continue;
-        focus.GrabFocus();
+        if (focus.IsVisibleInTree() && focus.GetFocusModeWithOverride() != FocusModeEnum.None) focus.GrabFocus();
     }
 
     public void Close()
     {
         Visible = false;
-        foreach (var child in GetChildren()) child.QueueFree();
+        if (_shade is not null)
+        {
+            _shade.Visible = false;
+            _shade.GetParent()?.RemoveChild(_shade);
+            _shade.QueueFree();
+            _shade = null;
+        }
+        foreach (var child in GetChildren())
+        {
+            RemoveChild(child);
+            child.QueueFree();
+        }
         _items.Clear();
     }
 

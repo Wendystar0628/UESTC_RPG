@@ -23,9 +23,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     private MapHudContext _ctx = null!;
     private ShaderMaterial _material = null!;
     private MapBaseBinding? _base;
-    private CanvasLayer? _layer;
     private Minimap _minimap = null!;
-    private AtlasPage _page = null!;
     private MinimapController _minimapCtl = null!;
     private AtlasController _atlasCtl = null!;
 
@@ -43,7 +41,6 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     internal HudRoot Hud => _services!.Hud;
     internal MapStyle Style => _style!;
     internal MapHudContext Ctx => _ctx;
-    internal CanvasLayer? Layer => _layer;
     internal MapDescriptor? Map => _map;
     internal MapGeo? Geo => _geo;
     internal IReadOnlyList<MapEntry> Entries => _entries;
@@ -60,35 +57,25 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Hud;
-        _style = MapStyle.TryLoad();
-        if (_style is null) { SetProcess(false); return; }
         _services = new MapHudServices();
+        _style = MapStyle.TryLoad(Hud.Ui);
+        if (_style is null) { SetProcess(false); return; }
         var atlas = _services.Atlas;
 
-        _ctx = new MapHudContext(_style);
+        _ctx = new MapHudContext(_style, Hud.Ui);
         _ctx.PinShapeLookup = id => atlas.Pins.FirstOrDefault(p => "pin:" + p.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) == id.Value)?.Shape ?? PinShape.Diamond;
-        var layer = new CanvasLayer { Layer = 10 };
-        _layer = layer;
-        AddChild(layer);
-        var root = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
-        layer.AddChild(root);
-        root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _minimap = new Minimap(_ctx);
-        root.AddChild(_minimap);
+        AddChild(_minimap);
         CallDeferred(MethodName.MountMinimap);
-        // 大地图在扉页之后预建、隐藏：第一次按 M 不建控件（SYS-ATLAS）
-        _page = new AtlasPage(_ctx) { Visible = false };
-        root.AddChild(_page);
 
         _material = MapMaterial.Acquire();
         MapMaterial.Configure(_material, _style);
         MapMaterial.SetThemeFront(_material, _ctx.ThemeFront);
         _base = new MapBaseBinding(_services.AtlasBase, _material);
         _minimap.Base.Bind(_material, _ctx.ResidentNight);
-        _page.Paper.Base.Bind(_material, false);
         _minimap.SyncTheme();
 
-        _atlasCtl = new AtlasController(this, _page);
+        _atlasCtl = new AtlasController(this);
         _minimapCtl = new MinimapController(this, _minimap, () => _atlasCtl.Open(AtlasTab.Layers), () => _atlasCtl.Open(AtlasTab.Index));
         _services.World.InstanceChanged += OnWorldChanged;
         atlas.Changed += RebuildEntries;
@@ -107,6 +94,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     private void OnWorldChanged(long instance) => _minimapCtl.ResetWorld();
 
     private void MountMinimap() => _minimapCtl.Mount(Hud.MinimapSlot);
+    internal void BindPage(AtlasPage page) => page.Paper.Base.Bind(_material, false);
 
     // ------------------------------------------------------------------ 地图数据
 
@@ -152,6 +140,11 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     public override void _Process(double delta)
     {
         var dt = (float)Math.Min(delta, 0.1);
+        if (_ctx.ResidentFollowsTheme != Hud.Ui.ResidentFollows)
+        {
+            _ctx.ResidentFollowsTheme = Hud.Ui.ResidentFollows;
+            _minimapCtl.SyncTheme();
+        }
         ApplyNight(_services!.Theme.Dark);
         _base!.Poll(_map?.Id);
         var playing = _services!.Flow.IsPlaying;

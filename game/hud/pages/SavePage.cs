@@ -7,35 +7,32 @@ using Godot;
 
 namespace Campus.Hud.Pages;
 
-/// <summary>存档页的打开方式：浏览（读取 / 在空位开始），或开始页"新游戏"三位全占时选位覆盖（SYS-TITLE §2.2、SYS-SAVE-FLOW §2.5）。</summary>
+/// <summary>浏览存档，或由开始页选择新游戏覆盖的位置。</summary>
 public enum SaveIntent : byte { Browse, NewGame }
 
-/// <summary>
-/// 存档页（UI-VISUAL、SYS-SAVE）：全屏大页，随主题，背后 scrim；三个存档位画成"存储模组"卡（400×212，切角 10，底边 16 根接点）。
-/// 只读 ISaveService 的存档位列表和缩略图；写入只经 IAppFlow（开始页里"继续 / 读取 / 新游戏"）。打开期间 LockInput(Menu)。
-/// 新游戏方式下已占的位主按钮是危险样式"覆盖并开始"，按一次弹出确认框（默认焦点在取消，Esc 等于取消）。
-/// </summary>
+/// <summary>居中的可滚动存档页；卡片随安全框宽度换列，覆盖确认进入独立对话框宿主。</summary>
 public partial class SavePage : Control
 {
-    private readonly List<(TechButton Hit, Control Card)> _cards = [];
+    private sealed record SaveCard(TechButton Hit, PanelContainer Panel, List<Panel> Contacts, bool Empty);
+    private readonly List<SaveCard> _cards = [];
     private UiKit _kit = null!;
-    private Control _panel = null!;
+    private Control _dialogParent = null!;
     private TechButton _primary = null!;
     private TechButton? _overwrite;
     private Control? _confirm;
     private Label _detail = null!;
     private IDisposable? _lock;
+    private Tween? _fade;
     private int _selected;
     private bool _fromTitle;
     private SaveIntent _intent;
 
     public event Action? CloseRequested;
-
     private static T Svc<T>() where T : class => Campus.Kernel.Registry.Kernel.Get<T>();
 
-    public static SavePage Create(UiKit kit, Control parent)
+    public static SavePage Create(UiKit kit, Control parent, Control dialogParent)
     {
-        var page = new SavePage { _kit = kit, MouseFilter = MouseFilterEnum.Stop, Visible = false };
+        var page = new SavePage { _kit = kit, _dialogParent = dialogParent, MouseFilter = MouseFilterEnum.Stop, Visible = false };
         parent.AddChild(page);
         page.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         return page;
@@ -45,140 +42,159 @@ public partial class SavePage : Control
     {
         _fromTitle = fromTitle;
         _intent = intent;
-        Rebuild();
+        ReleaseContent();
+        Build();
         Visible = true;
-        _lock ??= Lock();
+        _lock ??= Svc<ICameraRig>().LockInput(InputLockReason.Menu);
         Modulate = new Color(1, 1, 1, 0);
-        CreateTween().TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.36f));
-        if (_cards.Count > 0) _cards[_selected].Hit.GrabFocus();
+        _fade = CreateTween();
+        _fade.TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.36f));
+        if (_cards.Count > 0) FocusWhenInteractive(_cards[_selected].Hit);
     }
 
-    /// <summary>关页即释放内容（隐藏的件照样占实例参数槽，<see cref="UiKit.Holders"/>），下次打开照常重建。</summary>
+    /// <summary>大页关上立即移出树并排队释放，不留下隐藏的 UiKit.Holders。</summary>
     public void Close()
     {
         Visible = false;
         _lock?.Dispose();
         _lock = null;
-        foreach (var child in GetChildren()) child.QueueFree();
+        ReleaseContent();
+    }
+
+    private void ReleaseContent()
+    {
+        _fade?.Kill();
+        _fade = null;
+        ReleaseConfirm();
+        foreach (var child in GetChildren())
+        {
+            RemoveChild(child);
+            child.QueueFree();
+        }
         _cards.Clear();
-        _confirm = null;
         _overwrite = null;
     }
 
-    private static IDisposable Lock() => Svc<ICameraRig>().LockInput(InputLockReason.Menu);
-
-    private void Rebuild()
+    private void Build()
     {
-        foreach (var child in GetChildren()) child.QueueFree();
-        _cards.Clear();
-        _confirm = null;
-        _overwrite = null;
-        var view = GetViewportRect().Size;
-        _kit.Box(this, new Rect2(Vector2.Zero, view), new UiFx(Fill: "scrim", Margin: 0));
-        var size = new Vector2(Math.Min(1280, view.X - 128), 680);
-        _panel = new Control { Position = ((view - size) / 2).Round(), Size = size, MouseFilter = MouseFilterEnum.Ignore };
-        AddChild(_panel);
-        _kit.Box(_panel, new Rect2(Vector2.Zero, size), new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: _kit.Tokens.Chamfer("page"),
-            Flags: UiFlags.Highlight | UiFlags.Via));
-        _kit.Text(_panel, UiKit.T(_intent == SaveIntent.NewGame ? "saves.title.new_game" : "saves.title"), "h2", "text.1", new Vector2(32, 26));
-        _kit.Text(_panel, "SAVES", "mono-caps", "text.2", new Vector2(32 + 62, 38));
-        _kit.Button(_panel, ButtonStyle.Icon, "", new Rect2(size.X - 32 - 32, 24, 32, 32), padX: 4, icon: "close", iconMax: 20,
-            pressed: () => CloseRequested?.Invoke());
+        var scrim = _kit.Box(this, new UiFx(Fill: "scrim", Margin: 0));
+        scrim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        var frame = _kit.Layout.Page(this, UiKit.T(_intent == SaveIntent.NewGame ? "saves.title.new_game" : "saves.title"), "savesWidth", centered: true);
+        frame.Tabs.Visible = false;
+        _kit.Text(frame.Header, "SAVES", "mono-caps", "text.2", wrap: false).SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        _kit.Button(frame.Header, ButtonStyle.Icon, "", icon: "close", pressed: () => CloseRequested?.Invoke());
 
         var saves = Svc<ISaveService>();
         var slots = saves.Slots;
-        var latest = saves.Continue;
-        var card = _kit.Tokens.V2("metrics", "size", "memoryCard");
-        var gap = 24f;
-        var x0 = (size.X - (card.X * 3 + gap * 2)) / 2;
+        var grid = _kit.Layout.Cards(frame.Body);
         for (var i = 0; i < slots.Count; i++)
         {
-            var slot = slots[i];
-            var at = new Vector2(x0 + i * (card.X + gap), 96);
-            var holder = new Control { Position = at, Size = card, MouseFilter = MouseFilterEnum.Ignore };
-            _panel.AddChild(holder);
             var index = i;
-            var hit = _kit.Button(holder, ButtonStyle.Ghost, "", new Rect2(Vector2.Zero, card));
-            hit.SelfModulate = new Color(1, 1, 1, 0);
-            hit.Pressed += () => Select(index);
-            hit.FocusEntered += () => Select(index);
-            _cards.Add((hit, holder));
-            BuildCard(holder, slot, slot.Slot == latest, false);
+            var card = BuildCard(grid, slots[i], slots[i].Slot == saves.Continue);
+            card.Hit.Pressed += () => Select(index);
+            card.Hit.FocusEntered += () => Select(index);
+            _cards.Add(card);
         }
-        _detail = _kit.Text(_panel, "", "small", "text.2", new Vector2(x0, 96 + card.Y + 32), width: size.X - x0 * 2, wrap: true);
-        _primary = _kit.Button(_panel, ButtonStyle.Primary, "", new Rect2(size.X - x0 - 152, size.Y - 32 - 44, 152, 44), "button.primary", 20,
-            pressed: () => _ = Act());
+        _detail = _kit.Text(frame.Body, "", "small", "text.2");
+        _kit.Button(frame.Footer, ButtonStyle.Secondary, UiKit.T("ui.common.back"), pressed: () => CloseRequested?.Invoke());
+        _primary = _kit.Button(frame.Footer, ButtonStyle.Primary, "", "button.primary", pressed: () => _ = Act());
         if (_intent == SaveIntent.NewGame)
-            _overwrite = _kit.Button(_panel, ButtonStyle.Primary, UiKit.T("saves.overwrite"), new Rect2(size.X - x0 - 152, size.Y - 32 - 44, 152, 44), "button.primary", 20,
-                pressed: ShowConfirm);
-        _kit.Button(_panel, ButtonStyle.Secondary, UiKit.T("ui.common.back"), new Rect2(x0, size.Y - 32 - 40, 132, 40), pressed: () => CloseRequested?.Invoke());
-        _selected = Math.Clamp(slots.ToList().FindIndex(s => s.Slot == latest), 0, Math.Max(0, slots.Count - 1));
+            _overwrite = _kit.Button(frame.Footer, ButtonStyle.Danger, UiKit.T("saves.overwrite"), "button.primary", pressed: ShowConfirm);
+        _selected = Math.Clamp(slots.ToList().FindIndex(s => s.Slot == saves.Continue), 0, Math.Max(0, slots.Count - 1));
         if (slots.Count > 0) Select(_selected);
+        else _primary.Off = true;
     }
 
-    private void BuildCard(Control holder, SlotInfo slot, bool latest, bool selected)
+    private SaveCard BuildCard(Control parent, SlotInfo slot, bool latest)
     {
-        foreach (var child in holder.GetChildren())
-            if (child is not TechButton) child.QueueFree();
-        var size = holder.Size;
         var empty = slot.Health == SlotHealth.Empty || slot.Meta is null;
         var corrupt = slot.Health == SlotHealth.Corrupt;
-        _kit.Box(holder, new Rect2(Vector2.Zero, size), new UiFx(Fill: empty ? null : "surface.solid", Line: selected ? "primary.line" : empty ? "line.control" : "line.panel",
-            Chamfer: _kit.Tokens.Chamfer("card"), Flags: (empty ? UiFlags.Dashed : 0) | (selected ? UiFlags.SelectedIris : 0)));
-        _kit.Text(holder, $"SLOT {slot.Slot.Value.TrimStart('s').PadLeft(2, '0')}", "mono-caps", "text.2", new Vector2(24, 16));
+        var panel = _kit.Panel(parent, CardFx(empty, selected: false));
+        var content = _kit.Layout.Stack(_kit.Layout.Margin(panel), groups: false);
+        var header = _kit.Layout.Row(content);
+        _kit.Text(header, $"SLOT {slot.Slot.Value.TrimStart('s').PadLeft(2, '0')}", "mono-caps", "text.2");
         if (latest)
         {
-            var tag = _kit.Text(holder, UiKit.T("saves.latest"), "small", "text.accent", new Vector2(size.X - 70, 12));
-            _kit.Dot(holder, new Vector2(size.X - 80, 22), 6, new UiFx(Fill: "led.on"));
-            tag.Position = new Vector2(size.X - 24 - _kit.Width(tag), 12);
+            var lamp = _kit.Box(header, new UiFx(Fill: "led.on", Flags: UiFlags.Circle));
+            var diameter = _kit.Tokens.F("metrics", "via", "core");
+            lamp.CustomMinimumSize = new Vector2(diameter, diameter);
+            lamp.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            _kit.Text(header, UiKit.T("saves.latest"), "small", "text.accent").SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         }
-        for (var i = 0; i < 16; i++)
-            _kit.Box(holder, new Rect2(24 + i * 11, size.Y - 26, 7, 12), new UiFx(Fill: selected ? "primary.fill" : null, Line: selected ? "primary.line" : "line.hair"));
         if (empty)
+            _kit.Text(content, UiKit.T("saves.empty"), "body", "text.2", align: HorizontalAlignment.Center);
+        else
         {
-            _kit.Text(holder, UiKit.T("saves.empty"), "body", "text.2", new Vector2(0, size.Y / 2 - 14), width: size.X, align: HorizontalAlignment.Center);
-            return;
+            var body = _kit.Layout.Row(content);
+            var aspect = _kit.Layout.Add(body, new AspectRatioContainer
+            {
+                Ratio = 16f / 9f,
+                StretchMode = AspectRatioContainer.StretchModeEnum.WidthControlsHeight,
+                SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                SizeFlagsVertical = SizeFlags.ShrinkBegin,
+            });
+            var thumbnail = _kit.Panel(aspect, new UiFx(Fill: corrupt ? "danger.fill" : "surface.sunk", Line: "line.hair"));
+            if (!corrupt) TryThumbnail(thumbnail, slot.Slot);
+            var data = _kit.Layout.Stack(body, groups: false);
+            var meta = slot.Meta!;
+            _kit.Text(data, corrupt ? UiKit.T("saves.corrupt") : Place(meta), "h3", corrupt ? "danger.text" : "text.1");
+            _kit.Text(data, Summary(meta), "small", "text.2");
+            _kit.Text(data, PlayTime(meta.PlaySeconds), "data", "text.2");
+            _kit.Text(data, SavedAt(meta.SavedAtUnix), "data", "text.2");
         }
-        var thumb = new Rect2(24, 44, 176, 99);
-        _kit.Box(holder, thumb, new UiFx(Fill: corrupt ? "danger.fill" : "surface.sunk", Line: "line.hair"));
-        if (!corrupt) TryThumbnail(holder, slot.Slot, thumb);
-        var meta = slot.Meta!;
-        _kit.Text(holder, corrupt ? UiKit.T("saves.corrupt") : Place(meta), "h3", corrupt ? "danger.text" : "text.1", new Vector2(216, 44));
-        _kit.Text(holder, Summary(meta), "small", "text.2", new Vector2(216, 74));
-        _kit.Text(holder, PlayTime(meta.PlaySeconds), "data", "text.2", new Vector2(216, 98));
-        _kit.Text(holder, SavedAt(meta.SavedAtUnix), "data", "text.2", new Vector2(216, 120));
+        var pins = _kit.Layout.Row(content);
+        var contacts = new List<Panel>();
+        for (var i = 0; i < 16; i++)
+        {
+            var pin = _kit.Box(pins, new UiFx(Line: "line.hair"));
+            pin.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            pin.CustomMinimumSize = new Vector2(0, _kit.Layout.Metric("keycap") / 2f);
+            contacts.Add(pin);
+        }
+        // PanelContainer 把内容和命中层叠放；空文字按钮保留原生焦点、悬停和鼠标命中。
+        var hit = _kit.Button(panel, ButtonStyle.Ghost, "");
+        hit.SizeFlagsHorizontal = hit.SizeFlagsVertical = SizeFlags.ExpandFill;
+        hit.TooltipText = $"SLOT {slot.Slot.Value.TrimStart('s').PadLeft(2, '0')}";
+        return new SaveCard(hit, panel, contacts, empty);
     }
 
-    private void TryThumbnail(Control holder, SlotId slot, Rect2 rect)
+    private UiFx CardFx(bool empty, bool selected) => new(Fill: empty ? null : "surface.solid",
+        Line: selected ? "primary.line" : empty ? "line.control" : "line.panel",
+        Chamfer: _kit.Tokens.Chamfer("card"), Flags: (empty ? UiFlags.Dashed : 0) | (selected ? UiFlags.SelectedIris : 0));
+
+    private void TryThumbnail(Control parent, SlotId slot)
     {
         var bytes = Svc<ISaveService>().Thumbnail(slot);
         if (bytes is null || bytes.Length == 0) return;
         var image = new Image();
         if (image.LoadWebpFromBuffer(bytes) != Error.Ok) return;
-        holder.AddChild(new TextureRect
+        parent.AddChild(new TextureRect
         {
             Texture = ImageTexture.CreateFromImage(image),
-            Position = rect.Position,
-            Size = rect.Size,
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-            MouseFilter = MouseFilterEnum.Ignore
+            MouseFilter = MouseFilterEnum.Ignore,
         });
     }
 
     private void Select(int index)
     {
-        var saves = Svc<ISaveService>();
-        var slots = saves.Slots;
-        var latest = saves.Continue;
+        var slots = Svc<ISaveService>().Slots;
         _selected = index;
-        for (var i = 0; i < _cards.Count && i < slots.Count; i++) BuildCard(_cards[i].Card, slots[i], slots[i].Slot == latest, i == index);
+        for (var i = 0; i < _cards.Count; i++)
+        {
+            var card = _cards[i];
+            var selected = i == index;
+            _kit.Apply(card.Panel, CardFx(card.Empty, selected));
+            card.Hit.Selected = selected;
+            foreach (var pin in card.Contacts)
+                _kit.Apply(pin, new UiFx(Fill: selected ? "primary.fill" : null, Line: selected ? "primary.line" : "line.hair"));
+        }
         var slot = slots[index];
-        var empty = slot.Meta is null;
         var overwrite = _overwrite is not null && slot.Health != SlotHealth.Empty;
         _primary.Visible = !overwrite;
         if (_overwrite is not null) _overwrite.Visible = overwrite;
-        _primary.Text = UiKit.T(empty ? "saves.new_here" : "saves.load");
+        _primary.Text = UiKit.T(slot.Meta is null ? "saves.new_here" : "saves.load");
         _primary.OffReason = UiKit.T("saves.only_from_title");
         _primary.Off = !_fromTitle || slot.Health == SlotHealth.Corrupt;
         _detail.Text = slot.Health switch
@@ -190,48 +206,44 @@ public partial class SavePage : Control
         };
     }
 
-    /// <summary>覆盖确认框：画在本页内，背后 scrim 并挡住鼠标；Tab 与方向键只在两个钮之间走，默认焦点在取消。</summary>
     private void ShowConfirm()
     {
         if (_confirm is not null || !_fromTitle) return;
         var slot = Svc<ISaveService>().Slots[_selected];
-        var view = GetViewportRect().Size;
-        _confirm = new Control { Position = Vector2.Zero, Size = view, MouseFilter = MouseFilterEnum.Stop };
-        AddChild(_confirm);
-        _kit.Box(_confirm, new Rect2(Vector2.Zero, view), new UiFx(Fill: "scrim", Margin: 0));
-        var size = new Vector2(480, 232);
-        var dialog = new Control { Position = ((view - size) / 2).Round(), Size = size, MouseFilter = MouseFilterEnum.Ignore };
-        _confirm.AddChild(dialog);
-        _kit.Box(dialog, new Rect2(Vector2.Zero, size), new UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: _kit.Tokens.Chamfer("card"),
-            Flags: UiFlags.Highlight | UiFlags.Via));
-        _kit.Text(dialog, UiKit.T("saves.overwrite.title"), "h3", "danger.text", new Vector2(32, 28));
-        _kit.Text(dialog, UiKit.T("saves.overwrite.body", ("slot", slot.Slot.Value.TrimStart('s').PadLeft(2, '0'))), "small", "text.2",
-            new Vector2(32, 76), width: size.X - 64, wrap: true);
-        var cancel = _kit.Button(dialog, ButtonStyle.Secondary, UiKit.T("saves.overwrite.cancel"), new Rect2(32, size.Y - 32 - 40, 132, 40),
-            pressed: HideConfirm);
-        var ok = _kit.Button(dialog, ButtonStyle.Danger, UiKit.T("saves.overwrite"), new Rect2(size.X - 32 - 152, size.Y - 32 - 44, 152, 44), "button.primary", 20,
-            pressed: () => _ = Act());
-        LoopFocus(cancel, ok);
-        LoopFocus(ok, cancel);
-        cancel.GrabFocus();
+        _confirm = _kit.Layout.Host(_dialogParent, "OverwriteConfirm");
+        _confirm.MouseFilter = MouseFilterEnum.Stop;
+        var scrim = _kit.Box(_confirm, new UiFx(Fill: "scrim", Margin: 0));
+        scrim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        var dialog = _kit.Layout.Dialog(_confirm, UiKit.T("saves.overwrite.title"));
+        dialog.Tabs.Visible = false;
+        _kit.Text(dialog.Body, UiKit.T("saves.overwrite.body", ("slot", slot.Slot.Value.TrimStart('s').PadLeft(2, '0'))), "small", "text.2");
+        var cancel = _kit.Button(dialog.Footer, ButtonStyle.Secondary, UiKit.T("saves.overwrite.cancel"), pressed: HideConfirm);
+        _kit.Button(dialog.Footer, ButtonStyle.Danger, UiKit.T("saves.overwrite"), "button.primary", pressed: () => _ = Act());
+        FocusWhenInteractive(cancel);
     }
 
-    private static void LoopFocus(TechButton self, TechButton other)
+    private void ReleaseConfirm()
     {
-        self.FocusNext = self.FocusPrevious = self.FocusNeighborLeft = self.FocusNeighborRight = other.GetPath();
-        self.FocusNeighborTop = self.FocusNeighborBottom = self.GetPath();
+        if (_confirm is null) return;
+        _confirm.Visible = false;
+        _confirm.GetParent()?.RemoveChild(_confirm);
+        _confirm.QueueFree();
+        _confirm = null;
     }
 
     private void HideConfirm()
     {
-        if (_confirm is null) return;
-        _confirm.Visible = false;
-        _confirm.QueueFree();
-        _confirm = null;
-        (_overwrite is { Visible: true } ? _overwrite : _cards[_selected].Hit).GrabFocus();
+        ReleaseConfirm();
+        if (_cards.Count > 0) FocusWhenInteractive(_overwrite is { Visible: true } ? _overwrite : _cards[_selected].Hit);
     }
 
-    /// <summary>Esc 先取消确认框；有框返回 true，由界面根决定是否还要关页。</summary>
+    private static void FocusWhenInteractive(Control target)
+    {
+        // 根宿主先仲裁上层输入；隐藏 HUD 和被上层遮挡的页面不争抢焦点。
+        if (target.IsVisibleInTree() && target.GetFocusModeWithOverride() != FocusModeEnum.None) target.GrabFocus();
+    }
+
+    /// <summary>Esc 优先取消覆盖确认。</summary>
     public bool DismissConfirm()
     {
         if (_confirm is null) return false;
@@ -242,8 +254,7 @@ public partial class SavePage : Control
     private async Task Act()
     {
         if (!_fromTitle) return;
-        var slots = Svc<ISaveService>().Slots;
-        var slot = slots[_selected];
+        var slot = Svc<ISaveService>().Slots[_selected];
         var request = _intent == SaveIntent.NewGame || slot.Meta is null
             ? new EnterRequest(EnterKind.NewGame, slot.Slot)
             : new EnterRequest(EnterKind.LoadSlot, slot.Slot);

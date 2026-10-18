@@ -10,7 +10,8 @@ public sealed class QualityCatalog
 {
     public const int Count = 11;
     public static readonly QualityKnob[] All = Enum.GetValues<QualityKnob>();
-    public static readonly float[] RenderScales = [0.5f, 0.59f, 0.67f, 0.77f, 1f];
+    public static readonly IReadOnlyList<float> RenderScales = Array.AsReadOnly<float>([0.5f, 0.59f, 0.67f, 0.77f, 1f]);
+    private static readonly IReadOnlyList<float> ShadowDistances = Array.AsReadOnly<float>([600, 1000, 1600]);
     public static readonly (int Width, int Height)[] WindowSizes =
         [(1920, 1080), (1280, 720), (1600, 900), (2560, 1440), (3840, 2160)];
     private static readonly QualityPreset[] Presets = [QualityPreset.Balanced, QualityPreset.Fine, QualityPreset.Ultra];
@@ -31,10 +32,12 @@ public sealed class QualityCatalog
             Spec(QualityKnob.WindowSize, "WP-32", ApplyClass.UnderVeil, KnobKind.Performance, 0, WindowSizes.Length - 1, 1, 0),
             Spec(QualityKnob.VSync, "WP-32", ApplyClass.Immediate, KnobKind.Performance, 0, 1, 1, 0),
             Spec(QualityKnob.FrameCap, "WP-32", ApplyClass.Immediate, KnobKind.Performance, 0, 4, 1, 0),
-            Spec(QualityKnob.RenderScale, "WP-32", ApplyClass.UnderVeil, KnobKind.Performance, 0.5f, 1, 0, 0.5f),
+            Spec(QualityKnob.RenderScale, "WP-32", ApplyClass.UnderVeil, KnobKind.Performance,
+                RenderScales[0], RenderScales[^1], 0, RenderScales[0], values: RenderScales),
             Spec(QualityKnob.AntiAliasing, "WP-05", ApplyClass.UnderVeil, KnobKind.Performance, 0, 1, 1, 1, false),
             Spec(QualityKnob.ShadowQuality, "WP-03", ApplyClass.Immediate, KnobKind.Floor, 0, 2, 1, 0),
-            Spec(QualityKnob.ShadowDistance, "WP-03", ApplyClass.Immediate, KnobKind.Performance, 600, 1600, 0, 600),
+            Spec(QualityKnob.ShadowDistance, "WP-03", ApplyClass.Immediate, KnobKind.Performance,
+                ShadowDistances[0], ShadowDistances[^1], 0, ShadowDistances[0], values: ShadowDistances),
             Spec(QualityKnob.FoliageDensity, "WP-23", ApplyClass.Immediate, KnobKind.Performance, 0.75f, 1, 0.25f, 0.75f),
             Spec(QualityKnob.ReflectionInterval, "WP-24", ApplyClass.Immediate, KnobKind.Floor, 2, 4, 1, 4, false),
             Spec(QualityKnob.ParticleDensity, "WP-45b", ApplyClass.Immediate, KnobKind.Performance, 0.5f, 1, 0.25f, 0.5f),
@@ -104,12 +107,7 @@ public sealed class QualityCatalog
         if (value < spec.Min || value > spec.Max) return false;
         if (spec.HigherIsBetter ? value < spec.WorstAllowed : value > spec.WorstAllowed) return false;
         if (spec.Step > 0 && Math.Abs((value - spec.Min) / spec.Step - Math.Round((value - spec.Min) / spec.Step)) > 0.0001) return false;
-        return knob switch
-        {
-            QualityKnob.RenderScale => RenderScales.Any(scale => Math.Abs(scale - value) < 0.0001f),
-            QualityKnob.ShadowDistance => value is 600 or 1000 or 1600,
-            _ => true,
-        };
+        return spec.Values is null || spec.Values.Contains(value);
     }
 
     public float[] Resolve(QualityProfile profile, QualityPreset customBase)
@@ -140,6 +138,6 @@ public sealed class QualityCatalog
     }
 
     private static KnobSpec Spec(QualityKnob knob, string owner, ApplyClass apply, KnobKind kind,
-        float min, float max, float step, float worst, bool higher = true) =>
-        new(knob, owner, apply, kind, min, max, step, worst, higher, "quality." + Name(knob));
+        float min, float max, float step, float worst, bool higher = true, IReadOnlyList<float>? values = null) =>
+        new(knob, owner, apply, kind, min, max, step, worst, higher, "quality." + Name(knob)) { Values = values };
 }

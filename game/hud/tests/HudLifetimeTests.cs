@@ -7,6 +7,7 @@ using Campus.Contracts.Settings;
 using Campus.Hud;
 using Campus.Hud.Motion;
 using Campus.Hud.Style;
+using Campus.Hud.Widgets;
 using Campus.Kernel.Materials;
 using Campus.Kernel.Registry;
 using Campus.Kernel.World;
@@ -100,24 +101,35 @@ public sealed class HudLifetimeTests
             servicesProperty.SetValue(null, registry);
             hud = new HudRoot();
             parent.AddChild(hud);
-            var root = hud.GetNode<Control>("Root");
-            var corners = root.GetNode<Control>("Corners");
-            var residentCount = corners.GetChildCount();
+            var pages = hud.PageHost;
+            var corners = hud.CornerHost;
+            var residentCount = Residents(corners);
             AssertThat(residentCount > 0).OverrideFailureMessage("Playing HUD did not build its resident controls.").IsTrue();
             for (var cycle = 0; cycle < 3; cycle++)
             {
                 AssertThat(router.Layers == 3 && router.Observers == 1 && flow.Observers == 1).OverrideFailureMessage("HUD registered duplicate input layers or flow observers.").IsTrue();
                 AssertThat(Subscribers(world, "InstanceChanged") == worldBaseline + 2).OverrideFailureMessage("HUD root and theme clock did not bind world notifications exactly once.").IsTrue();
+                var dialog = new Control();
+                hud.DialogHost.AddChild(dialog);
+                AssertThat(hud.PageHost.FocusBehaviorRecursive == Control.FocusBehaviorRecursiveEnum.Disabled)
+                    .OverrideFailureMessage("A visible dialog did not disable the page host.").IsTrue();
                 parent.RemoveChild(hud);
                 AssertThat(router.Layers == 0 && router.Observers == 0 && flow.Observers == 0).OverrideFailureMessage("Tree exit retained input layers or service observers.").IsTrue();
                 AssertThat(Subscribers(settings, "Changed") == settingsBaseline && Subscribers(world, "InstanceChanged") == worldBaseline).OverrideFailureMessage("Tree exit retained settings/world observers.").IsTrue();
-                AssertThat(corners.GetChildCount() == 0).OverrideFailureMessage("Queued residents remained parented and could reenter before deletion.").IsTrue();
+                AssertThat(Residents(corners) == 0).OverrideFailureMessage("Queued residents remained parented and could reenter before deletion.").IsTrue();
+                // 退树后释放上层内容，宿主观察必须已解除；重入时重新观察现存子件。
+                hud.DialogHost.RemoveChild(dialog);
+                dialog.Free();
                 router.SetInterfaceMode(!router.InterfaceMode);
                 flow.SetState(AppState.Boot);
                 flow.SetState(AppState.Playing);
                 parent.AddChild(hud);
-                AssertThat(ReferenceEquals(root, hud.GetNode<Control>("Root")) && corners.GetChildCount() == residentCount).OverrideFailureMessage("Reentry duplicated the root or failed to rebuild residents.").IsTrue();
+                AssertThat(ReferenceEquals(pages, hud.PageHost) && Residents(corners) == residentCount).OverrideFailureMessage("Reentry duplicated the hosts or failed to rebuild residents.").IsTrue();
+                AssertThat(hud.PageHost.FocusBehaviorRecursive == Control.FocusBehaviorRecursiveEnum.Inherited)
+                    .OverrideFailureMessage("Reentry retained the detached dialog's focus block.").IsTrue();
             }
+            // 直接带可见弹层释放根，覆盖退出时子节点信号与宿主销毁的顺序。
+            hud.DialogHost.AddChild(new Control());
         }
         finally
         {
@@ -138,6 +150,9 @@ public sealed class HudLifetimeTests
 
     private static int Subscribers(object source, string name) =>
         ((Delegate?)source.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(source))?.GetInvocationList().Length ?? 0;
+
+    private static int Residents(Node root) => root.GetChildren().Sum(child =>
+        (child is SpeedBar or TimeCard or TimeStrip or WeatherStrip ? 1 : 0) + Residents(child));
 
     private sealed class Probe : IPaletteProbe
     {

@@ -37,7 +37,10 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     private IAppFlow _flow = null!;
     private IAudioService _audio = null!;
     private UiThemeClock _clock = null!;
-    private Control _root = null!, _corners = null!, _minimapSlot = null!;
+    private Control _root = null!, _safeFrame = null!, _corners = null!, _minimapSlot = null!;
+    private Control _backgroundHost = null!, _pageHost = null!, _dialogHost = null!, _hintHost = null!;
+    private VBoxContainer _topLeft = null!, _topRight = null!, _bottomLeft = null!, _bottomRight = null!;
+    private float _cornerAlpha = 1;
     private Resident? _resident;
     private PerfReadout? _perf;
     private Toast _toast = null!;
@@ -52,6 +55,13 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     private double _refreshClock = RefreshInterval;
 
     public Control MinimapSlot => _minimapSlot;
+    public Control BackgroundHost => _backgroundHost;
+    public Control SafeFrame => _safeFrame;
+    public Control CornerHost => _corners;
+    public Control PageHost => _pageHost;
+    public Control DialogHost => _dialogHost;
+    public Control HintHost => _hintHost;
+    public UiKit Ui => _kit;
 
     public HudRoot()
     {
@@ -65,6 +75,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         if (_initialized)
         {
             ConnectInput();
+            BindHostInput();
             BindEvents();
             _kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
             _primed = false;
@@ -102,13 +113,25 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         AddChild(_root);
         _root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
-        _minimapSlot = new Control { Name = "MinimapSlot", MouseFilter = Control.MouseFilterEnum.Ignore, Size = tokens.V2("metrics", "size", "minimap") };
-        _root.AddChild(_minimapSlot);
-        _corners = new Control { Name = "Corners", MouseFilter = Control.MouseFilterEnum.Ignore };
-        _root.AddChild(_corners);
-        _corners.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _backgroundHost = _kit.Layout.Host(_root, "BackgroundHost");
+        _safeFrame = _kit.Layout.SafeFrame(_root);
+        _corners = _kit.Layout.Host(_safeFrame, "CornerHost");
+        // 树顺序就是 Tab 阅读序：左上、右上、左下、右下。
+        _topLeft = _kit.Layout.Corner(_corners, Control.LayoutPreset.TopLeft);
+        _topRight = _kit.Layout.Corner(_corners, Control.LayoutPreset.TopRight);
+        _bottomLeft = _kit.Layout.Corner(_corners, Control.LayoutPreset.BottomLeft);
+        _bottomRight = _kit.Layout.Corner(_corners, Control.LayoutPreset.BottomRight);
+        _minimapSlot = _kit.Layout.Add(_topLeft, new Control
+        {
+            Name = "MinimapSlot", CustomMinimumSize = tokens.V2("metrics", "size", "minimap")
+        });
+        _pageHost = _kit.Layout.Host(_safeFrame, "PageHost");
+        _dialogHost = _kit.Layout.Host(_safeFrame, "DialogHost");
+        _hintHost = _kit.Layout.Host(_safeFrame, "HintHost");
+        UiLayout.SetInteractive(_backgroundHost, false);
+        UiLayout.SetInteractive(_hintHost, false);
 
-        _title = TitleMenu.Create(_kit, _root);
+        _title = TitleMenu.Create(_kit, _pageHost, _backgroundHost);
         _title.SavesRequested += () => OpenSaves(fromTitle: true);
         _title.OverwriteRequested += () => OpenSaves(fromTitle: true, SaveIntent.NewGame);
         _title.SettingsRequested += () => OpenSettings(SettingsPage.General, fromTitle: true);
@@ -116,15 +139,15 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         _title.QuitRequested += RequestQuit;
         _title.Notice += text => _toast.Show(text);
         ConnectInput();
-        _settingsCard = SettingsCard.Create(_kit, _root, _settings, _router);
+        _settingsCard = SettingsCard.Create(_kit, _pageHost, _settings, _router);
         _settingsCard.CloseRequested += CloseSettings;
         _settingsCard.QuitRequested += RequestQuit;
         _settingsCard.ToTitleRequested += () => { CloseSettings(); _ = _flow.ReturnToTitle(); };
-        _savePage = SavePage.Create(_kit, _root);
+        _savePage = SavePage.Create(_kit, _pageHost, _dialogHost);
         _savePage.CloseRequested += CloseSaves;
-        _toast = Toast.Create(_kit, _root);
-
+        _toast = Toast.Create(_kit, _hintHost);
         _initialized = true;
+        BindHostInput();
         BindEvents();
         _kit.SetResidentFollows(_settings.Resident == ResidentTheme.Follow);
         _lastMode = _model.Mode;
@@ -146,9 +169,10 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
             _idle += (float)delta;
         else _idle = 0;
         var target = _idle >= IdleFade ? 0f : 1f;
-        var step = (float)delta / (target < _corners.Modulate.A ? 1.2f : 0.18f);
-        var a = Mathf.MoveToward(_corners.Modulate.A, target, _motion.Level == MotionLevel.Instant ? 1 : step);
-        _corners.Modulate = new Color(1, 1, 1, a);
+        var step = (float)delta / _motion.Fade(target < _cornerAlpha ? 1.2f : 0.18f);
+        _cornerAlpha = Mathf.MoveToward(_cornerAlpha, target, _motion.Level == MotionLevel.Instant ? 1 : step);
+        FadeResidents(_cornerAlpha, target > 0);
+        SyncHostInput();
         if (_weatherHeld)
         {
             _weatherHold += (float)delta;
@@ -164,11 +188,13 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
 
     public override void _ExitTree()
     {
+        UnbindHostInput();
         if (_bound)
         {
             _bound = false;
             _clock.Switched -= OnThemeSwitched;
             _root.Resized -= Layout;
+            _safeFrame.Resized -= Layout;
             _settings.Changed -= OnSettingsChanged;
             _flow.Changed -= OnFlowChanged;
             _model.World.InstanceChanged -= OnWorldChanged;

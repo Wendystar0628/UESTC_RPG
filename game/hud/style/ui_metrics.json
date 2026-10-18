@@ -56,6 +56,7 @@
       "floatingCardWidth": 400,
       "cardMinWidth": 400,
       "faderTrackMinWidth": 168,
+      "mapScaleWidth": 200,
       "buttonPadX": 16,
       "buttonPadY": 4,
       "segmentPadX": 6,
@@ -66,7 +67,6 @@
     "space": {
       "screenEdge": 32,
       "panelPad": 16,
-      "panelPadWide": 20,
       "pagePad": 24,
       "control": 8,
       "group": 16
@@ -98,11 +98,7 @@
       "weatherStrip": [440, 52],
       "weatherCell": 36,
       "speedBar": [392, 64],
-      "speedLed": [7, 14],
-      "settingsCard": [620, 1016],
-      "minimap": [244, 272],
-      "hudIconButton": 40,
-      "memoryCard": [400, 212]
+      "minimap": [244, 272]
     },
     "type": {
       "_ref": "UI-VISUAL；size 逻辑像素 / lineHeight 倍数 / tracking em",
@@ -183,6 +179,9 @@
     "icon": { "grid": 24, "live": 20, "sizes": [16, 20, 24], "mapMarker": [20, 28], "miterLimit": 4, "innerRadius": 1, "solidMax": 0.25 },
     "map": {
       "_ref": "UI-VISUAL 令牌中的地图色表里的几何；颜色在 ui.json 的 map 段",
+      "minimapInset": 9,
+      "minimapBarHeight": 28,
+      "travelThumbnailAspect": [16, 9],
       "map.bound": { "dash": [5, 3] },
       "map.label.halo": { "width": 2 },
       "map.player": { "lineWidth": 1.5, "glow": { "light": 0, "dark": 4 } }

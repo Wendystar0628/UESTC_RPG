@@ -7,29 +7,24 @@ namespace Campus.Hud.Pages;
 
 public enum SettingsPage : byte { Keys, General, Graphics, Sound, Rebind, Licenses }
 
-/// <summary>
-/// 设置卡（UI-VISUAL、UI-NAV、SYS-GRAPHICS）：贴左的大页，620×1016，切角 14，随主题；不压暗，右侧 2/3 留给实景。
-/// 页：键位、设置、画面（按 KnobSpec 生成，只经 IQualityService）、声音（只经 IAudioService）、改键、许可；底部"返回标题""退出"。
-/// 打开期间经 ICameraRig.LockInput(Menu) 占用观者输入。内容在打开时才建、关上就释放：引擎只在释放节点时归还
-/// 实例参数槽（<see cref="UiKit.Holders"/>），隐藏的大页不该和 3D 流式实例抢同一个池；画面页没应用的改动跨开关保留。
-/// </summary>
+/// <summary>贴左的设置页：容器安排页头、可换行页签、滚动正文和始终可见的操作栏；关闭即释放。</summary>
 public partial class SettingsCard : Control
 {
     private static readonly SettingsPage[] Order = [SettingsPage.Keys, SettingsPage.General, SettingsPage.Graphics, SettingsPage.Sound, SettingsPage.Rebind, SettingsPage.Licenses];
-
-    private readonly Dictionary<SettingsPage, Control> _pages = [];
+    private readonly Dictionary<SettingsPage, VBoxContainer> _pages = [];
     private readonly HashSet<SettingsPage> _filled = [];
     private readonly List<TechButton> _tabs = [];
     private UiKit _kit = null!;
-    private IInputRouter _router = null!;   // 改键与键名经 IInputRouter（WP-06）
+    private IInputRouter _router = null!;
     private HudSettings _settings = null!;
-    private Panel _tabBar = null!;
-    private ScrollContainer _scroll = null!;
+    private UiPageFrame _frame = null!;
+    private VBoxContainer _pageActions = null!;
     private TechButton _toTitle = null!;
     private IDisposable? _lock;
     private SettingsPage _page = SettingsPage.Graphics;
     private string? _rebindAction;
     private IDisposable? _rebindLock;
+    private Tween? _opening;
     private bool _built;
 
     public event Action? CloseRequested;
@@ -42,15 +37,11 @@ public partial class SettingsCard : Control
     {
         var card = new SettingsCard
         {
-            _kit = kit,
-            _settings = settings,
-            _router = router,
-            Position = new Vector2(32, 32),
-            Size = kit.Tokens.V2("metrics", "size", "settingsCard"),
-            MouseFilter = MouseFilterEnum.Stop,
-            Visible = false,
+            _kit = kit, _settings = settings, _router = router,
+            MouseFilter = MouseFilterEnum.Ignore, Visible = false,
         };
         parent.AddChild(card);
+        card.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         return card;
     }
 
@@ -58,67 +49,44 @@ public partial class SettingsCard : Control
     {
         _built = true;
         var k = _kit;
-        var chamfer = k.Tokens.Chamfer("page");
+        _frame = k.Layout.Page(this, UiKit.T("settings.title"));
         var frost = _settings.Frost && !_settings.ReduceTransparency;
+        var fill = _settings.ReduceTransparency ? "surface.solid" : frost ? "surface.frost" : "surface.panel";
+        k.Apply(_frame.Panel, new UiFx(Fill: fill, Line: "line.panel", Chamfer: k.Tokens.Chamfer("page"), Flags: UiFlags.Highlight | UiFlags.Via));
+        _frame.Panel.MouseFilter = MouseFilterEnum.Stop;
         if (frost)
         {
-            AddChild(new BackBufferCopy { CopyMode = BackBufferCopy.CopyModeEnum.Rect, Rect = new Rect2(Vector2.Zero, Size) });
-            var blur = new ColorRect { Size = Size, Color = Colors.White, MouseFilter = MouseFilterEnum.Ignore, Material = k.Materials.Frost };
-            AddChild(blur);
-            blur.SetInstanceShaderParameter("chamfer", chamfer);
+            var copy = new BackBufferCopy { CopyMode = BackBufferCopy.CopyModeEnum.Rect };
+            _frame.Shell.AddChild(copy);
+            _frame.Shell.MoveChild(copy, 0);
+            var blur = new ColorRect { Color = Colors.White, MouseFilter = MouseFilterEnum.Ignore, Material = k.Materials.Frost };
+            _frame.Shell.AddChild(blur);
+            _frame.Shell.MoveChild(blur, 1);
+            blur.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            blur.SetInstanceShaderParameter("chamfer", k.Tokens.Chamfer("page"));
+            void ResizeCopy() => copy.Rect = _frame.Panel.GetRect();
+            _frame.Panel.Resized += ResizeCopy;
+            ResizeCopy();
         }
-        var fill = _settings.ReduceTransparency ? "surface.solid" : frost ? "surface.frost" : "surface.panel";
-        k.Box(this, new Rect2(Vector2.Zero, Size), new UiFx(Fill: fill, Line: "line.panel", Chamfer: chamfer, Flags: UiFlags.Highlight | UiFlags.Via));
-
-        const float x = 24;
-        var width = Size.X - 48;
-        k.Text(this, UiKit.T("settings.title"), "h2", "text.1", new Vector2(x, 18));
-        k.Text(this, "SETTINGS", "mono-caps", "text.2", new Vector2(x + 62, 30));
-        var close = k.Button(this, ButtonStyle.Icon, "", new Rect2(Size.X - 24 - 32, 18, 32, 32), padX: 4, icon: "close", iconMax: 20, padY: 4,
-            pressed: () => CloseRequested?.Invoke());
+        var close = k.Button(_frame.Header, ButtonStyle.Icon, "", icon: "close", pressed: () => CloseRequested?.Invoke());
         close.TooltipText = UiKit.T("ui.common.close") + " · Esc";
-
-        float tx = x;
+        close.AccessibilityName = UiKit.T("ui.common.close");
         for (var i = 0; i < Order.Length; i++)
         {
             var page = Order[i];
-            var label = UiKit.T("settings.tab." + Key(page)) + " " + (i + 1);
-            var probe = k.Text(this, label, "body", "text.2", Vector2.Zero);
-            var w = k.Width(probe) + 4;
-            probe.QueueFree();
-            var tab = k.Button(this, ButtonStyle.Tab, label, new Rect2(tx, 64, w, 38), "body", 0, padY: 2);
+            var tab = k.Button(_frame.Tabs, ButtonStyle.Tab, UiKit.T("settings.tab." + Key(page)) + " " + (i + 1));
             tab.Pressed += () => Show(page);
             _tabs.Add(tab);
-            tx += w + 22;
-        }
-        _tabBar = k.Box(this, new Rect2(x, 100, 40, 2), new UiFx(Fill: "primary.line"));
-        k.Box(this, new Rect2(x, 102, width, 1), new UiFx(Fill: "line.hair"));
-
-        _scroll = new ScrollContainer
-        {
-            Position = new Vector2(x - 8, 114),
-            Size = new Vector2(width + 16, Size.Y - 114 - 76),
-            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-            MouseFilter = MouseFilterEnum.Pass,
-        };
-        AddChild(_scroll);
-        _scroll.GetVScrollBar().ThemeTypeVariation = "ScrollThin";
-        _scroll.GetVScrollBar().Material = k.Materials.Text;
-        k.Recolor(_scroll.GetVScrollBar(), "line.scroll");
-        var stack = new VBoxContainer { CustomMinimumSize = new Vector2(width + 8, 0) };
-        _scroll.AddChild(stack);
-        foreach (var page in Order)
-        {
-            // 各页的内容在第一次切到它时才填（Fill），开卡只付当前这一页的代价
-            var content = new Control { CustomMinimumSize = new Vector2(width + 8, 0), MouseFilter = MouseFilterEnum.Pass, Visible = false };
-            stack.AddChild(content);
+            var content = k.Layout.Stack(_frame.Body);
+            content.Visible = false;
             _pages[page] = content;
         }
-
-        var footY = Size.Y - 64;
-        k.Box(this, new Rect2(x, footY - 12, width, 1), new UiFx(Fill: "line.hair"));
-        _toTitle = k.Button(this, ButtonStyle.Secondary, UiKit.T("settings.to_title"), new Rect2(x, footY, 132, 40), pressed: () => ToTitleRequested?.Invoke());
-        k.Button(this, ButtonStyle.Secondary, UiKit.T("settings.quit"), new Rect2(Size.X - x - 132, footY, 132, 40), pressed: () => QuitRequested?.Invoke());
+        // 页内操作和全局操作在滚动区外；换页只切换本页动作。
+        var footer = k.Layout.Stack(_frame.Footer, groups: false);
+        _pageActions = k.Layout.Stack(footer, groups: false);
+        var navigation = k.Layout.Flow(footer);
+        _toTitle = k.Button(navigation, ButtonStyle.Secondary, UiKit.T("settings.to_title"), pressed: () => ToTitleRequested?.Invoke());
+        k.Button(navigation, ButtonStyle.Secondary, UiKit.T("settings.quit"), pressed: () => QuitRequested?.Invoke());
     }
 
     public void Open(SettingsPage page, bool fromTitle)
@@ -132,13 +100,9 @@ public partial class SettingsCard : Control
             Visible = true;
             _lock ??= Lock(InputLockReason.Menu);
             Modulate = new Color(1, 1, 1, 0);
-            var t = CreateTween();
-            t.TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.26f));
-            if (_kit.Motion.Spatial)
-            {
-                Position = new Vector2(24, 32);
-                t.Parallel().TweenProperty(this, "position:x", 32f, 0.26f).SetTrans(Tween.TransitionType.Quart).SetEase(Tween.EaseType.Out);
-            }
+            _opening?.Kill();
+            _opening = CreateTween();
+            _opening.TweenProperty(this, "modulate:a", 1f, _kit.Motion.Fade(0.26f));
         }
         RefreshGraphics();
     }
@@ -146,23 +110,31 @@ public partial class SettingsCard : Control
     public void Close()
     {
         EndCapture();
+        _opening?.Kill();
+        _opening = null;
         Visible = false;
         _lock?.Dispose();
         _lock = null;
         Release();
     }
 
-    /// <summary>释放全部内容（排队到帧末，删在本帧绘制之前）；下次打开重建。</summary>
     private void Release()
     {
-        foreach (var child in GetChildren()) child.QueueFree();
+        // 当帧再次打开也不能让待释放的旧页参与排版、焦点和绘制。
+        foreach (var child in GetChildren())
+        {
+            RemoveChild(child);
+            child.QueueFree();
+        }
         _pages.Clear();
         _filled.Clear();
         _tabs.Clear();
         _rebindRows.Clear();
+        _knobSync.Clear();
         _preset = null;
         _applyStatus = null;
         _apply = null;
+        _graphicsActions = null;
         _built = false;
     }
 
@@ -170,30 +142,27 @@ public partial class SettingsCard : Control
     {
         if (!_filled.Add(page)) return;
         var content = _pages[page];
-        var width = Size.X - 48;
-        var height = page switch
+        switch (page)
         {
-            SettingsPage.Keys => BuildKeys(content, width),
-            SettingsPage.General => BuildGeneral(content, width),
-            SettingsPage.Graphics => BuildGraphics(content, width),
-            SettingsPage.Sound => BuildSound(content, width),
-            SettingsPage.Rebind => BuildRebind(content, width),
-            SettingsPage.Licenses => BuildLicenses(content, width),
-            _ => throw new InvalidOperationException("Unknown settings page."),
-        };
-        content.CustomMinimumSize = new Vector2(width + 8, height);
+            case SettingsPage.Keys: BuildKeys(content); break;
+            case SettingsPage.General: BuildGeneral(content); break;
+            case SettingsPage.Graphics: BuildGraphics(content); break;
+            case SettingsPage.Sound: BuildSound(content); break;
+            case SettingsPage.Rebind: BuildRebind(content); break;
+            case SettingsPage.Licenses: BuildLicenses(content); break;
+            default: throw new InvalidOperationException("Unknown settings page.");
+        }
     }
 
     private void Show(SettingsPage page)
     {
+        if (_page != page) EndCapture();
         _page = page;
         Fill(page);
         foreach (var (p, content) in _pages) content.Visible = p == page;
         for (var i = 0; i < _tabs.Count; i++) _tabs[i].Selected = Order[i] == page;
-        var tab = _tabs[Array.IndexOf(Order, page)];
-        _tabBar.Position = new Vector2(tab.Position.X, 100);
-        _tabBar.Size = new Vector2(tab.Size.X, 2);
-        _scroll.ScrollVertical = 0;
+        if (_graphicsActions is not null) _graphicsActions.Visible = page == SettingsPage.Graphics;
+        _pageActions.Visible = page == SettingsPage.Graphics;
+        _frame.Scroll.ScrollVertical = 0;
     }
-
 }

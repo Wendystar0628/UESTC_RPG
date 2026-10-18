@@ -17,16 +17,6 @@ public partial class Dropdown : OptionButton
 
     public event Action<int>? Changed;
 
-    public static Dropdown Create(UiKit kit, Control parent, Vector2 position, string[] labels, int selected = -1,
-        float minWidth = 0, float height = 36, string font = "body")
-    {
-        var drop = Create(kit, parent, labels, selected, font: font);
-        drop.Position = position;
-        drop.CustomMinimumSize = new Vector2(Math.Max(drop.CustomMinimumSize.X, minWidth), Math.Max(drop.CustomMinimumSize.Y, height));
-        drop.Size = drop.GetCombinedMinimumSize();
-        return drop;
-    }
-
     public static Dropdown Create(UiKit kit, Control parent, string[] labels, int selected = -1, bool pin = false, string font = "body")
     {
         var arrow = kit.Icon("chevron_down");

@@ -6,10 +6,10 @@ uid="uid://cxjivmcf17ilg"
 
 [deps]
 
-files=["res://hud/i18n/zh.zh.translation"]
+files=["res://hud/i18n/zh.zh.translation", "res://hud/i18n/zh.en.translation"]
 
 source_file="res://hud/i18n/zh.csv"
-dest_files=["res://hud/i18n/zh.zh.translation"]
+dest_files=["res://hud/i18n/zh.zh.translation", "res://hud/i18n/zh.en.translation"]
 
 [params]
 

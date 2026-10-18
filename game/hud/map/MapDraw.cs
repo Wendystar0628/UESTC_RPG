@@ -4,30 +4,20 @@ using Godot;
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 版图式的绘制原语（UI-VISUAL）：只切左上角的面板、1 物理像素发丝线（宽度传 −1，任何缩放下都是 1 物理像素）、
-/// 过孔、走线、键帽，以及地图标记与界面图标（UI-VISUAL：网格 24、活动区 20、线宽 1.5、方头、只用 0/45/90°）。
+/// 地图画布的绘制原语（UI-VISUAL）：1 物理像素发丝线（宽度传 −1）、
+/// 走线、比例尺、地图标记与界面图标。
 /// </summary>
 public static class MapDraw
 {
     public const float Hair = -1f;
 
-    public static Vector2[] ChipPoints(Rect2 r, float chamfer)
+    private static Vector2[] ChipPoints(Rect2 r, float chamfer)
     {
         var p = r.Position;
         var e = r.End;
         return chamfer <= 0
             ? [p, new(e.X, p.Y), e, new(p.X, e.Y)]
             : [new(p.X + chamfer, p.Y), new(e.X, p.Y), e, new(p.X, e.Y), new(p.X, p.Y + chamfer)];
-    }
-
-    /// <summary>面板：平涂、外缘发丝线、顶边 1 px 内高光（UI-VISUAL）。</summary>
-    public static void Panel(CanvasItem ci, Rect2 r, float chamfer, Color fill, Color line, Color? highlight = null)
-    {
-        var pts = ChipPoints(r, chamfer);
-        ci.DrawColoredPolygon(pts, fill);
-        if (highlight is { } h && h.A > 0)
-            ci.DrawLine(new(r.Position.X + chamfer, r.Position.Y + 1.5f), new(r.End.X - 1, r.Position.Y + 1.5f), h, Hair);
-        Outline(ci, r.Grow(-0.5f), Math.Max(0, chamfer - 0.2f), line);
     }
 
     public static void Outline(CanvasItem ci, Rect2 r, float chamfer, Color line)
@@ -40,36 +30,11 @@ public static class MapDraw
         ci.DrawPolyline(closed, line, Hair);
     }
 
-    /// <summary>浮层影（shadow.float）：只给卡片这类浮层，带蓝的墨，几层衰减的平移矩形近似模糊。</summary>
-    public static void FloatShadow(CanvasItem ci, Rect2 r, float chamfer, Color shadow, float dy, float blur)
-    {
-        if (shadow.A <= 0) return;
-        const int Steps = 6;
-        for (var i = Steps; i >= 1; i--)
-        {
-            var t = i / (float)Steps;
-            var grow = blur * 0.5f * t;
-            var c = shadow; c.A *= (1 - t) * (1 - t) * 0.5f + 0.06f;
-            ci.DrawColoredPolygon(ChipPoints(new Rect2(r.Position + new Vector2(0, dy * (1 - t * 0.5f)), r.Size).Grow(grow), chamfer + grow * 0.4f), c);
-        }
-    }
-
-    public static void Via(CanvasItem ci, Vector2 c, float diameter, Color color, bool filled)
+    private static void Via(CanvasItem ci, Vector2 c, float diameter, Color color, bool filled)
     {
         var r = diameter * 0.5f;
         if (filled) ci.DrawCircle(c, r, color, true, -1, true);
         else ci.DrawArc(c, r - 0.5f, 0, Mathf.Tau, 20, color, 1f, true);
-    }
-
-    /// <summary>过孔灯：Ø6 的核，深屏加 2 px 晕（UI-VISUAL）。</summary>
-    public static void Led(CanvasItem ci, Vector2 c, MapTone t, bool on)
-    {
-        if (on && t.LedHalo.A > 0)
-        {
-            var halo = t.LedHalo; halo.A = 0.22f;
-            ci.DrawCircle(c, 5f, halo, true, -1, true);
-        }
-        Via(ci, c, 6, on ? t.LedOn : t.Control, on);
     }
 
     public static void Text(CanvasItem ci, MapFont f, Vector2 baseline, string text, Color color, HorizontalAlignment align = HorizontalAlignment.Left, float width = -1)
@@ -80,25 +45,6 @@ public static class MapDraw
     {
         ci.DrawStringOutline(f.Font, baseline, f.Shape(text), HorizontalAlignment.Left, -1, f.Size, (int)MathF.Round(haloWidth * 2), halo);
         ci.DrawString(f.Font, baseline, f.Shape(text), HorizontalAlignment.Left, -1, f.Size, color);
-    }
-
-    /// <summary>键帽：凸起面、3 px 圆角近似为小斜角、等宽字（UI-VISUAL）。</summary>
-    public static float Keycap(CanvasItem ci, MapFont f, Vector2 topLeft, string key, MapTone t)
-    {
-        var w = MathF.Max(24, MathF.Ceiling(f.Width(key)) + 14);
-        var r = new Rect2(topLeft, new Vector2(w, 24));
-        ci.DrawColoredPolygon(Bevel(r, 3), t.Raised);
-        var closed = Bevel(r.Grow(-0.5f), 2.6f);
-        ci.DrawPolyline([.. closed, closed[0]], t.Control, Hair);
-        ci.DrawLine(new(r.Position.X + 3, r.End.Y - 1.5f), new(r.End.X - 3, r.End.Y - 1.5f), t.Control, Hair);
-        Text(ci, f, new(r.Position.X, r.Position.Y + 12 + f.Ascent * 0.36f), key, t.Text1, HorizontalAlignment.Center, w);
-        return w;
-    }
-
-    private static Vector2[] Bevel(Rect2 r, float k)
-    {
-        var p = r.Position; var e = r.End;
-        return [new(p.X + k, p.Y), new(e.X - k, p.Y), new(e.X, p.Y + k), new(e.X, e.Y - k), new(e.X - k, e.Y), new(p.X + k, e.Y), new(p.X, e.Y - k), new(p.X, p.Y + k)];
     }
 
     /// <summary>走线：45°/90° 折线，两端各一个过孔，只表示"连接"（UI-VISUAL）。</summary>
@@ -290,12 +236,4 @@ public static class MapDraw
         ci.DrawRect(new Rect2(c - new Vector2(3, 3), new Vector2(6, 6)), col, false, w, true);
     }
 
-    public static void CloseGlyph(CanvasItem ci, Vector2 c, Color col, float w)
-    {
-        L(ci, c + new Vector2(-5, -5), c + new Vector2(5, 5), col, w);
-        L(ci, c + new Vector2(5, -5), c + new Vector2(-5, 5), col, w);
-    }
-
-    public static void CheckGlyph(CanvasItem ci, Vector2 c, Color col, float w)
-        => ci.DrawPolyline([c + new Vector2(-4.5f, 0.2f), c + new Vector2(-1.4f, 3.3f), c + new Vector2(4.6f, -3.2f)], col, w, true);
 }

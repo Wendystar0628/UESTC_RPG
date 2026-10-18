@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Atlas;
+using Campus.Hud.Widgets;
 using Godot;
 
 namespace Campus.Hud.Map;
@@ -17,9 +18,24 @@ public sealed record MapEntry(AtlasMarker Marker)
 }
 
 /// <summary>小地图与大地图共享的状态与令牌；不是 Godot 节点。</summary>
-public sealed class MapHudContext(MapStyle style)
+public sealed class MapHudContext(MapStyle style, UiKit ui)
 {
     public MapStyle Style { get; } = style;
+    public UiKit Ui { get; } = ui;
+    public string T(string key) => UiKit.T(key);
+    public string T(string key, params (string Name, string Value)[] args) => UiKit.T(key, args);
+    public string Name(LocalizedName name) => TranslationServer.GetLocale().StartsWith("zh", StringComparison.OrdinalIgnoreCase) || name.En.Length == 0 ? name.Zh : name.En;
+
+    public TechButton IconButton(Control parent, Action<CanvasItem, Vector2, Color, float> glyph, string key, bool pin = false)
+    {
+        var button = Ui.Button(parent, ButtonStyle.Icon, "", pin: pin);
+        button.AccessibilityName = T(key);
+        button.TooltipText = T(key);
+        var drawing = new DrawHost(h => glyph(h, h.Size * 0.5f, ToneFor(button).Text1, Style.Metrics.IconStroke));
+        button.AddChild(drawing);
+        drawing.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        return button;
+    }
     /// <summary>大页的主题：0 晶白 … 1 深屏；与 ui_night 同一语义（扫描前沿的位置）。</summary>
     public float ThemeFront { get; set; }
     public bool PageNight => ThemeFront >= 0.5f;
@@ -40,64 +56,40 @@ public sealed class MapHudContext(MapStyle style)
         return Page;
     }
 
-    /// <summary>键盘焦点：控件外 3 px 一圈 1 物理像素的核，外衬 1 px 面板底，两侧各一条冷色色散（UI-VISUAL）。</summary>
-    public static void FocusRing(CanvasItem ci, Rect2 r, MapTone t)
-    {
-        var core = r.Grow(3);
-        MapDraw.Outline(ci, core.Grow(1), 0, t.FocusBacking);
-        var a = t.IrisA; a.A *= 0.35f;
-        var b = t.IrisB; b.A *= 0.35f;
-        MapDraw.Outline(ci, core.Grow(0.7f), 0, a);
-        MapDraw.Outline(ci, core.Grow(-0.7f), 0, b);
-        MapDraw.Outline(ci, core, 0, t.PrimaryLine);
-    }
-
     public static string GroupName(WaypointGroup g) => g switch
     {
-        WaypointGroup.Overview => "总览",
-        WaypointGroup.Core => "核心",
-        WaypointGroup.South => "南",
-        WaypointGroup.West => "西",
-        WaypointGroup.North => "北",
-        WaypointGroup.East => "东",
-        WaypointGroup.Edge => "边界",
-        _ => throw new ArgumentOutOfRangeException(nameof(g)),
-    };
-
-    public static string GroupEn(WaypointGroup g) => g switch
-    {
-        WaypointGroup.Overview => "OVERVIEW",
-        WaypointGroup.Core => "CORE",
-        WaypointGroup.South => "SOUTH",
-        WaypointGroup.West => "WEST",
-        WaypointGroup.North => "NORTH",
-        WaypointGroup.East => "EAST",
-        WaypointGroup.Edge => "EDGE",
+        WaypointGroup.Overview => UiKit.T("map.group.overview"),
+        WaypointGroup.Core => UiKit.T("map.group.core"),
+        WaypointGroup.South => UiKit.T("map.group.south"),
+        WaypointGroup.West => UiKit.T("map.group.west"),
+        WaypointGroup.North => UiKit.T("map.group.north"),
+        WaypointGroup.East => UiKit.T("map.group.east"),
+        WaypointGroup.Edge => UiKit.T("map.group.edge"),
         _ => throw new ArgumentOutOfRangeException(nameof(g)),
     };
 
     public static string SeasonName(Season s) => s switch
     {
-        Season.Spring => "春",
-        Season.Summer => "夏",
-        Season.Autumn => "秋",
-        Season.Winter => "冬",
+        Season.Spring => UiKit.T("hud.season.spring"),
+        Season.Summer => UiKit.T("hud.season.summer"),
+        Season.Autumn => UiKit.T("hud.season.autumn"),
+        Season.Winter => UiKit.T("hud.season.winter"),
         _ => throw new ArgumentOutOfRangeException(nameof(s)),
     };
 
     public static string WeatherName(WeatherKind? k) => k switch
     {
-        null or WeatherKind.Clear => "晴",
-        WeatherKind.FewClouds => "少云",
-        WeatherKind.Cloudy => "多云",
-        WeatherKind.Overcast => "阴",
-        WeatherKind.Fog => "雾",
-        WeatherKind.LightRain => "小雨",
-        WeatherKind.Rain => "雨",
-        WeatherKind.Thunderstorm => "雷雨",
-        WeatherKind.AfterRain => "初晴",
-        WeatherKind.Snow => "雪",
-        WeatherKind.AfterSnow => "雪后",
+        null or WeatherKind.Clear => UiKit.T("weather.kind.clear"),
+        WeatherKind.FewClouds => UiKit.T("weather.kind.few"),
+        WeatherKind.Cloudy => UiKit.T("weather.kind.cloudy"),
+        WeatherKind.Overcast => UiKit.T("weather.kind.overcast"),
+        WeatherKind.Fog => UiKit.T("weather.kind.fog"),
+        WeatherKind.LightRain => UiKit.T("weather.kind.drizzle"),
+        WeatherKind.Rain => UiKit.T("weather.kind.rain"),
+        WeatherKind.Thunderstorm => UiKit.T("weather.kind.storm"),
+        WeatherKind.AfterRain => UiKit.T("weather.kind.clearing"),
+        WeatherKind.Snow => UiKit.T("weather.kind.snow"),
+        WeatherKind.AfterSnow => UiKit.T("weather.kind.after_snow"),
         _ => throw new ArgumentOutOfRangeException(nameof(k)),
     };
 

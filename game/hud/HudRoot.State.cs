@@ -22,7 +22,7 @@ public partial class HudRoot
             case AppState.Title:
                 ReleaseResident();
                 if (!_title.Visible) _title.Open();
-                _corners.Visible = _minimapSlot.Visible = false;
+                _minimapSlot.Visible = false;
                 break;
             case AppState.Playing:
                 BuildResident();
@@ -47,14 +47,16 @@ public partial class HudRoot
     private void SyncCorners()
     {
         SyncPerf();
-        if (!Playing || _resident is not { } r) { _corners.Visible = false; _minimapSlot.Visible = false; return; }
+        if (!Playing || _resident is not { } r) { _minimapSlot.Visible = false; SyncHostInput(); return; }
         var ui = InterfaceState && !_clean;
         _minimapSlot.Visible = !_clean && !BigPage;
-        _corners.Visible = ui && !_savePage.Visible;
-        r.Speed.Visible = !_settingsCard.Visible;
-        r.Time.Visible = _timeOpen;
-        r.Weather.Visible = _timeOpen && _model.Allows(WorldControlMask.Weather);
-        r.Strip.Visible = !_timeOpen;
+        var show = ui && !_savePage.Visible;
+        r.TopRight.Visible = show;
+        r.Speed.Visible = show && !_settingsCard.Visible;
+        r.Time.Visible = show && _timeOpen;
+        r.Weather.Visible = show && _timeOpen && _model.Allows(WorldControlMask.Weather);
+        r.Strip.Visible = show && !_timeOpen;
+        SyncHostInput();
     }
 
     private void RefreshHud()
@@ -108,6 +110,7 @@ public partial class HudRoot
         _bound = true;
         _clock.Switched += OnThemeSwitched;
         _root.Resized += Layout;
+        _safeFrame.Resized += Layout;
         _settings.Changed += OnSettingsChanged;
         _flow.Changed += OnFlowChanged;
         _model.World.InstanceChanged += OnWorldChanged;

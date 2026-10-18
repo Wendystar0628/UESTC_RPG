@@ -44,7 +44,7 @@ public partial class HudRoot
             case "saves": OpenSaves(fromTitle: true); break;
             case "title": _clean = _galleryTitle = true; _title.Open(); break;
             case "hud": break;
-            case "layout": Widgets.UiLayoutGallery.Create(_kit, _root); break;
+            case "layout": Widgets.UiLayoutGallery.Create(_kit, _pageHost); break;
             case "census": Census(3); break;
             default: throw new ArgumentException($"Unknown --ui-gallery page: {page}");
         }

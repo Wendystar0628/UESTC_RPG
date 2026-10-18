@@ -1,263 +1,321 @@
-keys,zh
-ui.common.on,开
-ui.common.off,关
-ui.common.close,关闭
-ui.common.back,返回
-hud.time.title,TIME · 时间
-hud.time.preset.morning,晨
-hud.time.preset.noon,午
-hud.time.preset.dusk,昏
-hud.time.preset.night,夜
-hud.time.reset,回到{name}
-hud.time.forward_only,时间只往前走
-hud.season.spring,春
-hud.season.summer,夏
-hud.season.autumn,秋
-hud.season.winter,冬
-hud.forecast.steady,稍后 · 天气平稳
-hud.forecast.later,稍后
-hud.forecast.tonight,今夜
-hud.mode.fly,旁观 · F
-hud.mode.walk,行走 · F
-hud.speed.stroll,漫步
-hud.speed.cycle,骑行
-hud.speed.cruise,巡航
-hud.speed.bird,飞鸟
-hud.speed.cloud,云端
-hud.button.saves,存档
-hud.button.help,说明 · H
-hud.button.settings,设置
-hud.perf.fps,帧率
-hud.perf.frame,帧时
-hud.perf.cpu_render,CPU 渲染
-hud.perf.gpu_render,GPU 渲染
-hud.perf.cpu_usage,CPU 占用
-time.shichen.zi,子时
-time.shichen.chou,丑时
-time.shichen.yin,寅时
-time.shichen.mao,卯时
-time.shichen.chen,辰时
-time.shichen.si,巳时
-time.shichen.wu,午时
-time.shichen.wei,未时
-time.shichen.shen,申时
-time.shichen.you,酉时
-time.shichen.xu,戌时
-time.shichen.hai,亥时
-time.period.late_night,深夜
-time.period.dawn,黎明
-time.period.early_morning,清晨
-time.period.morning,上午
-time.period.noon,正午
-time.period.afternoon,午后
-time.period.dusk,黄昏
-time.period.evening,傍晚
-time.period.night,夜
-weather.cell.auto,自动天气
-weather.cell.clear,晴
-weather.cell.few,少云
-weather.cell.cloudy,多云
-weather.cell.overcast,阴
-weather.cell.fog,雾
-weather.cell.precip,降水
-weather.cell.thunder,雷雨
-weather.cell.after,初晴
-weather.kind.clear,晴
-weather.kind.few,少云
-weather.kind.cloudy,多云
-weather.kind.overcast,阴
-weather.kind.fog,雾
-weather.kind.drizzle,小雨
-weather.kind.rain,雨
-weather.kind.storm,雷雨
-weather.kind.clearing,初晴
-weather.kind.snow,雪
-weather.thunder.off_season,春夏才有雷雨
-weather.thunder.off_season_toast,春夏才有雷雨 · J 换季
-weather.manual_toast,{name} · 按住 Y 自动
-weather.auto_toast,自动天气
-toast.mode.walk,行走 · F 切回旁观
-toast.mode.fly,旁观 · F 切回行走
-toast.time_forward,+1 h · {clock}
-toast.flow.paused,流逝暂停 · P 继续
-toast.flow.resumed,流逝继续
-settings.title,设置
-settings.tab.keys,键位
-settings.tab.general,设置
-settings.tab.graphics,画面
-settings.tab.sound,声音
-settings.tab.rebind,改键
-settings.tab.licenses,许可
-settings.to_title,返回标题
-settings.to_title.off,已经在开始页
-settings.quit,退出
-settings.group.keys,键位 · KEYS
-settings.group.interface,界面 · INTERFACE
-settings.group.storage,存储 · STORAGE
-settings.theme,界面主题
-settings.theme.auto,自动
-settings.theme.light,晶白
-settings.theme.dark,深屏
-settings.resident,常驻件
-settings.resident.dark,深屏
-settings.resident.follow,随主题
-settings.frost,大页磨砂
-settings.reduce_transparency,降低透明度
-settings.reduce_motion,减少动态效果
-settings.follow_system,跟随系统
-settings.ui_scale,界面缩放
-settings.single_keys,单键快捷键
-settings.show_perf,显示性能信息
-settings.storage,本机缓存
-settings.storage.clear,清除缓存
-settings.storage.done,已完成
-settings.storage.running,进行中 {pct}%
-settings.save,存档
-settings.save.ok,保存正常
-settings.save.failed,最近一次保存失败
-settings.save.none,还没有存档
-settings.save.off,不保存 · 已关闭存档
-settings.save.other_window,不保存 · 另一个窗口正在运行
-keys.menu,界面态 / 漫游态
-keys.move,移动
-keys.updown,上升 / 下降
-keys.sprint,疾跑（按住）
-keys.time,时间卡
-keys.forward,时间 +1 h（按住连续）
-keys.flow,暂停 / 继续流逝
-keys.season,下一季
-keys.weather,下一种天气（按住 0.6 s 自动）
-keys.mode,旁观 / 行走
-keys.map,大地图
-keys.index,点位目录
-keys.minimap,小地图显隐
-keys.help,操作说明
-keys.clean,纯净模式
-keys.note,时间只往前走，没有倒退键。Esc 不暂停世界；暂停流逝用 P。数字键 1–9、0 跳到点位 P01–P09、P00。
-quality.preset.balanced,均衡
-quality.preset.fine,精致
-quality.preset.ultra,极致
-quality.preset.custom,自定义
-quality.group.display,显示 · DISPLAY
-quality.group.clarity,清晰度 · CLARITY
-quality.group.lighting,光影 · LIGHTING
-quality.group.scene,场景与植被 · SCENE
-quality.group.effects,水与粒子 · EFFECTS
-quality.tag.veil,雾幕
-quality.tag.restart,重启
-quality.footnote,描线、分阶明暗与按材质的影色、柔光、平涂贴图、实时阴影与西湖倒影是本作画风，任何画质下都保留。
-quality.apply,应用
-quality.apply.nothing,没有待应用的改动
-quality.pending.now,{n} 项已生效
-quality.pending.veil,{n} 项待应用 · 雾幕约 0.3 s
-quality.pending.restart,{n} 项待应用 · 下次启动生效
-quality.result.restart,已保存 · 下次启动生效
-quality.result.deferred,过渡结束后生效
-quality.result.rejected,有项目超出范围，没有改动
-quality.display_mode,显示模式
-quality.display_mode.0,窗口
-quality.display_mode.1,无边框
-quality.display_mode.2,独占全屏
-quality.window_size,窗口尺寸
-quality.window_size.0,1920×1080
-quality.window_size.1,1280×720
-quality.window_size.2,1600×900
-quality.window_size.3,2560×1440
-quality.window_size.4,3840×2160
-quality.v_sync,垂直同步
-quality.frame_cap,帧率上限
-quality.frame_cap.0,30
-quality.frame_cap.1,60
-quality.frame_cap.2,半刷新
-quality.frame_cap.3,刷新率
-quality.frame_cap.2.hz,{hz} Hz（半刷新）
-quality.frame_cap.3.hz,{hz} Hz（刷新率）
-quality.frame_cap.4,不限
-quality.render_scale,渲染比例
-quality.anti_aliasing,抗锯齿
-quality.anti_aliasing.0,SMAA 1x
-quality.anti_aliasing.1,FXAA
-quality.shadow_quality,阴影质量
-quality.shadow_quality.0,2048·2
-quality.shadow_quality.1,4096·4
-quality.shadow_quality.2,8192·4
-quality.shadow_distance,阴影距离
-quality.foliage_density,植被与草密度
-quality.reflection_interval,西湖倒影刷新
-quality.reflection_interval.2,每 2 帧
-quality.reflection_interval.3,每 3 帧
-quality.reflection_interval.4,每 4 帧
-quality.particle_density,降水与粒子密度
-sound.group.volume,音量 · VOLUME
-sound.group.calm,减少干扰 · CALM
-sound.master,总音量
-sound.ambience,环境
-sound.foley,动作
-sound.ui,界面
-sound.music,音乐
-sound.ui_sounds,界面音效
-sound.hover,悬停与聚焦音
-sound.quiet,安静模式
-sound.mono,单声道
-sound.sudden,突发声音
-sound.sudden.normal,正常
-sound.sudden.softer,柔和
-sound.background,窗口在后台时
-sound.background.keep,保持
-sound.background.lower,压低
-sound.background.mute,静音
-rebind.group,改键 · REBIND
-rebind.note,点一项后按下新键；Esc 取消。一个键只能绑一个动作，冲突时不改。
-rebind.waiting,请按新键……
-rebind.conflict,这个键已经给了“{action}”
-rebind.action.move_forward,前进
-rebind.action.move_backward,后退
-rebind.action.move_left,向左
-rebind.action.move_right,向右
-rebind.action.move_up,上升 / 跳跃
-rebind.action.move_down,下降 / 潜行
-rebind.action.sprint,疾跑
-rebind.action.time_panel,时间卡
-rebind.action.time_forward,时间 +1 h
-rebind.action.toggle_flow,暂停 / 继续流逝
-rebind.action.next_season,下一季
-rebind.action.weather,下一种天气
-rebind.action.toggle_mode,旁观 / 行走
-rebind.action.map,大地图
-rebind.action.atlas_index,点位目录
-rebind.action.minimap,小地图
-rebind.action.help,操作说明
-rebind.action.clean_view,纯净模式
-licenses.self,《电光年华》：代码与脚本 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据 ODbL 1.0。
-licenses.osm,地图数据 © OpenStreetMap contributors，按 Open Database License（ODbL）1.0 提供。
-licenses.fonts,思源黑体 SC（Adobe）、Inter（The Inter Project Authors）、JetBrains Mono（JetBrains）：SIL Open Font License 1.1。
-licenses.godot,Godot Engine：MIT 许可，© Juan Linietsky、Ariel Manzur 与 Godot 社区。
-title.name,电光年华
-title.english,ELECTRIC YEARS · UESTC
-title.continue,继续
-title.new,新游戏
-title.saves,存档
-title.settings,设置
-title.credits,制作人员与许可
-title.quit,退出
-title.continue.none,还没有存档
-title.enter_failed,没能进入，请再试一次
-saves.title,存档
-saves.latest,最近
-saves.empty,空 · 新游戏
-saves.corrupt,无法读取
-saves.load,读取
-saves.new_here,在这里开始
-saves.only_from_title,从开始页读取或开始
-saves.place.unknown,清水河校区
-saves.detail.empty,这个存档位是空的。在这里开始新游戏，之后会一直自动保存到这里。
-saves.detail.ok,自动保存 · 保留最近 {gens} 代
-saves.detail.corrupt,存档文件损坏，无法读取
-saves.title.new_game,新游戏 · 选择存档位
-saves.detail.overwrite,这个存档位已有进度。开始新游戏会替换它，旧进度不再保留。
-saves.detail.corrupt_overwrite,存档文件损坏，无法读取。可以覆盖它重新开始。
-saves.overwrite,覆盖并开始
-saves.overwrite.title,覆盖这个存档？
-saves.overwrite.body,存档位 {slot} 里现有的进度会被新游戏替换，此后无法找回。
-saves.overwrite.cancel,取消
-rebind.rejected,这个键不能用：{reason}
+keys,zh,en
+ui.common.on,开,On
+ui.common.off,关,Off
+ui.common.close,关闭,Close
+ui.common.back,返回,Back
+hud.time.title,TIME · 时间,TIME
+hud.time.preset.morning,晨,Morning
+hud.time.preset.noon,午,Noon
+hud.time.preset.dusk,昏,Dusk
+hud.time.preset.night,夜,Night
+hud.time.reset,回到{name},Return to {name}
+hud.time.forward_only,时间只往前走,Time only moves forward
+hud.season.spring,春,Spring
+hud.season.summer,夏,Summer
+hud.season.autumn,秋,Autumn
+hud.season.winter,冬,Winter
+hud.forecast.steady,稍后 · 天气平稳,Later · Stable weather
+hud.forecast.later,稍后,Later
+hud.forecast.tonight,今夜,Tonight
+hud.mode.fly,旁观 · F,Fly · F
+hud.mode.walk,行走 · F,Walk · F
+hud.speed.stroll,漫步,Stroll
+hud.speed.cycle,骑行,Cycle
+hud.speed.cruise,巡航,Cruise
+hud.speed.bird,飞鸟,Bird
+hud.speed.cloud,云端,Cloud
+hud.button.saves,存档,Saves
+hud.button.help,说明 · H,Help · H
+hud.button.settings,设置,Settings
+hud.perf.fps,帧率,FPS
+hud.perf.frame,帧时,Frame time
+hud.perf.cpu_render,CPU 渲染,CPU render
+hud.perf.gpu_render,GPU 渲染,GPU render
+hud.perf.cpu_usage,CPU 占用,CPU use
+time.shichen.zi,子时,Zi hour
+time.shichen.chou,丑时,Chou hour
+time.shichen.yin,寅时,Yin hour
+time.shichen.mao,卯时,Mao hour
+time.shichen.chen,辰时,Chen hour
+time.shichen.si,巳时,Si hour
+time.shichen.wu,午时,Wu hour
+time.shichen.wei,未时,Wei hour
+time.shichen.shen,申时,Shen hour
+time.shichen.you,酉时,You hour
+time.shichen.xu,戌时,Xu hour
+time.shichen.hai,亥时,Hai hour
+time.period.late_night,深夜,Late night
+time.period.dawn,黎明,Dawn
+time.period.early_morning,清晨,Early morning
+time.period.morning,上午,Morning
+time.period.noon,正午,Noon
+time.period.afternoon,午后,Afternoon
+time.period.dusk,黄昏,Dusk
+time.period.evening,傍晚,Evening
+time.period.night,夜,Night
+weather.cell.auto,自动天气,Automatic weather
+weather.cell.clear,晴,Clear
+weather.cell.few,少云,Few clouds
+weather.cell.cloudy,多云,Cloudy
+weather.cell.overcast,阴,Overcast
+weather.cell.fog,雾,Fog
+weather.cell.precip,降水,Precipitation
+weather.cell.thunder,雷雨,Thunderstorm
+weather.cell.after,初晴,Clearing
+weather.kind.clear,晴,Clear
+weather.kind.few,少云,Few clouds
+weather.kind.cloudy,多云,Cloudy
+weather.kind.overcast,阴,Overcast
+weather.kind.fog,雾,Fog
+weather.kind.drizzle,小雨,Drizzle
+weather.kind.rain,雨,Rain
+weather.kind.storm,雷雨,Thunderstorm
+weather.kind.clearing,初晴,Clearing
+weather.kind.snow,雪,Snow
+weather.thunder.off_season,春夏才有雷雨,Thunderstorms occur only in spring and summer
+weather.thunder.off_season_toast,春夏才有雷雨 · J 换季,Thunderstorms occur only in spring and summer · J Change season
+weather.manual_toast,{name} · 按住 Y 自动,{name} · Hold Y for automatic weather
+weather.auto_toast,自动天气,Automatic weather
+toast.mode.walk,行走 · F 切回旁观,Walk · F to fly
+toast.mode.fly,旁观 · F 切回行走,Fly · F to walk
+toast.time_forward,+1 h · {clock},+1 h · {clock}
+toast.flow.paused,流逝暂停 · P 继续,Time paused · P to resume
+toast.flow.resumed,流逝继续,Time resumed
+settings.title,设置,Settings
+settings.tab.keys,键位,Controls
+settings.tab.general,设置,General
+settings.tab.graphics,画面,Graphics
+settings.tab.sound,声音,Sound
+settings.tab.rebind,改键,Key bindings
+settings.tab.licenses,许可,Licenses
+settings.to_title,返回标题,Return to title
+settings.to_title.off,已经在开始页,Already at the title screen
+settings.quit,退出,Quit
+settings.group.keys,键位 · KEYS,CONTROLS
+settings.group.interface,界面 · INTERFACE,INTERFACE
+settings.group.storage,存储 · STORAGE,STORAGE
+settings.theme,界面主题,Interface theme
+settings.theme.auto,自动,Automatic
+settings.theme.light,晶白,Crystal white
+settings.theme.dark,深屏,Dark screen
+settings.resident,常驻件,HUD widgets
+settings.resident.dark,深屏,Dark screen
+settings.resident.follow,随主题,Follow theme
+settings.frost,大页磨砂,Page background blur
+settings.reduce_transparency,降低透明度,Reduce transparency
+settings.reduce_motion,减少动态效果,Reduce motion
+settings.follow_system,跟随系统,Follow system
+settings.ui_scale,界面缩放,Interface scale
+settings.single_keys,单键快捷键,Single-key shortcuts
+settings.show_perf,显示性能信息,Show performance
+settings.storage,本机缓存,Local cache
+settings.storage.clear,清除缓存,Clear cache
+settings.storage.done,已完成,Complete
+settings.storage.running,进行中 {pct}%,In progress {pct}%
+settings.save,存档,Saves
+settings.save.ok,保存正常,Saving normally
+settings.save.failed,最近一次保存失败,Last save failed
+settings.save.none,还没有存档,No saves yet
+settings.save.off,不保存 · 已关闭存档,Not saving · Saving disabled
+settings.save.other_window,不保存 · 另一个窗口正在运行,Not saving · Another window is running
+keys.menu,界面态 / 漫游态,Interface / Roam
+keys.move,移动,Move
+keys.updown,上升 / 下降,Ascend / Descend
+keys.sprint,疾跑（按住）,Sprint (hold)
+keys.time,时间卡,Time card
+keys.forward,时间 +1 h（按住连续）,Time +1 h (hold to repeat)
+keys.flow,暂停 / 继续流逝,Pause / Resume time
+keys.season,下一季,Next season
+keys.weather,下一种天气（按住 0.6 s 自动）,Next weather (hold 0.6 s for automatic)
+keys.mode,旁观 / 行走,Fly / Walk
+keys.map,大地图,Map
+keys.index,点位目录,Point index
+keys.minimap,小地图显隐,Toggle minimap
+keys.help,操作说明,Help
+keys.clean,纯净模式,Clean view
+keys.note,时间只往前走，没有倒退键。Esc 不暂停世界；暂停流逝用 P。数字键 1–9、0 跳到点位 P01–P09、P00。,Time only moves forward. Esc does not pause the world; press P to pause time. Number keys 1–9 and 0 jump to points P01–P09 and P00.
+quality.preset.balanced,均衡,Balanced
+quality.preset.fine,精致,Fine
+quality.preset.ultra,极致,Ultra
+quality.preset.custom,自定义,Custom
+quality.group.display,显示 · DISPLAY,DISPLAY
+quality.group.clarity,清晰度 · CLARITY,CLARITY
+quality.group.lighting,光影 · LIGHTING,LIGHTING
+quality.group.scene,场景与植被 · SCENE,SCENE & VEGETATION
+quality.group.effects,水与粒子 · EFFECTS,WATER & PARTICLES
+quality.tag.veil,雾幕,Veil
+quality.tag.restart,重启,Restart
+quality.footnote,描线、分阶明暗与按材质的影色、柔光、平涂贴图、实时阴影与西湖倒影是本作画风，任何画质下都保留。,"Outlines, stepped shading, material-tinted shadows, soft light, flat textures, real-time shadows and West Lake reflections define the visual style and remain enabled at every quality level."
+quality.apply,应用,Apply
+quality.apply.nothing,没有待应用的改动,No pending changes
+quality.pending.now,{n} 项已生效,{n} changes applied
+quality.pending.veil,{n} 项待应用 · 雾幕约 0.3 s,{n} changes pending · Veil about 0.3 s
+quality.pending.restart,{n} 项待应用 · 下次启动生效,{n} changes pending · Effective next launch
+quality.result.restart,已保存 · 下次启动生效,Saved · Effective next launch
+quality.result.deferred,过渡结束后生效,Effective after the transition
+quality.result.rejected,有项目超出范围，没有改动,Some values are out of range; nothing changed
+quality.display_mode,显示模式,Display mode
+quality.display_mode.0,窗口,Windowed
+quality.display_mode.1,无边框,Borderless
+quality.display_mode.2,独占全屏,Exclusive fullscreen
+quality.window_size,窗口尺寸,Window size
+quality.window_size.0,1920×1080,1920×1080
+quality.window_size.1,1280×720,1280×720
+quality.window_size.2,1600×900,1600×900
+quality.window_size.3,2560×1440,2560×1440
+quality.window_size.4,3840×2160,3840×2160
+quality.v_sync,垂直同步,VSync
+quality.frame_cap,帧率上限,Frame rate cap
+quality.frame_cap.0,30,30
+quality.frame_cap.1,60,60
+quality.frame_cap.2,半刷新,Half refresh rate
+quality.frame_cap.3,刷新率,Refresh rate
+quality.frame_cap.2.hz,{hz} Hz（半刷新）,{hz} Hz (half refresh rate)
+quality.frame_cap.3.hz,{hz} Hz（刷新率）,{hz} Hz (refresh rate)
+quality.frame_cap.4,不限,Unlimited
+quality.render_scale,渲染比例,Render scale
+quality.anti_aliasing,抗锯齿,Anti-aliasing
+quality.anti_aliasing.0,SMAA 1x,SMAA 1x
+quality.anti_aliasing.1,FXAA,FXAA
+quality.shadow_quality,阴影质量,Shadow quality
+quality.shadow_quality.0,2048·2,2048·2
+quality.shadow_quality.1,4096·4,4096·4
+quality.shadow_quality.2,8192·4,8192·4
+quality.shadow_distance,阴影距离,Shadow distance
+quality.foliage_density,植被与草密度,Foliage and grass density
+quality.reflection_interval,西湖倒影刷新,West Lake reflection update
+quality.reflection_interval.2,每 2 帧,Every 2 frames
+quality.reflection_interval.3,每 3 帧,Every 3 frames
+quality.reflection_interval.4,每 4 帧,Every 4 frames
+quality.particle_density,降水与粒子密度,Precipitation and particle density
+sound.group.volume,音量 · VOLUME,VOLUME
+sound.group.calm,减少干扰 · CALM,REDUCE DISTRACTIONS
+sound.master,总音量,Master
+sound.ambience,环境,Ambience
+sound.foley,动作,Movement
+sound.ui,界面,Interface
+sound.music,音乐,Music
+sound.ui_sounds,界面音效,Interface sounds
+sound.hover,悬停与聚焦音,Hover and focus sounds
+sound.quiet,安静模式,Quiet mode
+sound.mono,单声道,Mono audio
+sound.sudden,突发声音,Sudden sounds
+sound.sudden.normal,正常,Normal
+sound.sudden.softer,柔和,Softer
+sound.background,窗口在后台时,When in the background
+sound.background.keep,保持,Keep volume
+sound.background.lower,压低,Lower volume
+sound.background.mute,静音,Mute
+rebind.group,改键 · REBIND,KEY BINDINGS
+rebind.note,点一项后按下新键；Esc 取消。一个键只能绑一个动作，冲突时不改。,"Select an action, then press a new key; Esc cancels. Each key can bind to only one action. Conflicting bindings are left unchanged."
+rebind.waiting,请按新键……,Press a new key…
+rebind.conflict,这个键已经给了“{action}”,This key is already bound to “{action}”
+rebind.action.move_forward,前进,Forward
+rebind.action.move_backward,后退,Backward
+rebind.action.move_left,向左,Left
+rebind.action.move_right,向右,Right
+rebind.action.move_up,上升 / 跳跃,Ascend / Jump
+rebind.action.move_down,下降 / 潜行,Descend / Sneak
+rebind.action.sprint,疾跑,Sprint
+rebind.action.time_panel,时间卡,Time card
+rebind.action.time_forward,时间 +1 h,Time +1 h
+rebind.action.toggle_flow,暂停 / 继续流逝,Pause / Resume time
+rebind.action.next_season,下一季,Next season
+rebind.action.weather,下一种天气,Next weather
+rebind.action.toggle_mode,旁观 / 行走,Fly / Walk
+rebind.action.map,大地图,Map
+rebind.action.atlas_index,点位目录,Point index
+rebind.action.minimap,小地图,Minimap
+rebind.action.help,操作说明,Help
+rebind.action.clean_view,纯净模式,Clean view
+licenses.name.self,电光年华,ELECTRIC YEARS
+licenses.name.osm,地图数据 · MAP DATA,Map data
+licenses.name.fonts,字体 · FONTS,Fonts
+licenses.name.godot,Godot Engine,Godot Engine
+licenses.self,《电光年华》：代码与脚本 MIT；原创美术、音频、文案与设计文档保留所有权利；OSM 派生数据 ODbL 1.0。,"ELECTRIC YEARS: Code and scripts are licensed under MIT. All rights reserved for original art, audio, text and design documents. OSM-derived data is licensed under ODbL 1.0."
+licenses.osm,地图数据 © OpenStreetMap contributors，按 Open Database License（ODbL）1.0 提供。,"Map data © OpenStreetMap contributors, provided under the Open Database License (ODbL) 1.0."
+licenses.fonts,思源黑体 SC（Adobe）、Inter（The Inter Project Authors）、JetBrains Mono（JetBrains）：SIL Open Font License 1.1。,"Source Han Sans SC (Adobe), Inter (The Inter Project Authors) and JetBrains Mono (JetBrains): SIL Open Font License 1.1."
+licenses.godot,Godot Engine：MIT 许可，© Juan Linietsky、Ariel Manzur 与 Godot 社区。,"Godot Engine: MIT license, © Juan Linietsky, Ariel Manzur and the Godot community."
+title.name,电光年华,ELECTRIC YEARS
+title.english,ELECTRIC YEARS · UESTC,ELECTRIC YEARS · UESTC
+title.continue,继续,Continue
+title.new,新游戏,New game
+title.saves,存档,Saves
+title.settings,设置,Settings
+title.credits,制作人员与许可,Credits and licenses
+title.quit,退出,Quit
+title.continue.none,还没有存档,No saves yet
+title.enter_failed,没能进入，请再试一次,Could not enter. Please try again.
+saves.title,存档,Saves
+saves.latest,最近,Latest
+saves.empty,空 · 新游戏,Empty · New game
+saves.corrupt,无法读取,Unreadable
+saves.load,读取,Load
+saves.new_here,在这里开始,Start here
+saves.only_from_title,从开始页读取或开始,Load or start from the title screen
+saves.place.unknown,清水河校区,Qingshuihe Campus
+saves.detail.empty,这个存档位是空的。在这里开始新游戏，之后会一直自动保存到这里。,This slot is empty. Start a new game here; your progress will then be saved here automatically.
+saves.detail.ok,自动保存 · 保留最近 {gens} 代,Autosave · Keeps the latest {gens} generations
+saves.detail.corrupt,存档文件损坏，无法读取,The save file is damaged and cannot be read
+saves.title.new_game,新游戏 · 选择存档位,New game · Choose a save slot
+saves.detail.overwrite,这个存档位已有进度。开始新游戏会替换它，旧进度不再保留。,This slot already has progress. Starting a new game will replace it permanently.
+saves.detail.corrupt_overwrite,存档文件损坏，无法读取。可以覆盖它重新开始。,The save file is damaged and cannot be read. You can overwrite it to start again.
+saves.overwrite,覆盖并开始,Overwrite and start
+saves.overwrite.title,覆盖这个存档？,Overwrite this save?
+saves.overwrite.body,存档位 {slot} 里现有的进度会被新游戏替换，此后无法找回。,Existing progress in slot {slot} will be replaced by the new game and cannot be recovered.
+saves.overwrite.cancel,取消,Cancel
+rebind.rejected,这个键不能用：{reason},This key cannot be used: {reason}
+map.atlas.title,大地图,Map
+map.atlas.close,收起 · M,Close · M
+map.atlas.close_accessible,收起大地图,Close map
+map.atlas.meta,{name} · MAP 01/01,{name} · MAP 01/01
+map.tab.layers,图层,Layers
+map.tab.index,目录 · G,Index · G
+map.paper.title,地图页,Map canvas
+map.paper.zoom_in,放大,Zoom in
+map.paper.zoom_out,缩小,Zoom out
+map.paper.locate,回到玩家,Locate player
+map.paper.fit,全图,Fit map
+map.paper.hints,滚轮 缩放 · 拖动 平移 · G 目录 · Esc 返回,Wheel Zoom · Drag Pan · G Index · Esc Back
+map.readout.distance,{coordinates} · 距此 {distance} m,{coordinates} · {distance} m from here
+map.readout.here,{coordinates} · 此处,{coordinates} · Here
+map.group.overview,总览,Overview
+map.group.core,核心,Core
+map.group.south,南,South
+map.group.west,西,West
+map.group.north,北,North
+map.group.east,东,East
+map.group.edge,边界,Edge
+map.group.region,{name}区,{name} area
+map.travel.teleport,传送,Teleport
+map.travel.fly,飞过去,Fly there
+map.travel.track,追踪,Track
+map.travel.untrack,取消追踪,Untrack
+map.travel.here,此处,Here
+map.travel.track_only,只能追踪,Tracking only
+map.travel.fly_only,仅旁观,Fly only
+map.travel.both_modes,旁观 · 行走,Fly · Walk
+map.travel.recommend,推荐 {season} {clock} · {weather},Recommended {season} {clock} · {weather}
+map.travel.action_accessible,{action}：{name},{action}: {name}
+map.minimap.title,小地图,Minimap
+map.minimap.region_accessible,小地图，{name},"Minimap, {name}"
+map.index.title,目录,Index
+map.index.other,其他,Other
+map.index.here,此处,Here
+map.index.flyOnly,仅旁观,Fly only
+map.layers.title,图层,Layers
+map.layers.show,显示,Show
+map.layers.anchor,锚点,Anchors
+map.layers.viewpoint,观景点,Viewpoints
+map.layers.interior,可进入的室内,Interiors
+map.layers.route,路线,Routes
+map.layers.landmark,地标,Landmarks
+map.layers.facility,设施,Facilities
+map.layers.custom,我的标记,My markers
+map.layers.outskirts,外围街区,Outskirts
+map.legend.title,图例,Legend
+map.legend.travelable,可前往,Travelable
+map.legend.here,此处,Here
+map.legend.tracking,追踪中,Tracking
+map.legend.locked,未解锁（RPG 预留）,Locked (RPG reserved)
+weather.kind.after_snow,雪后,After snow

@@ -155,62 +155,16 @@ public sealed class UiKit
         return button;
     }
 
-    // 以下坐标重载仅供尚未迁移的页面；C-135 迁完使用方后删除。
-    public Panel Box(Control parent, Rect2 rect, UiFx fx)
+    /// <summary>时间环内部的圆形绘制载体；不参与页面布局。</summary>
+    public Panel Dot(Control parent, Vector2 center, float diameter, UiFx fx)
     {
-        var panel = new Panel
-        {
-            Position = rect.Position,
-            Size = rect.Size,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            ThemeTypeVariation = Theme.PanelType(fx.Margin),
-        };
-        panel.Material = Materials.Panel;
-        parent.AddChild(panel);
-        Apply(panel, fx);
+        var panel = Box(parent, fx with { Flags = fx.Flags | UiFlags.Circle });
+        panel.Position = center - Vector2.One * diameter / 2;
+        panel.Size = Vector2.One * diameter;
         return panel;
     }
 
-    public Panel Dot(Control parent, Vector2 center, float diameter, UiFx fx) =>
-        Box(parent, new Rect2(center - new Vector2(diameter, diameter) / 2, new Vector2(diameter, diameter)), fx with { Flags = fx.Flags | UiFlags.Circle });
-
-    public Label Text(Control parent, string text, string typeRole, string colorRole, Vector2 position, bool pin = false,
-        float width = 0, HorizontalAlignment align = HorizontalAlignment.Left, bool wrap = false)
-    {
-        var label = new Label
-        {
-            Text = Theme.Upper(typeRole) ? text.ToUpperInvariant() : text,
-            ThemeTypeVariation = UiThemeBuilder.TextType(typeRole),
-            Position = position,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            HorizontalAlignment = align,
-        };
-        if (wrap) { label.AutowrapMode = TextServer.AutowrapMode.WordSmart; label.CustomMinimumSize = new Vector2(width, 0); }
-        label.Material = Materials.Text;
-        parent.AddChild(label);
-        if (width > 0) label.Size = new Vector2(width, label.GetCombinedMinimumSize().Y);
-        Apply(label, new UiFx(Role: colorRole, Pin: pin));
-        return label;
-    }
-
     public void Recolor(CanvasItem item, string colorRole, bool pin = false) => Apply(item, new UiFx(Role: colorRole, Pin: pin));
-
-    public TextureRect IconRect(Control parent, string icon, Rect2 rect, string colorRole, bool pin = false)
-    {
-        var t = new TextureRect
-        {
-            Texture = Icon(icon),
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-            Position = rect.Position,
-            Size = rect.Size,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-        };
-        t.Material = Materials.Icon;
-        parent.AddChild(t);
-        Apply(t, new UiFx(Role: colorRole, Pin: pin, Extra: new Vector4(1, 0, 0, 0)));
-        return t;
-    }
 
     /// <summary>1 物理像素的线（Line2D 只作载体，宽度 3 逻辑像素留给抗锯齿）；extra = (线宽, 虚线实长, 空长, 0)。</summary>
     public Line2D Line(Control parent, Vector2[] points, string colorRole, bool pin = false, Vector4? extra = null, int flags = 0, float width = 3)
@@ -229,33 +183,6 @@ public sealed class UiKit
         Apply(line, new UiFx(Role: colorRole, Pin: pin, Flags: flags, Extra: extra ?? new Vector4(1, 0, 0, 0)));
         return line;
     }
-
-    /// <summary>M7 示波器（UI-VISUAL）：extra = (振幅 ≤ 0.4, 周期数, 相速, 线宽)。</summary>
-    public ColorRect Wave(Control parent, Rect2 rect, string colorRole, bool pin, Vector4 extra)
-    {
-        var wave = new ColorRect { Position = rect.Position, Size = rect.Size, Color = Godot.Colors.White, MouseFilter = Control.MouseFilterEnum.Ignore };
-        wave.Material = Materials.Line;
-        parent.AddChild(wave);
-        Apply(wave, new UiFx(Role: colorRole, Pin: pin, Flags: UiFlags.Wave, Extra: extra));
-        return wave;
-    }
-
-    public TechButton Button(Control parent, ButtonStyle style, string text, Rect2 rect, string fontRole = "body", int padX = 16,
-        string? icon = null, int iconMax = 24, bool pin = false, int padY = 4, HorizontalAlignment align = HorizontalAlignment.Center,
-        HorizontalAlignment iconAlign = HorizontalAlignment.Left, Action? pressed = null)
-    {
-        var button = TechButton.Create(this, style, text, icon, fontRole, padX, padY, iconMax, pin);
-        button.Position = rect.Position;
-        button.Size = rect.Size;
-        button.Alignment = align;
-        button.IconAlignment = iconAlign;
-        if (pressed is not null) button.Pressed += pressed;
-        parent.AddChild(button);
-        if (pin) Remember(button);
-        return button;
-    }
-
-    public float Width(Label label) => label.GetCombinedMinimumSize().X;
 
     /// <summary>
     /// 子树里占着实例参数槽的件数：挂着界面材质、没在排队释放的 CanvasItem（含滚动条这类内部子节点）。

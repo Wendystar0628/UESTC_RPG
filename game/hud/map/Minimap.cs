@@ -1,22 +1,14 @@
+using Campus.Hud.Widgets;
 using Godot;
 
 namespace Campus.Hud.Map;
 
-/// <summary>
-/// 左上角常驻的小地图（SYS-ATLAS、UI-VISUAL）：外框 244×272，锚在 (32, 32)；上方 226² 的地图视口，
-/// 下方 28 px 底栏（左区域名、右比例尺）。外框只切左上 12 px，切角旁一枚过孔，发丝线边，视口顶边中央等宽的"N"。
-/// 常驻件，默认固定深屏。界面态在视口右侧贴 [大地图 M]、[目录 G] 两个 36 px 图标钮。
-/// 共 8 个 Control：外框、视口、底图、标记层、玩家、N 签、两个按钮（SYS-ATLAS：≤ 12）。
-/// </summary>
+/// <summary>左上角常驻小地图；外框尺寸来自角区令牌，地图视口与底栏由容器分配。</summary>
 public partial class Minimap : Control
 {
-    public static readonly Vector2 Origin = new(32, 32);
-    public static readonly Vector2 FrameSize = new(244, 272);
-    private const float Inset = 9;
-    private const float ViewportSide = 226;
-    private const float BarHeight = 28;
-
     private readonly MapHudContext _ctx;
+    private readonly Label _regionLabel;
+    private readonly DrawHost _scaleHost;
     private string _region = "";
     private (float Meters, float Pixels) _scale;
     private bool _night;
@@ -24,27 +16,44 @@ public partial class Minimap : Control
     public Minimap(MapHudContext ctx)
     {
         _ctx = ctx;
-        Position = Origin;
-        Size = FrameSize;
+        Theme = ctx.Ui.Theme.Theme;
+        CustomMinimumSize = ctx.Ui.Tokens.V2("metrics", "size", "minimap");
         MouseFilter = MouseFilterEnum.Stop;
         ctx.Resident.Add(this);
-        Viewport = new Control { Position = new(Inset, Inset), Size = new(ViewportSide, ViewportSide), ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
-        AddChild(Viewport);
-        Base = new MapBase(crosses: false) { Size = Viewport.Size };
+        var ui = ctx.Ui;
+        var panel = ui.Panel(this, new Campus.Hud.Style.UiFx(Fill: "surface.panel", Line: "line.panel", Chamfer: ui.Tokens.Chamfer("panel"), Pin: true));
+        panel.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        var margin = ui.Layout.Add(panel, new MarginContainer(), "UiMinimapMargin");
+        var stack = ui.Layout.Add(margin, new VBoxContainer(), "UiMinimapBody");
+        Viewport = new Control { ClipContents = true, MouseFilter = MouseFilterEnum.Ignore, SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        stack.AddChild(Viewport);
+        Base = new MapBase(crosses: false);
         Viewport.AddChild(Base);
+        Base.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         Markers = new MarkerLayer(ctx, atlas: false) { IconSize = 16 };
         Viewport.AddChild(Markers);
-        Player = new PlayerMark(ctx) { ConeLength = ViewportSide * 0.5f * 0.3f };
+        Player = new PlayerMark(ctx);
         Viewport.AddChild(Player);
-        Overlay = new DrawHost(h => DrawNorth(h, new Vector2(ViewportSide * 0.5f, 0))) { Size = Viewport.Size };
+        Overlay = new DrawHost(h => DrawNorth(h, new Vector2(h.Size.X * 0.5f, 0)));
         Viewport.AddChild(Overlay);
-        AtlasButton = new MapButton(MapButtonKind.Icon, ctx) { Position = new(FrameSize.X + 8, Inset), Size = new(36, 36), Glyph = MapDraw.AtlasGlyph, KeyHint = "M" };
-        IndexButton = new MapButton(MapButtonKind.Icon, ctx) { Position = new(FrameSize.X + 8, Inset + 44), Size = new(36, 36), Glyph = MapDraw.IndexGlyph, KeyHint = "G" };
-        AtlasButton.AccessibilityName = "大地图";
-        IndexButton.AccessibilityName = "目录";
-        AddChild(AtlasButton);
-        AddChild(IndexButton);
-        AccessibilityName = "小地图";
+        Overlay.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        var buttons = ui.Layout.Corner(Viewport, LayoutPreset.TopRight);
+        AtlasButton = ctx.IconButton(buttons, MapDraw.AtlasGlyph, "map.atlas.title", pin: true);
+        IndexButton = ctx.IconButton(buttons, MapDraw.IndexGlyph, "map.index.title", pin: true);
+        var bar = ui.Layout.Row(stack);
+        bar.CustomMinimumSize = new Vector2(0, ui.Tokens.F("metrics", "map", "minimapBarHeight"));
+        _regionLabel = ui.Text(bar, "", "small", pin: true, wrap: false);
+        _regionLabel.ClipText = true;
+        _regionLabel.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        _scaleHost = new DrawHost(DrawScale) { SizeFlagsVertical = SizeFlags.ExpandFill };
+        bar.AddChild(_scaleHost);
+        Viewport.Resized += () =>
+        {
+            Player.ConeLength = Viewport.Size.X * 0.15f;
+            Markers.Invalidate();
+            Overlay.QueueRedraw();
+        };
+        AccessibilityName = ctx.T("map.minimap.title");
     }
 
     public Control Viewport { get; }
@@ -52,33 +61,33 @@ public partial class Minimap : Control
     public MarkerLayer Markers { get; }
     public PlayerMark Player { get; }
     public DrawHost Overlay { get; }
-    public MapButton AtlasButton { get; }
-    public MapButton IndexButton { get; }
-    public float ViewportHalf => ViewportSide * 0.5f;
+    public TechButton AtlasButton { get; }
+    public TechButton IndexButton { get; }
+    public float ViewportHalf => Viewport.Size.X * 0.5f;
     public event Action? Clicked;
 
-    /// <summary>界面态时显示两个图标钮；漫游态不显示（SYS-ATLAS）。</summary>
     public void SetInterfaceState(bool on)
     {
         AtlasButton.Visible = on;
         IndexButton.Visible = on;
     }
 
-    /// <summary>底栏：区域名变了才改字（≤ 10 Hz，不逐帧改文字）。</summary>
     public void SetRegion(string text)
     {
         if (text == _region) return;
         _region = text;
-        AccessibilityName = text.Length > 0 ? "小地图，" + text : "小地图";
-        QueueRedraw();
+        _regionLabel.Text = text;
+        AccessibilityName = text.Length > 0 ? _ctx.T("map.minimap.region_accessible", ("name", text)) : _ctx.T("map.minimap.title");
     }
 
     public void SetScale(float ppm)
     {
-        var s = MapDraw.NiceScale(ppm, 64);
+        var s = MapDraw.NiceScale(ppm, Viewport.Size.X * 0.28f);
         if (s == _scale) return;
         _scale = s;
-        QueueRedraw();
+        var tick = _ctx.Style.Fonts["tick"];
+        _scaleHost.CustomMinimumSize = new Vector2(_scale.Pixels + tick.Width(MapDraw.Meters(_scale.Meters)) + _ctx.Ui.Tokens.Space("control"), 0);
+        _scaleHost.QueueRedraw();
     }
 
     public void SyncTheme()
@@ -87,48 +96,31 @@ public partial class Minimap : Control
         if (night == _night) return;
         _night = night;
         Base.SetPinNight(night);
-        QueueRedraw();
         Markers.Invalidate();
-        AtlasButton.QueueRedraw();
-        IndexButton.QueueRedraw();
+        _scaleHost.QueueRedraw();
         Overlay.QueueRedraw();
+        foreach (var button in new[] { AtlasButton, IndexButton })
+            foreach (var child in button.GetChildren()) if (child is CanvasItem item) item.QueueRedraw();
     }
 
     public override void _GuiInput(InputEvent e)
     {
-        if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
-        {
-            Clicked?.Invoke();
-            AcceptEvent();
-        }
+        if (e is not InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true }) return;
+        Clicked?.Invoke();
+        AcceptEvent();
     }
 
-    public override void _Draw()
+    private void DrawScale(DrawHost h)
     {
         var t = _ctx.ResidentTone;
-        var m = _ctx.Style.Metrics;
-        var frame = new Rect2(Vector2.Zero, FrameSize);
-        MapDraw.Panel(this, frame, m.ChamferPanel, t.Panel, t.PanelLine, t.Highlight);
-        // 切角旁的过孔签名
-        MapDraw.Via(this, new Vector2(m.ChamferPanel + 9, 4.5f), m.Via, t.Text2, false);
-        // 视口外缘一圈发丝线，地图与面板分得开
-        MapDraw.Outline(this, new Rect2(Inset - 0.5f, Inset - 0.5f, ViewportSide + 1, ViewportSide + 1), 0, t.Hair);
-        // 底栏
-        var barTop = Inset + ViewportSide;
-        var baseline = barTop + BarHeight * 0.5f + 5;
-        var small = _ctx.Style.Fonts["small"];
-        var tick = _ctx.Style.Fonts["tick"];
-        var scaleText = MapDraw.Meters(_scale.Meters);
-        var right = FrameSize.X - Inset - 1;
-        var barRight = right;
-        var labelW = tick.Width(scaleText);
-        MapDraw.ScaleBar(this, new Vector2(barRight, baseline - 1).Round() + new Vector2(0.5f, 0.5f), MathF.Round(_scale.Pixels), t.Text2);
-        MapDraw.Text(this, tick, new(barRight - _scale.Pixels - 8 - labelW, baseline), scaleText, t.Text2);
-        var regionWidth = barRight - _scale.Pixels - 16 - labelW - Inset - 3;
-        MapDraw.Text(this, small, new(Inset + 3, baseline), Fit(small, _region, regionWidth), t.Text1);
+        var f = _ctx.Style.Fonts["tick"];
+        var text = MapDraw.Meters(_scale.Meters);
+        var baseline = (h.Size.Y + f.Ascent) * 0.5f;
+        MapDraw.ScaleBar(h, new Vector2(h.Size.X, baseline - 1).Round() + new Vector2(0.5f, 0.5f), MathF.Round(_scale.Pixels), t.Text2);
+        MapDraw.Text(h, f, new(0, baseline), text, t.Text2);
     }
 
-    /// <summary>"N"标签：视口顶边中央的一枚小签，压在地图之上（北朝上时固定在顶边）。</summary>
+    /// <summary>地图画布顶边的北向签。</summary>
     public void DrawNorth(CanvasItem ci, Vector2 centerTop)
     {
         var t = _ctx.ResidentTone;
@@ -137,12 +129,5 @@ public partial class Minimap : Control
         ci.DrawRect(r, t.Panel);
         MapDraw.Outline(ci, r.Grow(-0.5f), 0, t.Hair);
         MapDraw.Text(ci, f, new(r.Position.X, r.Position.Y + 11.5f), "N", t.Text1, HorizontalAlignment.Center, r.Size.X);
-    }
-
-    private static string Fit(MapFont f, string text, float width)
-    {
-        if (f.Width(text) <= width) return text;
-        while (text.Length > 1 && f.Width(text + "…") > width) text = text[..^1];
-        return text + "…";
     }
 }

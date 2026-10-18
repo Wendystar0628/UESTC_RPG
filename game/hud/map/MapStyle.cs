@@ -1,17 +1,17 @@
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Hud.Style;
+using Campus.Hud.Widgets;
 using Godot;
 
 namespace Campus.Hud.Map;
 
 /// <summary>
-/// 地图界面的令牌入口：颜色只来自 ui.json（map 段与 themes 段，UI-VISUAL），几何与字号来自 ui_metrics.json
-/// （WP-35 的非色令牌，UI-VISUAL）。两个文件都只读一次；代码里不写色值。
+/// 地图专有颜色来自 ui.json；几何与字体复用界面已加载的 UiTokens 和唯一 Theme。
 /// </summary>
 public sealed class MapStyle
 {
     public const string PalettePath = "res://style/palette/ext/ui.json";
-    public const string MetricsPath = "res://hud/style/ui_metrics.json";
 
     /// <summary>map_base 色表的顺序：与 map_base.gdshader 的 C_* 常量一一对应，只在末尾追加。</summary>
     public static readonly (string Token, string? Part)[] Roles =
@@ -39,20 +39,19 @@ public sealed class MapStyle
     public MapTone Tone(bool night) => night ? Night : Day;
 
     /// <summary>读不到令牌时返回 null：界面整体不显示，只记一条警告，不挡主线（ENG-WP）。</summary>
-    public static MapStyle? TryLoad()
+    public static MapStyle? TryLoad(UiKit ui)
     {
-        if (!Godot.FileAccess.FileExists(PalettePath) || !Godot.FileAccess.FileExists(MetricsPath))
+        if (!Godot.FileAccess.FileExists(PalettePath))
         {
-            GD.PushWarning($"WP-48b: UI tokens missing ({PalettePath}, {MetricsPath}); map HUD stays hidden.");
+            GD.PushWarning($"WP-48b: UI palette missing ({PalettePath}); map HUD stays hidden.");
             return null;
         }
         var document = JsonSerializer.Deserialize<UiPaletteDocument>(Godot.FileAccess.GetFileAsBytes(PalettePath), ContractJson.Options)
             ?? throw new InvalidDataException("ui.json is empty.");
         // 地图界面与其他消费者使用同一份完整场景目录。
         var palette = new UiPalette(document, Campus.Kernel.Registry.Kernel.Get<IPaletteCatalogSource>().Catalog);
-        var metrics = MapMetricsJson.Parse(Godot.FileAccess.GetFileAsBytes(MetricsPath));
         return new MapStyle(MapTone.From(palette, "light", false), MapTone.From(palette, "dark", true),
-            MapTable(palette, "light"), MapTable(palette, "dark"), MapMetrics.From(metrics), MapFonts.From(metrics.Metrics.Type));
+            MapTable(palette, "light"), MapTable(palette, "dark"), MapMetrics.From(ui.Tokens), new MapFonts(ui.Theme));
     }
 
     private static Color[] MapTable(UiPalette palette, string theme)
@@ -171,23 +170,21 @@ public sealed class MapTone
     }
 }
 
-/// <summary>ui_metrics.json 里地图界面用到的几何、主题扫描前沿宽与动效时长（逻辑像素，1920×1080 基准）。</summary>
+/// <summary>地图画布用到的几何、主题扫描前沿宽与进场时长（逻辑像素，1920×1080 基准）。</summary>
 public sealed record MapMetrics(
     float BoundDash, float BoundGap, float HaloWidth, float PlayerLine, float PlayerGlowDark,
     float FrontWidth,
-    float ChamferPage, float ChamferPanel, float ChamferCard, float Via, float IconStroke, float Indicator,
-    float ScrimMs, float PageInMs, float PageOutMs, float ReducedFadeMs, float GlowMax)
+    float ChamferPage, float IconStroke, float PageInMs, float GlowMax)
 {
-    internal static MapMetrics From(UiMetricsDoc d)
+    internal static MapMetrics From(UiTokens t)
     {
-        var map = d.Metrics.Map;
-        var chamfer = d.Metrics.Shape.Chamfer;
-        var theme = d.ThemeSwitch;
-        var durations = d.Motion.Durations;
-        return new(map.Bound.Dash[0], map.Bound.Dash[1], map.LabelHalo.Width, map.Player.LineWidth, map.Player.Glow.Dark,
-            theme.FrontWidth,
-            chamfer.Page, chamfer.Panel, chamfer.Card, d.Metrics.Shape.SignatureVia, d.Metrics.Line.IconStroke, d.Metrics.Line.Indicator,
-            durations.Scrim, durations.Page.In[1], durations.Page.Out[0], d.Motion.Reduced.FadeMax, d.Metrics.Glow.Max);
+        var dash = t.Get("metrics", "map", "map.bound", "dash");
+        var pageIn = t.Get("motion", "durations", "page", "in");
+        return new(dash[0].GetSingle(), dash[1].GetSingle(), t.F("metrics", "map", "map.label.halo", "width"),
+            t.F("metrics", "map", "map.player", "lineWidth"), t.F("metrics", "map", "map.player", "glow", "dark"),
+            t.F("themeSwitch", "frontWidth"),
+            t.Chamfer("page"), t.F("metrics", "line", "iconStroke"), pageIn[1].GetSingle(),
+            t.F("metrics", "glow", "max"));
     }
 }
 
@@ -201,51 +198,22 @@ public sealed record MapFont(Font Font, int Size, bool Upper)
 }
 
 /// <summary>
-/// 字体按 ui_metrics.json 的 type 段组装：项目字体文件（WP-35 登记在 game/assets/hud/fonts/）在时直接用；
-/// 还没入库时按家族名取系统字体，缺字由系统回退补上。
+/// 地图画布的字体角色薄包装：引用唯一 Theme 已生成的字体与字号。
 /// </summary>
 public sealed class MapFonts
 {
-    private const string FontDir = "res://assets/hud/fonts/";
+    private readonly UiThemeBuilder _theme;
     private readonly Dictionary<string, MapFont> _roles = new(StringComparer.Ordinal);
-    public MapFont this[string role] => _roles[role];
-
-    internal static MapFonts From(TypeDoc type)
+    internal MapFonts(UiThemeBuilder theme) => _theme = theme;
+    public MapFont this[string role]
     {
-        var cache = new Dictionary<string, Font>(StringComparer.Ordinal);
-        Font Face(string family, string weight)
+        get
         {
-            var key = family + "/" + weight;
-            if (cache.TryGetValue(key, out var hit)) return hit;
-            var f = type.Families[family];
-            Font font;
-            var file = f.Files.TryGetValue(weight, out var w) ? w : f.Files["Regular"];
-            var path = FontDir + file;
-            if (ResourceLoader.Exists(path)) font = GD.Load<Font>(path);
-            else
-            {
-                font = new SystemFont
-                {
-                    FontNames = [f.Name, family == "mono" ? "monospace" : "sans-serif"],
-                    FontWeight = weight switch { "Light" => 300, "Medium" => 500, _ => 400 },
-                    SubpixelPositioning = TextServer.SubpixelPositioning.Auto,
-                };
-            }
-            cache[key] = font;
+            if (_roles.TryGetValue(role, out var font)) return font;
+            var type = UiThemeBuilder.TextType(role);
+            font = new MapFont(_theme.Theme.GetFont("font", type), _theme.Theme.GetFontSize("font_size", type), _theme.Upper(role));
+            _roles.Add(role, font);
             return font;
         }
-        var fonts = new MapFonts();
-        foreach (var (name, r) in type.Roles)
-        {
-            var chain = type.Chains[r.Chain];
-            var primary = Face(chain[0], r.Weight);
-            var variation = new FontVariation { BaseFont = primary };
-            variation.SpacingGlyph = (int)MathF.Round(r.Tracking * r.Size);
-            var fallbacks = new Godot.Collections.Array<Font>();
-            foreach (var family in chain.Skip(1)) fallbacks.Add(Face(family, r.Weight));
-            variation.Fallbacks = fallbacks;
-            fonts._roles[name] = new MapFont(variation, r.Size, r.Upper);
-        }
-        return fonts;
     }
 }

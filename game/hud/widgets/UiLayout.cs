@@ -132,9 +132,12 @@ public sealed class UiLayout(UiKit kit)
     public VBoxContainer FloatingCard(Control parent, Control.LayoutPreset corner = Control.LayoutPreset.BottomRight, bool pin = false)
     {
         var anchor = Corner(parent, corner);
-        anchor.CustomMinimumSize = new Vector2(Metric("floatingCardWidth"), 0);
-        anchor.CustomMaximumSize = new Vector2(Metric("floatingCardWidth"), -1);
-        BindResize(parent, anchor, () => anchor.CustomMaximumSize = new Vector2(Math.Min(Metric("floatingCardWidth"), parent.Size.X), parent.Size.Y));
+        BindResize(parent, anchor, () =>
+        {
+            var width = Math.Max(0, Math.Min(Metric("floatingCardWidth"), parent.Size.X));
+            anchor.CustomMinimumSize = new Vector2(width, 0);
+            anchor.CustomMaximumSize = new Vector2(width, -1);
+        });
         return Card(anchor, pin);
     }
 

@@ -267,7 +267,7 @@ waypoint_9={
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://hud/i18n/zh.zh.translation")
+locale/translations=PackedStringArray("res://hud/i18n/zh.zh.translation", "res://hud/i18n/zh.en.translation")
 locale/fallback="zh"
 
 [physics]

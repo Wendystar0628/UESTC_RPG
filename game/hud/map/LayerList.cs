@@ -1,160 +1,152 @@
 using Campus.Contracts.Atlas;
+using Campus.Hud.Widgets;
 using Godot;
 
 namespace Campus.Hud.Map;
 
-/// <summary>
-/// 左栏"图层"页（SYS-ATLAS）：锚点、观景点、可进入的室内、路线、地标、设施、我的标记，另加"外围街区"；
-/// 每行写当前图里的数量。下面是图例：可前往、此处、追踪中、未解锁（RPG 预留，观光模式下灰显）。
-/// 整页 1 个 Control。
-/// </summary>
+/// <summary>地图图层开关与图例；容器决定排版，按钮焦点依次沿阅读顺序移动。</summary>
 public partial class LayerList : Control
 {
-    private const float Pad = 16;
-    private const float RowHeight = 40;
-    private const float Top = 12;
     public const int OutskirtsBit = 8;
 
-    private static readonly (int Bit, string Zh, MarkerKind? Kind)[] Layers =
+    private static readonly (int Bit, string Key, MarkerKind? Kind)[] Layers =
     [
-        (0, "锚点", MarkerKind.Anchor), (1, "观景点", MarkerKind.Viewpoint), (2, "可进入的室内", MarkerKind.Interior),
-        (3, "路线", MarkerKind.Route), (4, "地标", MarkerKind.Landmark), (5, "设施", MarkerKind.Facility),
-        (6, "我的标记", MarkerKind.Custom), (OutskirtsBit, "外围街区", null),
+        (0, "map.layers.anchor", MarkerKind.Anchor),
+        (1, "map.layers.viewpoint", MarkerKind.Viewpoint),
+        (2, "map.layers.interior", MarkerKind.Interior),
+        (3, "map.layers.route", MarkerKind.Route),
+        (4, "map.layers.landmark", MarkerKind.Landmark),
+        (5, "map.layers.facility", MarkerKind.Facility),
+        (6, "map.layers.custom", MarkerKind.Custom),
+        (OutskirtsBit, "map.layers.outskirts", null),
     ];
 
-    private static readonly MapEntry LegendAnchor = new(new AtlasMarker(new MarkerId("legend"), MarkerKind.Anchor, new("", ""), default,
-        "anchor", 0, 0, null, new TeleportSpec(new Campus.Contracts.Pose(default, 0, 0), null)));
-    private static readonly (string Zh, int State)[] LegendStates = [("可前往", 0), ("此处", 1), ("追踪中", 2), ("未解锁（RPG 预留）", 3)];
+    private static readonly string[] LegendKeys =
+    [
+        "map.legend.travelable", "map.legend.here", "map.legend.tracking", "map.legend.locked",
+    ];
 
     private readonly MapHudContext _ctx;
+    private readonly TechButton[] _buttons = new TechButton[Layers.Length];
     private readonly int[] _counts = new int[Layers.Length];
-    private int _hover = -1;
-    private int _focus;
+    private readonly List<LegendGlyph> _glyphs = [];
 
     public LayerList(MapHudContext ctx)
     {
         _ctx = ctx;
-        FocusMode = FocusModeEnum.All;
-        MouseFilter = MouseFilterEnum.Stop;
-        AccessibilityName = "图层";
-        MouseExited += () => { _hover = -1; QueueRedraw(); };
-        FocusEntered += QueueRedraw;
-        FocusExited += QueueRedraw;
+        FocusMode = FocusModeEnum.None;
+        MouseFilter = MouseFilterEnum.Ignore;
+        SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        SizeFlagsVertical = SizeFlags.ExpandFill;
+        AccessibilityName = ctx.T("map.layers.title");
+
+        var scroll = ctx.Ui.Layout.Scroll(this);
+        scroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        var stack = ctx.Ui.Layout.Stack(scroll);
+        ctx.Ui.Text(stack, ctx.T("map.layers.show"), "mono-caps", "text.2");
+        for (var i = 0; i < Layers.Length; i++)
+        {
+            var row = i;
+            var button = ctx.Ui.Layout.ListRow(stack, "", pressed: () => Toggle(row));
+            button.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            button.ClipText = true;
+            button.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            button.GuiInput += ev => OnRowInput(button, ev, row);
+            _buttons[i] = button;
+        }
+
+        ctx.Ui.Text(stack, ctx.T("map.legend.title"), "mono-caps", "text.2");
+        for (var i = 0; i < LegendKeys.Length; i++)
+        {
+            var row = ctx.Ui.Layout.Row(stack);
+            var icon = ctx.Ui.Layout.Add(row, new LegendGlyph(ctx, i));
+            _glyphs.Add(icon);
+            var edge = ctx.Ui.Layout.Metric("iconButton");
+            icon.CustomMinimumSize = new Vector2(edge, edge);
+            var key = LegendKeys[i];
+            var label = ctx.Ui.Text(row, ctx.T(key), "small", key == "map.legend.locked" ? "text.off" : "text.2");
+            label.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        }
+        RefreshRows();
     }
 
-    /// <summary>默认：设施、地标关，其余开（SYS-ATLAS）。</summary>
+    /// <summary>默认设施与地标隐藏，其余显示。</summary>
     public int Mask { get; private set; } = ~((1 << 4) | (1 << 5));
     public event Action<int>? MaskChanged;
+    public void SetMask(int mask) { Mask = mask; RefreshRows(); }
+    public bool OwnsFocus => _buttons.Any(button => button.HasFocus());
+
+    public void FocusFirst() => _buttons[0].GrabFocus();
+
+    public override void _Draw()
+    {
+        foreach (var glyph in _glyphs) glyph.QueueRedraw();
+    }
 
     public void SetCounts(IReadOnlyList<MapEntry> entries)
     {
         for (var i = 0; i < Layers.Length; i++)
-            _counts[i] = Layers[i].Kind is { } k ? entries.Count(e => e.Marker.Kind == k) : -1;
-        QueueRedraw();
+            _counts[i] = Layers[i].Kind is { } kind ? entries.Count(entry => entry.Marker.Kind == kind) : -1;
+        RefreshRows();
     }
 
     private void Toggle(int row)
     {
         Mask ^= 1 << Layers[row].Bit;
-        QueueRedraw();
+        RefreshRows();
         MaskChanged?.Invoke(Mask);
     }
 
-    private int RowAt(float y)
+    private void RefreshRows()
     {
-        var i = (int)MathF.Floor((y - Top - 32) / RowHeight);
-        return i >= 0 && i < Layers.Length ? i : -1;
-    }
-
-    public override void _GuiInput(InputEvent e)
-    {
-        switch (e)
-        {
-            case InputEventMouseMotion mm:
-                var h = RowAt(mm.Position.Y);
-                if (h != _hover) { _hover = h; QueueRedraw(); }
-                break;
-            case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } mb:
-                var r = RowAt(mb.Position.Y);
-                if (r >= 0) { _ctx.KeyboardFocus = false; _focus = r; Toggle(r); }
-                AcceptEvent();
-                break;
-            case InputEventKey { Pressed: true } k:
-                if (e.IsActionPressed("ui_down", allowEcho: true)) { _ctx.KeyboardFocus = true; _focus = Math.Min(Layers.Length - 1, _focus + 1); QueueRedraw(); AcceptEvent(); }
-                else if (e.IsActionPressed("ui_up", allowEcho: true)) { _ctx.KeyboardFocus = true; _focus = Math.Max(0, _focus - 1); QueueRedraw(); AcceptEvent(); }
-                else if (e.IsActionPressed("ui_accept") || k.PhysicalKeycode == Key.Space) { _ctx.KeyboardFocus = true; Toggle(_focus); AcceptEvent(); }
-                break;
-        }
-    }
-
-    public override void _Draw()
-    {
-        var t = _ctx.ToneFor(this);
-        var w = Size.X;
-        var body = _ctx.Style.Fonts["body"];
-        var data = _ctx.Style.Fonts["data"];
-        var caps = _ctx.Style.Fonts["mono-caps"];
-        var small = _ctx.Style.Fonts["small"];
-        var stroke = _ctx.Style.Metrics.IconStroke;
-        GroupTitle(Top + 20, "显示", "LAYERS", t, small, caps, w);
         for (var i = 0; i < Layers.Length; i++)
         {
-            var top = Top + 32 + i * RowHeight;
             var on = (Mask & (1 << Layers[i].Bit)) != 0;
-            if (i == _hover) DrawRect(new Rect2(0, top, w, RowHeight), t.RowHover);
-            // 复选框：18 px，1 px 控件边；开时主色实底加墨色勾（UI-VISUAL）
-            var box = new Rect2(Pad, top + (RowHeight - 18) * 0.5f, 18, 18);
-            if (on)
-            {
-                DrawRect(box, t.PrimaryFill);
-                MapDraw.Outline(this, box.Grow(-0.5f), 0, t.PrimaryLine);
-                MapDraw.CheckGlyph(this, box.GetCenter(), t.PrimaryInk, 1.6f);
-            }
-            else MapDraw.Outline(this, box.Grow(-0.5f), 0, t.Control);
-            MapDraw.Text(this, body, new(Pad + 30, top + 26), Layers[i].Zh, on ? t.Text1 : t.Text2);
-            if (_counts[i] >= 0)
-            {
-                var c = _counts[i].ToString(System.Globalization.CultureInfo.InvariantCulture);
-                MapDraw.Text(this, data, new(w - Pad - data.Width(c), top + 25), c, t.Text2);
-            }
-            if (HasFocus() && _ctx.KeyboardFocus && i == _focus) MapHudContext.FocusRing(this, new Rect2(4, top + 4, w - 8, RowHeight - 8), t);
+            var count = _counts[i] >= 0 ? $"  ·  {_counts[i]}" : "";
+            _buttons[i].Text = $"{_ctx.T(Layers[i].Key)}{count}";
+            _buttons[i].Selected = on;
+            _buttons[i].AccessibilityName = _buttons[i].Text;
         }
-        // 图例：写明各类标记的图标和状态
-        var y = Top + 32 + Layers.Length * RowHeight + 28;
-        GroupTitle(y, "图例", "LEGEND", t, small, caps, w);
-        y += 18;
-        foreach (var (zh, state) in LegendStates)
+    }
+
+    private void OnRowInput(TechButton button, InputEvent ev, int row)
+    {
+        if (ev is not InputEventKey { Pressed: true }) return;
+        if (ev.IsActionPressed("ui_down", allowEcho: true) && row + 1 < _buttons.Length)
+            _buttons[row + 1].GrabFocus();
+        else if (ev.IsActionPressed("ui_up", allowEcho: true) && row > 0)
+            _buttons[row - 1].GrabFocus();
+        else return;
+        _ctx.KeyboardFocus = true;
+        button.AcceptEvent();
+    }
+
+    /// <summary>图例图形只在自身的小画布内使用坐标。</summary>
+    private sealed partial class LegendGlyph(MapHudContext ctx, int state) : Control
+    {
+        public override void _Draw()
         {
-            var c = new Vector2(Pad + 12, y + 18);
+            var tone = ctx.ToneFor(this);
+            var center = Size / 2;
+            var radius = MathF.Min(Size.X, Size.Y) * 0.3f;
             var off = state == 3;
-            var ink = off ? t.TextOff : t.Graphic;
-            DrawCircle(c, 12, state == 1 ? ink : t.Solid, true, -1, true);
-            if (off) DashedRing(c, 12, t.TextOff);
-            else DrawArc(c, 12, 0, Mathf.Tau, 32, t.PanelLine, 1f, true);
-            _ctx.Icon(this, LegendAnchor, c, 16, state == 1 ? t.Solid : ink, stroke, false);
-            if (state == 2) DrawArc(c, 17, 0, Mathf.Tau, 40, t.PrimaryFill, 1.5f, true);
-            MapDraw.Text(this, small, new(Pad + 40, y + 23), zh, off ? t.TextOff : t.Text2);
-            y += 40;
+            var ink = off ? tone.TextOff : tone.Graphic;
+            DrawCircle(center, radius, state == 1 ? ink : tone.Solid, true, -1, true);
+            if (off) DrawDashedRing(center, radius, tone.TextOff);
+            else DrawArc(center, radius, 0, Mathf.Tau, 32, tone.PanelLine, 1f, true);
+            MapDraw.AnchorIcon(this, center, radius * 1.33f, state == 1 ? tone.Solid : ink,
+                ctx.Style.Metrics.IconStroke, false, false);
+            if (state == 2) DrawArc(center, radius * 1.42f, 0, Mathf.Tau, 40, tone.PrimaryFill, 1.5f, true);
         }
-    }
 
-    private void DashedRing(Vector2 c, float r, Color col)
-    {
-        const int Dashes = 12;
-        for (var i = 0; i < Dashes; i++)
+        private void DrawDashedRing(Vector2 center, float radius, Color color)
         {
-            var a = i * Mathf.Tau / Dashes;
-            DrawArc(c, r, a, a + Mathf.Tau / Dashes * 0.55f, 4, col, 1f, true);
+            const int dashes = 12;
+            for (var i = 0; i < dashes; i++)
+            {
+                var start = i * Mathf.Tau / dashes;
+                DrawArc(center, radius, start, start + Mathf.Tau / dashes * 0.55f, 4, color, 1f, true);
+            }
         }
-    }
-
-    private void GroupTitle(float baseline, string zh, string en, MapTone t, MapFont small, MapFont caps, float w)
-    {
-        MapDraw.Text(this, small, new(Pad, baseline), zh, t.Text2);
-        var x = Pad + small.Width(zh) + 8;
-        MapDraw.Text(this, caps, new(x, baseline - 1), en, t.TextOff);
-        x += caps.Width(en) + 10;
-        var ly = MathF.Round(baseline - 5) + 0.5f;
-        DrawLine(new(MathF.Round(x), ly), new(w - Pad, ly), t.Hair, MapDraw.Hair);
     }
 }

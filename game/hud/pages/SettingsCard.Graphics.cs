@@ -4,103 +4,113 @@ using Godot;
 
 namespace Campus.Hud.Pages;
 
-// 画面页（SYS-GRAPHICS：只经 IQualityService.Plan / Apply）；没应用的改动跨开关保留
+// 画面设置仅经 IQualityService.Plan / Apply；未应用的计划在关闭页面后保留。
 public partial class SettingsCard
 {
     private readonly Dictionary<QualityKnob, float> _pending = [];
+    private readonly Dictionary<QualityKnob, Action<float>> _knobSync = [];
     private Label? _applyStatus;
     private TechButton? _apply;
-    private Segmented? _preset;
-    private static readonly (string Key, QualityKnob[] Knobs)[] Groups =
-    [
-        ("display", [QualityKnob.DisplayMode, QualityKnob.WindowSize, QualityKnob.VSync, QualityKnob.FrameCap]),
-        ("clarity", [QualityKnob.RenderScale, QualityKnob.AntiAliasing]),
-        ("lighting", [QualityKnob.ShadowQuality, QualityKnob.ShadowDistance]),
-        ("scene", [QualityKnob.FoliageDensity]),
-        ("effects", [QualityKnob.ReflectionInterval, QualityKnob.ParticleDensity]),
-    ];
+    private Dropdown? _preset;
+    private VBoxContainer? _graphicsActions;
+    private QualityProfile? _planned;
 
-    private float BuildGraphics(Control page, float width)
+    private void BuildGraphics(Control page)
     {
         var quality = Svc<IQualityService>();
-        float y = 8;
-        _preset = Segmented.Create(_kit, page, new Vector2(8, y), [112, 114, 112, 122],
-            [UiKit.T("quality.preset.balanced"), UiKit.T("quality.preset.fine"), UiKit.T("quality.preset.ultra"), UiKit.T("quality.preset.custom")],
-            false, selected: (int)(_planned?.Preset ?? quality.Requested.Preset));
-        _preset.Changed += i =>
+        var presets = Enum.GetValues<QualityPreset>();
+        _preset = Dropdown.Create(_kit, page, presets.Select(preset => UiKit.T("quality.preset." + preset.ToString().ToLowerInvariant())).ToArray(),
+            Array.IndexOf(presets, _planned?.Preset ?? quality.Requested.Preset));
+        _preset.AccessibilityName = UiKit.T("settings.tab.graphics");
+        _preset.Changed += index =>
         {
-            if ((QualityPreset)i == QualityPreset.Custom) return;
+            if (presets[index] == QualityPreset.Custom) return;
             _pending.Clear();
-            Plan(new QualityProfile((QualityPreset)i, new Dictionary<QualityKnob, float>()));
+            Plan(new QualityProfile(presets[index], new Dictionary<QualityKnob, float>()));
+            SyncKnobs();
         };
-        y += 46;
-        var specs = quality.Knobs.ToDictionary(s => s.Knob);
-        foreach (var (group, knobs) in Groups)
+        foreach (var group in quality.Knobs.GroupBy(spec => GraphicsGroup(spec.Knob)))
         {
-            Parts.GroupHeader(_kit, page, new Vector2(8, y), width, UiKit.T("quality.group." + group));
-            y += 24;
-            foreach (var knob in knobs)
+            var content = _kit.Layout.SettingGroup(page, UiKit.T("quality.group." + group.Key));
+            foreach (var spec in group)
             {
-                if (!specs.TryGetValue(knob, out var spec)) continue;
-                Row(page, y, UiKit.T(spec.LabelKey));
-                KnobControl(page, new Vector2(ControlX, y + 2), spec, _pending.TryGetValue(knob, out var pending) ? pending : quality.Effective.Requested(knob));
+                var row = _kit.Layout.SettingRow(content, UiKit.T(spec.LabelKey));
+                var editor = _kit.Layout.Stack(row, groups: false);
+                KnobControl(editor, spec, RequestedValue(spec.Knob));
                 if (spec.Apply is ApplyClass.UnderVeil or ApplyClass.Restart)
-                    Parts.Tag(_kit, page, new Vector2(width - 48, y + 8), UiKit.T(spec.Apply == ApplyClass.Restart ? "quality.tag.restart" : "quality.tag.veil"), spec.Apply == ApplyClass.UnderVeil);
-                y += 40;
+                    Parts.Tag(_kit, editor, UiKit.T(spec.Apply == ApplyClass.Restart ? "quality.tag.restart" : "quality.tag.veil"), spec.Apply == ApplyClass.UnderVeil);
             }
-            y += 12;
         }
-        _kit.Text(page, UiKit.T("quality.footnote"), "small", "text.2", new Vector2(8, y), width: width - 8, wrap: true);
-        y += 52;
-        _applyStatus = _kit.Text(page, "", "small", "text.2", new Vector2(8, y + 12));
-        _apply = _kit.Button(page, ButtonStyle.Primary, UiKit.T("quality.apply"), new Rect2(width - 152 + 8, y, 152, 44), "button.primary", 20,
-            pressed: () => _ = ApplyPending());
+        _kit.Text(page, UiKit.T("quality.footnote"), "small", "text.2");
+        _graphicsActions = _kit.Layout.Stack(_pageActions, groups: false);
+        _applyStatus = _kit.Text(_graphicsActions, "", "small", "text.2");
+        _applyStatus.Visible = false;
+        var actions = _kit.Layout.Flow(_graphicsActions);
+        _apply = _kit.Button(actions, ButtonStyle.Primary, UiKit.T("quality.apply"), "button.primary", pressed: () => _ = ApplyPending());
         _apply.OffReason = UiKit.T("quality.apply.nothing");
         _apply.Off = true;
-        if (_planned is { } planned) ShowPlan(quality.Plan(planned));   // 上次关卡时没应用的改动
-        return y + 60;
+        if (_planned is { } planned) ShowPlan(quality.Plan(planned));
     }
 
-    private void KnobControl(Control page, Vector2 at, KnobSpec spec, float value)
+    private static string GraphicsGroup(QualityKnob knob) => knob switch
     {
-        var steps = spec.Step > 0 ? (int)Math.Round((spec.Max - spec.Min) / spec.Step) + 1 : 0;
-        if (spec.Step >= 1 && steps is >= 2 and <= 5)
+        QualityKnob.DisplayMode or QualityKnob.WindowSize or QualityKnob.VSync or QualityKnob.FrameCap => "display",
+        QualityKnob.RenderScale or QualityKnob.AntiAliasing => "clarity",
+        QualityKnob.ShadowQuality or QualityKnob.ShadowDistance => "lighting",
+        QualityKnob.FoliageDensity => "scene",
+        QualityKnob.ReflectionInterval or QualityKnob.ParticleDensity => "effects",
+        _ => throw new ArgumentOutOfRangeException(nameof(knob)),
+    };
+
+    private void KnobControl(Control parent, KnobSpec spec, float value)
+    {
+        if (spec.Values is { Count: > 0 } values)
         {
-            var labels = new string[steps];
-            var widths = new float[steps];
-            for (var i = 0; i < steps; i++)
-            {
-                labels[i] = StepLabel(spec, steps, spec.Min + i * spec.Step);
-                widths[i] = SegmentWidth;
-            }
-            var selected = (int)Math.Round((value - spec.Min) / spec.Step);
-            // 档数多或字放不进分段格的，用下拉框；其余分段钮
-            if (steps >= 4 || !Segmented.Fits(_kit, labels, widths))
-            {
-                var drop = Dropdown.Create(_kit, page, at, labels, selected, DropdownMinWidth);
-                drop.Changed += i => Change(spec.Knob, spec.Min + i * spec.Step);
-                return;
-            }
-            var seg = Segmented.Create(_kit, page, at, widths, labels, false, selected: selected);
-            seg.Changed += i => Change(spec.Knob, spec.Min + i * spec.Step);
+            int Index(float next) => Enumerable.Range(0, values.Count).MinBy(index => Math.Abs(values[index] - next));
+            var control = Dropdown.Create(_kit, parent, values.Select(next => FormatKnob(spec, next)).ToArray(), Index(value));
+            control.AccessibilityName = UiKit.T(spec.LabelKey);
+            control.Changed += index => Change(spec.Knob, values[index]);
+            _knobSync[spec.Knob] = next => control.Select(Index(next), notify: false);
+            return;
+        }
+        var steps = spec.Step > 0 ? (int)Math.Round((spec.Max - spec.Min) / spec.Step) + 1 : 0;
+        if (spec.Step >= 1 && steps >= 2)
+        {
+            var labels = Enumerable.Range(0, steps).Select(index => StepLabel(spec, steps, spec.Min + index * spec.Step)).ToArray();
+            var control = Dropdown.Create(_kit, parent, labels, (int)Math.Round((value - spec.Min) / spec.Step));
+            control.AccessibilityName = UiKit.T(spec.LabelKey);
+            control.Changed += index => Change(spec.Knob, spec.Min + index * spec.Step);
+            _knobSync[spec.Knob] = next => control.Select((int)Math.Round((next - spec.Min) / spec.Step), notify: false);
             return;
         }
         var step = spec.Step > 0 ? spec.Step : (spec.Max - spec.Min) / 20f;
-        var fader = Fader.Create(_kit, page, at + new Vector2(6, 0), 200, spec.Min, spec.Max, step, value, false, v => FormatKnob(spec, v));
-        fader.Changed += v => Change(spec.Knob, v);
+        var fader = Fader.Create(_kit, parent, spec.Min, spec.Max, step, value, format: next => FormatKnob(spec, next));
+        fader.AccessibilityName = UiKit.T(spec.LabelKey);
+        fader.Changed += next => Change(spec.Knob, next);
+        _knobSync[spec.Knob] = next => fader.Set(next, notify: false);
     }
 
-    private const float SegmentWidth = 72, DropdownMinWidth = 168;
-
-    private static string StepLabel(KnobSpec spec, int steps, float v)
+    private float RequestedValue(QualityKnob knob)
     {
-        var key = $"{spec.LabelKey}.{v:0}";
-        if (spec.Knob == QualityKnob.FrameCap && FrameCapHz((int)v) is { } hz) return UiKit.T(key + ".hz", ("hz", $"{hz}"));
-        return Campus.Hud.I18n.Tr.Has(key) ? UiKit.T(key) : steps == 2 ? UiKit.T(v > 0 ? "ui.common.on" : "ui.common.off") : $"{v:0}";
+        if (_pending.TryGetValue(knob, out var pending)) return pending;
+        var quality = Svc<IQualityService>();
+        if (_planned is not { } plan) return quality.Effective.Requested(knob);
+        if (plan.Overrides.TryGetValue(knob, out var value)) return value;
+        return plan.Preset == QualityPreset.Custom ? quality.Effective.Requested(knob) : quality.PresetValue(plan.Preset, knob);
     }
 
-    // 帧率上限的 2、3 档是刷新率的一半与整数倍：显示器的实际刷新率（当前屏）；取不到（−1）或不足 24 时返回 null，退回"半刷新""刷新率"原文案。
-    // 取整同 QualityCatalog.FrameLimit，所以文字与真正的上限一致
+    private void SyncKnobs()
+    {
+        foreach (var (knob, set) in _knobSync) set(RequestedValue(knob));
+    }
+
+    private static string StepLabel(KnobSpec spec, int steps, float value)
+    {
+        var key = $"{spec.LabelKey}.{value:0}";
+        if (spec.Knob == QualityKnob.FrameCap && FrameCapHz((int)value) is { } hz) return UiKit.T(key + ".hz", ("hz", $"{hz}"));
+        return Campus.Hud.I18n.Tr.Has(key) ? UiKit.T(key) : steps == 2 ? UiKit.T(value > 0 ? "ui.common.on" : "ui.common.off") : $"{value:0}";
+    }
+
     private static int? FrameCapHz(int code)
     {
         if (code is not (2 or 3)) return null;
@@ -109,12 +119,12 @@ public partial class SettingsCard
         return (int)MathF.Floor(code == 2 ? rate / 2 : rate);
     }
 
-    private static string FormatKnob(KnobSpec spec, float v) => spec.Knob switch
+    private static string FormatKnob(KnobSpec spec, float value) => spec.Knob switch
     {
-        QualityKnob.RenderScale => $"{v:0.00}×",
-        QualityKnob.ShadowDistance => $"{v:0} m",
-        QualityKnob.FoliageDensity or QualityKnob.ParticleDensity => $"{v * 100:0}%",
-        _ => $"{v:0.##}",
+        QualityKnob.RenderScale => $"{value:0.00}×",
+        QualityKnob.ShadowDistance => $"{value:0} m",
+        QualityKnob.FoliageDensity or QualityKnob.ParticleDensity => $"{value * 100:0}%",
+        _ => $"{value:0.##}",
     };
 
     private void Change(QualityKnob knob, float value)
@@ -122,12 +132,14 @@ public partial class SettingsCard
         var quality = Svc<IQualityService>();
         _pending[knob] = value;
         _preset?.Select((int)QualityPreset.Custom, notify: false);
-        var overrides = new Dictionary<QualityKnob, float>(quality.Requested.Overrides);
-        foreach (var (k, v) in _pending) overrides[k] = v;
+        var basis = _planned ?? quality.Requested;
+        var overrides = new Dictionary<QualityKnob, float>(basis.Overrides);
+        // Changing a preset's knob keeps the other preset values even before its pending application.
+        if (basis.Preset != quality.Requested.Preset && basis.Preset != QualityPreset.Custom)
+            foreach (var spec in quality.Knobs) overrides[spec.Knob] = quality.PresetValue(basis.Preset, spec.Knob);
+        foreach (var (changed, next) in _pending) overrides[changed] = next;
         Plan(new QualityProfile(QualityPreset.Custom, overrides));
     }
-
-    private QualityProfile? _planned;
 
     private void Plan(QualityProfile next)
     {
@@ -144,7 +156,8 @@ public partial class SettingsCard
         var restart = plan.Heaviest == ApplyClass.Restart;
         _applyStatus.Text = plan.Deltas.Count == 0 && _pending.Count == 0 ? ""
             : UiKit.T(restart ? "quality.pending.restart" : veil ? "quality.pending.veil" : "quality.pending.now", ("n", $"{Math.Max(plan.Deltas.Count, _pending.Count)}"));
-        _apply.Off = plan.Rejected.Count > 0;
+        _applyStatus.Visible = _applyStatus.Text.Length > 0;
+        _apply.Off = plan.Rejected.Count > 0 || plan.Deltas.Count == 0;
     }
 
     private async Task ApplyPending()
@@ -153,7 +166,7 @@ public partial class SettingsCard
         var result = await Svc<IQualityService>().Apply(next, ApplyOrigin.User);
         _pending.Clear();
         _planned = null;
-        if (_applyStatus is null || _apply is null) return;   // 等应用的这段时间里卡已经关了，或画面页还没填
+        if (_applyStatus is null || _apply is null) return;
         _applyStatus.Text = result.Status switch
         {
             ApplyStatus.Applied => result.RestartPending ? UiKit.T("quality.result.restart") : "",
@@ -161,12 +174,15 @@ public partial class SettingsCard
             ApplyStatus.Rejected => UiKit.T("quality.result.rejected"),
             _ => throw new InvalidOperationException("Unknown apply status."),
         };
+        _applyStatus.Visible = _applyStatus.Text.Length > 0;
         _apply.Off = true;
+        SyncKnobs();
     }
 
     private void RefreshGraphics()
     {
-        if (_preset is null || _pending.Count > 0) return;
+        if (_preset is null || _pending.Count > 0 || _planned is not null) return;
         _preset.Select((int)Svc<IQualityService>().Requested.Preset, notify: false);
+        SyncKnobs();
     }
 }
