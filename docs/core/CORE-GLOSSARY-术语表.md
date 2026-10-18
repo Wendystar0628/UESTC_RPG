@@ -135,7 +135,7 @@ gates: []
 - **可达空间**（活动范围）：旁观镜头能到的空间，参数在 `map.json` 的 `roam`（WLD-OUTSKIRTS-BORDER §2.1、SYS-VIEW §2.3）。
 - **边缘雾**（`edge_fog`）：旁观接近水平边界时朝外一侧的雾变浓（WLD-OUTSKIRTS-BORDER §2.3）。
 - **校界形心**（`MapDescriptor.Center`）：活动范围的中心（SYS-MAPS §2）。
-- **"校外暂未开放"**：行走顶住校界时的提示；旁观到边缘时是"前方暂未开放"（WLD-OUTSKIRTS-BORDER §3.1）。
+- **"前方暂未开放"**：旁观飞到可达空间边缘时的提示（WLD-OUTSKIRTS-BORDER §3.1）。
 - **地形分层**：清水河不做平地，按"平缓底板 + 少量强垂直 + 遮挡与揭示"主动设计地形（D-180、WLD-TERRAIN-SHAPE §2.1）。
 - **地形评估器**（`ITerrain`）：把地形覆盖层和 OSM 合成确定性高度函数的纯函数，渲染与碰撞读同一份（WLD-TERRAIN-APPLY §1）。
 - **地形操作**：地形覆盖层里的一条矢量操作，每条带 ID 和理由（WLD-TERRAIN-APPLY §1）。
@@ -156,7 +156,7 @@ gates: []
 - **门厅卡**：关着的门的门玻璃里画的门厅视差图层（WLD-INTERIORS-ACCESS §3）。
 - **开放入口**：开放楼的入口门固定敞开，配暖光池、地垫和开放牌，作为"能进"的信号（WLD-INTERIORS-ACCESS §2）。
 - **自动门**：开放室内里能进的房门和开放路线上的防火门、玻璃门：观者走近自动推开，闭门器缓缓关上，不加交互键（WLD-INTERIORS-ACCESS §2.1、D-027）。
-- **关着的门**：实体门扇与外墙连成一条碰撞，顶住时提示"此处暂不开放"（WLD-INTERIORS-ACCESS §2、§3）。
+- **关着的门**：实体门扇与外墙连成一条碰撞（WLD-INTERIORS-ACCESS §2、§3）。
 - **封口**：开放范围的边界，用现实里本来就有的东西收口（WLD-INTERIORS-ACCESS §1、WLD-INTERIORS-BUILD §5）。
 
 ## 7 观察模式、行走与跳转

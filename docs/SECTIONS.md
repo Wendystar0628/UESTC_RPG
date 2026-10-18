@@ -92,7 +92,7 @@
 - CORE-GLOSSARY §3 天气 · L77 · 1.3k
 - CORE-GLOSSARY §4 美术与光照 · L99 · 1.2k
 - CORE-GLOSSARY §5 箱庭、地形、边界与外围 · L121 · 1.5k
-- CORE-GLOSSARY §6 室内与门 · L146 · 974
+- CORE-GLOSSARY §6 室内与门 · L146 · 960
 - CORE-GLOSSARY §7 观察模式、行走与跳转 · L162 · 1.5k
 - CORE-GLOSSARY §8 平面地图与传送 · L187 · 934
 - CORE-GLOSSARY §9 开始页、过场与存档 · L204 · 1.4k
@@ -527,16 +527,16 @@
 
 ## WLD-INTERIORS-ACCESS · 室内开放：原则、门、关着的楼、新开一栋
 
-`docs/world/WLD-INTERIORS-ACCESS-室内开放与门.md` · 6.3k 字 · 室内的精选开放原则、门的区分与自动门、关着的楼、导航图与新开一栋楼的做法
-关键词：楼内、开放室内、开放清单、interiors.json、开放入口、自动门、此处暂不开放、封口、门厅卡、窗卡、简化室内、I0 兜底层、看进去例外、导航图、G19
+`docs/world/WLD-INTERIORS-ACCESS-室内开放与门.md` · 6.2k 字 · 室内的精选开放原则、门的区分与自动门、关着的楼、导航图与新开一栋楼的做法
+关键词：楼内、开放室内、开放清单、interiors.json、开放入口、自动门、封口、门厅卡、窗卡、简化室内、I0 兜底层、看进去例外、导航图、G19
 
-- WLD-INTERIORS-ACCESS §0 结论 · L23 · 890
+- WLD-INTERIORS-ACCESS §0 结论 · L23 · 877
   - ★ WLD-INTERIORS-ACCESS §0.1 接入要点 · L32 · 522
 - WLD-INTERIORS-ACCESS §1 开放原则与共用约定 · L41 · 952
-- WLD-INTERIORS-ACCESS §2 门的区分：开与关 · L55 · 1.4k
-  - WLD-INTERIORS-ACCESS §2.1 楼里的门：走近推开，闭门器关上 · L71 · 665
-- WLD-INTERIORS-ACCESS §3 关着的楼：外壳、窗卡、门厅卡与简化室内 · L81 · 822
-- WLD-INTERIORS-ACCESS §4 导航图、路线与扩展 · L91 · 815
+- WLD-INTERIORS-ACCESS §2 门的区分：开与关 · L55 · 1.3k
+  - WLD-INTERIORS-ACCESS §2.1 楼里的门：走近推开，闭门器关上 · L70 · 665
+- WLD-INTERIORS-ACCESS §3 关着的楼：外壳、窗卡、门厅卡与简化室内 · L80 · 822
+- WLD-INTERIORS-ACCESS §4 导航图、路线与扩展 · L90 · 815
 
 ## WLD-INTERIORS-BUILD · 室内制作：加载、生成器、风格、痕迹、楼梯与碰撞
 
@@ -626,23 +626,23 @@
 
 ## WLD-OUTSKIRTS-BORDER · 边界阻挡与提示：行走阻挡、飞行阻挡、提示文案
 
-`docs/world/WLD-OUTSKIRTS-BORDER-边界阻挡与提示.md` · 5.3k 字 · 校界的行走阻挡与缓停、旁观飞行的可达空间与推回、edge_fog、提示文案、多地图衔接
-关键词：行走阻挡、飞行阻挡、缓停、推回、缓冲带、软地板、可达空间、活动范围、edge_fog、边缘雾、校外暂未开放、前方暂未开放、合法化、地图入口
+`docs/world/WLD-OUTSKIRTS-BORDER-边界阻挡与提示.md` · 5.0k 字 · 校界的行走阻挡与缓停、旁观飞行的可达空间与推回、edge_fog、提示文案、多地图衔接
+关键词：行走阻挡、飞行阻挡、缓停、推回、缓冲带、软地板、可达空间、活动范围、edge_fog、边缘雾、前方暂未开放、合法化、地图入口
 
-- WLD-OUTSKIRTS-BORDER §0 结论 · L23 · 692
-  - ★ WLD-OUTSKIRTS-BORDER §0.1 接入要点 · L28 · 463
-- WLD-OUTSKIRTS-BORDER §1 行走阻挡 · L35 · 781
+- WLD-OUTSKIRTS-BORDER §0 结论 · L23 · 660
+  - ★ WLD-OUTSKIRTS-BORDER §0.1 接入要点 · L28 · 450
+- WLD-OUTSKIRTS-BORDER §1 行走阻挡 · L35 · 708
   - WLD-OUTSKIRTS-BORDER §1.1 挡什么（WP-30、WP-44） · L37 · 428
-  - WLD-OUTSKIRTS-BORDER §1.2 0.6 m 内的缓停（WP-42） · L47 · 277
+  - WLD-OUTSKIRTS-BORDER §1.2 0.6 m 内的缓停（WP-42） · L47 · 204
   - WLD-OUTSKIRTS-BORDER §1.3 兜底 · L52 · 65
 - WLD-OUTSKIRTS-BORDER §2 飞行阻挡（旁观模式） · L56 · 1.5k
   - WLD-OUTSKIRTS-BORDER §2.1 可达空间 · L60 · 396
   - WLD-OUTSKIRTS-BORDER §2.2 缓冲带与推回（WP-06） · L68 · 407
   - WLD-OUTSKIRTS-BORDER §2.3 边缘雾 `edge_fog` · L77 · 389
   - WLD-OUTSKIRTS-BORDER §2.4 参数、合法化与不受约束的镜头 · L84 · 337
-- WLD-OUTSKIRTS-BORDER §3 提示文案与多地图衔接 · L90 · 783
-  - WLD-OUTSKIRTS-BORDER §3.1 提示文案 · L92 · 456
-  - WLD-OUTSKIRTS-BORDER §3.2 与多地图、平面地图、存档的衔接 · L104 · 310
+- WLD-OUTSKIRTS-BORDER §3 提示文案与多地图衔接 · L90 · 641
+  - WLD-OUTSKIRTS-BORDER §3.1 提示文案 · L92 · 314
+  - WLD-OUTSKIRTS-BORDER §3.2 与多地图、平面地图、存档的衔接 · L103 · 310
 
 ## WLD-OUTSKIRTS · 边界与外围：大箱庭、外围环境带、阻挡与提示
 
@@ -963,7 +963,7 @@
 - MAP-QSH-NORTH §5 餐厅 · L80 · 984
 - MAP-QSH-NORTH §6 文化地标与丹桂路 · L94 · 182
 - MAP-QSH-NORTH §7 风雨连廊与本区增补 · L99 · 315
-- MAP-QSH-NORTH §8 本区身份特征、设计增补与近景要求 · L109 · 570
+- MAP-QSH-NORTH §8 本区身份特征、设计增补与近景要求 · L109 · 567
 - MAP-QSH-NORTH §9 待验证 · L129 · 116
 
 ## MAP-QSH-OUTSKIRTS · 清水河外围街区：周边结构、地标、灯光、农田与氛围增补
@@ -1258,7 +1258,7 @@
 - SYS-AUDIO-FOLEY §1 观者声 · L32 · 1.4k
   - SYS-AUDIO-FOLEY §1.1 原则 · L34 · 191
   - SYS-AUDIO-FOLEY §1.2 步相与步频 · L39 · 212
-  - SYS-AUDIO-FOLEY §1.3 材质与覆盖物 · L45 · 399
+  - SYS-AUDIO-FOLEY §1.3 材质与覆盖物 · L45 · 358
   - SYS-AUDIO-FOLEY §1.4 分层与变体 · L51 · 171
   - SYS-AUDIO-FOLEY §1.5 交互音 · L56 · 305
   - SYS-AUDIO-FOLEY §1.6 飞行风声 · L63 · 150
@@ -1279,7 +1279,7 @@
 - SYS-AUDIO §2 混音与响度 · L56 · 497
 - SYS-AUDIO §3 加速流逝的节制与转场 · L75 · 487
 - SYS-AUDIO §4 人迹声：确保不出现清晰人声 · L87 · 511
-- SYS-AUDIO §5 界面音效 · L98 · 425
+- SYS-AUDIO §5 界面音效 · L98 · 415
 - SYS-AUDIO §6 开场音乐 · L106 · 301
 - SYS-AUDIO §7 设置 · L111 · 376
 - SYS-AUDIO §8 素材策略与许可 · L117 · 504
@@ -1534,7 +1534,7 @@
   - SYS-VIEW §2.3 活动范围 · L76 · 245
   - SYS-VIEW §2.4 初始位置 · L84 · 533
   - SYS-VIEW §2.5 镜头不会自己动 · L93 · 768
-  - SYS-VIEW §2.6 操作说明与提示 · L106 · 250
+  - SYS-VIEW §2.6 操作说明与提示 · L106 · 234
 - SYS-VIEW §3 启动与开场 · L115 · 39
 - SYS-VIEW §4 环境痕迹与平面地图的分工 · L119 · 250
 - SYS-VIEW §5 待验证 · L125 · 68
@@ -1555,18 +1555,18 @@
 
 ## SYS-WALK-BOUNDS · 可行走范围、边界与碰撞
 
-`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.6k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
-关键词：可行走范围、可行走数据、禁行区、高度场地面、边界收口、隐形墙、校界缓停、软墙提示、碰撞顶加高、水平外扩、安全点、回位、涉水、开放泳区、游泳出口、碰撞就绪、自动门、电梯关门换位、行走走廊、推荐路线、碰撞级 C、SurfaceTag、FootMat、WalkClass、Collider、ICollisionWorld
+`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.3k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
+关键词：可行走范围、可行走数据、禁行区、高度场地面、边界收口、隐形墙、校界缓停、碰撞顶加高、水平外扩、安全点、回位、涉水、开放泳区、游泳出口、碰撞就绪、自动门、电梯关门换位、行走走廊、推荐路线、碰撞级 C、SurfaceTag、FootMat、WalkClass、Collider、ICollisionWorld
 
 - SYS-WALK-BOUNDS §0 结论 · L23 · 553
   - ★ SYS-WALK-BOUNDS §0.1 接入要点 · L31 · 292
 - SYS-WALK-BOUNDS §1 可行走范围 · L39 · 850
-- SYS-WALK-BOUNDS §2 边界收口 · L58 · 1.2k
-- SYS-WALK-BOUNDS §3 楼内的门与电梯 · L86 · 623
-- SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L100 · 983
-- SYS-WALK-BOUNDS §5 行走走廊与节奏 · L124 · 212
-- SYS-WALK-BOUNDS §6 推荐路线 · L130 · 193
-- SYS-WALK-BOUNDS §7 碰撞与就绪 · L134 · 1.4k
+- SYS-WALK-BOUNDS §2 边界收口 · L58 · 816
+- SYS-WALK-BOUNDS §3 楼内的门与电梯 · L79 · 623
+- SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L93 · 983
+- SYS-WALK-BOUNDS §5 行走走廊与节奏 · L117 · 212
+- SYS-WALK-BOUNDS §6 推荐路线 · L123 · 193
+- SYS-WALK-BOUNDS §7 碰撞与就绪 · L127 · 1.4k
 
 ## SYS-WALK · 行走模式：身体、手感、视角与切换
 
@@ -1648,7 +1648,7 @@
   - UI-NAV §3.3 点位目录 · L89 · 217
   - UI-NAV §3.4 首次进入与到达标题 · L93 · 386
   - UI-NAV §3.5 操作说明与设置 · L98 · 592
-  - UI-NAV §3.6 临时提示 · L106 · 410
+  - UI-NAV §3.6 临时提示 · L106 · 356
   - UI-NAV §3.7 天气签条 · L114 · 506
 - UI-NAV §4 输入 · L124 · 1.4k
   - UI-NAV §4.1 Esc 与单键快捷键 · L126 · 318
