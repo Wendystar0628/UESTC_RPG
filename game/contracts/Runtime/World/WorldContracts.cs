@@ -26,7 +26,6 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
     Flow Flow { get; }
     bool Scrubbing { get; }                 // 正在拖动时间环（UI-VISUAL）
     WorldTransition Transition { get; }     // 位标志：快进、换季转场、换天气的过渡
-    ViewMode ViewMode { get; }
     WeatherSel Weather { get; }             // 生效的天气选择（换季替换之后的值）
     WeatherVec WeatherNow { get; }          // 本帧的天气向量
     IReadOnlyList<WeatherSpan> WeatherAhead { get; }   // 前瞻 24 h 的天气队列，供快进和预报行（UI-NAV、UI-VISUAL）

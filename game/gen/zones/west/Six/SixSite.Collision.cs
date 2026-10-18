@@ -31,7 +31,7 @@ public sealed partial class SixSite
             var y = BaseY(c.Context, k.Entity);
             var style = Style(k.Upper(world));
             GridFacade.Collide(c, plan, y + S.BaseHeight, style, e => Dress(e, volumes), FootMat.StonePaving);
-            if (k.Entity == S.EntityC) east = EastFace(plan, eastDoor);
+            if (k.Entity == S.EntityC) east = EastFace(world, eastDoor);
             // The set-back glass at walking height: open between the vestibule cheeks, DoorClosed across each shut door.
             foreach (var (e, _, _) in GridFacade.Edges(BasePlan(plan)))
             {
@@ -40,7 +40,7 @@ public sealed partial class SixSite
                 var door = e.Frame.Local(eastDoor);
                 if (k.Entity == S.EntityC && MathF.Abs(door.Y - S.Recess) < 1.2f && door.X > 0 && door.X < e.Length)
                     cuts.Add((door.X - S.VestibuleWidth * 0.5f, door.X + S.VestibuleWidth * 0.5f, SurfaceTag.Ground));
-                foreach (var shut in S.ShutDoors)
+                foreach (var shut in S.ShutDoors(c.Context.World))
                 {
                     var p = e.Frame.Local(shut);
                     if (MathF.Abs(p.Y - S.Recess) < 1.2f && p.X > 0 && p.X < e.Length)
@@ -51,7 +51,7 @@ public sealed partial class SixSite
                 foreach (var cut in cuts.Where(cut => cut.Tag == SurfaceTag.DoorClosed))
                     c.Wall(e.Frame.P(cut.U0, 0.1f), e.Frame.P(cut.U1, 0.1f), 0.15f, y, y + S.BaseHeight, SurfaceTag.DoorClosed, FootMat.Glass);
             }
-            foreach (var (x, f) in Columns(plan, style, volumes, eastDoor))
+            foreach (var (x, f) in Columns(plan, style, volumes, eastDoor, world))
                 c.Box(f.At(x, y + S.BaseHeight * 0.5f, S.PierDepth * 0.5f - 0.1f), new(S.ColumnSize * 0.5f + 0.06f, S.BaseHeight * 0.5f, S.ColumnSize * 0.5f + 0.06f), SurfaceTag.Wall, FootMat.StonePaving);
         }
         if (entity is not null && entity != S.EntityC) return;

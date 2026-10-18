@@ -24,8 +24,8 @@ namespace Campus.Gen.Zones.South.MainBuilding;
 /// </summary>
 public sealed class MainBuildingSite : ZoneSite
 {
-    public const string B2 = "qsh:way:687370085";
-    public const string FrontSteps = "qsh:way:618752446";
+    public static readonly string B2 = SouthIds.MainB2.Entity;
+    public static readonly string FrontSteps = SouthIds.MainSteps.Entity;
     /// <summary>Window grids of the claimed front-steps feature (contract-29); B2's own windows stay WP-14's.</summary>
     public const string FrontPorchKey = "front-porch", RearPorchKey = "rear-porch";
 
@@ -57,23 +57,20 @@ public sealed class MainBuildingSite : ZoneSite
     private static Layout Read(IWorldModel world)
     {
         var b2 = world.Feature(B2);
-        var ring = b2.Outers().OrderByDescending(r => Math.Abs(PlanGeometry.SignedArea(r))).First();
-        var stepsRing = world.Feature(FrontSteps).Outers().First();
-        var stepsAt = PlanMath.Centroid(stepsRing);
-        // The front facade is the edge the steps stand against (the rear facade is about as long).
-        var edge = Enumerable.Range(0, ring.Count).MinBy(k => PlanGeometry.SegmentDistanceSquared(stepsAt, ring[k], ring[(k + 1) % ring.Count]));
-        Vector2 a = ring[edge], c = ring[(edge + 1) % ring.Count];
-        var front = PlanFrame.Toward(a, c);
-        if (Vector2.Dot(front.W, PlanMath.Centroid(ring) - (a + c) * 0.5f) > 0) front = PlanFrame.Toward(c, a);
-        // The steps zone is a near-rectangle in F: its sides' mean positions.
-        var steps = stepsRing.Select(front.Local).ToArray();
-        var byX = steps.OrderBy(p => p.X).ToArray();
+        var front = world.ContourFrame(SouthIds.MainFront, originAtEnd: true, forward: false);
+        Vector2 Side(string id)
+        {
+            var edge = world.ContourSegment(id);
+            return (front.Local(edge[0]) + front.Local(edge[^1])) * 0.5f;
+        }
+        var left = Side(SouthIds.MainStepsLeft);
+        var right = Side(SouthIds.MainStepsRight);
+        var bottom = Side(SouthIds.MainStepsFront);
         var rear = world.Interiors.Get(new(B2))?.Entrances.SingleOrDefault(e => e.Id == "b2.rear")
             ?? throw new InvalidOperationException($"{B2} has no b2.rear entrance in the interior index.");
         var turned = new PlanFrame(Vector2.Zero, -front.U);
         var rearFrame = new PlanFrame(new Vector2(rear.Center.X, rear.Center.Z) - turned.W * RearBlockFront, turned.U);
-        return new(front, rearFrame, (byX[0].X + byX[1].X) * 0.5f, (byX[^1].X + byX[^2].X) * 0.5f,
-            steps.OrderByDescending(p => p.Y).Take(2).Average(p => p.Y), b2.Height ?? throw new InvalidOperationException($"{B2} has no height."));
+        return new(front, rearFrame, left.X, right.X, bottom.Y, b2.Height ?? throw new InvalidOperationException($"{B2} has no height."));
     }
 
     public override string Id => "18a.main-building";
@@ -83,8 +80,8 @@ public sealed class MainBuildingSite : ZoneSite
     public override IReadOnlyList<InspectionProbe> Probes =>
     [
         // Q1: on the portico platform beside the door axis, looking at the building; Q4: 3 m west of the platform's plinth (stands, not map data).
-        Probe("Q1", B2, new(-346.73f, M.FloorY + 1.62f, 504.50f), new(0.5904f, -0.8071f), 4f, 6f),
-        Probe("Q4", B2, new(-367.72f, 1.62f, 482.70f), new(0.5904f, -0.8071f), -25f, 0.5f),
+        Probe("Q1", B2, new(-346.73f, M.FloorY + WalkRules.StandingEye, 504.50f), new(0.5904f, -0.8071f), 4f, 6f),
+        Probe("Q4", B2, new(-367.72f, WalkRules.StandingEye, 482.70f), new(0.5904f, -0.8071f), -25f, 0.5f),
     ];
 
     public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world)
@@ -261,7 +258,7 @@ public sealed class MainBuildingSite : ZoneSite
         foreach (var x in M.ArchWindows)
         {
             if (numbered is null)
-                b.Add(PartGeometryKernel.WallPanel(new PolygonRings(Shapes.RoundArch(x, M.ArchSill, M.ArchWidth, M.ArchSpring, 12)), 0.04f, L.Glass), g.F.At(g.Xc, floor, glassZ));
+                b.Add(PartGeometryKernel.WallPanel(new PolygonRings(Shapes.RoundArch(x, M.ArchSill, M.ArchWidth, M.ArchSpring, 12)), 0.04f, ZoneLooks.Glass), g.F.At(g.Xc, floor, glassZ));
             b.Add(PartGeometryKernel.BeveledBox(M.ArchWidth + 0.4f, 0.12f, 0.35f, 0.02f, L.StoneTrim), g.F.At(g.Xc + x, floor + M.ArchSill - 0.12f, M.BackWall + 0.1f));
             if (b.Detail != SiteDetail.Full) continue;
             // Mullion, transom at the springing line and two glazing bars: the window reads as a window, not a hole.
@@ -270,7 +267,7 @@ public sealed class MainBuildingSite : ZoneSite
                 b.Add(PartGeometryKernel.BeveledBox(M.ArchWidth, 0.08f, 0.1f, 0.012f, L.Metal), g.F.At(g.Xc + x, floor + M.ArchSill + M.ArchSpring * k - 0.04f, glassZ + 0.06f));
         }
         // Door: glass vestibule screen at the back, leaves fixed open against the reveals (SYS-WALK), stone threshold.
-        if (numbered is null) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, L.Glass), g.F.At(g.Xc, floor, glassZ));
+        if (numbered is null) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, ZoneLooks.Glass), g.F.At(g.Xc, floor, glassZ));
         b.Add(PartGeometryKernel.BeveledBox(M.DoorWidth + 0.2f, 0.12f, 0.15f, 0.015f, L.Metal), g.F.At(g.Xc, floor + M.DoorSpring, glassZ + 0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(0.06f, M.DoorSpring - 0.1f, 1.5f, 0.012f, L.Wood), g.F.At(g.Xc + side * (M.DoorWidth * 0.5f - 0.05f), floor, glassZ + 0.85f));
@@ -394,7 +391,7 @@ public sealed class MainBuildingSite : ZoneSite
         // Timber double door, leaves swung back flat against the block face; dark glass screen inside the arch.
         var openings = RearOpenings(g, floor);
         if (Allocation(b.Context, RearPorchKey, openings.Length) is { } allocation) WindowNumbers.Panes(b, openings, allocation, W.Hall, W.Corridor);
-        else b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, L.Glass), g.R.At(0, floor, RearGlassZ));
+        else b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, ZoneLooks.Glass), g.R.At(0, floor, RearGlassZ));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(1.15f, 2.65f, 0.07f, 0.015f, L.Wood), g.R.At(side * 1.85f, floor, blockFront + 0.04f));
         // The mat, open sign and door lamp are WP-13's, placed on the b2.rear entrance anchor (WLD-INTERIORS).

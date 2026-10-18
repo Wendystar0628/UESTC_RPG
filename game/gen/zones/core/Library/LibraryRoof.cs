@@ -18,23 +18,17 @@ public static class LibraryRoof
     /// <summary>Plan direction of face k (outward normal), k = 0…7 counterclockwise in (x, z).</summary>
     public static Vector2 FaceDirection(LibraryPlan plan, int k)
     {
-        var a = plan.FaceAngle + k * (Shapes.Tau / 8f);
+        var a = plan.FaceAngle + k * (MathF.Tau / 8f);
         return new(MathF.Cos(a), MathF.Sin(a));
     }
 
-    /// <summary>The face whose normal points closest to true north (−z): the mechanical box stands there.</summary>
-    public static int NorthFace(LibraryPlan plan)
-    {
-        var best = 0;
-        for (var k = 1; k < 8; k++)
-            if (FaceDirection(plan, k).Y < FaceDirection(plan, best).Y) best = k;
-        return best;
-    }
+    /// <summary>The registered north roof facet: the mechanical box stands there.</summary>
+    public static int NorthFace(LibraryPlan plan) => plan.NorthFacet;
 
     /// <summary>Skylight base vertex k on the curb top (circumradius <see cref="LibraryPlan.SkylightRadius"/>).</summary>
     public static Vector3 Vertex(LibraryPlan plan, int k, float radius, float y)
     {
-        var a = plan.FaceAngle + Shapes.Tau / 16f + k * (Shapes.Tau / 8f);
+        var a = plan.FaceAngle + MathF.Tau / 16f + k * (MathF.Tau / 8f);
         return new(plan.Centre.X + MathF.Cos(a) * radius, y, plan.Centre.Y + MathF.Sin(a) * radius);
     }
 
@@ -58,14 +52,14 @@ public static class LibraryRoof
         {
             var a = Vertex(plan, k, r, y0);
             var b = Vertex(plan, (k + 1) % 8, r, y0);
-            var n = Shapes.Normalize(Vector3.Cross(b - a, apex - a));
+            var n = VectorMath.Unit(Vector3.Cross(b - a, apex - a), Vector3.UnitY, 1e-8);
             if (n.Y < 0) n = -n;
             glass.Triangle(a, b, apex, n, column, 5, 0);
             // Main rib on the seam at vertex k: normal halfway between the two facets it joins.
             var prev = Vertex(plan, (k + 7) % 8, r, y0);
-            var np = Shapes.Normalize(Vector3.Cross(a - prev, apex - prev));
+            var np = VectorMath.Unit(Vector3.Cross(a - prev, apex - prev), Vector3.UnitY, 1e-8);
             if (np.Y < 0) np = -np;
-            Beam(steel, metal, a, Vector3.Lerp(a, apex, 1f - hub), Shapes.Normalize(n + np), S.RibWidth, S.RibDepth);
+            Beam(steel, metal, a, Vector3.Lerp(a, apex, 1f - hub), VectorMath.Unit(n + np, Vector3.UnitY, 1e-8), S.RibWidth, S.RibDepth);
             Beam(steel, metal, a, b, n, S.EdgeBeam, S.RibDepth * 0.8f);
             if (rows < 2) continue;
             // Triangular grid: G(j, i) is point i of row j, row 0 on the base, rows − j + 1 points per row. Bars on the
@@ -96,13 +90,13 @@ public static class LibraryRoof
     private static void Curb(LibraryPlan plan, CoreMesh mesh, LodLevel lod)
     {
         var trim = S.Trim(S.LibraryTrim);
-        float r0 = plan.SkylightRadius, r1 = r0 + S.SkylightCurbWidth / MathF.Cos(Shapes.Tau / 16f);
+        float r0 = plan.SkylightRadius, r1 = r0 + S.SkylightCurbWidth / MathF.Cos(MathF.Tau / 16f);
         float y0 = plan.RoofY - (lod == LodLevel.L0 ? 0.02f : 0f), y1 = SkylightBaseY(plan);
         for (var k = 0; k < 8; k++)
         {
             Vector3 ia = Vertex(plan, k, r0, y0), ib = Vertex(plan, (k + 1) % 8, r0, y0), oa = Vertex(plan, k, r1, y0), ob = Vertex(plan, (k + 1) % 8, r1, y0);
             var up = new Vector3(0, y1 - y0, 0);
-            var outward = Shapes.Normalize((oa + ob) * 0.5f - new Vector3(plan.Centre.X, y0, plan.Centre.Y)) with { Y = 0 };
+            var outward = VectorMath.Unit((oa + ob) * 0.5f - new Vector3(plan.Centre.X, y0, plan.Centre.Y), Vector3.UnitY, 1e-8) with { Y = 0 };
             mesh.Quad(trim, oa, ob, ob + up, oa + up, outward);
             mesh.Quad(trim, ia, ib, ib + up, ia + up, -outward);
             mesh.Quad(trim, ia + up, ib + up, ob + up, oa + up, Vector3.UnitY);
@@ -115,9 +109,9 @@ public static class LibraryRoof
         var t = b - a;
         if (t.LengthSquared() < 1e-6f) return;
         t = Vector3.Normalize(t);
-        var side = Shapes.Normalize(Vector3.Cross(up, t)) * (width * 0.5f);
-        var lift = Shapes.Normalize(up) * depth;
-        var sink = Shapes.Normalize(up) * -0.02f;
+        var side = VectorMath.Unit(Vector3.Cross(up, t), Vector3.UnitY, 1e-8) * (width * 0.5f);
+        var lift = VectorMath.Unit(up, Vector3.UnitY, 1e-8) * depth;
+        var sink = VectorMath.Unit(up, Vector3.UnitY, 1e-8) * -0.02f;
         mesh.Quad(paint, a - side + lift, a + side + lift, b + side + lift, b - side + lift, up);
         mesh.Quad(paint, a + side + sink, b + side + sink, b + side + lift, a + side + lift, side);
         mesh.Quad(paint, a - side + sink, b - side + sink, b - side + lift, a - side + lift, -side);
@@ -133,7 +127,7 @@ public static class LibraryRoof
         {
             Vector2 a = ring[k], b = ring[(k + 1) % ring.Count];
             var mid = (a + b) * 0.5f - c;
-            var n = Shapes.Normalize(new Vector3(mid.X, 0, mid.Y));
+            var n = VectorMath.Unit(new Vector3(mid.X, 0, mid.Y), Vector3.UnitY, 1e-8);
             mesh.Quad(paint, new(a.X, y0, a.Y), new(b.X, y0, b.Y), new(b.X, y1, b.Y), new(a.X, y1, a.Y), n);
         }
         for (var k = 1; k + 1 < ring.Count; k++)
@@ -159,7 +153,7 @@ public static class LibraryRoof
         var profile = new List<Vector2> { new(-half, 0), new(half, 0), new(half, S.VaultCurb) };
         for (var i = 1; i < segments; i++)
         {
-            var t = Shapes.Tau * 0.5f * i / segments;
+            var t = MathF.Tau * 0.5f * i / segments;
             profile.Add(new(MathF.Cos(t) * half, S.VaultCurb + MathF.Sin(t) * S.VaultRise));
         }
         profile.Add(new(-half, S.VaultCurb));
@@ -184,7 +178,7 @@ public static class LibraryRoof
         float hl = S.PlantLength * 0.5f, hd = S.PlantDepth * 0.5f;
         foreach (var side in new[] { -1.5f, 1.5f })
         {
-            var a = plan.FaceAngle + (north + side) * (Shapes.Tau / 8f);
+            var a = plan.FaceAngle + (north + side) * (MathF.Tau / 8f);
             var u = new Vector2(MathF.Cos(a), MathF.Sin(a));
             var t = new Vector2(-u.Y, u.X);
             var c = plan.Centre + u * S.PlantRadius;

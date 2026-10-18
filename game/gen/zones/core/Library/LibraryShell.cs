@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -82,25 +83,18 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
         (Vector2 Q, float Half, float Gap)? best = null;
         foreach (var road in world.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
         {
-            if (Highway(road.Props) is not ("footway" or "path" or "pedestrian")) continue;
+            if (WorldProps.TryText(road.Props, "highway") is not ("footway" or "path" or "pedestrian")) continue;
             var half = (road.Width > 0f ? road.Width : S.CafeWalkFallbackWidth) * 0.5f;
             var line = road.Line.Points;
-            for (var k = 1; k < line.Count; k++)
-            {
-                Vector2 a = line[k - 1], b = line[k], ab = b - a;
-                var t = Math.Clamp(Vector2.Dot(p - a, ab) / MathF.Max(ab.LengthSquared(), 1e-9f), 0f, 1f);
-                var q = a + ab * t;
-                var gap = Vector2.Distance(p, q) - half;
-                if (best is null || gap < best.Value.Gap) best = (q, half, gap);
-            }
+            if (line.Count < 2) continue;
+            var projection = PlanGeometry.Project(line, p);
+            var gap = (float)projection.Distance - half;
+            if (best is null || gap < best.Value.Gap) best = (projection.Point, half, gap);
         }
         if (best is not { } hit || hit.Gap < 0.3f || hit.Gap > S.CafeWalkReach) return null;
         var d = Vector2.Normalize(hit.Q - p);
         return (p - d * S.CafeWalkInset, hit.Q - d * (hit.Half - S.CafeWalkOverlap));
     }
-
-    private static string? Highway(JsonElement? props) =>
-        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("highway", out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
     /// <summary>
     /// The cafe walk as WP-15 paves a footway: pavers at the paving level (terrain + 0.15, 5 cm over the lawn), a granite
@@ -111,7 +105,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
         if (CafeWalk is not { } w) return;
         var along = Vector2.Normalize(w.B - w.A);
         var side = new Vector2(-along.Y, along.X);
-        float half = S.CafeWalkWidth * 0.5f, band = S.CafeWalkEdging, lift = S.PavingLift + ApronLift * 0.5f;
+        float half = S.CafeWalkWidth * 0.5f, band = S.CafeWalkEdging, lift = GroundLevels.Paving + ApronLift * 0.5f;
         Shapes.FlatStrip(mesh, S.Roof(S.CafeWalkPaving), w.A, w.B, S.CafeWalkWidth - 2 * band, _ground, lift);
         foreach (var sign in new[] { -1f, 1f })
         {
@@ -120,14 +114,14 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
             var e = side * (sign * half);
             Vector2 a = w.A + e, b = w.B + e;
             var n = new Vector3(side.X * sign, 0f, side.Y * sign);
-            mesh.Quad(S.Roof(S.CafeWalkEdge), new(a.X, _ground(a.X, a.Y) + S.LawnLift - 0.02f, a.Y), new(b.X, _ground(b.X, b.Y) + S.LawnLift - 0.02f, b.Y),
+            mesh.Quad(S.Roof(S.CafeWalkEdge), new(a.X, _ground(a.X, a.Y) + GroundLevels.Lawn - 0.02f, a.Y), new(b.X, _ground(b.X, b.Y) + GroundLevels.Lawn - 0.02f, b.Y),
                 new(b.X, _ground(b.X, b.Y) + lift, b.Y), new(a.X, _ground(a.X, a.Y) + lift, a.Y), n);
         }
     }
 
     public string Id => "library-shell";
     public Vector2 Anchor => Plan.Centre;
-    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreFeatures.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreIds.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     public LibraryPlan Plan { get; }
     public IReadOnlyList<Opening> Openings => _openings;
@@ -163,13 +157,13 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
 
     // ------------------------------------------------------------------ windows
 
-    public ClaimedWindowLayout WindowLayout => new(CoreFeatures.Library, [new WindowGridSpec(WindowKey, Columns, Rows)]);
+    public ClaimedWindowLayout WindowLayout => new(CoreIds.Library, [new WindowGridSpec(WindowKey, Columns, Rows)]);
 
     /// <summary>The library grid's allocation; its size must be the one this layout declared.</summary>
     public WindowAllocation Allocation(WindowNumberingSnapshot numbering)
     {
         ArgumentNullException.ThrowIfNull(numbering);
-        var allocation = numbering.Get(CoreFeatures.Library, WindowKey);
+        var allocation = numbering.Get(CoreIds.Library, WindowKey);
         if (allocation.Columns != Columns || allocation.Rows != Rows)
             throw new InvalidOperationException($"Library window grid is {Columns} × {Rows}, the allocation {allocation.Columns} × {allocation.Rows}.");
         return allocation;
@@ -507,7 +501,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
                     var along = Vector2.Normalize(w.B - w.A);
                     var side = new Vector2(-along.Y, along.X) * (S.CafeWalkWidth * 0.5f);
                     var mid = (w.A + w.B) * 0.5f;
-                    list.Add(new SlabCollider([w.A - side, w.B - side, w.B + side, w.A + side], _ground(mid.X, mid.Y) + S.PavingLift, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
+                    list.Add(new SlabCollider([w.A - side, w.B - side, w.B + side, w.A + side], _ground(mid.X, mid.Y) + GroundLevels.Paving, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
                 }
                 continue;
             }

@@ -29,8 +29,8 @@ public sealed class NorthPlazaSite : ZoneSite
     /// </summary>
     public static PlanFrame? FrameOf(IWorldModel world)
     {
-        if (!world.Features.ContainsKey(new(P.Feature)) || !world.Features.ContainsKey(new(P.BankContour))) return null;
-        return world.ContourFrame(P.BankContour, originAtEnd: false, forward: false);
+        if (!world.Features.ContainsKey(new(BoundaryFeatureIds.NorthPlaza)) || !world.Features.ContainsKey(new(BoundaryFeatureIds.NorthBankContour))) return null;
+        return world.ContourFrame(BoundaryFeatureIds.NorthBankContour, originAtEnd: false, forward: false);
     }
 
     public override void Build(SiteBuilder b)
@@ -41,7 +41,7 @@ public sealed class NorthPlazaSite : ZoneSite
         foreach (var at in P.Benches)
         {
             var bench = frame.Shift(at.X, at.Y);
-            b.Place(PartCatalog.Bench, P.BenchSize, bench.At(0, b.Ground(bench.Origin) + P.PavingTop, 0));
+            b.Place(PartCatalog.Bench, P.BenchSize, bench.At(0, b.Ground(bench.Origin) + GroundLevels.Paving, 0));
         }
     }
 
@@ -57,7 +57,7 @@ public sealed class NorthPlazaSite : ZoneSite
         var u = frame.U;
         var a = frame.P(P.RailT0, P.RailN);
         var c = frame.P(P.RailT1, P.RailN);
-        var y = MathF.Min(b.Ground(a), b.Ground(c)) + P.PavingTop;
+        var y = MathF.Min(b.Ground(a), b.Ground(c)) + GroundLevels.Paving;
         b.Run(L.LightSteel, a, c, P.HandRail, y + P.RailHeight - P.HandRail * 0.7f, y + P.RailHeight);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
         b.Run(L.LightSteel, a, c, 0.04f, y + P.BottomRail, y + P.BottomRail + 0.04f);
@@ -65,7 +65,7 @@ public sealed class NorthPlazaSite : ZoneSite
         {
             var at = frame.P(P.RailT0 + length * k / panels, P.RailN);
             var end = k == 0 || k == panels;
-            var size = end ? P.PostSize + 0.02f : P.PostSize;
+            var size = end ? P.EndPostSize : P.PostSize;
             b.Box(L.LightSteel, at, u, size, size, y - 0.02f, y + P.RailHeight - 0.01f);
             // The campus-side end post (k = 0) is shared with WP-20's canal-bank railing, which carries on from it: no cap there.
             if (end && k == panels && b.Detail == SiteDetail.Full)
@@ -89,13 +89,13 @@ public sealed class NorthPlazaSite : ZoneSite
         if (FrameOf(c.Context.World) is not { } frame) return;
         var a = frame.P(P.RailT0, P.RailN);
         var d = frame.P(P.RailT1, P.RailN);
-        var y = MathF.Min(c.Ground(a), c.Ground(d)) + P.PavingTop;
+        var y = MathF.Min(c.Ground(a), c.Ground(d)) + GroundLevels.Paving;
         // Inside the campus: an ordinary waterside barrier, not the boundary (WLD-OUTSKIRTS), top 1.5 m (SYS-WALK).
         c.Wall(a, d, 0.08f, y - 0.6f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);
         foreach (var at in P.Benches)
         {
             var bench = frame.Shift(at.X, at.Y);
-            c.Add(Bench.Collision(P.BenchSize), bench.At(0, c.Ground(bench.Origin) + P.PavingTop, 0));
+            c.Add(Bench.Collision(P.BenchSize), bench.At(0, c.Ground(bench.Origin) + GroundLevels.Paving, 0));
         }
     }
 }

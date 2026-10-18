@@ -1,5 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Zones.Common;
+using static Campus.Gen.Zones.Common.ZoneLooks;
 using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.West;
@@ -7,7 +9,7 @@ namespace Campus.Gen.Zones.West;
 /// <summary>
 /// Every tunable value of the west zone in one place, for review (WF-FLOW): materials as colour names, and the
 /// dimensions of each site. Footprints, storeys and entity positions are read from the world model by ID (D-239); the
-/// coordinates left here are this zone's own picks (door and shaft spots, routes), world (x, z) in metres. Values marked
+/// authored positions and routes are read from overlay/west.d/. Values marked
 /// "初值" are starting values awaiting the main session's call. 19b and 19c add their own nested classes after these.
 /// </summary>
 public static class WestTune
@@ -31,9 +33,6 @@ public static class WestTune
     /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look
     {
-        private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
-            new(new(family + ".lit"), new(family + ".shade")) { Fx = fx, Line = line, Wet = wet };
-
         /// <summary>六号's dry-hung stone: pale warm grey (浅暖灰石材, MAP-QSH-WEST).</summary>
         public static readonly ToonSpec Stone = S("stone.beige", ToonFx.BevelLift);
         /// <summary>Copings, sills, soffit fascias and column caps: grey-white, fine lines so trims do not hatch the facade.</summary>
@@ -43,8 +42,7 @@ public static class WestTune
         /// <summary>Louvre slats, mullions and door frames: grey aluminium.</summary>
         public static readonly ToonSpec Metal = S("frame.alu", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec RoofSlab = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
-        public static readonly ToonSpec Glass = new(new("glass.lit"), new("glass.shade"))
-        { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
+        public static readonly ToonSpec Glass = ZoneLooks.Glass;
         /// <summary>Entrance aprons and the stone plaza kerbs: light granite.</summary>
         public static readonly ToonSpec Granite = S("stone.beige", ToonFx.BevelLift, LineClass.Fine);
         /// <summary>The campus red (equip.fireRed, Opus review 10:07): 六号's emblem and the motto's lacquered characters.</summary>
@@ -96,19 +94,19 @@ public static class WestTune
     /// </summary>
     public static class Six
     {
-        public const string EntityA = "qsh:way:779496168";
-        public const string EntityB = "qsh:way:779496169";
-        public const string EntityC = "qsh:relation:14153711";
-        public const string PartA = "osm:way:779496168";
-        public const string PartB = "osm:way:779496169";
+        public static readonly string EntityA = WestIds.Way779496168.Entity;
+        public static readonly string EntityB = WestIds.Way779496169.Entity;
+        public static readonly string EntityC = WestIds.Relation14153711.Entity;
+        public static readonly string PartA = WestIds.Way779496168.Part;
+        public static readonly string PartB = WestIds.Way779496169.Part;
         /// <summary>The C block with its courtyard (the source the 13:06 dedupe kept).</summary>
-        public const string PartC = "osm:relation:10807930";
+        public static readonly string PartC = WestIds.Relation10807930.Part;
         /// <summary>B–C link: the 2F outdoor bridge over the drive-through (§1.6).</summary>
-        public const string LinkBC = "osm:relation:14153711";
+        public static readonly string LinkBC = WestIds.Relation14153711.Part;
         /// <summary>A–B link: a two-storey glass link (门厅或连廊).</summary>
-        public const string LinkAB = "osm:way:950008613";
+        public static readonly string LinkAB = WestIds.Way950008613.Part;
         /// <summary>North tower: the stair and lift core, 7 storeys, 23.1 m.</summary>
-        public const string Tower = "osm:way:779496167";
+        public static readonly string Tower = WestIds.Way779496167.Part;
 
         /// <summary>The two-storey glass base (两层通高) and the depth it is set back behind the stone line.</summary>
         public const float BaseHeight = 9.0f;
@@ -154,11 +152,11 @@ public static class WestTune
         /// </summary>
         public const float ApronDepth = 4.0f;
         /// <summary>Top of WP-15's paving (GroundSection.PavingY); the paving under the overhang sits 1 cm above it.</summary>
-        public const float PavingTop = 0.15f;
+        public const float PavingTop = GroundLevels.Paving;
         public const float ApronWidth = 7.6f;
 
         /// <summary>Shut entrances (glass doors, lobby card behind, DoorClosed): one on A, one on B, one on C's south-east face. 初值.</summary>
-        public static readonly Vector2[] ShutDoors = [new(-804.19f, 160.62f), new(-728.73f, 217.39f), new(-601.64f, 275.48f)];
+        public static Vector2[] ShutDoors(IWorldModel world) => [world.Feature(WestIds.SixShutDoor1).Point(), world.Feature(WestIds.SixShutDoor2).Point(), world.Feature(WestIds.SixShutDoor3).Point()];
         public const float ShutDoorWidth = 2.0f;
         public const float ShutDoorHeight = 2.6f;
 
@@ -194,7 +192,7 @@ public static class WestTune
         /// <summary>The blocks' common plan axis (A's south wing, B's first wing; C's faces run square to it).</summary>
         public static readonly Vector2 Axis = new(0.80023f, 0.59969f);
         /// <summary>Roof plant enclosures (fenced, in the middle of a wing) on A, B and C, set out along <see cref="Axis"/>. 初值.</summary>
-        public static readonly Vector2[] Plants = [new(-804.1f, 99.8f), new(-732.2f, 117.3f), new(-607.1f, 267.4f)];
+        public static Vector2[] Plants(IWorldModel world) => [world.Feature(WestIds.SixPlant1).Point(), world.Feature(WestIds.SixPlant2).Point(), world.Feature(WestIds.SixPlant3).Point()];
         public static readonly Vector2 PlantSize = new(8f, 5f);
         public const float PlantFence = 2.0f;
     }
@@ -206,7 +204,7 @@ public static class WestTune
     public static class Motto
     {
         /// <summary>The stone's node; it stands at the node's anchor in the world model.</summary>
-        public const string Entity = "qsh:node:11361252903";
+        public static readonly string Entity = WestIds.Node11361252903.Entity;
         /// <summary>Bearing its inscribed face looks along (toward P10).</summary>
         public const float Facing = 112f;
         public const float Length = 6.6f;
@@ -240,19 +238,19 @@ public static class WestTune
     /// </summary>
     public static class Four
     {
-        public const string EntityA = "qsh:relation:11334255";
-        public const string EntityB = "qsh:relation:11665641";
-        public const string EntityC = "qsh:relation:11334253";
+        public static readonly string EntityA = WestIds.Relation11334255.Entity;
+        public static readonly string EntityB = WestIds.Relation11665641.Entity;
+        public static readonly string EntityC = WestIds.Relation11334253.Entity;
 
         /// <summary>
         /// Door centres on each block's stone line toward the lawn, and the bearing the box faces: A's south face, B's
         /// south-east face, C's east face (osm:relation:11334255 e2, 11665641 e1, 11334252 e1, mid-points). 初值.
         /// </summary>
-        public static readonly (string Entity, string Key, Vector2 Door, float Facing)[] Boxes =
+        public static (string Entity, string Key, Vector2 Door, float Facing)[] Boxes(IWorldModel world) =>
         [
-            (EntityA, "a", new(-306.69f, -357.83f), 178.4f),
-            (EntityB, "b", new(-359.35f, -322.52f), 128.4f),
-            (EntityC, "c", new(-384.75f, -262.87f), 96.8f),
+            (EntityA, "a", world.Feature(WestIds.FourDoorA).Point(), world.Feature(WestIds.FourDoorA).Number("facing")),
+            (EntityB, "b", world.Feature(WestIds.FourDoorB).Point(), world.Feature(WestIds.FourDoorB).Number("facing")),
+            (EntityC, "c", world.Feature(WestIds.FourDoorC).Point(), world.Feature(WestIds.FourDoorC).Number("facing")),
         ];
 
         /// <summary>Glass box: width along the face, how far it stands out, and its height (two storeys of WP-14's 4.2 m research storey).</summary>
@@ -263,20 +261,15 @@ public static class WestTune
         public const float MullionPitch = 1.2f, Transom = FacadeRules.ResearchStorey;
         public const float DoorWidth = 2.4f, DoorHeight = 2.7f;
         /// <summary>Granite landing in front of the box, 3 cm proud of WP-15's paving.</summary>
-        public const float LandingDepth = 2.4f, PavingTop = 0.15f;
+        public const float LandingDepth = 2.4f, PavingTop = GroundLevels.Paving;
 
         /// <summary>
         /// The fan lawn (osm:way:803693984–803693986): its outer arc is the lawn's edge along the ring road; the seat wall runs on
         /// these edges, inset toward the dish centre, so the radial paths pass through its gaps. Points run along the arc. 初值.
         /// </summary>
-        public static readonly Vector2[][] SeatArcs =
-        [
-            [new(-335f, -211f), new(-344f, -220f), new(-352f, -230f), new(-357f, -241f), new(-360f, -252f)],
-            [new(-361f, -259f), new(-360f, -271f), new(-359f, -282f), new(-357f, -291f), new(-353f, -300f)],
-            [new(-343f, -316f), new(-334f, -324f), new(-326f, -330f), new(-320f, -333f), new(-315f, -334f), new(-311f, -334.5f)],
-        ];
+        public static Vector2[][] SeatArcs(IWorldModel world) => [world.Feature(WestIds.FourSeatArc1).Line().ToArray(), world.Feature(WestIds.FourSeatArc2).Line().ToArray(), world.Feature(WestIds.FourSeatArc3).Line().ToArray()];
         /// <summary>The dish centre the arcs are inset toward (MAP-QSH-TERRAIN: about (−324, −275), radius 32, 0.45 deep).</summary>
-        public static readonly Vector2 LawnCentre = new(-324f, -275f);
+        public static Vector2 LawnCentre(IWorldModel world) => ((TerrainCircle)((TerrainBasinOp)world.TerrainOperations[WestIds.FourFanLawn]).Shape).Center;
         public const float LawnRadius = 32f, LawnDepth = 0.45f;
         public const float SeatInset = 0.8f, SeatHeight = 0.45f, SeatWidth = 0.5f, SeatCap = 0.08f;
     }
@@ -289,27 +282,21 @@ public static class WestTune
     /// </summary>
     public static class Innovation
     {
-        public const string Entity = "qsh:relation:11032065";
+        public static readonly string Entity = WestIds.Relation11032065.Entity;
         /// <summary>The cross wings' long axis (north to south).</summary>
         public static readonly Vector2 WingAxis = new(-0.5990f, 0.8007f);
         /// <summary>
         /// The four links between wings and bars (osm:way:795677485 / 795677486 necks): centre and the link's length along the
         /// wing axis between the two buildings. The glass shaft is a little wider than the neck. 初值.
         /// </summary>
-        public static readonly (Vector2 Centre, float Length)[] Shafts =
-        [
-            (new(-591.9f, 77.2f), 6.2f),
-            (new(-626.9f, 119.7f), 7.0f),
-            (new(-553.4f, 106.4f), 6.6f),
-            (new(-586.7f, 149.6f), 7.6f),
-        ];
+        public static (Vector2 Centre, float Length)[] Shafts(IWorldModel world) => [(world.Feature(WestIds.InnovationShaft1).Point(), world.Feature(WestIds.InnovationShaft1).Number("length")), (world.Feature(WestIds.InnovationShaft2).Point(), world.Feature(WestIds.InnovationShaft2).Number("length")), (world.Feature(WestIds.InnovationShaft3).Point(), world.Feature(WestIds.InnovationShaft3).Number("length")), (world.Feature(WestIds.InnovationShaft4).Point(), world.Feature(WestIds.InnovationShaft4).Number("length"))];
         public const float ShaftWidth = 5.2f, ShaftHeight = 19.4f, ShaftFin = 1.25f, ShaftLanding = 3.9f;
 
         /// <summary>
         /// Main entrance on the east wing's south-east face to the parking square (795677486 e8, 2 m north of its mid-point so the
         /// portal's glass screen covers WP-14's own door and canopy there).
         /// </summary>
-        public static readonly Vector2 MainDoor = new(-564.70f, 134.12f);
+        public static Vector2 MainDoor(IWorldModel world) => world.Feature(WestIds.InnovationDoor).Point();
         public const float MainFacing = 126.8f;
         public const float PortalWidth = 9.0f, PortalHeight = 6.2f, PortalDepth = 3.4f, PortalMember = 0.7f;
         /// <summary>The glass screen stands this far behind the portal's front, proud of anything WP-14 hangs on the wall.</summary>
@@ -322,25 +309,20 @@ public static class WestTune
     /// <summary>
     /// 湿地栈道 (MAP-QSH-WEST; 19c): a timber boardwalk through the wetland low ground east of the levee and the wetland
     /// stream, from the A10 plaza (south mouth; design:west-a10-plaza in overlay/west.d/) to the footway at the 西门车行桥's east head (north mouth), on the main network.
-    /// No OSM line: the route is drawn here (初值), kept 10 m and more inside the low ground's east edge, swinging west to the
+    /// No OSM line: the route is authored in overlay/west.d/ (初值), kept 10 m and more inside the low ground's east edge, swinging west to the
     /// stream once (the turn, with the pebble wading beach), and passing P11's spot (−193, −300) so the 250° view opens over
     /// the reeds. The bridges (湿地石桥 692240860, 西门车行桥) and the canal banks are WP-28's (r005); this route touches neither.
     /// </summary>
     public static class Wetland
     {
         /// <summary>The 湿地公园 entity: the feature its seeds and probe name.</summary>
-        public const string Entity = "qsh:node:11020008575";
+        public static readonly string Entity = WestIds.Node11020008575.Entity;
         /// <summary>Route control points (world x, z), south to north; smoothed by two Chaikin passes (ends kept). 初值.</summary>
-        public static readonly Vector2[] Route =
-        [
-            new(-236.6f, -162.4f), new(-233.5f, -176f), new(-236.0f, -190f), new(-236.4f, -203f), new(-233.0f, -216f),
-            new(-221.5f, -238f), new(-205.5f, -262f), new(-195.0f, -287f), new(-193.0f, -312f), new(-198.0f, -340f),
-            new(-206.0f, -361f), new(-211.5f, -372.9f),
-        ];
+        public static Vector2[] Route(IWorldModel world) => world.Feature(WestIds.BoardwalkRoute).Line().ToArray();
         /// <summary>Deck width, plank thickness, and the deck top over the paving level at the two mouths (flush, a 3 cm lip).</summary>
-        public const float Width = 2.4f, Plank = 0.09f, Lip = 0.03f, PavingTop = 0.15f;
+        public const float Width = 2.4f, Plank = 0.09f, Lip = 0.03f, PavingTop = GroundLevels.Paving;
         /// <summary>WP-15 draws grass this high over the terrain (GroundSection.GrassY): the beach and the pebbles sit on it.</summary>
-        public const float GrassTop = 0.10f;
+        public const float GrassTop = GroundLevels.Lawn;
         /// <summary>Granite sill across each mouth, along the route.</summary>
         public const float Sill = 0.6f;
         /// <summary>Stringers along both edges (收边): width, depth below the deck top.</summary>
@@ -363,10 +345,9 @@ public static class WestTune
         /// <summary>
         /// 涉水卵石滩 (§12 涉水区): on the stream's east soft bank, below the stone bridge (downstream, north) at the boardwalk's
         /// turn; about 12.5 m along the stream, from 0.9 m inside the water edge to the deck. A gap in the rail with timber steps
-        /// leads down to it. Its wading polygon is <see cref="WadeRing"/> (registration pending: the stream is a channel op,
-        /// which has no wade list; Astra decides, max-116 19c). 初值.
+        /// leads down to it. Its wading polygon is <see cref="WadeRing"/> (read from the layout overlay; terrain wading is registered separately). 初值.
         /// </summary>
-        public static readonly Vector2 BeachCentre = new(-240.4f, -203.2f);
+        public static Vector2 BeachCentre(IWorldModel world) => world.Feature(WestIds.WetlandBeach).Point();
         /// <summary>The beach's half axes along and across the stream, and its long axis (the stream's line there).</summary>
         public const float BeachHalfLength = 6.3f, BeachHalfWidth = 2.7f;
         public static readonly Vector2 BeachAxis = new(0.0054f, -1f);
@@ -376,8 +357,7 @@ public static class WestTune
         public const int Pebbles = 46;
         public const float PebbleMin = 0.07f, PebbleMax = 0.26f;
         /// <summary>The wading polygon (水深不到 0.3 m): the beach's wet half, from the bank top into the stream.</summary>
-        public static readonly Vector2[] WadeRing =
-            [new(-241.2f, -196.9f), new(-243.1f, -197.6f), new(-243.4f, -203.2f), new(-243.1f, -208.8f), new(-241.2f, -209.5f)];
+        public static IReadOnlyList<Vector2> WadeRing(IWorldModel world) => world.Feature(WestIds.WetlandWade).Outer();
 
         /// <summary>Q2 (walk, K1): P11's spot on the deck, eye height, looking 250° over the reeds.</summary>
         public static readonly Vector2 P11 = new(-193.4f, -300f);
@@ -393,13 +373,16 @@ public static class WestTune
     public static class LeveeSteps
     {
         /// <summary>Junction on the levee centreline and a point down the path (world x, z).</summary>
-        public static readonly (string Key, Vector2 Top, Vector2 Toward)[] Junctions =
+        public static (string Key, Vector2 Top, Vector2 Toward)[] Junctions(IWorldModel world) =>
         [
-            ("stone-bridge", new(-296.28f, -164.94f), new(-283.7f, -160.1f)),
-            ("lake-mouth", new(-304.0f, -154.9f), new(-285.8f, -147.8f)),
+            ("stone-bridge", world.Feature(WestIds.LeveeStoneBridge).PointPair().From, world.Feature(WestIds.LeveeStoneBridge).PointPair().To),
+            ("lake-mouth", world.Feature(WestIds.LeveeLakeMouth).PointPair().From, world.Feature(WestIds.LeveeLakeMouth).PointPair().To),
         ];
         /// <summary>Levee crest half width and side run per metre of rise (west.terrain.json design:terrain:west-levee: width 4, 1:3).</summary>
-        public const float CrestHalf = 2.0f, SideRun = 3.0f, LeveeRise = 0.9f;
+        public static TerrainSlopeOp Levee(IWorldModel world) => (TerrainSlopeOp)world.TerrainOperations[WestIds.Levee];
+        public static float CrestHalf(IWorldModel world) => (float)Levee(world).Width!.Value * 0.5f;
+        public static float SideRun(IWorldModel world) => float.Parse(Levee(world).Side.Fill.AsSpan(2), System.Globalization.CultureInfo.InvariantCulture);
+        public static float LeveeRise(IWorldModel world) => (float)Levee(world).Y0;
         /// <summary>Outer flight width (path 2.5 m plus cheek walls), the target riser, and the least rise worth a flight.</summary>
         public const float Width = 3.1f, Riser = 0.15f, MinRise = 0.3f;
     }
@@ -413,7 +396,7 @@ public static class WestTune
     /// </summary>
     public static class Shelter
     {
-        public const string Entity = "qsh:way:604832425";
+        public static readonly string Entity = WestIds.Way604832425.Entity;
         /// <summary>Platform depth from the back line (the footprint's west edge) toward the road, its rise over the ground and its margin past the roof ends.</summary>
         public const float Depth = 3.25f, PlatformRise = 0.18f, PlatformMargin = 0.35f;
         /// <summary>Posts along the back and their section; roof underside over the platform, slab, overhangs, fascia band.</summary>
@@ -436,7 +419,7 @@ public static class WestTune
     public static class Carving
     {
         /// <summary>The carving's node; the stone lies at the node's anchor in the world model.</summary>
-        public const string Entity = "qsh:node:6784744448";
+        public static readonly string Entity = WestIds.Node6784744448.Entity;
         public const float Facing = 200f;
         /// <summary>Scale of the motto stone's faceted body: about 3.0 × 1.15 m in plan and 1.1 m high.</summary>
         public static readonly Vector3 Scale = new(0.45f, 0.62f, 0.62f);

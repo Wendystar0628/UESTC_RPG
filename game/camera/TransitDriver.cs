@@ -65,7 +65,6 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
             {
                 arrival = new Pose(run.LandOn ?? run.To.Position, run.To.YawDeg, 0);
                 body.Warp(arrival);
-                camera.SetPose(body.EyePose);
             }
             else
             {
@@ -91,7 +90,7 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
                 {
                     try
                     {
-                        await waits.WaitUntil(() => run.Cancelled || !body.Active || body.CollisionReady && body.Grounded,
+                        await waits.WaitUntil(() => run.Cancelled || !body.Active || body.ExitRequested || body.CollisionReady && body.Grounded,
                             TransitTuning.WalkSettleSeconds, "Transit walking feet did not settle.");
                     }
                     catch (TimeoutException) { }
@@ -100,7 +99,6 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
             }
 
             RequireCurrentArrival(destination);
-            if (body is not null) camera.SetPose(body.EyePose);
             run.Progress = 0.75f;
             // Another veil owner (map travel, quality) has taken over; leave the veil to it.
             if (veil.Reason == reason)

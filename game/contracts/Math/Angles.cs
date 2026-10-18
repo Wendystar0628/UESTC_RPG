@@ -22,6 +22,13 @@ public static class Angles
         return value == 0d || value >= 360d ? 0d : value;
     }
 
+    /// <summary>Shortest signed clockwise change from one bearing to another; an exact half-turn is +180 degrees.</summary>
+    public static float SignedDelta(float fromDegrees, float toDegrees)
+    {
+        var change = WrapDegrees(toDegrees - fromDegrees);
+        return change > 180f ? change - 360f : change;
+    }
+
     /// <summary>Plan direction (x,z) from compass degrees; does not wrap before trigonometry.</summary>
     public static Vector2 Heading(float bearingDegrees)
     {

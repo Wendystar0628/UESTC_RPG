@@ -25,8 +25,8 @@ public sealed class PinxueArcEndSite : ZoneSite
     /// <summary>The bay's chord (the registered outline's ends) and the height and storeys of the lobby it wraps, read by ID.</summary>
     private static (Vector2 Start, Vector2 End, float Height, int Storeys) Lobby(IWorldModel world)
     {
-        var (start, end) = Registered.Chord(world.Feature(P.ArcEndId).Outer());
-        var (height, storeys) = world.Feature(P.WingB).Part(P.ArcLobby).Levels();
+        var (start, end) = world.Feature(CenterEastIds.Layout.PinxueArcChord).PointPair();
+        var (height, storeys) = world.Feature(CenterEastIds.Pinxue.WingB).Part(CenterEastIds.Pinxue.ArcLobby).Levels();
         return (start, end, height, storeys);
     }
 
@@ -44,7 +44,7 @@ public sealed class PinxueArcEndSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var world = b.Context.World;
-        var y = world.Terrain.PadY(new(P.WingB));
+        var y = world.Terrain.PadY(new(CenterEastIds.Pinxue.WingB));
         var segments = b.Detail switch { SiteDetail.Full => 16, SiteDetail.Plain => 10, _ => 6 };
         var lobby = Lobby(world);
         var face = Face(world, segments);
@@ -52,7 +52,7 @@ public sealed class PinxueArcEndSite : ZoneSite
         var storeys = lobby.Storeys;
         var storey = height / storeys;
         Sweep(b, face, Section(-0.1f, 0.6f, 0.9f), L.DarkGranite, y - 0.3f);
-        Sweep(b, face, Section(0.12f, 0.18f, height - 0.9f - 0.6f), L.Glass, y + 0.6f);
+        Sweep(b, face, Section(0.12f, 0.18f, height - 0.9f - 0.6f), ZoneLooks.Glass, y + 0.6f);
         for (var k = 1; k < storeys; k++)
             Sweep(b, face, Section(-0.12f, 0.45f, 0.55f), L.Wall, y + k * storey - 0.3f);
         Sweep(b, face, Section(-0.12f, 0.45f, 0.9f), L.Wall, y + height - 0.9f);
@@ -90,7 +90,7 @@ public sealed class PinxueArcEndSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var world = c.Context.World;
-        var y = world.Terrain.PadY(new(P.WingB));
+        var y = world.Terrain.PadY(new(CenterEastIds.Pinxue.WingB));
         var face = Face(world, 8);
         var height = Lobby(world).Height;
         for (var i = 0; i + 1 < face.Length; i++)

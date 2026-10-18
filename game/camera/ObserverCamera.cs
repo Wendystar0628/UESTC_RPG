@@ -32,9 +32,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private ITransitDriver? _transit;
     private Pose _pose;
     private ViewMode _mode = ViewMode.Fly;
-    private int _speedStep;
     private int _flySpeedStep;
-    private int _walkSpeedStep = 2;
     private bool _recoverTriggered;
     private bool _automated;
     private long _worldInstance = long.MinValue;
@@ -47,7 +45,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     public ObserverCamera()
     {
         _flight = new(Tuning); _input = new(Tuning);
-        _speedStep = _flySpeedStep = Tuning.DefaultSpeedStep;
+        _flySpeedStep = Tuning.DefaultSpeedStep;
         ProcessPriority = FramePriority.Camera;
     }
 
@@ -80,6 +78,11 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         { _worldInstance = _world.Instance; ResetHistory(); SetEdgeFog(0); }
         AdvanceInput(seconds);
         if (!IsPlaying) { _flight.Reset(); SetEdgeFog(0); return; }
+        if (Mode == ViewMode.Walk && _walk is { ExitRequested: true })
+        {
+            _ = SetMode(ViewMode.Fly, ModeSwitchVia.Key);
+            return;
+        }
         if (ActiveTransit is not null)
         {
             if (!ActiveTransit.Done.IsCompleted) { _flight.Reset(); SetEdgeFog(0); return; }
@@ -92,7 +95,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
                 if (_locks.Locked) { _flight.Reset(); return; }
                 var move = _input.Move;
                 var displacement = _flight.Step(Pose, new(move.X, _input.Vertical, move.Y), _input.Sprint,
-                    _speedStep, _map.World.Spatial.GroundY(Pose.Position.X, Pose.Position.Z), seconds);
+                    _flySpeedStep, _map.World.Spatial.GroundY(Pose.Position.X, Pose.Position.Z), seconds);
                 var filtered = _bounds.FilterVelocity(Pose.Position, displacement, out float fog);
                 _flight.ConstrainVelocity(_bounds.FilterVelocity(Pose.Position, _flight.Velocity, out _));
                 var position = _bounds.Project(Pose.Position + filtered);
@@ -105,14 +108,8 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
                 SetEdgeFog(0);
                 if (_walk is null)
                     throw new InvalidOperationException("Walk mode requires the restored WP-42 controller.");
-                if (!_walk.Active)
-                {
-                    _ = SetMode(ViewMode.Fly, ModeSwitchVia.Key);
-                    return;
-                }
                 _walk.SetInput(_locks.Locked ? default : new WalkInput(_input.Move, _input.Sprint,
                     _input.JumpHeld, _input.TakeJump(), _input.Crouch));
-                _pose = _walk.EyePose;
                 if (!_locks.Locked && _input.RecoverHeld >= Tuning.ReturnHoldSeconds && !_recoverTriggered)
                 {
                     _recoverTriggered = true;

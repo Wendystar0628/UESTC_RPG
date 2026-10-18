@@ -5,7 +5,6 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.North.Framework;
 using Campus.Gen.Zones.Common;
 using Campus.Gen.World;
 using H = Campus.Gen.Zones.North.NorthTune.Hall;
@@ -29,7 +28,7 @@ public sealed class HallEntranceSite : ZoneSite
     public override string Id => "20a.xz1-hall";
 
     public override IReadOnlyList<InspectionProbe> Probes =>
-        [Probe("Q4", H.Feature, NorthTune.Probes.WallEye, NorthTune.Probes.WallLook, -20f, 0.5f)];
+        [Probe("Q4", NorthFeatureIds.Hall.Entity, NorthTune.Probes.WallEye, NorthTune.Probes.WallLook, -20f, 0.5f)];
 
     /// <summary>Porch frame and levels: origin on the footprint edge under the door, +Z out to the courtyard.</summary>
     internal sealed record Porch(PlanFrame Frame, float Ground, float Floor, int Risers, EntranceDecl Entrance)
@@ -42,28 +41,13 @@ public sealed class HallEntranceSite : ZoneSite
     /// <summary>The porch, or null when the world has no such building or no open entrance for it.</summary>
     internal static Porch? Locate(IWorldModel world)
     {
-        var id = new FeatureId(H.Feature);
+        var id = new FeatureId(NorthFeatureIds.Hall.Entity);
         if (!world.Features.TryGetValue(id, out var feature)) return null;
         if (world.Interiors.Get(id)?.Entrances.FirstOrDefault(e => e.Open) is not { } entrance) return null;
-        var ring = Plan.BuildingRings(feature).FirstOrDefault();
-        if (ring is null || ring.Count < 3) return null;
+        var edge = world.ContourSegment(NorthFeatureIds.HallFacade);
         var door = new Vector2(entrance.Center.X, entrance.Center.Z);
-        // The facade edge nearest the door centre whose outward side faces the declared facing.
-        var facing = PlanMath.Heading(entrance.YawDeg);
-        PlanFrame? best = null;
-        var bestDistance = float.MaxValue;
-        for (var e = 0; e < ring.Count; e++)
-        {
-            Vector2 a = ring[e], b = ring[(e + 1) % ring.Count];
-            var foot = Plan.Closest(door, a, b);
-            var distance = Vector2.Distance(door, foot);
-            var frame = PlanFrame.Along(foot, b - a);
-            if (PlanGeometry.InsideByCrossings(ring, frame.P(0, 0.5f))) frame = PlanFrame.Along(foot, a - b);
-            if (Vector2.Dot(frame.W, facing) < 0.7f || distance >= bestDistance) continue;
-            best = frame;
-            bestDistance = distance;
-        }
-        if (best is not { } f) return null;
+        var foot = PlanGeometry.ClosestPoint(door, edge[0], edge[^1], 1e-12f);
+        var f = PlanFrame.Along(foot, edge[0] - edge[^1]);
         var ground = world.Terrain.HeightAt(f.P(0, H.WallFace + H.LandingDepth + 2f).X, f.P(0, H.WallFace + H.LandingDepth + 2f).Y);
         // The floor follows the terrace (+3.0 → 4.0, MAP-QSH-TERRAIN) even while the shared entrance still reads 1.0.
         var floor = MathF.Max(entrance.Center.Y, ground + H.FloorRaise);

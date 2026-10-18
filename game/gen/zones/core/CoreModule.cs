@@ -1,3 +1,5 @@
+using Campus.Gen.Geometry;
+using Campus.Gen.Zones.Common;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Zones.Core.Annex;
@@ -16,75 +18,65 @@ namespace Campus.Gen.Zones.Core;
 /// to <see cref="CoreSite.Pieces"/>, their entries to overlay/core.d/ and their terrain to core.terrain.json.
 /// </summary>
 [ContentModule("core", Owner = "WP-16")]
-public sealed class CoreModule : IContentModule, IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider
+public sealed class CoreModule() : ZoneModuleBase([new CoreZoneSite()],
+    new(TrianglesL0: 60_000, TrianglesL1: 30_000, DrawCalls: 12), cacheResults: false),
+    IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider { }
+
+/// <summary>Keeps the core's shared stone and glass sinks together while common owns routing and metadata.</summary>
+internal sealed class CoreZoneSite : ZoneSite, ILightMetadataSource
 {
-    /// <summary>Union of every piece's claims; static because the kernel reads claims before any world is loaded.</summary>
-    public IReadOnlyList<Claim> Claims { get; } = CoreSite.Claims;
+    public override string Id => "core";
+    public override IReadOnlyList<Claim> Claims => CoreSite.Claims;
 
-    /// <summary>Upper bounds per 64 m cell for the whole zone (16a measures about 12k L0 triangles in the plaza cell).</summary>
-    public ModuleBudget Budget { get; } = new(TrianglesL0: 60_000, TrianglesL1: 30_000, DrawCalls: 12);
-
-    public IEnumerable<TileKey> Tiles(BuildContext ctx)
+    public override void Build(SiteBuilder builder)
     {
-        ArgumentNullException.ThrowIfNull(ctx);
-        return CoreSite.Pieces(ctx.World).Select(p => CoreTiles.Of(p.Anchor, LodLevel.L0)).Distinct()
-            .OrderBy(t => t.X).ThenBy(t => t.Z).ToArray();
+        foreach (var group in CoreSite.Pieces(builder.Context.World).GroupBy(piece => TileGrid.At(piece.Anchor, builder.Lod)))
+        {
+            var build = CreateBuild(builder.Context);
+            foreach (var piece in group) piece.Build(build, builder.Lod);
+            var output = build.Finish(builder.Lod);
+            var anchor = group.First().Anchor;
+            foreach (var mesh in output.Meshes) builder.Add(mesh, System.Numerics.Matrix4x4.Identity, anchor);
+            foreach (var part in output.Parts) builder.Place(part, anchor);
+            foreach (var emitter in output.Emitters ?? []) builder.Light(emitter, anchor);
+        }
     }
 
-    public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod)
+    public override void Collide(SiteColliders colliders)
     {
-        ArgumentNullException.ThrowIfNull(ctx);
-        var build = CreateBuild(ctx);
-        foreach (var piece in CoreSite.Pieces(ctx.World))
-            if (CoreTiles.Of(piece.Anchor, lod) == tile) piece.Build(build, lod);
-        return build.Finish(lod);
+        foreach (var piece in CoreSite.Pieces(colliders.Context.World))
+            foreach (var collider in piece.Collide()) colliders.Add(collider, piece.Anchor);
     }
 
-    public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile)
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level)
     {
-        ArgumentNullException.ThrowIfNull(ctx);
-        return CoreSite.Pieces(ctx.World).Where(p => CoreTiles.Of(p.Anchor, LodLevel.L0) == tile).SelectMany(p => p.Collide()).ToArray();
-    }
-
-    /// <summary>Whole production pieces before the tile's material and glass batching, retaining their placed parts.</summary>
-    public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level)
-    {
-        ArgumentNullException.ThrowIfNull(context);
         foreach (var piece in CoreSite.Pieces(context.World))
         {
             var build = CreateBuild(context);
             piece.Build(build, level);
-            // The plaza owns its separately claimed ring steps; other pieces have one owning claim or are auxiliary.
-            var feature = piece is TimePlaza ? CoreFeatures.TimePlaza : piece.Claims.OfType<FeatureClaim>().SingleOrDefault()?.Feature;
-            yield return new ContentSourceTrace($"core/{piece.Id}", feature, build.Finish(level), piece.Collide(), []);
+            var feature = piece is TimePlaza ? CoreIds.TimePlaza : piece.Claims.OfType<FeatureClaim>().SingleOrDefault()?.Feature;
+            yield return new($"core/{piece.Id}", feature, build.Finish(level), piece.Collide(), []);
         }
     }
 
+    public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world) =>
+        CoreSite.Pieces(world).OfType<IWindowedPiece>()
+            .SelectMany(piece => piece.WindowLayout.Grids.Select(grid => (piece.WindowLayout.Feature, grid)));
+
+    public override void DescribeWindows(BuildContext context, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
+    {
+        foreach (var piece in CoreSite.Pieces(context.World).OfType<IWindowedPiece>())
+            foreach (var window in piece.Windows(context.WindowNumbering!)) windows.Add(window);
+    }
+
+    public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context) =>
+        CoreSite.Pieces(context.World).OfType<TimePlaza>().SelectMany(plaza => plaza.Lights(LodLevel.L0)).ToArray();
+
     private static CoreBuild CreateBuild(BuildContext context) => new(context.Catalog)
     {
-        WindowNumbering = CoreSite.Numbering(context),
+        WindowNumbering = context.WindowNumbering,
         PartLods = context.PartLods,
     };
-
-    public IReadOnlyList<InspectionProbe> Probes => [];
-
-    public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        return CoreSite.Pieces(context.World).OfType<TimePlaza>().SelectMany(plaza => plaza.Lights(LodLevel.L0)).ToArray();
-    }
-
-    /// <summary>Window grids of every facade this zone claims (16b: the library shell), from the pieces' own layouts.</summary>
-    public IReadOnlyList<ClaimedWindowLayout> DescribeWindowLayouts(IWorldModel world, uint worldSeed) => CoreSite.WindowLayouts(world);
-
-    /// <summary>Every logical window of those grids, numbered from the context's allocation.</summary>
-    public WindowMetadata DescribeWindows(BuildContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var numbering = CoreSite.Numbering(context)
-            ?? throw new InvalidOperationException("Window metadata needs the map's WindowNumberingSnapshot in the BuildContext.");
-        return new([], CoreSite.Pieces(context.World).OfType<IWindowedPiece>().SelectMany(p => p.Windows(numbering)).ToArray());
-    }
 }
 
 /// <summary>
@@ -98,17 +90,17 @@ public static class CoreSite
     /// <summary>Every claim the zone makes. Keep in step with the pieces' own Claims (a unit test checks).</summary>
     public static IReadOnlyList<Claim> Claims { get; } =
     [
-        new FeatureClaim(CoreFeatures.TimePlaza, Aspects.Props),
-        new FeatureClaim(CoreFeatures.PlazaRingSteps, Aspects.Massing),
-        new FeatureClaim(CoreFeatures.Sundial, Aspects.Massing | Aspects.Props),
-        new FeatureClaim(CoreFeatures.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof),
-        new FeatureClaim(CoreFeatures.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof),
-        new FeatureClaim(CoreFeatures.Museum, Aspects.Massing | Aspects.Facade | Aspects.Roof),
-        new FeatureClaim(CoreFeatures.NorthAnnex, Aspects.Massing | Aspects.Facade | Aspects.Roof),
-        new FeatureClaim(CoreFeatures.CourtWing, Aspects.Massing | Aspects.Facade | Aspects.Roof),
-        new FeatureClaim(CoreFeatures.LowBlock, Aspects.Massing | Aspects.Facade | Aspects.Roof),
-        new FeatureClaim(CoreFeatures.NorthWestLink, Aspects.Massing | Aspects.Facade | Aspects.Roof),
-        new FeatureClaim(CoreFeatures.NorthWestJoint, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreIds.TimePlaza, Aspects.Props),
+        new FeatureClaim(CoreIds.PlazaRingSteps, Aspects.Massing),
+        new FeatureClaim(CoreIds.Sundial, Aspects.Massing | Aspects.Props),
+        new FeatureClaim(CoreIds.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreIds.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreIds.Museum, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreIds.NorthAnnex, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreIds.CourtWing, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreIds.LowBlock, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreIds.NorthWestLink, Aspects.Massing | Aspects.Facade | Aspects.Roof),
+        new FeatureClaim(CoreIds.NorthWestJoint, Aspects.Massing | Aspects.Facade | Aspects.Roof),
     ];
 
     public static IReadOnlyList<ICorePiece> Pieces(IWorldModel world)
@@ -139,32 +131,4 @@ public static class CoreSite
         return pieces.OfType<ICorePiece>().ToArray();
     }
 
-    /// <summary>
-    /// One complete layout for each facade the zone claims that is in this world: the windowed piece's grids, or an
-    /// explicit empty set. A feature declared by two pieces is a conflict, reported here rather than overwritten.
-    /// </summary>
-    public static IReadOnlyList<ClaimedWindowLayout> WindowLayouts(IWorldModel world)
-    {
-        ArgumentNullException.ThrowIfNull(world);
-        var declared = new SortedDictionary<string, ClaimedWindowLayout>(StringComparer.Ordinal);
-        foreach (var piece in Pieces(world).OfType<IWindowedPiece>())
-        {
-            var layout = piece.WindowLayout;
-            if (!declared.TryAdd(layout.Feature.Value, layout))
-                throw new InvalidOperationException($"Two core pieces declare windows for {layout.Feature.Value}.");
-        }
-        foreach (var claim in Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0 && world.Features.ContainsKey(c.Feature)))
-            declared.TryAdd(claim.Feature.Value, new ClaimedWindowLayout(claim.Feature, []));
-        return [.. declared.Values];
-    }
-
-    /// <summary>The context's window allocation, checked against the context's map; null only for fixtures without one.</summary>
-    public static WindowNumberingSnapshot? Numbering(BuildContext ctx)
-    {
-        ArgumentNullException.ThrowIfNull(ctx);
-        var numbering = ctx.WindowNumbering;
-        if (numbering is not null && ctx.Map is { } map && numbering.Map != map.Id)
-            throw new InvalidOperationException($"Window numbering is for map {numbering.Map.Value}, not {map.Id.Value}.");
-        return numbering;
-    }
 }

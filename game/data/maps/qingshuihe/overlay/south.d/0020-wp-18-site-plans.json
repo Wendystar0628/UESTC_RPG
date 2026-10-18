@@ -1,0 +1,191 @@
+{
+  "zone": "south",
+  "owner": "WP-18",
+  "map": "qingshuihe",
+  "ops": [
+    {
+      "op": "add",
+      "id": "design:south-main-front",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[-316.62, 519.34], [-374.74, 476.82]]}},
+      "props": {"parent": "qsh:way:687370085", "contour": "facade", "sourceId": "osm:way:687370085"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-main-steps-left",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[-375.06, 497.58], [-364.78, 484.01]]}},
+      "props": {"parent": "qsh:way:618752446", "contour": "facade", "sourceId": "osm:way:618752446"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-main-steps-right",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[-325.61, 512.81], [-336.21, 526.8]]}},
+      "props": {"parent": "qsh:way:618752446", "contour": "facade", "sourceId": "osm:way:618752446"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-main-steps-front",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[-336.21, 526.8], [-375.06, 497.58]]}},
+      "props": {"parent": "qsh:way:618752446", "contour": "facade", "sourceId": "osm:way:618752446"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-clock-axis",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[186.41, 550.53], [176.74, 561.16]]}},
+      "props": {"parent": "qsh:way:844548980", "contour": "facade", "sourceId": "osm:way:1157144625"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-platform-north-top",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[-178.02, 714.05], [-179.84, 715.76]]}},
+      "props": {"parent": "qsh:source:way:988857939", "contour": "facade", "sourceId": "osm:way:988857939"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-platform-north-bottom",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[-193.85, 700.82], [-192.02, 699.11]]}},
+      "props": {"parent": "qsh:source:way:988857939", "contour": "facade", "sourceId": "osm:way:988857939"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-platform-grand-edge",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[-46.8, 820.5], [-61.91, 823.54]]}},
+      "props": {"parent": "qsh:way:601600526", "contour": "facade", "sourceId": "osm:way:601600526"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-plaza-axis",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[-508.86, 686.969], [-498.072, 672.559]]}},
+      "props": {"parent": "design:south-a01-plaza", "contour": "facade"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-xuanbang-south-gable",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[191.41, 494.62], [199.88, 485.16]]}},
+      "props": {"parent": "qsh:way:844548980", "contour": "facade", "sourceId": "osm:way:844548980"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-xuanbang-portico",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[202.53, 487.5], [247.13, 437.04]]}},
+      "props": {"parent": "qsh:way:844548980", "contour": "facade", "sourceId": "osm:way:844548980"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-xuanbang-north-gable",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[242.55, 433.08], [250.3, 424.2]]}},
+      "props": {"parent": "qsh:way:844548980", "contour": "facade", "sourceId": "osm:way:844548980"},
+      "reason": "MAP-QSH-SOUTH：登记构件所依附的轮廓边，按端点读取（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-platform-core",
+      "kind": "sitePlan",
+      "geometry": {"type": "polygon", "rings": {"outer": [[-187.0, 805.0], [-176.0, 792.0], [-168.0, 772.0], [-165.5, 760.5], [-158.0, 774.0], [-144.0, 774.0], [-123.0, 788.6], [-94.2, 793.9], [-79.0, 789.6], [-64.2, 779.3], [-52.0, 762.5], [-43.0, 760.5], [-43.0, 812.6], [-66.2, 818.0], [-81.8, 842.7], [-113.2, 833.7], [-144.0, 834.8], [-148.2, 820.0], [-156.1, 811.8], [-168.8, 806.0], [-179.5, 813.4]], "holes": []}},
+      "props": {},
+      "reason": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-flagpole",
+      "kind": "siteAnchor",
+      "geometry": {"type": "point", "position": [-394.17, 0, 557.41]},
+      "props": {},
+      "reason": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-peacock-house",
+      "kind": "siteAnchor",
+      "geometry": {"type": "point", "position": [-302, 0, 305]},
+      "props": {},
+      "reason": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-lake-pavilion",
+      "kind": "siteAnchor",
+      "geometry": {"type": "point", "position": [30, 0, 592]},
+      "props": {},
+      "reason": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-platform-grand-stair",
+      "kind": "siteAnchor",
+      "geometry": {"type": "point", "position": [-54.35, 0, 822]},
+      "props": {},
+      "reason": "MAP-QSH-SOUTH：登记南区既有设计构件的平面位置，维持原构件布置（D-239）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-xuanbang-front0",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[174.72, 536.5], [203.93, 503.09]]}},
+      "props": {"parent": "qsh:way:844548980", "sourceId": "osm:way:844548980", "contour": "facade"},
+      "reason": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-xuanbang-front1",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[191.41, 494.62], [199.88, 485.16]]}},
+      "props": {"parent": "qsh:way:844548980", "sourceId": "osm:way:844548980", "contour": "facade"},
+      "reason": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-xuanbang-front2",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[202.53, 487.5], [247.13, 437.04]]}},
+      "props": {"parent": "qsh:way:844548980", "sourceId": "osm:way:844548980", "contour": "facade"},
+      "reason": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-xuanbang-front3",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[242.55, 433.08], [250.3, 424.2]]}},
+      "props": {"parent": "qsh:way:844548980", "sourceId": "osm:way:844548980", "contour": "facade"},
+      "reason": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-xuanbang-front4",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[254.57, 427.89], [260.61, 421.06]]}},
+      "props": {"parent": "qsh:way:844548980", "sourceId": "osm:way:844548980", "contour": "facade"},
+      "reason": "MAP-QSH-SOUTH：登记宣邦楼朝湖立面的构件边（D-243）"
+    },
+    {
+      "op": "add",
+      "id": "design:south-eastlake-wade-edge",
+      "kind": "contourSegment",
+      "geometry": {"type": "polyline", "line": {"points": [[144.75, 297.54], [167.68, 301.71]]}},
+      "props": {"parent": "qsh:relation:7849760", "sourceId": "osm:relation:7849760"},
+      "reason": "MAP-QSH-SOUTH：涉水台阶对应的硬岸边按端点登记（D-243）"
+    }
+  ]
+}

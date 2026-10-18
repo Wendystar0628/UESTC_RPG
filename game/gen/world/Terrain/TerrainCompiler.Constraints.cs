@@ -11,7 +11,7 @@ internal static partial class TerrainCompiler
         foreach (var feature in b.Context.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             if (b.WrittenWater.Contains(feature.Id)) continue;
-            var polygons = WorldFeatureKinds.Parts(feature, "water").SelectMany(p => WorldModelLoader.Polygons(p.Geometry)).ToArray();
+            var polygons = WorldFeatureKinds.Parts(feature, "water").SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray();
             if (polygons.Length == 0) continue;
             var defaults = b.Context.Defaults ?? throw new WorldDataException("map.json", "terrainDefaults", "Automatic water constraints require explicit map defaults.");
             var channel = b.References.IsChannelWater(feature);
@@ -61,7 +61,7 @@ internal static partial class TerrainCompiler
         foreach (var feature in b.Context.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             if (b.WrittenPads.Contains(feature.Id)) continue;
-            var polygons = WorldFeatureKinds.Parts(feature, "building").SelectMany(p => WorldModelLoader.Polygons(p.Geometry)).ToArray();
+            var polygons = WorldFeatureKinds.Parts(feature, "building").SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray();
             if (polygons.Length == 0) continue;
             var region = new TerrainRegion(polygons);
             AddPad(b, region, feature.Id, TouchesZeroBand(b, region) ? 0 : Median(prePad, region), 0.8, 6, null, null, prePad);

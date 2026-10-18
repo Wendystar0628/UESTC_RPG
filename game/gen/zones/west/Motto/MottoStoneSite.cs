@@ -21,9 +21,7 @@ public sealed class MottoStoneSite : ZoneSite
 {
     /// <summary>The stone's plan centre: its node's anchor in the world model.</summary>
     internal static Vector2 At(IWorldModel world) =>
-        world.Features.TryGetValue(new(M.Entity), out var feature) && feature.Geometry is PointGeometry point
-            ? new(point.Position.X, point.Position.Z)
-            : throw new InvalidOperationException($"校训石 {M.Entity} is missing from the world model.");
+        world.Feature(M.Entity).Point();
 
     /// <summary>Half axes of the kerb's centreline (local x along the stone, z across it).</summary>
     internal static Vector2 Kerb => new(M.Length * 0.5f + M.BedMarginX, M.Depth * 0.5f + M.BedMarginZ);
@@ -93,9 +91,9 @@ public sealed class MottoStoneSite : ZoneSite
         get
         {
             // Probe pins are fixed coordinates (no world access here): the stone's node anchor.
-            var out1 = PlanMath.Heading(M.Facing);
+            var out1 = Angles.Heading(M.Facing);
             var eye = new Vector2(-554.76f, 233.83f) + out1 * (M.Depth * 0.5f + 3f);
-            return [Probe("Q1", M.Entity, new(eye.X, 1.62f, eye.Y), -out1, -8f, 3f)];
+            return [Probe("Q1", M.Entity, new(eye.X, WalkRules.StandingEye, eye.Y), -out1, -8f, 3f)];
         }
     }
 }

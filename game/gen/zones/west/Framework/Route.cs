@@ -1,32 +1,13 @@
 using System.Numerics;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Zones.West.Framework;
 
-/// <summary>
-/// An open plan polyline (world x, z) measured by arc length, for things laid along a route (a boardwalk, its rails and
-/// posts). Scalar arithmetic only. "Right" is the sweep kernel's lateral positive: (t.z, −t.x) for a unit tangent t.
-/// </summary>
-public sealed class Route
+/// <summary>Boardwalk design route; measurement and sampling use the shared geometry layer.</summary>
+public sealed class Route(IReadOnlyList<Vector2> points)
 {
-    private readonly float[] _s;
-
-    public Route(IReadOnlyList<Vector2> points)
-    {
-        ArgumentNullException.ThrowIfNull(points);
-        if (points.Count < 2) throw new ArgumentException("A route needs at least two points.", nameof(points));
-        Points = [.. points];
-        _s = new float[Points.Length];
-        for (var i = 1; i < Points.Length; i++)
-        {
-            var d = Vector2.Distance(Points[i - 1], Points[i]);
-            if (!(d > 1e-4f)) throw new ArgumentException("A route cannot repeat a point.", nameof(points));
-            _s[i] = _s[i - 1] + d;
-        }
-    }
-
-    public Vector2[] Points { get; }
-
-    public float Length => _s[^1];
+    public Vector2[] Points { get; } = [.. points];
+    public float Length { get; } = (float)PlanGeometry.Length(points);
 
     /// <summary>Two Chaikin corner-cutting passes per <paramref name="passes"/>, keeping both end points.</summary>
     public static Vector2[] Smooth(IReadOnlyList<Vector2> points, int passes)
@@ -47,51 +28,19 @@ public sealed class Route
         return p;
     }
 
-    /// <summary>Point and unit tangent at arc length s (clamped to the route).</summary>
-    public (Vector2 P, Vector2 T) At(float s)
+    public (Vector2 P, Vector2 T) At(float station)
     {
-        s = Math.Clamp(s, 0f, Length);
-        var i = 1;
-        while (i < _s.Length - 1 && _s[i] < s) i++;
-        Vector2 a = Points[i - 1], b = Points[i];
-        var t = (s - _s[i - 1]) / (_s[i] - _s[i - 1]);
-        var d = b - a;
-        var l = MathF.Sqrt(d.X * d.X + d.Y * d.Y);
-        return (a + d * t, d / l);
+        var sample = PlanGeometry.Sample(Points, station);
+        return (sample.Point, sample.Tangent);
     }
 
-    public static Vector2 Right(Vector2 t) => new(t.Y, -t.X);
+    public static Vector2 Right(Vector2 tangent) => new(tangent.Y, -tangent.X);
 
-    /// <summary>Arc length of the route point nearest to <paramref name="p"/>, and its signed lateral offset (right positive).</summary>
-    public (float S, float Lateral) Project(Vector2 p)
+    public (float S, float Lateral) Project(Vector2 point)
     {
-        float best = float.MaxValue, bestS = 0, bestLat = 0;
-        for (var i = 1; i < Points.Length; i++)
-        {
-            Vector2 a = Points[i - 1], b = Points[i], d = b - a;
-            var l2 = d.X * d.X + d.Y * d.Y;
-            var t = Math.Clamp(((p.X - a.X) * d.X + (p.Y - a.Y) * d.Y) / l2, 0f, 1f);
-            var q = a + d * t;
-            var dist = Vector2.Distance(p, q);
-            if (dist < best)
-            {
-                best = dist;
-                bestS = _s[i - 1] + t * (_s[i] - _s[i - 1]);
-                var r = Right(d / MathF.Sqrt(l2));
-                bestLat = (p.X - q.X) * r.X + (p.Y - q.Y) * r.Y;
-            }
-        }
-        return (bestS, bestLat);
+        var projection = PlanGeometry.Project(Points, point);
+        return ((float)projection.Station, Vector2.Dot(point - projection.Point, Right(projection.Tangent)));
     }
 
-    /// <summary>The part of the route between arc lengths s0 and s1, with interior vertices kept.</summary>
-    public Vector2[] Sub(float s0, float s1)
-    {
-        s0 = Math.Clamp(s0, 0f, Length); s1 = Math.Clamp(s1, 0f, Length);
-        var list = new List<Vector2> { At(s0).P };
-        for (var i = 1; i < Points.Length - 1; i++)
-            if (_s[i] > s0 + 0.01f && _s[i] < s1 - 0.01f) list.Add(Points[i]);
-        list.Add(At(s1).P);
-        return [.. list];
-    }
+    public Vector2[] Sub(float from, float to) => PlanGeometry.Subline(Points, from, to);
 }

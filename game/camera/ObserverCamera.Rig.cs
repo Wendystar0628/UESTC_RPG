@@ -5,7 +5,13 @@ namespace Campus.Camera;
 
 public partial class ObserverCamera
 {
-    public Pose Pose => _pose;
+    // Title and cinematics own a presentation pose while the restored walk body stays frozen.
+    public Pose Pose => !IsPlaying ? _pose : Mode switch
+    {
+        ViewMode.Fly => _pose,
+        ViewMode.Walk => _walk?.EyePose ?? throw new InvalidOperationException("Walk mode requires its physical eye pose."),
+        _ => throw new InvalidOperationException("Unknown view mode.")
+    };
     public float Speed => _mode switch
     {
         ViewMode.Fly => _flight.Velocity.Length(),
@@ -13,7 +19,12 @@ public partial class ObserverCamera
         _ => throw new InvalidOperationException("Unknown view mode.")
     };
     public ViewMode Mode => _mode;
-    public int SpeedStep => _speedStep;
+    public int SpeedStep => Mode switch
+    {
+        ViewMode.Fly => _flySpeedStep,
+        ViewMode.Walk => _walk?.SpeedStep ?? throw new InvalidOperationException("Walk mode requires its speed setting."),
+        _ => throw new InvalidOperationException("Unknown view mode.")
+    };
     public ITransitHandle? ActiveTransit { get; private set; }
     public float EdgeFog { get; private set; }
     public N.Vector3 Feet => Mode switch
@@ -83,14 +94,11 @@ public partial class ObserverCamera
                 if (_walk is null) return Task.FromResult(ModeSwitchResult.Refused);
                 result = _walk.Enter(Pose);
                 if (result == ModeSwitchResult.Refused) return Task.FromResult(result);
-                _flySpeedStep = _speedStep; _speedStep = _walkSpeedStep;
-                _walk.SetSpeedStep(_walkSpeedStep);
-                _pose = _walk.EyePose;
                 break;
             case ViewMode.Fly:
                 _pose = (_walk is { Active: true } ? _walk.EyePose : Pose) with { FovDeg = Tuning.FlyFov };
                 if (_walk is { Active: true }) inheritedVelocity = new(_walk.Velocity.X, 0, _walk.Velocity.Z);
-                _walk?.Leave(); _speedStep = _flySpeedStep;
+                _walk?.Leave();
                 _pose = Legalize(_pose);
                 result = ModeSwitchResult.Ok;
                 break;

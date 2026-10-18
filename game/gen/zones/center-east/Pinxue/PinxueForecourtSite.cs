@@ -26,7 +26,7 @@ public sealed class PinxueForecourtSite : ZoneSite
 
     public override IReadOnlyList<InspectionProbe> Probes =>
         // Q4 (wall-hugging, K1): 0.5 m from the A hall's ground-floor glazing and dark plinth, on the forecourt.
-        [Probe("Q4", P.WingA, new(P.Q4Eye.X, P.PlatformY + 1.62f, P.Q4Eye.Y), P.Q4Look, -20f, 0.5f)];
+        [Probe("Q4", CenterEastIds.Pinxue.WingA, new(P.Q4Eye.X, P.PlatformY + WalkRules.StandingEye, P.Q4Eye.Y), P.Q4Look, -20f, 0.5f)];
 
     public override void Build(SiteBuilder b)
     {
@@ -43,7 +43,7 @@ public sealed class PinxueForecourtSite : ZoneSite
 
     /// <summary>Centres of the registered tree pits.</summary>
     internal static IEnumerable<Vector2> TreePitCentres(IWorldModel world) =>
-        world.Feature(P.TreePitsId).Polygons().Select(pit => pit.Outer.Aggregate(Vector2.Zero, (sum, p) => sum + p) / pit.Outer.Count);
+        world.Feature(CenterEastIds.Pinxue.TreePitsId).Polygons().Select(pit => PlanGeometry.Centroid(pit));
 
     private static void TreePits(SiteBuilder b, PlanFrame f)
     {
@@ -62,25 +62,16 @@ public sealed class PinxueForecourtSite : ZoneSite
 
     // ---- Lawn panel and the stepped cascade's stone tiers ----
 
-    /// <summary>The forecourt hole nearest a point (the lawn panel round the fountain, the round bed on the ramp).</summary>
+    /// <summary>The forecourt hole containing its authored placement point.</summary>
     internal static IReadOnlyList<Vector2>? HoleNear(IWorldModel world, Vector2 point)
     {
-        if (!world.Features.TryGetValue(new(P.Forecourt), out var court) || court.Geometry is not PolygonGeometry polygon) return null;
-        IReadOnlyList<Vector2>? best = null;
-        var bestDistance = 12f;
-        foreach (var hole in polygon.Rings.Holes)
-        {
-            var c = Vector2.Zero;
-            foreach (var p in hole) c += p;
-            var d = Vector2.Distance(c / hole.Count, point);
-            if (d < bestDistance) { best = hole; bestDistance = d; }
-        }
-        return best;
+        if (!world.Features.TryGetValue(new(CenterEastIds.Pinxue.Forecourt), out var court) || court.Geometry is not PolygonGeometry polygon) return null;
+        return polygon.Rings.Holes.SingleOrDefault(hole => PlanGeometry.PointInRing(point, hole));
     }
 
     private static void LawnPanel(SiteBuilder b)
     {
-        var fountain = b.Context.World.Feature(P.FountainId).Point();
+        var fountain = b.Context.World.Feature(CenterEastIds.Pinxue.FountainId).Point();
         if (HoleNear(b.Context.World, fountain) is not { } hole) return;
         var g = b.Ground(fountain);
         var kerb = PartGeometryKernel.BeveledRectangleProfile(P.PanelKerbWidth, P.PanelKerbHeight + 0.05f, 0.02f);
@@ -88,7 +79,7 @@ public sealed class PinxueForecourtSite : ZoneSite
     }
 
     /// <summary>The cascade's frame: centred on the registered fountain point, X along the bar, +Z toward the forecourt.</summary>
-    internal static PlanFrame FountainFrame(IWorldModel world) => Frame(world) with { Origin = world.Feature(P.FountainId).Point() };
+    internal static PlanFrame FountainFrame(IWorldModel world) => Frame(world) with { Origin = world.Feature(CenterEastIds.Pinxue.FountainId).Point() };
 
     /// <summary>The three tiers bottom to top: plan half extents, coping width, rim and water heights above the lawn.</summary>
     internal static IReadOnlyList<(Vector2 Half, float Coping, float Rim, float Water)> FountainTiers() =>
@@ -125,7 +116,7 @@ public sealed class PinxueForecourtSite : ZoneSite
 
     private static void RoundBed(SiteBuilder b)
     {
-        var at = b.Context.World.Feature(P.RoundBedId).Point();
+        var at = b.Context.World.Feature(CenterEastIds.Pinxue.RoundBedId).Point();
         var (low, high) = GroundRange(b, at, P.RoundBedRadius);
         var n = b.Detail == SiteDetail.Full ? 40 : 20;
         b.Add(Shapes.Ring(at, P.RoundBedRadius, P.SeatWidth, high + P.SeatHeight - (low - 0.1f), n, L.Granite), Matrix4x4.CreateTranslation(0, low - 0.1f, 0));
@@ -152,7 +143,7 @@ public sealed class PinxueForecourtSite : ZoneSite
     {
         var gate = PinxueFrameSite.GateOf(world);
         var walls = new List<(float X, float Z0, float Z1)>();
-        foreach (var id in new[] { P.RampWallNorthId, P.RampWallSouthId })
+        foreach (var id in new[] { CenterEastIds.Pinxue.RampWallNorthId, CenterEastIds.Pinxue.RampWallSouthId })
         {
             var line = world.Feature(id).Line();
             Vector2 a = gate.F.Local(line[0]), b = gate.F.Local(line[^1]);
@@ -221,7 +212,7 @@ public sealed class PinxueForecourtSite : ZoneSite
         foreach (var (half, _, rim, _) in FountainTiers())
             c.Box(fountainFrame.At(0, fg + (rim - 0.05f) * 0.5f, 0), new(half.X, (rim + 0.05f) * 0.5f, half.Y), SurfaceTag.Prop, FootMat.StonePaving);
         var bed = P.RoundBedRadius + P.SeatWidth * 0.5f;
-        var roundBed = world.Feature(P.RoundBedId).Point();
+        var roundBed = world.Feature(CenterEastIds.Pinxue.RoundBedId).Point();
         var rg = Ground(roundBed);
         c.Add(new PostCollider(roundBed, bed, rg - 0.1f, rg + P.SeatHeight, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
         foreach (var (x, wallZ0, wallZ1) in RampWalls(world))

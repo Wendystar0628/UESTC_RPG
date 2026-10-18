@@ -25,7 +25,7 @@ namespace Campus.Gen.Zones.South.Gate;
 /// </summary>
 public sealed class SouthGateSite : ZoneSite
 {
-    public const string Feature = "qsh:relation:8407525";
+    public static readonly string Feature = SouthIds.Gate.Entity;
     /// <summary>The guard houses' window grid (contract-29): three watch windows per house, one row per house.</summary>
     public const string HouseKey = "guard-houses";
     private const int HouseColumns = 3;
@@ -57,13 +57,11 @@ public sealed class SouthGateSite : ZoneSite
     private static Layout Read(IWorldModel world)
     {
         var gate = world.Feature(Feature);
-        IReadOnlyList<Vector2> Ring(string sourceId) => WorldFeatureGeometry.FacadeGeometryOf(gate.Part(sourceId)) is PolygonGeometry polygon
-            ? polygon.Rings.Outer
-            : throw new InvalidOperationException($"South gate part {sourceId} is not a single polygon.");
-        Vector2[] houses = [PlanMath.Centroid(Ring("osm:way:601600522")), PlanMath.Centroid(Ring("osm:way:601600523"))];
+        IReadOnlyList<Vector2> Ring(string sourceId) => gate.Contour(sourceId);
+        Vector2[] houses = [PlanGeometry.Centroid(Ring(SouthIds.WestHouse.Part), meanIfDegenerate: true), PlanGeometry.Centroid(Ring(SouthIds.EastHouse.Part), meanIfDegenerate: true)];
         var frame = PlanFrame.Along((houses[0] + houses[1]) * 0.5f, houses[1] - houses[0]);
-        IReadOnlyList<Vector2>[] islands = [Ring("osm:way:601600525"), Ring("osm:way:601600524")];
-        var at = islands.Select(r => frame.Local(PlanMath.Centroid(r))).ToArray();
+        IReadOnlyList<Vector2>[] islands = [Ring(SouthIds.WestIsland.Part), Ring(SouthIds.EastIsland.Part)];
+        var at = islands.Select(r => frame.Local(PlanGeometry.Centroid(r, meanIfDegenerate: true))).ToArray();
         // An island is a thin rotated rectangle: its width and length are the means of its short and long sides.
         static float[] Sides(IReadOnlyList<Vector2> r) => [.. Enumerable.Range(0, r.Count).Select(i => Vector2.Distance(r[i], r[(i + 1) % r.Count])).Order()];
         var sides = islands.Select(Sides).ToArray();
@@ -77,7 +75,7 @@ public sealed class SouthGateSite : ZoneSite
 
     public override IReadOnlyList<InspectionProbe> Probes =>
         // Q2: the west pedestrian lane, 1 m behind the turnstile row, looking out to the street (a stand, not map data).
-        [Probe("Q2", Feature, new(-527.33f, 1.62f, 720.70f), new(-0.583f, 0.812f), -2f, 1f)];
+        [Probe("Q2", Feature, new(-527.33f, WalkRules.StandingEye, 720.70f), new(-0.583f, 0.812f), -2f, 1f)];
 
     protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
     {
@@ -171,7 +169,7 @@ public sealed class SouthGateSite : ZoneSite
         Matrix4x4 At(float along, float yy, float off) => turned
             ? f.AtTurned(x + outward * off, yy, z + along)
             : f.At(x + along, yy, z + outward * off);
-        if (glass) b.Add(PartGeometryKernel.BeveledBox(width, h, 0.04f, 0, L.Glass), At(0, y0, 0.01f));
+        if (glass) b.Add(PartGeometryKernel.BeveledBox(width, h, 0.04f, 0, ZoneLooks.Glass), At(0, y0, 0.01f));
         b.Add(PartGeometryKernel.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Metal), At(0, y1, 0.04f));
         b.Add(PartGeometryKernel.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Metal), At(0, y0 - 0.06f, 0.04f));
         b.Add(PartGeometryKernel.BeveledBox(width + 0.3f, 0.07f, 0.18f, 0.015f, L.StoneTrim), At(0, y0 - 0.13f, 0.08f));
@@ -233,7 +231,7 @@ public sealed class SouthGateSite : ZoneSite
         {
             b.Add(PartGeometryKernel.BeveledBox(T.CabinetWidth, T.CabinetHeight, T.CabinetDepth, 0.03f, L.Metal), g.Frame.At(x, y, T.TurnstileZ));
             if (b.Detail == SiteDetail.Full)
-                b.Add(PartGeometryKernel.BeveledBox(T.CabinetWidth - 0.04f, 0.02f, 0.5f, 0, L.Glass), g.Frame.At(x, y + T.CabinetHeight, T.TurnstileZ + 0.35f));
+                b.Add(PartGeometryKernel.BeveledBox(T.CabinetWidth - 0.04f, 0.02f, 0.5f, 0, ZoneLooks.Glass), g.Frame.At(x, y + T.CabinetHeight, T.TurnstileZ + 0.35f));
         }
         if (b.Detail == SiteDetail.Mass) return;
         for (var i = 0; i < T.TurnstilePassages; i++)
@@ -241,8 +239,8 @@ public sealed class SouthGateSite : ZoneSite
             var x0 = cabinets[i] + T.CabinetWidth * 0.5f;
             var x1 = cabinets[i + 1] - T.CabinetWidth * 0.5f;
             var flap = (x1 - x0 - 0.08f) * 0.5f;
-            b.Add(PartGeometryKernel.BeveledBox(flap, 0.55f, 0.02f, 0, L.Glass), g.Frame.At(x0 + flap * 0.5f, y + 0.38f, T.TurnstileZ));
-            b.Add(PartGeometryKernel.BeveledBox(flap, 0.55f, 0.02f, 0, L.Glass), g.Frame.At(x1 - flap * 0.5f, y + 0.38f, T.TurnstileZ));
+            b.Add(PartGeometryKernel.BeveledBox(flap, 0.55f, 0.02f, 0, ZoneLooks.Glass), g.Frame.At(x0 + flap * 0.5f, y + 0.38f, T.TurnstileZ));
+            b.Add(PartGeometryKernel.BeveledBox(flap, 0.55f, 0.02f, 0, ZoneLooks.Glass), g.Frame.At(x1 - flap * 0.5f, y + 0.38f, T.TurnstileZ));
         }
     }
 

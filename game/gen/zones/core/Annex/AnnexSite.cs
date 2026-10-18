@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -19,12 +20,12 @@ public sealed class AnnexSite
 {
     private const float Join = 0.12f;
 
-    private AnnexSite(IReadOnlyList<Block> blocks, IReadOnlyList<WallPiece> pieces, IReadOnlyDictionary<string, (AnnexKind Kind, BuildingFrame Frame)> annexes)
+    private AnnexSite(IWorldModel world, IReadOnlyList<Block> blocks, IReadOnlyList<WallPiece> pieces, IReadOnlyDictionary<string, (AnnexKind Kind, BuildingFrame Frame)> annexes)
     {
         Blocks = blocks;
         Pieces = pieces;
         Annexes = annexes;
-        Courtyard = FindCourtyard();
+        Courtyard = FindCourtyard(world);
     }
 
     public IReadOnlyList<Block> Blocks { get; }
@@ -37,15 +38,15 @@ public sealed class AnnexSite
 
     public static readonly IReadOnlyList<(FeatureId Feature, AnnexKind Kind)> Members =
     [
-        (CoreFeatures.NorthAnnex, AnnexKind.NorthAnnex),
-        (CoreFeatures.CourtWing, AnnexKind.CourtWing),
-        (CoreFeatures.LowBlock, AnnexKind.LowBlock),
-        (CoreFeatures.NorthWestLink, AnnexKind.Link),
-        (CoreFeatures.NorthWestJoint, AnnexKind.Joint),
+        (CoreIds.NorthAnnex, AnnexKind.NorthAnnex),
+        (CoreIds.CourtWing, AnnexKind.CourtWing),
+        (CoreIds.LowBlock, AnnexKind.LowBlock),
+        (CoreIds.NorthWestLink, AnnexKind.Link),
+        (CoreIds.NorthWestJoint, AnnexKind.Joint),
     ];
 
     /// <summary>Covers built by others: their own data height above their pad.</summary>
-    private static readonly FeatureId[] Covers = [CoreFeatures.NorthEastConnector, CoreFeatures.NorthEastBridge, CoreFeatures.CafeStore];
+    private static readonly FeatureId[] Covers = [CoreIds.NorthEastConnector, CoreIds.NorthEastBridge, CoreIds.CafeStore];
 
     public static AnnexSite? From(IWorldModel world, LibraryShell? library)
     {
@@ -58,10 +59,10 @@ public sealed class AnnexSite
             if (!world.Features.TryGetValue(feature, out var source)) continue;
             // D-239: the storey count is the data's; each storey's height is the library's own table (the data's 3.5 m a storey would break the shared floor lines).
             var count = source.Storeys is > 0 and var n ? n : throw new InvalidOperationException($"北辅楼 {feature.Value} has no storey count in the world model.");
-            var heights = Enumerable.Range(0, count).Select(i => S.AnnexStoreys[Math.Min(i, S.AnnexStoreys.Length - 1)]).ToArray();
+            var heights = Enumerable.Range(0, count).Select(i => S.LibraryStoreys[Math.Min(i, S.LibraryStoreys.Length - 1)]).ToArray();
             var frame = BuildingFrame.Of(world, feature, heights);
             annexes.Add(feature.Value, (kind, frame));
-            blocks.AddRange(frame.Footprints.Select(r => new Block(feature.Value, BlockKind.Annex, LibraryPlan.Ccw(r.Outer), frame.WallBaseY, frame.EavesY)));
+            blocks.AddRange(frame.Footprints.Select(r => new Block(feature.Value, BlockKind.Annex, PlanGeometry.OpenRing(r.Outer), frame.WallBaseY, frame.EavesY)));
         }
         if (annexes.Count == 0) return null;
         foreach (var cover in Covers)
@@ -69,9 +70,9 @@ public sealed class AnnexSite
             if (!world.Features.TryGetValue(cover, out var f)) continue;
             var pad = world.Terrain.PadY(cover);
             var height = f.Height is > 0.5f and var h ? h : (f.Storeys ?? 2) * 3.5f;
-            blocks.AddRange(Plan.Polygons(f.Geometry).Select(r => new Block(cover.Value, BlockKind.Neighbour, LibraryPlan.Ccw(r.Outer), pad - FacadeRules.WallBelowPad, pad + height)));
+            blocks.AddRange(WorldFeatureGeometry.PolygonsOf(f.Geometry).Select(r => new Block(cover.Value, BlockKind.Neighbour, PlanGeometry.OpenRing(r.Outer), pad - FacadeRules.WallBelowPad, pad + height)));
         }
-        return new AnnexSite(blocks, LibraryPlan.Exterior(blocks), annexes);
+        return new AnnexSite(world, blocks, LibraryPlan.Exterior(blocks), annexes);
     }
 
     /// <summary>The wall pieces of one north block.</summary>
@@ -80,16 +81,15 @@ public sealed class AnnexSite
     /// <summary>
     /// Links the ground-standing pieces head to tail into loops. The plan's blocks are counterclockwise, so the outline of
     /// the whole group runs counterclockwise and every enclosed court clockwise; the court is the clockwise loop of more than
-    /// 60 m² nearest the court wing.
+    /// 60 m² containing the registered pergola wall.
     /// </summary>
-    private IReadOnlyList<WallPiece>? FindCourtyard()
+    private IReadOnlyList<WallPiece>? FindCourtyard(IWorldModel world)
     {
         var ground = Pieces.Where(p => p.Y0 <= p.Block.Y0 + 0.01f).ToList();
         var used = new bool[ground.Count];
-        var wing = Annexes.TryGetValue(CoreFeatures.CourtWing.Value, out var w) ? w.Frame.Centroid : (Vector2?)null;
-        if (wing is null) return null;
-        IReadOnlyList<WallPiece>? best = null;
-        var bestDistance = float.MaxValue;
+        if (!Annexes.ContainsKey(CoreIds.CourtWing.Value)) return null;
+        var selectedWall = CoreContours.Wall(world, CoreIds.GardenPergolaFace,
+            ground.Where(piece => piece.Block.Source == CoreIds.CourtWing.Value));
         for (var start = 0; start < ground.Count; start++)
         {
             if (used[start]) continue;
@@ -116,9 +116,8 @@ public sealed class AnnexSite
             var ring = loop.Select(i => ground[i].A).ToArray();
             var area = (float)PlanGeometry.SignedArea(ring);
             if (area > -60f) continue;
-            var distance = Vector2.Distance(Plan.Centroid([ring]), wing.Value);
-            if (distance < bestDistance) { bestDistance = distance; best = loop.Select(i => ground[i]).ToArray(); }
+            if (loop.Any(i => ReferenceEquals(ground[i], selectedWall))) return loop.Select(i => ground[i]).ToArray();
         }
-        return best;
+        return null;
     }
 }

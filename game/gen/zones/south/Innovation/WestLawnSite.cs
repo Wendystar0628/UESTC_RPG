@@ -35,7 +35,7 @@ public sealed class WestLawnSite : ZoneSite
     /// <summary>The seat-wall arc's chords, bearings From…To around the crest.</summary>
     internal static IEnumerable<(Vector2 A, Vector2 B)> SeatArc(SeatWall wall)
     {
-        Vector2 At(int k) => wall.Crest + PlanMath.Heading(wall.From + (wall.To - wall.From) * k / N.SeatChords) * wall.Radius;
+        Vector2 At(int k) => wall.Crest + Angles.Heading(wall.From + (wall.To - wall.From) * k / N.SeatChords) * wall.Radius;
         for (var k = 0; k < N.SeatChords; k++) yield return (At(k), At(k + 1));
     }
 

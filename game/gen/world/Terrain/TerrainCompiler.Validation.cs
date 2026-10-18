@@ -23,10 +23,10 @@ internal static partial class TerrainCompiler
         var rect = b.Context.DataRect;
         foreach (var tile in program.AffectedTiles())
         {
-            var startX = Math.Max((double)tile.X * 64, Math.Ceiling(rect.Min.X));
-            var startZ = Math.Max((double)tile.Z * 64, Math.Ceiling(rect.Min.Y));
-            var endX = Math.Min(((double)tile.X + 1) * 64 - 1, Math.Floor(rect.Max.X));
-            var endZ = Math.Min(((double)tile.Z + 1) * 64 - 1, Math.Floor(rect.Max.Y));
+            var startX = Math.Max((double)tile.X * TileGrid.BaseEdge, Math.Ceiling(rect.Min.X));
+            var startZ = Math.Max((double)tile.Z * TileGrid.BaseEdge, Math.Ceiling(rect.Min.Y));
+            var endX = Math.Min(((double)tile.X + 1) * TileGrid.BaseEdge - 1, Math.Floor(rect.Max.X));
+            var endZ = Math.Min(((double)tile.Z + 1) * TileGrid.BaseEdge - 1, Math.Floor(rect.Max.Y));
             for (var z = startZ; z <= endZ; z++)
                 for (var x = startX; x <= endX; x++)
                 {

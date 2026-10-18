@@ -1,4 +1,5 @@
 using System.Globalization;
+using Campus.Contracts;
 
 namespace Campus.Style.Palette.Keys;
 
@@ -68,28 +69,13 @@ public static class Oklab
         return d > 180.0 ? d - 360.0 : d;
     }
 
-    public static double Lerp(double a, double b, double t) => a + (b - a) * t;
-    public static Lab Lerp(Lab p, Lab q, double t) => new(Lerp(p.L, q.L, t), Lerp(p.A, q.A, t), Lerp(p.B, q.B, t));
+    public static Lab Lerp(Lab p, Lab q, double t) => new(ScalarMath.Lerp(p.L, q.L, t), ScalarMath.Lerp(p.A, q.A, t), ScalarMath.Lerp(p.B, q.B, t));
 
     public static Lab LerpLch(Lab p, Lab q, double t)
     {
-        var c = Lerp(p.Chroma, q.Chroma, t);
+        var c = ScalarMath.Lerp(p.Chroma, q.Chroma, t);
         var h = p.Hue + HueDiff(p.Hue, q.Hue) * t;
-        return FromLch(Lerp(p.L, q.L, t), c, h);
-    }
-
-    /// <summary>GLSL smoothstep, reversed edges allowed.</summary>
-    public static double Smoothstep(double e0, double e1, double x)
-    {
-        if (e0 == e1) return x < e0 ? 0.0 : 1.0;
-        var t = Math.Clamp((x - e0) / (e1 - e0), 0.0, 1.0);
-        return t * t * (3.0 - 2.0 * t);
-    }
-
-    public static double Smootherstep(double t)
-    {
-        t = Math.Clamp(t, 0.0, 1.0);
-        return t * t * t * (t * (6.0 * t - 15.0) + 10.0);
+        return FromLch(ScalarMath.Lerp(p.L, q.L, t), c, h);
     }
 
     private static bool InGamut((double R, double G, double B) c) =>

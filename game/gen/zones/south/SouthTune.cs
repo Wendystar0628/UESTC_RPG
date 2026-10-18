@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using static Campus.Gen.Zones.Common.ZoneLooks;
 using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.South;
@@ -21,9 +22,6 @@ public static class SouthTune
     /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look
     {
-        private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
-            new(new(family + ".lit"), new(family + ".shade")) { Fx = fx, Line = line, Wet = wet };
-
         /// <summary>Main building and gate: light grey-white stone (MAP-QSH-SOUTH).</summary>
         public static readonly ToonSpec Stone = S("wall.greyWhite", ToonFx.BevelLift);
         /// <summary>Copings, column bases and capitals, string courses, name-wall slabs.</summary>
@@ -40,8 +38,6 @@ public static class SouthTune
         public static readonly ToonSpec WhiteWire = S("wall.greyWhite", ToonFx.None, LineClass.None);
         public static readonly ToonSpec Wood = S("panel.brown", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec Marking = S("ground.markingYellow", ToonFx.None, LineClass.None);
-        public static readonly ToonSpec Glass = new(new("glass.lit"), new("glass.shade"))
-        { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
 
         /// <summary>Xuanbang: beige-grey stone walls, piers, columns and the clock tower (MAP-QSH-SOUTH).</summary>
         public static readonly ToonSpec Beige = S("stone.beige", ToonFx.BevelLift);
@@ -191,7 +187,7 @@ public static class SouthTune
     public static class Plaza
     {
         /// <summary>Top of WP-15's paving above the ground (GroundSection.PavingY): furniture stands on it.</summary>
-        public const float PavingTop = 0.15f;
+        public const float PavingTop = GroundLevels.Paving;
         public static readonly FurnitureParams PlanterSize = new(6.4f, 0.45f, 1.6f);
         public const float PlanterAlong = 7.0f;
         /// <summary>WP-13's street bench (FurnitureStyle.Bench), its back 0.7 m in front of the planter.</summary>
@@ -203,11 +199,7 @@ public static class SouthTune
     /// <summary>Entrance axis between the gate and the main building (§2.5).</summary>
     public static class Axis
     {
-        /// <summary>
-        /// National flagpole at the centre of the front lawn's paved inner square. The lawn (osm:way:568303118) carries the square
-        /// only as a notch in one outline, with no entity of its own to read, so the place stays here.
-        /// </summary>
-        public static readonly Vector2 Flagpole = new(-394.17f, 557.41f);
+        /// <summary>Flagpole proportions; placement comes from SouthIds.Flagpole in the overlay.</summary>
         public static readonly Vector2 FlagpoleFacing = new(0.802f, 0.597f);
         public const float PoleHeight = 22f, PoleFootRadius = 0.15f, PoleTopRadius = 0.08f;
     }
@@ -252,8 +244,7 @@ public static class SouthTune
     /// <summary>Forest park (§3.2; MAP-QSH-TERRAIN).</summary>
     public static class Park
     {
-        /// <summary>Peacock house on the hill's south-east foot (MAP-QSH-TERRAIN), between the two woodland paths; the map data has no entity for it.</summary>
-        public static readonly Vector2 PeacockHouse = new(-302f, 305f);
+        /// <summary>Peacock-house proportions; placement is the authored SouthIds.PeacockHouse point.</summary>
         public const float CageWidth = 9f, CageDepth = 7f, CageWall = 3.2f, CageRoofRise = 1.6f, CageMesh = 0.5f;
 
         /// <summary>
@@ -274,8 +265,6 @@ public static class SouthTune
         public const float MainGround = 5.0f, MainStorey = 4.2f, MainBay = 3.9f, MainPier = 1.3f;
         /// <summary>Tower: 5.0 m + 17 × 3.9 m = 71.3 m, cornice 0.9 m and parapet 1.65 m to 73.85 m.</summary>
         public const float TowerGround = 5.0f, TowerStorey = 3.9f, TowerBay = 3.2f, TowerPier = 0.9f, TowerParapet = 1.65f;
-        /// <summary>The lake fronts face about 311°; the main front is the one front edge longer than MainFrontMin.</summary>
-        public const float FrontFacing = 311f, MainFrontMin = 60f, EndBlockMin = 10f, EndBlockMax = 14f;
         /// <summary>Long axis of the slab (footprint edge running 41°).</summary>
         public static readonly Vector2 SlabAxis = new(0.6577f, -0.7532f);
 
@@ -294,7 +283,6 @@ public static class SouthTune
         /// Clock tower (§5.4, 初值): shaft to 46.0 m, cornice, setback dial stage to 54.6 m, cornice, lantern podium to the
         /// lantern floor at 56.4 m (P18 eye 58.0 m), slit columns to 60.6 m, entablature, bullet dome 61.1–66.2 m, finial to 66.65 m.
         /// </summary>
-        public const float ClockAxis = 42.3f;
         public const float ShaftTop = 46.0f, StageTop = 54.6f, LanternFloor = 56.4f, LanternTop = 60.6f, DomeBase = 61.1f, DomeTop = 66.2f;
         public const float Quoin = 1.7f, StageInset = 1.6f, DialRadius = 2.5f, DialY = 50.7f, DialProud = 0.4f;
         public const int LanternColumns = 20;
@@ -307,7 +295,7 @@ public static class SouthTune
         /// Floor and door threshold above the ground: the top of WP-15's paving (GroundSection.PavingY), so the side door's forecourt
         /// (design:south-clock-forecourt in overlay/south.d/) runs level into the doorway.
         /// </summary>
-        public const float Threshold = 0.15f;
+        public const float Threshold = GroundLevels.Paving;
         /// <summary>A pair of narrow windows per storey on every face.</summary>
         public const float SlitWidth = 0.9f, SlitHeight = 2.6f, SlitGap = 1.3f, SlitFirst = 8.4f, SlitPitch = 4.0f;
         public const int SlitRows = 9;
@@ -400,17 +388,6 @@ public static class SouthTune
         /// <summary>Probe distance outside an edge: an edge whose outside is a venue or another deck is not free.</summary>
         public const float AbutProbe = 0.8f;
 
-        /// <summary>
-        /// The closed shop block under the deck: the footprint set in 7 m from its edges (the arcade depth), simplified by hand and
-        /// kept west of the service roads that run under the deck along the stand. A drawn shape of the zone's own, not a data copy.
-        /// </summary>
-        public static readonly Vector2[] Core =
-        [
-            new(-187.0f, 805.0f), new(-176.0f, 792.0f), new(-168.0f, 772.0f), new(-165.5f, 760.5f), new(-158.0f, 774.0f), new(-144.0f, 774.0f),
-            new(-123.0f, 788.6f), new(-94.2f, 793.9f), new(-79.0f, 789.6f), new(-64.2f, 779.3f), new(-52.0f, 762.5f), new(-43.0f, 760.5f),
-            new(-43.0f, 812.6f), new(-66.2f, 818.0f), new(-81.8f, 842.7f), new(-113.2f, 833.7f), new(-144.0f, 834.8f), new(-148.2f, 820.0f),
-            new(-156.1f, 811.8f), new(-168.8f, 806.0f), new(-179.5f, 813.4f),
-        ];
         /// <summary>Shopfront bays on the core: target width, glazing sill and head, sign band; a closed door every second bay.</summary>
         public const float ShopBay = 4.6f, ShopSill = 0.45f, ShopHead = 3.2f, SignBottom = 3.35f, SignTop = 4.05f, Pilaster = 0.5f;
         public const float DoorWidth = 1.8f, DoorHeight = 2.5f;
@@ -419,7 +396,6 @@ public static class SouthTune
         /// Grand steps (一组宽大台阶) in the south edge's notch: two flights and a landing, centred on the notch edge. The place is the
         /// zone's choice of edge (the data has no steps there).
         /// </summary>
-        public static readonly Vector2 GrandStairAt = new(-54.35f, 822.0f);
         public const float GrandStairWidth = 13f, StairTread = 0.32f, StairLanding = 2.4f;
         public const int RisersPerFlight = 16;
         /// <summary>The OSM steps at the north tip (their place and direction are read from the footprint): drawn 3.0 m wide against its 2.5 m.</summary>
@@ -490,8 +466,7 @@ public static class SouthTune
         /// </summary>
         public static readonly Vector3 StatueLeaf = new(0.25f, 2.0f, 0f);
         public static readonly Vector3[] StatueUplights = [new(-0.9f, -PedestalTop, 1.7f), new(0.9f, -PedestalTop, 1.7f)];
-        /// <summary>Hexagonal pavilion on the south-bank hill top (MAP-QSH-TERRAIN, +3.0 m once the terrain lands); the map data has no entity for it.</summary>
-        public static readonly Vector2 Pavilion = new(30f, 592f);
+        /// <summary>Hexagonal pavilion proportions; placement is the authored SouthIds.LakePavilion point.</summary>
         public const float PavilionFloor = 0.45f, PavilionPlatform = 3.4f, PavilionColumns = 2.5f, PavilionColumnHeight = 3.0f;
         public const float LowerEave = 3.7f, LowerRise = 1.0f, DrumRadius = 2.0f, UpperEave = 2.75f, UpperRise = 1.8f;
     }

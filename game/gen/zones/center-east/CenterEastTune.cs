@@ -1,3 +1,4 @@
+using static Campus.Gen.Zones.Common.ZoneLooks;
 using System.Numerics;
 using Campus.Contracts;
 
@@ -6,8 +7,7 @@ namespace Campus.Gen.Zones.CenterEast;
 /// <summary>
 /// Every tunable value of the center-east zone in one place, for review (WF-FLOW): materials as colour names, and
 /// the modelling sizes of each site. Positions, outlines, storeys and heights that campus.json or overlay/center-east.d/
-/// already hold are read from the world model by the IDs below (D-239); what stays here as a coordinate differs from the data
-/// by design and says why. Local frames are described per block. Values marked "初值" are starting values awaiting the main
+/// already hold are read from the world model by the IDs below (D-239); only inspection viewpoints remain here because probes have no world input. Local frames are described per block. Values marked "初值" are starting values awaiting the main
 /// session's call. 21b–21d add their own nested classes after <see cref="Pinxue"/>.
 /// </summary>
 public static class CenterEastTune
@@ -34,8 +34,6 @@ public static class CenterEastTune
     /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look
     {
-        private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
-            new(new(family + ".lit"), new(family + ".shade")) { Fx = fx, Line = line, Wet = wet };
 
         /// <summary>Renovated teaching-block frame and walls: grey-white (MAP-QSH-CENTER-EAST).</summary>
         public static readonly ToonSpec Wall = S("wall.greyWhite", ToonFx.BevelLift);
@@ -55,8 +53,6 @@ public static class CenterEastTune
         public static readonly ToonSpec RoofSlab = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
         /// <summary>Grey aluminium window frames and mullions (窗框灰铝).</summary>
         public static readonly ToonSpec Metal = S("frame.alu", ToonFx.BevelLift, LineClass.Fine);
-        public static readonly ToonSpec Glass = new(new("glass.lit"), new("glass.shade"))
-        { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
         /// <summary>Research family trims (cornice, sills, portals, slab bands): grey-white against the warm stone.</summary>
         public static readonly ToonSpec LightTrim = S("wall.greyWhite", ToonFx.BevelLift, LineClass.Fine);
         /// <summary>Roof-garden timber frames (轻木构架).</summary>
@@ -111,23 +107,6 @@ public static class CenterEastTune
     /// </summary>
     public static class Pinxue
     {
-        /// <summary>The 品学楼 entity: its parts are the gate frame bar and the A–C, B–C link bridges.</summary>
-        public const string Complex = "qsh:relation:11043355";
-        public const string WingA = "qsh:relation:11043352";
-        public const string WingB = "qsh:relation:11043353";
-        /// <summary>A's main body (16 m, 4 storeys) and B's diagonal south-west lobby (19.5 m, 5 storeys), parts of the wings.</summary>
-        public const string WingAMain = "osm:relation:11043352", ArcLobby = "osm:way:797290169";
-        public const string FrameBar = "osm:way:797290174";
-        public const string BridgeAC = "osm:way:797290183";
-        public const string BridgeBC = "osm:way:797290182";
-        /// <summary>The forecourt (门框前广场) and its holes: the lawn panel round the fountain, the round bed on the ramp.</summary>
-        public const string Forecourt = "qsh:source:relation:11043356";
-        /// <summary>What this zone registered in overlay/center-east.d/ and builds from: placements are read back by these IDs.</summary>
-        public const string FountainId = "design:center-east-pinxue-fountain";
-        public const string TreePitsId = "design:center-east-pinxue-tree-pits";
-        public const string RoundBedId = "design:center-east-pinxue-round-bed";
-        public const string RampWallNorthId = "design:center-east-pinxue-ramp-seatwall-north", RampWallSouthId = "design:center-east-pinxue-ramp-seatwall-south";
-        public const string ArcEndId = "design:center-east-pinxue-arc-end";
         /// <summary>Design level of the platform (MAP-QSH-TERRAIN): only for probe eye heights, which have no terrain to read.</summary>
         public const float PlatformY = 1.5f;
 
@@ -202,19 +181,11 @@ public static class CenterEastTune
     /// grouped in pairs by giant pilasters, grey-white cornice and sills, dark plinth (MAP-QSH-RENOVATION E-02, E-03).
     /// All blocks share one plan direction; positions are in its local frame R (u along <see cref="Axis"/>, w = (−Axis.y,
     /// Axis.x), roughly south). Roof outlines and fittings registered in overlay/center-east.d/ (the three IDs below) are read
-    /// back from the world model and put into R; the doors, stairs and plant enclosures are not registered and stay here.
+    /// back from the world model and put into R; doors, stairs and plant enclosures are read from the zone layout points.
     /// </summary>
     public static class Research
     {
-        public const string KeA = "qsh:relation:11127418";
-        public const string KeB = "qsh:relation:11127417";
-        public const string KeC = "qsh:way:806848385";
-        /// <summary>Parts: the コ-shaped main block, the west and middle blocks with their link strips, and the lens halls.</summary>
-        public const string KeAMain = "osm:way:806848386", KeAWest = "osm:way:806848387", KeAHall = "osm:way:806848388";
-        public const string KeBMain = "osm:way:806848375", KeBMiddle = "osm:way:806848378", KeBWest = "osm:way:806848379", KeBHall = "osm:way:806848381";
-        public const string KeCBar = "osm:way:806848376", KeCLink = "osm:way:806848377", KeCHall = "osm:way:806848380";
         /// <summary>Registered roof dressings: 科 A's fence ring and tank, 科 B's attic ring and dishes, 科 C's garden ring.</summary>
-        public const string KeARoofId = "design:center-east-ke-a-roof", KeBRoofId = "design:center-east-ke-b-roof", KeCGardenId = "design:center-east-ke-c-roof-garden";
 
         public static readonly Vector2 Axis = new(0.9898f, -0.1423f);
 
@@ -239,25 +210,6 @@ public static class CenterEastTune
         public const int PortalStoreys = 2;
         public const float DoorWidth = 3.0f, DoorHeight = 3.0f, TreadDepth = 0.38f;
 
-        /// <summary>科 A's door on the east face, where the footway from 银杏大道 arrives (local u, w).</summary>
-        public static readonly Vector2 KeADoor = new(37.2f, -34.2f);
-        /// <summary>科 B's door on the east face, on the axis of its lens hall, facing the statue lawn (初值).</summary>
-        public static readonly Vector2 KeBDoor = new(72.1f, -143.8f);
-
-        /// <summary>
-        /// Lens halls (透镜形弧厅): a glass hall whose back stands against a block and whose front is one circular arc.
-        /// Outline: the local polyline Back, closed by an arc from its last point to its first, bulging Sagitta metres away
-        /// from it. The OSM outlines carry small hooks at the arc ends that this mainline smooths away, so these are the zone's
-        /// own recipe and not a copy of the OSM rings (the overlay's design:center-east-ke-*-lens-hall rings register its
-        /// 8-segment polygon; the built arc has 16) (初值).
-        /// </summary>
-        public static readonly Vector2[] KeAHallBack = [new(18.2f, -26.4f), new(26.0f, -26.4f), new(26.0f, -49.2f), new(18.2f, -49.2f)];
-        public const float KeAHallSagitta = 3.9f;
-        public static readonly Vector2[] KeBHallBack = [new(50.0f, -133.2f), new(60.0f, -133.2f), new(60.0f, -154.3f), new(50.0f, -154.3f)];
-        public const float KeBHallSagitta = 3.2f;
-        /// <summary>科 C's two-storey hall between C's bar and B's north arm, its arc facing the statue lawn: C 区大厅 and its door.</summary>
-        public static readonly Vector2[] KeCHallBack = [new(66.0f, -179.0f), new(58.7f, -179.0f), new(58.7f, -213.6f), new(72.0f, -213.6f)];
-        public const float KeCHallSagitta = 9.5f;
         /// <summary>Hall heights to the coping: a tall storey each, the storey count read from the hall part (OSM: 1, 1, 2 levels).</summary>
         public const float HallStorey = 4.5f, HallAttic = 1.0f;
         public const float HallDoorWidth = 2.4f, HallDoorHeight = 2.7f, HallCanopyDepth = 1.8f;
@@ -266,16 +218,10 @@ public static class CenterEastTune
         public const float AtticStorey = 4.2f;
 
         /// <summary>Stair penthouses on the roofs (B7 roof relief every 20–30 m), local centres; all 5.0 × 6.0 m, 3.4 m high.</summary>
-        public static readonly Vector2[] KeAStairs = [new(-38.0f, -63.3f), new(-38.0f, -9.6f), new(31.6f, -60.5f), new(-50.5f, -39.0f)];
-        public static readonly Vector2[] KeBStairs = [new(-40.0f, -170.4f), new(-40.0f, -116.3f), new(-0.8f, -144.4f), new(-54.5f, -144.7f)];
-        public static readonly Vector2[] KeCStairs = [new(5.0f, -222.7f), new(0.0f, -197.8f)];
         public static readonly Vector2 StairSize = new(5.0f, 6.0f);
         public const float StairHeight = 3.4f;
 
         /// <summary>Plant enclosures (屋面设备进围挡, MAP-QSH-ADDITIONS): dark perforated fence round three heat pumps.</summary>
-        public static readonly Vector2[] KeAPlant = [new(0.0f, -63.3f)];
-        public static readonly Vector2[] KeBPlant = [new(10.0f, -116.3f)];
-        public static readonly Vector2[] KeCPlant = [new(60.0f, -222.7f)];
         public static readonly Vector2 PlantSize = new(8.0f, 4.6f);
         public const float PlantFence = 1.8f;
 
@@ -306,18 +252,13 @@ public static class CenterEastTune
     /// </summary>
     public static class Monuments
     {
-        public const string Lin = "qsh:node:5261487375", Maxwell = "qsh:node:7878394896", Stele = "qsh:node:7878386482";
-        /// <summary>The equation stone and the apron round Maxwell, registered in the overlay (placement read back by ID).</summary>
-        public const string StoneId = "design:center-east-maxwell-equation-stone", ApronId = "design:center-east-maxwell-apron";
         /// <summary>The paved plaza in front of 科 B's door; its tree island on the door's axis carries 林为干像.</summary>
-        public const string Plaza = "qsh:source:relation:11583698";
 
         /// <summary>
         /// 林为干像 (§1.4): bronze bust in a suit on a dark pedestal at the east tip of the tree island, on 科 B's door axis
         /// (research frame w = −143.8, 0.9 m from the OSM point, so not the data's point), facing out along the axis to 银杏大道
         /// with the big tree behind. Bust scale 1.35 × a 2 m figure's head and shoulders.
         /// </summary>
-        public static readonly Vector2 LinAt = new(89.80f, -158.19f);
         public const float LinFacing = 81.8f, LinScale = 1.35f;
         public const float LinPlinth = 0.25f, LinShaft = 1.2f, LinCap = 0.12f;
         /// <summary>Granite kerb round the tree island (the plaza's hole), like the 品学楼 lawn panel's.</summary>
@@ -363,7 +304,6 @@ public static class CenterEastTune
             [new(-1.55f, 0f), new(1.5f, 0f), new(1.62f, 0.42f), new(1.5f, 0.92f), new(1.12f, 1.3f), new(0.5f, 1.56f), new(-0.2f, 1.74f), new(-0.82f, 1.78f), new(-1.32f, 1.5f), new(-1.62f, 0.8f)];
 
         /// <summary>WP-15's ground section above the terrain (GroundSection): lawns at 0.10 m, paving at 0.15 m.</summary>
-        public const float LawnLevel = 0.10f, PavingLevel = 0.15f;
     }
 
     /// <summary>
@@ -375,17 +315,14 @@ public static class CenterEastTune
     /// </summary>
     public static class Wenke
     {
-        public const string Entity = "qsh:way:883187548";
-        public const string Tower = "osm:way:1431090636", South = "osm:way:1431090637", Hub = "osm:way:1431090638", North = "osm:way:1431090639", West = "osm:way:1431090640";
         /// <summary>The atrium roof, the door's forecourt paving and the walk to the road, registered in the overlay (read back by ID).</summary>
-        public const string AtriumRoofId = "design:center-east-wenke-atrium-roof", ForecourtId = "design:center-east-wenke-forecourt", WalkId = "design:center-east-wenke-walk";
 
         /// <summary>
         /// Storeys per block (§3.2: tower about 15–16, podium 4–6 terraced). The tower's is null: the part's own 15 levels are
         /// read. The podium parts' OSM 4 levels are estimates, so the zone's own terraced counts stay: the south and west wings
         /// 6 at the hub stepping to 4 at their tips, the north wing 5 to 4, the hub <see cref="HubStoreys"/> (初值).
         /// </summary>
-        public static readonly (string Part, int? Storeys)[] Blocks = [(Tower, null), (Hub, HubStoreys), (South, 6), (North, 5), (West, 6)];
+        public static readonly (string Part, int? Storeys)[] Blocks = [(CenterEastIds.Wenke.Tower, null), (CenterEastIds.Wenke.Hub, HubStoreys), (CenterEastIds.Wenke.South, 6), (CenterEastIds.Wenke.North, 5), (CenterEastIds.Wenke.West, 6)];
         public const int HubStoreys = 5;
 
         /// <summary>One storey height everywhere so the floor bands of touching blocks line up; a taller ground storey.</summary>
@@ -412,29 +349,17 @@ public static class CenterEastTune
         /// Set-backs (逐层退台): from storey From up, a block keeps only the side of the line through At where the distance toward
         /// Toward stays within Keep metres. The hub follows the north wing so its narrow strip along that wing steps with it (初值).
         /// </summary>
-        public static readonly (string Part, int From, Vector2 At, Vector2 Toward, float Keep)[] SetBacks =
-        [
-            (South, 4, new(380f, 135f), new(-0.124f, 0.992f), 50f),
-            (South, 5, new(380f, 135f), new(-0.124f, 0.992f), 28f),
-            (West, 4, new(330f, 120f), new(0.17f, 0.985f), 42f),
-            (West, 4, new(318f, 106f), new(-0.86f, -0.5f), 28f),
-            (West, 5, new(330f, 120f), new(0.17f, 0.985f), 22f),
-            (West, 5, new(318f, 106f), new(-0.86f, -0.5f), 12f),
-            (North, 4, new(350f, 72f), new(-0.7f, -0.7f), 22f),
-            (Hub, 4, new(350f, 72f), new(-0.7f, -0.7f), 22f),
-        ];
 
         /// <summary>
         /// The yellow-green panels (§3.2 局部有黄绿面板): a vertical strip of opaque panels in place of glass on the tower's south
         /// face, from the storey over the podium roof to the top, centred on this point, over the atrium door (初值).
         /// </summary>
-        public static readonly Vector2 PanelStrip = new(397.0f, 101.9f);
         public const float PanelStripHalf = 2.8f;
         public const int PanelStripFrom = 5;
 
         /// <summary>
         /// The atrium's glass roof (中间是一个钢网架玻璃顶的中庭; mainline shows its form only): a low elliptical glass vault on the
-        /// hub roof, ribbed along meridians and two rings (初值). Its centre, long axis and semi-axes are AtriumRoofId's props.
+        /// hub roof, ribbed along meridians and two rings (初值). Its centre, long axis and semi-axes are CenterEastIds.Wenke.AtriumRoofId's props.
         /// </summary>
         public const float AtriumRise = 4.5f, AtriumCurb = 0.6f, AtriumRib = 0.14f;
         public const int AtriumRibs = 16;
@@ -442,18 +367,18 @@ public static class CenterEastTune
         /// <summary>
         /// The atrium entrance (中庭入口, closed: §3.3) on the hub's south-east face between the tower and the south wing, facing
         /// the forecourt and the training hall: a two-storey glass porch framed in yellow-green, glass doors shut (门厅卡 by WP-51).
-        /// The door's spot and facing are ForecourtId's props.door and props.doorFacing.
+        /// The door's spot and facing are CenterEastIds.Wenke.ForecourtId's props.door and props.doorFacing.
         /// </summary>
         public const float PorchHalfWidth = 4.6f, PorchJamb = 0.9f, PorchDepth = 1.8f, PorchHead = 1.1f;
         public const float DoorWidth = 3.2f, DoorHeight = 3.0f;
 
         /// <summary>
-        /// Forecourt paving in front of the door (ForecourtId, read in the door frame: u along the face toward the tower, w out):
-        /// a granite stop and the walk (WalkId, a strip from its west end to the road junction 544161568 / 544161582; design addition).
+        /// Forecourt paving in front of the door (CenterEastIds.Wenke.ForecourtId, read in the door frame: u along the face toward the tower, w out):
+        /// a granite stop and the walk (CenterEastIds.Wenke.WalkId, a strip from its west end to the road junction 544161568 / 544161582; design addition).
         /// </summary>
         public const float PavingTop = 0.17f, PavingKerb = 0.2f;
 
-        /// <summary>Tower roof: a stair and lift penthouse with the plant fenced beside it (屋面设备进围挡).</summary>
+        /// <summary>CenterEastIds.Wenke.Tower roof: a stair and lift penthouse with the plant fenced beside it (屋面设备进围挡).</summary>
         public static readonly Vector3 PenthouseSize = new(11f, 4.2f, 7f);
         public static readonly Vector2 PlantSize = new(9f, 5f);
         public const float PlantFence = 1.8f;
@@ -466,8 +391,6 @@ public static class CenterEastTune
     /// </summary>
     public static class Friendship
     {
-        /// <summary>The tree and the stone, registered in the overlay (read back by ID).</summary>
-        public const string TreeId = "design:center-east-wenke-friendship-tree", StoneId = "design:center-east-wenke-friendship-stone";
         /// <summary>Trunk wrap (cloth over the WP-23 trunk): radius and its bottom and top above the ground.</summary>
         public const float WrapRadius = 0.25f, WrapBottom = 0.25f, WrapTop = 2.3f;
         /// <summary>Three stakes leaning in to the trunk: foot radius, height where they meet the trunk, pole radius, first bearing.</summary>

@@ -9,8 +9,8 @@ public interface ICameraRig
     Pose Pose { get; }
     float Speed { get; }
     ViewMode Mode { get; }                   // Fly 由 WP-06 驱动，Walk 由 WP-42 驱动
-    void SetPose(Pose p);                    // 用于出生位置和测试构建，没有过渡动画；另用于 Title、Entering、Leaving 状态下
-                                             // CinematicPlayer 的逐帧驱动，这三个状态里 WP-06 的相机不积分输入（SYS-TITLE）
+    void SetPose(Pose p);                    // 只用于启动/地图出生、过渡的旁观落位、审查/测试，以及 Title、Entering、Leaving 的过场展示；
+                                             // Playing+Walk 的镜头直接读行走眼位，SetPose 不移动身体，也不写行走位姿
     ITransitHandle Transit(Pose to, TransitOptions? o = null);   // 点位跳转与同图传送（WP-36，UI-NAV、SYS-ATLAS），可被输入打断
     IDisposable LockInput(InputLockReason reason);   // 输入占用按原因计数：没有任何占用时才接受观者输入；Dispose 解除这一次占用
     ITransitHandle? ActiveTransit { get; }   // 进行中的跳转或传送，没有时为 null（SYS-AUDIO）

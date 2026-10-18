@@ -104,7 +104,7 @@ public sealed class WorldStateTests
         AssertThat(paused.AnimTime).IsEqual(WorldTime.InitialAnimTime);
         var wrapping = CreateWorld(new TestWeatherProcess());
         wrapping.Freeze(0, Season.Spring, WorldTime.AnimLoopSeconds - .01);
-        wrapping.SetFrameReadouts(ViewMode.Fly, WorldTime.ThirtyFpsStepRate);
+        wrapping.SetStepRate(WorldTime.ThirtyFpsStepRate);
         wrapping.Tick(.1);
         AssertThat(Math.Abs((wrapping.AnimTime) - (.09)) <= 1e-10).OverrideFailureMessage($"Expected {.09:R}, got {wrapping.AnimTime:R}.").IsTrue();
         AssertThat(Math.Abs((wrapping.Step12) - (1d / WorldTime.ThirtyFpsStepRate)) <= 1e-10).OverrideFailureMessage($"Expected {1d / WorldTime.ThirtyFpsStepRate:R}, got {wrapping.Step12:R}.").IsTrue();

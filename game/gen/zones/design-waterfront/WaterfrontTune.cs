@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using static Campus.Gen.Zones.Common.ZoneLooks;
 
 namespace Campus.Gen.Zones.DesignWaterfront;
 
@@ -15,8 +16,6 @@ public static class WaterfrontTune
     public const string StoneKind = "bridge-stone";
 
     // ---- Deck section ----
-    /// <summary>Walking bands sit at the WP-15 paving level above the carriageway (GroundSection.PavingY), so the approaches meet flush.</summary>
-    public const float PavingRise = 0.15f;
     /// <summary>Default sidewalk on a carriage bridge that has no own footway lines (西门车行桥).</summary>
     public const float DefaultSidewalk = 1.5f;
     /// <summary>Kerb stone between carriageway and sidewalk.</summary>
@@ -42,6 +41,7 @@ public static class WaterfrontTune
     public const int RailSegments = 10;
 
     // ---- Abutments ----
+    public const float BankSearchReach = 12f;
     /// <summary>Abutment wall under each deck end at the bank line, set back onto the bank, down below any bed.</summary>
     public const float AbutmentThick = 0.7f, AbutmentSetback = 0.15f, AbutmentBottom = -3.6f, AbutmentBevel = 0.03f;
     /// <summary>The deck rests this far onto the bank behind each abutment (搭板); the rest of a long network bridge line is ground.</summary>
@@ -49,8 +49,6 @@ public static class WaterfrontTune
 
     // ---- Bridge-head stone (桥头卧石) ----
     public const float StoneLength = 1.8f, StoneDepth = 0.75f, StoneHeight = 0.62f, StoneBevel = 0.06f;
-    /// <summary>Distance from the deck corner, outward and back along the approach, to the stone centre.</summary>
-    public const float StoneOutward = 1.6f, StoneBack = 2.4f;
 
     // ---- Collision (SYS-WALK; MAP-QSH-ADDITIONS WP-28 行) ----
     /// <summary>Deck ramps are cut every 2 m along the bridge; each is a sloped box this thick.</summary>
@@ -65,16 +63,13 @@ public static class WaterfrontTune
     public const string Paver = "ground.paver";
     public const string Kerb = "ground.curb";
 
-    public static PaletteToken Lit(string family) => new(family + ".lit");
-    public static PaletteToken Shade(string family) => new(family + ".shade");
-
     // ---- Material classes, matched to the WP-15 ground so deck and approach read as one surface ----
-    public static ToonSpec AsphaltSpec => new(Lit(Asphalt), Shade(Asphalt)) { Wet = 1f, Fx = ToonFx.Mottle };
-    public static ToonSpec PaverSpec => new(Lit(Paver), Shade(Paver)) { Wet = 0.6f, Fx = ToonFx.DetailTiling | ToonFx.Mottle };
-    public static ToonSpec KerbSpec => new(Lit(Kerb), Shade(Kerb)) { Wet = 0.6f, Fx = ToonFx.BevelLift | ToonFx.DetailTiling };
-    public static ToonSpec StoneSpec => new(Lit(StoneWhite), Shade(StoneWhite)) { Fx = ToonFx.BevelLift, Wet = 0.6f };
-    public static ToonSpec ConcreteSpec => new(Lit(Concrete), Shade(Concrete)) { Fx = ToonFx.BevelLift, Wet = 0.7f };
-    public static ToonSpec RailSpec => new(Lit(Stainless), Shade(Stainless)) { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth, Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f };
+    public static ToonSpec AsphaltSpec => S(Asphalt, ToonFx.Mottle, LineClass.Building, 1f);
+    public static ToonSpec PaverSpec => S(Paver, ToonFx.DetailTiling | ToonFx.Mottle, LineClass.Building);
+    public static ToonSpec KerbSpec => S(Kerb, ToonFx.BevelLift | ToonFx.DetailTiling, LineClass.Building);
+    public static ToonSpec StoneSpec => S(StoneWhite, ToonFx.BevelLift, LineClass.Building);
+    public static ToonSpec ConcreteSpec => S(Concrete, ToonFx.BevelLift, LineClass.Building, 0.7f);
+    public static ToonSpec RailSpec => S(Stainless, ToonFx.Rim | ToonFx.AnisoBand, LineClass.Fine, 0.4f) with { Steps = ShadeSteps.TwoHalf, Normal = ToonNormal.Smooth };
 
     /// <summary>VF-A flag: never casts (ART-MODELING).</summary>
     public const byte NoShadow = 8;

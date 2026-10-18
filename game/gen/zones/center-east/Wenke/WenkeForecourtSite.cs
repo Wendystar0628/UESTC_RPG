@@ -21,21 +21,30 @@ namespace Campus.Gen.Zones.CenterEast.Wenke;
 /// </summary>
 public sealed class WenkeForecourtSite : ZoneSite
 {
-    internal static PlanFrame StoneFrame(IWorldModel world) => PlanMath.Facing(world.Feature(F.StoneId).Point(), F.StoneFacing);
+    internal static PlanFrame StoneFrame(IWorldModel world) => PlanMath.Facing(world.Feature(CenterEastIds.Friendship.StoneId).Point(), F.StoneFacing);
 
     /// <summary>The friendship tree's spot.</summary>
-    internal static Vector2 TreeAt(IWorldModel world) => world.Feature(F.TreeId).Point();
+    internal static Vector2 TreeAt(IWorldModel world) => world.Feature(CenterEastIds.Friendship.TreeId).Point();
 
     /// <summary>The walk's centre line from the forecourt end: its frame (X along it), length and width.</summary>
     internal static (PlanFrame Frame, float Length, float Width) Walk(IWorldModel world)
     {
-        var (start, end, width) = Registered.Strip(world.Feature(K.WalkId).Outer(), WenkeSite.Door(world).Origin);
-        return (PlanFrame.Toward(start, end), Vector2.Distance(start, end), width);
+        var feature = world.Feature(CenterEastIds.Wenke.WalkId);
+        var rectangle = feature.Rectangle(feature.Pair("axis"));
+        var a = rectangle.Frame.P(-rectangle.Width * 0.5f, 0);
+        var b = rectangle.Frame.P(rectangle.Width * 0.5f, 0);
+        return (PlanFrame.Toward(a, b), rectangle.Width, rectangle.Depth);
     }
 
     /// <summary>The forecourt paving squared to the door frame: its local (u, w) corners.</summary>
-    internal static (Vector2 Min, Vector2 Max) ForecourtRect(IWorldModel world) =>
-        Registered.LocalBounds(WenkeSite.Door(world), world.Feature(K.ForecourtId).Outer());
+    internal static (Vector2 Min, Vector2 Max) ForecourtRect(IWorldModel world)
+    {
+        var frame = WenkeSite.Door(world);
+        var rectangle = world.Feature(CenterEastIds.Wenke.ForecourtId).Rectangle(frame.U);
+        var centre = frame.Local(rectangle.Frame.Origin);
+        var half = new Vector2(rectangle.Width, rectangle.Depth) * 0.5f;
+        return (centre - half, centre + half);
+    }
 
     public override string Id => "21c.wenke-forecourt";
 
@@ -57,7 +66,7 @@ public sealed class WenkeForecourtSite : ZoneSite
     {
         for (var i = 0; i < 3; i++)
         {
-            var h = PlanMath.Heading(F.StakeBearing + 120f * i);
+            var h = Angles.Heading(F.StakeBearing + 120f * i);
             yield return (tree + h * F.StakeFoot, tree + h * (F.WrapRadius + F.StakeRadius));
         }
     }

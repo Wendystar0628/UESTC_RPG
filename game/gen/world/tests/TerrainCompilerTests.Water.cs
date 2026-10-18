@@ -1,0 +1,370 @@
+using System.Numerics;
+using System.Text.Json;
+using Campus.Contracts;
+using Campus.Tests;
+using Campus.Contracts.Maps;
+using GdUnit4;
+using static GdUnit4.Assertions;
+
+namespace Campus.Gen.World.Tests;
+
+public sealed partial class TerrainCompilerTests
+{
+    [TestCase]
+    public void SoftWaterIncludesAllPartsAndLeavesIslandHolesDry()
+    {
+        var island = new PolygonRings(Box(-20, -20, 20, 20).Outer, [Box(-5, -5, 5, 5).Outer]);
+        var water = new WorldFeature(new("fixture:water"), FeatureSource.Design, new("poi"), new MultiPolygonGeometry([island, Box(40, -10, 60, 10)]))
+        {
+            Parts = [new("a", new PolygonGeometry(island), null, null) { Props = Kind("water") },
+                new("b", new PolygonGeometry(Box(40, -10, 60, 10)), null, null) { Props = Kind("water") }]
+        };
+        var lake = new TerrainLakeOp("design:terrain:lake", "fixture", water.Id, -0.5, new(TerrainBankKind.Soft, "1:5"), new(1.5), []) { Zone = Zone };
+        var terrain = Compile([lake], [water]);
+        AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.WaterY(water.Id)!.Value)) <= 0.001).IsTrue(); AssertThat(terrain.WaterAt(0, 0) is null && terrain.WaterAt(50, 0) is not null).OverrideFailureMessage("Water union lost holes or a real part.").IsTrue();
+        AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.HeightAt(-20, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-0.5875) - (double)(terrain.HeightAt(-19.75f, 0))) <= 0.001).IsTrue();
+        AssertThat(terrain.HeightAt(0, 0) > -0.5).OverrideFailureMessage("Island became submerged water bed.").IsTrue();
+    }
+
+    [TestCase]
+    public void ProjectedSlantedBankHasZeroTangentialDistanceDerivative()
+    {
+        var region = new TerrainRegion([new PolygonRings([new(-436.73f, 40.12f), new(-432.11f, 58.69f),
+            new(-449.31f, 61.93f), new(-453.93f, 43.36f)], [])]);
+        for (var i = 1; i < 100; i++)
+        {
+            var hit = region.NearestBoundary(-431.8, 41 + i * 0.17);
+            var atBank = region.Distance(hit.X, hit.Z);
+            AssertThat(Math.Abs((double)(0) - (double)(atBank.Height)) <= 0.001).IsTrue();
+            AssertThat(Math.Abs((double)(0) - (double)(atBank.Dx * hit.Tx + atBank.Dz * hit.Tz)) <= 0.001).IsTrue();
+            if (hit.Tx != 0 || hit.Tz != 0) AssertThat(Math.Abs((double)(1) - (double)(atBank.Dx * atBank.Dx + atBank.Dz * atBank.Dz)) <= 0.001).IsTrue();
+        }
+    }
+
+    [TestCase]
+    public void DrySwaleStaysDryAndOnlyARealNamedCrossingIsAccepted()
+    {
+        var road = new NetworkLine(new("fixture:road"), new([new(0, -30), new(0, 30)]), 4)
+            { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
+        var context = Context([]) with { Network = new([road], [], [], [], []) };
+        var swale = new TerrainChannelOp("design:terrain:swale", "synthetic crossing", null, 0.4,
+            new(TerrainBankKind.Swale) { Inner = "1:4" }, null, [], new([new(-20, 0), new(20, 0)]), 1,
+            Crossings: [new TerrainUnderpassCrossing(road.Id, Vector2.Zero)]) { Zone = Zone, Dry = true };
+        var terrain = TerrainCompiler.Compile(context, [Source([swale])]);
+        AssertThat(Math.Abs((double)(-0.4) - (double)(terrain.HeightAt(-10, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(0, 0))) <= 0.001).IsTrue();
+        AssertThat(terrain.WaterY(new(swale.Id)) is null && terrain.WaterAt(-10, 0) is null).OverrideFailureMessage("Dry swale fabricated a water entity.").IsTrue();
+        var invalid = swale with { Crossings = [new TerrainUnderpassCrossing(road.Id, new(0.9f, 0.9f))] };
+        {
+            WorldDataException? rejection = null;
+            try { TerrainCompiler.Compile(context, [Source([invalid])]); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+        var ending = swale with { Crossings = [new TerrainEndBeforeCrossing(road.Id)] };
+        var terminal = TerrainCompiler.Compile(context, [Source([ending])]);
+        var control = TerrainCompiler.Compile(context, []);
+        AssertThat(Math.Abs((double)(control.HeightAt(-3, 0)) - (double)(terminal.HeightAt(-3, 0))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(control.HeightAt(-2.99f, 0)) - (double)(terminal.HeightAt(-2.99f, 0))) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void WetChannelResolvesARealWaterSegmentAndTerraceUsesItsDeclaredAxis()
+    {
+        var water = WorldFeatureFixture.Create("fixture:water", "water", new PolygonGeometry(Box(-20, -3, 20, 3)));
+        var channel = new TerrainChannelOp("design:terrain:wet-channel", "synthetic real-id fixture", water.Id, 1.2,
+            new(TerrainBankKind.Hard, "1:4"), -1.2, [], new([new(-20, 0), new(20, 0)]), 6) { Zone = Zone };
+        var terrain = Compile([channel], [water]); AssertThat(Math.Abs((double)(-1.2) - (double)(terrain.WaterY(water.Id)!.Value)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-2.25) - (double)(terrain.HeightAt(0, 0))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(0, 3))) <= 0.001).IsTrue();
+        var wading = channel with { Wade = [Box(-2, -1, 2, 1)] };
+        var wadingSource = Source([wading]);
+        try
+        {
+            TerrainCompiler.Compile(Context([water]), [wadingSource]);
+            throw new InvalidOperationException("Channel Wade was silently ignored.");
+        }
+        catch (WorldDataException error)
+        {
+            AssertThat(error.File == wadingSource.File && error.Entry == wading.Id).IsTrue();
+        }
+        {
+            WorldDataException? rejection = null;
+            try { Compile([channel]); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+        var terrace = new TerrainTerraceOp("design:terrain:terrace", "synthetic terrace", new([new(-10, 0), new(10, 0)]),
+            new(0, 1), 0, 2, 0.5, 2, []) { Zone = Zone };
+        AssertThat(Math.Abs((double)(0.4) - (double)(Compile([terrace]).HeightAt(0, 2))) <= 0.001).IsTrue();
+        var basin = new TerrainBasinOp("design:terrain:basin", "synthetic basin", new TerrainCircle(Vector2.Zero, 12), 1) { Zone = Zone };
+        AssertThat(Math.Abs((double)(-1) - (double)(Compile([basin]).HeightAt(0, 0))) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void SourceRiverAreaUsesHardShoreWithoutInventingItsMissingCentreline()
+    {
+        var polygon = Box(35, -10, 45, 10);
+        var river = WorldFeatureFixture.Create("fixture:river-area", "water", new PolygonGeometry(polygon)) with
+        {
+            Parts = [new("osm:way:1", new PolygonGeometry(polygon), null, null)
+                { Props = JsonSerializer.SerializeToElement(new { kind = "water", sourceTags = new { water = "river" } }) }]
+        };
+        var context = Context([river]) with { Boundary = Box(-50, -50, 50, 50) };
+        var terrain = TerrainCompiler.Compile(context, []);
+        AssertThat(Math.Abs((double)(-1.2) - (double)(terrain.WaterY(river.Id)!.Value)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(46, 0))) <= 0.001).IsTrue();
+        AssertThat(terrain.HeightAt(40, 0) < -1.2).OverrideFailureMessage("Actual water=river was treated as a soft lake.").IsTrue();
+        var explicitChannel = new TerrainChannelOp("design:terrain:missing-line", "negative fixture", river.Id, 1.2,
+            new(TerrainBankKind.Hard, "1:4"), -1.2, []) { Zone = Zone };
+        {
+            WorldDataException? rejection = null;
+            try { TerrainCompiler.Compile(context, [Source([explicitChannel])]); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+    }
+
+    [TestCase]
+    public void AutomaticWaterUsesActualConstantShoreTopAndRequiresExplicitLevelForUnevenShore()
+    {
+        var water = WorldFeatureFixture.Create("fixture:raised-lake", "water", new PolygonGeometry(Box(-20, -20, 20, 20)));
+        var plateau = new TerrainPlatformOp("design:terrain:raised-lake-base", "fixture", Box(-40, -40, 40, 40), 3,
+            new("1:4", "1:4"), 2) { Zone = Zone };
+        var terrain = Compile([plateau], [water]); AssertThat(Math.Abs((double)(2.5) - (double)(terrain.WaterY(water.Id)!.Value)) <= 0.001).IsTrue();
+        var uneven = new TerrainSlopeOp("design:terrain:uneven-lake-base", "negative fixture", new PolygonGeometry(Box(-40, -40, 40, 40)),
+            0, 1, 0, new("1:4", "1:4"), 2, new(-40, 0), new(40, 0)) { Zone = Zone };
+        {
+            WorldDataException? rejection = null;
+            try { Compile([uneven], [water]); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+    }
+
+    [TestCase]
+    public void AutomaticRoadWaterWeightHasExactBoundariesAndNeverReappearsUnderWater()
+    {
+        var waterEdge = TerrainCompiler.WaterSideWeight(new(0, 1, 0), new(4, -1, 0));
+        var roadEdge = TerrainCompiler.WaterSideWeight(new(4, 1, 0), new(0, -1, 0));
+        AssertThat(Math.Abs((double)(0) - (double)(waterEdge.Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(waterEdge.Dx)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(1) - (double)(roadEdge.Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(roadEdge.Dx)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(TerrainCompiler.WaterSideWeight(new(-2, 1, 0), new(6, -1, 0)).Height)) <= 0.001).IsTrue();
+        var midpoint = TerrainCompiler.WaterSideWeight(new(2, 1, 0), new(2, -1, 0));
+        AssertThat(Math.Abs((double)(0.5) - (double)(midpoint.Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.375) - (double)(midpoint.Dx)) <= 0.001).IsTrue();
+        try { TerrainCompiler.WaterSideWeight(new(0, 1, 0), new(0, -1, 0)); throw new InvalidOperationException("Coincident fixed boundaries were silently accepted."); }
+        catch (ArgumentException) { }
+    }
+
+    [TestCase]
+    public void BridgeBanksFollowActualShoreArclengthAndHaveTwoMetreContinuousEnds()
+    {
+        var region = new TerrainRegion([Box(-10, -10, 10, 10)]);
+        var bridge = new NetworkLine(new("fixture:bridge"), new([new(-20, 0), new(20, 0)]), 2);
+        var banks = new TerrainBridgeBanks(region, [bridge]);
+        AssertThat(banks.Contacts.Count == 2).OverrideFailureMessage("Bridge/shore crossings were lost or invented.").IsTrue();
+        AssertThat(Math.Abs((double)(4) - (double)(banks.NearestContact(-10, 4).AlongDistance)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(1) - (double)(banks.HardWeight(-10, 5).Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(banks.HardWeight(-10, 5).Dz)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0.5) - (double)(banks.HardWeight(-10, 6).Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-0.75) - (double)(banks.HardWeight(-10, 6).Dz)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(banks.HardWeight(-10, 7).Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(banks.HardWeight(-10, 7).Dz)) <= 0.001).IsTrue();
+        var unrelated = new NetworkLine(new("fixture:nearby"), new([new(-11, -20), new(-11, 20)]), 2);
+        AssertThat(new TerrainBridgeBanks(region, [unrelated]).Contacts.Count == 0).OverrideFailureMessage("Nearby nonintersecting bridge was guessed into a bank segment.").IsTrue();
+        var water = WorldFeatureFixture.Create("fixture:lake", "water", new PolygonGeometry(region.Polygons[0]));
+        var context = Context([water]) with { Network = new([], [], [bridge], [], []) };
+        var terrain = TerrainCompiler.Compile(context, []);
+        AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.WaterY(water.Id)!.Value)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(-10, 4))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(-0.25) - (double)(terrain.HeightAt(-10, 6))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.HeightAt(-10, 7))) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void CompiledBankQueryExportsFrozenGeometryAndRejectsInvalidStations()
+    {
+        var water = WorldFeatureFixture.Create("fixture:bank-water", "water", new PolygonGeometry(Box(-10, -10, 10, 10)));
+        var bridge = new NetworkLine(new("fixture:bank-bridge"), new([new(-20, 0), new(20, 0)]), 2);
+        var context = Context([water]) with { Network = new([], [], [bridge], [], []) };
+        ITerrainBankSource source = TerrainCompiler.Compile(context, []);
+        AssertThat(source.Banks.Count == 2).OverrideFailureMessage("Resolved bridge banks were not exported once per actual crossing.").IsTrue();
+        AssertThat(source.Banks.Select(span => span.Id).SequenceEqual(source.Banks.Select(span => span.Id).OrderBy(id => id, StringComparer.Ordinal))).OverrideFailureMessage("Bank IDs are not in stable ordinal order.").IsTrue();
+        var first = source.Banks[0];
+        AssertThat(first.Waters.SequenceEqual(new[] { water.Id }) && first.Bridges.SequenceEqual(new[] { bridge.Id }) && first.Roads.Count == 0).OverrideFailureMessage("Exported provenance does not identify the actual water/bridge.").IsTrue();
+        AssertThat(Math.Abs((double)(2) - (double)(first.TransitionLength)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(source.BankTopY(first.Id, first.CoreFrom))) <= 0.001).IsTrue();
+        var retained = source.BankTopY(first.Id, (first.CoreFrom + first.CoreTo) / 2);
+        var plateau = new TerrainPlatformOp("design:terrain:bank-plateau", "new snapshot", Box(-40, -40, 40, 40), 3, new("1:4", "1:4"), 2) { Zone = Zone };
+        ITerrainBankSource changed = TerrainCompiler.Compile(context, [Source([plateau])]);
+        AssertThat(Math.Abs((double)(3) - (double)(changed.BankTopY(changed.Banks[0].Id, changed.Banks[0].CoreFrom))) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(retained) - (double)(source.BankTopY(first.Id, (first.CoreFrom + first.CoreTo) / 2))) <= 0.001).IsTrue();
+        foreach (var station in new[] { double.NaN, double.PositiveInfinity, -0.01, first.Length + 0.01 })
+        {
+            try { source.BankTopY(first.Id, station); throw new InvalidOperationException("Invalid station was silently clamped."); }
+            catch (ArgumentOutOfRangeException) { }
+        }
+        try { source.BankTopY(" missing ", 0); throw new InvalidOperationException("Malformed ID accepted."); } catch (ArgumentException) { }
+        try { source.BankTopY("missing", 0); throw new InvalidOperationException("Unknown ID substituted terrain height."); } catch (KeyNotFoundException) { }
+        var hard = new TerrainLakeOp("design:terrain:whole-bank", "whole ring", water.Id, -0.5, new(TerrainBankKind.Hard, "1:4"), new(1.5), []) { Zone = Zone };
+        ITerrainBankSource closed = Compile([hard], [water]); var ring = closed.Banks.Single();
+        AssertThat(ring.Shore.Points[0] == ring.Shore.Points[^1] && ring.TransitionLength == 0 && ring.CoreTo == ring.Length).OverrideFailureMessage("Whole Hard ring lost its final station contract.").IsTrue();
+        AssertThat(Math.Abs((double)(closed.BankTopY(ring.Id, 0)) - (double)(closed.BankTopY(ring.Id, ring.Length))) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void FootwayConflictIsOneContinuousHardSpanWithThreeMetreExtensions()
+    {
+        var water = new TerrainRegion([Box(-10, -10, 10, 10)]);
+        var road = new TerrainRegion([Box(-12, -3, -11, 3)]);
+        var banks = new TerrainBridgeBanks(water, []);
+        banks.ResolveFootways([new(new("fixture:shore-path"), TerrainRegion.Expand(road.Bounds, 5),
+            road.Polygons[0].Outer, (x, z) => (road.Distance(x, z), TerrainDifferential.Constant(0)))],
+            (_, _) => -0.5);
+        AssertThat(banks.RoadSpans.Count == 1).OverrideFailureMessage("One geometric conflict was split into sample-sized walls.").IsTrue();
+        var span = banks.RoadSpans[0];
+        var expectedEnd = 3 + Math.Sqrt(1.5 * 1.5 - 1) + 3;
+        AssertThat(Math.Abs(span.To - span.From - 2 * expectedEnd) < 0.01).OverrideFailureMessage("The continuous conflict root or 3 m extension changed.").IsTrue();
+        AssertThat(Math.Abs((double)(1) - (double)(banks.HardWeight(-10, 0).Height)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs(banks.HardWeight(-10, expectedEnd + 1).Height - 0.5) < 0.01).OverrideFailureMessage("Hard/Soft transition is not the fixed 2 m Hermite join.").IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(banks.HardWeight(-10, expectedEnd + 2.01).Height)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(banks.ProfileAt(-10, 0).Top!.Value.Height)) <= 0.001).IsTrue();
+        AssertThat(span.Roads.Count == 1 && span.Roads[0].Road == new FeatureId("fixture:shore-path")).OverrideFailureMessage("Resolved bank lost its actual road identity.").IsTrue();
+    }
+
+    [TestCase]
+    public void RegisteredUndergroundCulvertPreservesSurfaceAndLogicalWaterIdentity()
+    {
+        var shape = new PolygonGeometry(Box(-10, -2, 10, 2));
+        var water = new WorldFeature(new("fixture:source:way:44"), FeatureSource.Osm, new("water"), shape)
+        {
+            Parts = [new("osm:way:44", shape, null, null) { Props = Kind("water") }]
+        };
+        var line = new NetworkLine(water.Id, new([new(-10, 0), new(10, 0)]), 4)
+            { Props = JsonSerializer.SerializeToElement(new { waterway = "drain", tunnel = "culvert", layer = "-1" }) };
+        var context = Context([water]) with { Network = new([], [line], [], [line], []) };
+        var terrain = TerrainCompiler.Compile(context, []);
+        AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(0, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-1.2) - (double)(terrain.WaterY(water.Id)!.Value)) <= 0.001).IsTrue();
+        AssertThat(terrain.WaterAt(0, 0) is null && !terrain.IsSurfaceWater(water.Id)).OverrideFailureMessage("Buried water was exposed as surface water.").IsTrue();
+        var plateau = new TerrainPlatformOp("design:terrain:over-pipe", "raised land preserves buried metadata",
+            Box(-40, -40, 40, 40), 3, new("1:4", "1:4"), 2) { Zone = Zone };
+        var raised = TerrainCompiler.Compile(context, [Source([plateau])]);
+        AssertThat(Math.Abs((double)(3) - (double)(raised.HeightAt(0, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-1.2) - (double)(raised.WaterY(water.Id)!.Value)) <= 0.001).IsTrue();
+        var lake = WorldFeatureFixture.Create("fixture:pipe-lake", "water", new PolygonGeometry(Box(-15, -5, -5, 5)));
+        var connected = TerrainCompiler.Compile(Context([water, lake]) with { Network = context.Network }, []);
+        AssertThat(Math.Abs((double)(-0.5) - (double)(connected.WaterY(water.Id)!.Value)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(connected.HeightAt(0, 0))) <= 0.001).IsTrue();
+        var drainShape = new PolygonGeometry(Box(8, -2, 30, 2));
+        var drain = new WorldFeature(new("fixture:source:way:45"), FeatureSource.Osm, new("water"), drainShape)
+            { Parts = [new("osm:way:45", drainShape, null, null) { Props = Kind("water") }] };
+        var drainLine = new NetworkLine(drain.Id, new([new(10, 0), new(30, 0)]), 4)
+            { Props = JsonSerializer.SerializeToElement(new { waterway = "drain" }) };
+        var through = TerrainCompiler.Compile(Context([water, lake, drain]) with { Network = new([], [line, drainLine], [], [line], []) }, []);
+        AssertThat(Math.Abs((double)(-0.5) - (double)(through.WaterY(drain.Id)!.Value)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-0.5) - (double)(through.WaterY(water.Id)!.Value)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(through.HeightAt(0, 0))) <= 0.001).IsTrue();
+        {
+            WorldDataException? rejection = null;
+            try { TerrainCompiler.Compile(context with { Network = new([], [line], [], [], []) }, []); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+    }
+
+    [TestCase]
+    public void AutomaticRoadFollowsSoftBankAndPreservesItsWaterBoundary()
+    {
+        var water = WorldFeatureFixture.Create("fixture:lake", "water", new PolygonGeometry(Box(0, -20, 20, 20)));
+        CompiledTerrain Build(float center, float width)
+        {
+            var roadGeometry = new PolygonGeometry(Box(center - width / 2, -15, center + width / 2, 15));
+            var road = new WorldFeature(new("fixture:road"), FeatureSource.Osm, new("road"), roadGeometry)
+                { Parts = [new("osm:way:8", roadGeometry, null, null) { Props = Kind("road") }] };
+            var line = new NetworkLine(new("fixture:source:way:8"), new([new(center, -15), new(center, 15)]), width)
+                { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
+            return TerrainCompiler.Compile(Context([water, road]) with { Network = new([line], [], [], [], []) }, []);
+        }
+        var feasible = Build(-4, 2); AssertThat(Math.Abs((double)(-0.5) - (double)(feasible.HeightAt(0, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(feasible.HeightAt(-4, 0))) <= 0.001).IsTrue();
+        AssertThat(feasible.FactsAt(-0.5f, 0).Grade <= 1f / 3 + 0.01).OverrideFailureMessage("Narrowed side exceeded its true transverse grade.").IsTrue();
+        // Default base samples are now soft terrain-following targets, not two hidden Y=0
+        // anchors. This narrow path can follow the dry soft bank without moving its waterline.
+        var narrow = Build(-0.2f, 0.1f);
+        AssertThat(Math.Abs((double)(-0.5) - (double)(narrow.HeightAt(0, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-0.46) - (double)(narrow.HeightAt(-0.2f, 0))) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void WaterUnionRemovesInternalEdgesAndPreservesRemainingHoles()
+    {
+        var union = TerrainUnion.Build([new([Box(-2, -10, 1, 10)]), new([Box(-1, -10, 2, 10)])]);
+        AssertThat(Math.Abs((double)(-2) - (double)(union.Distance(0, 0).Height)) <= 0.001).IsTrue();
+        var touching = TerrainUnion.Build([new([Box(-2, -2, 0, 2)]), new([Box(0, -2, 2, 2)])]);
+        AssertThat(Math.Abs((double)(-2) - (double)(touching.Distance(0, 0).Height)) <= 0.001).IsTrue();
+        var island = new TerrainRegion([new PolygonRings(Box(-10, -10, 10, 10).Outer, [Box(-3, -3, 3, 3).Outer])]);
+        var filled = TerrainUnion.Build([island, new([Box(-1, -5, 1, 5)])]);
+        AssertThat(filled.Contains(0, 0) && !filled.Contains(2, 0) && filled.Polygons.Sum(p => p.Holes.Count) == 2).OverrideFailureMessage("Water union filled an unrelated island hole or retained an internal boundary.").IsTrue();
+        var a = new TerrainRegion([Box(-2.00037f, -10, 1, 10)]);
+        var c = new TerrainRegion([Box(-1, -10, 2.00037f, 10)]);
+        var fractional = TerrainUnion.Build([a, c]);
+        AssertThat(Math.Abs((double)(-2) - (double)(fractional.Distance(0, 0).Height)) <= 0.001).IsTrue();
+        var expected = Nodes(fractional);
+        AssertThat(expected.SequenceEqual(Nodes(TerrainUnion.Build([a, c]))) && expected.SequenceEqual(Nodes(TerrainUnion.Build([c, a])))).OverrideFailureMessage("Centimetre-grid union geometry changes between repeated builds or input order.").IsTrue();
+        static IEnumerable<Vector2> Nodes(TerrainRegion region) => region.Polygons
+            .SelectMany(p => new[] { p.Outer }.Concat(p.Holes)).SelectMany(ring => ring);
+    }
+
+    [TestCase]
+    public void ShoreEnvelopeKeepsFixedBoundaryValuesAndCapsTheFullLandGradient()
+    {
+        var envelope = new TerrainShoreEnvelope(new([Box(-1, -1, 1, 1)]), (x, _) => 0.2 * x, "fixture", "shore-envelope");
+        AssertThat(Math.Abs((double)(-0.2) - (double)(envelope.Constrain(TerrainDifferential.Constant(0), -1, 0).Height)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0.2) - (double)(envelope.Constrain(TerrainDifferential.Constant(0), 1, 0).Height)) <= 0.001).IsTrue();
+        var sample = envelope.Constrain(TerrainDifferential.Constant(0), -1.2, 0.2);
+        AssertThat(Math.Abs((double)(-0.1) - (double)(sample.Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.5) - (double)(Math.Sqrt(sample.Dx * sample.Dx + sample.Dz * sample.Dz))) <= 0.001).IsTrue();
+        const double e = 0.00001;
+        var finite = (envelope.Constrain(TerrainDifferential.Constant(0), -1.2 + e, 0.2).Height
+            - envelope.Constrain(TerrainDifferential.Constant(0), -1.2 - e, 0.2).Height) / (2 * e);
+        AssertThat(Math.Abs((double)(finite) - (double)(sample.Dx)) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void WaterJoinKeepsTwoMetreShoreArclengthWhileInteriorWidthChanges()
+    {
+        var lake = new TerrainRegion([Box(-10, -10, 10, 10)]);
+        var channel = new TerrainRegion([Box(-4, -25, 4, 0)]);
+        var join = new TerrainWaterJoin(TerrainUnion.Build([lake, channel]), lake);
+        foreach (var width in new[] { 2d, 6d, 12d })
+        {
+            AssertThat(Math.Abs((double)(1) - (double)(join.Weight(-4, -10, width).Height)) <= 0.001).IsTrue();
+            AssertThat(Math.Abs((double)(0.5) - (double)(join.Weight(-4, -11, width).Height)) <= 0.001).IsTrue();
+            AssertThat(Math.Abs((double)(0) - (double)(join.Weight(-4, -12, width).Height)) <= 0.001).IsTrue();
+            AssertThat(Math.Abs((double)(0) - (double)(join.Weight(-4, -13, width).Height)) <= 0.001).IsTrue();
+            var a = join.Weight(-4.00001, -11, width); var c = join.Weight(-3.99999, -11, width);
+            AssertThat(Math.Abs(a.Height - c.Height) < 0.01).OverrideFailureMessage("The fixed exposed shore and interior join are discontinuous.").IsTrue();
+        }
+        AssertThat(Math.Abs((double)(1) - (double)(join.Weight(0, 0, 4).Height)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(join.Weight(0, -22, 4).Height)) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void WaterUnionCannotHideAuthoredZoneExtentBehindAnAutomaticMember()
+    {
+        var automatic = WorldFeatureFixture.Create("fixture:a-auto-lake", "water", new PolygonGeometry(Box(-15, -8, 1, 8)));
+        var authored = WorldFeatureFixture.Create("fixture:z-authored-lake", "water", new PolygonGeometry(Box(-1, -8, 15, 8)));
+        var op = new TerrainLakeOp("design:terrain:authored-water", "zone regression", authored.Id, -0.5,
+            new(TerrainBankKind.Soft, "1:5"), new(1.5), []) { Zone = Zone };
+        var context = Context([automatic, authored]) with
+        {
+            Zones = new Dictionary<ZoneId, IReadOnlyList<PolygonRings>> { [Zone] = [Box(-7, -20, 7, 20)] }
+        };
+        {
+            WorldDataException? rejection = null;
+            try { TerrainCompiler.Compile(context, [Source([op])]); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+        var accepted = Compile([op], [automatic, authored]);
+        AssertThat(accepted.ZonesValidated).OverrideFailureMessage("A valid author extent lost its zone validation after union.").IsTrue();
+    }
+
+    [TestCase]
+    public void AuthoredAnchorAtRealHardShoreHasAnExactContentConflict()
+    {
+        var water = WorldFeatureFixture.Create("fixture:anchor-water", "water", new PolygonGeometry(Box(0, -10, 20, 10)));
+        var line = new NetworkLine(new("fixture:anchor-road"), new([new(0, -15), new(0, 0), new(0, 15)]), 0.5f)
+            { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
+        var corridor = new TerrainCorridorOp("design:terrain:bad-shore-anchor", "real fixed anchor conflict", line.Id,
+            [new(0, -0.3), new(15, -0.3), new(30, -0.3)], 0, 0.75) { Zone = Zone };
+        try
+        {
+            _ = TerrainCompiler.Compile(Context([water]) with { Network = new([line], [], [], [], []) }, [Source([corridor])]);
+            throw new InvalidOperationException("A real constrained hard anchor was accepted.");
+        }
+        catch (WorldDataException error)
+        {
+            AssertThat((string?)error.Data["TerrainConstraintKind"] == "content-conflict" && error.Entry == corridor.Id).OverrideFailureMessage("The exact shoreline anchor conflict lost its classification/location.").IsTrue();
+        }
+    }
+
+}

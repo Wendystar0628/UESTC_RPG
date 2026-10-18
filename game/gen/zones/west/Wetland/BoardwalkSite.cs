@@ -1,5 +1,6 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -26,42 +27,39 @@ namespace Campus.Gen.Zones.West.Wetland;
 public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
 {
     private static readonly StepsPart Steps = new();
-    private static readonly Lazy<Route> Line = new(() => new(Route.Smooth(W.Route, 2)));
+    private static readonly ConditionalWeakTable<IWorldModel, Route> Lines = new();
 
-    internal static Route Path => Line.Value;
+    internal static Route Path(IWorldModel world) => Lines.GetValue(world, value => new(Route.Smooth(W.Route(value), 2)));
 
     public override string Id => "19c.boardwalk";
 
     /// <summary>Deck top: the higher mouth's paving plus a small lip, constant along the boardwalk.</summary>
-    internal static float DeckTop(Func<float, float, float> ground)
+    internal static float DeckTop(IWorldModel world, Func<float, float, float> ground)
     {
-        var p = Path.Points;
+        var p = Path(world).Points;
         return MathF.Max(ground(p[0].X, p[0].Y), ground(p[^1].X, p[^1].Y)) + W.PavingTop + W.Lip;
     }
 
     /// <summary>Arc length of the beach opening and the side (+1 right, −1 left) the stream and the beach lie on.</summary>
-    internal static (float S, float Side) Beach
+    internal static (float S, float Side) Beach(IWorldModel world)
     {
-        get
-        {
-            var (s, lateral) = Path.Project(W.BeachCentre);
-            return (s, lateral >= 0 ? 1f : -1f);
-        }
+        var (s, lateral) = Path(world).Project(W.BeachCentre(world));
+        return (s, lateral >= 0 ? 1f : -1f);
     }
 
     /// <summary>Rail runs of one side as arc-length intervals; the water side opens at the beach.</summary>
-    internal static (float S0, float S1)[] RailRuns(float side)
+    internal static (float S0, float S1)[] RailRuns(IWorldModel world, float side)
     {
-        var (s, waterSide) = Beach;
-        var length = Path.Length;
+        var (s, waterSide) = Beach(world);
+        var length = Path(world).Length;
         return side == waterSide ? [(0f, s - W.BeachGap * 0.5f), (s + W.BeachGap * 0.5f, length)] : [(0f, length)];
     }
 
     /// <summary>Lamp stations along the edge away from the stream.</summary>
-    internal static float[] LampStations()
+    internal static float[] LampStations(IWorldModel world)
     {
         var list = new List<float>();
-        for (var s = W.LampStart; s < Path.Length - 2f; s += W.LampPitch) list.Add(s);
+        for (var s = W.LampStart; s < Path(world).Length - 2f; s += W.LampPitch) list.Add(s);
         return [.. list];
     }
 
@@ -69,8 +67,9 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
 
     public override void Build(SiteBuilder b)
     {
-        var y = DeckTop(b.Ground);
-        var path = Path;
+        var world = b.Context.World;
+        var y = DeckTop(b.Context.World, b.Ground);
+        var path = Path(world);
         var detail = b.Detail;
         // Deck: single planks close up, one beveled slab further off.
         if (detail == SiteDetail.Full) Planks(b, path, y);
@@ -89,8 +88,8 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         if (detail == SiteDetail.Mass) return;
         Piles(b, path, y);
         foreach (var side in new[] { -1f, 1f })
-            foreach (var (s0, s1) in RailRuns(side)) Railing(b, path, y, side, s0, s1, detail);
-        foreach (var s in LampStations()) Lamp(b, path, y, s, -Beach.Side, detail);
+            foreach (var (s0, s1) in RailRuns(world, side)) Railing(b, path, y, side, s0, s1, detail);
+        foreach (var s in LampStations(world)) Lamp(b, path, y, s, -Beach(world).Side, detail);
         BeachSteps(b, path, y);
         PebbleBeach(b, detail);
     }
@@ -158,8 +157,8 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
     public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var y = DeckTop(context.World.Terrain.HeightAt);
-        return LampStations().Select(s => LampLayout(Path, y, s, -Beach.Side).Emitter).ToArray();
+        var y = DeckTop(context.World, context.World.Terrain.HeightAt);
+        return LampStations(context.World).Select(s => LampLayout(Path(context.World), y, s, -Beach(context.World).Side).Emitter).ToArray();
     }
 
     private static (Vector2 Foot, LightEmitter Emitter) LampLayout(Route path, float y, float s, float side)
@@ -187,11 +186,11 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
     // ---- Wading beach and its steps ----
 
     /// <summary>The steps' frame: origin on the deck edge at the beach opening, local +Z back toward the deck (the upper level).</summary>
-    internal static (PlanFrame Frame, float Foot, StairParams? Flight) BeachFlight(Func<float, float, float> ground)
+    internal static (PlanFrame Frame, float Foot, StairParams? Flight) BeachFlight(IWorldModel world, Func<float, float, float> ground)
     {
-        var y = DeckTop(ground);
-        var (s, side) = Beach;
-        var (p, t) = Path.At(s);
+        var y = DeckTop(world, ground);
+        var (s, side) = Beach(world);
+        var (p, t) = Path(world).At(s);
         var outward = Route.Right(t) * side;
         var edge = p + outward * (W.Width * 0.5f);
         var frame = new PlanFrame(edge, new(-outward.Y, outward.X));
@@ -208,17 +207,17 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
 
     private static void BeachSteps(SiteBuilder b, Route path, float y)
     {
-        var (frame, foot, flight) = BeachFlight(b.Ground);
+        var (frame, foot, flight) = BeachFlight(b.Context.World, b.Ground);
         if (flight is null) return;
         b.Place(PartCatalog.Steps, flight, frame.At(0, foot, -flight.Depth * 0.5f));
     }
 
     /// <summary>The beach's frame: origin at its centre, local X along the stream.</summary>
-    internal static PlanFrame BeachFrame => PlanFrame.Along(W.BeachCentre, W.BeachAxis);
+    internal static PlanFrame BeachFrame(IWorldModel world) => PlanFrame.Along(W.BeachCentre(world), W.BeachAxis);
 
     private static void PebbleBeach(SiteBuilder b, SiteDetail detail)
     {
-        var f = BeachFrame;
+        var f = BeachFrame(b.Context.World);
         int rings = detail == SiteDetail.Full ? 5 : 3, segments = detail == SiteDetail.Full ? 32 : 16;
         var m = new Shapes.Writer(L.Pebble);
         var up = Vector3.UnitY;
@@ -273,8 +272,9 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
 
     public override void Collide(SiteColliders c)
     {
-        var path = Path;
-        var y = DeckTop(c.Ground);
+        var world = c.Context.World;
+        var path = Path(world);
+        var y = DeckTop(c.Context.World, c.Ground);
         // Deck: 2 m slabs, each a box whose top is the deck (SYS-WALK), timber underfoot.
         var slabs = Math.Max(1, (int)MathF.Ceiling(path.Length / W.SlabLength));
         var piece = path.Length / slabs;
@@ -285,24 +285,24 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         }
         // Railings: one barrier per polyline segment, top max(1.05, 1.5).
         foreach (var side in new[] { -1f, 1f })
-            foreach (var (s0, s1) in RailRuns(side))
+            foreach (var (s0, s1) in RailRuns(world, side))
             {
                 if (s1 - s0 < 0.5f) continue;
                 var line = PlanGeometry.MitreOffset(path.Sub(s0, s1), side * RailLateral, closed: false);
                 for (var i = 0; i + 1 < line.Length; i++)
                     c.Wall(line[i], line[i + 1], W.PostSize * 0.5f, y - 0.1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDeck);
             }
-        foreach (var s in LampStations())
+        foreach (var s in LampStations(world))
         {
             var (p, t) = path.At(s);
-            var q = p + Route.Right(t) * (-Beach.Side) * (W.Width * 0.5f - W.LampInset);
+            var q = p + Route.Right(t) * (-Beach(world).Side) * (W.Width * 0.5f - W.LampInset);
             c.Add(new PostCollider(q, W.LampRadius * 1.3f, y, y + W.LampHeight, SurfaceTag.Prop) { Foot = FootMat.Metal });
         }
-        var (frame, foot, flight) = BeachFlight(c.Ground);
+        var (frame, foot, flight) = BeachFlight(c.Context.World, c.Ground);
         if (flight is not null) c.Add(Steps.Collision(flight), frame.At(0, foot, -flight.Depth * 0.5f));
     }
 
     /// <summary>Q2 (walk, K1, MAP-QSH-WEST 近景巡检点 2): P11's spot on the deck at eye height, looking 250° over the reeds.</summary>
     public override IReadOnlyList<InspectionProbe> Probes =>
-        [Probe("Q2", W.Entity, new(W.P11.X, W.PavingTop + W.Lip + 1.62f, W.P11.Y), PlanMath.Heading(W.P11Bearing), -4f, 12f)];
+        [Probe("Q2", W.Entity, new(W.P11.X, W.PavingTop + W.Lip + WalkRules.StandingEye, W.P11.Y), Angles.Heading(W.P11Bearing), -4f, 12f)];
 }

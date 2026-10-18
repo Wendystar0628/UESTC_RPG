@@ -13,6 +13,10 @@ namespace Campus.Arch.Tests;
 [TestSuite]
 public sealed class ArchitectureTests
 {
+    private const string ZoneIdCatalogPattern = @"^Campus\.Gen\.Zones\.(?:South\.SouthIds|North\.NorthFeatureIds|Core\.CoreIds|" +
+        @"CenterEast\.CenterEastIds(?:\+(?:Pinxue|Research|Monuments|Wenke|Friendship|Layout))?|West\.WestIds|" +
+        @"DesignBoundary\.BoundaryFeatureIds|DesignPublic\.PublicIds)$";
+
     private static readonly Lazy<ReflectionAssembly[]> Production = new(LoadProduction);
     private static readonly Lazy<Architecture> Model = new(() => new ArchLoader()
         .LoadAssemblies(Production.Value.Append(ReflectionAssembly.Load("GodotSharp")).ToArray()).Build());
@@ -104,9 +108,13 @@ public sealed class ArchitectureTests
         foreach (var origin in packages)
         {
             var forbidden = packages.Where(target => !AssertReference(origin, target)).Select(NamespacePattern).ToArray();
+            // D-244: a zone reads another zone's identity catalog, never its implementation.
+            var allowedCatalogs = origin.StartsWith("Campus.Gen.Zones.", StringComparison.Ordinal) && origin != "Campus.Gen.Zones.Common"
+                ? ZoneIdCatalogPattern : "(?!)";
             if (forbidden.Length > 0)
                 Check(Types().That().ResideInNamespaceMatching(NamespacePattern(origin)).Should()
-                    .NotDependOnAny(Types().That().ResideInNamespaceMatching(string.Join('|', forbidden)))
+                    .NotDependOnAny(Types().That().ResideInNamespaceMatching(string.Join('|', forbidden))
+                        .And().DoNotHaveFullNameMatching(allowedCatalogs))
                     .WithoutRequiringPositiveResults());
         }
         // An empty project can lose unused references during compilation. Inspect its declaration too.

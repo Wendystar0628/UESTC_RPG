@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -89,10 +90,11 @@ public sealed class GrandStair : ICorePiece
     public static GrandStair? From(IWorldModel world, LibraryShell? shell)
     {
         ArgumentNullException.ThrowIfNull(world);
-        if (shell is null || !world.Features.ContainsKey(CoreFeatures.LibraryStair)) return null;
+        if (shell is null || !world.Features.ContainsKey(CoreIds.LibraryStair)) return null;
         if (shell.EntranceDoor is not { } door || shell.Plan.Landing.Count == 0) return null;
         // The stair stands square to the podium edge it lands on; its axis is the door's foot on that edge.
-        var (a, b) = shell.Plan.Landing.OrderByDescending(l => Vector2.Distance(l.A, l.B)).First();
+        var landing = world.ContourSegment(CoreIds.LibraryLanding);
+        var a = landing[0]; var b = landing[^1];
         var along = Vector2.Normalize(b - a);
         var outward = new Vector2(along.Y, -along.X);
         if (Vector2.Dot(outward, new Vector2(door.Outward.X, door.Outward.Z)) < 0) outward = -outward;
@@ -102,7 +104,7 @@ public sealed class GrandStair : ICorePiece
 
     public string Id => "library-entrance";
     public Vector2 Anchor => At(FrontS * 0.5f, 0f);
-    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreFeatures.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreIds.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>On the door axis at the podium edge.</summary>
     public Vector2 Origin { get; }
@@ -357,7 +359,7 @@ public sealed class GrandStair : ICorePiece
             if ((b - a).LengthSquared() < 1e-8f) continue;
             var d = Vector2.Normalize(b - a);
             var n = new Vector2(d.Y, -d.X) * sign;
-            var normal = Shapes.Normalize(Out3 * n.X + Vector3.UnitY * n.Y);
+            var normal = VectorMath.Unit(Out3 * n.X + Vector3.UnitY * n.Y, Vector3.UnitY, 1e-8);
             mesh.Quad(paint, At(a.X, w0, a.Y), At(b.X, w0, b.Y), At(b.X, w1, b.Y), At(a.X, w1, a.Y), normal);
         }
         var polygon = PolygonTriangulator.Triangulate(new PolygonRings([.. ring]));

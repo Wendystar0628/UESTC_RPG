@@ -20,7 +20,7 @@ namespace Campus.Gen.Zones.CenterEast.Research;
 public sealed class ResearchSteleSite : ZoneSite
 {
     /// <summary>The stone stands at its OSM point (the Stele node).</summary>
-    internal static PlanFrame Frame(IWorldModel world) => PlanMath.Facing(world.Feature(M.Stele).Point(), M.SteleFacing);
+    internal static PlanFrame Frame(IWorldModel world) => PlanMath.Facing(world.Feature(CenterEastIds.Monuments.Stele).Point(), M.SteleFacing);
 
     public override string Id => "21b2.research-stele";
 

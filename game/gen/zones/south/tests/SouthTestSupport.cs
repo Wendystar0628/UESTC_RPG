@@ -1,3 +1,4 @@
+using Campus.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -13,7 +14,7 @@ internal static class SouthTestSupport
     public static bool Covers(Collider c, Vector2 p, float y) => c switch
     {
         BoxCollider box => InBox(box, p) && MathF.Abs(y - box.At.M42) <= box.Half.Y,
-        WallCollider wall => DistanceToSegment(p, wall.A, wall.B) <= wall.HalfT + 0.26f && y >= wall.Y0 && y <= wall.Y1,
+        WallCollider wall => MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, wall.A, wall.B)) <= wall.HalfT + 0.26f && y >= wall.Y0 && y <= wall.Y1,
         PostCollider post => Vector2.Distance(p, post.C) <= post.R + 0.26f && y >= post.Y0 && y <= post.Y1,
         _ => false,
     };
@@ -31,7 +32,7 @@ internal static class SouthTestSupport
     public static bool Covers(Collider c, Vector2 p) => c switch
     {
         BoxCollider box => InBox(box, p),
-        WallCollider wall => DistanceToSegment(p, wall.A, wall.B) <= wall.HalfT + 0.26f,
+        WallCollider wall => MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, wall.A, wall.B)) <= wall.HalfT + 0.26f,
         _ => false,
     };
 
@@ -43,47 +44,10 @@ internal static class SouthTestSupport
         return MathF.Abs(Vector2.Dot(d, ux)) <= box.Half.X + 0.26f && MathF.Abs(Vector2.Dot(d, uz)) <= box.Half.Z + 0.26f;
     }
 
-    public static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
-    {
-        var ab = b - a;
-        var t = Math.Clamp(Vector2.Dot(p - a, ab) / ab.LengthSquared(), 0f, 1f);
-        return Vector2.Distance(p, a + ab * t);
-    }
-
     public static BuildContext Context()
     {
         // The south sites never read the map descriptor; the world model and seed are their whole input.
-        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1 };
+        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = Campus.Tests.RealMapFixture.Load().World, Map = null!, WorldSeed = 1 };
     }
 
-    public static string DataRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
-        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
-        return Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-    }
-
-    public static IWorldModel World()
-    {
-        var data = DataRoot();
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .Concat(Directory.GetFiles(Path.Combine(data, "overlay", "south.d"), "*.json").Order(StringComparer.Ordinal)
-                .Select(path => Path.GetRelativePath(data, path).Replace('\\', '/')))
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        return WorldModelLoader.Load(new("qingshuihe"), files).World;
-    }
-
-    /// <summary>The map as the kernel loads it: every authored overlay, not only the south one.</summary>
-    public static IWorldModel FullWorld()
-    {
-        var data = DataRoot();
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
-                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')))
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        return WorldModelLoader.Load(new("qingshuihe"), files).World;
-    }
 }

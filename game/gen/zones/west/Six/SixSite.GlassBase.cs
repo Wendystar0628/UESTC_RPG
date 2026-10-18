@@ -32,19 +32,19 @@ public sealed partial class SixSite
             GridFacade.Build(b, plan, y + S.BaseHeight, style, e => Dress(e, volumes), windowed ? Numbering(k) : null);
             GlassBase(b, plan, y, style, volumes);
             var roof = y + S.BaseHeight + style.RoofTop;
-            Plant(b, S.Plants[Blocks.ToList().IndexOf(k)], roof);
+            Plant(b, S.Plants(world)[Blocks.ToList().IndexOf(k)], roof);
         }
         if (entity is not null && entity != S.EntityC)
         {
-            foreach (var at in S.ShutDoors.Where(at => ShutEntity(b.Context.World, at) == entity)) ShutDoor(b, at);
+            foreach (var at in S.ShutDoors(world).Where(at => ShutEntity(b.Context.World, at) == entity)) ShutDoor(b, at);
             return;
         }
         var c = Plan(world, S.EntityC, S.PartC);
         var yc = BaseY(b.Context, S.EntityC);
-        var (face, door) = EastFace(c, EastDoor(world));
+        var (face, door) = EastFace(world, EastDoor(world));
         Vestibule(b, face, door, yc);
         Sign(b, face, yc + S.BaseHeight + Style(S.UpperC).Top);
-        foreach (var at in S.ShutDoors.Where(at => entity is null || ShutEntity(world, at) == entity)) ShutDoor(b, at);
+        foreach (var at in S.ShutDoors(world).Where(at => entity is null || ShutEntity(world, at) == entity)) ShutDoor(b, at);
         LinkAB(b, Plan(world, S.EntityC, S.LinkAB).Outer, yc);
         LinkBC(b, world, yc);
         Tower(b, Plan(world, S.EntityC, S.Tower).Outer, yc);
@@ -56,27 +56,8 @@ public sealed partial class SixSite
     /// A ring moved <paramref name="by"/> metres into the block along mitred bisectors; a courtyard hole grows into the block.
     /// Positive-area rings have their outside on the right of the path, so their block lies on the left.
     /// </summary>
-    internal static Vector2[] Inset(IReadOnlyList<Vector2> ring, float by, bool hole)
-    {
-        var n = ring.Count;
-        var left = PlanGeometry.SignedArea(ring) > 0 != hole;
-        var result = new Vector2[n];
-        for (var i = 0; i < n; i++)
-        {
-            Vector2 p = ring[(i + n - 1) % n], q = ring[i], r = ring[(i + 1) % n];
-            Vector2 na = Inward(q - p, left), nb = Inward(r - q, left);
-            var dot = na.X * nb.X + na.Y * nb.Y;
-            result[i] = dot > -0.8f ? q + (na + nb) * (by / (1f + dot)) : q + na * by;
-        }
-        return result;
-    }
-
-    private static Vector2 Inward(Vector2 d, bool left)
-    {
-        var length = MathF.Sqrt(d.X * d.X + d.Y * d.Y);
-        var normal = new Vector2(-d.Y / length, d.X / length);
-        return left ? normal : -normal;
-    }
+    internal static Vector2[] Inset(IReadOnlyList<Vector2> ring, float by, bool hole) =>
+        PlanGeometry.MitreOffset(ring, PlanGeometry.SignedArea(ring) > 0 != hole ? -by : by, closed: true);
 
     internal static PolygonRings BasePlan(PolygonRings plan) =>
         new(Inset(plan.Outer, S.Recess, false), [.. plan.Holes.Select(h => (IReadOnlyList<Vector2>)Inset(h, S.Recess, true))]);
@@ -100,7 +81,7 @@ public sealed partial class SixSite
             if (Dress(e, volumes).Kind != EdgeKind.Hidden)
                 GridFacade.Box(b, e.Frame, -S.Recess, e.Length + S.Recess, y - 0.1f, y + S.PavingTop + 0.01f, -S.Recess - 0.1f, 0.05f, L.Granite, 0);
         var east = EastDoor(b.Context.World);
-        var doors = S.ShutDoors.Append(east).ToArray();
+        var doors = S.ShutDoors(b.Context.World).Append(east).ToArray();
         foreach (var (e, _, _) in GridFacade.Edges(inner))
         {
             if (Dress(e, volumes, S.Recess).Kind == EdgeKind.Hidden) continue;
@@ -117,7 +98,7 @@ public sealed partial class SixSite
             }
             GridFacade.Box(b, f, 0, e.Length, y + 3.1f, y + 3.17f, 0, 0.1f, L.Metal, 0);
         }
-        foreach (var (x, f) in Columns(plan, style, volumes, east))
+        foreach (var (x, f) in Columns(plan, style, volumes, east, b.Context.World))
         {
             var bevel = b.Detail == SiteDetail.Full ? 0.04f : 0f;
             var z = S.PierDepth * 0.5f - 0.1f;
@@ -128,9 +109,9 @@ public sealed partial class SixSite
     }
 
     /// <summary>Base columns: local x on each built outer face's frame, under every <see cref="S.ColumnEvery"/>th pier, clear of the doors.</summary>
-    internal static IEnumerable<(float X, PlanFrame Frame)> Columns(PolygonRings plan, GridStyle style, IReadOnlyList<PolygonRings> volumes, Vector2 eastDoor)
+    internal static IEnumerable<(float X, PlanFrame Frame)> Columns(PolygonRings plan, GridStyle style, IReadOnlyList<PolygonRings> volumes, Vector2 eastDoor, IWorldModel world)
     {
-        var doors = S.ShutDoors.Append(eastDoor).ToArray();
+        var doors = S.ShutDoors(world).Append(eastDoor).ToArray();
         foreach (var run in GridFacade.Layout(plan, style, e => Dress(e, volumes)).Runs)
         {
             if (run.Edge.Kind == EdgeKind.Hidden) continue;

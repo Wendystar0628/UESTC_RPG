@@ -21,7 +21,7 @@ public sealed class ForestParkSite : ZoneSite
 {
     public const string Pavilion = "design:south-hongfeng-pavilion";
 
-    private static readonly PlanFrame Cage = new(P.PeacockHouse, Vector2.UnitX);
+    private static PlanFrame CageOf(IWorldModel world) => new(world.Feature(SouthIds.PeacockHouse).Point(), Vector2.UnitX);
 
     /// <summary>The pavilion's placement from its overlay feature (D-239): the hill top, the pavilion's side, the seat wall's radius, height and bearing range.</summary>
     private readonly record struct Hilltop(Vector2 At, float Size, float SeatRadius, float SeatHeight, float SeatFrom, float SeatTo)
@@ -41,7 +41,7 @@ public sealed class ForestParkSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var hill = HilltopOf(b.Context.World);
-        PeacockHouse(b, b.Ground(P.PeacockHouse));
+        PeacockHouse(b, b.Ground(CageOf(b.Context.World).Origin));
         HillPavilion(b, hill, b.Ground(hill.At));
     }
 
@@ -49,30 +49,31 @@ public sealed class ForestParkSite : ZoneSite
 
     private static void PeacockHouse(SiteBuilder b, float y)
     {
+        var cage = CageOf(b.Context.World);
         float w = P.CageWidth, d = P.CageDepth, h = P.CageWall, curb = 0.3f;
         var bottom = y + curb;
         var top = bottom + h;
-        b.Add(PartGeometryKernel.BeveledBox(w + 0.3f, curb + 0.1f, d + 0.3f, 0.03f, L.Concrete), Cage.At(0, y - 0.1f, 0));
+        b.Add(PartGeometryKernel.BeveledBox(w + 0.3f, curb + 0.1f, d + 0.3f, 0.03f, L.Concrete), cage.At(0, y - 0.1f, 0));
         // Frame: posts every ~1.5 m, a ring beam at the eaves and a mid rail.
         var posts = Ring(w, d, 1.5f).ToArray();
-        foreach (var p in posts) b.Add(PartGeometryKernel.BeveledBox(0.1f, h, 0.1f, 0.012f, L.WhiteSteel), Cage.At(p.X, bottom, p.Y));
+        foreach (var p in posts) b.Add(PartGeometryKernel.BeveledBox(0.1f, h, 0.1f, 0.012f, L.WhiteSteel), cage.At(p.X, bottom, p.Y));
         foreach (var (a, e) in Edges(w, d))
         {
-            Strut(b, Cage, new(a.X, top, a.Y), new(e.X, top, e.Y), 0.12f);
-            Strut(b, Cage, new(a.X, bottom + 1.0f, a.Y), new(e.X, bottom + 1.0f, e.Y), 0.06f);
+            Strut(b, cage, new(a.X, top, a.Y), new(e.X, top, e.Y), 0.12f);
+            Strut(b, cage, new(a.X, bottom + 1.0f, a.Y), new(e.X, bottom + 1.0f, e.Y), 0.06f);
         }
         // Hipped roof: hips and rafters to a short ridge, mesh rings that catch the winter snow lines (§11).
         var ridge = new[] { new Vector3(-(w - d) * 0.5f, top + P.CageRoofRise, 0), new Vector3((w - d) * 0.5f, top + P.CageRoofRise, 0) };
-        Strut(b, Cage, ridge[0], ridge[1], 0.1f);
+        Strut(b, cage, ridge[0], ridge[1], 0.1f);
         foreach (var p in posts)
         {
             var apex = p.X < ridge[0].X ? ridge[0] : p.X > ridge[1].X ? ridge[1] : new Vector3(p.X, ridge[0].Y, 0);
-            Strut(b, Cage, new(p.X, top, p.Y), apex, 0.07f);
+            Strut(b, cage, new(p.X, top, p.Y), apex, 0.07f);
         }
         // Door frame on the south side, facing the woodland path.
-        b.Add(PartGeometryKernel.BeveledBox(0.08f, 2.1f, 0.08f, 0.01f, L.WhiteSteel), Cage.At(-0.55f, bottom, d * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(0.08f, 2.1f, 0.08f, 0.01f, L.WhiteSteel), Cage.At(0.55f, bottom, d * 0.5f));
-        Strut(b, Cage, new(-0.55f, bottom + 2.1f, d * 0.5f), new(0.55f, bottom + 2.1f, d * 0.5f), 0.08f);
+        b.Add(PartGeometryKernel.BeveledBox(0.08f, 2.1f, 0.08f, 0.01f, L.WhiteSteel), cage.At(-0.55f, bottom, d * 0.5f));
+        b.Add(PartGeometryKernel.BeveledBox(0.08f, 2.1f, 0.08f, 0.01f, L.WhiteSteel), cage.At(0.55f, bottom, d * 0.5f));
+        Strut(b, cage, new(-0.55f, bottom + 2.1f, d * 0.5f), new(0.55f, bottom + 2.1f, d * 0.5f), 0.08f);
         if (b.Detail == SiteDetail.Mass) return;
         // Wire mesh: thin rods on a 0.5 m grid (L0), every other rod at L1.
         var mesh = P.CageMesh * (b.Detail == SiteDetail.Full ? 1 : 2);
@@ -84,23 +85,23 @@ public sealed class ForestParkSite : ZoneSite
             for (var k = 1; k < n; k++)
             {
                 var p = a + (e - a) * (k / (float)n);
-                b.Add(PartGeometryKernel.BeveledBox(rod, h, rod, 0, L.WhiteWire), Cage.At(p.X, bottom, p.Y));
+                b.Add(PartGeometryKernel.BeveledBox(rod, h, rod, 0, L.WhiteWire), cage.At(p.X, bottom, p.Y));
             }
             for (var yy = bottom + mesh; yy < top - 0.1f; yy += mesh)
-                if (MathF.Abs(yy - bottom - 1.0f) > 0.1f) Strut(b, Cage, new(a.X, yy, a.Y), new(e.X, yy, e.Y), rod, L.WhiteWire);
+                if (MathF.Abs(yy - bottom - 1.0f) > 0.1f) Strut(b, cage, new(a.X, yy, a.Y), new(e.X, yy, e.Y), rod, L.WhiteWire);
         }
         for (var k = 1; k <= 3; k++)
         {
             var t = k / 4f;
             float hx = w * 0.5f - (d * 0.5f) * t, hz = d * 0.5f * (1 - t), yy = top + P.CageRoofRise * t;
             Vector3[] r = [new(-hx, yy, -hz), new(hx, yy, -hz), new(hx, yy, hz), new(-hx, yy, hz)];
-            for (var i = 0; i < 4; i++) Strut(b, Cage, r[i], r[(i + 1) % 4], rod * 1.4f, L.WhiteWire);
+            for (var i = 0; i < 4; i++) Strut(b, cage, r[i], r[(i + 1) % 4], rod * 1.4f, L.WhiteWire);
         }
         // Timber perch inside for the birds' night roost (WLD-LIFE; the peacocks are WP-25's).
         foreach (var x in new[] { -2.2f, 1.8f })
-            b.Add(PartGeometryKernel.BeveledBox(0.12f, 2.3f, 0.12f, 0.015f, L.Wood), Cage.At(x, bottom, -1.0f));
-        Strut(b, Cage, new(-2.4f, bottom + 2.1f, -1.0f), new(2.0f, bottom + 2.1f, -1.0f), 0.1f, L.Wood);
-        Strut(b, Cage, new(-2.4f, bottom + 1.3f, -1.0f), new(2.0f, bottom + 1.3f, -1.0f), 0.08f, L.Wood);
+            b.Add(PartGeometryKernel.BeveledBox(0.12f, 2.3f, 0.12f, 0.015f, L.Wood), cage.At(x, bottom, -1.0f));
+        Strut(b, cage, new(-2.4f, bottom + 2.1f, -1.0f), new(2.0f, bottom + 2.1f, -1.0f), 0.1f, L.Wood);
+        Strut(b, cage, new(-2.4f, bottom + 1.3f, -1.0f), new(2.0f, bottom + 1.3f, -1.0f), 0.08f, L.Wood);
     }
 
     /// <summary>Points around a w × d rectangle (local), corners included, sides divided near the pitch.</summary>
@@ -125,14 +126,13 @@ public sealed class ForestParkSite : ZoneSite
         var d = e - a;
         var length = MathF.Sqrt(d.X * d.X + d.Y * d.Y + d.Z * d.Z);
         if (length < 0.02f) return;
-        var x = d / length;
+        var x = VectorMath.Unit(d);
         // Local Y: the up vector made perpendicular to the rod (or local Z for a vertical rod).
         var up = MathF.Abs(x.Y) > 0.95f ? new Vector3(0, 0, 1) : new Vector3(0, 1, 0);
-        var dot = up.X * x.X + up.Y * x.Y + up.Z * x.Z;
+        var dot = Vector3.Dot(up, x);
         var yv = up - x * dot;
-        var yl = MathF.Sqrt(yv.X * yv.X + yv.Y * yv.Y + yv.Z * yv.Z);
-        yv /= yl;
-        var zv = new Vector3(x.Y * yv.Z - x.Z * yv.Y, x.Z * yv.X - x.X * yv.Z, x.X * yv.Y - x.Y * yv.X);
+        yv = VectorMath.Unit(yv);
+        var zv = VectorMath.Cross(x, yv);
         var mid = (a + e) * 0.5f - yv * (size * 0.5f);
         var local = new Matrix4x4(x.X, x.Y, x.Z, 0, yv.X, yv.Y, yv.Z, 0, zv.X, zv.Y, zv.Z, 0, mid.X, mid.Y, mid.Z, 1);
         b.Add(PartGeometryKernel.BeveledBox(length, size, size, 0, material ?? L.WhiteSteel), GeometryPlacement.Multiply(local, f.At(0, 0, 0)));
@@ -182,8 +182,9 @@ public sealed class ForestParkSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        var y = c.Ground(P.PeacockHouse.X, P.PeacockHouse.Y);
-        var ring = Cage.Rect(-P.CageWidth * 0.5f, -P.CageDepth * 0.5f, P.CageWidth * 0.5f, P.CageDepth * 0.5f);
+        var cage = CageOf(c.Context.World);
+        var y = c.Ground(cage.Origin.X, cage.Origin.Y);
+        var ring = cage.Rect(-P.CageWidth * 0.5f, -P.CageDepth * 0.5f, P.CageWidth * 0.5f, P.CageDepth * 0.5f);
         for (var i = 0; i < 4; i++) c.Wall(ring[i], ring[(i + 1) % 4], 0.08f, y, y + 0.3f + P.CageWall + P.CageRoofRise, SurfaceTag.Wall, FootMat.Metal);
         var hill = HilltopOf(c.Context.World);
         var pad = hill.Frame;

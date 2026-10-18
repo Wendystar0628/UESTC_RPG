@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -53,16 +54,21 @@ public sealed class LibraryPlan
 {
     private const float Tolerance = 0.08f;
 
-    private LibraryPlan(float padY, IReadOnlyList<Block> blocks, IReadOnlyList<WallPiece> pieces, Vector2 centre, float faceAngle,
-        IReadOnlyList<(Vector2 A, Vector2 B)> landing, IReadOnlyList<Vector2>? store)
+    private LibraryPlan(IWorldModel world, float padY, IReadOnlyList<Block> blocks, IReadOnlyList<WallPiece> pieces, Vector2 centre, float faceAngle,
+        IReadOnlyList<(Vector2 A, Vector2 B)> landing)
     {
         PadY = padY;
         Blocks = blocks;
         Pieces = pieces;
         Centre = centre;
         FaceAngle = faceAngle;
+        NorthFacet = (int)world.Feature(CoreIds.LibraryRoofFace).Number("northFacet");
         Landing = landing;
-        CafeFace = store is null ? null : CafeFaceBeside(pieces, store, PadY + FacadeRules.FloorAbovePad);
+        EntranceFace = CoreContours.Wall(world, CoreIds.LibraryFrontFace,
+            pieces.Where(p => p.Block.Kind == BlockKind.FrontTower && MathF.Abs(p.Y0 - SecondFloorY) < 0.01f));
+        var cafeFace = CoreContours.Wall(world, CoreIds.LibraryCafeFace,
+            pieces.Where(p => p.Block.Kind == BlockKind.Podium && p.Y0 <= FloorY));
+        CafeFace = cafeFace is null ? null : (cafeFace, world.Feature(CoreIds.LibraryCafeFace).Text("doorAt") == "start");
     }
 
     public float PadY { get; }
@@ -75,6 +81,7 @@ public sealed class LibraryPlan
     public Vector2 Centre { get; }
     /// <summary>Angle (x = cos, z = sin) of one long face's outward normal; the eight faces are 45° apart.</summary>
     public float FaceAngle { get; }
+    public int NorthFacet { get; }
     /// <summary>Podium edges the grand stair base (8398) stands against: no parapet and a low collider (16c lands here).</summary>
     public IReadOnlyList<(Vector2 A, Vector2 B)> Landing { get; }
     /// <summary>
@@ -92,20 +99,19 @@ public sealed class LibraryPlan
     public float SecondFloorY => StoreyY(1);
 
     /// <summary>The front tower's face above the 2F terrace, toward the plaza: the glass slot and the front door are on it.</summary>
-    public WallPiece? EntranceFace => Pieces.Where(p => p.Block.Kind == BlockKind.FrontTower && p.Length >= 8f && MathF.Abs(p.Y0 - SecondFloorY) < 0.01f)
-        .OrderByDescending(p => p.Length).FirstOrDefault();
+    public WallPiece? EntranceFace { get; }
     public float TerraceY => StoreyY(S.LibraryStoreys.Length - 1);
     public float RoofY => StoreyY(S.LibraryStoreys.Length);
-    public float SkylightRadius => S.SkylightAcross * 0.5f / MathF.Cos(Shapes.Tau / 16f);
+    public float SkylightRadius => S.SkylightAcross * 0.5f / MathF.Cos(MathF.Tau / 16f);
 
     public static LibraryPlan? From(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        if (!world.Features.TryGetValue(CoreFeatures.Library, out var library) || library.Parts.Count == 0) return null;
+        if (!world.Features.TryGetValue(CoreIds.Library, out var library) || library.Parts.Count == 0) return null;
         var parts = library.Parts.GroupBy(p => p.SourceId, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.SelectMany(p => Plan.Polygons(WorldFeatureGeometry.FacadeGeometryOf(p))).Select(r => Ccw(r.Outer)).ToArray(), StringComparer.Ordinal);
-        if (!parts.TryGetValue(CoreFeatures.LibraryCore, out var cores) || cores.Length != 1) return null;
-        var padY = world.Terrain.PadY(CoreFeatures.Library);
+            .ToDictionary(g => g.Key, g => g.SelectMany(p => WorldFeatureGeometry.PolygonsOf(WorldFeatureGeometry.FacadeGeometryOf(p))).Select(r => PlanGeometry.OpenRing(r.Outer)).ToArray(), StringComparer.Ordinal);
+        if (!parts.TryGetValue(CoreIds.LibraryCore, out var cores) || cores.Length != 1) return null;
+        var padY = world.Terrain.PadY(CoreIds.Library);
         var floor = padY + FacadeRules.FloorAbovePad;
         var wallBase = padY - FacadeRules.WallBelowPad;
         float Storey(int k)
@@ -116,49 +122,36 @@ public sealed class LibraryPlan
         }
         float second = Storey(1), terrace = Storey(S.LibraryStoreys.Length - 1), roof = Storey(S.LibraryStoreys.Length);
 
-        var blocks = new List<Block> { new(CoreFeatures.LibraryCore, BlockKind.Core, cores[0], wallBase, roof) };
+        var blocks = new List<Block> { new(CoreIds.LibraryCore, BlockKind.Core, cores[0], wallBase, roof) };
         foreach (var (source, kind, top) in new[]
         {
-            (CoreFeatures.LibraryTowerNe, BlockKind.Tower, roof + S.TowerRise),
-            (CoreFeatures.LibraryTowerSe, BlockKind.FrontTower, Storey(S.FrontTowerStoreys)),
-            (CoreFeatures.LibraryTowerNw, BlockKind.Tower, roof + S.TowerRise),
-            (CoreFeatures.LibraryTowerSw, BlockKind.Tower, roof + S.TowerRise),
-            (CoreFeatures.LibraryPodium, BlockKind.Podium, second),
+            (CoreIds.LibraryTowerNe, BlockKind.Tower, roof + S.TowerRise),
+            (CoreIds.LibraryTowerSe, BlockKind.FrontTower, Storey(S.FrontTowerStoreys)),
+            (CoreIds.LibraryTowerNw, BlockKind.Tower, roof + S.TowerRise),
+            (CoreIds.LibraryTowerSw, BlockKind.Tower, roof + S.TowerRise),
+            (CoreIds.LibraryPodium, BlockKind.Podium, second),
         })
             if (parts.TryGetValue(source, out var rings))
                 blocks.AddRange(rings.Select(r => new Block(source, kind, r, wallBase, top)));
-        var solids = blocks.Where(b => b.Kind is BlockKind.Core or BlockKind.Tower or BlockKind.FrontTower).ToArray();
-        if (parts.TryGetValue(CoreFeatures.LibraryWings, out var wings))
+        var setbacks = CoreIds.LibraryWingSetbacks.Select(world.ContourSegment).ToArray();
+        if (parts.TryGetValue(CoreIds.LibraryWings, out var wings))
             foreach (var wing in wings)
             {
-                var setback = SetBack(wing, solids, S.TopSetback);
-                blocks.Add(new(CoreFeatures.LibraryWings, BlockKind.Wing, wing, wallBase, setback is null ? roof : terrace));
-                if (setback is not null) blocks.Add(new(CoreFeatures.LibraryWings, BlockKind.Setback, setback, terrace, roof));
+                var contour = setbacks.Single(arc => wing.Contains(arc[0]) && wing.Contains(arc[^1]));
+                var setback = SetBack(wing, contour, S.TopSetback);
+                blocks.Add(new(CoreIds.LibraryWings, BlockKind.Wing, wing, wallBase, setback is null ? roof : terrace));
+                if (setback is not null) blocks.Add(new(CoreIds.LibraryWings, BlockKind.Setback, setback, terrace, roof));
             }
 
-        var centre = Plan.Centroid([cores[0]]);
+        var centre = PlanGeometry.Centroid([cores[0]]);
         var landing = new List<(Vector2, Vector2)>();
-        if (world.Features.TryGetValue(CoreFeatures.LibraryStair, out var stair))
+        if (world.Features.TryGetValue(CoreIds.LibraryStair, out var stair))
             foreach (var podium in blocks.Where(b => b.Kind == BlockKind.Podium))
-                foreach (var ring in Plan.Polygons(stair.Parts.Count > 0 ? WorldFeatureGeometry.FacadeGeometryOf(stair.Parts[0]) : stair.Geometry))
+                foreach (var ring in WorldFeatureGeometry.PolygonsOf(stair.Parts.Count > 0 ? WorldFeatureGeometry.FacadeGeometryOf(stair.Parts[0]) : stair.Geometry))
                     landing.AddRange(Shared(podium.Ring, ring.Outer));
-        var store = world.Features.TryGetValue(CoreFeatures.CafeStore, out var cafe) ? Plan.Polygons(cafe.Geometry).FirstOrDefault()?.Outer : null;
-        return new LibraryPlan(padY, blocks, Exterior(blocks), centre, FaceAngleOf(cores[0], centre), landing, store);
-    }
-
-    /// <summary>
-    /// Ground-floor podium faces whose outside is open (not inside the store) and that end within 1 m of a store corner; of
-    /// those the longest, the door going to the end at the store.
-    /// </summary>
-    private static (WallPiece, bool)? CafeFaceBeside(IReadOnlyList<WallPiece> pieces, IReadOnlyList<Vector2> store, float floor)
-    {
-        static float Near(Vector2 p, IReadOnlyList<Vector2> ring) => ring.Min(q => Vector2.Distance(p, q));
-        var best = pieces
-            .Where(p => p.Block.Kind == BlockKind.Podium && p.Y0 <= floor && !PlanGeometry.InsideByCrossings(store, (p.A + p.B) * 0.5f + p.Out * 0.5f))
-            .Select(p => (Piece: p, AtA: Near(p.A, store) <= Near(p.B, store), Gap: MathF.Min(Near(p.A, store), Near(p.B, store))))
-            .Where(c => c.Gap < 1f)
-            .OrderByDescending(c => c.Piece.Length).FirstOrDefault();
-        return best.Piece is null ? null : (best.Piece, best.AtA);
+        var face = world.ContourSegment(CoreIds.LibraryRoofFace);
+        var normal = (face[0] + face[^1]) * 0.5f - centre;
+        return new LibraryPlan(world, padY, blocks, Exterior(blocks), centre, MathF.Atan2(normal.Y, normal.X), landing);
     }
 
     // ------------------------------------------------------------------ exterior wall pieces
@@ -242,28 +235,11 @@ public sealed class LibraryPlan
     /// <paramref name="setback"/>, the two end points slid along the neighbouring edges. Null when the wing has no clean
     /// outer run or the result is not a simple polygon; the wing then rises to the roof without a terrace.
     /// </summary>
-    public static IReadOnlyList<Vector2>? SetBack(IReadOnlyList<Vector2> wing, IReadOnlyList<Block> solids, float setback)
+    public static IReadOnlyList<Vector2>? SetBack(IReadOnlyList<Vector2> wing, IReadOnlyList<Vector2> selected, float setback)
     {
         var n = wing.Count;
-        var outer = new bool[n];
-        for (var i = 0; i < n; i++)
-        {
-            Vector2 a = wing[i], b = wing[(i + 1) % n];
-            var length = Vector2.Distance(a, b);
-            if (length < Tolerance) return null;
-            var covered = 0f;
-            foreach (var solid in solids)
-                for (var j = 0; j < solid.Ring.Count; j++)
-                    if (Overlap(a, b, solid.Ring[j], solid.Ring[(j + 1) % solid.Ring.Count]) is (var lo, var hi))
-                        covered += hi - lo;
-            outer[i] = covered < 0.5f * length;
-        }
-        // The single cyclic run of outer edges.
-        var starts = Enumerable.Range(0, n).Where(i => outer[i] && !outer[(i + n - 1) % n]).ToArray();
-        if (starts.Length != 1) return null;
-        var start = starts[0];
-        var count = 0;
-        while (count < n && outer[(start + count) % n]) count++;
+        var start = Enumerable.Range(0, n).Single(i => wing[i] == selected[0]);
+        var count = selected.Count - 1;
         if (count >= n - 1) return null;
 
         (Vector2 P, Vector2 D) Line(int edge, float shift)
@@ -272,21 +248,24 @@ public sealed class LibraryPlan
             var d = Vector2.Normalize(b - a);
             return (a - new Vector2(d.Y, -d.X) * shift, d);
         }
-        var result = new List<Vector2> { Intersect(Line(start + n - 1, 0f), Line(start, setback)) };
-        for (var k = 1; k < count; k++) result.Add(Intersect(Line(start + k - 1, setback), Line(start + k, setback)));
-        result.Add(Intersect(Line(start + count - 1, setback), Line(start + count, 0f)));
+        Vector2 Intersect(int e0, float s0, int e1, float s1)
+        {
+            var a = Line(e0, s0); var b = Line(e1, s1);
+            return PlanGeometry.LineIntersection(a.P, a.D, b.P, b.D, 1e-6f) ?? b.P;
+        }
+        var result = new List<Vector2> { Intersect(start + n - 1, 0f, start, setback) };
+        for (var k = 1; k < count; k++) result.Add(Intersect(start + k - 1, setback, start + k, setback));
+        result.Add(Intersect(start + count - 1, setback, start + count, 0f));
         for (var k = count + 1; k < n; k++) result.Add(wing[(start + k) % n]);
         // The end points must stay on their neighbouring edges, and the strip must triangulate.
         if (!Between(result[0], wing[(start + n - 1) % n], wing[start]) || !Between(result[count], wing[(start + count) % n], wing[(start + count + 1) % n]))
             return null;
         try { _ = PolygonTriangulator.Triangulate(new PolygonRings(result)); }
         catch (ArgumentException) { return null; }
-        return Ccw(result);
+        return PlanGeometry.OpenRing(result);
     }
 
     // ------------------------------------------------------------------ helpers
-
-    private static float Cross(Vector2 a, Vector2 b) => a.X * b.Y - a.Y * b.X;
 
     /// <summary>
     /// The span (distances from a along a → b) where segment c–e runs along segment a–b: nearly parallel (within about
@@ -298,20 +277,12 @@ public sealed class LibraryPlan
         float length = Vector2.Distance(a, b), other = Vector2.Distance(c, e);
         if (length < Tolerance || other < Tolerance) return null;
         Vector2 d = (b - a) / length, d2 = (e - c) / other;
-        if (MathF.Abs(Cross(d, d2)) > 0.05f) return null;
+        if (MathF.Abs(PlanGeometry.CrossFloat(d, d2)) > 0.05f) return null;
         float tc = Vector2.Dot(c - a, d), te = Vector2.Dot(e - a, d);
         float lo = MathF.Max(0f, MathF.Min(tc, te)), hi = MathF.Min(length, MathF.Max(tc, te));
         if (hi - lo < Tolerance) return null;
-        if (MathF.Abs(Cross(d2, a + d * lo - c)) > Tolerance || MathF.Abs(Cross(d2, a + d * hi - c)) > Tolerance) return null;
+        if (MathF.Abs(PlanGeometry.CrossFloat(d2, a + d * lo - c)) > Tolerance || MathF.Abs(PlanGeometry.CrossFloat(d2, a + d * hi - c)) > Tolerance) return null;
         return (lo, hi);
-    }
-
-    private static Vector2 Intersect((Vector2 P, Vector2 D) l0, (Vector2 P, Vector2 D) l1)
-    {
-        var den = Cross(l0.D, l1.D);
-        if (MathF.Abs(den) < 1e-6f) return l1.P;
-        var t = Cross(l1.P - l0.P, l1.D) / den;
-        return l0.P + l0.D * t;
     }
 
     private static bool Between(Vector2 p, Vector2 a, Vector2 b)
@@ -319,16 +290,6 @@ public sealed class LibraryPlan
         var d = b - a;
         var t = Vector2.Dot(p - a, d) / d.LengthSquared();
         return t > 0.02f && t < 0.98f;
-    }
-
-    /// <summary>Signed area in (x, z) is positive for the counterclockwise order every block uses.</summary>
-    public static Vector2[] Ccw(IReadOnlyList<Vector2> ring)
-    {
-        var area = PlanGeometry.SignedArea(ring);
-        var list = ring.ToList();
-        if (list.Count > 1 && Vector2.Distance(list[0], list[^1]) < 1e-4f) list.RemoveAt(list.Count - 1);
-        if (area < 0) list.Reverse();
-        return [.. list];
     }
 
     /// <summary>Edges of ring <paramref name="a"/> that lie along an edge of ring <paramref name="b"/> (the overlapping span).</summary>
@@ -345,14 +306,4 @@ public sealed class LibraryPlan
         }
     }
 
-    /// <summary>Outward normal angle of the core's longest edge: the octagon's long faces sit at this angle plus k · 90°.</summary>
-    private static float FaceAngleOf(IReadOnlyList<Vector2> core, Vector2 centre)
-    {
-        var best = 0;
-        for (var i = 1; i < core.Count; i++)
-            if (Vector2.DistanceSquared(core[i], core[(i + 1) % core.Count]) > Vector2.DistanceSquared(core[best], core[(best + 1) % core.Count])) best = i;
-        Vector2 a = core[best], b = core[(best + 1) % core.Count];
-        var mid = (a + b) * 0.5f - centre;
-        return MathF.Atan2(mid.Y, mid.X);
-    }
 }

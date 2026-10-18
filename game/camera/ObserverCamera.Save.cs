@@ -24,7 +24,7 @@ public partial class ObserverCamera
         var medium = _map?.World.Spatial.MediumAt(settled.Position);
         NavSpace? space = medium is { } current && current.Kind == MediumKind.Interior && current.Feature is { } feature
             ? new(feature, checked((short)current.Storey)) : null;
-        return new(Mode, settled with { FovDeg = null }, space, _speedStep, _flySpeedStep);
+        return new(Mode, settled with { FovDeg = null }, space, SpeedStep, _flySpeedStep);
     }
 
     public void Restore(ViewSaveData data, RestoreContext context)
@@ -45,14 +45,17 @@ public partial class ObserverCamera
         ActiveTransit?.Cancel(); ActiveTransit = null; _transitDestination = null;
         ResetHistory();
         _mode = mode;
-        _speedStep = Math.Clamp(data.SpeedStep,
-            mode switch { ViewMode.Fly => 1, ViewMode.Walk => 0, _ => throw new InvalidDataException("Unknown view mode.") },
-            mode switch { ViewMode.Fly => Tuning.SpeedSteps, ViewMode.Walk => 4, _ => throw new InvalidDataException("Unknown view mode.") });
-        _flySpeedStep = Math.Clamp(data.FlySpeedStep, 1, Tuning.SpeedSteps);
-        if (_speedStep != data.SpeedStep) context.Repair("view.speedStep");
-        if (_flySpeedStep != data.FlySpeedStep) context.Repair("view.flySpeedStep");
-        if (mode == ViewMode.Walk) _walkSpeedStep = _speedStep;
-        else _walk?.Leave();
+        // v1 keeps the active-speed projection on disk. Only a fly view restores it here;
+        // walk/Pose61 restores the sole walking speed from its own section.
+        int flyStep = mode switch
+        {
+            ViewMode.Fly => data.SpeedStep,
+            ViewMode.Walk => data.FlySpeedStep,
+            _ => throw new InvalidDataException("Unknown view mode.")
+        };
+        _flySpeedStep = Math.Clamp(flyStep, 1, Tuning.SpeedSteps);
+        if (_flySpeedStep != flyStep) context.Repair(mode == ViewMode.Fly ? "view.speedStep" : "view.flySpeedStep");
+        if (mode == ViewMode.Fly) _walk?.Leave();
         SetPose(pose); SetEdgeFog(0);
     }
 

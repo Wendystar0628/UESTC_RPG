@@ -44,7 +44,7 @@ public sealed class ColorScript
         var ia = (int)Math.Floor(sp) % 4;
         var a = (Season)ia;
         var b = (Season)((ia + 1) % 4);
-        var t = Oklab.Smootherstep(sp - Math.Floor(sp));
+        var t = ScalarMath.Smootherstep(sp - Math.Floor(sp));
         var (ha, sideA) = ArtSun.Altitude(clock, a);
         var h = sunAltDeg ?? ha;
         var f = EvaluateAt(a, h, sideA);
@@ -285,7 +285,7 @@ public sealed class PaletteComposer
             var sp = (i + 0.5) * 4.0 / PaletteLayout.SeasonSampleCount;
             var a = (int)Math.Floor(sp) % 4;
             var b = (a + 1) % 4;
-            var t = Oklab.Smootherstep(sp - Math.Floor(sp));
+            var t = ScalarMath.Smootherstep(sp - Math.Floor(sp));
             Put(fam.Row, i, Blend(lit[a], lit[b], t));
             Put(fam.Row + 1, i, Blend(shade[a], shade[b], t));
         }

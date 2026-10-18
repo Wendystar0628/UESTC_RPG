@@ -21,6 +21,26 @@ public static partial class PlanGeometry
         return Sample(line, new LengthIndexedLine(line), station, closed);
     }
 
+    /// <summary>Clamped endpoint samples and original interior vertices, excluding vertices within the endpoint station tolerance.</summary>
+    public static Vector2[] Subline(IReadOnlyList<Vector2> points, double s0, double s1, float endpointTolerance = 0.01f)
+    {
+        var line = PlanLine(points, closed: false);
+        var index = new LengthIndexedLine(line);
+        s0 = Math.Clamp(s0, 0d, line.Length);
+        s1 = Math.Clamp(s1, 0d, line.Length);
+        var result = new List<Vector2> { Sample(line, index, s0, closed: false).Point };
+        var coordinates = line.Coordinates;
+        double station = 0;
+        for (var i = 1; i < coordinates.Length - 1; i++)
+        {
+            station += coordinates[i - 1].Distance(coordinates[i]);
+            if (station > s0 + endpointTolerance && station < s1 - endpointTolerance)
+                result.Add(new((float)coordinates[i].X, (float)coordinates[i].Y));
+        }
+        result.Add(Sample(line, index, s1, closed: false).Point);
+        return result.ToArray();
+    }
+
     public static PlanLineProjection Project(IReadOnlyList<Vector2> points, Vector2 point, bool closed = false)
     {
         if (!VectorMath.Finite(point)) throw new ArgumentException("Non-finite query point.", nameof(point));
@@ -75,7 +95,12 @@ public static partial class PlanGeometry
         return p + u * t;
     }
 
-    public static Vector2? SegmentIntersection(Vector2 a, Vector2 b, Vector2 c, Vector2 d, float epsilon)
+    public static Vector2? SegmentIntersection(Vector2 a, Vector2 b, Vector2 c, Vector2 d, float epsilon) =>
+        SegmentHit(a, b, c, d, epsilon)?.Point;
+
+    /// <summary>Segment hit and clamped parameters along both segments. Endpoint tolerance admits shared-vertex hits without moving the computed point.</summary>
+    public static (Vector2 Point, float T, float U)? SegmentHit(Vector2 a, Vector2 b, Vector2 c, Vector2 d,
+        float epsilon = 1e-9f, float endpointTolerance = 0f)
     {
         var r = b - a;
         var s = d - c;
@@ -83,7 +108,8 @@ public static partial class PlanGeometry
         if (MathF.Abs(den) < epsilon) return null;
         var t = ((c.X - a.X) * s.Y - (c.Y - a.Y) * s.X) / den;
         var u = ((c.X - a.X) * r.Y - (c.Y - a.Y) * r.X) / den;
-        return t < 0 || t > 1 || u < 0 || u > 1 ? null : a + r * t;
+        return t < -endpointTolerance || t > 1f + endpointTolerance || u < -endpointTolerance || u > 1f + endpointTolerance
+            ? null : (a + r * t, Math.Clamp(t, 0f, 1f), Math.Clamp(u, 0f, 1f));
     }
 
     private static LineString PlanLine(IReadOnlyList<Vector2> points, bool closed)

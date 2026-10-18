@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.World;
@@ -32,7 +33,7 @@ public sealed record BuildingFrame(FeatureId Feature, IReadOnlyList<PolygonRings
     }
 
     /// <summary>Area-weighted centroid of all footprints' outer rings (the anchor for the building's tile).</summary>
-    public Vector2 Centroid => Plan.Centroid(Footprints.Select(f => f.Outer));
+    public Vector2 Centroid => PlanGeometry.Centroid(Footprints.Select(f => f.Outer));
 
     /// <summary>
     /// Frame of a building feature from the world model. The footprints are the facade outlines of its source parts when it has any
@@ -44,44 +45,8 @@ public sealed record BuildingFrame(FeatureId Feature, IReadOnlyList<PolygonRings
         ArgumentNullException.ThrowIfNull(world);
         if (!world.Features.TryGetValue(feature, out var f))
             throw new KeyNotFoundException($"Core building '{feature.Value}' is missing from the world model.");
-        var rings = (f.Parts.Count > 0 ? f.Parts.Select(WorldFeatureGeometry.FacadeGeometryOf) : [f.Geometry]).SelectMany(Plan.Polygons).ToArray();
-        if (rings.Length == 0) throw new InvalidOperationException($"Core building '{feature.Value}' has no footprint.");
+        var rings = WorldFeatureGeometry.FacadePolygonsOf(f);
+        if (rings.Count == 0) throw new InvalidOperationException($"Core building '{feature.Value}' has no footprint.");
         return new(feature, rings, world.Terrain.PadY(feature), storeyHeights);
-    }
-}
-
-/// <summary>Plan helpers over contract geometry.</summary>
-public static class Plan
-{
-    public static IEnumerable<PolygonRings> Polygons(OverlayGeometry geometry) => geometry switch
-    {
-        PolygonGeometry polygon => [polygon.Rings],
-        MultiPolygonGeometry multi => multi.Polygons,
-        PolylineGeometry or PointGeometry => [],
-        _ => throw new ArgumentException("Unknown geometry.", nameof(geometry)),
-    };
-
-    /// <summary>Area-weighted centroid of simple rings; falls back to the vertex mean for degenerate input.</summary>
-    public static Vector2 Centroid(IEnumerable<IReadOnlyList<Vector2>> rings)
-    {
-        double area = 0, x = 0, z = 0, mx = 0, mz = 0; var count = 0;
-        foreach (var ring in rings)
-            for (var i = 0; i < ring.Count; i++)
-            {
-                var a = ring[i]; var b = ring[(i + 1) % ring.Count];
-                var cross = (double)a.X * b.Y - (double)b.X * a.Y;
-                area += cross; x += (a.X + b.X) * cross; z += (a.Y + b.Y) * cross;
-                mx += a.X; mz += a.Y; count++;
-            }
-        if (count == 0) throw new ArgumentException("No points.", nameof(rings));
-        return Math.Abs(area) > 1e-6 ? new((float)(x / (3 * area)), (float)(z / (3 * area))) : new((float)(mx / count), (float)(mz / count));
-    }
-
-    /// <summary>Outer ring of the feature's first polygon (its own geometry, or its first source part).</summary>
-    public static IReadOnlyList<Vector2> OuterRing(WorldFeature feature)
-    {
-        var geometry = feature.Parts.Count > 0 ? feature.Parts[0].Geometry : feature.Geometry;
-        return Polygons(geometry).FirstOrDefault()?.Outer
-            ?? throw new InvalidOperationException($"Feature '{feature.Id.Value}' has no polygon.");
     }
 }

@@ -5,7 +5,6 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Circulation;
 using Campus.Gen.Parts.Core;
-using Campus.Gen.Zones.North.Framework;
 using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.North.NorthTune.Fence;
 using G = Campus.Gen.Zones.North.NorthTune.Gate;
@@ -95,7 +94,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
             var p = posts[j];
             var y = b.Ground(p);
             // Square posts turn with the run: along the chord of their two neighbours.
-            var u = Plan.Unit(posts[Math.Min(j + 1, posts.Count - 1)] - posts[Math.Max(j - 1, 0)]);
+            var u = VectorMath.Unit(posts[Math.Min(j + 1, posts.Count - 1)] - posts[Math.Max(j - 1, 0)], Vector2.Zero, 1e-9);
             if (u == Vector2.Zero) u = Vector2.UnitX;
             b.Box(L.Steel, p, u, F.PostSize, F.PostSize, y - 0.05f, y + F.Height);
             if (b.Detail == SiteDetail.Full) b.Box(L.Steel, p, u, F.PostSize + 0.04f, F.PostSize + 0.04f, y + F.Height, y + F.Height + 0.04f);

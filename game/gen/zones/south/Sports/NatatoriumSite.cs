@@ -21,8 +21,8 @@ namespace Campus.Gen.Zones.South.Sports;
 /// </summary>
 public sealed class NatatoriumSite : ZoneSite
 {
-    public const string Feature = "qsh:way:217855279";
-    private const string Part = "osm:way:217855279";
+    public static readonly string Feature = SouthIds.Natatorium.Entity;
+    private static readonly string Part = SouthIds.Natatorium.Part;
     public const string GlassKey = "glass-band";
 
     private const float PaneZ = 0.03f;
@@ -53,10 +53,8 @@ public sealed class NatatoriumSite : ZoneSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Natatorium {Feature} is missing from the world model.");
-        var ring = (feature.Parts.FirstOrDefault(p => p.SourceId == Part) is { } src ? WorldFeatureGeometry.FacadeGeometryOf(src) : feature.Geometry) is PolygonGeometry g
-            ? g.Rings.Outer
-            : throw new InvalidOperationException($"Natatorium {Feature} is not a single polygon.");
-        var centre = PlanMath.Centroid(ring);
+        var ring = feature.Contour(Part);
+        var centre = PlanGeometry.Centroid(ring, meanIfDegenerate: true);
         // Second moments about the centroid; a filled ellipse has variance (a/2)² and (b/2)² along its axes.
         double area = 0, sxx = 0, szz = 0, sxz = 0;
         for (var i = 0; i < ring.Count; i++)
@@ -135,7 +133,7 @@ public sealed class NatatoriumSite : ZoneSite
         for (var i = 0; i < p.Bays; i++)
         {
             var (f, width) = p.Facet(i);
-            b.Add(PartGeometryKernel.WallPanel(width + 0.02f, S.PoolGlassTop - S.PoolGlassFoot + 0.4f, 0.06f, [], L.Glass), f.At(0, y + S.PoolGlassFoot - 0.3f, -0.03f));
+            b.Add(PartGeometryKernel.WallPanel(width + 0.02f, S.PoolGlassTop - S.PoolGlassFoot + 0.4f, 0.06f, [], ZoneLooks.Glass), f.At(0, y + S.PoolGlassFoot - 0.3f, -0.03f));
         }
         if (Allocation(b.Context, p) is { } allocation) WindowNumbers.Panes(b, Openings(p, y), allocation, W.Venue, W.Pool);
         // The crown inside the drum, so the band never shows sky through its back.
@@ -189,7 +187,7 @@ public sealed class NatatoriumSite : ZoneSite
     /// <summary>The entrance hall's frame: on the major-axis ellipse direction of the bearing, +Z outward.</summary>
     internal static PlanFrame EntryFrame(Plan p, out float reach)
     {
-        var d = PlanMath.Heading(S.PoolDoorBearing);
+        var d = Angles.Heading(S.PoolDoorBearing);
         var local = p.Frame.Local(p.Frame.Origin + d);
         // Distance from the centre to the dome's face along d at the platform storey.
         var rho = Rho(p.DeckTop);
@@ -223,7 +221,7 @@ public sealed class NatatoriumSite : ZoneSite
         GridFacade.Box(b, f, hw - 0.6f, hw, floor - 0.3f, floor + h, face - 0.01f, front, L.White, 0.03f);
         GridFacade.Box(b, f, -hw - 0.4f, hw + 0.4f, floor + h, floor + h + 0.45f, back, front + 0.9f, L.StoneTrim, 0.03f);
         // Glazed front: panels between dark mullions, the middle pair the closed doors, a transom and a metal head panel.
-        GridFacade.Box(b, f, -hw + 0.6f, hw - 0.6f, floor, floor + h - 0.5f, face, face + 0.05f, L.Glass, 0);
+        GridFacade.Box(b, f, -hw + 0.6f, hw - 0.6f, floor, floor + h - 0.5f, face, face + 0.05f, ZoneLooks.Glass, 0);
         foreach (var x in new[] { -1.4f, 0f, 1.4f })
             GridFacade.Box(b, f, x - 0.06f, x + 0.06f, floor, floor + h - 0.5f, face, face + 0.14f, L.DarkFrame, 0);
         GridFacade.Box(b, f, -hw + 0.6f, hw - 0.6f, floor + 2.7f, floor + 2.8f, face, face + 0.14f, L.DarkFrame, 0);

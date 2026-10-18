@@ -98,7 +98,7 @@ public static class WorldModelLoader
             var parts = pair.Value.OrderBy(p => p.Part.SourceId, StringComparer.Ordinal).Select(p => p.Part).ToArray();
             var raw = pair.Value[0].Raw;
             entities.TryGetValue(pair.Key, out var entity);
-            var geometry = Geometry(parts.SelectMany(p => Polygons(p.Geometry)).ToArray());
+            var geometry = Geometry(parts.SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray());
             var height = parts.Max(p => p.Height);
             var kind = entity.ValueKind == JsonValueKind.Object ? Text(entity, "kind") : Text(raw, "kind");
             features.Add(pair.Key, new(new(pair.Key), FeatureSource.Osm, new(kind), geometry)
@@ -168,8 +168,8 @@ public static class WorldModelLoader
         var bounds = new Box3(new(limitRing.Min(p => p.X) - margin, roam?.FloorY ?? 0, limitRing.Min(p => p.Y) - margin),
             new(limitRing.Max(p => p.X) + margin, roam?.CeilY ?? Math.Max(1, features.Count > 0 ? features.Values.Max(f => f.Bounds.Max.Y) : 0), limitRing.Max(p => p.Y) + margin));
         return new(world, geo, PlanGeometry.Centroid(boundary.Outer), bounds,
-            new((int)MathF.Floor(bounds.Min.X / 64), (int)MathF.Floor(bounds.Min.Z / 64)),
-            new((int)MathF.Floor(bounds.Max.X / 64), (int)MathF.Floor(bounds.Max.Z / 64)))
+            TileGrid.At(bounds.Min),
+            TileGrid.At(bounds.Max))
         { Diagnostics = ["Terrain uses the current source relative plane. Designed slopes, platforms and sunken areas remain incomplete."] };
     }
 
@@ -289,7 +289,7 @@ public static class WorldModelLoader
                         throw new ArgumentException("hidePart cannot remove the final part; use hide to remove the entity explicitly.");
                     var remaining = current.Parts.Where(part => !string.Equals(part.SourceId, hidePart.SourceId, StringComparison.Ordinal)).ToArray();
                     // Match LoadCore's aggregation, preserving the remaining part records, polygon rings and holes.
-                    var geometry = Geometry(remaining.SelectMany(part => Polygons(part.Geometry)).ToArray());
+                    var geometry = Geometry(remaining.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
                     var height = remaining.Max(part => part.Height);
                     var bounds = BoundsOf(geometry, height ?? 0);
                     RegisterWrite(entityId, entityId, file, overlay.Owner, writes, claimedBy);
@@ -410,17 +410,15 @@ public static class WorldModelLoader
         PolygonGeometry polygon => new PolygonGeometry(Normalize(polygon.Rings)),
         MultiPolygonGeometry multi => Geometry(multi.Polygons.Select(Normalize).ToArray()),
         PolylineGeometry line when line.Line.Points.Count >= 2 => line,
-        PointGeometry point when float.IsFinite(point.Position.X) && float.IsFinite(point.Position.Y) && float.IsFinite(point.Position.Z) => point,
+        PointGeometry point when VectorMath.Finite(point.Position) => point,
         _ => throw new ArgumentException("Invalid geometry.")
     };
     private static PolygonRings Normalize(PolygonRings rings) => new(PlanGeometry.OpenRing(rings.Outer), rings.Holes.Select(h => PlanGeometry.OpenRing(h, false)).ToArray());
-    internal static IEnumerable<PolygonRings> Polygons(OverlayGeometry geometry) => geometry switch
-    { PolygonGeometry polygon => [polygon.Rings], MultiPolygonGeometry multi => multi.Polygons, PolylineGeometry or PointGeometry => [], _ => throw new ArgumentException("Unknown geometry.") };
     internal static Box3 BoundsOf(OverlayGeometry geometry, float height)
     {
         if (!float.IsFinite(height) || height < 0) throw new ArgumentException("Invalid feature height.");
         if (geometry is PointGeometry point) return new(point.Position, point.Position);
-        var points = geometry is PolylineGeometry line ? line.Line.Points : Polygons(geometry).SelectMany(p => p.Outer).ToArray();
+        var points = geometry is PolylineGeometry line ? line.Line.Points : WorldFeatureGeometry.PolygonsOf(geometry).SelectMany(p => p.Outer).ToArray();
         if (points.Count == 0) throw new ArgumentException("Empty feature geometry.");
         return new(new(points.Min(p => p.X), 0, points.Min(p => p.Y)), new(points.Max(p => p.X), height, points.Max(p => p.Y)));
     }
@@ -442,9 +440,9 @@ public static class WorldModelLoader
     private static void ValidateNetwork(WorldNetwork network)
     {
         foreach (var line in network.Roads.Concat(network.Waterways).Concat(network.Bridges).Concat(network.Culverts))
-            if (line.Line.Points.Count < 2 || line.Width < 0 || !float.IsFinite(line.Width) || line.Line.Points.Any(p => !float.IsFinite(p.X) || !float.IsFinite(p.Y)))
+            if (line.Line.Points.Count < 2 || line.Width < 0 || !float.IsFinite(line.Width) || line.Line.Points.Any(p => !VectorMath.Finite(p)))
                 throw new WorldDataException("network.json", line.Id.Value, "Invalid centerline or width.");
         foreach (var tree in network.Trees)
-            if (!float.IsFinite(tree.Position.X) || !float.IsFinite(tree.Position.Y) || !float.IsFinite(tree.Position.Z)) throw new WorldDataException("network.json", tree.Id.Value, "Invalid tree coordinate.");
+            if (!VectorMath.Finite(tree.Position)) throw new WorldDataException("network.json", tree.Id.Value, "Invalid tree coordinate.");
     }
 }

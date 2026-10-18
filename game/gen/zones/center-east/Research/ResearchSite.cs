@@ -28,7 +28,7 @@ public abstract class ResearchSite : ZoneSite
     /// <summary>The shared research frame R: X along the blocks' long faces, +Z roughly south.</summary>
     internal static readonly PlanFrame Frame = PlanFrame.Along(Vector2.Zero, R.Axis);
 
-    internal static readonly GridStyle Style = new(L.Stone, L.LightTrim, L.DarkGranite, L.Glass, L.Metal, L.RoofSlab)
+    internal static readonly GridStyle Style = new(L.Stone, L.LightTrim, L.DarkGranite, ZoneLooks.Glass, L.Metal, L.RoofSlab)
     {
         Bay = R.Bay,
         Pier = R.Pier,
@@ -56,14 +56,14 @@ public abstract class ResearchSite : ZoneSite
     internal abstract IReadOnlyList<(string Source, string Key)> Blocks { get; }
     /// <summary>Entities whose blocks touch this one's (their shared faces are hidden, facing faces read as a courtyard).</summary>
     internal virtual IReadOnlyList<string> Neighbours => [];
-    internal abstract IReadOnlyList<Vector2> HallBack { get; }
-    internal abstract float HallSagitta { get; }
+    internal abstract string HallId { get; }
+    internal abstract string HallBackId { get; }
     /// <summary>The hall's part, whose OSM levels are the hall's storeys.</summary>
     internal abstract string HallPart { get; }
     /// <summary>Local door point on a block face, or null when the door is in the hall's arc.</summary>
-    internal abstract Vector2? BlockDoor { get; }
-    internal abstract IReadOnlyList<Vector2> Stairs { get; }
-    internal abstract IReadOnlyList<Vector2> Plants { get; }
+    internal abstract string? BlockDoorId { get; }
+    internal abstract IReadOnlyList<string> StairIds { get; }
+    internal abstract IReadOnlyList<string> PlantIds { get; }
 
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
@@ -80,14 +80,17 @@ public abstract class ResearchSite : ZoneSite
     /// storeys, and the ring of a raised block over them when the building has one (科 B's attic).
     /// </summary>
     internal sealed record Plan(IReadOnlyList<IReadOnlyList<Vector2>> Blocks, IReadOnlyList<IReadOnlyList<Vector2>> AllBlocks, Vector2[] Hall,
-        int HallStoreys, IReadOnlyList<Vector2>? Raised);
+        int HallStoreys, IReadOnlyList<Vector2>? Raised, Vector2[] Back, float Sagitta, Vector2? Door);
 
     internal Plan Footprints(IWorldModel world)
     {
         var own = Blocks.Select(block => Ring(world, Entity, block.Source)).ToArray();
         var all = own.Concat(Neighbours.SelectMany(n => NeighbourBlocks(world, n))).ToArray();
         var (_, hallStoreys) = world.Feature(Entity).Part(HallPart).Levels();
-        return new(own, all, HallRing(HallBack, HallSagitta, 16), hallStoreys, RaisedRing(world));
+        var back = world.ContourSegment(HallBackId);
+        var sagitta = world.Feature(HallId).Number("sagitta");
+        return new(own, all, HallRing(back, sagitta, 16), hallStoreys, RaisedRing(world), back, sagitta,
+            BlockDoorId is null ? null : world.Feature(BlockDoorId).Point());
     }
 
     /// <summary>The ring of a block raised over the main ones, in world plan, or null.</summary>
@@ -95,25 +98,20 @@ public abstract class ResearchSite : ZoneSite
 
     internal static IReadOnlyList<Vector2> Ring(IWorldModel world, string entity, string source)
     {
-        if (!world.Features.TryGetValue(new(entity), out var feature))
-            throw new InvalidOperationException($"Research building {entity} is missing from the world model.");
-        // The facade outline (WP-08): the layout of faces, entrances and portal cells follows it, not the shared-edge physical outline.
-        return feature.Parts.FirstOrDefault(p => p.SourceId == source) is { } part && WorldFeatureGeometry.FacadeGeometryOf(part) is PolygonGeometry g
-            ? g.Rings.Outer
-            : throw new InvalidOperationException($"Research part {source} is missing or not a single polygon.");
+        return world.Feature(entity).Contour(source);
     }
 
     private static IEnumerable<IReadOnlyList<Vector2>> NeighbourBlocks(IWorldModel world, string entity) => entity switch
     {
-        R.KeB => new[] { R.KeBMain, R.KeBMiddle, R.KeBWest }.Select(id => Ring(world, R.KeB, id)),
-        R.KeC => new[] { R.KeCBar, R.KeCLink }.Select(id => Ring(world, R.KeC, id)),
+        var id when id == CenterEastIds.Research.KeB => new[] { CenterEastIds.Research.KeBMain, CenterEastIds.Research.KeBMiddle, CenterEastIds.Research.KeBWest }.Select(source => Ring(world, CenterEastIds.Research.KeB, source)),
+        var id when id == CenterEastIds.Research.KeC => new[] { CenterEastIds.Research.KeCBar, CenterEastIds.Research.KeCLink }.Select(source => Ring(world, CenterEastIds.Research.KeC, source)),
         _ => throw new ArgumentOutOfRangeException(nameof(entity), entity, "Not a research building."),
     };
 
     /// <summary>A lens hall's world outline: the local back polyline closed by an arc bulging away from it, outside on the right.</summary>
     internal static Vector2[] HallRing(IReadOnlyList<Vector2> back, float sagitta, int segments)
     {
-        var points = back.Select(p => Frame.P(p.X, p.Y)).ToList();
+        var points = back.ToList();
         Vector2 a = points[^1], b = points[0];
         var centre = points.Aggregate(Vector2.Zero, (s, p) => s + p) / points.Count;
         var chord = Vector2.Normalize(b - a);
@@ -125,14 +123,14 @@ public abstract class ResearchSite : ZoneSite
     }
 
     /// <summary>The hall's arc apex and its outward direction (the C hall's doors stand there).</summary>
-    internal (Vector2 Apex, Vector2 Out) HallApex()
+    internal (Vector2 Apex, Vector2 Out) HallApex(Plan plan)
     {
-        Vector2 a = Frame.P(HallBack[^1].X, HallBack[^1].Y), b = Frame.P(HallBack[0].X, HallBack[0].Y);
-        var centre = HallBack.Select(p => Frame.P(p.X, p.Y)).Aggregate(Vector2.Zero, (s, p) => s + p) / HallBack.Count;
+        Vector2 a = plan.Back[^1], b = plan.Back[0];
+        var centre = plan.Back.Aggregate(Vector2.Zero, (s, p) => s + p) / plan.Back.Length;
         var chord = Vector2.Normalize(b - a);
         var side = new Vector2(-chord.Y, chord.X);
         if (Vector2.Dot(side, (a + b) * 0.5f - centre) < 0) side = -side;
-        return ((a + b) * 0.5f + side * HallSagitta, side);
+        return ((a + b) * 0.5f + side * plan.Sagitta, side);
     }
 
     internal float BaseY(BuildContext ctx) => ctx.World.Terrain.PadY(new(Entity));
@@ -154,16 +152,16 @@ public abstract class ResearchSite : ZoneSite
         for (var d = 3f; d <= R.CourtyardReach && !courtyard; d += 3f)
             courtyard = plan.AllBlocks.Any(r => PlanGeometry.InsideByCrossings(r, mid + e.Frame.W * d));
         var kind = e.Length >= R.FrontMin && !courtyard ? EdgeKind.Front : EdgeKind.Plain;
-        if (DoorOn(e) is not { } x) return new(kind);
+        if (DoorOn(e, plan) is not { } x) return new(kind);
         var half = R.PortalHalfWidth + R.PortalJamb;
         return new(kind) { Cuts = [(x - half, x + half, PortalTop)] };
     }
 
     /// <summary>Local x of the block door on this face, when the door point lies on it.</summary>
-    internal float? DoorOn(GridEdgeInfo e)
+    internal float? DoorOn(GridEdgeInfo e, Plan plan)
     {
-        if (BlockDoor is not { } door) return null;
-        var local = e.Frame.Local(Frame.P(door.X, door.Y));
+        if (plan.Door is not { } door) return null;
+        var local = e.Frame.Local(door);
         var half = R.PortalHalfWidth + R.PortalJamb;
         return MathF.Abs(local.Y) < 0.6f && local.X > half && local.X < e.Length - half ? local.X : null;
     }
@@ -215,11 +213,11 @@ public abstract class ResearchSite : ZoneSite
         }
         foreach (var ring in plan.Blocks)
             foreach (var (e, _, _) in GridFacade.Edges(ring))
-                if (DoorOn(e) is { } x) Portal(b, e.Frame, x, y);
+                if (DoorOn(e, plan) is { } x) Portal(b, e.Frame, x, y);
         Hall(b, plan, y);
         var roof = y + Style.RoofTop;
-        foreach (var s in Stairs) Penthouse(b, s, roof);
-        foreach (var p in Plants) Plant(b, p, roof);
+        foreach (var id in StairIds) Penthouse(b, Frame.Local(b.Context.World.Feature(id).Point()), roof);
+        foreach (var id in PlantIds) Plant(b, Frame.Local(b.Context.World.Feature(id).Point()), roof);
         Roof(b, plan, y);
     }
 
@@ -288,14 +286,14 @@ public abstract class ResearchSite : ZoneSite
         var h = HallHeight(plan);
         var glassTop = y + h - R.HallAttic;
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
-        b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), glassTop - y + 0.1f, coarse ? L.LightTrim : L.Glass, y - 0.1f), Matrix4x4.Identity);
+        b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), glassTop - y + 0.1f, coarse ? L.LightTrim : ZoneLooks.Glass, y - 0.1f), Matrix4x4.Identity);
         b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), 0.3f, L.RoofSlab, y + h - 0.3f), Matrix4x4.Identity);
         Band(b, ring, Section(-0.4f, 0.08f, R.FloorLevel + 0.1f), L.DarkGranite, y - 0.1f);
         for (var k = 1; k < plan.HallStoreys; k++)
             Band(b, ring, Section(-0.4f, 0.16f, 0.5f), L.LightTrim, y + R.FloorLevel + k * R.HallStorey - 0.25f);
         Band(b, ring, Section(-0.4f, 0.12f, R.HallAttic), L.Wall, glassTop);
         if (b.Detail != SiteDetail.Mass) Band(b, ring, Section(-0.5f, 0.22f, 0.14f), L.Stone, y + h);
-        var door = BlockDoor is null ? HallApex() : ((Vector2, Vector2)?)null;
+        var door = plan.Door is null ? HallApex(plan) : ((Vector2, Vector2)?)null;
         if (b.Detail == SiteDetail.Full) Mullions(b, plan, ring, y + R.FloorLevel, glassTop, door);
         if (door is { } dd) HallDoor(b, dd.Item1, dd.Item2, y);
     }
@@ -388,10 +386,10 @@ public abstract class ResearchSite : ZoneSite
         {
             GridFacade.Collide(c, ring, y, Style, e => Dress(e, plan), FootMat.StonePaving);
             foreach (var (e, _, _) in GridFacade.Edges(ring))
-                if (DoorOn(e) is { } x) PortalCollide(c, e.Frame, x, y);
+                if (DoorOn(e, plan) is { } x) PortalCollide(c, e.Frame, x, y);
         }
         // Hall faces at the glass, 0.15 m inside it; the two arc segments meeting at the apex are the shut doors.
-        var door = BlockDoor is null ? HallApex() : ((Vector2, Vector2)?)null;
+        var door = plan.Door is null ? HallApex(plan) : ((Vector2, Vector2)?)null;
         foreach (var (a, e) in HallFaces(plan, plan.Hall))
         {
             var atDoor = door is { } dd && MathF.Min(Vector2.Distance(a, dd.Item1), Vector2.Distance(e, dd.Item1)) < 0.01f;

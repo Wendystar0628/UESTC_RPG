@@ -25,7 +25,7 @@ public enum EdgeKind
 public readonly record struct GridEdgeInfo(int Index, Vector2 A, Vector2 B, PlanFrame Frame, float Length)
 {
     /// <summary>Outward bearing in degrees (0 north, 90 east).</summary>
-    public float Facing => ZoneSite.Bearing(Frame.W);
+    public float Facing => Angles.Bearing(Frame.W);
 }
 
 /// <summary>

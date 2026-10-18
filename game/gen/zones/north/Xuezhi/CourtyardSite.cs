@@ -26,7 +26,7 @@ public sealed class CourtyardSite : ZoneSite
 
     /// <summary>The seat wall, or null when the world has no such overlay feature or it is not a three-point line.</summary>
     internal static Wall? Locate(IWorldModel world) =>
-        world.Features.TryGetValue(new(C.Feature), out var feature) && feature.Geometry is PolylineGeometry { Line.Points: { Count: 3 } points }
+        world.Features.TryGetValue(new(NorthFeatureIds.SeatWall), out var feature) && feature.Geometry is PolylineGeometry { Line.Points: { Count: 3 } points }
             ? new Wall(points[0], points[1], points[2])
             : null;
 
@@ -81,13 +81,13 @@ public sealed class CourtyardSite : ZoneSite
         if (Locate(b.Context.World) is not { } wall) return;
         var path = Path(wall, b.Detail == SiteDetail.Mass ? C.SeatSegments / 2 : C.SeatSegments);
         var g = Base(b.Ground, path);
-        var top = g + C.PavingLevel + C.BodyHeight;
+        var top = g + GroundLevels.Paving + C.BodyHeight;
         var body = PartGeometryKernel.BeveledRectangleProfile(C.BodyWidth, top - g + C.Sink, C.BodyBevel);
         b.Add(PartGeometryKernel.Sweep(body, path, L.Granite, baseY: g - C.Sink), Matrix4x4.Identity);
         if (b.Detail == SiteDetail.Mass) return;
         var seat = PartGeometryKernel.BeveledRectangleProfile(C.SeatWidth, C.SeatThickness, C.SeatBevel);
         b.Add(PartGeometryKernel.Sweep(seat, Path(wall, C.SeatSegments, C.SeatHoldBack), L.Wood, baseY: top), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.BeveledExtrude(PadOutline(wall), C.PadThickness, 0.01f, C.Pad, g + C.PavingLevel + C.PadLift - C.PadThickness), Matrix4x4.Identity);
+        b.Add(PartGeometryKernel.BeveledExtrude(PadOutline(wall), C.PadThickness, 0.01f, C.Pad, g + GroundLevels.Paving + C.PadLift - C.PadThickness), Matrix4x4.Identity);
     }
 
     /// <summary>One box per chord, body and seat together: 0.45 m above the pad, a prop the player can step onto.</summary>
@@ -96,7 +96,7 @@ public sealed class CourtyardSite : ZoneSite
         if (Locate(c.Context.World) is not { } wall) return;
         var path = Path(wall, C.SeatSegments);
         var g = Base(c.Ground, path);
-        var half = (C.Sink + C.PavingLevel + C.BodyHeight + C.SeatThickness) * 0.5f;
+        var half = (C.Sink + GroundLevels.Paving + C.BodyHeight + C.SeatThickness) * 0.5f;
         for (var i = 0; i + 1 < path.Length; i++)
         {
             var length = Vector2.Distance(path[i], path[i + 1]);

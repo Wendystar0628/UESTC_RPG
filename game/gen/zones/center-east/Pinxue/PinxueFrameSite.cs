@@ -35,23 +35,18 @@ public sealed class PinxueFrameSite : ZoneSite
 
     internal static Gate GateOf(IWorldModel world)
     {
-        var ring = RingOf(world, P.FrameBar);
-        var n = ring.Count;
-        float Edge(int i) => Vector2.Distance(ring[i], ring[(i + 1) % n]);
-        var longest = Enumerable.Range(0, n).Max(i => Edge(i));
-        // The bar's west long edge (forecourt side), run from its north end to its south end.
-        var west = Enumerable.Range(0, n).Where(i => Edge(i) > longest * 0.9f).MinBy(i => ring[i].X + ring[(i + 1) % n].X);
-        Vector2 a = ring[west], b = ring[(west + 1) % n];
-        if (a.Y > b.Y) (a, b) = (b, a);
-        var f = PlanFrame.Toward(a, b);
-        var depth = ring.Max(p => -f.Local(p).Y);
-        var (height, storeys) = world.Feature(P.WingA).Part(P.WingAMain).Levels();
+        var edge = world.ContourSegment(CenterEastIds.Layout.PinxueFrameEdge);
+        var a = edge[^1];
+        var b = edge[0];
+        var f = world.ContourFrame(CenterEastIds.Layout.PinxueFrameEdge, originAtEnd: true, forward: false);
+        var depth = world.Feature(CenterEastIds.Pinxue.Complex).Contour(CenterEastIds.Pinxue.FrameBar).Max(p => -f.Local(p).Y);
+        var (height, storeys) = world.Feature(CenterEastIds.Pinxue.WingA).Part(CenterEastIds.Pinxue.WingAMain).Levels();
         return new(f, Vector2.Distance(a, b), depth, height / storeys, height);
     }
 
     public override string Id => "21a.pinxue-frame";
 
-    public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(P.Complex), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(CenterEastIds.Pinxue.Complex), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
     {
@@ -66,11 +61,11 @@ public sealed class PinxueFrameSite : ZoneSite
         get
         {
             // Q1 (walk, K1): under the calligraphy beam's forecourt edge, looking up at the soffit and the plaque.
-            return [Probe("Q1", P.Complex, new(P.Q1Eye.X, P.PlatformY + 1.62f, P.Q1Eye.Y), P.Q1Look, 26f, 5f)];
+            return [Probe("Q1", CenterEastIds.Pinxue.Complex, new(P.Q1Eye.X, P.PlatformY + WalkRules.StandingEye, P.Q1Eye.Y), P.Q1Look, 26f, 5f)];
         }
     }
 
-    internal static float BaseY(BuildContext ctx) => ctx.World.Terrain.PadY(new(P.Complex));
+    internal static float BaseY(BuildContext ctx) => ctx.World.Terrain.PadY(new(CenterEastIds.Pinxue.Complex));
 
     public override void Build(SiteBuilder b)
     {
@@ -80,9 +75,9 @@ public sealed class PinxueFrameSite : ZoneSite
         Passage(b, g, y);
         foreach (var x in P.ColumnX) Column(b, g, x, y);
         var bridges = Bridges(world);
-        foreach (var box in bridges) Bridge(b, box, y, WindowNumbers.Allocation(b.Context, new(P.Complex), box.Key));
+        foreach (var box in bridges) Bridge(b, box, y, WindowNumbers.Allocation(b.Context, new(CenterEastIds.Pinxue.Complex), box.Key));
         Beam(b, g, y);
-        foreach (var source in new[] { P.BridgeAC, P.BridgeBC }) LinkColumns(b, Bar(world, source), g, y);
+        foreach (var source in new[] { CenterEastIds.Pinxue.BridgeAC, CenterEastIds.Pinxue.BridgeBC }) LinkColumns(b, Bar(world, source), g, y);
     }
 
     // ---- Windows (contract-29) ----
@@ -98,7 +93,7 @@ public sealed class PinxueFrameSite : ZoneSite
         foreach (var box in Bridges(world))
         {
             var (bands, bays, faces) = Ribbon(box);
-            yield return (new(P.Complex), new(box.Key, bays * faces, bands.Count));
+            yield return (new(CenterEastIds.Pinxue.Complex), new(box.Key, bays * faces, bands.Count));
         }
     }
 
@@ -107,9 +102,9 @@ public sealed class PinxueFrameSite : ZoneSite
         var y = BaseY(ctx);
         foreach (var box in Bridges(ctx.World))
         {
-            var allocation = WindowNumbers.Required(ctx, new(P.Complex), box.Key);
+            var allocation = WindowNumbers.Required(ctx, new(CenterEastIds.Pinxue.Complex), box.Key);
             var (bands, bays, faces) = Ribbon(box);
-            WindowNumbers.Fit(bays * faces, bands.Count, new(P.Complex), box.Key, allocation);
+            WindowNumbers.Fit(bays * faces, bands.Count, new(CenterEastIds.Pinxue.Complex), box.Key, allocation);
             WindowNumbers.Declare(windows, Openings(box, y), allocation, W.Teaching);
         }
     }
@@ -130,7 +125,7 @@ public sealed class PinxueFrameSite : ZoneSite
         var g = GateOf(world);
         var len = g.Length + 0.4f; // the ends sink into A's and B's walls
         var list = new List<BridgeBox> { new("beam", g.F, g.Axis - len * 0.5f, g.Axis + len * 0.5f, -g.Depth, 0f, g.BeamBottom, g.BeamTop, true, g.StoreyHeight) };
-        foreach (var (key, source) in new[] { ("bridge-ac", P.BridgeAC), ("bridge-bc", P.BridgeBC) })
+        foreach (var (key, source) in new[] { ("bridge-ac", CenterEastIds.Pinxue.BridgeAC), ("bridge-bc", CenterEastIds.Pinxue.BridgeBC) })
         {
             var (f, x0, x1, z0, z1) = Bar(world, source);
             list.Add(new(key, f, x0 - 0.3f, x1 + 0.3f, z0, z1, g.BridgeBottom, g.BridgeTop, false, g.StoreyHeight));
@@ -240,7 +235,7 @@ public sealed class PinxueFrameSite : ZoneSite
         if (allocation is { } a)
         {
             var (_, bays, faces) = Ribbon(box);
-            WindowNumbers.Fit(bays * faces, bands.Count, new(P.Complex), box.Key, a);
+            WindowNumbers.Fit(bays * faces, bands.Count, new(CenterEastIds.Pinxue.Complex), box.Key, a);
             WindowNumbers.Panes(b, Openings(box, y), a, W.Teaching, W.Corridor);
         }
         if (b.Detail == SiteDetail.Mass) return;
@@ -260,7 +255,7 @@ public sealed class PinxueFrameSite : ZoneSite
         var glassZ = zc - outward * 0.12f;
         foreach (var (sill, head) in bands)
         {
-            b.Add(PartGeometryKernel.BeveledBox(2 * half, head - sill, 0.04f, b.Detail == SiteDetail.Mass ? 0f : 0.005f, L.Glass), f.At(xc, y + sill, glassZ));
+            b.Add(PartGeometryKernel.BeveledBox(2 * half, head - sill, 0.04f, b.Detail == SiteDetail.Mass ? 0f : 0.005f, ZoneLooks.Glass), f.At(xc, y + sill, glassZ));
             if (b.Detail == SiteDetail.Mass) continue;
             b.Add(PartGeometryKernel.BeveledBox(2 * half + 0.1f, 0.08f, 0.32f, 0.01f, L.Trim), f.At(xc, y + sill - 0.08f, zc + outward * 0.12f));
             if (b.Detail != SiteDetail.Full) continue;
@@ -272,25 +267,15 @@ public sealed class PinxueFrameSite : ZoneSite
 
     // ---- Link bridges A–C, B–C (storeys 2–3) ----
 
-    private static IReadOnlyList<Vector2> RingOf(IWorldModel world, string sourceId) =>
-        WorldFeatureGeometry.FacadeGeometryOf(world.Feature(P.Complex).Part(sourceId)) is PolygonGeometry polygon ? polygon.Rings.Outer
-            : throw new InvalidOperationException($"Part {sourceId} is not a single polygon.");
-
-    /// <summary>Plan frame and local extents of a four-sided bar footprint: X along its longest edge.</summary>
+    /// <summary>Bridge bounds along its explicitly selected source edge.</summary>
     internal static (PlanFrame Frame, float X0, float X1, float Z0, float Z1) Bar(IWorldModel world, string sourceId)
     {
-        var ring = RingOf(world, sourceId);
-        var best = 0;
-        for (var i = 1; i < ring.Count; i++)
-            if (Vector2.Distance(ring[i], ring[(i + 1) % ring.Count]) > Vector2.Distance(ring[best], ring[(best + 1) % ring.Count])) best = i;
-        var f = PlanFrame.Toward(ring[best], ring[(best + 1) % ring.Count]);
-        float x0 = float.MaxValue, x1 = float.MinValue, z0 = float.MaxValue, z1 = float.MinValue;
-        foreach (var p in ring)
-        {
-            var l = f.Local(p);
-            x0 = MathF.Min(x0, l.X); x1 = MathF.Max(x1, l.X); z0 = MathF.Min(z0, l.Y); z1 = MathF.Max(z1, l.Y);
-        }
-        return (f, x0, x1, z0, z1);
+        var selection = sourceId == CenterEastIds.Pinxue.BridgeAC ? CenterEastIds.Layout.PinxueBridgeAcEdge : CenterEastIds.Layout.PinxueBridgeBcEdge;
+        var frame = world.ContourFrame(selection);
+        var bounds = world.Feature(CenterEastIds.Pinxue.Complex).Rectangle(frame.U, sourceId);
+        var centre = frame.Local(bounds.Frame.Origin);
+        return (frame, centre.X - bounds.Width * 0.5f, centre.X + bounds.Width * 0.5f,
+            centre.Y - bounds.Depth * 0.5f, centre.Y + bounds.Depth * 0.5f);
     }
 
     /// <summary>A link bridge's round columns; the bridge box itself is one of <see cref="Bridges"/>.</summary>
@@ -324,7 +309,7 @@ public sealed class PinxueFrameSite : ZoneSite
         foreach (var box in Bridges(c.Context.World))
             c.Box(box.Frame.At((box.X0 + box.X1) * 0.5f, y + (box.Bottom + box.Top) * 0.5f, (box.Z0 + box.Z1) * 0.5f),
                 new((box.X1 - box.X0) * 0.5f, (box.Top - box.Bottom) * 0.5f, (box.Z1 - box.Z0) * 0.5f), SurfaceTag.Wall, FootMat.Concrete);
-        foreach (var source in new[] { P.BridgeAC, P.BridgeBC })
+        foreach (var source in new[] { CenterEastIds.Pinxue.BridgeAC, CenterEastIds.Pinxue.BridgeBC })
         {
             var bar = Bar(c.Context.World, source);
             foreach (var (x, zc) in BridgeColumns(bar))

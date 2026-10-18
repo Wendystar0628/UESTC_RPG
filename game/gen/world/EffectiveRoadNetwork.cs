@@ -116,10 +116,9 @@ internal sealed class EffectiveRoadNetwork
             var roadType = Classification(feature.Props, feature.Id.Value);
             if (roadType is not ("footway" or "path" or "pedestrian")) continue;
             if (Area(feature.Props)) continue; // A retained area boundary is not a new centerline.
-            if (feature.Props is not { ValueKind: JsonValueKind.Object } props || !props.TryGetProperty("width", out var widthValue) ||
-                widthValue.ValueKind != JsonValueKind.Number || !widthValue.TryGetSingle(out var width) || !float.IsFinite(width) || width <= 0)
+            if (feature.TryNumber("width") is not { } width || width <= 0)
                 throw new WorldDataException("overlay", feature.Id.Value, "Design road width must be a finite positive number.");
-            if (line.Line.Points.Count < 2 || line.Line.Points.Any(point => !float.IsFinite(point.X) || !float.IsFinite(point.Y)) ||
+            if (line.Line.Points.Count < 2 || line.Line.Points.Any(point => !VectorMath.Finite(point)) ||
                 line.Line.Points.All(point => point == line.Line.Points[0]))
                 throw new WorldDataException("overlay", feature.Id.Value, "Design road points must be finite and have non-zero line length.");
             if (!ids.Add(feature.Id.Value))
@@ -130,11 +129,9 @@ internal sealed class EffectiveRoadNetwork
     }
 
     private static string PartKind(WorldFeaturePart part, WorldFeature parent) =>
-        part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var kind) && kind.ValueKind == JsonValueKind.String
-            ? kind.GetString()! : parent.Kind.Value;
+        part.Props.TryText("kind") ?? parent.Kind.Value;
 
-    private static bool Area(JsonElement? props) => props is { ValueKind: JsonValueKind.Object } value &&
-        value.TryGetProperty("area", out var area) && area.ValueKind == JsonValueKind.String && area.GetString() == "yes";
+    private static bool Area(JsonElement? props) => props.TryText("area") == "yes";
 
     private static string? Classification(JsonElement? props, string id)
     {

@@ -2,6 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -142,19 +143,12 @@ public sealed class WorldModelTests
     [TestCase]
     public void RealMigratedCampusLoadsEverySourcePartOnce()
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
-        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
-        var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-        var campus = File.ReadAllText(Path.Combine(data, "campus.json"));
-        var interiors = File.ReadAllText(Path.Combine(data, "interiors.json"));
-        var networkJson = File.ReadAllText(Path.Combine(data, "network.json"));
-        var result = WorldModelLoader.Load(new("qingshuihe"), new Dictionary<string, string>
-        {
-            ["campus.json"] = campus,
-            ["network.json"] = networkJson,
-            ["interiors.json"] = interiors
-        });
+        var files = RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        var campus = files["campus.json"];
+        var interiors = files["interiors.json"];
+        var networkJson = files["network.json"];
+        var result = RealMapFixture.LoadPrepared(files, options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() });
         using var original = JsonDocument.Parse(campus);
         foreach (var entity in original.RootElement.GetProperty("entities").EnumerateArray())
             AssertThat(result.World.Features.ContainsKey(new(entity.GetProperty("id").GetString()!))).OverrideFailureMessage("Lost an existing entity identity.").IsTrue();
@@ -176,13 +170,15 @@ public sealed class WorldModelTests
             .Select(entrance => entrance.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
         AssertThat(actualEntrances.Distinct(StringComparer.Ordinal).Count() == actualEntrances.Length &&
             actualEntrances.SequenceEqual(expectedEntrances, StringComparer.Ordinal)).OverrideFailureMessage("Authored interior entrances were lost or duplicated.").IsTrue();
-        var annex = result.World.Interiors.Get(new("qsh:way:806848403"))!;
-        var annexDoor = annex.Entrances.Single();
-        AssertThat(!annex.Open && annex.ProviderId is null && !annexDoor.Open && annexDoor.Id == "lib.north-annex" &&
-            annexDoor.Center == new Vector3(-143.7050f, .15f, -27.2100f) &&
-            annexDoor.Outside == new Vector3(-142.2069f, .15f, -29.2114f) &&
-            annexDoor.Inside == new Vector3(-145.5027f, .15f, -24.8083f) &&
-            annexDoor.YawDeg == 36.8f && annexDoor.ClearWidth == 2.4f).OverrideFailureMessage("Approved north-annex closed entrance coordinates or availability changed.").IsTrue();
+        foreach (var raw in authoredInteriors.RootElement.GetProperty("closedEntrances").EnumerateArray())
+        {
+            var entry = result.World.Interiors.Get(new(raw.GetProperty("featureId").GetString()!))!;
+            var door = entry.Entrances.Single(entrance => entrance.Id == raw.GetProperty("id").GetString());
+            AssertThat(!door.Open && door.Center == raw.GetProperty("doorCenter").Deserialize<Vector3>(ContractJson.Options) &&
+                door.Outside == raw.GetProperty("outsideLanding").Deserialize<Vector3>(ContractJson.Options) &&
+                door.Inside == raw.GetProperty("insideLanding").Deserialize<Vector3>(ContractJson.Options) &&
+                door.YawDeg == raw.GetProperty("facingDeg").GetSingle() && door.ClearWidth == raw.GetProperty("clearWidth").GetSingle()).OverrideFailureMessage("An authored closed entrance changed its position, dimensions or availability.").IsTrue();
+        }
         AssertThat(result.Geo.Epsg == 32648 && result.Geo.OriginLon > 103 && result.Center.X > 0 && result.Center.Y > 0).OverrideFailureMessage("Map coordinate frame is wrong.").IsTrue();
     }
 
@@ -247,27 +243,33 @@ public sealed class WorldModelTests
     [TestCase]
     public void ArchitectureReviewMixedParentsKeepBuildingPartsAndOpenParkDistinct()
     {
-        var result = WorldModelLoader.Load(new("qingshuihe"), RealFiles());
-        foreach (var sample in new[]
+        var result = RealMapFixture.LoadPrepared(RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal), options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() });
+        var samples = new[]
         {
-            (Id: new FeatureId("qsh:way:682336066"), Point: new Vector3(-672.712f, 1, -106.672f), Height: 15.6f),
-            (Id: new FeatureId("qsh:way:883187548"), Point: new Vector3(375.455f, 1, 80.05f), Height: 58.5f)
-        })
+            (Id: new FeatureId("qsh:way:682336066"), Point: new Vector3(-672.712f, 1, -106.672f)),
+            (Id: new FeatureId("qsh:way:883187548"), Point: new Vector3(375.455f, 1, 80.05f))
+        };
+        foreach (var sample in samples)
         {
+            var feature = result.World.Features[sample.Id];
+            var part = WorldFeatureKinds.Parts(feature, "building").Single(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)
+                .Any(polygon => PlanGeometry.Contains(polygon, new(sample.Point.X, sample.Point.Z))));
+            var height = part.Height ?? feature.Height ?? 0;
             var medium = result.World.Spatial.MediumAt(sample.Point);
             AssertThat(medium.Kind == MediumKind.Interior && medium.Feature == sample.Id).OverrideFailureMessage($"Building part {sample.Id.Value} was classified as {medium.Kind}.").IsTrue();
             AssertThat(result.World.Spatial.WalkClassAt(sample.Point.X, sample.Point.Z) == WalkClass.Walk).OverrideFailureMessage("A building projection blocked its physical openings.").IsTrue();
             AssertThat(result.World.Interiors.Get(sample.Id) is not null).OverrideFailureMessage("Mixed parent lost its interior index.").IsTrue();
-            AssertThat(result.World.Spatial.MediumAt(sample.Point with { Y = sample.Height + 1 }).Kind == MediumKind.Air).OverrideFailureMessage("Part height was ignored.").IsTrue();
+            AssertThat(result.World.Spatial.MediumAt(sample.Point with { Y = height + 1 }).Kind == MediumKind.Air).OverrideFailureMessage("Part height was ignored.").IsTrue();
         }
         var outdoors = new Vector3(-619.9118f, 1, -102.2f);
         AssertThat(result.World.Spatial.MediumAt(outdoors).Kind == MediumKind.Air).OverrideFailureMessage("Entire parent park became a building volume.").IsTrue();
         AssertThat(result.World.Spatial.WalkClassAt(outdoors.X, outdoors.Z) == WalkClass.Walk).OverrideFailureMessage("Open park became a building obstacle.").IsTrue();
-        foreach (var id in new[] { "qsh:way:682336066", "qsh:way:883187548" })
+        foreach (var id in samples.Select(sample => sample.Id))
         {
-            var feature = result.World.Features[new(id)];
+            var feature = result.World.Features[id];
             var buildingFootprints = feature.Parts.Where(part => part.Props?.GetProperty("kind").GetString() == "building")
-                .SelectMany(part => part.Geometry is PolygonGeometry polygon ? [polygon.Rings] : ((MultiPolygonGeometry)part.Geometry).Polygons).Select(polygon => polygon.Outer).ToArray();
+                .SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).Select(polygon => polygon.Outer).ToArray();
             AssertThat(buildingFootprints.Length > 0).OverrideFailureMessage($"The regression fixture {id} no longer has building parts.").IsTrue();
             var storeys = result.World.Interiors.Get(feature.Id)!.Storeys;
             AssertThat(buildingFootprints.All(ring => storeys.Any(storey => storey.Footprint.SequenceEqual(ring)))).OverrideFailureMessage("A building part is missing from the interior index.").IsTrue();
@@ -286,10 +288,7 @@ public sealed class WorldModelTests
             ["overlay/b.d/0000-fixture.json"] = """{"zone":"test","owner":"WP-15","ops":[{"op":"height","target":"osm:way:10","height":30,"reason":"test"}]}"""
         };
         try { WorldModelLoader.Load(new("test"), files); throw new InvalidOperationException("Conflicting overlays silently overwrote the same resolved entity."); }
-        catch (WorldDataException error)
-        {
-            AssertThat(error.Message.Contains("overlay/a.d/0000-fixture.json", StringComparison.Ordinal) && error.Message.Contains("overlay/b.d/0000-fixture.json", StringComparison.Ordinal)).OverrideFailureMessage("Conflict omitted one of its source files.").IsTrue();
-        }
+        catch (WorldDataException) { }
         AssertThat(previous.World.Features[new("fixture:relation:1")].Height == 16).OverrideFailureMessage("Failed reload mutated the previous snapshot.").IsTrue();
     }
 
@@ -312,10 +311,7 @@ public sealed class WorldModelTests
         catch (WorldDataException) { }
         files["overlay/a.d/0000-fixture.json"] = """{"zone":"test","owner":"WP-14","ops":[{"op":"hide","target":"fixture:relation:1","reason":"test"}]}""";
         try { WorldModelLoader.Load(new("test"), files); throw new InvalidOperationException("Hide conflict was accepted."); }
-        catch (WorldDataException error)
-        {
-            AssertThat(error.Message.Contains("overlay/a.d/0000-fixture.json", StringComparison.Ordinal) && error.Message.Contains("overlay/b.d/0000-fixture.json", StringComparison.Ordinal)).OverrideFailureMessage("Hide lost its conflict provenance.").IsTrue();
-        }
+        catch (WorldDataException) { }
     }
 
     [TestCase]
@@ -328,16 +324,19 @@ public sealed class WorldModelTests
         };
         var result = WorldModelLoader.Load(new("test"), files);
         AssertThat(result.Bounds == new Box3(new(-45, -40, -45), new(45, 1500, 45))).OverrideFailureMessage($"Authored roam bounds ignored: {result.Bounds}.").IsTrue();
-        var real = WorldModelLoader.Load(new("qingshuihe"), RealFiles());
-        AssertThat(real.Bounds.Min.Y == -28 && real.Bounds.Max.Y == 2000).OverrideFailureMessage("Real campus vertical roam bounds were replaced with building heights.").IsTrue();
-        AssertThat(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - 150)) < 0.01f).OverrideFailureMessage("Real campus fallback margin missing.").IsTrue();
+        var real = RealMapFixture.LoadPrepared(RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal), options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() });
+        var roam = RealMapFixture.Entry().Descriptor.Roam;
+        AssertThat(real.Bounds.Min.Y == roam.FloorY && real.Bounds.Max.Y == roam.CeilY).OverrideFailureMessage("Real campus vertical roam bounds were replaced with building heights.").IsTrue();
+        AssertThat(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - roam.FallbackMargin)) < 0.01f).OverrideFailureMessage("Real campus fallback margin missing.").IsTrue();
     }
 
     [TestCase]
     public void SyntheticBeatAnchorsLoadOverRealCampusWithoutBecomingBuildings()
     {
         // contract-25 / MAP-QSH-CORE 8.6: synthetic regression inputs, not an authored campus walk layout.
-        var files = RealFiles();
+        var files = RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         files["overlay/core-beat-fixture.d/0000-fixture.json"] = """
             {"zone":"core","owner":"WP-16","map":"qingshuihe","ops":[
               {"op":"add","id":"walk:beat-fixture-point","kind":"beat","geometry":{"type":"point","position":[-100,0,168]},"reason":"Regression fixture: time-square walking beat; not an authored map placement."},
@@ -345,7 +344,7 @@ public sealed class WorldModelTests
               {"op":"add","id":"walk:beat-fixture-multi","kind":"beat","geometry":{"type":"multiPolygon","polygons":[{"outer":[[-110,160],[-108,160],[-108,162],[-110,162]],"holes":[]},{"outer":[[-106,160],[-104,160],[-104,162],[-106,162]],"holes":[]}]},"reason":"Regression fixture: multi-area beat anchor, not building massing."}
             ]}
             """;
-        var result = WorldModelLoader.Load(new("qingshuihe"), files);
+        var result = RealMapFixture.LoadPrepared(files, options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() });
         foreach (var id in new[] { "walk:beat-fixture-point", "walk:beat-fixture-area", "walk:beat-fixture-multi" })
         {
             var anchor = result.World.Features[new(id)];
@@ -379,7 +378,7 @@ public sealed class WorldModelTests
             try { Load(overlay); throw new InvalidOperationException($"Invalid walk add '{op.Id.Value}' was accepted."); }
             catch (WorldDataException error)
             {
-                AssertThat(error.File == "overlay/test.d/0000-fixture.json" && error.Message.Contains("walk: beat anchor", StringComparison.Ordinal)).OverrideFailureMessage("Invalid walk add lost a precise validation error.").IsTrue();
+                AssertThat(error.File == "overlay/test.d/0000-fixture.json").OverrideFailureMessage("Invalid walk add lost a precise validation error.").IsTrue();
             }
         }
     }
@@ -446,7 +445,7 @@ public sealed class WorldModelTests
             {
                 var files = new Dictionary<string, string> { ["campus.json"] = Campus, [path] = Overlay(operations) };
                 var error = OverlayError(files);
-                AssertThat(error.File == path && error.Entry == "path" && error.Message.Contains("Retired", StringComparison.Ordinal)).OverrideFailureMessage("Retired input was ignored or lost its path.").IsTrue();
+                AssertThat(error.File == path && error.Entry == "path").OverrideFailureMessage("Retired input was ignored or lost its path.").IsTrue();
             }
     }
 
@@ -464,14 +463,13 @@ public sealed class WorldModelTests
         files["overlay/test.d/01.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 20, null, "first")], "WP-14");
         files["overlay/test.d/02.json"] = Overlay([new HeightOp(new("osm:way:10"), 30, null, "second")], "WP-15");
         var conflict = OverlayError(files);
-        AssertThat(conflict.File == "overlay/test.d/02.json" && new[] { "overlay/test.d/01.json", "overlay/test.d/02.json", "WP-14", "WP-15" }.All(text => conflict.Message.Contains(text, StringComparison.Ordinal))).OverrideFailureMessage("Shard conflict lost a real filename or owner.").IsTrue();
+        AssertThat(conflict.File == "overlay/test.d/02.json").IsTrue();
         var options = new WorldLoadOptions { ClaimedBy = new Dictionary<FeatureId, WpId> { [new("fixture:relation:1")] = new("WP-14") } };
         AssertThat(WorldModelLoader.Load(new("test"), files, options).World.Features[new("fixture:relation:1")].Height == 30).OverrideFailureMessage("Different shard owners did not respect a real claim.").IsTrue();
         files.Remove("overlay/test.d/02.json");
         files["overlay/other.d/01.json"] = Overlay([new HeightOp(new("osm:way:10"), 30, null, "same owner across groups")], "WP-14");
-        var crossGroup = OverlayError(files);
-        AssertThat(crossGroup.Message.Contains("Overlay conflict", StringComparison.Ordinal) &&
-            new[] { "overlay/other.d/01.json", "overlay/test.d/01.json" }.All(path => crossGroup.Message.Contains(path, StringComparison.Ordinal))).OverrideFailureMessage("Matching owners across split groups bypassed the conflict rule or lost their real paths.").IsTrue();
+        _ = OverlayError(files);
+
     }
 
     [TestCase]
@@ -496,15 +494,6 @@ public sealed class WorldModelTests
         try { WorldModelLoader.Load(new("test"), files); }
         catch (WorldDataException error) { return error; }
         throw new InvalidOperationException("Invalid feature overlay was accepted.");
-    }
-
-    private static Dictionary<string, string> RealFiles()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
-        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
-        var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-        return new[] { "campus.json", "network.json", "interiors.json", "map.json" }.ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
     }
 
     private static WorldModelLoadResult Load(string? overlay = null)

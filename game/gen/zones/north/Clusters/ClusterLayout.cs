@@ -1,9 +1,7 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using Campus.Contracts;
-using Campus.Gen.Zones.North.Framework;
 using Campus.Gen.Zones.Common;
 using Campus.Gen.World;
 using F = Campus.Gen.Zones.North.NorthTune.Fence;
@@ -82,11 +80,11 @@ public sealed class ClusterLayout
     {
         if (!world.Features.TryGetValue(new(cluster.Id), out var feature)) return null;
         // The main gate point and whether it is open are the overlay's gate feature (D-239).
-        if (!world.Features.TryGetValue(new("design:north-gate-" + cluster.Key), out var gateFeature) || gateFeature.Geometry is not PointGeometry gatePoint) return null;
+        if (!world.Features.TryGetValue(new(NorthFeatureIds.GatePrefix + cluster.Key), out var gateFeature) || gateFeature.Geometry is not PointGeometry gatePoint) return null;
         var mainGate = new Vector2(gatePoint.Position.X, gatePoint.Position.Z);
-        var clusterOpen = gateFeature.Props is { ValueKind: JsonValueKind.Object } gateProps && gateProps.TryGetProperty("open", out var openFlag) && openFlag.ValueKind == JsonValueKind.True;
-        var ring = Plan.OuterRing(feature);
-        if (ring is null || ring.Count < 3) return null;
+        var clusterOpen = gateFeature.Props?.GetProperty("open").GetBoolean() == true;
+        IReadOnlyList<Vector2> ring = PlanGeometry.DeduplicateRing(feature.Contour(facade: false), 0.05f * 0.05f);
+        if (ring.Count < 3) return null;
         var sign = PlanGeometry.SignedArea(ring) > 0 ? 1f : -1f;
         float minX = ring.Min(p => p.X) - 20, maxX = ring.Max(p => p.X) + 20, minZ = ring.Min(p => p.Y) - 20, maxZ = ring.Max(p => p.Y) + 20;
         bool Near(Vector2 p) => p.X >= minX && p.X <= maxX && p.Y >= minZ && p.Y <= maxZ;
@@ -98,15 +96,15 @@ public sealed class ClusterLayout
             for (var i = 0; i + 1 < pts.Count; i++)
                 if (Near(pts[i]) || Near(pts[i + 1]))
                 {
-                    var dir = Plan.Unit(pts[i + 1] - pts[i]);
+                    var dir = VectorMath.Unit(pts[i + 1] - pts[i], Vector2.Zero, 1e-9);
                     if (dir != Vector2.Zero) roads.Add(new(pts[i], pts[i + 1], dir, half));
                 }
         }
         foreach (var line in world.Network.Roads) AddRoad(line.Line.Points, line.Width);
         // A cluster no network road enters gets a design drive in the overlay, tagged with the cluster (props.cluster).
-        foreach (var drive in world.Features.Values.Where(f => f.Kind.Value == "road" && f.Geometry is PolylineGeometry && Drives(f, cluster.Id))
+        foreach (var drive in world.Features.Values.Where(f => f.Kind.Value == "road" && f.Geometry is PolylineGeometry && f.TryText("cluster") == cluster.Id)
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal))
-            AddRoad(((PolylineGeometry)drive.Geometry).Line.Points, Width(drive.Props));
+            AddRoad(((PolylineGeometry)drive.Geometry).Line.Points, drive.TryNumber("width") ?? 0f);
 
         // Resample the ring; inward normals are mitred at the original corners.
         var samples = new List<Sample>();
@@ -123,9 +121,9 @@ public sealed class ClusterLayout
                 var normal = inward;
                 if (k == 0)
                 {
-                    var prev = Plan.Unit(a - ring[(e + ring.Count - 1) % ring.Count]);
+                    var prev = VectorMath.Unit(a - ring[(e + ring.Count - 1) % ring.Count], Vector2.Zero, 1e-9);
                     var prevInward = new Vector2(-prev.Y, prev.X) * sign;
-                    var mid = Plan.Unit(prevInward + inward);
+                    var mid = VectorMath.Unit(prevInward + inward, Vector2.Zero, 1e-9);
                     var cos = Vector2.Dot(mid, inward);
                     normal = mid == Vector2.Zero ? inward : mid / MathF.Max(cos, 0.5f);
                 }
@@ -146,7 +144,7 @@ public sealed class ClusterLayout
                     if (MathF.Abs(Vector2.Dot(road.Dir, samples[i].Tangent)) < 0.5f) continue;
                     var p = samples[i].Ring + samples[i].Inward * d;
                     var need = road.Half + F.RoadClearance;
-                    var closest = Plan.Closest(p, road.A, road.B);
+                    var closest = PlanGeometry.ClosestPoint(p, road.A, road.B, 1e-12f);
                     if (Vector2.Distance(p, closest) >= need) continue;
                     var across = Vector2.Dot(closest - samples[i].Ring, samples[i].Inward);
                     d = across < d ? across + need : across - need;
@@ -189,7 +187,7 @@ public sealed class ClusterLayout
             foreach (var road in roads)
             {
                 var cos = MathF.Abs(Vector2.Dot(road.Dir, along));
-                if (Plan.Intersect(p, q, road.A, road.B) is not { } hit || cos >= 0.85f) continue;
+                if (PlanGeometry.SegmentHit(p, q, road.A, road.B, 1e-9f) is not { } hit || cos >= 0.85f) continue;
                 // A skewed road cuts a wider stretch of the fence line than its own width.
                 var width = road.Half * 2 / MathF.Max(MathF.Sqrt(1 - cos * cos), 0.6f);
                 var crossing = new Crossing(Wrap(samples[i].S + hit.T * step, perimeter), hit.Point, width, road.Half * 2, along, samples[i].Inward);
@@ -237,7 +235,7 @@ public sealed class ClusterLayout
         // Building rings near the cluster close the fence where it runs into them.
         var buildings = new List<IReadOnlyList<Vector2>>();
         foreach (var other in world.Features.Values)
-            foreach (var r in Plan.BuildingRings(other))
+            foreach (var r in NorthBuildings.Rings(other))
                 if (r.Count >= 3 && r.Any(Near)) buildings.Add(r);
 
         var keep = new bool[samples.Count];
@@ -311,12 +309,6 @@ public sealed class ClusterLayout
         }
         return new(p, h);
     }
-
-    private static bool Drives(WorldFeature f, string cluster) =>
-        f.Props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("cluster", out var c) && c.ValueKind == JsonValueKind.String && c.GetString() == cluster;
-
-    private static float Width(JsonElement? props) =>
-        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("width", out var w) && w.ValueKind == JsonValueKind.Number ? w.GetSingle() : 0f;
 
     private static float Wrap(float s, float perimeter) => ((s % perimeter) + perimeter) % perimeter;
 

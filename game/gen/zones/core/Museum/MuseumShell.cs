@@ -1,3 +1,5 @@
+using Campus.Gen.Zones.Common;
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -35,7 +37,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     private readonly IReadOnlyList<Opening> _openings;
     private readonly IReadOnlyList<Opening> _clerestory;
 
-    private MuseumShell(BuildingFrame frame, IReadOnlyList<Vector2> body, IReadOnlyList<float> ring)
+    private MuseumShell(IWorldModel world, BuildingFrame frame, IReadOnlyList<Vector2> body, IReadOnlyList<float> ring)
     {
         Frame = frame;
         Body = body;
@@ -44,12 +46,11 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
         ColumnLine = MuseumGeometry.Offset(body, widths.Select(w => w - S.ColumnInset).ToArray());
         Eave = MuseumGeometry.Chamfer(MuseumGeometry.Offset(body, widths.Select(w => w - S.ColumnInset + S.ColumnSize * 0.5f + S.MuseumEaveOverhang).ToArray()), S.MuseumCornerChamfer);
         Gallery = MuseumGeometry.Chamfer(body, S.MuseumCornerChamfer);
-        Hall = MuseumGeometry.Chamfer(MuseumGeometry.Scale(body, S.MuseumHallLength, S.MuseumHallWidth), S.MuseumCornerChamfer);
-        var normals = Enumerable.Range(0, body.Count).Select(i => MuseumGeometry.Normal(body, i)).ToArray();
-        South = Array.IndexOf(normals, normals.MaxBy(n => n.Y));
-        West = Array.IndexOf(normals, normals.MinBy(n => n.X));
-        North = Array.IndexOf(normals, normals.MinBy(n => n.Y));
-        East = Array.IndexOf(normals, normals.MaxBy(n => n.X));
+        Hall = MuseumGeometry.Chamfer(MuseumGeometry.Scale(body, world.ContourFrame(CoreIds.MuseumSouthFace).U, S.MuseumHallLength, S.MuseumHallWidth), S.MuseumCornerChamfer);
+        South = CoreContours.Edge(world, CoreIds.MuseumSouthFace, body);
+        West = CoreContours.Edge(world, CoreIds.MuseumWestFace, body);
+        North = CoreContours.Edge(world, CoreIds.MuseumNorthFace, body);
+        East = CoreContours.Edge(world, CoreIds.MuseumEastFace, body);
 
         var next = new int[Rows];
         int Allocate(int cells, int row) { var c = next[row]; next[row] += cells; return c; }
@@ -110,21 +111,26 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     public static MuseumShell? From(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        if (!world.Features.TryGetValue(CoreFeatures.Museum, out var museum)) return null;
-        var hall = museum.Parts.FirstOrDefault(p => p.SourceId == CoreFeatures.MuseumHall);
+        if (!world.Features.TryGetValue(CoreIds.Museum, out var museum)) return null;
+        var hall = museum.Parts.FirstOrDefault(p => p.SourceId == CoreIds.MuseumHall);
         if (hall is null) return null;
-        var body = Plan.Polygons(WorldFeatureGeometry.FacadeGeometryOf(hall)).FirstOrDefault()?.Outer;
+        var body = WorldFeatureGeometry.PolygonsOf(WorldFeatureGeometry.FacadeGeometryOf(hall)).FirstOrDefault()?.Outer;
         if (body is null || body.Count < 4) return null;
-        body = MuseumGeometry.Positive(body);
-        var outer = museum.Parts.Where(p => p.SourceId == CoreFeatures.MuseumRing).SelectMany(p => Plan.Polygons(WorldFeatureGeometry.FacadeGeometryOf(p))).FirstOrDefault()?.Outer;
-        var ring = Enumerable.Range(0, body.Count).Select(i => outer is null ? S.ColonnadeFallback : MuseumGeometry.ParallelDistance(body, i, outer, S.ColonnadeFallback)).ToArray();
-        var frame = BuildingFrame.Of(world, CoreFeatures.Museum, S.MuseumStoreys);
-        return new MuseumShell(frame, body, ring);
+        body = PlanGeometry.OpenRing(body);
+        var ring = new float[body.Count];
+        foreach (var (bodySelection, outerSelection) in CoreIds.MuseumColonnadeEdges)
+        {
+            var i = CoreContours.Edge(world, bodySelection, body);
+            var outer = world.ContourSegment(outerSelection);
+            ring[i] = Vector2.Dot((outer[0] + outer[^1]) * 0.5f - body[i], MuseumGeometry.Normal(body, i));
+        }
+        var frame = BuildingFrame.Of(world, CoreIds.Museum, S.MuseumStoreys);
+        return new MuseumShell(world, frame, body, ring);
     }
 
     public string Id => "museum";
-    public Vector2 Anchor => Plan.Centroid([Body]);
-    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreFeatures.Museum, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public Vector2 Anchor => PlanGeometry.Centroid([Body]);
+    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreIds.Museum, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     public BuildingFrame Frame { get; }
     /// <summary>The hall body octagon (8401), counterclockwise in (x, z) so each edge's outward side is (dz, −dx).</summary>
@@ -182,12 +188,12 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
 
     // ------------------------------------------------------------------ windows
 
-    public ClaimedWindowLayout WindowLayout => new(CoreFeatures.Museum, [new WindowGridSpec(WindowKey, Columns, Rows)]);
+    public ClaimedWindowLayout WindowLayout => new(CoreIds.Museum, [new WindowGridSpec(WindowKey, Columns, Rows)]);
 
     public WindowAllocation Allocation(WindowNumberingSnapshot numbering)
     {
         ArgumentNullException.ThrowIfNull(numbering);
-        var allocation = numbering.Get(CoreFeatures.Museum, WindowKey);
+        var allocation = numbering.Get(CoreIds.Museum, WindowKey);
         if (allocation.Columns != Columns || allocation.Rows != Rows)
             throw new InvalidOperationException($"Museum window grid is {Columns} × {Rows}, the allocation {allocation.Columns} × {allocation.Rows}.");
         return allocation;
@@ -358,14 +364,14 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
         // Pyramid faces from the eave slab's outer top edge to the small flat top (planar trapezoids: each top edge is its
         // eave edge scaled about the hall's centre).
         var eave = MuseumGeometry.Offset(Hall, Enumerable.Repeat(S.MuseumHallEaveOut, Hall.Count).ToArray());
-        var centre = Plan.Centroid([Hall]);
+        var centre = PlanGeometry.Centroid([Hall]);
         float y0 = HallEavesY + S.MuseumHallEaveThick, y1 = y0 + S.MuseumRoofRise;
         var apex = eave.Select(p => centre + (p - centre) * S.MuseumApexScale).ToArray();
         for (var k = 0; k < eave.Count; k++)
         {
             var j = (k + 1) % eave.Count;
             Vector3 a = new(eave[k].X, y0, eave[k].Y), b = new(eave[j].X, y0, eave[j].Y), c = new(apex[j].X, y1, apex[j].Y), d = new(apex[k].X, y1, apex[k].Y);
-            var n = Shapes.Normalize(Vector3.Cross(b - a, d - a));
+            var n = VectorMath.Unit(Vector3.Cross(b - a, d - a), Vector3.UnitY, 1e-8);
             if (n.Y < 0) n = -n;
             mesh.Quad(sheet, a, b, c, d, n);
         }

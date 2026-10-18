@@ -72,6 +72,16 @@ public static partial class PlanGeometry
         return new((float)center.X, (float)center.Y);
     }
 
+    /// <summary>Area-weighted centroid of independent filled rings; ring orientation does not turn a component into a hole.</summary>
+    public static Vector2 Centroid(IEnumerable<IReadOnlyList<Vector2>> rings)
+    {
+        var components = rings.Select(ring => Factory.CreatePolygon(Factory.CreateLinearRing(ClosedCoordinates(ring)))).ToArray();
+        var shape = Factory.CreateMultiPolygon(components);
+        if (shape.IsEmpty || shape.Area < 0.000001) throw new ArgumentException("Independent rings need nonzero area.", nameof(rings));
+        var center = shape.Centroid;
+        return new((float)center.X, (float)center.Y);
+    }
+
     public static float DistanceToEdges(PolygonRings polygon, Vector2 point)
     {
         var best = DistanceToRing(point, polygon.Outer);

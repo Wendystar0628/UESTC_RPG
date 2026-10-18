@@ -50,32 +50,39 @@ public sealed class SiteBuilder
         }
     }
 
-    /// <summary>Adds part geometry placed by a row-vector matrix (rigid or uniformly scaled).</summary>
-    public void Add(PartGeometry geometry, Matrix4x4 at)
+    /// <summary>Adds placed geometry; an explicit anchor changes cell filing only.</summary>
+    public void Add(PartGeometry geometry, Matrix4x4 at, Vector2? anchor = null)
     {
         ArgumentNullException.ThrowIfNull(geometry);
-        foreach (var mesh in geometry.Meshes) Add(mesh, at);
+        foreach (var mesh in geometry.Meshes) Add(mesh, at, anchor);
     }
 
-    public void Add(GeometryBundle mesh, Matrix4x4 at)
+    public void Add(GeometryBundle mesh, Matrix4x4 at, Vector2? anchor = null)
     {
         ArgumentNullException.ThrowIfNull(mesh);
-        var (anchor, placed) = GeometryPlacement.Place(mesh, at);
-        _items.Add(new(anchor, GeometryBuffer.Freeze(placed), null, HasLodChannel: mesh.Lods is not null));
+        var (centre, placed) = GeometryPlacement.Place(mesh, at);
+        _items.Add(new(anchor ?? centre, GeometryBuffer.Freeze(placed), null, HasLodChannel: mesh.Lods is not null));
     }
 
     /// <summary>Places a catalogue part (PartCatalog); it shows as a box until its owner's geometry lands (ENG-ARCH).</summary>
-    public void Place(string part, BoxPartParams parameters, Matrix4x4 at, PaletteToken? tint = null)
+    public void Place(string part, BoxPartParams parameters, Matrix4x4 at, PaletteToken? tint = null, Vector2? anchor = null)
     {
         ArgumentNullException.ThrowIfNull(parameters);
-        _items.Add(new(new(at.M41, at.M43), null, new PlacedPart(new(part), parameters, at, tint)));
+        Place(new PlacedPart(new(part), parameters, at, tint), anchor);
+    }
+
+    /// <summary>Retains the complete catalogue declaration, including emitter, variant and culling policy.</summary>
+    public void Place(PlacedPart part, Vector2? anchor = null)
+    {
+        ArgumentNullException.ThrowIfNull(part);
+        _items.Add(new(anchor ?? new(part.At.M41, part.At.M43), null, part));
     }
 
     /// <summary>Files a light declaration by its plan position, retaining site insertion order.</summary>
-    public void Light(LightEmitter emitter)
+    public void Light(LightEmitter emitter, Vector2? anchor = null)
     {
         ArgumentNullException.ThrowIfNull(emitter);
-        _items.Add(new(new(emitter.Position.X, emitter.Position.Z), null, null, emitter));
+        _items.Add(new(anchor ?? new(emitter.Position.X, emitter.Position.Z), null, null, emitter));
     }
 
     /// <summary>

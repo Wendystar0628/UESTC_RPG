@@ -31,6 +31,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private IMapContext? _map;
     private ICollisionWorld? _collision;
     private IWorldState? _world;
+    private IViewControl? _view;
     private IAppFlow? _appFlow;
     private bool _appFrozen;
     private WalkInput _input;
@@ -60,7 +61,8 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private float _descentElapsed;
     private long _worldInstance = -1;
 
-    public bool Active { get; private set; }
+    public bool Active => _view?.Mode == ViewMode.Walk;
+    public bool ExitRequested => _safetyFailed;
     public bool Grounded { get; private set; }
     public bool CollisionReady { get; private set; }
     public int SpeedStep { get; private set; } = WalkTuning.DefaultSpeedStep;
@@ -152,6 +154,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     {
         _collision ??= Services.Get<ICollisionWorld>();
         _world ??= Services.Get<IWorldState>();
+        _view ??= Services.Get<IViewControl>();
         _map = Services.Get<IMapService>().Context;
     }
 
@@ -161,7 +164,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         ResolveServices();
         if (_map is null) return ModeSwitchResult.Refused;
         var target = WalkSafetyQueries.PlacementHint(_map, from);
-        Active = true;
         _appFrozen = false;
         _safetyFailed = false;
         _crouching = false;
@@ -174,8 +176,19 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
 
     public void Leave()
     {
-        Active = false;
         _appFrozen = false;
+        _input = default;
+        _jumpQueued = false;
+        _descentDuration = 0;
+        _entryFrom = null;
+        Velocity = Vector3.Zero;
+        Grounded = false;
+        CollisionReady = false;
+    }
+
+    private void RequestExit()
+    {
+        _safetyFailed = true;
         _input = default;
         _jumpQueued = false;
         _descentDuration = 0;
@@ -418,7 +431,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
 
     private static void ValidatePose(Pose pose)
     {
-        if (!WalkMath.Finite(pose.Position) || !float.IsFinite(pose.YawDeg) || !float.IsFinite(pose.PitchDeg))
+        if (!VectorMath.Finite(pose.Position) || !float.IsFinite(pose.YawDeg) || !float.IsFinite(pose.PitchDeg))
             throw new ArgumentOutOfRangeException(nameof(pose));
     }
 

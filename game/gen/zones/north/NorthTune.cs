@@ -1,4 +1,7 @@
 using System.Numerics;
+using Campus.Gen.Zones.Common;
+using static Campus.Gen.Zones.Common.ZoneLooks;
+using Campus.Gen.Zones.DesignBoundary;
 using Campus.Contracts;
 using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
@@ -18,9 +21,6 @@ public static class NorthTune
     /// <summary>Materials (ART-STYLE colour names only).</summary>
     public static class Look
     {
-        private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
-            new(new(family + ".lit"), new(family + ".shade")) { Fx = fx, Line = line, Wet = wet };
-
         /// <summary>Guard house walls: the renovated dormitory warm yellow (N-22: "值班室按 N-02 的预设做新").</summary>
         public static readonly ToonSpec HouseWall = S("wall.dormYellow", ToonFx.BevelLift);
         /// <summary>Copings, sills, door surrounds, canopy fascias.</summary>
@@ -35,8 +35,7 @@ public static class NorthTune
         public static readonly ToonSpec SteelBar = S("equip.fence", ToonFx.None, LineClass.None, 0.4f);
         /// <summary>Turnstile cabinets, barrier cabinets, scanner stalks: brushed stainless.</summary>
         public static readonly ToonSpec Stainless = S("frame.alu", ToonFx.BevelLift, LineClass.Fine, 0.4f);
-        public static readonly ToonSpec Glass = new(new("glass.lit"), new("glass.shade"))
-        { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
+        public static readonly ToonSpec Glass = ZoneLooks.Glass;
         /// <summary>Clipped hedge inside the fence: the seasonal hedge colour, soft vegetation shading.</summary>
         public static readonly ToonSpec Hedge = new(new("hedge.lit"), new("hedge.shade"))
         { Normal = ToonNormal.Smooth, Steps = ShadeSteps.Soft, Line = LineClass.Tree };
@@ -67,28 +66,28 @@ public static class NorthTune
     public static readonly Cluster[] Clusters =
     [
         // 20a: 学知苑 1-8 and the international students' cluster.
-        new("qsh:way:596904641", "xz1"),
-        new("qsh:way:603368217", "xz2"),
-        new("qsh:way:596904652", "xz3"),
-        new("qsh:way:596904653", "xz4"),
-        new("qsh:way:596904654", "xz5"),
-        new("qsh:way:596904646", "xz6"),
-        new("qsh:way:596904651", "xz7"),
-        new("qsh:way:596904662", "xz8"),
-        new("qsh:way:848026371", "intl"),
+        new(NorthFeatureIds.ClusterXz1.Entity, "xz1"),
+        new(NorthFeatureIds.ClusterXz2.Entity, "xz2"),
+        new(NorthFeatureIds.ClusterXz3.Entity, "xz3"),
+        new(NorthFeatureIds.ClusterXz4.Entity, "xz4"),
+        new(NorthFeatureIds.ClusterXz5.Entity, "xz5"),
+        new(NorthFeatureIds.ClusterXz6.Entity, "xz6"),
+        new(NorthFeatureIds.ClusterXz7.Entity, "xz7"),
+        new(NorthFeatureIds.ClusterXz8.Entity, "xz8"),
+        new(NorthFeatureIds.International.Entity, "intl"),
         // 20b1: 硕丰苑.
-        new("qsh:way:596904664", "sf1"),
-        new("qsh:way:596904663", "sf2"),
-        new("qsh:way:596904658", "sf3"),
-        new("qsh:way:596904660", "sf4"),
-        new("qsh:way:596904659", "sf5"),
-        new("qsh:way:848026374", "sf6"),
-        new("qsh:way:725234159", "sf7"),
-        new("qsh:way:848026373", "sf8"),
-        new("qsh:way:1061419119", "sf10"),
+        new(NorthFeatureIds.ClusterSf1.Entity, "sf1"),
+        new(NorthFeatureIds.ClusterSf2.Entity, "sf2"),
+        new(NorthFeatureIds.ClusterSf3.Entity, "sf3"),
+        new(NorthFeatureIds.ClusterSf4.Entity, "sf4"),
+        new(NorthFeatureIds.ClusterSf5.Entity, "sf5"),
+        new(NorthFeatureIds.ClusterSf6.Entity, "sf6"),
+        new(NorthFeatureIds.ClusterSf7.Entity, "sf7"),
+        new(NorthFeatureIds.ClusterSf8.Entity, "sf8"),
+        new(NorthFeatureIds.ClusterSf10.Entity, "sf10"),
         // 20b2: 博翰苑.
-        new("qsh:way:596904655", "bh1"),
-        new("qsh:way:596904661", "bh2"),
+        new(NorthFeatureIds.ClusterBh1.Entity, "bh1"),
+        new(NorthFeatureIds.ClusterBh2.Entity, "bh2"),
     ];
 
     /// <summary>Cluster fence (MAP-QSH-NORTH): 2.2 m see-through steel bars, a 1.2 m clipped hedge inside.</summary>
@@ -130,29 +129,19 @@ public static class NorthTune
     }
 
     /// <summary>
-    /// Terrace levels of north.terrain.json (MAP-QSH-TERRAIN), mirrored here for the authored heights that sit
-    /// on them. The terrain file is the only source of the ground; these constants never replace a HeightAt query.
-    /// </summary>
-    public static class Terrain
-    {
-        public const float Upper = 3.0f, Lower = 1.5f;
-    }
-
-    /// <summary>
     /// Inspection probes of 20a (MAP-QSH-NORTH 近景巡检点): Q1 outside 学知一组团's open gate at eye height (walk, K1),
     /// Q4 against 学知苑 1 栋's ground floor at 0.5 m (首层贴墙, N-01), Q6 45° down over the 学知一 courtyard from about 40 m.
-    /// All three stand on the upper terrace (MAP-QSH-TERRAIN): eye heights are terrace + 1.62 m, so they float 3 m
-    /// above the flat stub until the WP-08 evaluator lands.
+    /// Review-camera input only: these fixed poses are not scene geometry.
     /// </summary>
     public static class Probes
     {
         /// <summary>The cluster whose main gate is the open walking route (overlay design:north-gate-xz1, props.open); Q1 and Q6 belong to it.</summary>
         public const string OpenCluster = "xz1";
-        public static readonly Vector3 GateEye = new(100.4f, Terrain.Upper + 1.62f, -468.9f);
+        public static readonly Vector3 GateEye = new(100.4f, 3f + WalkRules.StandingEye, -468.9f);
         public static readonly Vector2 GateLook = new(0.934f, 0.358f);
-        public static readonly Vector3 WallEye = new(130.7f, Terrain.Upper + 1.62f, -482.7f);
+        public static readonly Vector3 WallEye = new(130.7f, 3f + WalkRules.StandingEye, -482.7f);
         public static readonly Vector2 WallLook = new(-0.386f, -0.922f);
-        public static readonly Vector3 CourtEye = new(146f, Terrain.Upper + 30f, -431f);
+        public static readonly Vector3 CourtEye = new(146f, 3f + 30f, -431f);
         public static readonly Vector2 CourtLook = new(0.57f, -0.82f);
     }
 
@@ -162,15 +151,12 @@ public static class NorthTune
     /// the walk to the hill (design:terrain:north-xz1-court-hill) and the lawn behind it; at its back is the lawn in front of
     /// the south dormitory, whose windows stay 10 m off. A paved pad fills the space between the wall and the walk's edge, so
     /// the seat is reached from the walk without crossing grass. Granite body sunk into the ground, a warm wood seat with a
-    /// small overhang (ART-FIDELITY: chamfered, capped). The wall's plan points are the overlay polyline <see cref="Feature"/>
+    /// small overhang (ART-FIDELITY: chamfered, capped). The wall's plan points are the registered overlay polyline
     /// (D-239: start, mid, end); the bow is a quadratic curve through the mid point, bulging away from the walk so the wall
     /// gathers the view. 初值。
     /// </summary>
     public static class Court
     {
-        public const string Feature = "design:north-xz1-seatwall";
-        /// <summary>The courtyard walk the pad joins: 学知一组团 inner road, 5 m.</summary>
-        public const string Walk = "qsh:source:way:552816773";
         public const int SeatSegments = 12;
         /// <summary>Stone body: width, height above the pad, chamfer, and how far it is sunk below the terrain.</summary>
         public const float BodyWidth = 0.42f, BodyHeight = 0.38f, BodyBevel = 0.025f, Sink = 0.1f;
@@ -180,7 +166,7 @@ public static class NorthTune
         /// stopping 2 cm short of the walk's carriageway: 1.5 m deep at the wall ends, 2.0 m at the middle. Its top is at
         /// WP-15 paving level (GroundSection.PavingY, 0.15 m over the terrain, 5 cm above the lawn) plus <see cref="PadLift"/>,
         /// so where it laps over the kerb stone it covers it instead of flickering against it; the seat stands 0.45 m above it.</summary>
-        public const float PadReach = 1.69f, PadThickness = 0.08f, PavingLevel = 0.15f, PadLift = 0.01f;
+        public const float PadReach = 1.69f, PadThickness = 0.08f, PadLift = 0.01f;
         public static readonly ToonSpec Pad = new(new("ground.paver.lit"), new("ground.paver.shade")) { Fx = ToonFx.BevelLift, Line = LineClass.Fine, Wet = 0.6f };
     }
 
@@ -196,14 +182,10 @@ public static class NorthTune
     /// </summary>
     public static class Bank
     {
-        /// <summary>The bank selection shared with the plaza, with the same origin and direction.</summary>
-        public const string BankContour = "design:boundary-north-bank-contour";
         /// <summary>The plaza railing's campus-side end: <c>BoundaryTune.Plaza.RailT0</c> and <c>RailN</c>. Its end post is <see cref="JointPost"/> thick.</summary>
-        public const float JointT = -24.6f, RailN = 0.35f, JointPost = 0.08f;
+        public const float JointT = BoundaryTune.Plaza.RailT0, RailN = BoundaryTune.Plaza.RailN, JointPost = BoundaryTune.Plaza.EndPostSize;
         /// <summary>Where the run ends: 商业街's far end is at t −110.5; the end post stands just beyond it.</summary>
         public const float EndT = -115f;
-        /// <summary>Same as the plaza: the railing stands on a 0.15 m paved walk; with the real bank top this follows the ground.</summary>
-        public const float PavingTop = 0.15f;
         public const float Height = 1.1f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f, BarSize = 0.02f, BarPitch = 0.12f;
         public const float ColliderHalf = 0.08f;
     }
@@ -212,11 +194,10 @@ public static class NorthTune
     /// 硕丰苑十组团 rest deck (20b1; D-185 R6, MAP-QSH-ADDITIONS 休憩平台, registered as design:north-sf10-deck): the
     /// courtyard's one stay point, 12 × 8 m and 0.45 m high so its edge is the seat; deep grey steel frame, wood top in four
     /// boards around a square pit holding a clipped shrub. Long side along 33、32 栋, 20 m and more off every wall. The plan
-    /// (centre, long axis, length, width) and the height are the overlay polygon <see cref="Feature"/> (D-239). 初值。
+    /// (centre, long axis, length, width) and the height are the registered overlay polygon (D-239). 初值。
     /// </summary>
     public static class Deck
     {
-        public const string Feature = "design:north-sf10-deck";
         public const float Sink = 0.1f;
         /// <summary>Wood top: thickness, overhang past the steel frame, chamfer, and the gap between boards.</summary>
         public const float Top = 0.07f, Overhang = 0.05f, TopBevel = 0.015f, Seam = 0.02f;
@@ -226,12 +207,11 @@ public static class NorthTune
 
     /// <summary>
     /// 学知苑 1 栋 front door toward the courtyard (MAP-QSH-NORTH, WLD-INTERIORS `xz1.hall`). The door
-    /// centre and facing come from the interior index (EntranceDecl); the porch sits on the facade edge nearest to it.
+    /// centre and facing come from the interior index (EntranceDecl); the porch uses the registered facade selection.
     /// Frame: origin on the footprint (glass plane), X along the facade, +Z out to the courtyard.
     /// </summary>
     public static class Hall
     {
-        public const string Feature = "qsh:way:217855218";
         /// <summary>Ground floor raised about 1.0 m above the courtyard (MAP-QSH-TERRAIN), reached by 6–8 risers.</summary>
         public const float FloorRaise = 1.0f, Tread = 0.33f;
         public const int MinRisers = 6, MaxRisers = 8;

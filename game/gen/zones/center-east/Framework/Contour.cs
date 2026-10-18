@@ -23,40 +23,16 @@ public static class Contour
     public static Vector2[] Clip(IReadOnlyList<Vector2> ring, Vector2 at, Vector2 dir, float keep)
     {
         ArgumentNullException.ThrowIfNull(ring);
-        var n = Unit(dir);
+        var n = VectorMath.Unit(dir, Vector2.UnitX);
         var output = new List<Vector2>();
         for (var i = 0; i < ring.Count; i++)
         {
             Vector2 a = ring[i], b = ring[(i + 1) % ring.Count];
-            float da = Dot(a - at, n) - keep, db = Dot(b - at, n) - keep;
+            float da = Vector2.Dot(a - at, n) - keep, db = Vector2.Dot(b - at, n) - keep;
             if (da <= 0) output.Add(a);
             if ((da < 0 && db > 0) || (da > 0 && db < 0)) output.Add(a + (b - a) * (da / (da - db)));
         }
-        return Clean(output, 0.05f);
-    }
-
-    /// <summary>Canonical ring without repeated points or straight-through vertices.</summary>
-    public static Vector2[] Clean(IReadOnlyList<Vector2> ring, float minEdge)
-    {
-        ArgumentNullException.ThrowIfNull(ring);
-        var points = new List<Vector2>();
-        foreach (var p in ring)
-            if (points.Count == 0 || Vector2.Distance(points[^1], p) >= minEdge) points.Add(p);
-        while (points.Count > 1 && Vector2.Distance(points[0], points[^1]) < minEdge) points.RemoveAt(points.Count - 1);
-        for (var changed = true; changed && points.Count > 3;)
-        {
-            changed = false;
-            for (var i = 0; i < points.Count && points.Count > 3; i++)
-            {
-                Vector2 p = points[(i + points.Count - 1) % points.Count], q = points[i], r = points[(i + 1) % points.Count];
-                if (MathF.Abs(Cross(q - p, r - q)) < 1e-4f * Vector2.Distance(p, r) && Dot(q - p, r - q) > 0)
-                {
-                    points.RemoveAt(i);
-                    changed = true;
-                }
-            }
-        }
-        return PlanMath.OutsideRight(points);
+        return PlanGeometry.CleanRing(output, minEdge: 0.05f, collinearTolerance: 1e-4f) ?? throw new InvalidOperationException("Setback leaves no contour.");
     }
 
     /// <summary>
@@ -76,10 +52,10 @@ public static class Contour
             Vector2 din = q - p, dout = r - q;
             float lin = din.Length(), lout = dout.Length();
             din /= lin; dout /= lout;
-            var turn = MathF.Abs(MathF.Atan2(Cross(din, dout), Dot(din, dout))) * (180f / MathF.PI);
+            var turn = MathF.Abs(MathF.Atan2(PlanGeometry.CrossFloat(din, dout), Vector2.Dot(din, dout))) * (180f / MathF.PI);
             if (turn < minTurnDegrees || pinned(q)) { points.Add(q); continue; }
             // Tangent run of a circular fillet: r·tan(θ/2), tan(θ/2) = sinθ / (1 + cosθ).
-            var half = MathF.Abs(Cross(din, dout)) / (1f + Dot(din, dout));
+            var half = MathF.Abs(PlanGeometry.CrossFloat(din, dout)) / (1f + Vector2.Dot(din, dout));
             var run = MathF.Min(radius * half, 0.45f * MathF.Min(lin, lout));
             Vector2 s = q - din * run, e = q + dout * run;
             var segments = Math.Max(2, (int)MathF.Ceiling(turn / 12f));
@@ -89,70 +65,31 @@ public static class Contour
                 points.Add(s * ((1 - t) * (1 - t)) + q * (2 * t * (1 - t)) + e * (t * t));
             }
         }
-        return Clean(points, 0.02f);
+        return PlanGeometry.CleanRing(points, minEdge: 0.02f, collinearTolerance: 1e-4f) ?? throw new InvalidOperationException("Rounded outline has no contour.");
     }
 
-    /// <summary>Miter offset, outward for positive <paramref name="d"/>; the miter is held to 2.5 |d| at sharp corners.</summary>
-    public static Vector2[] Offset(IReadOnlyList<Vector2> ring, float d) => PlanGeometry.MitreOffset(ring, d, closed: true, limit: 2.5f);
-
-    /// <summary>Outward unit normal of a canonical ring's edge a→b.</summary>
-    public static Vector2 Outward(Vector2 a, Vector2 b) => Unit(new(b.Y - a.Y, a.X - b.X));
-
-    public static float Perimeter(IReadOnlyList<Vector2> ring)
-    {
-        var length = 0f;
-        for (var i = 0; i < ring.Count; i++) length += Vector2.Distance(ring[i], ring[(i + 1) % ring.Count]);
-        return length;
-    }
-
-    /// <summary>
-    /// The ring cut into <c>round(perimeter / pitch)</c> cells of equal arclength from its first point: each cell is the
-    /// polyline it covers (the cut points and the ring vertices between them), in ring order.
-    /// </summary>
+    /// <summary>Equal arc-length facade cells, retaining each source vertex inside its cell.</summary>
     public static IReadOnlyList<Vector2[]> Cells(IReadOnlyList<Vector2> ring, float pitch)
     {
-        ArgumentNullException.ThrowIfNull(ring);
-        // The closed path with its running length: point i of the ring sits at s[i], the ring's start again at s[n].
-        var n = ring.Count;
-        var s = new float[n + 1];
-        for (var i = 0; i < n; i++) s[i + 1] = s[i] + Vector2.Distance(ring[i], ring[(i + 1) % n]);
-        var total = s[n];
-        var count = Math.Max(1, (int)MathF.Round(total / pitch));
-        var cells = new Vector2[count][];
-        for (var c = 0; c < count; c++)
+        var total = PlanGeometry.Length(ring, closed: true);
+        var count = Math.Max(1, (int)Math.Round(total / pitch));
+        var stations = new double[ring.Count];
+        for (var i = 1; i < ring.Count; i++) stations[i] = stations[i - 1] + Vector2.Distance(ring[i - 1], ring[i]);
+        return Enumerable.Range(0, count).Select(c =>
         {
-            float s0 = total * c / count, s1 = c == count - 1 ? total : total * (c + 1) / count;
-            var points = new List<Vector2> { At(s0) };
-            for (var i = 1; i < n; i++)
-                if (s[i] > s0 + 1e-3f && s[i] < s1 - 1e-3f) points.Add(ring[i]);
-            points.Add(At(s1));
-            cells[c] = [.. points];
-        }
-        return cells;
-
-        Vector2 At(float d)
-        {
-            var i = 0;
-            while (i < n - 1 && s[i + 1] < d) i++;
-            var length = s[i + 1] - s[i];
-            return length > 1e-6f ? Vector2.Lerp(ring[i], ring[(i + 1) % n], Math.Clamp((d - s[i]) / length, 0f, 1f)) : ring[i];
-        }
+            var start = total * c / count;
+            var end = total * (c + 1) / count;
+            return new[] { PlanGeometry.Sample(ring, start, closed: true).Point }
+                .Concat(Enumerable.Range(1, ring.Count - 1).Where(i => stations[i] > start + 1e-3 && stations[i] < end - 1e-3).Select(i => ring[i]))
+                .Append(PlanGeometry.Sample(ring, end, closed: true).Point).ToArray();
+        }).ToArray();
     }
 
-    /// <summary>Point and outward normal halfway along a cell's polyline.</summary>
+    /// <summary>Point and outward normal halfway along a glazing cell.</summary>
     public static (Vector2 Point, Vector2 Out) Middle(IReadOnlyList<Vector2> cell)
     {
-        var total = 0f;
-        for (var i = 0; i + 1 < cell.Count; i++) total += Vector2.Distance(cell[i], cell[i + 1]);
-        var walked = 0f;
-        for (var i = 0; i + 1 < cell.Count; i++)
-        {
-            var length = Vector2.Distance(cell[i], cell[i + 1]);
-            if (walked + length >= total * 0.5f && length > 1e-4f)
-                return (Vector2.Lerp(cell[i], cell[i + 1], (total * 0.5f - walked) / length), Outward(cell[i], cell[i + 1]));
-            walked += length;
-        }
-        return (cell[0], Outward(cell[0], cell[^1]));
+        var sample = PlanGeometry.Sample(cell, PlanGeometry.Length(cell) * 0.5);
+        return (sample.Point, new(sample.Tangent.Y, -sample.Tangent.X));
     }
 
     /// <summary>
@@ -165,14 +102,14 @@ public static class Contour
         var m = new Shapes.Writer(material);
         var count = ring.Count;
         chamfer = MathF.Min(chamfer, (y1 - y0) * 0.4f);
-        var top = chamfer > 0 ? Offset(ring, -chamfer) : [.. ring];
+        var top = chamfer > 0 ? PlanGeometry.MitreOffset(ring, -chamfer, closed: true, limit: 2.5f) : [.. ring];
         var sideTop = y1 - chamfer;
         var up = Vector3.UnitY;
         for (var i = 0; i < count; i++)
         {
             var j = (i + 1) % count;
             Vector2 a = ring[i], b = ring[j];
-            var edge = Outward(a, b);
+            var edge = PlanGeometry.RightUnitNormal(a, b);
             var outward = new Vector3(edge.X, 0, edge.Y);
             var (na, nb) = (Normal(ring, i, edge), Normal(ring, j, edge));
             m.Quad(m.Vertex(new(a.X, y0, a.Y), na, new(0, 0)), m.Vertex(new(b.X, y0, b.Y), nb, new(1, 0)),
@@ -194,13 +131,13 @@ public static class Contour
     {
         ArgumentNullException.ThrowIfNull(ring);
         var m = new Shapes.Writer(material);
-        var inner = Offset(ring, -thickness);
+        var inner = PlanGeometry.MitreOffset(ring, -thickness, closed: true, limit: 2.5f);
         var count = ring.Count;
         var up = Vector3.UnitY;
         for (var i = 0; i < count; i++)
         {
             var j = (i + 1) % count;
-            var edge = Outward(ring[i], ring[j]);
+            var edge = PlanGeometry.RightUnitNormal(ring[i], ring[j]);
             var outward = new Vector3(edge.X, 0, edge.Y);
             var (na, nb) = (Normal(ring, i, edge), Normal(ring, j, edge));
             Vector2 a = ring[i], b = ring[j], c = inner[i], d = inner[j];
@@ -218,8 +155,8 @@ public static class Contour
     private static Vector3 Normal(IReadOnlyList<Vector2> ring, int i, Vector2 edge)
     {
         var count = ring.Count;
-        Vector2 n0 = Outward(ring[(i + count - 1) % count], ring[i]), n1 = Outward(ring[i], ring[(i + 1) % count]);
-        var n = Dot(n0, n1) >= SmoothCos ? Unit(n0 + n1) : edge;
+        Vector2 n0 = PlanGeometry.RightUnitNormal(ring[(i + count - 1) % count], ring[i]), n1 = PlanGeometry.RightUnitNormal(ring[i], ring[(i + 1) % count]);
+        var n = Vector2.Dot(n0, n1) >= SmoothCos ? VectorMath.Unit(n0 + n1, Vector2.UnitX) : edge;
         return new(n.X, 0, n.Y);
     }
 
@@ -232,13 +169,4 @@ public static class Contour
         for (var i = 0; i < polygon.Indices.Length; i += 3) m.Triangle(ids[polygon.Indices[i]], ids[polygon.Indices[i + 1]], ids[polygon.Indices[i + 2]], normal);
     }
 
-    private static float Dot(Vector2 a, Vector2 b) => a.X * b.X + a.Y * b.Y;
-
-    private static float Cross(Vector2 a, Vector2 b) => a.X * b.Y - a.Y * b.X;
-
-    private static Vector2 Unit(Vector2 v)
-    {
-        var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y);
-        return length > 1e-9f ? v / length : Vector2.UnitX;
-    }
 }

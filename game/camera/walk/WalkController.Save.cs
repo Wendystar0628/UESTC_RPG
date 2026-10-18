@@ -39,20 +39,14 @@ public partial class WalkController
         float yaw = validAngles ? pose.YawDeg : 0;
         float pitch = validAngles ? Math.Clamp(pose.PitchDeg, -89f, 89f) : 0;
         if (!validAngles || pitch != pose.PitchDeg) c.Repair("walk: look angles repaired");
-        if (!WalkMath.Finite(pose.Position))
+        if (!VectorMath.Finite(pose.Position))
         {
             pose = (_lastStable ?? DefaultFeet(c.Map)) with { YawDeg = yaw, PitchDeg = pitch };
             c.Repair("walk: invalid feet replaced by a pending landing origin");
         }
         else pose = new(pose.Position, yaw, pitch);
         Warp(pose);
-        // view/Pose60 has just restored this mode; the world frame readout updates next frame.
-        Active = Services.Get<IViewControl>().Mode switch
-        {
-            ViewMode.Fly => false,
-            ViewMode.Walk => true,
-            _ => throw new InvalidDataException("Unknown restored view mode.")
-        };
+        // view/Pose60 owns the mode; this section owns physical placement and walking speed.
         // Warp clears velocity, jump timers and interpolation. Physics stays frozen until real collision Ready.
     }
 
@@ -66,8 +60,7 @@ public partial class WalkController
         ResolveServices();
         var maps = Services.Get<IMapService>();
         if (maps.Current == targetMap && _map?.Descriptor.Id == targetMap) return;
-        Leave();
-        _safetyFailed = true;
+        RequestExit();
         throw new InvalidOperationException($"Cannot restore or capture walk feet before map {targetMap.Value} is mounted.");
     }
 }

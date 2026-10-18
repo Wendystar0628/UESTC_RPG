@@ -1,3 +1,5 @@
+using Campus.Gen.Zones.Common;
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
@@ -76,7 +78,7 @@ internal static class BridgeMesher
 
         // Abutments under the deck ends, from below any bed up into the slab.
         foreach (var a in plan.Abutments)
-            b.Add(PartGeometryKernel.BeveledExtrude(BridgePlan.Ccw([a.A, a.B, a.C, a.D]), soffit + Joint * 10f - (plan.RoadY + T.AbutmentBottom), 0f, T.ConcreteSpec, plan.RoadY + T.AbutmentBottom));
+            b.Add(PartGeometryKernel.BeveledExtrude(PlanGeometry.OpenRing([a.A, a.B, a.C, a.D]).ToArray(), soffit + Joint * 10f - (plan.RoadY + T.AbutmentBottom), 0f, T.ConcreteSpec, plan.RoadY + T.AbutmentBottom));
 
         var foot = plan.Footprint;
         float minX = foot.Min(p => p.X) - 1f, maxX = foot.Max(p => p.X) + 1f, minZ = foot.Min(p => p.Y) - 1f, maxZ = foot.Max(p => p.Y) + 1f;
@@ -93,16 +95,10 @@ internal static class BridgeMesher
     /// <summary>Square post turned to the bridge axis, standing on the base, with a plain square cap.</summary>
     private static void Post(PartBuilder b, BridgePlan plan, float s, float u, float size, float bottom, float topY, float cap, float capHeight, bool near)
     {
-        var at = Frame(plan, s, u);
+        var at = new PlanFrame(plan.P(s, u), plan.Axis).At(0, 0, 0);
         var shaft = topY - capHeight + Joint - (bottom - Joint);
         b.Add(PartGeometryKernel.BeveledBox(size, shaft, size, near ? T.PostBevel : 0f, T.StoneSpec), Xf.Move(0, bottom - Joint, 0).Then(at));
         b.Add(PartGeometryKernel.BeveledBox(cap, capHeight, cap, near ? T.CapBevel : 0f, T.StoneSpec), Xf.Move(0, topY - capHeight, 0).Then(at));
     }
 
-    /// <summary>Local X along the bridge axis, Y up, Z across (X × Y = Z), origin at (s, u) on the ground plane.</summary>
-    internal static Matrix4x4 Frame(BridgePlan plan, float s, float u)
-    {
-        var p = plan.P(s, u);
-        return new(plan.Axis.X, 0, plan.Axis.Y, 0, 0, 1, 0, 0, plan.Normal.X, 0, plan.Normal.Y, 0, p.X, 0, p.Y, 1);
-    }
 }

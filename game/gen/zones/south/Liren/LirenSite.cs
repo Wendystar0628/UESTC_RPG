@@ -21,9 +21,9 @@ namespace Campus.Gen.Zones.South.Liren;
 /// </summary>
 public sealed class LirenSite : ZoneSite
 {
-    public const string Connector = "qsh:relation:11185938";
-    public const string BlockA = "qsh:relation:11185936", BlockB = "qsh:way:814133732";
-    public const string PierPart = "osm:way:814133734", BridgePart = "osm:way:814133733", LinkPart = "osm:way:814133736";
+    public static readonly string Connector = SouthIds.LirenConnector.Entity;
+    public static readonly string BlockA = SouthIds.LirenA.Entity, BlockB = SouthIds.LirenB.Entity;
+    public static readonly string PierPart = SouthIds.LirenPiers.Part, BridgePart = SouthIds.LirenBridge.Part, LinkPart = SouthIds.LirenLink.Part;
     /// <summary>Window grids (contract-29): both pier blocks in one grid (in part order), the bridge storey and the east link.</summary>
     public const string PierKey = "piers", BridgeKey = "bridge", LinkKey = "east-link";
 
@@ -31,7 +31,7 @@ public sealed class LirenSite : ZoneSite
     /// Pier blocks: the cornice line as WP-14 builds A and B at 15.6 m (wall top 15.1, coping 16.57; the data's height is the
     /// 15.6 m, so the wall tops stay the proportions' own). The storey count comes from the map data (<see cref="Footprints.PierStyle"/>).
     /// </summary>
-    private static readonly GridStyle PierBase = new(L.White, L.WhiteTrim, L.GreyPlinth, L.Glass, L.Metal, L.RoofSlab)
+    private static readonly GridStyle PierBase = new(L.White, L.WhiteTrim, L.GreyPlinth, ZoneLooks.Glass, L.Metal, L.RoofSlab)
     {
         Bay = 3.6f,
         Pier = 1.6f,
@@ -94,15 +94,9 @@ public sealed class LirenSite : ZoneSite
         if (!world.Features.TryGetValue(new(Connector), out var connector))
             throw new InvalidOperationException($"Liren connector {Connector} is missing from the world model.");
         // The facade outline (WP-08): wall hiding, columns, collision and window declarations all share this one layout.
-        IReadOnlyList<IReadOnlyList<Vector2>> Polygons(string source) => connector.Parts.FirstOrDefault(p => p.SourceId == source) is { } part
-            ? WorldFeatureGeometry.FacadeGeometryOf(part) switch
-            {
-                PolygonGeometry g => [g.Rings.Outer],
-                MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer).ToArray(),
-                _ => throw new InvalidOperationException($"Liren part {source} is missing."),
-            }
-            : throw new InvalidOperationException($"Liren part {source} is missing.");
-        int Storeys(string source) => connector.Parts.FirstOrDefault(p => p.SourceId == source)?.Storeys ?? throw new InvalidOperationException($"Liren part {source} has no storeys.");
+        IReadOnlyList<IReadOnlyList<Vector2>> Polygons(string source) =>
+            (connector with { Geometry = connector.ContourGeometry(source), Parts = [] }).Outers();
+        int Storeys(string source) => connector.Part(source).Storeys ?? throw new InvalidOperationException($"Liren part {source} has no storeys.");
         var bridge = Polygons(BridgePart)[0];
         var piers = Polygons(PierPart);
         var link = Polygons(LinkPart)[0];
@@ -115,15 +109,8 @@ public sealed class LirenSite : ZoneSite
     /// </summary>
     internal static IReadOnlyList<IReadOnlyList<Vector2>> Block(IWorldModel world, string id)
     {
-        if (!world.Features.TryGetValue(new(id), out var f)) throw new InvalidOperationException($"Liren block {id} is missing.");
-        static IEnumerable<IReadOnlyList<Vector2>> Outers(OverlayGeometry? g) => g switch
-        {
-            PolygonGeometry p => [p.Rings.Outer],
-            MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer),
-            _ => [],
-        };
-        var rings = f.Parts.Count > 0 ? f.Parts.SelectMany(p => Outers(WorldFeatureGeometry.FacadeGeometryOf(p))).ToArray() : Outers(f.Geometry).ToArray();
-        return rings.Length > 0 ? rings : throw new InvalidOperationException($"Liren block {id} has no polygon footprint.");
+        var rings = world.Feature(id).Outers();
+        return rings.Count > 0 ? rings : throw new InvalidOperationException($"Liren block {id} has no polygon footprint.");
     }
 
     /// <summary>An edge lying against one of the given volumes is not dressed.</summary>
@@ -164,7 +151,7 @@ public sealed class LirenSite : ZoneSite
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
         var f = Rings(ctx.World);
-        var centre = PlanMath.Centroid(f.Bridge);
+        var centre = PlanGeometry.Centroid(f.Bridge, meanIfDegenerate: true);
         var y = ctx.World.Terrain.HeightAt(centre.X, centre.Y);
         foreach (var (ring, style, dress, lift, numbering) in Blocks(f))
             GridFacade.Declare(facades, ring, y + lift, style, dress, numbering, WindowNumbers.Required(ctx, numbering.Feature, numbering.Key));
@@ -182,7 +169,7 @@ public sealed class LirenSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);
-        var y = b.Ground(PlanMath.Centroid(f.Bridge));
+        var y = b.Ground(PlanGeometry.Centroid(f.Bridge, meanIfDegenerate: true));
         // Piers, the east link and the bridge storey over the void; the soffit slab under it reads the void's ceiling at three storeys.
         foreach (var (ring, style, dress, lift, numbering) in Blocks(f)) GridFacade.Build(b, ring, y + lift, style, dress, numbering);
         var bridge = new PolygonRings(f.Bridge);
@@ -214,7 +201,7 @@ public sealed class LirenSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var f = Rings(c.Context.World);
-        var centre = PlanMath.Centroid(f.Bridge);
+        var centre = PlanGeometry.Centroid(f.Bridge, meanIfDegenerate: true);
         var y = c.Ground(centre.X, centre.Y);
         foreach (var pier in f.Piers) GridFacade.Collide(c, pier, y, f.PierStyle, e => Dress(e, f.PierNeighbours), FootMat.Concrete);
         GridFacade.Collide(c, f.Link, y, f.LinkStyle, e => Dress(e, f.LinkNeighbours), FootMat.Concrete);

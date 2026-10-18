@@ -22,7 +22,7 @@ public sealed class CoreModuleTests
     [TestCase]
     public void WholeSourceTracesRestoreProductionGeometryAndCollisions()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var context = Context(world);
         var module = new CoreModule();
         var pieces = CoreSite.Pieces(world);
@@ -35,9 +35,9 @@ public sealed class CoreModuleTests
             AssertThat(traces.Where(t => t.Feature is { } feature && buildings.Contains(feature)).Select(t => t.Feature!.Value).ToHashSet().SetEquals(buildings)).OverrideFailureMessage("every claimed building has its own actual source").IsTrue();
             foreach (var trace in traces.Where(t => t.Feature is { } feature && buildings.Contains(feature)))
                 AssertThat(trace.Output.Meshes.Count > 0).OverrideFailureMessage($"{trace.SourceId}: actual generated building geometry").IsTrue();
-            foreach (var tile in pieces.Select(p => CoreTiles.Of(p.Anchor, lod)).Distinct())
+            foreach (var tile in pieces.Select(p => TileGrid.At(p.Anchor, lod)).Distinct())
             {
-                var sources = traces.Zip(pieces).Where(pair => CoreTiles.Of(pair.Second.Anchor, lod) == tile).Select(pair => pair.First).ToArray();
+                var sources = traces.Zip(pieces).Where(pair => TileGrid.At(pair.Second.Anchor, lod) == tile).Select(pair => pair.First).ToArray();
                 var output = module.Build(context, tile, lod);
                 var expected = Triangles([output]);
                 var actual = Triangles(sources.Select(t => t.Output));
@@ -47,7 +47,7 @@ public sealed class CoreModuleTests
             }
             foreach (var tile in module.Tiles(context))
             {
-                var sources = traces.Zip(pieces).Where(pair => CoreTiles.Of(pair.Second.Anchor, LodLevel.L0) == tile).Select(pair => pair.First);
+                var sources = traces.Zip(pieces).Where(pair => TileGrid.At(pair.Second.Anchor, LodLevel.L0) == tile).Select(pair => pair.First);
                 AssertThat(JsonSerializer.Serialize(module.Collide(context, tile), ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Colliders).ToArray(), ContractJson.Options)).OverrideFailureMessage($"{tile}: whole sources restore production collisions").IsTrue();
             }
         }
@@ -67,7 +67,7 @@ public sealed class CoreModuleTests
     [TestCase]
     public void RealMapLoadsTheOverlayAndBothAxisPieces()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var pieces = CoreSite.Pieces(world);
         AssertThat(pieces.Select(p => p.Id).SequenceEqual(["time-plaza", "sundial", "library-shell", "library-entrance", "museum", "annex-northannex", "annex-courtwing", "annex-lowblock", "annex-link", "annex-joint", "quiet-garden"])).OverrideFailureMessage("plaza, sundial, library, its entrance, the museum, the five north blocks and the quiet garden in order").IsTrue();
         foreach (var claim in CoreSite.Claims.OfType<FeatureClaim>())
@@ -77,21 +77,21 @@ public sealed class CoreModuleTests
         AssertThat(declared.SequenceEqual(fromPieces)).OverrideFailureMessage("module claims are exactly the pieces' claims").IsTrue();
         var plaza = (TimePlaza)pieces[0];
         AssertThat(MathF.Abs(plaza.Radius - 26.9f) < 0.3f).OverrideFailureMessage($"plaza radius {plaza.Radius} from the OSM circle").IsTrue();
-        var bearing = Shapes.BearingOf(plaza.Axis);
+        var bearing = Angles.Bearing(plaza.Axis);
         AssertThat(bearing is > 300f and < 315f).OverrideFailureMessage($"axis bearing {bearing} points northwest to the library stair").IsTrue();
-        AssertThat(!plaza.Sunken).OverrideFailureMessage("flat terrain stub: no ring steps yet").IsTrue();
+        AssertThat(plaza.FloorTop == world.Terrain.HeightAt(plaza.Centre.X, plaza.Centre.Y) + GroundLevels.Paving).OverrideFailureMessage("plaza floor follows the production terrain").IsTrue();
     }
 
     [TestCase]
     public void FlatPlazaHasInlaysFlagsLampsAndBenches()
     {
-        var world = RealWorld();
+        var world = new FakeWorld(Campus.Tests.RealMapFixture.Load().World) { Terrain = new FormulaTerrain((_, _) => 0f) };
         var module = new CoreModule();
         var ctx = Context(world);
         var plaza = (TimePlaza)CoreSite.Pieces(world)[0];
-        var output = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L0), LodLevel.L0);
+        var output = module.Build(ctx, TileGrid.At(plaza.Anchor, LodLevel.L0), LodLevel.L0);
         AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps).OverrideFailureMessage("sixteen rim lamps").IsTrue();
-        AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.Bench) == 3).OverrideFailureMessage("three benches from the overlay").IsTrue();
+        AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.Bench) == world.Features.Keys.Count(id => id.Value.StartsWith(CoreIds.PlazaBenchPrefix, StringComparison.Ordinal))).OverrideFailureMessage("benches follow their overlay registration").IsTrue();
         AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.RimLampChannel) == CoreStyle.RimLamps).OverrideFailureMessage("one first-light emitter per lamp").IsTrue();
         AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.FlagLightChannel) == 3).OverrideFailureMessage("three flag uplights").IsTrue();
         AssertThat(module.DescribeLights(ctx).SequenceEqual(output.Emitters!)).OverrideFailureMessage("light metadata matches the plaza's L0 output").IsTrue();
@@ -106,7 +106,7 @@ public sealed class CoreModuleTests
     [TestCase]
     public void SunkenTerrainGivesSixRisersTwoRampsAndStairColliders()
     {
-        var flat = RealWorld();
+        var flat = Campus.Tests.RealMapFixture.Load().World;
         var plazaFlat = (TimePlaza)CoreSite.Pieces(flat)[0];
         var world = new FakeWorld(flat) { Terrain = BowlTerrain(plazaFlat.Centre, plazaFlat.Radius - 2.1f + 0.3f, -0.9f, 0.5f) };
         var plaza = (TimePlaza)CoreSite.Pieces(world)[0];
@@ -127,12 +127,12 @@ public sealed class CoreModuleTests
     [TestCase]
     public void EveryLevelIsValidWoundAndWithinBudget()
     {
-        var world = RealWorld();
-        var palette = Palette();
+        var world = Campus.Tests.RealMapFixture.Load().World;
+        var palette = Campus.Contracts.Tests.PaletteFixture.Catalog;
         var module = new CoreModule();
         var ctx = Context(world, palette);
         foreach (var lod in Levels)
-            foreach (var tile in CoreSite.Pieces(world).Select(p => CoreTiles.Of(p.Anchor, lod)).Distinct())
+            foreach (var tile in CoreSite.Pieces(world).Select(p => TileGrid.At(p.Anchor, lod)).Distinct())
             {
                 var output = module.Build(ctx, tile, lod);
                 CheckBundles(output.Meshes);
@@ -147,17 +147,17 @@ public sealed class CoreModuleTests
                 AssertThat(output.Meshes.Count <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod} {tile}: {output.Meshes.Count} bundles").IsTrue();
                 Console.WriteLine($"core {lod} {tile}: {triangles} triangles, {output.Meshes.Count} bundles, {output.Parts.Count} parts");
             }
-        var first = module.Build(ctx, CoreTiles.Of(CoreSite.Pieces(world)[0].Anchor, LodLevel.L0), LodLevel.L0);
-        var second = new CoreModule().Build(Context(RealWorld(), palette), CoreTiles.Of(CoreSite.Pieces(world)[0].Anchor, LodLevel.L0), LodLevel.L0);
+        var first = module.Build(ctx, TileGrid.At(CoreSite.Pieces(world)[0].Anchor, LodLevel.L0), LodLevel.L0);
+        var second = new CoreModule().Build(Context(Campus.Tests.RealMapFixture.Load().World, palette), TileGrid.At(CoreSite.Pieces(world)[0].Anchor, LodLevel.L0), LodLevel.L0);
         AssertThat(first.Meshes.Count == second.Meshes.Count && first.Meshes.Zip(second.Meshes).All(p => p.First.Position.SequenceEqual(p.Second.Position))).OverrideFailureMessage("deterministic").IsTrue();
     }
 
     [TestCase]
     public void L2CellsCarryNoPartThatOnlyBuildsAtL0AndL1()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var module = new CoreModule();
-        var ctx = Context(world, Palette());
+        var ctx = Context(world, Campus.Contracts.Tests.PaletteFixture.Catalog);
         // The oracle is the part definitions themselves; the context carries the catalogue captured from them (contract-36).
         var bench = new Campus.Gen.Parts.Street.BenchPart().Lods.Keys.ToArray();
         AssertThat(bench.SequenceEqual([LodLevel.L0, LodLevel.L1])).OverrideFailureMessage("the bench builds at L0 and L1 only").IsTrue();
@@ -166,18 +166,18 @@ public sealed class CoreModuleTests
         AssertThat(catalog.Supports(new PartId(PartCatalog.StreetLamp), LodLevel.L2)).OverrideFailureMessage("the street lamp builds at L2").IsTrue();
 
         var plaza = CoreSite.Pieces(world)[0];
-        var near = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L0), LodLevel.L0);
+        var near = module.Build(ctx, TileGrid.At(plaza.Anchor, LodLevel.L0), LodLevel.L0);
         AssertThat(near.Parts.Any(p => p.Part.Value == PartCatalog.Bench)).OverrideFailureMessage("the plaza cell still seats its benches at L0").IsTrue();
-        var l2Tiles = CoreSite.Pieces(world).Select(p => CoreTiles.Of(p.Anchor, LodLevel.L2)).Distinct().ToArray();
+        var l2Tiles = CoreSite.Pieces(world).Select(p => TileGrid.At(p.Anchor, LodLevel.L2)).Distinct().ToArray();
         AssertThat(l2Tiles.Length > 0).OverrideFailureMessage("the zone has L2 cells").IsTrue();
         foreach (var lod in new[] { LodLevel.L2, LodLevel.L3, LodLevel.L4 })
-            foreach (var tile in CoreSite.Pieces(world).Select(p => CoreTiles.Of(p.Anchor, lod)).Distinct())
+            foreach (var tile in CoreSite.Pieces(world).Select(p => TileGrid.At(p.Anchor, lod)).Distinct())
                 foreach (var part in module.Build(ctx, tile, lod).Parts)
                 {
                     AssertThat(catalog.Supports(part.Part, lod)).OverrideFailureMessage($"{lod} {tile}: {part.Part.Value} has no {lod} builder").IsTrue();
                     AssertThat(part.Part.Value != PartCatalog.Bench).OverrideFailureMessage($"{lod} {tile}: no bench").IsTrue();
                 }
-        var far = module.Build(ctx, CoreTiles.Of(plaza.Anchor, LodLevel.L2), LodLevel.L2);
+        var far = module.Build(ctx, TileGrid.At(plaza.Anchor, LodLevel.L2), LodLevel.L2);
         AssertThat(far.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps).OverrideFailureMessage("the rim lamps (L0 to L2) stay at L2").IsTrue();
     }
 
@@ -185,9 +185,9 @@ public sealed class CoreModuleTests
     public void PlacedPartsAreCheckedAgainstTheContextCatalogueOnly()
     {
         // contract-36: a missing catalogue is "not supplied" and an unknown part is an error; neither passes the part through.
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var plaza = CoreSite.Pieces(world)[0];
-        var tile = CoreTiles.Of(plaza.Anchor, LodLevel.L0);
+        var tile = TileGrid.At(plaza.Anchor, LodLevel.L0);
         var bare = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
         InvalidOperationException? missingLods = null;
         try { new CoreModule().Build(bare, tile, LodLevel.L0); }
@@ -203,11 +203,12 @@ public sealed class CoreModuleTests
     [TestCase]
     public void GnomonPointsTrueNorthAtTheLatitude()
     {
-        var sundial = (Sundial)CoreSite.Pieces(RealWorld())[1];
+        var world = Campus.Tests.RealMapFixture.Load().World;
+        var sundial = CoreSite.Pieces(world).OfType<Sundial>().Single();
         var g = sundial.Gnomon;
         AssertThat(MathF.Abs(g.X) < 0.01f && g.Z < 0).OverrideFailureMessage("gnomon in the north meridian plane, pointing north (−z)").IsTrue();
         var elevation = MathF.Asin(g.Y) * 180f / MathF.PI;
-        AssertThat(MathF.Abs(elevation - 30.75f) < 0.01f).OverrideFailureMessage($"elevation {elevation}° equals the latitude").IsTrue();
+        AssertThat(MathF.Abs(elevation - world.Features[CoreIds.Sundial].Number("gnomonElevationDeg")) < 0.01f).OverrideFailureMessage($"elevation {elevation}° equals the latitude").IsTrue();
         AssertThat(g.Y < 0.55f).OverrideFailureMessage("dial face normal y below the snow threshold (MAP-QSH-CORE)").IsTrue();
         AssertThat(sundial.Collide().All(c => c.Foot != Contracts.Audio.FootMat.Auto)).OverrideFailureMessage("every collider has a foot material").IsTrue();
     }
@@ -215,11 +216,11 @@ public sealed class CoreModuleTests
     [TestCase]
     public void TerrainOverlayIsWellFormed()
     {
-        var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "overlay", "terrain", "core.terrain.json");
+        var path = Path.Combine(Campus.Tests.RealMapFixture.DataDirectory(), "overlay", "terrain", "core.terrain.json");
         // The contract parser checks field names, discriminators and numeric bounds.
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(path));
         AssertThat(file.Zone.Value == "core" && file.Owner.Value == "WP-16").OverrideFailureMessage("zone and owner").IsTrue();
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var roads = world.Network.Roads.Select(r => r.Id).ToHashSet();
         bool Exists(FeatureId id) => world.Features.ContainsKey(id) || roads.Contains(id);
         foreach (var op in file.Ops)
@@ -241,7 +242,7 @@ public sealed class CoreModuleTests
     public void OverlayParsesStrictly()
     {
         // Every key of the core overlay maps onto the contract records: a misspelt or stray field fails here, not silently in a build.
-        var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "overlay", "core.d");
+        var path = Path.Combine(Campus.Tests.RealMapFixture.DataDirectory(), "overlay", "core.d");
         var strict = new JsonSerializerOptions(ContractJson.Options)
         {
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
@@ -249,7 +250,7 @@ public sealed class CoreModuleTests
         };
         var files = Directory.GetFiles(path, "*.json").Order(StringComparer.Ordinal)
             .Select(file => JsonSerializer.Deserialize<OverlayFile>(File.ReadAllBytes(file), strict)!).ToArray();
-        AssertThat(files.All(file => file.Zone.Value == "core" && file.Owner.Value == "WP-16" && file.Map?.Value == "qingshuihe")).OverrideFailureMessage("zone, owner and map").IsTrue();
+        AssertThat(files.All(file => file.Zone.Value == "core" && file.Owner.Value == "WP-16" && file.Map == Campus.Tests.RealMapFixture.Entry().Descriptor.Id)).OverrideFailureMessage("zone, owner and map").IsTrue();
         var operations = files.SelectMany(file => file.Ops).ToArray();
         foreach (var op in operations.OfType<AddOp>())
         {
@@ -257,8 +258,8 @@ public sealed class CoreModuleTests
             AssertThat(op.Reason.Length > 10).OverrideFailureMessage($"{op.Id.Value} has a reason").IsTrue();
         }
         AssertThat(operations.OfType<AddOp>().Where(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry).Select(op => op.Id.Value)
-            .SequenceEqual(GinkgoWalks.Concat(GinkgoSidewalks.Select(s => s.Kept)))).OverrideFailureMessage("the ginkgo walks and the kept sidewalk ends are the overlay's only added roads").IsTrue();
-        AssertThat(operations.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(GinkgoSidewalks.Select(s => s.Hidden))).OverrideFailureMessage("the two ginkgo sidewalks are the overlay's only hides").IsTrue();
+            .SequenceEqual(CoreIds.GinkgoWalks.Concat(CoreIds.GinkgoSidewalks.Select(s => s.Kept)))).OverrideFailureMessage("the ginkgo walks and the kept sidewalk ends are the overlay's only added roads").IsTrue();
+        AssertThat(operations.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(CoreIds.GinkgoSidewalks.Select(s => s.Hidden))).OverrideFailureMessage("the two ginkgo sidewalks are the overlay's only hides").IsTrue();
     }
 
     [TestCase]
@@ -267,17 +268,17 @@ public sealed class CoreModuleTests
         // 0h follow-up (Opus 16:00 ① and 19:40): each OSM sidewalk running within 2.5 m of a ginkgo walk is hidden whole, from the
         // features and from the road network; its ends off the walk come back as a kept piece in the original point order, width
         // and type, joined to the walk's end. Nothing of the old sidewalk is lost: every stretch is under the walk or the kept piece.
-        var world = RealWorld();
-        var path = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "network.json");
+        var world = Campus.Tests.RealMapFixture.Load().World;
+        var path = Path.Combine(Campus.Tests.RealMapFixture.DataDirectory(), "network.json");
         var original = JsonSerializer.Deserialize<WorldNetwork>(File.ReadAllBytes(path), ContractJson.Options)!;
-        foreach (var (hidden, walk, kept) in GinkgoSidewalks)
+        foreach (var (hidden, walk, kept) in CoreIds.GinkgoSidewalks)
         {
             AssertThat(world.Network.Roads.All(r => r.Id.Value != hidden) && !world.Features.ContainsKey(new(hidden))).OverrideFailureMessage($"{hidden} is gone from the roads and the features").IsTrue();
             var old = original.Roads.Single(r => r.Id.Value == hidden);
             var walkLine = world.Network.Roads.Single(r => r.Id.Value == walk).Line.Points;
             var piece = world.Network.Roads.Single(r => r.Id.Value == kept);
-            AssertThat(piece.Width == old.Width && Prop(piece.Props, "roadType")?.GetString() == Prop(old.Props, "highway")?.GetString()
-                && Prop(piece.Props, "footway")?.GetString() == Prop(old.Props, "footway")?.GetString()).OverrideFailureMessage($"{kept}: the old width and type").IsTrue();
+            AssertThat(piece.Width == old.Width && WorldProps.TryText(piece.Props, "roadType") == WorldProps.TryText(old.Props, "highway")
+                && WorldProps.TryText(piece.Props, "footway") == WorldProps.TryText(old.Props, "footway")).OverrideFailureMessage($"{kept}: the old width and type").IsTrue();
             var points = piece.Line.Points;
             var joined = points[0] == walkLine[^1] ? points.Skip(1).ToArray() : points[^1] == walkLine[^1] ? points.Take(points.Count - 1).ToArray() : null;
             AssertThat(joined is { Length: >= 2 }).OverrideFailureMessage($"{kept}: one end is the walk's end").IsTrue();
@@ -285,11 +286,11 @@ public sealed class CoreModuleTests
             AssertThat(at >= 0 && joined.Select((p, i) => at + i < old.Line.Points.Count && old.Line.Points[at + i] == p).All(same => same)
                 && (at == 0 || at + joined.Length == old.Line.Points.Count)).OverrideFailureMessage($"{kept}: the old points in the old order, out to the old end").IsTrue();
             var line = old.Line.Points;
-            for (var s = 0f; s <= Length(line); s += 0.5f)
+            for (var s = 0f; s <= PlanGeometry.Length(line); s += 0.5f)
             {
-                var p = At(line, s);
+                var p = PlanGeometry.Sample(line, s).Point;
                 // The kept piece leaves the old line only where it bends onto the walk's end (1.26 m at most).
-                AssertThat(PolylineDistance(p, walkLine) <= 2.5f || PolylineDistance(p, points) <= 1.3f).OverrideFailureMessage($"{hidden}: ({p.X:0.0}, {p.Y:0.0}) at s {s:0.0} is under neither {walk} nor {kept}").IsTrue();
+                AssertThat(MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(walkLine, p)) <= 2.5f || MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(points, p)) <= 1.3f).OverrideFailureMessage($"{hidden}: ({p.X:0.0}, {p.Y:0.0}) at s {s:0.0} is under neither {walk} nor {kept}").IsTrue();
             }
         }
     }
@@ -300,96 +301,53 @@ public sealed class CoreModuleTests
         // max-108 0h-a: the walks between the 7 m and 14 m ginkgo rows keep their paved edge 3 m or more off every building and
         // water outline and waterway, and each end lies on the paving of an existing walk, so no end is a stub.
         const float half = 1.25f;
-        var world = RealWorld();
-        var avenue = world.Network.Roads.Single(r => r.Id.Value == "qsh:source:way:544688571").Line.Points;
+        var world = Campus.Tests.RealMapFixture.Load().World;
+        var avenue = world.Network.Roads.Single(r => r.Id.Value == CoreIds.GinkgoAvenue).Line.Points;
         // Any other walk of the network counts, design or OSM: the kept sidewalk ends at the bridges are design roads.
-        var walks = world.Network.Roads.Where(r => !GinkgoWalks.Contains(r.Id.Value) &&
-            (Prop(r.Props, "roadType") ?? Prop(r.Props, "highway"))?.GetString() is "footway" or "path" or "pedestrian").ToArray();
-        foreach (var id in GinkgoWalks)
+        var walks = world.Network.Roads.Where(r => !CoreIds.GinkgoWalks.Contains(r.Id.Value) &&
+            (WorldProps.TryText(r.Props, "roadType") ?? WorldProps.TryText(r.Props, "highway")) is "footway" or "path" or "pedestrian").ToArray();
+        foreach (var id in CoreIds.GinkgoWalks)
         {
             var feature = world.Features[new(id)];
             AssertThat(feature.Kind.Value == "road" && feature.Zone?.Value == "core").OverrideFailureMessage($"{id}: a core road feature").IsTrue();
-            AssertThat(Prop(feature.Props, "roadType")?.GetString() == "footway" && Prop(feature.Props, "width")?.GetSingle() == 2 * half).OverrideFailureMessage($"{id}: a 2.5 m footway").IsTrue();
+            AssertThat(WorldProps.TryText(feature.Props, "roadType") == "footway" && WorldProps.TryNumber(feature.Props, "width") == 2 * half).OverrideFailureMessage($"{id}: a 2.5 m footway").IsTrue();
             var line = ((PolylineGeometry)feature.Geometry).Line.Points;
             var min = line.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(20f);
             var max = line.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(20f);
             var outlines = Outlines(world, "building").Concat(Outlines(world, "water"))
                 .Where(r => r.Outer.Any(q => q.X >= min.X && q.X <= max.X && q.Y >= min.Y && q.Y <= max.Y)).ToArray();
-            for (var s = 0f; s <= Length(line); s += 0.5f)
+            for (var s = 0f; s <= PlanGeometry.Length(line); s += 0.5f)
             {
-                var p = At(line, s);
+                var p = PlanGeometry.Sample(line, s).Point;
                 var wall = outlines.Min(r => PlanGeometry.Contains(r, p) ? 0f
                     : r.Holes.Aggregate(PlanGeometry.DistanceToRing(p, r.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h))));
                 AssertThat(wall - half >= 3f).OverrideFailureMessage($"{id}: paving {wall - half:0.00} m off a wall or water edge at ({p.X:0.0}, {p.Y:0.0})").IsTrue();
-                var river = world.Network.Waterways.Min(w => PolylineDistance(p, w.Line.Points) - w.Width * 0.5f);
+                var river = world.Network.Waterways.Min(w => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(w.Line.Points, p)) - w.Width * 0.5f);
                 AssertThat(river - half >= 3f).OverrideFailureMessage($"{id}: paving {river - half:0.00} m off a waterway at ({p.X:0.0}, {p.Y:0.0})").IsTrue();
-                var offset = PolylineDistance(p, avenue);
+                var offset = MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(avenue, p));
                 AssertThat(MathF.Abs(offset - 10.5f) < 0.15f).OverrideFailureMessage($"{id}: {offset:0.00} m off the avenue's centre line at s {s:0.0}").IsTrue();
             }
             foreach (var end in new[] { line[0], line[^1] })
-                AssertThat(walks.Any(w => PolylineDistance(end, w.Line.Points) <= half + MathF.Max(w.Width, 2f) * 0.5f)).OverrideFailureMessage($"{id}: the end ({end.X:0.0}, {end.Y:0.0}) lies on an existing walk's paving").IsTrue();
+                AssertThat(walks.Any(w => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(w.Line.Points, end)) <= half + MathF.Max(w.Width, 2f) * 0.5f)).OverrideFailureMessage($"{id}: the end ({end.X:0.0}, {end.Y:0.0}) lies on an existing walk's paving").IsTrue();
         }
     }
 
     // ---------------------------------------------------------------- fixtures
 
-    private static readonly string[] GinkgoWalks = ["design:core-ginkgo-walk-west", "design:core-ginkgo-walk-east"];
-
-    /// <summary>The OSM sidewalks the ginkgo walks replace, each with its walk and the kept piece off the walk.</summary>
-    private static readonly (string Hidden, string Walk, string Kept)[] GinkgoSidewalks =
-    [
-        ("qsh:source:way:544161548", "design:core-ginkgo-walk-west", "design:core-ginkgo-sidewalk-west-bridge"),
-        ("qsh:source:way:544161558", "design:core-ginkgo-walk-east", "design:core-ginkgo-sidewalk-east-bridge"),
-    ];
-
-    private static JsonElement? Prop(JsonElement? props, string key) =>
-        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(key, out var value) ? value : null;
-
     /// <summary>Polygons of one kind, part by part where a feature has parts (a part's own kind wins, as the world model reads it).</summary>
     private static IEnumerable<PolygonRings> Outlines(IWorldModel world, string kind)
     {
-        static IEnumerable<PolygonRings> Of(OverlayGeometry g) => g switch
-        {
-            PolygonGeometry polygon => [polygon.Rings],
-            MultiPolygonGeometry multi => multi.Polygons,
-            _ => [],
-        };
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             if (feature.Parts.Count == 0)
             {
-                if (feature.Kind.Value == kind) foreach (var rings in Of(feature.Geometry)) yield return rings;
+                if (feature.Kind.Value == kind) foreach (var rings in WorldFeatureGeometry.PolygonsOf(feature.Geometry)) yield return rings;
                 continue;
             }
             foreach (var part in feature.Parts)
-                if ((Prop(part.Props, "kind")?.GetString() ?? feature.Kind.Value) == kind)
-                    foreach (var rings in Of(part.Geometry)) yield return rings;
+                if ((WorldProps.TryText(part.Props, "kind") ?? feature.Kind.Value) == kind)
+                    foreach (var rings in WorldFeatureGeometry.PolygonsOf(part.Geometry)) yield return rings;
         }
-    }
-
-    private static float Length(IReadOnlyList<Vector2> line)
-    {
-        var length = 0f;
-        for (var i = 1; i < line.Count; i++) length += Vector2.Distance(line[i - 1], line[i]);
-        return length;
-    }
-
-    private static Vector2 At(IReadOnlyList<Vector2> line, float s)
-    {
-        for (var i = 1; i < line.Count; i++)
-        {
-            var span = Vector2.Distance(line[i - 1], line[i]);
-            if (s <= span || i == line.Count - 1) return Vector2.Lerp(line[i - 1], line[i], span > 0f ? MathF.Min(1f, s / span) : 0f);
-            s -= span;
-        }
-        return line[^1];
-    }
-
-    private static float PolylineDistance(Vector2 p, IReadOnlyList<Vector2> line)
-    {
-        var best = float.MaxValue;
-        for (var i = 1; i < line.Count; i++) best = MathF.Min(best, PlanGeometry.SegmentDistanceSquared(p, line[i - 1], line[i]));
-        return MathF.Sqrt(best);
     }
 
     private static string Describe(Claim claim) => claim switch
@@ -418,8 +376,6 @@ public sealed class CoreModuleTests
     private static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
-
-
     private static BuildContext Context(IWorldModel world, PaletteCatalog? palette = null) => new()
     {
         World = world,
@@ -428,37 +384,6 @@ public sealed class CoreModuleTests
         Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog,
         PartLods = PartLodFixture.Catalog,
     };
-
-    private static IWorldModel RealWorld()
-    {
-        var dir = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
-        var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
-        foreach (var name in new[] { "campus.json", "map.json", "network.json", "interiors.json" })
-            files[name] = File.ReadAllBytes(Path.Combine(dir, name));
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(dir, "overlay"), "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
-            files["overlay/" + Path.GetRelativePath(Path.Combine(dir, "overlay"), file).Replace('\\', '/')] = File.ReadAllBytes(file);
-        return WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
-    }
-
-    private static PaletteCatalog Palette()
-    {
-        var dir = Path.Combine(FindRepository(), "game", "style", "palette");
-        var entries = new List<PaletteEntry>();
-        foreach (var file in new[] { Path.Combine(dir, "core.json") }.Concat(Directory.EnumerateFiles(Path.Combine(dir, "ext"), "WP-*.json").Order(StringComparer.Ordinal)))
-            entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return new PaletteCatalog(new PaletteRegistry(entries), []);
-    }
-
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
-    }
 
     /// <summary>A sunken disc at <paramref name="floor"/> out to <paramref name="radius"/>, rising at <paramref name="grade"/> back to 0.</summary>
     private static FormulaTerrain BowlTerrain(Vector2 centre, float radius, float floor, float grade) =>

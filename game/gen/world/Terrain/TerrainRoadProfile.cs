@@ -375,18 +375,14 @@ internal sealed class TerrainRoadProfile
             if (Excluded(projection.Station)) continue;
             var taper = TerrainDifferential.Constant(1) - (projection.Distance - minimum) * (1 / roadWidth);
             if (taper.Height <= 0) continue;
-            var ratio = Divide(minimum, projection.Distance);
-            var weight = Product(Product(taper, taper), Product(ratio, ratio));
+            var ratio = TerrainDifferential.Divide(minimum, projection.Distance);
+            var weight = TerrainDifferential.Product(TerrainDifferential.Product(taper, taper), TerrainDifferential.Product(ratio, ratio));
             var value = At(projection.Station);
-            weighted += Product(weight, new(value.Y, value.Grade * projection.Dx, value.Grade * projection.Dz)); sum += weight;
+            weighted += TerrainDifferential.Product(weight, new(value.Y, value.Grade * projection.Dx, value.Grade * projection.Dz)); sum += weight;
         }
         if (sum.Height == 0) throw new InvalidOperationException($"A road surface has no non-structural profile segment at ({x:R},{z:R}), nearest station={nearest.Station:R}/{Length:R}, exclusions={string.Join(';', _exclusions)}.");
-        return Divide(weighted, sum);
+        return TerrainDifferential.Divide(weighted, sum);
 
-        static TerrainDifferential Product(TerrainDifferential a, TerrainDifferential c) => new(a.Height * c.Height,
-            a.Dx * c.Height + a.Height * c.Dx, a.Dz * c.Height + a.Height * c.Dz);
-        static TerrainDifferential Divide(TerrainDifferential a, TerrainDifferential c) => new(a.Height / c.Height,
-            (a.Dx * c.Height - a.Height * c.Dx) / (c.Height * c.Height), (a.Dz * c.Height - a.Height * c.Dz) / (c.Height * c.Height));
     }
     public bool Excluded(double station) => _exclusions.Any(e => station >= e.From - 0.0000001 && station <= e.To + 0.0000001);
     private bool TouchesExclusion(double a, double b) => _exclusions.Any(e => e.From < b && e.To > a);

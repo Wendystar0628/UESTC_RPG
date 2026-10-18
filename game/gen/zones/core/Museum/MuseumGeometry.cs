@@ -12,18 +12,10 @@ namespace Campus.Gen.Zones.Core.Museum;
 /// </summary>
 public static class MuseumGeometry
 {
-    /// <summary>The ring in positive orientation (reversed when its shoelace area is negative).</summary>
-    public static IReadOnlyList<Vector2> Positive(IReadOnlyList<Vector2> ring)
-    {
-        return PlanGeometry.SignedArea(ring) >= 0 ? ring.ToArray() : ring.Reverse().ToArray();
-    }
 
     /// <summary>Outward unit normal of edge <paramref name="i"/>.</summary>
-    public static Vector2 Normal(IReadOnlyList<Vector2> ring, int i)
-    {
-        var d = Vector2.Normalize(ring[(i + 1) % ring.Count] - ring[i]);
-        return new(d.Y, -d.X);
-    }
+    public static Vector2 Normal(IReadOnlyList<Vector2> ring, int i) =>
+        PlanGeometry.RightUnitNormal(ring[i], ring[(i + 1) % ring.Count]);
 
     /// <summary>The wall face of edge <paramref name="i"/>: u from point i, outward normal, length.</summary>
     public static Face FaceOf(IReadOnlyList<Vector2> ring, int i)
@@ -71,13 +63,12 @@ public static class MuseumGeometry
     }
 
     /// <summary>
-    /// The ring scaled about its box centre in its own long-axis frame (the longest edge's direction) to the given length
+    /// The ring scaled about its box centre in the registered axis frame to the given length
     /// and width: an inner octagon parallel to the outer one, as the central hall is to the gallery.
     /// </summary>
-    public static IReadOnlyList<Vector2> Scale(IReadOnlyList<Vector2> ring, float length, float width)
+    public static IReadOnlyList<Vector2> Scale(IReadOnlyList<Vector2> ring, Vector2 along, float length, float width)
     {
-        var longest = Enumerable.Range(0, ring.Count).MaxBy(i => Vector2.DistanceSquared(ring[i], ring[(i + 1) % ring.Count]));
-        var u = Vector2.Normalize(ring[(longest + 1) % ring.Count] - ring[longest]);
+        var u = along;
         var v = new Vector2(-u.Y, u.X);
         float u0 = ring.Min(p => Vector2.Dot(p, u)), u1 = ring.Max(p => Vector2.Dot(p, u));
         float v0 = ring.Min(p => Vector2.Dot(p, v)), v1 = ring.Max(p => Vector2.Dot(p, v));
@@ -86,22 +77,4 @@ public static class MuseumGeometry
         return ring.Select(p => centre + u * (Vector2.Dot(p - centre, u) * su) + v * (Vector2.Dot(p - centre, v) * sv)).ToArray();
     }
 
-    /// <summary>
-    /// How far edge <paramref name="i"/> of <paramref name="ring"/> must move out to reach the nearest edge of
-    /// <paramref name="outer"/> running parallel to it (within about 11°), measured at that edge's middle; the fallback
-    /// when none lies outside it.
-    /// </summary>
-    public static float ParallelDistance(IReadOnlyList<Vector2> ring, int i, IReadOnlyList<Vector2> outer, float fallback)
-    {
-        Vector2 a = ring[i], d = Vector2.Normalize(ring[(i + 1) % ring.Count] - a), n = Normal(ring, i);
-        var best = float.MaxValue;
-        for (var j = 0; j < outer.Count; j++)
-        {
-            Vector2 p = outer[j], q = outer[(j + 1) % outer.Count];
-            if (Vector2.Distance(p, q) < 1f || MathF.Abs(Vector2.Dot(Vector2.Normalize(q - p), d)) < 0.98f) continue;
-            var distance = Vector2.Dot((p + q) * 0.5f - a, n);
-            if (distance > 0.5f && distance < best) best = distance;
-        }
-        return best < float.MaxValue ? best : fallback;
-    }
 }

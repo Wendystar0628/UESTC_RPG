@@ -22,83 +22,8 @@ namespace Campus.Gen.Zones.South.Xuanbang;
 internal static class ClockTower
 {
     /// <summary>Frame at the footprint centre: +X along the north-east-running faces, +Z towards the south-east door face.</summary>
-    internal static (PlanFrame Frame, float HalfX, float HalfZ) FrameOf(IReadOnlyList<Vector2> ring)
-    {
-        ring = Quadrilateral(ring);
-        var centre = PlanMath.Centroid(ring);
-        // The edge running closest to 42° (or 222°) gives +X; its neighbour gives the depth.
-        var best = 0;
-        var bestError = float.MaxValue;
-        for (var i = 0; i < 4; i++)
-        {
-            var d = ring[(i + 1) % 4] - ring[i];
-            var error = MathF.Abs(PlanMath.Turn(ZoneSite.Bearing(d) - X.ClockAxis));
-            error = MathF.Min(error, MathF.Abs(PlanMath.Turn(ZoneSite.Bearing(d) - X.ClockAxis - 180f)));
-            if (error < bestError) { bestError = error; best = i; }
-        }
-        var along = ring[(best + 1) % 4] - ring[best];
-        var across = ring[(best + 2) % 4] - ring[(best + 1) % 4];
-        if (MathF.Abs(PlanMath.Turn(ZoneSite.Bearing(along) - X.ClockAxis)) > 90f) along = -along;
-        var f = PlanFrame.Along(centre, along);
-        return (f, Length(along) * 0.5f, Length(across) * 0.5f);
-    }
-
-    /// <summary>
-    /// The footprint as four corners: a four-point ring is returned untouched; otherwise collinear points are dropped, and
-    /// if the rest is still not four points the smallest-area bounding rectangle (edge-aligned) stands in.
-    /// </summary>
-    internal static IReadOnlyList<Vector2> Quadrilateral(IReadOnlyList<Vector2> ring)
-    {
-        if (ring.Count == 4) return ring;
-        if (ring.Count < 3) throw new InvalidOperationException("The clock tower footprint needs at least three points.");
-        var pts = new List<Vector2>(ring);
-        for (var again = true; again && pts.Count > 3;)
-        {
-            again = false;
-            for (var i = 0; i < pts.Count; i++)
-            {
-                var a = pts[(i + pts.Count - 1) % pts.Count];
-                var b = pts[i];
-                var c = pts[(i + 1) % pts.Count];
-                var ab = b - a;
-                var bc = c - b;
-                var cross = ab.X * bc.Y - ab.Y * bc.X;
-                var scale = Length(ab) * Length(bc);
-                if (scale < 1e-6f || MathF.Abs(cross) <= 1e-3f * scale)
-                {
-                    pts.RemoveAt(i);
-                    again = true;
-                    break;
-                }
-            }
-        }
-        if (pts.Count == 4) return pts;
-        var bestArea = float.MaxValue;
-        Vector2[]? best = null;
-        for (var i = 0; i < pts.Count; i++)
-        {
-            var e = pts[(i + 1) % pts.Count] - pts[i];
-            var len = Length(e);
-            if (len < 1e-6f) continue;
-            var u = e / len;
-            var w = new Vector2(-u.Y, u.X);
-            float u0 = float.MaxValue, u1 = float.MinValue, w0 = float.MaxValue, w1 = float.MinValue;
-            foreach (var p in pts)
-            {
-                var pu = Vector2.Dot(p, u);
-                var pw = Vector2.Dot(p, w);
-                u0 = MathF.Min(u0, pu); u1 = MathF.Max(u1, pu);
-                w0 = MathF.Min(w0, pw); w1 = MathF.Max(w1, pw);
-            }
-            var area = (u1 - u0) * (w1 - w0);
-            if (area < bestArea - 1e-4f)
-            {
-                bestArea = area;
-                best = [u * u0 + w * w0, u * u1 + w * w0, u * u1 + w * w1, u * u0 + w * w1];
-            }
-        }
-        return best ?? throw new InvalidOperationException("The clock tower footprint is degenerate.");
-    }
+    internal static (PlanFrame Frame, float HalfX, float HalfZ) FrameOf(FeatureRectangle plan) =>
+        (plan.Frame, plan.Width * 0.5f, plan.Depth * 0.5f);
 
     /// <summary>Faces as frames at the face centre on the footprint line, +Z outward; index 0 is the south-east (door) face.</summary>
     internal static IEnumerable<(PlanFrame Face, float Width, bool Door)> Faces(PlanFrame f, float hx, float hz)
@@ -110,9 +35,9 @@ internal static class ClockTower
     }
 
     /// <summary>Centre of each dial (world) and its outward plan direction: the pivots WP-26 turns the hands about.</summary>
-    internal static IEnumerable<(Vector3 Centre, Vector2 Normal)> DialCentres(IReadOnlyList<Vector2> ring, float y)
+    internal static IEnumerable<(Vector3 Centre, Vector2 Normal)> DialCentres(FeatureRectangle plan, float y)
     {
-        var (f, hx, hz) = FrameOf(ring);
+        var (f, hx, hz) = FrameOf(plan);
         foreach (var (face, _, _) in Faces(f, hx - X.StageInset, hz - X.StageInset))
         {
             var p = face.P(0, X.DialProud);
@@ -127,9 +52,9 @@ internal static class ClockTower
     private const float SlitGlassZ = -0.2f, PortalGlassZ = -0.15f;
 
     /// <summary>The slit panes in grid order: column face * 2 + (0 left, 1 right), row = storey; 2 cm of each pane runs into the wall.</summary>
-    internal static IEnumerable<GlazedOpening> Slits(IReadOnlyList<Vector2> ring, float y)
+    internal static IEnumerable<GlazedOpening> Slits(FeatureRectangle plan, float y)
     {
-        var (f, hx, hz) = FrameOf(ring);
+        var (f, hx, hz) = FrameOf(plan);
         var index = 0;
         foreach (var (g, _, _) in Faces(f, hx, hz))
         {
@@ -148,9 +73,9 @@ internal static class ClockTower
     /// The portal panes, one per face in face order: the glazed door's arch on the closed faces, the fanlight over the springing on
     /// the open door face. The wall around the arch hides each pane's corners.
     /// </summary>
-    internal static IEnumerable<GlazedOpening> Portals(IReadOnlyList<Vector2> ring, float y)
+    internal static IEnumerable<GlazedOpening> Portals(FeatureRectangle plan, float y)
     {
-        var (f, hx, hz) = FrameOf(ring);
+        var (f, hx, hz) = FrameOf(plan);
         var index = 0;
         foreach (var (g, _, door) in Faces(f, hx, hz))
         {
@@ -161,16 +86,16 @@ internal static class ClockTower
     }
 
     /// <summary><paramref name="top"/> is the tower's height from the map data: the finial's tip.</summary>
-    internal static void Build(SiteBuilder b, IReadOnlyList<Vector2> ring, float top, float y)
+    internal static void Build(SiteBuilder b, FeatureRectangle plan, float top, float y)
     {
-        var (f, hx, hz) = FrameOf(ring);
+        var (f, hx, hz) = FrameOf(plan);
         var shaft = XuanbangSite.ClockAllocation(b.Context, XuanbangSite.ShaftKey);
         var portals = XuanbangSite.ClockAllocation(b.Context, XuanbangSite.PortalKey);
         // Numbered panes once the map's window numbering is in the context; without one the faces keep their plain glass.
         if (b.Detail != SiteDetail.Mass)
         {
-            if (shaft is { } s) WindowNumbers.Panes(b, Slits(ring, y), s, W.Research, W.Stair);
-            if (portals is { } p) WindowNumbers.Panes(b, Portals(ring, y), p, W.Research, W.Corridor);
+            if (shaft is { } s) WindowNumbers.Panes(b, Slits(plan, y), s, W.Research, W.Stair);
+            if (portals is { } p) WindowNumbers.Panes(b, Portals(plan, y), p, W.Research, W.Corridor);
         }
         var detail = b.Detail;
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
@@ -263,7 +188,7 @@ internal static class ClockTower
         if (detail == SiteDetail.Mass) return;
         var top = X.SlitFirst + (X.SlitRows - 1) * X.SlitPitch + X.SlitHeight;
         if (slitGlass)
-            b.Add(PartGeometryKernel.BeveledBox(X.SlitGap + 2 * X.SlitWidth + 0.4f, top - X.SlitFirst + 0.4f, 0.05f, 0, L.Glass), g.At(0, y + X.SlitFirst - 0.2f, SlitGlassZ));
+            b.Add(PartGeometryKernel.BeveledBox(X.SlitGap + 2 * X.SlitWidth + 0.4f, top - X.SlitFirst + 0.4f, 0.05f, 0, ZoneLooks.Glass), g.At(0, y + X.SlitFirst - 0.2f, SlitGlassZ));
         // Archivolt round the portal and a keystone.
         var ring = Shapes.RoundArch(0, 0, X.PortalWidth + 0.9f, X.PortalSpring, segments);
         var hole = Shapes.RoundArch(0, -0.01f, X.PortalWidth, X.PortalSpring + 0.01f, segments);
@@ -284,12 +209,12 @@ internal static class ClockTower
         var arch = Shapes.RoundArch(0, 0, X.PortalWidth, X.PortalSpring, segments);
         if (!door)
         {
-            if (portalGlass) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(arch), 0.05f, L.Glass), g.At(0, y, PortalGlassZ));
+            if (portalGlass) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(arch), 0.05f, ZoneLooks.Glass), g.At(0, y, PortalGlassZ));
             b.Add(PartGeometryKernel.BeveledBox(0.1f, X.PortalSpring, 0.1f, 0, L.DarkFrame), g.At(0, y, -0.08f));
             return;
         }
         var fan = Shapes.RoundArch(0, X.PortalSpring - 0.01f, X.PortalWidth, 0.01f, segments);
-        if (portalGlass) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(fan), 0.05f, L.Glass), g.At(0, y, PortalGlassZ));
+        if (portalGlass) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(fan), 0.05f, ZoneLooks.Glass), g.At(0, y, PortalGlassZ));
         b.Add(PartGeometryKernel.BeveledBox(X.PortalWidth, 0.12f, 0.12f, 0, L.DarkFrame), g.At(0, y + X.PortalSpring - 0.06f, -0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartGeometryKernel.BeveledBox(0.06f, X.PortalSpring - 0.1f, 1.1f, 0.012f, L.Wood), g.At(side * (X.PortalWidth * 0.5f - 0.05f), y, 0.2f));
@@ -316,9 +241,9 @@ internal static class ClockTower
         }
     }
 
-    internal static void Collide(SiteColliders c, IReadOnlyList<Vector2> ring, float y)
+    internal static void Collide(SiteColliders c, FeatureRectangle plan, float y)
     {
-        var (f, hx, hz) = FrameOf(ring);
+        var (f, hx, hz) = FrameOf(plan);
         foreach (var (face, width, door) in Faces(f, hx, hz))
         {
             var half = width * 0.5f + 0.35f;
@@ -331,5 +256,4 @@ internal static class ClockTower
         }
     }
 
-    private static float Length(Vector2 v) => MathF.Sqrt(v.X * v.X + v.Y * v.Y);
 }

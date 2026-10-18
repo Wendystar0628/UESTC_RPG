@@ -77,37 +77,18 @@ public sealed partial class SixSite
     /// <summary>The two narrow decks: from the link's centre line out to the facing faces of B and C.</summary>
     internal static IEnumerable<(Vector2 From, Vector2 To)> Bridges(IWorldModel world)
     {
-        var ring = Plan(world, S.EntityC, S.LinkBC).Outer;
-        var centre = PlanMath.Centroid(ring);
-        var across = new Vector2(-S.Axis.Y, S.Axis.X);
-        foreach (var (entity, part) in new[] { (S.EntityB, S.PartB), (S.EntityC, S.PartC) })
+        var centre = PlanGeometry.Centroid(Plan(world, S.EntityC, S.LinkBC).Outer);
+        var direction = new Vector2(-S.Axis.Y, S.Axis.X);
+        foreach (var (start, end) in WestIds.SixBridges)
         {
-            var target = Plan(world, entity, part).Outer;
-            foreach (var sign in new[] { -1f, 1f })
-            {
-                var hit = Cast(ring, centre, across * sign);
-                var far = Cast(target, centre, across * sign);
-                if (hit is { } h && far is { } t && t > h + 0.5f && t - h < 30f)
-                    yield return (centre + across * sign * h, centre + across * sign * t);
-            }
+            var a = world.ContourSegment(start);
+            var b = world.ContourSegment(end);
+            var from = PlanGeometry.LineIntersection(centre, direction, a[0], a[^1] - a[0], 1e-6f)
+                ?? throw new InvalidOperationException($"Bridge source {start} is parallel to its axis.");
+            var to = PlanGeometry.LineIntersection(centre, direction, b[0], b[^1] - b[0], 1e-6f)
+                ?? throw new InvalidOperationException($"Bridge target {end} is parallel to its axis.");
+            yield return (from, to);
         }
-    }
-
-    /// <summary>Distance along a ray to the nearest crossing of a ring's edges, if any.</summary>
-    private static float? Cast(IReadOnlyList<Vector2> ring, Vector2 origin, Vector2 dir)
-    {
-        float? best = null;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            Vector2 a = ring[i], e = ring[(i + 1) % ring.Count] - a;
-            var den = dir.X * e.Y - dir.Y * e.X;
-            if (MathF.Abs(den) < 1e-6f) continue;
-            var w = a - origin;
-            var t = (w.X * e.Y - w.Y * e.X) / den;
-            var u = (w.X * dir.Y - w.Y * dir.X) / den;
-            if (t > 0.01f && u >= 0 && u <= 1 && (best is null || t < best)) best = t;
-        }
-        return best;
     }
 
     /// <summary>Glass railing from local x0 to x1 on a frame's line: glass panes, posts, an aluminium handrail.</summary>

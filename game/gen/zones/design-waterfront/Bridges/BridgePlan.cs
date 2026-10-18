@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Gen.World;
+using Campus.Gen.Zones.Common;
 using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
 
 namespace Campus.Gen.Zones.DesignWaterfront.Bridges;
@@ -45,7 +46,7 @@ internal sealed class BridgePlan
     public float EndK { get; private set; }
     /// <summary>Carriageway surface; walking bands are <see cref="WalkY"/>.</summary>
     public float RoadY { get; }
-    public float WalkY => RoadY + T.PavingRise;
+    public float WalkY => RoadY + GroundLevels.Paving;
     public bool HasCarriage => Bands.Any(b => b.Kind == BandKind.Carriage);
     /// <summary>Outer edges of the walking surface; the parapet bases stand outside them.</summary>
     public float Left { get; }
@@ -63,16 +64,10 @@ internal sealed class BridgePlan
     public Vector2 Centre => P((StartS(0) + EndS(0)) * 0.5f, (OuterLeft + OuterRight) * 0.5f);
 
     /// <summary>Corners of a strip from u0 to u1 over the whole deck length, counterclockwise in (X, Z).</summary>
-    public Vector2[] Strip(float u0, float u1) => Ccw([P(StartS(u0), u0), P(StartS(u1), u1), P(EndS(u1), u1), P(EndS(u0), u0)]);
+    public Vector2[] Strip(float u0, float u1) => PlanGeometry.OpenRing([P(StartS(u0), u0), P(StartS(u1), u1), P(EndS(u1), u1), P(EndS(u0), u0)]).ToArray();
 
     /// <summary>The deck footprint, slab faces included (not the base overhang).</summary>
     public Vector2[] Footprint => Strip(OuterLeft, OuterRight);
-
-    internal static Vector2[] Ccw(Vector2[] ring)
-    {
-        if (PlanGeometry.SignedArea(ring) < 0) Array.Reverse(ring);
-        return ring;
-    }
 
     /// <summary>Resolves every bridge registered in the overlay (kind <see cref="T.BridgeKind"/>), in ID order.</summary>
     public static IReadOnlyList<BridgePlan> All(IWorldModel world)
@@ -84,7 +79,7 @@ internal sealed class BridgePlan
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == T.BridgeKind).OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             var plan = Resolve(world, feature, lines);
-            plan.FitToWater(world);
+            plan.FitToWater(world, feature.Text("banks", "start"), feature.Text("banks", "end"));
             plans.Add(plan);
         }
         return plans;
@@ -96,11 +91,11 @@ internal sealed class BridgePlan
             throw new InvalidOperationException($"{feature.Id.Value} needs props naming its axis line.");
         NetworkLine Line(string id) => lines.TryGetValue(id, out var line) ? line
             : throw new InvalidOperationException($"{feature.Id.Value} names {id}, which is not a network bridge or road.");
-        var axisLine = Line(Text(props, "axis") ?? throw new InvalidOperationException($"{feature.Id.Value} has no axis line."));
+        var axisLine = Line(WorldProps.TryText(props, "axis") ?? throw new InvalidOperationException($"{feature.Id.Value} has no axis line."));
         var carriage = props.TryGetProperty("carriage", out var c) && c.ValueKind == JsonValueKind.True;
         var walks = props.TryGetProperty("walks", out var w) && w.ValueKind == JsonValueKind.Array
             ? w.EnumerateArray().Select(e => Line(e.GetString()!)).ToArray() : [];
-        var sidewalk = props.TryGetProperty("sidewalk", out var sw) && sw.ValueKind == JsonValueKind.Number ? sw.GetSingle() : T.DefaultSidewalk;
+        var sidewalk = WorldProps.TryNumber(props, "sidewalk") ?? T.DefaultSidewalk;
 
         var points = axisLine.Line.Points;
         var origin = points[0];
@@ -156,42 +151,38 @@ internal sealed class BridgePlan
 
     /// <summary>
     /// Fits the deck to the water it crosses (MAP-QSH-ADDITIONS; the network lines often run on well past the banks):
-    /// along two sample lines near the deck's outer edges, the first and last crossing of a water outline give the two bank
+    /// two explicitly registered source-bank segments intersect sample lines near the deck's outer edges to give the bank
     /// lines. An abutment stands just behind each, and the deck ends a bearing margin behind the abutment, its end line
-    /// parallel to the bank; the rest of each line is ordinary ground (WP-15). No water under the deck: it keeps the line ends
-    /// and has no abutments.
+    /// parallel to the bank; the rest of each line is ordinary ground (WP-15).
     /// </summary>
-    private void FitToWater(IWorldModel world)
+    private void FitToWater(IWorldModel world, string startBank, string endBank)
     {
-        var rings = new List<IReadOnlyList<Vector2>>();
-        foreach (var f in world.Features.Values.Where(f => f.Kind.Value == "water").OrderBy(f => f.Id.Value, StringComparer.Ordinal))
-            switch (f.Geometry)
-            {
-                case PolygonGeometry p: rings.Add(p.Rings.Outer); rings.AddRange(p.Rings.Holes); break;
-                case MultiPolygonGeometry m: foreach (var r in m.Polygons) { rings.Add(r.Outer); rings.AddRange(r.Holes); } break;
-                default: break;
-            }
+        var banks = new[] { world.ContourSegment(startBank), world.ContourSegment(endBank) };
         const float inset = 0.2f;
         var samples = new[] { OuterLeft + inset, OuterRight - inset };
-        var first = new float?[2]; var last = new float?[2];
+        var first = new float[2]; var last = new float[2];
         for (var i = 0; i < samples.Length; i++)
         {
             var u = samples[i];
             // Searched well past the line ends: on a skewed crossing the far bank can lie beyond them.
-            float s0 = StartS(u) - SearchReach, s1 = EndS(u) + SearchReach;
+            float s0 = StartS(u) - T.BankSearchReach, s1 = EndS(u) + T.BankSearchReach;
             var a = P(s0, u); var b = P(s1, u);
-            foreach (var ring in rings)
-                for (var j = 0; j < ring.Count; j++)
+            for (var bank = 0; bank < banks.Length; bank++)
+            {
+                var hits = new List<float>();
+                var points = banks[bank];
+                for (var j = 1; j < points.Length; j++)
                 {
-                    if (Cross(a, b, ring[j], ring[(j + 1) % ring.Count]) is not { } t) continue;
-                    var s = s0 + (s1 - s0) * t;
-                    first[i] = Math.Min(first[i] ?? float.MaxValue, s);
-                    last[i] = Math.Max(last[i] ?? float.MinValue, s);
+                    if (PlanGeometry.SegmentIntersection(a, b, points[j - 1], points[j], 1e-9f) is not { } hit) continue;
+                    var s = Vector2.Dot(hit - Origin, Axis);
+                    if (!hits.Any(previous => MathF.Abs(previous - s) < 0.001f)) hits.Add(s);
                 }
+                if (hits.Count != 1) throw new InvalidOperationException($"{Id.Value}: each registered bank must cross each deck sample once.");
+                if (bank == 0) first[i] = hits[0]; else last[i] = hits[0];
+            }
         }
-        if (first[0] is null && first[1] is null) { Abutments = []; return; }
-        float F(int i) => first[i] ?? first[1 - i]!.Value;
-        float L(int i) => last[i] ?? last[1 - i]!.Value;
+        float F(int i) => first[i];
+        float L(int i) => last[i];
         float uA = samples[0], uB = samples[1];
         // Bank lines s = a + k u through the two samples; water faces of the abutments sit the set-back behind them.
         var kStart = (F(1) - F(0)) / (uB - uA); var aStart = F(0) - kStart * uA - T.AbutmentSetback;
@@ -211,23 +202,6 @@ internal sealed class BridgePlan
         ];
     }
 
-    /// <summary>Parameter t on a→b where it crosses segment c→d, or null.</summary>
-    private static float? Cross(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
-    {
-        var r = b - a; var q = d - c;
-        var den = (double)r.X * q.Y - (double)r.Y * q.X;
-        if (Math.Abs(den) < 1e-9) return null;
-        var ac = c - a;
-        var t = ((double)ac.X * q.Y - (double)ac.Y * q.X) / den;
-        var v = ((double)ac.X * r.Y - (double)ac.Y * r.X) / den;
-        return t is >= 0 and <= 1 && v is >= 0 and <= 1 ? (float)t : null;
-    }
-
-    /// <summary>How far past the mapped line ends the banks are looked for.</summary>
-    private const float SearchReach = 12f;
-
     private static float Width(NetworkLine line) => line.Width > 0 ? line.Width : 2.5f;
 
-    private static string? Text(JsonElement props, string name) =>
-        props.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 }

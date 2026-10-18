@@ -6,6 +6,7 @@ using Campus.Gen.Zones.DesignBoundary.Fence;
 using Campus.Gen.Zones.DesignBoundary.Framework;
 using Campus.Gen.Zones.DesignBoundary.Gates;
 using Campus.Gen.World;
+using Campus.Gen.Zones.South;
 using Campus.Gen.Zones.Common;
 using F = Campus.Gen.Zones.DesignBoundary.BoundaryTune.Fence;
 using H = Campus.Gen.Zones.DesignBoundary.BoundaryTune.HedgeClear;
@@ -114,13 +115,11 @@ public sealed class BoundaryPlan
     /// <summary>WP-18's south gate: the ring stays open between the outer walls of its two source-identified guard houses.</summary>
     private static Opening? South(IWorldModel world, BoundaryRing ring)
     {
-        if (!world.Features.TryGetValue(new(BoundaryTune.SouthGate.Feature), out var gate)) return null;
-        Vector2 House(string sourceId) => WorldFeatureGeometry.FacadeGeometryOf(gate.Part(sourceId)) is PolygonGeometry polygon
-            ? PlanMath.Centroid(polygon.Rings.Outer)
-            : throw new InvalidOperationException($"South gate part {sourceId} is not a single polygon.");
-        var (west, east) = (House("osm:way:601600522"), House("osm:way:601600523"));
+        if (!world.Features.TryGetValue(new(SouthIds.Gate.Entity), out var gate)) return null;
+        Vector2 House(string sourceId) => PlanGeometry.Centroid(gate.Part(sourceId).Contour());
+        var (west, east) = (House(SouthIds.WestHouse.Part), House(SouthIds.EastHouse.Part));
         var u = Vector2.Normalize(east - west);
-        var reach = BoundaryTune.SouthGate.HouseSize * 0.5f - 0.05f;
+        var reach = SouthTune.Gate.HouseSize * 0.5f - 0.05f;
         var a = ring.Arc(west - u * reach);
         var b = ring.Arc(east + u * reach);
         if (Vector2.Distance(ring.At(a), west) > 12f) return null;
@@ -138,8 +137,9 @@ public sealed class BoundaryPlan
     private static IEnumerable<Opening> Grates(IWorldModel world, BoundaryRing ring, IReadOnlyList<Opening> taken)
     {
         var hits = new List<float>();
-        var waters = world.Features.Values.Where(f => f.Kind.Value == "water").OrderBy(f => f.Id.Value, StringComparer.Ordinal)
-            .SelectMany(f => Outers(f.Geometry)).Where(o => o.Count >= 3).ToArray();
+        var waters = world.Features.Values.Where(f => f.Kind.Value == "water" && (f.Geometry is PolygonGeometry or MultiPolygonGeometry))
+            .OrderBy(f => f.Id.Value, StringComparer.Ordinal)
+            .SelectMany(f => f.Polygons().Select(p => p.Outer)).Where(o => o.Count >= 3).ToArray();
         foreach (var outer in waters)
             for (var i = 0; i < outer.Count; i++)
                 foreach (var s in ring.Crossings(outer[i], outer[(i + 1) % outer.Count])) hits.Add(s);
@@ -266,9 +266,9 @@ public sealed class BoundaryPlan
             var result = new Vector2[points.Count];
             for (var k = 0; k < points.Count; k++)
             {
-                var before = FenceRun.Unit(points[Math.Max(k, 1)] - points[Math.Max(k, 1) - 1]);
-                var after = FenceRun.Unit(points[Math.Min(k + 1, points.Count - 1)] - points[Math.Min(k + 1, points.Count - 1) - 1]);
-                var n = FenceRun.Unit(new Vector2(-before.Y, before.X) + new Vector2(-after.Y, after.X));
+                var before = VectorMath.Unit(points[Math.Max(k, 1)] - points[Math.Max(k, 1) - 1], Vector2.UnitX, minimumLength: 1e-6);
+                var after = VectorMath.Unit(points[Math.Min(k + 1, points.Count - 1)] - points[Math.Min(k + 1, points.Count - 1) - 1], Vector2.UnitX, minimumLength: 1e-6);
+                var n = VectorMath.Unit(new Vector2(-before.Y, before.X) + new Vector2(-after.Y, after.X), Vector2.UnitX, minimumLength: 1e-6);
                 var cos = MathF.Max(Vector2.Dot(n, new Vector2(-after.Y, after.X)), 0.5f);
                 result[k] = points[k] + n * (sign * off / cos);
             }
@@ -318,8 +318,8 @@ public sealed class BoundaryPlan
         {
             var p = line[k];
             if (Vector2.Distance(p, kept[^1]) < F.MinSegment) continue;
-            var a = FenceRun.Unit(p - kept[^1]);
-            var b = FenceRun.Unit(line[k + 1] - p);
+            var a = VectorMath.Unit(p - kept[^1], Vector2.UnitX, minimumLength: 1e-6);
+            var b = VectorMath.Unit(line[k + 1] - p, Vector2.UnitX, minimumLength: 1e-6);
             if (Vector2.Dot(a, b) > 0.99985f) continue;
             kept.Add(p);
         }
@@ -327,13 +327,6 @@ public sealed class BoundaryPlan
         kept.Add(line[^1]);
         return kept;
     }
-
-    internal static IEnumerable<IReadOnlyList<Vector2>> Outers(OverlayGeometry geometry) => geometry switch
-    {
-        PolygonGeometry p => [p.Rings.Outer],
-        MultiPolygonGeometry m => m.Polygons.Select(r => r.Outer),
-        _ => [],
-    };
 
     private static bool Overlaps(BoundaryRing ring, float a, float la, float b, float lb) =>
         ring.Forward(a, b) < la || ring.Forward(b, a) < lb;
@@ -369,8 +362,8 @@ public sealed class BoundaryPlan
                         _segments.Add((pts[k], pts[k + 1], reach));
             }
             var kinds = new HashSet<string>(H.Kinds, StringComparer.Ordinal);
-            foreach (var feature in world.Features.Values.Where(f => kinds.Contains(f.Kind.Value)).OrderBy(f => f.Id.Value, StringComparer.Ordinal))
-                foreach (var outer in Outers(feature.Geometry))
+            foreach (var feature in world.Features.Values.Where(f => kinds.Contains(f.Kind.Value) && f.Geometry is PolygonGeometry or MultiPolygonGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+                foreach (var outer in feature.Polygons().Select(p => p.Outer))
                 {
                     if (outer.Count < 3) continue;
                     var min = new Vector2(float.MaxValue);
@@ -391,12 +384,12 @@ public sealed class BoundaryPlan
         private bool Blocked(Vector2 p)
         {
             foreach (var (a, b, reach) in _segments)
-                if (Distance(p, a, b) < reach) return true;
+                if (MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, a, b)) < reach) return true;
             var pad = H.Area + F.HedgeWidth * 0.5f;
             foreach (var (outer, min, max) in _areas)
             {
                 if (p.X < min.X || p.Y < min.Y || p.X > max.X || p.Y > max.Y) continue;
-                if (PlanGeometry.InsideByCrossings(outer, p) || EdgeDistance(outer, p) < pad) return true;
+                if (PlanGeometry.InsideByCrossings(outer, p) || PlanGeometry.DistanceToRing(p, outer) < pad) return true;
             }
             return false;
         }
@@ -411,7 +404,7 @@ public sealed class BoundaryPlan
             {
                 if (lastClear is { } end && current.Count > 0 && current[^1] != end) current.Add(end);
                 // Each piece's ends pull back a little from what stopped it.
-                if (current.Count >= 2 && PathLength(current) >= H.MinLength)
+                if (current.Count >= 2 && PlanGeometry.Length(current) >= H.MinLength)
                     pieces.Add(BoundaryFence.Offset(current, 0f, _ => true, H.Trim * 0.5f, H.Trim * 0.5f));
                 current = [];
                 lastClear = null;
@@ -434,26 +427,5 @@ public sealed class BoundaryPlan
             return pieces;
         }
 
-        private static float PathLength(List<Vector2> line)
-        {
-            var sum = 0f;
-            for (var i = 0; i + 1 < line.Count; i++) sum += Vector2.Distance(line[i], line[i + 1]);
-            return sum;
-        }
-
-        private static float Distance(Vector2 p, Vector2 a, Vector2 b)
-        {
-            var ab = b - a;
-            var l2 = ab.LengthSquared();
-            var t = l2 > 0 ? Math.Clamp(Vector2.Dot(p - a, ab) / l2, 0f, 1f) : 0f;
-            return Vector2.Distance(p, a + ab * t);
-        }
-
-        private static float EdgeDistance(IReadOnlyList<Vector2> ring, Vector2 p)
-        {
-            var best = float.MaxValue;
-            for (var i = 0; i < ring.Count; i++) best = MathF.Min(best, Distance(p, ring[i], ring[(i + 1) % ring.Count]));
-            return best;
-        }
     }
 }

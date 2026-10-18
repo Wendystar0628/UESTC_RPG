@@ -43,11 +43,8 @@ public sealed partial class SixSite
 
     internal static PolygonRings Plan(IWorldModel world, string entity, string part)
     {
-        if (!world.Features.TryGetValue(new(entity), out var feature))
-            throw new InvalidOperationException($"六号科研楼 entity {entity} is missing from the world model.");
-        return feature.Parts.FirstOrDefault(p => p.SourceId == part) is { } src && WorldFeatureGeometry.FacadeGeometryOf(src) is PolygonGeometry g
-            ? g.Rings
-            : throw new InvalidOperationException($"六号科研楼 part {part} is missing or not a single polygon.");
+        return world.Feature(entity).ContourGeometry(part) is PolygonGeometry polygon
+            ? polygon.Rings : throw new InvalidOperationException($"{part} is not a polygon.");
     }
 
     /// <summary>Plans of every closed volume of the building (blocks, A–B link, tower), for hiding faces that touch another.</summary>
@@ -70,13 +67,6 @@ public sealed partial class SixSite
         return new(e.Length < 4.5f ? EdgeKind.Blank : EdgeKind.Plain);
     }
 
-    /// <summary>Local x of a door point on this outer face of the stone line, when it lies on it.</summary>
-    internal static float? On(GridEdgeInfo e, Vector2 door, float halfWidth)
-    {
-        var local = e.Frame.Local(door);
-        return MathF.Abs(local.Y) < 0.6f && local.X > halfWidth && local.X < e.Length - halfWidth ? local.X : null;
-    }
-
     /// <summary>The C east door's centre, from C's entrance record in the world model (interiors.json).</summary>
     internal static Vector2 EastDoor(IWorldModel world)
     {
@@ -86,11 +76,17 @@ public sealed partial class SixSite
     }
 
     /// <summary>The outer face carrying the east door, and the door's local x on it.</summary>
-    internal static (GridEdgeInfo Face, float X) EastFace(PolygonRings c, Vector2 door)
+    internal static (GridEdgeInfo Face, float X) EastFace(IWorldModel world, Vector2 door)
     {
-        foreach (var (e, _, _) in GridFacade.Edges(c.Outer))
-            if (On(e, door, S.VestibuleWidth * 0.5f) is { } x) return (e, x);
-        throw new InvalidOperationException("The C east door does not lie on C's stone line.");
+        var face = SelectedFace(world, WestIds.SixEastFace);
+        return (face, face.Frame.Local(door).X);
+    }
+
+    private static GridEdgeInfo SelectedFace(IWorldModel world, string selection)
+    {
+        var line = world.ContourSegment(selection);
+        var frame = PlanFrame.Toward(line[^1], line[0]);
+        return new(0, line[^1], line[0], frame, Vector2.Distance(line[0], line[^1]));
     }
 
     // ---- Window grids: one layout for geometry, collision and declarations ----

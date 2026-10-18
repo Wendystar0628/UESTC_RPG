@@ -32,15 +32,13 @@ public sealed class GatePlazaSite : ZoneSite
     internal static (PlanFrame Frame, float HalfAcross, float HalfAlong)? FrameOf(IWorldModel world)
     {
         if (!world.Features.TryGetValue(new(Feature), out var plaza)) return null;
-        if (plaza.Geometry is not PolygonGeometry { Rings.Outer: { Count: 4 } ring })
-            throw new InvalidOperationException($"{Feature} is expected to be a four-cornered polygon.");
-        var centre = (ring[0] + ring[1] + ring[2] + ring[3]) * 0.25f;
-        var (a, b) = Vector2.Distance(ring[0], ring[1]) >= Vector2.Distance(ring[1], ring[2]) ? (ring[1] - ring[0], ring[2] - ring[1]) : (ring[2] - ring[1], ring[1] - ring[0]);
+        var axis = world.ContourSegment(SouthIds.PlazaAxis);
         var gate = SouthGateSite.LayoutOf(world);
         var inward = new Vector2(gate.HouseEast.Y - gate.HouseWest.Y, gate.HouseWest.X - gate.HouseEast.X);
-        var along = Vector2.Dot(a, inward) >= 0 ? a : -a;
-        // X is Z turned a quarter clockwise in plan, so local +Z (PlanFrame.W) runs along the axis.
-        return (PlanFrame.Along(centre, new(along.Y, -along.X)), b.Length() * 0.5f, a.Length() * 0.5f);
+        var along = axis[^1] - axis[0];
+        if (Vector2.Dot(along, inward) < 0) along = -along;
+        var rectangle = plaza.Rectangle(new(along.Y, -along.X));
+        return (rectangle.Frame, rectangle.Width * 0.5f, rectangle.Depth * 0.5f);
     }
 
     /// <summary>Planter and benches as (part, parameters, plan frame at the item's foot); a bench's sitter faces back along −Z.</summary>

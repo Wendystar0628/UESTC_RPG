@@ -189,7 +189,7 @@
       "kind": "atrium-roof",
       "geometry": {"type": "polygon", "rings": {"outer": [[371.74, 101.67], [373.14, 106.06], [372.09, 111.35], [368.74, 116.75], [363.6, 121.42], [357.46, 124.65], [351.24, 125.96], [345.91, 125.15], [342.26, 122.33], [340.86, 117.94], [341.91, 112.65], [345.26, 107.25], [350.4, 102.58], [356.54, 99.35], [362.76, 98.04], [368.09, 98.85]], "holes": []}},
       "height": 5.1,
-      "props": {"building": "qsh:way:883187548", "part": "osm:way:1431090638", "centre": [357.0, 112.0], "axis": [0.819, -0.574], "half": [18.0, 11.5], "rise": 4.5, "curb": 0.6, "ribs": 16, "rings": 2, "material": "glass", "frame": "frame.alu", "access": "屋顶不开放"},
+      "props": {"building": "qsh:way:883187548", "part": "osm:way:1431090638", "centre": [357.0, 112.0], "axis": [0.819, -0.574], "half": [18.0, 11.5], "rise": 4.5, "curb": 0.6, "ribs": 16, "rings": 2, "material": "glass", "frame": "frame.alu", "access": "屋顶不开放", "setbacks": [{"part": "osm:way:1431090637", "from": 4, "at": [380, 135], "toward": [-0.124, 0.992], "keep": 50}, {"part": "osm:way:1431090637", "from": 5, "at": [380, 135], "toward": [-0.124, 0.992], "keep": 28}, {"part": "osm:way:1431090640", "from": 4, "at": [330, 120], "toward": [0.17, 0.985], "keep": 42}, {"part": "osm:way:1431090640", "from": 4, "at": [318, 106], "toward": [-0.86, -0.5], "keep": 28}, {"part": "osm:way:1431090640", "from": 5, "at": [330, 120], "toward": [0.17, 0.985], "keep": 22}, {"part": "osm:way:1431090640", "from": 5, "at": [318, 106], "toward": [-0.86, -0.5], "keep": 12}, {"part": "osm:way:1431090639", "from": 4, "at": [350, 72], "toward": [-0.7, -0.7], "keep": 22}, {"part": "osm:way:1431090638", "from": 4, "at": [350, 72], "toward": [-0.7, -0.7], "keep": 22}], "panelStrip": [397, 101.9]},
       "reason": "中庭外形（MAP-QSH-CENTER-EAST：中间是一个钢网架玻璃顶的中庭）：OSM 只有中部连接体 1431090638 的轮廓，没有屋顶形式。主线把中庭顶做成坐在连接体五层屋面上的一座椭圆低拱玻璃顶，长半轴 18 m、短半轴 11.5 m，拱高 4.5 m，下有 0.6 m 白色石沿，16 道经向肋加两道环肋（铝框色），不画施工网架（§3.3）。默认状态反天，拱顶映出黄昏天色；夜间反天（映出夜空和塔楼窗灯）；冬季拱顶积雪约一半。"
     },
     {
@@ -207,7 +207,7 @@
       "kind": "paving",
       "geometry": {"type": "polygon", "rings": {"outer": [[413.49, 113.5], [448.93, 122.25], [448.07, 125.75], [412.63, 117.0]], "holes": []}},
       "height": 0.17,
-      "props": {"building": "qsh:way:883187548", "material": "ground.paver", "width": 3.6, "from": "design:center-east-wenke-forecourt", "to": "qsh:source:way:544161582 与 544161568 的路口 (452.5, 123.8)"},
+      "props": {"building": "qsh:way:883187548", "material": "ground.paver", "width": 3.6, "from": "design:center-east-wenke-forecourt", "to": "qsh:source:way:544161582 与 544161568 的路口 (452.5, 123.8)", "axis": [35.44, 8.75]},
       "reason": "设计增补：从中庭门前铺装东侧到东边路口的一条 3.6 m 花岗岩步道，长约 36.5 m，两侧石条收边，把门前停点接到 R5 往网球场去的路口；由本区建成铺装（不进路网，不改纵断面）。默认状态长影；夜间灯下；接季。"
     },
     {

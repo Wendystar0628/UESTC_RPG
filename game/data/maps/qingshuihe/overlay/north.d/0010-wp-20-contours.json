@@ -1,0 +1,33 @@
+{
+  "zone": "north",
+  "owner": "WP-20",
+  "map": "qingshuihe",
+  "ops": [
+    {
+      "op": "add",
+      "id": "design:north-xz1-hall-facade",
+      "kind": "contourSegment",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              157.79,
+              -494.85
+            ],
+            [
+              118.64,
+              -478.46
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:way:217855218",
+        "sourceId": "osm:way:217855218",
+        "contour": "facade"
+      },
+      "reason": "D-243：登记学知苑1栋门廊所在立面，沿院侧边从东北端至西南端，不再按距门中心最近挑边。"
+    }
+  ]
+}

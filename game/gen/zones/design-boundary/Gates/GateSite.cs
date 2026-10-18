@@ -251,7 +251,7 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
         if (b.Detail == SiteDetail.Mass || Spec.Bollards.Length == 0) return;
         var bollard = new ColumnParams(0.18f, 0.8f, 0.18f);
         foreach (var p in Spec.Bollards)
-            b.Place(PartCatalog.Bollard, bollard, g.At(p.X, b.Ground(g.P(p.X, p.Y)) + BoundaryTune.Plaza.PavingTop, p.Y));
+            b.Place(PartCatalog.Bollard, bollard, g.At(p.X, b.Ground(g.P(p.X, p.Y)) + GroundLevels.Paving, p.Y));
     }
 
     // ---- Collision (SYS-WALK, WLD-OUTSKIRTS): Boundary, gaps under 0.5 m ----

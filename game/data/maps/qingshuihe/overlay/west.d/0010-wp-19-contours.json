@@ -7,9 +7,235 @@
       "op": "add",
       "id": "design:west-shelter-back",
       "kind": "contourSegment",
-      "geometry": {"type": "polyline", "line": {"points": [[-214.98, -417.82], [-210.09, -430.99]]}},
-      "props": {"parent": "qsh:way:604832425", "sourceId": "osm:way:604832425", "contour": "facade"},
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -214.98,
+              -417.82
+            ],
+            [
+              -210.09,
+              -430.99
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:way:604832425",
+        "sourceId": "osm:way:604832425",
+        "contour": "facade"
+      },
       "reason": "登记西门候车亭后墙所用的当前来源外立面西侧边，沿父轮廓逆时针从南端到北端读取，保持现有候车亭朝向、尺寸与碰撞。"
+    },
+    {
+      "op": "add",
+      "id": "design:west-six-east-face",
+      "kind": "contourSegment",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -593.76,
+              206.75
+            ],
+            [
+              -583.28,
+              251.04
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:10807930",
+        "contour": "facade"
+      },
+      "reason": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。"
+    },
+    {
+      "op": "add",
+      "id": "design:west-six-shut-face-1",
+      "kind": "contourSegment",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -768.12,
+              187.65
+            ],
+            [
+              -840.26,
+              133.59
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:way:779496168",
+        "sourceId": "osm:way:779496168",
+        "contour": "facade"
+      },
+      "reason": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。"
+    },
+    {
+      "op": "add",
+      "id": "design:west-six-shut-face-2",
+      "kind": "contourSegment",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -702.18,
+              237.35
+            ],
+            [
+              -755.27,
+              197.42
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:way:779496169",
+        "sourceId": "osm:way:779496169",
+        "contour": "facade"
+      },
+      "reason": "D-243：登记六号科研楼实际使用的来源 facadePolygons 完整立面边，生成器只读选段，不使用物理轮廓中已简化掉的中间顶点。"
+    },
+    {
+      "op": "add",
+      "id": "design:west-six-shut-face-3",
+      "kind": "contourSegment",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -583.28,
+              251.04
+            ],
+            [
+              -620.0,
+              299.93
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:10807930",
+        "contour": "facade"
+      },
+      "reason": "D-243：登记六号科研楼实际使用的来源 facadePolygons 完整立面边，生成器只读选段，不使用物理轮廓中已简化掉的中间顶点。"
+    },
+    {
+      "op": "add",
+      "id": "design:west-six-bridge-b-start",
+      "kind": "contourSegment",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -688.6,
+              213.7
+            ],
+            [
+              -712.4,
+              195.54
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:14153711",
+        "contour": "facade"
+      },
+      "reason": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。"
+    },
+    {
+      "op": "add",
+      "id": "design:west-six-bridge-b-end",
+      "kind": "contourSegment",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -729.11,
+              191.49
+            ],
+            [
+              -689.79,
+              221.04
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:way:779496169",
+        "sourceId": "osm:way:779496169",
+        "contour": "facade"
+      },
+      "reason": "D-243：登记六号科研楼实际使用的来源 facadePolygons 完整立面边，生成器只读选段，不使用物理轮廓中已简化掉的中间顶点。"
+    },
+    {
+      "op": "add",
+      "id": "design:west-six-bridge-c-start",
+      "kind": "contourSegment",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -697.34,
+              176.0
+            ],
+            [
+              -673.55,
+              194.16
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:14153711",
+        "contour": "facade"
+      },
+      "reason": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。"
+    },
+    {
+      "op": "add",
+      "id": "design:west-six-bridge-c-end",
+      "kind": "contourSegment",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -652.57,
+              191.22
+            ],
+            [
+              -684.99,
+              167.28
+            ]
+          ]
+        }
+      },
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:10807930",
+        "contour": "facade"
+      },
+      "reason": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。"
     }
   ]
 }

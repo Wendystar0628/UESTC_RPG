@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
+using Campus.Camera.Walk;
 using Godot;
 
 namespace Campus.Camera;
@@ -57,8 +58,12 @@ public partial class ObserverCamera
                 PitchDeg = Math.Clamp(Pose.PitchDeg - relative.Y * Tuning.DegreesPerMouseCount,
                     -Tuning.PitchLimit, Tuning.PitchLimit)
             };
-            _pose = pose;
-            if (Mode == ViewMode.Walk) _walk?.SetLook(pose.YawDeg, pose.PitchDeg);
+            switch (Mode)
+            {
+                case ViewMode.Fly: _pose = pose; break;
+                case ViewMode.Walk: _walk?.SetLook(pose.YawDeg, pose.PitchDeg); break;
+                default: throw new InvalidOperationException("Unknown view mode.");
+            }
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -157,10 +162,9 @@ public partial class ObserverCamera
     {
         switch (Mode)
         {
-            case ViewMode.Fly: _speedStep = _flySpeedStep = Math.Clamp(_speedStep + steps, 1, Tuning.SpeedSteps); break;
+            case ViewMode.Fly: _flySpeedStep = Math.Clamp(_flySpeedStep + steps, 1, Tuning.SpeedSteps); break;
             case ViewMode.Walk:
-                _speedStep = _walkSpeedStep = Math.Clamp(_walkSpeedStep + steps, 0, 4);
-                _walk?.SetSpeedStep(_walkSpeedStep); break;
+                _walk?.SetSpeedStep(Math.Clamp(SpeedStep + steps, 0, WalkTuning.SpeedStepCount - 1)); break;
             default: throw new InvalidOperationException("Unknown view mode.");
         }
     }

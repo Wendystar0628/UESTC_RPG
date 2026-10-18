@@ -1,0 +1,319 @@
+using System.Numerics;
+using System.Text.Json;
+using Campus.Contracts;
+using Campus.Tests;
+using Campus.Contracts.Maps;
+using GdUnit4;
+using static GdUnit4.Assertions;
+
+namespace Campus.Gen.World.Tests;
+
+public sealed partial class TerrainCompilerTests
+{
+    [TestCase]
+    public void FixedRoadAnchorsSurviveSmoothingAndInfeasibleGradeFails()
+    {
+        var profile = new TerrainRoadProfile([new(0, 0), new(20, 0.5), new(40, 0)], 40, [], 0.05, "fixture", "road");
+        AssertThat(Math.Abs((double)(0) - (double)(profile.At(0).Y)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.5) - (double)(profile.At(20).Y)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(profile.At(40).Y)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(profile.At(20).Grade)) <= 0.001).IsTrue();
+        {
+            WorldDataException? rejection = null;
+            try { new TerrainRoadProfile([new(0, 0), new(10, 2)], 10, [], 0.05, "fixture", "road"); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+        {
+            WorldDataException? rejection = null;
+            try { new TerrainRoadProfile([new(0, 0), new(9, 0)], 10, [], 0.05, "fixture", "road"); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+        var roundedEnd = new TerrainRoadProfile([new(0, 0), new(55.5, 1)], 55.49793264276604, [], 0.05, "fixture", "rounded-end");
+        AssertThat(Math.Abs((double)(1) - (double)(roundedEnd.At(roundedEnd.Length).Y)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(roundedEnd.Length) - (double)(TerrainRoadProfile.ResolveStation(55.5, 55.5, roundedEnd.Length, "fixture", "steps"))) <= 0.001).IsTrue();
+        {
+            WorldDataException? rejection = null;
+            try { TerrainRoadProfile.ResolveStation(55.499, 55.5, roundedEnd.Length, "fixture", "steps"); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+    }
+
+    [TestCase]
+    public void ExplicitCorridorRangeIsUnsupportedEvenForTheFullValidSource()
+    {
+        var road = new NetworkLine(new("fixture:range-road"), new([new(-10, 0), new(10, 0)]), 2.5f)
+            { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
+        var context = Context([]) with { Network = new([road], [], [], [], []) };
+        var full = new TerrainCorridorOp("design:terrain:range-road", "explicit interval capability boundary", road.Id,
+            [new(0, 0.5), new(20, 0.5)], 0, 0.75) { Zone = Zone };
+        foreach (var range in new[] { new TerrainStationRange(5, 15), new TerrainStationRange(0, 20) })
+        {
+            var ranged = full with { Range = range, Anchors = [new(range.S0, 0.5), new(range.S1, 0.5)] };
+            var source = Source([ranged]);
+            try
+            {
+                TerrainCompiler.Compile(context, [source]);
+                throw new InvalidOperationException("An explicit Range was silently treated as a full-source corridor.");
+            }
+            catch (WorldDataException error)
+            {
+                AssertThat(error.File == source.File && error.Entry == ranged.Id).IsTrue();
+            }
+        }
+        var unchanged = TerrainCompiler.Compile(context, [Source([full with { Range = null }])]);
+        AssertThat(Math.Abs((double)(0.5) - (double)(unchanged.HeightAt(0, 0))) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void AutomaticCorridorUsesNonRoadPlateauAndExplicitAnchorsOverrideIt()
+    {
+        var road = new NetworkLine(new("fixture:plateau-road"), new([new(-30, 0), new(30, 0)]), 2.5f)
+            { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
+        var plateau = new TerrainPlatformOp("design:terrain:road-plateau", "terrain-following road regression",
+            Box(-80, -80, 80, 80), 4, new("1:4", "1:4"), 2) { Zone = Zone };
+        var context = Context([]) with { Network = new([road], [], [], [], []) };
+        var automatic = TerrainCompiler.Compile(context, [Source([plateau])]);
+        AssertThat(Math.Abs((double)(4) - (double)(automatic.HeightAt(0, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(4) - (double)(automatic.HeightAt(-30, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(4) - (double)(automatic.HeightAt(30, 0))) <= 0.001).IsTrue();
+        var explicitRoad = new TerrainCorridorOp("design:terrain:authored-road", "explicit anchors win", road.Id,
+            [new(0, 5), new(60, 5)], 0, 0.75) { Zone = Zone };
+        var authored = TerrainCompiler.Compile(context, [Source([plateau, explicitRoad])]);
+        AssertThat(Math.Abs((double)(5) - (double)(authored.HeightAt(0, 0))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(5) - (double)(authored.HeightAt(-30, 0))) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void AutomaticTerrainConsumesEffectiveDesignRoadTypeAndLegacyHighway()
+    {
+        foreach (var (kind, legacy) in new[] { ("footway", false), ("path", false), ("pedestrian", false), ("footway", true) })
+        {
+            var road = new NetworkLine(new("design:road:effective-" + kind), new([new(-10, 0), new(10, 0)]), 2.5f)
+            {
+                Props = legacy ? JsonSerializer.SerializeToElement(new { highway = kind })
+                    : JsonSerializer.SerializeToElement(new { roadType = kind })
+            };
+            var context = Context([]) with { Network = new([road], [], [], [], []) };
+            var references = new TerrainReferences(context);
+            AssertThat(references.Road(road.Id, "fixture", "effective-road").Kind == kind
+                && references.AutomaticRoads().Single().Kind == kind).OverrideFailureMessage("Explicit and automatic road classification disagree.").IsTrue();
+            var terrain = TerrainCompiler.Compile(context, []);
+            AssertThat(!terrain.IsFlat(default)).OverrideFailureMessage("An effective WorldNetwork road was ignored by automatic terrain.").IsTrue();
+            AssertThat(Math.Abs((double)(0.0075) - (double)(terrain.HeightAt(0, 0.5f))) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-0.0075) - (double)(terrain.HeightAt(0, -0.5f))) <= 0.001).IsTrue();
+        }
+    }
+
+    [TestCase]
+    public void AutomaticNetworkFitMovesSoftSamplesAndKeepsSharedAuthorNodes()
+    {
+        var a = new TerrainRoad(new("fixture:left-road"), new("fixture:left-road"), new(new([new(-10, 0), new(0, 0)])), 2.5, "footway", null);
+        var c = new TerrainRoad(new("fixture:right-road"), new("fixture:right-road"), new(new([new(0, 0), new(10, 0)])), 2.5, "footway", null);
+        var baseline = new TerrainProgram([new("base", "fixture", Zone, TerrainGroup.Regional, 0, new(new(-20), new(20)),
+            (previous, x, _) => previous with { Surface = new(x * 0.2, 0.2, 0) })]);
+        TerrainRoadProfile.Request[] requests = [new(a, [], 1d / 12), new(c, [], 1d / 12)];
+        var fitted = TerrainRoadProfile.SmoothNetwork(requests, baseline, [], (_, _) => false);
+        var reverse = TerrainRoadProfile.SmoothNetwork(requests.Reverse().ToArray(), baseline, [], (_, _) => false);
+        AssertThat(Math.Abs((double)(0) - (double)(fitted[a.Source].At(10).Y)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(fitted[c.Source].At(0).Y)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(-0.3) - (double)(fitted[a.Source].At(0).Y)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.3) - (double)(fitted[c.Source].At(10).Y)) <= 0.001).IsTrue();
+        for (var s = 0d; s <= 10; s += 0.25)
+        {
+            AssertThat(Math.Abs((double)(fitted[a.Source].At(s).Y) - (double)(reverse[a.Source].At(s).Y)) <= 0.001).IsTrue();
+            AssertThat(Math.Abs(fitted[a.Source].At(s).Grade) <= 0.031).OverrideFailureMessage("Default network smoothing broke the shared-node grade bound.").IsTrue();
+        }
+        var authorRoad = new TerrainRoad(new("fixture:author-road"), new("fixture:author-road"), new(new([new(0, 0), new(0, 10)])), 2.5, "footway", null);
+        var authorProfile = new TerrainRoadProfile([new(0, 1), new(10, 1)], 10, [], 1d / 12, "fixture", "author");
+        var fixedFit = TerrainRoadProfile.SmoothNetwork(requests, baseline, [(authorRoad, authorProfile)], (_, _) => false);
+        AssertThat(Math.Abs((double)(1) - (double)(fixedFit[a.Source].At(10).Y)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(1) - (double)(fixedFit[c.Source].At(0).Y)) <= 0.001).IsTrue();
+        {
+            WorldDataException? rejection = null;
+            try { TerrainRoadProfile.SmoothNetwork(requests, baseline, [(authorRoad, authorProfile)], (x, _) => x == 0); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+    }
+
+    [TestCase]
+    public void AuthoredJunctionUsesExistingHeightToleranceWithoutMovingEitherProfile()
+    {
+        const double endpointHeight = 1.786;
+        const double interiorHeight = 1.7859987939771866;
+        var endRoad = new TerrainRoad(new("fixture:end-road"), new("fixture:end-road"),
+            new(new([new(-10, 0), new(0, 0)])), 2.5, "footway", null);
+        var throughRoad = new TerrainRoad(new("fixture:through-road"), new("fixture:through-road"),
+            new(new([new(0, -10), new(0, 0), new(0, 10)])), 2.5, "footway", null);
+        var automatic = new TerrainRoad(new("fixture:auto-road"), new("fixture:auto-road"),
+            new(new([new(0, 0), new(10, 0)])), 2.5, "footway", null);
+        TerrainAnchor[] endAnchors = [new(0, endpointHeight), new(10, endpointHeight)];
+        TerrainAnchor[] throughAnchors = [new(0, interiorHeight - 0.1), new(20, interiorHeight + 0.1)];
+        var endProfile = new TerrainRoadProfile(endAnchors, 10, [], 1d / 12, "end.terrain.json", "design:terrain:end-road");
+        var throughProfile = new TerrainRoadProfile(throughAnchors, 20, [], 1d / 12, "through.terrain.json", "design:terrain:through-road");
+        var fitted = TerrainRoadProfile.SmoothNetwork([new(automatic, [], 1d / 12)], new TerrainProgram([]),
+            [(endRoad, endProfile), (throughRoad, throughProfile)], (_, _) => false);
+        AssertThat(Math.Abs(endProfile.At(10).Y - endpointHeight) < 0.01
+            && Math.Abs(throughProfile.At(10).Y - interiorHeight) < 0.01).OverrideFailureMessage("Junction tolerance moved or averaged authored profiles.").IsTrue();
+        AssertThat(Math.Abs(fitted[automatic.Source].At(0).Y - interiorHeight) < 0.01).OverrideFailureMessage("The existing last-authored lock value was replaced or averaged.").IsTrue();
+        AssertThat(endAnchors[0].Y == endpointHeight && endAnchors[1].Y == endpointHeight
+            && throughAnchors[0].Y == interiorHeight - 0.1 && throughAnchors[1].Y == interiorHeight + 0.1).OverrideFailureMessage("Junction matching mutated the original authored anchor values.").IsTrue();
+        var incompatible = new TerrainRoadProfile([new(0, interiorHeight - 0.1 + 0.05), new(20, interiorHeight + 0.1 + 0.05)],
+            20, [], 1d / 12, "through.terrain.json", "design:terrain:incompatible-road");
+        {
+            WorldDataException? rejection = null;
+            try { TerrainRoadProfile.SmoothNetwork([], new TerrainProgram([]),
+            [(endRoad, endProfile), (throughRoad, incompatible)], (_, _) => false); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+    }
+
+    [TestCase]
+    public void RoadCrossfallOffsetIsContinuousAcrossAnInternalCorner()
+    {
+        var path = new TerrainPath(new([new(0, 10), new(0, 0), new(-10, 0)]));
+        const double e = 0.00001;
+        var a = path.Project(-e, -1); var c = path.Project(e, -1);
+        AssertThat(Math.Abs((double)(1) - (double)(a.Offset)) <= 0.001).IsTrue(); AssertThat(Math.Abs(a.Offset - c.Offset) < 0.01).OverrideFailureMessage("Crossfall jumped at an internal segment's clamped endpoint.").IsTrue();
+        AssertThat(Math.Abs((double)(Math.Sqrt(2)) - (double)(path.Project(1, -1).Offset)) <= 0.001).IsTrue();
+        var straight = new TerrainPath(new([new(0, 0), new(0, 10)]));
+        AssertThat(Math.Abs((double)(0) - (double)(straight.Project(0, -2).Offset)) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void RoadLongitudinalSurfaceIsContinuousAcrossTheInnerCorner()
+    {
+        var path = new TerrainPath(new([new(0, 10), new(0, 0), new(-10, 0)]));
+        var profile = new TerrainRoadProfile([new(0, 0), new(20, 0.2)], 20, [], 1d / 12, "fixture", "corner");
+        TerrainDifferential Sample(double x, double z) => profile.SurfaceAt(path, x, z, 2.5, path.Project(x, z));
+        const double e = 0.00001;
+        AssertThat(Math.Abs(Sample(-1 - e, 1).Height - Sample(-1 + e, 1).Height) < 0.01).OverrideFailureMessage("Longitudinal height selected discontinuous nearest-segment station values at the inner bend.").IsTrue();
+        AssertThat(Math.Abs((double)(0.1) - (double)(Sample(-1, 1).Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.09) - (double)(Sample(0, 1).Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.11) - (double)(Sample(-1, 0).Height)) <= 0.001).IsTrue();
+        AssertThat(Math.Abs((double)(0) - (double)(Sample(0, 10).Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0.2) - (double)(Sample(-10, 0).Height)) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void StructuralRoadEndpointRetainsItsExactSourceStation()
+    {
+        var path = new TerrainPath(new([new(-465.7f, 66.61f), new(-436.57f, 111.36f)]));
+        var end = path.Line.Points[^1];
+        AssertThat(Math.Abs((double)(path.Length) - (double)(path.Project(end.X, end.Y).Station)) <= 0.001).IsTrue();
+        var profile = new TerrainRoadProfile([new(0, 0), new(path.Length, 0)], path.Length,
+            [(0, path.Length - 0.00000000000001)], 1d / 12, "fixture", "bridge");
+        AssertThat(profile.Excluded(path.Length)).OverrideFailureMessage("Floating-point endpoint residue invented a ground-road sliver after a complete bridge.").IsTrue();
+        AssertThat(!profile.Excluded(path.Length + 0.01)).OverrideFailureMessage("Numerical endpoint tolerance expanded into geometric coverage.").IsTrue();
+    }
+
+    [TestCase]
+    public void RealSegmentIntersectionRejectsNearbyParallelProjection()
+    {
+        var line = new TerrainPath(new([new(-20, 0), new(20, 0)]));
+        var parallel = new TerrainPath(new([new(-20, 0.5f), new(20, 0.5f)]));
+        AssertThat(line.Intersections(parallel).Count == 0).OverrideFailureMessage("Close projections manufactured a crossing.").IsTrue();
+        var cross = line.Intersections(new(new([new(3, -10), new(3, 10)])));
+        AssertThat(cross.Count == 1).OverrideFailureMessage("Actual crossing missing.").IsTrue(); AssertThat(Math.Abs((double)(3) - (double)(cross[0].X)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(23) - (double)(cross[0].Station)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(10) - (double)(cross[0].OtherStation)) <= 0.001).IsTrue();
+    }
+
+    [TestCase]
+    public void EndCapDistanceHasBoundedSlopeAtBothFlanksAndObliqueRoadClearance()
+    {
+        const double radius = 3;
+        var tip = TerrainCompiler.EndCapDistance(3, 0, Vector2.Zero, 1, 0, radius);
+        var flank = TerrainCompiler.EndCapDistance(0, 3, Vector2.Zero, 1, 0, radius);
+        var centreline = TerrainCompiler.EndCapDistance(1, 0, Vector2.Zero, 1, 0, radius);
+        AssertThat(Math.Abs((double)(0) - (double)(tip.Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-1) - (double)(tip.Dx)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(flank.Height)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(-1) - (double)(flank.Dz)) <= 0.001).IsTrue(); AssertThat(Math.Abs((double)(2) - (double)(centreline.Height)) <= 0.001).IsTrue();
+        foreach (var point in new[] { new Vector2(0.00001f, 2.99999f), new Vector2(-0.00001f, 2.99999f), new Vector2(1, 2), new Vector2(-1, 2) })
+        {
+            var d = TerrainCompiler.EndCapDistance(point.X, point.Y, Vector2.Zero, 1, 0, radius);
+            AssertThat(double.IsFinite(d.Dx) && double.IsFinite(d.Dz) && d.Dx * d.Dx + d.Dz * d.Dz <= 1.01).OverrideFailureMessage("End-cap distance has an unbounded flank derivative.").IsTrue();
+        }
+        // A 4 m-wide north/south road occupies x >= -2 on its near side. A radius-3
+        // cap centred at x=-6 has exactly 1 m clearance, independently of channel yaw.
+        var center = new Vector2(-6, 0); var road = new TerrainPath(new([new(0, -100), new(0, 100)]));
+        AssertThat(Math.Abs((double)(1) - (double)(road.Project(center.X, center.Y).Distance - radius - 2)) <= 0.001).IsTrue();
+        var incorrectlyPlacedCenter = new Vector2(-3, 0);
+        AssertThat(road.Project(incorrectlyPlacedCenter.X, 0).Distance - radius - 2 < 0).OverrideFailureMessage("Fixture failed to expose centre-versus-cap clearance.").IsTrue();
+    }
+
+    [TestCase]
+    public void SignedDistanceKeepsRealRoadGeometryAcrossAMillimetreContainmentSwitch()
+    {
+        // Full float32 source polygon of way 572770118. Keep the public millimetre
+        // containment result while distance uses the actual side of its source edge.
+        var region = new TerrainRegion([new PolygonRings([
+            new(106.33f, 268.17f), new(111.45f, 271.39f), new(110.12f, 273.5f), new(104.54f, 269.99f),
+            new(102.25f, 266.52f), new(100.98f, 260.21f), new(99.6f, 258.74f), new(97.02f, 257.4f),
+            new(95.5f, 257.13f), new(92.33f, 257.69f), new(86.45f, 259.89f), new(82.57f, 259.91f),
+            new(80.57f, 257.62f), new(79.96f, 254.82f), new(80.7f, 250.17f), new(81.01f, 245.77f),
+            new(79.51f, 241.44f), new(76.48f, 237.13f), new(69.24f, 234.11f), new(63.03f, 229.46f),
+            new(55.85f, 229.08f), new(53.38f, 229.84f), new(46.44f, 230.71f), new(46.14f, 234.09f),
+            new(44.67f, 236.39f), new(42.57f, 235.04f), new(43.7f, 233.26f), new(44.13f, 228.49f),
+            new(52.85f, 227.39f), new(55.53f, 226.56f), new(63.92f, 227.01f), new(70.49f, 231.92f),
+            new(78.11f, 235.1f), new(81.76f, 240.29f), new(83.54f, 245.44f), new(83.19f, 250.45f),
+            new(82.5f, 254.75f), new(82.88f, 256.46f), new(83.7f, 257.41f), new(85.99f, 257.4f),
+            new(91.67f, 255.27f), new(95.49f, 254.59f), new(97.83f, 255), new(101.13f, 256.72f),
+            new(103.3f, 259.02f), new(104.61f, 265.55f)])]);
+        const double ax = 46.01933059234094, az = 234.27950000792043;
+        const double bx = 46.01933059241544, bz = 234.27949999311863;
+        AssertThat(!region.Contains(ax, az) && region.Contains(bx, bz)).OverrideFailureMessage("Public millimetre topology changed.").IsTrue();
+        var a = region.Distance(ax, az); var b = region.Distance(bx, bz);
+        AssertThat(a.Height > 0 && b.Height > 0).OverrideFailureMessage("A millimetre rounding threshold still changes the real distance sign.").IsTrue();
+        var separation = Math.Sqrt((bx - ax) * (bx - ax) + (bz - az) * (bz - az));
+        AssertThat(Math.Abs(b.Height - a.Height) <= separation + 0.01).OverrideFailureMessage("Signed distance is not 1-Lipschitz across the old jump.").IsTrue();
+    }
+
+    [TestCase]
+    public void ArealHighwayIsNotAContourMasqueradingAsACorridor()
+    {
+        var road = new NetworkLine(new("fixture:road"), new([new(-10, -10), new(10, -10), new(10, 10), new(-10, 10), new(-10, -10)]), 5)
+            { Props = JsonSerializer.SerializeToElement(new { highway = "pedestrian", area = "yes" }) };
+        var context = Context([]) with { Network = new([road], [], [], [], []) };
+        AssertThat(TerrainCompiler.Compile(context, []).IsFlat(default)).OverrideFailureMessage("Areal paving generated an automatic perimeter road.").IsTrue();
+        var corridor = new TerrainCorridorOp("design:terrain:invalid-road", "negative fixture", road.Id, [new(0, 0), new(80, 0)], 0, 0.75) { Zone = Zone };
+        {
+            WorldDataException? rejection = null;
+            try { TerrainCompiler.Compile(context, [Source([corridor])]); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+    }
+
+    [TestCase]
+    public void RealSourceEndCrossfallExtensionIsContinuousAtBothTerminalStations()
+    {
+        // Source way 572770116: the real cap corner projects 2.86 mm before
+        // the centreline end, so the old two exterior extensions did not meet.
+        Vector2[] points = [new(-8.35f, 224.89f), new(5.48f, 234.42f), new(15.62f, 236.44f),
+            new(20.8f, 236.31f), new(43.62f, 235.71f)];
+        var footprint = new TerrainRegion([new PolygonRings([new(15.51f, 237.7f), new(43.65f, 236.96f),
+            new(43.59f, 234.46f), new(15.73f, 235.19f), new(5.98f, 233.24f), new(-7.65f, 223.86f),
+            new(-9.06f, 225.92f), new(4.99f, 235.59f)])]);
+        var end = points[^1]; var previous = points[^2];
+        var dx = (double)end.X - previous.X; var dz = (double)end.Y - previous.Y;
+        var length = Math.Sqrt(dx * dx + dz * dz); var tx = dx / length; var tz = dz / length;
+        const double lateral = 2.36387369;
+        var x = end.X - tz * lateral; var z = end.Y + tx * lateral;
+        foreach (var reversed in new[] { false, true })
+        {
+            var path = new TerrainPath(new(reversed ? points.Reverse().ToArray() : points));
+            var road = new TerrainRoad(new("fixture:source-end"), new("fixture:source:way:572770116"), path, 2.5, "footway", footprint);
+            var profile = new TerrainRoadProfile([new(0, 0), new(path.Length, -0.03 * path.Length)], path.Length, [], 1d / 12, "fixture", "source-end");
+            foreach (var epsilon in new[] { 0.0001, 0.000001, 0.00000001, 0.0000000001 })
+            {
+                var a = Top(x - tx * epsilon, z - tz * epsilon);
+                var c = Top(x + tx * epsilon, z + tz * epsilon);
+                AssertThat(Math.Abs(c - a) < 0.01).OverrideFailureMessage($"Source-end height jumps at epsilon={epsilon:R}: {a:R}->{c:R}, reversed={reversed}.").IsTrue();
+            }
+            var actualA = Top(43.68212918421214, 238.0730637711107);
+            var actualB = Top(43.6821291989299, 238.0730637714087);
+            AssertThat(Math.Abs(actualB - actualA) < 0.01).OverrideFailureMessage("The measured real-shore source-end jump remains.").IsTrue();
+            // The source core and its actual 0.75 m shoulder keep planar crossfall,
+            // including the part of the shoulder past the source-end plane.
+            foreach (var point in new[] { new Vector2(43.6f, 235.8f), new Vector2(44, 235.8f) })
+            {
+                var contact = TerrainCompiler.CorridorContactAt(road, 0.75, point.X, point.Y);
+                AssertThat(contact.Distance.Height <= 0).OverrideFailureMessage("Fixture must be inside the fixed source core/shoulder.").IsTrue();
+                var expected = path.Project(point.X, point.Y);
+                var actual = TerrainCompiler.CorridorOffsetAt(road, contact, point.X, point.Y);
+                AssertThat(Math.Abs(actual.Height - expected.Offset) < 0.01).OverrideFailureMessage("Exterior continuity repair changed fixed core/shoulder crossfall.").IsTrue();
+            }
+
+            double Top(double px, double pz)
+            {
+                var contact = TerrainCompiler.CorridorContactAt(road, 0, px, pz);
+                var along = profile.SurfaceAt(path, px, pz, road.Width, path.Project(px, pz));
+                return along.Height + 0.015 * TerrainCompiler.CorridorOffsetAt(road, contact, px, pz).Height;
+            }
+        }
+    }
+
+}

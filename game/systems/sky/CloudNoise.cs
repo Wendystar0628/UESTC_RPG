@@ -1,3 +1,5 @@
+using Campus.Contracts;
+
 namespace Campus.Systems.Sky;
 
 /// <summary>
@@ -32,7 +34,7 @@ public static class CloudNoise
                 var i = y * Size + x;
                 // R：云体。大团块（越大越高），按簇的低频场分布；轮廓 s·(1 − d²/r²)，斜率有界，着色器按它估安全步长
                 r[i] = Domes(u, v, SkyTuning.NoiseBodyFreq, seed ^ 0x1001u, 0.30f, 0.75f, 0.40f, 1.0f, 0.60f, true)
-                    * Lerp(0.30f, 1.15f, Fbm(u, v, 3, 2, seed ^ 0x3003u));
+                    * ScalarMath.Lerp(0.30f, 1.15f, Fbm(u, v, 3, 2, seed ^ 0x3003u));
                 // G：层云盖的胞状起伏；B：圆团块（着色器在两个尺度上取它，叠出花椰菜顶与塔肩）
                 g[i] = Fbm(u, v, 8, 4, seed ^ 0x4004u);
                 b[i] = Domes(u, v, SkyTuning.NoiseDetailFreq, seed ^ 0x5005u, 0.45f, 0.95f, 0.55f, 1.0f, 1f, false);
@@ -64,7 +66,7 @@ public static class CloudNoise
         if (!float.IsFinite(coverage) || coverage <= 0f) return 1f;
         var x = Math.Clamp(coverage, 0f, 1f) * (table.Length - 1);
         var i = Math.Min((int)x, table.Length - 2);
-        return Lerp(table[i], table[i + 1], x - i);
+        return ScalarMath.Lerp(table[i], table[i + 1], x - i);
     }
 
     private static float[] Thresholds(int[] histogram, int total)
@@ -105,13 +107,13 @@ public static class CloudNoise
                 var iy = cy + dj;
                 var wx = (uint)(((ix % freq) + freq) % freq);
                 var wy = (uint)(((iy % freq) + freq) % freq);
-                var h = Hash(wx, wy, salt);
-                if (Unit(Hash(h, 0x54u, salt)) > presence) continue;
-                var px = ix + Unit(h);
-                var py = iy + Unit(Hash(h, 0x51u, salt));
-                var size = Unit(Hash(h, 0x52u, salt));
-                var radius = Lerp(rMin, rMax, size);
-                var strength = Lerp(sMin, sMax, sizeLinked ? size : Unit(Hash(h, 0x53u, salt)));
+                var h = IntegerNoise.Hash3D(wx, wy, salt);
+                if (IntegerNoise.Low24(IntegerNoise.Hash3D(h, 0x54u, salt)) > presence) continue;
+                var px = ix + IntegerNoise.Low24(h);
+                var py = iy + IntegerNoise.Low24(IntegerNoise.Hash3D(h, 0x51u, salt));
+                var size = IntegerNoise.Low24(IntegerNoise.Hash3D(h, 0x52u, salt));
+                var radius = ScalarMath.Lerp(rMin, rMax, size);
+                var strength = ScalarMath.Lerp(sMin, sMax, sizeLinked ? size : IntegerNoise.Low24(IntegerNoise.Hash3D(h, 0x53u, salt)));
                 var dx = x - px;
                 var dy = y - py;
                 var q = (dx * dx + dy * dy) / (radius * radius);
@@ -130,25 +132,11 @@ public static class CloudNoise
         var norm = 0f;
         for (var o = 0; o < octaves; o++)
         {
-            sum += amp * ValueNoise(u, v, freq << o, salt + (uint)o * 0x9E37u);
+            sum += amp * IntegerNoise.TileableValue2D(u, v, freq << o, salt + (uint)o * 0x9E37u);
             norm += amp;
             amp *= 0.5f;
         }
         return sum / norm;
-    }
-
-    private static float ValueNoise(float u, float v, int freq, uint salt)
-    {
-        var x = u * freq;
-        var y = v * freq;
-        var x0 = (int)MathF.Floor(x);
-        var y0 = (int)MathF.Floor(y);
-        var fx = Fade(x - x0);
-        var fy = Fade(y - y0);
-        float At(int ix, int iy) => Unit(Hash((uint)(((ix % freq) + freq) % freq), (uint)(((iy % freq) + freq) % freq), salt));
-        var top = Lerp(At(x0, y0), At(x0 + 1, y0), fx);
-        var bottom = Lerp(At(x0, y0 + 1), At(x0 + 1, y0 + 1), fx);
-        return Lerp(top, bottom, fy);
     }
 
     private static void Normalize(float[] values)
@@ -164,19 +152,5 @@ public static class CloudNoise
         for (var i = 0; i < values.Length; i++) values[i] = (values[i] - lo) / span;
     }
 
-    private static uint Hash(uint x, uint y, uint z)
-    {
-        var h = x * 0x8DA6B343u ^ y * 0xD8163841u ^ z * 0xCB1AB31Fu;
-        h ^= h >> 15;
-        h *= 0x2C1B3C6Du;
-        h ^= h >> 12;
-        h *= 0x297A2D39u;
-        h ^= h >> 15;
-        return h;
-    }
-
-    private static float Unit(uint h) => (h & 0xFFFFFFu) / 16777216f;
-    private static float Fade(float t) => t * t * t * (t * (t * 6f - 15f) + 10f);
-    private static float Lerp(float a, float b, float t) => a + (b - a) * t;
     private static byte ToByte(float v) => (byte)Math.Clamp((int)MathF.Round(v * 255f), 0, 255);
 }

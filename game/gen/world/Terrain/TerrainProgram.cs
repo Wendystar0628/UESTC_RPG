@@ -69,7 +69,7 @@ internal sealed class TerrainProgram
         {
             foreach (var bounds in _nodes[i].IndexPatches ?? [_nodes[i].Support])
             {
-                if (!float.IsFinite(bounds.Min.X) || !float.IsFinite(bounds.Min.Y) || !float.IsFinite(bounds.Max.X) || !float.IsFinite(bounds.Max.Y))
+                if (!VectorMath.Finite(bounds.Min) || !VectorMath.Finite(bounds.Max))
                     throw new WorldDataException(_nodes[i].File, _nodes[i].Id, "Non-finite terrain influence bound.");
                 var x0 = Cell(bounds.Min.X); var z0 = Cell(bounds.Min.Y); var x1 = Cell(bounds.Max.X); var z1 = Cell(bounds.Max.Y);
                 if ((long)(x1 - x0 + 1) * (z1 - z0 + 1) > 1_000_000)

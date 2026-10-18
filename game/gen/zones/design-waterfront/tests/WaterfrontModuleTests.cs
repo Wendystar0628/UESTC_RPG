@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.World;
+using Campus.Tests;
 using Campus.Gen.Zones.DesignWaterfront.Bridges;
 using GdUnit4;
 using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
@@ -14,28 +15,35 @@ using static GdUnit4.Assertions;
 public sealed class WaterfrontModuleTests
 {
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
-    private const string Yinxing = "design:waterfront-bridge-yinxing";
-    private static readonly string[] YinxingLines = ["qsh:source:way:683646721", "qsh:source:way:988857960", "qsh:source:way:988857962"];
+    private static readonly Lazy<IWorldModel> Loaded = new(() => RealMapFixture.Load().World);
 
     [TestCase]
     public void OverlayRegistersTheBridgesAndKeepsTheNetwork()
     {
         var world = World();
-        var site = WaterfrontModule.SiteOf(world);
-        AssertThat(site.Bridges.Select(b => b.Id.Value).SequenceEqual(["design:waterfront-bridge-library-north", "design:waterfront-bridge-ximen", Yinxing])).OverrideFailureMessage("three bridges in ID order").IsTrue();
-        AssertThat(site.Stones.Count == 2).OverrideFailureMessage("two bridge-head stones").IsTrue();
-        // 路网拓扑照旧: every merged line is still its own network bridge.
-        foreach (var id in YinxingLines) AssertThat(world.Network.Bridges.Any(l => l.Id.Value == id)).OverrideFailureMessage($"{id} stays in the network").IsTrue();
-        var yinxing = site.Bridges.Single(b => b.Id.Value == Yinxing);
-        AssertThat(yinxing.Lines.Select(l => l.Value).SequenceEqual(YinxingLines)).OverrideFailureMessage("the merged deck carries all three lines").IsTrue();
-        AssertThat(yinxing.Bands.Count == 3 && yinxing.Bands[1].Kind == BandKind.Carriage).OverrideFailureMessage("one carriageway between two walking strips").IsTrue();
+        var plans = BridgePlan.All(world);
+        var registrations = world.Features.Values.Where(f => f.Kind.Value == T.BridgeKind).OrderBy(f => f.Id.Value, StringComparer.Ordinal).ToArray();
+        AssertThat(plans.Count > 0 && plans.Select(b => b.Id).SequenceEqual(registrations.Select(f => f.Id))).IsTrue();
+        AssertThat(BridgeStone.All(world).Count == world.Features.Values.Count(f => f.Kind.Value == T.StoneKind)).IsTrue();
+        foreach (var registration in registrations)
+        {
+            var expected = new[] { registration.Text("axis") }.Concat(
+                registration.RequiredProps().TryGetProperty("walks", out var walks)
+                    ? walks.EnumerateArray().Select(w => w.GetString()!) : []).ToArray();
+            foreach (var id in expected)
+                AssertThat(world.Network.Bridges.Any(line => line.Id.Value == id)).OverrideFailureMessage($"{id} stays in the network").IsTrue();
+            var plan = plans.Single(b => b.Id == registration.Id);
+            AssertThat(plan.Lines.Select(line => line.Value).SequenceEqual(expected)).IsTrue();
+            AssertThat(plan.Bands.Count(b => b.Kind == BandKind.Carriage) == (plan.HasCarriage ? 1 : 0)).IsTrue();
+            AssertThat(plan.Bands.Any(b => b.Kind == BandKind.Walk)).IsTrue();
+        }
     }
 
     [TestCase]
     public void DeckSpansTheWaterOnTwoAbutments()
     {
         var world = World();
-        foreach (var plan in WaterfrontModule.SiteOf(world).Bridges)
+        foreach (var plan in BridgePlan.All(world))
         {
             AssertThat(plan.Abutments.Count == 2).OverrideFailureMessage($"{plan.Id.Value} crosses water and stands on two abutments").IsTrue();
             foreach (var id in plan.Lines)
@@ -94,9 +102,9 @@ public sealed class WaterfrontModuleTests
         var ctx = Context();
         var module = new WaterfrontModule();
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
-        var site = WaterfrontModule.SiteOf(ctx.World);
-        AssertThat(colliders.Length == site.Colliders.Count).OverrideFailureMessage("every collider is filed in exactly one cell").IsTrue();
-        foreach (var plan in site.Bridges)
+        var plans = BridgePlan.All(ctx.World);
+        AssertThat(colliders.Length == plans.Sum(plan => BridgeColliders.Of(plan).Count()) + BridgeStone.All(ctx.World).Count).OverrideFailureMessage("every collider is filed in exactly one cell").IsTrue();
+        foreach (var plan in plans)
         {
             var ramps = colliders.OfType<RampCollider>().Where(r => Inside(plan, new(r.P0.X, r.P0.Z))).ToArray();
             AssertThat(ramps.Length > 0 && ramps.All(r => r.Tag == SurfaceTag.Ground && r.Foot != FootMat.Auto)).OverrideFailureMessage($"{plan.Id.Value}: walkable deck ramps with a foot material").IsTrue();
@@ -105,7 +113,7 @@ public sealed class WaterfrontModuleTests
             var walls = colliders.OfType<WallCollider>().Where(w => Inside(plan, (w.A + w.B) * 0.5f)).ToArray();
             AssertThat(walls.Length == 2 && walls.All(w => w.Tag == SurfaceTag.Barrier && w.Y1 >= plan.WalkY + WalkRules.BarrierHeight - 0.01f && w.HalfT <= 0.3f)).OverrideFailureMessage($"{plan.Id.Value}: two parapets, top at least 1.5 m above the walk").IsTrue();
         }
-        AssertThat(colliders.OfType<BoxCollider>().Count() == 2).OverrideFailureMessage("each stone is one box").IsTrue();
+        AssertThat(colliders.OfType<BoxCollider>().Count() == BridgeStone.All(ctx.World).Count).OverrideFailureMessage("each stone is one box").IsTrue();
     }
 
     private static bool Inside(BridgePlan plan, Vector2 p)
@@ -117,21 +125,5 @@ public sealed class WaterfrontModuleTests
 
     private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1u };
 
-    private static IWorldModel World()
-    {
-        var data = DataDirectory();
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .Concat(Directory.GetFiles(Path.Combine(data, "overlay", "waterfront.d"), "*.json").Order(StringComparer.Ordinal)
-                .Select(path => Path.GetRelativePath(data, path).Replace('\\', '/')))
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        return WorldModelLoader.Load(new("qingshuihe"), files).World;
-    }
-
-    private static string DataDirectory()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
-        return directory is null ? throw new DirectoryNotFoundException("game/data/maps/qingshuihe") : Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-    }
-
+    private static IWorldModel World() => Loaded.Value;
 }

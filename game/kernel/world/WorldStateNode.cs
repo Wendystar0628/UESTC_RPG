@@ -13,14 +13,12 @@ namespace Campus.Kernel.World;
 public partial class WorldStateNode : Node, IMapAware, IQualityAware
 {
     private WorldStateService? _world;
-    private IViewControl? _view;
     private int _stepRate = WorldTime.DefaultStepRate;
 
     public override void _Ready()
     {
         ProcessPriority = FramePriority.WorldState;
         _world = (WorldStateService)Services.Get<IWorldState>();
-        _view = Services.Get<IViewControl>();
         _stepRate = Services.Get<IQualityService>().Effective.StepRate;
         // Ready completes before the first rendered frame, including shader warm-up.
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.AnimLoopSeconds, WorldTime.AnimLoopSeconds);
@@ -29,8 +27,8 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
 
     public override void _Process(double delta)
     {
-        if (_world is null || _view is null) return;
-        _world.SetFrameReadouts(_view.Mode, _stepRate);
+        if (_world is null) return;
+        _world.SetStepRate(_stepRate);
         _world.Tick(delta, RegistryGateRunner.FreezesAnimation);
         WriteGlobals();
     }

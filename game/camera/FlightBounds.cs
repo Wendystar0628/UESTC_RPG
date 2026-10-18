@@ -55,7 +55,7 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
 
     public bool IsLegal(Vector3 p, bool outsideBuffer = false)
     {
-        if (!Finite(p)) return false;
+        if (!VectorMath.Finite(p)) return false;
         Span<FlightBoundary> constraints = stackalloc FlightBoundary[5];
         Evaluate(p, constraints);
         foreach (var c in constraints)
@@ -65,7 +65,7 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
 
     public Vector3 Project(Vector3 p)
     {
-        if (!Finite(p)) throw new ArgumentOutOfRangeException(nameof(p));
+        if (!VectorMath.Finite(p)) throw new ArgumentOutOfRangeException(nameof(p));
         Span<FlightBoundary> constraints = stackalloc FlightBoundary[5];
         for (int iteration = 0; iteration < 64; iteration++)
         {
@@ -126,5 +126,4 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
         return inside ? -distance : distance;
     }
 
-    private static bool Finite(Vector3 p) => float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
 }

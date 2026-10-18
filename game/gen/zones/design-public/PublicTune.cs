@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using static Campus.Gen.Zones.Common.ZoneLooks;
 
 namespace Campus.Gen.Zones.DesignPublic;
 
@@ -10,17 +11,11 @@ namespace Campus.Gen.Zones.DesignPublic;
 /// </summary>
 public static class PublicTune
 {
-    /// <summary>Feature ID prefix of everything this package adds (MAP-QSH-ADDITIONS 第 1 条).</summary>
-    public const string Prefix = "design:public-";
-
     /// <summary>Overlay kind of the curved bench: point geometry at the arc centre (the pad centre), props radius/from/to.</summary>
     public const string ArcBenchKind = "arc-bench";
 
     /// <summary>Overlay kind of a tree pit (WP-23 plants it, WP-15 skips pits whose props say stone = site).</summary>
     public const string TreePitKind = "tree-pit";
-
-    /// <summary>WP-15's ground section above the terrain (GroundSection): lawns at 0.10 m, paving at 0.15 m.</summary>
-    public const float PavingLevel = 0.15f;
 
     public static class Bench
     {
@@ -56,16 +51,13 @@ public static class PublicTune
     /// <summary>Material families (ART-STYLE): only registered pairs, no new colours, no 砖红 or 电子蓝.</summary>
     public static class Look
     {
-        private static PaletteToken Lit(string f) => new(f + ".lit");
-        private static PaletteToken Shade(string f) => new(f + ".shade");
-
         /// <summary>Warm wood slats, the same family WP-13's bench uses (door.wood).</summary>
-        public static readonly ToonSpec Wood = new(Lit("door.wood"), Shade("door.wood")) { Fx = ToonFx.BevelLift, Line = LineClass.Fine, Wet = 0.6f };
+        public static readonly ToonSpec Wood = S("door.wood", ToonFx.BevelLift, LineClass.Fine);
         /// <summary>Light granite: plinths and the pit kerb (the forecourt and tree-pit stone of the campus).</summary>
-        public static readonly ToonSpec Granite = new(Lit("stone.beige"), Shade("stone.beige")) { Fx = ToonFx.BevelLift, Line = LineClass.Fine, Wet = 0.6f };
+        public static readonly ToonSpec Granite = S("stone.beige", ToonFx.BevelLift, LineClass.Fine);
         /// <summary>Dark grey steel: carriers, back posts (WP-13's DarkSteel).</summary>
-        public static readonly ToonSpec Steel = new(Lit("equip.fence"), Shade("equip.fence")) { Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f };
+        public static readonly ToonSpec Steel = S("equip.fence", ToonFx.Rim | ToonFx.AnisoBand, LineClass.Fine, 0.4f);
         /// <summary>Pit soil: the horizontal face that catches leaves, petals and snow (MAP-QSH-ADDITIONS R3).</summary>
-        public static readonly ToonSpec Soil = new(Lit("base.warmBrown"), Shade("base.warmBrown")) { Line = LineClass.None, Wet = 0.6f };
+        public static readonly ToonSpec Soil = S("base.warmBrown", line: LineClass.None);
     }
 }

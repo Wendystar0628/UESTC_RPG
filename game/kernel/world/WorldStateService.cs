@@ -57,7 +57,6 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         (TimeMoving ? WorldTransition.Time : WorldTransition.None) |
         (SeasonMoving ? WorldTransition.Season : WorldTransition.None) |
         (weather.Transitioning ? WorldTransition.Weather : WorldTransition.None);
-    public ViewMode ViewMode { get; private set; } = ViewMode.Fly;
     public WeatherSel Weather => weather.Selection;
     public WeatherVec WeatherNow => weather.Now;
     public IReadOnlyList<WeatherSpan> WeatherAhead => weather.Ahead;
@@ -342,11 +341,9 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         }
     }
 
-    public void SetFrameReadouts(ViewMode mode, int stepRate)
+    public void SetStepRate(int stepRate)
     {
-        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
         if (!WorldTime.IsStepRate(stepRate)) throw new ArgumentOutOfRangeException(nameof(stepRate));
-        ViewMode = mode;
         _stepRate = stepRate;
     }
 

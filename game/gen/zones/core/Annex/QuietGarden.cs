@@ -22,13 +22,14 @@ public sealed class QuietGarden : ICorePiece
 {
     private readonly Surface _ground;
 
-    private QuietGarden(IReadOnlyList<WallPiece> walls, Surface ground)
+    private QuietGarden(IWorldModel world, IReadOnlyList<WallPiece> walls, Surface ground)
     {
         Walls = walls;
         _ground = ground;
         Ring = walls.Select(w => w.A).Reverse().ToArray();
-        Pergola = walls.Where(w => w.Block.Source == CoreFeatures.CourtWing.Value).OrderByDescending(w => w.Length).First();
-        Colonnade = walls.Where(w => w.Block.Kind is BlockKind.Podium or BlockKind.Wing).OrderByDescending(w => w.Length).FirstOrDefault();
+        Pergola = CoreContours.Wall(world, CoreIds.GardenPergolaFace, walls.Where(w => w.Block.Source == CoreIds.CourtWing.Value))
+            ?? throw new InvalidOperationException("The registered pergola wall is not exposed.");
+        Colonnade = CoreContours.Wall(world, CoreIds.GardenColonnadeFace, walls.Where(w => w.Block.Kind is BlockKind.Podium or BlockKind.Wing));
         Pavilion = Widest([], S.PavilionRadius + S.PavilionOverhang + 0.6f);
         var first = Widest([(Pavilion, S.PavilionRadius + S.PavilionOverhang + S.PlanterGap)], PlanterReach);
         var second = Widest([(Pavilion, S.PavilionRadius + S.PavilionOverhang + S.PlanterGap), (first, 2 * PlanterReach + S.PlanterGap)], PlanterReach);
@@ -38,8 +39,8 @@ public sealed class QuietGarden : ICorePiece
     public static QuietGarden? From(IWorldModel world, AnnexSite? site)
     {
         ArgumentNullException.ThrowIfNull(world);
-        if (site?.Courtyard is not { } walls || !walls.Any(w => w.Block.Source == CoreFeatures.CourtWing.Value)) return null;
-        return new QuietGarden(walls, world.Terrain.HeightAt);
+        if (site?.Courtyard is not { } walls || !walls.Any(w => w.Block.Source == CoreIds.CourtWing.Value)) return null;
+        return new QuietGarden(world, walls, world.Terrain.HeightAt);
     }
 
     /// <summary>The court's walls in loop order; each piece's Out points into the court.</summary>
@@ -57,7 +58,7 @@ public sealed class QuietGarden : ICorePiece
     private Vector2 Across => Pergola.Out;
 
     public string Id => "quiet-garden";
-    public Vector2 Anchor => Plan.Centroid([Ring]);
+    public Vector2 Anchor => PlanGeometry.Centroid([Ring]);
     public IReadOnlyList<Claim> Claims => [];
 
     // ------------------------------------------------------------------ layout
@@ -69,7 +70,7 @@ public sealed class QuietGarden : ICorePiece
     private Vector2 Widest(IReadOnlyList<(Vector2 P, float R)> keep, float need)
     {
         float x0 = Ring.Min(p => p.X), x1 = Ring.Max(p => p.X), z0 = Ring.Min(p => p.Y), z1 = Ring.Max(p => p.Y);
-        var best = Plan.Centroid([Ring]);
+        var best = PlanGeometry.Centroid([Ring]);
         var bestClear = float.MinValue;
         for (var x = x0 + 0.25f; x < x1; x += 0.5f)
             for (var z = z0 + 0.25f; z < z1; z += 0.5f)
@@ -81,7 +82,7 @@ public sealed class QuietGarden : ICorePiece
                 {
                     var band = ReferenceEquals(w, Pergola) ? S.PergolaInset + S.PergolaDepth + S.PergolaOverhang
                         : ReferenceEquals(w, Colonnade) ? S.ColonnadeInset + S.ColonnadeColumn : 0f;
-                    clear = MathF.Min(clear, Distance(p, w.A, w.B) - band);
+                    clear = MathF.Min(clear, MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, w.A, w.B)) - band);
                 }
                 foreach (var (q, r) in keep) clear = MathF.Min(clear, Vector2.Distance(p, q) - r);
                 if (clear > bestClear + 1e-4f) { bestClear = clear; best = p; }
@@ -89,14 +90,7 @@ public sealed class QuietGarden : ICorePiece
         return best;
     }
 
-    private static float Distance(Vector2 p, Vector2 a, Vector2 b)
-    {
-        var ab = b - a;
-        var t = Math.Clamp(Vector2.Dot(p - a, ab) / MathF.Max(ab.LengthSquared(), 1e-9f), 0f, 1f);
-        return Vector2.Distance(p, a + ab * t);
-    }
-
-    private float Y(Vector2 p) => _ground(p.X, p.Y) + S.PavingLift;
+    private float Y(Vector2 p) => _ground(p.X, p.Y) + GroundLevels.Paving;
 
     // ------------------------------------------------------------------ build
 
@@ -129,7 +123,7 @@ public sealed class QuietGarden : ICorePiece
             var m = from + d * (0.85f * k + 0.45f);
             var side = new Vector2(-d.Y, d.X);
             Shapes.FlatPolygon(mesh, S.Inlay(S.CourtPath), [m - d * 0.28f - side * 0.48f, m + d * 0.28f - side * 0.48f, m + d * 0.28f + side * 0.48f, m - d * 0.28f + side * 0.48f],
-                _ground, S.PavingLift + S.DecalLift);
+                _ground, GroundLevels.Paving + GroundLevels.Decal);
         }
     }
 
@@ -204,7 +198,7 @@ public sealed class QuietGarden : ICorePiece
         var c = Pavilion;
         var y = Y(c);
         var turn = MathF.Atan2(Along.Y, Along.X);
-        Vector2 Corner(int k, float r) { var a = turn + Shapes.Tau * k / 6f; return c + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r; }
+        Vector2 Corner(int k, float r) { var a = turn + MathF.Tau * k / 6f; return c + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r; }
         var granite = S.Stone(S.ColonnadeGranite);
         var timber = S.Wall(S.Timber);
         float rp = S.PavilionRadius + S.PavilionPlinthOut;
@@ -231,7 +225,7 @@ public sealed class QuietGarden : ICorePiece
         {
             var p = Corner(k, S.PavilionRadius);
             float h = S.PavilionPost * 0.5f;
-            Prism(mesh, timber, i => p + new Vector2(MathF.Cos(turn + Shapes.Tau * i / 4f + 0.785398f), MathF.Sin(turn + Shapes.Tau * i / 4f + 0.785398f)) * h * 1.414f,
+            Prism(mesh, timber, i => p + new Vector2(MathF.Cos(turn + MathF.Tau * i / 4f + 0.785398f), MathF.Sin(turn + MathF.Tau * i / 4f + 0.785398f)) * h * 1.414f,
                 1f, 1f, floor - 0.02f, eave - S.PavilionFascia, 0f, sides: 4);
             if (k == gate || lod > LodLevel.L1) continue;
             // Bench rail between this post and the next: a seat board on two short legs.

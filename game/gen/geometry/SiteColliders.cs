@@ -18,10 +18,10 @@ public sealed class SiteColliders
 
     public IReadOnlyList<(Vector2 Anchor, Collider Collider)> Items => _items;
 
-    public void Add(Collider collider)
+    public void Add(Collider collider, Vector2? anchor = null)
     {
         ArgumentNullException.ThrowIfNull(collider);
-        _items.Add((GeometryPlacement.AnchorOf(collider), collider));
+        _items.Add((anchor ?? GeometryPlacement.AnchorOf(collider), collider));
     }
 
     /// <summary>A box collider from a placement matrix of its centre and its half extents in that frame.</summary>

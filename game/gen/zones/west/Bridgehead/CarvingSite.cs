@@ -21,9 +21,7 @@ public sealed class CarvingSite : ZoneSite
 
     /// <summary>The carving's position: its node's anchor in the world model.</summary>
     internal static Vector2 At(IWorldModel world) =>
-        world.Features.TryGetValue(new(C.Entity), out var feature) && feature.Geometry is PointGeometry point
-            ? new(point.Position.X, point.Position.Z)
-            : throw new InvalidOperationException($"国防科技园石刻 {C.Entity} is missing from the world model.");
+        world.Feature(C.Entity).Point();
 
     public override void Build(SiteBuilder b)
     {

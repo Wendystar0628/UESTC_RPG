@@ -26,12 +26,13 @@ public sealed class InnovationSite : ZoneSite
 
     internal static PlanFrame ShaftFrame(Vector2 centre) => PlanFrame.Along(centre, I.WingAxis);
 
-    internal static PlanFrame PortalFrame => PlanMath.Facing(I.MainDoor, I.MainFacing);
+    internal static PlanFrame PortalFrame(IWorldModel world) => PlanMath.Facing(I.MainDoor(world), I.MainFacing);
 
     public override void Build(SiteBuilder b)
     {
-        foreach (var (centre, length) in I.Shafts) Shaft(b, ShaftFrame(centre), length, b.Ground(centre));
-        Portal(b, PortalFrame, b.Ground(I.MainDoor));
+        var world = b.Context.World;
+        foreach (var (centre, length) in I.Shafts(world)) Shaft(b, ShaftFrame(centre), length, b.Ground(centre));
+        Portal(b, PortalFrame(world), b.Ground(I.MainDoor(world)));
     }
 
     private static void Shaft(SiteBuilder b, PlanFrame g, float length, float y)
@@ -91,14 +92,15 @@ public sealed class InnovationSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        foreach (var (centre, length) in I.Shafts)
+        var world = c.Context.World;
+        foreach (var (centre, length) in I.Shafts(world))
         {
             var g = ShaftFrame(centre);
             var y = c.Ground(centre.X, centre.Y);
             c.Box(g.At(0, y + I.ShaftHeight * 0.5f, 0), new(length * 0.5f, I.ShaftHeight * 0.5f, I.ShaftWidth * 0.5f), SurfaceTag.Wall, FootMat.Glass);
         }
-        var f = PortalFrame;
-        var yp = c.Ground(I.MainDoor.X, I.MainDoor.Y);
+        var f = PortalFrame(world);
+        var yp = c.Ground(I.MainDoor(world).X, I.MainDoor(world).Y);
         float hw = I.PortalWidth * 0.5f, m = I.PortalMember, d = I.PortalDepth;
         foreach (var s in new[] { -1f, 1f })
             c.Box(f.At(s * (hw - m * 0.5f), yp + I.PortalHeight * 0.5f, (d - 0.3f) * 0.5f), new(m * 0.5f, I.PortalHeight * 0.5f, (d + 0.3f) * 0.5f), SurfaceTag.Wall, FootMat.StonePaving);

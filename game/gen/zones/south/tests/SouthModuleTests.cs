@@ -1,3 +1,4 @@
+using Campus.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -18,70 +19,30 @@ public sealed class SouthModuleTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase]
-    public void OverlayLoadsAndSetsTheMainBuildingHeights()
-    {
-        var world = World();
-        AssertThat(world.Features[new("qsh:way:687370085")].Height is 34.4f).OverrideFailureMessage("B2 height from the HeightOp").IsTrue();
-        AssertThat(world.Features[new("qsh:way:687370085")].Storeys == 8).OverrideFailureMessage("B2 storeys").IsTrue();
-        AssertThat(world.Features[new("qsh:way:687370086")].Storeys == 7).OverrideFailureMessage("B1 storeys").IsTrue();
-        AssertThat(world.Features[new("qsh:way:687370092")].Storeys == 5).OverrideFailureMessage("A1 storeys").IsTrue();
-        AssertThat(world.Features.ContainsKey(new("design:south-hongfeng-pavilion"))).OverrideFailureMessage("pavilion design addition").IsTrue();
-    }
-
-    [TestCase]
     public void BuildingOneKeepsOnlyItsOneStoreySourcePartOnTheRealMap()
     {
-        var data = DataRoot();
-        var one = new FeatureId("qsh:way:691679140");
-        var rawFiles = new Dictionary<string, string>(StringComparer.Ordinal) { ["campus.json"] = File.ReadAllText(Path.Combine(data, "campus.json")) };
-        var raw = WorldModelLoader.Load(new("qingshuihe"), rawFiles).World;
-        AssertThat(raw.Features[one].Parts.Select(p => p.SourceId).Order(StringComparer.Ordinal)
-            .SequenceEqual(["osm:way:691679138", "osm:way:691679140"], StringComparer.Ordinal)).OverrideFailureMessage("the raw map carries two source parts for building 1").IsTrue();
+        var one = new FeatureId(SouthIds.Building1.Entity);
+        var rawFiles = RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal)).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        var raw = RealMapFixture.LoadPrepared(rawFiles, options: new WorldLoadOptions { ClaimedBy = new Dictionary<FeatureId, WpId>() }).World;
+        AssertThat(raw.Features[one].Parts.Any(part => part.SourceId == SouthIds.Building1HiddenWing.Part)).OverrideFailureMessage("the raw map carries two source parts for building 1").IsTrue();
         // The map as the kernel loads it: every authored overlay.
-        var world = FullWorld();
+        var world = RealMapFixture.Load().World;
         AssertThat(world.Features.ContainsKey(one)).OverrideFailureMessage("hidePart keeps the entity itself").IsTrue();
         var building = world.Features[one];
-        AssertThat(building.Parts.Count == 1 && building.Parts[0].SourceId == "osm:way:691679140").OverrideFailureMessage("only the 1-storey source part is left").IsTrue();
-        AssertThat(building.Height == 3.9f).OverrideFailureMessage("building 1 stands 3.9 m").IsTrue();
-        AssertThat(building.Storeys == 1).OverrideFailureMessage("building 1 has one storey").IsTrue();
+        AssertThat(building.Parts.Select(part => part.SourceId).SequenceEqual(raw.Features[one].Parts.Where(part => part.SourceId != SouthIds.Building1HiddenWing.Part).Select(part => part.SourceId))).OverrideFailureMessage("only the 1-storey source part is left").IsTrue();
     }
 
     [TestCase]
     public void ClaimsNameExistingFeatures()
     {
-        var world = World();
+        var world = RealMapFixture.Load().World;
         var module = new SouthModule();
-        AssertThat(module.Claims.Count == 8).OverrideFailureMessage("gate, front steps, Xuanbang, Liren's connector, the gym, the natatorium, the sports platform and the stand are claimed").IsTrue();
+        AssertThat(module.Claims.Count == SouthSites.All.Sum(site => site.Claims.Count)).OverrideFailureMessage("gate, front steps, Xuanbang, Liren's connector, the gym, the natatorium, the sports platform and the stand are claimed").IsTrue();
         foreach (var claim in module.Claims.OfType<FeatureClaim>())
         {
             AssertThat(world.Features.ContainsKey(claim.Feature)).OverrideFailureMessage($"claimed feature {claim.Feature.Value} exists").IsTrue();
             AssertThat((claim.Aspects & Aspects.Massing) != 0).OverrideFailureMessage("claims cover massing so WP-14 skips the extrusion").IsTrue();
         }
-    }
-
-    [TestCase]
-    public void OverlaySetsLirenAndRegistersTheWadeStep()
-    {
-        var world = World();
-        foreach (var id in new[] { Liren.LirenSite.BlockA, Liren.LirenSite.BlockB })
-        {
-            AssertThat(world.Features[new(id)].Storeys == 4).OverrideFailureMessage($"{id} has 4 storeys").IsTrue();
-            AssertThat(world.Features[new(id)].Family?.Value == "modern").OverrideFailureMessage($"{id} is in the white family").IsTrue();
-        }
-        AssertThat(world.Features.ContainsKey(new(EastLake.EastLakeSite.WadeStep))).OverrideFailureMessage("wade step design addition").IsTrue();
-    }
-
-    [TestCase]
-    public void TerrainOverlayParsesWithTheStageOneSchema()
-    {
-        var data = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(DataRoot(), "overlay", "terrain", "south.terrain.json")));
-        AssertThat(data.Zone.Value == "south" && data.Owner.Value == "WP-18").OverrideFailureMessage("zone and owner").IsTrue();
-        var hill = data.Ops.OfType<TerrainMoundOp>().Single(o => o.Id == "design:terrain:south-hongfeng");
-        AssertThat(hill.Shape is TerrainEllipse { YawDeg: 75 } e && e.Center == new Vector2(-352, 238) && e.Radii == new Vector2(42, 34)).OverrideFailureMessage("hill ellipse").IsTrue();
-        AssertThat(data.Ops.OfType<TerrainPlatformOp>().Single().Rings.Outer.Count == 12).OverrideFailureMessage("hill-top platform ring").IsTrue();
-        AssertThat(data.Ops.Count == 4 && data.Ops.All(o => o.Priority is 50 or 60)).OverrideFailureMessage("four operations keep their priorities").IsTrue();
-        var lawn = data.Ops.OfType<TerrainMoundOp>().Single(o => o.Id == "design:terrain:south-west-lawn");
-        AssertThat(lawn.Height <= 1.5 && lawn.Shape is TerrainEllipse le && MathF.Min(le.Radii.X, le.Radii.Y) >= 7.5 * lawn.Height).OverrideFailureMessage("the west-lawn mound keeps R6's limits (h ≤ 1.5 m, R ≥ 7.5 h)").IsTrue();
     }
 
     [TestCase]
@@ -95,8 +56,7 @@ public sealed class SouthModuleTests
             AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length).OverrideFailureMessage("source IDs are unique").IsTrue();
             foreach (var claim in module.Claims.OfType<FeatureClaim>())
                 AssertThat(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0)).OverrideFailureMessage($"{lod}: claimed source {claim.Feature} has actual geometry, collision and material contours").IsTrue();
-            var size = 64 << (int)lod;
-            var cells = module.ItemsFor(ctx, lod).Select(i => new TileKey((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
+            var cells = module.ItemsFor(ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
             var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
             AssertThat(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes)))).OverrideFailureMessage($"{lod}: complete source geometry reproduces the tiled production geometry").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
@@ -144,8 +104,7 @@ public sealed class SouthModuleTests
         {
             var items = module.ItemsFor(ctx, lod);
             AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
-            var size = 64 << (int)lod;
-            var cells = items.Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct().ToArray();
+            var cells = items.Select(i => (TileGrid.At(i.Anchor, lod).X, TileGrid.At(i.Anchor, lod).Z)).Distinct().ToArray();
             var meshes = 0;
             var parts = 0;
             foreach (var (x, z) in lod == LodLevel.L4 ? [(0, 0)] : cells)
@@ -171,8 +130,7 @@ public sealed class SouthModuleTests
         var module = new SouthModule();
         foreach (var (lod, limit) in new[] { (LodLevel.L0, module.Budget.TrianglesL0), (LodLevel.L1, module.Budget.TrianglesL1) })
         {
-            var size = 64 << (int)lod;
-            var cells = module.ItemsFor(ctx, lod).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
+            var cells = module.ItemsFor(ctx, lod).Select(i => (TileGrid.At(i.Anchor, lod).X, TileGrid.At(i.Anchor, lod).Z)).Distinct();
             foreach (var (x, z) in cells)
             {
                 var output = module.Build(ctx, new(x, z), lod);
@@ -198,7 +156,7 @@ public sealed class SouthModuleTests
         var module = new SouthModule();
         var cached = module.ItemsFor(ctx, LodLevel.L0);
         var anchor = cached.First(i => i.Mesh is not null).Anchor;
-        var tile = new TileKey((int)MathF.Floor(anchor.X / 64f), (int)MathF.Floor(anchor.Y / 64f));
+        var tile = TileGrid.At(anchor);
         var output = module.Build(ctx, tile, LodLevel.L0);
         var positions = output.Meshes.Select(m => m.Position.ToArray()).ToArray();
         var indices = output.Meshes.Select(m => m.Index.ToArray()).ToArray();

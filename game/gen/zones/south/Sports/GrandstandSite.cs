@@ -23,9 +23,9 @@ namespace Campus.Gen.Zones.South.Sports;
 /// </summary>
 public sealed class GrandstandSite : ZoneSite
 {
-    public const string Feature = "qsh:way:217855276";
-    private const string Part = "osm:way:217855276";
-    public const string Track = "qsh:way:808264789";
+    public static readonly string Feature = SouthIds.Grandstand.Entity;
+    private static readonly string Part = SouthIds.Grandstand.Part;
+    public static readonly string Track = SouthIds.Track.Entity;
     public const string LowSeats = "design:south-stadium-east-seats";
 
     public override string Id => "18c.stand";
@@ -45,10 +45,9 @@ public sealed class GrandstandSite : ZoneSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Stand {Feature} is missing from the world model.");
-        var ring = Ring(feature.Parts.FirstOrDefault(p => p.SourceId == Part) is { } src ? WorldFeatureGeometry.FacadeGeometryOf(src) : feature.Geometry)
-            ?? throw new InvalidOperationException($"Stand {Feature} is not a polygon.");
-        var track = world.Features.TryGetValue(new(Track), out var t) ? Ring(t.Parts.Count > 0 ? WorldFeatureGeometry.FacadeGeometryOf(t.Parts[0]) : t.Geometry) : null;
-        var centre = PlanMath.Centroid(track ?? ring);
+        var ring = PlanGeometry.DeduplicateRing(feature.Contour(Part));
+        var track = world.Features.TryGetValue(new(Track), out var t) ? t.Contour() : null;
+        var centre = PlanGeometry.Centroid(track ?? ring, meanIfDegenerate: true);
         var y = world.Terrain.HeightAt(centre.X, centre.Y);
         var found = new List<Station>();
         var count = (int)MathF.Round(360f / T.StationStep);
@@ -59,7 +58,7 @@ public sealed class GrandstandSite : ZoneSite
             var d = new Vector2(MathF.Cos(a), MathF.Sin(a));
             float near = float.MaxValue, far = float.MinValue;
             for (var k = 0; k < ring.Length; k++)
-                if (Cross(centre, d, ring[k], ring[(k + 1) % ring.Length]) is { } hit) { near = MathF.Min(near, hit); far = MathF.Max(far, hit); }
+                if (RayStation(centre, d, ring[k], ring[(k + 1) % ring.Length]) is { } hit) { near = MathF.Min(near, hit); far = MathF.Max(far, hit); }
             if (far - near >= T.MinDepth) found.Add(new(angle, centre + d * near, centre + d * far, d));
         }
         // The C is one run of rays: start it after the widest gap in angle, so it never wraps.
@@ -210,7 +209,7 @@ public sealed class GrandstandSite : ZoneSite
             // The cap's plane holds the ray; its local X runs out along the ray, Z across it.
             var across = new Vector2(-s.Out.Y, s.Out.X) * sign;
             var at = new Matrix4x4(s.Out.X, 0, s.Out.Y, 0, 0, 1, 0, 0, across.X, 0, across.Y, 0, s.Front.X, p.Y, s.Front.Y, 1);
-            if (Area(face) < 0) Array.Reverse(face);
+            if (PlanGeometry.SignedArea(face) < 0) Array.Reverse(face);
             b.Add(PartGeometryKernel.WallPanel(new PolygonRings(face), 0.2f, L.StandConcrete), at);
         }
     }
@@ -415,30 +414,14 @@ public sealed class GrandstandSite : ZoneSite
 
     // ---- Helpers ----
 
-    private static Vector2[]? Ring(OverlayGeometry geometry) => geometry switch
-    {
-        PolygonGeometry g => Clean(g.Rings.Outer),
-        MultiPolygonGeometry m => Clean(m.Polygons.OrderByDescending(r => MathF.Abs(GymSite.Area(r.Outer))).First().Outer),
-        _ => null,
-    };
-
-    private static Vector2[] Clean(IReadOnlyList<Vector2> ring)
-    {
-        var list = ring.ToList();
-        if (list.Count > 1 && Vector2.Distance(list[0], list[^1]) < 1e-4f) list.RemoveAt(list.Count - 1);
-        return [.. list];
-    }
-
     /// <summary>Distance along the ray (origin o, unit d) to segment a–b, or null when it misses.</summary>
-    private static float? Cross(Vector2 o, Vector2 d, Vector2 a, Vector2 b)
+    private static float? RayStation(Vector2 origin, Vector2 direction, Vector2 a, Vector2 b)
     {
-        var e = b - a;
-        var den = d.X * e.Y - d.Y * e.X;
-        if (MathF.Abs(den) < 1e-9f) return null;
-        var w = a - o;
-        var t = (w.X * e.Y - w.Y * e.X) / den;
-        var u = (w.X * d.Y - w.Y * d.X) / den;
-        return t > 0 && u >= 0 && u <= 1 ? t : null;
+        var edge = b - a;
+        if (PlanGeometry.LineIntersection(origin, direction, a, edge, 1e-9f) is not { } hit) return null;
+        var station = Vector2.Dot(hit - origin, direction);
+        var alongEdge = Vector2.Dot(hit - a, edge);
+        return station > 0 && alongEdge >= 0 && alongEdge <= edge.LengthSquared() ? station : null;
     }
 
     /// <summary>The section without collinear runs, for the end caps' triangulation.</summary>
@@ -454,5 +437,4 @@ public sealed class GrandstandSite : ZoneSite
         return [.. list];
     }
 
-    private static float Area(IReadOnlyList<Vector2> ring) => GymSite.Area(ring);
 }

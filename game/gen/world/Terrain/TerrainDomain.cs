@@ -107,8 +107,8 @@ internal sealed class TerrainRegion
                             for (var j = 0; j < cr.Count; j++)
                             {
                                 var p = ar[i]; var q = ar[(i + 1) % ar.Count]; var r = cr[j]; var s = cr[(j + 1) % cr.Count];
-                                static double Cross(Vector2 a, Vector2 b, Vector2 c) => ((double)b.X - a.X) * (c.Y - a.Y) - ((double)b.Y - a.Y) * (c.X - a.X);
-                                var a0 = Cross(p, q, r); var a1 = Cross(p, q, s); var b0 = Cross(r, s, p); var b1 = Cross(r, s, q);
+
+                                var a0 = VectorMath.Cross(p, q, r); var a1 = VectorMath.Cross(p, q, s); var b0 = VectorMath.Cross(r, s, p); var b1 = VectorMath.Cross(r, s, q);
                                 if (a0 * a1 < 0 && b0 * b1 < 0) return true;
                             }
         // Coincident boundaries contain no strict vertex or proper edge crossing. An actual interior
@@ -157,10 +157,10 @@ internal sealed class TerrainRegion
 
     private static bool SegmentsTouch(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
     {
-        static double Cross(Vector2 p, Vector2 q, Vector2 r) => ((double)q.X - p.X) * (r.Y - p.Y) - ((double)q.Y - p.Y) * (r.X - p.X);
+
         static bool On(Vector2 p, Vector2 q, Vector2 r) => r.X >= Math.Min(p.X, q.X) && r.X <= Math.Max(p.X, q.X)
             && r.Y >= Math.Min(p.Y, q.Y) && r.Y <= Math.Max(p.Y, q.Y);
-        var a0 = Cross(a, b, c); var a1 = Cross(a, b, d); var b0 = Cross(c, d, a); var b1 = Cross(c, d, b);
+        var a0 = VectorMath.Cross(a, b, c); var a1 = VectorMath.Cross(a, b, d); var b0 = VectorMath.Cross(c, d, a); var b1 = VectorMath.Cross(c, d, b);
         if (a0 == 0 && On(a, b, c) || a1 == 0 && On(a, b, d) || b0 == 0 && On(c, d, a) || b1 == 0 && On(c, d, b)) return true;
         return (a0 > 0) != (a1 > 0) && (b0 > 0) != (b1 > 0);
     }
@@ -186,7 +186,7 @@ internal sealed class TerrainPath
         for (var i = 0; i < line.Points.Count; i++)
         {
             var p = line.Points[i];
-            if (!float.IsFinite(p.X) || !float.IsFinite(p.Y)) throw new ArgumentException("Non-finite terrain path point.");
+            if (!VectorMath.Finite(p)) throw new ArgumentException("Non-finite terrain path point.");
             if (i == 0) continue;
             var a = line.Points[i - 1]; var dx = (double)p.X - a.X; var dz = (double)p.Y - a.Y;
             var length = Math.Sqrt(dx * dx + dz * dz);

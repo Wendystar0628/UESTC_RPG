@@ -196,7 +196,7 @@ internal static partial class TerrainCompiler
             TerrainEllipse ellipse => (ellipse.Center, ellipse.Radii, (ellipse.YawDeg - 90) * (Math.PI / 180)),
             _ => throw new WorldDataException(file, op.Id, "Only circle and ellipse mound/basin shapes are supported.")
         };
-        if (!float.IsFinite(radii.X) || !float.IsFinite(radii.Y) || radii.X <= 0 || radii.Y <= 0)
+        if (!VectorMath.Finite(radii) || radii.X <= 0 || radii.Y <= 0)
             throw new WorldDataException(file, op.Id, "Terrain shape radius cannot be represented in world coordinates.");
         if (1.5 * Math.Abs(amplitude) / Math.Min(radii.X, radii.Y) > 0.5)
             throw new WorldDataException(file, op.Id, "Mound/basin profile exceeds the 1:2 soil-grade limit before composition.");

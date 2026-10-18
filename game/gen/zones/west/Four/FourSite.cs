@@ -28,8 +28,9 @@ public sealed class FourSite : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        foreach (var box in F.Boxes) GlassBox(b, Frame(box), b.Ground(box.Door));
-        foreach (var arc in F.SeatArcs) SeatWall(b, SeatLine(arc));
+        var world = b.Context.World;
+        foreach (var box in F.Boxes(world)) GlassBox(b, Frame(box), b.Ground(box.Door));
+        foreach (var arc in F.SeatArcs(world)) SeatWall(b, SeatLine(world, arc));
     }
 
     // ---- The deep-blue glass box in its white frame ----
@@ -96,8 +97,8 @@ public sealed class FourSite : ZoneSite
     // ---- Seat wall on the fan lawn's outer arc ----
 
     /// <summary>An arc of the lawn edge moved <see cref="F.SeatInset"/> into the grass, toward the fan's centre.</summary>
-    internal static Vector2[] SeatLine(IReadOnlyList<Vector2> arc) =>
-        [.. arc.Select(p => p + Vector2.Normalize(F.LawnCentre - p) * F.SeatInset)];
+    internal static Vector2[] SeatLine(IWorldModel world, IReadOnlyList<Vector2> arc) =>
+        [.. arc.Select(p => p + Vector2.Normalize(F.LawnCentre(world) - p) * F.SeatInset)];
 
     private static void SeatWall(SiteBuilder b, IReadOnlyList<Vector2> line)
     {
@@ -118,7 +119,8 @@ public sealed class FourSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        foreach (var box in F.Boxes)
+        var world = c.Context.World;
+        foreach (var box in F.Boxes(world))
         {
             var f = Frame(box);
             var y = c.Ground(box.Door.X, box.Door.Y);
@@ -130,9 +132,9 @@ public sealed class FourSite : ZoneSite
             // The shut front: walking into the recess between the jambs reports a closed door (WLD-INTERIORS).
             c.Wall(f.P(-hw, d + 0.12f), f.P(hw, d + 0.12f), 0.1f, y, y + F.DoorHeight + 0.4f, SurfaceTag.DoorClosed, FootMat.Glass);
         }
-        foreach (var arc in F.SeatArcs)
+        foreach (var arc in F.SeatArcs(world))
         {
-            var line = SeatLine(arc);
+            var line = SeatLine(world, arc);
             var (y0, y1) = SeatSpan(line, c.Ground);
             for (var i = 0; i + 1 < line.Length; i++)
                 c.Wall(line[i], line[i + 1], F.SeatWidth * 0.5f, y0, y1, SurfaceTag.Prop, FootMat.StonePaving);

@@ -86,19 +86,17 @@ public static class WaterCatalog
 
     private static PolygonRings? Clean(PolygonRings rings)
     {
-        var outer = CleanRing(rings.Outer);
-        if (outer is null) return null;
+        if (rings.Outer.Any(point => !VectorMath.Finite(point))) return null;
+        var outer = PlanGeometry.DeduplicateRing(rings.Outer);
+        if (outer.Length < 3) return null;
         var holes = new List<IReadOnlyList<Vector2>>();
         foreach (var hole in rings.Holes)
-            if (CleanRing(hole) is { } h) holes.Add(h);
+        {
+            if (hole.Any(point => !VectorMath.Finite(point))) continue;
+            var points = PlanGeometry.DeduplicateRing(hole);
+            if (points.Length >= 3) holes.Add(points);
+        }
         return new(outer, holes.AsReadOnly());
-    }
-
-    private static IReadOnlyList<Vector2>? CleanRing(IReadOnlyList<Vector2> ring)
-    {
-        if (ring.Any(point => !VectorMath.Finite(point))) return null;
-        var points = PlanGeometry.DeduplicateRing(ring);
-        return points.Length >= 3 ? points : null;
     }
 
     public static float Area(PolygonRings rings)

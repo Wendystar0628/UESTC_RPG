@@ -12,34 +12,6 @@ public delegate float Surface(float x, float z);
 /// </summary>
 public static class Shapes
 {
-    public const float Tau = 6.2831853f;
-
-    /// <summary>Unit circle samples (cos, sin) for <paramref name="sides"/> equal steps starting at angle 0.</summary>
-    public static Vector2[] Circle(int sides)
-    {
-        if (sides < 3) throw new ArgumentOutOfRangeException(nameof(sides));
-        var result = new Vector2[sides];
-        for (var i = 0; i < sides; i++)
-        {
-            var a = Tau * i / sides;
-            result[i] = new(MathF.Cos(a), MathF.Sin(a));
-        }
-        return result;
-    }
-
-    /// <summary>Plan direction (x, z) of a compass bearing in degrees: 0° is north (−z), 90° is east (+x).</summary>
-    public static Vector2 Bearing(float degrees)
-    {
-        var a = degrees * (Tau / 360f);
-        return new(MathF.Sin(a), -MathF.Cos(a));
-    }
-
-    /// <summary>Compass bearing in degrees [0, 360) of a plan direction (x, z).</summary>
-    public static float BearingOf(Vector2 d)
-    {
-        var deg = MathF.Atan2(d.X, -d.Y) * (360f / Tau);
-        return deg < 0 ? deg + 360f : deg;
-    }
 
     /// <summary>
     /// Revolves a profile of (radius, height) points about the local +Y axis of <paramref name="frame"/>.
@@ -51,7 +23,7 @@ public static class Shapes
     {
         ArgumentNullException.ThrowIfNull(profile);
         if (profile.Count < 2) throw new ArgumentException("A lathe profile needs two points.", nameof(profile));
-        var ring = Circle(sides);
+        var ring = Campus.Gen.Zones.Common.Shapes.Circle(Vector2.Zero, 1f, sides);
         for (var i = 0; i + 1 < profile.Count; i++)
         {
             var p0 = profile[i]; var p1 = profile[i + 1];
@@ -63,7 +35,7 @@ public static class Shapes
             {
                 var c0 = ring[j]; var c1 = ring[(j + 1) % sides];
                 Vector3 V(Vector2 p, Vector2 c) => Vector3.Transform(new(p.X * c.X, p.Y, p.X * c.Y), frame);
-                Vector3 N(Vector2 c) => Normalize(Vector3.TransformNormal(new(nr * c.X, ny, nr * c.Y), frame));
+                Vector3 N(Vector2 c) => Vector3.Normalize(Vector3.TransformNormal(new(nr * c.X, ny, nr * c.Y), frame));
                 var a = V(p0, c0); var b = V(p0, c1); var c = V(p1, c1); var d = V(p1, c0);
                 if (p0.X <= 0f) mesh.Tri(paint, a, c, d, N(c0), N(c1), N(c0));
                 else if (p1.X <= 0f) mesh.Tri(paint, a, b, c, N(c0), N(c1), N(c1));
@@ -145,19 +117,19 @@ public static class Shapes
     {
         var u = new Vector3(along.X, 0, along.Y);
         var v = new Vector3(-along.Y, 0, along.X);
-        var ring = Circle(sides);
+        var ring = Campus.Gen.Zones.Common.Shapes.Circle(Vector2.Zero, 1f, sides);
         Vector3 P(int i, Vector2 c)
         {
             if (i < 0) return centre + u * (ra * c.X) + v * (rb * c.Y) - Vector3.UnitY * CoreStyle.Sink;
-            var phi = Tau * 0.25f * i / rings;
+            var phi = MathF.Tau * 0.25f * i / rings;
             float cp = MathF.Cos(phi), sp = MathF.Sin(phi);
             return centre + u * (ra * cp * c.X) + v * (rb * cp * c.Y) + Vector3.UnitY * (h * sp);
         }
         Vector3 N(int i, Vector2 c)
         {
-            var phi = Tau * 0.25f * Math.Max(i, 0) / rings;
+            var phi = MathF.Tau * 0.25f * Math.Max(i, 0) / rings;
             float cp = MathF.Cos(phi), sp = MathF.Sin(phi);
-            return Normalize(u * (cp * c.X / ra) + v * (cp * c.Y / rb) + Vector3.UnitY * (sp / h));
+            return Vector3.Normalize(u * (cp * c.X / ra) + v * (cp * c.Y / rb) + Vector3.UnitY * (sp / h));
         }
         for (var i = -1; i < rings; i++)
             for (var j = 0; j < sides; j++)
@@ -173,8 +145,8 @@ public static class Shapes
     /// <summary>Row-vector frame whose local +Y is <paramref name="up"/> and local +Z leans toward <paramref name="forward"/>.</summary>
     public static Matrix4x4 Frame(Vector3 origin, Vector3 up, Vector3 forward)
     {
-        var y = Normalize(up);
-        var x = Normalize(Vector3.Cross(y, forward));
+        var y = Vector3.Normalize(up);
+        var x = Vector3.Normalize(Vector3.Cross(y, forward));
         var z = Vector3.Cross(x, y);
         return new(x.X, x.Y, x.Z, 0, y.X, y.Y, y.Z, 0, z.X, z.Y, z.Z, 0, origin.X, origin.Y, origin.Z, 1);
     }
@@ -182,9 +154,4 @@ public static class Shapes
     /// <summary>Row-vector frame turned about +Y so local +Z points along the plan direction <paramref name="along"/>.</summary>
     public static Matrix4x4 Facing(Vector3 origin, Vector2 along) => Frame(origin, Vector3.UnitY, new(along.X, 0, along.Y));
 
-    public static Vector3 Normalize(Vector3 v)
-    {
-        var len = v.Length();
-        return len > 1e-8f ? v / len : Vector3.UnitY;
-    }
 }

@@ -124,8 +124,8 @@ public static class SeasonComposer
             if (fog.Toward is { } t)
             {
                 var amount = fog.AbAmount * wf;
-                a = Oklab.Lerp(a, t.A, amount);
-                b = Oklab.Lerp(b, t.B, amount);
+                a = ScalarMath.Lerp(a, t.A, amount);
+                b = ScalarMath.Lerp(b, t.B, amount);
             }
             f.SetColor(i, new Lab(Math.Min(1.0, c.L + fog.DL), a, b));
         }
@@ -232,7 +232,7 @@ public sealed class DayCurve
             var y = Hermite(Value(_f[i].V[c], c), Value(_f[j].V[c], c), _m[c][i], _m[c][j], h, t);
             o[c] = IsLog(c) ? Math.Pow(2.0, y) : y;
         }
-        var te = Oklab.Smoothstep(0.0, 1.0, t);
+        var te = ScalarMath.Smoothstep(0.0, 1.0, t);
         for (var c = 0; c < ColorEnd; c += 3)
         {
             var a0 = _f[i].Color(c);
@@ -241,7 +241,7 @@ public sealed class DayCurve
             var d = Oklab.HueDiff(a0.Hue, a1.Hue);
             if (Math.Abs(d) <= 40.0) continue;
             var dd = HuePath(a0.Hue, a1.Hue, IsSky(c) && Math.Abs(d) > 60.0);
-            var chroma = Oklab.Lerp(a0.Chroma, a1.Chroma, te);
+            var chroma = ScalarMath.Lerp(a0.Chroma, a1.Chroma, te);
             var hue = (a0.Hue + dd * te) * Math.PI / 180.0;
             o[c + 1] = chroma * Math.Cos(hue);
             o[c + 2] = chroma * Math.Sin(hue);
@@ -255,8 +255,8 @@ public sealed class DayCurve
         var f = new FrameVector();
         for (var c = 0; c < Count; c++)
             f.V[c] = IsLog(c)
-                ? Math.Pow(2.0, Oklab.Lerp(Math.Log2(Math.Max(1e-6, a.V[c])), Math.Log2(Math.Max(1e-6, b.V[c])), t))
-                : Oklab.Lerp(a.V[c], b.V[c], t);
+                ? Math.Pow(2.0, ScalarMath.Lerp(Math.Log2(Math.Max(1e-6, a.V[c])), Math.Log2(Math.Max(1e-6, b.V[c])), t))
+                : ScalarMath.Lerp(a.V[c], b.V[c], t);
         return f;
     }
 }
@@ -278,7 +278,7 @@ public static class WeatherCorrection
         v[R] += g * (target - v[R]);
         var tgt = weather.Shade.AmbientSkyTarget;
         var (c0, h0) = f.Ambient;
-        var c1 = Oklab.Lerp(c0, tgt.C, g);
+        var c1 = ScalarMath.Lerp(c0, tgt.C, g);
         var h1 = (h0 + Oklab.HueDiff(h0, tgt.H) * g) * Math.PI / 180.0;
         v[AmbientA] = c1 * Math.Cos(h1);
         v[AmbientB] = c1 * Math.Sin(h1);

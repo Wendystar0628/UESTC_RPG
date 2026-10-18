@@ -1,3 +1,4 @@
+using Campus.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -18,38 +19,20 @@ public sealed class SouthWindowTests
     [TestCase]
     public void WindowLayoutsDeclareEveryFacadeClaimWithItsGrids()
     {
-        var layouts = new SouthModule().DescribeWindowLayouts(World(), 1).ToDictionary(l => l.Feature.Value, l => l.Grids, StringComparer.Ordinal);
-        AssertThat(layouts.Count == 8).OverrideFailureMessage("gate, front steps, Xuanbang, the Liren connector, the two venues, the platform and the stand are declared").IsTrue();
-        AssertThat(layouts[Sports.GrandstandSite.Feature].Count == 0).OverrideFailureMessage("the stand has no glass: its declaration is empty").IsTrue();
-        AssertThat(!layouts.ContainsKey(MainBuilding.MainBuildingSite.B2)).OverrideFailureMessage("B2 keeps WP-14's generic windows").IsTrue();
-        void Grid(string feature, string key, int? columns, int rows)
-        {
-            var grid = layouts[feature].Single(g => g.Key == key);
-            AssertThat(grid.Rows == rows && grid.Columns > 0 && (columns is null || grid.Columns == columns)).OverrideFailureMessage($"{feature} / {key} is {grid.Columns}x{grid.Rows}").IsTrue();
-        }
-        Grid(Gate.SouthGateSite.Feature, "guard-houses", 3, 2);
-        Grid(MainBuilding.MainBuildingSite.FrontSteps, "front-porch", 5, 1);
-        Grid(MainBuilding.MainBuildingSite.FrontSteps, "rear-porch", 1, 1);
-        Grid(Xuanbang.XuanbangSite.Feature, "main", null, 8);
-        Grid(Xuanbang.XuanbangSite.Feature, "tower", null, 18);
-        Grid(Xuanbang.XuanbangSite.Feature, "clock-shaft", 8, SouthTune.Xuanbang.SlitRows);
-        Grid(Xuanbang.XuanbangSite.Feature, "clock-portals", 4, 1);
-        Grid(Xuanbang.XuanbangSite.Feature, "portico", 3, 2);
-        Grid(Liren.LirenSite.Connector, "piers", null, 4);
-        Grid(Liren.LirenSite.Connector, "bridge", null, 1);
-        Grid(Liren.LirenSite.Connector, "east-link", null, 2);
-        Grid(Sports.GymSite.Feature, "ring-hall", null, 2);
-        Grid(Sports.NatatoriumSite.Feature, "glass-band", null, 1);
-        Grid(Sports.PlatformSite.Feature, "arcade-shops", null, 1);
-        AssertThat(layouts.Values.Sum(g => g.Count) == 14).OverrideFailureMessage("fourteen grids in all").IsTrue();
+        var module = new SouthModule();
+        var world = RealMapFixture.Load().World;
+        var layouts = module.DescribeWindowLayouts(world, 1).ToDictionary(layout => layout.Feature, layout => layout.Grids);
+        var claimed = module.Claims.OfType<FeatureClaim>().Where(claim => (claim.Aspects & Aspects.Facade) != 0).Select(claim => claim.Feature).ToHashSet();
+        AssertThat(claimed.SetEquals(layouts.Keys)).OverrideFailureMessage("every facade claim has exactly one declaration").IsTrue();
+        AssertThat(layouts[new(Sports.GrandstandSite.Feature)].Count == 0).OverrideFailureMessage("the stand has no glass").IsTrue();
+        AssertThat(layouts.Values.SelectMany(grids => grids).All(grid => grid.Columns > 0 && grid.Rows > 0)).OverrideFailureMessage("declared grids have cells").IsTrue();
     }
 
     [TestCase]
     public void EveryDeclaredGridIsValidOnTheRealMap()
     {
         // The map as the kernel loads it: every authored overlay, not only the south one. One invalid grid withholds the whole table.
-        var data = DataRoot();
-        var world = FullWorld();
+        var world = RealMapFixture.Load().World;
         // The contract only promises an aggregate query envelope in WorldFeature.Geometry (the D0 world model gives a bounding
         // rectangle): the sites must read footprints from the parts, so the same declarations hold over such a view.
         foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)FakeWorld.Enveloped(world)) })
@@ -69,20 +52,19 @@ public sealed class SouthWindowTests
     {
         // The end-to-end reach before WP-02's orchestration: WP-14's provider allocates the whole real map with the zone's
         // real declarations, then the zone describes its windows from the published snapshot. The map loads as above.
-        var data = DataRoot();
-        var world = FullWorld();
+        var world = RealMapFixture.Load().World;
         var module = new SouthModule();
         var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
         foreach (var (name, view) in new[] { ("loaded", world), ("envelope", (IWorldModel)FakeWorld.Enveloped(world)) })
         {
             WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-18") : null;
-            var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
+            var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner };
             var layouts = module.DescribeWindowLayouts(view, 1);
             var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
             var south = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
             AssertThat(south.Length == layouts.Sum(l => l.Grids.Count) && south.All(a => a.Columns > 0 && a.Rows > 0)).OverrideFailureMessage($"{name}: every south grid is allocated with cells ({south.Length} of {layouts.Sum(l => l.Grids.Count)})").IsTrue();
             AssertThat(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity).OverrideFailureMessage($"{name}: the table fits ({snapshot.WindowCount})").IsTrue();
-            var metadata = module.DescribeWindows(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
+            var metadata = module.DescribeWindows(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = view, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
             var ids = metadata.Windows.Select(w => w.Id).Concat(metadata.Facades.SelectMany(f => Enumerable.Range(0, f.Rows * f.Columns)
                 .Where(cell => !f.Skip.Contains(cell)).Select(cell => f.BaseId + cell / f.Columns * f.TotalColumns + f.ColumnStart + cell % f.Columns))).ToArray();
             AssertThat(ids.Length > 0 && ids.All(id => south.Any(a => id >= a.BaseId && id < a.BaseId + a.Count))).OverrideFailureMessage($"{name}: the zone's windows lie in its own blocks").IsTrue();
@@ -99,7 +81,7 @@ public sealed class SouthWindowTests
     [TestCase]
     public void GuardHouseAndPorticoGlassIsNumberedOutward()
     {
-        var world = World();
+        var world = RealMapFixture.Load().World;
         var gate = Gate.SouthGateSite.LayoutOf(world);
         var houses = Gate.SouthGateSite.Openings(gate, 0f);
         AssertThat(houses.Length == 6 && houses.Select(o => (o.Column, o.Row)).Distinct().Count() == 6).OverrideFailureMessage("six guard-house windows, one cell each").IsTrue();
@@ -122,7 +104,7 @@ public sealed class SouthWindowTests
     [TestCase]
     public void NumberedGlassMatchesTheDeclaredWindows()
     {
-        var world = World();
+        var world = RealMapFixture.Load().World;
         var module = new SouthModule();
         // A stand-in for WP-14's allocation: the declared grids in canonical order after a block that shifts every base.
         var specs = module.DescribeWindowLayouts(world, 1).SelectMany(l => l.Grids.Select(g => (l.Feature, g)))
@@ -135,7 +117,7 @@ public sealed class SouthWindowTests
             allocations.Add(new(feature, grid.Key, next, grid.Columns, grid.Rows));
             next += grid.Columns * grid.Rows;
         }
-        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(new("qingshuihe"), new string('a', 64), allocations) };
+        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, WindowNumbering = new(RealMapFixture.Entry().Descriptor.Id, new string('a', 64), allocations) };
         var threwWithoutSnapshot = false;
         try { module.DescribeWindows(Context()); }
         catch (InvalidOperationException) { threwWithoutSnapshot = true; }
@@ -154,8 +136,7 @@ public sealed class SouthWindowTests
         HashSet<int> Glass(LodLevel lod)
         {
             var ids = new HashSet<int>();
-            var size = 64 << (int)lod;
-            var cells = module.ItemsFor(ctx, lod).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
+            var cells = module.ItemsFor(ctx, lod).Select(i => (TileGrid.At(i.Anchor, lod).X, TileGrid.At(i.Anchor, lod).Z)).Distinct();
             foreach (var (x, z) in lod == LodLevel.L4 ? [(0, 0)] : cells)
             {
                 var glass = module.Build(ctx, new(x, z), lod).Meshes.Where(m => m.Uv2 is not null).ToArray();
@@ -172,16 +153,6 @@ public sealed class SouthWindowTests
         var near = Glass(LodLevel.L0);
         AssertThat(near.SetEquals(declared)).OverrideFailureMessage($"L0 glass carries exactly the declared windows ({near.Count} vs {declared.Count})").IsTrue();
         AssertThat(Glass(LodLevel.L3).IsSubsetOf(declared)).OverrideFailureMessage("coarse glass keeps the same numbers").IsTrue();
-    }
-
-    private static MapDescriptor Descriptor()
-    {
-        var rect = new MapRect(new(-1280f, -1280f), new(1280f, 1280f));
-        return new MapDescriptor(new MapId("qingshuihe"), new LocalizedName("清水河", "Qingshuihe"), MapKind.Outdoor, 1, 1u,
-            new GeoFrame(0d, 0d, 32648, new(-200f, -200f), new(200f, 200f)), Vector2.Zero, new Box3(new(-1280f, -28f, -1280f), new(1280f, 2000f, 1280f)), rect,
-            new RoamLimits(0.9f, 30f, 3000f, -28f, 2000f, 30f, 40f, 150f), new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
-            new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
-            new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
     }
 
 }

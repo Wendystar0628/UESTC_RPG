@@ -26,9 +26,9 @@ namespace Campus.Gen.Zones.South.EastLake;
 /// </summary>
 public sealed class EastLakeSite : ZoneSite
 {
-    public const string Lake = "qsh:relation:7849760";
+    public static readonly string Lake = SouthIds.EastLake.Entity;
     public const string HardBank = "design:south-eastlake-hard-bank";
-    public const string Statue = "qsh:node:7867995301";
+    public static readonly string Statue = SouthIds.Statue.Entity;
     public const string WadeStep = "design:south-eastlake-wade-step";
 
     private static readonly StepsPart Steps = new();
@@ -59,22 +59,15 @@ public sealed class EastLakeSite : ZoneSite
     {
         var bank = world.ContourSegment(HardBank);
         var step = world.Feature(WadeStep);
-        var at = step.Point();
-        var wade = Enumerable.Range(0, bank.Length - 1).MinBy(i => DistanceToSegment(at, bank[i], bank[i + 1]));
+        var edge = world.ContourSegment(SouthIds.WadeEdge);
+        var wade = Enumerable.Range(0, bank.Length - 1).Single(i => bank[i] == edge[0] && bank[i + 1] == edge[^1]);
         var treads = step.Numbers("treads");
         return new(bank, wade, step.Number("width"), treads[0], treads[1], world.Feature(Statue).Point());
     }
 
-    private static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
-    {
-        var ab = b - a;
-        var t = Math.Clamp(Vector2.Dot(p - a, ab) / MathF.Max(Vector2.Dot(ab, ab), 1e-9f), 0f, 1f);
-        return Vector2.Distance(p, a + ab * t);
-    }
-
     public override IReadOnlyList<InspectionProbe> Probes =>
         // Q3: on the wade step's second tread, looking out over the water at the boats (a stand, not map data).
-        [Probe("Q3", Lake, new(154.52f, -0.65f + 1.62f, 300.54f), new(-0.1789f, 0.9839f), -12f, 2f)];
+        [Probe("Q3", Lake, new(154.52f, -0.65f + WalkRules.StandingEye, 300.54f), new(-0.1789f, 0.9839f), -12f, 2f)];
 
     public override void Build(SiteBuilder b)
     {
@@ -99,7 +92,7 @@ public sealed class EastLakeSite : ZoneSite
         WadeSteps(b, shore, y);
         Boats(b, shore, y);
         WuLiren(b, shore, b.Ground(shore.StatueAt));
-        Pavilion(b, b.Ground(K.Pavilion));
+        Pavilion(b, b.Ground(PavilionFrame(b.Context.World).Origin));
     }
 
     /// <summary>
@@ -111,7 +104,7 @@ public sealed class EastLakeSite : ZoneSite
             ? g.Rings
             : throw new InvalidOperationException($"East lake {Lake} is missing or not a single polygon.");
 
-    private const string LakePart = "osm:relation:7849760";
+    private static readonly string LakePart = SouthIds.EastLake.Part;
 
     internal static bool InWater(PolygonRings water, Vector2 p) => PlanGeometry.InsideByCrossings(water.Outer, p) && !water.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p));
 
@@ -339,11 +332,11 @@ public sealed class EastLakeSite : ZoneSite
             Limb(b, f, body, s, sh, el, 0.085f, 0.07f, small);
             Limb(b, f, body, s, el, wr, 0.07f, 0.068f, small);
             b.Add(Solids.Lathe([P(0, 0), P(0.047f, 0.019f), P(0.066f, 0.066f), P(0.047f, 0.113f), P(0, 0.132f)], small, L.Bronze), At(el.X, el.Y - 0.066f, el.Z));
-            var along = Unit(wr - el);
+            var along = VectorMath.Unit(wr - el);
             Hand(b, f, body, s, wr - along * 0.03f, along, small);
         }
         // Rolled document held across the right hand, sticking out either side.
-        var grip = wristR + Unit(wristR - elbowR) * 0.075f;
+        var grip = wristR + VectorMath.Unit(wristR - elbowR) * 0.075f;
         Limb(b, f, body, s, grip - Vector3.UnitX * 0.15f, grip + Vector3.UnitX * 0.15f, 0.029f, 0.029f, small);
         if (detail != SiteDetail.Full) return;
         // Hair mass over the crown and back; the face stays one smooth volume (an outlined nose reads as an eye).
@@ -355,7 +348,7 @@ public sealed class EastLakeSite : ZoneSite
     {
         var axis = to - from;
         var length = MathF.Sqrt(axis.X * axis.X + axis.Y * axis.Y + axis.Z * axis.Z) * s;
-        var y = Unit(axis);
+        var y = VectorMath.Unit(axis);
         b.Add(Shapes.Shaft(r0 * s, r1 * s, length, segments, L.Bronze), Orient(f, body, s, from, y));
     }
 
@@ -368,20 +361,12 @@ public sealed class EastLakeSite : ZoneSite
     private static Matrix4x4 Orient(PlanFrame f, float body, float s, Vector3 at, Vector3 direction)
     {
         Vector3 World(Vector3 v) => new(f.U.X * v.X + f.W.X * v.Z, v.Y, f.U.Y * v.X + f.W.Y * v.Z);
-        var y = Unit(World(direction));
+        var y = VectorMath.Unit(World(direction));
         var reference = MathF.Abs(y.Y) < 0.95f ? Vector3.UnitY : World(Vector3.UnitZ);
-        var x = Unit(Cross(y, reference));
-        var z = Cross(x, y);
+        var x = VectorMath.Unit(VectorMath.Cross(y, reference));
+        var z = VectorMath.Cross(x, y);
         var p = f.P(at.X * s, at.Z * s);
         return new(x.X, x.Y, x.Z, 0, y.X, y.Y, y.Z, 0, z.X, z.Y, z.Z, 0, p.X, body + at.Y * s, p.Y, 1);
-    }
-
-    private static Vector3 Cross(Vector3 a, Vector3 c) => new(a.Y * c.Z - a.Z * c.Y, a.Z * c.X - a.X * c.Z, a.X * c.Y - a.Y * c.X);
-
-    private static Vector3 Unit(Vector3 v)
-    {
-        var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
-        return new(v.X / length, v.Y / length, v.Z / length);
     }
 
     // ---- Hexagonal double-eaved pavilion on the south-bank hill (§4.5, MAP-QSH-TERRAIN) ----
@@ -397,11 +382,11 @@ public sealed class EastLakeSite : ZoneSite
 
     private static Vector2[] Hexagon(PlanFrame f, float r) => [.. Enumerable.Range(0, 6).Select(i => Corner(f, i, r))];
 
-    internal static PlanFrame PavilionFrame => PlanMath.Facing(K.Pavilion, 0f);
+    internal static PlanFrame PavilionFrame(IWorldModel world) => PlanMath.Facing(world.Feature(SouthIds.LakePavilion).Point(), 0f);
 
     private static void Pavilion(SiteBuilder b, float y)
     {
-        var f = PavilionFrame;
+        var f = PavilionFrame(b.Context.World);
         var detail = b.Detail;
         var bevel = detail == SiteDetail.Full ? 0.02f : 0f;
         var floor = y + K.PavilionFloor;
@@ -479,8 +464,8 @@ public sealed class EastLakeSite : ZoneSite
         var sy = c.Ground(shore.StatueAt.X, shore.StatueAt.Y);
         c.Box(StatueFrame(shore).At(0, sy + 1.0f, 0), new(1.0f, 1.0f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);
         // Pavilion: platform, steps, columns, benches.
-        var p = PavilionFrame;
-        var py = c.Ground(K.Pavilion.X, K.Pavilion.Y);
+        var p = PavilionFrame(c.Context.World);
+        var py = c.Ground(p.Origin.X, p.Origin.Y);
         c.Add(new SlabCollider(Hexagon(p, K.PavilionPlatform), py + K.PavilionFloor, K.PavilionFloor + 0.1f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
         var flight = PavilionFlight();
         c.Add(Steps.Collision(flight), p.AtReversed(0, py, Apothem(K.PavilionPlatform) + flight.Depth * 0.5f));

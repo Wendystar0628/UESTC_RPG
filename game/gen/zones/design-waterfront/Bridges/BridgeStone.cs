@@ -1,5 +1,7 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Text.Json;
+using Campus.Gen.World;
+using Campus.Gen.Zones.Common;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
@@ -29,34 +31,20 @@ internal sealed record BridgeStone(FeatureId Id, Vector2 Position, float FaceDeg
             .Select(f =>
             {
                 var p = ((PointGeometry)f.Geometry).Position;
-                var face = f.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("faceDeg", out var v) && v.ValueKind == JsonValueKind.Number ? v.GetSingle() : 240f;
+                var face = f.Number("faceDeg");
                 return new BridgeStone(f.Id, new(p.X, p.Z), face, world.Terrain.HeightAt(p.X, p.Z));
             })];
 
     /// <summary>Unit vector of the face's outward normal in (X, Z): bearing 0° is north (−Z), 90° east (+X).</summary>
-    public Vector2 Facing
-    {
-        get
-        {
-            var r = FaceDeg * (MathF.PI / 180f);
-            return new(MathF.Sin(r), -MathF.Cos(r));
-        }
-    }
+    public Vector2 Facing => Angles.Heading(FaceDeg);
 
     /// <summary>Local X along the stone (across the face normal), Z the face normal, origin on the ground at the centre.</summary>
-    public Matrix4x4 Frame
-    {
-        get
-        {
-            var z = Facing; var x = new Vector2(z.Y, -z.X);   // X × Y = Z: a right-handed frame with Z the face normal
-            return new(x.X, 0, x.Y, 0, 0, 1, 0, 0, z.X, 0, z.Y, 0, Position.X, GroundY, Position.Y, 1);
-        }
-    }
+    public Matrix4x4 Frame => new PlanFrame(Position, new(Facing.Y, -Facing.X)).At(0, GroundY, 0);
 
     public PartGeometry? Build(LodLevel lod)
     {
         if (lod is LodLevel.L3 or LodLevel.L4) return null;
-        var ring = BridgePlan.Ccw([.. Profile.Select(p => new Vector2(p.X * T.StoneLength, p.Y * (T.StoneHeight + 0.05f) - 0.05f))]);
+        var ring = PlanGeometry.OpenRing(Profile.Select(p => new Vector2(p.X * T.StoneLength, p.Y * (T.StoneHeight + 0.05f) - 0.05f))).ToArray();
         var b = new PartBuilder();
         // The profile is extruded along local Y, then turned so that it stands in X/Y and runs through the depth along Z.
         var stand = new Matrix4x4(1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, T.StoneDepth * 0.5f, 1);

@@ -44,7 +44,7 @@ public static class LandmarkSolids
                 var j = i % segments;
                 var around = p[k, (j + 1) % segments] - p[k, (j + segments - 1) % segments];
                 var up = p[Math.Min(n - 1, k + 1), j] - p[Math.Max(0, k - 1), j];
-                var normal = Unit(new(up.Y * around.Z - up.Z * around.Y, up.Z * around.X - up.X * around.Z, up.X * around.Y - up.Y * around.X));
+                var normal = VectorMath.Unit(VectorMath.Cross(up, around), Vector3.UnitY);
                 if (normal.X * p[k, j].X + normal.Z * p[k, j].Z < 0) normal = -normal;
                 rings[k][i] = m.Vertex(p[k, j], normal, new(2f * MathF.PI * profile[k].X * i / segments, arc));
             }
@@ -91,9 +91,9 @@ public static class LandmarkSolids
             // Slope plane through the level mid-eave and the top edge: one normal for the whole side.
             float ax = c1.X - c0.X, az = c1.Y - c0.Y;
             float ux = midTop.X - mid.X, uy = rise, uz = midTop.Y - mid.Y;
-            var normal = Unit(new(uy * az, uz * ax - ux * az, -uy * ax));
+            var normal = VectorMath.Unit(new Vector3(uy * az, uz * ax - ux * az, -uy * ax));
             if (normal.Y < 0) normal = -normal;
-            var outward = Unit(new(mid.X, 0, mid.Y));
+            var outward = VectorMath.Unit(new Vector3(mid.X, 0, mid.Y));
             int[] eaveTop = new int[perSide + 1], eaveLow = new int[perSide + 1], ridgeTop = new int[perSide + 1], ridgeLow = new int[perSide + 1];
             int[] fasciaTop = new int[perSide + 1], fasciaLow = new int[perSide + 1];
             for (var j = 0; j <= perSide; j++)
@@ -199,9 +199,9 @@ public static class LandmarkSolids
     /// </summary>
     public static Matrix4x4 Along(Vector3 a, Vector3 c, Vector3 normal)
     {
-        var u = Unit(c - a);
-        var n = Unit(normal - u * (normal.X * u.X + normal.Y * u.Y + normal.Z * u.Z));
-        var s = new Vector3(u.Y * n.Z - u.Z * n.Y, u.Z * n.X - u.X * n.Z, u.X * n.Y - u.Y * n.X);
+        var u = VectorMath.Unit(c - a, Vector3.UnitY);
+        var n = VectorMath.Unit(normal - u * Vector3.Dot(normal, u), Vector3.UnitY);
+        var s = VectorMath.Cross(u, n);
         return new(s.X, s.Y, s.Z, 0, u.X, u.Y, u.Z, 0, n.X, n.Y, n.Z, 0, a.X, a.Y, a.Z, 1);
     }
 
@@ -210,13 +210,7 @@ public static class LandmarkSolids
     {
         var t = s[Math.Min(s.Length - 1, j + 1)] - s[Math.Max(0, j - 1)];
         var n = new Vector2(t.Y, -t.X);
-        var length = MathF.Sqrt(n.X * n.X + n.Y * n.Y);
-        return length > 1e-9f ? n / length : new Vector2(0, -1);
+        return VectorMath.Unit(n, new Vector2(0, -1), 1e-9);
     }
 
-    private static Vector3 Unit(Vector3 v)
-    {
-        var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
-        return length > 1e-12f ? new(v.X / length, v.Y / length, v.Z / length) : Vector3.UnitY;
-    }
 }

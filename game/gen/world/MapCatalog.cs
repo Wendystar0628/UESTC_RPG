@@ -84,8 +84,8 @@ public sealed class MapCatalog
         var margin = new Vector2(file.Roam.FallbackMargin);
         var box = new Box3(new(min.X - margin.X, file.Roam.FloorY, min.Y - margin.Y),
             new(max.X + margin.X, file.Roam.CeilY, max.Y + margin.Y));
-        var tileMin = new TileKey((int)MathF.Floor(box.Min.X / 64f), (int)MathF.Floor(box.Min.Z / 64f));
-        var tileMax = new TileKey((int)MathF.Ceiling(box.Max.X / 64f) - 1, (int)MathF.Ceiling(box.Max.Z / 64f) - 1);
+        var tileMin = TileGrid.At(box.Min);
+        var tileMax = new TileKey((int)MathF.Ceiling(box.Max.X / TileGrid.BaseEdge) - 1, (int)MathF.Ceiling(box.Max.Z / TileGrid.BaseEdge) - 1);
         if (Math.Abs(tileMin.X) >= 512 || Math.Abs(tileMin.Z) >= 512 || Math.Abs(tileMax.X) >= 512 || Math.Abs(tileMax.Z) >= 512)
             throw new InvalidDataException("Map tile indices exceed the supported range.");
         var waypoints = waypointBytes.IsEmpty ? new WaypointFile(1, []) :
@@ -114,7 +114,7 @@ public sealed class MapCatalog
         }
         ValidateRect(file.DataRect.Min, file.DataRect.Max);
         var size = file.DataRect.Max - file.DataRect.Min;
-        if (size.X % 64f != 0 || size.Y % 64f != 0) throw new InvalidDataException("Data rectangle dimensions must be multiples of 64 metres.");
+        if (size.X % TileGrid.BaseEdge != 0 || size.Y % TileGrid.BaseEdge != 0) throw new InvalidDataException("Data rectangle dimensions must be multiples of 64 metres.");
         var r = file.Roam;
         float[] limits = [r.HeightFactor, r.HeightStart, r.MaxRadius, r.FloorY, r.CeilY, r.Buffer,
             r.SoftFloorClearance, r.FallbackMargin, r.PushRate, r.PushMax, r.EdgeFogMax];
@@ -132,7 +132,7 @@ public sealed class MapCatalog
 
     public static void ValidatePose(Pose pose)
     {
-        if (!float.IsFinite(pose.Position.X) || !float.IsFinite(pose.Position.Y) || !float.IsFinite(pose.Position.Z) ||
+        if (!VectorMath.Finite(pose.Position) ||
             !float.IsFinite(pose.YawDeg) || !float.IsFinite(pose.PitchDeg) ||
             pose.FovDeg is { } fov && (!float.IsFinite(fov) || fov <= 0 || fov >= 180))
             throw new InvalidDataException("Map pose contains invalid numbers.");
@@ -160,7 +160,7 @@ public sealed class MapCatalog
 
     private static void ValidateRect(Vector2 min, Vector2 max)
     {
-        if (!float.IsFinite(min.X) || !float.IsFinite(min.Y) || !float.IsFinite(max.X) || !float.IsFinite(max.Y) ||
+        if (!VectorMath.Finite(min) || !VectorMath.Finite(max) ||
             min.X >= max.X || min.Y >= max.Y) throw new InvalidDataException("Invalid finite map bounds.");
     }
 

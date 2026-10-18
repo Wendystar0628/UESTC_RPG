@@ -10,19 +10,12 @@ namespace Campus.Gen.Zones.Core;
 /// </summary>
 public static partial class CoreStyle
 {
-    // ---- Ground surfaces this zone stands on. Mirrors WP-15 GroundSection (paving 0.15, lawn 0.10 above the terrain
-    //      height, decal lift 4 mm); the zone cannot reference the ground assembly, keep the two in step. ----
-    public const float PavingLift = 0.15f;
-    public const float LawnLift = 0.10f;
-    public const float DecalLift = 0.004f;
     /// <summary>Solids continue this far below the surface they stand on, so draping never opens a gap.</summary>
     public const float Sink = 0.1f;
 
     // ---- Time plaza (MAP-QSH-CORE, MAP-QSH-TERRAIN) ----
     /// <summary>Axis bearing used only if the library stair feature is missing (P02 looks along 307°).</summary>
     public const float AxisBearingFallback = 307.5f;
-    /// <summary>Ring steps: risers near 0.15 m, tread clamp(0.65 − 2R, 0.30, 0.40) = 0.35 m (WLD-TERRAIN).</summary>
-    public const float StepRiserTarget = 0.15f;
     /// <summary>Below this terrain drop between rim and floor the plaza is flat and gets no ring steps (flat stub).</summary>
     public const float StepMinRise = 0.3f;
     /// <summary>Concentric stone bands (三道同心环带): (inner radius, outer radius) as fractions of the step-foot radius.</summary>
@@ -69,8 +62,6 @@ public static partial class CoreStyle
     public const float BenchSideOffset = 1.2f;
 
     // ---- Sundial (MAP-QSH-CORE) ----
-    /// <summary>Latitude of the campus: the gnomon points to true north at this elevation (身份特征, not tunable).</summary>
-    public const float Latitude = 30.75f;
     public static readonly (float Radius, float Height)[] SundialTiers = [(2.4f, 0.2f), (1.9f, 0.2f), (1.4f, 0.2f)];
     public const float SundialTierBevel = 0.025f;
     public const float SundialPadRadius = 3.6f;     // granite pad around the tiers
@@ -137,7 +128,7 @@ public static partial class CoreStyle
     /// <summary>ToonSpec of a material class with a colour family; the non-colour fields define the class.</summary>
     public static ToonSpec Spec(CoreMaterial material, string family)
     {
-        var spec = new ToonSpec(new(family + ".lit"), new(family + ".shade"));
+        var spec = Campus.Gen.Zones.Common.ZoneLooks.S(family);
         return material switch
         {
             CoreMaterial.Stone => spec with { Fx = ToonFx.BevelLift | ToonFx.Mottle, Wet = 0.6f },

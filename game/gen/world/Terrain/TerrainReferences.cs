@@ -11,7 +11,7 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
     public TerrainRegion Area(FeatureId id, string kind, string file, string op)
     {
         if (!context.Features.TryGetValue(id, out var feature)) throw new WorldDataException(file, op, $"Missing {kind} entity '{id.Value}'.");
-        var polygons = WorldFeatureKinds.Parts(feature, kind).SelectMany(p => WorldModelLoader.Polygons(p.Geometry)).ToArray();
+        var polygons = WorldFeatureKinds.Parts(feature, kind).SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray();
         if (polygons.Length == 0) throw new WorldDataException(file, op, $"Entity '{id.Value}' has no actual {kind} polygon parts.");
         return new(polygons);
     }
@@ -19,11 +19,11 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
     public TerrainRegion PadArea(FeatureId id, string file, string op)
     {
         if (!context.Features.TryGetValue(id, out var feature)) throw new WorldDataException(file, op, $"Missing pad entity '{id.Value}'.");
-        var buildings = WorldFeatureKinds.Parts(feature, "building").SelectMany(p => WorldModelLoader.Polygons(p.Geometry)).ToArray();
+        var buildings = WorldFeatureKinds.Parts(feature, "building").SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray();
         if (buildings.Length > 0) return new(buildings);
         if (feature.Kind.Value is not ("plaza" or "platform" or "pavilion" or "shelter" or "kiosk") && !IsArealRoad(id))
             throw new WorldDataException(file, op, $"Pad entity '{id.Value}' is neither an actual building nor an explicitly typed supported structure/plaza.");
-        return new(WorldModelLoader.Polygons(feature.Geometry));
+        return new(WorldFeatureGeometry.PolygonsOf(feature.Geometry));
     }
 
     public TerrainRoad Road(FeatureId id, string file, string op)
@@ -38,7 +38,7 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
         TerrainRegion? footprint = null;
         if (context.Features.TryGetValue(id, out var feature))
         {
-            var area = WorldFeatureKinds.Parts(feature, "road").SelectMany(p => WorldModelLoader.Polygons(p.Geometry)).ToArray();
+            var area = WorldFeatureKinds.Parts(feature, "road").SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray();
             if (area.Length > 0) footprint = new(area);
         }
         return new(id, line.Id, new(line.Line), line.Width, kind, footprint);
@@ -115,7 +115,7 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
             if (line.Width <= 0) throw new WorldDataException("network.json", line.Id.Value, "A line-shaped highway requires its actual positive width.");
             var parts = context.Features.Values.OrderBy(feature => feature.Id.Value, StringComparer.Ordinal)
                 .SelectMany(feature => WorldFeatureKinds.Parts(feature, "road").Where(part => SourceNetworkId(part.SourceId) == line.Id)).ToArray();
-            var polygons = parts.SelectMany(part => WorldModelLoader.Polygons(part.Geometry)).ToArray();
+            var polygons = parts.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray();
             yield return new(line.Id, line.Id, new(line.Line), line.Width, kind, polygons.Length > 0 ? new(polygons) : null);
         }
     }
@@ -135,7 +135,7 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
         if (feature.Parts.Count > 0 ? parts.Length == 0 : !allowedKinds.Contains(feature.Kind.Value, StringComparer.Ordinal))
             throw new WorldDataException(file, op, $"Structural entity '{id.Value}' does not have the required declared kind ({string.Join(",", allowedKinds)}).");
         if (feature.Parts.Count > 0) feature = feature with { Parts = parts };
-        if (!StructuralGeometry(feature).Any(geometry => WorldModelLoader.Polygons(geometry).Any() || geometry is PolylineGeometry))
+        if (!StructuralGeometry(feature).Any(geometry => WorldFeatureGeometry.PolygonsOf(geometry).Any() || geometry is PolylineGeometry))
             throw new WorldDataException(file, op, $"Structural entity '{id.Value}' has no footprint or alignment; a label alone is not structural evidence.");
         return feature;
     }
@@ -153,7 +153,7 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
     {
         var colon = source.IndexOf(':');
         if (colon < 0 || string.IsNullOrWhiteSpace(context.EntityPrefix)) return default;
-        return new(context.EntityPrefix + ":source:" + source[(colon + 1)..]);
+        return new(OsmFeatureIds.FromPart(context.EntityPrefix, source).Source);
     }
 
     public static double Grade(string ratio) => 1 / double.Parse(ratio.AsSpan(2), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
@@ -161,7 +161,7 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
     {
         foreach (var geometry in StructuralGeometry(feature))
         {
-            foreach (var polygon in WorldModelLoader.Polygons(geometry))
+            foreach (var polygon in WorldFeatureGeometry.PolygonsOf(geometry))
                 if (TerrainGeometry.PolygonDistance(point.X, point.Y, polygon).Height <= margin) return true;
             if (geometry is PolylineGeometry line && TerrainGeometry.ProjectToLine(point.X, point.Y, line.Line).Distance <= margin) return true;
         }
@@ -175,7 +175,7 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
                 foreach (var p in ring) if (NearStructure(feature, p, margin)) return true;
         foreach (var geometry in StructuralGeometry(feature))
         {
-            foreach (var polygon in WorldModelLoader.Polygons(geometry))
+            foreach (var polygon in WorldFeatureGeometry.PolygonsOf(geometry))
             {
                 if (polygon.Outer.Any(p => region.Distance(p.X, p.Y).Height <= margin)) return true;
                 if (new TerrainRegion([polygon]).InteriorOverlaps(region)) return true;

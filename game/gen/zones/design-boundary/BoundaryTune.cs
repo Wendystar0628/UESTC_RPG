@@ -1,12 +1,14 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Zones.Common;
+using static Campus.Gen.Zones.Common.ZoneLooks;
 using FacadeRules = Campus.Gen.Buildings.Rules.FacadeRules;
 
 namespace Campus.Gen.Zones.DesignBoundary;
 
 /// <summary>
 /// Every tunable value of the campus boundary and its gates in one place, for review (WF-FLOW): materials as colour
-/// names, the gate table, the fence and the gate dimensions. Coordinates are world (x, z) in metres from campus.json. Gate
+/// names, the gate table, the fence and the gate dimensions. Gate
 /// frames come from the data: origin where the gate road's centreline crosses the boundary ring, local X along the ring
 /// toward the guard-house side, local +Z out of the campus. Values marked "初值" await the main session's call. The ring
 /// fence (30b) runs everywhere else, opened at the gates, the grates and the side gates (Ring/BoundaryPlan).
@@ -20,9 +22,6 @@ public static class BoundaryTune
     /// <summary>Materials (ART-STYLE colour names only, no new names in 30a or 30b).</summary>
     public static class Look
     {
-        private static ToonSpec S(string family, ToonFx fx = ToonFx.None, LineClass line = LineClass.Building, float wet = 0.6f) =>
-            new(new(family + ".lit"), new(family + ".shade")) { Fx = fx, Line = line, Wet = wet };
-
         /// <summary>Gate piers, guard-house walls and the boundary's stone pillars: light grey stone, the south gate's family.</summary>
         public static readonly ToonSpec Stone = S("wall.greyWhite", ToonFx.BevelLift);
         /// <summary>Caps, joint bands, sills, the plaque frame.</summary>
@@ -44,8 +43,7 @@ public static class BoundaryTune
         /// <summary>Barrier arm and the waterside railing: light painted steel (MAP-QSH-WEST 浅色栏杆).</summary>
         public static readonly ToonSpec LightSteel = S("wall.greyWhite", ToonFx.None, LineClass.Fine, 0.4f);
         public static readonly ToonSpec LightBar = S("wall.greyWhite", ToonFx.None, LineClass.None, 0.4f);
-        public static readonly ToonSpec Glass = new(new("glass.lit"), new("glass.shade"))
-        { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0 };
+        public static readonly ToonSpec Glass = ZoneLooks.Glass;
         public static readonly ToonSpec Door = S("frame.alu", ToonFx.BevelLift, LineClass.Fine, 0.4f);
         /// <summary>Clipped hedge inside the fence (MAP-QSH-ADDITIONS 方整绿篱): seasonal hedge colour, soft shading.</summary>
         public static readonly ToonSpec Hedge = new(new("hedge.lit"), new("hedge.shade"))
@@ -112,30 +110,20 @@ public static class BoundaryTune
         bool Mirror = false, bool Plaque = true, float? Wicket = null, Vector2? Locker = null);
 
     /// <summary>
-    /// 30a: the north gate (北门, `qsh:node:6784723438`) and the west gate (西门, the residential road 170 m before the 西门桥头
-    /// bridge). 30b: 西北门 (the service road between them, `563777250`), 西二门 (水杉路, footways on both sides: the left one
+    /// 30a: the north gate (北门) and the west gate (西门, the residential road before the 西门桥头
+    /// bridge). 30b: 西北门 (the service road between them), 西二门 (水杉路, footways on both sides: the left one
     /// through a 便门 bank, the right one through the main bank) and 东南口 (the service road by 走马河's exit, house on the left).
     /// The service gates keep the composition without a plaque: they read as the campus's back doors (初值).
     /// </summary>
     public static readonly GateSpec[] Gates =
     [
-        new("north", "北门", "qsh:source:way:723349795", Closure: true,
-            "design:boundary-north-forecourt", [new(3.40f, 2.2f), new(3.58f, 5.2f), new(3.76f, 8.2f), new(3.94f, 11.2f)]),
-        new("west", "西门", "qsh:source:way:544161581", Closure: false, null, []),
-        new("northwest", "西北门", "qsh:source:way:563777250", Closure: false, null, [], Plaque: false),
-        new("west2", "西二门", "qsh:source:way:544277137", Closure: false, null, [], Wicket: -6.7f, Locker: new(13.2f, -0.86f)),
-        new("southeast", "东南口", "qsh:source:way:988857948", Closure: false, null, [], Mirror: true, Plaque: false),
+        new("north", "北门", BoundaryFeatureIds.NorthGateRoad.Source, Closure: true,
+            BoundaryFeatureIds.NorthForecourt, [new(3.40f, 2.2f), new(3.58f, 5.2f), new(3.76f, 8.2f), new(3.94f, 11.2f)]),
+        new("west", "西门", BoundaryFeatureIds.WestGateRoad.Source, Closure: false, null, []),
+        new("northwest", "西北门", BoundaryFeatureIds.NorthwestGateRoad.Source, Closure: false, null, [], Plaque: false),
+        new("west2", "西二门", BoundaryFeatureIds.West2GateRoad.Source, Closure: false, null, [], Wicket: -6.7f, Locker: new(13.2f, -0.86f)),
+        new("southeast", "东南口", BoundaryFeatureIds.SoutheastGateRoad.Source, Closure: false, null, [], Mirror: true, Plaque: false),
     ];
-
-    /// <summary>
-    /// The south gate (WP-18): its two guard houses close the line, so the ring fence stops on their outer walls. The house
-    /// positions are read from the gate entity; the side length is the south zone's modelled house (SouthTune.Gate.HouseSize).
-    /// </summary>
-    public static class SouthGate
-    {
-        public const string Feature = "qsh:relation:8407525";
-        public const float HouseSize = 5.6f;
-    }
 
     /// <summary>
     /// Every other road that crosses the ring is closed by a side gate (常闭侧门): two end pillars of the fence on the kerbs and a
@@ -154,7 +142,7 @@ public static class BoundaryTune
     /// </summary>
     public sealed record Detour(string Key, string Road, float Clear);
 
-    public static readonly Detour[] Detours = [new("north-tip", "qsh:source:way:723349816", 0.9f)];
+    public static readonly Detour[] Detours = [new("north-tip", BoundaryFeatureIds.NorthTipRoad.Source, 0.9f)];
 
     /// <summary>
     /// River grate (拦污格栅, WLD-OUTSKIRTS, MAP-QSH-ADDITIONS) wherever water crosses the ring: deep grey flat bars
@@ -165,7 +153,7 @@ public static class BoundaryTune
     {
         /// <summary>Opening beyond each water edge (the end pillar's centre stands on the bank top here).</summary>
         public const float Bank = 0.6f;
-        public const float Top = 1.5f, Foot = 2.2f, BarWidth = 0.02f, BarDepth = 0.07f, BarPitch = 0.11f;
+        public const float Top = WalkRules.BarrierHeight, Foot = 2.2f, BarWidth = 0.02f, BarDepth = 0.07f, BarPitch = 0.11f;
         public const float BeamHeight = 0.14f, BeamDepth = 0.16f, WaistY = 0.35f, WaistHeight = 0.08f;
         /// <summary>Water crossings closer than this along the ring are one channel.</summary>
         public const float Cluster = 30f;
@@ -188,23 +176,17 @@ public static class BoundaryTune
     /// water and the east service road, over the end of cycleway 950008623. Local frame: t along the bank (toward 21.8°), n off
     /// the water edge toward the road; its origin and direction come from the water feature's bank edge (NorthPlazaSite.FrameOf,
     /// D-239). The paving is WP-15 ground from the overlay polygon; this site adds the light railing on
-    /// the water side and two benches facing the water. The A05 kiosk is WP-13's on WP-48c's anchor: <see cref="Kiosk"/> is the
-    /// spot the plaza keeps for it (4.2 m off the water, 5.8 m from the lane edge, facing 165°).
+    /// the water side and two benches facing the water. The A05 kiosk is owned by WP-13 and reads WP-48c's registered anchor.
     /// </summary>
     public static class Plaza
     {
-        public const string Feature = "design:boundary-north-a05-plaza";
-        /// <summary>The bank selection shared with the north canal railing.</summary>
-        public const string BankContour = "design:boundary-north-bank-contour";
-        public const float PavingTop = 0.15f;
         /// <summary>Railing: 1.1 m, posts every ≤ 1.6 m, handrail and bottom rail, 20 mm bars at 0.12 m; collision 1.5 m.</summary>
         public const float RailN = 0.35f, RailHeight = 1.1f, PostPitch = 1.6f, PostSize = 0.06f, HandRail = 0.07f, BottomRail = 0.12f;
+        public const float EndPostSize = PostSize + 0.02f;
         public const float BarSize = 0.02f, BarPitch = 0.12f;
         public const float RailT0 = -24.6f, RailT1 = -11.4f;
         public static readonly Contracts.Parts.FurnitureParams BenchSize = new(1.8f, 0.8f, 0.62f);
         /// <summary>Bench centres (t, n); sitters face the water.</summary>
         public static readonly Vector2[] Benches = [new(-22.6f, 1.75f), new(-19.9f, 1.75f)];
-        public static readonly Vector2 Kiosk = new(-13.5f, 4.2f);
-        public const float KioskYaw = 165f;
     }
 }

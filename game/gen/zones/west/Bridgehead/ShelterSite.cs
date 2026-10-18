@@ -25,11 +25,11 @@ public sealed class ShelterSite : ZoneSite, ILightMetadataSource
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(H.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>The registered back line runs south to north, with the platform opening toward the road.</summary>
-    internal static PlanFrame Frame(IWorldModel world) => world.ContourFrame(WestFeatures.ShelterBack);
+    internal static PlanFrame Frame(IWorldModel world) => world.ContourFrame(WestIds.ShelterBack);
 
     internal static float Length(IWorldModel world)
     {
-        var back = world.ContourSegment(WestFeatures.ShelterBack);
+        var back = world.ContourSegment(WestIds.ShelterBack);
         return Vector2.Distance(back[0], back[^1]);
     }
 

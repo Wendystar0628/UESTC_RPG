@@ -26,13 +26,12 @@ public sealed class RestDeckSite : ZoneSite
         public Vector2[] Outline() => Frame.Rect(-Length * 0.5f, -Width * 0.5f, Length * 0.5f, Width * 0.5f);
     }
 
-    /// <summary>The deck, or null when the world has no such overlay feature or it is not a quadrilateral.</summary>
+    /// <summary>The deck, or null when absent; its rectangle direction is explicitly recorded.</summary>
     internal static Layout? Locate(IWorldModel world)
     {
-        if (!world.Features.TryGetValue(new(D.Feature), out var feature) || feature.Geometry is not PolygonGeometry { Rings.Outer: { Count: 4 } ring }) return null;
-        // Corner order is the overlay's: edge 0 → 1 is the long side, edge 1 → 2 the short one.
-        var centre = (ring[0] + ring[1] + ring[2] + ring[3]) * 0.25f;
-        return new(PlanFrame.Along(centre, ring[1] - ring[0]), Vector2.Distance(ring[0], ring[1]), Vector2.Distance(ring[1], ring[2]), feature.Height ?? 0f);
+        if (!world.Features.TryGetValue(new(NorthFeatureIds.RestDeck), out var feature)) return null;
+        var rectangle = feature.Rectangle(feature.Pair("direction"));
+        return new(rectangle.Frame, rectangle.Width, rectangle.Depth, feature.Height ?? 0f);
     }
 
     private static float Base(Layout plan, Func<Vector2, float> ground) => plan.Outline().Min(ground);

@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -27,13 +26,13 @@ namespace Campus.Gen.Zones.South.Sports;
 /// </summary>
 public sealed class PlatformSite : ZoneSite
 {
-    public const string Feature = "qsh:way:601600526";
-    private const string Part = "osm:way:601600526";
+    public static readonly string Feature = SouthIds.Platform.Entity;
+    private static readonly string Part = SouthIds.Platform.Part;
     public const string ShopKey = "arcade-shops";
     /// <summary>The OSM steps at the deck's north tip (an anonymous source footprint).</summary>
-    public const string NorthSteps = "qsh:source:way:988857939";
+    public static readonly string NorthSteps = SouthIds.PlatformNorthSteps.Source;
     /// <summary>The venues the deck meets: their footprints close the deck's edge.</summary>
-    private static readonly string[] Neighbours = [GymSite.Feature, NatatoriumSite.Feature, "qsh:way:217855276"];
+    private static readonly string[] Neighbours = [GymSite.Feature, NatatoriumSite.Feature, SouthIds.Grandstand.Entity];
 
     private const float PaneZ = 0.06f;
 
@@ -70,15 +69,14 @@ public sealed class PlatformSite : ZoneSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Platform {Feature} is missing from the world model.");
-        var deck = Ccw(OuterOf(feature.Parts.FirstOrDefault(p => p.SourceId == Part) is { } src ? WorldFeatureGeometry.FacadeGeometryOf(src) : feature.Geometry)
-            ?? throw new InvalidOperationException($"Platform {Feature} is not a polygon."));
+        var deck = PlanGeometry.OpenRing(feature.Contour(Part)).ToArray();
         var decks = new List<Vector2[]> { deck };
-        var y = world.Terrain.HeightAt(PlanMath.Centroid(deck).X, PlanMath.Centroid(deck).Y);
+        var y = world.Terrain.HeightAt(PlanGeometry.Centroid(deck, meanIfDegenerate: true).X, PlanGeometry.Centroid(deck, meanIfDegenerate: true).Y);
         var rise = feature.Height ?? throw new InvalidOperationException($"Platform {Feature} has no height.");
 
         var closed = new List<Vector2[]>(decks);
         foreach (var id in Neighbours)
-            if (world.Features.TryGetValue(new(id), out var n) && OuterOf(n.Parts.Count > 0 ? WorldFeatureGeometry.FacadeGeometryOf(n.Parts[0]) : n.Geometry) is { } ring) closed.Add(ring);
+            if (world.Features.TryGetValue(new(id), out var n) && n.Contour() is { } ring) closed.Add(ring.ToArray());
         var edges = new List<Edge>();
         foreach (var ring in decks)
             for (var i = 0; i < ring.Length; i++)
@@ -92,11 +90,15 @@ public sealed class PlatformSite : ZoneSite
             }
 
         var stairs = new List<Stair>();
-        if (Nearest(edges, P.GrandStairAt) is { } grand) stairs.Add(new(grand.Frame.Shift(grand.Frame.Local(P.GrandStairAt).X, 0), P.GrandStairWidth));
-        var (northTop, down) = NorthStair(world, PlanMath.Centroid(deck));
+        var grandEdge = world.ContourSegment(SouthIds.PlatformGrandEdge);
+        var grandFrame = PlanFrame.Toward(grandEdge[^1], grandEdge[0]).Shift(Vector2.Distance(grandEdge[0], grandEdge[^1]) * 0.5f, 0);
+        var stairAt = world.Feature(SouthIds.PlatformGrandStair).Point();
+        stairs.Add(new(grandFrame.Shift(grandFrame.Local(stairAt).X, 0), P.GrandStairWidth));
+        var (northTop, down) = NorthStair(world);
+
         stairs.Add(new(new(northTop, new(down.Y, -down.X)), P.NorthStairWidth));
 
-        var core = Ccw(P.Core);
+        var core = PlanGeometry.OpenRing(world.Feature(SouthIds.PlatformCore).Outer()).ToArray();
         var bays = new List<Bay>();
         for (var i = 0; i < core.Length; i++)
         {
@@ -121,7 +123,7 @@ public sealed class PlatformSite : ZoneSite
             {
                 var c = Vector2.Lerp(e.A, e.B, (P.ColumnEnd + (e.Length - 2f * P.ColumnEnd) * k / n) / e.Length) - e.Out * P.ColumnInset;
                 if (PlanGeometry.InsideByCrossings(core, c) || !decks.Any(r => PlanGeometry.InsideByCrossings(r, c)) || columns.Any(o => Vector2.Distance(o, c) < 3f)) continue;
-                if (roads.Any(r => Distance(r.Line, c) < r.HalfWidth + P.ColumnRadius + 0.3f)) continue;
+                if (roads.Any(r => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(r.Line, c)) < r.HalfWidth + P.ColumnRadius + 0.3f)) continue;
                 if (stairs.Any(s => InStair(s, c, 1.0f))) continue;
                 columns.Add(c);
             }
@@ -133,12 +135,15 @@ public sealed class PlatformSite : ZoneSite
     /// The north steps from the OSM footprint (a thin quad): the top centre is the midpoint of the short end nearer the deck, and the
     /// flight runs down toward the other end.
     /// </summary>
-    private static (Vector2 Top, Vector2 Down) NorthStair(IWorldModel world, Vector2 deckCentre)
+    private static (Vector2 Top, Vector2 Down) NorthStair(IWorldModel world)
     {
-        var ring = world.Feature(NorthSteps).Outers()[0];
-        var ends = Enumerable.Range(0, ring.Count).OrderBy(i => Vector2.DistanceSquared(ring[i], ring[(i + 1) % ring.Count])).Take(2)
-            .Select(i => (ring[i] + ring[(i + 1) % ring.Count]) * 0.5f).OrderBy(m => Vector2.DistanceSquared(m, deckCentre)).ToArray();
-        return (ends[0], Vector2.Normalize(ends[1] - ends[0]));
+        Vector2 Midpoint(string id)
+        {
+            var edge = world.ContourSegment(id);
+            return (edge[0] + edge[^1]) * 0.5f;
+        }
+        var top = Midpoint(SouthIds.PlatformNorthTop);
+        return (top, VectorMath.Unit(Midpoint(SouthIds.PlatformNorthBottom) - top));
     }
 
     // ---- Window grid: one pane per shopfront bay (the transom light over a door bay) ----
@@ -246,16 +251,16 @@ public sealed class PlatformSite : ZoneSite
                 {
                     var x0 = s < 0 ? -inner : P.DoorWidth * 0.5f + 0.1f;
                     GridFacade.Box(b, f, x0, x0 + side, floor - 0.1f, floor + P.ShopSill, -0.05f, 0.12f, L.Granite, full ? 0.01f : 0);
-                    GridFacade.Box(b, f, x0, x0 + side, floor + P.ShopSill, floor + P.ShopHead, 0, 0.05f, L.Glass, 0);
+                    GridFacade.Box(b, f, x0, x0 + side, floor + P.ShopSill, floor + P.ShopHead, 0, 0.05f, ZoneLooks.Glass, 0);
                 }
-                GridFacade.Box(b, f, -P.DoorWidth * 0.5f - 0.1f, P.DoorWidth * 0.5f + 0.1f, floor + P.DoorHeight, floor + P.ShopHead, 0, 0.05f, L.Glass, 0);
+                GridFacade.Box(b, f, -P.DoorWidth * 0.5f - 0.1f, P.DoorWidth * 0.5f + 0.1f, floor + P.DoorHeight, floor + P.ShopHead, 0, 0.05f, ZoneLooks.Glass, 0);
                 b.Place(PartCatalog.DoorGlass, new DoorParams(P.DoorWidth, P.DoorHeight, 0.12f, 0, 2) { Foot = FootMat.Glass }, f.AtReversed(0, floor, 0.1f));
                 GridFacade.Box(b, f, -inner, inner, floor + P.DoorHeight, floor + P.DoorHeight + 0.1f, 0, 0.12f, L.Metal, 0);
             }
             else
             {
                 GridFacade.Box(b, f, -inner, inner, floor - 0.1f, floor + P.ShopSill, -0.05f, 0.12f, L.Granite, full ? 0.01f : 0);
-                GridFacade.Box(b, f, -inner, inner, floor + P.ShopSill, floor + P.ShopHead, 0, 0.05f, L.Glass, 0);
+                GridFacade.Box(b, f, -inner, inner, floor + P.ShopSill, floor + P.ShopHead, 0, 0.05f, ZoneLooks.Glass, 0);
                 // Two slim mullions split the window into three lights.
                 foreach (var x in new[] { -inner / 3f, inner / 3f })
                     GridFacade.Box(b, f, x - 0.04f, x + 0.04f, floor + P.ShopSill, floor + P.ShopHead, 0, 0.1f, L.Metal, 0);
@@ -405,36 +410,6 @@ public sealed class PlatformSite : ZoneSite
 
     // ---- Plan helpers ----
 
-    private static Vector2[]? OuterOf(OverlayGeometry geometry) => geometry switch
-    {
-        PolygonGeometry g => Clean(g.Rings.Outer),
-        MultiPolygonGeometry m => Clean(m.Polygons.OrderByDescending(r => MathF.Abs(GymSite.Area(r.Outer))).First().Outer),
-        _ => null,
-    };
-
-    /// <summary>The ring without a repeated closing vertex.</summary>
-    private static Vector2[] Clean(IReadOnlyList<Vector2> ring)
-    {
-        var list = ring.ToList();
-        if (list.Count > 1 && Vector2.Distance(list[0], list[^1]) < 1e-4f) list.RemoveAt(list.Count - 1);
-        return [.. list];
-    }
-
-    /// <summary>The ring counter-clockwise in (x, z) (positive shoelace area), so every edge's outward normal is (dz, −dx).</summary>
-    private static Vector2[] Ccw(IReadOnlyList<Vector2> ring) => GymSite.Area(ring) >= 0 ? [.. ring] : [.. ring.Reverse()];
-
-    private static Edge? Nearest(IEnumerable<Edge> edges, Vector2 at)
-    {
-        Edge? best = null;
-        var bestDistance = float.MaxValue;
-        foreach (var e in edges.Where(e => e.Free))
-        {
-            var d = Distance([e.A, e.B], at);
-            if (d < bestDistance) { best = e; bestDistance = d; }
-        }
-        return bestDistance < 3f ? best : null;
-    }
-
     private static bool InStair(Stair s, Vector2 c, float margin)
     {
         var l = s.Frame.Local(c);
@@ -449,23 +424,11 @@ public sealed class PlatformSite : ZoneSite
         var list = new List<Road>();
         foreach (var line in world.Network.Roads)
         {
-            var type = line.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("roadType", out var v) && v.ValueKind == JsonValueKind.String
-                ? v.GetString() : null;
+            var type = line.Props.TryText("roadType");
             if (type is "footway" or "path" or "steps" or "pedestrian" or "cycleway" or "track" or "corridor") continue;
             list.Add(new(line.Line.Points, (line.Width > 0 ? line.Width : 5f) * 0.5f));
         }
         return list;
     }
 
-    private static float Distance(IReadOnlyList<Vector2> line, Vector2 p)
-    {
-        var best = float.MaxValue;
-        for (var i = 0; i + 1 < line.Count; i++)
-        {
-            var ab = line[i + 1] - line[i];
-            var t = Math.Clamp(Vector2.Dot(p - line[i], ab) / MathF.Max(Vector2.Dot(ab, ab), 1e-6f), 0f, 1f);
-            best = MathF.Min(best, Vector2.Distance(p, line[i] + ab * t));
-        }
-        return best;
-    }
 }

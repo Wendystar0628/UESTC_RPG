@@ -25,7 +25,7 @@ public static class InteriorPlanValidator
                 throw new ArgumentException("A portal refers to a missing zone.");
             if (portal.Kind == PortalKind.Door && Distance(portal.A, portal.B) < options.DoorClearWidth - 0.003f)
                 throw new ArgumentException("A walkable doorway is narrower than its required clearance.");
-            if (!float.IsFinite(portal.Height) || portal.Height <= 0f || !Finite(portal.A) || !Finite(portal.B))
+            if (!float.IsFinite(portal.Height) || portal.Height <= 0f || !VectorMath.Finite(portal.A) || !VectorMath.Finite(portal.B))
                 throw new ArgumentException("A portal has invalid geometry.");
         }
         if (plan.Doors.Select(d => d.Id).Distinct(StringComparer.Ordinal).Count() != plan.Doors.Count)
@@ -43,7 +43,7 @@ public static class InteriorPlanValidator
                 throw new ArgumentException("The moving-door budget is 40 per storey.");
         foreach (EntranceDecl entrance in plan.Entrances)
         {
-            if (!Finite(entrance.Center) || !Finite(entrance.Inside) || !Finite(entrance.Outside) || !float.IsFinite(entrance.YawDeg))
+            if (!VectorMath.Finite(entrance.Center) || !VectorMath.Finite(entrance.Inside) || !VectorMath.Finite(entrance.Outside) || !float.IsFinite(entrance.YawDeg))
                 throw new ArgumentException("Entrance coordinates must be finite.");
             PortalDecl[] matching = plan.Portals.Where(p => p.ZoneA == -1 && p.Kind != PortalKind.Window &&
                 Distance((p.A + p.B) * 0.5f, entrance.Center) <= 0.003f).ToArray();
@@ -98,7 +98,6 @@ public static class InteriorPlanValidator
         if (open.Any(id => !reached.Contains(id))) throw new ArgumentException("An open room or storey is disconnected from its wing corridor.");
     }
 
-    private static bool Finite(Vector3 p) => float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
     private static float Distance(Vector3 a, Vector3 b)
     {
         Vector3 d = b - a;

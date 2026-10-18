@@ -1,3 +1,5 @@
+using Campus.Gen.Geometry;
+using Campus.Gen.Zones.Common;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -20,7 +22,7 @@ public sealed class LibraryShellTests
     [TestCase]
     public void PlanHasEveryBlockAndASetBackOnEachWing()
     {
-        var plan = Shell(RealWorld()).Plan;
+        var plan = Shell(Campus.Tests.RealMapFixture.Load().World).Plan;
         int Count(BlockKind kind) => plan.Blocks.Count(b => b.Kind == kind);
         AssertThat(Count(BlockKind.Core) == 1 && Count(BlockKind.Wing) == 4 && Count(BlockKind.Setback) == 4).OverrideFailureMessage("core, four wings, four set-back strips").IsTrue();
         AssertThat(Count(BlockKind.Tower) == 3 && Count(BlockKind.FrontTower) == 1 && Count(BlockKind.Podium) == 2).OverrideFailureMessage($"towers {Count(BlockKind.Tower)}, front tower {Count(BlockKind.FrontTower)}, podium {Count(BlockKind.Podium)}").IsTrue();
@@ -33,12 +35,12 @@ public sealed class LibraryShellTests
     [TestCase]
     public void ExteriorPiecesFaceOutwardAndTheFrontDoorFaceMatchesTheEntrance()
     {
-        var plan = Shell(RealWorld()).Plan;
+        var plan = Shell(Campus.Tests.RealMapFixture.Load().World).Plan;
         AssertThat(plan.Pieces.Count > 40).OverrideFailureMessage($"exterior pieces ({plan.Pieces.Count})").IsTrue();
         foreach (var piece in plan.Pieces)
         {
             var mid = (piece.A + piece.B) * 0.5f;
-            AssertThat(!Inside(mid + piece.Out * 0.2f, piece.Block.Ring) && Inside(mid - piece.Out * 0.2f, piece.Block.Ring)).OverrideFailureMessage($"{piece.Block.Kind} piece faces out").IsTrue();
+            AssertThat(!PlanGeometry.InsideByCrossings(piece.Block.Ring, mid + piece.Out * 0.2f) && PlanGeometry.InsideByCrossings(piece.Block.Ring, mid - piece.Out * 0.2f)).OverrideFailureMessage($"{piece.Block.Kind} piece faces out").IsTrue();
             AssertThat(piece.Y1 > piece.Y0).OverrideFailureMessage("piece has height").IsTrue();
         }
         // No exterior wall is hidden inside another block of the shell.
@@ -46,21 +48,21 @@ public sealed class LibraryShellTests
         {
             var probe = (piece.A + piece.B) * 0.5f + piece.Out * 0.2f;
             var y = (piece.Y0 + piece.Y1) * 0.5f;
-            var buried = plan.Blocks.FirstOrDefault(b => !ReferenceEquals(b, piece.Block) && y > b.Y0 && y < b.Y1 && Inside(probe, b.Ring));
+            var buried = plan.Blocks.FirstOrDefault(b => !ReferenceEquals(b, piece.Block) && y > b.Y0 && y < b.Y1 && PlanGeometry.InsideByCrossings(b.Ring, probe));
             AssertThat(buried is null).OverrideFailureMessage($"{piece.Block.Kind} piece {piece.A}-{piece.B} y {piece.Y0}-{piece.Y1} is not buried in {buried?.Kind} {buried?.Source}").IsTrue();
         }
         // The front tower's outer face centres on (−154.6, 80), facing 127°; lib.main's door centre is on the slot glass 0.75 m in.
         var door = plan.Pieces.Single(p => p.Block.Kind == BlockKind.FrontTower && p.Length > 8f && p.Y1 - p.Y0 > 6f);
         var centre = (door.A + door.B) * 0.5f;
         AssertThat(Vector2.Distance(centre, new(-154.6f, 80f)) < 0.6f).OverrideFailureMessage($"front face centre {centre} at the lib.main door").IsTrue();
-        AssertThat(MathF.Abs(Shapes.BearingOf(door.Out) - 127f) < 3f).OverrideFailureMessage($"front face bearing {Shapes.BearingOf(door.Out)}").IsTrue();
+        AssertThat(MathF.Abs(Angles.Bearing(door.Out) - 127f) < 3f).OverrideFailureMessage($"front face bearing {Angles.Bearing(door.Out)}").IsTrue();
         AssertThat(MathF.Abs(door.Y0 - plan.SecondFloorY) < 0.01f).OverrideFailureMessage("the front face starts on the 2F terrace").IsTrue();
     }
 
     [TestCase]
     public void WindowGridFitsItsNumberRange()
     {
-        var shell = Shell(RealWorld());
+        var shell = Shell(Campus.Tests.RealMapFixture.Load().World);
         AssertThat(shell.WindowCount > 0 && shell.WindowCount <= 4096).OverrideFailureMessage($"the library grid ({shell.WindowCount} IDs) is a small part of the 65536-ID map table").IsTrue();
         var ids = new HashSet<int>();
         foreach (var o in shell.Openings)
@@ -76,11 +78,11 @@ public sealed class LibraryShellTests
     [TestCase]
     public void EveryLevelBuildsValidGlassAndLandmarkInstances()
     {
-        var world = RealWorld();
-        var palette = Palette();
+        var world = Campus.Tests.RealMapFixture.Load().World;
+        var palette = Campus.Contracts.Tests.PaletteFixture.Catalog;
         var shell = Shell(world);
         var numbering = Numbering(shell, shell.Columns);
-        var allocation = numbering.Get(CoreFeatures.Library, LibraryShell.WindowKey);
+        var allocation = numbering.Get(CoreIds.Library, LibraryShell.WindowKey);
         foreach (var lod in Levels)
         {
             var build = new CoreBuild(palette) { WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
@@ -115,18 +117,18 @@ public sealed class LibraryShellTests
     [TestCase]
     public void WindowDeclarationIsOneLibraryGridOfTheSharedLayout()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var shell = Shell(world);
         var layouts = new CoreModule().DescribeWindowLayouts(world, 1u);
         var windowed = layouts.Where(l => l.Grids.Count > 0).ToArray();
-        AssertThat(windowed.Select(l => l.Feature.Value).SequenceEqual([CoreFeatures.Library.Value, CoreFeatures.Museum.Value, CoreFeatures.NorthAnnex.Value, CoreFeatures.CourtWing.Value, CoreFeatures.LowBlock.Value, CoreFeatures.NorthWestLink.Value, CoreFeatures.NorthWestJoint.Value])).OverrideFailureMessage($"the library, the museum and the five north blocks declare windows ({windowed.Length})").IsTrue();
-        AssertThat(layouts.Single(l => l.Feature == CoreFeatures.LibraryStair).Grids.Count == 0).OverrideFailureMessage("the claimed stair base declares an empty set").IsTrue();
-        var layout = windowed.Single(l => l.Feature == CoreFeatures.Library);
-        AssertThat(layout.Feature == CoreFeatures.Library && world.Features.ContainsKey(layout.Feature)).OverrideFailureMessage("the declaration targets the library entity in this world").IsTrue();
+        AssertThat(windowed.Select(l => l.Feature.Value).SequenceEqual([CoreIds.Library.Value, CoreIds.Museum.Value, CoreIds.NorthAnnex.Value, CoreIds.CourtWing.Value, CoreIds.LowBlock.Value, CoreIds.NorthWestLink.Value, CoreIds.NorthWestJoint.Value])).OverrideFailureMessage($"the library, the museum and the five north blocks declare windows ({windowed.Length})").IsTrue();
+        AssertThat(layouts.Single(l => l.Feature == CoreIds.LibraryStair).Grids.Count == 0).OverrideFailureMessage("the claimed stair base declares an empty set").IsTrue();
+        var layout = windowed.Single(l => l.Feature == CoreIds.Library);
+        AssertThat(layout.Feature == CoreIds.Library && world.Features.ContainsKey(layout.Feature)).OverrideFailureMessage("the declaration targets the library entity in this world").IsTrue();
         AssertThat(CoreSite.Claims.OfType<FeatureClaim>().Any(c => c.Feature == layout.Feature && (c.Aspects & Aspects.Facade) != 0)).OverrideFailureMessage("the zone claims the library facade").IsTrue();
         AssertThat(layout.Grids.Count == 1).OverrideFailureMessage("a single grid covers every source part").IsTrue();
         var grid = layout.Grids[0];
-        AssertThat(grid.Key == "library-shell" && grid.Columns == shell.Columns && grid.Rows == 6).OverrideFailureMessage($"library-shell {grid.Columns} × {grid.Rows}").IsTrue();
+        AssertThat(grid.Key == LibraryShell.WindowKey && grid.Columns == shell.Columns && grid.Rows == LibraryShell.Rows).OverrideFailureMessage($"library-shell {grid.Columns} × {grid.Rows}").IsTrue();
         AssertThat(shell.Cells().Count() == shell.Cells().Select(c => (c.Column, c.Row)).Distinct().Count()).OverrideFailureMessage("each logical cell is declared once").IsTrue();
         AssertThat(shell.Cells().All(c => c.Column >= 0 && c.Column < grid.Columns && c.Row >= 0 && c.Row < grid.Rows)).OverrideFailureMessage("every cell lies inside the declared grid").IsTrue();
     }
@@ -134,14 +136,14 @@ public sealed class LibraryShellTests
     [TestCase]
     public void GlassAndMetadataReadTheSameAllocation()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var shell = Shell(world);
         var numbering = Numbering(shell, shell.Columns);
-        var allocation = numbering.Get(CoreFeatures.Library, LibraryShell.WindowKey);
-        AssertThat(allocation.BaseId == 707).OverrideFailureMessage("a generic block in front moves the library base").IsTrue();
+        var allocation = numbering.Get(CoreIds.Library, LibraryShell.WindowKey);
+        AssertThat(allocation.BaseId == numbering.Allocations[0].Count).OverrideFailureMessage("a generic block in front moves the library base").IsTrue();
         var module = new CoreModule();
         var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
-        var output = module.Build(ctx, CoreTiles.Of(shell.Anchor, LodLevel.L0), LodLevel.L0);
+        var output = module.Build(ctx, TileGrid.At(shell.Anchor, LodLevel.L0), LodLevel.L0);
         var glassIds = new SortedSet<int>();
         foreach (var g in output.Meshes.Where(m => m.Material.Spec.Kind is ToonKind.Glass or ToonKind.GlassNear))
             for (var v = 0; v < g.Position.Length / 3; v++)
@@ -163,7 +165,7 @@ public sealed class LibraryShellTests
     [TestCase]
     public void WithoutNumberingTheGlassCarriesNoWindowIds()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var shell = Shell(world);
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         shell.Build(build, LodLevel.L0);
@@ -186,11 +188,11 @@ public sealed class LibraryShellTests
     [TestCase]
     public void CollidersCoverTheShellAndLeaveTheStairLandingLow()
     {
-        var shell = Shell(RealWorld());
+        var shell = Shell(Campus.Tests.RealMapFixture.Load().World);
         var colliders = shell.Collide();
         AssertThat(colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("every collider has a foot material").IsTrue();
         var plan = shell.Plan;
-        AssertThat(colliders.OfType<SlabCollider>().Count(s => s.Ring.Count > 4) == 2).OverrideFailureMessage("the podium terrace is a slab").IsTrue();
+        AssertThat(colliders.OfType<SlabCollider>().Count(s => s.Ring.Count > 4) == plan.Blocks.Count(b => b.Kind == BlockKind.Podium)).OverrideFailureMessage("the podium terrace is a slab").IsTrue();
         AssertThat(colliders.OfType<WallCollider>().Any(w => MathF.Abs(w.Y1 - plan.SecondFloorY) < 0.01f)).OverrideFailureMessage("low wall under the stair landing").IsTrue();
         AssertThat(colliders.OfType<WallCollider>().Count(w => w.Y1 > plan.PadY + 200f) >= 12).OverrideFailureMessage("walls above the terrace run to 300 m").IsTrue();
     }
@@ -198,13 +200,13 @@ public sealed class LibraryShellTests
     [TestCase]
     public void BothDoorsLeaveAClearWayThroughTheirBays()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var shell = Shell(world);
         var plan = shell.Plan;
         var cafe = shell.CafeDoor ?? throw new InvalidOperationException("Expected: the 1F cafe door");
         // lib.cafe: on the 1F floor of the podium face that starts at the 品·悦吧 store front, two open leaves clear 1.1 m.
         AssertThat(MathF.Abs(cafe.Origin.Y - plan.FloorY) < 0.01f && plan.CafeFace is { Piece.Block.Kind: BlockKind.Podium }).OverrideFailureMessage("the cafe door is in the 1F podium").IsTrue();
-        var store = Plan.OuterRing(world.Features[CoreFeatures.CafeStore]);
+        var store = FeatureReads.Contour(world.Features[CoreIds.CafeStore]);
         AssertThat(store.Min(p => Vector2.Distance(p, new(cafe.Origin.X, cafe.Origin.Z))) < 6f).OverrideFailureMessage("the cafe door is beside the store front").IsTrue();
         AssertThat(cafe.Width / CoreStyle.DoorLeaves * 2 >= 1.1f && cafe.Height >= 2.4f).OverrideFailureMessage($"cafe door {cafe.Width} × {cafe.Height}").IsTrue();
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
@@ -224,7 +226,7 @@ public sealed class LibraryShellTests
                 foreach (var w in colliders.OfType<WallCollider>().Where(w => w.Y0 < bay.Origin.Y + 1.8f && w.Y1 > bay.Origin.Y + 0.3f))
                     AssertThat(SegmentDistance(a, b, w.A, w.B) > w.HalfT).OverrideFailureMessage($"the way through the door at {bay.Origin} crosses a wall {w.A}–{w.B}").IsTrue();
             }
-            AssertThat(colliders.OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - bay.Origin.Y) < 0.01f && Inside(o + n * 0.01f, s.Ring))).OverrideFailureMessage("the recess has a floor at the door's level").IsTrue();
+            AssertThat(colliders.OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - bay.Origin.Y) < 0.01f && PlanGeometry.InsideByCrossings(s.Ring, o + n * 0.01f))).OverrideFailureMessage("the recess has a floor at the door's level").IsTrue();
             // The face line is closed beside the bay: a wall 1 m to either side of the door's outer leaves.
             foreach (var side in new[] { -1f, 1f })
             {
@@ -251,9 +253,9 @@ public sealed class LibraryShellTests
     [TestCase]
     public void SkylightSpansTheAtrium()
     {
-        var plan = Shell(RealWorld()).Plan;
-        var across = 2 * plan.SkylightRadius * MathF.Cos(Shapes.Tau / 16f);
-        AssertThat(MathF.Abs(across - 34.5f) < 0.01f).OverrideFailureMessage($"skylight across flats {across}").IsTrue();
+        var plan = Shell(Campus.Tests.RealMapFixture.Load().World).Plan;
+        var across = 2 * plan.SkylightRadius * MathF.Cos(MathF.Tau / 16f);
+        AssertThat(MathF.Abs(across - CoreStyle.SkylightAcross) < 0.01f).OverrideFailureMessage($"skylight across flats {across}").IsTrue();
         AssertThat(LibraryRoof.SkylightApexY(plan) > plan.RoofY + 3f).OverrideFailureMessage("the cone rises above the curb").IsTrue();
         var north = LibraryRoof.FaceDirection(plan, LibraryRoof.NorthFace(plan));
         AssertThat(north.Y < -0.9f).OverrideFailureMessage($"mechanical box on the north axis {north}").IsTrue();
@@ -262,7 +264,7 @@ public sealed class LibraryShellTests
     [TestCase]
     public void CafeApronJoinsTheNearestFootwayWithAPavedLink()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var shell = Shell(world);
         var walk = shell.CafeWalk ?? throw new InvalidOperationException("Expected: a paved link from the cafe apron");
         var cafe = shell.CafeDoor ?? throw new InvalidOperationException("Expected: the cafe door");
@@ -274,7 +276,7 @@ public sealed class LibraryShellTests
             && h.GetString() is "footway" or "path" or "pedestrian").ToArray();
         var reach = walks.Min(r => Enumerable.Range(1, r.Line.Points.Count - 1).Min(k => SegmentDistance(walk.B, walk.B, r.Line.Points[k - 1], r.Line.Points[k])) - (r.Width > 0f ? r.Width : 2f) * 0.5f);
         AssertThat(reach < 0f).OverrideFailureMessage($"the link ends on a footway ({reach:F2})").IsTrue();
-        var slab = shell.Collide().OfType<SlabCollider>().Where(c => c.Ring.Count == 4 && Inside((walk.A + walk.B) * 0.5f, c.Ring)).ToArray();
+        var slab = shell.Collide().OfType<SlabCollider>().Where(c => c.Ring.Count == 4 && PlanGeometry.InsideByCrossings(c.Ring, (walk.A + walk.B) * 0.5f)).ToArray();
         AssertThat(slab.Length >= 1 && slab.All(c => c.Foot == FootMat.StonePaving)).OverrideFailureMessage("the link is walkable stone paving").IsTrue();
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         shell.Build(build, LodLevel.L0);
@@ -290,63 +292,23 @@ public sealed class LibraryShellTests
     /// <summary>A stand-in for WP-14's allocation: a 101 × 7 generic block sorted before the library, the museum and one block after it.</summary>
     private static WindowNumberingSnapshot Numbering(LibraryShell shell, int libraryColumns)
     {
-        var library = new WindowAllocation(CoreFeatures.Library, LibraryShell.WindowKey, 707, libraryColumns, LibraryShell.Rows);
-        var columns = CoreSite.Pieces(RealWorld()).OfType<Museum.MuseumShell>().Single().Columns;
-        var museum = new WindowAllocation(CoreFeatures.Museum, Museum.MuseumShell.WindowKey, 707 + library.Count, columns, Museum.MuseumShell.Rows);
-        var annex = AnnexShellTests.Allocations(RealWorld(), museum.BaseId + museum.Count).ToArray();
+        var generic = new WindowAllocation(new FeatureId("fixture:generic-before"), "generic", 0, 101, 7);
+        var library = new WindowAllocation(CoreIds.Library, LibraryShell.WindowKey, generic.Count, libraryColumns, LibraryShell.Rows);
+        var columns = CoreSite.Pieces(Campus.Tests.RealMapFixture.Load().World).OfType<Museum.MuseumShell>().Single().Columns;
+        var museum = new WindowAllocation(CoreIds.Museum, Museum.MuseumShell.WindowKey, generic.Count + library.Count, columns, Museum.MuseumShell.Rows);
+        var annex = AnnexShellTests.Allocations(Campus.Tests.RealMapFixture.Load().World, museum.BaseId + museum.Count).ToArray();
         var end = annex.Length == 0 ? museum.BaseId + museum.Count : annex[^1].BaseId + annex[^1].Count;
-        return new(new MapId("qingshuihe"), new string('a', 64),
+        return new(Campus.Tests.RealMapFixture.Entry().Descriptor.Id, new string('a', 64),
         [
-            new WindowAllocation(new FeatureId("qsh:way:0"), "generic", 0, 101, 7),
+            generic,
             library,
             museum,
             .. annex,
-            new WindowAllocation(new FeatureId("qsh:way:9"), "generic", end, 10, 1),
+            new WindowAllocation(new FeatureId("test:generic-after"), "generic", end, 10, 1),
         ]);
-    }
-
-
-    private static bool Inside(Vector2 p, IReadOnlyList<Vector2> ring)
-    {
-        var inside = false;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-            if ((ring[i].Y > p.Y) != (ring[j].Y > p.Y) && p.X < (ring[j].X - ring[i].X) * (p.Y - ring[i].Y) / (ring[j].Y - ring[i].Y) + ring[i].X)
-                inside = !inside;
-        return inside;
     }
 
     private static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
-
-    private static IWorldModel RealWorld()
-    {
-        var dir = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
-        var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
-        foreach (var name in new[] { "campus.json", "map.json", "network.json", "interiors.json" })
-            files[name] = File.ReadAllBytes(Path.Combine(dir, name));
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(dir, "overlay"), "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
-            files["overlay/" + Path.GetRelativePath(Path.Combine(dir, "overlay"), file).Replace('\\', '/')] = File.ReadAllBytes(file);
-        return WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
-    }
-
-    private static PaletteCatalog Palette()
-    {
-        var dir = Path.Combine(FindRepository(), "game", "style", "palette");
-        var entries = new List<PaletteEntry>();
-        foreach (var file in new[] { Path.Combine(dir, "core.json") }.Concat(Directory.EnumerateFiles(Path.Combine(dir, "ext"), "WP-*.json").Order(StringComparer.Ordinal)))
-            entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return new PaletteCatalog(new PaletteRegistry(entries), []);
-    }
-
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
-    }
 }

@@ -1,5 +1,7 @@
 using System.Numerics;
-using System.Text.Json;
+using Campus.Gen.World;
+using Campus.Gen.Geometry;
+using Campus.Gen.Zones.Common;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Parts.Core;
@@ -35,7 +37,7 @@ public static class PocketGreens
         foreach (var f in Ours(world, PublicTune.ArcBenchKind))
         {
             if (f.Geometry is not PointGeometry point) throw new InvalidDataException($"{f.Id.Value}: an arc bench is a point (its arc centre).");
-            float r = Number(f, "radius"), from = Number(f, "from"), to = Number(f, "to");
+            float r = f.Number("radius"), from = f.Number("from"), to = f.Number("to");
             if (!(r > 1f) || !(to > from) || to - from > 180f) throw new InvalidDataException($"{f.Id.Value}: radius must exceed 1 m and the arc run from < to within 180°.");
             list.Add(new(f.Id, new(point.Position.X, point.Position.Z), r, from, to));
         }
@@ -48,9 +50,9 @@ public static class PocketGreens
         var list = new List<RoundPit>();
         foreach (var f in Ours(world, PublicTune.TreePitKind))
         {
-            if (Text(f, "stone") != "site") continue;
+            if (f.TryText("stone") != "site") continue;
             if (f.Geometry is not PointGeometry point) throw new InvalidDataException($"{f.Id.Value}: a round pit is a point with props.radius.");
-            var r = Number(f, "radius");
+            var r = f.Number("radius");
             if (!(r > K.KerbWidth * 2f)) throw new InvalidDataException($"{f.Id.Value}: pit radius too small.");
             list.Add(new(f.Id, new(point.Position.X, point.Position.Z), r));
         }
@@ -58,53 +60,17 @@ public static class PocketGreens
     }
 
     private static IEnumerable<WorldFeature> Ours(IWorldModel world, string kind) =>
-        world.Features.Values.Where(f => f.Id.Value.StartsWith(PublicTune.Prefix, StringComparison.Ordinal) && f.Kind.Value == kind)
+        world.Features.Values.Where(f => f.Id.Value.StartsWith(PublicIds.Prefix, StringComparison.Ordinal) && f.Kind.Value == kind)
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal);
 
-    private static float Number(WorldFeature f, string name) =>
-        f.Props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetSingle(out var x) && float.IsFinite(x)
-            ? x : throw new InvalidDataException($"{f.Id.Value}: props.{name} must be a finite number.");
-
-    private static string? Text(WorldFeature f, string name) =>
-        f.Props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
-
     // ---- Plan helpers ----
-
-    /// <summary>Unit plan direction (world x east, z south) of a bearing in degrees.</summary>
-    public static Vector2 Dir(float bearing)
-    {
-        var a = bearing * (MathF.PI / 180f);
-        return new(MathF.Sin(a), -MathF.Cos(a));
-    }
 
     /// <summary>Points on the arc from <paramref name="from"/> to <paramref name="to"/>, segments + 1 of them.</summary>
     public static Vector2[] Arc(Vector2 c, float r, float from, float to, int segments)
     {
         var points = new Vector2[segments + 1];
-        for (var i = 0; i <= segments; i++) points[i] = c + Dir(from + (to - from) * i / segments) * r;
+        for (var i = 0; i <= segments; i++) points[i] = c + Angles.Heading(from + (to - from) * i / segments) * r;
         return points;
-    }
-
-    /// <summary>Counterclockwise (in x, z) closed circle without a repeated point.</summary>
-    public static Vector2[] Circle(Vector2 c, float r, int segments)
-    {
-        var points = new Vector2[segments];
-        for (var i = 0; i < segments; i++)
-        {
-            var a = 2f * MathF.PI * i / segments;
-            points[i] = new(c.X + r * MathF.Cos(a), c.Y + r * MathF.Sin(a));
-        }
-        return points;
-    }
-
-    /// <summary>
-    /// Rigid placement whose local +Z points along plan direction <paramref name="outward"/> and local X along the arc
-    /// (the PlanFrame convention: Z = (−U.z, U.x)), origin at plan <paramref name="p"/>, height <paramref name="y"/>.
-    /// </summary>
-    public static Matrix4x4 Facing(Vector2 p, Vector2 outward, float y)
-    {
-        var u = new Vector2(outward.Y, -outward.X);
-        return new(u.X, 0, u.Y, 0, 0, 1, 0, 0, outward.X, 0, outward.Y, 0, p.X, y, p.Y, 1);
     }
 
     // ---- Geometry ----
@@ -117,14 +83,14 @@ public static class PocketGreens
         foreach (var f in B.PlinthAt)
         {
             var bearing = bench.From + (bench.To - bench.From) * f;
-            var o = Dir(bearing);
+            var o = Angles.Heading(bearing);
             Add(output, PartGeometryKernel.BeveledBox(B.PlinthLength, B.PlinthHeight, B.PlinthDepth, lod == LodLevel.L0 ? B.PlinthBevel : 0.01f, L.Granite),
-                Facing(bench.Centre + o * bench.Radius, o, deck));
+                new PlanFrame(bench.Centre + o * bench.Radius, new(o.Y, -o.X)).At(0, deck, 0));
             if (lod >= LodLevel.L2) continue;
             Add(output, PartGeometryKernel.BeveledBox(B.CarrierLength, B.CarrierHeight, B.CarrierDepth, 0.005f, L.Steel),
-                Facing(bench.Centre + o * bench.Radius, o, deck + B.PlinthHeight));
+                new PlanFrame(bench.Centre + o * bench.Radius, new(o.Y, -o.X)).At(0, deck + B.PlinthHeight, 0));
             Add(output, PartGeometryKernel.BeveledBox(B.PostSize, B.BackTop - B.SeatTop + B.SlatThickness, B.PostSize, 0.008f, L.Steel),
-                Facing(bench.Centre + o * (bench.Radius + B.PostOffset), o, deck + B.SeatTop - B.SlatThickness));
+                new PlanFrame(bench.Centre + o * (bench.Radius + B.PostOffset), new(o.Y, -o.X)).At(0, deck + B.SeatTop - B.SlatThickness, 0));
         }
         var seatBase = deck + B.SeatTop - B.SlatThickness;
         if (lod >= LodLevel.L2)
@@ -145,11 +111,11 @@ public static class PocketGreens
     public static void Build(RoundPit pit, Func<Vector2, float> ground, LodLevel lod, ICollection<GeometryBundle> output)
     {
         var segments = lod switch { LodLevel.L0 => K.SegmentsL0, LodLevel.L1 => K.SegmentsL1, _ => K.SegmentsL2 };
-        var deck = ground(pit.Centre) + PublicTune.PavingLevel;
+        var deck = ground(pit.Centre) + GroundLevels.Paving;
         var kerb = PartGeometryKernel.BeveledRectangleProfile(K.KerbWidth, K.KerbHeight + 0.05f, lod == LodLevel.L0 ? K.KerbBevel : 0f);
-        var ring = Circle(pit.Centre, pit.Radius - K.KerbWidth * 0.5f, segments);
+        var ring = Shapes.Circle(pit.Centre, pit.Radius - K.KerbWidth * 0.5f, segments);
         AddWorld(output, PartGeometryKernel.Sweep(kerb, ring, L.Granite, closed: true, baseY: deck - 0.05f));
-        var soil = Circle(pit.Centre, pit.Radius - K.KerbWidth + 0.01f, segments);
+        var soil = Shapes.Circle(pit.Centre, pit.Radius - K.KerbWidth + 0.01f, segments);
         AddWorld(output, PartGeometryKernel.Extrude(new PolygonRings(soil), K.KerbHeight - K.SoilBelow + 0.05f, L.Soil, deck - 0.05f));
     }
 
@@ -158,7 +124,7 @@ public static class PocketGreens
     {
         var top = float.MinValue;
         foreach (var p in Arc(bench.Centre, bench.Radius, bench.From, bench.To, 4)) top = MathF.Max(top, ground(p));
-        return top + PublicTune.PavingLevel;
+        return top + GroundLevels.Paving;
     }
 
     // ---- Colliders and seats (same parameters as the geometry, SYS-WALK) ----
@@ -174,9 +140,9 @@ public static class PocketGreens
         for (var i = 0; i < n; i++)
         {
             var mid = bench.From + step * (i + 0.5f);
-            var o = Dir(mid);
+            var o = Angles.Heading(mid);
             var centre = bench.Centre + o * (bench.Radius * MathF.Cos(step * 0.5f * (MathF.PI / 180f)));
-            boxes[i] = new BoxCollider(Facing(centre, o, deck + B.SeatTop * 0.5f), new(half, B.SeatTop * 0.5f, B.HalfDepth), SurfaceTag.Prop) { Foot = FootMat.WoodDeck };
+            boxes[i] = new BoxCollider(new PlanFrame(centre, new(o.Y, -o.X)).At(0, deck + B.SeatTop * 0.5f, 0), new(half, B.SeatTop * 0.5f, B.HalfDepth), SurfaceTag.Prop) { Foot = FootMat.WoodDeck };
         }
         return boxes;
     }
@@ -191,7 +157,7 @@ public static class PocketGreens
     /// <summary>The pit kerb as a low post (0.2 m, stepped onto automatically); the trunk's collider is WP-23's.</summary>
     public static PostCollider PitPost(RoundPit pit, Func<Vector2, float> ground)
     {
-        var deck = ground(pit.Centre) + PublicTune.PavingLevel;
+        var deck = ground(pit.Centre) + GroundLevels.Paving;
         return new PostCollider(pit.Centre, pit.Radius, deck - 0.05f, deck + K.KerbHeight, SurfaceTag.Prop) { Foot = FootMat.StonePaving };
     }
 
@@ -205,26 +171,8 @@ public static class PocketGreens
         foreach (var mesh in geometry.Meshes) output.Add(mesh);
     }
 
-    /// <summary>Places part geometry by a rigid row-vector matrix, written out in scalar arithmetic (no SIMD paths).</summary>
     private static void Add(ICollection<GeometryBundle> output, PartGeometry geometry, Matrix4x4 at)
     {
-        foreach (var mesh in geometry.Meshes)
-        {
-            var count = mesh.Position.Length / 3;
-            var position = new float[mesh.Position.Length];
-            var normal = new float[mesh.Normal.Length];
-            for (var i = 0; i < count; i++)
-            {
-                float x = mesh.Position[3 * i], y = mesh.Position[3 * i + 1], z = mesh.Position[3 * i + 2];
-                position[3 * i] = x * at.M11 + y * at.M21 + z * at.M31 + at.M41;
-                position[3 * i + 1] = x * at.M12 + y * at.M22 + z * at.M32 + at.M42;
-                position[3 * i + 2] = x * at.M13 + y * at.M23 + z * at.M33 + at.M43;
-                float nx = mesh.Normal[3 * i], ny = mesh.Normal[3 * i + 1], nz = mesh.Normal[3 * i + 2];
-                normal[3 * i] = nx * at.M11 + ny * at.M21 + nz * at.M31;
-                normal[3 * i + 1] = nx * at.M12 + ny * at.M22 + nz * at.M32;
-                normal[3 * i + 2] = nx * at.M13 + ny * at.M23 + nz * at.M33;
-            }
-            output.Add(mesh with { Position = position, Normal = normal });
-        }
+        foreach (var mesh in geometry.Meshes) output.Add(GeometryPlacement.Place(mesh, at).Mesh);
     }
 }

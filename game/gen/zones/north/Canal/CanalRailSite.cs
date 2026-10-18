@@ -27,8 +27,8 @@ public sealed class CanalRailSite : ZoneSite
     /// </summary>
     public static PlanFrame? FrameOf(IWorldModel world)
     {
-        if (!world.Features.ContainsKey(new(B.BankContour))) return null;
-        return world.ContourFrame(B.BankContour, originAtEnd: false, forward: false);
+        if (!world.Features.ContainsKey(new(Campus.Gen.Zones.DesignBoundary.BoundaryFeatureIds.NorthBankContour))) return null;
+        return world.ContourFrame(Campus.Gen.Zones.DesignBoundary.BoundaryFeatureIds.NorthBankContour, originAtEnd: false, forward: false);
     }
 
     /// <summary>Panels from the joint post to the end post, at most <see cref="B.PostPitch"/> apart.</summary>
@@ -46,7 +46,7 @@ public sealed class CanalRailSite : ZoneSite
         var panels = Panels;
         var u = frame.U;
         var y = new float[panels];
-        for (var k = 0; k < panels; k++) y[k] = MathF.Min(b.Ground(Post(frame, k)), b.Ground(Post(frame, k + 1))) + B.PavingTop;
+        for (var k = 0; k < panels; k++) y[k] = MathF.Min(b.Ground(Post(frame, k)), b.Ground(Post(frame, k + 1))) + GroundLevels.Paving;
         for (var k = 0; k < panels; k++)
             b.Run(L.LightSteel, PanelStart(frame, k), Post(frame, k + 1), B.HandRail, y[k] + B.Height - B.HandRail * 0.7f, y[k] + B.Height);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
@@ -87,7 +87,7 @@ public sealed class CanalRailSite : ZoneSite
         for (var k = 0; k < Panels; k++)
         {
             Vector2 a = Post(frame, k), d = Post(frame, k + 1);
-            var y = MathF.Min(c.Ground(a), c.Ground(d)) + B.PavingTop;
+            var y = MathF.Min(c.Ground(a), c.Ground(d)) + GroundLevels.Paving;
             c.Wall(a, d, B.ColliderHalf, y - 0.6f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);
         }
     }

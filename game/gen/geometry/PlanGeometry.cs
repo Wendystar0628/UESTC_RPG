@@ -137,11 +137,16 @@ public static partial class PlanGeometry
     }
 
     public static float SegmentDistanceSquared(Vector2 p, Vector2 a, Vector2 b)
+        => Vector2.DistanceSquared(p, ClosestPoint(p, a, b));
+
+    /// <summary>Allocation-free scalar float projection; degenerate segments return their first endpoint.</summary>
+    public static Vector2 ClosestPoint(Vector2 p, Vector2 a, Vector2 b, float minimumLengthSquared = 0f)
     {
         var d = b - a;
-        var length = d.LengthSquared();
-        var t = length == 0 ? 0 : Math.Clamp(Vector2.Dot(p - a, d) / length, 0, 1);
-        return Vector2.DistanceSquared(p, a + d * t);
+        var length = d.X * d.X + d.Y * d.Y;
+        if (length == 0 || length < minimumLengthSquared) return a;
+        var t = Math.Clamp(((p.X - a.X) * d.X + (p.Y - a.Y) * d.Y) / length, 0f, 1f);
+        return a + d * t;
     }
 
     public static float DistanceToRing(Vector2 p, IReadOnlyList<Vector2> ring)
@@ -151,6 +156,16 @@ public static partial class PlanGeometry
         return MathF.Sqrt(distance);
     }
 
-    public static Vector2 Centroid(IReadOnlyList<Vector2> ring)
-        => Centroid(new PolygonRings(ring));
+    /// <summary>Area centroid; callers that allow a degenerate ring can retain the scalar-float vertex-mean fallback.</summary>
+    public static Vector2 Centroid(IReadOnlyList<Vector2> ring, bool meanIfDegenerate = false)
+    {
+        Vector2? fallback = null;
+        if (meanIfDegenerate)
+        {
+            float x = 0, z = 0;
+            foreach (var point in ring) { x += point.X; z += point.Y; }
+            fallback = new(x / ring.Count, z / ring.Count);
+        }
+        return Centroid(new PolygonRings(ring), fallback);
+    }
 }

@@ -17,7 +17,10 @@ public interface IWalkController
     Pose BodyPose { get; }
     Vector3 Velocity { get; }
     bool Grounded { get; }
+    /// <summary>Derived directly from IViewControl.Mode; the camera alone owns mode changes.</summary>
     bool Active { get; }
+    /// <summary>Terminal placement failure: physics is frozen until the camera handles the exit request.</summary>
+    bool ExitRequested { get; }
     bool CollisionReady { get; }
     NavSpace? Space { get; }
     /// <summary>Zero-based speed setting, 0 through 4; 2 is the default 1x speed.</summary>
@@ -29,10 +32,10 @@ public interface IWalkController
     /// <summary>Pure settled snapshot, resolved from the same feet destination as the walk save section.</summary>
     Pose SettledEyePose { get; }
 
-    /// <summary>Selects a legal feet destination from an eye pose and activates on success.</summary>
+    /// <summary>Prepares a legal feet destination from an eye pose before the camera commits walk mode.</summary>
     /// <remarks>The result describes destination selection. Physics stays frozen until collision is ready.</remarks>
     ModeSwitchResult Enter(Pose from);
-    /// <summary>Deactivates physics and clears pending input.</summary>
+    /// <summary>Clears motion and pending input as the camera leaves walk mode; never changes mode itself.</summary>
     void Leave();
     void SetLook(float yawDeg, float pitchDeg);
     void SetInput(WalkInput input);

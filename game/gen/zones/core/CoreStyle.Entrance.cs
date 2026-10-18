@@ -27,8 +27,8 @@ public static partial class CoreStyle
     // ---- Section (WLD-TERRAIN): risers near 0.15, flights of at most 1.5 m rise, one deep middle landing
     //      between the two runs (两跑) and short rest landings inside each run (review). ----
     public const float RestLanding = 1.2f, MiddleLanding = 2.8f;
-    /// <summary>The stair rises from the axis paving: terrain plus <see cref="PavingLift"/> at its foot.</summary>
-    public const float StairFootLift = PavingLift;
+    /// <summary>The stair rises from the axis paving: terrain plus <see cref="GroundLevels.Paving"/> at its foot.</summary>
+    public const float StairFootLift = GroundLevels.Paving;
 
     // ---- Terraces: retaining walls with a coping, lawn tops, clipped hedge borders (the guard on every open edge). ----
     public const float TerraceCoping = 0.1f, TerraceCopingProject = 0.05f;

@@ -24,8 +24,6 @@ public static class WalkMath
         return true;
     }
 
-    public static bool Finite(Vector3 p) => float.IsFinite(p.X) && float.IsFinite(p.Y) && float.IsFinite(p.Z);
-
     public static bool CanWalk(WalkClass value) => value switch
     {
         WalkClass.Walk or WalkClass.Interior or WalkClass.Wade => true,

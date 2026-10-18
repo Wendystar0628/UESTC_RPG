@@ -22,10 +22,10 @@ namespace Campus.Gen.Zones.CenterEast.Research;
 /// </summary>
 public sealed class StatueLawnSite : ZoneSite
 {
-    internal static PlanFrame LinFrame => PlanMath.Facing(M.LinAt, M.LinFacing);
+    internal static PlanFrame LinFrame(IWorldModel world) => PlanMath.Facing(world.Feature(CenterEastIds.Layout.LinPlacement).Point(), M.LinFacing);
     /// <summary>Maxwell stands at his OSM point and the equation stone at its registered point, both read by ID.</summary>
-    internal static PlanFrame MaxwellFrame(IWorldModel world) => PlanMath.Facing(world.Feature(M.Maxwell).Point(), M.MaxwellFacing);
-    internal static PlanFrame StoneFrame(IWorldModel world) => PlanMath.Facing(world.Feature(M.StoneId).Point(), M.StoneFacing);
+    internal static PlanFrame MaxwellFrame(IWorldModel world) => PlanMath.Facing(world.Feature(CenterEastIds.Monuments.Maxwell).Point(), M.MaxwellFacing);
+    internal static PlanFrame StoneFrame(IWorldModel world) => PlanMath.Facing(world.Feature(CenterEastIds.Monuments.StoneId).Point(), M.StoneFacing);
     private static PlanFrame R => ResearchSite.Frame;
 
     public override string Id => "21b2.statue-lawn";
@@ -36,7 +36,7 @@ public sealed class StatueLawnSite : ZoneSite
         var maxwell = MaxwellFrame(world);
         var stone = StoneFrame(world);
         IslandKerb(b);
-        LinBust(b, b.Ground(M.LinAt));
+        LinBust(b, b.Ground(LinFrame(world).Origin));
         Apron(b);
         Maxwell(b, maxwell, b.Ground(maxwell.Origin));
         EquationStone(b, stone, b.Ground(stone.Origin));
@@ -46,17 +46,17 @@ public sealed class StatueLawnSite : ZoneSite
 
     // ---- 林为干像 (§1.4): bust on a dark pedestal at the tip of the tree island ----
 
-    /// <summary>The plaza hole nearest 林为干像: the lawn island with the big tree, kerbed in granite.</summary>
+    /// <summary>The plaza hole containing 林为干像's authored point: the lawn island with the big tree, kerbed in granite.</summary>
     internal static IReadOnlyList<Vector2>? Island(IWorldModel world)
     {
-        if (!world.Features.TryGetValue(new(M.Plaza), out var plaza) || plaza.Geometry is not PolygonGeometry polygon) return null;
-        return polygon.Rings.Holes.FirstOrDefault(h => PlanGeometry.InsideByCrossings(h, M.LinAt));
+        if (!world.Features.TryGetValue(new(CenterEastIds.Monuments.Plaza), out var plaza) || plaza.Geometry is not PolygonGeometry polygon) return null;
+        return polygon.Rings.Holes.FirstOrDefault(h => PlanGeometry.InsideByCrossings(h, LinFrame(world).Origin));
     }
 
     private static void IslandKerb(SiteBuilder b)
     {
         if (b.Detail == SiteDetail.Mass || Island(b.Context.World) is not { } hole) return;
-        var g = b.Ground(PlanMath.Centroid(hole));
+        var g = b.Ground(PlanGeometry.Centroid(hole));
         var kerb = PartGeometryKernel.BeveledRectangleProfile(M.IslandKerbWidth, M.IslandKerbTop + 0.05f, 0.02f);
         b.Add(PartGeometryKernel.Sweep(kerb, hole.ToArray(), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
     }
@@ -70,7 +70,7 @@ public sealed class StatueLawnSite : ZoneSite
     /// </summary>
     private static void LinBust(SiteBuilder b, float y)
     {
-        var f = LinFrame;
+        var f = LinFrame(b.Context.World);
         var detail = b.Detail;
         var bevel = detail == SiteDetail.Full ? 0.025f : 0f;
         b.Add(PartGeometryKernel.BeveledBox(1.1f, M.LinPlinth, 1.1f, bevel, L.DarkStone), f.At(0, y - 0.05f, 0));
@@ -116,7 +116,14 @@ public sealed class StatueLawnSite : ZoneSite
     // ---- 麦克斯韦像 (§1.3) on its granite apron ----
 
     /// <summary>The registered apron squared to the research frame: its local (u, w) corners.</summary>
-    private static (Vector2 Min, Vector2 Max) ApronRect(IWorldModel world) => Registered.LocalBounds(R, world.Feature(M.ApronId).Outer());
+    private static (Vector2 Min, Vector2 Max) ApronRect(IWorldModel world)
+    {
+        var frame = R;
+        var rectangle = world.Feature(CenterEastIds.Monuments.ApronId).Rectangle(frame.U);
+        var centre = frame.Local(rectangle.Frame.Origin);
+        var half = new Vector2(rectangle.Width, rectangle.Depth) * 0.5f;
+        return (centre - half, centre + half);
+    }
 
     /// <summary>The apron's research-frame rectangle as a world ring (outside on the right).</summary>
     internal static Vector2[] ApronRing(IWorldModel world)
@@ -189,12 +196,12 @@ public sealed class StatueLawnSite : ZoneSite
             Limb(b, f, body, s, sh, el, 0.085f, 0.07f, small);
             Limb(b, f, body, s, el, wr, 0.07f, 0.068f, small);
             b.Add(Solids.Lathe([P(0, 0), P(0.047f, 0.019f), P(0.066f, 0.066f), P(0.047f, 0.113f), P(0, 0.132f)], small, L.Bronze), At(el.X, el.Y - 0.066f, el.Z));
-            var along = Unit(wr - el);
+            var along = VectorMath.Unit(wr - el);
             Hand(b, f, body, s, wr - along * 0.03f, along, small);
         }
         // The scroll stands in the right fist, leaning toward the left shoulder against the chest.
-        var grip = wristR + Unit(wristR - elbowR) * 0.075f;
-        var up = Unit(new(0.3f, 0.95f, -0.05f));
+        var grip = wristR + VectorMath.Unit(wristR - elbowR) * 0.075f;
+        var up = VectorMath.Unit(new Vector3(0.3f, 0.95f, -0.05f));
         Limb(b, f, body, s, grip - up * 0.17f, grip + up * 0.17f, 0.032f, 0.032f, small);
         if (detail != SiteDetail.Full) return;
         b.Add(Solids.Lathe(Hair, small * 2, L.Bronze, 0.9f, 1f), At(0, 1.765f, -0.006f).Scaled(s));
@@ -205,7 +212,7 @@ public sealed class StatueLawnSite : ZoneSite
     {
         var axis = to - from;
         var length = MathF.Sqrt(axis.X * axis.X + axis.Y * axis.Y + axis.Z * axis.Z) * s;
-        b.Add(Shapes.Shaft(r0 * s, r1 * s, length, segments, L.Bronze), Orient(f, body, s, from, Unit(axis)));
+        b.Add(Shapes.Shaft(r0 * s, r1 * s, length, segments, L.Bronze), Orient(f, body, s, from, VectorMath.Unit(axis)));
     }
 
     /// <summary>A hand as a flattened ovoid along the given model direction, its wrist starting inside the sleeve end.</summary>
@@ -217,17 +224,13 @@ public sealed class StatueLawnSite : ZoneSite
     private static Matrix4x4 Orient(PlanFrame f, float body, float s, Vector3 at, Vector3 direction)
     {
         Vector3 World(Vector3 v) => new(f.U.X * v.X + f.W.X * v.Z, v.Y, f.U.Y * v.X + f.W.Y * v.Z);
-        var y = Unit(World(direction));
+        var y = VectorMath.Unit(World(direction));
         var reference = MathF.Abs(y.Y) < 0.95f ? Vector3.UnitY : World(Vector3.UnitZ);
-        var x = Unit(Cross(y, reference));
-        var z = Cross(x, y);
+        var x = VectorMath.Unit(VectorMath.Cross(y, reference));
+        var z = VectorMath.Cross(x, y);
         var p = f.P(at.X * s, at.Z * s);
         return new(x.X, x.Y, x.Z, 0, y.X, y.Y, y.Z, 0, z.X, z.Y, z.Z, 0, p.X, body + at.Y * s, p.Y, 1);
     }
-
-    private static Vector3 Cross(Vector3 a, Vector3 c) => new(a.Y * c.Z - a.Z * c.Y, a.Z * c.X - a.X * c.Z, a.X * c.Y - a.Y * c.X);
-
-    private static Vector3 Unit(Vector3 v) => Solids.Unit(v);
 
     // ---- Equation stone (§1.3) ----
 
@@ -260,9 +263,9 @@ public sealed class StatueLawnSite : ZoneSite
         var world = c.Context.World;
         var maxwellFrame = MaxwellFrame(world);
         var stoneFrame = StoneFrame(world);
-        var lg = c.Ground(M.LinAt.X, M.LinAt.Y);
+        var lg = c.Ground(LinFrame(world).Origin.X, LinFrame(world).Origin.Y);
         var lt = LinPedestalTop;
-        c.Box(LinFrame.At(0, lg + (lt - 0.05f) * 0.5f, 0), new(0.55f, (lt + 0.05f) * 0.5f, 0.55f), SurfaceTag.Prop, FootMat.PolishedStone);
+        c.Box(LinFrame(world).At(0, lg + (lt - 0.05f) * 0.5f, 0), new(0.55f, (lt + 0.05f) * 0.5f, 0.55f), SurfaceTag.Prop, FootMat.PolishedStone);
         var mg = c.Ground(maxwellFrame.Origin.X, maxwellFrame.Origin.Y);
         var mt = M.MaxwellPedestalTop;
         c.Box(maxwellFrame.At(0, mg + (mt - 0.05f) * 0.5f, 0), new(1.0f, (mt + 0.05f) * 0.5f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);

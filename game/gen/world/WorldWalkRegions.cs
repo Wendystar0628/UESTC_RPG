@@ -42,7 +42,7 @@ internal sealed class WorldWalkRegions
         _bridgeLines = network.Bridges.Where(line => !replaced.Contains(line.Id)).ToArray();
 
         PolygonRings[] Areas(string kind) => features.SelectMany(feature => WorldFeatureKinds.Parts(feature, kind))
-            .SelectMany(part => WorldModelLoader.Polygons(part.Geometry)).ToArray();
+            .SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray();
     }
 
     public WalkClass At(float x, float z)

@@ -7,8 +7,8 @@ namespace Campus.Gen.Zones.DesignBoundary.Framework;
 
 /// <summary>
 /// The campus boundary ring (campus.json `boundary`, through <see cref="IWorldModel.Boundary"/>) with the plan queries the
-/// gates and fences need: crossings, projections, arc positions and inset slices. Plain arithmetic and square roots
-/// only (D-165). Index order follows the data; <see cref="Inward"/> gives the interior side of each edge.
+/// gates and fences need: crossings, projections, arc positions and inset slices, sharing geometry queries with
+/// <see cref="PlanGeometry"/>. Index order follows the data; <see cref="Inward"/> gives the interior side of each edge.
 /// </summary>
 public sealed class BoundaryRing
 {
@@ -19,21 +19,13 @@ public sealed class BoundaryRing
     public BoundaryRing(IReadOnlyList<Vector2> outer)
     {
         ArgumentNullException.ThrowIfNull(outer);
-        var points = new List<Vector2>(outer.Count);
-        foreach (var p in outer)
-            if (points.Count == 0 || Vector2.Distance(points[^1], p) > 0.05f) points.Add(p);
-        if (points.Count > 1 && Vector2.Distance(points[0], points[^1]) <= 0.05f) points.RemoveAt(points.Count - 1);
-        if (points.Count < 3) throw new ArgumentException("The boundary ring needs at least three points.", nameof(outer));
-        _p = [.. points];
+        _p = PlanGeometry.DeduplicateRing(outer, 0.05f * 0.05f);
+        if (_p.Length < 3) throw new ArgumentException("The boundary ring needs at least three points.", nameof(outer));
         _arc = new float[_p.Length];
         for (var i = 1; i < _p.Length; i++) _arc[i] = _arc[i - 1] + Length(i - 1);
         Perimeter = _arc[^1] + Length(_p.Length - 1);
-        // Interior side: test a point just off the longest edge's midpoint.
-        var longest = 0;
-        for (var i = 1; i < _p.Length; i++) if (Length(i) > Length(longest)) longest = i;
-        var (a, b) = Edge(longest);
-        var d = Vector2.Normalize(b - a);
-        _side = Contains((a + b) * 0.5f + new Vector2(d.Y, -d.X) * 0.5f) ? 1f : -1f;
+        // Winding determines which side of every boundary edge is inside.
+        _side = PlanGeometry.SignedArea(_p) < 0 ? 1f : -1f;
     }
 
     public int Count => _p.Length;
@@ -58,7 +50,7 @@ public sealed class BoundaryRing
     {
         for (var k = 0; k + 1 < line.Count; k++)
             for (var i = 0; i < _p.Length; i++)
-                if (Intersect(line[k], line[k + 1], _p[i], _p[Wrap(i + 1)]) is { } hit) return (hit.Point, i, hit.U);
+                if (PlanGeometry.SegmentHit(line[k], line[k + 1], _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit) return (hit.Point, i, hit.U);
         return null;
     }
 
@@ -67,11 +59,11 @@ public sealed class BoundaryRing
     {
         var hits = new List<(float Along, float S)>();
         for (var i = 0; i < _p.Length; i++)
-            if (Intersect(p, q, _p[i], _p[Wrap(i + 1)]) is { } hit)
+            if (PlanGeometry.SegmentHit(p, q, _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit)
             {
                 var s = Arc(i, hit.U);
-                if (hits.Any(h => MathF.Abs(h.Along - hit.S) * Vector2.Distance(p, q) < 0.05f)) continue;
-                hits.Add((hit.S, s));
+                if (hits.Any(h => MathF.Abs(h.Along - hit.T) * Vector2.Distance(p, q) < 0.05f)) continue;
+                hits.Add((hit.T, s));
             }
         hits.Sort((a, b) => a.Along.CompareTo(b.Along));
         return [.. hits.Select(h => h.S)];
@@ -83,29 +75,17 @@ public sealed class BoundaryRing
         (Vector2 Point, int Edge, float T)? best = null;
         var bestS = float.MaxValue;
         for (var i = 0; i < _p.Length; i++)
-            if (Intersect(p, p + dir * reach, _p[i], _p[Wrap(i + 1)]) is { } hit && hit.S * reach < bestS && hit.S > 1e-4f)
+            if (PlanGeometry.SegmentHit(p, p + dir * reach, _p[i], _p[Wrap(i + 1)], endpointTolerance: 1e-5f) is { } hit && hit.T * reach < bestS && hit.T > 1e-4f)
             {
-                bestS = hit.S * reach;
+                bestS = hit.T * reach;
                 best = (hit.Point, i, hit.U);
             }
         return best;
     }
 
     /// <summary>Nearest point of the ring to p: edge index and parameter.</summary>
-    public (int Edge, float T) Project(Vector2 p)
-    {
-        var best = (Edge: 0, T: 0f);
-        var bestD = float.MaxValue;
-        for (var i = 0; i < _p.Length; i++)
-        {
-            var (a, b) = Edge(i);
-            var ab = b - a;
-            var t = Math.Clamp(Vector2.Dot(p - a, ab) / ab.LengthSquared(), 0f, 1f);
-            var d = Vector2.DistanceSquared(p, a + ab * t);
-            if (d < bestD) { bestD = d; best = (i, t); }
-        }
-        return best;
-    }
+    public (int Edge, float T) Project(Vector2 p) =>
+        Locate((float)PlanGeometry.Project(_p, p, closed: true).Station);
 
     public Vector2 At(int edge, float t)
     {
@@ -205,18 +185,4 @@ public sealed class BoundaryRing
 
     private int Wrap(int i) => ((i % _p.Length) + _p.Length) % _p.Length;
 
-    private static (Vector2 Point, float S, float U)? Intersect(Vector2 p, Vector2 q, Vector2 a, Vector2 b)
-    {
-        var r = q - p;
-        var s = b - a;
-        var den = r.X * s.Y - r.Y * s.X;
-        if (MathF.Abs(den) < 1e-9f) return null;
-        var ap = a - p;
-        var t = (ap.X * s.Y - ap.Y * s.X) / den;
-        var u = (ap.X * r.Y - ap.Y * r.X) / den;
-        // A small tolerance keeps a crossing that lands exactly on a shared vertex (road node = ring vertex).
-        const float eps = 1e-5f;
-        if (t < -eps || t > 1 + eps || u < -eps || u > 1 + eps) return null;
-        return (p + r * t, Math.Clamp(t, 0f, 1f), Math.Clamp(u, 0f, 1f));
-    }
 }

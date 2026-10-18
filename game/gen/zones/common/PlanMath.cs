@@ -1,5 +1,6 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
+using Campus.Contracts;
 
 namespace Campus.Gen.Zones.Common;
 
@@ -14,35 +15,10 @@ public static class PlanMath
         return points;
     }
 
-    /// <summary>Area centroid of a simple ring (vertex mean for a degenerate one).</summary>
-    public static Vector2 Centroid(IReadOnlyList<Vector2> ring)
-    {
-        ArgumentNullException.ThrowIfNull(ring);
-        float sx = 0, sz = 0;
-        foreach (var p in ring) { sx += p.X; sz += p.Y; }
-        return PlanGeometry.Centroid(new Campus.Contracts.PolygonRings(ring), new(sx / ring.Count, sz / ring.Count));
-    }
-
-    /// <summary>An angle in degrees wrapped to (−180, 180].</summary>
-    public static float Turn(float degrees)
-    {
-        var d = degrees % 360f;
-        if (d > 180f) d -= 360f;
-        if (d <= -180f) d += 360f;
-        return d;
-    }
-
-    /// <summary>Plan unit vector of a bearing in degrees (0 north = −z, 90 east = +x).</summary>
-    public static Vector2 Heading(float bearing)
-    {
-        var a = bearing * (MathF.PI / 180f);
-        return new(MathF.Sin(a), -MathF.Cos(a));
-    }
-
     /// <summary>A frame at <paramref name="origin"/> whose local +Z faces <paramref name="bearing"/> (local +X is then its left).</summary>
     public static PlanFrame Facing(Vector2 origin, float bearing)
     {
-        var w = Heading(bearing);
+        var w = Angles.Heading(bearing);
         return new(origin, new(w.Y, -w.X));
     }
 

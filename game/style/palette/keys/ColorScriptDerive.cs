@@ -112,7 +112,7 @@ public sealed class Deriver
     }
 
     public double WarmLow(FrameVector f, double x) =>
-        (1.0 - Oklab.Smoothstep(_warmAlt0, _warmAlt1, x)) * Oklab.Smoothstep(_warmC0, _warmC1, f.Color(Key).Chroma);
+        (1.0 - ScalarMath.Smoothstep(_warmAlt0, _warmAlt1, x)) * ScalarMath.Smoothstep(_warmC0, _warmC1, f.Color(Key).Chroma);
 
     private Lab CapVegetation(Lab lit, FrameVector f, double x, HeroRef hero)
     {
@@ -157,9 +157,9 @@ public sealed class Deriver
         if (_scaleChroma) c1 *= LightM(f);
         var h1 = ca > 1e-6 ? RotateHue(albedo.Hue, hs, mc.DhMax) : hs;
         var own = Oklab.FromLch(l, c1, h1);
-        var w = Math.Max(f.V[WMin], Oklab.Smoothstep(_neutral0, _neutral1, ca));
+        var w = Math.Max(f.V[WMin], ScalarMath.Smoothstep(_neutral0, _neutral1, ca));
         var sky = Oklab.FromLch(1.0, cs, hs);
-        return new(l, Oklab.Lerp(own.A, sky.A, w), Oklab.Lerp(own.B, sky.B, w));
+        return new(l, ScalarMath.Lerp(own.A, sky.A, w), ScalarMath.Lerp(own.B, sky.B, w));
     }
 
     private Lab CapLitChroma(Lab albedo, Lab lit, Lab shade)

@@ -5,14 +5,14 @@ namespace Campus.Kernel.Stubs;
 
 /// <summary>No physical publisher is installed. Default positions/shapes are undefined behind Absent/Pending.</summary>
 [KernelService(typeof(IWalkSnapshot), Owner = "WP-00", IsStub = true)]
-public sealed class WalkSnapshotStub(IWorldState world, IMapService maps) : IWalkSnapshot
+public sealed class WalkSnapshotStub(IWorldState world, IMapService maps, IViewControl view) : IWalkSnapshot
 {
     public WalkSnapshot Previous => Current;
     public WalkSnapshot Current
     {
         get
         {
-            ViewMode mode = world.ViewMode;
+            ViewMode mode = view.Mode;
             var presence = mode switch
             {
                 ViewMode.Fly => WalkPresence.Absent,

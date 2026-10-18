@@ -62,7 +62,7 @@ public sealed class HudLifetimeTests
         var router = new Router();
         var settings = new HudSettings(Services.Get<ISettingsStore>());
         var world = new WorldStateService(new TestWeatherProcess());
-        var camera = new TestCameraRig(world);
+        var camera = new TestCameraRig();
         var model = new HudModel(world, camera, previousRegistry.Get<IRuleset>());
         var motion = new MotionPolicy(settings);
         var settingsBaseline = Subscribers(settings, "Changed");

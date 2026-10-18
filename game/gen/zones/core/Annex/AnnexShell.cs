@@ -27,19 +27,20 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     private readonly IReadOnlyList<WallPiece> _pieces;
     private readonly IReadOnlyList<Opening> _openings;
     private readonly Block _top;
+    private readonly WallPiece? _roofUnitsFace;
     private Surface _ground = (_, _) => 0f;
 
-    private AnnexShell(FeatureId feature, AnnexKind kind, BuildingFrame frame, IReadOnlyList<WallPiece> pieces)
+    private AnnexShell(FeatureId feature, AnnexKind kind, BuildingFrame frame, IReadOnlyList<WallPiece> pieces, WallPiece? door, WallPiece? roofUnitsFace)
     {
         Feature = feature;
         Kind = kind;
         Frame = frame;
         _pieces = pieces;
+        _roofUnitsFace = roofUnitsFace;
         _top = pieces.Select(p => p.Block).First();
         Rows = frame.StoreyHeights.Count;
         var next = new int[Rows];
         int Allocate(int cells, int row) { var c = next[row]; next[row] += cells; return c; }
-        var door = kind == AnnexKind.NorthAnnex ? DoorPiece(pieces, frame) : null;
         var openings = new List<Opening>();
         foreach (var piece in pieces) openings.AddRange(Layout(piece, ReferenceEquals(piece, door), Allocate));
         _openings = openings;
@@ -55,7 +56,9 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
             if (!site.Annexes.TryGetValue(feature.Value, out var entry)) continue;
             var pieces = site.PiecesOf(feature.Value).ToArray();
             if (pieces.Length == 0) continue;
-            yield return new AnnexShell(feature, kind, entry.Frame, pieces) { _ground = world.Terrain.HeightAt };
+            yield return new AnnexShell(feature, kind, entry.Frame, pieces, kind == AnnexKind.NorthAnnex
+                ? CoreContours.Wall(world, CoreIds.AnnexDoorFace, pieces.Where(p => p.Y0 <= entry.Frame.WallBaseY + 0.01f && p.Y1 >= entry.Frame.StoreyY(1))) : null,
+                kind == AnnexKind.NorthAnnex ? CoreContours.Wall(world, CoreIds.AnnexDoorFace, pieces.Where(p => p.Top)) : null) { _ground = world.Terrain.HeightAt };
         }
     }
 
@@ -88,8 +91,6 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     // ------------------------------------------------------------------ layout
 
     /// <summary>The north annex's longest ground face: its door goes to the bay nearest the face's middle.</summary>
-    private static WallPiece? DoorPiece(IReadOnlyList<WallPiece> pieces, BuildingFrame frame) =>
-        pieces.Where(p => p.Y0 <= frame.WallBaseY + 0.01f && p.Y1 >= frame.StoreyY(1)).OrderByDescending(p => p.Length).FirstOrDefault();
 
     private IEnumerable<Opening> Layout(WallPiece piece, bool door, Func<int, int, int> allocate)
     {
@@ -302,10 +303,10 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
         }
     }
 
-    /// <summary>A short row of roof units behind the longest parapet, seen from the 3F terrace (北辅楼屋顶设备).</summary>
+    /// <summary>A short row of roof units behind the registered street parapet, seen from the 3F terrace (北辅楼屋顶设备).</summary>
     private void RoofUnits(CoreBuild build)
     {
-        var face = _pieces.Where(p => p.Top).OrderByDescending(p => p.Length).FirstOrDefault();
+        var face = _roofUnitsFace;
         if (face is null) return;
         var f = Face.Of(face);
         for (var i = 0; i < S.AnnexRoofUnits; i++)

@@ -20,7 +20,7 @@ public sealed class WalkPlacementAdmission(CharacterBody3D body) : IDisposable
 
     public N.Vector3? Resolve(ISpatialIndex spatial, ICollisionWorld collision, N.Vector3 candidate, float height)
     {
-        if (!WalkMath.Finite(candidate) || !collision.Ready(candidate, WalkRules.Radius)) return null;
+        if (!VectorMath.Finite(candidate) || !collision.Ready(candidate, WalkRules.Radius)) return null;
         float hint = MathF.Max(candidate.Y, spatial.GroundY(candidate.X, candidate.Z) + WalkRules.StepHeight);
         if (collision.SupportY(candidate.X, candidate.Z, hint) is not { } hit || !float.IsFinite(hit.Y)) return null;
         var feet = new N.Vector3(candidate.X, hit.Y, candidate.Z);

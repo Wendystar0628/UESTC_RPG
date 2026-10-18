@@ -97,16 +97,3 @@ public sealed class CoreBuild(PaletteCatalog palette)
         return Parts.Where(p => catalog.Supports(p.Part, lod)).ToArray();
     }
 }
-
-/// <summary>Tile arithmetic shared by every piece (IContentModule contract on Tiles and Build).</summary>
-public static class CoreTiles
-{
-    public const float L0Size = 64f;
-
-    public static TileKey Of(Vector2 p, LodLevel lod)
-    {
-        if (lod == LodLevel.L4) return new TileKey(0, 0);
-        var size = L0Size * (1 << (int)lod);
-        return new TileKey((int)MathF.Floor(p.X / size), (int)MathF.Floor(p.Y / size));
-    }
-}

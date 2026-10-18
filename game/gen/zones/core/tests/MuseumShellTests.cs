@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -21,15 +22,15 @@ public sealed class MuseumShellTests
     [TestCase]
     public void RingsKeepTheHallBodyShapeAndTheColonnadeWidth()
     {
-        var museum = Museum(RealWorld());
+        var museum = Museum(Campus.Tests.RealMapFixture.Load().World);
         AssertThat(museum.Body.Count == 8 && museum.Gallery.Count == 16 && museum.Hall.Count == 16 && museum.Eave.Count == 16 && museum.Platform.Count == 16).OverrideFailureMessage("an octagon body and four chamfered rings").IsTrue();
         AssertThat(new[] { museum.South, museum.West, museum.North, museum.East }.Distinct().Count() == 4).OverrideFailureMessage("four distinct long faces").IsTrue();
         var south = MuseumGeometry.Normal(museum.Body, museum.South);
         var west = MuseumGeometry.Normal(museum.Body, museum.West);
         AssertThat(south.Y > 0.95f && west.X < -0.95f).OverrideFailureMessage($"south {south} faces +z, west {west} faces −x").IsTrue();
-        foreach (var p in museum.Hall) AssertThat(Inside(p, museum.Gallery)).OverrideFailureMessage("the hall stands inside the gallery").IsTrue();
-        foreach (var p in museum.Gallery) AssertThat(Inside(p, museum.Eave)).OverrideFailureMessage("the eave is outside the gallery walls").IsTrue();
-        foreach (var p in museum.Eave) AssertThat(Inside(p, museum.Platform)).OverrideFailureMessage("the eave is inside the platform edge").IsTrue();
+        foreach (var p in museum.Hall) AssertThat(PlanGeometry.InsideByCrossings(museum.Gallery, p)).OverrideFailureMessage("the hall stands inside the gallery").IsTrue();
+        foreach (var p in museum.Gallery) AssertThat(PlanGeometry.InsideByCrossings(museum.Eave, p)).OverrideFailureMessage("the eave is outside the gallery walls").IsTrue();
+        foreach (var p in museum.Eave) AssertThat(PlanGeometry.InsideByCrossings(museum.Platform, p)).OverrideFailureMessage("the eave is inside the platform edge").IsTrue();
         for (var i = 0; i < 8; i++)
         {
             var gallery = museum.GalleryFace(i);
@@ -51,7 +52,7 @@ public sealed class MuseumShellTests
     [TestCase]
     public void DoorsPorticoAndColumnsSitWhereTheEntrancesAre()
     {
-        var museum = Museum(RealWorld());
+        var museum = Museum(Campus.Tests.RealMapFixture.Load().World);
         var main = museum.MainDoor;
         var lake = museum.LakeDoor;
         AssertThat(main.Face == museum.GalleryFace(museum.South) && lake.Face == museum.GalleryFace(museum.West)).OverrideFailureMessage("main door south, side door on the lake front").IsTrue();
@@ -59,7 +60,7 @@ public sealed class MuseumShellTests
         AssertThat(entrances.Length == 2 && entrances.All(e => e.ClearWidth >= 1.1f)).OverrideFailureMessage("two open entrances at least 1.1 m clear").IsTrue();
         foreach (var (id, centre, outward, clear) in entrances)
         {
-            var bearing = Shapes.BearingOf(new Vector2(outward.X, outward.Z));
+            var bearing = Angles.Bearing(new Vector2(outward.X, outward.Z));
             Vector3 outside = centre + outward * 2.5f, inside = centre - outward * 3.0f;
             Console.WriteLine($"{id}: door ({centre.X:F4}, {centre.Y:F2}, {centre.Z:F4}) facing {bearing:F1}° outside ({outside.X:F4}, {outside.Y:F2}, {outside.Z:F4}) inside ({inside.X:F4}, {inside.Y:F2}, {inside.Z:F4}) clear {clear:F2}");
         }
@@ -83,11 +84,11 @@ public sealed class MuseumShellTests
     [TestCase]
     public void EveryLevelIsValidWithNumberedGlass()
     {
-        var world = RealWorld();
-        var palette = Palette();
+        var world = Campus.Tests.RealMapFixture.Load().World;
+        var palette = Campus.Contracts.Tests.PaletteFixture.Catalog;
         var museum = Museum(world);
         var numbering = Numbering(museum.Columns, 1);
-        var allocation = numbering.Get(CoreFeatures.Museum, MuseumShell.WindowKey);
+        var allocation = numbering.Get(CoreIds.Museum, MuseumShell.WindowKey);
         AssertThat(museum.Columns > 20 && museum.Clerestory.Count >= 6).OverrideFailureMessage($"{museum.Columns} grid columns, {museum.Clerestory.Count} clerestory runs").IsTrue();
         foreach (var lod in Levels)
         {
@@ -121,23 +122,23 @@ public sealed class MuseumShellTests
     [TestCase]
     public void LibraryAndMuseumShareOneWindowGlassBatchInTheirL3Cell()
     {
-        var world = RealWorld();
-        var palette = Palette();
+        var world = Campus.Tests.RealMapFixture.Load().World;
+        var palette = Campus.Contracts.Tests.PaletteFixture.Catalog;
         var pieces = CoreSite.Pieces(world);
         var library = pieces.OfType<LibraryShell>().Single();
         var museum = pieces.OfType<MuseumShell>().Single();
-        var tile = CoreTiles.Of(museum.Anchor, LodLevel.L3);
-        AssertThat(tile == CoreTiles.Of(library.Anchor, LodLevel.L3)).OverrideFailureMessage("library and museum share an L3 cell").IsTrue();
+        var tile = TileGrid.At(museum.Anchor, LodLevel.L3);
+        AssertThat(tile == TileGrid.At(library.Anchor, LodLevel.L3)).OverrideFailureMessage("library and museum share an L3 cell").IsTrue();
         var numbering = Numbering(museum.Columns, library.Columns);
         var ctx = new BuildContext { World = world, Map = null!, WorldSeed = 1u, Catalog = palette ?? Campus.Contracts.Tests.PaletteFixture.Catalog, WindowNumbering = numbering, PartLods = PartLodFixture.Catalog };
         var module = new CoreModule();
         foreach (var lod in new[] { LodLevel.L3, LodLevel.L4 })
         {
-            var output = module.Build(ctx, CoreTiles.Of(museum.Anchor, lod), lod);
+            var output = module.Build(ctx, TileGrid.At(museum.Anchor, lod), lod);
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
             AssertThat(glass.Length == 1).OverrideFailureMessage($"{lod}: one shared window-glass bundle ({glass.Length})").IsTrue();
             var bases = Enumerable.Range(0, glass[0].Uv2!.Length / 2).Select(i => glass[0].Uv2![2 * i]).Distinct().Order().ToArray();
-            var here = pieces.Where(p => p is IWindowedPiece && CoreTiles.Of(p.Anchor, lod) == CoreTiles.Of(museum.Anchor, lod)).Select(p => ((IWindowedPiece)p).WindowLayout.Feature).ToHashSet();
+            var here = pieces.Where(p => p is IWindowedPiece && TileGrid.At(p.Anchor, lod) == TileGrid.At(museum.Anchor, lod)).Select(p => ((IWindowedPiece)p).WindowLayout.Feature).ToHashSet();
             AssertThat(bases.SequenceEqual(numbering.Allocations.Where(a => here.Contains(a.Feature)).Select(a => (float)a.BaseId).Order())).OverrideFailureMessage($"{lod}: the shared bundle keeps each building's window base ({string.Join(", ", bases)})").IsTrue();
             AssertThat(output.Meshes.Count <= module.Budget.DrawCalls).OverrideFailureMessage($"{lod}: {output.Meshes.Count} bundles within {module.Budget.DrawCalls}").IsTrue();
         }
@@ -146,7 +147,7 @@ public sealed class MuseumShellTests
     [TestCase]
     public void CollisionLeavesBothDoorsOpenAndFillsEveryFoot()
     {
-        var museum = Museum(RealWorld());
+        var museum = Museum(Campus.Tests.RealMapFixture.Load().World);
         var colliders = museum.Collide();
         AssertThat(colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("every collider has a foot material").IsTrue();
         AssertThat(colliders.OfType<SlabCollider>().Count(s => s.Tag == SurfaceTag.Ground) >= museum.Gallery.Count).OverrideFailureMessage("the colonnade floor collides round the ring").IsTrue();
@@ -178,10 +179,10 @@ public sealed class MuseumShellTests
     /// <summary>A stand-in for WP-14's allocation: a generic block, the library and the museum in ordinal feature order.</summary>
     private static WindowNumberingSnapshot Numbering(int museumColumns, int libraryColumns)
     {
-        var generic = new WindowAllocation(new FeatureId("qsh:way:0"), "generic", 0, 101, 7);
-        var library = new WindowAllocation(CoreFeatures.Library, LibraryShell.WindowKey, generic.Count, libraryColumns, LibraryShell.Rows);
-        var museum = new WindowAllocation(CoreFeatures.Museum, MuseumShell.WindowKey, generic.Count + library.Count, museumColumns, MuseumShell.Rows);
-        return new(new MapId("qingshuihe"), new string('a', 64), [generic, library, museum, .. AnnexShellTests.Allocations(RealWorld(), museum.BaseId + museum.Count)]);
+        var generic = new WindowAllocation(new FeatureId("fixture:generic-before"), "generic", 0, 101, 7);
+        var library = new WindowAllocation(CoreIds.Library, LibraryShell.WindowKey, generic.Count, libraryColumns, LibraryShell.Rows);
+        var museum = new WindowAllocation(CoreIds.Museum, MuseumShell.WindowKey, generic.Count + library.Count, museumColumns, MuseumShell.Rows);
+        return new(Campus.Tests.RealMapFixture.Entry().Descriptor.Id, new string('a', 64), [generic, library, museum, .. AnnexShellTests.Allocations(Campus.Tests.RealMapFixture.Load().World, museum.BaseId + museum.Count)]);
     }
 
     private static float SegmentDistance(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
@@ -203,47 +204,7 @@ public sealed class MuseumShellTests
         return MathF.Min(MathF.Min(Point(a, c, d), Point(b, c, d)), MathF.Min(Point(c, a, b), Point(d, a, b)));
     }
 
-    private static bool Inside(Vector2 p, IReadOnlyList<Vector2> ring)
-    {
-        var inside = false;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-            if ((ring[i].Y > p.Y) != (ring[j].Y > p.Y) && p.X < (ring[j].X - ring[i].X) * (p.Y - ring[i].Y) / (ring[j].Y - ring[i].Y) + ring[i].X)
-                inside = !inside;
-        return inside;
-    }
-
     private static Vector3 P(GeometryBundle b, int i) => new(b.Position[3 * i], b.Position[3 * i + 1], b.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle b, int i) => new(b.Normal[3 * i], b.Normal[3 * i + 1], b.Normal[3 * i + 2]);
 
-
-    private static IWorldModel RealWorld()
-    {
-        var dir = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
-        var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
-        foreach (var name in new[] { "campus.json", "map.json", "network.json", "interiors.json" })
-            files[name] = File.ReadAllBytes(Path.Combine(dir, name));
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(dir, "overlay"), "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
-            files["overlay/" + Path.GetRelativePath(Path.Combine(dir, "overlay"), file).Replace('\\', '/')] = File.ReadAllBytes(file);
-        return WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
-    }
-
-    private static PaletteCatalog Palette()
-    {
-        var dir = Path.Combine(FindRepository(), "game", "style", "palette");
-        var entries = new List<PaletteEntry>();
-        foreach (var file in new[] { Path.Combine(dir, "core.json") }.Concat(Directory.EnumerateFiles(Path.Combine(dir, "ext"), "WP-*.json").Order(StringComparer.Ordinal)))
-            entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return new PaletteCatalog(new PaletteRegistry(entries), []);
-    }
-
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
-    }
 }

@@ -32,8 +32,7 @@ public partial class WalkController
                     return false;
                 }
             }
-            Leave();
-            _safetyFailed = true;
+            RequestExit();
             return false;
         }
         _placementTarget = new(feet, _yaw, _pitch);
@@ -120,7 +119,7 @@ public partial class WalkController
 
     private bool Recover()
     {
-        if (_map is null) return false;
+        if (_map is null) { RequestExit(); return false; }
         var target = _lastStable ?? BodyPose;
         Place(target with { YawDeg = _yaw, PitchDeg = _pitch }, 0);
         _placementStableTried = true;

@@ -7,6 +7,10 @@ namespace Campus.Gen.World;
 public readonly record struct TerrainDifferential(double Height, double Dx, double Dz)
 {
     public static TerrainDifferential Constant(double height) => new(height, 0, 0);
+    public static TerrainDifferential Product(TerrainDifferential a, TerrainDifferential c) => new(a.Height * c.Height,
+        a.Dx * c.Height + a.Height * c.Dx, a.Dz * c.Height + a.Height * c.Dz);
+    public static TerrainDifferential Divide(TerrainDifferential a, TerrainDifferential c) => new(a.Height / c.Height,
+        (a.Dx * c.Height - a.Height * c.Dx) / (c.Height * c.Height), (a.Dz * c.Height - a.Height * c.Dz) / (c.Height * c.Height));
     public static TerrainDifferential operator +(TerrainDifferential a, TerrainDifferential b) => new(a.Height + b.Height, a.Dx + b.Dx, a.Dz + b.Dz);
     public static TerrainDifferential operator -(TerrainDifferential a, TerrainDifferential b) => new(a.Height - b.Height, a.Dx - b.Dx, a.Dz - b.Dz);
     public static TerrainDifferential operator -(TerrainDifferential value) => new(-value.Height, -value.Dx, -value.Dz);
@@ -19,9 +23,7 @@ public static class TerrainMath
     public static double Hermite(double t)
     {
         RequireFinite(t, nameof(t));
-        if (t <= 0) return 0;
-        if (t >= 1) return 1;
-        return t * t * (3 - 2 * t);
+        return ScalarMath.Smoothstep(t);
     }
 
     public static TerrainDifferential SmoothMinimum(TerrainDifferential a, TerrainDifferential b, double width)
@@ -69,7 +71,7 @@ public static class TerrainMath
         double yawRadians, double amplitude)
     {
         RequireFinite(x, nameof(x)); RequireFinite(z, nameof(z)); RequireFinite(yawRadians, nameof(yawRadians)); RequireFinite(amplitude, nameof(amplitude));
-        if (!float.IsFinite(center.X) || !float.IsFinite(center.Y) || !float.IsFinite(radii.X) || !float.IsFinite(radii.Y) || radii.X <= 0 || radii.Y <= 0)
+        if (!VectorMath.Finite(center) || !VectorMath.Finite(radii) || radii.X <= 0 || radii.Y <= 0)
             throw new ArgumentException("Ellipse centre and positive radii must be finite.");
         var c = Math.Cos(yawRadians); var s = Math.Sin(yawRadians);
         if (!double.IsFinite(c) || !double.IsFinite(s)) throw new ArgumentOutOfRangeException(nameof(yawRadians));

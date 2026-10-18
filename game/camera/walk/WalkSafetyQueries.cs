@@ -39,7 +39,7 @@ public static class WalkSafetyQueries
         return pose with { Position = new(point.X, pose.Position.Y, point.Y) };
     }
 
-    public static bool ValidPose(Pose pose) => WalkMath.Finite(pose.Position)
+    public static bool ValidPose(Pose pose) => VectorMath.Finite(pose.Position)
         && float.IsFinite(pose.YawDeg) && float.IsFinite(pose.PitchDeg);
 
     public static bool InWater(ISpatialIndex spatial, Vector3 feet) =>
@@ -55,7 +55,7 @@ public static class WalkSafetyQueries
 
     public static bool NeedsRecovery(ISpatialIndex spatial, Vector3 feet)
     {
-        if (!WalkMath.Finite(feet) || !AllowsFeet(spatial, feet)) return true;
+        if (!VectorMath.Finite(feet) || !AllowsFeet(spatial, feet)) return true;
         var medium = spatial.MediumAt(feet);
         if (spatial.WalkClassAt(feet.X, feet.Z) != WalkClass.Wade && medium.Kind == MediumKind.Underwater
             && (!float.IsFinite(medium.Depth) || medium.Depth > WalkTuning.WaterRecoveryDepth)) return true;

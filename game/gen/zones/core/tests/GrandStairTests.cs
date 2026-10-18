@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -19,7 +20,7 @@ public sealed class GrandStairTests
     [TestCase]
     public void StairRisesToTheSecondFloorInTwoRunsOfShortFlights()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var (stair, shell) = Pieces(world);
         AssertThat(MathF.Abs(stair.TopY - shell.Plan.SecondFloorY) < 0.01f).OverrideFailureMessage("the top landing is the 2F floor").IsTrue();
         AssertThat(MathF.Abs(stair.Risers * stair.Riser - (stair.TopY - stair.FootY)) < 0.01f).OverrideFailureMessage("risers close the rise").IsTrue();
@@ -28,24 +29,24 @@ public sealed class GrandStairTests
         AssertThat(stair.Landings.Count(l => l.Middle) == 1 && stair.Landings.Count == stair.Flights.Count - 1).OverrideFailureMessage("two runs split by one middle landing").IsTrue();
         AssertThat(stair.Flights[0].Foot == stair.FrontS && MathF.Abs(stair.Flights[^1].Top(stair.Tread) - CoreStyle.TopLandingDepth) < 0.01f).OverrideFailureMessage("flights run from the foot to the top landing").IsTrue();
         // The data footprint (overlay/core.d/ reshape) is the built stair: the same rectangle within 0.15 m.
-        var ring = Plan.OuterRing(world.Features[CoreFeatures.LibraryStair]);
+        var ring = FeatureReads.Contour(world.Features[CoreIds.LibraryStair]);
         var h = GrandStair.HalfWidth;
         Vector2[] corners = [stair.At(0, -h), stair.At(0, h), stair.At(stair.FrontS, h), stair.At(stair.FrontS, -h)];
         Console.WriteLine("stair corners: " + string.Join(", ", corners.Select(c => $"[{c.X:F2}, {c.Y:F2}]")));
         foreach (var c in corners)
             AssertThat(ring.Min(p => Vector2.Distance(p, c)) < 0.15f).OverrideFailureMessage($"footprint corner {c} is in the overlay outline").IsTrue();
         // The axis is the front door's (interiors.json lib.main, WLD-INTERIORS).
-        var entrance = world.Interiors.Get(CoreFeatures.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
+        var entrance = world.Interiors.Get(CoreIds.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
         var centre = new Vector2(entrance.Center.X, entrance.Center.Z);
         var offAxis = MathF.Abs(Vector2.Dot(centre - stair.Origin, stair.Across));
         AssertThat(offAxis < 0.6f).OverrideFailureMessage($"the door centre is {offAxis} m off the stair axis").IsTrue();
-        AssertThat(MathF.Abs(Shapes.BearingOf(stair.Out) - entrance.YawDeg) < 3f).OverrideFailureMessage($"axis bearing {Shapes.BearingOf(stair.Out)}").IsTrue();
+        AssertThat(MathF.Abs(Angles.Bearing(stair.Out) - entrance.YawDeg) < 3f).OverrideFailureMessage($"axis bearing {Angles.Bearing(stair.Out)}").IsTrue();
     }
 
     [TestCase]
     public void FrontDoorOpensTheSlot()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var (stair, shell) = Pieces(world);
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         stair.Build(build, LodLevel.L0);
@@ -74,7 +75,7 @@ public sealed class GrandStairTests
     [TestCase]
     public void CanopySpansTheTowerFaceOverTheDoor()
     {
-        var (stair, shell) = Pieces(RealWorld());
+        var (stair, shell) = Pieces(Campus.Tests.RealMapFixture.Load().World);
         var bay = shell.EntranceDoor!.Value;
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         stair.Build(build, LodLevel.L0);
@@ -108,12 +109,12 @@ public sealed class GrandStairTests
     [TestCase]
     public void WpThirteenDressesTheLibraryFrontDoor()
     {
-        var world = RealWorld();
+        var world = Campus.Tests.RealMapFixture.Load().World;
         var zone = new WpId("WP-16");
         WpId? ClaimedBy(FeatureId feature, Aspects aspects) =>
             CoreSite.Claims.OfType<FeatureClaim>().Any(c => c.Feature == feature && (c.Aspects & aspects) == aspects) ? zone : null;
-        AssertThat(ClaimedBy(CoreFeatures.Library, Aspects.Props) is null).OverrideFailureMessage("the zone leaves the library's props unclaimed").IsTrue();
-        var entrance = world.Interiors.Get(CoreFeatures.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
+        AssertThat(ClaimedBy(CoreIds.Library, Aspects.Props) is null).OverrideFailureMessage("the zone leaves the library's props unclaimed").IsTrue();
+        var entrance = world.Interiors.Get(CoreIds.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
         var layout = Campus.Gen.Furniture.FurniturePlanner.Build(world, ClaimedBy);
         AssertThat(layout.Items.Count(i => i.Key.StartsWith("door:" + entrance.Id + ":", StringComparison.Ordinal)) == 3).OverrideFailureMessage("WP-13 places mat, sign and lamp at the front door").IsTrue();
     }
@@ -121,7 +122,7 @@ public sealed class GrandStairTests
     [TestCase]
     public void CollidersGuardEveryDropAndKeepTheFlightsWalkable()
     {
-        var (stair, _) = Pieces(RealWorld());
+        var (stair, _) = Pieces(Campus.Tests.RealMapFixture.Load().World);
         var colliders = stair.Collide();
         AssertThat(colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("every collider has a foot material").IsTrue();
         var ramps = colliders.OfType<RampCollider>().ToArray();
@@ -141,26 +142,4 @@ public sealed class GrandStairTests
         return (pieces.OfType<GrandStair>().Single(), pieces.OfType<LibraryShell>().Single());
     }
 
-
-    private static IWorldModel RealWorld()
-    {
-        var dir = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
-        var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
-        foreach (var name in new[] { "campus.json", "map.json", "network.json", "interiors.json" })
-            files[name] = File.ReadAllBytes(Path.Combine(dir, name));
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(dir, "overlay"), "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
-            files["overlay/" + Path.GetRelativePath(Path.Combine(dir, "overlay"), file).Replace('\\', '/')] = File.ReadAllBytes(file);
-        return WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
-    }
-
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
-    }
 }

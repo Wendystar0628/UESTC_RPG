@@ -64,7 +64,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     {
         if (file.Version != 1 || labels.Version != 1 || waypoints.Version != 1)
             throw new JsonException("Unsupported Atlas input version.");
-        if (!Finite(file.AtlasRect.Min) || !Finite(file.AtlasRect.Max)
+        if (!VectorMath.Finite(file.AtlasRect.Min) || !VectorMath.Finite(file.AtlasRect.Max)
             || file.AtlasRect.Min.X >= file.AtlasRect.Max.X || file.AtlasRect.Min.Y >= file.AtlasRect.Max.Y)
             throw new JsonException("Invalid Atlas page rectangle.");
         var hidden = new HashSet<string>(file.Hidden, StringComparer.Ordinal);
@@ -113,7 +113,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
                 var first = visible.First(item => item.Id == marker.Id);
                 throw new JsonException($"Duplicate Atlas marker ID '{marker.Id.Value}' from features '{first.Feature?.Value}' and '{marker.Feature?.Value}'.");
             }
-            if (!Finite(marker.At) || marker.MinZoomBand > 4)
+            if (!VectorMath.Finite(marker.At) || marker.MinZoomBand > 4)
                 throw new JsonException($"Atlas marker '{marker.Id.Value}' has invalid coordinates or zoom band.");
             if (marker.Teleport is not null && !Travelable(marker.Kind)) throw new JsonException("This marker kind cannot travel.");
             if (marker.Kind == MarkerKind.Anchor && (marker.Form is null || marker.Feature is null || marker.Teleport is null))
@@ -122,11 +122,11 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
             if (marker.Teleport is { } destination)
             {
                 var pose = destination.Fly;
-                if (!Finite(Plan(pose.Position)) || !float.IsFinite(pose.Position.Y)
+                if (!VectorMath.Finite(Plan(pose.Position)) || !float.IsFinite(pose.Position.Y)
                     || !float.IsFinite(pose.YawDeg) || !float.IsFinite(pose.PitchDeg) || pose.PitchDeg is < -90 or > 90
                     || (pose.FovDeg is { } fov && (!float.IsFinite(fov) || fov <= 0 || fov >= 180)))
                     throw new JsonException("Invalid Atlas flight pose.");
-                if (destination.Stand is { } stand && (!Finite(Plan(stand.Feet))
+                if (destination.Stand is { } stand && (!VectorMath.Finite(Plan(stand.Feet))
                     || !float.IsFinite(stand.Feet.Y) || !float.IsFinite(stand.YawDeg)))
                     throw new JsonException("Invalid Atlas standing pose.");
             }
@@ -258,7 +258,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
             _ => throw new InvalidOperationException("Unknown observer mode."),
         };
         var position = observer.Feet;
-        if (!Finite(Plan(position)) || !float.IsFinite(position.Y)) return;
+        if (!VectorMath.Finite(Plan(position)) || !float.IsFinite(position.Y)) return;
         var height = position.Y - _context.World.Spatial.GroundY(position.X, position.Z);
         if (!float.IsFinite(height)) return;
         var changed = false;
@@ -425,14 +425,13 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     {
         _transit = null; _destination = null; _transitInput?.Dispose(); _transitInput = null;
     }
-    private bool Contains(Vector2 at) => Finite(at) && _atlasRect is { } rect
+    private bool Contains(Vector2 at) => VectorMath.Finite(at) && _atlasRect is { } rect
         && at.X >= rect.Min.X && at.X <= rect.Max.X && at.Y >= rect.Min.Y && at.Y <= rect.Max.Y;
     private void ValidatePin(Vector2 at, PinShape shape)
     {
         if (!Contains(at)) throw new ArgumentOutOfRangeException(nameof(at));
         if (!Enum.IsDefined(shape)) throw new ArgumentOutOfRangeException(nameof(shape));
     }
-    private static bool Finite(Vector2 at) => float.IsFinite(at.X) && float.IsFinite(at.Y);
     private static Vector2 Plan(Vector3 at) => new(at.X, at.Z);
     private static MarkerId PinId(int id) => new("pin:" + id.ToString(System.Globalization.CultureInfo.InvariantCulture));
     private static bool Refuse(TravelRefusal value, out TravelRefusal why) { why = value; return false; }

@@ -1,10 +1,11 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Tests;
 using Campus.Gen.Geometry;
 using Campus.Gen.World;
+using Campus.Gen.Zones.Common;
 using Campus.Gen.Zones.North.Clusters;
-using Campus.Gen.Zones.North.Framework;
 using GdUnit4;
 
 namespace Campus.Gen.Zones.North.Tests;
@@ -20,22 +21,22 @@ public sealed class NorthModuleTests
     [TestCase]
     public void EveryClusterHasItsPolygonAndGateAddition()
     {
-        var world = World();
+        var world = RealMapFixture.Load().World;
         foreach (var cluster in NorthTune.Clusters)
         {
             AssertThat(world.Features.ContainsKey(new(cluster.Id))).OverrideFailureMessage($"{cluster.Key} polygon exists").IsTrue();
-            AssertThat(world.Features.TryGetValue(new("design:north-gate-" + cluster.Key), out var gate) && gate.Geometry is PointGeometry).OverrideFailureMessage($"{cluster.Key} gate addition is registered").IsTrue();
+            AssertThat(world.Features.TryGetValue(new(NorthFeatureIds.GatePrefix + cluster.Key), out var gate) && gate.Geometry is PointGeometry).OverrideFailureMessage($"{cluster.Key} gate addition is registered").IsTrue();
         }
     }
 
     [TestCase]
     public void EveryClusterGetsAMainGateAndAClosedFence()
     {
-        var world = World();
+        var world = RealMapFixture.Load().World;
         foreach (var cluster in NorthTune.Clusters)
         {
             var layout = ClusterLayout.Of(world, cluster) ?? throw new InvalidOperationException($"{cluster.Key} has no layout");
-            var open = world.Features[new("design:north-gate-" + cluster.Key)].Props is { ValueKind: JsonValueKind.Object } gateProps
+            var open = world.Features[new(NorthFeatureIds.GatePrefix + cluster.Key)].Props is { ValueKind: JsonValueKind.Object } gateProps
                 && gateProps.TryGetProperty("open", out var openFlag) && openFlag.ValueKind == JsonValueKind.True;
             AssertThat(layout.Gates.Count(g => g.Main) == 1).OverrideFailureMessage($"{cluster.Key} has one main gate").IsTrue();
             AssertThat(layout.Gates.Count(g => g.Open) == (open ? 1 : 0)).OverrideFailureMessage($"{cluster.Key} open gates").IsTrue();
@@ -83,11 +84,10 @@ public sealed class NorthModuleTests
         {
             var items = module.ItemsFor(ctx, lod);
             AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
-            var size = 64 << (int)lod;
-            var cells = items.Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct().ToArray();
+            var cells = items.Select(i => TileGrid.At(i.Anchor, lod)).Distinct().ToArray();
             var meshes = 0;
             var parts = 0;
-            foreach (var (x, z) in lod == LodLevel.L4 ? [(0, 0)] : cells)
+            foreach (var (x, z) in cells)
             {
                 var output = module.Build(ctx, new(x, z), lod);
                 foreach (var mesh in output.Meshes)
@@ -112,8 +112,7 @@ public sealed class NorthModuleTests
         var module = new NorthModule();
         foreach (var (lod, limit) in new[] { (LodLevel.L0, module.Budget.TrianglesL0), (LodLevel.L1, module.Budget.TrianglesL1) })
         {
-            var size = 64 << (int)lod;
-            var cells = module.ItemsFor(ctx, lod).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
+            var cells = module.ItemsFor(ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
             foreach (var (x, z) in cells)
             {
                 var output = module.Build(ctx, new(x, z), lod);
@@ -137,16 +136,19 @@ public sealed class NorthModuleTests
     {
         var ctx = Context();
         var module = new NorthModule();
-        // East edge: 硕丰苑十组团 runs out to the 磨底河 bank near x 790 (MAP-QSH-NORTH); batched boxes anchor at their
-        // 64 m cell's centre, x 800 for that cell. South edge: 博翰一组团's fence reaches z −73 by 4499 (cell centre −96).
+        var sourcePoints = NorthTune.Clusters.SelectMany(cluster => ctx.World.Feature(cluster.Id).Contour(facade: false))
+            .Concat(ctx.World.ContourSegment(Campus.Gen.Zones.DesignBoundary.BoundaryFeatureIds.NorthBankContour)).ToArray();
+        var min = sourcePoints.Aggregate(Vector2.Min) - new Vector2(TileGrid.BaseEdge);
+        var max = sourcePoints.Aggregate(Vector2.Max) + new Vector2(TileGrid.BaseEdge);
         foreach (var item in module.ItemsFor(ctx, LodLevel.L0))
-            AssertThat(item.Anchor.X is > -260 and <= 800 && item.Anchor.Y is > -1000 and < -64).OverrideFailureMessage($"item at {item.Anchor} is in the north zone").IsTrue();
+            AssertThat(item.Anchor.X >= min.X && item.Anchor.X <= max.X && item.Anchor.Y >= min.Y && item.Anchor.Y <= max.Y)
+                .OverrideFailureMessage($"item at {item.Anchor} is within the north sources' cells").IsTrue();
     }
 
     private static bool Covers(Collider c, Vector2 p, float slack) => c switch
     {
         BoxCollider box => InBox(box, p, slack),
-        WallCollider wall => DistanceToSegment(p, wall.A, wall.B) <= wall.HalfT + slack,
+        WallCollider wall => MathF.Sqrt(PlanGeometry.SegmentDistanceSquared(p, wall.A, wall.B)) <= wall.HalfT + slack,
         _ => false,
     };
 

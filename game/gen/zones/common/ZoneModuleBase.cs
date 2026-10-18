@@ -53,7 +53,7 @@ public abstract class ZoneModuleBase : IContentModule
         return cells.Select(cell => new TileKey(cell.X, cell.Z)).ToArray();
     }
 
-    public ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
+    public virtual ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
     {
         var meshes = new List<GeometryBundle>();
         var parts = new List<PlacedPart>();

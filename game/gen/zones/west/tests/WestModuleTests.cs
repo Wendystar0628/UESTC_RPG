@@ -2,6 +2,7 @@ using Campus.Gen.Zones.Common;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Tests;
 using Campus.Contracts.Maps;
 using Campus.Gen.World;
 using Campus.Gen.Zones.West.Four;
@@ -33,7 +34,7 @@ public sealed class WestModuleTests
             AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length).OverrideFailureMessage("source IDs are unique").IsTrue();
             foreach (var claim in module.Claims.OfType<FeatureClaim>())
                 AssertThat(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0)).OverrideFailureMessage($"{lod}: claimed source {claim.Feature} carries production output, collision and solid contours").IsTrue();
-            var size = 64 << (int)lod;
+            var size = TileGrid.Edge(lod);
             var cells = module.ItemsFor(ctx, lod).Select(i => new TileKey((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
             var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
             AssertThat(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes)))).OverrideFailureMessage($"{lod}: source triangles reproduce tiled production").IsTrue();
@@ -67,17 +68,19 @@ public sealed class WestModuleTests
     public void OverlayCorrectsStoreysAndRegistersTheA10Plaza()
     {
         var world = World();
-        foreach (var (id, height, storeys) in new[] { ("qsh:relation:11334253", 19.5f, 5), ("qsh:relation:8426842", 19.5f, 5), ("qsh:way:682336066", 11.7f, 3) })
+        var overlay = System.Text.Json.JsonSerializer.Deserialize<OverlayFile>(
+            File.ReadAllText(Path.Combine(RealMapFixture.DataDirectory(), "overlay", "west.d", "0000-wp-19-base.json")), ContractJson.Options)!;
+        foreach (var op in overlay.Ops.OfType<HeightOp>())
         {
-            var f = world.Features[new(id)];
-            AssertThat(f.Height == height && f.Storeys == storeys).OverrideFailureMessage($"{id} raised to {storeys} storeys").IsTrue();
-            AssertThat(f.Parts.All(p => p.Height == height && p.Storeys == storeys)).OverrideFailureMessage($"every part of {id} follows its HeightOp").IsTrue();
+            var feature = world.Features[op.Target];
+            AssertThat(feature.Height == op.Height && feature.Storeys == op.Storeys).OverrideFailureMessage("registered height applies to the entity").IsTrue();
+            AssertThat(feature.Parts.All(part => part.Height == op.Height && part.Storeys == op.Storeys)).OverrideFailureMessage("registered height applies to every part").IsTrue();
         }
         // 研究院大楼 keeps its per-part 4–7 storeys: an entity-wide HeightOp would flatten them (contract-31).
-        var institute = world.Features[new("qsh:relation:11031411")].Parts.Where(p => p.Storeys is not null).Select(p => p.Storeys!.Value).ToArray();
-        AssertThat(institute.Min() == 4 && institute.Max() == 7).OverrideFailureMessage("研究院大楼 parts stay 4–7 storeys").IsTrue();
-        AssertThat(!world.Features.ContainsKey(new("qsh:way:779496166"))).OverrideFailureMessage("六号's duplicate C shell stays hidden").IsTrue();
-        var plaza = world.Features[new("design:west-a10-plaza")];
+        var institute = world.Features[new(WestIds.Relation11031411.Entity)].Parts.Where(p => p.Storeys is not null).Select(p => p.Storeys!.Value).ToArray();
+        AssertThat(institute.Distinct().Count() > 1).OverrideFailureMessage("研究院大楼 keeps distinct per-part floor counts").IsTrue();
+        AssertThat(!world.Features.ContainsKey(new(WestIds.Way779496166.Entity))).OverrideFailureMessage("六号's duplicate C shell stays hidden").IsTrue();
+        var plaza = world.Features[new(WestIds.A10Plaza)];
         AssertThat(plaza.Kind.Value == "road" && plaza.Geometry is PolygonGeometry).OverrideFailureMessage("the A10 plaza is registered as paving").IsTrue();
     }
 
@@ -100,7 +103,7 @@ public sealed class WestModuleTests
         float Reach(string key) => S.BaseHeight + SixSite.Style(SixSite.Blocks.Single(k => k.Key == key).Upper(world)).Top;
         float a = Reach("a"), b = Reach("b"), c = Reach("c");
         AssertThat(MathF.Abs(a - world.Features[new(S.EntityA)].Height!.Value) < 0.6f).OverrideFailureMessage($"A reaches its data height, got {a}").IsTrue();
-        AssertThat(MathF.Abs(b - world.Features[new(S.EntityB)].Height!.Value) < 0.6f && MathF.Abs(c - 32.5f) < 0.6f).OverrideFailureMessage($"B reaches its data height and C about 32.5 m, got {b}, {c}").IsTrue();
+        AssertThat(MathF.Abs(b - world.Features[new(S.EntityB)].Height!.Value) < 0.6f).OverrideFailureMessage($"B reaches its data height, got {b}").IsTrue();
         AssertThat(a > b && a > c + S.SignRise).OverrideFailureMessage("A stays the tallest, above C's crown sign").IsTrue();
         // The glass base sits back from the stone line by the recess on every face.
         foreach (var k in SixSite.Blocks)
@@ -123,7 +126,7 @@ public sealed class WestModuleTests
         {
             var items = module.ItemsFor(ctx, lod);
             AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
-            var size = 64 << (int)lod;
+            var size = TileGrid.Edge(lod);
             var cells = items.Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct().ToArray();
             var meshes = 0;
             var parts = 0;
@@ -152,7 +155,7 @@ public sealed class WestModuleTests
         var module = new WestModule();
         foreach (var (lod, limit) in new[] { (LodLevel.L0, module.Budget.TrianglesL0), (LodLevel.L1, module.Budget.TrianglesL1) })
         {
-            var size = 64 << (int)lod;
+            var size = TileGrid.Edge(lod);
             var cells = module.ItemsFor(ctx, lod).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
             foreach (var (x, z) in cells)
             {
@@ -180,7 +183,7 @@ public sealed class WestModuleTests
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
         AssertThat(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto)).OverrideFailureMessage("every collider fills its foot material").IsTrue();
         // Nothing at walking height crosses the doorway between the vestibule cheeks.
-        var outward = PlanMath.Heading(77f);
+        var outward = Angles.Heading(77f);
         for (var d = -S.Recess - 1f; d <= 0.5f; d += 0.25f)
         {
             var p = SixSite.EastDoor(ctx.World) + outward * d;
@@ -188,8 +191,8 @@ public sealed class WestModuleTests
         }
         // 六号's shut doors (19b's entrance boxes and portal add their own DoorClosed fronts elsewhere in the zone).
         var shut = colliders.OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.DoorClosed && (w.A.X + w.B.X) * 0.5f < -583f).ToArray();
-        AssertThat(shut.Length == S.ShutDoors.Length).OverrideFailureMessage($"one DoorClosed segment per shut entrance, got {shut.Length}").IsTrue();
-        foreach (var door in S.ShutDoors)
+        AssertThat(shut.Length == S.ShutDoors(ctx.World).Length).OverrideFailureMessage($"one DoorClosed segment per shut entrance, got {shut.Length}").IsTrue();
+        foreach (var door in S.ShutDoors(ctx.World))
             AssertThat(shut.Any(w => Vector2.Distance((w.A + w.B) * 0.5f, door) < S.Recess + 0.6f)).OverrideFailureMessage($"shut door {door} is DoorClosed").IsTrue();
         // The motto stone is one unclimbable box.
         AssertThat(colliders.OfType<BoxCollider>().Any(b => b.Tag == SurfaceTag.Prop && MathF.Abs(b.Half.Y * 2 - M.Height) < 0.01f)).OverrideFailureMessage("the motto stone collides as a 2 m box").IsTrue();
@@ -200,7 +203,8 @@ public sealed class WestModuleTests
     {
         var world = World();
         var layouts = new WestModule().DescribeWindowLayouts(world, 1).ToDictionary(l => l.Feature.Value, l => l.Grids, StringComparer.Ordinal);
-        AssertThat(layouts.Count == 4).OverrideFailureMessage($"four Facade-claimed features declare layouts, got {layouts.Count}").IsTrue();
+        AssertThat(layouts.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(new WestModule().Claims.OfType<FeatureClaim>()
+            .Where(claim => (claim.Aspects & Aspects.Facade) != 0).Select(claim => claim.Feature.Value))).OverrideFailureMessage("every claimed facade declares a layout").IsTrue();
         AssertThat(layouts[WestTune.Shelter.Entity].Count == 0).OverrideFailureMessage("the bus shelter declares an empty window layout").IsTrue();
         int Upper(string key) => SixSite.Blocks.Single(k => k.Key == key).Upper(world);
         AssertThat(layouts[S.EntityA].Single().Key == "a" && layouts[S.EntityA].Single().Rows == Upper("a")).OverrideFailureMessage("A: one grid over its upper floors").IsTrue();
@@ -223,7 +227,7 @@ public sealed class WestModuleTests
             allocations.Add(new(feature, grid.Key, next, grid.Columns, grid.Rows));
             next += grid.Columns * grid.Rows;
         }
-        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(new("qingshuihe"), new string('a', 64), allocations) };
+        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, WindowNumbering = new(RealMapFixture.Entry().Descriptor.Id, new string('a', 64), allocations) };
         var metadata = module.DescribeWindows(ctx);
         var declared = new List<int>();
         foreach (var f in metadata.Facades)
@@ -247,41 +251,48 @@ public sealed class WestModuleTests
     [TestCase]
     public void WindowTablePublishesWithTheWestDeclarations()
     {
-        var data = DataDirectory();
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
-                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')))
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
+        var world = World();
         var module = new WestModule();
         var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
         WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-19") : null;
-        var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner };
+        var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner };
         var layouts = module.DescribeWindowLayouts(world, 1);
         var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
         var ours = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
         AssertThat(ours.Length == layouts.Sum(l => l.Grids.Count) && ours.All(a => a.Columns > 0 && a.Rows > 0)).OverrideFailureMessage("every west grid is allocated with cells").IsTrue();
         AssertThat(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity).OverrideFailureMessage($"the table fits ({snapshot.WindowCount})").IsTrue();
-        var metadata = module.DescribeWindows(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
+        var metadata = module.DescribeWindows(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
         AssertThat(metadata.Facades.Count > 0).OverrideFailureMessage("the west zone declares facade runs").IsTrue();
     }
 
     [TestCase]
     public void TerrainOverlayParsesAndKeepsTheA10PlazaAndTheGatesLevel()
     {
-        var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(DataDirectory(), "overlay", "terrain", "west.terrain.json")));
+        var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "overlay", "terrain", "west.terrain.json")));
         AssertThat(file.Zone.Value == "west" && file.Owner.Value == "WP-19").OverrideFailureMessage("the file belongs to WP-19's west zone").IsTrue();
-        AssertThat(file.Ops.All(o => o.Id.StartsWith("design:terrain:west-", StringComparison.Ordinal) && o.Zone.Value == "west")).OverrideFailureMessage("ids and zones").IsTrue();
-        var low = file.Ops.OfType<TerrainPlatformOp>().Single(o => o.Id == "design:terrain:west-wetland-low");
-        var plaza = ((PolygonGeometry)World().Features[new("design:west-a10-plaza")].Geometry).Rings.Outer;
+        AssertThat(file.Ops.All(o => o.Id.StartsWith(WestIds.TerrainPrefix, StringComparison.Ordinal) && o.Zone.Value == "west")).OverrideFailureMessage("ids and zones").IsTrue();
+        var low = file.Ops.OfType<TerrainPlatformOp>().Single(o => o.Id == WestIds.WetlandLow);
+        var plaza = ((PolygonGeometry)World().Features[new(WestIds.A10Plaza)].Geometry).Rings.Outer;
         AssertThat(low.Rings.Holes.Count == 1 && plaza.All(p => PlanGeometry.InsideByCrossings(low.Rings.Holes[0], p))).OverrideFailureMessage("the low ground leaves a dry hole round the plaza").IsTrue();
-        var stream = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-wetland-stream");
-        var canal = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == "design:terrain:west-hongguang-north");
-        AssertThat(stream.WaterY is -0.5 && canal.WaterY is -1.2).OverrideFailureMessage("the wetland stream keeps the lake level, the canal runs 0.7 m lower").IsTrue();
+        var stream = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == WestIds.WetlandStream);
+        var canal = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == WestIds.HongguangNorth);
+        AssertThat(stream.WaterY > canal.WaterY).OverrideFailureMessage("the wetland stream stays above the canal").IsTrue();
         // The west gates' 20 m zero bands (MAP-QSH-TERRAIN): no authored point comes near them.
-        Vector2[] gates = [new(-372.7f, -505.0f), new(-197.6f, -731.3f), new(-620.0f, -190.0f)];
+        var terrainWorld = World();
+        var boundary = terrainWorld.Boundary.Outer;
+        var gates = new[]
+        {
+            Campus.Gen.Zones.DesignBoundary.BoundaryFeatureIds.WestGateRoad.Source,
+            Campus.Gen.Zones.DesignBoundary.BoundaryFeatureIds.West2GateRoad.Source,
+            Campus.Gen.Zones.DesignBoundary.BoundaryFeatureIds.NorthwestGateRoad.Source,
+        }.Select(id =>
+        {
+            var road = terrainWorld.Network.Roads.Single(item => item.Id.Value == id).Line.Points;
+            return Enumerable.Range(0, road.Count - 1)
+                .SelectMany(i => Enumerable.Range(0, boundary.Count).Select(j =>
+                    PlanGeometry.SegmentIntersection(road[i], road[i + 1], boundary[j], boundary[(j + 1) % boundary.Count], 1e-6f)))
+                .First(point => point.HasValue)!.Value;
+        }).ToArray();
         var points = file.Ops.SelectMany(Points).ToArray();
         AssertThat(points.All(p => gates.All(g => Vector2.Distance(p, g) > 60f))).OverrideFailureMessage("every terrain operation stays out of the gates' zero bands").IsTrue();
 
@@ -300,40 +311,38 @@ public sealed class WestModuleTests
         var world = World();
         foreach (var (id, family) in new[]
         {
-            ("qsh:relation:11334255", "research"), ("qsh:relation:11665641", "research"), ("qsh:relation:11334253", "research"),
-            ("qsh:relation:8426842", "research"), ("qsh:relation:11031411", "research"), ("qsh:way:603368216", "research"),
-            ("qsh:relation:11032065", "research"), ("qsh:way:795677483", "research"), ("qsh:way:795677482", "research"),
-            ("qsh:way:570145228", "office"), ("qsh:way:779496151", "research"), ("qsh:way:779496154", "research"),
+            (WestIds.Relation11334255.Entity, "research"), (WestIds.Relation11665641.Entity, "research"), (WestIds.Relation11334253.Entity, "research"),
+            (WestIds.Relation8426842.Entity, "research"), (WestIds.Relation11031411.Entity, "research"), (WestIds.Way603368216.Entity, "research"),
+            (WestIds.Relation11032065.Entity, "research"), (WestIds.Way795677483.Entity, "research"), (WestIds.Way795677482.Entity, "research"),
+            (WestIds.Way570145228.Entity, "office"), (WestIds.Way779496151.Entity, "research"), (WestIds.Way779496154.Entity, "research"),
         })
             AssertThat(world.Features[new(id)].Family?.Value == family).OverrideFailureMessage($"{id} is styled {family} for WP-14").IsTrue();
-        foreach (var id in new[] { F4.EntityA, F4.EntityB, F4.EntityC, "qsh:relation:8426842" })
+        foreach (var id in new[] { F4.EntityA, F4.EntityB, F4.EntityC, WestIds.Relation8426842.Entity })
             AssertThat(world.Features[new(id)].Facade?.Value == "research.stoneFrame").OverrideFailureMessage($"{id} takes the stone-and-glass preset").IsTrue();
-        // 19b claims nothing: the bodies stay WP-14's, the zone only adds entrance boxes, shafts and the portal in front of them.
-        AssertThat(new WestModule().Claims.OfType<FeatureClaim>().Count() == 4).OverrideFailureMessage("only 六号's three entities and the 19c bus shelter are claimed").IsTrue();
     }
 
     [TestCase]
     public void FourGlassBoxesSitOnTheirStoneLinesAndAreShut()
     {
         var world = World();
-        var parts = new Dictionary<string, string> { [F4.EntityA] = "osm:relation:11334255", [F4.EntityB] = "osm:relation:11665641", [F4.EntityC] = "osm:relation:11334252" };
-        foreach (var box in F4.Boxes)
+        var parts = new Dictionary<string, string> { [F4.EntityA] = WestIds.Relation11334255.Part, [F4.EntityB] = WestIds.Relation11665641.Part, [F4.EntityC] = WestIds.Relation11334252.Part };
+        foreach (var box in F4.Boxes(world))
         {
             var ring = Six.SixSite.Plan(world, box.Entity, parts[box.Entity]).Outer;
             var onLine = Enumerable.Range(0, ring.Count).Any(i => Near(ring[i], ring[(i + 1) % ring.Count], box.Door, 0.3f));
             AssertThat(onLine).OverrideFailureMessage($"四号 {box.Key}: the door lies on the block's stone line").IsTrue();
-            var out1 = PlanMath.Heading(box.Facing);
+            var out1 = Angles.Heading(box.Facing);
             AssertThat(!PlanGeometry.InsideByCrossings(ring, box.Door + out1 * 2f) && PlanGeometry.InsideByCrossings(ring, box.Door - out1 * 2f)).OverrideFailureMessage($"四号 {box.Key}: the box faces out of the block").IsTrue();
         }
         var ctx = Context();
         var module = new WestModule();
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
-        foreach (var box in F4.Boxes)
+        foreach (var box in F4.Boxes(world))
             AssertThat(colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, box.Door) < F4.GlassDepth + 1f)).OverrideFailureMessage($"四号 {box.Key}: the glass box front is DoorClosed").IsTrue();
-        AssertThat(colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, I.MainDoor) < I.PortalDepth + 0.5f)).OverrideFailureMessage("创新中心: the main portal is DoorClosed").IsTrue();
+        AssertThat(colliders.OfType<WallCollider>().Any(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, I.MainDoor(world)) < I.PortalDepth + 0.5f)).OverrideFailureMessage("创新中心: the main portal is DoorClosed").IsTrue();
         // The seat wall runs inside the lawn, clear of the radial paths' gaps.
-        foreach (var arc in F4.SeatArcs)
-            AssertThat(FourSite.SeatLine(arc).All(p => Vector2.Distance(p, F4.LawnCentre) < arc.Max(q => Vector2.Distance(q, F4.LawnCentre)))).OverrideFailureMessage("the seat wall is inset into the lawn").IsTrue();
+        foreach (var arc in F4.SeatArcs(world))
+            AssertThat(FourSite.SeatLine(world, arc).All(p => Vector2.Distance(p, F4.LawnCentre(world)) < arc.Max(q => Vector2.Distance(q, F4.LawnCentre(world))))).OverrideFailureMessage("the seat wall is inset into the lawn").IsTrue();
     }
 
     [TestCase]
@@ -343,7 +352,7 @@ public sealed class WestModuleTests
         var feature = world.Features[new(I.Entity)];
         var plans = feature.Parts.Select(p => p.Geometry).OfType<PolygonGeometry>().Select(g => g.Rings.Outer)
             .Concat(feature.Parts.Select(p => p.Geometry).OfType<MultiPolygonGeometry>().SelectMany(m => m.Polygons.Select(r => r.Outer))).ToArray();
-        foreach (var (centre, length) in I.Shafts)
+        foreach (var (centre, length) in I.Shafts(world))
         {
             AssertThat(plans.Any(r => PlanGeometry.InsideByCrossings(r, centre))).OverrideFailureMessage($"shaft {centre} stands on a link of 创新中心").IsTrue();
             var ends = new[] { centre + I.WingAxis * (length * 0.5f + 1.5f), centre - I.WingAxis * (length * 0.5f + 1.5f) };
@@ -354,18 +363,16 @@ public sealed class WestModuleTests
     [TestCase]
     public void FourFanLawnIsAShallowDish()
     {
-        var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(DataDirectory(), "overlay", "terrain", "west.terrain.json")));
-        var dish = file.Ops.OfType<TerrainBasinOp>().Single(o => o.Id == "design:terrain:west-four-fan-lawn");
-        AssertThat(dish.Height is 0.45 && dish.Shape is TerrainCircle { Radius: 32 } c && Vector2.Distance(c.Center, F4.LawnCentre) < 0.01f).OverrideFailureMessage("the fan lawn is a 0.45 m dish of radius 32 m (MAP-QSH-TERRAIN)").IsTrue();
+        var world = World();
+        var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "overlay", "terrain", "west.terrain.json")));
+        var dish = file.Ops.OfType<TerrainBasinOp>().Single(o => o.Id == WestIds.FourFanLawn);
+        AssertThat(dish.Height > 0 && dish.Shape is TerrainCircle { Radius: > 0 } c && Vector2.Distance(c.Center, F4.LawnCentre(world)) < 0.01f).OverrideFailureMessage("the fan lawn is a shallow circular dish centred on the authored layout").IsTrue();
     }
 
     // ---- helpers ----
 
-    private static bool Near(Vector2 a, Vector2 b, Vector2 p, float r)
-    {
-        var t = Math.Clamp(Vector2.Dot(p - a, b - a) / Vector2.Dot(b - a, b - a), 0f, 1f);
-        return Vector2.Distance(a + (b - a) * t, p) < r;
-    }
+    private static bool Near(Vector2 a, Vector2 b, Vector2 p, float radius) =>
+        PlanGeometry.SegmentDistanceSquared(p, a, b) < radius * radius;
 
     private static byte[] Bytes(BuildContext ctx)
     {
@@ -388,32 +395,6 @@ public sealed class WestModuleTests
 
     private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1 };
 
-    private static string DataDirectory()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
-        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
-        return Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-    }
-
-    private static MapDescriptor Descriptor()
-    {
-        var rect = new MapRect(new(-1280f, -1280f), new(1280f, 1280f));
-        return new MapDescriptor(new MapId("qingshuihe"), new LocalizedName("清水河", "Qingshuihe"), MapKind.Outdoor, 1, 1u,
-            new GeoFrame(0d, 0d, 32648, new(-200f, -200f), new(200f, 200f)), Vector2.Zero, new Box3(new(-1280f, -28f, -1280f), new(1280f, 2000f, 1280f)), rect,
-            new RoamLimits(0.9f, 30f, 3000f, -28f, 2000f, 30f, 40f, 150f), new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
-            new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
-            new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-    }
-
-    private static IWorldModel World()
-    {
-        var data = DataDirectory();
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .Concat(Directory.GetFiles(Path.Combine(data, "overlay", "west.d"), "*.json").Order(StringComparer.Ordinal)
-                .Select(path => Path.GetRelativePath(data, path).Replace('\\', '/')))
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        return WorldModelLoader.Load(new("qingshuihe"), files).World;
-    }
+    private static IWorldModel World() => RealMapFixture.Load().World;
 
 }

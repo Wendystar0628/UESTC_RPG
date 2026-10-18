@@ -60,16 +60,17 @@ public sealed partial class SixSite
         b.Place(PartCatalog.InteriorCard, new PanelParams(S.ShutDoorWidth + 1.6f, S.ShutDoorHeight + 0.6f, 0.06f) { Variation = 1 }, f.AtReversed(x, y, z - 1.4f));
     }
 
-    private static string ShutEntity(IWorldModel world, Vector2 at) =>
-        Blocks.First(k => GridFacade.Edges(Plan(world, k.Entity, k.Part).Outer).Any(edge => On(edge.Item1, at, S.ShutDoorWidth) is not null)).Entity;
+    private static string ShutEntity(IWorldModel world, Vector2 at)
+    {
+        var index = Array.IndexOf(S.ShutDoors(world), at);
+        return world.Feature(WestIds.SixShutFaces[index]).Text("parent");
+    }
 
-    /// <summary>The block face carrying a shut door, the door's local x on it and the block's base.</summary>
     internal static (GridEdgeInfo Face, float X, float Y) ShutFace(BuildContext ctx, Vector2 at)
     {
-        foreach (var k in Blocks)
-            foreach (var (e, _, _) in GridFacade.Edges(Plan(ctx.World, k.Entity, k.Part).Outer))
-                if (On(e, at, S.ShutDoorWidth) is { } x) return (e, x, BaseY(ctx, k.Entity));
-        throw new InvalidOperationException($"Shut door {at} does not lie on a 六号 stone line.");
+        var index = Array.IndexOf(S.ShutDoors(ctx.World), at);
+        var face = SelectedFace(ctx.World, WestIds.SixShutFaces[index]);
+        return (face, face.Frame.Local(at).X, BaseY(ctx, ShutEntity(ctx.World, at)));
     }
 
     // ---- Crown sign: red emblem and silver characters ----

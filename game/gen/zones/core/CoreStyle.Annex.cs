@@ -14,7 +14,6 @@ public static partial class CoreStyle
     // ---- Storeys: the library's own height table, so every floor line and string course runs on from the ring. The data's
     //      heights (3.5 m a storey, 14 m for 8403) are 4 m lower than this table, so heights are not read from it (D-239);
     //      the storey count of each block is the data's (AnnexSite). ----
-    public static readonly float[] AnnexStoreys = [4.95f, 4.5f, 4.5f, 4.5f];
 
     // ---- 8403 punched windows: one bay grid on every floor so the windows stack (行政与业务用房, review). ----
     /// <summary>Bay pitch along a face; window width (two cells, one mullion) and the margin kept at each face end.</summary>

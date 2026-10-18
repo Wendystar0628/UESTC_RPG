@@ -139,8 +139,7 @@ public static partial class CoreStyle
     public static Paint Sheet(string family) => new(CoreMaterial.Sheet, family);
 
     /// <summary>Window glass (toon_glass with window cards); casts shadow, it closes the hollow shell.</summary>
-    public static ToonSpec WindowGlass { get; } = new(new("glass.lit"), new("glass.shade"))
-    { Kind = ToonKind.Glass, Fx = ToonFx.GlassStreak | ToonFx.Glare, Wet = 0f };
+    public static ToonSpec WindowGlass => Campus.Gen.Zones.Common.ZoneLooks.Glass;
     /// <summary>See-through glass of the skylight and the front tower slot (paths P1 and P2, toon_glass_near).</summary>
     public static ToonSpec ClearGlass { get; } = WindowGlass with { Kind = ToonKind.GlassNear };
 }

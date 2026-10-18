@@ -36,8 +36,6 @@ public static partial class CoreStyle
     public const float MuseumCornerChamfer = 0.35f;
 
     // ---- Colonnade ring (柱廊环, 8402): square columns along the platform edge carrying the eave band. ----
-    /// <summary>Ring width where the data has no parallel outer edge (约 5.5 m, MAP-QSH-CORE).</summary>
-    public const float ColonnadeFallback = 5.5f;
     /// <summary>Column centres in from the platform edge; the eave's outer face this far beyond the columns' outer faces.</summary>
     public const float ColumnInset = 0.9f, MuseumEaveOverhang = 0.3f;
     /// <summary>Square columns: shaft, base block and capital (review); bays at most this pitch.</summary>

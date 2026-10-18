@@ -43,12 +43,5 @@ public abstract class ZoneSite
 
     /// <summary>A probe looking along plan direction <paramref name="look"/>; yaw is the bearing (0 north, 90 east).</summary>
     protected static InspectionProbe Probe(string id, string feature, System.Numerics.Vector3 eye, System.Numerics.Vector2 look, float pitch, float distance) =>
-        new(id, new(feature), new(eye, Bearing(look), pitch, 60f), distance);
-
-    /// <summary>Bearing in degrees of a plan direction (world x east, z south; 0 north, 90 east).</summary>
-    public static float Bearing(System.Numerics.Vector2 direction)
-    {
-        var degrees = MathF.Atan2(direction.X, -direction.Y) * (180f / MathF.PI);
-        return degrees < 0 ? degrees + 360f : degrees;
-    }
+        new(id, new(feature), new(eye, Angles.Bearing(look), pitch, 60f), distance);
 }

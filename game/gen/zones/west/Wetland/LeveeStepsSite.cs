@@ -24,15 +24,15 @@ public sealed class LeveeStepsSite : ZoneSite
     public override string Id => "19c.levee-steps";
 
     /// <summary>One junction's flight: its frame (origin at the slope foot on the path, +Z up the path toward the levee), foot level and part.</summary>
-    internal static (PlanFrame Frame, float Foot, StairParams Flight)? Flight((string Key, Vector2 Top, Vector2 Toward) j, Func<float, float, float> ground)
+    internal static (PlanFrame Frame, float Foot, StairParams Flight)? Flight(IWorldModel world, (string Key, Vector2 Top, Vector2 Toward) j, Func<float, float, float> ground)
     {
         var d = Vector2.Normalize(j.Toward - j.Top);
         // The flank lies between CrestHalf and CrestHalf + rise × SideRun off the levee centreline, measured square to it;
         // along a path that meets the levee at an angle those distances grow by 1 / sin. The levee's local direction comes
         // from the centreline's own neighbours (west.terrain.json), so a skew path still lands on the flank.
-        var across = MathF.Max(0.5f, Square(j.Top, d));
-        var crest = T.CrestHalf / across;
-        var run = T.LeveeRise * T.SideRun / across;
+        var across = MathF.Max(0.5f, Square(world.TerrainLine(WestIds.Levee), j.Top, d));
+        var crest = T.CrestHalf(world) / across;
+        var run = T.LeveeRise(world) * T.SideRun(world) / across;
         var top = j.Top + d * crest;
         var foot = j.Top + d * (crest + run);
         float yTop = ground(top.X, top.Y), yFoot = ground(foot.X, foot.Y);
@@ -45,36 +45,28 @@ public sealed class LeveeStepsSite : ZoneSite
     }
 
     /// <summary>|sin| of the angle between the path and the levee centreline at the junction (1 when square).</summary>
-    private static float Square(Vector2 top, Vector2 d)
+    private static float Square(IReadOnlyList<Vector2> line, Vector2 top, Vector2 d)
     {
-        var line = Levee;
         var best = 0;
-        for (var i = 1; i < line.Length; i++)
+        for (var i = 1; i < line.Count; i++)
             if (Vector2.DistanceSquared(line[i], top) < Vector2.DistanceSquared(line[best], top)) best = i;
         var a = line[Math.Max(0, best - 1)];
-        var b = line[Math.Min(line.Length - 1, best + 1)];
+        var b = line[Math.Min(line.Count - 1, best + 1)];
         var t = Vector2.Normalize(b - a);
-        return MathF.Abs(t.X * d.Y - t.Y * d.X);
+        return MathF.Abs(PlanGeometry.CrossFloat(t, d));
     }
-
-    /// <summary>
-    /// The levee centreline near the two junctions (west.terrain.json design:terrain:west-levee, first points). Kept here: terrain
-    /// operations are not in the world model, so there is no ID to read it by.
-    /// </summary>
-    internal static readonly Vector2[] Levee =
-        [new(-308.84f, -147.52f), new(-307.28f, -150.63f), new(-303.98f, -154.91f), new(-296.28f, -164.94f), new(-293.69f, -168.33f), new(-281.59f, -184.05f)];
 
     public override void Build(SiteBuilder b)
     {
-        foreach (var j in T.Junctions)
-            if (Flight(j, b.Ground) is { } f)
+        foreach (var j in T.Junctions(b.Context.World))
+            if (Flight(b.Context.World, j, b.Ground) is { } f)
                 b.Place(PartCatalog.Steps, f.Flight, f.Frame.At(0, f.Foot, f.Flight.Depth * 0.5f));
     }
 
     public override void Collide(SiteColliders c)
     {
-        foreach (var j in T.Junctions)
-            if (Flight(j, c.Ground) is { } f)
+        foreach (var j in T.Junctions(c.Context.World))
+            if (Flight(c.Context.World, j, c.Ground) is { } f)
                 c.Add(Steps.Collision(f.Flight), f.Frame.At(0, f.Foot, f.Flight.Depth * 0.5f));
     }
 }

@@ -35,22 +35,16 @@ public sealed record FenceRun(IReadOnlyList<Vector2> Line, RunEnd Start, RunEnd 
             {
                 var first = i == 0 && k == 0;
                 var at = p + u * (length * k / panels);
-                var along = k == 0 && i > 0 ? Chord(Line[i - 1], q) : u;
+                var along = k == 0 && i > 0 ? VectorMath.Unit(q - Line[i - 1], Vector2.UnitX, minimumLength: 1e-6) : u;
                 posts.Add((at, along, !first || Start != RunEnd.None, first && Start == RunEnd.EndPillar));
             }
         }
         var last = Line[^1];
-        posts.Add((last, Unit(last - Line[^2]), End != RunEnd.None, End == RunEnd.EndPillar));
+        posts.Add((last, VectorMath.Unit(last - Line[^2], Vector2.UnitX, minimumLength: 1e-6), End != RunEnd.None, End == RunEnd.EndPillar));
         return posts;
     }
 
-    private static Vector2 Chord(Vector2 a, Vector2 b) => Unit(b - a);
 
-    internal static Vector2 Unit(Vector2 v)
-    {
-        var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y);
-        return length > 1e-6f ? v / length : Vector2.UnitX;
-    }
 }
 
 public static class BoundaryFence
@@ -167,22 +161,22 @@ public static class BoundaryFence
         ArgumentNullException.ThrowIfNull(line);
         ArgumentNullException.ThrowIfNull(inside);
         // The side is read on the last segment, which follows the ring; a closure's first leg crosses campus on both sides.
-        var un = FenceRun.Unit(line[^1] - line[^2]);
+        var un = VectorMath.Unit(line[^1] - line[^2], Vector2.UnitX, minimumLength: 1e-6);
         var probe = (line[^1] + line[^2]) * 0.5f + new Vector2(-un.Y, un.X) * 0.5f;
         var sign = inside(probe) ? 1f : -1f;
         var result = new Vector2[line.Count];
         for (var k = 0; k < line.Count; k++)
         {
-            var before = FenceRun.Unit(line[Math.Max(k, 1)] - line[Math.Max(k, 1) - 1]);
-            var after = FenceRun.Unit(line[Math.Min(k + 1, line.Count - 1)] - line[Math.Min(k + 1, line.Count - 1) - 1]);
+            var before = VectorMath.Unit(line[Math.Max(k, 1)] - line[Math.Max(k, 1) - 1], Vector2.UnitX, minimumLength: 1e-6);
+            var after = VectorMath.Unit(line[Math.Min(k + 1, line.Count - 1)] - line[Math.Min(k + 1, line.Count - 1) - 1], Vector2.UnitX, minimumLength: 1e-6);
             var nb = new Vector2(-before.Y, before.X);
             var na = new Vector2(-after.Y, after.X);
-            var n = FenceRun.Unit(nb + na);
+            var n = VectorMath.Unit(nb + na, Vector2.UnitX, minimumLength: 1e-6);
             var cos = MathF.Max(Vector2.Dot(n, na), 0.5f);
             result[k] = line[k] + n * (sign * distance / cos);
         }
-        if (trimStart > 0 && result.Length > 1) result[0] += FenceRun.Unit(result[1] - result[0]) * trimStart;
-        if (trimEnd > 0 && result.Length > 1) result[^1] += FenceRun.Unit(result[^2] - result[^1]) * trimEnd;
+        if (trimStart > 0 && result.Length > 1) result[0] += VectorMath.Unit(result[1] - result[0], Vector2.UnitX, minimumLength: 1e-6) * trimStart;
+        if (trimEnd > 0 && result.Length > 1) result[^1] += VectorMath.Unit(result[^2] - result[^1], Vector2.UnitX, minimumLength: 1e-6) * trimEnd;
         return result;
     }
 }

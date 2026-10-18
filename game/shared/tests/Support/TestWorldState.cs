@@ -28,8 +28,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     public Campus.Contracts.Flow Flow { get; private set; } = new(1);
     public bool Scrubbing => false;
     public WorldTransition Transition => WorldTransition.None;
-    public ViewMode ViewMode { get; private set; } = ViewMode.Fly;
-    public ViewMode Mode => ViewMode;
+    public ViewMode Mode { get; private set; } = ViewMode.Fly;
     public WeatherSel Weather => weather.Selection;
     public WeatherVec WeatherNow => weather.Now;
     public IReadOnlyList<WeatherSpan> WeatherAhead => weather.Ahead;
@@ -170,7 +169,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     {
         Restore(new WorldSaveMoment(17.5, 0, Season.Autumn, 1));
         AnimTime = 240;
-        ViewMode = ViewMode.Fly;
+        Mode = ViewMode.Fly;
         CompleteRestore();
     }
 
@@ -214,22 +213,14 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
         Rev++;
     }
 
-    /// <summary>Keeps the shared readout in sync with the Test fixture camera mode control.</summary>
-    public void SetViewMode(ViewMode mode)
-    {
-        EnsureControlsAvailable();
-        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
-        ViewMode = mode;
-        Rev++;
-    }
-
     public Task<ModeSwitchResult> SetMode(ViewMode m, ModeSwitchVia via)
     {
         EnsureControlsAvailable();
         if (!Enum.IsDefined(m)) throw new ArgumentOutOfRangeException(nameof(m));
         if (!Enum.IsDefined(via)) throw new ArgumentOutOfRangeException(nameof(via));
         if (!ruleset.Current.ViewModes.Contains(m)) return Task.FromResult(ModeSwitchResult.Refused);
-        SetViewMode(m);
+        Mode = m;
+        Rev++;
         return Task.FromResult(ModeSwitchResult.Ok);
     }
 

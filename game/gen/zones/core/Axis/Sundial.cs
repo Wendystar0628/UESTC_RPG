@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -17,25 +18,25 @@ public sealed class Sundial : ICorePiece
 {
     private readonly IWorldModel _world;
 
-    private Sundial(IWorldModel world, Vector2 position)
+    private Sundial(IWorldModel world, Vector2 position, float elevation)
     {
         _world = world;
         Position = position;
-        Base = world.Terrain.HeightAt(position.X, position.Y) + S.PavingLift;
-        var phi = S.Latitude * (Shapes.Tau / 360f);
+        Base = world.Terrain.HeightAt(position.X, position.Y) + GroundLevels.Paving;
+        var phi = elevation * Angles.DegreesToRadians;
         Gnomon = new(0, MathF.Sin(phi), -MathF.Cos(phi));
     }
 
     public static Sundial? From(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        if (!world.Features.TryGetValue(CoreFeatures.Sundial, out var f) || f.Geometry is not PointGeometry point) return null;
-        return new Sundial(world, new(point.Position.X, point.Position.Z));
+        if (!world.Features.TryGetValue(CoreIds.Sundial, out var f) || f.Geometry is not PointGeometry point) return null;
+        return new Sundial(world, new(point.Position.X, point.Position.Z), f.Number("gnomonElevationDeg"));
     }
 
     public string Id => "sundial";
     public Vector2 Anchor => Position;
-    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreFeatures.Sundial, Aspects.Massing | Aspects.Props)];
+    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreIds.Sundial, Aspects.Massing | Aspects.Props)];
 
     public Vector2 Position { get; }
     /// <summary>Top of the granite pad the tiers stand on.</summary>
@@ -89,7 +90,7 @@ public sealed class Sundial : ICorePiece
             var half = new Vector3(radius * 0.924f, (height + S.Sink) * 0.5f, radius * 0.924f);
             var centre = new Vector3(Position.X, y + height - half.Y, Position.Y);
             list.Add(new BoxCollider(Matrix4x4.CreateTranslation(centre), half, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
-            list.Add(new BoxCollider(Matrix4x4.CreateRotationY(Shapes.Tau / 8f) * Matrix4x4.CreateTranslation(centre), half, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
+            list.Add(new BoxCollider(Matrix4x4.CreateRotationY(MathF.Tau / 8f) * Matrix4x4.CreateTranslation(centre), half, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
             y += height;
         }
         list.Add(new PostCollider(Position, S.SundialRingOuter, TiersTop, DialCentre.Y + S.SundialRingOuter, SurfaceTag.Prop) { Foot = FootMat.Metal });

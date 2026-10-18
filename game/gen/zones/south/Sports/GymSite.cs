@@ -24,8 +24,8 @@ namespace Campus.Gen.Zones.South.Sports;
 /// </summary>
 public sealed class GymSite : ZoneSite
 {
-    public const string Feature = "qsh:way:217855275";
-    private const string Part = "osm:way:217855275";
+    public static readonly string Feature = SouthIds.Gym.Entity;
+    private static readonly string Part = SouthIds.Gym.Part;
     public const string GlassKey = "ring-hall";
 
     /// <summary>Numbered panes stand this far in front of the glass core.</summary>
@@ -67,22 +67,13 @@ public sealed class GymSite : ZoneSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Gym {Feature} is missing from the world model.");
-        var ring = (feature.Parts.FirstOrDefault(p => p.SourceId == Part) is { } src ? WorldFeatureGeometry.FacadeGeometryOf(src) : feature.Geometry) is PolygonGeometry g
-            ? g.Rings.Outer
-            : throw new InvalidOperationException($"Gym {Feature} is not a single polygon.");
-        var radius = MathF.Sqrt(MathF.Abs(Area(ring)) / MathF.PI);
+        var ring = feature.Contour(Part);
+        var radius = MathF.Sqrt((float)Math.Abs(PlanGeometry.SignedArea(ring)) / MathF.PI);
         var bays = (int)MathF.Round(2f * MathF.PI * (radius - S.GymGlassInset) / S.GymBay);
-        var door = PlanMath.Heading(S.GymDoorBearing);
+        var door = Angles.Heading(S.GymDoorBearing);
         var deckTop = world.Feature(PlatformSite.Feature).Height ?? throw new InvalidOperationException($"Platform {PlatformSite.Feature} has no height.");
         var top = feature.Height ?? throw new InvalidOperationException($"Gym {Feature} has no height.");
-        return new(PlanMath.Centroid(ring), radius, MathF.Atan2(door.Y, door.X) - MathF.PI / bays, bays, deckTop, top);
-    }
-
-    internal static float Area(IReadOnlyList<Vector2> ring)
-    {
-        var a = 0f;
-        for (var i = 0; i < ring.Count; i++) a += ring[i].X * ring[(i + 1) % ring.Count].Y - ring[(i + 1) % ring.Count].X * ring[i].Y;
-        return a * 0.5f;
+        return new(PlanGeometry.Centroid(ring, meanIfDegenerate: true), radius, MathF.Atan2(door.Y, door.X) - MathF.PI / bays, bays, deckTop, top);
     }
 
     /// <summary>Row sills and heights of the ring hall's glass, above the ground: the platform storey, then the upper hall over the transom.</summary>
@@ -176,7 +167,7 @@ public sealed class GymSite : ZoneSite
                 ? [new(-half, 0), new(-S.GymDoorWidth * 0.5f, 0), new(-S.GymDoorWidth * 0.5f, 0.3f + S.GymDoorHeight), new(S.GymDoorWidth * 0.5f, 0.3f + S.GymDoorHeight),
                     new(S.GymDoorWidth * 0.5f, 0), new(half, 0), new(half, height), new(-half, height)]
                 : [new(-half, 0), new(half, 0), new(half, height), new(-half, height)];
-            b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outline), 0.06f, L.Glass), f.At(0, y0, -0.03f));
+            b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outline), 0.06f, ZoneLooks.Glass), f.At(0, y0, -0.03f));
         }
         if (Allocation(b.Context, p) is { } allocation) WindowNumbers.Panes(b, Openings(p, y), allocation, W.Venue, W.Gym);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
@@ -293,7 +284,7 @@ public sealed class GymSite : ZoneSite
         // Leaves swung in against the reveals, and the lobby's inner glass screen 2 m inside.
         foreach (var side in new[] { -1f, 1f })
             GridFacade.Box(b, f, side * (w * 0.5f - 0.03f) - 0.03f, side * (w * 0.5f - 0.03f) + 0.03f, floor, floor + h - 0.05f, -1.45f, -0.05f, L.Metal, 0.01f);
-        GridFacade.Box(b, f, -w * 0.5f - 0.2f, w * 0.5f + 0.2f, floor, floor + h, -2.1f, -2.04f, L.Glass, 0);
+        GridFacade.Box(b, f, -w * 0.5f - 0.2f, w * 0.5f + 0.2f, floor, floor + h, -2.1f, -2.04f, ZoneLooks.Glass, 0);
         foreach (var side in new[] { -1f, 1f })
             GridFacade.Box(b, f, side * (w * 0.5f + 0.2f) - 0.06f, side * (w * 0.5f + 0.2f) + 0.06f, floor, floor + h, -2.1f, -0.1f, L.StoneTrim, 0.01f);
         // Flat canopy over the landing on two slim posts.
@@ -305,7 +296,7 @@ public sealed class GymSite : ZoneSite
 
     private static float BearingAngle(float bearing)
     {
-        var d = PlanMath.Heading(bearing);
+        var d = Angles.Heading(bearing);
         return MathF.Atan2(d.Y, d.X);
     }
 
@@ -340,7 +331,11 @@ public sealed class GymSite : ZoneSite
                 continue;
             }
             var mid = (a0 + a1) * 0.5f;
-            if (services.Any(s => MathF.Abs(PlanMath.Turn((s - mid) * 180f / MathF.PI)) < 180f / segments))
+            if (services.Any(s =>
+            {
+                var delta = Angles.SignedDelta(0f, (s - mid) * Angles.RadiansToDegrees);
+                return MathF.Abs(delta) < 180f / segments;
+            }))
             {
                 c.Wall(pa, pb, 0.25f, y, y + 2.4f, SurfaceTag.DoorClosed, FootMat.Concrete);
                 c.Wall(pa, pb, 0.25f, y + 2.4f, y + p.Top, SurfaceTag.Wall, FootMat.Concrete);

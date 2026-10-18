@@ -64,7 +64,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
             {
                 var count = Math.Max(1, part.Storeys ?? (int)MathF.Ceiling((part.Height ?? 3.6f) / 3.6f));
                 var height = (part.Height ?? count * 3.6f) / count;
-                foreach (var polygon in WorldModelLoader.Polygons(part.Geometry))
+                foreach (var polygon in WorldFeatureGeometry.PolygonsOf(part.Geometry))
                     for (var floor = 1; floor <= count; floor++)
                         storeys.Add(new(floor, (floor - 1) * height, height, polygon.Outer));
             }
@@ -134,7 +134,7 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
                     ids.Add(feature.Id);
                 }
     }
-    private static int Cell(float coordinate) => (int)MathF.Floor(coordinate / 64);
+    private static int Cell(float coordinate) => TileGrid.At(new Vector2(coordinate, 0)).X;
     public IReadOnlyList<FeatureId> Query(Box3 box)
     {
         var ids = new HashSet<FeatureId>();
@@ -152,7 +152,7 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
         foreach (var id in ids)
         {
             var feature = _features[id];
-            if (WorldModelLoader.Polygons(feature.Geometry).Any(p => PlanGeometry.Contains(p, point))) yield return feature;
+            if (WorldFeatureGeometry.PolygonsOf(feature.Geometry).Any(p => PlanGeometry.Contains(p, point))) yield return feature;
         }
     }
     public CameraMedium MediumAt(Vector3 p)
@@ -162,12 +162,12 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
         {
             var point = new Vector2(p.X, p.Z);
             var part = WorldFeatureKinds.Parts(feature, "building").FirstOrDefault(part => p.Y >= ground && p.Y < ground + (part.Height ?? 3.6f)
-                && WorldModelLoader.Polygons(part.Geometry).Any(r => PlanGeometry.Contains(r, point)));
+                && WorldFeatureGeometry.PolygonsOf(part.Geometry).Any(r => PlanGeometry.Contains(r, point)));
             if (part is not null)
             {
                 var storeys = _interiors.Get(feature.Id)?.Storeys;
                 var storey = storeys?.Where(s => p.Y >= s.FloorY && p.Y < s.FloorY + s.Height && PlanGeometry.PointInRing(point, s.Footprint)).OrderBy(s => s.Index).FirstOrDefault();
-                var distance = WorldModelLoader.Polygons(part.Geometry).Where(r => PlanGeometry.Contains(r, point))
+                var distance = WorldFeatureGeometry.PolygonsOf(part.Geometry).Where(r => PlanGeometry.Contains(r, point))
                     .SelectMany(r => new[] { r.Outer }.Concat(r.Holes)).Min(r => PlanGeometry.DistanceToRing(new(p.X, p.Z), r));
                 var localFloor = _interiors is WorldInteriorIndex
                     ? 1 + (int)MathF.Floor((p.Y - ground) / ((part.Height ?? 3.6f) / Math.Max(1, part.Storeys ?? 1)))
@@ -175,7 +175,7 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
                 return new(MediumKind.Interior, feature.Id, localFloor, distance);
             }
             if (p.Y < ground && p.Y >= ground - 6 && WorldFeatureKinds.Parts(feature, "water")
-                .Any(water => WorldModelLoader.Polygons(water.Geometry).Any(r => PlanGeometry.Contains(r, point))))
+                .Any(water => WorldFeatureGeometry.PolygonsOf(water.Geometry).Any(r => PlanGeometry.Contains(r, point))))
                 return new(MediumKind.Underwater, feature.Id, Depth: ground - p.Y);
         }
         return p.Y < ground ? new(MediumKind.Underground, Depth: ground - p.Y) : new(MediumKind.Air);

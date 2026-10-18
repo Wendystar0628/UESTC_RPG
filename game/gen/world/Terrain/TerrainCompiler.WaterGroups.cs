@@ -17,6 +17,10 @@ internal static partial class TerrainCompiler
         IReadOnlyList<FeatureId> Waters, IReadOnlyList<TerrainBankInterval> OriginalHard);
     private sealed class WaterJoinBudget(double width) { public double Width { get; set; } = width; }
 
+    private static bool SameWaterNode(Vector2 a, Vector2 c) =>
+        Math.Round(a.X * 1000d, MidpointRounding.ToEven) == Math.Round(c.X * 1000d, MidpointRounding.ToEven)
+        && Math.Round(a.Y * 1000d, MidpointRounding.ToEven) == Math.Round(c.Y * 1000d, MidpointRounding.ToEven);
+
     private static void ResolveUndergroundLevels(Builder b)
     {
         var pipes = b.UndergroundWaterSpecs.OrderBy(spec => spec.Id.Value, StringComparer.Ordinal).ToArray();
@@ -27,10 +31,8 @@ internal static partial class TerrainCompiler
         var surfaceNodes = surface.Select(water => b.References.WaterNodes(water.Feature)).ToArray();
         var weirs = b.Operations.Values.OfType<TerrainChannelOp>().SelectMany(op => op.Weirs).ToArray();
         bool Barrier(FeatureId a, FeatureId c) => weirs.Any(weir => weir.Upstream == a && weir.Downstream == c || weir.Upstream == c && weir.Downstream == a);
-        static bool Same(Vector2 a, Vector2 c) => Math.Round(a.X * 1000d, MidpointRounding.ToEven) == Math.Round(c.X * 1000d, MidpointRounding.ToEven)
-            && Math.Round(a.Y * 1000d, MidpointRounding.ToEven) == Math.Round(c.Y * 1000d, MidpointRounding.ToEven);
         var groups = Components(pipes.Length, (a, c) => !Barrier(pipes[a].Id, pipes[c].Id)
-            && (ends[a].Any(p => vertices[c].Any(q => Same(p, q))) || ends[c].Any(p => vertices[a].Any(q => Same(p, q)))));
+            && (ends[a].Any(p => vertices[c].Any(q => SameWaterNode(p, q))) || ends[c].Any(p => vertices[a].Any(q => SameWaterNode(p, q)))));
         foreach (var group in groups)
         {
             var anchors = new List<(FeatureId Id, double Level)>();
@@ -41,7 +43,7 @@ internal static partial class TerrainCompiler
                 {
                     if (Barrier(pipes[i].Id, surface[j].Feature)) continue;
                     var connected = surfaceNodes[j].Count > 0
-                        ? ends[i].Any(p => surfaceNodes[j].Any(q => Same(p, q)))
+                        ? ends[i].Any(p => surfaceNodes[j].Any(q => SameWaterNode(p, q)))
                         : ends[i].Any(p => surface[j].Region.Contains(p.X, p.Y));
                     if (connected) anchors.Add((surface[j].Feature, surface[j].Level));
                 }
@@ -200,13 +202,11 @@ internal static partial class TerrainCompiler
         var nodes = specs.Select(spec => b.References.WaterNodes(spec.Id)).ToArray();
         var ends = specs.Select(spec => b.References.WaterEndpoints(spec.Id)).ToArray();
         var weirs = b.Operations.Values.OfType<TerrainChannelOp>().SelectMany(op => op.Weirs).ToArray();
-        static bool Same(Vector2 a, Vector2 c) => Math.Round(a.X * 1000d, MidpointRounding.ToEven) == Math.Round(c.X * 1000d, MidpointRounding.ToEven)
-            && Math.Round(a.Y * 1000d, MidpointRounding.ToEven) == Math.Round(c.Y * 1000d, MidpointRounding.ToEven);
         bool Connected(int a, int c)
         {
             if (weirs.Any(w => w.Upstream == specs[a].Id && w.Downstream == specs[c].Id
                 || w.Upstream == specs[c].Id && w.Downstream == specs[a].Id)) return false;
-            var registeredNodes = ends[a].Any(p => nodes[c].Any(q => Same(p, q))) || ends[c].Any(p => nodes[a].Any(q => Same(p, q)));
+            var registeredNodes = ends[a].Any(p => nodes[c].Any(q => SameWaterNode(p, q))) || ends[c].Any(p => nodes[a].Any(q => SameWaterNode(p, q)));
             if (registeredNodes) return true;
             if (nodes[c].Count == 0 && ends[a].Any(p => specs[c].Region.Contains(p.X, p.Y))) return true;
             if (nodes[a].Count == 0 && ends[c].Any(p => specs[a].Region.Contains(p.X, p.Y))) return true;
@@ -399,303 +399,5 @@ internal static partial class TerrainCompiler
             groups.Add(group.OrderBy(i => i).ToArray());
         }
         return groups;
-    }
-}
-
-/// <summary>Continuous extension of the prescribed exposed-shore profile into the water interior.</summary>
-internal sealed class TerrainWaterJoin
-{
-    private readonly record struct Contribution(TerrainDifferential Distance, TerrainDifferential Weight);
-    private sealed record Transition(Vector2 A, Vector2 B, double Start, double End, double RunLength);
-    private readonly TerrainRingIndex? _lakeEdges;
-    private readonly TerrainRingIndex? _channelEdges;
-    private readonly Transition[] _transitions;
-    private readonly TerrainRegion _domain;
-    private readonly TerrainRegion _lakeArea;
-
-    public TerrainWaterJoin(TerrainRegion domain, TerrainRegion lakeArea)
-    {
-        _domain = domain; _lakeArea = lakeArea;
-        var lake = new List<(Vector2 A, Vector2 B)>(); var channel = new List<(Vector2 A, Vector2 B)>();
-        var transitions = new List<Transition>();
-        foreach (var polygon in domain.Polygons)
-            foreach (var ring in new[] { polygon.Outer }.Concat(polygon.Holes))
-            {
-                var count = ring.Count; var labels = new bool[count];
-                for (var i = 0; i < count; i++)
-                {
-                    var a = ring[i]; var c = ring[(i + 1) % count];
-                    // A source boundary midpoint can round to the exterior in the integer
-                    // containment predicate. Millimetre topology still identifies that same
-                    // exposed edge as lake shore; it must not become an invented Hard segment.
-                    labels[i] = lakeArea.Distance(((double)a.X + c.X) / 2, ((double)a.Y + c.Y) / 2).Height <= 0.001;
-                    if (labels[i]) lake.Add((a, c));
-                }
-                if (!labels.Any(value => value))
-                { for (var i = 0; i < count; i++) channel.Add((ring[i], ring[(i + 1) % count])); continue; }
-                for (var start = 0; start < count; start++)
-                {
-                    if (labels[start] || !labels[(start + count - 1) % count]) continue;
-                    var run = new List<(Vector2 A, Vector2 B, double Start, double End)>(); var station = 0d; var index = start;
-                    do
-                    {
-                        var a = ring[index]; var c = ring[(index + 1) % count];
-                        var dx = (double)c.X - a.X; var dz = (double)c.Y - a.Y; var end = station + Math.Sqrt(dx * dx + dz * dz);
-                        run.Add((a, c, station, end)); station = end; index = (index + 1) % count;
-                    } while (!labels[index]);
-                    foreach (var edge in run)
-                    {
-                        var cuts = new[] { edge.Start, edge.End, TerrainBridgeBanks.TransitionLength, station - TerrainBridgeBanks.TransitionLength }
-                            .Where(s => s >= edge.Start && s <= edge.End).Distinct().OrderBy(s => s).ToArray();
-                        for (var i = 0; i + 1 < cuts.Length; i++)
-                        {
-                            var a = At(cuts[i]); var c = At(cuts[i + 1]);
-                            if (a == c) continue;
-                            if (cuts[i] >= TerrainBridgeBanks.TransitionLength && cuts[i + 1] <= station - TerrainBridgeBanks.TransitionLength) channel.Add((a, c));
-                            else transitions.Add(new(a, c, cuts[i], cuts[i + 1], station));
-                        }
-                        Vector2 At(double s)
-                        {
-                            if (s == edge.Start) return edge.A; if (s == edge.End) return edge.B;
-                            var t = (s - edge.Start) / (edge.End - edge.Start);
-                            return new((float)(edge.A.X + ((double)edge.B.X - edge.A.X) * t), (float)(edge.A.Y + ((double)edge.B.Y - edge.A.Y) * t));
-                        }
-                    }
-                }
-            }
-        _lakeEdges = lake.Count == 0 ? null : new(lake); _channelEdges = channel.Count == 0 ? null : new(channel);
-        _transitions = transitions.ToArray();
-    }
-
-    public TerrainDifferential Weight(double x, double z, double width)
-    {
-        var near = ShoreWeight(x, z, width); var domainDistance = _domain.Distance(x, z);
-        if (domainDistance.Height >= 0) return near;
-        var distance = _lakeArea.Distance(x, z);
-        TerrainDifferential interior;
-        if (distance.Height <= 0) interior = TerrainDifferential.Constant(1);
-        else if (distance.Height >= width) interior = TerrainDifferential.Constant(0);
-        else
-        {
-            var t = distance.Height / width; var slope = -6 * t * (1 - t) / width;
-            interior = new(1 - TerrainMath.Hermite(t), distance.Dx * slope, distance.Dz * slope);
-        }
-        // The existing minimum 2 m fillet connects the fixed boundary extension to the
-        // interior field. Widening the interior's horizontal profile must not also preserve
-        // its narrow boundary pattern deeper and deeper into the bed.
-        const double normalFillet = 2;
-        var inward = -domainDistance; if (inward.Height >= normalFillet) return interior;
-        var ratio = inward.Height / normalFillet; var derivative = 6 * ratio * (1 - ratio) / normalFillet;
-        var depthWeight = new TerrainDifferential(TerrainMath.Hermite(ratio), derivative * inward.Dx, derivative * inward.Dz);
-        return near + Product(interior - near, depthWeight);
-    }
-
-    public IReadOnlyList<TerrainBankInterval> HardIntervals(bool lakeHard, bool channelHard)
-    {
-        if (lakeHard && channelHard) return TerrainBankGeometry.WholeRings(_domain);
-        var result = new List<TerrainBankInterval>();
-        if (!lakeHard && !channelHard) return result;
-        foreach (var item in TerrainBankGeometry.Rings(_domain))
-        {
-            var points = item.Path.Line.Points; var count = points.Count - 1; var stations = new double[count + 1]; var lake = new bool[count];
-            for (var i = 0; i < count; i++)
-            {
-                var a = points[i]; var c = points[i + 1]; var dx = (double)c.X - a.X; var dz = (double)c.Y - a.Y;
-                stations[i + 1] = stations[i] + Math.Sqrt(dx * dx + dz * dz);
-                lake[i] = _lakeArea.Distance(((double)a.X + c.X) / 2, ((double)a.Y + c.Y) / 2).Height <= 0.001;
-            }
-            if (lake.All(value => value == lake[0]))
-            {
-                if (lake[0] ? lakeHard : channelHard) result.Add(new(item.Polygon, item.Ring, 0, item.Path.Length, item.Path.Length, [], []));
-                continue;
-            }
-            for (var start = 0; start < count; start++)
-            {
-                if (lake[start] == lake[(start + count - 1) % count] || !(lake[start] ? lakeHard : channelHard)) continue;
-                var length = 0d; var edge = start;
-                do { length += stations[edge + 1] - stations[edge]; edge = (edge + 1) % count; } while (lake[edge] == lake[start]);
-                var from = stations[start]; var to = from + length;
-                if (!lake[start]) { from += TerrainBridgeBanks.TransitionLength; to -= TerrainBridgeBanks.TransitionLength; }
-                if (to > from) result.Add(new(item.Polygon, item.Ring, from, to, item.Path.Length, [], []));
-            }
-        }
-        return result;
-    }
-
-    private TerrainDifferential ShoreWeight(double x, double z, double width)
-    {
-        var capacity = _transitions.Length + 2;
-        Span<Contribution> values = capacity <= 64 ? stackalloc Contribution[capacity] : new Contribution[capacity];
-        var count = 0;
-        if (_lakeEdges is not null) values[count++] = Constant(_lakeEdges.Nearest(x, z), 1, x, z);
-        if (_channelEdges is not null) values[count++] = Constant(_channelEdges.Nearest(x, z), 0, x, z);
-        foreach (var edge in _transitions)
-        {
-            var dx = (double)edge.B.X - edge.A.X; var dz = (double)edge.B.Y - edge.A.Y;
-            var lengthSquared = dx * dx + dz * dz; var length = Math.Sqrt(lengthSquared);
-            var raw = ((x - edge.A.X) * dx + (z - edge.A.Y) * dz) / lengthSquared;
-            var t = Math.Max(0, Math.Min(1, raw)); var px = edge.A.X + dx * t; var pz = edge.A.Y + dz * t;
-            var qx = x - px; var qz = z - pz; var distance = Math.Sqrt(qx * qx + qz * qz);
-            var station = edge.Start + (edge.End - edge.Start) * t;
-            var (left, leftSlope) = EndWeight(station); var (right, rightSlope) = EndWeight(edge.RunLength - station);
-            var weight = 1 - (1 - left) * (1 - right);
-            var along = leftSlope * (1 - right) - rightSlope * (1 - left);
-            var scale = raw > 0 && raw < 1 ? (edge.End - edge.Start) / length : 0;
-            values[count++] = new(distance == 0 ? TerrainDifferential.Constant(0) : new(distance, qx / distance, qz / distance),
-                new(weight, along * scale * dx / length, along * scale * dz / length));
-        }
-        var closest = 0;
-        for (var i = 1; i < count; i++) if (values[i].Distance.Height < values[closest].Distance.Height) closest = i;
-        var minimum = values[closest].Distance;
-        if (minimum.Height <= 0.0000001) return values[closest].Weight; // Floating projection limit, not a geometric band.
-        var denominator = TerrainDifferential.Constant(0); var numerator = TerrainDifferential.Constant(0);
-        for (var i = 0; i < count; i++)
-        {
-            var distance = values[i].Distance;
-            var taper = TerrainDifferential.Constant(1) - (distance - minimum) * (1 / width);
-            if (taper.Height <= 0) continue;
-            // Normalized inverse-square coordinates remain finite near a shore and equal its
-            // prescribed boundary value exactly. Compact support gives exact terminal profiles.
-            var ratio = Divide(minimum, distance); var weight = Product(Product(taper, taper), Product(ratio, ratio));
-            numerator += Product(weight, values[i].Weight); denominator += weight;
-        }
-        return Divide(numerator, denominator);
-    }
-
-    private static Contribution Constant(TerrainRingIndex.Hit hit, double weight, double x, double z)
-    {
-        var distance = Math.Sqrt(hit.Squared);
-        return new(distance == 0 ? TerrainDifferential.Constant(0) : new(distance, (x - hit.X) / distance, (z - hit.Z) / distance), TerrainDifferential.Constant(weight));
-    }
-    private static (double Value, double Slope) EndWeight(double station)
-    {
-        if (station <= 0) return (1, 0); if (station >= TerrainBridgeBanks.TransitionLength) return (0, 0);
-        var t = station / TerrainBridgeBanks.TransitionLength;
-        return (1 - TerrainMath.Hermite(t), -6 * t * (1 - t) / TerrainBridgeBanks.TransitionLength);
-    }
-    private static TerrainDifferential Product(TerrainDifferential a, TerrainDifferential c) => new(a.Height * c.Height,
-        a.Dx * c.Height + a.Height * c.Dx, a.Dz * c.Height + a.Height * c.Dz);
-    private static TerrainDifferential Divide(TerrainDifferential a, TerrainDifferential c) => new(a.Height / c.Height,
-        (a.Dx * c.Height - a.Height * c.Dx) / (c.Height * c.Height), (a.Dz * c.Height - a.Height * c.Dz) / (c.Height * c.Height));
-}
-
-/// <summary>Simultaneous fixed shore-height constraints on land, with exact 1:2 Lipschitz cones.</summary>
-internal sealed class TerrainShoreEnvelope
-{
-    private const double Grade = 0.5;
-    private sealed record Edge(double Ax, double Az, double Bx, double Bz, double Ay, double By, int Id);
-    private sealed class Node
-    {
-        public required double MinX, MaxX, MinZ, MaxZ, MinY, MaxY;
-        public Edge[]? Edges;
-        public Node? Left, Right;
-    }
-    private readonly TerrainRegion _domain;
-    private readonly Func<double, double, double> _shoreHeight;
-    private readonly string _file, _id;
-    private readonly Func<double, double, string>? _explain;
-    private Node _root = null!;
-
-    public TerrainShoreEnvelope(TerrainRegion domain, Func<double, double, double> shoreHeight, string file, string id,
-        Func<double, double, string>? explain = null)
-    { _domain = domain; _shoreHeight = shoreHeight; _file = file; _id = id; _explain = explain; Refresh(); }
-
-    public void Refresh()
-    {
-        var edges = new List<Edge>();
-        foreach (var polygon in _domain.Polygons)
-            foreach (var ring in new[] { polygon.Outer }.Concat(polygon.Holes))
-                for (var i = 0; i < ring.Count; i++)
-                {
-                    var a = ring[i]; var c = ring[(i + 1) % ring.Count];
-                    var dx = (double)c.X - a.X; var dz = (double)c.Y - a.Y;
-                    var count = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(dx * dx + dz * dz) / 0.25));
-                    var x0 = (double)a.X; var z0 = (double)a.Y; var y0 = _shoreHeight(x0, z0);
-                    for (var j = 1; j <= count; j++)
-                    {
-                        var x1 = a.X + dx * j / count; var z1 = a.Y + dz * j / count; var y1 = _shoreHeight(x1, z1);
-                        Add(x0, z0, x1, z1, y0, y1, 0); x0 = x1; z0 = z1; y0 = y1;
-                    }
-                }
-        _root = Build(edges.ToArray());
-
-        void Add(double ax, double az, double bx, double bz, double ay, double by, int depth)
-        {
-            var mx = (ax + bx) / 2; var mz = (az + bz) / 2; var my = _shoreHeight(mx, mz);
-            var error = Math.Max(Math.Abs(my - (ay + by) / 2), Math.Max(
-                Math.Abs(_shoreHeight((3 * ax + bx) / 4, (3 * az + bz) / 4) - (3 * ay + by) / 4),
-                Math.Abs(_shoreHeight((ax + 3 * bx) / 4, (az + 3 * bz) / 4) - (ay + 3 * by) / 4)));
-            // These are vector boundary constraints, not a sampled height field. Adaptive
-            // chords resolve the prescribed curve to 1e-8 m, far below its 2 cm acceptance.
-            if (error > 0.00000001)
-            {
-                if (depth >= 24) throw new WorldDataException(_file, _id,
-                    $"Shore height is discontinuous or cannot be resolved by the deterministic boundary envelope: a=({ax:R},{az:R},{ay:R}), b=({bx:R},{bz:R},{by:R}), mid={my:R}, error={error:R}. A: {_explain?.Invoke(ax, az)} B: {_explain?.Invoke(bx, bz)}");
-                Add(ax, az, mx, mz, ay, my, depth + 1); Add(mx, mz, bx, bz, my, by, depth + 1); return;
-            }
-            edges.Add(new(ax, az, bx, bz, ay, by, edges.Count));
-        }
-    }
-
-    public TerrainDifferential Constrain(TerrainDifferential baseline, double x, double z)
-    {
-        var lower = new TerrainDifferential(double.NegativeInfinity, 0, 0);
-        var upper = new TerrainDifferential(double.PositiveInfinity, 0, 0);
-        Visit(_root);
-        if (lower.Height > upper.Height + 0.000001)
-            throw new WorldDataException(_file, _id, $"Fixed exposed shore heights cannot coexist within the 1:2 land-grade limit at ({x:R},{z:R}); lower={lower.Height:R}, upper={upper.Height:R}.");
-        var result = baseline.Height > upper.Height ? upper : baseline;
-        return result.Height < lower.Height ? lower : result;
-
-        void Visit(Node node)
-        {
-            var distance = Distance(node, x, z);
-            if (node.MaxY - Grade * distance <= lower.Height && node.MinY + Grade * distance >= upper.Height) return;
-            if (node.Edges is { } edges)
-            {
-                foreach (var edge in edges)
-                {
-                    var a = Bound(edge, x, z, false); var c = Bound(edge, x, z, true);
-                    if (a.Height > lower.Height) lower = a;
-                    if (c.Height < upper.Height) upper = c;
-                }
-                return;
-            }
-            if (Distance(node.Left!, x, z) <= Distance(node.Right!, x, z)) { Visit(node.Left!); Visit(node.Right!); }
-            else { Visit(node.Right!); Visit(node.Left!); }
-        }
-    }
-
-    private static TerrainDifferential Bound(Edge edge, double x, double z, bool upper)
-    {
-        var dx = edge.Bx - edge.Ax; var dz = edge.Bz - edge.Az; var length = Math.Sqrt(dx * dx + dz * dz);
-        var tx = dx / length; var tz = dz / length; var slope = (edge.By - edge.Ay) / length;
-        var along = (x - edge.Ax) * tx + (z - edge.Az) * tz;
-        var across = Math.Abs(-(x - edge.Ax) * tz + (z - edge.Az) * tx);
-        var station = along;
-        if (Math.Abs(slope) < Grade)
-            station += (upper ? -1 : 1) * slope * across / Math.Sqrt(Grade * Grade - slope * slope);
-        else station = upper ? slope > 0 ? 0 : length : slope > 0 ? length : 0;
-        station = Math.Max(0, Math.Min(length, station));
-        var qx = x - (edge.Ax + tx * station); var qz = z - (edge.Az + tz * station);
-        var distance = Math.Sqrt(qx * qx + qz * qz); var sign = upper ? 1 : -1;
-        var height = edge.Ay + slope * station + sign * Grade * distance;
-        return distance <= 0.0000000001 ? new(height, slope * tx, slope * tz)
-            : new(height, sign * Grade * qx / distance, sign * Grade * qz / distance);
-    }
-    private static Node Build(Edge[] edges)
-    {
-        var node = new Node { MinX = edges.Min(e => Math.Min(e.Ax, e.Bx)), MaxX = edges.Max(e => Math.Max(e.Ax, e.Bx)),
-            MinZ = edges.Min(e => Math.Min(e.Az, e.Bz)), MaxZ = edges.Max(e => Math.Max(e.Az, e.Bz)),
-            MinY = edges.Min(e => Math.Min(e.Ay, e.By)), MaxY = edges.Max(e => Math.Max(e.Ay, e.By)) };
-        if (edges.Length <= 8) { node.Edges = edges.OrderBy(e => e.Id).ToArray(); return node; }
-        var splitX = node.MaxX - node.MinX >= node.MaxZ - node.MinZ;
-        var sorted = edges.OrderBy(e => splitX ? e.Ax + e.Bx : e.Az + e.Bz).ThenBy(e => e.Id).ToArray();
-        var middle = sorted.Length / 2; node.Left = Build(sorted[..middle]); node.Right = Build(sorted[middle..]); return node;
-    }
-    private static double Distance(Node node, double x, double z)
-    {
-        var dx = Math.Max(0, Math.Max(node.MinX - x, x - node.MaxX)); var dz = Math.Max(0, Math.Max(node.MinZ - z, z - node.MaxZ));
-        return Math.Sqrt(dx * dx + dz * dz);
     }
 }

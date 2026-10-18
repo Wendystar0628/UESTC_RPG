@@ -70,5 +70,5 @@ public static class TerrainGeometry
     }
 
     private static void Check(Vector2 point)
-    { if (!float.IsFinite(point.X) || !float.IsFinite(point.Y)) throw new ArgumentException("Plan coordinates must be finite."); }
+    { if (!VectorMath.Finite(point)) throw new ArgumentException("Plan coordinates must be finite."); }
 }
