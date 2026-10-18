@@ -15,7 +15,7 @@
 
 ## CORE-CONVENTIONS · 约定
 
-`docs/core/CORE-CONVENTIONS-约定.md` · 8.7k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法、编号与命名、实体 ID 规则、确定性原则
+`docs/core/CORE-CONVENTIONS-约定.md` · 8.9k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法、编号与命名、实体 ID 规则、确定性原则
 关键词：约定、坐标系、单位、角度、方位角、时间写法、编号体系、命名、实体 ID、色名、枚举纪律、持久化 ID、确定性
 
 - CORE-CONVENTIONS §0 结论 · L22 · 807
@@ -26,16 +26,16 @@
   - CORE-CONVENTIONS §1.3 清水河的范围数 · L60 · 278
   - CORE-CONVENTIONS §1.4 其他单位 · L68 · 267
 - CORE-CONVENTIONS §2 时间写法 · L76 · 831
-- CORE-CONVENTIONS §3 标识与命名 · L94 · 4.3k
+- CORE-CONVENTIONS §3 标识与命名 · L94 · 4.5k
   - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L96 · 826
-  - CORE-CONVENTIONS §3.2 编号体系 · L111 · 835
-  - CORE-CONVENTIONS §3.3 同号不同义的读法 · L133 · 576
-  - CORE-CONVENTIONS §3.4 命名写法 · L145 · 682
-  - CORE-CONVENTIONS §3.5 色名 · L155 · 364
-  - CORE-CONVENTIONS §3.6 枚举与扩展纪律 · L162 · 567
-  - CORE-CONVENTIONS §3.7 持久化 ID 的稳定 · L173 · 426
-- CORE-CONVENTIONS §4 确定性 · L182 · 294
-- CORE-CONVENTIONS §5 路径 · L190 · 258
+  - CORE-CONVENTIONS §3.2 编号体系 · L111 · 950
+  - CORE-CONVENTIONS §3.3 同号不同义的读法 · L135 · 716
+  - CORE-CONVENTIONS §3.4 命名写法 · L148 · 682
+  - CORE-CONVENTIONS §3.5 色名 · L158 · 364
+  - CORE-CONVENTIONS §3.6 枚举与扩展纪律 · L165 · 567
+  - CORE-CONVENTIONS §3.7 持久化 ID 的稳定 · L176 · 426
+- CORE-CONVENTIONS §4 确定性 · L185 · 294
+- CORE-CONVENTIONS §5 路径 · L193 · 258
 
 ## CORE-DECISIONS-PROCESS · 协作与流程决策
 
@@ -117,13 +117,13 @@
 
 ## WF-COMMS · 交接与通信
 
-`docs/workflow/WF-COMMS-交接与通信.md` · 6.6k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
+`docs/workflow/WF-COMMS-交接与通信.md` · 6.7k 字 · .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
 关键词：.collab、交接目录、文件布局、结案即删、D-228、不归档、下一个编号、任务单、施工单、旁路单、调研目录、契约申请、评审请求、六行短头部、完成回报、回报格式、截图命名、文件命名、来信、收件箱、notes、一条一个文件、【需定】【待审】【知会】、Codex 会话、codex queue、引导信箱、steer、HANDOVER.md、D-207、D-208、作者观察台、dashboard、post.py、审计项、通知
 
 - WF-COMMS §0 结论 · L23 · 717
   - ★ WF-COMMS §0.1 接入要点 · L33 · 217
 - WF-COMMS §1 交接目录与文件 · L40 · 1.1k
-- WF-COMMS §2 命名与写法 · L61 · 451
+- WF-COMMS §2 命名与写法 · L61 · 505
 - WF-COMMS §3 任务单、请求文件、契约申请与完成回报 · L68 · 974
   - WF-COMMS §3.1 施工单与旁路单 · L70 · 238
   - WF-COMMS §3.2 请求文件 · L75 · 50
@@ -245,13 +245,13 @@
 
 ## WF-STATUS · 施工状态、队列与调研入队
 
-`docs/workflow/WF-STATUS-施工状态、队列与调研入队.md` · 4.3k 字 · 施工状态文件怎么填、施工队列的格式与即时维护、队列平衡、交接单、调研入队流水线与旁路单
+`docs/workflow/WF-STATUS-施工状态、队列与调研入队.md` · 4.4k 字 · 施工状态文件怎么填、施工队列的格式与即时维护、队列平衡、交接单、调研入队流水线与旁路单
 关键词：施工队列、一行一件、即时维护、拆分重活、可派、进行中、待编译、等前置、暂停、行号、施工状态、状态文件、当前 main、最近可运行入口、已冻结的契约组、队列平衡、积压、交接单、HANDOVER.md、接手、已集成、调研入队流水线、审计、调研简报、旁路单、D-224
 
 - WF-STATUS §0 结论 · L23 · 614
   - ★ WF-STATUS §0.1 接入要点 · L32 · 231
 - WF-STATUS §1 施工状态文件怎么填 · L39 · 462
-- WF-STATUS §2 施工队列与队列平衡 · L47 · 992
+- WF-STATUS §2 施工队列与队列平衡 · L47 · 1.0k
 - WF-STATUS §3 交接单 · L76 · 89
 - WF-STATUS §4 调研入队流水线 · L80 · 1.4k
   - WF-STATUS §4.1 调研与旁路单 · L94 · 761

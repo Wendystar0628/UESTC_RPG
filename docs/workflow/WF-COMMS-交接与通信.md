@@ -45,7 +45,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 | --- | --- | --- |
 | `requests/contract-<包号>-<主题>.md` | 任何代理 | 契约或共享工程文件的申请（WF-BUILD §3）；Codex 主线在末尾写结论和提交 |
 | `requests/review-<包号>-<主题>.md` | Codex 主线 | 请主会话审美评审：截图或录像路径、可调参数位置与现值；主会话在末尾写结论或新值 |
-| `tasks/claude/<nnn>-<主题>.md` | 主会话建单、写评审；施工子代理写一行现状 | 施工单（WF-FLOW §2） |
+| `tasks/claude/<行号>-<主题>.md` | 主会话建单、写评审；施工子代理写一行现状 | 施工单（WF-FLOW §2） |
 | `tasks/codex/`、`tasks/misc/` | Codex 主线；主会话 | Codex 主线的计划与子单；其他任务单与简报 |
 | `side/cards/s<nnn>-<主题>.md` | 主会话 | 旁路单（WF-STATUS §4.1）；Codex 主线开的子代理在末尾写"结果" |
 | `research/INDEX.md`、`research/<日期>-r<nnn>-<主题>/` | 主会话追加索引与审计；调研子代理写报告与总览 | 调研索引与各方向报告 |
@@ -62,7 +62,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 
 - 任务单与请求文件只追加、不改写，每条带时间，路径一律写绝对路径；唯一的例外是 `research/INDEX.md` 的"Opus 审计"一列（调研子代理标"待审"，主会话审计后改写）。
 - **文件名一看就懂**（D-208）：规范文档的文件名是"编码-中文简题.md"（WF-DOC §3）。
-- **任务单**："三位编号-主题"：施工单 `tasks/claude/<nnn>-<主题>.md`、调研目录 `research/<日期>-r<nnn>-<主题>/`、旁路单 `side/cards/s<nnn>-<主题>.md`。编号各自递增，取 `status/施工状态.md` 开头记的下一个号，用掉就改；调研号看 `research/INDEX.md` 末行；子单在编号后加 a、b。
+- **任务单**："编号-主题"：施工单与 Codex 主线的计划用施工队列的行号（`tasks/claude/Q-018-草叶样板.md`），一张单管几行时用主行的号，单内步骤写"第 n 步"，不另起字母编号；调研目录 `research/<日期>-r<nnn>-<主题>/`、旁路单 `side/cards/s<nnn>-<主题>.md`。编号各自递增，取 `status/施工状态.md` 开头记的下一个号，用掉就改；调研号看 `research/INDEX.md` 末行；子单在编号后加 a、b。
 - **请求文件**：`<类型>-<包号>-<主题>.md`，类型是 `contract`、`review`；先确认文件不存在再创建，已有同名时末尾加 `-2`、`-3`。
 
 ## 3 任务单、请求文件、契约申请与完成回报
