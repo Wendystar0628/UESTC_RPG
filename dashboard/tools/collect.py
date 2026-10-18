@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(ROOT, 'scripts', 'build'))
 sys.path.insert(0, os.path.join(ROOT, '.collab', 'tools'))  # 监控库 monitor：本机协作数据（.collab）只经它读，这是仓库代码引用 .collab 的唯一例外
 
 import datafile  # noqa: E402
-from monitor.read import collab  # noqa: E402
+from monitor.read import collab, wpnames  # noqa: E402
 
 SOURCE = 'collect.py'
 STATES = ('进行中', '待编译', '等前置', '可派', '暂停')
@@ -369,7 +369,10 @@ def main():
             ('decisions', decisions_data), ('health', health_data), ('audit-auto', audit_data)]
     for name, job in jobs:
         try:
-            datafile.write('auto', name, job(), source=SOURCE)
+            data = job()
+            if name != 'docs':  # 文档目录是各文档标题原文，文档自己带名
+                data = wpnames.annotate_tree(data)  # 工作包号在写文件处配中文包名
+            datafile.write('auto', name, data, source=SOURCE)
         except Exception as e:
             print(f'collect：{name} 采集失败，已跳过（{type(e).__name__}: {e}）', file=sys.stderr)
     try:

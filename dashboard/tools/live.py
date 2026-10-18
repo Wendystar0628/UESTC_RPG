@@ -15,7 +15,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "..", ".collab", "tools"))  # 监控库 monitor 在仓库根的 .collab 下
 from datafile import write  # noqa: E402
 from monitor import util as U  # noqa: E402
-from monitor.read import collab, repo, scriptfiles  # noqa: E402
+from monitor.read import collab, repo, scriptfiles, wpnames  # noqa: E402
 from monitor.check import build as gate_check  # noqa: E402
 from monitor.view import catalog, hooks, people, running, trees, work  # noqa: E402
 
@@ -85,7 +85,7 @@ def write_catalog(procs):
 def write_once():
     global _last_catalog
     live, procs = collect()
-    path = write("auto", "live", live, source="live.py")
+    path = write("auto", "live", wpnames.annotate_tree(live), source="live.py")   # 工作包号在写文件处配中文包名
     if time.time() - _last_catalog >= CATALOG_EVERY_S:
         _last_catalog = time.time()
         write_catalog(procs)
