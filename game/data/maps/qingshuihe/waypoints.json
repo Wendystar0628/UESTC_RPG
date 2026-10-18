@@ -452,21 +452,21 @@
       "group": "south",
       "fly": {
         "position": [
-          -340,
-          36,
-          486
+          -348.09,
+          36.7,
+          494.7
         ],
-        "yawDeg": 215,
-        "pitchDeg": -6,
+        "yawDeg": 216,
+        "pitchDeg": -12,
         "fovDeg": null
       },
       "stand": {
         "feet": [
-          -340,
+          -341.83,
           34.38,
-          486
+          486.15
         ],
-        "yawDeg": 215
+        "yawDeg": 216
       },
       "entry": "door",
       "recommend": {
