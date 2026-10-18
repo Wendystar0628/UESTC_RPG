@@ -276,9 +276,10 @@ public static class InteriorPlanGenerator
                     if (start < 0.05f || end > length - 0.05f) throw new ArgumentException("An entrance crosses a wing corner.");
                     int zone = ZoneAt(s.Index, center + inward * (_options.ExteriorWallThickness + 0.1f));
                     if (entry.Open && !_zones.Single(z => z.Id == zone).Open) throw new ArgumentException("An open entrance leads into a locked room.");
-                    openings.Add(new(start, end, 0f, _options.DoorHeight, entry.Open ? null : InteriorWallRole.LockedDoor));
+                    float doorHeight = entry.HeadY == 0f ? _options.DoorHeight : entry.HeadY - s.FloorY;
+                    openings.Add(new(start, end, 0f, doorHeight, entry.Open ? null : InteriorWallRole.LockedDoor));
                     _portals.Add(new(s.Index, -1, zone, At(PlanGeometry.Quantize(a + tangent * start), s.FloorY),
-                        At(PlanGeometry.Quantize(a + tangent * end), s.FloorY), _options.DoorHeight,
+                        At(PlanGeometry.Quantize(a + tangent * end), s.FloorY), doorHeight,
                         entry.Open ? PortalKind.Door : PortalKind.Sealed));
                 }
                 foreach (FacadeBay bay in _grid.Bays.Where(bay => bay.Edge == edge && bay.WindowKind != FacadeWindowKind.Blank))

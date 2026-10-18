@@ -42,16 +42,16 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             if (blocking) Error = $"Interior destination is not an open registered building: {building.Value}.";
             return;
         }
-        if (!entry.Storeys.Any(storey => storey.Index == space.Floor))
+        if (!entry.OpenStoreys.Contains(space.Floor))
         {
-            if (blocking) Error = $"Interior destination storey does not exist: {building.Value}/{space.Floor}.";
+            if (blocking) Error = $"Interior destination storey is not open: {building.Value}/{space.Floor}.";
             return;
         }
-        foreach (var storey in entry.Storeys.Where(storey => Math.Abs(storey.Index - space.Floor) <= 1).OrderBy(storey => storey.Index))
+        foreach (var storey in entry.OpenStoreys.Where(storey => Math.Abs(storey - space.Floor) <= 1).Order())
         {
-            var detail = storey.Index == space.Floor ? "IF" : "IS";
+            var detail = storey == space.Floor ? "IF" : "IS";
             var key = new BakeKey(_context.Descriptor.Id, "interior." + entry.ProviderId,
-                FormattableString.Invariant($"{building.Value}/{storey.Index}/{detail}"));
+                FormattableString.Invariant($"{building.Value}/{storey}/{detail}"));
             target.Add(key);
             if (!_layers.ContainsKey(key)) _layers.Add(key, new(key, bake.Ensure(key, priority), mount.Revision, priority, building));
             else if (priority == BakePriority.KnownDestination) bake.Ensure(key, priority);

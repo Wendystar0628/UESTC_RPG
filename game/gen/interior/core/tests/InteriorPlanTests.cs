@@ -63,6 +63,37 @@ public sealed class InteriorPlanTests
         AssertThat(InteriorPlanCollision.BuildStorey(plan, 2).All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("A collider lacks a foot material.").IsTrue();
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void ExteriorEntranceHeadUsesAbsoluteWorldHeightAndUnknownHeadKeepsDefault()
+    {
+        InteriorPlanRequest request = Request();
+        const float floorY = 20f;
+        foreach (bool open in new[] { true, false })
+        foreach (float headY in new[] { 0f, floorY + 2.8f })
+        {
+            EntranceDecl entrance = request.Entrances[0];
+            entrance = entrance with
+            {
+                Center = entrance.Center + Vector3.UnitY * floorY,
+                Inside = entrance.Inside + Vector3.UnitY * floorY,
+                Outside = entrance.Outside + Vector3.UnitY * floorY,
+                HeadY = headY, Open = open
+            };
+            InteriorPlan plan = InteriorPlanGenerator.Generate(request with
+            {
+                Storeys = request.Storeys.Select(s => s with { FloorY = s.FloorY + floorY }).ToArray(),
+                Entrances = [entrance]
+            });
+            PortalDecl portal = plan.Portals.Single(p => p.ZoneA == -1 && p.Kind != PortalKind.Window);
+            float expected = headY == 0f ? request.Options.DoorHeight : headY - floorY;
+            AssertThat(MathF.Abs(portal.Height - expected) <= TestTolerance.Position).OverrideFailureMessage("Entrance head was treated as a relative height or ignored.").IsTrue();
+            AssertThat(plan.Walls.Any(w => w.Role == InteriorWallRole.Exterior &&
+                MathF.Abs(w.BottomY - floorY - expected) <= TestTolerance.Position &&
+                Covers(new(w.A, w.B, w.Thickness * .5f, w.BottomY, w.TopY, SurfaceTag.Wall),
+                    entrance.Center + Vector3.UnitY * (expected + TestTolerance.Position)))).OverrideFailureMessage("The entrance lintel does not follow its portal head.").IsTrue();
+        }
+    }
+
     [TestCase, TestCategory(TestReason.Contract)]
     public void StairFlightsMeetLandingsAndUpperFloorsHaveRealHoles()
     {

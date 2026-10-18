@@ -68,7 +68,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
                     for (var floor = 1; floor <= count; floor++)
                         storeys.Add(new(floor, (floor - 1) * height, height, polygon.Outer));
             }
-            if (storeys.Count > 0) entries.Add(feature.Id, new(feature.Id, storeys.AsReadOnly(), [], false, null));
+            if (storeys.Count > 0) entries.Add(feature.Id, new(feature.Id, storeys.AsReadOnly(), [], false, null, []));
         }
         if (catalog is not null)
         {
@@ -85,6 +85,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
             foreach (var item in document.RootElement.GetProperty("interiors").EnumerateArray())
             {
                 var provider = WorldModelLoader.Text(item, "providerId");
+                var openStoreys = Array.AsReadOnly(item.GetProperty("openFloors").EnumerateArray().Select(floor => floor.GetInt32()).Order().ToArray());
                 foreach (var idValue in item.GetProperty("featureIds").EnumerateArray())
                 {
                     var id = new FeatureId(idValue.GetString()!);
@@ -100,7 +101,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
                         if (entrance.ClearWidth <= 0) throw new WorldDataException("interiors.json", entrance.Id, "Invalid entrance width.");
                         entrances.Add(entrance);
                     }
-                    entries[id] = entry with { Open = true, ProviderId = provider, Entrances = entrances.AsReadOnly() };
+                    entries[id] = entry with { Open = true, ProviderId = provider, Entrances = entrances.AsReadOnly(), OpenStoreys = openStoreys };
                 }
             }
         }

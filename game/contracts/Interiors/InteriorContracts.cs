@@ -67,9 +67,10 @@ public interface IInteriorProvider           // gen 里实现，纯函数；注�
 }
 // ContentOutput 里室内层的实例一律带 IgnoreOcclusionCulling 的标记，室内遮挡体单独成表（WP-33 管理显隐，WLD-INTERIORS）
 
-// 室内索引：WP-51 烘焙，WP-08 随空间索引加载
+// 室内索引：Storeys 保留整栋楼的空间层；OpenStoreys 只列正式提供者按目录开放的层，不可由 Storeys 推断。
 public sealed record InteriorIndexEntry(FeatureId Feature, IReadOnlyList<StoreyInfo> Storeys,
-    IReadOnlyList<EntranceDecl> Entrances, bool Open, string? ProviderId);
+    IReadOnlyList<EntranceDecl> Entrances, bool Open, string? ProviderId,
+    [property: JsonRequired] IReadOnlyList<int> OpenStoreys);
 public interface IInteriorIndex
 {
     InteriorIndexEntry? Get(FeatureId id);

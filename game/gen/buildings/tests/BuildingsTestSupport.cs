@@ -170,7 +170,7 @@ internal static class BuildingsTestSupport
 
     /// <summary>The open entrances of the fixture's features (the interior index's EntranceDecl).</summary>
     internal static FakeInteriors Entrances(params (string Feature, EntranceDecl Door)[] doors) =>
-        new([.. doors.GroupBy(d => d.Feature).Select(g => new InteriorIndexEntry(new FeatureId(g.Key), [], [.. g.Select(d => d.Door)], true, "test"))]);
+        new([.. doors.GroupBy(d => d.Feature).Select(g => new InteriorIndexEntry(new FeatureId(g.Key), [], [.. g.Select(d => d.Door)], true, "test", [1]))]);
 
     /// <summary>Level at 0 (pads too) north of <paramref name="edge"/> (z), <paramref name="drop"/> lower south of it.</summary>
     internal static FormulaTerrain Falling(float edge, float drop) => new((x, z) => z < edge ? -drop : 0f);

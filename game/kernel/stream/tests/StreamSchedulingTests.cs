@@ -6,12 +6,45 @@ using Campus.Kernel.Stream;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Registry;
 using GdUnit4;
+using System.Text.Json;
 
 namespace Campus.Tests;
 
 [TestSuite]
 public sealed class StreamSchedulingTests
 {
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void OpenTopFloorPrefetchAndSelectionNeverRequestItsClosedNeighbour()
+    {
+        var files = RealMapFixture.ReadFiles();
+        var waypoint = JsonSerializer.Deserialize<WaypointFile>(files["waypoints.json"].Span, ContractJson.Options)!
+            .Waypoints.Single(point => point.Id == "P16");
+        var world = RealMapFixture.Load().World;
+        var medium = world.Spatial.MediumAt(waypoint.Fly.Position);
+        var building = medium.Feature ?? throw new InvalidOperationException("P16 is no longer indoors.");
+        var entry = world.Interiors.Get(building)!;
+        if (medium.Storey != entry.OpenStoreys.Max() || !entry.Storeys.Any(s => s.Index == medium.Storey + 1))
+            throw new InvalidOperationException("The fixture no longer covers an open top floor next to a closed floor.");
+        var context = new TestMapContext(RealMapFixture.Entry().Descriptor, world);
+        var expected = entry.OpenStoreys.Where(floor => Math.Abs(floor - medium.Storey) <= 1).Order()
+            .Select(floor => new BakeKey(context.Descriptor.Id, "interior." + entry.ProviderId,
+                FormattableString.Invariant($"{building.Value}/{floor}/{(floor == medium.Storey ? "IF" : "IS")}"))).ToArray();
+        foreach (bool knownDestination in new[] { false, true })
+        {
+            var bake = new InteriorRequests();
+            var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { });
+            stream.Load(context);
+            if (knownDestination) stream.Prefetch(new(building, checked((short)medium.Storey)));
+            else stream.Select(medium);
+            if (!bake.Keys.SequenceEqual(expected) || stream.Error is not null || knownDestination && stream.DestinationReady)
+                throw new InvalidOperationException("Open-floor requests or pending destination readiness changed.");
+            stream.Prefetch(new(building, checked((short)(medium.Storey + 1))));
+            if (bake.Keys.Count != expected.Length || stream.Error is null || stream.DestinationReady)
+                throw new InvalidOperationException("A closed destination reached the baker or became ready.");
+        }
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void OffOriginModuleProducesOneWholeMapRootAndAnHonestEmptyBundleOnTheBakeWorker()
@@ -169,6 +202,18 @@ public sealed class StreamSchedulingTests
         if (!visibility.Drawn.Contains(root)) throw new InvalidOperationException("Parent faded out before 250 ms.");
         visibility.Apply(new HashSet<StreamTile> { child }, .2f, true, (_, _, _) => { });
         if (visibility.Drawn.Contains(root) || !visibility.Drawn.Contains(child)) throw new InvalidOperationException("Fade completion left stale parent coverage.");
+    }
+    private sealed class InteriorRequests : IBakeService, IBakeHandle
+    {
+        public List<BakeKey> Keys { get; } = [];
+        public IBakeHandle Ensure(BakeKey key, BakePriority priority) { Keys.Add(key); return this; }
+        public BakeProgress Progress => default;
+        public long CacheBytes => 0;
+        public void Clear() => Keys.Clear();
+        public void ClearFailures() { }
+        public BakeState State => BakeState.Pending;
+        public object? Product => null;
+        public string? Error => null;
     }
     private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module") : IStreamMountWork
     {

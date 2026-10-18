@@ -126,7 +126,7 @@ public sealed class GroundPavingTests
             {
                 Boundary = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]),
                 Features = features.ToDictionary(f => f.Id),
-                Interiors = new FakeInteriors(new InteriorIndexEntry(building.Id, [], entrances, true, null)),
+                Interiors = new FakeInteriors(new InteriorIndexEntry(building.Id, [], entrances, true, null, [1])),
                 Fidelity = zone is { } zoneAt ? new FakeFidelity(groundAt: (x, _) => zoneAt(x), walkDistance: 15f) : null,
             };
         }

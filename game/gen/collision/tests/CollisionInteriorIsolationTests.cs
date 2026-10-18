@@ -134,7 +134,7 @@ public sealed class CollisionInteriorIsolationTests
         Features = new ReadOnlyDictionary<FeatureId, WorldFeature>(
             new Dictionary<FeatureId, WorldFeature> { [Feature] = WorldFeatureFixture.Create(Feature.Value, "poi", new PointGeometry(new(2, 0, 2))) }),
         Spatial = new FlatSpatial(forbidden: "This isolation test must not fabricate ground support."),
-        Interiors = new FakeInteriors(new InteriorIndexEntry(Feature, [], [], open, open ? ProviderId : null)),
+        Interiors = new FakeInteriors(new InteriorIndexEntry(Feature, [], [], open, open ? ProviderId : null, open ? [1] : [])),
     };
     private sealed class FixtureProvider(MapId map, float height, IReadOnlyList<FeatureId> features, Action? beforeCollision = null) : IInteriorProvider
     {

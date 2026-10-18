@@ -52,8 +52,12 @@ public sealed class InteriorEntranceHeightReferenceTests
         var bindings = InteriorAssembly.Configure(Bytes("pad"), providers, terrain);
         AssertThat(terrain.Calls == 1).OverrideFailureMessage("One entrance should query its feature pad once during configuration.").IsTrue();
         var context = Context(providers);
-        var first = InteriorAssembly.BuildConfigured(context, bindings).Entries.Single().Entrances.Single();
-        var second = InteriorAssembly.BuildConfigured(context, bindings).Entries.Single().Entrances.Single();
+        var firstEntry = InteriorAssembly.BuildConfigured(context, bindings).Entries.Single();
+        var secondEntry = InteriorAssembly.BuildConfigured(context, bindings).Entries.Single();
+        AssertThat(firstEntry.OpenStoreys.SequenceEqual(bindings.Single().OpenFloors) &&
+            secondEntry.OpenStoreys.SequenceEqual(firstEntry.OpenStoreys)).OverrideFailureMessage("Interior assembly lost the provider's authoritative open storeys.").IsTrue();
+        var first = firstEntry.Entrances.Single();
+        var second = secondEntry.Entrances.Single();
         AssertThat(first == second && first.Center.Y == 2.75f && first.Outside.Y == 2.25f && first.Inside.Y == 2.5f &&
             first.Id == "entry.main" && first.YawDeg == 0 && first.ClearWidth == 1.25f && terrain.Calls == 1).OverrideFailureMessage("BuildConfigured reparsed or re-offset a resolved entrance.").IsTrue();
     }
@@ -71,7 +75,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         AssertThat(bindings.Count == 0).OverrideFailureMessage("Closed entrance configured a provider.").IsTrue();
         var result = InteriorAssembly.BuildConfigured(context, bindings, catalog);
         var entry = result.Entries.Single();
-        AssertThat(entry.Feature == Feature && !entry.Open && entry.ProviderId is null && entry.Storeys.Count == 2 &&
+        AssertThat(entry.Feature == Feature && !entry.Open && entry.ProviderId is null && entry.OpenStoreys.Count == 0 && entry.Storeys.Count == 2 &&
             entry.Storeys[1].FloorY == 4 && entry.Entrances.Single().Center.Y == .15f).OverrideFailureMessage("Interior assembly lost closed entrance or original building storeys.").IsTrue();
         AssertThat(result.Content.Meshes.Count == 0 && result.Colliders.Count == 0 && result.NavNodes.Count == 0 &&
             result.NavEdges.Count == 0 && result.NavPortals.Count == 0).OverrideFailureMessage("Closed register generated walkable content.").IsTrue();

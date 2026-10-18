@@ -219,7 +219,7 @@ public sealed class AtlasServiceTests
         test.World.Features = new Dictionary<FeatureId, WorldFeature> { [featureId] = feature };
         var entrance = new EntranceDecl("test-door", new(10, 3, 12.5f), new(10, 3, 7), 2, true)
         { Center = new(10, 3, 10), YawDeg = 180 };
-        test.World.Interiors = new FakeInteriors(new InteriorIndexEntry(featureId, [], [entrance], true, "test-provider"));
+        test.World.Interiors = new FakeInteriors(new InteriorIndexEntry(featureId, [], [entrance], true, "test-provider", [1]));
         test.Reload();
         var door = test.Atlas.Find(new("door:test-door"))!;
         AssertThat(door.At == new Vector2(10, 10) && door.Teleport?.Stand?.Feet == entrance.Outside).OverrideFailureMessage("Door marker copied an incorrect location.").IsTrue();

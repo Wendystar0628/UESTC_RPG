@@ -170,6 +170,10 @@ public sealed class WorldModelTests
             .Select(entrance => entrance.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
         AssertThat(actualEntrances.Distinct(StringComparer.Ordinal).Count() == actualEntrances.Length &&
             actualEntrances.SequenceEqual(expectedEntrances, StringComparer.Ordinal)).OverrideFailureMessage("Authored interior entrances were lost or duplicated.").IsTrue();
+        foreach (var interior in authoredInteriors.RootElement.GetProperty("interiors").EnumerateArray())
+        foreach (var feature in interior.GetProperty("featureIds").EnumerateArray())
+            AssertThat(result.World.Interiors.Get(new(feature.GetString()!))!.OpenStoreys.SequenceEqual(
+                interior.GetProperty("openFloors").EnumerateArray().Select(floor => floor.GetInt32()).Order())).OverrideFailureMessage("The interior index lost the authoritative open floor range.").IsTrue();
         foreach (var raw in authoredInteriors.RootElement.GetProperty("closedEntrances").EnumerateArray())
         {
             var entry = result.World.Interiors.Get(new(raw.GetProperty("featureId").GetString()!))!;

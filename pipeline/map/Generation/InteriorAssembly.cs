@@ -150,7 +150,7 @@ public static class InteriorAssembly
                 var existing = context.World.Interiors.Get(pair.Key);
                 if (existing is { Open: true } || existing?.ProviderId is not null)
                     throw new JsonException($"Closed entrance '{pair.Value[0].Id}' conflicts with existing open interior '{pair.Key.Value}'.");
-                closedEntries.Add(new(pair.Key, existing?.Storeys ?? storeys, pair.Value, false, null));
+                closedEntries.Add(new(pair.Key, existing?.Storeys ?? storeys, pair.Value, false, null, []));
             }
         }
         var meshes = new List<GeometryBundle>();
@@ -165,8 +165,8 @@ public static class InteriorAssembly
             var provider = providers[providerId];
             foreach (FeatureId feature in binding.FeatureIds)
             {
-                InteriorLayout layout = provider.Layout(context, feature);
-                entries.Add(new(feature, layout.Storeys, layout.Entrances, provider.Walkable, providerId));
+                InteriorLayout layout = ValidatedLayout(provider, binding, context, feature);
+                entries.Add(new(feature, layout.Storeys, layout.Entrances, provider.Walkable, providerId, layout.OpenStoreys));
                 NavFloorGraph? entranceFloor = null;
                 foreach (int floor in layout.OpenStoreys.Order())
                 {
