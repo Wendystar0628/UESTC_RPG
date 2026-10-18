@@ -24,7 +24,7 @@ public sealed class FurnitureStreetLayoutTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void TheMainRoadAndTwoSecondaryRoadsAreFurnishedDeterministically()
     {
-        var a = Build(World.Value);
+        var a = RealLayout.Value;
         var b = Build(World.Value);
         var lamps = a.Items.Where(i => i.Kind == FurnitureKind.StreetLamp).ToList();
         AssertThat(a.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)).SequenceEqual(b.Items.Select(i => (i.Key, i.Part.At, i.Part.Params)))).OverrideFailureMessage("two builds differ").IsTrue();
@@ -37,7 +37,7 @@ public sealed class FurnitureStreetLayoutTests
         AssertThat(a.Count(FurnitureKind.Bin) * 2 >= rest - 2 && a.Count(FurnitureKind.Bin) <= rest).OverrideFailureMessage("a bin at every other rest stop").IsTrue();
         // SYS-ATLAS: a kiosk or a post on every anchor on open ground or an authored elevated deck. The counts follow the anchor data, so
         // moving an anchor (WP-48c) never needs a new number here.
-        var landings = AnchorLandings(World.Value);
+        var landings = AnchorLandings();
         var kiosks = landings.Count(l => l.Form == "kiosk" && l.Landing == Landing.Open);
         var posts = landings.Count(l => l.Form == "post" && l.Landing == Landing.Open);
         AssertThat(kiosks + posts > 0).OverrideFailureMessage("no anchor lands on open ground").IsTrue();
@@ -53,7 +53,7 @@ public sealed class FurnitureStreetLayoutTests
         // Opus review 12:15: a bench lines a walk and faces it, its bay joined to the walk, a passage of 1.2 m left in front; it
         // never faces a carriageway or sits in the strip between the kerb and the tree rows. Its bin stands 2–4 m away on its own bay.
         var world = World.Value;
-        var layout = Build(world);
+        var layout = RealLayout.Value;
         var walks = world.Network.Roads.Where(r => Highway(r) is "footway" or "path" or "pedestrian").ToList();
         var lanes = world.Network.Roads.Where(Carriageway).ToList();
         // Rest stops along walks; a rest node's benches (key "node:") stand at a plaza or walk end and are judged by their own test.
@@ -94,8 +94,8 @@ public sealed class FurnitureStreetLayoutTests
     {
         // An anchor whose point lands on a carriageway, in water or in a building gets nothing and one structured diagnostic. Judged from the world data (StreetSite.LandingAt), not by anchor ID: moving an anchor needs no change here.
         var world = World.Value;
-        var layout = Build(world);
-        var landings = AnchorLandings(world);
+        var layout = RealLayout.Value;
+        var landings = AnchorLandings();
         foreach (var (feature, form, _, landing) in landings)
         {
             var id = feature.Id.Value;
@@ -131,8 +131,8 @@ public sealed class FurnitureStreetLayoutTests
     {
         // Opus review 12:15: a kiosk's apron or a post's foot touches pedestrian paving (≤ 0.5 m off it); the facing never changes.
         var world = World.Value;
-        var layout = Build(world);
-        var site = new StreetSite(world);
+        var layout = RealLayout.Value;
+        var site = Site.Value;
         var lines = world.Network.Roads.Where(r => Highway(r) is "footway" or "path" or "pedestrian" or "steps").ToList();
         var areas = new List<PolygonRings>();
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "road"))
@@ -181,12 +181,13 @@ public sealed class FurnitureStreetLayoutTests
     }
 
     /// <summary>
-    /// Every kiosk and post anchor of the world in ID order, with its footprint centre and what that point lands on: the data the
+    /// Every kiosk and post anchor of the real world in ID order, with its footprint centre and what that point lands on: the data the
     /// planner places by, so the tests' expectations follow the anchor data.
     /// </summary>
-    private static List<(WorldFeature Feature, string Form, Vector2 Centre, Landing Landing)> AnchorLandings(IWorldModel world)
+    private static List<(WorldFeature Feature, string Form, Vector2 Centre, Landing Landing)> AnchorLandings()
     {
-        var site = new StreetSite(world);
+        var world = World.Value;
+        var site = Site.Value;
         var found = new List<(WorldFeature, string, Vector2, Landing)>();
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "anchor").OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {

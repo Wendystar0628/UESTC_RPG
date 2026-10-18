@@ -23,6 +23,19 @@ public sealed class VegetationBuildTests
 {
     private static readonly Lazy<(string Root, BuildContext Context)> Data = new(Load);
 
+    private static readonly VegetationModule Module = new();
+
+    /// <summary>Every occupied cell built once at L0, in tile order; the cases below only read these.</summary>
+    private static readonly Lazy<(TileKey Tile, ContentOutput Output)[]> Near = new(() =>
+        [.. Module.Tiles(Data.Value.Context).Select(tile => (tile, Module.Build(Data.Value.Context, tile, LodLevel.L0)))]);
+
+    /// <summary>The far cells that hold a tree, built once per far level.</summary>
+    private static readonly Dictionary<LodLevel, Lazy<ContentOutput[]>> Far = new[] { LodLevel.L1, LodLevel.L2 }.ToDictionary(lod => lod, lod => new Lazy<ContentOutput[]>(() =>
+    {
+        var ctx = Data.Value.Context;
+        return [.. VegetationInputs.Layout(ctx).Layout.Trees.Select(t => TileGrid.At(t.Position, lod)).Distinct().Select(tile => Module.Build(ctx, tile, lod))];
+    }));
+
     private static (string, BuildContext) Load()
     {
         var root = RepositoryFixture.Root;
@@ -48,35 +61,32 @@ public sealed class VegetationBuildTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryTreeIsInstancedOnceAtEachBand()
     {
         var ctx = Data.Value.Context;
-        var module = new VegetationModule();
+        var module = Module;
         var trees = VegetationInputs.Layout(ctx).Layout.Trees;
-        var tiles = module.Tiles(ctx).ToArray();
-        var near = tiles.Select(t => module.Build(ctx, t, LodLevel.L0)).ToArray();
+        var tiles = Near.Value.Select(n => n.Tile).ToArray();
+        var near = Near.Value.Select(n => n.Output).ToArray();
         AssertThat(near.All(o => o.Instances.Count > 0)).OverrideFailureMessage("an occupied cell built no instances").IsTrue();
         AssertThat(near.All(o => o.Meshes.Count == 0 && o.Parts.Count == 0)).OverrideFailureMessage("vegetation must hand over instance streams only").IsTrue();
         Records(near, trees, VegPool.L0);
 
         // Far tiles (128 m and 256 m): the same trees on the far stand-in.
         foreach (var lod in new[] { LodLevel.L1, LodLevel.L2 })
-        {
-            var far = trees.Select(t => TileGrid.At(t.Position, lod))
-                .Distinct().Select(t => module.Build(ctx, t, lod)).ToArray();
-            Records(far, trees, VegPool.Far);
-        }
+            Records(Far[lod].Value, trees, VegPool.Far);
         AssertThat(module.Build(ctx, tiles[0], LodLevel.L3).Instances.Count == 0 && module.Build(ctx, new(0, 0), LodLevel.L4).Instances.Count == 0)
             .OverrideFailureMessage("crown clouds are not built yet").IsTrue();
         AssertThat(module.Build(ctx, new(100000, 100000), LodLevel.L0) == ContentOutput.Empty).OverrideFailureMessage("an empty cell must stay empty").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void StreamsShareOnePrototypePerMotherModelAndLevel()
     {
         var ctx = Data.Value.Context;
-        var module = new VegetationModule();
-        var streams = module.Tiles(ctx).SelectMany(t => module.Build(ctx, t, LodLevel.L0).Instances).ToArray();
+        var streams = Near.Value.SelectMany(n => n.Output.Instances).ToArray();
         foreach (var group in streams.GroupBy(s => s.Prototype.Id))
             AssertThat(group.Select(s => s.Prototype).Distinct().Count() == 1).OverrideFailureMessage($"{group.Key}: prototype rebuilt per tile").IsTrue();
         var ids = streams.Select(s => s.Id).ToArray();
@@ -100,20 +110,21 @@ public sealed class VegetationBuildTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TraceSourcesFlattenToBuildAndCollide()
     {
         var ctx = Data.Value.Context;
-        var module = new VegetationModule();
+        var module = Module;
         var sources = module.TraceSources(ctx, LodLevel.L0).ToArray();
         var trees = VegetationInputs.Layout(ctx).Layout.Trees;
         AssertThat(sources.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == sources.Length)
             .OverrideFailureMessage("all trees have stable unique source IDs").IsTrue();
-        foreach (var tile in module.Tiles(ctx).Take(40))
+        foreach (var (tile, output) in Near.Value.Take(40))
         {
             var ids = trees.Where(t => TileGrid.At(t.Position) == tile)
                 .Select(t => "object/vegetation/" + t.Key).ToHashSet(StringComparer.Ordinal);
             var traces = sources.Where(t => ids.Contains(t.SourceId)).ToArray();
-            var built = Flatten(module.Build(ctx, tile, LodLevel.L0).Instances);
+            var built = Flatten(output.Instances);
             var traced = Flatten(traces.SelectMany(t => t.Output.Instances));
             AssertThat(built.SequenceEqual(traced)).OverrideFailureMessage($"{tile}: traced records differ from Build").IsTrue();
             var colliders = module.Collide(ctx, tile).Select(c => c.ToString()).Order(StringComparer.Ordinal);
@@ -127,15 +138,12 @@ public sealed class VegetationBuildTests
     [TestCategory("Slow")]
     public void WholeMapStaysWithinAnOrderOfMagnitudeOfTheBudget()
     {
-        var ctx = Data.Value.Context;
-        var module = new VegetationModule();
-        var trees = VegetationInputs.Layout(ctx).Layout.Trees;
+        var module = Module;
         int Weigh(ContentOutput o) => o.Instances.Sum(s => s.Count * VegetationPrototypes.Triangles(s.Prototype));
-        var heaviest = module.Tiles(ctx).Select(t => module.Build(ctx, t, LodLevel.L0)).ToArray();
+        var heaviest = Near.Value.Select(n => n.Output).ToArray();
         var l0 = heaviest.Max(Weigh);
         var draws = heaviest.Max(o => o.Instances.Sum(s => s.Prototype.Surfaces.Count));
-        var l1 = trees.Select(t => TileGrid.At(t.Position, LodLevel.L1))
-            .Distinct().Max(t => Weigh(module.Build(ctx, t, LodLevel.L1)));
+        var l1 = Far[LodLevel.L1].Value.Max(Weigh);
         // Demo precision: only an order of magnitude over the declared budget fails (WF-RULE §15).
         var factor = TestTolerance.BudgetFactor;
         AssertThat(l0 <= factor * module.Budget.TrianglesL0 && l1 <= factor * module.Budget.TrianglesL1 && draws <= factor * module.Budget.DrawCalls)

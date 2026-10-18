@@ -34,23 +34,31 @@ public sealed class PavementTests
         return (species, PlantingRules.Parse(RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey].Span, species));
     });
 
-    private static readonly Lazy<IWorldModel> Bare = new(() => Load(false));
-    private static readonly Lazy<IWorldModel> Overlaid = new(() => Load(true));
-    private static readonly Lazy<PlantingLayout> BareLayout = new(() => Plant(Bare.Value));
+    private static readonly Lazy<IWorldModel> Bare = new(() => Load());
+    private static readonly Lazy<IWorldModel> Overlaid = new(() => RealMapFixture.Load().World);
+    internal static readonly Lazy<PlantingLayout> BareLayout = new(() => Plant(Bare.Value));
+    internal static readonly Lazy<PlantingLayout> OverlaidLayout = new(() => Plant(Overlaid.Value));
+    private static readonly Lazy<PlantingLayout> BareVerified = new(() => Verify(Bare.Value, null, "campus data", planted: BareLayout.Value));
+    private static readonly Lazy<PlantingLayout> OverlaidVerified = new(() => Verify(Overlaid.Value, null, "with overlays", planted: OverlaidLayout.Value));
+
+    /// <summary>The exclusive fixture without extra operations, and its layout: the baseline most fixture cases compare with.</summary>
+    internal static readonly Lazy<IWorldModel> FixtureWorld = new(() => Fixture());
+    internal static readonly Lazy<PlantingLayout> FixtureLayout = new(() => PlantFixture(FixtureWorld.Value));
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void NoTreeStandsOnHardPavementAndOnlyThoseTreesGiveWay()
     {
         // The campus data alone, and the world as the kernel loads it (every overlay: design walks, plazas, tree pits).
-        foreach (var (label, world) in new[] { ("campus data", Bare.Value), ("with overlays", Overlaid.Value) })
+        foreach (var (label, layout) in new[] { ("campus data", BareVerified.Value), ("with overlays", OverlaidVerified.Value) })
         {
-            var layout = Verify(world, null, label);
             Console.WriteLine($"pavement ({label}): {layout.Avoided.Count} of {layout.BeforeGivingWay().Count} trees give way, {layout.Trees.Count} stay; "
                 + string.Join(", ", layout.Avoided.GroupBy(a => a.Tree.Source).OrderBy(g => g.Key).Select(g => $"{g.Key} {g.Count()}")));
         }
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheDesignWalksAndPlazasOfTheOverlaysAreRead()
     {
         // The exclusive fixture supplies nonempty walk, plaza, pit and avoidance cases; production owners may remove theirs.
@@ -70,7 +78,7 @@ public sealed class PavementTests
             !fixtureCensus.Paving.Any(p => p.Id == "design:fixture-plaza" && p.Rings is not null) || fixtureCensus.Pits.Count == 0 ||
             Verify(fixture, null, "walk/plaza/pit fixture", fixture: true).Avoided.Count == 0)
             throw new InvalidOperationException("the fixture did not exercise walk, plaza, pit and pavement avoidance");
-        foreach (var (world, layout) in new[] { (fixture, PlantFixture(fixture)), (Overlaid.Value, Plant(Overlaid.Value)) })
+        foreach (var (world, layout) in new[] { (fixture, PlantFixture(fixture)), (Overlaid.Value, OverlaidLayout.Value) })
         {
             var census = Census.Of(world);
             foreach (var t in layout.Trees)
@@ -87,7 +95,7 @@ public sealed class PavementTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void ADesignWalkAcrossTheAvenueTakesTheTreesOnIt()
     {
-        var bare = PlantFixture(Fixture());
+        var bare = FixtureLayout.Value;
         var tree = bare.Trees.First(t => t.Source == PlantSource.Road);
         var (x, z) = (tree.Position.X, tree.Position.Z);
         var world = Fixture(Road("design:fixture-avenue-cross-walk", "footway", 3f, [new(x - 5f, z - 5f), new(x + 5f, z + 5f)]));
@@ -100,6 +108,7 @@ public sealed class PavementTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheOsmTreesOnDanguiWalkW2GiveWay()
     {
         if (!DanguiOsmTrees.Any()) throw new InvalidOperationException("the authored walk has no OSM trees to exercise");
@@ -107,7 +116,7 @@ public sealed class PavementTests
         foreach (var id in DanguiOsmTrees)
             if (bare.Trees.All(t => t.Key != id) || bare.Avoided.Any(a => a.Tree.Key == id))
                 throw new InvalidOperationException($"{id} is not a planted OSM tree before the walk");
-        var world = Load(false, ("fixture-dangui-w2.d/0000-fixture.json", Overlay(Road("design:fixture-dangui-walk-w2", "footway", DanguiWalk.Width, DanguiWalk.Line.Points))));
+        var world = Load(("fixture-dangui-w2.d/0000-fixture.json", Overlay(Road("design:fixture-dangui-walk-w2", "footway", DanguiWalk.Width, DanguiWalk.Line.Points))));
         var layout = Verify(world, bare, "w2");
         foreach (var id in DanguiOsmTrees)
         {
@@ -120,10 +129,11 @@ public sealed class PavementTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheOsmTreesOnDanguiWalkW2GiveWayInTheMap()
     {
         // The same case on the map as the kernel loads it, now that 0h-b's walks are in the overlays.
-        var layout = Plant(Overlaid.Value);
+        var layout = OverlaidLayout.Value;
         foreach (var id in DanguiOsmTrees)
         {
             var given = layout.Avoided.SingleOrDefault(a => a.Tree.Key == id);
@@ -140,7 +150,7 @@ public sealed class PavementTests
         // The walk is one walk: paved once, from the line, so the trees on it give way (they still count as planted, so the planting
         // order is that of the unmodified fixture) instead of vanishing as they would from a road; filed as the feature alone it takes
         // the same trees. A network line alone is an ordinary road and keeps the trunks off all the same.
-        var bare = PlantFixture(Fixture());
+        var bare = FixtureLayout.Value;
         var tree = bare.Trees.First(t => t.Source == PlantSource.Road);
         var (x, z) = (tree.Position.X, tree.Position.Z);
         const string id = "design:fixture-twice-filed-walk";
@@ -166,7 +176,7 @@ public sealed class PavementTests
     public void AHiddenDesignWalkTakesNoTree()
     {
         // A walk the overlays add and then hide leaves both stacks, and nothing of it comes back: the layout is the original fixture's.
-        var bare = PlantFixture(Fixture());
+        var bare = FixtureLayout.Value;
         var tree = bare.Trees.First(t => t.Source == PlantSource.Road);
         var (x, z) = (tree.Position.X, tree.Position.Z);
         const string id = "design:fixture-hidden-walk";
@@ -178,13 +188,14 @@ public sealed class PavementTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheOsmTreePointsOnAWalkFiledInBothStacksGiveWayAndDoNotVanish()
     {
         // The OSM tree points on a design walk (Dangui Road's second walk, 9633125237 and its neighbours) give way: each is in the
         // layout's Avoided list at its place in the planting order, none is dropped before it is planted, none stands.
         var bare = BareLayout.Value;
         const string id = "design:fixture-dangui-walk-w2";
-        var world = Load(false, ("fixture-dangui-w2-both.d/0000-fixture.json", Overlay(Road(id, "footway", DanguiWalk.Width, DanguiWalk.Line.Points))));
+        var world = Load(("fixture-dangui-w2-both.d/0000-fixture.json", Overlay(Road(id, "footway", DanguiWalk.Width, DanguiWalk.Line.Points))));
         RequireFiled(world, id, line: true, feature: true);
         var layout = Verify(world, bare, "w2 filed twice");
         var walk = world.Network.Roads.Single(r => r.Id.Value == id);
@@ -203,10 +214,11 @@ public sealed class PavementTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheTreePitsOfTheMapProtectOnlyTheTreesInsideThem()
     {
         // Production pits may be added or removed by their owners; check each currently protected original tree.
-        var withPits = Verify(Overlaid.Value, null, "with pits");
+        var withPits = OverlaidVerified.Value;
         var noPits = Verify(Filed(Overlaid.Value, _ => true, f => f.Kind.Value != Planting.TreePitKind), withPits, "without pits");
         var standing = withPits.Trees.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
         var kept = noPits.Avoided.Where(a => standing.Contains(a.Tree.Key)).Select(a => a.Tree).ToList();
@@ -221,7 +233,7 @@ public sealed class PavementTests
     public void ATreePitLetsATreeStandOnPavement()
     {
         // Two trees that give way on the fixture plaza: one gets a square pit, the other a round bed; both stay, nothing else moves.
-        var bare = PlantFixture(Fixture());
+        var bare = FixtureLayout.Value;
         var square = bare.Avoided.First(a => a.Tree.Source == PlantSource.Road).Tree;
         var round = bare.Avoided.First(a => a.Tree.Source == PlantSource.OsmTree).Tree;
         var (sx, sz) = (square.Position.X, square.Position.Z);
@@ -292,9 +304,9 @@ public sealed class PavementTests
     /// same records and order as the supplied baseline when present. Exactly the trees on pavement and outside every pit
     /// give way; repeated builds keep every record, key and order.
     /// </summary>
-    private static PlantingLayout Verify(IWorldModel world, PlantingLayout? baseline, string label, bool fixture = false)
+    private static PlantingLayout Verify(IWorldModel world, PlantingLayout? baseline, string label, bool fixture = false, PlantingLayout? planted = null)
     {
-        var layout = fixture ? PlantFixture(world) : Plant(world);
+        var layout = planted ?? (fixture ? PlantFixture(world) : Plant(world));
         // New pit and design sources come last; adding pavement or pits must preserve every earlier record and its order.
         var before = Original(layout.BeforeGivingWay());
         if (baseline is not null && !SameRecords(before, Original(baseline.BeforeGivingWay())))
@@ -363,13 +375,13 @@ public sealed class PavementTests
 
     internal static IWorldModel World(bool overlays) => overlays ? Overlaid.Value : Bare.Value;
 
-    internal static IWorldModel Load(bool overlays, params (string Name, string Text)[] extra)
+    /// <summary>The campus data without its overlays, plus the given overlay files.</summary>
+    private static IWorldModel Load(params (string Name, string Text)[] extra)
     {
         var files = RealMapFixture.ReadTextFiles();
-        if (!overlays)
-            foreach (var key in files.Keys.Where(key => key.StartsWith("overlay/", StringComparison.Ordinal)).ToArray()) files.Remove(key);
+        foreach (var key in files.Keys.Where(key => key.StartsWith("overlay/", StringComparison.Ordinal)).ToArray()) files.Remove(key);
         foreach (var (name, text) in extra) files["overlay/" + name] = text;
-        return RealMapFixture.LoadPrepared(files, options: overlays ? null : new WorldLoadOptions
+        return RealMapFixture.LoadPrepared(files, options: new WorldLoadOptions
         {
             ClaimedBy = new Dictionary<FeatureId, WpId>(),
         }).World;

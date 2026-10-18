@@ -63,6 +63,7 @@ public sealed class NorthSiteTests
     /// way in. 学知一组团's gate is the open walking route (P13, A11, WP-31c) and keeps its place.
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void MainGatesFaceTheHighestGradeRoadWithTheHouseOnTheRight()
     {
         var world = RealMapFixture.Load().World;

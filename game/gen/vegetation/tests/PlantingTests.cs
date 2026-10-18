@@ -29,10 +29,11 @@ public sealed class PlantingTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheCampusIsPlantedAndTheAvenueHasOneRowEachSide()
     {
         var (world, species, rules) = Data.Value;
-        var a = Planting.Build(world, species, rules, 1u);
+        var a = PavementTests.BareLayout.Value;
         var b = Planting.Build(world, species, rules, 1u);
         if (!a.Trees.Select(t => (t.Key, t.Position, t.Variant, t.Species.Id)).SequenceEqual(b.Trees.Select(t => (t.Key, t.Position, t.Variant, t.Species.Id))))
             throw new InvalidOperationException("two builds differ");
@@ -57,7 +58,7 @@ public sealed class PlantingTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void EditingADistantGreenParcelKeepsLocalTrees()
     {
-        var original = PavementTests.PlantFixture(PavementTests.Fixture()).BeforeGivingWay();
+        var original = PavementTests.FixtureLayout.Value.BeforeGivingWay();
         if (!original.Any(t => t.Source == PlantSource.Grove)) throw new InvalidOperationException("the local parcel has no grove trees");
         var keys = original.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
         var small = PavementTests.PlantFixture(PavementTests.Fixture(RemoteGreen(-75f))).BeforeGivingWay();
@@ -76,12 +77,13 @@ public sealed class PlantingTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GinkgosStayWhereTheyAreRegistered()
     {
         // WLD-VEGETATION: ginkgo only on the avenue (with its OSM street trees), beside the main building and at the
         // student centre; never spread elsewhere.
-        var (world, species, rules) = Data.Value;
-        var layout = Planting.Build(world, species, rules, 1u);
+        var (world, _, rules) = Data.Value;
+        var layout = PavementTests.BareLayout.Value;
         var allowed = rules.Groves.Areas.Where(a => a.Mix.Any(m => m.Species == "ginkgo"))
             .Select(a => (a.Radius, Features: world.Features.Values.Where(f => f.Name == a.Name).ToList())).ToList();
         foreach (var t in layout.Trees.Where(t => t.Species.Id == "ginkgo" && t.Source == PlantSource.Grove))
@@ -92,10 +94,11 @@ public sealed class PlantingTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TrunksKeepOffBuildingsWaterAndRoads()
     {
-        var (world, species, rules) = Data.Value;
-        var layout = Planting.Build(world, species, rules, 1u);
+        var world = Data.Value.World;
+        var layout = PavementTests.BareLayout.Value;
         var blocking = world.Features.Values.SelectMany(f => new[] { "building", "water", "sport", "parking" }
             .SelectMany(kind => Parts(f, kind))).SelectMany(p => p.Geometry switch
             {
@@ -118,11 +121,11 @@ public sealed class PlantingTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void TreesLandOnTheTerrainAndAvoidSteepGround()
     {
-        // WLD-TERRAIN: y = HeightAt(centre); no tree where the grade exceeds 25%. A tilted test terrain with one steep band.
-        var (world, species, rules) = Data.Value;
+        // WLD-TERRAIN: y = HeightAt(centre); no tree where the grade exceeds 25%. A tilted test terrain with one steep band,
+        // judged on the exclusive fixture (a local rule: the real campus is planted elsewhere).
         var terrain = TiltedTerrain.Create();
-        var layout = Planting.Build(new FakeWorld(world) { Terrain = terrain }, species, rules, 1u);
-        var flat = Planting.Build(world, species, rules, 1u);
+        var layout = Planting.Build(new FakeWorld(PavementTests.FixtureWorld.Value) { Terrain = terrain }, PavementTests.Data.Species, PavementTests.FixtureRules, 1u);
+        var flat = PavementTests.FixtureLayout.Value;
         foreach (var t in layout.Trees)
         {
             if (MathF.Abs(t.Position.Y - terrain.HeightAt(t.Position.X, t.Position.Z)) > TestTolerance.Position) throw new InvalidOperationException($"{t.Key} floats");
@@ -135,11 +138,12 @@ public sealed class PlantingTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void TrunkCollidersFollowTheTrees()
     {
-        var (world, species, rules) = Data.Value;
-        var layout = Planting.Build(world, species, rules, 1u);
+        // Judged on the exclusive fixture's trees over flat ground: the colliders follow any layout.
+        var layout = PavementTests.FixtureLayout.Value;
+        var terrain = FlatTerrain.Default;
         var tree = layout.Trees.First(t => t.Source == PlantSource.Road);
         var tile = TileGrid.At(tree.Position);
-        var colliders = TreeColliders.For(layout, tile, world.Terrain).Cast<PostCollider>().ToList();
+        var colliders = TreeColliders.For(layout, tile, terrain).Cast<PostCollider>().ToList();
         var inTile = layout.Trees.Count(t => TileGrid.At(t.Position) == tile);
         if (colliders.Count != inTile || colliders.Count == 0) throw new InvalidOperationException($"{colliders.Count} posts for {inTile} trees");
         foreach (var c in colliders)
@@ -152,7 +156,7 @@ public sealed class PlantingTests
         foreach (var cell in new TileKey[] { new(3, 2), new(-4, -3) })
         {
             var moved = tree with { Position = new(cell.X * TileGrid.BaseEdge + 12, tree.Position.Y, cell.Z * TileGrid.BaseEdge + 24) };
-            var post = (PostCollider)TreeColliders.For(new([moved]), cell, world.Terrain).Single();
+            var post = (PostCollider)TreeColliders.For(new([moved]), cell, terrain).Single();
             if (post.C != new Vector2(moved.Position.X, moved.Position.Z))
                 throw new InvalidOperationException("Tree collision did not retain world coordinates: " + cell);
             var local = (BoxCollider)Campus.Gen.Collision.CollisionGeometry.Localize([post], cell).Single();
@@ -162,10 +166,11 @@ public sealed class PlantingTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void LeavesFallUnderTheCrownsAndCarpetTheAvenue()
     {
-        var (world, species, rules) = Data.Value;
-        var layout = Planting.Build(world, species, rules, 1u);
+        var (world, _, rules) = Data.Value;
+        var layout = PavementTests.BareLayout.Value;
         var rect = new MapRect(world.Boundary.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min),
             world.Boundary.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max));
         const float step = 1f;

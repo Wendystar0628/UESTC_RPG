@@ -39,7 +39,9 @@ public sealed class FurniturePlantingRowTests
         AssertThat(PlantingRows.Resolve(Inputs(edited)).Roads[1].Rows.SequenceEqual([6.5f])).OverrideFailureMessage("an edited offset is not read").IsTrue();
         var (kept, gap) = PlantingRows.Resolve(Inputs(Edit(root => root["roads"]!.AsArray().RemoveAt(2))));
         AssertThat(kept[2].Rows.SequenceEqual(FurnitureStyle.Roads[2].Rows) && gap.Count == 1 && gap[0].Level == DiagnosticLevel.Warning && gap[0].Code == PlantingRows.RoadCode).OverrideFailureMessage("a road missing from the planting file is not warned about once").IsTrue();
-        // Nothing to read, or nothing readable: the fallback stands, with exactly one warning, and the layout still builds.
+        // Nothing to read, or nothing readable: the fallback stands, with exactly one warning, and the layout still builds
+        // (judged on the furnished roads alone: the rows only touch them, and the real layout is planned once elsewhere).
+        var plain = Build(OpenWorld.Value);
         (IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? Inputs, string Code)[] unreadable =
         [
             (null, PlantingRows.MissingCode), (new Dictionary<string, ReadOnlyMemory<byte>>(), PlantingRows.MissingCode),
@@ -50,10 +52,10 @@ public sealed class FurniturePlantingRowTests
             var (fallback, warnings) = PlantingRows.Resolve(inputs);
             AssertThat(fallback.Select(r => r.Rows).Zip(FurnitureStyle.Roads.Select(r => r.Rows), (a, b) => a.SequenceEqual(b)).All(same => same)).OverrideFailureMessage("the fallback rows are not the style's").IsTrue();
             AssertThat(warnings.Count == 1 && warnings[0].Level == DiagnosticLevel.Warning && warnings[0].Code == code).OverrideFailureMessage($"{warnings.Count} diagnostics for {code}").IsTrue();
-            var layout = FurniturePlanner.Build(World.Value, null, inputs);
-            AssertThat(layout.Diagnostics.Where(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal)).SequenceEqual(warnings) && layout.Items.Count == Build(World.Value).Items.Count).OverrideFailureMessage("the fallback layout differs from the real one, whose rows are the same").IsTrue();
+            var layout = FurniturePlanner.Build(OpenWorld.Value, null, inputs);
+            AssertThat(layout.Diagnostics.Where(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal)).SequenceEqual(warnings) && layout.Items.Count == plain.Items.Count).OverrideFailureMessage("the fallback layout differs from the real one, whose rows are the same").IsTrue();
         }
-        AssertThat(!Build(World.Value).Diagnostics.Any(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal))).OverrideFailureMessage("the real layout warns").IsTrue();
+        AssertThat(!RealLayout.Value.Diagnostics.Any(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal))).OverrideFailureMessage("the real layout warns").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -62,7 +64,7 @@ public sealed class FurniturePlantingRowTests
         // A bench keeps RowClear off the planted rows, so moving a row onto an avenue bench forces that bench off its slot (or off
         // the walk altogether); the other roads' benches stay where they were.
         var world = World.Value;
-        var before = Build(world);
+        var before = RealLayout.Value;
         var avenue = world.Network.Roads.Where(l => StreetSite.RoadName(l) == FurnitureStyle.Roads[0].Name).ToList();
         var bench = before.Items.First(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:0:", StringComparison.Ordinal));
         var offset = avenue.Min(l => (float)PlanGeometry.Project(l.Line.Points, bench.Anchor).Distance);

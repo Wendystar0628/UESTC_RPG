@@ -109,8 +109,8 @@ public sealed class GroundEffectiveRoadsTests
         // The walk and the sidewalk are one paved surface: no kerb, edging or step across the join, and none beside it.
         for (var z = 5.0f; z <= 30f; z += 0.5f)
             foreach (var x in new[] { 29.3f, 30f, 30.7f })
-                AssertThat(SurfaceAt(withWalk, x, z) == GroundSurface.Paver).OverrideFailureMessage($"({x}, {z}) is {SurfaceAt(withWalk, x, z)}, not plain paving.").IsTrue();
-        AssertThat(SurfaceAt(bare, 30f, 20f) != GroundSurface.Paver).OverrideFailureMessage("Without the walk that ground is lawn.").IsTrue();
+                AssertThat(TestWorld.SurfaceAt(withWalk, x, z) == GroundSurface.Paver).OverrideFailureMessage($"({x}, {z}) is {TestWorld.SurfaceAt(withWalk, x, z)}, not plain paving.").IsTrue();
+        AssertThat(TestWorld.SurfaceAt(bare, 30f, 20f) != GroundSurface.Paver).OverrideFailureMessage("Without the walk that ground is lawn.").IsTrue();
 
         // The carriageway has no fillet or kerb of its own from a footway, and the footway's crossing sits where it meets the road.
         AssertThat(RoadGraph.Fillets(GroundSources.Read(withWalk).Roads).Count == 0).OverrideFailureMessage("A footway never rounds a carriageway corner.").IsTrue();
@@ -168,19 +168,6 @@ public sealed class GroundEffectiveRoadsTests
     }
 
     // ---------------------------------------------------------------- helpers
-
-    private static GroundSurface SurfaceAt(IWorldModel world, float x, float z)
-    {
-        var layout = GroundLayout.Of(world);
-        var key = TileGrid.At(new Vector2(x, z));
-        var tx = key.X;
-        var tz = key.Z;
-        var tile = new GroundTile(tx * TileGrid.BaseEdge, tz * TileGrid.BaseEdge, TileGrid.BaseEdge, TileGrid.BaseEdge / 256f);
-        var grid = TerrainGrid.For(FlatTerrain.Default, new TileKey(tx, tz), LodLevel.L0, tile);
-        var field = TileField.Build(layout, tile, Section, grid);
-        var mesher = new GroundMesher(field, Section, LodLevel.L0, layout, grid, new MeshSink());
-        return mesher.SurfaceAt((int)MathF.Round((x - tile.X0) / tile.Cell), (int)MathF.Round((z - tile.Z0) / tile.Cell));
-    }
 
     private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement.Clone();
 

@@ -30,7 +30,7 @@ public sealed class VegFadeTests
                 for (var i = 3; i < wood.Custom2!.Length; i += 4)
                     if (wood.Custom2[i] != MotherModels.FarWoodTag) throw new InvalidOperationException($"{s.Id}/{v}: wood tag {wood.Custom2[i]}");
                 // Same vertex layout and material as the near crown and wood, so the far pool shares their warmed pipelines.
-                var l1 = MotherModels.Build(s, v, VegLevel.L1, palette);
+                var l1 = MotherModelTests.Mother(s, v, VegLevel.L1);
                 if (crown.Material != l1.Crown.Material || (crown.Uv is null) != (l1.Crown.Uv is null) || crown.Flags?[0] != l1.Crown.Flags?[0])
                     throw new InvalidOperationException($"{s.Id}/{v}: crown layout differs from L1");
                 if (wood.Index.Length > 0 && (wood.Material != l1.Wood.Material || (wood.Uv is null) != (l1.Wood.Uv is null)))
@@ -44,7 +44,7 @@ public sealed class VegFadeTests
                 if (hi.Y < l1hi.Y - 0.25f * (l1hi.Y - l1lo.Y)) throw new InvalidOperationException($"{s.Id}/{v}: stand-in crown much smaller than L1");
             }
         // Near models keep the near tags (wood 0, masses −1).
-        var near = MotherModels.Build(Table.Value.Get("ginkgo"), 0, VegLevel.L1, palette);
+        var near = MotherModelTests.Mother(Table.Value.Get("ginkgo"), 0, VegLevel.L1);
         if (near.Wood.Custom2!.Where((_, i) => i % 4 == 3).Any(w => w != 0f)) throw new InvalidOperationException("near wood tagged");
     }
 

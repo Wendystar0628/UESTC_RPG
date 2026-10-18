@@ -26,8 +26,8 @@ public sealed class RoadFurnitureTests
     {
         // WLD-LIFE: a few cars in each car park, whole inside it, noses to its longest edge; never more than the cap a lot.
         var world = World.Value;
-        var layout = Build(world);
-        var site = new StreetSite(world);
+        var layout = RealLayout.Value;
+        var site = Site.Value;
         var cars = layout.Items.Where(i => i.Kind == FurnitureKind.ParkedCar).ToList();
         AssertThat(cars.Count > 0).OverrideFailureMessage("no parked cars").IsTrue();
         foreach (var group in cars.GroupBy(c => c.Key.Split(':')[1]))
@@ -69,7 +69,7 @@ public sealed class RoadFurnitureTests
         // MAP-QSH-ADDITIONS: the avenue's lamps keep a regular pitch; only junctions may nudge one by a step or two.
         foreach (var side in new[] { ":l:", ":r:" })
         {
-            var row = Build(World.Value).Items.Where(i => i.Kind == FurnitureKind.StreetLamp && i.Key.StartsWith("lamp:0:0" + side, StringComparison.Ordinal)).ToList();
+            var row = RealLayout.Value.Items.Where(i => i.Kind == FurnitureKind.StreetLamp && i.Key.StartsWith("lamp:0:0" + side, StringComparison.Ordinal)).ToList();
             var gaps = row.Zip(row.Skip(1), (p, q) => Vector2.Distance(p.Anchor, q.Anchor)).ToList();
             AssertThat(gaps.Count > 0).OverrideFailureMessage($"{gaps.Count} gaps on side {side}").IsTrue();
             var regular = gaps.Count(g => MathF.Abs(g - FurnitureStyle.MainLampSpacing) <= FurnitureStyle.MainLampSpacing * 0.15f);
@@ -82,7 +82,7 @@ public sealed class RoadFurnitureTests
     {
         var world = World.Value;
         var outlines = world.Features.Values.Where(f => f.Kind.Value is "building" or "water").SelectMany(Polygons).ToList();
-        foreach (var item in Build(world).Items.Where(i => i.Kind is FurnitureKind.StreetLamp or FurnitureKind.Bench or FurnitureKind.Bin or FurnitureKind.BusStop))
+        foreach (var item in RealLayout.Value.Items.Where(i => i.Kind is FurnitureKind.StreetLamp or FurnitureKind.Bench or FurnitureKind.Bin or FurnitureKind.BusStop))
         {
             var p = item.Anchor;
             AssertThat(PlanGeometry.Contains(world.Boundary, p)).OverrideFailureMessage($"{item.Key} outside the campus").IsTrue();

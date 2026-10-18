@@ -78,6 +78,7 @@ public sealed class BuildingTraceTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TraceSourcesReproduceBuildAndCollideOnTheRealCampus()
     {
         var real = RealMapFixture.Load().World;

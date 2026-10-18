@@ -23,6 +23,7 @@ using static GdUnit4.Assertions;
 public sealed class FurnitureModuleTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void FurnitureLandsOnTheTerrain()
     {
         // 8% everywhere: poles sink 0.05–0.3 m below the lawn level at their centre; benches and bins share a concrete plinth.
@@ -78,7 +79,7 @@ public sealed class FurnitureModuleTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void CollidersFollowThePartsWithTheirFootMaterial()
     {
-        foreach (var item in Build(World.Value).Items)
+        foreach (var item in RealLayout.Value.Items)
         {
             AssertThat(item.Colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage($"{item.Key} leaves a collider on Auto (G21i)").IsTrue();
             foreach (var collider in item.Colliders)

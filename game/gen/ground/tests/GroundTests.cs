@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -337,7 +338,25 @@ public sealed class GroundTests
 internal static class TestWorld
 {
 
+    private static readonly ConditionalWeakTable<IWorldModel, Dictionary<TileKey, GroundMesher>> Meshers = new();
+
     public static FakeWorld Empty() => Of([]);
+
+    /// <summary>Final ground surface at a point, classified on a 0.25 m lattice of the L0 tile that holds it (one tile field per world and tile, shared by the probes).</summary>
+    public static GroundSurface SurfaceAt(IWorldModel world, float x, float z)
+    {
+        var key = TileGrid.At(new Vector2(x, z));
+        var tile = new GroundTile(key.X * TileGrid.BaseEdge, key.Z * TileGrid.BaseEdge, TileGrid.BaseEdge, TileGrid.BaseEdge / 256f);
+        var byTile = Meshers.GetOrCreateValue(world);
+        if (!byTile.TryGetValue(key, out var mesher))
+        {
+            var layout = GroundLayout.Of(world);
+            var grid = TerrainGrid.For(FlatTerrain.Default, key, LodLevel.L0, tile);
+            var field = TileField.Build(layout, tile, GroundSection.Default, grid);
+            byTile[key] = mesher = new GroundMesher(field, GroundSection.Default, LodLevel.L0, layout, grid, new MeshSink());
+        }
+        return mesher.SurfaceAt((int)MathF.Round((x - tile.X0) / tile.Cell), (int)MathF.Round((z - tile.Z0) / tile.Cell));
+    }
 
     public static FakeWorld Of(IEnumerable<WorldFeature> features, WorldNetwork? network = null) => new()
     {

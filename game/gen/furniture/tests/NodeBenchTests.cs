@@ -29,8 +29,8 @@ public sealed class NodeBenchTests
         // paving there, facing it, under the walk benches' rules (3 m off carriageways, no carriageway 12 m ahead). Judged on the
         // avenue with a node put where one of its own benches stands, so the spot is known to take a bench.
         var world = World.Value;
-        var site = new StreetSite(world);
-        var baseline = Build(world);
+        var site = Site.Value;
+        var baseline = RealLayout.Value;
         var spot = baseline.Items.First(i => i.Kind == FurnitureKind.Bench && i.Key.StartsWith("rest:0:", StringComparison.Ordinal)).Anchor;
         var avenue = FurnitureStyle.Roads[0] with { Nodes = [new RestNode("test node", spot)] };
         var layout = FurniturePlanner.Build(world, null, Inputs(), [avenue, FurnitureStyle.Roads[1], FurnitureStyle.Roads[2]]);
@@ -59,7 +59,7 @@ public sealed class NodeBenchTests
         // The road's walks carry no benches (the design walks sit 7.5 m off the road: a bench on either side is too near the carriageway
         // or looks at it); its two nodes take benches under the same rules or report why none fits, never by relaxing them.
         var world = World.Value;
-        var layout = Build(world);
+        var layout = RealLayout.Value;
         var index = FurnitureStyle.Roads.ToList().FindIndex(r => r.Nodes is not null);
         AssertThat(index >= 0).OverrideFailureMessage("no road has rest nodes").IsTrue();
         var rule = FurnitureStyle.Roads[index];
@@ -73,13 +73,13 @@ public sealed class NodeBenchTests
         }
         // Opus review 17:28: a node bench may stand on the plaza, its back to the paving edge and parallel to it, facing into the
         // plaza, wholly on its paving and off the walks' strips, 3 m off carriageways (judged in general on a made-up plaza below).
-        var site = new StreetSite(world);
+        var site = Site.Value;
         var standing = layout.Items.Where(i => i.Key.StartsWith($"node:{index}:", StringComparison.Ordinal) && i.Pad is null).ToList();
         var plaza = standing.Where(b => site.OnPlaza(b.Anchor)).ToList();
         var walk = standing.Except(plaza).ToList();
         CheckPlazaBenches(site, plaza);
         // Opus review 13c2b 21:05: or on a walk 4 m or wider, at its edge, back to it, 2.5 m left to pass.
-        CheckWalkEdgeBenches(world, walk);
+        CheckWalkEdgeBenches(world, site, walk);
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -87,8 +87,8 @@ public sealed class NodeBenchTests
     {
         // Opus review 17:28, judged on a made-up 12 × 10 m pedestrian square on open ground with a rest node at its middle: the
         // benches stand on the square (no bay on flat ground), backs to its edge, facing in; a square that is not there takes none.
-        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
-        var spot = OpenGround(open);
+        var open = OpenWorld.Value;
+        var spot = OpenSpot.Value;
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
         var props = JsonSerializer.SerializeToElement(new { roadType = "pedestrian" });
         var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), props.GetRawText());
@@ -106,8 +106,8 @@ public sealed class NodeBenchTests
     {
         // Opus review 13c2b 21:05, judged on made-up walks on open ground with a rest node on them: a 5 m walk seats the node's benches on
         // itself at its edge (backs to the edge, 2.5 m left to pass); a 3.5 m walk takes none on itself (they stand beside it, 13c1).
-        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
-        var spot = OpenGround(open);
+        var open = OpenWorld.Value;
+        var spot = OpenSpot.Value;
         foreach (var (width, takes) in new[] { (5f, true), (3.5f, false) })
         {
             var (line, feature) = DesignWalk(spot, width);
@@ -121,7 +121,7 @@ public sealed class NodeBenchTests
                 continue;
             }
             AssertThat(onWalk.Count is >= 1 and <= FurnitureStyle.NodeBenches && onWalk.Count == benches.Count && benches.All(b => b.Pad is null)).OverrideFailureMessage($"{onWalk.Count} of {benches.Count} node benches on the {width} m walk, or on bays").IsTrue();
-            CheckWalkEdgeBenches(world, onWalk);
+            CheckWalkEdgeBenches(world, new StreetSite(world), onWalk);
         }
     }
 
@@ -130,8 +130,8 @@ public sealed class NodeBenchTests
     {
         // Opus review 13c2b rework, on the made-up 12 × 10 m square with a 2.5 m footway running through its middle: the walk line does
         // not count against the benches (they stand on the square, backs to its edge, 2.5 m of paving in front), but none sits across it.
-        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
-        var spot = OpenGround(open);
+        var open = OpenWorld.Value;
+        var spot = OpenSpot.Value;
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
         var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), JsonSerializer.Serialize(new { roadType = "pedestrian" }));
         var walkProps = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 2.5f });
@@ -145,14 +145,15 @@ public sealed class NodeBenchTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ADesignWalkFiledAsFeatureAndAsNetworkLineHasItsNodeBenchesOnce()
     {
         // WP-08's effective network files a design walk twice under one ID: as the feature the overlay added and as a network line.
         // The walk is one walk: whichever way it is filed (line only, feature only, both) its node gets the same benches, standing
         // just off its edge and facing it, and a walk that is filed nowhere (hidden) gets none. Judged on a walk made up on open
         // ground, so it holds on a world with or without the effective network.
-        var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
-        var spot = OpenGround(open);
+        var open = OpenWorld.Value;
+        var spot = OpenSpot.Value;
         var (line, feature) = DesignWalk(spot);
         var rules = NodeRules(spot);
         FurnitureLayout Layout(NetworkLine? asLine, WorldFeature? asFeature) => FurniturePlanner.Build(WalkWorld(open, asLine, asFeature), null, Inputs(), rules);
@@ -177,8 +178,8 @@ public sealed class NodeBenchTests
         foreach (var (name, filed) in new[] { ("line only", Layout(line, null)), ("feature only", Layout(null, feature)) })
             AssertThat(Benches(filed).Select(b => (b.Key, b.Anchor, b.Part.Params)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor, b.Part.Params)))).OverrideFailureMessage($"the walk filed as {name} has other node benches than filed twice").IsTrue();
         // The same through the loader: an overlay adds the walk (with and without a hide that takes it away again).
-        var shown = FurniturePlanner.Build(new FakeWorld(Loaded(spot, hide: false)) { Terrain = FlatTerrain.Default }, null, Inputs(), rules);
-        var hidden = FurniturePlanner.Build(new FakeWorld(Loaded(spot, hide: true)) { Terrain = FlatTerrain.Default }, null, Inputs(), rules);
+        var shown = FurniturePlanner.Build(Pared(Loaded(spot, hide: false), feature.Id), null, Inputs(), rules);
+        var hidden = FurniturePlanner.Build(Pared(Loaded(spot, hide: true), feature.Id), null, Inputs(), rules);
         AssertThat(Benches(shown).Select(b => (b.Key, b.Anchor)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor)))).OverrideFailureMessage("the loaded walk has other node benches than the walk filed by hand").IsTrue();
         AssertThat(hidden.Items.Count == none.Items.Count && Benches(hidden).Count == 0 && hidden.Diagnostics.SequenceEqual(none.Diagnostics)).OverrideFailureMessage("a hidden design walk still gets furniture").IsTrue();
     }
@@ -188,10 +189,9 @@ public sealed class NodeBenchTests
     /// <see cref="FurnitureStyle.WalkBenchClear"/> inside its edge and facing across it, at least <see cref="FurnitureStyle.NodeWalkPass"/>
     /// of the walk left beyond the sitters' feet; 3 m off carriageways and never facing one within 12 m.
     /// </summary>
-    private static void CheckWalkEdgeBenches(IWorldModel world, IEnumerable<FurnitureItem> benches)
+    private static void CheckWalkEdgeBenches(IWorldModel world, StreetSite site, IEnumerable<FurnitureItem> benches)
     {
         var walks = world.Network.Roads.Where(r => Highway(r) is "footway" or "path" or "pedestrian").ToList();
-        var site = new StreetSite(world);
         foreach (var bench in benches)
         {
             var p = (FurnitureParams)bench.Part.Params;

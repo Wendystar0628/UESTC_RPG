@@ -27,7 +27,7 @@ public sealed class AnchorFacingTests
         // edge and its face towards the paving, and the layout diagnosticss the yaw (and centre) the anchor data should take over. Judged on
         // a synthetic anchor: the first kiosk of the data moved to a grass notch inside the plaza near (120, -65) (A04's old spot).
         var world = World.Value;
-        var site = new StreetSite(world);
+        var site = Site.Value;
         var spot = new Vector2(120f, -65f);
         AssertThat(site.PavingEdgeFacing(spot) is { Gap: > 1f }).OverrideFailureMessage("the notch is not off the paving any more: pick another spot").IsTrue();
         var original = world.Features.Values.Where(f => f.Kind.Value == "anchor" && WorldProps.TryText(f.Props, "form") == "kiosk" && f.Props!.Value.TryGetProperty("groundY", out var y) && y.GetSingle() < 0.5f)
@@ -60,7 +60,7 @@ public sealed class AnchorFacingTests
     public void AnchorsAndEntrancesFaceTheirData()
     {
         var world = World.Value;
-        var layout = Build(world);
+        var layout = RealLayout.Value;
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "anchor"))
         {
             if (layout.Items.SingleOrDefault(i => i.Key == "anchor:" + feature.Id.Value) is not { } item)

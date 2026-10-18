@@ -47,6 +47,7 @@ public sealed class SouthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WholeSourcesReproduceProductionAndKeepClaimedPlans()
     {
         var ctx = Context();

@@ -17,6 +17,7 @@ using static GdUnit4.Assertions;
 public sealed class WaterMapDataTests
 {
     [TestCase, TestCategory(TestReason.Smoke)]
+    [TestCategory("Slow")]
     public void EveryMapStaysInsideTheWaterBudget()
     {
         var maps = RepositoryFixture.FilePath("game", "data", "maps");

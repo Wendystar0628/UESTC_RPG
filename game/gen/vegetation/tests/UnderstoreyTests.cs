@@ -17,18 +17,17 @@ namespace Campus.Gen.Vegetation.Tests;
 [TestSuite]
 public sealed class UnderstoreyTests
 {
-    private static readonly Lazy<PlantingLayout> Overlaid = new(() => PavementTests.Plant(PavementTests.World(true)));
-
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void NewSourcesComeLastAndAreStable()
     {
-        var layout = Overlaid.Value;
+        var layout = PavementTests.OverlaidLayout.Value;
         var all = layout.BeforeGivingWay();
         var first = all.TakeWhile(t => t.Source <= PlantSource.Grove).Count();
         if (all.Skip(first).Any(t => t.Source <= PlantSource.Grove)) throw new InvalidOperationException("a rule tree follows a pit or design tree");
         var added = all.Skip(first).ToList();
         if (layout.Avoided.Any(a => a.Tree.Source > PlantSource.Grove)) throw new InvalidOperationException("a pit or design tree gave way");
-        var again = PavementTests.Plant(PavementTests.Load(true)).Trees.Where(t => t.Source > PlantSource.Grove).ToList();
+        var again = PavementTests.Plant(PavementTests.World(true)).Trees.Where(t => t.Source > PlantSource.Grove).ToList();
         if (!PavementTests.SameRecords(again, added)) throw new InvalidOperationException("the new sources differ between two builds");
         // Pit trees come before design trees; repeatability above also checks their complete order.
         var firstDesign = added.FindIndex(t => t.Source == PlantSource.Design);
@@ -38,7 +37,7 @@ public sealed class UnderstoreyTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void AddingSourcesPreservesExistingRecordsAndOrder()
     {
-        var original = PavementTests.PlantFixture(PavementTests.Fixture());
+        var original = PavementTests.FixtureLayout.Value;
         var first = new[] { Pit("design:fixture-held-pit", -70f, -20f), DesignTree("design:fixture-tree", -70f, 20f) };
         var before = PavementTests.PlantFixture(PavementTests.Fixture(first));
         var after = PavementTests.PlantFixture(PavementTests.Fixture(first.Concat(
@@ -60,11 +59,12 @@ public sealed class UnderstoreyTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheTwoLibraryCamphorsArePlanted()
     {
         foreach (var id in new[] { "design:core-library-camphor-1", "design:core-library-camphor-2" })
         {
-            var tree = Overlaid.Value.Trees.SingleOrDefault(t => t.Key == id) ?? throw new InvalidOperationException($"{id} is not planted");
+            var tree = PavementTests.OverlaidLayout.Value.Trees.SingleOrDefault(t => t.Key == id) ?? throw new InvalidOperationException($"{id} is not planted");
             var feature = PavementTests.World(true).Features.Values.Single(f => f.Id.Value == id);
             var at = ((PointGeometry)feature.Geometry).Position;
             if (tree.Source != PlantSource.Design || tree.Species.Id != "camphor" || MathF.Abs(tree.Height - feature.Height!.Value) > TestTolerance.Position ||
@@ -77,7 +77,7 @@ public sealed class UnderstoreyTests
     public void APitThatHoldsATreeGetsNoOther()
     {
         // Exclusive fixture: one occupied square pit and one empty pit well away from every original tree.
-        var bare = PavementTests.PlantFixture(PavementTests.Fixture());
+        var bare = PavementTests.FixtureLayout.Value;
         var held = bare.Trees.First(t => t.Source == PlantSource.Grove);
         var empty = new Vector2(-70f, -70f);
         var world = PavementTests.Fixture(Pit("design:fixture-held-pit", held.Position.X, held.Position.Z),
@@ -92,6 +92,7 @@ public sealed class UnderstoreyTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void UnderstoreyKeepsOffPavementAndRoads()
     {
         var world = PavementTests.Fixture(Pit("design:fixture-understorey-pit", -70f, -70f));
@@ -99,7 +100,7 @@ public sealed class UnderstoreyTests
         var rules = PavementTests.FixtureRules;
         var trees = PavementTests.PlantFixture(world);
         CheckUnderstorey(world, species, rules, trees, requireKinds: true);
-        CheckUnderstorey(PavementTests.World(true), species, PavementTests.Data.Rules, Overlaid.Value, requireKinds: false);
+        CheckUnderstorey(PavementTests.World(true), species, PavementTests.Data.Rules, PavementTests.OverlaidLayout.Value, requireKinds: false);
     }
 
     private static void CheckUnderstorey(IWorldModel world, SpeciesTable species, PlantingRules rules, PlantingLayout trees, bool requireKinds)
