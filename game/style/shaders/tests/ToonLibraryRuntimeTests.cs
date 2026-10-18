@@ -472,8 +472,8 @@ public sealed class ToonLibraryRuntimeTests
     private sealed class Palettes : IPaletteCatalogSource
     {
         public PaletteCatalog Catalog { get; } = new(new PaletteRegistry([
-            new(new PaletteToken("test.lit"), 64, System.Numerics.Vector3.One, "test", false, PaletteRole.Lit),
-            new(new PaletteToken("test.shade"), 65, System.Numerics.Vector3.Zero, "test", false, PaletteRole.Shade)
+            new(new PaletteToken("test.lit"), new(64), System.Numerics.Vector3.One, "test", false, PaletteRole.Lit),
+            new(new PaletteToken("test.shade"), new(65), System.Numerics.Vector3.Zero, "test", false, PaletteRole.Shade)
         ]), [
             new(new PaletteToken("ext.lit"), new PaletteIndex(256), System.Numerics.Vector3.One, "test", false, PaletteRole.Lit),
             new(new PaletteToken("ext.shade"), new PaletteIndex(257), System.Numerics.Vector3.Zero, "test", false, PaletteRole.Shade)

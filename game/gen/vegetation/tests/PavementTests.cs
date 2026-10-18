@@ -340,7 +340,7 @@ public sealed class PavementTests
     {
         Pits = new("koelreuteria", "camphor"),
         Understorey = new(new("loropetalum", 0.42f, 1f),
-            new(1.3f, 1.2f, 8f, 1f, 0.5f, 8f, ["boxhedge"], [("photinia", 1f)]), new("grass", 2.5f, 5f, 0.14f, 2))
+            new(1.3f, 1.2f, 8f, 1f, 0.5f, 8f, ["boxhedge"], [("photinia", 1f)]))
     };
 
     internal static PlantingLayout PlantFixture(IWorldModel world) => Planting.Build(world, Data.Species, FixtureRules, 1u);

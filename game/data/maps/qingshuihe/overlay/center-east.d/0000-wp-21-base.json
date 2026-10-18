@@ -82,7 +82,7 @@
       "geometry": {"type": "polyline", "line": {"points": [[115.5, -150.5], [125.19, -164.25]]}},
       "height": 1.5,
       "props": {"road": "qsh:source:way:797875320", "rise": 1.5, "risers": 10, "ramp": "1:12", "builder": "WP-15（WLD-TERRAIN）"},
-      "reason": "实物登记（MAP-QSH-TERRAIN）：品学楼台基边缘这一出入口台外放不下 30 m 的 5% 坡，做 10 级台阶并列 1:12 坡道（约 20 m 含平台）接回 0 m；是 center-east.terrain.json 里该路走廊 steps 区段引用的构筑物。夜间灯下；踏面接季。"
+      "reason": "实物登记（MAP-QSH-TERRAIN）：台基西侧出入口的台阶与并列坡道（10 级台阶并列 1:12 坡道，约 20 m 含平台），接台面 +1.5 与外地面 0 m。夜间灯下；踏面接季。"
     },
     {
       "op": "add",
@@ -91,7 +91,7 @@
       "geometry": {"type": "polyline", "line": {"points": [[123.13, -144.33], [117.86, -148.59], [115.5, -150.5]]}},
       "height": 1.5,
       "props": {"road": "qsh:source:way:797875320", "rise": 1.5, "risers": 10, "ramp": "1:12", "builder": "WP-15（WLD-TERRAIN）"},
-      "reason": "实物登记（MAP-QSH-TERRAIN）：品学楼台基边缘这一出入口台外放不下 30 m 的 5% 坡，做 10 级台阶并列 1:12 坡道（约 20 m 含平台）接回 0 m；是 center-east.terrain.json 里该路走廊 steps 区段引用的构筑物。夜间灯下；踏面接季。"
+      "reason": "实物登记（MAP-QSH-TERRAIN）：台基西侧出入口的台阶与并列坡道（10 级台阶并列 1:12 坡道，约 20 m 含平台），接台面 +1.5 与外地面 0 m。夜间灯下；踏面接季。"
     },
     {
       "op": "add",

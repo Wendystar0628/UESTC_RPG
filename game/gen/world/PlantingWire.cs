@@ -60,14 +60,12 @@ public sealed record AreaWire(string Name, float Radius, Dictionary<string, floa
 
 public sealed record WashAreaWire(string Name, float Radius);
 
-public sealed record UnderstoreyWire(PitCoverWire? PitCover = null, BorderWire? Borders = null, TuftWire? Tufts = null);
+public sealed record UnderstoreyWire(PitCoverWire? PitCover = null, BorderWire? Borders = null);
 
 public sealed record PitCoverWire(string Species, float Height, float Spacing);
 
 public sealed record BorderWire(float Spacing, float Inset, float Run, float Share, float HedgeShare, float Reach,
     IReadOnlyList<string> Hedge, Dictionary<string, float> Mix);
-
-public sealed record TuftWire(string Species, float Cell, float Edge, float Share, int PerTree);
 
 [JsonSerializable(typeof(PlantingFile))]
 internal partial class PlantingJsonContext : JsonSerializerContext { }

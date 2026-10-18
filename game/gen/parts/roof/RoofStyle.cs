@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Roof;
 /// </summary>
 public static class RoofStyle
 {
-    // ---- Colour families (ART-STYLE). WP-12 owns ids 248–251 in style/palette/ext/WP-12.json; the rest are core names. ----
+    // ---- Colour families (ART-STYLE). WP-12 owns ids 248–251 in style/palette/ext/roof_equipment.json; the rest are core names. ----
     /// <summary>Off-white casings: air-conditioner body, dish and panel antennas.</summary>
     public const string CasingWhite = "wall.greyWhite";
     /// <summary>Galvanised and stainless steel: lightning strip, tank shell, grille frame, masts.</summary>

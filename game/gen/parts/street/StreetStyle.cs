@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Street;
 /// </summary>
 public static class StreetStyle
 {
-    // ---- Colour families. WP-13 has no palette segment yet, so every name is borrowed (ART-STYLE) ----
+    // ---- Registered colour families (ART-STYLE) ----
     /// <summary>White paint: disc street lamp, open-sign face, sign lettering, white stone sphere.</summary>
     public const string PaintWhite = "wall.greyWhite";
     /// <summary>Grey aluminium: single-arm lamp, bench legs, sign poles and frames, lamp accent rings.</summary>
@@ -21,11 +21,9 @@ public static class StreetStyle
     /// <summary>Dark grey steel (WP-12 blue-grey, lit #6E737B): bin frame, atlas kiosk and post, lamp housings, accent bands.</summary>
     public const string DarkSteel = "equip.fence";
     /// <summary>
-    /// Black of the crash bollard's stripe (Opus review 13:46: the stripe read dark grey-blue in daylight). No registered pair is
-    /// black, so this borrows the darkest neutral one, <c>glass</c> (autumn 17:30 lit #525B52, shade #313E4E; <see cref="DarkSteel"/>
-    /// reads #6E737B). Proposed for bank 1: <c>hazard.black</c>, a warm near-black; switch the name here when it is registered.
+    /// Registered warm near-black for the crash bollard's stripe.
     /// </summary>
-    public const string HazardBlack = "glass";
+    public const string HazardBlack = "hazard.black";
     /// <summary>Light equipment grey (WP-12): bin rim band and the grey "other waste" door.</summary>
     public const string LightSteel = "equip.grey";
     /// <summary>Warm wood (WP-10, lit #A8744A): bench slats.</summary>
@@ -40,11 +38,9 @@ public static class StreetStyle
     public const string StoneDark = "ground.asphalt";
     public const string SafetyYellow = "ground.markingYellow";
     /// <summary>
-    /// Street blue for the recyclable door and the shuttle-stop board (Opus review 10:07: <c>street.blue</c>, autumn 17:30 lit
-    /// #4E7FB0, ids 448–449 in the 512-colour extension). The palette loader still reads schema 1 only, so until the second bank
-    /// reaches the vertices this borrows the closest registered blue; switch the name here when street.blue is registered.
+    /// Registered street blue for the recyclable door and the shuttle-stop board.
     /// </summary>
-    public const string StreetBlue = "uestc.techblue";
+    public const string StreetBlue = "street.blue";
     /// <summary>Sorting doors left to right (WLD-LIFE): other, recyclable, hazardous, kitchen. Red is the campus red.</summary>
     public static readonly string[] BinDoors = ["equip.grey", StreetBlue, "equip.fireRed", "ground.turf"];
     /// <summary>Shuttle-stop board ("蓝底白字"), the same street blue.</summary>

@@ -7,15 +7,14 @@ using Campus.Gen.World;
 namespace Campus.Gen.Vegetation;
 
 /// <summary>
-/// What an understorey plant is (max-011 23c2b): ground cover in a tree pit, a loose shrub of a green-edge border, a module
-/// of a clipped hedge run, or a grass tussock breaking up a lawn.
+/// What an understorey plant is (max-011 23c2b): ground cover in a tree pit, a loose shrub of a green-edge border, or a module
+/// of a clipped hedge run.
 /// </summary>
-public enum UnderKind : byte { PitCover = 0, Shrub = 1, Hedge = 2, Tuft = 3 }
+public enum UnderKind : byte { PitCover = 0, Shrub = 1, Hedge = 2 }
 
 /// <summary>
 /// One understorey plant: a ball-form mother model (<see cref="TreeForms.IsBall"/>) instanced like a tree, but stretched by
-/// Size on its own axes (x along Yaw, y up, z across), so one clipped ball serves as a cushion, a shrub, a hedge module or a
-/// tussock. Position is the foot (on the soil of a pit, else on the terrain). Yaw turns about +Y the way the trees' Yaw does
+/// Size on its own axes (x along Yaw, y up, z across), so one clipped ball serves as a cushion, a shrub or a hedge module. Position is the foot (on the soil of a pit, else on the terrain). Yaw turns about +Y the way the trees' Yaw does
 /// (local x goes to (cos, 0, −sin)); hedge modules lay their x along the edge. Custom is the INSTANCE_CUSTOM block of
 /// WLD-VEGETATION with the drawn height in w; its appearance variant carries <see cref="Understorey.UnderVariantBit"/>,
 /// so veg_card and veg_trunk fade the plant out before its draw distance (23c2c).
@@ -28,7 +27,7 @@ public sealed record GroundPlant(string Key, SpeciesInfo Species, int Variant, V
     public Vector4 Custom => new(Seed, Species.Row * 16 + Understorey.UnderVariantBit, WindPos, Height);
 }
 
-/// <summary>All understorey plants of one map, in a stable order (pit cover, borders, tussocks).</summary>
+/// <summary>All understorey plants of one map, in a stable order (pit cover, borders).</summary>
 public sealed record UnderstoreyLayout(IReadOnlyList<GroundPlant> Plants)
 {
     public int Count(UnderKind kind) => Plants.Count(p => p.Kind == kind);
@@ -39,23 +38,15 @@ public sealed record UnderstoreyLayout(IReadOnlyList<GroundPlant> Plants)
 /// table, the map's planting rules, the tree layout and the world seed:
 /// <list type="bullet">
 /// <item>tree pits get low clipped cushions round their trunks (the pit's frame, kerb and soil are WP-15's);</item>
-/// <item>green edges that face a road or a walk get borders: runs of loose shrub clumps and runs of clipped hedge;</item>
-/// <item>lawns get grass tussocks along their edges and round the trunks standing in them.</item>
+/// <item>green edges that face a road or a walk get borders: runs of loose shrub clumps and runs of clipped hedge.</item>
 /// </list>
 /// Nothing stands on hard pavement (the planter's pavement index, tree pits aside), on a road, in a building, water, court
-/// or car park, on a trunk, or on grades above <see cref="MaxGrade"/>. Shrubs, hedges and tussocks do not collide
+/// or car park, on a trunk, or on grades above <see cref="MaxGrade"/>. Shrubs and hedges do not collide
 /// (WLD-VEGETATION: only blocking hedges do, and the cluster hedges are WP-20's).
 /// </summary>
 public static class Understorey
 {
     public const float MaxGrade = 0.3f;
-
-    /// <summary>
-    /// Grass tussocks are switched off for this release (max-011 21:01 review: flat tussocks read as moss patches on open lawn).
-    /// The rule, the <c>tuft</c> species row and the <c>tufts</c> entry in planting.json stay; they come back with a dedicated
-    /// grass shader (veg_grass). This is the only switch.
-    /// </summary>
-    public const bool TuftsEnabled = false;
 
     /// <summary>Draw distance (m) for shrubs, hedge modules and pit cover (max-011 21:01 review: 150 m to 100 m); the consumer's near pool reads it.</summary>
     public const float DrawDistance = 100f;
@@ -70,16 +61,13 @@ public static class Understorey
     /// <summary>Start of the understorey fade (m); it ends at <see cref="DrawDistance"/> (veg_* VEG_UNDER_FADE).</summary>
     public const float FadeStart = 85f;
 
-    /// <summary>Draw distance (m) for tussocks, when <see cref="TuftsEnabled"/>.</summary>
-    public const float TuftDrawDistance = 45f;
-
     /// <summary>Clearance of an understorey plant from pavement edges and road surfaces (m).</summary>
     public const float PaveClearance = 0.35f;
 
     /// <summary>Clearance from building, water, court and parking outlines (m).</summary>
     public const float BlockClearance = 0.6f;
 
-    /// <summary>No shrub or tussock this close to a trunk (m); pit cushions keep <see cref="PitTrunkGap"/>.</summary>
+    /// <summary>No shrub this close to a trunk (m); pit cushions keep <see cref="PitTrunkGap"/>.</summary>
     public const float TrunkGap = 0.9f;
     public const float PitTrunkGap = 0.35f;
 
@@ -96,10 +84,7 @@ public static class Understorey
     /// <summary>Clipped hedge modules: height and half width (m); each module overlaps its neighbours by this share of the spacing.</summary>
     public const float HedgeHeight = 0.85f, HedgeHalfWidth = 0.42f, HedgeOverlap = 0.62f;
 
-    /// <summary>Tussocks: drawn height range (m), flattened by <see cref="TuftFlatten"/> and widened by <see cref="TuftWiden"/>; round trunks at this ring (m).</summary>
-    public const float TuftMin = 0.28f, TuftMax = 0.48f, TuftFlatten = 0.6f, TuftWiden = 1.4f, TuftRingMin = 0.9f, TuftRingMax = 1.9f;
-
-    /// <summary>Green parcels smaller than this (m²) are verges and islands: no border, no tussocks along their edge.</summary>
+    /// <summary>Green parcels smaller than this (m²) are verges and islands: no border.</summary>
     public const float MinParcel = 60f;
 
     public static UnderstoreyLayout Build(IWorldModel world, SpeciesTable species, PlantingRules rules, PlantingLayout trees, uint seed)
@@ -114,7 +99,6 @@ public static class Understorey
         var u = rules.Understorey;
         if (u.Pits is { } cover) PitCover(site, species.Get(cover.Species), cover, trees, plants);
         if (u.Borders is { } borders) Borders(site, species, borders, trunks, plants);
-        if (TuftsEnabled && u.Tufts is { } tufts) Tufts(site, species.Get(tufts.Species), tufts, trees, trunks, plants);
         return new UnderstoreyLayout(plants.AsReadOnly());
     }
 
@@ -211,51 +195,6 @@ public static class Understorey
 
     /// <summary>A road or a walk lies within <paramref name="reach"/>: the edge is a verge, not the far side of a lawn.</summary>
     private static bool Facing(Planting.Site site, Vector2 p, float reach) => site.OnRoad(p, reach) || site.IsPaved(p, reach);
-
-    // ---------------------------------------------------------------------------------------------------------
-    // Tussocks: along the lawn edges and round the trunks that stand in green.
-    // ---------------------------------------------------------------------------------------------------------
-
-    private static void Tufts(Planting.Site site, SpeciesInfo info, TuftPlanting rule, PlantingLayout trees, TrunkGrid trunks, List<GroundPlant> plants)
-    {
-        for (var g = 0; g < site.Green.Count; g++)
-        {
-            var parcel = site.Green[g];
-            if (parcel.Area < MinParcel) continue;
-            var sample = 0;
-            foreach (var (p, _, inward, _) in Walk(parcel, rule.Cell))
-            {
-                var key = "tuft:" + g.ToString(CultureInfo.InvariantCulture) + ":" + (sample++).ToString(CultureInfo.InvariantCulture);
-                var (variant, h) = Pick(site.Seed, key);
-                if (Fraction(h, 11) >= rule.Share) continue;
-                var c = p + inward * (ScalarMath.Lerp(0.3f, rule.Edge, Fraction(h, 5) * Fraction(h, 5)));
-                if (!PlanGeometry.Contains(parcel.Rings, c) || !Clear(site, trunks, c, TrunkGap)) continue;
-                AddTuft(site, plants, key, info, variant, h, c);
-            }
-        }
-        foreach (var tree in trees.Trees)
-        {
-            if (tree.Source == PlantSource.Pit || TreeForms.IsBall(tree.Species.Form)) continue;
-            var at = new Vector2(tree.Position.X, tree.Position.Z);
-            if (site.InPit(at) || site.IsPaved(at, 0f)) continue;
-            for (var k = 0; k < rule.PerTree; k++)
-            {
-                var key = "tuft:" + tree.Key + ":" + k.ToString(CultureInfo.InvariantCulture);
-                var (variant, h) = Pick(site.Seed, key);
-                var d = TreePlan.Azimuth(6.2831853f * (k + Fraction(h, 3)) / rule.PerTree);
-                var c = at + new Vector2(d.X, d.Z) * (ScalarMath.Lerp(TuftRingMin, TuftRingMax, Fraction(h, 5)));
-                if (!Clear(site, trunks, c, TuftRingMin * 0.8f)) continue;
-                AddTuft(site, plants, key, info, variant, h, c);
-            }
-        }
-    }
-
-    private static void AddTuft(Planting.Site site, List<GroundPlant> plants, string key, SpeciesInfo info, int variant, float h, Vector2 c)
-    {
-        var model = Model(info, variant);
-        var k = (ScalarMath.Lerp(TuftMin, TuftMax, Fraction(h, 7))) / model.Height;
-        Add(site, plants, key, info, variant, c, 0f, 6.2831853f * Fraction(h, 3), new Vector3(k * TuftWiden, k * TuftFlatten, k * TuftWiden), UnderKind.Tuft);
-    }
 
     // ---------------------------------------------------------------------------------------------------------
     // Common.

@@ -124,6 +124,24 @@ public static class PlanLines
             ? null : (a + r * t, Math.Clamp(t, 0f, 1f), Math.Clamp(u, 0f, 1f));
     }
 
+    /// <summary>Unique segment crossing or nearest endpoint contact within a distance in metres.
+    /// The point stays on the first segment, both parameters are clamped, and parallel paths do not cross.</summary>
+    public static (double X, double Y, double T, double U)? SegmentContact(Vector2 a, Vector2 b, Vector2 c, Vector2 d,
+        double distanceTolerance = 0)
+    {
+        var first = new LineSegment(new Coordinate(a.X, a.Y), new Coordinate(b.X, b.Y));
+        var second = new LineSegment(new Coordinate(c.X, c.Y), new Coordinate(d.X, d.Y));
+        if (((double)b.X - a.X) * ((double)d.Y - c.Y) - ((double)b.Y - a.Y) * ((double)d.X - c.X) == 0)
+        {
+            if (first.Distance(second) == 0)
+                throw new ArgumentException("Overlapping path segments do not define a unique crossing.");
+            return null;
+        }
+        var closest = first.ClosestPoints(second);
+        if (closest[0].Distance(closest[1]) > distanceTolerance) return null;
+        return (closest[0].X, closest[0].Y, first.SegmentFraction(closest[0]), second.SegmentFraction(closest[1]));
+    }
+
     private static LineString PlanLine(IReadOnlyList<Vector2> points, bool closed)
     {
         ArgumentNullException.ThrowIfNull(points);

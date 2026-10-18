@@ -4,7 +4,6 @@ namespace Campus.Contracts;
 public static class PaletteLayout
 {
     public const int EncodingVersion = 2;
-    public const int ExtensionSchema = 2;
     public const string LayoutId = "banked9-rows-v1";
     public const int LegacyCapacity = 256;
     public const int Capacity = 512;

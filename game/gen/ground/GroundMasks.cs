@@ -188,7 +188,7 @@ public static class GroundMasks
                 var grid = TerrainGrid.For(terrain, new TileKey(tx, tz), LodLevel.L0,
                     new GroundTile(tx * TileGrid.BaseEdge, tz * TileGrid.BaseEdge, TileGrid.BaseEdge, 1f));
                 var field = TileField.Build(layout, tile, section, grid);
-                var mesher = new GroundMesher(field, section, LodLevel.L1, layout, grid, new MeshSink());
+                var mesher = new GroundMesher(field, section, LodLevel.L0, layout, grid, new MeshSink());
                 for (var j = 0; j < tileCells; j++)
                     for (var i = 0; i < tileCells; i++)
                     {

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Tests.Support;
+using Campus.Gen.World;
 using Campus.Tests;
 using GdUnit4;
 
@@ -128,42 +129,6 @@ public sealed class GroundDiagonalTests
         AssertThat(checkedTriangles > 500).OverrideFailureMessage($"Only {checkedTriangles} lawn triangles checked.").IsTrue();
         AssertThat(nearArc > 20).OverrideFailureMessage($"Only {nearArc} lawn triangles beside the junction fillet.").IsTrue();
         AssertThat(worst <= 0.01f).OverrideFailureMessage($"Lawn leaves the draped terrain by {worst} m.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestTag.Determinism)]
-    [TestCategory(TestReason.Contract)]
-    public void LawnToneFieldFollowsTheSameDiagonal()
-    {
-        // The tone field is sampled on a coarse lattice and linear on its triangles; the mesher clips blocks that are
-        // affine on the anti-diagonal halves, so the fine values must come from the same split. The noise is gentle
-        // (the two splits differ by a few millionths at the sampled points), so the comparison is exact to float rounding.
-        var tile = new TileKey(0, 0);
-        var ctx = TestWorld.Context(TestWorld.Empty());
-        var extent = GroundLod.Tile(tile, LodLevel.L0, ctx.Map.DataRect);
-        var grid = TerrainGrid.For(FlatTerrain.Default, tile, LodLevel.L0, extent);
-        var field = TileField.Build(GroundLayout.Of(ctx.World), extent, GroundSection.Default, grid, LawnNoise.Seed(ctx), GroundLod.ToneCell(LodLevel.L0));
-        var m = field.ToneMacro;
-        AssertThat(m >= 4).OverrideFailureMessage($"Tone macro cell of {m} fine cells is too small to test.").IsTrue();
-        var spread = 0f;
-        for (var cj = 0; cj < 3; cj++)
-            for (var ci = 0; ci < 3; ci++)
-            {
-                float T(int a, int b) => field.Get((ci + a) * m, (cj + b) * m, TileField.Tone);
-                foreach (var (a, b) in new[] { (1, 1), (m - 1, 1), (1, m - 1), (m / 2, m / 2 - 1), (m - 1, m - 1), (m / 2 + 1, m / 2 + 1) })
-                {
-                    float u = (float)a / m, w = (float)b / m;
-                    var anti = u + w <= 1f
-                        ? T(0, 0) + u * (T(1, 0) - T(0, 0)) + w * (T(0, 1) - T(0, 0))
-                        : T(1, 1) + (1f - w) * (T(1, 0) - T(1, 1)) + (1f - u) * (T(0, 1) - T(1, 1));
-                    var main = u >= w
-                        ? T(0, 0) + u * (T(1, 0) - T(0, 0)) + w * (T(1, 1) - T(1, 0))
-                        : T(0, 0) + w * (T(0, 1) - T(0, 0)) + u * (T(1, 1) - T(0, 1));
-                    var actual = field.Get(ci * m + a, cj * m + b, TileField.Tone);
-                    AssertThat(Math.Abs((double)(anti) - (double)(actual)) <= 2e-7).OverrideFailureMessage($"tone at cell ({ci}, {cj}) offset ({a}, {b}): expected {anti}, got {actual}.").IsTrue();
-                    spread = MathF.Max(spread, MathF.Abs(main - anti));
-                }
-            }
-        AssertThat(spread > 1e-6f).OverrideFailureMessage($"The sampled tone values must tell the two diagonals apart; they differ by at most {spread}.").IsTrue();
     }
 
     /// <summary>A terrain whose only non-flat tile is <paramref name="tile"/> at level 0, filled from a ready 65 x 65 centimetre field.</summary>

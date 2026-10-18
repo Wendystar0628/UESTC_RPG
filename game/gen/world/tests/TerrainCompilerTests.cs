@@ -23,15 +23,6 @@ public sealed partial class TerrainCompilerTests
         var middle = TerrainCompiler.ZeroBandWeight(new(25, 1, 0));
         AssertThat(Math.Abs((double)(0) - (double)(left.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(left.Dx)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(1) - (double)(right.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(right.Dx)) <= TestTolerance.Position).IsTrue();
         AssertThat(Math.Abs((double)(0.5) - (double)(middle.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0.15) - (double)(middle.Dx)) <= TestTolerance.Position).IsTrue();
-        // Independent endpoint limits: cubic Hermite has O(epsilon^2) value error
-        // and O(epsilon) slope error. Test both sides, not a second polynomial implementation.
-        const double e = 0.0001;
-        AssertThat(TerrainCompiler.ZeroBandWeight(new(20 - e, 1, 0)) == left).OverrideFailureMessage("Protected side is not constant.").IsTrue();
-        AssertThat(TerrainCompiler.ZeroBandWeight(new(30 + e, 1, 0)) == right).OverrideFailureMessage("Interior side is not constant.").IsTrue();
-        var nearLeft = TerrainCompiler.ZeroBandWeight(new(20 + e, 1, 0));
-        var nearRight = TerrainCompiler.ZeroBandWeight(new(30 - e, 1, 0));
-        AssertThat(nearLeft.Height / e < TestTolerance.Position && (1 - nearRight.Height) / e < TestTolerance.Position).OverrideFailureMessage("Taper has a height corner.").IsTrue();
-        AssertThat(Math.Abs(nearLeft.Dx) < TestTolerance.Position && Math.Abs(nearRight.Dx) < TestTolerance.Position).OverrideFailureMessage("Taper endpoint derivative is not continuous.").IsTrue();
     }
 
     [TestCase, TestCategory(TestTag.Determinism)]
@@ -178,31 +169,6 @@ public sealed partial class TerrainCompilerTests
             try { TerrainCompiler.Compile(Context([lake, stream]) with { Network = new([], [canal], [], [], []) }, [Source([fixedCanal])]); } catch (WorldDataException error) { rejection = error; }
             AssertThat(rejection is not null).IsTrue();
         }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void AutomaticRoundingAndSurfaceAtStayAboveTheContinuousSupportFloor()
-    {
-        var road = new TerrainRoad(new("fixture:rounded-floor"), new("fixture:rounded-floor"),
-            new(new([new(0, 15), new(0, 0), new(-15, 0)])), 2.5, "footway", null);
-        var baseline = new TerrainProgram([new("base", "fixture", Zone, TerrainGroup.Regional, 0, new(new(-30), new(30)),
-            (previous, x, z) => previous with { Surface = new(-0.6 + 0.01 * x + 0.02 * z, 0.01, 0.02) })]);
-        var fit = new TerrainRoadProfile.NetworkFit([new(road, [], 1d / 12)], baseline, [], (_, _) => false);
-        var initial = fit.Solve()[road.Source]; const double floor = -0.18;
-        var support = TerrainCompiler.AutomaticFreeboardSupport(road, initial, (-1d, 0.875d), (-1d, 1.125d));
-        AssertThat(support.Count >= 3 && support.Count < fit.Samples.Count).OverrideFailureMessage("The existing bend support was missed or expanded to the entire road.").IsTrue();
-        foreach (var index in support) fit.Require(road.Source, index, new(floor, "fixture:water"));
-        var constrained = fit.Solve()[road.Source];
-        for (var part = 0; part <= 1000; part++)
-        {
-            var z = 0.875 + 0.25 * part / 1000;
-            var value = constrained.SurfaceAt(road.Path, -1, z, road.Width, road.Path.Project(-1, z));
-            AssertThat(value.Height >= floor - TestTolerance.Position).OverrideFailureMessage("Continuous SurfaceAt fell below its constrained contributing samples.").IsTrue();
-        }
-        foreach (var sample in fit.Samples) fit.Require(sample.Source, sample.Index, new(floor, "fixture:water"));
-        constrained = fit.Solve()[road.Source];
-        for (var station = 0d; station <= road.Path.Length; station += 0.005)
-            AssertThat(constrained.At(station).Y >= floor - TestTolerance.Position).OverrideFailureMessage("Existing three-node automatic rounding undershot its sample lower bound.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

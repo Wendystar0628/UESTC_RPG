@@ -9,8 +9,8 @@ public sealed record WorldModelLoadInputs(MapDescriptor Descriptor,
 {
     private readonly IReadOnlyDictionary<ZoneId, IReadOnlyList<PolygonRings>>? _zoneBoundaries;
 
-    /// <summary>Preloaded zones.json boundaries; null means missing, an empty dictionary means provided with no zones.
-    /// Snapshotting preserves geometry without asserting topology or completing terrain validation.</summary>
+    /// <summary>Optional authoritative zone polygons for ownership and influence-extent acceptance; not a height-evaluation prerequisite.
+    /// Null means unavailable; an empty dictionary means supplied with no zones. Snapshotting does not assert validation.</summary>
     public IReadOnlyDictionary<ZoneId, IReadOnlyList<PolygonRings>>? ZoneBoundaries
     {
         get => _zoneBoundaries;

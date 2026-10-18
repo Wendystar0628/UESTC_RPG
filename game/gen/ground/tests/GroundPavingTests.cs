@@ -31,7 +31,8 @@ public sealed class GroundPavingTests
         foreach (var mesh in patterned)
         {
             mesh.ValidateVertexData();   // contract: UV and UV2 present, gate/K constant per triangle
-            AssertThat(mesh.Material.Spec.SurfacePattern == GroundPaving.Granite).OverrideFailureMessage("Granite 600 profile.").IsTrue();
+            AssertThat(mesh.Material.Spec.SurfacePattern == SurfaceMaterialCatalog.FromInputs(TestWorld.Context(world).SourceInputs)
+                .Get(GroundPaving.GraniteMaterialId)).OverrideFailureMessage("The plaza uses its authored material profile.").IsTrue();
             AssertThat(mesh.Material.Spec with { SurfacePattern = null } == GroundPalette.Spec(GroundMaterial.Plaza)).OverrideFailureMessage("The profile is the only material difference from the plain plaza class.").IsTrue();
             AssertThat(mesh.ColorIndices!.All(id => id == GroundPalette.Id(GroundColor.Curb))).OverrideFailureMessage("Granite keeps its colour.").IsTrue();
             for (var v = 0; v < mesh.Position.Length / 3; v++)

@@ -111,12 +111,12 @@ public sealed class BakeSurfaceTests
     {
         var palette = new PaletteCatalog(new PaletteRegistry(new PaletteEntry[]
         {
-            new(new("fixture.lit"), 64, N.Vector3.One, "fixture", false, PaletteRole.Lit),
-            new(new("fixture.shade"), 65, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
-            new(new("fixture.tint"), 66, N.Vector3.One, "fixture", false, PaletteRole.Lit),
-            new(new("fixture.tint.shade"), 67, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
-            new(new("fixture.accent"), 68, N.Vector3.One, "fixture", false, PaletteRole.Lit),
-            new(new("fixture.accent.shade"), 69, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)
+            new(new("fixture.lit"), new(64), N.Vector3.One, "fixture", false, PaletteRole.Lit),
+            new(new("fixture.shade"), new(65), new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
+            new(new("fixture.tint"), new(66), N.Vector3.One, "fixture", false, PaletteRole.Lit),
+            new(new("fixture.tint.shade"), new(67), new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
+            new(new("fixture.accent"), new(68), N.Vector3.One, "fixture", false, PaletteRole.Lit),
+            new(new("fixture.accent.shade"), new(69), new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)
         }), []);
         foreach (var useUv2 in new[] { false, true })
         {
@@ -290,8 +290,8 @@ public sealed class BakeSurfaceTests
         [0, 0, 0, 64, 0, 0, 0, 0, 64], [0, 1, 0, 1, 0, 0, 0, 0, -1], [0, 2, 1], Uv: [0, 0, 1, 0, 0, 1]);
     private static Box3 Bounds() => new(N.Vector3.Zero, new(64, 64, 64));
     private static PaletteCatalog Palette() => new(new PaletteRegistry([
-        new(new("fixture.lit"), 64, N.Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("fixture.shade"), 65, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)]), []);
+        new(new("fixture.lit"), new(64), N.Vector3.One, "fixture", false, PaletteRole.Lit),
+        new(new("fixture.shade"), new(65), new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)]), []);
     private static Godot.Collections.Dictionary Dictionary(BakedSurface surface) => new()
     {
         ["format"] = surface.Format,

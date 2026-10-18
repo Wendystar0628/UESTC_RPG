@@ -9,7 +9,7 @@ namespace Campus.Style.Palette.Keys.Tests;
 
 /// <summary>
 /// The catalog fills bank-0 frame and seasonal rows plus bank-1 pairs in the 256×68 layout. The extension pairs here are
-/// test entries at the bank edges (256/257, 510/511) plus one per material class in between, not the registered ext-v2 table.
+/// test entries at the bank edges (256/257, 510/511) plus one per material class in between, not the registered bank-1 table.
 /// </summary>
 [TestSuite]
 public sealed class PaletteBankTests
@@ -69,9 +69,9 @@ public sealed class PaletteBankTests
             Key("vegetation.json"), Key("weather.json")));
         var entries = new List<PaletteEntry>();
         foreach (var file in new[] { Path.Combine(palette, "core.json") }
-            .Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "WP-*.json").Order(StringComparer.Ordinal)))
-            entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        var extensions = new List<PaletteEntryV2>();
+            .Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "*.json").Where(path => Path.GetFileName(path) != "ui.json").Order(StringComparer.Ordinal)))
+            entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries.Where(entry => entry.Index.Value < PaletteLayout.LegacyCapacity));
+        var extensions = new List<PaletteEntry>();
         foreach (var (lit, cls, albedo) in new[]
         {
             (256, "building", new System.Numerics.Vector3(0.62f, 0.36f, 0.26f)), (330, "metal", new System.Numerics.Vector3(0.32f, 0.31f, 0.29f)),

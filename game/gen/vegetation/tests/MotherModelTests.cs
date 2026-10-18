@@ -22,13 +22,7 @@ public sealed class MotherModelTests
     {
         var root = RepositoryFixture.Root;
         var table = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json")));
-        var entries = new List<PaletteEntry>();
-        var palette = Path.Combine(root, "game", "style", "palette");
-        var files = new[] { Path.Combine(palette, "core.json") }
-            .Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "WP-*.json").Order(StringComparer.Ordinal));
-        foreach (var file in files)
-            entries.AddRange(JsonSerializer.Deserialize<PaletteRegistryData>(File.ReadAllBytes(file), ContractJson.Options)!.Entries);
-        return (table, new PaletteCatalog(new PaletteRegistry(entries), []));
+        return (table, Campus.Contracts.Tests.PaletteFixture.Catalog);
     }
 
     private static readonly ConcurrentDictionary<(string Species, int Variant, VegLevel Level), MotherModel> Mothers = new();
@@ -296,7 +290,7 @@ public sealed class MotherModelTests
             var m = Mother(s, 0, VegLevel.L0);
             if (MathF.Abs(m.Bounds.Min.Y + MotherModels.Burial) > TestTolerance.Layout && !TreeForms.IsBall(s.Form))
                 throw new InvalidOperationException($"{s.Id}: trunk not buried {m.Bounds.Min.Y}");
-            // Clipped shrub balls and tussocks sit a little lower than their nominal height (no stem, flattened top cluster).
+            // Clipped shrub balls sit a little lower than their nominal height (no stem, flattened top cluster).
             if (m.Bounds.Max.Y < m.Height * (TreeForms.IsBall(s.Form) ? 0.8f : 0.85f) || m.Bounds.Max.Y > m.Height * 1.35f)
                 throw new InvalidOperationException($"{s.Id}: top {m.Bounds.Max.Y} for height {m.Height}");
             if (m.TrunkRadius <= 0f || m.BranchHeight <= 0f) throw new InvalidOperationException($"{s.Id}: collider data");

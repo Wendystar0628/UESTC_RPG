@@ -1,0 +1,125 @@
+{
+  "schema": 2,
+  "entries": [
+    {
+      "token": "bronze.lit",
+      "index": 320,
+      "albedo": [
+        0.324622,
+        0.314406,
+        0.288587
+      ],
+      "materialClass": "metal",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "bronze.shade",
+      "index": 321,
+      "albedo": [
+        0.324622,
+        0.314406,
+        0.288587
+      ],
+      "materialClass": "metal",
+      "seasonal": false,
+      "role": "shade"
+    },
+    {
+      "token": "stone.black.lit",
+      "index": 322,
+      "albedo": [
+        0.1853,
+        0.1967,
+        0.2157
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "stone.black.shade",
+      "index": 323,
+      "albedo": [
+        0.1853,
+        0.1967,
+        0.2157
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "shade"
+    },
+    {
+      "token": "glass.tea.lit",
+      "index": 324,
+      "albedo": [
+        0.4169,
+        0.3557,
+        0.2635
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "glass.tea.shade",
+      "index": 325,
+      "albedo": [
+        0.4169,
+        0.3557,
+        0.2635
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "shade"
+    },
+    {
+      "token": "band.ochre.lit",
+      "index": 326,
+      "albedo": [
+        0.5444,
+        0.296,
+        0.2036
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "band.ochre.shade",
+      "index": 327,
+      "albedo": [
+        0.5444,
+        0.296,
+        0.2036
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "shade"
+    },
+    {
+      "token": "glass.deep.lit",
+      "index": 328,
+      "albedo": [
+        0.1952,
+        0.2563,
+        0.3249
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "glass.deep.shade",
+      "index": 329,
+      "albedo": [
+        0.1952,
+        0.2563,
+        0.3249
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "shade"
+    }
+  ]
+}

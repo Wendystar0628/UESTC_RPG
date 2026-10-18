@@ -1,0 +1,7 @@
+{
+  "schema": 2,
+  "entries": [
+    {"token": "tree.bark.lit", "index": 252, "albedo": [0.500763, 0.396822, 0.308028], "materialClass": "building", "seasonal": false, "role": "lit"},
+    {"token": "tree.bark.shade", "index": 253, "albedo": [0.500763, 0.396822, 0.308028], "materialClass": "building", "seasonal": false, "role": "shade"}
+  ]
+}

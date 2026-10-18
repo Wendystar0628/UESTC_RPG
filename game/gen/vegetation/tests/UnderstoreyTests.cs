@@ -13,7 +13,7 @@ namespace Campus.Gen.Vegetation.Tests;
 
 /// <summary>
 /// max-011 23c2b: the empty tree pits and the overlays' design trees are two new tree sources planted after the others; the
-/// understorey (pit cover, border shrubs and hedges, grass tussocks) keeps off hard pavement and roads.
+/// understorey (pit cover, border shrubs and hedges) keeps off hard pavement and roads.
 /// </summary>
 [TestSuite]
 public sealed class UnderstoreyTests
@@ -114,13 +114,6 @@ public sealed class UnderstoreyTests
         var under = Understorey.Build(world, species, rules, trees, 1u);
         foreach (var kind in Enum.GetValues<UnderKind>())
         {
-            if (kind == UnderKind.Tuft)
-            {
-                // Disabled tussocks are absent everywhere; only the fixture requires a nonempty enabled case.
-                if ((!Understorey.TuftsEnabled && under.Count(kind) != 0) || (requireKinds && Understorey.TuftsEnabled && under.Count(kind) == 0))
-                    throw new InvalidOperationException($"{under.Count(kind)} tussocks with TuftsEnabled = {Understorey.TuftsEnabled}");
-                continue;
-            }
             if (requireKinds && under.Count(kind) == 0) throw new InvalidOperationException($"no {kind} in the exclusive fixture");
         }
         var census = PavementTests.Census.Of(world);
@@ -149,9 +142,9 @@ public sealed class UnderstoreyTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void UnderstoreyModelsAreClippedBalls()
     {
-        // Shrubs, hedge modules and tussocks are many and small: their mother models are the clipped-ball form.
+        // Shrubs and hedge modules are many and small: their mother models are the clipped-ball form.
         var (species, _) = PavementTests.Data;
-        foreach (var id in new[] { "photinia", "loropetalum", "boxhedge", "grass" })
+        foreach (var id in new[] { "photinia", "loropetalum", "boxhedge" })
             if (!TreeForms.IsBall(species.Get(id).Form)) throw new InvalidOperationException($"{id} is not a ball form");
     }
 

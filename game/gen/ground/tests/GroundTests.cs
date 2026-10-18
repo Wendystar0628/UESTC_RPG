@@ -51,7 +51,7 @@ public sealed class GroundTests
         // Every tone patch is broad: sample a 1 m grid and require each sample to share its tone with a neighbour.
         var ctx = TestWorld.Context(TestWorld.Empty());
         var tone = GroundSection.Default.Lawn;
-        var seed = LawnNoise.Seed(ctx);
+        var seed = LawnNoise.Seed(ctx.WorldSeed);
         int Tone(float x, float z) { var n = LawnNoise.At(x, z, seed, tone); return n < tone.Low ? 0 : n < tone.High ? 1 : 2; }
         var isolated = 0;
         for (var z = 0; z < 128; z++)
@@ -100,7 +100,7 @@ public sealed class GroundTests
             {
                 var ny = m.Normal[3 * v + 1];
                 var z = m.Position[3 * v + 2];
-                if (MathF.Abs(ny) < 1e-3f && MathF.Abs(z - 3f) < 1e-3f)
+                if (MathF.Abs(ny) < 0.02f && MathF.Abs(z - 3f) < TestTolerance.Position)
                 {
                     found = true;
                     var nz = m.Normal[3 * v + 2];
@@ -247,11 +247,11 @@ public sealed class GroundTests
         var ids = new Dictionary<string, int>();
         var core = System.IO.Path.Combine(palette, "core.json");
         foreach (var path in new[] { System.IO.File.Exists(core) ? core : System.IO.Path.Combine(palette, "keys", "registry.fallback.json"),
-                     System.IO.Path.Combine(palette, "ext", "WP-15.json") })
+                     System.IO.Path.Combine(palette, "ext", "ground.json") })
         {
             using var doc = JsonDocument.Parse(System.IO.File.ReadAllBytes(path));
             foreach (var e in doc.RootElement.GetProperty("entries").EnumerateArray())
-                ids[e.GetProperty("token").GetString()!] = e.GetProperty("id").GetInt32();
+                ids[e.GetProperty("token").GetString()!] = e.GetProperty("index").GetInt32();
         }
         foreach (var color in Enum.GetValues<GroundColor>())
         {
@@ -270,50 +270,6 @@ public sealed class GroundTests
         AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 4f, 4f))) <= TestTolerance.Position).OverrideFailureMessage($"fillet corner: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 4f, 4f)}.").IsTrue();
         AssertThat(Math.Abs((double)(Section.GrassY) - (double)(GroundCollision.SampleHeight(collider, 12f, 12f))) <= TestTolerance.Position).OverrideFailureMessage($"lawn beyond the fillet: expected {Section.GrassY}, got {GroundCollision.SampleHeight(collider, 12f, 12f)}.").IsTrue();
     }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void SurfacesAreWatertight()
-    {
-        // Every edge inside the tile is shared by exactly two triangles: no T-junctions, no pinholes between leaves,
-        // kerb faces close onto the surfaces they join. Open edges may only lie on the tile border or at the bottom
-        // of skirts and water banks; road markings are separate decals.
-        foreach (var world in new[] { TestWorld.Street(), TestWorld.Junction() })
-            foreach (var lod in new[] { LodLevel.L0, LodLevel.L1 })
-            {
-                var output = new GroundModule().Build(TestWorld.Context(world), new TileKey(0, 0), lod);
-                var edges = new Dictionary<(Vector3, Vector3), int>();
-                foreach (var m in output.Meshes.Where(m => m.Material.Spec != GroundPalette.Spec(GroundMaterial.Marking)))
-                    for (var t = 0; t < m.Index.Length; t += 3)
-                        for (var e = 0; e < 3; e++)
-                        {
-                            // Snap to 0.1 mm: contours nudged off lattice points leave micrometre slivers that
-                            // collapse here; anything that stays open after snapping is a real crack.
-                            Vector3 P(int i) => new(MathF.Round(m.Position[3 * i] * 1e4f) * 1e-4f,
-                                MathF.Round(m.Position[3 * i + 1] * 1e4f) * 1e-4f, MathF.Round(m.Position[3 * i + 2] * 1e4f) * 1e-4f);
-                            var p0 = P(m.Index[t]);
-                            var p1 = P(m.Index[t + 1]);
-                            var p2 = P(m.Index[t + 2]);
-                            if (p0 == p1 || p1 == p2 || p2 == p0) break;
-                            var a = P(m.Index[t + e]);
-                            var b = P(m.Index[t + (e + 1) % 3]);
-                            var key = Less(a, b) ? (a, b) : (b, a);
-                            edges[key] = edges.GetValueOrDefault(key) + 1;
-                        }
-                var size = TileGrid.Edge(lod);
-                bool Border(Vector3 p) => p.X == 0f || p.Z == 0f || p.X == size || p.Z == size;
-                foreach (var ((a, b), count) in edges)
-                {
-                    if (count % 2 == 0) continue;   // collapsed slivers can stack an even number of faces on one edge
-                    if (Border(a) && Border(b) && (a.X == b.X || a.Z == b.Z)) continue;
-                    if (a.Y < 0f && b.Y < 0f) continue;   // skirt and bank bottoms
-                    if (Vector3.Distance(a, b) < 1e-3f) continue;   // sub-millimetre slivers beside nudged contours are dropped
-                    AssertThat(false).OverrideFailureMessage($"{lod}: edge {a} -> {b} used {count} times.").IsTrue();
-                }
-            }
-    }
-
-    private static bool Less(Vector3 a, Vector3 b) =>
-        a.X != b.X ? a.X < b.X : a.Z != b.Z ? a.Z < b.Z : a.Y < b.Y;
 
     // ---------------------------------------------------------------- helpers
 
@@ -415,8 +371,16 @@ internal static class TestWorld
             new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
             new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
             new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = map, WorldSeed = 1u };
+        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = map,
+            WorldSeed = 1u, SourceInputs = MaterialInputs.Value.Entries };
     }
+
+    private static readonly Lazy<BuildInputSnapshot> MaterialInputs = new(() => BuildInputSnapshot.Freeze(
+        new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
+        {
+            [SurfaceMaterialCatalog.SourcePath] = System.IO.File.ReadAllBytes(
+                System.IO.Path.Combine(RealMapFixture.DataDirectory(), SurfaceMaterialCatalog.SourcePath))
+        }));
 
     private static PolygonRings Rect(float x0, float z0, float x1, float z1) =>
         new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]);

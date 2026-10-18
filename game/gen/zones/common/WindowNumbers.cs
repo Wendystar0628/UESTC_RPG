@@ -44,13 +44,18 @@ public static class WindowNumbers
             throw new InvalidOperationException($"{feature.Value} / {key}: {columns}×{rows} openings against the allocated {allocation.Columns}×{allocation.Rows}.");
     }
 
-    /// <summary>One numbered rectangular pane per opening (WP-10 OpeningGlass).</summary>
-    public static void Panes(SiteBuilder b, IEnumerable<GlazedOpening> openings, WindowAllocation allocation, ChannelId channel, byte card)
+    /// <summary>One numbered rectangular pane per opening (WP-10 OpeningGlass), optionally in the site's glass material.</summary>
+    public static void Panes(SiteBuilder b, IEnumerable<GlazedOpening> openings, WindowAllocation allocation, ChannelId channel, byte card,
+        ToonSpec? glass = null)
     {
         ArgumentNullException.ThrowIfNull(b);
         foreach (var o in openings)
-            b.Add(OpeningGlass.Grid(o.Width, o.Height, 1, 1, allocation.BaseId, o.Column, o.Row, allocation.Columns, channel, card),
-                OpeningPlacement.Frame(o.Origin, o.Outward));
+        {
+            var mesh = OpeningGlass.Grid(o.Width, o.Height, 1, 1, allocation.BaseId, o.Column, o.Row, allocation.Columns, channel, card);
+            // OpeningGlass leaves ColorIndices null, so the packer takes the colour from this material's Lit token.
+            if (glass is not null) mesh = mesh with { Material = new(glass) };
+            b.Add(mesh, OpeningPlacement.Frame(o.Origin, o.Outward));
+        }
     }
 
     /// <summary>The same openings as individual window declarations (ContentOutput.LooseWindows semantics).</summary>

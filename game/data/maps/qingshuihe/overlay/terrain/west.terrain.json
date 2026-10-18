@@ -7,7 +7,7 @@
       "op": "channel",
       "id": "design:terrain:west-hongguang-north",
       "zone": "west",
-      "water": "qsh:source:way:693515475",
+      "water": "qsh:way:693515475",
       "depth": 1.2,
       "bank": {"kind": "hard", "slope": "1:1"},
       "waterY": -1.2,
@@ -18,14 +18,31 @@
       "op": "channel",
       "id": "design:terrain:west-wetland-stream",
       "zone": "west",
-      "water": "qsh:source:way:217855313",
+      "water": "qsh:way:217855313",
       "depth": 0.6,
       "bank": {"kind": "soft", "slope": "1:4"},
       "waterY": -0.5,
       "weirs": [],
       "line": {"points": [[-254.0, -247.46], [-248.96, -242.51], [-244.16, -211.2], [-244.08, -196.37], [-263.35, -168.19], [-268.99, -153.47], [-276.18, -134.71]]},
       "width": 4.0,
-      "reason": "水（MAP-QSH-TERRAIN）：湿地溪是西湖东北湾经湿地向北的一段，取走马河 osm:way:217855313 湖口（−276.2, −134.7）以北到暗涵入口（−254.0, −247.5）的折线，常水位 −0.5 与西湖同高，软岸 1:4，岸顶落在湿地低地 −0.25；北端经穿堤暗涵 osm:way:1172471444 在暗涵口约 (−284, −277) 两级各 0.35 m 跌进红光右支渠（−0.5 → −1.2），是 MAP-QSH-WEST 的暗涵口水声；单个 weir 的落差上限是 0.6 m，两级跌水要中间水段或放宽上限，暂不登记 weir，等 WP-08 定。湿地的水就是湖水；涉水卵石滩落在本溪软岸上，由 19c 登记。"
+      "reason": "水（MAP-QSH-TERRAIN）：湿地溪是西湖东北湾经湿地向北的一段，取走马河 osm:way:217855313 湖口（−276.2, −134.7）以北到暗涵入口（−254.0, −247.5）的折线，常水位 −0.5 与西湖同高，软岸 1:4，岸顶落在湿地低地 −0.25；北端经穿堤暗涵 osm:way:1172471444 在暗涵口约 (−284, −277) 两级各 0.35 m 跌进红光右支渠（−0.5 → −1.2），是 MAP-QSH-WEST 的暗涵口水声；单个 weir 的落差上限是 0.6 m，两级跌水以暗涵本身作恒水位 −0.85 的中间水段，两座堰登记在 design:terrain:west-wetland-culvert。湿地的水就是湖水；涉水卵石滩落在本溪软岸上，由 19c 登记。"
+    },
+    {
+      "op": "channel",
+      "id": "design:terrain:west-wetland-culvert",
+      "zone": "west",
+      "water": "qsh:way:1172471444",
+      "depth": 1.2,
+      "bank": {"kind": "hard", "slope": "1:1"},
+      "waterY": -0.85,
+      "weirs": [
+        {"s": 0.5, "drop": 0.35, "kind": "weir", "structure": "design:west-wetland-culvert-weir-in", "upstream": "qsh:way:217855313", "downstream": "qsh:way:1172471444"},
+        {"s": 40.0, "drop": 0.35, "kind": "weir", "structure": "design:west-wetland-culvert-weir-out", "upstream": "qsh:way:1172471444", "downstream": "qsh:way:693515475"},
+        {"s": 40.0, "drop": 0.35, "kind": "weir", "structure": "design:west-wetland-culvert-weir-out", "upstream": "qsh:way:1172471444", "downstream": "qsh:source:way:687770522"}
+      ],
+      "line": {"points": [[-254.0, -247.46], [-282.93, -275.93]]},
+      "width": 4.0,
+      "reason": "水位阶梯（MAP-QSH-TERRAIN、MAP-QSH-TERRAIN-DISTRICTS）：穿堤暗涵 osm:way:1172471444 自身就是湿地溪（−0.5）与红光右支渠北段（−1.2）之间的中间水段，常水位 −0.85，不画水面、不雕刻地表，只记水位；两端各一座堰，每级 0.35 m：入口堰在暗涵入口 (−254, −247.5)，S=0.5，溪 → 涵；出口堰在暗涵口约 (−282.5, −275.5)，S=40.0（涵长 40.6 m），涵 → 渠。两座堰是不同的构筑物 design:west-wetland-culvert-weir-in / -out，相距 39.5 m。暗涵两端的 OSM 节点与溪、渠重合，涵若不是独立水位就会把 −0.5 与 −1.2 连成一个分量，所以由它承担中间段。出口同时落在红光渠的两份表示里：4 m 中线水带 qsh:way:693515475 和实宽水面 qsh:source:way:687770522（水体多边形，两者真实重叠，岸线另被北界与滨水选段引用，不能隐去任一份），出口堰对两者各登记一条连接，同一座构筑物。"
     },
     {
       "op": "platform",

@@ -20,6 +20,9 @@ public readonly record struct TerrainDifferential(double Height, double Dx, doub
 /// <summary>Format-independent scalar primitives. This class does not choose map layout or operation order.</summary>
 public static class TerrainMath
 {
+    internal const double HeightTolerance = 0.02;
+    internal const double GradeTolerance = 0.01;
+
     public static double Hermite(double t)
     {
         RequireFinite(t, nameof(t));

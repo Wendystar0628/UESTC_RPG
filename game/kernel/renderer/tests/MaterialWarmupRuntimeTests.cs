@@ -233,8 +233,8 @@ public sealed partial class MaterialWarmupRuntimeTests
     private sealed class Palettes : IPaletteCatalogSource
     {
         public PaletteCatalog Catalog { get; } = new(new PaletteRegistry([
-            new(new("test.lit"), 64, N.Vector3.One, "test", false, PaletteRole.Lit),
-            new(new("test.shade"), 65, N.Vector3.Zero, "test", false, PaletteRole.Shade)]), [
+            new(new("test.lit"), new(64), N.Vector3.One, "test", false, PaletteRole.Lit),
+            new(new("test.shade"), new(65), N.Vector3.Zero, "test", false, PaletteRole.Shade)]), [
             new(new("test.high.lit"), new(510), N.Vector3.One, "test", false, PaletteRole.Lit),
             new(new("test.high.shade"), new(511), N.Vector3.Zero, "test", false, PaletteRole.Shade)]);
     }

@@ -1,0 +1,20 @@
+{
+  "materials": [
+    {
+      "id": "ground.plaza.granite",
+      "surfacePattern": {
+        "layer": 1,
+        "periodMeters": [0.6, 0.6],
+        "jointMeters": [0.006, 0.006]
+      }
+    },
+    {
+      "id": "ground.walk.paver",
+      "surfacePattern": {
+        "layer": 2,
+        "periodMeters": [0.3, 0.15],
+        "jointMeters": [0.004, 0.004]
+      }
+    }
+  ]
+}

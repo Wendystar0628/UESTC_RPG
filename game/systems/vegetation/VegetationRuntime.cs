@@ -22,6 +22,8 @@ namespace Campus.Systems.Vegetation;
 /// and the changed pools rewrite their whole buffer, visible count and bounds. A pool left with no tree is parked: its bounds move far below the ground, since an empty
 /// pool whose bounds still meet the camera or a shadow cascade costs its draw calls in that pass (max-011 0n-2).
 /// A new world instance re-buckets at once.
+/// The near card grass of the authored grass areas comes in the same prepared list under <see cref="GrassPool.KeyPrefix"/>
+/// and runs as one <see cref="GrassPool"/> per style, refreshed on the same tick (WLD-VEGETATION §3.5).
 /// No engine instance is made here.
 /// </summary>
 [KernelNode("systems.vegetation", Owner = "WP-23")]
@@ -36,10 +38,12 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private const int MountsPerFrame = 8;        // mother models mounted per frame after loading
 
     private readonly List<Mother> _mothers = [];
+    private readonly List<GrassPool> _grass = [];
+    private bool _grassMounted;
     private IInstancePoolHost? _host;
     private ICameraRig? _rig;
     private IWorldState? _world;
-    private Task<Mother[]>? _pending;
+    private Task<(Mother[] Trees, GrassPool[] Grass)>? _pending;
     private MapId? _map;
     private int _mounted;
     private double _since = Interval;
@@ -115,7 +119,12 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             GD.PushError($"Vegetation build context unavailable, no trees on {ctx.Descriptor.Id.Value}: {error}");
             return;
         }
-        _pending = Task.Run(() => producer.PrepareVegetation(context()).Select(data => new Mother(data)).ToArray());
+        _pending = Task.Run(() =>
+        {
+            var prepared = producer.PrepareVegetation(context());
+            return (prepared.Where(d => !IsGrass(d)).Select(data => new Mother(data)).ToArray(),
+                prepared.Where(IsGrass).Select(data => new GrassPool(data)).ToArray());
+        });
     }
 
     public override void _Process(double delta)
@@ -134,9 +143,18 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         if (_pending is { IsCompleted: true } done)
         {
             _pending = null;
-            _mothers.AddRange(done.GetAwaiter().GetResult());
+            var (trees, grass) = done.GetAwaiter().GetResult();
+            _mothers.AddRange(trees);
+            _grass.AddRange(grass);
         }
         if (_host is null || _rig is null || _map is not { } map) return;
+        if (!_grassMounted && _pending is null)
+        {
+            foreach (var pool in _grass) pool.Mount(_host, map);
+            _grassMounted = true;
+            if (_grass.Count > 0)
+                GD.Print($"Grass mounted: {_grass.Sum(g => g.Count)} clumps in {_grass.Count} pools, capacity {_grass.Sum(g => g.Capacity)}");
+        }
         for (var n = 0; n < MountsPerFrame && _mounted < _mothers.Count; n++)
         {
             _mothers[_mounted].Mount(_host, map);
@@ -158,6 +176,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         if (!reset && _since < Interval) return;
         _since = 0;
         for (var i = 0; i < _mounted; i++) _mothers[i].Refresh(eye, reset);
+        foreach (var pool in _grass) pool.Refresh(eye, reset);
         _resetForCapture = false;
         _worldReset = false;
         _appliedEye = eye;
@@ -169,11 +188,16 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         Grass = null;
         foreach (var mother in _mothers) mother.Free();
         _mothers.Clear();
+        foreach (var pool in _grass) pool.Free();
+        _grass.Clear();
+        _grassMounted = false;
         _mounted = 0;
         _worldReset = true;
         _appliedEye = null;
         _resetForCapture = false;
     }
+
+    private static bool IsGrass(VegetationMotherData data) => data.Key.StartsWith(GrassPool.KeyPrefix, StringComparison.Ordinal);
 
     /// <summary>Capture the formal service's prepared map context before publishing work.</summary>
     private static Func<BuildContext> ContextFor(IMapContext map) => VegetationContext.Resolve(map, ModuleId,

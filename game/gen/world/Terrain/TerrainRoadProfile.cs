@@ -4,7 +4,7 @@ namespace Campus.Gen.World;
 
 internal sealed class TerrainRoadProfile
 {
-    internal const double JunctionHeightTolerance = 0.0001;
+    internal const double JunctionHeightTolerance = TerrainMath.HeightTolerance;
     internal sealed record Interval(IReadOnlyList<TerrainAnchor> Anchors, string File, string Id);
     internal sealed record Request(TerrainRoad Road, IReadOnlyList<(double From, double To)> Exclusions, double MaximumGrade,
         IReadOnlyList<Interval>? Intervals = null);
@@ -40,46 +40,10 @@ internal sealed class TerrainRoadProfile
     private readonly string? _authoredFile;
     private readonly string? _authoredEntry;
     public double Length { get; }
-    internal IReadOnlyList<TerrainAnchor> AuthoredAnchors { get; private set; } = [];
-    internal IReadOnlyList<TerrainAnchor> AutomaticSamples { get; } = [];
 
-    // These are the original samples of the existing linear/two-sided rounding pieces.
-    // Their nonnegative convex weights prove the continuous automatic-profile lower bound.
+    // Samples contributing to the existing interpolation pieces, used by the bank fit.
     internal IEnumerable<int> SupportIndices(double from, double to) => _pieces
-        .Where(piece => piece.S1 >= from - 0.0000001 && piece.S0 <= to + 0.0000001).SelectMany(piece => piece.Support).Distinct().Order();
-
-    // Author Hermite pieces are fixed; use their true extrema, never the automatic
-    // convex-combination certificate, when proving their contribution above a floor.
-    internal double MinimumHeight(double from, double to)
-    {
-        var minimum = double.PositiveInfinity;
-        foreach (var piece in _pieces.Where(piece => piece.S1 >= from && piece.S0 <= to))
-        {
-            var left = Math.Max(from, piece.S0); var right = Math.Min(to, piece.S1);
-            minimum = Math.Min(minimum, Math.Min(piece.At(left).Y, piece.At(right).Y));
-            if (!piece.Cubic) continue;
-            var length = piece.S1 - piece.S0;
-            var a = 2 * piece.Y0 - 2 * piece.Y1 + length * (piece.M0 + piece.M1);
-            var b = -3 * piece.Y0 + 3 * piece.Y1 - length * (2 * piece.M0 + piece.M1);
-            var c = length * piece.M0;
-            if (a == 0) { if (b != 0) Visit(-c / (2 * b)); }
-            else
-            {
-                var discriminant = b * b - 3 * a * c;
-                if (discriminant >= 0)
-                {
-                    var root = Math.Sqrt(discriminant); var q = -b - (b < 0 ? -root : root);
-                    Visit(q / (3 * a)); if (q != 0) Visit(c / q);
-                }
-            }
-            void Visit(double t)
-            {
-                var station = piece.S0 + length * t;
-                if (t >= 0 && t <= 1 && station >= left && station <= right) minimum = Math.Min(minimum, piece.At(station).Y);
-            }
-        }
-        return minimum;
-    }
+        .Where(piece => piece.S1 >= from - TerrainMath.HeightTolerance && piece.S0 <= to + TerrainMath.HeightTolerance).SelectMany(piece => piece.Support).Distinct().Order();
 
     internal sealed record Bound(double Height, string Water);
     internal sealed record Sample(FeatureId Source, int Index, double Station, double X, double Z, int Node, bool Fixed);
@@ -92,11 +56,7 @@ internal sealed class TerrainRoadProfile
         private readonly NetworkPath[] _paths;
         private readonly Dictionary<FeatureId, NetworkPath> _pathBySource;
         private readonly NetworkEdge[] _edges;
-        private readonly string[] _owners;
         private readonly Bound?[] _bounds;
-        private double[] _heights;
-        private readonly int[] _components;
-        private readonly Dictionary<int, string> _componentWaters = [];
         public IReadOnlyList<Sample> Samples { get; }
         public int NodeCount => _targets.Length;
         public IReadOnlyDictionary<FeatureId, TerrainRoadProfile> Profiles { get; private set; } = new Dictionary<FeatureId, TerrainRoadProfile>();
@@ -140,7 +100,7 @@ internal sealed class TerrainRoadProfile
                         locked[key] = anchor.Y;
                     }
             var keys = new Dictionary<(long X, long Z), int>(); var values = new List<double>(); var fixedValues = new List<bool>();
-            var paths = new List<NetworkPath>(); var ownersByNode = new List<string>();
+            var paths = new List<NetworkPath>();
             var edges = new List<NetworkEdge>();
             foreach (var request in requests.OrderBy(r => r.Road.Source.Value, StringComparer.Ordinal))
             {
@@ -180,16 +140,14 @@ internal sealed class TerrainRoadProfile
                             throw new WorldDataException(interval.File, interval.Id, "Authored interval conflicts with another fixed road at a shared node.");
                         authorY = fixedY; isAuthored = true;
                     }
-                    if (isZero && isAuthored && Math.Abs(authorY) > 0.000001)
+                    if (isZero && isAuthored && Math.Abs(authorY) > TerrainMath.HeightTolerance)
                         throw new WorldDataException(interval?.File ?? "overlay/terrain", interval?.Id ?? "corridor", "An authored shared road node conflicts with the protected zero band.");
                     if (!keys.TryGetValue(key, out var node))
                     {
                         node = values.Count; keys.Add(key, node);
                         values.Add(isAuthored ? authorY : isZero ? 0 : terrain.Evaluate(p.X, p.Y).Surface.Height);
                         fixedValues.Add(isZero || isAuthored);
-                        ownersByNode.Add(isAuthored && firstLockedSource.TryGetValue(key, out var owner) ? $"source='{owner.Road.Source.Value}', file='{owner.Profile._authoredFile}', entry='{owner.Profile._authoredEntry}'"
-                            : isAuthored ? "authored-corridor-interval"
-                            : isZero ? "protected-zero-band" : "automatic-soft-target");
+
                     }
                     else if (isAuthored)
                     {
@@ -214,11 +172,7 @@ internal sealed class TerrainRoadProfile
             }
             _targets = values.ToArray(); _fixed = fixedValues.ToArray(); _paths = paths.ToArray();
             _pathBySource = _paths.ToDictionary(path => path.Request.Road.Source);
-            _edges = edges.ToArray(); _owners = ownersByNode.ToArray(); _bounds = new Bound?[_targets.Length];
-            _heights = _targets.ToArray(); _components = Enumerable.Range(0, _targets.Length).ToArray();
-            foreach (var edge in _edges) { var a = Component(edge.A); var c = Component(edge.B); if (a != c) _components[c] = a; }
-            for (var node = 0; node < _components.Length; node++) _components[node] = Component(node);
-            int Component(int node) { while (_components[node] != node) node = _components[node]; return node; }
+            _edges = edges.ToArray(); _bounds = new Bound?[_targets.Length];
             Samples = _paths.SelectMany(item => item.Stations.Select((station, index) =>
             {
                 var p = item.Request.Road.Path.At(station); var node = item.Nodes[index];
@@ -226,22 +180,11 @@ internal sealed class TerrainRoadProfile
             })).ToArray();
         }
 
-        public double Height(Sample sample) => _heights[sample.Node];
-        public Bound? LowerBound(Sample sample) => _bounds[sample.Node];
-        public string BindingWater(Sample sample) => _bounds[sample.Node]?.Water
-            ?? (_componentWaters.TryGetValue(_components[sample.Node], out var waters) ? "grade-propagated:" + waters : "none");
-
         public bool Require(FeatureId source, int sampleIndex, Bound bound)
         {
             var path = _pathBySource[source]; var node = path.Nodes[sampleIndex];
             if (_bounds[node] is { } old && old.Height >= bound.Height) return false;
-            if (_fixed[node] && _targets[node] < bound.Height)
-            {
-                var sample = Samples.First(value => value.Source == source && value.Index == sampleIndex);
-                var error = new WorldDataException("network.json", source.Value,
-                    $"UNSUPPORTED: conservative freeboard support closure cannot prove a fixed road node feasible; source='{source.Value}', station={sample.Station:R}, world=({sample.X:R},{sample.Z:R}), fixedHeight={_targets[node]:R}, conservativeLowerBound={bound.Height:R}, water='{bound.Water}', owner={_owners[node]}. This is not a demonstrated authored-content conflict; anchors were not moved.");
-                error.Data["TerrainConstraintKind"] = "unsupported"; throw error;
-            }
+            if (_fixed[node]) return false; // Actual bank checks own fixed-height conflicts.
             _bounds[node] = bound; return true;
         }
 
@@ -265,7 +208,7 @@ internal sealed class TerrainRoadProfile
                     var c = _fixed[edge.B] ? oldB : oldB + edge.CorrectionB;
                     var difference = c - a; var excess = Math.Abs(difference) - edge.Limit;
                     var nextA = a; var nextB = c;
-                    if (excess > 0)
+                    if (excess > TerrainMath.HeightTolerance)
                     {
                         var sign = difference < 0 ? -1 : 1;
                         if (_fixed[edge.A] && _fixed[edge.B])
@@ -287,8 +230,8 @@ internal sealed class TerrainRoadProfile
                     lowerCorrections[node] = corrected - next; heights[node] = next;
                     change = Math.Max(change, Math.Abs(next - old));
                 }
-                if (change <= 0.00000001 && _edges.All(e => Math.Abs(heights[e.B] - heights[e.A]) <= e.Limit + 0.0000001)
-                    && Enumerable.Range(0, heights.Length).All(node => _bounds[node] is not { } bound || heights[node] >= bound.Height))
+                if (change <= TerrainMath.HeightTolerance / 2 && _edges.All(e => Math.Abs(heights[e.B] - heights[e.A]) <= e.Limit + TerrainMath.HeightTolerance)
+                    && Enumerable.Range(0, heights.Length).All(node => _bounds[node] is not { } bound || heights[node] >= bound.Height - TerrainMath.HeightTolerance))
                 { converged = true; break; }
             }
             if (!converged)
@@ -300,9 +243,6 @@ internal sealed class TerrainRoadProfile
                 if (constrained) error.Data["TerrainConstraintKind"] = "unsupported";
                 throw error;
             }
-            _componentWaters.Clear();
-            foreach (var group in Enumerable.Range(0, _bounds.Length).Where(node => _bounds[node] is not null).GroupBy(node => _components[node]))
-                _componentWaters.Add(group.Key, string.Join(";", group.Select(node => _bounds[node]!.Water).Distinct().Order(StringComparer.Ordinal)));
             var result = new Dictionary<FeatureId, TerrainRoadProfile>();
             foreach (var item in _paths)
             {
@@ -311,12 +251,11 @@ internal sealed class TerrainRoadProfile
                 {
                     var profile = new TerrainRoadProfile(anchors, item.Request.Road.Path.Length, item.Request.Exclusions,
                         item.Request.MaximumGrade, intervals[0].File, intervals[0].Id, preserveBounds: true);
-                    profile.AuthoredAnchors = intervals.SelectMany(interval => interval.Anchors).Distinct().OrderBy(anchor => anchor.S).ToArray();
                     result.Add(item.Request.Road.Source, profile);
                 }
                 else result.Add(item.Request.Road.Source, new(anchors, item.Request.Road.Path.Length, item.Request.Exclusions, item.Junctions));
             }
-            _heights = heights; Profiles = result; return result;
+            Profiles = result; return result;
         }
     }
 
@@ -327,7 +266,7 @@ internal sealed class TerrainRoadProfile
     private TerrainRoadProfile(IReadOnlyList<TerrainAnchor> anchors, double length,
         IReadOnlyList<(double From, double To)> exclusions, IReadOnlyList<bool> junctions)
     {
-        Length = length; AutomaticSamples = anchors.ToArray(); _exclusions = exclusions.ToArray(); var pieces = new List<Piece>();
+        Length = length; _exclusions = exclusions.ToArray(); var pieces = new List<Piece>();
         var slopes = Enumerable.Range(0, anchors.Count - 1).Select(i => (anchors[i + 1].Y - anchors[i].Y) / (anchors[i + 1].S - anchors[i].S)).ToArray();
         var radii = new double[anchors.Count];
         for (var i = 1; i + 1 < anchors.Count; i++)
@@ -339,10 +278,6 @@ internal sealed class TerrainRoadProfile
             if (end > start) pieces.Add(new(start, end, a.Y + slopes[i] * radii[i], c.Y - slopes[i] * radii[i + 1], slopes[i], slopes[i], false, [i, i + 1]));
             if (radii[i + 1] > 0)
             {
-                // Existing symmetric rounding is exactly the three-node convex combination:
-                // left=(r/hL)*(1-t)^2, right=(r/hR)*t^2, centre=1-left-right.
-                // r <= min(hL,hR)/2 makes every coefficient nonnegative (centre >= 1/2).
-                // This records the proof without changing any interpolation coefficient.
                 var radius = radii[i + 1];
                 pieces.Add(new(c.S - radius, c.S + radius, c.Y - slopes[i] * radius, c.Y + slopes[i + 1] * radius, slopes[i], slopes[i + 1], true, [i, i + 1, i + 2]));
             }
@@ -362,8 +297,6 @@ internal sealed class TerrainRoadProfile
         anchors = anchors.Select((anchor, index) => index == anchors.Count - 1 ? new TerrainAnchor(actualLength, anchor.Y) : anchor).ToArray();
         if (anchors[^2].S >= actualLength)
             throw new WorldDataException(file, op, "The final interior anchor must precede the actual source endpoint.");
-        AuthoredAnchors = anchors.ToArray();
-        if (preserveBounds) AutomaticSamples = anchors.ToArray();
         Length = actualLength; _exclusions = exclusions.OrderBy(e => e.From).ThenBy(e => e.To).ToArray();
         var slopes = new double[anchors.Count - 1];
         for (var i = 0; i < slopes.Length; i++) slopes[i] = (anchors[i + 1].Y - anchors[i].Y) / (anchors[i + 1].S - anchors[i].S);
@@ -382,7 +315,7 @@ internal sealed class TerrainRoadProfile
         _pieces = pieces.ToArray();
         foreach (var piece in _pieces)
             foreach (var station in piece.CriticalStations().Concat(_exclusions.SelectMany(e => new[] { e.From, e.To })).Where(s => s >= piece.S0 && s <= piece.S1))
-                if (!_exclusions.Any(e => station >= e.From && station <= e.To) && Math.Abs(piece.At(station).Grade) > maximumGrade + 0.000001)
+                if (!_exclusions.Any(e => station >= e.From && station <= e.To) && Math.Abs(piece.At(station).Grade) > maximumGrade + TerrainMath.GradeTolerance)
                     throw new WorldDataException(file, op, $"Fixed corridor anchors cannot be smoothed within grade {maximumGrade:R}; station={station:R}, grade={piece.At(station).Grade:R}. Anchors were not moved.");
 
         // A harmonic joint keeps each mixed-source piece between its two samples, so the

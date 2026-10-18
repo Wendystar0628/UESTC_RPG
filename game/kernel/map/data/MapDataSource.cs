@@ -27,8 +27,12 @@ public class MapDataSource
         WorldInputFiles.ReadWorldFiles(entry.Descriptor, new ResourceInputs(entry.DataRoot));
 
     /// <summary>Capture authored map resources on the engine thread before worker loading.</summary>
-    public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry) =>
-        new(entry, WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot), ReadWorldFiles(entry)));
+    public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry)
+    {
+        var input = new MapLoadInput(entry,
+            WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot), ReadWorldFiles(entry)));
+        return input with { Entry = MapCatalog.ReadEntry(entry, input.Files) };
+    }
 
     public virtual MapClaimSnapshot? ReadClaims(MapId map) => MapClaimCapture.Capture(Campus.Kernel.Registry.Kernel.Services, map);
 

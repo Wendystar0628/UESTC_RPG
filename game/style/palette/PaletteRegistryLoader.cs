@@ -8,18 +8,16 @@ public static class PaletteRegistryLoader
 {
     public const string CorePath = "res://style/palette/core.json";
     public const string ExtDirectory = "res://style/palette/ext";
-    public const string ExtV2Directory = "res://style/palette/ext-v2";
 
     public static PaletteCatalog LoadCatalog() => PaletteCatalog.FromSources(
-        new[] { CorePath }.Concat(PackageFiles(ExtDirectory)).Select(path => (path, ReadRequired(path))),
-        PackageFiles(ExtV2Directory).Select(path => (path, ReadRequired(path))));
+        new[] { CorePath }.Concat(PackageFiles(ExtDirectory)).Select(path => (path, ReadRequired(path))));
 
     // ext/ui.json 是界面令牌，不属于场景色表。
     private static IEnumerable<string> PackageFiles(string directory)
     {
         if (!DirAccess.DirExistsAbsolute(directory)) return [];
         return ResourceLoader.ListDirectory(directory)
-            .Where(name => name.StartsWith("WP-", StringComparison.Ordinal) && name.EndsWith(".json", StringComparison.Ordinal))
+            .Where(name => name.EndsWith(".json", StringComparison.Ordinal) && !string.Equals(name, "ui.json", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal)
             .Select(name => directory + "/" + name)
             .ToArray();

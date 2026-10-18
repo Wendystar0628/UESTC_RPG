@@ -44,7 +44,7 @@ public static class FacadePresets
     /// <summary>
     /// 科研楼家族，浅暖灰石材框架加大面积深色玻璃，比六号科研楼更通透（MAP-QSH-SOUTH，成电国际创新中心）：
     /// windows take 0.84 of the bay and 2.8 m of the storey (about 0.6 of the wall against the family's 0.3), filled
-    /// with curtain-wall lights between stone piers and spandrels. 玻璃色借 glass（全校唯一的玻璃色名），深色玻璃色名进调色板后换。
+    /// with curtain-wall lights in registered deep glass between stone piers and spandrels.
     /// </summary>
     public static readonly FacadeLook ResearchStoneFrame = new("research.stoneFrame")
     {
@@ -52,7 +52,7 @@ public static class FacadePresets
         WindowHeight = 2.8f,
         Sill = 0.6f,
         GroundSill = 0.75f,
-        Glass = Families.Glass,
+        Glass = Families.GlassDeep,
         Frame = Families.StoneBeige,
         Trim = Families.WallGreyWhite,
         Window = PartCatalog.CurtainWall,
@@ -89,7 +89,7 @@ public static class FacadePresets
 
     /// <summary>
     /// 学知六组团 B 型 (宿舍金样): wider and taller windows (0.62 of the bay, 1.75 m) between narrow warm-white piers, 灰粉砂
-    /// spandrels. 深灰蓝玻璃 (glass.deep) goes in when it enters the palette (max-112), then Glass changes and nothing else.
+    /// spandrels and registered 深灰蓝玻璃 (glass.deep).
     /// </summary>
     public static readonly FacadeLook DormB = new("dorm.b")
     {
@@ -97,7 +97,7 @@ public static class FacadePresets
         WindowHeight = 1.75f,
         Sill = 0.85f,
         GroundSill = 1.00f,
-        Glass = Families.Glass, // glass.deep 进调色板（max-112）后换
+        Glass = Families.GlassDeep,
         Frame = Families.WallWarmWhite,
         Trim = Families.WallGreyWhite,
         Accent = Families.PanelPinkSand,

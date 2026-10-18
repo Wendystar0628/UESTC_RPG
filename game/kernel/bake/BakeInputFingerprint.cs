@@ -86,6 +86,8 @@ internal static class BakeInputFingerprint
             AddFurniturePlanting(context, input, area);
         if (vegetation)
             input.File(context.GlobalInputs.Entries, "vegetation/species.json");
+        if (!collision && (key.Module is "ground" or "buildings"))
+            input.File(context.SourceInputs, SurfaceMaterialCatalog.SourcePath);
         if (key.Module == "water") input.Add(context.Map.Env.ReflectLakes);
         if (key.Module == "map")
         {

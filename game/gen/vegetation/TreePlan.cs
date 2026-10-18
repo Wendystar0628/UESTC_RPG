@@ -356,7 +356,7 @@ internal sealed class TreePlan
         var center = Vector3.Lerp(mainTip, CrownCenter, 0.1f) + Vector3.UnitY * (r * 0.1f);
         AddBall(center, r * 0.8f, mainTip, index, true);
         _clusters.Add((center, r, mainTip));
-        var satellites = Form.Id == "tuft" ? 3 : Form.Id == "shrub" ? 5 : Math.Clamp((26 - mains * 2) / mains, 4, 8);
+        var satellites = Form.Id == "shrub" ? 5 : Math.Clamp((26 - mains * 2) / mains, 4, 8);
         for (var k = 0; k < satellites; k++)
         {
             var d = Vector3.Normalize(RandomDirection() + outward * 0.55f + Vector3.UnitY * 0.45f);

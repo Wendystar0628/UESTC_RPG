@@ -6,8 +6,8 @@ namespace Campus.Gen.World;
 
 internal static partial class TerrainCompiler
 {
-    private sealed record PadCheck(FeatureId Feature, TerrainRegion Region, double Y, double Apron,
-        double GradeWidth, WorldFeature? Structure, bool Automatic, string File, string Id, TerrainNode Node);
+    private sealed record PadCheck(FeatureId Feature, TerrainRegion Region, double Y,
+        double GradeWidth, WorldFeature? Structure, string File, string Id);
 
     private sealed class Builder(TerrainCompileContext context)
     {
@@ -130,7 +130,7 @@ internal static partial class TerrainCompiler
             }
         }
         var zonesValidated = context.Zones is not null && builder.Operations.Values.All(op => context.Zones.ContainsKey(op.Zone));
-        if (!zonesValidated) builder.Diagnostics.Add("NOT_VERIFIED: terrain influence extents require the authoritative zones.json boundaries; preview terrain is available, full data acceptance is incomplete.");
+        if (!zonesValidated) builder.Diagnostics.Add("NOT_VERIFIED: authoritative zone polygons were not supplied; terrain is evaluated, but operation zone membership and cross-zone influence extents are not accepted.");
         builder.Diagnostics.Add($"Terrain compiled: authored={builder.Operations.Count}, nodes={program.Nodes.Count}, pads={builder.Pads.Count}, waterSegments={builder.Water.Count}.");
         return new(context.DataRect, program, builder.Pads, builder.Water, builder.Diagnostics, zonesValidated, ExportBanks(builder));
     }

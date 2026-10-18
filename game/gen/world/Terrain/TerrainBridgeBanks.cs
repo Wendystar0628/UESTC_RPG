@@ -128,7 +128,7 @@ internal sealed class TerrainBridgeBanks
                 // A fixed core is never averaged away. Equal-height cores retain the first
                 // ordinal road's derivative; incompatible shared-core heights remain an error.
                 roadTop = cores[0].Top;
-                if (cores.Any(value => Math.Abs(value.Top.Height - roadTop.Height) > 0.0001))
+                if (cores.Any(value => Math.Abs(value.Top.Height - roadTop.Height) > TerrainMath.HeightTolerance))
                     throw new WorldDataException("network.json", string.Join(",", cores.Select(value => value.Road.Value)),
                         $"Coincident road cores have incompatible bank tops at ({x:R},{z:R}): "
                         + string.Join("; ", cores.Select(value => $"{value.Road.Value}={value.Top.Height:R}")));
@@ -273,13 +273,7 @@ internal sealed class TerrainBridgeBanks
             for (var i = 1; i < samples.Length; i++)
             {
                 if (conflicts[i] == conflicts[i - 1]) continue;
-                var low = samples[i - 1]; var high = samples[i];
-                for (var step = 0; step < 32 && high - low > 0.000001; step++)
-                {
-                    var middle = (low + high) / 2;
-                    if (Conflict(middle) == conflicts[i - 1]) low = middle; else high = middle;
-                }
-                var crossing = (low + high) / 2;
+                var crossing = (samples[i - 1] + samples[i]) / 2;
                 if (conflicts[i]) from = crossing;
                 else { intervals.Add((from!.Value, crossing)); from = null; }
             }
@@ -313,7 +307,7 @@ internal sealed class TerrainBridgeBanks
                     if (unwrapped < start || unwrapped > end) return false;
                     var p = ring.Path.At(station); var level = softLevel(p.X, p.Y);
                     return level is { } y && EvaluateRoadContact(road, p.X, p.Y) is { } contact
-                        && Math.Abs(contact.Top.Height - y) > contact.Distance.Height / 3 + 0.000001;
+                        && Math.Abs(contact.Top.Height - y) > contact.Distance.Height / 3 + TerrainMath.HeightTolerance;
                 })).ToArray();
                 if (contributors.Length == 0) throw new InvalidOperationException("A resolved Hard interval lost its actual source road.");
                 spans.Add(new(ring.Polygon, ring.Ring, start, end, ring.Path.Length, contributors));
@@ -325,7 +319,7 @@ internal sealed class TerrainBridgeBanks
                 if (level is null) return false;
                 foreach (var road in candidates)
                     if (EvaluateRoadContact(road, p.X, p.Y) is { } contact && contact.Distance.Height >= 0
-                        && Math.Abs(contact.Top.Height - level.Value) > contact.Distance.Height / 3 + 0.000001) return true;
+                        && Math.Abs(contact.Top.Height - level.Value) > contact.Distance.Height / 3 + TerrainMath.HeightTolerance) return true;
                 return false;
             }
         }

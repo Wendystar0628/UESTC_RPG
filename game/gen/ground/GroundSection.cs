@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Ground;
 
@@ -43,31 +44,12 @@ public sealed record GroundSection
 
     public PitSpec Pits { get; init; } = new();
 
-    public LawnTone Lawn { get; init; } = new();
+    public LawnTone Lawn { get; init; } = LawnTone.Default;
 
     public static GroundSection Default { get; } = new();
 
     /// <summary>Largest field threshold used by the surface classifier; distance fields must be exact up to here.</summary>
     internal float MaxIso => MathF.Max(MathF.Max(CurbWidth, EdgingWidth), Lawn.EdgeBand);
-}
-
-/// <summary>
-/// Large-scale light and shade on lawns, so a big lawn reads as sunlit grass with depth rather than a flat carpet:
-/// low-frequency noise splits it into broad lighter and darker patches with clean edges, and the lawn is one tone
-/// darker along kerbs, paving and building feet. Tones are palette pairs (ground.grassLight / ground.grassDark) that
-/// follow the seasonal grass colour; fog fades them with distance like everything else.
-/// </summary>
-public sealed record LawnTone
-{
-    /// <summary>Feature size of the two noise octaves, metres; patches come out about a third of this across.</summary>
-    public float Scale { get; init; } = 64f;
-    public float DetailScale { get; init; } = 17f;
-    public float DetailWeight { get; init; }
-    /// <summary>Noise below this is the darker tone, above <see cref="High"/> the lighter tone.</summary>
-    public float Low { get; init; } = 0.36f;
-    public float High { get; init; } = 0.66f;
-    /// <summary>Width of the darker band along kerbs, paving and building feet; 0 turns it off.</summary>
-    public float EdgeBand { get; init; } = 0.5f;
 }
 
 /// <summary>

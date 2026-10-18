@@ -39,21 +39,11 @@ internal sealed class GroundPaving
 {
     /// <summary>Profile 0: no pattern.</summary>
     public const byte None = 0;
-    public const byte Granite600 = 1;
-    public const byte Paver300 = 2;
+    public const byte GraniteProfile = 1;
+    public const byte PaverProfile = 2;
 
-    /// <summary>WP-04 layers (game/style/shaders/SurfacePatternLayers.cs). Stable; never reused.</summary>
-    public const ushort StackBondLayer = 1;
-    public const ushort RunningBondLayer = 2;
-
-    /// <summary>Square granite: 600 mm module including the joint. Joint width is the trial value of max-129 (6 mm).</summary>
-    public static readonly SurfacePatternSpec Granite = new(StackBondLayer, new(0.6f, 0.6f), new(0.006f, 0.006f));
-
-    /// <summary>
-    /// Walk pavers: 300×150 mm with a 4 mm sand joint, U along the walk and V across it (trial values until paving
-    /// data exists). A course joint lies on the centre line, so a walk reads symmetric about its axis.
-    /// </summary>
-    public static readonly SurfacePatternSpec Paver = new(RunningBondLayer, new(0.3f, 0.15f), new(0.004f, 0.004f));
+    public const string GraniteMaterialId = "ground.plaza.granite";
+    public const string PaverMaterialId = "ground.walk.paver";
 
     /// <summary>Building categories whose entrance forecourt is laid in granite (data vocabulary, not identities).</summary>
     private const string LibraryCategory = "library";
@@ -80,10 +70,10 @@ internal sealed class GroundPaving
     public bool HasPlazas => _frames.Count > 0;
     public bool HasWalks => _walks.Count > 0;
 
-    public static SurfacePatternSpec Spec(byte profile) => profile switch
+    public static string MaterialId(byte profile) => profile switch
     {
-        Granite600 => Granite,
-        Paver300 => Paver,
+        GraniteProfile => GraniteMaterialId,
+        PaverProfile => PaverMaterialId,
         _ => throw new ArgumentOutOfRangeException(nameof(profile), profile, "Unknown ground paving profile.")
     };
 
@@ -170,7 +160,7 @@ internal sealed class GroundPaving
                 var length = Vector2.Distance(a, line[i + 1]);
                 if (!(length > 1e-4f)) return null;
                 var d = (line[i + 1] - a) / length;
-                result[i] = new PavingFrame(Paver300, a - d * s, d, new(-d.Y, d.X));
+                result[i] = new PavingFrame(PaverProfile, a - d * s, d, new(-d.Y, d.X));
                 s += length;
             }
             return result;
@@ -182,7 +172,7 @@ internal sealed class GroundPaving
             var edge = outer[(i + 1) % outer.Length] - outer[i];
             if (edge.Length() > longest) (start, dir, longest) = (outer[i], Vector2.Normalize(edge), edge.Length());
         }
-        return longest > 1e-4f ? [new PavingFrame(Paver300, start, dir, new(-dir.Y, dir.X))] : null;
+        return longest > 1e-4f ? [new PavingFrame(PaverProfile, start, dir, new(-dir.Y, dir.X))] : null;
     }
 
     /// <summary>First plaza on the entrance's outward axis, the axis entry point and the run across that plaza.</summary>
@@ -212,7 +202,7 @@ internal sealed class GroundPaving
                 var run = 0f;
                 while (run < MaxRun && Inside(shape, entry + axis * (run + Step))) run += Step;
                 var across = new Vector2(-axis.Y, axis.X);
-                return (shape, run, new PavingFrame(Granite600, entry, across, axis));
+                return (shape, run, new PavingFrame(GraniteProfile, entry, across, axis));
             }
         }
         return null;

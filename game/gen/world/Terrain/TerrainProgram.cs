@@ -87,12 +87,6 @@ internal sealed class TerrainProgram
     }
 
     public TerrainEvaluation Evaluate(double x, double z, int exclusiveEnd = int.MaxValue)
-        => EvaluateCore(x, z, exclusiveEnd, null);
-
-    public TerrainEvaluation EvaluateExcept(double x, double z, TerrainNode excluded)
-        => EvaluateCore(x, z, int.MaxValue, excluded);
-
-    private TerrainEvaluation EvaluateCore(double x, double z, int exclusiveEnd, TerrainNode? excluded)
     {
         var value = new TerrainEvaluation(TerrainDifferential.Constant(0), TerrainClass.Flat) { BoundaryWeight = _boundaryWeight?.Invoke(x, z) };
         if (!_buckets.TryGetValue(new(Cell(x), Cell(z)), out var candidates)) return value;
@@ -100,7 +94,6 @@ internal sealed class TerrainProgram
         {
             if (index >= exclusiveEnd) break;
             var node = _nodes[index]; var box = node.Support;
-            if (ReferenceEquals(node, excluded)) continue;
             if (x < box.Min.X || x > box.Max.X || z < box.Min.Y || z > box.Max.Y) continue;
             value = node.Apply(value, x, z);
             if (!double.IsFinite(value.Surface.Height) || !double.IsFinite(value.Surface.Dx) || !double.IsFinite(value.Surface.Dz))
@@ -128,7 +121,7 @@ internal sealed class TerrainProgram
         {
             if (x < node.Support.Min.X || x > node.Support.Max.X || z < node.Support.Min.Y || z > node.Support.Max.Y) continue;
             var next = node.Apply(value, x, z);
-            if (Math.Abs(next.Surface.Height - value.Surface.Height) > 0.0000001)
+            if (Math.Abs(next.Surface.Height - value.Surface.Height) > TerrainMath.HeightTolerance)
                 changes.Add($"{node.Id} ({node.File}): {value.Surface.Height:R}->{next.Surface.Height:R}" + (node.ExplainPoint is { } detail ? "; " + detail(x, z) : ""));
             value = next;
         }

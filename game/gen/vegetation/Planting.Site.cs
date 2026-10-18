@@ -12,8 +12,14 @@ public static partial class Planting
 {
     internal sealed record Parcel(string Id, PolygonRings Rings, Vector2 Min, Vector2 Max, float Area);
 
+    /// <summary>
+    /// How grass meets a piece of pavement (WLD-VEGETATION §3.5): a walk or path under 3 m wide takes a soft edge the grass may
+    /// creep over; steps keep the 1 m setback of an entrance; every other pavement (plazas, wide walks) keeps a clean straight edge.
+    /// </summary>
+    internal enum PaveEdge : byte { Clean, Soft, Steps }
+
     /// <summary>One piece of hard pavement: an area, or a centre line with its half width. Min and Max box it (without the clearance).</summary>
-    private sealed record Pave(PolygonRings? Rings, IReadOnlyList<Vector2>? Line, float Half, Vector2 Min, Vector2 Max);
+    private sealed record Pave(PolygonRings? Rings, IReadOnlyList<Vector2>? Line, float Half, Vector2 Min, Vector2 Max, PaveEdge Edge);
 
     /// <summary>
     /// A tree pit: an area (a square pit or a planting strip; Axis along its long side, HalfLength and HalfWidth its half
@@ -111,16 +117,39 @@ public static partial class Planting
             return false;
         }
 
+        /// <summary>
+        /// <see cref="OnRoad(Vector2, float)"/> with a clearance per kind of network line: carriageways (kerbed), walks and paths
+        /// under <see cref="GrassField.SoftEdgeWidth"/> (soft, may be negative), steps, and every other paved line (clean).
+        /// </summary>
+        public bool OnRoad(Vector2 p, float carriageway, float clean, float soft, float steps)
+        {
+            foreach (var road in _roads.In(p))
+            {
+                var type = road.Props?.OptionalText("roadType") ?? road.Props?.OptionalText("highway");
+                var clearance = type is null || !Paved.Contains(type) ? carriageway
+                    : type == "steps" ? steps : road.Width < GrassField.SoftEdgeWidth ? soft : clean;
+                if (PlanLines.Project(road.Line.Points, p).Distance < road.Width * 0.5f + clearance) return true;
+            }
+            return false;
+        }
+
         /// <summary>True when a trunk at <paramref name="p"/> stands on hard pavement or within <see cref="TrunkClearance"/> of it, and not in a tree pit.</summary>
         public bool OnPavement(Vector2 p) => !InPit(p) && IsPaved(p, TrunkClearance);
 
         public bool InPit(Vector2 p) => _pits.Any(pit => pit.Holds(p));
 
         /// <summary>True when <paramref name="p"/> lies on hard pavement or within <paramref name="clearance"/> of it (tree pits included).</summary>
-        public bool IsPaved(Vector2 p, float clearance)
+        public bool IsPaved(Vector2 p, float clearance) => IsPaved(p, clearance, clearance, clearance);
+
+        /// <summary>
+        /// <see cref="IsPaved(Vector2, float)"/> with a clearance per kind of edge (<see cref="PaveEdge"/>); a soft clearance may be
+        /// negative (a centre line's distance below its half width), so grass can reach over the edge of a narrow walk.
+        /// </summary>
+        public bool IsPaved(Vector2 p, float clean, float soft, float steps)
         {
             foreach (var pave in _pavement.In(p))
             {
+                var clearance = pave.Edge switch { PaveEdge.Soft => soft, PaveEdge.Steps => steps, _ => clean };
                 if (pave.Rings is { } rings)
                 {
                     if (p.X < pave.Min.X - clearance || p.X > pave.Max.X + clearance ||
@@ -168,29 +197,32 @@ public static partial class Planting
         {
             var type = (props?.OptionalText("roadType") ?? props?.OptionalText("highway"));
             if (type is null || !Paved.Contains(type)) return;
+            var steps = type == "steps" ? PaveEdge.Steps : PaveEdge.Clean;
             switch (geometry)
             {
                 case PolygonGeometry polygon:
-                    IndexPavement(polygon.Rings);
+                    IndexPavement(polygon.Rings, steps);
                     break;
                 case MultiPolygonGeometry multi:
-                    foreach (var rings in multi.Polygons) IndexPavement(rings);
+                    foreach (var rings in multi.Polygons) IndexPavement(rings, steps);
                     break;
                 case PolylineGeometry { Line.Points: { Count: >= 2 } points }:
-                    var half = (width > 0f ? width : PavedWidth(props, type)) * 0.5f;
+                    var full = width > 0f ? width : PavedWidth(props, type);
+                    var half = full * 0.5f;
+                    var edge = steps == PaveEdge.Steps ? steps : full < GrassField.SoftEdgeWidth ? PaveEdge.Soft : PaveEdge.Clean;
                     var min = points.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(half);
                     var max = points.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(half);
-                    _pavement.AddBox(min, max, new Pave(null, points, half, min, max));
+                    _pavement.AddBox(min, max, new Pave(null, points, half, min, max, edge));
                     break;
             }
         }
 
-        private void IndexPavement(PolygonRings rings)
+        private void IndexPavement(PolygonRings rings, PaveEdge edge)
         {
             if (rings.Outer.Count < 3) return;
             var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
             var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
-            _pavement.AddBox(min, max, new Pave(rings, null, 0f, min, max));
+            _pavement.AddBox(min, max, new Pave(rings, null, 0f, min, max, edge));
         }
 
         /// <summary>Width of a paved line as WP-15 paves it (GroundClassifier): its own width, else the type's default.</summary>

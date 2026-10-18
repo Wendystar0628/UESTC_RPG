@@ -134,8 +134,8 @@ public sealed class RoofPartsTests
             {
                 if (!entry.TryGetProperty("token", out var token)) continue;
                 tokens.Add(token.GetString()!);
-                if (Path.GetFileName(file) != "WP-12.json") continue;
-                AssertThat(entry.GetProperty("id").GetInt32() is >= 248 and <= 251 or >= 254 and <= 255).OverrideFailureMessage($"{token.GetString()} lies outside WP-12's ids 248–251 and 254–255.").IsTrue();
+                if (Path.GetFileName(file) != "roof_equipment.json") continue;
+                AssertThat(entry.GetProperty("index").GetInt32() is >= 248 and <= 251 or >= 254 and <= 255).OverrideFailureMessage($"{token.GetString()} lies outside WP-12's ids 248–251 and 254–255.").IsTrue();
                 // Equipment surfaces are large neutral areas: intrinsic OKLCH chroma stays within 0.05 (ART-MODELING).
                 // Fire red is the small saturated identity colour (WLD-INTERIORS) and is exempt.
                 if (token.GetString()!.StartsWith("equip.fireRed.", StringComparison.Ordinal)) continue;

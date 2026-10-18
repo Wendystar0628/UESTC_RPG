@@ -1,9 +1,9 @@
 {
- "schema": 1,
+ "schema": 2,
  "entries": [
   {
    "token": "sun.light",
-   "id": 0,
+   "index": 0,
    "albedo": [
     1.0,
     0.8275,
@@ -15,7 +15,7 @@
   },
   {
    "token": "ambient.sky",
-   "id": 1,
+   "index": 1,
    "albedo": [
     0.6588,
     0.6784,
@@ -27,7 +27,7 @@
   },
   {
    "token": "bounce.ground",
-   "id": 2,
+   "index": 2,
    "albedo": [
     0.8471,
     0.6902,
@@ -39,7 +39,7 @@
   },
   {
    "token": "interior.warm",
-   "id": 3,
+   "index": 3,
    "albedo": [
     0.9216,
     0.6902,
@@ -51,7 +51,7 @@
   },
   {
    "token": "line.warm",
-   "id": 4,
+   "index": 4,
    "albedo": [
     0.2902,
     0.2039,
@@ -63,7 +63,7 @@
   },
   {
    "token": "line.cool",
-   "id": 5,
+   "index": 5,
    "albedo": [
     0.2078,
     0.3137,
@@ -75,7 +75,7 @@
   },
   {
    "token": "shaft.near",
-   "id": 6,
+   "index": 6,
    "albedo": [
     1.0,
     0.9412,
@@ -87,7 +87,7 @@
   },
   {
    "token": "shaft.far",
-   "id": 7,
+   "index": 7,
    "albedo": [
     0.9569,
     0.7098,
@@ -99,7 +99,7 @@
   },
   {
    "token": "rim",
-   "id": 8,
+   "index": 8,
    "albedo": [
     1.0,
     0.851,
@@ -111,7 +111,7 @@
   },
   {
    "token": "glass.glare",
-   "id": 9,
+   "index": 9,
    "albedo": [
     1.0,
     0.9569,
@@ -123,7 +123,7 @@
   },
   {
    "token": "window.warm",
-   "id": 10,
+   "index": 10,
    "albedo": [
     1.0,
     0.8784,
@@ -135,7 +135,7 @@
   },
   {
    "token": "window.cool",
-   "id": 11,
+   "index": 11,
    "albedo": [
     0.9333,
     0.9569,
@@ -147,7 +147,7 @@
   },
   {
    "token": "shadow.1",
-   "id": 12,
+   "index": 12,
    "albedo": [
     0.6353,
     0.6549,
@@ -159,7 +159,7 @@
   },
   {
    "token": "fog.sun",
-   "id": 13,
+   "index": 13,
    "albedo": [
     0.9529,
     0.8235,
@@ -171,7 +171,7 @@
   },
   {
    "token": "fog.anti",
-   "id": 14,
+   "index": 14,
    "albedo": [
     0.7216,
     0.7137,
@@ -183,7 +183,7 @@
   },
   {
    "token": "sky.sun.0",
-   "id": 15,
+   "index": 15,
    "albedo": [
     1.0,
     0.8824,
@@ -195,7 +195,7 @@
   },
   {
    "token": "sky.sun.1",
-   "id": 16,
+   "index": 16,
    "albedo": [
     0.9686,
     0.6902,
@@ -207,7 +207,7 @@
   },
   {
    "token": "sky.sun.2",
-   "id": 17,
+   "index": 17,
    "albedo": [
     0.851,
     0.5765,
@@ -219,7 +219,7 @@
   },
   {
    "token": "sky.sun.3",
-   "id": 18,
+   "index": 18,
    "albedo": [
     0.6118,
     0.5961,
@@ -231,7 +231,7 @@
   },
   {
    "token": "sky.sun.4",
-   "id": 19,
+   "index": 19,
    "albedo": [
     0.2902,
     0.3843,
@@ -243,7 +243,7 @@
   },
   {
    "token": "sky.anti.0",
-   "id": 20,
+   "index": 20,
    "albedo": [
     0.8902,
     0.7647,
@@ -255,7 +255,7 @@
   },
   {
    "token": "sky.anti.1",
-   "id": 21,
+   "index": 21,
    "albedo": [
     0.7843,
     0.749,
@@ -267,7 +267,7 @@
   },
   {
    "token": "sky.anti.2",
-   "id": 22,
+   "index": 22,
    "albedo": [
     0.6627,
     0.7059,
@@ -279,7 +279,7 @@
   },
   {
    "token": "sky.anti.3",
-   "id": 23,
+   "index": 23,
    "albedo": [
     0.4941,
     0.5647,
@@ -291,7 +291,7 @@
   },
   {
    "token": "sky.anti.4",
-   "id": 24,
+   "index": 24,
    "albedo": [
     0.2902,
     0.3843,
@@ -303,7 +303,7 @@
   },
   {
    "token": "sky.cloudLit",
-   "id": 25,
+   "index": 25,
    "albedo": [
     1.0,
     0.9529,
@@ -315,7 +315,7 @@
   },
   {
    "token": "sky.cloudRim",
-   "id": 26,
+   "index": 26,
    "albedo": [
     1.0,
     0.7608,
@@ -327,7 +327,7 @@
   },
   {
    "token": "sky.cloudBelly",
-   "id": 27,
+   "index": 27,
    "albedo": [
     0.549,
     0.502,
@@ -339,7 +339,7 @@
   },
   {
    "token": "sky.cloudDeep",
-   "id": 28,
+   "index": 28,
    "albedo": [
     0.4157,
     0.4078,
@@ -351,7 +351,7 @@
   },
   {
    "token": "sky.moon",
-   "id": 29,
+   "index": 29,
    "albedo": [
     0.9608,
     0.9451,
@@ -363,7 +363,7 @@
   },
   {
    "token": "shadow.contact",
-   "id": 32,
+   "index": 32,
    "albedo": [
     0.2784,
     0.2784,
@@ -375,7 +375,7 @@
   },
   {
    "token": "line.building",
-   "id": 33,
+   "index": 33,
    "albedo": [
     0.2314,
     0.2118,
@@ -387,7 +387,7 @@
   },
   {
    "token": "line.tree",
-   "id": 34,
+   "index": 34,
    "albedo": [
     0.2902,
     0.2275,
@@ -399,7 +399,7 @@
   },
   {
    "token": "shadow.interior",
-   "id": 35,
+   "index": 35,
    "albedo": [
     0.7647,
     0.6549,
@@ -411,7 +411,7 @@
   },
   {
    "token": "weather.overcast",
-   "id": 40,
+   "index": 40,
    "albedo": [
     0.7451,
     0.702,
@@ -423,7 +423,7 @@
   },
   {
    "token": "weather.snowOvercast",
-   "id": 41,
+   "index": 41,
    "albedo": [
     0.7216,
     0.7059,
@@ -435,7 +435,7 @@
   },
   {
    "token": "weather.nightRain",
-   "id": 42,
+   "index": 42,
    "albedo": [
     0.2353,
     0.1961,
@@ -447,7 +447,7 @@
   },
   {
    "token": "weather.cbBase",
-   "id": 43,
+   "index": 43,
    "albedo": [
     0.3529,
     0.3765,
@@ -459,7 +459,7 @@
   },
   {
    "token": "weather.fog",
-   "id": 44,
+   "index": 44,
    "albedo": [
     0.8941,
     0.8627,
@@ -471,7 +471,7 @@
   },
   {
    "token": "weather.washedSky",
-   "id": 45,
+   "index": 45,
    "albedo": [
     0.2627,
     0.3725,
@@ -483,7 +483,7 @@
   },
   {
    "token": "sign.green",
-   "id": 48,
+   "index": 48,
    "albedo": [
     0.3098,
     0.749,
@@ -495,7 +495,7 @@
   },
   {
    "token": "firefly",
-   "id": 49,
+   "index": 49,
    "albedo": [
     0.8745,
     1.0,
@@ -507,7 +507,7 @@
   },
   {
    "token": "water.poolGlow",
-   "id": 50,
+   "index": 50,
    "albedo": [
     0.5608,
     0.8471,
@@ -519,7 +519,7 @@
   },
   {
    "token": "lamp.warm",
-   "id": 51,
+   "index": 51,
    "albedo": [
     1.0,
     0.8157,
@@ -531,7 +531,7 @@
   },
   {
    "token": "lamp.amber",
-   "id": 52,
+   "index": 52,
    "albedo": [
     1.0,
     0.7059,
@@ -543,7 +543,7 @@
   },
   {
    "token": "lamp.cool",
-   "id": 53,
+   "index": 53,
    "albedo": [
     0.902,
     0.9333,
@@ -555,7 +555,7 @@
   },
   {
    "token": "sign.exitGreen",
-   "id": 54,
+   "index": 54,
    "albedo": [
     0.2471,
     0.6471,
@@ -567,7 +567,7 @@
   },
   {
    "token": "snow.lit",
-   "id": 64,
+   "index": 64,
    "albedo": [
     0.9569,
     0.9647,
@@ -579,7 +579,7 @@
   },
   {
    "token": "snow.shade",
-   "id": 65,
+   "index": 65,
    "albedo": [
     0.9569,
     0.9647,
@@ -591,7 +591,7 @@
   },
   {
    "token": "wall.lit",
-   "id": 66,
+   "index": 66,
    "albedo": [
     0.8941,
     0.8667,
@@ -603,7 +603,7 @@
   },
   {
    "token": "wall.shade",
-   "id": 67,
+   "index": 67,
    "albedo": [
     0.8941,
     0.8667,
@@ -615,7 +615,7 @@
   },
   {
    "token": "stone.beige.lit",
-   "id": 68,
+   "index": 68,
    "albedo": [
     0.8118,
     0.7843,
@@ -627,7 +627,7 @@
   },
   {
    "token": "stone.beige.shade",
-   "id": 69,
+   "index": 69,
    "albedo": [
     0.8118,
     0.7843,
@@ -639,7 +639,7 @@
   },
   {
    "token": "wall.greyWhite.lit",
-   "id": 70,
+   "index": 70,
    "albedo": [
     0.8706,
     0.8667,
@@ -651,7 +651,7 @@
   },
   {
    "token": "wall.greyWhite.shade",
-   "id": 71,
+   "index": 71,
    "albedo": [
     0.8706,
     0.8667,
@@ -663,7 +663,7 @@
   },
   {
    "token": "wall.dormYellow.lit",
-   "id": 72,
+   "index": 72,
    "albedo": [
     0.8471,
     0.7686,
@@ -675,7 +675,7 @@
   },
   {
    "token": "wall.dormYellow.shade",
-   "id": 73,
+   "index": 73,
    "albedo": [
     0.8471,
     0.7686,
@@ -687,7 +687,7 @@
   },
   {
    "token": "wall.creamCoffee.lit",
-   "id": 74,
+   "index": 74,
    "albedo": [
     0.8039,
     0.7098,
@@ -699,7 +699,7 @@
   },
   {
    "token": "wall.creamCoffee.shade",
-   "id": 75,
+   "index": 75,
    "albedo": [
     0.8039,
     0.7098,
@@ -711,7 +711,7 @@
   },
   {
    "token": "band.terracotta.lit",
-   "id": 76,
+   "index": 76,
    "albedo": [
     0.7059,
     0.4784,
@@ -723,7 +723,7 @@
   },
   {
    "token": "band.terracotta.shade",
-   "id": 77,
+   "index": 77,
    "albedo": [
     0.7059,
     0.4784,
@@ -735,7 +735,7 @@
   },
   {
    "token": "panel.yellowGreen.lit",
-   "id": 78,
+   "index": 78,
    "albedo": [
     0.6667,
     0.6627,
@@ -747,7 +747,7 @@
   },
   {
    "token": "panel.yellowGreen.shade",
-   "id": 79,
+   "index": 79,
    "albedo": [
     0.6667,
     0.6627,
@@ -759,7 +759,7 @@
   },
   {
    "token": "panel.pinkSand.lit",
-   "id": 80,
+   "index": 80,
    "albedo": [
     0.7412,
     0.6431,
@@ -771,7 +771,7 @@
   },
   {
    "token": "panel.pinkSand.shade",
-   "id": 81,
+   "index": 81,
    "albedo": [
     0.7412,
     0.6431,
@@ -783,7 +783,7 @@
   },
   {
    "token": "panel.brown.lit",
-   "id": 82,
+   "index": 82,
    "albedo": [
     0.6196,
     0.5294,
@@ -795,7 +795,7 @@
   },
   {
    "token": "panel.brown.shade",
-   "id": 83,
+   "index": 83,
    "albedo": [
     0.6196,
     0.5294,
@@ -807,7 +807,7 @@
   },
   {
    "token": "panel.paleGold.lit",
-   "id": 84,
+   "index": 84,
    "albedo": [
     0.7569,
     0.6784,
@@ -819,7 +819,7 @@
   },
   {
    "token": "panel.paleGold.shade",
-   "id": 85,
+   "index": 85,
    "albedo": [
     0.7569,
     0.6784,
@@ -831,7 +831,7 @@
   },
   {
    "token": "tile.canteen.lit",
-   "id": 86,
+   "index": 86,
    "albedo": [
     0.7608,
     0.6784,
@@ -843,7 +843,7 @@
   },
   {
    "token": "tile.canteen.shade",
-   "id": 87,
+   "index": 87,
    "albedo": [
     0.7608,
     0.6784,
@@ -855,7 +855,7 @@
   },
   {
    "token": "base.warmBrown.lit",
-   "id": 88,
+   "index": 88,
    "albedo": [
     0.5922,
     0.4667,
@@ -867,7 +867,7 @@
   },
   {
    "token": "base.warmBrown.shade",
-   "id": 89,
+   "index": 89,
    "albedo": [
     0.5922,
     0.4667,
@@ -879,7 +879,7 @@
   },
   {
    "token": "roof.grey.lit",
-   "id": 90,
+   "index": 90,
    "albedo": [
     0.451,
     0.4784,
@@ -891,7 +891,7 @@
   },
   {
    "token": "roof.grey.shade",
-   "id": 91,
+   "index": 91,
    "albedo": [
     0.451,
     0.4784,
@@ -903,7 +903,7 @@
   },
   {
    "token": "roof.silverMetal.lit",
-   "id": 92,
+   "index": 92,
    "albedo": [
     0.7843,
     0.8039,
@@ -915,7 +915,7 @@
   },
   {
    "token": "roof.silverMetal.shade",
-   "id": 93,
+   "index": 93,
    "albedo": [
     0.7843,
     0.8039,
@@ -927,7 +927,7 @@
   },
   {
    "token": "frame.alu.lit",
-   "id": 94,
+   "index": 94,
    "albedo": [
     0.5725,
     0.6078,
@@ -939,7 +939,7 @@
   },
   {
    "token": "frame.alu.shade",
-   "id": 95,
+   "index": 95,
    "albedo": [
     0.5725,
     0.6078,
@@ -951,7 +951,7 @@
   },
   {
    "token": "glass.lit",
-   "id": 96,
+   "index": 96,
    "albedo": [
     0.2078,
     0.3098,
@@ -963,7 +963,7 @@
   },
   {
    "token": "glass.shade",
-   "id": 97,
+   "index": 97,
    "albedo": [
     0.2078,
     0.3098,
@@ -975,7 +975,7 @@
   },
   {
    "token": "brick.lit",
-   "id": 98,
+   "index": 98,
    "albedo": [
     0.7608,
     0.3412,
@@ -987,7 +987,7 @@
   },
   {
    "token": "brick.shade",
-   "id": 99,
+   "index": 99,
    "albedo": [
     0.7608,
     0.3412,
@@ -999,7 +999,7 @@
   },
   {
    "token": "uestc.blue.lit",
-   "id": 100,
+   "index": 100,
    "albedo": [
     0.0,
     0.2471,
@@ -1011,7 +1011,7 @@
   },
   {
    "token": "uestc.blue.shade",
-   "id": 101,
+   "index": 101,
    "albedo": [
     0.0,
     0.2471,
@@ -1023,7 +1023,7 @@
   },
   {
    "token": "uestc.techblue.lit",
-   "id": 102,
+   "index": 102,
    "albedo": [
     0.098,
     0.3804,
@@ -1035,7 +1035,7 @@
   },
   {
    "token": "uestc.techblue.shade",
-   "id": 103,
+   "index": 103,
    "albedo": [
     0.098,
     0.3804,
@@ -1047,7 +1047,7 @@
   },
   {
    "token": "uestc.gold.lit",
-   "id": 104,
+   "index": 104,
    "albedo": [
     0.8627,
     0.6706,
@@ -1059,7 +1059,7 @@
   },
   {
    "token": "uestc.gold.shade",
-   "id": 105,
+   "index": 105,
    "albedo": [
     0.8627,
     0.6706,
@@ -1071,7 +1071,7 @@
   },
   {
    "token": "bloom.capsule.lit",
-   "id": 106,
+   "index": 106,
    "albedo": [
     0.6784,
     0.3294,
@@ -1083,7 +1083,7 @@
   },
   {
    "token": "bloom.capsule.shade",
-   "id": 107,
+   "index": 107,
    "albedo": [
     0.6784,
     0.3294,
@@ -1095,7 +1095,7 @@
   },
   {
    "token": "sign.wetFloor.lit",
-   "id": 108,
+   "index": 108,
    "albedo": [
     0.8392,
     0.7608,
@@ -1107,7 +1107,7 @@
   },
   {
    "token": "sign.wetFloor.shade",
-   "id": 109,
+   "index": 109,
    "albedo": [
     0.8392,
     0.7608,
@@ -1119,7 +1119,7 @@
   },
   {
    "token": "umbrella.grayblue.lit",
-   "id": 110,
+   "index": 110,
    "albedo": [
     0.549,
     0.6118,
@@ -1131,7 +1131,7 @@
   },
   {
    "token": "umbrella.grayblue.shade",
-   "id": 111,
+   "index": 111,
    "albedo": [
     0.549,
     0.6118,
@@ -1143,7 +1143,7 @@
   },
   {
    "token": "umbrella.graygreen.lit",
-   "id": 112,
+   "index": 112,
    "albedo": [
     0.5765,
     0.6353,
@@ -1155,7 +1155,7 @@
   },
   {
    "token": "umbrella.graygreen.shade",
-   "id": 113,
+   "index": 113,
    "albedo": [
     0.5765,
     0.6353,
@@ -1167,7 +1167,7 @@
   },
   {
    "token": "umbrella.beige.lit",
-   "id": 114,
+   "index": 114,
    "albedo": [
     0.8353,
     0.7843,
@@ -1179,7 +1179,7 @@
   },
   {
    "token": "umbrella.beige.shade",
-   "id": 115,
+   "index": 115,
    "albedo": [
     0.8353,
     0.7843,
@@ -1191,7 +1191,7 @@
   },
   {
    "token": "umbrella.graypink.lit",
-   "id": 116,
+   "index": 116,
    "albedo": [
     0.7647,
     0.6392,
@@ -1203,7 +1203,7 @@
   },
   {
    "token": "umbrella.graypink.shade",
-   "id": 117,
+   "index": 117,
    "albedo": [
     0.7647,
     0.6392,
@@ -1215,7 +1215,7 @@
   },
   {
    "token": "ginkgo.lit",
-   "id": 118,
+   "index": 118,
    "albedo": [
     1.0,
     0.851,
@@ -1228,7 +1228,7 @@
   },
   {
    "token": "ginkgo.shade",
-   "id": 119,
+   "index": 119,
    "albedo": [
     1.0,
     0.851,
@@ -1241,7 +1241,7 @@
   },
   {
    "token": "metaseq.lit",
-   "id": 120,
+   "index": 120,
    "albedo": [
     0.851,
     0.4706,
@@ -1254,7 +1254,7 @@
   },
   {
    "token": "metaseq.shade",
-   "id": 121,
+   "index": 121,
    "albedo": [
     0.851,
     0.4706,
@@ -1267,7 +1267,7 @@
   },
   {
    "token": "cherry.lit",
-   "id": 122,
+   "index": 122,
    "albedo": [
     0.8784,
     0.4784,
@@ -1280,7 +1280,7 @@
   },
   {
    "token": "cherry.shade",
-   "id": 123,
+   "index": 123,
    "albedo": [
     0.8784,
     0.4784,
@@ -1293,7 +1293,7 @@
   },
   {
    "token": "maple.lit",
-   "id": 124,
+   "index": 124,
    "albedo": [
     0.8471,
     0.2824,
@@ -1306,7 +1306,7 @@
   },
   {
    "token": "maple.shade",
-   "id": 125,
+   "index": 125,
    "albedo": [
     0.8471,
     0.2824,
@@ -1319,7 +1319,7 @@
   },
   {
    "token": "willow.lit",
-   "id": 126,
+   "index": 126,
    "albedo": [
     0.7882,
     0.8275,
@@ -1332,7 +1332,7 @@
   },
   {
    "token": "willow.shade",
-   "id": 127,
+   "index": 127,
    "albedo": [
     0.7882,
     0.8275,
@@ -1345,7 +1345,7 @@
   },
   {
    "token": "plum.lit",
-   "id": 128,
+   "index": 128,
    "albedo": [
     0.6588,
     0.3451,
@@ -1358,7 +1358,7 @@
   },
   {
    "token": "plum.shade",
-   "id": 129,
+   "index": 129,
    "albedo": [
     0.6588,
     0.3451,
@@ -1371,7 +1371,7 @@
   },
   {
    "token": "deciduous.lit",
-   "id": 130,
+   "index": 130,
    "albedo": [
     0.9098,
     0.7529,
@@ -1384,7 +1384,7 @@
   },
   {
    "token": "deciduous.shade",
-   "id": 131,
+   "index": 131,
    "albedo": [
     0.9098,
     0.7529,
@@ -1397,7 +1397,7 @@
   },
   {
    "token": "jacaranda.lit",
-   "id": 132,
+   "index": 132,
    "albedo": [
     0.7216,
     0.7686,
@@ -1410,7 +1410,7 @@
   },
   {
    "token": "jacaranda.shade",
-   "id": 133,
+   "index": 133,
    "albedo": [
     0.7216,
     0.7686,
@@ -1423,7 +1423,7 @@
   },
   {
    "token": "hibiscus.lit",
-   "id": 134,
+   "index": 134,
    "albedo": [
     0.6118,
     0.6902,
@@ -1436,7 +1436,7 @@
   },
   {
    "token": "hibiscus.shade",
-   "id": 135,
+   "index": 135,
    "albedo": [
     0.6118,
     0.6902,
@@ -1449,7 +1449,7 @@
   },
   {
    "token": "camphor.lit",
-   "id": 136,
+   "index": 136,
    "albedo": [
     0.3686,
     0.549,
@@ -1462,7 +1462,7 @@
   },
   {
    "token": "camphor.shade",
-   "id": 137,
+   "index": 137,
    "albedo": [
     0.3686,
     0.549,
@@ -1475,7 +1475,7 @@
   },
   {
    "token": "camphor.red.lit",
-   "id": 138,
+   "index": 138,
    "albedo": [
     0.7843,
     0.502,
@@ -1488,7 +1488,7 @@
   },
   {
    "token": "camphor.red.shade",
-   "id": 139,
+   "index": 139,
    "albedo": [
     0.7843,
     0.502,
@@ -1501,7 +1501,7 @@
   },
   {
    "token": "nanmu.lit",
-   "id": 140,
+   "index": 140,
    "albedo": [
     0.3059,
     0.4784,
@@ -1514,7 +1514,7 @@
   },
   {
    "token": "nanmu.shade",
-   "id": 141,
+   "index": 141,
    "albedo": [
     0.3059,
     0.4784,
@@ -1527,7 +1527,7 @@
   },
   {
    "token": "palm.lit",
-   "id": 142,
+   "index": 142,
    "albedo": [
     0.3059,
     0.4392,
@@ -1540,7 +1540,7 @@
   },
   {
    "token": "palm.shade",
-   "id": 143,
+   "index": 143,
    "albedo": [
     0.3059,
     0.4392,
@@ -1553,7 +1553,7 @@
   },
   {
    "token": "photinia.lit",
-   "id": 144,
+   "index": 144,
    "albedo": [
     0.7216,
     0.2588,
@@ -1566,7 +1566,7 @@
   },
   {
    "token": "photinia.shade",
-   "id": 145,
+   "index": 145,
    "albedo": [
     0.7216,
     0.2588,
@@ -1579,7 +1579,7 @@
   },
   {
    "token": "loropetalum.lit",
-   "id": 146,
+   "index": 146,
    "albedo": [
     0.6118,
     0.2902,
@@ -1592,7 +1592,7 @@
   },
   {
    "token": "loropetalum.shade",
-   "id": 147,
+   "index": 147,
    "albedo": [
     0.6118,
     0.2902,
@@ -1605,7 +1605,7 @@
   },
   {
    "token": "hedge.lit",
-   "id": 148,
+   "index": 148,
    "albedo": [
     0.7843,
     0.7843,
@@ -1618,7 +1618,7 @@
   },
   {
    "token": "hedge.shade",
-   "id": 149,
+   "index": 149,
    "albedo": [
     0.7843,
     0.7843,
@@ -1631,7 +1631,7 @@
   },
   {
    "token": "grass.lit",
-   "id": 150,
+   "index": 150,
    "albedo": [
     0.8392,
     0.7451,
@@ -1644,7 +1644,7 @@
   },
   {
    "token": "grass.shade",
-   "id": 151,
+   "index": 151,
    "albedo": [
     0.8392,
     0.7451,
@@ -1657,7 +1657,7 @@
   },
   {
    "token": "reed.lit",
-   "id": 152,
+   "index": 152,
    "albedo": [
     0.7843,
     0.7216,
@@ -1670,7 +1670,7 @@
   },
   {
    "token": "reed.shade",
-   "id": 153,
+   "index": 153,
    "albedo": [
     0.7843,
     0.7216,
@@ -1683,7 +1683,7 @@
   },
   {
    "token": "lotus.lit",
-   "id": 154,
+   "index": 154,
    "albedo": [
     0.5412,
     0.4784,
@@ -1696,7 +1696,7 @@
   },
   {
    "token": "lotus.shade",
-   "id": 155,
+   "index": 155,
    "albedo": [
     0.5412,
     0.4784,
@@ -1709,7 +1709,7 @@
   },
   {
    "token": "tree.bare.lit",
-   "id": 156,
+   "index": 156,
    "albedo": [
     0.5412,
     0.4549,
@@ -1722,7 +1722,7 @@
   },
   {
    "token": "tree.bare.shade",
-   "id": 157,
+   "index": 157,
    "albedo": [
     0.5412,
     0.4549,
@@ -1735,7 +1735,7 @@
   },
   {
    "token": "bloom.pink.lit",
-   "id": 158,
+   "index": 158,
    "albedo": [
     0.9647,
     0.7765,
@@ -1748,7 +1748,7 @@
   },
   {
    "token": "bloom.pink.shade",
-   "id": 159,
+   "index": 159,
    "albedo": [
     0.9647,
     0.7765,
@@ -1761,7 +1761,7 @@
   },
   {
    "token": "bloom.plum.lit",
-   "id": 160,
+   "index": 160,
    "albedo": [
     0.9098,
     0.4706,
@@ -1774,7 +1774,7 @@
   },
   {
    "token": "bloom.plum.shade",
-   "id": 161,
+   "index": 161,
    "albedo": [
     0.9098,
     0.4706,
@@ -1787,7 +1787,7 @@
   },
   {
    "token": "bloom.white.lit",
-   "id": 162,
+   "index": 162,
    "albedo": [
     0.9804,
     0.9647,
@@ -1800,7 +1800,7 @@
   },
   {
    "token": "bloom.white.shade",
-   "id": 163,
+   "index": 163,
    "albedo": [
     0.9804,
     0.9647,
@@ -1813,7 +1813,7 @@
   },
   {
    "token": "bloom.violet.lit",
-   "id": 164,
+   "index": 164,
    "albedo": [
     0.5569,
     0.5255,
@@ -1826,7 +1826,7 @@
   },
   {
    "token": "bloom.violet.shade",
-   "id": 165,
+   "index": 165,
    "albedo": [
     0.5569,
     0.5255,
@@ -1839,7 +1839,7 @@
   },
   {
    "token": "bloom.rose.lit",
-   "id": 166,
+   "index": 166,
    "albedo": [
     0.8784,
     0.4157,
@@ -1852,7 +1852,7 @@
   },
   {
    "token": "bloom.rose.shade",
-   "id": 167,
+   "index": 167,
    "albedo": [
     0.8784,
     0.4157,
@@ -1865,7 +1865,7 @@
   },
   {
    "token": "bloom.crape.lit",
-   "id": 168,
+   "index": 168,
    "albedo": [
     0.8157,
     0.4784,
@@ -1878,7 +1878,7 @@
   },
   {
    "token": "bloom.crape.shade",
-   "id": 169,
+   "index": 169,
    "albedo": [
     0.8157,
     0.4784,
@@ -1891,7 +1891,7 @@
   },
   {
    "token": "bloom.yellow.lit",
-   "id": 170,
+   "index": 170,
    "albedo": [
     0.949,
     0.8157,
@@ -1904,7 +1904,7 @@
   },
   {
    "token": "bloom.yellow.shade",
-   "id": 171,
+   "index": 171,
    "albedo": [
     0.949,
     0.8157,
@@ -1917,7 +1917,7 @@
   },
   {
    "token": "bloom.lotus.lit",
-   "id": 172,
+   "index": 172,
    "albedo": [
     0.949,
     0.5412,
@@ -1930,7 +1930,7 @@
   },
   {
    "token": "bloom.lotus.shade",
-   "id": 173,
+   "index": 173,
    "albedo": [
     0.949,
     0.5412,
@@ -1943,7 +1943,7 @@
   },
   {
    "token": "plume.lit",
-   "id": 174,
+   "index": 174,
    "albedo": [
     0.9294,
     0.902,
@@ -1956,7 +1956,7 @@
   },
   {
    "token": "plume.shade",
-   "id": 175,
+   "index": 175,
    "albedo": [
     0.9294,
     0.902,
@@ -1969,7 +1969,7 @@
   },
   {
    "token": "crop.lit",
-   "id": 176,
+   "index": 176,
    "albedo": [
     0.8471,
     0.7059,
@@ -1982,7 +1982,7 @@
   },
   {
    "token": "crop.shade",
-   "id": 177,
+   "index": 177,
    "albedo": [
     0.8471,
     0.7059,

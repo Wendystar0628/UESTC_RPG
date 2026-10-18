@@ -211,10 +211,6 @@
    "SYS-VIEW",
    "TOOL-PREVIEW"
   ],
-  "WP-02": [
-   "ENG-BUDGET-LOD",
-   "ENG-PERF-STREAM"
-  ],
   "WP-02a": [
    "ENG-BUDGET-LOD",
    "ENG-PERF-STREAM"
@@ -355,7 +351,6 @@
    "WLD-OUTSKIRTS",
    "WLD-OUTSKIRTS-BORDER"
   ],
-  "WP-31": [],
   "WP-31a": [
    "MAP-QSH-INTERIORS",
    "WLD-INTERIORS",
@@ -400,20 +395,7 @@
    "UI-VISUAL-COMPONENTS",
    "UI-VISUAL-MOTION"
   ],
-  "WP-35b": [
-   "UI-NAV",
-   "UI-VISUAL",
-   "UI-VISUAL-COMPONENTS",
-   "UI-VISUAL-MOTION"
-  ],
   "WP-35c": [
-   "UI-NAV",
-   "UI-VISUAL",
-   "UI-VISUAL-COMPONENTS",
-   "UI-VISUAL-MOTION"
-  ],
-  "WP-35d": [
-   "SYS-TITLE",
    "UI-NAV",
    "UI-VISUAL",
    "UI-VISUAL-COMPONENTS",
@@ -451,9 +433,6 @@
    "SYS-WALK-BOUNDS",
    "WLD-OUTSKIRTS-BORDER"
   ],
-  "WP-45": [
-   "SYS-WEATHER"
-  ],
   "WP-45a": [
    "SYS-WEATHER",
    "SYS-WEATHER-PROCESS"
@@ -464,23 +443,10 @@
   "WP-46": [
    "SYS-MAPS"
   ],
-  "WP-47": [
-   "MAP-QSH-OUTSKIRTS",
-   "WLD-OUTSKIRTS",
-   "WLD-OUTSKIRTS-BAND"
-  ],
   "WP-47a": [
    "MAP-QSH-OUTSKIRTS",
    "WLD-OUTSKIRTS",
    "WLD-OUTSKIRTS-BAND"
-  ],
-  "WP-47b": [
-   "MAP-QSH-OUTSKIRTS",
-   "WLD-OUTSKIRTS",
-   "WLD-OUTSKIRTS-BAND"
-  ],
-  "WP-48": [
-   "SYS-ATLAS"
   ],
   "WP-48a": [
    "SYS-ATLAS",
@@ -493,9 +459,6 @@
   "WP-48c": [
    "SYS-ATLAS",
    "SYS-ATLAS-TRAVEL"
-  ],
-  "WP-49": [
-   "SYS-TITLE"
   ],
   "WP-49a": [
    "SYS-TITLE",
@@ -510,10 +473,6 @@
    "SYS-SAVE-FLOW",
    "SYS-SAVE-FORMAT"
   ],
-  "WP-51": [
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-BUILD"
-  ],
   "WP-51a": [
    "WLD-INTERIORS",
    "WLD-INTERIORS-BUILD"
@@ -521,13 +480,6 @@
   "WP-51b": [
    "WLD-INTERIORS",
    "WLD-INTERIORS-BUILD"
-  ],
-  "WP-52": [
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-BUILD"
-  ],
-  "WP-53": [
-   "SYS-AUDIO"
   ],
   "WP-53a": [
    "SYS-AUDIO"

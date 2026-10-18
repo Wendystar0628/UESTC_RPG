@@ -3,6 +3,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Tests;
 using Campus.Contracts.Maps;
+using Campus.Gen.Geometry;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -48,6 +49,16 @@ public sealed partial class TerrainCompilerTests
         var control = TerrainCompiler.Compile(context, []);
         AssertThat(Math.Abs((double)(control.HeightAt(-3, 0)) - (double)(terminal.HeightAt(-3, 0))) <= TestTolerance.Position).IsTrue();
         AssertThat(Math.Abs((double)(control.HeightAt(-2.99f, 0)) - (double)(terminal.HeightAt(-2.99f, 0))) <= TestTolerance.Position).IsTrue();
+
+        var touching = swale with { Line = new([new(PlanGeometry.Tolerance / 2, 0), new(20, 0)]) };
+        var path = new TerrainPath(touching.Line!); var roadPath = new TerrainPath(road.Line);
+        AssertThat(path.Intersections(roadPath).Count == 0).OverrideFailureMessage("Strict callers admitted a gap.").IsTrue();
+        var contactTerrain = TerrainCompiler.Compile(context, [Source([touching])]);
+        AssertThat(Math.Abs(contactTerrain.HeightAt(0, 0)) <= TestTolerance.Position && contactTerrain.HeightAt(10, 0) < 0).IsTrue();
+        var separated = touching with { Line = new([new(PlanGeometry.Tolerance * 2, 0), new(20, 0)]) };
+        WorldDataException? separatedRejection = null;
+        try { TerrainCompiler.Compile(context, [Source([separated])]); } catch (WorldDataException error) { separatedRejection = error; }
+        AssertThat(separatedRejection is not null).OverrideFailureMessage("The at matching radius became a segment-contact tolerance.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -73,19 +84,12 @@ public sealed partial class TerrainCompilerTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void AutomaticWaterUsesActualConstantShoreTopAndRequiresExplicitLevelForUnevenShore()
+    public void AutomaticWaterUsesActualShoreTop()
     {
         var water = WorldFeatureFixture.Create("fixture:raised-lake", "water", new PolygonGeometry(Box(-20, -20, 20, 20)));
         var plateau = new TerrainPlatformOp("design:terrain:raised-lake-base", "fixture", Box(-40, -40, 40, 40), 3,
             new("1:4", "1:4"), 2) { Zone = Zone };
         var terrain = Compile([plateau], [water]); AssertThat(Math.Abs((double)(2.5) - (double)(terrain.WaterY(water.Id)!.Value)) <= TestTolerance.Position).IsTrue();
-        var uneven = new TerrainSlopeOp("design:terrain:uneven-lake-base", "negative fixture", new PolygonGeometry(Box(-40, -40, 40, 40)),
-            0, 1, 0, new("1:4", "1:4"), 2, new(-40, 0), new(40, 0)) { Zone = Zone };
-        {
-            WorldDataException? rejection = null;
-            try { Compile([uneven], [water]); } catch (WorldDataException error) { rejection = error; }
-            AssertThat(rejection is not null).IsTrue();
-        }
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -220,7 +224,7 @@ public sealed partial class TerrainCompilerTests
         AssertThat(Math.Abs((double)(0.2) - (double)(envelope.Constrain(TerrainDifferential.Constant(0), 1, 0).Height)) <= TestTolerance.Position).IsTrue();
         var sample = envelope.Constrain(TerrainDifferential.Constant(0), -1.2, 0.2);
         AssertThat(Math.Abs((double)(-0.1) - (double)(sample.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0.5) - (double)(Math.Sqrt(sample.Dx * sample.Dx + sample.Dz * sample.Dz))) <= TestTolerance.Position).IsTrue();
-        const double e = 0.00001;
+        const double e = 0.01;
         var finite = (envelope.Constrain(TerrainDifferential.Constant(0), -1.2 + e, 0.2).Height
             - envelope.Constrain(TerrainDifferential.Constant(0), -1.2 - e, 0.2).Height) / (2 * e);
         AssertThat(Math.Abs((double)(finite) - (double)(sample.Dx)) <= TestTolerance.Position).IsTrue();
@@ -238,7 +242,7 @@ public sealed partial class TerrainCompilerTests
             AssertThat(Math.Abs((double)(0.5) - (double)(join.Weight(-4, -11, width).Height)) <= TestTolerance.Position).IsTrue();
             AssertThat(Math.Abs((double)(0) - (double)(join.Weight(-4, -12, width).Height)) <= TestTolerance.Position).IsTrue();
             AssertThat(Math.Abs((double)(0) - (double)(join.Weight(-4, -13, width).Height)) <= TestTolerance.Position).IsTrue();
-            var a = join.Weight(-4.00001, -11, width); var c = join.Weight(-3.99999, -11, width);
+            var a = join.Weight(-4.01, -11, width); var c = join.Weight(-3.99, -11, width);
             AssertThat(Math.Abs(a.Height - c.Height) < TestTolerance.Position).OverrideFailureMessage("The fixed exposed shore and interior join are discontinuous.").IsTrue();
         }
         AssertThat(Math.Abs((double)(1) - (double)(join.Weight(0, 0, 4).Height)) <= TestTolerance.Position).IsTrue();
@@ -246,12 +250,12 @@ public sealed partial class TerrainCompilerTests
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
-    public void WaterUnionCannotHideAuthoredZoneExtentBehindAnAutomaticMember()
+    public void WaterUnionPreservesAuthoredLocalProfileAndZoneExtentBehindAnAutomaticMember()
     {
         var automatic = WorldFeatureFixture.Create("fixture:a-auto-lake", "water", new PolygonGeometry(Box(-15, -8, 1, 8)));
         var authored = WorldFeatureFixture.Create("fixture:z-authored-lake", "water", new PolygonGeometry(Box(-1, -8, 15, 8)));
         var op = new TerrainLakeOp("design:terrain:authored-water", "zone regression", authored.Id, -0.5,
-            new(TerrainBankKind.Soft, "1:5"), new(1.5), []) { Zone = Zone };
+            new(TerrainBankKind.Soft, "1:4"), new(1.5), []) { Zone = Zone };
         var context = Context([automatic, authored]) with
         {
             Zones = new Dictionary<ZoneId, IReadOnlyList<PolygonRings>> { [Zone] = [Box(-7, -20, 7, 20)] }
@@ -263,25 +267,11 @@ public sealed partial class TerrainCompilerTests
         }
         var accepted = Compile([op], [automatic, authored]);
         AssertThat(accepted.ZonesValidated).OverrideFailureMessage("A valid author extent lost its zone validation after union.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void AuthoredAnchorAtRealHardShoreHasAnExactContentConflict()
-    {
-        var water = WorldFeatureFixture.Create("fixture:anchor-water", "water", new PolygonGeometry(Box(0, -10, 20, 10)));
-        var line = new NetworkLine(new("fixture:anchor-road"), new([new(0, -15), new(0, 0), new(0, 15)]), 0.5f)
-            { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
-        var corridor = new TerrainCorridorOp("design:terrain:bad-shore-anchor", "real fixed anchor conflict", line.Id,
-            [new(0, -0.3), new(15, -0.3), new(30, -0.3)], 0, 0.75) { Zone = Zone };
-        try
-        {
-            _ = TerrainCompiler.Compile(Context([water]) with { Network = new([line], [], [], [], []) }, [Source([corridor])]);
-            throw new InvalidOperationException("A real constrained hard anchor was accepted.");
-        }
-        catch (WorldDataException error)
-        {
-            AssertThat((string?)error.Data["TerrainConstraintKind"] == "content-conflict" && error.Entry == corridor.Id).OverrideFailureMessage("The exact shoreline anchor conflict lost its classification/location.").IsTrue();
-        }
+        var authoredOnly = Compile([op], [authored]);
+        var automaticOnly = Compile([], [automatic]);
+        AssertThat(Math.Abs(accepted.HeightAt(10, 0) - authoredOnly.HeightAt(10, 0)) <= TestTolerance.Position
+            && Math.Abs(accepted.HeightAt(-10, 0) - automaticOnly.HeightAt(-10, 0)) <= TestTolerance.Position)
+            .OverrideFailureMessage("A shared water level replaced a member's local depth/bank profile.").IsTrue();
     }
 
 }

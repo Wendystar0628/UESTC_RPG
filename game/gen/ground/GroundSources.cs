@@ -43,6 +43,8 @@ internal static class GroundSources
         var roads = new List<RoadLine>();
         foreach (var line in world.Network.Roads.OrderBy(l => l.Id.Value, StringComparer.Ordinal))
         {
+            // An area way's network line is its perimeter; its real polygon is already laid above.
+            if (WorldProps.TryText(line.Props, "area") == "yes") continue;
             var points = PlanLines.CleanPath(line.Line.Points);
             if (points.Length < 2) continue;
             var type = GroundClassifier.RoadType(line.Props);

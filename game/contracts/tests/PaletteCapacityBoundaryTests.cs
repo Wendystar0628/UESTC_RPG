@@ -40,12 +40,12 @@ public sealed class PaletteCapacityBoundaryTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void CatalogIsAnImmutableUnionAndSchemaTwoCannotRedefineLegacyOrSeasonalEntries()
+    public void CatalogUsesOneSourceFormatAndPreservesBankRules()
     {
         var legacy = Legacy();
         var legacyJson = JsonSerializer.Serialize(new PaletteRegistryData(legacy.Entries), ContractJson.Options);
-        var extensions = new List<PaletteEntryV2> { Entry(256), Entry(257), Entry(510), Entry(511) };
-        var json = JsonSerializer.Serialize(new PaletteExtensionData(extensions), ContractJson.Options);
+        var extensions = new List<PaletteEntry> { Entry(256), Entry(257), Entry(510), Entry(511) };
+        var json = JsonSerializer.Serialize(new PaletteRegistryData(extensions), ContractJson.Options);
         // Exercise the real property converter: the global enum converter would OR these strings into valid values.
         foreach (var (canonical, invalid) in new[]
         {
@@ -57,30 +57,27 @@ public sealed class PaletteCapacityBoundaryTests
             AssertThat(badJson != json).OverrideFailureMessage("The role JSON regression did not modify a real input property.").IsTrue();
             {
                 bool rejected = false;
-                try { JsonSerializer.Deserialize<PaletteExtensionData>(badJson, ContractJson.Options); }
+                try { JsonSerializer.Deserialize<PaletteRegistryData>(badJson, ContractJson.Options); }
                 catch (JsonException) { rejected = true; }
                 AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
             }
         }
-        // The V2 metadata view also represents legacy entries, so its local converter supports all existing roles.
+        // The shared metadata converter supports every existing bank-0 role.
         foreach (var role in Enum.GetValues<PaletteRole>())
         {
             var entryJson = JsonSerializer.Serialize(Entry(256) with { Role = role }, ContractJson.Options);
-            var entryRoundTrip = JsonSerializer.Deserialize<PaletteEntryV2>(entryJson, ContractJson.Options) ?? throw new JsonException();
-            AssertThat(entryRoundTrip.Role == role).OverrideFailureMessage("The V2 metadata role converter cannot represent a legacy role.").IsTrue();
+            var entryRoundTrip = JsonSerializer.Deserialize<PaletteEntry>(entryJson, ContractJson.Options) ?? throw new JsonException();
+            AssertThat(entryRoundTrip.Role == role).OverrideFailureMessage("The shared metadata converter cannot represent a bank-0 role.").IsTrue();
         }
-        var oldCaseJson = legacyJson.Replace("\"role\":\"lit\"", "\"role\":\"LIT\"", StringComparison.Ordinal);
-        var oldCaseData = JsonSerializer.Deserialize<PaletteRegistryData>(oldCaseJson, ContractJson.Options) ?? throw new JsonException();
-        AssertThat(oldCaseJson != legacyJson && PaletteRegistry.FromData(oldCaseData).Get((byte)64).Role == PaletteRole.Lit).OverrideFailureMessage("Local V2 validation broke legacy role casing compatibility.").IsTrue();
-        var data = JsonSerializer.Deserialize<PaletteExtensionData>(json, ContractJson.Options) ?? throw new JsonException();
-        var catalog = PaletteCatalog.FromData(legacy, data);
+        var data = JsonSerializer.Deserialize<PaletteRegistryData>(json, ContractJson.Options) ?? throw new JsonException();
+        var catalog = PaletteCatalog.FromData(new(legacy.Entries.Concat(data.Entries).ToArray()));
         var copied = new PaletteCatalog(legacy, extensions);
         extensions.Clear();
         AssertThat(copied.ExtensionCount == 4 && catalog.Resolve(new("ext.510")).Value == 510).OverrideFailureMessage("Catalog retained a mutable input list or truncated an index.").IsTrue();
         AssertThat(catalog.Get(new PaletteIndex(64)).Albedo == Vector3.One).OverrideFailureMessage("Legacy metadata changed.").IsTrue();
-        AssertThat(legacyJson == JsonSerializer.Serialize(new PaletteRegistryData(legacy.Entries), ContractJson.Options)).OverrideFailureMessage("Schema-1 serialization changed.").IsTrue();
-        AssertThat(json.Contains("\"index\":256", StringComparison.Ordinal)).OverrideFailureMessage("Schema-2 must use a numeric index field.").IsTrue();
-        AssertThrown(() => ((IList<PaletteEntryV2>)catalog.Entries).Clear()).IsInstanceOf<NotSupportedException>();
+        AssertThat(legacyJson == JsonSerializer.Serialize(new PaletteRegistryData(legacy.Entries), ContractJson.Options)).OverrideFailureMessage("Bank-0 metadata changed.").IsTrue();
+        AssertThat(json.Contains("\"index\":256", StringComparison.Ordinal)).OverrideFailureMessage("Every source must use a numeric index field.").IsTrue();
+        AssertThrown(() => ((IList<PaletteEntry>)catalog.Entries).Clear()).IsInstanceOf<NotSupportedException>();
         AssertThrown(() => legacy.Get(new PaletteToken("ext.256"))).IsInstanceOf<KeyNotFoundException>();
         catalog.Validate(new(new("ext.256"), new("ext.257")));
         AssertThrown(() => catalog.Validate(new(new("ext.256"), new("ext.511")))).IsInstanceOf<ArgumentException>();
@@ -92,22 +89,22 @@ public sealed class PaletteCapacityBoundaryTests
         AssertThrown(() => new PaletteCatalog(legacy, [Entry(256) with { Role = PaletteRole.Emissive }, Entry(257)])).IsInstanceOf<ArgumentException>();
         AssertThrown(() => new PaletteCatalog(legacy, [Entry(256) with { Albedo = new(float.NaN, 0, 0) }, Entry(257)])).IsInstanceOf<ArgumentException>();
         AssertThrown(() => new PaletteCatalog(legacy, [Entry(254), Entry(255)])).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => PaletteCatalog.FromData(legacy, new([], Schema: 1))).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => PaletteCatalog.FromData(new([], Schema: 1))).IsInstanceOf<ArgumentException>();
         {
             bool rejected = false;
-            try { JsonSerializer.Deserialize<PaletteExtensionData>("{\"entries\":[]}", ContractJson.Options); }
+            try { JsonSerializer.Deserialize<PaletteRegistryData>("{\"entries\":[]}", ContractJson.Options); }
             catch (JsonException) { rejected = true; }
             AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
         }
         {
             bool rejected = false;
-            try { JsonSerializer.Deserialize<PaletteExtensionData>("{\"schema\":2,\"entries\":[],\"unknown\":1}", ContractJson.Options); }
+            try { JsonSerializer.Deserialize<PaletteRegistryData>("{\"schema\":2,\"entries\":[],\"unknown\":1}", ContractJson.Options); }
             catch (JsonException) { rejected = true; }
             AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
         }
         {
             bool rejected = false;
-            try { JsonSerializer.Deserialize<PaletteExtensionData>(json.Replace("\"index\":256,", "", StringComparison.Ordinal), ContractJson.Options); }
+            try { JsonSerializer.Deserialize<PaletteRegistryData>(json.Replace("\"index\":256,", "", StringComparison.Ordinal), ContractJson.Options); }
             catch (JsonException) { rejected = true; }
             AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
         }
@@ -195,9 +192,9 @@ public sealed class PaletteCapacityBoundaryTests
     }
 
     private static PaletteRegistry Legacy() => new([
-        new(new("old.lit"), 64, Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("old.shade"), 65, new(.5f), "fixture", false, PaletteRole.Shade)]);
-    private static PaletteEntryV2 Entry(int index) => new(new("ext." + index), new(index), Vector3.One,
+        new(new("old.lit"), new(64), Vector3.One, "fixture", false, PaletteRole.Lit),
+        new(new("old.shade"), new(65), new(.5f), "fixture", false, PaletteRole.Shade)]);
+    private static PaletteEntry Entry(int index) => new(new("ext." + index), new(index), Vector3.One,
         "fixture", false, (index & 1) == 0 ? PaletteRole.Lit : PaletteRole.Shade);
     private static GeometryBundle Geometry() => new(new(new(new("old.lit"), new("old.shade"))),
         [0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1, 0, 0, 1], [0, 1, 2]);

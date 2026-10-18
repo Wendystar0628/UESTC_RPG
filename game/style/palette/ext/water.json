@@ -1,9 +1,9 @@
 {
- "schema": 1,
+ "schema": 2,
  "entries": [
   {
    "token": "water.near.lit",
-   "id": 214,
+   "index": 214,
    "albedo": [
     0.6902,
     0.8392,
@@ -15,7 +15,7 @@
   },
   {
    "token": "water.near.shade",
-   "id": 215,
+   "index": 215,
    "albedo": [
     0.6902,
     0.8392,
@@ -27,7 +27,7 @@
   },
   {
    "token": "water.mid.lit",
-   "id": 216,
+   "index": 216,
    "albedo": [
     0.5059,
     0.7451,
@@ -39,7 +39,7 @@
   },
   {
    "token": "water.mid.shade",
-   "id": 217,
+   "index": 217,
    "albedo": [
     0.5059,
     0.7451,
@@ -51,7 +51,7 @@
   },
   {
    "token": "water.far.lit",
-   "id": 218,
+   "index": 218,
    "albedo": [
     0.3451,
     0.6745,
@@ -63,7 +63,7 @@
   },
   {
    "token": "water.far.shade",
-   "id": 219,
+   "index": 219,
    "albedo": [
     0.3451,
     0.6745,
@@ -75,7 +75,7 @@
   },
   {
    "token": "water.deep.lit",
-   "id": 220,
+   "index": 220,
    "albedo": [
     0.1098,
     0.4863,
@@ -87,7 +87,7 @@
   },
   {
    "token": "water.deep.shade",
-   "id": 221,
+   "index": 221,
    "albedo": [
     0.1098,
     0.4863,
@@ -99,7 +99,7 @@
   },
   {
    "token": "water.foam.lit",
-   "id": 222,
+   "index": 222,
    "albedo": [
     0.9137,
     0.9216,
@@ -111,7 +111,7 @@
   },
   {
    "token": "water.foam.shade",
-   "id": 223,
+   "index": 223,
    "albedo": [
     0.9137,
     0.9216,

@@ -103,7 +103,7 @@ public sealed class GroundTreePitTests
                 var color = mesh.ColorIndices![a];
                 AssertThat(color == frame || color == earth).OverrideFailureMessage($"A triangle of colour {color} lies over a pit at ({cx}, {cz}).").IsTrue();
                 // A flat triangle (a top, not a vertical face) is never at the paving level: nothing is laid over a pit.
-                var flat = MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * b + 1]) < 1e-4f && MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * c + 1]) < 1e-4f;
+                var flat = MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * b + 1]) < TestTolerance.Position && MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * c + 1]) < TestTolerance.Position;
                 if (!flat) continue;
                 AssertThat(Math.Abs(cy - Section.PavingY) > Campus.Gen.Geometry.PlanGeometry.Tolerance).OverrideFailureMessage($"A triangle at paving level lies over a pit at ({cx}, {cz}).").IsTrue();
                 if (color == earth) tops.Add(cy);

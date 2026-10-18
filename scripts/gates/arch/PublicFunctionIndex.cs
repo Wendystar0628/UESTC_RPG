@@ -39,7 +39,7 @@ internal static class PublicFunctionIndex
         new(["SegmentDistanceSquared", "ClosestPoint"], [Lines], m => m.Parameters.Length > 1 && IsVector(m.Parameters[0].Type)),
         new(["SegmentDistance"], [Lines], m => m.Parameters.Length == 4 && IsScalar(m.Parameters[0].Type) &&
             IsScalar(m.Parameters[1].Type) && IsVector(m.Parameters[2].Type) && IsVector(m.Parameters[3].Type)),
-        new(["LineIntersection", "SegmentIntersection", "SegmentHit"], [Lines],
+        new(["LineIntersection", "SegmentIntersection", "SegmentHit", "SegmentContact"], [Lines],
             m => m.Parameters.Length >= 4 && m.Parameters.Take(4).All(p => IsVector(p.Type))),
         new(["Feature", "Part", "Levels", "Point", "Outer", "Outers", "Line", "Contour", "ContourGeometry", "PointPair", "Rectangle", "ContourSegment", "ContourFrame", "TerrainLine"], [Reads],
             m => m.Parameters.Length > 0 && SourceModel.Name(m.Parameters[0].Type) is

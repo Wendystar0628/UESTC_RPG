@@ -52,7 +52,7 @@ public static class Materials
     public static IReadOnlyList<MaterialKind> All { get; } = Enum.GetValues<MaterialKind>();
 }
 
-/// <summary>Colour families from the WP-04 core registry (game/style/palette/core.json). Names only; values live in the registry.</summary>
+/// <summary>Registered colour families. Names only; values live in game/style/palette/.</summary>
 public static class Families
 {
     public const string WallWarmWhite = "wall";
@@ -69,4 +69,5 @@ public static class Families
     public const string RoofSilverMetal = "roof.silverMetal";
     public const string FrameAlu = "frame.alu";
     public const string Glass = "glass";
+    public const string GlassDeep = "glass.deep";
 }

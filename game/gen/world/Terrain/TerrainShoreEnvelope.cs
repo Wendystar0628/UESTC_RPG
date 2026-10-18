@@ -18,12 +18,10 @@ internal sealed class TerrainShoreEnvelope
     private readonly TerrainRegion _domain;
     private readonly Func<double, double, double> _shoreHeight;
     private readonly string _file, _id;
-    private readonly Func<double, double, string>? _explain;
     private Node _root = null!;
 
-    public TerrainShoreEnvelope(TerrainRegion domain, Func<double, double, double> shoreHeight, string file, string id,
-        Func<double, double, string>? explain = null)
-    { _domain = domain; _shoreHeight = shoreHeight; _file = file; _id = id; _explain = explain; Refresh(); }
+    public TerrainShoreEnvelope(TerrainRegion domain, Func<double, double, double> shoreHeight, string file, string id)
+    { _domain = domain; _shoreHeight = shoreHeight; _file = file; _id = id; Refresh(); }
 
     public void Refresh()
     {
@@ -39,27 +37,11 @@ internal sealed class TerrainShoreEnvelope
                     for (var j = 1; j <= count; j++)
                     {
                         var x1 = a.X + dx * j / count; var z1 = a.Y + dz * j / count; var y1 = _shoreHeight(x1, z1);
-                        Add(x0, z0, x1, z1, y0, y1, 0); x0 = x1; z0 = z1; y0 = y1;
+                        edges.Add(new(x0, z0, x1, z1, y0, y1, edges.Count)); x0 = x1; z0 = z1; y0 = y1;
                     }
                 }
         _root = Build(edges.ToArray());
 
-        void Add(double ax, double az, double bx, double bz, double ay, double by, int depth)
-        {
-            var mx = (ax + bx) / 2; var mz = (az + bz) / 2; var my = _shoreHeight(mx, mz);
-            var error = Math.Max(Math.Abs(my - (ay + by) / 2), Math.Max(
-                Math.Abs(_shoreHeight((3 * ax + bx) / 4, (3 * az + bz) / 4) - (3 * ay + by) / 4),
-                Math.Abs(_shoreHeight((ax + 3 * bx) / 4, (az + 3 * bz) / 4) - (ay + 3 * by) / 4)));
-            // These are vector boundary constraints, not a sampled height field. Adaptive
-            // chords resolve the prescribed curve to the 1 cm terrain quantum, within its 2 cm acceptance.
-            if (error > 0.01)
-            {
-                if (depth >= 24) throw new WorldDataException(_file, _id,
-                    $"Shore height is discontinuous or cannot be resolved by the deterministic boundary envelope: a=({ax:R},{az:R},{ay:R}), b=({bx:R},{bz:R},{by:R}), mid={my:R}, error={error:R}. A: {_explain?.Invoke(ax, az)} B: {_explain?.Invoke(bx, bz)}");
-                Add(ax, az, mx, mz, ay, my, depth + 1); Add(mx, mz, bx, bz, my, by, depth + 1); return;
-            }
-            edges.Add(new(ax, az, bx, bz, ay, by, edges.Count));
-        }
     }
 
     public TerrainDifferential Constrain(TerrainDifferential baseline, double x, double z)
@@ -67,7 +49,7 @@ internal sealed class TerrainShoreEnvelope
         var lower = new TerrainDifferential(double.NegativeInfinity, 0, 0);
         var upper = new TerrainDifferential(double.PositiveInfinity, 0, 0);
         Visit(_root);
-        if (lower.Height > upper.Height + 0.01)
+        if (lower.Height > upper.Height + TerrainMath.HeightTolerance)
             throw new WorldDataException(_file, _id, $"Fixed exposed shore heights cannot coexist within the 1:2 land-grade limit at ({x:R},{z:R}); lower={lower.Height:R}, upper={upper.Height:R}.");
         var result = baseline.Height > upper.Height ? upper : baseline;
         return result.Height < lower.Height ? lower : result;

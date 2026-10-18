@@ -272,28 +272,18 @@ internal sealed class TerrainPath
         return Line.Points[^1];
     }
 
-    public IReadOnlyList<TerrainIntersection> Intersections(TerrainPath other)
+    public IReadOnlyList<TerrainIntersection> Intersections(TerrainPath other, double distanceTolerance = 0)
     {
         var intersections = new List<TerrainIntersection>();
         for (var i = 0; i < Line.Points.Count - 1; i++)
             for (var j = 0; j < other.Line.Points.Count - 1; j++)
             {
                 var a = Line.Points[i]; var b = Line.Points[i + 1]; var c = other.Line.Points[j]; var d = other.Line.Points[j + 1];
-                var rx = (double)b.X - a.X; var rz = (double)b.Y - a.Y; var sx = (double)d.X - c.X; var sz = (double)d.Y - c.Y;
-                var denominator = rx * sz - rz * sx; var qx = (double)c.X - a.X; var qz = (double)c.Y - a.Y;
-                if (denominator == 0)
-                {
-                    if (qx * rz - qz * rx == 0 && Math.Max(Math.Min(a.X, b.X), Math.Min(c.X, d.X)) <= Math.Min(Math.Max(a.X, b.X), Math.Max(c.X, d.X))
-                        && Math.Max(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y)) <= Math.Min(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y)))
-                        throw new ArgumentException("Overlapping path segments do not define a unique crossing.");
-                    continue;
-                }
-                var t = (qx * sz - qz * sx) / denominator; var u = (qx * rz - qz * rx) / denominator;
-                if (t < 0 || t > 1 || u < 0 || u > 1) continue;
-                var station = _stations[i] + t * (_stations[i + 1] - _stations[i]);
+                if (PlanLines.SegmentContact(a, b, c, d, distanceTolerance) is not { } hit) continue;
+                var station = _stations[i] + hit.T * (_stations[i + 1] - _stations[i]);
                 if (intersections.Any(p => Math.Abs(p.Station - station) < 0.000001)) continue;
-                intersections.Add(new(a.X + rx * t, a.Y + rz * t, station,
-                    other._stations[j] + u * (other._stations[j + 1] - other._stations[j])));
+                intersections.Add(new(hit.X, hit.Y, station,
+                    other._stations[j] + hit.U * (other._stations[j + 1] - other._stations[j])));
             }
         return intersections.OrderBy(p => p.Station).ThenBy(p => p.OtherStation).ToArray();
     }

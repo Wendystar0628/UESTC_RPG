@@ -1,4 +1,5 @@
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Ground;
 
@@ -63,8 +64,8 @@ public sealed class GroundModule : IContentModule
         var extent = GroundLod.Tile(tile, lod, ctx.Map.DataRect);
         // Surfaces are classified on the flat plan, then draped: every vertex takes the terrain grid's height (D-180).
         var terrain = TerrainGrid.For(ctx.World.Terrain, tile, lod, extent);
-        var field = TileField.Build(layout, extent, _section, terrain, LawnNoise.Seed(ctx), GroundLod.ToneCell(lod));
-        var sink = new MeshSink();
+        var field = TileField.Build(layout, extent, _section, terrain, LawnNoise.Seed(ctx.WorldSeed), GroundLod.ToneCell(lod));
+        var sink = new MeshSink(SurfaceMaterialCatalog.FromInputs(ctx.SourceInputs));
         new GroundMesher(field, _section, lod, layout, terrain, sink).Run();
         if (GroundLod.HasMarkings(lod)) layout.Markings(_section).Emit(extent, sink, _section, terrain);
         return new ContentOutput(sink.Finish(), []);

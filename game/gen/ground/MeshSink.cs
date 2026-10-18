@@ -10,7 +10,7 @@ namespace Campus.Gen.Ground;
 /// Patterned plaza faces (Q-015) carry continuous metre UVs in their paving frame and UV2 = (gate, K), constant on each
 /// triangle; vertices are shared only between triangles with the same UV2.
 /// </summary>
-internal sealed class MeshSink
+internal sealed class MeshSink(SurfaceMaterialCatalog? materials = null)
 {
     private const int MaxVertices = 65536;
     private readonly SortedDictionary<int, List<Chunk>> _chunks = new();
@@ -64,7 +64,9 @@ internal sealed class MeshSink
             var profile = (byte)((key >> 8) & 0xff);
             var flags = (byte)(key & 0xff);
             var spec = GroundPalette.Spec(material);
-            if (profile != GroundPaving.None) spec = spec with { SurfacePattern = GroundPaving.Spec(profile) };
+            if (profile != GroundPaving.None)
+                spec = spec with { SurfacePattern = (materials ?? throw new InvalidOperationException("Patterned ground requires the map's surface material catalogue."))
+                    .Get(GroundPaving.MaterialId(profile)) };
             foreach (var chunk in list)
             {
                 if (chunk.Index.Count == 0) continue;

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.World;
 
@@ -150,7 +151,7 @@ internal static partial class TerrainCompiler
         TerrainDifferential? roadTop = null, bool reserveTransitionGrade = false,
         TerrainBridgeBanks? bridgeBanks = null, TerrainDifferential? originalBankTop = null)
     {
-        if (roadTop is { } declaredTop && declaredTop.Height < level + 0.3 - 0.000001)
+        if (roadTop is { } declaredTop && declaredTop.Height < level + 0.3 - TerrainMath.HeightTolerance)
             throw new WorldDataException(file, name,
                 $"Resolved footway bank top {declaredTop.Height:R} is below the fixed water level plus 0.3 m freeboard at ({x:R},{z:R}): waterY={level:R}, requiredBankTop={level + 0.3:R}, finalMixedTop={declaredTop}, originalBankTop={originalBankTop}, deficit={level + 0.3 - declaredTop.Height:R}. "
                 + (bridgeBanks?.ExplainProfileAt(x, z) ?? "No resolved footway span is available for this profile."));
@@ -168,7 +169,7 @@ internal static partial class TerrainCompiler
         // existing 1:2 land-grade budget for it, leaving sqrt(1-(1/2)^2) waterward so the full
         // vector remains within 1:1. This changes no endpoint/depth and adds no design slope.
         var normalGrade = roadTop is null && !reserveTransitionGrade ? 1 : Math.Sqrt(1 - 0.5 * 0.5);
-        if (roadTop is not null && top.Dx * top.Dx + top.Dz * top.Dz > 0.25 + 0.000001)
+        if (roadTop is not null && top.Dx * top.Dx + top.Dz * top.Dz > Math.Pow(0.5 + TerrainMath.GradeTolerance, 2))
             throw new WorldDataException(file, name, "Resolved road bank top exceeds the available along-shore grade budget.");
         var footDistance = drop * (1 / normalGrade);
         if (inward.Height < footDistance.Height) return top - inward * normalGrade;
@@ -237,7 +238,7 @@ internal static partial class TerrainCompiler
             {
                 case TerrainUnderpassCrossing underpass:
                 {
-                    var candidates = path.Intersections(road.Path).OrderBy(p => (p.X - underpass.At.X) * (p.X - underpass.At.X)
+                    var candidates = path.Intersections(road.Path, PlanGeometry.Tolerance).OrderBy(p => (p.X - underpass.At.X) * (p.X - underpass.At.X)
                         + (p.Z - underpass.At.Y) * (p.Z - underpass.At.Y)).ThenBy(p => p.Station).ToArray();
                     var dx = candidates.Length == 0 ? double.PositiveInfinity : candidates[0].X - underpass.At.X;
                     var dz = candidates.Length == 0 ? double.PositiveInfinity : candidates[0].Z - underpass.At.Y;
@@ -385,7 +386,7 @@ internal static partial class TerrainCompiler
             {
                 var file = b.Files[channel.Id];
                 if (!levels.TryGetValue(weir.Upstream, out var upper) || !levels.TryGetValue(weir.Downstream, out var lower)
-                    || Math.Abs(upper - lower - weir.Drop) > 0.0001)
+                    || Math.Abs(upper - lower - weir.Drop) > TerrainMath.HeightTolerance)
                     throw new WorldDataException(file, channel.Id, "Weir drop does not match two actual constant water-level segments.");
                 var kind = weir.Kind switch { TerrainWeirKind.Weir => "weir", TerrainWeirKind.Gate => "gate", TerrainWeirKind.Culvert => "culvert", _ => throw new ArgumentException("Unknown weir kind.") };
                 var structure = b.References.Structure(weir.Structure, file, channel.Id, kind);

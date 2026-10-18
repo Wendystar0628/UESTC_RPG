@@ -47,12 +47,10 @@ public static class TreeForms
         ["palm"] = new("palm", 0.86f, 0.80f, 0.32f, 0.0f, true, 0, 0, 0f, 0, 0, 0.030f, 1.30f, 0.4f, 0.0f),
         // Clipped shrub ball: no visible stem.
         ["shrub"] = new("shrub", 0.05f, 0.0f, 0.62f, 0.0f, false, 3, 3, 30f, 0, 0, 0.040f, 0.22f, 0f, 0.13f),
-        // Grass tussock (max-011 23c2b): a low mound built like a shrub ball with fewer satellites, no stem; Understorey widens it.
-        ["tuft"] = new("tuft", 0.05f, 0.0f, 0.62f, 0.2f, false, 3, 3, 20f, 0, 0, 0.040f, 0.16f, 0f, 0.13f),
     };
 
-    /// <summary>Stemless forms built as clipped balls (TreePlan.BuildShrub): shrubs and grass tussocks; they cast no trunk collider.</summary>
-    public static bool IsBall(string id) => id is "shrub" or "tuft";
+    /// <summary>Stemless forms built as clipped balls (TreePlan.BuildShrub): shrubs; they cast no trunk collider.</summary>
+    public static bool IsBall(string id) => id is "shrub";
 
     public static bool Exists(string id) => Table.ContainsKey(id);
 

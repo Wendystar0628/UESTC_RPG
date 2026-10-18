@@ -59,7 +59,10 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     /// <summary>Plan-only grass input from the same prepared context used by trees; no grass geometry is implied.</summary>
     public GrassRuntimeData PrepareGrass(BuildContext context) => GrassInputs.Read(context);
 
-    /// <summary>All runtime pools prepared from the same L0 streams, layout cache and shared production prototypes.</summary>
+    /// <summary>
+    /// All runtime pools prepared from the same L0 streams, layout cache and shared production prototypes; then the grass pools
+    /// (<see cref="GrassClumps.Mothers"/>), which carry one prototype each and are told apart by their key prefix.
+    /// </summary>
     public IReadOnlyList<VegetationMotherData> PrepareVegetation(BuildContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -87,7 +90,9 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
                     InstanceMatrix(data.AsSpan(tree * InstanceStreamLayout.FloatsPerInstance, InstanceStreamLayout.FloatsPerInstance)));
             built[i] = new(key, new WpId(VegetationPrototypes.Owner), data, prototypes, bounds);
         }
-        return built;
+        // Near card grass of the authored grass areas, after the trees (keys GrassClumps.KeyPrefix + style, one prototype each).
+        var grass = GrassField.Build(PrepareGrass(context), context.World, Layout(context).Layout, context.WorldSeed);
+        return [.. built, .. GrassClumps.Mothers(grass)];
     }
 
     private static System.Numerics.Matrix4x4 InstanceMatrix(ReadOnlySpan<float> r) =>

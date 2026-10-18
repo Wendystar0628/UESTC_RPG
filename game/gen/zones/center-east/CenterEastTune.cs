@@ -58,19 +58,18 @@ public static class CenterEastTune
         /// <summary>Roof-garden timber frames (轻木构架).</summary>
         public static readonly ToonSpec Timber = S("panel.brown", ToonFx.BevelLift, LineClass.Fine);
         /// <summary>
-        /// The two bronze figures (§1.3–§1.4), after 吴立人像's accepted borrowing (18c1 review 1): the palette is full, so the
-        /// deep bronze borrows tree.bark until the 320–321 bronze pair is registered; the verdigris in the recesses (ART-STYLE
-        /// §10 青铜像) waits for that pair too. Curved metal: two-and-a-half steps, rim and anisotropic band (ART-STYLE).
+        /// The two bronze figures use the registered bronze pair. Curved metal: two-and-a-half steps, rim and anisotropic
+        /// band (ART-STYLE).
         /// </summary>
-        public static readonly ToonSpec Bronze = new(new("tree.bark.lit"), new("tree.bark.shade"))
+        public static readonly ToonSpec Bronze = new(new("bronze.lit"), new("bronze.shade"))
         {
             Fx = ToonFx.Rim | ToonFx.AnisoBand,
             Steps = ShadeSteps.TwoHalf,
             Normal = ToonNormal.Smooth,
             Wet = 0.4f,
         };
-        /// <summary>林为干像's dark pedestal (深色基座): the darkest neutral name, as 吴立人像's black stone (322–323 later).</summary>
-        public static readonly ToonSpec DarkStone = S("glass", ToonFx.BevelLift, LineClass.Building, 0.9f);
+        /// <summary>林为干像's dark pedestal uses the registered polished black stone.</summary>
+        public static readonly ToonSpec DarkStone = S("stone.black", ToonFx.BevelLift, LineClass.Building, 0.9f);
         /// <summary>麦克斯韦像's light grey granite pedestal (浅灰花岗岩) and the stele's base.</summary>
         public static readonly ToonSpec PaleGranite = S("wall.greyWhite", ToonFx.BevelLift);
         /// <summary>The 科研楼 stele's rough-hewn white stone (粗凿白石, the campus stone-carving family).</summary>

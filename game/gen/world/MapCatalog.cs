@@ -34,6 +34,15 @@ public sealed class MapCatalog
 
     public bool TryGet(MapId id, out MapCatalogEntry entry) => _entries.TryGetValue(id, out entry!);
 
+    /// <summary>Rebuild the descriptor from the same frozen resources that will produce this world.</summary>
+    public static MapCatalogEntry ReadEntry(MapCatalogEntry entry, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
+    {
+        if (!files.TryGetValue("map.json", out var map)) throw new WorldDataException("map.json", "root", "Required map descriptor is missing.");
+        if (!files.TryGetValue("campus.json", out var campus)) throw new WorldDataException("campus.json", "root", "Required map data is missing.");
+        return ReadEntry(new(entry.Descriptor.Id, entry.DataRoot), map.Span, campus,
+            files.GetValueOrDefault("waypoints.json").Span);
+    }
+
     public static MapIndex ReadIndex(ReadOnlySpan<byte> bytes)
     {
         var index = JsonSerializer.Deserialize<MapIndex>(bytes, ContractJson.Options)

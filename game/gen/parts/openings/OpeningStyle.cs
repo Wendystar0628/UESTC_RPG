@@ -125,7 +125,7 @@ public static class OpeningStyle
 
     // ---- Materials ---------------------------------------------------------------------------------------------
     // Registered tokens only: the toon library validates every token. curtain.cream and door.wood are WP-10's own
-    // pairs (game/style/palette/ext/WP-10.json, IDs 244–247, albedo solved from the default-cell lit); the gasket uses
+    // pairs (game/style/palette/ext/openings.json, IDs 244–247, albedo solved from the default-cell lit); the gasket uses
     // WP-12's equip.fence; the rest are core.
     public static ToonSpec Metal { get; } = Spec("frame.alu") with { Fx = ToonFx.Rim | ToonFx.AnisoBand, Line = LineClass.Fine, Wet = 0.4f };
     /// <summary>Dark gaskets, seams and plenums: WP-12's blue-grey equipment steel (equip.fence, 248/249).</summary>

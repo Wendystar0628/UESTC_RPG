@@ -20,7 +20,7 @@ namespace Campus.Gen.Zones.South.Sports;
 /// - the silver-grey roof, broad and almost flat in the middle, radial seams and two rings of light blue-grey vent caps;
 /// - the open public entrance on the platform storey (gym.deck in interiors.json), with WLD-INTERIORS's presentation.
 /// The glass is one grid (contract-29): a column per facet, the platform storey and the upper hall as rows, the door cell skipped.
-/// The tea glass borrows the registered glass colour (the palette is full, ART-STYLE).
+/// The tea glass uses its registered colour (ART-STYLE).
 /// </summary>
 public sealed class GymSite : ZoneSite
 {
@@ -167,9 +167,9 @@ public sealed class GymSite : ZoneSite
                 ? [new(-half, 0), new(-S.GymDoorWidth * 0.5f, 0), new(-S.GymDoorWidth * 0.5f, 0.3f + S.GymDoorHeight), new(S.GymDoorWidth * 0.5f, 0.3f + S.GymDoorHeight),
                     new(S.GymDoorWidth * 0.5f, 0), new(half, 0), new(half, height), new(-half, height)]
                 : [new(-half, 0), new(half, 0), new(half, height), new(-half, height)];
-            b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outline), 0.06f, ZoneLooks.Glass), f.At(0, y0, -0.03f));
+            b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outline), 0.06f, L.TeaGlass), f.At(0, y0, -0.03f));
         }
-        if (Allocation(b.Context, p) is { } allocation) WindowNumbers.Panes(b, Openings(p, y), allocation, W.Venue, W.Gym);
+        if (Allocation(b.Context, p) is { } allocation) WindowNumbers.Panes(b, Openings(p, y), allocation, W.Venue, W.Gym, L.TeaGlass);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
         var rg = p.GlassRadius;
         // Transom and head: dark rings just proud of the glass.
@@ -284,7 +284,7 @@ public sealed class GymSite : ZoneSite
         // Leaves swung in against the reveals, and the lobby's inner glass screen 2 m inside.
         foreach (var side in new[] { -1f, 1f })
             GridFacade.Box(b, f, side * (w * 0.5f - 0.03f) - 0.03f, side * (w * 0.5f - 0.03f) + 0.03f, floor, floor + h - 0.05f, -1.45f, -0.05f, L.Metal, 0.01f);
-        GridFacade.Box(b, f, -w * 0.5f - 0.2f, w * 0.5f + 0.2f, floor, floor + h, -2.1f, -2.04f, ZoneLooks.Glass, 0);
+        GridFacade.Box(b, f, -w * 0.5f - 0.2f, w * 0.5f + 0.2f, floor, floor + h, -2.1f, -2.04f, L.TeaGlass, 0);
         foreach (var side in new[] { -1f, 1f })
             GridFacade.Box(b, f, side * (w * 0.5f + 0.2f) - 0.06f, side * (w * 0.5f + 0.2f) + 0.06f, floor, floor + h, -2.1f, -0.1f, L.StoneTrim, 0.01f);
         // Flat canopy over the landing on two slim posts.

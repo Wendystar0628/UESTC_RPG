@@ -185,11 +185,11 @@ public sealed class GeometryInstancePoolRuntimeTests
     public void CatalogPoolsUploadBothBanksWithoutReinterpretingTheirFrozenVersion()
     {
         var legacy = new PaletteRegistry([
-            new(new("fixture.first.lit"), 64, new N.Vector3(.5f), "fixture", false, PaletteRole.Lit),
-            new(new("fixture.first.shade"), 65, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
-            new(new("fixture.edge.lit"), 254, new N.Vector3(.5f), "fixture", false, PaletteRole.Lit),
-            new(new("fixture.edge.shade"), 255, new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)]);
-        var catalog = new PaletteCatalog(legacy, new PaletteEntryV2[] {
+            new(new("fixture.first.lit"), new(64), new N.Vector3(.5f), "fixture", false, PaletteRole.Lit),
+            new(new("fixture.first.shade"), new(65), new N.Vector3(.5f), "fixture", false, PaletteRole.Shade),
+            new(new("fixture.edge.lit"), new(254), new N.Vector3(.5f), "fixture", false, PaletteRole.Lit),
+            new(new("fixture.edge.shade"), new(255), new N.Vector3(.5f), "fixture", false, PaletteRole.Shade)]);
+        var catalog = new PaletteCatalog(legacy, new PaletteEntry[] {
             new(new("fixture.high.lit"), new(256), new(.5f), "fixture", false, PaletteRole.Lit),
             new(new("fixture.high.shade"), new(257), new(.5f), "fixture", false, PaletteRole.Shade),
             new(new("fixture.last.lit"), new(510), new(.5f), "fixture", false, PaletteRole.Lit),
@@ -411,10 +411,10 @@ public sealed class GeometryInstancePoolRuntimeTests
         Cinematics: new Dictionary<string, string>(), Portals: []));
 
     private static PaletteCatalog Catalog() => new(new PaletteRegistry(
-        Enumerable.Range(0, 256).Select(i => new PaletteEntry(new("fixture.color." + i), (byte)i,
+        Enumerable.Range(0, 256).Select(i => new PaletteEntry(new("fixture.color." + i), new(i),
             new N.Vector3(.5f), "fixture", false, i < 32 ? PaletteRole.Frame : i < 40 ? PaletteRole.Retired :
                 i < 64 ? PaletteRole.Weather : (i & 1) == 0 ? PaletteRole.Lit : PaletteRole.Shade))
-            .Select(entry => entry.Id switch
+            .Select(entry => entry.Index.Value switch
             {
                 64 => entry with { Token = new("fixture.first.lit") },
                 65 => entry with { Token = new("fixture.first.shade") },

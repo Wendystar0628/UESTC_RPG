@@ -104,8 +104,8 @@ public static partial class CoreStyle
     public const string EmblemGold = "uestc.gold";
     /// <summary>Polished stainless steel: poles, sundial ring and gnomon.</summary>
     public const string Steel = "roof.silverMetal";
-    /// <summary>Bronze dial face (青铜色). No bronze entry is registered yet; nearest warm metal brown (review).</summary>
-    public const string Bronze = "panel.brown";
+    /// <summary>Bronze dial face (青铜色), from the registered bronze family.</summary>
+    public const string Bronze = "bronze";
     /// <summary>Lamp poles: grey aluminium.</summary>
     public const string LampMetal = "frame.alu";
     public const string FlagBlue = "uestc.blue";

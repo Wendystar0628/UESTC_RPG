@@ -94,7 +94,7 @@ public sealed class PaletteComposer
     private int _cursor;
     public IReadOnlyList<string> Warnings { get; }
 
-    /// <summary>The complete catalog: legacy entries plus the schema-2 extension pairs (IDs 256–511, non-seasonal).</summary>
+    /// <summary>The complete catalog: bank-0 entries plus bank-1 pairs (indices 256–511, non-seasonal).</summary>
     public PaletteComposer(ColorScript script, PaletteCatalog catalog)
     {
         _script = script;

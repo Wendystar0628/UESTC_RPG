@@ -1,0 +1,53 @@
+{
+  "schema": 2,
+  "entries": [
+    {
+      "token": "street.blue.lit",
+      "index": 448,
+      "albedo": [
+        0.160031,
+        0.43037,
+        0.687544
+      ],
+      "materialClass": "metal",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "street.blue.shade",
+      "index": 449,
+      "albedo": [
+        0.160031,
+        0.43037,
+        0.687544
+      ],
+      "materialClass": "metal",
+      "seasonal": false,
+      "role": "shade"
+    },
+    {
+      "token": "hazard.black.lit",
+      "index": 450,
+      "albedo": [
+        0.135,
+        0.1312,
+        0.1236
+      ],
+      "materialClass": "metal",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "hazard.black.shade",
+      "index": 451,
+      "albedo": [
+        0.135,
+        0.1312,
+        0.1236
+      ],
+      "materialClass": "metal",
+      "seasonal": false,
+      "role": "shade"
+    }
+  ]
+}

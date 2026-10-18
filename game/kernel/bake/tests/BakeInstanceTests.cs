@@ -160,10 +160,10 @@ public sealed class BakeInstanceTests
         [0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1, 0, 0, 1], [0, 1, 2],
         Uv: [0, 0, 1, 0, 0, 1], Lods: [new MeshLod(.5f, [0, 2, 1])]);
     private static PaletteCatalog Palette() => new(new PaletteRegistry([
-        new(new("fixture.first"), 64, Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("fixture.first.shade"), 65, new Vector3(.5f), "fixture", false, PaletteRole.Shade),
-        new(new("fixture.second"), 66, Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("fixture.second.shade"), 67, new Vector3(.5f), "fixture", false, PaletteRole.Shade),
-        new(new("fixture.accent"), 68, Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("fixture.accent.shade"), 69, new Vector3(.5f), "fixture", false, PaletteRole.Shade)]), []);
+        new(new("fixture.first"), new(64), Vector3.One, "fixture", false, PaletteRole.Lit),
+        new(new("fixture.first.shade"), new(65), new Vector3(.5f), "fixture", false, PaletteRole.Shade),
+        new(new("fixture.second"), new(66), Vector3.One, "fixture", false, PaletteRole.Lit),
+        new(new("fixture.second.shade"), new(67), new Vector3(.5f), "fixture", false, PaletteRole.Shade),
+        new(new("fixture.accent"), new(68), Vector3.One, "fixture", false, PaletteRole.Lit),
+        new(new("fixture.accent.shade"), new(69), new Vector3(.5f), "fixture", false, PaletteRole.Shade)]), []);
 }

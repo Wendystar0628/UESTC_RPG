@@ -38,7 +38,7 @@ public static class MepStyle
     /// <summary>Bottled water: light aqua (WP-24's near-water colour) until an interior name exists.</summary>
     public const string Water = "water.near";
     /// <summary>
-    /// Fire red (消防红, ids 254/255 in ext/WP-12.json): lit #C8473B at autumn 17:30, intrinsic #A7424B solved back from it with
+    /// Fire red (消防红, ids 254/255 in ext/roof_equipment.json): lit #C8473B at autumn 17:30, intrinsic #A7424B solved back from it with
     /// WP-37's deriver. Hydrant frame and door, extinguishers, the scald lettering; WP-13's outdoor hydrants reference the same
     /// name. One of the three saturated interior colours (WLD-INTERIORS).
     /// </summary>

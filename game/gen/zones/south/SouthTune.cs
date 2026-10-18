@@ -65,19 +65,17 @@ public static class SouthTune
         public static readonly ToonSpec BoatWood = S("door.wood", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec BoatInside = S("panel.brown", ToonFx.None, LineClass.Fine);
         /// <summary>
-        /// Wu Liren statue (§4.9), deep bronze: the palette is full (ART-STYLE), so it borrows the nearest registered name.
-        /// tree.bark lights to about #8D7765 at autumn 17:30 (target #6F5B3E, ΔE_ok 0.10, the closest warm name; its shade is
-        /// derived as usual). Curved metal: two-and-a-half steps, rim and anisotropic band (ART-STYLE).
+        /// Wu Liren statue, registered deep bronze. Curved metal: two-and-a-half steps, rim and anisotropic band (ART-STYLE).
         /// </summary>
-        public static readonly ToonSpec Bronze = new(new("tree.bark.lit"), new("tree.bark.shade"))
+        public static readonly ToonSpec Bronze = new(new("bronze.lit"), new("bronze.shade"))
         {
             Fx = ToonFx.Rim | ToonFx.AnisoBand,
             Steps = ShadeSteps.TwoHalf,
             Normal = ToonNormal.Smooth,
             Wet = 0.4f,
         };
-        /// <summary>Polished black stone pedestal: the darkest neutral name (C &lt; 0.06, ART-STYLE), lit about #525B52 at 17:30.</summary>
-        public static readonly ToonSpec DarkStone = S("glass", ToonFx.BevelLift, LineClass.Building, 0.9f);
+        /// <summary>Polished black stone pedestal (ART-STYLE).</summary>
+        public static readonly ToonSpec DarkStone = S("stone.black", ToonFx.BevelLift, LineClass.Building, 0.9f);
         /// <summary>Hexagonal pavilion (§4.5): red-brown columns, dark grey tiles.</summary>
         public static readonly ToonSpec RedTimber = S("band.terracotta", ToonFx.BevelLift, LineClass.Fine);
         public static readonly ToonSpec Tiles = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
@@ -93,8 +91,10 @@ public static class SouthTune
             Normal = ToonNormal.Smooth,
             Wet = 0.85f,
         };
-        /// <summary>The gym's ochre-brown base band: the warm brown family, smooth round.</summary>
-        public static readonly ToonSpec Ochre = S("base.warmBrown", ToonFx.Mottle) with { Normal = ToonNormal.Smooth };
+        /// <summary>The gym's registered ochre-brown base band, smooth round.</summary>
+        public static readonly ToonSpec Ochre = S("band.ochre", ToonFx.Mottle) with { Normal = ToonNormal.Smooth };
+        /// <summary>The gym's tea-coloured curtain wall and entrance screen.</summary>
+        public static readonly ToonSpec TeaGlass = Glass with { Lit = new("glass.tea.lit"), Shade = new("glass.tea.shade") };
         /// <summary>Brown horizontal louvres in front of the tea glass (§7.1).</summary>
         public static readonly ToonSpec Louvre = S("panel.brown", ToonFx.None, LineClass.Fine) with { Normal = ToonNormal.Smooth };
         /// <summary>Light blue-grey roof vent caps (§7.1): WP-12's equipment grey.</summary>

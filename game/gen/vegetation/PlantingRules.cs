@@ -33,16 +33,10 @@ public sealed record PitCover(string Species, float Height, float Spacing);
 public sealed record BorderPlanting(float Spacing, float Inset, float Run, float Share, float HedgeShare, float Reach,
     IReadOnlyList<string> Hedge, IReadOnlyList<(string Species, float Weight)> Mix);
 
-/// <summary>
-/// Grass tussocks that break up the lawns (WLD-VEGETATION; the near grass ring of ENG-PERF is the detail version):
-/// along the green edges (Edge m deep, one try per Cell m, kept below Share) and round the trunks standing in green (PerTree).
-/// </summary>
-public sealed record TuftPlanting(string Species, float Cell, float Edge, float Share, int PerTree);
-
 /// <summary>The understorey rules (max-011 23c2b); all optional, a map without them has no understorey.</summary>
-public sealed record UnderstoreyRules(PitCover? Pits, BorderPlanting? Borders, TuftPlanting? Tufts)
+public sealed record UnderstoreyRules(PitCover? Pits, BorderPlanting? Borders)
 {
-    public static UnderstoreyRules None { get; } = new(null, null, null);
+    public static UnderstoreyRules None { get; } = new(null, null);
 }
 
 /// <summary>
@@ -94,10 +88,7 @@ public sealed record PlantingRules(IReadOnlyList<RoadPlanting> Roads, float OsmN
                     ? new BorderPlanting(Positive(b.Spacing, "understorey.borders.spacing"), Positive(b.Inset, "understorey.borders.inset"),
                         Positive(b.Run, "understorey.borders.run"), Share(b.Share, "understorey.borders.share"),
                         Share(b.HedgeShare, "understorey.borders.hedgeShare"), Positive(b.Reach, "understorey.borders.reach"),
-                        Ids(b.Hedge, "understorey.borders.hedge"), Mix(b.Mix, "understorey.borders.mix")) : null,
-                u.Tufts is { } t
-                    ? new TuftPlanting(Known(t.Species, "understorey.tufts.species"), Positive(t.Cell, "understorey.tufts.cell"),
-                        Positive(t.Edge, "understorey.tufts.edge"), Share(t.Share, "understorey.tufts.share"), t.PerTree) : null);
+                        Ids(b.Hedge, "understorey.borders.hedge"), Mix(b.Mix, "understorey.borders.mix")) : null);
             if (under.Borders is { Hedge.Count: 0 }) throw new InvalidDataException("planting: border hedges need a species.");
         }
         var groves = file.Groves;

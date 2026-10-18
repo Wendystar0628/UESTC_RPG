@@ -16,7 +16,7 @@ public static partial class MotherModels
     /// <summary>Trunks start this far below the local ground (WLD-TERRAIN: HeightAt minus burial).</summary>
     public const float Burial = 0.3f;
 
-    /// <summary>Bark: warm grey-brown, low chroma (max-011 review; colour IDs 252–253, ext/WP-23.json).</summary>
+    /// <summary>Bark: warm grey-brown, low chroma (max-011 review; colour IDs 252–253, ext/tree_bark.json).</summary>
     public static readonly PaletteToken Bark = new("tree.bark.lit");
     public static readonly PaletteToken BarkShade = new("tree.bark.shade");
 

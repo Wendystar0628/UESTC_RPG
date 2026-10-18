@@ -10,9 +10,8 @@ internal static class PaletteFixture
     {
         var palette = Campus.Tests.RepositoryFixture.FilePath("game", "style", "palette");
         var core = Path.Combine(palette, "core.json");
-        var bank0 = new[] { core }.Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "WP-*.json").Order(StringComparer.Ordinal));
-        var bank1 = Directory.GetFiles(Path.Combine(palette, "ext-v2"), "WP-*.json").Order(StringComparer.Ordinal);
-        return PaletteCatalog.FromSources(bank0.Select(path => (path, File.ReadAllBytes(path))),
-            bank1.Select(path => (path, File.ReadAllBytes(path))));
+        var files = new[] { core }.Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "*.json")
+            .Where(path => Path.GetFileName(path) != "ui.json").Order(StringComparer.Ordinal));
+        return PaletteCatalog.FromSources(files.Select(path => (path, File.ReadAllBytes(path))));
     }
 }

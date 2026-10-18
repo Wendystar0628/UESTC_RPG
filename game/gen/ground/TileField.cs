@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using System.Numerics;
 using Campus.Gen.Geometry;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Ground;
 

@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Campus.Contracts;
 
@@ -11,14 +13,59 @@ public enum PaletteRole : byte { Frame, Retired, Lit, Shade, Weather, Emissive }
 /// Seasonal Albedo is reference-only; seasonal values come from WP-37 keys/vegetation.json.
 /// MaterialClass is an extensible data key. Token names are case-sensitive.
 /// </summary>
-public sealed record PaletteEntry(PaletteToken Token, byte Id, Vector3 Albedo,
-    string MaterialClass, bool Seasonal, PaletteRole Role)
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record PaletteEntry(
+    [property: JsonRequired] PaletteToken Token,
+    [property: JsonRequired] PaletteIndex Index,
+    [property: JsonRequired] Vector3 Albedo,
+    [property: JsonRequired] string MaterialClass,
+    [property: JsonRequired] bool Seasonal,
+    [property: JsonRequired, JsonConverter(typeof(PaletteRoleJsonConverter))] PaletteRole Role)
 {
-    /// <summary>Seasonal row 4-63 when Seasonal is true; otherwise null.</summary>
+    /// <summary>Bank-0 seasonal row 4-63 when Seasonal is true; otherwise null.</summary>
     public int? Row { get; init; }
 }
 
-public sealed record PaletteRegistryData(IReadOnlyList<PaletteEntry> Entries, int Schema = 1);
+// Canonical roles are shared by every scene palette source.
+internal sealed class PaletteRoleJsonConverter : JsonConverter<PaletteRole>
+{
+    public PaletteRoleJsonConverter() { }
+
+    public override PaletteRole Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.String) throw new JsonException("Expected one canonical palette role string.");
+        return reader.GetString() switch
+        {
+            "frame" => PaletteRole.Frame,
+            "retired" => PaletteRole.Retired,
+            "lit" => PaletteRole.Lit,
+            "shade" => PaletteRole.Shade,
+            "weather" => PaletteRole.Weather,
+            "emissive" => PaletteRole.Emissive,
+            _ => throw new JsonException("Expected one canonical palette role; combined, repeated or noncanonical values are invalid.")
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, PaletteRole value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value switch
+        {
+            PaletteRole.Frame => "frame",
+            PaletteRole.Retired => "retired",
+            PaletteRole.Lit => "lit",
+            PaletteRole.Shade => "shade",
+            PaletteRole.Weather => "weather",
+            PaletteRole.Emissive => "emissive",
+            _ => throw new JsonException("Unknown palette role.")
+        });
+}
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record PaletteRegistryData(
+    [property: JsonRequired] IReadOnlyList<PaletteEntry> Entries,
+    [property: JsonRequired] int Schema = PaletteRegistryData.CurrentSchema)
+{
+    public const int CurrentSchema = 2;
+}
 
 /// <summary>Immutable, engine-independent registration of palette columns and surface-colour pairs.</summary>
 public sealed class PaletteRegistry
@@ -36,9 +83,9 @@ public sealed class PaletteRegistry
             ValidateEntry(entry);
             if (!byToken.TryAdd(entry.Token, entry))
                 throw new ArgumentException($"Duplicate palette token '{entry.Token.Value}'.", nameof(entries));
-            if (_byId[entry.Id] is { } previous)
-                throw new ArgumentException($"Duplicate palette ID {entry.Id}: '{previous.Token.Value}' and '{entry.Token.Value}'.", nameof(entries));
-            _byId[entry.Id] = entry;
+            if (_byId[entry.Index.Value] is { } previous)
+                throw new ArgumentException($"Duplicate palette ID {entry.Index.Value}: '{previous.Token.Value}' and '{entry.Token.Value}'.", nameof(entries));
+            _byId[entry.Index.Value] = entry;
         }
         for (var id = 64; id < _byId.Length; id += 2)
         {
@@ -49,7 +96,7 @@ public sealed class PaletteRegistry
                 throw new ArgumentException($"Palette surface pair {id}/{id + 1} is incomplete: Lit and adjacent Shade must both be registered.", nameof(entries));
         }
         _byToken = new ReadOnlyDictionary<PaletteToken, PaletteEntry>(byToken);
-        Entries = Array.AsReadOnly(byToken.Values.OrderBy(entry => entry.Id).ToArray());
+        Entries = Array.AsReadOnly(byToken.Values.OrderBy(entry => entry.Index.Value).ToArray());
     }
 
     public IReadOnlyList<PaletteEntry> Entries { get; }
@@ -58,7 +105,7 @@ public sealed class PaletteRegistry
     public static PaletteRegistry FromData(PaletteRegistryData data)
     {
         ArgumentNullException.ThrowIfNull(data);
-        if (data.Schema != 1) throw new ArgumentException($"Unsupported palette registry schema {data.Schema}; expected 1.", nameof(data));
+        if (data.Schema != PaletteRegistryData.CurrentSchema) throw new ArgumentException($"Unsupported palette registry schema {data.Schema}; expected {PaletteRegistryData.CurrentSchema}.", nameof(data));
         return new(data.Entries);
     }
 
@@ -80,14 +127,16 @@ public sealed class PaletteRegistry
         spec.ValidateSurfacePattern();
         var lit = Get(spec.Lit);
         var shade = Get(spec.Shade);
-        if (lit.Role != PaletteRole.Lit || shade.Role != PaletteRole.Shade || shade.Id != lit.Id + 1)
-            throw new ArgumentException($"ToonSpec pair '{lit.Token.Value}' ({lit.Id}, {lit.Role}) / '{shade.Token.Value}' ({shade.Id}, {shade.Role}) must be Lit/adjacent Shade.", nameof(spec));
+        if (lit.Role != PaletteRole.Lit || shade.Role != PaletteRole.Shade || shade.Index.Value != lit.Index.Value + 1)
+            throw new ArgumentException($"ToonSpec pair '{lit.Token.Value}' ({lit.Index.Value}, {lit.Role}) / '{shade.Token.Value}' ({shade.Index.Value}, {shade.Role}) must be Lit/adjacent Shade.", nameof(spec));
         if (spec.Deep is { } deep) _ = Get(deep);
         if (spec.Backface is { } backface) _ = Get(backface);
     }
 
     private static void ValidateEntry(PaletteEntry entry)
     {
+        if (entry.Index.Value >= PaletteLayout.LegacyCapacity)
+            throw new ArgumentException("Bank 0 requires indices 0..255.", nameof(entry));
         if (string.IsNullOrWhiteSpace(entry.Token.Value) || entry.Token.Value != entry.Token.Value.Trim())
             throw new ArgumentException("Palette token must be non-empty and have no surrounding whitespace.", nameof(entry));
         if (string.IsNullOrWhiteSpace(entry.MaterialClass) || entry.MaterialClass != entry.MaterialClass.Trim())
@@ -102,15 +151,15 @@ public sealed class PaletteRegistry
             throw new ArgumentException($"Palette token '{entry.Token.Value}' has invalid Albedo; expected finite sRGB components in [0, 1].", nameof(entry));
         var allowed = entry.Role switch
         {
-            PaletteRole.Frame => entry.Id <= 31,
-            PaletteRole.Retired => entry.Id is >= 32 and <= 39,
-            PaletteRole.Lit => entry.Id >= 64 && (entry.Id & 1) == 0,
-            PaletteRole.Shade => entry.Id >= 65 && (entry.Id & 1) == 1,
-            PaletteRole.Weather => entry.Id is >= 40 and <= 63,
-            PaletteRole.Emissive => entry.Id is >= 40 and <= 63,
+            PaletteRole.Frame => entry.Index.Value <= 31,
+            PaletteRole.Retired => entry.Index.Value is >= 32 and <= 39,
+            PaletteRole.Lit => entry.Index.Value >= 64 && (entry.Index.Value & 1) == 0,
+            PaletteRole.Shade => entry.Index.Value >= 65 && (entry.Index.Value & 1) == 1,
+            PaletteRole.Weather => entry.Index.Value is >= 40 and <= 63,
+            PaletteRole.Emissive => entry.Index.Value is >= 40 and <= 63,
             _ => throw new ArgumentOutOfRangeException(nameof(entry), entry.Role, "Unknown palette role.")
         };
         if (!allowed)
-            throw new ArgumentException($"Palette token '{entry.Token.Value}' uses ID {entry.Id} outside its {entry.Role} range; IDs 40-63 are for Weather and Emissive.", nameof(entry));
+            throw new ArgumentException($"Palette token '{entry.Token.Value}' uses ID {entry.Index.Value} outside its {entry.Role} range; IDs 40-63 are for Weather and Emissive.", nameof(entry));
     }
 }

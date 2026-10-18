@@ -54,7 +54,9 @@ internal static class RealMapFixture
     public static WorldModelLoadResult LoadPrepared(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
         MapId? map = null, WorldLoadOptions? options = null)
     {
-        var id = map ?? Entry().Descriptor.Id;
+        files = BuildInputSnapshot.Freeze(files).Entries;
+        var entry = MapCatalog.ReadEntry(Entry(map), files);
+        var id = entry.Descriptor.Id;
         options ??= new();
         MapClaimSnapshot? claims = null;
         if (options.ClaimedBy is null)

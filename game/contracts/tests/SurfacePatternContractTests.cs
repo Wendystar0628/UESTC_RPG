@@ -50,8 +50,8 @@ public sealed class SurfacePatternContractTests
     public void ProfileDimensionsAreCheckedByGeometryAndPaletteCatalog()
     {
         var registry = new PaletteRegistry([
-            new(Plain.Lit, 64, Vector3.One, "fixture", false, PaletteRole.Lit),
-            new(Plain.Shade, 65, Vector3.Zero, "fixture", false, PaletteRole.Shade)]);
+            new(Plain.Lit, new(64), Vector3.One, "fixture", false, PaletteRole.Lit),
+            new(Plain.Shade, new(65), Vector3.Zero, "fixture", false, PaletteRole.Shade)]);
         var catalog = new PaletteCatalog(registry, []);
         catalog.Validate(Plain with { SurfacePattern = Pattern });
         SurfacePatternSpec[] invalid = [default, Pattern with { PeriodMeters = new(0, 1) },

@@ -50,6 +50,22 @@
       "geometry": {"type": "polygon", "rings": {"outer": [[-241.01, -156.46], [-240.7, -160.29], [-234.31, -162.62], [-232.35, -161.31], [-231.25, -158.31], [-231.92, -156.04], [-238.31, -153.72]], "holes": []}},
       "props": {"roadType": "pedestrian", "anchor": "A10", "night": "导览桩暖色小灯下；广场西侧与栈道两侧贴水处是暗区", "seasons": "接季：铺装接落叶、杏花瓣与积雪"},
       "reason": "设计增补：给导览桩 A10 落脚（MAP-QSH-WEST 锚点表）。原锚点 (−205, −330) 落在湿地低地中间，10 m 内没有人行硬面；按锚点表的节点「湿地栈道南口」和 MAP-QSH-TERRAIN「落在栈道口的园路上（0 m），不落进湿地低地」，把小广场放在栈道南口：湿地环路 osm:way:544166204 与石桥引道 osm:way:692240859 的交点 (−239.8, −155.1) 东侧，长轴朝 250°，约 9.8 × 7 m，切角。导览桩立在广场东缘 (−232.5, −159.6)、朝 250° 看芦苇荡，暖色小灯落在铺装上；广场把桩和水隔开约 8 m，西侧栈道与石桥两边贴水的暗处不进灯，留给萤火虫（§10.1、P11）。地形覆盖层 design:terrain:west-wetland-low 在这里留洞，广场保持 0 m"
+    },
+    {
+      "op": "add",
+      "id": "design:west-wetland-culvert-weir-in",
+      "kind": "weir",
+      "geometry": {"type": "polygon", "rings": {"outer": [[-255.26, -245.33], [-256.4, -246.45], [-253.03, -249.87], [-251.89, -248.75]], "holes": []}},
+      "props": {"drop": 0.35, "upstream": "qsh:way:217855313", "downstream": "qsh:way:1172471444"},
+      "reason": "实物登记（MAP-QSH-TERRAIN 水位阶梯）：湿地溪（−0.5）入穿堤暗涵 osm:way:1172471444 的第一级跌水堰，落差 0.35 m，立在暗涵入口 (−254.4, −247.8)，约 1.6 m 厚、横跨 4 m 溪宽两侧各出 0.4 m 搭岸；是 west.terrain.json 里 design:terrain:west-wetland-culvert 第一座 weir 引用的构筑物，堰下水面白色翻花，收为发声器。涵内水位 −0.85。"
+    },
+    {
+      "op": "add",
+      "id": "design:west-wetland-culvert-weir-out",
+      "kind": "weir",
+      "geometry": {"type": "polygon", "rings": {"outer": [[-283.77, -273.39], [-284.91, -274.51], [-281.54, -277.93], [-280.4, -276.81]], "holes": []}},
+      "props": {"drop": 0.35, "upstream": "qsh:way:1172471444", "downstream": ["qsh:way:693515475", "qsh:source:way:687770522"]},
+      "reason": "实物登记（MAP-QSH-TERRAIN 水位阶梯）：暗涵（−0.85）出口跌进红光右支渠北段（−1.2）的第二级跌水堰，落差 0.35 m，立在暗涵口约 (−282.5, −275.5)，一半在涵口、一半搭上渠壁，约 1.6 m 厚；是 design:terrain:west-wetland-culvert 第二座 weir 引用的构筑物，与入口堰相距约 39.5 m，各是各的构筑物；堰下水面白色翻花，收为发声器（暗涵口水声，MAP-QSH-WEST）。"
     }
   ]
 }

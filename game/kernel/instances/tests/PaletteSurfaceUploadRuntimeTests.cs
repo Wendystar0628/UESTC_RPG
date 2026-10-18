@@ -156,10 +156,10 @@ public sealed class PaletteSurfaceUploadRuntimeTests
     private static ToonSpec Spec(int index) => new(Token(index), Token(index + 1));
     private static PaletteCatalog Catalog()
     {
-        var legacy = new PaletteRegistry(Enumerable.Range(0, 256).Select(i => new PaletteEntry(Token(i), (byte)i,
+        var legacy = new PaletteRegistry(Enumerable.Range(0, 256).Select(i => new PaletteEntry(Token(i), new(i),
             new N.Vector3(.5f), "fixture", false, i < 32 ? PaletteRole.Frame : i < 40 ? PaletteRole.Retired :
                 i < 64 ? PaletteRole.Weather : (i & 1) == 0 ? PaletteRole.Lit : PaletteRole.Shade)));
-        return new(legacy, Enumerable.Range(256, 256).Select(i => new PaletteEntryV2(Token(i), new(i), new(.5f),
+        return new(legacy, Enumerable.Range(256, 256).Select(i => new PaletteEntry(Token(i), new(i), new(.5f),
             "fixture", false, (i & 1) == 0 ? PaletteRole.Lit : PaletteRole.Shade)));
     }
     private static GeometryBundle Geometry(int count = 3) => new(new(Spec(64)),

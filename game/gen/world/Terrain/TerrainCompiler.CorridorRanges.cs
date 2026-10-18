@@ -84,7 +84,7 @@ internal static partial class TerrainCompiler
                     throw new WorldDataException(b.Files[current.Id], current.Id, "Corridor intervals overlap on the same original source road.");
                 if (current.Anchors[0].S == prior.Anchors[^1].S
                     && (Math.Abs(current.Anchors[0].Y - prior.Anchors[^1].Y) > TerrainRoadProfile.JunctionHeightTolerance
-                        || current.CrossFall != prior.CrossFall || current.Shoulder != prior.Shoulder))
+                        || Math.Abs(current.CrossFall - prior.CrossFall) > TerrainMath.GradeTolerance || Math.Abs(current.Shoulder - prior.Shoulder) > TerrainMath.HeightTolerance))
                     throw new WorldDataException(b.Files[current.Id], current.Id, "Touching source-road intervals need matching endpoint height, cross-fall and shoulder.");
             }
             var exclusions = BridgeExclusions(b, road);

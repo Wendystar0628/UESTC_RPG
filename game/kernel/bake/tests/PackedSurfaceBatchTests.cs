@@ -167,8 +167,8 @@ public sealed class PackedSurfaceBatchTests
         { Shader = shader, Reflect = reflect };
     private static Box3 Bounds() => new(new(-64, -16, -64), new(64, 64, 64));
     private static PaletteCatalog Palette() => new(new PaletteRegistry([
-        new(new("fixture.lit"), 64, Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("fixture.shade"), 65, new Vector3(.5f), "fixture", false, PaletteRole.Shade),
-        new(new("fixture.accent"), 66, Vector3.One, "fixture", false, PaletteRole.Lit),
-        new(new("fixture.accent.shade"), 67, new Vector3(.5f), "fixture", false, PaletteRole.Shade)]), []);
+        new(new("fixture.lit"), new(64), Vector3.One, "fixture", false, PaletteRole.Lit),
+        new(new("fixture.shade"), new(65), new Vector3(.5f), "fixture", false, PaletteRole.Shade),
+        new(new("fixture.accent"), new(66), Vector3.One, "fixture", false, PaletteRole.Lit),
+        new(new("fixture.accent.shade"), new(67), new Vector3(.5f), "fixture", false, PaletteRole.Shade)]), []);
 }

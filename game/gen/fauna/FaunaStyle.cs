@@ -5,7 +5,7 @@ namespace Campus.Gen.Fauna;
 /// <summary>
 /// Every look and placement constant of the WP-25 animals in one place (WF-FLOW): colour names, shading specs, the
 /// overall scale and the site rules. Colours are palette names only (ART-STYLE); the three fauna pairs live in
-/// game/style/palette/ext/WP-25.json, the rest are borrowed from the core table.
+/// game/style/palette/ext/fauna.json, the rest are borrowed from the core table.
 /// </summary>
 public static class FaunaStyle
 {

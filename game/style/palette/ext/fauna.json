@@ -1,0 +1,11 @@
+{
+  "schema": 2,
+  "entries": [
+    {"token": "fauna.ginger.lit", "index": 234, "albedo": [0.843137, 0.560784, 0.317647], "materialClass": "fabric", "seasonal": false, "role": "lit"},
+    {"token": "fauna.ginger.shade", "index": 235, "albedo": [0.843137, 0.560784, 0.317647], "materialClass": "fabric", "seasonal": false, "role": "shade"},
+    {"token": "fauna.ink.lit", "index": 236, "albedo": [0.231373, 0.231373, 0.270588], "materialClass": "fabric", "seasonal": false, "role": "lit"},
+    {"token": "fauna.ink.shade", "index": 237, "albedo": [0.231373, 0.231373, 0.270588], "materialClass": "fabric", "seasonal": false, "role": "shade"},
+    {"token": "fauna.dove.lit", "index": 238, "albedo": [0.666667, 0.686275, 0.721569], "materialClass": "fabric", "seasonal": false, "role": "lit"},
+    {"token": "fauna.dove.shade", "index": 239, "albedo": [0.666667, 0.686275, 0.721569], "materialClass": "fabric", "seasonal": false, "role": "shade"}
+  ]
+}

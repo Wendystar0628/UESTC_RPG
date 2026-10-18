@@ -117,7 +117,7 @@ public sealed class FaunaTests
         var root = RepositoryFixture.Root;
         var tokens = new HashSet<string>(StringComparer.Ordinal);
         var files = new[] { Path.Combine(root, "game", "style", "palette", "core.json") }
-            .Concat(Directory.GetFiles(Path.Combine(root, "game", "style", "palette", "ext"), "WP-*.json"));
+            .Concat(Directory.GetFiles(Path.Combine(root, "game", "style", "palette", "ext"), "*.json").Where(path => Path.GetFileName(path) != "ui.json"));
         foreach (var file in files)
         {
             using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));

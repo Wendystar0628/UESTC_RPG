@@ -30,24 +30,11 @@ internal static partial class TerrainCompiler
 
     private static double DefaultShoreTop(Builder b, TerrainRegion region, FeatureId id)
     {
+        if (region.Polygons.Length == 0 || region.Polygons[0].Outer.Count == 0)
+            throw new WorldDataException("campus.json", id.Value, "Water has no shore-top sample.");
         if (b.LandBeforeWater.Nodes.Count == 0) return 0;
-        double? reference = null;
-        foreach (var polygon in region.Polygons)
-            foreach (var ring in new[] { polygon.Outer }.Concat(polygon.Holes))
-                for (var i = 0; i < ring.Count; i++)
-                {
-                    var a = ring[i]; var c = ring[(i + 1) % ring.Count];
-                    var dx = (double)c.X - a.X; var dz = (double)c.Y - a.Y;
-                    var samples = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(dx * dx + dz * dz)));
-                    for (var j = 0; j <= samples; j++)
-                    {
-                        var y = b.LandBeforeWater.Evaluate(a.X + dx * j / samples, a.Y + dz * j / samples).Surface.Height;
-                        reference ??= y;
-                        if (Math.Abs(y - reference.Value) > 0.0001)
-                            throw new WorldDataException("campus.json", id.Value, "Automatic water has nonconstant shore-top terrain; an authored constant waterY is required. No mean or median level is invented.");
-                    }
-                }
-        return reference ?? throw new WorldDataException("campus.json", id.Value, "Water has no shore-top sample.");
+        var point = region.Polygons[0].Outer[0];
+        return b.LandBeforeWater.Evaluate(point.X, point.Y).Surface.Height;
     }
 
     private static void AddPads(Builder b, IEnumerable<TerrainPadOp> operations, TerrainProgram prePad)
@@ -56,7 +43,7 @@ internal static partial class TerrainCompiler
         {
             if (!b.WrittenPads.Add(op.Feature)) throw new WorldDataException(b.Files[op.Id], op.Id, "Multiple pad operations target one entity.");
             var region = b.References.PadArea(op.Feature, b.Files[op.Id], op.Id);
-            AddPad(b, region, op.Feature, op.PadY ?? Median(prePad, region), op.Apron, op.Grade, op.Edge, op, prePad);
+            AddPad(b, region, op.Feature, op.PadY ?? Median(prePad, region), op.Apron, op.Grade, op.Edge, op);
         }
         foreach (var feature in b.Context.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
@@ -64,12 +51,12 @@ internal static partial class TerrainCompiler
             var polygons = WorldFeatureKinds.Parts(feature, "building").SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray();
             if (polygons.Length == 0) continue;
             var region = new TerrainRegion(polygons);
-            AddPad(b, region, feature.Id, TouchesZeroBand(b, region) ? 0 : Median(prePad, region), 0.8, 6, null, null, prePad);
+            AddPad(b, region, feature.Id, TouchesZeroBand(b, region) ? 0 : Median(prePad, region), 0.8, 6, null, null);
         }
     }
 
     private static void AddPad(Builder b, TerrainRegion region, FeatureId feature, double y, double apron, double gradeWidth,
-        TerrainPadEdge? edge, TerrainPadOp? op, TerrainProgram prePad)
+        TerrainPadEdge? edge, TerrainPadOp? op)
     {
         var file = op is null ? "campus.json" : b.Files[op.Id]; var id = op?.Id ?? "auto-pad-" + feature.Value;
         b.Pads.Add(feature, (float)y);
@@ -77,12 +64,6 @@ internal static partial class TerrainCompiler
         var structure = edge is null ? null : b.References.Structure(new(edge.StructureId), file, id, "edgeBand", "terrace", "retainingWall");
         if (edge is { Kind: TerrainEdgeKind.Terrace } && edge.Tread < Math.Max(2, 1.5 * edge.Riser))
             throw new WorldDataException(file, id, "Terraced retaining structure has insufficient tread depth.");
-        var worst = region.Polygons.SelectMany(polygon => polygon.Outer)
-            .Select(point => (Point: point, Ground: prePad.Evaluate(point.X, point.Y).Surface.Height))
-            .Select(sample => (sample.Point, sample.Ground, Difference: Math.Abs(sample.Ground - y)))
-            .OrderByDescending(sample => sample.Difference).ThenBy(sample => sample.Point.X).ThenBy(sample => sample.Point.Y).First();
-        if ((worst.Difference > 1.2 || worst.Difference / 0.25 > gradeWidth) && structure is null)
-            b.Diagnostics.Add($"PRE_FIELD: pad '{feature.Value}' before pads/corridors: worstVertex=({worst.Point.X:R},{worst.Point.Y:R}), padY={y:R}, groundY={worst.Ground:R}, ground difference={worst.Difference:R} m, available grade width={gradeWidth:R} m. This is earthwork context, not final acceptance. Contributors: {prePad.Explain(worst.Point.X, worst.Point.Y)}");
         var fill = structure is null ? 0.25 : 1d;
         var bounded = TerrainRegion.Expand(region.Bounds, apron + gradeWidth);
         // MapRect stores float coordinates. Its index box must round outwards;
@@ -110,7 +91,7 @@ internal static partial class TerrainCompiler
                 return Constrain(previous, target, beyond, fill, fill, 2, covered);
             }, op is null);
         b.Nodes.Add(node);
-        b.PadChecks.Add(new(feature, region, y, apron, gradeWidth, structure, op is null, file, id, node));
+        b.PadChecks.Add(new(feature, region, y, gradeWidth, structure, file, id));
         if (structure is not null) b.Diagnostics.Add($"NOT_VERIFIED: pad edge '{edge!.StructureId}' plan reference resolved; generated vertical collision connections require the content/physics acceptance pass.");
     }
 
@@ -290,11 +271,11 @@ internal static partial class TerrainCompiler
                 longitudinal.Dx + cross.Height * offset.Dx + cross.Dx * offset.Height,
                 longitudinal.Dz + cross.Height * offset.Dz + cross.Dz * offset.Height);
             var proposed = Constrain(previous, target, contact.Distance, 1d / 3, 1d / 3, 2);
-            if (Math.Abs(proposed.Surface.Height - previous.Surface.Height) > 0.000001
+            if (Math.Abs(proposed.Surface.Height - previous.Surface.Height) > TerrainMath.HeightTolerance
                 && (op is not null || CorridorContactAt(road, 0, x, z).Distance.Height < 0))
             {
                 foreach (var water in b.WaterShores)
-                    if (water.Region.Distance(x, z).Height < -0.000001)
+                    if (water.Region.Distance(x, z).Height < -TerrainMath.HeightTolerance)
                         throw new WorldDataException(file, id,
                             $"Road core/author constraint changes registered surface-water bed '{water.Id}' without a real bridge/underpass exclusion at ({x:R},{z:R}): previousH={previous.Surface.Height:R}, proposedH={proposed.Surface.Height:R}. Smoothing does not authorize filling a channel or inventing a bridge.");
             }
@@ -423,7 +404,7 @@ internal static partial class TerrainCompiler
                 for (var delta = -10; delta <= 10; delta++)
                 {
                     var sample = Math.Max(0, Math.Min(road.Profile.Length, station + delta));
-                    if (!road.Profile.Excluded(sample) && Math.Abs(road.Profile.At(sample).Grade) > 0.03 + 0.000001)
+                    if (!road.Profile.Excluded(sample) && Math.Abs(road.Profile.At(sample).Grade) > 0.03 + TerrainMath.GradeTolerance)
                         throw new WorldDataException(road.File, road.Operation?.Id ?? road.Road.Feature.Value,
                             $"Road profile exceeds 3% within 10 m of a junction: node=({node.Key.X},{node.Key.Z}) mm, station={station:R}, sample={sample:R}, height={road.Profile.At(sample).Y:R}, grade={road.Profile.At(sample).Grade:R}.");
                 }

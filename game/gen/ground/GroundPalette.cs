@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Audio;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Ground;
 
@@ -25,7 +26,7 @@ public enum GroundMaterial : byte { Asphalt, Curb, Paving, Lawn, Marking, Plaza 
 
 /// <summary>
 /// Palette tokens and material specs for the ground. Colours live only in the palette data
-/// (game/style/palette/ext/WP-15.json, columns 178-197 and the track pair 198-199 borrowed from the next segment;
+/// (game/style/palette/ext/ground.json, columns 178-197 and the track pair 198-199 borrowed from the next segment;
 /// grass and base.warmBrown from the core table);
 /// this file only names them. Plazas share the granite of the kerbs; step faces under lawns use the core warm brown.
 /// </summary>
@@ -46,11 +47,11 @@ public static class GroundPalette
         GroundColor.Paver => 184,
         GroundColor.Court => 186,
         GroundColor.Turf => 188,
-        GroundColor.GrassLight => 190,
-        GroundColor.GrassDark => 192,
+        GroundColor.GrassLight => LawnAppearance.GrassLight,
+        GroundColor.GrassDark => LawnAppearance.GrassDark,
         GroundColor.Marking => 194,
         GroundColor.MarkingYellow => 196,
-        GroundColor.Grass => 150,
+        GroundColor.Grass => LawnAppearance.Grass,
         GroundColor.Track => 198,
         GroundColor.Soil => 88,
         _ => throw new ArgumentOutOfRangeException(nameof(color), color, "Unknown ground colour.")
@@ -79,9 +80,9 @@ public static class GroundPalette
         GroundColor.Court => "ground.court",
         GroundColor.Turf => "ground.turf",
         GroundColor.Track => "ground.track",
-        GroundColor.Grass => "grass",
-        GroundColor.GrassLight => "ground.grassLight",
-        GroundColor.GrassDark => "ground.grassDark",
+        GroundColor.Grass => LawnAppearance.GrassFamily,
+        GroundColor.GrassLight => LawnAppearance.LightFamily,
+        GroundColor.GrassDark => LawnAppearance.DarkFamily,
         GroundColor.Marking => "ground.marking",
         GroundColor.MarkingYellow => "ground.markingYellow",
         GroundColor.Soil => "base.warmBrown",
@@ -149,7 +150,7 @@ public static class GroundPalette
         GroundMaterial.Curb => Pair(GroundColor.Curb) with { Wet = 0.6f, Fx = ToonFx.BevelLift | ToonFx.DetailTiling },
         GroundMaterial.Plaza => Spec(GroundMaterial.Curb),
         GroundMaterial.Paving => Pair(GroundColor.Paver) with { Wet = 0.6f, Fx = ToonFx.DetailTiling | ToonFx.Mottle },
-        GroundMaterial.Lawn => Pair(GroundColor.Grass) with { Wet = 0.4f },
+        GroundMaterial.Lawn => LawnAppearance.Spec(),
         GroundMaterial.Marking => Pair(GroundColor.Marking) with { Wet = 0.8f, Line = LineClass.None },
         _ => throw new ArgumentOutOfRangeException(nameof(material), material, "Unknown ground material.")
     };
