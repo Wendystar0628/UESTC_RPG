@@ -43,7 +43,7 @@ internal sealed partial class StreetSite
     {
         var best = float.MaxValue;
         foreach (var line in _walks.AllAround(p))
-            if (!ReferenceEquals(line, except)) best = MathF.Min(best, MathF.Sqrt(LineDistanceSquared(p, line.Line.Points)));
+            if (!ReferenceEquals(line, except)) best = MathF.Min(best, MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(line.Line.Points, p)));
         return best;
     }
 
@@ -67,7 +67,7 @@ internal sealed partial class StreetSite
             float gap; Vector2 edge, inward;
             if (paving.Line is { } line)
             {
-                var (q, _) = NearestOn(p, line);
+                var q = PlanGeometry.Project(line, p).Point;
                 var d = Vector2.Distance(p, q);
                 if (d <= paving.Half) return (0f, p, Vector2.Zero, paving.Road);
                 gap = d - paving.Half;
@@ -82,11 +82,11 @@ internal sealed partial class StreetSite
                 var bestD = float.MaxValue;
                 foreach (var ring in rings.Holes.Prepend(rings.Outer))
                 {
-                    var near = NearestOn(p, ring, true);
+                    var near = PlanGeometry.Project(ring, p, closed: true);
                     var d = Vector2.DistanceSquared(p, near.Point);
                     if (d >= bestD) continue;
                     bestD = d;
-                    hit = near;
+                    hit = (near.Point, near.Tangent);
                 }
                 edge = hit.Point;
                 gap = MathF.Sqrt(bestD);
@@ -120,7 +120,7 @@ internal sealed partial class StreetSite
         {
             if (paving.Rings is { } rings) { if (PlanGeometry.Contains(rings, p)) return true; continue; }
             var line = paving.Line!;
-            var (q, _) = NearestOn(p, line);
+            var q = PlanGeometry.Project(line, p).Point;
             if (Vector2.DistanceSquared(q, line[0]) < 1e-6f || Vector2.DistanceSquared(q, line[^1]) < 1e-6f) continue;
             if (Vector2.Distance(p, q) <= paving.Half) return true;
         }

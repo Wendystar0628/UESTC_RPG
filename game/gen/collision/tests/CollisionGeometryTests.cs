@@ -3,6 +3,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.Tests.Support;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Collision.Tests;
@@ -26,9 +27,10 @@ public sealed class CollisionGeometryTests
     [TestCase]
     public void NegativeCoordinatesUseFloorAndLocalTransforms()
     {
-        var tile = CollisionGeometry.TileAt(new(-0.01f, 0, -64.01f));
+        var tile = TileGrid.At(new Vector3(-0.01f, 0, -TileGrid.BaseEdge - 0.01f));
         AssertThat(tile == new TileKey(-1, -2)).OverrideFailureMessage("Negative coordinates must floor, not truncate.").IsTrue();
-        var wall = new WallCollider(new(-64, -128), new(-60, -128), 0.1f, 0, 2, SurfaceTag.Barrier);
+        var origin = TileGrid.Origin(tile);
+        var wall = new WallCollider(origin, origin + new Vector2(4, 0), 0.1f, 0, 2, SurfaceTag.Barrier);
         var local = (BoxCollider)CollisionGeometry.Localize([wall], tile).Single();
         AssertThat(Contains(local, new(2, 1, 0)) && !Contains(local, new(5, 1, 0))).OverrideFailureMessage("Tile localization changed the world alignment.").IsTrue();
     }
@@ -37,9 +39,9 @@ public sealed class CollisionGeometryTests
     public void BodyBatchesRespectShapeCapAndSemantics()
     {
         var wall = new WallCollider(Vector2.Zero, Vector2.UnitX, 0.1f, 0, 2, SurfaceTag.Wall) { Foot = FootMat.Concrete };
-        var batches = CollisionGeometry.BodyBatches(Enumerable.Repeat<Collider>(wall, 501).Append(wall with { Tag = SurfaceTag.Boundary }));
-        AssertThat(batches.Count == 4).OverrideFailureMessage("501 walls plus one boundary need four bodies.").IsTrue();
-        AssertThat(batches.All(b => b.Count <= 250 && b.Select(c => (c.Tag, c.Foot)).Distinct().Count() == 1)).OverrideFailureMessage("Invalid collision body grouping.").IsTrue();
+        var batches = CollisionGeometry.BodyBatches(Enumerable.Repeat<Collider>(wall, CollisionGeometry.MaxShapesPerBody * 2 + 1).Append(wall with { Tag = SurfaceTag.Boundary }));
+        AssertThat(batches.Count == 4).OverrideFailureMessage("Two full wall batches, a partial batch and a separate boundary batch are required.").IsTrue();
+        AssertThat(batches.All(b => b.Count <= CollisionGeometry.MaxShapesPerBody && b.Select(c => (c.Tag, c.Foot)).Distinct().Count() == 1)).OverrideFailureMessage("Invalid collision body grouping.").IsTrue();
     }
 
     [TestCase]
@@ -84,7 +86,7 @@ public sealed class CollisionGeometryTests
     {
         var buildingA = Rectangle(10, 10, 20, 20);
         var buildingB = Rectangle(40, 10, 50, 20);
-        var parent = new WorldFeature(new("fixture:park"), FeatureSource.Osm, new("poi"), new PolygonGeometry(Rectangle(0, 0, 60, 40)))
+        var parent = WorldFeatureFixture.Create("fixture:park", "poi", new PolygonGeometry(Rectangle(0, 0, 60, 40)), source: FeatureSource.Osm) with
         {
             Height = 900,
             Parts =
@@ -108,7 +110,7 @@ public sealed class CollisionGeometryTests
     [TestCase]
     public void GroupedBuildingParentKeepsSeparateMultiPolygonsAndNonBuildingPartsOpen()
     {
-        var parent = new WorldFeature(new("fixture:group"), FeatureSource.Osm, new("building"), new PolygonGeometry(Rectangle(0, 0, 80, 40)))
+        var parent = WorldFeatureFixture.Create("fixture:group", "building", new PolygonGeometry(Rectangle(0, 0, 80, 40)), source: FeatureSource.Osm) with
         {
             Parts =
             [

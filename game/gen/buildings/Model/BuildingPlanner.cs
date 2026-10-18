@@ -19,14 +19,6 @@ public static class BuildingPlanner
     public static readonly DesignKind BuildingKind = new("building");
 
     /// <summary>
-    /// Kind of one part: its source record's "kind" (Props), else the parent feature's kind — the same rule as the
-    /// world model's part filter. An entity whose own kind is, say, poi can still own building parts.
-    /// </summary>
-    public static string PartKind(WorldFeature f, WorldFeaturePart part) =>
-        part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var declared) &&
-        declared.ValueKind == JsonValueKind.String ? declared.GetString()! : f.Kind.Value;
-
-    /// <summary>
     /// The building footprints of a feature, chosen per part and never by the parent's kind alone: every part whose
     /// kind is building, with its own height and storeys (the aggregate geometry is then not built); a feature
     /// without parts counts when its own kind is building. Multi-polygons yield one footprint per polygon;
@@ -38,7 +30,7 @@ public static class BuildingPlanner
         {
             foreach (var part in f.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
             {
-                if (PartKind(f, part) != BuildingKind.Value) continue;
+                if ((part.Props.TryText("kind") ?? f.Kind.Value) != BuildingKind.Value) continue;
                 foreach (var (key, rings) in Polygons(part.SourceId, WorldFeatureGeometry.FacadeGeometryOf(part)))
                     yield return new BuildingSource(f, key, rings, part.Height ?? f.Height, part.Storeys ?? f.Storeys, part.Props ?? f.Props);
             }
@@ -78,7 +70,7 @@ public static class BuildingPlanner
         if (!CleanRings(src.Rings, out var outerClean, out var holesClean)) return null;
 
         var style = FacadeRules.StyleOf(feature.Family, src.Props, feature.Props);
-        var centroidClean = PlanRing.Centroid(outerClean, holesClean);
+        var centroidClean = PlanGeometry.Centroid(new PolygonRings(outerClean.Points, [.. holesClean.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outerClean.Points[0]);
         var cell = new Vector2(MathF.Floor(centroidClean.X / 160f), MathF.Floor(centroidClean.Y / 160f));
         var cluster = StableHash.Hash32(worldSeed, "wp14.cluster",
             cell.X.ToString(CultureInfo.InvariantCulture), cell.Y.ToString(CultureInfo.InvariantCulture));
@@ -93,7 +85,7 @@ public static class BuildingPlanner
         var holes = grid.Footprint.Holes.Select(h => PlanRing.FromPoints([.. h], hole: true)).ToList();
         var area = (float)PlanGeometry.SignedArea(outer.Points) - holes.Sum(h => MathF.Abs((float)PlanGeometry.SignedArea(h.Points)));
         if (area < 6f) return null;
-        var centroid = PlanRing.Centroid(outer, holes);
+        var centroid = PlanGeometry.Centroid(new PolygonRings(outer.Points, [.. holes.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outer.Points[0]);
 
         var (height, storeys, hs) = Heights(src, profile);
         var small = area < 40f || height < 3.2f;
@@ -181,12 +173,14 @@ public static class BuildingPlanner
     private static bool CleanRings(PolygonRings source, out PlanRing outerClean, out List<PlanRing> holesClean)
     {
         holesClean = [];
-        var cleaned = PlanRing.Clean(source.Outer, hole: false);
+        var cleanPoints = PlanGeometry.CleanRing(source.Outer, minEdge: .35f, collinearTolerance: .12f, minimumArea: 4f, reversalTolerance: .05f, maxPasses: 64, duplicateDistanceSquared: .0025f);
+        var cleaned = cleanPoints is null ? null : PlanRing.FromPoints(cleanPoints, hole: false);
         outerClean = cleaned!;
         if (cleaned is null) return false;
         foreach (var h in source.Holes)
         {
-            var ring = PlanRing.Clean(h, hole: true);
+            var holePoints = PlanGeometry.CleanRing(h, outer: false, minEdge: .35f, collinearTolerance: .12f, minimumArea: 4f, reversalTolerance: .05f, maxPasses: 64, duplicateDistanceSquared: .0025f);
+            var ring = holePoints is null ? null : PlanRing.FromPoints(holePoints, hole: true);
             if (ring is null || MathF.Abs((float)PlanGeometry.SignedArea(ring.Points)) < 8f) continue;
             if (!ring.Points.All(p => PlanGeometry.InsideByCrossings(cleaned.Points, p))) continue;
             holesClean.Add(ring);

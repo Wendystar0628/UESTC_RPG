@@ -254,7 +254,7 @@ bool toon_fade_discard(vec2 frag_xy) {
 	if (fade_t0 == 0.0) {
 		return false;
 	}
-	float p = clamp(mod(fade_clock - abs(fade_t0), 480.0) / 0.25, 0.0, 1.0);
+	float p = clamp(mod(fade_clock - abs(fade_t0), anim_loop_seconds) / 0.25, 0.0, 1.0);
 	int ix = int(mod(frag_xy.x, 4.0));
 	int iy = int(mod(frag_xy.y, 4.0));
 	float b = (TOON_BAYER[iy * 4 + ix] + 0.5) / 16.0;

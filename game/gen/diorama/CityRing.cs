@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using static Campus.Contracts.ScalarMath;
 
 namespace Campus.Gen.Diorama;
 
@@ -34,7 +35,7 @@ public static class CityRing
             var clusterHeight = 0f;
             while (az < start + 360f)
             {
-                var bearing = Wrap(az);
+                var bearing = Angles.WrapDegrees(az);
                 var fill = Fill(data.Sectors, bearing, ringIndex);
                 var tower = rng.NextFloat() < fill.TowerShare;
                 var width = tower ? Lerp(TowerWidthMin, TowerWidthMax, rng.NextFloat()) : Lerp(BlockWidthMin, BlockWidthMax, rng.NextFloat());
@@ -83,8 +84,8 @@ public static class CityRing
 
     private static BoxFrame Frame(Vector2 centre, float bearing, float radius, float yawDeg)
     {
-        var b = bearing * (MathF.PI / 180f);
-        var dir = new Vector3(MathF.Sin(b), 0f, -MathF.Cos(b));
+        var heading = Angles.Heading(bearing);
+        var dir = new Vector3(heading.X, 0f, heading.Y);
         var c = new Vector3(centre.X, 0f, centre.Y) + dir * radius;
         var y = yawDeg * (MathF.PI / 180f);
         var inward = -dir;
@@ -135,10 +136,10 @@ public static class CityRing
         float total = 0f, fill = 0f, tower = 0f, lowMin = 0f, lowMax = 0f, highMin = 0f, highMax = 0f;
         foreach (var s in sectors)
         {
-            var span = Wrap(s.To - s.From);
-            var into = Wrap(bearing - s.From);
+            var span = Angles.WrapDegrees(s.To - s.From);
+            var into = Angles.WrapDegrees(bearing - s.From);
             var outside = into <= span ? 0f : MathF.Min(into - span, 360f - into);
-            var w = 1f - SmoothStep(0f, SectorBlendDeg, outside);
+            var w = 1f - Smoothstep(0f, SectorBlendDeg, outside);
             if (w <= 0f) continue;
             var f = ringIndex == 0 ? s.Near : s.Mid;
             total += w;
@@ -148,19 +149,5 @@ public static class CityRing
         if (total <= 0f) return new(0f, 0f, (1f, 1f), (1f, 1f));
         var inv = 1f / total;
         return new(fill * inv, tower * inv, (lowMin * inv, lowMax * inv), (highMin * inv, highMax * inv));
-    }
-
-    public static float Wrap(float deg)
-    {
-        var w = deg % 360f;
-        return w < 0f ? w + 360f : w;
-    }
-
-    private static float Lerp(float a, float b, float t) => a + (b - a) * t;
-
-    private static float SmoothStep(float a, float b, float x)
-    {
-        var t = Math.Clamp((x - a) / (b - a), 0f, 1f);
-        return t * t * (3f - 2f * t);
     }
 }

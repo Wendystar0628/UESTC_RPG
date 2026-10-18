@@ -126,7 +126,7 @@ public static partial class FurniturePlanner
         if (Land.Pad(site.World.Terrain, Frame(centre, inward, 0f), p.Width * 0.5f, p.Depth * 0.5f) is not { } ground) return (null, "no ground for its feet");
         // Not against a bank: the ground round it (the back included) keeps within PlazaBankRise of the paving it stands on.
         var terrain = site.World.Terrain;
-        var paving = ground.Top - S.PavingLift - S.PadProud;
+        var paving = ground.Top - GroundLevels.Paving - S.PadProud;
         for (var i = -1; i <= 1; i++)
             for (var k = -1; k <= 1; k++)
             {
@@ -167,7 +167,7 @@ public static partial class FurniturePlanner
         if (site.CarriagewayAhead(centre + inward * (p.Depth * 0.5f), inward, S.FaceClear)) return (null, $"facing a carriageway within {Num(S.FaceClear)} m");
         if (Land.Pad(site.World.Terrain, Frame(centre, inward, 0f), p.Width * 0.5f, p.Depth * 0.5f) is not { } ground) return (null, "no ground for its feet");
         var terrain = site.World.Terrain;
-        var paving = ground.Top - S.PavingLift - S.PadProud;
+        var paving = ground.Top - GroundLevels.Paving - S.PadProud;
         for (var i = -1; i <= 1; i++)
             for (var k = -1; k <= 1; k++)
             {

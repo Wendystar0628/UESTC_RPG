@@ -90,11 +90,6 @@ internal sealed partial class StreetSite
     private static bool Pedestrian(string? type) => type is "footway" or "path" or "pedestrian" or "steps";
 
     /// <summary>Road type as WP-15 reads it (GroundClassifier): <c>roadType</c>, else <c>highway</c>.</summary>
-    private static string? RoadType(JsonElement? props)
-    {
-        if (props is not { ValueKind: JsonValueKind.Object } p) return null;
-        foreach (var name in new[] { "roadType", "highway" })
-            if (p.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String) return value.GetString();
-        return null;
-    }
+    private static string? RoadType(JsonElement? props) =>
+        WorldProps.TryText(props, "roadType") ?? WorldProps.TryText(props, "highway");
 }

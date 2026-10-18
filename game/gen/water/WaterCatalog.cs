@@ -96,42 +96,22 @@ public static class WaterCatalog
 
     private static IReadOnlyList<Vector2>? CleanRing(IReadOnlyList<Vector2> ring)
     {
-        var points = new List<Vector2>(ring.Count);
-        foreach (var point in ring)
-        {
-            if (!float.IsFinite(point.X) || !float.IsFinite(point.Y)) return null;
-            if (points.Count == 0 || Vector2.DistanceSquared(points[^1], point) > 1e-8f) points.Add(point);
-        }
-        if (points.Count > 1 && Vector2.DistanceSquared(points[0], points[^1]) <= 1e-8f) points.RemoveAt(points.Count - 1);
-        return points.Count >= 3 ? points.AsReadOnly() : null;
+        if (ring.Any(point => !VectorMath.Finite(point))) return null;
+        var points = PlanGeometry.DeduplicateRing(ring);
+        return points.Length >= 3 ? points : null;
     }
 
     public static float Area(PolygonRings rings)
     {
-        var area = MathF.Abs(SignedArea(rings.Outer));
-        foreach (var hole in rings.Holes) area -= MathF.Abs(SignedArea(hole));
+        var area = MathF.Abs((float)PlanGeometry.SignedArea(rings.Outer));
+        foreach (var hole in rings.Holes) area -= MathF.Abs((float)PlanGeometry.SignedArea(hole));
         return area;
-    }
-
-    public static float SignedArea(IReadOnlyList<Vector2> ring)
-    {
-        double sum = 0d;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++)
-            sum += (double)ring[j].X * ring[i].Y - (double)ring[i].X * ring[j].Y;
-        return (float)(sum * 0.5d);
     }
 
     private static float Perimeter(PolygonRings rings)
     {
-        var length = RingLength(rings.Outer);
-        foreach (var hole in rings.Holes) length += RingLength(hole);
-        return length;
-    }
-
-    private static float RingLength(IReadOnlyList<Vector2> ring)
-    {
-        var length = 0f;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++) length += Vector2.Distance(ring[i], ring[j]);
+        var length = (float)PlanGeometry.Length(rings.Outer, closed: true);
+        foreach (var hole in rings.Holes) length += (float)PlanGeometry.Length(hole, closed: true);
         return length;
     }
 

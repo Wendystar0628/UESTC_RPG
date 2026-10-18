@@ -6,7 +6,6 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Gen.World;
-using Campus.Kernel.Maps;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -135,15 +134,20 @@ public sealed class WalkRulesTests
     {
         var (entry, oldContext) = LoadCampusSpawnFixture();
         var target = new MapId("target-fixture");
-        var waypoint = entry.Waypoints.Single(w => w.Id == "P01");
+        var waypoint = entry.Waypoints.First(w => w.Stand is not null);
         var targetEntry = entry with
         {
             Descriptor = entry.Descriptor with { Id = target, DefaultSpawn = waypoint.Id, Spawns = [] },
             Waypoints = [waypoint]
         };
-        var maps = new SpawnMaps(targetEntry) { Current = entry.Descriptor.Id, Context = oldContext };
+        var lastRequestedMap = default(MapId);
+        var maps = SpawnMaps(targetEntry);
+        maps.Current = entry.Descriptor.Id;
+        maps.Context = oldContext;
+        var resolve = maps.SpawnResolver!;
+        maps.SpawnResolver = (map, spawn) => { lastRequestedMap = map; return resolve(map, spawn); };
         var dto = WalkSafetyQueries.CreateDefault(maps, new(1, target, targetEntry.Descriptor.World.Default));
-        AssertThat(maps.LastRequestedMap == target && dto.Feet.Position == waypoint.Stand!.Feet
+        AssertThat(lastRequestedMap == target && dto.Feet.Position == waypoint.Stand!.Feet
             && dto.Feet.YawDeg == waypoint.Stand.YawDeg).OverrideFailureMessage("CreateDefault ignored NewGameContext.Map or reused the previously mounted map.").IsTrue();
     }
 
@@ -152,7 +156,8 @@ public sealed class WalkRulesTests
     {
         var (entry, context) = LoadCampusSpawnFixture();
         var missing = entry with { Descriptor = entry.Descriptor with { DefaultSpawn = "missing-fixture" } };
-        var maps = new SpawnMaps(missing) { Context = context };
+        var maps = SpawnMaps(missing);
+        maps.Context = context;
         var missingSpawnRejected = false;
         try { WalkSafetyQueries.DefaultFeet(maps, entry.Descriptor.Id); }
         catch (ArgumentException) { missingSpawnRejected = true; }
@@ -165,39 +170,21 @@ public sealed class WalkRulesTests
 
     private static (MapCatalogEntry Entry, IMapContext Context) LoadCampusSpawnFixture()
     {
-        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")
-            ?? throw new InvalidOperationException("The gate must provide UESTC_REPOSITORY for the real campus fixture.");
-        var index = MapCatalog.ReadIndex(File.ReadAllBytes(Path.Combine(root, "game", "data", "maps", "index.json")));
-        var indexed = index.Maps.Single(m => m.Id == index.DefaultMap);
-        var data = Path.Combine(root, "game", indexed.Dir["res://".Length..]);
-        var entry = MapCatalog.ReadEntry(indexed, File.ReadAllBytes(Path.Combine(data, "map.json")),
-            File.ReadAllBytes(Path.Combine(data, "campus.json")), File.ReadAllBytes(Path.Combine(data, "waypoints.json")));
-        var files = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var name in new[] { "campus.json", "network.json", "interiors.json", "map.json" })
-            files.Add(name, File.ReadAllText(Path.Combine(data, name)));
-        var loaded = WorldModelLoader.Load(indexed.Id, files);
-        return (entry, MapWorldLoading.CreateContext(entry, loaded, BuildInputSnapshot.Freeze(files.ToDictionary(p => p.Key, p => (ReadOnlyMemory<byte>)System.Text.Encoding.UTF8.GetBytes(p.Value), StringComparer.Ordinal))));
+        var entry = RealMapFixture.Entry();
+        return (entry, new TestMapContext(entry.Descriptor, RealMapFixture.Load().World,
+            BuildInputSnapshot.Freeze(RealMapFixture.ReadFiles()), entry.DataRoot));
     }
 
-    private sealed class SpawnMaps(MapCatalogEntry entry) : IMapService
+    private static TestMapService SpawnMaps(MapCatalogEntry entry) => new()
     {
-        public long Rev => 1;
-        public MapId Default => entry.Descriptor.Id;
-        public IReadOnlyList<MapDescriptor> Maps => [entry.Descriptor];
-        public IReadOnlyList<MapVisit> Visits => [];
-        public MapId Current { get; set; } = entry.Descriptor.Id;
-        public IMapContext? Context { get; set; }
-        public IMapTransition? Transition => null;
-        public MapId LastRequestedMap { get; private set; }
-        public event Action<MapId, MapTravelCause>? Arrived { add { } remove { } }
-        public MapSpawn ResolveSpawn(MapId map, string? spawn = null)
-        {
-            LastRequestedMap = map;
-            if (map != entry.Descriptor.Id) throw new ArgumentException("Unknown fixture map.", nameof(map));
-            return entry.ResolveSpawn(spawn ?? entry.Descriptor.DefaultSpawn);
-        }
-        public IMapTransition Travel(MapTravelRequest request) => throw new NotSupportedException();
-    }
+        Rev = 1,
+        Default = entry.Descriptor.Id,
+        Current = entry.Descriptor.Id,
+        Maps = [entry.Descriptor],
+        SpawnResolver = (map, spawn) => map == entry.Descriptor.Id
+            ? entry.ResolveSpawn(spawn ?? entry.Descriptor.DefaultSpawn)
+            : throw new ArgumentException("Unknown fixture map.", nameof(map)),
+    };
 
     private sealed class SafetySpatial(float support, float? water = null, WalkClass classification = WalkClass.Walk,
         bool nearShore = false, float? ground = null) : ISpatialIndex

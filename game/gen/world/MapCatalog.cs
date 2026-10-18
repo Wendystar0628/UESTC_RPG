@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.World;
 
@@ -165,26 +166,11 @@ public sealed class MapCatalog
 
     private static Vector2 BoundaryCenter(JsonElement boundary)
     {
-        double area = 0, x = 0, z = 0;
-        var ringIndex = 0;
-        foreach (var ring in boundary.EnumerateArray())
-        {
-            var points = ring.EnumerateArray().Select(p => new Vector2(p[0].GetSingle(), p[1].GetSingle())).ToArray();
-            if (points.Length < 3 || points.Any(p => !float.IsFinite(p.X) || !float.IsFinite(p.Y)))
-                throw new InvalidDataException("Invalid campus boundary ring.");
-            double a = 0, cx = 0, cz = 0;
-            for (var i = 0; i < points.Length; i++)
-            {
-                var p = points[i]; var q = points[(i + 1) % points.Length];
-                var cross = (double)p.X * q.Y - (double)q.X * p.Y;
-                a += cross; cx += (p.X + q.X) * cross; cz += (p.Y + q.Y) * cross;
-            }
-            if (Math.Abs(a) < 1e-8) throw new InvalidDataException("Campus boundary has zero area.");
-            var weight = Math.Abs(a) * (ringIndex++ == 0 ? 1 : -1);
-            area += weight; x += cx / (3 * a) * weight; z += cz / (3 * a) * weight;
-        }
-        if (area <= 0) throw new InvalidDataException("Campus boundary has no positive area.");
-        return new((float)(x / area), (float)(z / area));
+        var rings = boundary.EnumerateArray().Select(ring => (IReadOnlyList<Vector2>)ring.EnumerateArray()
+            .Select(point => new Vector2(point[0].GetSingle(), point[1].GetSingle())).ToArray()).ToArray();
+        if (rings.Length == 0) throw new InvalidDataException("Campus boundary has no outer ring.");
+        try { return PlanGeometry.Centroid(new PolygonRings(rings[0], rings.Skip(1).ToArray())); }
+        catch (ArgumentException error) { throw new InvalidDataException("Invalid campus boundary.", error); }
     }
 }
 

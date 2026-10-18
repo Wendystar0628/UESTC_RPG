@@ -79,7 +79,7 @@ public static class WorldModelLoader
             var sourceId = Text(raw, "id");
             if (!sourceIds.Add(sourceId)) throw new WorldDataException("campus.json", sourceId, "Duplicate source geometry.");
             var entityId = OptionalText(raw, "entityId");
-            var id = entityId ?? (prefix is null ? throw new WorldDataException("campus.json", "meta.entityPrefix", "Anonymous geometry needs a map entity prefix.") : prefix + ":source" + sourceId[sourceId.IndexOf(':')..]);
+            var id = entityId ?? (prefix is null ? throw new WorldDataException("campus.json", "meta.entityPrefix", "Anonymous geometry needs a map entity prefix.") : OsmFeatureIds.FromPart(prefix, sourceId).Source);
             if (entityId is null && entities.ContainsKey(id)) throw new WorldDataException("campus.json", sourceId, "Anonymous feature ID collides with an authored entity.");
             var polygons = raw.GetProperty("polygons").EnumerateArray().Select(Rings).ToArray();
             if (polygons.Length == 0) throw new WorldDataException("campus.json", sourceId, "Missing footprint.");
@@ -160,7 +160,8 @@ public static class WorldModelLoader
         if (input.ContainsKey("outskirts.json") && options.Outskirts is null)
             throw new WorldDataException("outskirts.json", "root", "A parsed outskirts model is required until the producer's file contract is available.");
         var outskirts = options.Outskirts;
-        var world = new WorldModelSnapshot(frozen, boundary, network, interiors, outskirts, interiorOverlays.AsReadOnly(), options);
+        var world = new WorldModelSnapshot(frozen, boundary, network, interiors, outskirts, interiorOverlays.AsReadOnly(), options,
+            ReadTerrainOperations(map, input));
         var limitRing = outskirts?.CutLine is { Count: >= 3 } cutLine ? cutLine : boundary.Outer;
         var roam = ReadRoam(map, input);
         var margin = outskirts is null ? roam?.FallbackMargin ?? 0 : 0;
@@ -170,6 +171,21 @@ public static class WorldModelLoader
             new((int)MathF.Floor(bounds.Min.X / 64), (int)MathF.Floor(bounds.Min.Z / 64)),
             new((int)MathF.Floor(bounds.Max.X / 64), (int)MathF.Floor(bounds.Max.Z / 64)))
         { Diagnostics = ["Terrain uses the current source relative plane. Designed slopes, platforms and sunken areas remain incomplete."] };
+    }
+
+    private static IReadOnlyDictionary<string, TerrainOp> ReadTerrainOperations(MapId map, SortedDictionary<string, string> input)
+    {
+        var operations = new SortedDictionary<string, TerrainOp>(StringComparer.Ordinal);
+        foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("overlay/terrain/", StringComparison.Ordinal)
+            && pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 3))
+        {
+            var overlay = TerrainOverlayJson.Parse(Utf8.GetBytes(text));
+            CheckMap(map, overlay.Map, file);
+            foreach (var operation in overlay.Ops)
+                if (!operations.TryAdd(operation.Id, operation))
+                    throw new WorldDataException(file, operation.Id, "Duplicate terrain operation ID.");
+        }
+        return new ReadOnlyDictionary<string, TerrainOp>(operations);
     }
 
     private static void ApplyZones(SortedDictionary<string, string> input, SortedDictionary<string, WorldFeature> features, Dictionary<string, List<string>> aliases)

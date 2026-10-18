@@ -1,4 +1,5 @@
 using System.Numerics;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Ground;
 
@@ -86,7 +87,7 @@ internal sealed class TileField
             {
                 if (d >= nearest[k]) return;
                 nearest[k] = d;
-                core[k] = Sdf.Clamp(d + kerb, limit);
+                core[k] = Math.Clamp(d + kerb, -limit, limit);
                 rim[k] = rimTop;
                 soil[k] = soilTop;
             });
@@ -182,7 +183,7 @@ internal sealed class TileField
                 for (var i = i0; i <= i1; i++)
                 {
                     var k = j * S + i;
-                    var d = Sdf.Clamp((float)(dist[(j - j0) * w + (i - i0)] - shape.HalfWidth), Limit);
+                    var d = Math.Clamp((float)(dist[(j - j0) * w + (i - i0)] - shape.HalfWidth), -Limit, Limit);
                     visit?.Invoke(k, d);
                     if (d < grid[k]) grid[k] = d;
                 }
@@ -211,7 +212,7 @@ internal sealed class TileField
                 while (c < crossings.Count && crossings[c] < x) c++;
                 var inside = (c & 1) == 1;
                 var raw = (float)dist[(j - j0) * w + (i - i0)];
-                var d = Sdf.Clamp(inside ? -raw : raw, Limit);
+                var d = Math.Clamp(inside ? -raw : raw, -Limit, Limit);
                 var k = j * S + i;
                 visit?.Invoke(k, d);
                 if (d < grid[k]) grid[k] = d;
@@ -258,7 +259,7 @@ internal sealed class TileField
             var row = (j - j0) * w - i0;
             for (var i = c0; i <= c1; i++)
             {
-                var d = Sdf.Segment(X(i), z, a, b);
+                var d = PlanGeometry.SegmentDistance(X(i), z, a, b);
                 if (d < dist[row + i]) dist[row + i] = d;
             }
         }

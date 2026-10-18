@@ -1,20 +1,32 @@
 namespace Campus.Contracts.Maps;
 
-/// <summary>
-/// Kernel-owned map lifecycle boundary. WP-01 aggregates node lifetime/MapAware dispatch,
-/// shader map parameters and the WP-02b stream state. WP-46 owns startup and same-map entry ordering.
-/// Methods run on the main thread; synchronous failures throw, asynchronous failures set Error.
-/// Mount runs once at startup; shutdown belongs to the scene host. No engine handles cross this boundary.
-/// </summary>
+/// <summary>Main-thread destination preparation. The latest arrival is the only current request.</summary>
 public interface IMapRuntime
 {
-    void Mount(IMapContext context);
-    void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null);
-    void BeginWarm();
-    bool ResidentReady { get; }
-    bool DestinationReady { get; }
-    bool WarmReady { get; }
-    string? Error { get; }
+    IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null);
+    IMapArrival? Arrival { get; }
+}
+
+/// <summary>
+/// One destination's readiness barrier, including resident content, destination geometry and pipeline warming.
+/// Done succeeds only when ready, faults on preparation failure, and is cancelled on cancellation/replacement/exit.
+/// A completed handle remains a historical result; compare it with IMapRuntime.Arrival before reusing readiness.
+/// Cancel never moves the camera or rolls back mounted content; cancelling an older handle cannot affect its replacement.
+/// </summary>
+public interface IMapArrival
+{
+    MapStreamDestination Destination { get; }
+    Task Done { get; }
+    void Cancel();
+}
+
+/// <summary>
+/// Startup map lifetime, separate from arrival. Mount runs once and completes after data preparation,
+/// MapAware callbacks and required resident content. Shutdown belongs to the scene host.
+/// </summary>
+public interface IMapLifetime
+{
+    Task Mount(IMapContext context);
 }
 
 /// <summary>
@@ -38,8 +50,4 @@ public interface IMapStreamState
     void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null);
 }
 
-// Mount dispatches MapAware and begins resident loading. ResidentReady covers required resident content;
-// Prefetch replaces the one destination request; DestinationReady includes required destination geometry
-// and collision, including the explicit Space's interior floor content when supplied by a save.
-// BeginWarm starts kernel pipeline/UI warming; WarmReady is independent of stream readiness.
-// MapStage.Warm waits for all required ready flags; Error is terminal for that operation and never counts as ready.
+// Stream readiness is consumed by the kernel arrival coordinator. Presentation callers use arrival handles.

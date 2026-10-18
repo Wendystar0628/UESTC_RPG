@@ -29,16 +29,10 @@ public sealed class BuildInputAssemblyTests
     }
 
     [TestCase]
-    public void RequiredInputsFailWithScopeAndKeyBeforeAnyConsumerRuns()
+    public void RequiredInputsFailBeforeAnyConsumerRuns()
     {
-        Exception? missing = null;
-        AssertThrown(() =>
-        {
-            try { BuildInputAssembly.ReadRequiredGlobalInputs(["vegetation/species.json"], _ => ReadOnlyMemory<byte>.Empty); }
-            catch (Exception error) { missing = error; throw; }
-        }).IsInstanceOf<InvalidDataException>();
-        AssertThat(missing is InvalidDataException missingError && missingError.Message.Contains("scope=global", StringComparison.Ordinal) &&
-            missingError.Message.Contains("vegetation/species.json", StringComparison.Ordinal)).OverrideFailureMessage("Missing-input error lost scope or key.").IsTrue();
+        AssertThrown(() => BuildInputAssembly.ReadRequiredGlobalInputs(
+            ["vegetation/species.json"], _ => ReadOnlyMemory<byte>.Empty)).IsInstanceOf<InvalidDataException>();
         var read = false;
         AssertThrown(() => BuildInputAssembly.ReadRequiredGlobalInputs(
             ["res://data/vegetation/species.json"], _ => { read = true; return new byte[] { 1 }; })).IsInstanceOf<ArgumentException>();

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -28,9 +29,9 @@ public sealed class EntranceTests
             Anchor("t:wing", "wing.east", new(320f, 0f, 8f), 90f));                             // opens into the taller block next door
         var features = new[]
         {
-            Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(100, 0, 40, 16), 4, 15.6f, "research"),
-            Feature("t:low", Rect(200, 0, 40, 16), 4, 13.2f, "teaching"), Feature("t:wing", Rect(300, 0, 20, 16), 3, 10.5f, "teaching"),
-            Feature("t:block", Rect(320, 0, 20, 16), 5, 18f, "teaching"),
+            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 40, 16))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4),
+            WorldFeatureFixture.Create("t:low", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 16))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 13.2f, storeys: 4), WorldFeatureFixture.Create("t:wing", "building", new PolygonGeometry(new PolygonRings(Rect(300, 0, 20, 16))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3),
+            WorldFeatureFixture.Create("t:block", "building", new PolygonGeometry(new PolygonRings(Rect(320, 0, 20, 16))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 18f, storeys: 5),
         };
         var world = World(index, features);
         var set = BuildingSet.For(world, 2u);
@@ -82,7 +83,7 @@ public sealed class EntranceTests
     {
         // WP-14 opens doors only on the facades it generates: a zone pack's Facade or Massing claim takes the door, its
         // landing, canopy and doorway colliders with it (the zone pack builds that door).
-        var features = new[] { Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(200, 0, 40, 16), 4, 15.6f, "research") };
+        var features = new[] { WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 16))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4) };
         var world = World(Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f)), features);
         var module = new BuildingsModule();
         var dorm = BuildingSet.For(world, 2u).Plans.Single(p => p.Key == "t:dorm");
@@ -99,7 +100,7 @@ public sealed class EntranceTests
         // The real campus under every zone pack's claims (the kernel's ledger rebuilt from the content modules): WP-14's
         // authored openings at open anchors remain clear. The library (16b), Xuanbang's clock tower
         // (18b) and, since 18c2, the gym deck are claimed: their doors are the zone packs'.
-        var real = RealCampus();
+        var real = RealMapFixture.Load().World;
         var rctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) };
         var anchored = BuildingSet.For(real, 1u).Plans.SelectMany(p => p.Entrances.Where(e => e.Anchor is not null).Select(e => (Plan: p, Door: e))).ToArray();
         foreach (var (plan, e) in anchored)
@@ -111,15 +112,15 @@ public sealed class EntranceTests
             AssertThat(!walls.Any(w => Blocks(w, centre, (opening.Y0 + opening.Y1) * 0.5f))).OverrideFailureMessage("Expected: " + ($"{e.Anchor} on {plan.Id.Value}: open doorway is clear")).IsTrue();
             if (mine) AssertThat(walls.Any(w => Blocks(w, centre, opening.Y1 + 0.1f))).OverrideFailureMessage("Expected: " + ($"{e.Anchor}: the lintel remains")).IsTrue();
         }
-        foreach (var id in new[] { "lib.main", "xb.clock", "gym.deck" })
-            AssertThat(anchored.Any(x => x.Door.Anchor == id && !BuildingsModule.Unclaimed(rctx, x.Plan))).OverrideFailureMessage("Expected: " + ($"{id}: claimed by its zone pack, WP-14 gives way")).IsTrue();
+        AssertThat(anchored.Any(x => !BuildingsModule.Unclaimed(rctx, x.Plan)))
+            .OverrideFailureMessage("Authored zone entrances give way to their owning pack.").IsTrue();
     }
 
     [TestCase]
     public void AnchorsSetTheDoorHeadAndLogDoorsAlone()
     {
         // contract-34: the anchor's HeadY is the door top (under the next slab); without one the family's door rise stays.
-        var dorm = Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence");
+        var dorm = WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6);
         PlanEntrance? Door(float head, out BuildingPlan plan)
         {
             var (feature, decl) = Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f);
@@ -134,9 +135,9 @@ public sealed class EntranceTests
         AssertThat(MathF.Abs(p2.DoorOf(tall).Y1 - (p2.FloorY(1) - Rules.EntranceRules.SlabDepth)) < 0.01f).OverrideFailureMessage("Expected: " + ("never through the next slab")).IsTrue();
 
         // Doors alone (outside landing on a porch or deck) are logged with the package expected to build what they open onto.
-        var lab = Feature("t:lab", Rect(100, 0, 40, 16), 4, 15.6f, "research") with { Zone = new ZoneId("north") };
+        var lab = WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 40, 16))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4) with { Zone = new ZoneId("north") };
         var porch = Entrances(Anchor("t:lab", "lab.porch", new(112f, 1.2f, 0f), 0f, outsideY: 1.2f));
-        var deck = Feature("t:deck", Rect(100, -6, 40, 6), 1, 1.2f, "service");
+        var deck = WorldFeatureFixture.Create("t:deck", "building", new PolygonGeometry(new PolygonRings(Rect(100, -6, 40, 6))), props: "{\"category\":\"service\"}", source: FeatureSource.Osm, height: 1.2f, storeys: 1);
         string Log(FakeWorld w, Func<FeatureId, Aspects, WpId?> claims)
         {
             var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = w, Map = TestMap, WorldSeed = 2u, ClaimedBy = claims };
@@ -160,7 +161,7 @@ public sealed class EntranceTests
     {
         // The ground south of the dorm (z < -1) lies 0.9 m below its pad; the lab stands on level ground (WLD-TERRAIN).
         var world = World(Entrances(Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f, outsideY: -0.9f)),
-            Falling(-1f, 0.9f), Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(100, 20, 40, 16), 4, 15.6f, "research"));
+            Falling(-1f, 0.9f), WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(100, 20, 40, 16))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4));
         var set = BuildingSet.For(world, 2u);
         var dorm = set.Plans.Single(p => p.Key == "t:dorm");
         var steps = EntranceKit.Pieces(dorm, dorm.Entrances.Single());

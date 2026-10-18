@@ -6,11 +6,7 @@ namespace Campus.Gen.Collision;
 /// <summary>Pure CPU collision preparation. All coordinates supplied here are world metres.</summary>
 public static class CollisionGeometry
 {
-    public const float TileSize = 64f;
     public const int MaxShapesPerBody = 250;
-
-    public static TileKey TileAt(Vector3 position) => new((int)MathF.Floor(position.X / TileSize), (int)MathF.Floor(position.Z / TileSize));
-    public static Vector3 Origin(TileKey tile) => new(tile.X * TileSize, 0, tile.Z * TileSize);
 
     public static IReadOnlyList<IReadOnlyList<Collider>> BodyBatches(IEnumerable<Collider> colliders) => colliders
         .GroupBy(c => (c.Tag, c.Foot)).OrderBy(g => (int)g.Key.Tag).ThenBy(g => (int)g.Key.Foot)
@@ -53,7 +49,8 @@ public static class CollisionGeometry
 
     public static IReadOnlyList<Collider> Localize(IEnumerable<Collider> worldColliders, TileKey tile)
     {
-        var translation = Matrix4x4.CreateTranslation(-Origin(tile));
+        var origin = TileGrid.Origin(tile);
+        var translation = Matrix4x4.CreateTranslation(-origin.X, 0, -origin.Y);
         var result = new List<Collider>();
         foreach (var source in worldColliders)
         {
@@ -68,9 +65,9 @@ public static class CollisionGeometry
     public static bool IntersectsTile(Collider collider, TileKey tile)
     {
         var bounds = Bounds(collider);
-        var origin = Origin(tile);
-        return bounds.Max.X >= origin.X && bounds.Min.X <= origin.X + TileSize &&
-            bounds.Max.Z >= origin.Z && bounds.Min.Z <= origin.Z + TileSize;
+        var origin = TileGrid.Origin(tile);
+        return bounds.Max.X >= origin.X && bounds.Min.X <= origin.X + TileGrid.BaseEdge &&
+            bounds.Max.Z >= origin.Y && bounds.Min.Z <= origin.Y + TileGrid.BaseEdge;
     }
 
     public static Box3 Bounds(Collider collider)
@@ -83,7 +80,11 @@ public static class CollisionGeometry
             RampCollider r => new[] { r.P0, r.P1, r.P2, r.P3, r.P0 - Vector3.UnitY * r.Thick, r.P1 - Vector3.UnitY * r.Thick, r.P2 - Vector3.UnitY * r.Thick, r.P3 - Vector3.UnitY * r.Thick },
             SlabCollider s => s.Ring.SelectMany(p => new[] { new Vector3(p.X, s.Y, p.Y), new Vector3(p.X, s.Y - s.Thick, p.Y) }),
             BoxCollider b => Enumerable.Range(0, 8).Select(i => Vector3.Transform(new Vector3((i & 1) == 0 ? -b.Half.X : b.Half.X, (i & 2) == 0 ? -b.Half.Y : b.Half.Y, (i & 4) == 0 ? -b.Half.Z : b.Half.Z), b.At)),
-            HeightFieldCollider h => new[] { Origin(h.Tile), Origin(h.Tile) + new Vector3(TileSize, 0, TileSize) },
+            HeightFieldCollider h => new[]
+            {
+                new Vector3(TileGrid.Origin(h.Tile).X, 0, TileGrid.Origin(h.Tile).Y),
+                new Vector3(TileGrid.Origin(h.Tile).X + TileGrid.BaseEdge, 0, TileGrid.Origin(h.Tile).Y + TileGrid.BaseEdge)
+            },
             _ => throw new NotSupportedException(collider.GetType().Name),
         };
         var min = new Vector3(float.PositiveInfinity); var max = new Vector3(float.NegativeInfinity);

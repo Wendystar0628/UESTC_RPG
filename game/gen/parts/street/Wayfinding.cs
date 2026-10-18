@@ -222,7 +222,7 @@ public sealed class KerbRampPart : IPartDef<RampParams>
         if (!near) return b.Finish(Bounds(p));
         // The tactile strip across the foot, on the slope, 3 mm proud.
         var slope = (h - lip) / p.Depth;
-        var n = Xf.Unit(new(0, 1, -slope));
+        var n = VectorMath.Unit(new Vector3(0, 1, -slope));
         Vector3 On(float x, float z) => new Vector3(x, lip + (z + hz) * slope, z) + n * 0.003f;
         var z0 = -hz + 0.05f; var z1 = z0 + S.TactileDepth;
         b.Add(PartShapes.FlatQuad(On(-hx + 0.08f, z0), On(-hx + 0.08f, z1), On(hx - 0.08f, z1), On(hx - 0.08f, z0), n, Lettering.Print(S.Board(S.TactileYellow))), VertexFlag.NoShadow);

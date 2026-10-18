@@ -119,7 +119,7 @@ public sealed class HeroGuardTests
 
     private static ColorScript Script(bool guardOff)
     {
-        var keys = Path.Combine(RepositoryRoot(), "game", "style", "palette", "keys");
+        var keys = Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette", "keys");
         byte[] Read(string name) => File.ReadAllBytes(Path.Combine(keys, name));
         var derive = Read("derive.json");
         if (guardOff)
@@ -132,13 +132,5 @@ public sealed class HeroGuardTests
     }
 
     private static JsonNode DeriveNode() =>
-        JsonNode.Parse(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "game", "style", "palette", "keys", "derive.json")))!;
-
-    private static string RepositoryRoot()
-    {
-        if (Environment.GetEnvironmentVariable("UESTC_REPOSITORY") is { Length: > 0 } root) return root;
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "game", "style", "palette", "core.json"))) return directory.FullName;
-        throw new InvalidOperationException("Repository root not found.");
-    }
+        JsonNode.Parse(File.ReadAllBytes(Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette", "keys", "derive.json")))!;
 }

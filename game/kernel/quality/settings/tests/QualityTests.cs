@@ -66,13 +66,5 @@ public sealed class QualityTests
         if (state.Effective.StepRate != 12) throw new InvalidOperationException("Capture must stay at 12 Hz.");
     }
 
-    private static QualityCatalog Catalog()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            var path = Path.Combine(directory.FullName, "game", "data", "quality-presets.json");
-            if (File.Exists(path)) return new(File.ReadAllText(path));
-        }
-        throw new FileNotFoundException("Cannot locate the production quality preset table.");
-    }
+    private static QualityCatalog Catalog() => new(File.ReadAllText(RepositoryFixture.FilePath("game", "data", "quality-presets.json")));
 }

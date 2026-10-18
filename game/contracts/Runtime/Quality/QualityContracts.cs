@@ -28,11 +28,11 @@ public sealed class QualityView
 
     public QualityView(long version, QualityPreset preset,
         IReadOnlyList<float> effective, IReadOnlyList<float>? requested = null,
-        int stepRate = 12)
+        int stepRate = WorldTime.DefaultStepRate)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(version);
         if (!Enum.IsDefined(preset)) throw new ArgumentOutOfRangeException(nameof(preset));
-        if (stepRate is not (12 or 15)) throw new ArgumentOutOfRangeException(nameof(stepRate));
+        if (!WorldTime.IsStepRate(stepRate)) throw new ArgumentOutOfRangeException(nameof(stepRate));
         ArgumentNullException.ThrowIfNull(effective);
         _effective = Copy(effective, nameof(effective));
         _requested = Copy(requested ?? effective, nameof(requested));

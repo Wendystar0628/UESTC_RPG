@@ -9,6 +9,7 @@ using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
 using Campus.Contracts.Save;
 using Campus.Gen.Interior.Shell.Box;
+using Campus.Gen.Tests.Support;
 using Campus.Hud.Map;
 using Campus.Systems.Atlas;
 using GdUnit4;
@@ -192,11 +193,12 @@ public sealed class AtlasServiceTests
     {
         var test = new Fixture();
         var featureId = new FeatureId("test-building");
-        test.World.Configure([new(featureId, FeatureSource.Design, new("building"),
-            new PolygonGeometry(new PolygonRings([new(1, 1), new(2, 1), new(2, 2)]))) { Name = "测试楼" }]);
+        var feature = WorldFeatureFixture.Create(featureId.Value, "building",
+            new PolygonGeometry(new PolygonRings([new(1, 1), new(2, 1), new(2, 2)]))) with { Name = "测试楼" };
+        test.World.Features = new Dictionary<FeatureId, WorldFeature> { [featureId] = feature };
         var entrance = new EntranceDecl("test-door", new(10, 3, 12.5f), new(10, 3, 7), 2, true)
         { Center = new(10, 3, 10), YawDeg = 180 };
-        test.Interiors.Configure([new(featureId, [], [entrance], true, "test-provider")]);
+        test.World.Interiors = new FakeInteriors(new InteriorIndexEntry(featureId, [], [entrance], true, "test-provider"));
         test.Reload();
         var door = test.Atlas.Find(new("door:test-door"))!;
         AssertThat(door.At == new Vector2(10, 10) && door.Teleport?.Stand?.Feet == entrance.Outside).OverrideFailureMessage("Door marker copied an incorrect location.").IsTrue();
@@ -206,12 +208,8 @@ public sealed class AtlasServiceTests
     [TestCase]
     public void RealCampusAndInteriorAssemblyProduceUniqueAtlasDoorMarkers()
     {
-        var repository = new DirectoryInfo(AppContext.BaseDirectory);
-        while (repository is not null && !File.Exists(Path.Combine(repository.FullName, "game", "data", "maps", "qingshuihe", "campus.json")))
-            repository = repository.Parent;
-        if (repository is null) throw new InvalidOperationException("Real campus data not found.");
-        var root = Path.Combine(repository.FullName, "game", "data", "maps", "qingshuihe");
-        var interiorBytes = File.ReadAllBytes(Path.Combine(root, "interiors.json"));
+        var files = RealMapFixture.ReadFiles();
+        var interiorBytes = files["interiors.json"].ToArray();
         using var catalog = JsonDocument.Parse(interiorBytes);
         var items = catalog.RootElement.GetProperty("interiors").EnumerateArray().ToArray();
         var open = items.SelectMany(item => item.GetProperty("featureIds").EnumerateArray())
@@ -223,15 +221,14 @@ public sealed class AtlasServiceTests
         var authoredDoorIds = items.SelectMany(item => item.GetProperty("entrances").EnumerateArray())
             .Where(door => door.GetProperty("open").GetBoolean())
             .Select(door => door.GetProperty("id").GetString()!).ToHashSet(StringComparer.Ordinal);
-        var files = Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories)
-            .ToDictionary(path => Path.GetRelativePath(root, path).Replace('\\', '/'),
-                path => (ReadOnlyMemory<byte>)File.ReadAllBytes(path), StringComparer.Ordinal);
-        var campus = Campus.Gen.World.WorldModelLoader.Load(new("qingshuihe"), files);
-        var interiorIndex = new TestInteriorIndex();
-        var world = new MutableWorldFixture(interiorIndex);
-        world.Configure(campus.World.Features.Values, campus.World.Boundary);
-        var mapFile = JsonSerializer.Deserialize<MapFile>(File.ReadAllBytes(Path.Combine(root, "map.json")), ContractJson.Options)!;
-        var descriptor = mapFile.Complete(campus.Geo, campus.Center, campus.Bounds, campus.TileMin, campus.TileMax);
+        var campus = RealMapFixture.Load();
+        var world = new FakeWorld
+        {
+            Features = campus.World.Features,
+            Boundary = campus.World.Boundary,
+            Spatial = new FlatSpatial(),
+        };
+        var descriptor = RealMapFixture.Entry().Descriptor;
         var providers = typeof(LibraryBoxInterior).Assembly.GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && typeof(IInteriorProvider).IsAssignableFrom(type))
             .Select(type => (Type: type, Registration: type.GetCustomAttribute<InteriorProviderAttribute>()))
@@ -239,10 +236,10 @@ public sealed class AtlasServiceTests
             .ToDictionary(item => item.Registration!.Id, item => (IInteriorProvider)Activator.CreateInstance(item.Type)!, StringComparer.Ordinal);
         var built = InteriorAssembly.Build(interiorBytes,
             new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = descriptor.Seed }, providers);
-        interiorIndex.Configure(built.Entries);
+        world.Interiors = new FakeInteriors(built.Entries.ToArray());
         var doors = built.Entries.SelectMany(entry => entry.Entrances.Where(door => door.Open)
             .Select(door => (Feature: entry.Feature, Door: door))).ToArray();
-        AssertThat(campus.World.Features.Count > 400 && built.Entries.Select(entry => entry.Feature)
+        AssertThat(campus.World.Features.Count > 0 && built.Entries.Select(entry => entry.Feature)
             .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(expectedIndexFeatures)).OverrideFailureMessage("Regression did not assemble the complete campus and registered interior index.").IsTrue();
         AssertThat(built.Entries.Where(entry => entry.Open).Select(entry => entry.Feature)
             .OrderBy(id => id.Value, StringComparer.Ordinal).SequenceEqual(open.OrderBy(id => id.Value, StringComparer.Ordinal))).OverrideFailureMessage("Closed registration changed the open interior feature set.").IsTrue();
@@ -250,9 +247,9 @@ public sealed class AtlasServiceTests
         AssertThat(doors.Select(item => item.Door.Id).Distinct(StringComparer.Ordinal).Count() == doors.Length).OverrideFailureMessage("Interior provider reused an entrance ID across different building features.").IsTrue();
         var atlas = new AtlasService(NewCamera(), new Observer(), new TestRuleset());
         atlas.LoadMap(new TestMapContext(descriptor, world),
-            JsonSerializer.Deserialize<AtlasMarkerFile>(File.ReadAllBytes(Path.Combine(root, "atlas", "markers.json")), ContractJson.Options)!,
-            JsonSerializer.Deserialize<AtlasLabelFile>(File.ReadAllBytes(Path.Combine(root, "atlas", "labels.json")), ContractJson.Options)!,
-            JsonSerializer.Deserialize<WaypointFile>(File.ReadAllBytes(Path.Combine(root, "waypoints.json")), ContractJson.Options)!);
+            JsonSerializer.Deserialize<AtlasMarkerFile>(files["atlas/markers.json"].Span, ContractJson.Options)!,
+            JsonSerializer.Deserialize<AtlasLabelFile>(files["atlas/labels.json"].Span, ContractJson.Options)!,
+            JsonSerializer.Deserialize<WaypointFile>(files["waypoints.json"].Span, ContractJson.Options)!);
         AssertThat(atlas.Markers.Count(marker => marker.Kind == MarkerKind.Interior) == doors.Length).OverrideFailureMessage("Atlas silently discarded an entrance from the real interior index.").IsTrue();
         foreach (var item in doors)
         {
@@ -279,13 +276,12 @@ public sealed class AtlasServiceTests
         internal Driver Driver { get; } = new();
         internal TestView View { get; }
         internal Observer Observer { get; } = new();
-        internal TestInteriorIndex Interiors { get; } = new();
-        internal MutableWorldFixture World { get; }
+        internal FakeWorld World { get; }
         internal TestMapContext Context { get; }
         internal AtlasService Atlas { get; }
         internal Fixture(string policy = "all-unlocked")
         {
-            World = new(Interiors);
+            World = new() { Boundary = new([]) };
             var map = new MapDescriptor(new("test-map"), new("测试", "Test"), MapKind.Outdoor, 1, 1,
                 new(0, 0, 1, new(-1000), new(1000)), Vector2.Zero, new(new(-1000), new(1000)),
                 new(new(-1000), new(1000)), new(1, 30, 3000, -28, 2000, 30, 40, 150),

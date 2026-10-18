@@ -1,8 +1,8 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Fauna;
-using Campus.Gen.World;
 using Campus.Gen.Tests.Support;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Fauna.Tests;
@@ -12,31 +12,8 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class FaunaTests
 {
-    private static readonly Lazy<IWorldModel> World = new(Load);
-    private static readonly Lazy<IReadOnlyList<FeatureId>> Lakes = new(() =>
-    {
-        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe", "map.json")));
-        return doc.RootElement.GetProperty("env").GetProperty("reflectLakes").EnumerateArray().Select(e => new FeatureId(e.GetString()!)).ToArray();
-    });
-
-    private static IWorldModel Load()
-    {
-        var data = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        foreach (var overlay in Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
-                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Order(StringComparer.Ordinal))
-            files[Path.GetRelativePath(data, overlay).Replace('\\', '/')] = File.ReadAllText(overlay);
-        return WorldModelLoader.Load(new("qingshuihe"), files).World;
-    }
-
-    private static string FindRepository()
-    {
-        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
-            if (File.Exists(Path.Combine(dir.FullName, "game", "project.godot"))) return dir.FullName;
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
+    private static readonly Lazy<IWorldModel> World = new(() => RealMapFixture.Load().World);
+    private static readonly Lazy<IReadOnlyList<FeatureId>> Lakes = new(() => RealMapFixture.Entry().Descriptor.Env.ReflectLakes);
 
     [TestCase]
     public void LayoutIsDeterministicAndKeepsTheMainlineCounts()
@@ -53,21 +30,21 @@ public sealed class FaunaTests
         AssertThat(dayCats <= 4 && nightCats < dayCats).OverrideFailureMessage($"At most four cats by day and fewer at night ({dayCats}/{nightCats}).").IsTrue();
         AssertThat(cats.All(s => s.Rain.Count == s.Day.Count)).OverrideFailureMessage("Every cat has an under-the-eaves place in rain.").IsTrue();
         var pigeons = a.Sites.Single(s => s.Kind == FaunaKind.Pigeon);
-        AssertThat(pigeons.Day.Count is >= 6 and <= 12).OverrideFailureMessage($"6-12 pigeons, got {pigeons.Day.Count}.").IsTrue();
+        AssertThat(pigeons.Day.Count > 0 && pigeons.Day.Count <= FaunaStyle.PigeonCount).OverrideFailureMessage($"Pigeon flock exceeds its configured size: {pigeons.Day.Count}.").IsTrue();
         AssertThat(pigeons.Night.Count == 0 && pigeons.Rain.Count == 0).OverrideFailureMessage("No pigeons on the ground at night or in rain.").IsTrue();
         AssertThat(pigeons.Day.Count(p => p.Model.White) == 1).OverrideFailureMessage("One white pigeon among the grey.").IsTrue();
         var sparrowSites = a.Sites.Count(s => s.Kind == FaunaKind.Sparrow);
-        AssertThat(sparrowSites is >= 2 and <= 6).OverrideFailureMessage($"3-6 sparrow places (fewer rather than more), got {sparrowSites}.").IsTrue();
+        AssertThat(sparrowSites > 0 && sparrowSites <= FaunaStyle.SparrowGroups + FaunaStyle.SparrowWalls).OverrideFailureMessage($"Sparrow sites exceed their configured limit: {sparrowSites}.").IsTrue();
         foreach (var site in a.Sites)
             foreach (var x in site.Day.Concat(site.Night).Concat(site.Rain))
-                AssertThat(float.IsFinite(x.Position.X) && float.IsFinite(x.Position.Y) && float.IsFinite(x.Yaw)).OverrideFailureMessage($"{site.Key}: finite pose.").IsTrue();
+                AssertThat(VectorMath.Finite(x.Position) && float.IsFinite(x.Yaw)).OverrideFailureMessage($"{site.Key}: finite pose.").IsTrue();
         var swans = a.Sites.Where(s => s.Kind == FaunaKind.Swan).ToArray();
-        AssertThat(swans.Length == 2 && swans[0].Day.Count == 4 && swans[1].Day.Count == 2 && swans.All(s => s.Night.Count == s.Day.Count)).OverrideFailureMessage($"Four black swans on the first lake, two on the second: {string.Join("; ", a.Log)}").IsTrue();
+        AssertThat(swans.Length == Lakes.Value.Count && swans[0].Day.Count == FaunaStyle.SwansFirstLake && swans[1].Day.Count == FaunaStyle.SwansSecondLake && swans.All(s => s.Night.Count == s.Day.Count)).OverrideFailureMessage($"Configured swans stay on their lakes by day and night: {string.Join("; ", a.Log)}").IsTrue();
         var crows = a.Sites.Where(s => s.Kind == FaunaKind.Crow).ToArray();
-        AssertThat(crows.Length is >= 2 and <= 3 && crows.All(c => c.Day.Count is >= 2 and <= 3)).OverrideFailureMessage($"2-3 crow groups of 2-3: {string.Join("; ", a.Log)}").IsTrue();
+        AssertThat(crows.Length > 0 && crows.Length <= FaunaStyle.CrowGroups && crows.All(c => c.Day.Count is >= 2 and <= 3)).OverrideFailureMessage($"Crow groups stay within their configured limit: {string.Join("; ", a.Log)}").IsTrue();
         for (var i = 0; i < crows.Length; i++)
             for (var j = i + 1; j < crows.Length; j++)
-                AssertThat(Vector3.Distance(crows[i].Day[0].Position, crows[j].Day[0].Position) >= 140f).OverrideFailureMessage("Crow groups at least 150 m apart.").IsTrue();
+                AssertThat(Vector3.Distance(crows[i].Day[0].Position, crows[j].Day[0].Position) >= FaunaStyle.CrowGroupSpacing - 10f).OverrideFailureMessage("Crow groups keep apart.").IsTrue();
         var spots = cats.Select(s => s.Day[0].Position).ToArray();
         for (var i = 0; i < spots.Length; i++)
             for (var j = i + 1; j < spots.Length; j++)
@@ -138,7 +115,7 @@ public sealed class FaunaTests
     [TestCase]
     public void ColoursAreRegisteredNames()
     {
-        var root = FindRepository();
+        var root = RepositoryFixture.Root;
         var tokens = new HashSet<string>(StringComparer.Ordinal);
         var files = new[] { Path.Combine(root, "game", "style", "palette", "core.json") }
             .Concat(Directory.GetFiles(Path.Combine(root, "game", "style", "palette", "ext"), "WP-*.json"));

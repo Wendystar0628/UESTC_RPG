@@ -20,9 +20,6 @@ public readonly record struct WindowBlock(FeatureId Feature, string Key, int Bas
 /// </summary>
 public sealed class BuildingSet
 {
-    /// <summary>Campus window numbers stay below this (window_override is 256 × 256); outskirts use their own range above it.</summary>
-    public const int CampusWindowLimit = 65536;
-
     private static readonly ConditionalWeakTable<IWorldModel, Dictionary<uint, BuildingSet>> Cache = new();
     private static readonly object Sync = new();
 

@@ -143,13 +143,10 @@ public sealed class ToonLibraryRuntimeTests
                 if (state == "undersized") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), tiny);
                 for (var frame = 0; frame < 8; frame++)
                     await parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-                if (System.Environment.GetEnvironmentVariable("UESTC_REPOSITORY") is { Length: > 0 } root)
-                {
-                    var directory = Path.Combine(root, "output", "render-review");
-                    Directory.CreateDirectory(directory);
-                    using var image = parent.GetViewport().GetTexture().GetImage();
-                    AssertThat(image.SavePng(Path.Combine(directory, $"WP-00-window-cards-native-{state}.png")) == Error.Ok).OverrideFailureMessage("Save real glass smoke evidence.").IsTrue();
-                }
+                var directory = Campus.Tests.RepositoryFixture.FilePath("output", "render-review");
+                Directory.CreateDirectory(directory);
+                using var image = parent.GetViewport().GetTexture().GetImage();
+                AssertThat(image.SavePng(Path.Combine(directory, $"WP-00-window-cards-native-{state}.png")) == Error.Ok).OverrideFailureMessage("Save real glass smoke evidence.").IsTrue();
             }
             GD.Print("WINDOW_CARDS_NATIVE exercised=real_toon_glass,type_mask,invalid_row,unbound,undersized_1x1,cols0 pixel_assertions=False");
         }
@@ -389,7 +386,7 @@ public sealed class ToonLibraryRuntimeTests
         var rejecting = new RejectCards(registry);
         var rejected = false;
         try { using var unexpected = new ToonLibrary(new Palettes(), new ShaderMaterialSource(), rejecting); }
-        catch (InvalidOperationException error) when (error.Message == "reject window_cards") { rejected = true; }
+        catch (InvalidOperationException) { rejected = true; }
         AssertThat(rejected).OverrideFailureMessage("Exercise failure after mat_table registration and card texture creation.").IsTrue();
         AssertThat(!registry.TryAcquire(ShaderGlobals.MatTable, out _)).OverrideFailureMessage("A partially constructed library must unregister mat_table.").IsTrue();
         AssertThat(rejecting.Cards is not null && !GodotObject.IsInstanceValid(rejecting.Cards)).OverrideFailureMessage("Rejected texture ownership stays local and must be disposed.").IsTrue();

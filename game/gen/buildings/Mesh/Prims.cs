@@ -1,3 +1,5 @@
+using Campus.Gen.Geometry;
+using Campus.Contracts;
 using System.Numerics;
 using Campus.Gen.Buildings.Plan;
 
@@ -24,8 +26,7 @@ public sealed class Profile
         {
             var ds = points[i + 1].S - points[i].S;
             var dy = points[i + 1].Y - points[i].Y;
-            var len = MathF.Sqrt(ds * ds + dy * dy);
-            seg[i] = len > 1e-6f ? new Vector2(dy / len, -ds / len) : Vector2.UnitX;
+            seg[i] = VectorMath.Unit(new Vector2(dy, -ds), Vector2.UnitX, 1e-6f);
         }
         SegmentNormal = seg;
     }
@@ -102,7 +103,7 @@ public static class Prims
         for (var i = 0; i < ring.Count; i++) perim[i + 1] = perim[i] + ring.Length[i];
         var vAcc = new float[pts.Count];
         for (var j = 1; j < pts.Count; j++)
-            vAcc[j] = vAcc[j - 1] + MathF.Sqrt(Sq(pts[j].S - pts[j - 1].S) + Sq(pts[j].Y - pts[j - 1].Y));
+            vAcc[j] = vAcc[j - 1] + Vector2.Distance(new(pts[j].S, pts[j].Y), new(pts[j - 1].S, pts[j - 1].Y));
         for (var j = 0; j + 1 < pts.Count; j++)
         {
             var p0 = pts[j];
@@ -182,8 +183,8 @@ public static class Prims
     /// <summary>Horizontal cap over the ring outline at offset s (with chamfers), facing up or down; holes optional.</summary>
     public static void Cap(MeshSink sink, in Face face, PlanRing outer, IReadOnlyList<PlanRing> holes, float s, float c, float y, bool up)
     {
-        var o = Dedup(Outline(outer, s, c));
-        var hs = holes.Select(h => (IReadOnlyList<Vector2>)Dedup(Outline(h, s, c))).ToArray();
+        var o = PlanGeometry.DeduplicateRing(Outline(outer, s, c));
+        var hs = holes.Select(h => (IReadOnlyList<Vector2>)PlanGeometry.DeduplicateRing(Outline(h, s, c))).ToArray();
         CapPoints(sink, face, o, hs, y, up);
     }
 
@@ -216,19 +217,9 @@ public static class Prims
         }
     }
 
-    public static Vector2[] Dedup(Vector2[] o)
-    {
-        var list = new List<Vector2>(o.Length);
-        foreach (var p in o)
-            if (list.Count == 0 || Vector2.DistanceSquared(list[^1], p) > 1e-8f) list.Add(p);
-        while (list.Count > 1 && Vector2.DistanceSquared(list[0], list[^1]) <= 1e-8f) list.RemoveAt(list.Count - 1);
-        return [.. list];
-    }
-
     private static Vector3 N(Vector2 plan, Vector2 section) =>
         new Vector3(plan.X * section.X, section.Y, plan.Y * section.X);
 
-    private static float Sq(float x) => x * x;
 }
 
 /// <summary>

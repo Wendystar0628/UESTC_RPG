@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Gen.Tests.Support;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
@@ -110,15 +110,15 @@ public sealed class GroundPavingTests
     {
         public static FakeWorld Library(string category, float yaw, Func<float, FidelityZone>? zone = null, bool side = false)
         {
-            var building = Feature("fixture:hall", "building", Rect(-20f, -15f, 0f, 15f),
-                $$"""{"kind":"building","category":"{{category}}"}""");
+            var building = WorldFeatureFixture.Create("fixture:hall", "building", new PolygonGeometry(Rect(-20f, -15f, 0f, 15f)),
+                $$"""{"kind":"building","category":"{{category}}"}""", FeatureSource.Osm, height: 20f);
             const string pedestrian = """{"kind":"road","roadType":"pedestrian"}""";
             var features = new List<WorldFeature>
             {
                 building,
-                Feature("fixture:forecourt", "road", Rect(10f, -20f, 60f, 20f), pedestrian),
-                Feature("fixture:place", "road", Rect(30f, -5f, 40f, 5f), pedestrian),
-                Feature("fixture:neighbour", "road", Rect(10f, 30f, 60f, 50f), pedestrian),
+                WorldFeatureFixture.Create("fixture:forecourt", "road", new PolygonGeometry(Rect(10f, -20f, 60f, 20f)), pedestrian, FeatureSource.Osm),
+                WorldFeatureFixture.Create("fixture:place", "road", new PolygonGeometry(Rect(30f, -5f, 40f, 5f)), pedestrian, FeatureSource.Osm),
+                WorldFeatureFixture.Create("fixture:neighbour", "road", new PolygonGeometry(Rect(10f, 30f, 60f, 50f)), pedestrian, FeatureSource.Osm),
             };
             var entrances = new List<EntranceDecl> { Entrance("hall.main", Door, yaw) };
             if (side) entrances.Add(Entrance("hall.side", new(20f, -25f), 180f));   // faces south across the forecourt (40 m run)
@@ -137,12 +137,5 @@ public sealed class GroundPavingTests
         private static PolygonRings Rect(float x0, float z0, float x1, float z1) =>
             new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]);
 
-        private static WorldFeature Feature(string id, string kind, PolygonRings rings, string props) =>
-            new(new FeatureId(id), FeatureSource.Osm, new DesignKind(kind), new PolygonGeometry(rings))
-            {
-                Bounds = new Box3(new(rings.Outer.Min(p => p.X), 0f, rings.Outer.Min(p => p.Y)),
-                    new(rings.Outer.Max(p => p.X), kind == "building" ? 20f : 0f, rings.Outer.Max(p => p.Y))),
-                Props = JsonDocument.Parse(props).RootElement.Clone()
-            };
     }
 }

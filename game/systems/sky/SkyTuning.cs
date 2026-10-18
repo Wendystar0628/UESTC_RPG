@@ -15,7 +15,6 @@ public static class SkyTuning
 
     /// <summary>g(anim_time): a slow closed loop, so clouds still breathe while the clock is paused (ART-SKYLIGHT).</summary>
     public const double AnimLoopRadiusMeters = 150.0;
-    public const double AnimLoopSeconds = 480.0;
 
     /// <summary>Sky-looking cover → cloud-plane coverage: plane = cover^gamma (0.1 → 0.03, 0.32 → 0.18, 1 → 1).</summary>
     public const float PlaneCoverageGamma = 1.5f;

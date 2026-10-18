@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Gen.World;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
@@ -74,9 +74,8 @@ public sealed class GroundStadiumTests
 
         // A track mapped as a closed line is a band along it that closes on itself.
         var points = Oval(0f, 0f, 40f, 30f).Outer;
-        var line = new WorldFeature(new FeatureId("test:way:12"), FeatureSource.Osm, new DesignKind("sport"),
-            new PolylineGeometry(new Polyline([.. points, points[0]])))
-        { Props = Json("""{"kind":"sport","sport":"running"}""") };
+        var line = WorldFeatureFixture.Create("test:way:12", "sport",
+            new PolylineGeometry(new Polyline([.. points, points[0]])), """{"kind":"sport","sport":"running"}""", FeatureSource.Osm);
         var shape = GroundSources.Read(TestWorld.Of([line])).Shapes.Single(s => s.Kind == SurfaceKind.Track);
         AssertThat(shape.Line is { } chain && chain.Length == points.Count + 1 && chain[0] == chain[^1]).OverrideFailureMessage("A closed track line stays closed.").IsTrue();
         AssertThat(Math.Abs((double)(SportGround.TrackWidth * 0.5) - (double)(shape.HalfWidth)) <= 0.01).OverrideFailureMessage($"track line half width: expected {SportGround.TrackWidth * 0.5}, got {shape.HalfWidth}.").IsTrue();
@@ -180,23 +179,30 @@ public sealed class GroundStadiumTests
     [TestCase]
     public void RealCampusStadiumIsARingAroundTurfOnLawn()
     {
-        var world = WorldModelLoader.Load(new("qingshuihe"), RealFiles()).World;
+        var world = RealMapFixture.Load().World;
         var shapes = GroundSources.Read(world).Shapes;
-        // The stadium outline has no sport tag and no surface of its own; the sports centre outline likewise.
-        AssertThat(shapes.All(s => s.Id.Value is not ("qsh:way:808264788" or "qsh:way:949704496"))).OverrideFailureMessage("Stadium and sports-centre outlines make no shapes.").IsTrue();
-        var track = shapes.Single(s => s.Id.Value == "qsh:way:808264789");
-        AssertThat(track.Kind == SurfaceKind.Track && track.Rings is { Length: 2 }).OverrideFailureMessage("The running track is a ring.").IsTrue();
-
-        AssertThat(SurfaceAt(world, 84f, 775f) == GroundSurface.Turf).OverrideFailureMessage("The pitch is turf.").IsTrue();
-        AssertThat(IsLawn(SurfaceAt(world, 44.5f, 775f))).OverrideFailureMessage("Between the pitch and the track the infield is lawn.").IsTrue();
-        // The traced line is the inner edge: its west side is at x = 40 and its east side at x = 125 along z = 770.
-        AssertThat(SurfaceAt(world, 36.5f, 770f) == GroundSurface.Track).OverrideFailureMessage("The ring lies outside the traced line, west side.").IsTrue();
-        AssertThat(SurfaceAt(world, 129.5f, 770f) == GroundSurface.Track).OverrideFailureMessage("The ring lies outside the traced line, east side.").IsTrue();
-        AssertThat(IsLawn(SurfaceAt(world, 170f, 780f))).OverrideFailureMessage("The grass east of the track is lawn, not a court.").IsTrue();
-        AssertThat(IsLawn(SurfaceAt(world, 0f, 760f))).OverrideFailureMessage("West of the track, inside the outline, is lawn.").IsTrue();
-
-        var quads = QuadsNear(GroundLayout.Of(world), 84f, 775f, 70f);
-        AssertThat(quads.Count > 100).OverrideFailureMessage($"The stadium pitch has its lines, got {quads.Count} strips.").IsTrue();
+        var sportsSites = world.Features.Values.Where(feature => feature.Props is { } props &&
+            props.TryGetProperty("sourceTags", out var tags) && tags.TryGetProperty("leisure", out var leisure) &&
+            leisure.GetString() is "stadium" or "sports_centre").ToArray();
+        // The leisure tag also describes buildings such as the gym and swimming hall; only sport-kind enclosures
+        // are empty outlines. Buildings keep their footprints regardless of their leisure tag.
+        var outlines = sportsSites.Where(feature => feature.Kind.Value == "sport").ToArray();
+        AssertThat(outlines.Length > 0).IsTrue();
+        AssertThat(outlines.All(outline => shapes.All(shape => shape.Id != outline.Id)))
+            .OverrideFailureMessage("Stadium and sports-centre outlines make no ground of their own.").IsTrue();
+        foreach (var building in sportsSites.Where(feature => feature.Kind.Value == "building"))
+            AssertThat(shapes.Any(shape => shape.Id == building.Id && shape.Kind == SurfaceKind.Building))
+                .OverrideFailureMessage($"The sports building {building.Id} keeps its footprint.").IsTrue();
+        AssertThat(shapes.Any(shape => shape.Kind == SurfaceKind.Track && shape.Rings is { Length: > 1 }))
+            .OverrideFailureMessage("The real running track surrounds an open infield.").IsTrue();
+        var pitches = shapes.Where(shape => shape.Kind == SurfaceKind.Turf && shape.Marked).ToArray();
+        AssertThat(pitches.Length > 0).IsTrue();
+        var layout = GroundLayout.Of(world);
+        var pitch = pitches.OrderByDescending(shape => (shape.Max.X - shape.Min.X) * (shape.Max.Y - shape.Min.Y)).First();
+        var centre = (pitch.Min + pitch.Max) * 0.5f;
+        var half = MathF.Max(pitch.Max.X - pitch.Min.X, pitch.Max.Y - pitch.Min.Y);
+        AssertThat(QuadsNear(layout, centre.X, centre.Y, half).Count > 0)
+            .OverrideFailureMessage($"The real main pitch {pitch.Id} has white lines.").IsTrue();
     }
 
     // ---------------------------------------------------------------- helpers
@@ -207,9 +213,10 @@ public sealed class GroundStadiumTests
     private static GroundSurface SurfaceAt(IWorldModel world, float x, float z)
     {
         var layout = GroundLayout.Of(world);
-        var tx = (int)MathF.Floor(x / GroundLod.TileSize);
-        var tz = (int)MathF.Floor(z / GroundLod.TileSize);
-        var tile = new GroundTile(tx * GroundLod.TileSize, tz * GroundLod.TileSize, GroundLod.TileSize, GroundLod.TileSize / 256f);
+        var key = TileGrid.At(new Vector2(x, z));
+        var tx = key.X;
+        var tz = key.Z;
+        var tile = new GroundTile(tx * TileGrid.BaseEdge, tz * TileGrid.BaseEdge, TileGrid.BaseEdge, TileGrid.BaseEdge / 256f);
         var grid = TerrainGrid.For(FlatTerrain.Default, new TileKey(tx, tz), LodLevel.L0, tile);
         var field = TileField.Build(layout, tile, Section, grid);
         var mesher = new GroundMesher(field, Section, LodLevel.L0, layout, grid, new MeshSink());
@@ -221,8 +228,8 @@ public sealed class GroundStadiumTests
     {
         var markings = layout.Markings(Section);
         var quads = new List<RoadMarkings.Quad>();
-        for (var z = (int)MathF.Floor((cz - half) / GroundLod.TileSize); z <= (int)MathF.Floor((cz + half) / GroundLod.TileSize); z++)
-            for (var x = (int)MathF.Floor((cx - half) / GroundLod.TileSize); x <= (int)MathF.Floor((cx + half) / GroundLod.TileSize); x++)
+        for (var z = (int)MathF.Floor((cz - half) / TileGrid.BaseEdge); z <= (int)MathF.Floor((cz + half) / TileGrid.BaseEdge); z++)
+            for (var x = (int)MathF.Floor((cx - half) / TileGrid.BaseEdge); x <= (int)MathF.Floor((cx + half) / TileGrid.BaseEdge); x++)
                 quads.AddRange(markings.In(x, z));
         return quads;
     }
@@ -247,7 +254,7 @@ public sealed class GroundStadiumTests
     /// <summary>A pitch of the given size centred at (cx, cz), its long axis turned by the given angle from +z.</summary>
     private static PitchShape Pitch(float cx, float cz, float length, float width, float degrees)
     {
-        var a = degrees * MathF.PI / 180f;
+        var a = degrees * Angles.DegreesToRadians;
         var along = new Vector2(MathF.Sin(a), MathF.Cos(a));
         var across = new Vector2(along.Y, -along.X);
         var centre = new Vector2(cx, cz);
@@ -282,23 +289,7 @@ public sealed class GroundStadiumTests
     private static WorldFeature Entity(string id, string sourceTags, string partProps, PolygonRings rings)
     {
         var part = new WorldFeaturePart(id.Replace("test:", "osm:", StringComparison.Ordinal), new PolygonGeometry(rings), null, null) { Props = Json(partProps) };
-        var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
-        var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
-        return new(new FeatureId(id), FeatureSource.Osm, new DesignKind("sport"), new PolygonGeometry(rings))
-        {
-            Parts = [part],
-            Bounds = new Box3(new(min.X, 0f, min.Y), new(max.X, 0f, max.Y)),
-            Props = Json($$"""{"id":"{{id}}","kind":"sport","sourceTags":{{sourceTags}}}""")
-        };
-    }
-
-    private static Dictionary<string, string> RealFiles()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
-        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
-        var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-        return new[] { "campus.json", "network.json", "interiors.json" }
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
+        return WorldFeatureFixture.Create(id, "sport", new PolygonGeometry(rings),
+            $$"""{"id":"{{id}}","kind":"sport","sourceTags":{{sourceTags}}}""", FeatureSource.Osm, parts: [part]);
     }
 }

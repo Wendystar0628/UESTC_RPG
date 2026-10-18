@@ -209,12 +209,12 @@ vec3 wtr_swell(vec2 p, float t) {
 	vec2 dir1 = vec2(-0.5, 0.866);
 	vec2 dir2 = vec2(0.97, -0.243);
 	vec3 k = 2.0 * PI / WTR_SWELL_LEN;
-	vec3 w = 2.0 * PI * WTR_SWELL_K / 480.0;
+	vec3 w = 2.0 * PI * WTR_SWELL_K / anim_loop_seconds;
 	d += WTR_SWELL_SLOPE.x * cos(k.x * dot(p, dir0) - w.x * t) * dir0;
 	d += WTR_SWELL_SLOPE.y * cos(k.y * dot(p, dir1) - w.y * t + 1.7) * dir1;
 	d += WTR_SWELL_SLOPE.z * cos(k.z * dot(p, dir2) - w.z * t + 4.1) * dir2;
 	vec2 dir3 = vec2(-0.906, -0.423);
-	d += WTR_SWELL_SLOPE.y * cos(2.0 * PI / 11.0 * dot(p, dir3) - 2.0 * PI * 150.0 / 480.0 * t + 0.6) * dir3;
+	d += WTR_SWELL_SLOPE.y * cos(2.0 * PI / 11.0 * dot(p, dir3) - 2.0 * PI * 150.0 / anim_loop_seconds * t + 0.6) * dir3;
 	return normalize(vec3(-d.x, 1.0, -d.y));
 }
 
@@ -449,7 +449,7 @@ void fragment() {
 		// ---- 岸边泡沫线：有断口，线宽随波起伏；外侧再一道断续的细线；冬季更宽更白（§1.4）
 		float winter = clamp(snow, 0.0, 1.0);
 		float fw_m = mix(WTR_FOAM_W, WTR_FOAM_W_WINTER, winter) * (channel ? WTR_FOAM_CHANNEL.x : 1.0);
-		fw_m *= 1.0 + WTR_FOAM_PULSE * sin(2.0 * PI * WTR_FOAM_K / 480.0 * t12 + p.x * 0.9 - p.y * 0.7);
+		fw_m *= 1.0 + WTR_FOAM_PULSE * sin(2.0 * PI * WTR_FOAM_K / anim_loop_seconds * t12 + p.x * 0.9 - p.y * 0.7);
 		float gaps = mix(WTR_FOAM_GAP, WTR_FOAM_GAP * 0.5, winter);
 		float foam = (1.0 - wtr_aa_step(fw_m, d)) * step(gaps, wtr_noise(p * 0.32 + vec2(13.0, 71.0)));
 		float band2 = wtr_aa_step(fw_m * 1.9, d) * (1.0 - wtr_aa_step(fw_m * 1.9 + 0.08, d)) * step(0.52, wtr_noise(p * 1.7 + vec2(5.0, 29.0)));

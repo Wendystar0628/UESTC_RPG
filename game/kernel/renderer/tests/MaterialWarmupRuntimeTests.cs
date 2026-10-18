@@ -1,3 +1,4 @@
+using Campus.Tests;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Instances;
@@ -198,7 +199,7 @@ public sealed class MaterialWarmupRuntimeTests
         }
         public void Capture(string name)
         {
-            if (System.Environment.GetEnvironmentVariable("UESTC_REPOSITORY") is not { Length: > 0 } root) return;
+            var root = RepositoryFixture.Root;
             var destination = Path.Combine(root, "output", "render-review");
             Directory.CreateDirectory(destination);
             using var image = Parent.GetViewport().GetTexture().GetImage();

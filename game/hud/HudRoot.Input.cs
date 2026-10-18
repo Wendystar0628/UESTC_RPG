@@ -93,7 +93,7 @@ public partial class HudRoot
                 _control.Advance(1);
                 _model.Poke();
                 var clock = _model.World.Clock % 24;
-                _toast.Show(UiKit.T("toast.time_forward", ("clock", $"{(int)clock:00}:{(int)(clock % 1 * 60):00}")));
+                _toast.Show(UiKit.T("toast.time_forward", ("clock", WorldTime.FormatClock(clock))));
                 return true;
             case "toggle_flow":
                 if (!_model.Allows(WorldControlMask.Flow)) return false;

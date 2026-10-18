@@ -9,20 +9,22 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
-/// <summary>Requires settled world/weather and a producer-owned content predicate; fixed sleeps cannot satisfy this barrier.</summary>
+/// <summary>Requires the current arrival, settled world/weather and producer content; fixed sleeps cannot satisfy this barrier.</summary>
 public static class CaptureBarrier
 {
-    public static async Task WaitForReadyAsync(Node host, ViewContentReadiness producers, Func<bool> contentReady,
+    public static async Task WaitForReadyAsync(Node host, ViewContentReadiness producers, IMapArrival arrival, Func<bool> contentReady,
         CancellationToken cancellationToken = default, bool includeCanvas = true)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(producers);
+        ArgumentNullException.ThrowIfNull(arrival);
         ArgumentNullException.ThrowIfNull(contentReady);
         var world = Services.Get<IWorldState>();
         var weather = Services.Get<IWeatherProcess>();
         var bake = Services.Get<IBakeService>();
         var runtime = Services.Get<IMapRuntime>();
         var rig = Services.Get<ICameraRig>();
+        using var cancellation = cancellationToken.Register(arrival.Cancel);
         var previous = PipelineCounts.Read(includeCanvas);
         var stable = 0;
         var settled = 0;
@@ -30,24 +32,26 @@ public static class CaptureBarrier
         var lastProgress = started;
         var nextDiagnostic = started;
         var wasReady = false;
-        var progress = (bake.Progress, runtime.ResidentReady, runtime.DestinationReady, runtime.WarmReady);
+        var progress = (bake.Progress, arrival.Done.Status);
         while (settled < BootTuning.CaptureSettleFrames)
         {
             cancellationToken.ThrowIfCancellationRequested();
             await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             cancellationToken.ThrowIfCancellationRequested();
             if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
+            if (arrival.Done.IsCompleted) await arrival.Done;
+            if (!ReferenceEquals(runtime.Arrival, arrival))
+                throw new OperationCanceledException("Capture arrival was replaced.");
             var current = PipelineCounts.Read(includeCanvas);
             var content = contentReady();
-            if (runtime.Error is { } runtimeError) throw new InvalidOperationException(runtimeError);
-            content &= producers.IsReady(rig.Pose);
+            content &= arrival.Done.IsCompletedSuccessfully && producers.IsReady(rig.Pose);
             var scrubbing = world.Scrubbing;
             var transition = world.Transition;
             var weatherTransitioning = weather.Transitioning;
             var ready = content && !scrubbing && transition == WorldTransition.None && !weatherTransitioning;
             var pipelineChanged = current != previous;
             var now = FrameClock.MonotonicMilliseconds;
-            var nextProgress = (bake.Progress, runtime.ResidentReady, runtime.DestinationReady, runtime.WarmReady);
+            var nextProgress = (bake.Progress, arrival.Done.Status);
             if (pipelineChanged || ready != wasReady || nextProgress != progress) lastProgress = now;
             progress = nextProgress;
             if (!ready || pipelineChanged) { stable = 0; settled = 0; }
@@ -81,7 +85,7 @@ public static class CaptureBarrier
             var veil = Services.Get<IVeilState>();
             var presentation = Services.Get<IVeilPresentation>();
             var map = runtime is MapRuntime actual ? actual.DescribeReadiness()
-                : $"provider={runtime.GetType().FullName},resident={runtime.ResidentReady},destination={runtime.DestinationReady},warm={runtime.WarmReady},error={runtime.Error ?? "none"}";
+                : $"provider={runtime.GetType().FullName},arrival={runtime.Arrival?.Done.Status},destination={runtime.Arrival?.Destination}";
             return $"veil[opacity={veil.Opacity},reason={veil.Reason},covered={presentation.IsCovered}]; runtime[{map}]";
         }
         catch (Exception error) { return $"producerDiagnosticsUnavailable={error.GetBaseException().Message}"; }

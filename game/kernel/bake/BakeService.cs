@@ -262,8 +262,8 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             var area = BakeInputFingerprint.Area(context, key);
             foreach (var (id, source) in map.Modules)
                 if (source.Value.Tiles(context).Any(tile =>
-                    (tile.X + 1) * 64 >= area.Min.X && tile.X * 64 <= area.Max.X &&
-                    (tile.Z + 1) * 64 >= area.Min.Y && tile.Z * 64 <= area.Max.Y)) dependencies[id] = source.CodeHash;
+                    (tile.X + 1) * TileGrid.BaseEdge >= area.Min.X && tile.X * TileGrid.BaseEdge <= area.Max.X &&
+                    (tile.Z + 1) * TileGrid.BaseEdge >= area.Min.Y && tile.Z * TileGrid.BaseEdge <= area.Max.Y)) dependencies[id] = source.CodeHash;
             foreach (var (id, source) in map.Interiors)
                 if (source.Value.FeatureIds.Any(feature => context.World.Features.TryGetValue(feature, out var value) &&
                     value.Bounds.Min.X <= area.Max.X && value.Bounds.Max.X >= area.Min.X &&
@@ -366,7 +366,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         var layout = InteriorAssembly.ValidatedLayout(provider, binding, context, feature);
         if (!layout.OpenStoreys.Contains(storey)) throw new InvalidDataException("Interior storey is not open.");
         var center = layout.Bounds.Center;
-        var tile = new TileKey((int)Math.Floor(center.X / 64f), (int)Math.Floor(center.Z / 64f));
+        var tile = TileGrid.At(center);
         return map.Geometry!.BuildOutput(key, context, provider.BuildStorey(context, feature, storey, detail), tile, LodLevel.L0,
             diagnostics => map.Collect(key.Module, "interior-geometry", diagnostics, feature));
     }
@@ -418,8 +418,8 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     private static float Distance(BakeKey key, IMapContext map)
     {
         var request = BakeRequestKeys.Parse(key);
-        var size = BakeRequestKeys.BaseTileMetres << (int)request.Level;
-        var center = new System.Numerics.Vector2((request.Tile.X + 0.5f) * size, (request.Tile.Z + 0.5f) * size);
+        var size = TileGrid.Edge(request.Level);
+        var center = TileGrid.Origin(request.Tile, request.Level) + new System.Numerics.Vector2(size * 0.5f);
         var start = map.Descriptor.Title?.T0.Position;
         var origin = start is { } p ? new System.Numerics.Vector2(p.X, p.Z) : map.Descriptor.Center;
         return System.Numerics.Vector2.DistanceSquared(center, origin);

@@ -1,3 +1,4 @@
+using Campus.Gen.Tests.Support;
 using Campus.Pipeline.Map;
 using System.Numerics;
 using System.Text;
@@ -17,41 +18,40 @@ public sealed class BakeInputTests
     [TestCase]
     public void CellInputsIgnoreExplanationsAndDistantObjectsButKeepDisplayedText()
     {
-        var world = new MutableWorldFixture();
+        var world = new FakeWorld { Boundary = new([]) };
         var local = Feature("fixture:local", 10, "校门", "旧说明", "入口");
         var distant = Feature("fixture:distant", 1000, "远楼", "说明", "远处");
-        world.Configure([local, distant]);
+        world.Features = ((WorldFeature[])[local, distant]).ToDictionary(feature => feature.Id);
         var baseline = Hash(Context(world), "furniture");
-        world.Configure([Feature("fixture:local", 10, "校门", "新说明", "入口"), distant with { Name = "远处改名" }]);
+        world.Features = ((WorldFeature[])[Feature("fixture:local", 10, "校门", "新说明", "入口"), distant with { Name = "远处改名" }]).ToDictionary(feature => feature.Id);
         if (Hash(Context(world), "furniture") != baseline) throw new InvalidOperationException("Explanations or a distant object invalidated this cell.");
-        world.Configure([local with { Name = "北校门" }, distant]);
+        world.Features = ((WorldFeature[])[local with { Name = "北校门" }, distant]).ToDictionary(feature => feature.Id);
         if (Hash(Context(world), "furniture") == baseline) throw new InvalidOperationException("Displayed name did not invalidate its cell.");
-        world.Configure([Feature("fixture:local", 10, "校门", "旧说明", "出口"), distant]);
+        world.Features = ((WorldFeature[])[Feature("fixture:local", 10, "校门", "旧说明", "出口"), distant]).ToDictionary(feature => feature.Id);
         if (Hash(Context(world), "furniture") == baseline) throw new InvalidOperationException("Displayed text did not invalidate its cell.");
 
         var parcel = Green("fixture:green", 10, 300);
         var remoteParcel = Green("fixture:remote-green", 1000, 60);
         const string planting = """{"roads":[],"groves":{"mix":{},"areas":[],"washNear":[]}}""";
-        world.Configure([parcel, remoteParcel]);
+        world.Features = ((WorldFeature[])[parcel, remoteParcel]).ToDictionary(feature => feature.Id);
         baseline = Hash(Context(world, planting: planting), "vegetation");
-        world.Configure([parcel, Green("fixture:remote-green", 1000, 80)]);
+        world.Features = ((WorldFeature[])[parcel, Green("fixture:remote-green", 1000, 80)]).ToDictionary(feature => feature.Id);
         if (Hash(Context(world, planting: planting), "vegetation") != baseline)
             throw new InvalidOperationException("An independent distant green parcel invalidated this vegetation cell.");
-        world.Configure([Green("fixture:green", 10, 320), remoteParcel]);
+        world.Features = ((WorldFeature[])[Green("fixture:green", 10, 320), remoteParcel]).ToDictionary(feature => feature.Id);
         if (Hash(Context(world, planting: planting), "vegetation") == baseline)
             throw new InvalidOperationException("The far end of this cell's green parcel did not invalidate its vegetation.");
 
-        static WorldFeature Green(string id, float x, float length) => new(new(id), FeatureSource.Design, new("green"),
-            new PolygonGeometry(new([new(x, 10), new(x + length, 10), new(x + length, 50), new(x, 50)])))
-        { Bounds = new(new(x, 0, 10), new(x + length, 0, 50)) };
+        static WorldFeature Green(string id, float x, float length) => WorldFeatureFixture.Create(id, "green",
+            new PolygonGeometry(new([new(x, 10), new(x + length, 10), new(x + length, 50), new(x, 50)])));
     }
 
     [TestCase]
     public void SpeciesChangesOnlyItsConsumersAndWindowFingerprintIsNotACellDependency()
     {
-        var world = new MutableWorldFixture();
+        var world = new FakeWorld { Boundary = new([]) };
         var local = Feature("fixture:local", 10, "楼", "说明", "入口") with { Kind = new("building") };
-        world.Configure([local]);
+        world.Features = ((WorldFeature[])[local]).ToDictionary(feature => feature.Id);
         var a = Context(world, "one"); var b = Context(world, "two");
         if (Hash(a, "vegetation") == Hash(b, "vegetation") || Hash(a, "buildings") != Hash(b, "buildings"))
             throw new InvalidOperationException("Species changes reached the wrong content modules.");
@@ -69,13 +69,13 @@ public sealed class BakeInputTests
     {
         var raw = Encoding.UTF8.GetBytes("old-campus");
         var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["campus.json"] = raw });
-        var world = new MutableWorldFixture();
-        var map = new TestContext(Context(world).Map, world, inputs);
+        var world = new FakeWorld { Boundary = new([]) };
+        var map = new TestMapContext(Context(world).Map, world, inputs, "must-not-reread-source-files");
         var captured = BakeInputFingerprint.ReadInputs(map);
         raw[0] = (byte)'X';
         if (!ReferenceEquals(captured, inputs.Entries) || Encoding.UTF8.GetString(captured["campus.json"].Span) != "old-campus")
             throw new InvalidOperationException("The baker changed the captured input version.");
-        try { BakeInputFingerprint.ReadInputs(map with { SourceInputs = BuildInputSnapshot.Empty }); }
+        try { BakeInputFingerprint.ReadInputs(map with { Inputs = BuildInputSnapshot.Empty }); }
         catch (InvalidDataException) { return; }
         throw new InvalidOperationException("A missing frozen snapshot was accepted.");
     }
@@ -83,7 +83,7 @@ public sealed class BakeInputTests
     [TestCase]
     public void WindowContextForwardsTheFrozenResourcesAndCapabilities()
     {
-        var original = Context(new MutableWorldFixture());
+        var original = Context(new FakeWorld { Boundary = new([]) });
         var forwarded = BakeWindowPreparation.Context(original, "cell-input", "module-code", null);
         if (!ReferenceEquals(original.SourceInputs, forwarded.SourceInputs) || !ReferenceEquals(original.GlobalInputs, forwarded.GlobalInputs) ||
             !ReferenceEquals(original.GroundMaskContributors, forwarded.GroundMaskContributors) || !ReferenceEquals(original.PartLods, forwarded.PartLods) ||
@@ -94,7 +94,7 @@ public sealed class BakeInputTests
     private static string Hash(BuildContext context, string module) => BakeInputFingerprint.Compute(context,
         BakeRequestKeys.Tile(context.Map.Id, module, new(0, 0), LodLevel.L0), "runtime-code");
     private static WorldFeature Feature(string id, float x, string name, string note, string text) =>
-        new(new(id), FeatureSource.Design, new("prop"), new PointGeometry(new(x, 0, 10)))
+        WorldFeatureFixture.Create(id, "prop", new PointGeometry(new(x, 0, 10))) with
         {
             Bounds = new(new(x, 0, 10), new(x + 1, 2, 11)), Name = name,
             Props = JsonSerializer.SerializeToElement(new { note, text }, ContractJson.Options)
@@ -113,10 +113,6 @@ public sealed class BakeInputTests
             new Dictionary<string, ReadOnlyMemory<byte>> { ["vegetation/planting.json"] = Encoding.UTF8.GetBytes(planting) },
         PartLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())])
     };
-    private sealed record TestContext(MapDescriptor Descriptor, IWorldModel World, BuildInputSnapshot SourceInputs) : IMapContext
-    {
-        public string DataRoot => "must-not-reread-source-files";
-    }
 }
 
 internal sealed class BakeFixturePart : IPartDef

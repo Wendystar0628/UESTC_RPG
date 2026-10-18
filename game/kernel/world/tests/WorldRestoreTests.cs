@@ -17,7 +17,7 @@ public sealed class WorldRestoreTests
     [TestCase]
     public void RestoreCommitsOneInstanceAndDropsAllTransitionHistory()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = CreateWorld(weather);
         world.Freeze(17.5, Season.Autumn, 240);
         world.Advance(24);
@@ -42,7 +42,7 @@ public sealed class WorldRestoreTests
     [TestCase]
     public void SaveMomentUsesTheSameFreshEndpointAsWorldCaptureWithoutStepping()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = CreateWorld(weather);
         world.Tick(.0625);
         world.Advance(1); // A HUD action after this frame's world/weather step.
@@ -74,7 +74,7 @@ public sealed class WorldRestoreTests
     [TestCase]
     public void FailedRestoreFreezesUntilAFreshSuccessfulRestoreCommits()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = CreateWorld(weather);
         var instance = world.Instance;
         var failed = new WorldSaveV1(7, .2, 0, Season.Spring, 10, 10, 10.25);
@@ -111,7 +111,7 @@ public sealed class WorldRestoreTests
     {
         foreach (var afterCommit in new[] { false, true })
         {
-            var weather = new RecordingWeatherProcess();
+            var weather = new TestWeatherProcess();
             var world = CreateWorld(weather);
             if (afterCommit)
             {
@@ -164,7 +164,7 @@ public sealed class WorldRestoreTests
     public void WorldSaveUsesIndependentContractOptionsAfterSharedOptionsAreLocked()
     {
         ContractJson.Options.MakeReadOnly(populateMissingResolver: true);
-        var world = CreateWorld(new RecordingWeatherProcess());
+        var world = CreateWorld(new TestWeatherProcess());
         var typeInfo = world.TypeInfo;
         AssertThat(ContractJson.Options.IsReadOnly).OverrideFailureMessage("Shared contract options must be locked for this regression.").IsTrue();
         AssertThat(!ReferenceEquals(typeInfo.Options, ContractJson.Options)).OverrideFailureMessage("World source generation must own an independent copy of the shared options.").IsTrue();
@@ -193,14 +193,14 @@ public sealed class WorldRestoreTests
     [TestCase]
     public void JsonRoundTripIsStrictAndContinuesBitExactly()
     {
-        var a = CreateWorld(new RecordingWeatherProcess());
+        var a = CreateWorld(new TestWeatherProcess());
         a.SetFlow(60);
         for (var i = 0; i < 100; i++) a.Tick(.017);
         var dto = a.Capture(default);
         var json = JsonSerializer.Serialize(dto, a.TypeInfo);
         var parsed = JsonSerializer.Deserialize(json, a.TypeInfo)!;
         AssertThat(parsed).IsEqual(dto);
-        var b = CreateWorld(new RecordingWeatherProcess());
+        var b = CreateWorld(new TestWeatherProcess());
         b.Restore(parsed, Restore()); b.CompleteRestore();
         for (var i = 0; i < 150; i++)
         {
@@ -217,7 +217,7 @@ public sealed class WorldRestoreTests
     [TestCase]
     public void InvalidControlsAndInvalidCoreSaveAreRejectedWithoutMutation()
     {
-        var world = CreateWorld(new RecordingWeatherProcess());
+        var world = CreateWorld(new TestWeatherProcess());
         var initial = world.Capture(default);
         AssertThrown(() => world.Advance(0)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.Advance(double.NaN)).IsInstanceOf<ArgumentOutOfRangeException>();

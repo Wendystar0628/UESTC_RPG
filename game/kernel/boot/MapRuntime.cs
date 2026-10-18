@@ -10,17 +10,25 @@ namespace Campus.Kernel.Boot;
 
 /// <summary>Scene-side map lifetime. The map service owns transition ordering; this host owns engine nodes.</summary>
 [KernelService(typeof(IMapRuntime), Owner = "WP-01")]
+[KernelService(typeof(IMapLifetime), Owner = "WP-01")]
 [KernelNode("map-runtime", Owner = "WP-01")]
-public partial class MapRuntime : Node, IMapRuntime
+public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 {
     private readonly List<(Type Type, Node Node)> _scoped = [];
     private IMapStreamState? _stream;
     private ICollisionWorld? _collision;
     private RenderHost? _renderer;
     private MaterialWarmup? _materials;
+    private IToonMaterialProvider? _materialSource;
     private MapId? _loaded;
     private Task? _preparing;
     private bool _mountPrepared;
+    private TaskCompletionSource? _mountCompletion;
+    private ArrivalRun? _arrival;
+    private IVeilPresentation? _presentation;
+    private ulong _arrivalFrame;
+    private ulong _coveredDrawFrame;
+    private bool _reuseWarmth;
     private Task? _shutdown;
     private bool _stopping;
     private long _mapGeneration;
@@ -32,10 +40,17 @@ public partial class MapRuntime : Node, IMapRuntime
     private int _stable;
     private PipelineCounts _previous;
     private ViewContentReadiness? _contentReadiness;
-    public bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Error is null;
-    public bool DestinationReady => _mountPrepared && _stream?.DestinationReady == true && _renderer?.PipelineReady == true && Error is null;
-    public bool WarmReady { get; private set; }
-    public string? Error => _error ?? _materials?.Error ?? _stream?.Error ?? _renderer?.Error ?? _collision?.Error;
+    private bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Error is null;
+    private bool DestinationReady => _mountPrepared && _stream?.DestinationReady == true &&
+        _renderer?.PipelineReady == true && Error is null && _arrival is { } arrival && (arrival.Destination.Mode switch
+        {
+            ViewMode.Fly => true,
+            ViewMode.Walk => _collision!.Ready(arrival.Destination.Pose.Position, WalkRules.ArrivalCollisionRadius),
+            _ => throw new InvalidOperationException("Unknown arrival view mode.")
+        });
+    private bool WarmReady { get; set; }
+    public IMapArrival? Arrival => _arrival;
+    private string? Error => _error ?? _materials?.Error ?? _stream?.Error ?? _renderer?.Error ?? _collision?.Error;
 
     public override void _Ready()
     {
@@ -45,6 +60,8 @@ public partial class MapRuntime : Node, IMapRuntime
         _renderer = Services.Get<IRenderHost>() as RenderHost
             ?? throw new InvalidOperationException("The stage requires its dynamic render host.");
         _materials = Services.Get<MaterialWarmup>();
+        _materialSource = Services.Get<IToonMaterialProvider>();
+        _presentation = Services.Get<IVeilPresentation>();
         RenderingServer.Singleton.FramePostDraw += CountDraw;
     }
 
@@ -98,7 +115,7 @@ public partial class MapRuntime : Node, IMapRuntime
         }
     }
 
-    public void Mount(IMapContext context)
+    public Task Mount(IMapContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         if (_stopping) throw new InvalidOperationException("The map runtime is shutting down.");
@@ -106,8 +123,8 @@ public partial class MapRuntime : Node, IMapRuntime
             throw new InvalidOperationException("The map runtime mounts once at startup.");
         _error = null;
         _mountPrepared = false;
+        _mountCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _contentReadiness = null;
-        WarmReady = false;
         try
         {
             var camera = Services.Get<Camera3D>();
@@ -128,9 +145,11 @@ public partial class MapRuntime : Node, IMapRuntime
         catch (Exception error)
         {
             _error = error.GetBaseException().Message;
+            _mountCompletion.TrySetException(error);
             ReportFailure(context.Descriptor.Id, "map-node-mount", null, error);
             throw;
         }
+        return _mountCompletion.Task;
     }
 
     private async Task PrepareMap(IMapContext context, long generation)
@@ -164,23 +183,35 @@ public partial class MapRuntime : Node, IMapRuntime
         }
     }
 
-    public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null)
+    public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null)
     {
         if (_stopping) throw new InvalidOperationException("The map runtime is shutting down.");
+        if (!_mountPrepared) throw new InvalidOperationException("A map must be prepared before arrival.");
+        _arrival?.Cancel();
+        var arrival = new ArrivalRun(new(destination, mode, space), CancelArrival);
+        _arrival = arrival;
+        // Every arrival resets its own readiness once. Sampling starts only after a later covered camera draw.
         WarmReady = false;
-        _stream!.Prefetch(destination, mode, space);
-    }
-    public void BeginWarm()
-    {
-        if (_stopping) throw new InvalidOperationException("The map runtime is shutting down.");
         _warming = true;
         _samplesStarted = false;
         _stable = 0;
+        _arrivalFrame = Engine.GetProcessFrames();
         _lastWarmDraw = _drawFrames;
         _previous = PipelineCounts.Read();
-        WarmReady = false;
-        _materials!.End(reset: true);
+        _reuseWarmth = _materials!.IsReady;
+        if (!_reuseWarmth) _materials.End(reset: true);
+        try { _stream!.Prefetch(destination, mode, space); }
+        catch (Exception error) { arrival.Fail(error); _warming = false; }
+        return arrival;
     }
+
+    private void CancelArrival(ArrivalRun arrival)
+    {
+        if (!ReferenceEquals(_arrival, arrival)) return;
+        _warming = false;
+        _materials?.End();
+    }
+
     public string DescribeReadiness() =>
         $"map={_loaded?.Value ?? "none"},mountPrepared={_mountPrepared},preparation={_preparing?.Status}," +
         $"stopping={_stopping},resident={ResidentReady},destination={DestinationReady},warm={WarmReady}," +
@@ -192,20 +223,45 @@ public partial class MapRuntime : Node, IMapRuntime
         $"materials[{_materials?.DescribeReadiness() ?? "missing"}]";
     public override void _Process(double delta)
     {
-        if (!_warming || Error is not null) return;
+        if (_stopping) return;
+        if (Error is { } failure)
+        {
+            if (_mountCompletion is { Task.IsCompleted: false } || _arrival is { Done.IsCompleted: false })
+                FailArrival(new InvalidOperationException(failure));
+            return;
+        }
+        if (ResidentReady) _mountCompletion?.TrySetResult();
+        try { AdvanceArrival(); }
+        catch (Exception error)
+        {
+            _error = error.GetBaseException().Message;
+            FailArrival(error);
+            ReportFailure(_loaded ?? default, "arrival", null, error);
+        }
+    }
+
+    private void FailArrival(Exception error)
+    {
+        _mountCompletion?.TrySetException(error);
+        _arrival?.Fail(error);
+        _warming = false;
+        _materials?.End();
+    }
+
+    private void AdvanceArrival()
+    {
+        if (!_warming || _arrival is not { } arrival || arrival.Done.IsCompleted) return;
+        if (!ResidentReady || _coveredDrawFrame <= _arrivalFrame || _presentation?.IsCovered != true) return;
         if (!_samplesStarted)
         {
-            if (!ResidentReady) return;
-            try
+            if (_contentReadiness?.IsReady(Services.Get<ICameraRig>().Pose) != true) return;
+            // Existing warm pipelines keep the same-map fast path. Newly required variants must be sampled.
+            if (_reuseWarmth && _renderer!.PipelineReady && _materialSource!.CapturePendingWarm().Materials.Count == 0)
             {
-                if (_contentReadiness?.IsReady(Services.Get<ICameraRig>().Pose) != true) return;
-            }
-            catch (Exception error)
-            {
-                _error = error.GetBaseException().Message;
-                ReportFailure(_loaded ?? default, "content-readiness", null, error);
+                if (DestinationReady) CompleteArrival(arrival);
                 return;
             }
+            _reuseWarmth = false;
             _materials!.Begin();
             _samplesStarted = true;
         }
@@ -214,22 +270,51 @@ public partial class MapRuntime : Node, IMapRuntime
         var counts = PipelineCounts.Read();
         _stable = ResidentReady && _materials!.IsReady && counts == _previous ? _stable + 1 : 0;
         _previous = counts;
-        WarmReady = _stable >= BootTuning.WarmFrames && DestinationReady;
-        if (WarmReady) { _materials!.End(); _warming = false; }
+        if (_stable >= BootTuning.WarmFrames && DestinationReady) CompleteArrival(arrival);
     }
 
-    private void CountDraw() => _drawFrames++;
+    private void CompleteArrival(ArrivalRun arrival)
+    {
+        WarmReady = true;
+        _materials!.End();
+        _warming = false;
+        arrival.Complete();
+    }
+
+    private void CountDraw()
+    {
+        _drawFrames++;
+        if (_presentation?.IsCovered == true) _coveredDrawFrame = Engine.GetProcessFrames();
+    }
+
     public void StopNewWork()
     {
         _stopping = true;
+        _mountCompletion?.TrySetCanceled();
+        _arrival?.Cancel();
+        _arrival = null;
         _warming = false;
         _materials?.End(reset: true);
     }
     public override void _ExitTree()
     {
+        StopNewWork();
         _mapGeneration++;
         RenderingServer.Singleton.FramePostDraw -= CountDraw;
         if (_materials is not null && GodotObject.IsInstanceValid(_materials)) _materials.End(reset: true);
+    }
+
+    private sealed class ArrivalRun(MapStreamDestination destination, Action<ArrivalRun> onCancel) : IMapArrival
+    {
+        private readonly TaskCompletionSource _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public MapStreamDestination Destination => destination;
+        public Task Done => _done.Task;
+        public void Cancel()
+        {
+            if (_done.TrySetCanceled()) onCancel(this);
+        }
+        public void Complete() => _done.TrySetResult();
+        public void Fail(Exception error) => _done.TrySetException(error);
     }
 
     private static void ReportFailure(MapId map, string phase, string? receiver, Exception error) =>

@@ -163,7 +163,7 @@ public sealed class StreetLampPart : IPartDef<LampParams>
     /// <summary>Single-arm geometry: the joint on the pole, the arm tip inside the head, the head frame (−Z front tilted up).</summary>
     private static (Vector3 Joint, Vector3 Tip, Matrix4x4 Head, float FrontZ) Arm(LampParams p)
     {
-        var rise = S.ArmRiseDeg * (float.Pi / 180f);
+        var rise = S.ArmRiseDeg * Angles.DegreesToRadians;
         var c = MathF.Cos(rise); var s = MathF.Sin(rise);
         var reach = Math.Max(p.Width - S.ArmHeadLength, S.ArmMinReach);
         var half = S.ArmHeadLength * 0.5f;

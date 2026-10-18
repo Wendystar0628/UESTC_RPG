@@ -64,7 +64,7 @@ public static partial class Planting
                 if (road.Line.Points.Count < 2) continue;
                 // A design walk is pavement, not a road: it takes the trunks that stand on it (tree pits excepted) and not the ones
                 // beside it, and a tree on it still counts as planted. Only the walk's own line is read, at the network's width.
-                if (world.Features.TryGetValue(road.Id, out var walk) && IsWalk(walk) && RoadType(road.Props) is { } type && Paved.Contains(type))
+                if (world.Features.TryGetValue(road.Id, out var walk) && IsWalk(walk) && (road.Props?.OptionalText("roadType") ?? road.Props?.OptionalText("highway")) is { } type && Paved.Contains(type))
                 {
                     IndexPavement(road.Props, new PolylineGeometry(road.Line), road.Width);
                     continue;
@@ -106,7 +106,7 @@ public static partial class Planting
             foreach (var road in _roads.In(p))
             {
                 var r = road.Width * 0.5f + clearance;
-                if (PolylineDistanceSquared(p, road.Line.Points) < r * r) return true;
+                if (PlanGeometry.Project(road.Line.Points, p).Distance < r) return true;
             }
             return false;
         }
@@ -130,7 +130,7 @@ public static partial class Planting
                 else
                 {
                     var r = pave.Half + clearance;
-                    if (PolylineDistanceSquared(p, pave.Line!) < r * r) return true;
+                    if (PlanGeometry.Project(pave.Line!, p).Distance < r) return true;
                 }
             }
             return false;
@@ -166,7 +166,7 @@ public static partial class Planting
 
         private void IndexPavement(JsonElement? props, OverlayGeometry geometry, float width = 0f)
         {
-            var type = RoadType(props);
+            var type = (props?.OptionalText("roadType") ?? props?.OptionalText("highway"));
             if (type is null || !Paved.Contains(type)) return;
             switch (geometry)
             {
@@ -195,7 +195,7 @@ public static partial class Planting
 
         /// <summary>Width of a paved line as WP-15 paves it (GroundClassifier): its own width, else the type's default.</summary>
         private static float PavedWidth(JsonElement? props, string type) =>
-            Number(props, "width") is { } width and > 0f ? width : type switch
+            props?.OptionalNumber("width") is { } width and > 0f ? width : type switch
             {
                 "path" => 2f,
                 "cycleway" => 3f,
@@ -206,10 +206,10 @@ public static partial class Planting
         /// <summary>A tree pit feature (design addition): square pits are areas; a round bed is a point with a radius, else half its size.</summary>
         private void AddPits(WorldFeature feature)
         {
-            var perPit = Number(feature.Props, "perPit") is { } n and >= 0f ? (int)MathF.Round(n) : 1;
-            if (Text(feature.Props, "plant") is { } plant && plant != "tree") perPit = 0;
-            var species = Text(feature.Props, "species");
-            var soil = Number(feature.Props, "soilAbove") is { } s and >= 0f ? s : 0.3f;
+            var perPit = feature.Props?.OptionalNumber("perPit") is { } n and >= 0f ? (int)MathF.Round(n) : 1;
+            if (feature.Props?.OptionalText("plant") is { } plant && plant != "tree") perPit = 0;
+            var species = feature.Props?.OptionalText("species");
+            var soil = feature.Props?.OptionalNumber("soilAbove") is { } s and >= 0f ? s : 0.3f;
             var id = feature.Id.Value;
             switch (feature.Geometry)
             {
@@ -220,7 +220,7 @@ public static partial class Planting
                     for (var i = 0; i < multi.Polygons.Count; i++) AddPit(id + ":" + i.ToString(CultureInfo.InvariantCulture), multi.Polygons[i]);
                     break;
                 case PointGeometry point:
-                    var radius = Number(feature.Props, "radius") is { } r and > 0f ? r : Number(feature.Props, "size") is { } size and > 0f ? size * 0.5f : 0.9f;
+                    var radius = feature.Props?.OptionalNumber("radius") is { } r and > 0f ? r : feature.Props?.OptionalNumber("size") is { } size and > 0f ? size * 0.5f : 0.9f;
                     _pits.Add(new(id, null, new Vector2(point.Position.X, point.Position.Z), radius, Vector2.UnitX, 0f, 0f, perPit, species, soil));
                     break;
             }
@@ -245,21 +245,6 @@ public static partial class Planting
                 _pits.Add(new(key, rings, centre, 0f, axis, (a1 - a0) * 0.5f, (b1 - b0) * 0.5f, perPit, species, soil));
             }
         }
-
-        private static string? Text(JsonElement? props, string name) =>
-            props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
-
-        private static string? RoadType(JsonElement? props)
-        {
-            if (props is not { ValueKind: JsonValueKind.Object } p) return null;
-            foreach (var name in new[] { "roadType", "highway" })
-                if (p.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String) return value.GetString();
-            return null;
-        }
-
-        private static float? Number(JsonElement? props, string name) =>
-            props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number &&
-            value.TryGetSingle(out var number) && float.IsFinite(number) ? number : null;
 
         private static IEnumerable<Parcel> Polygons(WorldFeature feature, string kind)
         {
@@ -294,8 +279,7 @@ public static partial class Planting
             }
             foreach (var part in feature.Parts)
             {
-                var partKind = part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var declared)
-                    ? declared.GetString() : feature.Kind.Value;
+                var partKind = part.Props?.OptionalText("kind") ?? feature.Kind.Value;
                 if (partKind == kind) yield return part;
             }
         }

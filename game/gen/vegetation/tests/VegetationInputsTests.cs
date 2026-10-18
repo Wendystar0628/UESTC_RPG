@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Campus.Contracts;
+using Campus.Tests;
 using Campus.Contracts.Maps;
 using Campus.Gen.World;
 using GdUnit4;
@@ -20,11 +21,8 @@ public sealed class VegetationInputsTests
 {
     private static readonly Lazy<(string Root, IWorldModel World)> Data = new(() =>
     {
-        var root = FindRepository();
-        var data = Path.Combine(root, "game", "data", "maps", "qingshuihe");
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        return (root, WorldModelLoader.Load(new("qingshuihe"), files).World);
+        var root = RepositoryFixture.Root;
+        return (root, PavementTests.World(false));
     });
 
     [TestCase]
@@ -48,7 +46,7 @@ public sealed class VegetationInputsTests
         var ctx = Context(withPlanting: true);
         var module = new VegetationModule();
         var tree = VegetationInputs.Layout(ctx).Layout.Trees.First(t => t.Source == PlantSource.Road);
-        var cell = new TileKey((int)MathF.Floor(tree.Position.X / 64f), (int)MathF.Floor(tree.Position.Z / 64f));
+        var cell = TileGrid.At(tree.Position);
         if (!module.Tiles(ctx).Contains(cell) || module.Collide(ctx, cell).Count == 0)
             throw new InvalidOperationException("tiles or trunk colliders disagree with the layout");
         var grid = new GroundMaskGrid(new MapRect(new(tree.Position.X - 32f, tree.Position.Z - 32f), new(tree.Position.X + 32f, tree.Position.Z + 32f)), 64, 64, 1f);
@@ -78,20 +76,10 @@ public sealed class VegetationInputsTests
         });
         var map = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
         if (withPlanting)
-            map[VegetationInputs.PlantingKey] = File.ReadAllBytes(Path.Combine(root, "game", "data", "maps", "qingshuihe", "vegetation", "planting.json"));
+            map[VegetationInputs.PlantingKey] = RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey];
         return new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map).Entries };
     }
 
     private static PaletteCatalog Catalog => MotherModelTests.Palette;
 
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
-    }
 }

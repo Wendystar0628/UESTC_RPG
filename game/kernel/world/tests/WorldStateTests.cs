@@ -34,7 +34,7 @@ public sealed class WorldStateTests
     [TestCase]
     public void SolarHeightQueryNormalizesPeriodsAndNeverMutatesWorld()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = CreateWorld(weather);
         world.SetFlow(0);
         world.SetSeason(Season.Winter);
@@ -66,7 +66,7 @@ public sealed class WorldStateTests
     [TestCase]
     public void JumpWrapsForwardAndStopsWithinThreeSeconds()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = CreateWorld(weather);
         world.SetFlow(0);
         world.SetClock(6);
@@ -92,22 +92,22 @@ public sealed class WorldStateTests
     {
         foreach (var rate in new[] { 0, 1, 10, 60, 360, 1440 })
         {
-            var world = CreateWorld(new RecordingWeatherProcess());
+            var world = CreateWorld(new TestWeatherProcess());
             world.SetFlow(rate);
             world.Tick(600);
             AssertThat(Math.Abs((world.WorldHours) - (17.5 + rate * .1 / 3600)) <= 1e-10).OverrideFailureMessage($"Expected {17.5 + rate * .1 / 3600:R}, got {world.WorldHours:R}.").IsTrue();
-            AssertThat(Math.Abs((world.AnimTime) - (240.1)) <= 1e-10).OverrideFailureMessage($"Expected {240.1:R}, got {world.AnimTime:R}.").IsTrue();
+            AssertThat(Math.Abs((world.AnimTime) - (WorldTime.InitialAnimTime + .1)) <= 1e-10).OverrideFailureMessage($"Expected {WorldTime.InitialAnimTime + .1:R}, got {world.AnimTime:R}.").IsTrue();
         }
-        var paused = CreateWorld(new RecordingWeatherProcess());
+        var paused = CreateWorld(new TestWeatherProcess());
         paused.SetFlow(0);
         paused.Tick(.1, freezeAnimation: true);
-        AssertThat(paused.AnimTime).IsEqual(240);
-        var wrapping = CreateWorld(new RecordingWeatherProcess());
-        wrapping.Freeze(0, Season.Spring, 479.99);
-        wrapping.SetFrameReadouts(ViewMode.Fly, 15);
+        AssertThat(paused.AnimTime).IsEqual(WorldTime.InitialAnimTime);
+        var wrapping = CreateWorld(new TestWeatherProcess());
+        wrapping.Freeze(0, Season.Spring, WorldTime.AnimLoopSeconds - .01);
+        wrapping.SetFrameReadouts(ViewMode.Fly, WorldTime.ThirtyFpsStepRate);
         wrapping.Tick(.1);
         AssertThat(Math.Abs((wrapping.AnimTime) - (.09)) <= 1e-10).OverrideFailureMessage($"Expected {.09:R}, got {wrapping.AnimTime:R}.").IsTrue();
-        AssertThat(Math.Abs((wrapping.Step12) - (1 / 15d)) <= 1e-10).OverrideFailureMessage($"Expected {1 / 15d:R}, got {wrapping.Step12:R}.").IsTrue();
+        AssertThat(Math.Abs((wrapping.Step12) - (1d / WorldTime.ThirtyFpsStepRate)) <= 1e-10).OverrideFailureMessage($"Expected {1d / WorldTime.ThirtyFpsStepRate:R}, got {wrapping.Step12:R}.").IsTrue();
     }
 
     [TestCase]
@@ -115,7 +115,7 @@ public sealed class WorldStateTests
     {
         foreach (var rate in new[] { 60, 360, 1440 })
         {
-            var world = CreateWorld(new RecordingWeatherProcess());
+            var world = CreateWorld(new TestWeatherProcess());
             world.Freeze(17 + 5 / 60d, Season.Autumn, 240);
             world.FlowTo(17.5, rate);
             for (var i = 0; i < 400 && world.Flow.Rate != 0; i++) world.Tick(.1);
@@ -129,7 +129,7 @@ public sealed class WorldStateTests
     [TestCase]
     public void SetFlowAndSecondFlowToCancelThePreviousStop()
     {
-        var world = CreateWorld(new RecordingWeatherProcess());
+        var world = CreateWorld(new TestWeatherProcess());
         world.FlowTo(17.51, 1440);
         world.SetFlow(1440);
         world.Tick(.1);
@@ -147,7 +147,7 @@ public sealed class WorldStateTests
     [TestCase]
     public void FlowToKeepsItsClockDestinationWhenTheSeasonChanges()
     {
-        var world = CreateWorld(new RecordingWeatherProcess());
+        var world = CreateWorld(new TestWeatherProcess());
         var instance = world.Instance;
         world.FlowTo(18, 60);
         world.SetSeason(Season.Summer);
@@ -170,7 +170,7 @@ public sealed class WorldStateTests
     [TestCase]
     public void DragUsesDampedMonotoneMotionAcrossMidnightAndRejectsReverse()
     {
-        var world = CreateWorld(new RecordingWeatherProcess());
+        var world = CreateWorld(new TestWeatherProcess());
         world.Freeze(23.9, Season.Autumn, 240);
         world.SetClock(.1, ClockSetMode.Drag);
         AssertThat(Math.Abs((world.TargetHours) - (24.1)) <= 1e-10).OverrideFailureMessage($"Expected {24.1:R}, got {world.TargetHours:R}.").IsTrue();
@@ -190,7 +190,7 @@ public sealed class WorldStateTests
     [TestCase]
     public void SeasonPreservesSolarArcAndTimelineAndInterruptsFromCurrentValue()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = CreateWorld(weather);
         world.SetFlow(0);
         var instance = world.Instance;
@@ -223,7 +223,7 @@ public sealed class WorldStateTests
                 {
                     foreach (var dt in new[] { .0625, .1 })
                     {
-                        var world = CreateWorld(new RecordingWeatherProcess(), reduced ? new TestMotionSettings(true) : null);
+                        var world = CreateWorld(new TestWeatherProcess(), reduced ? new TestMotionSettings(true) : null);
                         world.Freeze(17.5, start, 240);
                         var target = (Season)(((int)start + distance) % 4);
                         world.SetSeason(target);

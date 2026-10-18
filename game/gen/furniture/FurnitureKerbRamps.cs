@@ -35,7 +35,7 @@ public static partial class FurniturePlanner
             foreach (var line in lines)
                 for (var i = 1; i < points.Count; i++)
                     for (var j = 1; j < line.Line.Points.Count; j++)
-                        if (Intersect(points[i - 1], points[i], line.Line.Points[j - 1], line.Line.Points[j]) is { } x) spots.Add((x, true));
+                        if (PlanGeometry.SegmentIntersection(points[i - 1], points[i], line.Line.Points[j - 1], line.Line.Points[j], 1e-6f) is { } x) spots.Add((x, true));
             foreach (var (spot, crossing) in spots)
             {
                 if (Nearest(lines, spot) is not { } near) continue;
@@ -61,7 +61,7 @@ public static partial class FurniturePlanner
                     }
                     if (found is not { } centre) { verge++; continue; }
                     if (placed.Any(q => Vector2.Distance(q, centre) < S.RampGap)) { crowded++; continue; }
-                    if (site.World.Network.Roads.Any(o => !lines.Contains(o) && StreetSite.Carriageway(o) && DistanceTo(centre, o) < StreetSite.HalfWidth(o) + p.Width * 0.5f))
+                    if (site.World.Network.Roads.Any(o => !lines.Contains(o) && StreetSite.Carriageway(o) && MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(o.Line.Points, centre)) < StreetSite.HalfWidth(o) + p.Width * 0.5f))
                     {
                         junction++;
                         continue;
@@ -81,35 +81,14 @@ public static partial class FurniturePlanner
         (Vector2, Vector2, NetworkLine)? best = null;
         var bestD = float.MaxValue;
         foreach (var line in lines)
-            for (var i = 1; i < line.Line.Points.Count; i++)
-            {
-                var a = line.Line.Points[i - 1]; var ab = line.Line.Points[i] - a;
-                var len2 = ab.LengthSquared();
-                if (len2 < 1e-6f) continue;
-                var q = a + ab * Math.Clamp(Vector2.Dot(p - a, ab) / len2, 0f, 1f);
-                var d = Vector2.DistanceSquared(p, q);
-                if (d >= bestD) continue;
-                bestD = d;
-                best = (q, ab / MathF.Sqrt(len2), line);
-            }
+        {
+            var near = PlanGeometry.Project(line.Line.Points, p);
+            var d = Vector2.DistanceSquared(p, near.Point);
+            if (d >= bestD) continue;
+            bestD = d;
+            best = (near.Point, near.Tangent, line);
+        }
         return best;
     }
 
-    private static float DistanceTo(Vector2 p, NetworkLine line)
-    {
-        var best = float.MaxValue;
-        for (var i = 1; i < line.Line.Points.Count; i++) best = MathF.Min(best, PlanGeometry.SegmentDistanceSquared(p, line.Line.Points[i - 1], line.Line.Points[i]));
-        return MathF.Sqrt(best);
-    }
-
-    /// <summary>The crossing point of segments ab and cd, if they cross.</summary>
-    private static Vector2? Intersect(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
-    {
-        var r = b - a; var s = d - c;
-        var denom = r.X * s.Y - r.Y * s.X;
-        if (MathF.Abs(denom) < 1e-6f) return null;
-        var t = ((c.X - a.X) * s.Y - (c.Y - a.Y) * s.X) / denom;
-        var u = ((c.X - a.X) * r.Y - (c.Y - a.Y) * r.X) / denom;
-        return t is >= 0f and <= 1f && u is >= 0f and <= 1f ? a + r * t : null;
-    }
 }

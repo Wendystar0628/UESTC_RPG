@@ -218,7 +218,7 @@ public sealed class SkylightPart : IPartDef<RoofParams>
         var curb = Math.Min(RoofStyle.SkylightCurb, Math.Min(p.Width, p.Depth) * 0.2f);
         var hx = p.Width * 0.5f - curb * 0.5f; var a = p.Depth * 0.5f - curb * 0.5f;
         var slope = p.SlopeDeg > 0 ? Math.Min(p.SlopeDeg, RoofStyle.SkylightMaxSlopeDeg) : RoofStyle.SkylightDefaultSlopeDeg;
-        var rise = Math.Min(a * MathF.Tan(slope * (float.Pi / 180f)), p.Height - 0.16f);
+        var rise = Math.Min(a * MathF.Tan(slope * Angles.DegreesToRadians), p.Height - 0.16f);
         var curbH = p.Height - rise - 0.045f;
         var baseY = curbH - 0.003f;
         var builder = new PartBuilder();
@@ -236,7 +236,7 @@ public sealed class SkylightPart : IPartDef<RoofParams>
                 builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(a - 0.05f, a + 0.02f, -0.005f, 0.04f), bar, frame, false, baseY), VertexFlag.NoShadow);
                 builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(-a - 0.02f, -a + 0.05f, -0.005f, 0.04f), bar, frame, false, baseY), VertexFlag.NoShadow);
                 var length = (float)Math.Sqrt((double)a * a + (double)rise * rise);
-                var angle = MathF.Atan2(rise, a) * (180f / float.Pi);
+                var angle = MathF.Atan2(rise, a) * Angles.RadiansToDegrees;
                 var count = Math.Max(1, (int)Math.Round(2 * hx / RoofStyle.SkylightBarPitch));
                 var size = new Vector3(RoofStyle.SkylightFrame, 0.04f, length);
                 for (var k = 0; k <= count; k++)

@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Hud.I18n;
 using Campus.Hud.Motion;
 using Campus.Hud.Style;
@@ -17,13 +18,14 @@ public sealed class UiKit
     private readonly List<WeakReference<CanvasItem>> _pinned = [];
     private bool _residentFollows;
 
-    public UiKit(UiTokens tokens, UiColors colors, UiMaterials materials, UiThemeBuilder theme, MotionPolicy motion)
+    public UiKit(UiTokens tokens, UiColors colors, UiMaterials materials, UiThemeBuilder theme, MotionPolicy motion, IUiTheme themeState)
     {
         Tokens = tokens;
         Colors = colors;
         Materials = materials;
         Theme = theme;
         Motion = motion;
+        ThemeState = themeState;
     }
 
     public UiTokens Tokens { get; }
@@ -31,6 +33,7 @@ public sealed class UiKit
     public UiMaterials Materials { get; }
     public UiThemeBuilder Theme { get; }
     public MotionPolicy Motion { get; }
+    public IUiTheme ThemeState { get; }
 
     public static string T(string key) => Tr.T(key);
     public static string T(string key, params (string Name, string Value)[] args) => Tr.T(key, args);

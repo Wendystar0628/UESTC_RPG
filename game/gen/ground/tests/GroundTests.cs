@@ -7,6 +7,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
@@ -22,14 +23,14 @@ public sealed class GroundTests
     public void EmptyWorldIsFlatLawnInBroadTones()
     {
         var ctx = TestWorld.Context(TestWorld.Empty());
-        var tones = new HashSet<string>();
+        var tones = new HashSet<ushort>();
         var triangles = 0;
         for (var x = -2; x < 2; x++)
         {
             var output = new GroundModule().Build(ctx, new TileKey(x, 0), LodLevel.L0);
             foreach (var mesh in output.Meshes)
             {
-                foreach (var id in mesh.ColorIndices!) tones.Add(id.ToString());
+                foreach (var id in mesh.ColorIndices!) tones.Add(id);
                 triangles += mesh.Index.Length / 3;
                 for (var v = 0; v < mesh.Position.Length / 3; v++)
                 {
@@ -39,7 +40,7 @@ public sealed class GroundTests
             }
             AssertWinding(output);
         }
-        AssertThat(tones.SetEquals(["150", "190", "192"])).OverrideFailureMessage($"A 256 m strip of lawn shows all three tones, got {string.Join(", ", tones)}.").IsTrue();
+        AssertThat(tones.SetEquals(new[] { GroundColor.Grass, GroundColor.GrassLight, GroundColor.GrassDark }.Select(GroundPalette.Id))).OverrideFailureMessage($"A 256 m strip of lawn shows all three tones, got {string.Join(", ", tones)}.").IsTrue();
         AssertThat(triangles < 4 * 12000).OverrideFailureMessage($"Lawn tone contours stay cheap, got {triangles} triangles.").IsTrue();
     }
 
@@ -149,8 +150,8 @@ public sealed class GroundTests
         var colliders = new GroundModule().Collide(ctx, new TileKey(0, 0));
         AssertThat(colliders.Count == 1 && colliders[0] is HeightFieldCollider).OverrideFailureMessage("Each ground tile has one height field.").IsTrue();
         var collider = (HeightFieldCollider)colliders[0];
-        AssertThat(collider.HeightsCm.Length == 65 * 65).OverrideFailureMessage("Height field must be 65 x 65.").IsTrue();
-        AssertThat(collider.FootMatHalfMeter is { Length: 128 * 128 }).OverrideFailureMessage("Footstep grid must be 128 x 128.").IsTrue();
+        AssertThat(collider.HeightsCm.Length == GroundCollision.Samples * GroundCollision.Samples).OverrideFailureMessage("Height field must be 65 x 65.").IsTrue();
+        AssertThat(collider.FootMatHalfMeter?.Length == GroundCollision.FootCells * GroundCollision.FootCells).OverrideFailureMessage("Footstep grid must be 128 x 128.").IsTrue();
         AssertThat(collider.FootMatHalfMeter!.All(b => b != 0)).OverrideFailureMessage("No Auto footstep material on the ground.").IsTrue();
         AssertThat(Math.Abs((double)(Section.RoadY) - (double)(GroundCollision.SampleHeight(collider, 10f, 0f))) <= .02).OverrideFailureMessage($"road height: expected {Section.RoadY}, got {GroundCollision.SampleHeight(collider, 10f, 0f)}.").IsTrue();
         AssertThat(Math.Abs((double)(Section.PavingY) - (double)(GroundCollision.SampleHeight(collider, 10f, 4.5f))) <= .02).OverrideFailureMessage($"sidewalk height: expected {Section.PavingY}, got {GroundCollision.SampleHeight(collider, 10f, 4.5f)}.").IsTrue();
@@ -209,7 +210,9 @@ public sealed class GroundTests
             m.ValidateVertexData();
             for (var v = 0; v < m.Position.Length / 3; v++)
             {
-                if (m.ColorIndices![v] is not (150 or 190 or 192)) continue;
+                if (m.ColorIndices![v] != GroundPalette.Id(GroundColor.Grass) &&
+                    m.ColorIndices[v] != GroundPalette.Id(GroundColor.GrassLight) &&
+                    m.ColorIndices[v] != GroundPalette.Id(GroundColor.GrassDark)) continue;
                 if (OnTileBorder(m.Position[3 * v], m.Position[3 * v + 2])) continue;
                 float x = m.Position[3 * v], y = m.Position[3 * v + 1], z = m.Position[3 * v + 2];
                 if (z < 12f) continue;   // away from the flattened road verge
@@ -296,7 +299,7 @@ public sealed class GroundTests
                             var key = Less(a, b) ? (a, b) : (b, a);
                             edges[key] = edges.GetValueOrDefault(key) + 1;
                         }
-                var size = lod == LodLevel.L0 ? 64f : 128f;
+                var size = TileGrid.Edge(lod);
                 bool Border(Vector3 p) => p.X == 0f || p.Z == 0f || p.X == size || p.Z == size;
                 foreach (var ((a, b), count) in edges)
                 {
@@ -314,7 +317,7 @@ public sealed class GroundTests
 
     // ---------------------------------------------------------------- helpers
 
-    private static bool OnTileBorder(float x, float z) => x % 64f == 0f || z % 64f == 0f;
+    private static bool OnTileBorder(float x, float z) => x % TileGrid.BaseEdge == 0f || z % TileGrid.BaseEdge == 0f;
 
     /// <summary>Every top triangle faces up, every face triangle faces horizontally (clockwise front faces).</summary>
     private static void AssertWinding(ContentOutput output)
@@ -334,28 +337,27 @@ public sealed class GroundTests
 }
 
 /// <summary>Small synthetic worlds: an east-west street with kerbs, a sidewalk, a plaza and a crossing footpath.</summary>
-internal sealed class TestWorld : FakeWorld
+internal static class TestWorld
 {
-    private TestWorld(IEnumerable<WorldFeature> features, WorldNetwork network)
+
+    public static FakeWorld Empty() => Of([]);
+
+    public static FakeWorld Of(IEnumerable<WorldFeature> features, WorldNetwork? network = null) => new()
     {
-        Boundary = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]);
-        Features = features.ToDictionary(f => f.Id);
-        Network = network;
-    }
+        Boundary = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]),
+        Features = features.ToDictionary(f => f.Id),
+        Network = network ?? WorldNetwork.Empty,
+    };
 
-    public static TestWorld Empty() => new([], WorldNetwork.Empty);
-
-    public static TestWorld Of(IEnumerable<WorldFeature> features, WorldNetwork? network = null) => new(features, network ?? WorldNetwork.Empty);
-
-    public static TestWorld Street()
+    public static FakeWorld Street()
     {
         var features = new List<WorldFeature>
         {
-            Polygon("osm:way:1", "road", Rect(-200f, -3f, 200f, 3f), """{"roadType":"residential"}"""),
-            Polygon("osm:way:2", "road", Rect(-200f, 3f, 200f, 5.5f), """{"roadType":"footway"}"""),
-            Polygon("osm:way:3", "road", Rect(20f, 8f, 40f, 20f), """{"roadType":"pedestrian"}"""),
-            Polygon("osm:way:4", "road", Rect(30f, -12f, 32.5f, 8f), """{"roadType":"footway"}"""),
-            Polygon("osm:way:5", "building", Rect(-40f, 20f, -20f, 40f), "{}"),
+            WorldFeatureFixture.Create("osm:way:1", "road", new PolygonGeometry(Rect(-200f, -3f, 200f, 3f)), """{"roadType":"residential"}""", FeatureSource.Osm),
+            WorldFeatureFixture.Create("osm:way:2", "road", new PolygonGeometry(Rect(-200f, 3f, 200f, 5.5f)), """{"roadType":"footway"}""", FeatureSource.Osm),
+            WorldFeatureFixture.Create("osm:way:3", "road", new PolygonGeometry(Rect(20f, 8f, 40f, 20f)), """{"roadType":"pedestrian"}""", FeatureSource.Osm),
+            WorldFeatureFixture.Create("osm:way:4", "road", new PolygonGeometry(Rect(30f, -12f, 32.5f, 8f)), """{"roadType":"footway"}""", FeatureSource.Osm),
+            WorldFeatureFixture.Create("osm:way:5", "building", new PolygonGeometry(Rect(-40f, 20f, -20f, 40f)), "{}", FeatureSource.Osm, height: 20f),
         };
         var roads = new List<NetworkLine>
         {
@@ -364,16 +366,16 @@ internal sealed class TestWorld : FakeWorld
             new(new FeatureId("osm:way:4"), new Polyline([new(31.25f, -12f), new(31.25f, 8f)]), 2.5f)
                 { Props = JsonDocument.Parse("""{"highway":"footway"}""").RootElement.Clone() },
         };
-        return new(features, new WorldNetwork(roads, [], [], [], []));
+        return Of(features, new WorldNetwork(roads, [], [], [], []));
     }
 
     /// <summary>A T junction: an east-west road and a road running south from it, both 6 m wide.</summary>
-    public static TestWorld Junction()
+    public static FakeWorld Junction()
     {
         var features = new List<WorldFeature>
         {
-            Polygon("osm:way:11", "road", Rect(-60f, -3f, 60f, 3f), """{"roadType":"residential"}"""),
-            Polygon("osm:way:12", "road", Rect(-3f, 0f, 3f, 60f), """{"roadType":"residential"}"""),
+            WorldFeatureFixture.Create("osm:way:11", "road", new PolygonGeometry(Rect(-60f, -3f, 60f, 3f)), """{"roadType":"residential"}""", FeatureSource.Osm),
+            WorldFeatureFixture.Create("osm:way:12", "road", new PolygonGeometry(Rect(-3f, 0f, 3f, 60f)), """{"roadType":"residential"}""", FeatureSource.Osm),
         };
         var roads = new List<NetworkLine>
         {
@@ -382,7 +384,7 @@ internal sealed class TestWorld : FakeWorld
             new(new FeatureId("osm:way:12"), new Polyline([new(0f, 0f), new(0f, 60f)]), 6f)
                 { Props = JsonDocument.Parse("""{"highway":"residential"}""").RootElement.Clone() },
         };
-        return new(features, new WorldNetwork(roads, [], [], [], []));
+        return Of(features, new WorldNetwork(roads, [], [], [], []));
     }
 
     public static BuildContext Context(IWorldModel world, float half = 1280f)
@@ -401,14 +403,4 @@ internal sealed class TestWorld : FakeWorld
     private static PolygonRings Rect(float x0, float z0, float x1, float z1) =>
         new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]);
 
-    private static WorldFeature Polygon(string id, string kind, PolygonRings rings, string props)
-    {
-        var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
-        var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
-        return new(new FeatureId(id), FeatureSource.Osm, new DesignKind(kind), new PolygonGeometry(rings))
-        {
-            Bounds = new Box3(new(min.X, 0f, min.Y), new(max.X, kind == "building" ? 20f : 0f, max.Y)),
-            Props = JsonDocument.Parse(props).RootElement.Clone()
-        };
-    }
 }

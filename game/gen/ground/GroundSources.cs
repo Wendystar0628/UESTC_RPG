@@ -1,6 +1,8 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Gen.World;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Ground;
 
@@ -41,7 +43,7 @@ internal static class GroundSources
         var roads = new List<RoadLine>();
         foreach (var line in world.Network.Roads.OrderBy(l => l.Id.Value, StringComparer.Ordinal))
         {
-            var points = Clean(line.Line.Points);
+            var points = PlanGeometry.CleanPath(line.Line.Points);
             if (points.Length < 2) continue;
             var type = GroundClassifier.RoadType(line.Props);
             var width = GroundClassifier.Width(line.Props, type, line.Width);
@@ -88,7 +90,7 @@ internal static class GroundSources
         {
             if (feature.Kind.Value != "bridge-deck" || feature.Props is not { ValueKind: JsonValueKind.Object } props) continue;
             var ids = new List<string>();
-            if (GroundClassifier.Text(props, "axis") is { } axis) ids.Add(axis);
+            if (WorldProps.TryText(props, "axis") is { } axis) ids.Add(axis);
             if (props.TryGetProperty("walks", out var walks) && walks.ValueKind == JsonValueKind.Array)
                 foreach (var w in walks.EnumerateArray())
                     if (w.ValueKind == JsonValueKind.String) ids.Add(w.GetString()!);
@@ -127,7 +129,7 @@ internal static class GroundSources
     /// and the building planner use the same rule). An entity whose own kind is poi can still own building parts.
     /// </summary>
     private static string PartKind(WorldFeature feature, WorldFeaturePart part) =>
-        GroundClassifier.Text(part.Props, "kind") ?? feature.Kind.Value;
+        WorldProps.TryText(part.Props, "kind") ?? feature.Kind.Value;
 
     /// <summary>
     /// True for a road drawn as a centre line whose effective copy lives in <c>Network.Roads</c>, so that copy is the one
@@ -142,7 +144,7 @@ internal static class GroundSources
         if (network.Contains(feature.Id)) return true;
         return feature.Source == FeatureSource.Design &&
             GroundClassifier.RoadType(source.Props) is "footway" or "path" or "pedestrian" &&
-            GroundClassifier.Text(source.Props, "area") != "yes";
+            WorldProps.TryText(source.Props, "area") != "yes";
     }
 
     /// <summary>Overlay kind of a tree pit or planting strip.</summary>
@@ -156,8 +158,8 @@ internal static class GroundSources
     /// </summary>
     private static void AddPits(List<GroundShape> shapes, WorldFeature feature)
     {
-        if (GroundClassifier.Text(feature.Props, "stone") == "site") return;
-        var profile = new PitProfile(feature.Height, GroundClassifier.Number(feature.Props, "soilAbove"), GroundClassifier.Number(feature.Props, "kerb"));
+        if (WorldProps.TryText(feature.Props, "stone") == "site") return;
+        var profile = new PitProfile(feature.Height, WorldProps.TryNumber(feature.Props, "soilAbove"), WorldProps.TryNumber(feature.Props, "kerb"));
         switch (feature.Geometry)
         {
             case PolygonGeometry polygon:
@@ -174,13 +176,13 @@ internal static class GroundSources
     {
         if (GroundClassifier.KindOf(source.Kind, source.Props, source.Entity) is not { } kind) return;
         // Only a record that names a sport is a marked pitch; a pitch without a sport tag is plain grass (no white lines).
-        var marked = kind == SurfaceKind.Turf && GroundClassifier.Text(source.Props, "sport") is { Length: > 0 };
+        var marked = kind == SurfaceKind.Turf && WorldProps.TryText(source.Props, "sport") is { Length: > 0 };
         void Add(GroundShape? shape)
         {
             if (shape is null) return;
             shape.PartSourceId = source.PartSourceId;
             if (shape.DirectionPath is null && source.Geometry is PolylineGeometry line)
-                shape.DirectionPath = Clean(line.Line.Points);
+                shape.DirectionPath = PlanGeometry.CleanPath(line.Line.Points);
             shapes.Add(shape);
         }
         switch (source.Geometry)
@@ -195,7 +197,7 @@ internal static class GroundSources
             case PolylineGeometry when kind == SurfaceKind.Building:
                 break;   // a footprint needs an area
             case PolylineGeometry polyline when kind == SurfaceKind.Track:
-                Add(SportGround.TrackLine(id, polyline.Line.Points, GroundClassifier.Number(source.Props, "width")));
+                Add(SportGround.TrackLine(id, polyline.Line.Points, WorldProps.TryNumber(source.Props, "width")));
                 break;
             case PolylineGeometry polyline:
                 var type = GroundClassifier.RoadType(source.Props);
@@ -217,12 +219,12 @@ internal static class GroundSources
     internal static GroundShape? Polygon(FeatureId id, SurfaceKind kind, PolygonRings rings, bool marked = false, PitProfile? pit = null)
     {
         var list = new List<Vector2[]>();
-        var outer = Clean(rings.Outer);
+        var outer = PlanGeometry.CleanPath(rings.Outer);
         if (outer.Length < 3) return null;
         list.Add(outer);
         foreach (var hole in rings.Holes)
         {
-            var h = Clean(hole);
+            var h = PlanGeometry.CleanPath(hole);
             if (h.Length >= 3) list.Add(h);
         }
         var min = outer[0];
@@ -233,7 +235,7 @@ internal static class GroundSources
 
     private static GroundShape? Capsule(FeatureId id, SurfaceKind kind, IReadOnlyList<Vector2> line, float width)
     {
-        var points = Clean(line);
+        var points = PlanGeometry.CleanPath(line);
         if (points.Length < 2 || !(width > 0f)) return null;
         var half = width * 0.5f;
         var min = points[0];
@@ -249,20 +251,6 @@ internal static class GroundSources
             Min = min - new Vector2(half),
             Max = max + new Vector2(half)
         };
-    }
-
-    /// <summary>Drops non-finite points, consecutive duplicates and a repeated closing vertex.</summary>
-    internal static Vector2[] Clean(IReadOnlyList<Vector2> points)
-    {
-        var result = new List<Vector2>(points.Count);
-        foreach (var p in points)
-        {
-            if (!float.IsFinite(p.X) || !float.IsFinite(p.Y)) continue;
-            if (result.Count > 0 && Vector2.DistanceSquared(result[^1], p) < 1e-8f) continue;
-            result.Add(p);
-        }
-        if (result.Count > 2 && Vector2.DistanceSquared(result[0], result[^1]) < 1e-8f) result.RemoveAt(result.Count - 1);
-        return result.ToArray();
     }
 
 }

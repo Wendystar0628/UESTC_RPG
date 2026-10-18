@@ -63,7 +63,7 @@ internal sealed class MeshBuilder
     /// <summary>Axis-aligned box in frame space; a positive bevel uses the kernel's single-band chamfer box.</summary>
     internal void Box(ToonSpec material, Vector3 min, Vector3 max, float bevel, Frame frame, byte flags = 0)
     {
-        var size = V3.Sub(max, min);
+        var size = Vector3.Subtract(max, min);
         var smallest = Math.Min(size.X, Math.Min(size.Y, size.Z));
         var b = bevel > 0 && bevel < smallest * 0.45f ? bevel : 0;
         var box = PartGeometryKernel.BeveledBox(size.X, size.Y, size.Z, b, material);
@@ -79,7 +79,7 @@ internal sealed class MeshBuilder
         if (rings < 3 || segments < 6 || !(radii.X > 0 && radii.Y > 0 && radii.Z > 0)) throw new ArgumentException("An ellipsoid needs 3 rings, 6 segments and positive radii.");
         var layer = For(material, flags);
         if (layer.Count + (rings - 1) * segments + 2 > 65536) throw new ArgumentException("A part surface exceeds 65,536 vertices.");
-        Vector3 Normal(Vector3 unit) => V3.Unit(new(unit.X / radii.X, unit.Y / radii.Y, unit.Z / radii.Z));
+        Vector3 Normal(Vector3 unit) => VectorMath.Unit(new Vector3(unit.X / radii.X, unit.Y / radii.Y, unit.Z / radii.Z));
         Vector3 At(Vector3 unit) => new(centre.X + radii.X * unit.X, centre.Y + radii.Y * unit.Y, centre.Z + radii.Z * unit.Z);
         var top = Vertex(layer, frame, At(Vector3.UnitY), Vector3.UnitY, Vector2.Zero);
         var ring = new int[rings - 1, segments];
@@ -95,7 +95,7 @@ internal sealed class MeshBuilder
             }
         }
         var bottom = Vertex(layer, frame, At(-Vector3.UnitY), -Vector3.UnitY, Vector2.One);
-        Vector3 Out(int a, int b, int c) => V3.Sub(V3.Scale(V3.Add(V3.Add(P(layer, a), P(layer, b)), P(layer, c)), 1f / 3), frame.Point(centre));
+        Vector3 Out(int a, int b, int c) => Vector3.Subtract(Vector3.Multiply(Vector3.Add(Vector3.Add(P(layer, a), P(layer, b)), P(layer, c)), 1f / 3), frame.Point(centre));
         for (var j = 0; j < segments; j++)
         {
             var k = (j + 1) % segments;
@@ -131,7 +131,7 @@ internal sealed class MeshBuilder
         for (var k = 0; k < n; k++)
         {
             var d = section[(k + 1) % n] - section[k];
-            var length = V3.Length(d);
+            var length = (float)Math.Sqrt(VectorMath.Dot(d, d));
             if (!(length > 1e-7f)) throw new ArgumentException("A section has a repeated point.");
             edge[k] = new(sign * d.Y / length, -sign * d.X / length);
         }
@@ -140,7 +140,7 @@ internal sealed class MeshBuilder
         for (var s = 0; s < segments; s++)
         {
             var a = path[s]; var b = path[(s + 1) % m];
-            tangent[s] = V3.Unit(new(b.X - a.X, 0, b.Z - a.Z));
+            tangent[s] = VectorMath.Unit(new Vector3(b.X - a.X, 0, b.Z - a.Z));
             right[s] = new(tangent[s].Z, 0, -tangent[s].X);
         }
         var miter = new Vector3[m];
@@ -149,10 +149,10 @@ internal sealed class MeshBuilder
             if (!closed && i == 0) { miter[i] = right[0]; continue; }
             if (!closed && i == m - 1) { miter[i] = right[^1]; continue; }
             var ra = right[(i + segments - 1) % segments]; var rb = right[i % segments];
-            var denominator = 1 + V3.Dot(ra, rb);
+            var denominator = 1 + VectorMath.Dot(ra, rb);
             if (denominator < 1e-8) throw new ArgumentException("A sweep cannot reverse direction at a join.");
-            miter[i] = V3.Scale(V3.Add(ra, rb), (float)(1 / denominator));
-            if (V3.Dot(miter[i], miter[i]) > (double)miterLimit * miterLimit + 1e-6) throw new ArgumentException("A sweep join exceeds the miter limit.");
+            miter[i] = Vector3.Multiply(Vector3.Add(ra, rb), (float)(1 / denominator));
+            if (VectorMath.Dot(miter[i], miter[i]) > (double)miterLimit * miterLimit + 1e-6) throw new ArgumentException("A sweep join exceeds the miter limit.");
         }
         Vector3 Pos(int i, Vector2 p) => new(path[i].X + miter[i].X * p.X, path[i].Y + p.Y, path[i].Z + miter[i].Z * p.X);
         Vector3 Lift(Vector3 lateral, Vector2 n2) => new(lateral.X * n2.X, n2.Y, lateral.Z * n2.X);
@@ -163,7 +163,7 @@ internal sealed class MeshBuilder
         {
             int i = s, j = (s + 1) % m;
             for (var k = 0; k < n; k++)
-                if (V3.Dot(V3.Sub(Pos(j, section[k]), Pos(i, section[k])), tangent[s]) <= 0)
+                if (VectorMath.Dot(Vector3.Subtract(Pos(j, section[k]), Pos(i, section[k])), tangent[s]) <= 0)
                     throw new ArgumentException("A sweep segment is too short for the section and adjacent miters.");
             // True face normals of this segment, oriented by the section's outward normal.
             var face = new Vector3[n];
@@ -171,16 +171,17 @@ internal sealed class MeshBuilder
             {
                 var a = Pos(i, section[k]); var b = Pos(i, section[(k + 1) % n]); var d = Pos(j, section[k]);
                 var guess = Lift(right[s], edge[k]);
-                var cross = V3.Cross(V3.Sub(b, a), V3.Sub(d, a));
-                face[k] = V3.Dot(cross, cross) > 1e-20 ? V3.Unit(cross) : guess;
-                if (V3.Dot(face[k], guess) < 0) face[k] = V3.Scale(face[k], -1);
+                var cross = VectorMath.Cross(Vector3.Subtract(b, a), Vector3.Subtract(d, a));
+                face[k] = VectorMath.Dot(cross, cross) > 1e-20 ? VectorMath.Unit(cross) : guess;
+                if (VectorMath.Dot(face[k], guess) < 0) face[k] = Vector3.Multiply(face[k], -1);
             }
             Vector3 Smooth(int vertex, int k)
             {
-                var axis = V3.Unit(miter[vertex]);
-                return V3.Unit(Lift(axis, edge[(k + n - 1) % n] + edge[k]));
+                var axis = VectorMath.Unit(miter[vertex]);
+                return VectorMath.Unit(Lift(axis, edge[(k + n - 1) % n] + edge[k]));
             }
-            var length = V3.Length(new Vector2(path[j].X - path[i].X, path[j].Z - path[i].Z));
+            var delta = new Vector2(path[j].X - path[i].X, path[j].Z - path[i].Z);
+            var length = (float)Math.Sqrt(VectorMath.Dot(delta, delta));
             for (var k = 0; k < n; k++)
             {
                 var l = (k + 1) % n;
@@ -192,7 +193,7 @@ internal sealed class MeshBuilder
                     n0 = n3 = bevel ? face[(k + n - 1) % n] : face[k];
                     n1 = n2 = bevel ? face[l] : face[k];
                 }
-                var v = V3.Length(section[l] - section[k]);
+                var v = (float)Math.Sqrt(VectorMath.Dot(section[l] - section[k], section[l] - section[k]));
                 var a = Vertex(layer, frame, Pos(i, section[k]), n0, new(along, 0));
                 var b = Vertex(layer, frame, Pos(i, section[l]), n1, new(along, v));
                 var c = Vertex(layer, frame, Pos(j, section[l]), n2, new(along + length, v));
@@ -206,7 +207,7 @@ internal sealed class MeshBuilder
         for (var end = 0; end < 2; end++)
         {
             var i = end == 0 ? 0 : m - 1;
-            var outward = end == 0 ? V3.Scale(tangent[0], -1) : tangent[^1];
+            var outward = end == 0 ? Vector3.Multiply(tangent[0], -1) : tangent[^1];
             var ids = new int[capPoints.Count];
             for (var k = 0; k < ids.Length; k++) ids[k] = Vertex(layer, frame, Pos(i, capPoints[k]), outward, capPoints[k]);
             for (var t = 0; t < capIndices.Count; t += 3)
@@ -239,7 +240,7 @@ internal sealed class MeshBuilder
         for (var i = 0; i < n; i++)
         {
             var d = ring[(i + 1) % n] - ring[i];
-            var length = V3.Length(d);
+            var length = (float)Math.Sqrt(VectorMath.Dot(d, d));
             if (!(length > 1e-7f)) throw new ArgumentException("A ring has a repeated point.");
             // Ring (z, y) is counterclockwise when area > 0; its outward normal is (dy, −dz).
             normals[i] = new(0, -sign * d.X / length, sign * d.Y / length);
@@ -254,7 +255,7 @@ internal sealed class MeshBuilder
             var bevel = chamfer is not null && chamfer[i];
             var ni = bevel ? normals[(i + n - 1) % n] : normals[i];
             var nj = bevel ? normals[j] : normals[i];
-            var length = V3.Length(ring[j] - ring[i]);
+            var length = (float)Math.Sqrt(VectorMath.Dot(ring[j] - ring[i], ring[j] - ring[i]));
             var a = Vertex(layer, frame, new(x0, ring[i].Y, ring[i].X), ni, new(x0, along));
             var b = Vertex(layer, frame, new(x1, ring[i].Y, ring[i].X), ni, new(x1, along));
             var c = Vertex(layer, frame, new(x1, ring[j].Y, ring[j].X), nj, new(x1, along + length));
@@ -320,7 +321,7 @@ internal sealed class MeshBuilder
     private static void Triangle(Layer layer, int a, int b, int c, Vector3 outward)
     {
         var pa = P(layer, a);
-        var direction = V3.Dot(V3.Cross(V3.Sub(P(layer, b), pa), V3.Sub(P(layer, c), pa)), outward);
+        var direction = VectorMath.Dot(VectorMath.Cross(Vector3.Subtract(P(layer, b), pa), Vector3.Subtract(P(layer, c), pa)), outward);
         if (!double.IsFinite(direction) || direction == 0)
             throw new ArgumentException($"A face is degenerate: {pa} {P(layer, b)} {P(layer, c)} toward {outward}.");
         // Godot's front face is clockwise seen from outside, i.e. the triangle's right-hand normal points inward.

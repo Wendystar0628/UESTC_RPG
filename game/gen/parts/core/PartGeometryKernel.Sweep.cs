@@ -37,7 +37,7 @@ public static partial class PartGeometryKernel
         {
             if (profile.Normals.Count != profile.Points.Count) throw new ArgumentException("A section normal is required for each point.", nameof(profile));
             foreach (var n in profile.Normals)
-                if (!float.IsFinite(n.X) || !float.IsFinite(n.Y) || Math.Abs((double)n.X * n.X + (double)n.Y * n.Y - 1) > 1e-5)
+                if (!VectorMath.Finite(n) || Math.Abs((double)n.X * n.X + (double)n.Y * n.Y - 1) > 1e-5)
                     throw new ArgumentException("Section normals must be finite unit vectors.", nameof(profile));
         }
         var segmentCount = closed ? path.Count : path.Count - 1;
@@ -45,7 +45,7 @@ public static partial class PartGeometryKernel
         for (var i = 0; i < segmentCount; i++)
         {
             var a = path[i]; var b = path[(i + 1) % path.Count];
-            tangents[i] = GeometryMath.Unit(new(b.X - a.X, 0, b.Y - a.Y));
+            tangents[i] = VectorMath.Unit(new Vector3(b.X - a.X, 0, b.Y - a.Y));
             rights[i] = new(tangents[i].Z, 0, -tangents[i].X);
         }
         var miters = new Vector3[path.Count];
@@ -56,10 +56,10 @@ public static partial class PartGeometryKernel
             else
             {
                 var a = rights[(i + segmentCount - 1) % segmentCount]; var b = rights[i % segmentCount];
-                var denominator = 1 + GeometryMath.Dot(a, b);
+                var denominator = 1 + VectorMath.Dot(a, b);
                 if (denominator < 1e-8) throw new ArgumentException("A sweep cannot reverse direction at a join.", nameof(path));
-                miters[i] = GeometryMath.Scale(GeometryMath.Add(a, b), (float)(1 / denominator));
-                if (GeometryMath.Dot(miters[i], miters[i]) > (double)miterLimit * miterLimit + 1e-6)
+                miters[i] = Vector3.Multiply(Vector3.Add(a, b), (float)(1 / denominator));
+                if (VectorMath.Dot(miters[i], miters[i]) > (double)miterLimit * miterLimit + 1e-6)
                     throw new ArgumentException("A sweep join exceeds the miter limit.", nameof(path));
             }
         }
@@ -69,11 +69,11 @@ public static partial class PartGeometryKernel
         for (var s = 0; s < segmentCount; s++)
         {
             var next = (s + 1) % path.Count; var delta = new Vector3(path[next].X - path[s].X, 0, path[next].Y - path[s].Y);
-            var length = (float)Math.Sqrt(GeometryMath.Dot(delta, delta));
+            var length = (float)Math.Sqrt(VectorMath.Dot(delta, delta));
             for (var i = 0; i < profile.Points.Count; i++)
             {
                 var j = (i + 1) % profile.Points.Count; var a = profile.Points[i]; var b = profile.Points[j];
-                if (GeometryMath.Dot(GeometryMath.Sub(Position(next, a), Position(s, a)), tangents[s]) <= 0)
+                if (VectorMath.Dot(Vector3.Subtract(Position(next, a), Position(s, a)), tangents[s]) <= 0)
                     throw new ArgumentException("A sweep segment is too short for the section and adjacent miters.", nameof(path));
                 var edge = PlanGeometry.RightUnitNormal(a, b); var n0 = profile.Normals?[i] ?? edge; var n1 = profile.Normals?[j] ?? edge;
                 Vector3 Normal(Vector2 n) => new(rights[s].X * n.X, n.Y, rights[s].Z * n.X);
@@ -87,7 +87,7 @@ public static partial class PartGeometryKernel
         {
             for (var end = 0; end < 2; end++)
             {
-                var ring = end == 0 ? 0 : path.Count - 1; var normal = end == 0 ? GeometryMath.Scale(tangents[0], -1) : tangents[^1];
+                var ring = end == 0 ? 0 : path.Count - 1; var normal = end == 0 ? Vector3.Multiply(tangents[0], -1) : tangents[^1];
                 var ids = new int[cap.Vertices.Length];
                 for (var i = 0; i < ids.Length; i++) ids[i] = writer.Vertex(Position(ring, cap.Vertices[i]), normal, cap.Vertices[i]);
                 for (var i = 0; i < cap.Indices.Length; i += 3) writer.Triangle(ids[cap.Indices[i]], ids[cap.Indices[i + 1]], ids[cap.Indices[i + 2]], normal);

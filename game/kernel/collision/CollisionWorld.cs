@@ -62,18 +62,18 @@ public sealed class CollisionWorld : ICollisionWorld
     {
         MainThread();
         if (_context is null || _root is null || !_root.IsInsideTree() || !Finite(p) || !float.IsFinite(r) || r < 0) return false;
-        var center = CollisionGeometry.TileAt(p);
-        var min = CollisionGeometry.TileAt(p - new N.Vector3(r, 0, r));
-        var max = CollisionGeometry.TileAt(p + new N.Vector3(r, 0, r));
+        var center = TileGrid.At(p);
+        var min = TileGrid.At(p - new N.Vector3(r, 0, r));
+        var max = TileGrid.At(p + new N.Vector3(r, 0, r));
         for (var x = Math.Min(min.X, center.X - 1); x <= Math.Max(max.X, center.X + 1); x++)
             for (var z = Math.Min(min.Z, center.Z - 1); z <= Math.Max(max.Z, center.Z + 1); z++)
             {
                 var tile = new TileKey(x, z);
                 if (Math.Abs(x - center.X) > 1 || Math.Abs(z - center.Z) > 1)
                 {
-                    var origin = CollisionGeometry.Origin(tile);
-                    var dx = MathF.Max(MathF.Max(origin.X - p.X, p.X - origin.X - 64), 0);
-                    var dz = MathF.Max(MathF.Max(origin.Z - p.Z, p.Z - origin.Z - 64), 0);
+                    var origin = TileGrid.Origin(tile);
+                    var dx = MathF.Max(MathF.Max(origin.X - p.X, p.X - origin.X - TileGrid.BaseEdge), 0);
+                    var dz = MathF.Max(MathF.Max(origin.Y - p.Z, p.Z - origin.Y - TileGrid.BaseEdge), 0);
                     if (dx * dx + dz * dz > r * r) continue;
                 }
                 // Outside the declared tile rectangle is never silently treated as physical ground.
@@ -97,6 +97,7 @@ public sealed class CollisionWorld : ICollisionWorld
         if (_root is null || !_tiles.TryGetValue(tile, out var state) || state.Ready) throw new InvalidOperationException("Collision tile is not pending.");
         var bodyIndex = state.Bodies.Count;
         var first = colliders[0];
+        var origin = TileGrid.Origin(tile);
         StaticBody3D? body = null;
         var rid = default(Rid);
         try
@@ -104,7 +105,7 @@ public sealed class CollisionWorld : ICollisionWorld
             body = new StaticBody3D
             {
                 Name = $"Collision_{tile.X}_{tile.Z}_{bodyIndex}",
-                Position = CollisionGeometry.Origin(tile).ToGodot(),
+                Position = new Vector3(origin.X, 0, origin.Y),
                 CollisionLayer = 1u << (int)first.Tag,
                 CollisionMask = 0,
             };

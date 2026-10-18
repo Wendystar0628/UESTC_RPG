@@ -290,7 +290,7 @@ public partial class TimeStrip : Control
     public void Sync()
     {
         var clock = _model.Clock;
-        _clock.Text = $"{(int)clock:00}:{(int)((clock % 1) * 60):00}";
+        _clock.Text = WorldTime.FormatClock(clock);
         _text.Text = $"{UiKit.T("time.shichen." + TimeCard.Shichen(clock))} · {UiKit.T("hud.season." + TimeCard.SeasonCode(_model.Season).ToLowerInvariant())} · " +
                      UiKit.T("weather.cell." + WeatherStrip.CellKey(WeatherStrip.CellOf(_model.Weather.Kind)));
         _via.Position = new Vector2(104 + _kit.Width(_text) + 10, 25);

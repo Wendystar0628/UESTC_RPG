@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Ground;
 
@@ -37,22 +38,10 @@ internal static class RoadGraph
     /// <summary>Point and direction at arc length d from a vertex, walking forward or backward; null if the line is shorter.</summary>
     public static (Vector2? Point, Vector2 Dir) Walk(Vector2[] points, int vertex, bool forward, float d)
     {
-        var step = forward ? 1 : -1;
-        var i = vertex;
-        while (i + step >= 0 && i + step < points.Length)
-        {
-            var a = points[i];
-            var b = points[i + step];
-            var seg = Vector2.Distance(a, b);
-            if (seg > 0f && d <= seg)
-            {
-                var dir = (b - a) / seg;
-                return (a + dir * d, dir);
-            }
-            d -= seg;
-            i += step;
-        }
-        return (null, Vector2.UnitX);
+        var arm = forward ? points[vertex..] : points[..(vertex + 1)].Reverse().ToArray();
+        if (arm.Length < 2 || d > PlanGeometry.Length(arm)) return (null, Vector2.UnitX);
+        var sample = PlanGeometry.Sample(arm, d);
+        return (sample.Point, sample.Tangent);
     }
 
     /// <summary>
@@ -96,7 +85,7 @@ internal static class RoadGraph
         var radius = Math.Clamp(MathF.Min(a.Half, b.Half) * 1.4f, 4f, 8f);
         var na = new Vector2(-a.Dir.Y, a.Dir.X);   // a's kerb side facing b
         var nb = new Vector2(b.Dir.Y, -b.Dir.X);   // b's kerb side facing a
-        if (Lines(node + na * (a.Half + radius), a.Dir, node + nb * (b.Half + radius), b.Dir) is not { } centre) return null;
+        if (PlanGeometry.LineIntersection(node + na * (a.Half + radius), a.Dir, node + nb * (b.Half + radius), b.Dir, 1e-5f) is not { } centre) return null;
         var t1 = centre - na * radius;
         var t2 = centre - nb * radius;
         // Tangent points must lie on the arms, within their straight-ish first stretch.
@@ -120,21 +109,8 @@ internal static class RoadGraph
 
     private static float ArmLength(Arm arm)
     {
-        var pts = arm.Road.Points;
-        var length = 0f;
-        var step = arm.Forward ? 1 : -1;
-        for (var i = arm.Vertex; i + step >= 0 && i + step < pts.Length; i += step)
-            length += Vector2.Distance(pts[i], pts[i + step]);
-        return length;
-    }
-
-    /// <summary>Intersection of two lines p + t·u and q + s·v; null when (nearly) parallel.</summary>
-    private static Vector2? Lines(Vector2 p, Vector2 u, Vector2 q, Vector2 v)
-    {
-        var den = u.X * v.Y - u.Y * v.X;
-        if (MathF.Abs(den) < 1e-5f) return null;
-        var t = ((q.X - p.X) * v.Y - (q.Y - p.Y) * v.X) / den;
-        return p + u * t;
+        var points = arm.Road.Points;
+        return (float)PlanGeometry.Length(arm.Forward ? points[arm.Vertex..] : points[..(arm.Vertex + 1)]);
     }
 
     /// <summary>Monotonic in the angle of (x, z), in [0, 4); no trigonometry.</summary>

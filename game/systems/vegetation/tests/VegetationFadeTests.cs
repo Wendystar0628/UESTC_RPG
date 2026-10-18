@@ -12,7 +12,7 @@ public sealed class VegetationFadeTests
     [TestCase]
     public void ShadersMirrorTheFadeConstants()
     {
-        var shaders = Path.Combine(FindRepository(), "game", "style", "shaders");
+        var shaders = Campus.Tests.RepositoryFixture.FilePath("game", "style", "shaders");
         foreach (var user in new[] { "veg_card.gdshader", "veg_trunk.gdshader" })
             if (!File.ReadAllText(Path.Combine(shaders, user)).Contains("veg_common.gdshaderinc", StringComparison.Ordinal))
                 throw new InvalidOperationException($"{user} must include veg_common.gdshaderinc");
@@ -37,16 +37,5 @@ public sealed class VegetationFadeTests
         var x = float.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
         var y = float.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
         AssertThat(x == a && y == b).OverrideFailureMessage($"{file}: {name} = ({x}, {y}), expected ({a}, {b})").IsTrue();
-    }
-
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
     }
 }

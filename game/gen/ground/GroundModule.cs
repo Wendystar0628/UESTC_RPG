@@ -37,14 +37,16 @@ public sealed class GroundModule : IContentModule
     internal static IEnumerable<TileKey> TileKeys(Contracts.Maps.MapDescriptor map)
     {
         var geo = map.Geo;
-        var x0 = (int)MathF.Floor(geo.BoundaryMin.X / GroundLod.TileSize) - MarginTiles;
-        var z0 = (int)MathF.Floor(geo.BoundaryMin.Y / GroundLod.TileSize) - MarginTiles;
-        var x1 = (int)MathF.Ceiling(geo.BoundaryMax.X / GroundLod.TileSize) - 1 + MarginTiles;
-        var z1 = (int)MathF.Ceiling(geo.BoundaryMax.Y / GroundLod.TileSize) - 1 + MarginTiles;
-        var rx0 = (int)MathF.Floor(map.DataRect.Min.X / GroundLod.TileSize);
-        var rz0 = (int)MathF.Floor(map.DataRect.Min.Y / GroundLod.TileSize);
-        var rx1 = (int)MathF.Ceiling(map.DataRect.Max.X / GroundLod.TileSize) - 1;
-        var rz1 = (int)MathF.Ceiling(map.DataRect.Max.Y / GroundLod.TileSize) - 1;
+        var first = TileGrid.At(geo.BoundaryMin);
+        var x0 = first.X - MarginTiles;
+        var z0 = first.Z - MarginTiles;
+        var x1 = (int)MathF.Ceiling(geo.BoundaryMax.X / TileGrid.BaseEdge) - 1 + MarginTiles;
+        var z1 = (int)MathF.Ceiling(geo.BoundaryMax.Y / TileGrid.BaseEdge) - 1 + MarginTiles;
+        var dataFirst = TileGrid.At(map.DataRect.Min);
+        var rx0 = dataFirst.X;
+        var rz0 = dataFirst.Z;
+        var rx1 = (int)MathF.Ceiling(map.DataRect.Max.X / TileGrid.BaseEdge) - 1;
+        var rz1 = (int)MathF.Ceiling(map.DataRect.Max.Y / TileGrid.BaseEdge) - 1;
         x0 = Math.Max(Math.Max(x0, rx0), map.TileMin.X);
         z0 = Math.Max(Math.Max(z0, rz0), map.TileMin.Z);
         x1 = Math.Min(Math.Min(x1, rx1), map.TileMax.X);

@@ -1,3 +1,4 @@
+using Campus.Tests;
 using Campus.Camera.Walk;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -37,8 +38,7 @@ public sealed class CollisionCoreTests
         var input = source.ReadLoadInput(entry);
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
-        var repository = System.Environment.GetEnvironmentVariable("UESTC_REPOSITORY")
-            ?? throw new InvalidOperationException("The test runner must supply UESTC_REPOSITORY.");
+        var repository = RepositoryFixture.Root;
         var cache = System.Environment.GetEnvironmentVariable("UESTC_BAKE_CACHE")
             ?? Path.Combine(repository, "output", "cache", "bake");
         using var bake = new BakeService(new(cache, Live: false, Strict: false, Background: false,
@@ -93,7 +93,7 @@ public sealed class CollisionCoreTests
 
         async Task LoadNearby(N.Vector3 feet)
         {
-            var center = CollisionGeometry.TileAt(feet);
+            var center = TileGrid.At(feet);
             var needed = new HashSet<TileKey>();
             for (var z = center.Z - 1; z <= center.Z + 1; z++)
                 for (var x = center.X - 1; x <= center.X + 1; x++) needed.Add(new(x, z));

@@ -134,7 +134,7 @@ public sealed class FacadeOpenings
         {
             var n = (k + 1) % 4;
             Band(outer[k], outer[n], sF, bevel[n], bevel[k], sF, f.Out);
-            if (c > 0f) Band(bevel[k], bevel[n], sF, light[n], light[k], sF - c, Vector3.Normalize(f.Out + inward[k]));
+            if (c > 0f) Band(bevel[k], bevel[n], sF, light[n], light[k], sF - c, VectorMath.Unit(f.Out + inward[k]));
             Band(light[k], light[n], sF - c, light[n], light[k], sG, inward[k]);
         }
         // Mullions run through between the ring's chamfers; transoms sit a step behind and span the whole light.
@@ -162,8 +162,8 @@ public sealed class FacadeOpenings
                 Band((u0 + c, y0), (u1 - c, y0), sFront, (u1 - c, y1), (u0 + c, y1), sFront, f.Out);
                 if (c > 0f)
                 {
-                    Band((u0, y0), (u0, y1), sFront - c, (u0 + c, y1), (u0 + c, y0), sFront, Vector3.Normalize(f.Out - a));
-                    Band((u1 - c, y0), (u1 - c, y1), sFront, (u1, y1), (u1, y0), sFront - c, Vector3.Normalize(f.Out + a));
+                    Band((u0, y0), (u0, y1), sFront - c, (u0 + c, y1), (u0 + c, y0), sFront, VectorMath.Unit(f.Out - a));
+                    Band((u1 - c, y0), (u1 - c, y1), sFront, (u1, y1), (u1, y0), sFront - c, VectorMath.Unit(f.Out + a));
                 }
                 Band((u0, y0), (u0, y1), sFront - c, (u0, y1), (u0, y0), sG, -a);
                 Band((u1, y0), (u1, y1), sFront - c, (u1, y1), (u1, y0), sG, a);
@@ -173,8 +173,8 @@ public sealed class FacadeOpenings
                 Band((u0, y0 + c), (u1, y0 + c), sFront, (u1, y1 - c), (u0, y1 - c), sFront, f.Out);
                 if (c > 0f)
                 {
-                    Band((u0, y0), (u1, y0), sFront - c, (u1, y0 + c), (u0, y0 + c), sFront, Vector3.Normalize(f.Out - up));
-                    Band((u0, y1 - c), (u1, y1 - c), sFront, (u1, y1), (u0, y1), sFront - c, Vector3.Normalize(f.Out + up));
+                    Band((u0, y0), (u1, y0), sFront - c, (u1, y0 + c), (u0, y0 + c), sFront, VectorMath.Unit(f.Out - up));
+                    Band((u0, y1 - c), (u1, y1 - c), sFront, (u1, y1), (u0, y1), sFront - c, VectorMath.Unit(f.Out + up));
                 }
                 Band((u0, y0), (u1, y0), sFront - c, (u1, y0), (u0, y0), sG, -up);
                 Band((u0, y1), (u1, y1), sFront - c, (u1, y1), (u0, y1), sG, up);

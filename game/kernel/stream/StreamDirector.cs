@@ -69,7 +69,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState
         _destinationRequired.All(IsReady) && (_interiors?.DestinationReady ?? true) && (_destinationMode switch
         {
             ViewMode.Fly => true,
-            ViewMode.Walk => _collision.Ready(destination.Position, 96),
+            ViewMode.Walk => _collision.Ready(destination.Position, WalkRules.ArrivalCollisionRadius),
             _ => throw new ArgumentOutOfRangeException(nameof(_destinationMode))
         }));
     private string? _error;

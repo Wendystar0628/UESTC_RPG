@@ -39,7 +39,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
     private ShaderMaterial? _material;
     private IInstancePool? _pool;
     private float _density = 1f;
-    private int _stepRate = 12;
+    private int _stepRate = WorldTime.DefaultStepRate;
     private Image? _occImage;
     private ImageTexture? _occ;
 

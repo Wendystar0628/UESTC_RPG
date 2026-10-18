@@ -1,3 +1,4 @@
+using Campus.Gen.Tests.Support;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Lod;
@@ -18,7 +19,7 @@ public sealed class StreamSchedulingTests
         {
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             Map = BackdropInputsTests.Descriptor(),
-            World = new TestWorldModel(),
+            World = new FakeWorld { Boundary = new([]) },
             WorldSeed = 1
         };
         var module = new RootModule();

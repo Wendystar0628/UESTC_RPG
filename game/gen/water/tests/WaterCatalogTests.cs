@@ -5,6 +5,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Tests.Support;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Water.Tests;
@@ -30,12 +31,11 @@ public sealed class WaterCatalogTests
     {
         var lake = new FeatureId("lake");
         var river = new FeatureId("river");
-        var water = new DesignKind("water");
         var features = new Dictionary<FeatureId, WorldFeature>
         {
-            [lake] = new(lake, FeatureSource.Osm, water, new PolygonGeometry(Rect(0, 0, 80, 60))),
+            [lake] = WorldFeatureFixture.Create(lake.Value, "water", new PolygonGeometry(Rect(0, 0, 80, 60)), source: FeatureSource.Osm),
             // Two parts: the aggregate geometry must not be built in addition.
-            [river] = new(river, FeatureSource.Osm, water, new PolygonGeometry(Rect(-500, -500, 500, 500)))
+            [river] = WorldFeatureFixture.Create(river.Value, "water", new PolygonGeometry(Rect(-500, -500, 500, 500)), source: FeatureSource.Osm) with
             {
                 Parts =
                 [

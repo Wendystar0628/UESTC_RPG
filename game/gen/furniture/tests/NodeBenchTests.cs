@@ -1,7 +1,9 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Campus.Contracts;
+using Campus.Tests;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
@@ -92,7 +94,7 @@ public sealed class NodeBenchTests
         var spot = OpenGround(open);
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
         var props = JsonSerializer.SerializeToElement(new { roadType = "pedestrian" });
-        var square = new WorldFeature(new("design:furniture-test-square"), FeatureSource.Design, new("road"), new PolygonGeometry(new PolygonRings(ring, []))) { Props = props };
+        var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), props.GetRawText());
         IWorldModel world = MadeWorld(WalkWorld(open, null, square), [], [], SquareTrees(spot));
         var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
         var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
@@ -116,7 +118,7 @@ public sealed class NodeBenchTests
             var world = WalkWorld(open, line, feature);
             var layout = FurniturePlanner.Build(world, null, Inputs(), NodeRules(spot));
             var benches = layout.Items.Where(i => i.Key.StartsWith("node:0:0:", StringComparison.Ordinal)).ToList();
-            var onWalk = benches.Where(b => Distance(b.Anchor, line) <= Half(line)).ToList();
+            var onWalk = benches.Where(b => (float)PlanGeometry.Project(line.Line.Points, b.Anchor).Distance <= Half(line)).ToList();
             Console.WriteLine($"{width} m walk at {spot}: {benches.Count} node benches, {onWalk.Count} on the walk");
             if (!takes)
             {
@@ -136,8 +138,7 @@ public sealed class NodeBenchTests
         var open = new FakeWorld(World.Value) { Terrain = FlatTerrain.Default };
         var spot = OpenGround(open);
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
-        var square = new WorldFeature(new("design:furniture-test-square"), FeatureSource.Design, new("road"), new PolygonGeometry(new PolygonRings(ring, [])))
-        { Props = JsonSerializer.SerializeToElement(new { roadType = "pedestrian" }) };
+        var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), JsonSerializer.Serialize(new { roadType = "pedestrian" }));
         var walkProps = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 2.5f });
         var walk = new NetworkLine(new("design:furniture-test-through"), new Polyline([spot + new Vector2(-14f, 0f), spot + new Vector2(14f, 0f)]), 2.5f) { Props = walkProps };
         IWorldModel world = MadeWorld(open, [walk], [square], SquareTrees(spot));
@@ -176,7 +177,7 @@ public sealed class NodeBenchTests
             var facing = Front(bench.Part.At);
             var p = (FurnitureParams)bench.Part.Params;
             var front = bench.Anchor + facing * (p.Depth * 0.5f);
-            var edge = Distance(front, line) - Half(line);
+            var edge = (float)PlanGeometry.Project(line.Line.Points, front).Distance - Half(line);
             AssertThat(edge is >= -0.02f and <= FurnitureStyle.WalkGap + 0.1f).OverrideFailureMessage($"{bench.Key}: front {edge:F2} m off the walk's edge").IsTrue();
             AssertThat(site.PavingEdgeFacing(front + facing * 0.3f) is { Gap: <= 0f, Road: { } walk } && walk.Id == line.Id).OverrideFailureMessage($"{bench.Key} does not face the walk").IsTrue();
         }
@@ -203,18 +204,18 @@ public sealed class NodeBenchTests
             var p = (FurnitureParams)bench.Part.Params;
             var facing = Front(bench.Part.At);
             var right = new Vector2(-facing.Y, facing.X);
-            var walk = walks.Where(w => Distance(bench.Anchor, w) <= Half(w)).MinBy(w => Distance(bench.Anchor, w))
+            var walk = walks.Where(w => (float)PlanGeometry.Project(w.Line.Points, bench.Anchor).Distance <= Half(w)).MinBy(w => (float)PlanGeometry.Project(w.Line.Points, bench.Anchor).Distance)
                 ?? throw new InvalidOperationException($"{bench.Key} does not stand on a walk");
             AssertThat(2f * Half(walk) >= FurnitureStyle.NodeWalkMin).OverrideFailureMessage($"{bench.Key} stands on a walk {2f * Half(walk):F1} m wide").IsTrue();
             foreach (var u in new[] { -p.Width * 0.5f, 0f, p.Width * 0.5f })
                 foreach (var v in new[] { -p.Depth * 0.5f, p.Depth * 0.5f + FurnitureStyle.FeetReach })
-                    AssertThat(Distance(bench.Anchor + right * u + facing * v, walk) <= Half(walk) + 0.01f).OverrideFailureMessage($"{bench.Key} leaves its walk at ({u:F2}, {v:F2})").IsTrue();
+                    AssertThat((float)PlanGeometry.Project(walk.Line.Points, bench.Anchor + right * u + facing * v).Distance <= Half(walk) + 0.01f).OverrideFailureMessage($"{bench.Key} leaves its walk at ({u:F2}, {v:F2})").IsTrue();
             var back = bench.Anchor - facing * (p.Depth * 0.5f);
-            AssertThat(MathF.Abs(Half(walk) - Distance(back, walk) - FurnitureStyle.WalkBenchClear) < 0.05f).OverrideFailureMessage($"{bench.Key} has its back {Half(walk) - Distance(back, walk):F2} m inside the walk's edge").IsTrue();
-            var toLine = Vector2.Normalize(Nearest(back, walk) - back);
+            AssertThat(MathF.Abs(Half(walk) - (float)PlanGeometry.Project(walk.Line.Points, back).Distance - FurnitureStyle.WalkBenchClear) < 0.05f).OverrideFailureMessage($"{bench.Key} has its back {Half(walk) - (float)PlanGeometry.Project(walk.Line.Points, back).Distance:F2} m inside the walk's edge").IsTrue();
+            var toLine = Vector2.Normalize(PlanGeometry.Project(walk.Line.Points, back).Point - back);
             AssertThat(Vector2.Dot(toLine, facing) > 0.97f).OverrideFailureMessage($"{bench.Key} does not face across its walk").IsTrue();
             var feet = bench.Anchor + facing * (p.Depth * 0.5f + FurnitureStyle.FeetReach);
-            var across = Vector2.Dot(feet - Nearest(feet, walk), facing);
+            var across = Vector2.Dot(feet - PlanGeometry.Project(walk.Line.Points, feet).Point, facing);
             AssertThat(Half(walk) - across >= FurnitureStyle.NodeWalkPass - 0.01f).OverrideFailureMessage($"{bench.Key} leaves {Half(walk) - across:F2} m to pass").IsTrue();
             AssertThat(site.OffCarriageways(bench.Anchor, p.Depth * 0.5f, FurnitureStyle.RoadSetback - 0.1f)).OverrideFailureMessage($"{bench.Key} is within {FurnitureStyle.RoadSetback} m of a carriageway").IsTrue();
             AssertThat(!site.CarriagewayAhead(bench.Anchor + facing * (p.Depth * 0.5f), facing, FurnitureStyle.FaceClear)).OverrideFailureMessage($"{bench.Key} faces a carriageway within {FurnitureStyle.FaceClear} m").IsTrue();
@@ -258,24 +259,19 @@ public sealed class NodeBenchTests
         var id = new FeatureId("design:furniture-test-walk");
         var points = new Polyline([spot + new Vector2(-8f, 0f), spot + new Vector2(8f, 0f)]);
         var props = JsonSerializer.SerializeToElement(new { roadType = "footway", width });
-        return (new NetworkLine(id, points, width) { Props = props }, new WorldFeature(id, FeatureSource.Design, new("road"), new PolylineGeometry(points)) { Props = props });
+        return (new NetworkLine(id, points, width) { Props = props }, WorldFeatureFixture.Create(id.Value, "road", new PolylineGeometry(points), props.GetRawText()));
     }
 
     /// <summary>The real world with an overlay that adds the made-up design walk, and takes it away again when <paramref name="hide"/>.</summary>
     private static IWorldModel Loaded(Vector2 spot, bool hide)
     {
-        var data = Path.Combine(FindRepository(), "game", "data", "maps", "qingshuihe");
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        foreach (var overlay in Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
-                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Order(StringComparer.Ordinal))
-            files[Path.GetRelativePath(data, overlay).Replace('\\', '/')] = File.ReadAllText(overlay);
+        var entry = RealMapFixture.Entry();
+        var files = RealMapFixture.ReadTextFiles(entry.Descriptor.Id);
         var (line, feature) = DesignWalk(spot);
         var ops = new List<OverlayOp> { new AddOp(feature.Id, feature.Kind, feature.Geometry, null, feature.Props, "furniture test walk") };
         if (hide) ops.Add(new HideOp(feature.Id, "furniture test: hidden again"));
-        files["overlay/zz-furniture-test.d/0000-fixture.json"] = JsonSerializer.Serialize(new OverlayFile(new("furniture-test"), new("WP-13"), ops) { Map = new("qingshuihe") }, ContractJson.Options);
-        return WorldModelLoader.Load(new("qingshuihe"), files).World;
+        files["overlay/zz-furniture-test.d/0000-fixture.json"] = JsonSerializer.Serialize(new OverlayFile(new("furniture-test"), new("WP-13"), ops) { Map = entry.Descriptor.Id }, ContractJson.Options);
+        return WorldModelLoader.Load(entry.Descriptor.Id, files).World;
     }
 
     /// <summary>The world with a walk filed the way the effective network files a design walk: as a network line, as a feature, or both (null leaves that stack alone).</summary>

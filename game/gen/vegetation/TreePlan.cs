@@ -169,8 +169,8 @@ internal sealed class TreePlan
     {
         t = Math.Clamp(t, -1f, 1f);
         var ellipse = MathF.Sqrt(MathF.Max(0f, 1f - t * t));
-        var cone = (1f - t) * 0.5f * (0.6f + 0.4f * Smooth((t + 1f) / 0.3f));
-        return CrownRx * (ellipse + (cone - ellipse) * Form.Taper);
+        var cone = (1f - t) * 0.5f * (0.6f + 0.4f * ScalarMath.Smoothstep((t + 1f) / 0.3f));
+        return CrownRx * (ScalarMath.Lerp(ellipse, cone, Form.Taper));
     }
 
     public bool InsideEnvelope(Vector3 p, float margin)
@@ -182,7 +182,7 @@ internal sealed class TreePlan
     }
 
     public float Next() => _rng.NextFloat();
-    public float Range(float a, float b) => a + (b - a) * _rng.NextFloat();
+    public float Range(float a, float b) => ScalarMath.Lerp(a, b, _rng.NextFloat());
     public int Count(int min, int max) => max <= min ? min : min + _rng.NextInt(max - min + 1);
 
     public Vector3 RandomDirection()
@@ -195,16 +195,10 @@ internal sealed class TreePlan
 
     public static Vector3 Azimuth(float angle) => new(MathF.Cos(angle), 0f, MathF.Sin(angle));
 
-    private static float Smooth(float x)
-    {
-        x = Math.Clamp(x, 0f, 1f);
-        return x * x * (3f - 2f * x);
-    }
-
     private void BuildTree()
     {
         var stems = Math.Max(1, Form.Stems);
-        var trunkTop = Form.Leader ? Height * 0.94f : BranchY + (Height - BranchY) * 0.16f;
+        var trunkTop = Form.Leader ? Height * 0.94f : ScalarMath.Lerp(BranchY, Height, 0.16f);
         var stemTops = new List<Limb>();
         var stemAngle = Next() * Tau;
         for (var s = 0; s < stems; s++)
@@ -257,7 +251,7 @@ internal sealed class TreePlan
             else
             {
                 var top = trunk.Tip;
-                var y = BranchY + (top.Y - BranchY) * Range(0.1f, 0.95f);
+                var y = ScalarMath.Lerp(BranchY, top.Y, Range(0.1f, 0.95f));
                 origin = PointAt(trunk, y);
                 var t = Range(-0.2f, 0.45f);
                 tip = CrownCenter + Azimuth(angle) * (Envelope(t) * Range(0.62f, 0.76f)) + Vector3.UnitY * (t * CrownRy);
@@ -446,7 +440,7 @@ internal sealed class TreePlan
             var a = Vector3.Lerp(origin, control, t);
             var b = Vector3.Lerp(control, tip, t);
             limb.Points.Add(Vector3.Lerp(a, b, t));
-            limb.Radii.Add(radius * (1f + (tipRatio - 1f) * t));
+            limb.Radii.Add(radius * (ScalarMath.Lerp(1f, tipRatio, t)));
         }
         return limb;
     }
@@ -484,7 +478,7 @@ internal sealed class TreePlan
     {
         var x = Math.Clamp(f, 0f, 1f) * (limb.Points.Count - 1);
         var i = Math.Min((int)x, limb.Points.Count - 2);
-        return limb.Radii[i] + (limb.Radii[i + 1] - limb.Radii[i]) * (x - i);
+        return ScalarMath.Lerp(limb.Radii[i], limb.Radii[i + 1], x - i);
     }
 
     private static Vector3 PointAt(Limb trunk, float y) => Along(trunk, FractionAt(trunk, y));

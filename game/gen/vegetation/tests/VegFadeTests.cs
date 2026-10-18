@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Campus.Contracts;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Vegetation.Tests;
@@ -11,7 +12,7 @@ namespace Campus.Gen.Vegetation.Tests;
 public sealed class VegFadeTests
 {
     private static readonly Lazy<SpeciesTable> Table = new(() =>
-        SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(FindRepository(), "game", "data", "vegetation", "species.json"))));
+        SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(RepositoryFixture.Root, "game", "data", "vegetation", "species.json"))));
 
     [TestCase]
     public void FarStandInIsLightTaggedAndShapedLikeL1()
@@ -70,14 +71,4 @@ public sealed class VegFadeTests
         return (lo, hi);
     }
 
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
-    }
 }

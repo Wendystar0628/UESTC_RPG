@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Contracts.Atlas;
 using Godot;
 
@@ -53,7 +54,7 @@ public partial class TravelCard : Control
             _ => "旁观 · 行走",
         };
         _recommend = entry.Recommend is { } r
-            ? $"推荐 {MapHudContext.SeasonName(r.Season)} {MapHudContext.Clock(r.Clock)} · {MapHudContext.WeatherName(r.Weather)}"
+            ? $"推荐 {MapHudContext.SeasonName(r.Season)} {WorldTime.FormatClock(r.Clock, roundToMinute: true)} · {MapHudContext.WeatherName(r.Weather)}"
             : "";
         PrimaryStyle = primary;
         var travel = entry.Travelable;

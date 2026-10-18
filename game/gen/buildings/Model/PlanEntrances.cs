@@ -51,8 +51,7 @@ internal static class PlanEntrances
         if (world.Interiors.Get(feature.Id) is not { } entry) return doors;
         foreach (var e in entry.Entrances.Where(e => e.Open).OrderBy(e => e.Id, StringComparer.Ordinal))
         {
-            var yaw = e.YawDeg * (float.Pi / 180f);
-            var facing = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
+            var facing = Angles.Heading(e.YawDeg);
             var centre = new Vector2(e.Center.X, e.Center.Z);
             int fi = -1;
             float uFoot = 0f, nearest = EntranceRules.AnchorReach;

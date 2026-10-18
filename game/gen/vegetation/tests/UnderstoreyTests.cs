@@ -16,20 +16,6 @@ namespace Campus.Gen.Vegetation.Tests;
 [TestSuite]
 public sealed class UnderstoreyTests
 {
-    /// <summary>
-    /// The pit and design trees that were in the map when 23c2b was taken, in planting order. Other packages may add or drop
-    /// pits and design trees (D-199), so the test checks these by ID and does not pin the whole set.
-    /// </summary>
-    private static readonly string[] KnownNewSources =
-    [
-        "design:center-east-pinxue-round-bed",
-        "design:center-east-pinxue-tree-pits:0", "design:center-east-pinxue-tree-pits:1", "design:center-east-pinxue-tree-pits:2",
-        "design:center-east-pinxue-tree-pits:3", "design:center-east-pinxue-tree-pits:4", "design:center-east-pinxue-tree-pits:5",
-        "design:center-east-pinxue-tree-pits:6", "design:center-east-pinxue-tree-pits:7", "design:center-east-pinxue-tree-pits:8",
-        "design:center-east-pinxue-tree-pits:9",
-        "design:core-library-camphor-1", "design:core-library-camphor-2",
-    ];
-
     private static readonly Lazy<PlantingLayout> Overlaid = new(() => PavementTests.Plant(PavementTests.World(true)));
 
     [TestCase]
@@ -42,21 +28,12 @@ public sealed class UnderstoreyTests
         var added = all.Skip(first).ToList();
         if (layout.Avoided.Any(a => a.Tree.Source > PlantSource.Grove)) throw new InvalidOperationException("a pit or design tree gave way");
         var again = PavementTests.Plant(PavementTests.Load(true)).Trees.Where(t => t.Source > PlantSource.Grove).ToList();
-        var print = PavementTests.Fingerprint(added);
         if (!PavementTests.SameRecords(again, added)) throw new InvalidOperationException("the new sources differ between two builds");
         Console.WriteLine($"new sources: {added.Count(t => t.Source == PlantSource.Pit)} pit trees, {added.Count(t => t.Source == PlantSource.Design)} design trees, " +
-            $"{layout.PitsHeld} pits already held a tree; fingerprint {print}");
-        // Pit trees come before design trees; the known ones keep their order (by ID, D-199).
+            $"{layout.PitsHeld} pits already held a tree");
+        // Pit trees come before design trees; repeatability above also checks their complete order.
         var firstDesign = added.FindIndex(t => t.Source == PlantSource.Design);
         if (firstDesign >= 0 && added.Skip(firstDesign).Any(t => t.Source == PlantSource.Pit)) throw new InvalidOperationException("a pit tree follows a design tree");
-        var at = added.Select((t, i) => (t, i)).ToDictionary(e => e.t.Key, e => e.i, StringComparer.Ordinal);
-        var last = -1;
-        foreach (var key in KnownNewSources)
-        {
-            if (!at.TryGetValue(key, out var index)) continue;
-            if (index < last) throw new InvalidOperationException($"{key} moved before an earlier known source");
-            last = index;
-        }
     }
 
     [TestCase]

@@ -27,7 +27,7 @@ internal static class SportGround
     public static GroundShape? TrackRing(FeatureId id, PolygonRings rings)
     {
         if (rings.Holes.Count > 0) return GroundSources.Polygon(id, SurfaceKind.Track, rings);
-        var inner = GroundSources.Clean(rings.Outer);
+        var inner = PlanGeometry.CleanPath(rings.Outer);
         if (inner.Length < 3) return null;
         if (Outward(inner, TrackWidth) is { } outer)
             return GroundSources.Polygon(id, SurfaceKind.Track, new PolygonRings(outer, [inner]));
@@ -37,7 +37,7 @@ internal static class SportGround
     /// <summary>A track mapped as a line is a band of <paramref name="width"/> (else <see cref="TrackWidth"/>) along it; a closed line stays closed.</summary>
     public static GroundShape? TrackLine(FeatureId id, IReadOnlyList<Vector2> line, float? width)
     {
-        var points = GroundSources.Clean(line);
+        var points = PlanGeometry.CleanPath(line);
         if (points.Length < 2) return null;
         var closed = line.Count > 2 && Vector2.DistanceSquared(line[0], line[^1]) < 1e-8f;
         if (closed && points.Length > 2) points = [.. points, points[0]];

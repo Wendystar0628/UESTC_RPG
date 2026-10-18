@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Gen.Tests.Support;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -26,7 +27,7 @@ public sealed class MapBakeTests
     [TestCase]
     public void MultiplePolygonsAndNarrowRoadSurviveNorthUpRasterization()
     {
-        var multi = new WorldFeature(new("fixture:building"), FeatureSource.Design, new("building"),
+        var multi = WorldFeatureFixture.Create("fixture:building", "building",
             new MultiPolygonGeometry([Square(-12, -12, -8, -8), Square(8, 8, 12, 12)]));
         var road = new NetworkLine(new("fixture:road"), new([new(-16, 0), new(16, 0)]), 0.1f);
         var world = World([multi], new([road], [], [], [], []));
@@ -42,17 +43,14 @@ public sealed class MapBakeTests
     public void MixedPoiUsesOnlyBuildingPartsAndLeavesCampusGroundUnfilled()
     {
         var grounds = new PolygonGeometry(Square(-14, -14, 14, 14));
-        var poi = new WorldFeature(new("fixture:campus"), FeatureSource.Osm, new("poi"), grounds)
-        {
-            Parts =
+        var poi = WorldFeatureFixture.Create("fixture:campus", "poi", grounds, source: FeatureSource.Osm, parts:
             [
                 new("source:grounds", grounds, null, null) { Props = JsonSerializer.SerializeToElement(new { kind = "poi" }) },
                 new("source:building-a", new MultiPolygonGeometry([Square(-12, -12, -8, -8), Square(8, 8, 12, 12)]), 15.6f, 4)
                     { Props = JsonSerializer.SerializeToElement(new { kind = "building" }) },
                 new("source:building-b", new PolygonGeometry(Square(8, -12, 12, -8)), 58.5f, 15)
                     { Props = JsonSerializer.SerializeToElement(new { kind = "building" }) }
-            ]
-        };
+            ]);
         var product = MapBaker.Build(Input(World([poi])));
         var a = product.Textures[0];
         AssertThat(Pixel(a, 5, 5, 3) < 128 && Pixel(a, 26, 26, 3) < 128 && Pixel(a, 26, 5, 3) < 128).OverrideFailureMessage("A building part of the POI was omitted.").IsTrue();
@@ -96,8 +94,8 @@ public sealed class MapBakeTests
     [TestCase]
     public void OutputIsIndependentOfFeatureDictionaryInsertionOrder()
     {
-        var one = new WorldFeature(new("fixture:one"), FeatureSource.Design, new("water"), new PolygonGeometry(Square(-8, -8, 0, 0)));
-        var two = new WorldFeature(new("fixture:two"), FeatureSource.Design, new("green"), new PolygonGeometry(Square(0, 0, 8, 8)));
+        var one = WorldFeatureFixture.Create("fixture:one", "water", new PolygonGeometry(Square(-8, -8, 0, 0)));
+        var two = WorldFeatureFixture.Create("fixture:two", "green", new PolygonGeometry(Square(0, 0, 8, 8)));
         var a = MapBakeCodec.Serialize(MapBaker.Build(Input(World([one, two]))));
         var b = MapBakeCodec.Serialize(MapBaker.Build(Input(World([two, one]))));
         AssertThat(a.SequenceEqual(b)).OverrideFailureMessage("Dictionary insertion order changed bytes.").IsTrue();

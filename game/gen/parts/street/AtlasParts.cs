@@ -144,7 +144,7 @@ public sealed class AtlasPostPart : IPartDef<SignParams>
         var plinth = S.PostPlinthHeight;
         b.AddBox(new(-p.Width * 0.5f, 0, -p.Depth * 0.5f), new(p.Width * 0.5f, plinth, p.Depth * 0.5f), near ? 0.015f : 0, S.Stone(new(S.Lit(S.StoneDark), S.Shade(S.StoneDark)), false), VertexFlag.NoShadow);
         // Shaft up to the low (front) edge of the slant; the slanted cap plate sits on it.
-        var tan = MathF.Tan(S.PostSlantDeg * (float.Pi / 180f));
+        var tan = MathF.Tan(S.PostSlantDeg * Angles.DegreesToRadians);
         var c = s + 2 * CapOverhang;
         var low = p.Height - c * tan;
         b.AddBox(new(-s * 0.5f, plinth - S.Joint, -s * 0.5f), new(s * 0.5f, low - CapThickness + 0.01f, s * 0.5f), near ? 0.012f : 0, dark);
@@ -154,7 +154,7 @@ public sealed class AtlasPostPart : IPartDef<SignParams>
         var section = near ? Chamfered(outline, 0.008f) : new SweepProfile(outline);
         b.Add(PartGeometryKernel.Sweep(section, [new(-c * 0.5f, 0), new(c * 0.5f, 0)], dark));
         // Plate on the slant: local Y along the slant normal (up and towards the viewer), local Z up the slope.
-        var slant = S.PostSlantDeg * (float.Pi / 180f);
+        var slant = S.PostSlantDeg * Angles.DegreesToRadians;
         var cs = MathF.Cos(slant); var sn = MathF.Sin(slant);
         var mid = new Vector3(0, (low + p.Height) * 0.5f, 0);
         var lift = 0.0035f;
@@ -179,21 +179,15 @@ public sealed class AtlasPostPart : IPartDef<SignParams>
         for (var i = 0; i < n; i++)
         {
             var prev = outline[(i + n - 1) % n]; var at = outline[i]; var next = outline[(i + 1) % n];
-            var toPrev = Unit(prev - at); var toNext = Unit(next - at);
+            var toPrev = VectorMath.Unit(prev - at); var toNext = VectorMath.Unit(next - at);
             points.Add(at + toPrev * cut); normals.Add(EdgeNormal(prev, at));
             points.Add(at + toNext * cut); normals.Add(EdgeNormal(at, next));
         }
         return new(points.AsReadOnly(), normals.AsReadOnly());
     }
 
-    private static Vector2 Unit(Vector2 v)
-    {
-        var length = Math.Sqrt((double)v.X * v.X + (double)v.Y * v.Y);
-        return new((float)(v.X / length), (float)(v.Y / length));
-    }
-
     /// <summary>Outward normal of a counterclockwise edge a→b: the edge direction turned clockwise.</summary>
-    private static Vector2 EdgeNormal(Vector2 a, Vector2 b) => Unit(new(b.Y - a.Y, a.X - b.X));
+    private static Vector2 EdgeNormal(Vector2 a, Vector2 b) => VectorMath.Unit(new Vector2(b.Y - a.Y, a.X - b.X));
 
     private static float Section(SignParams p)
     {

@@ -10,15 +10,8 @@ public readonly record struct LatheBand(float R0, float Y0, float R1, float Y1, 
     /// <summary>A crease-bounded band whose two ends share the edge's own outward normal.</summary>
     public static LatheBand Flat(float r0, float y0, float r1, float y1)
     {
-        var n = Normal2(y1 - y0, -(r1 - r0));
+        var n = VectorMath.Unit(new Vector2(y1 - y0, -(r1 - r0)));
         return new(r0, y0, r1, y1, n, n);
-    }
-
-    internal static Vector2 Normal2(float x, float y)
-    {
-        var length = Math.Sqrt((double)x * x + (double)y * y);
-        if (!(length > 1e-12)) throw new ArgumentException("A lathe edge must have length.");
-        return new((float)(x / length), (float)(y / length));
     }
 }
 
@@ -82,7 +75,7 @@ public static class PartShapes
         var centre = (a + b + c + d) * 0.25f;
         foreach (var (p, q, r) in new[] { (a, b, c), (a, b, d), (a, c, d), (b, c, d) })
         {
-            var n = Xf.Unit(Vector3.Cross(q - p, r - p));
+            var n = VectorMath.Unit(Vector3.Cross(q - p, r - p));
             if (Vector3.Dot(n, p - centre) < 0) n = -n;
             writer.Triangle(writer.Vertex(p, n, Vector2.Zero), writer.Vertex(q, n, Vector2.Zero), writer.Vertex(r, n, Vector2.Zero), n);
         }
@@ -99,7 +92,7 @@ public static class PartShapes
             var angle = 2.0 * Math.PI * i / segments;
             var c = (float)Math.Cos(angle); var s = (float)Math.Sin(angle);
             points[i] = new(centre.X + radius * c, centre.Y + radius * s);
-            normals[i] = LatheBand.Normal2(c, s);
+            normals[i] = VectorMath.Unit(new Vector2(c, s));
         }
         return new(Array.AsReadOnly(points), Array.AsReadOnly(normals));
     }
@@ -217,9 +210,9 @@ public static class PartShapes
             // Snap the poles onto the axis exactly so the fan closes.
             var r0 = Math.Abs(c0) < 1e-6f ? 0 : radius * c0; var r1 = Math.Abs(c1) < 1e-6f ? 0 : radius * c1;
             yield return new(r0, centreY + radius * squash * s0, r1, centreY + radius * squash * s1,
-                LatheBand.Normal2(c0 * squash, s0), LatheBand.Normal2(c1 * squash, s1));
+                VectorMath.Unit(new Vector2(c0 * squash, s0)), VectorMath.Unit(new Vector2(c1 * squash, s1)));
         }
     }
 
-    private static Vector3 Radial(Vector2 n, float c, float s) => Xf.Unit(new(n.X * c, n.Y, n.X * s));
+    private static Vector3 Radial(Vector2 n, float c, float s) => VectorMath.Unit(new Vector3(n.X * c, n.Y, n.X * s));
 }

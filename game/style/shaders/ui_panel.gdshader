@@ -416,7 +416,7 @@ void fragment() {
 		float frames = max(extra.x, 1.0);
 		float frame = 0.0;
 		if (extra.z > 0.5) {
-			float dt = mod(anim_time - extra.y + 480.0, 480.0);
+			float dt = mod(anim_time - extra.y + anim_loop_seconds, anim_loop_seconds);
 			frame = clamp(floor(dt * max(step_rate, 1.0)), 0.0, frames - 1.0);
 		}
 		vec2 uv = vec2((UV.x + frame) / frames, UV.y);

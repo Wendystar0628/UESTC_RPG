@@ -31,7 +31,7 @@ internal sealed partial class StreetSite
         foreach (var tree in _trees.In(p))
             if (Vector2.Distance(p, tree) <= reach) return true;
         foreach (var (line, offset) in _rows.In(p))
-            if (MathF.Abs(MathF.Sqrt(LineDistanceSquared(p, line.Line.Points)) - offset) <= reach) return true;
+            if (MathF.Abs(MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(line.Line.Points, p)) - offset) <= reach) return true;
         return false;
     }
 
@@ -39,7 +39,7 @@ internal sealed partial class StreetSite
     public bool OffRows(Vector2 p, float radius)
     {
         foreach (var (line, offset) in _rows.In(p))
-            if (MathF.Abs(MathF.Sqrt(LineDistanceSquared(p, line.Line.Points)) - offset) < radius + FurnitureStyle.RowClear) return false;
+            if (MathF.Abs(MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(line.Line.Points, p)) - offset) < radius + FurnitureStyle.RowClear) return false;
         return true;
     }
 
@@ -50,7 +50,7 @@ internal sealed partial class StreetSite
         {
             if (!Carriageway(road)) continue;
             var r = HalfWidth(road) + clear + radius;
-            if (LineDistanceSquared(p, road.Line.Points) < r * r) return false;
+            if (PlanGeometry.PolylineDistanceSquared(road.Line.Points, p) < r * r) return false;
         }
         return true;
     }
@@ -94,12 +94,12 @@ internal sealed partial class StreetSite
             if (onBeside && ReferenceEquals(road, beside)) continue;
             if (walksPass && IsPedestrian(road)) continue;
             var r = HalfWidth(road) + (ReferenceEquals(road, beside) ? 0f : FurnitureStyle.RoadClear) + radius;
-            if (LineDistanceSquared(p, road.Line.Points) < r * r) return "a road surface";
+            if (PlanGeometry.PolylineDistanceSquared(road.Line.Points, p) < r * r) return "a road surface";
         }
         foreach (var bridge in _bridges.In(p))
         {
             var r = HalfWidth(bridge) + 2f + radius;
-            if (LineDistanceSquared(p, bridge.Line.Points) < r * r) return "a bridge";
+            if (PlanGeometry.PolylineDistanceSquared(bridge.Line.Points, p) < r * r) return "a bridge";
         }
         foreach (var tree in _trees.In(p))
             if (Vector2.Distance(p, tree) < radius + FurnitureStyle.TreeClear) return "a tree";
@@ -111,7 +111,7 @@ internal sealed partial class StreetSite
     {
         foreach (var p in points)
             foreach (var road in _roads.In(p))
-                if (IsPedestrian(road) && LineDistanceSquared(p, road.Line.Points) < clear * clear) return true;
+                if (IsPedestrian(road) && PlanGeometry.PolylineDistanceSquared(road.Line.Points, p) < clear * clear) return true;
         return false;
     }
 

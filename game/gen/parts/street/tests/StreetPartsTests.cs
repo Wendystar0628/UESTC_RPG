@@ -200,7 +200,7 @@ public sealed class StreetPartsTests
     public void SizesAndColoursFollowTheStyleRules()
     {
         // Every surface colour is a registered Lit/Shade pair name, never a literal.
-        var palette = Path.Combine(RepositoryRoot(), "game", "style", "palette");
+        var palette = Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette");
         var tokens = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in new[] { Path.Combine(palette, "core.json") }.Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "*.json")))
         {
@@ -310,14 +310,6 @@ public sealed class StreetPartsTests
         RampCollider r => (Vector3.Min(Vector3.Min(r.P0, r.P1), Vector3.Min(r.P2, r.P3)), Vector3.Max(Vector3.Max(r.P0, r.P1), Vector3.Max(r.P2, r.P3))),
         _ => throw new InvalidOperationException($"Unexpected collider {collider.GetType().Name}."),
     };
-
-    private static string RepositoryRoot()
-    {
-        if (Environment.GetEnvironmentVariable("UESTC_REPOSITORY") is { Length: > 0 } root) return root;
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "game", "style", "palette", "core.json"))) return directory.FullName;
-        throw new InvalidOperationException("Repository root not found.");
-    }
 
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle m, int i) => new(m.Normal[3 * i], m.Normal[3 * i + 1], m.Normal[3 * i + 2]);

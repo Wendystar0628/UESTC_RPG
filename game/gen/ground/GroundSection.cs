@@ -1,3 +1,5 @@
+using Campus.Contracts;
+
 namespace Campus.Gen.Ground;
 
 /// <summary>
@@ -9,10 +11,10 @@ namespace Campus.Gen.Ground;
 public sealed record GroundSection
 {
     /// <summary>Kerb stone top and the flush paving level (sidewalks, plazas, courts).</summary>
-    public float PavingY { get; init; } = 0.15f;
+    public float PavingY { get; init; } = GroundLevels.Paving;
 
     /// <summary>Lawn level: 5 cm below paving so that every lawn edge reads as a small step.</summary>
-    public float GrassY { get; init; } = 0.10f;
+    public float GrassY { get; init; } = GroundLevels.Lawn;
 
     /// <summary>Carriageway and parking level.</summary>
     public float RoadY { get; init; }
@@ -33,7 +35,7 @@ public sealed record GroundSection
     public float BankBottomY { get; init; } = -0.6f;
 
     /// <summary>Lift of decal geometry (markings) above the surface it lies on.</summary>
-    public float DecalLift { get; init; } = 0.004f;
+    public float DecalLift { get; init; } = GroundLevels.Decal;
 
     public MarkingSpec Markings { get; init; } = new();
 
@@ -172,8 +174,6 @@ public sealed record PitchSpec
 /// </summary>
 public static class GroundLod
 {
-    public const float TileSize = 64f;
-
     /// <summary>
     /// Fixed vertical range of every ground tile's position quantisation, metres (D-180): the packer uses
     /// [MinY, MaxY] for y in all ground tiles so that neighbouring tiles quantise heights with the same step.
@@ -190,7 +190,7 @@ public static class GroundLod
             case Contracts.LodLevel.L1:
             case Contracts.LodLevel.L2:
             case Contracts.LodLevel.L3:
-                var size = TileSize * (1 << (int)lod);
+                var size = (float)TileGrid.Edge(lod);
                 var cells = lod == Contracts.LodLevel.L0 ? 256 : 128;
                 return new(tile.X * size, tile.Z * size, size, size / cells);
             case Contracts.LodLevel.L4:

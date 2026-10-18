@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.World;
@@ -32,11 +31,11 @@ public sealed class CollisionTileBuilder(
             var entry = context.World.Interiors.Get(feature.Id);
             foreach (var footprint in BuildingFootprints(feature))
             {
-                var origin = CollisionGeometry.Origin(tile);
+                var origin = TileGrid.Origin(tile);
                 var minimum = footprint.Rings.Outer.Aggregate(Vector2.Min) - new Vector2(.3f);
                 var maximum = footprint.Rings.Outer.Aggregate(Vector2.Max) + new Vector2(.3f);
-                if (maximum.X < origin.X || minimum.X > origin.X + CollisionGeometry.TileSize ||
-                    maximum.Y < origin.Z || minimum.Y > origin.Z + CollisionGeometry.TileSize) continue;
+                if (maximum.X < origin.X || minimum.X > origin.X + TileGrid.BaseEdge ||
+                    maximum.Y < origin.Y || minimum.Y > origin.Y + TileGrid.BaseEdge) continue;
                 world.AddRange(BuildingWalls(footprint.Rings, context.World.Spatial, entry, footprint.Height)
                     .Where(w => CollisionGeometry.IntersectsTile(w, tile)));
             }
@@ -47,9 +46,9 @@ public sealed class CollisionTileBuilder(
             {
                 if (!provider.Provider.Walkable) continue;
                 var layout = provider.Provider.Layout(context, feature);
-                var tileOrigin = CollisionGeometry.Origin(tile);
-                if (layout.Bounds.Max.X < tileOrigin.X || layout.Bounds.Min.X > tileOrigin.X + 64 ||
-                    layout.Bounds.Max.Z < tileOrigin.Z || layout.Bounds.Min.Z > tileOrigin.Z + 64) continue;
+                var tileOrigin = TileGrid.Origin(tile);
+                if (layout.Bounds.Max.X < tileOrigin.X || layout.Bounds.Min.X > tileOrigin.X + TileGrid.BaseEdge ||
+                    layout.Bounds.Max.Z < tileOrigin.Y || layout.Bounds.Min.Z > tileOrigin.Y + TileGrid.BaseEdge) continue;
                 foreach (var storey in layout.OpenStoreys.Order())
                 {
                     world.AddRange(provider.Provider.CollisionStorey(context, feature, storey)
@@ -85,10 +84,7 @@ public sealed class CollisionTileBuilder(
         {
             foreach (var part in feature.Parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
             {
-                string? kind = feature.Kind.Value;
-                if (part.Props is { ValueKind: JsonValueKind.Object } props &&
-                    props.TryGetProperty("kind", out var value) && value.ValueKind == JsonValueKind.String)
-                    kind = value.GetString();
+                var kind = part.Props.TryText("kind") ?? feature.Kind.Value;
                 if (kind == "building") Add(part.SourceId, part.Geometry, part.Height, part.Storeys);
             }
         }

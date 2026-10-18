@@ -29,13 +29,6 @@ public static partial class FurniturePlanner
         return new(-f.Y, 0, f.X, 0, 0, 1, 0, 0, -f.X, 0, -f.Y, 0, p.X, y, p.Y, 1);
     }
 
-    /// <summary>Plan direction of a yaw in degrees: 0 = north (−Z), 90 = east (+X), the convention of anchors and entrances.</summary>
-    public static Vector2 Facing(float yawDeg)
-    {
-        var a = yawDeg * (float.Pi / 180f);
-        return new(MathF.Sin(a), -MathF.Cos(a));
-    }
-
     /// <summary>Moves a part-local collider by a rigid placement matrix.</summary>
     public static Collider Placed(Collider collider, Matrix4x4 at) => collider switch
     {
@@ -79,19 +72,6 @@ public static partial class FurniturePlanner
             a.ValueKind == JsonValueKind.Array && a.GetArrayLength() >= 3)
             return new(a[0].GetSingle(), a[2].GetSingle());
         return new((feature.Bounds.Min.X + feature.Bounds.Max.X) * 0.5f, (feature.Bounds.Min.Z + feature.Bounds.Max.Z) * 0.5f);
-    }
-
-    private static string? Text(JsonElement? props, string name) =>
-        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
-
-    private static float? Number(JsonElement? props, string name) =>
-        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetSingle() : null;
-
-    /// <summary>The yaw in degrees (0 = north, 90 = east, [0, 360)) of a plan direction: the inverse of <see cref="Facing"/>.</summary>
-    private static float YawDeg(Vector2 facing)
-    {
-        var deg = MathF.Atan2(facing.X, -facing.Y) * (180f / float.Pi);
-        return deg < 0f ? deg + 360f : deg;
     }
 
     private static string Fixed(float v) => v.ToString("F2", CultureInfo.InvariantCulture);

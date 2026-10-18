@@ -104,8 +104,8 @@ public partial class CollisionStreamingNode : Node3D, IMapAware
         var map = _context!.Descriptor;
         foreach (var center in centers)
         {
-            var min = CollisionGeometry.TileAt(center - new N.Vector3(LoadRadius, 0, LoadRadius));
-            var max = CollisionGeometry.TileAt(center + new N.Vector3(LoadRadius, 0, LoadRadius));
+            var min = TileGrid.At(center - new N.Vector3(LoadRadius, 0, LoadRadius));
+            var max = TileGrid.At(center + new N.Vector3(LoadRadius, 0, LoadRadius));
             var wanted = new List<TileKey>();
             for (var x = Math.Max(min.X, map.TileMin.X); x <= Math.Min(max.X, map.TileMax.X); x++)
                 for (var z = Math.Max(min.Z, map.TileMin.Z); z <= Math.Min(max.Z, map.TileMax.Z); z++)
@@ -136,9 +136,9 @@ public partial class CollisionStreamingNode : Node3D, IMapAware
     }
     private static float DistanceSquared(TileKey tile, N.Vector3 feet)
     {
-        var origin = CollisionGeometry.Origin(tile);
-        var dx = MathF.Max(MathF.Max(origin.X - feet.X, feet.X - origin.X - 64), 0);
-        var dz = MathF.Max(MathF.Max(origin.Z - feet.Z, feet.Z - origin.Z - 64), 0);
+        var origin = TileGrid.Origin(tile);
+        var dx = MathF.Max(MathF.Max(origin.X - feet.X, feet.X - origin.X - TileGrid.BaseEdge), 0);
+        var dz = MathF.Max(MathF.Max(origin.Y - feet.Z, feet.Z - origin.Y - TileGrid.BaseEdge), 0);
         return dx * dx + dz * dz;
     }
     private static bool IsWalk(ViewMode mode) => mode switch { ViewMode.Walk => true, ViewMode.Fly => false, _ => throw new InvalidOperationException("Unknown observer mode.") };

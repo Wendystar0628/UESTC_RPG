@@ -17,7 +17,7 @@ public sealed class WorldWeatherLinkTests
     [TestCase]
     public void WeatherIsNotSteppedBeforeTheFirstMapEnters()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = new WorldStateService(weather);
         world.Tick(.0625);
         AssertThat(weather.Steps.Count).IsEqual(0);
@@ -30,7 +30,7 @@ public sealed class WorldWeatherLinkTests
     [TestCase]
     public void WinterEarlyClockInitializesWithoutWeatherTransitions()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = new WorldStateService(weather);
         var instance = world.Instance;
         world.Freeze(6, Season.Winter, 240);
@@ -66,7 +66,7 @@ public sealed class WorldWeatherLinkTests
     [TestCase]
     public void ApplyOrdersSeasonClockPinAndCapturesTheirCommonEndpoint()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = CreateWorld(weather);
         world.SetFlow(0);
         world.Apply(new WorldPreset(21, Season.Winter, WeatherKind.Thunderstorm));
@@ -85,7 +85,7 @@ public sealed class WorldWeatherLinkTests
     [TestCase]
     public void ReducedMotionUsesHalfSecondTransitionTiming()
     {
-        var world = CreateWorld(new RecordingWeatherProcess(), new TestMotionSettings(true));
+        var world = CreateWorld(new TestWeatherProcess(), new TestMotionSettings(true));
         world.SetFlow(0);
         world.Apply(new WorldPreset(21, Season.Spring));
         for (var i = 0; i < 5; i++) world.Tick(.1);
@@ -97,7 +97,7 @@ public sealed class WorldWeatherLinkTests
     [TestCase]
     public void DefaultComesFromMapAndKeepsHeroBandWithoutChangingInstance()
     {
-        var weather = new RecordingWeatherProcess();
+        var weather = new TestWeatherProcess();
         var world = CreateWorld(weather);
         var context = PresetContext(new WorldPreset(17.5, Season.Autumn, WeatherKind.Clear), true);
         world.OnMapLoaded(context);

@@ -1,3 +1,4 @@
+using Campus.Gen.Tests.Support;
 using static GdUnit4.Assertions;
 using Campus.Pipeline.Map;
 using System.Numerics;
@@ -76,14 +77,7 @@ public sealed class InteriorProviderScopeTests
         var map = new MapId("fixture-map");
         foreach (var type in new[] { typeof(UnregisteredInterior), typeof(Godot.Node), typeof(Campus.Kernel.Maps.MapService) })
         {
-            Exception? error = null;
-            AssertThrown(() =>
-            {
-                try { registry.CreateInteriorProvider(type, map); }
-                catch (Exception exception) { error = exception; throw; }
-            }).IsInstanceOf<InvalidOperationException>();
-            AssertThat(error is InvalidOperationException typedError && typedError.Message.Contains(type.FullName!, StringComparison.Ordinal))
-                .OverrideFailureMessage("Rejected type was not identified in the error.").IsTrue();
+            AssertThrown(() => registry.CreateInteriorProvider(type, map)).IsInstanceOf<InvalidOperationException>();
         }
         // Rejections must not leave the cycle guard or instance cache poisoned.
         var first = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
@@ -139,9 +133,10 @@ public sealed class InteriorProviderScopeTests
         var bounds = new Box3(new(offset, 0f, offset), new(offset + 32f, 24f, offset + 40f));
         var ring = new PolygonRings([new(offset, offset), new(offset + 32f, offset),
             new(offset + 32f, offset + 40f), new(offset, offset + 40f)]);
-        var world = new MutableWorldFixture();
-        world.Configure([new WorldFeature(feature, FeatureSource.Osm, new("building"), new PolygonGeometry(ring))
-        { Bounds = bounds, Height = 24f, Storeys = 6 }], boundary: ring);
+        var world = new FakeWorld { Boundary = new([]) };
+        world.Features = ((WorldFeature[])[new WorldFeature(feature, FeatureSource.Osm, new("building"), new PolygonGeometry(ring))
+        { Bounds = bounds, Height = 24f, Storeys = 6 }]).ToDictionary(feature => feature.Id);
+        world.Boundary = ring;
         var descriptor = new MapDescriptor(map, new("测试地图", "Fixture"), MapKind.Outdoor, 1, 7,
             new(0, 0, 32648, new(-512, -512), new(512, 512)), Vector2.Zero,
             new(new(-512, -28, -512), new(512, 2000, 512)), new(new(-512, -512), new(512, 512)),

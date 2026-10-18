@@ -19,10 +19,7 @@ public sealed class NightlightTests
 {
     private static IEnumerable<string> ScheduleFiles()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "game", "data", "maps"))) dir = dir.Parent;
-        if (dir is null) throw new InvalidOperationException("Repository root not found from the test directory.");
-        var files = Directory.GetFiles(Path.Combine(dir.FullName, "game", "data", "maps"), "lighting-schedule.json", SearchOption.AllDirectories)
+        var files = Directory.GetFiles(RepositoryFixture.FilePath("game", "data", "maps"), "lighting-schedule.json", SearchOption.AllDirectories)
             .Order(StringComparer.Ordinal).ToArray();
         if (files.Length == 0) throw new InvalidOperationException("No lighting-schedule.json found.");
         return files;

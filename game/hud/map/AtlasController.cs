@@ -11,9 +11,6 @@ internal sealed class AtlasController : IDisposable
     private const float HereCardMeters = 20;
     private const float HereIndexMeters = 40;
     private const float HereIndexDeg = 60;
-    private const float HoverPrefetchSeconds = 0.3f;
-    private const float IndexPrefetchSeconds = 0.15f;
-    private const string HudLayerName = "HudRoot";
     private const int AttributionLayer = 11;
 
     private readonly MapHud _host;
@@ -28,9 +25,6 @@ internal sealed class AtlasController : IDisposable
     private bool _pendingFromRoam;
     private float _pageFade = 1;
 
-    private MarkerId? _hover;
-    private float _hoverAge;
-    private bool _hoverPrefetched;
     private string _overlayKey = "";
     private int _statusKey = -1;
 
@@ -44,9 +38,8 @@ internal sealed class AtlasController : IDisposable
         page.Paper.Markers.LayerMask = page.Layers.Mask;
         page.Index.SelectionChanged += e => { page.Paper.PanTo(e.At); page.Paper.Card.Visible = false; page.Paper.Markers.NameSelected = true; page.Paper.SelectMarker(e.Id); };
         page.Index.Activated += OpenCard;
-        page.Index.Hovered += e => BeginHover(e.Id, IndexPrefetchSeconds);
         page.Paper.Clicked += e => { if (e is null) CloseCard(); else OpenCard(e); };
-        page.Paper.HoverChanged += e => { page.Paper.Markers.Hover = e?.Id; page.Paper.Markers.Invalidate(); BeginHover(e?.Id, HoverPrefetchSeconds); };
+        page.Paper.HoverChanged += e => { page.Paper.Markers.Hover = e?.Id; page.Paper.Markers.Invalidate(); };
         page.Paper.Locate.Pressed += () => page.Paper.PanTo(PlayerAt());
         page.Paper.Fit.Pressed += FitAll;
         page.Paper.ConnectorFrom = () => page.Paper.Card.Entry is { } e ? page.Paper.View.ToLocal(e.At, AtlasPaper.PaperSize) : null;
@@ -109,7 +102,7 @@ internal sealed class AtlasController : IDisposable
         foreach (var node in _host.GetParent()?.GetChildren() ?? [])
         {
             if (node is not CanvasLayer { Visible: true } layer || layer == _host.Layer) continue;
-            if (layer.Name != HudLayerName && layer.Layer != AttributionLayer) continue;
+            if (!ReferenceEquals(layer, _host.Hud) && layer.Layer != AttributionLayer) continue;
             layer.Visible = false;
             _covered.Add(layer);
         }
@@ -149,7 +142,6 @@ internal sealed class AtlasController : IDisposable
         _page.Visible = false;
         CoverOthers(false);
         CloseCard();
-        _hover = null;
         if (_pending is null) { _lease?.Dispose(); _lease = null; }
         if (restoreRoam && _fromRoam && _pending is null) Input.MouseMode = Input.MouseModeEnum.Captured;
     }
@@ -189,18 +181,13 @@ internal sealed class AtlasController : IDisposable
         var pose = _s.Rig.Pose;
         paper.Player.Follow(view.ToLocal(PlayerAt(), AtlasPaper.PaperSize), _s.Observer.YawDeg, pose.YawDeg, _host.HorizontalFov(pose));
         UpdateHere(pose);
-        if (_hover is { } hover && !_hoverPrefetched)
-        {
-            _hoverAge += dt;
-            if (_hoverAge >= HoverPrefetchSeconds) { _s.Atlas.Prefetch(hover); _hoverPrefetched = true; }
-        }
         // 标题行小签：季节、钟点（按世界分钟）、天气，变了才重排字
         var world = _s.World;
         var statusKey = ((int)world.SeasonTarget * 1440 + (int)(world.Clock * 60)) * 16 + (int)world.Weather.Kind;
         if (statusKey != _statusKey)
         {
             _statusKey = statusKey;
-            _page.SetStatus($"{MapHudContext.SeasonName(world.SeasonTarget)} · {MapHudContext.Clock(world.Clock)} · {MapHudContext.WeatherName(world.Weather.Kind)}");
+            _page.SetStatus($"{MapHudContext.SeasonName(world.SeasonTarget)} · {WorldTime.FormatClock(world.Clock, roundToMinute: true)} · {MapHudContext.WeatherName(world.Weather.Kind)}");
         }
         var readout = Readout(paper);
         var (scaleM, _) = MapDraw.NiceScale(view.Ppm, 160);
@@ -244,14 +231,6 @@ internal sealed class AtlasController : IDisposable
         if (changed) { _page.Index.QueueRedraw(); _page.Paper.Markers.Invalidate(); }
     }
 
-    private void BeginHover(MarkerId? id, float seconds)
-    {
-        if (id == _hover) return;
-        _hover = id;
-        _hoverPrefetched = false;
-        _hoverAge = HoverPrefetchSeconds - seconds;
-    }
-
     private void OpenCard(MapEntry e) => OpenCard(e, keepFocus: false);
 
     private void OpenCard(MapEntry e, bool keepFocus)
@@ -274,7 +253,6 @@ internal sealed class AtlasController : IDisposable
         paper.Markers.NameSelected = false;
         paper.SelectMarker(e.Id);
         _page.Index.Select(e.Id);
-        _s.Atlas.Prefetch(e.Id);
         if (!keepFocus && !paper.Card.Primary.Disabled) paper.Card.Primary.GrabFocus();
         else if (!keepFocus) paper.Card.Track.GrabFocus();
     }

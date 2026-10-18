@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
@@ -72,8 +71,8 @@ internal static class BuildingsTestSupport
     /// <summary>An open entrance of a feature: door centre (floor height in Y), facing yaw (0 north, 90 east), outside landing 2.5 m out.</summary>
     internal static (string Feature, EntranceDecl Door) Anchor(string feature, string id, Vector3 centre, float yawDeg, float? outsideY = null)
     {
-        var yaw = yawDeg * (float.Pi / 180f);
-        var facing = new Vector3(MathF.Sin(yaw), 0f, -MathF.Cos(yaw));
+        var heading = Angles.Heading(yawDeg);
+        var facing = new Vector3(heading.X, 0f, heading.Y);
         var outside = centre + facing * 2.5f;
         outside.Y = outsideY ?? centre.Y;
         return (feature, new EntranceDecl(id, outside, centre - facing * 3f, 1.1f, true) { Center = centre, YawDeg = yawDeg });
@@ -112,22 +111,6 @@ internal static class BuildingsTestSupport
         WindowNumbering = new BuildingsModule().PrepareWindowNumbering(ctx, []),
     };
 
-    /// <summary>The repository's campus as the kernel loads it: base data, interior index and every zone overlay.</summary>
-    internal static IWorldModel RealCampus()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
-        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
-        var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
-                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')))
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        return Campus.Gen.World.WorldModelLoader.Load(new MapId("qingshuihe"), files).World;
-    }
-
     /// <summary>
     /// The claims ledger of the real campus (the kernel's MapClaimLedger, rebuilt): every zone pack's claims under its owner.
     /// The other content modules (furniture, ground, vegetation, water) claim nothing.
@@ -165,17 +148,6 @@ internal static class BuildingsTestSupport
 
     internal static PolygonRings Courtyard(float x, float z) =>
         new(Rect(x, z, 50, 40), [new List<Vector2> { new(x + 12, z + 12), new(x + 12, z + 28), new(x + 38, z + 28), new(x + 38, z + 12) }]);
-
-    internal static WorldFeature Feature(string id, List<Vector2> outer, int storeys, float height, string category) =>
-        Feature(id, new PolygonRings(outer), storeys, height, category);
-
-    internal static WorldFeature Feature(string id, PolygonRings rings, int storeys, float height, string category) =>
-        new(new FeatureId(id), FeatureSource.Osm, new DesignKind("building"), new PolygonGeometry(rings))
-        {
-            Height = height,
-            Storeys = storeys,
-            Props = JsonDocument.Parse("{\"category\":\"" + category + "\"}").RootElement.Clone(),
-        };
 
     internal static FakeWorld World(params WorldFeature[] features) => Of(features);
 

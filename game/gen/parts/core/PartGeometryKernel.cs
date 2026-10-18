@@ -38,7 +38,7 @@ public static partial class PartGeometryKernel
                     for (var sb = 0; sb < 2; sb++)
                     {
                         var c = 3 - a - b; var lo = sa << a | sb << b; var hi = lo | 1 << c;
-                        var normal = GeometryMath.Add(Axis(a, sa == 0 ? -1 : 1), Axis(b, sb == 0 ? -1 : 1));
+                        var normal = Vector3.Add(Axis(a, sa == 0 ? -1 : 1), Axis(b, sb == 0 ? -1 : 1));
                         writer.Quad(lookup[a, lo], lookup[a, hi], lookup[b, hi], lookup[b, lo], normal);
                     }
         for (var corner = 0; corner < 8; corner++)
@@ -94,18 +94,19 @@ public static partial class PartGeometryKernel
         {
             var j = (i + 1) % ring.Length; var edge = PlanGeometry.RightUnitNormal(ring[i], ring[j]); var normal = new Vector3(edge.X, 0, edge.Y);
             Vector3 P(Vector2 p, float y) => new(p.X, baseY + y, p.Y);
-            AddStrip(writer, P(inset[i], 0), P(inset[j], 0), P(ring[j], bevel), P(ring[i], bevel), -Vector3.UnitY, normal, GeometryMath.Sub(normal, Vector3.UnitY));
+            AddStrip(writer, P(inset[i], 0), P(inset[j], 0), P(ring[j], bevel), P(ring[i], bevel), -Vector3.UnitY, normal, Vector3.Subtract(normal, Vector3.UnitY));
             AddStrip(writer, P(ring[i], bevel), P(ring[j], bevel), P(ring[j], height - bevel), P(ring[i], height - bevel), normal, normal, normal);
-            AddStrip(writer, P(ring[i], height - bevel), P(ring[j], height - bevel), P(inset[j], height), P(inset[i], height), normal, Vector3.UnitY, GeometryMath.Add(normal, Vector3.UnitY));
+            AddStrip(writer, P(ring[i], height - bevel), P(ring[j], height - bevel), P(inset[j], height), P(inset[i], height), normal, Vector3.UnitY, Vector3.Add(normal, Vector3.UnitY));
         }
         return writer.Finish();
     }
 
     private static PartGeometry ExtrudePlane(PolygonRings rings, float depth, ToonSpec material, Vector3 origin, Vector3 u, Vector3 v, Vector3 axis)
     {
-        GeometryMath.Positive(depth, nameof(depth)); GeometryMath.Finite(origin, nameof(origin));
+        GeometryMath.Positive(depth, nameof(depth));
+        if (!VectorMath.Finite(origin)) throw new ArgumentException("Coordinates must be finite.", nameof(origin));
         var polygon = PolygonTriangulator.Triangulate(rings); var writer = new GeometryWriter(material);
-        AddCap(writer, polygon, origin, u, v, axis, 0, GeometryMath.Scale(axis, -1));
+        AddCap(writer, polygon, origin, u, v, axis, 0, Vector3.Multiply(axis, -1));
         AddCap(writer, polygon, origin, u, v, axis, depth, axis);
         for (var r = 0; r < polygon.RingStarts.Length; r++)
         {
@@ -113,7 +114,7 @@ public static partial class PartGeometryKernel
             for (var i = start; i < end; i++)
             {
                 var a = polygon.Vertices[i]; var b = polygon.Vertices[i + 1 < end ? i + 1 : start];
-                var edge = PlanGeometry.RightUnitNormal(a, b); var normal = GeometryMath.Add(GeometryMath.Scale(u, edge.X), GeometryMath.Scale(v, edge.Y));
+                var edge = PlanGeometry.RightUnitNormal(a, b); var normal = Vector3.Add(Vector3.Multiply(u, edge.X), Vector3.Multiply(v, edge.Y));
                 var p0 = GeometryMath.Point(a, origin, u, v, axis, 0); var p1 = GeometryMath.Point(b, origin, u, v, axis, 0);
                 var p2 = GeometryMath.Point(b, origin, u, v, axis, depth); var p3 = GeometryMath.Point(a, origin, u, v, axis, depth);
                 // OpeningAo remains the authored occlusion strength; only reveals reduce visibility.
@@ -131,8 +132,8 @@ public static partial class PartGeometryKernel
     }
     private static void AddStrip(GeometryWriter writer, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 lowerNormal, Vector3 upperNormal, Vector3 outward, float visibility = 1)
     {
-        var length = (float)Math.Sqrt(GeometryMath.Dot(GeometryMath.Sub(b, a), GeometryMath.Sub(b, a)));
-        var height = (float)Math.Sqrt(GeometryMath.Dot(GeometryMath.Sub(d, a), GeometryMath.Sub(d, a)));
+        var length = (float)Math.Sqrt(VectorMath.Dot(Vector3.Subtract(b, a), Vector3.Subtract(b, a)));
+        var height = (float)Math.Sqrt(VectorMath.Dot(Vector3.Subtract(d, a), Vector3.Subtract(d, a)));
         writer.Quad(writer.Vertex(a, lowerNormal, Vector2.Zero, visibility), writer.Vertex(b, lowerNormal, new(length, 0), visibility),
             writer.Vertex(c, upperNormal, new(length, height), visibility), writer.Vertex(d, upperNormal, new(0, height), visibility), outward);
     }

@@ -7,6 +7,8 @@ public static class ShaderGlobals
     public const string Clock = "clock";
     /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string AnimTime = "anim_time";
+    /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode; value from WorldTime.AnimLoopSeconds.</summary>
+    public const string AnimLoopSeconds = "anim_loop_seconds";
     /// <summary>Sole writer: Campus.Kernel.Frame.FrameClockNode.</summary>
     public const string FadeClock = "fade_clock";
     /// <summary>Sole writer: Campus.Kernel.Quality.Settings.QualityRuntime.</summary>

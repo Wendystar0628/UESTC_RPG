@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using System.Numerics;
 
 namespace Campus.Gen.Parts.Core;
@@ -15,8 +16,8 @@ public static class Xf
 
     public static Matrix4x4 Move(float x, float y, float z) => new(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1);
     public static Matrix4x4 Move(Vector3 v) => Move(v.X, v.Y, v.Z);
-    public static Matrix4x4 RotX(float degrees) => Matrix4x4.CreateRotationX(degrees * (float.Pi / 180f));
-    public static Matrix4x4 RotY(float degrees) => Matrix4x4.CreateRotationY(degrees * (float.Pi / 180f));
+    public static Matrix4x4 RotX(float degrees) => Matrix4x4.CreateRotationX(degrees * Angles.DegreesToRadians);
+    public static Matrix4x4 RotY(float degrees) => Matrix4x4.CreateRotationY(degrees * Angles.DegreesToRadians);
 
     /// <summary>Apply a first, then b.</summary>
     public static Matrix4x4 Then(this Matrix4x4 a, Matrix4x4 b) => new(
@@ -35,25 +36,17 @@ public static class Xf
         var x = n.X * m.M11 + n.Y * m.M21 + n.Z * m.M31;
         var y = n.X * m.M12 + n.Y * m.M22 + n.Z * m.M32;
         var z = n.X * m.M13 + n.Y * m.M23 + n.Z * m.M33;
-        var length = Math.Sqrt((double)x * x + (double)y * y + (double)z * z);
-        return length <= 1e-12 ? n : new((float)(x / length), (float)(y / length), (float)(z / length));
+        return VectorMath.Unit(new Vector3(x, y, z), n);
     }
 
     /// <summary>Right-handed frame whose local +X follows <paramref name="axis"/>; lays swept pipes along any direction.</summary>
     public static Matrix4x4 AlongX(Vector3 axis, Vector3 origin)
     {
-        var x = Unit(axis);
+        var x = VectorMath.Unit(axis);
         var hint = Math.Abs(x.Y) < 0.9f ? Vector3.UnitY : Vector3.UnitX;
         var dot = x.X * hint.X + x.Y * hint.Y + x.Z * hint.Z;
-        var y = Unit(new(hint.X - x.X * dot, hint.Y - x.Y * dot, hint.Z - x.Z * dot));
-        var z = new Vector3(x.Y * y.Z - x.Z * y.Y, x.Z * y.X - x.X * y.Z, x.X * y.Y - x.Y * y.X);
+        var y = VectorMath.Unit(new Vector3(hint.X - x.X * dot, hint.Y - x.Y * dot, hint.Z - x.Z * dot));
+        var z = VectorMath.Cross(x, y);
         return new(x.X, x.Y, x.Z, 0, y.X, y.Y, y.Z, 0, z.X, z.Y, z.Z, 0, origin.X, origin.Y, origin.Z, 1);
-    }
-
-    public static Vector3 Unit(Vector3 v)
-    {
-        var length = Math.Sqrt((double)v.X * v.X + (double)v.Y * v.Y + (double)v.Z * v.Z);
-        if (!(length > 1e-12)) throw new ArgumentException("A direction must be nonzero.");
-        return new((float)(v.X / length), (float)(v.Y / length), (float)(v.Z / length));
     }
 }

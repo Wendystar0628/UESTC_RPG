@@ -65,10 +65,7 @@ public partial class Dropdown : OptionButton
     }
 
     // 展开框是独立窗口挂不了 ui_panel，打开前按界面主题钟的当前主题改写它的样式颜色（全局参数不读回，G4）
-    private void SyncPopupTheme()
-    {
-        if (GetTree().Root.FindChild("UiThemeClock", true, false) is UiThemeClock clock) _kit.Theme.SetPopupDark(clock.Dark);
-    }
+    private void SyncPopupTheme() => _kit.Theme.SetPopupDark(_kit.ThemeState.Dark);
 
     private void Refresh()
     {

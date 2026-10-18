@@ -1,3 +1,4 @@
+using Campus.Gen.World;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
@@ -200,7 +201,7 @@ public static class FacadeRules
             };
             if (byFamily is { } known) return known;
         }
-        var category = Category(partProps) ?? Category(featureProps);
+        var category = partProps.TryText("category") ?? featureProps.TryText("category");
         return category switch
         {
             "residence" => BuildingStyle.Dormitory,
@@ -213,12 +214,6 @@ public static class FacadeRules
             "medical" => BuildingStyle.Medical,
             _ => BuildingStyle.Utility,
         };
-    }
-
-    public static string? Category(JsonElement? props)
-    {
-        if (props is not { ValueKind: JsonValueKind.Object } p) return null;
-        return p.TryGetProperty("category", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
     }
 
     /// <summary>

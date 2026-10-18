@@ -31,7 +31,6 @@ public interface IAtlasService                                    // Kernel 服�
     UnlockState StateOf(MarkerId id);
     string? RegionAt(float x, float z);                           // 8 m 区域栅格；返回地点 ID
     bool CanTravel(MarkerId id, TravelStyle style, out TravelRefusal why);
-    void Prefetch(MarkerId id);                                   // 同一时间只保留一个目的地（UI-NAV）
     ITransitHandle? Travel(MarkerId id, TravelStyle style);       // 同图只调 ICameraRig.Transit；目标在别的图时才调 IMapService.Travel；拒绝时返回 null
     MarkerId? Tracked { get; }
     void Track(MarkerId? id);                                     // null 取消；同一时间只有一个

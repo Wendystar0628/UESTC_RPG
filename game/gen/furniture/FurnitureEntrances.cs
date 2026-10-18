@@ -25,11 +25,11 @@ public static partial class FurniturePlanner
             foreach (var door in entry.Entrances.OrderBy(e => e.Id, StringComparer.Ordinal))
             {
                 if (!door.Open || !seen.Add(door.Id)) continue;
-                var facing = Facing(door.YawDeg);
+                var facing = Angles.Heading(door.YawDeg);
                 var plan = new Vector2(door.Center.X, door.Center.Z);
                 // The entrance floor, never below the paving in front of the door (WLD-TERRAIN: mat and sign on the landing).
                 var front = plan + facing * (S.MatDepth * 0.5f + S.MatGap);
-                var floor = Frame(plan, facing, MathF.Max(door.Center.Y, site.World.Terrain.HeightAt(front.X, front.Y) + S.PavingLift));
+                var floor = Frame(plan, facing, MathF.Max(door.Center.Y, site.World.Terrain.HeightAt(front.X, front.Y) + GroundLevels.Paving));
                 var key = "door:" + door.Id;
                 var matWidth = Math.Clamp(door.ClearWidth + S.MatExtra, S.MatMinWidth, S.MatMaxWidth);
                 var mat = new PanelParams(matWidth, S.MatThickness, S.MatDepth);
@@ -58,7 +58,7 @@ public static partial class FurniturePlanner
         var terrain = site.World.Terrain;
         foreach (var feature in site.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
-            if (Text(feature.Props, "subcategory") != "bus") continue;
+            if (WorldProps.TryText(feature.Props, "subcategory") != "bus") continue;
             var anchor = Anchor(feature);
             if (site.NearestCarriageway(anchor, 45f) is not { } near) continue;
             var normal = new Vector2(-near.Along.Y, near.Along.X);

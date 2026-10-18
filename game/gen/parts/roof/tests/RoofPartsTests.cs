@@ -130,7 +130,7 @@ public sealed class RoofPartsTests
     [TestCase]
     public void EveryColourIsRegisteredAndOurSegmentStaysInsideItsIds()
     {
-        var palette = Path.Combine(RepositoryRoot(), "game", "style", "palette");
+        var palette = Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette");
         var tokens = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in new[] { Path.Combine(palette, "core.json") }.Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "*.json")))
         {
@@ -178,14 +178,6 @@ public sealed class RoofPartsTests
         var a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
         var bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
         return Math.Sqrt(a * a + bb * bb);
-    }
-
-    private static string RepositoryRoot()
-    {
-        if (Environment.GetEnvironmentVariable("UESTC_REPOSITORY") is { Length: > 0 } root) return root;
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "game", "style", "palette", "core.json"))) return directory.FullName;
-        throw new InvalidOperationException("Repository root not found.");
     }
 
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);

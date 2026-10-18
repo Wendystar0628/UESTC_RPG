@@ -3,44 +3,22 @@ using static Campus.Style.Palette.Keys.FrameLayout;
 
 namespace Campus.Style.Palette.Keys;
 
-/// <summary>
-/// SYS-TIME art sun, mirroring WP-34's ArtEphemeris (including its autumn 17:30 = 5.5° calibration). The live frame reads
-/// IWorldState.Sun.AltDeg; this class only supplies the side of the arc, the noon cap, and altitudes for IPaletteProbe hours.
-/// </summary>
+/// <summary>Colour-script coordinates derived from the shared authored solar track.</summary>
 public static class ArtSun
 {
-    // (sunrise h, sunset h, H noon cap °)
-    private static readonly (double Rise, double Set, double H)[] Params =
-    [
-        (6 + 50 / 60.0, 19 + 20 / 60.0, 55.0),   // spring
-        (6 + 10 / 60.0, 19 + 55 / 60.0, 62.0),   // summer
-        (7 + 35 / 60.0, 18 + 5 / 60.0, 41.0),    // autumn
-        (7 + 55 / 60.0, 17 + 55 / 60.0, 34.0),   // winter
-    ];
-    public const double NightH = 24.0, Exponent = 1.15, AutumnH = 41.0, NormFrom = 25.0;
-    private static readonly double HeroSine = Math.Sin(Math.PI * (17.5 - 455 / 60.0) / ((1085 - 455) / 60.0));
-    private static readonly double HeroDelta = 5.5 - 41.0 * Math.Pow(HeroSine, Exponent);
+    public const double NormFrom = 25.0;
+    public static double AutumnH => ArtEphemeris.At(Season.Autumn).Height;
+    public static double NoonCap(Season season) => ArtEphemeris.At(season).Height;
 
-    public static double NoonCap(Season s) => Params[(int)s].H;
-
-    /// <summary>Altitude (°) and side for a clock in a season; noon and nadir fall on the side that contains them.</summary>
+    /// <summary>Altitude and side; noon and nadir fall on the side that contains them.</summary>
     public static (double H, KeySide Side) Altitude(double clock, Season season)
     {
-        var (rise, set, cap) = Params[(int)season];
-        var c = clock % 24.0;
-        if (c < 0) c += 24.0;
-        if (c >= rise && c < set)
-        {
-            var u = (c - rise) / (set - rise);
-            var sine = Math.Sin(Math.PI * u);
-            var h = cap * Math.Pow(Math.Max(0.0, sine), Exponent);
-            // WP-34 ArtEphemeris autumn calibration: autumn 17:30 is exactly 5.5° (SYS-TIME).
-            if (season == Season.Autumn) h += HeroDelta * sine * (1.0 - sine) / (HeroSine * (1.0 - HeroSine));
-            return (h, u < 0.5 ? KeySide.Dawn : KeySide.Dusk);
-        }
-        var night = 24.0 - set + rise;
-        var un = ((c - set) % 24.0 + 24.0) % 24.0 / night;
-        return (-NightH * Math.Pow(Math.Sin(Math.PI * un), Exponent), un < 0.5 ? KeySide.Dusk : KeySide.Dawn);
+        var c = ArtEphemeris.Wrap(clock, 24d);
+        var phase = ArtEphemeris.Phase(c, (int)season);
+        var side = phase < 1
+            ? (phase < 0.5 ? KeySide.Dawn : KeySide.Dusk)
+            : (phase < 1.5 ? KeySide.Dusk : KeySide.Dawn);
+        return (ArtEphemeris.SunAt(c, (int)season).Altitude, side);
     }
 
     /// <summary>Season altitude → autumn-equivalent altitude: above 25° the arc is normalised to noon.</summary>
@@ -55,8 +33,8 @@ public static class ArtSun
     {
         KeySide.Nadir => 0.0,
         KeySide.Noon => 1.0,
-        KeySide.Dawn => (x + NightH) / (AutumnH + NightH),
-        KeySide.Dusk => 1.0 + (AutumnH - x) / (AutumnH + NightH),
+        KeySide.Dawn => (x + ArtEphemeris.NightDepth) / (AutumnH + ArtEphemeris.NightDepth),
+        KeySide.Dusk => 1.0 + (AutumnH - x) / (AutumnH + ArtEphemeris.NightDepth),
         _ => throw new ArgumentOutOfRangeException(nameof(side))
     };
 

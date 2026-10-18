@@ -1,4 +1,5 @@
 using System.Globalization;
+using Campus.Contracts;
 using Campus.Contracts.Quality;
 
 namespace Campus.Kernel.Boot;
@@ -83,7 +84,7 @@ public sealed class BootArguments
         OneOf("gen", "live");
         OneOf("cine", "enter_new", "enter_new_short", "enter_continue", "leave");
         Number("clock", 0, 24, exclusiveMax: true);
-        Number("anim", 0, 480, exclusiveMax: true);
+        Number("anim", 0, WorldTime.AnimLoopSeconds, exclusiveMax: true);
         Number("weather-intensity", 0, 1); Number("wet", 0, 1); Number("ui-scale", .75, 1.5);
         Number("weather-remaining", 0, double.MaxValue);
         foreach (var key in new[] { "seed", "weather-seed", "audio-seed" })
@@ -108,7 +109,7 @@ public sealed class BootArguments
             _values.TryAdd("quality", "fine");
             if (!HasLoad)
             {
-                _values.TryAdd("clock", "17.5"); _values.TryAdd("season", "autumn"); _values.TryAdd("anim", "240");
+                _values.TryAdd("clock", "17.5"); _values.TryAdd("season", "autumn"); _values.TryAdd("anim", WorldTime.InitialAnimTime.ToString(CultureInfo.InvariantCulture));
                 _values.TryAdd("flow", "0"); _values.TryAdd("mode", "fly"); _values.TryAdd("seed", "1");
                 _values.TryAdd("weather", "clear"); _values.TryAdd("weather-seed", "1");
                 if (!Title && !Has("spawn") && !Has("focus") && !Has("pose-file")) _values.TryAdd("pose", "V1");

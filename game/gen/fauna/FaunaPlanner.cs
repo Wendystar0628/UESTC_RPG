@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Fauna;
 using Campus.Gen.World;
@@ -133,7 +132,7 @@ public static class FaunaPlanner
             if (Inside(b, mid + outward * 0.3f)) outward = -outward;
             var spot = mid + outward * S.CatDoorOffset;
             // Without a road network (a stub world) the longest free wall stands in for the door side.
-            var d = roads.Length == 0 ? -length : roads.Min(r => DistanceToLine(r.Line.Points, spot) - r.Width * 0.5f);
+            var d = roads.Length == 0 ? -length : roads.Min(r => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(r.Line.Points, spot)) - r.Width * 0.5f);
             if ((roads.Length > 0 && (d > S.CatRoadReach || d < 0.8f)) || d >= bestD) continue;
             if (!free(spot) || !free(spot + along * 0.6f) || !free(spot - along * 0.6f) || !free(spot + outward * S.CatNightOut)) continue;
             bestD = d;
@@ -147,7 +146,7 @@ public static class FaunaPlanner
         var rng = new Rng(StableHash.Hash32(seed, key, "fauna.cat.pose"));
         FaunaInstance Cat(CatCoat coat, CatPose pose, Vector2 at, float turnDeg)
         {
-            var heading = Rotate(door.Out, (turnDeg + (rng.NextFloat() - 0.5f) * 20f) * float.Pi / 180f);
+            var heading = Vector2.TransformNormal(door.Out, Matrix3x2.CreateRotation((turnDeg + (rng.NextFloat() - 0.5f) * 20f) * Angles.DegreesToRadians));
             return new(FaunaModelKey.CatOf(coat, pose), new(at.X, ground(at), at.Y), Yaw(heading), S.Scale);
         }
         var o = door.Out;
@@ -185,11 +184,12 @@ public static class FaunaPlanner
         var plazas = Footprints(world, f => f.Kind == S.Steps).OrderByDescending(p => p.Area).ThenBy(p => p.Feature.Id.Value, StringComparer.Ordinal).ToArray();
         if (plazas.Length == 0) { log.Add("pigeons: no stepped plaza; left out"); return; }
         var plaza = plazas[0];
-        var centre = Centroid(plaza.Ring);
-        var foot = Prop(plaza.Feature, "footRadius") ?? MathF.Sqrt(plaza.Area / float.Pi) * 0.9f;
+        var centre = VertexMean(plaza.Ring);
+        var foot = plaza.Feature.TryNumber("props", "footRadius") ?? plaza.Feature.TryNumber("footRadius")
+            ?? MathF.Sqrt(plaza.Area / float.Pi) * 0.9f;
         // Toward the library when there is one (the flock keeps to the plaza and the library's great steps, WLD-LIFE).
         var library = buildings.Where(b => b.Category == "library").OrderByDescending(b => b.Area).FirstOrDefault();
-        var toward = library is null ? Vector2.UnitY : OrganicMeshExt.Unit2(Centroid(library.Ring) - centre, Vector2.UnitY);
+        var toward = library is null ? Vector2.UnitY : VectorMath.Unit(VertexMean(library.Ring) - centre, Vector2.UnitY, 1e-6f);
         var flock = centre + toward * (foot * S.PigeonRingFraction);
         var rng = new Rng(StableHash.Hash32(seed, "fauna.pigeons", "flock"));
         var day = new List<FaunaInstance>();
@@ -204,7 +204,7 @@ public static class FaunaPlanner
             if (!free(p) || taken.Any(q => Vector2.Distance(p, q) < 0.5f)) continue;
             taken.Add(p);
             var white = day.Count == 4;   // one white bird among the grey (WLD-LIFE)
-            day.Add(new(FaunaModelKey.PigeonOf(peck ? BirdPose.Peck : BirdPose.Stand, white), new(p.X, ground(p) + S.PavingLift, p.Y), yaw, S.Scale));
+            day.Add(new(FaunaModelKey.PigeonOf(peck ? BirdPose.Peck : BirdPose.Stand, white), new(p.X, ground(p) + GroundLevels.Paving, p.Y), yaw, S.Scale));
         }
         sites.Add(Site("pigeons.plaza", FaunaKind.Pigeon, day, [], []));
         log.Add($"pigeons.plaza: {day.Count} birds at ({flock.X:F1}, {flock.Y:F1}) on '{plaza.Feature.Id.Value}'");
@@ -218,7 +218,7 @@ public static class FaunaPlanner
         var hosts = buildings.Where(b => b.Category is S.Dining or S.Residence).ToArray();
         var trees = world.Network.Trees
             .Select(t => (Tree: t, P: new Vector2(t.Position.X, t.Position.Z)))
-            .Where(t => hosts.Any(b => DistanceToRing(b.Ring, t.P) <= S.SparrowTreeReach) && free(t.P))
+            .Where(t => hosts.Any(b => PlanGeometry.DistanceToRing(t.P, b.Ring) <= S.SparrowTreeReach) && free(t.P))
             .OrderBy(t => StableHash.Hash32(seed, t.Tree.Id.Value, "fauna.sparrow")).ThenBy(t => t.Tree.Id.Value, StringComparer.Ordinal)
             .ToArray();
         var groups = new List<Vector2>();
@@ -252,9 +252,13 @@ public static class FaunaPlanner
             var birds = new List<FaunaInstance>();
             foreach (var (t, turn) in new[] { (0.36f, 0.5f), (0.41f, -0.6f) })
             {
-                var (p, dir) = AlongLine(points, t);
+                var sample = points.Skip(1).Any(vertex => vertex != points[0])
+                    ? PlanGeometry.Sample(points, PlanGeometry.Length(points) * t)
+                    : new PlanLineSample(points[0], Vector2.UnitX, 0);
+                var p = sample.Point;
+                var dir = sample.Tangent;
                 var normal = new Vector2(-dir.Y, dir.X);
-                var heading = Rotate(normal, turn);
+                var heading = Vector2.TransformNormal(normal, Matrix3x2.CreateRotation(turn));
                 birds.Add(new(FaunaModelKey.SparrowOf(BirdPose.Perch), new(p.X, ground(p) + wall.Height!.Value, p.Y), Yaw(heading), S.Scale));
             }
             var key = $"sparrows.wall-{sites.Count(s => s.Key.StartsWith("sparrows.wall", StringComparison.Ordinal)) + 1}";
@@ -277,10 +281,10 @@ public static class FaunaPlanner
             var lake = chosen[li];
             var count = li == 0 ? S.SwansFirstLake : S.SwansSecondLake;
             // One normal water level per body: ITerrain.WaterY, else the water module's rule (bank - 0.5 m + 0.004 m).
-            var centre = Centroid(lake.Ring);
+            var centre = VertexMean(lake.Ring);
             var y = world.Terrain.WaterY(lake.Feature.Id) ?? world.Spatial.GroundY(centre.X, centre.Y) - 0.5f + 0.004f;
             var rng = new Rng(StableHash.Hash32(seed, lake.Feature.Id.Value, "fauna.swans"));
-            bool Open(Vector2 p, float margin) => Inside(lake, p) && DistanceToRing(lake.Ring, p) >= margin && !buildings.Any(b => Inside(b, p));
+            bool Open(Vector2 p, float margin) => Inside(lake, p) && PlanGeometry.DistanceToRing(p, lake.Ring) >= margin && !buildings.Any(b => Inside(b, p));
             var day = new List<FaunaInstance>();
             for (var attempt = 0; attempt < 400 && day.Count < count; attempt++)
             {
@@ -296,8 +300,8 @@ public static class FaunaPlanner
             }
             // Night and heavy rain: tucked in together near the shore point closest to a building (the swan house on the
             // first lake, a bank on the second), asleep.
-            var anchor = lake.Ring.OrderBy(v => buildings.Length == 0 ? 0 : buildings.Min(b => DistanceToRing(b.Ring, v))).ThenBy(v => v.X).First();
-            var inward = OrganicMeshExt.Unit2(centre - anchor, Vector2.UnitY);
+            var anchor = lake.Ring.OrderBy(v => buildings.Length == 0 ? 0 : buildings.Min(b => PlanGeometry.DistanceToRing(v, b.Ring))).ThenBy(v => v.X).First();
+            var inward = VectorMath.Unit(centre - anchor, Vector2.UnitY, 1e-6f);
             var huddle = anchor + inward * S.SwanHuddleOut;
             for (var step = 0; step < 20 && !Open(huddle, 2.5f); step++) huddle += inward * 1.5f;
             var night = new List<FaunaInstance>();
@@ -342,7 +346,7 @@ public static class FaunaPlanner
             for (var i = 0; i < n; i++)
             {
                 var p = mid + along * at;
-                var heading = Rotate(outward, (rng.NextFloat() - 0.5f) * 1.6f);
+                var heading = Vector2.TransformNormal(outward, Matrix3x2.CreateRotation((rng.NextFloat() - 0.5f) * 1.6f));
                 crows.Add(new(FaunaModelKey.CrowOf(), new(p.X, y, p.Y), Yaw(heading), S.Scale));
                 at += 0.8f + rng.NextFloat() * 0.9f;
             }
@@ -380,25 +384,15 @@ public static class FaunaPlanner
             var rings = (f.Parts.Count > 0 ? f.Parts.Select(p => p.Geometry) : [f.Geometry]).SelectMany(Polygons).ToArray();
             if (rings.Length == 0) continue;
             // The largest polygon stands for the feature (doors face its walls); the rest still count as occupied.
-            foreach (var ring in rings.OrderByDescending(r => MathF.Abs(SignedArea(r.Outer))))
+            foreach (var ring in rings.OrderByDescending(r => MathF.Abs((float)PlanGeometry.SignedArea(r.Outer))))
             {
                 if (ring.Outer.Count < 3) continue;
                 var min = new Vector2(ring.Outer.Min(p => p.X), ring.Outer.Min(p => p.Y));
                 var max = new Vector2(ring.Outer.Max(p => p.X), ring.Outer.Max(p => p.Y));
-                yield return new(f, ring.Outer, min, max, MathF.Abs(SignedArea(ring.Outer)), Category(f));
+                yield return new(f, ring.Outer, min, max, MathF.Abs((float)PlanGeometry.SignedArea(ring.Outer)), f.TryText("category") ?? "");
             }
         }
     }
-
-    private static string Category(WorldFeature f) =>
-        f.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("category", out var c) && c.ValueKind == JsonValueKind.String
-            ? c.GetString() ?? "" : "";
-
-    private static float? Prop(WorldFeature f, string name) =>
-        f.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("props", out var inner) && inner.ValueKind == JsonValueKind.Object
-            && inner.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetSingle()
-        : f.Props is { ValueKind: JsonValueKind.Object } direct && direct.TryGetProperty(name, out var d) && d.ValueKind == JsonValueKind.Number ? d.GetSingle()
-        : null;
 
     private static IEnumerable<PolygonRings> Polygons(OverlayGeometry g) => g switch
     {
@@ -410,76 +404,15 @@ public static class FaunaPlanner
     private static bool Inside(Footprint f, Vector2 p) =>
         p.X >= f.Min.X && p.X <= f.Max.X && p.Y >= f.Min.Y && p.Y <= f.Max.Y && PlanGeometry.InsideByCrossings(f.Ring, p);
 
-    private static float SignedArea(IReadOnlyList<Vector2> ring)
-    {
-        double sum = 0;
-        for (int i = 0, j = ring.Count - 1; i < ring.Count; j = i++) sum += (double)ring[j].X * ring[i].Y - (double)ring[i].X * ring[j].Y;
-        return (float)(sum * 0.5);
-    }
-
-    private static Vector2 Centroid(IReadOnlyList<Vector2> ring)
+    // Sites use the authored vertices' mean; an area centroid would move irregular shoreline placements.
+    private static Vector2 VertexMean(IReadOnlyList<Vector2> ring)
     {
         var sum = Vector2.Zero;
         foreach (var p in ring) sum += p;
         return sum / ring.Count;
     }
 
-    private static float DistanceToLine(IReadOnlyList<Vector2> line, Vector2 p)
-    {
-        var best = float.MaxValue;
-        for (var i = 0; i + 1 < line.Count; i++) best = MathF.Min(best, Segment(line[i], line[i + 1], p));
-        return best;
-    }
-
-    private static float DistanceToRing(IReadOnlyList<Vector2> ring, Vector2 p)
-    {
-        var best = float.MaxValue;
-        for (var i = 0; i < ring.Count; i++) best = MathF.Min(best, Segment(ring[i], ring[(i + 1) % ring.Count], p));
-        return best;
-    }
-
-    private static float Segment(Vector2 a, Vector2 b, Vector2 p)
-    {
-        var ab = b - a;
-        var len = ab.LengthSquared();
-        var t = len <= 1e-12f ? 0 : Math.Clamp(Vector2.Dot(p - a, ab) / len, 0, 1);
-        return Vector2.Distance(p, a + ab * t);
-    }
-
-    private static (Vector2 Point, Vector2 Dir) AlongLine(IReadOnlyList<Vector2> line, float fraction)
-    {
-        var total = 0f;
-        for (var i = 0; i + 1 < line.Count; i++) total += Vector2.Distance(line[i], line[i + 1]);
-        var target = total * fraction;
-        for (var i = 0; i + 1 < line.Count; i++)
-        {
-            var seg = Vector2.Distance(line[i], line[i + 1]);
-            if (target <= seg || i + 2 == line.Count)
-            {
-                var dir = OrganicMeshExt.Unit2(line[i + 1] - line[i], Vector2.UnitX);
-                return (line[i] + dir * MathF.Min(target, seg), dir);
-            }
-            target -= seg;
-        }
-        return (line[0], Vector2.UnitX);
-    }
-
     /// <summary>Heading in the plan (x, z) to the model yaw: model +Z turned by yaw about +Y points along (sin yaw, cos yaw).</summary>
     private static float Yaw(Vector2 heading) => MathF.Atan2(heading.X, heading.Y);
 
-    private static Vector2 Rotate(Vector2 v, float radians)
-    {
-        var c = MathF.Cos(radians);
-        var s = MathF.Sin(radians);
-        return new(v.X * c - v.Y * s, v.X * s + v.Y * c);
-    }
-}
-
-internal static class OrganicMeshExt
-{
-    internal static Vector2 Unit2(Vector2 v, Vector2 fallback)
-    {
-        var l = v.Length();
-        return l > 1e-6f ? v / l : fallback;
-    }
 }

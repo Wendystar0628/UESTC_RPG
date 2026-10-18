@@ -44,12 +44,11 @@ public static class CaptureSequence
             }
             if (!presentation.IsCovered)
                 throw new InvalidOperationException("Capture warmup requires a drawn opaque veil.");
-            runtime.Prefetch(appliedPose, rig.Mode);
-            runtime.BeginWarm();
-            await CaptureBarrier.WaitForReadyAsync(host, producers, () => rig.Pose == appliedPose && contentReady(),
+            var arrival = runtime.Arrive(appliedPose, rig.Mode);
+            await CaptureBarrier.WaitForReadyAsync(host, producers, arrival, () => rig.Pose == appliedPose && contentReady(),
                 cancellationToken, includeCanvas: options.Value("ui") == "1");
             await veil.Reveal(VeilReason.Boot, 0);
-            await CaptureBarrier.WaitForReadyAsync(host, producers, () => rig.Pose == appliedPose && contentReady() && veil.Opacity == 0,
+            await CaptureBarrier.WaitForReadyAsync(host, producers, arrival, () => rig.Pose == appliedPose && contentReady() && veil.Opacity == 0,
                 cancellationToken, includeCanvas: options.Value("ui") == "1");
             cancellationToken.ThrowIfCancellationRequested();
             using var image = host.GetViewport().GetTexture().GetImage();

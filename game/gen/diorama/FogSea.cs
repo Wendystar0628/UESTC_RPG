@@ -35,9 +35,9 @@ public static class FogSea
             // Bank crest wanders along the perimeter (cells of waveLength metres, periodic round the ring).
             var perimeterCells = MathF.Max(1f, MathF.Round(2f * MathF.PI * edge / bank.WaveLength));
             var t = s / (float)segments * perimeterCells;
-            var crest = bank.Height * (1f + bank.Jitter * DioramaNoise.Value(t, noiseSeed, (int)perimeterCells));
+            var crest = bank.Height * (1f + bank.Jitter * IntegerNoise.Value1D(t, noiseSeed, (int)perimeterCells));
             // The fog shoreline wanders in and out across the ground's edge, so the straight edge never shows as a line.
-            var wander = bank.Wander * DioramaNoise.Value(t * 0.5f, noiseSeed ^ 0x68e31da4u, (int)MathF.Max(1f, MathF.Round(perimeterCells * 0.5f)));
+            var wander = bank.Wander * IntegerNoise.Value1D(t * 0.5f, noiseSeed ^ 0x68e31da4u, (int)MathF.Max(1f, MathF.Round(perimeterCells * 0.5f)));
             radii.Clear();
             foreach (var k in BankSteps)
                 radii.Add(edge + (k < 0f ? k * bank.Inside : k * bank.Outside));
@@ -73,8 +73,8 @@ public static class FogSea
     private static float Bank(float d, float crest, float top, EdgeBankData bank)
     {
         var crestAt = BankCrestAt * bank.Inside;
-        if (d < crestAt) return BankFootY + (crest - BankFootY) * SmoothStep(-bank.Inside, crestAt, d);
-        return top + (crest - top) * (1f - SmoothStep(crestAt, bank.Outside, d));
+        if (d < crestAt) return BankFootY + (crest - BankFootY) * ScalarMath.Smoothstep(-bank.Inside, crestAt, d);
+        return top + (crest - top) * (1f - ScalarMath.Smoothstep(crestAt, bank.Outside, d));
     }
 
     /// <summary>Distance from the centre to the ground's edge along a direction: the cut line if given, else the rectangle.</summary>
@@ -104,12 +104,6 @@ public static class FogSea
         var t = (a.X * e.Y - a.Y * e.X) / den;
         var u = (a.X * dir.Y - a.Y * dir.X) / den;
         return t > 0f && u is >= 0f and <= 1f ? t : null;
-    }
-
-    private static float SmoothStep(float a, float b, float x)
-    {
-        var t = Math.Clamp((x - a) / (b - a), 0f, 1f);
-        return t * t * (3f - 2f * t);
     }
 }
 

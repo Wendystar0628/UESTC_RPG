@@ -67,7 +67,7 @@ public static class StepsAlong
         for (var s = 0; s < segments; s++)
         {
             var a = footLine[s]; var b = footLine[(s + 1) % footLine.Count];
-            var d = b - a; var length = V3.Length(d);
+            var d = b - a; var length = (float)Math.Sqrt(VectorMath.Dot(d, d));
             var lateral = new Vector2(d.Y / length, -d.X / length);
             Vector3 At(Vector2 p, float s2, float y) => new(p.X + lateral.X * s2, baseY + y, p.Y + lateral.Y * s2);
             if (finish == StepsFinish.Stone && risers >= 3)

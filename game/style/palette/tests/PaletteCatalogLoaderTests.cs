@@ -20,17 +20,17 @@ public sealed class PaletteCatalogLoaderTests
         var (legacy, files) = Load();
         var catalog = LoadCatalog(legacy, files);
         AssertThat(catalog.Get(new PaletteIndex(legacy.Entries[0].Id)).Albedo == legacy.Entries[0].Albedo).OverrideFailureMessage("The base metadata changed while composing the catalog.").IsTrue();
-        AssertThat(catalog.ExtensionCount == 14).OverrideFailureMessage($"Expected the seven approved bank-1 pairs, found {catalog.ExtensionCount} extension entries.").IsTrue();
-        foreach (var (family, lit) in new[]
+        var extensions = files.SelectMany(file => JsonSerializer.Deserialize<PaletteExtensionData>(file.Item2, ContractJson.Options)!.Entries).ToArray();
+        AssertThat(catalog.ExtensionCount == extensions.Length).OverrideFailureMessage("An authored extension entry was lost.").IsTrue();
+        foreach (var entry in extensions)
         {
-            ("bronze", 320), ("stone.black", 322), ("glass.tea", 324), ("band.ochre", 326), ("glass.deep", 328),
-            ("street.blue", 448), ("hazard.black", 450)
-        })
-        {
-            AssertThat(catalog.Resolve(new PaletteToken(family + ".lit")).Value == lit).OverrideFailureMessage($"{family}.lit is not at {lit}.").IsTrue();
-            AssertThat(catalog.Resolve(new PaletteToken(family + ".shade")).Value == lit + 1).OverrideFailureMessage($"{family}.shade is not at {lit + 1}.").IsTrue();
-            AssertThat(!legacy.TryGet(new PaletteToken(family + ".lit"), out _)).OverrideFailureMessage($"{family} leaked into the legacy byte registry.").IsTrue();
-            catalog.Validate(new ToonSpec(new PaletteToken(family + ".lit"), new PaletteToken(family + ".shade")));
+            AssertThat(catalog.Resolve(entry.Token) == entry.Index).OverrideFailureMessage($"{entry.Token.Value} did not retain its authored index.").IsTrue();
+            AssertThat(!legacy.TryGet(entry.Token, out _)).OverrideFailureMessage($"{entry.Token.Value} leaked into the legacy byte registry.").IsTrue();
+            if (entry.Role == PaletteRole.Lit)
+            {
+                var shade = extensions.Single(candidate => candidate.Index.Value == entry.Index.Value + 1);
+                catalog.Validate(new ToonSpec(entry.Token, shade.Token));
+            }
         }
     }
 
@@ -71,10 +71,7 @@ public sealed class PaletteCatalogLoaderTests
 
     private static (PaletteRegistry Legacy, (string, byte[])[] Files) Load()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !System.IO.File.Exists(Path.Combine(dir.FullName, "ownership.json"))) dir = dir.Parent;
-        if (dir is null) throw new InvalidOperationException("Repository root not found from the test directory.");
-        var palette = Path.Combine(dir.FullName, "game", "style", "palette");
+        var palette = Campus.Tests.RepositoryFixture.FilePath("game", "style", "palette");
         var entries = new List<PaletteEntry>();
         foreach (var file in new[] { Path.Combine(palette, "core.json") }
             .Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "WP-*.json").Order(StringComparer.Ordinal)))

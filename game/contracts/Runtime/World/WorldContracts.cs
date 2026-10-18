@@ -1,7 +1,6 @@
 using System.Numerics;
 
 namespace Campus.Contracts;
-public enum ClockPreset { Morning, Noon, Dusk, Night }
 public readonly record struct Flow(int Rate);   // 世界秒 / 真实秒；取值见 FlowRates，0 = 暂停
 [Flags] public enum WorldTransition : byte { None = 0, Time = 1, Season = 2, Weather = 4 }   // 几种过渡可以同时进行
 public enum WeatherMode : byte { Auto, Manual }
@@ -33,9 +32,9 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
     IReadOnlyList<WeatherSpan> WeatherAhead { get; }   // 前瞻 24 h 的天气队列，供快进和预报行（UI-NAV、UI-VISUAL）
     uint WeatherSeed { get; }               // 本存档的天气基础种子（SYS-WEATHER；每个存档一个，SYS-SAVE）
     bool IsNative(WeatherKind k);           // 该天气在目标季节里有没有；界面据此把该格画成禁用态（SYS-WEATHER、UI-VISUAL）
-    double AnimTime { get; }                // 实时秒 mod 480，用 delta 累加，与 Clock 无关；旧网页版的 t = AnimTime / 480
+    double AnimTime { get; }                // 实时秒，周期见 WorldTime.AnimLoopSeconds；用 delta 累加，与 Clock 无关
     double Step12 { get; }                  // floor(AnimTime·StepRate)/StepRate，"一拍二"；StepRate 与全局参数 step_rate 同源
-                                            // （QualityView.StepRate：帧率上限 30 时 15，其余 12；截图与门禁一律 12）
+                                            // （QualityView.StepRate：规则见 WorldTime.StepRate）
 }
 
 public enum ClockSetMode { Drag, Jump }

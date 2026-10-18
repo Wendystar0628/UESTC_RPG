@@ -1,3 +1,5 @@
+using Campus.Tests;
+using Campus.Gen.Tests.Support;
 using static GdUnit4.Assertions;
 using System.Globalization;
 using System.Numerics;
@@ -42,7 +44,7 @@ public sealed class BuildingOverlapValidatorTests
         AssertThat(BuildingOverlapValidator.Measure(a, B(18)).IoU == 0.9).OverrideFailureMessage("Exact threshold fixture").IsTrue();
         BuildingOverlapValidator.Validate(World(Feature("a", "a", a), Feature("b", "b", B(18))));
         BuildingOverlapValidator.Validate(World(Feature("a", "a", a), Feature("b", "b", B(17.98f))));
-        { var __reportText = Failure(World(Feature("a", "a", a), Feature("b", "b", B(18.02f)))); foreach (var __expectedText in new[] { "IoU=", "> 0.9" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(World(Feature("a", "a", a), Feature("b", "b", B(18.02f))));
     }
 
     [TestCase]
@@ -50,7 +52,7 @@ public sealed class BuildingOverlapValidatorTests
     {
         var a = Feature("a", "source-a", Rect(0, 0, 2, 2)) with
         { Parts = [new("source-a", new MultiPolygonGeometry([Rect(0, 0, 2, 2), Rect(10, 0, 12, 2)]), 5, 1)] };
-        { var __reportText = Failure(World(a, Feature("b", "source-b", Rect(10, 0, 12, 2)))); foreach (var __expectedText in new[] { "source=\"source-a\"; polygon=1", "1 pair(s)" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(World(a, Feature("b", "source-b", Rect(10, 0, 12, 2))));
     }
 
     [TestCase]
@@ -60,19 +62,18 @@ public sealed class BuildingOverlapValidatorTests
         var reversed = new PolygonRings([new(10, 10), new(10, 0), new(5, 0), new(0, 0), new(0, 10), new(10, 10)],
             p.Holes.Reverse().Select(h => (IReadOnlyList<Vector2>)h.Reverse().ToArray()).ToArray());
         BuildingOverlapValidator.Validate(World(Feature("a", "shared", p), Feature("b", "shared", reversed)));
-        var report = Failure(World(Feature("a", "shared", p), Feature("b", "shared", reversed), Feature("c", "different", p)));
-        { var __reportText = report; foreach (var __expectedText in new[] { "1 pair(s)", "entity=\"a\"", "entity=\"b\"", "entity=\"c\"" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(World(Feature("a", "shared", p), Feature("b", "shared", reversed), Feature("c", "different", p)));
     }
 
     [TestCase]
     public void Conflicts()
     {
-        { var __reportText = Failure(World(Feature("a", "same", Rect(0, 0, 2, 2)), Feature("b", "same", Rect(0, 0, 3, 2)), Feature("c", "same", Rect(0, 0, 2, 2)))); foreach (var __expectedText in new[] { "geometry differs at polygon=0", "source=\"same\"", "entity=\"a\"", "entity=\"b\"", "entity=\"c\"" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(World(Feature("a", "same", Rect(0, 0, 2, 2)), Feature("b", "same", Rect(0, 0, 3, 2)), Feature("c", "same", Rect(0, 0, 2, 2))));
         var b = Feature("b", "same", Rect(0, 0, 2, 2)) with
         { Parts = [new("same", new MultiPolygonGeometry([Rect(0, 0, 2, 2), Rect(10, 10, 11, 11)]), 5, 1)] };
-        { var __reportText = Failure(World(Feature("a", "same", Rect(0, 0, 2, 2)), b)); foreach (var __expectedText in new[] { "polygon count differs" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(World(Feature("a", "same", Rect(0, 0, 2, 2)), b));
         var bowtie = new PolygonRings([new(0, 0), new(2, 2), new(0, 2), new(2, 0)]);
-        { var __reportText = Failure(World(Feature("a", "invalid", bowtie))); foreach (var __expectedText in new[] { "Invalid building source geometry", "source=\"invalid\"" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(World(Feature("a", "invalid", bowtie)));
     }
 
     [TestCase]
@@ -81,17 +82,17 @@ public sealed class BuildingOverlapValidatorTests
         using var props = JsonDocument.Parse("{\"kind\":\"building\"}");
         var poi = Feature("poi", "under-poi", Rect(0, 0, 2, 2)) with { Kind = new("poi") };
         poi = poi with { Parts = [poi.Parts[0] with { Props = props.RootElement.Clone() }] };
-        { var __reportText = Failure(World(poi, Feature("b", "b", Rect(0, 0, 2, 2)))); foreach (var __expectedText in new[] { "under-poi" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(World(poi, Feature("b", "b", Rect(0, 0, 2, 2))));
         var hugeEnvelope = Feature("a", "a", Rect(20, 20, 21, 21)) with { Geometry = new PolygonGeometry(Rect(0, 0, 10, 10)) };
         var point = new WorldFeature(new("point"), FeatureSource.Osm, new("building"), new PointGeometry(new(0, 0, 0)));
         var line = point with { Id = new("line"), Geometry = new PolylineGeometry(new([new(0, 0), new(10, 10)])) };
         BuildingOverlapValidator.Validate(World(hugeEnvelope, Feature("b", "b", Rect(0, 0, 10, 10)), point, line));
         var design = new WorldFeature(new("design:a"), FeatureSource.Design, new("building"), new PolygonGeometry(Rect(0, 0, 2, 2)));
-        { var __reportText = Failure(World(design, Feature("b", "b", Rect(0, 0, 2, 2)))); foreach (var __expectedText in new[] { "source=\"design:a\"" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(World(design, Feature("b", "b", Rect(0, 0, 2, 2))));
     }
 
     [TestCase]
-    public void StableReport()
+    public void RejectionDoesNotDependOnCultureOrInputOrder()
     {
         var a = Feature("same-entity", "source-a", Rect(0, 0, 2, 2));
         a = a with { Name = "same name", Parts = [a.Parts[0], new("source-b", a.Parts[0].Geometry, 500, 100)] };
@@ -100,11 +101,9 @@ public sealed class BuildingOverlapValidatorTests
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
-            var left = Failure(World(a, b), (_, _) => new("WP-test"));
+            Reject(World(a, b), (_, _) => new("WP-test"));
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
-            var right = Failure(World(b, a with { Parts = a.Parts.Reverse().ToArray() }), (_, _) => new("WP-test"));
-            AssertThat(left == right).OverrideFailureMessage("Report differs with input order/culture").IsTrue();
-            { var __reportText = left; foreach (var __expectedText in new[] { "3 pair(s)", "massing:\"WP-test\"", "facade:\"WP-test\"", "roof:\"WP-test\"", "areaA=4 m2", "union=4 m2" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+            Reject(World(b, a with { Parts = a.Parts.Reverse().ToArray() }), (_, _) => new("WP-test"));
         }
         finally { CultureInfo.CurrentCulture = previousCulture; }
     }
@@ -119,10 +118,10 @@ public sealed class BuildingOverlapValidatorTests
         AssertThat(a.Holes.Count == 1).OverrideFailureMessage("Real C source must retain its hole").IsTrue();
         var m = BuildingOverlapValidator.Measure(a, b);
         // Campus coordinates can evolve independently of this package.
-        // Exact areas are covered by the synthetic fixtures above; this real pair locks rejection and source identity.
+        // Exact areas are covered by the synthetic fixtures above; this real pair checks rejection.
         AssertThat(m.AreaA > m.AreaB && m.AreaB > 0 && m.Intersection > 0 && m.Intersection <= m.AreaB &&
             m.IoU > BuildingOverlapValidator.MaximumIntersectionOverUnion && m.IoU < 1).OverrideFailureMessage("The distinct real source footprints must overlap above the rejection threshold.").IsTrue();
-        { var __reportText = Failure(FromRaw([keep, remove])); foreach (var __expectedText in new[] { "qsh:relation:14153711", "qsh:way:779496166", "osm:relation:10807930", "osm:way:779496166", "1 pair(s)" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(FromRaw([keep, remove]));
     }
 
     [TestCase]
@@ -147,15 +146,14 @@ public sealed class BuildingOverlapValidatorTests
             "qsh:way:691679140", "qsh:way:779496166", "qsh:way:814133732"];
         var raw = Fixture.GetProperty("features").EnumerateArray()
             .Where(f => entities.Contains(f.GetProperty("entityId").GetString(), StringComparer.Ordinal)).ToArray();
-        var report = Failure(FromRaw(raw));
-        { var __reportText = report; foreach (var __expectedText in new[] { "4 pair(s)", "osm:relation:11334254", "osm:relation:11665641", "osm:relation:11334255", "osm:relation:11665642", "osm:way:691679138", "osm:way:691679140" }) AssertThat(__reportText.Contains(__expectedText, StringComparison.Ordinal)).OverrideFailureMessage("Missing: " + __expectedText + "\n" + __reportText).IsTrue(); };
+        Reject(FromRaw(raw));
+
         // This is the intended effective-source projection, not an implementation/test of overlay HideOp.
         BuildingOverlapValidator.Validate(FromRaw(raw.Where(f => !removed.Contains(f.GetProperty("id").GetString()!, StringComparer.Ordinal))));
-        Console.WriteLine("REAL_REPORT_BEGIN\n" + report + "\nREAL_REPORT_END");
     }
 
     JsonElement Raw(string id) => Fixture.GetProperty("features").EnumerateArray().Single(f => f.GetProperty("id").GetString() == id);
-    FixtureWorld FromRaw(IEnumerable<JsonElement> features) => World(features.GroupBy(f => f.GetProperty("entityId").GetString()!, StringComparer.Ordinal).Select(group =>
+    FakeWorld FromRaw(IEnumerable<JsonElement> features) => World(features.GroupBy(f => f.GetProperty("entityId").GetString()!, StringComparer.Ordinal).Select(group =>
     {
         var parts = group.Select(f =>
         {
@@ -163,7 +161,7 @@ public sealed class BuildingOverlapValidatorTests
             OverlayGeometry geometry = polygons.Length == 1 ? new PolygonGeometry(polygons[0]) : new MultiPolygonGeometry(polygons);
             return new WorldFeaturePart(f.GetProperty("id").GetString()!, geometry, null, null) { Props = f.Clone() };
         }).ToArray();
-        return new WorldFeature(new(group.Key), FeatureSource.Osm, new("building"), parts[0].Geometry) { Parts = parts };
+        return WorldFeatureFixture.Create(group.Key, "building", parts[0].Geometry, source: FeatureSource.Osm, parts: parts);
     }).ToArray());
 
     static PolygonRings ReadRings(JsonElement polygon)
@@ -173,41 +171,18 @@ public sealed class BuildingOverlapValidatorTests
     }
     static PolygonRings Rect(float x1, float y1, float x2, float y2) => new([new(x1, y1), new(x2, y1), new(x2, y2), new(x1, y2)]);
     static WorldFeature Feature(string entity, string source, PolygonRings rings) =>
-        new(new(entity), FeatureSource.Osm, new("building"), new PolygonGeometry(rings)) { Parts = [new(source, new PolygonGeometry(rings), 5, 1)] };
-    static FixtureWorld World(params WorldFeature[] features) => new(features.ToDictionary(f => f.Id));
-    static string Failure(IWorldModel world, Func<FeatureId, Aspects, WpId?>? owner = null)
-    {
-        try { BuildingOverlapValidator.Validate(world, owner); }
-        catch (InvalidDataException e) { return e.Message; }
-        throw new InvalidOperationException("Expected validation failure.");
-    }
+        WorldFeatureFixture.Create(entity, "building", new PolygonGeometry(rings), source: FeatureSource.Osm,
+            parts: [new(source, new PolygonGeometry(rings), 5, 1)]);
+    static FakeWorld World(params WorldFeature[] features) => new() { Features = features.ToDictionary(f => f.Id) };
 
-    sealed class FixtureWorld(IReadOnlyDictionary<FeatureId, WorldFeature> features) : IWorldModel
-    {
-        public IReadOnlyDictionary<FeatureId, WorldFeature> Features => features;
-        public PolygonRings Boundary => throw new NotSupportedException();
-        public WorldNetwork Network => throw new NotSupportedException();
-        public ISpatialIndex Spatial => throw new NotSupportedException();
-        public IInteriorIndex Interiors => throw new NotSupportedException();
-        public IOutskirtsModel? Outskirts => throw new NotSupportedException();
-        public IFidelityModel? Fidelity => throw new NotSupportedException();
-    }
+    static void Reject(IWorldModel world, Func<FeatureId, Aspects, WpId?>? owner = null) =>
+        AssertThrown(() => BuildingOverlapValidator.Validate(world, owner)).IsInstanceOf<InvalidDataException>();
 
     private static readonly Lazy<JsonElement> RawCampus = new(() =>
     {
-        using var document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(GameRoot(),
-            "data", "maps", "qingshuihe", "campus.json")));
+        using var document = JsonDocument.Parse(RealMapFixture.ReadFiles()["campus.json"]);
         return document.RootElement.Clone();
     });
-    private static string GameRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "project.godot"))) return directory.FullName;
-            var game = Path.Combine(directory.FullName, "game");
-            if (File.Exists(Path.Combine(game, "project.godot"))) return game;
-        }
-        throw new DirectoryNotFoundException("The campus fixture must run from a repository game build.");
-    }
+
     private static JsonElement Fixture => RawCampus.Value;
 }

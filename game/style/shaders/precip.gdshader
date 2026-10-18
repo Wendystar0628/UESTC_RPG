@@ -217,7 +217,7 @@ void vertex() {
 		float len = precip_v.w;
 		if (is_snow) {
 			// 横摆：480 s 内整数个周期，按一拍二取样
-			float ph = 6.2831853 * (stepped * (40.0 + floor(r * 40.0)) / 480.0 + r);
+			float ph = 6.2831853 * (stepped * (40.0 + floor(r * 40.0)) / anim_loop_seconds + r);
 			p.xz += vec2(sin(ph), cos(ph * 0.7)) * PC_FLAKE_SWAY;
 		}
 		float top = pc_occ_top(p);

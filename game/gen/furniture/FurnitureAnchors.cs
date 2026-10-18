@@ -19,10 +19,10 @@ public static partial class FurniturePlanner
         foreach (var feature in site.World.Features.Values.Where(f => f.Kind.Value == "anchor").OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             if (feature.Geometry is not PolygonGeometry { Rings.Outer: { Count: >= 3 } ring }) continue;
-            var form = Text(feature.Props, "form");
+            var form = WorldProps.TryText(feature.Props, "form");
             if (form is not ("kiosk" or "post")) continue;
-            var yaw = Number(feature.Props, "yawDeg") ?? 0f;
-            var facing = Facing(yaw);
+            var yaw = WorldProps.TryNumber(feature.Props, "yawDeg") ?? 0f;
+            var facing = Angles.Heading(yaw);
             var right = new Vector2(-facing.Y, facing.X);
             var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
             var width = Extent(ring, right);
@@ -44,7 +44,7 @@ public static partial class FurniturePlanner
                         // Large entity (WLD-TERRAIN): on its pad, with a paved apron; a deck the height field does not carry (A06)
                         // comes from the overlay's groundY. An apron off the paving moves to its edge (a deck is paving already).
                         var ground = terrain.HeightAt(centre.X, centre.Y);
-                        var deck = Number(feature.Props, "groundY") is { } y && y > ground + S.DeckAbove ? y : (float?)null;
+                        var deck = WorldProps.TryNumber(feature.Props, "groundY") is { } y && y > ground + S.DeckAbove ? y : (float?)null;
                         if (deck is null) (centre, facing) = KioskOnPaving(site, centre, facing, p.Width * 0.5f + S.ApronMargin, p.Depth * 0.5f + S.ApronMargin, diagnostics, feature.Id);
                         var level = deck ?? terrain.PadY(feature.Id);
                         var plan = Frame(centre, facing, 0f);
@@ -93,7 +93,7 @@ public static partial class FurniturePlanner
             {
                 var at = hit.Edge + along * slide + inward * (S.ApronPavingClear + halfDepth);
                 if (Vector2.Distance(at, centre) > S.AnchorPavingReach || !OnPaving(site, at, inward, halfWidth, halfDepth)) continue;
-                diagnostics.Add(new(DiagnosticLevel.Info, "wp13.anchor.turned", $"anchor {id.Value} (kiosk) turned onto paving: yawDeg {Fixed(YawDeg(inward))} (data {Fixed(YawDeg(facing))}), centre ({Fixed(at.X)}, {Fixed(at.Y)}) (data ({Fixed(centre.X)}, {Fixed(centre.Y)}))", id));
+                diagnostics.Add(new(DiagnosticLevel.Info, "wp13.anchor.turned", $"anchor {id.Value} (kiosk) turned onto paving: yawDeg {Fixed(Angles.Bearing(inward))} (data {Fixed(Angles.Bearing(facing))}), centre ({Fixed(at.X)}, {Fixed(at.Y)}) (data ({Fixed(centre.X)}, {Fixed(centre.Y)}))", id));
                 return (at, inward);
             }
         }

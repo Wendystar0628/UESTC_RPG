@@ -3,25 +3,8 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Parts.Core;
 
-// Scalar arithmetic deliberately fixes operation order across supported CPUs.
 internal static class GeometryMath
 {
-    internal static Vector3 Add(Vector3 a, Vector3 b) => new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
-    internal static Vector3 Sub(Vector3 a, Vector3 b) => new(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
-    internal static Vector3 Scale(Vector3 a, float s) => new(a.X * s, a.Y * s, a.Z * s);
-    internal static Vector3 Cross(Vector3 a, Vector3 b) => new(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
-    internal static double Dot(Vector3 a, Vector3 b) => (double)a.X * b.X + (double)a.Y * b.Y + (double)a.Z * b.Z;
-    internal static Vector3 Unit(Vector3 a)
-    {
-        Finite(a, nameof(a));
-        var length = Math.Sqrt(Dot(a, a));
-        if (length <= 1e-12) throw new ArgumentException("A direction or edge must be nonzero.");
-        return new((float)(a.X / length), (float)(a.Y / length), (float)(a.Z / length));
-    }
-    internal static void Finite(Vector3 p, string name)
-    {
-        if (!float.IsFinite(p.X) || !float.IsFinite(p.Y) || !float.IsFinite(p.Z)) throw new ArgumentException("Coordinates must be finite.", name);
-    }
     internal static void Positive(float value, string name)
     {
         if (!float.IsFinite(value) || value <= 0) throw new ArgumentOutOfRangeException(name, "A dimension must be finite and positive.");
@@ -43,15 +26,15 @@ internal sealed class GeometryWriter(ToonSpec material)
     // GeometryBundle.Ao is visibility: 1 is unoccluded, 0 is fully occluded.
     internal int Vertex(Vector3 position, Vector3 normal, Vector2 uv, float visibility = 1)
     {
-        GeometryMath.Finite(position, nameof(position)); GeometryMath.Finite(normal, nameof(normal));
+        if (!VectorMath.Finite(position)) throw new ArgumentException("Coordinates must be finite.", nameof(position));
+        if (!VectorMath.Finite(normal)) throw new ArgumentException("Coordinates must be finite.", nameof(normal));
         if (positions.Count >= 65536) throw new ArgumentException("A part surface exceeds 65,536 vertices; split it before baking.");
         positions.Add(position); normals.Add(normal); uvs.Add(uv); ambientVisibility.Add(visibility);
         return positions.Count - 1;
     }
     internal void Triangle(int a, int b, int c, Vector3 outward)
     {
-        var cross = GeometryMath.Cross(GeometryMath.Sub(positions[b], positions[a]), GeometryMath.Sub(positions[c], positions[a]));
-        var direction = GeometryMath.Dot(cross, outward);
+        var direction = VectorMath.TriangleOrientation(positions[a], positions[b], positions[c], outward);
         if (!double.IsFinite(direction) || direction == 0) throw new ArgumentException("A face is degenerate.");
         // Godot's front face is clockwise when viewed from outside.
         indices.Add(a); indices.Add(direction < 0 ? b : c); indices.Add(direction < 0 ? c : b);

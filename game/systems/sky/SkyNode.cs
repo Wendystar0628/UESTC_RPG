@@ -133,7 +133,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         // 噪声坐标 = 世界坐标 + 漂移，所以漂移取反，云才朝 towardDeg 走（方向约定见 CORE-INDEX：(sin A, ·, −cos A)）
         var x = -Math.Sin(az) * distance;
         var z = Math.Cos(az) * distance;
-        var theta = 2.0 * Math.PI * animTime / SkyTuning.AnimLoopSeconds;
+        var theta = 2.0 * Math.PI * animTime / WorldTime.AnimLoopSeconds;
         x += SkyTuning.AnimLoopRadiusMeters * Math.Cos(theta);
         z += SkyTuning.AnimLoopRadiusMeters * Math.Sin(theta);
         return new Vector2((float)Wrap(x), (float)Wrap(z));

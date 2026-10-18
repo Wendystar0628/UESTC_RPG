@@ -36,7 +36,7 @@ public static partial class FurniturePlanner
         var lockerSpots = new List<ServiceSite>();
         foreach (var spot in vendingSites)
         {
-            if (axis.Any(l => DistanceTo(spot.At, l) < S.MainAxisClear)) { axial++; continue; }
+            if (axis.Any(l => MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(l.Line.Points, spot.At)) < S.MainAxisClear)) { axial++; continue; }
             if (groups.Any(g => Vector2.Distance(g.At, spot.At) < S.VendingSpacing)) { crowded++; continue; }
             var hash = StableHash.Hash32(0x13C2Cu, "vending", spot.Label);
             var count = S.VendingMin + (int)(hash % (uint)(S.VendingMax - S.VendingMin + 1));
@@ -82,7 +82,7 @@ public static partial class FurniturePlanner
 
         // Shared-bicycle bays: the open cluster gates, the doors of teaching buildings, libraries and canteens, then the places the map
         // marks for parking bicycles (OSM 非机动车 points).
-        var parking = world.Features.Values.Where(f => S.BaySubcategories.Contains(Text(f.Props, "subcategory") ?? "")).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
+        var parking = world.Features.Values.Where(f => S.BaySubcategories.Contains(WorldProps.TryText(f.Props, "subcategory") ?? "")).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
             .Select(f => new ServiceSite(f.Id.Value, Anchor(f), null, null));
         var baySites = gates.Where(g => g.Open).Concat(Buildings(site, S.BayCategories, door: true)).Concat(parking).ToList();
         var bays = new List<string>();
@@ -130,7 +130,7 @@ public static partial class FurniturePlanner
             if (feature.Geometry is not PointGeometry point) continue;
             var open = feature.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("open", out var o) && o.ValueKind == JsonValueKind.True;
             PolygonRings? outline = null;
-            if (Text(feature.Props, "cluster") is { } id && world.Features.TryGetValue(new(id), out var cluster))
+            if (WorldProps.TryText(feature.Props, "cluster") is { } id && world.Features.TryGetValue(new(id), out var cluster))
                 outline = cluster.Geometry switch { PolygonGeometry polygon => polygon.Rings, MultiPolygonGeometry { Polygons.Count: > 0 } multi => multi.Polygons[0], _ => null };
             if (outline is null) continue;
             gates.Add((open, new(feature.Id.Value, new(point.Position.X, point.Position.Z), outline, null, open)));
@@ -149,14 +149,14 @@ public static partial class FurniturePlanner
         var done = new HashSet<FeatureId>();
         foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == "building").OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
-            if (!categories.Contains(Text(feature.Props, "category") ?? "")) continue;
+            if (!categories.Contains(WorldProps.TryText(feature.Props, "category") ?? "")) continue;
             var entry = world.Interiors.Get(feature.Id);
             if (entry is not null && !done.Add(entry.Feature)) continue;
             var open = entry?.Entrances.Where(e => e.Open).OrderBy(e => e.Id, StringComparer.Ordinal).FirstOrDefault();
             if (open is not null)
             {
                 var plan = new Vector2(open.Center.X, open.Center.Z);
-                var facing = Facing(open.YawDeg);
+                var facing = Angles.Heading(open.YawDeg);
                 yield return new(feature.Id.Value, plan + facing * (door ? (S.BayNear + S.BayFar) * 0.5f : S.BayNear), null, door ? plan : null);
                 continue;
             }
@@ -187,7 +187,7 @@ public static partial class FurniturePlanner
                     var q = Vector2.Lerp(a, b, (k + 0.5f) / steps);
                     foreach (var line in lines)
                     {
-                        var d = DistanceTo(q, line) - StreetSite.HalfWidth(line);
+                        var d = MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(line.Line.Points, q)) - StreetSite.HalfWidth(line);
                         if (d <= 30f && (best is null || d < best.Value.D)) best = (d, q);
                     }
                 }
@@ -251,7 +251,7 @@ public static partial class FurniturePlanner
         foreach (var line in site.World.Network.Roads.Where(StreetSite.Carriageway).OrderBy(l => l.Id.Value, StringComparer.Ordinal))
         {
             var half = StreetSite.HalfWidth(line);
-            if (DistanceTo(p, line) > reach + half) continue;
+            if (MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(line.Line.Points, p)) > reach + half) continue;
             var run = new StreetSite.Run([.. line.Line.Points]);
             for (var s = 0f; s <= run.Length; s += 1f)
             {
@@ -284,10 +284,9 @@ public static partial class FurniturePlanner
     /// </summary>
     private static bool WithinBudget(List<FurnitureItem> items, IReadOnlyList<FurnitureItem> extra, Dictionary<(string, object), (int Meshes, int Triangles)> cache)
     {
-        static (int, int) Cell(Vector2 p) => ((int)MathF.Floor(p.X / 64f), (int)MathF.Floor(p.Y / 64f));
-        foreach (var cell in extra.Select(i => Cell(i.Anchor)).Distinct())
+        foreach (var cell in extra.Select(i => TileGrid.At(i.Anchor)).Distinct())
         {
-            var inCell = items.Where(i => Cell(i.Anchor) == cell).Concat(extra.Where(i => Cell(i.Anchor) == cell)).ToList();
+            var inCell = items.Where(i => TileGrid.At(i.Anchor) == cell).Concat(extra.Where(i => TileGrid.At(i.Anchor) == cell)).ToList();
             int draws = inCell.Any(i => i.Pad is not null) ? 1 : 0, triangles = 0;
             foreach (var look in inCell.Select(i => (i.Part.Part.Value, i.Part.Params)).Distinct()) draws += Measure(look.Value, look.Params, cache).Meshes;
             foreach (var item in inCell) triangles += Measure(item.Part.Part.Value, item.Part.Params, cache).Triangles;

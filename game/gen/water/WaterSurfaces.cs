@@ -1,3 +1,4 @@
+using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 
@@ -10,16 +11,15 @@ namespace Campus.Gen.Water;
 /// </summary>
 public sealed class WaterSurfaces
 {
-    private readonly WaterParams _p;
     private readonly Lazy<WaterMesh[]> _meshes;
 
     public WaterSurfaces(IWorldModel world, MapDescriptor map, WaterParams? parameters = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(map);
-        _p = parameters ?? WaterParams.Default;
-        Bodies = WaterCatalog.Build(world, map, _p);
-        _meshes = new(() => Bodies.Select(b => WaterMesher.Build(b, Bodies, _p)).ToArray(),
+        var p = parameters ?? WaterParams.Default;
+        Bodies = WaterCatalog.Build(world, map, p);
+        _meshes = new(() => Bodies.Select(b => WaterMesher.Build(b, Bodies, p)).ToArray(),
             LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
@@ -33,7 +33,7 @@ public sealed class WaterSurfaces
         foreach (var mesh in Meshes)
             for (var t = 0; t < mesh.TriangleCount; t++)
             {
-                var key = CellOf(mesh, t, _p.TileSize);
+                var key = CellOf(mesh, t, LodLevel.L0);
                 tiles.Add((key.X, key.Z));
             }
         return tiles.Select(t => new TileKey(t.X, t.Z)).ToArray();
@@ -44,7 +44,6 @@ public sealed class WaterSurfaces
     {
         var whole = lod == LodLevel.L4;
         if (whole && tile != new TileKey(0, 0)) return null;
-        var size = _p.TileSize * (1 << (int)lod);
         var position = new List<float>();
         var uv = new List<float>();
         var uv2 = new List<float>();
@@ -54,7 +53,7 @@ public sealed class WaterSurfaces
             var remap = new Dictionary<int, int>();
             for (var t = 0; t < mesh.TriangleCount; t++)
             {
-                if (!whole && CellOf(mesh, t, size) != tile) continue;
+                if (!whole && CellOf(mesh, t, lod) != tile) continue;
                 for (var k = 0; k < 3; k++)
                 {
                     var v = mesh.Index[3 * t + k];
@@ -89,13 +88,13 @@ public sealed class WaterSurfaces
         return bundle;
     }
 
-    private static TileKey CellOf(WaterMesh mesh, int triangle, float size)
+    private static TileKey CellOf(WaterMesh mesh, int triangle, LodLevel lod)
     {
         var a = mesh.Index[3 * triangle];
         var b = mesh.Index[3 * triangle + 1];
         var c = mesh.Index[3 * triangle + 2];
         var x = (mesh.Position[3 * a] + mesh.Position[3 * b] + mesh.Position[3 * c]) / 3f;
         var z = (mesh.Position[3 * a + 2] + mesh.Position[3 * b + 2] + mesh.Position[3 * c + 2]) / 3f;
-        return new((int)MathF.Floor(x / size), (int)MathF.Floor(z / size));
+        return TileGrid.At(new Vector2(x, z), lod);
     }
 }

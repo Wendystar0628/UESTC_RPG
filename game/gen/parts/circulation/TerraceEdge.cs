@@ -62,7 +62,7 @@ public static class TerraceEdge
         for (var i = 0; i + 1 < line.Count; i++)
         {
             var a = line[i]; var b = line[i + 1];
-            var d = b - a; var length = V3.Length(d);
+            var d = b - a; var length = (float)Math.Sqrt(VectorMath.Dot(d, d));
             // Toward the upper side, as the sweep's positive lateral (dz, −dx); the wall face is on the other side.
             var upper = new Vector2(d.Y / length, -d.X / length);
             var half = S.BarrierMinHalfThickness;

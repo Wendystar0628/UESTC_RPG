@@ -63,10 +63,5 @@ public readonly record struct PlanFrame(Vector2 Origin, Vector2 U)
     /// <summary>Plan ring of a local rectangle, counter-clockwise in local (x, z).</summary>
     public Vector2[] Rect(float x0, float z0, float x1, float z1) => [P(x0, z0), P(x1, z0), P(x1, z1), P(x0, z1)];
 
-    private static Vector2 Unit(Vector2 v)
-    {
-        var length = MathF.Sqrt(v.X * v.X + v.Y * v.Y);
-        if (!(length > 1e-6f)) throw new ArgumentException("A frame direction must be nonzero.");
-        return new(v.X / length, v.Y / length);
-    }
+    private static Vector2 Unit(Vector2 v) => Campus.Contracts.VectorMath.Unit(v, minimumLength: 1e-6);
 }

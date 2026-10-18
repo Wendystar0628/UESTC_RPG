@@ -62,11 +62,12 @@ public static class WeatherRules
 
     public static (double DawnFrom, double DawnTo, double DuskFrom, double DuskTo) Bands(Season season)
     {
-        var (rise, set, height) = Sun(season);
+        var track = ArtEphemeris.At(season);
+        var (rise, set, height) = (track.Rise, track.Set, track.Height);
         double day = set - rise, night = 24 - day;
-        double nightArc = Math.Asin(Math.Pow(7.0 / 24, 1 / 1.15)) / Math.PI;
-        double morningArc = Math.Asin(Math.Pow(3 / height, 1 / 1.15)) / Math.PI;
-        double eveningArc = Math.Asin(Math.Pow(8 / height, 1 / 1.15)) / Math.PI;
+        double nightArc = Math.Asin(Math.Pow(7.0 / ArtEphemeris.NightDepth, 1 / ArtEphemeris.ArcExponent)) / Math.PI;
+        double morningArc = Math.Asin(Math.Pow(3 / height, 1 / ArtEphemeris.ArcExponent)) / Math.PI;
+        double eveningArc = Math.Asin(Math.Pow(8 / height, 1 / ArtEphemeris.ArcExponent)) / Math.PI;
         return (rise - night * nightArc, rise + day * morningArc, set - day * eveningArc, set + night * nightArc);
     }
 
@@ -112,14 +113,6 @@ public static class WeatherRules
     {
         if (!float.IsFinite(value) || value < 0 || value > 1) throw new ArgumentOutOfRangeException(nameof(value));
     }
-    public static void ValidateSeason(Season season) => _ = Sun(season);
+    public static void ValidateSeason(Season season) => _ = ArtEphemeris.At(season);
 
-    private static (double Rise, double Set, double Height) Sun(Season season) => season switch
-    {
-        Season.Spring => (410 / 60.0, 1160 / 60.0, 55),
-        Season.Summer => (370 / 60.0, 1195 / 60.0, 62),
-        Season.Autumn => (455 / 60.0, 1085 / 60.0, 41),
-        Season.Winter => (475 / 60.0, 1075 / 60.0, 34),
-        _ => throw new ArgumentOutOfRangeException(nameof(season))
-    };
 }

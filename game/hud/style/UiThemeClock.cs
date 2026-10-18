@@ -9,7 +9,9 @@ namespace Campus.Hud.Style;
 /// 上穿 +0.5° 切晶白），快进进行中不判定、结束后判一次；切换时全局参数 ui_night 在 0.6 s 真实时间内线性走完
 /// （它是扫描前沿的位置，不是颜色插值量），减少动态效果时一帧走完。只在切换期间写 ui_night。
 /// </summary>
-public partial class UiThemeClock : Node
+[KernelService(typeof(IUiTheme), Owner = "WP-35")]
+[KernelService(typeof(UiThemeClock), Owner = "WP-35")]
+public partial class UiThemeClock : Node, IUiTheme
 {
     private readonly IWorldState _world;
     private readonly HudSettings _settings;
@@ -21,8 +23,9 @@ public partial class UiThemeClock : Node
     private float _target;
     private long _instance;
 
-    public UiThemeClock(IWorldState world, HudSettings settings, MotionPolicy motion, UiTokens tokens)
+    public UiThemeClock(IWorldState world, HudSettings settings, MotionPolicy motion)
     {
+        var tokens = UiTokens.Load();
         _world = world;
         _settings = settings;
         _motion = motion;

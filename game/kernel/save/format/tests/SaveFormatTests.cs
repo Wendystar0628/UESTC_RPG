@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Buffers.Binary;
 using System.Numerics;
 using System.Security.Cryptography;
@@ -26,15 +27,10 @@ public sealed class SaveFormatTests
         new([new(new("world") { Owner = "WP-50", Version = version, Phase = phase, Order = 10 }, section ?? new())]);
     private static string TestDirectory()
     {
-        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? FindRoot();
+        var root = RepositoryFixture.Root;
         return Path.GetFullPath(Path.Combine(root, "output", "save-tests", "case-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _testId)));
     }
-    private static string FindRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "ownership.json"))) return directory.FullName;
-        throw new InvalidOperationException("Set UESTC_REPOSITORY to the tested worktree.");
-    }
+
     private static void Rehash(byte[] bytes)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);

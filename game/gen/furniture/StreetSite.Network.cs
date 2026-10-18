@@ -8,13 +8,8 @@ namespace Campus.Gen.Furniture;
 
 internal sealed partial class StreetSite
 {
-    public static string? RoadName(NetworkLine line)
-    {
-        if (line.Props is not { ValueKind: JsonValueKind.Object } props) return null;
-        foreach (var name in new[] { "name:zh", "name" })
-            if (props.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String) return value.GetString();
-        return null;
-    }
+    public static string? RoadName(NetworkLine line) =>
+        WorldProps.TryText(line.Props, "name:zh") ?? WorldProps.TryText(line.Props, "name");
 
     /// <summary>The nearest point on any carriageway (not a footpath) to <paramref name="p"/> within <paramref name="reach"/>, with its line.</summary>
     public (Vector2 Point, Vector2 Along, NetworkLine Line)? NearestCarriageway(Vector2 p, float reach)
@@ -24,31 +19,17 @@ internal sealed partial class StreetSite
         foreach (var road in World.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
         {
             if (!Carriageway(road)) continue;
-            var points = road.Line.Points;
-            for (var i = 1; i < points.Count; i++)
-            {
-                var a = points[i - 1]; var b = points[i];
-                var ab = b - a;
-                var len2 = ab.LengthSquared();
-                if (len2 < 1e-6f) continue;
-                var t = Math.Clamp(Vector2.Dot(p - a, ab) / len2, 0f, 1f);
-                var q = a + ab * t;
-                var d = Vector2.DistanceSquared(p, q);
-                if (d >= bestD) continue;
-                bestD = d;
-                best = (q, ab / MathF.Sqrt(len2), road);
-            }
+            var near = PlanGeometry.Project(road.Line.Points, p);
+            var d = Vector2.DistanceSquared(p, near.Point);
+            if (d >= bestD) continue;
+            bestD = d;
+            best = (near.Point, near.Tangent, road);
         }
         return best;
     }
 
     /// <summary>Vehicle roads WP-15 paves as carriageway (GroundClassifier); footpaths, steps and cycleways are not.</summary>
-    public static bool Carriageway(NetworkLine line)
-    {
-        var type = line.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("highway", out var h) && h.ValueKind == JsonValueKind.String
-            ? h.GetString() : null;
-        return CarriagewayType(type);
-    }
+    public static bool Carriageway(NetworkLine line) => CarriagewayType(WorldProps.TryText(line.Props, "highway"));
 
     private static bool CarriagewayType(string? type) =>
         type is "service" or "residential" or "tertiary" or "secondary" or "primary" or "unclassified" or "living_street";
@@ -101,24 +82,16 @@ internal sealed partial class StreetSite
     public sealed class Run
     {
         private readonly List<Vector2> _points;
-        private readonly float[] _lengths;
 
         public Run(List<Vector2> points)
         {
             _points = points;
-            _lengths = new float[points.Count];
-            for (var i = 1; i < points.Count; i++) _lengths[i] = _lengths[i - 1] + Vector2.Distance(points[i - 1], points[i]);
+            Length = (float)PlanGeometry.Length(points);
         }
 
-        public float Length => _lengths[^1];
+        public float Length { get; }
 
-        public Vector2 At(float s)
-        {
-            var i = 1;
-            while (i < _points.Count - 1 && _lengths[i] < s) i++;
-            var span = _lengths[i] - _lengths[i - 1];
-            return Vector2.Lerp(_points[i - 1], _points[i], span > 1e-6f ? Math.Clamp((s - _lengths[i - 1]) / span, 0f, 1f) : 0f);
-        }
+        public Vector2 At(float s) => PlanGeometry.Sample(_points, s).Point;
 
         /// <summary>Unit left normal at <paramref name="s"/> (the tangent turned towards +X×−Z), averaged over a 4 m chord so bends stay smooth.</summary>
         public Vector2? Normal(float s)

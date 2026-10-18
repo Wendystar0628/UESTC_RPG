@@ -40,8 +40,8 @@ internal static class CarBody
         var b = new PartBuilder();
 
         // ---- Lower body: hood, sides, boot; the arches cut its underside over the wheels ----
-        float Top(float z) => z <= zCowl ? Lerp(shape.HoodNose, belt, (z - zN) / (zCowl - zN))
-            : z <= zRear ? belt : Lerp(belt, shape.TailTop, (z - zRear) / (zT - zRear));
+        float Top(float z) => z <= zCowl ? ScalarMath.Lerp(shape.HoodNose, belt, (z - zN) / (zCowl - zN))
+            : z <= zRear ? belt : ScalarMath.Lerp(belt, shape.TailTop, (z - zRear) / (zT - zRear));
         float Under(float z)
         {
             if (!far)
@@ -124,8 +124,8 @@ internal static class CarBody
             var v0 = (footFirst ? footGap : headGap) / len; var v1 = 1f - (footFirst ? headGap : footGap) / len;
             Vector3 At(float v, float side)
             {
-                var half = Lerp(a0.X, a1.X, v) - S.PillarA;
-                return new(side * half, Lerp(a0.Y, a1.Y, v), Lerp(a0.Z, a1.Z, v));
+                var half = ScalarMath.Lerp(a0.X, a1.X, v) - S.PillarA;
+                return new(side * half, ScalarMath.Lerp(a0.Y, a1.Y, v), ScalarMath.Lerp(a0.Z, a1.Z, v));
             }
             var normal = new Vector3(0, a1.Z - a0.Z, -(a1.Y - a0.Y));
             Pane(b, [At(v0, 1f), At(v1, 1f), At(v1, -1f), At(v0, -1f)], normal, glass);
@@ -144,7 +144,7 @@ internal static class CarBody
         var aLine = Offset(new(zCowl, footTop), new(zRoofF, railTop));
         var cLine = Offset(new(zRoofR, railTop), new(zRear, footTop));
         float On((Vector2 P, float Slope) line, float y) => line.P.X + (y - line.P.Y) * line.Slope;
-        var zB = Lerp(zRoofF, zRoofR, shape.BPillar);
+        var zB = ScalarMath.Lerp(zRoofF, zRoofR, shape.BPillar);
         Vector2[] front = [new(Math.Max(On(aLine, ySill), zCowl + S.MirrorSail), ySill), new(On(aLine, yTop), yTop), new(zB - S.PillarB * 0.5f, yTop), new(zB - S.PillarB * 0.5f, ySill)];
         Vector2[] rear = [new(zB + S.PillarB * 0.5f, ySill), new(zB + S.PillarB * 0.5f, yTop), new(Math.Min(On(cLine, yTop), zRoofR - shape.RearGlassTop), yTop),
             new(Math.Min(On(cLine, ySill), zRoofR - shape.RearGlassFoot), ySill)];
@@ -226,10 +226,10 @@ internal static class CarBody
     /// </summary>
     private static void Pane(PartBuilder b, IReadOnlyList<Vector3> outline, Vector3 outward, ToonSpec material)
     {
-        var n = Xf.Unit(outward);
+        var n = VectorMath.Unit(outward);
         var ring = outline.ToList();
         var newell = Vector3.Zero;
-        for (var i = 0; i < ring.Count; i++) newell += GeometryMath.Cross(ring[i], ring[(i + 1) % ring.Count]);
+        for (var i = 0; i < ring.Count; i++) newell += VectorMath.Cross(ring[i], ring[(i + 1) % ring.Count]);
         if (Vector3.Dot(newell, n) < 0) ring.Reverse();
         var writer = new MeshWriter(material);
         var top = ring.Select(q => q + n * S.PaneProud).ToArray();
@@ -244,15 +244,13 @@ internal static class CarBody
         for (var i = 0; i < ring.Count; i++)
         {
             var j = (i + 1) % ring.Count;
-            var side = Xf.Unit(GeometryMath.Cross(ring[j] - ring[i], n));
+            var side = VectorMath.Unit(VectorMath.Cross(ring[j] - ring[i], n));
             var a = writer.Vertex(top[i], side, Vector2.Zero); var c = writer.Vertex(top[j], side, Vector2.Zero);
             var e = writer.Vertex(bottom[j], side, Vector2.Zero); var f = writer.Vertex(bottom[i], side, Vector2.Zero);
             writer.Triangle(a, c, e, side); writer.Triangle(a, e, f, side);
         }
         b.Add(writer.Finish(), VertexFlag.NoShadow);
     }
-
-    private static float Lerp(float a, float b, float t) => a + (b - a) * t;
 }
 
 /// <summary>
@@ -281,7 +279,7 @@ internal static class Loft
             if (!chamfer[band]) { a = band; b = band + 1; }
             else if (((j - band) % n + n) % n == 0) { a = band - 1; b = band; }
             else { a = band + 1; b = band + 2; }
-            return Xf.Unit(GeometryMath.Cross(P(i, b) - P(i, a), along));
+            return VectorMath.Unit(VectorMath.Cross(P(i, b) - P(i, a), along));
         }
         for (var g = 0; g + 1 < m; g++)
             for (var k = 0; k < n; k++)
@@ -289,8 +287,8 @@ internal static class Loft
                 var A = P(g, k); var B = P(g, k + 1); var C = P(g + 1, k + 1); var D = P(g + 1, k);
                 var ia = w.Vertex(A, Normal(g, k, k, g), new(A.Z, A.Y)); var ib = w.Vertex(B, Normal(g, k + 1, k, g), new(B.Z, B.Y));
                 var ic = w.Vertex(C, Normal(g + 1, k + 1, k, g), new(C.Z, C.Y)); var id = w.Vertex(D, Normal(g + 1, k, k, g), new(D.Z, D.Y));
-                w.Triangle(ia, ib, ic, GeometryMath.Cross(B - A, C - A));
-                w.Triangle(ia, ic, id, GeometryMath.Cross(C - A, D - A));
+                w.Triangle(ia, ib, ic, VectorMath.Cross(B - A, C - A));
+                w.Triangle(ia, ic, id, VectorMath.Cross(C - A, D - A));
             }
         foreach (var e in new[] { 0, m - 1 })
         {

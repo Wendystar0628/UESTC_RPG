@@ -28,12 +28,12 @@ public static partial class FurniturePlanner
         var left = new List<string>();
         foreach (var feature in site.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
-            if (!S.FountainCategories.Contains(Text(feature.Props, "category") ?? "")) continue;
+            if (!S.FountainCategories.Contains(WorldProps.TryText(feature.Props, "category") ?? "")) continue;
             if (site.World.Interiors.Get(feature.Id) is not { } entry || !done.Add(entry.Feature)) continue;
             var door = entry.Entrances.Where(e => e.Open).OrderBy(e => e.Id, StringComparer.Ordinal).FirstOrDefault();
             if (door is null) continue;
             var plan = new Vector2(door.Center.X, door.Center.Z);
-            var facing = Facing(door.YawDeg);
+            var facing = Angles.Heading(door.YawDeg);
             WalkFit? fit = null;
             foreach (var edge in site.PavingEdgesNear(plan, S.FountainFar, S.NodeStep))
             {
@@ -63,7 +63,7 @@ public static partial class FurniturePlanner
     {
         var p = S.Signpost;
         var landmarks = site.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal)
-            .Where(f => S.LandmarkSubcategories.Contains(Text(f.Props, "subcategory") ?? "") || S.LandmarkCategories.Contains(Text(f.Props, "category") ?? ""))
+            .Where(f => S.LandmarkSubcategories.Contains(WorldProps.TryText(f.Props, "subcategory") ?? "") || S.LandmarkCategories.Contains(WorldProps.TryText(f.Props, "category") ?? ""))
             .ToList();
         var junctions = Junctions(site);
         var candidates = new List<(Vector2 At, int Branches, float Landmark)>();
@@ -116,7 +116,7 @@ public static partial class FurniturePlanner
                 if (ends.Contains(i)) continue;
                 var points = lines[i].Line.Points;
                 if (Vector2.Distance(points[0], at) <= S.JunctionSnap || Vector2.Distance(points[^1], at) <= S.JunctionSnap) continue;
-                if (DistanceTo(at, lines[i]) <= S.JunctionSnap) { branches += 2; through++; }
+                if (MathF.Sqrt(PlanGeometry.PolylineDistanceSquared(lines[i].Line.Points, at)) <= S.JunctionSnap) { branches += 2; through++; }
             }
             if (ends.Distinct().Count() + through >= 2) result.Add((at, branches));
         }

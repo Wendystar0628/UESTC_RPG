@@ -32,6 +32,8 @@ public sealed class RegistryGateTests
             throw new InvalidOperationException("Runtime initialization is intentionally unavailable in this declaration-only fixture.");
         }
         public IReadOnlyDictionary<FeatureId, WorldFeature> Features => throw new NotSupportedException();
+        public IReadOnlyDictionary<string, TerrainOp> TerrainOperations { get; } =
+            new System.Collections.ObjectModel.ReadOnlyDictionary<string, TerrainOp>(new Dictionary<string, TerrainOp>(StringComparer.Ordinal));
         public PolygonRings Boundary => throw new NotSupportedException();
         public WorldNetwork Network => throw new NotSupportedException();
         public ISpatialIndex Spatial => throw new NotSupportedException();

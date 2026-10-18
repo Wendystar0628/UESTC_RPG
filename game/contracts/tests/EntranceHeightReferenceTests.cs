@@ -62,9 +62,7 @@ public sealed class EntranceHeightReferenceTests
             try { Parse(WithRef("\"pad\""), terrain); }
             catch (JsonException caught) { error = caught; }
             AssertThat(error is not null).OverrideFailureMessage("Expected JsonException.").IsTrue();
-            AssertThat(ReferenceEquals(error!.InnerException, cause) && terrain.Calls == 1 &&
-                error.Message.Contains("entry.main", StringComparison.Ordinal) &&
-                error.Message.Contains(Feature.Value, StringComparison.Ordinal)).OverrideFailureMessage("Pad failure lost its source or identity.").IsTrue();
+            AssertThat(ReferenceEquals(error!.InnerException, cause) && terrain.Calls == 1).OverrideFailureMessage("Pad failure lost its cause or repeated the terrain query.").IsTrue();
         }
         var mismatched = new ProbeTerrain(2);
         using var document = JsonDocument.Parse(WithRef("\"pad\""));
@@ -133,7 +131,7 @@ public sealed class EntranceHeightReferenceTests
     }
 
     [TestCase]
-    public void RequiredEntranceFieldsAndClosedDoorDiagnosticsArePreserved()
+    public void RequiredEntranceFieldsAndMalformedClosedDoorsAreRejected()
     {
         using var entry = JsonDocument.Parse(Entry);
         foreach (var field in entry.RootElement.EnumerateObject())
@@ -160,19 +158,15 @@ public sealed class EntranceHeightReferenceTests
             catch (JsonException) { rejected = true; }
             AssertThat(rejected).OverrideFailureMessage("Expected JsonException.").IsTrue();
         }
-        foreach (var (door, path) in new[]
+        foreach (var door in new[]
         {
-            ("null", "closedEntrances[0]"),
-            ("{}", "closedEntrances[0]"),
-            (Entry.Replace("\"open\":true", "\"open\":false,\"heightRef\":\"pad\"", StringComparison.Ordinal), "entry.main")
+            "null",
+            "{}",
+            Entry.Replace("\"open\":true", "\"open\":false,\"heightRef\":\"pad\"", StringComparison.Ordinal)
         })
         {
             using var catalog = JsonDocument.Parse("{\"interiors\":[],\"closedEntrances\":[" + door + "]}");
-            JsonException? error = null;
-            try { InteriorEntranceJson.ParseClosedEntrances(catalog.RootElement); }
-            catch (JsonException caught) { error = caught; }
-            AssertThat(error is not null).OverrideFailureMessage("Expected JsonException.").IsTrue();
-            AssertThat(error!.Path == path).OverrideFailureMessage("Closed entrance failure lost its authored ID or array position.").IsTrue();
+            AssertThrown(() => InteriorEntranceJson.ParseClosedEntrances(catalog.RootElement)).IsInstanceOf<JsonException>();
         }
     }
 

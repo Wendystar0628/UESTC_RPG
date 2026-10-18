@@ -19,30 +19,42 @@ internal sealed class CinematicTestPresentation : IVeilPresentation
     }
 }
 
-internal sealed class CinematicRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMapStreamState
+internal sealed class CinematicRuntimeTestStub(Func<bool> covered) : IMapRuntime
 {
-    bool IMapStreamState.IsUnloaded => false;
-    public int Prefetches { get; private set; }
-    public int Warms { get; private set; }
-    public bool ResidentReady { get; private set; } = true;
-    public bool DestinationReady { get; private set; }
-    public bool CompletePrefetchImmediately { get; set; } = true;
-    public bool WarmReady { get; private set; } = true;
-    public string? Error { get; set; }
-    public MapStreamDestination? Destination { get; private set; }
-    public void Mount(IMapContext context) { ResidentReady = true; }
-    public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null)
+    public int Arrivals { get; private set; }
+    public bool CompleteArrivalImmediately { get; set; } = true;
+    private string? _error;
+    public string? Error
     {
-        Prefetches++; Destination = new(destination, mode, space); DestinationReady = CompletePrefetchImmediately; WarmReady = false;
+        get => _error;
+        set { _error = value; _arrival?.TryComplete(); }
     }
-    public void BeginWarm()
+    private ArrivalStub? _arrival;
+    public IMapArrival? Arrival => _arrival;
+    public IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null)
     {
-        if (!covered()) throw new InvalidOperationException("Warm samples require an actually covered test frame.");
-        Warms++; WarmReady = DestinationReady;
+        _arrival?.Cancel();
+        Arrivals++;
+        _arrival = new(this, new(destination, mode, space), CompleteArrivalImmediately);
+        return _arrival;
     }
-    public void CompleteDestination() { DestinationReady = true; WarmReady = Warms > 0; }
-}
+    public void CompleteArrival() { if (_arrival is { } arrival) { arrival.Ready = true; arrival.TryComplete(); } }
 
+    private sealed class ArrivalStub(CinematicRuntimeTestStub owner, MapStreamDestination destination, bool ready) : IMapArrival
+    {
+        private readonly TaskCompletionSource _done = new();
+        public bool Ready { get; set; } = ready;
+        public MapStreamDestination Destination => destination;
+        public Task Done { get { TryComplete(); return _done.Task; } }
+        public void Cancel() => _done.TrySetCanceled();
+        public void TryComplete()
+        {
+            if (owner.Error is { } error) _done.TrySetException(new InvalidOperationException(error));
+            else if (Ready && owner.IsCovered()) _done.TrySetResult();
+        }
+    }
+    private bool IsCovered() => covered();
+}
 internal static class CinematicTestFrames
 {
     public static async Task Complete(Task operation, CinematicPlayback playback,
@@ -69,20 +81,19 @@ internal sealed class FlowTestRig
     public CinematicTestPresentation Presentation { get; } = new();
     public CinematicRuntimeTestStub Runtime { get; }
     public CinematicPlayback Playback { get; }
-    public TestCollisionWorld Collision { get; } = new();
     public List<string> Diagnostics { get; } = [];
 
-    public FlowTestRig(bool completePrefetchImmediately = true)
+    public FlowTestRig(bool completeArrivalImmediately = true)
     {
         World = new(new TestWeatherProcess(), Rules);
         Camera = new(World);
-        Runtime = new(() => Presentation.IsCovered) { CompletePrefetchImmediately = completePrefetchImmediately };
+        Runtime = new(() => Presentation.IsCovered) { CompleteArrivalImmediately = completeArrivalImmediately };
         Playback = new(Camera, Veil, Rules, Presentation);
     }
 
     /// <summary>Builds the flow under test; restore defaults to the rig's world.</summary>
     public AppFlowService CreateFlow(ISaveService saves, IMapService maps, IAppExit exit, IWorldRestore? restore = null) =>
-        new(Camera, Veil, saves, maps, World, World, Rules, new TestMotionSettings(), World, Collision, Playback,
-            restore ?? World, exit, Runtime, Runtime)
+        new(Camera, Veil, saves, maps, World, World, Rules, new TestMotionSettings(), World, Playback,
+            restore ?? World, exit, Runtime)
         { DiagnosticSink = Diagnostics.Add };
 }

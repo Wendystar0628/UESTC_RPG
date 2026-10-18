@@ -186,11 +186,6 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
         why = TravelRefusal.None; return true;
     }
 
-    public void Prefetch(MarkerId id)
-    {
-        // The transit driver prefetches and warms the destination itself; a hover prefetch would reset WarmReady.
-    }
-
     public ITransitHandle? Travel(MarkerId id, TravelStyle style)
     {
         if (!CanTravel(id, style, out _)) return null;

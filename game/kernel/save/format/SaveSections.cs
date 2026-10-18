@@ -167,7 +167,7 @@ public sealed class SaveSections
                 !double.IsFinite(hours.GetDouble() + offset.GetDouble())) throw new JsonException("World clock overflow.");
             if (data.TryGetProperty("flowRateBeforePause", out var before) && before.GetInt32() == 0)
                 throw new JsonException("Paused restore rate cannot be zero.");
-            if (data.TryGetProperty("animTime", out var anim) && (anim.GetDouble() < 0 || anim.GetDouble() >= 480))
+            if (data.TryGetProperty("animTime", out var anim) && (anim.GetDouble() < 0 || anim.GetDouble() >= WorldTime.AnimLoopSeconds))
                 throw new JsonException("Invalid animation time.");
             if (data.TryGetProperty("seasonPos", out var position) && data.TryGetProperty("seasonTarget", out var target) &&
                 (!Enum.TryParse<Season>(target.GetString(), true, out var season) || position.GetDouble() != (int)season))

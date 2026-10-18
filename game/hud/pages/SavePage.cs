@@ -255,7 +255,7 @@ public partial class SavePage : Control
         meta.PlaceKey is { } key && Campus.Hud.I18n.Tr.Has(key) ? UiKit.T(key) : UiKit.T("saves.place.unknown");
 
     public static string Summary(SaveMeta meta) =>
-        $"{UiKit.T("hud.season." + TimeCard.SeasonCode(meta.Season).ToLowerInvariant())} · {(int)meta.Clock:00}:{(int)(meta.Clock % 1 * 60):00} · " +
+        $"{UiKit.T("hud.season." + TimeCard.SeasonCode(meta.Season).ToLowerInvariant())} · {WorldTime.FormatClock(meta.Clock)} · " +
         UiKit.T("weather.cell." + WeatherStrip.CellKey(WeatherStrip.CellOf(meta.Weather)));
 
     private static string PlayTime(double seconds)

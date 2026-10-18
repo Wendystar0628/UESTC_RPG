@@ -7,8 +7,8 @@ namespace Campus.Kernel.Lod;
 /// <summary>Coordinates are indices in the selected level's 64 * 2^level metre grid.</summary>
 public readonly record struct StreamTile(TileKey Tile, LodLevel Level) : IComparable<StreamTile>
 {
-    public int Edge => 64 << (int)Level;
-    public Vector2 Min => new(Tile.X * Edge, Tile.Z * Edge);
+    public int Edge => TileGrid.Edge(Level);
+    public Vector2 Min => TileGrid.Origin(Tile, Level);
     public Vector2 Max => Min + new Vector2(Edge);
     public static StreamTile Root => new(new(0, 0), LodLevel.L4);
     public int CompareTo(StreamTile other)

@@ -93,9 +93,9 @@ public static partial class FeatureReads
 
     private static string? ContourText(JsonElement props, string key, string selectionId)
     {
-        if (!props.TryGetProperty(key, out var value)) return null;
-        return value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(value.GetString())
-            ? value.GetString() : throw ContourError(selectionId, $"props.{key} must be a nonempty string.");
+        if (!props.TryGetProperty(key, out _)) return null;
+        var value = WorldProps.TryText(props, key);
+        return !string.IsNullOrWhiteSpace(value) ? value : throw ContourError(selectionId, $"props.{key} must be a nonempty string.");
     }
 
     private static WorldDataException ContourError(string selectionId, string message) => new("world model", selectionId, message);

@@ -120,9 +120,7 @@ public partial class TimeCard : Control
     public void Sync()
     {
         var clock = _model.Clock;
-        var hours = (int)Math.Floor(clock);
-        var minutes = (int)Math.Floor((clock - hours) * 60);
-        _readout.Text = $"{hours:00}:{minutes:00}";
+        _readout.Text = WorldTime.FormatClock(clock);
         _period.Text = $"{UiKit.T("time.shichen." + Shichen(clock))} · {UiKit.T("time.period." + Period(clock))}";
         _tag.Text = $"{SeasonCode(_model.Season)} · {WeatherCode(_model.Weather.Kind)}".ToUpperInvariant();
         var angle = (float)((clock - 12.0) / 24.0 * Math.Tau);

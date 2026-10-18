@@ -28,8 +28,8 @@ public sealed class FurnitureModule : IContentModule, ILightMetadataSource
     public IEnumerable<TileKey> Tiles(BuildContext ctx)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        return Layout(ctx).Items.Select(i => Cell(i.Anchor, LodLevel.L0)).Distinct().OrderBy(c => c.X).ThenBy(c => c.Z)
-            .Select(c => new TileKey(c.X, c.Z)).ToArray();
+        return Layout(ctx).Items.Select(i => TileGrid.At(i.Anchor)).Distinct().OrderBy(c => c.X).ThenBy(c => c.Z)
+            .ToArray();
     }
 
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod)
@@ -41,7 +41,7 @@ public sealed class FurnitureModule : IContentModule, ILightMetadataSource
         PartBuilder? pads = null;
         foreach (var item in Layout(ctx).Items)
         {
-            if (lod > Deepest(item.Kind) || Cell(item.Anchor, lod) != (tile.X, tile.Z)) continue;
+            if (lod > Deepest(item.Kind) || TileGrid.At(item.Anchor, lod) != tile) continue;
             parts.Add(item.Part);
             if (lod == LodLevel.L0) emitters.AddRange(item.Emitters);
             if (item.Pad is { } pad && lod <= LodLevel.L1) (pads ??= new PartBuilder()).Add(pad.Geometry());
@@ -59,15 +59,15 @@ public sealed class FurnitureModule : IContentModule, ILightMetadataSource
     {
         var layout = Layout(ctx);
         if (layout.Diagnostics.Count == 0) return [];
-        var first = layout.Items.Select(i => Cell(i.Anchor, LodLevel.L0)).Min();
-        return first == (tile.X, tile.Z) ? layout.Diagnostics : [];
+        var first = layout.Items.Select(i => TileGrid.At(i.Anchor)).OrderBy(c => c.X).ThenBy(c => c.Z).First();
+        return first == tile ? layout.Diagnostics : [];
     }
 
     /// <summary>Colliders live in fixed 64 m cells, filed by their item's anchor.</summary>
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        return Layout(ctx).Items.Where(i => Cell(i.Anchor, LodLevel.L0) == (tile.X, tile.Z)).SelectMany(i => i.Colliders).ToArray();
+        return Layout(ctx).Items.Where(i => TileGrid.At(i.Anchor) == tile).SelectMany(i => i.Colliders).ToArray();
     }
 
     /// <summary>The map's layout for this context's world and claims, built once and shared.</summary>
@@ -94,10 +94,4 @@ public sealed class FurnitureModule : IContentModule, ILightMetadataSource
             or FurnitureKind.VendingMachine or FurnitureKind.DeliveryLocker or FurnitureKind.BicycleBay or FurnitureKind.ParkedBicycle => LodLevel.L1,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown furniture kind."),
     };
-
-    private static (int X, int Z) Cell(Vector2 p, LodLevel lod)
-    {
-        var size = 64f * (1 << (int)lod);
-        return ((int)MathF.Floor(p.X / size), (int)MathF.Floor(p.Y / size));
-    }
 }

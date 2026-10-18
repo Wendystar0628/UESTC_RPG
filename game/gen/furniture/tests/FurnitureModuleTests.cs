@@ -29,7 +29,7 @@ public sealed class FurnitureModuleTests
         var gentle = Build(new FakeWorld(World.Value) { Terrain = terrain });
         foreach (var lamp in gentle.Items.Where(i => i.Kind == FurnitureKind.StreetLamp))
         {
-            var burial = terrain.HeightAt(lamp.Part.At.M41, lamp.Part.At.M43) + FurnitureStyle.LawnLift - lamp.Part.At.M42;
+            var burial = terrain.HeightAt(lamp.Part.At.M41, lamp.Part.At.M43) + GroundLevels.Lawn - lamp.Part.At.M42;
             AssertThat(burial is >= 0.049f and <= 0.301f).OverrideFailureMessage($"{lamp.Key} buried {burial:F3} m").IsTrue();
         }
         var benches = gentle.Items.Where(i => i.Kind == FurnitureKind.Bench).ToList();
@@ -40,7 +40,7 @@ public sealed class FurnitureModuleTests
             var plinth = bench.Pad!;
             var high = Corners(bench).Max(c => terrain.HeightAt(c.X, c.Y));
             var low = Corners(bench).Min(c => terrain.HeightAt(c.X, c.Y));
-            AssertThat(plinth.Top >= high + FurnitureStyle.PavingLift - 0.01f && plinth.Bottom <= low - FurnitureStyle.PadSkirt + 0.01f).OverrideFailureMessage($"{bench.Key}: plinth does not cover the slope").IsTrue();
+            AssertThat(plinth.Top >= high + GroundLevels.Paving - 0.01f && plinth.Bottom <= low - FurnitureStyle.PadSkirt + 0.01f).OverrideFailureMessage($"{bench.Key}: plinth does not cover the slope").IsTrue();
             AssertThat(bench.Colliders.OfType<BoxCollider>().Any(c => c.Foot == FootMat.Concrete)).OverrideFailureMessage($"{bench.Key}: plinth has no collider").IsTrue();
             AssertThat(plinth.Geometry().Meshes.Sum(m => m.Index.Length) > 0).OverrideFailureMessage($"{bench.Key}: empty plinth mesh").IsTrue();
             var bin = gentle.Items.SingleOrDefault(i => i.Key == bench.Key.Replace(":bench", ":bin", StringComparison.Ordinal));
@@ -48,9 +48,9 @@ public sealed class FurnitureModuleTests
         }
         // Flat: rest stops stand on paved bays just proud of the paving; the kiosk on the A06 deck stays on its deck.
         var flat = Build(World.Value);
-        var top = FurnitureStyle.PavingLift + FurnitureStyle.PadProud;
+        var top = GroundLevels.Paving + FurnitureStyle.PadProud;
         AssertThat(flat.Items.Where(i => i.Pad is not null).All(i => !i.Pad!.Plinth)).OverrideFailureMessage("plinths on flat ground").IsTrue();
-        AssertThat(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - (i.Pad is null ? FurnitureStyle.PavingLift : top)) < 0.01f)).OverrideFailureMessage("benches off their bays (or, on a plaza, off its paving)").IsTrue();
+        AssertThat(flat.Items.Where(i => i.Kind is FurnitureKind.Bench or FurnitureKind.Bin).All(i => MathF.Abs(i.Part.At.M42 - (i.Pad is null ? GroundLevels.Paving : top)) < 0.01f)).OverrideFailureMessage("benches off their bays (or, on a plaza, off its paving)").IsTrue();
         var kiosks = flat.Items.Where(i => i.Kind == FurnitureKind.AtlasKiosk).ToList();
         AssertThat(kiosks.Count(k => MathF.Abs(k.Part.At.M42 - 5f - top) < 0.01f) == 1 && kiosks.Count(k => MathF.Abs(k.Part.At.M42 - top) < 0.01f) == kiosks.Count - 1).OverrideFailureMessage("kiosks: one on the A06 deck, the others on their pads").IsTrue();
         // 30%: no pole stands.

@@ -120,7 +120,7 @@ public sealed class BenchPart : IPartDef<FurnitureParams>
     private static BackFrame Back(FurnitureParams p)
     {
         var (front, depth) = Seat(p);
-        var tilt = S.BackTiltDeg * (float.Pi / 180f);
+        var tilt = S.BackTiltDeg * Angles.DegreesToRadians;
         var s = MathF.Sin(tilt); var c = MathF.Cos(tilt); var t = s / c;
         var footY = S.SeatHeight + S.BackRise; var footZ = front + depth + 0.005f;
         var span = (p.Height - 0.01f - footY) / c;

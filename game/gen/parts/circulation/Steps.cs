@@ -150,7 +150,7 @@ public sealed class StepsPart() : CirculationPart<StairParams>(new(300, 200))
         var frame = Frame.Along(new(x, (a.Y + b.Y) * 0.5f, (a.X + b.X) * 0.5f), along);
         // Local X runs along the segment, local Y is the perpendicular toward up.
         var centre = frame.Point(new(0, (above - below) * 0.5f, 0));
-        var length = V3.Length(b - a);
+        var length = (float)Math.Sqrt(VectorMath.Dot(b - a, b - a));
         var placed = frame with { Origin = centre };
         return new(placed.ToMatrix(), new(length * 0.5f, (above + below) * 0.5f, width * 0.5f), SurfaceTag.Prop) { Foot = foot };
     }

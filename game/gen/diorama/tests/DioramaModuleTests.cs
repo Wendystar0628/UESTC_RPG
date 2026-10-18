@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Tests;
 using Campus.Contracts.Maps;
 using Campus.Gen.Tests.Support;
 using GdUnit4;
@@ -37,7 +38,7 @@ public sealed class DioramaModuleTests
 
     private static IEnumerable<string> BackdropFiles()
     {
-        var maps = Path.Combine(FindRepository(), "game", "data", "maps");
+        var maps = RepositoryFixture.FilePath("game", "data", "maps");
         return Directory.EnumerateFiles(maps, "backdrop.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToArray();
     }
 
@@ -101,7 +102,7 @@ public sealed class DioramaModuleTests
             {
                 if (far.Uv![2 * v + 1] < 0.5f) continue;
                 var p = new Vector2(far.Position[3 * v], far.Position[3 * v + 2]);
-                var bearing = (int)MathF.Floor(CityRing.Wrap(MathF.Atan2(p.X, -p.Y) * 180f / MathF.PI)) % 360;
+                var bearing = (int)MathF.Floor(Angles.Bearing(p)) % 360;
                 crest[bearing] = MathF.Max(crest[bearing], far.Position[3 * v + 1]);
             }
             AssertThat(crest.Any(h => h <= 0f)).OverrideFailureMessage("a bearing of the far ring has no silhouette").IsFalse();
@@ -109,7 +110,7 @@ public sealed class DioramaModuleTests
             foreach (var m in data.FarRing.Mountains)
             {
                 var expected = FarRing.MountainHeight(data.FarRing, m);
-                var top = crest[(int)CityRing.Wrap(MathF.Round(m.Azimuth)) % 360];
+                var top = crest[(int)Angles.WrapDegrees(MathF.Round(m.Azimuth)) % 360];
                 AssertThat(top < expected * 0.85f || top > expected * 1.15f).OverrideFailureMessage($"{m.Name}: crest {top} m, expected about {expected} m").IsFalse();
             }
         }
@@ -159,16 +160,5 @@ public sealed class DioramaModuleTests
     private static IEnumerable<float> Heights(GeometryBundle m)
     {
         for (var v = 0; v < m.Position.Length / 3; v++) yield return m.Position[3 * v + 1];
-    }
-
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new DirectoryNotFoundException("Repository root (ownership.json) not found.");
     }
 }

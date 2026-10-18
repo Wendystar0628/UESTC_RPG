@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Water.Tests;
@@ -18,7 +19,8 @@ public sealed class WaterMapDataTests
     [TestCase]
     public void EveryMapStaysInsideTheWaterBudget()
     {
-        var maps = Path.Combine(FindRepository(), "game", "data", "maps");
+        var maps = RepositoryFixture.FilePath("game", "data", "maps");
+        var budget = new WaterModule().Budget.TrianglesL0;
         var checkedMaps = 0;
         foreach (var file in Directory.EnumerateFiles(maps, "campus.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
         {
@@ -26,7 +28,7 @@ public sealed class WaterMapDataTests
             var meshes = bodies.Select(b => WaterMesher.Build(b, bodies)).ToArray();
             var triangles = meshes.Sum(m => m.TriangleCount);
             Console.WriteLine($"{file}: {bodies.Count} water bodies, {meshes.Sum(m => m.VertexCount)} vertices, {triangles} triangles");
-            AssertThat(triangles > 50_000).OverrideFailureMessage($"water uses {triangles} triangles (budget 50 000)").IsFalse();
+            AssertThat(triangles > budget).OverrideFailureMessage($"water uses {triangles} triangles (budget {budget})").IsFalse();
             foreach (var m in meshes)
             {
                 var area = 0f;
@@ -69,16 +71,5 @@ public sealed class WaterMapDataTests
             }
         }
         return bodies;
-    }
-
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
     }
 }

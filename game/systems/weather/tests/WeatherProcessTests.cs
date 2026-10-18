@@ -13,9 +13,8 @@ namespace Campus.Systems.Weather.Tests;
 public sealed class WeatherProcessTests
 {
     private static readonly MapId Map = new("weather-test-a");
-    private static WeatherProfile Profile => WeatherProfile.Parse(File.ReadAllText(Path.Combine(
-        Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? throw new InvalidOperationException("UESTC_REPOSITORY is required."),
-        "game", "data", "weather", "chengdu", "profile.json")));
+    private static WeatherProfile Profile => WeatherProfile.Parse(File.ReadAllText(
+        RepositoryFixture.FilePath("game", "data", "weather", "chengdu", "profile.json")));
 
     [TestCase]
     public void SameSeedMapAndTimeGiveTheSameWeatherInAnyCallOrder()

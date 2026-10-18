@@ -1,7 +1,6 @@
+global using Campus.Gen.World;
 using System.Numerics;
-using System.Text.Json;
 using Campus.Contracts;
-using Campus.Gen.World;
 
 namespace Campus.Gen.Zones.Common;
 
@@ -54,30 +53,4 @@ public static partial class FeatureReads
     public static IReadOnlyList<Vector2> Line(this WorldFeature feature) =>
         feature.Geometry is PolylineGeometry line ? line.Line.Points : throw new InvalidOperationException($"{feature.Id.Value} is not a polyline.");
 
-    /// <summary>The feature's props (an overlay add's "props", or an entity's own fields).</summary>
-    public static JsonElement RequiredProps(this WorldFeature feature) =>
-        feature.Props ?? throw new InvalidOperationException($"{feature.Id.Value} has no props.");
-
-    /// <summary>A number in the feature's props, by key path.</summary>
-    public static float Number(this WorldFeature feature, params string[] path) =>
-        Walk(feature, path) is { ValueKind: JsonValueKind.Number } e && e.TryGetSingle(out var x) && float.IsFinite(x)
-            ? x
-            : throw Missing(feature, path);
-
-    /// <summary>An array of numbers in the feature's props, by key path.</summary>
-    public static float[] Numbers(this WorldFeature feature, params string[] path) =>
-        Walk(feature, path) is { ValueKind: JsonValueKind.Array } e && e.EnumerateArray().All(v => v.ValueKind == JsonValueKind.Number)
-            ? e.EnumerateArray().Select(v => v.GetSingle()).ToArray()
-            : throw Missing(feature, path);
-
-    private static JsonElement Walk(WorldFeature feature, string[] path)
-    {
-        var e = feature.RequiredProps();
-        foreach (var key in path)
-            e = e.ValueKind == JsonValueKind.Object && e.TryGetProperty(key, out var next) ? next : throw Missing(feature, path);
-        return e;
-    }
-
-    private static InvalidOperationException Missing(WorldFeature feature, string[] path) =>
-        new($"{feature.Id.Value} has no numeric props.{string.Join('.', path)}.");
 }

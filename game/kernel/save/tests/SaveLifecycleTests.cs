@@ -175,10 +175,9 @@ public sealed partial class SaveLifecycleTests
         }
         public async Task Start()
         {
-            var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? throw new InvalidOperationException("UESTC_REPOSITORY required.");
-            var directory = Path.Combine(root, "output", "save-tests", "lifecycle-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _id));
+            var directory = RepositoryFixture.FilePath("output", "save-tests", "lifecycle-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _id));
             var rules = new TestRuleset("test-policy", id: "test-rules");
-            var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new FakeVeil(), () => Flow,
+            var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new ImmediateVeil(), () => Flow,
                 _ => { }, World, WaitDestination,
                 () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400);
             var sections = new SaveSections([
@@ -207,7 +206,6 @@ public sealed partial class SaveLifecycleTests
         public void Dispose() => Save.Dispose();
     }
 
-    private sealed class FakeVeil : IVeilState { public float Opacity => 0; public VeilReason Reason => VeilReason.Boot; }
     private sealed class FakeWorld(Func<bool> inFrame, List<string> log) : IWorldState, IWorldRestore, ISaveSection<LifecycleWorld>
     {
         public double Hours { get; set; } = 17.5;
@@ -304,7 +302,6 @@ public sealed partial class SaveLifecycleTests
         public UnlockState StateOf(MarkerId id) => UnlockState.Hidden;
         public string? RegionAt(float x, float z) => null;
         public bool CanTravel(MarkerId id, TravelStyle style, out TravelRefusal why) { why = TravelRefusal.Unavailable; return false; }
-        public void Prefetch(MarkerId id) { }
         public ITransitHandle? Travel(MarkerId id, TravelStyle style) => null;
         public MarkerId? Tracked => null;
         public void Track(MarkerId? id) { }

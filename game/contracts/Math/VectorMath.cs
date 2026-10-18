@@ -14,7 +14,19 @@ public static class VectorMath
     public static double Cross(Vector2 a, Vector2 b) => (double)a.X * b.Y - (double)a.Y * b.X;
     public static double Cross(Vector2 origin, Vector2 a, Vector2 b) =>
         ((double)a.X - origin.X) * ((double)b.Y - origin.Y) - ((double)a.Y - origin.Y) * ((double)b.X - origin.X);
-    public static Vector3 Cross(Vector3 a, Vector3 b) => Vector3.Cross(a, b);
+    /// <summary>Scalar float multiply/subtract order used by mesh winding and degeneracy predicates.</summary>
+    public static Vector3 Cross(Vector3 a, Vector3 b) =>
+        new(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
+
+    /// <summary>Signed triangle orientation along outward. Promote coordinates before subtraction and retain double precision through the scalar triple product.</summary>
+    public static double TriangleOrientation(Vector3 a, Vector3 b, Vector3 c, Vector3 outward)
+    {
+        double abX = (double)b.X - a.X, abY = (double)b.Y - a.Y, abZ = (double)b.Z - a.Z;
+        double acX = (double)c.X - a.X, acY = (double)c.Y - a.Y, acZ = (double)c.Z - a.Z;
+        return (abY * acZ - abZ * acY) * outward.X
+            + (abZ * acX - abX * acZ) * outward.Y
+            + (abX * acY - abY * acX) * outward.Z;
+    }
 
     /// <summary>Normalize a finite direction; reject lengths at or below the caller's geometric tolerance.</summary>
     public static Vector2 Unit(Vector2 v, double minimumLength = 1e-12)

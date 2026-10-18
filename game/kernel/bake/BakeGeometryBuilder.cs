@@ -172,8 +172,9 @@ internal sealed class BakeGeometryBuilder
 
     private Box3 Bounds(BuildContext context, TileKey tile, LodLevel level, IEnumerable<GeometryBundle> meshes)
     {
-        var size = BakeRequestKeys.BaseTileMetres << (int)level;
-        var minimum = level == LodLevel.L4 ? context.Map.Bounds.Min : new N.Vector3(tile.X * size, context.Map.Bounds.Min.Y, tile.Z * size);
+        var size = TileGrid.Edge(level);
+        var origin = TileGrid.Origin(tile, level);
+        var minimum = level == LodLevel.L4 ? context.Map.Bounds.Min : new N.Vector3(origin.X, context.Map.Bounds.Min.Y, origin.Y);
         var maximum = level == LodLevel.L4 ? context.Map.Bounds.Max : minimum + new N.Vector3(size, context.Map.Bounds.Size.Y, size);
         var hasGeometry = false;
         foreach (var mesh in meshes)

@@ -36,7 +36,7 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     public const int BudgetDrawCalls = 40;
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx) => Layout(ctx).Layout.Trees
-        .Select(t => new TileKey((int)MathF.Floor(t.Position.X / TreeColliders.TileSize), (int)MathF.Floor(t.Position.Z / TreeColliders.TileSize)))
+        .Select(t => TileGrid.At(t.Position))
         .Distinct().OrderBy(t => t.X).ThenBy(t => t.Z).ToArray();
 
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod)
@@ -100,8 +100,7 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
             var id = "object/vegetation/" + tree.Key;
             var prototype = VegetationPrototypes.Get(tree.Species, tree.Variant, pool, RequirePalette(context));
             var output = ContentOutput.Empty with { Instances = [Stream(id, prototype, [tree])] };
-            var tile = new TileKey((int)MathF.Floor(tree.Position.X / TreeColliders.TileSize),
-                (int)MathF.Floor(tree.Position.Z / TreeColliders.TileSize));
+            var tile = TileGrid.At(tree.Position);
             var colliders = level == LodLevel.L0 ? TreeColliders.For(new PlantingLayout([tree]), tile, context.World.Terrain) : [];
             FeatureId? feature = context.World.Features.ContainsKey(new(tree.Key)) ? new FeatureId(tree.Key) : null;
             yield return new ContentSourceTrace(id, feature, output, colliders, []);
@@ -156,8 +155,7 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     /// <summary>The trees whose trunk foot lies in the tile of this level (floor(xz / (64 &lt;&lt; lod))), in layout order.</summary>
     private static List<PlantedTree> InTile(PlantingLayout layout, TileKey tile, LodLevel lod)
     {
-        var size = TreeColliders.TileSize * (1 << (int)lod);
-        return layout.Trees.Where(t => (int)MathF.Floor(t.Position.X / size) == tile.X && (int)MathF.Floor(t.Position.Z / size) == tile.Z).ToList();
+        return layout.Trees.Where(t => TileGrid.At(t.Position, lod) == tile).ToList();
     }
 
     /// <summary>Trees grouped by mother model, groups in ordinal species then variant order, trees in layout order.</summary>

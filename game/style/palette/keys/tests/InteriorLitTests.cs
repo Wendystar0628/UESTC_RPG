@@ -101,7 +101,7 @@ public sealed class InteriorLitTests
 
     private static (Deriver Deriver, FrameVector Frame, double X) GoldenFrame()
     {
-        var keys = Path.Combine(RepositoryRoot(), "game", "style", "palette", "keys");
+        var keys = Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette", "keys");
         byte[] Read(string name) => File.ReadAllBytes(Path.Combine(keys, name));
         var script = new ColorScript(ColorScriptData.Load(Read("autumn.keys.json"), Read("derive.json"), Read("seasons.json"),
             Read("vegetation.json"), Read("weather.json")));
@@ -110,11 +110,11 @@ public sealed class InteriorLitTests
     }
 
     private static JsonElement DeriveRoot() =>
-        JsonDocument.Parse(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "game", "style", "palette", "keys", "derive.json"))).RootElement;
+        JsonDocument.Parse(File.ReadAllBytes(Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette", "keys", "derive.json"))).RootElement;
 
     private static IEnumerable<(string Token, Lab Albedo, string Class)> Materials(IEnumerable<string> tokens)
     {
-        var core = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "game", "style", "palette", "core.json"))).RootElement.GetProperty("entries");
+        var core = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette", "core.json"))).RootElement.GetProperty("entries");
         foreach (var token in tokens)
         {
             if (token == FireRed.Token)
@@ -129,12 +129,4 @@ public sealed class InteriorLitTests
     }
 
     private static double Dist(Lab a, Lab b) => Math.Sqrt((a.L - b.L) * (a.L - b.L) + (a.A - b.A) * (a.A - b.A) + (a.B - b.B) * (a.B - b.B));
-
-    private static string RepositoryRoot()
-    {
-        if (Environment.GetEnvironmentVariable("UESTC_REPOSITORY") is { Length: > 0 } root) return root;
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "game", "style", "palette", "core.json"))) return directory.FullName;
-        throw new InvalidOperationException("Repository root not found.");
-    }
 }

@@ -43,10 +43,10 @@ public static class FarRing
         for (var i = 0; i < n; i++)
         {
             var az = columns[i];
-            var b = az * (MathF.PI / 180f);
-            var dir = new Vector3(MathF.Sin(b), 0f, -MathF.Cos(b));
+            var heading = Angles.Heading(az);
+            var dir = new Vector3(heading.X, 0f, heading.Y);
             var spurPeriod = SpurPeriodHillDeg + (SpurPeriodMountainDeg - SpurPeriodHillDeg) * weights[i];
-            var spur = DioramaNoise.Value(az / spurPeriod, spurSeed, (int)MathF.Round(360f / spurPeriod));
+            var spur = IntegerNoise.Value1D(az / spurPeriod, spurSeed, (int)MathF.Round(360f / spurPeriod));
             for (var r = 0; r < rows; r++)
             {
                 var w = r / (float)(rows - 1);
@@ -125,21 +125,21 @@ public static class FarRing
         static bool InSpan(float az, float from, float to)
         {
             var span = to - from;
-            var into = CityRing.Wrap(az - from);
+            var into = Angles.WrapDegrees(az - from);
             return into <= span;
         }
     }
 
     public static float HillHeight(FarRingData far, float az)
     {
-        var keys = far.Hills.OrderBy(k => CityRing.Wrap(k.Azimuth)).ToArray();
-        var b = CityRing.Wrap(az);
-        var i = Array.FindLastIndex(keys, k => CityRing.Wrap(k.Azimuth) <= b);
+        var keys = far.Hills.OrderBy(k => Angles.WrapDegrees(k.Azimuth)).ToArray();
+        var b = Angles.WrapDegrees(az);
+        var i = Array.FindLastIndex(keys, k => Angles.WrapDegrees(k.Azimuth) <= b);
         var a = keys[i < 0 ? keys.Length - 1 : i];
         var c = keys[(i + 1) % keys.Length];
-        var span = CityRing.Wrap(c.Azimuth - a.Azimuth);
-        var t = span <= 0f ? 0f : CityRing.Wrap(b - a.Azimuth) / span;
-        var s = t * t * (3f - 2f * t);
+        var span = Angles.WrapDegrees(c.Azimuth - a.Azimuth);
+        var t = span <= 0f ? 0f : Angles.WrapDegrees(b - a.Azimuth) / span;
+        var s = ScalarMath.Smoothstep(t);
         var elev = a.ElevationDeg + (c.ElevationDeg - a.ElevationDeg) * s;
         return far.Radius * MathF.Tan(elev * (MathF.PI / 180f));
     }
@@ -153,8 +153,8 @@ public static class FarRing
         var hill = HillHeight(far, az);
         var wrapHill = (int)MathF.Round(360f / HillNoisePeriodDeg);
         var wrapDetail = (int)MathF.Round(360f / HillDetailPeriodDeg);
-        hill *= 1f + HillNoise * (0.7f * DioramaNoise.Value(az / HillNoisePeriodDeg, hillSeed, wrapHill)
-            + 0.3f * DioramaNoise.Value(az / HillDetailPeriodDeg, hillSeed ^ 0x5bd1e995u, wrapDetail));
+        hill *= 1f + HillNoise * (0.7f * IntegerNoise.Value1D(az / HillNoisePeriodDeg, hillSeed, wrapHill)
+            + 0.3f * IntegerNoise.Value1D(az / HillDetailPeriodDeg, hillSeed ^ 0x5bd1e995u, wrapDetail));
         var mountain = 0f;
         foreach (var m in far.Mountains)
         {
@@ -173,8 +173,8 @@ public static class FarRing
             mountain = MathF.Max(mountain, MathF.Max(shoulder, peaks));
         }
         if (mountain > 0f)
-            mountain *= 1f + RidgeNoise * DioramaNoise.Value(az / RidgeNoisePeriodDeg, ridgeSeed, (int)MathF.Round(360f / RidgeNoisePeriodDeg))
-                + RidgeDetail * DioramaNoise.Value(az / RidgeDetailPeriodDeg, ridgeSeed ^ 0x27d4eb2fu, (int)MathF.Round(360f / RidgeDetailPeriodDeg));
+            mountain *= 1f + RidgeNoise * IntegerNoise.Value1D(az / RidgeNoisePeriodDeg, ridgeSeed, (int)MathF.Round(360f / RidgeNoisePeriodDeg))
+                + RidgeDetail * IntegerNoise.Value1D(az / RidgeDetailPeriodDeg, ridgeSeed ^ 0x27d4eb2fu, (int)MathF.Round(360f / RidgeDetailPeriodDeg));
         var height = MathF.Max(hill, mountain);
         var weight = mountain > hill ? Math.Clamp((mountain - hill) / MathF.Max(hill, 1f), 0f, 1f) : 0f;
         return (height, weight);
@@ -182,14 +182,13 @@ public static class FarRing
 
     private static float Bump(float t)
     {
-        var x = Math.Clamp(1f - t, 0f, 1f);
-        return x * x * (3f - 2f * x);
+        return ScalarMath.Smoothstep(1f - t);
     }
 
     /// <summary>Signed bearing difference a − b in −180…180.</summary>
     private static float Delta(float a, float b)
     {
-        var d = CityRing.Wrap(a - b);
+        var d = Angles.WrapDegrees(a - b);
         return d > 180f ? d - 360f : d;
     }
 

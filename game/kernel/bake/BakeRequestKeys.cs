@@ -7,8 +7,6 @@ namespace Campus.Kernel.Bake;
 /// <summary>Request vocabulary shared by baking and streaming. Coordinates are indices at the requested level.</summary>
 public static class BakeRequestKeys
 {
-    public const int BaseTileMetres = 64;
-
     public static BakeKey Tile(MapId map, string module, TileKey tile, LodLevel level) =>
         new(map, module, FormattableString.Invariant($"L{(int)level}/{tile.X}/{tile.Z}"));
 
@@ -40,7 +38,7 @@ public static class BakeRequestKeys
 
     public static TileKey Parent(TileKey baseTile, LodLevel level)
     {
-        var scale = 1 << (int)level;
+        var scale = TileGrid.Edge(level) / TileGrid.BaseEdge;
         return new((int)Math.Floor((double)baseTile.X / scale), (int)Math.Floor((double)baseTile.Z / scale));
     }
 }

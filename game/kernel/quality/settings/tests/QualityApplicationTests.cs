@@ -244,7 +244,7 @@ public sealed class QualityApplicationTests
 
     private static BootContext Context() => new(
         new Dictionary<string, string>(), new HashSet<string>(StringComparer.Ordinal),
-        Path.Combine(RepositoryRoot(), "output", "tests", "quality"), "quality-tests", false);
+        Path.Combine(RepositoryFixture.Root, "output", "tests", "quality"), "quality-tests", false);
 
     private sealed class FakeRuntime : IQualityRuntime
     {
@@ -306,7 +306,7 @@ public sealed class QualityApplicationTests
         public string Hash => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(_path)));
         public FileStoreSpy(string scenario, QualityProfile? baseline)
         {
-            var directory = Path.Combine(RepositoryRoot(), "output", "tests", "quality", $"{scenario}-{Environment.ProcessId}-{Interlocked.Increment(ref _nextId)}");
+            var directory = Path.Combine(RepositoryFixture.Root, "output", "tests", "quality", $"{scenario}-{Environment.ProcessId}-{Interlocked.Increment(ref _nextId)}");
             Directory.CreateDirectory(directory);
             _path = Path.Combine(directory, "graphics-spy.json");
             File.WriteAllBytes(_path, baseline is null ? [] : JsonSerializer.SerializeToUtf8Bytes(baseline));
@@ -324,15 +324,6 @@ public sealed class QualityApplicationTests
         }
     }
 
-    private static QualityCatalog Catalog() => new(File.ReadAllText(Path.Combine(RepositoryRoot(), "game", "data", "quality-presets.json")));
+    private static QualityCatalog Catalog() => new(File.ReadAllText(Path.Combine(RepositoryFixture.Root, "game", "data", "quality-presets.json")));
 
-    private static string RepositoryRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            var path = Path.Combine(directory.FullName, "game", "data", "quality-presets.json");
-            if (File.Exists(path)) return directory.FullName;
-        }
-        throw new FileNotFoundException("Cannot locate the production quality preset table.");
-    }
 }

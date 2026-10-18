@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Contracts.Quality;
 
 namespace Campus.Kernel.Quality.Settings;
@@ -77,6 +78,6 @@ public sealed class QualityState
     {
         var cap = QualityCatalog.FrameLimit(_values[(int)QualityKnob.FrameCap], RefreshRate);
         return new(_version, Requested.Overrides.Count == 0 ? _basePreset : QualityPreset.Custom, _values,
-            stepRate: !CaptureMode && cap == 30 ? 15 : 12);
+            stepRate: WorldTime.StepRate(cap, CaptureMode));
     }
 }

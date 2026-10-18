@@ -1,4 +1,6 @@
 using System.Numerics;
+using Campus.Contracts;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Ground;
 
@@ -28,9 +30,10 @@ internal sealed partial class RoadMarkings
     public void Emit(GroundTile tile, MeshSink sink, GroundSection section, TerrainGrid terrain)
     {
         const byte flags = GroundPalette.FlagDecal | GroundPalette.FlagNoShadow;
-        var x0 = (int)MathF.Floor(tile.X0 / GroundLod.TileSize);
-        var z0 = (int)MathF.Floor(tile.Z0 / GroundLod.TileSize);
-        var span = Math.Max(1, (int)MathF.Round(tile.Size / GroundLod.TileSize));
+        var first = TileGrid.At(new Vector2(tile.X0, tile.Z0));
+        var x0 = first.X;
+        var z0 = first.Z;
+        var span = Math.Max(1, (int)MathF.Round(tile.Size / TileGrid.BaseEdge));
         for (var z = z0; z < z0 + span; z++)
             for (var x = x0; x < x0 + span; x++)
                 foreach (var q in In(x, z))
@@ -80,7 +83,7 @@ internal sealed partial class RoadMarkings
                 for (var i = 0; i + 1 < walk.Points.Length; i++)
                     for (var k = 0; k + 1 < road.Points.Length; k++)
                     {
-                        if (Intersect(walk.Points[i], walk.Points[i + 1], road.Points[k], road.Points[k + 1]) is not { } x) continue;
+                        if (PlanGeometry.SegmentIntersection(walk.Points[i], walk.Points[i + 1], road.Points[k], road.Points[k + 1], 1e-6f) is not { } x) continue;
                         if (NearJunction(junctions, x, spec.ZebraLength + spec.ZebraSetback)) continue;
                         var along = Vector2.Normalize(road.Points[k + 1] - road.Points[k]);
                         zebras.Add((x, along, road.Width * 0.5f, MathF.Max(spec.ZebraLength, walk.Width + 1f)));
@@ -100,12 +103,12 @@ internal sealed partial class RoadMarkings
         {
             if (road.Width < spec.CentreLineMinWidth) continue;
             var period = spec.DashLength + spec.DashGap;
-            var length = Length(road.Points);
+            var length = PlanGeometry.Length(road.Points);
             var start = spec.DashGap * 0.5f;
             for (var s = start; s + spec.DashLength <= length; s += period)
             {
-                var (p0, _) = At(road.Points, s);
-                var (p1, _) = At(road.Points, s + spec.DashLength);
+                var p0 = PlanGeometry.Sample(road.Points, s).Point;
+                var p1 = PlanGeometry.Sample(road.Points, s + spec.DashLength).Point;
                 var mid = (p0 + p1) * 0.5f;
                 if (NearJunction(junctions, mid, spec.ZebraSetback + spec.ZebraLength + 1.5f)) continue;
                 if (placed.Any(p => Vector2.DistanceSquared(p, mid) < 25f)) continue;   // keep clear of mid-block crossings
@@ -145,7 +148,8 @@ internal sealed partial class RoadMarkings
         var side = new Vector2(-dir.Y, dir.X) * (width * 0.5f);
         var quad = new Quad(p0 - side, p1 - side, p1 + side, p0 + side, color, level);
         var centre = (p0 + p1) * 0.5f;
-        var key = Key((int)MathF.Floor(centre.X / GroundLod.TileSize), (int)MathF.Floor(centre.Y / GroundLod.TileSize));
+        var cell = TileGrid.At(centre);
+        var key = Key(cell.X, cell.Z);
         if (!_byTile.TryGetValue(key, out var list)) _byTile.Add(key, list = []);
         list.Add(quad);
         Count++;
@@ -167,42 +171,6 @@ internal sealed partial class RoadMarkings
         return false;
     }
 
-
-    // ---------------------------------------------------------------- polyline helpers
-
-    private static float Length(Vector2[] points)
-    {
-        var length = 0f;
-        for (var i = 0; i + 1 < points.Length; i++) length += Vector2.Distance(points[i], points[i + 1]);
-        return length;
-    }
-
-    private static (Vector2 Point, Vector2 Dir) At(Vector2[] points, float s)
-    {
-        for (var i = 0; i + 1 < points.Length; i++)
-        {
-            var seg = Vector2.Distance(points[i], points[i + 1]);
-            if (s <= seg || i + 2 == points.Length)
-            {
-                var dir = seg > 0f ? (points[i + 1] - points[i]) / seg : Vector2.UnitX;
-                return (points[i] + dir * MathF.Min(s, seg), dir);
-            }
-            s -= seg;
-        }
-        return (points[^1], Vector2.UnitX);
-    }
-
-    private static Vector2? Intersect(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
-    {
-        var r = b - a;
-        var s = d - c;
-        var den = r.X * s.Y - r.Y * s.X;
-        if (MathF.Abs(den) < 1e-6f) return null;
-        var t = ((c.X - a.X) * s.Y - (c.Y - a.Y) * s.X) / den;
-        var u = ((c.X - a.X) * r.Y - (c.Y - a.Y) * r.X) / den;
-        if (t < 0f || t > 1f || u < 0f || u > 1f) return null;
-        return a + r * t;
-    }
 
     private static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
 }

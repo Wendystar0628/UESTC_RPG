@@ -46,9 +46,9 @@ public static class GroundCollision
     public static float SampleHeight(HeightFieldCollider collider, float x, float z)
     {
         ArgumentNullException.ThrowIfNull(collider);
-        var u = x - collider.Tile.X * GroundLod.TileSize;
-        var w = z - collider.Tile.Z * GroundLod.TileSize;
-        if (u < 0 || w < 0 || u > GroundLod.TileSize || w > GroundLod.TileSize) return float.NaN;
+        var u = x - collider.Tile.X * TileGrid.BaseEdge;
+        var w = z - collider.Tile.Z * TileGrid.BaseEdge;
+        if (u < 0 || w < 0 || u > TileGrid.BaseEdge || w > TileGrid.BaseEdge) return float.NaN;
         var i = Math.Clamp((int)MathF.Floor(u), 0, Samples - 2);
         var j = Math.Clamp((int)MathF.Floor(w), 0, Samples - 2);
         float H(int a, int b) => collider.HeightsCm[(j + b) * Samples + i + a] * .01f;

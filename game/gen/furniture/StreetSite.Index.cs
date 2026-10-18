@@ -16,27 +16,6 @@ internal sealed partial class StreetSite
     private static float Edge(PolygonRings rings, Vector2 p) =>
         rings.Holes.Aggregate(PlanGeometry.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h)));
 
-    /// <summary>The nearest point to <paramref name="p"/> on a polyline (or ring) with the unit direction of the segment it lies on.</summary>
-    private static (Vector2 Point, Vector2 Tangent) NearestOn(Vector2 p, IReadOnlyList<Vector2> line, bool closed = false)
-    {
-        var best = line[0];
-        var tangent = Vector2.UnitX;
-        var bestD = float.MaxValue;
-        var count = closed ? line.Count + 1 : line.Count;
-        for (var i = 1; i < count; i++)
-        {
-            var a = line[i - 1]; var ab = line[i % line.Count] - a;
-            var len2 = ab.LengthSquared();
-            var q = len2 < 1e-8f ? a : a + ab * Math.Clamp(Vector2.Dot(p - a, ab) / len2, 0f, 1f);
-            var d = Vector2.DistanceSquared(p, q);
-            if (d >= bestD) continue;
-            bestD = d;
-            best = q;
-            if (len2 >= 1e-8f) tangent = ab / MathF.Sqrt(len2);
-        }
-        return (best, tangent);
-    }
-
     /// <summary>Road areas of a feature, part by part (a part's own kind and props win over its feature's, as WP-15 reads them).</summary>
     private static IEnumerable<(JsonElement? Props, OverlayGeometry Geometry)> RoadSources(WorldFeature feature)
     {
@@ -80,13 +59,6 @@ internal sealed partial class StreetSite
         if (rings.Outer.Count < 3) return;
         _paving.AddBox(rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min), rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max),
             new Paving(rings, null, 0f));
-    }
-
-    private static float LineDistanceSquared(Vector2 p, IReadOnlyList<Vector2> line)
-    {
-        var best = float.MaxValue;
-        for (var i = 1; i < line.Count; i++) best = MathF.Min(best, PlanGeometry.SegmentDistanceSquared(p, line[i - 1], line[i]));
-        return best;
     }
 
     /// <summary>The polygons of a feature of one kind (a part's own kind wins over its feature's), as the world model groups them.</summary>

@@ -254,6 +254,7 @@ function Invoke-GateProcess {
     try {
         $result = Invoke-UESTCProcess $Executable $Arguments $root (Join-Path $work "$Name.log") -Visible:$Visible -AllowFailure:$isTest -TimeoutSeconds $TimeoutSeconds
         if ($isTest) {
+            if ($result.ExitCode -ne 0) { throw "${Name}: test process exited $($result.ExitCode). See $($result.Log)" }
             $executed = 0
             if (Test-Path -LiteralPath $trxPath -PathType Leaf) {
                 [xml]$trx = Get-Content -Raw -LiteralPath $trxPath
@@ -265,7 +266,6 @@ function Invoke-GateProcess {
                 $failure.Data['Incomplete'] = $true
                 throw $failure
             }
-            if ($result.ExitCode -ne 0) { throw "${Name}: test process exited $($result.ExitCode). See $($result.Log)" }
             $result | Add-Member -NotePropertyName Tests -NotePropertyValue $executed
         }
         return $result

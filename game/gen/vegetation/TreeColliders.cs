@@ -12,19 +12,17 @@ namespace Campus.Gen.Vegetation;
 /// </summary>
 public static class TreeColliders
 {
-    public const float TileSize = 64f;
-
     public static IReadOnlyList<Collider> For(PlantingLayout layout, TileKey tile, ITerrain terrain)
     {
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(terrain);
-        var origin = new Vector2(tile.X * TileSize, tile.Z * TileSize);
+        var origin = TileGrid.Origin(tile);
         var plans = new Dictionary<(string, int), (float Radius, float Branch)>();
         var colliders = new List<Collider>();
         foreach (var tree in layout.Trees)
         {
             var p = new Vector2(tree.Position.X, tree.Position.Z);
-            if (p.X < origin.X || p.Y < origin.Y || p.X >= origin.X + TileSize || p.Y >= origin.Y + TileSize) continue;
+            if (p.X < origin.X || p.Y < origin.Y || p.X >= origin.X + TileGrid.BaseEdge || p.Y >= origin.Y + TileGrid.BaseEdge) continue;
             if (TreeForms.IsBall(tree.Species.Form)) continue;
             var key = (tree.Species.Id, tree.Variant);
             if (!plans.TryGetValue(key, out var trunk))

@@ -1,22 +1,7 @@
+using Campus.Contracts;
 using System.Numerics;
 
 namespace Campus.Gen.Parts.Circulation.Geometry;
-
-internal static class V3
-{
-    internal static Vector3 Add(Vector3 a, Vector3 b) => new(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
-    internal static Vector3 Sub(Vector3 a, Vector3 b) => new(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
-    internal static Vector3 Scale(Vector3 a, float s) => new(a.X * s, a.Y * s, a.Z * s);
-    internal static Vector3 Cross(Vector3 a, Vector3 b) => new(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
-    internal static double Dot(Vector3 a, Vector3 b) => (double)a.X * b.X + (double)a.Y * b.Y + (double)a.Z * b.Z;
-    internal static Vector3 Unit(Vector3 a)
-    {
-        var length = Math.Sqrt(Dot(a, a));
-        if (!double.IsFinite(length) || length <= 1e-12) throw new ArgumentException("A direction must be finite and nonzero.");
-        return new((float)(a.X / length), (float)(a.Y / length), (float)(a.Z / length));
-    }
-    internal static float Length(Vector2 a) => (float)Math.Sqrt((double)a.X * a.X + (double)a.Y * a.Y);
-}
 
 /// <summary>
 /// Rigid placement: local (x, y, z) maps to Origin + X·x + Y·y + Z·z. The axes are orthonormal and right-handed,
@@ -38,9 +23,9 @@ internal readonly record struct Frame(Vector3 Origin, Vector3 X, Vector3 Y, Vect
     /// <summary>Local +X runs from <paramref name="origin"/> along <paramref name="along"/>, local +Y leans toward world up.</summary>
     internal static Frame Along(Vector3 origin, Vector3 along)
     {
-        var x = V3.Unit(along);
-        var y = V3.Unit(V3.Sub(Vector3.UnitY, V3.Scale(x, (float)V3.Dot(Vector3.UnitY, x))));
-        return new(origin, x, y, V3.Cross(x, y));
+        var x = VectorMath.Unit(along);
+        var y = VectorMath.Unit(Vector3.Subtract(Vector3.UnitY, Vector3.Multiply(x, (float)VectorMath.Dot(Vector3.UnitY, x))));
+        return new(origin, x, y, VectorMath.Cross(x, y));
     }
 
     internal Vector3 Point(Vector3 p) => new(

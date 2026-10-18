@@ -119,15 +119,11 @@ public sealed class VegetationContextTests
     {
         public static Fixture Load()
         {
-            var data = DataDirectory();
-            var id = new MapId("qingshuihe");
-            var dir = "res://data/maps/" + id.Value + "/";
-            var all = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
-            foreach (var path in Directory.EnumerateFiles(data, "*.json", SearchOption.AllDirectories))
-                all[Path.GetRelativePath(data, path).Replace('\\', '/')] = File.ReadAllBytes(path);
-            var entry = MapCatalog.ReadEntry(new MapIndexEntry(id, dir), all["map.json"].Span, all["campus.json"], all["waypoints.json"].Span);
-            var baseFiles = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-                .ToDictionary(name => name, name => all[name], StringComparer.Ordinal);
+            var entry = Campus.Tests.RealMapFixture.Entry();
+            var id = entry.Descriptor.Id;
+            var all = Campus.Tests.RealMapFixture.ReadFiles();
+            var baseFiles = all.Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
             var loader = new WorldModelLoaderAdapter();
             var baseInput = new MapLoadInput(entry, baseFiles);
             var map = MapWorldLoading.CreateContext(entry, MapWorldLoading.LoadPrepared(loader, baseInput), baseInput.SourceInputs);
@@ -137,16 +133,6 @@ public sealed class VegetationContextTests
             registry.Discover(assemblies);
             var claims = MapClaimCapture.Capture(registry, id);
             return new(map, new MapLoadInput(entry, all), claims);
-        }
-
-        private static string DataDirectory()
-        {
-            for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            {
-                var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-                if (File.Exists(Path.Combine(data, "campus.json"))) return data;
-            }
-            throw new DirectoryNotFoundException("Real campus data is missing.");
         }
     }
 }

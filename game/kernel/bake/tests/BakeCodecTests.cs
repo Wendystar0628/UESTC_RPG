@@ -1,3 +1,4 @@
+using Campus.Tests;
 using static GdUnit4.Assertions;
 using System.Buffers.Binary;
 using System.Numerics;
@@ -170,7 +171,7 @@ public sealed class BakeCodecTests
     [RequireGodotRuntime]
     public void CorruptCacheIsAMissAndGameVersionChangesClearProducts()
     {
-        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY")!;
+        var root = RepositoryFixture.Root;
         var directory = Path.Combine(root, "output", "bake-cache", Guid.NewGuid().ToString("N"));
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
         var writer = new BakeCacheStore(directory, "version-one");

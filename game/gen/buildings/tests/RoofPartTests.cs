@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -20,7 +21,7 @@ public sealed class RoofPartTests
     [TestCase]
     public void RoofsTakeTheWp12PartsByTheirZone()
     {
-        WorldFeature[] features = [Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"), Feature("t:lab", Rect(100, 0, 48, 20), 5, 21f, "research")];
+        WorldFeature[] features = [WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 48, 20))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 21f, storeys: 5)];
         var plain = BuildingSet.For(World(features), 2u);
         var hero = BuildingSet.For(World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K3, FidelityZone.K1), features), 2u);
         var module = new BuildingsModule();

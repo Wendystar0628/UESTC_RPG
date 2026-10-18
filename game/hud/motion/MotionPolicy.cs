@@ -10,6 +10,7 @@ public enum MotionLevel : byte { Full, Reduced, Instant }
 /// 界面组件的时长一律经这里取，组件里不写判断。--motion=full|reduced|instant 优先于设置；Instant 给门禁和截图用。
 /// </summary>
 [KernelService(typeof(IMotionSettings), Owner = "WP-35")]
+[KernelService(typeof(MotionPolicy), Owner = "WP-35")]
 public sealed class MotionPolicy : IMotionSettings
 {
     private readonly HudSettings _settings;

@@ -1,4 +1,5 @@
 using Campus.Gen.World;
+using Campus.Gen.Tests.Support;
 using static GdUnit4.Assertions;
 using Campus.Pipeline.Map;
 using System.Numerics;
@@ -24,7 +25,7 @@ public sealed class MapServiceTests
         AssertThat(spawn.Id == "P00" && spawn.Fly == new Pose(new(37, 19, -4), 15, -12, 60) &&
             spawn.Stand == new WaypointStand(new(37, 0, -4), 15)).OverrideFailureMessage("DefaultSpawn backed by a waypoint was not resolved with its fly and stand poses.").IsTrue();
         AssertThat(f.Service.Context is null && f.Service.Current == default && f.Service.Rev == 0 &&
-            f.Loader.Loads == 0 && f.Runtime.PrefetchCalls == 0).OverrideFailureMessage("Spawn lookup unexpectedly loaded or travelled to a map.").IsTrue();
+            f.Loader.Loads == 0 && f.Runtime.Arrivals == 0).OverrideFailureMessage("Spawn lookup unexpectedly loaded or travelled to a map.").IsTrue();
     }
 
     [TestCase]
@@ -68,72 +69,73 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
-    public void BootWaitsForMountDestinationAndWarm()
+    public void BootWaitsForMountAndArrival()
     {
         var f = new Fixture();
-        f.Runtime.ResidentReady = false;
-        f.Runtime.DestinationReady = false;
-        f.Runtime.WarmReady = false;
+        f.Runtime.DelayMount();
+        f.Runtime.ArrivalReady = false;
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Stage == MapStage.Mount);
         AssertThat(f.Service.Context is null).OverrideFailureMessage("Context became visible before Mount.").IsTrue();
         f.Service.Step();
-        AssertThat(f.Service.Context is not null && f.Service.Current == default).OverrideFailureMessage("Mount/current lifetime is wrong.").IsTrue();
-        AssertThat(!travel.Done.IsCompleted && f.Camera.InputLocked).OverrideFailureMessage("Unready map was handed to the observer.").IsTrue();
-        AssertThat(f.Data.RectWrites == 1).OverrideFailureMessage("map_rect was not applied exactly at Mount.").IsTrue();
-        f.Runtime.ResidentReady = true;
+        AssertThat(f.Service.Context is not null && f.Service.Current == default && f.Camera.InputLocked).IsTrue();
+        AssertThat(f.Data.RectWrites == 1 && f.Runtime.Arrivals == 0).IsTrue();
+        f.Runtime.ReleaseMount();
+        f.Until(() => travel.Stage == MapStage.Warm);
         f.Service.Step();
-        f.Service.Step();
-        AssertThat(travel.Stage == MapStage.Warm && !travel.Done.IsCompleted).OverrideFailureMessage("Destination was not awaited.").IsTrue();
-        AssertThat(f.Runtime.WarmStarts == 1).OverrideFailureMessage("Warm was blocked behind destination material readiness.").IsTrue();
-        f.Runtime.DestinationReady = true;
-        f.Service.Step();
-        AssertThat(f.Runtime.WarmStarts == 1 && !travel.Done.IsCompleted).OverrideFailureMessage("Warm readiness was ignored.").IsTrue();
-        f.Runtime.WarmReady = true;
+        AssertThat(!travel.Done.IsCompleted && f.Runtime.Arrivals == 1).IsTrue();
+        f.Runtime.ArrivalReady = true;
         f.Until(() => travel.Done.IsCompleted);
-        AssertThat(travel.Done.Result == MapTravelResult.Arrived && f.Service.Current == f.A && f.Service.Rev == 1).OverrideFailureMessage("Boot did not arrive.").IsTrue();
-        AssertThat(!f.Camera.InputLocked).OverrideFailureMessage("Boot leaked its input lease.").IsTrue();
+        AssertThat(travel.Done.Result == MapTravelResult.Arrived && f.Service.Current == f.A && f.Service.Rev == 1 && !f.Camera.InputLocked).IsTrue();
     }
 
     [TestCase]
-    public void SameMapRestoreWarmsInvalidatedPipelinesBeforeReportingArrival()
+    public void SameMapRestoreWaitsForArrivalWithoutReloading()
     {
         var f = new Fixture(); f.Boot();
         var context = f.Service.Context;
-        var warmStarts = f.Runtime.WarmStarts;
-        f.Runtime.DestinationReady = false; // Quality invalidated the destination's real material pipelines.
-        f.Runtime.WarmReady = false;
+        f.Runtime.ArrivalReady = false;
         var destination = new Pose(new(12, 40, 18), 25, -10, 60);
         var travel = f.Service.Travel(new(f.A, Pose: destination, Mode: ViewMode.Fly, Cause: MapTravelCause.LoadSave));
         f.Until(() => travel.Stage == MapStage.Warm);
         f.Service.Step();
-        AssertThat(f.Runtime.WarmStarts == warmStarts + 1 && f.Camera.Pose == destination && !travel.Done.IsCompleted).OverrideFailureMessage("Same-map restoration waited for invalidated pipelines without drawing their warm samples.").IsTrue();
-        f.Runtime.DestinationReady = true;
-        f.Service.Step();
-        AssertThat(!travel.Done.IsCompleted && f.Runtime.WarmStarts == warmStarts + 1).OverrideFailureMessage("Same-map restoration skipped warmth or repeatedly restarted the warm batch.").IsTrue();
-        f.Runtime.WarmReady = true;
+        AssertThat(f.Camera.Pose == destination && !travel.Done.IsCompleted && f.Runtime.Arrivals == 2).IsTrue();
+        f.Runtime.ArrivalReady = true;
         f.Until(() => travel.Done.IsCompleted);
-        AssertThat(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
-            f.Loader.Loads == 1).OverrideFailureMessage("Warming a same-map restore rebuilt the map.").IsTrue();
+        AssertThat(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) && f.Loader.Loads == 1).IsTrue();
     }
 
     [TestCase]
-    public void SameMapNewGameKeepsTheMapAndAddsNoWarm()
+    public void ReplacedArrivalCannotCompleteMapTravel()
     {
         var f = new Fixture(); f.Boot();
-        var context = f.Service.Context;
-        var warmStarts = f.Runtime.WarmStarts;
-        f.Runtime.DestinationReady = false;
+        f.Runtime.ArrivalReady = false;
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.NewGame));
         f.Until(() => travel.Stage == MapStage.Warm);
-        AssertThat(!travel.Done.IsCompleted && f.Runtime.WarmStarts == warmStarts).OverrideFailureMessage("Same-map NewGame introduced another warm operation.").IsTrue();
-        f.Runtime.DestinationReady = true;
+        var old = f.Runtime.Arrival!;
+        var replacement = f.Runtime.Arrive(f.Camera.Pose, f.Camera.Mode);
+        old.Cancel();
+        AssertThat(old.Done.IsCanceled && !replacement.Done.IsCompleted).IsTrue();
         f.Until(() => travel.Done.IsCompleted);
-        AssertThat(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context)).OverrideFailureMessage("Same-map NewGame rebuilt the map.").IsTrue();
+        AssertThat(travel.Done.Result == MapTravelResult.Failed && !replacement.Done.IsCompleted).IsTrue();
+        f.Runtime.ArrivalReady = true;
+        AssertThat(replacement.Done.IsCompletedSuccessfully).IsTrue();
     }
 
     [TestCase]
-    public void BootWaitsForAsyncMountPreparationBeforePrefetch()
+    public void DisposingMapServiceCancelsItsPendingArrival()
+    {
+        var f = new Fixture(); f.Boot();
+        f.Runtime.ArrivalReady = false;
+        var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.NewGame));
+        f.Until(() => travel.Stage == MapStage.Warm);
+        var arrival = f.Runtime.Arrival!;
+        f.Service.Dispose();
+        AssertThat(arrival.Done.IsCanceled && travel.Done.Result == MapTravelResult.Failed && !f.Camera.InputLocked).IsTrue();
+    }
+
+    [TestCase]
+    public void BootWaitsForAsyncMountPreparationBeforeArrival()
     {
         var f = new Fixture();
         f.Runtime.DelayMount();
@@ -143,18 +145,18 @@ public sealed class MapServiceTests
         f.Service.Step(); // Mount returns while its asynchronous prepare task is still pending.
         for (var frame = 0; frame < 3; frame++) f.Service.Step();
         AssertThat(f.Runtime.MountPending && travel.Stage == MapStage.Mount && !travel.Done.IsCompleted).OverrideFailureMessage("Async Mount was treated as a completed map binding.").IsTrue();
-        AssertThat(f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == originalPose).OverrideFailureMessage("Destination work started before map preparation and callbacks completed.").IsTrue();
+        AssertThat(f.Runtime.Arrivals == 0 && f.Camera.Pose == originalPose).OverrideFailureMessage("Destination work started before map preparation and callbacks completed.").IsTrue();
         AssertThat(f.Poses.LegalizeCalls == 0).OverrideFailureMessage("Destination was legalized against old or incomplete map data.").IsTrue();
         AssertThat(f.Service.Rev == 0 && f.Camera.InputLocked).OverrideFailureMessage("Unprepared map was granted to the observer.").IsTrue();
 
         f.Runtime.ReleaseMount();
         f.Until(() => travel.Done.IsCompleted);
-        AssertThat(travel.Done.Result == MapTravelResult.Arrived && f.Runtime.PrefetchCalls == 1 && f.Runtime.WarmStarts == 1).OverrideFailureMessage("Released async Mount did not prefetch and warm exactly once.").IsTrue();
+        AssertThat(travel.Done.Result == MapTravelResult.Arrived && f.Runtime.Arrivals == 1).OverrideFailureMessage("Released async Mount did not start one arrival.").IsTrue();
         AssertThat(f.Service.Current == f.A && f.Service.Rev == 1 && !f.Camera.InputLocked).OverrideFailureMessage("Async Mount did not finish the normal arrival lifecycle.").IsTrue();
     }
 
     [TestCase]
-    public void FailedAsyncMountDoesNotPrefetchOrReportArrival()
+    public void FailedAsyncMountDoesNotArrive()
     {
         var f = new Fixture();
         f.Runtime.DelayMount();
@@ -163,8 +165,8 @@ public sealed class MapServiceTests
         f.Service.Step();
         f.Runtime.FailMount("Fixture asynchronous preparation failure.");
         f.Until(() => travel.Done.IsCompleted);
-        AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Runtime.PrefetchCalls == 0 &&
-            f.Runtime.WarmStarts == 0 && f.Service.Rev == 0).OverrideFailureMessage("Failed asynchronous preparation was mistaken for readiness.").IsTrue();
+        AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Runtime.Arrivals == 0 &&
+            f.Service.Rev == 0).OverrideFailureMessage("Failed asynchronous preparation was mistaken for readiness.").IsTrue();
     }
 
     [TestCase]
@@ -189,7 +191,7 @@ public sealed class MapServiceTests
     }
 
     [TestCase]
-    public void LegalizedDestinationIsSharedByPrefetchWarmAndSpawn()
+    public void LegalizedDestinationIsSharedByArrivalAndSpawn()
     {
         var f = new Fixture();
         var reachable = new Box3(new(-20, 0, -20), new(20, 100, 20));
@@ -200,7 +202,7 @@ public sealed class MapServiceTests
         var travel = f.Service.Travel(new(f.A, Pose: requested, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
         AssertThat(travel.Done.Result == MapTravelResult.Arrived && f.Poses.LegalizeCalls == 1 &&
-            f.Runtime.LastPrefetch == expected && f.Camera.Pose == expected).OverrideFailureMessage("Prefetch and Spawn did not use the same legal finite destination.").IsTrue();
+            f.Runtime.LastArrival == expected && f.Camera.Pose == expected).OverrideFailureMessage("Arrival and Spawn did not use the same legal finite destination.").IsTrue();
     }
 
     [TestCase]
@@ -212,7 +214,7 @@ public sealed class MapServiceTests
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
         AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Poses.LegalizeCalls == 1 &&
-            f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == original).OverrideFailureMessage("Non-finite legalization output was applied or replaced by an invented fallback position.").IsTrue();
+            f.Runtime.Arrivals == 0 && f.Camera.Pose == original).OverrideFailureMessage("Non-finite legalization output was applied or replaced by an invented fallback position.").IsTrue();
     }
 
     [TestCase]
@@ -229,7 +231,7 @@ public sealed class MapServiceTests
         var travel = f.Service.Travel(new(f.A, Pose: saved, Mode: ViewMode.Fly, Cause: MapTravelCause.LoadSave));
         f.Until(() => travel.Done.IsCompleted);
         AssertThat(travel.Done.Result == MapTravelResult.Arrived && ReferenceEquals(context, f.Service.Context) &&
-            f.Loader.Loads == 1 && f.Runtime.LastPrefetch == legal && f.Camera.Pose == legal &&
+            f.Loader.Loads == 1 && f.Runtime.LastArrival == legal && f.Camera.Pose == legal &&
             f.Service.Visits.Single().LastPose == legal).OverrideFailureMessage("Full restore retained an obsolete saved pose or unnecessarily rebuilt the current world.").IsTrue();
     }
 
@@ -246,7 +248,7 @@ public sealed class MapServiceTests
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.Boot));
         f.Until(() => travel.Done.IsCompleted);
         AssertThat(travel.Done.Result == MapTravelResult.Failed && f.Poses.LegalizeCalls == 1 &&
-            f.Runtime.PrefetchCalls == 0 && f.Runtime.WarmStarts == 0 && f.Camera.Pose == original && f.Service.Rev == 0).OverrideFailureMessage("A finite destination rejected by the roam validator was treated as a legal arrival.").IsTrue();
+            f.Runtime.Arrivals == 0 && f.Camera.Pose == original && f.Service.Rev == 0).OverrideFailureMessage("A finite destination rejected by the roam validator was treated as a legal arrival.").IsTrue();
     }
 
     [TestCase]
@@ -365,7 +367,7 @@ public sealed class MapServiceTests
             var world = new TestWorldState(new TestWeatherProcess(), new TestRuleset());
             Camera = new(world);
             Poses = new(Runtime);
-            Service = new(Camera, world, Runtime, Loader, Poses, Data);
+            Service = new(Camera, world, Runtime, Runtime, Loader, Poses, Data);
             if (initialize)
             {
                 var initialized = Service.Initialize();
@@ -447,63 +449,59 @@ public sealed class MapServiceTests
             if (Failing.Contains(map)) throw new InvalidDataException("Fixture load failure.");
             catalog.TryGet(map, out var entry);
             var d = entry.Descriptor;
-            var world = new TestWorldModel();
+            var world = new FakeWorld { Boundary = new([]) };
             using var document = JsonDocument.Parse(files["campus.json"]);
             _worldVersions[world] = document.RootElement.GetProperty("revision").GetInt32();
             return new(world, d.Geo, d.Center, d.Bounds, d.TileMin, d.TileMax);
         }
     }
-    private sealed class TestRuntime : IMapRuntime
+    private sealed class TestRuntime : IMapRuntime, IMapLifetime
     {
-        private TaskCompletionSource? _mountGate;
-        private Task? _preparing;
-        private bool _mountPrepared;
-        private bool _residentReady = true;
-        private bool _destinationReady = true;
-        private bool _hasDestination;
-        public bool ResidentReady { get => _mountPrepared && _residentReady && Error is null; set => _residentReady = value; }
-        public bool DestinationReady { get => _mountPrepared && _hasDestination && _destinationReady && Error is null; set => _destinationReady = value; }
-        public bool WarmReady { get; set; } = true;
-        public string? Error { get; private set; }
-        public bool MountPending => _preparing is { IsCompleted: false };
-        public int PrefetchCalls { get; private set; }
-        public Pose? LastPrefetch { get; private set; }
-        public int WarmStarts { get; private set; }
+        private TaskCompletionSource? _mount;
+        private bool _delayMount;
+        private bool _arrivalReady = true;
+        public IMapArrival? Arrival { get; private set; }
+        public bool MountReady => _mount?.Task.IsCompletedSuccessfully == true;
+        public bool ArrivalReady
+        {
+            get => _arrivalReady;
+            set { _arrivalReady = value; if (value) (Arrival as TestArrival)?.Complete(); }
+        }
+        public bool MountPending => _mount is { Task.IsCompleted: false };
+        public int Arrivals { get; private set; }
+        public Pose? LastArrival { get; private set; }
         public List<MapId> Mounted { get; } = [];
         public List<IMapContext> Contexts { get; } = [];
-        public void DelayMount() => _mountGate = new();
-        public void ReleaseMount() => _mountGate!.TrySetResult();
-        public void FailMount(string message) => _mountGate!.TrySetException(new InvalidDataException(message));
-        public void Mount(IMapContext context)
+        public void DelayMount() => _delayMount = true;
+        public void ReleaseMount() => _mount!.TrySetResult();
+        public void FailMount(string message) => _mount!.TrySetException(new InvalidDataException(message));
+        public Task Mount(IMapContext context)
         {
             Mounted.Add(context.Descriptor.Id);
             Contexts.Add(context);
-            _mountPrepared = false;
-            _hasDestination = false;
-            Error = null;
-            _preparing = PrepareMap();
+            _mount = new();
+            if (!_delayMount) _mount.TrySetResult();
+            return _mount.Task;
         }
-        private async Task PrepareMap()
+        public IMapArrival Arrive(Pose pose, ViewMode mode, NavSpace? space = null)
         {
-            try
-            {
-                if (_mountGate is not null) await _mountGate.Task.ConfigureAwait(false);
-                _mountPrepared = true; // Mirrors callbacks becoming legal only after Prepare has completed.
-            }
-            catch (Exception error) { Error = error.GetBaseException().Message; }
+            if (!MountReady) throw new InvalidOperationException("A map must be mounted before arrival.");
+            Arrival?.Cancel();
+            Arrivals++;
+            LastArrival = pose;
+            var arrival = new TestArrival(new(pose, mode, space));
+            Arrival = arrival;
+            if (ArrivalReady) arrival.Complete();
+            return arrival;
         }
-        public void Prefetch(Pose pose, ViewMode mode, NavSpace? space = null)
-        {
-            if (!_mountPrepared) throw new InvalidOperationException("A map must be mounted before destination prefetch.");
-            PrefetchCalls++;
-            LastPrefetch = pose;
-            _hasDestination = true;
-        }
-        public void BeginWarm()
-        {
-            if (!_mountPrepared) throw new InvalidOperationException("A map must be prepared before warming.");
-            WarmStarts++;
-        }
+    }
+    private sealed class TestArrival(MapStreamDestination destination) : IMapArrival
+    {
+        private readonly TaskCompletionSource _done = new();
+        public MapStreamDestination Destination => destination;
+        public Task Done => _done.Task;
+        public void Cancel() => _done.TrySetCanceled();
+        public void Complete() => _done.TrySetResult();
     }
     private sealed class TestPoseValidator(TestRuntime runtime) : ICameraPoseValidator
     {
@@ -512,7 +510,7 @@ public sealed class MapServiceTests
         public int LegalizeCalls { get; private set; }
         public Pose Legalize(Pose pose)
         {
-            if (!runtime.ResidentReady) throw new InvalidOperationException("Map callbacks must finish before destination legalization.");
+            if (!runtime.MountReady) throw new InvalidOperationException("Map callbacks must finish before destination legalization.");
             LegalizeCalls++;
             return Project(pose);
         }

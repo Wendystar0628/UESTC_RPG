@@ -18,22 +18,9 @@ public static class PlanMath
     public static Vector2 Centroid(IReadOnlyList<Vector2> ring)
     {
         ArgumentNullException.ThrowIfNull(ring);
-        float a = 0, cx = 0, cz = 0;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            Vector2 p = ring[i], q = ring[(i + 1) % ring.Count];
-            var cross = p.X * q.Y - q.X * p.Y;
-            a += cross;
-            cx += (p.X + q.X) * cross;
-            cz += (p.Y + q.Y) * cross;
-        }
-        if (MathF.Abs(a) < 1e-6f)
-        {
-            float sx = 0, sz = 0;
-            foreach (var p in ring) { sx += p.X; sz += p.Y; }
-            return new(sx / ring.Count, sz / ring.Count);
-        }
-        return new(cx / (3f * a), cz / (3f * a));
+        float sx = 0, sz = 0;
+        foreach (var p in ring) { sx += p.X; sz += p.Y; }
+        return PlanGeometry.Centroid(new Campus.Contracts.PolygonRings(ring), new(sx / ring.Count, sz / ring.Count));
     }
 
     /// <summary>An angle in degrees wrapped to (−180, 180].</summary>

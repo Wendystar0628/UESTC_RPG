@@ -20,6 +20,9 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
     private readonly ICameraRig _camera;
     private readonly IViewControl _view;
     private readonly IMapRuntime _runtime;
+    private readonly IMapLifetime _lifetime;
+    private Task? _mount;
+    private IMapArrival? _arrival;
     private readonly IWorldModelLoader _loader;
     private readonly ICameraPoseValidator _poses;
     private readonly IWalkController? _walk;
@@ -40,17 +43,16 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
     private WaypointStand? _stand;
     private bool _started;
     private bool _sameMap;
-    private bool _warmStarted;
     private bool _spawnStarted;
     private bool _modeStarted;
     private bool _preservePresentationPose;
     private bool _stopped;
     private MapId _savedCurrent;
 
-    public MapService(ICameraRig camera, IViewControl view, IMapRuntime runtime,
+    public MapService(ICameraRig camera, IViewControl view, IMapRuntime runtime, IMapLifetime lifetime,
         IWorldModelLoader loader, ICameraPoseValidator poses, MapDataSource? data = null, IWalkController? walk = null)
     {
-        _camera = camera; _view = view; _runtime = runtime;
+        _camera = camera; _view = view; _runtime = runtime; _lifetime = lifetime;
         _loader = loader; _data = data ?? new();
         _poses = poses ?? throw new ArgumentNullException(nameof(poses));
         _walk = walk;
@@ -181,32 +183,32 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
                         Context = _prepared ?? throw new InvalidOperationException("Map world was not prepared.");
                         _prepared = null;
                         _data.WriteMapRect(Context.Descriptor.DataRect);
-                        _runtime.Mount(Context);
+                        _mount = _lifetime.Mount(Context);
                     }
                     _started = true;
                 }
-                ThrowRuntimeError();
-                // Mount starts asynchronous data preparation. ResidentReady guarantees that all
-                // preparation and MapAware callbacks (including the stream's map binding) completed.
-                if (!_runtime.ResidentReady) return;
+                if (_mount is { } mounting)
+                {
+                    if (!mounting.IsCompleted) return;
+                    mounting.GetAwaiter().GetResult();
+                    _mount = null;
+                }
                 LegalizeDestination();
-                _runtime.Prefetch(_destination, _destinationMode);
+                _camera.SetPose(_destination);
+                _arrival = _runtime.Arrive(_destination, _destinationMode);
                 Move(MapStage.Warm);
                 break;
             case MapStage.Warm:
-                ThrowRuntimeError();
-                if (!_warmStarted && (!_sameMap || !_runtime.DestinationReady))
-                {
-                    // Material readiness can itself depend on sample draws. Start warming before
-                    // waiting for it, including a same-map restore after quality invalidated pipelines.
-                    // An already-ready same-map destination keeps its zero-warm fast path.
-                    _camera.SetPose(_destination); _runtime.BeginWarm(); _warmStarted = true;
-                }
-                if (!_runtime.ResidentReady || !_runtime.DestinationReady || (_warmStarted && !_runtime.WarmReady)) return;
+                var arrival = _arrival ?? throw new InvalidOperationException("Map arrival is missing.");
+                if (!arrival.Done.IsCompleted) return;
+                arrival.Done.GetAwaiter().GetResult();
+                if (!ReferenceEquals(_runtime.Arrival, arrival))
+                    throw new InvalidOperationException("Map arrival was replaced before spawn.");
                 Move(MapStage.Spawn);
                 break;
             case MapStage.Spawn:
-                ThrowRuntimeError();
+                if (!ReferenceEquals(_runtime.Arrival, _arrival))
+                    throw new InvalidOperationException("Map arrival was replaced during spawn.");
                 if (!_spawnStarted) { _camera.SetPose(_destination); _spawnStarted = true; }
                 if (!_modeStarted)
                 {
@@ -302,6 +304,9 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
         _target = null;
         ClearPendingLoad();
         _modeChange = null;
+        _mount = null;
+        if (result != MapTravelResult.Arrived) _arrival?.Cancel();
+        _arrival = null;
         _input?.Dispose();
         _input = null;
         if (result == MapTravelResult.Arrived) PublishArrival(finished.Cause);
@@ -322,7 +327,6 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
     {
         _active!.MoveTo(stage);
         _started = false;
-        _warmStarted = false;
         _spawnStarted = false;
         _modeStarted = false;
     }
@@ -333,7 +337,8 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
         _stopped = true;
         var active = _active;
         _active = null; _request = null; _target = null;
-        _catalogTask = null; _modeChange = null;
+        _catalogTask = null; _modeChange = null; _mount = null;
+        _arrival?.Cancel(); _arrival = null;
         ClearPendingLoad();
         Context = null;
         _input?.Dispose(); _input = null;
@@ -350,11 +355,6 @@ public sealed class MapService : IMapService, ISaveSection<MapsSave>, IBootParti
     }
 
     private sealed record PendingMapLoad(MapLoadInput Input, Task<WorldModelLoadResult> Work);
-
-    private void ThrowRuntimeError()
-    {
-        if (_runtime.Error is { Length: > 0 } error) throw new InvalidOperationException(error);
-    }
 
     private IMapTransition Completed(MapTravelRequest request, MapTravelResult result)
     { var transition = new MapTransition(Current, request); transition.Complete(result); return transition; }

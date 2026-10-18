@@ -9,6 +9,7 @@ namespace Campus.Gen.World;
 public sealed class WorldModelSnapshot : IWorldModel
 {
     public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }
+    public IReadOnlyDictionary<string, TerrainOp> TerrainOperations { get; }
     public PolygonRings Boundary { get; }
     public WorldNetwork Network { get; }
     public ISpatialIndex Spatial { get; }
@@ -20,11 +21,13 @@ public sealed class WorldModelSnapshot : IWorldModel
 
     internal WorldModelSnapshot(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary,
         WorldNetwork network, IInteriorIndex interiors, IOutskirtsModel? outskirts,
-        IReadOnlyList<InteriorOverlayFile> interiorOverlays, WorldLoadOptions options)
+        IReadOnlyList<InteriorOverlayFile> interiorOverlays, WorldLoadOptions options,
+        IReadOnlyDictionary<string, TerrainOp> terrainOperations)
     {
         Features = features; Boundary = boundary; Network = network; Interiors = interiors;
         Outskirts = outskirts; Fidelity = options.Fidelity; InteriorOverlays = interiorOverlays;
         Terrain = options.Terrain;
+        TerrainOperations = terrainOperations;
         Spatial = new WorldSpatialIndex(features, boundary, network, interiors, Terrain);
     }
 }

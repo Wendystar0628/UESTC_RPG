@@ -18,11 +18,11 @@ public static partial class Planting
     private static PlantedTree Probe(Site site, SpeciesInfo info, string key)
     {
         var h = StableHash.Hash32(site.Seed, "veg", key);
-        var seed = (h >> 8) * (1f / 16777216f);
+        var seed = IntegerNoise.High24(h);
         var h2 = StableHash.Hash32(h, "look");
         var variant = (int)(h2 % TreeForms.Variants);
         var scale = 0.92f + 0.16f * ((h2 >> 8) & 0xffff) / 65535f;
-        var yaw = 6.2831853f * (StableHash.Hash32(h, "yaw") >> 8) * (1f / 16777216f);
+        var yaw = MathF.Tau * IntegerNoise.High24(StableHash.Hash32(h, "yaw"));
         var height = TreeForms.HeightOf(info, variant) * scale;
         return new PlantedTree(key, info, variant, Vector3.Zero, yaw, scale, height, false, PlantSource.Grove, seed, 0f);
     }
@@ -48,17 +48,7 @@ public static partial class Planting
         return true;
     }
 
-    private static float Hash01(uint seed, string purpose, int x, int z) =>
-        (StableHash.Hash32(seed, purpose, x.ToString(CultureInfo.InvariantCulture), z.ToString(CultureInfo.InvariantCulture)) >> 8) * (1f / 16777216f);
-
     private static string Key(string kind, int rule, int chain, int side, int row, int index) => string.Join(':', kind,
         rule.ToString(CultureInfo.InvariantCulture), chain.ToString(CultureInfo.InvariantCulture),
         side < 0 ? "l" : "r", row.ToString(CultureInfo.InvariantCulture), index.ToString(CultureInfo.InvariantCulture));
-
-    private static float PolylineDistanceSquared(Vector2 p, IReadOnlyList<Vector2> line)
-    {
-        var best = float.MaxValue;
-        for (var i = 1; i < line.Count; i++) best = MathF.Min(best, PlanGeometry.SegmentDistanceSquared(p, line[i - 1], line[i]));
-        return best;
-    }
 }

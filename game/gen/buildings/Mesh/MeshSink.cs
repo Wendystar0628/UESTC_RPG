@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Buildings.Rules;
@@ -80,8 +81,7 @@ public sealed class MeshSink(PaletteCatalog catalog)
                 map[i] = s.Count;
                 float x = part.Position[3 * i], y = part.Position[3 * i + 1], z = part.Position[3 * i + 2];
                 float nx = part.Normal[3 * i], ny = part.Normal[3 * i + 1], nz = part.Normal[3 * i + 2];
-                var p = new Vector3(x * at.M11 + y * at.M21 + z * at.M31 + at.M41, x * at.M12 + y * at.M22 + z * at.M32 + at.M42,
-                    x * at.M13 + y * at.M23 + z * at.M33 + at.M43);
+                var p = GeometryPlacement.Point(new(x, y, z), at);
                 var n = new Vector3(nx * at.M11 + ny * at.M21 + nz * at.M31, nx * at.M12 + ny * at.M22 + nz * at.M32,
                     nx * at.M13 + ny * at.M23 + nz * at.M33);
                 var uv = part.Uv is { } u ? new Vector2(u[2 * i], u[2 * i + 1]) : Vector2.Zero;
@@ -214,8 +214,7 @@ public sealed class MeshSink(PaletteCatalog catalog)
         {
             Position.Add(p.X); Position.Add(p.Y); Position.Add(p.Z);
             var n = normal;
-            var len = n.Length();
-            n = len > 1e-8f ? n / len : Vector3.UnitY;
+            n = VectorMath.Unit(n, Vector3.UnitY, 1e-8f);
             Normal.Add(n.X); Normal.Add(n.Y); Normal.Add(n.Z);
             Uv.Add(uv.X); Uv.Add(uv.Y);
             if (HasUv2) { Uv2.Add(uv2.X); Uv2.Add(uv2.Y); }

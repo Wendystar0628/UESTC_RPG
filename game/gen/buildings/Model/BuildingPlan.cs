@@ -37,7 +37,6 @@ public sealed record FacadeLayout(int Ring, int Edge, int Bays, float BayWidth, 
 /// <summary>Everything about one building (one source part) that does not depend on the detail level.</summary>
 public sealed class BuildingPlan
 {
-    public const float TileSize = 64f;
     public const float WallChamfer = 0.035f;
 
     public required FeatureId Id { get; init; }
@@ -90,14 +89,7 @@ public sealed class BuildingPlan
     /// <summary>Index of an entrance's door in Openings[e.Facade] (for its precision zone).</summary>
     public int DoorIndex(PlanEntrance e) => Array.FindIndex(Openings[e.Facade], o => o.Kind == BayKind.Door && o.Bay == e.Bay && o.Row == e.Row);
 
-    public TileKey Tile(LodLevel lod) => TileOf(Centroid, lod);
-
-    public static TileKey TileOf(Vector2 p, LodLevel lod)
-    {
-        if (lod == LodLevel.L4) return new TileKey(0, 0);
-        var size = TileSize * (1 << (int)lod);
-        return new TileKey((int)MathF.Floor(p.X / size), (int)MathF.Floor(p.Y / size));
-    }
+    public TileKey Tile(LodLevel lod) => TileGrid.At(Centroid, lod);
 
     public FidelityZone ZoneOf(int facade, int opening) =>
         facade < OpeningZones.Count ? OpeningZones[facade][opening] : FidelityZone.K3;

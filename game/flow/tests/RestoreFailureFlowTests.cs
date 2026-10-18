@@ -75,7 +75,7 @@ public sealed class RestoreFailureFlowTests
         var f = new Fixture();
         await f.Flow.PrepareBoot(new());
         try { await f.Flow.PrepareWorld(); }
-        catch (InvalidOperationException error) when (error.Message == "save.error.restore_world")
+        catch (InvalidOperationException)
         {
             if (f.Flow.State != AppState.Boot || f.Veil.Opacity != 1 || f.Veil.Reveals != 0 || !f.Camera.InputLocked)
                 throw new InvalidOperationException("Boot restore failure did not retain its recovery boundary.");

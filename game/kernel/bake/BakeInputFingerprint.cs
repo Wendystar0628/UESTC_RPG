@@ -132,7 +132,7 @@ internal static class BakeInputFingerprint
                 var box = VegetationBounds(remaining[i]);
                 if (!regions.Any(region => Intersects(box, region))) continue;
                 // Spaced reads the adjacent 32 m occupation buckets: their full reach fits this guard band.
-                regions.Add(Expand(box, BakeRequestKeys.BaseTileMetres));
+                regions.Add(Expand(box, TileGrid.BaseEdge));
                 remaining.RemoveAt(i);
                 changed = true;
             }
@@ -155,7 +155,7 @@ internal static class BakeInputFingerprint
         foreach (var tree in selected)
         {
             var point = new Vector2(tree.Position.X, tree.Position.Z);
-            regions.Add(Expand(new(point, point), BakeRequestKeys.BaseTileMetres));
+            regions.Add(Expand(new(point, point), TileGrid.BaseEdge));
         }
         input.Add(selected);
 
@@ -260,16 +260,16 @@ internal static class BakeInputFingerprint
         {
             var feature = new FeatureId(key.Detail.Split('/')[0]);
             if (!context.World.Features.TryGetValue(feature, out var source)) throw new InvalidDataException("Interior source feature is absent.");
-            return Expand(new(new(source.Bounds.Min.X, source.Bounds.Min.Z), new(source.Bounds.Max.X, source.Bounds.Max.Z)), 64);
+            return Expand(new(new(source.Bounds.Min.X, source.Bounds.Min.Z), new(source.Bounds.Max.X, source.Bounds.Max.Z)), TileGrid.BaseEdge);
         }
         if (key.Detail.StartsWith("C/", StringComparison.Ordinal) || key.Detail.StartsWith('L'))
         {
             var request = BakeRequestKeys.Parse(key);
             // L4/0/0 is explicitly the current whole-map distant product, unlike the L0-L3 grid.
             if (request.Level == LodLevel.L4) return context.Map.DataRect;
-            var edge = BakeRequestKeys.BaseTileMetres << (int)request.Level;
-            var min = new Vector2(request.Tile.X * edge, request.Tile.Z * edge);
-            return Expand(new(min, min + new Vector2(edge)), 64);
+            var edge = TileGrid.Edge(request.Level);
+            var min = TileGrid.Origin(request.Tile, request.Level);
+            return Expand(new(min, min + new Vector2(edge)), TileGrid.BaseEdge);
         }
         return context.Map.DataRect; // Atlas and other non-cell products.
     }

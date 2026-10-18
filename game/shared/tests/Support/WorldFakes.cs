@@ -16,6 +16,7 @@ internal class FakeWorld : IWorldModel
         Terrain = inner.Terrain;
         Boundary = inner.Boundary;
         Features = inner.Features;
+        TerrainOperations = inner.TerrainOperations;
         Network = inner.Network;
         Spatial = inner.Spatial;
         Interiors = inner.Interiors;
@@ -26,6 +27,7 @@ internal class FakeWorld : IWorldModel
     public ITerrain Terrain { get; set; } = FlatTerrain.Default;
     public PolygonRings Boundary { get; set; } = new([new(-1000f, -1000f), new(1000f, -1000f), new(1000f, 1000f), new(-1000f, 1000f)]);
     public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; set; } = new Dictionary<FeatureId, WorldFeature>();
+    public IReadOnlyDictionary<string, TerrainOp> TerrainOperations { get; set; } = new Dictionary<string, TerrainOp>(StringComparer.Ordinal);
     public WorldNetwork Network { get; set; } = WorldNetwork.Empty;
     public ISpatialIndex Spatial { get; set; } = new FlatSpatial();
     public IInteriorIndex Interiors { get; set; } = new FakeInteriors();

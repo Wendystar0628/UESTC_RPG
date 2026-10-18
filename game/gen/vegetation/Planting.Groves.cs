@@ -34,7 +34,7 @@ public static partial class Planting
                 var cluster = (MathF.Sin(x / 53f + MathF.Cos(z / 47f)) + MathF.Cos(z / 59f - x / 139f) + 2f) / 4f;
                 if (parcel.Area > BigLawn && edge > EdgeKeep && cluster < OpenNoise) continue;
                 var mix = areas.FirstOrDefault(a => Near(a.Box!.Value, p, a.Area.Radius)).Area?.Mix ?? rules.Groves.Mix;
-                var stand = Hash01(site.Seed, "stand", (int)MathF.Floor(x / StandCell), (int)MathF.Floor(z / StandCell));
+                var stand = IntegerNoise.High24(StableHash.Hash32(site.Seed, "stand", ((int)MathF.Floor(x / StandCell)).ToString(CultureInfo.InvariantCulture), ((int)MathF.Floor(z / StandCell)).ToString(CultureInfo.InvariantCulture)));
                 var info = species.Get(Pick(mix, StandWeight * stand + (1f - StandWeight) * draw));
                 var key = "grove:" + parcel.Id + ":" + attempt.ToString(CultureInfo.InvariantCulture);
                 var washed = wash.Any(a => Near(a.Box!.Value, p, a.Area.Radius));

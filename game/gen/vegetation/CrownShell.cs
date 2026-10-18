@@ -1,4 +1,5 @@
 using System.Numerics;
+using Campus.Contracts;
 
 namespace Campus.Gen.Vegetation;
 
@@ -70,7 +71,7 @@ internal sealed class CrownShell
     {
         var x = (Math.Clamp(t, -1f, 1f) + 1f) * 0.5f * ProfileSteps;
         var i = Math.Min((int)x, ProfileSteps - 1);
-        return _profile[i] + (_profile[i + 1] - _profile[i]) * (x - i);
+        return ScalarMath.Lerp(_profile[i], _profile[i + 1], x - i);
     }
 
     /// <summary>Envelope field: &lt; 0 inside, 0 on the shell (not a true distance; only its gradient is used).</summary>

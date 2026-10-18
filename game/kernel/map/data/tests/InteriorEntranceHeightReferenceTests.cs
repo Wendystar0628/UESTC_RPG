@@ -1,3 +1,4 @@
+using Campus.Gen.Tests.Support;
 using static GdUnit4.Assertions;
 using Campus.Pipeline.Map;
 using System.Numerics;
@@ -71,8 +72,8 @@ public sealed class InteriorEntranceHeightReferenceTests
             entry.Storeys[1].FloorY == 4 && entry.Entrances.Single().Center.Y == .15f).OverrideFailureMessage("Interior assembly lost closed entrance or original building storeys.").IsTrue();
         AssertThat(result.Content.Meshes.Count == 0 && result.Colliders.Count == 0 && result.NavNodes.Count == 0 &&
             result.NavEdges.Count == 0 && result.NavPortals.Count == 0).OverrideFailureMessage("Closed register generated walkable content.").IsTrue();
-        var index = (TestInteriorIndex)context.World.Interiors;
-        index.Configure(result.Entries);
+        var index = new FakeInteriors(result.Entries.ToArray());
+        ((FakeWorld)context.World).Interiors = index;
         AssertThat(index.Get(Feature) == entry && index.EntrancesNear(new(0, .15f, 0), 1).Single().Id == "entry.closed").OverrideFailureMessage("Interior assembly final configured index omitted closed registration.").IsTrue();
         var again = InteriorAssembly.BuildConfigured(context, bindings, catalog);
         AssertThat(ReferenceEquals(again.Entries.Single().Storeys, entry.Storeys) &&
@@ -94,7 +95,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         var context = Context(new Dictionary<string, IInteriorProvider> { [Provider] = probe });
         var closedFeature = new FeatureId("fixture:closed");
         var source = context.World.Features[Feature];
-        ((MutableWorldFixture)context.World).Configure([source, source with { Id = closedFeature }]);
+        ((FakeWorld)context.World).Features = ((WorldFeature[])[source, source with { Id = closedFeature }]).ToDictionary(feature => feature.Id);
         var baseline = InteriorAssembly.BuildConfigured(context, bindings, Bytes(null));
         int baselineCalls = probe.Calls;
         probe.Calls = 0;
@@ -138,7 +139,7 @@ public sealed class InteriorEntranceHeightReferenceTests
             AssertThrown(() => InteriorAssembly.BuildConfigured(context,
                 [new("must-not-be-called", [Feature], [1], 0)], Encoding.UTF8.GetBytes(catalog))).IsInstanceOf<JsonException>();
         var source = context.World.Features[Feature];
-        ((MutableWorldFixture)context.World).Configure([source with { Kind = new("water") }]);
+        ((FakeWorld)context.World).Features = ((WorldFeature[])[source with { Kind = new("water") }]).ToDictionary(feature => feature.Id);
         AssertThrown(() => InteriorAssembly.BuildConfigured(context, [], Encoding.UTF8.GetBytes(ClosedCatalog()))).IsInstanceOf<JsonException>();
     }
 
@@ -150,9 +151,10 @@ public sealed class InteriorEntranceHeightReferenceTests
     {
         var bounds = new Box3(new(-16, 0, -16), new(16, 8, 16));
         var ring = new PolygonRings([new(-16, -16), new(16, -16), new(16, 16), new(-16, 16)]);
-        var world = new MutableWorldFixture();
-        world.Configure([new WorldFeature(Feature, FeatureSource.Osm, new("building"), new PolygonGeometry(ring))
-        { Bounds = bounds, Height = 8, Storeys = 2 }], boundary: ring);
+        var world = new FakeWorld { Boundary = new([]) };
+        world.Features = ((WorldFeature[])[new WorldFeature(Feature, FeatureSource.Osm, new("building"), new PolygonGeometry(ring))
+        { Bounds = bounds, Height = 8, Storeys = 2 }]).ToDictionary(feature => feature.Id);
+        world.Boundary = ring;
         var map = new MapDescriptor(new("height-test"), new("Test", "Test"), MapKind.Outdoor, 1, 1,
             new(0, 0, 32648, new(-64, -64), new(64, 64)), Vector2.Zero, bounds,
             new(new(-64, -64), new(64, 64)), new(.9f, 30, 3000, -28, 2000, 30, 40, 150),

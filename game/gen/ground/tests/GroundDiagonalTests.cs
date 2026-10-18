@@ -59,11 +59,11 @@ public sealed class GroundDiagonalTests
         foreach (var (x, z, jolt) in Native)
         {
             // World inputs formed as the probe forms them, so the local coordinates are the same floats.
-            var worldX = NativeTile.X * GroundLod.TileSize + x;
-            var worldZ = NativeTile.Z * GroundLod.TileSize + z;
+            var worldX = NativeTile.X * TileGrid.BaseEdge + x;
+            var worldZ = NativeTile.Z * TileGrid.BaseEdge + z;
             var sampled = GroundCollision.SampleHeight(collider, worldX, worldZ);
             AssertThat(MathF.Abs(sampled - jolt) <= MatchToleranceM).OverrideFailureMessage($"({x}, {z}): sampler {sampled}, native Jolt {jolt}.").IsTrue();
-            AssertThat(MathF.Abs(MainDiagonal(cm, worldX - NativeTile.X * GroundLod.TileSize, worldZ - NativeTile.Z * GroundLod.TileSize) - jolt) > 0.2f).OverrideFailureMessage($"({x}, {z}): the fixture must tell the diagonals apart.").IsTrue();
+            AssertThat(MathF.Abs(MainDiagonal(cm, worldX - NativeTile.X * TileGrid.BaseEdge, worldZ - NativeTile.Z * TileGrid.BaseEdge) - jolt) > 0.2f).OverrideFailureMessage($"({x}, {z}): the fixture must tell the diagonals apart.").IsTrue();
         }
     }
 
@@ -169,8 +169,8 @@ public sealed class GroundDiagonalTests
     private static FormulaTerrain FixtureTerrain(TileKey tile, short[] cm) => new(
         (x, z) =>
         {
-            var u = x - tile.X * GroundLod.TileSize;
-            var w = z - tile.Z * GroundLod.TileSize;
+            var u = x - tile.X * TileGrid.BaseEdge;
+            var w = z - tile.Z * TileGrid.BaseEdge;
             if (u < 0f || w < 0f || u > 64f || w > 64f) return 0f;
             var i = Math.Clamp((int)MathF.Floor(u), 0, 63);
             var j = Math.Clamp((int)MathF.Floor(w), 0, 63);

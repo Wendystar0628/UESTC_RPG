@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Ground;
 
@@ -154,7 +155,7 @@ internal static class GroundClassifier
     };
 
     public static string RoadType(JsonElement? props) =>
-        Text(props, "roadType") ?? Text(props, "highway") ?? "";
+        WorldProps.TryText(props, "roadType") ?? WorldProps.TryText(props, "highway") ?? "";
 
     /// <summary>
     /// Surface class of one source record from its kind and its own props; null for kinds that leave the lawn untouched
@@ -175,7 +176,7 @@ internal static class GroundClassifier
             case "building":
                 return SurfaceKind.Building;
             case "sport":
-                return Text(props, "sport") switch
+                return WorldProps.TryText(props, "sport") switch
                 {
                     "running" => SurfaceKind.Track,
                     "athletics" when Leisure(props, entity) == "track" => SurfaceKind.Track,
@@ -204,23 +205,9 @@ internal static class GroundClassifier
     };
 
     private static string? Leisure(JsonElement? props, JsonElement? entity) =>
-        Text(props, "leisure") ?? SourceTag(props, "leisure") ?? SourceTag(entity, "leisure");
-
-    private static string? SourceTag(JsonElement? record, string name) =>
-        record is { ValueKind: JsonValueKind.Object } r && r.TryGetProperty("sourceTags", out var tags) && tags.ValueKind == JsonValueKind.Object
-            ? Text(tags, name) : null;
+        WorldProps.TryText(props, "leisure") ?? WorldProps.TryText(props, "sourceTags", "leisure") ?? WorldProps.TryText(entity, "sourceTags", "leisure");
 
     public static float Width(JsonElement? props, string type, float given) =>
-        given > 0f && float.IsFinite(given) ? given : Number(props, "width") is { } w && w > 0f ? w : DefaultWidth(type);
+        given > 0f && float.IsFinite(given) ? given : WorldProps.TryNumber(props, "width") is { } w && w > 0f ? w : DefaultWidth(type);
 
-    public static string? Text(JsonElement? props, string name) =>
-        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String
-            ? v.GetString() : null;
-
-    public static float? Number(JsonElement? props, string name)
-    {
-        if (props is not { ValueKind: JsonValueKind.Object } p || !p.TryGetProperty(name, out var v)) return null;
-        if (v.ValueKind == JsonValueKind.Number && v.TryGetSingle(out var f) && float.IsFinite(f)) return f;
-        return null;
-    }
 }

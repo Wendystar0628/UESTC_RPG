@@ -19,19 +19,17 @@ public sealed partial class AppFlowService
         control.SetFlow(0);
         var frozenHours = world.WorldHours;
         camera.SetPose(_destination);
-        // Covers both the real opaque draw and the destination camera update.
-        // Numeric veil opacity alone cannot authorize visible pipeline samples.
+        IMapArrival arrival;
         if (saves.HasPendingPose)
         {
-            // WP-50 is the sole prefetch/warm/restore owner for a pending save pose.
+            // Save owns the pending pose's arrival and restore transaction.
             await playback.WaitForPresentedCoverage();
             await saves.CompleteResume();
+            arrival = mapRuntime.Arrival ?? throw new InvalidOperationException("Resume preparation has no arrival.");
         }
         else
         {
             using var readinessWait = veil.ObserveReadinessWait();
-            // Returning from this same live world has no pending save pose. Prepare
-            // that authored destination once without reloading or changing Instance.
             var switched = await view.SetMode(_destinationMode, ModeSwitchVia.Ui);
             switch (switched)
             {
@@ -40,13 +38,9 @@ public sealed partial class AppFlowService
                 default: throw new ArgumentOutOfRangeException(nameof(switched));
             }
             _destination = camera.Pose;
-            mapRuntime.Prefetch(_destination, _destinationMode, Info(slot)?.Meta?.Space);
-            await playback.WaitForPresentedCoverage();
-            mapRuntime.BeginWarm();
-            // Save resumption is the ENG-PERF read/restore barrier exception:
-            // keep the cover until ready without the ordinary arrival time limit.
-            await playback.WaitUntil(() => DestinationReady(_destination, _destinationMode), double.PositiveInfinity,
-                "Resume destination did not become resident, warm and collision-ready.");
+            arrival = mapRuntime.Arrive(_destination, _destinationMode, Info(slot)?.Meta?.Space);
+            // Save resumption retains its covered world without the ordinary arrival limit.
+            await WaitForArrival(arrival);
         }
         RequireHealthyWorld();
         if (!ReferenceEquals(maps.Context, context) || maps.Current != context.Descriptor.Id || world.Instance != instance)
@@ -55,45 +49,36 @@ public sealed partial class AppFlowService
             throw new InvalidOperationException("Continue preparation changed the frozen world time or saved flow.");
         if (saves.HasPendingPose) throw new InvalidOperationException("Resume preparation left the saved pose pending.");
         _destination = camera.Pose; _destinationMode = camera.Mode;
-        var prefetched = streamState.Destination
-            ?? throw new InvalidOperationException("Resume preparation has no destination identity.");
-        if (prefetched.Mode != _destinationMode || !SameLocation(prefetched.Pose, _destination) || !DestinationReady(_destination, _destinationMode))
-            throw new InvalidOperationException("Resume readiness belongs to a different destination.");
-        _resumeEndpoint = new(slot, context, instance, _destination, _destinationMode, prefetched);
+        RequireArrival(arrival, _destination, _destinationMode);
+        _resumeEndpoint = new(slot, context, instance, _destination, _destinationMode, arrival);
     }
 
     private async Task PreparePlayableDestination()
     {
         using var readinessWait = veil.ObserveReadinessWait();
         var pose = camera.Pose; var mode = camera.Mode;
-        var destination = streamState.Destination;
-        if (destination is null || destination.Mode != mode || !SameLocation(destination.Pose, pose) || !DestinationReady(pose, mode))
+        var arrival = mapRuntime.Arrival;
+        if (arrival is null || !Matches(arrival, pose, mode) || !arrival.Done.IsCompletedSuccessfully)
         {
-            mapRuntime.Prefetch(pose, mode);
-            await playback.WaitForPresentedCoverage();
-            mapRuntime.BeginWarm();
-            await playback.WaitUntil(() => DestinationReady(pose, mode), double.PositiveInfinity,
-                "New-game destination did not become resident, warm and collision-ready.");
+            arrival = mapRuntime.Arrive(pose, mode);
+            await WaitForArrival(arrival);
         }
         RequireHealthyWorld();
-        if (streamState.Destination is not { } prepared || prepared.Mode != mode || !SameLocation(prepared.Pose, pose))
-            throw new InvalidOperationException("Playable readiness belongs to a different destination.");
+        RequireArrival(arrival, pose, mode);
     }
 
     private async Task PrepareTitleDestination()
     {
-        if (_titlePrepared) return;
+        if (TitlePrepared) return;
         using var readinessWait = veil.ObserveReadinessWait();
         await veil.Cover(VeilReason.Cinematic, 0);
         var pose = TitlePose();
         camera.SetPose(pose);
-        mapRuntime.Prefetch(pose, ViewMode.Fly);
-        await playback.WaitForPresentedCoverage();
-        mapRuntime.BeginWarm();
-        await playback.WaitUntil(() => DestinationReady(pose, ViewMode.Fly), double.PositiveInfinity,
-            "Title destination did not become resident and warm.");
+        var arrival = mapRuntime.Arrive(pose, ViewMode.Fly);
+        await WaitForArrival(arrival);
         RequireHealthyWorld();
-        _titlePrepared = true;
+        RequireArrival(arrival, pose, ViewMode.Fly);
+        _titleArrival = arrival;
     }
 
     private void RequirePreparedResume()
@@ -101,24 +86,36 @@ public sealed partial class AppFlowService
         var endpoint = _resumeEndpoint ?? throw new InvalidOperationException("Continue reached handoff without preparing its covered destination.");
         if (_request?.Slot != endpoint.Slot || !ReferenceEquals(maps.Context, endpoint.Context) ||
             maps.Current != endpoint.Context.Descriptor.Id || world.Instance != endpoint.Instance ||
-            _destination != endpoint.Pose || _destinationMode != endpoint.Mode ||
-            streamState.Destination != endpoint.Prefetched || saves.HasPendingPose || !DestinationReady(endpoint.Pose, endpoint.Mode))
+            _destination != endpoint.Pose || _destinationMode != endpoint.Mode || saves.HasPendingPose)
             throw new InvalidOperationException("Prepared resume destination was invalidated before handoff.");
+        RequireArrival(endpoint.Arrival, endpoint.Pose, endpoint.Mode);
     }
-    private bool DestinationReady(Pose pose, ViewMode mode)
+
+    private async Task WaitForArrival(IMapArrival arrival)
     {
-        if (mapRuntime.Error is { } error) throw new InvalidOperationException(error);
-        if (collision.Error is { } collisionError) throw new InvalidOperationException(collisionError);
-        if (!mapRuntime.ResidentReady || !mapRuntime.DestinationReady || !mapRuntime.WarmReady) return false;
-        return mode switch
+        try
         {
-            ViewMode.Fly => true,
-            ViewMode.Walk => collision.Ready(pose.Position, 2),
-            _ => throw new InvalidOperationException("Unknown saved view mode."),
-        };
+            await playback.WaitUntil(() =>
+            {
+                if (!ReferenceEquals(mapRuntime.Arrival, arrival)) throw new OperationCanceledException("Flow arrival was replaced.");
+                return arrival.Done.IsCompleted;
+            }, double.PositiveInfinity, "Flow destination did not become ready.");
+            await arrival.Done;
+        }
+        catch { arrival.Cancel(); throw; }
     }
+
+    private void RequireArrival(IMapArrival arrival, Pose pose, ViewMode mode)
+    {
+        if (!ReferenceEquals(mapRuntime.Arrival, arrival) || !Matches(arrival, pose, mode))
+            throw new InvalidOperationException("Readiness belongs to a different arrival.");
+        if (!arrival.Done.IsCompleted) throw new InvalidOperationException("Arrival is still pending.");
+        arrival.Done.GetAwaiter().GetResult();
+    }
+    private static bool Matches(IMapArrival arrival, Pose pose, ViewMode mode) =>
+        arrival.Destination.Mode == mode && SameLocation(arrival.Destination.Pose, pose);
     private static bool SameLocation(Pose a, Pose b) => a.Position == b.Position &&
         Math.Abs(CinematicPoseMath.AngleDelta(a.YawDeg, b.YawDeg)) < 0.0001f && a.PitchDeg == b.PitchDeg;
     private sealed record ResumeEndpoint(SlotId Slot, IMapContext Context, long Instance, Pose Pose,
-        ViewMode Mode, MapStreamDestination Prefetched);
+        ViewMode Mode, IMapArrival Arrival);
 }

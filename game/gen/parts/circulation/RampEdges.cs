@@ -21,7 +21,8 @@ public static class RampEdges
         if (!(width >= 2 * S.RampCurbWidth + 0.6f && width <= 30)) throw new ArgumentOutOfRangeException(nameof(width));
         for (var i = 0; i + 1 < deckLine.Count; i++)
         {
-            var run = V3.Length(new Vector2(deckLine[i + 1].X - deckLine[i].X, deckLine[i + 1].Z - deckLine[i].Z));
+            var delta = new Vector2(deckLine[i + 1].X - deckLine[i].X, deckLine[i + 1].Z - deckLine[i].Z);
+            var run = (float)Math.Sqrt(VectorMath.Dot(delta, delta));
             if (!(run > 0.05f) || Math.Abs(deckLine[i + 1].Y - deckLine[i].Y) > 0.2f * run)
                 throw new ArgumentException("Ramp segments must be at least 5 cm long and no steeper than 1:5.", nameof(deckLine));
         }
@@ -84,7 +85,11 @@ public static class RampEdges
     private static float PlanLength(IReadOnlyList<Vector3> path)
     {
         float total = 0;
-        for (var i = 0; i + 1 < path.Count; i++) total += V3.Length(new Vector2(path[i + 1].X - path[i].X, path[i + 1].Z - path[i].Z));
+        for (var i = 0; i + 1 < path.Count; i++)
+        {
+            var delta = new Vector2(path[i + 1].X - path[i].X, path[i + 1].Z - path[i].Z);
+            total += (float)Math.Sqrt(VectorMath.Dot(delta, delta));
+        }
         return total;
     }
 
@@ -94,7 +99,7 @@ public static class RampEdges
         for (var i = 0; i + 1 < path.Count; i++)
         {
             var a = path[i]; var b = path[i + 1];
-            var d = new Vector2(b.X - a.X, b.Z - a.Z); var length = V3.Length(d);
+            var d = new Vector2(b.X - a.X, b.Z - a.Z); var length = (float)Math.Sqrt(VectorMath.Dot(d, d));
             if (distance > length && i + 2 < path.Count) { distance -= length; continue; }
             var t = Math.Clamp(distance / length, 0, 1);
             return (new(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t, a.Z + (b.Z - a.Z) * t), new(d.Y / length, -d.X / length), new(d.X, 0, d.Y));
@@ -108,7 +113,8 @@ public static class RampEdges
         var trimmed = path.ToArray();
         Vector3 Toward(Vector3 from, Vector3 to)
         {
-            var length = V3.Length(new Vector2(to.X - from.X, to.Z - from.Z));
+            var delta = new Vector2(to.X - from.X, to.Z - from.Z);
+            var length = (float)Math.Sqrt(VectorMath.Dot(delta, delta));
             if (!(length > 2 * by)) throw new ArgumentException("A ramp's end segments are too short for its handrails.", nameof(path));
             var t = by / length;
             return new(from.X + (to.X - from.X) * t, from.Y + (to.Y - from.Y) * t, from.Z + (to.Z - from.Z) * t);

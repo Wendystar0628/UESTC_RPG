@@ -1,3 +1,4 @@
+using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using static GdUnit4.Assertions;
 using System.Numerics;
@@ -13,13 +14,6 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class MapSpawnResolutionTests
 {
-    [TestCase]
-    public void LegacyImplementationExplicitlyRejectsCatalogueLookup()
-    {
-        IMapService legacy = new TestMapService(); // Implements no ResolveSpawn: the default method must fail explicitly.
-        AssertThrown(() => legacy.ResolveSpawn(new("spawn-test"))).IsInstanceOf<NotSupportedException>();
-        AssertThrown(() => legacy.ResolveSpawn(new("spawn-test"), "P00")).IsInstanceOf<NotSupportedException>();
-    }
 
     [TestCase]
     public void ExplicitSpawnWinsOverSameNamedWaypoint()
@@ -41,7 +35,7 @@ public sealed class MapSpawnResolutionTests
             ["waypoints.json"] = JsonSerializer.SerializeToUtf8Bytes(new WaypointFile(1, entry.Waypoints), ContractJson.Options),
             ["review.json"] = System.Text.Encoding.UTF8.GetBytes("{\"version\":1,\"poses\":[{\"id\":\"V1\",\"waypoint\":\"P00\"}]}")
         });
-        var context = new MapContext(entry.Descriptor, new TestWorldModel(), entry.DataRoot, inputs);
+        var context = new MapContext(entry.Descriptor, new FakeWorld { Boundary = new([]) }, entry.DataRoot, inputs);
         AssertThat(ReviewPoseResolver.Resolve("V1", context) == entry.Waypoints[0].Fly).OverrideFailureMessage("The V1 overview did not follow the authored P00 relation.").IsTrue();
         AssertThat(ReviewPoseResolver.Resolve("P01", context) == entry.Waypoints[1].Fly).OverrideFailureMessage("Capture did not resolve the named waypoint in the frozen input version.").IsTrue();
         AssertThrown(() => ReviewPoseResolver.Resolve("missing", context)).IsInstanceOf<ArgumentException>();

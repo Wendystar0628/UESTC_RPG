@@ -30,6 +30,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         _veil = RuntimeKernel.Get<IVeilService>();
         _closed = false;
         _lifetime = _service.Bind(this);
+        ApplyStepRate(_service.Effective);
     }
 
     public override void _ExitTree()
@@ -107,15 +108,23 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     public async Task WaitForDestination(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var stream = RuntimeKernel.Get<IMapStreamState>();
+        var runtime = RuntimeKernel.Get<IMapRuntime>();
         var camera = RuntimeKernel.Get<ICameraRig>();
-        stream.Prefetch(camera.Pose, camera.Mode);
-        var elapsed = 0d;
-        while (!stream.DestinationReady && stream.Error is null && elapsed < 1.2)
-            elapsed += await NextFrame(cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (stream.Error is not null) throw new InvalidOperationException($"Quality destination failed: {stream.Error}");
-        if (!stream.DestinationReady) throw new TimeoutException("Quality destination was not ready within 1.2 seconds.");
+        var arrival = runtime.Arrive(camera.Pose, camera.Mode, RuntimeKernel.Get<IObserverState>().Space);
+        try
+        {
+            var elapsed = 0d;
+            while (!arrival.Done.IsCompleted && elapsed < 1.2)
+                elapsed += await NextFrame(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!arrival.Done.IsCompleted) throw new TimeoutException("Quality destination was not ready within 1.2 seconds.");
+            await arrival.Done;
+            if (!ReferenceEquals(runtime.Arrival, arrival)) throw new OperationCanceledException("The quality destination was replaced.");
+        }
+        finally
+        {
+            if (!arrival.Done.IsCompleted) arrival.Cancel();
+        }
     }
 
     public void Dispatch(QualityView view, in QualityChange change)
@@ -145,11 +154,14 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         {
             RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Quality, new Vector4(DetailScale,
                 view[QualityKnob.FoliageDensity], GrassRadius, 0));
-            RenderingServer.GlobalShaderParameterSet(ShaderGlobals.StepRate, (float)view.StepRate);
+            ApplyStepRate(view);
         }
         catch (Exception error) { errors.Add(error); }
         if (errors.Count > 0) throw new AggregateException("Quality consumers failed.", errors);
     }
+
+    private static void ApplyStepRate(QualityView view) =>
+        RenderingServer.GlobalShaderParameterSet(ShaderGlobals.StepRate, (float)view.StepRate);
 
     public void ApplyQuality(QualityView view, in QualityChange change)
     {

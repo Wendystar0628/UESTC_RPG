@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -25,7 +26,7 @@ public sealed class BuildingPlanKernelTests
             new WorldFeaturePart("osm:way:2", new PolygonGeometry(new PolygonRings(Rect(40, 0, 20, 12))), 7f, 2),
             new WorldFeaturePart("osm:way:1", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), 21f, 6),
         };
-        var entity = Feature("qsh:way:1", Rect(0, 0, 60, 12), 6, 21f, "teaching") with { Parts = parts };
+        var entity = WorldFeatureFixture.Create("qsh:way:1", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 21f, storeys: 6) with { Parts = parts };
         var set = BuildingSet.For(World(entity), 1u);
         AssertThat(set.Plans.Count == 2).OverrideFailureMessage("Expected: " + ("one plan per part, none for the aggregate")).IsTrue();
         AssertThat(set.Plans[0].Key == "osm:way:1" && set.Plans[0].Storeys == 6).OverrideFailureMessage("Expected: " + ("first part by source id, six storeys")).IsTrue();
@@ -45,11 +46,9 @@ public sealed class BuildingPlanKernelTests
             new WorldFeaturePart("osm:way:11", new PolygonGeometry(new PolygonRings(Rect(40, 0, 20, 14))), 8f, 2) { Props = Raw("building", "teaching") },
             new WorldFeaturePart("osm:way:12", new PolygonGeometry(new PolygonRings(Rect(0, 30, 60, 30))), null, null) { Props = Raw("green", "landscape") },
         };
-        var park = new WorldFeature(new FeatureId("qsh:way:9"), FeatureSource.Osm, new DesignKind("poi"),
-            new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 60))))
-        { Parts = parts, Props = Raw("poi", "teaching") };
-        var lawn = new WorldFeature(new FeatureId("qsh:way:8"), FeatureSource.Osm, new DesignKind("green"),
-            new PolygonGeometry(new PolygonRings(Rect(100, 0, 20, 20))));
+        var park = WorldFeatureFixture.Create("qsh:way:9", "poi", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 60))),
+            props: "{\"kind\":\"poi\",\"category\":\"teaching\"}", source: FeatureSource.Osm, parts: parts);
+        var lawn = WorldFeatureFixture.Create("qsh:way:8", "green", new PolygonGeometry(new PolygonRings(Rect(100, 0, 20, 20))), source: FeatureSource.Osm);
         var set = BuildingSet.For(World(park, lawn), 1u);
         AssertThat(set.Plans.Count == 2).OverrideFailureMessage("Expected: " + ("the two building parts of a poi entity, not its green part nor the lawn")).IsTrue();
         AssertThat(set.Plans.All(p => p.Style == Rules.BuildingStyle.Academic)).OverrideFailureMessage("Expected: " + ("style from the part's own category")).IsTrue();
@@ -59,9 +58,9 @@ public sealed class BuildingPlanKernelTests
     public void BaysAndWindowColumnsComeFromThePlanKernel()
     {
         var world = World(
-            Feature("t:dorm", Rect(0, 0, 36, 14), 6, 19.8f, "residence"),
-            Feature("t:l", LShape(100, 0), 4, 15.6f, "research"),
-            Feature("t:court", Courtyard(0, 100), 3, 12f, "teaching"));
+            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 36, 14))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6),
+            WorldFeatureFixture.Create("t:l", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4),
+            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 12f, storeys: 3));
         var set = BuildingSet.For(world, 1u);
         foreach (var plan in set.Plans)
         {
@@ -91,7 +90,7 @@ public sealed class BuildingPlanKernelTests
     [TestCase]
     public void GenericBuildingsLayWindowsOnTheFacadeOutlineOfAPart()
     {
-        var world = RealCampus();
+        var world = RealMapFixture.Load().World;
         var checkedParts = 0;
         var differing = 0;
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))

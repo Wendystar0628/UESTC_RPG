@@ -1,3 +1,4 @@
+using Campus.Gen.Tests.Support;
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -71,7 +72,7 @@ public sealed class StreamLifecycleTests
         typeof(StreamDirector).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(target);
     private static void Set(StreamDirector target, string name, object value) =>
         typeof(StreamDirector).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(target, value);
-    private static IMapContext Context() => new TestMapContext(BackdropInputsTests.Descriptor(), new TestWorldModel(),
+    private static IMapContext Context() => new TestMapContext(BackdropInputsTests.Descriptor(), new FakeWorld { Boundary = new([]) },
         BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>()), "res://fixture/");
     private static BuildContext Build(IMapContext context) => new()
     { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = context.World, Map = context.Descriptor, WorldSeed = 1 };

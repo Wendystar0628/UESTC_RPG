@@ -8,11 +8,8 @@ public sealed record WaterParams
 {
     public static WaterParams Default { get; } = new();
 
-    /// <summary>Grid step of the surface mesh in metres. Must divide <see cref="TileSize"/>.</summary>
+    /// <summary>Grid step of the surface mesh in metres. Must divide <see cref="Campus.Contracts.TileGrid.BaseEdge"/>.</summary>
     public float MeshStep { get; init; } = 3.2f;
-
-    /// <summary>Streaming cell edge (CORE-CONVENTIONS: 64 m quadtree cells).</summary>
-    public float TileSize { get; init; } = 64f;
 
     /// <summary>
     /// Normal water level below the bank top (m), per water body, until ITerrain.WaterY (contract-15, D-180) lands:

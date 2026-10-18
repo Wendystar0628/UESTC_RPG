@@ -69,8 +69,8 @@ public static class MapWorldLoading
             descriptor = descriptor with
             {
                 Bounds = new(new(min.X, descriptor.Roam.FloorY, min.Y), new(max.X, descriptor.Roam.CeilY, max.Y)),
-                TileMin = new((int)MathF.Floor(min.X / 64f), (int)MathF.Floor(min.Y / 64f)),
-                TileMax = new((int)MathF.Ceiling(max.X / 64f) - 1, (int)MathF.Ceiling(max.Y / 64f) - 1)
+                TileMin = TileGrid.At(min),
+                TileMax = new((int)MathF.Ceiling(max.X / TileGrid.BaseEdge) - 1, (int)MathF.Ceiling(max.Y / TileGrid.BaseEdge) - 1)
             };
         }
         return new MapContext(descriptor, loaded.World, entry.DataRoot, sourceInputs);

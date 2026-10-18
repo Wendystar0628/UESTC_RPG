@@ -20,6 +20,7 @@ namespace Campus.Hud;
 /// 四角的常驻件在进入漫游时建、回到开始页时释放。
 /// </summary>
 [KernelNode("hud", Owner = "WP-35")]
+[KernelService(typeof(HudRoot), Owner = "WP-35")]
 public partial class HudRoot : CanvasLayer, IBootParticipant
 {
     private const float IdleFade = 4f;
@@ -48,6 +49,8 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     private Season _lastSeason;
     private bool _initialized, _bound;
 
+    public Control MinimapSlot => _minimapSlot;
+
     public HudRoot()
     {
         Layer = 10;
@@ -72,7 +75,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         }
         _settings = Services.Get<HudSettings>();
         _model = Services.Get<HudModel>();
-        _motion = (MotionPolicy)Services.Get<IMotionSettings>();
+        _motion = Services.Get<MotionPolicy>();
         _control = Services.Get<IWorldControl>();
         _flow = Services.Get<IAppFlow>();
         _audio = Services.Get<IAudioService>();
@@ -81,10 +84,10 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         var colors = UiColors.Load();
         var materials = new UiMaterials(tokens, colors);
         var theme = new UiThemeBuilder(tokens, colors);
-        _kit = new UiKit(tokens, colors, materials, theme, _motion);
+        _clock = Services.Get<UiThemeClock>();
+        _kit = new UiKit(tokens, colors, materials, theme, _motion, _clock);
         _theme = theme;
 
-        _clock = new UiThemeClock(Services.Get<IWorldState>(), _settings, _motion, tokens);
         AddChild(_clock);
 
         _root = new Control

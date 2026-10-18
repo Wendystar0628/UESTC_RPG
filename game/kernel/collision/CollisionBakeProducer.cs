@@ -38,8 +38,8 @@ public sealed class CollisionBakeProducer : IBakeProducer
             sources.Where(s => s.Registration.Kind == "content").Select(s => new CollisionModule(s.Registration.Id, (IContentModule)s.Instance)).ToArray(),
             partCollision.Collision);
         var colliders = builder.Build(context, tile);
-        var origin = CollisionGeometry.Origin(tile);
-        var bounds = new Box3(new(origin.X, context.Map.Bounds.Min.Y, origin.Z), new(origin.X + 64, context.Map.Bounds.Max.Y, origin.Z + 64));
+        var origin = TileGrid.Origin(tile);
+        var bounds = new Box3(new(origin.X, context.Map.Bounds.Min.Y, origin.Y), new(origin.X + TileGrid.BaseEdge, context.Map.Bounds.Max.Y, origin.Y + TileGrid.BaseEdge));
         return new CollisionTile(key, tile, bounds, colliders);
     }
 

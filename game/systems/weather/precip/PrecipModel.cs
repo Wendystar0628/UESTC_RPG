@@ -99,7 +99,7 @@ public sealed class PrecipModel
     public PrecipFrame Step(in WeatherVec w, long instance, double step12, float gust, float density, int stepRate)
     {
         if (!double.IsFinite(step12)) throw new ArgumentOutOfRangeException(nameof(step12));
-        if (stepRate is not (12 or 15)) throw new ArgumentOutOfRangeException(nameof(stepRate));
+        if (!WorldTime.IsStepRate(stepRate)) throw new ArgumentOutOfRangeException(nameof(stepRate));
         var h = HalfSize(w);
         var v = Velocity(w, gust);
         if (!_started || instance != _instance)
@@ -109,7 +109,7 @@ public sealed class PrecipModel
             _lastStep = step12;
         }
         var dt = step12 - _lastStep;
-        if (dt < 0) dt += 480.0;          // anim_time 每 480 s 回绕
+        if (dt < 0) dt += WorldTime.AnimLoopSeconds;
         if (dt > 1.0) dt = 0.0;           // 跳拨动画时钟（--anim、读档）不当作经过了时间
         _lastStep = step12;
         if (dt > 0) _d = Wrap(_d + v * (float)dt, PrecipTuning.WrapPerHalf * h);

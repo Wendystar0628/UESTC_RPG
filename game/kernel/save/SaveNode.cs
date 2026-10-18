@@ -18,7 +18,6 @@ public partial class SaveNode : Node, IBootParticipant
 {
     private SaveService _save = null!;
     private IMapRuntime _mapRuntime = null!;
-    private ICollisionWorld _collision = null!;
     private IVeilPresentation? _veilPresentation;
     private readonly CancellationTokenSource _exit = new();
     private TaskCompletionSource<byte[]?>? _capture;
@@ -47,7 +46,6 @@ public partial class SaveNode : Node, IBootParticipant
                     var slot = explicitWrite ? ParseSlot(saveArg!) : (SlotId?)null;
                     var seed = args.TryGetValue("weather-seed", out var value) ? uint.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : (uint?)null;
                     _mapRuntime = RuntimeKernel.Get<IMapRuntime>();
-                    _collision = RuntimeKernel.Get<ICollisionWorld>();
                     _veilPresentation = RuntimeKernel.Get<IVeilPresentation>();
                     var sections = RuntimeKernel.Services.Entries.Where(e => e.Kind == "save").Select(e =>
                         new SaveSectionRegistration(e.Type.GetCustomAttributes<SaveSectionAttribute>()
@@ -128,33 +126,25 @@ public partial class SaveNode : Node, IBootParticipant
         var readinessWait = new SaveReadinessObservation();
         try
         {
-            await InSaveFrame(() =>
+            var arrival = await InSaveFrame(() =>
             {
                 // Boot has one observation spanning every startup dependency, with the frontispiece policy.
                 if (RuntimeKernel.Get<IAppFlow>().State != AppState.Boot)
                     readinessWait.Attach(RuntimeKernel.Get<IVeilService>().ObserveReadinessWait());
-                _mapRuntime.Prefetch(pose, mode, space);
-                return true;
+                return _mapRuntime.Arrive(pose, mode, space);
             }, cancellation).ConfigureAwait(false);
             while (!await InSaveFrame(() =>
             {
-                if (_mapRuntime.Error is { } error) throw new InvalidOperationException(error);
+                if (arrival.Done.IsCompleted) arrival.Done.GetAwaiter().GetResult();
                 if (_drawFrame <= poseFrame || !_drawCovered || _veilPresentation?.IsCovered != true) return false;
-                // Prefetch invalidates previous warmth. Start only after the native camera had a later process+covered draw.
-                _mapRuntime.BeginWarm();
                 return true;
             }, cancellation).ConfigureAwait(false)) { }
-            while (!await InSaveFrame(() =>
+            await arrival.Done.WaitAsync(cancellation).ConfigureAwait(false);
+            await InSaveFrame(() =>
             {
-                if (_mapRuntime.Error is { } error) throw new InvalidOperationException(error);
-                if (_collision.Error is { } collisionError) throw new InvalidOperationException(collisionError);
-                return _mapRuntime.ResidentReady && _mapRuntime.DestinationReady && _mapRuntime.WarmReady && (mode switch
-                {
-                    ViewMode.Fly => true,
-                    ViewMode.Walk => _collision.Ready(pose.Position, 64),
-                    _ => throw new ArgumentOutOfRangeException(nameof(mode))
-                });
-            }, cancellation).ConfigureAwait(false)) { }
+                if (!ReferenceEquals(_mapRuntime.Arrival, arrival)) throw new OperationCanceledException("The save destination was replaced.");
+                return true;
+            }, cancellation).ConfigureAwait(false);
         }
         finally { readinessWait.Dispose(); }
     }

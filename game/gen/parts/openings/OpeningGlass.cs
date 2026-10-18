@@ -79,11 +79,11 @@ public static class OpeningPlacement
     /// </summary>
     public static Matrix4x4 Frame(Vector3 origin, Vector3 outward)
     {
-        var z = Unit(new(-outward.X, -outward.Y, -outward.Z));
+        var z = VectorMath.Unit(-outward, 1e-9);
         if (Math.Abs(z.Y) > 1e-4) throw new ArgumentException("A facade normal must be horizontal.", nameof(outward));
         // x = up × z, y = z × x (= up for a horizontal z).
-        var x = Unit(new(z.Z, 0, -z.X));
-        var y = new Vector3(z.Y * x.Z - z.Z * x.Y, z.Z * x.X - z.X * x.Z, z.X * x.Y - z.Y * x.X);
+        var x = VectorMath.Unit(new Vector3(z.Z, 0, -z.X), 1e-9);
+        var y = VectorMath.Cross(z, x);
         return new(x.X, x.Y, x.Z, 0, y.X, y.Y, y.Z, 0, z.X, z.Y, z.Z, 0, origin.X, origin.Y, origin.Z, 1);
     }
 
@@ -111,12 +111,5 @@ public static class OpeningPlacement
         }
         var fabric = OpeningStyle.Fabric with { Lit = new(family + ".lit"), Shade = new(family + ".shade") };
         return new PanelParams(glassWidth, glassHeight, depth) { Variation = state, Material = fabric };
-    }
-
-    private static Vector3 Unit(Vector3 v)
-    {
-        var length = Math.Sqrt((double)v.X * v.X + (double)v.Y * v.Y + (double)v.Z * v.Z);
-        if (!(length > 1e-9) || !double.IsFinite(length)) throw new ArgumentException("A direction must be finite and nonzero.");
-        return new((float)(v.X / length), (float)(v.Y / length), (float)(v.Z / length));
     }
 }

@@ -29,7 +29,7 @@ public sealed class AnchorFacingTests
         var site = new StreetSite(world);
         var spot = new Vector2(120f, -65f);
         AssertThat(site.PavingEdgeFacing(spot) is { Gap: > 1f }).OverrideFailureMessage("the notch is not off the paving any more: pick another spot").IsTrue();
-        var original = world.Features.Values.Where(f => f.Kind.Value == "anchor" && Text(f.Props, "form") == "kiosk" && f.Props!.Value.TryGetProperty("groundY", out var y) && y.GetSingle() < 0.5f)
+        var original = world.Features.Values.Where(f => f.Kind.Value == "anchor" && WorldProps.TryText(f.Props, "form") == "kiosk" && f.Props!.Value.TryGetProperty("groundY", out var y) && y.GetSingle() < 0.5f)
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal).First();
         var ring = new List<Vector2> { spot + new Vector2(-0.4f, -1f), spot + new Vector2(-0.4f, 1f), spot + new Vector2(0.4f, 1f), spot + new Vector2(0.4f, -1f) };
         var moved = original with { Geometry = new PolygonGeometry(new PolygonRings(ring, [])), Props = Edit(original.Props!.Value, "yawDeg", 90f) };
@@ -38,8 +38,8 @@ public sealed class AnchorFacingTests
         var item = layout.Items.Single(i => i.Key == "anchor:" + moved.Id.Value);
         Console.WriteLine($"kiosk off paving: yaw {turned.Yaw}, centre {turned.Centre}; diagnostics: {layout.Diagnostics.Single(d => d.Feature == moved.Id && d.Code == "wp13.anchor.turned").Message}");
         var facing = Front(item.Part.At);
-        AssertThat(Vector2.Dot(facing, FurniturePlanner.Facing(turned.Yaw)) > 0.999f && Vector2.Distance(item.Anchor, turned.Centre) < 0.01f).OverrideFailureMessage("the diagnostic does not give the placement").IsTrue();
-        AssertThat(Vector2.Dot(facing, FurniturePlanner.Facing(90f)) < 0.99f).OverrideFailureMessage("the yaw of the data stands, though the apron was off the paving").IsTrue();
+        AssertThat(Vector2.Dot(facing, Angles.Heading(turned.Yaw)) > 0.999f && Vector2.Distance(item.Anchor, turned.Centre) < 0.01f).OverrideFailureMessage("the diagnostic does not give the placement").IsTrue();
+        AssertThat(Vector2.Dot(facing, Angles.Heading(90f)) < 0.99f).OverrideFailureMessage("the yaw of the data stands, though the apron was off the paving").IsTrue();
         var apron = item.Pad ?? throw new InvalidOperationException("no apron");
         var right = new Vector2(-facing.Y, facing.X);
         // The whole outline of the apron is on paving.
@@ -77,12 +77,12 @@ public sealed class AnchorFacingTests
         }
         foreach (var door in world.Interiors.EntrancesNear(Vector3.Zero, 1e5f).Where(e => e.Open))
         {
-            var outward = FurniturePlanner.Facing(door.YawDeg);
+            var outward = Angles.Heading(door.YawDeg);
             var mat = layout.Items.Single(i => i.Key == $"door:{door.Id}:mat");
             var lamp = layout.Items.Single(i => i.Key == $"door:{door.Id}:lamp");
             AssertThat(Vector2.Dot(mat.Anchor - new Vector2(door.Center.X, door.Center.Z), outward) > 0.4f).OverrideFailureMessage($"{door.Id}: mat not in front of the door").IsTrue();
-            // On the entrance floor, never below the paving (flat terrain: 0.15 m).
-            var floor = MathF.Max(door.Center.Y, FurnitureStyle.PavingLift);
+            // On the entrance floor, never below the paving in front of the door.
+            var floor = MathF.Max(door.Center.Y, world.Terrain.HeightAt(mat.Anchor.X, mat.Anchor.Y) + GroundLevels.Paving);
             AssertThat(MathF.Abs(mat.Part.At.M42 - floor) < 0.01f && lamp.Part.At.M42 > floor + 2f).OverrideFailureMessage($"{door.Id}: kit off the entrance floor").IsTrue();
             AssertThat(Vector2.Dot(Front(lamp.Part.At), outward) > 0.999f && lamp.Emitters.Single().Channel == StreetStyle.FirstGroup).OverrideFailureMessage($"{door.Id}: lamp").IsTrue();
         }

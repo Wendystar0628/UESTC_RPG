@@ -59,16 +59,8 @@ public static class CanopyProjection
 
         // The avenue: the rule whose rows are ginkgo; its carriageway carries the full leaf carpet with two worn tracks.
         foreach (var rule in rules.Roads.Where(r => r.Species.Contains("ginkgo")))
-            foreach (var road in world.Network.Roads.Where(l => Name(l) == rule.Name).OrderBy(l => l.Id.Value, StringComparer.Ordinal))
+            foreach (var road in world.Network.Roads.Where(l => (l.Props?.OptionalText("name:zh") ?? l.Props?.OptionalText("name")) == rule.Name).OrderBy(l => l.Id.Value, StringComparer.Ordinal))
                 grid.Corridor(mask1, road.Line.Points, road.Width * 0.5f);
-    }
-
-    private static string? Name(NetworkLine line)
-    {
-        if (line.Props is not { ValueKind: JsonValueKind.Object } props) return null;
-        foreach (var name in new[] { "name:zh", "name" })
-            if (props.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String) return value.GetString();
-        return null;
     }
 
     private readonly record struct Grid(MapRect Rect, float Step, int Width, int Height)

@@ -18,7 +18,7 @@ public partial class FrameClockNode : Node
     }
     public override void _Process(double delta)
     {
-        _elapsed = (_elapsed + delta) % 480d;
+        _elapsed = (_elapsed + delta) % WorldTime.AnimLoopSeconds;
         FrameClock.FadeSeconds = (float)_elapsed;
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalFadeClock, FrameClock.FadeSeconds);
     }

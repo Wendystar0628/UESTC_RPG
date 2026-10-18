@@ -152,15 +152,5 @@ public static partial class PlanGeometry
     }
 
     public static Vector2 Centroid(IReadOnlyList<Vector2> ring)
-    {
-        double x = 0, z = 0, crossSum = 0;
-        for (var i = 0; i < ring.Count; i++)
-        {
-            var a = ring[i]; var b = ring[(i + 1) % ring.Count];
-            var cross = (double)a.X * b.Y - (double)b.X * a.Y;
-            x += (a.X + b.X) * cross; z += (a.Y + b.Y) * cross; crossSum += cross;
-        }
-        if (Math.Abs(crossSum) < 0.000001) throw new ArgumentException("Degenerate ring.");
-        return new((float)(x / (3 * crossSum)), (float)(z / (3 * crossSum)));
-    }
+        => Centroid(new PolygonRings(ring));
 }

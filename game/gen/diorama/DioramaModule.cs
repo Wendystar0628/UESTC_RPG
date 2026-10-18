@@ -28,7 +28,7 @@ public sealed class DioramaModule : IContentModule
         ArgumentNullException.ThrowIfNull(ctx);
         if (Data(ctx) is null) return [];
         var c = Centre(ctx);
-        return [new TileKey((int)MathF.Floor(c.X / 64f), (int)MathF.Floor(c.Y / 64f))];
+        return [TileGrid.At(c)];
     }
 
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod)

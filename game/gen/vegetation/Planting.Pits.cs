@@ -51,8 +51,8 @@ public static partial class Planting
     {
         foreach (var feature in site.World.Features.Values.Where(f => f.Kind.Value == DesignTreeKind).OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
-            if (Text(feature.Props, "planter") != Planter || feature.Geometry is not PointGeometry point) continue;
-            if (Text(feature.Props, "species") is not { } id || !species.TryGet(id, out var info)) continue;
+            if (feature.Props?.OptionalText("planter") != Planter || feature.Geometry is not PointGeometry point) continue;
+            if (feature.Props?.OptionalText("species") is not { } id || !species.TryGet(id, out var info)) continue;
             var p = new Vector2(point.Position.X, point.Position.Z);
             if (trees.Any(t => Vector2.Distance(new(t.Position.X, t.Position.Z), p) < SameTree)) continue;
             Place(site, info!, p, feature.Id.Value, PlantSource.Design, trees, feature.Height is > 0f and var h ? h : null);
@@ -79,7 +79,4 @@ public static partial class Planting
         site.Occupy(p, tree.CrownRadius);
         trees.Add(tree);
     }
-
-    private static string? Text(JsonElement? props, string name) =>
-        props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 }

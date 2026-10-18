@@ -73,14 +73,16 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
                 camera.SetPose(arrival);
             }
             run.Progress = 0.5f;
-            runtime.Prefetch(arrival, body is not null ? ViewMode.Walk : ViewMode.Fly);
-            runtime.BeginWarm();
+            var destination = runtime.Arrive(arrival, body is not null ? ViewMode.Walk : ViewMode.Fly);
+            run.Arrival = destination;
 
             using (veil.ObserveReadinessWait())
             {
-                await waits.WaitUntil(() => run.Cancelled || DestinationReady(), double.PositiveInfinity,
+                await waits.WaitUntil(() => run.Cancelled || destination.Done.IsCompleted, double.PositiveInfinity,
                     "Transit destination did not become resident, warm and collision-ready.");
                 if (run.Cancelled) return;
+                await destination.Done;
+                RequireCurrentArrival(destination);
                 var frames = 0;
                 await waits.WaitUntil(() => run.Cancelled || ++frames > TransitTuning.MinSettleFrames,
                     double.PositiveInfinity, "Transit settle frames.");
@@ -97,6 +99,7 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
                 }
             }
 
+            RequireCurrentArrival(destination);
             if (body is not null) camera.SetPose(body.EyePose);
             run.Progress = 0.75f;
             // Another veil owner (map travel, quality) has taken over; leave the veil to it.
@@ -117,6 +120,7 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
         }
         finally
         {
+            if (run.Arrival is { } pending && !pending.Done.IsCompleted) pending.Cancel();
             run.Finish(TransitResult.Cancelled);
             await ReleaseVeil(run, reason, covered);
             if (ReferenceEquals(_active, run)) _active = null;
@@ -131,10 +135,9 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
         catch (Exception error) { GD.PushError($"[WP-36] veil reveal failed: {error}"); }
     }
 
-    private bool DestinationReady()
+    private void RequireCurrentArrival(IMapArrival arrival)
     {
-        if (runtime.Error is { } error) throw new InvalidOperationException(error);
-        return runtime.ResidentReady && runtime.DestinationReady && runtime.WarmReady;
+        if (!ReferenceEquals(runtime.Arrival, arrival)) throw new OperationCanceledException("Transit arrival was replaced.");
     }
 
     private sealed class TransitRun(TransitKind kind, Pose to, N.Vector3? landOn) : ITransitHandle
@@ -147,11 +150,13 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
         public N.Vector3? LandOn => landOn;
         public bool Cancelled { get; private set; }
         public bool Finished => _done.Task.IsCompleted;
+        public IMapArrival? Arrival { get; set; }
 
         public void Cancel()
         {
             if (_done.Task.IsCompleted) return;
             Cancelled = true;
+            Arrival?.Cancel();
             _done.TrySetResult(TransitResult.Cancelled);
         }
 

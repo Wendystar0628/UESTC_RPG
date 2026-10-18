@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Tests;
 using Campus.Contracts.Vegetation;
 using Campus.Contracts.Maps;
 using Campus.Gen.World;
@@ -25,18 +26,15 @@ public sealed class VegetationBuildTests
 
     private static (string, BuildContext) Load()
     {
-        var root = FindRepository();
-        var data = Path.Combine(root, "game", "data", "maps", "qingshuihe");
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
+        var root = RepositoryFixture.Root;
+        var world = PavementTests.World(false);
         var global = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             [VegetationInputs.SpeciesKey] = File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json"))
         });
         var map = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
-            [VegetationInputs.PlantingKey] = File.ReadAllBytes(Path.Combine(data, "vegetation", "planting.json"))
+            [VegetationInputs.PlantingKey] = RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey]
         });
         var ctx = new BuildContext
         {
@@ -65,8 +63,7 @@ public sealed class VegetationBuildTests
         // Far tiles (128 m and 256 m): the same trees on the far stand-in.
         foreach (var lod in new[] { LodLevel.L1, LodLevel.L2 })
         {
-            var size = 64 << (int)lod;
-            var far = trees.Select(t => new TileKey((int)MathF.Floor(t.Position.X / size), (int)MathF.Floor(t.Position.Z / size)))
+            var far = trees.Select(t => TileGrid.At(t.Position, lod))
                 .Distinct().Select(t => module.Build(ctx, t, lod)).ToArray();
             Records(far, trees, VegPool.Far);
         }
@@ -116,8 +113,7 @@ public sealed class VegetationBuildTests
             .OverrideFailureMessage("all trees have stable unique source IDs").IsTrue();
         foreach (var tile in module.Tiles(ctx).Take(40))
         {
-            var ids = trees.Where(t => (int)MathF.Floor(t.Position.X / TreeColliders.TileSize) == tile.X
-                && (int)MathF.Floor(t.Position.Z / TreeColliders.TileSize) == tile.Z)
+            var ids = trees.Where(t => TileGrid.At(t.Position) == tile)
                 .Select(t => "object/vegetation/" + t.Key).ToHashSet(StringComparer.Ordinal);
             var traces = sources.Where(t => ids.Contains(t.SourceId)).ToArray();
             var built = Flatten(module.Build(ctx, tile, LodLevel.L0).Instances);
@@ -140,7 +136,7 @@ public sealed class VegetationBuildTests
         var heaviest = module.Tiles(ctx).Select(t => module.Build(ctx, t, LodLevel.L0)).ToArray();
         var l0 = heaviest.Max(Weigh);
         var draws = heaviest.Max(o => o.Instances.Sum(s => s.Prototype.Surfaces.Count));
-        var l1 = trees.Select(t => new TileKey((int)MathF.Floor(t.Position.X / 128f), (int)MathF.Floor(t.Position.Z / 128f)))
+        var l1 = trees.Select(t => TileGrid.At(t.Position, LodLevel.L1))
             .Distinct().Max(t => Weigh(module.Build(ctx, t, LodLevel.L1)));
         Console.WriteLine($"vegetation budget: L0 cell {l0}, L1 tile {l1}, draws {draws}; trees {trees.Count}");
         AssertThat(l0 <= module.Budget.TrianglesL0 && l1 <= module.Budget.TrianglesL1 && draws <= module.Budget.DrawCalls)
@@ -211,14 +207,4 @@ public sealed class VegetationBuildTests
         return new PaletteCatalog(new PaletteRegistry(entries), []);
     }
 
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
-    }
 }

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Ground;
 
@@ -91,7 +92,7 @@ internal sealed class GroundPaving
         if (plazas.Length > 0)
             foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
             {
-                if (feature.Kind.Value != "building" || GroundClassifier.Text(feature.Props, "category") != LibraryCategory) continue;
+                if (feature.Kind.Value != "building" || WorldProps.TryText(feature.Props, "category") != LibraryCategory) continue;
                 if (world.Interiors.Get(feature.Id) is not { } entry) continue;
                 foreach (var entrance in entry.Entrances.Where(e => e.Open).OrderBy(e => e.Id, StringComparer.Ordinal))
                 {
@@ -109,10 +110,9 @@ internal sealed class GroundPaving
     /// <summary>First plaza on the entrance's outward axis, the axis entry point and the run across that plaza.</summary>
     private static (GroundShape Shape, float Run, PavingFrame Frame)? Forecourt(GroundShape[] plazas, EntranceDecl entrance)
     {
-        var yaw = entrance.YawDeg * (MathF.PI / 180f);
         // Yaw 0 = north (−Z), 90 = east (+X) (WLD-INTERIORS).
-        var axis = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
-        if (!float.IsFinite(axis.X) || !float.IsFinite(axis.Y) || axis.LengthSquared() < 0.5f) return null;
+        var axis = Angles.Heading(entrance.YawDeg);
+        if (!VectorMath.Finite(axis) || axis.LengthSquared() < 0.5f) return null;
         axis = Vector2.Normalize(axis);
         var door = new Vector2(entrance.Center.X, entrance.Center.Z);
         for (var t = 0f; t <= Reach; t += Step)

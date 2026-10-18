@@ -121,8 +121,7 @@ public sealed partial class StageGateDriver(IStageGateHost host)
                 await CaptureSequence.RunAsync(host.Stage, host.Readiness, AppBoot.Options, host.SyncView, () =>
                 {
                     host.CheckActive();
-                    return host.Ready &&
-                        host.MapRuntime.ResidentReady && host.MapRuntime.DestinationReady && host.MapRuntime.WarmReady;
+                    return host.Ready;
                 }, host.Lifetime, pose =>
                 {
                     if (!Kernel.Get<ICameraPoseValidator>().IsLegal(pose, outsideBuffer: true))

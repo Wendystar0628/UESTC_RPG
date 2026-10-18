@@ -5,10 +5,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Tests;
 using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using GdUnit4;
@@ -23,31 +22,23 @@ namespace Campus.Gen.Vegetation.Tests;
 [TestSuite]
 public sealed class PavementTests
 {
-    /// <summary>
-    /// The centre line of 0h-b's second Dangui Road walk (design:north-dangui-walk-w2, 021ba14), copied as a fixture so the case is
-    /// covered whether or not that overlay is in the map yet.
-    /// </summary>
-    private const string DanguiWalkW2 = "[[-23.09, -628.26], [-22.13, -630.805], [-21.997, -631.157], [-20.365, -635.483], [-18.6, -640.162], [-16.836, -644.84], " +
-        "[-15.071, -649.518], [-13.306, -654.196], [-11.541, -658.874], [-9.776, -663.553], [-8.012, -668.231], [-6.247, -672.909], [-4.482, -677.587], " +
-        "[-2.7, -682.31], [-2.184, -683.675], [-0.709, -687.165], [1.239, -691.77], [3.187, -696.375], [5.135, -700.98], [7.083, -705.585], [9.031, -710.189], " +
-        "[10.98, -714.794], [12.928, -719.399], [14.876, -724.004], [16.824, -728.609], [18.772, -733.214], [20.72, -737.819], [22.812, -742.742], " +
-        "[22.978, -743.127], [25.46, -747.556], [27.511, -751.172], [27.628, -751.465], [29.414, -755.758], [31.342, -760.371], [33.271, -764.984], " +
-        "[35.199, -769.598], [37.127, -774.211], [39.055, -778.824], [40.984, -783.437], [42.912, -788.051], [44.84, -792.664], [46.769, -797.277], " +
-        "[48.697, -801.89], [50.625, -806.503], [52.553, -811.117], [54.482, -815.73], [56.41, -820.343], [58.338, -824.956], [60.266, -829.569], [61.728, -833.067]]";
+    private static NetworkLine DanguiWalk => Overlaid.Value.Network.Roads.Single(r => r.Id.Value == "design:north-dangui-walk-w2");
 
-    private static readonly string[] DanguiOsmTrees = ["qsh:source:node:9633125237", "qsh:source:node:9633125264"];
+    private static IEnumerable<string> DanguiOsmTrees => BareLayout.Value.Trees
+        .Where(t => t.Source == PlantSource.OsmTree && Off(DanguiWalk, new(t.Position.X, t.Position.Z)) < DanguiWalk.Width * 0.5f + Planting.TrunkClearance)
+        .Select(t => t.Key);
 
     private static readonly Lazy<(SpeciesTable Species, PlantingRules Rules)> Rules = new(() =>
     {
         var species = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(Root, "game", "data", "vegetation", "species.json")));
-        return (species, PlantingRules.Parse(File.ReadAllBytes(Path.Combine(Root, "game", "data", "maps", "qingshuihe", "vegetation", "planting.json")), species));
+        return (species, PlantingRules.Parse(RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey].Span, species));
     });
 
     private static readonly Lazy<IWorldModel> Bare = new(() => Load(false));
     private static readonly Lazy<IWorldModel> Overlaid = new(() => Load(true));
     private static readonly Lazy<PlantingLayout> BareLayout = new(() => Plant(Bare.Value));
 
-    private static string Root => FindRepository();
+    private static string Root => RepositoryFixture.Root;
 
     [TestCase]
     public void NoTreeStandsOnHardPavementAndOnlyThoseTreesGiveWay()
@@ -111,13 +102,14 @@ public sealed class PavementTests
     }
 
     [TestCase]
-    public void TheTwoOsmTreesOnDanguiWalkW2GiveWay()
+    public void TheOsmTreesOnDanguiWalkW2GiveWay()
     {
+        if (!DanguiOsmTrees.Any()) throw new InvalidOperationException("the authored walk has no OSM trees to exercise");
         var bare = BareLayout.Value;
         foreach (var id in DanguiOsmTrees)
             if (bare.Trees.All(t => t.Key != id) || bare.Avoided.Any(a => a.Tree.Key == id))
                 throw new InvalidOperationException($"{id} is not a planted OSM tree before the walk");
-        var world = Load(false, ("fixture-dangui-w2.d/0000-fixture.json", Overlay(Road("design:fixture-dangui-walk-w2", "footway", 2.5f, DanguiWalkW2))));
+        var world = Load(false, ("fixture-dangui-w2.d/0000-fixture.json", Overlay(Road("design:fixture-dangui-walk-w2", "footway", DanguiWalk.Width, DanguiWalk.Line.Points))));
         var layout = Verify(world, bare, "w2");
         foreach (var id in DanguiOsmTrees)
         {
@@ -130,7 +122,7 @@ public sealed class PavementTests
     }
 
     [TestCase]
-    public void TheTwoOsmTreesOnDanguiWalkW2GiveWayInTheMap()
+    public void TheOsmTreesOnDanguiWalkW2GiveWayInTheMap()
     {
         // The same case on the map as the kernel loads it, now that 0h-b's walks are in the overlays.
         var layout = Plant(Overlaid.Value);
@@ -138,9 +130,9 @@ public sealed class PavementTests
         {
             var given = layout.Avoided.SingleOrDefault(a => a.Tree.Key == id);
             if (given is null || given.Tree.Source != PlantSource.OsmTree || layout.Trees.Any(t => t.Key == id))
-                throw new InvalidOperationException($"{id} did not give way to design:north-dangui-walk-w2");
+                throw new InvalidOperationException($"{id} did not give way to {DanguiWalk.Id.Value}");
         }
-        Console.WriteLine($"pavement (map): {layout.Avoided.Count(a => a.Tree.Key.StartsWith("qsh:source:node:96331252", StringComparison.Ordinal))} OSM trees of the Dangui Road walks give way");
+        Console.WriteLine($"pavement (map): {DanguiOsmTrees.Count()} OSM trees on the authored Dangui Road walk give way");
     }
 
     [TestCase]
@@ -194,7 +186,7 @@ public sealed class PavementTests
         // layout's Avoided list at its place in the planting order, none is dropped before it is planted, none stands.
         var bare = BareLayout.Value;
         const string id = "design:fixture-dangui-walk-w2";
-        var world = Load(false, ("fixture-dangui-w2-both.d/0000-fixture.json", Overlay(Road(id, "footway", 2.5f, DanguiWalkW2))));
+        var world = Load(false, ("fixture-dangui-w2-both.d/0000-fixture.json", Overlay(Road(id, "footway", DanguiWalk.Width, DanguiWalk.Line.Points))));
         RequireFiled(world, id, line: true, feature: true);
         var layout = Verify(world, bare, "w2 filed twice");
         var walk = world.Network.Roads.Single(r => r.Id.Value == id);
@@ -286,15 +278,9 @@ public sealed class PavementTests
         SameRecords(a.Avoided.Select(a => a.Tree), b.Avoided.Select(a => a.Tree)) && a.PitsHeld == b.PitsHeld;
 
     // Compare every stored field of the planted instances.
-    internal static bool SameRecords(IEnumerable<PlantedTree> a, IEnumerable<PlantedTree> b) => Fingerprint(a) == Fingerprint(b) &&
-        a.Select(t => (Bits(t.Height), Bits(t.Seed), Bits(t.WindPos))).SequenceEqual(b.Select(t => (Bits(t.Height), Bits(t.Seed), Bits(t.WindPos))));
+    internal static bool SameRecords(IEnumerable<PlantedTree> a, IEnumerable<PlantedTree> b) => a.SequenceEqual(b);
 
-    private static float Off(NetworkLine line, Vector2 p)
-    {
-        var best = float.MaxValue;
-        for (var i = 1; i < line.Line.Points.Count; i++) best = MathF.Min(best, PlanGeometry.SegmentDistanceSquared(p, line.Line.Points[i - 1], line.Line.Points[i]));
-        return MathF.Sqrt(best);
-    }
+    private static float Off(NetworkLine line, Vector2 p) => (float)PlanGeometry.Project(line.Line.Points, p).Distance;
 
     /// <summary>A world with some of its network roads and features left out, to file a walk one way only.</summary>
     private static FakeWorld Filed(IWorldModel inner, Func<NetworkLine, bool> keepRoad, Func<WorldFeature, bool> keepFeature) => new(inner)
@@ -381,14 +367,11 @@ public sealed class PavementTests
 
     internal static IWorldModel Load(bool overlays, params (string Name, string Text)[] extra)
     {
-        var data = Path.Combine(Root, "game", "data", "maps", "qingshuihe");
-        var names = new[] { "campus.json", "network.json", "interiors.json", "map.json" }.AsEnumerable();
-        if (overlays) names = names.Concat(Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
-                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).Select(p => Path.GetRelativePath(data, p).Replace('\\', '/')));
-        var files = names.OrderBy(name => name, StringComparer.Ordinal).ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
+        var files = RealMapFixture.ReadTextFiles();
+        if (!overlays)
+            foreach (var key in files.Keys.Where(key => key.StartsWith("overlay/", StringComparison.Ordinal)).ToArray()) files.Remove(key);
         foreach (var (name, text) in extra) files["overlay/" + name] = text;
-        return WorldModelLoader.Load(new("qingshuihe"), files).World;
+        return WorldModelLoader.Load(RealMapFixture.Entry().Descriptor.Id, files).World;
     }
 
     internal static string Overlay(params string[] ops) =>
@@ -403,27 +386,6 @@ public sealed class PavementTests
 
     internal static string F(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
-    internal static string Fingerprint(IEnumerable<PlantedTree> trees)
-    {
-        var text = new StringBuilder();
-        foreach (var t in trees)
-            text.Append(string.Join('|', t.Key, t.Species.Id, t.Variant.ToString(CultureInfo.InvariantCulture), Bits(t.Position.X), Bits(t.Position.Y),
-                Bits(t.Position.Z), Bits(t.Yaw), Bits(t.Scale), t.Wash ? "1" : "0", ((int)t.Source).ToString(CultureInfo.InvariantCulture))).Append('\n');
-        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())));
-    }
-
-    private static string Bits(float value) => BitConverter.SingleToInt32Bits(value).ToString("x8", CultureInfo.InvariantCulture);
-
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
-    }
 
     /// <summary>
     /// The hard pavement and tree pits of a world, read again from its features and network the way WP-15 paves them: the
@@ -447,14 +409,14 @@ public sealed class PavementTests
             {
                 foreach (var (props, geometry) in RoadSources(feature))
                 {
-                    var type = Text(props, "roadType") ?? Text(props, "highway");
+                    var type = props?.OptionalText("roadType") ?? props?.OptionalText("highway");
                     if (type is null || !Paved.Contains(type)) continue;
                     switch (geometry)
                     {
                         case PolygonGeometry polygon: census.Paving.Add(new(feature.Id.Value, polygon.Rings, null, 0f)); break;
                         case MultiPolygonGeometry multi: census.Paving.AddRange(multi.Polygons.Select(rings => new Pave(feature.Id.Value, rings, null, 0f))); break;
                         case PolylineGeometry line:
-                            var width = Number(props, "width") is { } w and > 0f ? w : type switch { "path" => 2f, "cycleway" => 3f, "pedestrian" => 5f, _ => 2.5f };
+                            var width = props?.OptionalNumber("width") is { } w and > 0f ? w : type switch { "path" => 2f, "cycleway" => 3f, "pedestrian" => 5f, _ => 2.5f };
                             census.Paving.Add(new(feature.Id.Value, null, line.Line.Points, width * 0.5f));
                             break;
                     }
@@ -465,14 +427,14 @@ public sealed class PavementTests
                     case PolygonGeometry polygon: census.Pits.Add(new(polygon.Rings, default, 0f)); break;
                     case MultiPolygonGeometry multi: census.Pits.AddRange(multi.Polygons.Select(rings => new Pit(rings, default, 0f))); break;
                     case PointGeometry point:
-                        var radius = Number(feature.Props, "radius") is { } r and > 0f ? r : Number(feature.Props, "size") is { } size and > 0f ? size * 0.5f : 0.9f;
+                        var radius = feature.Props?.OptionalNumber("radius") is { } r and > 0f ? r : feature.Props?.OptionalNumber("size") is { } size and > 0f ? size * 0.5f : 0.9f;
                         census.Pits.Add(new(null, new(point.Position.X, point.Position.Z), radius));
                         break;
                 }
             }
             foreach (var road in world.Network.Roads)
             {
-                var type = Text(road.Props, "roadType") ?? Text(road.Props, "highway");
+                var type = road.Props?.OptionalText("roadType") ?? road.Props?.OptionalText("highway");
                 if (type is not null && Paved.Contains(type)) census.Paving.Add(new(road.Id.Value, null, road.Line.Points, MathF.Max(road.Width, 2f) * 0.5f));
             }
             return census;
@@ -510,11 +472,5 @@ public sealed class PavementTests
         /// <summary>A trunk here gives way: on pavement or within the trunk clearance of it, and in no pit.</summary>
         public bool GivesWay(Vector2 p) => !InPit(p) && Paving.Any(pave => Within(pave, p, Planting.TrunkClearance));
 
-        private static string? Text(JsonElement? props, string name) =>
-            props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
-
-        private static float? Number(JsonElement? props, string name) =>
-            props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number &&
-            v.TryGetSingle(out var number) && float.IsFinite(number) ? number : null;
     }
 }

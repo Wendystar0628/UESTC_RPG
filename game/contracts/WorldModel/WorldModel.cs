@@ -78,6 +78,8 @@ public interface IWorldModel
     /// <summary>Actual campus boundary from source geometry, including holes; never the map's bounding rectangle.</summary>
     PolygonRings Boundary { get; }
     IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; }
+    /// <summary>Authored terrain operations indexed by their stable overlay IDs.</summary>
+    IReadOnlyDictionary<string, TerrainOp> TerrainOperations { get; }
     WorldNetwork Network { get; }
     ISpatialIndex Spatial { get; }
     IInteriorIndex Interiors { get; }

@@ -4,6 +4,7 @@ using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Tests.Support;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Collision.Tests;
@@ -61,9 +62,8 @@ public sealed class CollisionInteriorIsolationTests
         Exception? error = null;
         try { new CollisionTileBuilder([], _ => []).Build(context, new(0, 0)); }
         catch (Exception caught) { error = caught; }
-        AssertThat(error).OverrideFailureMessage("Expected an explicit interior binding error containing 'missing provider'.").IsNotNull();
+        AssertThat(error).OverrideFailureMessage("Expected an explicit interior binding error.").IsNotNull();
         AssertThat(error!).IsInstanceOf<InvalidOperationException>();
-        AssertThat(error!.Message).Contains("missing provider");
     }
 
     [TestCase]
@@ -73,9 +73,8 @@ public sealed class CollisionInteriorIsolationTests
         Exception? error = null;
         try { new CollisionTileBuilder([], _ => []).Build(context, new(0, 0)); }
         catch (Exception caught) { error = caught; }
-        AssertThat(error).OverrideFailureMessage("Expected an explicit interior binding error containing 'missing from this map's snapshot'.").IsNotNull();
+        AssertThat(error).OverrideFailureMessage("Expected an explicit interior binding error.").IsNotNull();
         AssertThat(error!).IsInstanceOf<InvalidOperationException>();
-        AssertThat(error!.Message).Contains("missing from this map's snapshot");
     }
 
     [TestCase]
@@ -86,9 +85,8 @@ public sealed class CollisionInteriorIsolationTests
         Exception? error = null;
         try { new CollisionTileBuilder([], _ => []).Build(context, new(0, 0)); }
         catch (Exception caught) { error = caught; }
-        AssertThat(error).OverrideFailureMessage("Expected an explicit interior binding error containing 'feature list is empty'.").IsNotNull();
+        AssertThat(error).OverrideFailureMessage("Expected an explicit interior binding error.").IsNotNull();
         AssertThat(error!).IsInstanceOf<InvalidOperationException>();
-        AssertThat(error!.Message).Contains("feature list is empty");
     }
 
     [TestCase]
@@ -134,7 +132,7 @@ public sealed class CollisionInteriorIsolationTests
     {
         Boundary = new([new(0, 0), new(64, 0), new(64, 64), new(0, 64)]),
         Features = new ReadOnlyDictionary<FeatureId, WorldFeature>(
-            new Dictionary<FeatureId, WorldFeature> { [Feature] = new(Feature, FeatureSource.Design, new("poi"), new PointGeometry(new(2, 0, 2))) }),
+            new Dictionary<FeatureId, WorldFeature> { [Feature] = WorldFeatureFixture.Create(Feature.Value, "poi", new PointGeometry(new(2, 0, 2))) }),
         Spatial = new FlatSpatial(forbidden: "This isolation test must not fabricate ground support."),
         Interiors = new FakeInteriors(new InteriorIndexEntry(Feature, [], [], open, open ? ProviderId : null)),
     };

@@ -8,8 +8,8 @@ namespace Campus.Flow;
 
 public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil, ISaveService saves,
     IMapService maps, IWorldState world, IWorldControl control, IRuleset rules,
-    IMotionSettings motion, IViewControl view, ICollisionWorld collision, ICinematicPlayback playback,
-    IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime, IMapStreamState streamState,
+    IMotionSettings motion, IViewControl view, ICinematicPlayback playback,
+    IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime,
     ICinematicSettings? settings = null) : IAppFlow
 {
     internal Action<string>? DiagnosticSink { get; init; }
@@ -21,7 +21,9 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     private bool _leaveSaved;
     private Pose _leavePose;
     private int _leaveFlow;
-    private bool _titlePrepared;
+    private IMapArrival? _titleArrival;
+    private bool TitlePrepared => _titleArrival is { } arrival &&
+        ReferenceEquals(mapRuntime.Arrival, arrival) && arrival.Done.IsCompletedSuccessfully;
     private SlotId? _preview;
     private bool _livePreview;
     private bool _previewNeedsVeil;
@@ -260,7 +262,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
     {
         if (restore.RestoreFaulted) return HoldRestoreFailure();
         if (!In(AppState.Playing)) return Task.CompletedTask;
-        _leaveSaved = false; _titlePrepared = false; _leavePose = camera.Pose; _leaveFlow = world.Flow.Rate; HoldInput(); Change(AppState.Leaving);
+        _leaveSaved = false; _titleArrival = null; _leavePose = camera.Pose; _leaveFlow = world.Flow.Rate; HoldInput(); Change(AppState.Leaving);
         _leaving = ReturnToTitleCore(); return _leaving;
     }
     private async Task ReturnToTitleCore()
@@ -282,7 +284,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
                 control.SetFlow(0);
                 if (!_quitting) Change(AppState.Title);
             }
-            if (!_quitting && (!_leaveSaved || _titlePrepared) && mapRuntime.Error is null && mapRuntime.WarmReady)
+            if (!_quitting && (!_leaveSaved || TitlePrepared) && mapRuntime.Arrival?.Done.IsCompletedSuccessfully == true)
                 await veil.Reveal(VeilReason.Cinematic, FlowTuning.RevealSeconds);
         }
     }
@@ -303,7 +305,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IVeilService veil,
             playback.Clear();
         }
         else await veil.Cover(VeilReason.Cinematic, FlowTuning.CoverSeconds);
-        if (!_titlePrepared) await PrepareTitleDestination();
+        if (!TitlePrepared) await PrepareTitleDestination();
         camera.SetPose(TitlePose());
         // This is the existing world instance: do not reload it just to display T0.
         // Quit from Title never flushes; the playable pose remains in the saved metadata.

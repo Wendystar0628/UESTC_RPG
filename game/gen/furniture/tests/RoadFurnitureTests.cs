@@ -57,9 +57,9 @@ public sealed class RoadFurnitureTests
         {
             var p = (RampParams)ramp.Part.Params;
             var back = ramp.Anchor - Front(ramp.Part.At) * (p.Depth * 0.5f);
-            var kerb = road.Min(l => Distance(back, l) - StreetSite.HalfWidth(l));
+            var kerb = road.Min(l => (float)PlanGeometry.Project(l.Line.Points, back).Distance - StreetSite.HalfWidth(l));
             AssertThat(MathF.Abs(kerb) < 0.05f).OverrideFailureMessage($"{ramp.Key}: its top edge is {kerb:F2} m off the kerb").IsTrue();
-            AssertThat(road.Min(l => Distance(ramp.Anchor + Front(ramp.Part.At) * 2f, l)) < road.Min(l => Distance(ramp.Anchor, l))).OverrideFailureMessage($"{ramp.Key} does not face the road").IsTrue();
+            AssertThat(road.Min(l => (float)PlanGeometry.Project(l.Line.Points, ramp.Anchor + Front(ramp.Part.At) * 2f).Distance) < road.Min(l => (float)PlanGeometry.Project(l.Line.Points, ramp.Anchor).Distance)).OverrideFailureMessage($"{ramp.Key} does not face the road").IsTrue();
         }
         for (var i = 0; i < ramps.Count; i++)
             for (var k = i + 1; k < ramps.Count; k++)

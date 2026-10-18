@@ -172,20 +172,21 @@ public static class GroundMasks
         var step = set.MetersPerPixel;
         var ratio = set.TerrainMetersPerPixel / step;
         var weight = 1f / (ratio * ratio);
-        var tileCells = (int)(GroundLod.TileSize / step);
-        if (tileCells * step != GroundLod.TileSize) throw new ArgumentOutOfRangeException(nameof(set), "Mask pixels must tile 64 m.");
+        var tileCells = (int)(TileGrid.BaseEdge / step);
+        if (tileCells * step != TileGrid.BaseEdge) throw new ArgumentOutOfRangeException(nameof(set), "Mask pixels must tile 64 m.");
         // Sample pixel centres: a lattice offset by half a pixel, laid out in 64 m tiles.
-        var tx0 = (int)MathF.Floor(set.Rect.Min.X / GroundLod.TileSize);
-        var tz0 = (int)MathF.Floor(set.Rect.Min.Y / GroundLod.TileSize);
-        var tx1 = (int)MathF.Ceiling(set.Rect.Max.X / GroundLod.TileSize);
-        var tz1 = (int)MathF.Ceiling(set.Rect.Max.Y / GroundLod.TileSize);
+        var first = TileGrid.At(set.Rect.Min);
+        var tx0 = first.X;
+        var tz0 = first.Z;
+        var tx1 = (int)MathF.Ceiling(set.Rect.Max.X / TileGrid.BaseEdge);
+        var tz1 = (int)MathF.Ceiling(set.Rect.Max.Y / TileGrid.BaseEdge);
         for (var tz = tz0; tz < tz1; tz++)
             for (var tx = tx0; tx < tx1; tx++)
             {
-                var tile = new GroundTile(tx * GroundLod.TileSize + step * 0.5f, tz * GroundLod.TileSize + step * 0.5f,
-                    GroundLod.TileSize, step);
+                var tile = new GroundTile(tx * TileGrid.BaseEdge + step * 0.5f, tz * TileGrid.BaseEdge + step * 0.5f,
+                    TileGrid.BaseEdge, step);
                 var grid = TerrainGrid.For(terrain, new TileKey(tx, tz), LodLevel.L0,
-                    new GroundTile(tx * GroundLod.TileSize, tz * GroundLod.TileSize, GroundLod.TileSize, 1f));
+                    new GroundTile(tx * TileGrid.BaseEdge, tz * TileGrid.BaseEdge, TileGrid.BaseEdge, 1f));
                 var field = TileField.Build(layout, tile, section, grid);
                 var mesher = new GroundMesher(field, section, LodLevel.L1, layout, grid, new MeshSink());
                 for (var j = 0; j < tileCells; j++)

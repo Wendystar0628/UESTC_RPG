@@ -77,11 +77,11 @@ public sealed partial class StageGateDriver
             throw new InvalidOperationException("The second process did not fully restore its saved world.");
 
         if (world.Flow.Rate != 0) throw new InvalidOperationException("The restored core snapshot is not paused.");
-        var maps = host.MapRuntime;
-        await CaptureBarrier.WaitForReadyAsync(stage, host.Readiness, () =>
+        var arrival = host.MapRuntime.Arrival ?? throw new InvalidOperationException("Core lifecycle has no map arrival.");
+        await CaptureBarrier.WaitForReadyAsync(stage, host.Readiness, arrival, () =>
         {
             host.CheckActive();
-            return maps.ResidentReady && maps.DestinationReady && maps.WarmReady;
+            return true;
         }, host.Lifetime, includeCanvas: false);
         var output = AppBoot.Options.Value("out");
         Directory.CreateDirectory(output);

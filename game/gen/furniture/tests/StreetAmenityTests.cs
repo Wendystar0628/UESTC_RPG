@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Campus.Contracts;
+using Campus.Tests;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
@@ -57,8 +58,7 @@ public sealed class StreetAmenityTests
         NetworkLine Walk(string id, Vector2 a, Vector2 b) => new(new($"design:furniture-test-{id}"), new Polyline([a, b]), 2.5f) { Props = props };
         List<NetworkLine> Star(string tag, Vector2 at) => [Walk(tag + "-w", at, at + new Vector2(-14f, 0f)), Walk(tag + "-e", at, at + new Vector2(14f, 0f)), Walk(tag + "-n", at, at + new Vector2(0f, 14f))];
         var landmarkAt = spot + new Vector2(6f, -20f);
-        var landmark = new WorldFeature(new("design:furniture-test-landmark"), FeatureSource.Design, new("poi"), new PointGeometry(new Vector3(landmarkAt.X, 0f, landmarkAt.Y)))
-        { Props = JsonSerializer.SerializeToElement(new { category = "landscape", subcategory = "landmark" }), Bounds = new(new(landmarkAt.X, 0f, landmarkAt.Y), new(landmarkAt.X, 0f, landmarkAt.Y)) };
+        var landmark = WorldFeatureFixture.Create("design:furniture-test-landmark", "poi", new PointGeometry(new Vector3(landmarkAt.X, 0f, landmarkAt.Y)), JsonSerializer.Serialize(new { category = "landscape", subcategory = "landmark" }));
         int Signs(IWorldModel world) => FurniturePlanner.Build(world, null, Inputs()).Count(FurnitureKind.Signpost);
         var baseline = Signs(open);
         var one = Signs(MadeWorld(open, Star("a", spot), [landmark]));
@@ -87,7 +87,7 @@ public sealed class StreetAmenityTests
         {
             var doorId = fountain.Key["fountain:".Length..];
             var entry = world.Features.Values.Select(f => world.Interiors.Get(f.Id)).First(e => e is not null && e.Entrances.Any(d => d.Id == doorId))!;
-            var kinds = world.Features.Values.Where(f => world.Interiors.Get(f.Id)?.Feature == entry.Feature).Select(f => Text(f.Props, "category") ?? "").ToList();
+            var kinds = world.Features.Values.Where(f => world.Interiors.Get(f.Id)?.Feature == entry.Feature).Select(f => WorldProps.TryText(f.Props, "category") ?? "").ToList();
             AssertThat(kinds.Any(FurnitureStyle.FountainCategories.Contains)).OverrideFailureMessage($"{fountain.Key} is not by a sports or teaching building ({string.Join(", ", kinds)})").IsTrue();
             AssertThat(buildings.Add(entry.Feature)).OverrideFailureMessage($"{fountain.Key}: a second fountain for one building").IsTrue();
             var door = entry.Entrances.Where(d => d.Open).OrderBy(d => d.Id, StringComparer.Ordinal).First();
@@ -95,7 +95,7 @@ public sealed class StreetAmenityTests
             var plan = new Vector2(door.Center.X, door.Center.Z);
             var away = fountain.Anchor - plan;
             AssertThat(away.Length() is >= FurnitureStyle.FountainNear - 1.5f and <= FurnitureStyle.FountainFar + 1.5f).OverrideFailureMessage($"{fountain.Key} stands {away.Length():F1} m from its door").IsTrue();
-            AssertThat(Vector2.Dot(away, FurniturePlanner.Facing(door.YawDeg)) > 0f).OverrideFailureMessage($"{fountain.Key} stands behind its door").IsTrue();
+            AssertThat(Vector2.Dot(away, Angles.Heading(door.YawDeg)) > 0f).OverrideFailureMessage($"{fountain.Key} stands behind its door").IsTrue();
             AssertThat(fountain.Pad is not null && site.PavingEdgeFacing(fountain.Anchor + Front(fountain.Part.At) * 0.6f) is { Gap: < 0.3f }).OverrideFailureMessage($"{fountain.Key} is not on a bay facing the paving").IsTrue();
         }
     }
@@ -131,7 +131,7 @@ public sealed class StreetAmenityTests
             AssertThat(machines[0].Pad is { } bay && MathF.Abs(bay.Top - machines[0].Part.At.M42) < 0.01f).OverrideFailureMessage($"{group.Key} is off its bay").IsTrue();
             AssertThat(machines.All(m => Serves(m, FurnitureStyle.ServiceFront))).OverrideFailureMessage($"{group.Key} does not face the paving or the road").IsTrue();
             var centre = machines.Aggregate(Vector2.Zero, (a, m) => a + m.Anchor) / machines.Count;
-            AssertThat(axis.All(l => Distance(centre, l) >= FurnitureStyle.MainAxisClear - FurnitureStyle.ServiceReach - 2f)).OverrideFailureMessage($"{group.Key} stands on the main axis").IsTrue();
+            AssertThat(axis.All(l => (float)PlanGeometry.Project(l.Line.Points, centre).Distance >= FurnitureStyle.MainAxisClear - FurnitureStyle.ServiceReach - 2f)).OverrideFailureMessage($"{group.Key} stands on the main axis").IsTrue();
             var siteId = group.Key["vending:".Length..];
             if (world.Features.TryGetValue(new(siteId), out var feature) && feature.Kind.Value == "clusterGate")
             {
@@ -188,10 +188,9 @@ public sealed class StreetAmenityTests
         var road = new NetworkLine(new("design:furniture-test-drive"), new Polyline([spot + new Vector2(0f, 24f), spot + new Vector2(0f, -30f)]), 5f)
         { Props = JsonSerializer.SerializeToElement(new { highway = "service" }) };
         Vector2[] ring = [spot + new Vector2(-20f, -3f), spot + new Vector2(20f, -3f), spot + new Vector2(20f, -39f), spot + new Vector2(-20f, -39f)];
-        var cluster = new WorldFeature(new("design:furniture-test-cluster"), FeatureSource.Design, new("poi"), new PolygonGeometry(new PolygonRings(ring, [])));
+        var cluster = WorldFeatureFixture.Create("design:furniture-test-cluster", "poi", new PolygonGeometry(new PolygonRings(ring, [])));
         var gateAt = spot + new Vector2(0f, -3f);
-        var gate = new WorldFeature(new("design:furniture-test-gate"), FeatureSource.Design, new("clusterGate"), new PointGeometry(new Vector3(gateAt.X, 0f, gateAt.Y)))
-        { Props = JsonSerializer.SerializeToElement(new { cluster = "design:furniture-test-cluster", open = false }) };
+        var gate = WorldFeatureFixture.Create("design:furniture-test-gate", "clusterGate", new PointGeometry(new Vector3(gateAt.X, 0f, gateAt.Y)), JsonSerializer.Serialize(new { cluster = "design:furniture-test-cluster", open = false }));
         var layout = Build(MadeWorld(open, [road], [cluster, gate]));
         var machines = layout.Items.Where(i => i.Key.StartsWith("vending:design:furniture-test-gate:", StringComparison.Ordinal)).ToList();
         Console.WriteLine($"made-up gate at {gateAt}: " + string.Join(", ", machines.Select(m => $"{m.Key} ({m.Anchor.X:F1}, {m.Anchor.Y:F1})")) +
@@ -204,7 +203,7 @@ public sealed class StreetAmenityTests
                 AssertThat(!PlanGeometry.Contains(rings, corner) && PlanGeometry.DistanceToRing(corner, ring) >= FurnitureStyle.GateOutside - 0.01f).OverrideFailureMessage($"{m.Key} is inside the cluster").IsTrue();
             var facing = Front(m.Part.At);
             AssertThat(MathF.Abs(facing.X) > 0.99f && Vector2.Dot(facing, new Vector2(spot.X - m.Anchor.X, 0f)) > 0f).OverrideFailureMessage($"{m.Key} does not face the road").IsTrue();
-            AssertThat(Distance(m.Anchor, road) - 2.5f >= FurnitureStyle.ServiceFront + FurnitureStyle.Vending.Depth * 0.5f - 0.05f).OverrideFailureMessage($"{m.Key} crowds the road").IsTrue();
+            AssertThat((float)PlanGeometry.Project(road.Line.Points, m.Anchor).Distance - 2.5f >= FurnitureStyle.ServiceFront + FurnitureStyle.Vending.Depth * 0.5f - 0.05f).OverrideFailureMessage($"{m.Key} crowds the road").IsTrue();
         }
         AssertThat(layout.Items.Any(i => i.Key == "locker:design:furniture-test-gate")).OverrideFailureMessage("the first closed gate's group has no locker beside it").IsTrue();
     }

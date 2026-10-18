@@ -4,6 +4,7 @@
 
 global uniform float clock;
 global uniform float anim_time;
+global uniform float anim_loop_seconds;
 global uniform float fade_clock;
 global uniform float step_rate;
 global uniform vec4 season;

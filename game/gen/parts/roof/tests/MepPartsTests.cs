@@ -112,7 +112,7 @@ public sealed class MepPartsTests
     [TestCase]
     public void EveryColourIsARegisteredPair()
     {
-        var palette = Path.Combine(RepositoryRoot(), "game", "style", "palette");
+        var palette = Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette");
         var tokens = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in new[] { Path.Combine(palette, "core.json") }.Concat(Directory.GetFiles(Path.Combine(palette, "ext"), "*.json")))
         {
@@ -133,7 +133,7 @@ public sealed class MepPartsTests
     [TestCase]
     public void FireEquipmentUsesTheRegisteredFireRed()
     {
-        using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "game", "style", "palette", "ext", "WP-12.json")));
+        using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Path.Combine(Campus.Tests.RepositoryFixture.Root, "game", "style", "palette", "ext", "WP-12.json")));
         var ids = document.RootElement.GetProperty("entries").EnumerateArray().ToDictionary(e => e.GetProperty("token").GetString()!, e => e.GetProperty("id").GetInt32());
         AssertThat(ids.GetValueOrDefault("equip.fireRed.lit") == 254 && ids.GetValueOrDefault("equip.fireRed.shade") == 255).OverrideFailureMessage("equip.fireRed must sit at ids 254/255.").IsTrue();
         foreach (var sample in MepGallery.CreateSamples().Where(s => s.Part.Value is PartCatalog.Hydrant or PartCatalog.Extinguisher))
@@ -199,14 +199,6 @@ public sealed class MepPartsTests
         var copy = (BoxPartParams)defaults.GetType().GetMethod("<Clone>$")!.Invoke(defaults, null)!;
         typeof(BoxPartParams).GetProperty(nameof(BoxPartParams.Variation))!.SetValue(copy, variation);
         return copy;
-    }
-
-    private static string RepositoryRoot()
-    {
-        if (Environment.GetEnvironmentVariable("UESTC_REPOSITORY") is { Length: > 0 } root) return root;
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "game", "style", "palette", "core.json"))) return directory.FullName;
-        throw new InvalidOperationException("Repository root not found.");
     }
 
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);

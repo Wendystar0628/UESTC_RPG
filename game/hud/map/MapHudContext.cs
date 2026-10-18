@@ -101,12 +101,6 @@ public sealed class MapHudContext(MapStyle style)
         _ => throw new ArgumentOutOfRangeException(nameof(k)),
     };
 
-    public static string Clock(double hours)
-    {
-        var minutes = (int)Math.Round(((hours % 24) + 24) % 24 * 60) % (24 * 60);
-        return $"{minutes / 60:00}:{minutes % 60:00}";
-    }
-
     /// <summary>标记的类型图标：可传送的标记用主色"通电"，其余用正文色（SYS-ATLAS）。</summary>
     public void Icon(CanvasItem ci, MapEntry e, Vector2 c, float size, Color ink, float stroke, bool solid)
     {

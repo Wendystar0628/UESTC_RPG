@@ -61,10 +61,7 @@ public sealed class PaletteBankTests
 
     private static (ColorScript, PaletteCatalog) Load()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "ownership.json"))) dir = dir.Parent;
-        if (dir is null) throw new InvalidOperationException("Repository root not found from the test directory.");
-        var palette = Path.Combine(dir.FullName, "game", "style", "palette");
+        var palette = Campus.Tests.RepositoryFixture.FilePath("game", "style", "palette");
         byte[] Key(string name) => File.ReadAllBytes(Path.Combine(palette, "keys", name));
         var script = new ColorScript(ColorScriptData.Load(Key("autumn.keys.json"), Key("derive.json"), Key("seasons.json"),
             Key("vegetation.json"), Key("weather.json")));

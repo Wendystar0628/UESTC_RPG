@@ -37,12 +37,10 @@ internal sealed class MinimapController
     }
 
     /// <summary>
-    /// 小地图挂进 WP-35 的左上角槽位 "MinimapSlot"（槽位名由 WP-35 定，SYS-ATLAS）：U、--ui=0、过场、设置卡与存档页
-    /// 打开时随槽位隐藏。没有 HudRoot 时（只有 D0 舞台）留在宿主自己的 CanvasLayer 10 上。
+    /// 小地图挂进 HudRoot 传来的左上角槽位（SYS-ATLAS）：U、--ui=0、过场、设置卡与存档页打开时随槽位隐藏。
     /// </summary>
-    public void Mount()
+    public void Mount(Control slot)
     {
-        if (_host.GetParent()?.FindChild("MinimapSlot", true, false) is not Control slot) return;
         _minimap.Reparent(slot, keepGlobalTransform: false);
         _minimap.Position = Vector2.Zero;
     }

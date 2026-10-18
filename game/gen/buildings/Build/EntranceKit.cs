@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -105,7 +106,7 @@ public static class EntranceKit
 
     /// <summary>The pieces' colliders in world space.</summary>
     public static IEnumerable<Collider> Colliders(IReadOnlyList<Piece> pieces) =>
-        pieces.SelectMany(piece => Collision(piece).Select(c => Transform(c, piece.At)));
+        pieces.SelectMany(piece => Collision(piece).Select(c => GeometryPlacement.Transform(c, piece.At)));
 
     private static PartGeometry Geometry(Piece piece, LodLevel lod) => piece.Params switch
     {
@@ -149,26 +150,4 @@ public static class EntranceKit
         M43 = m.M43 + x * m.M13 + y * m.M23 + z * m.M33,
     };
 
-    private static Collider Transform(Collider collider, Matrix4x4 at) => collider switch
-    {
-        BoxCollider box => box with { At = Mul(box.At, at) },
-        RampCollider ramp => ramp with { P0 = Point(ramp.P0, at), P1 = Point(ramp.P1, at), P2 = Point(ramp.P2, at), P3 = Point(ramp.P3, at) },
-        WallCollider wall => wall with { A = Plan(wall.A, at), B = Plan(wall.B, at), Y0 = wall.Y0 + at.M42, Y1 = wall.Y1 + at.M42 },
-        _ => throw new ArgumentException("Unsupported collider kind for an entrance part.", nameof(collider)),
-    };
-
-    private static Vector3 Point(Vector3 p, Matrix4x4 at) => new(
-        p.X * at.M11 + p.Y * at.M21 + p.Z * at.M31 + at.M41,
-        p.X * at.M12 + p.Y * at.M22 + p.Z * at.M32 + at.M42,
-        p.X * at.M13 + p.Y * at.M23 + p.Z * at.M33 + at.M43);
-
-    private static Vector2 Plan(Vector2 p, Matrix4x4 at) => new(p.X * at.M11 + p.Y * at.M31 + at.M41, p.X * at.M13 + p.Y * at.M33 + at.M43);
-
-    /// <summary>Row-vector affine product (a then b) in scalar arithmetic: no SIMD paths in generated output (D-165).</summary>
-    private static Matrix4x4 Mul(Matrix4x4 a, Matrix4x4 b) => new(
-        a.M11 * b.M11 + a.M12 * b.M21 + a.M13 * b.M31, a.M11 * b.M12 + a.M12 * b.M22 + a.M13 * b.M32, a.M11 * b.M13 + a.M12 * b.M23 + a.M13 * b.M33, 0,
-        a.M21 * b.M11 + a.M22 * b.M21 + a.M23 * b.M31, a.M21 * b.M12 + a.M22 * b.M22 + a.M23 * b.M32, a.M21 * b.M13 + a.M22 * b.M23 + a.M23 * b.M33, 0,
-        a.M31 * b.M11 + a.M32 * b.M21 + a.M33 * b.M31, a.M31 * b.M12 + a.M32 * b.M22 + a.M33 * b.M32, a.M31 * b.M13 + a.M32 * b.M23 + a.M33 * b.M33, 0,
-        a.M41 * b.M11 + a.M42 * b.M21 + a.M43 * b.M31 + b.M41, a.M41 * b.M12 + a.M42 * b.M22 + a.M43 * b.M32 + b.M42,
-        a.M41 * b.M13 + a.M42 * b.M23 + a.M43 * b.M33 + b.M43, 1);
 }

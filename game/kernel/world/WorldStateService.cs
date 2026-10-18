@@ -34,7 +34,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     private double _seasonStartArcClock;
     private double _finalOffset;
     private int _flowBeforePause = 1;
-    private int _stepRate = 12;
+    private int _stepRate = WorldTime.DefaultStepRate;
     private bool _initializationApplied;
     private bool _restorePending;
     private bool _mapUnavailable = true;
@@ -62,7 +62,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public WeatherVec WeatherNow => weather.Now;
     public IReadOnlyList<WeatherSpan> WeatherAhead => weather.Ahead;
     public uint WeatherSeed => weather.Seed;
-    public double AnimTime { get; private set; } = 240;
+    public double AnimTime { get; private set; } = WorldTime.InitialAnimTime;
     public bool RestoreFaulted { get; private set; }
     public double Step12 => Math.Floor(AnimTime * _stepRate) / _stepRate;
     public bool IsSettled => !RestoreFaulted && !_restorePending && !TimeMoving && !SeasonMoving && !Scrubbing;
@@ -92,7 +92,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         if (_restorePending) throw new InvalidOperationException("CompleteRestore must commit the World phase before ticking.");
         var previousSun = Sun;
         var previousMoon = Moon;
-        if (!freezeAnimation) AnimTime = ArtEphemeris.Wrap(AnimTime + dt, 480);
+        if (!freezeAnimation) AnimTime = ArtEphemeris.Wrap(AnimTime + dt, WorldTime.AnimLoopSeconds);
 
         if (_dragging)
         {
@@ -104,8 +104,8 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
             if (_jumpDuration > 0)
             {
                 _jumpElapsed = AdvanceElapsed(_jumpElapsed, dt, _jumpDuration);
-                WorldHours = Math.Clamp(ArtEphemeris.Lerp(_jumpFrom, _targetHours,
-                    ArtEphemeris.Smooth(_jumpElapsed / _jumpDuration)), WorldHours, _targetHours);
+                WorldHours = Math.Clamp(ScalarMath.Lerp(_jumpFrom, _targetHours,
+                    ScalarMath.Smoothstep(_jumpElapsed / _jumpDuration)), WorldHours, _targetHours);
                 if (_jumpElapsed >= _jumpDuration) LandClock();
             }
             else
@@ -136,8 +136,8 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         if (SeasonMoving)
         {
             _seasonElapsed = AdvanceElapsed(_seasonElapsed, dt, _seasonDuration);
-            var blend = ArtEphemeris.Smooth(_seasonElapsed / _seasonDuration);
-            SeasonPos = ArtEphemeris.Wrap(ArtEphemeris.Lerp(_seasonFrom, _seasonTo, blend), 4);
+            var blend = ScalarMath.Smoothstep(_seasonElapsed / _seasonDuration);
+            SeasonPos = ArtEphemeris.Wrap(ScalarMath.Lerp(_seasonFrom, _seasonTo, blend), 4);
             _offset = _seasonStartOffset + ArtEphemeris.ClockAtPhase(_seasonArc, SeasonPos) - _seasonStartArcClock;
             if (_seasonElapsed >= _seasonDuration)
             {
@@ -310,7 +310,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         ValidateClock(clock);
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
         if (!double.IsFinite(anim) || anim < 0) throw new ArgumentOutOfRangeException(nameof(anim));
-        SetImmediate(new WorldSaveV1(clock, 0, (int)season, season, 0, 1, ArtEphemeris.Wrap(anim, 480)));
+        SetImmediate(new WorldSaveV1(clock, 0, (int)season, season, 0, 1, ArtEphemeris.Wrap(anim, WorldTime.AnimLoopSeconds)));
         _initializationApplied = true;
         Rev++;
     }
@@ -345,7 +345,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public void SetFrameReadouts(ViewMode mode, int stepRate)
     {
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
-        if (stepRate is not (12 or 15)) throw new ArgumentOutOfRangeException(nameof(stepRate));
+        if (!WorldTime.IsStepRate(stepRate)) throw new ArgumentOutOfRangeException(nameof(stepRate));
         ViewMode = mode;
         _stepRate = stepRate;
     }
@@ -367,7 +367,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
     public WorldSaveV1 CreateDefault(NewGameContext context)
     {
         ValidatePreset(context.Start);
-        return new(context.Start.Clock, 0, (int)context.Start.Season, context.Start.Season, 1, 1, 240);
+        return new(context.Start.Clock, 0, (int)context.Start.Season, context.Start.Season, 1, 1, WorldTime.InitialAnimTime);
     }
 
     public void Restore(WorldSaveV1 dto, RestoreContext context)
@@ -376,7 +376,7 @@ public sealed class WorldStateService(IWeatherProcess weather, IMotionSettings? 
         if (!double.IsFinite(dto.WorldHours) || dto.WorldHours < 0 || !double.IsFinite(dto.ClockOffset) ||
             !double.IsFinite(dto.WorldHours + dto.ClockOffset) || !double.IsFinite(dto.SeasonPos) ||
             dto.SeasonPos is < 0 or >= 4 || !Enum.IsDefined(dto.SeasonTarget) || dto.SeasonPos != (int)dto.SeasonTarget ||
-            !double.IsFinite(dto.AnimTime) || dto.AnimTime is < 0 or >= 480 ||
+            !double.IsFinite(dto.AnimTime) || dto.AnimTime is < 0 or >= WorldTime.AnimLoopSeconds ||
             !IsRate(dto.FlowRate) || !IsRate(dto.FlowRateBeforePause) || dto.FlowRateBeforePause == 0)
             throw new JsonException("Invalid core world segment.");
         SetImmediate(dto);

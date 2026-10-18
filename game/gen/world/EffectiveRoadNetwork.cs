@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using Campus.Contracts;
 
@@ -54,10 +53,7 @@ internal sealed class EffectiveRoadNetwork
     // A failed export-key parse never proves that a road has no campus source.
     private string? SourceId(string networkId)
     {
-        if (_prefix is null || !networkId.StartsWith(_prefix + ":source:way:", StringComparison.Ordinal)) return null;
-        var number = networkId[(_prefix.Length + ":source:way:".Length)..];
-        return long.TryParse(number, NumberStyles.None, CultureInfo.InvariantCulture, out var id) && id >= 0 &&
-            id.ToString(CultureInfo.InvariantCulture) == number ? "osm:way:" + number : null;
+        return _prefix is not null && OsmFeatureIds.TryWayFromSource(_prefix, networkId, out var ids) ? ids.Part : null;
     }
 
     public Removal PlanRoadHide(string id, IReadOnlyDictionary<string, WorldFeature> features, string file)

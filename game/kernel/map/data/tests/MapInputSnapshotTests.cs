@@ -1,3 +1,4 @@
+using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using static GdUnit4.Assertions;
 using System.Numerics;
@@ -83,8 +84,7 @@ public sealed class MapInputSnapshotTests
     }
     private static WorldModelLoadResult Loaded(MapCatalogEntry entry)
     {
-        var world = new MutableWorldFixture();
-        world.Configure([], boundary: new PolygonRings([new(-64, -64), new(64, -64), new(64, 64), new(-64, 64)]));
+        var world = new FakeWorld { Boundary = new([new(-64, -64), new(64, -64), new(64, 64), new(-64, 64)]) };
         return new(world, entry.Descriptor.Geo, entry.Descriptor.Center, entry.Descriptor.Bounds,
             entry.Descriptor.TileMin, entry.Descriptor.TileMax);
     }

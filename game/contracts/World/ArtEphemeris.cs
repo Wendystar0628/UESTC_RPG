@@ -1,11 +1,16 @@
 using System.Numerics;
-using Campus.Contracts;
+using static Campus.Contracts.ScalarMath;
 
-namespace Campus.Kernel.World;
+namespace Campus.Contracts;
 
-/// <summary>The authored solar and lunar curves in SYS-TIME section 2; no wall clock or calendar.</summary>
+public enum ClockPreset { Morning, Noon, Dusk, Night }
+
+/// <summary>The authored solar and lunar curves in SYS-TIME; no wall clock or calendar.</summary>
 public static class ArtEphemeris
 {
+    public const double NightDepth = 24d;
+    public const double ArcExponent = 1.15;
+
     public readonly record struct Track(double Rise, double Set, double RiseAz, double SetAz, double Height, double MoonHeight);
 
     public static Track At(Season season) => season switch
@@ -61,10 +66,10 @@ public static class ArtEphemeris
     public static double DuskEnd(Season season)
     {
         var track = At(season);
-        return track.Set + (24 - track.Set + track.Rise) * Math.Asin(Math.Pow(7d / 24, 1 / 1.15)) / Math.PI;
+        return track.Set + (24 - track.Set + track.Rise) * Math.Asin(Math.Pow(7d / NightDepth, 1 / ArcExponent)) / Math.PI;
     }
 
-    public static (Body Sun, Body Moon) Evaluate(double clock, double season)
+    public static (double Altitude, double Azimuth) SunAt(double clock, double season)
     {
         var track = At(season);
         var phase = Phase(clock, season);
@@ -72,29 +77,38 @@ public static class ArtEphemeris
         if (phase < 1)
         {
             var sine = Math.Sin(Math.PI * phase);
-            altitude = track.Height * Math.Pow(Math.Max(0, sine), 1.15);
+            altitude = track.Height * Math.Pow(Math.Max(0, sine), ArcExponent);
             azimuth = Lerp(track.RiseAz, track.SetAz, phase);
             // Tiny authored calibration: the autumn hero frame is exactly 5.5 / 241 degrees,
             // while sunrise, sunset and the noon cap retain their table values.
             var autumnWeight = Math.Max(0, 1 - Math.Abs(Wrap(season - 2 + 2, 4) - 2));
-            const double heroPhase = (17.5 - 455 / 60d) / ((1085 - 455) / 60d);
+            var autumn = At(Season.Autumn);
+            var heroPhase = (17.5 - autumn.Rise) / (autumn.Set - autumn.Rise);
             var heroSine = Math.Sin(Math.PI * heroPhase);
             var shape = sine * (1 - sine);
-            altitude += autumnWeight * (5.5 - 41 * Math.Pow(heroSine, 1.15)) * shape / (heroSine * (1 - heroSine));
-            azimuth += autumnWeight * (241 - Lerp(113, 248.5, heroPhase)) * sine / heroSine;
+            altitude += autumnWeight * (5.5 - autumn.Height * Math.Pow(heroSine, ArcExponent)) * shape / (heroSine * (1 - heroSine));
+            azimuth += autumnWeight * (241 - Lerp(autumn.RiseAz, autumn.SetAz, heroPhase)) * sine / heroSine;
         }
         else
         {
-            altitude = -24 * Math.Pow(Math.Max(0, Math.Sin(Math.PI * (phase - 1))), 1.15);
+            altitude = -NightDepth * Math.Pow(Math.Max(0, Math.Sin(Math.PI * (phase - 1))), ArcExponent);
             azimuth = Wrap(Lerp(track.SetAz, track.RiseAz + 360, phase - 1), 360);
         }
+        return (altitude, azimuth);
+    }
+
+    public static (Body Sun, Body Moon) Evaluate(double clock, double season)
+    {
+        var track = At(season);
+        var phase = Phase(clock, season);
+        var (altitude, azimuth) = SunAt(clock, season);
         var moonPhase = Wrap(phase - 1, 2);
         var moonAltitude = moonPhase < 1
-            ? track.MoonHeight * Math.Pow(Math.Max(0, Math.Sin(Math.PI * moonPhase)), 1.15)
-            : -24 * Math.Pow(Math.Max(0, Math.Sin(Math.PI * (moonPhase - 1))), 1.15);
+            ? track.MoonHeight * Math.Pow(Math.Max(0, Math.Sin(Math.PI * moonPhase)), ArcExponent)
+            : -NightDepth * Math.Pow(Math.Max(0, Math.Sin(Math.PI * (moonPhase - 1))), ArcExponent);
         var moonAzimuth = moonPhase < 1 ? Lerp(62, 300, moonPhase) : Wrap(Lerp(300, 422, moonPhase - 1), 360);
-        return (BodyAt(altitude, azimuth, Smooth((altitude + 2) / 6)),
-            BodyAt(moonAltitude, moonAzimuth, .2 * Smooth((moonAltitude + 2) / 6)));
+        return (BodyAt(altitude, azimuth, Smoothstep((altitude + 2) / 6)),
+            BodyAt(moonAltitude, moonAzimuth, .2 * Smoothstep((moonAltitude + 2) / 6)));
     }
 
     private static Body BodyAt(double altitude, double azimuth, double intensity)
@@ -110,6 +124,4 @@ public static class ArtEphemeris
         var remainder = value % period;
         return remainder < 0 ? remainder + period : remainder;
     }
-    public static double Lerp(double from, double to, double t) => from + (to - from) * t;
-    public static double Smooth(double t) { t = Math.Clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 }

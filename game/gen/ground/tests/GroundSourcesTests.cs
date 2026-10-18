@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Gen.World;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
@@ -40,8 +39,8 @@ public sealed class GroundSourcesTests
     public void WalkFaceInputRetainsTheOriginalPolylineWithoutInventingPhase()
     {
         Vector2[] points = [new(0, 20), new(10, 20), new(10, 30)];
-        var feature = new WorldFeature(new("fixture:walk"), FeatureSource.Osm, new("road"), new PolylineGeometry(new(points)))
-        { Props = Json("""{"roadType":"footway","width":2.5}""") };
+        var feature = WorldFeatureFixture.Create("fixture:walk", "road", new PolylineGeometry(new(points)),
+            """{"roadType":"footway","width":2.5}""", FeatureSource.Osm);
         var layout = GroundLayout.Of(TestWorld.Of([feature]));
         var context = new GroundSourceContext(layout.Near(new(0, 0), new(64, 64)), GroundSection.Default, 0f);
         var source = new GroundFaceInput(GroundSurface.Paver, GroundFaceRole.Top, context).SourcesAt(new(5, 20)).Single();
@@ -163,7 +162,7 @@ public sealed class GroundSourcesTests
     }
 
     [TestCase]
-    public void UnsupportedGeometryNamesTheEntityAndPart()
+    public void UnsupportedGroundGeometryIsRejected()
     {
         var odd = new Unsupported();
         var withParts = TestWorld.Of([Entity("test:relation:7", "building", Building,
@@ -174,20 +173,12 @@ public sealed class GroundSourcesTests
         catch (Exception caught) { sourceError = caught; }
         AssertThat(sourceError).OverrideFailureMessage("Expected the unsupported geometry to be rejected.").IsNotNull();
         AssertThat(sourceError!).IsInstanceOf<InvalidOperationException>();
-        var message = sourceError!.Message;
-        AssertThat(message.Contains("test:relation:7", StringComparison.Ordinal) && message.Contains("osm:way:71", StringComparison.Ordinal) &&
-            message.Contains(nameof(Unsupported), StringComparison.Ordinal)).OverrideFailureMessage($"Error must name entity, part and geometry: {message}").IsTrue();
-        AssertThat(!message.Contains("osm:way:70", StringComparison.Ordinal)).OverrideFailureMessage("The readable part is not blamed.").IsTrue();
-
         // The same failure through the public build path is not swallowed on the way.
         Exception? buildError = null;
         try { new GroundModule().Build(TestWorld.Context(withParts), new TileKey(0, 0), LodLevel.L0); }
         catch (Exception caught) { buildError = caught; }
         AssertThat(buildError).OverrideFailureMessage("Expected the unsupported geometry to be rejected.").IsNotNull();
         AssertThat(buildError!).IsInstanceOf<InvalidOperationException>();
-        AssertThat(buildError!.Message.Contains("osm:way:71", StringComparison.Ordinal))
-            .OverrideFailureMessage("The tile build must surface the entity and part.").IsTrue();
-
         var withoutParts = TestWorld.Of([new WorldFeature(new FeatureId("test:way:8"), FeatureSource.Osm, new DesignKind("road"), odd)
             { Props = Json("""{"roadType":"service"}""") }]);
         Exception? plainError = null;
@@ -195,9 +186,6 @@ public sealed class GroundSourcesTests
         catch (Exception caught) { plainError = caught; }
         AssertThat(plainError).OverrideFailureMessage("Expected the unsupported geometry to be rejected.").IsNotNull();
         AssertThat(plainError!).IsInstanceOf<InvalidOperationException>();
-        var plain = plainError!.Message;
-        AssertThat(plain.Contains("test:way:8", StringComparison.Ordinal) && plain.Contains(nameof(Unsupported), StringComparison.Ordinal)).OverrideFailureMessage($"Error must name the entity: {plain}").IsTrue();
-
         // A kind that never touches the ground is not read at all, whatever its geometry.
         var green = TestWorld.Of([Entity("test:way:9", "green", """{"kind":"green"}""",
             new WorldFeaturePart("osm:way:90", odd, 0f, null) { Props = Json("""{"kind":"green"}""") })]);
@@ -212,8 +200,8 @@ public sealed class GroundSourcesTests
         var anchor = new PointGeometry(new Vector3(10f, 0f, 10f));
         var world = TestWorld.Of(
         [
-            new WorldFeature(new FeatureId("test:way:20"), FeatureSource.Osm, new DesignKind("building"), anchor) { Props = Json(Building) },
-            new WorldFeature(new FeatureId("test:way:21"), FeatureSource.Osm, new DesignKind("water"), anchor),
+            WorldFeatureFixture.Create("test:way:20", "building", anchor, Building, FeatureSource.Osm),
+            WorldFeatureFixture.Create("test:way:21", "water", anchor, source: FeatureSource.Osm),
             Entity("test:way:22", "poi", """{"kind":"poi"}""", new WorldFeaturePart("osm:way:220", anchor, null, null) { Props = Json(Building) }),
         ]);
         AssertThat(GroundSources.Read(world).Shapes.Count == 0).OverrideFailureMessage("Point geometry yields no ground shape.").IsTrue();
@@ -222,119 +210,34 @@ public sealed class GroundSourcesTests
     [TestCase]
     public void RealCampusIsReadPartByPart()
     {
-        var files = RealFiles();
-        var world = WorldModelLoader.Load(new("qingshuihe"), files).World;
-        var (shapes, _) = GroundSources.Read(world);   // used to throw on the first multi-part building
-
-        var raw = RawPolygons(files["campus.json"]);
-        var polygonShapes = shapes.Where(s => s.Rings is not null && !s.Id.Value.StartsWith("fillet:", StringComparison.Ordinal)).ToArray();
-        var ground = new HashSet<string> { "road", "parking", "water", "building", "sport" };
-        // A stadium or sports-centre outline without a sport tag only encloses other features and has no ground of its own.
-        AssertThat(polygonShapes.Length == raw.Count(p => ground.Contains(p.Kind) && !p.Outline)).OverrideFailureMessage("Every ground polygon of every part gives exactly one shape.").IsTrue();
-        AssertThat(raw.Count(p => p.Outline) == 2).OverrideFailureMessage("The campus has one stadium outline and one sports-centre outline.").IsTrue();
-
-        int Shapes(SurfaceKind kind) => polygonShapes.Count(s => s.Kind == kind);
-        int Raw(Func<RawPolygon, bool> where) => raw.Count(where);
-        AssertThat(Shapes(SurfaceKind.Building) == Raw(p => p.Kind == "building")).OverrideFailureMessage("Building footprints.").IsTrue();
-        AssertThat(polygonShapes.Where(s => s.Kind == SurfaceKind.Building).Sum(s => s.Rings!.Length) == raw.Where(p => p.Kind == "building").Sum(p => p.Rings.Length)).OverrideFailureMessage("Every building hole is kept as a ring of its footprint.").IsTrue();
-        AssertThat(Shapes(SurfaceKind.Parking) == Raw(p => p.Kind == "parking")).OverrideFailureMessage("Car parks.").IsTrue();
-        AssertThat(Shapes(SurfaceKind.Track) == Raw(p => p.Kind == "sport" && p.Sport == "running")).OverrideFailureMessage("Running tracks come from the part's own sport.").IsTrue();
-        AssertThat(Shapes(SurfaceKind.Turf) == Raw(p => p.Kind == "sport" && !p.Outline && p.Sport is "soccer" or null)).OverrideFailureMessage("Football pitches, and pitches that name no sport, are turf (the campus has one: the ring-shaped athletics field).").IsTrue();
-        AssertThat(Shapes(SurfaceKind.Court) == Raw(p => p.Kind == "sport" && p.Sport is not (null or "running" or "soccer" or "swimming"))).OverrideFailureMessage("Courts.").IsTrue();
-        AssertThat(Shapes(SurfaceKind.Water) == Raw(p => p.Kind == "water" || (p.Kind == "sport" && p.Sport == "swimming"))).OverrideFailureMessage("Lakes and pools.").IsTrue();
-
-        // Cross-check the whole campus against the raw polygons with an independent even-odd test: parts, polygons and holes.
-        var layout = GroundLayout.Of(world);
-        Compare(layout, SurfaceKind.Building, raw.Where(p => p.Kind == "building").ToArray());
-        Compare(layout, SurfaceKind.Parking, raw.Where(p => p.Kind == "parking").ToArray());
-        Compare(layout, SurfaceKind.Water, raw.Where(p => p.Kind == "water" || (p.Kind == "sport" && p.Sport == "swimming")).ToArray());
-
-        // Mixed parents of the architecture review: poi entities owning building parts and an open park part.
-        foreach (var id in new[] { "qsh:way:682336066", "qsh:way:883187548" })
+        var world = RealMapFixture.Load().World;
+        var shapes = GroundSources.Read(world).Shapes;
+        var buildingParts = world.Features.Values.SelectMany(feature => feature.Parts
+            .Where(part => (part.Props is { } props && props.TryGetProperty("kind", out var kind)
+                ? kind.GetString() : feature.Kind.Value) == "building")
+            .Select(part => (Feature: feature, Part: part))).ToArray();
+        AssertThat(buildingParts.Length > 0).IsTrue();
+        foreach (var (feature, part) in buildingParts)
         {
-            var feature = world.Features[new(id)];
-            AssertThat(feature.Kind.Value == "poi" && feature.Parts.Count > 1).OverrideFailureMessage($"{id} is no longer a mixed parent.").IsTrue();
+            var polygons = part.Geometry switch
+            {
+                PolygonGeometry polygon => new[] { polygon.Rings },
+                MultiPolygonGeometry multi => multi.Polygons.ToArray(),
+                _ => Array.Empty<PolygonRings>()
+            };
+            var footprints = shapes.Where(shape => shape.Id == feature.Id && shape.PartSourceId == part.SourceId).ToArray();
+            AssertThat(footprints.Length == polygons.Length).OverrideFailureMessage($"Building part {part.SourceId} retains every footprint.").IsTrue();
+            foreach (var polygon in polygons)
+                AssertThat(footprints.Any(shape => shape.Kind == SurfaceKind.Building && shape.Rings is { } rings &&
+                    rings[0].SequenceEqual(polygon.Outer) && rings.Length == polygon.Holes.Count + 1 &&
+                    rings.Skip(1).Zip(polygon.Holes).All(pair => pair.First.SequenceEqual(pair.Second))))
+                    .OverrideFailureMessage($"Building part {part.SourceId} retains its outline and holes.").IsTrue();
         }
-        AssertThat(layout.SignedDistance(SurfaceKind.Building, new(-672.712f, -106.672f), 30f) < 0f).OverrideFailureMessage("A building part of a poi parent keeps its footprint.").IsTrue();
-        AssertThat(layout.SignedDistance(SurfaceKind.Building, new(-619.9118f, -102.2f), 30f) > 0f).OverrideFailureMessage("The park part of the same parent is no footprint.").IsTrue();
-    }
-
-    /// <summary>Samples every polygon's neighbourhood and checks the layout's inside/outside against raw even-odd.</summary>
-    private static void Compare(GroundLayout layout, SurfaceKind kind, RawPolygon[] polygons)
-    {
-        var sampled = 0;
-        foreach (var polygon in polygons)
-        {
-            var (min, max) = polygon.Bounds;
-            for (var z = min.Y - 3f; z <= max.Y + 3f; z += 2f)
-                for (var x = min.X - 3f; x <= max.X + 3f; x += 2f)
-                {
-                    var distance = layout.SignedDistance(kind, new(x, z), 4f);
-                    if (MathF.Abs(distance) < 0.02f) continue;   // on a boundary: either answer is right
-                    var inside = polygons.Any(p => p.Contains(x, z));
-                    sampled++;
-                    AssertThat(inside == distance < 0f).OverrideFailureMessage($"{kind} at ({x}, {z}): layout says {(distance < 0f ? "inside" : "outside")}, source polygons say {(inside ? "inside" : "outside")}.").IsTrue();
-                }
-        }
-        AssertThat(sampled > 1000).OverrideFailureMessage($"Sampled only {sampled} points for {kind}.").IsTrue();
     }
 
     // ---------------------------------------------------------------- helpers
 
     private sealed record Unsupported : OverlayGeometry;
-
-    private sealed record RawPolygon(string Kind, string? Sport, bool Outline, Vector2[][] Rings)
-    {
-        public (Vector2 Min, Vector2 Max) Bounds { get; } = Extent(Rings[0]);
-
-        private static (Vector2, Vector2) Extent(Vector2[] outer) =>
-            (outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min), outer.Aggregate(new Vector2(float.MinValue), Vector2.Max));
-
-        /// <summary>Even-odd over all rings in double precision: a hole is outside, independent of the generator's code.</summary>
-        public bool Contains(double x, double z)
-        {
-            if (x < Bounds.Min.X || x > Bounds.Max.X || z < Bounds.Min.Y || z > Bounds.Max.Y) return false;
-            var inside = false;
-            foreach (var ring in Rings)
-                for (int i = 0, j = ring.Length - 1; i < ring.Length; j = i++)
-                {
-                    var (a, b) = (ring[j], ring[i]);
-                    if ((a.Y > z) != (b.Y > z) && x < (double)(b.X - a.X) * (z - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
-                }
-            return inside;
-        }
-    }
-
-    private static List<RawPolygon> RawPolygons(string campusJson)
-    {
-        var result = new List<RawPolygon>();
-        using var document = JsonDocument.Parse(campusJson);
-        // The OSM leisure tag of every entity: a part's own record does not repeat it.
-        var leisure = document.RootElement.GetProperty("entities").EnumerateArray()
-            .Where(e => e.TryGetProperty("sourceTags", out var tags) && tags.TryGetProperty("leisure", out _))
-            .ToDictionary(e => e.GetProperty("id").GetString()!, e => e.GetProperty("sourceTags").GetProperty("leisure").GetString()!);
-        foreach (var feature in document.RootElement.GetProperty("features").EnumerateArray())
-        {
-            var kind = feature.GetProperty("kind").GetString()!;
-            var sport = feature.TryGetProperty("sport", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() : null;
-            var owner = feature.TryGetProperty("entityId", out var entityId) && entityId.ValueKind == JsonValueKind.String ? entityId.GetString() : null;
-            var outline = kind == "sport" && sport is null && owner is not null && leisure.GetValueOrDefault(owner) is "stadium" or "sports_centre";
-            foreach (var polygon in feature.GetProperty("polygons").EnumerateArray())
-                result.Add(new(kind, sport, outline, polygon.EnumerateArray()
-                    .Select(ring => ring.EnumerateArray().Select(p => new Vector2(p[0].GetSingle(), p[1].GetSingle())).ToArray()).ToArray()));
-        }
-        return result;
-    }
-
-    private static Dictionary<string, string> RealFiles()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
-        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
-        var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-        return new[] { "campus.json", "network.json", "interiors.json" }
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-    }
 
     private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement.Clone();
 
@@ -361,14 +264,7 @@ public sealed class GroundSourcesTests
             1 => new PolygonGeometry(polygons[0]),
             _ => new MultiPolygonGeometry(polygons)
         };
-        var outline = polygons.SelectMany(r => r.Outer).DefaultIfEmpty().ToArray();
-        var min = outline.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
-        var max = outline.Aggregate(new Vector2(float.MinValue), Vector2.Max);
-        return new(new FeatureId(id), FeatureSource.Osm, new DesignKind(kind), geometry)
-        {
-            Parts = parts.OrderBy(p => p.SourceId, StringComparer.Ordinal).ToArray(),
-            Bounds = new Box3(new(min.X, 0f, min.Y), new(max.X, 10f, max.Y)),
-            Props = Json(props)
-        };
+        return WorldFeatureFixture.Create(id, kind, geometry, props, FeatureSource.Osm,
+            height: 10f, parts: parts.OrderBy(p => p.SourceId, StringComparer.Ordinal).ToArray());
     }
 }

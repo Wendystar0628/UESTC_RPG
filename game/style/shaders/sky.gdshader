@@ -251,7 +251,7 @@ float star_field(vec3 dir, float px, out vec3 tint) {
 	// 闪烁按一拍二步进；频率取 480 s 的整数倍，anim_time 回卷时不跳
 	float steps = max(step_rate, 1.0);
 	float ts = floor(anim_time * steps) / steps;
-	float f = TAU * floor(mix(70.0, 190.0, rnd.z)) / 480.0;
+	float f = TAU * floor(mix(70.0, 190.0, rnd.z)) / anim_loop_seconds;
 	float tw = 0.78 + 0.22 * sin(ts * f + rnd.x * 40.0);
 	tint = mix(pal_cur(PAL_WINDOW_COOL), pal_cur(PAL_WINDOW_WARM), fract(rnd.z * 11.1) * 0.35);
 	return k * mix(0.35, 1.0, bright) * tw;

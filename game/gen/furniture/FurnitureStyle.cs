@@ -267,12 +267,6 @@ public static class FurnitureStyle
     public const float ItemGap = 0.6f;
 
     // ---- Landing (WLD-TERRAIN) ----
-    /// <summary>
-    /// WP-15 lays its surfaces above the height field: lawn 0.10 m, paving and kerb tops 0.15 m (GroundSection). Furniture takes
-    /// its heights from those levels until the world model can say which surface lies at a point.
-    /// </summary>
-    public const float LawnLift = 0.10f;
-    public const float PavingLift = 0.15f;
     /// <summary>Point things (poles, posts): y = H(centre) + lawn − burial, burial 0.05–0.3 m growing with the drop under the footprint.</summary>
     public const float BurialMin = 0.05f;
     public const float BurialMax = 0.3f;

@@ -98,7 +98,7 @@ public partial class TitleMenu : Control
     {
         var world = Svc<IWorldState>();
         _data.Text = $"{UiKit.T("hud.season." + TimeCard.SeasonCode(world.SeasonTarget).ToLowerInvariant())} · " +
-                     $"{(int)world.Clock:00}:{(int)(world.Clock % 1 * 60):00} · " +
+                     $"{WorldTime.FormatClock(world.Clock)} · " +
                      $"{UiKit.T("weather.cell." + WeatherStrip.CellKey(WeatherStrip.CellOf(world.Weather.Kind)))}";
         SlotInfo? latest = null;
         var saves = Svc<ISaveService>();

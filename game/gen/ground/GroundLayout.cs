@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Ground;
 
@@ -108,8 +109,11 @@ internal sealed class GroundLayout
         return new GroundLayout(shapes, roads) { Paving = GroundPaving.Build(world, shapes) };
     }
 
-    private static (int X, int Z) Bin(Vector2 p) =>
-        ((int)MathF.Floor(p.X / GroundLod.TileSize), (int)MathF.Floor(p.Y / GroundLod.TileSize));
+    private static (int X, int Z) Bin(Vector2 p)
+    {
+        var cell = TileGrid.At(p);
+        return (cell.X, cell.Z);
+    }
     private static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
 }
 
@@ -121,8 +125,8 @@ internal static class Sdf
         if (shape.Line is { } line)
         {
             var d = double.MaxValue;
-            for (var i = 0; i + 1 < line.Length; i++) d = Math.Min(d, Segment(p.X, p.Y, line[i], line[i + 1]));
-            return Clamp((float)(d - shape.HalfWidth), limit);
+            for (var i = 0; i + 1 < line.Length; i++) d = Math.Min(d, PlanGeometry.SegmentDistance(p.X, p.Y, line[i], line[i + 1]));
+            return Math.Clamp((float)(d - shape.HalfWidth), -limit, limit);
         }
         var rings = shape.Rings!;
         var best = double.MaxValue;
@@ -132,27 +136,14 @@ internal static class Sdf
             {
                 var a = ring[i];
                 var b = ring[(i + 1) % ring.Length];
-                best = Math.Min(best, Segment(p.X, p.Y, a, b));
+                best = Math.Min(best, PlanGeometry.SegmentDistance(p.X, p.Y, a, b));
                 if ((a.Y <= p.Y) != (b.Y <= p.Y))
                 {
                     var x = a.X + (p.Y - a.Y) * (b.X - a.X) / (b.Y - a.Y);
                     if (x < p.X) inside = !inside;
                 }
             }
-        return Clamp(inside ? (float)-best : (float)best, limit);
+        return Math.Clamp(inside ? (float)-best : (float)best, -limit, limit);
     }
 
-    /// <summary>Euclidean distance from (px, pz) to segment ab, in double precision.</summary>
-    public static double Segment(double px, double pz, Vector2 a, Vector2 b)
-    {
-        double ax = a.X, az = a.Y, dx = b.X - ax, dz = b.Y - az;
-        var len2 = dx * dx + dz * dz;
-        var t = len2 > 0d ? ((px - ax) * dx + (pz - az) * dz) / len2 : 0d;
-        t = t < 0d ? 0d : t > 1d ? 1d : t;
-        var ex = px - (ax + t * dx);
-        var ez = pz - (az + t * dz);
-        return Math.Sqrt(ex * ex + ez * ez);
-    }
-
-    public static float Clamp(float v, float limit) => v < -limit ? -limit : v > limit ? limit : v;
 }

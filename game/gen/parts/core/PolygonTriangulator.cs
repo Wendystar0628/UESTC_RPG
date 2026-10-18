@@ -79,7 +79,7 @@ public static class PolygonTriangulator
         var points = new List<Vector2>(input.Count);
         foreach (var p in input)
         {
-            if (!float.IsFinite(p.X) || !float.IsFinite(p.Y)) throw new ArgumentException("Polygon coordinates must be finite.", nameof(input));
+            if (!VectorMath.Finite(p)) throw new ArgumentException("Polygon coordinates must be finite.", nameof(input));
             if (points.Count == 0 || p != points[^1]) points.Add(p);
         }
         if (points.Count > 1 && points[0] == points[^1]) points.RemoveAt(points.Count - 1);

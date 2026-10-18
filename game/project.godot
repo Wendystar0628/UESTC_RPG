@@ -295,7 +295,11 @@ clock={
 }
 anim_time={
 "type": "float",
-"value": 240.0
+"value": 0.0
+}
+anim_loop_seconds={
+"type": "float",
+"value": 0.0
 }
 fade_clock={
 "type": "float",
@@ -303,7 +307,7 @@ fade_clock={
 }
 step_rate={
 "type": "float",
-"value": 12.0
+"value": 0.0
 }
 season={
 "type": "vec4",

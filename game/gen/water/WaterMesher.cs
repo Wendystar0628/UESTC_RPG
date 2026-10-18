@@ -1,4 +1,5 @@
 using System.Numerics;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Water;
 
@@ -55,7 +56,7 @@ public static class WaterMesher
             float sxx = 0f, sxz = 0f, szz = 0f;
             foreach (var s in shores)
             {
-                var d = DistanceSquared(v, s.A, s.B);
+                var d = PlanGeometry.SegmentDistanceSquared(v, s.A, s.B);
                 if (d < best) best = d;
                 if (body.Kind != WaterKind.Channel || d > FlowReach * FlowReach) continue;
                 // Orientation tensor of the nearby banks: the long banks outweigh an end cap or a joint.
@@ -354,14 +355,6 @@ public static class WaterMesher
         foreach (var other in all)
             if (other != owner && other.Contains(outside)) return false;
         return true;
-    }
-
-    private static float DistanceSquared(Vector2 p, Vector2 a, Vector2 b)
-    {
-        var ab = b - a;
-        var len = ab.LengthSquared();
-        var t = len > 0f ? Math.Clamp(Vector2.Dot(p - a, ab) / len, 0f, 1f) : 0f;
-        return Vector2.DistanceSquared(p, a + ab * t);
     }
 
     private static bool SegmentTouchesRect(Vector2 a, Vector2 b, Vector2 min, Vector2 max)

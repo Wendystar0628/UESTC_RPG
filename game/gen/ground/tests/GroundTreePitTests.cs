@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Gen.World;
+using Campus.Gen.Tests.Support;
+using Campus.Tests;
 using GdUnit4;
 
 namespace Campus.Gen.Ground.Tests;
@@ -25,7 +26,11 @@ public sealed class GroundTreePitTests
     /// <summary>Triangles this far inside an outline are checked; a pit corner smaller than a lattice cell (0.25 m) rounds off, so the last 0.15 m is not.</summary>
     private const float InsideMargin = 0.15f;
     /// <summary>Design heights above the paving (0.15 m): a pit frame 0.20, a strip kerb 0.15, soil 0.05 below; the records ask for 0.42 and 0.2.</summary>
-    private const float PitRim = 0.35f, PitSoil = 0.30f, PitKerb = 0.22f, StripRim = 0.30f, StripSoil = 0.25f, StripKerb = 0.15f;
+    private static readonly float PitRim = Section.PavingY + Section.Pits.PitRimAbovePaving;
+    private static readonly float PitSoil = PitRim - Section.Pits.SoilBelowRim;
+    private static readonly float StripRim = Section.PavingY + Section.Pits.StripRimAbovePaving;
+    private static readonly float StripSoil = StripRim - Section.Pits.SoilBelowRim;
+    private const float PitKerb = 0.22f, StripKerb = 0.15f;
     private const float AuthoredPitRim = 0.42f, AuthoredStripRim = 0.2f;
 
     [TestCase]
@@ -215,24 +220,31 @@ public sealed class GroundTreePitTests
     [TestCase]
     public void RealCampusPitsAndStripBecomeGroundShapes()
     {
-        var world = WorldModelLoader.Load(new("qingshuihe"), RealFiles()).World;
+        var world = RealMapFixture.Load().World;
         var shapes = GroundSources.Read(world).Shapes.Where(s => s.Kind == SurfaceKind.Pit).ToArray();
-        int Authored(string id) => world.Features[new(id)].Geometry switch { MultiPolygonGeometry m => m.Polygons.Count, PolygonGeometry => 1, _ => 0 };
-        var squares = shapes.Count(s => s.Id.Value == "design:north-dangui-plaza-tree-pits");
-        AssertThat(squares > 0 && squares == Authored("design:north-dangui-plaza-tree-pits")).OverrideFailureMessage("Every square pit of the north plaza is one shape.").IsTrue();
-        var strip = shapes.Where(s => s.Id.Value == "design:north-dangui-planting-strip").ToArray();
-        AssertThat(strip.Length > 0 && strip.Length == Authored("design:north-dangui-planting-strip")).OverrideFailureMessage("Every segment of the planting strip is one shape.").IsTrue();
-        var (rim, soil, kerb) = strip[0].PitHeights(Section);
-        AssertThat(Math.Abs((double)(StripRim) - (double)(rim)) <= 0.01).OverrideFailureMessage($"strip kerb top: expected {StripRim}, got {rim}.").IsTrue();
-        AssertThat(Math.Abs((double)(StripSoil) - (double)(soil)) <= 0.01).OverrideFailureMessage($"strip soil top: expected {StripSoil}, got {soil}.").IsTrue();
-        AssertThat(Math.Abs((double)(0.15) - (double)(kerb)) <= 0.01).OverrideFailureMessage($"strip frame thickness: expected {0.15}, got {kerb}.").IsTrue();
-        AssertThat(shapes.All(s => s.Rings is { Length: >= 1 })).OverrideFailureMessage("Every pit is an outline.").IsTrue();
+        var authored = world.Features.Values.Where(feature => feature.Kind.Value == GroundSources.PitKind &&
+            WorldProps.TryText(feature.Props, "stone") != "site" && feature.Geometry is PolygonGeometry or MultiPolygonGeometry).ToArray();
+        AssertThat(authored.Length > 0).IsTrue();
+        foreach (var feature in authored)
+        {
+            var polygons = feature.Geometry is PolygonGeometry ? 1 : ((MultiPolygonGeometry)feature.Geometry).Polygons.Count;
+            var pieces = shapes.Where(shape => shape.Id == feature.Id).ToArray();
+            AssertThat(pieces.Length == polygons).OverrideFailureMessage($"Every authored polygon of {feature.Id} becomes one pit.").IsTrue();
+            foreach (var piece in pieces)
+            {
+                var (rim, soil, kerb) = piece.PitHeights(Section);
+                AssertThat(rim > Section.PavingY && soil < rim && kerb >= Section.Pits.MinKerb && kerb <= Section.Pits.MaxKerb)
+                    .OverrideFailureMessage("The stone frame stands above paving and contains sunken soil.").IsTrue();
+                AssertThat(MathF.Abs(rim - soil - Section.Pits.SoilBelowRim) <= 0.01f).IsTrue();
+            }
+        }
+        AssertThat(shapes.All(shape => shape.Rings is { Length: >= 1 })).IsTrue();
     }
 
     // ---------------------------------------------------------------- fixtures and helpers
 
     /// <summary>An 80 m plaza with two square pits (one turned 30 degrees) and a 2 m strip, all inside it, in tile (0, 0).</summary>
-    private static TestWorld PlazaWorld() => new TestWorldBuilder().Plaza()
+    private static FakeWorld PlazaWorld() => new TestWorldBuilder().Plaza()
         .Pit("design:t-pits", null, AuthoredPitRim, """{"plant":"tree","perPit":1,"size":1.8,"kerb":0.22,"soilAbove":0.32}""",
             Square(20f, 20f, 1.8f, 0f), Square(36f, 20f, 1.8f, 30f))
         .Pit("design:t-strip", null, AuthoredStripRim, """{"plant":"tree","kerb":0.15,"soilAbove":0.14}""", Strip(30f, 30.05f, 50f, 32.05f))
@@ -242,7 +254,7 @@ public sealed class GroundTreePitTests
 
     private static PolygonRings Square(float cx, float cz, float size, float degrees)
     {
-        var a = degrees * MathF.PI / 180f;
+        var a = degrees * Angles.DegreesToRadians;
         var u = new Vector2(MathF.Cos(a), MathF.Sin(a)) * (size * 0.5f);
         var w = new Vector2(-u.Y, u.X);
         var c = new Vector2(cx, cz);
@@ -264,7 +276,7 @@ public sealed class GroundTreePitTests
     private static GroundMesher Mesher(IWorldModel world, out TileField field)
     {
         var layout = GroundLayout.Of(world);
-        var tile = new GroundTile(0f, 0f, GroundLod.TileSize, GroundLod.TileSize / 256f);
+        var tile = new GroundTile(0f, 0f, TileGrid.BaseEdge, TileGrid.BaseEdge / 256f);
         var grid = TerrainGrid.For(FlatTerrain.Default, new TileKey(0, 0), LodLevel.L0, tile);
         field = TileField.Build(layout, tile, Section, grid);
         return new GroundMesher(field, Section, LodLevel.L0, layout, grid, new MeshSink());
@@ -292,28 +304,11 @@ public sealed class GroundTreePitTests
         var tags = sport is null ? """{"leisure":"pitch"}""" : $$"""{"leisure":"pitch","sport":"{{sport}}"}""";
         var props = sport is null ? """{"kind":"sport"}""" : $$"""{"kind":"sport","sport":"{{sport}}"}""";
         var part = new WorldFeaturePart(id.Replace("test:", "osm:", StringComparison.Ordinal), new PolygonGeometry(rings), null, null) { Props = Json(props) };
-        return new(new FeatureId(id), FeatureSource.Osm, new DesignKind("sport"), new PolygonGeometry(rings))
-        {
-            Parts = [part],
-            Bounds = new Box3(new(cx - 52.5f, 0f, cz - 34f), new(cx + 52.5f, 0f, cz + 34f)),
-            Props = Json($$"""{"id":"{{id}}","kind":"sport","sourceTags":{{tags}}}""")
-        };
+        return WorldFeatureFixture.Create(id, "sport", new PolygonGeometry(rings),
+            $$"""{"id":"{{id}}","kind":"sport","sourceTags":{{tags}}}""", FeatureSource.Osm, parts: [part]);
     }
 
-    private static Dictionary<string, string> RealFiles()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe", "campus.json"))) directory = directory.Parent;
-        if (directory is null) throw new InvalidOperationException("Repository campus fixture not found.");
-        var data = Path.Combine(directory.FullName, "game", "data", "maps", "qingshuihe");
-        var files = new[] { "campus.json", "network.json", "interiors.json" }
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        foreach (var path in Directory.GetDirectories(Path.Combine(data, "overlay"), "*.d")
-                    .Where(dir => Path.GetFileName(dir) is not "interior.d" and not "terrain.d" and not "outskirts.d" and not "walkable.d" and not "fidelity.d")
-                    .SelectMany(dir => Directory.GetFiles(dir, "*.json")).OrderBy(p => p, StringComparer.Ordinal))
-            files[Path.GetRelativePath(data, path).Replace('\\', '/')] = File.ReadAllText(path);
-        return files;
-    }
+
 
     private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement.Clone();
 
@@ -325,11 +320,8 @@ public sealed class GroundTreePitTests
         public TestWorldBuilder Plaza()
         {
             var rings = new PolygonRings([new(4f, 4f), new(60f, 4f), new(60f, 60f), new(4f, 60f)]);
-            _features.Add(new(new FeatureId("osm:way:plaza"), FeatureSource.Osm, new DesignKind("road"), new PolygonGeometry(rings))
-            {
-                Bounds = new Box3(new(4f, 0f, 4f), new(60f, 0f, 60f)),
-                Props = Json("""{"roadType":"pedestrian"}""")
-            });
+            _features.Add(WorldFeatureFixture.Create("osm:way:plaza", "road", new PolygonGeometry(rings),
+                """{"roadType":"pedestrian"}""", FeatureSource.Osm));
             return this;
         }
 
@@ -338,15 +330,11 @@ public sealed class GroundTreePitTests
         {
             PolygonRings[] all = single is null ? polygons : [single, .. polygons];
             OverlayGeometry geometry = all.Length > 0 ? new MultiPolygonGeometry(all) : new PointGeometry(new Vector3(20f, 0f, 20f));
-            _features.Add(new(new FeatureId(id), FeatureSource.Design, new DesignKind("tree-pit"), geometry)
-            {
-                Height = height,
-                Bounds = new Box3(new(4f, 0f, 4f), new(60f, height, 60f)),
-                Props = Json(props)
-            });
+            _features.Add(WorldFeatureFixture.Create(id, GroundSources.PitKind, geometry, props, height: height)
+                with { Bounds = new Box3(new(4f, 0f, 4f), new(60f, height, 60f)) });
             return this;
         }
 
-        public TestWorld Build() => TestWorld.Of(_features);
+        public FakeWorld Build() => TestWorld.Of(_features);
     }
 }

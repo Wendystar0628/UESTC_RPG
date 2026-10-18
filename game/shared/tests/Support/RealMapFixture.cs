@@ -1,6 +1,8 @@
 using System.Text;
+using System.Reflection;
 using Campus.Contracts;
 using Campus.Gen.World;
+using Campus.Pipeline.Map;
 
 namespace Campus.Tests;
 
@@ -34,7 +36,38 @@ internal static class RealMapFixture
     {
         var entry = Entry(map);
         var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new DiskWorldInputSource(ResourceDirectory(entry.DataRoot)));
-        return WorldModelLoader.Load(entry.Descriptor.Id, files, options);
+        return LoadPrepared(files, entry.Descriptor.Id, options);
+    }
+
+    /// <summary>Load intentional edits to real map inputs with the registered production claims.</summary>
+    public static WorldModelLoadResult LoadPrepared(IReadOnlyDictionary<string, string> files,
+        MapId? map = null, WorldLoadOptions? options = null) =>
+        LoadPrepared(files.ToDictionary(pair => pair.Key,
+            pair => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(pair.Value), StringComparer.Ordinal), map, options);
+
+    public static WorldModelLoadResult LoadPrepared(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
+        MapId? map = null, WorldLoadOptions? options = null)
+    {
+        var id = map ?? Entry().Descriptor.Id;
+        options ??= new();
+        MapClaimSnapshot? claims = null;
+        if (options.ClaimedBy is null)
+        {
+            var registrations = RegistrationDiscovery.Discover(
+                new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }.Select(Assembly.Load));
+            claims = new(RegistrationDiscovery.ForMap(registrations, entry => entry.Map, id.Value)
+                .Where(entry => entry.Kind == "content")
+                .Select(entry => new MapClaimSource(entry.Id, new(entry.Owner), entry.Map is null,
+                    ((IContentModule)Activator.CreateInstance(entry.Type)!).Claims)));
+            var baseline = claims.RequiresAreaResolution
+                ? WorldModelLoader.Load(id, files.Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
+                    .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal), options).World
+                : null;
+            options = options with { ClaimedBy = claims.OverlayOwners(baseline) };
+        }
+        var loaded = WorldModelLoader.Load(id, files, options);
+        _ = claims?.Build(loaded.World);
+        return loaded;
     }
 
     private static string ResourceDirectory(string resource)

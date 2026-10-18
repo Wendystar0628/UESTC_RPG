@@ -9,7 +9,8 @@ public static class PartPlacement
 {
     public static IReadOnlyList<PlacedPart> Linear(PlacedPart source, int count, Vector3 step)
     {
-        ArgumentNullException.ThrowIfNull(source); Count(count); GeometryMath.Finite(step, nameof(step));
+        ArgumentNullException.ThrowIfNull(source); Count(count);
+        if (!VectorMath.Finite(step)) throw new ArgumentException("Coordinates must be finite.", nameof(step));
         ValidateMatrix(source.At);
         var result = new PlacedPart[count];
         for (var i = 0; i < count; i++)
@@ -23,7 +24,9 @@ public static class PartPlacement
     /// <summary>Rotates the source's entire local placement around a world-space centre using Y rotation.</summary>
     public static IReadOnlyList<PlacedPart> Radial(PlacedPart source, int count, Vector3 centre, float stepRadians)
     {
-        ArgumentNullException.ThrowIfNull(source); Count(count); GeometryMath.Finite(centre, nameof(centre)); ValidateMatrix(source.At);
+        ArgumentNullException.ThrowIfNull(source); Count(count);
+        if (!VectorMath.Finite(centre)) throw new ArgumentException("Coordinates must be finite.", nameof(centre));
+        ValidateMatrix(source.At);
         if (!float.IsFinite(stepRadians)) throw new ArgumentOutOfRangeException(nameof(stepRadians));
         var result = new PlacedPart[count];
         for (var i = 0; i < count; i++)
@@ -39,8 +42,8 @@ public static class PartPlacement
     /// <summary>Row-vector transform: +Z faces forward and +Y follows the supplied up direction.</summary>
     public static Matrix4x4 Socket(Vector3 position, Vector3 forward, Vector3 up)
     {
-        GeometryMath.Finite(position, nameof(position));
-        var z = GeometryMath.Unit(forward); var x = GeometryMath.Unit(GeometryMath.Cross(up, z)); var y = GeometryMath.Unit(GeometryMath.Cross(z, x));
+        if (!VectorMath.Finite(position)) throw new ArgumentException("Coordinates must be finite.", nameof(position));
+        var z = VectorMath.Unit(forward); var x = VectorMath.Unit(VectorMath.Cross(up, z)); var y = VectorMath.Unit(VectorMath.Cross(z, x));
         return new(x.X, x.Y, x.Z, 0, y.X, y.Y, y.Z, 0, z.X, z.Y, z.Z, 0, position.X, position.Y, position.Z, 1);
     }
 

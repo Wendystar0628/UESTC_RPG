@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Kernel.Lod;
 
 namespace Campus.Kernel.Stream;
@@ -45,5 +46,5 @@ public sealed class TileVisibility(float fadeSeconds)
     {
         _target.Clear(); _drawn.Clear(); _retiring.Clear(); _scratch.Clear();
     }
-    public static float Elapsed(float now, float then) => now >= then ? now - then : now + 480 - then;
+    public static float Elapsed(float now, float then) => now >= then ? now - then : now + WorldTime.AnimLoopSeconds - then;
 }

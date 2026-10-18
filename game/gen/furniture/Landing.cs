@@ -38,7 +38,7 @@ public sealed record Pad(Matrix4x4 Frame, float HalfWidth, float HalfDepth, floa
 /// <summary>
 /// Landing on the terrain (WLD-TERRAIN). Parts are generated flat with their origin on the ground; the placer reads
 /// <see cref="ITerrain"/> and picks the origin height. WP-15 lays its surfaces above the height field (lawn
-/// <see cref="FurnitureStyle.LawnLift"/>, paving and kerb tops <see cref="FurnitureStyle.PavingLift"/>), so heights are taken
+/// <see cref="GroundLevels.Lawn"/>, paving and kerb tops <see cref="GroundLevels.Paving"/>), so heights are taken
 /// from those levels:
 /// <list type="bullet">
 /// <item>point things (poles, posts): y = H(centre) + lawn level − burial, burial 0.05–0.3 m growing with the drop under the
@@ -62,7 +62,7 @@ public static class Land
             low = MathF.Min(low, terrain.HeightAt(p.X + dx * radius, p.Y + dz * radius));
         if ((h - low) / MathF.Max(radius, 0.01f) > S.PointMaxGrade) return null;
         var burial = Math.Clamp(S.BurialMin + MathF.Max(h - low, radius * grade), S.BurialMin, S.BurialMax);
-        return h + S.LawnLift - burial;
+        return h + GroundLevels.Lawn - burial;
     }
 
     /// <summary>
@@ -88,7 +88,7 @@ public static class Land
         if (high - low > S.PlinthMaxDrop) return null;
         var span = 2f * MathF.Sqrt(halfWidth * halfWidth + halfDepth * halfDepth);
         var grade = baseY is null ? MathF.Max(terrain.FactsAt(frame.M41, frame.M43).Grade, (high - low) / span) : 0f;
-        return new Pad(frame, halfWidth, halfDepth, low - S.PadSkirt, high + S.PavingLift + S.PadProud, grade > S.SmallMaxGrade);
+        return new Pad(frame, halfWidth, halfDepth, low - S.PadSkirt, high + GroundLevels.Paving + S.PadProud, grade > S.SmallMaxGrade);
     }
 
     private static readonly (float, float)[] Around = [(1f, 0f), (-1f, 0f), (0f, 1f), (0f, -1f)];

@@ -19,7 +19,7 @@ public static partial class Planting
         for (var r = 0; r < rules.Roads.Count; r++)
         {
             var rule = rules.Roads[r];
-            var chains = Chains(site.World.Network.Roads.Where(l => RoadName(l) == rule.Name).ToList());
+            var chains = Chains(site.World.Network.Roads.Where(l => (l.Props?.OptionalText("name:zh") ?? l.Props?.OptionalText("name")) == rule.Name).ToList());
             for (var c = 0; c < chains.Count; c++)
             {
                 var chain = chains[c];
@@ -50,14 +50,6 @@ public static partial class Planting
                 }
             }
         }
-    }
-
-    private static string? RoadName(NetworkLine line)
-    {
-        if (line.Props is not { ValueKind: JsonValueKind.Object } props) return null;
-        foreach (var name in new[] { "name:zh", "name" })
-            if (props.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String) return value.GetString();
-        return null;
     }
 
     /// <summary>Joins lines that share end points (within 1 m) into chains, in ID order, so a road split by a bridge stays one row.</summary>
@@ -93,27 +85,17 @@ public static partial class Planting
     /// <summary>Points every <paramref name="spacing"/> along a polyline from <paramref name="start"/>, with the unit left normal there.</summary>
     private static IEnumerable<(Vector2 P, Vector2 N)> Samples(List<Vector2> line, float start, float spacing)
     {
-        var lengths = new float[line.Count];
-        for (var i = 1; i < line.Count; i++) lengths[i] = lengths[i - 1] + Vector2.Distance(line[i - 1], line[i]);
-        var total = lengths[^1];
+        var total = PlanGeometry.Length(line);
         for (var s = start; s < total; s += spacing)
         {
             // The normal comes from a 4 m chord, so rows round the bends instead of kinking at the vertices.
-            var a = At(line, lengths, MathF.Max(0f, s - 2f));
-            var b = At(line, lengths, MathF.Min(total, s + 2f));
+            var a = PlanGeometry.Sample(line, MathF.Max(0f, s - 2f)).Point;
+            var b = PlanGeometry.Sample(line, Math.Min(total, s + 2f)).Point;
             var t = b - a;
             if (t.LengthSquared() < 1e-6f) continue;
             t = Vector2.Normalize(t);
-            yield return (At(line, lengths, s), new Vector2(-t.Y, t.X));
+            yield return (PlanGeometry.Sample(line, s).Point, new Vector2(-t.Y, t.X));
         }
-    }
-
-    private static Vector2 At(List<Vector2> line, float[] lengths, float s)
-    {
-        var i = 1;
-        while (i < line.Count - 1 && lengths[i] < s) i++;
-        var span = lengths[i] - lengths[i - 1];
-        return Vector2.Lerp(line[i - 1], line[i], span > 1e-6f ? Math.Clamp((s - lengths[i - 1]) / span, 0f, 1f) : 0f);
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -122,7 +104,7 @@ public static partial class Planting
 
     private static void PlantOsmTrees(Site site, SpeciesTable species, PlantingRules rules, List<PlantedTree> trees)
     {
-        var named = rules.Roads.SelectMany(rule => site.World.Network.Roads.Where(l => RoadName(l) == rule.Name)
+        var named = rules.Roads.SelectMany(rule => site.World.Network.Roads.Where(l => (l.Props?.OptionalText("name:zh") ?? l.Props?.OptionalText("name")) == rule.Name)
             .Select(l => (Rule: rule, Line: l))).ToList();
         foreach (var point in site.World.Network.Trees.OrderBy(t => t.Id.Value, StringComparer.Ordinal))
         {
@@ -134,7 +116,7 @@ public static partial class Planting
             var best = rules.OsmNear;
             foreach (var (rule, line) in named)
             {
-                var d = MathF.Sqrt(PolylineDistanceSquared(p, line.Line.Points));
+                var d = (float)PlanGeometry.Project(line.Line.Points, p).Distance;
                 if (d < best) (best, id, wash) = (d, rule.Species[0], rule.Wash);
             }
             if (point.Species is { Length: > 0 } given && species.TryGet(given, out var known)) id = known!.Id;

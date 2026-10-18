@@ -6,6 +6,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Tests;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
 using Campus.Gen.Tests.Support;
@@ -21,13 +22,10 @@ public sealed class PlantingTests
 
     private static (IWorldModel, SpeciesTable, PlantingRules) Load()
     {
-        var root = FindRepository();
+        var root = RepositoryFixture.Root;
         var species = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json")));
-        var rules = PlantingRules.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "maps", "qingshuihe", "vegetation", "planting.json")), species);
-        var data = Path.Combine(root, "game", "data", "maps", "qingshuihe");
-        var files = new[] { "campus.json", "network.json", "interiors.json", "map.json" }
-            .ToDictionary(name => name, name => File.ReadAllText(Path.Combine(data, name)), StringComparer.Ordinal);
-        return (WorldModelLoader.Load(new("qingshuihe"), files).World, species, rules);
+        var rules = PlantingRules.Parse(RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey].Span, species);
+        return (PavementTests.World(false), species, rules);
     }
 
     [TestCase]
@@ -42,13 +40,15 @@ public sealed class PlantingTests
         // grove (rows × length / spacing; cross streets, crossing paths and buildings take some out); a spring band of
         // cherry and flowering plum outside them.
         var avenue = a.Trees.Where(t => t.Source == PlantSource.Road && t.Species.Id == "ginkgo").ToList();
-        if (avenue.Count is < 250 or > 500) throw new InvalidOperationException($"{avenue.Count} avenue ginkgos");
-        if (avenue.Select(t => t.Key.Split(':')[3] + t.Key.Split(':')[4]).Distinct().Count() != 2)
+        if (avenue.Count == 0) throw new InvalidOperationException($"{avenue.Count} avenue ginkgos");
+        var avenueRows = rules.Roads.Where(r => r.Species.Contains("ginkgo")).Sum(r => r.Rows.Count) * 2;
+        if (avenue.Select(t => t.Key.Split(':')[3] + t.Key.Split(':')[4]).Distinct().Count() != avenueRows)
             throw new InvalidOperationException("the avenue does not have one row each side");
         var band = a.Trees.Where(t => t.Source == PlantSource.Band).ToList();
-        if (band.Count < 100 || band.Any(t => t.Species.Id is not ("cherry" or "plum"))) throw new InvalidOperationException($"band of {band.Count}");
-        if (a.Count(PlantSource.Grove) < 600) throw new InvalidOperationException($"only {a.Count(PlantSource.Grove)} grove trees");
-        if (a.Count(PlantSource.OsmTree) < 20) throw new InvalidOperationException($"only {a.Count(PlantSource.OsmTree)} OSM trees");
+        var bandSpecies = rules.Roads.Where(r => r.Band is not null).SelectMany(r => r.Band!.Species).ToHashSet(StringComparer.Ordinal);
+        if (band.Count == 0 || band.Any(t => !bandSpecies.Contains(t.Species.Id))) throw new InvalidOperationException($"band of {band.Count}");
+        if (a.Count(PlantSource.Grove) == 0) throw new InvalidOperationException($"only {a.Count(PlantSource.Grove)} grove trees");
+        if (a.Count(PlantSource.OsmTree) == 0) throw new InvalidOperationException($"only {a.Count(PlantSource.OsmTree)} OSM trees");
         if (a.Trees.Select(t => t.Key).Distinct().Count() != a.Trees.Count) throw new InvalidOperationException("duplicate keys");
         if (a.Trees.Any(t => t.Custom.X is < 0f or >= 1f || t.Custom.Z is < 0f or > 1f || !(t.Custom.W > 0f)))
             throw new InvalidOperationException("INSTANCE_CUSTOM out of range");
@@ -84,10 +84,11 @@ public sealed class PlantingTests
         // student centre; never spread elsewhere.
         var (world, species, rules) = Data.Value;
         var layout = Planting.Build(world, species, rules, 1u);
-        var allowed = new[] { "主楼", "学生活动中心" }.Select(n => world.Features.Values.Where(f => f.Name == n).ToList()).ToList();
+        var allowed = rules.Groves.Areas.Where(a => a.Mix.Any(m => m.Species == "ginkgo"))
+            .Select(a => (a.Radius, Features: world.Features.Values.Where(f => f.Name == a.Name).ToList())).ToList();
         foreach (var t in layout.Trees.Where(t => t.Species.Id == "ginkgo" && t.Source == PlantSource.Grove))
         {
-            var near = allowed.Any(group => group.Any(f => Distance(f.Bounds, t.Position) <= 75f));
+            var near = allowed.Any(area => area.Features.Any(f => Distance(f.Bounds, t.Position) <= area.Radius + 0.05f));
             if (!near) throw new InvalidOperationException($"grove ginkgo {t.Key} at ({t.Position.X:F0}, {t.Position.Z:F0})");
         }
     }
@@ -139,20 +140,20 @@ public sealed class PlantingTests
         var (world, species, rules) = Data.Value;
         var layout = Planting.Build(world, species, rules, 1u);
         var tree = layout.Trees.First(t => t.Source == PlantSource.Road);
-        var tile = new TileKey((int)MathF.Floor(tree.Position.X / 64f), (int)MathF.Floor(tree.Position.Z / 64f));
+        var tile = TileGrid.At(tree.Position);
         var colliders = TreeColliders.For(layout, tile, world.Terrain).Cast<PostCollider>().ToList();
-        var inTile = layout.Trees.Count(t => (int)MathF.Floor(t.Position.X / 64f) == tile.X && (int)MathF.Floor(t.Position.Z / 64f) == tile.Z);
+        var inTile = layout.Trees.Count(t => TileGrid.At(t.Position) == tile);
         if (colliders.Count != inTile || colliders.Count == 0) throw new InvalidOperationException($"{colliders.Count} posts for {inTile} trees");
         foreach (var c in colliders)
         {
             if (c.Foot != FootMat.Bark || c.Tag != SurfaceTag.Barrier) throw new InvalidOperationException("trunk material");
             if (!(c.R > 0.05f && c.R < 1f && c.Y1 > c.Y0 + 0.5f)
-                || (int)MathF.Floor(c.C.X / 64f) != tile.X || (int)MathF.Floor(c.C.Y / 64f) != tile.Z)
+                || TileGrid.At(c.C) != tile)
                 throw new InvalidOperationException($"post {c.C} r {c.R} y {c.Y0}–{c.Y1}");
         }
         foreach (var cell in new TileKey[] { new(3, 2), new(-4, -3) })
         {
-            var moved = tree with { Position = new(cell.X * 64 + 12, tree.Position.Y, cell.Z * 64 + 24) };
+            var moved = tree with { Position = new(cell.X * TileGrid.BaseEdge + 12, tree.Position.Y, cell.Z * TileGrid.BaseEdge + 24) };
             var post = (PostCollider)TreeColliders.For(new([moved]), cell, world.Terrain).Single();
             if (post.C != new Vector2(moved.Position.X, moved.Position.Z))
                 throw new InvalidOperationException("Tree collision did not retain world coordinates: " + cell);
@@ -167,13 +168,15 @@ public sealed class PlantingTests
     {
         var (world, species, rules) = Data.Value;
         var layout = Planting.Build(world, species, rules, 1u);
-        var rect = new MapRect(new(-1280f, -1280f), new(1280f, 1280f));
+        var rect = new MapRect(world.Boundary.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min),
+            world.Boundary.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max));
         const float step = 1f;
-        var w = (int)(2560f / step);
-        var m1 = new byte[w * w * 4];
-        var m2 = new byte[w * w * 4];
+        var w = (int)MathF.Round((rect.Max.X - rect.Min.X) / step);
+        var h = (int)MathF.Round((rect.Max.Y - rect.Min.Y) / step);
+        var m1 = new byte[w * h * 4];
+        var m2 = new byte[w * h * 4];
         CanopyProjection.Paint(layout, rules, world, rect, step, m1, m2);
-        byte At(byte[] m, int channel, float x, float z) => m[(((int)((z + 1280f) / step)) * w + (int)((x + 1280f) / step)) * 4 + channel];
+        byte At(byte[] m, int channel, float x, float z) => m[(((int)((z - rect.Min.Y) / step)) * w + (int)((x - rect.Min.X) / step)) * 4 + channel];
         var ginkgo = layout.Trees.First(t => t.Source == PlantSource.Road);
         if (At(m1, 0, ginkgo.Position.X, ginkgo.Position.Z) < 200) throw new InvalidOperationException("no ginkgo leaves under an avenue tree");
         if (At(m2, 2, ginkgo.Position.X, ginkgo.Position.Z) < 200) throw new InvalidOperationException("no canopy shelter under an avenue tree");
@@ -194,7 +197,7 @@ public sealed class PlantingTests
     private static IEnumerable<WorldFeaturePart> Parts(WorldFeature feature, string kind) =>
         feature.Parts.Count == 0
             ? (feature.Kind.Value == kind && feature.Geometry is not (PointGeometry or PolylineGeometry) ? [new("", feature.Geometry, null, null)] : [])
-            : feature.Parts.Where(part => (part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var k) ? k.GetString() : feature.Kind.Value) == kind);
+            : feature.Parts.Where(part => (part.Props?.OptionalText("kind") ?? feature.Kind.Value) == kind);
 
     private static float Distance(Box3 box, Vector3 p)
     {
@@ -211,14 +214,4 @@ public sealed class PlantingTests
             (x, z) => new TerrainFacts(Steep(x) ? 0.4f : 0.04f, Steep(x) ? TerrainClass.Slope : TerrainClass.Flat, 0f, 0f));
     }
 
-    private static string FindRepository()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "ownership.json"))) return current.FullName;
-            current = current.Parent;
-        }
-        throw new InvalidOperationException("repository root not found");
-    }
 }

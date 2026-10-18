@@ -177,17 +177,16 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         await BootWorldOverrides.ApplyView(options, registry, appBoot.WillRestoreWorld, showTitle);
         CheckStartupActive();
         _view!.Sync();
-        _mapRuntime!.Prefetch(registry.Get<ICameraRig>().Pose, registry.Get<ICameraRig>().Mode);
-        _mapRuntime.BeginWarm();
+        var rig = registry.Get<ICameraRig>();
+        var arrival = _mapRuntime!.Arrive(rig.Pose, rig.Mode);
         await Initialize(BootPhase.BeforeReveal);
         _contentReadiness = ViewContentReadiness.Capture(this);
         Phase = "warm-final-view";
-        await CaptureBarrier.WaitForReadyAsync(this, _contentReadiness, () =>
+        await CaptureBarrier.WaitForReadyAsync(this, _contentReadiness, arrival, () =>
         {
             CheckStartupActive();
-            if (_mapRuntime.Error is { } error) throw new InvalidOperationException(error);
-            return _mapRuntime.ResidentReady && _mapRuntime.DestinationReady && _mapRuntime.WarmReady;
-        });
+            return true;
+        }, _captureLifetime.Token);
         CheckStartupActive();
         Phase = "reveal";
         readinessWait.Dispose(); // Preparation ended; the authored reveal duration is not loading.

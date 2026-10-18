@@ -47,8 +47,8 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
         var bowl = 2 * radius * RoofStyle.DishDepthRatio;
         var c = bowl / (radius * radius);
         float Front(float r) => c * r * r;
-        Vector2 FrontNormal(float r) => Norm(-2 * c * r, 1);
-        Vector2 BackNormal(float r) => Norm(2 * c * r, -1);
+        Vector2 FrontNormal(float r) => VectorMath.Unit(new Vector2(-2 * c * r, 1));
+        Vector2 BackNormal(float r) => VectorMath.Unit(new Vector2(2 * c * r, -1));
         var steps = near ? 3 : 2;
         var bands = new List<LatheBand>();
         for (var i = 0; i < steps; i++)
@@ -118,12 +118,6 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
                 builder.AddCentredBox(new(0.04f, 0.04f, armLength), Xf.Move(0, y, -(mastR - 0.005f + armLength * 0.5f)).Then(turn), RoofStyle.Metal(RoofStyle.Steel), 0, VertexFlag.NoShadow);
         }
         return builder;
-    }
-
-    private static Vector2 Norm(float x, float y)
-    {
-        var length = Math.Sqrt((double)x * x + (double)y * y);
-        return new((float)(x / length), (float)(y / length));
     }
 
     private static void Validate(EquipmentParams p)

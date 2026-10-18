@@ -24,7 +24,7 @@ public static partial class FurniturePlanner
     {
         var terrain = site.World.Terrain;
         // Each car look (shape and colour) is its own mesh set: a 64 m cell keeps to a few of them (draw calls, ART-MODELING).
-        var looks = new Dictionary<(int, int), List<VehicleParams>>();
+        var looks = new Dictionary<TileKey, List<VehicleParams>>();
         for (var lot = 0; lot < site.ParkingLots.Count; lot++)
         {
             var rings = site.ParkingLots[lot];
@@ -51,7 +51,7 @@ public static partial class FurniturePlanner
                 var colour = StreetStyle.CarBodies[(int)((hash >> 12) % (uint)StreetStyle.CarBodies.Length)];
                 car = car with { Material = new(StreetStyle.Lit(colour), StreetStyle.Shade(colour)) };
                 var centre = a + along * (start + (k + 0.5f) * S.CarSlot) + inward * (S.CarNoseIn + car.Depth * 0.5f);
-                var cell = ((int)MathF.Floor(centre.X / 64f), (int)MathF.Floor(centre.Y / 64f));
+                var cell = TileGrid.At(centre);
                 if (!looks.TryGetValue(cell, out var used)) looks.Add(cell, used = []);
                 if (!used.Contains(car) && used.Count >= S.CarLooksPerCell) car = used[(int)((hash >> 16) % (uint)used.Count)];
                 centre = a + along * (start + (k + 0.5f) * S.CarSlot) + inward * (S.CarNoseIn + car.Depth * 0.5f);

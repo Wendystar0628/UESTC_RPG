@@ -1,3 +1,4 @@
+using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
@@ -24,12 +25,12 @@ public sealed class BuildingTraceTests
         var door = Anchor("t:dorm", "dorm.south", new(21.3f, 0f, 0f), 0f, outsideY: -0.9f);
         WorldFeature[] features =
         [
-            Feature("t:dorm", Rect(0, 0, 60, 18), 6, 19.8f, "residence"),
-            Feature("t:lab", Rect(10, 30, 40, 16), 4, 15.6f, "research"),
-            Feature("t:claimed", Rect(5, 50, 20, 10), 3, 10.5f, "teaching"),
-            Feature("t:hall", Rect(100, 0, 40, 30), 1, 9f, "sport"),
-            Feature("t:court", Courtyard(0, 100), 3, 12f, "teaching"),
-            Feature("t:plant", Rect(200, 0, 20, 12), 2, 8f, "utility"),
+            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6),
+            WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(10, 30, 40, 16))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4),
+            WorldFeatureFixture.Create("t:claimed", "building", new PolygonGeometry(new PolygonRings(Rect(5, 50, 20, 10))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3),
+            WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 40, 30))), props: "{\"category\":\"sport\"}", source: FeatureSource.Osm, height: 9f, storeys: 1),
+            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 12f, storeys: 3),
+            WorldFeatureFixture.Create("t:plant", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 20, 12))), props: "{\"category\":\"utility\"}", source: FeatureSource.Osm, height: 8f, storeys: 2),
         ];
         var world = World(Entrances(door), Falling(-1f, 0.9f), features);
         var ctx = Prepared(Ctx(world, 2u, claims: ["t:claimed"]));
@@ -79,7 +80,7 @@ public sealed class BuildingTraceTests
     [TestCase]
     public void TraceSourcesReproduceBuildAndCollideOnTheRealCampus()
     {
-        var real = RealCampus();
+        var real = RealMapFixture.Load().World;
         var ctx = Prepared(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = real, Map = TestMap, WorldSeed = 1u, ClaimedBy = RealClaims(real) });
         var module = new BuildingsModule();
         var mine = BuildingSet.For(real, 1u).Plans.Where(p => BuildingsModule.Unclaimed(ctx, p)).ToArray();

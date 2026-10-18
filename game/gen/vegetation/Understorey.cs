@@ -181,15 +181,15 @@ public static class Understorey
                 var index = sample++;
                 var run = (int)MathF.Floor(s / rule.Run);
                 var runKey = parcelKey + ":" + run.ToString(CultureInfo.InvariantCulture);
-                if (Hash01(site.Seed, "border-run", runKey) >= rule.Share) continue;
-                var hedge = Hash01(site.Seed, "border-hedge", runKey) < rule.HedgeShare;
+                if (IntegerNoise.High24(StableHash.Hash32(site.Seed, "border-run", runKey)) >= rule.Share) continue;
+                var hedge = IntegerNoise.High24(StableHash.Hash32(site.Seed, "border-hedge", runKey)) < rule.HedgeShare;
                 var c = p + inward * rule.Inset;
                 if (!PlanGeometry.Contains(parcel.Rings, c) || !Facing(site, c, rule.Reach) || !Clear(site, trunks, c, TrunkGap)) continue;
                 var key = "border:" + parcelKey + ":" + index.ToString(CultureInfo.InvariantCulture);
                 var (variant, h) = Pick(site.Seed, key);
                 if (hedge)
                 {
-                    var info = species.Get(rule.Hedge[(int)(Hash01(site.Seed, "border-hedge-species", runKey) * rule.Hedge.Count) % rule.Hedge.Count]);
+                    var info = species.Get(rule.Hedge[(int)(IntegerNoise.High24(StableHash.Hash32(site.Seed, "border-hedge-species", runKey)) * rule.Hedge.Count) % rule.Hedge.Count]);
                     var model = Model(info, variant);
                     var half = rule.Spacing * HedgeOverlap;
                     var size = new Vector3(half / model.Radius, HedgeHeight / model.Height, HedgeHalfWidth / model.Radius);
@@ -199,9 +199,9 @@ public static class Understorey
                 {
                     if (Fraction(h, 5) < ClumpGap) continue;
                     // One species per run, so a clump reads as one planting.
-                    var info = species.Get(Pick(rule.Mix, Hash01(site.Seed, "border-mix", runKey)));
+                    var info = species.Get(Pick(rule.Mix, IntegerNoise.High24(StableHash.Hash32(site.Seed, "border-mix", runKey))));
                     var model = Model(info, variant);
-                    var height = ShrubMin + (ShrubMax - ShrubMin) * Fraction(h, 7);
+                    var height = ScalarMath.Lerp(ShrubMin, ShrubMax, Fraction(h, 7));
                     var k = height / model.Height;
                     Add(site, plants, key, info, variant, c, 0f, 6.2831853f * Fraction(h, 3), new Vector3(k), UnderKind.Shrub);
                 }
@@ -228,7 +228,7 @@ public static class Understorey
                 var key = "tuft:" + g.ToString(CultureInfo.InvariantCulture) + ":" + (sample++).ToString(CultureInfo.InvariantCulture);
                 var (variant, h) = Pick(site.Seed, key);
                 if (Fraction(h, 11) >= rule.Share) continue;
-                var c = p + inward * (0.3f + (rule.Edge - 0.3f) * Fraction(h, 5) * Fraction(h, 5));
+                var c = p + inward * (ScalarMath.Lerp(0.3f, rule.Edge, Fraction(h, 5) * Fraction(h, 5)));
                 if (!PlanGeometry.Contains(parcel.Rings, c) || !Clear(site, trunks, c, TrunkGap)) continue;
                 AddTuft(site, plants, key, info, variant, h, c);
             }
@@ -243,7 +243,7 @@ public static class Understorey
                 var key = "tuft:" + tree.Key + ":" + k.ToString(CultureInfo.InvariantCulture);
                 var (variant, h) = Pick(site.Seed, key);
                 var d = TreePlan.Azimuth(6.2831853f * (k + Fraction(h, 3)) / rule.PerTree);
-                var c = at + new Vector2(d.X, d.Z) * (TuftRingMin + (TuftRingMax - TuftRingMin) * Fraction(h, 5));
+                var c = at + new Vector2(d.X, d.Z) * (ScalarMath.Lerp(TuftRingMin, TuftRingMax, Fraction(h, 5)));
                 if (!Clear(site, trunks, c, TuftRingMin * 0.8f)) continue;
                 AddTuft(site, plants, key, info, variant, h, c);
             }
@@ -253,7 +253,7 @@ public static class Understorey
     private static void AddTuft(Planting.Site site, List<GroundPlant> plants, string key, SpeciesInfo info, int variant, float h, Vector2 c)
     {
         var model = Model(info, variant);
-        var k = (TuftMin + (TuftMax - TuftMin) * Fraction(h, 7)) / model.Height;
+        var k = (ScalarMath.Lerp(TuftMin, TuftMax, Fraction(h, 7))) / model.Height;
         Add(site, plants, key, info, variant, c, 0f, 6.2831853f * Fraction(h, 3), new Vector3(k * TuftWiden, k * TuftFlatten, k * TuftWiden), UnderKind.Tuft);
     }
 
@@ -270,7 +270,7 @@ public static class Understorey
         float yaw, Vector3 size, UnderKind kind)
     {
         var y = site.World.Terrain.HeightAt(p.X, p.Y) + lift;
-        var seed = (StableHash.Hash32(site.Seed, "veg", key) >> 8) * (1f / 16777216f);
+        var seed = IntegerNoise.High24(StableHash.Hash32(site.Seed, "veg", key));
         plants.Add(new GroundPlant(key, info, variant, new Vector3(p.X, y, p.Y), yaw, size, kind, seed, site.WindPos(p.X)));
     }
 
@@ -284,13 +284,11 @@ public static class Understorey
     private static (int Variant, float Hash) Pick(uint seed, string key)
     {
         var h = StableHash.Hash32(seed, "under", key);
-        return ((int)(h % TreeForms.Variants), (h >> 8) * (1f / 16777216f));
+        return ((int)(h % TreeForms.Variants), IntegerNoise.High24(h));
     }
 
     /// <summary>Another uniform value from one hash (the fractional part of a multiple), so one hash feeds several choices.</summary>
     private static float Fraction(float h, int k) => h * k - MathF.Floor(h * k);
-
-    private static float Hash01(uint seed, string purpose, string key) => (StableHash.Hash32(seed, purpose, key) >> 8) * (1f / 16777216f);
 
     private static string Pick(IReadOnlyList<(string Species, float Weight)> mix, float u)
     {
@@ -313,22 +311,13 @@ public static class Understorey
         var ring = parcel.Rings.Outer;
         // Counter-clockwise rings (positive signed area) have the interior on the left of the direction of travel.
         var left = PlanGeometry.SignedArea(ring) > 0;
-        var s = 0f;
-        var next = step * 0.5f;
-        for (var i = 0; i < ring.Count; i++)
+        var length = PlanGeometry.Length(ring, closed: true);
+        for (var station = step * 0.5f; station <= length; station += step)
         {
-            var a = ring[i];
-            var b = ring[(i + 1) % ring.Count];
-            var length = Vector2.Distance(a, b);
-            if (length < 1e-4f) continue;
-            var t = (b - a) / length;
+            var sample = PlanGeometry.Sample(ring, station, closed: true);
+            var t = sample.Tangent;
             var n = left ? new Vector2(-t.Y, t.X) : new Vector2(t.Y, -t.X);
-            while (next <= s + length)
-            {
-                yield return (a + t * (next - s), t, n, next);
-                next += step;
-            }
-            s += length;
+            yield return (sample.Point, t, n, station);
         }
     }
 

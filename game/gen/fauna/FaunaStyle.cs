@@ -48,9 +48,6 @@ public static class FaunaStyle
     /// <summary>Cat sites keep this far apart, so each one reads as its own place.</summary>
     public const float CatSiteSpacing = 150f;
 
-    /// <summary>Paved plazas stand this much above the terrain (WP-16 and WP-13 PavingLift), so the flock stands on the paving.</summary>
-    public const float PavingLift = 0.15f;
-
     /// <summary>Pigeon flock on the largest stepped plaza: count, ring fraction of the steps' foot radius, scatter.</summary>
     public const int PigeonCount = 9;
     public const float PigeonRingFraction = 0.55f;

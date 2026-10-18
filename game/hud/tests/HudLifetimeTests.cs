@@ -32,7 +32,7 @@ public sealed class HudLifetimeTests
         var world = new WorldStateService(new WeatherProcess(Services.Get<IWeatherProfileSource>()));
         var motion = new MotionPolicy(settings);
         var baseline = Subscribers(settings, "Changed");
-        var clock = new UiThemeClock(world, settings, motion, UiTokens.Load());
+        var clock = new UiThemeClock(world, settings, motion);
         var parent = ((SceneTree)Engine.GetMainLoop()).Root;
         try
         {
@@ -75,6 +75,8 @@ public sealed class HudLifetimeTests
             registry.Add(settings);
             registry.Add(model);
             registry.Add<IMotionSettings>(motion);
+            registry.Add(motion);
+            registry.Add(new UiThemeClock(world, settings, motion));
             registry.Add<IWorldState>(world);
             registry.Add<IWorldControl>(world);
             registry.Add<ICameraRig>(camera);

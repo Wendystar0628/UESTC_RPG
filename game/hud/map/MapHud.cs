@@ -14,7 +14,7 @@ namespace Campus.Hud.Map;
 /// 小地图与图集页各自的行为在 <see cref="MinimapController"/> 与 <see cref="AtlasController"/>。
 /// 标记、区域与传送经 IAtlasService；玩家箭头与所在区域读 IObserverState；视锥读 ICameraRig.Pose；
 /// 不直接调 ICameraRig.Transit（ENG-ARCH）。界面在 CanvasLayer 10（HudRoot 那一层）；
-/// WP-35 的左上角槽位与全屏页槽位合入后改挂到槽位里。
+/// 小地图挂进 HudRoot 提供的左上角槽位。
 /// </summary>
 [KernelNode("hud-map", Owner = "WP-48b")]
 public partial class MapHud : Node, IMapAware, IBootParticipant
@@ -36,12 +36,12 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     private long _atlasRev = -1;
 
     private bool _uiEnabled = true;
-    private Campus.Hud.Style.UiThemeClock? _clock;
     private bool _night;
     private bool _pure;
 
     // 两个控制共用的状态与依赖
     internal MapHudServices Services => _services!;
+    internal HudRoot Hud => _services!.Hud;
     internal MapStyle Style => _style!;
     internal MapHudContext Ctx => _ctx;
     internal CanvasLayer? Layer => _layer;
@@ -70,7 +70,6 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         _minimap = new Minimap(_ctx);
         root.AddChild(_minimap);
         CallDeferred(MethodName.MountMinimap);
-        CallDeferred(MethodName.FindClock);
         // 大地图在扉页之后预建、隐藏：第一次按 M 不建控件（SYS-ATLAS）
         _page = new AtlasPage(_ctx) { Visible = false };
         root.AddChild(_page);
@@ -97,9 +96,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
         _services!.Atlas.Changed -= RebuildEntries;
     }
 
-    private void MountMinimap() => _minimapCtl.Mount();
-
-    private void FindClock() => _clock = GetParent()?.FindChild("UiThemeClock", true, false) as Campus.Hud.Style.UiThemeClock;
+    private void MountMinimap() => _minimapCtl.Mount(Hud.MinimapSlot);
 
     // ------------------------------------------------------------------ 地图数据
 
@@ -145,7 +142,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     public override void _Process(double delta)
     {
         var dt = (float)Math.Min(delta, 0.1);
-        if (_clock is { } clock && GodotObject.IsInstanceValid(clock)) ApplyNight(clock.Dark);
+        ApplyNight(_services!.Theme.Dark);
         _base!.Poll(_map?.Id);
         var playing = _services!.Flow.State switch
         {
