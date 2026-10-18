@@ -64,7 +64,8 @@
           Dash.chip(it.who || '—', sideOf(it.who)));
       })));
       var more = items.length > MAX_WORK ? '另有 ' + (items.length - MAX_WORK) + ' 项，' : '';
-      body.appendChild(h('div.ov-more', more, h('a', { href: '#work/work-doing' }, '去施工页的“正在做”')));
+      var pend = items.filter(function (it) { return it.state === '待编译'; }).length;
+      body.appendChild(h('div.ov-more', more, '进行中 ', h('a', { href: '#work/work-doing' }, String(items.length - pend)), ' 项，待编译 ', h('a', { href: '#work/work-pending' }, String(pend)), ' 项（去施工页看）'));
     }
     return staleCard(Dash.card('在做（' + items.length + ' 项）', body), 'live', !!live);
   }

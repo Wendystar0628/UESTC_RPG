@@ -18,6 +18,11 @@
 .dg-dir { font-family: var(--mono); font-size: var(--fs-xs); }
 .dg-flag { font-size: var(--fs-xs); color: var(--auto); }
 
+/* 待编译卡：工作树块与文件清单 */
+.pd-tree { display: flex; flex-direction: column; gap: var(--s1); padding-left: var(--s3); border-left: 2px solid var(--line-2); }
+.pd-gate.is-bad { color: var(--risk); }
+.pd-files { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+
 .qu-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; align-items: start; margin-top: var(--s3); }
 .qu-col { min-width: 0; }
 .qu-colhead { display: flex; align-items: baseline; gap: 0.5rem; width: 100%; padding: 0 0.15rem 0.5rem; border: 0; border-bottom: 2px solid var(--text-2); background: none; font: inherit; color: inherit; text-align: left; margin-bottom: 0.6rem; }

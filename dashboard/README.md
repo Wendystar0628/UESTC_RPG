@@ -56,7 +56,12 @@ live:      { sessions: [{ id, name, side: "claude"|"codex", model, effort, state
                           stage?, testing? }],
              build:    { lock: "free"|"held", holder, engines, builds, editors },
              work:     { items: [{ row, what, dirs, state, who, sheet, agents: [{ id, side, name, model, effort, state, started, last, task }],
-                                   changes: { files, dirs: [{ path, files }] }, flags: [一句话] }],
+                                   changes: { files, dirs: [{ path, files }] }, flags: [一句话],
+                                   pending?: { by, files: { count, list: [路径] },
+                                               tree: null | { path, name, state, dirty, ahead, behind, touched,
+                                                              running: [{ name, kind, cmd, stage, testing, since }], gate, gateOk,
+                                                              shots: { count, at } },
+                                               waiting: { since, estimated, basis } } }],
                          loose:  [agent...],
                          mains:  [{ name, model, effort, state, since, task }] },
              worktrees: { root: 指定的工作树目录,
@@ -87,6 +92,7 @@ audit:     { items: [{ id, at, from, title, why, link, status: "open"|"done" }] 
 - `live.sessions`、`live.agents`：Claude 与 Codex 两侧；`agents[].row` 是子代理名开头对上的队列行号（Claude 看 `description`，Codex 看 `task_name`；没有行号的是调研、核查一类，`row` 为空）；`stalled` 是"记录没收尾却 20 分钟没写"。`since`：会话当前状态从何时起（Codex 取会话记录里最近一次开始或结束，Claude 取记录最后写入）。`task`：Codex 主线最近一句话（全文）。
 - `live.scripts`：逐个进程列出，同一脚本的外壳与子进程合并成一项；`where` 是"主检出"或临时工作树的路径（命令行路径对上 git 登记的工作树）；`cmd` 是命令摘要（`gate.ps1 -Wp WP-00`、`fixed_shots.ps1 -Only …`、`dotnet test Campus.Gen.Tests --filter …`、Godot 的 `--shots=P02 clear/autumn/17.5` 等）；门禁另有 `stage`（走到哪一门：G1 编译、G1 资源导入、G2 测试 <项目>、G4 架构规则……，读该检出 `output/build/gates` 下的日志）与 `testing`（正在跑的测试项目）。没在跑也要露面的来信监视、实时采集和巡逻（定时任务，进程里看不到，看 `state/patrol.last`）带 `state: "stopped"`。
 - `live.work`：`items` 是施工队列里进行中、待编译的行（再加有子代理在跑的行），`agents` 是按行号对上的最近 30 分钟有动静的子代理，`changes` 是工作区里落在这行"目录"列下的未提交文件数与目录，`sheet` 是任务单路径或 null；`flags` 是程序算出的不一致（子代理在跑但行不是进行中；进行中却 3 小时没改动也没子代理；待编译但工作区里已没有改动）。`loose` 是在跑或刚交回、却对不上队列行的子代理；`mains` 是两个主会话现在在干什么。
+  待编译的行另带 `pending`（没有的写明没有）：`by` 谁编（谁一列写 Claude 的是"主会话统一编译"，写 Codex 的是"Codex 主线编译"）；`files` 是主检出里落在这行"目录"列下还没提交的文件，数量加全部清单；`tree` 是按行号对上的同名临时工作树（开在 `worktreeRoot/<队列行号>`，WF-RULE §13，`C-176` 与 `c176` 同一行），没有就是 `null`，对上了给路径、状态、未提交数、`running`（在里面跑的脚本，来自 `live.scripts`：门禁的 `stage` 走到哪一门与 `testing`，Godot 的 `cmd` 里带 `--shots=机位`）、`gate`/`gateOk`（最近一次门禁的一句话，来自 `check/build.gate_brief`，没跑过是 `null`）、`shots`（这个检出 `output/shots` 的截图张数与这一轮的时刻）；`waiting` 是等了多久：队列没有记"改成待编译"的时刻，`since` 取那批文件里最早的修改时间，`estimated` 恒为真，`basis` 写明是估算，没有文件可估算时 `since` 为 `null`。临时工作树与后台脚本由 `live.py` 取好传给 `monitor.view.work`，视图不另读进程表。
 - `live.worktrees`：git 登记着的每个工作树（主检出除外）。`ahead` / `behind` 是领先、落后本地 main 的提交数，`dirty` 是未提交的文件数，`touched` 是最后动过的时刻（改动文件、检出目录里最新的），`inRoot` 是否在 `root`（`monitor/local.json` 的 `worktreeRoot`）下，`running` 是命令行里带这个路径的进程按类（门禁、截图、Godot、dotnet 测试、dotnet 编译、其他）分组，`gate` 是最近一次门禁的一句话（没有报告是 null）。`state`：`using`（里面有进程在跑）、`idle`、`invalid`（目录没了，登记失效）；`flags` 是要看的理由与处理办法（不在指定目录、失效、没进程且超过 90 分钟没动）。
 - `live.hooks`：登记的每个钩子（读 `~/.claude/settings.json` 与 `~/.codex/hooks.json`）。有我们自己记账的（`tracked: true`）带 `last`（最后触发）、`h1`/`h24`（近 1 小时、24 小时的 `n` 触发、`inj` 成功注入、`err` 报错、`dropped` 被挤掉、`miss` 取不到）、`lastInj`（最近一次注入：时刻、哪几类、字数）、`recent`（最近 20 条：时刻、事件、工具、注入类、字数、报错、挤掉与取不到个数、降级 `cut`）、`flag`（要看的理由：登记了但一次都没触发、触发了但没有一次成功注入、只有报错）；第三方钩子 `tracked: false`，只有登记信息，写明无记账。
 - `live.errors`：采集某一块失败时的原文（哪个文件读不到会写在里面）；页面据此区分三种空状态：数据里没有这个字段（采集脚本是旧版本）、读源失败（显示 errors 原文）、有字段但确实为空。
@@ -126,7 +132,7 @@ Dash.liveGap(live, key, 块名们, 空时的话)
 
 **数字口径**：能直接读出的数写确切值——时刻（`Dash.at`）、份数与个数（文档、队列行、子代理、待审、测试个数、提交号等）；只有测出来的大量值才报数量级（`Dash.mag`）：代码行、文件体积、测试代码行、引用次数。
 
-- 页面路由用地址里的 `#页名`，`#页名/块` 滚到那一页的某一块（块 id 就是面板 id，如 `#work/work-doing`）；页面清单在 `app/manifest.js`。
+- 页面路由用地址里的 `#页名`，`#页名/块` 滚到那一页的某一块（块 id 就是面板 id，如 `#work/work-doing`、`#work/work-pending`）；页面清单在 `app/manifest.js`。
 - 面板只用 `Dash.*` 与 `style.css` 的通用类，面板自己的样式写在同名 `.css`，只用令牌，不写颜色字面量。
 - 已看标记（作者点"知道了"）只存在浏览器本地（localStorage），不回写数据文件；要真正结项由模型用 `post.py done`。
 - **演示数据**：地址带 `?demo` 时，所有数据改从 `data/demo/<名字>.js` 读（同一格式），用来在采集脚本没跑时开发和预览面板；演示数据只放这里，不写进 `auto/`、`curated/`。
@@ -136,8 +142,8 @@ Dash.liveGap(live, key, 块名们, 空时的话)
 
 | 页 | 面板（文件） | 看什么 |
 | --- | --- | --- |
-| `#overview` 总览 | `overview.js` | 第一行：一句项目状态、阶段与优先级、数据新旧；第二行三栏：需要你看（审计项与【需定】，最多 5 条）、在做（队列里进行中与待编译的行，最多 8 条，谁的签条）、谁在干活（每个主会话一块，名下在跑的子代理逐个列，已交回的折叠）；第三行两栏：后台脚本（构建锁、逐个进程、巡逻，末尾一行"临时工作树 N 个"可展开）、健康摘要（只列不正常的项，最多 5 条，另有 N 项正常）；钩子与生效记录；最新通知 3 条。宽屏（≥1280 px）按此排，窄屏同顺序叠成一列 |
-| `#work` 施工 | `work.js` | 自上而下四块：① 两个主会话现在在干什么；② 正在做（`work-doing`）：进行中与待编译的行，一行一张详细卡（行、状态、谁、按行号对上的子代理的签条、改动的目录与文件数、任务单链接、程序算出的不一致），末尾是没挂队列行的子代理；③ 排着的（`work-queued`）：可派、等前置、暂停三栏的紧凑卡片，暂停默认收起；④ 临时工作树（`work-trees`）一张卡 |
+| `#overview` 总览 | `overview.js` | 第一行：一句项目状态、阶段与优先级、数据新旧；第二行三栏：需要你看（审计项与【需定】，最多 5 条）、在做（队列里进行中与待编译的行，最多 8 条，谁的签条；末尾"进行中 N 项、待编译 M 项"两个数分别链到施工页的进行中与待编译）、谁在干活（每个主会话一块，名下在跑的子代理逐个列，已交回的折叠）；第三行两栏：后台脚本（构建锁、逐个进程、巡逻，末尾一行"临时工作树 N 个"可展开）、健康摘要（只列不正常的项，最多 5 条，另有 N 项正常）；钩子与生效记录；最新通知 3 条。宽屏（≥1280 px）按此排，窄屏同顺序叠成一列 |
+| `#work` 施工 | `work.js` | 自上而下五块：① 两个主会话现在在干什么；② 进行中（`work-doing`）：进行中的行（与有子代理在跑却不是待编译的行），一行一张详细卡（行、状态、谁、按行号对上的子代理的签条、改动的目录与文件数、任务单链接、程序算出的不一致），末尾是没挂队列行的子代理；③ 待编译（`work-pending`）：待编译的行，每行一张卡——行、做什么、谁编、待编译文件数（点开看全部清单）、同名工作树及它的门禁进度（在跑的门禁走到哪一门、Godot 在拍哪个机位）或最近一次门禁结果、截图张数、已等多久（估算，注明依据），没有工作树写"还没开始统一编译"；④ 排着的（`work-queued`）：可派、等前置、暂停三栏的紧凑卡片，暂停默认收起；⑤ 临时工作树（`work-trees`）一张卡 |
 | `#health` 健康 | `health.js` | 全部检查按分组列出，每项一行：状态点、标题、一句话；点开看细节、建议、链接；分组标题写几项正常、几项要看 |
 | `#models` 模型 | `models.js` | 会话 → 子代理（与总览同一个 `Dash.who`）；后台脚本与构建锁（同一个 `Dash.scripts`） |
 | `#structure` 结构 | `structure.js` | 层 → 目录 → 子目录的树，默认展开第一层；每行文件数（确切）、代码行（数量级）、一句说明 |

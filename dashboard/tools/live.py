@@ -65,8 +65,8 @@ def collect():
     build = part(errors, "构建锁", lambda: build_block(items, n_engine, n_build, editors), None)
     hook_cards = part(errors, "钩子", hooks.cards, None)
     changes = part(errors, "工作区改动", repo.changes, [])
-    done = part(errors, "在做的工作", lambda: work.build(rows, agents, sessions, changes), None)
     worktrees = part(errors, "临时工作树", lambda: worktree_block(procs), None)
+    done = part(errors, "在做的工作", lambda: work.build(rows, agents, sessions, changes, worktrees, out_scripts), None)
     live = {"sessions": sessions, "agents": agents, "scripts": out_scripts, "build": build, "work": done, "worktrees": worktrees, "hooks": hook_cards, "errors": errors}
     return live, procs
 

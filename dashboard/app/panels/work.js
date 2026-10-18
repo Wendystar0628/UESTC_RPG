@@ -1,6 +1,7 @@
-/* 施工页：自上而下四块。① 主会话现况；② 正在做（队列里进行中、待编译的行，一行一张详细卡，末尾是没挂队列行的子代理）；
-   ③ 排着的（可派、等前置、暂停三栏的紧凑卡片，暂停默认收起）；④ 临时工作树。
-   数据 live.work、live.worktrees（15 s 刷新）、queue（10 min 刷新）。总览里的链接用 #work/work-doing 直达第二块（块 id 就是面板 id）。 */
+/* 施工页：自上而下五块。① 主会话现况；② 进行中（队列里进行中的行，一行一张详细卡，末尾是没挂队列行的子代理）；
+   ③ 待编译（work-pending：每行一张卡——谁编、待编译文件、同名临时工作树的门禁进度或结果、截图张数、等了多久）；
+   ④ 排着的（可派、等前置、暂停三栏的紧凑卡片，暂停默认收起）；⑤ 临时工作树。
+   数据 live.work、live.worktrees（15 s 刷新）、queue（10 min 刷新）。总览里的链接用 #work/work-doing、#work/work-pending 直达（块 id 就是面板 id）。 */
 (function () {
   var h = Dash.h;
   var pausedOpen = false;   // 暂停栏展开与否，重绘后保持
@@ -38,7 +39,7 @@
     }
   });
 
-  /* ---------- ② 正在做：每个工作项一张卡（行、状态、谁、子代理、改动的目录、任务单、不一致） ---------- */
+  /* ---------- ② 进行中：每个工作项一张卡（行、状态、谁、子代理、改动的目录、任务单、不一致） ---------- */
   function agentChip(a) {
     var c = Dash.chip(Dash.agentLabel(a), a.side);
     c.title = a.task || '';
@@ -72,12 +73,10 @@
       var root = h('div.stack' + (Dash.isStale('live') ? '.is-stale' : ''));
       var gap = workGap(d.live);
       if (gap) {
-        root.appendChild(Dash.card('正在做', gap));
+        root.appendChild(Dash.card('进行中', gap));
       } else {
-        var items = d.live.work.items.slice().sort(function (a, b) { return (a.state === '进行中' ? 0 : 1) - (b.state === '进行中' ? 0 : 1); });
-        var run = items.filter(function (i) { return i.state === '进行中'; }).length;
-        root.appendChild(Dash.status(items.length ? '正在做 ' + items.length + ' 项（进行中 ' + run + '，待编译 ' + (items.length - run) + '）' : '队列里没有进行中或待编译的行',
-          items.length ? 'ok' : 'muted'));
+        var items = d.live.work.items.filter(function (i) { return i.state !== '待编译'; });
+        root.appendChild(Dash.status(items.length ? '进行中 ' + items.length + ' 项' : '队列里没有进行中的行', items.length ? 'ok' : 'muted'));
         root.appendChild(h('div.dg-cards', items.map(itemCard)));
       }
       if (d.live && d.live.work) {
@@ -89,7 +88,71 @@
     }
   });
 
-  /* ---------- ③ 排着的：可派、等前置、暂停，紧凑卡片 ---------- */
+  /* ---------- ③ 待编译：每行一张卡（谁编、待编译文件可展开、工作树和它的门禁进度或结果、截图张数、等了多久） ---------- */
+  function runText(r) {
+    var what = r.kind === 'engine' ? 'Godot ' + r.cmd : (r.cmd && r.cmd !== r.name ? r.cmd : r.name);
+    return [what, r.stage ? '现在在 ' + r.stage : '', r.testing || '', Dash.at(r.since) + ' 起，已 ' + Dash.elapsed(r.since)].filter(Boolean).join(' · ');
+  }
+  function treeBlock(t) {
+    if (!t) return h('div.dg-line.muted', '还没开始统一编译（没有同名的临时工作树）');
+    var tone = { using: 'ok', idle: 'muted', invalid: 'risk' }[t.state] || 'muted';
+    var label = { using: '在用', idle: '闲置', invalid: '失效' }[t.state] || t.state;
+    var box = h('div.pd-tree',
+      h('div.dg-line', h('b', '工作树 '), h('span.dg-dir', t.path), ' ', Dash.chip(label, tone),
+        t.state === 'invalid' ? null : h('span.muted', ' · 未提交 ' + t.dirty + ' 个文件' + (t.behind ? ' · 落后 main ' + t.behind + ' 个提交' : ''))));
+    if (t.state !== 'invalid') {
+      if (t.running.length) {
+        t.running.forEach(function (r) { box.appendChild(h('div.dg-line', '在跑：' + runText(r))); });
+      } else {
+        box.appendChild(h('div.dg-line.muted', '里面没有进程在跑' + (t.touched ? '，闲置 ' + Dash.elapsed(t.touched) : '')));
+      }
+    }
+    box.appendChild(t.gate ? h('div.dg-line.pd-gate' + (t.gateOk ? '' : '.is-bad'), '最近一次门禁：' + t.gate) : h('div.dg-line.muted', '还没跑过门禁'));
+    box.appendChild(h('div.dg-line', h('b', '截图 ' + t.shots.count + ' 张'), t.shots.at ? h('span.muted', '（这一轮 ' + Dash.at(t.shots.at) + '）') : null));
+    return box;
+  }
+  function waitLine(w) {
+    if (!w.since) return h('div.dg-line.muted', '等了多久：拿不到（' + w.basis + '）');
+    return h('div.dg-line', h('b', '已等 ' + Dash.elapsed(w.since)), h('span.muted', '（估算，' + w.basis + '：' + Dash.at(w.since) + '）'));
+  }
+  function pendingCard(it) {
+    var p = it.pending;
+    var body = h('div.dg-card', h('div.dg-head',
+      h('span.dg-id', it.row),
+      h('span.dg-what', Dash.longText(it.what)),
+      Dash.chip(it.who || '—', sideOf(it.who))));
+    body.appendChild(h('div.dg-line', h('b', '谁编 '), p.by));
+    body.appendChild(p.files.count
+      ? Dash.fold('待编译文件 ' + p.files.count + ' 个', h('div.pd-files', p.files.list.map(function (f) { return h('div.dg-dir', f); })))
+      : h('div.dg-line.muted', '这行的目录下没有未提交的文件' + (it.dirs ? '（目录：' + it.dirs + '）' : '')));
+    body.appendChild(treeBlock(p.tree));
+    body.appendChild(waitLine(p.waiting));
+    if (it.agents.length) body.appendChild(h('div.dg-agents', it.agents.map(agentChip)));
+    body.appendChild(h('div.dg-line',
+      it.sheet ? h('span', '任务单：', Dash.a(it.sheet, it.sheet.split('/').pop().replace(/\.md$/, ''))) : h('span.muted', '没有对上任务单')));
+    it.flags.forEach(function (f) { body.appendChild(h('div.dg-flag', f)); });
+    return body;
+  }
+
+  Dash.panel({
+    id: 'work-pending', page: 'work', order: 25, card: false, needs: ['live'],
+    render: function (el, d) {
+      var root = h('div.stack' + (Dash.isStale('live') ? '.is-stale' : ''));
+      var gap = workGap(d.live);
+      if (gap) {
+        root.appendChild(Dash.card('待编译', gap));
+      } else {
+        var items = d.live.work.items.filter(function (i) { return i.state === '待编译'; });
+        var started = items.filter(function (i) { return i.pending && i.pending.tree; }).length;
+        root.appendChild(Dash.status(items.length ? '待编译 ' + items.length + ' 项（已开工作树 ' + started + '，还没开始统一编译 ' + (items.length - started) + '）' : '队列里没有待编译的行',
+          items.length ? 'ok' : 'muted'));
+        root.appendChild(h('div.dg-cards', items.map(function (i) { return i.pending ? pendingCard(i) : itemCard(i); })));
+      }
+      el.appendChild(root);
+    }
+  });
+
+  /* ---------- ④ 排着的：可派、等前置、暂停，紧凑卡片 ---------- */
   var COLS = [['可派', '可以派出去'], ['等前置', '要先等别的做完'], ['暂停', '先放着']];
 
   function whoLabel(w) {
@@ -130,7 +193,7 @@
     }
   });
 
-  /* ---------- ④ 临时工作树：只用于统一编译、快检和视觉样板，开在指定目录下，用完 remove（WF-RULE §13） ---------- */
+  /* ---------- ⑤ 临时工作树：只用于统一编译、快检和视觉样板，开在指定目录下，用完 remove（WF-RULE §13） ---------- */
   Dash.panel({
     id: 'work-trees', page: 'work', order: 40, card: false, needs: ['live'],
     render: function (el, d) {
