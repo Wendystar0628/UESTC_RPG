@@ -14,7 +14,7 @@
     "sunriseDirection": "rightToLeft",
     "judgeAfterFastForward": true,
     "settings": { "theme": ["auto", "light", "dark"], "themeDefault": "auto", "resident": ["dark", "follow"], "residentDefault": "dark" },
-    "pinnedDark": ["minimap", "timeCard", "timeStrip", "toast", "arrivalRecommend", "speedLeds", "viewMode", "weatherStrip", "hudIconButtons"],
+    "pinnedDark": ["minimap", "timeCard", "timeStrip", "toast", "arrivalRecommend", "speedLeds", "viewMode", "weatherStrip", "hudIconButtons", "perfReadout"],
     "followTheme": ["atlas", "settingsCard", "savePage", "dialog", "credits"],
     "noTheme": ["titlePage", "cinema", "overTitle"]
   },

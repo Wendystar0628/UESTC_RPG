@@ -27,6 +27,11 @@ hud.speed.cloud,云端
 hud.button.saves,存档
 hud.button.help,说明 · H
 hud.button.settings,设置
+hud.perf.fps,帧率
+hud.perf.frame,帧时
+hud.perf.cpu_render,CPU 渲染
+hud.perf.gpu_render,GPU 渲染
+hud.perf.cpu_usage,CPU 占用
 time.shichen.zi,子时
 time.shichen.chou,丑时
 time.shichen.yin,寅时
@@ -102,6 +107,7 @@ settings.reduce_motion,减少动态效果
 settings.follow_system,跟随系统
 settings.ui_scale,界面缩放
 settings.single_keys,单键快捷键
+settings.show_perf,显示性能信息
 settings.storage,本机缓存
 settings.storage.clear,清除缓存
 settings.storage.done,已完成

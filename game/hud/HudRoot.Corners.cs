@@ -21,6 +21,7 @@ public partial class HudRoot
         if (view.X <= 0) return;
         var edge = _kit.Tokens.Space("screenEdge");
         _minimapSlot.Position = new Vector2(edge, edge);
+        _perf?.Place();
         if (_resident is not { } r) return;
         r.Speed.Position = new Vector2(edge, view.Y - 36 - r.Speed.Size.Y);
         r.Time.Position = new Vector2(view.X - edge - r.Time.Size.X, view.Y - 36 - r.Time.Size.Y);
@@ -57,6 +58,24 @@ public partial class HudRoot
         }
         _resident = null;
         _weatherHeld = false;
+    }
+
+    // ---------------- 性能信息（UI-NAV §2）：设置里打开才存在，挂在界面根上而不是四角（漫游态、四角淡出时都照常显示），随 U、--ui=0、开始页、过场消失 ----------------
+    private void SyncPerf()
+    {
+        var want = _settings.ShowPerf && Playing && !_clean && !_hidden;
+        if (want == (_perf is not null)) return;
+        if (!want) { FreePerf(); return; }
+        var edge = _kit.Tokens.Space("screenEdge");
+        _perf = PerfReadout.Create(_kit, _root, edge, edge + _kit.Tokens.Size("hudIconButton") + 8);
+    }
+
+    private void FreePerf()
+    {
+        if (_perf is not { } perf) return;
+        _perf = null;
+        _root.RemoveChild(perf);   // 立即移出场景树，视口渲染耗时测量随之关闭
+        perf.QueueFree();
     }
 
     private Control BuildTopRight()

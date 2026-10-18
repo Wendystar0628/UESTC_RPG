@@ -37,6 +37,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     private UiThemeClock _clock = null!;
     private Control _root = null!, _corners = null!, _minimapSlot = null!;
     private Resident? _resident;
+    private PerfReadout? _perf;
     private Toast _toast = null!;
     private SettingsCard _settingsCard = null!;
     private SavePage _savePage = null!;
@@ -174,6 +175,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
             _settingsCard.Close();
             _savePage.Close();
             ReleaseResident();
+            FreePerf();
             _weatherHeld = false;
             // 同实例重新入树时复用根控件，恢复订阅并重建已释放的四角。
             RequestReady();

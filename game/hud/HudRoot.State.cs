@@ -46,6 +46,7 @@ public partial class HudRoot
 
     private void SyncCorners()
     {
+        SyncPerf();
         if (!Playing || _resident is not { } r) { _corners.Visible = false; _minimapSlot.Visible = false; return; }
         var ui = InterfaceState && !_clean;
         _minimapSlot.Visible = !_clean && !BigPage;

@@ -32,6 +32,7 @@ public sealed class HudSettings
     public bool Frost { get; private set; } = true;
     public float UiScale { get; private set; } = 1f;
     public bool SingleKeyShortcuts { get; private set; } = true;
+    public bool ShowPerf { get; private set; }
     public long Rev { get; private set; }
     public event Action? Changed;
 
@@ -42,6 +43,7 @@ public sealed class HudSettings
     public void SetFrost(bool v) => Set(() => Frost = v, Frost != v);
     public void SetUiScale(float v) => Set(() => UiScale = Math.Clamp(v, 0.75f, 1.5f), Math.Abs(UiScale - v) > 0.001f);
     public void SetSingleKeyShortcuts(bool v) => Set(() => SingleKeyShortcuts = v, SingleKeyShortcuts != v);
+    public void SetShowPerf(bool v) => Set(() => ShowPerf = v, ShowPerf != v);
 
     private void Set(Action apply, bool changed)
     {
@@ -72,6 +74,7 @@ public sealed class HudSettings
         _section.Set("frost", Frost);
         _section.Set("ui_scale", UiScale);
         _section.Set("single_key_shortcuts", SingleKeyShortcuts);
+        _section.Set("show_perf", ShowPerf);
         _store.TrySave();
     }
 
@@ -84,5 +87,6 @@ public sealed class HudSettings
         Frost = _section.Bool("frost", Frost);
         UiScale = _section.Float("ui_scale", UiScale, 0.75f, 1.5f);
         SingleKeyShortcuts = _section.Bool("single_key_shortcuts", SingleKeyShortcuts);
+        ShowPerf = _section.Bool("show_perf", ShowPerf);
     }
 }

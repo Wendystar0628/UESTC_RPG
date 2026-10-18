@@ -43,6 +43,10 @@ public partial class SettingsCard
         Row(page, y, UiKit.T("settings.single_keys"));
         var keys = DipSwitch.Create(_kit, page, new Vector2(ControlX, y + 10), _settings.SingleKeyShortcuts, false);
         keys.Toggled += _settings.SetSingleKeyShortcuts;
+        y += 40;
+        Row(page, y, UiKit.T("settings.show_perf"));
+        var perf = DipSwitch.Create(_kit, page, new Vector2(ControlX, y + 10), _settings.ShowPerf, false);
+        perf.Toggled += _settings.SetShowPerf;
         y += 52;
 
         Parts.GroupHeader(_kit, page, new Vector2(8, y), width, UiKit.T("settings.group.storage"));
