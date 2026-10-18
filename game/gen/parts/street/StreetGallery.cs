@@ -13,7 +13,7 @@ public sealed record StreetSample(string Id, string Label, PartId Part, BoxPartP
 }
 
 /// <summary>
-/// Review set for the part gallery and the tests: every WP-13 part (13a, then 13c2b) at typical sizes and every variation,
+/// Review set for the part gallery and the tests: every WP-13 part (13a, 13c2b, then the street-set completion) at typical sizes and every variation,
 /// in the row order the review screenshots use.
 /// </summary>
 public static class StreetGallery
@@ -55,6 +55,24 @@ public static class StreetGallery
             Sample("fountain", "直饮水台", PartCatalog.DrinkingFountain, new DrinkingFountainPart(), new EquipmentParams(0.6f, 1.1f, 0.45f)),
             Sample("signpost", "双柱指路牌", PartCatalog.Signpost, new SignpostPart(), new SignParams(1.2f, 2.6f, 0.12f) { Variation = 1 }),
             Sample("kerb-ramp", "缘石坡道", StreetStyle.KerbRampId, new KerbRampPart(), new RampParams(1.5f, 0.15f, 1.2f)),
+            // Street-set completion.
+            Sample("road-name-plate", "路名牌（单板）", PartCatalog.RoadNameSign, new RoadNameSignPart(), new SignParams(1f, 0.3f, 0.06f)),
+            Sample("road-name-sign", "路名牌（双柱）", PartCatalog.RoadNameSign, new RoadNameSignPart(), new SignParams(1.1f, 2.4f, 0.16f) { Variation = 1 }),
+            Sample("speaker-pair", "灯杆广播喇叭（一对）", PartCatalog.StreetSpeaker, new StreetSpeakerPart(), new EquipmentParams(0.4f, 0.3f, 0.4f)),
+            Sample("speaker-cross", "灯杆广播喇叭（四向）", PartCatalog.StreetSpeaker, new StreetSpeakerPart(), new EquipmentParams(0.4f, 0.3f, 0.4f) { Variation = 1 }),
+            Sample("convex-mirror", "弯道凸面镜", PartCatalog.ConvexMirror, new ConvexMirrorPart(), new SignParams(0.7f, 3.8f, 0.24f)),
+            Sample("pole", "电线杆", PartCatalog.UtilityPole, new UtilityPolePart(), new ColumnParams(0.32f, 8f, 0.32f)),
+            Sample("pole-transformer", "电线杆（变压器桶）", PartCatalog.UtilityPole, new UtilityPolePart(), new ColumnParams(0.32f, 8f, 0.32f) { Variation = 1 }),
+            Sample("pole-lamp", "电线杆（防犯灯）", PartCatalog.UtilityPole, new UtilityPolePart(), new ColumnParams(0.32f, 8f, 0.32f) { Variation = 2 }),
+            Sample("drain-grate", "雨水箅", PartCatalog.Drain, new DrainPart(), new TrimParams(2f, 0.12f, 0.3f)),
+            Sample("drain-cover", "盖板沟", PartCatalog.Drain, new DrainPart(), new TrimParams(2f, 0.12f, 0.3f) { Variation = 1 }),
+            Sample("drain-gutter", "L 形边沟", PartCatalog.Drain, new DrainPart(), new TrimParams(2.4f, 0.12f, 0.4f) { Variation = 2 }),
+            Sample("fence-pipe", "管式步道栏", PartCatalog.StreetFence, new StreetFencePart(), new RailingParams(3f, 1.1f, 0.12f, 1.5f)),
+            Sample("fence-bars", "透空栏杆与石柱", PartCatalog.StreetFence, new StreetFencePart(), new RailingParams(4f, 2.2f, 0.24f, 2f) { Variation = 1 }),
+            Sample("fence-guardrail", "波形护栏", PartCatalog.StreetFence, new StreetFencePart(), new RailingParams(4f, 0.75f, 0.12f, 2f) { Variation = 2 }),
+            Sample("wall-clock", "外墙圆钟", PartCatalog.WallClock, new WallClockPart(), new SignParams(1.5f, 1.5f, 0.12f)),
+            Sample("notice-board", "宣传栏", PartCatalog.NoticeBoard, new NoticeBoardPart(), new SignParams(1.8f, 2f, 0.15f)),
+            Sample("notice-board-eave", "木檐公告板", PartCatalog.NoticeBoard, new NoticeBoardPart(), new SignParams(2.2f, 2.1f, 0.3f) { Variation = 1 }),
         ]);
     }
 

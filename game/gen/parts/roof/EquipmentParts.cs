@@ -100,15 +100,15 @@ public sealed class EquipmentGrillePart : IPartDef<PanelParams>
         var lid = RoofStyle.GrilleTopThickness;
         var height = p.Height - lid + 0.003f;
         var front = -p.Depth * 0.5f;
-        AddPanel(builder, p.Width, height, PanelDepth, Xf.Move(0, 0, front + PanelDepth * 0.5f), near);
         var steelLid = RoofStyle.Casing(RoofStyle.Steel);
         if (!near)
         {
-            // Far: the louvred sides read as one aluminium block behind the front frame.
+            // Far: the louvred cage reads as one aluminium block under its lid; no front frame (a niche repeats on every upper storey).
             builder.AddBox(new(-p.Width * 0.5f + 0.01f, 0, front + 0.01f), new(p.Width * 0.5f - 0.01f, height, p.Depth * 0.5f), 0, RoofStyle.Grille(RoofStyle.Aluminium));
             builder.AddBox(new(-p.Width * 0.5f, p.Height - lid, front), new(p.Width * 0.5f, p.Height, p.Depth * 0.5f), 0, steelLid);
             return builder.Finish(Bounds(p));
         }
+        AddPanel(builder, p.Width, height, PanelDepth, Xf.Move(0, 0, front + PanelDepth * 0.5f), near);
         var sideWidth = p.Depth - PanelDepth + 0.004f;
         var sideZ = (PanelDepth - 0.004f) * 0.5f;
         // Left side faces −X, right side faces +X; both run from the front panel back to the wall.

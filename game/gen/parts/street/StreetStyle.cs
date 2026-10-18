@@ -353,4 +353,144 @@ public static class StreetStyle
     // ---- Lettering (ART-MODELING: vector type is a part constant at every level; §7.5: printed as face geometry) ----
     /// <summary>Print quads float this far off their face (reverse-Z D32F separates 1–2 mm within 400 m, ART-MODELING).</summary>
     public const float PrintLift = 0.0015f;
+
+    // ---- Street-set completion: road-name sign, notice board, convex mirror, utility pole, speaker, drain, fence, clock ----
+    /// <summary>
+    /// Convex mirror pole and frame (MAP-QSH-ADDITIONS "凸面镜橙": a low-saturation orange, WP-04 sets the value). Until it is registered this
+    /// borrows the closest registered pair, the terracotta band; switch the name here when the orange lands.
+    /// </summary>
+    public const string MirrorOrange = "band.terracotta";
+    /// <summary>The pale board behind the posters of a notice board, and the quiet poster colours (ART-AMBIENCE: no brand, newly pasted).</summary>
+    public const string PosterBoard = "wall";
+    public static readonly string[] Posters = ["umbrella.beige", "umbrella.grayblue", "wall.dormYellow", "umbrella.graygreen", "umbrella.graypink", "wall.greyWhite"];
+    /// <summary>A raised print block stands this far off its face; the same for every sign and board.</summary>
+    public const float InkProud = 0.004f;
+
+    // ---- Road-name sign (VOCAB: two posts, dark grey board, white characters with pinyin) ----
+    public const float RoadPlateThickness = 0.03f;
+    public const float RoadPlateHeight = 0.3f;
+    /// <summary>The posts rise this far above the plate.</summary>
+    public const float RoadPlateTopGap = 0.1f;
+    public const float RoadPost = 0.07f;
+    /// <summary>Post centres stand this far in from the plate's ends.</summary>
+    public const float RoadPostInset = 0.12f;
+    public const int RoadChars = 4;
+    public const float RoadInset = 0.018f;
+    public const float RoadRule = 0.012f;
+
+    // ---- Notice board (宣传栏, 木檐公告板) ----
+    public const float NoticeSill = 0.8f;
+    public const float NoticeFrame = 0.05f;
+    public const float NoticeCaseDepth = 0.09f;
+    public const float NoticePost = 0.08f;
+    public const float NoticePanel = 0.02f;
+    public const float NoticeGlassInset = 0.012f;
+    public const float NoticeGlassThick = 0.01f;
+    /// <summary>The eave's back bottom sits this far under the board top; its front top drops by <see cref="NoticeEaveDrop"/>.</summary>
+    public const float NoticeEaveGap = 0.05f;
+    public const float NoticeEaveDrop = 0.07f;
+    public const float NoticeEaveThick = 0.045f;
+
+    // ---- Convex mirror ----
+    public const float MirrorPole = 0.045f;
+    public const float MirrorFlange = 0.065f;
+    public const float MirrorBack = 0.015f;
+    public const float MirrorRing = 0.035f;
+    public const float MirrorRingDepth = 0.05f;
+    public const float MirrorDomeRise = 0.03f;
+    /// <summary>The mirror's top edge hangs this far under the pole's cap.</summary>
+    public const float MirrorTopGap = 0.06f;
+
+    // ---- Utility pole (ART-AMBIENCE §5: at most five kinds of piece; §8: anti-crime lamp at 4.5–5 m) ----
+    public const float PoleTopRatio = 0.62f;
+    public const float PoleTopMin = 0.075f;
+    public const float PoleArmLength = 1.5f;
+    public const float PoleArmSection = 0.08f;
+    /// <summary>The crossarm's centre hangs this far under the pole's top.</summary>
+    public const float PoleArmDrop = 0.45f;
+    public const float PoleNumberY = 1.9f;
+    public const float PegFirst = 2.6f;
+    public const float PegPitch = 0.45f;
+    public const float PegLength = 0.2f;
+    public const float PegRadius = 0.02f;
+    public const float TankRadius = 0.2f;
+    public const float TankHeight = 0.62f;
+    /// <summary>The transformer barrel's foot hangs this far under the pole's top; the gap is between it and the pole.</summary>
+    public const float TankDrop = 2.35f;
+    public const float TankGap = 0.06f;
+    public const float LampHeight = 4.8f;
+    public const float LampArmReach = 0.62f;
+    public const float LampArmRise = 0.12f;
+    public const float LampArmRadius = 0.025f;
+    public const float LampShadeRadius = 0.17f;
+    public const float LampShadeHeight = 0.08f;
+    public const FootMat PoleFoot = FootMat.Concrete;
+    /// <summary>Pole transformer hum (WLD-LIFE-STREET: only within a few metres). The set waits for the sound-set registry.</summary>
+    public const string TransformerSet = "amb.transformer.hum";
+    public const float TransformerHumDb = 36f;
+    public const float TransformerHumRadius = 6f;
+
+    // ---- Lamp-pole broadcast horn ----
+    public const float SpeakerCollar = 0.1f;
+    public const float SpeakerBell = 0.13f;
+    public const float SpeakerNeck = 0.035f;
+    public const float SpeakerDriverProud = 0.004f;
+    /// <summary>The evening broadcast from the lamp-pole horns (SYS-AUDIO-AMBIENCE); the set and its 17:40–18:10 window wait for the registry.</summary>
+    public const string BroadcastSet = "amb.street.broadcast";
+    public const float BroadcastDb = 55f;
+    public const float BroadcastRadius = 70f;
+
+    // ---- Drain ----
+    public const float DrainBorder = 0.05f;
+    /// <summary>The grate's frame stands this far under the bar tops.</summary>
+    public const float DrainRecess = 0.012f;
+    public const float DrainBarPitch = 0.06f;
+    public const float DrainBar = 0.02f;
+    public const float DrainSeam = 0.012f;
+    public const float DrainCoverSlab = 0.5f;
+    public const float DrainGutterSlab = 1.2f;
+    /// <summary>The trench bed lies this far under the top; slabs sink <see cref="DrainSlabThick"/> into it; cover slabs' handle blocks stand <see cref="DrainHandle"/> proud.</summary>
+    public const float DrainSlabRise = 0.04f;
+    public const float DrainSlabThick = 0.02f;
+    public const float DrainHandle = 0.004f;
+    /// <summary>The grate's water sound, in rain and after it. The set waits for the registry.</summary>
+    public const string DrainSet = "amb.drain.flow";
+    public const float DrainDb = 34f;
+    public const float DrainRadius = 5f;
+
+    // ---- Street fence ----
+    public const float FencePostRadius = 0.04f;
+    public const float FenceRail = 0.03f;
+    public const float FenceUpright = 0.02f;
+    public const float FenceUprightPitch = 0.14f;
+    public const float FencePier = 0.24f;
+    public const float FencePierCap = 0.05f;
+    public const float FenceBarRail = 0.05f;
+    public const float FenceBar = 0.03f;
+    public const float FenceBarPitch = 0.1f;
+    public const float GuardPost = 0.1f;
+    public const float GuardPostDepth = 0.06f;
+    public const float GuardBeamThick = 0.03f;
+    public const float GuardBeamHeight = 0.3f;
+    public const float GuardRecess = 0.025f;
+    public const float FenceColliderHalf = 0.04f;
+
+    // ---- Wall clock (ART-AMBIENCE §2: white face, black hands) ----
+    public const int ClockSegments = 24;
+    public const float ClockBezelRatio = 0.08f;
+    public const float ClockDrumInset = 0.006f;
+    /// <summary>The face lies this far behind the bezel's front, deep enough for the ticks and both hands to stand within the part.</summary>
+    public const float ClockFaceSink = 0.03f;
+    public const float ClockTickRing = 0.92f;
+    public const float ClockMajorLen = 0.14f;
+    public const float ClockMinorLen = 0.08f;
+    public const float ClockMajorWidth = 0.03f;
+    public const float ClockMinorWidth = 0.016f;
+    public const float ClockTickThick = 0.006f;
+    public const float ClockTail = 0.12f;
+    public const float ClockHourLen = 0.5f;
+    public const float ClockMinuteLen = 0.78f;
+    public const float ClockHourWidth = 0.07f;
+    public const float ClockMinuteWidth = 0.045f;
+    public const float ClockHandThick = 0.006f;
 }

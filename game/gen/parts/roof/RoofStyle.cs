@@ -140,4 +140,30 @@ public static class RoofStyle
     public const float MastDiameter = 0.1f;
     public const float PanelAntennaWidth = 0.26f;
     public const float PanelAntennaDepth = 0.09f;
+
+    // ---- Flags and banners (ART-STYLE: the electronic blue is for flags, school bus and shared bicycles; WLD-LIFE-STREET: low-saturation red and blue pennants) ----
+    public const string FlagBlue = "uestc.blue";
+    public const string FlagBlueLight = "uestc.techblue";
+    /// <summary>The red of the anniversary pennant and the red banner: the terracotta band, the closest registered low-saturation red.</summary>
+    public const string FlagRed = "band.terracotta";
+    public const float FlagBarRadius = 0.015f;
+    public const float FlagHem = 0.03f;
+    public const float FlagHemRadius = 0.012f;
+    public const float FlagOverlap = 0.003f;
+
+    // ---- Lattice test tower (MAP-QSH-ADDITIONS-VOCAB: a white lattice mast on the research roofs) ----
+    public const float TowerTopRatio = 0.55f;
+    public const float TowerLeg = 0.045f;
+    public const float TowerRing = 0.03f;
+    public const float TowerBrace = 0.025f;
+    public const float TowerMast = 1.2f;
+    public const float TowerMastRadius = 0.04f;
+    public const float TowerPanelHeight = 1f;
+    public const float TowerDeck = 0.05f;
+
+    // ---- Photovoltaic module (a 1.1 × 1.8 m module in an aluminium frame, dark teal cells) ----
+    public const float SolarFrame = 0.035f;
+    public const int SolarColumns = 6;
+    public const int SolarRows = 10;
+    public const float SolarLine = 0.004f;
 }

@@ -36,6 +36,16 @@ public static class RoofGallery
             Sample("antenna-dish", "抛物面天线", PartCatalog.Antenna, new AntennaPart(), new EquipmentParams(1.4f, 2.2f, 1.4f)),
             Sample("antenna-mast", "通信天线杆", PartCatalog.Antenna, new AntennaPart(), new EquipmentParams(0.8f, 3.5f, 0.8f) { Variation = 1 }),
             Sample("equipment-fence", "设备围挡（带门）", PartCatalog.EquipmentFence, new EquipmentFencePart(), new RailingParams(4f, 1.8f, 0.06f, 1.3f) { Variation = 1 }),
+            Sample("test-tower", "格构测试塔（四腿）", PartCatalog.TestTower, new TestTowerPart(), new EquipmentParams(2f, 6f, 2f)),
+            Sample("test-tower-three", "格构测试塔（三腿）", PartCatalog.TestTower, new TestTowerPart(), new EquipmentParams(2f, 6f, 2f) { Variation = 1 }),
+            Sample("solar-panel", "光伏板（银框）", PartCatalog.SolarPanel, new SolarPanelPart(), new PanelParams(1.1f, 0.08f, 1.8f)),
+            Sample("solar-panel-dark", "光伏板（黑框）", PartCatalog.SolarPanel, new SolarPanelPart(), new PanelParams(1.1f, 0.08f, 1.8f) { Variation = 1 }),
+            Sample("pennant-blue", "灯杆旗（蓝）", PartCatalog.Pennant, new PennantPart(), new SignParams(0.5f, 0.8f, 0.02f)),
+            Sample("pennant-red", "校庆道旗（红）", PartCatalog.Pennant, new PennantPart(), new SignParams(0.5f, 0.8f, 0.02f) { Variation = 1 }),
+            Sample("pennant-band", "灯杆旗（蓝，横带）", PartCatalog.Pennant, new PennantPart(), new SignParams(0.5f, 0.8f, 0.02f) { Variation = 2 }),
+            Sample("banner-white", "横幅（白）", PartCatalog.Banner, new BannerPart(), new SignParams(3f, 0.6f, 0.02f)),
+            Sample("banner-blue", "横幅（蓝）", PartCatalog.Banner, new BannerPart(), new SignParams(3f, 0.6f, 0.02f) { Variation = 1 }),
+            Sample("banner-red", "横幅（红）", PartCatalog.Banner, new BannerPart(), new SignParams(3f, 0.6f, 0.02f) { Variation = 2 }),
         ]);
     }
 

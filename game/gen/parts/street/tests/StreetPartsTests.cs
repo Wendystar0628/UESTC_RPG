@@ -22,6 +22,8 @@ public sealed class StreetPartsTests
         PartCatalog.AtlasKiosk, PartCatalog.AtlasPost, PartCatalog.EntranceMat, PartCatalog.OpenSign, PartCatalog.EntranceLamp,
         PartCatalog.ParkedCar, PartCatalog.ParkedBicycle, PartCatalog.BicycleShelter, PartCatalog.VendingMachine, PartCatalog.DeliveryLocker,
         PartCatalog.DrinkingFountain, PartCatalog.Signpost, PartCatalog.CurbRamp,
+        PartCatalog.RoadNameSign, PartCatalog.StreetSpeaker, PartCatalog.ConvexMirror, PartCatalog.UtilityPole, PartCatalog.StreetFence,
+        PartCatalog.Drain, PartCatalog.WallClock, PartCatalog.NoticeBoard,
     ];
 
     private static PartCatalogEntry Entry(string id) =>
@@ -106,7 +108,8 @@ public sealed class StreetPartsTests
             var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var colliders = (IReadOnlyList<Collider>)Contract(type).GetMethod("Collision")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
             // Parked bicycles never collide (WLD-LIFE: they come and go, a collider would leave an invisible wall).
-            var visualOnly = sample.Id is "entrance-mat" or "entrance-lamp" or "open-sign-wall" or "bicycle";
+            var visualOnly = sample.Id is "entrance-mat" or "entrance-lamp" or "open-sign-wall" or "bicycle" or "road-name-plate" or "speaker-pair" or "speaker-cross"
+                or "drain-grate" or "drain-cover" or "drain-gutter" or "wall-clock";
             AssertThat(visualOnly ? colliders.Count == 0 : colliders.Count > 0).OverrideFailureMessage($"{sample.Id} has the wrong collision class (MAP-QSH-ADDITIONS).").IsTrue();
             foreach (var collider in colliders)
             {
@@ -258,14 +261,24 @@ public sealed class StreetPartsTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void StreetLifePartsDeclareTheirSoundsSocketsAndSizes()
     {
-        // WLD-LIFE: of the street parts only the vending machine hums, within 4 m; every other part is silent.
+        // WLD-LIFE: only the vending machine, the pole transformer, the rain grate and the broadcast horn make sound; every other part is silent.
         foreach (var sample in StreetGallery.CreateSamples())
         {
             var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var sounds = (IReadOnlyList<SoundSocketDecl>)Contract(type).GetMethod("Sounds")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
-            if (sample.Part.Value != PartCatalog.VendingMachine) { AssertThat(sounds.Count == 0).OverrideFailureMessage($"{sample.Id} makes a sound.").IsTrue(); continue; }
-            AssertThat(sounds.Count == 1 && sounds[0].AudibleRadius <= 4f && sounds[0].Set.Value.Length > 0).OverrideFailureMessage($"{sample.Id}: the compressor socket is missing or carries too far.").IsTrue();
-            AssertThat(sample.Bounds.Contains(new(sounds[0].Local.M41, sounds[0].Local.M42, sounds[0].Local.M43))).OverrideFailureMessage($"{sample.Id}: the compressor is outside the machine.").IsTrue();
+            // The sounding parts and how far they carry (WLD-LIFE-STREET): the compressor 4 m, the pole transformer 6 m, the grate's water,
+            // and the lamp-pole broadcast from afar.
+            var reach = sample.Id switch
+            {
+                "vending" or "vending-odd" => 4f,
+                "pole-transformer" => 6f,
+                "drain-grate" => 8f,
+                "speaker-pair" or "speaker-cross" => 100f,
+                _ => 0f,
+            };
+            if (reach == 0f) { AssertThat(sounds.Count == 0).OverrideFailureMessage($"{sample.Id} makes a sound.").IsTrue(); continue; }
+            AssertThat(sounds.Count == 1 && sounds[0].AudibleRadius <= reach && sounds[0].Set.Value.Length > 0).OverrideFailureMessage($"{sample.Id}: the sound socket is missing or carries too far.").IsTrue();
+            AssertThat(sample.Bounds.Contains(new(sounds[0].Local.M41, sounds[0].Local.M42, sounds[0].Local.M43))).OverrideFailureMessage($"{sample.Id}: the sound socket is outside the part.").IsTrue();
         }
         // The shared bicycle's contact points (WP-54b's riding clips): seat above the cranks, grips left (−X) and right, axles on the wheels.
         IPartDef<VehicleParams> bike = new ParkedBicyclePart();

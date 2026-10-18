@@ -1709,10 +1709,6 @@
       "owner": "WP-49a"
     },
     {
-      "pattern": "game/gen/parts/_stubs/**",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/gen/parts/street/**",
       "owner": "WP-13"
     },

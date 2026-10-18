@@ -135,4 +135,29 @@ public static class CirculationStyle
 
     // ---- Iron gates (WLD-INTERIORS seals) ----
     public const float GateFrame = 0.08f, GateBar = 0.03f, GateBarPitch = 0.12f;
+
+    // ---- Folding gates, lift doors, raised and tiered floors (WLD-INTERIORS; core palette tokens) ----
+    /// <summary>Folding gate in grey-green paint (灰绿铁门, ART-AMBIENCE §3) and in dark steel.</summary>
+    public static readonly ToonSpec GateGreen = new(new("umbrella.graygreen.lit"), new("umbrella.graygreen.shade")) { Fx = ToonFx.BevelLift };
+    public static readonly ToonSpec GateDark = new(new("equip.fence.lit"), new("equip.fence.shade")) { Fx = ToonFx.BevelLift };
+    /// <summary>Lift door and jamb: brushed stainless, white paint, dark steel.</summary>
+    public static readonly ToonSpec LiftSteel = new(new("roof.silverMetal.lit"), new("roof.silverMetal.shade")) { Fx = ToonFx.BevelLift };
+    public static readonly ToonSpec LiftWhite = new(new("wall.greyWhite.lit"), new("wall.greyWhite.shade")) { Fx = ToonFx.BevelLift };
+    /// <summary>Lift indicator and call-button plate, the floor's joints.</summary>
+    public static readonly ToonSpec Insert = new(new("glass.lit"), new("glass.shade")) { Line = LineClass.Fine };
+    public static readonly ToonSpec FloorWood = new(new("door.wood.lit"), new("door.wood.shade")) { Fx = ToonFx.BevelLift };
+    public static readonly ToonSpec FloorGrey = new(new("equip.grey.lit"), new("equip.grey.shade")) { Fx = ToonFx.BevelLift };
+    public const FootMat TileFoot = FootMat.Tile;
+    public const FootMat WoodFoot = FootMat.WoodFloor;
+    public const FootMat SteelFoot = FootMat.SteelPlate;
+
+    // ---- Folding gate ----
+    public const float FoldStile = 0.08f, FoldTopRail = 0.08f, FoldBottomRail = 0.05f, FoldTrack = 0.14f;
+    public const float FoldBar = 0.03f, FoldBarThick = 0.03f, FoldCellWidth = 0.3f, FoldCellHeight = 0.4f;
+
+    // ---- Lift door ----
+    public const float LiftJamb = 0.14f, LiftHead = 0.2f, LiftSill = 0.03f, LiftGap = 0.008f, LiftRecess = 0.02f, LiftFrameRecess = 0.012f;
+
+    // ---- Raised floor ----
+    public const float RaisedPlate = 0.035f, RaisedSkirtInset = 0.03f, RaisedModule = 0.6f, RaisedJoint = 0.006f;
 }

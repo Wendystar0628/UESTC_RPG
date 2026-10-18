@@ -19,7 +19,7 @@ public sealed class MepPartsTests
     private static bool FloorStanding(string id, int variation) => id switch
     {
         PartCatalog.Boiler => variation != 2,
-        PartCatalog.WaterDispenser or PartCatalog.Extinguisher => true,
+        PartCatalog.WaterDispenser or PartCatalog.Extinguisher or PartCatalog.Turnstile or PartCatalog.Switchgear => true,
         PartCatalog.IndoorAirConditioner => variation == 2,
         _ => false,
     };

@@ -195,6 +195,39 @@ public static class PartShapes
     }
 
     /// <summary>
+    /// Closed lathe profile through <paramref name="points"/> (radius, height), counter-clockwise: rings and washers whose profile
+    /// does not touch the axis (<see cref="Creased"/> only runs axis to axis). Every corner is a crease.
+    /// </summary>
+    public static LatheBand[] Loop(params Vector2[] points)
+    {
+        var bands = new LatheBand[points.Length];
+        for (var i = 0; i < points.Length; i++)
+        {
+            var a = points[i]; var b = points[(i + 1) % points.Length];
+            bands[i] = LatheBand.Flat(a.X, a.Y, b.X, b.Y);
+        }
+        return bands;
+    }
+
+    /// <summary>
+    /// Open lathe profile through <paramref name="points"/> (radius, height) with smooth shading: interior vertices average their two
+    /// edges' normals, the first and last keep their own edge's. Add creased bands at the ends (flat caps, rims) with <see cref="LatheBand.Flat"/>.
+    /// </summary>
+    public static List<LatheBand> Smooth(params Vector2[] points)
+    {
+        static Vector2 Edge(Vector2 a, Vector2 b) => VectorMath.Unit(new Vector2(b.Y - a.Y, -(b.X - a.X)));
+        var bands = new List<LatheBand>(points.Length - 1);
+        for (var i = 0; i + 1 < points.Length; i++)
+        {
+            var a = points[i]; var b = points[i + 1];
+            var n0 = i == 0 ? Edge(a, b) : VectorMath.Unit(Edge(points[i - 1], a) + Edge(a, b));
+            var n1 = i + 2 == points.Length ? Edge(a, b) : VectorMath.Unit(Edge(a, b) + Edge(b, points[i + 2]));
+            bands.Add(new(a.X, a.Y, b.X, b.Y, n0, n1));
+        }
+        return bands;
+    }
+
+    /// <summary>
     /// Arc bands on a circle about (0, <paramref name="centreY"/>) from angle <paramref name="fromDeg"/> to <paramref name="toDeg"/>
     /// (−90 = bottom pole, 90 = top pole), with radial smooth normals; <paramref name="squash"/> scales the arc vertically.
     /// </summary>

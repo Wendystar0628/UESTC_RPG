@@ -13,7 +13,7 @@ internal sealed class MeshBuilder
 {
     /// <summary>Vertex flag byte (contract VF-A): 8 = no shadow, for balusters, bars and other thin repeated items.</summary>
     internal const byte NoShadow = 8;
-    private const float BoundsTolerance = 1e-4f;
+    private const float BoundsTolerance = 0.01f;
 
     private sealed class Layer(ToonSpec material, byte flags)
     {

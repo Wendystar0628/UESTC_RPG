@@ -36,6 +36,15 @@ public static class CirculationGallery
             Sample("drying-rail", "晾衣杆", PartCatalog.DryingRail, new DryingRailPart(), new RailingParams(3f, 0.12f, 0.6f)),
             Sample("planter", "花箱", PartCatalog.Planter, new PlanterPart(), new FurnitureParams(1.6f, 0.55f, 0.6f)),
             Sample("iron-gate", "铁栅门", PartCatalog.IronGate, new IronGatePart(), new DoorParams(1.6f, 2.1f, 0.08f, Leaves: 2)),
+            Sample("folding-gate", "折叠铁闸（铝灰）", PartCatalog.FoldingGate, new FoldingGatePart(), new DoorParams(3.6f, 1.6f, 0.3f)),
+            Sample("folding-gate-green", "折叠铁闸（灰绿）", PartCatalog.FoldingGate, new FoldingGatePart(), new DoorParams(3.6f, 1.6f, 0.3f) { Variation = 1 }),
+            Sample("folding-gate-pair", "折叠铁闸（双扇，深色）", PartCatalog.FoldingGate, new FoldingGatePart(), new DoorParams(4.2f, 1.8f, 0.3f) { Variation = 2 }),
+            Sample("lift-door", "电梯门（不锈钢）", PartCatalog.ElevatorDoor, new ElevatorDoorPart(), new DoorParams(1.2f, 2.2f, 0.1f)),
+            Sample("lift-door-white", "电梯门（白）", PartCatalog.ElevatorDoor, new ElevatorDoorPart(), new DoorParams(1.2f, 2.2f, 0.1f) { Variation = 1 }),
+            Sample("raised-floor", "架空地板（砖面）", PartCatalog.RaisedFloor, new RaisedFloorPart(), new PanelParams(3.6f, 0.2f, 3.6f)),
+            Sample("raised-floor-stage", "舞台地板（木）", PartCatalog.RaisedFloor, new RaisedFloorPart(), new PanelParams(3.6f, 0.4f, 2.4f) { Variation = 1 }),
+            Sample("tiered-floor", "阶梯地面", PartCatalog.TieredFloor, new TieredFloorPart(), new StairParams(6f, 1.5f, 2.7f)),
+            Sample("tiered-floor-hall", "阶梯教室地面", PartCatalog.TieredFloor, new TieredFloorPart(), new StairParams(8f, 1.2f, 7.2f, 8)),
         ]);
     }
 
