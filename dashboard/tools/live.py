@@ -109,6 +109,10 @@ def write_once():
     global _last_catalog
     live, procs = collect()
     path = write("auto", "live", wpnames.annotate_tree(live), source="live.py")   # 工作包号在写文件处配中文包名
+    try:
+        gate_check.shot_rounds(True)   # 截图轮次即时记账：工作树拍完就删，也不丢这一轮
+    except Exception as e:
+        print(f"{U.iso(time.time())} 记截图轮次失败：{type(e).__name__} {e}", file=sys.stderr)
     if time.time() - _last_catalog >= CATALOG_EVERY_S:
         _last_catalog = time.time()
         write_catalog(procs)

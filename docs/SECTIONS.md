@@ -26,7 +26,7 @@
   - CORE-CONVENTIONS §1.3 清水河的范围数 · L60 · 278
   - CORE-CONVENTIONS §1.4 其他单位 · L68 · 267
 - CORE-CONVENTIONS §2 时间写法 · L76 · 831
-- CORE-CONVENTIONS §3 标识与命名 · L94 · 6.2k
+- CORE-CONVENTIONS §3 标识与命名 · L94 · 6.3k
   - CORE-CONVENTIONS §3.1 地图、实体与覆盖层 · L96 · 976
   - CORE-CONVENTIONS §3.2 编号体系 · L112 · 873
   - CORE-CONVENTIONS §3.3 同号不同义的读法 · L135 · 687
