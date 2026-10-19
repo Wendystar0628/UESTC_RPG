@@ -1,0 +1,236 @@
+[
+  {
+    "shader": "fxGlow",
+    "format": 34359742481,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "none"
+  },
+  {
+    "shader": "precip",
+    "format": 34359742481,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "none"
+  },
+  {
+    "shader": "dioramaFar",
+    "format": 34359742527,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "none"
+  },
+  {
+    "shader": "cineCloud",
+    "format": 34359742495,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "none"
+  },
+  {
+    "shader": "uiPanel",
+    "format": 0,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "rect"
+  },
+  {
+    "shader": "uiPanel",
+    "format": 0,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "texturedRect"
+  },
+  {
+    "shader": "uiPanel",
+    "format": 0,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "polygon"
+  },
+  {
+    "shader": "uiPanel",
+    "format": 0,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "msdfText"
+  },
+  {
+    "shader": "uiScreen",
+    "format": 0,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "rect"
+  },
+  {
+    "shader": "mapBase",
+    "format": 0,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "rect"
+  },
+  {
+    "kind": "static",
+    "format": 34359742479,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "static",
+    "format": 34359742527,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "static",
+    "format": 34363929087,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "static",
+    "format": 34896613407,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "glass",
+    "format": 34359742527,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "glass",
+    "format": 34896613407,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "glassNear",
+    "format": 34359742527,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "vegTrunk",
+    "format": 34363929039,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "none"
+  },
+  {
+    "kind": "vegTrunk",
+    "format": 34363929039,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "shadowsOnly",
+    "canvas": "none"
+  },
+  {
+    "kind": "vegTrunk",
+    "format": 34900799967,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "vegCard",
+    "format": 34363929055,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "none"
+  },
+  {
+    "kind": "vegCard",
+    "format": 34900799967,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "vegGrass",
+    "format": 34363871647,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "none"
+  },
+  {
+    "kind": "sceneText",
+    "format": 34359742527,
+    "primitive": "triangles",
+    "instanced": false,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  },
+  {
+    "kind": "vegTwigMass",
+    "format": 34363929039,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "off",
+    "canvas": "none"
+  },
+  {
+    "kind": "vegTwigMass",
+    "format": 34900799967,
+    "primitive": "triangles",
+    "instanced": true,
+    "reflect": false,
+    "shadows": "on",
+    "canvas": "none"
+  }
+]

@@ -234,7 +234,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                 RequireAuxiliaryProduct(map, key, product);
                 return product;
             }, cancellation);
-            if (cached is not null) return cached;
+            if (cached is not null)
+            {
+                map.PipelineStatistics?.Add(cached, map.Geometry);
+                return cached;
+            }
             if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
         }
         var buildContext = (module is not null ? context : map.CreateBuildContext(codeHash, inputHash)).WithWorld(_terrain.AssetWorld(context.World));
@@ -248,6 +252,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         cancellation.ThrowIfCancellationRequested();
         RequireInteriorProduct(map, key, validated);
         RequireAuxiliaryProduct(map, key, validated);
+        map.PipelineStatistics?.Add(validated, map.Geometry);
         if (!_options.Live && generation == Interlocked.Read(ref _cacheGeneration))
         {
             _cache.Write(key, bytes, cancellation);
@@ -431,6 +436,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog Catalog)
     {
         internal TerrainCacheService? TerrainCache { get; init; }
+        internal BakePipelineCatalog? PipelineStatistics;
         internal BakeSourceIndexCache? SourceCache { get; init; }
         internal BuildContext CreateAssetContext(string codeHash)
         {

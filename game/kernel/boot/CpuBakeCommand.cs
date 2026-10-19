@@ -26,6 +26,7 @@ public sealed class CpuBakeCommand : IBakeCommand
             var requested = context.Run.Flow.Map ?? catalog.Default;
             var maps = requested.Value == "*" ? catalog.Maps : catalog.Maps.Where(map => map.Id == requested).ToArray();
             if (maps.Count == 0) throw new ArgumentException($"Unknown bake map: {requested.Value}.");
+            var pipelines = requested.Value == "*" && !options.MapOnly ? new BakePipelineCatalog() : null;
             var loader = new WorldModelLoaderAdapter(terrain);
             foreach (var descriptor in maps)
             {
@@ -37,7 +38,7 @@ public sealed class CpuBakeCommand : IBakeCommand
                 try
                 {
                     await bake.PrepareMapData(map);
-                    await bake.BakeOffline(map);
+                    await bake.BakeOffline(map, pipelines);
                     while (bake.TryTakeDiagnostic(out var collected))
                     {
                         var diagnostic = collected!.Diagnostic;
@@ -47,6 +48,7 @@ public sealed class CpuBakeCommand : IBakeCommand
                 }
                 finally { bake.Unmount(map.Descriptor.Id); }
             }
+            pipelines?.Write(ProjectSettings.GlobalizePath("res://"));
             exitCode = 0;
         }
         catch (Exception error) { GD.PushError(error.ToString()); }

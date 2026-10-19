@@ -46,17 +46,22 @@ internal sealed class BakeGeometryBuilder
     {
         RequireCatalog(context);
         collect(output.Diagnostics);
-        var meshes = new List<GeometryBundle>(output.Meshes);
-        foreach (var part in output.Parts)
-        {
-            if (!_parts.TryGetValue(part.Part.Value, out var build)) throw new InvalidDataException($"Unknown part: {part.Part.Value}");
-            var geometry = build(part.Params, level);
-            foreach (var mesh in geometry.Meshes) meshes.Add(Transform(mesh, part));
-        }
+        var meshes = ExpandMeshes(output, level).ToList();
         var bounds = Bounds(context, tile, level, meshes);
         var surfaces = meshes.Where(m => m.Position.Length > 0 && m.Index.Length > 0).Select(m => Pack(m, bounds)).ToArray();
         var batched = PackedSurfaceBatcher.Merge(surfaces);
         return _instances.PackTile(key, tile, level, bounds, batched, output.Instances);
+    }
+
+    internal IEnumerable<GeometryBundle> ExpandMeshes(ContentOutput output, LodLevel level)
+    {
+        foreach (var mesh in output.Meshes) yield return mesh;
+        foreach (var part in output.Parts)
+        {
+            if (!_parts.TryGetValue(part.Part.Value, out var build)) throw new InvalidDataException($"Unknown part: {part.Part.Value}");
+            var geometry = build(part.Params, level);
+            foreach (var mesh in geometry.Meshes) yield return Transform(mesh, part);
+        }
     }
 
     internal static TileBundle Assemble(BakeKey key, TileKey tile, LodLevel level, Box3 bounds,
@@ -92,19 +97,7 @@ internal sealed class BakeGeometryBuilder
             submittedTriangles = surfaces.Sum(Triangles) + instances.Sum(instance => Triangles(instance.Surface) * instance.InstanceCount),
             instanceStreams = streamGroups,
             bounds,
-            pipelines = surfaces.Select(surface => (Surface: surface, Instanced: false))
-                .Concat(instances.Select(instance => (Surface: instance.Surface, Instanced: true)))
-                .Select(item => new
-                {
-                    item.Surface.Material.Spec.Kind,
-                    item.Surface.Material.Spec.Fx,
-                    item.Surface.Format,
-                    item.Surface.Primitive,
-                    item.Surface.Shader,
-                    item.Surface.Reflect,
-                    item.Instanced
-                }).Distinct()
-                .OrderBy(p => p.Kind).ThenBy(p => p.Fx).ThenBy(p => p.Format).ThenBy(p => p.Shader).ThenBy(p => p.Reflect).ThenBy(p => p.Instanced).ToArray()
+            pipelines = BakePipelineCatalog.Combinations(bundle)
         }, ContractJson.Options);
         return new(key, tile, level, bounds, surfaces, instances, statistics);
     }
