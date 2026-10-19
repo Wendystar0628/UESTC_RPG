@@ -106,7 +106,7 @@
 
 ## WF-BUILD · 施工边界
 
-`docs/workflow/WF-BUILD-施工边界.md` · 3.5k 字 · 施工时能改哪里、共享文件、契约申请与冻结、构建与测试排队、新模块怎么接入、Godot API 先查签名，以及禁用写法门禁拦不住的两条约定
+`docs/workflow/WF-BUILD-施工边界.md` · 3.6k 字 · 施工时能改哪里、共享文件、契约申请与冻结、构建与测试排队、新模块怎么接入、Godot API 先查签名，以及禁用写法门禁拦不住的两条约定
 关键词：独占目录、共享文件、契约申请、契约冻结、构建锁、构建与测试排队、.uid、特性接入、穷举 switch、几何不随时季天气变、GDScript、uid、signatures.txt、Godot API
 
 - WF-BUILD §0 结论 · L23 · 851
@@ -114,7 +114,7 @@
 - WF-BUILD §1 改哪里 · L40 · 518
 - WF-BUILD §2 G4 拦不住的约定 · L48 · 170
 - WF-BUILD §3 契约申请与冻结 · L53 · 331
-- WF-BUILD §4 构建与测试排队 · L60 · 760
+- WF-BUILD §4 构建与测试排队 · L60 · 821
 
 ## WF-COMMS · 交接与通信
 
