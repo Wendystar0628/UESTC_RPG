@@ -1,8 +1,9 @@
 ﻿# 固定机位截图：一个 Godot 进程按 poses.txt 拍完所选机位，地图只加载一次，再拼一张缩略总览。
-# 用法：powershell -NoProfile -File fixed_shots.ps1 [-Only 名字,名字] [-Build]
+# 用法：powershell -NoProfile -File fixed_shots.ps1 [-Only 名字,名字] [-Build] [-Poses 机位文件]
 #   -Build：按共享 Directory.Build.props 编译优化 Debug 并导入（代码改过、还没编译时用）
+#   -Poses：换一份机位表（格式同 poses.txt），临时加拍的机位放仓库外，不改 poses.txt
 # 整轮持有构建锁（WF-BUILD），不开声音；出图在运行它的检出（主检出或工作树）的 output/shots/，覆盖上一轮，总览是 总览.jpg。
-param([string[]]$Only = @(), [switch]$Build)
+param([string[]]$Only = @(), [switch]$Build, [string]$Poses = '')
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $repo 'scripts\lib\common.ps1')
@@ -10,7 +11,7 @@ $layout = Get-UESTCLayout $repo
 $godot = Get-UESTCGodot
 $out = Join-Path $repo 'output\shots'
 $null = [IO.Directory]::CreateDirectory($out)
-$poses = Join-Path $PSScriptRoot 'poses.txt'
+$poses = if ($Poses) { (Resolve-Path $Poses).Path } else { Join-Path $PSScriptRoot 'poses.txt' }
 $names = @(Get-Content -Encoding UTF8 $poses | Where-Object { $_.Trim() -and -not $_.TrimStart().StartsWith('#') } | ForEach-Object { ($_ -split '\s*\|\s*')[0].Trim() })
 if ($Only.Count) {
     $Only = @($Only | ForEach-Object { $_ -split ',' })
