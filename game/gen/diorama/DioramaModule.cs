@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Diorama;
 
 /// <summary>
-/// The diorama's resident backdrop (WLD-DIORAMA; ENG-PERF "远景剪影 L4 常驻"): the fog sea, the city rings and the
+/// The diorama's resident backdrop (WLD-OUTSKIRTS-DIORAMA; ENG-PERF "远景剪影 L4 常驻"): the fog sea, the city rings and the
 /// far ring with the snow mountains, one surface each, all on diorama_far.gdshader, none casting shadows, no colliders.
 /// It is a whole-map product: Build answers L4 tile (0, 0) only, every other level and tile is empty; Tiles reports the
 /// single L0 cell that holds the map centre so a streamer that keys products by occupied cells still finds it.

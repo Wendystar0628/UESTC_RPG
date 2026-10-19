@@ -8,12 +8,12 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Concrete utility pole (电线杆, ART-AMBIENCE §5): a tapered round pole with a steel crossarm in front of its top carrying three white
+/// Concrete utility pole (电线杆, WLD-AMBIENCE): a tapered round pole with a steel crossarm in front of its top carrying three white
 /// porcelain insulators, footholds above head height alternating left and right, and a small number plate at eye level. At most five kinds
 /// of piece, as the doc asks; no wires (the span lines are drawn between poles by the placer). Width is the diameter at the foot, Height
 /// the pole's top (9–10 m in the back lanes), Depth is unused (the pole is round). The front is −Z (the road side). Variation 0: the plain
 /// pole. 1: with a pole-mounted transformer barrel on a strap bracket under the arm; it hums within 6 m (WLD-LIFE-STREET). 2: with a
-/// short arm and a cold-white anti-crime lamp at 4.5–5 m (后巷防犯灯, ART-AMBIENCE §8), its diffuser self-lit on the street lamp group.
+/// short arm and a cold-white anti-crime lamp at 4.5–5 m (后巷防犯灯, WLD-AMBIENCE), its diffuser self-lit on the street lamp group.
 /// Collision: the pole as a post, Concrete.
 /// </summary>
 [Part(PartCatalog.UtilityPole, Owner = "WP-13")]

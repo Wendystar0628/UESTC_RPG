@@ -13,7 +13,7 @@ public static partial class Planting
     internal sealed record Parcel(string Id, PolygonRings Rings, Vector2 Min, Vector2 Max, float Area);
 
     /// <summary>
-    /// How grass meets a piece of pavement (WLD-VEGETATION §3.5): a walk or path under 3 m wide takes a soft edge the grass may
+    /// How grass meets a piece of pavement (WLD-VEGETATION): a walk or path under 3 m wide takes a soft edge the grass may
     /// creep over; steps keep the 1 m setback of an entrance; every other pavement (plazas, wide walks) keeps a clean straight edge.
     /// </summary>
     internal enum PaveEdge : byte { Clean, Soft, Steps }

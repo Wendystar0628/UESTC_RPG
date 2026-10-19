@@ -11,7 +11,7 @@ public static partial class FurniturePlanner
     private static readonly StoneSpherePart SphereDef = new();
 
     // ---------------------------------------------------------------------------------------------------------
-    // Barriers (WLD-LIFE-STREET §2 路障): white stone spheres across the mouth of a wide walk at a carriageway.
+    // Barriers (WLD-LIFE-STREET 路障): white stone spheres across the mouth of a wide walk at a carriageway.
     // ---------------------------------------------------------------------------------------------------------
 
     /// <summary>A carriageway with its box, grown by its half width and the kerb reach: what is farther from a point cannot reach it.</summary>

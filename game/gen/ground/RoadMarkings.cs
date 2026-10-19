@@ -5,7 +5,7 @@ using Campus.Gen.Geometry;
 namespace Campus.Gen.Ground;
 
 /// <summary>
-/// Dashed centre lines and zebra crossings derived from the road network (ART-AMBIENCE 6). Markings are flat decal
+/// Dashed centre lines and zebra crossings derived from the road network (WLD-AMBIENCE 6). Markings are flat decal
 /// quads lying on the asphalt; each quad belongs to the tile that contains its centre, so tiles never duplicate one.
 /// Every quad is checked against the exact carriageway field, so mismatched centre lines never paint over a kerb.
 /// Football pitches get their lines from the same quads (<see cref="AddPitches"/>), on the turf instead of the asphalt.

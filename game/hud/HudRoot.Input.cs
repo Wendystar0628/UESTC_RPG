@@ -136,7 +136,7 @@ public partial class HudRoot
             else SetInterface(!InterfaceState);
             return true;
         }
-        // F12 不是单字符键，不受单键快捷键总开关约束（UI-NAV §4.2）；纯净模式下同样可用
+        // F12 不是单字符键，不受单键快捷键总开关约束（UI-NAV）；纯净模式下同样可用
         if (e.Action == "photo_export")
         {
             if (!e.Echo) _ = ExportPhoto();
@@ -212,7 +212,7 @@ public partial class HudRoot
 
     private bool _photoPending;
 
-    // 照片导出（UI-NAV §3.6）：后端忙、不可用时不提示；成功或失败各出一条临时提示
+    // 照片导出（UI-NAV）：后端忙、不可用时不提示；成功或失败各出一条临时提示
     private async Task ExportPhoto()
     {
         if (_photoPending) return;

@@ -7,7 +7,7 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Street fence (道路护栏, ART-AMBIENCE §6, MAP-QSH-ADDITIONS-VOCAB §5), a run along X: Width is its length, Height its top, Depth its
+/// Street fence (道路护栏, WLD-AMBIENCE, MAP-QSH-ADDITIONS-VOCAB), a run along X: Width is its length, Height its top, Depth its
 /// thickness, PostSpacing the distance between posts. Variation 0: the pipe pedestrian rail (外围管式步道栏) of round posts, two
 /// horizontal tubes and thin uprights, grey aluminium. 1: the see-through boundary railing (校界透空栏杆), dense dark uprights between
 /// two rails and light stone piers every <c>PostSpacing</c>. 2: the warm-white W-beam guardrail (波形护栏) on grey posts, for slopes

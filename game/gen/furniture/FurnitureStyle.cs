@@ -5,7 +5,7 @@ using Campus.Gen.Parts.Street;
 namespace Campus.Gen.Furniture;
 
 /// <summary>
-/// The class of a road for street furniture (WLD-LIFE-STREET §2, MAP-QSH-ADDITIONS-ATMOSPHERE §1), read from the network line's own
+/// The class of a road for street furniture (WLD-LIFE-STREET, MAP-QSH-ADDITIONS-ATMOSPHERE), read from the network line's own
 /// <c>highway</c> by <see cref="FurnitureStyle.TierOf"/>: how often it has lamps and rest stops is <see cref="FurnitureStyle.Rule"/>.
 /// </summary>
 public enum RoadTier
@@ -35,12 +35,12 @@ public sealed record TierRule(float LampSpacing, bool BothSides, bool DiscLamp, 
 /// </summary>
 public static class FurnitureStyle
 {
-    // ---- Roads: every lit carriageway and pedestrian street of the campus, by its class (WLD-LIFE-STREET §2) ----
+    // ---- Roads: every lit carriageway and pedestrian street of the campus, by its class (WLD-LIFE-STREET) ----
     /// <summary>
-    /// Lamp and rest-stop rules by class. The avenue and the trunk roads follow MAP-QSH-ADDITIONS-ATMOSPHERE §1 (grade one 25–30 m, kept
+    /// Lamp and rest-stop rules by class. The avenue and the trunk roads follow MAP-QSH-ADDITIONS-ATMOSPHERE (grade one 25–30 m, kept
     /// regular on the avenue, grade two 30–40 m); the service lanes sit at the far end of grade two with a stop every eighth lamp gap;
     /// pedestrian streets are lit like grade two, with no stops along their line (stops belong at the plaza ends and junction nodes).
-    /// Together they put some tens of bins on the campus, most of them on the trunk roads (WLD-LIFE-STREET §2: 92 in all).
+    /// Together they put some tens of bins on the campus, most of them on the trunk roads (WLD-LIFE-STREET: 92 in all).
     /// </summary>
     public static TierRule Rule(RoadTier tier) => tier switch
     {
@@ -95,7 +95,7 @@ public static class FurnitureStyle
     public const float RampWalkBehind = 0.6f;
     public const float RampSlide = 4.5f;
 
-    // ---- Barriers (WLD-LIFE-STREET §2 路障): white stone spheres across the mouth of a wide walk where it meets a carriageway ----
+    // ---- Barriers (WLD-LIFE-STREET 路障): white stone spheres across the mouth of a wide walk where it meets a carriageway ----
     /// <summary>
     /// A main junction is where a carriageway meets a walk (footway, path, pedestrian street) at least <see cref="BarrierWalkMin"/> wide: the
     /// walk's end within <see cref="RampKerbReach"/> of the kerb, or the walk crossing the carriageway (a row on each side). The row stands
@@ -141,13 +141,13 @@ public static class FurnitureStyle
     public static IReadOnlyList<string> FountainCategories { get; } = Array.AsReadOnly(new[] { "sport", "teaching" });
 
     // ---- Vending groups, delivery lockers and shared-bicycle bays (13c2c): where people use them, a few clusters, blank between ----
-    // ---- (WLD-LIFE; ART-AMBIENCE rule 4: one theme a place, things in a cluster; "no piling up": rather too few). ----
+    // ---- (WLD-LIFE; WLD-AMBIENCE rule 4: one theme a place, things in a cluster; "no piling up": rather too few). ----
     /// <summary>
     /// A vending group is <see cref="VendingMin"/>–<see cref="VendingMax"/> machines side by side, <see cref="VendingSideGap"/> apart, on one
     /// paved bay, every other group holding one low-saturation odd machine (WLD-LIFE). Groups stand at the dormitory cluster gates
     /// (the open gate first, then by ID), then at the canteens and the sports venues (<see cref="VendingCategories"/>: by the first open
     /// entrance, else the side of the building nearest the network); none within <see cref="VendingSpacing"/> of another (one to a line of
-    /// sight) and none within <see cref="MainAxisClear"/> of a main road (ART-AMBIENCE: no vending groups on the main axis).
+    /// sight) and none within <see cref="MainAxisClear"/> of a main road (WLD-AMBIENCE: no vending groups on the main axis).
     /// </summary>
     public static EquipmentParams Vending { get; } = new(1f, 1.85f, 0.78f);
     public const int VendingMin = 2;

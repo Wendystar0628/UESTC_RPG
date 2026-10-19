@@ -4,13 +4,13 @@ using Campus.Gen.Zones.Core.Framework;
 namespace Campus.Gen.Zones.Core;
 
 /// <summary>
-/// Tunable values of the library shell (16b, MAP-QSH-CORE, MAP-QSH-LIBRARY). Metres and degrees; values marked
+/// Tunable values of the library shell (16b, MAP-QSH-CORE, MAP-QSH-INTERIORS-LIBRARY). Metres and degrees; values marked
 /// "review" are mainline initial values awaiting the main session's call. Colours are palette names only.
 /// </summary>
 public static partial class CoreStyle
 {
     // ---- Storeys and heights. The 1F floor is the pad + FloorAbovePad, and 1F is 4.95 m so the 2F floor lands on
-    //      pad + 5.1 like the stair top and interiors.json's lib.main door (MAP-QSH-LIBRARY: 5F 18.6, roof 23.1).
+    //      pad + 5.1 like the stair top and interiors.json's lib.main door (MAP-QSH-INTERIORS-LIBRARY: 5F 18.6, roof 23.1).
     //      Not read from the data (D-239): its ring height is 22.5 m and podium 4.5 m, 0.6 m under this section. ----
     public static readonly float[] LibraryStoreys = [4.95f, 4.5f, 4.5f, 4.5f, 4.5f];
     /// <summary>

@@ -132,7 +132,7 @@ VegSpecies veg_species(int row) {
 	return s;
 }
 
-// 覆雪（WLD-VEGETATION §6.4）：按世界法线朝上的程度覆雪，覆雪量越大雪线越往下；每个团块（叶簇）的雪线按自己的哈希错开一点，
+// 覆雪（WLD-VEGETATION）：按世界法线朝上的程度覆雪，覆雪量越大雪线越往下；每个团块（叶簇）的雪线按自己的哈希错开一点，
 // 遮蔽处雪线抬高。雪是平涂的 snow.*，与叶色之间只有一个像素的抗锯齿边，不混色。
 const vec2 VEG_SNOW_LINE = vec2(0.95, 0.4);  // 覆雪量 0 → 1 时，雪线（法线 y）从前者降到后者；冬季基线 0.7 时约 0.57
 const float VEG_SNOW_JITTER = 0.12;          // 每个团块雪线的起伏（法线 y，±一半）

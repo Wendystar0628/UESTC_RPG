@@ -7,7 +7,7 @@ using S = Campus.Gen.Zones.Core.LibraryInterior.LibraryInteriorStyle;
 namespace Campus.Gen.Zones.Core.LibraryInterior;
 
 /// <summary>
-/// 5F 西窗阅览带 (P16, MAP-QSH-LIBRARY): the west aisle from the gallery through sector C, lined with shelves, and the reading
+/// 5F 西窗阅览带 (P16, MAP-QSH-INTERIORS-LIBRARY): the west aisle from the gallery through sector C, lined with shelves, and the reading
 /// band along the shell's top-storey west wall: a table under each of the shell's windows with a chair facing the view over
 /// the museum roof to the West Lake, green lamps, books, and the glass of water left in the sun. Seals close the band's back
 /// and ends.

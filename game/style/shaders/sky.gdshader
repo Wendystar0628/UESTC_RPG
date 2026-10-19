@@ -5,7 +5,7 @@
 // 颜色只读调色板纹理第 0 行（ENG-PERF 的行布局，色号与 game/style/palette/core.json 一致），着色器里不写颜色。
 // 不用内置 TIME；时间只读 anim_time、step_rate；日月方向读全局参数里的真实方向（sun_dir、moon_dir），不读 LIGHT0。
 // 当前帧的云量与阈值由 SkyNode 写进本材质的两个 uniform（云量来自 IColorScriptFrame，不从脚本读回全局参数）。
-// 后置细节（ENG-WP）：银河、城市天光方位、九项光效、远处雨幕与云内闪、彩虹、积雨云卡片。
+// 后置细节（PLAN-WP）：银河、城市天光方位、九项光效、远处雨幕与云内闪、彩虹、积雨云卡片。
 
 shader_type sky;
 render_mode use_half_res_pass, use_quarter_res_pass;

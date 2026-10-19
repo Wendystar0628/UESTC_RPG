@@ -12,7 +12,7 @@ namespace Campus.Gen.Furniture;
 /// <summary>
 /// 13c2c: vending groups, delivery lockers and shared-bicycle bays where people use them (WLD-LIFE): a few clusters at the
 /// dormitory cluster gates, the canteens, the sports venues and the doors of teaching buildings, libraries and canteens, blank in between
-/// (ART-AMBIENCE rule 4; "no piling up"). Every rule and number is in <see cref="FurnitureStyle"/>.
+/// (WLD-AMBIENCE rule 4; "no piling up"). Every rule and number is in <see cref="FurnitureStyle"/>.
 /// </summary>
 public static partial class FurniturePlanner
 {

@@ -114,7 +114,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
         var d = ctx.Descriptor;
         PoolBounds = PrecipModel.PoolBounds(d.Center, d.Roam.MaxRadius, d.Roam.FloorY, d.Roam.CeilY);
         _pool?.SetAabb(ToAabb(PoolBounds));
-        // 主线版：precip_occ 是常量顶面（遮蔽高度图的烘焙在后置细节里，ENG-WP）；全图纹理按 map_rect 采样，尺寸不影响取值。
+        // 主线版：precip_occ 是常量顶面（遮蔽高度图的烘焙在后置细节里，PLAN-WP）；全图纹理按 map_rect 采样，尺寸不影响取值。
         var size = PrecipTuning.OccConstantSize;
         _occImage ??= Image.CreateEmpty(size, size, false, Image.Format.Rh);
         _occImage.Fill(new Color(PrecipTuning.OccConstantTop, 0f, 0f, 1f));

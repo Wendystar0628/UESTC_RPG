@@ -8,7 +8,7 @@ using S = Campus.Gen.Zones.Core.LibraryInterior.LibraryInteriorStyle;
 namespace Campus.Gen.Zones.Core.LibraryInterior;
 
 /// <summary>
-/// 图书馆室内 (WP-17, MAP-QSH-LIBRARY), laid out on the shell's own plan so walls, floors, windows and the skylight agree.
+/// 图书馆室内 (WP-17, MAP-QSH-INTERIORS-LIBRARY), laid out on the shell's own plan so walls, floors, windows and the skylight agree.
 /// Every open storey has the shell interior and the atrium rings; 1F carries the hall and 5F the west aisle and reading band.
 /// The other catalogue features of the library entry (the north-east connector and the cafe store front) get plain
 /// floor plates and wall linings until their rooms are built.

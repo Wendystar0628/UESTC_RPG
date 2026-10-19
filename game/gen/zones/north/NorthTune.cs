@@ -31,7 +31,7 @@ public static class NorthTune
         public static readonly ToonSpec Granite = S("stone.beige", ToonFx.BevelLift);
         /// <summary>Fence posts and rails, barrier arms: deep grey steel (MAP-QSH-NORTH). 初值：借 WP-12 的围挡深灰。</summary>
         public static readonly ToonSpec Steel = S("equip.fence", ToonFx.BevelLift, LineClass.Fine, 0.4f);
-        /// <summary>Fence bars: same colour, no outline, so the 25 mm bars read as a veil, not hatching (ART-AMBIENCE).</summary>
+        /// <summary>Fence bars: same colour, no outline, so the 25 mm bars read as a veil, not hatching (WLD-AMBIENCE).</summary>
         public static readonly ToonSpec SteelBar = S("equip.fence", ToonFx.None, LineClass.None, 0.4f);
         /// <summary>Turnstile cabinets, barrier cabinets, scanner stalks: brushed stainless.</summary>
         public static readonly ToonSpec Stainless = S("frame.alu", ToonFx.BevelLift, LineClass.Fine, 0.4f);

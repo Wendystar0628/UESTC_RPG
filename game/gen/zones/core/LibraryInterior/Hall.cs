@@ -6,7 +6,7 @@ using S = Campus.Gen.Zones.Core.LibraryInterior.LibraryInteriorStyle;
 namespace Campus.Gen.Zones.Core.LibraryInterior;
 
 /// <summary>
-/// 1F 中厅 (MAP-QSH-LIBRARY): the atrium floor in polished stone with black strips parallel to the entrance axis, grey carpet
+/// 1F 中厅 (MAP-QSH-INTERIORS-LIBRARY): the atrium floor in polished stone with black strips parallel to the entrance axis, grey carpet
 /// under the galleries and in the A and D sector fronts, the twin stair with the motto plaque between its feet, the curved
 /// exhibition boards at the centre, the red reading table (the visual focus) toward the entrance, dark reading tables with
 /// green lamps along the W and N edges, lounge seating and lanterns in the sector fronts, and the seals that close the

@@ -356,7 +356,7 @@ public static class StreetStyle
     /// borrows the closest registered pair, the terracotta band; switch the name here when the orange lands.
     /// </summary>
     public const string MirrorOrange = "band.terracotta";
-    /// <summary>The pale board behind the posters of a notice board, and the quiet poster colours (ART-AMBIENCE: no brand, newly pasted).</summary>
+    /// <summary>The pale board behind the posters of a notice board, and the quiet poster colours (WLD-AMBIENCE: no brand, newly pasted).</summary>
     public const string PosterBoard = "wall";
     public static readonly string[] Posters = ["umbrella.beige", "umbrella.grayblue", "wall.dormYellow", "umbrella.graygreen", "umbrella.graypink", "wall.greyWhite"];
     /// <summary>A raised print block stands this far off its face; the same for every sign and board.</summary>
@@ -397,7 +397,7 @@ public static class StreetStyle
     /// <summary>The mirror's top edge hangs this far under the pole's cap.</summary>
     public const float MirrorTopGap = 0.06f;
 
-    // ---- Utility pole (ART-AMBIENCE §5: at most five kinds of piece; §8: anti-crime lamp at 4.5–5 m) ----
+    // ---- Utility pole (WLD-AMBIENCE: at most five kinds of piece; anti-crime lamp at 4.5–5 m) ----
     public const float PoleTopRatio = 0.62f;
     public const float PoleTopMin = 0.075f;
     public const float PoleArmLength = 1.5f;
@@ -471,7 +471,7 @@ public static class StreetStyle
     public const float GuardRecess = 0.025f;
     public const float FenceColliderHalf = 0.04f;
 
-    // ---- Wall clock (ART-AMBIENCE §2: white face, black hands) ----
+    // ---- Wall clock (WLD-AMBIENCE: white face, black hands) ----
     public const int ClockSegments = 24;
     public const float ClockBezelRatio = 0.08f;
     public const float ClockDrumInset = 0.006f;

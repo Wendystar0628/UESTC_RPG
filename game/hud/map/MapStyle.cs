@@ -38,7 +38,7 @@ public sealed class MapStyle
     public MapFonts Fonts { get; }
     public MapTone Tone(bool night) => night ? Night : Day;
 
-    /// <summary>读不到令牌时返回 null：界面整体不显示，只记一条警告，不挡主线（ENG-WP）。</summary>
+    /// <summary>读不到令牌时返回 null：界面整体不显示，只记一条警告，不挡主线（PLAN-WP）。</summary>
     public static MapStyle? TryLoad(UiKit ui)
     {
         if (!Godot.FileAccess.FileExists(PalettePath))

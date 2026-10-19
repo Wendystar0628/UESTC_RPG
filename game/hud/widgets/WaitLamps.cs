@@ -5,7 +5,7 @@ using Godot;
 namespace Campus.Hud.Widgets;
 
 /// <summary>
-/// 等待灯（UI-VISUAL-COMPONENTS §4.5）：三枚过孔依次点亮再一起熄，不用进度条、不显示百分比。
+/// 等待灯（UI-VISUAL-COMPONENTS）：三枚过孔依次点亮再一起熄，不用进度条、不显示百分比。
 /// 何时出现由雾幕服务的 <see cref="IVeilState.Waiting"/> 决定（1.5 s / 扉页 4 s 的延迟已在服务里），这里只随它显隐。
 /// 不显示时不留件（<see cref="UiKit.Holders"/>）：亮起时建、淡出后释放。减少动态效果下三枚常亮，由文字陪着。
 /// 开始页贴右下角，行走中四角有常驻件，改放底边居中；应用加载页不出等待灯。

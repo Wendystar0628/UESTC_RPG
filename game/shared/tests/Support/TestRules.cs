@@ -1,6 +1,6 @@
 namespace Campus.Tests;
 
-/// <summary>Why a test exists. Every test carries exactly one (ENG-CODE §6).</summary>
+/// <summary>Why a test exists. Every test carries exactly one (STD-CODE).</summary>
 internal static class TestReason
 {
     /// <summary>Guards a public interface, data format or same-input-same-output rule.</summary>
@@ -44,7 +44,7 @@ internal static class TestTolerance
     /// <summary>Hours: world time (3.6 s of world clock).</summary>
     public const double WorldHours = 1e-3;
 
-    /// <summary>Budgets are set targets: a measurement fails only this many times over its budget (WF-RULE §15).</summary>
+    /// <summary>Budgets are set targets: a measurement fails only this many times over its budget (WF-RULE).</summary>
     public const float BudgetFactor = 10f;
 }
 

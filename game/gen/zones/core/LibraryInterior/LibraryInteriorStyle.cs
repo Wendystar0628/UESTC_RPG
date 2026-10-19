@@ -5,7 +5,7 @@ using ZoneLooks = Campus.Gen.Zones.Common.ZoneLooks;
 namespace Campus.Gen.Zones.Core.LibraryInterior;
 
 /// <summary>
-/// Tunable values of the library interior (WP-17, MAP-QSH-LIBRARY). Metres; "review" marks mainline initial values awaiting
+/// Tunable values of the library interior (WP-17, MAP-QSH-INTERIORS-LIBRARY). Metres; "review" marks mainline initial values awaiting
 /// the main session's call. Storey heights, the skylight, the 5F set-back and the window holes come from the shell
 /// (<see cref="Library.LibraryPlan"/>, <see cref="Library.LibraryShell"/>), never from here.
 /// Colours are palette names only. No interior colours are registered yet (WLD-INTERIORS-BUILD, WP-04), so each one
@@ -13,7 +13,7 @@ namespace Campus.Gen.Zones.Core.LibraryInterior;
 /// </summary>
 internal static class LibraryInteriorStyle
 {
-    // ---- Atrium and gallery rings (MAP-QSH-LIBRARY 中庭与回廊). The ring outside the topmost gallery is the skylight edge,
+    // ---- Atrium and gallery rings (MAP-QSH-INTERIORS-LIBRARY 中庭与回廊). The ring outside the topmost gallery is the skylight edge,
     //      so the void is the skylight across flats minus one ring on each side. ----
     public const float GalleryWidth = 4f;
     /// <summary>Corner cut along each edge of the void and the ring seals: splits the octagon's 45° folds (ART-MODELING).</summary>

@@ -7,7 +7,7 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Convex corner mirror (弯道凸面镜, ART-AMBIENCE §6): a low-saturation orange pole carrying a round mirror near its top, the mirror
+/// Convex corner mirror (弯道凸面镜, WLD-AMBIENCE): a low-saturation orange pole carrying a round mirror near its top, the mirror
 /// a shallow glass dome in an orange frame ring on a dark back plate, facing −Z. Width is the mirror's diameter (0.6–0.8 m), Height the
 /// pole's top (3.6–4 m on the street), Depth the footprint that holds the pole's foot behind (+Z) and the mirror in front of it. The
 /// mirror is never a live reflection: it takes the glass class, which paints the sky gradient, an opposite-side silhouette and a diagonal

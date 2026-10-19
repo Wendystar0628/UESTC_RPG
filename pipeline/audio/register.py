@@ -93,7 +93,7 @@ def main():
         if sid.startswith("SELF-SYNTH"):
             sources.append(dict(id=sid, source="自制（程序合成）", url="pipeline/audio/synth_broadcast.py", title="广播旋律与铜钟（占位）",
                                 author="UESTC_RPG", license="SELF-SYNTH", license_url="", downloaded="", snapshot="", sha256="",
-                                attribution="", note="自有版权，保留所有权利（OPS-RELEASE）", used_in=sorted(rels)))
+                                attribution="", note="自有版权，保留所有权利（ENG-RELEASE）", used_in=sorted(rels)))
             continue
         n = sid[3:]
         s = snaps[n]

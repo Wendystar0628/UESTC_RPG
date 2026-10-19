@@ -8,7 +8,7 @@ namespace Campus.Gen.Buildings.Rules;
 /// How the facade fittings take the WP-12 parts (WF-FLOW: tunables in one place): the unit grille (机位格栅) with its
 /// outdoor unit, and the rain downpipe and condensate drain (落水管). Part shapes and their section details are the
 /// PartCatalog defaults and RoofStyle; these values only decide how a WP-14 facade maps onto them (MAP-QSH-ADDITIONS-VOCAB
-/// and ART-RENOVATION). Initial values; the main session sets the final ones at review.
+/// and WLD-RENOVATION). Initial values; the main session sets the final ones at review.
 /// </summary>
 public static class FittingRules
 {
@@ -43,6 +43,6 @@ public static class FittingRules
     public const float DrainBesideGrille = 0.105f;
     /// <summary>Niches whose left edges are within this are one strip.</summary>
     public const float StripTolerance = 0.1f;
-    /// <summary>Dark steel-grey of the condensate drains (ART-RENOVATION: 统一深灰竖管); rain pipes take the facade's trim colour.</summary>
+    /// <summary>Dark steel-grey of the condensate drains (WLD-RENOVATION: 统一深灰竖管); rain pipes take the facade's trim colour.</summary>
     public const string DrainFamily = RoofStyle.FenceSteel;
 }

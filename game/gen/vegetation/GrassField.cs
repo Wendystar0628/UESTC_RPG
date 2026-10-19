@@ -10,7 +10,7 @@ namespace Campus.Gen.Vegetation;
 public enum GrassStyle : byte { Short = 0, Tall = 1 }
 
 /// <summary>
-/// One card-grass clump (WLD-VEGETATION §3.5): its foot on the lawn surface, yaw, uniform scale, a stable seed, and the lawn
+/// One card-grass clump (WLD-VEGETATION): its foot on the lawn surface, yaw, uniform scale, a stable seed, and the lawn
 /// tone (palette column) of the ground it stands on, so that its blades melt into the lawn's own colour field with distance.
 /// </summary>
 public sealed record GrassClump(Vector3 Position, float Yaw, float Scale, float Seed, ushort Tone, float WindPos, GrassStyle Style)

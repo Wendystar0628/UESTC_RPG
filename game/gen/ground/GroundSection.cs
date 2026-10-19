@@ -106,7 +106,7 @@ public sealed record PitSpec
     public float MaxKerb { get; init; } = 0.6f;
 }
 
-/// <summary>Road marking dimensions (ART-AMBIENCE 6, GB 5768 proportions, stylised).</summary>
+/// <summary>Road marking dimensions (WLD-AMBIENCE 6, GB 5768 proportions, stylised).</summary>
 public sealed record MarkingSpec
 {
     /// <summary>Carriageways at least this wide get a dashed centre line.</summary>

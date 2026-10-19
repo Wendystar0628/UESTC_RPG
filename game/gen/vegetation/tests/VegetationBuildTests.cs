@@ -176,7 +176,7 @@ public sealed class VegetationBuildTests
         var l0 = heaviest.Max(Weigh);
         var draws = heaviest.Max(o => o.Instances.Sum(s => s.Prototype.Surfaces.Count));
         var l1 = Far[LodLevel.L1].Value.Max(Weigh);
-        // Demo precision: only an order of magnitude over the declared budget fails (WF-RULE §15).
+        // Demo precision: only an order of magnitude over the declared budget fails (WF-RULE).
         var factor = TestTolerance.BudgetFactor;
         AssertThat(l0 <= factor * module.Budget.TrianglesL0 && l1 <= factor * module.Budget.TrianglesL1 && draws <= factor * module.Budget.DrawCalls)
             .OverrideFailureMessage($"L0 {l0}, L1 {l1}, draws {draws} over {factor}x {module.Budget}").IsTrue();

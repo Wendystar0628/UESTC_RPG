@@ -8,7 +8,7 @@ using Godot;
 namespace Campus.Kernel.Settings;
 
 /// <summary>
-/// The only reader/writer of the profile-level settings file user://settings.json (SYS-SAVE-FORMAT §3).
+/// The only reader/writer of the profile-level settings file user://settings.json (SYS-SAVE-FORMAT).
 /// Top-level sections: ui, input, graphics, audio. Each system reads and writes only its own section.
 /// JSON parsing never creates objects from file content; wrong-typed or out-of-range keys fall back to
 /// the caller's default, unknown keys are ignored, missing sections read as defaults.

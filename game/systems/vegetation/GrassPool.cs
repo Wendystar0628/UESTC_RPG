@@ -7,7 +7,7 @@ using N = System.Numerics;
 namespace Campus.Systems.Vegetation;
 
 /// <summary>
-/// One grass style's near pool (WLD-VEGETATION §3.5, ENG-PERF): the clumps are filed in <see cref="Cell"/> m cells; at most at the
+/// One grass style's near pool (WLD-VEGETATION, ENG-PERF): the clumps are filed in <see cref="Cell"/> m cells; at most at the
 /// vegetation runtime's 10 Hz, once the eye has moved <see cref="Step"/> m, the cells within <see cref="Reach"/> of the eye are
 /// written as the buffer's prefix and the rest is hidden. veg_grass sinks the blades into the lawn before the near radius
 /// (global quality.z, 20 m at its widest) ends, and drops the clumps beyond the density (quality.y) in the shader, so the lawn's own colour is the far grass and nothing pops at the reach. Layer 6, no shadow (ENG-PERF).

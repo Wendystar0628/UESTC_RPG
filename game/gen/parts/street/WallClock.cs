@@ -7,11 +7,11 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Round wall clock (外墙圆钟, ART-AMBIENCE §2): a white face in a grey aluminium bezel on a dark drum, twelve black ticks and two
+/// Round wall clock (外墙圆钟, WLD-AMBIENCE): a white face in a grey aluminium bezel on a dark drum, twelve black ticks and two
 /// black hands with a centre cap, facing −Z with its back on +Z (the wall). The face's diameter is the smaller of Width and Height
 /// (1.2–1.8 m on the two stair towers, smaller for the catalogue default); Depth is the drum. The hands are drawn at 17:30, the default
 /// state; the world clock turning them is the runtime's business (the part is static geometry, the same at every hour and season). It
-/// does not glow at night (ART-AMBIENCE §2: dark, or a faint ring light behind it that the placer's lamp table supplies). Visual only:
+/// does not glow at night (WLD-AMBIENCE: dark, or a faint ring light behind it that the placer's lamp table supplies). Visual only:
 /// it hangs on a stair tower, far out of reach.
 /// </summary>
 [Part(PartCatalog.WallClock, Owner = "WP-13")]

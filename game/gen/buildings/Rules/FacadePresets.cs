@@ -67,7 +67,7 @@ public static class FacadePresets
     /// <summary>
     /// 本科 A 型: the bay's 1.8 m window (half of it) in a 1.6 m opening 1.0 m off the floor, a solid wall around it, and the
     /// 陶红 only as the apron under each window, as wide as the window (MAP-QSH-NORTH): about a sixth of the wall against a
-    /// quarter when the lintels took it too (ART-RENOVATION, the 陶红 at most a quarter of the facade).
+    /// quarter when the lintels took it too (WLD-RENOVATION, the 陶红 at most a quarter of the facade).
     /// </summary>
     private static FacadeLook TypeA(string key, string frame) => new(key)
     {

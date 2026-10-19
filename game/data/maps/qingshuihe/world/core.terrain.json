@@ -153,7 +153,7 @@
       "feature": "qsh:way:806848396",
       "grade": 4.0,
       "padY": 0.0,
-      "reason": "垫层（MAP-QSH-TERRAIN）：图书馆锁在 0，大台阶顶与二楼楼面 +5.1 不随地形动（MAP-QSH-LIBRARY）。"
+      "reason": "垫层（MAP-QSH-TERRAIN）：图书馆锁在 0，大台阶顶与二楼楼面 +5.1 不随地形动（MAP-QSH-INTERIORS-LIBRARY）。"
     },
     {
       "op": "pad",

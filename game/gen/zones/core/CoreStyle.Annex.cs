@@ -23,7 +23,7 @@ public static partial class CoreStyle
     public const float AnnexGroundSill = 0.75f, AnnexGroundHeight = 2.9f, AnnexGroundTransom = 2.2f;
 
     /// <summary>
-    /// The closed door of the north annex on its long street face (门玻璃是门厅卡, MAP-QSH-LIBRARY): width, height of the
+    /// The closed door of the north annex on its long street face (门玻璃是门厅卡, MAP-QSH-INTERIORS-LIBRARY): width, height of the
     /// opening and of the door below its transom light; a flat stone canopy over it.
     /// </summary>
     public const float AnnexDoorWidth = 2.4f, AnnexDoorHeight = 3.3f, AnnexDoorTop = 2.5f;

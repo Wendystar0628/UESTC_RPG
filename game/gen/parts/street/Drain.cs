@@ -8,7 +8,7 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Drain (雨水箅 and 边沟, ART-FIDELITY-DETAIL, ART-AMBIENCE §6): a flat ground piece laid along X; Width is its length, Height its
+/// Drain (雨水箅 and 边沟, ART-FIDELITY-DETAIL, WLD-AMBIENCE): a flat ground piece laid along X; Width is its length, Height its
 /// thickness (the placer sinks it so the top is flush with the road), Depth its width. Variation 0: the rain grate, a concrete frame round
 /// a dark trough crossed by steel bars (they fade into one dark-grey plate beyond the near level, where the bar pitch drops under
 /// 4 px); it carries the trickle of water that is heard in the rain and after it. 1: a trench of concrete cover slabs (盖板沟) with two

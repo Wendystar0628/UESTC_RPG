@@ -89,6 +89,6 @@ public static class WaterfrontTune
     /// <summary>VF-A flag: never casts (ART-MODELING).</summary>
     public const byte NoShadow = 8;
 
-    // ---- Budget (ENG-WP: WP-28 takes 1 % / 1 % from the building share; measured on the 28a bridges) ----
+    // ---- Budget (PLAN-WP: WP-28 takes 1 % / 1 % from the building share; measured on the 28a bridges) ----
     public const int BudgetTrianglesL0 = 24_000, BudgetTrianglesL1 = 12_000, BudgetDrawCalls = 8;
 }

@@ -6,7 +6,7 @@ using S = Campus.Gen.Zones.Core.LibraryInterior.LibraryInteriorStyle;
 namespace Campus.Gen.Zones.Core.LibraryInterior;
 
 /// <summary>
-/// The atrium as every storey sees it (MAP-QSH-LIBRARY 中庭与回廊): the balustrade round the void on each gallery, the columns
+/// The atrium as every storey sees it (MAP-QSH-INTERIORS-LIBRARY 中庭与回廊): the balustrade round the void on each gallery, the columns
 /// behind the void corners, the star ceiling under each gallery, and the bookshelf seal along the outer edge of the gallery
 /// ring with this storey's openings (1F corridor mouths and sector fronts, the 5F west aisle).
 /// </summary>

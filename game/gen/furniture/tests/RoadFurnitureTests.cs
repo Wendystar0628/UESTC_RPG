@@ -84,7 +84,7 @@ public sealed class RoadFurnitureTests
     {
         // D-247: lamps, rest stops and bins follow the road class (FurnitureStyle.Rule), whatever the road is called. Judged on properties:
         // nearly every long run of the avenue and the trunk roads that lies inside the campus has a lamp; the rest stops of a side stand at
-        // their class's rhythm and keep its distance; the bins number the order of WLD-LIFE-STREET §2's 92 (judged by order of magnitude only).
+        // their class's rhythm and keep its distance; the bins number the order of WLD-LIFE-STREET's 92 (judged by order of magnitude only).
         const int DocumentedBins = 92;
         var world = World.Value;
         var layout = RealLayout.Value;

@@ -7,7 +7,7 @@ using Campus.Gen.World;
 namespace Campus.Gen.Vegetation;
 
 /// <summary>
-/// The clump prototypes of veg_grass and the runtime data of the grass pools (WLD-VEGETATION §3.5). A clump is a tuft of
+/// The clump prototypes of veg_grass and the runtime data of the grass pools (WLD-VEGETATION). A clump is a tuft of
 /// tapered, curved blades, each two quads and a tip (5 vertices, 3 triangles), rooted in a small disc round the clump foot and
 /// leaning outward. Per vertex: UV = (side −1 / 0 / +1, height fraction t); CUSTOM1 = (blade root, blade rank 0–1);
 /// CUSTOM2 = (offset of the vertex from the blade's centre line, blade phase). veg_grass sways the centre line, thins the blades

@@ -140,7 +140,7 @@ public static class CirculationStyle
     public const float GateFrame = 0.08f, GateBar = 0.03f, GateBarPitch = 0.12f;
 
     // ---- Folding gates, lift doors, raised and tiered floors (WLD-INTERIORS; core palette tokens) ----
-    /// <summary>Folding gate in grey-green paint (灰绿铁门, ART-AMBIENCE §3) and in dark steel.</summary>
+    /// <summary>Folding gate in grey-green paint (灰绿铁门, WLD-AMBIENCE) and in dark steel.</summary>
     public static readonly ToonSpec GateGreen = new(new("umbrella.graygreen.lit"), new("umbrella.graygreen.shade")) { Fx = ToonFx.BevelLift };
     public static readonly ToonSpec GateDark = new(new("equip.fence.lit"), new("equip.fence.shade")) { Fx = ToonFx.BevelLift };
     /// <summary>Lift door and jamb: brushed stainless, white paint, dark steel.</summary>

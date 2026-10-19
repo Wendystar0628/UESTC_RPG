@@ -8,7 +8,7 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Lamp-pole broadcast horn (灯杆广播喇叭, ART-FIDELITY-DETAIL, ART-AMBIENCE): a grey collar that clamps round the lamp pole, with
+/// Lamp-pole broadcast horn (灯杆广播喇叭, ART-FIDELITY-DETAIL, WLD-AMBIENCE): a grey collar that clamps round the lamp pole, with
 /// reflex horns flaring out of it, each horn a pale body with a dark driver in its mouth. Variation 0: two horns back to back along Z
 /// (up and down the road). 1: four horns, a cross. The part's origin is the pole's axis at the collar's foot, so a placer puts it at
 /// the pole at 3.5–4.5 m. Width × Depth is the footprint the horns reach; Height is the horn's bell. It carries the evening broadcast

@@ -4,7 +4,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Buildings.Rules;
 
 /// <summary>
-/// Construction pattern lines of the main wall (ART-STYLE-SHADING §4.2, ART-RENOVATION §3.1 and §3.5, D-195): painted walls
+/// Construction pattern lines of the main wall (ART-STYLE-SHADING, WLD-RENOVATION, D-195): painted walls
 /// are cut into 1.5 × 0.75 m panels, identity-tile buildings carry the tile grid. Both are lightness-only lines drawn by
 /// toon_static from the wall's metre UV (U along the wall, V up from the plinth top); the shader fades them out per cell
 /// pixel size, so there is no distance-banded colour block anywhere.

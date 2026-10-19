@@ -34,7 +34,7 @@ public static class BoundaryTune
         /// scene text atlas (INV-4); the field stays blank until then.
         /// </summary>
         public static readonly ToonSpec PlaqueField = S("roof.grey", ToonFx.None, LineClass.Fine, 0.5f);
-        /// <summary>Fence rails: deep grey steel, the north cluster fences' colour (MAP-QSH-NORTH, ART-AMBIENCE).</summary>
+        /// <summary>Fence rails: deep grey steel, the north cluster fences' colour (MAP-QSH-NORTH, WLD-AMBIENCE).</summary>
         public static readonly ToonSpec Steel = S("equip.fence", ToonFx.BevelLift, LineClass.Fine, 0.4f);
         /// <summary>Fence bars: same colour, no outline, so the 25 mm bars read as a veil, not hatching.</summary>
         public static readonly ToonSpec SteelBar = S("equip.fence", ToonFx.None, LineClass.None, 0.4f);

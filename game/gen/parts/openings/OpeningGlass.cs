@@ -69,7 +69,7 @@ public static class OpeningGlass
     }
 }
 
-/// <summary>Helpers for WP-14 and the zone packs when they place WP-10 parts (ENG-WP).</summary>
+/// <summary>Helpers for WP-14 and the zone packs when they place WP-10 parts (PLAN-WP).</summary>
 public static class OpeningPlacement
 {
     /// <summary>

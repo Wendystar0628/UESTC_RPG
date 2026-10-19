@@ -17,7 +17,7 @@ namespace Campus.Gen.Zones.Core.Annex;
 /// coping, reveals and sills of the library's openings. The court blocks (8406, 8408) and the north-west link (8409,
 /// 8410) carry the library's ribbon windows; the north annex (8403, offices and stacks) has punched windows stacked on one
 /// bay grid, rainwater pipes, roof units and one closed glass door with a stone canopy on its long street face. The low
-/// block's roof is the 3F G terrace (MAP-QSH-LIBRARY), paved like the library's 2F terrace.
+/// block's roof is the 3F G terrace (MAP-QSH-INTERIORS-LIBRARY), paved like the library's 2F terrace.
 /// <para>Windows: one grid <see cref="WindowKey"/> per block, <see cref="Columns"/> × storeys, on the library's channel.</para>
 /// </summary>
 public sealed class AnnexShell : ICorePiece, IWindowedPiece

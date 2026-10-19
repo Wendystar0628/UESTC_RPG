@@ -8,7 +8,7 @@ using S = Campus.Gen.Parts.Street.StreetStyle;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Road-name sign (路名牌, MAP-QSH-ADDITIONS-VOCAB §2): a dark grey board with a white rule round its edge, a row of character
+/// Road-name sign (路名牌, MAP-QSH-ADDITIONS-VOCAB): a dark grey board with a white rule round its edge, a row of character
 /// blocks and a row of pinyin strips (the road names wait for the scene-text atlas, so the blocks stand in for the text). Width is the
 /// board; the footprint depth holds the plate and what carries it. Variation 0: a bare plate (Height is its height), the back on +Z
 /// with two clamp tabs for a post or a wall; visual only, the front (−Z) printed. Variation 1: the two-post sign of a main junction
@@ -138,7 +138,7 @@ public sealed class RoadNameSignPart : IPartDef<SignParams>
 }
 
 /// <summary>
-/// Notice board (宣传栏 and 木檐公告板, WLD-LIFE-STREET, ART-AMBIENCE §4): a grey aluminium frame round a glass case of flat posters
+/// Notice board (宣传栏 and 木檐公告板, WLD-LIFE-STREET, WLD-AMBIENCE): a grey aluminium frame round a glass case of flat posters
 /// (low-saturation colours, a title bar and two text bars each; the posters' own text waits for the scene-text atlas), the case
 /// standing on two dark posts with its sill 0.8 m up. Width × Height × Depth is the whole board; the case sits at the back (+Z) and is
 /// <see cref="StreetStyle.NoticeCaseDepth"/> deep. Variation 0: the plain case (校内主路、宿舍区和食堂门口). Variation 1: with a small

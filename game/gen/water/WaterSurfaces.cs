@@ -7,7 +7,7 @@ namespace Campus.Gen.Water;
 
 /// <summary>
 /// All water surfaces of one map, meshed once and handed out per streaming cell. A triangle belongs to the cell that
-/// holds its centroid (CORE-CONVENTIONS: an element crossing cells belongs to exactly one cell).
+/// holds its centroid (STD-CONVENTIONS: an element crossing cells belongs to exactly one cell).
 /// Cell keys follow the content-module convention: at level L the key is floor(world / (64 &lt;&lt; L)); L4 (0, 0) is the whole map.
 /// </summary>
 public sealed class WaterSurfaces
