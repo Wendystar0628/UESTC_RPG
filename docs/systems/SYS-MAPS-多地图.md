@@ -59,12 +59,12 @@ gates: [G2, G4, G5, G6, G7]
 - 世界文件 `world/<区>.json`：每区一份，记录就是 `WorldFeature`，格式见 CORE-CONVENTIONS §3.1，加载以 `game/gen/world/WorldModelLoader.cs` 为准；原点与投影在 `world/geo.json`。
 - 精选室内属于所在的图，不是单独的图，随本图的流式加载进出（WLD-INTERIORS）。
 
-### 1.2 本机烘焙缓存与启动数据
+### 1.2 烘焙缓存与启动数据
 
-- **本机烘焙**（D-165）：L0–L3 的 TileBundle（含外围 O0、O1）、碰撞级 C、室内包与碰撞包、平面地图底图不随安装包发，在玩家机器上由与开发烘焙器同一个 `Build()` 生成，写进本机缓存。查找顺序：本机缓存 → 本机烘焙。做法见 ENG-PERF-STREAM §1、ENG-ARCH §3（`IBakeService`）。
+- **烘焙与随包**（D-165）：各图的 TileBundle、碰撞级 C、室内包与碰撞包、平面地图底图，发布时全图烘好随包发，缺失时由同一个 `Build()` 本机补烘。查找顺序：本机缓存 → 随包缓存 → 本机补烘。做法见 ENG-PERF-STREAM §1、ENG-ARCH §3（`IBakeService`）。
 - **缓存按图分开**，各图互不覆盖；只有影响 `Build()` 的输入改了才重烘，改出生点、默认状态、点位不重烘。判鲜规则见 ENG-ARCH §4、ENG-PERF-STREAM §1.1。
 - **本机缓存与画面设置、世界状态、存档无关**，跨存档、跨画质共用（CORE-CONVENTIONS §4）；它不是存档。
-- **没有几何启动集**：每张图的几何都在本机烘焙（ENG-ARCH §4）。
+- **没有几何启动集**：随包的是全图缓存，不另做启动集（ENG-ARCH §4）。
 - 主 PCK 只留全局资源和各图的 JSON。
 
 ## 2 地图描述 `map.json`

@@ -49,7 +49,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 14.8k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 14.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
@@ -57,7 +57,7 @@
 - CORE-DECISIONS-SYSTEMS §1 界面 · L31 · 3.2k
 - CORE-DECISIONS-SYSTEMS §2 存档 · L61 · 1.4k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L79 · 2.1k
-- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.9k
+- CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 4.0k
 - CORE-DECISIONS-SYSTEMS §5 工程 · L133 · 3.5k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
@@ -1221,7 +1221,7 @@
 - SYS-ATLAS §0 结论 · L22 · 660
   - ★ SYS-ATLAS §0.1 接入要点 · L33 · 311
 - SYS-ATLAS §1 允许什么、禁止什么 · L39 · 405
-- SYS-ATLAS §2 多地图下的数据 · L51 · 535
+- SYS-ATLAS §2 多地图下的数据 · L51 · 543
 - SYS-ATLAS §3 存档里存什么、设置里存什么 · L58 · 423
 
 ## SYS-AUDIO-AMBIENCE · 环境声景与天气事件声
@@ -1309,7 +1309,7 @@
   - ★ SYS-MAPS §0.1 接入要点 · L32 · 797
 - SYS-MAPS §1 数据归属 · L42 · 1.2k
   - SYS-MAPS §1.1 按图与全局 · L44 · 788
-  - SYS-MAPS §1.2 本机烘焙缓存与启动数据 · L62 · 433
+  - SYS-MAPS §1.2 烘焙缓存与启动数据 · L62 · 418
 - SYS-MAPS §2 地图描述 `map.json` · L70 · 663
 - SYS-MAPS §3 切换 · L82 · 2.4k
   - SYS-MAPS §3.1 一个 World3D，先卸后装 · L86 · 151
@@ -1697,7 +1697,7 @@
 `docs/engineering/ENG-ARCH-工程架构.md` · 9.7k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、ContentModule、KernelService、KernelNode、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、架构规则、生命周期、契约、契约申请、枚举穷举、本机烘焙、.tbin、缓存键、英雄资产、桩、占位、仓库脚本自成一体、架构导向、扩展方式、net10.0、技术栈
 
-- ENG-ARCH §0 结论 · L21 · 1.4k
+- ENG-ARCH §0 结论 · L21 · 1.5k
   - ★ ENG-ARCH §0.1 接入要点 · L33 · 757
 - ENG-ARCH §1 当前架构 · L45 · 1.2k
   - ENG-ARCH 技术栈 · L47 · 185
@@ -1842,16 +1842,16 @@
 `docs/engineering/ENG-PERF-STREAM-流式加载与烘焙.md` · 3.7k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
 关键词：TileBundle、流式加载、本机烘焙缓存、tbin、六条不变量、看门狗、碰撞级、室内包、目的地预取、零分配、GC、显存记账、安装包布局、不泄漏
 
-- ENG-PERF-STREAM §0 结论 · L22 · 610
-  - ★ ENG-PERF-STREAM §0.1 接入要点 · L30 · 216
-- ENG-PERF-STREAM §1 流式加载 · L36 · 1.4k
-  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L38 · 612
+- ENG-PERF-STREAM §0 结论 · L22 · 615
+  - ★ ENG-PERF-STREAM §0.1 接入要点 · L30 · 222
+- ENG-PERF-STREAM §1 流式加载 · L36 · 1.5k
+  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L38 · 627
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L46 · 474
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L59 · 168
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L63 · 177
 - ENG-PERF-STREAM §2 主线程与 C# · L67 · 315
 - ENG-PERF-STREAM §3 内存与显存 · L73 · 279
-- ENG-PERF-STREAM §4 安装包与磁盘布局 · L77 · 155
+- ENG-PERF-STREAM §4 安装包与磁盘布局 · L77 · 144
 - ENG-PERF-STREAM §5 待验证（P0） · L81 · 79
 
 ## ENG-PERF · 性能工程：总原则、绘制管线与剔除
@@ -1924,14 +1924,14 @@
 
 ## OPS-RELEASE · 发布与交付
 
-`docs/ops/OPS-RELEASE-发布与交付.md` · 6.5k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
+`docs/ops/OPS-RELEASE-发布与交付.md` · 6.6k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
 关键词：发布、交付、版本号、version.txt、构建信息、导出、导出入口、scripts/release、分发压缩包、UESTC-<版本>-win64.7z、地图数据包、map-data-<版本>.zip、ODbL、正式用户目录、%APPDATA%\UESTC、安装、更新、卸载、诊断包、导出诊断、许可、MIT、LICENSE、干净环境验证、OSM 署名、许可页、制作人员与许可、窗口标题、窗口图标、八角晶片
 
 - OPS-RELEASE §0 结论 · L21 · 1.3k
   - ★ OPS-RELEASE §0.1 接入要点 · L31 · 768
 - OPS-RELEASE §1 版本号与构建信息 · L44 · 268
 - OPS-RELEASE §2 用户数据目录 · L51 · 273
-- OPS-RELEASE §3 导出与发布 · L57 · 584
+- OPS-RELEASE §3 导出与发布 · L57 · 618
 - OPS-RELEASE §4 安装、更新与卸载 · L66 · 504
 - OPS-RELEASE §5 地图数据包（ODbL） · L78 · 359
 - OPS-RELEASE §6 故障处理与诊断 · L85 · 547
