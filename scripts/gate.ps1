@@ -1,4 +1,4 @@
-# 门禁总入口：按工作包和改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
+﻿# 门禁总入口：按工作包和改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
 # 用法：powershell scripts\gate.ps1 -Wp WP-xx [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <路径...>] [-BaseRef <基线>] [-Map qingshuihe] [-Frames 300]
 #   默认：G1、受影响模块的 G2 和 G4，再加受影响的启动、行走、存档核心专项（核心专项驱动正式生产舞台）
 #   -Plan 只读，只列出会跑什么；-Full 请求保留的 12 道门，没做完的门返回 NotImplemented
@@ -226,20 +226,20 @@ if (-not $BaseRef) {
 }
 if ($Smoke -and ($Only.Count -gt 0 -or $Full)) { throw '-Smoke cannot be combined with -Only or -Full.' }
 if ($Frames -lt 1) { throw 'Frames must be positive.' }
-$changes = @(if ($PSBoundParameters.ContainsKey('Paths')) {
-    @($Paths | ForEach-Object {
+$unfilteredChanges = @(if ($PSBoundParameters.ContainsKey('Paths')) {
+    $Paths | ForEach-Object {
         $absolute = [IO.Path]::GetFullPath($(if ([IO.Path]::IsPathRooted($_)) { $_ } else { Join-Path $root $_ }))
         if (-not $absolute.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
             throw "Path escapes repository: $_"
         }
         $absolute.Substring($root.Length + 1).Replace('\','/')
-    } | Sort-Object -Unique)
+    } | Sort-Object -Unique
 } else {
-    $actualChanges = @(Get-UESTCChanges $root $BaseRef)
-    # WP-00 integrates the shared checkout; package entry points keep ownership scope.
-    if ($Wp -eq 'WP-00') { $actualChanges }
-    else { Select-UESTCChanges $root $Wp $actualChanges $BaseRef }
+    Get-UESTCChanges $root $BaseRef
 })
+# Keep additions before package selection so unowned new code cannot disappear from G4.
+$changes = @(if ($PSBoundParameters.ContainsKey('Paths') -or $Wp -eq 'WP-00') { $unfilteredChanges }
+    else { Select-UESTCChanges $root $Wp $unfilteredChanges $BaseRef })
 $formatPaths = @($changes | Where-Object { $_ -match '\.cs$' -and $_ -notmatch '^game/addons/' -and (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf) })
 $runtimeChanges = @($changes | Where-Object { $_ -notmatch '^docs/|\.md$|^\.collab/' })
 if (-not ($Full -or $Smoke -or $Only.Count)) {
@@ -417,10 +417,11 @@ foreach ($id in $selected) {
             }
             'G3' { $detail = Test-UESTCOwnership $root $Wp $changes -BaseRef $BaseRef | ConvertTo-Json -Depth 5 -Compress }
             'G4' {
+                $newFiles = Test-UESTCNewCodeFiles $root $unfilteredChanges -BaseRef $BaseRef
                 $null = Test-UESTCSourceBoundaries $root
                 $settings = Write-TestSettings
                 $null = Invoke-GateProcess 'G4-architecture' dotnet @('test',(Join-Path $root 'scripts/gates/arch/Campus.Arch.Tests.csproj'),'-c','Debug','--settings',$settings,'--logger','trx','--results-directory',(Join-Path $work 'arch-results'))
-                $detail = 'Source rules and ArchUnitNET rules passed; BannedApiAnalyzers run in compilation.'
+                $detail = "New code placement/name checked ($($newFiles.CheckedNewCodeFiles) files); source and ArchUnitNET rules passed; BannedApiAnalyzers run in compilation."
             }
             'G5' {
                 Assert-GodotVersion

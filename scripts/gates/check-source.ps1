@@ -1,5 +1,5 @@
-﻿# 源码与归属检查函数库：列出改动文件，按 ownership.json 核对归属与 UID，并检查源码边界规则（颜色、着色器白名单、路径与 ID 耦合等）。
-# 用法：由 scripts\gate.ps1 点引用（. scripts\gates\check-source.ps1）后调用其中的 Test-UESTCOwnership、Test-UESTCSourceBoundaries 等函数，不单独运行
+﻿# 源码与归属检查函数库：列出改动文件，按 ownership.json 核对归属与 UID，并检查新增代码放置、命名及源码边界规则。
+# 用法：由 scripts\gate.ps1 点引用（. scripts\gates\check-source.ps1）后调用 Test-UESTCOwnership、Test-UESTCNewCodeFiles、Test-UESTCSourceBoundaries 等函数，不单独运行
 function Get-UESTCFiles {
     param([string]$Root)
     Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached', '--others', '--exclude-standard') | Sort-Object -Unique
@@ -69,6 +69,31 @@ function Get-UESTCPathOwnership {
         }
         [pscustomobject]@{ Path=$path; Owner=$owner; Maintainers=$maintainers }
     }
+}
+
+# G4 applies placement/name rules to additions only; existing paths keep their baseline.
+function Test-UESTCNewCodeFiles {
+    param([string]$Root, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef)
+    $base = (Invoke-UESTCGit $Root @('merge-base', $BaseRef, 'HEAD')).StdOut.Trim()
+    $basePaths = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
+    foreach ($path in (Get-UESTCGitPaths $Root @('ls-tree', '-z', '-r', '--name-only', $base))) {
+        $null = $basePaths.Add($path)
+    }
+    $added = @($Changes | Where-Object {
+        $_ -match '^(game|pipeline|scripts|docs|dashboard|tools|\.collab/tools)/' -and
+            $_ -match '\.(cs|gd|gdshader|gdshaderinc|glsl|glslinc|ps1|psm1|py|js|mjs|cjs|ts|jsx|tsx|cmd|bat|sh)$' -and
+            -not $basePaths.Contains($_) -and (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf)
+    } | Sort-Object -Unique)
+    $failures = New-Object 'Collections.Generic.List[string]'
+    $patchNames = @('misc','util','utils','helper','helpers','temp','tmp','new','v2','old','backup','legacy','compat','patch','fix')
+    foreach ($entry in (Get-UESTCPathOwnership $Root $added $BaseRef)) {
+        if (-not $entry.Owner) { $failures.Add("New code file has no registered ownership: $($entry.Path)") }
+        # Match whole path tokens, so ordinary responsibilities such as news/oldTown remain valid.
+        $tokens = @($entry.Path -split '[^a-zA-Z0-9]+' | Where-Object { $_ -in $patchNames } | Sort-Object -Unique)
+        if ($tokens.Count) { $failures.Add("New code path uses patch-style name ($($tokens -join ', ')): $($entry.Path)") }
+    }
+    if ($failures.Count) { throw ($failures -join "`n") }
+    [pscustomobject]@{ CheckedNewCodeFiles=$added.Count }
 }
 
 function Test-UESTCPackageOwner {
