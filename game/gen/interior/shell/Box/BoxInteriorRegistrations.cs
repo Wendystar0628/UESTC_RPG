@@ -14,9 +14,6 @@ public sealed class XuanbangBoxInterior : BoxInteriorProvider { }
 [InteriorProvider("interior.box.sports", Owner = "WP-51")]
 public sealed class SportsBoxInterior : BoxInteriorProvider { }
 
-[InteriorProvider("interior.box.research-six", Owner = "WP-51")]
-public sealed class ResearchSixBoxInterior : BoxInteriorProvider { }
-
 [InteriorProvider("interior.box.research-institute", Owner = "WP-51")]
 public sealed class ResearchInstituteBoxInterior : BoxInteriorProvider { }
 

@@ -31,7 +31,7 @@ public sealed partial class SixSite
             var style = Style(k.Upper(world));
             var windowed = GridFacade.Layout(plan, style, e => Dress(e, volumes)).Columns > 0;
             GridFacade.Build(b, plan, y + S.BaseHeight, style, e => Dress(e, volumes), windowed ? Numbering(k) : null);
-            GlassBase(b, plan, y, style, volumes);
+            GlassBase(b, k.Entity, plan, y, style, volumes);
             var roof = y + S.BaseHeight + style.RoofTop;
             Plant(b, S.Plants(world)[Blocks.ToList().IndexOf(k)], roof);
         }
@@ -71,12 +71,26 @@ public sealed partial class SixSite
     /// behind the glass, slim mullions (L0), a stone soffit over the recess, and square stone columns in the stone line under
     /// every second pier (and at every convex corner).
     /// </summary>
-    private static void GlassBase(SiteBuilder b, PolygonRings plan, float y, GridStyle style, IReadOnlyList<PolygonRings> volumes)
+    private static void GlassBase(SiteBuilder b, string entity, PolygonRings plan, float y, GridStyle style, IReadOnlyList<PolygonRings> volumes)
     {
         var soffit = y + S.BaseHeight - 0.45f;
         var inner = BasePlan(plan);
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
-        b.Add(PartGeometryKernel.Extrude(inner, soffit - y + 0.1f, coarse ? L.DarkGrey : L.Glass, y - 0.1f), Matrix4x4.Identity);
+        // A facade is a skin. A closed extrusion also capped the open hall and both bridge doors.
+        foreach (var (e, _, _) in GridFacade.Edges(inner))
+        {
+            if (Dress(e, volumes, S.Recess).Kind == EdgeKind.Hidden) continue;
+            var openings = BaseOpenings(b.Context.World, entity, e);
+            var levels = openings.SelectMany(o => new[] { y + o.Bottom, y + o.Top })
+                .Append(y - 0.1f).Append(soffit).Where(h => h >= y - 0.1f && h <= soffit).Distinct().Order().ToArray();
+            for (var j = 1; j < levels.Length; j++)
+            {
+                var middle = (levels[j - 1] + levels[j]) * 0.5f - y;
+                foreach (var (x0, x1) in GridFacade.Open(0, e.Length,
+                    openings.Where(o => middle >= o.Bottom && middle <= o.Top).Select(o => (o.From, o.To))))
+                    GridFacade.Box(b, e.Frame, x0, x1, levels[j - 1], levels[j], -0.05f, 0.05f, coarse ? L.DarkGrey : L.Glass, 0);
+            }
+        }
         b.Add(PartGeometryKernel.Extrude(plan, 0.45f, L.Trim, soffit), Matrix4x4.Identity);
         if (coarse) return;
         // Grey paving under the overhang, from the set-back glass out to the stone line (门前灰色铺装, §1.4), one slab per face
@@ -90,17 +104,25 @@ public sealed partial class SixSite
         {
             if (Dress(e, volumes, S.Recess).Kind == EdgeKind.Hidden) continue;
             var f = e.Frame;
-            GridFacade.Box(b, f, 0, e.Length, y - 0.1f, y + 0.3f, -0.05f, 0.12f, L.DarkGrey, 0);
-            GridFacade.Box(b, f, 0, e.Length, y + S.BaseStorey - 0.25f, y + S.BaseStorey + 0.2f, -0.05f, 0.1f, L.DarkGrey, 0);
+            var openings = BaseOpenings(b.Context.World, entity, e);
+            void Band(float bottom, float top, float depth, ToonSpec material)
+            {
+                foreach (var (x0, x1) in GridFacade.Open(0, e.Length,
+                    openings.Where(o => o.Bottom < top && o.Top > bottom).Select(o => (o.From, o.To))))
+                    GridFacade.Box(b, f, x0, x1, y + bottom, y + top, -0.05f, depth, material, 0);
+            }
+            Band(-0.1f, 0.3f, 0.12f, L.DarkGrey);
+            Band(S.BaseStorey - 0.25f, S.BaseStorey + 0.2f, 0.1f, L.DarkGrey);
             if (b.Detail != SiteDetail.Full) continue;
             var count = Math.Max(1, (int)MathF.Ceiling(e.Length / S.MullionPitch));
             for (var i = 1; i < count; i++)
             {
                 var x = e.Length * i / count;
                 if (doors.Any(d => Vector2.Distance(f.P(x, 0), d) < S.VestibuleWidth * 0.5f + 0.6f)) continue;
+                if (openings.Any(o => x >= o.From && x <= o.To)) continue;
                 GridFacade.Box(b, f, x - 0.035f, x + 0.035f, y + 0.3f, soffit, 0, 0.12f, L.Metal, 0);
             }
-            GridFacade.Box(b, f, 0, e.Length, y + 3.1f, y + 3.17f, 0, 0.1f, L.Metal, 0);
+            Band(3.1f, 3.17f, 0.1f, L.Metal);
         }
         foreach (var (x, f) in Columns(plan, style, volumes, east, b.Context.World))
         {

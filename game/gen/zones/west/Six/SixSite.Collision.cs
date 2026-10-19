@@ -37,19 +37,23 @@ public sealed partial class SixSite
             foreach (var (e, _, _) in GridFacade.Edges(BasePlan(plan)))
             {
                 if (Dress(e, volumes, S.Recess).Kind == EdgeKind.Hidden) continue;
-                var cuts = new List<(float U0, float U1, SurfaceTag Tag)>();
-                var door = e.Frame.Local(eastDoor);
-                if (k.Entity == S.EntityC && MathF.Abs(door.Y - S.Recess) < 1.2f && door.X > 0 && door.X < e.Length)
-                    cuts.Add((door.X - S.VestibuleWidth * 0.5f, door.X + S.VestibuleWidth * 0.5f, SurfaceTag.Ground));
+                var closed = new List<(float U0, float U1)>();
+                var openings = BaseOpenings(world, k.Entity, e);
                 foreach (var shut in S.ShutDoors(c.Context.World))
                 {
                     var p = e.Frame.Local(shut);
                     if (MathF.Abs(p.Y - S.Recess) < 1.2f && p.X > 0 && p.X < e.Length)
-                        cuts.Add((p.X - S.ShutDoorWidth * 0.5f, p.X + S.ShutDoorWidth * 0.5f, SurfaceTag.DoorClosed));
+                        closed.Add((p.X - S.ShutDoorWidth * 0.5f, p.X + S.ShutDoorWidth * 0.5f));
                 }
-                foreach (var (u0, u1) in GridFacade.Open(0, e.Length, cuts.Select(cut => (cut.U0, cut.U1))))
-                    c.Wall(e.Frame.P(u0, 0.1f), e.Frame.P(u1, 0.1f), 0.15f, y, y + S.BaseHeight, SurfaceTag.Wall, FootMat.Glass);
-                foreach (var cut in cuts.Where(cut => cut.Tag == SurfaceTag.DoorClosed))
+                var levels = openings.SelectMany(o => new[] { o.Bottom, o.Top }).Append(0).Append(S.BaseHeight).Distinct().Order().ToArray();
+                for (var j = 1; j < levels.Length; j++)
+                {
+                    var middle = (levels[j - 1] + levels[j]) * 0.5f;
+                    var cuts = openings.Where(o => middle >= o.Bottom && middle <= o.Top).Select(o => (o.From, o.To)).Concat(closed);
+                    foreach (var (u0, u1) in GridFacade.Open(0, e.Length, cuts))
+                        c.Wall(e.Frame.P(u0, 0.1f), e.Frame.P(u1, 0.1f), 0.15f, y + levels[j - 1], y + levels[j], SurfaceTag.Wall, FootMat.Glass);
+                }
+                foreach (var cut in closed)
                     c.Wall(e.Frame.P(cut.U0, 0.1f), e.Frame.P(cut.U1, 0.1f), 0.15f, y, y + S.BaseHeight, SurfaceTag.DoorClosed, FootMat.Glass);
             }
             foreach (var (x, f) in Columns(plan, style, volumes, eastDoor, world))
@@ -68,6 +72,9 @@ public sealed partial class SixSite
                 c.Wall(e.Frame.P(0, -0.15f), e.Frame.P(e.Length, -0.15f), 0.15f, yc, yc + S.TowerHeight, SurfaceTag.Wall, FootMat.StonePaving);
         foreach (var (e, _, _) in GridFacade.Edges(Plan(world, S.EntityC, S.LinkBC).Outer).Where(edge => c.Includes(SiteRanges.Bounds([edge.Item1.A, edge.Item1.B], S.LinkPier))))
             foreach (var x in new[] { S.LinkPier * 0.5f, e.Length * 0.5f })
+            {
+                if (LinkOpenings(world, e).Any(o => x + S.LinkPier * 0.5f > o.From && x - S.LinkPier * 0.5f < o.To)) continue;
                 c.Box(e.Frame.At(x, yc + S.BaseHeight * 0.5f, -S.LinkPier * 0.5f), new(S.LinkPier * 0.5f, S.BaseHeight * 0.5f, S.LinkPier * 0.5f), SurfaceTag.Wall, FootMat.StonePaving);
+            }
     }
 }

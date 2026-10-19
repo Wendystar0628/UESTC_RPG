@@ -67,7 +67,7 @@
           "outsideLanding": [
             -139.2484,
             0.15,
-            25.3600
+            25.36
           ],
           "insideLanding": [
             -144.6887,
@@ -129,7 +129,7 @@
           "doorCenter": [
             -314.4268,
             0.15,
-            73.8090
+            73.809
           ],
           "facingDeg": 262.8,
           "outsideLanding": [
@@ -207,7 +207,7 @@
             501.9265
           ],
           "insideLanding": [
-            -344.7800,
+            -344.78,
             2.6,
             497.4994
           ],
@@ -317,23 +317,21 @@
     },
     {
       "featureIds": [
-        "qsh:relation:14153711",
-        "qsh:way:779496169"
+        "qsh:relation:14153711"
       ],
       "sourceFeatureIds": [
         "osm:relation:10807930",
-        "osm:relation:14153711",
-        "osm:way:779496169"
+        "osm:relation:14153711"
       ],
       "name": {
         "zh": "六号科研楼",
         "en": "Research Building Six"
       },
       "scope": {
-        "zh": "C 区 1F 门厅、公式台阶、2F 连廊及 B 区 2F 一小段公共区",
-        "en": "C block entrance hall and formula stairs; 2F bridge and a short public section of B block"
+        "zh": "C 区 1F 门厅、公式台阶与 2F 北翼通道",
+        "en": "C block entrance hall, formula stairs and 2F northern corridor"
       },
-      "providerId": "interior.box.research-six",
+      "providerId": "interior.research-six",
       "openFloors": [
         1,
         2
@@ -362,6 +360,29 @@
           "open": true
         }
       ],
+      "seals": [],
+      "owner": "WP-31b"
+    },
+    {
+      "featureIds": [
+        "qsh:way:779496169"
+      ],
+      "sourceFeatureIds": [
+        "osm:way:779496169"
+      ],
+      "name": {
+        "zh": "六号科研楼",
+        "en": "Research Building Six"
+      },
+      "scope": {
+        "zh": "B 区 2F 一小段公共区",
+        "en": "A short public section of B block 2F"
+      },
+      "providerId": "interior.research-six.b",
+      "openFloors": [
+        2
+      ],
+      "entrances": [],
       "seals": [],
       "owner": "WP-31b"
     },
@@ -662,9 +683,21 @@
     {
       "id": "lib.north-annex",
       "featureId": "qsh:way:806848403",
-      "doorCenter": [-143.7050, 0.15, -27.2100],
-      "outsideLanding": [-142.2069, 0.15, -29.2114],
-      "insideLanding": [-145.5027, 0.15, -24.8083],
+      "doorCenter": [
+        -143.705,
+        0.15,
+        -27.21
+      ],
+      "outsideLanding": [
+        -142.2069,
+        0.15,
+        -29.2114
+      ],
+      "insideLanding": [
+        -145.5027,
+        0.15,
+        -24.8083
+      ],
       "facingDeg": 36.8,
       "clearWidth": 2.4,
       "open": false

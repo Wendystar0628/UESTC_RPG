@@ -52,17 +52,24 @@ public sealed partial class SixSite
         {
             var f = e.Frame;
             var h = S.LinkPier * 0.5f;
+            var openings = LinkOpenings(world, e);
             foreach (var x in new[] { h, e.Length * 0.5f })
+            {
+                if (openings.Any(o => x + h > o.From && x - h < o.To)) continue;
                 GridFacade.Box(b, f, x - h, x + h, y - 0.1f, roof - 0.55f, -S.LinkPier, 0, L.Stone, bevel);
-            GridFacade.Box(b, f, 0, e.Length, deck - 0.75f, deck + 0.05f, -0.05f, 0.12f, L.Stone, bevel);
+            }
+            foreach (var (x0, x1) in GridFacade.Open(0, e.Length, openings))
+                GridFacade.Box(b, f, x0, x1, deck - 0.75f, deck + 0.05f, -0.05f, 0.12f, L.Stone, bevel);
             GridFacade.Box(b, f, -0.15f, e.Length + 0.15f, roof - 0.6f, roof + 0.1f, -0.05f, 0.3f, L.Stone, bevel);
-            if (b.Detail != SiteDetail.Mass) Rail(b, f, S.LinkPier + 0.2f, e.Length - S.LinkPier - 0.2f, deck);
+            if (b.Detail != SiteDetail.Mass)
+                foreach (var (x0, x1) in GridFacade.Open(S.LinkPier + 0.2f, e.Length - S.LinkPier - 0.2f, openings))
+                    Rail(b, f, x0, x1, deck);
         }
         foreach (var (from, to) in Bridges(world))
         {
             var f = PlanFrame.Toward(from, to);
             var length = Vector2.Distance(from, to);
-            GridFacade.Box(b, f, 0, length, deck - 0.7f, deck, -1.7f, 1.7f, L.Trim, bevel);
+            GridFacade.Box(b, f, 0, length, deck - 0.7f, deck, -BridgeHalfWidth, BridgeHalfWidth, L.Trim, bevel);
             GridFacade.Box(b, f, 0, length, roof - 0.5f, roof - 0.1f, -2.0f, 2.0f, L.Trim, bevel);
             if (b.Detail == SiteDetail.Mass) continue;
             foreach (var s in new[] { -1f, 1f })
@@ -87,6 +94,10 @@ public sealed partial class SixSite
                 ?? throw new InvalidOperationException($"Bridge source {start} is parallel to its axis.");
             var to = PlanLines.LineIntersection(centre, direction, b[0], b[^1] - b[0], 1e-6f)
                 ?? throw new InvalidOperationException($"Bridge target {end} is parallel to its axis.");
+            var target = PlanFrame.Toward(b[^1], b[0]);
+            var directionToBlock = Vector2.Normalize(to - from);
+            // The stone line projects beyond the base glass; keep one continuous deck through that recess.
+            to += directionToBlock * (-S.Recess / Vector2.Dot(directionToBlock, target.W));
             yield return (from, to);
         }
     }
