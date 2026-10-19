@@ -36,7 +36,7 @@ public static partial class TileBundleCodec
             NightlightTileContent nightlight => nightlight.Key,
             _ => throw new NotSupportedException($"Unsupported bake payload: {product.GetType().FullName}")
         };
-        var maximum = product is TileBundle or CollisionTile ? BakeCacheStore.MaximumPayloadBytes : BakeCacheStore.MaximumPayload(productKey);
+        var maximum = product is TileBundle or CollisionTile ? BakeCacheStore.MaximumPayloadBytes : BakeCacheStore.MaximumProductBytes;
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream, new UTF8Encoding(false, true), true);
         writer.Write(Magic); writer.Write(2);
@@ -79,7 +79,7 @@ public static partial class TileBundleCodec
 
     public static object Decode(string identity, BakeKey expectedKey, byte[] bytes)
     {
-        var maximum = BakeCacheStore.MaximumPayload(expectedKey);
+        var maximum = BakeCacheStore.MaximumProductBytes;
         if (bytes.Length <= 0 || bytes.Length > maximum)
             throw new InvalidDataException($"Bake container {expectedKey.Map.Value}/{expectedKey.Module}/{expectedKey.Detail}: {bytes.Length} bytes exceeds limit {maximum}.");
         using var stream = new MemoryStream(bytes, false);

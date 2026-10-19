@@ -7,6 +7,8 @@ namespace Campus.Gen.Fauna;
 [ContentModule("fauna", Owner = "WP-25")]
 public sealed class FaunaModule : IFaunaContentSource
 {
+    public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.ReflectLakes, [], []);
+
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<BuildContext, FaunaLayout> _layouts = new();
     public IReadOnlyList<Claim> Claims => [];
 

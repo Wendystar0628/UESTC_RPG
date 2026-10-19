@@ -17,6 +17,8 @@ namespace Campus.Gen.Buildings;
 [ContentModule("buildings", Owner = "WP-14")]
 public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, IWindowMetadataSource, IContentSourceTraceProvider
 {
+    public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [SurfaceMaterialCatalog.SourcePath], []);
+
     /// <summary>Generic module: claims no specific feature (SYS-MAPS).</summary>
     public IReadOnlyList<Claim> Claims { get; } = [];
 

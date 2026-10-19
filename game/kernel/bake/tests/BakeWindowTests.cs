@@ -314,6 +314,9 @@ public sealed class BakeWindowTests
 
     private sealed class DirectoryProducer : IBakeProducer, IBakeContentConsumer
     {
+        public BakePayloadClass PayloadClass => BakePayloadClass.Product;
+        public BakeProductKind ProductKind => BakeProductKind.Vegetation;
+        public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
         public int PrepareCalls;
         public int DirectoryCalls;
         private bool _prepared;
@@ -336,6 +339,9 @@ public sealed class BakeWindowTests
 
     private sealed class PausedProducer(ManualResetEventSlim started, ManualResetEventSlim release) : IBakeProducer
     {
+        public BakePayloadClass PayloadClass => BakePayloadClass.Product;
+        public BakeProductKind ProductKind => BakeProductKind.Fauna;
+        public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
         public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];
         public bool CanBuild(BakeKey key) => key.Module == "cancelled";
         public object Build(BakeKey key, BuildContext context)

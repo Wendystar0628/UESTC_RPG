@@ -49,10 +49,12 @@ internal sealed class BakeSourceIndex
         PrepareSources();
         var cells = new Dictionary<TileKey, List<string>>();
         var windows = new Dictionary<TileKey, List<string>>();
+        var interiors = InteriorInputs(context);
         foreach (var feature in _features)
         {
             var stamp = Hash(new { feature, claims = Enum.GetValues<Aspects>().Select(aspect =>
-                new { aspect, owner = context.ClaimedBy(feature.Id, aspect) }).ToArray() });
+                new { aspect, owner = context.ClaimedBy(feature.Id, aspect) }).ToArray(),
+                interior = interiors.GetValueOrDefault(feature.Id) });
             var box = VegetationBounds(feature, 0);
             Add(cells, box, stamp);
             if (context.WindowNumbering is { } numbering)
@@ -71,7 +73,7 @@ internal sealed class BakeSourceIndex
         foreach (var pair in cells) _cells.Add(pair.Key, Hash(pair.Value.Order(StringComparer.Ordinal).ToArray()));
         foreach (var pair in windows) _windows.Add(pair.Key, Hash(pair.Value.Order(StringComparer.Ordinal).ToArray()));
         CommonStamp = Hash(new { terrain.CommonStamp, context.World.Boundary, context.Map.TerrainDefaults,
-            fidelity = FileStamp("fidelity.json"), interior = FileStamp("interiors.json") });
+            fidelity = FileStamp("fidelity.json") });
         PaletteStamp = Hash(new { PaletteLayout.EncodingVersion, PaletteLayout.LayoutId,
             entries = context.Catalog.Entries.OrderBy(entry => entry.Index.Value).ToArray() });
 
@@ -82,6 +84,36 @@ internal sealed class BakeSourceIndex
                 if (!cells.TryGetValue(cell, out var stamps)) cells.Add(cell, stamps = []);
                 stamps.Add(stamp);
             }
+        }
+    }
+
+    private static IReadOnlyDictionary<FeatureId, string> InteriorInputs(BuildContext context)
+    {
+        var result = new Dictionary<FeatureId, List<object>>();
+        if (!context.SourceInputs.TryGetValue("interiors.json", out var bytes)) return new Dictionary<FeatureId, string>();
+        using var document = JsonDocument.Parse(bytes);
+        var root = document.RootElement;
+        foreach (var item in root.GetProperty("interiors").EnumerateArray())
+        {
+            var shared = item.EnumerateObject().Where(property => property.Name is not ("featureIds" or "entrances"))
+                .ToDictionary(property => property.Name, property => property.Value, StringComparer.Ordinal);
+            foreach (var feature in item.GetProperty("featureIds").EnumerateArray())
+            {
+                var id = new FeatureId(feature.GetString() ?? throw new InvalidDataException("Missing interior feature ID."));
+                var entrances = item.GetProperty("entrances").EnumerateArray()
+                    .Where(entrance => entrance.GetProperty("featureId").GetString() == id.Value).ToArray();
+                Add(id, new { version = root.GetProperty("version"), shared, entrances });
+            }
+        }
+        if (root.TryGetProperty("closedEntrances", out var closed))
+            foreach (var entrance in closed.EnumerateArray())
+                Add(new(entrance.GetProperty("featureId").GetString() ?? throw new InvalidDataException("Missing closed entrance feature ID.")), entrance);
+        return result.ToDictionary(pair => pair.Key, pair => Hash(pair.Value));
+
+        void Add(FeatureId id, object value)
+        {
+            if (!result.TryGetValue(id, out var values)) result.Add(id, values = []);
+            values.Add(value);
         }
     }
 

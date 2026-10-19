@@ -14,6 +14,8 @@ namespace Campus.Gen.Water;
 [ContentModule("water", Owner = "WP-24")]
 public sealed class WaterModule : IWaterContentSource
 {
+    public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.ReflectLakes, [], []);
+
     private readonly object _gate = new();
     private (IWorldModel World, MapId Map, WaterSurfaces Surfaces)? _cache;
 

@@ -1,5 +1,8 @@
 namespace Campus.Contracts.Bake;
 
+public enum BakePayloadClass { Tile, Product }
+public enum BakeProductKind { Collision, Map, Vegetation, Fauna, Nightlight }
+
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class BakeProducerAttribute(string id) : Attribute
 {
@@ -14,6 +17,10 @@ public sealed class BakeProducerAttribute(string id) : Attribute
 /// </summary>
 public interface IBakeProducer
 {
+    BakeInputDependencies Inputs(BakeKey key);
+    BakePayloadClass PayloadClass { get; }
+    BakeProductKind ProductKind { get; }
+    bool UsesModule(IContentModule module) => false;
     /// <summary>Lists prepared auxiliary keys and influence bounds without generating geometry, instance records or sampling heights.</summary>
     IReadOnlyList<BakeTileEntry> Tiles(BuildContext context);
     bool CanBuild(BakeKey key);

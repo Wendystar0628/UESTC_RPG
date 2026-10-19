@@ -11,6 +11,14 @@ namespace Campus.Pipeline.Map;
 [BakeProducer("map", Owner = "WP-48a")]
 public sealed class MapBakeProducer : IBakeProducer
 {
+    private const string LabelsFile = "atlas/labels.json";
+    private const string MarkersFile = "atlas/markers.json";
+    private static readonly IReadOnlyList<string> MapFiles = Array.AsReadOnly(new[] { LabelsFile, MarkersFile, "waypoints.json" });
+    public BakePayloadClass PayloadClass => BakePayloadClass.Product;
+    public BakeProductKind ProductKind => BakeProductKind.Map;
+    public BakeInputDependencies Inputs(BakeKey key) => new(BakeInputKinds.World | BakeInputKinds.ReflectLakes | BakeInputKinds.OutskirtsBlocks,
+        MapFiles, []);
+
     public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];
 
     public bool CanBuild(BakeKey key) => key.Module == MapBaker.Module && key.Detail == MapBaker.Detail;
@@ -18,8 +26,8 @@ public sealed class MapBakeProducer : IBakeProducer
     public object Build(BakeKey key, BuildContext context)
     {
         if (!CanBuild(key) || key.Map != context.Map.Id) throw new ArgumentException("Map bake key does not match its context.");
-        var labels = AtlasLabelData.Parse(Required(context, "atlas/labels.json").Span);
-        using var markers = JsonDocument.Parse(Required(context, "atlas/markers.json"));
+        var labels = AtlasLabelData.Parse(Required(context, LabelsFile).Span);
+        using var markers = JsonDocument.Parse(Required(context, MarkersFile));
         if (!markers.RootElement.TryGetProperty("atlasRect", out var rectJson)) throw new InvalidDataException("Atlas page rectangle is missing.");
         var atlasRect = rectJson.Deserialize<MapRect>(AtlasLabelData.JsonOptions)
             ?? throw new InvalidDataException("Invalid atlas page rectangle.");
@@ -36,7 +44,7 @@ public sealed class MapBakeProducer : IBakeProducer
     private static string LabelHash(BuildContext context)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        foreach (string path in new[] { "atlas/labels.json", "atlas/markers.json", "waypoints.json" })
+        foreach (string path in MapFiles)
         {
             hash.AppendData(Encoding.UTF8.GetBytes(path));
             hash.AppendData([0]);

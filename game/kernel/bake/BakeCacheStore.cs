@@ -14,12 +14,18 @@ public sealed class BakeCacheStore
     public const int MaximumCompressedTileBytes = 8 * 1024 * 1024;
     public const int MaximumPayloadBytes = MaximumTileUploadBytes + 1024 * 1024;
     public const int MaximumProductBytes = 128 * 1024 * 1024;
-    internal static int MaximumPayload(BakeKey key) => key.Module is BakeModuleIds.VegetationTrees or BakeModuleIds.VegetationGrass or
-        BakeModuleIds.FaunaRuntime or BakeModuleIds.NightlightLamps or BakeModuleIds.NightlightWindows or "map" ||
-        key.Module == "resident" && (key.Detail is "meta" or "source-index") || key.Module == "terrain" && key.Detail == "meta"
-        ? MaximumProductBytes : MaximumPayloadBytes;
-    internal static int MaximumFile(BakeKey key) => MaximumPayload(key) == MaximumProductBytes
-        ? MaximumProductBytes + 1024 * 1024 : MaximumCompressedTileBytes;
+    internal static int MaximumPayload(BakePayloadClass payload) => payload switch
+    {
+        BakePayloadClass.Tile => MaximumPayloadBytes,
+        BakePayloadClass.Product => MaximumProductBytes,
+        _ => throw new ArgumentOutOfRangeException(nameof(payload))
+    };
+    internal static int MaximumFile(BakePayloadClass payload) => payload switch
+    {
+        BakePayloadClass.Tile => MaximumCompressedTileBytes,
+        BakePayloadClass.Product => MaximumProductBytes + 1024 * 1024,
+        _ => throw new ArgumentOutOfRangeException(nameof(payload))
+    };
 
     private const uint CompressionMagic = 0x315A4254; // TBZ1
     private readonly string _root;
@@ -75,24 +81,24 @@ public sealed class BakeCacheStore
         }
     }
 
-    public T? TryRead<T>(BakeKey key, Func<byte[], T> decode,
+    public T? TryRead<T>(BakeKey key, BakePayloadClass payload, Func<byte[], T> decode,
         CancellationToken cancellationToken = default) where T : class
     {
-        foreach (var value in ReadCandidates(key, decode, cancellationToken)) return value;
+        foreach (var value in ReadCandidates(key, payload, decode, cancellationToken)) return value;
         return null;
     }
 
-    internal IEnumerable<T> ReadCandidates<T>(BakeKey key, Func<byte[], T> decode,
+    internal IEnumerable<T> ReadCandidates<T>(BakeKey key, BakePayloadClass payload, Func<byte[], T> decode,
         CancellationToken cancellationToken = default) where T : class
     {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
-        if (ReadCandidate(_root, key, decode, cancellationToken) is { } local) yield return local;
-        if (_packagedAvailable && ReadCandidate(_packagedRoot!, key, decode, cancellationToken) is { } packaged)
+        if (ReadCandidate(_root, key, payload, decode, cancellationToken) is { } local) yield return local;
+        if (_packagedAvailable && ReadCandidate(_packagedRoot!, key, payload, decode, cancellationToken) is { } packaged)
             yield return packaged;
     }
 
-    private T? ReadCandidate<T>(string root, BakeKey key, Func<byte[], T> decode,
+    private T? ReadCandidate<T>(string root, BakeKey key, BakePayloadClass payload, Func<byte[], T> decode,
         CancellationToken cancellationToken) where T : class
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -100,13 +106,13 @@ public sealed class BakeCacheStore
         if (!File.Exists(path)) return null;
         try
         {
-            var file = ReadBounded(path, MaximumFile(key));
+            var file = ReadBounded(path, MaximumFile(payload));
             byte[] bytes;
             EnterCache(cancellationToken);
             try
             {
                 ThrowIfStopped();
-                bytes = DecodeFile(file, MaximumPayload(key), key);
+                bytes = DecodeFile(file, MaximumPayload(payload), key);
             }
             finally { Monitor.Exit(_sync); }
             cancellationToken.ThrowIfCancellationRequested();
@@ -122,7 +128,7 @@ public sealed class BakeCacheStore
         }
     }
 
-    public void Write(BakeKey key, byte[] bytes, CancellationToken cancellationToken = default)
+    public void Write(BakeKey key, BakePayloadClass payload, byte[] bytes, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
@@ -130,13 +136,13 @@ public sealed class BakeCacheStore
         try
         {
             ThrowIfStopped();
-            var maximum = MaximumPayload(key);
+            var maximum = MaximumPayload(payload);
             if (bytes.Length <= 0 || bytes.Length > maximum)
                 throw new InvalidDataException($"Bake payload {key.Map.Value}/{key.Module}/{key.Detail}: {bytes.Length} bytes exceeds limit {maximum}.");
             var encoded = EncodeFile(bytes);
             cancellationToken.ThrowIfCancellationRequested();
-            if (encoded.Length > MaximumFile(key))
-                throw new InvalidDataException($"Compressed bake product {key.Map.Value}/{key.Module}/{key.Detail}: {encoded.Length} bytes exceeds limit {MaximumFile(key)}.");
+            if (encoded.Length > MaximumFile(payload))
+                throw new InvalidDataException($"Compressed bake product {key.Map.Value}/{key.Module}/{key.Detail}: {encoded.Length} bytes exceeds limit {MaximumFile(payload)}.");
             var path = FilePath(_root, key);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var oldLength = File.Exists(path) ? new FileInfo(path).Length : 0;
@@ -255,9 +261,7 @@ public sealed class BakeCacheStore
     private static string FilePath(string root, BakeKey key)
     {
         var detail = key.Detail.Split('/');
-        var product = key.Module == "terrain" ? "terrain" : key.Module == "resident" ? "resident" : key.Module == "map" ? "map" : key.Module.StartsWith("interior.", StringComparison.Ordinal) ? "interior" :
-            detail[0] == "C" ? "collision" : "geometry";
-        var segments = new List<string> { root, Segment(key.Map.Value), product, Segment(key.Module) };
+        var segments = new List<string> { root, Segment(key.Map.Value), Segment(key.Module) };
         segments.AddRange(detail.Select(Segment));
         var path = Path.Combine(segments.ToArray()) + ".tbin";
         for (var current = path; current != root; current = Path.GetDirectoryName(current)!)

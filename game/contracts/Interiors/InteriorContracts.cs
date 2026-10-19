@@ -56,6 +56,8 @@ public interface IInteriorCatalogConfigurable
 }
 public interface IInteriorProvider           // gen 里实现，纯函数；注册即开放（G19c 核对开放清单 = 注册的提供者 = 门开着的楼）
 {
+    BakeInputDependencies BakeInputs => BakeInputDependencies.World;
+    BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
     IReadOnlyList<FeatureId> FeatureIds { get; }
     int Priority { get; }
     bool Walkable => true;

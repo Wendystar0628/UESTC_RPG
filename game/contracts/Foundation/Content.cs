@@ -21,12 +21,26 @@ public sealed class ContentModuleAttribute(string id) : Attribute
 /// <summary>Declared upper bounds for generated L0/L1 triangles and draw calls.</summary>
 public sealed record ModuleBudget(int TrianglesL0, int TrianglesL1, int DrawCalls);
 public sealed record PartBudget(int L0, int L1);
+[Flags]
+public enum BakeInputKinds
+{
+    None = 0, World = 1, Windows = 2, Vegetation = 4, Furniture = 8,
+    Backdrop = 16, ReflectLakes = 32, OutskirtsBlocks = 64, Lighting = 128
+}
+
+/// <summary>Effective source dependencies declared by a CPU producer. File keys are relative to map data or game/data.</summary>
+public sealed record BakeInputDependencies(BakeInputKinds Kinds, IReadOnlyList<string> MapFiles, IReadOnlyList<string> GlobalFiles)
+{
+    public static BakeInputDependencies World { get; } = new(BakeInputKinds.World, [], []);
+}
 public sealed record LightEmitter(ChannelId Channel, Vector3 Position, PaletteToken Color, float Energy, float Range);
 public sealed record Footprint2D(FeatureId Feature, PolygonRings Rings, float MinY = 0f, float MaxY = 0f);
 public sealed record InspectionProbe(string Id, FeatureId Feature, Pose Pose, float Distance);
 
 public interface IContentModule
 {
+    BakeInputDependencies BakeInputs => BakeInputDependencies.World;
+    BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
     IReadOnlyList<Claim> Claims { get; }
     ModuleBudget Budget { get; }
     /// <summary>Enumerates conservative occupied L0 cells on the 64-metre grid from source ranges, without generating products or querying terrain heights, regardless of requested rendering LOD.</summary>

@@ -219,6 +219,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             throw new InvalidDataException("More than one producer claims this bake key.");
         if (module is null && interior is null && matches.Length == 0) throw new InvalidDataException("No bake producer is registered for this key.");
         var codeHash = module?.CodeHash ?? interior?.CodeHash ?? matches[0].CodeHash;
+        var payloadClass = module is not null || interior is not null ? BakePayloadClass.Tile : matches[0].Value.PayloadClass;
         var context = module is not null ? map.GetPreparedContext(map.Context, key.Module) : map.CreateBuildContext(codeHash);
         var sources = map.SourceIndex(context);
         var inputHash = sources.TryProduct(key, out var preparedHash) ? preparedHash : ProductInputHash(map, context, key);
@@ -227,7 +228,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         PrepareProductTerrain(map, key);
         if (!_options.Live)
         {
-            var cached = _cache.TryRead(key, payload =>
+            var cached = _cache.TryRead(key, payloadClass, payload =>
             {
                 var product = Decode(identity, key, payload);
                 RequireInteriorProduct(map, key, product);
@@ -255,7 +256,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         map.PipelineStatistics?.Add(validated, map.Geometry);
         if (!_options.Live && generation == Interlocked.Read(ref _cacheGeneration))
         {
-            _cache.Write(key, bytes, cancellation);
+            _cache.Write(key, payloadClass, bytes, cancellation);
         }
         return validated;
     }

@@ -44,7 +44,7 @@ public static partial class TileBundleCodec
     private static void Channel<T>(BinaryWriter writer, ReadOnlySpan<T> values, BakeKey key) where T : unmanaged
     {
         var bytes = MemoryMarshal.AsBytes(values);
-        var maximum = BakeCacheStore.MaximumPayload(key);
+        var maximum = BakeCacheStore.MaximumProductBytes;
         if (bytes.Length > maximum) throw new InvalidDataException($"CPU channel {key.Map.Value}/{key.Module}/{key.Detail}: {bytes.Length} bytes exceeds limit {maximum}.");
         writer.Write(values.Length);
         writer.Write(bytes);
@@ -54,7 +54,7 @@ public static partial class TileBundleCodec
     {
         var count = reader.ReadInt32();
         var bytes = (long)count * Unsafe.SizeOf<T>();
-        var maximum = BakeCacheStore.MaximumPayload(key);
+        var maximum = BakeCacheStore.MaximumProductBytes;
         var remaining = reader.BaseStream.Length - reader.BaseStream.Position;
         if (count < 0 || bytes > maximum || bytes > remaining)
             throw new InvalidDataException($"CPU channel {key.Map.Value}/{key.Module}/{key.Detail}: {bytes} bytes, remaining={remaining}, limit={maximum}.");

@@ -75,7 +75,6 @@ public sealed partial class BakeService
                 var request = BakeRequestKeys.Parse(entry.Key);
                 if (entry.Key.Map != map || request.Collision || request.Level != LodLevel.L0 ||
                     modules.ContainsKey(entry.Key.Module) ||
-                    entry.Key.Module is not (BakeModuleIds.VegetationTrees or BakeModuleIds.VegetationGrass or BakeModuleIds.FaunaRuntime or BakeModuleIds.NightlightLamps or BakeModuleIds.NightlightWindows) ||
                     producers.Count(producer => producer.Value.CanBuild(entry.Key)) != 1 ||
                     !VectorMath.Finite(entry.Bounds.Min) || !VectorMath.Finite(entry.Bounds.Max) ||
                     entry.Bounds.Min.X > entry.Bounds.Max.X || entry.Bounds.Min.Y > entry.Bounds.Max.Y || entry.Bounds.Min.Z > entry.Bounds.Max.Z)

@@ -85,10 +85,6 @@ public sealed class BakeAuxiliaryCodecTests
         Reject(() => BakeProductCodec.Encode("fixture", lamps with { LampIds = [320] }));
         Reject(() => BakeProductCodec.Decode("fixture", windows.Key, bytes[..^1]));
         Reject(() => BakeProductCodec.Decode("fixture", windows.Key, bytes.Concat(new byte[] { 0 }).ToArray()));
-        foreach (var module in new[] { BakeModuleIds.VegetationTrees, BakeModuleIds.VegetationGrass, BakeModuleIds.FaunaRuntime,
-            BakeModuleIds.NightlightLamps, BakeModuleIds.NightlightWindows })
-            if (BakeCacheStore.MaximumPayload(key with { Module = module }) != BakeCacheStore.MaximumProductBytes)
-                throw new InvalidOperationException("An auxiliary CPU product inherited the render container limit.");
         var count = BakeCacheStore.MaximumPayloadBytes / (GlowSet.Stride * sizeof(float)) + 1;
         var large = windows with { Glow = windows.Glow with { Count = count, Buffer = new float[count * GlowSet.Stride] }, ReflectionWindowIndices = [] };
         var largeBytes = BakeProductCodec.Encode("fixture/large", large);

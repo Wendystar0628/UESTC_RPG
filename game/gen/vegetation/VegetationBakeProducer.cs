@@ -10,6 +10,11 @@ namespace Campus.Gen.Vegetation;
 [BakeProducer("vegetation.runtime", Owner = "WP-23")]
 public sealed class VegetationBakeProducer : IBakeProducer, IBakeContentConsumer
 {
+    public BakePayloadClass PayloadClass => BakePayloadClass.Product;
+    public BakeProductKind ProductKind => BakeProductKind.Vegetation;
+    public BakeInputDependencies Inputs(BakeKey key) => Source.Module.BakeInputs;
+    public bool UsesModule(IContentModule module) => module is IVegetationRuntimeSource;
+
     private Lazy<IReadOnlyList<PreparedContentModule>>? _modules;
 
     public void Prepare(Lazy<IReadOnlyList<PreparedContentModule>> modules, LightInventoryDocument lighting) => _modules = modules;

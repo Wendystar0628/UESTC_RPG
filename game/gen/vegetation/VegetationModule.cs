@@ -15,6 +15,9 @@ namespace Campus.Gen.Vegetation;
 [ContentModule("vegetation", Owner = "WP-23")]
 public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskContributor, IContentSourceTraceProvider
 {
+    public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Vegetation, [], [VegetationInputs.SpeciesKey]);
+    public BakeInputDependencies CollisionInputs => BakeInputs;
+
     private readonly object _gate = new();
     private Cache? _cache;
 

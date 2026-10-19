@@ -13,6 +13,10 @@ namespace Campus.Kernel.Collision;
 [BakeProducer("collision.world", Owner = "WP-43")]
 public sealed class CollisionBakeProducer : IBakeProducer, IBakeContentConsumer
 {
+    public BakePayloadClass PayloadClass => BakePayloadClass.Tile;
+    public BakeProductKind ProductKind => BakeProductKind.Collision;
+    public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
+
     public const string Module = "collision.world";
     private readonly (Registration Registration, object Instance)[] _parts;
     private Lazy<IReadOnlyList<PreparedContentModule>>? _modules;

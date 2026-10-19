@@ -15,6 +15,8 @@ namespace Campus.Gen.Diorama;
 [ContentModule("diorama", Owner = "WP-22")]
 public sealed class DioramaModule : IContentModule
 {
+    public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.Backdrop, [], []);
+
     private readonly object _gate = new();
     private (IWorldModel World, MapId Map, IReadOnlyList<GeometryBundle> Meshes)? _cache;
 

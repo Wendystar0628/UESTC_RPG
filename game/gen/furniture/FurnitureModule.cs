@@ -17,6 +17,9 @@ namespace Campus.Gen.Furniture;
 [ContentModule("furniture", Owner = "WP-13")]
 public sealed class FurnitureModule : IContentModule, ILightMetadataSource
 {
+    public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Furniture, [], [SceneTextInputs.AtlasKey]);
+    public BakeInputDependencies CollisionInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Furniture, [], []);
+
     private static readonly ConditionalWeakTable<IWorldModel, List<(Func<FeatureId, Aspects, WpId?> Claims, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs, BuildInputSnapshot Globals, PaletteCatalog Catalog, FurnitureLayout Layout)>> Cache = new();
     private static readonly object Sync = new();
 

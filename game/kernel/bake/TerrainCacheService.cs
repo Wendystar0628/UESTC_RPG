@@ -184,18 +184,18 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     internal void RequireMiss(BakeKey key)
     { if (_options.Strict && !_options.Live) throw new InvalidDataException($"Strict cache miss: {key.Map.Value}/{key.Module}/{key.Detail}"); }
     internal T? ReadProduct<T>(BakeKey key, string identity, Action<T>? validate = null) where T : class =>
-        Read(key, identity, bytes => DecodeProduct(bytes, key, validate));
+        Read(key, identity, bytes => DecodeProduct(bytes, key, validate), BakePayloadClass.Product);
     internal IEnumerable<T> ReadProductCandidates<T>(BakeKey key, string identity, Action<T> validate) where T : class
     {
         if (_options.Live) yield break;
-        foreach (var value in Store.ReadCandidates(key, bytes => Decode(bytes, identity, payload => DecodeProduct(payload, key, validate))))
+        foreach (var value in Store.ReadCandidates(key, BakePayloadClass.Product, bytes => Decode(bytes, identity, payload => DecodeProduct(payload, key, validate))))
             yield return value;
     }
-    internal void WriteProduct<T>(BakeKey key, string identity, T value) where T : class => Write(key, identity, TileBundleCodec.EncodeCache(key, value));
-    private T? Read<T>(BakeKey key, string identity, Func<byte[], T> decode) where T : class
+    internal void WriteProduct<T>(BakeKey key, string identity, T value) where T : class => Write(key, identity, TileBundleCodec.EncodeCache(key, value), BakePayloadClass.Product);
+    private T? Read<T>(BakeKey key, string identity, Func<byte[], T> decode, BakePayloadClass payload = BakePayloadClass.Tile) where T : class
     {
         if (_options.Live) return null;
-        return Store.TryRead(key, bytes => Decode(bytes, identity, decode));
+        return Store.TryRead(key, payload, bytes => Decode(bytes, identity, decode));
     }
     private static T Decode<T>(byte[] bytes, string identity, Func<byte[], T> decode)
     {
@@ -209,12 +209,12 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
         validate?.Invoke(value);
         return value;
     }
-    private void Write(BakeKey key, string identity, byte[] bytes)
+    private void Write(BakeKey key, string identity, byte[] bytes, BakePayloadClass payload = BakePayloadClass.Tile)
     {
         if (_options.Live) return;
         using var stream = new MemoryStream();
         using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true)) { writer.Write(identity); writer.Write(bytes); }
-        Store.Write(key, stream.ToArray());
+        Store.Write(key, payload, stream.ToArray());
     }
     public void Dispose() { Store.Stop(); _sessions.Clear(); _preparing.Clear(); }
 }

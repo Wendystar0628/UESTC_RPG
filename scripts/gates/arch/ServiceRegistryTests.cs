@@ -98,6 +98,9 @@ namespace Campus.Arch.Tests
     [BakeProducer("fixture.bake", Owner = "WP-02a")]
     public sealed class FixtureBakeProducer : IBakeProducer
     {
+        public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
+        public BakePayloadClass PayloadClass => BakePayloadClass.Product;
+        public BakeProductKind ProductKind => BakeProductKind.Collision;
         public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];
         public bool CanBuild(BakeKey key) => key.Module == "fixture.bake";
         public object Build(BakeKey key, BuildContext context) => throw new NotSupportedException("This test checks registration, not baking.");

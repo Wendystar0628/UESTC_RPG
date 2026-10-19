@@ -19,13 +19,13 @@ public static partial class TileBundleCodec
             case BakeSourceIndexData sources: writer.Write((byte)3); Sources(writer, sources, key); break;
             default: throw new NotSupportedException($"Unsupported CPU cache: {typeof(T).Name}");
         }
-        if (stream.Length > BakeCacheStore.MaximumPayload(key)) throw new InvalidDataException("CPU cache exceeds its product limit.");
+        if (stream.Length > BakeCacheStore.MaximumProductBytes) throw new InvalidDataException("CPU cache exceeds its product limit.");
         return stream.ToArray();
     }
 
     internal static T DecodeCache<T>(byte[] bytes, BakeKey key) where T : class
     {
-        if (bytes.Length > BakeCacheStore.MaximumPayload(key)) throw new InvalidDataException("CPU cache exceeds its product limit.");
+        if (bytes.Length > BakeCacheStore.MaximumProductBytes) throw new InvalidDataException("CPU cache exceeds its product limit.");
         using var reader = new BinaryReader(new MemoryStream(bytes, false), new UTF8Encoding(false, true));
         try
         {

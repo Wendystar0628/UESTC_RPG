@@ -14,6 +14,12 @@ namespace Campus.Systems.Nightlight;
 [BakeProducer("nightlight", Owner = "WP-39")]
 public sealed class NightlightBakeProducer : IBakeProducer, IBakeContentConsumer, INightlightCatalogBuilder
 {
+    public BakePayloadClass PayloadClass => BakePayloadClass.Product;
+    public BakeProductKind ProductKind => BakeProductKind.Nightlight;
+    public BakeInputDependencies Inputs(BakeKey key) => new(BakeInputKinds.World | BakeInputKinds.Lighting |
+        (key.Module == BakeModuleIds.NightlightWindows ? BakeInputKinds.Windows : BakeInputKinds.None), [ScheduleFile], []);
+    public bool UsesModule(IContentModule module) => module is ILightMetadataSource or IWindowMetadataSource or IWindowNumberingProvider;
+
     internal const string ScheduleFile = "lighting-schedule.json";
     private const uint LampSeed = 0x39u;
     private Lazy<IReadOnlyList<PreparedContentModule>>? _modules;

@@ -11,6 +11,8 @@ namespace Campus.Gen.Ground;
 [ContentModule("ground", Owner = "WP-15")]
 public sealed class GroundModule : IGroundCoverSource
 {
+    public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World, [SurfaceMaterialCatalog.SourcePath], [SceneTextInputs.AtlasKey]);
+
     /// <summary>Tiles beyond the source data that still get lawn (the campus edge before the outskirts take over).</summary>
     public const int MarginTiles = 2;
 

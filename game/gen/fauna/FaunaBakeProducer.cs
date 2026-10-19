@@ -9,6 +9,11 @@ namespace Campus.Gen.Fauna;
 [BakeProducer(BakeModuleIds.FaunaRuntime, Owner = "WP-25")]
 public sealed class FaunaBakeProducer : IBakeProducer, IBakeContentConsumer
 {
+    public BakePayloadClass PayloadClass => BakePayloadClass.Product;
+    public BakeProductKind ProductKind => BakeProductKind.Fauna;
+    public BakeInputDependencies Inputs(BakeKey key) => Source.Module.BakeInputs;
+    public bool UsesModule(IContentModule module) => module is IFaunaContentSource;
+
     private Lazy<IReadOnlyList<PreparedContentModule>>? _modules;
 
     public void Prepare(Lazy<IReadOnlyList<PreparedContentModule>> modules, LightInventoryDocument lighting) => _modules = modules;

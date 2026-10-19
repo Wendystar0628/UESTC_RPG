@@ -15,7 +15,7 @@ public static partial class TileBundleCodec
 
     private static T[] Records<T>(BinaryReader reader, BakeKey key, Func<BinaryReader, T> read, int maximum = int.MaxValue)
     {
-        var values = new T[Count(reader, Math.Min(maximum, BakeCacheStore.MaximumPayload(key)))];
+        var values = new T[Count(reader, Math.Min(maximum, BakeCacheStore.MaximumProductBytes))];
         for (var i = 0; i < values.Length; i++) values[i] = read(reader);
         return values;
     }

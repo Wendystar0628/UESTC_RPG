@@ -39,8 +39,11 @@ public sealed partial class BakeService
     private static string ProductInputHash(MapBuild map, BuildContext context, BakeKey key)
     {
         var dependencies = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        var declared = map.Modules.TryGetValue(key.Module, out var module) ? module.Value.BakeInputs :
+            map.Interiors.TryGetValue(key.Module, out var interior) ? interior.Value.BakeInputs :
+            map.Producers.Single(producer => producer.Value.CanBuild(key)).Value.Inputs(key);
         if (map.TryAuxiliaryInput(key, out var entry, out var sourceCodes, out var lightingStamp))
-            return BakeInputFingerprint.Compute(context, key, RuntimeCodeHash(), map.SourceIndex(context), sourceCodes,
+            return BakeInputFingerprint.Compute(context, key, RuntimeCodeHash(), map.SourceIndex(context), declared, sourceCodes,
                 new MapRect(new(entry.Bounds.Min.X, entry.Bounds.Min.Z), new(entry.Bounds.Max.X, entry.Bounds.Max.Z)), lightingStamp);
         if (key.Detail.StartsWith("C/", StringComparison.Ordinal))
         {
@@ -49,15 +52,37 @@ public sealed partial class BakeService
             foreach (var (id, tiles) in moduleTiles.Modules)
                 if (tiles.Any(tile =>
                     (tile.X + 1) * TileGrid.BaseEdge >= area.Min.X && tile.X * TileGrid.BaseEdge <= area.Max.X &&
-                    (tile.Z + 1) * TileGrid.BaseEdge >= area.Min.Y && tile.Z * TileGrid.BaseEdge <= area.Max.Y)) dependencies[id] = map.Modules[id].CodeHash;
+                    (tile.Z + 1) * TileGrid.BaseEdge >= area.Min.Y && tile.Z * TileGrid.BaseEdge <= area.Max.Y))
+                {
+                    dependencies[id] = map.Modules[id].CodeHash;
+                    declared = Merge(declared, map.Modules[id].Value.CollisionInputs);
+                }
             foreach (var (id, source) in map.Interiors)
                 if (source.Value.FeatureIds.Any(feature => context.World.Features.TryGetValue(feature, out var value) &&
                     value.Bounds.Min.X <= area.Max.X && value.Bounds.Max.X >= area.Min.X &&
-                    value.Bounds.Min.Z <= area.Max.Y && value.Bounds.Max.Z >= area.Min.Y)) dependencies[id] = source.CodeHash;
-            dependencies.Add("collision", GenerationInputAssembly.CodeVersion(typeof(Campus.Gen.Collision.CollisionGeometry).Assembly));
+                    value.Bounds.Min.Z <= area.Max.Y && value.Bounds.Max.Z >= area.Min.Y))
+                {
+                    dependencies[id] = source.CodeHash;
+                    declared = Merge(declared, source.Value.CollisionInputs);
+                }
+            var collisionCode = typeof(Campus.Gen.Collision.CollisionGeometry);
+            dependencies.Add(collisionCode.FullName!, GenerationInputAssembly.CodeVersion(collisionCode.Assembly));
         }
-        return BakeInputFingerprint.Compute(context, key, RuntimeCodeHash(), map.SourceIndex(context), dependencies);
+        MapRect? interiorArea = null;
+        if (map.Interiors.ContainsKey(key.Module))
+        {
+            var id = new FeatureId(key.Detail.Split('/')[0]);
+            if (!context.World.Features.TryGetValue(id, out var feature)) throw new InvalidDataException("Interior source feature is absent.");
+            interiorArea = new(new(feature.Bounds.Min.X - TileGrid.BaseEdge, feature.Bounds.Min.Z - TileGrid.BaseEdge),
+                new(feature.Bounds.Max.X + TileGrid.BaseEdge, feature.Bounds.Max.Z + TileGrid.BaseEdge));
+        }
+        return BakeInputFingerprint.Compute(context, key, RuntimeCodeHash(), map.SourceIndex(context), declared, dependencies, interiorArea);
     }
+
+    private static BakeInputDependencies Merge(BakeInputDependencies first, BakeInputDependencies second) => new(
+        first.Kinds | second.Kinds,
+        first.MapFiles.Concat(second.MapFiles).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
+        first.GlobalFiles.Concat(second.GlobalFiles).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray());
 
     private void FlushInputIdentities()
     {

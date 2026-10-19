@@ -120,7 +120,7 @@ public sealed class BakeCodecTests
             BakeModuleIds.NightlightLamps, BakeModuleIds.NightlightWindows })
         {
             var key = BakeRequestKeys.Tile(new("fixture"), module, default, LodLevel.L0);
-            AssertThrown(() => BakeCacheStore.DecodeFile(bytes, BakeCacheStore.MaximumPayload(key), key))
+            AssertThrown(() => BakeCacheStore.DecodeFile(bytes, BakeCacheStore.MaximumPayload(BakePayloadClass.Tile), key))
                 .IsInstanceOf<InvalidDataException>();
         }
     }
@@ -207,63 +207,59 @@ public sealed class BakeCodecTests
         TileBundle Decode(byte[] bytes) => (TileBundle)TileBundleCodec.Decode("fixture/identity", key, bytes);
         try
         {
-            package.Write(key, TileBundleCodec.Encode("fixture/identity", original));
+            package.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode("fixture/identity", original));
             var packagedPath = Directory.GetFiles(packagedRoot, "*.tbin", SearchOption.AllDirectories).Single();
             var packagedBytes = File.ReadAllBytes(packagedPath);
-            writer.Write(key, TileBundleCodec.Encode("fixture/identity", local));
-            if (writer.TryRead(key, Decode)?.Bounds != local.Bounds)
+            writer.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode("fixture/identity", local));
+            if (writer.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
                 throw new InvalidOperationException("A packaged product hid a valid local override.");
             var localPath = Directory.GetFiles(localRoot, "*.tbin", SearchOption.AllDirectories).Single();
             File.WriteAllBytes(localPath, [1, 2, 3]);
             RequirePackaged();
             foreach (var invalid in new[] { TileBundleCodec.Encode("stale/identity", local), new byte[] { 1, 2, 3 } })
             {
-                writer.Write(key, invalid);
+                writer.Write(key, BakePayloadClass.Tile, invalid);
                 RequirePackaged();
             }
-            writer.Write(key, TileBundleCodec.Encode("fixture/identity", local));
+            writer.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode("fixture/identity", local));
             writer.Clear();
             RequirePackaged();
-            writer.Write(key, TileBundleCodec.Encode("fixture/identity", local));
+            writer.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode("fixture/identity", local));
             var updated = new BakeCacheStore(localRoot, "version-two", packagedRoot);
             updated.Initialize();
-            if (updated.CacheBytes != 0 || updated.TryRead(key, Decode) is not null ||
+            if (updated.CacheBytes != 0 || updated.TryRead(key, BakePayloadClass.Tile, Decode) is not null ||
                 !File.ReadAllBytes(packagedPath).SequenceEqual(packagedBytes))
                 throw new InvalidOperationException("Version migration reused incompatible products or changed the installation.");
             File.WriteAllBytes(packagedPath, [1, 2, 3]);
             var corrupt = new BakeCacheStore(localRoot, "version-one", packagedRoot);
-            if (corrupt.TryRead(key, Decode) is not null || !File.ReadAllBytes(packagedPath).SequenceEqual(new byte[] { 1, 2, 3 }))
+            if (corrupt.TryRead(key, BakePayloadClass.Tile, Decode) is not null || !File.ReadAllBytes(packagedPath).SequenceEqual(new byte[] { 1, 2, 3 }))
                 throw new InvalidOperationException("A corrupt packaged product was accepted or removed.");
-            corrupt.Write(key, TileBundleCodec.Encode("fixture/identity", local));
-            if (corrupt.TryRead(key, Decode)?.Bounds != local.Bounds)
+            corrupt.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode("fixture/identity", local));
+            if (corrupt.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)
                 throw new InvalidOperationException("A missing packaged product could not be replaced locally.");
             var cpuKey = key with { Module = BakeModuleIds.VegetationTrees };
             var cpuBytes = new byte[BakeCacheStore.MaximumPayloadBytes + 64];
             var rng = new Rng(76);
             for (var offset = 0; offset < cpuBytes.Length; offset += sizeof(int))
                 BinaryPrimitives.WriteInt32LittleEndian(cpuBytes.AsSpan(offset), rng.NextInt(int.MaxValue));
-            package.Write(cpuKey, cpuBytes);
+            package.Write(cpuKey, BakePayloadClass.Product, cpuBytes);
             var cpuPath = Directory.GetFiles(packagedRoot, "*.tbin", SearchOption.AllDirectories).Single(path => path != packagedPath);
             var cpuFile = File.ReadAllBytes(cpuPath);
             if (cpuFile.Length <= BakeCacheStore.MaximumCompressedTileBytes ||
-                writer.TryRead(cpuKey, value => value) is not { } restoredCpu || !restoredCpu.SequenceEqual(cpuBytes))
+                writer.TryRead(cpuKey, BakePayloadClass.Product, value => value) is not { } restoredCpu || !restoredCpu.SequenceEqual(cpuBytes))
                 throw new InvalidOperationException("A CPU cache product retained the compressed or decoded render-tile limit.");
-            writer.Write(cpuKey, [1, 2, 3]);
-            var fallbackCpu = writer.TryRead(cpuKey, value => value.Length == cpuBytes.Length ? value :
+            writer.Write(cpuKey, BakePayloadClass.Product, [1, 2, 3]);
+            var fallbackCpu = writer.TryRead(cpuKey, BakePayloadClass.Product, value => value.Length == cpuBytes.Length ? value :
                 throw new InvalidDataException("Malformed local CPU fixture."));
             if (fallbackCpu is null || !fallbackCpu.SequenceEqual(cpuBytes) || !File.ReadAllBytes(cpuPath).SequenceEqual(cpuFile))
                 throw new InvalidOperationException("CPU candidate validation hid or modified the packaged product.");
-            AssertThrown(() => writer.Write(key, cpuBytes)).IsInstanceOf<InvalidDataException>();
-            if (BakeCacheStore.MaximumPayload(key) != BakeCacheStore.MaximumPayloadBytes ||
-                BakeCacheStore.MaximumFile(key) != BakeCacheStore.MaximumCompressedTileBytes ||
-                BakeCacheStore.MaximumPayload(key with { Module = "collision.world", Detail = "C/0/0" }) != BakeCacheStore.MaximumPayloadBytes)
-                throw new InvalidOperationException("CPU cache classification changed render/collision boundaries.");
+            AssertThrown(() => writer.Write(key, BakePayloadClass.Tile, cpuBytes)).IsInstanceOf<InvalidDataException>();
             writer.Stop();
-            AssertThrown(() => writer.Write(key, [1])).IsInstanceOf<OperationCanceledException>();
-            AssertThrown(() => writer.TryRead(key, Decode)).IsInstanceOf<OperationCanceledException>();
+            AssertThrown(() => writer.Write(key, BakePayloadClass.Tile, [1])).IsInstanceOf<OperationCanceledException>();
+            AssertThrown(() => writer.TryRead(key, BakePayloadClass.Tile, Decode)).IsInstanceOf<OperationCanceledException>();
             void RequirePackaged()
             {
-                if (writer.TryRead(key, Decode)?.Bounds != original.Bounds || File.Exists(localPath) ||
+                if (writer.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != original.Bounds || File.Exists(localPath) ||
                     !File.ReadAllBytes(packagedPath).SequenceEqual(packagedBytes))
                     throw new InvalidOperationException("A bad local candidate hid the package or caused a packaged write.");
             }

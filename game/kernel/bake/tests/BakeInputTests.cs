@@ -1,7 +1,7 @@
 using Campus.Gen.Tests.Support;
 using Campus.Gen.World;
 using Campus.Pipeline.Map;
-using System.Collections.Concurrent;
+using static Campus.Kernel.Bake.Tests.BakeInputFixture;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
@@ -31,7 +31,7 @@ public sealed class BakeInputTests
         var key = BakeRequestKeys.Tile(before.Map.Id, BakeModuleIds.FaunaRuntime, default, LodLevel.L0);
         var footprint = new MapRect(new(0, 0), new(300, 100));
         string Stamp(BuildContext context, string sourceCode, MapRect? area) =>
-            BakeInputFingerprint.Compute(context, key, "runtime-code", new(context),
+            BakeInputFingerprint.Compute(context, key, "runtime-code", new(context), BakeInputDependencies.World,
                 new Dictionary<string, string> { ["fauna"] = sourceCode }, area);
         if (Stamp(before, "source-one", footprint) == Stamp(after, "source-one", footprint) ||
             Stamp(before, "source-one", footprint) == Stamp(before, "source-two", footprint))
@@ -47,16 +47,16 @@ public sealed class BakeInputTests
         var world = new FakeWorld { Boundary = new([]) };
         var before = Context(world, global: Atlas(512));
         var after = Context(world, global: Atlas(1024));
-        foreach (var module in new[] { "furniture", "zone.north", "zone.center-east", "zone.west" })
+        foreach (var module in new[] { "furniture", "zone.north", "zone.center-east", "zone.west", "ground", "interior.research-six" })
         {
             if (Hash(before, module) == Hash(after, module))
                 throw new InvalidOperationException("Scene atlas UV changes did not invalidate a rendered consumer.");
             var key = new BakeKey(before.Map.Id, module, "C/0/0");
-            if (BakeInputFingerprint.Compute(before, key, "runtime-code", new(before)) !=
-                BakeInputFingerprint.Compute(after, key, "runtime-code", new(after)))
+            if (BakeInputFingerprint.Compute(before, key, "runtime-code", new(before), BakeInputDependencies.World) !=
+                BakeInputFingerprint.Compute(after, key, "runtime-code", new(after), BakeInputDependencies.World))
                 throw new InvalidOperationException("Scene atlas changes invalidated collision.");
         }
-        if (Hash(before, "ground") != Hash(after, "ground"))
+        if (Hash(before, "unrelated") != Hash(after, "unrelated"))
             throw new InvalidOperationException("Scene atlas changes invalidated unrelated content.");
 
         static BuildInputSnapshot Atlas(int size) => BuildInputSnapshot.Freeze(
@@ -80,10 +80,10 @@ public sealed class BakeInputTests
         };
         var referenceField = new CountingFingerprintField(1);
         var reference = Context(new FakeWorld { Boundary = new([]), Terrain = referenceField, Fidelity = referenceField });
-        var expected = keys.Select(key => BakeInputFingerprint.Compute(reference, key, "runtime-code", new(reference))).ToArray();
+        var expected = keys.Select(key => BakeInputFingerprint.Compute(reference, key, "runtime-code", new(reference), BakeInputDependencies.World)).ToArray();
         var actual = new string[keys.Length];
         Parallel.For(0, keys.Length, index => actual[index] =
-            BakeInputFingerprint.Compute(context, keys[index], "runtime-code", sources: map.SourceIndex(context)));
+            BakeInputFingerprint.Compute(context, keys[index], "runtime-code", sources: map.SourceIndex(context), dependencies: BakeInputDependencies.World));
         if (!actual.SequenceEqual(expected) || !field.PointReads.IsEmpty || !field.TileReads.IsEmpty ||
             !ReferenceEquals(map.SourceIndex(context), map.SourceIndex(context)))
             throw new InvalidOperationException("Concurrent keys changed source stamps, queried terrain, or rebuilt the map index.");
@@ -92,9 +92,9 @@ public sealed class BakeInputTests
         var changed = Context(new FakeWorld { Boundary = new([]), Terrain = changedField, Fidelity = changedField });
         var nextMap = Map(changed);
         using var nextLifetime = nextMap.Lifetime;
-        var next = BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", sources: nextMap.SourceIndex(changed));
+        var next = BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", sources: nextMap.SourceIndex(changed), dependencies: BakeInputDependencies.World);
         if (next == actual[0] || !changedField.PointReads.IsEmpty || !changedField.TileReads.IsEmpty ||
-            next != BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", new(changed)))
+            next != BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", new(changed), BakeInputDependencies.World))
             throw new InvalidOperationException("The next MapBuild reused the preceding world's source index or queried terrain.");
 
         static BakeService.MapBuild Map(BuildContext context) => new(
@@ -145,6 +145,16 @@ public sealed class BakeInputTests
         if (Hash(Context(world), "furniture") == baseline) throw new InvalidOperationException("Displayed name did not invalidate its cell.");
         world.Features = ((WorldFeature[])[Feature("fixture:local", 10, "校门", "旧说明", "出口"), distant]).ToDictionary(feature => feature.Id);
         if (Hash(Context(world), "furniture") == baseline) throw new InvalidOperationException("Displayed text did not invalidate its cell.");
+
+        string Interiors(int localFloor, int distantFloor) => JsonSerializer.Serialize(new { version = 1, interiors = new[]
+        {
+            new { providerId = "fixture.local", featureIds = new[] { local.Id.Value }, openFloors = new[] { localFloor }, entrances = Array.Empty<object>() },
+            new { providerId = "fixture.distant", featureIds = new[] { distant.Id.Value }, openFloors = new[] { distantFloor }, entrances = Array.Empty<object>() }
+        } });
+        baseline = Hash(Context(world, interiors: Interiors(1, 1)), "furniture");
+        if (Hash(Context(world, interiors: Interiors(1, 2)), "furniture") != baseline ||
+            Hash(Context(world, interiors: Interiors(2, 1)), "furniture") == baseline)
+            throw new InvalidOperationException("Interior catalog changes did not stay with their building's source cells.");
 
         var parcel = Green("fixture:green", 10, 300);
         var remoteParcel = Green("fixture:remote-green", 1000, 60);
@@ -265,60 +275,17 @@ public sealed class BakeInputTests
     }
 
     private static string Hash(BuildContext context, string module) => BakeInputFingerprint.Compute(context,
-        BakeRequestKeys.Tile(context.Map.Id, module, new(0, 0), LodLevel.L0), "runtime-code", new(context));
-    private static WorldFeature Feature(string id, float x, string name, string note, string text) =>
-        WorldFeatureFixture.Create(id, "prop", new PointGeometry(new(x, 0, 10))) with
-        {
-            Bounds = new(new(x, 0, 10), new(x + 1, 2, 11)), Name = name,
-            Props = JsonSerializer.SerializeToElement(new { note, text }, ContractJson.Options)
-        };
-    private static BuildContext Context(IWorldModel world, string species = "one", WindowNumberingSnapshot? numbering = null, string? planting = null,
-        BuildInputSnapshot? global = null) => new()
+        BakeRequestKeys.Tile(context.Map.Id, module, new(0, 0), LodLevel.L0), "runtime-code", new(context), Inputs(module));
+    private static BakeInputDependencies Inputs(string module) => module switch
     {
-        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, WorldSeed = 1, CodeHash = "module-code", WindowNumbering = numbering,
-        Map = new(new("fixture"), new("Fixture", "Fixture"), MapKind.Outdoor, 1, 1,
-            new(0, 0, 32648, Vector2.Zero, new(64, 64)), new(32, 32), new(Vector3.Zero, new(64, 64, 64)),
-            new(Vector2.Zero, new(64, 64)), new(1, 0, 64, 0, 64, 1, 1, 1), new(0, 0), new(0, 0), "start", [],
-            new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Default", "Default"), false, "fixture"),
-            new("sky.json", "backdrop.json", []), []),
-        GlobalInputs = global ?? BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
-            { ["vegetation/species.json"] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { species })) }, "fixture"),
-        SourceInputs = planting is null ? new Dictionary<string, ReadOnlyMemory<byte>>() :
-            new Dictionary<string, ReadOnlyMemory<byte>> { ["vegetation/planting.json"] = Encoding.UTF8.GetBytes(planting) },
-        PartLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())])
+        "vegetation" => new Campus.Gen.Vegetation.VegetationModule().BakeInputs,
+        "furniture" => new Campus.Gen.Furniture.FurnitureModule().BakeInputs,
+        "ground" => new Campus.Gen.Ground.GroundModule().BakeInputs,
+        "buildings" => new Campus.Gen.Buildings.BuildingsModule().BakeInputs,
+        "zone.north" => new Campus.Gen.Maps.Qingshuihe.North.NorthModule().BakeInputs,
+        "zone.center-east" => new Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastModule().BakeInputs,
+        "zone.west" => new Campus.Gen.Maps.Qingshuihe.West.WestModule().BakeInputs,
+        "interior.research-six" => new Campus.Gen.Maps.Qingshuihe.West.SixInterior.SixCInteriorProvider().BakeInputs,
+        _ => BakeInputDependencies.World
     };
-
-    private sealed class CountingFingerprintField(float height) : ITerrain, IFidelityModel
-    {
-        public TerrainInputSummary SourceInputs { get; } = new("fixture-height/" + height.ToString(System.Globalization.CultureInfo.InvariantCulture), []);
-        public ConcurrentDictionary<(string Kind, int X, int Z), int> PointReads { get; } = new();
-        public ConcurrentDictionary<(TileKey Tile, int Level), int> TileReads { get; } = new();
-        private void Read(string kind, float x, float z) => PointReads.AddOrUpdate(
-            (kind, BitConverter.SingleToInt32Bits(x), BitConverter.SingleToInt32Bits(z)), 1, (_, count) => count + 1);
-        public bool IsFlat(TileKey tile) => height == 0;
-        public float HeightAt(float x, float z) { Read("height", x, z); return height; }
-        public (float Height, TerrainFacts Facts) SampleAt(float x, float z)
-        {
-            Read("sample", x, z);
-            return (height, new(0, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity));
-        }
-        public TerrainFacts FactsAt(float x, float z) { Read("facts", x, z); return new(0, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity); }
-        public void FillTile(TileKey tile, int level, Span<short> cm)
-        {
-            TileReads.AddOrUpdate((tile, level), 1, (_, count) => count + 1);
-            cm.Fill(checked((short)(height / TerrainSampling.Centimetre)));
-        }
-        public float PadY(FeatureId feature) { Read("pad", 0, 0); throw new KeyNotFoundException(); }
-        public bool TryGetPadY(FeatureId feature, out float y) { Read("pad", 0, 0); y = 0; return false; }
-        public float? WaterY(FeatureId water) { Read("water", 0, 0); return null; }
-        public IReadOnlyList<FacadeSegment> Facades(FeatureId building) => [];
-        public RoofZone Roof(FeatureId building) => new(building, FidelityZone.K3);
-        public FidelityZone GroundAt(float x, float z) { Read("ground", x, z); return FidelityZone.K3; }
-        public float WalkDistanceAt(float x, float z) { Read("walk", x, z); return 0; }
-        public string InputHash => "fixture";
-    }
-}
-internal sealed class BakeFixturePart : IPartDef
-{
-    public IReadOnlyList<LodLevel> SupportedLods => [LodLevel.L0, LodLevel.L2];
 }

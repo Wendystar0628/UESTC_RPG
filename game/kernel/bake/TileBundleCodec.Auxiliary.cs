@@ -34,7 +34,7 @@ public static partial class TileBundleCodec
         {
             var id = Text(reader, 1024); var owner = Json<WpId>(reader);
             var records = Channel<float>(reader, key);
-            var bounds = new Box3[Count(reader, BakeCacheStore.MaximumPayload(key) / 24)];
+            var bounds = new Box3[Count(reader, BakeCacheStore.MaximumProductBytes / 24)];
             for (var j = 0; j < bounds.Length; j++) bounds[j] = Box(reader);
             var prototypes = new GeometryPrototype[Count(reader, 4)];
             for (var j = 0; j < prototypes.Length; j++) prototypes[j] = Prototype(reader, key);
@@ -74,7 +74,7 @@ public static partial class TileBundleCodec
     private static FaunaTileContent Fauna(BinaryReader reader, BakeKey key)
     {
         var tile = Json<TileKey>(reader); RequireTile(key, tile, BakeModuleIds.FaunaRuntime);
-        var log = Records(reader, key, r => Text(r, BakeCacheStore.MaximumPayload(key)));
+        var log = Records(reader, key, r => Text(r, BakeCacheStore.MaximumProductBytes));
         var sites = new FaunaSiteContent[Count(reader)];
         for (var i = 0; i < sites.Length; i++)
         {
