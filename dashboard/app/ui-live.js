@@ -163,13 +163,15 @@
   /* ---------- 临时工作树 ---------- */
 
   function treeRow(w) {
-    var tone = { using: 'ok', idle: 'muted', invalid: 'risk' }[w.state] || 'muted';
-    var label = { using: '在用', idle: '闲置', invalid: '失效' }[w.state] || w.state;
+    var tone = { using: 'ok', resident: 'ok', idle: 'muted', invalid: 'risk' }[w.state] || 'muted';
+    var label = { using: '在用', resident: '常驻' + (w.persistent ? '·' + w.persistent : ''), idle: '闲置', invalid: '失效' }[w.state] || w.state;
     var run;
     if (w.state === 'invalid') {
       run = '目录没了';
     } else if (w.running.length) {
       run = '在跑 ' + w.running.map(function (g) { return g.kind + (g.n > 1 ? ' ×' + g.n : '') + '（' + Dash.at(g.since) + ' 起）'; }).join('、');
+    } else if (w.state === 'resident') {
+      run = '常驻，不清理；' + Dash.elapsed(w.touched) + '前动过';
     } else {
       run = '闲置 ' + Dash.elapsed(w.touched);
     }
