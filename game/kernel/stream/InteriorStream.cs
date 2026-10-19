@@ -4,6 +4,7 @@ using Campus.Contracts.Maps;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Renderer;
 using Godot;
+using AppBoot = Campus.Kernel.Boot.Boot;
 
 namespace Campus.Kernel.Stream;
 
@@ -116,7 +117,8 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             var visible = _visible.Contains(layer.Key) && Ready(layer);
             if (layer.Visible == visible) continue;
             layer.Visible = visible;
-            layer.Prepared.SetVisible(visible, visible ? FrameClock.FadeSeconds : 0);
+            // Zero is the shader's fully visible sentinel, rather than a zero-duration interpolation.
+            layer.Prepared.SetVisible(visible, visible && !AppBoot.Options.CaptureMode ? FrameClock.FadeSeconds : 0);
         }
         for (var i = _draining.Count - 1; i >= 0; i--)
         {

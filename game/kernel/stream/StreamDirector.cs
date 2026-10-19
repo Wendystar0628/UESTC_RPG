@@ -6,6 +6,7 @@ using Campus.Kernel.Lod;
 using Campus.Kernel.Renderer;
 using Campus.Kernel.Materials;
 using Godot;
+using AppBoot = Campus.Kernel.Boot.Boot;
 using Services = Campus.Kernel.Registry.Kernel;
 using N = System.Numerics;
 
@@ -403,7 +404,8 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         if (_tree is null || _catalog is null || remainingMilliseconds < .1 || !PlanCurrent) return;
         RefreshReflectionWorld(remainingMilliseconds * .25);
         _tree.ResolveVisible(_refined, IsReady, _visible);
-        _visibility.Apply(_visible, FrameClock.FadeSeconds, true, (tile, visible, fade) =>
+        // Capture uses the existing no-fade path: new tiles get fade_t0=0 and old tiles hide immediately.
+        _visibility.Apply(_visible, FrameClock.FadeSeconds, !AppBoot.Options.CaptureMode, (tile, visible, fade) =>
         {
             foreach (var bundle in _groups[tile].Bundles) bundle.SetVisible(visible, fade);
         });
