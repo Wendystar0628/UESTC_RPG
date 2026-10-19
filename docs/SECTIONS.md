@@ -708,38 +708,38 @@
 
 ## WLD-VEGETATION · 植被：树冠画法、草坪、地面覆盖与季相
 
-`docs/world/WLD-VEGETATION-植被.md` · 10.3k 字 · 树木、灌木、草坪与水生植物的观感规则、树种色名与季相行、地面覆盖、季相与天气、碰撞与声音数据
+`docs/world/WLD-VEGETATION-植被.md` · 10.4k 字 · 树木、灌木、草坪与水生植物的观感规则、树种色名与季相行、地面覆盖、季相与天气、碰撞与声音数据
 关键词：植被、植物、树冠画法、云团型、插片型、冬季裸枝、叶量、开花、季相、局部季节、四季变色、草坪、绿篱、荷、芦苇、落叶地毯、树冠遮蔽、覆雪、过渡绿地、species.json
 
 - WLD-VEGETATION §0 结论 · L22 · 1.4k
   - ★ WLD-VEGETATION §0.1 接入要点 · L34 · 728
-- WLD-VEGETATION §1 卡通树冠的画法 · L46 · 1.4k
+- WLD-VEGETATION §1 卡通树冠的画法 · L46 · 1.5k
   - WLD-VEGETATION §1.1 团块与三类树冠 · L50 · 312
   - WLD-VEGETATION §1.2 明暗与法线 · L59 · 160
   - WLD-VEGETATION §1.3 逆光 · L65 · 279
   - WLD-VEGETATION §1.4 描线、远景与树干 · L73 · 206
-  - WLD-VEGETATION §1.5 冬季裸枝 · L79 · 379
-- WLD-VEGETATION §2 树种与四季 · L87 · 981
-  - WLD-VEGETATION §2.1 色名与季相行 · L95 · 608
-- WLD-VEGETATION §3 草坪 · L101 · 1.4k
-  - WLD-VEGETATION §3.1 颜色与长影 · L103 · 220
-  - WLD-VEGETATION §3.2 开阔草坪 · L108 · 331
-  - WLD-VEGETATION §3.3 积雪与季节花境 · L116 · 309
-  - WLD-VEGETATION §3.4 过渡绿地的草本与草面（D-185） · L121 · 231
-  - WLD-VEGETATION §3.5 草叶的表示与交界（D-205，取值是初值，样板同位姿定） · L128 · 305
-- WLD-VEGETATION §4 落叶、花瓣与积雪（地面覆盖） · L133 · 800
-- WLD-VEGETATION §5 水生植物 · L143 · 464
-- WLD-VEGETATION §6 季相与天气 · L158 · 1.3k
-  - WLD-VEGETATION §6.1 逐株错相与叶量 · L160 · 193
-  - WLD-VEGETATION §6.2 季节颜色 · L165 · 194
-  - WLD-VEGETATION §6.3 摆动与飘落（给 SYS-MOTION 的参数） · L170 · 160
-  - WLD-VEGETATION §6.4 覆雪 · L175 · 455
-  - WLD-VEGETATION §6.5 换季与天气切换 · L181 · 237
-- WLD-VEGETATION §7 碰撞、画面设置与声音 · L187 · 1.1k
-  - WLD-VEGETATION §7.1 行走碰撞 · L189 · 381
-  - WLD-VEGETATION §7.2 画面设置（SYS-GRAPHICS） · L198 · 362
-  - WLD-VEGETATION §7.3 声音的接口（SYS-AUDIO） · L205 · 292
-- WLD-VEGETATION §8 待验证 · L214 · 80
+  - WLD-VEGETATION §1.5 冬季裸枝 · L79 · 496
+- WLD-VEGETATION §2 树种与四季 · L88 · 981
+  - WLD-VEGETATION §2.1 色名与季相行 · L96 · 608
+- WLD-VEGETATION §3 草坪 · L102 · 1.4k
+  - WLD-VEGETATION §3.1 颜色与长影 · L104 · 220
+  - WLD-VEGETATION §3.2 开阔草坪 · L109 · 331
+  - WLD-VEGETATION §3.3 积雪与季节花境 · L117 · 309
+  - WLD-VEGETATION §3.4 过渡绿地的草本与草面（D-185） · L122 · 231
+  - WLD-VEGETATION §3.5 草叶的表示与交界（D-205，取值是初值，样板同位姿定） · L129 · 305
+- WLD-VEGETATION §4 落叶、花瓣与积雪（地面覆盖） · L134 · 800
+- WLD-VEGETATION §5 水生植物 · L144 · 464
+- WLD-VEGETATION §6 季相与天气 · L159 · 1.3k
+  - WLD-VEGETATION §6.1 逐株错相与叶量 · L161 · 193
+  - WLD-VEGETATION §6.2 季节颜色 · L166 · 194
+  - WLD-VEGETATION §6.3 摆动与飘落（给 SYS-MOTION 的参数） · L171 · 160
+  - WLD-VEGETATION §6.4 覆雪 · L176 · 455
+  - WLD-VEGETATION §6.5 换季与天气切换 · L182 · 237
+- WLD-VEGETATION §7 碰撞、画面设置与声音 · L188 · 1.1k
+  - WLD-VEGETATION §7.1 行走碰撞 · L190 · 381
+  - WLD-VEGETATION §7.2 画面设置（SYS-GRAPHICS） · L199 · 362
+  - WLD-VEGETATION §7.3 声音的接口（SYS-AUDIO） · L206 · 292
+- WLD-VEGETATION §8 待验证 · L215 · 80
 
 ## WLD-WATER · 水体：动画式水面画法、反光带与倒影、涉水与泳区规则
 
