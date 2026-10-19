@@ -59,8 +59,6 @@ public static class BootWorldOverrides
         var context = services.Get<IMapService>().Context ?? throw new InvalidOperationException("View overrides require a loaded map.");
         var control = services.Get<IWorldControl>();
         if (!showTitle || options.ExplicitFlow) control.SetFlow(options.FlowRate ?? 1);
-        if (options.Focus is not null || options.PoseFile is not null)
-            throw new NotSupportedException("Content preview location provider is not yet connected.");
         var poseId = options.Pose;
         if (poseId is not null)
         {

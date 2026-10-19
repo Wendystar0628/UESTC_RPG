@@ -22,7 +22,7 @@ public interface IMapTransition
     MapId To { get; }
     MapTravelCause Cause { get; }
     MapStage Stage { get; }
-    float Progress { get; }                  // 0–1，只给界面的等待灯用，不画进度条（UI-VISUAL）
+    float Progress { get; }                  // 0–1，加载界面的真实加载进度（UI-VISUAL）
     Task<MapTravelResult> Done { get; }      // 主线程完成；不可取消
 }
 public interface IMapService                 // Kernel 服务（WP-46）

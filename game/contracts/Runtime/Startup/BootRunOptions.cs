@@ -39,8 +39,6 @@ public sealed record WorldBootOptions
     public ViewMode? ViewMode { get; init; }
     public bool ExplicitViewMode { get; init; }
     public string? Pose { get; init; }
-    public string? Focus { get; init; }
-    public string? PoseFile { get; init; }
     public WeatherBootOverrides Weather { get; init; } = new();
 }
 

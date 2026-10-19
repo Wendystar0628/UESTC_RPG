@@ -19,11 +19,11 @@ public sealed class BootArguments
         "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
-        "audio-probe", "audio-out", "preset", "focus", "pose-file", "travel-sequence"
+        "audio-probe", "audio-out", "preset", "travel-sequence"
     };
     private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "audio-probe" };
     private static readonly string[] WorldKeys = ["clock", "season", "anim", "flow", "seed", "weather", "weather-intensity",
-        "weather-seed", "weather-remaining", "sunshower", "wet", "pose", "mode", "map", "spawn", "focus", "pose-file"];
+        "weather-seed", "weather-remaining", "sunshower", "wet", "pose", "mode", "map", "spawn"];
     private readonly Dictionary<string, string> _values;
     private readonly HashSet<string> _provided;
     private IReadOnlyDictionary<QualityKnob, float> _qualityOverrides = new Dictionary<QualityKnob, float>();
@@ -66,8 +66,6 @@ public sealed class BootArguments
         var result = new BootArguments(values);
         if (result.Has("without"))
             throw Invalid("NotSupported: --without module filtering is not implemented; no modules have been excluded.");
-        if (!development && (result.Has("focus") || result.Has("pose-file"))) throw Invalid("Preview arguments require a development build.");
-        if (new[] { "pose", "focus", "pose-file" }.Count(result.Has) > 1) throw Invalid("--pose, --focus and --pose-file are mutually exclusive.");
         if (result.Has("slot") && result.Has("load")) throw Invalid("--slot and --load are mutually exclusive.");
         if (result.HasLoad && WorldKeys.Any(result.Has)) throw Invalid("Saved state cannot be combined with world overrides.");
         result.Validate();
@@ -107,7 +105,7 @@ public sealed class BootArguments
             if (Has(key) && !uint.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out _)) throw Invalid(key);
         foreach (var key in new[] { "frames", "save-at" })
             if (Has(key) && (!int.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out var value) || value <= 0)) throw Invalid(key);
-        foreach (var key in new[] { "out", "load", "save-dir", "bake-cache", "pose-file", "audio-out", "ui-export-theme" })
+        foreach (var key in new[] { "out", "load", "save-dir", "bake-cache", "audio-out", "ui-export-theme" })
             if (Has(key) && !Path.IsPathFullyQualified(Value(key))) throw Invalid($"--{key} must be absolute.");
         _qualityOverrides = QualityOverrides();
         if (Has("shots") && Value("shots").Split(',').Any(id => id.Length == 0 || id.Any(c => !char.IsLetterOrDigit(c) && c is not '_' and not '-')))
@@ -130,7 +128,7 @@ public sealed class BootArguments
                 _values.TryAdd("clock", "17.5"); _values.TryAdd("season", "autumn"); _values.TryAdd("anim", WorldTime.InitialAnimTime.ToString(CultureInfo.InvariantCulture));
                 _values.TryAdd("flow", "0"); _values.TryAdd("mode", "fly"); _values.TryAdd("seed", "1");
                 _values.TryAdd("weather", "clear"); _values.TryAdd("weather-seed", "1");
-                if (!Title && !Has("spawn") && !Has("focus") && !Has("pose-file")) _values.TryAdd("pose", "V1");
+                if (!Title && !Has("spawn")) _values.TryAdd("pose", "V1");
             }
         }
         _values.TryAdd("motion", CaptureMode && Value("ui") == "1" ? "instant" : "full");
@@ -188,7 +186,7 @@ public sealed class BootArguments
                 FlowRate = NumberValue("flow") is { } flow ? (int)flow : null,
                 ExplicitFlow = Has("flow"), ExplicitViewMode = Has("mode"),
                 ViewMode = Text("mode") switch { null => null, "fly" => ViewMode.Fly, "walk" => ViewMode.Walk, _ => throw Invalid("mode") },
-                Pose = Text("pose"), Focus = Text("focus"), PoseFile = Text("pose-file"),
+                Pose = Text("pose"),
                 Weather = new(Seed("weather-seed"), weather, (float?)NumberValue("weather-intensity"),
                     (float?)NumberValue("wet"), NumberValue("weather-remaining"),
                     new[] { "weather", "weather-intensity", "weather-remaining", "wet" }.Any(_values.ContainsKey))

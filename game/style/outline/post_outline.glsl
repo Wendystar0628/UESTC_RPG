@@ -19,7 +19,7 @@ VERSION_DEFINES
 //   tiltshift_comp  : the compose dispatch in CompositorEffect POST_TRANSPARENT (section PASS_TILTSHIFT_COMP).
 // Kernels added later (tilt-shift blur, flare, FXAA) become further versions of this file.
 //
-// Outline (ART-STYLE §4.5, ENG-PERF §10.2), two dispatches:
+// Outline (ART-STYLE §4.5, ENG-PERF), two dispatches:
 //   mask      : reads depth + normal_roughness (7-bit material ID in alpha) + mat_table row 0, writes a RG8 mask
 //               R = line coverage (sub-pixel widths drawn as coverage),
 //               G = material ID of the side the line takes its colour from (bits 0-6) + convex-lit flag (bit 7).
@@ -37,11 +37,11 @@ VERSION_DEFINES
 // 4 reconstructed world position, 5 fog amount, 6 fog colour (both linear, for the parity test against
 // fog.gdshaderinc).
 //
-// Edge criteria per neighbour (ENG-PERF §10.2):
+// Edge criteria per neighbour (ENG-PERF):
 //   depth  : neighbour farther than the centre's plane predicts by > 1.5 % (plus a normal-quantisation term),
-//   normal : soft threshold, coverage = 1 - smoothstep(0.62, 0.78, dot(n_a, n_b)) (ART-STYLE §4.6),
+//   normal : soft threshold, coverage = 1 - smoothstep(0.62, 0.78, dot(n_a, n_b)) (ART-STYLE),
 //   ID     : material IDs differ (material boundary / object boundary).
-// Widths follow ART-STYLE §4.3 by linear depth (outer 1.25 px at 1080p, crease x0.8, ID x0.6, 0 beyond 400 m),
+// Widths follow ART-STYLE by linear depth (outer 1.25 px at 1080p, crease x0.8, ID x0.6, 0 beyond 400 m),
 // scaled by internal_height / 1080 with a minimum width for lines whose nominal width is >= 1 px.
 //
 // Ported from the reference scenes' line passes (render/太阳雨中的小渔港, edge pass S8 and line pass _8; the same code in
@@ -133,8 +133,8 @@ layout(set = 0, binding = 6) uniform sampler2D palette;   // global palette, sRG
 // ---------------------------------------------------------------------------------------------------------------
 // Shared helpers
 
-const float LINE_FAR = 400.0;          // beyond this no line at all (ART-STYLE §4.3)
-const float BRIGHT_FAR0 = 120.0;       // convex bright line fades out 120-150 m (ENG-PERF §10.2)
+const float LINE_FAR = 400.0;          // beyond this no line at all (ART-STYLE)
+const float BRIGHT_FAR0 = 120.0;       // convex bright line fades out 120-150 m (ENG-PERF)
 const float BRIGHT_FAR1 = 150.0;
 
 // mat_table row 0 flags (B channel bits)
@@ -236,7 +236,7 @@ float oklab_b(vec3 c) {
 // ---------------------------------------------------------------------------------------------------------------
 #ifdef PASS_MASK
 
-// Nominal outer-contour width in px at 1080p by linear depth (ART-STYLE §4.3).
+// Nominal outer-contour width in px at 1080p by linear depth (ART-STYLE).
 float outer_width_nominal(float z) {
 	float w;
 	if (z < 5.0) {
@@ -471,7 +471,7 @@ void main() {
 		return;
 	}
 	Surf s0 = fetch_surf(c);
-	// Early out: sky and beyond 400 m (ENG-PERF §10.2). Not by tilt-shift blur circle.
+	// Early out: sky and beyond 400 m (ENG-PERF). Not by tilt-shift blur circle.
 	if (s0.sky || s0.z >= LINE_FAR) {
 		imageStore(line_mask, c, vec4(0.0));
 		return;
@@ -762,7 +762,7 @@ void main() {
 	vec4 col = imageLoad(color_image, c);
 	vec3 rgb = col.rgb;
 
-	// Convex bright line on the lit side, next to the dark crease line (ART-STYLE §4.7, ENG-PERF §10.2).
+	// Convex bright line on the lit side, next to the dark crease line (ART-STYLE §4.7, ENG-PERF).
 	if (any_flag && m0 < 0.5) {
 		bool bright = (g[4] & 128u) != 0u;
 		Surf s = fetch_surf(c);
@@ -825,7 +825,7 @@ void main() {
 
 #ifdef PASS_LUT
 
-// ---- version lut. Writes the runtime colour-grading LUT: CDL ∘ base table (ART-STYLE §7.2, ENG-PERF §10.2).
+// ---- version lut. Writes the runtime colour-grading LUT: CDL ∘ base table (ART-STYLE §7.2, ENG-PERF).
 //
 // The LUT is sampled by the engine's tonemap pass through Environment.AdjustmentColorCorrection, after
 // linear_to_srgb, so both its input coordinate and its output are sRGB-encoded values in 0..1.
@@ -916,7 +916,7 @@ void main() {
 #ifdef PASS_TILTSHIFT_COMP
 
 // ---- version tiltshift_comp. CompositorEffect POST_TRANSPARENT, the compose dispatch of the tilt-shift pair
-// (ART-STYLE §7.2, §7.4, §7.8; ENG-PERF §10.2). Runs every frame even when tilt-shift is off, because the
+// (ART-STYLE §7.2, §7.4, §7.8; ENG-PERF). Runs every frame even when tilt-shift is off, because the
 // highlight shoulder (style floor) and the vignette live here:
 //   1. tilt-shift blend: mix(c, blur, smoothstep(0.66, 1.05, |uv.y - 0.47| * 2) * 0.25 * amount)
 //      (amount 0 when the player turned tilt-shift off; the two blur dispatches are then skipped),
