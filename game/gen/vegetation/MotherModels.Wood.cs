@@ -9,6 +9,9 @@ public static partial class MotherModels
     // Wood: tapered tubes with a lobed root flare; trunks 32 / 16 / 8 sides (ENG-PERF), branch tips capped.
     // ---------------------------------------------------------------------------------------------------------
 
+    /// <summary>The existing low-detail branch section, shared by L0 secondaries and L1 branches.</summary>
+    private const int SimplifiedBranchSides = 4;
+
     private static void WriteWood(MeshWriter w, TreePlan plan, VegLevel level, Ids ids)
     {
         var flarePhase = plan.Next() * 6.2831853f;
@@ -21,15 +24,26 @@ public static partial class MotherModels
                 (0, _) => 6,
                 (1, VegLevel.L0Plus) => 12,
                 (1, VegLevel.L0) => 6,
-                (1, _) => 4,
+                (1, _) => SimplifiedBranchSides,
+                (_, VegLevel.L1) when plan.Species.Deciduous => SimplifiedBranchSides,
                 (_, VegLevel.L1) => 0,
-                (_, VegLevel.L0) => 4,
+                (_, VegLevel.L0) => SimplifiedBranchSides,
                 _ => 6
             };
             if (sides == 0) continue;
             var points = new List<Vector3>(limb.Points);
             var radii = new List<float>(limb.Radii);
-            if (points.Count > 4)
+            if (level == VegLevel.L1 && plan.Species.Deciduous && limb.Level > 0)
+            {
+                // Retain the same skeleton and every winter-card anchor at middle distance. Spend fewer rings on each
+                // branch instead of removing the entire secondary level: main branches keep their bend, secondaries
+                // use the chord between their attachment and tip. Counts, taper and reach still come from TreePlan.
+                var middle = points.Count / 2;
+                var keep = limb.Level == 1 ? new[] { 0, middle, points.Count - 1 } : new[] { 0, points.Count - 1 };
+                points = keep.Select(i => limb.Points[i]).ToList();
+                radii = keep.Select(i => limb.Radii[i]).ToList();
+            }
+            else if (points.Count > 4)
             {
                 // L0 and L1 keep every other ring: limbs are gentle curves, and the silhouette is what reads past 15 m.
                 // L0+ thins only the trunk above the crown base, where the crown hides it (a 19 m leader is 20 rings).

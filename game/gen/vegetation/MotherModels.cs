@@ -73,6 +73,9 @@ public static partial class MotherModels
     /// <summary>L1 target (ENG-PERF: 0.6–0.9k); L1 merges its masses down to this many.</summary>
     public const int MaxMassesL1 = 6;
 
+    /// <summary>Upper end of the existing L1 triangle target, including the retained winter branch skeleton.</summary>
+    public const int TrianglesL1 = 900;
+
     /// <summary>Cards stay within this fraction of the crown diameter outside the crown masses (max-011 review: 5%).</summary>
     public const float CardReach = 0.05f;
 
@@ -256,6 +259,12 @@ public static partial class MotherModels
                     break;
                 }
             }
+        }
+        else if (plan.Species.Deciduous)
+        {
+            // A bare crown spends its L1 budget on the branch hierarchy too. Keep every merged mass, but let masses
+            // step down to the same coarse icosphere as the far stand-in within the existing L1 allowance.
+            Fit(TrianglesL1, minDetail: 0);
         }
         foreach (var (blob, index, scale, detail) in blobs)
             WriteBlob(crown, plan, shell, blob, index, scale, detail, ids, faces: hidden?.Kept(index, detail));

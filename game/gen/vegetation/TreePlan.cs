@@ -268,6 +268,7 @@ internal sealed class TreePlan
             // The leader's own top carries a blob (ginkgo, metasequoia).
             var top = stemTops[0].Tip;
             var r = MathF.Max(0.45f, Envelope(0.75f) * 0.75f);
+            var topIndex = Blobs.Count;
             AddBlob(top - Vector3.UnitY * (r * 0.35f), r, top, 0, true);
             // Leader crowns get a body of masses along the leader (max-011: no sky through a metasequoia or ginkgo); the
             // masses at the branch tips then only shape the tiered outline around it.
@@ -279,6 +280,7 @@ internal sealed class TreePlan
                 AddBlob(c, rc, tips.MinBy(t => Vector3.DistanceSquared(t, c)), -1, false);
                 y += rc * 1.2f;
             }
+            NestLeaderTop(topIndex);
         }
         // Neighbouring masses step front and back along the crown radius, so their seams show a depth step (max-110 110c-4).
         CrownStagger.Apply(this);
@@ -286,6 +288,25 @@ internal sealed class TreePlan
 
     /// <summary>Radius of the leader-body masses as a fraction of the crown envelope at their height.</summary>
     public const float LeaderBody = 0.72f;
+
+    /// <summary>Leader-top overlap starts at the existing minimum crown-cluster press depth.</summary>
+    public const float LeaderTopPress = MotherModels.ClusterPressMin;
+
+    /// <summary>
+    /// Keep the small leader-top mass growing out of the crown instead of floating over it when spring leaf amount
+    /// contracts the masses. Reuse the existing cluster press depth; no new seasonal geometry or species exception.
+    /// </summary>
+    private void NestLeaderTop(int index)
+    {
+        var top = Blobs[index];
+        var host = Blobs.Where((_, i) => i != index)
+            .MinBy(b => Vector3.Distance(top.Center, b.Center) - b.Radius)!;
+        var offset = top.Center - host.Center;
+        var distance = offset.Length();
+        var reach = MathF.Max(0f, host.Radius - top.Radius * LeaderTopPress);
+        if (distance <= reach) return;
+        Blobs[index] = top with { Center = host.Center + offset * (reach / distance) };
+    }
 
     private void AddMainCrown(Limb main, int index)
     {
