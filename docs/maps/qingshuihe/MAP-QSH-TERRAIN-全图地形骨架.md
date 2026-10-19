@@ -9,14 +9,14 @@ contributors: [WP-08, WP-15, WP-24, WP-28]
 depends: [CORE-INDEX, WLD-TERRAIN, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, SYS-WALK]
 related: [MAP-QSH-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-DIORAMA, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-VEGETATION, SYS-TITLE, UI-NAV, SYS-ATLAS, ART-SKYLIGHT, ENG-GATES, ENG-WP]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/terrain/"]
+data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G7, G15, G19]
 ---
 
 # MAP-QSH-TERRAIN · 全图地形骨架：层分布、地标丘、揭示路线与常水位
 
 > **范围**：本文规定清水河地形的全图骨架：各层放在哪、全校唯一的地标丘、遮挡与揭示的三条路线、各水体的常水位与跌水连接，以及坡度与着色在本图的实例。十处分区的标高、坡度和连接在 MAP-QSH-TERRAIN-DISTRICTS，验收镜头、冲突检查与点位标高在 MAP-QSH-TERRAIN-CHECKS。
-> **不在本文**：地形的通用规则（分层、手感刻度、坡度类、合成与竖直落差做法，WLD-TERRAIN）；各操作的坐标与实体 ID（`game/data/maps/qingshuihe/overlay/terrain/` 的五份地形文件，以它们为准）；各区楼与构筑物的外观（MAP-QSH-CORE 至 MAP-QSH-CENTER-EAST）；水面画法（WLD-WATER）；行走规则（SYS-WALK）；点位清单（UI-NAV）。
+> **不在本文**：地形的通用规则（分层、手感刻度、坡度类、合成与竖直落差做法，WLD-TERRAIN）；各操作的坐标与实体 ID（`game/data/maps/qingshuihe/world/` 的五份地形文件，以它们为准）；各区楼与构筑物的外观（MAP-QSH-CORE 至 MAP-QSH-CENTER-EAST）；水面画法（WLD-WATER）；行走规则（SYS-WALK）；点位清单（UI-NAV）。
 > **查阅**：先读 §0；各层分布、红枫丘、揭示路线看 §1；常水位看 §2；坡度与着色看 §3；十处分区地形看 MAP-QSH-TERRAIN-DISTRICTS；验收镜头、冲突与点位标高看 MAP-QSH-TERRAIN-CHECKS
 
 ## 0 结论
@@ -82,7 +82,7 @@ gates: [G2, G7, G15, G19]
 
 | 水体 | 常水位 | 岸型 | 连接 |
 | --- | --- | --- | --- |
-| 西湖 | −0.5 | 软岸为主，北岸半圆台阶花坛、水杉路一侧硬岸 | 东北湾出口两级跌水（各 0.35 m）入走马河；箱涵两端堰口向渠溢流 |
+| 西湖 | −0.5 | 软岸为主；北岸是半圆台阶花坛（MAP-QSH-CORE §6.4），不做硬岸墙；水杉路一侧是硬岸，范围取水杉路离水边 15 m 以内的连续岸段 | 东北湾出口两级跌水（各 0.35 m）入走马河；箱涵两端堰口向渠溢流 |
 | 湿地溪 | −0.5（岸顶取湿地低地 −0.25） | 软岸、芦苇 | 南端并入西湖东北湾；北端穿渠堤暗涵口两级跌水入红光右支渠 |
 | 走马河 · 图书馆北段与中段、东南段上游 | −1.2 | 草坡 1:3 与石砌墙交替；主网一侧栏杆 | 立人楼西小溪、东湖东出水渠两级跌水汇入 |
 | 走马河 · 东南段下游 | −1.6 | 石砌墙 | 一道堰降一级；东南出界 |
