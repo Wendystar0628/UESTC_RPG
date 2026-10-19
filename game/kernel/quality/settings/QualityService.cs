@@ -15,7 +15,7 @@ public interface IQualityRuntime
     float RefreshRate { get; }
     Vector2I OutputSize { get; }
     Vector2I ScreenSize { get; }
-    IVeilLease Cover(CancellationToken cancellationToken);
+    IAppLoadingLease ShowLoading(CancellationToken cancellationToken);
     Task WaitForDestination(CancellationToken cancellationToken);
     void Dispatch(QualityView view, in QualityChange change);
     void ReportError(string message);
@@ -36,7 +36,6 @@ public interface IQualityFrame : IQualityService
 [KernelService(typeof(IQualityService), Owner = "WP-32")]
 public sealed class QualityService : IQualityFrame, IBootParticipant
 {
-    internal const float VeilSeconds = 0.3f;
     private sealed class Binding
     {
         public IQualityRuntime Runtime { get; }
@@ -119,7 +118,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
         _ => throw new ArgumentOutOfRangeException(nameof(phase)),
     };
 
-    /// <summary>Boot calls this after map/camera and prewarm are ready, while its veil is opaque.</summary>
+    /// <summary>Boot calls this after map/camera and prewarm are ready, while its screen is opaque.</summary>
     private async Task InitializeAsync(BootContext context)
     {
         if (_initialized) return;
@@ -156,7 +155,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
         if (plan.Rejected.Count != 0) return Task.FromResult(Result(ApplyStatus.Rejected, plan.Rejected));
         var binding = _binding ?? throw new InvalidOperationException("Quality runtime is not mounted.");
         var runtime = binding.Runtime;
-        // The boot caller already owns an opaque veil; no second veil or transition wait is needed.
+        // The boot caller already owns an opaque screen; no second screen or transition wait is needed.
         if (origin == ApplyOrigin.Startup || origin == ApplyOrigin.CommandLine && runtime.Booting)
             return ApplyDuringBoot(binding, plan.Next, origin);
         var deferred = runtime.Transitioning || _active is not null;
@@ -201,34 +200,33 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
         var snapshot = _state.Capture();
         var previousDurable = _durableProfile;
         var applied = false;
-        IVeilLease? veil = null;
+        IAppLoadingLease? screen = null;
         var persistenceAttempted = false;
         try
         {
             var plan = Plan(request.Profile);
-            var veiled = plan.Deltas.Any(delta => delta.Apply == ApplyClass.UnderVeil);
-            if (veiled)
+            var loading = plan.Deltas.Any(delta => delta.Apply == ApplyClass.UnderLoading);
+            if (loading)
             {
-                veil = runtime.Cover(cancellationToken);
-                await veil.Covered.WaitAsync(cancellationToken);
+                screen = runtime.ShowLoading(cancellationToken);
+                await screen.Covered.WaitAsync(cancellationToken);
             }
             cancellationToken.ThrowIfCancellationRequested();
             await runtime.NextFrame(cancellationToken).WaitAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            if (veil is { IsCurrent: false }) throw new InvalidOperationException("Quality veil was taken over before application.");
             applied = true;
-            var change = _state.Commit(request.Profile, request.Origin, veiled);
+            var change = _state.Commit(request.Profile, request.Origin, loading);
             if (change.Knobs != 0) runtime.Dispatch(Effective, change);
             cancellationToken.ThrowIfCancellationRequested();
-            if (veiled)
+            if (loading)
             {
                 await runtime.WaitForDestination(cancellationToken).WaitAsync(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!veil!.IsCurrent) throw new InvalidOperationException("Quality veil was taken over during application.");
-                await veil.Reveal(VeilSeconds).WaitAsync(cancellationToken);
+                screen!.Report(1, 1);
+                await screen.Hide().WaitAsync(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
             }
-            // No failed dispatch/readiness/reveal operation is ever written to settings.json.
+            // No failed dispatch/readiness/loading operation is ever written to settings.json.
             if (request.Origin == ApplyOrigin.User && MergeUserIntoDurable(snapshot.Profile, request.Profile))
             {
                 persistenceAttempted = !CaptureMode;
@@ -250,16 +248,16 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
             _durableProfile = previousDurable;
             if (applied)
             {
-                var rollback = _state.Restore(snapshot, request.Origin, veil?.IsCurrent == true);
+                var rollback = _state.Restore(snapshot, request.Origin, screen is not null);
                 try { runtime.Dispatch(Effective, rollback); }
                 catch (Exception recovery) { recoveryErrors.Add(recovery); }
                 if (cancellationToken.IsCancellationRequested) return;
                 Notify(binding, rollback);
             }
             if (cancellationToken.IsCancellationRequested) return;
-            if (veil is not null)
+            if (screen is not null)
             {
-                try { await veil.Reveal(VeilSeconds).WaitAsync(cancellationToken); }
+                try { await screen.Hide().WaitAsync(cancellationToken); }
                 catch (Exception recovery) { recoveryErrors.Add(recovery); }
             }
             if (cancellationToken.IsCancellationRequested) return;
@@ -278,7 +276,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
             request.Completion?.TrySetException(error);
             throw;
         }
-        finally { veil?.Dispose(); }
+        finally { if (screen is not null) await screen.DisposeAsync(); }
     }
 
     private void Publish(Binding binding, in QualityChange change)

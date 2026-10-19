@@ -9,6 +9,7 @@ namespace Campus.Kernel.World;
 
 public interface IWorldFrame : IWorldState, IMapAware
 {
+    event Action? ReducedTransitionRequested;
     double SeasonFrom { get; }
     double SeasonTo { get; }
     double SeasonProgress { get; }
@@ -49,6 +50,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     private MapWorldRules? _rules;
     private MapId? _map;
 
+    public event Action? ReducedTransitionRequested;
     public long Rev { get; private set; } = 1;
     public long Instance { get; private set; } = 1;
     public event Action<long>? InstanceChanged;
@@ -117,9 +119,10 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
             {
                 _jumpElapsed = AdvanceElapsed(_jumpElapsed, dt, _jumpDuration);
                 WorldHours = Math.Clamp(ScalarMath.Lerp(_jumpFrom, _targetHours,
-                    ScalarMath.Smoothstep(_jumpElapsed / _jumpDuration)), WorldHours, _targetHours);
-                if (_jumpElapsed >= _jumpDuration) LandClock();
+                    motion?.ReduceMotion == true ? 1 : ScalarMath.Smoothstep(_jumpElapsed / _jumpDuration)), WorldHours, _targetHours);
+                if (motion?.ReduceMotion == true || _jumpElapsed >= _jumpDuration) LandClock();
             }
+            else if (motion?.ReduceMotion == true) LandClock();
             else
             {
                 const double damping = 2 * .6931471805599453 / .15;
@@ -141,7 +144,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         if (SeasonMoving)
         {
             _seasonElapsed = AdvanceElapsed(_seasonElapsed, dt, _seasonDuration);
-            var blend = ScalarMath.Smoothstep(_seasonElapsed / _seasonDuration);
+            var blend = motion?.ReduceMotion == true ? 1 : ScalarMath.Smoothstep(_seasonElapsed / _seasonDuration);
             SeasonPos = ArtEphemeris.Wrap(ScalarMath.Lerp(_seasonFrom, _seasonTo, blend), 4);
             _offset = _seasonStartOffset + ArtEphemeris.ClockAtPhase(_seasonArc, SeasonPos) - _seasonStartArcClock;
             if (_seasonElapsed >= _seasonDuration)
@@ -170,6 +173,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
                 StartJump(_targetHours + ForwardHours(hours, ArtEphemeris.Wrap(_targetHours + PlannedOffset, 24)));
                 break;
             case ClockSetMode.Drag:
+                BeginReducedTransition();
                 var currentTarget = ArtEphemeris.Wrap(_targetHours + PlannedOffset, 24);
                 var delta = ArtEphemeris.Wrap(hours - currentTarget + 12, 24) - 12;
                 // The pointer can cross midnight. Counterclockwise samples cannot rewind or add a day.
@@ -206,6 +210,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         EnsureUsable();
         if (!Enum.IsDefined(season)) throw new ArgumentOutOfRangeException(nameof(season));
         if (season == SeasonTarget) return;
+        BeginReducedTransition();
         _seasonFrom = SeasonPos;
         var distance = ArtEphemeris.Wrap((int)season - SeasonPos, 4);
         _seasonTo = _seasonFrom + distance;
@@ -225,6 +230,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         EnsureUsable();
         ValidateWeather(kind, intensity);
         if (!IsNative(kind)) return;
+        BeginReducedTransition();
         weather.Select(new WeatherSel(WeatherMode.Manual, kind, intensity ?? .5f));
         Rev++;
     }
@@ -233,6 +239,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     {
         EnsureUsable();
         ValidateWeather(Weather.Kind, intensity);
+        BeginReducedTransition();
         weather.Select(Weather with { Intensity = intensity });
         Rev++;
     }
@@ -240,6 +247,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     public void SetWeatherAuto()
     {
         EnsureUsable();
+        BeginReducedTransition();
         weather.Select(Weather with { Mode = WeatherMode.Auto });
         Rev++;
     }
@@ -403,8 +411,14 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         Omega = 0;
     }
 
+    private void BeginReducedTransition()
+    {
+        if (motion?.ReduceMotion == true) ReducedTransitionRequested?.Invoke();
+    }
+
     private void StartJump(double target)
     {
+        if (target > WorldHours) BeginReducedTransition();
         _dragging = false;
         _dragIdle = 1;
         _targetHours = Math.Max(_targetHours, target);

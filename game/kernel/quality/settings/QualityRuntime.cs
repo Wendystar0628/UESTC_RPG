@@ -18,7 +18,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     private const double DestinationWaitSeconds = 1.2;
 
     private IQualityFrame _service = null!;
-    private IVeilService _veil = null!;
+    private IAppLoadingPresentation _screen = null!;
     private IWorldState _world = null!;
     private Vector4 _quality;
     private Vector4 _qualityFrom;
@@ -32,7 +32,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
     {
         ProcessPriority = FramePriority.Quality;
         _service = RuntimeKernel.Get<IQualityFrame>();
-        _veil = RuntimeKernel.Get<IVeilService>();
+        _screen = RuntimeKernel.Get<IAppLoadingPresentation>();
         _world = RuntimeKernel.Get<IWorldState>();
         _world.InstanceChanged += OnWorldInstanceChanged;
         _closed = false;
@@ -92,14 +92,14 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
                 AppState.Title or AppState.Playing => false,
                 _ => throw new ArgumentOutOfRangeException(nameof(app)),
             };
-            return appBusy || flow.Activity != AppActivity.None || _veil.Opacity > 0;
+            return appBusy || flow.Activity != AppActivity.None || _screen.Active;
         }
     }
 
-    public IVeilLease Cover(CancellationToken cancellationToken)
+    public IAppLoadingLease ShowLoading(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return _veil.Cover(VeilReason.Quality, QualityService.VeilSeconds);
+        return _screen.Show();
     }
     public void ReportError(string message) => GD.PushError(message);
     public void ReportInfo(string message) => GD.Print(message);
@@ -145,7 +145,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         var registrations = RuntimeKernel.Services.ForMap(currentMap).Where(entry => entry.Kind == "node")
             .Select(entry => (Entry: entry, Quality: entry.Type.GetCustomAttribute<QualityResponsiveAttribute>()))
             .Where(item => item.Quality is not null)
-            .OrderBy(item => notification.Veiled ? OwnerOrder(item.Entry.Owner) : 0)
+            .OrderBy(item => notification.Loading ? OwnerOrder(item.Entry.Owner) : 0)
             .ThenBy(item => item.Entry.Id, StringComparer.Ordinal).ToArray();
         foreach (var item in registrations)
         {

@@ -31,12 +31,12 @@ public sealed class AudioMixTests
         mix.UpdatePages(UiSurface.Atlas);
         mix.Step(AudioMix.PageFadeSeconds);
         Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), AudioMix.PageOpenDuckDb);
-        mix.Duck(DuckReason.Veil, -8f, 0f, .8f);
+        mix.Duck(DuckReason.Loading, -8f, 0f, .8f);
         Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), -8f);
         Near(AudioMix.ToDb(mix.Gain(AudioGroup.Foley)), -8f);
         Near(mix.Gain(AudioGroup.Ui), 1f);
         Near(mix.Gain(AudioGroup.Music), 1f);
-        mix.ReleaseDuck(DuckReason.Veil);
+        mix.ReleaseDuck(DuckReason.Loading);
         mix.Step(.8f);
         Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), AudioMix.PageOpenDuckDb);
         mix.UpdatePages(UiSurface.AtlasIndex);
@@ -80,46 +80,35 @@ public sealed class AudioMixTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void MapTravelRestoresDuringRevealAndDoesNotRestartOnHeldFrames()
+    public void MapTravelRestoresAfterLoadingAndHeldFramesDoNotRestartDuck()
     {
         var mix = new AudioMix(new(Master: 1f, Ambience: 1f));
         mix.SetAudible(true, 0f);
-        mix.UpdateVeil(0f, VeilReason.MapTravel);
-        mix.UpdateVeil(.5f, VeilReason.MapTravel);
-        mix.Step(.5f);
-        Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), -40f);
-        mix.UpdateVeil(1f, VeilReason.MapTravel);
+        mix.UpdateLoading(true);
         mix.BeginMapUnload();
         mix.Step(.5f);
-        mix.UpdateVeil(1f, VeilReason.MapTravel);
+        Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), -40f);
+        mix.UpdateLoading(true);
         mix.Step(.5f);
         Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), -40f);
-
-        mix.UpdateVeil(.96f, VeilReason.MapTravel);
-        mix.Step(.1f);
-        Near(mix.Gain(AudioGroup.Ambience), .01f + .99f * .1f / 2.5f);
-        // A reveal can remain at the same opacity while another stage warms.
-        for (var i = 0; i < 24; i++)
-        {
-            mix.UpdateVeil(.96f, VeilReason.MapTravel);
-            mix.Step(.1f);
-        }
+        mix.UpdateLoading(false);
+        mix.Step(2.5f);
         Near(mix.Gain(AudioGroup.Ambience), 1f);
     }
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void NewCoverDuringRevealReappliesWorldDuck()
+    public void NewLoadingScreenReappliesWorldDuck()
     {
         var mix = new AudioMix(new(Master: 1f, Ambience: 1f));
         mix.SetAudible(true, 0f);
-        mix.UpdateVeil(1f, VeilReason.Teleport);
+        mix.UpdateLoading(true);
         mix.Step(.5f);
-        mix.UpdateVeil(.7f, VeilReason.Teleport);
+        mix.UpdateLoading(false);
         mix.Step(.4f);
         if (AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)) <= -8f)
-            throw new InvalidOperationException("Reveal did not begin restoring the world.");
-        mix.UpdateVeil(.8f, VeilReason.Teleport);
+            throw new InvalidOperationException("Loading completion did not restore world audio.");
+        mix.UpdateLoading(true);
         mix.Step(.5f);
         Near(AudioMix.ToDb(mix.Gain(AudioGroup.Ambience)), -8f);
     }

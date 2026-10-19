@@ -128,7 +128,6 @@ float df_haze(float haze, float k) {
 	c *= mix(1.0, DF_AFTER_RAIN, df_after_rain());
 	c *= mix(1.0, DF_SEASON_CLARITY.x, df_season_near(s, 1.0)) * mix(1.0, DF_SEASON_CLARITY.y, df_season_near(s, 3.0));
 	float h = 1.0 - (1.0 - haze) * c;
-	h = mix(h, 1.0, pow(clamp(veil, 0.0, 1.0), 0.7));
 	return clamp(h, 0.0, 1.0);
 }
 
@@ -247,7 +246,6 @@ vec3 df_far(vec3 dir) {
 	float floor_v = mix(DF_VIS_CLEAR_FLOOR, mix(DF_VIS_BAD_FLOOR, DF_VIS_CLEAR_FLOOR, snowing), bad);
 	float vis = max(floor_v, vis_season * haze_k * (1.0 - bad));
 	vis = mix(vis, DF_VIS_AFTER_RAIN, df_after_rain());
-	vis *= 1.0 - pow(clamp(veil, 0.0, 1.0), 0.7);
 	col = mix(sky_c, col, vis);
 
 	// 山脚以下（裙边）渐隐成该方向的雾色，与雾海、地平线以下的天空同色

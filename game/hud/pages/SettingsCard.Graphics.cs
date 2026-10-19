@@ -38,8 +38,8 @@ public partial class SettingsCard
                 var row = _kit.Layout.SettingRow(content, UiKit.T(spec.LabelKey));
                 var editor = _kit.Layout.Stack(row, groups: false);
                 KnobControl(editor, spec, RequestedValue(spec.Knob));
-                if (spec.Apply is ApplyClass.UnderVeil or ApplyClass.Restart)
-                    Parts.Tag(_kit, editor, UiKit.T(spec.Apply == ApplyClass.Restart ? "quality.tag.restart" : "quality.tag.veil"), spec.Apply == ApplyClass.UnderVeil);
+                if (spec.Apply is ApplyClass.UnderLoading or ApplyClass.Restart)
+                    Parts.Tag(_kit, editor, UiKit.T(spec.Apply == ApplyClass.Restart ? "quality.tag.restart" : "quality.tag.loading"), spec.Apply == ApplyClass.UnderLoading);
                 yield return null;
             }
         }
@@ -148,16 +148,16 @@ public partial class SettingsCard
         var plan = Svc<IQualityService>().Plan(next);
         _planned = next;
         ShowPlan(plan);
-        if (plan.Heaviest is not (ApplyClass.UnderVeil or ApplyClass.Restart) && plan.Rejected.Count == 0) _ = ApplyPending();
+        if (plan.Heaviest is not (ApplyClass.UnderLoading or ApplyClass.Restart) && plan.Rejected.Count == 0) _ = ApplyPending();
     }
 
     private void ShowPlan(ApplyPlan plan)
     {
         if (_applyStatus is null || _apply is null) return;
-        var veil = plan.Heaviest == ApplyClass.UnderVeil;
+        var screen = plan.Heaviest == ApplyClass.UnderLoading;
         var restart = plan.Heaviest == ApplyClass.Restart;
         _applyStatus.Text = plan.Deltas.Count == 0 && _pending.Count == 0 ? ""
-            : UiKit.T(restart ? "quality.pending.restart" : veil ? "quality.pending.veil" : "quality.pending.now", ("n", $"{Math.Max(plan.Deltas.Count, _pending.Count)}"));
+            : UiKit.T(restart ? "quality.pending.restart" : screen ? "quality.pending.loading" : "quality.pending.now", ("n", $"{Math.Max(plan.Deltas.Count, _pending.Count)}"));
         _applyStatus.Visible = _applyStatus.Text.Length > 0;
         _apply.Off = plan.Rejected.Count > 0 || plan.Deltas.Count == 0;
     }

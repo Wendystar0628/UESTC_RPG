@@ -10,8 +10,8 @@ public sealed partial class QualityApplicationTests
     {
         public bool Booting { get; set; } = true;
         public bool Transitioning { get; set; }
-        public bool QualityVeilActive { get; private set; }
-        public bool OtherVeilActive { get; private set; }
+        public bool QualityLoadingActive { get; private set; }
+        public bool OtherLoadingActive { get; private set; }
         public float RefreshRate => 60;
         public Godot.Vector2I OutputSize => new(1920, 1080);
         public Godot.Vector2I ScreenSize => OutputSize;
@@ -19,7 +19,7 @@ public sealed partial class QualityApplicationTests
         public bool FailRollback { get; set; }
         public bool FailReadiness { get; set; }
         public bool Takeover { get; set; }
-        public int RevealCount { get; private set; }
+        public int HideCount { get; private set; }
         public QualityView? EngineView { get; private set; }
         public List<string> Errors { get; } = [];
         public string? HoldAt { get; set; }
@@ -39,33 +39,34 @@ public sealed partial class QualityApplicationTests
             HeldCalls++;
             return Held.Task;
         }
-        public IVeilLease Cover(CancellationToken cancellationToken)
+        public IAppLoadingLease ShowLoading(CancellationToken cancellationToken)
         {
-            QualityVeilActive = true;
-            return new QualityLease(this, Wait("cover"));
+            QualityLoadingActive = true;
+            return new QualityLease(this, Wait("loading"));
         }
-        private sealed class QualityLease(FakeRuntime runtime, Task covered) : IVeilLease
+        private sealed class QualityLease(FakeRuntime runtime, Task covered) : IAppLoadingLease
         {
             private bool _released;
             public Task Covered => covered;
-            public bool IsCurrent => !_released && !runtime.OtherVeilActive;
-            public Task Reveal(float seconds)
+            public void Report(int completed, int total) { }
+            public Task Hide()
             {
                 if (_released) return Task.CompletedTask;
-                runtime.RevealCount++;
-                Dispose();
-                return runtime.Wait("reveal");
+                runtime.HideCount++;
+                Release();
+                return runtime.Wait("hide");
             }
-            public void Dispose()
+            public ValueTask DisposeAsync() { Release(); return ValueTask.CompletedTask; }
+            private void Release()
             {
                 if (_released) return;
                 _released = true;
-                runtime.QualityVeilActive = false;
+                runtime.QualityLoadingActive = false;
             }
         }
         public Task WaitForDestination(CancellationToken cancellationToken)
         {
-            if (Takeover) OtherVeilActive = true;
+            if (Takeover) OtherLoadingActive = true;
             return FailReadiness ? Task.FromException(new TimeoutException("Fake destination exceeded 1.2 seconds.")) : Wait("destination");
         }
         public void Dispatch(QualityView view, in QualityChange change)

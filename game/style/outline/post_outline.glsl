@@ -96,7 +96,6 @@ layout(set = 0, binding = 0, std140) uniform OutlineParams {
 	vec4 g_medium;       // medium
 	vec4 g_medium_color; // medium_color (linear)
 	vec4 g_fog_low;      // fog_low
-	vec4 g_misc;         // x: veil, yzw: reserved
 	vec4 g_sun_dir;      // xyz: sun_dir (real sun direction, unquantised)
 	vec4 g_moon_dir;     // xyz: moon_dir
 } P;
@@ -123,10 +122,9 @@ layout(set = 0, binding = 6) uniform sampler2D palette;   // global palette, sRG
 #define moon_dir (P.g_moon_dir.xyz)
 #define medium (P.g_medium)
 #define medium_color (P.g_medium_color)
-#define veil (P.g_misc.x)
 // Godot re-imports a .glsl only when its own bytes change, not when an included file does: bump this stamp
 // whenever fog.glslinc is re-synced, or the old fog stays compiled in.
-// fog.glslinc mirror stamp: fog.gdshaderinc @ main d618f5a + 0p FOG_SCALE_HEIGHT 120 (WP-04 bank 1, PaletteLayout banked9-rows-v1)
+// D-263 removes the inactive transition input. fog.glslinc mirror stamp: fog.gdshaderinc @ main d618f5a + 0p FOG_SCALE_HEIGHT 120 (WP-04 bank 1, PaletteLayout banked9-rows-v1)
 #include "fog.glslinc"
 #endif
 
@@ -781,7 +779,7 @@ void main() {
 			}
 		}
 		if (bright && !s.sky && dot(s.nrm, P.key_light.xyz) > 0.0) {
-			// Fades with distance and sinks into the fog like the surface it sits on (also under the veil).
+			// Fades with distance and sinks into the fog like the surface it sits on.
 			vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
 			float fog_a = fog_eval(wp, P.inv_view[3].xyz).a;
 			float lift = bevel_lift(s.id) * P.key_light.w * (1.0 - smoothstep(BRIGHT_FAR0, BRIGHT_FAR1, s.z)) * (1.0 - fog_a);

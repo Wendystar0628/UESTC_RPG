@@ -18,7 +18,6 @@ global uniform float retreat_y;
 global uniform vec4 wind;
 global uniform float snow;
 global uniform vec4 ground_amt;
-global uniform float veil;
 global uniform float stars;
 global uniform vec4 fog;
 global uniform vec4 fog_low;

@@ -6,12 +6,12 @@ using N = System.Numerics;
 namespace Campus.Camera;
 
 /// <summary>
-/// Veil teleport (SYS-ATLAS-TRAVEL): cover, move, wait for destination readiness, reveal.
+/// Loading-screen teleport (SYS-ATLAS-TRAVEL): show, move, wait for destination readiness, hide.
 /// The camera resolves this driver after registration (parameterless constructor), so the camera
 /// must never be handed this driver through constructor injection.
 /// </summary>
 [KernelService(typeof(ITransitDriver), Owner = "WP-36")]
-public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRuntime runtime,
+public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loading, IMapRuntime runtime,
     IMapService maps, ITerrainPreparation terrain, ICameraPoseValidator validator,
     IWalkController? walk = null) : ITransitDriver
 {
@@ -22,11 +22,9 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
 
     public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null)
     {
-        // Slide and arc flights are not implemented; an automatic transit also takes the veil jump.
-        TransitKind kind = (options?.Prefer ?? TransitPreference.Auto) switch
+        var kind = (options?.Prefer ?? TransitPreference.Auto) switch
         {
-            TransitPreference.Auto => TransitKind.Veil,
-            TransitPreference.Teleport => TransitKind.Teleport,
+            TransitPreference.Auto or TransitPreference.Teleport => TransitKind.Teleport,
             _ => throw new ArgumentOutOfRangeException(nameof(options))
         };
         _active?.Cancel();
@@ -38,27 +36,16 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
 
     private async Task Execute(TransitRun run)
     {
-        IVeilLease? cover = null;
+        IAppLoadingLease? screen = null;
         try
         {
             var tree = Engine.GetMainLoop() as SceneTree ?? throw new InvalidOperationException("Transit requires a running scene tree.");
-            var reason = run.Kind switch
-            {
-                TransitKind.Teleport => VeilReason.Teleport,
-                TransitKind.Veil => VeilReason.Transit,
-                TransitKind.Slide or TransitKind.Arc => throw new NotSupportedException("Slide and arc transit are not implemented."),
-                _ => throw new ArgumentOutOfRangeException(nameof(run))
-            };
             var body = camera.Mode == ViewMode.Walk && walk is { Active: true } ? walk : null;
             body?.SetInput(default);
 
-            cover = veil.Cover(reason, TransitTuning.CoverSeconds);
-            run.Cover = cover;
-            await cover.Covered;
+            screen = loading.Show();
+            await screen.Covered.WaitAsync(run.Token);
             run.Progress = 0.25f;
-            if (run.Cancelled) return;
-            // The move must follow a presented opaque frame, not just a veil opacity of one.
-            await tree.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             if (run.Cancelled) return;
 
             var context = maps.Context ?? throw new InvalidOperationException("Transit has no mounted map.");
@@ -89,50 +76,38 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
             var destination = runtime.Arrive(arrival, body is not null ? ViewMode.Walk : ViewMode.Fly);
             run.Arrival = destination;
 
-            using (veil.ObserveReadinessWait())
+            await destination.Done.WaitAsync(run.Token);
+            RequireCurrentArrival(destination);
+            if (body is not null)
             {
-                await Task.WhenAny(destination.Done, run.Done);
-                if (run.Cancelled) return;
-                await destination.Done;
-                RequireCurrentArrival(destination);
-                for (var frame = 0; frame < TransitTuning.MinSettleFrames; frame++)
+                var elapsed = 0d;
+                while (body.Active && !body.ExitRequested && !(body.CollisionReady && body.Grounded) &&
+                    elapsed < TransitTuning.WalkSettleSeconds)
                 {
                     await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
                     if (run.Cancelled) return;
-                }
-                if (body is not null)
-                {
-                    var elapsed = 0d;
-                    while (body.Active && !body.ExitRequested && !(body.CollisionReady && body.Grounded) &&
-                        elapsed < TransitTuning.WalkSettleSeconds)
-                    {
-                        await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
-                        if (run.Cancelled) return;
-                        elapsed += tree.Root.GetProcessDeltaTime();
-                    }
+                    elapsed += tree.Root.GetProcessDeltaTime();
                 }
             }
 
             RequireCurrentArrival(destination);
             run.Progress = 0.75f;
-            // Releasing this run leaves all other veil owners in place.
-            try { await cover.Reveal(TransitTuning.RevealSeconds); }
-            catch (OperationCanceledException) { }
+            screen.Report(1, 1);
+            await screen.Hide().WaitAsync(run.Token);
             if (run.Cancelled) return;
             run.Progress = 1;
             run.Finish(TransitResult.Arrived);
         }
         catch (Exception error)
         {
-            if (error is not OperationCanceledException) GD.PushError($"[WP-36] veil teleport failed: {error}");
+            if (error is not OperationCanceledException) GD.PushError($"[WP-36] teleport failed: {error}");
             run.Finish(TransitResult.Cancelled);
         }
         finally
         {
             if (run.Arrival is { } pending && !pending.Done.IsCompleted) pending.Cancel();
             run.Finish(TransitResult.Cancelled);
-            cover?.Dispose();
-            run.Cover = null;
+            if (screen is not null) await screen.DisposeAsync();
             if (ReferenceEquals(_active, run)) _active = null;
         }
     }
@@ -154,14 +129,15 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
         public bool TerrainReady { get; set; }
         public bool Finished => _done.Task.IsCompleted;
         public IMapArrival? Arrival { get; set; }
-        public IVeilLease? Cover { get; set; }
+        private readonly CancellationTokenSource _cancellation = new();
+        public CancellationToken Token => _cancellation.Token;
 
         public void Cancel()
         {
             if (_done.Task.IsCompleted) return;
             Cancelled = true;
             Arrival?.Cancel();
-            Cover?.Dispose();
+            _cancellation.Cancel();
             _done.TrySetResult(TransitResult.Cancelled);
         }
 

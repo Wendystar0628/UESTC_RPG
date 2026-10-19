@@ -8,7 +8,7 @@
 // file, the same names the material side reads, filled each frame by C# from the same state that writes the
 // globals (ENG-PERF §1.5) — as macros onto its uniform buffer:
 //   fog, fog_low, weather_fog, map_rect, medium (vec4), medium_color (vec4, linear rgb),
-//   sun_dir, moon_dir (vec3), veil, edge_fog (float), and `sampler2D palette` bound to the palette's RD texture
+//   sun_dir, moon_dir (vec3), edge_fog (float), and `sampler2D palette` bound to the palette's RD texture
 //   through its sRGB view (RenderingServer.TextureGetRdTexture(rid, true)), so texelFetch returns linear values
 //   like the source_color global does on the material side.
 //
@@ -121,8 +121,6 @@ vec3 pal_season(int row, float s) {
 const float FOG_SIL_ALPHA = 0.9;     // 剪影距离处雾量的上限，远处仍能和天空分开
 const float FOG_RATE = 2.3;          // 起雾到剪影之间的指数速率
 const float FOG_DESAT = 0.25;        // 200 m 起的降饱和量（ART-SKYLIGHT §6.2）
-const float FOG_VEIL_GAIN = 0.8;     // 雾幕的密度项：×(1 + 0.8 × veil)；主要效果靠 fog_range 里的距离收拢（ART-SKYLIGHT §6.4）
-const float FOG_VEIL_NEAR = 20.0;    // 全幕雾幕时剪影距离收到的位置（m）
 const float FOG_EDGE_GAIN = 0.6;     // 边缘雾：密度 ×(1 + 0.6 × edge_fog × w)（WLD-OUTSKIRTS §8.3）
 const float FOG_WEATHER_SIL_MIN = 600.0;   // 雾天剪影距离不低于 600 m（ART-SKYLIGHT §6.6）
 const float FOG_SCALE_HEIGHT = 120.0;     // 大气的标高（m）：视线越高，等效雾程越短；俯瞰箱庭时不被整片雾盖住
@@ -300,11 +298,7 @@ vec2 fog_range(float exempt) {
 	float k = clamp(exempt, 0.0, 1.0);
 	sil = mix(sil, max(sil, FOG_EXEMPT_SIL), k);
 	start = mix(start, max(start, FOG_EXEMPT_START), k);
-	// 雾幕（ART-SKYLIGHT §6.4）：起雾与剪影距离一起由远到近收拢，远处先沉、近处后沉；
-	// 全幕时一路收到镜头前，2D 雾幕层只在最后补满。地标豁免不抵抗雾幕，所以放在最后。
-	float v = clamp(veil, 0.0, 1.0);
-	sil = (sil - FOG_VEIL_NEAR) * (1.0 - v) * (1.0 - v) + FOG_VEIL_NEAR;
-	start = min(start * (1.0 - v), sil * 0.5);
+	start = min(start, sil * 0.5);
 	return vec2(start, max(sil, start + 1.0));
 }
 
@@ -333,8 +327,8 @@ vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt) {
 	vec3 dir = dist > 1e-4 ? ray / dist : vec3(0.0, 0.0, -1.0);
 	vec2 rg = fog_range(exempt);
 
-	// 密度：关键帧标量 × 雾幕 × 边缘雾（只在朝外一侧加浓）
-	float dens = max(fog.x, 0.0) * (1.0 + FOG_VEIL_GAIN * clamp(veil, 0.0, 1.0));
+	// 密度：关键帧标量 × 边缘雾（只在朝外一侧加浓）
+	float dens = max(fog.x, 0.0);
 	vec2 ctr = map_rect.xy + 0.5 / max(map_rect.zw, vec2(1e-6));
 	vec2 outward = cam_pos.xz - ctr;
 	float lo = length(outward);
@@ -347,9 +341,7 @@ vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt) {
 
 	// 距离雾：起雾距离以内为 0，到剪影距离约 0.81，再往远趋近 0.9
 	float t = max(fog_equiv_dist(world_pos, cam_pos) - rg.x, 0.0) / (rg.y - rg.x);
-	// 雾幕时上限与霾带一起放开，veil = 1 时 3D 雾自己沉到底，2D 雾幕层只作保险
-	float vv = clamp(veil, 0.0, 1.0);
-	float a = mix(FOG_SIL_ALPHA, 1.0, vv) * (1.0 - exp(-FOG_RATE * t * dens));
+	float a = FOG_SIL_ALPHA * (1.0 - exp(-FOG_RATE * t * dens));
 
 	// 贴地雾：关键帧（fog_low.x 雾顶高、fog_low.y 密度，清晨与日出）与天气（weather_fog.y 雾顶高、weather_fog.z 密度）取并；
 	// 湖面雾（fog_low.z）只在水面上，由水面着色器按同一个量加，这里不算

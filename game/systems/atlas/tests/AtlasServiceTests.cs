@@ -99,8 +99,8 @@ public sealed class AtlasServiceTests
         test.Atlas.Tick();
         AssertThat(test.Camera.Locks == 0 && test.Atlas.IsSettled).OverrideFailureMessage("Arrival did not release input.").IsTrue();
         test.Atlas.Travel(new("test-post"), TravelStyle.Fly);
-        AssertThat(test.Camera.Options?.Prefer == TransitPreference.Auto).OverrideFailureMessage("Fly did not use normal transit preference.").IsTrue();
-        AssertThat(test.Camera.Locks == 0).OverrideFailureMessage("Fly retained an Atlas input lock and cannot be interrupted.").IsTrue();
+        AssertThat(test.Camera.Options?.Prefer == TransitPreference.Teleport).OverrideFailureMessage("Far fly-there did not use teleport.").IsTrue();
+        AssertThat(test.Camera.Locks == 1).OverrideFailureMessage("Teleport did not retain input through loading.").IsTrue();
         test.Camera.Handle!.Completion.SetResult(TransitResult.Cancelled);
         test.Atlas.Tick();
         AssertThat(test.Camera.Locks == 0).OverrideFailureMessage("Cancelled transit retained the input lock.").IsTrue();

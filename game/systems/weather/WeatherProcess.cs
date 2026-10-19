@@ -8,7 +8,7 @@ namespace Campus.Systems.Weather;
 /// </summary>
 [KernelService(typeof(IWeatherProcess), Owner = "WP-45a")]
 [KernelService(typeof(WeatherProcess), Owner = "WP-45a")]
-public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherProcess
+public sealed class WeatherProcess(IWeatherProfileSource profiles, IMotionSettings? motion = null) : IWeatherProcess
 {
     private WeatherSettings _set = new();
     private WeatherTimeline? _line;
@@ -91,7 +91,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
             var target = Vector(t.WorldHours);
             if (_blendElapsed < 3)
             {
-                _blendElapsed = Math.Min(3, _blendElapsed + t.RealDt);
+                _blendElapsed = motion?.ReduceMotion == true ? 3 : Math.Min(3, _blendElapsed + t.RealDt);
                 Now = WeatherVectors.Lerp(_blendFrom, target, ScalarMath.Smoothstep((float)(_blendElapsed / 3)));
             }
             else Now = target;

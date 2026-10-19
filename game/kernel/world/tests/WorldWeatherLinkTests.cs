@@ -94,8 +94,16 @@ public sealed class WorldWeatherLinkTests
     {
         var world = CreateWorld(new TestWeatherProcess(), new TestMotionSettings(true));
         world.SetFlow(0);
+        var previous = world.SeasonPos;
+        double? captured = null;
+        world.ReducedTransitionRequested += () => captured ??= world.SeasonPos;
         world.Apply(new WorldPreset(21, Season.Spring));
-        for (var i = 0; i < 5; i++) world.Tick(.1);
+        AssertThat(captured == previous).OverrideFailureMessage("The old season was not captured before the transition.").IsTrue();
+        world.Tick(.1);
+        AssertThat(world.SeasonPos).IsEqual((double)(int)Season.Spring);
+        AssertThat(Math.Abs(world.Clock - 21) <= TestTolerance.WorldHours)
+            .OverrideFailureMessage("The new scene was not settled beneath the reduced-motion screenshot.").IsTrue();
+        for (var i = 1; i < 5; i++) world.Tick(.1);
         AssertThat(world.IsSettled).OverrideFailureMessage("Reduced-motion world transition exceeded half a second.").IsTrue();
         AssertThat(Math.Abs((world.Clock) - (21)) <= TestTolerance.WorldHours).OverrideFailureMessage($"Expected {21:R}, got {world.Clock:R}.").IsTrue();
         AssertThat(world.SeasonTarget).IsEqual(Season.Spring);

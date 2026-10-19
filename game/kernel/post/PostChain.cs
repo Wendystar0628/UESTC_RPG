@@ -11,7 +11,7 @@ namespace Campus.Kernel.Post;
 /// The post-processing chain (WP-05, ART-STYLE, ENG-PERF): owns the two CompositorEffects on the active
 /// camera (outline at PostSky, finish at PostTransparent), the engine's glow / tonemap / adjustment settings and
 /// the runtime LUT. Each frame it copies the colour-script keyframe scalars (IColorScriptFrame), the key light,
-/// weather, veil, edge fog and map rect into one <see cref="PostFrame"/> for the render thread, so nothing reads
+/// weather, edge fog and map rect into one <see cref="PostFrame"/> for the render thread, so nothing reads
 /// shader globals back. Quality knobs owned here take effect without pipeline compilation (SYS-GRAPHICS).
 /// Glow runs at the standard level; vignette, tilt-shift, lens flare and light shafts are style defaults and always on.
 /// </summary>
@@ -24,7 +24,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     private const float GlowThresholdFloor = 1.0f;     // registered lit colours (peak 1.0) never bloom by day
     private const float GlowLowSunDeg = 6f;            // glow starts at level 2 above, level 3 below (ART-STYLE)
     private const float FlashBloom = 0.1f;             // thunderstorm flash frame (SYS-WEATHER)
-    private const float SeasonVeilBloom = 0.1f;        // season-change veil (SYS-TIME)
 
     private readonly PostFrameBox _box = new();
     private readonly OutlineEffect _outline = new();
@@ -39,7 +38,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     private IMediumRenderState? _medium;
     private IGlobalDataTextureRegistry? _textures;
     private ICameraRig? _rig;
-    private IVeilState? _veil;
     private Camera3D? _camera;
     private Godot.Environment? _environment;
     private Texture3Drd? _lut;
@@ -49,7 +47,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     {
         Name = "PostChain";
         ProcessPriority = FramePriority.Systems;
-        ProcessMode = ProcessModeEnum.Always;   // post keeps running under pause and veils
+        ProcessMode = ProcessModeEnum.Always;   // post keeps running under pause and loading screens
         _outline.Inputs = _box;
         _finish.Inputs = _box;
         _compositor.CompositorEffects = [_outline, _finish];
@@ -64,7 +62,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         _medium = Services.Get<IMediumRenderState>();
         _textures = Services.Get<IGlobalDataTextureRegistry>();
         _rig = Services.Get<ICameraRig>();
-        _veil = Services.Get<IVeilState>();
         if (Services.Get<IMapService>().Context is { } context) OnMapLoaded(context);
         // Startup-only pipeline switches (ENG-PERF rule 10): set before warm-up, never toggled at runtime.
         GetViewport().UseDebanding = true;
@@ -93,7 +90,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     {
         if (change.Has(QualityKnob.AntiAliasing))
         {
-            // Under-veil class: applied while the veil is fully covering (or at startup); rebuilds buffers only.
+            // Loading class: applied while the loading screen is fully covering (or at startup); rebuilds buffers only.
             GetViewport().ScreenSpaceAA = (int)view[QualityKnob.AntiAliasing] switch
             {
                 0 => Viewport.ScreenSpaceAAEnum.Smaa,
@@ -114,7 +111,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     public override void _Process(double delta)
     {
         if (_colorScript is null || _world is null || _key is null || _weather is null || _medium is null
-            || _textures is null || _rig is null || _veil is null) return;
+            || _textures is null || _rig is null) return;
         var dt = (float)Math.Min(delta, 0.25);
         AttachToCamera();
         var environment = GetViewport().FindWorld3D()?.Environment;
@@ -149,7 +146,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             Medium = new Vector4(medium.X, medium.Y, medium.Z, medium.W),
             MediumColor = new Color(mediumColor.X, mediumColor.Y, mediumColor.Z),
             EdgeFog = _rig.EdgeFog,
-            Veil = _veil.Opacity,
             SunDir = new Vector3(_world.Sun.Dir.X, _world.Sun.Dir.Y, _world.Sun.Dir.Z),     // same source as sun_dir / moon_dir
             MoonDir = new Vector3(_world.Moon.Dir.X, _world.Moon.Dir.Y, _world.Moon.Dir.Z),
             TiltAmount = 0f,
@@ -165,8 +161,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             _textures.TryAcquire(ShaderGlobals.MatTable, out var matTable) ? matTable : null);
 
         if (_environment is null) return;
-        var bloom = cs.Glow + FlashBloom * frame.Flash
-            + (_veil.Reason == VeilReason.Season ? SeasonVeilBloom * _veil.Opacity : 0f);
+        var bloom = cs.Glow + FlashBloom * frame.Flash;
         _environment.GlowBloom = Mathf.Max(bloom, 0f);
         _environment.GlowIntensity = cs.GlowIntensity;
         _environment.GlowHdrThreshold = Mathf.Max(cs.GlowHdrThreshold, GlowThresholdFloor);

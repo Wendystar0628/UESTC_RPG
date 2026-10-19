@@ -13,16 +13,43 @@ namespace Campus.Kernel.World;
 public partial class WorldStateNode : Node, IMapAware, IQualityAware
 {
     private IWorldFrame? _world;
+    private IWorldTransitionPresentation? _transition;
+    private IMotionSettings? _motion;
+    private ulong _transitionFrame = ulong.MaxValue;
     private int _stepRate = WorldTime.DefaultStepRate;
 
     public override void _Ready()
     {
         ProcessPriority = FramePriority.WorldState;
         _world = Services.Get<IWorldFrame>();
+        _transition = Services.Get<IWorldTransitionPresentation>();
+        _motion = Services.Get<IMotionSettings>();
+        _world.ReducedTransitionRequested += OnReducedTransition;
         _stepRate = Services.Get<IQualityService>().Effective.StepRate;
         // Ready completes before the first rendered frame, including shader warm-up.
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.AnimLoopSeconds, WorldTime.AnimLoopSeconds);
         WriteGlobals();
+    }
+
+    public override void _ExitTree()
+    {
+        if (_world is not null) _world.ReducedTransitionRequested -= OnReducedTransition;
+    }
+
+    private void OnReducedTransition()
+    {
+        var frame = Engine.GetProcessFrames();
+        if (_transitionFrame == frame) return;
+        _transitionFrame = frame;
+        _transition!.CapturePreviousFrame();
+        _ = Crossfade();
+    }
+
+    private async Task Crossfade()
+    {
+        try { await _transition!.Crossfade(.5f); }
+        catch (OperationCanceledException) when (!IsInsideTree()) { }
+        catch (Exception error) { GD.PushError($"[WP-34] reduced-motion crossfade failed: {error}"); }
     }
 
     public override void _Process(double delta)
@@ -48,8 +75,10 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
         var world = World;
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Clock, (float)world.Clock);
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.AnimTime, (float)world.AnimTime);
-        RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Season, new Vector4((float)world.SeasonPos,
-            (float)world.SeasonFrom, (float)world.SeasonTo, (float)world.SeasonProgress));
+        var season = (float)world.SeasonPos;
+        RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Season, _motion?.ReduceMotion == true
+            ? new Vector4(season, season, season, 1f)
+            : new Vector4(season, (float)world.SeasonFrom, (float)world.SeasonTo, (float)world.SeasonProgress));
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.SunDir, new Vector3(world.Sun.Dir.X, world.Sun.Dir.Y, world.Sun.Dir.Z));
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.MoonDir, new Vector3(world.Moon.Dir.X, world.Moon.Dir.Y, world.Moon.Dir.Z));
         // Facing the viewer gives the authored full moon; phase does not flash through a calendar during a season change.

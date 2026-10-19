@@ -44,7 +44,7 @@ public sealed class QualityState
         return new(frozen, Array.AsReadOnly(deltas), heaviest, 0, 0, []);
     }
 
-    public QualityChange Commit(QualityProfile next, ApplyOrigin origin, bool veiled)
+    public QualityChange Commit(QualityProfile next, ApplyOrigin origin, bool loading)
     {
         var plan = Plan(next);
         if (plan.Rejected.Count != 0) throw new ArgumentException("Cannot commit invalid quality values.", nameof(next));
@@ -68,12 +68,12 @@ public sealed class QualityState
         if (origin == ApplyOrigin.Startup) mask = (1UL << QualityCatalog.Count) - 1;
         if (mask != 0) _version++;
         Effective = MakeView();
-        return new(_version, mask, origin, veiled);
+        return new(_version, mask, origin, loading);
     }
 
     public Snapshot Capture() => new(Requested, _basePreset, (float[])_values.Clone());
 
-    public QualityChange Restore(Snapshot snapshot, ApplyOrigin origin, bool veiled)
+    public QualityChange Restore(Snapshot snapshot, ApplyOrigin origin, bool loading)
     {
         Requested = snapshot.Profile;
         _basePreset = snapshot.BasePreset;
@@ -81,7 +81,7 @@ public sealed class QualityState
         _version++;
         Effective = MakeView();
         // A consumer may have thrown after partially applying; replay every setting to restore it.
-        return new(_version, (1UL << QualityCatalog.Count) - 1, origin, veiled);
+        return new(_version, (1UL << QualityCatalog.Count) - 1, origin, loading);
     }
 
     private QualityView MakeView()

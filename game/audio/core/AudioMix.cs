@@ -15,10 +15,7 @@ public sealed class AudioMix
     private readonly Ramp _audible = new();
     private readonly Ramp _background = new(1);
     private readonly Ramp _route = new(1);
-    private VeilMixPhase _veilPhase;
-    private VeilReason _veilReason;
-    private float _veilOpacity;
-    private bool _hasVeilSample, _veilDucked, _mapUnloading;
+    private bool _loading, _mapUnloading;
 
     public AudioMix(AudioSettings settings) => SetSettings(settings, true);
 
@@ -54,7 +51,7 @@ public sealed class AudioMix
     private static int DuckIndex(DuckReason reason) => reason switch
     {
         DuckReason.Boot => 0,
-        DuckReason.Veil => 1,
+        DuckReason.Loading => 1,
         DuckReason.PageOpen => 2,
         DuckReason.MapTravel => 3,
         _ => throw new ArgumentOutOfRangeException(nameof(reason))
@@ -110,42 +107,17 @@ public sealed class AudioMix
         Duck(DuckReason.MapTravel, -40f, 0f, 2.5f);
     }
 
-    public void UpdateVeil(float opacity, VeilReason reason)
+    public void UpdateLoading(bool active)
     {
-        if (!float.IsFinite(opacity) || opacity is < 0f or > 1f) throw new ArgumentOutOfRangeException(nameof(opacity));
-        var db = reason switch
-        {
-            VeilReason.Boot => 0f,
-            VeilReason.Transit or VeilReason.Teleport => -8f,
-            VeilReason.Season or VeilReason.Quality or VeilReason.Respawn => -6f,
-            VeilReason.MapTravel => -40f,
-            _ => throw new ArgumentOutOfRangeException(nameof(reason))
-        };
-        var sameTransition = _hasVeilSample && reason == _veilReason;
-        // IVeilState exposes opacity rather than a phase. Latch its falling edge so
-        // held/quantized reveal frames do not reapply the cover duck or restart the fade.
-        var phase = opacity <= .001f ? VeilMixPhase.Clear
-            : sameTransition && opacity < _veilOpacity ? VeilMixPhase.Revealing
-            : sameTransition && opacity == _veilOpacity && _veilPhase == VeilMixPhase.Revealing ? VeilMixPhase.Revealing
-            : opacity >= .999f ? VeilMixPhase.Holding
-            : VeilMixPhase.Covering;
-        if (phase is VeilMixPhase.Covering or VeilMixPhase.Holding)
-        {
-            if (!_veilDucked || !sameTransition)
-                Duck(DuckReason.Veil, db, .5f, reason == VeilReason.MapTravel ? 2.5f : .8f);
-            _veilDucked = true;
-        }
+        if (active == _loading) return;
+        _loading = active;
+        if (active) Duck(DuckReason.Loading, -8f, .5f, .8f);
         else
         {
-            if (_veilDucked) ReleaseDuck(DuckReason.Veil);
+            ReleaseDuck(DuckReason.Loading);
             if (_mapUnloading) ReleaseDuck(DuckReason.MapTravel);
-            _veilDucked = false;
             _mapUnloading = false;
         }
-        _veilPhase = phase;
-        _veilOpacity = opacity;
-        _veilReason = reason;
-        _hasVeilSample = true;
     }
 
     public void ResetWorldAutomation()
@@ -179,7 +151,6 @@ public sealed class AudioMix
     public static float FromDb(float db) => db <= SilenceDb ? 0f : MathF.Pow(10f, db / 20f);
     public static float ToDb(float gain) => gain <= .0001f ? SilenceDb : Math.Max(SilenceDb, 20f * MathF.Log10(gain));
 
-    private enum VeilMixPhase : byte { Clear, Covering, Holding, Revealing }
 
     private sealed class Ramp(float initial = 0f)
     {

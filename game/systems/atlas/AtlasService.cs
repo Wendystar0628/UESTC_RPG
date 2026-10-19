@@ -195,6 +195,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     public ITransitHandle? Travel(MarkerId id, TravelStyle style)
     {
         if (!CanTravel(id, style, out _)) return null;
+        style = TravelStyle.Teleport;
         var spec = Find(id)!.Teleport!;
         // A walking observer cannot land on a viewpoint without a standing pose: change to the fly camera first.
         if (observer.Mode == ViewMode.Walk && spec.Stand is null)
@@ -219,7 +220,7 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
             },
         };
         _traceTravel?.Invoke("start", id, style, null, observer.Mode);
-        // Teleport retains the map's input exclusion through the veil. Fly must remain interruptible.
+        // The loading screen retains input exclusion until the destination is ready.
         var input = style switch
         {
             TravelStyle.Teleport => camera.LockInput(InputLockReason.Atlas),

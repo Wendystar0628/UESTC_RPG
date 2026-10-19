@@ -28,7 +28,6 @@ internal struct PostFrame
     public Vector4 Medium;
     public Color MediumColor;     // linear
     public float EdgeFog;
-    public float Veil;
     public Vector3 SunDir;        // sun_dir: real sun direction (sky side of the fog colour)
     public Vector3 MoonDir;       // moon_dir
     // Finish pass and LUT (versions tiltshift_comp and lut of post_outline.glsl)

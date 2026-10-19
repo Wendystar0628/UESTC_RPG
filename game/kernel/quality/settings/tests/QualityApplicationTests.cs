@@ -14,22 +14,22 @@ public sealed partial class QualityApplicationTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public async Task QualityTimeoutRestoresStateReleasesOwnVeilAndDoesNotSave() =>
+    public async Task QualityTimeoutRestoresStateReleasesOwnLoadingAndDoesNotSave() =>
         await VerifyFailedApplication("timeout", failDispatch: false, takeover: false, failRollback: false);
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public async Task QualityDispatchFailureRestoresStateAndReleasesOwnVeil() =>
+    public async Task QualityDispatchFailureRestoresStateAndReleasesOwnLoading() =>
         await VerifyFailedApplication("dispatch", failDispatch: true, takeover: false, failRollback: false);
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public async Task QualityFailureNeverRevealsAnotherFlowsVeil() =>
+    public async Task QualityFailureNeverRevealsAnotherFlowsLoading() =>
         await VerifyFailedApplication("takeover", failDispatch: false, takeover: true, failRollback: false);
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public async Task RollbackConsumerFailureStillReleasesOwnVeilAndReportsBothErrors() =>
+    public async Task RollbackConsumerFailureStillReleasesOwnLoadingAndReportsBothErrors() =>
         await VerifyFailedApplication("rollback", failDispatch: true, takeover: false, failRollback: true);
 
     private static async Task VerifyFailedApplication(string name, bool failDispatch, bool takeover, bool failRollback)
@@ -52,7 +52,7 @@ public sealed partial class QualityApplicationTests
         var changes = new List<QualityChange>();
         service.Changed += changes.Add;
         var overrides = beforeProfile.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
-        overrides[QualityKnob.AntiAliasing] = 1; // UnderVeil
+        overrides[QualityKnob.AntiAliasing] = 1; // UnderLoading
         overrides[QualityKnob.ParticleDensity] = .5f;
         var pending = service.Apply(new(beforeProfile.Preset, overrides), ApplyOrigin.User);
         service.Tick(.25);
@@ -73,11 +73,11 @@ public sealed partial class QualityApplicationTests
         if (store.SaveCount != 0 || store.Hash != beforeHash) throw new InvalidOperationException("Failed application reached persistent storage.");
         if (takeover)
         {
-            if (runtime.RevealCount != 1 || !runtime.OtherVeilActive || runtime.QualityVeilActive)
-                throw new InvalidOperationException("Recovery revealed another flow's veil.");
+            if (runtime.HideCount != 1 || !runtime.OtherLoadingActive || runtime.QualityLoadingActive)
+                throw new InvalidOperationException("Recovery hid another flow's screen.");
         }
-        else if (runtime.RevealCount != 1 || runtime.QualityVeilActive)
-            throw new InvalidOperationException("Recovery left its quality veil covering the player.");
+        else if (runtime.HideCount != 1 || runtime.QualityLoadingActive)
+            throw new InvalidOperationException("Recovery left its quality screen covering the player.");
     }
 
     [TestCase]
@@ -117,7 +117,7 @@ public sealed partial class QualityApplicationTests
     [TestCategory(TestReason.Contract)]
     public async Task UnbindingCancelsApplicationWaitsAndDiscardsLateResults()
     {
-        foreach (var boundary in new[] { "cover", "frame", "destination", "reveal", "save" })
+        foreach (var boundary in new[] { "loading", "frame", "destination", "hide", "save" })
         {
             var (service, runtime, store) = await CliSession($"close-{boundary}");
             using var cleanup = store;
@@ -126,7 +126,7 @@ public sealed partial class QualityApplicationTests
             runtime.HoldAt = boundary;
             if (boundary == "save") store.HeldWrite = new();
             var next = service.Requested.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
-            // The CLI's FSR1 profile already uses FXAA; changing render scale still requires the veil.
+            // The CLI's FSR1 profile already uses FXAA; changing render scale still requires the screen.
             next[QualityKnob.RenderScale] = 1;
             next[QualityKnob.ParticleDensity] = .5f;
             var pending = service.Apply(new(service.Requested.Preset, next), ApplyOrigin.User);
@@ -137,13 +137,13 @@ public sealed partial class QualityApplicationTests
             var queued = await service.Apply(QualityCatalog.Profile(QualityPreset.Balanced), ApplyOrigin.User);
             if (queued.Status != ApplyStatus.Deferred) throw new InvalidOperationException("Active application did not defer the next request.");
             var dispatches = runtime.DispatchCount;
-            var reveals = runtime.RevealCount;
+            var hides = runtime.HideCount;
             var saves = store.SaveCount;
             service.Unbind(runtime);
             await AssertThrown(pending.WaitAsync(TimeSpan.FromSeconds(5))).ContinueWith(result => { AssertThat(result.Result).OverrideFailureMessage("Runtime shutdown did not cancel its request.").IsNotNull(); result.Result!.IsInstanceOf<OperationCanceledException>(); });
             service.Tick(20);
-            if (runtime.DispatchCount != dispatches || runtime.RevealCount != reveals || store.SaveCount != saves || changes.Count != 0)
-                throw new InvalidOperationException($"Closing at {boundary} allowed a late publish, rollback, reveal or save.");
+            if (runtime.DispatchCount != dispatches || runtime.HideCount != hides || store.SaveCount != saves || changes.Count != 0)
+                throw new InvalidOperationException($"Closing at {boundary} allowed a late publish, rollback, hide or save.");
             // Rebinding must not revive either request from the old runtime.
             var replacement = new FakeRuntime();
             service.Bind(replacement);
@@ -158,7 +158,7 @@ public sealed partial class QualityApplicationTests
             service.Unbind(runtime); // A stale node's exit cannot detach the replacement.
             service.Tick(0);
             if (replacement.DispatchCount != afterRebind || runtime.DispatchCount != dispatches ||
-                runtime.RevealCount != reveals || store.SaveCount != saves || changes.Count != notificationsAfterRebind)
+                runtime.HideCount != hides || store.SaveCount != saves || changes.Count != notificationsAfterRebind)
                 throw new InvalidOperationException("Old completion or queued request survived runtime replacement.");
             await ApplyUser(service, new(service.Requested.Preset, new Dictionary<QualityKnob, float> { [QualityKnob.ParticleDensity] = .5f }));
             service.Unbind(replacement);

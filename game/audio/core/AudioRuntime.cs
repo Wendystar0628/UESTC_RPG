@@ -24,7 +24,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
     private AudioVoicePool? _pool;
     private AudioStreamPlayer? _ui;
     private IWorldState? _world;
-    private IVeilState? _veil;
+    private IAppLoadingPresentation? _loading;
     private IAppFlow? _app;
     private IUiSurfaceState? _surfaces;
     private bool _initialized, _enabled, _enteredTree, _audible, _background;
@@ -101,7 +101,7 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
         if (_enteredTree) _ui.Play();
         _world = RuntimeKernel.Get<IWorldState>();
         if (_enteredTree) _world.InstanceChanged += OnWorldInstanceChanged;
-        _veil = RuntimeKernel.Get<IVeilState>();
+        _loading = RuntimeKernel.Get<IAppLoadingPresentation>();
         _app = RuntimeKernel.Get<IAppFlow>();
         _surfaces = RuntimeKernel.Get<IUiSurfaceState>();
         _initialized = true;
@@ -184,15 +184,15 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
             AppState.Quitting => true,
             _ => throw new InvalidOperationException("Unknown application state for audio.")
         };
-        // CompleteBoot follows Reveal; the final readiness phase lets the bed enter during Reveal itself.
-        var audible = _enabled && !quitting && (_audible || (_bootPhases & 4) != 0 && _veil!.Opacity < .999f);
+        // The final readiness phase permits the bed once the loading screen has gone.
+        var audible = _enabled && !quitting && (_audible || (_bootPhases & 4) != 0 && !_loading!.Active);
         if (audible != _audible)
         {
             _audible = audible;
             _mix.SetAudible(audible, audible ? 3f : .3f);
             if (quitting) _store?.Flush();
         }
-        _mix.UpdateVeil(_veil!.Opacity, _veil.Reason);
+        _mix.UpdateLoading(_loading!.Active);
         _mix.UpdatePages(_surfaces!.Open);
         _mix.Step(dt);
         _store?.Step(dt);

@@ -30,13 +30,13 @@ public sealed class QualityCatalog
     {
         _specs =
         [
-            Spec(QualityKnob.DisplayMode, "WP-32", ApplyClass.UnderVeil, KnobKind.Performance, 0, 2, 1, 0),
-            Spec(QualityKnob.WindowSize, "WP-32", ApplyClass.UnderVeil, KnobKind.Performance, 0, WindowSizes.Length - 1, 1, 0),
+            Spec(QualityKnob.DisplayMode, "WP-32", ApplyClass.UnderLoading, KnobKind.Performance, 0, 2, 1, 0),
+            Spec(QualityKnob.WindowSize, "WP-32", ApplyClass.UnderLoading, KnobKind.Performance, 0, WindowSizes.Length - 1, 1, 0),
             Spec(QualityKnob.VSync, "WP-32", ApplyClass.Immediate, KnobKind.Performance, 0, 1, 1, 0),
             Spec(QualityKnob.FrameCap, "WP-32", ApplyClass.Immediate, KnobKind.Performance, 0, 4, 1, 0),
-            Spec(QualityKnob.RenderScale, "WP-32", ApplyClass.UnderVeil, KnobKind.Performance,
+            Spec(QualityKnob.RenderScale, "WP-32", ApplyClass.UnderLoading, KnobKind.Performance,
                 RenderScales[0], RenderScales[^1], 0, RenderScales[0], values: RenderScales),
-            Spec(QualityKnob.AntiAliasing, "WP-05", ApplyClass.UnderVeil, KnobKind.Performance, 0, 1, 1, 1, false),
+            Spec(QualityKnob.AntiAliasing, "WP-05", ApplyClass.UnderLoading, KnobKind.Performance, 0, 1, 1, 1, false),
             Spec(QualityKnob.ShadowQuality, "WP-03", ApplyClass.Immediate, KnobKind.Floor, 0, 2, 1, 0),
             Spec(QualityKnob.ShadowDistance, "WP-03", ApplyClass.Immediate, KnobKind.Performance,
                 ShadowDistances[0], ShadowDistances[^1], 0, ShadowDistances[0], values: ShadowDistances),
