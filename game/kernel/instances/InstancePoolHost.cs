@@ -24,6 +24,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     private bool _mounted;
     private bool _exiting;
     private long _nextNodeId;
+    private long? _preparationRevision;
 
     public InstancePoolHost() { }
     public InstancePoolHost(IToonMaterialProvider materials, IShaderMaterialSource shaderSource, PaletteCatalog catalog)
@@ -44,9 +45,27 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         _exiting = false;
     }
 
-    public override void _Process(double delta)
+    public override void _Process(double delta) => RefreshPreparation();
+
+    internal void RefreshPreparation(InstancePool? published = null)
     {
-        foreach (var pool in _orderedPools) pool.RefreshPreparation();
+        if (_materials is null || (_orderedPools.Count == 0 && published is null)) return;
+        try
+        {
+            // Capture also prunes released materials; only a changed preparation batch needs a pool traversal.
+            var revision = _materials.CapturePendingWarm().Revision;
+            if (_preparationRevision != revision)
+                foreach (var pool in _orderedPools) pool.RefreshPreparation(revision);
+            published?.RefreshPreparation(revision);
+            _preparationRevision = revision;
+        }
+        catch
+        {
+            _preparationRevision = null;
+            foreach (var pool in _orderedPools) pool.InvalidatePreparation();
+            published?.InvalidatePreparation();
+            throw;
+        }
     }
 
     public override void _ExitTree()
@@ -222,7 +241,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             if (map is { } mapId) instance.SetMeta("map_id", mapId.Value);
             var pool = new InstancePool(this, id, owner, capacity, triangles, shadows, map,
                 mesh.GetSurfaceCount(), instance, multiMesh, mesh, ready);
-            pool.RefreshPreparation();
+            RefreshPreparation(pool);
             AddChild(instance);
             if (instance.GetParent() != this) throw new InvalidOperationException("Godot rejected the pool node.");
             _pools.Add((owner, id), pool);

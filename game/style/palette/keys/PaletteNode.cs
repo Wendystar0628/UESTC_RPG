@@ -1,5 +1,6 @@
 using System.Globalization;
 using Campus.Contracts;
+using Campus.Contracts.Maps;
 using Campus.Kernel.Renderer;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
@@ -17,7 +18,7 @@ namespace Campus.Style.Palette.Keys;
 [KernelNode("style.palette", Owner = "WP-37")]
 [KernelService(typeof(IColorScriptFrame), Owner = "WP-37")]
 [KernelService(typeof(IPaletteProbe), Owner = "WP-37")]
-public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
+public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapAware
 {
     private static readonly StringName _shaderGlobalFog = ShaderGlobals.Fog;
     private static readonly StringName _shaderGlobalFogLow = ShaderGlobals.FogLow;
@@ -35,6 +36,10 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
     private long _rev;
     private bool _worldReset = true;
     private double _lastClock = double.NaN, _lastSeason = double.NaN;
+    private float _lastSunAltitude = float.NaN;
+    private WeatherVec _lastWeather;
+    private WorldFrame _frame;
+    private int _seasonalPending;
     private int _frames;
     private PaletteInspector? _inspector;
 
@@ -52,7 +57,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         _composer = new PaletteComposer(_script, _catalog);
         foreach (var warning in _composer.Warnings) GD.PushWarning(warning);
         // Default state until the world is read: autumn 17:30, clear (SYS-TIME).
-        var first = _script.EvaluateWorld(17.5, (double)Season.Autumn, null, default);
+        var first = _frame = _script.EvaluateWorld(17.5, (double)Season.Autumn, null, default);
         _composer.ComposeCurrent(first);
         _composer.StepSeasonal(first, full: true);
         _image = Image.CreateFromData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
@@ -100,26 +105,51 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe
         }
         var clock = _world.Clock;
         var season = _world.SeasonPos;
+        var sunAltitude = _world.Sun.AltDeg;
         var weather = _world.WeatherNow;
-        var w = _script.EvaluateWorld(clock, season, _world.Sun.AltDeg, weather);
-        _composer.ComposeCurrent(w);
-        var jump = double.IsNaN(_lastClock) || Math.Abs(Oklab.HueDiff(_lastClock * 15.0, clock * 15.0)) > 7.5;   // > 0.5 h
-        var full = _worldReset || season != _lastSeason || jump;
-        _composer.StepSeasonal(w, full);
-        _image.SetData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
-        _texture.Update(_image);
-        WriteGlobals(w);
-        var snapshot = _composer.Snapshot(w, _rev);
-        if (snapshot != Current || _worldReset) snapshot = snapshot with { Rev = ++_rev };
-        Current = snapshot;
-        _worldReset = false;
-        _lastClock = clock;
-        _lastSeason = season;
-        _inspector?.Refresh(w, clock, season);
-        if (_inspector is not null && ++_frames == 30) PrintParity(w, clock, season);
+        // EvaluateWorld's weather corrections read these five fields; other weather channels do not colour the palette.
+        var changed = _worldReset || clock != _lastClock || season != _lastSeason || sunAltitude != _lastSunAltitude ||
+            weather.Cloud != _lastWeather.Cloud || weather.Overcast != _lastWeather.Overcast ||
+            weather.Precip != _lastWeather.Precip || weather.PrecipKind != _lastWeather.PrecipKind || weather.Wet != _lastWeather.Wet;
+        var upload = changed;
+        if (changed)
+        {
+            var w = _frame = _script.EvaluateWorld(clock, season, sunAltitude, weather);
+            _composer.ComposeCurrent(w);
+            var jump = double.IsNaN(_lastClock) || Math.Abs(Oklab.HueDiff(_lastClock * 15.0, clock * 15.0)) > 7.5;   // > 0.5 h
+            var full = _worldReset || season != _lastSeason || jump;
+            _composer.StepSeasonal(w, full);
+            _seasonalPending = full ? 0 : Math.Max(0, _composer.SeasonalCount - 1);
+            WriteGlobals(w);
+            var snapshot = _composer.Snapshot(w, _rev);
+            if (snapshot != Current || _worldReset) snapshot = snapshot with { Rev = ++_rev };
+            Current = snapshot;
+            _worldReset = false;
+            _lastClock = clock;
+            _lastSeason = season;
+            _lastSunAltitude = sunAltitude;
+            _lastWeather = weather;
+            _inspector?.Refresh(w, clock, season);
+        }
+        else if (_seasonalPending > 0)
+        {
+            // Finish the existing one-family-per-frame sweep after the last continuous input change.
+            _composer.StepSeasonal(_frame, full: false);
+            _seasonalPending--;
+            upload = true;
+        }
+        if (upload)
+        {
+            _image.SetData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
+            _texture.Update(_image);
+        }
+        if (_inspector is not null && ++_frames == 30) PrintParity(_frame, clock, season);
     }
 
     private void OnWorldInstanceChanged(long _) => _worldReset = true;
+
+    public void OnMapUnloading(MapId from) => _worldReset = true;
+    public void OnMapLoaded(IMapContext context) => _worldReset = true;
 
     public override void _ExitTree()
     {

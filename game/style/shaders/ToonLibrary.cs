@@ -388,7 +388,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
         {
             if (_disposed) return;
             _disposed = true;
-            _issued = null;
+            Advance();
             owned = _byClass.Values.Select(entry => entry.Material).Distinct<Material>(ReferenceEqualityComparer.Instance).ToArray();
             _byClass.Clear();
             _states.Clear();

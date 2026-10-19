@@ -20,6 +20,7 @@ internal sealed class InstancePool(
     private ArrayMesh? _mesh = mesh;
     private Func<bool>? _preparation = preparation;
     private bool _materialReady = preparation is null;
+    private long? _preparationRevision;
     private bool _freed;
     private bool _hasBuffer;
     private int _visibleCount;
@@ -56,27 +57,28 @@ internal sealed class InstancePool(
             if (value < 0 || value > Capacity) throw new ArgumentOutOfRangeException(nameof(value));
             if (value > 0 && !_hasBuffer)
                 throw new InvalidOperationException("Write the complete instance buffer before showing the pool.");
-            RefreshPreparation();
+            host.RefreshPreparation(this);
             _multiMesh!.VisibleInstanceCount = value;
             _visibleCount = value;
         }
     }
 
-    internal void RefreshPreparation()
+    internal void RefreshPreparation(long revision)
     {
-        if (_freed || _preparation is null) return;
-        bool ready;
-        try { ready = _preparation(); }
-        catch
-        {
-            // A provider failure must not leave a previously warmed draw visible.
-            _instance!.Visible = false;
-            _materialReady = false;
-            throw;
-        }
+        if (_freed || _preparation is null || _preparationRevision == revision) return;
+        var ready = _preparation();
+        _preparationRevision = revision;
         if (ready == _materialReady) return;
         _materialReady = ready;
         _instance!.Visible = ready;
+    }
+
+    internal void InvalidatePreparation()
+    {
+        if (_freed || _preparation is null) return;
+        _preparationRevision = null;
+        _materialReady = false;
+        _instance!.Visible = false;
     }
 
     public void SetParameter(StringName name, Vector4 value)

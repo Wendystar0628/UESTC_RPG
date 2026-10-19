@@ -117,15 +117,56 @@ public sealed class GeometryInstancePoolRuntimeTests
         fixture.Provider.Ready = true; // Simulates the provider's issued evidence; this test does not certify a warm draw.
         fixture.Host._Process(0);
         AssertThat(node.Visible && fixture.Host.GetStatistics().Single().MaterialReady).OverrideFailureMessage("Completed provider readiness did not reveal the pool.").IsTrue();
+        var readyQueries = fixture.Provider.ReadinessQueries;
+        fixture.Host._Process(0);
         pool.WriteBuffer(submitted);
         pool.VisibleCount = 2;
+        AssertThat(fixture.Provider.ReadinessQueries == readyQueries).OverrideFailureMessage("Unchanged preparation queried every pool material again.").IsTrue();
         AssertThat(mesh.GetInstanceId() == meshIdentity && ownedShaderMaterial.GetInstanceId() == materialIdentity && fixture.Source.Created.Count == 1).OverrideFailureMessage("An instance-buffer update rebuilt the prototype or material.").IsTrue();
         var statistics = fixture.Host.GetStatistics().Single();
         AssertThat(statistics.SurfaceCount == 2 && statistics.MeshTriangles == 4 && statistics.VisibleTriangles == 8 &&
             statistics.InstanceBufferBytes == pool.Capacity * 64L).OverrideFailureMessage("Multi-surface allocation statistics are wrong.").IsTrue();
         fixture.Provider.Ready = false;
-        fixture.Host._Process(0);
+        pool.VisibleCount = 2;
         AssertThat(!node.Visible && fixture.Host.GetStatistics().Single().ReadyVisibleTriangles == 0).OverrideFailureMessage("Invalidated readiness left a pool visible.").IsTrue();
+
+        fixture.Provider.Ready = true;
+        fixture.Host._Process(0);
+        var shared = fixture.Host.Mount(Spec("shared-ready", prototype));
+        var sharedNode = FindPool(fixture.Host, "shared-ready");
+        shared.WriteBuffer(InstanceData(shared.Capacity));
+        shared.VisibleCount = 1;
+        AssertThat(sharedNode.Visible && fixture.Host.GetStatistics().All(stat => stat.MaterialReady)).OverrideFailureMessage("First publication at an already checked revision skipped its real material check.").IsTrue();
+        fixture.Provider.FirstMaterial.Dispose();
+        fixture.Host._Process(0);
+        AssertThat(!node.Visible && !sharedNode.Visible && fixture.Host.GetStatistics().All(stat => !stat.MaterialReady)).OverrideFailureMessage("Released material retained cached readiness in a sharing pool.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public async Task ProviderDisposalAdvancesRevisionWithoutUnlockingUndrawnPools()
+    {
+        using var textures = new GlobalDataTextureRegistry();
+        var catalog = Catalog();
+        using var library = new ToonLibrary(new Palettes(catalog), new ShaderMaterialSource(), textures);
+        using (var fixture = Fixture.Create(catalog, library))
+        {
+            var prototype = Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec)));
+            var pool = fixture.Host.Mount(Spec("provider-disposal", prototype));
+            var node = FindPool(fixture.Host, "provider-disposal");
+            pool.WriteBuffer(InstanceData(pool.Capacity));
+            pool.VisibleCount = 1;
+            var pending = library.CapturePendingWarm();
+            AssertThat(pending.Materials.Count > 0 && !node.Visible && !fixture.Host.GetStatistics().Single().MaterialReady).OverrideFailureMessage("A revision alone granted readiness without real warm draws.").IsTrue();
+            library.Dispose();
+            fixture.Host._Process(0);
+            pool.VisibleCount = 2;
+            AssertThat(library.CapturePendingWarm().Revision > pending.Revision && !node.Visible &&
+                !fixture.Host.GetStatistics().Single().MaterialReady).OverrideFailureMessage("Provider disposal failed to invalidate its preparation revision and keep the pool hidden.").IsTrue();
+        }
+        await textures.ShutdownAsync();
     }
 
     [TestCase]
@@ -433,7 +474,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         public RecordingSource Source { get; } = new();
         public Node3D Parent => _parent!;
         public InstancePoolHost Host => _host!;
-        public static Fixture Create(PaletteCatalog? catalog = null)
+        public static Fixture Create(PaletteCatalog? catalog = null, IToonMaterialProvider? materials = null)
         {
             var fixture = new Fixture();
             try
@@ -444,7 +485,7 @@ public sealed class GeometryInstancePoolRuntimeTests
                 fixture.Provider = new(fixture._first, fixture._second);
                 fixture._parent = new Node3D();
                 tree.Root.AddChild(fixture._parent);
-                fixture._host = new InstancePoolHost(fixture.Provider, fixture.Source, catalog ?? Catalog());
+                fixture._host = new InstancePoolHost(materials ?? fixture.Provider, fixture.Source, catalog ?? Catalog());
                 fixture._parent.AddChild(fixture._host);
                 return fixture;
             }
@@ -456,6 +497,11 @@ public sealed class GeometryInstancePoolRuntimeTests
             _first?.Dispose();
             _second?.Dispose();
         }
+    }
+
+    private sealed class Palettes(PaletteCatalog catalog) : IPaletteCatalogSource
+    {
+        public PaletteCatalog Catalog { get; } = catalog;
     }
 
     private sealed class RecordingSource : IShaderMaterialSource
@@ -474,7 +520,15 @@ public sealed class GeometryInstancePoolRuntimeTests
         public ToonSpec SecondSpec { get; } = new(new("fixture.second.lit"), new("fixture.second.shade"));
         public ShaderMaterial FirstMaterial => first;
         public ShaderMaterial SecondMaterial => second;
-        public bool Ready { get; set; }
+        private bool _ready;
+        private long _revision = 1;
+        private ToonWarmBatch? _batch;
+        public int ReadinessQueries { get; private set; }
+        public bool Ready
+        {
+            get => _ready;
+            set { if (_ready != value) { _ready = value; _revision++; } }
+        }
         public int ThrowAtLayout { get; set; } = -1;
         public List<(Material Material, WarmDrawLayout Layout)> Layouts { get; } = [];
         private readonly HashSet<Material> _registered = [];
@@ -484,17 +538,24 @@ public sealed class GeometryInstancePoolRuntimeTests
             _registered.Add(material);
             return material;
         }
-        public bool IsReady(ToonSpec spec) => Ready;
-        public bool IsReady(ShaderId shader, Material material) => Ready && _registered.Contains(material);
+        public bool IsReady(ToonSpec spec) { ReadinessQueries++; return Ready; }
+        public bool IsReady(ShaderId shader, Material material) { ReadinessQueries++; return Ready && _registered.Contains(material); }
         public void Track(ShaderId shader, Material material) => _registered.Add(material);
         public void TrackLayout(Material material, WarmDrawLayout layout)
         {
             if (!_registered.Contains(material)) throw new InvalidOperationException("Unregistered test material.");
+            if (Layouts.Contains((material, layout))) return;
             if (Layouts.Count + 1 == ThrowAtLayout) throw new InvalidOperationException("Injected second-surface preparation failure.");
             Layouts.Add((material, layout));
-            Ready = false;
+            _ready = false;
+            _revision++;
         }
-        public ToonWarmBatch CapturePendingWarm() => throw new NotSupportedException("This recording double does not certify warm evidence.");
+        public ToonWarmBatch CapturePendingWarm()
+        {
+            if (_registered.RemoveWhere(material => !GodotObject.IsInstanceValid(material)) > 0) _revision++;
+            // This double exposes state changes only; CompleteWarm still rejects fabricated draw evidence.
+            return _batch is { } batch && batch.Revision == _revision ? batch : _batch = new(_revision, []);
+        }
         public bool CompleteWarm(ToonWarmBatch batch) => throw new NotSupportedException("Use the real WP-04 warm-draw integration for evidence.");
     }
 
