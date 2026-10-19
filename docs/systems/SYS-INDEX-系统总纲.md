@@ -5,6 +5,7 @@ category: systems
 summary: 系统域总纲：运行时各系统怎么工作的通用原则和文档树
 keywords: [系统, 系统总纲, 文档树, SYS, 观察模式, 行走, 时间与季节, 天气, 存档, 设置文件, 多地图, 转场, 过渡不硬切, 音频, 画面设置, 开始页]
 owners: []
+paths: ["docs/systems/**"]
 contributors: []
 depends: [CORE-INDEX]
 related: []

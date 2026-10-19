@@ -5,6 +5,7 @@ category: registry
 summary: 登记域总纲：按编号或按词查的登记：决策与术语
 keywords: [登记, 登记总纲, 文档树, REG, 决策, 术语表, D 编号]
 owners: []
+paths: ["docs/registry/**"]
 contributors: []
 depends: [CORE-INDEX]
 related: []

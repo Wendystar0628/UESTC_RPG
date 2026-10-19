@@ -6,6 +6,7 @@ parent: WF-INDEX
 summary: 一个包从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
 keywords: [开发流程, 派工, 施工单, 按工作量拆单, 子单 1 小时, 回报, 评审, 防打架, 邻居, 可调参数, D-184, D-211, 评审通用结论]
 owners: [WP-00]
+paths: [".collab/tasks/**"]
 contributors: []
 depends: [WF-ROLE, PLAN-WP, ENG-ARCH]
 related: [WF-MODEL, WF-COMMS, WF-STATUS, WF-BUILD, WF-RULE]

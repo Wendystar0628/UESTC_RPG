@@ -5,6 +5,7 @@ category: workflow
 summary: 协作域总纲：两个指挥和子代理怎么干活：入口、守则、施工边界、流程、通信、角色、模型与队列
 keywords: [协作, 协作总纲, 文档树, WF, 全员守则, 施工队列, 子代理, 主会话]
 owners: []
+paths: ["docs/workflow/**"]
 contributors: []
 depends: [CORE-INDEX]
 related: []

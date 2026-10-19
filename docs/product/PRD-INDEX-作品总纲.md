@@ -5,6 +5,7 @@ category: product
 summary: 作品域总纲：作品是什么、做什么不做什么、观光规则集的硬约束；本域通用原则与文档树
 keywords: [作品, 作品总纲, 文档树, PRD]
 owners: []
+paths: ["docs/product/**"]
 contributors: []
 depends: [CORE-INDEX]
 related: []

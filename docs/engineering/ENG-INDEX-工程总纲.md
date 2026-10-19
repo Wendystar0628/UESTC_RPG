@@ -5,6 +5,7 @@ category: engineering
 summary: 工程域总纲：架构、性能、验收、发布、开发工具（内容预览）与扩展路线的通用原则和文档树
 keywords: [工程, 工程总纲, 文档树, ENG, 工程架构, 性能预算, 性能工程, 硬规则, 验收, 门禁, 发布, 内容预览, 扩展路线, 主线之后]
 owners: []
+paths: ["docs/engineering/**"]
 contributors: []
 depends: [CORE-INDEX]
 related: []

@@ -150,7 +150,9 @@
   },
   {
    "docs": [
-    "WF-COMMS"
+    "WF-COMMS",
+    "WF-FLOW",
+    "WF-MODEL"
    ],
    "glob": ".collab/tasks/**"
   },
@@ -165,6 +167,84 @@
     "STD-DOC"
    ],
    "glob": "docs/**"
+  },
+  {
+   "docs": [
+    "CORE-INDEX"
+   ],
+   "glob": "docs/README.md"
+  },
+  {
+   "docs": [
+    "ART-INDEX"
+   ],
+   "glob": "docs/art/**"
+  },
+  {
+   "docs": [
+    "ENG-INDEX"
+   ],
+   "glob": "docs/engineering/**"
+  },
+  {
+   "docs": [
+    "MAP-QSH-INDEX"
+   ],
+   "glob": "docs/maps/qingshuihe/**"
+  },
+  {
+   "docs": [
+    "PLAN-INDEX"
+   ],
+   "glob": "docs/plan/**"
+  },
+  {
+   "docs": [
+    "PRD-INDEX"
+   ],
+   "glob": "docs/product/**"
+  },
+  {
+   "docs": [
+    "REG-INDEX"
+   ],
+   "glob": "docs/registry/**"
+  },
+  {
+   "docs": [
+    "STD-INDEX"
+   ],
+   "glob": "docs/standards/**"
+  },
+  {
+   "docs": [
+    "SYS-INDEX"
+   ],
+   "glob": "docs/systems/**"
+  },
+  {
+   "docs": [
+    "UI-INDEX"
+   ],
+   "glob": "docs/ui/**"
+  },
+  {
+   "docs": [
+    "WF-INDEX"
+   ],
+   "glob": "docs/workflow/**"
+  },
+  {
+   "docs": [
+    "WF-ENTRY"
+   ],
+   "glob": "docs/workflow/WF-ENTRY-*.md"
+  },
+  {
+   "docs": [
+    "WLD-INDEX"
+   ],
+   "glob": "docs/world/**"
   },
   {
    "docs": [

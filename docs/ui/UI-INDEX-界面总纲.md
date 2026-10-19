@@ -5,6 +5,7 @@ category: ui
 summary: 界面域总纲：界面有什么、怎么操作、长什么样；本域通用原则与文档树
 keywords: [界面, 界面总纲, 文档树, UI]
 owners: []
+paths: ["docs/ui/**"]
 contributors: []
 depends: [CORE-INDEX]
 related: []

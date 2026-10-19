@@ -5,6 +5,7 @@ category: core
 summary: 全项目唯一的顶层，只放每次开发都要掌握的全局：核心准则（这是什么、怎么干活、怎么写文档、怎么写代码、做成什么样）与信息地图（信息在哪、仓库目录、只列标题的文档地图）；具体内容一律在下层按需读
 keywords: [总纲, 核心准则, 信息地图, 文档地图, 仓库目录, 信息在哪, 怎么查文档, 按需读, 钩子注入, 电光年华, 实现优先, 不过度工程化, 测试最小, 改设计必清旧, 查全局, 直接改主线, 一份权威, 写给大模型, 文档精简, 失败就报错]
 owners: []
+paths: ["docs/README.md"]
 contributors: []
 depends: []
 related: [WF-ENTRY, WF-RULE, STD-DOC, ENG-ARCH, STD-CODE, PRD-SCOPE, PRD-INVARIANTS, REG-DECISIONS, STD-CONVENTIONS]

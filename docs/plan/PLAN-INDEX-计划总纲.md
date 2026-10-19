@@ -5,6 +5,7 @@ category: plan
 summary: 计划域总纲：工作包的划分、阶段与主线闸口的通用原则和文档树
 keywords: [计划, 计划总纲, 文档树, PLAN, 工作包, 阶段, 主线闸口, 主线版, 主线之后, 包表]
 owners: []
+paths: ["docs/plan/**"]
 contributors: []
 depends: [CORE-INDEX]
 related: []

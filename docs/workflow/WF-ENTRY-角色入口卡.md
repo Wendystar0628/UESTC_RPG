@@ -6,6 +6,7 @@ parent: WF-INDEX
 summary: 每个角色的入口卡：身份与回报对象、开工动作、本角色独有的必守、做某事前读哪一节；由钩子按节标题注入
 keywords: [角色入口卡, 入口卡, 主会话, 子代理, Codex 主线, 重置后先读, 开工动作, 收尾, 做 X 前读 Y, 钩子注入, SessionStart, SubagentStart, 引擎路径, UESTC_GODOT]
 owners: [WP-00]
+paths: ["docs/workflow/WF-ENTRY-*.md"]
 contributors: []
 depends: [CORE-INDEX, WF-RULE]
 related: [WF-ROLE, WF-MODEL, WF-COMMS, WF-FLOW, WF-BUILD, WF-STATUS]

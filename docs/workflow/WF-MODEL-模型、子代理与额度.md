@@ -6,6 +6,7 @@ parent: WF-INDEX
 summary: 按七问与难度选施工模型和推理强度，怎么开子代理、写简报，额度、并发与冻结，两家模型的易犯行为
 keywords: [七问, 选模型, Opus 与 Sonnet 的分界, 机械活, gpt-6-luna 子代理, 推理强度, 升级先找原因, 简单少量的活直接做, 子代理, Agent 工具, spawn_agent, 子代理生命周期, 默认新开, 简报模板, 接续段, 额度, 5 小时窗口, 每周额度, 并发, 额度刹车, get_usage, 临近重置用足, Codex 额度, 额度见底, 冻结, 切换账号, 易犯行为, D-184, D-191, D-226]
 owners: [WP-00]
+paths: [".collab/tasks/**"]
 contributors: []
 depends: [WF-ROLE]
 related: [WF-ENTRY, WF-FLOW, WF-STATUS, WF-RULE, WF-COMMS, PLAN-WP]
