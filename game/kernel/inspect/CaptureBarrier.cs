@@ -25,19 +25,20 @@ public static class CaptureBarrier
         var loading = Services.Get<IAppLoadingPresentation>();
         var world = Services.Get<IWorldState>();
         var weather = Services.Get<IWeatherProcess>();
-        var started = FrameClock.MonotonicMilliseconds;
-        while (true)
+        var content = false;
+        var materialReady = false;
+        var samplesReleased = false;
+        var veilOpacity = float.NaN;
+        var loadingActive = false;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            // Arrival can complete after the last covered draw, before presentation processes the release.
-            // Certify the state submitted to a new draw, then read back only that draw's completed viewport.
-            await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePreDraw);
-            var submittedReady = Ready();
-            await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-            if (Ready() && submittedReady) return;
-            if (FrameClock.MonotonicMilliseconds - started > BootTuning.StalledSeconds * 1000)
-                throw new TimeoutException($"Screenshot presentation stalled; veil={veil.Opacity},loading={loading.Active}; " +
-                    materials.DescribeReadiness());
+            // Arrival can finish on the last covered draw. Query outside rendering, then require a new draw.
+            await FrameAwaiter.ReadyDrawAsync(host, Ready, TimeSpan.FromSeconds(BootTuning.StalledSeconds), cancellationToken);
+        }
+        catch (TimeoutException error)
+        {
+            throw new TimeoutException($"Screenshot presentation stalled; content={content},materialsReady={materialReady}," +
+                $"samplesReleased={samplesReleased},veil={veilOpacity},loading={loadingActive}", error);
         }
 
         bool Ready()
@@ -46,8 +47,13 @@ public static class CaptureBarrier
             if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
             if (rig.Pose != pose) throw new OperationCanceledException("Capture pose was replaced.");
             if (materials.Error is { } error) throw new InvalidOperationException("Capture material warmup failed: " + error);
-            return contentReady() && materials.IsReady && materials.SamplesReleased && veil.Opacity == 0f &&
-                !loading.Active && !world.Scrubbing && world.Transition == WorldTransition.None && !weather.Transitioning;
+            content = contentReady();
+            materialReady = materials.IsReady;
+            samplesReleased = materials.SamplesReleased;
+            veilOpacity = veil.Opacity;
+            loadingActive = loading.Active;
+            return content && materialReady && samplesReleased && veilOpacity == 0f &&
+                !loadingActive && !world.Scrubbing && world.Transition == WorldTransition.None && !weather.Transitioning;
         }
     }
 
@@ -66,41 +72,63 @@ public static class CaptureBarrier
         var lastProgress = started;
         var nextDiagnostic = started;
         var progress = bake.Progress;
-        while (true)
+        var timeout = TimeSpan.FromSeconds(BootTuning.StalledSeconds);
+        using var deadline = new CancellationTokenSource(timeout);
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
+        var content = false;
+        var scrubbing = false;
+        var transition = WorldTransition.None;
+        var weatherTransitioning = false;
+        var streamReady = false;
+        var now = started;
+        ulong frame = 0;
+        long instance = 0;
+        double worldHours = 0;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
-            if (rig.Pose != pose) throw new OperationCanceledException("Capture pose was replaced.");
-            if (mapStream.Error is { } error) throw new InvalidOperationException("Capture stream failed: " + error);
-            var content = contentReady();
-            var scrubbing = world.Scrubbing;
-            var transition = world.Transition;
-            var weatherTransitioning = weather.Transitioning;
-            var streamReady = stream.ViewReady;
-            var ready = content && streamReady && !scrubbing && transition == WorldTransition.None && !weatherTransitioning;
-            if (ready)
+            while (true)
             {
-                // New view demand uses the production warmup cover; read only its released, presented frame.
-                await WaitForPresentedAsync(host, pose, () => contentReady() && stream.ViewReady, cancellationToken);
-                return;
+                await FrameAwaiter.ProcessAsync(host, lifetime.Token);
+                lifetime.Token.ThrowIfCancellationRequested();
+                if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
+                if (rig.Pose != pose) throw new OperationCanceledException("Capture pose was replaced.");
+                if (mapStream.Error is { } error) throw new InvalidOperationException("Capture stream failed: " + error);
+                content = contentReady();
+                scrubbing = world.Scrubbing;
+                transition = world.Transition;
+                weatherTransitioning = weather.Transitioning;
+                streamReady = stream.ViewReady;
+                var ready = content && streamReady && !scrubbing && transition == WorldTransition.None && !weatherTransitioning;
+                if (ready)
+                {
+                    lifetime.Token.ThrowIfCancellationRequested();
+                    deadline.CancelAfter(Timeout.InfiniteTimeSpan);
+                    break;
+                }
+                now = FrameClock.MonotonicMilliseconds;
+                frame = Engine.GetProcessFrames();
+                instance = world.Instance;
+                worldHours = world.WorldHours;
+                var nextProgress = bake.Progress;
+                if (nextProgress != progress) { lastProgress = now; deadline.CancelAfter(timeout); }
+                progress = nextProgress;
+                if (now >= nextDiagnostic)
+                {
+                    GD.Print("[WP-01][phase=capture-readiness] " + Describe());
+                    nextDiagnostic = now + 10000;
+                }
             }
-            var now = FrameClock.MonotonicMilliseconds;
-            var nextProgress = bake.Progress;
-            if (nextProgress != progress) lastProgress = now;
-            progress = nextProgress;
-            if (now >= nextDiagnostic)
-            {
-                GD.Print("[WP-01][phase=capture-readiness] " + Describe());
-                nextDiagnostic = now + 10000;
-            }
-            if (now - lastProgress > BootTuning.StalledSeconds * 1000)
-                throw new TimeoutException("Screenshot readiness stalled; " + Describe());
-            string Describe() =>
-                $"frame={Engine.GetProcessFrames()},waitMs={now - started:F1},noProgressMs={now - lastProgress:F1}," +
-                $"content={content},streamReady={streamReady},scrubbing={scrubbing},worldTransition={transition},weatherTransitioning={weatherTransitioning}," +
-                $"pose={pose},instance={world.Instance},worldHours={world.WorldHours:R}";
         }
+        catch (OperationCanceledException error) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException("Screenshot readiness stalled; " + Describe(), error);
+        }
+        // New view demand uses the production warmup cover; read only its released, presented frame.
+        await WaitForPresentedAsync(host, pose, () => contentReady() && stream.ViewReady, cancellationToken);
+
+        string Describe() =>
+            $"frame={frame},waitMs={now - started:F1},noProgressMs={now - lastProgress:F1}," +
+            $"content={content},streamReady={streamReady},scrubbing={scrubbing},worldTransition={transition},weatherTransitioning={weatherTransitioning}," +
+            $"pose={pose},instance={instance},worldHours={worldHours:R}";
     }
 }

@@ -34,25 +34,46 @@ public sealed class ViewContentReadiness
         var weather = Services.Get<IWeatherProcess>();
         var bake = Services.Get<IBakeService>();
         using var cancellation = cancellationToken.Register(arrival.Cancel);
-        var lastProgress = FrameClock.MonotonicMilliseconds;
         var progress = (bake.Progress, arrival.Done.Status);
-        while (true)
+        var timeout = TimeSpan.FromSeconds(BootTuning.StalledSeconds);
+        using var deadline = new CancellationTokenSource(timeout);
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
+        var content = false;
+        var producersReady = false;
+        var scrubbing = false;
+        var transition = WorldTransition.None;
+        var weatherTransitioning = false;
+        Pose? lastPose = null;
+        var completed = 0;
+        var total = 0;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!host.IsInsideTree()) throw new OperationCanceledException("Stage left the tree during arrival.");
-            if (arrival.Done.IsCompleted) await arrival.Done;
-            if (!ReferenceEquals(runtime.Arrival, arrival)) throw new OperationCanceledException("Stage arrival was replaced.");
-            var content = contentReady();
-            if (arrival.Done.IsCompletedSuccessfully && content && IsReady(rig.Pose) &&
-                !world.Scrubbing && world.Transition == WorldTransition.None && !weather.Transitioning) return;
-            var now = FrameClock.MonotonicMilliseconds;
-            var nextProgress = (bake.Progress, arrival.Done.Status);
-            if (nextProgress != progress) lastProgress = now;
-            progress = nextProgress;
-            if (now - lastProgress > BootTuning.StalledSeconds * 1000)
-                throw new TimeoutException($"Stage arrival stalled; {Services.Get<IMapLifetime>().DescribeReadiness()}; producers=[{Describe(rig.Pose)}]");
+            while (true)
+            {
+                await FrameAwaiter.ProcessAsync(host, lifetime.Token);
+                lifetime.Token.ThrowIfCancellationRequested();
+                if (!host.IsInsideTree()) throw new OperationCanceledException("Stage left the tree during arrival.");
+                if (arrival.Done.IsCompleted) await arrival.Done;
+                if (!ReferenceEquals(runtime.Arrival, arrival)) throw new OperationCanceledException("Stage arrival was replaced.");
+                content = contentReady();
+                lastPose = rig.Pose;
+                producersReady = arrival.Done.IsCompletedSuccessfully && content && IsReady(lastPose.Value);
+                scrubbing = world.Scrubbing;
+                transition = world.Transition;
+                weatherTransitioning = weather.Transitioning;
+                completed = arrival.Completed;
+                total = arrival.Total;
+                if (producersReady && !scrubbing && transition == WorldTransition.None && !weatherTransitioning) return;
+                var nextProgress = (bake.Progress, arrival.Done.Status);
+                if (nextProgress != progress) deadline.CancelAfter(timeout);
+                progress = nextProgress;
+            }
+        }
+        catch (OperationCanceledException error) when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException($"Stage arrival stalled; arrival={progress.Item2},completed={completed},total={total},bake={progress.Item1}," +
+                $"content={content},producersReady={producersReady},scrubbing={scrubbing},worldTransition={transition}," +
+                $"weatherTransitioning={weatherTransitioning},pose={lastPose}", error);
         }
     }
 

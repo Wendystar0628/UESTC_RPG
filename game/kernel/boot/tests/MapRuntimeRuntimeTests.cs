@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
+using Campus.Kernel.Frame;
 using Campus.Kernel.Renderer;
 using GdUnit4;
 using static GdUnit4.Assertions;
@@ -13,6 +14,59 @@ namespace Campus.Tests;
 
 public sealed partial class MaterialWarmupRuntimeTests
 {
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public async Task CaptureQueriesOutsideDrawSignalsAndWaitsForFreshDraw()
+    {
+        await using var fixture = new Fixture();
+        var tree = fixture.Parent.GetTree();
+        var ready = false;
+        var inDraw = false;
+        var processes = 0;
+        var draws = 0;
+        var readyAtDraw = -1;
+        void BeforeDraw() => inDraw = true;
+        void AfterDraw() { inDraw = true; draws++; }
+        void BeforeProcess() { inDraw = false; processes++; }
+        bool Ready()
+        {
+            AssertThat(GodotThread.IsMainThread() && processes > 0 && !inDraw).OverrideFailureMessage("Readiness ran outside a safe process boundary.").IsTrue();
+            if (ready && readyAtDraw < 0) readyAtDraw = draws;
+            return ready;
+        }
+        RenderingServer.Singleton.FramePreDraw += BeforeDraw;
+        RenderingServer.Singleton.FramePostDraw += AfterDraw;
+        tree.ProcessFrame += BeforeProcess;
+        var rendering = RenderingServer.RenderLoopEnabled;
+        try
+        {
+            var waiting = FrameAwaiter.ReadyDrawAsync(fixture.Parent, Ready, TimeSpan.FromSeconds(5));
+            await FrameAwaiter.ProcessAsync(fixture.Parent);
+            AssertThat(!waiting.IsCompleted).OverrideFailureMessage("Unready content completed its presentation barrier.").IsTrue();
+            ready = true;
+            await waiting;
+            AssertThat(readyAtDraw >= 0 && draws > readyAtDraw).OverrideFailureMessage("Ready content completed without a fresh draw.").IsTrue();
+            RenderingServer.RenderLoopEnabled = false;
+            using var cancellation = new CancellationTokenSource();
+            var pending = FrameAwaiter.ReadyDrawAsync(fixture.Parent, Ready, TimeSpan.FromSeconds(5), cancellation.Token);
+            await FrameAwaiter.ProcessAsync(fixture.Parent);
+            AssertThat(!pending.IsCompleted).OverrideFailureMessage("An undrawn view became presented.").IsTrue();
+            cancellation.Cancel();
+            try { await pending; throw new InvalidOperationException("Disabled rendering did not remain cancellable."); }
+            catch (OperationCanceledException) { }
+            try { await FrameAwaiter.ReadyDrawAsync(fixture.Parent, Ready, TimeSpan.FromMilliseconds(50)); throw new InvalidOperationException("Disabled rendering completed instead of timing out."); }
+            catch (TimeoutException) { }
+        }
+        finally
+        {
+            RenderingServer.RenderLoopEnabled = rendering;
+            RenderingServer.Singleton.FramePreDraw -= BeforeDraw;
+            RenderingServer.Singleton.FramePostDraw -= AfterDraw;
+            tree.ProcessFrame -= BeforeProcess;
+        }
+    }
     [TestCase]
     [TestCategory(TestReason.Regression)]
     [TestCategory("NativeRender")]

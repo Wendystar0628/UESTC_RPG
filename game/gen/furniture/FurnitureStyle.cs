@@ -5,7 +5,7 @@ using Campus.Gen.Parts.Street;
 namespace Campus.Gen.Furniture;
 
 /// <summary>
-/// The class of a road for street furniture (WLD-LIFE-STREET, MAP-QSH-ADDITIONS-ATMOSPHERE), read from the network line's own
+/// The class of a road for street furniture (WLD-LIFE-STREET, MAP-QSH-ATMOSPHERE), read from the network line's own
 /// <c>highway</c> by <see cref="FurnitureStyle.TierOf"/>: how often it has lamps and rest stops is <see cref="FurnitureStyle.Rule"/>.
 /// </summary>
 public enum RoadTier
@@ -37,7 +37,7 @@ public static class FurnitureStyle
 {
     // ---- Roads: every lit carriageway and pedestrian street of the campus, by its class (WLD-LIFE-STREET) ----
     /// <summary>
-    /// Lamp and rest-stop rules by class. The avenue and the trunk roads follow MAP-QSH-ADDITIONS-ATMOSPHERE (grade one 25–30 m, kept
+    /// Lamp and rest-stop rules by class. The avenue and the trunk roads follow MAP-QSH-ATMOSPHERE (grade one 25–30 m, kept
     /// regular on the avenue, grade two 30–40 m); the service lanes sit at the far end of grade two with a stop every eighth lamp gap;
     /// pedestrian streets are lit like grade two, with no stops along their line (stops belong at the plaza ends and junction nodes).
     /// Together they put some tens of bins on the campus, most of them on the trunk roads (WLD-LIFE-STREET: 92 in all).
