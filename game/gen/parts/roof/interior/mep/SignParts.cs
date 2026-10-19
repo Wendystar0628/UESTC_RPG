@@ -31,7 +31,7 @@ public sealed class ExitSignPart() : MepPart<SignParams>(new(900, 60))
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f;
         var e = MepStyle.ExitBorder;
         var face = -hz + MepStyle.Relief;
-        b.AddBox(new(-hx, 0, face + MepStyle.ExitFaceProud), new(hx, p.Height, hz), MepStyle.SmallBevel, MepStyle.Casing(MepStyle.White), f);
+        b.AddBox(new(-hx, 0, face + MepStyle.ExitFaceProud), new(hx, p.Height, hz), MepStyle.SmallBevel, PartMaterials.Casing(MepStyle.White), f);
         b.AddBox(new(-hx + e, e, face), new(hx - e, p.Height - e, face + MepStyle.ExitFaceProud + 0.002f), 0, MepStyle.Lit(MepStyle.ExitGreen), f);
         if (!near) return;
         var ink = MepStyle.Lit(MepStyle.White);   // symbol and lettering positions below are face coordinates (u = viewer's right)
@@ -111,10 +111,10 @@ public sealed class RoomSignPart() : MepPart<SignParams>(new(500, 60))
         var v = Variant(p);
         var f = MepStyle.Flags;
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f;
-        var plate = v switch { 0 => MepStyle.Casing(MepStyle.White), 1 => MepStyle.Metal(MepStyle.Aluminium), _ => MepStyle.Casing(MepStyle.Wood) };
+        var plate = v switch { 0 => PartMaterials.Casing(MepStyle.White), 1 => PartMaterials.Metal(MepStyle.Aluminium), _ => PartMaterials.Casing(MepStyle.Wood) };
         var face = -hz + MepStyle.Relief;
         b.AddBox(new(-hx, 0, face), new(hx, p.Height, hz), Math.Min(MepStyle.SmallBevel, p.Depth * 0.3f), plate, f);
-        var dark = MepStyle.Insert(MepStyle.Dark);
+        var dark = PartMaterials.Grille(MepStyle.Dark);
         // The band sits on the viewer's left, which is +X for a plate facing −Z.
         if (v == 0) b.AddBox(new(hx - p.Width * MepStyle.RoomSignHeader, 0.008f, face - 0.0015f), new(hx - 0.008f, p.Height - 0.008f, face + 0.001f), 0, dark, f);
         else if (v == 1 && near) b.AddBox(new(-hx + 0.012f, p.Height - 0.022f, face - 0.0015f), new(hx - 0.012f, p.Height - 0.016f, face + 0.001f), 0, dark, f);
@@ -127,7 +127,7 @@ public sealed class RoomSignPart() : MepPart<SignParams>(new(500, 60))
         var left = v == 0 ? -hx + p.Width * MepStyle.RoomSignHeader : -hx;   // face u: the band takes the viewer's left
         var room = hx - left - 0.03f;
         var h = Math.Min(p.Height * MepStyle.RoomSignTextRatio, room / StrokeText.Width(number, 1));
-        var ink = MepStyle.Insert(v == 2 ? MepStyle.White : MepStyle.Dark);
+        var ink = PartMaterials.Grille(v == 2 ? MepStyle.White : MepStyle.Dark);
         StrokeFont.Write(b, number, (left + hx) * 0.5f, p.Height * (v == 1 ? 0.44f : 0.5f), face, h, ink);
     }
 }

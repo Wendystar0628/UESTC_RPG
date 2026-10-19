@@ -120,6 +120,78 @@
       "materialClass": "building",
       "seasonal": false,
       "role": "shade"
+    },
+    {
+      "token": "glass.key.mint.lit",
+      "index": 330,
+      "albedo": [
+        0.52888507,
+        0.77485354,
+        0.80258808
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "glass.key.mint.shade",
+      "index": 331,
+      "albedo": [
+        0.52888507,
+        0.77485354,
+        0.80258808
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "shade"
+    },
+    {
+      "token": "glass.key.apricot.lit",
+      "index": 332,
+      "albedo": [
+        0.77292976,
+        0.67658204,
+        0.54661606
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "glass.key.apricot.shade",
+      "index": 333,
+      "albedo": [
+        0.77292976,
+        0.67658204,
+        0.54661606
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "shade"
+    },
+    {
+      "token": "glass.key.coral.lit",
+      "index": 334,
+      "albedo": [
+        0.76812944,
+        0.58574982,
+        0.61673442
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "lit"
+    },
+    {
+      "token": "glass.key.coral.shade",
+      "index": 335,
+      "albedo": [
+        0.76812944,
+        0.58574982,
+        0.61673442
+      ],
+      "materialClass": "building",
+      "seasonal": false,
+      "role": "shade"
     }
   ]
 }

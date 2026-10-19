@@ -1,3 +1,4 @@
+using Campus.Gen.Parts.Core;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
@@ -165,8 +166,8 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, MeshSink sink)
 
     /// <summary>The fence's board surface in RoofRules.FenceBoard instead of the part's fence steel; posts and cap rail unchanged.</summary>
     private static GeometryBundle FenceBoards(GeometryBundle mesh) =>
-        mesh.Material.Spec.Lit == RoofStyle.Lit(RoofStyle.FenceSteel)
-            ? mesh with { Material = new ToonRef(mesh.Material.Spec with { Lit = RoofStyle.Lit(RoofRules.FenceBoard), Shade = RoofStyle.Shade(RoofRules.FenceBoard) }) }
+        mesh.Material.Spec.Lit == PartMaterials.Lit(RoofStyle.FenceSteel)
+            ? mesh with { Material = new ToonRef(mesh.Material.Spec with { Lit = PartMaterials.Lit(RoofRules.FenceBoard), Shade = PartMaterials.Shade(RoofRules.FenceBoard) }) }
             : mesh;
 
     /// <summary>The units of an enclosure, tank first (its ladder faces the heat pumps), at their PartCatalog sizes.</summary>

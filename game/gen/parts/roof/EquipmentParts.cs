@@ -28,8 +28,8 @@ public sealed class AirConditionerPart : IPartDef<EquipmentParams>
     {
         Validate(p);
         var near = lod == LodLevel.L0;
-        var casing = RoofStyle.Casing(RoofStyle.CasingWhite);
-        var fan = RoofStyle.Grille(RoofStyle.FenceSteel);
+        var casing = PartMaterials.Casing(RoofStyle.CasingWhite);
+        var fan = PartMaterials.Grille(RoofStyle.FenceSteel);
         var x0 = -p.Width * 0.5f; var valve = Math.Min(RoofStyle.AcValveBoxWidth, p.Width * 0.12f);
         var x1 = p.Width * 0.5f - valve;
         var front = -p.Depth * 0.5f + RoofStyle.AcFanProud; var back = p.Depth * 0.5f;
@@ -49,7 +49,7 @@ public sealed class AirConditionerPart : IPartDef<EquipmentParams>
             builder.AddDisc(fx, fy, -p.Depth * 0.5f, -p.Depth * 0.5f + 0.009f, radius * 0.22f, 8, casing, VertexFlag.NoShadow);
             // Valve cover on the right, and two rails under the casing.
             builder.AddBox(new(x1, y0 + 0.04f, front + 0.03f), new(p.Width * 0.5f, y0 + Math.Min(0.18f, height * 0.4f), front + 0.03f + Math.Min(0.12f, p.Depth * 0.4f)), 0, casing, VertexFlag.NoShadow);
-            var metal = RoofStyle.Metal(RoofStyle.Aluminium);
+            var metal = PartMaterials.Metal(RoofStyle.Aluminium);
             foreach (var side in new[] { -1f, 1f })
             {
                 var cx = (x0 + x1) * 0.5f + side * (x1 - x0) * 0.32f;
@@ -100,11 +100,11 @@ public sealed class EquipmentGrillePart : IPartDef<PanelParams>
         var lid = RoofStyle.GrilleTopThickness;
         var height = p.Height - lid + 0.003f;
         var front = -p.Depth * 0.5f;
-        var steelLid = RoofStyle.Casing(RoofStyle.Steel);
+        var steelLid = PartMaterials.Casing(RoofStyle.Steel);
         if (!near)
         {
             // Far: the louvred cage reads as one aluminium block under its lid; no front frame (a niche repeats on every upper storey).
-            builder.AddBox(new(-p.Width * 0.5f + 0.01f, 0, front + 0.01f), new(p.Width * 0.5f - 0.01f, height, p.Depth * 0.5f), 0, RoofStyle.Grille(RoofStyle.Aluminium));
+            builder.AddBox(new(-p.Width * 0.5f + 0.01f, 0, front + 0.01f), new(p.Width * 0.5f - 0.01f, height, p.Depth * 0.5f), 0, PartMaterials.Grille(RoofStyle.Aluminium));
             builder.AddBox(new(-p.Width * 0.5f, p.Height - lid, front), new(p.Width * 0.5f, p.Height, p.Depth * 0.5f), 0, steelLid);
             return builder.Finish(Bounds(p));
         }
@@ -124,8 +124,8 @@ public sealed class EquipmentGrillePart : IPartDef<PanelParams>
     {
         var f = Math.Min(RoofStyle.GrilleFrame, Math.Min(width, height) * 0.2f);
         Vector2[] opening = [new(-width * 0.5f + f, f), new(width * 0.5f - f, f), new(width * 0.5f - f, height - f), new(-width * 0.5f + f, height - f)];
-        builder.Add(PartGeometryKernel.WallPanel(width, height, depth, [opening], RoofStyle.Metal(RoofStyle.Steel)), at);
-        var blade = RoofStyle.Grille(RoofStyle.Aluminium);
+        builder.Add(PartGeometryKernel.WallPanel(width, height, depth, [opening], PartMaterials.Metal(RoofStyle.Steel)), at);
+        var blade = PartMaterials.Grille(RoofStyle.Aluminium);
         var clear = height - 2 * f;
         if (!near)
         {
@@ -175,7 +175,7 @@ public sealed class WaterTankPart : IPartDef<EquipmentParams>
     {
         Validate(p);
         var near = lod == LodLevel.L0;
-        var shell = RoofStyle.Casing(RoofStyle.Steel);
+        var shell = PartMaterials.Casing(RoofStyle.Steel);
         var f = RoofStyle.TankFlange;
         var hx = p.Width * 0.5f - f; var hz = p.Depth * 0.5f - f;
         var stand = p.Variation >= 1;
@@ -189,7 +189,7 @@ public sealed class WaterTankPart : IPartDef<EquipmentParams>
             if (stand) AddStand(builder, hx, hz, y0, lod);
             else
             {
-                var metal = RoofStyle.Metal(RoofStyle.Aluminium);
+                var metal = PartMaterials.Metal(RoofStyle.Aluminium);
                 foreach (var side in new[] { -1f, 1f })
                     builder.AddBox(new(-hx + 0.05f, 0, side * hz * 0.6f - 0.08f), new(hx - 0.05f, y0 + 0.003f, side * hz * 0.6f + 0.08f), 0, metal);
             }
@@ -200,7 +200,7 @@ public sealed class WaterTankPart : IPartDef<EquipmentParams>
         {
             // Panel seams: flanges round the shell every metre, ribs up the faces. They take the metal class, so the
             // material boundary draws them even where the step is too shallow for a depth line, and the rim catches the low sun.
-            var seam = RoofStyle.Metal(RoofStyle.Steel);
+            var seam = PartMaterials.Metal(RoofStyle.Steel);
             Vector2[] ring = [new(-hx, -hz), new(hx, -hz), new(hx, hz), new(-hx, hz)];
             var inner = -(0.04f * 0.6f + 0.004f);
             for (var y = y0 + RoofStyle.TankPanel; y < top - 0.25f; y += RoofStyle.TankPanel)
@@ -212,7 +212,7 @@ public sealed class WaterTankPart : IPartDef<EquipmentParams>
                     builder.AddBox(new(x - 0.025f, y0 + 0.05f, side < 0 ? -hz - rib : hz - 0.004f), new(x + 0.025f, top - 0.05f, side < 0 ? -hz + 0.004f : hz + rib), 0, seam, VertexFlag.NoShadow);
             for (var z = -hz + RoofStyle.TankPanel; z < hz - 0.3f; z += RoofStyle.TankPanel)
                 builder.AddBox(new(-hx - rib, y0 + 0.05f, z - 0.025f), new(-hx + 0.004f, top - 0.05f, z + 0.025f), 0, seam, VertexFlag.NoShadow);
-            builder.AddColumn(hx * 0.5f, top - 0.003f, Math.Min(p.Height, top + VentHeight), hz * 0.4f, 0.05f, 8, RoofStyle.Pipe(RoofStyle.Casing(RoofStyle.Steel)), VertexFlag.NoShadow);
+            builder.AddColumn(hx * 0.5f, top - 0.003f, Math.Min(p.Height, top + VentHeight), hz * 0.4f, 0.05f, 8, PartMaterials.Pipe(PartMaterials.Casing(RoofStyle.Steel)), VertexFlag.NoShadow);
             AddLadder(builder, hx, hz, top, p.Height);
         }
         return builder.Finish(Bounds(p));
@@ -220,7 +220,7 @@ public sealed class WaterTankPart : IPartDef<EquipmentParams>
 
     private static void AddStand(PartBuilder builder, float hx, float hz, float y0, LodLevel lod)
     {
-        var steel = RoofStyle.Metal(RoofStyle.EquipmentGrey);
+        var steel = PartMaterials.Metal(RoofStyle.EquipmentGrey);
         var leg = RoofStyle.TankLeg;
         foreach (var sx in new[] { -1f, 1f })
             foreach (var sz in new[] { -1f, 1f })
@@ -244,7 +244,7 @@ public sealed class WaterTankPart : IPartDef<EquipmentParams>
 
     private static void AddLadder(PartBuilder builder, float hx, float hz, float top, float height)
     {
-        var metal = RoofStyle.Metal(RoofStyle.Aluminium);
+        var metal = PartMaterials.Metal(RoofStyle.Aluminium);
         var x = hx + RoofStyle.TankFlange + LadderReach - 0.04f;
         var halfSpan = Math.Min(0.2f, hz * 0.5f);
         var railTop = height;
@@ -289,8 +289,8 @@ public sealed class HeatPumpPart : IPartDef<EquipmentParams>
     {
         Validate(p);
         var near = lod == LodLevel.L0;
-        var casing = RoofStyle.Casing(RoofStyle.EquipmentGrey);
-        var dark = RoofStyle.Grille(RoofStyle.FenceSteel);
+        var casing = PartMaterials.Casing(RoofStyle.EquipmentGrey);
+        var dark = PartMaterials.Grille(RoofStyle.FenceSteel);
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f - Proud;
         var y0 = RoofStyle.HeatPumpSkid; var top = p.Height - RoofStyle.HeatPumpShroud;
         var builder = new PartBuilder();
@@ -304,7 +304,7 @@ public sealed class HeatPumpPart : IPartDef<EquipmentParams>
             for (var i = 0; i < fans; i++)
             {
                 var x = -hx + pitch * (i + 0.5f);
-                builder.AddColumn(x, top - 0.003f, p.Height - 0.012f, 0, radius, segments, RoofStyle.Curved(RoofStyle.EquipmentGrey));
+                builder.AddColumn(x, top - 0.003f, p.Height - 0.012f, 0, radius, segments, PartMaterials.Curved(RoofStyle.EquipmentGrey));
                 builder.AddColumn(x, p.Height - 0.015f, p.Height, 0, radius - 0.035f, segments, dark, VertexFlag.NoShadow);
             }
             // Coil panels on both long faces, louvres over them near.
@@ -315,19 +315,19 @@ public sealed class HeatPumpPart : IPartDef<EquipmentParams>
                 var face = side * hz;
                 builder.AddBox(new(-hx + margin, panel0, side < 0 ? face - 0.008f : face - 0.003f), new(hx - margin, panel1, side < 0 ? face + 0.003f : face + 0.008f), 0, dark);
                 if (!near) continue;
-                var blade = RoofStyle.Grille(RoofStyle.Aluminium);
+                var blade = PartMaterials.Grille(RoofStyle.Aluminium);
                 for (var y = panel0 + RoofStyle.HeatPumpLouvrePitch * 0.5f; y < panel1 - 0.02f; y += RoofStyle.HeatPumpLouvrePitch)
                     builder.AddBox(new(-hx + margin - 0.01f, y - 0.011f, side < 0 ? -hz - Proud : face - 0.003f), new(hx - margin + 0.01f, y + 0.011f, side < 0 ? face + 0.003f : hz + Proud), 0, blade, VertexFlag.NoShadow);
             }
         }
         if (near)
         {
-            var metal = RoofStyle.Metal(RoofStyle.Aluminium);
+            var metal = PartMaterials.Metal(RoofStyle.Aluminium);
             foreach (var side in new[] { -1f, 1f })
                 builder.AddBox(new(-hx + 0.02f, 0, side * hz * 0.64f - 0.05f), new(hx - 0.02f, y0 + 0.003f, side * hz * 0.64f + 0.05f), 0, metal);
         }
         else
-            builder.AddBox(new(-hx + 0.02f, 0, -hz + 0.02f), new(hx - 0.02f, y0 + 0.003f, hz - 0.02f), 0, RoofStyle.Metal(RoofStyle.Aluminium));
+            builder.AddBox(new(-hx + 0.02f, 0, -hz + 0.02f), new(hx - 0.02f, y0 + 0.003f, hz - 0.02f), 0, PartMaterials.Metal(RoofStyle.Aluminium));
         return builder.Finish(Bounds(p));
     }
 

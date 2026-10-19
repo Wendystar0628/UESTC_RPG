@@ -42,8 +42,8 @@ public sealed class EquipmentFencePart : IPartDef<RailingParams>
     {
         Validate(p); ArgumentNullException.ThrowIfNull(path);
         var half = p.Depth * 0.5f; var cap = Math.Min(RoofStyle.FenceCap, p.Height * 0.1f);
-        var board = RoofStyle.Board(RoofStyle.FenceSteel);
-        var light = RoofStyle.Metal(RoofStyle.Aluminium);
+        var board = PartMaterials.Board(RoofStyle.FenceSteel);
+        var light = PartMaterials.Metal(RoofStyle.Aluminium);
         var builder = new PartBuilder();
         if (lod <= LodLevel.L1)
         {
@@ -70,7 +70,7 @@ public sealed class EquipmentFencePart : IPartDef<RailingParams>
                 var frame = Xf.AlongX(along, new((a.X + b.X) * 0.5f, 0, (a.Y + b.Y) * 0.5f));
                 var head = p.Height - cap - Math.Min(0.15f, p.Height * 0.1f);
                 builder.AddCentredBox(new(bay - RoofStyle.FencePost + 0.006f, 0.05f, p.Depth + 0.02f), Xf.Move(centre, head, 0).Then(frame), light);
-                builder.AddCentredBox(new(0.12f, 0.035f, p.Depth + 0.03f), Xf.Move(centre + bay * 0.3f, Math.Min(1.05f, p.Height * 0.55f), 0).Then(frame), RoofStyle.Metal(RoofStyle.Steel), 0, VertexFlag.NoShadow);
+                builder.AddCentredBox(new(0.12f, 0.035f, p.Depth + 0.03f), Xf.Move(centre + bay * 0.3f, Math.Min(1.05f, p.Height * 0.55f), 0).Then(frame), PartMaterials.Metal(RoofStyle.Steel), 0, VertexFlag.NoShadow);
             }
         }
         return builder.Finish(bounds ?? ParapetCapPart.PathBounds(path, half + CapOverhang + 0.01f, 0, p.Height));
@@ -144,7 +144,7 @@ public sealed class CanopyPart : IPartDef<RoofParams>
         Validate(p);
         var near = lod == LodLevel.L0;
         var tilt = Tilt(p);
-        var host = RoofStyle.Trim(p.Material);
+        var host = PartMaterials.Trim(p.Material);
         var builder = new PartBuilder();
         if (lod >= LodLevel.L2)
         {
@@ -157,13 +157,13 @@ public sealed class CanopyPart : IPartDef<RoofParams>
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f;
         // Edge band on three sides; the right of travel is outside, so the section sits inside the path.
         Vector2[] edge = [new(-hx, hz), new(-hx, -hz), new(hx, -hz), new(hx, hz)];
-        var white = RoofStyle.Trim(RoofStyle.CasingWhite);
+        var white = PartMaterials.Trim(RoofStyle.CasingWhite);
         builder.Add(PartGeometryKernel.Sweep(PartShapes.BevelRect(band, p.Height, near ? 0.015f : 0, -band * 0.5f, 0), edge, white), tilt);
         var slabPiece = PartShapes.Box(new(-hx + band - 0.004f, p.Height - rise - slab, -hz + band - 0.004f), new(hx - band + 0.004f, p.Height - rise, hz), 0, host, out var slabAt);
         builder.Add(slabPiece, slabAt.Then(tilt));
         if (p.Variation >= 1)
         {
-            var metal = RoofStyle.Pipe(RoofStyle.Metal(RoofStyle.Steel));
+            var metal = PartMaterials.Pipe(PartMaterials.Metal(RoofStyle.Steel));
             var segments = near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar;
             foreach (var side in new[] { -1f, 1f })
             {
@@ -223,12 +223,12 @@ public sealed class SkylightPart : IPartDef<RoofParams>
         var baseY = curbH - 0.003f;
         var builder = new PartBuilder();
         Vector2[] ring = [new(-hx, -a), new(hx, -a), new(hx, a), new(-hx, a)];
-        builder.Add(PartGeometryKernel.Sweep(PartShapes.BevelRect(curb, curbH, near ? 0.015f : 0, 0, 0), ring, RoofStyle.Trim(p.Material), true));
+        builder.Add(PartGeometryKernel.Sweep(PartShapes.BevelRect(curb, curbH, near ? 0.015f : 0, 0, 0), ring, PartMaterials.Trim(p.Material), true));
         Vector2[] ridge = [new(-hx, 0), new(hx, 0)];
-        builder.Add(PartGeometryKernel.Sweep(new([new(-a, 0), new(a, 0), new(0, rise)]), ridge, RoofStyle.Glazing(), false, baseY));
+        builder.Add(PartGeometryKernel.Sweep(new([new(-a, 0), new(a, 0), new(0, rise)]), ridge, PartMaterials.Glazing(), false, baseY));
         if (lod <= LodLevel.L1)
         {
-            var frame = RoofStyle.Metal(RoofStyle.Aluminium);
+            var frame = PartMaterials.Metal(RoofStyle.Aluminium);
             Vector2[] bar = [new(-hx - 0.01f, 0), new(hx + 0.01f, 0)];
             builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(-0.035f, 0.035f, rise - 0.02f, rise + 0.04f), bar, frame, false, baseY));
             if (near)

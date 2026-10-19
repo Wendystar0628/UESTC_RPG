@@ -54,14 +54,8 @@ public static class MepStyle
     /// <summary>Glow colour handed to the lamp inventory for the exit sign (ART-STYLE).</summary>
     public static readonly PaletteToken SignalGlow = new("sign.green");
 
-    public static ToonSpec Casing(string family) => RoofStyle.Casing(family);
-    public static ToonSpec Metal(string family) => RoofStyle.Metal(family);
-    public static ToonSpec Pipe(string family) => RoofStyle.Pipe(RoofStyle.Casing(family));
-    public static ToonSpec Curved(string family) => RoofStyle.Curved(family);
-    /// <summary>Small inserts (displays, outlets, keys, text): fine line class so they fade with the small-part rule.</summary>
-    public static ToonSpec Insert(string family) => RoofStyle.Grille(family);
     /// <summary>Self-lit sign face and its lettering, driven by the signal channel (ToonSpec.Emissive).</summary>
-    public static ToonSpec Lit(string family) => RoofStyle.Grille(family) with { Emissive = SignalChannel };
+    public static ToonSpec Lit(string family) => PartMaterials.Grille(family) with { Emissive = SignalChannel };
 
     // ---- Shared ----
     public const float Bevel = 0.012f;

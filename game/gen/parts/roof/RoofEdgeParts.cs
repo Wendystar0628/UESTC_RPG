@@ -36,7 +36,7 @@ public sealed class ParapetCapPart : IPartDef<TrimParams>
     {
         Validate(p); ArgumentNullException.ThrowIfNull(path);
         var near = lod == LodLevel.L0;
-        var material = RoofStyle.Trim(p.Material);
+        var material = PartMaterials.Trim(p.Material);
         var half = p.Depth * 0.5f;
         var builder = new PartBuilder();
         builder.Add(PartGeometryKernel.Sweep(PartShapes.BevelRect(p.Depth, p.Height, near ? RoofStyle.CopingBevel : 0, 0, 0), path, material, closed));
@@ -94,7 +94,7 @@ public sealed class LightningStripPart : IPartDef<TrimParams>
         ArgumentNullException.ThrowIfNull(path);
         var (rod, height) = Size(p);
         var near = lod == LodLevel.L0;
-        var metal = RoofStyle.Metal(RoofStyle.Steel);
+        var metal = PartMaterials.Metal(RoofStyle.Steel);
         var builder = new PartBuilder();
         builder.Add(PartGeometryKernel.Sweep(PartShapes.Circle(rod * 0.5f, near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar),
             path, metal, closed, height - rod * 0.5f), VertexFlag.NoShadow);
@@ -162,7 +162,7 @@ public sealed class DownpipePart : IPartDef<ColumnParams>
         Validate(p);
         var near = lod == LodLevel.L0;
         var r = p.Width * 0.5f; var wall = p.Depth * 0.5f;
-        var metal = RoofStyle.Pipe(p.Material);
+        var metal = PartMaterials.Pipe(p.Material);
         var segments = near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar;
         var hopper = p.Variation < 1;
         var hopperH = Math.Min(0.25f, p.Height * 0.2f); var hopperD = Math.Min(0.18f, Math.Max(r * 2 + 0.04f, wall * 2));

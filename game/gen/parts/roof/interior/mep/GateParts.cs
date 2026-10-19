@@ -26,14 +26,14 @@ public sealed class TurnstilePart() : MepPart<EquipmentParams>(new(1000, 200))
         var v = Variant(p);
         var f = MepStyle.Flags;
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f; var h = p.Height;
-        var steel = MepStyle.Casing(MepStyle.Stainless);
-        var dark = MepStyle.Insert(MepStyle.Dark);
+        var steel = PartMaterials.Casing(MepStyle.Stainless);
+        var dark = PartMaterials.Grille(MepStyle.Dark);
         var bx = hx - Side;   // the cabinet's lane-side face; the leaf and the slots stand between it and the footprint's edge
         b.AddBox(new(-hx + 0.02f, 0, -hz + 0.04f), new(bx - 0.02f, 0.05f + MepStyle.Relief, hz - 0.04f), 0, dark, f);
         b.AddBox(new(-hx, 0.05f, -hz), new(bx, h - 0.05f + MepStyle.Relief, hz), near ? MepStyle.Bevel : 0, steel, f);
         b.AddBox(new(-hx, h - 0.05f, -hz), new(bx, h - 0.006f, hz), near ? 0.01f : 0, steel, f);
         // Indicator window near the entry end, on the cap: green arrow lens, or the red one of the closed gate.
-        var lens = MepStyle.Insert(v == 2 ? MepStyle.FireRed : MepStyle.ExitGreen);
+        var lens = PartMaterials.Grille(v == 2 ? MepStyle.FireRed : MepStyle.ExitGreen);
         b.AddBox(new(-bx * 0.5f - 0.04f, h - 0.012f, -hz + 0.08f), new(-bx * 0.5f + 0.04f, h, -hz + 0.2f), 0, lens, f);
         if (!near && v == 0) return;
         switch (v)
@@ -41,11 +41,11 @@ public sealed class TurnstilePart() : MepPart<EquipmentParams>(new(1000, 200))
             case 0:
                 // Wing slot on the lane face, with the edge of the glass wing showing in it.
                 b.AddBox(new(bx - MepStyle.Relief, 0.62f, -hz * 0.55f), new(bx + MepStyle.Relief + 0.001f, 0.9f, hz * 0.55f), 0, dark, f);
-                if (near) b.AddBox(new(bx, 0.7f, -hz * 0.45f), new(bx + 0.012f, 0.84f, hz * 0.45f), 0, MepStyle.Insert(MepStyle.Glass), f);
+                if (near) b.AddBox(new(bx, 0.7f, -hz * 0.45f), new(bx + 0.012f, 0.84f, hz * 0.45f), 0, PartMaterials.Grille(MepStyle.Glass), f);
                 break;
             case 1:
                 // The leaf stands open along the lane on two hinge blocks.
-                b.AddBox(new(bx, 0.2f, -hz * 0.3f), new(bx + 0.016f, 0.85f, hz * 0.55f), 0, MepStyle.Insert(MepStyle.Glass), f);
+                b.AddBox(new(bx, 0.2f, -hz * 0.3f), new(bx + 0.016f, 0.85f, hz * 0.55f), 0, PartMaterials.Grille(MepStyle.Glass), f);
                 foreach (var z in new[] { -hz * 0.3f + 0.03f, hz * 0.55f - 0.03f })
                     b.AddBox(new(bx - MepStyle.Relief, 0.3f, z - 0.025f), new(bx + 0.02f, 0.4f, z + 0.025f), 0, dark, f);
                 break;
@@ -57,7 +57,7 @@ public sealed class TurnstilePart() : MepPart<EquipmentParams>(new(1000, 200))
         }
         if (near && v != 2)
             // A card reader plate on the cap, past the indicator.
-            b.AddBox(new(-bx * 0.5f - 0.025f, h - 0.012f, -hz + 0.3f), new(-bx * 0.5f + 0.025f, h, -hz + 0.4f), 0.003f, MepStyle.Casing(MepStyle.White), f);
+            b.AddBox(new(-bx * 0.5f - 0.025f, h - 0.012f, -hz + 0.3f), new(-bx * 0.5f + 0.025f, h, -hz + 0.4f), 0.003f, PartMaterials.Casing(MepStyle.White), f);
     }
 }
 
@@ -78,9 +78,9 @@ public sealed class SwitchgearPart() : MepPart<EquipmentParams>(new(1100, 220))
         var v = Variant(p);
         var f = MepStyle.Flags;
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f; var h = p.Height;
-        var dark = MepStyle.Insert(MepStyle.Dark);
-        var shell = MepStyle.Casing(v == 2 ? MepStyle.Dark : MepStyle.Grey);
-        var door = MepStyle.Casing(v == 2 ? MepStyle.Dark : MepStyle.White);
+        var dark = PartMaterials.Grille(MepStyle.Dark);
+        var shell = PartMaterials.Casing(v == 2 ? MepStyle.Dark : MepStyle.Grey);
+        var door = PartMaterials.Casing(v == 2 ? MepStyle.Dark : MepStyle.White);
         const float plinth = 0.08f; const float skin = 0.03f;
         b.AddBox(new(-hx + 0.02f, 0, -hz + 0.02f), new(hx - 0.02f, plinth + MepStyle.Relief, hz - 0.02f), 0, dark, f);
         b.AddBox(new(-hx, plinth, -hz + skin), new(hx, h, hz), near ? MepStyle.Bevel : 0, shell, f);
@@ -96,15 +96,15 @@ public sealed class SwitchgearPart() : MepPart<EquipmentParams>(new(1100, 220))
             if (!near) continue;
             // Handle on the meeting side (the door nearest the middle), hinges on the other for the single door.
             var hxp = doors == 1 ? x0 + dw - 0.05f : (i < doors / 2.0f ? x0 + dw - 0.04f : x0 + 0.04f);
-            b.AddBox(new(hxp - 0.012f, (y0 + y1) * 0.5f - 0.08f, -hz), new(hxp + 0.012f, (y0 + y1) * 0.5f + 0.08f, -hz + 0.015f + MepStyle.Relief), 0.004f, MepStyle.Metal(MepStyle.Aluminium), f);
+            b.AddBox(new(hxp - 0.012f, (y0 + y1) * 0.5f - 0.08f, -hz), new(hxp + 0.012f, (y0 + y1) * 0.5f + 0.08f, -hz + 0.015f + MepStyle.Relief), 0.004f, PartMaterials.Metal(MepStyle.Aluminium), f);
             if (v == 0)
                 for (var k = 0; k < 4; k++)
                     b.AddBox(new(x0 + 0.06f, y0 + 0.08f + k * 0.045f, -hz + 0.011f), new(x0 + dw - 0.06f, y0 + 0.08f + k * 0.045f + 0.02f, -hz + 0.015f + MepStyle.Relief), 0, dark, f);
             if (v == 1)
-                b.AddBox(new(x0 + 0.04f, y1 - 0.22f, -hz + 0.011f), new(x0 + dw - 0.04f, y1 - 0.08f, -hz + 0.015f + MepStyle.Relief), 0, MepStyle.Insert(MepStyle.Glass), f);
+                b.AddBox(new(x0 + 0.04f, y1 - 0.22f, -hz + 0.011f), new(x0 + dw - 0.04f, y1 - 0.08f, -hz + 0.015f + MepStyle.Relief), 0, PartMaterials.Grille(MepStyle.Glass), f);
             if (v == 2)
                 foreach (var y in new[] { y0 + 0.2f, y1 - 0.2f })
-                    b.AddBox(new(x0 + 0.005f, y - 0.05f, -hz + 0.011f), new(x0 + 0.03f, y + 0.05f, -hz + 0.015f + MepStyle.Relief), 0, MepStyle.Metal(MepStyle.Aluminium), f);
+                    b.AddBox(new(x0 + 0.005f, y - 0.05f, -hz + 0.011f), new(x0 + 0.03f, y + 0.05f, -hz + 0.015f + MepStyle.Relief), 0, PartMaterials.Metal(MepStyle.Aluminium), f);
         }
         if (v == 0)
         {
@@ -112,9 +112,9 @@ public sealed class SwitchgearPart() : MepPart<EquipmentParams>(new(1100, 220))
             b.AddBox(new(-hx * 0.6f, h - 0.22f, -hz + 0.015f), new(hx * 0.6f, h - 0.06f, -hz + skin + MepStyle.Relief), 0, dark, f);
             if (near)
                 for (var i = 0; i < 3; i++)
-                    b.AddDisc((i - 1) * hx * 0.35f, h - 0.14f, -hz + 0.006f, -hz + 0.02f, 0.014f, 10, MepStyle.Insert(i == 1 ? MepStyle.FireRed : MepStyle.ExitGreen), f);
+                    b.AddDisc((i - 1) * hx * 0.35f, h - 0.14f, -hz + 0.006f, -hz + 0.02f, 0.014f, 10, PartMaterials.Grille(i == 1 ? MepStyle.FireRed : MepStyle.ExitGreen), f);
         }
         else if (v == 2 && near)
-            b.AddBox(new(-0.1f, h - 0.3f, -hz + 0.011f), new(0.1f, h - 0.18f, -hz + 0.015f + MepStyle.Relief), 0, MepStyle.Insert(MepStyle.FireRed), f);
+            b.AddBox(new(-0.1f, h - 0.3f, -hz + 0.011f), new(0.1f, h - 0.18f, -hz + 0.015f + MepStyle.Relief), 0, PartMaterials.Grille(MepStyle.FireRed), f);
     }
 }

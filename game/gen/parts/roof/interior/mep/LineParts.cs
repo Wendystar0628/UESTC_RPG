@@ -20,7 +20,7 @@ public sealed class CableTrayPart() : MepPart<TrimParams>(new(1100, 220))
     {
         var f = MepStyle.Flags;
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f; var h = p.Height;
-        var steel = MepStyle.Casing(MepStyle.Stainless);
+        var steel = PartMaterials.Casing(MepStyle.Stainless);
         const float t = 0.012f;
         var floor = t;
         switch (Variant(p))
@@ -33,7 +33,7 @@ public sealed class CableTrayPart() : MepPart<TrimParams>(new(1100, 220))
                     b.AddBox(new(-hx, 0, -hz), new(hx, h, -hz + t), near ? 0.003f : 0, steel, f);
                     if (near)
                     {
-                        var slot = MepStyle.Insert(MepStyle.Dark);
+                        var slot = PartMaterials.Grille(MepStyle.Dark);
                         for (var x = -hx + 0.15f; x < hx - 0.15f; x += 0.2f)
                             foreach (var z in new[] { -hz * 0.55f, hz * 0.55f })
                                 b.AddBox(new(x - 0.05f, t - MepStyle.Relief, z - 0.008f), new(x + 0.05f, t + 0.002f, z + 0.008f), 0, slot, f);
@@ -55,7 +55,7 @@ public sealed class CableTrayPart() : MepPart<TrimParams>(new(1100, 220))
                 {
                     // A basket: lengthwise floor wires, cross wires over them, a top wire and a bottom wire on each side, ribs between.
                     const float wire = 0.008f;
-                    var metal = MepStyle.Metal(MepStyle.Stainless);
+                    var metal = PartMaterials.Metal(MepStyle.Stainless);
                     foreach (var z in new[] { -hz + wire, hz - wire })
                     {
                         b.AddBox(new(-hx, h - wire, z - wire * 0.5f), new(hx, h, z + wire * 0.5f), 0, metal, f);
@@ -64,7 +64,7 @@ public sealed class CableTrayPart() : MepPart<TrimParams>(new(1100, 220))
                     floor = 2 * wire;
                     if (!near)
                     {
-                        b.AddBox(new(-hx, 0, -hz + wire), new(hx, wire, hz - wire), 0, MepStyle.Insert(MepStyle.Dark), f);
+                        b.AddBox(new(-hx, 0, -hz + wire), new(hx, wire, hz - wire), 0, PartMaterials.Grille(MepStyle.Dark), f);
                         break;
                     }
                     for (var x = -hx + 0.1f; x < hx; x += 0.2f)
@@ -82,7 +82,7 @@ public sealed class CableTrayPart() : MepPart<TrimParams>(new(1100, 220))
         }
         // Three cables lying in the tray along its length.
         var r = Math.Min(0.012f, (h - floor) * 0.4f);
-        var cable = new[] { MepStyle.Pipe(MepStyle.Dark), MepStyle.Pipe(MepStyle.Grey), MepStyle.Pipe(MepStyle.Dark) };
+        var cable = new[] { PartMaterials.Pipe(MepStyle.Dark), PartMaterials.Pipe(MepStyle.Grey), PartMaterials.Pipe(MepStyle.Dark) };
         for (var i = 0; i < 3; i++)
         {
             var z = (i - 1) * hz * 0.42f;
@@ -108,9 +108,9 @@ public sealed class DirectorySignPart() : MepPart<SignParams>(new(1500, 160))
         var f = MepStyle.Flags;
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f; var h = p.Height;
         var face = -hz + MepStyle.Relief;
-        var plate = v switch { 0 => MepStyle.Casing(MepStyle.White), 1 => MepStyle.Metal(MepStyle.Aluminium), _ => MepStyle.Casing(MepStyle.Wood) };
+        var plate = v switch { 0 => PartMaterials.Casing(MepStyle.White), 1 => PartMaterials.Metal(MepStyle.Aluminium), _ => PartMaterials.Casing(MepStyle.Wood) };
         b.AddBox(new(-hx, 0, face), new(hx, h, hz), near ? MepStyle.SmallBevel : 0, plate, f);
-        var dark = MepStyle.Insert(MepStyle.Dark);
+        var dark = PartMaterials.Grille(MepStyle.Dark);
         var header = Math.Min(0.14f, h * 0.16f); var margin = 0.03f;
         float rowTop;
         if (v == 1)
@@ -126,8 +126,8 @@ public sealed class DirectorySignPart() : MepPart<SignParams>(new(1500, 160))
         }
         var rowH = (rowTop - margin - 0.02f) / 5;
         if (!near) return;
-        var ink = MepStyle.Insert(v == 1 || v == 2 ? MepStyle.White : MepStyle.Dark);
-        var bar = MepStyle.Insert(v == 1 ? MepStyle.Grey : MepStyle.Dark);
+        var ink = PartMaterials.Grille(v == 1 || v == 2 ? MepStyle.White : MepStyle.Dark);
+        var bar = PartMaterials.Grille(v == 1 ? MepStyle.Grey : MepStyle.Dark);
         for (var i = 0; i < 5; i++)
         {
             var cy = rowTop - (i + 0.5f) * rowH;
@@ -135,7 +135,7 @@ public sealed class DirectorySignPart() : MepPart<SignParams>(new(1500, 160))
             StrokeFont.Write(b, (5 - i).ToString(System.Globalization.CultureInfo.InvariantCulture), -hx + margin + 0.06f, cy, face, rowH * 0.55f, ink);
             var u0 = -hx + margin + 0.14f; var u1 = hx - margin - 0.04f - (i % 2 == 0 ? 0.04f : 0.12f);
             b.AddBox(new(-u1, cy - rowH * 0.12f, face - 0.0015f), new(-u0, cy + rowH * 0.12f, face + 0.001f), 0, bar, f);
-            if (i > 0) b.AddBox(new(-hx + margin, rowTop - i * rowH - 0.0015f, face - 0.001f), new(hx - margin, rowTop - i * rowH + 0.0015f, face + 0.001f), 0, MepStyle.Insert(MepStyle.Grey), f);
+            if (i > 0) b.AddBox(new(-hx + margin, rowTop - i * rowH - 0.0015f, face - 0.001f), new(hx - margin, rowTop - i * rowH + 0.0015f, face + 0.001f), 0, PartMaterials.Grille(MepStyle.Grey), f);
         }
     }
 }

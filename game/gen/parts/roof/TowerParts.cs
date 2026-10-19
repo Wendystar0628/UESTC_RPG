@@ -30,7 +30,7 @@ public sealed class TestTowerPart : IPartDef<EquipmentParams>
         var near = lod == LodLevel.L0;
         var seg = near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar;
         var legs = p.Variation == 1 ? 3 : 4;
-        var lattice = RoofStyle.Pipe(RoofStyle.Casing(RoofStyle.CasingWhite));
+        var lattice = PartMaterials.Pipe(PartMaterials.Casing(RoofStyle.CasingWhite));
         var b = new PartBuilder();
         var top = p.Height - RoofStyle.TowerMast;
         var panels = Math.Max(2, (int)MathF.Round(top / RoofStyle.TowerPanelHeight));
@@ -67,8 +67,8 @@ public sealed class TestTowerPart : IPartDef<EquipmentParams>
         // Platform on the legs' tops, the mast standing out of it, a cross-arm near its head.
         var topScale = RoofStyle.TowerTopRatio;
         var px = Math.Min(hx * topScale + 0.12f, p.Width * 0.5f - 0.01f); var pz = Math.Min(hz * topScale + 0.12f, p.Depth * 0.5f - 0.01f);
-        b.AddBox(new(-px, top - 0.01f, -pz), new(px, top + RoofStyle.TowerDeck, pz), near ? 0.012f : 0, RoofStyle.Trim(RoofStyle.Aluminium));
-        var steel = RoofStyle.Pipe(RoofStyle.Metal(RoofStyle.Steel));
+        b.AddBox(new(-px, top - 0.01f, -pz), new(px, top + RoofStyle.TowerDeck, pz), near ? 0.012f : 0, PartMaterials.Trim(RoofStyle.Aluminium));
+        var steel = PartMaterials.Pipe(PartMaterials.Metal(RoofStyle.Steel));
         b.AddPipe(new(0, top, 0), new(0, p.Height, 0), RoofStyle.TowerMastRadius, seg, steel);
         if (near)
         {
@@ -110,11 +110,11 @@ public sealed class SolarPanelPart : IPartDef<PanelParams>
         var near = lod == LodLevel.L0;
         var b = new PartBuilder();
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f; var h = p.Height; var f = RoofStyle.SolarFrame;
-        b.AddBox(new(-hx, 0, -hz), new(hx, h - 0.005f, hz), near ? 0.01f : 0, RoofStyle.Casing(p.Variation == 1 ? RoofStyle.FenceSteel : RoofStyle.Aluminium));
-        b.AddBox(new(-hx + f, h - 0.006f, -hz + f), new(hx - f, h - 0.002f, hz - f), 0, RoofStyle.Board(RoofStyle.Glass), VertexFlag.NoShadow);
+        b.AddBox(new(-hx, 0, -hz), new(hx, h - 0.005f, hz), near ? 0.01f : 0, PartMaterials.Casing(p.Variation == 1 ? RoofStyle.FenceSteel : RoofStyle.Aluminium));
+        b.AddBox(new(-hx + f, h - 0.006f, -hz + f), new(hx - f, h - 0.002f, hz - f), 0, PartMaterials.Board(RoofStyle.Glass), VertexFlag.NoShadow);
         if (!near) return b.Finish(Bounds(p));
         // Cell grid: lines along both directions, a little proud of the cells.
-        var line = RoofStyle.Metal(RoofStyle.Aluminium);
+        var line = PartMaterials.Metal(RoofStyle.Aluminium);
         var w = p.Width - 2 * f; var d = p.Depth - 2 * f;
         for (var c = 1; c < RoofStyle.SolarColumns; c++)
         {

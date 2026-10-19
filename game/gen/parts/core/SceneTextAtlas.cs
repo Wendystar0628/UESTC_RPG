@@ -35,6 +35,11 @@ public sealed class SceneTextAtlas
             if (!_glyphs.TryGetValue(rune.Value, out var entry))
                 throw new InvalidDataException($"Scene text atlas lacks U+{rune.Value:X}: {text}");
             var plane = entry.Glyph.PlaneBounds;
+            if (plane.Z <= plane.X || plane.W <= plane.Y)
+            {
+                cursor += entry.Advance;
+                continue;
+            }
             var uv = entry.Glyph.UvRect;
             // Native MSDF padding extends into the next glyph. Opaque printed cells must not paint over
             // their neighbour's ink: crop to the advance cell and interpolate the corresponding UV.

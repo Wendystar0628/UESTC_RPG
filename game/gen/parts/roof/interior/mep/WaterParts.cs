@@ -24,9 +24,9 @@ public sealed class BoilerPart() : MepPart<EquipmentParams>(new(1300, 160))
     {
         var v = Variant(p);
         var f = MepStyle.Flags;
-        var steel = MepStyle.Casing(MepStyle.Stainless);
-        var metal = MepStyle.Metal(MepStyle.Aluminium);
-        var dark = MepStyle.Insert(MepStyle.Dark);
+        var steel = PartMaterials.Casing(MepStyle.Stainless);
+        var metal = PartMaterials.Metal(MepStyle.Aluminium);
+        var dark = PartMaterials.Grille(MepStyle.Dark);
         var hx = p.Width * 0.5f; var back = p.Depth * 0.5f;
         var front = -p.Depth * 0.5f + MepStyle.BoilerTapReach;
         var y0 = v == 2 ? 0 : MepStyle.BoilerFoot;
@@ -49,9 +49,9 @@ public sealed class BoilerPart() : MepPart<EquipmentParams>(new(1300, 160))
         b.AddBox(new(-px, py0, front - MepStyle.Relief), new(px, py1, front + 0.002f), near ? MepStyle.SmallBevel : 0, dark, f);
         if (near)
         {
-            var white = MepStyle.Casing(MepStyle.White);
+            var white = PartMaterials.Casing(MepStyle.White);
             var gy = (py0 + py1) * 0.5f;
-            b.AddBox(new(-px + 0.02f, py0 + 0.025f, front - MepStyle.Relief - 0.002f), new(-px * 0.1f, py1 - 0.025f, front - MepStyle.Relief + 0.001f), 0, MepStyle.Insert(MepStyle.Grey), f);
+            b.AddBox(new(-px + 0.02f, py0 + 0.025f, front - MepStyle.Relief - 0.002f), new(-px * 0.1f, py1 - 0.025f, front - MepStyle.Relief + 0.001f), 0, PartMaterials.Grille(MepStyle.Grey), f);
             for (var i = 0; i < 3; i++)
                 b.AddDisc(px * (0.2f + 0.27f * i), gy, front - MepStyle.Relief - 0.005f, front - MepStyle.Relief + 0.001f, 0.012f, 10, white, f);
         }
@@ -66,13 +66,13 @@ public sealed class BoilerPart() : MepPart<EquipmentParams>(new(1300, 160))
         // Dark back plate framing the taps.
         b.AddBox(new(-tw, trayTop, front - 0.002f), new(tw, yt + 0.11f, front + 0.002f), 0, dark, f);
         var pitch = Math.Min(0.16f, 2 * tw / taps);
-        var red = MepStyle.Casing(MepStyle.FireRed);
+        var red = PartMaterials.Casing(MepStyle.FireRed);
         for (var i = 0; i < taps; i++)
         {
             var x = (i - (taps - 1) * 0.5f) * pitch;
             b.AddBox(new(x - 0.018f, yt, front - 0.05f), new(x + 0.018f, yt + 0.05f, front - 0.001f), near ? 0.004f : 0, metal, f);
             if (!near) continue;
-            b.AddColumn(x, yt - 0.04f, yt + 0.003f, front - 0.034f, 0.009f, 8, MepStyle.Pipe(MepStyle.Aluminium), f);
+            b.AddColumn(x, yt - 0.04f, yt + 0.003f, front - 0.034f, 0.009f, 8, PartMaterials.Pipe(MepStyle.Aluminium), f);
             b.AddBox(new(x - 0.011f, yt + 0.047f, front - 0.068f), new(x + 0.011f, yt + 0.068f, front - 0.012f), 0.004f, red, f);
         }
         if (!near) return;
@@ -86,8 +86,8 @@ public sealed class BoilerPart() : MepPart<EquipmentParams>(new(1300, 160))
         var h = Math.Min(MepStyle.BoilerWarningHeight, (2 * hx - 0.08f) / StrokeText.Width(MepStyle.BoilerWarning, 1));
         var sy = Math.Min(yt + 0.11f + 0.02f + h * 0.8f, py0 - h);
         var sw = StrokeText.Width(MepStyle.BoilerWarning, h) * 0.5f + 0.015f;
-        b.AddBox(new(-sw, sy - h * 0.8f, front - 0.0015f), new(sw, sy + h * 0.8f, front + 0.002f), 0, MepStyle.Insert(MepStyle.White), f);
-        StrokeFont.Write(b, MepStyle.BoilerWarning, 0, sy, front - 0.0015f, h, MepStyle.Insert(MepStyle.FireRed));
+        b.AddBox(new(-sw, sy - h * 0.8f, front - 0.0015f), new(sw, sy + h * 0.8f, front + 0.002f), 0, PartMaterials.Grille(MepStyle.White), f);
+        StrokeFont.Write(b, MepStyle.BoilerWarning, 0, sy, front - 0.0015f, h, PartMaterials.Grille(MepStyle.FireRed));
     }
 }
 
@@ -111,9 +111,9 @@ public sealed class WaterDispenserPart() : MepPart<EquipmentParams>(new(700, 200
         var f = MepStyle.Flags;
         var hx = p.Width * 0.5f; var back = p.Depth * 0.5f;
         var front = -p.Depth * 0.5f + Reach;
-        var body = MepStyle.Casing(v == 2 ? MepStyle.Stainless : MepStyle.White);
-        var dark = MepStyle.Insert(MepStyle.Dark);
-        var metal = MepStyle.Metal(MepStyle.Aluminium);
+        var body = PartMaterials.Casing(v == 2 ? MepStyle.Stainless : MepStyle.White);
+        var dark = PartMaterials.Grille(MepStyle.Dark);
+        var metal = PartMaterials.Metal(MepStyle.Aluminium);
         var bottle = v == 0 ? Math.Min(MepStyle.DispenserBottleMax, p.Height * MepStyle.DispenserBottleRatio) : 0;
         var top = p.Height - bottle;
         b.AddBox(new(-hx, 0, front), new(hx, top, back), near ? MepStyle.Bevel : 0, body, f);
@@ -121,7 +121,7 @@ public sealed class WaterDispenserPart() : MepPart<EquipmentParams>(new(700, 200
         else if (near)
         {
             // Top control strip (1) or display (2).
-            var band = v == 1 ? MepStyle.Insert(MepStyle.Grey) : dark;
+            var band = v == 1 ? PartMaterials.Grille(MepStyle.Grey) : dark;
             b.AddBox(new(-hx * 0.7f, top - 0.11f, front - MepStyle.Relief), new(hx * 0.7f, top - 0.04f, front + 0.002f), MepStyle.SmallBevel, band, f);
         }
 
@@ -136,9 +136,9 @@ public sealed class WaterDispenserPart() : MepPart<EquipmentParams>(new(700, 200
         for (var i = 0; i < taps; i++)
         {
             var x = (i - (taps - 1) * 0.5f) * pitch;
-            var lever = MepStyle.Casing(i == 0 ? MepStyle.FireRed : v == 2 ? MepStyle.Aluminium : MepStyle.White);
+            var lever = PartMaterials.Casing(i == 0 ? MepStyle.FireRed : v == 2 ? MepStyle.Aluminium : MepStyle.White);
             b.AddBox(new(x - 0.016f, yt - 0.02f, front - 0.03f), new(x + 0.016f, yt + 0.03f, front - 0.001f), near ? 0.004f : 0, lever, f);
-            if (near) b.AddColumn(x, yt - 0.045f, yt - 0.017f, front - 0.016f, 0.007f, 8, MepStyle.Pipe(MepStyle.Aluminium), f);
+            if (near) b.AddColumn(x, yt - 0.045f, yt - 0.017f, front - 0.016f, 0.007f, 8, PartMaterials.Pipe(MepStyle.Aluminium), f);
         }
         if (!near) return;
         // Lower door: a seam line and a recessed pull, so the cabinet does not read as a blank block.
@@ -157,8 +157,8 @@ public sealed class WaterDispenserPart() : MepPart<EquipmentParams>(new(700, 200
         var h = y1 - y0;
         var shoulder = y0 + Math.Min(0.12f, h * 0.28f);
         var segments = near ? RoofStyle.RoundSegmentsFine : 8;
-        var water = MepStyle.Curved(MepStyle.Water);
-        b.AddColumn(0, y0 - 0.003f, y0 + 0.022f, zc, r * 0.78f, segments, MepStyle.Casing(MepStyle.Grey), f);
+        var water = PartMaterials.Curved(MepStyle.Water);
+        b.AddColumn(0, y0 - 0.003f, y0 + 0.022f, zc, r * 0.78f, segments, PartMaterials.Casing(MepStyle.Grey), f);
         LatheBand[] bands =
         [
             new(0, y0 + 0.02f, neck, y0 + 0.02f, new(0, -1), new(0, -1)),

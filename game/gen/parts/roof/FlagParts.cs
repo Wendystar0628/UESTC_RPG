@@ -64,8 +64,8 @@ public sealed class PennantPart : IPartDef<SignParams>
         var near = lod == LodLevel.L0;
         var b = new PartBuilder();
         var hx = p.Width * 0.5f; var h = p.Height; var d = p.Depth * 0.5f;
-        var cloth = RoofStyle.Board(p.Variation == 1 ? RoofStyle.FlagRed : RoofStyle.FlagBlue);
-        var steel = RoofStyle.Pipe(RoofStyle.Metal(RoofStyle.Aluminium));
+        var cloth = PartMaterials.Board(p.Variation == 1 ? RoofStyle.FlagRed : RoofStyle.FlagBlue);
+        var steel = PartMaterials.Pipe(PartMaterials.Metal(RoofStyle.Aluminium));
         var rb = RoofStyle.FlagBarRadius; var seg = near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar;
         var barY = h - rb - 0.005f;
         // Crossbar with round end caps, two short hanger tabs, the cloth under it and the hem rod.
@@ -75,13 +75,13 @@ public sealed class PennantPart : IPartDef<SignParams>
         b.AddPipe(new(-hx + 0.008f, hem, 0), new(hx - 0.008f, hem, 0), RoofStyle.FlagHemRadius, seg, steel);
         if (!near) return b.Finish(Bounds(p));
         foreach (var x in new[] { -hx * 0.7f, hx * 0.7f })
-            b.AddBox(new(x - 0.012f, top - 0.04f, -d - 0.002f), new(x + 0.012f, barY + 0.008f, d + 0.002f), 0, RoofStyle.Metal(RoofStyle.Aluminium), VertexFlag.NoShadow);
-        var white = RoofStyle.Board(RoofStyle.CasingWhite);
+            b.AddBox(new(x - 0.012f, top - 0.04f, -d - 0.002f), new(x + 0.012f, barY + 0.008f, d + 0.002f), 0, PartMaterials.Metal(RoofStyle.Aluminium), VertexFlag.NoShadow);
+        var white = PartMaterials.Board(RoofStyle.CasingWhite);
         var span = top - hem;
         if (p.Variation == 2)
         {
             // A lighter band across the cloth, a hand above the hem rod.
-            b.AddBox(new(-hx + 0.012f, hem + span * 0.18f, -d - 0.001f), new(hx - 0.012f, hem + span * 0.3f, d + 0.001f), 0, RoofStyle.Board(RoofStyle.FlagBlueLight), VertexFlag.NoShadow);
+            b.AddBox(new(-hx + 0.012f, hem + span * 0.18f, -d - 0.001f), new(hx - 0.012f, hem + span * 0.3f, d + 0.001f), 0, PartMaterials.Board(RoofStyle.FlagBlueLight), VertexFlag.NoShadow);
             return b.Finish(Bounds(p));
         }
         var r = Math.Min(p.Width * 0.5f - 0.05f, span * 0.28f);
@@ -124,9 +124,9 @@ public sealed class BannerPart : IPartDef<SignParams>
         var b = new PartBuilder();
         var hx = p.Width * 0.5f; var h = p.Height; var d = p.Depth * 0.5f;
         var v = p.Variation;
-        var cloth = RoofStyle.Board(v switch { 0 => RoofStyle.CasingWhite, 1 => RoofStyle.FlagBlue, _ => RoofStyle.FlagRed });
-        var accent = RoofStyle.Board(v == 0 ? RoofStyle.FlagBlue : RoofStyle.CasingWhite);
-        var steel = RoofStyle.Pipe(RoofStyle.Metal(RoofStyle.Aluminium));
+        var cloth = PartMaterials.Board(v switch { 0 => RoofStyle.CasingWhite, 1 => RoofStyle.FlagBlue, _ => RoofStyle.FlagRed });
+        var accent = PartMaterials.Board(v == 0 ? RoofStyle.FlagBlue : RoofStyle.CasingWhite);
+        var steel = PartMaterials.Pipe(PartMaterials.Metal(RoofStyle.Aluminium));
         var rb = RoofStyle.FlagBarRadius; var seg = near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar;
         var top = h - 2 * rb; var bottom = 2 * rb;
         b.AddPipe(new(-hx, h - rb, 0), new(hx, h - rb, 0), rb, seg, steel);

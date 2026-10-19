@@ -63,7 +63,7 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
             bands.Add(new(r0, Front(r0) - Shell, r1, Front(r1) - Shell, BackNormal(r0), BackNormal(r1)));
         }
         // The rim is the silhouette: 24 sides near keep it round at roof-walking distance; the bowl needs few rings.
-        var dish = PartShapes.Lathe(bands, near ? 24 : 8, RoofStyle.Curved(RoofStyle.CasingWhite));
+        var dish = PartShapes.Lathe(bands, near ? 24 : 8, PartMaterials.Curved(RoofStyle.CasingWhite));
         // Aim: the bowl axis (+Y) turns to (0, sin tilt, −cos tilt); the rim top lands on Height.
         var aim = Xf.RotX(-(90f - RoofStyle.DishTiltDeg));
         var top = float.MinValue;
@@ -72,7 +72,7 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
             top = Math.Max(top, Xf.Point(aim, new(mesh.Position[i], mesh.Position[i + 1], mesh.Position[i + 2])).Y);
         var at = aim.Then(Xf.Move(0, p.Height - top, radius * 0.25f));
         var builder = new PartBuilder().Add(dish, at);
-        var steel = RoofStyle.Pipe(RoofStyle.Metal(RoofStyle.Steel));
+        var steel = PartMaterials.Pipe(PartMaterials.Metal(RoofStyle.Steel));
         var back = Xf.Point(at, new(0, -Shell, 0));
         var armEnd = Xf.Point(at, new(0, -Shell - Arm, 0));
         builder.AddPipe(back, armEnd, 0.04f, near ? 8 : 6, steel);
@@ -81,7 +81,7 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
         if (lod <= LodLevel.L1)
         {
             var size = Math.Min(0.7f, p.Width * 0.7f);
-            builder.AddBox(new(armEnd.X - size * 0.5f, 0, armEnd.Z - size * 0.5f), new(armEnd.X + size * 0.5f, baseTop, armEnd.Z + size * 0.5f), 0, RoofStyle.Metal(RoofStyle.Aluminium));
+            builder.AddBox(new(armEnd.X - size * 0.5f, 0, armEnd.Z - size * 0.5f), new(armEnd.X + size * 0.5f, baseTop, armEnd.Z + size * 0.5f), 0, PartMaterials.Metal(RoofStyle.Aluminium));
         }
         if (near)
         {
@@ -90,7 +90,7 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
             var rim = Xf.Point(at, new(0, Front(radius * 0.9f), -radius * 0.9f));
             var feed = Xf.Point(at, new(0, focus, 0));
             builder.AddPipe(rim, feed, 0.015f, 6, steel, VertexFlag.NoShadow);
-            builder.AddCentredBox(new(0.08f, 0.14f, 0.08f), Xf.Move(0, focus, 0).Then(at), RoofStyle.Casing(RoofStyle.CasingWhite), 0, VertexFlag.NoShadow);
+            builder.AddCentredBox(new(0.08f, 0.14f, 0.08f), Xf.Move(0, focus, 0).Then(at), PartMaterials.Casing(RoofStyle.CasingWhite), 0, VertexFlag.NoShadow);
         }
         return builder;
     }
@@ -100,14 +100,14 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
         var near = lod == LodLevel.L0;
         var builder = new PartBuilder();
         var baseTop = 0.1f;
-        builder.AddBox(new(-0.25f, 0, -0.25f), new(0.25f, baseTop, 0.25f), 0, RoofStyle.Metal(RoofStyle.Aluminium));
+        builder.AddBox(new(-0.25f, 0, -0.25f), new(0.25f, baseTop, 0.25f), 0, PartMaterials.Metal(RoofStyle.Aluminium));
         var mastR = RoofStyle.MastDiameter * 0.5f;
-        builder.AddColumn(0, baseTop - 0.003f, p.Height, 0, mastR, near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar, RoofStyle.Pipe(RoofStyle.Metal(RoofStyle.Steel)));
+        builder.AddColumn(0, baseTop - 0.003f, p.Height, 0, mastR, near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar, PartMaterials.Pipe(PartMaterials.Metal(RoofStyle.Steel)));
         var panelH = Math.Min(1.2f, p.Height * 0.45f);
         var depth = RoofStyle.PanelAntennaDepth;
         var centreY = p.Height - 0.05f - panelH * 0.5f;
         var reach = mastR + 0.12f + depth * 0.5f;
-        var panel = RoofStyle.Casing(RoofStyle.CasingWhite);
+        var panel = PartMaterials.Casing(RoofStyle.CasingWhite);
         for (var k = 0; k < 3; k++)
         {
             var turn = Xf.RotY(120f * k);
@@ -115,7 +115,7 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
             if (!near) continue;
             var armLength = reach - depth * 0.5f - mastR + 0.01f;
             foreach (var y in new[] { centreY - panelH * 0.35f, centreY + panelH * 0.35f })
-                builder.AddCentredBox(new(0.04f, 0.04f, armLength), Xf.Move(0, y, -(mastR - 0.005f + armLength * 0.5f)).Then(turn), RoofStyle.Metal(RoofStyle.Steel), 0, VertexFlag.NoShadow);
+                builder.AddCentredBox(new(0.04f, 0.04f, armLength), Xf.Move(0, y, -(mastR - 0.005f + armLength * 0.5f)).Then(turn), PartMaterials.Metal(RoofStyle.Steel), 0, VertexFlag.NoShadow);
         }
         return builder;
     }
