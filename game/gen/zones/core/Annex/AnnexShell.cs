@@ -47,12 +47,13 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
         Columns = Math.Max(1, next.Max());
     }
 
-    public static IEnumerable<AnnexShell> From(IWorldModel world, AnnexSite? site)
+    public static IEnumerable<AnnexShell> From(IWorldModel world, AnnexSite? site, Func<FeatureId, bool>? includes = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         if (site is null) yield break;
         foreach (var (feature, kind) in AnnexSite.Members)
         {
+            if (includes is not null && !includes(feature)) continue;
             if (!site.Annexes.TryGetValue(feature.Value, out var entry)) continue;
             var pieces = site.PiecesOf(feature.Value).ToArray();
             if (pieces.Length == 0) continue;

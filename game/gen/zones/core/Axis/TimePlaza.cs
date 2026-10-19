@@ -57,13 +57,7 @@ public sealed class TimePlaza : ICorePiece
     {
         ArgumentNullException.ThrowIfNull(world);
         if (!world.Features.TryGetValue(CoreIds.TimePlaza, out var plaza)) return null;
-        var ring = FeatureReads.Contour(plaza);
-        var centre = Vector2.Zero;
-        foreach (var p in ring) centre += p;
-        centre /= ring.Count;
-        var radius = 0f;
-        foreach (var p in ring) radius += Vector2.Distance(p, centre);
-        radius /= ring.Count;
+        var (centre, radius) = Plan(plaza);
         // The axis points from the plaza centre to the library's grand stair (MAP-QSH-CORE).
         var axis = world.Features.TryGetValue(CoreIds.LibraryStair, out var stair)
             ? Vector2.Normalize(PlanGeometry.Centroid(WorldFeatureGeometry.PolygonsOf(stair.Parts.Count > 0 ? stair.Parts[0].Geometry : stair.Geometry).Select(r => r.Outer)) - centre)
@@ -74,6 +68,18 @@ public sealed class TimePlaza : ICorePiece
             .Select(f => { var p = ((PointGeometry)f.Geometry).Position; return new Vector2(p.X, p.Z); })
             .ToArray();
         return new TimePlaza(world, centre, radius, axis, benches);
+    }
+
+    internal static (Vector2 Centre, float Radius) Plan(WorldFeature plaza)
+    {
+        var ring = FeatureReads.Contour(plaza);
+        var centre = Vector2.Zero;
+        foreach (var p in ring) centre += p;
+        centre /= ring.Count;
+        var radius = 0f;
+        foreach (var p in ring) radius += Vector2.Distance(p, centre);
+        radius /= ring.Count;
+        return (centre, radius);
     }
 
     public string Id => "time-plaza";
@@ -456,11 +462,13 @@ public sealed class TimePlaza : ICorePiece
             var ground = _world.Terrain.HeightAt(p.X, p.Y) + GroundLevels.Lawn;
             build.Parts.Add(new PlacedPart(new PartId(PartCatalog.StreetLamp), parameters, Matrix4x4.CreateTranslation(p.X, ground, p.Y)));
         }
-        var bench = new FurnitureParams(1.8f, 0.8f, 0.6f) { Material = S.PartMaterial(S.LampMetal) };
+        var bench = BenchParameters;
         foreach (var p in _benches)
         {
             var ground = _world.Terrain.HeightAt(p.X, p.Y) + GroundLevels.Lawn;
             build.Parts.Add(new PlacedPart(new PartId(PartCatalog.Bench), bench, Shapes.Facing(new(p.X, ground, p.Y), Vector2.Normalize(Centre - p))));
         }
     }
+
+    internal static FurnitureParams BenchParameters { get; } = new(1.8f, 0.8f, 0.6f) { Material = S.PartMaterial(S.LampMetal) };
 }

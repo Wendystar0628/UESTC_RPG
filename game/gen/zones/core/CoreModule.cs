@@ -1,7 +1,7 @@
 using Campus.Gen.Geometry;
 using Campus.Gen.Zones.Common;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
+using Campus.Contracts.Maps;
 using Campus.Gen.Zones.Core.Annex;
 using Campus.Gen.Zones.Core.Axis;
 using Campus.Gen.Zones.Core.Entrance;
@@ -27,10 +27,13 @@ internal sealed class CoreZoneSite : ZoneSite, ILightMetadataSource
 {
     public override string Id => "core";
     public override IReadOnlyList<Claim> Claims => CoreSite.Claims;
+    public override IReadOnlyList<MapRect> Ranges(IWorldModel world) => CoreRanges.All(world);
 
     public override void Build(SiteBuilder builder)
     {
-        foreach (var group in CoreSite.Pieces(builder.Context.World).GroupBy(piece => TileGrid.At(piece.Anchor, builder.Lod)))
+        foreach (var group in CoreSite.Pieces(builder.Context.World, builder.Includes)
+            .Where(piece => builder.Includes(piece.Anchor))
+            .GroupBy(piece => TileGrid.At(piece.Anchor, builder.Lod)))
         {
             var build = CreateBuild(builder.Context);
             foreach (var piece in group) piece.Build(build, builder.Lod);
@@ -44,7 +47,8 @@ internal sealed class CoreZoneSite : ZoneSite, ILightMetadataSource
 
     public override void Collide(SiteColliders colliders)
     {
-        foreach (var piece in CoreSite.Pieces(colliders.Context.World))
+        foreach (var piece in CoreSite.Pieces(colliders.Context.World, colliders.Includes)
+            .Where(piece => colliders.Includes(piece.Anchor)))
             foreach (var collider in piece.Collide()) colliders.Add(collider, piece.Anchor);
     }
 
@@ -85,8 +89,6 @@ internal sealed class CoreZoneSite : ZoneSite, ILightMetadataSource
 /// </summary>
 public static class CoreSite
 {
-    private static readonly ConditionalWeakTable<IWorldModel, IReadOnlyList<ICorePiece>> Cache = new();
-
     /// <summary>Every claim the zone makes. Keep in step with the pieces' own Claims (a unit test checks).</summary>
     public static IReadOnlyList<Claim> Claims { get; } =
     [
@@ -103,30 +105,34 @@ public static class CoreSite
         new FeatureClaim(CoreIds.NorthWestJoint, Aspects.Massing | Aspects.Facade | Aspects.Roof),
     ];
 
-    public static IReadOnlyList<ICorePiece> Pieces(IWorldModel world)
+    public static IReadOnlyList<ICorePiece> Pieces(IWorldModel world, Func<MapRect, bool>? includes = null)
     {
         ArgumentNullException.ThrowIfNull(world);
-        return Cache.GetValue(world, Create);
-    }
-
-    private static IReadOnlyList<ICorePiece> Create(IWorldModel world)
-    {
-        var library = LibraryShell.From(world);
-        var annex = AnnexSite.From(world, library);
+        bool Selected(FeatureId feature) => CoreRanges.ForFeature(world, feature) is { } range && (includes?.Invoke(range) ?? true);
+        var plazaSelected = Selected(CoreIds.TimePlaza);
+        var sundialSelected = Selected(CoreIds.Sundial);
+        var librarySelected = Selected(CoreIds.Library);
+        var stairSelected = Selected(CoreIds.LibraryStair);
+        var museumSelected = Selected(CoreIds.Museum);
+        var annexSelected = AnnexSite.Members.Where(member => Selected(member.Feature)).Select(member => member.Feature).ToHashSet();
+        var gardenSelected = CoreRanges.Garden(world) is { } gardenRange && (includes?.Invoke(gardenRange) ?? true);
+        // The stair and north blocks share the library plan; construct that dependency only for selected sources.
+        var library = librarySelected || stairSelected || annexSelected.Count > 0 || gardenSelected ? LibraryShell.From(world) : null;
+        var annex = annexSelected.Count > 0 || gardenSelected ? AnnexSite.From(world, library) : null;
         ICorePiece?[] pieces =
         [
             // 16a: the axis and the time plaza.
-            TimePlaza.From(world),
-            Sundial.From(world),
+            plazaSelected ? TimePlaza.From(world) : null,
+            sundialSelected ? Sundial.From(world) : null,
             // 16b onward: library shell, surrounding blocks, museum, West Lake structures.
-            library,
+            librarySelected ? library : null,
             // 16c: the grand stair (8398) and the 2F front door in the shell's glass slot.
-            GrandStair.From(world, library),
+            stairSelected ? GrandStair.From(world, library) : null,
             // 16d-2: the museum (8401 hall body inside the 8402 colonnade ring).
-            MuseumShell.From(world),
+            museumSelected ? MuseumShell.From(world) : null,
             // 16e: the library's north blocks (8403, 8406, 8408, 8409, 8410) and the 宁静苑 court they close.
-            .. AnnexShell.From(world, annex),
-            QuietGarden.From(world, annex),
+            .. AnnexShell.From(world, annex, annexSelected.Contains),
+            gardenSelected ? QuietGarden.From(world, annex) : null,
         ];
         return pieces.OfType<ICorePiece>().ToArray();
     }

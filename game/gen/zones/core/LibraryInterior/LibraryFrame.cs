@@ -41,7 +41,7 @@ internal sealed class LibraryFrame
     public static LibraryFrame Of(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        return Cache.GetValue(world, w => new LibraryFrame(CoreSite.Pieces(w).OfType<LibraryShell>().SingleOrDefault()
+        return Cache.GetValue(world, w => new LibraryFrame(LibraryShell.From(w)
             ?? throw new InvalidOperationException("The library interior needs the library shell (MAP-QSH-CORE) in this world.")));
     }
 

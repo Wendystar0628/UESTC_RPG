@@ -80,6 +80,17 @@ public sealed class CoreModuleTests
         AssertThat(declared.SequenceEqual(fromPieces)).OverrideFailureMessage("module claims are exactly the pieces' claims").IsTrue();
         var plaza = (TimePlaza)pieces[0];
         AssertThat(plaza.FloorTop == world.Terrain.HeightAt(plaza.Centre.X, plaza.Centre.Y) + GroundLevels.Paving).OverrideFailureMessage("plaza floor follows the production terrain").IsTrue();
+        var sourceOnly = new FakeWorld(world)
+        {
+            Terrain = new FormulaTerrain((_, _) => throw new InvalidOperationException("Directory construction must not read terrain."),
+                padY: _ => throw new InvalidOperationException("Directory construction must not read pads.")),
+        };
+        var module = new CoreModule();
+        var cells = module.Tiles(Context(sourceOnly)).ToArray();
+        AssertThat(cells.Length > 0).OverrideFailureMessage("the directory comes from authored ranges without constructing pieces").IsTrue();
+        var outside = new TileKey(cells.Max(cell => cell.X) + 1, cells.Max(cell => cell.Z) + 1);
+        AssertThat(module.Build(Context(sourceOnly), outside, LodLevel.L0).Meshes.Count == 0
+            && module.Collide(Context(sourceOnly), outside).Count == 0).OverrideFailureMessage("an unrelated request generates no core source or height reads").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
