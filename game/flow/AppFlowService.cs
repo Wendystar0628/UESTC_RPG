@@ -57,7 +57,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
 
     public Task<EnterResult> Enter(EnterRequest request)
     {
-        if (!In(AppState.Title) || maps.Context is null && !restore.RestoreFaulted) return Task.FromResult(EnterResult.Rejected);
+        if (!In(AppState.Title)) return Task.FromResult(EnterResult.Rejected);
         var slot = request.Kind switch
         {
             EnterKind.NewGame => request.Slot,
@@ -85,6 +85,8 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
                 _ => throw new ArgumentOutOfRangeException(nameof(_request)),
             };
             await BeginLoading(_request, newGame);
+            // A faulted world's NewGame transaction owns its recovery preparation.
+            if (!newGame || !restore.RestoreFaulted) await WorldReady;
             if (newGame) await StartNewTimeline(); else await RestoreRequested();
             RequireHealthyWorld();
             if (!newGame) { await PrepareResumeEndpoint(); RequirePreparedResume(); }
@@ -105,6 +107,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
             ReleaseFlow(); Change(AppState.Playing); ReleaseInput();
             return EnterResult.Entered;
         }
+        catch (OperationCanceledException) when (_quitting) { return EnterResult.Rejected; }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
             CaptureFailure(error);
@@ -195,6 +198,7 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
     private async Task QuitCore()
     {
         var previous = State; _quitting = true; HoldInput();
+        _worldReady.TrySetCanceled();
         if (restore.RestoreFaulted)
         {
             // Save returns Deferred for a faulted restore: intentionally preserve the old generation.

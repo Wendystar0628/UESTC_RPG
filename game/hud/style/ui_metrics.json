@@ -223,7 +223,6 @@
       "title": { "in": 900, "out": 600, "hold": 2400, "perGlyph": 50 },
       "dayNight": { "sweep": 600, "handleTurnDeg": 6 },
       "statusLamp": { "period": 2400, "min": 0.55, "endFade": 300 },
-      "waitLamps": { "fade": 200, "period": 1600, "allOff": 400, "showAfter": 1500, "showAfterColdBoot": 4000 },
       "loading": { "in": 200, "out": 500 },
       "firstGuide": { "hold": 4000 },
       "trace": { "panel": 400, "route": [400, 600], "saved": 450, "connector": 240, "land": 120, "head": 8, "tail": 120 },
@@ -257,8 +256,7 @@
       "quantizeFade": 150,
       "springFade": 100,
       "dayNight": "instant",
-      "dayNightCue": 300,
-      "worldVeil": 500
+      "dayNightCue": 300
     }
   }
 }

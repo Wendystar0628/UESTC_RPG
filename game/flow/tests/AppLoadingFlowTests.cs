@@ -14,6 +14,23 @@ namespace Campus.Tests;
 public sealed class AppLoadingFlowTests
 {
     [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task EarlyTitleEntryJoinsBackgroundBootBeforeStartingTheTimeline()
+    {
+        var rig = new FlowTestRig(); var maps = Maps(out _, out _);
+        var saves = new SaveService(rig.Camera);
+        var flow = rig.CreateFlow(saves, maps, new TestAppExit(allowQuit: false));
+        await flow.PrepareBoot(new());
+        await flow.OpenTitle();
+        var entering = flow.Enter(new(EnterKind.NewGame, new("s1")));
+        if (entering.IsCompleted || flow.State != AppState.Entering || !rig.Loading.Active || saves.NewGames != 0)
+            throw new InvalidOperationException("Early entry did not join the covered background boot.");
+        await flow.PrepareWorld(); await flow.CompleteBoot();
+        if (await entering != EnterResult.Entered || saves.NewGames != 1 || rig.Loading.Active)
+            throw new InvalidOperationException("Joined startup duplicated or failed the selected new game.");
+    }
+
+    [TestCase]
     [TestCategory(TestReason.Smoke)]
     public async Task TitleAndNewGameResolveDefaultWaypointWithNoInlineSpawns()
     {

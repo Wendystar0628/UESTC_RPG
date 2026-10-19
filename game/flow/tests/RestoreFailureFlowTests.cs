@@ -11,9 +11,18 @@ public sealed class RestoreFailureFlowTests
 {
     [TestCase]
     [TestCategory(TestReason.Smoke)]
-    public async Task FaultedWorldRetainsCoverAndAcceptsNewGameWithoutMapContext()
+    public async Task FaultedWorldRetainsCoverAndAcceptsNewGameWithoutMapContext() =>
+        await FaultedRecoveryCase(bootFailed: false);
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public async Task FailedBootStillAllowsTheFaultedWorldNewGameRecoveryTransaction() =>
+        await FaultedRecoveryCase(bootFailed: true);
+
+    private static async Task FaultedRecoveryCase(bool bootFailed)
     {
         var f = new Fixture();
+        if (bootFailed) f.Flow.FailBoot(new InvalidOperationException("boot.failed"));
         await f.Flow.ReturnToTitle();
         var entering = f.Flow.Enter(new(EnterKind.NewGame, new("s1")));
         var result = await entering;

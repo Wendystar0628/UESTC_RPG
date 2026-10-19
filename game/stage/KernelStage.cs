@@ -34,7 +34,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private Task? _shutdownTask;
     private readonly CancellationTokenSource _captureLifetime = new();
     private ViewContentReadiness? _contentReadiness;
-    private IVeilLease? _failureVeil;
+    private IAppLoadingLease? _failureLoading;
     private IFlowLease? _failureFlow;
     private readonly StageGateDriver _gate;
     private string _phase = "compose";
@@ -131,19 +131,22 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private async Task StartWorld()
     {
         var registry = Services.Services;
-        using var bootVeil = registry.Get<IVeilService>().Cover(VeilReason.Boot, 0,
-            AppBoot.Options.Title ? VeilContent.Frontispiece : VeilContent.Fog);
+        var frontispiece = registry.Get<IAppFrontispiecePresentation>();
+        IAppLoadingLease? bootLoading = null;
+        if (AppBoot.Options.Flow.ShowTitle) await frontispiece.Show();
+        else { bootLoading = registry.Get<IAppLoadingPresentation>().Show(); await bootLoading.Covered; }
         using var startupFlow = registry.Get<IWorldControl>().AcquireFlow(FlowPriority.Pause, 0);
-        try { await StartWorld(bootVeil, startupFlow); }
+        try { await StartWorld(frontispiece, bootLoading, startupFlow); }
         catch (OperationCanceledException) when (_closing) { throw; }
         catch
         {
             HoldFailure();
             throw;
         }
+        finally { if (bootLoading is not null) await bootLoading.DisposeAsync(); }
     }
 
-    private async Task StartWorld(IVeilLease bootVeil, IFlowLease startupFlow)
+    private async Task StartWorld(IAppFrontispiecePresentation frontispiece, IAppLoadingLease? bootLoading, IFlowLease startupFlow)
     {
         var options = AppBoot.Options;
         var showTitle = options.Flow.ShowTitle;
@@ -153,23 +156,17 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (participants.GroupBy(item => item.Id, StringComparer.Ordinal).Any(group => group.Count() != 1))
             throw new InvalidOperationException("Boot participant IDs must be unique.");
         var context = CreateBootContext();
-        var veil = registry.Get<IVeilService>();
-        await bootVeil.Covered;
-        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         CheckStartupActive();
-        if (!registry.Get<IVeilPresentation>().IsCovered)
-            throw new InvalidOperationException("Startup has no fully opaque viewport veil.");
-        var shaderCompilation = options.Title && !context.CaptureMode
-            ? StartupShaderCompilation.Capture(registry.Get<ISettingsStore>()) : null;
-        // One observation owns the whole boot preparation; nested save/map work must not start a 1.5 s scope.
-        using var readinessWait = veil.ObserveReadinessWait(options.Title
-            ? VeilWaitKind.BootFrontispiece : VeilWaitKind.Readiness,
-            firstShaderCompilation: shaderCompilation?.FirstShaderCompilation == true);
+        if (!registry.Get<IAppScreenCoverage>().IsCovered)
+            throw new InvalidOperationException("Startup has no fully opaque application presentation.");
         await Initialize(BootPhase.BeforeMap);
+        registry.Get<PipelineWarmup>().SetCanvasFont(_runtimeObjects.OfType<Campus.Hud.HudRoot>().Single().CanvasFont);
         Phase = "prepare-flow";
         var appBoot = registry.Get<IAppBootFlow>();
         var target = await appBoot.PrepareBoot(options.Flow);
         CheckStartupActive();
+        // Interface, sound and save metadata are ready; no map work delays menu interaction.
+        if (showTitle) await appBoot.OpenTitle();
         var maps = registry.Get<IMapService>();
         if (!appBoot.WillRestoreWorld)
         {
@@ -208,14 +205,14 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         }, _captureLifetime.Token);
         CheckStartupActive();
         Phase = "reveal";
-        readinessWait.Dispose(); // Preparation ended; the authored reveal duration is not loading.
-        shaderCompilation?.RecordSuccess();
         _statistics!.MarkRealtime();
-        await bootVeil.Reveal(showTitle ? BootTuning.TitleRevealSeconds : BootTuning.WorldRevealSeconds);
-        CheckStartupActive();
+        // Retire the boot-only image independently of foreground loading ownership. A player
+        // who already entered remains covered by their loading lease while joining this work.
+        if (showTitle && _flow!.State != AppState.Title) await frontispiece.Hide(0);
+        if (bootLoading is not null) { bootLoading.Report(1, 1); await bootLoading.Hide(); }
         await appBoot.CompleteBoot();
-        if (_flow!.State == AppState.Title)
-            GD.Print($"STARTUP_PHASE title-ready {FrameClock.MonotonicMilliseconds:R}");
+        if (showTitle) await frontispiece.Hide(BootTuning.TitleRevealSeconds);
+        CheckStartupActive();
         _ready = true;
         Phase = "realtime";
         GD.Print($"[WP-01][map={maps.Current.Value}][phase=realtime] flow={_flow!.State}; startup complete");
@@ -315,7 +312,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _closing = true;
         if (_flow is not null) _flow.Changed -= OnFlowChanged;
         _captureLifetime.Cancel();
-        _failureVeil?.Dispose();
+        if (_failureLoading is not null) _ = _failureLoading.DisposeAsync();
         _failureFlow?.Dispose();
     }
 
@@ -399,6 +396,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     {
         _ready = false;
         Failure = error.GetBaseException().Message;
+        if (_flow is IAppBootFlow bootFlow) bootFlow.FailBoot(error);
         GD.PushError($"[WP-01][phase={Phase}] {error}");
         HoldFailure();
         // Automated runs must never turn an incomplete startup or a failed screenshot into success.
@@ -407,10 +405,10 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private void HoldFailure()
     {
-        var veil = _runtimeObjects.OfType<IVeilService>().SingleOrDefault();
-        if (veil is not null)
+        var loading = _runtimeObjects.OfType<IAppLoadingPresentation>().SingleOrDefault();
+        if (loading is not null)
         {
-            try { _failureVeil ??= veil.Cover(VeilReason.Boot, 0, AppBoot.Options.Title ? VeilContent.Frontispiece : VeilContent.Fog); }
+            try { _failureLoading ??= loading.Show(); }
             catch (Exception coverError) { GD.PushError($"[WP-01][phase=failure-cover] {coverError}"); }
         }
         var world = _runtimeObjects.OfType<IWorldControl>().SingleOrDefault();

@@ -64,6 +64,7 @@ public partial class HudRoot
     private void RefreshHud()
     {
         _refreshClock = 0;
+        if (_title.Visible) _title.Sync();
         SyncNotices();
         if (_resident is not { } r) return;
         if (r.Speed.IsVisibleInTree()) r.Speed.Sync();

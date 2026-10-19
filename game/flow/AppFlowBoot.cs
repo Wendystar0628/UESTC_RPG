@@ -14,6 +14,9 @@ public sealed partial class AppFlowService : IAppBootFlow, IBootParticipant
     private SlotId? _bootSlot;
     private bool _worldPrepared;
     private bool _captureMode;
+    private readonly TaskCompletionSource _worldReady = new();
+    public Task WorldReady => _worldReady.Task;
+    public void FailBoot(Exception error) => _worldReady.TrySetException(error);
     public bool WillRestoreWorld => _boot is not null && (_boot.LoadFile is not null || _bootSlot.HasValue);
     public string Id => "app-flow";
     public int Order => 100;
@@ -41,7 +44,7 @@ public sealed partial class AppFlowService : IAppBootFlow, IBootParticipant
     }
     public async Task PrepareWorld()
     {
-        if (!In(AppState.Boot) || _boot is null) throw new InvalidOperationException("PrepareBoot must run before PrepareWorld.");
+        if (State is not (AppState.Boot or AppState.Title or AppState.Entering) || _boot is null) throw new InvalidOperationException("PrepareBoot must run before PrepareWorld.");
         try { await PrepareWorldCore(); }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
@@ -50,6 +53,15 @@ public sealed partial class AppFlowService : IAppBootFlow, IBootParticipant
             if (restore.RestoreFaulted || !TitlePrepared) throw;
             _boot = _boot with { ShowTitle = true }; _worldPrepared = true;
         }
+    }
+    public Task OpenTitle()
+    {
+        if (!In(AppState.Boot) || _boot is not { ShowTitle: true })
+            throw new InvalidOperationException("Title can open only after title boot preparation.");
+        HoldTitleFlow();
+        Change(AppState.Title);
+        MarkPhase("title-ready");
+        return Task.CompletedTask;
     }
     private async Task PrepareWorldCore()
     {
@@ -79,8 +91,9 @@ public sealed partial class AppFlowService : IAppBootFlow, IBootParticipant
     public Task CompleteBoot()
     {
         RequireHealthyWorld();
-        if (!In(AppState.Boot) || _boot is null || !_worldPrepared) throw new InvalidOperationException("Boot world is not prepared.");
-        if (_boot.ShowTitle) Change(AppState.Title);
+        if (_boot is null || !_worldPrepared) throw new InvalidOperationException("Boot world is not prepared.");
+        _worldReady.TrySetResult();
+        if (_boot.ShowTitle) { if (In(AppState.Boot)) Change(AppState.Title); else if (In(AppState.Title)) RefreshTitlePrefetch(); }
         else { Change(AppState.Playing); ReleaseInput(); }
         return Task.CompletedTask;
     }

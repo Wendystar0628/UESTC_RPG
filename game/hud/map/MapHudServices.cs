@@ -16,7 +16,6 @@ internal sealed class MapHudServices
     public ICameraRig Rig { get; } = KernelRegistry.Get<ICameraRig>();
     public IWorldState World { get; } = KernelRegistry.Get<IWorldState>();
     public IAppFlow Flow { get; } = KernelRegistry.Get<IAppFlow>();
-    public IVeilState Veil { get; } = KernelRegistry.Get<IVeilState>();
     public IMotionSettings Motion { get; } = KernelRegistry.Get<IMotionSettings>();
     public IMediumState Medium { get; } = KernelRegistry.Get<IMediumState>();
     public IUiSurfaceSink Surfaces { get; } = KernelRegistry.Get<IUiSurfaceSink>();

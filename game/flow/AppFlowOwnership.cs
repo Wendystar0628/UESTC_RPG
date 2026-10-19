@@ -16,6 +16,7 @@ public sealed partial class AppFlowService : IDisposable
     private bool _saveNeeded;
     private bool _trackingLoading;
     private bool _loadingCompleted;
+    private IAppLoadingLease? _loadingLease;
 
     private void HoldTitleFlow() => _titleFlow ??= control.AcquireFlow(FlowPriority.Pause, 0);
     private void HoldLoadingFlow()
@@ -39,9 +40,13 @@ public sealed partial class AppFlowService : IDisposable
         _arrivalCompleted = 0; _arrivalTotal = 0; _loadingCompleted = false;
         _trackingLoading = true;
         mapRuntime.ArrivalChanged += ObserveArrival;
-        await loading.Show(request);
+        var previous = _loadingLease;
+        var lease = loading.Show(request);
+        _loadingLease = lease;
+        await lease.Covered;
+        if (previous is not null) await previous.Hide();
         if (request is not null) titlePresentation.SetVisible(false);
-        loading.Report(0, 1);
+        lease.Report(0, 1);
     }
     private void ObserveArrival(IMapArrival? arrival)
     {
@@ -65,7 +70,7 @@ public sealed partial class AppFlowService : IDisposable
         if (!_trackingLoading || _arrivalTotal == 0) return;
         var completed = _arrivalCompleted + (_worldComplete ? 1 : 0) + (_saveNeeded && _saveComplete ? 1 : 0);
         var total = _arrivalTotal + 1 + (_saveNeeded ? 1 : 0);
-        loading.Report(completed, total);
+        _loadingLease?.Report(completed, total);
         if (completed == total && !_loadingCompleted)
         {
             _loadingCompleted = true; MarkPhase("loading-complete");
@@ -82,7 +87,9 @@ public sealed partial class AppFlowService : IDisposable
     private async Task FinishLoading()
     {
         CompleteLoadingProgress();
-        await loading.Hide();
+        var lease = _loadingLease;
+        _loadingLease = null;
+        if (lease is not null) await lease.Hide();
         StopTrackingLoading();
     }
     private void StopTrackingLoading()

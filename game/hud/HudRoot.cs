@@ -22,7 +22,9 @@ namespace Campus.Hud;
 [KernelNode("hud", Owner = "WP-35")]
 [KernelService(typeof(HudRoot), Owner = "WP-35")]
 [KernelService(typeof(IAppLoadingPresentation), Owner = "WP-35")]
-public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation
+[KernelService(typeof(IAppScreenCoverage), Owner = "WP-35")]
+[KernelService(typeof(IAppFrontispiecePresentation), Owner = "WP-35")]
+public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation, IAppScreenCoverage, IAppFrontispiecePresentation
 {
     private const float IdleFade = 4f;
     private const double RefreshInterval = 0.1;
@@ -37,7 +39,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private IWorldControl _control = null!;
     private IAppFlow _flow = null!;
     private IAudioService _audio = null!;
-    private IVeilState _veil = null!;
     private UiThemeClock _clock = null!;
     private Control _root = null!, _safeFrame = null!, _corners = null!, _minimapSlot = null!;
     private Control _loadingHost = null!;
@@ -47,7 +48,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private Resident? _resident;
     private PerfReadout? _perf;
     private Toast _toast = null!;
-    private WaitLamps _wait = null!;
     private SettingsCard _settingsCard = null!;
     private SavePage _savePage = null!;
     private TitleMenu _title = null!;
@@ -76,6 +76,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
 
     public override void _Ready()
     {
+        RenderingServer.Singleton.FramePostDraw += OnCoverageDrawn;
         if (_initialized)
         {
             ConnectInput();
@@ -96,7 +97,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _control = Services.Get<IWorldControl>();
         _flow = Services.Get<IAppFlow>();
         _audio = Services.Get<IAudioService>();
-        _veil = Services.Get<IVeilState>();
 
         var tokens = UiTokens.Load();
         var colors = UiColors.Load();
@@ -129,6 +129,11 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         AddChild(_loadingHost);
         _loadingHost.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
+        _frontispiece = new ColorRect { Name = "Frontispiece", Color = colors.Resolve("loading.background"),
+            Visible = false, MouseFilter = Control.MouseFilterEnum.Ignore };
+        AddChild(_frontispiece);
+        MoveChild(_frontispiece, 0);
+        _frontispiece.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _backgroundHost = _kit.Layout.Host(_root, "BackgroundHost");
         _safeFrame = _kit.Layout.SafeFrame(_root);
         _corners = _kit.Layout.Host(_safeFrame, "CornerHost");
@@ -162,7 +167,6 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _savePage = SavePage.Create(_kit, _pageHost, _dialogHost);
         _savePage.CloseRequested += CloseSaves;
         _toast = Toast.Create(_kit, _hintHost);
-        _wait = WaitLamps.Create(_kit, _hintHost, _veil);
         _initialized = true;
         BindHostInput();
         BindEvents();
@@ -179,11 +183,10 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         _settings.Tick(delta);
         if (_scaleDebounce >= 0 && (_scaleDebounce += (float)delta) >= 0.2f) { _scaleDebounce = -1; ApplyScale(); }
         SyncCorners();
-        _wait.Tick(delta, atCorner: !Playing, suppressed: Active);
         _refreshClock += delta;
         if (_refreshClock >= RefreshInterval) RefreshHud();
         // 只把真正交给玩家、未被遮住的界面时间算作空闲；图库保留待评审的 HUD。
-        if (Playing && InterfaceState && _corners.IsVisibleInTree() && _veil.Opacity == 0
+        if (Playing && InterfaceState && _corners.IsVisibleInTree() && !Active
             && _flow.Activity == AppActivity.None && _args.Gallery != "hud" && !BigPage
             && _root.GetViewport().GuiGetFocusOwner() is null && DisplayServer.AccessibilityScreenReaderActive() == 0)
             _idle += (float)delta;
@@ -208,6 +211,8 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
 
     public override void _ExitTree()
     {
+        RenderingServer.Singleton.FramePostDraw -= OnCoverageDrawn;
+        _loadingCovered = _frontispieceCovered = false;
         UnbindHostInput();
         if (_bound)
         {

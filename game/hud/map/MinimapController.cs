@@ -96,14 +96,14 @@ internal sealed class MinimapController
         _minimap.Player.Follow(size * 0.5f, _s.Observer.YawDeg, pose.YawDeg, _host.HorizontalFov(pose));
         _minimap.SetScale(ppm);
         _minimap.SetInterfaceState(Input.MouseMode == Input.MouseModeEnum.Visible);
-        // 镜头在室内、地下、水下时整体不透明度 0.6；雾幕段跟着雾幕淡出、淡回（SYS-ATLAS）
+        // 镜头在室内、地下、水下时整体不透明度 0.6（SYS-ATLAS）。
         var dim = _s.Medium.Current.Kind switch
         {
             MediumKind.Interior or MediumKind.Underground or MediumKind.Underwater => 0.6f,
             MediumKind.Air or MediumKind.FogSea => 1f,
             _ => throw new InvalidOperationException(_s.Medium.Current.Kind.ToString()),
         };
-        _minimap.Modulate = new Color(1, 1, 1, dim * (1 - Math.Clamp(_s.Veil.Opacity, 0, 1)));
+        _minimap.Modulate = new Color(1, 1, 1, dim);
         UpdateRegion(dt, at);
     }
 

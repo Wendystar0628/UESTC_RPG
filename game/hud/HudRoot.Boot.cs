@@ -6,6 +6,7 @@ namespace Campus.Hud;
 
 public partial class HudRoot
 {
+    internal Font CanvasFont => _theme.Theme.DefaultFont;
     public string Id => "hud";
     public int Order => 0;
 
