@@ -65,7 +65,7 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
         _material = Services.Get<IShaderMaterialSource>().Create(ShaderId.Precip);
         var (position, uv, index) = PrecipModel.BuildQuad();
         _pool = Services.Get<IInstancePoolHost>().Mount(new InstancePoolSpec(
-            "precip", "WP-45b", position, uv, index, _material,
+            "precip", "WP-45b", position, uv, index, _material, ShaderId.Precip,
             PrecipTuning.Capacity, ToAabb(PoolBounds), PoolLayers));
         _pool.WriteBuffer(PrecipModel.BuildBuffer());
     }

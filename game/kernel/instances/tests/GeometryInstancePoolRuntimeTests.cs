@@ -59,6 +59,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         first.Ao![0] = 1;
 
         var pool = fixture.Host.Mount(Spec("channels", prototype));
+        AssertThat(!pool.IsReady).OverrideFailureMessage("A pool without its complete buffer must not be ready.").IsTrue();
         var node = fixture.Host.GetChild<MultiMeshInstance3D>(0);
         var multi = node.Multimesh;
         var mesh = (ArrayMesh)multi.Mesh;
@@ -107,7 +108,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         var submitted = (float[])scratch.Clone();
         pool.WriteBuffer(scratch);
         pool.VisibleCount = 3;
-        AssertThat(!node.Visible && multi.VisibleInstanceCount == 3).OverrideFailureMessage("A requested prefix escaped the pending-prewarm visibility gate.").IsTrue();
+        AssertThat(!pool.IsReady && !node.Visible && multi.VisibleInstanceCount == 3).OverrideFailureMessage("A requested prefix escaped the pending-prewarm visibility gate.").IsTrue();
         var meshIdentity = mesh.GetInstanceId();
         var materialIdentity = ownedShaderMaterial.GetInstanceId();
         System.Array.Fill(scratch, float.NaN);
@@ -115,13 +116,12 @@ public sealed class GeometryInstancePoolRuntimeTests
         AssertThat(multi.GetBuffer().SequenceEqual(submitted)).OverrideFailureMessage("Reusing caller scratch changed the already uploaded native buffer.").IsTrue();
 
         fixture.Provider.Ready = true; // Simulates the provider's issued evidence; this test does not certify a warm draw.
-        fixture.Host._Process(0);
-        AssertThat(node.Visible && fixture.Host.GetStatistics().Single().MaterialReady).OverrideFailureMessage("Completed provider readiness did not reveal the pool.").IsTrue();
+        AssertThat(pool.IsReady && node.Visible && fixture.Host.GetStatistics().Single().MaterialReady).OverrideFailureMessage("The pool readiness query did not refresh completed provider readiness.").IsTrue();
         var readyQueries = fixture.Provider.ReadinessQueries;
         fixture.Host._Process(0);
         pool.WriteBuffer(submitted);
         pool.VisibleCount = 2;
-        AssertThat(fixture.Provider.ReadinessQueries == readyQueries).OverrideFailureMessage("Unchanged preparation queried every pool material again.").IsTrue();
+        AssertThat(pool.IsReady && fixture.Provider.ReadinessQueries == readyQueries).OverrideFailureMessage("Unchanged preparation queried every pool material again.").IsTrue();
         AssertThat(mesh.GetInstanceId() == meshIdentity && ownedShaderMaterial.GetInstanceId() == materialIdentity && fixture.Source.Created.Count == 1).OverrideFailureMessage("An instance-buffer update rebuilt the prototype or material.").IsTrue();
         var statistics = fixture.Host.GetStatistics().Single();
         AssertThat(statistics.SurfaceCount == 2 && statistics.MeshTriangles == 4 && statistics.VisibleTriangles == 8 &&
@@ -134,9 +134,10 @@ public sealed class GeometryInstancePoolRuntimeTests
         fixture.Host._Process(0);
         var shared = fixture.Host.Mount(Spec("shared-ready", prototype));
         var sharedNode = FindPool(fixture.Host, "shared-ready");
-        shared.WriteBuffer(InstanceData(shared.Capacity));
+        AssertThat(!shared.IsReady).OverrideFailureMessage("Ready shared materials must not bypass the complete buffer requirement.").IsTrue();
+        shared.WriteBuffer(new float[shared.Capacity * InstanceStreamLayout.FloatsPerInstance]);
         shared.VisibleCount = 1;
-        AssertThat(sharedNode.Visible && fixture.Host.GetStatistics().All(stat => stat.MaterialReady)).OverrideFailureMessage("First publication at an already checked revision skipped its real material check.").IsTrue();
+        AssertThat(shared.IsReady && sharedNode.Visible && fixture.Host.GetStatistics().All(stat => stat.MaterialReady)).OverrideFailureMessage("A complete zero buffer at an already checked revision did not become ready.").IsTrue();
         fixture.Provider.FirstMaterial.Dispose();
         fixture.Host._Process(0);
         AssertThat(!node.Visible && !sharedNode.Visible && fixture.Host.GetStatistics().All(stat => !stat.MaterialReady)).OverrideFailureMessage("Released material retained cached readiness in a sharing pool.").IsTrue();

@@ -8,7 +8,7 @@ namespace Campus.Kernel.Instances;
 internal sealed class InstancePool(
     InstancePoolHost host, string id, string ownerWp, int capacity, int meshTriangles,
     GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, int surfaceCount,
-    MultiMeshInstance3D instance, MultiMesh multiMesh, ArrayMesh mesh, Func<bool>? preparation) : IInstancePool
+    MultiMeshInstance3D instance, MultiMesh multiMesh, ArrayMesh mesh, Func<bool> preparation) : IInstancePool
 {
     private static readonly StringName _shaderInstancePrecipD = InstanceShaderParameters.PrecipD;
     private static readonly StringName _shaderInstancePrecipK = InstanceShaderParameters.PrecipK;
@@ -19,7 +19,7 @@ internal sealed class InstancePool(
     private MultiMesh? _multiMesh = multiMesh;
     private ArrayMesh? _mesh = mesh;
     private Func<bool>? _preparation = preparation;
-    private bool _materialReady = preparation is null;
+    private bool _materialReady;
     private long? _preparationRevision;
     private bool _freed;
     private bool _hasBuffer;
@@ -29,6 +29,15 @@ internal sealed class InstancePool(
     public string OwnerWp { get; } = ownerWp;
     public MapId? Map { get; } = map;
     public int Capacity { get; } = capacity;
+    public bool IsReady
+    {
+        get
+        {
+            RequireLive();
+            host.RefreshPreparation(this);
+            return _hasBuffer && _materialReady;
+        }
+    }
     internal InstancePoolStatistics Statistics => new(Id, OwnerWp, Capacity, _visibleCount, meshTriangles,
         shadows != GeometryInstance3D.ShadowCastingSetting.Off)
     {

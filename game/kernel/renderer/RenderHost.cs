@@ -54,6 +54,8 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     public bool Pending => _entries.Values.Any(entry => entry.Pending);
     public bool PipelineReady => _materials is not null && _entries.Values.All(entry => !entry.Pending &&
         entry.Draws.All(IsReady));
+    public bool IsReady(RenderHandle handle) => _entries.TryGetValue(handle.Value, out var entry) &&
+        !entry.Pending && entry.Draws.All(IsReady);
 
     /// <summary>Raw reflection instances are not scene-tree nodes; main instances are scanned there.</summary>
     public Rid[] CaptureReflectionInstances() => _entries.Values.SelectMany(entry => entry.Draws)
@@ -121,32 +123,9 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         var phase = "render-geometry-build";
         try
         {
-            var surfaces = await Task.Run(() =>
-            {
-                var result = new List<Surface>();
-                foreach (var mesh in geometry) result.Add(new(mesh, N.Matrix4x4.Identity, null, mesh.IgnoreOcclusionCulling));
-                foreach (var (part, definition) in parts)
-                {
-                    try
-                    {
-                        var method = typeof(RenderHost).GetMethod(nameof(BuildPart), BindingFlags.NonPublic | BindingFlags.Static)!
-                            .MakeGenericMethod(part.Params.GetType());
-                        var built = (PartGeometry)method.Invoke(null, [definition, part.Params])!;
-                        foreach (var mesh in built.Meshes) result.Add(new(mesh, part.At, part.Tint, part.IgnoreOcclusionCulling || mesh.IgnoreOcclusionCulling));
-                    }
-                    catch (Exception error)
-                    {
-                        throw new InvalidOperationException($"Dynamic part '{part.Part.Value}' failed in {definition.GetType().FullName} " +
-                            $"with parameters {part.Params.GetType().FullName}.", error);
-                    }
-                }
-                foreach (var surface in result)
-                {
-                    surface.Geometry.ValidateVertexData();
-                    catalog.Validate(surface.Geometry.Material.Spec);
-                }
-                return result;
-            });
+            // Prepared geometry must finish native submission inside the caller's mount budget.
+            var surfaces = parts.Length == 0 ? PrepareSurfaces(geometry, parts, catalog)
+                : await Task.Run(() => PrepareSurfaces(geometry, parts, catalog));
             if (!_entries.TryGetValue(handle, out var current) || !ReferenceEquals(entry, current)) return;
             phase = "render-geometry-upload";
             foreach (var surface in surfaces)
@@ -184,6 +163,34 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
             Error = $"Dynamic content mount failed for {entry.Owner.Value}: {error.GetBaseException().Message}";
             Unmount(new(handle));
         }
+    }
+
+    private static List<Surface> PrepareSurfaces(IReadOnlyList<GeometryBundle> geometry,
+        (PlacedPart Part, object Definition)[] parts, PaletteCatalog catalog)
+    {
+        var result = new List<Surface>();
+        foreach (var mesh in geometry) result.Add(new(mesh, N.Matrix4x4.Identity, null, mesh.IgnoreOcclusionCulling));
+        foreach (var (part, definition) in parts)
+        {
+            try
+            {
+                var method = typeof(RenderHost).GetMethod(nameof(BuildPart), BindingFlags.NonPublic | BindingFlags.Static)!
+                    .MakeGenericMethod(part.Params.GetType());
+                var built = (PartGeometry)method.Invoke(null, [definition, part.Params])!;
+                foreach (var mesh in built.Meshes) result.Add(new(mesh, part.At, part.Tint, part.IgnoreOcclusionCulling || mesh.IgnoreOcclusionCulling));
+            }
+            catch (Exception error)
+            {
+                throw new InvalidOperationException($"Dynamic part '{part.Part.Value}' failed in {definition.GetType().FullName} " +
+                    $"with parameters {part.Params.GetType().FullName}.", error);
+            }
+        }
+        foreach (var surface in result)
+        {
+            surface.Geometry.ValidateVertexData();
+            catalog.Validate(surface.Geometry.Material.Spec);
+        }
+        return result;
     }
 
     private static PartGeometry BuildPart<T>(object definition, object parameters) where T : notnull

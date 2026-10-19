@@ -8,6 +8,7 @@ namespace Campus.Kernel.Instances;
 /// Position contains xyz triples, Uv contains uv pairs, and Index contains triangle triples.
 /// Input arrays are copied into engine resources during Mount and are not retained.
 /// Material is borrowed: its caller must keep it alive until the pool is freed.
+/// Shader identifies this exact material for actual instanced-layout preparation.
 /// CustomAabb is in pool-local coordinates and must include every shader-driven displacement.
 /// </summary>
 public sealed record InstancePoolSpec(
@@ -17,6 +18,7 @@ public sealed record InstancePoolSpec(
     float[] Uv,
     int[] Index,
     ShaderMaterial Material,
+    ShaderId Shader,
     int Capacity,
     Aabb CustomAabb,
     uint Layers,
@@ -29,6 +31,9 @@ public sealed record InstancePoolSpec(
 public interface IInstancePool
 {
     int Capacity { get; }
+
+    /// <summary>The live pool has its complete buffer and its actual material layouts are ready.</summary>
+    bool IsReady { get; }
 
     /// <summary>
     /// Uploads exactly Capacity * 16 finite floats without retaining the source span.

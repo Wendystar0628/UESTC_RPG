@@ -118,8 +118,9 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         RequireMounted();
         ArgumentNullException.ThrowIfNull(spec);
         ValidateIdentityAndCapacity(spec.Id, spec.OwnerWp, spec.Capacity, spec.Layers, spec.CustomAabb);
-        ValidateLegacy(spec);
+        ValidateRaw(spec);
         RequireUnique(spec.OwnerWp, spec.Id);
+        var provider = _materials ??= Services.Get<IToonMaterialProvider>();
 
         var vertices = new Vector3[spec.Position.Length / 3];
         var uv = new Vector2[vertices.Length];
@@ -140,12 +141,15 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
             if (mesh.GetSurfaceCount() != 1) throw new InvalidOperationException("Godot rejected the instance-pool surface.");
             mesh.SurfaceSetMaterial(0, spec.Material);
+            provider.Track(spec.Shader, spec.Material);
+            provider.TrackLayout(spec.Material, new WarmDrawLayout(MeshSurfaceFormat.Read(mesh), Instanced: true));
         }
         catch { mesh.Dispose(); throw; }
-        // The legacy caller-supplied material stays borrowed; its established readiness contract is unchanged.
+        var shader = spec.Shader;
+        var material = spec.Material;
         return Publish(spec.Id, spec.OwnerWp, spec.Capacity, spec.CustomAabb, spec.Layers,
             spec.CastShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
-            null, false, mesh, spec.Index.Length / 3, null);
+            null, false, mesh, spec.Index.Length / 3, () => provider.IsReady(shader, material));
     }
 
     public IInstancePool Mount(GeometryInstancePoolSpec spec)
@@ -209,7 +213,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
 
     private IInstancePool Publish(string id, string owner, int capacity, Aabb bounds, uint layers,
         GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, bool ignoreOcclusion,
-        ArrayMesh mesh, int triangles, Func<bool>? ready)
+        ArrayMesh mesh, int triangles, Func<bool> ready)
     {
         MultiMesh? multiMesh = null;
         MultiMeshInstance3D? instance = null;
@@ -234,7 +238,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
                 CustomAabb = bounds,
                 CastShadow = shadows,
                 IgnoreOcclusionCulling = ignoreOcclusion,
-                Visible = ready is null
+                Visible = false
             };
             instance.SetMeta("owner_wp", owner);
             instance.SetMeta("instance_pool_id", id);
@@ -349,8 +353,9 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             !GodotObject.IsInstanceValid(shaderMaterial.Shader) || shaderMaterial.Shader.GetMode() != Shader.Mode.Spatial)
             throw new ArgumentException("Pools require a live spatial shader material.", nameof(material));
     }
-    private static void ValidateLegacy(InstancePoolSpec spec)
+    private static void ValidateRaw(InstancePoolSpec spec)
     {
+        if (!Enum.IsDefined(spec.Shader)) throw new ArgumentOutOfRangeException(nameof(spec), "Unknown pool shader.");
         ArgumentNullException.ThrowIfNull(spec.Position);
         ArgumentNullException.ThrowIfNull(spec.Uv);
         ArgumentNullException.ThrowIfNull(spec.Index);

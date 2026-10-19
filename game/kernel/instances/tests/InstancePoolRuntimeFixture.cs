@@ -19,14 +19,13 @@ public static class InstancePoolRuntimeFixture
     private static readonly StringName _shaderInstancePrecipK = InstanceShaderParameters.PrecipK;
     private static readonly StringName _shaderInstancePrecipV = InstanceShaderParameters.PrecipV;
 
-    public static void Run(Node parent, ShaderMaterial material)
+    public static void Run(Node parent, ShaderMaterial material, InstancePoolHost host)
     {
         if (!parent.IsInsideTree()) throw new ArgumentException("Fixture parent must be in the scene tree.", nameof(parent));
         var spec = new InstancePoolSpec("fixture", "WP-00",
             [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0],
             [0, 0, 1, 0, 1, 1, 0, 1], [0, 1, 2, 0, 2, 3],
-            material, 8192, new Aabb(new(-100, -100, -100), new(200, 200, 200)), 1);
-        var host = new InstancePoolHost();
+            material, ShaderId.Precip, 8192, new Aabb(new(-100, -100, -100), new(200, 200, 200)), 1);
         try
         {
             {
@@ -98,7 +97,7 @@ public static class InstancePoolRuntimeFixture
             var node = host.GetChild<MultiMeshInstance3D>(0);
             var multiMesh = node.Multimesh;
             var mesh = multiMesh.Mesh;
-            AssertThat(pool.Capacity == 8192 && pool.VisibleCount == 0).OverrideFailureMessage("Initial pool state is wrong.").IsTrue();
+            AssertThat(pool.Capacity == 8192 && pool.VisibleCount == 0 && !pool.IsReady && !node.Visible).OverrideFailureMessage("Initial pool state is wrong.").IsTrue();
             AssertThat(multiMesh.InstanceCount == 8192 && multiMesh.UseCustomData && !multiMesh.UseColors &&
                 multiMesh.TransformFormat == MultiMesh.TransformFormatEnum.Transform3D).OverrideFailureMessage("Buffer format is wrong.").IsTrue();
             AssertThat(node.GetMeta("owner_wp").AsString() == spec.OwnerWp &&
@@ -136,6 +135,7 @@ public static class InstancePoolRuntimeFixture
             }
             buffer[^1] = 1;
             pool.WriteBuffer(buffer);
+            AssertThat(!pool.IsReady && !node.Visible).OverrideFailureMessage("Raw pool upload bypassed actual material preparation.").IsTrue();
             AssertThat(multiMesh.GetBuffer().SequenceEqual(buffer)).OverrideFailureMessage("The native buffer lost transform or custom data.").IsTrue();
             pool.VisibleCount = 32;
             AssertThat(multiMesh.VisibleInstanceCount == 32).OverrideFailureMessage("Visible prefix did not reach Godot.").IsTrue();
@@ -190,6 +190,12 @@ public static class InstancePoolRuntimeFixture
 
             pool.Free();
             pool.Free();
+            {
+                var thrown = false;
+                try { _ = pool.IsReady; }
+                catch (ObjectDisposedException) { thrown = true; }
+                AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ObjectDisposedException).Name}.").IsTrue();
+            }
             AssertThat(!GodotObject.IsInstanceValid(node) && !GodotObject.IsInstanceValid(multiMesh) &&
                 !GodotObject.IsInstanceValid(mesh)).OverrideFailureMessage("Free retained an owned engine object.").IsTrue();
             AssertThat(host.GetStatistics().Count == 0 && host.GetChildCount() == 0 &&
