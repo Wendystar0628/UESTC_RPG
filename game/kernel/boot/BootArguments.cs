@@ -20,7 +20,7 @@ public sealed class BootArguments
         "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "cine", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
-        "audio-probe", "audio-out", "preset", "focus", "pose-file"
+        "audio-probe", "audio-out", "preset", "focus", "pose-file", "travel-sequence"
     };
     private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "audio-probe" };
     private static readonly string[] WorldKeys = ["clock", "season", "anim", "flow", "seed", "weather", "weather-intensity",
@@ -72,6 +72,8 @@ public sealed class BootArguments
         if (result.Has("slot") && result.Has("load")) throw Invalid("--slot and --load are mutually exclusive.");
         if (result.HasLoad && WorldKeys.Any(result.Has)) throw Invalid("Saved state cannot be combined with world overrides.");
         result.Validate();
+        if (result.Has("travel-sequence") && (result.CpuBakeMode || result.CaptureMode || result.Has("inspect")))
+            throw Invalid("--travel-sequence cannot be combined with a bake, capture or inspect command.");
         if (result.CpuBakeMode && result._provided.Overlaps(["gate", "shots", "bench", "frames", "inspect"]))
             throw Invalid("CPU baking cannot be combined with a rendering or gate command.");
         result.AddDefaults();
@@ -113,6 +115,8 @@ public sealed class BootArguments
         _qualityOverrides = QualityOverrides();
         if (Has("shots") && Value("shots").Split(',').Any(id => id.Length == 0 || id.Any(c => !char.IsLetterOrDigit(c) && c is not '_' and not '-')))
             throw Invalid("Invalid screenshot identifier.");
+        if (Has("travel-sequence") && Value("travel-sequence").Split(',').Any(id => id.Length == 0 || id.Any(char.IsWhiteSpace)))
+            throw Invalid("Invalid travel sequence marker identifier.");
     }
 
     private void AddDefaults()
@@ -183,6 +187,7 @@ public sealed class BootArguments
             FreezeAnimation = Has("shots") && !Has("cine") && !Has("bench"),
             Title = Title,
             SaveDirectory = Text("save-dir"),
+            TravelSequence = Text("travel-sequence")?.Split(',') ?? [],
             Flow = new BootFlowRequest(ShowTitle: Title && cinematic != CinematicKind.Leave,
                 Slot: Slot(Text("slot")), LoadFile: Text("load"),
                 Map: Text("map") is { } map ? new MapId(map) : null, Spawn: Text("spawn"),

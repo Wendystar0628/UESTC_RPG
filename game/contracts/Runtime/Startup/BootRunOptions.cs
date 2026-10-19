@@ -15,6 +15,7 @@ public sealed record BootRunOptions
     public bool FreezeAnimation { get; init; }
     public bool Title { get; init; } = true;
     public string? SaveDirectory { get; init; }
+    public IReadOnlyList<string> TravelSequence { get; init; } = [];
     public BootFlowRequest Flow { get; init; } = new();
     public WorldBootOptions World { get; init; } = new();
     public UiBootOptions Ui { get; init; } = new();
