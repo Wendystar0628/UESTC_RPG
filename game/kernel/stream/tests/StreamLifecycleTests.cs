@@ -135,6 +135,70 @@ public sealed class StreamLifecycleTests
 
     [TestCase]
     [TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public void ElevatedMixedFrontierNeedsOnlyItsDrawnGeometryAndStillRejectsAHole()
+    {
+        var director = new StreamDirector();
+        try
+        {
+            var context = Context();
+            var pose = new Pose(new(-193, 158, 111), 0, -68, 60);
+            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
+            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
+            Set(director, "_catalog", catalog); Set(director, "_maps", new TestMapService());
+            Set(director, "_camera", new TestCameraRig(pose: pose));
+            Set(director, "_plannedContext", context); Set(director, "_plannedWorld", context.World);
+            Set(director, "_plannedPose", pose); Set(director, "_plannedLive", true); Set(director, "_planReady", true);
+            Set(director, "_selectionApplied", true); Set(director, "_destinationPlanned", true);
+            Set(director, "_destination", pose); Set(director, "_destinationMode", ViewMode.Fly);
+            var required = (HashSet<StreamTile>)Field(director, "_viewRequired")!;
+            var refined = (HashSet<StreamTile>)Field(director, "_refined")!;
+            var tree = new LodTree(new(new(-512, 0, -512), new(512, 10, 512)), new());
+            Set(director, "_tree", tree);
+            tree.Select(pose.Position, 0, 1080, pose.FovDeg!.Value, LodLevel.L0, required, refined);
+            ((HashSet<StreamTile>)Field(director, "_destinationRequired")!).UnionWith(required);
+            ((HashSet<StreamTile>)Field(director, "_destinationRefined")!).UnionWith(refined);
+            var frontier = required.Where(tile => !refined.Contains(tile)).ToHashSet();
+            if (frontier.Select(tile => tile.Level).Distinct().Count() < 2)
+                throw new InvalidOperationException("The elevated fixture must select a mixed detail frontier.");
+            var getGroup = typeof(StreamDirector).GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var groups = required.ToDictionary(tile => tile, tile => getGroup.Invoke(director, [tile])!);
+            foreach (var (tile, group) in groups)
+            {
+                group.GetType().GetField("GeometryRequested")!.SetValue(group, true);
+                group.GetType().GetField("Mounted")!.SetValue(group, tile == StreamTile.Root || frontier.Contains(tile));
+            }
+            var resolve = typeof(StreamDirector).GetMethod("ResolveVisible", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var visibility = (TileVisibility)Field(director, "_visibility")!;
+            void Present()
+            {
+                resolve.Invoke(director, null);
+                visibility.Apply((HashSet<StreamTile>)Field(director, "_visible")!, 0, false, (_, _, _) => { });
+            }
+            Present();
+            if (!visibility.Drawn.SetEquals(frontier) || !director.ViewReady || !director.DestinationReady)
+                throw new InvalidOperationException("Undrawn ancestors blocked complete ready mixed-detail geometry.");
+            groups[StreamTile.Root].GetType().GetField("Mounted")!.SetValue(groups[StreamTile.Root], false);
+            if (director.ViewReady || director.DestinationReady)
+                throw new InvalidOperationException("Complete finer geometry certified an unmounted resident root.");
+            groups[StreamTile.Root].GetType().GetField("Mounted")!.SetValue(groups[StreamTile.Root], true);
+            var missing = frontier.OrderBy(tile => tile.Level).First();
+            groups[missing].GetType().GetField("Mounted")!.SetValue(groups[missing], false);
+            groups[missing.Parent].GetType().GetField("Mounted")!.SetValue(groups[missing.Parent], true);
+            Present();
+            if (!visibility.Drawn.Contains(missing.Parent) || director.ViewReady || director.DestinationReady)
+                throw new InvalidOperationException("A fallback parent certified a missing selected leaf.");
+            groups[missing.Parent].GetType().GetField("Mounted")!.SetValue(groups[missing.Parent], false);
+            groups[StreamTile.Root].GetType().GetField("Mounted")!.SetValue(groups[StreamTile.Root], false);
+            Present();
+            if (visibility.Drawn.Count != 0 || director.ViewReady || director.DestinationReady)
+                throw new InvalidOperationException("An incomplete frontier was shown without complete fallback coverage.");
+        }
+        finally { director.Free(); }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
     public void ResidentBackdropAppearsEvenWhenReadyChildrenSkipTheRootFallback()

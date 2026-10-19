@@ -80,7 +80,12 @@ public static class CaptureBarrier
             var weatherTransitioning = weather.Transitioning;
             var streamReady = stream.ViewReady;
             var ready = content && streamReady && !scrubbing && transition == WorldTransition.None && !weatherTransitioning;
-            if (ready) return;
+            if (ready)
+            {
+                // New view demand uses the production warmup cover; read only its released, presented frame.
+                await WaitForPresentedAsync(host, pose, () => contentReady() && stream.ViewReady, cancellationToken);
+                return;
+            }
             var now = FrameClock.MonotonicMilliseconds;
             var nextProgress = bake.Progress;
             if (nextProgress != progress) lastProgress = now;

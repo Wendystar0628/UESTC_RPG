@@ -17,6 +17,75 @@ public sealed partial class MaterialWarmupRuntimeTests
     [TestCategory(TestReason.Regression)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
+    public async Task RevealedViewWarmsNewDemandWithoutArrivalAndSharesItsCoverWithExplicitArrival()
+    {
+        await using var fixture = new Fixture();
+        var first = fixture.Mount("runtime-initial", fixture.Spec);
+        var runtime = fixture.StartArrivalRuntime();
+        var destination = new Pose(new N.Vector3(2f, 0f, -3f), 0f, 0f);
+        var initial = runtime.Arrive(destination, ViewMode.Fly);
+        await fixture.Until(() => initial.Done.IsCompleted);
+        await initial.Done;
+        await fixture.Boot.Reveal(0f);
+        await fixture.Draw();
+        var captures = fixture.Provider.Captures;
+        for (var i = 0; i < 5; i++) runtime._Process(0);
+        AssertThat(fixture.Provider.Captures == captures && fixture.Veil.Opacity == 0f).
+            OverrideFailureMessage("The unchanged warm coordinator repeatedly captured pending batches or acquired a cover.").IsTrue();
+
+        var accepted = fixture.Provider.Accepted;
+        fixture.Cover.Visible = false;
+        var lateSpec = fixture.Spec with { Line = LineClass.Fine };
+        var late = fixture.Mount("runtime-late", lateSpec);
+        runtime._Process(0);
+        for (var i = 0; i < MaterialWarmup.StableFrames + 5; i++) await fixture.Draw();
+        AssertThat(fixture.Provider.Accepted == accepted && fixture.Warmup.SamplesReleased && !late.Visible &&
+            !fixture.Warmup.IsReady && ReferenceEquals(runtime.Arrival, initial)).
+            OverrideFailureMessage("A revealed view must wait for real cover presentation before sampling new demand.").IsTrue();
+        fixture.Cover.Visible = true;
+        await fixture.Until(() => fixture.ReadyForReveal && late.Visible && fixture.Veil.Opacity == 0f);
+        AssertThat(fixture.Provider.Accepted > accepted && ReferenceEquals(runtime.Arrival, initial)).
+            OverrideFailureMessage("New current-view demand stalled after an explicit arrival ended.").IsTrue();
+
+        accepted = fixture.Provider.Accepted;
+        var layout = new WarmDrawLayout(MeshSurfaceFormat.Read((ArrayMesh)late.Multimesh.Mesh), false);
+        fixture.Library.TrackLayout(fixture.Library.Get(lateSpec), layout);
+        await fixture.Until(() => !fixture.Warmup.SamplesReleased);
+        using var external = fixture.Veil.Cover(VeilReason.Teleport, 0f);
+        await fixture.Until(() => fixture.ReadyForReveal && fixture.Provider.Accepted > accepted);
+        // The automatic coordinator also waits for its final stable destination draw before releasing its own lease.
+        for (var i = 0; i < Campus.Kernel.Boot.BootTuning.WarmFrames + 5; i++) await fixture.Draw();
+        AssertThat(external.IsCurrent && fixture.Veil.Opacity == 1f && fixture.Warmup.SamplesReleased).
+            OverrideFailureMessage("Automatic warming released the external cover or retained samples.").IsTrue();
+        await external.Reveal(0f);
+        AssertThat(fixture.Veil.Opacity == 0f).OverrideFailureMessage("Automatic warming leaked its own cover underneath an external lease.").IsTrue();
+
+        fixture.Mount("runtime-handoff", fixture.Spec with { Line = LineClass.Tree });
+        await fixture.Until(() => !fixture.Warmup.SamplesReleased);
+        using var transit = fixture.Veil.Cover(VeilReason.Transit, 0f);
+        var explicitArrival = runtime.Arrive(destination, ViewMode.Fly);
+        await fixture.Until(() => explicitArrival.Done.IsCompleted);
+        await explicitArrival.Done;
+        AssertThat(transit.IsCurrent && fixture.Veil.Opacity == 1f && fixture.Warmup.SamplesReleased).
+            OverrideFailureMessage("Explicit arrival and automatic warming interfered with cover ownership or sample cleanup.").IsTrue();
+        await transit.Reveal(0f);
+        AssertThat(fixture.Veil.Opacity == 0f).OverrideFailureMessage("Handing automatic warming to an arrival leaked its cover.").IsTrue();
+
+        fixture.Library.TrackLayout(fixture.Library.Get(fixture.Spec), new(MeshSurfaceFormat.Read((ArrayMesh)first.Multimesh.Mesh), false));
+        await fixture.Until(() => !fixture.Warmup.SamplesReleased);
+        accepted = fixture.Provider.Accepted;
+        runtime.StopNewWork();
+        await fixture.Until(() => fixture.Warmup.SamplesReleased);
+        for (var i = 0; i < MaterialWarmup.StableFrames + 5; i++) await fixture.Draw();
+        AssertThat(fixture.Provider.Accepted == accepted && fixture.Veil.Opacity == 0f && !fixture.Warmup.IsReady).
+            OverrideFailureMessage("Stopping automatic warming retained its cover or accepted later draw evidence.").IsTrue();
+        GD.Print("MATERIAL_WARMUP_EVIDENCE revealedDemand=True uncoveredAccepted=0 idleSnapshots=0 externalCoverRetained=True arrivalHandoff=True stoppedReleased=True");
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    [TestCategory("NativeRender")]
+    [RequireGodotRuntime]
     public async Task VisibleArrivalReusesWarmDrawsAndReleasesOnlyItsOwnFallbackCover()
     {
         await using var fixture = new Fixture();
@@ -137,7 +206,6 @@ public sealed partial class MaterialWarmupRuntimeTests
             Parent.AddChild(Renderer = new ArrivalRenderer());
             Set("_renderer", Renderer);
             Set("_materials", Warmup);
-            Set("_materialSource", Provider);
             Set("_camera", new TestCameraRig());
             Set("_terrain", new FlowTerrainPreparation());
             Set("_context", new TestMapContext(RealMapFixture.Entry().Descriptor, new Campus.Gen.Tests.Support.FakeWorld()));

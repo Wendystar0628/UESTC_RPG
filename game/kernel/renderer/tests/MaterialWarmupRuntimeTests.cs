@@ -150,7 +150,7 @@ public sealed partial class MaterialWarmupRuntimeTests
         public VeilLayer Cover { get; } = new();
         public MaterialWarmup Warmup { get; } = new();
         public Camera3D Camera { get; } = new() { Current = true, Near = .05f, Far = 100f };
-        public bool ReadyForReveal => Warmup.IsReady && Warmup.SamplesReleased && Provider.CapturePendingWarm().Materials.Count == 0;
+        public bool ReadyForReveal => Warmup.IsReady && Warmup.SamplesReleased && !Warmup.HasPendingWarm;
         private bool _warming;
         public ToonSpec Spec { get; } = new(new("test.lit"), new("test.shade"));
         private readonly InstancePoolHost _host;
@@ -198,7 +198,7 @@ public sealed partial class MaterialWarmupRuntimeTests
             await Parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             if (_runtime is not null) { _runtime._Process(0); return; }
             // Test composition explicitly starts each production warm batch after a real covered draw.
-            if (!_warming && Veil.Opacity == 1f && Cover.IsCovered && Provider.CapturePendingWarm().Materials.Count > 0)
+            if (!_warming && Veil.Opacity == 1f && Cover.IsCovered && Warmup.HasPendingWarm)
             { Warmup.Begin(); _warming = true; }
             if (_warming && ReadyForReveal) { Warmup.End(); _warming = false; }
         }
@@ -241,8 +241,10 @@ public sealed partial class MaterialWarmupRuntimeTests
 
     private sealed class RecordingProvider(ToonLibrary library) : IToonMaterialProvider
     {
+        public event Action? WarmChanged { add => library.WarmChanged += value; remove => library.WarmChanged -= value; }
         public int Accepted { get; private set; }
         public int Rejected { get; private set; }
+        public int Captures { get; private set; }
         public ulong FirstCapturedFrame { get; private set; }
         public ulong FirstDrawCompleteFrame { get; private set; }
         public Material Get(ToonSpec spec) => library.Get(spec);
@@ -252,6 +254,7 @@ public sealed partial class MaterialWarmupRuntimeTests
         public bool IsReady(ShaderId shader, Material material) => library.IsReady(shader, material);
         public ToonWarmBatch CapturePendingWarm()
         {
+            Captures++;
             var batch = library.CapturePendingWarm();
             if (batch.Materials.Count > 0 && FirstCapturedFrame == 0) FirstCapturedFrame = Engine.GetProcessFrames();
             return batch;

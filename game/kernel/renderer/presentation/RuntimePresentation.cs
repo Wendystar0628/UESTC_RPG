@@ -40,6 +40,8 @@ public sealed record ToonWarmBatch(long Revision, IReadOnlyList<ToonWarmMaterial
 /// <summary>Engine-side material bridge. WP-04 owns shader creation, palette IDs and pipeline readiness.</summary>
 public interface IToonMaterialProvider
 {
+    /// <summary>The requested warm set changed. Handlers schedule work; they must not capture a batch inline.</summary>
+    event Action? WarmChanged;
     Material Get(ToonSpec spec);
     /// <summary>True only when every layout actually requested for the resolved material has valid draw evidence.</summary>
     bool IsReady(ToonSpec spec);

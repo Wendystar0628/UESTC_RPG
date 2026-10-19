@@ -32,6 +32,8 @@ public partial class MaterialWarmup : Node
     private Node3D? _samples3D;
     private CanvasLayer? _samples2D;
     private ToonWarmBatch? _batch;
+    private ToonWarmBatch? _pending;
+    private bool _pendingDirty = true;
     private Task<Fixture>? _fixtureTask;
     private bool _active;
     private bool _drawn;
@@ -42,9 +44,25 @@ public partial class MaterialWarmup : Node
     private PipelineCounts _previous;
     private Vector2 _viewportSize;
     private bool _awaitCover;
-    public bool IsReady { get; private set; }
+    private bool _ready;
+    public bool IsReady { get => _ready && !HasPendingWarm; private set => _ready = value; }
     public string? Error { get; private set; }
     public bool SamplesReleased => _samples3D is null && _samples2D is null && _retiring.Count == 0;
+    public bool HasPendingWarm => PendingWarm.Materials.Count > 0;
+
+    private ToonWarmBatch PendingWarm
+    {
+        get
+        {
+            if (!_pendingDirty && _pending is not null) return _pending;
+            // Capture may prune disposed materials and publish another invalidation while it runs.
+            _pendingDirty = false;
+            _pending = _materials!.CapturePendingWarm();
+            return _pending;
+        }
+    }
+
+    private void OnWarmChanged() => _pendingDirty = true;
 
     /// <summary>Includes detached roots awaiting QueueFree, which a scene-tree census cannot reach.</summary>
     public IReadOnlyList<Node> CaptureParameterRoots()
@@ -82,6 +100,8 @@ public partial class MaterialWarmup : Node
         _presentation ??= Services.Get<IVeilPresentation>();
         _loading ??= Services.Get<IAppLoadingPresentation>();
         _camera ??= Services.Get<Camera3D>();
+        _pendingDirty = true;
+        _materials.WarmChanged += OnWarmChanged;
         RenderingServer.Singleton.FramePostDraw += OnFrameDrawn;
     }
 
@@ -115,7 +135,7 @@ public partial class MaterialWarmup : Node
             if (_batch is not null) return;
             if (_fixtureTask is null || !_fixtureTask.IsCompleted) return;
             var fixture = _fixtureTask.GetAwaiter().GetResult();
-            var batch = _materials!.CapturePendingWarm();
+            var batch = PendingWarm;
             _lastCapturedRevision = batch.Revision;
             _lastCapturedMaterials = batch.Materials.Count;
             if (batch.Materials.Count == 0)
@@ -156,7 +176,7 @@ public partial class MaterialWarmup : Node
             GD.Print($"[WP-01][phase=material-warmup] event=draw-complete revision={revision} accepted={completed} stable={_stable} frame={Engine.GetProcessFrames()}");
             ClearSamples();
             // A changed material/quality revision rejects stale evidence and is sampled again next frame.
-            IsReady = completed && _materials.CapturePendingWarm().Materials.Count == 0;
+            IsReady = completed && !HasPendingWarm;
         }
         catch (Exception error) { Fail(error); }
     }
@@ -405,6 +425,9 @@ public partial class MaterialWarmup : Node
         $"covered={Covered},loadingCovered={_loading?.IsCovered},veil={_veil?.Opacity},retiringBatches={_retiring.Count},error={Error ?? "none"}";
     public override void _ExitTree()
     {
+        if (_materials is not null) _materials.WarmChanged -= OnWarmChanged;
+        _pending = null;
+        _pendingDirty = true;
         RenderingServer.Singleton.FramePostDraw -= OnFrameDrawn;
         End(reset: true);
     }

@@ -517,6 +517,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     }
     private sealed class RecordingProvider(ShaderMaterial first, ShaderMaterial second) : IToonMaterialProvider
     {
+        public event Action? WarmChanged;
         public ToonSpec FirstSpec { get; } = new(new("fixture.first.lit"), new("fixture.first.shade"));
         public ToonSpec SecondSpec { get; } = new(new("fixture.second.lit"), new("fixture.second.shade"));
         public ShaderMaterial FirstMaterial => first;
@@ -528,7 +529,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         public bool Ready
         {
             get => _ready;
-            set { if (_ready != value) { _ready = value; _revision++; } }
+            set { if (_ready != value) { _ready = value; _revision++; WarmChanged?.Invoke(); } }
         }
         public int ThrowAtLayout { get; set; } = -1;
         public List<(Material Material, WarmDrawLayout Layout)> Layouts { get; } = [];
@@ -550,10 +551,12 @@ public sealed class GeometryInstancePoolRuntimeTests
             Layouts.Add((material, layout));
             _ready = false;
             _revision++;
+            WarmChanged?.Invoke();
         }
         public ToonWarmBatch CapturePendingWarm()
         {
-            if (_registered.RemoveWhere(material => !GodotObject.IsInstanceValid(material)) > 0) _revision++;
+            if (_registered.RemoveWhere(material => !GodotObject.IsInstanceValid(material)) > 0)
+            { _revision++; WarmChanged?.Invoke(); }
             // This double exposes state changes only; CompleteWarm still rejects fabricated draw evidence.
             return _batch is { } batch && batch.Revision == _revision ? batch : _batch = new(_revision, []);
         }

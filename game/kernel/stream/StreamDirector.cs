@@ -403,8 +403,12 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     private bool SelectionReady(IReadOnlySet<StreamTile> required, IReadOnlySet<StreamTile> refined)
     {
-        if (Error is not null || _context is null || _catalog is null || !_selectionApplied || !PlanCurrent ||
+        if (!ResidentReady || !_selectionApplied || !PlanCurrent ||
             _tree is null || required.Count == 0 || !_visibility.IsSettled(FrameClock.FadeSeconds)) return false;
+        // Root backdrop draws stay visible independently of the replaceable geometry frontier.
+        foreach (var bundle in _groups[StreamTile.Root].Bundles)
+            foreach (var draw in bundle.Draws)
+                if (draw.Resident && !_materials.IsReady(draw)) return false;
         foreach (var tile in required)
             if (!refined.Contains(tile) && !HasVisibleCoverage(tile)) return false;
         return true;

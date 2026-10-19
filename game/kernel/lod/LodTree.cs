@@ -8,6 +8,7 @@ public sealed class LodTree
 {
     private readonly Dictionary<StreamTile, StreamTile[]> _children = [];
     private readonly Dictionary<StreamTile, Box3> _bounds = [];
+    private readonly HashSet<StreamTile> _replacements = [];
     private readonly StreamSettings _settings;
     public LodTree(Box3 mapBounds, StreamSettings settings)
     {
@@ -77,17 +78,30 @@ public sealed class LodTree
     }
     public static float Distance(Vector3 position, Box3 bounds) => Vector3.Distance(position, Vector3.Clamp(position, bounds.Min, bounds.Max));
 
-    /// <summary>A parent disappears only when every real child is mounted and pipeline-ready.</summary>
+    /// <summary>A parent disappears only when every real child has complete, pipeline-ready coverage.</summary>
     public void ResolveVisible(IReadOnlySet<StreamTile> refined, Func<StreamTile, bool> ready, HashSet<StreamTile> visible)
     {
-        visible.Clear();
-        if (ready(StreamTile.Root)) Resolve(StreamTile.Root, refined, ready, visible);
+        visible.Clear(); _replacements.Clear();
+        if (Cover(StreamTile.Root, refined, ready)) Resolve(StreamTile.Root, visible);
     }
-    private void Resolve(StreamTile tile, IReadOnlySet<StreamTile> refined, Func<StreamTile, bool> ready, HashSet<StreamTile> visible)
+    private bool Cover(StreamTile tile, IReadOnlySet<StreamTile> refined, Func<StreamTile, bool> ready)
     {
         var children = Children(tile);
-        if (refined.Contains(tile) && children.Count > 0 && children.All(ready))
-            foreach (var child in children) Resolve(child, refined, ready, visible);
+        if (refined.Contains(tile) && children.Count > 0)
+        {
+            var complete = true;
+            foreach (var child in children)
+                if (!Cover(child, refined, ready)) complete = false;
+            if (complete) { _replacements.Add(tile); return true; }
+        }
+        // Hidden ancestors need no material proof when their entire replacement frontier is ready.
+        // An incomplete replacement still requires this tile's own ready geometry as coverage.
+        return ready(tile);
+    }
+    private void Resolve(StreamTile tile, HashSet<StreamTile> visible)
+    {
+        if (_replacements.Contains(tile))
+            foreach (var child in Children(tile)) Resolve(child, visible);
         else visible.Add(tile);
     }
 }

@@ -50,6 +50,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private long _revision = 1;
     private int _nextId = FirstId;
     private bool _disposed;
+    public event Action? WarmChanged;
 
     /// <param name="palettes">完整色表来源（WP-04 的正式实现，无 GPU）：ToonSpec 按它校验，含 256–511 的扩展色。</param>
     /// <param name="source">白名单非卡通着色器的材质来源（veg_* 等由它建）。</param>
@@ -295,6 +296,8 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     {
         _revision++;
         _issued = null;
+        // Subscribers only invalidate their cached view; no renderer work or snapshot is performed under this lock.
+        WarmChanged?.Invoke();
     }
 
     private void OnQualityChanged(QualityChange change)
