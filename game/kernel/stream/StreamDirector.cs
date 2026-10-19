@@ -16,6 +16,7 @@ namespace Campus.Kernel.Stream;
 public interface IStreamVisualFrame
 {
     bool CanActivateVisual { get; }
+    bool CaptureReady { get; }
     void FinishMountFrame(double remainingMilliseconds);
     void ReleaseRetired(double budgetMilliseconds);
 }
@@ -66,6 +67,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private long _destinationSequence, _mapRequestSequence, _arrivedSequence;
     private IMapTransition? _destinationTransition;
     private bool _haveCamera;
+    private bool _selectionApplied;
     private N.Vector3 _lastCamera, _velocity;
     public MapStreamDestination? Destination => _destinationState;
     public bool HasPendingDestination => _destinationState is not null && !_destinationConsumed;
@@ -84,6 +86,18 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public int MountedTiles => _groups.Values.Count(group => group.Mounted);
     public int VisibleTiles => _visibility.Drawn.Count;
     public bool CanActivateVisual => _retiringBundles.Count == 0 && _detachPending.Count == 0;
+    public bool CaptureReady
+    {
+        get
+        {
+            if (Error is not null || _context is null || _catalog is null || !_selectionApplied ||
+                !_visibility.CaptureReady(FrameClock.FadeSeconds) ||
+                !(_interiors?.CaptureReady(FrameClock.FadeSeconds, _settings.FadeSeconds) ?? false)) return false;
+            foreach (var tile in _required)
+                if (!IsReady(tile)) return false;
+            return true;
+        }
+    }
     /// <summary>Raw packed-buffer bytes from TileBundle stats; not compressed disk size or measured VRAM.</summary>
     public long ResidentBytes => _groups.Values.Sum(group => group.Bundles.Sum(bundle => bundle.Bytes));
 
@@ -112,6 +126,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         if (!IsUnloaded) throw new InvalidOperationException("Stream map must finish unloading before the next mount.");
         _mapGeneration++;
         _context = context; _error = null; _speed.Reset();
+        _selectionApplied = false;
         _destinationConsumed = false;
         _haveCamera = false; _velocity = N.Vector3.Zero;
         _reflectionDirty = true;
@@ -137,6 +152,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
                      .Concat(_interiors?.Prepared ?? []).Concat(_retiringBundles).Distinct()) bundle.DetachAll();
         _mapGeneration++;
         _context = null; _error = null; _destination = null; _destinationState = null; _catalog = null; _tree = null;
+        _selectionApplied = false;
         _destinationPlanned = false; _destinationConsumed = false;
         _destinationSequence++; _destinationTransition = null; _mapRequestSequence = _arrivedSequence = 0;
         _mount.RemoveMap(from);
@@ -157,6 +173,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         if (space is null && _context.World.Spatial.MediumAt(destination.Position) is { Kind: MediumKind.Interior, Feature: { } building } medium)
             space = new(building, checked((short)medium.Storey));
         _destination = destination; _destinationMode = mode; _destinationState = new(destination, mode, space); _error = null;
+        _selectionApplied = false;
         _destinationPlanned = false; _destinationConsumed = false; _destinationRequired.Clear(); _destinationRefined.Clear();
         _destinationSequence++; _requests.Clear();
         var targetTransition = _maps.Transition is { Stage: MapStage.Mount or MapStage.Warm or MapStage.Spawn } transition ? transition : null;
@@ -218,6 +235,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     private void OnWorldInstanceChanged(long _)
     {
+        _selectionApplied = false;
         _speed.Reset();
         _replan = _settings.ReplanSeconds;
         _haveCamera = false;
@@ -241,6 +259,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     private void Replan(bool exempt)
     {
+        _selectionApplied = false;
         var tree = _tree ?? throw new InvalidOperationException("A map tree is required before planning.");
         var viewport = GetViewport();
         var height = viewport.GetVisibleRect().Size.Y * viewport.Scaling3DScale;
@@ -372,6 +391,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         {
             foreach (var bundle in _groups[tile].Bundles) bundle.SetVisible(visible, fade);
         });
+        _selectionApplied = true;
     }
     private bool IsReady(StreamTile tile) => _groups.TryGetValue(tile, out var group) && group.Error is null && group.Mounted &&
         group.Bundles.All(bundle => bundle.Draws.All(_materials.IsReady));

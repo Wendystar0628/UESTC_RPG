@@ -4,12 +4,13 @@ using Campus.Contracts.Maps;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Renderer;
+using Campus.Kernel.Stream;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
-/// <summary>Requires the current arrival, settled world/weather and producer content; fixed sleeps cannot satisfy this barrier.</summary>
+/// <summary>Requires the current arrival, settled stream fades, world/weather and producer content.</summary>
 public static class CaptureBarrier
 {
     public static async Task WaitForReadyAsync(Node host, ViewContentReadiness producers, IMapArrival arrival, Func<bool> contentReady,
@@ -23,6 +24,7 @@ public static class CaptureBarrier
         var weather = Services.Get<IWeatherProcess>();
         var bake = Services.Get<IBakeService>();
         var runtime = Services.Get<IMapRuntime>();
+        var stream = Services.Get<IStreamVisualFrame>();
         var rig = Services.Get<ICameraRig>();
         using var cancellation = cancellationToken.Register(arrival.Cancel);
         var previous = PipelineCounts.Read(includeCanvas);
@@ -48,7 +50,8 @@ public static class CaptureBarrier
             var scrubbing = world.Scrubbing;
             var transition = world.Transition;
             var weatherTransitioning = weather.Transitioning;
-            var ready = content && !scrubbing && transition == WorldTransition.None && !weatherTransitioning;
+            var streamReady = stream.CaptureReady;
+            var ready = content && streamReady && !scrubbing && transition == WorldTransition.None && !weatherTransitioning;
             var pipelineChanged = current != previous;
             var now = FrameClock.MonotonicMilliseconds;
             var nextProgress = (bake.Progress, arrival.Done.Status);
@@ -69,7 +72,7 @@ public static class CaptureBarrier
 
             string Describe() =>
                 $"frame={Engine.GetProcessFrames()},waitMs={now - started:F1},noProgressMs={now - lastProgress:F1}," +
-                $"content={content},scrubbing={scrubbing},worldTransition={transition},weatherTransitioning={weatherTransitioning}," +
+                $"content={content},streamReady={streamReady},scrubbing={scrubbing},worldTransition={transition},weatherTransitioning={weatherTransitioning}," +
                 $"ready={ready},stable={stable}/{BootTuning.CaptureStableFrames},settled={settled}/{BootTuning.CaptureSettleFrames}," +
                 $"pipelineChanged={pipelineChanged},pipelineBefore={previous},pipelineNow={current},canvasIncluded={includeCanvas}," +
                 $"instance={world.Instance},worldHours={world.WorldHours:R}," +

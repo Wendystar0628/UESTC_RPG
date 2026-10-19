@@ -232,12 +232,20 @@ public sealed class StreamSchedulingTests
     {
         var visibility = new TileVisibility(.25f); var root = StreamTile.Root;
         var child = new StreamTile(new(0, 0), LodLevel.L3);
+        visibility.Apply(new HashSet<StreamTile> { root }, 479.5f, true, (_, _, _) => { });
+        if (visibility.CaptureReady(479.5f) || visibility.CaptureReady(479.7f))
+            throw new InvalidOperationException("First-entry fade was ready before 250 ms.");
         visibility.Apply(new HashSet<StreamTile> { root }, 479.8f, true, (_, _, _) => { });
+        if (!visibility.CaptureReady(479.8f))
+            throw new InvalidOperationException("First-entry fade did not complete.");
         visibility.Apply(new HashSet<StreamTile> { child }, 479.9f, true, (_, _, _) => { });
+        if (visibility.CaptureReady(479.9f)) throw new InvalidOperationException("Replacement fade was ready on its start frame.");
         visibility.Apply(new HashSet<StreamTile> { child }, .1f, true, (_, _, _) => { });
         if (!visibility.Drawn.Contains(root)) throw new InvalidOperationException("Parent faded out before 250 ms.");
+        if (visibility.CaptureReady(.1f)) throw new InvalidOperationException("Capture became ready during the complementary fade.");
         visibility.Apply(new HashSet<StreamTile> { child }, .2f, true, (_, _, _) => { });
         if (visibility.Drawn.Contains(root) || !visibility.Drawn.Contains(child)) throw new InvalidOperationException("Fade completion left stale parent coverage.");
+        if (!visibility.CaptureReady(.2f)) throw new InvalidOperationException("Capture did not become ready after fade completion.");
     }
     private sealed class InteriorRequests : IBakeService, IBakeHandle
     {
