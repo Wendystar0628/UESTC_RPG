@@ -9,8 +9,8 @@ namespace Campus.Gen.Vegetation;
 
 /// <summary>
 /// Frozen prototypes of the vegetation pools and the per-tree instance record. One prototype per mother model (species ×
-/// variant) and pool, built once per palette and shared by every tile stream and by the runtime pools: the near levels are
-/// the mother models (wood surface, then crown surface); the far pool's mainline stand-in is <see cref="MotherModels.FarStandIn"/>
+/// variant) and pool, built once per frozen global inputs and palette and shared by every tile stream and runtime pool.
+/// Near levels are the mother models (wood, crown, optional winter twig mass); the far pool's mainline stand-in is <see cref="MotherModels.FarStandIn"/>
 /// (the L2 stand-in decided in WLD-VEGETATION replaces it in the detail version); the shadow proxy is
 /// <see cref="MotherModels.ShadowProxy"/>. The instance record is the 3×4 transform (uniform scale, yaw, trunk foot) plus
 /// INSTANCE_CUSTOM (<see cref="PlantedTree.Custom"/>, §11.2).
@@ -22,7 +22,7 @@ public static class VegetationPrototypes
     /// <summary>Crown sway and card flutter reach (m) around the model bounds (veg_* wind, WLD-VEGETATION CustomAabb).</summary>
     public const float SwayPad = 0.6f;
 
-    private static readonly ConditionalWeakTable<PaletteCatalog, ConcurrentDictionary<(SpeciesInfo, int, VegPool), Lazy<GeometryPrototype>>> Cache = new();
+    private static readonly ConditionalWeakTable<BuildInputSnapshot, ConcurrentDictionary<(PaletteCatalog, string, int, VegPool), Lazy<GeometryPrototype>>> Cache = new();
 
     /// <summary>Prototype ID: vegetation/{species}/{variant}/{pool}.</summary>
     public static string Id(SpeciesInfo species, int variant, VegPool pool)
@@ -50,14 +50,15 @@ public static class VegetationPrototypes
         return (parts[1], variant, pool);
     }
 
-    public static GeometryPrototype Get(SpeciesInfo species, int variant, VegPool pool, PaletteCatalog palette)
+    public static GeometryPrototype Get(SpeciesInfo species, int variant, VegPool pool, BuildContext context)
     {
         ArgumentNullException.ThrowIfNull(species);
-        ArgumentNullException.ThrowIfNull(palette);
+        ArgumentNullException.ThrowIfNull(context);
         _ = Name(pool);
-        var table = Cache.GetValue(palette, _ => new());
-        return table.GetOrAdd((species, variant, pool), key => new Lazy<GeometryPrototype>(
-            () => Create(key.Item1, key.Item2, key.Item3, palette), LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+        // SpeciesInfo contains seasonal arrays: parsing the same frozen input gives new references, not a new mother.
+        var table = Cache.GetValue(context.GlobalInputs, _ => new());
+        return table.GetOrAdd((context.Catalog, species.Id, variant, pool), _ => new Lazy<GeometryPrototype>(
+            () => Create(species, variant, pool, context), LazyThreadSafetyMode.ExecutionAndPublication)).Value;
     }
 
     /// <summary>Local → world: uniform scale, yaw about the trunk, then the trunk foot (row-vector order).</summary>
@@ -104,8 +105,9 @@ public static class VegetationPrototypes
         _ => throw new ArgumentOutOfRangeException(nameof(pool), pool, "Unknown vegetation pool.")
     };
 
-    private static GeometryPrototype Create(SpeciesInfo species, int variant, VegPool pool, PaletteCatalog palette)
+    private static GeometryPrototype Create(SpeciesInfo species, int variant, VegPool pool, BuildContext context)
     {
+        var palette = context.Catalog;
         var id = Id(species, variant, pool);
         switch (pool)
         {
@@ -115,7 +117,7 @@ public static class VegetationPrototypes
             case VegPool.Far:
                 // The far stand-in (MotherModels.FarStandIn, 23c2c): a five-sided trunk and the L1 merged masses at icosphere
                 // level 0, tagged so veg_card / veg_trunk cross-fade it against the near pool's L1; stemless balls have no wood.
-                var l1 = Get(species, variant, VegPool.L1, palette);
+                var l1 = Get(species, variant, VegPool.L1, context);
                 var (farWood, farCrown, farTwig) = MotherModels.FarStandIn(species, variant, palette);
                 var far = new List<GeometryBuffer>(3);
                 if (farWood.Index.Length > 0) far.Add(GeometryBuffer.Freeze(farWood));

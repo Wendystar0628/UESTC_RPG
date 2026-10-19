@@ -27,7 +27,7 @@ public static partial class Planting
     private static void PlantSportWalls(Site site, SpeciesTable species, List<PlantedTree> trees)
     {
         foreach (var (_, key, point) in SportWallPoints(site.World))
-            Place(site, species.Get(SportWallSpecies), point, key, PlantSource.SportWall, trees, scale: null);
+            Try(site, species.Get(SportWallSpecies), point, key, wash: false, PlantSource.SportWall, trees, crownClear: false);
     }
 
     /// <summary>Actual wall trunk candidates shared by planting and bake terrain dependencies.</summary>

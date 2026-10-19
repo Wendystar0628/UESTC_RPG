@@ -51,7 +51,7 @@ public sealed class VegetationBuildTests
         var ctx = new BuildContext
         {
             World = world,
-            Map = null!,
+            Map = RealMapFixture.Entry().Descriptor,
             WorldSeed = 1u,
             GlobalInputs = global,
             SourceInputs = map.Entries,
@@ -87,26 +87,57 @@ public sealed class VegetationBuildTests
     {
         var ctx = Data.Value.Context;
         var streams = Near.Value.SelectMany(n => n.Output.Instances).ToArray();
+        var prepared = Module.PrepareVegetation(ctx).SelectMany(m => m.Prototypes)
+            .Where(p => p.Id.StartsWith("vegetation/", StringComparison.Ordinal)).ToDictionary(p => p.Id, StringComparer.Ordinal);
+        var species = VegetationInputs.Species(ctx);
+        foreach (var prototype in prepared.Values)
+        {
+            var (id, _, pool) = VegetationPrototypes.Parse(prototype.Id);
+            var tree = species.Get(id);
+            var kinds = new List<ToonKind>();
+            if (pool == VegPool.Shadow || !TreeForms.IsBall(tree.Form)) kinds.Add(ToonKind.VegTrunk);
+            if (pool != VegPool.Shadow)
+            {
+                kinds.Add(ToonKind.VegCard);
+                if (MotherModels.HasTwigMass(tree)) kinds.Add(ToonKind.VegTwigMass);
+            }
+            AssertThat(prototype.Surfaces.Select(surface => surface.Material.Spec.Kind).SequenceEqual(kinds))
+                .OverrideFailureMessage($"{prototype.Id}: surfaces").IsTrue();
+        }
         foreach (var group in streams.GroupBy(s => s.Prototype.Id))
+        {
             AssertThat(group.Select(s => s.Prototype).Distinct().Count() == 1).OverrideFailureMessage($"{group.Key}: prototype rebuilt per tile").IsTrue();
+            AssertThat(ReferenceEquals(group.First().Prototype, prepared[group.Key])).OverrideFailureMessage($"{group.Key}: runtime rebuilt the prototype").IsTrue();
+        }
         var ids = streams.Select(s => s.Id).ToArray();
         AssertThat(ids.Distinct(StringComparer.Ordinal).Count() == ids.Length).OverrideFailureMessage("duplicate stream IDs").IsTrue();
         foreach (var s in streams)
         {
-            AssertThat(s.Prototype.Surfaces.Count is 1 or 2).OverrideFailureMessage($"{s.Id}: surfaces").IsTrue();
             var palette = ctx.Catalog!;
             foreach (var surface in s.Prototype.Surfaces) palette.Validate(surface.Material.Spec);
         }
         var far = streams.Select(s => s.Prototype).Distinct().First();
         var parts = far.Id.Split('/');
-        var info = VegetationInputs.Species(ctx).Get(parts[1]);
+        var info = species.Get(parts[1]);
         var variant = int.Parse(parts[2], CultureInfo.InvariantCulture);
-        var l1 = VegetationPrototypes.Get(info, variant, VegPool.L1, ctx.Catalog!);
-        var stand = VegetationPrototypes.Get(info, variant, VegPool.Far, ctx.Catalog!);
-        AssertThat(stand.Id != l1.Id && stand.Surfaces.Count == 2 && stand.Surfaces[0].Material.Spec.Kind == ToonKind.VegTrunk
+        foreach (var pool in Enum.GetValues<VegPool>())
+        {
+            var prototype = VegetationPrototypes.Get(info, variant, pool, ctx);
+            AssertThat(ReferenceEquals(prototype, prepared[prototype.Id])).OverrideFailureMessage($"{prototype.Id}: reparsed species rebuilt the prototype").IsTrue();
+        }
+        var l1 = VegetationPrototypes.Get(info, variant, VegPool.L1, ctx);
+        var stand = VegetationPrototypes.Get(info, variant, VegPool.Far, ctx);
+        AssertThat(stand.Id != l1.Id && stand.Surfaces.Count == (MotherModels.HasTwigMass(info) ? 3 : 2) && stand.Surfaces[0].Material.Spec.Kind == ToonKind.VegTrunk
             && stand.Surfaces[1].Material.Spec.Kind == ToonKind.VegCard )
             .OverrideFailureMessage("the mainline far stand-in is a trunk and a mass crown").IsTrue();
-        AssertThat(VegetationPrototypes.Get(info, variant, VegPool.Shadow, ctx.Catalog!).Surfaces.Count == 1).OverrideFailureMessage("one shadow proxy surface").IsTrue();
+        AssertThat(VegetationPrototypes.Get(info, variant, VegPool.Shadow, ctx).Surfaces.Count == 1).OverrideFailureMessage("one shadow proxy surface").IsTrue();
+        var otherInputs = new BuildContext
+        {
+            World = ctx.World, Map = ctx.Map, WorldSeed = ctx.WorldSeed, Catalog = ctx.Catalog,
+            GlobalInputs = BuildInputSnapshot.Freeze(ctx.GlobalInputs.Entries)
+        };
+        AssertThat(!ReferenceEquals(l1, VegetationPrototypes.Get(info, variant, VegPool.L1, otherInputs)))
+            .OverrideFailureMessage("another frozen input snapshot reused a mother prototype").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -127,6 +158,9 @@ public sealed class VegetationBuildTests
             var built = Flatten(output.Instances);
             var traced = Flatten(traces.SelectMany(t => t.Output.Instances));
             AssertThat(built.SequenceEqual(traced)).OverrideFailureMessage($"{tile}: traced records differ from Build").IsTrue();
+            var prototypes = output.Instances.ToDictionary(s => s.Prototype.Id, s => s.Prototype, StringComparer.Ordinal);
+            AssertThat(traces.SelectMany(t => t.Output.Instances).All(s => ReferenceEquals(s.Prototype, prototypes[s.Prototype.Id])))
+                .OverrideFailureMessage($"{tile}: trace rebuilt a prototype").IsTrue();
             var colliders = module.Collide(ctx, tile).Select(c => c.ToString()).Order(StringComparer.Ordinal);
             var tracedColliders = traces.SelectMany(t => t.Colliders).Select(c => c.ToString()).Order(StringComparer.Ordinal);
             AssertThat(colliders.SequenceEqual(tracedColliders)).OverrideFailureMessage($"{tile}: traced colliders differ from Collide").IsTrue();

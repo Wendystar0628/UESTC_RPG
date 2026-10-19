@@ -117,18 +117,25 @@ public static partial class Planting
         // Reserve deliberate walls first, then publish them last to preserve the existing source order.
         PlantSportWalls(site, species, trees);
         var walls = trees.Count;
+        var avoidedWalls = site.Avoided.Count;
+        var wallCandidates = walls + avoidedWalls;
         PlantRoads(site, species, rules, trees);
         PlantOsmTrees(site, species, rules, trees);
         PlantGroves(site, species, rules, trees);
         var held = PlantPits(site, species, rules, trees);
         PlantDesignTrees(site, species, trees);
-        if (walls > 0)
+        if (wallCandidates > 0)
         {
             var reserved = trees.GetRange(0, walls);
             trees.RemoveRange(0, walls);
             trees.AddRange(reserved);
+            // Giving-way records use the same planting order, so the reserved walls move to its end too.
+            var reservedAvoided = site.Avoided.GetRange(0, avoidedWalls);
+            site.Avoided.RemoveRange(0, avoidedWalls);
             for (var i = 0; i < site.Avoided.Count; i++)
-                site.Avoided[i] = site.Avoided[i] with { Index = site.Avoided[i].Index - walls };
+                site.Avoided[i] = site.Avoided[i] with { Index = site.Avoided[i].Index - wallCandidates };
+            var wallStart = trees.Count + site.Avoided.Count - walls;
+            site.Avoided.AddRange(reservedAvoided.Select(a => a with { Index = wallStart + a.Index }));
         }
         return new PlantingLayout(trees.AsReadOnly()) { Avoided = site.Avoided.AsReadOnly(), PitsHeld = held };
     }

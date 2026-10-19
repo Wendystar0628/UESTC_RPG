@@ -44,12 +44,11 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
         if (PoolOf(lod) is not { } pool) return ContentOutput.Empty;
         var trees = InTile(Layout(ctx).Layout, tile, lod);
         if (trees.Count == 0) return ContentOutput.Empty;
-        var palette = RequirePalette(ctx);
         var streams = new List<GeometryInstanceStream>();
         foreach (var group in ByMother(trees))
         {
             var first = group[0];
-            var prototype = VegetationPrototypes.Get(first.Species, first.Variant, pool, palette);
+            var prototype = VegetationPrototypes.Get(first.Species, first.Variant, pool, ctx);
             streams.Add(Stream(StreamId(tile, lod, first), prototype, group));
         }
         return ContentOutput.Empty with { Instances = streams.AsReadOnly() };
@@ -88,7 +87,7 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
         {
             var (key, (info, variant, records)) = (mothers[i].Key, mothers[i].Value);
             var prototypes = Enum.GetValues<VegPool>()
-                .Select(pool => VegetationPrototypes.Get(info, variant, pool, context.Catalog)).ToArray();
+                .Select(pool => VegetationPrototypes.Get(info, variant, pool, context)).ToArray();
             var data = records.ToArray();
             var bounds = new Box3[data.Length / InstanceStreamLayout.FloatsPerInstance];
             for (var tree = 0; tree < bounds.Length; tree++)
@@ -112,7 +111,7 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
         foreach (var tree in Layout(context).Layout.Trees)
         {
             var id = "object/vegetation/" + tree.Key;
-            var prototype = VegetationPrototypes.Get(tree.Species, tree.Variant, pool, RequirePalette(context));
+            var prototype = VegetationPrototypes.Get(tree.Species, tree.Variant, pool, context);
             var output = ContentOutput.Empty with { Instances = [Stream(id, prototype, [tree])] };
             var tile = TileGrid.At(tree.Position);
             var colliders = level == LodLevel.L0 ? TreeColliders.For(new PlantingLayout([tree]), tile, context.World.Terrain) : [];

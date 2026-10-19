@@ -56,6 +56,44 @@ public sealed class PlantingTests
         }
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void SportWallsUseTrunkClearanceAndPreserveOtherCandidates()
+    {
+        const string group = """
+            {"id":"design:fixture-wall-group","kind":"sportGroup",
+             "props":{"members":["fixture-court"],"gate":[-65,-60],"gateGap":3,"treePitch":3,"treeOffset":1.5,"sharedGapBelow":8},
+             "geometry":{"type":"polygon","rings":{"outer":[[-80,-60],[-50,-60],[-50,-30],[-80,-30]],"holes":[]}}}
+            """;
+        var baseline = PavementTests.PlantFixture(PavementTests.Fixture(group)).Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
+        var target = baseline.First();
+        var x = target.Position.X;
+        var z = target.Position.Z;
+        foreach (var kind in new[] { "building", "water", "sport", "parking", "road", "pavement" })
+        {
+            var obstacle = JsonSerializer.Serialize(new
+            {
+                id = "design:fixture-wall-obstacle", kind = kind is "road" or "pavement" ? "road" : kind,
+                props = new { highway = kind == "pavement" ? "pedestrian" : "residential" },
+                geometry = new { type = "polygon", rings = new { outer = new[] { new[] { x - 1, z - 1 }, new[] { x + 1, z - 1 }, new[] { x + 1, z + 1 }, new[] { x - 1, z + 1 } }, holes = Array.Empty<float[][]>() } }
+            });
+            if (kind == "road") obstacle = JsonSerializer.Serialize(new
+            {
+                id = "fixture:source:way:4", kind = "road", props = new { highway = "residential", width = 2 },
+                geometry = new { type = "polyline", line = new { points = new[] { new[] { x - 5, z }, new[] { x + 5, z } } } }
+            });
+            var layout = PavementTests.PlantFixture(PavementTests.Fixture(group, obstacle));
+            var kept = layout.Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
+            var keys = kept.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
+            if (keys.Contains(target.Key))
+                throw new InvalidOperationException($"{kind}: a blocked wall trunk stayed");
+            if (!PavementTests.SameRecords(baseline.Where(t => keys.Contains(t.Key)), kept))
+                throw new InvalidOperationException($"{kind}: another candidate changed identity or order");
+            if (kind == "pavement" && (!layout.Avoided.Any(a => a.Tree.Key == target.Key) ||
+                !PavementTests.SameRecords(baseline, layout.BeforeGivingWay().Where(t => t.Source == PlantSource.SportWall))))
+                throw new InvalidOperationException("wall pavement avoidance lost the original planting order");
+        }
+    }
+
     private static (IWorldModel, SpeciesTable, PlantingRules) Load()
     {
         var root = RepositoryFixture.Root;
