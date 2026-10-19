@@ -92,6 +92,7 @@ public sealed partial class AppFlowService : IAppBootFlow, IBootParticipant
     {
         RequireHealthyWorld();
         if (_boot is null || !_worldPrepared) throw new InvalidOperationException("Boot world is not prepared.");
+        MarkPhase("world-ready");
         _worldReady.TrySetResult();
         if (_boot.ShowTitle) { if (In(AppState.Boot)) Change(AppState.Title); else if (In(AppState.Title)) RefreshTitlePrefetch(); }
         else { Change(AppState.Playing); ReleaseInput(); }

@@ -24,6 +24,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private StageCamera? _view;
     private readonly List<object> _runtimeObjects = [];
     private FrameStatistics? _statistics;
+    private readonly bool _startupProfiling = System.Environment.GetEnvironmentVariable("UESTC_STARTUP_PROFILE") == "1";
     private IAppFlow? _flow;
     private IMapRuntime? _mapRuntime;
     private IMapLifetime? _mapLifetime;
@@ -45,7 +46,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         {
             _phase = value;
             RegistryGateRunner.TraceBootPhase(value);
-            GD.Print($"STARTUP_PHASE {value} {FrameClock.MonotonicMilliseconds:R}");
+            GD.Print(FormattableString.Invariant($"STARTUP_PHASE {value} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
         }
     }
     public string? Failure { get; private set; }
@@ -115,7 +116,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         }
         _flow = registry.Get<IAppFlow>();
         _flow.PhaseReached += static phase =>
-            GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R}"));
+            GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
         if (!ReferenceEquals(_flow, registry.Get<IAppBootFlow>()))
             throw new InvalidOperationException("IAppFlow and IAppBootFlow must resolve to the same instance.");
         _flow.Changed += OnFlowChanged;
@@ -246,7 +247,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private void TraceInputReady()
     {
         if (_closing || _flow?.State != AppState.Playing) return;
-        GD.Print($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} mode={Services.Get<ICameraRig>().Mode}");
+        GD.Print(FormattableString.Invariant($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} mode={Services.Get<ICameraRig>().Mode}"));
     }
 
     private async Task RunBakeCommand()
@@ -270,6 +271,11 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     public override void _Process(double delta)
     {
         _statistics?.Sample();
+        if (_startupProfiling && _statistics is { } statistics)
+        {
+            var frame = statistics.Current;
+            GD.Print(FormattableString.Invariant($"STARTUP_FRAME {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} rendererCpuMs={frame.CpuRenderMilliseconds:R} rendererGpuMs={frame.GpuRenderMilliseconds:R}"));
+        }
         _gate.OnProcess();
     }
 
