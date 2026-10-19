@@ -8,7 +8,6 @@ namespace Campus.Gen.Zones.Common;
 
 public static partial class FeatureReads
 {
-    private const float ContourEndpointTolerance = 0.5f;
 
     /// <summary>
     /// Reads a non-rendered contourSegment: a two-point polyline with props.parent, optional sourceId and contour="facade".
@@ -55,7 +54,7 @@ public static partial class FeatureReads
             var count = (b - a + ring.Count) % ring.Count + 1;
             result = Enumerable.Range(0, count).Select(i => ring[(a + i) % ring.Count]).ToArray();
         }
-        return result ?? throw ContourError(selectionId, $"Both endpoints must match vertices on one parent contour within {ContourEndpointTolerance} m.");
+        return result ?? throw ContourError(selectionId, $"Both endpoints must match vertices on one parent contour within {WorldFeatureGeometry.SelectionEndpointTolerance} m.");
     }
 
     /// <summary>
@@ -79,9 +78,9 @@ public static partial class FeatureReads
             if (d < distance) { distance = d; best = i; tied = false; }
             else if (d == distance) tied = true;
         }
-        if (tied && distance <= ContourEndpointTolerance * ContourEndpointTolerance)
+        if (tied && distance <= WorldFeatureGeometry.SelectionEndpointTolerance * WorldFeatureGeometry.SelectionEndpointTolerance)
             throw ContourError(selectionId, "An endpoint is equally close to multiple contour vertices.");
-        return distance <= ContourEndpointTolerance * ContourEndpointTolerance ? best : -1;
+        return distance <= WorldFeatureGeometry.SelectionEndpointTolerance * WorldFeatureGeometry.SelectionEndpointTolerance ? best : -1;
     }
 
     private static IReadOnlyList<IReadOnlyList<Vector2>> ContourOuters(OverlayGeometry geometry, string selectionId) => geometry switch

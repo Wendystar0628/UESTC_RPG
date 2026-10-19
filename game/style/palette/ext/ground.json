@@ -22,6 +22,8 @@
     {"token": "ground.markingYellow.lit", "index": 196, "albedo": [0.823529, 0.721569, 0.4], "materialClass": "ground", "seasonal": false, "role": "lit"},
     {"token": "ground.markingYellow.shade", "index": 197, "albedo": [0.823529, 0.721569, 0.4], "materialClass": "ground", "seasonal": false, "role": "shade"},
     {"token": "ground.track.lit", "index": 198, "albedo": [0.623529, 0.341176, 0.270588], "materialClass": "ground", "seasonal": false, "role": "lit"},
-    {"token": "ground.track.shade", "index": 199, "albedo": [0.623529, 0.341176, 0.270588], "materialClass": "ground", "seasonal": false, "role": "shade"}
+    {"token": "ground.track.shade", "index": 199, "albedo": [0.623529, 0.341176, 0.270588], "materialClass": "ground", "seasonal": false, "role": "shade"},
+    {"token": "ground.bankWet.lit", "index": 454, "albedo": [0.511853, 0.511841, 0.493003], "materialClass": "ground", "seasonal": false, "role": "lit"},
+    {"token": "ground.bankWet.shade", "index": 455, "albedo": [0.511853, 0.511841, 0.493003], "materialClass": "ground", "seasonal": false, "role": "shade"}
   ]
 }

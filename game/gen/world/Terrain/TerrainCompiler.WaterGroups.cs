@@ -65,6 +65,7 @@ internal static partial class TerrainCompiler
 
     private static void CompileWaterGroups(Builder b)
     {
+        var registeredBanks = ReadRegisteredBanks(b);
         ResolveConnectedWaterLevels(b);
         for (var i = 0; i < b.WaterSpecs.Count; i++)
             if (b.WaterSpecs[i].AutoLevelPending)
@@ -117,8 +118,9 @@ internal static partial class TerrainCompiler
             try { domain = members.Length == 1 ? members[0].Region : TerrainUnion.Build(members.Select(spec => spec.Region)); }
             catch (ArgumentException error) { throw new WorldDataException("campus.json", string.Join(",", members.Select(spec => spec.Id.Value)), error.Message, error); }
             var representative = members.OrderBy(spec => spec.Op?.Priority ?? 50).ThenBy(spec => spec.Name, StringComparer.Ordinal).First();
+            var registeredHard = RegisteredBankIntervals(registeredBanks, members, domain);
             var bridgeBanks = members.Any(spec => spec.Bank.Kind is TerrainBankKind.Soft or TerrainBankKind.Wetland)
-                ? new TerrainBridgeBanks(domain, b.Context.Network.Bridges) : null;
+                ? new TerrainBridgeBanks(domain, b.Context.Network.Bridges, registeredHard) : null;
             var (node, check, originalHard) = ComposeWaterProfiles(b, members, domain, bridgeBanks, representative);
             b.Nodes.Add(node);
             b.WaterShores.Add(new(representative.File, representative.Name, domain, node, check, bridgeBanks,

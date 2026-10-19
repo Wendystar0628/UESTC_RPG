@@ -5,6 +5,9 @@ namespace Campus.Gen.World;
 /// <summary>Current feature geometry used by facade layouts, preserving authored order and rings.</summary>
 public static class WorldFeatureGeometry
 {
+    /// <summary>Metres allowed when selecting a declared contour endpoint, independent of height precision.</summary>
+    public const float SelectionEndpointTolerance = 0.5f;
+
     /// <summary>The polygons of an area feature, one or many; non-area features fail.</summary>
     public static IReadOnlyList<PolygonRings> Polygons(this WorldFeature feature) =>
         feature.Geometry is PolygonGeometry or MultiPolygonGeometry ? PolygonsOf(feature.Geometry)

@@ -3,15 +3,16 @@ using Campus.Contracts;
 using Campus.Gen.Geometry;
 using Campus.Gen.Zones.Common;
 using Campus.Gen.Zones.DesignWaterfront.Bridges;
+using Campus.Gen.Zones.DesignWaterfront.Banks;
 using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
 
 namespace Campus.Gen.Zones.DesignWaterfront;
 
-/// <summary>WP-28 registered bridge decks and bridge-head stones, with their network lines kept intact.</summary>
+/// <summary>WP-28 registered bridges and hard-bank structures, resolved against the compiled terrain.</summary>
 [ContentModule("zone.waterfront", Owner = "WP-28")]
 public sealed class WaterfrontModule : ZoneModuleBase
 {
-    private static readonly IReadOnlyList<ZoneSite> Sites = [new BridgeSite()];
+    private static readonly IReadOnlyList<ZoneSite> Sites = [new BridgeSite(), new BankSite()];
 
     public WaterfrontModule() : base(Sites, new(T.BudgetTrianglesL0, T.BudgetTrianglesL1, T.BudgetDrawCalls),
         cacheColliders: true) { }

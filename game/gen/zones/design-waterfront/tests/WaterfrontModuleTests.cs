@@ -4,6 +4,8 @@ using Campus.Contracts.Audio;
 using Campus.Gen.World;
 using Campus.Tests;
 using Campus.Gen.Zones.DesignWaterfront.Bridges;
+using Campus.Gen.Zones.DesignWaterfront.Banks;
+using Campus.Gen.Zones.Common;
 using GdUnit4;
 using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
 
@@ -100,24 +102,41 @@ public sealed class WaterfrontModuleTests
         var module = new WaterfrontModule();
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
         var plans = BridgePlan.All(ctx.World);
-        AssertThat(colliders.Length == plans.Sum(plan => BridgeColliders.Of(plan).Count()) + BridgeStone.All(ctx.World).Count).OverrideFailureMessage("every collider is filed in exactly one cell").IsTrue();
+        AssertThat(colliders.Length == module.CollidersFor(ctx).Count).OverrideFailureMessage("every collider is filed in exactly one cell").IsTrue();
         foreach (var plan in plans)
         {
-            var ramps = colliders.OfType<RampCollider>().Where(r => Inside(plan, new(r.P0.X, r.P0.Z))).ToArray();
+            var bridge = BridgeColliders.Of(plan).Select(item => item.Collider).ToArray();
+            AssertThat(bridge.All(colliders.Contains)).OverrideFailureMessage("all bridge colliders are published").IsTrue();
+            var ramps = bridge.OfType<RampCollider>().ToArray();
             AssertThat(ramps.Length > 0 && ramps.All(r => r.Tag == SurfaceTag.Ground && r.Foot != FootMat.Auto)).OverrideFailureMessage($"{plan.Id.Value}: walkable deck ramps with a foot material").IsTrue();
             AssertThat(ramps.All(r => Vector3.Distance(r.P0, r.P3) <= T.RampStep + TestTolerance.Position)).OverrideFailureMessage("ramps are cut every 2 m").IsTrue();
             AssertThat(ramps.All(r => MathF.Abs(r.P0.Y - plan.RoadY) < TestTolerance.Position || MathF.Abs(r.P0.Y - plan.WalkY) < TestTolerance.Position)).OverrideFailureMessage("ramp tops at the carriageway or walking level").IsTrue();
-            var walls = colliders.OfType<WallCollider>().Where(w => Inside(plan, (w.A + w.B) * 0.5f)).ToArray();
+            var walls = bridge.OfType<WallCollider>().ToArray();
             AssertThat(walls.Length == 2 && walls.All(w => w.Tag == SurfaceTag.Barrier && w.Y1 >= plan.WalkY + WalkRules.BarrierHeight - TestTolerance.Position && w.HalfT <= 0.3f)).OverrideFailureMessage($"{plan.Id.Value}: two parapets, top at least 1.5 m above the walk").IsTrue();
         }
-        AssertThat(colliders.OfType<BoxCollider>().Count() == BridgeStone.All(ctx.World).Count).OverrideFailureMessage("each stone is one box").IsTrue();
+        foreach (var stone in BridgeStone.All(ctx.World))
+            AssertThat(colliders.Count(collider => collider == stone.Collider) == 1).OverrideFailureMessage("each stone is one box").IsTrue();
     }
 
-    private static bool Inside(BridgePlan plan, Vector2 p)
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void RegisteredBankUsesTheCompiledShoreAndOpensAtItsWaterAccessSteps()
     {
-        var d = p - plan.Origin;
-        float s = Vector2.Dot(d, plan.Axis), u = Vector2.Dot(d, plan.Normal);
-        return u >= plan.OuterLeft - 0.5f && u <= plan.OuterRight + 0.5f && s >= plan.StartS(u) - 0.5f && s <= plan.EndS(u) + 0.5f;
+        var world = World();
+        var bank = BankPlan.All(world).Single(plan => plan.Id.Value == T.BankSampleId);
+        var registration = world.Feature(T.BankSampleId);
+        var (a, b) = registration.PointPair();
+        AssertThat(new[] { a, b }.All(point => PlanLines.Project(bank.Shore, point).Distance <= T.BankEndpointTolerance)).IsTrue();
+        var source = (ITerrainBankSource)world.Terrain;
+        AssertThat(source.Banks.Contains(bank.Span) && bank.Span.Kind == TerrainBankKind.Hard).IsTrue();
+        AssertThat(bank.WaterY == world.Terrain.WaterY(new(registration.Text("water")))).IsTrue();
+        foreach (var exit in bank.Exits)
+        {
+            var lowTread = exit.BaseY + exit.Steps.Height / exit.Steps.Steps;
+            AssertThat(MathF.Abs(lowTread - (bank.WaterY - T.BankSubmersion)) < TestTolerance.Position).IsTrue();
+            AssertThat(MathF.Abs(exit.BaseY + exit.Steps.Height - bank.TopAt(exit.Station)) < TestTolerance.Position).IsTrue();
+            AssertThat(bank.Pieces().All(piece =>
+                PlanLines.SegmentDistanceSquared(exit.Frame.Origin, piece.A, piece.B) >= MathF.Pow(exit.Steps.Width / 2 - TestTolerance.Position, 2))).IsTrue();
+        }
     }
 
     private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1u };

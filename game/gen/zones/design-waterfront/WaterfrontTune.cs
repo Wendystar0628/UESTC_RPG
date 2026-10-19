@@ -15,6 +15,18 @@ public static class WaterfrontTune
     /// <summary>Overlay kind of a bridge-head lying stone (MAP-QSH-ADDITIONS 桥头卧石).</summary>
     public const string StoneKind = "bridge-stone";
 
+    // ---- Registered hard-bank sample (MAP-QSH-WATER) ----
+    public const string BankKind = "bank", HardBankForm = "hard";
+    public const string BankSampleId = "design:waterfront-bank-library-south-sample";
+    public const float BankCopingWidth = 0.35f, BankCopingThickness = 0.15f, BankCopingOverhang = 0.03f;
+    public const float BankWetHeight = 0.2f, BankCopingBevel = 0.015f;
+    public const float BankRiser = 0.15f, BankTread = 0.35f, BankSubmersion = 0.15f;
+    public const float BankPieceLength = 2f, BankJoinTolerance = 0.02f;
+    public const float BankEndpointTolerance = Campus.Gen.World.WorldFeatureGeometry.SelectionEndpointTolerance;
+    public const string BankWet = "ground.bankWet";
+    public static ToonSpec BankWallSpec => ConcreteSpec;
+    public static ToonSpec BankWetSpec => BankWallSpec with { Lit = new(BankWet + ".lit"), Shade = new(BankWet + ".shade") };
+
     // ---- Deck section ----
     /// <summary>Default sidewalk on a carriage bridge that has no own footway lines (西门车行桥).</summary>
     public const float DefaultSidewalk = 1.5f;

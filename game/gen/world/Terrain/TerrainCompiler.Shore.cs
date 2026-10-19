@@ -201,6 +201,7 @@ internal static partial class TerrainCompiler
             var intervals = shore.OriginalHard.ToList();
             if (shore.Banks is { } bank)
             {
+                intervals.AddRange(bank.RegisteredHard);
                 intervals.AddRange(bank.Contacts.Select(contact => new TerrainBankInterval(contact.Polygon, contact.Ring,
                     contact.ShoreStation - TerrainBridgeBanks.HardHalfLength, contact.ShoreStation + TerrainBridgeBanks.HardHalfLength,
                     contact.RingLength, [], [contact.Bridge])));

@@ -17,13 +17,16 @@ internal sealed class TerrainBridgeBanks
     private RoadSpan[] _roadSpans = [];
     private bool _footwaysCommitted;
     public IReadOnlyList<Contact> Contacts { get; }
+    public IReadOnlyList<TerrainBankInterval> RegisteredHard { get; }
     public IReadOnlyList<RoadSpan> RoadSpans => _roadSpans;
     internal const double HardHalfLength = 5; // Opus contract-15, 2026-10-16 11:14.
     internal const double TransitionLength = 2; // Opus contract-15, 2026-10-16 11:49.
     internal const double FootwayExtension = 3; // Opus 2026-10-16 13:39.
 
-    public TerrainBridgeBanks(TerrainRegion region, IReadOnlyList<NetworkLine> bridges)
+    public TerrainBridgeBanks(TerrainRegion region, IReadOnlyList<NetworkLine> bridges,
+        IReadOnlyList<TerrainBankInterval>? registeredHard = null)
     {
+        RegisteredHard = registeredHard?.ToArray() ?? [];
         var rings = new List<(int Polygon, int Ring, TerrainPath Path)>();
         for (var polygon = 0; polygon < region.Polygons.Length; polygon++)
         {
@@ -104,6 +107,16 @@ internal sealed class TerrainBridgeBanks
             if (Math.Abs(delta) < shortest) { shortest = Math.Abs(delta); signed = delta; }
         }
         var weight = Taper(shortest - HardHalfLength, signed < 0 ? -1 : 1);
+        foreach (var interval in RegisteredHard)
+        {
+            if (interval.Polygon != ring.Polygon || interval.Ring != ring.Ring) continue;
+            var station = hit.Station;
+            while (station < interval.From - TransitionLength) station += interval.Length;
+            while (station > interval.To + TransitionLength && station - interval.Length >= interval.From - TransitionLength) station -= interval.Length;
+            var outside = station < interval.From ? interval.From - station : station > interval.To ? station - interval.To : 0;
+            var candidate = Taper(outside, station < interval.From ? -1 : 1);
+            weight += TerrainDifferential.Product(TerrainDifferential.Constant(1) - weight, candidate);
+        }
         TerrainDifferential? top = null;
         foreach (var span in spans)
         {

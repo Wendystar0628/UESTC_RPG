@@ -1,0 +1,30 @@
+{
+  "zone": "waterfront",
+  "owner": "WP-28",
+  "map": "qingshuihe",
+  "ops": [
+    {
+      "op": "add",
+      "id": "design:waterfront-bank-library-south-sample",
+      "kind": "bank",
+      "geometry": { "type": "polyline", "line": { "points": [[-220.5, -77.5], [-170.3, -70.6]] } },
+      "props": {
+        "form": "hard",
+        "water": "qsh:way:217855313",
+        "treads": [{ "centre": [-192.0, -72.287806], "width": 3.0 }]
+      },
+      "reason": "MAP-QSH-WATER 硬岸接水样板：主会话定走马河南岸图书馆一侧此段，压顶与常水湿带连续，中心 x=-192 正对图书馆轴线留一处 3 m 亲水台阶；岸顶、水侧与水位由同一编译地形提供，末级没入常水位 0.15 m。"
+    },
+    {
+      "op": "add",
+      "id": "design:waterfront-bank-library-south-exit-clearance",
+      "kind": "grass-area",
+      "geometry": {
+        "type": "polygon",
+        "rings": { "outer": [[-194.683, -72.063], [-189.902, -70.600], [-188.878, -73.946], [-193.659, -75.410]], "holes": [] }
+      },
+      "props": { "category": "exclude" },
+      "reason": "MAP-QSH-WATER：亲水台阶宽 3 m，出口两侧各留 1 m 无草，连同岸顶接入口与水侧踏步一起留空；使用既有 grass-area 排除登记。"
+    }
+  ]
+}
