@@ -16,9 +16,9 @@ public interface IBakeContextSource
     BuildContext GetPreparedContext(IMapContext context, string moduleId);
 
     /// <summary>
-    /// Returns the current prepared map's single immutable L0 tile index, keyed by module ID.
+    /// Returns the current prepared map's single immutable module and auxiliary tile directory.
     /// Construction runs once on a worker and is shared by streaming and collision dependencies.
     /// Invalid or stale map contexts fail at entry; callers reject late results with their map generation.
     /// </summary>
-    Task<IReadOnlyDictionary<string, IReadOnlyList<TileKey>>> GetPreparedModuleTilesAsync(IMapContext context);
+    Task<PreparedBakeTiles> GetPreparedModuleTilesAsync(IMapContext context);
 }

@@ -1,6 +1,8 @@
+using Campus.Contracts.Bake;
+
 namespace Campus.Contracts.Vegetation;
 
-/// <summary>Vegetation display pools in instance-prototype order.</summary>
+/// <summary>Vegetation display pools. Tree payload prototype order is L0Plus, L0, L1, Shadow; Far belongs to static tiles.</summary>
 public enum VegPool : byte { L0Plus = 0, L0 = 1, L1 = 2, Far = 3, Shadow = 4 }
 
 /// <summary>Prepared geometry and complete instance records for one vegetation mother model.</summary>
@@ -24,12 +26,17 @@ public sealed class VegetationMotherData
     public IReadOnlyList<Box3> Bounds { get; }
 }
 
+/// <summary>Prepared tree or grass data for one requested owner tile.</summary>
+public sealed record VegetationTileContent(BakeKey Key, TileKey Tile,
+    IReadOnlyList<VegetationMotherData> Mothers);
+
 /// <summary>Production capability exposing prepared vegetation to the display runtime.</summary>
 public interface IVegetationRuntimeSource : IContentModule
 {
-    IReadOnlyList<VegetationMotherData> PrepareVegetation(BuildContext context);
-    /// <summary>Authored grass scopes from this exact map version; actual prototypes use the existing geometry instance pools.</summary>
-    GrassRuntimeData PrepareGrass(BuildContext context);
+    /// <summary>Candidate owner tiles from authored grass scopes; querying the directory does not build grass instances.</summary>
+    IReadOnlyList<TileKey> GrassTiles(BuildContext context);
+    IReadOnlyList<VegetationMotherData> PrepareTrees(BuildContext context, TileKey tile);
+    IReadOnlyList<VegetationMotherData> PrepareGrass(BuildContext context, TileKey tile);
     /// <summary>
     /// The packed species table for the tree_species global texture (WLD-VEGETATION): RGBA32F texels, row-major,
     /// 8 texels per species row and 32 rows; the layout is documented on Campus.Gen.Vegetation.SpeciesTable.

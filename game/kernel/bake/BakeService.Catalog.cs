@@ -31,6 +31,12 @@ public sealed partial class BakeService
                 foreach (var child in tree.Children(tile).Reverse()) pending.Push(child);
             }
 
+            foreach (var entry in directory.Auxiliary)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                yield return entry.Key;
+            }
+
             foreach (var binding in map.Data.Value.InteriorBindings.OrderBy(value => value.ProviderId, StringComparer.Ordinal))
                 foreach (var feature in binding.FeatureIds.OrderBy(value => value.Value, StringComparer.Ordinal))
                 {

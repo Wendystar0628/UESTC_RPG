@@ -132,10 +132,10 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             var ledger = new Lazy<MapClaimLedger>(() => claims.Build(context.World), LazyThreadSafetyMode.ExecutionAndPublication);
             Func<FeatureId, Aspects, WpId?> claimLookup = (feature, aspects) => ledger.Value.ClaimedBy(feature, aspects);
             var sourceCache = new BakeSourceIndexCache(_terrain, context.Descriptor.Id,
-                SourceVersion(context, seed, globalInputs, modules, interiors));
+                SourceVersion(context, seed, globalInputs, modules, interiors, producers));
             var map = new MapBuild(context, modules, interiors, producers, geometry,
                 ledger, claimLookup, new(() => Load(context, seed, catalog, interiors, modules, claimLookup, globalInputs,
-                    groundContributors, partLods, sourceCache), LazyThreadSafetyMode.ExecutionAndPublication),
+                    groundContributors, partLods, sourceCache, producers), LazyThreadSafetyMode.ExecutionAndPublication),
                 globalInputs, groundContributors, partLods, catalog) { TerrainCache = _terrain, SourceCache = sourceCache };
             _contexts.Add(context.Descriptor.Id, map);
             return map;
@@ -169,18 +169,18 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             {
                 map.InteriorCoverage = cached.Coverage;
                 foreach (var layout in cached.Layouts) map.InteriorLayouts.Add(layout.Feature, layout);
-                foreach (var entry in cached.Directory) map.ResidentModuleTiles.Add(entry.Module, entry.Tiles);
+                map.PrepareDirectory(cached.Metadata, cached.Directory);
                 return cached.Metadata;
             }
             map.InteriorCoverage = InspectInteriorCoverage(map);
             var generated = BakeMapMetadataBuilder.Build(map);
             RequireEntranceCoverage(map, generated);
-            map.PrepareDirectory();
+            map.PrepareDirectory(generated);
             PrepareResidentTerrain(map);
             var terrainPoints = _terrain.SaveResidentPoints(context.World, data.ResidentStamp);
             _terrain.WriteJson(new(context.Descriptor.Id, "resident", "meta"), data.ResidentStamp,
                 new BakeResidentData(generated, data.Windows.Metadata, map.InteriorCoverage.ToArray(), map.InteriorLayouts.Values.ToArray(),
-                    map.ResidentModuleTiles.Select(pair => new BakeModuleDirectory(pair.Key, pair.Value.ToArray())).ToArray(), terrainPoints));
+                    map.PreparedTiles, terrainPoints));
             return generated;
         });
         lock (_sync)
@@ -231,9 +231,9 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             {
                 var product = Decode(identity, key, payload);
                 RequireInteriorProduct(map, key, product);
+                RequireAuxiliaryProduct(map, key, product);
                 return product;
-            },
-                key.Module == "map" ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes, cancellation);
+            }, cancellation);
             if (cached is not null) return cached;
             if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
         }
@@ -247,6 +247,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         var validated = Decode(identity, key, bytes);
         cancellation.ThrowIfCancellationRequested();
         RequireInteriorProduct(map, key, validated);
+        RequireAuxiliaryProduct(map, key, validated);
         if (!_options.Live && generation == Interlocked.Read(ref _cacheGeneration))
         {
             _cache.Write(key, bytes, cancellation);
@@ -256,7 +257,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
 
     private LoadedMap Load(IMapContext context, uint seed, PaletteCatalog catalog, IReadOnlyDictionary<string, Interior> interiors,
         IReadOnlyDictionary<string, ContentModuleInput> modules, Func<FeatureId, Aspects, WpId?> claimLookup, BuildInputSnapshot globalInputs,
-        IReadOnlyList<IGroundMaskContributor> groundContributors, PartLodCatalog partLods, BakeSourceIndexCache sourceCache)
+        IReadOnlyList<IGroundMaskContributor> groundContributors, PartLodCatalog partLods, BakeSourceIndexCache sourceCache, Producer[] producers)
     {
         if (!_options.Live)
         {
@@ -274,10 +275,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         {
             // Revalidate changed inputs before publishing a replacement resident version.
             BuildingOverlapValidator.Validate(context.World, claimLookup);
-            return ResidentStamp(context, seed, catalog, interiors, modules, globalInputs, claimLookup);
+            return ResidentStamp(context, seed, catalog, interiors, modules, globalInputs, claimLookup, producers);
         });
         var resident = _terrain.ReadJson<BakeResidentData>(new(context.Descriptor.Id, "resident", "meta"), residentStamp, candidate =>
         {
+            BakeMapMetadataBuilder.ValidateResident(candidate, context.Descriptor.Id, modules, producers);
             if (!_terrain.RestoreResidentPoints(context.World, residentStamp, candidate.TerrainPoints))
                 throw new InvalidDataException("Resident metadata has missing terrain points.");
         });
@@ -462,7 +464,6 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         public BakeMapMetadata? Metadata { get; private set; }
         public IReadOnlyList<InteriorCoverage> InteriorCoverage { get; set; } = [];
         internal Dictionary<FeatureId, InteriorLayout> InteriorLayouts { get; } = [];
-        internal Dictionary<string, IReadOnlyList<TileKey>> ResidentModuleTiles { get; } = new(StringComparer.Ordinal);
         private IReadOnlyDictionary<string, BuildContext>? _preparedContexts;
 
         internal BuildContext CreateBuildContext(string codeHash, string dataHash = "")
@@ -494,12 +495,16 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             var data = Data.Value;
             if (!ReferenceEquals(metadata.Lighting.WindowNumbering, data.Windows.Snapshot))
                 throw new InvalidDataException("Lighting publication must retain the prepared window snapshot instance.");
-            if (ResidentModuleTiles.Count != Modules.Count || Modules.Keys.Any(id => !ResidentModuleTiles.ContainsKey(id)))
-                throw new InvalidDataException("Resident metadata has no complete module directory.");
+            Metadata = metadata;
+            PublishDirectory();
+        }
+
+        private void FreezeInputs(BakeMapMetadata metadata)
+        {
+            if (!Active || !Data.IsValueCreated || !ReferenceEquals(metadata.Lighting.WindowNumbering, Data.Value.Windows.Snapshot))
+                throw new InvalidOperationException("Map preparation inputs are not ready.");
             _preparedContexts = new ReadOnlyDictionary<string, BuildContext>(Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal)
                 .ToDictionary(pair => pair.Key, pair => CreateBuildContext(pair.Value.CodeHash), StringComparer.Ordinal));
-            Metadata = metadata;
-            PrepareModuleTiles();
         }
 
         internal BuildContext GetPreparedContext(IMapContext context, string moduleId)

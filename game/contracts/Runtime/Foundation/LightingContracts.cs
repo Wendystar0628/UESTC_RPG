@@ -11,6 +11,8 @@ public interface ILightInventory
     IReadOnlyList<LightEmitter> Lamps { get; } // Includes outskirts. Consumers must not depend on list order.
     IReadOnlyList<WindowFacadeDecl> Facades { get; }
     IReadOnlyList<WindowDecl> Windows { get; }
+    /// <summary>The complete resident lamp catalog; it does not change with tile demand or current time/weather.</summary>
+    NightlightCatalog Nightlight { get; }
 }
 
 /// <summary>

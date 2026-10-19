@@ -188,18 +188,15 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     internal IEnumerable<T> ReadJsonCandidates<T>(BakeKey key, string identity, Action<T> validate) where T : class
     {
         if (_options.Live) yield break;
-        foreach (var value in Store.ReadCandidates(key, bytes => Decode(bytes, identity, payload => DecodeJson(payload, validate)), MaximumPayload(key)))
+        foreach (var value in Store.ReadCandidates(key, bytes => Decode(bytes, identity, payload => DecodeJson(payload, validate))))
             yield return value;
     }
     internal void WriteJson<T>(BakeKey key, string identity, T value) => Write(key, identity, JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options));
     private T? Read<T>(BakeKey key, string identity, Func<byte[], T> decode) where T : class
     {
         if (_options.Live) return null;
-        return Store.TryRead(key, bytes => Decode(bytes, identity, decode), MaximumPayload(key));
+        return Store.TryRead(key, bytes => Decode(bytes, identity, decode));
     }
-    private static int MaximumPayload(BakeKey key) => key.Module == "terrain" && key.Detail == "meta" ||
-        key.Module == "resident" && (key.Detail is "meta" or "source-index")
-        ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes;
     private static T Decode<T>(byte[] bytes, string identity, Func<byte[], T> decode)
     {
         using var reader = new BinaryReader(new MemoryStream(bytes));

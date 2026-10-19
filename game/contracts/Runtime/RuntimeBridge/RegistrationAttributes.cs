@@ -23,5 +23,7 @@ public readonly record struct RenderHandle(ulong Value);
 public interface IRenderHost
 {
     RenderHandle Mount(ContentOutput content, WpId owner);
+    /// <summary>True only for a completed live mount whose submitted draws have prepared materials.</summary>
+    bool IsReady(RenderHandle handle);
     void Unmount(RenderHandle handle);
 }

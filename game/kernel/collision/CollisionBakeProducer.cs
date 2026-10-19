@@ -28,7 +28,9 @@ public sealed class CollisionBakeProducer : IBakeProducer, IBakeContentConsumer
 
     public bool CanBuild(BakeKey key) => key.Module == Module && key.Detail.StartsWith("C/", StringComparison.Ordinal);
 
-    public void Prepare(Lazy<IReadOnlyList<PreparedContentModule>> modules) => _modules = modules;
+    public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];
+
+    public void Prepare(Lazy<IReadOnlyList<PreparedContentModule>> modules, LightInventoryDocument lighting) => _modules = modules;
 
     public object Build(BakeKey key, BuildContext context)
     {

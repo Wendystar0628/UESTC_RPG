@@ -14,6 +14,13 @@ public sealed class BakeCacheStore
     public const int MaximumCompressedTileBytes = 8 * 1024 * 1024;
     public const int MaximumPayloadBytes = MaximumTileUploadBytes + 1024 * 1024;
     public const int MaximumProductBytes = 128 * 1024 * 1024;
+    internal static int MaximumPayload(BakeKey key) => key.Module is BakeModuleIds.VegetationTrees or BakeModuleIds.VegetationGrass or
+        BakeModuleIds.FaunaRuntime or BakeModuleIds.NightlightLamps or BakeModuleIds.NightlightWindows or "map" ||
+        key.Module == "resident" && (key.Detail is "meta" or "source-index") || key.Module == "terrain" && key.Detail == "meta"
+        ? MaximumProductBytes : MaximumPayloadBytes;
+    internal static int MaximumFile(BakeKey key) => MaximumPayload(key) == MaximumProductBytes
+        ? MaximumProductBytes + 1024 * 1024 : MaximumCompressedTileBytes;
+
     private const uint CompressionMagic = 0x315A4254; // TBZ1
     private readonly string _root;
     private readonly string? _packagedRoot;
@@ -68,24 +75,24 @@ public sealed class BakeCacheStore
         }
     }
 
-    public T? TryRead<T>(BakeKey key, Func<byte[], T> decode, int maximumPayload = MaximumPayloadBytes,
+    public T? TryRead<T>(BakeKey key, Func<byte[], T> decode,
         CancellationToken cancellationToken = default) where T : class
     {
-        foreach (var value in ReadCandidates(key, decode, maximumPayload, cancellationToken)) return value;
+        foreach (var value in ReadCandidates(key, decode, cancellationToken)) return value;
         return null;
     }
 
-    internal IEnumerable<T> ReadCandidates<T>(BakeKey key, Func<byte[], T> decode, int maximumPayload = MaximumPayloadBytes,
+    internal IEnumerable<T> ReadCandidates<T>(BakeKey key, Func<byte[], T> decode,
         CancellationToken cancellationToken = default) where T : class
     {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
-        if (ReadCandidate(_root, key, decode, maximumPayload, cancellationToken) is { } local) yield return local;
-        if (_packagedAvailable && ReadCandidate(_packagedRoot!, key, decode, maximumPayload, cancellationToken) is { } packaged)
+        if (ReadCandidate(_root, key, decode, cancellationToken) is { } local) yield return local;
+        if (_packagedAvailable && ReadCandidate(_packagedRoot!, key, decode, cancellationToken) is { } packaged)
             yield return packaged;
     }
 
-    private T? ReadCandidate<T>(string root, BakeKey key, Func<byte[], T> decode, int maximumPayload,
+    private T? ReadCandidate<T>(string root, BakeKey key, Func<byte[], T> decode,
         CancellationToken cancellationToken) where T : class
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -93,14 +100,13 @@ public sealed class BakeCacheStore
         if (!File.Exists(path)) return null;
         try
         {
-            var limit = maximumPayload == MaximumProductBytes ? MaximumProductBytes + 1024 * 1024 : MaximumCompressedTileBytes;
-            var file = ReadBounded(path, limit);
+            var file = ReadBounded(path, MaximumFile(key));
             byte[] bytes;
             EnterCache(cancellationToken);
             try
             {
                 ThrowIfStopped();
-                bytes = DecodeFile(file, maximumPayload);
+                bytes = DecodeFile(file, MaximumPayload(key), key);
             }
             finally { Monitor.Exit(_sync); }
             cancellationToken.ThrowIfCancellationRequested();
@@ -124,10 +130,13 @@ public sealed class BakeCacheStore
         try
         {
             ThrowIfStopped();
+            var maximum = MaximumPayload(key);
+            if (bytes.Length <= 0 || bytes.Length > maximum)
+                throw new InvalidDataException($"Bake payload {key.Map.Value}/{key.Module}/{key.Detail}: {bytes.Length} bytes exceeds limit {maximum}.");
             var encoded = EncodeFile(bytes);
             cancellationToken.ThrowIfCancellationRequested();
-            if (key.Module != "map" && encoded.Length > MaximumCompressedTileBytes)
-                throw new InvalidDataException("Compressed tile exceeds 8 MiB on disk; split the generated tile.");
+            if (encoded.Length > MaximumFile(key))
+                throw new InvalidDataException($"Compressed bake product {key.Map.Value}/{key.Module}/{key.Detail}: {encoded.Length} bytes exceeds limit {MaximumFile(key)}.");
             var path = FilePath(_root, key);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var oldLength = File.Exists(path) ? new FileInfo(path).Length : 0;
@@ -203,7 +212,7 @@ public sealed class BakeCacheStore
         return result;
     }
 
-    public static byte[] DecodeFile(byte[] file, int maximumPayload = MaximumPayloadBytes)
+    public static byte[] DecodeFile(byte[] file, int maximumPayload = MaximumPayloadBytes, BakeKey? key = null)
     {
         if (file.Length < 12 || BinaryPrimitives.ReadUInt32LittleEndian(file) != CompressionMagic)
             throw new InvalidDataException("Invalid compressed tile header.");
@@ -211,7 +220,7 @@ public sealed class BakeCacheStore
         var compressedLength = BinaryPrimitives.ReadInt32LittleEndian(file.AsSpan(8));
         if (maximumPayload is <= 0 or > MaximumProductBytes || length <= 0 || length > maximumPayload ||
             compressedLength != file.Length - 12 || compressedLength <= 0)
-            throw new InvalidDataException("Invalid compressed tile lengths.");
+            throw new InvalidDataException($"Invalid compressed product lengths for {key}: payload={length}, compressed={compressedLength}, actual={file.Length - 12}, limit={maximumPayload}.");
         var payload = GD.Decompress(file[12..], length, Godot.FileAccess.CompressionMode.Zstd);
         if (payload.Length != length) throw new InvalidDataException("Truncated or corrupt Zstd tile.");
         return payload;
@@ -220,7 +229,7 @@ public sealed class BakeCacheStore
     public static byte[] ReadBounded(string path, int limit)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        if (stream.Length is <= 0 || stream.Length > limit) throw new InvalidDataException($"File length exceeds limit: {path}");
+        if (stream.Length is <= 0 || stream.Length > limit) throw new InvalidDataException($"File {path}: {stream.Length} bytes exceeds limit {limit}.");
         var result = new byte[checked((int)stream.Length)];
         stream.ReadExactly(result);
         return result;

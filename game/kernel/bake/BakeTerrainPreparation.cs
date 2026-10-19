@@ -2,8 +2,6 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
-using Campus.Contracts.Fauna;
-using Campus.Contracts.Vegetation;
 
 namespace Campus.Kernel.Bake;
 
@@ -14,8 +12,6 @@ public sealed partial class BakeService
         foreach (var module in map.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value))
         {
             var context = map.CreateAssetContext(module.CodeHash);
-            if (module.Value is IVegetationRuntimeSource vegetation) _ = vegetation.PrepareVegetation(context);
-            if (module.Value is IFaunaContentSource fauna) _ = fauna.PrepareFauna(context);
             if (module.Value is IGroundCoverSource ground) _ = ground.PrepareGroundCover(context);
         }
     }

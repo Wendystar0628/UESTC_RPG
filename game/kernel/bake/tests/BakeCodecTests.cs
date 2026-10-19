@@ -73,6 +73,12 @@ public sealed class BakeCodecTests
             catch (InvalidDataException) { rejected = true; }
             AssertThat(rejected).OverrideFailureMessage("Malformed bake data was accepted.").IsTrue();
         }
+        var bounds = new Box3(Vector3.Zero, new(64, 64, 64));
+        var oversizedSurface = new BakedSurface(new(new(new("fixture.lit"), new("fixture.shade"))),
+            0, BakedPrimitive.Triangles, 3, 3, new byte[BakeCacheStore.MaximumTileUploadBytes + 1],
+            ReadOnlyMemory<byte>.Empty, new byte[] { 0, 0, 1, 0, 2, 0 }, bounds);
+        AssertThrown(() => TileBundleCodec.Encode("fixture/identity", new TileBundle(key, default, LodLevel.L0, bounds, [oversizedSurface])))
+            .IsInstanceOf<InvalidDataException>();
     }
 
     [TestCase]
@@ -104,6 +110,13 @@ public sealed class BakeCodecTests
             try { BakeCacheStore.DecodeFile(bytes); }
             catch (InvalidDataException) { rejected = true; }
             AssertThat(rejected).OverrideFailureMessage("Malformed bake data was accepted.").IsTrue();
+        }
+        foreach (var module in new[] { BakeModuleIds.VegetationTrees, BakeModuleIds.VegetationGrass, BakeModuleIds.FaunaRuntime,
+            BakeModuleIds.NightlightLamps, BakeModuleIds.NightlightWindows })
+        {
+            var key = BakeRequestKeys.Tile(new("fixture"), module, default, LodLevel.L0);
+            AssertThrown(() => BakeCacheStore.DecodeFile(bytes, BakeCacheStore.MaximumPayload(key), key))
+                .IsInstanceOf<InvalidDataException>();
         }
     }
 
@@ -219,6 +232,27 @@ public sealed class BakeCodecTests
             corrupt.Write(key, TileBundleCodec.Encode("fixture/identity", local));
             if (corrupt.TryRead(key, Decode)?.Bounds != local.Bounds)
                 throw new InvalidOperationException("A missing packaged product could not be replaced locally.");
+            var cpuKey = key with { Module = BakeModuleIds.VegetationTrees };
+            var cpuBytes = new byte[BakeCacheStore.MaximumPayloadBytes + 64];
+            var rng = new Rng(76);
+            for (var offset = 0; offset < cpuBytes.Length; offset += sizeof(int))
+                BinaryPrimitives.WriteInt32LittleEndian(cpuBytes.AsSpan(offset), rng.NextInt(int.MaxValue));
+            package.Write(cpuKey, cpuBytes);
+            var cpuPath = Directory.GetFiles(packagedRoot, "*.tbin", SearchOption.AllDirectories).Single(path => path != packagedPath);
+            var cpuFile = File.ReadAllBytes(cpuPath);
+            if (cpuFile.Length <= BakeCacheStore.MaximumCompressedTileBytes ||
+                writer.TryRead(cpuKey, value => value) is not { } restoredCpu || !restoredCpu.SequenceEqual(cpuBytes))
+                throw new InvalidOperationException("A CPU cache product retained the compressed or decoded render-tile limit.");
+            writer.Write(cpuKey, [1, 2, 3]);
+            var fallbackCpu = writer.TryRead(cpuKey, value => value.Length == cpuBytes.Length ? value :
+                throw new InvalidDataException("Malformed local CPU fixture."));
+            if (fallbackCpu is null || !fallbackCpu.SequenceEqual(cpuBytes) || !File.ReadAllBytes(cpuPath).SequenceEqual(cpuFile))
+                throw new InvalidOperationException("CPU candidate validation hid or modified the packaged product.");
+            AssertThrown(() => writer.Write(key, cpuBytes)).IsInstanceOf<InvalidDataException>();
+            if (BakeCacheStore.MaximumPayload(key) != BakeCacheStore.MaximumPayloadBytes ||
+                BakeCacheStore.MaximumFile(key) != BakeCacheStore.MaximumCompressedTileBytes ||
+                BakeCacheStore.MaximumPayload(key with { Module = "collision.world", Detail = "C/0/0" }) != BakeCacheStore.MaximumPayloadBytes)
+                throw new InvalidOperationException("CPU cache classification changed render/collision boundaries.");
             writer.Stop();
             AssertThrown(() => writer.Write(key, [1])).IsInstanceOf<OperationCanceledException>();
             AssertThrown(() => writer.TryRead(key, Decode)).IsInstanceOf<OperationCanceledException>();

@@ -19,7 +19,7 @@ internal static class BakeInputFingerprint
     public static string Identity(BakeKey key, string stamp) => $"{BakeOptions.Abi}/{key.Map.Value}/{key.Module}/{key.Detail}/{stamp}";
 
     public static string Compute(BuildContext context, BakeKey key, string runtimeCode, BakeSourceIndex sources,
-        IReadOnlyDictionary<string, string>? dependencyCodes = null)
+        IReadOnlyDictionary<string, string>? dependencyCodes = null, MapRect? sourceArea = null, string auxiliaryStamp = "")
     {
         if (string.IsNullOrWhiteSpace(context.CodeHash) || string.IsNullOrWhiteSpace(runtimeCode))
             throw new InvalidDataException($"Missing generated code fingerprint for {key.Module}.");
@@ -33,10 +33,17 @@ internal static class BakeInputFingerprint
         {
             input.Add(sources.FileStamp(context.Map.Env.Backdrop)); input.Add(context.World.Outskirts?.CutLine); return input.Finish();
         }
-        var vegetation = key.Module == "vegetation" || key.Module == "collision.world" && dependencyCodes?.ContainsKey("vegetation") == true;
+        var vegetation = key.Module is BakeModuleIds.VegetationTrees or BakeModuleIds.VegetationGrass || key.Module == "vegetation" || key.Module == "collision.world" && dependencyCodes?.ContainsKey("vegetation") == true;
         var furniture = key.Module == "furniture" || key.Module == "collision.world" && dependencyCodes?.ContainsKey("furniture") == true;
         input.Add(sources.CommonStamp);
-        sources.AddArea(input, Area(context, key), UsesWindows(key.Module), vegetation, furniture);
+        input.Add(sourceArea);
+        input.Add(auxiliaryStamp);
+        sources.AddArea(input, sourceArea ?? Area(context, key), UsesWindows(key.Module) || key.Module == BakeModuleIds.NightlightWindows, vegetation, furniture);
+        if (key.Module is BakeModuleIds.NightlightLamps or BakeModuleIds.NightlightWindows)
+        {
+            input.Add(sources.FileStamp("lighting-schedule.json"));
+        }
+        if (key.Module == BakeModuleIds.FaunaRuntime) input.Add(context.Map.Env.ReflectLakes);
         if (vegetation) input.Add(sources.FileStamp("vegetation/species.json", global: true));
         if (!collision && (key.Module is "furniture" or "zone.north" or "zone.center-east" or "zone.west")) input.Add(sources.FileStamp(SceneTextInputs.AtlasKey, global: true));
         if (!collision && (key.Module is "ground" or "buildings")) input.Add(sources.FileStamp(SurfaceMaterialCatalog.SourcePath));

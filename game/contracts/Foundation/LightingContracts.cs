@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json.Serialization;
 
 namespace Campus.Contracts;
 
@@ -19,6 +20,14 @@ public sealed record WindowFacadeDecl(int BaseId, int TotalColumns, ChannelId Ch
 /// <summary>An irregular individual window, sharing the glass surface's building-level numbering.</summary>
 public sealed record WindowDecl(int Id, int BaseId, int TotalColumns, ChannelId Channel,
     Vector3 Center, Vector3 Right, Vector3 Up, float Width, float Height);
+
+/// <summary>Resident map lighting declarations and the mandatory prepacked lamp catalog, published as one snapshot.</summary>
+public sealed record LightInventoryDocument(MapId Map,
+    IReadOnlyList<LightEmitter> Lamps, IReadOnlyList<WindowFacadeDecl> Facades, IReadOnlyList<WindowDecl> Windows,
+    [property: JsonRequired] NightlightCatalog Nightlight)
+{
+    public WindowNumberingSnapshot? WindowNumbering { get; init; }
+}
 
 /// <summary>Map lighting declarations from source layouts, without building tile geometry.</summary>
 public interface ILightMetadataSource

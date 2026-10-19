@@ -36,3 +36,25 @@ public interface IStreamMountQueue
 }
 // Per-frame caps: total <= 1.0 ms; Collision <= one Step and <= 0.3 ms of that total;
 // Visual <= one Step. Auxiliary work also consumes the same remaining total budget.
+
+/// <summary>One existing view and its near-layer world bounds. Frustum planes point outward: Normal dot p + D is at most zero inside.</summary>
+/// <remarks>The caller owns and reuses the memory; participants consume it during Demand and never retain it.</remarks>
+public readonly record struct StreamDemandView(Pose Eye,
+    ReadOnlyMemory<System.Numerics.Plane> Frustum,
+    ReadOnlyMemory<Box3> Near);
+
+public enum StreamTileNeed : byte { None, Retain, Required }
+
+/// <summary>A fixed auxiliary payload owner; StreamDirector owns its request and mount lifecycle.</summary>
+public interface IStreamTileParticipant
+{
+    bool CanMount(BakeKey key);
+    /// <summary>Pure demand from frozen influence bounds, this view and residency. Retain keeps an existing mount without requesting a new one.</summary>
+    StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident);
+    /// <summary>Creates bounded work without engine side effects; the shared queue alone advances it.</summary>
+    IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision);
+    /// <summary>Mounted content and its materials are ready; this does not certify that a frame is capturable.</summary>
+    bool IsReady(BakeKey key);
+    void Unmount(BakeKey key);
+    string? Error { get; }
+}

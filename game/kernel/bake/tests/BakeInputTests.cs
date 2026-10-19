@@ -19,6 +19,29 @@ public sealed class BakeInputTests
 {
     [TestCase]
     [TestCategory(TestReason.Regression)]
+    public void AuxiliaryInputsUseWholeSiteBoundsAndOriginalSourceCode()
+    {
+        var feature = Feature("fixture:outside-owner", 250, "fixture", "one", "one");
+        BuildContext With(WorldFeature value) => Context(new FakeWorld
+        {
+            Boundary = new([]), Features = new Dictionary<FeatureId, WorldFeature> { [value.Id] = value }
+        });
+        var before = With(feature);
+        var after = With(feature with { Name = "changed" });
+        var key = BakeRequestKeys.Tile(before.Map.Id, BakeModuleIds.FaunaRuntime, default, LodLevel.L0);
+        var footprint = new MapRect(new(0, 0), new(300, 100));
+        string Stamp(BuildContext context, string sourceCode, MapRect? area) =>
+            BakeInputFingerprint.Compute(context, key, "runtime-code", new(context),
+                new Dictionary<string, string> { ["fauna"] = sourceCode }, area);
+        if (Stamp(before, "source-one", footprint) == Stamp(after, "source-one", footprint) ||
+            Stamp(before, "source-one", footprint) == Stamp(before, "source-two", footprint))
+            throw new InvalidOperationException("Auxiliary freshness ignored remote site bounds or source module code.");
+        if (Stamp(before, "source-one", null) != Stamp(after, "source-one", null))
+            throw new InvalidOperationException("The fixture did not place its dependency outside the owner-cell margin.");
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
     public void SceneAtlasChangesInvalidateItsRenderConsumersWithoutChangingCollision()
     {
         var world = new FakeWorld { Boundary = new([]) };

@@ -11,6 +11,8 @@ namespace Campus.Pipeline.Map;
 [BakeProducer("map", Owner = "WP-48a")]
 public sealed class MapBakeProducer : IBakeProducer
 {
+    public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];
+
     public bool CanBuild(BakeKey key) => key.Module == MapBaker.Module && key.Detail == MapBaker.Detail;
 
     public object Build(BakeKey key, BuildContext context)

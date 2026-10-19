@@ -1,21 +1,42 @@
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 
 namespace Campus.Kernel.Bake;
 
 /// <summary>TBIN v2 preserves shader/reflection metadata and full-precision UV2 without executable type metadata.</summary>
-public static class TileBundleCodec
+public static partial class TileBundleCodec
 {
     private const uint Magic = 0x4E494254;
     private const int MaximumItems = 4096;
     private const int MaximumCollisionShapes = 16384;
     private const int MaximumJson = 1024 * 1024;
+    private static readonly JsonSerializerOptions TileJson = CreateTileJson();
+
+    private static JsonSerializerOptions CreateTileJson()
+    {
+        var options = new JsonSerializerOptions(ContractJson.Options);
+        // A VariantTag may carry the exact empty season mask (default struct value).
+        // Retain that bit mask rather than requiring a named enum member or changing its meaning.
+        options.Converters.Insert(0, new JsonStringEnumConverter<SeasonMask>(JsonNamingPolicy.CamelCase, allowIntegerValues: true));
+        return options;
+    }
 
     public static byte[] Encode(string identity, object product)
     {
+        var productKey = product switch
+        {
+            TileBundle tile => tile.Key,
+            CollisionTile collision => collision.Key,
+            Campus.Contracts.Vegetation.VegetationTileContent vegetation => vegetation.Key,
+            Campus.Contracts.Fauna.FaunaTileContent fauna => fauna.Key,
+            NightlightTileContent nightlight => nightlight.Key,
+            _ => throw new NotSupportedException($"Unsupported bake payload: {product.GetType().FullName}")
+        };
+        var maximum = product is TileBundle or CollisionTile ? BakeCacheStore.MaximumPayloadBytes : BakeCacheStore.MaximumPayload(productKey);
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream, new UTF8Encoding(false, true), true);
         writer.Write(Magic); writer.Write(2);
@@ -24,7 +45,7 @@ public static class TileBundleCodec
         {
             case TileBundle tile:
                 if (tile.Stats.Bytes > BakeCacheStore.MaximumTileUploadBytes)
-                    throw new InvalidDataException("Raw surface upload exceeds 8 MiB; split the generated tile (including fp32 UV2 surfaces).");
+                    throw new InvalidDataException($"Raw surface upload {tile.Key.Map.Value}/{tile.Key.Module}/{tile.Key.Detail}: {tile.Stats.Bytes} bytes exceeds limit {BakeCacheStore.MaximumTileUploadBytes}.");
                 writer.Write((byte)1); Key(writer, tile.Key); Json(writer, tile.Tile); writer.Write((byte)tile.Level); Json(writer, tile.Bounds);
                 writer.Write(tile.Surfaces.Count);
                 foreach (var surface in tile.Surfaces) Surface(writer, surface);
@@ -41,15 +62,26 @@ public static class TileBundleCodec
                 writer.Write((byte)2); Key(writer, collision.Key); Json(writer, collision.Tile); Json(writer, collision.Bounds);
                 Json(writer, collision.Colliders, BakeCacheStore.MaximumPayloadBytes); Text(writer, collision.StatisticsJson);
                 break;
+            case Campus.Contracts.Vegetation.VegetationTileContent vegetation:
+                writer.Write((byte)3); Key(writer, vegetation.Key); Vegetation(writer, vegetation);
+                break;
+            case Campus.Contracts.Fauna.FaunaTileContent fauna:
+                writer.Write((byte)4); Key(writer, fauna.Key); Fauna(writer, fauna);
+                break;
+            case NightlightTileContent nightlight:
+                writer.Write((byte)5); Key(writer, nightlight.Key); Nightlight(writer, nightlight);
+                break;
             default: throw new NotSupportedException($"Unsupported bake payload: {product.GetType().FullName}");
         }
-        if (stream.Length > BakeCacheStore.MaximumPayloadBytes) throw new InvalidDataException("Uncompressed tile container exceeds its buffer/header limit.");
+        if (stream.Length > maximum) throw new InvalidDataException($"Bake container {productKey.Map.Value}/{productKey.Module}/{productKey.Detail}: {stream.Length} bytes exceeds limit {maximum}.");
         return stream.ToArray();
     }
 
     public static object Decode(string identity, BakeKey expectedKey, byte[] bytes)
     {
-        if (bytes.Length is <= 0 or > BakeCacheStore.MaximumPayloadBytes) throw new InvalidDataException("Invalid tile payload size.");
+        var maximum = BakeCacheStore.MaximumPayload(expectedKey);
+        if (bytes.Length <= 0 || bytes.Length > maximum)
+            throw new InvalidDataException($"Bake container {expectedKey.Map.Value}/{expectedKey.Module}/{expectedKey.Detail}: {bytes.Length} bytes exceeds limit {maximum}.");
         using var stream = new MemoryStream(bytes, false);
         using var reader = new BinaryReader(stream, new UTF8Encoding(false, true));
         try
@@ -59,6 +91,8 @@ public static class TileBundleCodec
             var kind = reader.ReadByte();
             var key = Key(reader);
             if (key != expectedKey) throw new InvalidDataException("Tile request key mismatch.");
+            if (kind is 1 or 2 && bytes.Length > BakeCacheStore.MaximumPayloadBytes)
+                throw new InvalidDataException($"Render/collision container {key.Map.Value}/{key.Module}/{key.Detail}: {bytes.Length} bytes exceeds limit {BakeCacheStore.MaximumPayloadBytes}.");
             object result;
             switch (kind)
             {
@@ -84,11 +118,14 @@ public static class TileBundleCodec
                     foreach (var collider in colliders) ValidateCollider(collider);
                     result = new CollisionTile(key, collisionTile, collisionBounds, colliders, Statistics(reader));
                     break;
+                case 3: result = Vegetation(reader, key); break;
+                case 4: result = Fauna(reader, key); break;
+                case 5: result = Nightlight(reader, key); break;
                 default: throw new InvalidDataException("Unknown tile payload kind.");
             }
             if (stream.Position != stream.Length) throw new InvalidDataException("Trailing bytes in tile payload.");
             if (result is TileBundle render && render.Stats.Bytes > BakeCacheStore.MaximumTileUploadBytes)
-                throw new InvalidDataException("Raw surface upload exceeds 8 MiB.");
+                throw new InvalidDataException($"Raw surface upload {render.Key.Map.Value}/{render.Key.Module}/{render.Key.Detail}: {render.Stats.Bytes} bytes exceeds limit {BakeCacheStore.MaximumTileUploadBytes}.");
             return result;
         }
         catch (Exception error) when (error is EndOfStreamException or JsonException or ArgumentException or OverflowException)
@@ -122,11 +159,11 @@ public static class TileBundleCodec
     private static string Text(BinaryReader reader, int maximum = MaximumJson) => new UTF8Encoding(false, true).GetString(Bytes(reader, maximum));
     private static void Json<T>(BinaryWriter writer, T value, int maximum = MaximumJson)
     {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options);
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(value, TileJson);
         if (bytes.Length > maximum) throw new InvalidDataException($"Tile JSON section exceeds its limit: {bytes.Length} > {maximum}.");
         Bytes(writer, bytes);
     }
-    private static T Json<T>(BinaryReader reader, int maximum = MaximumJson) => JsonSerializer.Deserialize<T>(Bytes(reader, maximum), ContractJson.Options)
+    private static T Json<T>(BinaryReader reader, int maximum = MaximumJson) => JsonSerializer.Deserialize<T>(Bytes(reader, maximum), TileJson)
         ?? throw new InvalidDataException($"Missing {typeof(T).Name} data.");
     private static void Bytes(BinaryWriter writer, ReadOnlyMemory<byte> bytes) { writer.Write(bytes.Length); writer.Write(bytes.Span); }
     private static byte[] Bytes(BinaryReader reader, int maximum = BakeCacheStore.MaximumPayloadBytes)
