@@ -1,6 +1,8 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Kernel.Renderer;
+using Campus.Kernel.Boot;
+using Campus.Kernel.Frame;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 
@@ -12,10 +14,9 @@ namespace Campus.Kernel.Inspect;
 public partial class PhotoExportNode : Node, IPhotoExport
 {
     private IAppFlow _flow = null!;
-    private IVeilState _veil = null!;
+    private IAppLoadingPresentation _loading = null!;
     private readonly CancellationTokenSource _exit = new();
     private TaskCompletionSource<PhotoExportResult>? _active;
-    private TaskCompletionSource<PhotoExportResult>? _pending;
     private IDisposable? _hiddenHud;
     private string? _path;
     private bool _exiting;
@@ -23,8 +24,7 @@ public partial class PhotoExportNode : Node, IPhotoExport
     public override void _Ready()
     {
         _flow = Services.Get<IAppFlow>();
-        _veil = Services.Get<IVeilState>();
-        RenderingServer.FramePostDraw += OnFramePostDraw;
+        _loading = Services.Get<IAppLoadingPresentation>();
     }
 
     public Task<PhotoExportResult> ExportCurrentAsync()
@@ -40,7 +40,7 @@ public partial class PhotoExportNode : Node, IPhotoExport
         {
             _path = System.IO.Path.Combine(OS.GetUserDataDir(), "photos", $"photo-{Time.GetTicksUsec()}.png");
             _hiddenHud = CapturePresentation.HideHud();
-            _pending = _active;
+            _ = CaptureAsync(_active, _exit.Token);
         }
         catch (Exception error)
         {
@@ -50,23 +50,23 @@ public partial class PhotoExportNode : Node, IPhotoExport
         return _active.Task;
     }
 
-    private bool CanCapture() => _flow.State == AppState.Playing && _veil.Opacity == 0
+    private bool CanCapture() => _flow.State == AppState.Playing && !_loading.Active
         && DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Minimized;
 
-    private void OnFramePostDraw()
+    private async Task CaptureAsync(TaskCompletionSource<PhotoExportResult> completion, CancellationToken cancellation)
     {
-        if (_pending is not { } completion) return;
-        _pending = null;
         Image? image = null;
         try
         {
-            if (!CanCapture())
-            {
-                completion.TrySetResult(new(PhotoExportStatus.Unavailable, _path));
-                return;
-            }
+            await FrameAwaiter.ReadyDrawAsync(this, CanCapture, TimeSpan.FromSeconds(BootTuning.StalledSeconds), cancellation);
             image = GetViewport().GetTexture().GetImage();
             if (image.IsEmpty()) throw new IOException("The photo viewport returned an empty image.");
+        }
+        catch (OperationCanceledException)
+        {
+            image?.Dispose();
+            completion.TrySetResult(new(PhotoExportStatus.Unavailable, _path));
+            return;
         }
         catch (Exception error)
         {
@@ -81,7 +81,7 @@ public partial class PhotoExportNode : Node, IPhotoExport
             _hiddenHud = null;
         }
         // The worker owns only its detached Image and file; HUD and tree state stay on the main thread.
-        _ = EncodeAndSaveAsync(image, _path!, completion, _exit.Token);
+        await EncodeAndSaveAsync(image, _path!, completion, cancellation);
     }
 
     private static async Task EncodeAndSaveAsync(Image image, string requestedPath,
@@ -133,11 +133,9 @@ public partial class PhotoExportNode : Node, IPhotoExport
     public override void _ExitTree()
     {
         _exiting = true;
-        RenderingServer.FramePostDraw -= OnFramePostDraw;
         _exit.Cancel();
         _hiddenHud?.Dispose();
         _hiddenHud = null;
-        _pending = null;
         _active?.TrySetResult(new(PhotoExportStatus.Unavailable, _path));
         _exit.Dispose();
     }

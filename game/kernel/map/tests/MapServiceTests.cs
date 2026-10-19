@@ -86,7 +86,7 @@ public sealed class MapServiceTests
         AssertThat(f.Service.Context is not null && f.Service.Current == default && f.Camera.InputLocked).IsTrue();
         AssertThat(f.Data.RectWrites == 1 && f.Runtime.Arrivals == 0).IsTrue();
         f.Runtime.ReleaseMount();
-        f.Until(() => travel.Stage == MapStage.Warm);
+        f.Until(() => travel.Stage == MapStage.Arrival);
         f.Service.Step();
         AssertThat(!travel.Done.IsCompleted && f.Runtime.Arrivals == 1).IsTrue();
         f.Runtime.ArrivalReady = true;
@@ -103,7 +103,7 @@ public sealed class MapServiceTests
         f.Runtime.ArrivalReady = false;
         var destination = new Pose(new(12, 40, 18), 25, -10, 60);
         var travel = f.Service.Travel(new(f.A, Pose: destination, Mode: ViewMode.Fly, Cause: MapTravelCause.LoadSave));
-        f.Until(() => travel.Stage == MapStage.Warm);
+        f.Until(() => travel.Stage == MapStage.Arrival);
         f.Service.Step();
         AssertThat(f.Camera.Pose == destination && !travel.Done.IsCompleted && f.Runtime.Arrivals == 2).IsTrue();
         f.Runtime.ArrivalReady = true;
@@ -118,7 +118,7 @@ public sealed class MapServiceTests
         var f = new Fixture(); f.Boot();
         f.Runtime.ArrivalReady = false;
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.NewGame));
-        f.Until(() => travel.Stage == MapStage.Warm);
+        f.Until(() => travel.Stage == MapStage.Arrival);
         var old = f.Runtime.Arrival!;
         var replacement = f.Runtime.Arrive(f.Camera.Pose, f.Camera.Mode);
         old.Cancel();
@@ -136,7 +136,7 @@ public sealed class MapServiceTests
         var f = new Fixture(); f.Boot();
         f.Runtime.ArrivalReady = false;
         var travel = f.Service.Travel(new(f.A, Cause: MapTravelCause.NewGame));
-        f.Until(() => travel.Stage == MapStage.Warm);
+        f.Until(() => travel.Stage == MapStage.Arrival);
         var arrival = f.Runtime.Arrival!;
         f.Service.Dispose();
         AssertThat(arrival.Done.IsCanceled && travel.Done.Result == MapTravelResult.Failed && !f.Camera.InputLocked).IsTrue();

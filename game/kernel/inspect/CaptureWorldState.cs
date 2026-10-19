@@ -7,7 +7,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
-/// <summary>A fixed-shot row is a fresh world instance with the already mounted map and warmed materials.</summary>
+/// <summary>A fixed-shot row is a fresh world instance with the already mounted map.</summary>
 internal static class CaptureWorldState
 {
     internal static void Start(BootRunOptions args, MapDescriptor map)

@@ -18,9 +18,8 @@ public partial class SaveNode : Node, IBootParticipant
 {
     private SaveService _save = null!;
     private IMapRuntime _mapRuntime = null!;
-    private IVeilPresentation? _veilPresentation;
     private IAppLoadingPresentation? _loading;
-    private bool PresentedCover => _veilPresentation?.IsCovered == true || _loading?.IsCovered == true;
+    private bool PresentedCover => _loading?.IsCovered == true;
     private readonly CancellationTokenSource _exit = new();
     private TaskCompletionSource<byte[]?>? _capture;
     private IDisposable? _hiddenHud;
@@ -44,14 +43,13 @@ public partial class SaveNode : Node, IBootParticipant
                 {
                     var save = context.Run.Save;
                     _mapRuntime = RuntimeKernel.Get<IMapRuntime>();
-                    _veilPresentation = RuntimeKernel.Get<IVeilPresentation>();
                     _loading = RuntimeKernel.Get<IAppLoadingPresentation>();
                     var sections = RuntimeKernel.Services.Entries.Where(e => e.Kind == "save").Select(e =>
                         new SaveSectionRegistration(e.Type.GetCustomAttributes<SaveSectionAttribute>()
                             .Single(a => a.Id == e.Id && a.Scope == e.Scope),
                             (ISaveSection)RuntimeKernel.Services.Create(e.Type))).ToArray();
                     var bindings = new SaveRuntimeBindings(RuntimeKernel.Get<IWorldState>(), RuntimeKernel.Get<IMapService>(), RuntimeKernel.Get<ICameraRig>(),
-                        RuntimeKernel.Get<IObserverState>(), RuntimeKernel.Get<IRuleset>(), RuntimeKernel.Get<IAtlasService>(), RuntimeKernel.Get<IVeilState>(),
+                        RuntimeKernel.Get<IObserverState>(), RuntimeKernel.Get<IRuleset>(), RuntimeKernel.Get<IAtlasService>(), RuntimeKernel.Get<IAppLoadingPresentation>(),
                         RuntimeKernel.Get<IAppFlow>(), id => RuntimeKernel.Get<IRulesetActivation>().Select(id),
                         RuntimeKernel.Get<IWorldRestore>(), WaitDestination, CaptureThumbnail,
                         () => (long)Time.GetUnixTimeFromSystem(), pose => RuntimeKernel.Get<ICameraPoseValidator>().LegalizePrepared(pose));
@@ -124,59 +122,51 @@ public partial class SaveNode : Node, IBootParticipant
         // Pose was restored in this Save frame, after Camera's process step. Its same-frame draw is insufficient.
         var poseFrame = _frame;
         var cancellation = _exit.Token;
-        var readinessWait = new SaveReadinessObservation();
-        try
+        var identity = await InSaveFrame(() => (RuntimeKernel.Get<IWorldState>().Instance,
+            RuntimeKernel.Get<IMapService>().Current,
+            Body: mode == ViewMode.Walk ? RuntimeKernel.Get<IWalkController>() : null), cancellation).ConfigureAwait(false);
+        var body = identity.Body;
+        Task<ModeSwitchResult>? fallback = null;
+        var arrival = await InSaveFrame(() =>
         {
-            var identity = await InSaveFrame(() => (RuntimeKernel.Get<IWorldState>().Instance,
-                RuntimeKernel.Get<IMapService>().Current,
-                Body: mode == ViewMode.Walk ? RuntimeKernel.Get<IWalkController>() : null), cancellation).ConfigureAwait(false);
-            var body = identity.Body;
-            Task<ModeSwitchResult>? fallback = null;
-            var arrival = await InSaveFrame(() =>
+            if (body?.PlacementArrival is { } placement && ReferenceEquals(_mapRuntime.Arrival, placement)) return placement;
+            return _mapRuntime.Arrive(body?.BodyPose ?? pose, mode, body?.Space ?? space);
+        }, cancellation).ConfigureAwait(false);
+        while (!await InSaveFrame(() =>
+        {
+            if (RuntimeKernel.Get<IWorldState>().Instance != identity.Instance
+                || RuntimeKernel.Get<IMapService>().Current != identity.Current)
+                throw new OperationCanceledException("The restore world or map was replaced.");
+            if (!ReferenceEquals(_mapRuntime.Arrival, arrival))
             {
-                // Boot has one observation spanning every startup dependency, with the frontispiece policy.
-                if (RuntimeKernel.Get<IAppFlow>().State != AppState.Boot && _loading?.Active != true)
-                    readinessWait.Attach(RuntimeKernel.Get<IVeilService>().ObserveReadinessWait());
-                if (body?.PlacementArrival is { } placement && ReferenceEquals(_mapRuntime.Arrival, placement)) return placement;
-                return _mapRuntime.Arrive(body?.BodyPose ?? pose, mode, body?.Space ?? space);
-            }, cancellation).ConfigureAwait(false);
-            while (!await InSaveFrame(() =>
-            {
-                if (RuntimeKernel.Get<IWorldState>().Instance != identity.Instance
-                    || RuntimeKernel.Get<IMapService>().Current != identity.Current)
-                    throw new OperationCanceledException("The restore world or map was replaced.");
-                if (!ReferenceEquals(_mapRuntime.Arrival, arrival))
-                {
-                    var repair = body?.PlacementArrival;
-                    if (mode != ViewMode.Walk || repair is null || !ReferenceEquals(_mapRuntime.Arrival, repair))
-                        throw new OperationCanceledException("The save destination was replaced.");
-                    arrival = repair;
-                }
-                if (body?.ExitRequested == true)
-                {
-                    fallback ??= RuntimeKernel.Get<IViewControl>().SetMode(ViewMode.Fly, ModeSwitchVia.Ui);
-                    if (!fallback.IsCompleted) return false;
-                    if (fallback.GetAwaiter().GetResult() == ModeSwitchResult.Refused)
-                        throw new InvalidOperationException("Invalid walking save could not return to fly mode.");
-                    body = null;
-                    mode = ViewMode.Fly;
-                    arrival = _mapRuntime.Arrive(RuntimeKernel.Get<ICameraRig>().Pose, mode);
-                    GD.PushWarning("[WP-50] walk: no safe landing within range; restored in fly mode.");
-                }
-                if (arrival.Done.IsCompleted) arrival.Done.GetAwaiter().GetResult();
-                if (_drawFrame <= poseFrame || !_drawCovered || !PresentedCover) return false;
-                return arrival.Done.IsCompletedSuccessfully && (body is null || body.CollisionReady);
-            }, cancellation).ConfigureAwait(false)) { }
-            await InSaveFrame(() =>
-            {
-                if (!ReferenceEquals(_mapRuntime.Arrival, arrival)
-                    || RuntimeKernel.Get<IWorldState>().Instance != identity.Instance
-                    || RuntimeKernel.Get<IMapService>().Current != identity.Current)
+                var repair = body?.PlacementArrival;
+                if (mode != ViewMode.Walk || repair is null || !ReferenceEquals(_mapRuntime.Arrival, repair))
                     throw new OperationCanceledException("The save destination was replaced.");
-                return true;
-            }, cancellation).ConfigureAwait(false);
-        }
-        finally { readinessWait.Dispose(); }
+                arrival = repair;
+            }
+            if (body?.ExitRequested == true)
+            {
+                fallback ??= RuntimeKernel.Get<IViewControl>().SetMode(ViewMode.Fly, ModeSwitchVia.Ui);
+                if (!fallback.IsCompleted) return false;
+                if (fallback.GetAwaiter().GetResult() == ModeSwitchResult.Refused)
+                    throw new InvalidOperationException("Invalid walking save could not return to fly mode.");
+                body = null;
+                mode = ViewMode.Fly;
+                arrival = _mapRuntime.Arrive(RuntimeKernel.Get<ICameraRig>().Pose, mode);
+                GD.PushWarning("[WP-50] walk: no safe landing within range; restored in fly mode.");
+            }
+            if (arrival.Done.IsCompleted) arrival.Done.GetAwaiter().GetResult();
+            if (_drawFrame <= poseFrame || !_drawCovered || !PresentedCover) return false;
+            return arrival.Done.IsCompletedSuccessfully && (body is null || body.CollisionReady);
+        }, cancellation).ConfigureAwait(false)) { }
+        await InSaveFrame(() =>
+        {
+            if (!ReferenceEquals(_mapRuntime.Arrival, arrival)
+                || RuntimeKernel.Get<IWorldState>().Instance != identity.Instance
+                || RuntimeKernel.Get<IMapService>().Current != identity.Current)
+                throw new OperationCanceledException("The save destination was replaced.");
+            return true;
+        }, cancellation).ConfigureAwait(false);
     }
 
     private Task<T> InSaveFrame<T>(Func<T> action, CancellationToken cancellation)

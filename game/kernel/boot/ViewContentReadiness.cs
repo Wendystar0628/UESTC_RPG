@@ -24,7 +24,7 @@ public sealed class ViewContentReadiness
 
     public static ViewContentReadiness Capture(Node stage) => new(Descendants(stage).OfType<IViewContentReadiness>().ToArray());
 
-    /// <summary>Production arrival already owns complete destination visuals, collision and material warmup.</summary>
+    /// <summary>Production arrival already owns complete destination visuals and collision.</summary>
     public async Task WaitForReadyAsync(Node host, IMapArrival arrival, Func<bool> contentReady,
         CancellationToken cancellationToken = default)
     {

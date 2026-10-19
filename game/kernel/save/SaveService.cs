@@ -15,7 +15,7 @@ public sealed record SaveRuntimeOptions(string Directory, string Build, bool Ena
 
 /// <summary>Engine adapters are supplied once at boot. None are called on the disk worker.</summary>
 public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, ICameraRig Camera,
-    IObserverState Observer, IRuleset Ruleset, IAtlasService Atlas, IVeilState Veil,
+    IObserverState Observer, IRuleset Ruleset, IAtlasService Atlas, IAppLoadingPresentation Loading,
     IAppFlow AppFlow, Action<RulesetId> SelectRuleset, IWorldRestore WorldRestore,
     Func<Pose, NavSpace?, ViewMode, Task> WaitDestination, Func<Task<byte[]?>> CaptureThumbnail, Func<long> UnixTime,
     Func<Pose, Task<Pose>>? PreparePose = null);
@@ -110,7 +110,7 @@ public sealed partial class SaveService : ISaveService, IDisposable
     {
         get
         {
-            if (RestoreFaulted || _restoring || !Playing || _runtime.Veil.Opacity > 0 || MapTransitioning) return false;
+            if (RestoreFaulted || _restoring || !Playing || _runtime.Loading.Active || MapTransitioning) return false;
             foreach (var registration in _sections.Registered) if (!registration.Section.IsSettled) return false;
             return true;
         }

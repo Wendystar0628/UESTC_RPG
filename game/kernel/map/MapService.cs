@@ -208,9 +208,9 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
                 LegalizeDestination(_legalize.GetAwaiter().GetResult());
                 _camera.SetPose(_destination);
                 _arrival = _runtime.Arrive(_destination, _destinationMode);
-                Move(MapStage.Warm);
+                Move(MapStage.Arrival);
                 break;
-            case MapStage.Warm:
+            case MapStage.Arrival:
                 var arrival = _arrival ?? throw new InvalidOperationException("Map arrival is missing.");
                 if (!arrival.Done.IsCompleted) return;
                 arrival.Done.GetAwaiter().GetResult();

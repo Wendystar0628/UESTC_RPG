@@ -194,7 +194,7 @@ public sealed partial class SaveLifecycleTests
             var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-save-lifecycle-" + Environment.ProcessId + "-" + Interlocked.Increment(ref _id));
             _directory = directory;
             var rules = new TestRuleset("test-policy", id: "test-rules");
-            var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new ImmediateVeil(), _flow,
+            var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new TestAppLoadingPresentation(), _flow,
                 _ => { }, World, WaitDestination,
                 () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400, pose => Task.FromResult(pose));
             var sections = new SaveSections([

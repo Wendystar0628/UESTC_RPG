@@ -16,7 +16,7 @@ public sealed class MapTransition(MapId from, MapTravelRequest request) : IMapTr
     {
         MapStage.LoadData => 0,
         MapStage.Mount => 1f / 4,
-        MapStage.Warm => 2f / 4,
+        MapStage.Arrival => 2f / 4,
         MapStage.Spawn => 3f / 4,
         MapStage.Done => 1,
         _ => throw new ArgumentOutOfRangeException(nameof(Stage))

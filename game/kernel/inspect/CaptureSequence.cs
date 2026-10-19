@@ -3,7 +3,6 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
-using Campus.Kernel.Renderer;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -20,7 +19,8 @@ public static class CaptureSequence
         var destination = options.Capture.Output ?? throw new ArgumentException("--out must be an absolute directory.");
         var context = Services.Get<IMapService>().Context ?? throw new InvalidOperationException("Capture requires a loaded map.");
         var rig = Services.Get<ICameraRig>();
-        var stream = Services.Get<IMapStreamState>();
+        var loading = Services.Get<IAppLoadingPresentation>();
+        var runtime = Services.Get<IMapRuntime>();
         Directory.CreateDirectory(destination);
         var shots = AppBoot.FixedShots.Count > 0 ? AppBoot.FixedShots
             : options.Capture.Shots.Select(id => new FixedShot(id, id, options)).ToArray();
@@ -37,6 +37,9 @@ public static class CaptureSequence
                 ? shotOptions.Title ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
                     : throw new ArgumentException("T0 requires --title=1.")
                 : ReviewPoseResolver.Resolve(id, context);
+            await using var cover = loading.Show();
+            await cover.Covered;
+            cancellationToken.ThrowIfCancellationRequested();
             var terrainPoint = new System.Numerics.Vector2(pose.Position.X, pose.Position.Z);
             await Services.Get<ITerrainPreparation>().PrepareRegion(context, new(terrainPoint, terrainPoint), cancellationToken);
             if (id != "T0") validatePose?.Invoke(pose);
@@ -47,16 +50,21 @@ public static class CaptureSequence
             var appliedPose = rig.Pose;
             producers.PrepareCapture(appliedPose);
             var medium = context.World.Spatial.MediumAt(appliedPose.Position);
-            if (medium is { Kind: MediumKind.Interior, Feature: { } building })
+            NavSpace? space = medium is { Kind: MediumKind.Interior, Feature: { } building }
+                ? new(building, checked((short)medium.Storey)) : null;
+            // Both outdoor rings and the current indoor floor use the production destination barrier.
+            var arrival = runtime.Arrive(appliedPose, rig.Mode, space);
+            void ReportProgress() => cover.Report(arrival.Completed, arrival.Total);
+            arrival.ProgressChanged += ReportProgress;
+            try
             {
-                // Indoor captures need the existing arrival's current-floor IF, adjacent IS and near tiles.
-                var runtime = Services.Get<IMapRuntime>();
-                var arrival = runtime.Arrive(appliedPose, rig.Mode,
-                    new(building, checked((short)medium.Storey)));
+                ReportProgress();
                 LogPhase("pose-applied");
                 await producers.WaitForReadyAsync(host, arrival, contentReady, cancellationToken);
                 if (rig.Pose != appliedPose) throw new OperationCanceledException("Capture pose was replaced.");
                 LogPhase("destination-ready");
+                cover.Report(arrival.Total, arrival.Total);
+                await cover.Hide();
                 await CaptureBarrier.WaitForPresentedAsync(host, appliedPose, () =>
                 {
                     if (!ReferenceEquals(runtime.Arrival, arrival))
@@ -65,13 +73,7 @@ public static class CaptureSequence
                 }, cancellationToken);
                 LogPhase("scene-presented");
             }
-            else
-            {
-                stream.Prefetch(appliedPose, rig.Mode);
-                LogPhase("pose-applied");
-                await CaptureBarrier.WaitForReadyAsync(host, appliedPose, contentReady, cancellationToken);
-                LogPhase("view-ready");
-            }
+            finally { arrival.ProgressChanged -= ReportProgress; }
             cancellationToken.ThrowIfCancellationRequested();
             using var image = host.GetViewport().GetTexture().GetImage();
             if (image.IsEmpty()) throw new IOException("Screenshot viewport returned an empty image.");
