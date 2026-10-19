@@ -259,10 +259,16 @@ float sky_fog_weather_k() {
 	return smoothstep(1.0, 3.0, weather_fog.x);
 }
 
-// 地平线的霾色 = 远景雾色（fog.sun / fog.anti 按太阳侧权重混），雾天向 weather.fog 靠
+// 乳白天气雾只用于白天；随既有日月交接退回当前帧的夜间雾色，不把夜雨天空提成白昼。
+vec3 sky_weather_fog_color(float w_sun) {
+	vec3 night = mix(pal_cur(PAL_FOG_ANTI), pal_cur(PAL_FOG_SUN), w_sun);
+	return mix(pal_cur(PAL_WEATHER_FOG), night, sky_night_k());
+}
+
+// 地平线的霾色 = 远景雾色（fog.sun / fog.anti 按太阳侧权重混），雾天向同一昼夜天气雾色靠
 vec3 sky_haze_color(float w_sun) {
 	vec3 c = mix(pal_cur(PAL_FOG_ANTI), pal_cur(PAL_FOG_SUN), w_sun);
-	return mix(c, pal_cur(PAL_WEATHER_FOG), sky_fog_weather_k());
+	return mix(c, sky_weather_fog_color(w_sun), sky_fog_weather_k());
 }
 
 // 天空渐变（不含云和日月盘）：五段色带 + 地平线霾带 + 雾天整片靠拢
@@ -272,7 +278,7 @@ vec3 sky_gradient(vec3 dir, float w_sun) {
 	float hz = exp2(-max(e, 0.0) / (0.5 * sky_haze_deg()));
 	c = mix(c, sky_haze_color(w_sun), e < 0.0 ? 1.0 : hz);
 	float fk = sky_fog_weather_k() * SKY_FOG_MIX * mix(1.0, 0.55, smoothstep(0.0, 40.0, e));
-	return mix(c, pal_cur(PAL_WEATHER_FOG), fk);
+	return mix(c, sky_weather_fog_color(w_sun), fk);
 }
 
 vec3 fog_sky(vec3 dir_w) {

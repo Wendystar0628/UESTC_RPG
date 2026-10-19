@@ -264,9 +264,13 @@ public sealed class DayCurve
 /// <summary>Weather correction layer (SYS-WEATHER, weather.json). Clear weather leaves the frame untouched.</summary>
 public static class WeatherCorrection
 {
+    // Same solar-altitude handover as sky_night_k in fog.gdshaderinc.
+    private const double NightSideFromDeg = -6.0;
+    private const double NightSideToDeg = -13.0;
+
     public static bool IsClear(in WeatherVec w) => w.Overcast == 0f && w.Precip == 0f && w.Wet == 0f;
 
-    public static void Apply(WeatherFile weather, FrameVector f, in WeatherVec w, bool daylight)
+    public static void Apply(WeatherFile weather, FrameVector f, in WeatherVec w, double sunAltDeg)
     {
         if (IsClear(w)) return;
         var v = f.V;
@@ -283,7 +287,10 @@ public static class WeatherCorrection
         v[AmbientA] = c1 * Math.Cos(h1);
         v[AmbientB] = c1 * Math.Sin(h1);
         var so = weather.Sky.Overcast;
+        var night = 1.0 - ScalarMath.Smoothstep(NightSideToDeg, NightSideFromDeg, sunAltDeg);
+        var nr = weather.Tokens.NightRain;
         var oc = Oklab.FromLch(Math.Max(so.MinL, 0.78 - so.RainLDrop * p * (1.0 - k)), so.C, so.H);
+        oc = Oklab.Lerp(oc, Oklab.FromLch(nr.L, nr.C, nr.H), night);
         var washed = wet * (1.0 - g) * (1.0 - p);
         var washedC = weather.Sky.WashedChromaAdd * washed;
         for (var i = SkySun; i < FogSun; i += 3)
@@ -292,7 +299,9 @@ public static class WeatherCorrection
             double l = c.L, ch = c.Chroma;
             if (g > 0.5)
             {
-                if (daylight) l = Math.Max(l, so.MinL);
+                l = Math.Max(l, so.MinL * (1.0 - night));
+                if ((i == SkySun + 12 || i == SkyAnti + 12) && weather.Sky.NightRainMinZenithL is { } nightMinL)
+                    l = Math.Max(l, nightMinL * night);
                 ch = Math.Max(ch, so.MinC);
             }
             f.SetColor(i, Oklab.FromLch(l, ch + washedC, c.Hue));

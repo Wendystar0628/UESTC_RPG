@@ -49,7 +49,7 @@ public sealed class ColorScript
         var h = sunAltDeg ?? ha;
         var f = EvaluateAt(a, h, sideA);
         if (t > 1e-9) f = DayCurve.Blend(f, EvaluateAt(b, h, ArtSun.Altitude(clock, b).Side), t);
-        WeatherCorrection.Apply(Data.Weather, f, weather, h > -2.0);
+        WeatherCorrection.Apply(Data.Weather, f, weather, h);
         return new WorldFrame(f, ArtSun.ToAutumnX(h, a), h, a, b, t,
             f.V[VegChroma] * WeatherCorrection.VegetationChromaMul(Data.Weather, weather));
     }
@@ -62,7 +62,7 @@ public sealed class ColorScript
         {
             var f = Evaluate(season, hour);
             var (h, _) = ArtSun.Altitude(hour, season);
-            WeatherCorrection.Apply(Data.Weather, f, weather, h > -2.0);
+            WeatherCorrection.Apply(Data.Weather, f, weather, h);
             var (r, g, b) = Oklab.ToSrgbClipped(Oklab.Lerp(f.Sky(true, 0), f.Sky(false, 0), 0.5));
             srgb24[hour] = new Vector3((float)r, (float)g, (float)b);
         }
