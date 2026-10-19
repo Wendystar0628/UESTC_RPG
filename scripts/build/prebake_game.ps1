@@ -3,6 +3,7 @@
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $repo 'scripts\lib\common.ps1')
+. (Join-Path $repo 'scripts\lib\start-game.ps1')
 $layout = Get-UESTCLayout $repo
 $godot = Get-UESTCGodot
 $out = Join-Path $repo 'output\prebake_game'
@@ -11,8 +12,7 @@ $lease = $null
 $code = 1
 try {
     $lease = Enter-UESTCBuildLock $layout.Locks
-    Invoke-UESTCProcess 'dotnet' @('build', "$repo\game\Campus.csproj", '-c', 'Debug', '-v', 'q') $repo (Join-Path $out 'build.log') | Out-Null
-    Invoke-UESTCProcess $godot @('--headless', '--path', "$repo\game", '--import') $repo (Join-Path $out 'import.log') -TimeoutSeconds 600 | Out-Null
+    Initialize-UESTCLaunch -Root $repo -Godot $godot -BuildLease $lease
     $result = Invoke-UESTCProcess $godot @('--headless', '--path', "$repo\game", '--', '--bake=all', '--map=*') $repo (Join-Path $out 'bake.log') -TimeoutSeconds 14400 -AllowFailure
     $code = $result.ExitCode
     foreach ($line in ($result.StdOut -split '\r?\n')) {
