@@ -1,7 +1,7 @@
 ﻿# 固定机位截图：一个 Godot 进程按 poses.txt 拍完所选机位，地图只加载一次，再拼一张缩略总览。
 # 用法：powershell -NoProfile -File fixed_shots.ps1 [-Only 名字,名字] [-Build]
 #   -Build：先 dotnet build 与 --headless --import（代码改过、还没编译时用）
-# 整轮持有构建锁（WF-BUILD），不开声音；出图仍在主检出 output/shots/，覆盖上一轮，总览是 总览.jpg。
+# 整轮持有构建锁（WF-BUILD），不开声音；出图在运行它的检出（主检出或工作树）的 output/shots/，覆盖上一轮，总览是 总览.jpg。
 param([string[]]$Only = @(), [switch]$Build)
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
