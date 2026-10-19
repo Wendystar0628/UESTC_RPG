@@ -54,6 +54,7 @@ public sealed class NodeBenchTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheMapsRestNodesTakeBenchesOrSayWhyNot()
     {
         // The road's walks carry no benches (the design walks sit 7.5 m off the road: a bench on either side is too near the carriageway
