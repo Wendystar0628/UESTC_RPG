@@ -29,7 +29,7 @@ public interface IContentModule
 {
     IReadOnlyList<Claim> Claims { get; }
     ModuleBudget Budget { get; }
-    /// <summary>Enumerates the module's occupied L0 cells on the 64-metre grid, regardless of requested rendering LOD.</summary>
+    /// <summary>Enumerates conservative occupied L0 cells on the 64-metre grid from source ranges, without generating products or querying terrain heights, regardless of requested rendering LOD.</summary>
     IEnumerable<TileKey> Tiles(BuildContext ctx);
     /// <summary>
     /// For L0-L3, tile is the level's index: floor(worldXZ / (64 &lt;&lt; (int)lod)), including negative coordinates.

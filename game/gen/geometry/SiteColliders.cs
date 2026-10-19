@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Contracts.Maps;
 
 namespace Campus.Gen.Geometry;
 
@@ -8,9 +9,21 @@ public sealed class SiteColliders
 {
     private readonly List<(Vector2 Anchor, Collider Collider)> _items = [];
 
-    public SiteColliders(BuildContext context) => Context = context;
+    private readonly TileKey? _requestedTile;
+
+    public SiteColliders(BuildContext context, TileKey? requestedTile = null)
+    {
+        Context = context;
+        _requestedTile = requestedTile;
+    }
 
     public BuildContext Context { get; }
+
+    /// <summary>Whether a source range meets the requested collision cell; an unrestricted trace includes all sources.</summary>
+    public bool Includes(MapRect range) => SiteTileRequest.Includes(_requestedTile, LodLevel.L0, range);
+
+    /// <summary>For a source filed wholly under one explicit anchor; spanning sources must use their range instead.</summary>
+    public bool Includes(Vector2 anchor) => _requestedTile is not { } tile || TileGrid.At(anchor) == tile;
 
     public float Ground(float x, float z) => Context.World.Terrain.HeightAt(x, z);
 

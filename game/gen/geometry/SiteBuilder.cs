@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 
 namespace Campus.Gen.Geometry;
@@ -21,18 +22,26 @@ public sealed class SiteBuilder
     private readonly List<SiteItem> _items = [];
     private readonly List<(int X, int Z, ToonSpec Material, bool NoShadow)> _batchKeys = [];
     private readonly Dictionary<(int X, int Z, ToonSpec Material, bool NoShadow), BoxBatch> _batches = [];
+    private readonly TileKey? _requestedTile;
 
-    public SiteBuilder(BuildContext context, LodLevel lod, SiteDetail detail)
+    public SiteBuilder(BuildContext context, LodLevel lod, SiteDetail detail, TileKey? requestedTile = null)
     {
         Context = context;
         Lod = lod;
         Detail = detail;
+        _requestedTile = requestedTile;
     }
 
     public BuildContext Context { get; }
     public LodLevel Lod { get; }
 
     public SiteDetail Detail { get; }
+
+    /// <summary>Whether a source range meets the requested grid cell; an unrestricted build and L4 include all sources.</summary>
+    public bool Includes(MapRect range) => SiteTileRequest.Includes(_requestedTile, Lod, range);
+
+    /// <summary>For a source filed wholly under one explicit anchor; spanning sources must use their range instead.</summary>
+    public bool Includes(Vector2 anchor) => _requestedTile is not { } tile || Lod == LodLevel.L4 || TileGrid.At(anchor, Lod) == tile;
 
     /// <summary>Ground height from the map terrain (flat stub until the WP-08 evaluator lands).</summary>
     public float Ground(float x, float z) => Context.World.Terrain.HeightAt(x, z);
@@ -205,5 +214,16 @@ public sealed class SiteBuilder
             mesh.ValidateVertexData();
             return new(anchor, GeometryBuffer.Freeze(mesh), null);
         }
+    }
+}
+
+public static class SiteTileRequest
+{
+    public static bool Includes(TileKey? requestedTile, LodLevel lod, MapRect range)
+    {
+        if (requestedTile is not { } tile || lod == LodLevel.L4) return true;
+        var min = TileGrid.At(range.Min, lod);
+        var max = TileGrid.At(range.Max, lod);
+        return tile.X >= min.X && tile.X <= max.X && tile.Z >= min.Z && tile.Z <= max.Z;
     }
 }

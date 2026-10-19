@@ -1,17 +1,21 @@
 using Campus.Gen.Geometry;
 using Campus.Contracts;
+using Campus.Contracts.Maps;
 
 namespace Campus.Gen.Zones.Common;
 
 /// <summary>
 /// One piece of a zone (a landmark, a gate with its fence, a forecourt, a group of courts). Each zone lists its sites in its
-/// module's All; the module does the cell filing, caching and merging for all of them. Sites are pure: they read only the
+/// module's All; the module does the cell filing and merging for all of them. Sites are pure: they read only the
 /// world model and terrain through the builder and never perform IO.
 /// </summary>
 public abstract class ZoneSite
 {
     /// <summary>Stable site key, "21a.pinxue-frame" style; used in seeds and test messages.</summary>
     public abstract string Id { get; }
+
+    /// <summary>Conservative plan ranges covering output anchors, geometry and height reads; reads source data only, without building or terrain queries.</summary>
+    public abstract IReadOnlyList<MapRect> Ranges(IWorldModel world);
 
     /// <summary>Features this site builds instead of the generic producers (WP-14 skips claimed Massing).</summary>
     public virtual IReadOnlyList<Claim> Claims => [];

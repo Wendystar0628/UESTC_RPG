@@ -1,31 +1,11 @@
-using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Zones.Common;
 
-/// <summary>Shared routing, caching and metadata assembly for site-based zones.</summary>
+/// <summary>Range-based routing and metadata assembly for site-based zones.</summary>
 public abstract class ZoneModuleBase : IContentModule
 {
-    private sealed class PreparedProducts
-    {
-        public PreparedProducts(ZoneModuleBase module, BuildContext context)
-        {
-            Items = Enum.GetValues<LodLevel>().ToDictionary(lod => lod,
-                lod => new Lazy<IReadOnlyList<SiteItem>>(() => module.CreateItems(context, lod), LazyThreadSafetyMode.ExecutionAndPublication));
-            Colliders = new(() =>
-            {
-                var colliders = new SiteColliders(context);
-                foreach (var site in module._sites) site.Collide(colliders);
-                return Array.AsReadOnly(colliders.Items.ToArray());
-            }, LazyThreadSafetyMode.ExecutionAndPublication);
-        }
-        public IReadOnlyDictionary<LodLevel, Lazy<IReadOnlyList<SiteItem>>> Items { get; }
-        public Lazy<IReadOnlyList<(Vector2 Anchor, Collider Collider)>> Colliders { get; }
-    }
-
-    private readonly ConditionalWeakTable<BuildContext, PreparedProducts> _prepared = new();
     private readonly IReadOnlyList<ZoneSite> _sites;
     private readonly GeometryMergePolicy _mergePolicy;
 
@@ -46,16 +26,14 @@ public abstract class ZoneModuleBase : IContentModule
     public IEnumerable<TileKey> Tiles(BuildContext context)
     {
         var cells = new SortedSet<(int X, int Z)>();
-        foreach (var item in ItemsFor(context, LodLevel.L0))
-        {
-            var cell = TileGrid.At(item.Anchor);
-            cells.Add((cell.X, cell.Z));
-        }
-        foreach (var (anchor, _) in CollidersFor(context))
-        {
-            var cell = TileGrid.At(anchor);
-            cells.Add((cell.X, cell.Z));
-        }
+        foreach (var site in _sites)
+            foreach (var range in site.Ranges(context.World))
+            {
+                var min = TileGrid.At(range.Min);
+                var max = TileGrid.At(range.Max);
+                for (var x = min.X; x <= max.X; x++)
+                    for (var z = min.Z; z <= max.Z; z++) cells.Add((x, z));
+            }
         return cells.Select(cell => new TileKey(cell.X, cell.Z)).ToArray();
     }
 
@@ -64,9 +42,8 @@ public abstract class ZoneModuleBase : IContentModule
         var meshes = new List<GeometryBundle>();
         var parts = new List<PlacedPart>();
         var lights = new List<LightEmitter>();
-        foreach (var item in ItemsFor(context, lod))
+        foreach (var item in BuildItems(context, tile, lod))
         {
-            if (lod != LodLevel.L4 && TileGrid.At(item.Anchor, lod) != tile) continue;
             if (item.Mesh is { } mesh) meshes.Add(GeometryPublication.Publish(mesh, item.HasLodChannel));
             if (item.Part is { } part) parts.Add(part);
             if (item.Light is { } light) lights.Add(light);
@@ -75,8 +52,13 @@ public abstract class ZoneModuleBase : IContentModule
             new(GeometryBatch.Merge(meshes, _mergePolicy), parts, lights.Count == 0 ? null : lights);
     }
 
-    public IReadOnlyList<Collider> Collide(BuildContext context, TileKey tile) =>
-        CollidersFor(context).Where(item => TileGrid.At(item.Anchor) == tile).Select(item => item.Collider).ToArray();
+    public IReadOnlyList<Collider> Collide(BuildContext context, TileKey tile)
+    {
+        var colliders = new SiteColliders(context, tile);
+        foreach (var site in _sites)
+            if (site.Ranges(context.World).Any(colliders.Includes)) site.Collide(colliders);
+        return colliders.Items.Where(item => TileGrid.At(item.Anchor) == tile).Select(item => item.Collider).ToArray();
+    }
 
     public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod) =>
         _sites.SelectMany(site => site.TraceSources(context, lod));
@@ -111,10 +93,7 @@ public abstract class ZoneModuleBase : IContentModule
     public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context) =>
         _sites.OfType<ILightMetadataSource>().SelectMany(site => site.DescribeLights(context)).ToArray();
 
-    internal IReadOnlyList<SiteItem> ItemsFor(BuildContext context, LodLevel lod)
-        => _prepared.GetValue(context, value => new(this, value)).Items[lod].Value;
-
-    private IReadOnlyList<SiteItem> CreateItems(BuildContext context, LodLevel lod)
+    internal IReadOnlyList<SiteItem> BuildItems(BuildContext context, TileKey tile, LodLevel lod)
     {
         var builder = new SiteBuilder(context, lod, lod switch
         {
@@ -122,11 +101,9 @@ public abstract class ZoneModuleBase : IContentModule
             LodLevel.L1 => SiteDetail.Plain,
             LodLevel.L2 or LodLevel.L3 or LodLevel.L4 => SiteDetail.Mass,
             _ => throw new ArgumentOutOfRangeException(nameof(lod)),
-        });
-        foreach (var site in _sites) site.Build(builder);
-        return Array.AsReadOnly(builder.Items.ToArray());
+        }, tile);
+        foreach (var site in _sites)
+            if (lod == LodLevel.L4 || site.Ranges(context.World).Any(builder.Includes)) site.Build(builder);
+        return builder.Items.Where(item => lod == LodLevel.L4 || TileGrid.At(item.Anchor, lod) == tile).ToArray();
     }
-
-    internal IReadOnlyList<(Vector2 Anchor, Collider Collider)> CollidersFor(BuildContext context)
-        => _prepared.GetValue(context, value => new(this, value)).Colliders.Value;
 }
