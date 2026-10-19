@@ -7,10 +7,10 @@ namespace Campus.Kernel.Stream;
 
 public interface IStreamMountFrame
 {
-    void Drain(Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null);
+    void Drain(bool covered, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null);
 }
 
-/// <summary>The sole owner of the shared collision/visual mount budget.</summary>
+/// <summary>The sole owner of the shared collision/visual mount budget and covered-screen refresh slices.</summary>
 [KernelService(typeof(IStreamMountFrame), Owner = "WP-02b")]
 [KernelService(typeof(IStreamMountQueue), Owner = "WP-02b")]
 public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
@@ -65,11 +65,13 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
                 _pending[i].Cancel(); _pending.RemoveAt(i);
             }
     }
-    public void Drain(Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
+    public void Drain(bool covered, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
     {
         var start = _clock();
+        var frameBudget = covered ? KernelBudgets.StreamCoveredMountMilliseconds : _settings.MountMilliseconds;
         var retiring = canActivateVisual is not null && !canActivateVisual();
-        release?.Invoke(retiring ? Math.Max(0, _settings.MountMilliseconds - KernelBudgets.CollisionMountMilliseconds) : Math.Min(.25, _settings.MountMilliseconds));
+        release?.Invoke(covered ? frameBudget : retiring
+            ? Math.Max(0, frameBudget - KernelBudgets.CollisionMountMilliseconds) : Math.Min(.25, frameBudget));
         var collisionUsed = false; var visualUsed = false;
         var blockedByRetirement = false;
         for (var i = 0; i < _pending.Count;)
@@ -78,25 +80,28 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
             if (work is IStreamMountCancellationState { IsCancelled: true }) { _pending.RemoveAt(i); continue; }
             if (work.Revision != Revision) { work.Cancel(); _pending.RemoveAt(i); continue; }
             var elapsed = _clock() - start;
-            var remaining = _settings.MountMilliseconds - elapsed;
+            var remaining = frameBudget - elapsed;
             if (remaining <= 0) break;
             double budget;
             switch (work.Kind)
             {
                 case StreamMountKind.Collision:
-                    if (collisionUsed) { i++; continue; }
-                    collisionUsed = true; budget = Math.Min(KernelBudgets.CollisionMountMilliseconds, remaining); break;
+                    if (!covered && collisionUsed) { i++; continue; }
+                    collisionUsed = true;
+                    budget = covered ? remaining : Math.Min(KernelBudgets.CollisionMountMilliseconds, remaining); break;
                 case StreamMountKind.Visual:
                     if (canActivateVisual is not null && !canActivateVisual()) { blockedByRetirement = true; i++; continue; }
-                    if (visualUsed || !_watchdog.CanActivate(start)) { i++; continue; }
-                    visualUsed = true; budget = Math.Min(_watchdog.VisualBudgetMilliseconds, remaining); break;
+                    if (!covered && (visualUsed || !_watchdog.CanActivate(start))) { i++; continue; }
+                    visualUsed = true;
+                    budget = covered ? remaining : Math.Min(_watchdog.VisualBudgetMilliseconds, remaining); break;
                 case StreamMountKind.Auxiliary:
                     budget = remaining; break;
                 default: throw new ArgumentOutOfRangeException(nameof(work.Kind));
             }
             try
             {
-                if (work.Step(budget)) _pending.RemoveAt(i); else i++;
+                if (work.Step(budget)) _pending.RemoveAt(i);
+                else if (!covered) i++;
             }
             catch (Exception error)
             {
@@ -109,9 +114,9 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         if (blockedByRetirement || retiring && !visualUsed &&
             _pending.Any(work => work.Kind == StreamMountKind.Visual && work is not IStreamMountCancellationState { IsCancelled: true }))
             BlockedByRetirementFrames++;
-        finish?.Invoke(_watchdog.CanActivate(start)
-            ? Math.Max(0, _settings.MountMilliseconds - (_clock() - start)) : 0);
+        finish?.Invoke(covered || _watchdog.CanActivate(start)
+            ? Math.Max(0, frameBudget - (_clock() - start)) : 0);
         LastMilliseconds = _clock() - start;
-        _watchdog.Observe(LastMilliseconds, _clock());
+        if (!covered) _watchdog.Observe(LastMilliseconds, _clock());
     }
 }
