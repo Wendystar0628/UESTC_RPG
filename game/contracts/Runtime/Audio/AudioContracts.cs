@@ -69,7 +69,7 @@ public enum UiCue : byte
 public enum MusicCue : byte { Silence, Title, Enter, ReturnTitle }   // 开场音乐做好之前全部按 Silence
 
 // ===== 音频服务：总入口（53a，Kernel 服务） =====
-public enum DuckReason : byte { Boot, Veil, PageOpen, MapTravel = 4 }
+public enum DuckReason : byte { Boot, Loading, PageOpen, MapTravel = 4 }
 public readonly record struct AudioSnapshot(long Frame, int RealVoices, int Nodes3D, int VirtualEmitters,
     int OneShotsLast5s, float MasterPeakDb, int ResidentKb);
 public interface IAudioService

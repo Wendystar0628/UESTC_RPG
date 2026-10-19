@@ -360,10 +360,6 @@ ground_amt={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)
 }
-veil={
-"type": "float",
-"value": 0.0
-}
 stars={
 "type": "float",
 "value": 0.0

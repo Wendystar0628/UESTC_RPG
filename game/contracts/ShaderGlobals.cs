@@ -36,7 +36,6 @@ public static class ShaderGlobals
     /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonGlobalsNode; ginkgo, other leaves/petals, ground snow divided by 1.5, reserved zero.</summary>
     public const string GroundAmt = "ground_amt";
     /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
-    public const string Veil = "veil";
     /// <summary>Sole writer: Campus.Systems.Sky.SkyNode.</summary>
     public const string Stars = "stars";
     /// <summary>Sole writer: Campus.Style.Palette.Keys.PaletteNode.</summary>

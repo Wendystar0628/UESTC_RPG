@@ -34,8 +34,9 @@ public interface IStreamMountQueue
     /// and release completed mounts; they do not advance the shared queue revision.</remarks>
     void RemoveMap(MapId map);
 }
-// Per-frame caps: total <= 1.0 ms; Collision <= one Step and <= 0.3 ms of that total;
-// Visual <= one Step. Auxiliary work also consumes the same remaining total budget.
+// Visible-frame caps: total <= 1.0 ms; Collision <= one Step and <= 0.3 ms of that total;
+// Visual <= one Step. Auxiliary work shares the remainder. Actual opaque screen coverage
+// permits multiple tiles/steps in a shared UI-responsive slice; readiness rules are unchanged.
 
 /// <summary>One existing view and its near-layer world bounds. Frustum planes point outward: Normal dot p + D is at most zero inside.</summary>
 /// <remarks>The caller owns and reuses the memory; participants consume it during Demand and never retain it.</remarks>
@@ -53,7 +54,7 @@ public interface IStreamTileParticipant
     StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident);
     /// <summary>Creates bounded work without engine side effects; the shared queue alone advances it.</summary>
     IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision);
-    /// <summary>Mounted content and its materials are ready; this does not certify that a frame is capturable.</summary>
+    /// <summary>Mounted content is ready; this does not certify that a frame is capturable.</summary>
     bool IsReady(BakeKey key);
     void Unmount(BakeKey key);
     string? Error { get; }

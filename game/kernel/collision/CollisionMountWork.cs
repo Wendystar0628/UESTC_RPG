@@ -4,7 +4,7 @@ using Campus.Gen.Collision;
 
 namespace Campus.Kernel.Collision;
 
-/// <summary>Called only by WP-02b's StreamMount queue, once per frame at most.</summary>
+/// <summary>Called only by WP-02b's StreamMount queue, once per visible frame at most; covered frames share the loading UI slice.</summary>
 public sealed class CollisionMountWork : IStreamMountWork
 {
     // Keep ordinary batches small; 250 remains the hard ceiling checked again at the physics boundary.

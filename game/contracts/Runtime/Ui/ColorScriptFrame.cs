@@ -5,7 +5,7 @@ namespace Campus.Contracts;
 /// <summary>
 /// WP-37 publishes one immutable CPU snapshot after color-script evaluation. Consumers copy Current once
 /// per frame; none of these values may be obtained by reading GPU shader parameters back.
-/// Values include season/weather corrections, before a consumer applies quality, veil, lightning or medium effects.
+/// Values include season/weather corrections, before a consumer applies quality, lightning or medium effects.
 /// </summary>
 public interface IColorScriptFrame
 {

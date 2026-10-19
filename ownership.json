@@ -2,6 +2,18 @@
   "version": 1,
   "rules": [
     {
+      "pattern": ".collab/tools/**",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "dashboard/**",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/data/pipeline-combinations.json",
+      "owner": "WP-01"
+    },
+    {
       "pattern": "game/assets/scene-text/**",
       "owner": "WP-04"
     },

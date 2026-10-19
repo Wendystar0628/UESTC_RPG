@@ -159,7 +159,7 @@ public static class FramePriority
     public const int Animate = 20;         // WP-54a: animation/IK after Systems; never feeds back into physics or the earlier camera.
     public const int Audio = 50;            // WP-53a、53b、53d：仲裁、权重、排程、写播放器音量（SYS-AUDIO）
     public const int Hud = 100;             // WP-35：HudModel、MotionHub、UiThemeClock（写 ui_night）；WP-48b 的小地图与大地图
-    public const int StreamMount = 900;     // WP-02 挂载（每帧 ≤ 1.0 ms）、WP-43 碰撞入树（预算内分帧）；新挂上的室内房间与门户下一帧生效
+    public const int StreamMount = 900;     // 可见期共享1 ms；实际全屏遮盖时批量挂载并给UI让帧；新挂室内房间与门户下一帧生效
     public const int Save = 1000;           // WP-50：每帧最后一步，拍快照；读档时在这一步恢复，下一帧所有系统同时看到新世界（SYS-SAVE）
 }
 

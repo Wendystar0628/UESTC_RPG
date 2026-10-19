@@ -15,7 +15,7 @@ public sealed record BootContext(
 /// Implement on an already registered service or node; do not register this interface as a singleton service.
 /// The kernel deduplicates instances by reference, rejects duplicate Ids, and calls each phase serially
 /// in Order then ordinal Id order. Each instance is called at most once per phase; irrelevant phases return
-/// immediately. Exceptions abort startup and propagate to Boot, which keeps the veil fully opaque.
+/// immediately. Exceptions abort startup and propagate to Boot, which keeps the application loading screen fully opaque.
 /// </summary>
 public interface IBootParticipant
 {
@@ -42,6 +42,6 @@ public interface IViewCapturePreparation
 }
 
 // BeforeMap: map catalog, save metadata/lock and silent audio resources, before destination selection.
-// AfterMapWarm: after Travel(Boot), resident data, viewport and 3D/2D warmup; quality detection/application.
+// AfterMapWarm: after Travel(Boot), resident data and viewport preparation; quality detection/application.
 // BeforeReveal: after IAppBootFlow.PrepareWorld and explicit command-line world overrides, final ready work.
-// The kernel performs the last Reveal, then IAppBootFlow.CompleteBoot; no participant reveals or grants input.
+// The kernel completes world readiness, then releases its presentation; no participant grants input.

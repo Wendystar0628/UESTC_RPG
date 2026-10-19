@@ -18,39 +18,6 @@ public interface IPaletteProbe
     void SampleHorizon(Season season, WeatherVec weather, Span<Vector3> srgb24);
 }
 
-// 雾幕：WP-01 实现（雾幕层由 WP-05 画），转场、跳转、传送、换季、画质、回位、切图共用一层
-public enum VeilReason : byte { Boot, Transit, Teleport, Season, Quality, Respawn, MapTravel = 7 }   // 在 Campus.Contracts，不在音频命名空间
-public enum VeilContent : byte { Fog, Frontispiece }    // 雾色；扉页插画（SYS-TITLE）
-// Fixed policies from UI-VISUAL and SYS-TITLE. Callers do not choose delays.
-public enum VeilWaitKind : byte { Readiness, BootFrontispiece }
-public interface IVeilState
-{
-    float Opacity { get; }
-    VeilReason Reason { get; }
-    // True means a live readiness observation has reached its policy delay: show the waiting indicator.
-    bool Waiting { get; }
-    // A live boot-frontispiece observation has no successful startup record for this device/driver.
-    // Does not mean compilation is active. Show its explanation only together with Waiting.
-    bool FirstShaderCompilation { get; }
-}   // 只读；音频据此压低 World 组（SYS-AUDIO）
-public interface IVeilLease : IDisposable
-{
-    Task Covered { get; }                  // 本租约要求的遮挡已经盖满
-    bool IsCurrent { get; }                // 雾幕服务选中的持有者；不用 Reason 推断所有权
-    // Releases only this lease. Other covers remain; the final release fades out over seconds.
-    Task Reveal(float seconds);
-}
-public interface IVeilService : IVeilState
-{
-    // Ownership is returned synchronously, before awaiting Covered. Dispose releases immediately and is idempotent.
-    IVeilLease Cover(VeilReason reason, float seconds, VeilContent content = VeilContent.Fog);
-    // Observe actual readiness work only. Main-thread begin; Dispose may run on a worker and is idempotent.
-    // Does not cover/reveal, change Reason, evaluate Ready, cancel work, or impose any timeout.
-    // Each scope owns only itself; simultaneous live scopes aggregate with OR.
-    // firstShaderCompilation belongs only to BootFrontispiece and clears immediately on scope disposal.
-    IDisposable ObserveReadinessWait(VeilWaitKind kind = VeilWaitKind.Readiness, bool firstShaderCompilation = false);
-}
-
 // 其他包补的只读状态（SYS-AUDIO）
 public readonly record struct LightningFlash(double RealSeconds, float AzDeg, float ElDeg, float DistanceKm,
     int Pulses, float Peak, bool Visible);              // Visible = false：减少动态效果时只发事件、不画

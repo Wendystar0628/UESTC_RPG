@@ -14,7 +14,7 @@ public interface IMapContext                 // 纯数据；场景 RID 和物理
 public enum MapTravelCause : byte { Boot, NewGame, LoadSave }
 public sealed record MapTravelRequest(MapId Target, string? Spawn = null, Pose? Pose = null,
     ViewMode? Mode = null, MapTravelCause Cause = MapTravelCause.Boot);
-public enum MapStage : byte { LoadData, Mount, Warm, Spawn, Done }
+public enum MapStage : byte { LoadData, Mount, Arrival, Spawn, Done }
 public enum MapTravelResult : byte { Arrived, Rejected, Failed }
 public interface IMapTransition
 {

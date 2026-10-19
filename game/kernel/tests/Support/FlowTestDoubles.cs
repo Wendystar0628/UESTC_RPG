@@ -8,16 +8,37 @@ namespace Campus.Tests;
 
 internal sealed class TestAppLoadingPresentation : IAppLoadingPresentation
 {
-    public bool Active { get; private set; }
+    private readonly List<Lease> _leases = [];
+    public bool Active => _leases.Count != 0;
     public bool IsCovered => Active;
     public float Progress { get; private set; }
     public int Hides { get; private set; }
-    public Task Show(EnterRequest? request = null) { if (!Active) Progress = 0; Active = true; return Task.CompletedTask; }
-    public void Report(int completed, int total) => Progress = Math.Max(Progress, (float)completed / total);
-    public Task Hide()
+    public IAppLoadingLease Show(EnterRequest? request = null)
     {
-        if (Progress != 1) throw new InvalidOperationException("Loading hid before every item completed.");
-        Active = false; Hides++; return Task.CompletedTask;
+        if (!Active) Progress = 0;
+        var lease = new Lease(this);
+        _leases.Add(lease);
+        return lease;
+    }
+    private sealed class Lease(TestAppLoadingPresentation owner) : IAppLoadingLease
+    {
+        private bool _released;
+        public Task Covered => Task.CompletedTask;
+        public void Report(int completed, int total)
+        {
+            if (!_released) owner.Progress = Math.Max(owner.Progress, total > 0 ? (float)completed / total : 0);
+        }
+        public Task Hide()
+        {
+            if (_released) return Task.CompletedTask;
+            if (owner._leases.Count == 1 && owner.Progress != 1)
+                throw new InvalidOperationException("Loading hid before every item completed.");
+            _released = true;
+            owner._leases.Remove(this);
+            if (!owner.Active) owner.Hides++;
+            return Task.CompletedTask;
+        }
+        public ValueTask DisposeAsync() => new(Hide());
     }
 }
 internal sealed class TestAppTitlePresentation : IAppTitlePresentation

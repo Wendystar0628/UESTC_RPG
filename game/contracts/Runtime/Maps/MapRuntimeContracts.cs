@@ -9,7 +9,7 @@ public interface IMapRuntime
 }
 
 /// <summary>
-/// One destination's readiness barrier, including resident content, destination geometry and pipeline warming.
+/// One destination's readiness barrier, including resident content, destination geometry, current interior content and walking collision.
 /// Done succeeds only when ready, faults on preparation failure, and is cancelled on cancellation/replacement/exit.
 /// A completed handle remains a historical result; compare it with IMapRuntime.Arrival before reusing readiness.
 /// Cancel never moves the camera or rolls back mounted content; cancelling an older handle cannot affect its replacement.

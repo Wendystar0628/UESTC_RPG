@@ -1,7 +1,7 @@
 namespace Campus.Contracts.Quality;
 
 public enum QualityPreset : byte { Balanced, Fine, Ultra, Custom }              // 均衡、精致、极致、自定义
-public enum ApplyClass : byte { Immediate, Amortized, UnderVeil, Restart }       // 即时、即时（分帧）、雾幕、重启（SYS-GRAPHICS），由轻到重
+public enum ApplyClass : byte { Immediate, Amortized, UnderLoading, Restart }       // 即时、即时（分帧）、加载界面、重启（SYS-GRAPHICS），由轻到重
 public enum KnobKind : byte { Floor, StyleDefault, Performance }                 // 风格底线（有最差值）、风格默认（可关）、性能项（SYS-GRAPHICS）
 
 public enum QualityKnob : byte                      // 共 11 项，连续序号（QualityChange.Knobs 按序号置位）；--quality-set 用它的 snake_case
@@ -78,16 +78,16 @@ public enum ApplyOrigin : byte
     Gate,           // 门禁、基准、画面测试与"预设轮换"脚本：不写盘
 }
 
-public readonly record struct QualityChange(long Version, ulong Knobs, ApplyOrigin Origin, bool Veiled)
+public readonly record struct QualityChange(long Version, ulong Knobs, ApplyOrigin Origin, bool Loading)
 {
     public bool Has(QualityKnob k) => (Knobs & (1UL << (int)k)) != 0;   // 按 QualityKnob 的序号置位，不分配
-}   // Veiled：本次在雾幕全黑时生效；为 false 时负责方自己淡化，不得硬切
+}   // Loading：本次在加载界面完全遮盖时生效；为 false 时负责方自己淡化，不得硬切
 
 public readonly record struct KnobDelta(QualityKnob Knob, float From, float To, ApplyClass Apply);
 public sealed record ApplyPlan(
     QualityProfile Next,
     IReadOnlyList<KnobDelta> Deltas,                // 只列有变化的项
-    ApplyClass Heaviest,                            // 最重的一类：有 UnderVeil 时界面才亮"应用"，有 Restart 时显示"启"
+    ApplyClass Heaviest,                            // 最重的一类：有 UnderLoading 时界面才亮"应用"，有 Restart 时显示"启"
     long VramBytes, long VramBudgetBytes,           // 按 SYS-GRAPHICS 的公式估的显存与 DXGI 给的预算；P2 之前为 0
     IReadOnlyList<QualityKnob> Rejected);           // 劣于最差值、超出范围或不合法的项；不为空时 Apply 整体拒绝，什么也不改
 
@@ -107,14 +107,14 @@ public interface IQualityService                    // Kernel 服务（WP-32）�
     IReadOnlyList<KnobSpec> Knobs { get; }          // 单项目录（QualityCatalog）：画面页按它生成控件
     float PresetValue(QualityPreset p, QualityKnob k);   // 预设表 game/data/quality-presets.json 的取值
     event Action<QualityChange>? Changed;           // 主线程，值变才发
-    ApplyPlan Plan(QualityProfile next);            // 界面据此显示"雾幕""重启"生效标签与显存估计（UI-VISUAL）
+    ApplyPlan Plan(QualityProfile next);            // 界面据此显示"加载界面""重启"生效标签与显存估计（UI-VISUAL）
     Task<ApplyResult> Apply(QualityProfile next, ApplyOrigin origin);
 }
 
 public interface IQualityAware                      // 标了 [QualityResponsive] 的 [KernelNode] 实现
 {
     // WP-32 在 FramePriority.Quality 那一步调用：启动时以全部项调用一次，之后只在 Owns 或 Reads 里的项变化时调用。
-    // 即时类按节点 ID 顺序调用；雾幕类在雾幕全黑时按 SYS-GRAPHICS 第 3 步的负责方顺序调用；
+    // 即时类按节点 ID 顺序调用；加载界面类在加载界面完全遮盖时按 SYS-GRAPHICS 第 3 步的负责方顺序调用；
     // 分帧类由负责方自己分帧完成，每帧不超过 0.3 ms。
     void ApplyQuality(QualityView view, in QualityChange change);
 }

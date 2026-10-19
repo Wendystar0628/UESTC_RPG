@@ -18,4 +18,7 @@ public static class KernelBudgets
 
     // ENG-BUDGET: the collision share of that mount budget
     public const double CollisionMountMilliseconds = .3;
+
+    // While an opaque screen is actually presented, yield often enough to keep its UI responsive.
+    public const double StreamCoveredMountMilliseconds = 8;
 }

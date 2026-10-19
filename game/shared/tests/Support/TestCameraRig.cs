@@ -34,7 +34,7 @@ internal class TestCameraRig(IViewControl? view = null, Pose? pose = null, bool 
     {
         if (!transit) throw new NotSupportedException("This domain fixture does not execute camera transit.");
         Options = options;
-        return Handle = new(options?.Prefer == TransitPreference.Teleport ? TransitKind.Teleport : TransitKind.Slide);
+        return Handle = new(TransitKind.Teleport);
     }
     public IDisposable LockInput(InputLockReason reason)
     {

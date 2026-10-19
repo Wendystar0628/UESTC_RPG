@@ -181,8 +181,6 @@ public sealed partial class StageGateDriver
             }
             if (node is RenderHost renderHost)
                 foreach (var instance in renderHost.CaptureReflectionInstances()) AddSpatial(instance);
-            if (node is MaterialWarmup warmup)
-                foreach (var root in warmup.CaptureParameterRoots()) Visit(root);
             var children = node.GetChildren(includeInternal: true);
             foreach (var child in children) Visit(child);
         }

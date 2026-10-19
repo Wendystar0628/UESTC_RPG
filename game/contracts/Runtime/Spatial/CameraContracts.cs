@@ -19,12 +19,12 @@ public interface ICameraRig
     float EdgeFog { get; }                   // 与全局参数 edge_fog 同一个值（WLD-OUTSKIRTS），音频据此压低远处的声音
 }
 public enum InputLockReason : byte { Atlas, AppFlow, MapTravel, Menu, Rebind } // Append new reasons only.
-public enum TransitPreference : byte { Auto, Teleport }   // Auto 按距离选滑移、弧线或雾幕弧线（UI-NAV）；Teleport 是地图传送（SYS-ATLAS）
+public enum TransitPreference : byte { Auto, Teleport }   // Auto 按距离选原地镜头运动或传送（UI-NAV）；Teleport 是地图传送（SYS-ATLAS）
 public sealed record TransitOptions(EntryPath? Entry = null, Vector3? LandOn = null /* 行走落点 */)
 {
     public TransitPreference Prefer { get; init; } = TransitPreference.Auto;
 }
-public enum TransitKind { Slide, Arc, Veil, Teleport }   // Teleport：地图传送的雾幕瞬移，雾幕盖满 → 移位 → 等目的地就绪 → 散开（SYS-ATLAS）
+public enum TransitKind { Teleport }   // 加载界面盖满后移位，目的地就绪后退出加载
 public enum TransitResult { Arrived, Cancelled }
 public interface ITransitHandle
 {
