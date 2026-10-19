@@ -20,8 +20,9 @@ public sealed class FaunaTests
     [TestCategory("Slow")]
     public void LayoutIsDeterministicAndKeepsTheMainlineCounts()
     {
-        var a = FaunaPlanner.Build(World.Value, 1, Lakes.Value);
-        var b = FaunaPlanner.Build(World.Value, 1, Lakes.Value);
+        var sourceOnly = new FakeWorld(World.Value) { Spatial = new FlatSpatial(forbidden: "Directory must not sample terrain."), Terrain = null! };
+        var a = FaunaPlanner.Plan(sourceOnly, 1, Lakes.Value);
+        var b = FaunaPlanner.Plan(World.Value, 1, Lakes.Value);
         foreach (var line in a.Log) Console.WriteLine("[fauna] " + line);
         AssertThat(a.Sites.Select(s => s.Key).SequenceEqual(b.Sites.Select(s => s.Key))).OverrideFailureMessage("Same world, same sites.").IsTrue();
         AssertThat(a.Sites.SelectMany(s => s.Day).Select(x => x.Position).SequenceEqual(b.Sites.SelectMany(s => s.Day).Select(x => x.Position))).OverrideFailureMessage("Same positions.").IsTrue();
@@ -51,6 +52,31 @@ public sealed class FaunaTests
         for (var i = 0; i < spots.Length; i++)
             for (var j = i + 1; j < spots.Length; j++)
                 AssertThat(Vector3.Distance(spots[i], spots[j]) >= FaunaStyle.CatSiteSpacing - 1f).OverrideFailureMessage("Cat sites keep apart.").IsTrue();
+
+        var context = new BuildContext
+        {
+            World = sourceOnly, WorldSeed = 1, Map = RealMapFixture.Entry().Descriptor,
+            Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
+        };
+        var module = new FaunaModule();
+        var directory = module.FaunaTiles(context);
+        AssertThat(!module.Tiles(context).Any()).OverrideFailureMessage("Fauna has no empty static geometry products.").IsTrue();
+        AssertThat(directory.Count == a.Sites.Select(site => TileGrid.At(site.Bounds.Center)).Distinct().Count()).IsTrue();
+        foreach (var site in a.Sites)
+        {
+            var owner = directory[TileGrid.At(site.Bounds.Center)];
+            AssertThat(owner.Contains(site.Bounds.Min) && owner.Contains(site.Bounds.Max))
+                .OverrideFailureMessage("An owner directory entry covers every state's complete site bounds, including cross-tile habitats.").IsTrue();
+            var resolved = FaunaPlanner.Resolve(site, World.Value);
+            AssertThat(resolved.Day.Concat(resolved.Night).Concat(resolved.Rain).All(animal => site.Bounds.Contains(animal.Position)))
+                .OverrideFailureMessage("Source-only bounds conservatively contain the original terrain-resolved states.").IsTrue();
+        }
+        var selected = directory.Keys.First();
+        var product = module.PrepareFauna(context.WithWorld(World.Value), selected);
+        AssertThat(product.Sites.Select(site => site.Key).SequenceEqual(a.Sites.Where(site => TileGrid.At(site.Bounds.Center) == selected).Select(site => site.Key)))
+            .OverrideFailureMessage("Preparing one owner tile returns exactly its own sites.").IsTrue();
+        AssertThat(product.Sites.All(site => site.Sets.Count == Enum.GetValues<FaunaSet>().Length))
+            .OverrideFailureMessage("Requested sites retain all three display states.").IsTrue();
     }
 
     private static FakeWorld NoNetworkWorld(IWorldModel inner) => new(inner)
@@ -63,7 +89,7 @@ public sealed class FaunaTests
     [TestCategory("Slow")]
     public void AStubWorldWithoutNetworkOrDesignFeaturesDegradesQuietly()
     {
-        var layout = FaunaPlanner.Build(NoNetworkWorld(World.Value), 1, Lakes.Value);
+        var layout = FaunaPlanner.Plan(NoNetworkWorld(World.Value), 1, Lakes.Value);
         AssertThat(layout.Sites.Any(s => s.Kind == FaunaKind.Cat)).OverrideFailureMessage("Cats still find a wall without roads.").IsTrue();
         AssertThat(!layout.Sites.Any(s => s.Kind == FaunaKind.Pigeon)).OverrideFailureMessage("No stepped plaza, no pigeons, and no exception.").IsTrue();
     }
@@ -100,8 +126,8 @@ public sealed class FaunaTests
             };
             AssertThat(height >= lo && height <= hi).OverrideFailureMessage($"{key}: height {height:F3} out of the species' range.").IsTrue();
         }
-        var sites = FaunaPlanner.Build(World.Value, 1, Lakes.Value).Sites;
-        var day = sites.SelectMany(s => s.Day).ToArray();
+        var sites = FaunaPlanner.Plan(World.Value, 1, Lakes.Value).Sites;
+        var day = sites.Select(site => FaunaPlanner.Resolve(site, World.Value)).SelectMany(s => s.Day).ToArray();
         var output = scene.Build(day);
         AssertThat(output.Meshes.Count == 2 && output.Meshes.All(m => m.ColorIndices is { } c && c.Length * 3 == m.Position.Length)).OverrideFailureMessage("One cat and one bird bundle with colour IDs.").IsTrue();
     }

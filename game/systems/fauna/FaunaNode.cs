@@ -1,165 +1,259 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
-using Campus.Contracts.Content;
 using Campus.Contracts.Fauna;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
+using Campus.Kernel.Bake;
+using Campus.Kernel.Renderer;
 using Godot;
+using N = System.Numerics;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Systems.Fauna;
 
-/// <summary>
-/// WP-25 animals at runtime (WLD-LIFE). On map load the site layout and every set's world-space geometry are
-/// prepared off the main thread from the map's world model (no feature IDs, no data paths). Each site then keeps a latched
-/// "applied set": four times a second the target set is read from the sun altitude and the weather vector
-/// (<see cref="FaunaSchedule"/>; IWorldState only), and a changed target is applied only while the site is outside the main
-/// camera's frustum, or during a time fast-forward, a clock scrub, a season or weather transition, or a world-instance change
-/// (under the veil). So animals never pop in or out in view. Geometry goes through the kernel's IRenderHost; nothing here
-/// creates engine instances. Animal reactions (contract-22) and the dynamic sound emitters (WP-53) are not part of 25a.
-/// </summary>
+/// <summary>Streamed animal owner tiles with per-site display latches (WLD-LIFE).</summary>
 [KernelNode("systems.fauna", Owner = "WP-25")]
-public partial class FaunaNode : Node, IMapAware, IViewContentReadiness
+public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCapturePreparation, IStreamTileParticipant
 {
-    private const double CheckSeconds = 0.25;              // 4 Hz latch check (WLD-LIFE)
+    private const double CheckSeconds = 0.25;
     private static readonly WpId Package = new("WP-25");
+    private readonly Dictionary<BakeKey, TileState> _tiles = [];
+    private readonly N.Plane[] _planes = new N.Plane[6];
+    private IWorldState? _world;
+    private IRenderHost? _host;
+    private IRenderReadiness? _renderReadiness;
+    private IStreamMountQueue? _mount;
+    private ICameraRig? _rig;
+    private IReflectionWorld? _reflection;
+    private MapId? _map;
+    private long _generation;
+    private long _captureEpoch;
+    private double _sinceCheck;
+    private bool _force = true;
+    private string? _error;
+    public string? Error => _error ?? _renderReadiness?.Error;
 
     private sealed class Latch
     {
         public bool Applied;
         public FaunaSet? Set;
-        public RenderHandle? Handle;
+        public FaunaSet? Desired;
+        public bool Requested;
+        public long Epoch;
+        public long AppliedEpoch = -1;
+        public long Version;
+        public bool AllowVisible;
+        public readonly List<RenderHandle> Handles = [];
     }
 
-    private IWorldState? _world;
-    private IRenderHost? _host;
-    private Task<FaunaContent>? _job;
-    private FaunaContent? _prepared;
-    private Latch[] _latches = [];
-    private double _sinceCheck;
-    private bool _force;
-    public string? Error { get; private set; }
-    public bool IsReady(Pose pose) => Error is null && _job is null && _prepared is not null && _latches.All(latch => latch.Applied);
-
-    /// <summary>Applied set per site key, for gates and the review sandbox (read only).</summary>
-    public IReadOnlyDictionary<string, FaunaSet?> Applied =>
-        _prepared is null ? new Dictionary<string, FaunaSet?>() :
-        _prepared.Sites.Select((s, i) => (s.Key, _latches[i].Set)).ToDictionary(p => p.Key, p => p.Set, StringComparer.Ordinal);
-
-    public override void _EnterTree()
+    private sealed class TileState(FaunaTileContent content, BakePriority priority, long revision, long generation)
     {
-        ProcessPriority = FramePriority.Systems;
-        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
-        _force = true;
+        public readonly FaunaTileContent Content = content;
+        public readonly BakePriority Priority = priority;
+        public readonly long Revision = revision;
+        public readonly long Generation = generation;
+        public readonly Latch[] Latches = content.Content.Sites.Select(_ => new Latch()).ToArray();
+        public TileWork? Work;
+        public bool Mounted;
     }
 
-    public override void _Ready()
-    {
-        _world = Services.Get<IWorldState>();
-        _world.InstanceChanged += OnWorldInstanceChanged;
-    }
+    public IReadOnlyDictionary<string, FaunaSet?> Applied => _tiles.Values
+        .SelectMany(tile => tile.Content.Content.Sites.Select((site, i) => (site.Key, tile.Latches[i].Set)))
+        .ToDictionary(pair => pair.Key, pair => pair.Set, StringComparer.Ordinal);
 
-    private void OnWorldInstanceChanged(long _) => _force = true;
+    public bool CanMount(BakeKey key) => key.Module == BakeModuleIds.FaunaRuntime;
 
-    // Leaving the tree: the render host releases its owned nodes when the stage exits, and the
-    // stage is busy removing children, so only drop the references here; map unloads release through the host.
-    public override void _ExitTree()
-    {
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
-        _latches = [];
-        _prepared = null;
-        _job = null;
-    }
+    public StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident)
+        => FaunaDemand.Evaluate(in entry, in view, resident);
 
-    public void OnMapUnloading(MapId from)
+    public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision)
     {
-        Release();
-        _job = null;
-    }
-
-    public void OnMapLoaded(IMapContext ctx)
-    {
-        ArgumentNullException.ThrowIfNull(ctx);
-        Release();
-        Error = null;
-        var source = Services.Get<IMapContentSource>().GetModule<IFaunaContentSource>(ctx, "fauna");
-        var context = Services.Get<IBakeContextSource>().GetPreparedContext(ctx, "fauna");
-        // The registered producer builds pure geometry off-thread; runtime only mounts the resulting states.
-        _job = Task.Run(() => source.PrepareFauna(context));
-    }
-
-    public override void _Process(double delta)
-    {
-        if (Error is not null) return;
-        try { UpdateContent(delta); }
-        catch (Exception error)
+        if (!CanMount(key) || _map != key.Map || product is not FaunaTileContent content || content.Key != key)
+            throw new ArgumentException("Fauna mount product does not match its key or current map.");
+        var request = BakeRequestKeys.Parse(key);
+        if (request.Collision || request.Level != LodLevel.L0 || request.Tile != content.Tile)
+            throw new ArgumentException("Fauna mount owner tile does not match its key.");
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var site in content.Content.Sites)
         {
-            Error = error.GetBaseException().Message;
-            GD.PushError($"[WP-25 fauna] content failed: {error}");
+            if (TileGrid.At(site.Bounds.Center) != content.Tile || site.Sets.Count != Enum.GetValues<FaunaSet>().Length || !keys.Add(site.Key))
+                throw new ArgumentException("Fauna tile contains invalid site ownership or display states.");
         }
+        var tile = new TileState(content, priority, revision, _generation);
+        return tile.Work = new TileWork(this, tile, initial: true);
     }
 
-    private void UpdateContent(double delta)
+    public bool IsReady(BakeKey key) => Error is null && !_force && _tiles.TryGetValue(key, out var tile) && TileReady(tile);
+
+    public bool IsReady(Pose pose)
     {
-        if (_world is null) return;
-        if (_job is { IsCompleted: true } job)
-        {
-            _job = null;
-            _prepared = job.GetAwaiter().GetResult();
-            _latches = _prepared.Sites.Select(_ => new Latch()).ToArray();
-            foreach (var line in _prepared.Log) GD.Print("[WP-25 fauna] " + line);
-            _force = true;
-        }
-        if (_prepared is null) return;
-        _sinceCheck += Math.Min(delta, 0.1);
-        if (!_force && _sinceCheck < CheckSeconds) return;
-        _sinceCheck = 0;
-        var weather = _world.WeatherNow;
-        var sun = _world.Sun.AltDeg;
-        var anywhere = _force || _world.Transition != WorldTransition.None || _world.Scrubbing;
-        var frustum = anywhere ? null : GetViewport()?.GetCamera3D()?.GetFrustum();
-        for (var i = 0; i < _latches.Length; i++)
-        {
-            var site = _prepared.Sites[i];
-            var latch = _latches[i];
-            var target = FaunaSchedule.Target(site.Kind, sun, _world.Clock, weather);
-            if (latch.Applied && latch.Set == target) continue;
-            if (latch.Applied && !anywhere && (frustum is null || InView(site.Bounds, frustum))) continue;
-            Apply(i, target);
-        }
-        _force = false;
+        if (Error is not null || _map is null || _force) return false;
+        foreach (var tile in _tiles.Values) if (!TileReady(tile)) return false;
+        return true;
     }
 
-    private void Apply(int index, FaunaSet? target)
+    private bool TileReady(TileState tile)
     {
-        var latch = _latches[index];
-        _host ??= Services.Get<IRenderHost>();
-        if (latch.Handle is { } old) { _host.Unmount(old); latch.Handle = null; }
-        if (target is { } set && _prepared!.Sites[index].Sets[(int)set] is { Meshes.Count: > 0 } output)
-            latch.Handle = _host.Mount(output, Package);
-        latch.Set = target;
-        latch.Applied = true;
-    }
-
-    /// <summary>Conservative AABB-frustum test: outside only when the box lies fully beyond one of the (outward) frustum planes.</summary>
-    private static bool InView(Box3 box, Godot.Collections.Array<Plane> planes)
-    {
-        foreach (var plane in planes)
+        if (!tile.Mounted) return false;
+        for (var i = 0; i < tile.Latches.Length; i++)
         {
-            var n = plane.Normal;
-            // The box corner deepest along the inward direction (−normal).
-            var corner = new Vector3(n.X > 0 ? box.Min.X : box.Max.X, n.Y > 0 ? box.Min.Y : box.Max.Y, n.Z > 0 ? box.Min.Z : box.Max.Z);
-            if (plane.DistanceTo(corner) > 0) return false;
+            var latch = tile.Latches[i];
+            if (!latch.Applied || latch.AppliedEpoch != _captureEpoch) return false;
+            if ((_world!.Transition != WorldTransition.None || _world.Scrubbing) &&
+                latch.Set != Target(tile.Content.Content.Sites[i])) return false;
+            foreach (var handle in latch.Handles) if (!_host!.IsReady(handle)) return false;
         }
         return true;
     }
 
+    public void PrepareCapture(Pose pose)
+    {
+        // Every requested still starts from the same target state, independent of the preceding still's latch history.
+        _captureEpoch++;
+        _force = true;
+    }
+
+    public override void _EnterTree() { ProcessPriority = FramePriority.Systems; _force = true; }
+
+    public override void _Ready()
+    {
+        _world = Services.Get<IWorldState>();
+        _host = Services.Get<IRenderHost>();
+        _renderReadiness = Services.Get<IRenderReadiness>();
+        _mount = Services.Get<IStreamMountQueue>();
+        _rig = Services.Get<ICameraRig>();
+        _reflection = Services.Get<IReflectionWorld>();
+        _world.InstanceChanged += OnWorldInstanceChanged;
+    }
+
+    private void OnWorldInstanceChanged(long _) { _captureEpoch++; _force = true; }
+
+    public override void _ExitTree()
+    {
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        Release();
+    }
+
+    public void OnMapUnloading(MapId from) { Release(); _map = null; }
+
+    public void OnMapLoaded(IMapContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        Release();
+        _map = context.Descriptor.Id;
+        _error = null;
+        _force = true;
+    }
+
+    public override void _Process(double delta)
+    {
+        if (Error is not null || _world is null || _map is null) return;
+        _sinceCheck += Math.Min(delta, 0.1);
+        if (!_force && _sinceCheck < CheckSeconds) return;
+        _sinceCheck = 0;
+        try
+        {
+            var anywhere = _force || _world.Transition != WorldTransition.None || _world.Scrubbing;
+            var hasView = false;
+            var mirrored = false;
+            StreamDemandView reflection = default;
+            if (!anywhere && GetViewport()?.GetCamera3D() is { } camera)
+            {
+                var projection = camera.GetCameraProjection();
+                var transform = camera.GetCameraTransform();
+                for (var i = 0; i < _planes.Length; i++)
+                {
+                    var plane = transform * projection.GetProjectionPlane((Projection.Planes)i);
+                    _planes[i] = new(new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z), -plane.D);
+                }
+                hasView = true;
+                var view = new StreamDemandView(_rig!.Pose, _planes, ReadOnlyMemory<Box3>.Empty);
+                mirrored = _reflection!.TryGetDemand(in view, out reflection);
+            }
+            foreach (var tile in _tiles.Values)
+            {
+                for (var i = 0; i < tile.Latches.Length; i++)
+                {
+                    var site = tile.Content.Content.Sites[i];
+                    var visible = !hasView || FaunaDemand.InView(site.Bounds, _planes) || mirrored && FaunaDemand.InView(site.Bounds, reflection.Frustum.Span);
+                    Request(tile.Latches[i], Target(site), anywhere, visible);
+                }
+                if (tile.Work is null && NeedsWork(tile))
+                {
+                    tile.Work = new TileWork(this, tile, initial: false);
+                    _mount!.Enqueue(tile.Work);
+                }
+            }
+            _force = false;
+        }
+        catch (Exception error) { _error = error.GetBaseException().Message; }
+    }
+
+    private FaunaSet? Target(FaunaSiteContent site) =>
+        FaunaSchedule.Target(site.Kind, _world!.Sun.AltDeg, _world.Clock, _world.WeatherNow);
+
+    private void Request(Latch latch, FaunaSet? target, bool anywhere, bool visible)
+    {
+        if (latch.Applied && !anywhere && visible)
+        {
+            if (!latch.AllowVisible) latch.Requested = false;
+            return;
+        }
+        if (latch.Applied && latch.Set == target && latch.AppliedEpoch == _captureEpoch && !latch.Requested) return;
+        if (latch.Requested && latch.Desired == target && latch.Epoch == _captureEpoch)
+        { latch.AllowVisible |= anywhere; return; }
+        latch.Desired = target;
+        latch.Epoch = _captureEpoch;
+        latch.Version++;
+        latch.Requested = true;
+        latch.AllowVisible = anywhere;
+    }
+
+    private bool VisibleNow(Box3 bounds)
+    {
+        if (GetViewport()?.GetCamera3D() is not { } camera) return true;
+        var projection = camera.GetCameraProjection();
+        var transform = camera.GetCameraTransform();
+        for (var i = 0; i < _planes.Length; i++)
+        {
+            var plane = transform * projection.GetProjectionPlane((Projection.Planes)i);
+            _planes[i] = new(new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z), -plane.D);
+        }
+        if (FaunaDemand.InView(bounds, _planes)) return true;
+        var view = new StreamDemandView(_rig!.Pose, _planes, ReadOnlyMemory<Box3>.Empty);
+        return _reflection!.TryGetDemand(in view, out var reflected) && FaunaDemand.InView(bounds, reflected.Frustum.Span);
+    }
+
+    private static bool NeedsWork(TileState tile)
+    {
+        foreach (var latch in tile.Latches) if (!latch.Applied || latch.Requested) return true;
+        return false;
+    }
+
+    public void Unmount(BakeKey key)
+    {
+        if (!_tiles.Remove(key, out var tile)) return;
+        tile.Work?.Cancel();
+        Free(tile);
+    }
+
+    private void Free(TileState tile)
+    {
+        tile.Mounted = false;
+        foreach (var latch in tile.Latches)
+        {
+            foreach (var handle in latch.Handles) _host!.Unmount(handle);
+            latch.Handles.Clear();
+            latch.Applied = false;
+            latch.Requested = false;
+        }
+    }
+
     private void Release()
     {
-        if (_host is not null)
-            foreach (var latch in _latches)
-                if (latch.Handle is { } handle) _host.Unmount(handle);
-        _latches = [];
-        _prepared = null;
+        _generation++;
+        foreach (var tile in _tiles.Values) { tile.Work?.Cancel(); Free(tile); }
+        _tiles.Clear();
+        _sinceCheck = 0;
     }
 }

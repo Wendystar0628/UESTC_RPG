@@ -1,6 +1,8 @@
 using Campus.Tests;
 using Campus.Contracts;
 using Campus.Contracts.Fauna;
+using Campus.Contracts.Bake;
+using N = System.Numerics;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -9,6 +11,25 @@ namespace Campus.Systems.Fauna.Tests;
 [TestSuite]
 public sealed class FaunaScheduleTests
 {
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void DemandIncludesCrossTileHabitatsAndDistantVisibleSites()
+    {
+        var edge = TileGrid.BaseEdge;
+        var bounds = new Box3(new N.Vector3(edge * 2, -1, edge * 2), new N.Vector3(edge * 6, 1, edge * 6));
+        var entry = new BakeTileEntry(default, bounds);
+        var near = new Box3(new N.Vector3(edge * 2, -1, edge * 2), new N.Vector3(edge * 3, 1, edge * 3));
+        var nearView = new StreamDemandView(default, ReadOnlyMemory<N.Plane>.Empty, new[] { near });
+        AssertThat(FaunaDemand.Evaluate(in entry, in nearView, false) == StreamTileNeed.Required)
+            .OverrideFailureMessage("A habitat intersecting near demand loads even when its owner centre is elsewhere.").IsTrue();
+        N.Plane[] frustum = [new(N.Vector3.UnitX, -bounds.Max.X), new(-N.Vector3.UnitX, bounds.Min.X),
+            new(N.Vector3.UnitY, -bounds.Max.Y), new(-N.Vector3.UnitY, bounds.Min.Y),
+            new(N.Vector3.UnitZ, -bounds.Max.Z), new(-N.Vector3.UnitZ, bounds.Min.Z)];
+        var farView = new StreamDemandView(default, frustum, ReadOnlyMemory<Box3>.Empty);
+        AssertThat(FaunaDemand.Evaluate(in entry, in farView, false) == StreamTileNeed.Required &&
+            FaunaDemand.Evaluate(in entry, in farView, true) != StreamTileNeed.None)
+            .OverrideFailureMessage("Actual main or reflected visibility requests and retains animals beyond the near ring.").IsTrue();
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void ScheduleFollowsTheSpeciesTable()

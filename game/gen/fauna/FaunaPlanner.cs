@@ -27,8 +27,15 @@ public readonly record struct FaunaModelKey(FaunaKind Kind, CatCoat Coat, byte P
     };
 }
 
-/// <summary>One animal of a set: model, world position of its feet, heading (radians, model +Z turned about +Y) and scale.</summary>
-public sealed record FaunaInstance(FaunaModelKey Model, Vector3 Position, float Yaw, float Scale);
+/// <summary>One planned animal: model, feet XZ and height offset, heading (radians, model +Z turned about +Y) and scale.</summary>
+public sealed record FaunaInstance(FaunaModelKey Model, Vector3 Position, float Yaw, float Scale)
+{
+    /// <summary>Position.Y is an offset until the requested owner tile resolves this source.</summary>
+    public FaunaElevation Elevation { get; init; }
+}
+
+public enum FaunaHeightSource : byte { Ground, Water, Pad }
+public readonly record struct FaunaElevation(FaunaHeightSource Source, FeatureId Feature, Vector2 WaterFallback);
 
 /// <summary>
 /// One place with its own latch (WLD-LIFE): the animals it shows in each set. A set may be empty (the pigeons' night
@@ -52,7 +59,7 @@ public sealed record FaunaLayout(IReadOnlyList<FaunaSite> Sites, IReadOnlyList<s
 /// Chooses the mainline animal sites from the world model alone (WLD-LIFE): no feature IDs, no map IDs. Buildings are found by
 /// the entity category (residence, research, dining), the pigeon plaza is the largest stepped plaza (overlay kind "steps"), perches
 /// are seat walls (kind "seat-wall") and sparrows keep to trees of the planting network. Ground heights come from the world's
-/// terrain (WLD-TERRAIN). Deterministic: the same world and seed give the same layout.
+/// terrain only when a requested tile resolves the plan (WLD-TERRAIN). Deterministic: the same world and seed give the same layout.
 /// </summary>
 public static class FaunaPlanner
 {
@@ -60,7 +67,7 @@ public static class FaunaPlanner
 
     /// <param name="lakes">The map's lakes in order (MapDescriptor.Env.ReflectLakes): the first holds four black swans, the second two.
     /// Without it the two largest water bodies stand in.</param>
-    public static FaunaLayout Build(IWorldModel world, uint seed, IReadOnlyList<FeatureId>? lakes = null)
+    public static FaunaLayout Plan(IWorldModel world, uint seed, IReadOnlyList<FeatureId>? lakes = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         var log = new List<string>();
@@ -68,7 +75,8 @@ public static class FaunaPlanner
         var water = Footprints(world, f => f.Kind == S.Water).ToArray();
         var roads = world.Network.Roads.Where(r => r.Line.Points.Count >= 2).ToArray();
         bool Free(Vector2 p) => !buildings.Any(b => Inside(b, p)) && !water.Any(w => Inside(w, p));
-        float Ground(Vector2 p) => world.Spatial.GroundY(p.X, p.Y);
+        // Layout is independent of terrain evaluation; retain offsets and resolve only requested sites.
+        static float Ground(Vector2 _) => 0f;
 
         var sites = new List<FaunaSite>();
         var catSpots = new List<Vector2>();
@@ -282,7 +290,8 @@ public static class FaunaPlanner
             var count = li == 0 ? S.SwansFirstLake : S.SwansSecondLake;
             // One normal water level per body: ITerrain.WaterY, else the water module's rule (bank - 0.5 m + 0.004 m).
             var centre = VertexMean(lake.Ring);
-            var y = world.Terrain.WaterY(lake.Feature.Id) ?? world.Spatial.GroundY(centre.X, centre.Y) - 0.5f + 0.004f;
+            const float y = 0f;
+            var elevation = new FaunaElevation(FaunaHeightSource.Water, lake.Feature.Id, centre);
             var rng = new Rng(StableHash.Hash32(seed, lake.Feature.Id.Value, "fauna.swans"));
             bool Open(Vector2 p, float margin) => Inside(lake, p) && PlanGeometry.DistanceToRing(p, lake.Ring) >= margin && !buildings.Any(b => Inside(b, p));
             var day = new List<FaunaInstance>();
@@ -294,9 +303,9 @@ public static class FaunaPlanner
                 // A pair: the second bird a little behind and beside the first, on nearly the same heading.
                 var dir = new Vector2(MathF.Sin(heading), MathF.Cos(heading));
                 var mate = p - dir * S.SwanPairGap + new Vector2(dir.Y, -dir.X) * 0.9f;
-                day.Add(new(FaunaModelKey.SwanOf(SwanPose.Float), new(p.X, y, p.Y), heading, 1f));
+                day.Add(new(FaunaModelKey.SwanOf(SwanPose.Float), new(p.X, y, p.Y), heading, 1f) { Elevation = elevation });
                 if (day.Count < count && Open(mate, S.SwanShoreMargin * 0.6f))
-                    day.Add(new(FaunaModelKey.SwanOf(SwanPose.Float), new(mate.X, y, mate.Y), heading + 0.25f, 1f));
+                    day.Add(new(FaunaModelKey.SwanOf(SwanPose.Float), new(mate.X, y, mate.Y), heading + 0.25f, 1f) { Elevation = elevation });
             }
             // Night and heavy rain: tucked in together near the shore point closest to a building (the swan house on the
             // first lake, a bank on the second), asleep.
@@ -309,11 +318,11 @@ public static class FaunaPlanner
             {
                 var angle = i * 2.4f;
                 var p = huddle + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * (i == 0 ? 0f : 1.3f + 0.25f * i);
-                night.Add(new(FaunaModelKey.SwanOf(SwanPose.Sleep), new(p.X, y, p.Y), angle * 1.7f, 1f));
+                night.Add(new(FaunaModelKey.SwanOf(SwanPose.Sleep), new(p.X, y, p.Y), angle * 1.7f, 1f) { Elevation = elevation });
             }
             var key = $"swans.lake-{li + 1}";
             sites.Add(Site(key, FaunaKind.Swan, day, night, []));
-            log.Add($"{key}: {day.Count} black swans on '{lake.Feature.Name ?? lake.Feature.Id.Value}' at water y {y:F2}");
+            log.Add($"{key}: {day.Count} black swans on '{lake.Feature.Name ?? lake.Feature.Id.Value}'");
         }
         if (chosen.Length == 0) log.Add("swans: no lake; left out");
     }
@@ -338,7 +347,7 @@ public static class FaunaPlanner
             var along = (c - a) / length;
             var outward = new Vector2(along.Y, -along.X);
             if (Inside(b, mid + outward * 0.3f)) outward = -outward;
-            var y = world.Terrain.PadY(b.Feature.Id) + b.Feature.Height!.Value + S.CrowCopingRise;
+            var y = b.Feature.Height!.Value + S.CrowCopingRise;
             var rng = new Rng(StableHash.Hash32(seed, b.Feature.Id.Value, "fauna.crow.group"));
             var n = 2 + (rng.NextFloat() < 0.5f ? 1 : 0);
             var crows = new List<FaunaInstance>();
@@ -347,13 +356,14 @@ public static class FaunaPlanner
             {
                 var p = mid + along * at;
                 var heading = Vector2.TransformNormal(outward, Matrix3x2.CreateRotation((rng.NextFloat() - 0.5f) * 1.6f));
-                crows.Add(new(FaunaModelKey.CrowOf(), new(p.X, y, p.Y), Yaw(heading), S.Scale));
+                crows.Add(new(FaunaModelKey.CrowOf(), new(p.X, y, p.Y), Yaw(heading), S.Scale)
+                    { Elevation = new(FaunaHeightSource.Pad, b.Feature.Id, default) });
                 at += 0.8f + rng.NextFloat() * 0.9f;
             }
             groups.Add(mid);
             var key = $"crows.roof-{groups.Count}";
             sites.Add(Site(key, FaunaKind.Crow, crows, [], []));
-            log.Add($"{key}: {n} crows on '{b.Feature.Name ?? b.Feature.Id.Value}' parapet at y {y:F1}");
+            log.Add($"{key}: {n} crows on '{b.Feature.Name ?? b.Feature.Id.Value}' parapet");
         }
     }
 
@@ -366,11 +376,40 @@ public static class FaunaPlanner
         var max = new Vector3(float.MinValue);
         foreach (var a in all)
         {
-            min = Vector3.Min(min, a.Position - new Vector3(1.2f, 0.2f, 1.2f));
-            max = Vector3.Max(max, a.Position + new Vector3(1.2f, 1.0f, 1.2f));
+            // Heights remain conservative source bounds; no terrain sampling is needed for the directory.
+            var waterOffset = a.Elevation.Source switch
+            {
+                FaunaHeightSource.Ground or FaunaHeightSource.Pad => 0f,
+                FaunaHeightSource.Water => -0.5f + 0.004f,
+                _ => throw new ArgumentOutOfRangeException(nameof(day), a.Elevation.Source, "Unknown fauna height source."),
+            };
+            min = Vector3.Min(min, a.Position + new Vector3(-1.2f, TerrainSampling.MinimumHeight + waterOffset - 0.2f, -1.2f));
+            max = Vector3.Max(max, a.Position + new Vector3(1.2f, TerrainSampling.MaximumHeight + 1.0f, 1.2f));
         }
         if (all.Length == 0) { min = Vector3.Zero; max = Vector3.Zero; }
         return new(key, kind, day.ToArray(), night.ToArray(), rain.ToArray(), new(min, max));
+    }
+
+    /// <summary>Resolves the original height rules for one requested site's states, preserving its frozen owner bounds.</summary>
+    public static FaunaSite Resolve(FaunaSite site, IWorldModel world)
+    {
+        FaunaInstance Place(FaunaInstance animal)
+        {
+            var source = animal.Elevation;
+            var height = source.Source switch
+            {
+                FaunaHeightSource.Ground => world.Spatial.GroundY(animal.Position.X, animal.Position.Z),
+                FaunaHeightSource.Water => world.Terrain.WaterY(source.Feature) ??
+                    world.Spatial.GroundY(source.WaterFallback.X, source.WaterFallback.Y) - 0.5f + 0.004f,
+                FaunaHeightSource.Pad => world.Terrain.PadY(source.Feature),
+                _ => throw new ArgumentOutOfRangeException(nameof(site), source.Source, "Unknown fauna height source."),
+            };
+            return animal with { Position = animal.Position + Vector3.UnitY * height };
+        }
+        return site with
+        {
+            Day = site.Day.Select(Place).ToArray(), Night = site.Night.Select(Place).ToArray(), Rain = site.Rain.Select(Place).ToArray(),
+        };
     }
 
     private static IEnumerable<Footprint> Ranked(IEnumerable<Footprint> items, uint seed, string purpose) =>
