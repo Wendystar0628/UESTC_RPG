@@ -15,6 +15,7 @@
     "sand": { "200": "#E2D9CB" }
   },
   "special": {
+    "loading.background": "#B8B6D6",
     "ink": "#192A44",
     "screen": "#101C2E",
     "screen.solid": "#162336",

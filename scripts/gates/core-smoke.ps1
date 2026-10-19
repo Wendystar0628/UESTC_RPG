@@ -1,4 +1,4 @@
-﻿# 核心冒烟：正式场景完成存档、关闭与恢复，拒绝引擎错误/泄漏，报告实例参数需求与容量，供 G5 与 G20 核心共用。
+﻿# 核心冒烟：正式场景从标题经新游戏、行走、返回标题与继续，再关闭存档和重启恢复，拒绝引擎错误/泄漏，报告实例参数需求与容量，供 G5 与 G20 核心共用。
 # 用法：由 scripts\gate.ps1 点引用（. scripts\gates\core-smoke.ps1）后调用 Invoke-UESTCMainlineSmoke 与 Invoke-UESTCSaveCore，不单独运行
 if (-not (Get-Variable UESTCCoreSmokeResults -Scope Script -ErrorAction SilentlyContinue)) {
     $script:UESTCCoreSmokeResults = @{}
@@ -62,8 +62,12 @@ function Invoke-UESTCMainlineSmoke {
         if ($close.Output -match $godotFailurePattern) {
             throw 'The production close process reported an engine/shader error or resource leak.'
         }
-        foreach ($marker in @('CORE_TITLE_READY','CORE_INPUT_READY','CORE_ROUNDTRIP_READY')) {
+        foreach ($marker in @('CORE_TITLE_READY','CORE_INPUT_READY','CORE_RETURN_TITLE_READY','CORE_CONTINUE_READY','CORE_ROUNDTRIP_READY')) {
             if (-not $close.StdOut.Contains($marker)) { throw "The production close process missed $marker." }
+        }
+        $loadingSequence = '(?s)STARTUP_PHASE title-ready [^\r\n]+.*STARTUP_PHASE new-game-enter [^\r\n]+.*STARTUP_PHASE loading-complete [^\r\n]+.*STARTUP_PHASE input-ready [^\r\n]*mode=Walk.*CORE_INPUT_READY.*STARTUP_PHASE loading-complete [^\r\n]+.*CORE_RETURN_TITLE_READY.*STARTUP_PHASE loading-complete [^\r\n]+.*CORE_CONTINUE_READY'
+        if ($close.StdOut -notmatch $loadingSequence) {
+            throw 'The title/new-game/return/continue sequence did not complete each real loading progress bar.'
         }
         if ($null -eq $closeObservation.At) { throw 'The close process did not receive WM_CLOSE.' }
         # Same machine monotonic clock; includes the runner's final observation interval.
@@ -115,13 +119,13 @@ function Invoke-UESTCMainlineSmoke {
         }
         $parameterUsage['Warnings'] = $parameterWarnings
         $result = [pscustomobject]@{ Status='Passed';
-            Scope='G5 startup/exit automatic assertions; full UI/transit mainline remains centralized'; CloseMilliseconds=$closeMs;
+            Scope='G5 Title/NewGame/Walk/ReturnToTitle/Continue/window-close save and restart restore'; CloseMilliseconds=$closeMs;
             Generation=[UInt64]$latest; PersistedFields='RuntimeMatched (CoreSnapshotsMatch spatial position tolerance; other fields exact)';
             Screenshot='Both captured for Opus visual review; no G7 pixel comparison or tolerance claim';
             InstanceShaderParameters=[pscustomobject]$parameterUsage;
             Logs=$work; Screenshots=$shots }
     } catch {
-        $result = [pscustomobject]@{ Status='Failed'; Scope='G5 startup/exit core'; Error=$_.Exception.Message; Logs=$work; Screenshots=$shots }
+        $result = [pscustomobject]@{ Status='Failed'; Scope='G5 title/entry/return/continue/exit core'; Error=$_.Exception.Message; Logs=$work; Screenshots=$shots }
     } finally { if ($lease) { Exit-UESTCBuildLock $lease } }
     $script:UESTCCoreSmokeResults[$key] = $result
     return $result

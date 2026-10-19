@@ -21,7 +21,8 @@ namespace Campus.Hud;
 /// </summary>
 [KernelNode("hud", Owner = "WP-35")]
 [KernelService(typeof(HudRoot), Owner = "WP-35")]
-public partial class HudRoot : CanvasLayer, IBootParticipant
+[KernelService(typeof(IAppLoadingPresentation), Owner = "WP-35")]
+public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresentation
 {
     private const float IdleFade = 4f;
     private const double RefreshInterval = 0.1;
@@ -39,6 +40,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
     private IVeilState _veil = null!;
     private UiThemeClock _clock = null!;
     private Control _root = null!, _safeFrame = null!, _corners = null!, _minimapSlot = null!;
+    private Control _loadingHost = null!;
     private Control _backgroundHost = null!, _pageHost = null!, _dialogHost = null!, _hintHost = null!;
     private VBoxContainer _topLeft = null!, _topRight = null!, _bottomLeft = null!, _bottomRight = null!;
     private float _cornerAlpha = 1;
@@ -116,6 +118,17 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         AddChild(_root);
         _root.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
+        // 必需应用边界与普通 HUD 分开显隐；同一 CanvasLayer 内后绘制，--ui=0 也真实覆盖。
+        _loadingHost = new Control
+        {
+            Name = "LoadingHost",
+            Theme = theme.Theme,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            TextureFilter = CanvasItem.TextureFilterEnum.LinearWithMipmaps
+        };
+        AddChild(_loadingHost);
+        _loadingHost.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+
         _backgroundHost = _kit.Layout.Host(_root, "BackgroundHost");
         _safeFrame = _kit.Layout.SafeFrame(_root);
         _corners = _kit.Layout.Host(_safeFrame, "CornerHost");
@@ -166,7 +179,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant
         _settings.Tick(delta);
         if (_scaleDebounce >= 0 && (_scaleDebounce += (float)delta) >= 0.2f) { _scaleDebounce = -1; ApplyScale(); }
         SyncCorners();
-        _wait.Tick(delta, atCorner: !Playing);
+        _wait.Tick(delta, atCorner: !Playing, suppressed: Active);
         _refreshClock += delta;
         if (_refreshClock >= RefreshInterval) RefreshHud();
         // 只把真正交给玩家、未被遮住的界面时间算作空闲；图库保留待评审的 HUD。

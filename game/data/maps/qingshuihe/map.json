@@ -50,12 +50,7 @@
     "quietUntilDusk": true,
     "weatherProfile": "chengdu",
     "sunProfile": "default",
-    "fixed": null,
-    "newGameStart": {
-      "clock": 17.083333333333332,
-      "season": "autumn",
-      "weather": "clear"
-    }
+    "fixed": null
   },
   "env": {
     "sky": "sky.json",
@@ -79,6 +74,5 @@
     },
     "cloudLayout": "qingshuihe"
   },
-  "cinematics": {},
   "portals": []
 }

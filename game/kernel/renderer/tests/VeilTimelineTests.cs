@@ -75,7 +75,7 @@ public sealed class VeilTimelineTests
     public void CoverDuringRevealCancelsTheFadeWithoutLosingTheNewOwner()
     {
         var veil = new VeilTimeline();
-        var old = veil.Cover(VeilReason.Cinematic, 0);
+        var old = veil.Cover(VeilReason.Transit, 0);
         var reveal = old.Reveal(1);
         veil.Advance(.5);
         using var next = veil.Cover(VeilReason.Respawn, 1);

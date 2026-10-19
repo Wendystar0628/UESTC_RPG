@@ -22,7 +22,7 @@ public sealed class BakeSurfaceTests
             Id: new("fixture"), Name: default!, Kind: Campus.Contracts.Maps.MapKind.Outdoor,
             Version: 1, Seed: 1, Geo: default!, Center: default, Bounds: mapBounds, DataRect: default!,
             Roam: default!, TileMin: default, TileMax: default, DefaultSpawn: "fixture", Spawns: [],
-            World: default!, Env: default!, Cinematics: new Dictionary<string, string>(), Portals: []);
+            World: default!, Env: default!, Portals: []);
         var context = new BuildContext { World = null!, Map = map, WorldSeed = 1, Catalog = catalog };
         var builder = new BakeGeometryBuilder(catalog, new ServiceRegistry());
         foreach (var level in new[] { LodLevel.L0, LodLevel.L4 })

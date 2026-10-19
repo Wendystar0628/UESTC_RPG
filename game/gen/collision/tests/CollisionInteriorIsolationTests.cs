@@ -170,7 +170,7 @@ public sealed class CollisionInteriorIsolationTests
         new(0, 0, 0, Vector2.Zero, new(64, 64)), new(32, 32), new(new(0, -5, 0), new(64, 20, 64)),
         new(Vector2.Zero, new(64, 64)), new(1, 0, 64, -5, 20, 0, 0, 0), new(0, 0), new(0, 0),
         "fixture", [], new(MapTimeRule.Shared, new(12, Season.Autumn), new("测试", "Fixture"), false, "fixture-weather"),
-        new("fixture-sky", "fixture-backdrop", []), new Dictionary<string, string>(), []);
+        new("fixture-sky", "fixture-backdrop", []), []);
 
     // The aggregate is a non-building marker so this fixture isolates the provider's floor, not automatic exterior walls.
     private static FakeWorld FixtureWorld(bool open) => new()

@@ -83,7 +83,7 @@ public sealed class MapInputSnapshotTests
             new(0.9f, 30, 3000, -28, 2000, 30, 40, 150), new(-1, -1), new(0, 0),
             "spawn", [new("spawn", new(new(0, 20, 30), 0, -15), null)],
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("默认", "Default"), false, "fixture"),
-            new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+            new("sky.json", "backdrop.json", []), []);
         return new(descriptor, "res://data/fixture/", []);
     }
     private static WorldModelLoadResult Loaded(MapCatalogEntry entry)

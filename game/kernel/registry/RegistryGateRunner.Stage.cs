@@ -29,7 +29,7 @@ public static partial class RegistryGateRunner
             GD.Print($"CORE_BOOT_PHASE {phase} {FrameClock.MonotonicMilliseconds:R}");
     }
 
-    /// <summary>Screenshot runs freeze the animation clock, except named cinematics and benchmarks.</summary>
+    /// <summary>Screenshot runs freeze the animation clock, except benchmarks.</summary>
     public static bool FreezesAnimation => AppBoot.Options.FreezeAnimation;
 
     private static byte[] ReadData(string path)

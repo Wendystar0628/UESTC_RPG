@@ -5,7 +5,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Renderer;
 
-/// <summary>Draws the actual requested materials behind the opaque veil before reporting pipeline readiness.</summary>
+/// <summary>Draws the actual requested materials behind presented opaque coverage before reporting pipeline readiness.</summary>
 [KernelNode("material-warmup", Owner = "WP-01")]
 [KernelService(typeof(MaterialWarmup), Owner = "WP-01")]
 public partial class MaterialWarmup : Node
@@ -27,6 +27,7 @@ public partial class MaterialWarmup : Node
     private IPaletteIndexResolver? _palettes;
     private IVeilState? _veil;
     private IVeilPresentation? _presentation;
+    private IAppLoadingPresentation? _loading;
     private Camera3D? _camera;
     private Node3D? _samples3D;
     private CanvasLayer? _samples2D;
@@ -61,13 +62,14 @@ public partial class MaterialWarmup : Node
 
     /// <summary>Explicit composition for renderer fixtures; production uses the registered services.</summary>
     public void Configure(IToonMaterialProvider materials, IVeilState veil, IVeilPresentation presentation, Camera3D camera,
-        IPaletteIndexResolver palettes)
+        IPaletteIndexResolver palettes, IAppLoadingPresentation loading)
     {
         if (IsInsideTree()) throw new InvalidOperationException("Configure warmup before mounting it.");
         _materials = materials;
         _palettes = palettes;
         _veil = veil;
         _presentation = presentation;
+        _loading = loading;
         _camera = camera;
     }
 
@@ -78,6 +80,7 @@ public partial class MaterialWarmup : Node
         _palettes ??= Services.Get<IPaletteCatalogSource>().Catalog;
         _veil ??= Services.Get<IVeilState>();
         _presentation ??= Services.Get<IVeilPresentation>();
+        _loading ??= Services.Get<IAppLoadingPresentation>();
         _camera ??= Services.Get<Camera3D>();
         RenderingServer.Singleton.FramePostDraw += OnFrameDrawn;
     }
@@ -383,7 +386,7 @@ public partial class MaterialWarmup : Node
             _camera.Near >= 2f || _camera.Far <= 2f)
             throw new InvalidOperationException("Material warming requires the active perspective camera to draw its layer-1 sample array at 2 m.");
     }
-    private bool Covered => _veil!.Opacity >= 1f && _presentation?.IsCovered == true;
+    private bool Covered => _loading!.IsCovered || _veil!.Opacity >= 1f && _presentation?.IsCovered == true;
     private bool ResetForViewportChange()
     {
         var size = GetViewport().GetVisibleRect().Size;
@@ -399,7 +402,7 @@ public partial class MaterialWarmup : Node
         $"active={_active},ready={IsReady},batch={_batch?.Revision},batchMaterials={_batch?.Materials.Count ?? 0}," +
         $"lastCapturedRevision={_lastCapturedRevision},lastCapturedMaterials={_lastCapturedMaterials}," +
         $"drawn={_drawn},stable={_stable}/{StableFrames},fixture={_fixtureTask?.Status}," +
-        $"covered={_presentation?.IsCovered},veil={_veil?.Opacity},retiringBatches={_retiring.Count},error={Error ?? "none"}";
+        $"covered={Covered},loadingCovered={_loading?.IsCovered},veil={_veil?.Opacity},retiringBatches={_retiring.Count},error={Error ?? "none"}";
     public override void _ExitTree()
     {
         RenderingServer.Singleton.FramePostDraw -= OnFrameDrawn;

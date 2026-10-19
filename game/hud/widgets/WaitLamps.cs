@@ -8,7 +8,7 @@ namespace Campus.Hud.Widgets;
 /// 等待灯（UI-VISUAL-COMPONENTS §4.5）：三枚过孔依次点亮再一起熄，不用进度条、不显示百分比。
 /// 何时出现由雾幕服务的 <see cref="IVeilState.Waiting"/> 决定（1.5 s / 扉页 4 s 的延迟已在服务里），这里只随它显隐。
 /// 不显示时不留件（<see cref="UiKit.Holders"/>）：亮起时建、淡出后释放。减少动态效果下三枚常亮，由文字陪着。
-/// 界面态以外（开始页、进入过场）贴右下角，行走中四角有常驻件，改放底边居中。
+/// 开始页贴右下角，行走中四角有常驻件，改放底边居中；应用加载页不出等待灯。
 /// </summary>
 public partial class WaitLamps : Control
 {
@@ -32,8 +32,9 @@ public partial class WaitLamps : Control
     }
 
     /// <summary>由界面根每帧调用；atCorner 为真时贴右下角，否则底边居中。</summary>
-    public void Tick(double delta, bool atCorner)
+    public void Tick(double delta, bool atCorner, bool suppressed = false)
     {
+        Visible = !suppressed;
         var waiting = _veil.Waiting;
         if (waiting && _panel is null) Build();
         if (_panel is null) return;

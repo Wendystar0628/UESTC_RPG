@@ -61,7 +61,7 @@ public sealed class FlightBoundsTests
         new(0, 0, 0, new(-100, -100), new(100, 100)), Vector2.Zero,
         new(new(-200, -28, -200), new(200, 2000, 200)), new(new(-200, -200), new(200, 200)),
         new(.9f, 30, 3000, -28, 2000, 30, 40, 150), default, default, "start", [], null!,
-        new("test", "test", []), new Dictionary<string, string>(), []);
+        new("test", "test", []), []);
     private sealed class Outskirts : IOutskirtsModel
     {
         public IReadOnlyList<Vector2> FrontLine { get; } = Square(120);

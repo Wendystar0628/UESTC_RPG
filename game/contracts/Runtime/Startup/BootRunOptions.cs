@@ -1,5 +1,4 @@
 using Campus.Contracts.AppFlow;
-using Campus.Contracts.Cinematic;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
 
@@ -65,7 +64,6 @@ public sealed record CaptureBootOptions
     public IReadOnlyList<string> Shots { get; init; } = [];
     public int? FrameLimit { get; init; }
     public bool IncludeCanvas { get; init; } = true;
-    public CinematicKind? Cinematic { get; init; }
 }
 public sealed record QualityBootOptions
 {

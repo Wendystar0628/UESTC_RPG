@@ -33,6 +33,6 @@ internal static class WorldTestKit
         new(0, 0, 0, Vector2.Zero, Vector2.One), Vector2.Zero, new(Vector3.Zero, Vector3.One),
         new(Vector2.Zero, Vector2.One), new(1, 1, 1, -1, 1, 1, 1, 1), new(0, 0), new(0, 0),
         "entry", [], new(MapTimeRule.Shared, preset, new("默认", "Default"), quiet, "test-profile"),
-        new("sky", "backdrop", []), new Dictionary<string, string>(), []));
+        new("sky", "backdrop", []), []));
 
 }

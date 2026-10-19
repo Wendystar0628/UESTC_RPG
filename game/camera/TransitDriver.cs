@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
 using Godot;
 using N = System.Numerics;
@@ -13,7 +12,7 @@ namespace Campus.Camera;
 /// </summary>
 [KernelService(typeof(ITransitDriver), Owner = "WP-36")]
 public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRuntime runtime,
-    ICinematicPlayback waits, IMapService maps, ITerrainPreparation terrain, ICameraPoseValidator validator,
+    IMapService maps, ITerrainPreparation terrain, ICameraPoseValidator validator,
     IWalkController? walk = null) : ITransitDriver
 {
     private TransitRun? _active;
@@ -42,6 +41,7 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
         IVeilLease? cover = null;
         try
         {
+            var tree = Engine.GetMainLoop() as SceneTree ?? throw new InvalidOperationException("Transit requires a running scene tree.");
             var reason = run.Kind switch
             {
                 TransitKind.Teleport => VeilReason.Teleport,
@@ -58,7 +58,7 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
             run.Progress = 0.25f;
             if (run.Cancelled) return;
             // The move must follow a presented opaque frame, not just a veil opacity of one.
-            await waits.WaitForPresentedCoverage();
+            await tree.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             if (run.Cancelled) return;
 
             var context = maps.Context ?? throw new InvalidOperationException("Transit has no mounted map.");
@@ -91,24 +91,25 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
 
             using (veil.ObserveReadinessWait())
             {
-                await waits.WaitUntil(() => run.Cancelled || destination.Done.IsCompleted, double.PositiveInfinity,
-                    "Transit destination did not become resident, warm and collision-ready.");
+                await Task.WhenAny(destination.Done, run.Done);
                 if (run.Cancelled) return;
                 await destination.Done;
                 RequireCurrentArrival(destination);
-                var frames = 0;
-                await waits.WaitUntil(() => run.Cancelled || ++frames > TransitTuning.MinSettleFrames,
-                    double.PositiveInfinity, "Transit settle frames.");
-                if (run.Cancelled) return;
+                for (var frame = 0; frame < TransitTuning.MinSettleFrames; frame++)
+                {
+                    await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                    if (run.Cancelled) return;
+                }
                 if (body is not null)
                 {
-                    try
+                    var elapsed = 0d;
+                    while (body.Active && !body.ExitRequested && !(body.CollisionReady && body.Grounded) &&
+                        elapsed < TransitTuning.WalkSettleSeconds)
                     {
-                        await waits.WaitUntil(() => run.Cancelled || !body.Active || body.ExitRequested || body.CollisionReady && body.Grounded,
-                            TransitTuning.WalkSettleSeconds, "Transit walking feet did not settle.");
+                        await tree.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
+                        if (run.Cancelled) return;
+                        elapsed += tree.Root.GetProcessDeltaTime();
                     }
-                    catch (TimeoutException) { }
-                    if (run.Cancelled) return;
                 }
             }
 

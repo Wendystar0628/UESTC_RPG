@@ -6,7 +6,7 @@ namespace Campus.Camera;
 public partial class ObserverCamera
 {
     public float RollDeg => IsPlaying && _mode == ViewMode.Walk ? _walk?.EyeRollDeg ?? 0 : 0;
-    // Title and cinematics own a presentation pose while the restored walk body stays frozen.
+    // Application flow owns a presentation pose while the restored walk body stays frozen.
     public Pose Pose => !IsPlaying || _mode is null ? _pose : Mode switch
     {
         ViewMode.Fly => _pose,

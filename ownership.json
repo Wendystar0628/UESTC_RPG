@@ -680,10 +680,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/data/maps/*/cinematics/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/style/outline/post_fxaa.glsl",
       "owner": "WP-05"
     },
@@ -786,10 +782,6 @@
     {
       "pattern": "game/data/audio/licenses.json",
       "owner": "WP-53e"
-    },
-    {
-      "pattern": "game/camera/cinematic/*.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/data/maps/*/backdrop.json",
@@ -916,7 +908,7 @@
       "owner": "WP-53b"
     },
     {
-      "pattern": "game/data/maps/*/cinematics/**",
+      "pattern": "game/data/maps/*/title-clouds.json",
       "owner": "WP-49b"
     },
     {
@@ -1133,10 +1125,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/camera/cinematic/**",
-      "owner": "WP-49a"
-    },
-    {
       "pattern": "game/gen/parts/street/**",
       "owner": "WP-13"
     },
@@ -1243,6 +1231,10 @@
     {
       "pattern": "game/gen/zones/core/**",
       "owner": "WP-16"
+    },
+    {
+      "pattern": "game/gen/zones/west/SixInterior/**",
+      "owner": "WP-31b"
     },
     {
       "pattern": "game/gen/zones/west/**",
@@ -1435,6 +1427,14 @@
     {
       "pattern": "game/kernel/bake/**",
       "owner": "WP-02a"
+    },
+    {
+      "pattern": "game/kernel/boot/TitleCloudNode.cs",
+      "owner": "WP-49b"
+    },
+    {
+      "pattern": "game/kernel/boot/TitleCloudNode.cs.uid",
+      "owner": "WP-49b"
     },
     {
       "pattern": "game/kernel/boot/**",

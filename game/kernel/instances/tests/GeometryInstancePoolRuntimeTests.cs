@@ -408,7 +408,7 @@ public sealed class GeometryInstancePoolRuntimeTests
         Id: id, Name: default!, Kind: MapKind.Outdoor, Version: 1, Seed: 1, Geo: default!, Center: default,
         Bounds: default, DataRect: default!, Roam: default!, TileMin: default, TileMax: default,
         DefaultSpawn: "fixture", Spawns: [], World: default!, Env: default!,
-        Cinematics: new Dictionary<string, string>(), Portals: []));
+        Portals: []));
 
     private static PaletteCatalog Catalog() => new(new PaletteRegistry(
         Enumerable.Range(0, 256).Select(i => new PaletteEntry(new("fixture.color." + i), new(i),

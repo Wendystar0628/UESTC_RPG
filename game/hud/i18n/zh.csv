@@ -260,6 +260,11 @@ title.credits,制作人员与许可,Credits and licenses
 title.quit,退出,Quit
 title.continue.none,还没有存档,No saves yet
 title.enter_failed,没能进入，请再试一次,Could not enter. Please try again.
+save.error.restore_world,没能恢复存档，已回到开始页，请重试或开始新游戏。,Could not restore the save. Returned to the title screen. Try again or start a new game.
+loading.title,返回标题,Return to title
+loading.destination,{action} · {place} · {season} · {clock},{action} · {place} · {season} · {clock}
+loading.progress,已准备 {completed} / {total} 项,{completed} of {total} preparation items ready
+hud.first_guide,单击画面开始 · Esc 打开菜单 · H 操作说明,Click to begin · Esc for menu · H for controls
 saves.title,存档,Saves
 saves.latest,最近,Latest
 saves.empty,空 · 新游戏,Empty · New game

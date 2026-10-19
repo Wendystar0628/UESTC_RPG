@@ -52,7 +52,7 @@ public sealed class MapSpawnResolutionTests
         var file = new MapFile(new("spawn-test"), new("Test", "Test"), MapKind.Outdoor, 1, 1,
             new(new(-64, -64), new(64, 64)), new(.9f, 30, 3000, -28, 2000, 30, 40, 150), "P00", spawns,
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Default", "Default"), true, "test"),
-            new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+            new("sky.json", "backdrop.json", []), []);
         return new(file.Complete(new(103, 30, 32648, new(-32, -32), new(32, 32)), Vector2.Zero,
             new(new(-64, -28, -64), new(64, 2000, 64)), new(-1, -1), new(0, 0)),
             "res://data/maps/spawn-test/", [first, other]);

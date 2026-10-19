@@ -18,7 +18,7 @@ public interface ICameraRig
     ITransitHandle? ActiveTransit { get; }   // 进行中的跳转或传送，没有时为 null（SYS-AUDIO）
     float EdgeFog { get; }                   // 与全局参数 edge_fog 同一个值（WLD-OUTSKIRTS），音频据此压低远处的声音
 }
-public enum InputLockReason : byte { Atlas, Cinematic, MapTravel, Menu, Rebind } // Append new reasons only.
+public enum InputLockReason : byte { Atlas, AppFlow, MapTravel, Menu, Rebind } // Append new reasons only.
 public enum TransitPreference : byte { Auto, Teleport }   // Auto 按距离选滑移、弧线或雾幕弧线（UI-NAV）；Teleport 是地图传送（SYS-ATLAS）
 public sealed record TransitOptions(EntryPath? Entry = null, Vector3? LandOn = null /* 行走落点 */)
 {

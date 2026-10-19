@@ -29,7 +29,7 @@ public static class MatTable
     public const float LineWidth = 1.0f;
     public const float LineTint = 0.22f;
     public const float FineFadeEndMeters = 60f;   // 小件线淡出的终点（ART-STYLE）
-    public const int LastEmissiveSlot = 29;       // 可作自发光的最后一个灯光通道槽位：30 sys.cue、31 sys.poolGain 不是亮度
+    public const int LastEmissiveSlot = 29;       // 可作自发光的最后一个灯光通道槽位：30 为预留、31 sys.poolGain 不是亮度
 
     public const int ByteCount = Width * Height * 4;
 
@@ -86,7 +86,7 @@ public static class MatTable
 
     /// <summary>
     /// 自发光通道：槽位 + 1，0 表示不自发光。只收灯光通道的窗灯与灯具槽位（ENG-PERF）；
-    /// sys.cue、sys.poolGain 不是亮度，未登记的通道名直接报错。
+    /// 预留槽位与 sys.poolGain 不是亮度，未登记的通道名直接报错。
     /// </summary>
     public static int EmissiveByte(ChannelId? channel)
     {

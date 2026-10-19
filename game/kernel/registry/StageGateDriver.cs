@@ -1,9 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Atlas;
-using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
-using Campus.Contracts.Save;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Inspect;
@@ -22,7 +20,6 @@ public interface IStageGateHost
     CancellationToken Lifetime { get; }
     bool Ready { get; }
     bool Closing { get; }
-    string Phase { set; }
     void CheckActive();
     void SyncView();
     Task Close();
@@ -30,7 +27,7 @@ public interface IStageGateHost
 }
 
 /// <summary>
-/// Drives the production stage from the command line: named cinematics (--cine), screenshot runs (--shots, --frames)
+/// Drives the production stage from the command line: screenshot runs (--shots, --frames)
 /// and the startup/exit core lifecycle (--gate=save-close, save-resume). No second scene or service graph is created.
 /// </summary>
 public sealed partial class StageGateDriver(IStageGateHost host)
@@ -58,38 +55,6 @@ public sealed partial class StageGateDriver(IStageGateHost host)
     {
         if (_closeAt is { } closeAt)
             GD.Print($"CORE_SHUTDOWN_MS {FrameClock.MonotonicMilliseconds - closeAt:R}");
-    }
-
-    /// <summary>--cine: plays one named cinematic after the boot reveal.</summary>
-    public async Task RunNamedCinematic()
-    {
-        var options = AppBoot.Options;
-        if (options.Capture.Cinematic is not { } cinematic) return;
-        host.Phase = "named-cinematic";
-        var saves = Kernel.Get<ISaveService>();
-        var flow = host.Flow;
-        switch (cinematic)
-        {
-            case CinematicKind.EnterNew:
-            case CinematicKind.EnterNewShort:
-                SlotId? selected = options.Save.WriteSlot ?? options.Flow.Slot;
-                var slot = selected ?? saves.Slots.FirstOrDefault(info => info.Health == SlotHealth.Empty)?.Slot
-                    ?? throw new InvalidOperationException("Named new-game playback requires an empty or explicitly selected slot.");
-                GD.Print($"STARTUP_PHASE new-game-enter {FrameClock.MonotonicMilliseconds:R}");
-                if (await flow.Enter(new(EnterKind.NewGame, slot)) != EnterResult.Entered)
-                    throw new InvalidOperationException("Named new-game playback failed.");
-                break;
-            case CinematicKind.EnterContinue:
-                if (await flow.Enter(new(EnterKind.Continue, saves.Active ?? saves.Continue)) != EnterResult.Entered)
-                    throw new InvalidOperationException("Named continue playback requires a readable slot.");
-                break;
-            case CinematicKind.Leave:
-                await flow.ReturnToTitle();
-                if (flow.State != AppState.Title) throw new InvalidOperationException("Named return-to-title playback failed.");
-                break;
-            default: throw new ArgumentOutOfRangeException(nameof(cinematic));
-        }
-        host.CheckActive();
     }
 
     /// <summary>Called once startup reached realtime: starts the requested production command.</summary>

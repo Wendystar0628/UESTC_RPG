@@ -21,10 +21,7 @@ public sealed record MapWorldRules(
     bool QuietUntilDusk,                                         // 默认状态保持晴到本季黄昏带结束（SYS-WEATHER）
     string WeatherProfile,                                       // game/data/weather/<剧本>/；清水河 "chengdu"
     string SunProfile = "default",                               // 美术日月轨迹（SYS-TIME）
-    WorldPreset? Fixed = null)                                   // Time == Fixed 时进图钉住的状态（预留）
-{
-    public WorldPreset? NewGameStart { get; init; }              // SYS-TITLE：新游戏过场的起点，清水河秋 17:05 晴；null 时取 Default
-}
+    WorldPreset? Fixed = null);                                  // Time == Fixed 时进图钉住的状态（预留）
 public sealed record MapEnvironment(string Sky, string Backdrop, IReadOnlyList<FeatureId> ReflectLakes)   // 列表顺序即湖号
 {
     public string? Outskirts { get; init; }                      // WLD-OUTSKIRTS："outskirts.json"；null 表示没有外围
@@ -38,7 +35,6 @@ public sealed record MapDescriptor(
     TileKey TileMin, TileKey TileMax,
     string DefaultSpawn, IReadOnlyList<MapSpawn> Spawns,
     MapWorldRules World, MapEnvironment Env,
-    IReadOnlyDictionary<string, string> Cinematics,              // 角色 → 过场 ID：enterNew、enterNewShort、enterContinue、leave（SYS-TITLE）
     IReadOnlyList<MapPortal> Portals)
 {
     public MapTitle? Title { get; init; }                        // 没写时开始页用默认图的 T0

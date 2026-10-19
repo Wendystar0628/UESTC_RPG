@@ -125,7 +125,7 @@ public sealed class TerrainInputBoundaryTests
     private static MapFile File() => new(new("fixture"), new("Fixture", "Fixture"), MapKind.Outdoor, 1, 1,
         new(Vector2.Zero, new(64, 64)), new(1, 0, 64, 0, 64, 1, 1, 1), "start", [],
         new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Default", "Default"), false, "fixture"),
-        new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+        new("sky.json", "backdrop.json", []), []);
 
     private static MapDescriptor Complete(MapFile file) => file.Complete(
         new(0, 0, 32648, Vector2.Zero, new(64, 64)), new(32, 32),

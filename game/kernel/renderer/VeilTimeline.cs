@@ -159,8 +159,7 @@ public sealed class VeilTimeline : IVeilService
             VeilReason.Season => 3,
             VeilReason.Quality => 4,
             VeilReason.Respawn => 5,
-            VeilReason.Cinematic => 6,
-            VeilReason.MapTravel => 7,
+            VeilReason.MapTravel => 6,
             _ => throw new ArgumentOutOfRangeException(nameof(reason))
         };
         if (!float.IsFinite(seconds) || seconds < 0) throw new ArgumentOutOfRangeException(nameof(seconds));

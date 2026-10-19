@@ -10,15 +10,6 @@ public partial class ObserverCamera
     private readonly List<Layer> _layers = [];
     private long _nextLayer;
     private float _wheel;
-    private bool _menuHeld;
-    private float _menuSeconds;
-    private bool _skipSent;
-    private bool _skipHintVisible;
-    // ISkipInputState: hold-menu skip of the Entering sequence.
-    public float Progress => _flow?.State == AppState.Entering && _menuHeld
-        ? Math.Clamp(_menuSeconds / Tuning.SkipHoldSeconds, 0, 1) : 0;
-    public bool HintVisible => _flow?.State == AppState.Entering && _skipHintVisible;
-
     public IDisposable RegisterLayer(string owner, int priority, Func<InputActionEvent, bool> handler)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(owner);
@@ -31,21 +22,15 @@ public partial class ObserverCamera
 
     public override void _Input(InputEvent input)
     {
-        if (_flow?.State == AppState.Entering) _skipHintVisible = true;
         // Releases always clear held state, including when a newly opened GUI consumes the release.
         foreach (string action in InputBindings.Actions)
             if (input.IsActionReleased(action)) _input.Release(action);
-        if (input.IsActionReleased("menu")) ResetSkipHold();
     }
 
     public override void _UnhandledInput(InputEvent input)
     {
         if (_flow is null) return;
-        if (_flow.State == AppState.Entering)
-        {
-            if (input.IsActionPressed("menu")) { _menuHeld = true; GetViewport().SetInputAsHandled(); }
-            return;
-        }
+        if (_flow.State is AppState.Boot or AppState.Entering or AppState.Leaving) return;
         if (input is InputEventMouseMotion motion)
         {
             if (!IsPlaying || InterfaceMode || _locks.Locked) return;
@@ -127,11 +112,8 @@ public partial class ObserverCamera
     {
         if (what != NotificationApplicationFocusOut) return;
         _input.Clear(); _flight.Reset(); _walk?.SetInput(default);
-        ResetSkipHold();
         SetInterfaceMode(true);
     }
-
-    private void ResetSkipHold() { _menuHeld = false; _menuSeconds = 0; _skipSent = false; }
 
     private bool Dispatch(InputActionEvent action)
     {
@@ -141,15 +123,7 @@ public partial class ObserverCamera
             if (_layers.Contains(layer) && layer.Handler(action)) return true;
         return false;
     }
-    private void AdvanceInput(float seconds)
-    {
-        _input.Advance(seconds);
-        if (_flow?.State == AppState.Entering && _menuHeld && !_skipSent)
-        {
-            _menuSeconds += seconds;
-            if (_menuSeconds >= Tuning.SkipHoldSeconds && _flow.Skippable) { _skipSent = true; _flow.Skip(); }
-        }
-    }
+    private void AdvanceInput(float seconds) => _input.Advance(seconds);
     private bool CanDoubleSpace() => _map?.World.Spatial.MediumAt(Pose.Position).Kind != MediumKind.Underwater
         && (Mode switch
         {

@@ -70,8 +70,8 @@ public sealed class WorldRestoreTests
         AssertThat((world.WorldHours, world.Clock, world.SeasonPos, world.AnimTime,
             world.Rev, world.Instance, weather.Steps.Count)).IsEqual(before);
         var context = new CaptureContext(SaveReason.Quit, new("test-world"), true) { Moment = moment };
-        using var flow = world.AcquireFlow(FlowPriority.Cinematic, 0);
-        flow.FlowTo(18, 60);
+        using var flow = world.AcquireFlow(FlowPriority.AppFlow, 0);
+        world.SetClock(18);
         var shared = world.Capture(in context);
         AssertThat(shared.WorldHours).IsEqual(moment.WorldHours);
         AssertThat(shared.ClockOffset).IsEqual(moment.ClockOffset);
@@ -137,7 +137,7 @@ public sealed class WorldRestoreTests
                 world.Restore(new WorldSaveV1(7, .2, 0, Season.Spring, 10, 10, 10.25), Restore());
                 world.CompleteRestore();
             }
-            using var flow = world.AcquireFlow(FlowPriority.Cinematic, world.Flow.Rate);
+            using var flow = world.AcquireFlow(FlowPriority.AppFlow, world.Flow.Rate);
             var moment = world.GetSaveMoment();
             var instance = world.Instance;
             world.AbortRestore();
@@ -151,7 +151,6 @@ public sealed class WorldRestoreTests
                 () => world.SetClock(8),
                 () => world.SetClock(8, ClockSetMode.Drag),
                 () => world.Advance(1),
-                () => flow.FlowTo(18, 60),
                 () => flow.SetRate(60),
                 () => world.AcquireFlow(FlowPriority.Pause, 0),
                 () => world.SetFlow(0),
@@ -246,11 +245,9 @@ public sealed class WorldRestoreTests
     {
         var world = CreateWorld(new TestWeatherProcess());
         var initial = world.Capture(default);
-        using var flow = world.AcquireFlow(FlowPriority.Cinematic, world.Flow.Rate);
         AssertThrown(() => world.Advance(0)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.Advance(double.NaN)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.SetFlow(2)).IsInstanceOf<ArgumentOutOfRangeException>();
-        AssertThrown(() => flow.FlowTo(24, 60)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.SetClock(-1)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.SetSeason((Season)9)).IsInstanceOf<ArgumentOutOfRangeException>();
         AssertThrown(() => world.Restore(initial with { WorldHours = double.NaN }, Restore())).IsInstanceOf<JsonException>();

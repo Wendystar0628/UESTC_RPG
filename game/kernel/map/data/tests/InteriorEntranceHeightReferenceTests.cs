@@ -168,7 +168,7 @@ public sealed class InteriorEntranceHeightReferenceTests
             new(new(-64, -64), new(64, 64)), new(.9f, 30, 3000, -28, 2000, 30, 40, 150),
             new(-1, -1), new(0, 0), "spawn", [],
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Test", "Test"), false, "test"),
-            new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+            new("sky.json", "backdrop.json", []), []);
         return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = map, World = world, WorldSeed = 1, InteriorProviders = providers };
     }
 

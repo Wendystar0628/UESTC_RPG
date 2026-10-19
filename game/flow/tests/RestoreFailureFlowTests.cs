@@ -1,4 +1,3 @@
-using Campus.Camera.Cinematic;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Save;
@@ -17,11 +16,10 @@ public sealed class RestoreFailureFlowTests
         var f = new Fixture();
         await f.Flow.ReturnToTitle();
         var entering = f.Flow.Enter(new(EnterKind.NewGame, new("s1")));
-        await CinematicTestFrames.Complete(entering, f.Playback, f.Presentation, f.Veil);
         var result = await entering;
         if (result != EnterResult.Failed || f.Save.NewGames != 1 || f.Flow.State != AppState.Title)
             throw new InvalidOperationException("Recovery was rejected before reaching the save transaction.");
-        if (!f.Camera.InputLocked || f.Veil.Opacity != 1 || f.Veil.Reveals != 0)
+        if (!f.Camera.InputLocked || !f.Loading.Active || f.Loading.Hides != 0)
             throw new InvalidOperationException("A failed recovery exposed or unlocked the partial world.");
         if (f.Diagnostics.Count != 1 || !f.Diagnostics[0].Contains("System.IO.InvalidDataException: save.error.restore_world", StringComparison.Ordinal) ||
             !f.Diagnostics[0].Contains("StartNewTimeline", StringComparison.Ordinal))
@@ -35,7 +33,7 @@ public sealed class RestoreFailureFlowTests
         var f = new Fixture();
         await f.Flow.ReturnToTitle();
         await f.Flow.Quit();
-        if (f.Flow.State != AppState.Quitting || f.Save.Flushes != 1 || f.Save.Saves != 0 || !f.Camera.InputLocked || f.Veil.Reveals != 0 || f.Exit.Calls != 1)
+        if (f.Flow.State != AppState.Quitting || f.Save.Flushes != 1 || f.Save.Saves != 0 || !f.Camera.InputLocked || f.Loading.Hides != 0 || f.Exit.Calls != 1)
             throw new InvalidOperationException("Faulted quit wrote or resumed the partial world.");
     }
 
@@ -82,7 +80,7 @@ public sealed class RestoreFailureFlowTests
         try { await f.Flow.PrepareWorld(); }
         catch (InvalidOperationException)
         {
-            if (f.Flow.State != AppState.Boot || f.Veil.Opacity != 1 || f.Veil.Reveals != 0 || !f.Camera.InputLocked)
+            if (f.Flow.State != AppState.Boot || !f.Loading.Active || f.Loading.Hides != 0 || !f.Camera.InputLocked)
                 throw new InvalidOperationException("Boot restore failure did not retain its recovery boundary.");
             return;
         }
@@ -94,10 +92,8 @@ public sealed class RestoreFailureFlowTests
         private readonly FlowTestRig _rig = new();
         public TestCameraRig Camera => _rig.Camera;
         public FaultedSave Save { get; } = new();
-        public ImmediateVeil Veil => _rig.Veil;
+        public TestAppLoadingPresentation Loading => _rig.Loading;
         public TestAppExit Exit { get; } = new();
-        public CinematicTestPresentation Presentation => _rig.Presentation;
-        public CinematicPlayback Playback => _rig.Playback;
         public List<string> Diagnostics => _rig.Diagnostics;
         public AppFlowService Flow { get; }
         public Fixture() => Flow = _rig.CreateFlow(Save, new TestMapService(), Exit, new Fault());
@@ -123,6 +119,7 @@ public sealed class RestoreFailureFlowTests
         public override Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full) => Failed(slot);
         public override Task CompleteResume() => throw new InvalidOperationException("Cannot resume a faulted world.");
         public override Task<LoadResult> LoadFile(string path) => Failed(null);
+        public override Task<LoadResult> RestoreTitlePreview() => Failed(null);
         public override Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) { NewGames++; return Failed(slot); }
         public override Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) { Flushes++; return FlushGate?.Task ?? Task.FromResult(new SaveResult(FlushStatus, null, 0)); }
         private static Task<LoadResult> Failed(SlotId? slot) => Task.FromResult(new LoadResult(LoadStatus.Failed, slot, 0, [], "save.error.restore_world"));

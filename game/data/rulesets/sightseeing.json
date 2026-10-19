@@ -10,11 +10,6 @@
   "incidents": [
     "late-returner"
   ],
-  "cinematicStates": [
-    "title",
-    "entering",
-    "leaving"
-  ],
   "characters": false,
   "playerBody": true,
   "interaction": "none",

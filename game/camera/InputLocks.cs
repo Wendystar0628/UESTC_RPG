@@ -20,7 +20,7 @@ public sealed class InputLocks
     }
     private static int Index(InputLockReason reason) => reason switch
     {
-        InputLockReason.Atlas or InputLockReason.Cinematic or InputLockReason.MapTravel or
+        InputLockReason.Atlas or InputLockReason.AppFlow or InputLockReason.MapTravel or
         InputLockReason.Menu or InputLockReason.Rebind => (int)reason,
         _ => throw new ArgumentOutOfRangeException(nameof(reason))
     };

@@ -338,7 +338,7 @@ public sealed class MapServiceTests
         {
             var map = f.Catalog.Maps[0];
             var file = new MapFile(map.Id, map.Name, map.Kind, map.Version, map.Seed, map.DataRect, map.Roam,
-                map.DefaultSpawn, map.Spawns, map.World, map.Env, map.Cinematics, map.Portals);
+                map.DefaultSpawn, map.Spawns, map.World, map.Env, map.Portals);
             var entry = MapCatalog.ReadEntry(new(map.Id, "res://data/" + map.Id.Value + '/'),
                 JsonSerializer.SerializeToUtf8Bytes(file, ContractJson.Options),
                 Encoding.UTF8.GetBytes("""
@@ -411,7 +411,7 @@ public sealed class MapServiceTests
                 new(new(-64), new(64)), new(.9f, 30, 3000, -28, 2000, 30, 40, 150), new(-1, -1), new(0, 0),
                 "start", [new("start", new(new(0, 20, 10), 0, -10), null)],
                 new(MapTimeRule.Shared, new(17.5, Season.Autumn, WeatherKind.Clear), new("默认", "Default"), false, "test"),
-                new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+                new("sky.json", "backdrop.json", []), []);
             return new(map, "res://data/" + id.Value + '/', []);
         }
     }
@@ -484,6 +484,7 @@ public sealed class MapServiceTests
         private bool _delayMount;
         private bool _arrivalReady = true;
         public IMapArrival? Arrival { get; private set; }
+        public event Action<IMapArrival?>? ArrivalChanged;
         public bool MountReady => _mount?.Task.IsCompletedSuccessfully == true;
         public bool ArrivalReady
         {
@@ -520,6 +521,7 @@ public sealed class MapServiceTests
             LastArrival = pose;
             var arrival = new TestArrival(new(pose, mode, space));
             Arrival = arrival;
+            ArrivalChanged?.Invoke(arrival);
             if (ArrivalReady) arrival.Complete();
             return arrival;
         }
@@ -529,8 +531,11 @@ public sealed class MapServiceTests
         private readonly TaskCompletionSource _done = new();
         public MapStreamDestination Destination => destination;
         public Task Done => _done.Task;
+        public int Completed => Done.IsCompletedSuccessfully ? Total : 0;
+        public int Total => 1;
+        public event Action? ProgressChanged;
         public void Cancel() => _done.TrySetCanceled();
-        public void Complete() => _done.TrySetResult();
+        public void Complete() { if (_done.TrySetResult()) ProgressChanged?.Invoke(); }
     }
     private sealed class TestPoseValidator(TestRuntime runtime) : ICameraPoseValidator
     {

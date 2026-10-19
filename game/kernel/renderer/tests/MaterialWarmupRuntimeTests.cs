@@ -170,7 +170,7 @@ public sealed partial class MaterialWarmupRuntimeTests
             Parent.AddChild(Cover);
             _host = new InstancePoolHost(Provider, source, palettes.Catalog);
             Parent.AddChild(_host);
-            Warmup.Configure(Provider, Veil, Cover, Camera, palettes.Catalog);
+            Warmup.Configure(Provider, Veil, Cover, Camera, palettes.Catalog, Loading);
             Parent.AddChild(Warmup);
             Cover.Present(new VeilFrame(Veil.Opacity, Veil.Content, null));
         }

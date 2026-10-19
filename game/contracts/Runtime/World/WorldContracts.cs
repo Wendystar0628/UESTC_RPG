@@ -2,13 +2,11 @@ using System.Numerics;
 
 namespace Campus.Contracts;
 public readonly record struct Flow(int Rate);   // 世界秒 / 真实秒；取值见 FlowRates，0 = 暂停
-public enum FlowPriority : byte { Pause, Cinematic }
+public enum FlowPriority : byte { Pause, AppFlow }
 public interface IFlowLease : IDisposable
 {
-    // Updates only this lease; either command cancels its preceding destination.
+    // Updates only this lease.
     void SetRate(int rate);
-    // Advance to the next occurrence, then hold this lease at zero until changed or disposed.
-    void FlowTo(double clock, int rate);
 }
 [Flags] public enum WorldTransition : byte { None = 0, Time = 1, Season = 2, Weather = 4 }   // 几种过渡可以同时进行
 public enum WeatherMode : byte { Auto, Manual }
@@ -95,7 +93,7 @@ public interface IWorldRestore
 // （Reset 由新游戏调用，见 WeatherBoot），其他代码一律读 IWorldState 和天气类全局参数。有了这一层，WP-34 和 WP-45 可以并行开发
 public readonly record struct WeatherTick(
     double WorldHours,
-    double TargetHours,                      // 大于 WorldHours 表示正在快进（跳转、拨时间环、Advance、FlowTo、ResetDefault、Apply）
+    double TargetHours,                      // 大于 WorldHours 表示正在快进（跳转、拨时间环、Advance、ResetDefault、Apply）
     double ClockOffset, Season Season, float SunAltDeg, int FlowRate, double RealDt);
 public sealed record WeatherProcessState(    // 全局天气设定的落定快照；自动天气由种子、地图与世界时间求值，不存生成状态。
     MapId Map, WeatherSel Selection,
@@ -146,8 +144,8 @@ public static class FramePriority
                                             // Current、Context 在这一步换，同一帧里所有系统看到同一张图（SYS-MAPS）
     public const int Quality = -1200;       // WP-32：即时类设置与自动调节生效、分发 IQualityAware、写全局参数 quality；
                                             // 先于相机，同一帧里所有系统看到同一版本的 QualityView（SYS-GRAPHICS）
-    public const int Camera = -1100;        // WP-06（含可达空间求值、写 edge_fog）、WP-36、WP-42；WP-49a 的 CinematicPlayer（SYS-TITLE）
-    public const int WorldState = -1000;    // WP-34：推进世界时间、钟点和季节（含 FlowTo 的停点），再调 IWeatherProcess.Step 求天气向量（WP-45）
+    public const int Camera = -1100;        // WP-06（含可达空间求值、写 edge_fog）、WP-36、WP-42
+    public const int WorldState = -1000;    // WP-34：推进世界时间、钟点和季节，再调 IWeatherProcess.Step 求天气向量（WP-45）
     public const int KeyLight = -900;       // WP-03：含按阴度改投影（SYS-WEATHER）、室内抬高阴影方向的最低高度（ENG-PERF）
     public const int Palette = -800;        // WP-37、WP-04：含天气修正量
     public const int Channels = -700;       // WP-03 通道求值、WP-39 时刻表：按有效太阳高度 h_eff 求值（SYS-WEATHER）

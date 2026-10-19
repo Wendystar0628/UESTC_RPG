@@ -11,7 +11,6 @@ public enum ChannelClass : byte
 {
     Window,     // L = 亮窗比例 = clamp(dark(h_eff) × curve(钟点), 0, cap)，再取阴雨天的白天下限
     Lamp,       // L = 保留比例 × (1 + Δ)；每盏灯另按 lamp_table 里的太阳高度阈值与 h_eff 比较
-    Cue,        // sys.cue：平时 (0, 0)；过场覆盖时 (1, 目标太阳高度)
     PoolGain,   // sys.poolGain：(IColorScriptFrame.LampPoolGain, 0)
     Reserved,   // 预留：恒为 (0, Δmin)
 }
@@ -49,10 +48,6 @@ public sealed record DeltaSpec(float Min = 0.005f, float Max = 0.15f, float Seco
 public sealed record DayFloorSpec(float Overcast = 0.25f, float Rain = 0.3f,
     Vector2? OvercastRamp = null, Vector2? RainRamp = null, Vector2? OccupancyRamp = null);
 
-/// <summary>过场"初灯追镜头"（SYS-TITLE）：LampCueDef.Group 到通道的映射，以及接管这些灯的槽位。</summary>
-[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed record CueSpec(ChannelId Slot, ChannelId SysSlot, IReadOnlyDictionary<string, ChannelId> Groups);
-
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record LightingScheduleFile(
     int Format,
@@ -61,8 +56,7 @@ public sealed record LightingScheduleFile(
     DeltaSpec Delta,
     DayFloorSpec DayFloor,
     IReadOnlyDictionary<string, ThresholdGroup> Groups,
-    IReadOnlyList<ChannelSpec> Channels,
-    CueSpec Cue)
+    IReadOnlyList<ChannelSpec> Channels)
 {
     public const int ChannelCount = 32;
     public const int CurrentFormat = 1;

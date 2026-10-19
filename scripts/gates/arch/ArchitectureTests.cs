@@ -225,12 +225,6 @@ public sealed class ArchitectureTests
         Check(Types().That().ResideInNamespaceMatching(@"^Campus\.(?:Systems|Style)(?:\.|$)").Should()
             .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.(?:Gen|Pipeline)(?:\.|$)"))
             .WithoutRequiringPositiveResults());
-        Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Camera\.Cinematic(?:\.|$)").Should()
-            .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Flow(?:\.|$)"))
-            .WithoutRequiringPositiveResults());
-        Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Flow(?:\.|$)").Should()
-            .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.Camera\.Cinematic(?:\.|$)"))
-            .WithoutRequiringPositiveResults());
         Check(Types().That().ResideInNamespaceMatching(@"^Campus\.Hud(?:\.|$)").Should()
             .NotDependOnAny(Types().That().ResideInNamespaceMatching(@"^Campus\.(Kernel|Style|Camera|Medium|Systems|Audio|Flow)(\.|$)")
                 .And().DoNotHaveFullName("Campus.Kernel.Registry.Kernel")

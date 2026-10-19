@@ -11,7 +11,6 @@
     "sign": { "fromDeg": 7.0, "toDeg": 3.0 },
     "always": { "fromDeg": 90.0, "toDeg": 90.0 }
   },
-  "cue": { "slot": "lamp.cue", "sysSlot": "sys.cue", "groups": { "firstLight": "lamp.first" } },
   "channels": [
     { "slot": 0, "id": "window.general", "kind": "window", "cap": 0.85, "dark": [9.0, 2.0], "dayFloor": true,
       "note": "窗灯总体：17:22–17:40 约 20% → 70%，17:30 约 40%；21:00 约 80%；00:30 约 10% 的灯岛。亮窗比例另受楼级偏置与按房间成团的阈值调制（ScheduleMath.WindowThreshold）",
@@ -82,9 +81,7 @@
     { "slot": 22, "id": "sign.signal", "kind": "lamp", "group": "always", "color": "lamp.amber",
       "note": "小信号点：充电桩琥珀灯、闸机与直饮水台绿灯、售货机屏幕、安全出口绿标；不计入照度",
       "curve": [[0.0, 1.0]] },
-    { "slot": 23, "id": "lamp.cue", "kind": "lamp", "group": "first", "color": "lamp.warm",
-      "note": "过场初灯追镜头的银杏大道一线（SYS-TITLE）：平时与 lamp.first 同值；覆盖时保留比例改为路线前沿",
-      "curve": [[0.0, 1.0]] },
+    { "slot": 23, "id": "reserved.23", "kind": "reserved" },
     { "slot": 24, "id": "lamp.fountain", "kind": "lamp", "group": "street", "color": "lamp.warm",
       "note": "西湖扇形喷泉的水柱根部灯：只用暖白；时段暂定 19:00–22:00，按 MAP-QSH-CORE 校准",
       "curve": [[0.0, 0.0], [18.95, 0.0], [19.0, 1.0], [21.95, 1.0], [22.0, 0.0]] },
@@ -99,7 +96,7 @@
       "curve": [[0.0, 0.0], [18.95, 0.0], [19.0, 1.0], [22.0, 1.0], [22.05, 0.0]] },
     { "slot": 28, "id": "reserved.28", "kind": "reserved" },
     { "slot": 29, "id": "reserved.29", "kind": "reserved" },
-    { "slot": 30, "id": "sys.cue", "kind": "cue", "note": "平时 (0, 0)；过场覆盖时 (1, 覆盖期间判开灯用的目标太阳高度)" },
+    { "slot": 30, "id": "reserved.30", "kind": "reserved" },
     { "slot": 31, "id": "sys.poolGain", "kind": "poolGain", "note": "L = IColorScriptFrame.LampPoolGain（冬夜 1.5，其余 1）；着色器把光斑半径乘它，不是 0–1 的量" }
   ]
 }

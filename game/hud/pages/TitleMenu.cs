@@ -63,22 +63,7 @@ public partial class TitleMenu : Control
         content.SizeFlagsVertical = SizeFlags.ExpandFill;
         content.Alignment = BoxContainer.AlignmentMode.End;
         var heading = _kit.Layout.Stack(content, groups: false);
-        var title = _kit.Text(heading, UiKit.T("title.name"), "display-1", "over.title.text");
-        void FitTitle()
-        {
-            // 从既有字号阶梯选可放下的片名字号，不额外维护像素断点。
-            var fitted = UiThemeBuilder.TextType("h2");
-            foreach (var role in new[] { "display-1", "display-2", "h1", "h2" })
-            {
-                fitted = UiThemeBuilder.TextType(role);
-                var font = _kit.Theme.Theme.GetFont("font", fitted);
-                var size = _kit.Theme.Theme.GetFontSize("font_size", fitted);
-                if (font.GetStringSize(title.Text, fontSize: size).X <= title.Size.X) break;
-            }
-            if (title.ThemeTypeVariation != fitted) title.ThemeTypeVariation = fitted;
-        }
-        title.Resized += FitTitle;
-        title.Ready += FitTitle;
+        TitleName(_kit, heading);
         var rule = _kit.Box(heading, new UiFx(Fill: "over.title.text"));
         rule.CustomMinimumSize = new Vector2(0, _kit.Tokens.F("metrics", "line", "hairPhys"));
         rule.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -101,6 +86,27 @@ public partial class TitleMenu : Control
         }
         _continue = _items[0];
         _continue.OffReason = UiKit.T("title.continue.none");
+    }
+
+    /// <summary>开始页与加载页共用同一片名字号选择。</summary>
+    public static void TitleName(UiKit kit, Control heading)
+    {
+        var title = kit.Text(heading, UiKit.T("title.name"), "display-1", "over.title.text");
+        void FitTitle()
+        {
+            // 从既有字号阶梯选可放下的片名字号，不额外维护像素断点。
+            var fitted = UiThemeBuilder.TextType("h2");
+            foreach (var role in new[] { "display-1", "display-2", "h1", "h2" })
+            {
+                fitted = UiThemeBuilder.TextType(role);
+                var font = kit.Theme.Theme.GetFont("font", fitted);
+                var size = kit.Theme.Theme.GetFontSize("font_size", fitted);
+                if (font.GetStringSize(title.Text, fontSize: size).X <= title.Size.X) break;
+            }
+            if (title.ThemeTypeVariation != fitted) title.ThemeTypeVariation = fitted;
+        }
+        title.Resized += FitTitle;
+        title.Ready += FitTitle;
     }
 
     /// <summary>打开时才建，<see cref="Close"/> 时释放：离开开始页以后它不再占实例参数槽（<see cref="UiKit.Holders"/>）。</summary>

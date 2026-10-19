@@ -15,7 +15,7 @@ public readonly record struct LampRecord(
     float Energy,          // 级别：一级 1.0、二级 0.75、三级 0.5（MAP-QSH-ADDITIONS）
     int Slot,              // 灯光通道槽位
     float ThresholdDeg,    // 开灯阈值（太阳高度，度）：h_eff 低于它就亮；≥ 89° 为常亮
-    float Keep,            // 保留阈值 κ ∈ [0, 1)：通道保留比例低于它时熄（熄一半、整组关、过场前沿）
+    float Keep,            // 保留阈值 κ ∈ [0, 1)：通道保留比例低于它时熄（熄一半、整组关）
     int Sequence,          // 偶发事件序号（0 = 不参与）
     float GlowRadius)      // 灯头光晕半径（m）
 {

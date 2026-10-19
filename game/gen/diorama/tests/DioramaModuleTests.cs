@@ -23,7 +23,7 @@ public sealed class DioramaModuleTests
         new MapRect(new(-1280, -1280), new(1280, 1280)), new RoamLimits(0.9f, 30, 3000, -28, 2000, 30, 40, 150),
         new TileKey(-20, -20), new TileKey(20, 20), "P00", [],
         new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("", ""), false, "test"),
-        new MapEnvironment("sky.json", backdrop, []), new Dictionary<string, string>(), []);
+        new MapEnvironment("sky.json", backdrop, []), []);
 
     private static BuildContext Context(byte[]? backdrop, uint seed = 1) => new()
     {

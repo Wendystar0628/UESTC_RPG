@@ -20,7 +20,6 @@ public sealed record FlightTuning
     public float SpaceTapSeconds { get; init; } = .2f;
     public float ModeSwitchCooldown { get; init; } = .5f;
     public float ReturnHoldSeconds { get; init; } = .6f;
-    public float SkipHoldSeconds { get; init; } = (float)Campus.Flow.FlowTuning.SkipHoldSeconds;
     public float FogTimeConstant { get; init; } = .5f;
     public float MaxFrameStep { get; init; } = .1f;
 

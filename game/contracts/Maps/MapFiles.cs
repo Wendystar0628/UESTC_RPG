@@ -10,7 +10,7 @@ public sealed record MapFile(
     MapId Id, LocalizedName Name, MapKind Kind, int Version, uint Seed,
     MapRect DataRect, RoamLimits Roam, string DefaultSpawn,
     IReadOnlyList<MapSpawn> Spawns, MapWorldRules World, MapEnvironment Env,
-    IReadOnlyDictionary<string, string> Cinematics, IReadOnlyList<MapPortal> Portals)
+    IReadOnlyList<MapPortal> Portals)
 {
     public MapTitle? Title { get; init; }
     public TerrainDefaults? TerrainDefaults { get; init; }
@@ -18,7 +18,7 @@ public sealed record MapFile(
     {
         if (TerrainDefaults is { } defaults) TerrainOverlayJson.ValidateTerrainDefaults(defaults);
         return new(Id, Name, Kind, Version, Seed, geo, center, bounds, DataRect, Roam,
-            tileMin, tileMax, DefaultSpawn, Spawns, World, Env, Cinematics, Portals)
+            tileMin, tileMax, DefaultSpawn, Spawns, World, Env, Portals)
         { Title = Title, TerrainDefaults = TerrainDefaults };
     }
 }

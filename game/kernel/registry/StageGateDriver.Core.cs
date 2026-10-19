@@ -14,7 +14,7 @@ using AppBoot = Campus.Kernel.Boot.Boot;
 
 namespace Campus.Kernel.Registry;
 
-// G5/G20 core lifecycle: Boot -> Title -> new game -> save -> window close, then a second process restores it.
+// G5/G20 core lifecycle: Title -> NewGame -> Walk -> Title -> Continue -> window close/save; a second process restores it.
 public sealed partial class StageGateDriver
 {
     private async Task RunCoreLifecycle(string gate)
@@ -25,10 +25,11 @@ public sealed partial class StageGateDriver
         var flow = host.Flow;
         var saves = Kernel.Get<ISaveService>();
         var camera = Kernel.Get<ICameraRig>();
+        var walk = Kernel.Get<IWalkController>();
+        var observer = Kernel.Get<IObserverState>();
         var input = Kernel.Get<IInputRouter>();
         var world = Kernel.Get<IWorldState>();
         var control = Kernel.Get<IWorldControl>();
-        var veil = Kernel.Get<IVeilService>();
         foreach (var service in new[] { typeof(ICameraRig), typeof(IObserverState), typeof(IWalkController),
             typeof(ICollisionWorld), typeof(IMapService), typeof(IMapRuntime), typeof(ISaveService), typeof(IAppFlow) })
         {
@@ -47,6 +48,10 @@ public sealed partial class StageGateDriver
             if (await flow.Enter(new(EnterKind.NewGame, new SlotId("s1"))) != EnterResult.Entered)
                 throw new InvalidOperationException("The production flow could not enter a new game.");
             host.CheckActive();
+            if (flow.State != AppState.Playing || observer.Mode != ViewMode.Walk || !walk.Active)
+                throw new InvalidOperationException("New game did not enter Playing in Walk mode.");
+            await CoreWait(() => walk.Grounded && walk.CollisionReady && walk.IsSettled,
+                "New game did not prepare its standing collision and settle.");
             input.SetInterfaceMode(false);
             if (Input.MouseMode != Input.MouseModeEnum.Captured)
                 throw new InvalidOperationException("Playing did not capture input.");
@@ -64,17 +69,27 @@ public sealed partial class StageGateDriver
                 Input.ParseInputEvent(release);
             }
             GD.Print("CORE_INPUT_READY");
-            await CoreWait(() => camera.Speed < .0001f, "The released movement input remained active.");
+            await CoreWait(() => camera.Speed < .0001f && walk.IsSettled,
+                "The released movement input remained active.");
             var saved = await saves.SaveNow(SaveReason.Test);
             if (saved.Status != SaveStatus.Saved) throw new InvalidOperationException("Core save failed: " + saved.Error);
             var beforeLoad = CaptureCoreSections();
-            using var cover = veil.Cover(VeilReason.Cinematic, 0);
-            await cover.Covered;
-            await stage.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-            var loaded = await saves.Load(new("s1"));
-            if (loaded.Status != LoadStatus.Loaded || !CoreSnapshotsMatch(beforeLoad, CaptureCoreSections()))
-                throw new InvalidOperationException("Production save/load did not restore the core runtime state.");
-            await cover.Reveal(0);
+            await flow.ReturnToTitle();
+            host.CheckActive();
+            if (flow.State != AppState.Title || Input.MouseMode == Input.MouseModeEnum.Captured)
+                throw new InvalidOperationException("Return to title did not release playing input.");
+            GD.Print($"CORE_RETURN_TITLE_READY {FrameClock.MonotonicMilliseconds:R}");
+            if (await flow.Enter(new(EnterKind.Continue, new SlotId("s1"))) != EnterResult.Entered)
+                throw new InvalidOperationException("The production flow could not continue the saved game.");
+            host.CheckActive();
+            if (flow.State != AppState.Playing || observer.Mode != ViewMode.Walk || !walk.Active ||
+                saves.HasPendingPose || saves.Active != new SlotId("s1"))
+                throw new InvalidOperationException("Continue did not restore the saved Walk world.");
+            await CoreWait(() => walk.Grounded && walk.CollisionReady && walk.IsSettled,
+                "Continue did not prepare its standing collision and settle.");
+            if (!CoreSnapshotsMatch(beforeLoad, CaptureCoreSections()))
+                throw new InvalidOperationException("Production return/continue did not restore the core runtime state.");
+            GD.Print($"CORE_CONTINUE_READY {FrameClock.MonotonicMilliseconds:R}");
             GD.Print("CORE_ROUNDTRIP_READY");
         }
         else if (flow.State != AppState.Playing || saves.HasPendingPose || saves.Active != new SlotId("s1"))

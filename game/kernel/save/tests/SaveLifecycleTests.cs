@@ -146,8 +146,9 @@ public sealed partial class SaveLifecycleTests
         AssertThat((await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(1)))).Status == SaveStatus.Deferred).OverrideFailureMessage("Fault exit attempted to serialize the partial world.").IsTrue();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Fault damaged the last good generation.").IsTrue();
         fixture.Weather.FailRestore = false;
-        var recovered = await fixture.Pump(fixture.Save.NewGame(new("s1"), 2));
-        AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("A complete new game did not release the fault lease.").IsTrue();
+        var recovered = await fixture.Pump(fixture.Save.RestoreTitlePreview());
+        AssertThat(recovered.Status == LoadStatus.Loaded && !fixture.World.RestoreFaulted && fixture.Camera.Locks == 0).OverrideFailureMessage("A complete default preview did not release the fault lease.").IsTrue();
+        AssertThat(fixture.Save.Active is null && fixture.Save.Slots[0].Meta?.Gen == 1).OverrideFailureMessage("Title recovery selected a writable slot or changed the previous generation.").IsTrue();
         AssertThat(fixture.Save.State.ErrorKey is null).OverrideFailureMessage("Recovery left the stale error visible.").IsTrue();
     }
 
@@ -304,7 +305,7 @@ public sealed partial class SaveLifecycleTests
                 new(0, 0, 32648, new(-100), new(100)), Vector2.Zero, new(new(-100), new(100)), new(new(-100), new(100)),
                 new(1, 0, 3000, -100, 1000, 30, 40, 150), new(-1, -1), new(1, 1), "spawn", [],
                 new(MapTimeRule.Shared, new(17.5, Season.Autumn, WeatherKind.Clear), new("测试", "Test"), false, "test"),
-                new("test", "test", []), new Dictionary<string, string>(), [])];
+                new("test", "test", []), [])];
         }
         public TaskCompletionSource<MapTravelResult>? Pending { get; set; }
         public bool FailTravel { get; set; }

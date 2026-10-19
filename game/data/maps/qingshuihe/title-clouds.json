@@ -3,7 +3,6 @@
   "map": "qingshuihe",
   "name": "qingshuihe",
   "shader": "res://style/shaders/cine_cloud.gdshader",
-  "camVeil": { "offset": [0.0, 0.0, -0.5], "scale": [4.0, 1.2] },
   "layers": [
     {
       "layer": 0,

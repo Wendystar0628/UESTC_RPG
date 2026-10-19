@@ -167,7 +167,7 @@ public sealed class FurnitureModuleTests
             new RoamLimits(0.9f, 30f, 3000f, -28f, 2000f, 30f, 40f, 150f),
             new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
             new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
-            new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+            new MapEnvironment("sky.json", "backdrop.json", []), []);
         return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World.Value, Map = map, WorldSeed = 1u, SourceInputs = inputs, GlobalInputs = FurnitureTestSupport.GlobalInputs };
     }
 

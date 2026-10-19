@@ -4,7 +4,7 @@ using Godot;
 
 namespace Campus.Camera;
 
-/// <summary>The explicit listener follows the observer eye after camera and cinematic pose updates.</summary>
+/// <summary>The explicit listener follows the observer eye after camera pose updates.</summary>
 internal partial class ObserverListener : AudioListener3D
 {
     internal ObserverCamera? Observer { get; init; }

@@ -1,7 +1,6 @@
 using System.Globalization;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
-using Campus.Contracts.Cinematic;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
@@ -17,7 +16,7 @@ public sealed class BootArguments
         "gate", "map", "spawn", "pose", "clock", "season", "anim", "flow", "mode", "ui", "seed",
         "weather", "weather-intensity", "wet", "weather-seed", "weather-remaining", "sunshower",
         "quality", "quality-set", "bench", "without", "inspect", "shots", "frames", "out",
-        "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "cine", "save", "slot",
+        "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
         "audio-probe", "audio-out", "preset", "focus", "pose-file", "travel-sequence"
@@ -78,7 +77,6 @@ public sealed class BootArguments
             throw Invalid("CPU baking cannot be combined with a rendering or gate command.");
         result.AddDefaults();
         if (result.Value("pose") == "T0" && !result.Title) throw Invalid("T0 requires --title=1.");
-        if (result.Has("cine") && !result.Title) throw Invalid("--cine requires --title=1.");
         if (result.Has("shots") && !result.Has("out")) throw Invalid("--shots requires an absolute --out directory.");
         return result.Resolve();
     }
@@ -99,7 +97,6 @@ public sealed class BootArguments
         OneOf("ui-theme", "auto", "light", "dark");
         OneOf("motion", "full", "reduced", "instant");
         OneOf("gen", "live");
-        OneOf("cine", "enter_new", "enter_new_short", "enter_continue", "leave");
         Number("clock", 0, 24, exclusiveMax: true);
         Number("anim", 0, WorldTime.AnimLoopSeconds, exclusiveMax: true);
         Number("weather-intensity", 0, 1); Number("wet", 0, 1);
@@ -161,15 +158,6 @@ public sealed class BootArguments
         uint? Seed(string key, bool explicitOnly = false) => (explicitOnly ? Explicit(key) : Text(key)) is { } value
             ? uint.Parse(value, CultureInfo.InvariantCulture) : null;
         SlotId? Slot(string? value) => value is null or "off" ? null : new SlotId("s" + value.TrimStart('s'));
-        var cinematic = Text("cine") switch
-        {
-            null => (CinematicKind?)null,
-            "enter_new" => CinematicKind.EnterNew,
-            "enter_new_short" => CinematicKind.EnterNewShort,
-            "enter_continue" => CinematicKind.EnterContinue,
-            "leave" => CinematicKind.Leave,
-            _ => throw Invalid("cine")
-        };
         var weather = Text("weather") switch
         {
             null or "auto" => (WeatherKind?)null,
@@ -184,14 +172,14 @@ public sealed class BootArguments
         {
             Mode = CpuBakeMode ? BootRunMode.CpuBake : CaptureMode ? BootRunMode.Capture : BootRunMode.Interactive,
             Automated = CaptureMode || Has("inspect"),
-            FreezeAnimation = Has("shots") && !Has("cine") && !Has("bench"),
+            FreezeAnimation = Has("shots") && !Has("bench"),
             Title = Title,
             SaveDirectory = Text("save-dir"),
             TravelSequence = Text("travel-sequence")?.Split(',') ?? [],
-            Flow = new BootFlowRequest(ShowTitle: Title && cinematic != CinematicKind.Leave,
+            Flow = new BootFlowRequest(ShowTitle: Title,
                 Slot: Slot(Text("slot")), LoadFile: Text("load"),
                 Map: Text("map") is { } map ? new MapId(map) : null, Spawn: Text("spawn"),
-                Cinematic: Text("cine"), Seed: Seed("weather-seed") ?? Seed("seed")),
+                Seed: Seed("weather-seed") ?? Seed("seed")),
             World = new WorldBootOptions
             {
                 Clock = NumberValue("clock"),
@@ -219,7 +207,7 @@ public sealed class BootArguments
                 Gate = Text("gate"), Inspect = Text("inspect"), Output = Text("out"),
                 Shots = Text("shots")?.Split(',') ?? [],
                 FrameLimit = NumberValue("frames") is { } frames ? (int)frames : null,
-                IncludeCanvas = Value("ui") == "1", Cinematic = cinematic
+                IncludeCanvas = Value("ui") == "1"
             },
             Quality = new()
             {

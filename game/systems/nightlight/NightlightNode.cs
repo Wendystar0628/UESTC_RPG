@@ -1,15 +1,12 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Contracts.AppFlow;
-using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Lighting;
 using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
-using Campus.Systems.Nightlight.Cue;
 using Campus.Systems.Nightlight.Glow;
 using Campus.Systems.Nightlight.Lamps;
 using Campus.Systems.Nightlight.Schedule;
@@ -26,11 +23,9 @@ namespace Campus.Systems.Nightlight;
 /// ILightChannelSink 写进 light_channels；按图读时刻表、建灯表与倒影索引（lamp_table、lamp_grid、refl_lamps）、管窗覆盖（window_override），
 /// 写全局参数 shaft。灯具与窗格读 WP-02 的全图清单 ILightInventory，清单的 Rev 变了就重建灯表和光晕；
 /// 灯头光晕与窗光晕各挂一个内核实例池（IInstancePoolHost）。注册 id 与 WP-03 的桩相同，合入后自动替掉桩。
-/// 同一个节点也是过场"灯光提示"钩子 ILampCueHook 的实现（contract-12 第 4 节），替掉 WP-00 的桩。
 /// </summary>
 [KernelNode("light-schedule", Owner = "WP-39")]
-[KernelService(typeof(ILampCueHook), Owner = "WP-39")]
-public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewContentReadiness
+public partial class NightlightNode : Node, IMapAware, IViewContentReadiness
 {
     private static readonly StringName _shaderGlobalLampGrid = ShaderGlobals.LampGrid;
     private static readonly StringName _shaderGlobalLampTable = ShaderGlobals.LampTable;
@@ -38,7 +33,6 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
     private static readonly StringName _shaderGlobalWindowOverride = ShaderGlobals.WindowOverride;
 
     private const string ScheduleFile = "lighting-schedule.json";
-    private const string ExtrasFile = "cinematics/extras.json";
     private const uint LampSeed = 0x39u;
 
     // 光柱（ART-STYLE、ENG-PERF）：近镜 1.2 → 5.5 m 淡入、顺轴衰减 0.4；整体强度按太阳高度 2°–30° 与天气
@@ -54,7 +48,6 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
     private IWorldState? _world;
     private ILightChannelSink? _sink;
     private IColorScriptFrame? _colors;
-    private IAppFlow? _flow;
     private ILightInventory? _inventory;
     private IInstancePoolHost? _pools;
     private IShaderMaterialSource? _materials;
@@ -67,8 +60,6 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
     private ImageTexture? _overrideTexture;
     private ImageTexture? _tableTexture;
     private ImageTexture? _gridTexture;
-    private IReadOnlyList<LampCueDef> _cueDefs = [];
-    private LampCue? _cue;
 
     /// <summary>本图灯表里的灯（只读，光斑、光晕与倒影索引共用）。</summary>
     public IReadOnlyList<LampRecord> Lamps { get; private set; } = [];
@@ -92,7 +83,6 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
         _world.InstanceChanged += OnWorldInstanceChanged;
         _sink = Services.Get<ILightChannelSink>();
         _colors = Services.Get<IColorScriptFrame>();
-        _flow = Services.Get<IAppFlow>();
         _inventory = Services.Get<ILightInventory>();
         _pools = Services.Get<IInstancePoolHost>();
         _materials = Services.Get<IShaderMaterialSource>();
@@ -114,11 +104,9 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
 
     public void OnMapUnloading(MapId from)
     {
-        EndCue();
         _schedule = null;
         _map = null;
         _groundPreparation = null; _preparingRevision = long.MinValue;
-        _cueDefs = [];
         Lamps = [];
         ClearReflectionLamps();
         _windows.Bind(null);
@@ -142,7 +130,6 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
                 throw new InvalidDataException($"{ScheduleFile} slot {slot} is '{schedule.Spec(slot).Id.Value}', catalog says '{LightChannelCatalog.Id(slot).Value}'.");
         _schedule = schedule;
         _map = ctx;
-        _cueDefs = ReadCues(ctx);
         RebuildFromInventory(ctx, schedule);
         _windows.ClearAll();
         EnsureOverrideTexture();
@@ -153,7 +140,6 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
         if (_schedule is null || _world is null || _sink is null) return;
         // 后台烘焙补完、换图后清单 Rev 加 1：重建灯表与光晕（与清单的顺序无关）
         if (_map is not null && _inventory is not null && _inventory.Rev != _inventoryRev) RebuildFromInventory(_map, _schedule);
-        if (_cue is not null && !CueAllowed()) EndCue();
         var weather = _world.WeatherNow;
         var gain = _colors?.Current.LampPoolGain ?? 1f;
         var input = new ScheduleInput(_world.Clock, _world.Sun.AltDeg, weather.Overcast, weather.Precip, gain, delta);
@@ -171,68 +157,8 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
 
     private void OnWorldInstanceChanged(long _)
     {
-        EndCue();
         _schedule?.Reset();
         _windows.ClearAll();
-    }
-
-    // ------------------------------------------------------------------
-    // 过场"灯光提示"钩子 ILampCueHook（SYS-TITLE）：WP-49a 的 CinematicPlayer 调用；只在 Entering 生效，
-    // 只改灯光通道纹理（lamp.cue、sys.cue 两个槽位），撤销后各值与不覆盖时完全相同。
-    // Seek 在 FramePriority.Camera 调，早于本节点的 Channels，所以同一帧就按新前沿求值；钩子自己不计时。
-    // ------------------------------------------------------------------
-
-    bool ILampCueHook.Begin(string cueRef, float targetSunAltDeg) => BeginCue(cueRef, targetSunAltDeg);
-    void ILampCueHook.Seek(double timelineSeconds) => SeekCue(timelineSeconds);
-    void ILampCueHook.End() => EndCue();
-
-    /// <summary>开始覆盖：cueRef 是 extras.json 里 lampCue 的 ref；targetSunDeg 是过场终点钟点的有效太阳高度（判"本该亮着"的灯）。</summary>
-    public bool BeginCue(string cueRef, float targetSunDeg)
-    {
-        if (_schedule is null || !CueAllowed()) return false;
-        var def = _cueDefs.FirstOrDefault(d => d.Ref == cueRef);
-        if (def is null) return false;
-        _cue = new LampCue(def, targetSunDeg);
-        _schedule.Cue = _cue.At(double.NegativeInfinity);
-        return true;
-    }
-
-    /// <summary>每帧由播放器传入时间轴秒数，推进前沿。</summary>
-    public void SeekCue(double timelineSeconds)
-    {
-        if (_schedule is null || _cue is null) return;
-        if (!CueAllowed()) { EndCue(); return; }
-        _schedule.Cue = _cue.At(timelineSeconds);
-    }
-
-    /// <summary>只有进入过场（Entering）时覆盖生效；别的状态一律不覆盖。</summary>
-    private bool CueAllowed()
-    {
-        if (_flow is null) return false;
-        return _flow.State switch
-        {
-            AppState.Entering => true,
-            AppState.Boot or AppState.Title or AppState.Playing or AppState.Leaving or AppState.Quitting => false,
-            _ => throw new InvalidOperationException($"Unhandled AppState {_flow.State} for the lamp cue."),
-        };
-    }
-
-    /// <summary>撤销覆盖（到点、跳过、交还控制、换实例都走这里）。</summary>
-    public void EndCue()
-    {
-        _cue = null;
-        if (_schedule is not null) _schedule.Cue = null;
-    }
-
-    // ------------------------------------------------------------------
-
-    private static IReadOnlyList<LampCueDef> ReadCues(IMapContext ctx)
-    {
-        var path = ctx.DataRoot + ExtrasFile;
-        if (!Godot.FileAccess.FileExists(path)) return [];
-        var extras = JsonSerializer.Deserialize<CinematicExtrasFile>(Godot.FileAccess.GetFileAsBytes(path), ContractJson.Options);
-        if (extras is null) return [];
-        return extras.Refs.Values.OfType<LampCueDef>().OrderBy(d => d.Ref, StringComparer.Ordinal).ToArray();
     }
 
     private void RebuildFromInventory(IMapContext ctx, ScheduleEvaluator schedule)
@@ -263,7 +189,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
         var palette = Services.Get<IPaletteCatalogSource>().Catalog;
         var lamps = LampSetBuilder.Build(emitters, schedule,
             token => palette.TryGet(token, out var entry) ? entry.Index.Value : null,
-            (x, z) => ctx.World.Spatial.GroundY(x, z), LampSeed ^ ctx.Descriptor.Seed, _cueDefs, out var report);
+            (x, z) => ctx.World.Spatial.GroundY(x, z), LampSeed ^ ctx.Descriptor.Seed, out var report);
         Lamps = lamps;
         var rect = ctx.Descriptor.DataRect;
         var table = LampTable.PackTable(lamps);
@@ -289,7 +215,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewConten
             _windowGlow.Upload(_pools, Material, windowSet);
         }
         _inventoryRev = revision;
-        GD.Print($"nightlight: map {ctx.Descriptor.Id.Value} rev={_inventoryRev} lamps={report.Accepted} cue={report.CueLamps} grid={size.Width}x{size.Height} " +
+        GD.Print($"nightlight: map {ctx.Descriptor.Id.Value} rev={_inventoryRev} lamps={report.Accepted} grid={size.Width}x{size.Height} " +
             $"overflowCells={overflow} skipped(channel={report.UnknownChannel}, notLamp={report.NotLamp}, color={report.UnknownColor}, dup={report.Duplicates}) " +
             $"windows={windowReport.Windows} skipped(channel={windowReport.UnknownChannel}, facade={windowReport.BadFacade})");
     }

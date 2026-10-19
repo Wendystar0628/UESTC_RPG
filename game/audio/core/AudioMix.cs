@@ -10,8 +10,8 @@ public sealed class AudioMix
     public const float PageOpenDuckDb = -4f;
     public const float PageFadeSeconds = .5f;
     private readonly Ramp[] _groups = [new(), new(), new(), new(), new()];
-    private readonly Ramp[] _ducks = [new(1), new(1), new(1), new(1), new(1)];
-    private readonly float[] _release = new float[5];
+    private readonly Ramp[] _ducks = [new(1), new(1), new(1), new(1)];
+    private readonly float[] _release = new float[4];
     private readonly Ramp _audible = new();
     private readonly Ramp _background = new(1);
     private readonly Ramp _route = new(1);
@@ -56,8 +56,7 @@ public sealed class AudioMix
         DuckReason.Boot => 0,
         DuckReason.Veil => 1,
         DuckReason.PageOpen => 2,
-        DuckReason.Cinematic => 3,
-        DuckReason.MapTravel => 4,
+        DuckReason.MapTravel => 3,
         _ => throw new ArgumentOutOfRangeException(nameof(reason))
     };
 
@@ -119,7 +118,6 @@ public sealed class AudioMix
             VeilReason.Boot => 0f,
             VeilReason.Transit or VeilReason.Teleport => -8f,
             VeilReason.Season or VeilReason.Quality or VeilReason.Respawn => -6f,
-            VeilReason.Cinematic => -8f,
             VeilReason.MapTravel => -40f,
             _ => throw new ArgumentOutOfRangeException(nameof(reason))
         };

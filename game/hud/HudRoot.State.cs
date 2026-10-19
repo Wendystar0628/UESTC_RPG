@@ -32,7 +32,7 @@ public partial class HudRoot
                 break;
             case AppState.Entering:
             case AppState.Leaving:
-                BuildResident();   // 进出都在雾幕下，建在这里不露出建页那一帧
+                BuildResident();   // 进出在加载页下准备四角，交还时直接出现
                 goto case AppState.Quitting;
             case AppState.Boot:
             case AppState.Quitting:
@@ -134,6 +134,9 @@ public partial class HudRoot
     {
         if (current == AppState.Playing) ResetIdleFade();
         SyncState();
+        // 启动恢复没有 EnterResult 回调；普通进入失败仍由开始菜单原有提示处理。
+        if (previous == AppState.Boot && current == AppState.Title && _flow.LastError is { } errorKey)
+            _toast.Show(UiKit.T(errorKey), bar: "warning.fill");
     }
 
     private void OnInterfaceModeChanged(bool enabled)

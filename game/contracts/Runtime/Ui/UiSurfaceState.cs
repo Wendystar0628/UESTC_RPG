@@ -6,7 +6,7 @@ namespace Campus.Contracts;
 public enum UiSurface : ushort
 {
     None = 0, Minimap = 1, Atlas = 2, AtlasIndex = 4, SettingsCard = 8, SavePage = 16, TitleMenu = 32,
-    Dialog = 64, TimeCard = 128, WeatherStrip = 256, Cinema = 512
+    Dialog = 64, TimeCard = 128, WeatherStrip = 256
 }
 
 /// <summary>Visible, interactive surfaces; changes are published on the main thread only when values change.</summary>

@@ -37,9 +37,9 @@ public static class LightChannelCatalog
         "window.cafe", "window.venue", "window.gym", "interior.public",
         "lamp.first", "lamp.first.half", "lamp.street", "lamp.landscape",
         "lamp.statue", "lamp.canopy", "lamp.pilotis", "lamp.corridor",
-        "lamp.court", "sign.shop", "sign.signal", "lamp.cue",
+        "lamp.court", "sign.shop", "sign.signal", "reserved.23",
         "lamp.fountain", "clock.face", "lamp.aviation", "water.pool",
-        "reserved.28", "reserved.29", "sys.cue", "sys.poolGain"
+        "reserved.28", "reserved.29", "reserved.30", "sys.poolGain"
     ];
 
     public static ChannelId Id(int slot)

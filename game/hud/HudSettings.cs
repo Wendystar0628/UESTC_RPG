@@ -16,6 +16,7 @@ public static class HudSettingDefinitions
     public static SettingDefinition<float> UiScale => UiSettingDefinitions.Scale;
     public static readonly SettingDefinition<bool> SingleKeyShortcuts = new("single_key_shortcuts", true, "settings.single_keys");
     public static readonly SettingDefinition<bool> ShowPerf = new("show_perf", false, "settings.show_perf");
+    public static readonly SettingDefinition<bool> FirstGuideSeen = new("first_guide_seen", false, "hud.first_guide");
 }
 
 /// <summary>
@@ -44,6 +45,7 @@ public sealed class HudSettings
     public float UiScale { get; private set; } = HudSettingDefinitions.UiScale.Default;
     public bool SingleKeyShortcuts { get; private set; } = HudSettingDefinitions.SingleKeyShortcuts.Default;
     public bool ShowPerf { get; private set; } = HudSettingDefinitions.ShowPerf.Default;
+    public bool FirstGuideSeen { get; private set; } = HudSettingDefinitions.FirstGuideSeen.Default;
     public long Rev { get; private set; }
     public event Action? Changed;
 
@@ -55,6 +57,14 @@ public sealed class HudSettings
     public void SetUiScale(float v) => Set(() => UiScale = Math.Clamp(v, (float)HudSettingDefinitions.UiScale.Range!.Min, (float)HudSettingDefinitions.UiScale.Range.Max), Math.Abs(UiScale - v) > 0.001f);
     public void SetSingleKeyShortcuts(bool v) => Set(() => SingleKeyShortcuts = v, SingleKeyShortcuts != v);
     public void SetShowPerf(bool v) => Set(() => ShowPerf = v, ShowPerf != v);
+
+    public void MarkFirstGuideSeen()
+    {
+        if (FirstGuideSeen) return;
+        FirstGuideSeen = true;
+        _section.Set(HudSettingDefinitions.FirstGuideSeen.Key, true);
+        _store.TrySave();
+    }
 
     private void Set(Action apply, bool changed)
     {
@@ -99,5 +109,6 @@ public sealed class HudSettings
         UiScale = _section.Get(HudSettingDefinitions.UiScale);
         SingleKeyShortcuts = _section.Get(HudSettingDefinitions.SingleKeyShortcuts);
         ShowPerf = _section.Get(HudSettingDefinitions.ShowPerf);
+        FirstGuideSeen = _section.Get(HudSettingDefinitions.FirstGuideSeen);
     }
 }

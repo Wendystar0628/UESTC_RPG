@@ -49,7 +49,7 @@ public sealed class CharacterWaterBoundaryTests
     public void LegacyRulesetConstructorAndJsonKeepBodyPermissionOffUnlessExplicit()
     {
         var legacy = new RulesetDescriptor(new("legacy"), [ViewMode.Fly, ViewMode.Walk],
-            ViewMode.Fly, WorldControlMask.None, "all-unlocked", [], []);
+            ViewMode.Fly, WorldControlMask.None, "all-unlocked", []);
         AssertThat(!legacy.PlayerBody && !legacy.Characters).OverrideFailureMessage("A legacy ruleset unexpectedly enabled a character.").IsTrue();
         string json = JsonSerializer.Serialize(legacy, ContractJson.Options);
         using var parsed = JsonDocument.Parse(json);

@@ -4,14 +4,14 @@ using Campus.Contracts.Save;
 
 namespace Campus.Tests;
 
-/// <summary>Shared IRuleset fake. Defaults: Fly and Walk, no cinematic states.</summary>
+/// <summary>Shared IRuleset fake. Defaults: Fly and Walk.</summary>
 internal sealed class TestRuleset(string policy = "all-unlocked", IReadOnlyList<ViewMode>? viewModes = null,
-    IReadOnlyList<AppState>? cinematicStates = null, string id = "test", ViewMode defaultViewMode = ViewMode.Fly) : IRuleset
+    string id = "test", ViewMode defaultViewMode = ViewMode.Fly) : IRuleset
 {
-    /// <summary>The ruleset the entry flow and cinematic tests run under: Fly only, Title/Entering/Leaving cinematics.</summary>
-    public static TestRuleset ForFlow() => new("none", [ViewMode.Fly], [AppState.Title, AppState.Entering, AppState.Leaving]);
+    /// <summary>The ruleset used by entry-flow tests.</summary>
+    public static TestRuleset ForFlow() => new("none", [ViewMode.Fly, ViewMode.Walk], defaultViewMode: ViewMode.Walk);
     public RulesetDescriptor Current { get; } = new(new(id), viewModes ?? [ViewMode.Fly, ViewMode.Walk],
-        defaultViewMode, WorldControlMask.All, policy, [], cinematicStates ?? []);
+        defaultViewMode, WorldControlMask.All, policy, []);
     public long Rev => 1;
 }
 
@@ -97,9 +97,9 @@ internal sealed class TestAppFlow : IAppFlow
     public Func<AppActivity>? ActivitySource { get; set; }
     public AppActivity Activity { get => ActivitySource?.Invoke() ?? _activity; set => _activity = value; }
     public long Rev { get; private set; }
-    public EnterPath? Path => null;
-    public bool Skippable => false;
+    public string? LastError => null;
     public event Action<AppState, AppState>? Changed;
+    public event Action<string>? PhaseReached { add { } remove { } }
     public int Observers => Changed?.GetInvocationList().Length ?? 0;
     public void SetState(AppState state)
     {
@@ -110,7 +110,6 @@ internal sealed class TestAppFlow : IAppFlow
     }
     public Task<EnterResult> Enter(EnterRequest request) => throw new NotSupportedException();
     public Task ReturnToTitle() => Task.CompletedTask;
-    public void Skip() { }
     public Task Quit() => Task.CompletedTask;
 }
 
@@ -145,6 +144,7 @@ internal class TestSaveService : ISaveService
     public virtual Task CompleteResume() => throw new InvalidOperationException("Unexpected CompleteResume.");
     public virtual Task<LoadResult> LoadFile(string path) => throw new InvalidOperationException("Unexpected LoadFile.");
     public virtual Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) => throw new InvalidOperationException("Unexpected NewGame.");
+    public virtual Task<LoadResult> RestoreTitlePreview() => throw new InvalidOperationException("Unexpected RestoreTitlePreview.");
     public virtual Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => throw new InvalidOperationException("Unexpected FlushForQuit.");
     public virtual byte[]? Thumbnail(SlotId slot) => null;
 }

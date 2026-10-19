@@ -182,7 +182,7 @@ public sealed class AuthorityGateTests
     public void CameraPoseWritesStayWithinArrivalAndPresentationOwners()
     {
         var errors = new List<string>();
-        string[] spaces = ["Campus.Flow", "Campus.Camera.Cinematic", "Campus.Kernel.Boot", "Campus.Kernel.Maps", "Campus.Kernel.Inspect", "Campus.Gates"];
+        string[] spaces = ["Campus.Flow", "Campus.Kernel.Boot", "Campus.Kernel.Maps", "Campus.Kernel.Inspect", "Campus.Gates"];
         string[] types = ["Campus.Camera.ObserverCamera", "Campus.Camera.TransitDriver"];
         foreach (var file in SourceModel.Production)
         foreach (var call in file.Root.DescendantNodes().OfType<InvocationExpressionSyntax>())
@@ -192,7 +192,7 @@ public sealed class AuthorityGateTests
                 method.ContainingType.AllInterfaces.Any(item => SourceModel.Name(item) == "Campus.Contracts.ICameraRig"))) continue;
             var owner = SourceModel.Owner(file.Model, call);
             if (!types.Contains(owner, StringComparer.Ordinal) && !spaces.Any(space => SourceModel.InNamespace(owner, space)))
-                errors.Add(file.At(call, "ICameraRig.SetPose is reserved for arrival, cinematic presentation, restore and inspection."));
+                errors.Add(file.At(call, "ICameraRig.SetPose is reserved for arrival, application presentation, restore and inspection."));
         }
         SourceModel.RequireNoViolations(errors);
     }

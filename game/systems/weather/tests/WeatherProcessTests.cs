@@ -414,7 +414,7 @@ public sealed class WeatherProcessTests
             new MapDescriptor(Map, new("测试", "Test"), MapKind.Outdoor, 1, 1, null!, default, default, null!, null!,
                 default, default, "test", Array.Empty<MapSpawn>(),
                 new(MapTimeRule.Shared, new(17.5, Season.Autumn, WeatherKind.Clear), new("测试", "Test"), true, "test"),
-                null!, new Dictionary<string, string>(), Array.Empty<MapPortal>())
+                null!, Array.Empty<MapPortal>())
         ],
     };
 }

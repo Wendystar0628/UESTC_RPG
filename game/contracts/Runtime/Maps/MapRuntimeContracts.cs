@@ -5,6 +5,7 @@ public interface IMapRuntime
 {
     IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null);
     IMapArrival? Arrival { get; }
+    event Action<IMapArrival?>? ArrivalChanged;
 }
 
 /// <summary>
@@ -17,6 +18,9 @@ public interface IMapArrival
 {
     MapStreamDestination Destination { get; }
     Task Done { get; }
+    int Completed { get; }
+    int Total { get; }
+    event Action? ProgressChanged;
     void Cancel();
 }
 

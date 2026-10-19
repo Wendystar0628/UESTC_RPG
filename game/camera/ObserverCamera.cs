@@ -14,10 +14,9 @@ namespace Campus.Camera;
 [KernelService(typeof(IViewControl), Owner = "WP-06")]
 [KernelService(typeof(IInputRouter), Owner = "WP-06")]
 [KernelService(typeof(ICameraPoseValidator), Owner = "WP-06")]
-[KernelService(typeof(ISkipInputState), Owner = "WP-06")]
 [KernelNode("observer-camera", Owner = "WP-06")]
 [SaveSection("view", Owner = "WP-06", Version = 1, Phase = RestorePhase.Pose, Order = 60)]
-public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewControl, IInputRouter, ISkipInputState,
+public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewControl, IInputRouter,
     ICameraPoseValidator, IMapAware, IMapDataParticipant, ISaveSection<ViewSaveData>
 {
     private readonly InputLocks _locks = new();
@@ -206,7 +205,6 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private void OnFlowChanged(AppState previous, AppState next)
     {
         _input.Clear(); _flight.Reset(); _walk?.SetInput(default); SetInterfaceMode(true); SetEdgeFog(0);
-        ResetSkipHold(); _skipHintVisible = false;
         if (IsPlaying && Mode == ViewMode.Fly) _flowProjection = LegalizePrepared(Pose);
     }
     private void SetEdgeFog(float value)
@@ -220,7 +218,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _flight.Reset(); _input.Clear(); _walk?.SetInput(default);
         _flightProjection = null;
         _recoverTriggered = false;
-        _wheel = 0; ResetSkipHold(); _skipHintVisible = false;
+        _wheel = 0;
         _listener?.Sync(reset: true);
     }
 
@@ -266,7 +264,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
             _flyFovTarget = target;
             _flyFovElapsed = 0;
         }
-        // Keep an explicitly supplied review/cinematic FOV until a mode or preference change.
+        // Keep an explicitly supplied review FOV until a mode or preference change.
         if (_flyFovElapsed >= Tuning.ModeFovSeconds) return;
         _flyFovElapsed = MathF.Min(_flyFovElapsed + seconds, Tuning.ModeFovSeconds);
         float t = ScalarMath.Smootherstep(_flyFovElapsed / Tuning.ModeFovSeconds);

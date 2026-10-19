@@ -5,7 +5,7 @@ function Test-UESTCNamespaceRole {
     if ($Namespace -cnotmatch '^Campus(?:\.[A-Z][A-Za-z0-9]*)+$') { return $false }
     if ($Path -match '/tests/|^scripts/gates/arch/') { return $true }
     if ($Path -match '^game/contracts/') {
-        return $Namespace -cmatch '^Campus\.Contracts(?:\.(?:Quality|Maps|Atlas|AppFlow|Cinematic|Save|Audio|Bake|Parts|Entities|Startup|Settings|Content|Vegetation|Water|Fauna)(?:\.[A-Z][A-Za-z0-9]*)*)?$'
+        return $Namespace -cmatch '^Campus\.Contracts(?:\.(?:Quality|Maps|Atlas|AppFlow|Save|Audio|Bake|Parts|Entities|Startup|Settings|Content|Vegetation|Water|Fauna)(?:\.[A-Z][A-Za-z0-9]*)*)?$'
     }
     if ($Path -match '^pipeline/map/') {
         # These sources are compiled into Campus.Gen, retaining their pipeline responsibility.

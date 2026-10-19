@@ -17,8 +17,8 @@ public sealed class FlowLeaseTests
         var world = CreateWorld(new TestWeatherProcess());
         world.SetFlow(60);
         using var title = world.AcquireFlow(FlowPriority.Pause, 0);
-        using var older = world.AcquireFlow(FlowPriority.Cinematic, 10);
-        using var newer = world.AcquireFlow(FlowPriority.Cinematic, 360);
+        using var older = world.AcquireFlow(FlowPriority.AppFlow, 10);
+        using var newer = world.AcquireFlow(FlowPriority.AppFlow, 360);
         using var laterPause = world.AcquireFlow(FlowPriority.Pause, 0);
         older.SetRate(1440);
         AssertThat(world.Flow.Rate).IsEqual(360);
@@ -36,31 +36,6 @@ public sealed class FlowLeaseTests
         AssertThat(world.Flow.Rate).IsEqual(10);
         world.SetFlow(0);
         AssertThat(world.LastFlowRate).IsEqual(10);
-    }
-
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void SuspendedFlowDestinationResumesAndItsStopDoesNotOverwriteTheBaseRate()
-    {
-        var world = CreateWorld(new TestWeatherProcess());
-        world.SetFlow(10);
-        using var timeline = world.AcquireFlow(FlowPriority.Cinematic, 0);
-        var start = world.WorldHours;
-        var target = world.Clock + .06;
-        timeline.FlowTo(target, 1440);
-        using (world.AcquireFlow(FlowPriority.Cinematic, 0))
-        {
-            world.Tick(.1);
-            AssertThat(world.WorldHours).IsEqual(start);
-            AssertThat(world.AnimTime > WorldTime.InitialAnimTime).IsTrue();
-        }
-        world.Tick(.1);
-        world.Tick(.1);
-        AssertThat(world.Clock).IsEqual(target);
-        AssertThat(world.Flow.Rate).IsEqual(0);
-        AssertThat(world.BaseFlow.Rate).IsEqual(10);
-        timeline.Dispose();
-        AssertThat(world.Flow.Rate).IsEqual(10);
     }
 
     [TestCase]

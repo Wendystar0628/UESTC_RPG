@@ -146,7 +146,7 @@ public sealed class InteriorProviderScopeTests
             new(0.9f, 30, 3000, -28, 2000, 30, 40, 150), new(-8, -8), new(7, 7),
             "spawn", [new("spawn", new(new(0, 20, 30), 0, -15), null)],
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("测试时刻", "Fixture"), false, "fixture"),
-            new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+            new("sky.json", "backdrop.json", []), []);
         return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = 7, InteriorProviders = providers };
     }
 

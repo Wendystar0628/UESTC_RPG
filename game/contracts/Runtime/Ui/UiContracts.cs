@@ -18,8 +18,8 @@ public interface IPaletteProbe
     void SampleHorizon(Season season, WeatherVec weather, Span<Vector3> srgb24);
 }
 
-// 雾幕：WP-01 实现（雾幕层由 WP-05 画），转场、跳转、传送、换季、画质、回位、过场、切图共用一层
-public enum VeilReason : byte { Boot, Transit, Teleport, Season, Quality, Respawn, Cinematic, MapTravel }   // 在 Campus.Contracts，不在音频命名空间
+// 雾幕：WP-01 实现（雾幕层由 WP-05 画），转场、跳转、传送、换季、画质、回位、切图共用一层
+public enum VeilReason : byte { Boot, Transit, Teleport, Season, Quality, Respawn, MapTravel = 7 }   // 在 Campus.Contracts，不在音频命名空间
 public enum VeilContent : byte { Fog, Frontispiece }    // 雾色；扉页插画（SYS-TITLE）
 // Fixed policies from UI-VISUAL and SYS-TITLE. Callers do not choose delays.
 public enum VeilWaitKind : byte { Readiness, BootFrontispiece }

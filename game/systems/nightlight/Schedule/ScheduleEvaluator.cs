@@ -7,9 +7,6 @@ namespace Campus.Systems.Nightlight.Schedule;
 public readonly record struct ScheduleInput(
     double Clock, float SunAltDeg, float Overcast, float Precip, float PoolGain, double RealDt);
 
-/// <summary>过场"初灯追镜头"的覆盖：前沿位置与软边都是相对路线全长的比例，目标高度是覆盖期间判开灯用的 h_eff。</summary>
-public readonly record struct CueOverride(float Front, float Band, float TargetSunDeg);
-
 /// <summary>
 /// 32 个灯光通道的每帧求值（ENG-PERF）。只算数：结果交给 WP-03 的通道写入接口。
 /// 目标值只由钟点、h_eff 与季节决定（可复现）；过渡宽度 Δ 随通道的变化速率自适应，
@@ -36,16 +33,11 @@ public sealed class ScheduleEvaluator
             _slotById.Add(spec.Id, spec.Slot);
             if (spec.Kind == ChannelClass.Lamp) _groupBySlot[spec.Slot] = file.Groups[spec.Group!];
         }
-        CueSlot = _slotById[file.Cue.Slot];
-        CueSysSlot = _slotById[file.Cue.SysSlot];
         PoolGainSlot = file.Channels.Single(c => c.Kind == ChannelClass.PoolGain).Slot;
     }
 
     public LightingScheduleFile File => _file;
-    public int CueSlot { get; }
-    public int CueSysSlot { get; }
     public int PoolGainSlot { get; }
-    public CueOverride? Cue { get; set; }
 
     public int SlotOf(ChannelId id) => _slotById.TryGetValue(id, out var slot) ? slot :
         throw new KeyNotFoundException($"Lighting channel '{id.Value}' is not in lighting-schedule.json.");
@@ -66,10 +58,7 @@ public sealed class ScheduleEvaluator
             case ChannelClass.Window:
                 return WindowTarget(spec, input);
             case ChannelClass.Lamp:
-                if (slot == CueSlot && Cue is { } cue) return Math.Clamp(cue.Front, 0f, 1f);
                 return Math.Clamp(ScheduleMath.Curve(spec.Curve, input.Clock), 0f, 1f);
-            case ChannelClass.Cue:
-                return Cue is null ? 0f : 1f;
             case ChannelClass.PoolGain:
                 return float.IsFinite(input.PoolGain) && input.PoolGain > 0f ? input.PoolGain : 1f;
             case ChannelClass.Reserved:
@@ -111,10 +100,7 @@ public sealed class ScheduleEvaluator
             output[slot] = spec.Kind switch
             {
                 ChannelClass.Window => new Vector2(target, delta),
-                ChannelClass.Lamp when slot == CueSlot && Cue is { } cue =>
-                    new Vector2(Math.Clamp(cue.Front, 0f, 1f) * (1f + cue.Band), Math.Max(cue.Band, deltaSpec.Min)),
                 ChannelClass.Lamp => new Vector2(target * (1f + delta), delta),
-                ChannelClass.Cue => Cue is { } c ? new Vector2(1f, c.TargetSunDeg) : Vector2.Zero,
                 ChannelClass.PoolGain => new Vector2(target, 0f),
                 ChannelClass.Reserved => new Vector2(0f, deltaSpec.Min),
                 _ => throw new InvalidOperationException($"Unknown channel class {spec.Kind}."),
@@ -174,7 +160,6 @@ public sealed class ScheduleEvaluator
                     if (spec.Curve.Count == 0 || spec.Group is null || !file.Groups.ContainsKey(spec.Group))
                         throw new InvalidDataException($"Lamp channel '{spec.Id.Value}' needs a curve and a known group.");
                     break;
-                case ChannelClass.Cue:
                 case ChannelClass.PoolGain:
                 case ChannelClass.Reserved:
                     break;
@@ -182,15 +167,8 @@ public sealed class ScheduleEvaluator
                     throw new InvalidDataException($"Unknown channel class {spec.Kind}.");
             }
         }
-        if (file.Channels.Count(c => c.Kind == ChannelClass.Cue) != 1 || file.Channels.Count(c => c.Kind == ChannelClass.PoolGain) != 1)
-            throw new InvalidDataException("lighting-schedule.json needs exactly one cue slot and one pool-gain slot.");
-        var cueSlot = file.Channels.FirstOrDefault(c => c.Id == file.Cue.Slot);
-        var sysSlot = file.Channels.FirstOrDefault(c => c.Id == file.Cue.SysSlot);
-        if (cueSlot is not { Kind: ChannelClass.Lamp } || sysSlot is not { Kind: ChannelClass.Cue })
-            throw new InvalidDataException("cue.slot must name a lamp channel and cue.sysSlot the cue channel.");
-        foreach (var target in file.Cue.Groups.Values)
-            if (!file.Channels.Any(c => c.Id == target && c.Kind == ChannelClass.Lamp))
-                throw new InvalidDataException($"cue group maps to unknown lamp channel '{target.Value}'.");
+        if (file.Channels.Count(c => c.Kind == ChannelClass.PoolGain) != 1)
+            throw new InvalidDataException("lighting-schedule.json needs exactly one pool-gain slot.");
         foreach (var (name, group) in file.Groups)
             if (!float.IsFinite(group.FromDeg) || !float.IsFinite(group.ToDeg) || group.ToDeg > group.FromDeg)
                 throw new InvalidDataException($"Threshold group '{name}' needs toDeg <= fromDeg.");

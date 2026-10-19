@@ -102,7 +102,7 @@ public sealed class BackdropInputsTests
         new(.9f, 30, 3000, -28, 2000, 30, 40, 150), new(78, -110), new(81, -107), "spawn",
         [new("spawn", new(new(5100, 20, -6900), 0, -15), null)],
         new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("默认", "Default"), false, "fixture"),
-        new("sky.json", backdrop, []), new Dictionary<string, string>(), []);
+        new("sky.json", backdrop, []), []);
 
     internal static BuildInputSnapshot Snapshot(string key, string json) =>
         BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { [key] = Encoding.UTF8.GetBytes(json) });

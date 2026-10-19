@@ -17,7 +17,7 @@ public sealed class LightingContentBoundaryTests
         var fixedSlots = new (int Slot, string Id)[]
         {
             (0, "window.general"), (7, "window.allnight"), (11, "interior.public"),
-            (12, "lamp.first"), (23, "lamp.cue"), (28, "reserved.28"), (30, "sys.cue"), (31, "sys.poolGain")
+            (12, "lamp.first"), (23, "reserved.23"), (28, "reserved.28"), (30, "reserved.30"), (31, "sys.poolGain")
         };
         foreach (var (slot, id) in fixedSlots)
             if (LightChannelCatalog.Id(slot).Value != id || LightChannelCatalog.Slot(new ChannelId(id)) != slot)

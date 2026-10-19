@@ -1,6 +1,5 @@
 using System.Numerics;
 using System.Text.Json.Serialization;
-using Campus.Contracts.AppFlow;
 
 namespace Campus.Contracts;
 [Flags]
@@ -12,8 +11,7 @@ public sealed record RulesetDescriptor(
     [property: JsonRequired] ViewMode DefaultViewMode,
     WorldControlMask WorldControls,
     string UnlockPolicy,
-    IReadOnlyList<string> Incidents,
-    IReadOnlyList<AppState> CinematicStates)
+    IReadOnlyList<string> Incidents)
 {
     public bool Characters { get; init; }
     /// <summary>Permits the player presentation independently of NPCs; runtime release/body gates still apply.</summary>

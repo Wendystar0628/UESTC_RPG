@@ -31,6 +31,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private IVeilService? _veil;
     private IVeilLease? _readinessCover;
     private IVeilPresentation? _presentation;
+    private IAppLoadingPresentation? _loading;
     private ulong _arrivalFrame;
     private long _arrivalDraw;
     private ulong _coveredDrawFrame;
@@ -56,6 +57,8 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         });
     private bool WarmReady { get; set; }
     public IMapArrival? Arrival => _arrival;
+    public event Action<IMapArrival?>? ArrivalChanged;
+    private bool IsCovered => _loading?.IsCovered == true || _presentation?.IsCovered == true;
     private string? Error => _error ?? _materials?.Error ?? _stream?.Error ?? _renderer?.Error ?? _collision?.Error;
 
     public override void _Ready()
@@ -70,6 +73,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _terrain = Services.Get<ITerrainPreparation>();
         _veil = Services.Get<IVeilService>();
         _presentation = Services.Get<IVeilPresentation>();
+        _loading = Services.Get<IAppLoadingPresentation>();
         RenderingServer.Singleton.FramePostDraw += CountDraw;
     }
 
@@ -211,6 +215,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _previous = PipelineCounts.Read();
         _reuseWarmth = _materials!.IsReady;
         if (!_reuseWarmth) _materials.End(reset: true);
+        ArrivalChanged?.Invoke(arrival);
         _ = PrepareArrival(arrival, _context ?? throw new InvalidOperationException("Arrival requires the mounted map context."), _mapGeneration);
         return arrival;
     }
@@ -224,10 +229,16 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             var point = new System.Numerics.Vector2(destination.Pose.Position.X, destination.Pose.Position.Z);
             var product = FormattableString.Invariant($"arrival/{point.X:R}/{point.Y:R}");
             await _terrain!.PreparePoints(context, product, [point], cancellation);
+            cancellation.ThrowIfCancellationRequested();
+            if (generation != _mapGeneration || !ReferenceEquals(_arrival, arrival)) return;
+            arrival.MarkCompleted(ArrivalStep.TerrainPoint);
             if (destination.Mode == ViewMode.Walk)
             {
                 var reach = new System.Numerics.Vector2(WalkRules.ArrivalCollisionRadius);
                 await _terrain.PrepareRegion(context, new(point - reach, point + reach), cancellation);
+                cancellation.ThrowIfCancellationRequested();
+                if (generation != _mapGeneration || !ReferenceEquals(_arrival, arrival)) return;
+                arrival.MarkCompleted(ArrivalStep.TerrainRegion);
             }
             if (_stopping || generation != _mapGeneration || !ReferenceEquals(_arrival, arrival) || arrival.Done.IsCompleted) return;
             // Prefetch may classify the destination medium; all destination readers start after preparation.
@@ -291,31 +302,55 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     {
         if (!_warming || _arrival is not { } arrival || arrival.Done.IsCompleted) return;
         if (!arrival.Prepared) return;
-        if (!ResidentReady) return;
+        if (_stream!.DestinationReady) arrival.MarkCompleted(ArrivalStep.Destination);
+        if (arrival.Destination.Mode == ViewMode.Walk &&
+            _collision!.Ready(arrival.Destination.Pose.Position, WalkRules.ArrivalCollisionRadius))
+            arrival.MarkCompleted(ArrivalStep.Collision);
+        if (ContentReady) arrival.MarkCompleted(ArrivalStep.Content);
+        if (!ResidentReady) { arrival.ReadyDraw = null; return; }
+        arrival.MarkCompleted(ArrivalStep.Resident);
+        if (_loading?.Active == true && !_loading.IsCovered) return;
         if (!_samplesStarted)
         {
             // Existing warm pipelines keep the same-map fast path. Newly required variants must be sampled.
             if (_reuseWarmth && _renderer!.PipelineReady && _materialSource!.CapturePendingWarm().Materials.Count == 0)
             {
-                if (_drawFrames > _arrivalDraw && _materials!.SamplesReleased && ContentReady && DestinationReady)
-                    CompleteArrival(arrival);
+                if (_materials!.SamplesReleased) FinishArrivalAfterDraw(arrival);
                 return;
             }
             // Visible arrivals own only their temporary cover; external transit/boot covers stay with their callers.
-            if (_presentation?.IsCovered != true)
+            if (!IsCovered && _loading?.Active != true)
                 _readinessCover ??= _veil!.Cover(VeilReason.Transit, 0f);
-            if (_coveredDrawFrame <= _arrivalFrame || _presentation?.IsCovered != true || !ContentReady) return;
+            if (_coveredDrawFrame <= _arrivalFrame || !IsCovered || !ContentReady) return;
             _reuseWarmth = false;
             _materials!.Begin();
             _samplesStarted = true;
         }
-        if (_coveredDrawFrame <= _arrivalFrame || _presentation?.IsCovered != true) return;
+        if (_coveredDrawFrame <= _arrivalFrame || !IsCovered) return;
         if (_drawFrames == _lastWarmDraw) return;
         _lastWarmDraw = _drawFrames;
         var counts = PipelineCounts.Read();
         _stable = ResidentReady && _materials!.IsReady && _materials.SamplesReleased && counts == _previous ? _stable + 1 : 0;
         _previous = counts;
-        if (_stable >= BootTuning.WarmFrames && ContentReady && DestinationReady) CompleteArrival(arrival);
+        if (_stable >= BootTuning.WarmFrames) FinishArrivalAfterDraw(arrival);
+    }
+
+    private void FinishArrivalAfterDraw(ArrivalRun arrival)
+    {
+        if (!_renderer!.PipelineReady)
+        {
+            arrival.ReadyDraw = null;
+            return;
+        }
+        arrival.MarkCompleted(ArrivalStep.Pipeline);
+        if (!ContentReady || !DestinationReady)
+        {
+            arrival.ReadyDraw = null;
+            return;
+        }
+        // The final evidence must be a draw submitted after this destination's barriers became ready.
+        arrival.ReadyDraw ??= _drawFrames;
+        if (_drawFrames > arrival.ReadyDraw.Value && _drawFrames > _arrivalDraw) CompleteArrival(arrival);
     }
 
     // Visible-content producers apply the presented camera. Stream/collision separately certify the arrival destination.
@@ -339,15 +374,19 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private void CountDraw()
     {
         _drawFrames++;
-        if (_presentation?.IsCovered == true) _coveredDrawFrame = Engine.GetProcessFrames();
+        if (IsCovered) _coveredDrawFrame = Engine.GetProcessFrames();
     }
 
     public void StopNewWork()
     {
         _stopping = true;
         _mountCompletion?.TrySetCanceled();
-        _arrival?.Cancel();
-        _arrival = null;
+        if (_arrival is { } arrival)
+        {
+            arrival.Cancel();
+            _arrival = null;
+            ArrivalChanged?.Invoke(null);
+        }
         _warming = false;
         _materials?.End(reset: true);
         ReleaseReadinessCover();
@@ -360,21 +399,52 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (_materials is not null && GodotObject.IsInstanceValid(_materials)) _materials.End(reset: true);
     }
 
+    [Flags]
+    private enum ArrivalStep
+    {
+        None = 0, TerrainPoint = 1, Resident = 2, Destination = 4, Content = 8, Pipeline = 16, Draw = 32,
+        TerrainRegion = 64, Collision = 128
+    }
+
     private sealed class ArrivalRun(MapStreamDestination destination, Action<ArrivalRun> onCancel) : IMapArrival
     {
         private readonly TaskCompletionSource _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly CancellationTokenSource _cancellation = new();
+        private readonly ArrivalStep _required = ArrivalStep.TerrainPoint | ArrivalStep.Resident |
+            ArrivalStep.Destination | ArrivalStep.Content | ArrivalStep.Pipeline | ArrivalStep.Draw |
+            (destination.Mode switch
+            {
+                ViewMode.Fly => ArrivalStep.None,
+                ViewMode.Walk => ArrivalStep.TerrainRegion | ArrivalStep.Collision,
+                _ => throw new ArgumentOutOfRangeException(nameof(destination.Mode))
+            });
+        private ArrivalStep _completed;
         public CancellationToken Token => _cancellation.Token;
         public bool Prepared { get; set; }
+        public long? ReadyDraw { get; set; }
         public MapStreamDestination Destination => destination;
         public Task Done => _done.Task;
+        public int Completed => Done.IsCompletedSuccessfully ? Total : System.Numerics.BitOperations.PopCount((uint)_completed);
+        public int Total => System.Numerics.BitOperations.PopCount((uint)_required);
+        public event Action? ProgressChanged;
+        public void MarkCompleted(ArrivalStep step)
+        {
+            if (Done.IsCompleted || (_required & step) == 0 || (_completed & step) != 0) return;
+            _completed |= step;
+            ProgressChanged?.Invoke();
+        }
         public void Cancel()
         {
             if (!_done.TrySetCanceled()) return;
             _cancellation.Cancel(); _cancellation.Dispose();
             onCancel(this);
         }
-        public void Complete() { if (_done.TrySetResult()) _cancellation.Dispose(); }
+        public void Complete()
+        {
+            if (!_done.TrySetResult()) return;
+            _cancellation.Dispose();
+            ProgressChanged?.Invoke();
+        }
         public void Fail(Exception error)
         {
             if (!_done.TrySetException(error)) return;

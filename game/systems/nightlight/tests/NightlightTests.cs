@@ -1,11 +1,9 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Lighting;
 using Campus.Kernel.World;
-using Campus.Systems.Nightlight.Cue;
 using Campus.Systems.Nightlight.Glow;
 using Campus.Systems.Nightlight.Lamps;
 using Campus.Systems.Nightlight.Schedule;
@@ -131,27 +129,6 @@ public sealed class NightlightTests
         return output[s.PoolGainSlot].X;
     }
 
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void CueChangesOnlyTheCueSlotsAndReleasesExactly()
-    {
-        var s = Default();
-        var plain = new Vector2[32];
-        var cued = new Vector2[32];
-        var released = new Vector2[32];
-        s.Evaluate(At(17.4, 6.3f), plain);
-        var def = new LampCueDef("avenue", "firstLight", [new(0, 0), new(0, 300)], 30f, [new(16, 0), new(28, 300)], 2.0);
-        var cue = new LampCue(def, 5.5f);
-        s.Cue = cue.At(22.0);
-        s.Evaluate(At(17.4, 6.3f), cued);
-        for (var i = 0; i < 32; i++)
-            if (i != s.CueSlot && i != s.CueSysSlot) AssertThat(plain[i] == cued[i]).OverrideFailureMessage($"cue changed slot {i}.").IsTrue();
-        AssertThat(cued[s.CueSlot].X / (1f + cued[s.CueSlot].Y)).OverrideFailureMessage($"{"cue front halfway at 22 s"}: expected {0.5f:R}, got {cued[s.CueSlot].X / (1f + cued[s.CueSlot].Y):R}.").IsEqualApprox(0.5f, TestTolerance.FloatRelative);
-        AssertThat(cued[s.CueSysSlot].Y).OverrideFailureMessage($"{"cue target altitude"}: expected {5.5f:R}, got {cued[s.CueSysSlot].Y:R}.").IsEqualApprox(5.5f, TestTolerance.AngleDegrees);
-        s.Cue = null;
-        s.Evaluate(At(17.4, 6.3f), released);
-        for (var i = 0; i < 32; i++) AssertThat(plain[i] == released[i]).OverrideFailureMessage($"slot {i} differs after release.").IsTrue();
-    }
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
@@ -234,7 +211,7 @@ public sealed class NightlightTests
         var emitters = Enumerable.Range(0, 48).Select(i =>
             new LightEmitter(new ChannelId("lamp.first"), new Vector3(i * 9.7f, 2.45f, i * -5.3f), warm, 0.75f, 2.4f)).ToList();
         emitters.Add(new LightEmitter(new ChannelId("interior.public"), new Vector3(-50f, 2.45f, 0f), warm, 0.75f, 2.4f));
-        var lamps = LampSetBuilder.Build(emitters, s, _ => 51, (_, _) => 0f, 1u, [], out var report);
+        var lamps = LampSetBuilder.Build(emitters, s, _ => 51, (_, _) => 0f, 1u, out var report);
         AssertThat(report.Accepted == 48 && report.NotLamp == 1).OverrideFailureMessage($"48 entrance lamps registered, the window-channel one dropped; got {report}").IsTrue();
         AssertThat(lamps.All(l => l.Slot == first && l.ThresholdDeg is >= 4f and <= 8f && l.Energy == 0.75f)).OverrideFailureMessage("entrance lamps ride the first-light group").IsTrue();
         // 秋季一整天每 5 分钟：太阳高于阈值时不亮；低于阈值后亮着，保留比例满（1:00–5:30 也不按哈希熄一半）
@@ -290,19 +267,4 @@ public sealed class NightlightTests
         (1f - ScalarMath.Smoothstep(l.ThresholdDeg - 0.08f, l.ThresholdDeg + 0.08f, heff),
          ScalarMath.Smoothstep(l.Keep, l.Keep + Math.Max(channel.Y, 1e-3f), channel.X));
 
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void CueLampsFollowTheRouteOrder()
-    {
-        var s = Default();
-        var def = new LampCueDef("avenue", "firstLight", [new(0, 0), new(0, -200)], 30f, [new(16, 0), new(28, 200)], 2.0);
-        var emitters = Enumerable.Range(0, 8).Select(i =>
-            new LightEmitter(new ChannelId("lamp.first"), new Vector3(8f, 6f, -i * 27f), new PaletteToken("lamp.warm"), 1f, 5f)).ToList();
-        emitters.Add(new LightEmitter(new ChannelId("lamp.first"), new Vector3(200f, 6f, 0f), new PaletteToken("lamp.warm"), 1f, 5f));
-        var lamps = LampSetBuilder.Build(emitters, s, _ => 51, (_, _) => 0f, 1u, [def], out var report);
-        AssertThat(report.CueLamps == 8).OverrideFailureMessage($"eight avenue lamps join the cue, got {report.CueLamps}").IsTrue();
-        var cueLamps = lamps.Where(l => l.Slot == s.CueSlot).OrderBy(l => -l.Base.Z).ToArray();
-        for (var i = 1; i < cueLamps.Length; i++) AssertThat(cueLamps[i].Keep > cueLamps[i - 1].Keep).OverrideFailureMessage("κ grows along the route").IsTrue();
-        AssertThat(lamps.Single(l => l.Base.X > 100f).Slot == s.SlotOf(new ChannelId("lamp.first"))).OverrideFailureMessage("lamps off the route keep their channel").IsTrue();
-    }
 }

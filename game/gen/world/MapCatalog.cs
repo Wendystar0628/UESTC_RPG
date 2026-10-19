@@ -114,7 +114,7 @@ public sealed class MapCatalog
     private static void Validate(MapFile file)
     {
         if (file.DataRect is null || file.Roam is null || file.World is null || file.Env is null ||
-            file.Spawns is null || file.Cinematics is null || file.Portals is null || string.IsNullOrWhiteSpace(file.DefaultSpawn))
+            file.Spawns is null || file.Portals is null || string.IsNullOrWhiteSpace(file.DefaultSpawn))
             throw new InvalidDataException("Missing map fields.");
         if (file.TerrainDefaults is { } defaults)
         {

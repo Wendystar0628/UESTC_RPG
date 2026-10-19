@@ -114,6 +114,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             if (!_runtimeObjects.Any(item => ReferenceEquals(item, instance))) _runtimeObjects.Add(instance);
         }
         _flow = registry.Get<IAppFlow>();
+        _flow.PhaseReached += static phase =>
+            GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R}"));
         if (!ReferenceEquals(_flow, registry.Get<IAppBootFlow>()))
             throw new InvalidOperationException("IAppFlow and IAppBootFlow must resolve to the same instance.");
         _flow.Changed += OnFlowChanged;
@@ -214,7 +216,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         await appBoot.CompleteBoot();
         if (_flow!.State == AppState.Title)
             GD.Print($"STARTUP_PHASE title-ready {FrameClock.MonotonicMilliseconds:R}");
-        await _gate.RunNamedCinematic();
         _ready = true;
         Phase = "realtime";
         GD.Print($"[WP-01][map={maps.Current.Value}][phase=realtime] flow={_flow!.State}; startup complete");
@@ -415,7 +416,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         var world = _runtimeObjects.OfType<IWorldControl>().SingleOrDefault();
         if (world is not null)
         {
-            try { _failureFlow ??= world.AcquireFlow(FlowPriority.Cinematic, 0); }
+            try { _failureFlow ??= world.AcquireFlow(FlowPriority.AppFlow, 0); }
             catch (Exception flowError) { GD.PushError($"[WP-01][phase=failure-flow] {flowError}"); }
         }
     }
@@ -427,7 +428,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     CancellationToken IStageGateHost.Lifetime => _captureLifetime.Token;
     bool IStageGateHost.Ready => _ready;
     bool IStageGateHost.Closing => _closing;
-    string IStageGateHost.Phase { set => Phase = value; }
     void IStageGateHost.CheckActive() => CheckStartupActive();
     void IStageGateHost.SyncView() => _view!.Sync();
     Task IStageGateHost.Close() => CloseAsync();

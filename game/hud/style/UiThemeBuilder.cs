@@ -50,6 +50,8 @@ public sealed class UiThemeBuilder
     public const string CardGrid = "UiCardGrid", Actions = "UiActions", Tabs = "UiTabs", Segments = "UiSegments";
     public const string PanelContainerType = "UiPanelContainer";
     public const string MinimapMargin = "UiMinimapMargin", MinimapBody = "UiMinimapBody";
+    public const string LoadingProgressType = "UiLoadingProgress";
+    public const string LoadingTitleMargin = "UiLoadingTitleMargin", LoadingFooterMargin = "UiLoadingFooterMargin";
 
     private void BuildLayout()
     {
@@ -67,6 +69,9 @@ public sealed class UiThemeBuilder
         MarginType(PanelMargin, _t.Space("panelPad"));
         MarginType(SmallMargin, _t.F("metrics", "grid", "half"));
         MarginType(MinimapMargin, _t.F("metrics", "map", "minimapInset"));
+        var loadingOrigin = _t.V2("metrics", "loading", "titleOrigin");
+        MarginType(LoadingTitleMargin, loadingOrigin.X, loadingOrigin.Y, 0, 0);
+        MarginType(LoadingFooterMargin, 0, 0, 0, _t.Space("screenEdge"));
         BoxType(MinimapBody, "VBoxContainer", 0);
         BoxType(Groups, "VBoxContainer", _t.Space("group"));
         BoxType(Rows, "VBoxContainer", _t.F("metrics", "layout", "rowGap"));
@@ -80,13 +85,20 @@ public sealed class UiThemeBuilder
         Theme.SetConstant("v_separation", CardGrid, _t.I("metrics", "layout", "cardGap"));
         Theme.SetTypeVariation(PanelContainerType, "PanelContainer");
         Theme.SetStylebox("panel", PanelContainerType, Carrier(_t.I("metrics", "shape", "expandMargin"), 0, 0, 0));
+        Theme.SetTypeVariation(LoadingProgressType, "ProgressBar");
+        Theme.SetStylebox("background", LoadingProgressType, new StyleBoxEmpty());
+        Theme.SetStylebox("fill", LoadingProgressType, new StyleBoxEmpty());
     }
 
-    private void MarginType(string name, float margin)
+    private void MarginType(string name, float margin) => MarginType(name, margin, margin, margin, margin);
+
+    private void MarginType(string name, float left, float top, float right, float bottom)
     {
         Theme.SetTypeVariation(name, "MarginContainer");
-        foreach (var side in new[] { "left", "top", "right", "bottom" })
-            Theme.SetConstant("margin_" + side, name, (int)margin);
+        Theme.SetConstant("margin_left", name, (int)left);
+        Theme.SetConstant("margin_top", name, (int)top);
+        Theme.SetConstant("margin_right", name, (int)right);
+        Theme.SetConstant("margin_bottom", name, (int)bottom);
     }
 
     private void BoxType(string name, string baseType, float gap)

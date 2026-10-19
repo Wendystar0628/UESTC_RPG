@@ -10,13 +10,13 @@ public sealed class VeilWaitingTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void CoverAndAuthoredDwellDoNotImplyReadinessWaiting()
+    public void CoverAndOpaqueDwellDoNotImplyReadinessWaiting()
     {
         var veil = new VeilTimeline();
-        using var cover = veil.Cover(VeilReason.Cinematic, 0);
+        using var cover = veil.Cover(VeilReason.Transit, 0);
         cover.Covered.GetAwaiter().GetResult();
         veil.Advance(10);
-        AssertThat(!veil.Waiting && veil.Opacity == 1).OverrideFailureMessage("Authored opaque dwell became loading.").IsTrue();
+        AssertThat(!veil.Waiting && veil.Opacity == 1).OverrideFailureMessage("Opaque dwell became loading.").IsTrue();
     }
 
     [TestCase]
@@ -31,7 +31,7 @@ public sealed class VeilWaitingTests
         AssertThat(ordinary.Waiting).OverrideFailureMessage("Ordinary wait never became visible.").IsTrue();
         var boot = new VeilTimeline();
         using var frontispiece = boot.ObserveReadinessWait(VeilWaitKind.BootFrontispiece);
-        using var cover = boot.Cover(VeilReason.Cinematic, 0); // Reason cannot reclassify this scope.
+        using var cover = boot.Cover(VeilReason.Transit, 0); // Reason cannot reclassify this scope.
         cover.Covered.GetAwaiter().GetResult();
         boot.Advance(3.999);
         AssertThat(!boot.Waiting).OverrideFailureMessage("Frontispiece wait became visible before four seconds.").IsTrue();
@@ -78,7 +78,7 @@ public sealed class VeilWaitingTests
     {
         var veil = new VeilTimeline();
         var scope = veil.ObserveReadinessWait();
-        using var cover = veil.Cover(VeilReason.Cinematic, 0);
+        using var cover = veil.Cover(VeilReason.Transit, 0);
         scope.Dispose();
         AssertThat(!veil.Waiting && veil.Opacity == 1 && cover.IsCurrent).OverrideFailureMessage("Observation disposal cleared protection or retained the wait indicator.").IsTrue();
         var cancelled = veil.ObserveReadinessWait();

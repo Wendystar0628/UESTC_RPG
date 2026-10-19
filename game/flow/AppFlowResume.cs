@@ -1,5 +1,4 @@
 using Campus.Contracts;
-using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 
@@ -12,24 +11,25 @@ public sealed partial class AppFlowService
 
     private async Task PrepareResumeEndpoint()
     {
+        if (!_resumeRequested) throw new InvalidOperationException("Continue did not request its saved world.");
         if (_resumeEndpoint is not null) { RequirePreparedResume(); return; }
         var slot = _request!.Slot!.Value;
         var context = Context(); var instance = world.Instance;
         var savedFlow = world.BaseFlow;
-        HoldCinematicFlow();
+        HoldLoadingFlow();
         var frozenHours = world.WorldHours;
         camera.SetPose(_destination);
         IMapArrival arrival;
         if (saves.HasPendingPose)
         {
             // Save owns the pending pose's arrival and restore transaction.
-            await playback.WaitForPresentedCoverage();
             await saves.CompleteResume();
             arrival = mapRuntime.Arrival ?? throw new InvalidOperationException("Resume preparation has no arrival.");
+            ObserveArrival(arrival);
+            await WaitForArrival(arrival);
         }
         else
         {
-            using var readinessWait = veil.ObserveReadinessWait();
             var switched = await view.SetMode(_destinationMode, ModeSwitchVia.Ui);
             switch (switched)
             {
@@ -55,23 +55,24 @@ public sealed partial class AppFlowService
 
     private async Task PreparePlayableDestination()
     {
-        using var readinessWait = veil.ObserveReadinessWait();
-        var pose = camera.Pose; var mode = camera.Mode;
+        var mode = camera.Mode;
+        camera.SetPose(camera.Pose with { FovDeg = camera.Pose.FovDeg ?? UserFov(mode) });
+        var pose = camera.Pose;
         var arrival = mapRuntime.Arrival;
         if (arrival is null || !Matches(arrival, pose, mode) || !arrival.Done.IsCompletedSuccessfully)
         {
             arrival = mapRuntime.Arrive(pose, mode);
             await WaitForArrival(arrival);
         }
+        ObserveArrival(arrival);
         RequireHealthyWorld();
         RequireArrival(arrival, pose, mode);
     }
 
     private async Task PrepareTitleDestination()
     {
-        if (TitlePrepared) return;
-        using var readinessWait = veil.ObserveReadinessWait();
-        await CoverFlow(0);
+        titlePresentation.SetVisible(true);
+        if (TitlePrepared) { ObserveArrival(_titleArrival); return; }
         var pose = TitlePose();
         camera.SetPose(pose);
         var arrival = mapRuntime.Arrive(pose, ViewMode.Fly);
@@ -95,12 +96,8 @@ public sealed partial class AppFlowService
     {
         try
         {
-            await playback.WaitUntil(() =>
-            {
-                if (!ReferenceEquals(mapRuntime.Arrival, arrival)) throw new OperationCanceledException("Flow arrival was replaced.");
-                return arrival.Done.IsCompleted;
-            }, double.PositiveInfinity, "Flow destination did not become ready.");
             await arrival.Done;
+            if (!ReferenceEquals(mapRuntime.Arrival, arrival)) throw new OperationCanceledException("Flow arrival was replaced.");
         }
         catch { arrival.Cancel(); throw; }
     }
@@ -115,7 +112,7 @@ public sealed partial class AppFlowService
     private static bool Matches(IMapArrival arrival, Pose pose, ViewMode mode) =>
         arrival.Destination.Mode == mode && SameLocation(arrival.Destination.Pose, pose);
     private static bool SameLocation(Pose a, Pose b) => a.Position == b.Position &&
-        Math.Abs(CinematicPoseMath.AngleDelta(a.YawDeg, b.YawDeg)) < 0.0001f && a.PitchDeg == b.PitchDeg;
+        (a.YawDeg - b.YawDeg) % 360 == 0 && a.PitchDeg == b.PitchDeg && a.FovDeg == b.FovDeg;
     private sealed record ResumeEndpoint(SlotId Slot, IMapContext Context, long Instance, Pose Pose,
         ViewMode Mode, IMapArrival Arrival);
 }

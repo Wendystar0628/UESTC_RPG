@@ -66,10 +66,10 @@ public enum UiCue : byte
     Focus, Hover, Confirm, Back, Toggle, PageOpen, PageClose, SliderTick,
     TeleportConfirm, TeleportArrive, Saved, ShiftDayNight, Denied
 }
-public enum MusicCue : byte { Silence, Title, EnterNew, EnterContinue, ReturnTitle }   // 开场音乐做好之前全部按 Silence
+public enum MusicCue : byte { Silence, Title, Enter, ReturnTitle }   // 开场音乐做好之前全部按 Silence
 
 // ===== 音频服务：总入口（53a，Kernel 服务） =====
-public enum DuckReason : byte { Boot, Veil, PageOpen, Cinematic, MapTravel }
+public enum DuckReason : byte { Boot, Veil, PageOpen, MapTravel = 4 }
 public readonly record struct AudioSnapshot(long Frame, int RealVoices, int Nodes3D, int VirtualEmitters,
     int OneShotsLast5s, float MasterPeakDb, int ResidentKb);
 public interface IAudioService
@@ -79,7 +79,6 @@ public interface IAudioService
     void ApplySettings(AudioSettings next);                  // 音量 80 ms 斜坡；0.5 s 去抖写盘
     void PlayUi(UiCue cue);                                  // 当场 PlayStream；界面音效关时静默丢弃；80 ms 去重
     void SetMusic(MusicCue cue, float fadeSeconds = 1.5f);
-    void Cine(string cue, float seconds, float db = 0f);     // 过场的 audio 轨：title.start / title.fadeIn / title.fadeOut / duck / amb.altitude
     void Duck(DuckReason reason, float db, float attackSeconds, float releaseSeconds);   // 多个原因取最深
     void ReleaseDuck(DuckReason reason);
     AudioSnapshot Snapshot { get; }                          // 调试面板与门禁

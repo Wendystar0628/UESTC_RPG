@@ -37,12 +37,12 @@ public partial class HudRoot
         if (!_hostInputBound) return;
         var dialog = HasVisibleContent(_dialogHost);
         var page = HasVisibleContent(_pageHost);
-        _corners.Visible = Playing && !_clean && !dialog && !page;
-        UiLayout.SetInteractive(_dialogHost, dialog && !_hidden);
-        UiLayout.SetInteractive(_pageHost, !dialog && !_hidden);
-        UiLayout.SetInteractive(_corners, !dialog && !page && InterfaceState && !_hidden);
+        _corners.Visible = Playing && !Active && !_clean && !dialog && !page;
+        UiLayout.SetInteractive(_dialogHost, dialog && !_hidden && !Active);
+        UiLayout.SetInteractive(_pageHost, !dialog && !_hidden && !Active);
+        UiLayout.SetInteractive(_corners, !dialog && !page && InterfaceState && !_hidden && !Active);
         // 开始菜单与设置/存档共用页面层，大页打开时菜单退出阅读顺序。
-        UiLayout.SetInteractive(_title, !BigPage && !dialog);
+        UiLayout.SetInteractive(_title, !BigPage && !dialog && !Active);
     }
 
     private void BindHostChild(Node child)
@@ -92,7 +92,7 @@ public partial class HudRoot
     private void SetInterface(bool on) => _router.SetInterfaceMode(on);
 
     // 第 1 层：改键捕获期间吞掉所有动作；具体按下的物理键由 _Input 交给设置卡
-    private bool DialogLayer(InputActionEvent e) => _settingsCard.Visible && _settingsCard.Capturing;
+    private bool DialogLayer(InputActionEvent e) => Active || _settingsCard.Visible && _settingsCard.Capturing;
 
     // 第 2 层：大页（设置卡、存档页，含从开始页打开的）：Esc 关页，打开这一页的 H 再按一次关页，其余动作一律吞掉
     private bool PageLayer(InputActionEvent e)
@@ -188,6 +188,7 @@ public partial class HudRoot
 
     public override void _Input(InputEvent e)
     {
+        if (Active) { Handled(); return; }
         if (e is InputEventMouseMotion or InputEventMouseButton or InputEventKey { Pressed: true }) Touch();
         // 改键捕获：下一个物理键交给设置卡（输入优先级第 1 层）
         if (_settingsCard.Visible && _settingsCard.Capturing && e is InputEventKey { Pressed: true, Echo: false } key)

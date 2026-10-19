@@ -152,28 +152,9 @@ public partial class AudioRuntime : Node, IAudioService, IAudioVoiceService, IMa
         // Commissioned music is deliberately absent in this mainline. Every documented cue is Silence.
         _ = cue switch
         {
-            MusicCue.Silence or MusicCue.Title or MusicCue.EnterNew or MusicCue.EnterContinue or MusicCue.ReturnTitle => MusicCue.Silence,
+            MusicCue.Silence or MusicCue.Title or MusicCue.Enter or MusicCue.ReturnTitle => MusicCue.Silence,
             _ => throw new ArgumentOutOfRangeException(nameof(cue))
         };
-    }
-
-    public void Cine(string cue, float seconds, float db = 0f)
-    {
-        if (!float.IsFinite(seconds) || seconds < 0f || !float.IsFinite(db)) throw new ArgumentOutOfRangeException(nameof(seconds));
-        switch (cue)
-        {
-            case "title.start": SetMusic(MusicCue.Title, seconds); break;
-            case "title.fadeIn": SetMusic(MusicCue.Title, seconds); break;
-            case "title.fadeOut": SetMusic(MusicCue.Silence, seconds); break;
-            case "duck":
-                if (db >= 0f) ReleaseDuck(DuckReason.Cinematic);
-                else Duck(DuckReason.Cinematic, db, seconds, seconds);
-                break;
-            case "amb.altitude":
-                // Mainline ambience follows the actual camera altitude; authored override is deferred with cinematics.
-                break;
-            default: throw new ArgumentException("Unknown cinematic audio cue: " + cue, nameof(cue));
-        }
     }
 
     public void Duck(DuckReason reason, float db, float attackSeconds, float releaseSeconds) => _mix.Duck(reason, db, attackSeconds, releaseSeconds);

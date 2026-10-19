@@ -24,10 +24,10 @@ public sealed record SaveMeta(
     ulong Line,                     // 世界线号 = 这条世界线第一代的代号；回退只在同一条线内（SYS-SAVE）
     double PlaySeconds,             // 游玩时长：只在漫游态累加
     MapId Map, double WorldHours, double Clock, Season Season, WeatherKind Weather, ViewMode Mode,
-    Pose Pose,                      // 镜头位姿，与 view 段相同；"继续"过场按它定终点（SYS-SAVE，SYS-TITLE）
+    Pose Pose,                      // 镜头位姿，与 view 段相同；继续读档按它定终点（SYS-SAVE，SYS-TITLE）
     NavSpace? Space,                // 所在空间（楼与楼层，WLD-INTERIORS）；室外为 null
     string? Region,                 // 区域 ID（SYS-ATLAS区域栅格）
-    string? PlaceKey,               // 地点名的翻译键，存档卡摘要与继续过场的地点字幕用；查不到时退回图名（SYS-SAVE）
+    string? PlaceKey,               // 地点名的翻译键，存档卡摘要用；查不到时退回图名（SYS-SAVE）
     long SavedAtUnix,               // 系统时钟，只用于显示（SYS-SAVE，G4 例外）
     SaveReason Reason,
     string Ruleset = "sightseeing", // RulesetId.Value（规则集块）；预留 "rpg"
@@ -74,8 +74,7 @@ public sealed class RestoreContext
     // 修复要用的只读查询（安全点、活动范围、点位与标记是否存在）由 WP-50 在 v1 里补全
 }
 public sealed record NewGameContext(uint Seed, MapId Map, WorldPreset Start, ViewMode Mode);
-// Start 默认取本图 map.json 的 newGameStart（MapWorldRules.NewGameStart；清水河秋 17:05、晴，SYS-MAPS），没有时取本图默认状态；
-// 之后由 IFlowLease.FlowTo 正向推到落金初灯（SYS-SAVE、SYS-TITLE）
+// Start defaults to the authored map world state; application entry keeps that clock.
 
 public interface ISaveSection                         // 注册器只认这个非泛型接口；各包实现下面的泛型版
 {
@@ -123,9 +122,10 @@ public interface ISaveService                         // Kernel 服务（WP-50�
     Task<LoadResult> Load(SlotId s, LoadScope scope = LoadScope.Full);
     // 后台读取、校验，主线程按阶段恢复（SYS-SAVE）；Full 在恢复位姿处的格与碰撞就绪后才完成，Preview 在 Content 阶段恢复完就完成
     bool HasPendingPose { get; }                      // Preview 读档后为 true，Pose 阶段的段已解析、还没恢复
-    Task CompleteResume();                            // 继续过场交还控制那一帧调用，在 FramePriority.Save 恢复 view、walk；Instance 不变
+    Task CompleteResume();                            // 继续读档交还控制前调用，在 FramePriority.Save 恢复 view、walk；Instance 不变
     Task<LoadResult> LoadFile(string path);           // --load：一律 Full；源文件只读；之后写到 --save 指定的存档位，没指定就不写
     Task<LoadResult> NewGame(SlotId s, uint? seed = null, WorldPreset? start = null);
+    Task<LoadResult> RestoreTitlePreview(); // Rebuilds the default preview without entropy, slot writes or an active save.
     // seed 为 null 时取一次熵（G4 唯一的熵源例外）；start 为 null 时取本图的 newGameStart（SYS-SAVE）
     Task<SaveResult> FlushForQuit(SaveReason r, TimeSpan timeout);
     // r 只能是 Quit 或 ToTitle；旧代不受影响。Saved、Disabled、Deferred（有意不写）可以直接退出；

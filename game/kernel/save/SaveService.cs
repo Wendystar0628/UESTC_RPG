@@ -22,7 +22,7 @@ public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, IC
 
 [KernelService(typeof(SaveService), Owner = "WP-50")]
 [KernelService(typeof(ISaveService), Owner = "WP-50")]
-public sealed class SaveService : ISaveService, IDisposable
+public sealed partial class SaveService : ISaveService, IDisposable
 {
     private static readonly SlotId[] AutoSlots = [new("s1"), new("s2"), new("s3")];
     private readonly ConcurrentQueue<Action> _frames = new();
@@ -116,7 +116,7 @@ public sealed class SaveService : ISaveService, IDisposable
         }
     }
 
-    /// <summary>Timed saves are the 5-minute Interval (and the gate's Test); other reasons never schedule a save (SYS-SAVE-FLOW §1.1).</summary>
+    /// <summary>Timed saves are the 5-minute Interval (and the gate's Test); other reasons never schedule a save (SYS-SAVE-FLOW).</summary>
     public void Request(SaveReason reason)
     {
         if (!Enum.IsDefined(reason)) throw new ArgumentOutOfRangeException(nameof(reason));
@@ -375,7 +375,7 @@ public sealed class SaveService : ISaveService, IDisposable
             { repairs.Add("Removed section for missing map: " + item.Key); continue; }
             map ??= _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
             var dto = item.Dto ?? item.Registration.Section.CreateDefault(defaults ??
-                new(_runtime.World.WeatherSeed, item.Map, map.World.NewGameStart ?? map.World.Default,
+                new(_runtime.World.WeatherSeed, item.Map, map.World.Default,
                     _runtime.Ruleset.Current.DefaultViewMode));
             item.Registration.Section.Restore(dto, context);
             repairs.AddRange(context.Repairs);
@@ -388,7 +388,7 @@ public sealed class SaveService : ISaveService, IDisposable
         if (section is null) return prepared;
         var dto = await OnFrame(() => section.Dto ?? section.Registration.Section.CreateDefault(defaults ??
             new(_runtime.World.WeatherSeed, section.Map,
-                _runtime.Maps.Maps.First(map => map.Id == section.Map).World.NewGameStart ?? _runtime.Maps.Maps.First(map => map.Id == section.Map).World.Default,
+                _runtime.Maps.Maps.First(map => map.Id == section.Map).World.Default,
                 _runtime.Ruleset.Current.DefaultViewMode))).ConfigureAwait(false);
         if (dto is not ViewSaveData view) throw new InvalidDataException("The view section must use the shared view DTO.");
         var preparing = await OnFrame(() => (_runtime.PreparePose ?? throw new InvalidOperationException("View restoration requires terrain preparation."))(view.Pose)).ConfigureAwait(false);
@@ -425,54 +425,6 @@ public sealed class SaveService : ISaveService, IDisposable
             await RestoreFailed(Active, error).ConfigureAwait(false);
             throw;
         }
-        finally { await OnFrame(EndRestoreOperation).ConfigureAwait(false); _operation.Release(); }
-    }
-
-    public async Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null)
-    {
-        if (!AutoSlots.Contains(slot)) throw new ArgumentOutOfRangeException(nameof(slot));
-        await _operation.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            await BeginRestoreOperation().ConfigureAwait(false);
-            NewGameContext? defaults = null;
-            var prepared = await OnFrame(() =>
-            {
-                _restoreMutationStarted = true;
-                _runtime.SelectRuleset(_defaultRuleset);
-                var map = _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
-                var context = new NewGameContext(seed ?? _options.WeatherSeed ?? NewSeed(), map.Id,
-                    start ?? map.World.NewGameStart ?? map.World.Default, _runtime.Ruleset.Current.DefaultViewMode);
-                defaults = context;
-                var entries = _sections.Registered.Select(r => new PreparedSection(SaveSections.Key(r.Attribute, map.Id), r,
-                    map.Id, r.Attribute.Phase == RestorePhase.World ? r.Section.CreateDefault(context) : null,
-                    r.Attribute.Version, null)).ToArray();
-                var generation = checked(_slots[slot].MaxGeneration + 1);
-                var meta = new SaveMeta(1, _options.Build, slot, SlotKind.Auto, generation, generation, 0, map.Id,
-                    context.Start.Clock, context.Start.Clock, context.Start.Season,
-                    context.Start.Weather ?? map.World.Default.Weather ?? throw new InvalidDataException("The map has no default weather."),
-                    context.Mode, default, null, null, null, _runtime.UnixTime(), SaveReason.NewGame,
-                    _runtime.Ruleset.Current.Id.Value);
-                var save = new PreparedSave(new(meta, new Dictionary<string, RawSaveSection>(), null), entries);
-                RestorePhaseOf(save, RestorePhase.World, []); _runtime.WorldRestore.CompleteRestore();
-                Active = _options.WriteSlot ?? slot; _newLine = true; _line = 0; _playSeconds = 0;
-                _authorizedOverwrite = Active == slot;
-                _thumbnail = null; _unknown = new Dictionary<string, RawSaveSection>(); _pendingPose = null;
-                return save;
-            }).ConfigureAwait(false);
-            await Travel(prepared.Document.Meta.Map, null, null, MapTravelCause.NewGame).ConfigureAwait(false);
-            await OnFrame(() => RestorePhaseOf(prepared, RestorePhase.Content, [], defaults)).ConfigureAwait(false);
-            prepared = await PrepareViewPose(prepared, [], defaults).ConfigureAwait(false);
-            var wait = await OnFrame(() =>
-            {
-                RestorePhaseOf(prepared, RestorePhase.Pose, [], defaults);
-                return _runtime.WaitDestination(_runtime.Camera.Pose, _runtime.Observer.Space, _runtime.Observer.Mode);
-            }).ConfigureAwait(false);
-            await wait.ConfigureAwait(false);
-            await OnFrame(RestoreSucceeded).ConfigureAwait(false);
-            return new(LoadStatus.Loaded, Active, 0, []);
-        }
-        catch (Exception error) { return await RestoreFailed(slot, error).ConfigureAwait(false); }
         finally { await OnFrame(EndRestoreOperation).ConfigureAwait(false); _operation.Release(); }
     }
 
@@ -561,7 +513,7 @@ public sealed class SaveService : ISaveService, IDisposable
         var map = _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
         foreach (var section in _sections.Registered)
         {
-            var dto = section.Section.CreateDefault(new(1, map.Id, map.World.NewGameStart ?? map.World.Default,
+            var dto = section.Section.CreateDefault(new(1, map.Id, map.World.Default,
                 _runtime.Ruleset.Current.DefaultViewMode));
             JsonSerializer.SerializeToUtf8Bytes(dto, section.Section.TypeInfo);
         }

@@ -135,7 +135,7 @@ public sealed class MapBakeTests
     {
         var rect = new MapRect(new(-16, -16), new(16, 16));
         var map = new MapDescriptor(new("fixture"), new("Fixture", "Fixture"), MapKind.Outdoor, 1, 1,
-            null!, Vector2.Zero, default, rect, null!, default, default, "", [], null!, null!, new Dictionary<string, string>(), []);
+            null!, Vector2.Zero, default, rect, null!, default, default, "", [], null!, null!, []);
         return new(world, map, rect, Labels(), "world-hash", "code-hash", "label-hash")
         {
             Options = new() { MainSize = 32, ClassSize = 16, OutskirtsSize = 16, RingSize = 16, CampusMarginMetres = 0 }

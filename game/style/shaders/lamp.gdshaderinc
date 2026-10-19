@@ -11,9 +11,7 @@
 // ---------------------------------------------------------------------------
 const int LAMP_SLOT_LAMP_FIRST = 12;     // 灯具类槽位 12–27（LightChannelCatalog）：L 是保留比例，开灯另按每盏灯的太阳高度阈值
 const int LAMP_SLOT_LAMP_LAST = 27;
-const int LAMP_SLOT_CUE = 23;            // lamp.cue：过场初灯追镜头接管的银杏大道一线
 const int LAMP_SLOT_AVIATION = 26;       // lamp.aviation：慢明灭
-const int LAMP_SLOT_SYS_CUE = 30;        // sys.cue：x = 1 表示覆盖生效，y = 覆盖期间判开灯用的目标太阳高度
 const int LAMP_SLOT_POOL_GAIN = 31;      // sys.poolGain：x = 光斑面积增益（冬夜 1.5，半径乘它的平方根），不是 0–1 的量
 const float LAMP_ON_HALF_DEG = 0.08;     // 开灯过渡的半宽（度）
 const float LAMP_RAMP_FROM = 0.6;        // 刚亮时的亮度（SYS-TIME）
@@ -149,18 +147,11 @@ LampData lamp_fetch(int i) {
 
 // 单盏灯的亮灭 0–1（不乘级别，不含光斑、光晕的形状）：按 h_eff 开灯、刚亮 0.6 → −4° 时 1.0、通道保留比例
 float lamp_on(LampData l, float h_eff) {
-	float h = h_eff;
-	if (l.slot == LAMP_SLOT_CUE) {
-		vec2 cue = lamp_channel(LAMP_SLOT_SYS_CUE);
-		if (cue.x > 0.5) {
-			h = cue.y;
-		}
-	}
 	float on = 1.0;
 	float ramp = 1.0;
 	if (l.theta < LAMP_ALWAYS_DEG) {
-		on = 1.0 - smoothstep(l.theta - LAMP_ON_HALF_DEG, l.theta + LAMP_ON_HALF_DEG, h);
-		ramp = mix(LAMP_RAMP_FROM, 1.0, clamp((l.theta - h) / max(l.theta - LAMP_RAMP_FULL_DEG, 0.5), 0.0, 1.0));
+		on = 1.0 - smoothstep(l.theta - LAMP_ON_HALF_DEG, l.theta + LAMP_ON_HALF_DEG, h_eff);
+		ramp = mix(LAMP_RAMP_FROM, 1.0, clamp((l.theta - h_eff) / max(l.theta - LAMP_RAMP_FULL_DEG, 0.5), 0.0, 1.0));
 	}
 	vec2 c = lamp_channel(l.slot);
 	float keep = smoothstep(l.kappa, l.kappa + max(c.y, 1e-3), c.x);
@@ -174,7 +165,7 @@ float lamp_level(LampData l, float h_eff) {
 
 // 灯具部件（灯罩、灯牌）的自发光亮度 0–1，slot 是材质登记的灯光通道。窗灯类通道直接取 L；
 // 灯具类通道取灯表里灯头离 p 最近、且在 LAMP_FIXTURE_REACH 以内那盏灯的亮灭，与它的光斑、光晕同一个开灯阈值、
-// 保留阈值和过场覆盖：白天灯灭，灯罩也不亮。附近没有登记的灯时退回通道的 L。
+// 保留阈值：白天灯灭，灯罩也不亮。附近没有登记的灯时退回通道的 L。
 float lamp_fixture_level(vec3 p, int slot) {
 	float lv = clamp(lamp_channel(slot).x, 0.0, 1.0);
 	if (slot < LAMP_SLOT_LAMP_FIRST || slot > LAMP_SLOT_LAMP_LAST || !in_map(p)) {

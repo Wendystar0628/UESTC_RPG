@@ -35,7 +35,7 @@ internal static class FixedShotPlan
                 if (selected.Length > 0 && !selected.Contains(columns[0], StringComparer.Ordinal)) continue;
                 var extra = columns[2].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
                 var options = BootArguments.ParseSingle(common.Concat(extra).Concat(["--shots=" + columns[1], "--pose=" + columns[1]]), development);
-                if (options.HasLoad || options.Title || options.Capture.Gate is not null || options.Capture.Cinematic is not null ||
+                if (options.HasLoad || options.Title || options.Capture.Gate is not null ||
                     options.World.ViewMode != Campus.Contracts.ViewMode.Fly || options.World.FlowRate != 0)
                     throw new ArgumentException("Fixed shots require a fresh, paused fly capture without title or lifecycle gates.");
                 result.Add(new(columns[0], columns[1], options));

@@ -311,7 +311,7 @@ public sealed class AtlasServiceTests
                 new(new(-1000), new(1000)), new(1, 30, 3000, -28, 2000, 30, 40, 150),
                 default, default, "test-spawn", [],
                 new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("测试", "Test"), false, "test"),
-                new("test", "test", []), new Dictionary<string, string>(), []);
+                new("test", "test", []), []);
             Context = new(map, World);
             var maps = new SingleMapService(Context, Camera);
             View = new(Observer);
@@ -397,7 +397,6 @@ public sealed class AtlasServiceTests
         public void ApplySettings(Campus.Contracts.Audio.AudioSettings settings) => throw new NotSupportedException();
         public void PlayUi(Campus.Contracts.Audio.UiCue cue) { }
         public void SetMusic(Campus.Contracts.Audio.MusicCue cue, float fadeSeconds = 1.5f) => throw new NotSupportedException();
-        public void Cine(string cue, float seconds, float db = 0f) => throw new NotSupportedException();
         public void Duck(Campus.Contracts.Audio.DuckReason reason, float db, float attackSeconds, float releaseSeconds) { }
         public void ReleaseDuck(Campus.Contracts.Audio.DuckReason reason) { }
     }

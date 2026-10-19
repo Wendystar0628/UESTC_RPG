@@ -188,5 +188,5 @@ public sealed class CollisionHeightFieldRuntimeTests
         new(new(-128, -5, -128), new(128, 10, 128)), new(new(-128, -128), new(128, 128)),
         new(1, 0, 128, -5, 10, 0, 0, 0), new(-2, -2), new(1, 1), "fixture", [],
         new(MapTimeRule.Shared, new(12, Season.Autumn), new("测试", "Fixture"), false, "fixture-weather"),
-        new("fixture-no-sky", "fixture-no-backdrop", []), new Dictionary<string, string>(), []));
+        new("fixture-no-sky", "fixture-no-backdrop", []), []));
 }

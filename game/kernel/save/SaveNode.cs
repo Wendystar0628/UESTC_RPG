@@ -19,6 +19,8 @@ public partial class SaveNode : Node, IBootParticipant
     private SaveService _save = null!;
     private IMapRuntime _mapRuntime = null!;
     private IVeilPresentation? _veilPresentation;
+    private IAppLoadingPresentation? _loading;
+    private bool PresentedCover => _veilPresentation?.IsCovered == true || _loading?.IsCovered == true;
     private readonly CancellationTokenSource _exit = new();
     private TaskCompletionSource<byte[]?>? _capture;
     private IDisposable? _hiddenHud;
@@ -43,6 +45,7 @@ public partial class SaveNode : Node, IBootParticipant
                     var save = context.Run.Save;
                     _mapRuntime = RuntimeKernel.Get<IMapRuntime>();
                     _veilPresentation = RuntimeKernel.Get<IVeilPresentation>();
+                    _loading = RuntimeKernel.Get<IAppLoadingPresentation>();
                     var sections = RuntimeKernel.Services.Entries.Where(e => e.Kind == "save").Select(e =>
                         new SaveSectionRegistration(e.Type.GetCustomAttributes<SaveSectionAttribute>()
                             .Single(a => a.Id == e.Id && a.Scope == e.Scope),
@@ -81,6 +84,8 @@ public partial class SaveNode : Node, IBootParticipant
 
     private Task<byte[]?> CaptureThumbnail()
     {
+        // A loading-covered save must never hide its cover for a thumbnail readback.
+        if (_loading?.Active == true) return Task.FromResult<byte[]?>(null);
         if (DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Minimized) return Task.FromResult<byte[]?>(null);
         if (_capture is not null) return _capture.Task;
         _capture = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -130,7 +135,7 @@ public partial class SaveNode : Node, IBootParticipant
             var arrival = await InSaveFrame(() =>
             {
                 // Boot has one observation spanning every startup dependency, with the frontispiece policy.
-                if (RuntimeKernel.Get<IAppFlow>().State != AppState.Boot)
+                if (RuntimeKernel.Get<IAppFlow>().State != AppState.Boot && _loading?.Active != true)
                     readinessWait.Attach(RuntimeKernel.Get<IVeilService>().ObserveReadinessWait());
                 if (body?.PlacementArrival is { } placement && ReferenceEquals(_mapRuntime.Arrival, placement)) return placement;
                 return _mapRuntime.Arrive(body?.BodyPose ?? pose, mode, body?.Space ?? space);
@@ -159,7 +164,7 @@ public partial class SaveNode : Node, IBootParticipant
                     GD.PushWarning("[WP-50] walk: no safe landing within range; restored in fly mode.");
                 }
                 if (arrival.Done.IsCompleted) arrival.Done.GetAwaiter().GetResult();
-                if (_drawFrame <= poseFrame || !_drawCovered || _veilPresentation?.IsCovered != true) return false;
+                if (_drawFrame <= poseFrame || !_drawCovered || !PresentedCover) return false;
                 return arrival.Done.IsCompletedSuccessfully && (body is null || body.CollisionReady);
             }, cancellation).ConfigureAwait(false)) { }
             await InSaveFrame(() =>
@@ -184,7 +189,7 @@ public partial class SaveNode : Node, IBootParticipant
     {
         if (_exiting) return;
         _drawFrame = _frame;
-        _drawCovered = _veilPresentation?.IsCovered == true;
+        _drawCovered = PresentedCover;
     }
 
     public override void _ExitTree()

@@ -24,23 +24,39 @@ public sealed partial class MaterialWarmupRuntimeTests
         await fixture.Boot.Reveal(0f);
         await fixture.Draw();
         var runtime = fixture.StartArrivalRuntime();
+        var arrivals = new List<IMapArrival?>();
+        runtime.ArrivalChanged += arrivals.Add;
         var destination = new Pose(new N.Vector3(2f, 0f, -3f), 0f, 0f);
         fixture.Stream.ResidentReady = false;
         fixture.Stream.DestinationReady = false;
         var visible = runtime.Arrive(destination, ViewMode.Fly);
+        var progress = new List<int> { visible.Completed };
+        visible.ProgressChanged += () => progress.Add(visible.Completed);
+        var total = visible.Total;
         runtime._Process(0);
-        AssertThat(!visible.Done.IsCompleted && fixture.Veil.Opacity == 0f).IsTrue();
+        AssertThat(!visible.Done.IsCompleted && visible.Completed > 0 && visible.Completed < total &&
+            fixture.Veil.Opacity == 0f && ReferenceEquals(arrivals.Last(), visible)).IsTrue();
         await fixture.Draw();
         fixture.Stream.ResidentReady = true;
         runtime._Process(0);
         AssertThat(!visible.Done.IsCompleted).OverrideFailureMessage("A warm draw skipped destination residency.").IsTrue();
         fixture.Stream.DestinationReady = true;
         runtime._Process(0);
+        AssertThat(!visible.Done.IsCompleted && visible.Completed < total).OverrideFailureMessage("Arrival completed before drawing the ready destination.").IsTrue();
+        await fixture.Draw();
         await visible.Done;
+        AssertThat(visible.Total == total && visible.Completed == total && progress.SequenceEqual(progress.Order())).
+            OverrideFailureMessage("Real arrival progress changed its plan, regressed or failed to finish.").IsTrue();
         AssertThat(fixture.Veil.Opacity == 0f).OverrideFailureMessage("An already warm arrival unnecessarily covered the visible viewport.").IsTrue();
         var next = runtime.Arrive(destination, ViewMode.Fly);
         runtime._Process(0);
         AssertThat(!next.Done.IsCompleted).OverrideFailureMessage("A new arrival inherited the previous arrival's draw.").IsTrue();
+        var replaced = next;
+        next = runtime.Arrive(destination, ViewMode.Fly);
+        replaced.Cancel();
+        runtime._Process(0);
+        AssertThat(replaced.Done.IsCanceled && !next.Done.IsCompleted && next.Completed < next.Total &&
+            ReferenceEquals(runtime.Arrival, next)).OverrideFailureMessage("Cancelling an older handle affected its replacement.").IsTrue();
         await fixture.Draw();
         await next.Done;
 
@@ -56,7 +72,22 @@ public sealed partial class MaterialWarmupRuntimeTests
             fixture.Provider.Accepted > accepted).OverrideFailureMessage("The visible arrival did not finish its real warm batch and release its cover.").IsTrue();
         await fixture.Draw();
 
-        fixture.Mount("arrival-cancel", fixture.Spec with { Line = LineClass.Tree });
+        fixture.Mount("arrival-loading", fixture.Spec with { Line = LineClass.Tree });
+        fixture.Loading.Active = true;
+        var loading = runtime.Arrive(destination, ViewMode.Fly);
+        runtime._Process(0);
+        await fixture.Draw();
+        AssertThat(!loading.Done.IsCompleted && fixture.Veil.Opacity == 0f).
+            OverrideFailureMessage("An active loading page started a second veil or certified coverage before presentation.").IsTrue();
+        fixture.Loading.IsCovered = true;
+        await fixture.Until(() => loading.Done.IsCompleted);
+        await loading.Done;
+        AssertThat(loading.Completed == loading.Total && fixture.Veil.Opacity == 0f).
+            OverrideFailureMessage("Presented application coverage did not finish real pipeline warming.").IsTrue();
+        fixture.Loading.Active = fixture.Loading.IsCovered = false;
+        await fixture.Draw();
+
+        fixture.Mount("arrival-cancel", fixture.Spec with { Line = LineClass.None });
         var cancelled = runtime.Arrive(destination, ViewMode.Fly);
         runtime._Process(0);
         using var external = fixture.Veil.Cover(VeilReason.Teleport, 0f);
@@ -76,7 +107,8 @@ public sealed partial class MaterialWarmupRuntimeTests
         var stopped = runtime.Arrive(destination, ViewMode.Fly);
         runtime._Process(0);
         runtime.StopNewWork();
-        AssertThat(stopped.Done.IsCanceled && fixture.Veil.Opacity == 0f).OverrideFailureMessage("Stopping retained the arrival's temporary cover.").IsTrue();
+        AssertThat(stopped.Done.IsCanceled && stopped.Completed < stopped.Total && arrivals.Last() is null &&
+            fixture.Veil.Opacity == 0f).OverrideFailureMessage("Stopping retained the arrival's temporary cover or published success.").IsTrue();
     }
 
     private sealed partial class Fixture
@@ -84,6 +116,7 @@ public sealed partial class MaterialWarmupRuntimeTests
         private MapRuntime? _runtime;
         private Action? _arrivalDraw;
         public ArrivalStream Stream { get; } = new();
+        public ArrivalLoading Loading { get; } = new();
 
         public MapRuntime StartArrivalRuntime()
         {
@@ -97,16 +130,27 @@ public sealed partial class MaterialWarmupRuntimeTests
             Set("_materials", Warmup);
             Set("_materialSource", Provider);
             Set("_camera", new TestCameraRig());
-            Set("_terrain", new CinematicTerrainPreparation());
+            Set("_terrain", new FlowTerrainPreparation());
             Set("_context", new TestMapContext(RealMapFixture.Entry().Descriptor, new Campus.Gen.Tests.Support.FakeWorld()));
             Set("_veil", Veil);
             Set("_presentation", Cover);
+            Set("_loading", Loading);
             Set("_contentReadiness", ViewContentReadiness.Capture(Parent));
             _arrivalDraw = typeof(MapRuntime).GetMethod("CountDraw", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .CreateDelegate<Action>(runtime);
             RenderingServer.Singleton.FramePostDraw += _arrivalDraw;
             return runtime;
         }
+    }
+
+    private sealed class ArrivalLoading : IAppLoadingPresentation
+    {
+        public bool Active { get; set; }
+        public bool IsCovered { get; set; }
+        public float Progress { get; private set; }
+        public Task Show(Campus.Contracts.AppFlow.EnterRequest? request = null) { Active = true; return Task.CompletedTask; }
+        public void Report(int completed, int total) => Progress = (float)completed / total;
+        public Task Hide() { Active = IsCovered = false; return Task.CompletedTask; }
     }
 
     private sealed class ArrivalStream : IMapStreamState

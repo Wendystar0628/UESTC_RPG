@@ -87,7 +87,7 @@ internal static class BuildingsTestSupport
         new Box3(new(-1024f, -28f, -1024f), new(1024f, 2000f, 1024f)), new MapRect(new(-1024f, -1024f), new(1024f, 1024f)),
         new RoamLimits(0.9f, 30f, 3000f, -28f, 2000f, 30f, 40f, 150f), new TileKey(-16, -16), new TileKey(15, 15), "P00", [],
         new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
-        new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
+        new MapEnvironment("sky.json", "backdrop.json", []), []);
 
     /// <summary>A build context as the kernel hands it out: <paramref name="claims"/> are facade claims of a zone pack.</summary>
     internal static BuildContext Ctx(IWorldModel world, uint seed, WindowNumberingSnapshot? numbering = null, string[]? claims = null) => new()

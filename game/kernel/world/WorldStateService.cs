@@ -81,10 +81,10 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     public double SeasonTo => _seasonTo;
     public double SeasonProgress => SeasonMoving ? Math.Clamp(_seasonElapsed / _seasonDuration, 0, 1) : 1;
     public double ClockOffset => _offset;
-    public double TargetHours => _activeFlow?.Stop ?? _targetHours;
+    public double TargetHours => _targetHours;
     public JsonTypeInfo<WorldSaveV1> TypeInfo => WorldSaveJson.Contract.WorldSaveV1;
     private bool SeasonMoving => _seasonDuration > 0;
-    private bool TimeMoving => _targetHours > WorldHours || _activeFlow?.Stop is not null;
+    private bool TimeMoving => _targetHours > WorldHours;
 
     public double PresetClock(ClockPreset preset, Season season) => ArtEphemeris.Preset(preset, season);
     public float SunAltDegAt(double clock, Season season)
@@ -134,13 +134,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         }
         else if (!Scrubbing && Flow.Rate > 0)
         {
-            var next = WorldHours + dt * Flow.Rate / 3600;
-            if (_activeFlow?.Stop is { } stop && next >= stop)
-            {
-                WorldHours = stop;
-                StopFlow(_activeFlow!);
-            }
-            else WorldHours = next;
+            WorldHours += dt * Flow.Rate / 3600;
             _targetHours = WorldHours;
         }
 
@@ -181,7 +175,6 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
                 // The pointer can cross midnight. Counterclockwise samples cannot rewind or add a day.
                 if (delta > 0) _targetHours += delta;
                 _jumpDuration = 0;
-                ClearFlowTargets();
                 _dragging = true;
                 _dragIdle = 0;
                 break;
@@ -223,13 +216,6 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         _seasonStartArcClock = ArtEphemeris.ClockAtPhase(_seasonArc, SeasonPos);
         _finalOffset = _offset + ArtEphemeris.ClockAtPhase(_seasonArc, (int)season) - _seasonStartArcClock;
         SeasonTarget = season;
-        foreach (var lease in _flowLeases)
-        {
-            if (lease.Clock is not { } clock) continue;
-            // FlowTo owns a clock destination, not an absolute hour from the previous season's offset.
-            lease.Stop = _targetHours + ForwardHours(clock, ArtEphemeris.Wrap(_targetHours + _finalOffset, 24));
-            if (lease.Stop == WorldHours && _targetHours == WorldHours) StopFlow(lease);
-        }
         weather.Reseason(WorldHours, season, _finalOffset);
         Rev++;
     }
@@ -411,8 +397,6 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         _flowBeforePause = dto.FlowRateBeforePause;
         AnimTime = dto.AnimTime;
         _velocity = _jumpDuration = _jumpElapsed = _seasonDuration = _seasonElapsed = 0;
-        // The caller's pause spans this restore transaction; discard old destinations, not owners.
-        ClearFlowTargets();
         _dragging = false;
         _dragIdle = 1;
         (Sun, Moon) = ArtEphemeris.Evaluate(Clock, SeasonPos);
@@ -421,7 +405,6 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
 
     private void StartJump(double target)
     {
-        ClearFlowTargets();
         _dragging = false;
         _dragIdle = 1;
         _targetHours = Math.Max(_targetHours, target);
