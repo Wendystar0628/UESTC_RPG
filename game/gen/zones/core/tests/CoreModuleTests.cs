@@ -67,6 +67,7 @@ public sealed class CoreModuleTests
         })).GroupBy(t => t).ToDictionary(g => g.Key, g => g.Count());
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void RealMapLoadsTheAuthoredWorldAndBothAxisPieces()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -82,6 +83,7 @@ public sealed class CoreModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void FlatPlazaHasInlaysFlagsLampsAndBenches()
     {
         var world = new FakeWorld(Campus.Tests.RealMapFixture.Load().World) { Terrain = new FormulaTerrain((_, _) => 0f) };
@@ -103,6 +105,7 @@ public sealed class CoreModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void SunkenTerrainGivesSixRisersTwoRampsAndStairColliders()
     {
         var flat = Campus.Tests.RealMapFixture.Load().World;
@@ -148,6 +151,7 @@ public sealed class CoreModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void L2CellsCarryNoPartThatOnlyBuildsAtL0AndL1()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -177,6 +181,7 @@ public sealed class CoreModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void PlacedPartsAreCheckedAgainstTheContextCatalogueOnly()
     {
         // contract-36: a missing catalogue is "not supplied" and an unknown part is an error; neither passes the part through.
@@ -198,6 +203,7 @@ public sealed class CoreModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GnomonPointsTrueNorthAtTheLatitude()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -211,6 +217,7 @@ public sealed class CoreModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TerrainOverlayIsWellFormed()
     {
         var path = Path.Combine(Campus.Tests.RealMapFixture.DataDirectory(), "world", "core.terrain.json");
@@ -237,6 +244,7 @@ public sealed class CoreModuleTests
 
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GinkgoSidewalksGiveWayToTheWalks()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -255,6 +263,7 @@ public sealed class CoreModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GinkgoWalksKeepOffWallsAndWaterAndJoinExistingWalks()
     {
         // max-108 0h-a: the walks between the 7 m and 14 m ginkgo rows keep their paved edge 3 m or more off every building and

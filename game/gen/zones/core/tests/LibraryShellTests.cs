@@ -21,6 +21,7 @@ public sealed class LibraryShellTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void PlanHasEveryBlockAndASetBackOnEachWing()
     {
         var plan = Shell(Campus.Tests.RealMapFixture.Load().World).Plan;
@@ -34,6 +35,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ExteriorPiecesFaceOutwardAndTheFrontDoorFaceMatchesTheEntrance()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -63,6 +65,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WindowGridFitsItsNumberRange()
     {
         var shell = Shell(Campus.Tests.RealMapFixture.Load().World);
@@ -79,6 +82,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryLevelBuildsValidGlassAndLandmarkInstances()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -116,6 +120,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WindowDeclarationIsOneLibraryGridOfTheSharedLayout()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -135,6 +140,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GlassAndMetadataReadTheSameAllocation()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -164,6 +170,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WithoutNumberingTheGlassCarriesNoWindowIds()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -187,6 +194,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CollidersCoverTheShellAndLeaveTheStairLandingLow()
     {
         var shell = Shell(Campus.Tests.RealMapFixture.Load().World);
@@ -199,6 +207,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BothDoorsLeaveAClearWayThroughTheirBays()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -252,6 +261,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void SkylightSpansTheAtrium()
     {
         var plan = Shell(Campus.Tests.RealMapFixture.Load().World).Plan;
@@ -263,6 +273,7 @@ public sealed class LibraryShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CafeApronJoinsTheNearestFootwayWithAPavedLink()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;

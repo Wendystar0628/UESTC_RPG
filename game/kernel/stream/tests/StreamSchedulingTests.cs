@@ -50,6 +50,7 @@ public sealed class StreamSchedulingTests
 
     [TestCase]
     [TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
     public void OpenTopFloorPrefetchAndSelectionNeverRequestItsClosedNeighbour()
     {
         var files = RealMapFixture.ReadFiles();

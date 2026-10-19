@@ -20,6 +20,7 @@ public sealed class AnnexShellTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheFiveNorthBlocksAreBuiltOnTheLibraryFloorLines()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -55,6 +56,7 @@ public sealed class AnnexShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheQuietGardenFillsTheClosedCourt()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;

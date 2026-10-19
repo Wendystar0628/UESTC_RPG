@@ -23,6 +23,7 @@ using static GdUnit4.Assertions;
 public sealed partial class CenterEastModuleTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void PassageAndBridgesKeepTheirClearHeights()
     {
         var ctx = Context();
@@ -44,6 +45,7 @@ public sealed partial class CenterEastModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void RampWallsStepWithTheGround()
     {
         var world = World();
@@ -82,6 +84,7 @@ public sealed partial class CenterEastModuleTests
 
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void MonumentsStandAtTheirPointsAndLeaveTheDoorsClear()
     {
         var world = World();
@@ -112,6 +115,7 @@ public sealed partial class CenterEastModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WenkeStandsTerracedWithOneShutDoorAndAClearForecourt()
     {
         var ctx = Context();

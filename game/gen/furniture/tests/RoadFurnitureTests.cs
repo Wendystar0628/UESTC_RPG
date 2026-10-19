@@ -22,6 +22,7 @@ using static GdUnit4.Assertions;
 public sealed class RoadFurnitureTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CarsParkSparselyInTheLotsAndKerbRampsMeetTheWalks()
     {
         // WLD-LIFE: a few cars in each car park, whole inside it, noses to its longest edge; never more than the cap a lot.
@@ -62,6 +63,7 @@ public sealed class RoadFurnitureTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void AvenueLampsKeepTheirRhythm()
     {
         // MAP-QSH-ADDITIONS: the avenue's lamps keep a regular pitch; only junctions may nudge one by a step or two.
@@ -77,6 +79,7 @@ public sealed class RoadFurnitureTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryLitRoadClassHasLampsAndKeepsItsRestRhythm()
     {
         // D-247: lamps, rest stops and bins follow the road class (FurnitureStyle.Rule), whatever the road is called. Judged on properties:
@@ -120,6 +123,7 @@ public sealed class RoadFurnitureTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void RoadFurnitureKeepsOffRoadsBuildingsAndWater()
     {
         var world = World.Value;
@@ -141,7 +145,7 @@ public sealed class RoadFurnitureTests
     public void AWideWalkMeetingARoadGetsARowOfWhiteStoneSpheresAcrossItsMouth()
     {
         // WLD-LIFE-STREET 路障: a row inside the walk, Setback from the kerb, across it, Pitch apart; cars stop, people still pass.
-        var spot = OpenSpot.Value;
+        var spot = OpenSpot;
         var road = new NetworkLine(new("design:furniture-test-road"), new Polyline([spot + new Vector2(-12f, 0f), spot + new Vector2(12f, 0f)]), 6f)
             { Props = JsonSerializer.SerializeToElement(new { highway = "residential" }) };
         var walk = new NetworkLine(new("design:furniture-test-mouth"), new Polyline([spot + new Vector2(0f, -14f), spot + new Vector2(0f, -1.1f)]), 4f)

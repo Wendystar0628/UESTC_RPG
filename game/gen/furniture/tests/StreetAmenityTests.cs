@@ -23,6 +23,7 @@ using static GdUnit4.Assertions;
 public sealed class StreetAmenityTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void SignpostsStandAtLandmarkJunctionsOneToALineOfSight()
     {
         // Opus review 13c2b 21:05 (until WP-44's points): a signpost only by a junction of three or more walks with a landmark within
@@ -51,7 +52,7 @@ public sealed class StreetAmenityTests
         // Made up on open ground: three walks meeting at a point, a landmark 20 m off: one signpost at the junction. Without the landmark,
         // none; a second such junction 40 m away (inside the 80 m line of sight) adds none.
         var open = OpenWorld.Value;
-        var spot = OpenSpot.Value;
+        var spot = OpenSpot;
         var props = JsonSerializer.SerializeToElement(new { highway = "footway", width = 2.5f });
         NetworkLine Walk(string id, Vector2 a, Vector2 b) => new(new($"design:furniture-test-{id}"), new Polyline([a, b]), 2.5f) { Props = props };
         List<NetworkLine> Star(string tag, Vector2 at) => [Walk(tag + "-w", at, at + new Vector2(-14f, 0f)), Walk(tag + "-e", at, at + new Vector2(14f, 0f)), Walk(tag + "-n", at, at + new Vector2(0f, 14f))];
@@ -68,6 +69,7 @@ public sealed class StreetAmenityTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void FountainsStandOutsideTheMainEntrancesOfSportsAndTeachingBuildings()
     {
         // Opus review 13c2b 21:05 (until WP-44's points): one drinking fountain a building, by the main entrance of a sports venue or a
@@ -96,6 +98,7 @@ public sealed class StreetAmenityTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void VendingLockersAndBaysStandWhereTheyAreUsedAndFew()
     {
         // 13c2c: vending groups of 2–3 at the cluster gates, canteens and sports venues, one to a line of sight and none on the main
@@ -177,7 +180,7 @@ public sealed class StreetAmenityTests
         // Made up on open ground: a 5 m service road running north into a 40 × 36 m cluster, a closed gate where it crosses the outline.
         // The gate takes one vending group (and, as the first closed gate's, a locker) beside the road, outside the cluster, facing the road.
         var open = OpenWorld.Value;
-        var spot = OpenSpot.Value;
+        var spot = OpenSpot;
         var road = new NetworkLine(new("design:furniture-test-drive"), new Polyline([spot + new Vector2(0f, 24f), spot + new Vector2(0f, -30f)]), 5f)
         { Props = JsonSerializer.SerializeToElement(new { highway = "service" }) };
         Vector2[] ring = [spot + new Vector2(-20f, -3f), spot + new Vector2(20f, -3f), spot + new Vector2(20f, -39f), spot + new Vector2(-20f, -39f)];

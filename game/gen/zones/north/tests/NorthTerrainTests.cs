@@ -16,6 +16,7 @@ using static Campus.Gen.Zones.North.Tests.NorthTestSupport;
 public sealed class NorthTerrainTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TerrainOverlayParsesAndReferencesRealRoads()
     {
         var file = Terrain();
@@ -57,6 +58,7 @@ public sealed class NorthTerrainTests
     /// profile keeps to 5 %, and to 3 % within 10 m of a junction (WLD-TERRAIN).
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryRoadOnATerraceHasAnchorsAndJunctionsAgree()
     {
         var file = Terrain();
@@ -106,6 +108,7 @@ public sealed class NorthTerrainTests
     /// 1.2 m allowed without a structure). Its whole footprint stands on one level and every terrace crest keeps 6 m off it.
     /// </summary>
     [TestCase, TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
     public void Building5561StandsOnOneLevelClearOfTheTerraceEdge()
     {
         var footprint = NorthBuildings.Rings(RealMapFixture.Load().World.Features[new(NorthFeatureIds.Building5561.Entity)]).Single();
@@ -133,6 +136,7 @@ public sealed class NorthTerrainTests
     /// existing walk or pedestrian area, or the kerb of a carriageway that meets 丹桂路 (a junction).
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void DanguiWalksKeepOffWallsAndWaterAndJoinTheNetwork()
     {
         var road = NorthFeatureIds.DanguiRoad.Source;

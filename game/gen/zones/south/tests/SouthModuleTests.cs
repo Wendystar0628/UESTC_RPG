@@ -32,6 +32,7 @@ public sealed class SouthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ClaimsNameExistingFeatures()
     {
         var world = RealMapFixture.Load().World;
@@ -94,6 +95,7 @@ public sealed class SouthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryLevelIsValidAndEveryItemLandsInOneCell()
     {
         var ctx = Context();
@@ -125,6 +127,7 @@ public sealed class SouthModuleTests
 
     [TestCase, TestCategory(TestTag.Determinism)]
     [TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BuildIsDeterministic()
     {
         var ctx = Context();
@@ -135,6 +138,7 @@ public sealed class SouthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
     public void WritableBuildOutputCannotModifySharedSiteGeometry()
     {
         var ctx = Context();
@@ -156,6 +160,7 @@ public sealed class SouthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EntranceKitsAreLeftToTheStreetFurniture()
     {
         // WLD-INTERIORS: WP-13 places the mat, open sign and door lamp on every open entrance anchor; the zone builds the doorway only.
@@ -166,6 +171,7 @@ public sealed class SouthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void SitesStayInsideTheSouthZone()
     {
         var ctx = Context();

@@ -67,6 +67,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void AuthoredStoreysAndTheA10PlazaLoad()
     {
         var world = World();
@@ -95,6 +96,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ClaimsCoverEveryPartOfSix()
     {
         var world = World();
@@ -107,6 +109,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BlocksStandAtTheirHeightsWithATallestA()
     {
         var world = World();
@@ -127,6 +130,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryLevelIsValidAndEveryItemLandsInOneCell()
     {
         var ctx = Context();
@@ -160,6 +164,7 @@ public sealed class WestModuleTests
 
     [TestCase, TestCategory(TestTag.Determinism)]
     [TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BuildIsDeterministic()
     {
         var ctx = Context();
@@ -170,6 +175,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EastDoorIsOpenAndTheOtherEntrancesAreShut()
     {
         var ctx = Context();
@@ -193,6 +199,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryFacadeClaimDeclaresItsWindowGrids()
     {
         var world = World();
@@ -207,6 +214,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void NumberedGlassMatchesTheDeclaredWindows()
     {
         var world = World();
@@ -243,6 +251,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WindowTablePublishesWithTheWestDeclarations()
     {
         var world = World();
@@ -260,6 +269,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TerrainOverlayParsesAndKeepsTheA10PlazaAndTheGatesLevel()
     {
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "world", "west.terrain.json")));
@@ -300,6 +310,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void OtherWestBuildingsGoToWp14WithTheirFamilies()
     {
         var world = World();
@@ -316,6 +327,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void FourGlassBoxesSitOnTheirStoneLinesAndAreShut()
     {
         var world = World();
@@ -340,6 +352,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void InnovationShaftsBridgeWingAndBar()
     {
         var world = World();
@@ -355,6 +368,7 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void FourFanLawnIsAShallowDish()
     {
         var world = World();

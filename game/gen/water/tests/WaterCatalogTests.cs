@@ -29,13 +29,12 @@ public sealed class WaterCatalogTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void EveryBodyHasItsOwnLevelAndPartsAreBuiltSeparately()
     {
-        var source = RealMapFixture.Load().World;
-        var reflectLakes = RealMapFixture.Entry().Descriptor.Env.ReflectLakes;
-        var lake = reflectLakes.First();
-        // Source centrelines now also live in Features; only a real surface polygon supplies this fixture's identity.
-        var river = source.Features.Values.Where(f => f.Kind == WaterCatalog.WaterKindKey && !reflectLakes.Contains(f.Id)
-                && f.Geometry is PolygonGeometry or MultiPolygonGeometry)
-            .OrderBy(f => f.Id.Value, StringComparer.Ordinal).First().Id;
+        var lake = new FeatureId("fixture:lake");
+        var river = new FeatureId("fixture:channel");
+        var source = new FakeWorld
+        {
+            Terrain = new FlatTerrain(new Dictionary<FeatureId, float> { [lake] = 0.4f, [river] = -0.6f }),
+        };
         var features = new Dictionary<FeatureId, WorldFeature>
         {
             [lake] = WorldFeatureFixture.Create(lake.Value, "water", new PolygonGeometry(Rect(0, 0, 80, 60))),
@@ -49,7 +48,7 @@ public sealed class WaterCatalogTests
                 ],
             },
         };
-        // Keep the multipart fixture, but use the production terrain's levels and forbid the old ground-height path.
+        // Distinct terrain water levels must reach every part; the old ground-height path is forbidden.
         var bodies = WaterCatalog.Build(new FakeWorld(source)
         {
             Features = features,

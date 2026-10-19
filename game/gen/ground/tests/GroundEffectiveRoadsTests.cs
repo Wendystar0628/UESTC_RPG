@@ -118,6 +118,7 @@ public sealed class GroundEffectiveRoadsTests
     }
 
     [TestCase, TestCategory(TestReason.Smoke)]
+    [TestCategory("Slow")]
     public void RealCampusLaysEveryAuthoredLineOnceAndKeepsItsAreasAndHoles()
     {
         var world = RealMapFixture.Load().World;

@@ -88,17 +88,17 @@ public sealed class NodeBenchTests
         // Opus review 17:28, judged on a made-up 12 × 10 m pedestrian square on open ground with a rest node at its middle: the
         // benches stand on the square (no bay on flat ground), backs to its edge, facing in; a square that is not there takes none.
         var open = OpenWorld.Value;
-        var spot = OpenSpot.Value;
+        var spot = OpenSpot;
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
         var props = JsonSerializer.SerializeToElement(new { highway = "pedestrian" });
         var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), props.GetRawText());
         IWorldModel world = MadeWorld(NodeWorld(WalkWorld(open, null, square), spot), [], [], SquareTrees(spot));
         var layout = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, world, null, Inputs());
-        var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
+        var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{OpenAvenue.Key}:0:", StringComparison.Ordinal)).ToList();
         AssertThat(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches && benches.All(b => b.Pad is null)).OverrideFailureMessage($"{benches.Count} benches on the square, or on bays").IsTrue();
         CheckPlazaBenches(new StreetSite(world), benches);
         var bare = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, NodeWorld(open, spot), null, Inputs());
-        AssertThat(!bare.Items.Any(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal))).OverrideFailureMessage("benches at a node with no square").IsTrue();
+        AssertThat(!bare.Items.Any(i => i.Key.StartsWith($"node:{OpenAvenue.Key}:0:", StringComparison.Ordinal))).OverrideFailureMessage("benches at a node with no square").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -107,13 +107,13 @@ public sealed class NodeBenchTests
         // Opus review 13c2b 21:05, judged on made-up walks on open ground with a rest node on them: a 5 m walk seats the node's benches on
         // itself at its edge (backs to the edge, 2.5 m left to pass); a 3.5 m walk takes none on itself (they stand beside it, 13c1).
         var open = OpenWorld.Value;
-        var spot = OpenSpot.Value;
+        var spot = OpenSpot;
         foreach (var (width, takes) in new[] { (5f, true), (3.5f, false) })
         {
             var (line, feature) = DesignWalk(spot, width);
             var world = NodeWorld(WalkWorld(open, line, feature), spot);
             var layout = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, world, null, Inputs());
-            var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
+            var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{OpenAvenue.Key}:0:", StringComparison.Ordinal)).ToList();
             var onWalk = benches.Where(b => (float)PlanLines.Project(line.Line.Points, b.Anchor).Distance <= Half(line)).ToList();
             if (!takes)
             {
@@ -131,14 +131,14 @@ public sealed class NodeBenchTests
         // Opus review 13c2b rework, on the made-up 12 × 10 m square with a 2.5 m footway running through its middle: the walk line does
         // not count against the benches (they stand on the square, backs to its edge, 2.5 m of paving in front), but none sits across it.
         var open = OpenWorld.Value;
-        var spot = OpenSpot.Value;
+        var spot = OpenSpot;
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
         var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), JsonSerializer.Serialize(new { highway = "pedestrian" }));
         var walkProps = JsonSerializer.SerializeToElement(new { highway = "footway", width = 2.5f });
         var walk = new NetworkLine(new("design:furniture-test-through"), new Polyline([spot + new Vector2(-14f, 0f), spot + new Vector2(14f, 0f)]), 2.5f) { Props = walkProps };
         IWorldModel world = MadeWorld(NodeWorld(open, spot), [walk], [square], SquareTrees(spot));
         var layout = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, world, null, Inputs());
-        var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
+        var benches = layout.Items.Where(i => i.Key.StartsWith($"node:{OpenAvenue.Key}:0:", StringComparison.Ordinal)).ToList();
         var site = new StreetSite(world);
         AssertThat(benches.Count is >= 1 and <= FurnitureStyle.NodeBenches && benches.All(b => site.OnPlaza(b.Anchor))).OverrideFailureMessage($"{benches.Count} benches on the square").IsTrue();
         CheckPlazaBenches(site, benches);
@@ -153,10 +153,10 @@ public sealed class NodeBenchTests
         // just off its edge and facing it, and a walk that is filed nowhere (hidden) gets none. Judged on a walk made up on open
         // ground, so it holds on a world with or without the effective network.
         var open = OpenWorld.Value;
-        var spot = OpenSpot.Value;
+        var spot = OpenSpot;
         var (line, feature) = DesignWalk(spot);
         FurnitureLayout Layout(NetworkLine? asLine, WorldFeature? asFeature) => FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, NodeWorld(WalkWorld(open, asLine, asFeature), spot), null, Inputs());
-        List<FurnitureItem> Benches(FurnitureLayout layout) => layout.Items.Where(i => i.Key.StartsWith($"node:{Avenue.Key}:0:", StringComparison.Ordinal)).ToList();
+        List<FurnitureItem> Benches(FurnitureLayout layout) => layout.Items.Where(i => i.Key.StartsWith($"node:{OpenAvenue.Key}:0:", StringComparison.Ordinal)).ToList();
         var none = Layout(null, null);
         var both = Layout(line, feature);
         var benches = Benches(both);
@@ -237,9 +237,9 @@ public sealed class NodeBenchTests
 
     private const string TestNode = "design:furniture-test-node";
 
-    /// <summary><paramref name="inner"/> with an authored avenue one rest node at <paramref name="spot"/>: the node's benches are keyed <c>node:{Avenue.Key}:0:</c>.</summary>
+    /// <summary><paramref name="inner"/> with one rest node at <paramref name="spot"/>, naming the same planting-rule avenue in real and local fixtures.</summary>
     private static FakeWorld NodeWorld(IWorldModel inner, Vector2 spot) =>
-        MadeWorld(inner, [], [WorldFeatureFixture.Create(TestNode, FurnitureStyle.RestNodeKind, new PointGeometry(new(spot.X, 0f, spot.Y)), JsonSerializer.Serialize(new { road = Avenue.Name }))]);
+        MadeWorld(inner, [], [WorldFeatureFixture.Create(TestNode, FurnitureStyle.RestNodeKind, new PointGeometry(new(spot.X, 0f, spot.Y)), JsonSerializer.Serialize(new { road = OpenAvenue.Name }))]);
 
     /// <summary>A 16 m east–west design walk centred on <paramref name="spot"/>, as the network line and as the feature of one ID.</summary>
     private static (NetworkLine Line, WorldFeature Feature) DesignWalk(Vector2 spot, float width = 2.5f)

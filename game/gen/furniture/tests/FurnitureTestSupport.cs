@@ -49,28 +49,27 @@ internal static class FurnitureTestSupport
     internal static RoadGroup Avenue => Groups.Value.Single(g => g.Tier == RoadTier.Avenue);
 
     /// <summary>
-    /// Open flat ground for made-up scenes: the real boundary and the avenue's lines only, so a made-up scene is planned
-    /// without planning the whole map again. <see cref="OpenSpot"/> is clear of everything on the real map.
+    /// Open flat ground for made-up scenes, with one named avenue away from the local test geometry.
     /// </summary>
     internal static readonly Lazy<FakeWorld> OpenWorld = new(() => new FakeWorld
     {
-        Boundary = World.Value.Boundary,
-        Terrain = FlatTerrain.Default,
-        Network = WorldNetwork.Empty with { Roads = [.. World.Value.Network.Roads.Where(Furnished)] },
+        Network = WorldNetwork.Empty with
+        {
+            Roads = [new(new("fixture:furniture-avenue"), new Polyline([new(200f, -80f), new(200f, 80f)]), 6f)
+            {
+                Props = JsonSerializer.SerializeToElement(new
+                {
+                    highway = "residential",
+                    name = PlantingRows.Resolve(Inputs()).Roads.Single(r => r.Offsets.Count >= FurnitureStyle.AvenueRows).Name
+                })
+            }],
+        },
     });
 
-    internal static readonly Lazy<Vector2> OpenSpot = new(OpenGround);
+    internal static Vector2 OpenSpot => Vector2.Zero;
 
-    private static bool Furnished(NetworkLine line) => StreetSite.RoadName(line) == Avenue.Name;
-
-    /// <summary>A loaded world pared to what <see cref="OpenWorld"/> holds plus one made-up walk (its feature and its network line, whichever the world has).</summary>
-    internal static FakeWorld Pared(IWorldModel loaded, FeatureId walk) => new()
-    {
-        Boundary = loaded.Boundary,
-        Terrain = FlatTerrain.Default,
-        Features = loaded.Features.Where(pair => pair.Key == walk).ToDictionary(pair => pair.Key, pair => pair.Value),
-        Network = WorldNetwork.Empty with { Roads = [.. loaded.Network.Roads.Where(l => l.Id == walk || Furnished(l))] },
-    };
+    internal static RoadGroup OpenAvenue => FurniturePlanner.RoadGroups(OpenWorld.Value,
+        PlantingRows.Resolve(Inputs()).Roads).Single(g => g.Tier == RoadTier.Avenue);
 
     /// <summary>The real planting rules, edited by <paramref name="change"/>, as the bytes the loader would supply.</summary>
     internal static byte[] Edit(Action<JsonNode> change)
@@ -78,27 +77,6 @@ internal static class FurnitureTestSupport
         var root = JsonNode.Parse(PlantingBytes.Value)!;
         change(root);
         return JsonSerializer.SerializeToUtf8Bytes(root);
-    }
-
-    internal static readonly Vector2[] Compass = [new(1f, 0f), new(-1f, 0f), new(0f, 1f), new(0f, -1f), new(0.7f, 0.7f), new(-0.7f, 0.7f), new(0.7f, -0.7f), new(-0.7f, -0.7f)];
-
-    /// <summary>The first spot (scanning west to east, north to south) of the real map with open ground all round: no outline, tree, road or paving near, inside the campus.</summary>
-    private static Vector2 OpenGround()
-    {
-        const float Clear = 30f;
-        var world = World.Value;
-        var site = Site.Value;
-        var lines = world.Network.Roads.Concat(world.Network.Bridges).ToList();
-        for (var x = -1200f; x <= 1200f; x += 24f)
-            for (var z = -1200f; z <= 1200f; z += 24f)
-            {
-                var p = new Vector2(x, z);
-                if (!PlanGeometry.Contains(world.Boundary, p) || site.Blocker(p, 14f) is not null || site.PavingEdgeFacing(p) is not null) continue;
-                if (!Compass.All(d => PlanGeometry.Contains(world.Boundary, p + d * Clear))) continue;
-                if (lines.Any(l => (float)PlanLines.Project(l.Line.Points, p).Distance < Half(l) + Clear)) continue;
-                return p;
-            }
-        throw new InvalidOperationException("The map has no open ground for a made-up walk.");
     }
 
     internal static (float Yaw, Vector2 Centre)? Turned(FurnitureLayout layout, string id)

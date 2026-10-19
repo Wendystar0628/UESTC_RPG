@@ -25,6 +25,7 @@ using static GdUnit4.Assertions;
 public sealed class West19cTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BoardwalkRunsThroughTheReedsClearOfTheBridgesAndTheStream()
     {
         var world = World();
@@ -61,6 +62,7 @@ public sealed class West19cTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void RailingsMeetTheWatersideRuleAndOpenOnlyAtTheBeach()
     {
         var world = World();
@@ -86,6 +88,7 @@ public sealed class West19cTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void LampsLightThePlanksFromTheDrySideOnly()
     {
         var world = World();
@@ -110,6 +113,7 @@ public sealed class West19cTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void LeveeStepsFollowTheTerrainAndVanishOnFlatGround()
     {
         var world = World();
@@ -142,6 +146,7 @@ public sealed class West19cTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ShelterStandsOnItsFootprintAndOpensToTheRoad()
     {
         var world = World();
@@ -158,6 +163,7 @@ public sealed class West19cTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CarvingLiesInTheGreenWedgeAwayFromTheBridgeStone()
     {
         var world = World();

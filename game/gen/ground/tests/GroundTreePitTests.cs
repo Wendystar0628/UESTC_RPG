@@ -218,6 +218,7 @@ public sealed class GroundTreePitTests
     }
 
     [TestCase, TestCategory(TestReason.Smoke)]
+    [TestCategory("Slow")]
     public void RealCampusPitsAndStripBecomeGroundShapes()
     {
         var world = RealMapFixture.Load().World;

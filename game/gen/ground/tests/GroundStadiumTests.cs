@@ -177,6 +177,7 @@ public sealed class GroundStadiumTests
     }
 
     [TestCase, TestCategory(TestReason.Smoke)]
+    [TestCategory("Slow")]
     public void RealCampusStadiumIsARingAroundTurfOnLawn()
     {
         var world = RealMapFixture.Load().World;

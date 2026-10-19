@@ -17,6 +17,7 @@ public sealed class FaunaTests
 
     [TestCase, TestCategory(TestTag.Determinism)]
     [TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void LayoutIsDeterministicAndKeepsTheMainlineCounts()
     {
         var a = FaunaPlanner.Build(World.Value, 1, Lakes.Value);
@@ -59,6 +60,7 @@ public sealed class FaunaTests
     };
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void AStubWorldWithoutNetworkOrDesignFeaturesDegradesQuietly()
     {
         var layout = FaunaPlanner.Build(NoNetworkWorld(World.Value), 1, Lakes.Value);
@@ -67,6 +69,7 @@ public sealed class FaunaTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ModelsAreClosedAndValid()
     {
         var scene = new FaunaScene(Campus.Contracts.Tests.PaletteFixture.Catalog);

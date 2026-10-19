@@ -19,6 +19,7 @@ public sealed class GrandStairTests
 {
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void StairRisesToTheSecondFloorInTwoRunsOfShortFlights()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -45,6 +46,7 @@ public sealed class GrandStairTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void FrontDoorOpensTheSlot()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -74,6 +76,7 @@ public sealed class GrandStairTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CanopySpansTheTowerFaceOverTheDoor()
     {
         var (stair, shell) = Pieces(Campus.Tests.RealMapFixture.Load().World);
@@ -123,6 +126,7 @@ public sealed class GrandStairTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CollidersGuardEveryDropAndKeepTheFlightsWalkable()
     {
         var (stair, _) = Pieces(Campus.Tests.RealMapFixture.Load().World);

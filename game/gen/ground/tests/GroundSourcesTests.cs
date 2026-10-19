@@ -208,6 +208,7 @@ public sealed class GroundSourcesTests
     }
 
     [TestCase, TestCategory(TestReason.Smoke)]
+    [TestCategory("Slow")]
     public void RealCampusIsReadPartByPart()
     {
         var world = RealMapFixture.Load().World;

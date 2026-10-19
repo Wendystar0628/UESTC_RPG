@@ -75,6 +75,7 @@ public sealed partial class CenterEastModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ClaimsNameExistingFeaturesAndCoverTheirBuildings()
     {
         var world = World();
@@ -104,6 +105,7 @@ public sealed partial class CenterEastModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ResearchRegistrationsMatchWhatIsBuilt()
     {
         var world = World();
@@ -117,6 +119,7 @@ public sealed partial class CenterEastModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ResearchBlocksStandFiveStoreysWithOneShutEntranceEach()
     {
         var ctx = Context();
@@ -137,6 +140,7 @@ public sealed partial class CenterEastModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryLevelIsValidAndEveryItemLandsInOneCell()
     {
         var ctx = Context();
@@ -170,6 +174,7 @@ public sealed partial class CenterEastModuleTests
 
     [TestCase, TestCategory(TestTag.Determinism)]
     [TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BuildIsDeterministic()
     {
         var ctx = Context();

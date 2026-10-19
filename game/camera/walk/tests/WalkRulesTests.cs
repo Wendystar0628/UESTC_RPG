@@ -5,6 +5,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Gen.World;
+using Campus.Gen.Tests.Support;
 using GdUnit4;
 using static GdUnit4.Assertions;
 
@@ -232,8 +233,7 @@ public sealed class WalkRulesTests
     private static (MapCatalogEntry Entry, IMapContext Context) LoadCampusSpawnFixture()
     {
         var entry = RealMapFixture.Entry();
-        return (entry, new TestMapContext(entry.Descriptor, RealMapFixture.Load().World,
-            BuildInputSnapshot.Freeze(RealMapFixture.ReadFiles()), entry.DataRoot));
+        return (entry, new TestMapContext(entry.Descriptor, new FakeWorld(), DataRoot: entry.DataRoot));
     }
 
     private static TestMapService SpawnMaps(MapCatalogEntry entry) => new()

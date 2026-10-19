@@ -20,6 +20,7 @@ public sealed class WaterfrontModuleTests
     private static readonly Lazy<IWorldModel> Loaded = new(() => RealMapFixture.Load().World);
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WorldRecordsRegisterTheBridgesAndKeepTheNetwork()
     {
         var world = World();
@@ -42,6 +43,7 @@ public sealed class WaterfrontModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void DeckSpansTheWaterOnTwoAbutments()
     {
         var world = World();
@@ -74,6 +76,7 @@ public sealed class WaterfrontModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BuildsEveryLevelValidAndDeterministic()
     {
         var ctx = Context();
@@ -96,6 +99,7 @@ public sealed class WaterfrontModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void DeckWalksAndParapetsBlock()
     {
         var ctx = Context();
@@ -119,6 +123,7 @@ public sealed class WaterfrontModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void RegisteredBankUsesTheCompiledShoreAndOpensAtItsWaterAccessSteps()
     {
         var world = World();

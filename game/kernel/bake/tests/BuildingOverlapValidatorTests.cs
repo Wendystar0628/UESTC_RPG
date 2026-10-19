@@ -117,6 +117,7 @@ public sealed class BuildingOverlapValidatorTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void RealApprovedWorldHasNoDuplicateBuildingFootprints() =>
         BuildingOverlapValidator.Validate(RealMapFixture.Load().World);
 

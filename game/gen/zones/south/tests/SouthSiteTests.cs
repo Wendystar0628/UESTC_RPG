@@ -20,6 +20,7 @@ using static Campus.Gen.Zones.South.Tests.SouthTestSupport;
 public sealed class SouthSiteTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GateClosureHasNoGapAboveHalfAMetre()
     {
         var ctx = Context();
@@ -42,6 +43,7 @@ public sealed class SouthSiteTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GateBollardsAreCrashBollardsInTheirOwnColours()
     {
         // §1.4: yellow-and-black; a tint or a material would paint the black stripe yellow as well (13b, 12:00).
@@ -51,6 +53,7 @@ public sealed class SouthSiteTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ClockSideDoorOpensOntoAPavedForecourt()
     {
         // 13b review: an open doorway stands on paving at least the door width + 1 m wide and 2 m deep, tied to the nearest paving.
@@ -80,6 +83,7 @@ public sealed class SouthSiteTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GatePlazaGivesA01ItsFooting()
     {
         var world = RealMapFixture.Load().World;
@@ -106,6 +110,7 @@ public sealed class SouthSiteTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void XuanbangKeepsItsSkyline()
     {
         var ctx = Context();
@@ -123,6 +128,7 @@ public sealed class SouthSiteTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void LirenGatewayIsOpenUnderTheBridge()
     {
         var ctx = Context();
@@ -139,6 +145,7 @@ public sealed class SouthSiteTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void HardBankBalustradeGuardsTheWaterButTheWadeStep()
     {
         var ctx = Context();
@@ -168,6 +175,7 @@ public sealed class SouthSiteTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void PlatformDeckCarriesA06AndOpensOnlyWhereStairsLand()
     {
         var ctx = Context();
@@ -203,6 +211,7 @@ public sealed class SouthSiteTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void SportsVenuesKeepTheirProfilesAndTheDeckDoorway()
     {
         var ctx = Context();

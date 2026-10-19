@@ -17,6 +17,7 @@ using static Campus.Gen.Zones.South.Tests.SouthTestSupport;
 public sealed class SouthWindowTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WindowLayoutsDeclareEveryFacadeClaimWithItsGrids()
     {
         var module = new SouthModule();
@@ -29,6 +30,7 @@ public sealed class SouthWindowTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryDeclaredGridIsValidOnTheRealMap()
     {
         // The map as the kernel loads it: all authored world records. One invalid grid withholds the whole table.
@@ -48,6 +50,7 @@ public sealed class SouthWindowTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WindowTablePublishesWithTheSouthDeclarations()
     {
         // The end-to-end reach before WP-02's orchestration: WP-14's provider allocates the whole real map with the zone's
@@ -79,6 +82,7 @@ public sealed class SouthWindowTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GuardHouseAndPorticoGlassIsNumberedOutward()
     {
         var world = RealMapFixture.Load().World;
@@ -102,6 +106,7 @@ public sealed class SouthWindowTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void NumberedGlassMatchesTheDeclaredWindows()
     {
         var world = RealMapFixture.Load().World;

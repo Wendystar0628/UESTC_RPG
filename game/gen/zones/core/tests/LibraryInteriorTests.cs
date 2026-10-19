@@ -19,6 +19,7 @@ public sealed class LibraryInteriorTests
     /// with a stair from 1F to 2F.
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryOpenStoreyBuildsAProductAndFootedCollision()
     {
         var world = RealMapFixture.Load().World;

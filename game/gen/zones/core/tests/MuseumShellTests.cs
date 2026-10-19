@@ -21,6 +21,7 @@ public sealed class MuseumShellTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void RingsKeepTheHallBodyShapeAndTheColonnadeWidth()
     {
         var museum = Museum(Campus.Tests.RealMapFixture.Load().World);
@@ -51,6 +52,7 @@ public sealed class MuseumShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void DoorsPorticoAndColumnsSitWhereTheEntrancesAre()
     {
         var museum = Museum(Campus.Tests.RealMapFixture.Load().World);
@@ -83,6 +85,7 @@ public sealed class MuseumShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryLevelIsValidWithNumberedGlass()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -119,6 +122,7 @@ public sealed class MuseumShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void LibraryAndMuseumShareOneWindowGlassBatchInTheirL3Cell()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -143,6 +147,7 @@ public sealed class MuseumShellTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CollisionLeavesBothDoorsOpenAndFillsEveryFoot()
     {
         var museum = Museum(Campus.Tests.RealMapFixture.Load().World);

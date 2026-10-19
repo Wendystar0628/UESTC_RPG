@@ -24,6 +24,7 @@ public sealed class BoundaryModuleTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WorldRecordsRegisterTheForecourtAndThePlaza()
     {
         var world = RealMapFixture.Load().World;
@@ -32,6 +33,7 @@ public sealed class BoundaryModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void GatesSitWhereTheirRoadsLeaveTheCampus()
     {
         var world = RealMapFixture.Load().World;
@@ -47,6 +49,7 @@ public sealed class BoundaryModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheFenceRunsAllTheWayRound()
     {
         var world = RealMapFixture.Load().World;
@@ -77,6 +80,7 @@ public sealed class BoundaryModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryRoadAndChannelThroughTheRingMeetsAnOpening()
     {
         var world = RealMapFixture.Load().World;
@@ -96,6 +100,7 @@ public sealed class BoundaryModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void NothingWalksOutThroughAGate()
     {
         var ctx = Context();
@@ -124,6 +129,7 @@ public sealed class BoundaryModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void NothingWalksOutAnywhereAlongTheRing()
     {
         var ctx = Context();
@@ -161,6 +167,7 @@ public sealed class BoundaryModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CollidersAreTaggedAndCarryAFootMaterial()
     {
         var ctx = Context();
@@ -173,6 +180,7 @@ public sealed class BoundaryModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void PlazaBenchesStayOnThePavingBehindTheRailing()
     {
         var world = RealMapFixture.Load().World;
@@ -186,6 +194,7 @@ public sealed class BoundaryModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryLevelIsValid()
     {
         var ctx = Context();

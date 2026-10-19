@@ -19,6 +19,7 @@ public sealed class PublicModuleTests
     private static readonly Lazy<IWorldModel> Loaded = new(() => RealMapFixture.Load().World);
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void AuthoredPocketGreensLoadWithTheWorld()
     {
         var world = Loaded.Value;
@@ -36,6 +37,7 @@ public sealed class PublicModuleTests
 
     /// <summary>Each pad keeps off carriageways, footways, buildings, water, parking, courts and every other package's additions.</summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void PadsKeepClearOfRoadsBuildingsAndOtherAdditions()
     {
         var world = Loaded.Value;
@@ -67,6 +69,7 @@ public sealed class PublicModuleTests
 
     /// <summary>The bench and tree fit on their authored pad with room for a sitter.</summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BenchAndTreeFitOnThePad()
     {
         var world = Loaded.Value;
@@ -84,6 +87,7 @@ public sealed class PublicModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void SeatsAndCollidersShareTheSeatBoxes()
     {
         var ctx = Context();
@@ -115,6 +119,7 @@ public sealed class PublicModuleTests
 
     [TestCase, TestCategory(TestTag.Determinism)]
     [TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BuildIsDeterministicWithRegisteredColours()
     {
         var ctx = Context();
