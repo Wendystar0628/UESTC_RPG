@@ -94,7 +94,12 @@ public sealed partial class AppFlowService : IDisposable
     private void MarkPhase(string phase) => PhaseReached?.Invoke(phase);
     public void Dispose()
     {
-        try { StopTrackingLoading(); ReleaseFlow(); }
+        try
+        {
+            saves.SlotsChanged -= RefreshTitlePrefetch;
+            stream.SetPinnedDestinations([]);
+            StopTrackingLoading(); ReleaseFlow();
+        }
         finally { _input?.Dispose(); _input = null; }
     }
 }

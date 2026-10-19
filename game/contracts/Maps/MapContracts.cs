@@ -13,7 +13,17 @@ public sealed record RoamLimits(                                 // 旁观活动
     float FloorY, float CeilY,                                   // −28 m、2000 m
     float Buffer, float SoftFloorClearance,                      // 30 m 缓冲带；外围上空的软地板 = 屋顶 + 40 m
     float FallbackMargin);                                       // 没有外围数据的图：校界外扩 150 m
-public sealed record MapSpawn(string Id, Pose Fly, WaypointStand? Stand);   // 点位以外的出生点
+public sealed record MapSpawn(string Id, Pose Fly, WaypointStand? Stand)    // 点位以外的出生点
+{
+    /// <summary>The authored initial view, shared by new-game creation and destination prefetch.</summary>
+    public Pose ViewPose(ViewMode mode) => mode switch
+    {
+        ViewMode.Fly => Fly,
+        ViewMode.Walk when Stand is { } stand => new(stand.Feet + Vector3.UnitY * WalkRules.StandingEye, stand.YawDeg, 0),
+        ViewMode.Walk => throw new InvalidDataException($"Spawn {Id} has no walk stand."),
+        _ => throw new InvalidDataException("Invalid default observer mode.")
+    };
+}
 public sealed record MapWorldRules(
     MapTimeRule Time,
     WorldPreset Default,                                         // 清水河：秋 17:30 晴

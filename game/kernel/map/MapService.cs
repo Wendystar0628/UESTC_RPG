@@ -424,14 +424,7 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     {
         if (_catalog is null || !_catalog.TryGet(context.Map, out var map)) throw new InvalidDataException("Unknown new-game map.");
         var spawn = map.ResolveSpawn(map.Descriptor.DefaultSpawn);
-        var pose = context.Mode switch
-        {
-            ViewMode.Fly => spawn.Fly,
-            ViewMode.Walk when spawn.Stand is { } stand =>
-                new Pose(stand.Feet + Vector3.UnitY * WalkRules.StandingEye, stand.YawDeg, 0),
-            ViewMode.Walk => throw new InvalidDataException("The default walking spawn has no stand."),
-            _ => throw new InvalidDataException("Invalid default observer mode."),
-        };
+        var pose = spawn.ViewPose(context.Mode);
         return new(context.Map, Array.AsReadOnly(new[] { new MapVisit(context.Map, pose, context.Mode) }));
     }
 

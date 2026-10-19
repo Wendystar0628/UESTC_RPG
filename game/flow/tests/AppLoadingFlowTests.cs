@@ -24,6 +24,10 @@ public sealed class AppLoadingFlowTests
         await flow.PrepareBoot(new()); await flow.PrepareWorld(); await flow.CompleteBoot();
         if (flow.State != AppState.Title || flow.IsPlaying || !rig.Title.Visible || rig.Camera.Pose != entry.ResolveSpawn(entry.Descriptor.DefaultSpawn).Fly)
             throw new InvalidOperationException("Title fallback did not use the catalogue's default waypoint.");
+        var spawnPose = maps.ResolveSpawn(maps.Default).ViewPose(ViewMode.Walk);
+        if (rig.Runtime.PinnedDestinations is not [{ Mode: ViewMode.Walk } prefetched] || prefetched.Pose != spawnPose ||
+            rig.Runtime.Arrivals != 0 || saves.NewGames != 0 || saves.Active is not null)
+            throw new InvalidOperationException("Title spawn prefetch changed the world or requested a real arrival.");
         var result = await flow.Enter(new(EnterKind.NewGame, new("s1")));
         if (rig.Diagnostics.Count != 0) throw new InvalidOperationException(string.Join(Environment.NewLine, rig.Diagnostics));
         if (result != EnterResult.Entered || !flow.IsPlaying || saves.NewGames != 1 || saves.Saves != 1)
@@ -31,7 +35,8 @@ public sealed class AppLoadingFlowTests
         if (rig.Camera.Mode != ViewMode.Walk || rig.Camera.Pose.Position != SaveService.Landing.Position ||
             rig.Runtime.Arrival?.Destination is not { Mode: ViewMode.Walk } landing || landing.Pose.Position != SaveService.Landing.Position)
             throw new InvalidOperationException("New game did not hand control back walking on the restored spawn stand.");
-        if (requests.Count(spawn => spawn is null) < 1 || rig.Camera.InputLocked || rig.Loading.Active || rig.Loading.Progress != 1 || rig.Title.Visible)
+        if (requests.Count(spawn => spawn is null) < 1 || rig.Camera.InputLocked || rig.Loading.Active || rig.Loading.Progress != 1 || rig.Title.Visible ||
+            rig.Runtime.PinnedDestinations.Count != 0)
             throw new InvalidOperationException("The flow bypassed spawn resolution or failed to finish loading.");
     }
 
@@ -71,6 +76,16 @@ public sealed class AppLoadingFlowTests
             if (world.BaseFlow.Rate != savedFlow || world.Flow.Rate != 0 || !rig.Title.Visible)
                 throw new InvalidOperationException("Returning to title changed the saved base flow instead of holding it.");
         }
+        var titlePose = camera.Pose; var titleMode = camera.Mode; var titleArrival = runtime.Arrival;
+        var titleInstance = world.Instance; var titleHours = world.WorldHours; var active = saves.Active;
+        var pendingPose = saves.HasPendingPose;
+        saves.UpdateEndpoint(saves.Meta.Pose with { YawDeg = saves.Meta.Pose.YawDeg + 1 });
+        if (runtime.PinnedDestinations.Count != 2 ||
+            !runtime.PinnedDestinations.Contains(new(saves.Meta.Pose, saves.Meta.Mode, saves.Meta.Space)) ||
+            camera.Pose != titlePose || camera.Mode != titleMode || !ReferenceEquals(runtime.Arrival, titleArrival) ||
+            world.Instance != titleInstance || world.WorldHours != titleHours || saves.Active != active ||
+            saves.HasPendingPose != pendingPose || saves.Completions != 0 || saves.Loads != (pending ? 1 : 0))
+            throw new InvalidOperationException("Title endpoint refresh restored a pose, changed the world, or replaced readiness.");
         runtime.CompleteArrivalImmediately = !delayDestination;
         var previousArrivals = runtime.Arrivals;
         var instance = world.Instance; var hours = world.WorldHours;
@@ -85,6 +100,8 @@ public sealed class AppLoadingFlowTests
                 world.WorldHours != hours || world.Flow.Rate != 0 || world.BaseFlow.Rate != savedFlow ||
                 runtime.Arrival?.Destination != destination || runtime.Arrivals != previousArrivals + 1 || saves.Loads != 0)
                 throw new InvalidOperationException("Resume exposed or duplicated its pending destination.");
+            if (runtime.PinnedDestinations.Count == 0)
+                throw new InvalidOperationException("Title released prefetch residency before the real destination was ready.");
             Task? quitting = null;
             if (quitDuringWait)
             {
@@ -106,8 +123,13 @@ public sealed class AppLoadingFlowTests
             saves.Completions != (pending ? 1 : 0) || saves.Loads != (pending ? 1 : 0))
             throw new InvalidOperationException("Resume duplicated or bypassed its preparation owner.");
         if (world.Instance != instance || world.WorldHours != hours || world.Flow.Rate != savedFlow ||
-            camera.Pose != saves.Meta.Pose || camera.InputLocked || saves.HasPendingPose || rig.Loading.Active || rig.Loading.Progress != 1 || rig.Title.Visible)
+            camera.Pose != saves.Meta.Pose || camera.InputLocked || saves.HasPendingPose || rig.Loading.Active || rig.Loading.Progress != 1 || rig.Title.Visible ||
+            runtime.PinnedDestinations.Count != 0)
             throw new InvalidOperationException("Continue lost saved flow, world identity, endpoint or input handoff.");
+        flow.Dispose();
+        saves.UpdateEndpoint(saves.Meta.Pose with { YawDeg = saves.Meta.Pose.YawDeg + 1 });
+        if (runtime.PinnedDestinations.Count != 0)
+            throw new InvalidOperationException("Disposed flow kept publishing title prefetch requests.");
     }
     private static TestMapService Maps(out MapCatalogEntry entry, out List<string?> requests, Pose? inline = null)
     {
@@ -151,9 +173,9 @@ public sealed class AppLoadingFlowTests
         }
     }
     private sealed class ResumeSaveService(ICameraRig camera, IWorldState world, FlowRuntimeTestStub runtime, MapId map,
-        Func<bool> covered) : TestSaveService
+        Func<bool> covered) : TestSaveService, ISaveService
     {
-        public SaveMeta Meta { get; } = new(1, "test", new("s1"), SlotKind.Auto, 1, 1, 0, map,
+        public SaveMeta Meta { get; private set; } = new(1, "test", new("s1"), SlotKind.Auto, 1, 1, 0, map,
             17.5, 17.5, Season.Autumn, WeatherKind.Clear, ViewMode.Fly, new(new(30, 45, -15), 25, -20), null, null, null, 0, SaveReason.Test);
         public int Loads { get; private set; }
         public int Completions { get; private set; }
@@ -162,6 +184,9 @@ public sealed class AppLoadingFlowTests
         public override SlotId? Active => Meta.Slot;
         public override bool HasPendingPose => _hasPendingPose;
         private bool _hasPendingPose;
+        private event Action? _slotsChanged;
+        event Action? ISaveService.SlotsChanged { add => _slotsChanged += value; remove => _slotsChanged -= value; }
+        public void UpdateEndpoint(Pose pose) { Meta = Meta with { Pose = pose }; _slotsChanged?.Invoke(); }
         public override Task<SaveResult> SaveNow(SaveReason reason) => throw new InvalidOperationException("Continue must not write a new generation.");
         public override Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full)
         {

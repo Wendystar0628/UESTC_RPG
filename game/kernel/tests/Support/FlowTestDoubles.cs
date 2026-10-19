@@ -25,8 +25,17 @@ internal sealed class TestAppTitlePresentation : IAppTitlePresentation
     public bool Visible { get; private set; }
     public void SetVisible(bool visible) => Visible = visible;
 }
-internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime
+internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMapStreamState
 {
+    public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = [];
+    public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => PinnedDestinations = destinations.ToArray();
+    public bool IsUnloaded => false;
+    public bool ResidentReady => true;
+    public bool DestinationReady => Arrival?.Done.IsCompletedSuccessfully == true;
+    public MapStreamDestination? Destination => Arrival?.Destination;
+    public bool HasPendingDestination => Arrival is { Done.IsCompleted: false };
+    public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) =>
+        throw new InvalidOperationException("Flow preparation must retain real arrival ownership.");
     public int Arrivals { get; private set; }
     public bool CompleteArrivalImmediately { get; set; } = true;
     public event Action<IMapArrival?>? ArrivalChanged;
@@ -79,7 +88,7 @@ internal sealed class FlowTestRig
         Runtime = new(() => Loading.Active) { CompleteArrivalImmediately = completeArrivalImmediately };
     }
     public AppFlowService CreateFlow(ISaveService saves, IMapService maps, IAppExit exit, IWorldRestore? restore = null) =>
-        new(Camera, Loading, Title, saves, maps, World, World, World, restore ?? World, exit, Runtime)
+        new(Camera, Loading, Title, saves, maps, World, World, World, restore ?? World, exit, Runtime, Runtime)
         { DiagnosticSink = Diagnostics.Add };
 }
 internal sealed class FlowTerrainPreparation : ITerrainPreparation, ICameraPoseValidator

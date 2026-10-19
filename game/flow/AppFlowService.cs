@@ -8,7 +8,7 @@ namespace Campus.Flow;
 
 public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppTitlePresentation titlePresentation, ISaveService saves,
     IMapService maps, IWorldState world, IWorldControl control, IViewControl view,
-    IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime,
+    IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime, IMapStreamState stream,
     ISettingsStore? profileSettings = null) : IAppFlow
 {
     internal Action<string>? DiagnosticSink { get; init; }
@@ -89,6 +89,8 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
             RequireHealthyWorld();
             if (!newGame) { await PrepareResumeEndpoint(); RequirePreparedResume(); }
             else await PreparePlayableDestination();
+            // The real destination now owns residency; keep the pins through its terrain preparation.
+            stream.SetPinnedDestinations([]);
             if (newGame)
             {
                 // The first generation belongs to this prepared Walk endpoint.
@@ -264,5 +266,36 @@ public sealed partial class AppFlowService(ICameraRig camera, IAppLoadingPresent
     private bool In(AppState expected) => State switch { AppState.Boot or AppState.Title or AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => State == expected, _ => throw new InvalidOperationException("Unknown application state.") };
     private void HoldInput() => _input ??= camera.LockInput(InputLockReason.AppFlow);
     private void ReleaseInput() { if (restore.RestoreFaulted) return; _input?.Dispose(); _input = null; }
-    private void Change(AppState state) { if (state is AppState.Playing) RequireHealthyWorld(); if (State == state) return; var old = State; State = state; Rev++; Changed?.Invoke(old, state); }
+    private void Change(AppState state)
+    {
+        if (state is AppState.Playing) RequireHealthyWorld();
+        if (State == state) return;
+        var old = State;
+        if (old is AppState.Title) saves.SlotsChanged -= RefreshTitlePrefetch;
+        State = state; Rev++;
+        switch (state)
+        {
+            case AppState.Title:
+                saves.SlotsChanged += RefreshTitlePrefetch;
+                RefreshTitlePrefetch();
+                break;
+            case AppState.Entering: break;
+            case AppState.Boot: case AppState.Playing: case AppState.Leaving: case AppState.Quitting:
+                stream.SetPinnedDestinations([]);
+                break;
+            default: throw new ArgumentOutOfRangeException(nameof(state));
+        }
+        Changed?.Invoke(old, state);
+    }
+    private void RefreshTitlePrefetch()
+    {
+        if (State is not AppState.Title || restore.RestoreFaulted || maps.Context is null)
+        { stream.SetPinnedDestinations([]); return; }
+        var destinations = new List<MapStreamDestination>(2);
+        if (maps.Default == maps.Current)
+            destinations.Add(new(maps.ResolveSpawn(maps.Default).ViewPose(ViewMode.Walk), ViewMode.Walk));
+        if (saves.Continue is { } slot && Info(slot) is { Health: SlotHealth.Ok, Meta: { } meta } && meta.Map == maps.Current)
+            destinations.Add(new(meta.Pose, meta.Mode, meta.Space));
+        stream.SetPinnedDestinations(destinations);
+    }
 }

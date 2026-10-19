@@ -53,6 +53,10 @@ public interface IMapStreamState
     /// Destination and DestinationReady keep the latest result until the next request or unload. Consumers only pin an active destination.
     /// </summary>
     bool HasPendingDestination { get; }
+    /// <summary>CPU read-ahead destinations in the active map; they do not mount visuals or replace the current arrival.</summary>
+    IReadOnlyList<MapStreamDestination> PinnedDestinations { get; }
+    /// <summary>Main-thread snapshot replacement; an empty collection releases the read-ahead hints. Unload clears them.</summary>
+    void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations);
     void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null);
 }
 

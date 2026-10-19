@@ -2,7 +2,6 @@ using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
-using N = System.Numerics;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera;
@@ -63,13 +62,10 @@ public partial class ObserverCamera
     {
         // The ruleset selects the mode; the map catalogue resolves the authored spawn before mount.
         var spawn = Services.Get<IMapService>().ResolveSpawn(context.Map);
+        var pose = spawn.ViewPose(context.Mode);
         if (context.Mode == ViewMode.Fly)
-            return new(context.Mode, spawn.Fly, null, Tuning.DefaultSpeedStep, Tuning.DefaultSpeedStep);
-        if (context.Mode != ViewMode.Walk) throw new InvalidDataException("Invalid default observer mode.");
-        var stand = spawn.Stand ?? throw new InvalidDataException(
-            $"Default spawn of {context.Map.Value} has no walk stand.");
-        var eye = new Pose(stand.Feet + N.Vector3.UnitY * WalkRules.StandingEye, stand.YawDeg, 0);
-        ValidateFinite(eye);
-        return new(context.Mode, eye, null, WalkRules.DefaultSpeedStep, Tuning.DefaultSpeedStep);
+            return new(context.Mode, pose, null, Tuning.DefaultSpeedStep, Tuning.DefaultSpeedStep);
+        ValidateFinite(pose);
+        return new(context.Mode, pose, null, WalkRules.DefaultSpeedStep, Tuning.DefaultSpeedStep);
     }
 }
