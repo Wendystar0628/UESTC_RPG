@@ -274,6 +274,7 @@ photo_export={
 [internationalization]
 
 locale/translations=PackedStringArray("res://hud/i18n/zh.zh.translation", "res://hud/i18n/zh.en.translation")
+locale/translations.editor_hint=PackedStringArray()
 locale/fallback="zh"
 
 [physics]
