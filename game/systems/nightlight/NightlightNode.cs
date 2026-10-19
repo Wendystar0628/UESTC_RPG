@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Cinematic;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Lighting;
 using Campus.Kernel.Materials;
@@ -29,7 +30,7 @@ namespace Campus.Systems.Nightlight;
 /// </summary>
 [KernelNode("light-schedule", Owner = "WP-39")]
 [KernelService(typeof(ILampCueHook), Owner = "WP-39")]
-public partial class NightlightNode : Node, IMapAware, ILampCueHook
+public partial class NightlightNode : Node, IMapAware, ILampCueHook, IViewContentReadiness
 {
     private static readonly StringName _shaderGlobalLampGrid = ShaderGlobals.LampGrid;
     private static readonly StringName _shaderGlobalLampTable = ShaderGlobals.LampTable;
@@ -58,6 +59,9 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     private IInstancePoolHost? _pools;
     private IShaderMaterialSource? _materials;
     private IMapContext? _map;
+    private ITerrainPreparation? _terrain;
+    private Task? _groundPreparation;
+    private long _preparingRevision = long.MinValue;
     private long _inventoryRev = long.MinValue;
     private Image? _overrideImage;
     private ImageTexture? _overrideTexture;
@@ -68,6 +72,8 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
 
     /// <summary>本图灯表里的灯（只读，光斑、光晕与倒影索引共用）。</summary>
     public IReadOnlyList<LampRecord> Lamps { get; private set; } = [];
+    public bool IsReady(Pose pose) => _map is not null && _inventory is not null && _inventoryRev == _inventory.Rev;
+    public string? Error => _groundPreparation?.Exception?.GetBaseException().Message;
 
     public override void _EnterTree()
     {
@@ -82,6 +88,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     public override void _Ready()
     {
         _world = Services.Get<IWorldState>();
+        _terrain = Services.Get<ITerrainPreparation>();
         _world.InstanceChanged += OnWorldInstanceChanged;
         _sink = Services.Get<ILightChannelSink>();
         _colors = Services.Get<IColorScriptFrame>();
@@ -99,6 +106,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _windows.Bind(null);
         _inventoryRev = long.MinValue;
+        _groundPreparation = null; _preparingRevision = long.MinValue;
         _lampGlow.Free();
         _windowGlow.Free();
         ClearReflectionLamps();
@@ -109,6 +117,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         EndCue();
         _schedule = null;
         _map = null;
+        _groundPreparation = null; _preparingRevision = long.MinValue;
         _cueDefs = [];
         Lamps = [];
         ClearReflectionLamps();
@@ -235,6 +244,19 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         if (numbering.Map != ctx.Descriptor.Id)
             throw new InvalidDataException("The lighting inventory belongs to a different map.");
         var emitters = inventory.Lamps;
+        if (_groundPreparation is { } pending)
+        {
+            if (!pending.IsCompleted) return;
+            pending.GetAwaiter().GetResult();
+        }
+        if (_preparingRevision != revision)
+        {
+            var points = emitters.Select(e => new N.Vector2(e.Position.X, e.Position.Z)).Distinct().ToArray();
+            _preparingRevision = revision;
+            _groundPreparation = (_terrain ??= Services.Get<ITerrainPreparation>()).PreparePoints(ctx, "nightlight.lamp-bases", points);
+            if (!_groundPreparation.IsCompleted) return;
+            _groundPreparation.GetAwaiter().GetResult();
+        }
         var facades = inventory.Facades;
         var windows = inventory.Windows;
         _windows.Bind(numbering);

@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Camera;
 using Campus.Contracts;
+using Campus.Contracts.Save;
 using GdUnit4;
 using static GdUnit4.Assertions;
 

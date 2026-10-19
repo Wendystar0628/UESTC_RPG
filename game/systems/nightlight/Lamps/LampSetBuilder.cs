@@ -39,7 +39,7 @@ public static class LampSetBuilder
             var column = paletteColumn(e.Color) ?? (schedule.Spec(slot).Color is { } fallback ? paletteColumn(fallback) : null);
             if (column is null) { unknownColor++; continue; }
             var ground = groundY(e.Position.X, e.Position.Z);
-            if (!float.IsFinite(ground)) ground = 0f;
+            if (!float.IsFinite(ground)) throw new InvalidDataException("A lamp base needs prepared finite terrain.");
             var basePoint = new Vector3(e.Position.X, ground, e.Position.Z);
             var key = LampTable.Key(basePoint);
             if (byKey.ContainsKey(key)) { duplicates++; continue; }

@@ -18,13 +18,19 @@ namespace Campus.Camera;
 [KernelNode("observer-camera", Owner = "WP-06")]
 [SaveSection("view", Owner = "WP-06", Version = 1, Phase = RestorePhase.Pose, Order = 60)]
 public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewControl, IInputRouter, ISkipInputState,
-    ICameraPoseValidator, IMapAware, ISaveSection<ViewSaveData>
+    ICameraPoseValidator, IMapAware, IMapDataParticipant, ISaveSection<ViewSaveData>
 {
     private readonly InputLocks _locks = new();
     private readonly InputBindings _bindings = new();
     private readonly FlightMotion _flight;
     private readonly ObserverInputState _input;
     private IMapContext? _map;
+    private ITerrainPreparation? _terrain;
+    private Task? _terrainPending;
+    private Task<Pose>? _flowProjection;
+    private Task<System.Numerics.Vector3>? _flightProjection;
+    private System.Numerics.Vector3 _projectedVelocity;
+    private float _projectedFog;
     private FlightBounds? _bounds;
     private IAppFlow? _flow;
     private IRuleset? _rules;
@@ -37,7 +43,6 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     private bool _automated;
     private bool _worldResetPending = true;
     private IWorldState? _world;
-    private Pose? _transitDestination;
     private TaskCompletionSource<ModeSwitchResult>? _walkEntry;
     private ObserverListener? _listener;
     private ISettingsSection? _uiSettings;
@@ -62,6 +67,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     {
         _flow = Services.Get<IAppFlow>(); _rules = Services.Get<IRuleset>();
         _world = Services.Get<IWorldState>();
+        _terrain = Services.Get<ITerrainPreparation>();
         _world.InstanceChanged += OnWorldInstanceChanged;
         if (Services.Services.Entries.Any(e => e.Kind == "service" && e.Id == typeof(IWalkController).FullName && !e.IsStub))
             _walk = Services.Get<IWalkController>();
@@ -96,6 +102,11 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     public override void _Process(double delta)
     {
         float seconds = (float)Math.Min(delta, Tuning.MaxFrameStep);
+        if (_flowProjection is { } flowProjection)
+        {
+            if (!flowProjection.IsCompleted) return;
+            _pose = flowProjection.GetAwaiter().GetResult(); _flowProjection = null;
+        }
         if (_worldResetPending)
         { _worldResetPending = false; ResetHistory(); SetEdgeFog(0); }
         AdvanceInput(seconds);
@@ -110,23 +121,45 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         if (ActiveTransit is not null)
         {
             if (!ActiveTransit.Done.IsCompleted) { _flight.Reset(); SetEdgeFog(0); return; }
-            ActiveTransit = null; _transitDestination = null;
+            ActiveTransit = null;
         }
         switch (Mode)
         {
             case ViewMode.Fly:
                 if (_map is null || _bounds is null) return;
                 if (_locks.Locked) { _flight.Reset(); return; }
+                if (_flightProjection is { } projection)
+                {
+                    if (!projection.IsCompleted) return;
+                    ApplyFlightPosition(projection.GetAwaiter().GetResult(), _projectedFog, seconds);
+                    _flight.ConstrainVelocity(_projectedVelocity);
+                    _flightProjection = null;
+                    return;
+                }
+                if (!TerrainReady(Pose.Position)) return;
                 var move = _input.Move;
                 var displacement = _flight.Step(Pose, new(move.X, _input.Vertical, move.Y), _input.Sprint,
                     _flySpeedStep, _map.World.Spatial.GroundY(Pose.Position.X, Pose.Position.Z), seconds);
                 var filtered = _bounds.FilterVelocity(Pose.Position, displacement, out float fog);
                 _flight.ConstrainVelocity(_bounds.FilterVelocity(Pose.Position, _flight.Velocity, out _));
-                var position = _bounds.Project(Pose.Position + filtered);
-                _pose = Pose with { Position = position };
-                var medium = _map.World.Spatial.MediumAt(position).Kind;
-                if (_automated || medium is MediumKind.Interior or MediumKind.Underground or MediumKind.Underwater) fog = 0;
-                SetEdgeFog(fog + (EdgeFog - fog) * MathF.Exp(-seconds / Tuning.FogTimeConstant));
+                var target = Pose.Position + filtered;
+                if (!TerrainReady(target, Pose.Position))
+                {
+                    _projectedVelocity = _flight.Velocity; _projectedFog = fog;
+                    _flightProjection = ProjectFlightAfterTerrain(target, _terrainPending!, _bounds);
+                    return;
+                }
+                // Projection can cross a terrain-block boundary even when the requested move does not.
+                var position = target;
+                if (!_bounds.IsLegal(target))
+                {
+                    _projectedVelocity = _flight.Velocity;
+                    _projectedFog = fog;
+                    _flightProjection = _bounds.ProjectPrepared(target, _terrain!);
+                    if (!_flightProjection.IsCompleted) return;
+                    position = _flightProjection.GetAwaiter().GetResult(); _flightProjection = null;
+                }
+                ApplyFlightPosition(position, fog, seconds);
                 break;
             case ViewMode.Walk:
                 SetEdgeFog(0);
@@ -153,12 +186,19 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         // In particular, loading a map must not replace a preview/Title pose with its default spawn.
         ResetHistory(); SetEdgeFog(0);
     }
+    public Task Prepare(IMapContext context)
+    {
+        var point = new System.Numerics.Vector2(_pose.Position.X, _pose.Position.Z);
+        return (_terrain ??= Services.Get<ITerrainPreparation>()).PreparePoints(context, "camera.presentation", new[] { point });
+    }
+    public void Unload(MapId from) { }
     public void OnMapUnloading(MapId from)
     {
         CancelWalkEntry();
-        ActiveTransit?.Cancel(); ActiveTransit = null; _transitDestination = null;
+        ActiveTransit?.Cancel(); ActiveTransit = null;
         ResetHistory();
         _bounds = null; _map = null; SetEdgeFog(0);
+        _terrainPending = null; _flightProjection = null; _flowProjection = null;
     }
 
     private bool IsPlaying => _flow?.IsPlaying == true;
@@ -167,7 +207,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     {
         _input.Clear(); _flight.Reset(); _walk?.SetInput(default); SetInterfaceMode(true); SetEdgeFog(0);
         ResetSkipHold(); _skipHintVisible = false;
-        if (IsPlaying && Mode == ViewMode.Fly) _pose = Legalize(Pose);
+        if (IsPlaying && Mode == ViewMode.Fly) _flowProjection = LegalizePrepared(Pose);
     }
     private void SetEdgeFog(float value)
     {
@@ -176,11 +216,45 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     }
     private void ResetHistory()
     {
-        ActiveTransit?.Cancel(); ActiveTransit = null; _transitDestination = null;
+        ActiveTransit?.Cancel(); ActiveTransit = null;
         _flight.Reset(); _input.Clear(); _walk?.SetInput(default);
+        _flightProjection = null;
         _recoverTriggered = false;
         _wheel = 0; ResetSkipHold(); _skipHintVisible = false;
         _listener?.Sync(reset: true);
+    }
+
+    private bool TerrainReady(System.Numerics.Vector3 point, System.Numerics.Vector3? from = null)
+    {
+        if (_map is null) return false;
+        if (_terrainPending is { } pending)
+        {
+            if (!pending.IsCompleted) return false;
+            pending.GetAwaiter().GetResult(); _terrainPending = null;
+        }
+        var terrain = _terrain ??= Services.Get<ITerrainPreparation>();
+        var at = new System.Numerics.Vector2(point.X, point.Z);
+        if (terrain.IsPrepared(_map.World, at)) return true;
+        var start = from is { } p ? new System.Numerics.Vector2(p.X, p.Z) : at;
+        _terrainPending = terrain.PrepareRegion(_map, new(System.Numerics.Vector2.Min(start, at), System.Numerics.Vector2.Max(start, at)));
+        if (!_terrainPending.IsCompleted) return false;
+        _terrainPending.GetAwaiter().GetResult(); _terrainPending = null;
+        return true;
+    }
+
+    private async Task<System.Numerics.Vector3> ProjectFlightAfterTerrain(System.Numerics.Vector3 target,
+        Task preparation, FlightBounds bounds)
+    {
+        await preparation;
+        return await bounds.ProjectPrepared(target, _terrain!);
+    }
+
+    private void ApplyFlightPosition(System.Numerics.Vector3 position, float fog, float seconds)
+    {
+        _pose = Pose with { Position = position };
+        var medium = _map!.World.Spatial.MediumAt(position).Kind;
+        if (_automated || medium is MediumKind.Interior or MediumKind.Underground or MediumKind.Underwater) fog = 0;
+        SetEdgeFog(fog + (EdgeFog - fog) * MathF.Exp(-seconds / Tuning.FogTimeConstant));
     }
 
     private void AdvanceFlyFov(float seconds)

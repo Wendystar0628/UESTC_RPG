@@ -10,6 +10,7 @@ namespace Campus.Camera.Walk;
 public partial class WalkController
 {
     private static readonly WalkSaveJsonContext SaveJson = new(new JsonSerializerOptions(ContractJson.Options));
+    private RestoreContext? _historyRestore;
     public JsonTypeInfo<WalkSave> TypeInfo => SaveJson.WalkSave;
 
     public WalkSave Capture(in CaptureContext c)
@@ -26,13 +27,14 @@ public partial class WalkController
         foreach (var saved in dto.SafePoints ?? [])
         {
             if (!WalkSafetyQueries.ValidPose(saved)) { c.Repair("walk: invalid history point removed"); continue; }
-            if (WalkSafetyQueries.InWater(_map!.World.Spatial, saved.Position)
-                || !WalkSafetyQueries.AllowsFeet(_map.World.Spatial, saved.Position))
-            { c.Repair("walk: unsafe history point removed"); continue; }
-            float boundary = FlightBounds.RingDistance(new(saved.Position.X, saved.Position.Z), _map.World.Boundary, out _);
+            float boundary = FlightBounds.RingDistance(new(saved.Position.X, saved.Position.Z), _map!.World.Boundary, out _);
             if (boundary > -WalkTuning.BoundaryClearance) { c.Repair("walk: boundary history point removed"); continue; }
             _safePoints.Record(saved);
         }
+        _historyRestore = c;
+        var points = _safePoints.Points.Select(p => new System.Numerics.Vector2(p.Position.X, p.Position.Z)).ToArray();
+        var preparation = _terrain!.PreparePoints(_map!, "walk.saved-safe-points", points);
+        _landingPointsPreparation = _landingPointsPreparation is { } authored ? Task.WhenAll(authored, preparation) : preparation;
         _crouching = dto.Crouching;
         _restoredCrouch = dto.Crouching;
         ApplyHeight();
@@ -53,6 +55,21 @@ public partial class WalkController
         // view/Pose60 owns the mode; this section owns physical placement and walking speed.
         // Placement clears velocity, jump timers and interpolation; save repairs stay within their own radius.
         // Physics stays frozen until the actual arrival and collision are ready.
+    }
+
+    private void ValidateRestoredHistory()
+    {
+        if (_historyRestore is not { } restore) return;
+        _historyRestore = null;
+        var history = _safePoints.Capture();
+        _safePoints.Clear();
+        foreach (var point in history)
+        {
+            if (WalkSafetyQueries.InWater(_map!.World.Spatial, point.Position)
+                || !WalkSafetyQueries.AllowsFeet(_map.World.Spatial, point.Position))
+                restore.Repair("walk: unsafe history point removed");
+            else _safePoints.Record(point);
+        }
     }
 
     public WalkSave CreateDefault(NewGameContext c) =>

@@ -15,6 +15,23 @@ public sealed class CinematicTrack : IDisposable
     private readonly float[] _lengths;
     private int _segment = -1;
     private Pose _segmentStart;
+
+    public static IReadOnlyList<System.Numerics.Vector2> TerrainPoints(CinematicDef definition, CinematicAnchorSet anchors)
+    {
+        var points = new List<System.Numerics.Vector2>();
+        foreach (var segment in definition.Camera)
+        {
+            if (segment.Path != CameraPath.Transit) continue;
+            var from = segment.Points[0].P ?? anchors.Resolve(segment.Points[0].Anchor!).Position;
+            var to = segment.Points[1].P ?? anchors.Resolve(segment.Points[1].Anchor!).Position;
+            for (var sample = 0; sample <= CinematicTuning.TransitSamples; sample++)
+            {
+                var point = Vector3.Lerp(from, to, (float)sample / CinematicTuning.TransitSamples);
+                points.Add(new(point.X, point.Z));
+            }
+        }
+        return points.Distinct().ToArray();
+    }
     public CinematicTrack(CinematicDef definition, CinematicAnchorSet anchors, IWorldModel world)
     {
         CinematicValidation.Validate(definition, definition.Map);
@@ -67,6 +84,35 @@ public sealed class CinematicTrack : IDisposable
             top = Math.Max(top, ground + height);
         }
         return top;
+    }
+    public IReadOnlyList<System.Numerics.Vector2> TerrainPathPoints()
+    {
+        var points = new HashSet<System.Numerics.Vector2>();
+        var current = _anchors.Current.Position;
+        points.Add(new(current.X, current.Z));
+        for (var index = 0; index < _definition.Camera.Count; index++)
+        {
+            var segment = _definition.Camera[index];
+            float length = _lengths[index];
+            if (segment.Orbit is { } orbit)
+                length = MathF.Abs(orbit.Radius1 - orbit.Radius0)
+                    + MathF.Max(orbit.Radius0, orbit.Radius1) * MathF.Abs(orbit.Azimuth1 - orbit.Azimuth0) * float.Pi / 180;
+            // Sub-metre path intervals cover the integer-metre cells used by the runtime sampler.
+            int samples = Math.Max(1, (int)MathF.Ceiling(length * 4));
+            var previous = Position(index, segment.T0);
+            for (int sample = 0; sample <= samples; sample++)
+            {
+                var point = Position(index, segment.T0 + ((segment.ArriveAt ?? segment.T1) - segment.T0) * sample / samples);
+                int minX = (int)MathF.Floor(MathF.Min(previous.X, point.X)) - 1;
+                int minZ = (int)MathF.Floor(MathF.Min(previous.Z, point.Z)) - 1;
+                int maxX = (int)MathF.Ceiling(MathF.Max(previous.X, point.X)) + 1;
+                int maxZ = (int)MathF.Ceiling(MathF.Max(previous.Z, point.Z)) + 1;
+                for (int z = minZ; z <= maxZ; z++)
+                    for (int x = minX; x <= maxX; x++) points.Add(new(x, z));
+                previous = point;
+            }
+        }
+        return points.OrderBy(p => p.X).ThenBy(p => p.Y).ToArray();
     }
     public Pose Sample(double time, Pose previous, double delta)
     {

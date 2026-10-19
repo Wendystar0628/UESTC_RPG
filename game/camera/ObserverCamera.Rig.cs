@@ -65,7 +65,8 @@ public partial class ObserverCamera
         ViewMode.Walk => _walk?.Space,
         _ => throw new InvalidOperationException("Unknown view mode.")
     };
-    public bool IsSettled => _mode is not null && ActiveTransit is null && (Mode switch
+    public bool IsSettled => _mode is not null && ActiveTransit is null && _walkEntry is null
+        && _flowProjection is null && _flightProjection is null && _terrainPending is null && (Mode switch
     {
         ViewMode.Fly => true,
         ViewMode.Walk => _walk?.IsSettled ?? false,
@@ -75,6 +76,7 @@ public partial class ObserverCamera
     public void SetPose(Pose pose)
     {
         ValidateFinite(pose);
+        _flightProjection = null; _terrainPending = null; _flowProjection = null;
         _pose = pose with { FovDeg = pose.FovDeg ?? (Mode switch
         {
             ViewMode.Fly => FlyFov,
@@ -93,10 +95,8 @@ public partial class ObserverCamera
         if (_transit is null || !_transit.IsReady)
             throw new InvalidOperationException("The production transit driver is not ready.");
         ValidateFinite(to);
-        if (!IsLegal(to)) throw new ArgumentOutOfRangeException(nameof(to), "Transit destination is outside the reachable volume.");
         ActiveTransit?.Cancel();
         _input.Clear(); _flight.Reset();
-        _transitDestination = to;
         ActiveTransit = _transit.Start(Pose, to, options);
         return ActiveTransit;
     }
@@ -111,36 +111,39 @@ public partial class ObserverCamera
         }
         if (_rules is null || !_rules.Current.ViewModes.Contains(mode)) return Task.FromResult(ModeSwitchResult.Refused);
         if (mode == _mode) return Task.FromResult(ModeSwitchResult.Ok);
-        ActiveTransit?.Cancel(); ActiveTransit = null; _transitDestination = null;
-        ModeSwitchResult result;
-        N.Vector3 inheritedVelocity = default;
+        ActiveTransit?.Cancel(); ActiveTransit = null;
         switch (mode)
         {
             case ViewMode.Walk:
                 if (_walk is null) return Task.FromResult(ModeSwitchResult.Refused);
-                result = _walk.Enter(Pose);
+                var result = _walk.Enter(Pose);
                 if (result == ModeSwitchResult.Refused)
                 { WalkEntryRefused?.Invoke(); return Task.FromResult(result); }
                 _walkEntry = new(TaskCreationOptions.RunContinuationsAsynchronously);
                 _flight.Reset(); _input.Clear(); SetEdgeFog(0);
                 return _walkEntry.Task;
             case ViewMode.Fly:
-                bool landingRefused = _walk?.ExitRequested == true && !PlacementReadFailed();
-                _pose = _walk is { Active: true } ? _walk.EyePose : Pose;
-                _flyFovFrom = _pose.FovDeg ?? FlyFov;
-                _flyFovTarget = FlyFov;
-                _flyFovElapsed = 0;
-                if (_walk is { Active: true }) inheritedVelocity = new(_walk.Velocity.X, 0, _walk.Velocity.Z);
-                _walk?.Leave();
-                _pose = Legalize(_pose);
-                if (landingRefused) WalkEntryRefused?.Invoke();
-                result = ModeSwitchResult.Ok;
-                break;
+                return SwitchToFly();
             default: throw new ArgumentOutOfRangeException(nameof(mode));
         }
-        _mode = mode; _flight.Reset(); _input.Clear(); SetEdgeFog(0);
+    }
+
+    private async Task<ModeSwitchResult> SwitchToFly()
+    {
+        bool landingRefused = _walk?.ExitRequested == true && !PlacementReadFailed();
+        var map = _map;
+        var origin = _walk is { Active: true } ? _walk.EyePose : Pose;
+        var pose = await LegalizePrepared(origin);
+        if (!ReferenceEquals(map, _map)) return ModeSwitchResult.Refused;
+        N.Vector3 inheritedVelocity = _walk is { Active: true } body ? new(body.Velocity.X, 0, body.Velocity.Z) : default;
+        _walk?.Leave();
+        _pose = pose;
+        _flyFovFrom = _pose.FovDeg ?? FlyFov;
+        _flyFovTarget = FlyFov; _flyFovElapsed = 0;
+        _mode = ViewMode.Fly; _flight.Reset(); _input.Clear(); SetEdgeFog(0);
         _flight.ConstrainVelocity(inheritedVelocity);
-        return Task.FromResult(result);
+        if (landingRefused) WalkEntryRefused?.Invoke();
+        return ModeSwitchResult.Ok;
     }
 
     private bool AdvanceWalkEntry()

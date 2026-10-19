@@ -88,7 +88,7 @@ internal sealed class FlowTestRig
         World = new(new TestWeatherProcess(), Rules);
         Camera = new(World);
         Runtime = new(() => Presentation.IsCovered) { CompleteArrivalImmediately = completeArrivalImmediately };
-        Playback = new(Camera, Veil, Rules, Presentation);
+        Playback = new(Camera, Veil, Rules, Presentation, new CinematicTerrainPreparation());
     }
 
     /// <summary>Builds the flow under test; restore defaults to the rig's world.</summary>
@@ -96,4 +96,14 @@ internal sealed class FlowTestRig
         new(Camera, Veil, saves, maps, World, World, Rules, new TestMotionSettings(), World, Playback,
             restore ?? World, exit, Runtime)
         { DiagnosticSink = Diagnostics.Add };
+}
+
+internal sealed class CinematicTerrainPreparation : ITerrainPreparation, ICameraPoseValidator
+{
+    public bool IsLegal(Pose pose, bool outsideBuffer) => true;
+    public Task<Pose> LegalizePrepared(Pose pose, CancellationToken cancellation = default) => Task.FromResult(pose);
+    public bool IsPrepared(IWorldModel world, System.Numerics.Vector2 point) => true;
+    public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => Task.CompletedTask;
+    public Task PreparePoints(IMapContext context, string product, IReadOnlyList<System.Numerics.Vector2> points,
+        CancellationToken cancellation = default) => Task.CompletedTask;
 }

@@ -66,17 +66,39 @@ public sealed class FlightBounds(IMapContext context, PolygonRings boundary)
     public Vector3 Project(Vector3 p)
     {
         if (!VectorMath.Finite(p)) throw new ArgumentOutOfRangeException(nameof(p));
-        Span<FlightBoundary> constraints = stackalloc FlightBoundary[5];
         for (int iteration = 0; iteration < 64; iteration++)
         {
-            Evaluate(p, constraints);
-            var worst = constraints[0];
-            foreach (var c in constraints) if (c.Distance > worst.Distance) worst = c;
-            if (worst.Distance <= Epsilon) return p;
-            p -= worst.Outward * ((worst.Distance + Epsilon) * worst.ProjectionScale);
+            if (ProjectStep(ref p)) return p;
         }
         if (!IsLegal(p)) throw new InvalidDataException("Map reachable volume has no stable nearby projection.");
         return p;
+    }
+
+    public async Task<Vector3> ProjectPrepared(Vector3 p, ITerrainPreparation terrain,
+        CancellationToken cancellation = default)
+    {
+        if (!VectorMath.Finite(p)) throw new ArgumentOutOfRangeException(nameof(p));
+        for (int iteration = 0; iteration < 64; iteration++)
+        {
+            var point = new Vector2(p.X, p.Z);
+            if (!terrain.IsPrepared(context.World, point)) await terrain.PrepareRegion(context, new(point, point), cancellation);
+            if (ProjectStep(ref p)) return p;
+        }
+        var final = new Vector2(p.X, p.Z);
+        await terrain.PrepareRegion(context, new(final, final), cancellation);
+        if (!IsLegal(p)) throw new InvalidDataException("Map reachable volume has no stable nearby projection.");
+        return p;
+    }
+
+    private bool ProjectStep(ref Vector3 p)
+    {
+        Span<FlightBoundary> constraints = stackalloc FlightBoundary[5];
+        Evaluate(p, constraints);
+        var worst = constraints[0];
+        foreach (var constraint in constraints) if (constraint.Distance > worst.Distance) worst = constraint;
+        if (worst.Distance <= Epsilon) return true;
+        p -= worst.Outward * ((worst.Distance + Epsilon) * worst.ProjectionScale);
+        return false;
     }
 
     public Vector3 FilterVelocity(Vector3 p, Vector3 velocity, out float edgeFog)

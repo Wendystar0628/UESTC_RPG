@@ -14,7 +14,7 @@ public partial class ObserverCamera
 
     public ViewSaveData Capture(in CaptureContext context)
     {
-        Pose settled = (ActiveTransit is not null ? _transit?.Destination ?? _transitDestination : null) ?? (Mode switch
+        Pose settled = (ActiveTransit is not null ? _transit?.Destination : null) ?? (Mode switch
         {
             ViewMode.Fly => Pose,
             ViewMode.Walk => _walk?.SettledEyePose ?? Pose,
@@ -39,9 +39,10 @@ public partial class ObserverCamera
             throw new InvalidDataException("The saved view mode is unavailable in the selected ruleset.");
         if (mode == ViewMode.Walk && _walk is null)
             throw new InvalidOperationException("Restoring walk view requires WP-42 and its walk save section.");
-        Pose pose = Legalize(data.Pose);
-        if (pose.Position != data.Pose.Position) context.Repair("view.pose");
-        ActiveTransit?.Cancel(); ActiveTransit = null; _transitDestination = null;
+        ValidateFinite(data.Pose);
+        // MapService awaited terrain preparation and projected this destination before restore.
+        Pose pose = data.Pose;
+        ActiveTransit?.Cancel(); ActiveTransit = null;
         ResetHistory();
         _mode = mode;
         // v1 keeps the active-speed projection on disk. Only a fly view restores it here;

@@ -13,12 +13,13 @@ namespace Campus.Camera;
 /// </summary>
 [KernelService(typeof(ITransitDriver), Owner = "WP-36")]
 public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRuntime runtime,
-    ICinematicPlayback waits, IWalkController? walk = null) : ITransitDriver
+    ICinematicPlayback waits, IMapService maps, ITerrainPreparation terrain, ICameraPoseValidator validator,
+    IWalkController? walk = null) : ITransitDriver
 {
     private TransitRun? _active;
 
     public bool IsReady => true;
-    public Pose? Destination => _active is { Finished: false } active ? active.To : null;
+    public Pose? Destination => _active is { Finished: false, TerrainReady: true } active ? active.To : null;
 
     public ITransitHandle Start(Pose from, Pose to, TransitOptions? options = null)
     {
@@ -59,6 +60,19 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
             // The move must follow a presented opaque frame, not just a veil opacity of one.
             await waits.WaitForPresentedCoverage();
             if (run.Cancelled) return;
+
+            var context = maps.Context ?? throw new InvalidOperationException("Transit has no mounted map.");
+            var target = new N.Vector2(run.To.Position.X, run.To.Position.Z);
+            await terrain.PrepareRegion(context, new(target, target));
+            if (run.LandOn is { } land)
+            {
+                var feet = new N.Vector2(land.X, land.Z);
+                await terrain.PrepareRegion(context, new(feet, feet));
+            }
+            if (run.Cancelled) return;
+            if (!ReferenceEquals(maps.Context, context)) throw new OperationCanceledException("Transit map was replaced.");
+            if (!validator.IsLegal(run.To, false)) throw new ArgumentOutOfRangeException(nameof(run), "Transit destination is outside the reachable volume.");
+            run.TerrainReady = true;
 
             Pose arrival;
             if (body is not null)
@@ -136,6 +150,7 @@ public sealed class TransitDriver(ICameraRig camera, IVeilService veil, IMapRunt
         public Pose To => to;
         public N.Vector3? LandOn => landOn;
         public bool Cancelled { get; private set; }
+        public bool TerrainReady { get; set; }
         public bool Finished => _done.Task.IsCompleted;
         public IMapArrival? Arrival { get; set; }
         public IVeilLease? Cover { get; set; }

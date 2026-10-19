@@ -169,7 +169,7 @@ public partial class ObserverCamera
     }
     private void CancelTransitForInput()
     {
-        ActiveTransit?.Cancel(); ActiveTransit = null; _transitDestination = null;
+        ActiveTransit?.Cancel(); ActiveTransit = null;
     }
     private static float WrapYaw(float yaw) => (yaw % 360 + 360) % 360;
     private sealed class LayerLease(ObserverCamera owner, long id) : IDisposable

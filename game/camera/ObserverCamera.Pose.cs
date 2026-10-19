@@ -2,13 +2,17 @@ using Campus.Contracts;
 
 namespace Campus.Camera;
 
-// ICameraPoseValidator and the finite-pose guard shared by SetPose, Transit and Legalize.
+// ICameraPoseValidator and the finite-pose guard shared by SetPose and Transit.
 public partial class ObserverCamera
 {
-    public Pose Legalize(Pose pose)
+    public async Task<Pose> LegalizePrepared(Pose pose, CancellationToken cancellation = default)
     {
         ValidateFinite(pose);
-        return _bounds is null ? pose : pose with { Position = _bounds.Project(pose.Position) };
+        return _bounds is null ? pose : pose with
+        {
+            Position = await _bounds.ProjectPrepared(pose.Position,
+                _terrain ??= Campus.Kernel.Registry.Kernel.Get<ITerrainPreparation>(), cancellation)
+        };
     }
 
     public bool IsLegal(Pose pose, bool outsideBuffer = false)

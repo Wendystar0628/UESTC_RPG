@@ -117,7 +117,8 @@ public sealed class CinematicPlaybackTests
     public async Task CancelledTransitPreservesAnotherCoverWithTheSameReason()
     {
         var rig = new FlowTestRig();
-        var transit = new TransitDriver(rig.Camera, rig.Veil, rig.Runtime, rig.Playback);
+        var terrain = new CinematicTerrainPreparation();
+        var transit = new TransitDriver(rig.Camera, rig.Veil, rig.Runtime, rig.Playback, Maps(), terrain, terrain);
         var run = transit.Start(rig.Camera.Pose, rig.Camera.Pose);
         using var faultCover = rig.Veil.Cover(VeilReason.Transit, 0);
         run.Cancel();
@@ -281,6 +282,7 @@ public sealed class CinematicPlaybackTests
             Rev = 1,
             Default = entry.Descriptor.Id,
             Current = entry.Descriptor.Id,
+            Context = new TestMapContext(entry.Descriptor, new FakeWorld { Boundary = new([]) }),
             Maps = [entry.Descriptor],
             SpawnResolver = (map, spawn) => map == entry.Descriptor.Id
                 ? entry.ResolveSpawn(spawn ?? entry.Descriptor.DefaultSpawn)

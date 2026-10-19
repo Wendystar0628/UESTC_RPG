@@ -4,6 +4,7 @@ using Campus.Contracts.Audio;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
+using Campus.Contracts.Startup;
 using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
@@ -17,7 +18,7 @@ namespace Campus.Camera.Walk;
 [KernelService(typeof(IWalkTelemetry), Owner = "WP-42")]
 [KernelNode("walk-controller", Owner = "WP-42")]
 [SaveSection("walk", Owner = "WP-42", Version = 1, Phase = RestorePhase.Pose, Order = 61)]
-public partial class WalkController : CharacterBody3D, IWalkController, IMapAware, ISaveSection<WalkSave>
+public partial class WalkController : CharacterBody3D, IWalkController, IMapAware, ISaveSection<WalkSave>, IViewContentReadiness
 {
     // WP-43 assigns one layer per SurfaceTag. Water is semantic, never a blocking surface.
     private const uint BlockingLayers = (1u << (int)SurfaceTag.Ground) | (1u << (int)SurfaceTag.Stair)
@@ -33,6 +34,11 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private WalkPlacementAdmission? _admission;
     private CollisionShape3D? _shape;
     private IMapContext? _map;
+    private ITerrainPreparation? _terrain;
+    private Task? _terrainPreparation;
+    private Task? _entryTerrainPreparation;
+    private Task? _landingPointsPreparation;
+    private bool _entryCandidatePending;
     private ICollisionWorld? _collision;
     private IWorldState? _world;
     private IViewControl? _view;
@@ -80,8 +86,10 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     public IMapArrival? PlacementArrival => _placementArrival;
     public int SpeedStep { get; private set; } = WalkRules.DefaultSpeedStep;
     public int SafetyReturnCount { get; private set; }
-    public bool IsSettled => !Active || (!_swimming && Grounded && CollisionReady && _descentDuration <= 0 && !_safetyFailed
-        && _map is not null && !WalkSafetyQueries.InWater(_map.World.Spatial, _feet));
+    public bool IsSettled => _landingPointsPreparation is null && (!Active || (!_swimming && Grounded && CollisionReady
+        && _descentDuration <= 0 && !_safetyFailed && _map is not null && !WalkSafetyQueries.InWater(_map.World.Spatial, _feet)));
+    public bool IsReady(Pose pose) => _landingPointsPreparation is null && _historyRestore is null;
+    public string? Error => _landingPointsPreparation?.Exception?.GetBaseException().Message;
     public Pose BodyPose => new(_feet, _yaw, _pitch);
     public N.Vector3 ObserverEye => _feet + N.Vector3.UnitY * EyeHeight;
     N.Vector3 IWalkController.Velocity => Velocity.ToNumerics();
@@ -91,7 +99,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     {
         get
         {
-            if (_map is null) return null;
+            if (_map is null || _terrain is null || !_terrain.IsPrepared(_map.World, new(_feet.X, _feet.Z))) return null;
             var medium = _map.World.Spatial.MediumAt(_feet + N.Vector3.UnitY * EyeHeight);
             return medium.Kind switch
             {
@@ -187,6 +195,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private void ResolveServices()
     {
         _collision ??= Services.Get<ICollisionWorld>();
+        _terrain ??= Services.Get<ITerrainPreparation>();
         _water ??= Services.Get<IWaterTraversalQuery>();
         _world ??= Services.Get<IWorldState>();
         _view ??= Services.Get<IViewControl>();
@@ -205,10 +214,13 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         ApplyHeight();
         Place(from, WalkTuning.LandingLift);
         _entryFrom = from;
-        var target = EntryCandidate(from);
-        if (target.Position != from.Position) MovePlacementFocus(target);
+        _entryCandidatePending = true;
+        var end = from.Position + Angles.Forward(from.YawDeg, from.PitchDeg) * WalkTuning.LandingSightDistance;
+        var begin = new N.Vector2(from.Position.X, from.Position.Z);
+        var finish = new N.Vector2(end.X, end.Z);
+        _entryTerrainPreparation = _terrain!.PrepareRegion(_map, new(N.Vector2.Min(begin, finish), N.Vector2.Max(begin, finish)));
         _fov = from.FovDeg ?? UiSettingDefinitions.FlyFov.Default;
-        return target.Position == from.Position ? ModeSwitchResult.Ok : ModeSwitchResult.Relocated;
+        return ModeSwitchResult.Ok;
     }
 
     public void Leave()
@@ -223,6 +235,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         _placementArrival = null;
         _entrySightPending = false;
         _entryFrom = null;
+        _entryCandidatePending = false; _entryTerrainPreparation = null;
         Velocity = Vector3.Zero;
         Grounded = false;
         CollisionReady = false;
@@ -237,6 +250,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         _jumpQueued = false;
         _descentDuration = 0;
         _entryFrom = null;
+        _entryCandidatePending = false; _entryTerrainPreparation = null;
         Velocity = Vector3.Zero;
         Grounded = false;
         CollisionReady = false;
@@ -309,12 +323,28 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     {
         _telemetryTick++;
         FlushPlacementEvents();
+        if (_landingPointsPreparation is { } landingPoints)
+        {
+            if (!landingPoints.IsCompleted) return;
+            landingPoints.GetAwaiter().GetResult(); _landingPointsPreparation = null;
+            ValidateRestoredHistory();
+        }
         StepPhysics(delta);
     }
 
     private void StepPhysics(double delta)
     {
         if ((!Active && _entryFrom is null) || _shape is null || _map is null || _collision is null || _safetyFailed) return;
+        if (!TerrainReady(_feet, _cylinder.Radius)) { _previousFeet = _feet; return; }
+        if (_entryCandidatePending)
+        {
+            if (_entryTerrainPreparation is not { IsCompleted: true }) return;
+            _entryTerrainPreparation.GetAwaiter().GetResult(); _entryTerrainPreparation = null;
+            _entryCandidatePending = false;
+            var origin = _entryFrom!.Value;
+            var candidate = EntryCandidate(origin);
+            if (candidate.Position != origin.Position) MovePlacementFocus(candidate);
+        }
         // Resolve only after the node is live, never while constructing the flow/save/view dependency graph.
         _appFlow ??= Services.Get<IAppFlow>();
         CollisionReady = _collision.Ready(_feet, _cylinder.Radius);
@@ -337,6 +367,10 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         }
         float dt = (float)delta;
         if (!(dt > 0) || !float.IsFinite(dt)) return;
+        // Prepare the actual one-tick motion envelope before water, safety or region queries.
+        float travel = Math.Max(WalkTuning.SprintSpeed * WalkRules.SpeedMultiplier(SpeedStep)
+            + WalkTuning.SprintJumpBoost * WalkRules.SpeedMultiplier(SpeedStep), Velocity.Length()) * dt;
+        if (!TerrainReady(_feet, travel + _cylinder.Radius)) { _previousFeet = _feet; return; }
         if (_worldResetPending)
         {
             _worldResetPending = false;
@@ -541,8 +575,17 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         _entryFrom = null;
         _placementNeedsCheck = false;
         _hasPlacement = false;
+        _terrainPreparation = null; _entryTerrainPreparation = null; _landingPointsPreparation = null;
+        _historyRestore = null;
         _sinceSafe = 0;
     }
 
-    public void OnMapLoaded(IMapContext ctx) => _map = ctx;
+    public void OnMapLoaded(IMapContext ctx)
+    {
+        _map = ctx;
+        _terrain ??= Services.Get<ITerrainPreparation>();
+        var points = ctx.Descriptor.Spawns.Where(s => s.Stand is not null)
+            .Select(s => new N.Vector2(s.Stand!.Feet.X, s.Stand.Feet.Z)).ToArray();
+        _landingPointsPreparation = _terrain.PreparePoints(ctx, "walk.authored-landings", points);
+    }
 }

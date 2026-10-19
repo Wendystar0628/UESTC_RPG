@@ -8,11 +8,16 @@ namespace Campus.Camera.Cinematic;
 
 /// <summary>Single playback owner, advanced only by the camera-priority node.</summary>
 [KernelService(typeof(ICinematicPlayback), Owner = "WP-49a")]
-public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRuleset rules, IVeilPresentation presentation) : ICinematicPlayback, IDisposable
+public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRuleset rules, IVeilPresentation presentation,
+    ITerrainPreparation terrain) : ICinematicPlayback, IDisposable
 {
     private readonly List<FrameWait> _waits = [];
     private CinematicDef? _definition;
     private CinematicTrack? _track;
+    private Task? _trackPreparation;
+    private CinematicAnchorSet? _trackAnchors;
+    private IWorldModel? _trackWorld;
+    private IMapContext? _trackContext;
     private Func<WorldCue, bool, Task>? _worldCue;
     private TaskCompletionSource? _done;
     private Task? _pending;
@@ -51,7 +56,13 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
     {
         if (IsPlaying) throw new InvalidOperationException("A cinematic is already playing.");
         if (!rules.Current.CinematicStates.Contains(state)) throw new InvalidOperationException("Ruleset forbids cinematic playback in this state.");
-        _track?.Dispose(); _track = new(definition, Anchors(start, maps), world);
+        _track?.Dispose(); _track = null;
+        _trackAnchors = Anchors(start, maps); _trackWorld = world;
+        _trackContext = maps.Context ?? throw new InvalidOperationException("Cinematic terrain has no mounted map.");
+        var points = CinematicTrack.TerrainPoints(definition, _trackAnchors);
+        _trackPreparation = points.Count == 0 ? Task.CompletedTask : terrain.PreparePoints(
+            _trackContext,
+            "cinematic.transit." + definition.Id, points);
         ReleaseMask();
         _definition = definition; _worldCue = worldCue; _worldIndex = 0; Time = 0;
         _paused = false; _stopping = false; _pending = null; _finish = null; _veilTask = null; _carry = 0;
@@ -75,9 +86,17 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
             }
             catch (Exception error) { if (_waits.Remove(wait)) wait.Done.TrySetException(error); }
         }
-        if (!IsPlaying || _paused || _stopping || _definition is null || _track is null) return;
+        if (!IsPlaying || _paused || _stopping || _definition is null) return;
         try
         {
+            if (_track is null)
+            {
+                if (_trackPreparation is not { IsCompleted: true }) return;
+                _trackPreparation.GetAwaiter().GetResult();
+                _track = new(_definition, _trackAnchors!, _trackWorld!);
+                if (_trackContext is { } pathContext)
+                    _pending = terrain.PreparePoints(pathContext, "cinematic.path." + _definition.Id, _track.TerrainPathPoints());
+            }
             if (_pending is { IsCompleted: false }) return;
             _pending?.GetAwaiter().GetResult(); _pending = null;
             if (_worldIndex < _definition.World.Count && _definition.World[_worldIndex].T <= Time && _veilTask is { IsCompleted: false }) return;
@@ -90,8 +109,16 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
                 if (mask.T0 > Time) next = Math.Min(next, mask.T0);
                 if (mask.T1 - mask.FadeOut > Time) next = Math.Min(next, mask.T1 - mask.FadeOut);
             }
-            ApplyCover(next);
             var previous = camera.Pose;
+            var position = _track.PositionAt(next);
+            if (_trackContext is { } context && !terrain.IsPrepared(context.World, new(position.X, position.Z)))
+            {
+                var to = new System.Numerics.Vector2(position.X, position.Z);
+                _pending = terrain.PreparePoints(context, "cinematic.frame." + _definition.Id, new[] { to });
+                _carry -= delta;
+                return;
+            }
+            ApplyCover(next);
             camera.SetPose(_track.Sample(next, previous, next - Time)); _carry -= next - Time; Time = next;
             if (_worldIndex < _definition.World.Count && _definition.World[_worldIndex].T <= Time)
             {
@@ -113,6 +140,7 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
         _paused = true; _stopping = true;
         try
         {
+            if (_trackPreparation is not null) await _trackPreparation;
             if (_pending is not null) await _pending;
             if (_definition is not null)
             {
@@ -137,6 +165,7 @@ public sealed class CinematicPlayback(ICameraRig camera, IVeilService veil, IRul
             var waits = _waits.ToArray(); _waits.Clear();
             var done = _done; _done = null;
             var track = _track; _track = null; _definition = null; _worldCue = null;
+            _trackPreparation = null; _trackAnchors = null; _trackWorld = null; _trackContext = null;
             _pending = null; _veilTask = null;
             ReleaseMask();
             track?.Dispose();

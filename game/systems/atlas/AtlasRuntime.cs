@@ -4,26 +4,50 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
+using Campus.Kernel.Frame;
 
 namespace Campus.Systems.Atlas;
 
 [KernelNode("atlas", Owner = "WP-48c")]
-public partial class AtlasRuntime : Godot.Node, IMapAware
+public partial class AtlasRuntime : Godot.Node, IMapAware, IMapDataParticipant
 {
     private readonly AtlasService _atlas;
     private readonly IBakeService _bake;
     private readonly AtlasBaseSource _baseSource;
+    private readonly ITerrainPreparation _terrain;
     private IBakeHandle? _mapBake;
     private bool _productPublished;
 
     public AtlasRuntime(AtlasService atlas, AtlasBaseSource baseSource, IMapService maps, IAppFlow flow,
-        IAudioService audio, IBakeService bake, IViewControl view)
+        IAudioService audio, IBakeService bake, IViewControl view, ITerrainPreparation terrain)
     {
         _atlas = atlas;
         _bake = bake;
         _baseSource = baseSource;
-        _atlas.Connect(maps, flow, audio, view);
+        _terrain = terrain;
+        _atlas.Connect(maps, flow, audio, view, TraceTravel);
     }
+
+    private static void TraceTravel(string phase, MarkerId id, TravelStyle style, string? result, ViewMode mode)
+    {
+        var at = FrameClock.MonotonicMilliseconds;
+        var completion = result is null ? "" : $" result={result} mode={mode}";
+        Godot.GD.Print(FormattableString.Invariant($"ATLAS_TRAVEL_PHASE {phase} {id.Value} {style} {at:R}{completion}"));
+    }
+
+    public Task Prepare(IMapContext context)
+    {
+        _atlas.OnMapLoaded(context);
+        var points = _atlas.Markers.Where(m => m.Teleport is not null).SelectMany(m =>
+        {
+            var destination = m.Teleport!;
+            var fly = new System.Numerics.Vector2(destination.Fly.Position.X, destination.Fly.Position.Z);
+            return destination.Stand is { } stand
+                ? new[] { fly, new System.Numerics.Vector2(stand.Feet.X, stand.Feet.Z) } : new[] { fly };
+        }).Distinct().ToArray();
+        return _terrain.PreparePoints(context, "atlas.travel-poses", points);
+    }
+    public void Unload(MapId from) { }
 
     public override void _Ready() => ProcessPriority = FramePriority.Systems;
     public override void _Process(double delta)
