@@ -79,7 +79,7 @@ gates: [G1, G5]
 | --- | --- | --- |
 | `WorldHours` | 小时，double | 同一世界实例内单调递增，暂停时不动；跨实例比较没有意义（SYS-TIME §1） |
 | `Clock` | 小时，[0, 24) | 由 `WorldHours` 换算；换季时钟点数字可能变小，但太阳不倒走（SYS-TIME §1） |
-| 钟点的写法 | 正文写 HH:MM；命令行与 JSON 写小数小时 | 17:30 写 `17.5`；17:05 写 `17.083333` |
+| 钟点的写法 | 正文写 HH:MM；命令行与 JSON 写小数小时 | 17:30 写 `17.5`；17:15 写 `17.25` |
 | `SeasonPos` | [0, 4)，连续、循环；0 春、1 夏、2 秋、3 冬 | 季节不自动推进（SYS-TIME） |
 | 流逝倍率 | 世界秒 / 真实秒；0 = 暂停，默认 1 | 取值集合见 ENG-ARCH §3 的 `Flow.Rate` |
 | `AnimTime` | 秒；与世界时间无关 | 暂停、快进、倍速都不影响（SYS-MOTION §1.2） |
@@ -164,7 +164,6 @@ gates: [G1, G5]
 - **全局着色器参数**：小写下划线、不带前缀（`weather_a`）；C# 侧只用 `ShaderGlobals` 的常量，总线名只用 `AudioBuses` 的常量，不写字符串字面量（ENG-PERF §1.5）。着色器文件名以系统名作前缀，白名单见 ENG-PERF §1.4。
 - **JSON**：字段 camelCase，枚举按字符串，向量写成数组；多态类型的类型字段写在每个对象的第一个字段（ENG-ARCH §3）。
 - **命令行取值**：天气写连字符小写（`few-clouds`），季节写英文小写，预设、设备档和 `--quality-set` 的单项名见 ENG-GATES-SHOTS §1。
-- **过场**：过场 ID 用 snake_case，`map.json` 里的角色名用 camelCase（SYS-MAPS §2）。
 
 ### 3.5 色名
 

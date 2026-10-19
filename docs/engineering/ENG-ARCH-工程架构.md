@@ -116,7 +116,7 @@ gates: [G1, G2, G3, G4, G5, G6]
 
 - 契约在 `game/contracts/`（`Campus.Contracts`）；签名、注释和 JSON 格式（`schemas/`）以源码为准，文档不抄签名。
 - 改契约，或加着色器全局参数、着色器文件、程序集引用、NuGet 包，向 Codex 主线申请（WF-BUILD §1、WF-BUILD §3）；改动与全部使用方、数据和文档同批迁移，不保留旧接口（WF-RULE §10，D-209、D-214）。
-- 画面相关的契约（`ToonSpec`、调色板、着色器全局参数、界面令牌、过场 JSON）由主会话确认字段够用、命名与美术文档一致。
+- 画面相关的契约（`ToonSpec`、调色板、着色器全局参数、界面令牌）由主会话确认字段够用、命名与美术文档一致。
 - **枚举纪律**：枚举只在末尾追加值，JSON 按字符串存；会追加值的枚举，消费方写穷举 `switch`，`default` 分支拒绝或报错，不写二值判断；读到不认识的字符串按不合法处理（SYS-SAVE-FORMAT §1.3）。
 - JSON 一律用 `ContractJson.Options`；存读档用 System.Text.Json 源生成（SYS-SAVE-FORMAT §4）。
 - 契约用 `System.Numerics`，Godot 侧用引擎的向量与变换，两边转换只用内核的一组扩展方法（CORE-CONVENTIONS §1）。

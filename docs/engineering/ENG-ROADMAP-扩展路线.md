@@ -50,7 +50,7 @@ gates: [G4, G5, G20]
 
 ## 2 写死的规定与写法纪律
 
-观光版现行的规定全部保留，看作规则集 `sightseeing` 的内容：不出现 NPC 与他人、没有可点选的东西、全片一个偶发事件、只有旁观和行走两种观察模式、镜头不自己动、过场只在 Title、Entering、Leaving、时间季节天气随意调、解锁策略 `all-unlocked`（INV-1–INV-12，D-182）。内容规则写成规则集字段 `Characters`、`Interaction`、`ClearVoices`（运行时不读，门禁按它取判据）。其余写死的规定（过场无角色轨、碰撞不随状态变、全场一盏方向光、不画车流、外围不能进、界面只有登记的件、音乐只在开始页与进场过场等），以后只增即可，不需要预留，各自的规则在对应文档。
+观光版现行的规定全部保留，看作规则集 `sightseeing` 的内容：不出现 NPC 与他人、没有可点选的东西、全片一个偶发事件、只有旁观和行走两种观察模式、镜头不自己动、时间季节天气随意调、解锁策略 `all-unlocked`（INV-1–INV-12，D-182）。内容规则写成规则集字段 `Characters`、`Interaction`、`ClearVoices`（运行时不读，门禁按它取判据）。其余写死的规定（碰撞不随状态变、全场一盏方向光、不画车流、外围不能进、界面只有登记的件、音乐只在开始页等），以后只增即可，不需要预留，各自的规则在对应文档。
 
 **写法纪律**（现在就照做，不花额外代码）：不在代码里写观光专属常量，一律读规则集；"观者在哪"读 `IObserverState`，"画面从哪看"读 `ICameraRig`；会追加值的枚举不做二值判断；读档、新游戏换世界实例时，平滑、回差、历史类系统直接落到新值，以后的 NPC、剧情状态同样遵守。
 
@@ -60,13 +60,13 @@ gates: [G4, G5, G20]
 
 以下 6 条已采纳（D-160），由 WP-00（契约、桩与拆除） 写进契约 v1 候选；契约以 `game/contracts/` 为准。
 
-1. **规则集**：契约 `RulesetId`、`WorldControlMask`、`InteractionRule`、`RulesetDescriptor`、`IRuleset`（Kernel 服务，只读，只有新游戏和读档能切换）；数据 `game/data/rulesets/sightseeing.json`，字段含 `ViewModes`、`WorldControls`、`UnlockPolicy`、`Incidents`、`CinematicStates` 与内容规则。新游戏先定规则集再调各段 `CreateDefault`；读档先按 meta 的 `Ruleset` 定规则集再进 `World` 阶段。
+1. **规则集**：契约 `RulesetId`、`WorldControlMask`、`InteractionRule`、`RulesetDescriptor`、`IRuleset`（Kernel 服务，只读，只有新游戏和读档能切换）；数据 `game/data/rulesets/sightseeing.json`，字段含 `ViewModes`、`WorldControls`、`UnlockPolicy`、`Incidents` 与内容规则。新游戏先定规则集再调各段 `CreateDefault`；读档先按 meta 的 `Ruleset` 定规则集再进 `World` 阶段。
 2. **观者状态**：契约 `IObserverState`（脚位、眼位、朝向、所在空间、观察模式）；旁观时是镜头位置，行走时是行走控制器的物理体。第一人称下观者与镜头重合，第三人称后分开。
-3. **输入占用按原因计**：`ICameraRig.LockInput(InputLockReason)` 返回 `IDisposable`，没有占用时才接受观者输入，不设布尔开关；原因有大地图、开始页与过场、换图雾幕、菜单、改键捕获，以后末尾追加。
+3. **输入占用按原因计**：`ICameraRig.LockInput(InputLockReason)` 返回 `IDisposable`，没有占用时才接受观者输入，不设布尔开关；原因有大地图、开始页、加载界面、换图雾幕、菜单、改键捕获，以后末尾追加。
 4. **枚举的穷举纪律**：会追加值的枚举，消费方一律写穷举 `switch`，`default` 拒绝或报错；读到不认识的枚举字符串当作不合法（CORE-CONVENTIONS §3.6、ENG-ARCH §3）。
 5. **偶发事件数据化**：`game/data/maps/qingshuihe/incidents.json` 记事件 ID、路线实体、选树选灯规则、各版本开关；`IncidentDirector` 只跑规则集 `Incidents` 里的事件。
 6. **名字占位**：目录 `game/entities/`、`game/contracts/Entities/`、`game/data/text/`、`game/data/maps/<id>/entities/` 在 `ownership.json` 记为 RPG 预留，观光期不写入；实体 ID 前缀 `npc:`、`item:`、`quest:` 保留，G5 拒绝观光数据使用；存档预留段名含 `calendar`、`agents`；`interact`（E）、`inventory`（I）的名字和键位不分配给观光功能。
 
 ### 3.2 不需要现在预留的
 
-以后只增即可：新观察模式（`ViewMode` 末尾追加）；新帧步（`FramePriority` 追加常量）；新服务与契约块（交互、任务、对话、背包、NPC、文本、日历）；新存档段；过场的角色轨；`MapKind.Instance`；规则集预算。
+以后只增即可：新观察模式（`ViewMode` 末尾追加）；新帧步（`FramePriority` 追加常量）；新服务与契约块（交互、任务、对话、背包、NPC、文本、日历）；新存档段；`MapKind.Instance`；规则集预算。

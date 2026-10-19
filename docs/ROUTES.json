@@ -78,7 +78,6 @@
   "SYS-TIME": "docs/systems/SYS-TIME-时间与季节.md",
   "SYS-TIME-LOOK": "docs/systems/SYS-TIME-LOOK-色彩脚本四季与灯光.md",
   "SYS-TITLE": "docs/systems/SYS-TITLE-开始页与启动.md",
-  "SYS-TITLE-CINEMATIC": "docs/systems/SYS-TITLE-CINEMATIC-进入过场与返回标题.md",
   "SYS-VIEW": "docs/systems/SYS-VIEW-观察模式与开场.md",
   "SYS-VIEW-MEDIUM": "docs/systems/SYS-VIEW-MEDIUM-介质呈现.md",
   "SYS-WALK": "docs/systems/SYS-WALK-行走模式.md",
@@ -461,12 +460,10 @@
    "SYS-ATLAS-TRAVEL"
   ],
   "WP-49a": [
-   "SYS-TITLE",
-   "SYS-TITLE-CINEMATIC"
+   "SYS-TITLE"
   ],
   "WP-49b": [
-   "SYS-TITLE",
-   "SYS-TITLE-CINEMATIC"
+   "SYS-TITLE"
   ],
   "WP-50": [
    "SYS-SAVE",

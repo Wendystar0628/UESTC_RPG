@@ -8,7 +8,7 @@ keywords: [动物, 鸟, 校园猫, 鸽群, 反应动物, 黄昏乌鸦, 季节性
 owners: [WP-25]
 contributors: []
 depends: [WLD-LIFE, CORE-INDEX, ART-STYLE, ENG-ARCH, SYS-TIME, SYS-WEATHER]
-related: [WLD-LIFE-STREET, WLD-VEGETATION, WLD-WATER, WLD-INTERIORS, SYS-MOTION, SYS-WALK, SYS-AUDIO, SYS-TITLE, MAP-QSH-NORTH, MAP-QSH-LIBRARY]
+related: [WLD-LIFE-STREET, WLD-VEGETATION, WLD-WATER, WLD-INTERIORS, SYS-MOTION, SYS-WALK, SYS-AUDIO, MAP-QSH-NORTH, MAP-QSH-LIBRARY]
 contracts: []
 data: []
 gates: [G4, G7, G15]
@@ -58,7 +58,6 @@ gates: [G4, G7, G15]
 - **雨雪中**（SYS-WEATHER §2）：白鹭、斑头雁、小䴙䴘、翠鸟、孔雀、家燕、涉禽、鸽子用夜间那一套（鸽子躲到檐下）；黑天鹅、小天鹅、白眼潜鸭小雨、中雨照常在水面，大雨和雷雨时用夜间那一套；猫另有一套"檐下"位置（雨棚下、门廊下、科 C 楼台阶、学知苑檐下，在 `precip_occ` 遮蔽范围内），夜里下雨也用这一套；雨停回到白天或夜间那一套。
 - **季节性动物**按季节权重出没（SYS-MOTION-ENV §6）。
 - **叫声**（SYS-AUDIO-AMBIENCE §1.3、§1.4）：看得见的水禽、猫、鸽子离观者 25 m 以内且在视野里时，只在小动作或反应动作那一刻概率出声；25 m 以外声音从当前生效的那套位置发出；孔雀每真实小时不超过 2 次；乌鸦叫黄昏为主、从远处传来，画面里的乌鸦不出声；喜鹊的声音同样不放。
-- **过场白鹭**（可选，SYS-TITLE-CINEMATIC §1.3）：新游戏过场可有一小群白鹭（6–9 只）横过主轴线上空，只在开始页和过场里出现（WP-49b（标题美术与过场数据））。
 - **不要画的鸟**：成群飞过或飞行中的乌鸦、成群飞过的燕子、鸳鸯、喜鹊。
 
 ### 1.1 反应动物：猫与鸽群

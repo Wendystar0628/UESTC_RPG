@@ -166,8 +166,8 @@ gates: []
 - **行走**：有重力和碰撞，以眼高走、跑、跳、潜行（SYS-WALK §2）。
 - **镜头不会自己动**：不做环绕、俯视、导览和自动运镜；观者触发的跳转、传送、模式切换、回位不算（SYS-VIEW §2.5）。
 - **观者状态**（`IObserverState`）：观者自己在哪；"画面从哪看"读 `ICameraRig`（ENG-ARCH §3、ENG-ROADMAP §3）。
-- **输入占用**（`LockInput`）：大地图、开始页与过场、换图雾幕按原因各自取得的占用（ENG-ARCH §3、ENG-ROADMAP §3）。
-- **雾幕**：画面上的一层全屏雾色遮罩，换季、远距离跳转、传送、切图、过场共用一层（`IVeilService`）（UI-NAV-WAYPOINTS §2.1、ART-SKYLIGHT-ATMOSPHERE §3.4）。
+- **输入占用**（`LockInput`）：大地图、开始页、加载界面、换图雾幕按原因各自取得的占用（ENG-ARCH §3、ENG-ROADMAP §3）。
+- **雾幕**：画面上的一层全屏雾色遮罩，换季、远距离跳转、传送、切图共用一层（`IVeilService`）（UI-NAV-WAYPOINTS §2.1、ART-SKYLIGHT-ATMOSPHERE §3.4）。
 - **主网**：行走必须能走、执行走廊标准的那部分路网（SYS-WALK-BOUNDS §1）。
 - **行走走廊**：主网中线两侧一定宽度以及开放室内的可走部分，精度要求更密（ART-FIDELITY §5.1）。
 - **可行走数据**：登记的禁行区、涉水区、开放泳区多边形，运行时按位置查（SYS-WALK-BOUNDS §1）。
@@ -201,20 +201,16 @@ gates: []
 - **`atlasRect`**：平面地图的页面范围，写在 `atlas/markers.json`（SYS-ATLAS-UI §1.3）。
 - **`IAtlasService`**：管标记、解锁、追踪和传送的服务；与 `IMapService` 是两回事，不得混名（ENG-ARCH §3、D-138）。
 
-## 9 开始页、过场与存档
+## 9 开始页与存档
 
 - **启动序列**：雾色、扉页、交叉淡化成实时的 T0，全程没有进度条（SYS-TITLE §1）。
 - **扉页**：T0 的三维静帧，由截图机的出图脚本生成；片名块由界面层实时画在上面（SYS-TITLE §1）。
 - **T0**（云隙望穹）：开始页的静止机位，在活动范围之外，只在 `--title=1` 下有效（SYS-TITLE §2.1、ENG-GATES-SHOTS §1）。
 - **开始页**：背景是最近一个存档的世界，流逝停住；没有存档时是落金初灯的预览（SYS-TITLE §2）。
-- **新游戏过场**：新建世界实例，把落金到初灯演一遍，在 P00 上出标题卡后交还控制（SYS-TITLE-CINEMATIC §1）。
-- **继续过场**：穿云，移到存档位姿上空，落下，交还；世界时间不动。**返回标题**先保存再回到 T0（SYS-TITLE-CINEMATIC §2）。
-- **世界轨**：过场里推进世界状态的那条轨；跳过时按顺序立即执行完，所以终态与完整播放相同（SYS-TITLE-CINEMATIC §3、§4）。
-- **跳过**：过场中按住 Esc；返回标题不可跳过（SYS-TITLE-CINEMATIC §3）。
-- **交还控制**：过场结束、把镜头交给观者的那一刻（SYS-TITLE §3）。
+- **加载界面**：新游戏、继续、返回标题、游戏里换图共用的全屏界面，带一条进度条，走满后淡出（SYS-TITLE §3.1）。
+- **云卡**：T0 里的云片，只在开始页出现（SYS-TITLE §2.1）。
+- **交还控制**：加载界面淡出、把镜头交给观者的那一刻（SYS-TITLE §3）。
 - **应用状态**（`IAppFlow`）：Boot、Title、Entering、Playing、Leaving、Quitting；偶发事件、自动保存、小地图只在 Playing 里有（SYS-TITLE §3）。
-- **放映层**：过场与开始页用的独立界面层，在雾幕之上、界面之下，不随主题（SYS-TITLE-CINEMATIC §5）。
-- **`CinematicPlayer`**：在相机那一步逐帧驱动过场镜头的节点（SYS-TITLE-CINEMATIC §5）。
 - **存档位**（`SlotId`）：三个自动存档位，每个装一条世界线（SYS-SAVE §1）。
 - **世界线**：从一次新游戏开始到被另一次新游戏覆盖为止的一串存档（SYS-SAVE §1）。
 - **代**（gen）：每次保存写一个新文件，代号严格递增，保留最近几代，不覆盖不改名（SYS-SAVE §1）。
@@ -283,7 +279,7 @@ gates: []
 - **声学网格**：全图常驻的离线声学数据（SYS-AUDIO-FOLEY §2.2）。
 - **房间与门户**（声学）：开放室内声明的声学房间和房间之间的开口（SYS-AUDIO-FOLEY §2.2）。
 - **界面音**（`UiCue`）：按动效频率分级的界面音效，高频事件默认无声（SYS-AUDIO §5）。
-- **开场音乐**：开始页和进场过场的一段原创小品，做好之前不放（SYS-AUDIO §6）。
+- **开场音乐**：开始页的一段原创小品，做好之前不放（SYS-AUDIO §6）。
 
 ## 13 画面设置与性能
 
@@ -366,7 +362,6 @@ gates: []
 | 门户 | ① 室内平面的开口 `PortalDecl`（ENG-ARCH §3）；② 声学门户 `AcousticPortalDecl`（SYS-AUDIO-FOLEY §2.2） | 契约里枚举分别叫 `PortalKind` 与 `AcousticPortalKind` |
 | 区 / 区域 | ① 区（zone，各区工作包）；② 地图区域（region，SYS-ATLAS） | 地图语境写"区域" |
 | 通用 | ① 通用模块；② 通用提供者 `GenericInteriorProvider`；③ 派工简报模板 | 写全称 |
-| 继续 | ① 开始页的"继续"按钮；② 继续过场（SYS-TITLE-CINEMATIC §2.1） | 过场写"继续过场" |
 | 清水河 | ① 校区名；② 地图 ID `qingshuihe`；③ 截面线外的那条河 | 地图写 ID，河写"清水河（河）" |
 | 编号前缀 | P、V、E、A、R、G、O、L、I 等的同号不同义见 CORE-CONVENTIONS §3.3 | — |
 | 痕迹 | ① 生活痕迹（§1）；② 贴花类的"痕迹"：落叶、季节落物、天气湿痕（ART-FIDELITY §2）；③ 旧痕：翻新删去、不做旧不画的老旧痕迹（§1） | 人留下的写"生活痕迹"，老旧的写"旧痕" |
