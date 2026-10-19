@@ -211,7 +211,7 @@ public sealed class BakeCacheStore
     private string FilePath(BakeKey key)
     {
         var detail = key.Detail.Split('/');
-        var product = key.Module == "map" ? "map" : key.Module.StartsWith("interior.", StringComparison.Ordinal) ? "interior" :
+        var product = key.Module == "terrain" ? "terrain" : key.Module == "resident" ? "resident" : key.Module == "map" ? "map" : key.Module.StartsWith("interior.", StringComparison.Ordinal) ? "interior" :
             detail[0] == "C" ? "collision" : "geometry";
         var segments = new List<string> { _root, Segment(key.Map.Value), product, Segment(key.Module) };
         segments.AddRange(detail.Select(Segment));

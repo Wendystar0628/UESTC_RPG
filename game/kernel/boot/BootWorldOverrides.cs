@@ -67,6 +67,8 @@ public static class BootWorldOverrides
             var titlePose = showTitle && poseId == "T0";
             var pose = titlePose ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
                 : ReviewPoseResolver.Resolve(poseId, context);
+            var terrainPoint = new System.Numerics.Vector2(pose.Position.X, pose.Position.Z);
+            await services.Get<ITerrainPreparation>().PrepareRegion(context, new(terrainPoint, terrainPoint));
             if (!titlePose && !services.Get<ICameraPoseValidator>().IsLegal(pose, outsideBuffer: true))
                 throw new ArgumentException($"Pose is outside the reachable space or inside its buffer: {poseId}.");
             services.Get<ICameraRig>().SetPose(pose);

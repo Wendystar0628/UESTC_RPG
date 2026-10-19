@@ -24,7 +24,7 @@ internal sealed record TerrainWaterRegion(FeatureId Feature, TerrainRegion Regio
 
 internal sealed record TerrainBankInterval(int Polygon, int Ring, double From, double To, double Length,
     IReadOnlyList<FeatureId> Roads, IReadOnlyList<FeatureId> Bridges);
-internal sealed record ResolvedTerrainBank(TerrainBankSpan Span, TerrainNode Water, TerrainProgram BeforeWater)
+internal sealed record ResolvedTerrainBank(TerrainBankSpan Span, Func<double, double, double> ShoreTop)
 {
     public float TopAt(double station)
     {
@@ -46,7 +46,7 @@ internal sealed record ResolvedTerrainBank(TerrainBankSpan Span, TerrainNode Wat
 
         float Evaluate(double x, double z)
         {
-            var value = Water.Apply(BeforeWater.Evaluate(x, z), x, z).Surface.Height;
+            var value = ShoreTop(x, z);
             if (!double.IsFinite(value) || Math.Abs(value) > float.MaxValue) throw new InvalidOperationException("Resolved bank top is not finite.");
             return (float)value;
         }
@@ -130,14 +130,18 @@ internal sealed class TerrainProgram
     private static int Cell(double value) => checked((int)Math.Floor(value / TerrainSampling.TileQuads));
 }
 
-internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource, ITerrainWaterSource
+internal sealed class CompiledTerrain : ITerrainAssetBuilder, ITerrainBankSource, ITerrainWaterSource
 {
-    public TerrainInputSummary SourceInputs => _field.SourceInputs;
-    private readonly TerrainHeightField _field;
-    private readonly TerrainWaterRegion[] _water;
+    public TerrainInputSummary SourceInputs => Reader.SourceInputs;
+    private TerrainHeightField? _field;
+    private TerrainWaterRegion[]? _water;
+    private IPreparedTerrain? _prepared;
+    private TerrainFrozenData? _frozen;
+    private ITerrain Reader => _prepared ?? (ITerrain?)_field ?? throw new InvalidOperationException("Cold terrain batch is closed.");
+    private readonly MapRect _dataRect;
     public IReadOnlyList<string> Diagnostics { get; }
     public bool ZonesValidated { get; }
-    private readonly IReadOnlyDictionary<string, ResolvedTerrainBank> _banks;
+    private IReadOnlyDictionary<string, ResolvedTerrainBank>? _banks;
     public IReadOnlyList<TerrainBankSpan> Banks { get; }
     public IReadOnlyList<TerrainWaterBody> Waters { get; }
 
@@ -145,6 +149,7 @@ internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource, ITerrainWa
         IEnumerable<TerrainWaterRegion> water, IReadOnlyList<string> diagnostics, bool zonesValidated,
         IReadOnlyList<ResolvedTerrainBank>? banks = null)
     {
+        _dataRect = dataRect;
         _water = water.OrderBy(w => w.Feature.Value, StringComparer.Ordinal).ToArray();
         Waters = Array.AsReadOnly(_water.Where(value => !value.Underground).Select(value => new TerrainWaterBody(value.Feature,
             CopyPolygons(value.Region.Polygons), CopyPolygons(value.Wade.SelectMany(area => area.Polygons)))).ToArray());
@@ -160,27 +165,62 @@ internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource, ITerrainWa
         new PolygonRings(Array.AsReadOnly(polygon.Outer.ToArray()),
             Array.AsReadOnly(polygon.Holes.Select(hole => (IReadOnlyList<System.Numerics.Vector2>)Array.AsReadOnly(hole.ToArray())).ToArray()))).ToArray());
 
-    public bool IsFlat(TileKey tile) => _field.IsFlat(tile);
-    public float HeightAt(float x, float z) => _field.HeightAt(x, z);
-    public (float Height, TerrainFacts Facts) SampleAt(float x, float z) => _field.SampleAt(x, z);
-    public void FillTile(TileKey tile, int level, Span<short> cm) => _field.FillTile(tile, level, cm);
-    public float PadY(FeatureId feature) => _field.PadY(feature);
-    public bool TryGetPadY(FeatureId feature, out float y) => _field.TryGetPadY(feature, out y);
-    public float? WaterY(FeatureId water) => _field.WaterY(water);
-    public TerrainFacts FactsAt(float x, float z) => _field.FactsAt(x, z);
+    public bool IsFlat(TileKey tile) => Reader.IsFlat(tile);
+    public float HeightAt(float x, float z) => Reader.HeightAt(x, z);
+    public (float Height, TerrainFacts Facts) SampleAt(float x, float z) => Reader.SampleAt(x, z);
+    public void FillTile(TileKey tile, int level, Span<short> cm) => Reader.FillTile(tile, level, cm);
+    public float PadY(FeatureId feature) => Reader.PadY(feature);
+    public bool TryGetPadY(FeatureId feature, out float y) => Reader.TryGetPadY(feature, out y);
+    public float? WaterY(FeatureId water) => Reader.WaterY(water);
+    public TerrainFacts FactsAt(float x, float z) => Reader.FactsAt(x, z);
+    private TerrainHeightField ColdField => _field ?? throw new InvalidOperationException("Cold terrain batch is closed.");
+    public TerrainRasterBlock BuildBlock(TileKey block, IPreparedTerrain terrain) => ColdField.BuildBlock(block, terrain);
+    public TerrainRasterPoint[] BuildPoints(IReadOnlyList<System.Numerics.Vector2> points) => ColdField.BuildPoints(points);
+    public TerrainRasterPoint[] SnapshotPoints() => ColdField.SnapshotPoints();
+    public void Seal(IPreparedTerrain terrain)
+    {
+        if (_prepared is not null) return;
+        terrain.Publish(SnapshotPoints());
+        _prepared = terrain;
+        _field = null; _water = null; _banks = null; _frozen = null;
+    }
+    public TerrainFrozenData Freeze()
+    {
+        if (_frozen is not null) return _frozen;
+        var distant = new short[TerrainSampling.SampleCount(4)];
+        FillTile(default, 4, distant);
+        var profiles = _banks!.Values.OrderBy(bank => bank.Span.Id, StringComparer.Ordinal).Select(bank =>
+        {
+            var stations = new SortedSet<double> { 0, bank.Span.Length, bank.Span.CoreFrom, bank.Span.CoreTo };
+            for (var s = 1d; s < bank.Span.Length; s++) stations.Add(s);
+            var length = 0d;
+            for (var i = 1; i < bank.Span.Shore.Points.Count; i++)
+            {
+                var a = bank.Span.Shore.Points[i - 1]; var b = bank.Span.Shore.Points[i];
+                var dx = (double)b.X - a.X; var dz = (double)b.Y - a.Y;
+                length += Math.Sqrt(dx * dx + dz * dz); stations.Add(length);
+            }
+            var samples = stations.ToArray();
+            return new TerrainBankProfile(bank.Span, samples, samples.Select(s => TerrainMath.QuantizeCentimetres(bank.TopAt(s))).ToArray());
+        }).ToArray();
+        return _frozen = new(_dataRect, SourceInputs, ColdField.Pads, ColdField.WaterLevels, Waters.ToArray(), profiles,
+            ColdField.Supports.ToArray(), distant, Diagnostics.ToArray());
+    }
     public float BankTopY(string id, double station)
     {
+        if (_prepared is ITerrainBankSource prepared) return prepared.BankTopY(id, station);
         if (string.IsNullOrWhiteSpace(id) || id != id.Trim() || id.Any(char.IsControl)) throw new ArgumentException("Malformed bank span ID.", nameof(id));
-        if (!_banks.TryGetValue(id, out var bank)) throw new KeyNotFoundException($"Unknown bank span '{id}'.");
+        if (!_banks!.TryGetValue(id, out var bank)) throw new KeyNotFoundException($"Unknown bank span '{id}'.");
         if (!double.IsFinite(station) || station < 0 || station > bank.Span.Length) throw new ArgumentOutOfRangeException(nameof(station));
         return bank.TopAt(station);
     }
-    public bool IsSurfaceWater(FeatureId id) => _water.Any(water => water.Feature == id && !water.Underground);
+    public bool IsSurfaceWater(FeatureId id) => Waters.Any(water => water.Water == id);
 
     public (FeatureId Id, float Surface, bool Wade)? WaterAt(float x, float z)
     {
+        if (_prepared is ITerrainWaterSource prepared) return prepared.WaterAt(x, z);
         TerrainWaterRegion? first = null;
-        foreach (var water in _water)
+        foreach (var water in _water!)
         {
             if (water.Underground) continue;
             if (!water.Region.Contains(x, z)) continue;

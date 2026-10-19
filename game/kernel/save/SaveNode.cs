@@ -51,7 +51,7 @@ public partial class SaveNode : Node, IBootParticipant
                         RuntimeKernel.Get<IObserverState>(), RuntimeKernel.Get<IRuleset>(), RuntimeKernel.Get<IAtlasService>(), RuntimeKernel.Get<IVeilState>(),
                         RuntimeKernel.Get<IAppFlow>(), id => RuntimeKernel.Get<IRulesetActivation>().Select(id),
                         RuntimeKernel.Get<IWorldRestore>(), WaitDestination, CaptureThumbnail,
-                        () => (long)Time.GetUnixTimeFromSystem());
+                        () => (long)Time.GetUnixTimeFromSystem(), pose => RuntimeKernel.Get<ICameraPoseValidator>().LegalizePrepared(pose));
                     await _save.Initialize(new(context.SaveDirectory, context.Build, save.Enabled, save.WriteSlot, save.AtFrame, save.WeatherSeed), bindings, new(sections));
                     break;
                 }

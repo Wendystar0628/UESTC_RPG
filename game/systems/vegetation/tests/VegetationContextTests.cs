@@ -6,6 +6,7 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
+using Campus.Kernel.Bake;
 using Campus.Kernel.Registry;
 using Campus.Tests;
 using GdUnit4;
@@ -27,7 +28,9 @@ public sealed class VegetationContextTests
     public void PreparedSourcePreservesTheAuthoredWorldAndClaims()
     {
         var fixture = Fixture.Load();
-        var loaded = MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(), fixture.Input, fixture.Claims);
+        using var terrain = new TerrainCacheService(new(Path.GetTempPath(), Live: true, Strict: false, Background: false,
+            MapOnly: false, LogicalProcessors: 1, SeedOverride: null));
+        var loaded = MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), fixture.Input, fixture.Claims);
         var map = MapWorldLoading.CreateContext(fixture.Input.Entry, loaded, fixture.Input.SourceInputs);
         var prepared = new BuildContext
         {

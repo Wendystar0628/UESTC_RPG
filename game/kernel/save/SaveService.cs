@@ -17,7 +17,8 @@ public sealed record SaveRuntimeOptions(string Directory, string Build, bool Ena
 public sealed record SaveRuntimeBindings(IWorldState World, IMapService Maps, ICameraRig Camera,
     IObserverState Observer, IRuleset Ruleset, IAtlasService Atlas, IVeilState Veil,
     IAppFlow AppFlow, Action<RulesetId> SelectRuleset, IWorldRestore WorldRestore,
-    Func<Pose, NavSpace?, ViewMode, Task> WaitDestination, Func<Task<byte[]?>> CaptureThumbnail, Func<long> UnixTime);
+    Func<Pose, NavSpace?, ViewMode, Task> WaitDestination, Func<Task<byte[]?>> CaptureThumbnail, Func<long> UnixTime,
+    Func<Pose, Task<Pose>>? PreparePose = null);
 
 [KernelService(typeof(SaveService), Owner = "WP-50")]
 [KernelService(typeof(ISaveService), Owner = "WP-50")]
@@ -345,6 +346,7 @@ public sealed class SaveService : ISaveService, IDisposable
         await OnFrame(() => RestorePhaseOf(prepared, RestorePhase.Content, repairs)).ConfigureAwait(false);
         if (scope == LoadScope.Full)
         {
+            prepared = await PrepareViewPose(prepared, repairs).ConfigureAwait(false);
             var wait = await OnFrame(() =>
             {
                 RestorePhaseOf(prepared, RestorePhase.Pose, repairs);
@@ -380,6 +382,25 @@ public sealed class SaveService : ISaveService, IDisposable
         }
     }
 
+    private async Task<PreparedSave> PrepareViewPose(PreparedSave prepared, List<string> repairs, NewGameContext? defaults = null)
+    {
+        var section = prepared.Sections.FirstOrDefault(item => item.Registration.Attribute.Id == "view");
+        if (section is null) return prepared;
+        var dto = await OnFrame(() => section.Dto ?? section.Registration.Section.CreateDefault(defaults ??
+            new(_runtime.World.WeatherSeed, section.Map,
+                _runtime.Maps.Maps.First(map => map.Id == section.Map).World.NewGameStart ?? _runtime.Maps.Maps.First(map => map.Id == section.Map).World.Default,
+                _runtime.Ruleset.Current.DefaultViewMode))).ConfigureAwait(false);
+        if (dto is not ViewSaveData view) throw new InvalidDataException("The view section must use the shared view DTO.");
+        var preparing = await OnFrame(() => (_runtime.PreparePose ?? throw new InvalidOperationException("View restoration requires terrain preparation."))(view.Pose)).ConfigureAwait(false);
+        var pose = await preparing.ConfigureAwait(false);
+        if (pose != view.Pose) repairs.Add("view.pose");
+        return prepared with
+        {
+            Document = prepared.Document with { Meta = prepared.Document.Meta with { Pose = pose } },
+            Sections = prepared.Sections.Select(item => ReferenceEquals(item, section) ? item with { Dto = view with { Pose = pose } } : item).ToArray()
+        };
+    }
+
     public async Task CompleteResume()
     {
         await _operation.WaitAsync().ConfigureAwait(false);
@@ -389,6 +410,7 @@ public sealed class SaveService : ISaveService, IDisposable
             var prepared = _pendingPose;
             if (prepared is null) return;
             await BeginRestoreOperation().ConfigureAwait(false);
+            prepared = await PrepareViewPose(prepared, []).ConfigureAwait(false);
             var wait = await OnFrame(() =>
             {
                 _restoreMutationStarted = true;
@@ -439,9 +461,11 @@ public sealed class SaveService : ISaveService, IDisposable
                 return save;
             }).ConfigureAwait(false);
             await Travel(prepared.Document.Meta.Map, null, null, MapTravelCause.NewGame).ConfigureAwait(false);
+            await OnFrame(() => RestorePhaseOf(prepared, RestorePhase.Content, [], defaults)).ConfigureAwait(false);
+            prepared = await PrepareViewPose(prepared, [], defaults).ConfigureAwait(false);
             var wait = await OnFrame(() =>
             {
-                RestorePhaseOf(prepared, RestorePhase.Content, [], defaults); RestorePhaseOf(prepared, RestorePhase.Pose, [], defaults);
+                RestorePhaseOf(prepared, RestorePhase.Pose, [], defaults);
                 return _runtime.WaitDestination(_runtime.Camera.Pose, _runtime.Observer.Space, _runtime.Observer.Mode);
             }).ConfigureAwait(false);
             await wait.ConfigureAwait(false);

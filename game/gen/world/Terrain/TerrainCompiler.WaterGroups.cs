@@ -13,7 +13,7 @@ internal static partial class TerrainCompiler
         public string Name => Op?.Id ?? "auto-water-" + Id.Value;
         public bool AutoLevelPending { get; init; }
     }
-    private sealed record WaterShore(string File, string Id, TerrainRegion Region, TerrainNode Node,
+    private sealed record WaterShore(string File, string Id, TerrainRegion Region, TerrainNode Node, Func<double, double, double> ShoreTop,
         Func<double, double, bool> CheckLevel, TerrainBridgeBanks? Banks,
         IReadOnlyList<FeatureId> Waters, IReadOnlyList<TerrainBankInterval> OriginalHard);
     private sealed class WaterJoinBudget(double width) { public double Width { get; set; } = width; }
@@ -122,9 +122,9 @@ internal static partial class TerrainCompiler
             var registeredHard = RegisteredBankIntervals(registeredBanks, members, domain);
             var bridgeBanks = members.Any(spec => spec.Bank.Kind is TerrainBankKind.Soft or TerrainBankKind.Wetland)
                 ? new TerrainBridgeBanks(domain, b.Context.Network.Bridges, registeredHard, id => b.References.SourceFiles(id)) : null;
-            var (node, check, originalHard) = ComposeWaterProfiles(b, members, domain, bridgeBanks, representative);
+            var (node, shoreTop, check, originalHard) = ComposeWaterProfiles(b, members, domain, bridgeBanks, representative);
             b.Nodes.Add(node);
-            b.WaterShores.Add(new(representative.File, representative.Name, domain, node, check, bridgeBanks,
+            b.WaterShores.Add(new(representative.File, representative.Name, domain, node, shoreTop, check, bridgeBanks,
                 members.Select(spec => spec.Id).ToArray(), originalHard));
             foreach (var spec in members)
             {
@@ -138,7 +138,7 @@ internal static partial class TerrainCompiler
         }
     }
 
-    private static (TerrainNode Node, Func<double, double, bool> Check, IReadOnlyList<TerrainBankInterval> Hard)
+    private static (TerrainNode Node, Func<double, double, double> ShoreTop, Func<double, double, bool> Check, IReadOnlyList<TerrainBankInterval> Hard)
         ComposeWaterProfiles(Builder b, WaterSpec[] members, TerrainRegion domain, TerrainBridgeBanks? banks, WaterSpec representative)
     {
         // Defaults supply the uncovered water. Natural lake profiles retain their existing
@@ -174,6 +174,7 @@ internal static partial class TerrainCompiler
             return WithSurface(previous, surface, double.PositiveInfinity, double.PositiveInfinity,
                 a.Class == TerrainClass.Transition || c.Class == TerrainClass.Transition);
         }
+        double ShoreTop(double x, double z) => Evaluate(b.LandBeforeWater.Evaluate(x, z), x, z, nodes.Length - 1).Surface.Height;
         var node = new TerrainNode(representative.Name, representative.File, representative.Op?.Zone ?? default,
             TerrainGroup.Water, representative.Op?.Priority ?? 50, support, (previous, x, z) =>
             {
@@ -184,7 +185,7 @@ internal static partial class TerrainCompiler
             }, members.All(spec => spec.Op is null)) { HasSeparateAuthorValidation = true };
         if (joins.Length > 0)
         {
-            envelope = new(domain, (x, z) => Evaluate(b.LandBeforeWater.Evaluate(x, z), x, z, nodes.Length - 1).Surface.Height,
+            envelope = new(domain, ShoreTop,
                 representative.File, representative.Name);
             b.ShoreEnvelopeRefresh.Add(envelope.Refresh);
             var suggested = profiles.SelectMany(a => profiles.Select(c => WaterJoinWidth(b, a.Spec, c.Spec))).Max();
@@ -207,7 +208,9 @@ internal static partial class TerrainCompiler
             hard = profiles[i].Spec.Bank.Kind == TerrainBankKind.Hard
                 ? TerrainBankGeometry.Merge(hard.Concat(joins[i - 1].HardIntervals(true, false)))
                 : IntersectHardIntervals(hard, joins[i - 1].HardIntervals(false, true));
-        return (node, Check, hard);
+        // Bank spans lie on this original shore. Sampling their float polyline must not
+        // reclassify an edge point as land and apply the exterior slope envelope.
+        return (node, ShoreTop, Check, hard);
     }
 
     private static IReadOnlyList<TerrainBankInterval> IntersectHardIntervals(IReadOnlyList<TerrainBankInterval> a,

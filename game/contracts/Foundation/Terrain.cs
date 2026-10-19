@@ -5,7 +5,7 @@ using Campus.Contracts.Maps;
 
 namespace Campus.Contracts;
 
-/// <summary>Read-only deterministic terrain of the current map. Implementations perform no IO while sampling.</summary>
+/// <summary>Deterministic terrain in prepared regions. The scheduler prepares regions before querying; sampling performs no IO.</summary>
 public interface ITerrain
 {
     /// <summary>Frozen source-only dependency stamps, prepared without evaluating terrain.</summary>
@@ -13,9 +13,9 @@ public interface ITerrain
     /// <summary>True only if H is zero across the entire 64 m L0 cell, including its shared boundary.</summary>
     /// <remarks>For a coarser cell, test every covered L0 cell before taking the zero-height fast path.</remarks>
     bool IsFlat(TileKey tile);
-    /// <summary>Analytical height in metres. At 1 m lattice points it differs from FillTile's centimetres by at most 0.005 m.</summary>
+    /// <summary>Centimetre lattice height, interpolated on the (1,0)-(0,1) diagonal. An unprepared region is a caller error.</summary>
     float HeightAt(float x, float z);
-    /// <summary>Height and facts from one analytical evaluation at the same world position.</summary>
+    /// <summary>Height and facts from the same prepared metre lattice.</summary>
     (float Height, TerrainFacts Facts) SampleAt(float x, float z);
     /// <summary>Fills exactly 65 * 65 samples for levels 0-3, or exactly 81 * 81 samples for level 4.</summary>
     /// <remarks>
@@ -80,6 +80,15 @@ public static class TerrainSampling
     public const float MinimumHeight = -5f;
     public const float MaximumHeight = 10f;
     public const float Centimetre = 0.01f;
+
+    /// <summary>Integer nodes read by the common triangle sampler, including both axes for fractional queries.</summary>
+    public static TerrainSampleGrid QueryGrid(Vector2 point)
+    {
+        if (!VectorMath.Finite(point)) throw new ArgumentOutOfRangeException(nameof(point));
+        var origin = new Vector2(MathF.Floor(point.X), MathF.Floor(point.Y));
+        var width = point == origin ? 1 : 2;
+        return new(origin, Vector2.One, width, width);
+    }
 
     /// <summary>Required destination length; the optional 33x33 render optimization never changes FillTile's contract.</summary>
     public static int SampleCount(int level) => level switch

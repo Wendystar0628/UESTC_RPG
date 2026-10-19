@@ -97,6 +97,8 @@ public sealed partial class MaterialWarmupRuntimeTests
             Set("_materials", Warmup);
             Set("_materialSource", Provider);
             Set("_camera", new TestCameraRig());
+            Set("_terrain", new CinematicTerrainPreparation());
+            Set("_context", new TestMapContext(RealMapFixture.Entry().Descriptor, new Campus.Gen.Tests.Support.FakeWorld()));
             Set("_veil", Veil);
             Set("_presentation", Cover);
             Set("_contentReadiness", ViewContentReadiness.Capture(Parent));

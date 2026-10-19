@@ -125,6 +125,9 @@ public sealed partial class TerrainCompilerTests
         AssertThat(first.Waters.SequenceEqual(new[] { water.Id }) && first.Bridges.SequenceEqual(new[] { bridge.Id }) && first.Roads.Count == 0).OverrideFailureMessage("Exported provenance does not identify the actual water/bridge.").IsTrue();
         AssertThat(Math.Abs((double)(2) - (double)(first.TransitionLength)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(source.BankTopY(first.Id, first.CoreFrom))) <= TestTolerance.Position).IsTrue();
         var retained = source.BankTopY(first.Id, (first.CoreFrom + first.CoreTo) / 2);
+        var restored = new PreparedTerrain(((CompiledTerrain)source).Freeze());
+        AssertThat(Math.Abs(restored.BankTopY(first.Id, (first.CoreFrom + first.CoreTo) / 2) - retained) <= TestTolerance.Position
+            && restored.Banks.Count == source.Banks.Count).OverrideFailureMessage("Frozen original-shore profiles changed the bank top or its exported spans.").IsTrue();
         var plateau = new TerrainPlatformOp("design:terrain:bank-plateau", "new snapshot", Box(-40, -40, 40, 40), 3, new("1:4", "1:4"), 2) { Zone = Zone };
         ITerrainBankSource changed = TerrainCompiler.Compile(context, [Source([plateau])]);
         AssertThat(Math.Abs((double)(3) - (double)(changed.BankTopY(changed.Banks[0].Id, changed.Banks[0].CoreFrom))) <= TestTolerance.Position).IsTrue();
@@ -180,7 +183,12 @@ public sealed partial class TerrainCompilerTests
         // Default base samples are now soft terrain-following targets, not two hidden Y=0
         // anchors. This narrow path can follow the dry soft bank without moving its waterline.
         var narrow = Build(-0.2f, 0.1f);
-        AssertThat(Math.Abs((double)(-0.5) - (double)(narrow.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-0.46) - (double)(narrow.HeightAt(-0.2f, 0))) <= TestTolerance.Position).IsTrue();
+        AssertThat(Math.Abs((double)(-0.5) - (double)(narrow.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue();
+        // A sub-metre path drapes on the published grid; it cannot retain a separate analytical floor.
+        var narrowFloor = narrow.HeightAt(-0.2f, 0);
+        AssertThat(narrowFloor < 0 && narrow.WaterAt(-0.2f, 0) is null).OverrideFailureMessage("The path was raised to hidden zero anchors or classified as water.").IsTrue();
+        AssertThat(Math.Abs(narrowFloor - RenderedHeight(narrow, -0.2f, 0)) <= TestTolerance.Position)
+            .OverrideFailureMessage("The narrow path floats above its rendered terrain.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

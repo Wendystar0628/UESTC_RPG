@@ -13,6 +13,9 @@ public sealed record LightInventoryDocument(MapId Map,
 public sealed record EntranceInventoryDocument(MapId Map,
     IReadOnlyList<BakedEntrance> Entrances);
 internal sealed record BakeMapMetadata(LightInventoryDocument Lighting, EntranceInventoryDocument Entrances);
+internal sealed record BakeResidentData(BakeMapMetadata Metadata, WindowMetadata Windows,
+    BakeService.InteriorCoverage[] Coverage, InteriorLayout[] Layouts, BakeModuleDirectory[] Directory, TileKey[] TerrainPoints);
+internal sealed record BakeModuleDirectory(string Module, TileKey[] Tiles);
 
 /// <summary>Runtime read-only inventory; map preparation publishes all three immutable tables together.</summary>
 [KernelService(typeof(BakeLightInventory), Owner = "WP-02a")]
@@ -52,13 +55,13 @@ internal static class BakeMapMetadataBuilder
         foreach (var module in map.Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value))
         {
             if (!map.Active) throw new OperationCanceledException("Map unloaded while preparing resident metadata.");
-            if (module.Value is ILightMetadataSource source) CollectLights(source, map.CreateBuildContext(module.CodeHash));
+            if (module.Value is ILightMetadataSource source) CollectLights(source, map.CreateAssetContext(module.CodeHash));
         }
         foreach (var binding in data.InteriorBindings.OrderBy(binding => binding.ProviderId, StringComparer.Ordinal))
         {
             var id = "interior." + binding.ProviderId;
             var interior = map.Interiors[id];
-            var context = map.CreateBuildContext(interior.CodeHash);
+            var context = map.CreateAssetContext(interior.CodeHash);
             if (interior.Value is ILightMetadataSource source) CollectLights(source, context);
             foreach (var feature in binding.FeatureIds.OrderBy(feature => feature.Value, StringComparer.Ordinal))
             {

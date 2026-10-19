@@ -14,6 +14,30 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class StreamLifecycleTests
 {
+    [TestCase, TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public void PendingDestinationCannotQueryTerrainOrInheritAppliedSelection()
+    {
+        var director = new StreamDirector();
+        try
+        {
+            var context = new TestMapContext(BackdropInputsTests.Descriptor(), new FakeWorld
+                { Spatial = new FlatSpatial(forbidden: "Terrain has not been prepared.") });
+            var catalog = ModuleTileCatalog.Build(new Dictionary<string, IReadOnlyList<TileKey>>());
+            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
+            var interiors = new InteriorStream(null!, null!, null!, null!, _ => { }); interiors.Load(context);
+            Set(director, "_catalog", catalog); Set(director, "_maps", new TestMapService()); Set(director, "_interiors", interiors);
+            Set(director, "_destinationConsumed", true); Set(director, "_destinationPlanned", true); Set(director, "_selectionApplied", true);
+            var target = new Pose(new(1, 2, 3), 0, 0);
+            director.Prefetch(target, ViewMode.Fly);
+            // A mount finishing for the old view must not certify this newly registered destination.
+            Set(director, "_selectionApplied", true);
+            if (director.Destination?.Pose != target || !director.HasPendingDestination || director.DestinationReady || director.CaptureReady)
+                throw new InvalidOperationException("A pending unprepared destination inherited the previous view's readiness.");
+        }
+        finally { director.Free(); }
+    }
+
     [TestCase]
     [TestCategory(TestReason.Regression)]
     [TestCategory("NativeRender")]

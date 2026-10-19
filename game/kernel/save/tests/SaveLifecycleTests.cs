@@ -195,7 +195,7 @@ public sealed partial class SaveLifecycleTests
             var rules = new TestRuleset("test-policy", id: "test-rules");
             var bindings = new SaveRuntimeBindings(World, Maps, Camera, Camera, rules, new FakeAtlas(Maps), new ImmediateVeil(), _flow,
                 _ => { }, World, WaitDestination,
-                () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400);
+                () => ThumbnailBarrier?.Task ?? Task.FromResult<byte[]?>(null), () => 1792082400, pose => Task.FromResult(pose));
             var sections = new SaveSections([
                 new(new("world") { Owner = "WP-50", Phase = RestorePhase.World, Order = 10 }, World),
                 new(new("weather") { Owner = "WP-50", Phase = RestorePhase.World, Order = 21 }, Weather),
@@ -263,18 +263,18 @@ public sealed partial class SaveLifecycleTests
         public LifecycleWorld CreateDefault(NewGameContext context) => new(context.Start.Clock, 0, context.Start.Season);
     }
     private sealed class FakeCamera(Func<bool> inFrame, List<string> log)
-        : TestCameraRig(null, new Pose(new Vector3(1, 2, 3), 0, 0)), IObserverState, ISaveSection<LifecycleView>
+        : TestCameraRig(null, new Pose(new Vector3(1, 2, 3), 0, 0)), IObserverState, ISaveSection<ViewSaveData>
     {
         public Action? BeforeDefault { get; set; }
         public NewGameContext? DefaultContext { get; private set; }
         public Vector3 Feet => Pose.Position; public Vector3 Eye => Pose.Position; public float YawDeg => Pose.YawDeg; public NavSpace? Space => null;
-        public JsonTypeInfo<LifecycleView> TypeInfo => LifecycleJsonContext.Strict.LifecycleView;
-        public LifecycleView Capture(in CaptureContext context) { AssertThat(inFrame()).OverrideFailureMessage("View capture outside Save frame.").IsTrue(); return new(Pose, Mode, Space); }
-        public void Restore(LifecycleView dto, RestoreContext context) { AssertThat(inFrame()).OverrideFailureMessage("Pose restore outside Save frame.").IsTrue(); SetPose(dto.Pose); log.Add("view"); }
-        public LifecycleView CreateDefault(NewGameContext context)
+        public JsonTypeInfo<ViewSaveData> TypeInfo => LifecycleJsonContext.Strict.ViewSaveData;
+        public ViewSaveData Capture(in CaptureContext context) { AssertThat(inFrame()).OverrideFailureMessage("View capture outside Save frame.").IsTrue(); return new(Mode, Pose, Space, 1, 1); }
+        public void Restore(ViewSaveData dto, RestoreContext context) { AssertThat(inFrame()).OverrideFailureMessage("Pose restore outside Save frame.").IsTrue(); SetPose(dto.Pose); log.Add("view"); }
+        public ViewSaveData CreateDefault(NewGameContext context)
         {
             BeforeDefault?.Invoke(); DefaultContext = context;
-            return new(new(new Vector3(1, 2, 3), 0, 0), context.Mode, null);
+            return new(context.Mode, new(new Vector3(1, 2, 3), 0, 0), null, 1, 1);
         }
     }
     private sealed class FakeWeather : ISaveSection<LifecycleWeather>
@@ -342,11 +342,10 @@ public sealed partial class SaveLifecycleTests
 }
 
 public sealed record LifecycleWorld(double WorldHours, double ClockOffset, Season SeasonTarget, int FlowRate = 1);
-public sealed record LifecycleView(Pose Pose, ViewMode Mode, NavSpace? Space);
 public sealed record LifecycleWeather(WeatherSel Selection, double AtHours);
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
 [JsonSerializable(typeof(LifecycleWorld))]
-[JsonSerializable(typeof(LifecycleView))]
+[JsonSerializable(typeof(ViewSaveData))]
 [JsonSerializable(typeof(LifecycleWeather))]
 internal partial class LifecycleJsonContext : JsonSerializerContext
 {

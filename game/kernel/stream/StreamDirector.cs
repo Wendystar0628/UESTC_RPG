@@ -41,6 +41,13 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private IWorldState _world = null!;
     private ICollisionWorld _collision = null!;
     private IMapService _maps = null!;
+    private ITerrainPreparation _terrain = null!;
+    private TerrainPlan? _terrainPlan;
+    private IMapContext? _plannedContext;
+    private IWorldModel? _plannedWorld;
+    private Pose _plannedPose;
+    private bool _plannedLive, _planReady;
+    private long _plannedSequence, _interiorDestinationSequence = -1;
     private StreamMaterials _materials = null!;
     private IReflectionWorld _reflections = null!;
     private readonly Queue<PreparedTile> _reflectionRefresh = [];
@@ -73,7 +80,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public bool IsUnloaded => _context is null && _pending.Count == 0 && _preparing.Count == 0 && _catalogTask is null && _retiringBundles.Count == 0 && (_interiors?.IsUnloaded ?? true);
     public bool ResidentReady => Error is null && _context is not null && _catalog is not null &&
         _groups.TryGetValue(StreamTile.Root, out var root) && root.Error is null && root.Mounted;
-    public bool DestinationReady => Error is null && _context is not null && (_destinationConsumed || _destinationPlanned && _destination is { } destination && _catalog is not null &&
+    public bool DestinationReady => Error is null && _context is not null && PlanCurrent && _selectionApplied && (_destinationConsumed || _destinationPlanned && _destination is { } destination && _catalog is not null &&
         _destinationRequired.All(IsReady) && (_interiors?.DestinationReady ?? true) && (_destinationMode switch
         {
             ViewMode.Fly => true,
@@ -89,7 +96,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         get
         {
-            if (Error is not null || _context is null || _catalog is null || !_selectionApplied ||
+            if (Error is not null || _context is null || _catalog is null || !_selectionApplied || !PlanCurrent ||
                 !_visibility.CaptureReady(FrameClock.FadeSeconds) ||
                 !(_interiors?.CaptureReady(FrameClock.FadeSeconds, _settings.FadeSeconds) ?? false)) return false;
             foreach (var tile in _required)
@@ -114,6 +121,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _camera = Services.Get<ICameraRig>(); _world = Services.Get<IWorldState>();
         _world.InstanceChanged += OnWorldInstanceChanged;
         _maps = Services.Get<IMapService>(); // Resolve at node Ready, never from a constructor dependency cycle.
+        _terrain = Services.Get<ITerrainPreparation>();
         _maps.Arrived += OnMapArrived;
         _collision = Services.Get<ICollisionWorld>();
         _materials = new(Services.Get<IToonMaterialProvider>(), Services.Get<IShaderMaterialSource>());
@@ -124,6 +132,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         if (!IsUnloaded) throw new InvalidOperationException("Stream map must finish unloading before the next mount.");
         _mapGeneration++;
+        CancelTerrainPlan(); _planReady = false; _interiorDestinationSequence = -1;
         _context = context; _error = null; _speed.Reset();
         _selectionApplied = false;
         _destinationConsumed = false;
@@ -145,7 +154,9 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         foreach (var bundle in _groups.Values.SelectMany(group => group.Bundles)
                      .Concat(_interiors?.Prepared ?? []).Concat(_retiringBundles).Distinct()) bundle.DetachAll();
         _mapGeneration++;
+        CancelTerrainPlan(); _planReady = false; _interiorDestinationSequence = -1;
         _context = null; _error = null; _destination = null; _destinationState = null; _catalog = null; _tree = null;
+        _plannedContext = null; _plannedWorld = null;
         _selectionApplied = false;
         _destinationPlanned = false; _destinationConsumed = false;
         _destinationSequence++; _destinationTransition = null; _mapRequestSequence = _arrivedSequence = 0;
@@ -164,10 +175,8 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null)
     {
         if (_context is null) throw new InvalidOperationException("A map must be mounted before destination prefetch.");
-        if (space is null && _context.World.Spatial.MediumAt(destination.Position) is { Kind: MediumKind.Interior, Feature: { } building } medium)
-            space = new(building, checked((short)medium.Storey));
         _destination = destination; _destinationMode = mode; _destinationState = new(destination, mode, space); _error = null;
-        _selectionApplied = false;
+        _selectionApplied = false; _planReady = false; CancelTerrainPlan();
         _destinationPlanned = false; _destinationConsumed = false; _destinationRequired.Clear(); _destinationRefined.Clear();
         _destinationSequence++; _requests.Clear();
         var targetTransition = _maps.Transition is { Stage: MapStage.Mount or MapStage.Warm or MapStage.Spawn } transition ? transition : null;
@@ -176,7 +185,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             _destinationTransition = targetTransition; _arrivedSequence = 0;
             _mapRequestSequence = targetTransition is null ? 0 : _destinationSequence;
         }
-        _interiors!.Prefetch(space);
+        _interiors?.Prefetch(null);
         _replan = _settings.ReplanSeconds;
     }
     public override void _Process(double delta)
@@ -229,6 +238,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     private void OnWorldInstanceChanged(long _)
     {
+        CancelTerrainPlan(); _planReady = false;
         _selectionApplied = false;
         _speed.Reset();
         _replan = _settings.ReplanSeconds;
@@ -254,11 +264,22 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private void Replan(bool exempt)
     {
         _selectionApplied = false;
+        var pose = _camera.Pose;
+        var live = CanUseLiveCamera();
+        if (!live && _destination is { } mounting) pose = mounting;
+        if (!PreparePlanningTerrain(pose, live)) return;
         var tree = _tree ?? throw new InvalidOperationException("A map tree is required before planning.");
         var viewport = GetViewport();
         var height = viewport.GetVisibleRect().Size.Y * viewport.Scaling3DScale;
-        var pose = _camera.Pose;
-        var live = CanUseLiveCamera();
+        if (!_destinationConsumed && _destination is { } accepted && _interiorDestinationSequence != _destinationSequence)
+        {
+            var space = _destinationState!.Space;
+            if (space is null && _context!.World.Spatial.MediumAt(accepted.Position) is { Kind: MediumKind.Interior, Feature: { } building } medium)
+                space = new(building, checked((short)medium.Storey));
+            _destinationState = new(accepted, _destinationMode, space);
+            _interiors!.Prefetch(space);
+            _interiorDestinationSequence = _destinationSequence;
+        }
         _required.Clear(); _refined.Clear(); _required.Add(StreamTile.Root);
         if (live)
         {
@@ -321,6 +342,8 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         }
         _requests.Replace(requests);
         _checkRetention = true;
+        _plannedContext = _context; _plannedWorld = _context!.World; _plannedPose = pose;
+        _plannedLive = live; _plannedSequence = _destinationSequence; _planReady = true;
     }
     private void PollHandles()
     {
@@ -378,7 +401,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         }
         _interiors?.Finish(GetViewport().GetWorld3D().Scenario, remainingMilliseconds >= .1);
         if (_checkRetention) { _checkRetention = false; RetireUnneeded(); }
-        if (_tree is null || _catalog is null || remainingMilliseconds < .1) return;
+        if (_tree is null || _catalog is null || remainingMilliseconds < .1 || !PlanCurrent) return;
         RefreshReflectionWorld(remainingMilliseconds * .25);
         _tree.ResolveVisible(_refined, IsReady, _visible);
         _visibility.Apply(_visible, FrameClock.FadeSeconds, true, (tile, visible, fade) =>
@@ -387,6 +410,49 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         });
         _selectionApplied = true;
     }
+    private bool PlanCurrent => _planReady && _context is not null && ReferenceEquals(_plannedContext, _context) &&
+        ReferenceEquals(_plannedWorld, _context.World) && _plannedSequence == _destinationSequence && _plannedLive == CanUseLiveCamera() &&
+        _plannedPose == (_plannedLive ? _camera.Pose : _destination ?? _camera.Pose);
+
+    private bool PreparePlanningTerrain(Pose pose, bool live)
+    {
+        var context = _context!;
+        var same = _terrainPlan is { } pending && ReferenceEquals(pending.Context, context) && ReferenceEquals(pending.World, context.World) &&
+            pending.Generation == _mapGeneration && pending.Sequence == _destinationSequence && pending.Pose == pose && pending.Live == live;
+        if (!same) CancelTerrainPlan();
+        var points = new List<N.Vector2>(2);
+        if (live || _destination is not null) points.Add(new(pose.Position.X, pose.Position.Z));
+        if (!_destinationConsumed && _destination is { } destination)
+        {
+            var target = new N.Vector2(destination.Position.X, destination.Position.Z);
+            if (!points.Contains(target)) points.Add(target);
+        }
+        if (points.All(point => _terrain.IsPrepared(context.World, point))) { CancelTerrainPlan(); return true; }
+        _planReady = false;
+        if (_terrainPlan is null)
+        {
+            var cancellation = new CancellationTokenSource();
+            var product = "stream/" + string.Join("/", points.Select(point => FormattableString.Invariant($"{point.X:R}/{point.Y:R}")));
+            _terrainPlan = new(context, context.World, _mapGeneration, _destinationSequence, pose, live,
+                _terrain.PreparePoints(context, product, points, cancellation.Token), cancellation);
+            _requests.Clear();
+        }
+        if (!_terrainPlan.Preparation.IsCompleted) return false;
+        try { _terrainPlan.Preparation.GetAwaiter().GetResult(); }
+        catch (Exception error) { _error = error.GetBaseException().Message; CancelTerrainPlan(); return false; }
+        if (!points.All(point => _terrain.IsPrepared(context.World, point)))
+            throw new InvalidOperationException("Terrain preparation completed without the current planning points.");
+        CancelTerrainPlan(); return true;
+    }
+    private void CancelTerrainPlan()
+    {
+        if (_terrainPlan is not { } pending) return;
+        _terrainPlan = null;
+        pending.Cancellation.Cancel(); pending.Cancellation.Dispose();
+        _ = ObserveDiscardedTerrain(pending.Preparation);
+    }
+    private static async Task ObserveDiscardedTerrain(Task preparation)
+    { try { await preparation.ConfigureAwait(false); } catch (Exception) { } }
     private bool IsReady(StreamTile tile) => _groups.TryGetValue(tile, out var group) && group.Error is null && group.Mounted &&
         group.Bundles.All(bundle => bundle.Draws.All(_materials.IsReady));
     private bool IsCurrent(StreamTile tile, TileGroup group, long revision) => _context is not null && revision == _mount.Revision &&
@@ -483,6 +549,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     public override void _ExitTree()
     {
+        CancelTerrainPlan(); _planReady = false;
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _exiting = true;
         if (_context is { } context) OnMapUnloading(context.Descriptor.Id);
@@ -511,6 +578,8 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     private sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup Group);
     private sealed record Preparing(StreamTile Tile, long Revision, Task<PreparedTile> Task, TileGroup Group);
+    private sealed record TerrainPlan(IMapContext Context, IWorldModel World, long Generation, long Sequence,
+        Pose Pose, bool Live, Task Preparation, CancellationTokenSource Cancellation);
     private sealed class TileGroup(StreamTile tile, int expected)
     {
         public StreamTile Tile { get; } = tile;

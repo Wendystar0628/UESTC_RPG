@@ -37,11 +37,12 @@ public sealed class CollisionCoreTests
         AssertThat(route.All(point => point.Stand is not null)).OverrideFailureMessage("The G15 short route requires both authored Stand points.").IsTrue();
         var claims = source.ReadClaims(id);
         var input = source.ReadLoadInput(entry);
-        var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(), input, claims));
-        var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
         using var cache = new TemporaryCache();
-        using var bake = new BakeService(new(cache.Path, Live: false, Strict: false, Background: false,
-            MapOnly: false, LogicalProcessors: 3, SeedOverride: null));
+        var options = new BakeOptions(cache.Path, Live: false, Strict: false, Background: false, MapOnly: false, LogicalProcessors: 3, SeedOverride: null);
+        using var terrain = new TerrainCacheService(options);
+        var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), input, claims));
+        var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
+        using var bake = new BakeService(options, terrain);
         var map = bake.Mount(context);
         await bake.PrepareMapData(context);
         using var native = new World3D();

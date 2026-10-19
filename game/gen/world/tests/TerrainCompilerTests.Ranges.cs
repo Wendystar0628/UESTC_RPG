@@ -37,7 +37,15 @@ public sealed partial class TerrainCompilerTests
                         AssertThat(Math.Abs(terrain.HeightAt(x, 0) - original.HeightAt(x, 0)) <= TestTolerance.Position)
                             .OverrideFailureMessage("A corridor edge filled the shoreline or registered bed.").IsTrue();
                     foreach (var anchor in operations.OfType<TerrainCorridorOp>().SelectMany(op => op.Anchors))
-                        AssertThat(Math.Abs(terrain.HeightAt(center, (float)(line.Line.Points[0].Y + anchor.S)) - anchor.Y) <= TestTolerance.Position).IsTrue();
+                    {
+                        var z = (float)(line.Line.Points[0].Y + anchor.S);
+                        // The flat authored road core keeps its fixed datum at a dry metre node.
+                        // Its half-metre centre is sampled from that node and the fixed shore node.
+                        AssertThat(Math.Abs(terrain.HeightAt(MathF.Floor(center), z) - anchor.Y) <= TestTolerance.Position)
+                            .OverrideFailureMessage("The road core moved its fixed elevation.").IsTrue();
+                        AssertThat(Math.Abs(terrain.HeightAt(center, z) - RenderedHeight(terrain, center, z)) <= TestTolerance.Position)
+                            .OverrideFailureMessage("The road centre differs from its rendered metre lattice.").IsTrue();
+                    }
                     AssertThat(terrain.WaterY(water.Id) == original.WaterY(water.Id) && Math.Abs(terrain.HeightAt(-0.01f, 0) - terrain.HeightAt(0, 0)) <= TestTolerance.Position).IsTrue();
                     AssertThat(terrain.FactsAt(-0.5f, 0).Grade <= 1f / 3 + TestTolerance.Position).IsTrue();
                 }

@@ -26,6 +26,8 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private TaskCompletionSource? _mountCompletion;
     private ArrivalRun? _arrival;
     private ICameraRig? _camera;
+    private ITerrainPreparation? _terrain;
+    private IMapContext? _context;
     private IVeilService? _veil;
     private IVeilLease? _readinessCover;
     private IVeilPresentation? _presentation;
@@ -46,7 +48,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private ViewContentReadiness? _contentReadiness;
     private bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Error is null;
     private bool DestinationReady => _mountPrepared && _stream?.DestinationReady == true &&
-        _renderer?.PipelineReady == true && Error is null && _arrival is { } arrival && (arrival.Destination.Mode switch
+        _renderer?.PipelineReady == true && Error is null && _arrival is { Prepared: true } arrival && (arrival.Destination.Mode switch
         {
             ViewMode.Fly => true,
             ViewMode.Walk => _collision!.Ready(arrival.Destination.Pose.Position, WalkRules.ArrivalCollisionRadius),
@@ -65,6 +67,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _materials = Services.Get<MaterialWarmup>();
         _materialSource = Services.Get<IToonMaterialProvider>();
         _camera = Services.Get<ICameraRig>();
+        _terrain = Services.Get<ITerrainPreparation>();
         _veil = Services.Get<IVeilService>();
         _presentation = Services.Get<IVeilPresentation>();
         RenderingServer.Singleton.FramePostDraw += CountDraw;
@@ -111,6 +114,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             }
             _scoped.Clear();
             _loaded = null;
+            _context = null;
         }
         catch (Exception error) { ReportFailure(from, "map-unload", null, error); failures.Add(error); }
         finally
@@ -145,6 +149,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             if (nodes.Any(item => !item.Node.IsInsideTree()))
                 throw new InvalidOperationException("Every map kernel node must enter the tree before map callbacks.");
             _loaded = context.Descriptor.Id;
+            _context = context;
             _preparing = PrepareMap(context, ++_mapGeneration);
         }
         catch (Exception error)
@@ -206,9 +211,35 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _previous = PipelineCounts.Read();
         _reuseWarmth = _materials!.IsReady;
         if (!_reuseWarmth) _materials.End(reset: true);
-        try { _stream!.Prefetch(destination, mode, space); }
-        catch (Exception error) { FailArrival(error); }
+        _ = PrepareArrival(arrival, _context ?? throw new InvalidOperationException("Arrival requires the mounted map context."), _mapGeneration);
         return arrival;
+    }
+
+    private async Task PrepareArrival(ArrivalRun arrival, IMapContext context, long generation)
+    {
+        var cancellation = arrival.Token;
+        try
+        {
+            var destination = arrival.Destination;
+            var point = new System.Numerics.Vector2(destination.Pose.Position.X, destination.Pose.Position.Z);
+            var product = FormattableString.Invariant($"arrival/{point.X:R}/{point.Y:R}");
+            await _terrain!.PreparePoints(context, product, [point], cancellation);
+            if (destination.Mode == ViewMode.Walk)
+            {
+                var reach = new System.Numerics.Vector2(WalkRules.ArrivalCollisionRadius);
+                await _terrain.PrepareRegion(context, new(point - reach, point + reach), cancellation);
+            }
+            if (_stopping || generation != _mapGeneration || !ReferenceEquals(_arrival, arrival) || arrival.Done.IsCompleted) return;
+            // Prefetch may classify the destination medium; all destination readers start after preparation.
+            _stream!.Prefetch(destination.Pose, destination.Mode, destination.Space);
+            arrival.Prepared = true;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception error)
+        {
+            if (_stopping || generation != _mapGeneration || !ReferenceEquals(_arrival, arrival) || arrival.Done.IsCompleted) return;
+            FailArrival(error);
+        }
     }
 
     private void CancelArrival(ArrivalRun arrival)
@@ -222,7 +253,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     public string DescribeReadiness() =>
         $"map={_loaded?.Value ?? "none"},mountPrepared={_mountPrepared},preparation={_preparing?.Status}," +
         $"stopping={_stopping},resident={ResidentReady},destination={DestinationReady},warm={WarmReady}," +
-        $"warming={_warming},samplesStarted={_samplesStarted},stable={_stable}/{BootTuning.WarmFrames}," +
+        $"warming={_warming},terrainPrepared={_arrival?.Prepared},samplesStarted={_samplesStarted},stable={_stable}/{BootTuning.WarmFrames}," +
         $"drawFrames={_drawFrames},lastWarmDraw={_lastWarmDraw},pipeline={_previous},error={Error ?? "none"}; " +
         $"stream[resident={_stream?.ResidentReady},destination={_stream?.DestinationReady},unloaded={_stream?.IsUnloaded}," +
         $"target={_stream?.Destination},error={_stream?.Error ?? "none"}]; " +
@@ -259,6 +290,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private void AdvanceArrival()
     {
         if (!_warming || _arrival is not { } arrival || arrival.Done.IsCompleted) return;
+        if (!arrival.Prepared) return;
         if (!ResidentReady) return;
         if (!_samplesStarted)
         {
@@ -331,14 +363,23 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private sealed class ArrivalRun(MapStreamDestination destination, Action<ArrivalRun> onCancel) : IMapArrival
     {
         private readonly TaskCompletionSource _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly CancellationTokenSource _cancellation = new();
+        public CancellationToken Token => _cancellation.Token;
+        public bool Prepared { get; set; }
         public MapStreamDestination Destination => destination;
         public Task Done => _done.Task;
         public void Cancel()
         {
-            if (_done.TrySetCanceled()) onCancel(this);
+            if (!_done.TrySetCanceled()) return;
+            _cancellation.Cancel(); _cancellation.Dispose();
+            onCancel(this);
         }
-        public void Complete() => _done.TrySetResult();
-        public void Fail(Exception error) => _done.TrySetException(error);
+        public void Complete() { if (_done.TrySetResult()) _cancellation.Dispose(); }
+        public void Fail(Exception error)
+        {
+            if (!_done.TrySetException(error)) return;
+            _cancellation.Cancel(); _cancellation.Dispose();
+        }
     }
 
     private static void ReportFailure(MapId map, string phase, string? receiver, Exception error) =>

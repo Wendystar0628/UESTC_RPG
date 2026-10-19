@@ -29,10 +29,12 @@ public sealed class StreamSchedulingTests
         var provider = new LibraryInteriorProvider();
         provider.Configure(features, floors, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
         var context = new TestMapContext(RealMapFixture.Entry().Descriptor, world);
-        var generation = new BuildContext { Map = context.Descriptor, World = world, WorldSeed = 1,
+        var layouts = new Dictionary<FeatureId, InteriorLayout>();
+        var generation = new BuildContext { Map = context.Descriptor, World = world, WorldSeed = 1, InteriorLayouts = layouts,
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             InteriorProviders = new Dictionary<string, IInteriorProvider> { [providerId] = provider } };
-        var layout = features.Select(feature => provider.Layout(generation, feature)).Single(item => item.AtriumVisibleStoreys.Count > 0);
+        foreach (var feature in features) layouts.Add(feature, provider.Layout(generation, feature));
+        var layout = layouts.Values.Single(item => item.AtriumVisibleStoreys.Count > 0);
         var atriumFloor = layout.AtriumVisibleStoreys.Min();
         var bake = new InteriorRequests();
         var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { });

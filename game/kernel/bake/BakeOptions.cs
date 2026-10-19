@@ -9,7 +9,7 @@ namespace Campus.Kernel.Bake;
 public sealed record BakeOptions(string CacheRoot, bool Live, bool Strict, bool Background,
     bool MapOnly, int LogicalProcessors, uint? SeedOverride)
 {
-    public const string Abi = "godot-4.7.2-tbin-7";
+    public const string Abi = "godot-4.7.2-tbin-8";
     public int MaximumWorkers => Math.Max(1, LogicalProcessors - 2);
     public int PlayingWorkers => Math.Max(1, LogicalProcessors / 4);
 

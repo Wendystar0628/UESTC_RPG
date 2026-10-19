@@ -95,17 +95,24 @@ public sealed class CollisionInteriorIsolationTests
     {
         var map = new MapId("fixture-no-interiors");
         var context = new BuildContext { Map = Descriptor(map), World = FixtureWorld(open: false), WorldSeed = 1, Catalog = Catalog };
-        var moduleContext = new BuildContext { Map = context.Map, World = context.World, WorldSeed = 2, Catalog = Catalog };
-        var module = new PreparedModule(moduleContext);
+        var moduleContext = new BuildContext
+        {
+            Map = context.Map, World = FixtureWorld(open: false), WorldSeed = 2, Catalog = Catalog,
+            SourceInputs = new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(
+                new Dictionary<string, ReadOnlyMemory<byte>> { ["module.json"] = new byte[] { 1 } }),
+            ClaimedBy = (_, _) => null,
+            WindowNumbering = new(map, new string('0', 64), [])
+        };
+        var module = new PreparedModule(moduleContext, context.World);
         var tile = new TileKey(0, 0);
         var builder = new CollisionTileBuilder([new("prepared", module, moduleContext, Array.AsReadOnly(new[] { tile }))], _ => []);
         var result = builder.Build(context, tile);
         _ = builder.Build(context, tile);
         AssertThat(result.Count == 0).OverrideFailureMessage("A map without interior declarations produced extra collision shapes.").IsTrue();
-        AssertThat(module.Builds == 2 && module.Collisions == 2).OverrideFailureMessage("Collision jobs must use the prepared module context and shared tile index.").IsTrue();
+        AssertThat(module.Builds == 2 && module.Collisions == 2).OverrideFailureMessage("Collision jobs must preserve prepared module inputs and use the current asset world and shared tile index.").IsTrue();
     }
 
-    private sealed class PreparedModule(BuildContext prepared) : IContentModule
+    private sealed class PreparedModule(BuildContext prepared, IWorldModel assetWorld) : IContentModule
     {
         public int Builds, Collisions;
         public IReadOnlyList<Claim> Claims => [];
@@ -113,15 +120,26 @@ public sealed class CollisionInteriorIsolationTests
         public IEnumerable<TileKey> Tiles(BuildContext context) => throw new InvalidOperationException("Collision jobs must not enumerate Tiles.");
         public ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
         {
-            if (!ReferenceEquals(context, prepared)) throw new InvalidOperationException("Module generation lost its prepared context.");
+            CheckContext(context);
             Builds++;
             return ContentOutput.Empty;
         }
         public IReadOnlyList<Collider> Collide(BuildContext context, TileKey tile)
         {
-            if (!ReferenceEquals(context, prepared)) throw new InvalidOperationException("Module collision lost its prepared context.");
+            CheckContext(context);
             Collisions++;
             return [];
+        }
+        private void CheckContext(BuildContext context)
+        {
+            if (!ReferenceEquals(context.World, assetWorld))
+                throw new InvalidOperationException("Module generation and collision must use this job's cold asset world.");
+            if (context.Map != prepared.Map || context.WorldSeed != prepared.WorldSeed
+                || !ReferenceEquals(context.Catalog, prepared.Catalog)
+                || !ReferenceEquals(context.SourceInputs, prepared.SourceInputs)
+                || !ReferenceEquals(context.ClaimedBy, prepared.ClaimedBy)
+                || !ReferenceEquals(context.WindowNumbering, prepared.WindowNumbering))
+                throw new InvalidOperationException("Module generation or collision lost its prepared inputs, claims or window numbering.");
         }
     }
 

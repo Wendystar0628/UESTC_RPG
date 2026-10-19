@@ -32,6 +32,6 @@ public interface ICameraPoseValidator
     /// <param name="outsideBuffer">True also excludes the inner edge buffer, as required for --pose and authored waypoints.
     /// False accepts the full reachable volume including its buffer.</param>
     bool IsLegal(Pose pose, bool outsideBuffer);
-    /// <summary>Projects an out-of-range pose into the reachable volume immediately, without a push-back animation.</summary>
-    Pose Legalize(Pose pose);
+    /// <summary>Prepares each actual terrain query before projecting into the reachable volume.</summary>
+    Task<Pose> LegalizePrepared(Pose pose, CancellationToken cancellation = default);
 }

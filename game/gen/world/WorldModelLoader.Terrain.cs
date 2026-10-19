@@ -48,7 +48,7 @@ public static partial class WorldModelLoader
         return error.Path ?? "root";
     }
 
-    private static (ITerrain Terrain, IReadOnlyList<string> Diagnostics) CompileTerrain(WorldModelLoadInputs? inputs, IReadOnlyList<TerrainSource> sources,
+    private static TerrainCompileContext? PrepareTerrain(WorldModelLoadInputs? inputs, IReadOnlyList<TerrainSource> sources,
         PolygonRings boundary, IReadOnlyDictionary<FeatureId, WorldFeature> features, WorldNetwork network, string? prefix)
     {
         if (inputs is null)
@@ -56,7 +56,7 @@ public static partial class WorldModelLoader
             if (sources.Count != 0)
                 throw new WorldDataException(sources[0].File, sources[0].Data.Ops.FirstOrDefault()?.Id ?? "root",
                     "Terrain evaluation requires explicit WorldModelLoadInputs with this map's descriptor.");
-            return (FlatTerrain.Default, []);
+            return null;
         }
         TerrainAutoSettings? automatic = null;
         if (inputs.Descriptor.TerrainDefaults is { } defaults)
@@ -70,10 +70,8 @@ public static partial class WorldModelLoader
             catch (ArgumentException error)
             { throw new WorldDataException("map.json", "terrainDefaults", error.Message, error); }
         }
-        var context = new TerrainCompileContext(inputs.Descriptor.Id, inputs.Descriptor.DataRect, boundary,
+        return new TerrainCompileContext(inputs.Descriptor.Id, inputs.Descriptor.DataRect, boundary,
             features, network, prefix ?? "", automatic, inputs.ZoneBoundaries);
-        var terrain = TerrainCompiler.Compile(context, sources);
-        return (terrain, terrain.Diagnostics);
     }
 
     private static IReadOnlyDictionary<string, TerrainOp> TerrainOperations(IReadOnlyList<TerrainSource> sources)

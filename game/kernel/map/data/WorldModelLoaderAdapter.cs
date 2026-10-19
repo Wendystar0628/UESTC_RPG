@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Gen.World;
+using Campus.Kernel.Bake;
 
 namespace Campus.Kernel.Maps;
 
@@ -7,10 +8,12 @@ namespace Campus.Kernel.Maps;
 [KernelService(typeof(IWorldModelLoader), Owner = "WP-00")]
 public sealed class WorldModelLoaderAdapter : IWorldModelLoader
 {
+    private readonly TerrainCacheService _terrain;
+    public WorldModelLoaderAdapter(TerrainCacheService terrain) => _terrain = terrain;
     public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
         WorldModelLoadInputs inputs)
     {
         if (inputs.Descriptor.Id != map) throw new InvalidDataException("World load descriptor does not match the target map.");
-        return WorldModelLoader.LoadWorld(inputs, files);
+        return _terrain.Load(map, WorldModelLoader.PrepareWorld(inputs, files));
     }
 }

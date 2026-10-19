@@ -32,6 +32,8 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     private readonly IWorldModelLoader _loader;
     private readonly ICameraPoseValidator _poses;
     private readonly IWalkController? _walk;
+    private readonly ITerrainPreparation? _terrain;
+    private Task<Pose>? _legalize;
     private readonly MapDataSource _data;
     private readonly Dictionary<MapId, MapVisit> _visits = [];
     private MapCatalog? _catalog;
@@ -56,12 +58,14 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     private MapId _savedCurrent;
 
     public MapService(ICameraRig camera, IViewControl view, IMapRuntime runtime, IMapLifetime lifetime,
-        IWorldModelLoader loader, ICameraPoseValidator poses, MapDataSource? data = null, IWalkController? walk = null)
+        IWorldModelLoader loader, ICameraPoseValidator poses, MapDataSource? data = null, IWalkController? walk = null,
+        ITerrainPreparation? terrain = null)
     {
         _camera = camera; _view = view; _runtime = runtime; _lifetime = lifetime;
         _loader = loader; _data = data ?? new();
         _poses = poses ?? throw new ArgumentNullException(nameof(poses));
         _walk = walk;
+        _terrain = terrain;
     }
 
     public long Rev { get; private set; }
@@ -199,7 +203,9 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
                     mounting.GetAwaiter().GetResult();
                     _mount = null;
                 }
-                LegalizeDestination();
+                _legalize ??= PrepareDestinationTerrain();
+                if (!_legalize.IsCompleted) return;
+                LegalizeDestination(_legalize.GetAwaiter().GetResult());
                 _camera.SetPose(_destination);
                 _arrival = _runtime.Arrive(_destination, _destinationMode);
                 Move(MapStage.Warm);
@@ -280,11 +286,22 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         MapCatalog.ValidatePose(_destination);
     }
 
-    private void LegalizeDestination()
+    private async Task<Pose> PrepareDestinationTerrain()
+    {
+        var pose = _preservePresentationPose ? _destination : await _poses.LegalizePrepared(_destination);
+        if (_terrain is not null && Context is { } context)
+        {
+            var point = new Vector2(pose.Position.X, pose.Position.Z);
+            var reach = _destinationMode == ViewMode.Walk ? WalkRules.ArrivalCollisionRadius : 0f;
+            await _terrain.PrepareRegion(context, new(point - new Vector2(reach), point + new Vector2(reach)));
+        }
+        return pose;
+    }
+
+    private void LegalizeDestination(Pose legalized)
     {
         if (_preservePresentationPose) return;
         var original = _destination;
-        var legalized = _poses.Legalize(original);
         MapCatalog.ValidatePose(legalized);
         if (!_poses.IsLegal(legalized, outsideBuffer: false))
             throw new InvalidDataException("Map destination remains outside the reachable space after legalization.");
@@ -310,6 +327,7 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         _target = null;
         ClearPendingLoad();
         _modeChange = null;
+        _legalize = null;
         _mount = null;
         if (result != MapTravelResult.Arrived) _arrival?.Cancel();
         _arrival = null;

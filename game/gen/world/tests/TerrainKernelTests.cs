@@ -83,6 +83,17 @@ public sealed class TerrainKernelTests
         var a = new short[TerrainSampling.SampleCount(4)]; var b = new short[a.Length];
         terrain.FillTile(new(-100, 20), 4, a); terrain.FillTile(default, 4, b);
         AssertThat(a.SequenceEqual(b) && a[40 * 81 + 40] == 300 && a[0] == 0 && a[^1] == 0).OverrideFailureMessage("L4 used a fixed map extent or tile origin.").IsTrue();
+        var prepared = new PreparedTerrain(new(rect, terrain.SourceInputs, [], [], [], [], [rect], a, []));
+        var restored = new short[a.Length]; prepared.FillTile(default, 4, restored);
+        AssertThat(restored.SequenceEqual(a) && !prepared.HasBlock(default)).OverrideFailureMessage("Restoring L4 required fine terrain blocks.").IsTrue();
+        var point = new Vector2(40, 20.5f);
+        prepared.Publish(terrain.BuildPoints([point]));
+        AssertThat(prepared.IsPrepared(point) && prepared.HeightAt(point.X, point.Y) == terrain.HeightAt(point.X, point.Y))
+            .OverrideFailureMessage("A prepared fractional query differs from the authoritative metre nodes.").IsTrue();
+        terrain.BuildBlock(default, prepared);
+        AssertThat(prepared.HasBlock(default) && prepared.HeightAt(point.X, point.Y) == terrain.HeightAt(point.X, point.Y)
+            && !terrain.SnapshotPoints().Any(node => node.X >= 0 && node.X <= TerrainRasterBlock.Edge && node.Z >= 0 && node.Z <= TerrainRasterBlock.Edge))
+            .OverrideFailureMessage("Published block nodes were retained again in the cold sparse snapshot.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

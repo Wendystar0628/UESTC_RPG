@@ -23,7 +23,11 @@ public sealed partial class TerrainCompilerTests
         AssertThat(terrain.Waters.Single().Polygons.Count == water.Parts.Count
             && terrain.Waters.Single().Polygons[0].Holes.Count == island.Holes.Count).IsTrue();
         AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.WaterY(water.Id)!.Value)) <= TestTolerance.Position).IsTrue(); AssertThat(terrain.WaterAt(0, 0) is null && terrain.WaterAt(50, 0) is not null).OverrideFailureMessage("Water union lost holes or a real part.").IsTrue();
-        AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.HeightAt(-20, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-0.5875) - (double)(terrain.HeightAt(-19.75f, 0))) <= TestTolerance.Position).IsTrue();
+        AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.HeightAt(-20, 0))) <= TestTolerance.Position).IsTrue();
+        var nearShore = terrain.HeightAt(-19.75f, 0);
+        AssertThat(nearShore < terrain.WaterY(water.Id)!.Value && terrain.WaterAt(-19.75f, 0) is not null
+            && Math.Abs(nearShore - RenderedHeight(terrain, -19.75f, 0)) <= TestTolerance.Position)
+            .OverrideFailureMessage("The first wet grid cell lost its submerged bed or disagrees with rendering.").IsTrue();
         AssertThat(terrain.HeightAt(0, 0) > -0.5).OverrideFailureMessage("Island became submerged water bed.").IsTrue();
     }
 

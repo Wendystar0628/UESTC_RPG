@@ -23,24 +23,23 @@ public sealed partial class BakeService
     {
         private Lazy<Task<IReadOnlyDictionary<string, IReadOnlyList<TileKey>>>>? _moduleTiles;
 
+        internal void PrepareDirectory()
+        {
+            foreach (var (id, module) in Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            {
+                Lifetime.Token.ThrowIfCancellationRequested();
+                var tiles = module.Value.Tiles(CreateAssetContext(module.CodeHash)).Distinct().OrderBy(tile => tile.X).ThenBy(tile => tile.Z).ToArray();
+                if (tiles.Any(tile => tile.X <= -512 || tile.X >= 512 || tile.Z <= -512 || tile.Z >= 512))
+                    throw new InvalidDataException($"Module {id} returned an out-of-range tile.");
+                ResidentModuleTiles.Add(id, tiles);
+            }
+        }
+
         private void PrepareModuleTiles()
         {
             var contexts = _preparedContexts!;
-            _moduleTiles = new(() => Task.Run<IReadOnlyDictionary<string, IReadOnlyList<TileKey>>>(() =>
-            {
-                var result = new SortedDictionary<string, IReadOnlyList<TileKey>>(StringComparer.Ordinal);
-                foreach (var (id, module) in Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-                {
-                    Lifetime.Token.ThrowIfCancellationRequested();
-                    var tiles = module.Value.Tiles(contexts[id]).Distinct().OrderBy(tile => tile.X).ThenBy(tile => tile.Z).ToArray();
-                    foreach (var tile in tiles)
-                        if (tile.X <= -512 || tile.X >= 512 || tile.Z <= -512 || tile.Z >= 512)
-                            throw new InvalidDataException($"Module {id} returned an out-of-range tile ({tile.X},{tile.Z}).");
-                    result.Add(id, Array.AsReadOnly(tiles));
-                }
-                Lifetime.Token.ThrowIfCancellationRequested();
-                return new ReadOnlyDictionary<string, IReadOnlyList<TileKey>>(result);
-            }, Lifetime.Token), LazyThreadSafetyMode.ExecutionAndPublication);
+            _moduleTiles = new(() => Task.FromResult<IReadOnlyDictionary<string, IReadOnlyList<TileKey>>>(
+                new ReadOnlyDictionary<string, IReadOnlyList<TileKey>>(ResidentModuleTiles)), LazyThreadSafetyMode.ExecutionAndPublication);
             foreach (var producer in Producers.Select(producer => producer.Value).OfType<IBakeContentConsumer>())
                 producer.Prepare(new(() =>
                 {

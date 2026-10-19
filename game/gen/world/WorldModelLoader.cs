@@ -47,6 +47,11 @@ public static partial class WorldModelLoader
             files.ToDictionary(p => p.Key, p => Decode(p.Key, p.Value), StringComparer.Ordinal), options, inputs);
     }
 
+    /// <summary>Parse once, then let the kernel resolve cached terrain before publishing the world.</summary>
+    public static WorldModelPreparation PrepareWorld(WorldModelLoadInputs inputs,
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, WorldLoadOptions? options = null) =>
+        PrepareCore(inputs.Descriptor.Id, files.ToDictionary(pair => pair.Key, pair => Decode(pair.Key, pair.Value), StringComparer.Ordinal), options ?? new(), inputs);
+
     private static string Decode(string file, ReadOnlyMemory<byte> bytes)
     { try { return Utf8.GetString(bytes.Span).TrimStart('\uFEFF'); } catch (DecoderFallbackException error) { throw new WorldDataException(file, "encoding", "Invalid UTF-8.", error); } }
 
@@ -56,12 +61,12 @@ public static partial class WorldModelLoader
     private static WorldModelLoadResult LoadChecked(MapId map, IReadOnlyDictionary<string, string> files,
         WorldLoadOptions? options, WorldModelLoadInputs? inputs)
     {
-        try { return LoadCore(map, files, options ?? new(), inputs); }
+        try { return PrepareCore(map, files, options ?? new(), inputs).BuildForAssets(); }
         catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
         { throw new WorldDataException("world/geo.json", "root", error.Message, error); }
     }
 
-    private static WorldModelLoadResult LoadCore(MapId map, IReadOnlyDictionary<string, string> files,
+    private static WorldModelPreparation PrepareCore(MapId map, IReadOnlyDictionary<string, string> files,
         WorldLoadOptions options, WorldModelLoadInputs? inputs)
     {
         var input = new SortedDictionary<string, string>(StringComparer.Ordinal);
@@ -161,21 +166,26 @@ public static partial class WorldModelLoader
         var frozen = new ReadOnlyDictionary<FeatureId, WorldFeature>(features.Values.ToDictionary(f => f.Id));
         var interiorOverlays = ReadInteriorOverlays(map, input, frozen);
         var sources = ReadTerrainSources(map, input);
-        var (terrain, diagnostics) = CompileTerrain(inputs, sources, boundary, frozen, network, prefix);
-        var interiors = options.Interiors ?? new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"),
-            inputs is null ? null : terrain);
+        var terrainContext = PrepareTerrain(inputs, sources, boundary, frozen, network, prefix);
         if (input.ContainsKey("outskirts.json") && options.Outskirts is null)
             throw new WorldDataException("outskirts.json", "root", "A parsed outskirts model is required until the producer's file contract is available.");
         var outskirts = options.Outskirts;
-        var world = new WorldModelSnapshot(frozen, boundary, network, interiors, outskirts, interiorOverlays, options,
-            TerrainOperations(sources), terrain);
+        var operations = TerrainOperations(sources);
         var limitRing = outskirts?.CutLine is { Count: >= 3 } cutLine ? cutLine : boundary.Outer;
         var roam = ReadRoam(map, input);
         var margin = outskirts is null ? roam?.FallbackMargin ?? 0 : 0;
         var bounds = new Box3(new(limitRing.Min(p => p.X) - margin, roam?.FloorY ?? 0, limitRing.Min(p => p.Y) - margin),
             new(limitRing.Max(p => p.X) + margin, roam?.CeilY ?? Math.Max(1, frozen.Count > 0 ? frozen.Values.Max(f => f.Bounds.Max.Y) : 0), limitRing.Max(p => p.Y) + margin));
-        return new(world, geo, PlanGeometry.Centroid(boundary.Outer), bounds, TileGrid.At(bounds.Min), TileGrid.At(bounds.Max))
-        { Diagnostics = diagnostics };
+        WorldModelSnapshot Snapshot(ITerrain terrain, IInteriorIndex interiors) =>
+            new(frozen, boundary, network, interiors, outskirts, interiorOverlays, options, operations, terrain);
+        return new(terrainContext is null ? FlatTerrain.Default.SourceInputs : TerrainSourceInputs.Prepare(terrainContext, sources),
+            terrainContext is null ? null : () => TerrainCompiler.Compile(terrainContext, sources),
+            (terrain, diagnostics) =>
+            {
+                var interiors = options.Interiors ?? new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"), inputs is null ? null : terrain);
+                var world = Snapshot(terrain, interiors);
+                return new(world, geo, PlanGeometry.Centroid(boundary.Outer), bounds, TileGrid.At(bounds.Min), TileGrid.At(bounds.Max)) { Diagnostics = diagnostics };
+            }, (world, terrain) => Snapshot(terrain, world.Interiors));
 
         void AddLine(NetworkLine line, string kind, string file)
         {

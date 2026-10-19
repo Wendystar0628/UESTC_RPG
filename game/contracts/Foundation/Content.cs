@@ -49,6 +49,9 @@ public sealed class BuildContext
     public required uint WorldSeed { get; init; }
     /// <summary>Single immutable map-wide campus window allocation, prepared before window metadata or geometry. Null is for legacy/no-window fixtures only.</summary>
     public WindowNumberingSnapshot? WindowNumbering { get; init; }
+    /// <summary>Final resident interior layouts restored with the map's cached metadata.</summary>
+    public IReadOnlyDictionary<FeatureId, InteriorLayout> InteriorLayouts { get; init; } =
+        new ReadOnlyDictionary<FeatureId, InteriorLayout>(new Dictionary<FeatureId, InteriorLayout>());
     /// <summary>Map-filtered immutable part LOD capabilities, captured before worker publication. Null means not supplied, never complete or universally supported.</summary>
     public Parts.PartLodCatalog? PartLods { get; init; }
     private IReadOnlyDictionary<string, IInteriorProvider> _interiorProviders =
@@ -93,6 +96,14 @@ public sealed class BuildContext
     public string DataHash { get; init; } = "";
     /// <summary>Fingerprint of this producer and its shared generation dependencies, computed by the caller.</summary>
     public string CodeHash { get; init; } = "";
+    /// <summary>Retains this producer's frozen inputs while using its prepared cold-asset world.</summary>
+    public BuildContext WithWorld(IWorldModel world) => new()
+    {
+        World = world, Map = Map, WorldSeed = WorldSeed, WindowNumbering = WindowNumbering, InteriorLayouts = InteriorLayouts,
+        PartLods = PartLods, InteriorProviders = InteriorProviders, Catalog = Catalog, ClaimedBy = ClaimedBy,
+        SourceInputs = SourceInputs, GlobalInputs = GlobalInputs, GroundMaskContributors = GroundMaskContributors,
+        DataHash = DataHash, CodeHash = CodeHash
+    };
     public Rng Seeded(FeatureId feature, PartId part, string purpose) =>
         new(StableHash.Hash32(WorldSeed, feature.Value, part.Value, purpose));
     public ToonRef Toon(ToonSpec spec)

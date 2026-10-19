@@ -22,8 +22,9 @@ public sealed class CollisionTileBuilder(
         foreach (var entry in modules.OrderBy(m => m.Id, StringComparer.Ordinal))
         {
             if (!entry.Tiles.Contains(tile)) continue;
-            world.AddRange(entry.Module.Collide(entry.Context, tile));
-            foreach (var part in entry.Module.Build(entry.Context, tile, LodLevel.L0).Parts)
+            var moduleContext = entry.Context.WithWorld(context.World);
+            world.AddRange(entry.Module.Collide(moduleContext, tile));
+            foreach (var part in entry.Module.Build(moduleContext, tile, LodLevel.L0).Parts)
                 world.AddRange(partCollision(part).Select(c => CollisionGeometry.Transform(c, part.At)));
         }
         foreach (var feature in context.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))

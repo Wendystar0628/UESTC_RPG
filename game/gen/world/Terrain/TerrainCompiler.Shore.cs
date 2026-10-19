@@ -213,7 +213,7 @@ internal static partial class TerrainCompiler
             {
                 var id = $"{shore.Waters.OrderBy(water => water.Value, StringComparer.Ordinal).First().Value}:bank:{interval.Polygon}:{interval.Ring}:{index++}";
                 var span = TerrainBankGeometry.Create(id, shore.Waters, shore.Region, interval);
-                result.Add(new(span, shore.Node, b.LandBeforeWater));
+                result.Add(new(span, shore.ShoreTop));
             }
         }
         return result;

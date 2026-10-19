@@ -167,7 +167,8 @@ public sealed class BakeWindowTests
             GroundMaskContributors = contributors,
             PartLods = partLods
         };
-        var modules = Modules(source, new Provider(Snapshot([])));
+        var provider = new Provider(Snapshot([]));
+        var modules = Modules(source, provider);
         var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", inputs);
         var claims = new Lazy<MapClaimLedger>(() => new(context.World, [new("source", Owner, false, [new FeatureClaim(Feature, Aspects.Facade)])]));
         var reads = 0;
@@ -188,6 +189,10 @@ public sealed class BakeWindowTests
         var producer = map.CreateBuildContext("producer-code", "atlas-input");
         AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
         var lighting = new LightInventoryDocument(context.Map.Id, [], [], []) { WindowNumbering = loaded.Windows.Snapshot };
+        // Metadata still cannot enumerate cells; the explicit cold-resident directory phase can.
+        source.PreparingDirectory = provider.PreparingDirectory = true;
+        map.PrepareDirectory();
+        source.PreparingDirectory = provider.PreparingDirectory = false;
         map.CompletePreparation(new(lighting, new(context.Map.Id, [])));
         var a = map.GetPreparedContext(mapContext, "source");
         var b = map.GetPreparedContext(mapContext, "provider");
@@ -212,12 +217,13 @@ public sealed class BakeWindowTests
             new Dictionary<string, ContentModuleInput> { ["counted"] = new(counted, "counted-code", Owner, false) },
             new Dictionary<string, BakeService.Interior>(), [], null!, claims, claimLookup, data,
             context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
+        indexed.PrepareDirectory();
         indexed.CompletePreparation(map.Metadata!);
         var firstTiles = indexed.GetPreparedModuleTilesAsync(mapContext);
         var secondTiles = indexed.GetPreparedModuleTilesAsync(mapContext);
         var tiles = firstTiles.GetAwaiter().GetResult();
         if (!ReferenceEquals(firstTiles, secondTiles) || !ReferenceEquals(tiles, secondTiles.GetAwaiter().GetResult()) ||
-            counted.Calls != 1 || !ReferenceEquals(counted.Context, indexed.GetPreparedContext(mapContext, "counted")) ||
+            counted.Calls != 1 || !ReferenceEquals(counted.Context!.World, indexed.GetPreparedContext(mapContext, "counted").World) ||
             !tiles["counted"].SequenceEqual(counted.Cells.Distinct().OrderBy(tile => tile.X).ThenBy(tile => tile.Z)))
             throw new InvalidOperationException("Prepared map consumers re-enumerated Tiles or lost the frozen module context.");
         AssertThrown(() => indexed.GetPreparedModuleTilesAsync(mapContext with { })).IsInstanceOf<InvalidOperationException>();
@@ -237,6 +243,8 @@ public sealed class BakeWindowTests
         if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Unloaded map accepted late diagnostics.");
         AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
         if (reads != 1) throw new InvalidOperationException("Context lookup re-ran preparation.");
+        if (source.TileCalls != 1 || provider.TileCalls != 1)
+            throw new InvalidOperationException("Prepared lookups re-enumerated the cold-resident directory.");
     }
 
     [TestCase]
@@ -319,9 +327,16 @@ public sealed class BakeWindowTests
         new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
     private class Module : IContentModule
     {
+        public bool PreparingDirectory { get; set; }
+        public int TileCalls { get; private set; }
         public IReadOnlyList<Claim> Claims => [];
         public ModuleBudget Budget => new(0, 0, 0);
-        public virtual IEnumerable<TileKey> Tiles(BuildContext ctx) => throw new InvalidOperationException("Metadata must not call Tiles.");
+        public virtual IEnumerable<TileKey> Tiles(BuildContext ctx)
+        {
+            if (!PreparingDirectory) throw new InvalidOperationException("Only explicit directory preparation may call Tiles.");
+            TileCalls++;
+            return [];
+        }
         public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod) => throw new InvalidOperationException("Metadata must not call Build.");
         public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) => throw new InvalidOperationException("Metadata must not call Collide.");
     }

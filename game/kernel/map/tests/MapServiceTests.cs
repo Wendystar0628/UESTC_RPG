@@ -537,11 +537,11 @@ public sealed class MapServiceTests
         public Func<Pose, Pose> Project { get; set; } = pose => pose;
         public Func<Pose, bool> Allowed { get; set; } = _ => true;
         public int LegalizeCalls { get; private set; }
-        public Pose Legalize(Pose pose)
+        public Task<Pose> LegalizePrepared(Pose pose, CancellationToken cancellation = default)
         {
             if (!runtime.MountReady) throw new InvalidOperationException("Map callbacks must finish before destination legalization.");
             LegalizeCalls++;
-            return Project(pose);
+            return Task.FromResult(Project(pose));
         }
         public bool IsLegal(Pose pose, bool outsideBuffer) => Allowed(pose);
     }

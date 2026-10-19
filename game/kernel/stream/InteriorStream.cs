@@ -37,9 +37,8 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     {
         _context = context; Error = null; _atriumStoreys.Clear();
         if (generation is null) return;
-        foreach (var provider in generation.InteriorProviders.Values)
-            foreach (var feature in provider.FeatureIds)
-                _atriumStoreys.Add(feature, provider.Layout(generation, feature).AtriumVisibleStoreys);
+        foreach (var layout in generation.InteriorLayouts.Values)
+            _atriumStoreys.Add(layout.Feature, layout.AtriumVisibleStoreys);
     }
     public void Prefetch(NavSpace? space)
     {

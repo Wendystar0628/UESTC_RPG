@@ -18,7 +18,7 @@ public interface ITerrainBankSource
     /// Station is metres along the span's final exported Shore, in [0, Length], including transition portions.
     /// Use the same double segment accumulation as TerrainBankSpan.Length. Both endpoints are included;
     /// a closed span's stations 0 and Length identify the same position and elevation.
-    /// Query the frozen evaluator/profiles without IO or mutable callbacks. The returned height is finite.
+    /// Query the frozen bank profile without IO or mutable callbacks. The returned height is finite.
     /// Reject malformed IDs with ArgumentException, unknown IDs with KeyNotFoundException, and non-finite
     /// or out-of-range stations with ArgumentOutOfRangeException. Do not clamp, wrap, or substitute terrain height.
     /// </remarks>
