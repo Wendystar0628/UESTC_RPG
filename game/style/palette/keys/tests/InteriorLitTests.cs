@@ -72,18 +72,35 @@ public sealed class InteriorLitTests
         }
     }
 
-    // Row 2 has no light-gain term: chroma only follows the shade rule (x1.1 capped at +chromaMulMax) and the interior.warm blend.
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void InteriorShadeIsNotScaledByTheGain()
+    public void InteriorShadeKeepsPatchLightnessAndMaterialIdentity()
     {
         var (deriver, frame, x) = GoldenFrame();
-        var cap = DeriveRoot().GetProperty("shade").GetProperty("chromaMulMax").GetDouble();
-        var warmC = frame.InteriorWarm.C;
+        var neutralEdges = DeriveRoot().GetProperty("shade").GetProperty("neutralCEdge").EnumerateArray().Select(v => v.GetDouble()).ToArray();
+        var neutralMax = neutralEdges.Min();
+        var colouredMin = neutralEdges.Max();
+        var lightnessRatio = InteriorRule.GetProperty("shadeLRatio").GetDouble();
+        var hueMax = InteriorRule.GetProperty("shadeHueMax").GetDouble();
         foreach (var (token, albedo, cls) in Materials(["equip.fireRed", .. HighChroma, .. LowChroma]))
         {
             var m = deriver.Material(albedo, cls, frame, x, null);
-            AssertThat(m.ShadeIn.Chroma <= Math.Max(albedo.Chroma + cap, warmC) + TestTolerance.FloatRelative).OverrideFailureMessage($"{token}: interior shade C {m.ShadeIn.Chroma:F4} grew past the shade rule.").IsTrue();
+            var patch = deriver.InteriorPatch(m.Lit);
+            AssertThat(m.ShadeIn.L + TestTolerance.FloatRelative >= patch.L * lightnessRatio).OverrideFailureMessage($"{token}: interior shade L {m.ShadeIn.L:F4} is below {lightnessRatio:P0} of window-patch L {patch.L:F4}.").IsTrue();
+            if (albedo.Chroma <= neutralMax)
+            {
+                AssertThat(m.ShadeIn.Chroma <= neutralMax + TestTolerance.FloatRelative).OverrideFailureMessage($"{token}: neutral interior shade C {m.ShadeIn.Chroma:F4} exceeds {neutralMax:F4}.").IsTrue();
+            }
+            else if (albedo.Chroma >= colouredMin)
+            {
+                AssertThat(m.ShadeIn.Chroma <= albedo.Chroma + TestTolerance.FloatRelative).OverrideFailureMessage($"{token}: interior shade C {m.ShadeIn.Chroma:F4} exceeds albedo C {albedo.Chroma:F4}.").IsTrue();
+                AssertThat(Math.Abs(Oklab.HueDiff(albedo.Hue, m.ShadeIn.Hue)) <= hueMax + TestTolerance.AngleDegrees).OverrideFailureMessage($"{token}: interior shade hue moved more than {hueMax} degrees from the material hue.").IsTrue();
+                var (r, g, b) = Oklab.ToLinear(Oklab.FromLch(m.ShadeIn.L, albedo.Chroma, m.ShadeIn.Hue));
+                if (r >= 0 && g >= 0 && b >= 0 && r <= 1 && g <= 1 && b <= 1)
+                {
+                    AssertThat(m.ShadeIn.Chroma).OverrideFailureMessage($"{token}: in-gamut interior shade must retain albedo chroma.").IsEqualApprox(albedo.Chroma, TestTolerance.FloatRelative);
+                }
+            }
         }
     }
 

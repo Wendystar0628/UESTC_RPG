@@ -32,7 +32,7 @@ public sealed class Deriver
     private readonly bool _scaleChroma;
     private readonly double _warmK, _warmAlt0, _warmAlt1, _warmC0, _warmC1, _hueMax, _albedoGain;
     private readonly double _guardLo, _guardHi, _guardMinC, _guardMirror, _guardFloor;
-    private readonly double _rIn, _litGain, _litLMax, _shaderGain;
+    private readonly double _shadeInLRatio, _shadeInHueMax, _litGain, _litLMax, _shaderGain;
     public double SwatchLAmbient { get; }
     public double SwatchLInterior { get; }
 
@@ -61,7 +61,8 @@ public sealed class Deriver
         (_yellowLo, _yellowHi) = (shade.YellowGuard.First, shade.YellowGuard.Second);
         (_greenLo, _greenHi) = (shade.GreenGuard.First, shade.GreenGuard.Second);
         _scaleChroma = shade.ScaleChromaWithLight;
-        _rIn = derive.Interior.RIn;
+        _shadeInLRatio = derive.Interior.ShadeLRatio;
+        _shadeInHueMax = derive.Interior.ShadeHueMax;
         _litGain = derive.Interior.LitGain;
         _litLMax = derive.Interior.LitLMax;
         _shaderGain = derive.Interior.ShaderGain;
@@ -145,14 +146,14 @@ public sealed class Deriver
         return ha + Math.CopySign(step, d);
     }
 
-    public Lab Shade(Lab albedo, Lab lit, FrameVector f, string cls, double? rOverride = null, (double C, double H)? ambientOverride = null)
+    public Lab Shade(Lab albedo, Lab lit, FrameVector f, string cls)
     {
         var mc = _classes[cls];
-        var r = rOverride ?? f.V[R];
-        var (cs, hs) = ambientOverride ?? f.Ambient;
+        var r = f.V[R];
+        var (cs, hs) = f.Ambient;
         var ca = albedo.Chroma;
-        // 三阶类（植被、花）的影：明度差 1 − r × r_mat 再乘本帧的 vegDepth（室内行不乘）
-        var l = mc.Three && rOverride is null ? lit.L * (1.0 - (1.0 - r * mc.RMat) * f.V[VegDepth]) : lit.L * r * mc.RMat;
+        // 三阶类（植被、花）的影：明度差 1 − r × r_mat 再乘本帧的 vegDepth
+        var l = mc.Three ? lit.L * (1.0 - (1.0 - r * mc.RMat) * f.V[VegDepth]) : lit.L * r * mc.RMat;
         var c1 = Math.Min(ca * mc.KC, ca + _chromaMulMax);
         if (_scaleChroma) c1 *= LightM(f);
         var h1 = ca > 1e-6 ? RotateHue(albedo.Hue, hs, mc.DhMax) : hs;
@@ -182,9 +183,24 @@ public sealed class Deriver
             lit = Oklab.GamutMap(Oklab.FromLch(lit.L, lit.Chroma * vegChromaMul, lit.Hue));
             shade = Oklab.GamutMap(Oklab.FromLch(shade.L, shade.Chroma * vegChromaMul, shade.Hue));
         }
-        var shadeIn = Shade(albedo, lit, f, cls, _rIn, f.InteriorWarm);
+        var shadeIn = InteriorShade(albedo, lit, f);
         var litIn = InteriorLit(lit, shadeIn);
         return new(lit, shade, shadeIn, litIn);
+    }
+
+    /// <summary>
+    /// Interior shade (ART-STYLE): lightness follows the actual window-patch target. Neutral materials take a low-chroma warm
+    /// tint; coloured materials retain their albedo chroma and turn towards the warm hue by at most the interior hue limit.
+    /// </summary>
+    private Lab InteriorShade(Lab albedo, Lab lit, FrameVector f)
+    {
+        var l = InteriorPatch(lit).L * _shadeInLRatio;
+        var (warmC, warmH) = f.InteriorWarm;
+        var h = albedo.Hue + Math.Clamp(Oklab.HueDiff(albedo.Hue, warmH), -_shadeInHueMax, _shadeInHueMax);
+        var own = Oklab.FromLch(l, albedo.Chroma, h);
+        var neutral = ScalarMath.Smoothstep(_neutral0, _neutral1, albedo.Chroma);
+        var warm = Oklab.FromLch(l, Math.Min(warmC, Math.Min(_neutral0, _neutral1)), warmH);
+        return Oklab.GamutMap(Oklab.Lerp(own, warm, neutral));
     }
 
     /// <summary>

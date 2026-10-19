@@ -414,7 +414,7 @@ ToonCol toon_colors_from(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp) 
 	shade = toon_port_shade(c, m, lit, shade, interior ? 0.0 : day * (1.0 - toon_overcast()));
 
 	// 影里的两条连续项（ART-STYLE）：天光渐变；朝下面的地面暖反光（室内和夜间为 0）
-	shade *= 1.0 + TOON_SKY_GRAD * c.n_w.y;
+	shade *= 1.0 + TOON_SKY_GRAD * c.n_w.y * (interior ? 0.0 : 1.0);
 	float bounce = TOON_BOUNCE * clamp(-c.n_w.y, 0.0, 1.0) * key_strength * day * (interior ? 0.0 : 1.0);
 	shade = mix(shade, shade * pal_cur(PAL_BOUNCE_GROUND) * 1.6, bounce);
 

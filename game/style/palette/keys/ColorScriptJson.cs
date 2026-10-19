@@ -100,7 +100,7 @@ public sealed record ChromaCapJson(double Ratio, double MinAlbedoC);
 public sealed record DeriveShadeJson(double ChromaMulMax, DoublePair NeutralCEdge, DoublePair YellowGuard, DoublePair GreenGuard,
     bool ScaleChromaWithLight, DoublePair? OliveZone = null, DoublePair? GreenRange = null);
 
-public sealed record DeriveInteriorJson(double RIn, double LitGain, double LitLMax, double ShaderGain);
+public sealed record DeriveInteriorJson(double ShadeLRatio, double ShadeHueMax, double LitGain, double LitLMax, double ShaderGain);
 
 public sealed record SwatchLJson(
     [property: JsonPropertyName("ambient.sky")] double AmbientSky,
