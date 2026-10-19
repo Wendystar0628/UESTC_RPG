@@ -67,7 +67,7 @@
 
 ## ART-FIDELITY · 视觉精度标准
 
-`docs/art/ART-FIDELITY-视觉精度标准.md` · 6.9k 字 · 处处不粗糙、细节按区分级：精度底线 B1–B13、五个精度区、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
+`docs/art/ART-FIDELITY-视觉精度标准.md` · 7.0k 字 · 处处不粗糙、细节按区分级：精度底线 B1–B13、五个精度区、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
 关键词：视觉精度、精度区、K1–K5、判定距离、底线清单、B1–B13、不粗糙、一票否决、区界规则、可读规则、巡检点、行走走廊、外围分级
 
 - ART-FIDELITY §0 结论 · L22 · 1.1k
@@ -81,7 +81,7 @@
 - ART-FIDELITY §2 底线 · L90 · 1.1k
   - ART-FIDELITY §2.0 底线清单（B1–B13） · L94 · 1.1k
 - ART-FIDELITY §3 一票否决清单 · L114 · 505
-- ART-FIDELITY §4 巡检点 · L124 · 232
+- ART-FIDELITY §4 巡检点 · L124 · 291
 - ART-FIDELITY §5 行走走廊 · L129 · 775
   - ART-FIDELITY §5.1 范围与画面构成 · L131 · 176
   - ART-FIDELITY §5.2 走廊里的加密 · L136 · 203
@@ -2032,14 +2032,14 @@
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
-`docs/registry/REG-DECISIONS-WORLD-世界与画面决策.md` · 9.3k 字 · 作品、画面、世界、地图四个域的已定决策：作品定位与范围、世界与地图、美术风格
+`docs/registry/REG-DECISIONS-WORLD-世界与画面决策.md` · 9.5k 字 · 作品、画面、世界、地图四个域的已定决策：作品定位与范围、世界与地图、美术风格
 关键词：决策、世界、画面、作品定位、地图、美术风格、视觉精度、翻新、日式街景、不变量
 
 - REG-DECISIONS-WORLD §0 结论 · L23 · 127
   - ★ REG-DECISIONS-WORLD §0.1 接入要点 · L27 · 54
 - REG-DECISIONS-WORLD §1 作品定位与范围 · L31 · 2.2k
-- REG-DECISIONS-WORLD §2 世界与地图 · L52 · 3.7k
-- REG-DECISIONS-WORLD §3 美术风格 · L81 · 2.7k
+- REG-DECISIONS-WORLD §2 世界与地图 · L52 · 3.9k
+- REG-DECISIONS-WORLD §3 美术风格 · L82 · 2.7k
 
 ## REG-GLOSSARY · 术语表
 
