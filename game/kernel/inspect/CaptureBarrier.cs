@@ -3,15 +3,54 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
+using Campus.Kernel.Renderer;
 using Campus.Kernel.Stream;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
-/// <summary>One drawn frame with the current pose's coarse outdoor content and applied world state.</summary>
+/// <summary>Readback barriers for coarse outdoor content and presented indoor destinations.</summary>
 public static class CaptureBarrier
 {
+    /// <summary>Draw the released indoor destination after its existing warmup cover has been withdrawn.</summary>
+    public static async Task WaitForPresentedAsync(Node host, Pose pose, Func<bool> contentReady,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        ArgumentNullException.ThrowIfNull(contentReady);
+        var rig = Services.Get<ICameraRig>();
+        var materials = Services.Get<MaterialWarmup>();
+        var veil = Services.Get<IVeilState>();
+        var loading = Services.Get<IAppLoadingPresentation>();
+        var world = Services.Get<IWorldState>();
+        var weather = Services.Get<IWeatherProcess>();
+        var started = FrameClock.MonotonicMilliseconds;
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // Arrival can complete after the last covered draw, before presentation processes the release.
+            // Certify the state submitted to a new draw, then read back only that draw's completed viewport.
+            await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePreDraw);
+            var submittedReady = Ready();
+            await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            if (Ready() && submittedReady) return;
+            if (FrameClock.MonotonicMilliseconds - started > BootTuning.StalledSeconds * 1000)
+                throw new TimeoutException($"Screenshot presentation stalled; veil={veil.Opacity},loading={loading.Active}; " +
+                    materials.DescribeReadiness());
+        }
+
+        bool Ready()
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
+            if (rig.Pose != pose) throw new OperationCanceledException("Capture pose was replaced.");
+            if (materials.Error is { } error) throw new InvalidOperationException("Capture material warmup failed: " + error);
+            return contentReady() && materials.IsReady && materials.SamplesReleased && veil.Opacity == 0f &&
+                !loading.Active && !world.Scrubbing && world.Transition == WorldTransition.None && !weather.Transitioning;
+        }
+    }
+
     public static async Task WaitForReadyAsync(Node host, Pose pose, Func<bool> contentReady,
         CancellationToken cancellationToken = default)
     {

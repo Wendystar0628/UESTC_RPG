@@ -50,12 +50,20 @@ public static class CaptureSequence
             if (medium is { Kind: MediumKind.Interior, Feature: { } building })
             {
                 // Indoor captures need the existing arrival's current-floor IF, adjacent IS and near tiles.
-                var arrival = Services.Get<IMapRuntime>().Arrive(appliedPose, rig.Mode,
+                var runtime = Services.Get<IMapRuntime>();
+                var arrival = runtime.Arrive(appliedPose, rig.Mode,
                     new(building, checked((short)medium.Storey)));
                 LogPhase("pose-applied");
                 await producers.WaitForReadyAsync(host, arrival, contentReady, cancellationToken);
                 if (rig.Pose != appliedPose) throw new OperationCanceledException("Capture pose was replaced.");
                 LogPhase("destination-ready");
+                await CaptureBarrier.WaitForPresentedAsync(host, appliedPose, () =>
+                {
+                    if (!ReferenceEquals(runtime.Arrival, arrival))
+                        throw new OperationCanceledException("Capture arrival was replaced.");
+                    return contentReady() && producers.IsReady(appliedPose);
+                }, cancellationToken);
+                LogPhase("scene-presented");
             }
             else
             {
