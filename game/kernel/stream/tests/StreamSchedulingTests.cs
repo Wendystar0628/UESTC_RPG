@@ -15,6 +15,7 @@ namespace Campus.Tests;
 public sealed class StreamSchedulingTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
     public void LibraryAtriumRequestsAllDeclaredOpenStoreysAndClearsThemOnReload()
     {
         var world = RealMapFixture.Load().World;
