@@ -49,7 +49,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 6. **容器**按 ENG-PERF §1.1 选；MultiMesh 不用实例色、成批整块写；GPUParticles3D 只作备选，用要批准。
 7. **顶点格式**：内核或烘焙器打包成压缩 20 B/顶点，每个表面 ≤ 65 536 个顶点，只用 ENG-PERF §2 登记的格式。
 8. **discard**：不透明着色器里的 `discard` 与 `ALPHA_SCISSOR_THRESHOLD` 只用于白名单里的镂空类和抖动淡化。
-9. **运行时不得改动会触发管线重编译的设置**：阴影开关、`LightAngularDistance` 与 `ShadowBlur` 的有无、软影滤波档位、阴影深度 16 位、MSAA、TAA、FSR2、CompositorEffect 的 `Needs*`、深度预通道、Environment 的各项 `*Enabled` 启动时定，四预设相同；画面设置按即时、雾幕、重启三类生效（SYS-GRAPHICS §3），会清空管线的设置不做成选项；启动预热覆盖所有可达组合；时间、季节、天气、介质只经全局参数与全局纹理；每次雾幕淡出之后 SURFACE、DRAW、Canvas 编译计数不增，新 MSDF 字形为 0。
+9. **运行时不得改动会触发管线重编译的设置**：阴影开关、`LightAngularDistance` 与 `ShadowBlur` 的有无、软影滤波档位、阴影深度 16 位、MSAA、TAA、FSR2、CompositorEffect 的 `Needs*`、深度预通道、Environment 的各项 `*Enabled` 启动时定，四预设相同；画面设置按即时、加载、重启三类生效（SYS-GRAPHICS §3），会清空管线的设置不做成选项；启动时在扉页下按组合预热一批（ENG-PERF §2）；时间、季节、天气、介质只经全局参数与全局纹理；每次加载界面淡出之后 SURFACE、DRAW、Canvas 编译计数不增，新 MSDF 字形为 0。
 10. **版本锁定**：Godot 4.7.2-stable .NET；升级经主会话评审，升级后跑一次快检和固定机位截图。
 
 ### 1.2 烘焙、线程、存档、音频与确定性（第 11–23 条）
@@ -77,4 +77,4 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 - **不用的引擎特性**（全项目唯一的清单）：SSAO、SSIL、SSR、SDFGI、体积雾、Environment 雾、反射探针、引擎 Decal、带阴影的点光与聚光；这些效果由自写的着色器与代理实现（ENG-PERF-LIGHT）。
 - **Environment**：背景用 Sky，环境光与反射源关，Tonemap Linear，Glow 常开，运行时不切。
 - **固定的渲染项**：深度预通道开且不改（描线读 normal_roughness），`screen_space_roughness_limiter`、MSAA、TAA、`hdr_2d` 关；`force_vertex_shading` 关，否则 `light()` 不执行。
-- **C#**：工作站并发 GC，雾幕结束后设 `SustainedLowLatency`。
+- **C#**：工作站并发 GC，加载界面淡出后设 `SustainedLowLatency`。
