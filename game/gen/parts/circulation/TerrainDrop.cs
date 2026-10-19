@@ -10,7 +10,7 @@ public enum DropMethod
 {
     /// <summary>≤ 0.04 m: absorbed by the terrain (slope ≤ 5%).</summary>
     Absorb,
-    /// <summary>0.04–0.15 m: a 1:12 sloped curb, no step.</summary>
+    /// <summary>Above absorption up to the minimum two-riser height: a 1:12 sloped curb, no step.</summary>
     SlopedCurb,
     /// <summary>Ramp runs in the height field, rails and curbs from <see cref="RampPart"/> variation 2.</summary>
     Ramp,
@@ -58,7 +58,7 @@ public static class TerrainDrop
         if (!float.IsFinite(available) || available < 0) throw new ArgumentOutOfRangeException(nameof(available));
         var clear = Clear(mainNetwork, clearWidth);
         if (rise <= 0.04f) return new(DropMethod.Absorb, rise, 0, true) { ClearWidth = clear };
-        if (rise <= 0.15f)
+        if (rise <= S.StepsMinRise)
         {
             var run = rise / S.RampMaxGrade;
             return new(DropMethod.SlopedCurb, rise, run, run <= available + 1e-3f) { ClearWidth = clear, Grade = S.RampMaxGrade };
@@ -85,11 +85,11 @@ public static class TerrainDrop
 
     /// <summary>
     /// The steps half of "两条路" (§5.1): steps for <paramref name="rise"/> even when a ramp would fit, for places that
-    /// pair short steps with a parallel ramp (台口、品学楼台基出入口). Rises of 0.15–4 m.
+    /// pair short steps with a parallel ramp (台口、品学楼台基出入口). Rises from the minimum two-riser height to 4 m.
     /// </summary>
     public static DropPlan PlanSteps(float rise, bool mainNetwork, float? clearWidth = null)
     {
-        if (!(rise > 0.15f && rise <= 4f)) throw new ArgumentOutOfRangeException(nameof(rise), "Steps connect drops of 0.15–4 m.");
+        if (!(rise >= S.StepsMinRise && rise <= 4f)) throw new ArgumentOutOfRangeException(nameof(rise), $"Steps connect drops of {S.StepsMinRise}–4 m.");
         return StepsPlan(rise, float.MaxValue, Clear(mainNetwork, clearWidth));
     }
 

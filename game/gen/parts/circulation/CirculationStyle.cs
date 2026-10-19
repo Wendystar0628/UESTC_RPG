@@ -82,6 +82,9 @@ public static class CirculationStyle
     public const float BarrierMinHalfThickness = 0.05f;
 
     // ---- Outdoor steps (WLD-TERRAIN) ----
+    /// <summary>Absolute riser floor for geometry; two such risers define the curb/steps boundary.</summary>
+    public const float RiserMinAllowed = 0.08f;
+    public const float StepsMinRise = 2 * RiserMinAllowed;
     public const float RiserMin = 0.12f, RiserMax = 0.16f, RiserTarget = 0.15f;
     public const float TreadBase = 0.65f, TreadMin = 0.30f, TreadMax = 0.40f;
     public const float LandingMin = 1.2f;

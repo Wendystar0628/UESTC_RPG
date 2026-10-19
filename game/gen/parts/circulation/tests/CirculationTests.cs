@@ -159,10 +159,20 @@ public sealed class CirculationTests
     public void TerrainDropFollowsTheConnectionTable()
     {
         AssertThat(TerrainDrop.Plan(0.03f, 5, true).Method == DropMethod.Absorb).OverrideFailureMessage("≤ 4 cm is absorbed.").IsTrue();
-        AssertThat(TerrainDrop.Plan(0.1f, 5, true).Method == DropMethod.SlopedCurb).OverrideFailureMessage("≤ 15 cm is a sloped curb.").IsTrue();
+        foreach (var rise in new[] { 0.1f, 0.15f, 0.15000004f, 0.155f, MathF.BitDecrement(S.StepsMinRise), S.StepsMinRise })
+            foreach (var available in new[] { 0.5f, 5f })
+            {
+                var curb = TerrainDrop.Plan(rise, available, true);
+                AssertThat(curb.Method == DropMethod.SlopedCurb && curb.Rise == rise).OverrideFailureMessage("Drops up to the minimum two-riser height must keep their rise as sloped curbs.").IsTrue();
+            }
+        AssertThrown(() => TerrainDrop.PlanSteps(MathF.BitDecrement(S.StepsMinRise), true)).IsInstanceOf<ArgumentOutOfRangeException>();
+        var minimumSteps = TerrainDrop.PlanSteps(S.StepsMinRise, true);
+        AssertThat(minimumSteps.Risers == 2 && minimumSteps.Riser == S.RiserMinAllowed && minimumSteps.Rise == S.StepsMinRise).OverrideFailureMessage("Explicit steps must accept the minimum two-riser rise unchanged.").IsTrue();
+        var minimumParams = (StairParams)minimumSteps.Parts.Single().Params;
+        ClosedClockwise(new StepsPart().Lods[LodLevel.L0](minimumParams), new StepsPart().Bounds(minimumParams), "minimum planned steps");
         AssertThat(TerrainDrop.Plan(5f, 100, true).Method == DropMethod.Terraces).OverrideFailureMessage("> 4 m goes to terraces.").IsTrue();
         AssertThat(TerrainDrop.Plan(0.3f, 4, true).Method == DropMethod.Ramp && TerrainDrop.Plan(0.3f, 2, true).Method == DropMethod.Steps).OverrideFailureMessage("12 × ΔH decides ramp or steps.").IsTrue();
-        for (var rise = 0.16f; rise <= 4f; rise += 0.07f)
+        for (var rise = MathF.BitIncrement(S.StepsMinRise); rise <= 4f; rise += 0.07f)
         {
             foreach (var main in new[] { true, false })
             {
@@ -188,7 +198,7 @@ public sealed class CirculationTests
                     AssertThat(landing.End - landing.Start + plan.Tread >= Math.Max(S.LandingMin, plan.ClearWidth) - TestTolerance.Position).OverrideFailureMessage("Landing shorter than the rule.").IsTrue();
             }
         }
-        for (var rise = 0.16f; rise <= 1.5f; rise += 0.11f)
+        for (var rise = MathF.BitIncrement(S.StepsMinRise); rise <= 1.5f; rise += 0.11f)
         {
             var plan = TerrainDrop.Plan(rise, 40, true);
             AssertThat(plan.Method == DropMethod.Ramp && plan.Grade <= S.RampMaxGrade + TestTolerance.Position && plan.Fits).OverrideFailureMessage("Ramp plan breaks 1:12 or does not fit.").IsTrue();

@@ -118,7 +118,7 @@ public static class StepsAlong
         if (risers < 1 || risers > 40) throw new ArgumentOutOfRangeException(nameof(risers));
         var (rMin, rMax, tMin, tMax) = finish switch
         {
-            StepsFinish.Stone => (0.08f, 0.2f, 0.25f, 0.6f),
+            StepsFinish.Stone => (S.RiserMinAllowed, 0.2f, 0.25f, 0.6f),
             StepsFinish.GrassSeats => (0.2f, 0.45f, 0.8f, 2.0f),
             _ => throw new ArgumentOutOfRangeException(nameof(finish), finish, "Unknown steps finish."),
         };

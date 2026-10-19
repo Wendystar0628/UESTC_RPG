@@ -51,7 +51,7 @@ public sealed class StepsPart() : CirculationPart<StairParams>(new(300, 200))
     {
         if (p.Steps < 1) throw new ArgumentOutOfRangeException(nameof(p), "Steps need at least one riser.");
         var r = p.Height / p.Steps; var t = p.Depth / p.Steps;
-        Range(r, 0.08f, 0.2f, "riser height");
+        Range(r, S.RiserMinAllowed, 0.2f, "riser height");
         Range(t, 0.25f, 0.6f, "tread depth");
         var cheek = p.Variation == 2 ? 0 : S.CheekWidth;
         Range(p.Width - 2 * cheek, 0.6f, 60f, "clear width");
