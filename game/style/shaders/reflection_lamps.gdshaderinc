@@ -18,6 +18,8 @@ vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale)
 	float h_eff = lamp_heff();
 	float strip_length = REFLECTION_LAMP_LENGTH * length_scale;
 	float pixel = max(length(fwidth(p_world.xz)), 1e-4);
+	float camera_height = camera_world.y - p_world.y;
+	if (camera_height <= 0.0) return color;
 	for (int i = 0; i < REFLECTION_LAMP_CAPACITY; i++) {
 		vec4 reference = texelFetch(refl_lamps, ivec2(i, 0), 0);
 		int kind = int(round(reference.x));
@@ -27,7 +29,7 @@ vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale)
 		float level;
 		if (kind == 1) {
 			LampData lamp = lamp_fetch(int(round(reference.y)));
-			source = lamp.base;
+			source = lamp.base + vec3(0.0, lamp.head, 0.0);
 			lamp_color = pal_cur(lamp.col);
 			level = lamp_level(lamp, h_eff);
 		} else {
@@ -42,11 +44,15 @@ vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale)
 			level = lamp_window_on(id, base_id, cols, slot, override_value);
 			lamp_color = pal_cur(lamp_window_cool(id, override_value) ? PAL_WINDOW_COOL : PAL_WINDOW_WARM);
 		}
+		float source_height = source.y - p_world.y;
+		if (source_height <= 0.0) continue;
 		vec2 toward = camera_world.xz - source.xz;
 		float camera_distance = length(toward);
 		if (camera_distance <= pixel) continue;
 		vec2 axis = toward / camera_distance;
-		vec2 offset = p_world.xz - source.xz;
+		// 相机连到水平面下的镜像灯头，与本片元所在平面的交点；灯条从这里朝相机延伸。
+		vec2 reflection_origin = source.xz + toward * source_height / (source_height + camera_height);
+		vec2 offset = p_world.xz - reflection_origin;
 		float along = dot(offset, axis);
 		float across = abs(dot(offset, vec2(-axis.y, axis.x)));
 		float width = 1.0 - smoothstep(REFLECTION_LAMP_WIDTH * 0.5 - pixel,
