@@ -358,9 +358,6 @@
    "SYS-VIEW",
    "WLD-OUTSKIRTS"
   ],
-  "WP-07": [
-   "SYS-VIEW-MEDIUM"
-  ],
   "WP-08": [
    "ENG-PREVIEW",
    "WLD-TERRAIN",
@@ -474,17 +471,7 @@
    "SYS-BORDER",
    "WLD-OUTSKIRTS"
   ],
-  "WP-31a": [
-   "MAP-QSH-INTERIORS",
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-ACCESS"
-  ],
   "WP-31b": [
-   "MAP-QSH-INTERIORS",
-   "WLD-INTERIORS",
-   "WLD-INTERIORS-ACCESS"
-  ],
-  "WP-31c": [
    "MAP-QSH-INTERIORS",
    "WLD-INTERIORS",
    "WLD-INTERIORS-ACCESS"
@@ -501,7 +488,6 @@
    "ENG-PERF-ADAPT",
    "SYS-GRAPHICS"
   ],
-  "WP-33": [],
   "WP-34": [
    "ART-SKYLIGHT",
    "SYS-TIME"
@@ -541,19 +527,11 @@
   "WP-40": [
    "ART-SKYLIGHT-ATMOSPHERE"
   ],
-  "WP-41": [
-   "SYS-TIME"
-  ],
   "WP-42": [
    "SYS-BORDER",
    "SYS-WALK"
   ],
   "WP-43": [
-   "SYS-WALK-BOUNDS"
-  ],
-  "WP-44": [
-   "MAP-QSH-TERRAIN-CHECKS",
-   "SYS-BORDER",
    "SYS-WALK-BOUNDS"
   ],
   "WP-45a": [
@@ -619,8 +597,6 @@
   ],
   "WP-53e": [
    "SYS-AUDIO"
-  ],
-  "WP-54a": [],
-  "WP-54b": []
+  ]
  }
 }

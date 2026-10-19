@@ -93,7 +93,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 
 ```
 工作包：WP-18（南区）· 提交 <短号>或"未提交"
-改动：game/gen/zones/south/**
+改动：game/gen/maps/qingshuihe/south/**
 新文件：进项目结构的新文件路径与归属（目录或文档树的哪一级），或"无"
 完成：MAP-QSH-SOUTH §1–§5；未完成：MAP-QSH-SOUTH §6（可选），未做
 检查：跑了什么、结果；没跑写"未跑"

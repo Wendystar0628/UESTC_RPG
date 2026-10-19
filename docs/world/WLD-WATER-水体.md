@@ -59,7 +59,7 @@ gates: [G4, G7, G10]
 
 ### 1.3 硬质驳岸的接水
 
-适用于所有常年接水的石砌或混凝土驳岸（D-205）：岸墙用 `ground.concrete`，常水位以上画一条淡湿带 `ground.bankWet`，沿岸均匀连续，草坡岸和天气湿痕不用它；岸顶压顶用 `ground.curb`；湿带、压顶、踏步的尺寸以 `game/gen/zones/design-waterfront/WaterfrontTune.cs` 的 `Bank*` 常量为准。沿岸约每 150 m 一处宽 3 m 的亲水台阶，优先正对楼门或广场轴线，不足 150 m 的一段放一处在段中点；已有涉水口的地方岸墙断开，不另加台阶；出口两侧 1 m 不长草丛。
+适用于所有常年接水的石砌或混凝土驳岸（D-205）：岸墙用 `ground.concrete`，常水位以上画一条淡湿带 `ground.bankWet`，沿岸均匀连续，草坡岸和天气湿痕不用它；岸顶压顶用 `ground.curb`；湿带、压顶、踏步的尺寸以 `game/gen/maps/qingshuihe/waterfront/WaterfrontTune.cs` 的 `Bank*` 常量为准。沿岸约每 150 m 一处宽 3 m 的亲水台阶，优先正对楼门或广场轴线，不足 150 m 的一段放一处在段中点；已有涉水口的地方岸墙断开，不另加台阶；出口两侧 1 m 不长草丛。
 
 ## 2 反光带、灯条与倒影
 

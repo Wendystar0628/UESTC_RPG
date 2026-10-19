@@ -142,7 +142,7 @@ gates: [G1, G5]
 
 文件与编号的具体格式见 §3.8；以下是代码与数据里的名字。
 
-- **命名空间**：PascalCase，按 ENG-ARCH §1 的分层与职责取，不跟目录的字面大小写（`game/gen/zones/south/` 对应 `Campus.Gen.Zones.South`）。程序集与目录的对应见 ENG-ARCH §2。
+- **命名空间**：PascalCase，按 ENG-ARCH §1 的分层与职责取，不跟目录的字面大小写（`game/gen/maps/qingshuihe/south/` 对应 `Campus.Gen.Maps.Qingshuihe.South`，`game/gen/sites/` 对应 `Campus.Gen.Sites`）。程序集与目录的对应见 ENG-ARCH §2。
 - **特性的 ID**：小写、点分（`[ContentModule("zone.south")]`）；区域私有的部件 ID 加区名前缀（ENG-ARCH §2、§5）。
 - **存档段 ID**：小写字母、数字、连字符；按图的段在文件里展开为 `map:<id>/<段>`（SYS-SAVE §2）。
 - **全局着色器参数**：小写下划线、不带前缀（`weather_a`）；C# 侧只用 `ShaderGlobals` 的常量，总线名只用 `AudioBuses` 的常量，不写字符串字面量（ENG-PERF §1.5）。着色器文件名以系统名作前缀，白名单见 ENG-PERF §1.4。
