@@ -7,6 +7,10 @@ namespace Campus.Gen.World;
 
 internal static partial class TerrainCompiler
 {
+    internal const double AutomaticPadApron = 0.8;
+    internal const double AutomaticPadGrade = 6;
+    internal const double AutomaticRoadCrossFall = 0.015;
+
     private static void AddDefaultWater(Builder b)
     {
         foreach (var feature in b.Context.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
@@ -58,7 +62,7 @@ internal static partial class TerrainCompiler
         {
             if (b.WrittenPads.Contains(feature.Id)) continue;
             if (b.References.StructuralPadArea(feature) is not { } region) continue;
-            AddPad(b, region, feature.Id, Median(prePad, region), 0.8, 6, null, null);
+            AddPad(b, region, feature.Id, Median(prePad, region), AutomaticPadApron, AutomaticPadGrade, null, null);
         }
     }
 
@@ -158,7 +162,7 @@ internal static partial class TerrainCompiler
         public TerrainCorridorOp? Operation { get; } = operation;
         public string File { get; } = file;
         public CorridorPlan? Plan { get; init; }
-        public double MaximumCrossFall => Plan is { } plan ? Math.Max(plan.HasGaps ? 0.015 : 0, plan.Operations.Max(op => Math.Abs(op.CrossFall))) : Math.Abs(Operation?.CrossFall ?? 0.015);
+        public double MaximumCrossFall => Plan is { } plan ? Math.Max(plan.HasGaps ? AutomaticRoadCrossFall : 0, plan.Operations.Max(op => Math.Abs(op.CrossFall))) : Math.Abs(Operation?.CrossFall ?? AutomaticRoadCrossFall);
         private bool _frozen;
         public void ReplaceProfile(TerrainRoadProfile replacement)
         {
@@ -243,8 +247,8 @@ internal static partial class TerrainCompiler
         var shoulder = op?.Shoulder ?? b.Context.Defaults?.CorridorShoulder
             ?? throw new WorldDataException("map.json", "terrainDefaults", "Automatic road constraints require explicit map defaults.");
         var width = road.Width / 2 + (sharedEntry?.Plan is { } planWidth ? Math.Max(shoulder, planWidth.Operations.Max(operation => operation.Shoulder)) : shoulder);
-        var crossMagnitude = sharedEntry?.MaximumCrossFall ?? Math.Abs(op?.CrossFall ?? 0.015);
-        var reach = width + (b.RangeBound + TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight + crossMagnitude * width) / (1d / 3 - crossMagnitude) + 4;
+        var crossMagnitude = sharedEntry?.MaximumCrossFall ?? Math.Abs(op?.CrossFall ?? AutomaticRoadCrossFall);
+        var reach = CorridorReach(b.RangeBound, width, crossMagnitude);
         var support = TerrainRegion.Expand(road.Path.Bounds, reach);
         var patches = PathPatches(road.Path, reach);
         var entry = sharedEntry ?? new RoadEntry(road, profile, op, file);
@@ -266,7 +270,7 @@ internal static partial class TerrainCompiler
             var hit = road.Path.Project(contact.X, contact.Z);
             if (entry.Profile.Excluded(hit.Station)) return previous;
             var longitudinal = entry.Profile.SurfaceAt(road.Path, x, z, road.Width, pointHit);
-            var cross = parameters?.Cross ?? TerrainDifferential.Constant(op?.CrossFall ?? 0.015);
+            var cross = parameters?.Cross ?? TerrainDifferential.Constant(op?.CrossFall ?? AutomaticRoadCrossFall);
             if (op is null)
             {
                 cross = TerrainDifferential.Product(previous.BoundaryWeight ?? ZeroBandWeight(b, x, z), cross);
@@ -295,7 +299,7 @@ internal static partial class TerrainCompiler
                 var oldShoulder = b.LandBeforeCorridors.Evaluate(sx, sz).Surface.Height;
                 var shoulderHit = road.Path.Project(sx, sz);
                 var shoulderOffset = motor ? -Math.Abs(shoulderHit.Offset) : shoulderHit.Offset;
-                var edgeTarget = entry.Profile.At(hit.Station).Y + (op?.CrossFall ?? ZeroBandWeight(b, sx, sz).Height * 0.015) * shoulderOffset;
+                var edgeTarget = entry.Profile.At(hit.Station).Y + (op?.CrossFall ?? ZeroBandWeight(b, sx, sz).Height * AutomaticRoadCrossFall) * shoulderOffset;
                 return $"roadProjection=({center.X:R},{center.Y:R}), s={hit.Station:R}/{road.Path.Length:R}, distance={hit.Distance:R}, signedOffset={hit.Offset:R}, halfWidth+shoulder={width:R}, coreDistance={contact.Distance.Height:R}, shoulderPoint=({sx:R},{sz:R}), originalShoulderH={oldShoulder:R}, targetShoulderH={edgeTarget:R}, supportReach={reach:R}, sourceFootprintContains={road.Footprint?.Contains(x,z)}";
             }
         });

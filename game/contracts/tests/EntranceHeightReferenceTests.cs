@@ -186,6 +186,7 @@ public sealed class EntranceHeightReferenceTests
 
     private sealed class ProbeTerrain(float padY, Exception? failure = null) : ITerrain
     {
+        public TerrainInputSummary SourceInputs => throw new NotSupportedException();
         public int Calls { get; private set; }
         public FeatureId LastFeature { get; private set; }
         public float PadY(FeatureId feature) { Calls++; LastFeature = feature; if (failure is not null) throw failure; return padY; }

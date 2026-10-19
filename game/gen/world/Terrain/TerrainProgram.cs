@@ -132,6 +132,7 @@ internal sealed class TerrainProgram
 
 internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource, ITerrainWaterSource
 {
+    public TerrainInputSummary SourceInputs => _field.SourceInputs;
     private readonly TerrainHeightField _field;
     private readonly TerrainWaterRegion[] _water;
     public IReadOnlyList<string> Diagnostics { get; }
@@ -140,14 +141,14 @@ internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource, ITerrainWa
     public IReadOnlyList<TerrainBankSpan> Banks { get; }
     public IReadOnlyList<TerrainWaterBody> Waters { get; }
 
-    public CompiledTerrain(MapRect dataRect, TerrainProgram program, IReadOnlyDictionary<FeatureId, float> pads,
+    public CompiledTerrain(TerrainInputSummary sourceInputs, MapRect dataRect, TerrainProgram program, IReadOnlyDictionary<FeatureId, float> pads,
         IEnumerable<TerrainWaterRegion> water, IReadOnlyList<string> diagnostics, bool zonesValidated,
         IReadOnlyList<ResolvedTerrainBank>? banks = null)
     {
         _water = water.OrderBy(w => w.Feature.Value, StringComparer.Ordinal).ToArray();
         Waters = Array.AsReadOnly(_water.Where(value => !value.Underground).Select(value => new TerrainWaterBody(value.Feature,
             CopyPolygons(value.Region.Polygons), CopyPolygons(value.Wade.SelectMany(area => area.Polygons)))).ToArray());
-        _field = new(dataRect, (x, z) => program.Evaluate(x, z), program.Nodes.SelectMany(n => n.IndexPatches ?? [n.Support]).ToArray(), pads,
+        _field = new(sourceInputs, dataRect, (x, z) => program.Evaluate(x, z), program.Nodes.SelectMany(n => n.IndexPatches ?? [n.Support]).ToArray(), pads,
             _water.ToDictionary(w => w.Feature, w => (float)w.Level));
         Diagnostics = diagnostics.ToArray(); ZonesValidated = zonesValidated;
         var orderedBanks = (banks ?? []).OrderBy(bank => bank.Span.Id, StringComparer.Ordinal).ToArray();

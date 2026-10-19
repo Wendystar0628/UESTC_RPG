@@ -8,6 +8,8 @@ namespace Campus.Contracts;
 /// <summary>Read-only deterministic terrain of the current map. Implementations perform no IO while sampling.</summary>
 public interface ITerrain
 {
+    /// <summary>Frozen source-only dependency stamps, prepared without evaluating terrain.</summary>
+    TerrainInputSummary SourceInputs { get; }
     /// <summary>True only if H is zero across the entire 64 m L0 cell, including its shared boundary.</summary>
     /// <remarks>For a coarser cell, test every covered L0 cell before taking the zero-height fast path.</remarks>
     bool IsFlat(TileKey tile);
@@ -35,6 +37,26 @@ public interface ITerrain
     /// <summary>Logical constant water level. Unknown features and non-water features return null.</summary>
     float? WaterY(FeatureId water);
     TerrainFacts FactsAt(float x, float z);
+}
+
+/// <summary>Source inputs affecting one 64 m world cell, including upstream source dependencies.</summary>
+public readonly record struct TerrainInputCell(TileKey Cell, string Stamp);
+
+/// <summary>The common source stamp covers map-wide parameters; Cells contains spatial source dependencies.</summary>
+public sealed class TerrainInputSummary
+{
+    public string CommonStamp { get; }
+    public IReadOnlyList<TerrainInputCell> Cells { get; }
+    public TerrainInputSummary(string commonStamp, IReadOnlyList<TerrainInputCell> cells)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(commonStamp);
+        ArgumentNullException.ThrowIfNull(cells);
+        var ordered = cells.OrderBy(cell => cell.Cell.X).ThenBy(cell => cell.Cell.Z).ToArray();
+        if (ordered.Any(cell => string.IsNullOrWhiteSpace(cell.Stamp)) || ordered.Select(cell => cell.Cell).Distinct().Count() != ordered.Length)
+            throw new ArgumentException("Terrain source cells require unique keys and nonempty stamps.", nameof(cells));
+        CommonStamp = commonStamp;
+        Cells = Array.AsReadOnly(ordered);
+    }
 }
 
 public enum TerrainClass : byte { Flat, Slope, Transition }
@@ -92,6 +114,7 @@ public sealed class FlatTerrain : ITerrain
 {
     public static FlatTerrain Default { get; } = new();
     private readonly IReadOnlyDictionary<FeatureId, float> _waterLevels;
+    public TerrainInputSummary SourceInputs { get; }
 
     public FlatTerrain(IReadOnlyDictionary<FeatureId, float>? waterLevels = null)
     {
@@ -104,6 +127,7 @@ public sealed class FlatTerrain : ITerrain
             snapshot.Add(pair.Key, pair.Value);
         }
         _waterLevels = new ReadOnlyDictionary<FeatureId, float>(snapshot);
+        SourceInputs = new("flat/" + System.Text.Json.JsonSerializer.Serialize(snapshot.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal).ToArray(), ContractJson.Options), []);
     }
 
     public bool IsFlat(TileKey tile) => true;

@@ -29,8 +29,8 @@ public sealed class BakeInputTests
             if (Hash(before, module) == Hash(after, module))
                 throw new InvalidOperationException("Scene atlas UV changes did not invalidate a rendered consumer.");
             var key = new BakeKey(before.Map.Id, module, "C/0/0");
-            if (BakeInputFingerprint.Compute(before, key, "runtime-code", new(world)) !=
-                BakeInputFingerprint.Compute(after, key, "runtime-code", new(world)))
+            if (BakeInputFingerprint.Compute(before, key, "runtime-code", new(before)) !=
+                BakeInputFingerprint.Compute(after, key, "runtime-code", new(after)))
                 throw new InvalidOperationException("Scene atlas changes invalidated collision.");
         }
         if (Hash(before, "ground") != Hash(after, "ground"))
@@ -43,7 +43,7 @@ public sealed class BakeInputTests
 
     [TestCase]
     [TestCategory(TestReason.Regression)]
-    public void MapBuildSamplesAreSharedAcrossKeysWithoutChangingFingerprintsOrCrossingWorlds()
+    public void MapBuildSourceIndexIsSharedWithoutTerrainQueriesOrCrossingWorlds()
     {
         var field = new CountingFingerprintField(1);
         var context = Context(new FakeWorld { Boundary = new([]), Terrain = field, Fidelity = field });
@@ -57,26 +57,22 @@ public sealed class BakeInputTests
         };
         var referenceField = new CountingFingerprintField(1);
         var reference = Context(new FakeWorld { Boundary = new([]), Terrain = referenceField, Fidelity = referenceField });
-        var expected = keys.Select(key => BakeInputFingerprint.Compute(reference, key, "runtime-code", new(reference.World))).ToArray();
+        var expected = keys.Select(key => BakeInputFingerprint.Compute(reference, key, "runtime-code", new(reference))).ToArray();
         var actual = new string[keys.Length];
         Parallel.For(0, keys.Length, index => actual[index] =
-            BakeInputFingerprint.Compute(context, keys[index], "runtime-code", samples: map.FingerprintSamples));
-        if (!actual.SequenceEqual(expected) || field.PointReads.IsEmpty ||
-            field.PointReads.Keys.Any(key => key.Kind is "height" or "facts") ||
-            !field.PointReads.Keys.Any(key => key.Kind == "sample") || field.PointReads.Values.Any(count => count != 1) || field.TileReads.Values.Any(count => count != 1))
-            throw new InvalidOperationException("Concurrent keys changed their fingerprints or repeated a shared terrain/fidelity read.");
+            BakeInputFingerprint.Compute(context, keys[index], "runtime-code", sources: map.SourceIndex(context)));
+        if (!actual.SequenceEqual(expected) || !field.PointReads.IsEmpty || !field.TileReads.IsEmpty ||
+            !ReferenceEquals(map.SourceIndex(context), map.SourceIndex(context)))
+            throw new InvalidOperationException("Concurrent keys changed source stamps, queried terrain, or rebuilt the map index.");
 
         var changedField = new CountingFingerprintField(2);
         var changed = Context(new FakeWorld { Boundary = new([]), Terrain = changedField, Fidelity = changedField });
         var nextMap = Map(changed);
         using var nextLifetime = nextMap.Lifetime;
-        var next = BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", samples: nextMap.FingerprintSamples);
-        if (next == actual[0] || changedField.PointReads.IsEmpty || changedField.TileReads.IsEmpty ||
-            !changedField.PointReads.Keys.Any(key => key.Kind == "sample") ||
-            changedField.PointReads.Keys.Any(key => key.Kind is "height" or "facts") ||
-            changedField.PointReads.Values.Any(count => count != 1) || changedField.TileReads.Values.Any(count => count != 1) ||
-            next != BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", new(changed.World)))
-            throw new InvalidOperationException("The next MapBuild reused the preceding world's samples.");
+        var next = BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", sources: nextMap.SourceIndex(changed));
+        if (next == actual[0] || !changedField.PointReads.IsEmpty || !changedField.TileReads.IsEmpty ||
+            next != BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", new(changed)))
+            throw new InvalidOperationException("The next MapBuild reused the preceding world's source index or queried terrain.");
 
         static BakeService.MapBuild Map(BuildContext context) => new(
             new TestMapContext(context.Map, context.World), new Dictionary<string, ContentModuleInput>(),
@@ -86,7 +82,7 @@ public sealed class BakeInputTests
 
     [TestCase]
     [TestCategory(TestReason.Regression)]
-    public void MissingPadsDoNotBlockFingerprintsAndPadPresenceAndHeightChangeThem()
+    public void PadSourcePresenceAndValuesInvalidateWithoutReadingResolvedPads()
     {
         var prop = Feature("fixture:prop", 10, "牌", "说明", "入口");
         var green = prop with { Id = new("fixture:green"), Kind = new("green") };
@@ -107,6 +103,7 @@ public sealed class BakeInputTests
         }
 
         static TerrainHeightField Terrain(IReadOnlyDictionary<FeatureId, float> pads) => new(
+            new(JsonSerializer.Serialize(pads.OrderBy(pair => pair.Key.Value).ToArray(), ContractJson.Options), []),
             new(Vector2.Zero, new(64, 64)), (_, _) => new(TerrainDifferential.Constant(0), TerrainClass.Flat), [], pads);
     }
 
@@ -206,7 +203,7 @@ public sealed class BakeInputTests
     }
 
     private static string Hash(BuildContext context, string module) => BakeInputFingerprint.Compute(context,
-        BakeRequestKeys.Tile(context.Map.Id, module, new(0, 0), LodLevel.L0), "runtime-code", new(context.World));
+        BakeRequestKeys.Tile(context.Map.Id, module, new(0, 0), LodLevel.L0), "runtime-code", new(context));
     private static WorldFeature Feature(string id, float x, string name, string note, string text) =>
         WorldFeatureFixture.Create(id, "prop", new PointGeometry(new(x, 0, 10))) with
         {
@@ -231,6 +228,7 @@ public sealed class BakeInputTests
 
     private sealed class CountingFingerprintField(float height) : ITerrain, IFidelityModel
     {
+        public TerrainInputSummary SourceInputs { get; } = new("fixture-height/" + height.ToString(System.Globalization.CultureInfo.InvariantCulture), []);
         public ConcurrentDictionary<(string Kind, int X, int Z), int> PointReads { get; } = new();
         public ConcurrentDictionary<(TileKey Tile, int Level), int> TileReads { get; } = new();
         private void Read(string kind, float x, float z) => PointReads.AddOrUpdate(
@@ -248,9 +246,9 @@ public sealed class BakeInputTests
             TileReads.AddOrUpdate((tile, level), 1, (_, count) => count + 1);
             cm.Fill(checked((short)(height / TerrainSampling.Centimetre)));
         }
-        public float PadY(FeatureId feature) => throw new KeyNotFoundException();
-        public bool TryGetPadY(FeatureId feature, out float y) { y = 0; return false; }
-        public float? WaterY(FeatureId water) => null;
+        public float PadY(FeatureId feature) { Read("pad", 0, 0); throw new KeyNotFoundException(); }
+        public bool TryGetPadY(FeatureId feature, out float y) { Read("pad", 0, 0); y = 0; return false; }
+        public float? WaterY(FeatureId water) { Read("water", 0, 0); return null; }
         public IReadOnlyList<FacadeSegment> Facades(FeatureId building) => [];
         public RoofZone Roof(FeatureId building) => new(building, FidelityZone.K3);
         public FidelityZone GroundAt(float x, float z) { Read("ground", x, z); return FidelityZone.K3; }

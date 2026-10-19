@@ -174,6 +174,7 @@ public sealed class InteriorEntranceHeightReferenceTests
 
     private sealed class ProbeTerrain : ITerrain
     {
+        public TerrainInputSummary SourceInputs => throw new NotSupportedException();
         public int Calls { get; private set; }
         public float PadY(FeatureId feature)
         {

@@ -18,18 +18,20 @@ public readonly record struct TerrainEvaluation(TerrainDifferential Surface, Ter
 /// </summary>
 public sealed class TerrainHeightField : ITerrain
 {
+    public TerrainInputSummary SourceInputs { get; }
     private readonly MapRect _dataRect;
     private readonly Func<double, double, TerrainEvaluation> _sample;
     private readonly MapRect[] _supports;
     private readonly IReadOnlyDictionary<FeatureId, float> _pads;
     private readonly IReadOnlyDictionary<FeatureId, float> _waters;
 
-    public TerrainHeightField(MapRect dataRect, Func<double, double, TerrainEvaluation> sample,
+    public TerrainHeightField(TerrainInputSummary sourceInputs, MapRect dataRect, Func<double, double, TerrainEvaluation> sample,
         IReadOnlyList<MapRect> nonZeroSupports, IReadOnlyDictionary<FeatureId, float>? pads = null,
         IReadOnlyDictionary<FeatureId, float>? waters = null)
     {
         _ = TerrainSampling.Grid(default, 4, dataRect);
         ArgumentNullException.ThrowIfNull(sample); ArgumentNullException.ThrowIfNull(nonZeroSupports);
+        SourceInputs = sourceInputs ?? throw new ArgumentNullException(nameof(sourceInputs));
         _dataRect = dataRect; _sample = sample;
         _supports = nonZeroSupports.OrderBy(rect => rect.Min.X).ThenBy(rect => rect.Min.Y)
             .ThenBy(rect => rect.Max.X).ThenBy(rect => rect.Max.Y).ToArray();

@@ -12,6 +12,7 @@ internal static partial class TerrainCompiler
     private sealed class Builder(TerrainCompileContext context)
     {
         public TerrainCompileContext Context { get; } = context;
+        public TerrainInputSummary SourceInputs { get; set; } = null!;
         public TerrainReferences References { get; } = new(context);
         public TerrainRegion Campus { get; } = new([context.Boundary]);
         public List<TerrainNode> Nodes { get; } = [];
@@ -61,17 +62,11 @@ internal static partial class TerrainCompiler
                     throw new WorldDataException(source.File, op.Id, $"Terrain zone '{op.Zone.Value}' does not exist in the supplied authoritative zone map.");
                 if (!builder.Operations.TryAdd(op.Id, op)) throw new WorldDataException(source.File, op.Id, $"Duplicate terrain ID, already in {builder.Files[op.Id]}.");
                 builder.Files.Add(op.Id, source.File);
-                builder.RangeBound += op switch
-                {
-                    TerrainMoundOp m => m.Height,
-                    TerrainBasinOp b => b.Height,
-                    TerrainChannelOp c => c.Depth,
-                    _ => 0
-                };
             }
         }
-        builder.RangeBound += TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight;
+        builder.RangeBound = SourceRangeBound(builder.Operations.Values);
         if (!double.IsFinite(builder.RangeBound)) throw new WorldDataException("world", "range", "Terrain operation amplitudes overflow.");
+        builder.SourceInputs = TerrainSourceInputs.Prepare(context, sources);
         var ordered = builder.Operations.Values.OrderBy(Group).ThenBy(op => op.Priority).ThenBy(op => op.Id, StringComparer.Ordinal).ToArray();
         foreach (var op in ordered)
         {
@@ -130,8 +125,15 @@ internal static partial class TerrainCompiler
     {
         if (!zonesValidated) builder.Diagnostics.Add("NOT_VERIFIED: terrain is evaluated, but operation zone membership and cross-zone influence extents have not been accepted by offline validation with authoritative zone polygons.");
         builder.Diagnostics.Add($"Terrain compiled: authored={builder.Operations.Count}, nodes={program.Nodes.Count}, pads={builder.Pads.Count}, waterSegments={builder.Water.Count}.");
-        return new(builder.Context.DataRect, program, builder.Pads, builder.Water, builder.Diagnostics, zonesValidated, ExportBanks(builder));
+        return new(builder.SourceInputs, builder.Context.DataRect, program, builder.Pads, builder.Water, builder.Diagnostics, zonesValidated, ExportBanks(builder));
     }
+
+    internal static double SourceRangeBound(IEnumerable<TerrainOp> operations) =>
+        TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight + operations.Sum(op => op switch
+        { TerrainMoundOp mound => mound.Height, TerrainBasinOp basin => basin.Height, TerrainChannelOp channel => channel.Depth, _ => 0d });
+
+    internal static double CorridorReach(double rangeBound, double width, double crossMagnitude) =>
+        width + (rangeBound + TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight + crossMagnitude * width) / (1d / 3 - crossMagnitude) + 4;
 
     private static TerrainGroup Group(TerrainOp op) => op switch
     {
@@ -146,10 +148,15 @@ internal static partial class TerrainCompiler
 
     private static MapRect ConstraintBounds(Builder b, MapRect core, double fill, double cut, double fillet, double crossFall = 0)
     {
+        return ConstraintBounds(b.RangeBound, core, fill, cut, fillet, crossFall);
+    }
+
+    internal static MapRect ConstraintBounds(double rangeBound, MapRect core, double fill, double cut, double fillet, double crossFall = 0)
+    {
         var effectiveGrade = Math.Min(fill, cut) - Math.Abs(crossFall);
         if (effectiveGrade <= 0) throw new ArgumentException("Constraint cross-fall must be smaller than both exterior grades for finite support.");
         var diameter = Math.Abs(core.Max.X - core.Min.X) + Math.Abs(core.Max.Y - core.Min.Y);
-        return TerrainRegion.Expand(core, (b.RangeBound + TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight + Math.Abs(crossFall) * diameter) / effectiveGrade + 2 * fillet);
+        return TerrainRegion.Expand(core, (rangeBound + TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight + Math.Abs(crossFall) * diameter) / effectiveGrade + 2 * fillet);
     }
 
     private static TerrainEvaluation WithSurface(TerrainEvaluation previous, TerrainDifferential result, double crest, double toe, bool coveredTransition = false)

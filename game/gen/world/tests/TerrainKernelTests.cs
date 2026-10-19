@@ -14,7 +14,7 @@ public sealed class TerrainKernelTests
     public void CombinedSampleSharesOneEvaluationAndMatchesSeparateQueries()
     {
         var calls = 0;
-        var terrain = new TerrainHeightField(new(new(-64), new(64)), (_, _) =>
+        var terrain = new TerrainHeightField(new("fixture", []), new(new(-64), new(64)), (_, _) =>
         {
             calls++;
             return new(new(2, 0.3, 0.4), TerrainClass.Transition, 7, 9);
@@ -79,7 +79,7 @@ public sealed class TerrainKernelTests
     public void WholeMapSamplingUsesItsRectAndIgnoresTile()
     {
         var rect = new MapRect(new(-80, -40), new(160, 80));
-        var terrain = new TerrainHeightField(rect, (x, z) => new(TerrainMath.EllipticalMound(x, z, new(40, 20), new(120, 60), 0, 3), TerrainClass.Slope), [rect]);
+        var terrain = new TerrainHeightField(new("fixture", []), rect, (x, z) => new(TerrainMath.EllipticalMound(x, z, new(40, 20), new(120, 60), 0, 3), TerrainClass.Slope), [rect]);
         var a = new short[TerrainSampling.SampleCount(4)]; var b = new short[a.Length];
         terrain.FillTile(new(-100, 20), 4, a); terrain.FillTile(default, 4, b);
         AssertThat(a.SequenceEqual(b) && a[40 * 81 + 40] == 300 && a[0] == 0 && a[^1] == 0).OverrideFailureMessage("L4 used a fixed map extent or tile origin.").IsTrue();
@@ -90,7 +90,7 @@ public sealed class TerrainKernelTests
     {
         var pads = new Dictionary<FeatureId, float> { [new("fixture:pad")] = 1.5f };
         var waters = new Dictionary<FeatureId, float> { [new("fixture:water")] = -0.5f };
-        var terrain = new TerrainHeightField(new(new(-64), new(64)), (_, _) => new(TerrainDifferential.Constant(0), TerrainClass.Flat), [], pads, waters);
+        var terrain = new TerrainHeightField(new("fixture", []), new(new(-64), new(64)), (_, _) => new(TerrainDifferential.Constant(0), TerrainClass.Flat), [], pads, waters);
         pads[new("fixture:pad")] = 7; waters.Clear();
         AssertThat(Math.Abs((double)(1.5) - (double)(terrain.PadY(new("fixture:pad")))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.WaterY(new("fixture:water"))!.Value)) <= TestTolerance.Position).IsTrue();
         AssertThat(terrain.WaterY(new("fixture:missing")) is null).OverrideFailureMessage("Unknown entity became a water body.").IsTrue();
@@ -122,6 +122,6 @@ public sealed class TerrainKernelTests
     private static TerrainHeightField Mound()
     {
         var support = new MapRect(new(-40, -60), new(40, 60));
-        return new(new(new(-128), new(128)), (x, z) => new(TerrainMath.EllipticalMound(x, z, Vector2.Zero, new(40, 60), 0, 3), TerrainClass.Slope), [support]);
+        return new(new("fixture-mound", []), new(new(-128), new(128)), (x, z) => new(TerrainMath.EllipticalMound(x, z, Vector2.Zero, new(40, 60), 0, 3), TerrainClass.Slope), [support]);
     }
 }

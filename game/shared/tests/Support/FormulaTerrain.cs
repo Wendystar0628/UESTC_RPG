@@ -17,6 +17,7 @@ internal sealed class FormulaTerrain(
     TileFill? fill = null,
     Func<FeatureId, float>? padY = null) : ITerrain
 {
+    public TerrainInputSummary SourceInputs => throw new NotSupportedException("Formula terrain has no authored source snapshot.");
     private static readonly TerrainFacts LevelFacts = new(0f, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity);
 
     public bool IsFlat(TileKey tile) => isFlat?.Invoke(tile) ?? false;
