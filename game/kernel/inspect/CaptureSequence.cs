@@ -46,10 +46,24 @@ public static class CaptureSequence
             syncCamera();
             var appliedPose = rig.Pose;
             producers.PrepareCapture(appliedPose);
-            stream.Prefetch(appliedPose, rig.Mode);
-            LogPhase("pose-applied");
-            await CaptureBarrier.WaitForReadyAsync(host, appliedPose, contentReady, cancellationToken);
-            LogPhase("coarse-ready");
+            var medium = context.World.Spatial.MediumAt(appliedPose.Position);
+            if (medium is { Kind: MediumKind.Interior, Feature: { } building })
+            {
+                // Indoor captures need the existing arrival's current-floor IF, adjacent IS and near tiles.
+                var arrival = Services.Get<IMapRuntime>().Arrive(appliedPose, rig.Mode,
+                    new(building, checked((short)medium.Storey)));
+                LogPhase("pose-applied");
+                await producers.WaitForReadyAsync(host, arrival, contentReady, cancellationToken);
+                if (rig.Pose != appliedPose) throw new OperationCanceledException("Capture pose was replaced.");
+                LogPhase("destination-ready");
+            }
+            else
+            {
+                stream.Prefetch(appliedPose, rig.Mode);
+                LogPhase("pose-applied");
+                await CaptureBarrier.WaitForReadyAsync(host, appliedPose, contentReady, cancellationToken);
+                LogPhase("coarse-ready");
+            }
             cancellationToken.ThrowIfCancellationRequested();
             using var image = host.GetViewport().GetTexture().GetImage();
             if (image.IsEmpty()) throw new IOException("Screenshot viewport returned an empty image.");
