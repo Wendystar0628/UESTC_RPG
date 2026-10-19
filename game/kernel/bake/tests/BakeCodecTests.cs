@@ -19,17 +19,22 @@ public sealed class BakeCodecTests
         var key = BakeRequestKeys.Collision(new("fixture"), "collision.world", new(-1, 2));
         var box = new Box3(new(-64, -2, 128), new(0, 20, 192));
         var original = new CollisionTile(key, new(-1, 2), box,
-            [new WallCollider(new(1, 2), new(3, 4), .1f, 0, 3, SurfaceTag.Wall) { Foot = FootMat.Metal }]);
+            [new WallCollider(new(1, 2), new(3, 4), .1f, 0, 3, SurfaceTag.Wall) { Foot = FootMat.Metal },
+                new HeightFieldCollider(default, Enumerable.Range(0, 65 * 65).Select(i => (short)(i - 2000)).ToArray(), SurfaceTag.Ground)
+                { FootMatHalfMeter = new byte[128 * 128], Patches = [new(new(1, 2), new(3, 4), .5f, FootMat.Metal, 321)] }]);
         var bytes = TileBundleCodec.Encode("fixture/identity", original);
         var decoded = (CollisionTile)TileBundleCodec.Decode("fixture/identity", key, bytes);
-        var wall = (WallCollider)decoded.Colliders.Single();
+        var wall = (WallCollider)decoded.Colliders[0];
+        var expectedField = (HeightFieldCollider)original.Colliders[1]; var field = (HeightFieldCollider)decoded.Colliders[1];
+        if (!field.HeightsCm.SequenceEqual(expectedField.HeightsCm) || !field.FootMatHalfMeter!.SequenceEqual(expectedField.FootMatHalfMeter!) ||
+            !field.Patches!.SequenceEqual(expectedField.Patches!)) throw new InvalidOperationException("Heightfield channels lost their exact values.");
         if (wall.A != new Vector2(1, 2) || wall.B != new Vector2(3, 4) || decoded.Bounds != box || wall.Foot != FootMat.Metal)
             throw new InvalidOperationException("Collision codec changed local parameters or bounds.");
         if (!bytes.SequenceEqual(TileBundleCodec.Encode("fixture/identity", decoded)))
             throw new InvalidOperationException("Canonical codec bytes changed after a round trip.");
         var floors = Enumerable.Range(0, 2048).Select(index => (Collider)new SlabCollider(
-            Enumerable.Range(0, 32).Select(vertex => new Vector2(index % 64 + .5f, index / 64 + .5f)
-                + .4f * new Vector2(MathF.Cos(vertex * float.Tau / 32), MathF.Sin(vertex * float.Tau / 32))).ToArray(),
+            Enumerable.Range(0, 64).Select(vertex => new Vector2(index % 64 + .5f, index / 64 + .5f)
+                + .4f * new Vector2(MathF.Cos(vertex * float.Tau / 64), MathF.Sin(vertex * float.Tau / 64))).ToArray(),
             .1f, .2f, SurfaceTag.Ground) { Foot = FootMat.StonePaving }).ToArray();
         var dense = new CollisionTile(key, original.Tile, box, floors);
         var denseBytes = TileBundleCodec.Encode("fixture/dense", dense);

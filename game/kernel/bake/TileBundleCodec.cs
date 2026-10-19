@@ -60,7 +60,7 @@ public static partial class TileBundleCodec
                 if (collision.Colliders.Count > MaximumCollisionShapes)
                     throw new InvalidDataException($"Too many collision shapes in tile {collision.Tile}: {collision.Colliders.Count} > {MaximumCollisionShapes}.");
                 writer.Write((byte)2); Key(writer, collision.Key); Json(writer, collision.Tile); Json(writer, collision.Bounds);
-                Json(writer, collision.Colliders, BakeCacheStore.MaximumPayloadBytes); Text(writer, collision.StatisticsJson);
+                Records(writer, collision.Colliders, (w, collider) => CollisionShape(w, collider, collision.Key)); Text(writer, collision.StatisticsJson);
                 break;
             case Campus.Contracts.Vegetation.VegetationTileContent vegetation:
                 writer.Write((byte)3); Key(writer, vegetation.Key); Vegetation(writer, vegetation);
@@ -113,9 +113,7 @@ public static partial class TileBundleCodec
                     break;
                 case 2:
                     var collisionTile = Json<TileKey>(reader); var collisionBounds = Json<Box3>(reader);
-                    var colliders = Json<Collider[]>(reader, BakeCacheStore.MaximumPayloadBytes);
-                    if (colliders.Length > MaximumCollisionShapes) throw new InvalidDataException("Too many collision shapes in one tile.");
-                    foreach (var collider in colliders) ValidateCollider(collider);
+                    var colliders = Records(reader, key, r => CollisionShape(r, key), MaximumCollisionShapes);
                     result = new CollisionTile(key, collisionTile, collisionBounds, colliders, Statistics(reader));
                     break;
                 case 3: result = Vegetation(reader, key); break;

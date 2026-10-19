@@ -178,7 +178,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             map.PrepareDirectory(generated);
             PrepareResidentTerrain(map);
             var terrainPoints = _terrain.SaveResidentPoints(context.World, data.ResidentStamp);
-            _terrain.WriteJson(new(context.Descriptor.Id, "resident", "meta"), data.ResidentStamp,
+            _terrain.WriteProduct(new(context.Descriptor.Id, "resident", "meta"), data.ResidentStamp,
                 new BakeResidentData(generated, data.Windows.Metadata, map.InteriorCoverage.ToArray(), map.InteriorLayouts.Values.ToArray(),
                     map.PreparedTiles, terrainPoints));
             return generated;
@@ -277,7 +277,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             BuildingOverlapValidator.Validate(context.World, claimLookup);
             return ResidentStamp(context, seed, catalog, interiors, modules, globalInputs, claimLookup, producers);
         });
-        var resident = _terrain.ReadJson<BakeResidentData>(new(context.Descriptor.Id, "resident", "meta"), residentStamp, candidate =>
+        var resident = _terrain.ReadProduct<BakeResidentData>(new(context.Descriptor.Id, "resident", "meta"), residentStamp, candidate =>
         {
             BakeMapMetadataBuilder.ValidateResident(candidate, context.Descriptor.Id, modules, producers);
             if (!_terrain.RestoreResidentPoints(context.World, residentStamp, candidate.TerrainPoints))

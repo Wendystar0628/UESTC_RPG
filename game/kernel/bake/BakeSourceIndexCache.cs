@@ -18,7 +18,7 @@ internal sealed class BakeSourceIndexCache(TerrainCacheService terrain, MapId ma
 
     internal string ResolveResidentStamp(Func<string> compute)
     {
-        var candidates = terrain.ReadJsonCandidates<BakeSourceIndexData>(_key, _identity, saved =>
+        var candidates = terrain.ReadProductCandidates<BakeSourceIndexData>(_key, _identity, saved =>
         {
             if (!Complete(saved)) throw new InvalidDataException("Incomplete cached source index.");
         }).ToArray();
@@ -57,7 +57,7 @@ internal sealed class BakeSourceIndexCache(TerrainCacheService terrain, MapId ma
             if (index.VegetationCount == _vegetationCount && index.FurnitureCount == _furnitureCount &&
                 index.ProductCount == _productCount && _writtenVersion == sourceVersion) return;
             var saved = index.Snapshot(sourceVersion, _residentStamp);
-            terrain.WriteJson(_key, _identity, saved);
+            terrain.WriteProduct(_key, _identity, saved);
             _vegetationCount = saved.Vegetation.Length;
             _furnitureCount = saved.Furniture.Length;
             _productCount = saved.Products.Length;

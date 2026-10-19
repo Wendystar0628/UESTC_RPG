@@ -240,14 +240,15 @@ public sealed class BakeInputTests
         var product = BakeRequestKeys.Tile(context.Map.Id, "ground", default, LodLevel.L0);
         source.RememberProduct(product, new string('b', 32));
         source.RememberProduct(product with { Detail = "L4/0/0" }, new string('c', 32));
-        var saved = source.Snapshot("current", stamp);
+        var saved = source.Snapshot("current", stamp) with
+        { Cells = Enumerable.Range(0, 16384).Select(i => new BakeSourceCell(new(i, -i), stamp)).ToArray() };
         try
         {
             using var packaged = new TerrainCacheService(options);
-            packaged.WriteJson(key, identity, saved);
+            packaged.WriteProduct(key, identity, saved);
             using var local = new TerrainCacheService(options with { CacheRoot = Path.Combine(directory, "local"), PackagedCacheRoot = options.CacheRoot });
             var own = saved.Products[0] with { Stamp = new string('d', 32) };
-            local.WriteJson(key, identity, saved with { SourceVersion = "older", Products = [own] });
+            local.WriteProduct(key, identity, saved with { SourceVersion = "older", Products = [own] });
             var cache = new BakeSourceIndexCache(local, context.Map.Id, "current");
             if (cache.ResolveResidentStamp(() => throw new InvalidOperationException("Warm source inputs were expanded.")) != stamp)
                 throw new InvalidOperationException("The matching packaged source version was ignored.");
@@ -256,8 +257,8 @@ public sealed class BakeInputTests
                 saved.Products.Any(item => !restored.TryProduct(item.Key, out _)))
                 throw new InvalidOperationException("A partial local index hid packaged keys or lost local precedence.");
             restored.Persist();
-            var persisted = local.ReadJson<BakeSourceIndexData>(key, identity)!;
-            if (persisted.SourceVersion != saved.SourceVersion || persisted.Products.Length != saved.Products.Length)
+            var persisted = local.ReadProduct<BakeSourceIndexData>(key, identity)!;
+            if (persisted.SourceVersion != saved.SourceVersion || persisted.Products.Length != saved.Products.Length || !persisted.Cells.SequenceEqual(saved.Cells))
                 throw new InvalidOperationException("Merged product stamps were not persisted for the next startup.");
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }

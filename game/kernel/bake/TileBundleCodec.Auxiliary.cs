@@ -61,7 +61,7 @@ public static partial class TileBundleCodec
     {
         var key = content.Key;
         RequireTile(content.Key, content.Tile, BakeModuleIds.FaunaRuntime);
-        Json(writer, content.Tile); Json(writer, content.Content.Log, BakeCacheStore.MaximumPayload(key));
+        Json(writer, content.Tile); Records(writer, content.Content.Log, Text);
         writer.Write(content.Content.Sites.Count);
         foreach (var site in content.Content.Sites)
         {
@@ -74,7 +74,7 @@ public static partial class TileBundleCodec
     private static FaunaTileContent Fauna(BinaryReader reader, BakeKey key)
     {
         var tile = Json<TileKey>(reader); RequireTile(key, tile, BakeModuleIds.FaunaRuntime);
-        var log = Json<string[]>(reader, BakeCacheStore.MaximumPayload(key));
+        var log = Records(reader, key, r => Text(r, BakeCacheStore.MaximumPayload(key)));
         var sites = new FaunaSiteContent[Count(reader)];
         for (var i = 0; i < sites.Length; i++)
         {
@@ -93,38 +93,6 @@ public static partial class TileBundleCodec
         if (string.IsNullOrWhiteSpace(site.Key) || !Enum.IsDefined(site.Kind) || site.Sets is null || site.Sets.Count != 3 || site.Sets.Any(set => set is null))
             throw new InvalidDataException("Fauna requires explicit Day/Night/Rain sets.");
         Bounds(site.Bounds);
-    }
-
-    private static void Output(BinaryWriter writer, ContentOutput output, BakeKey key)
-    {
-        ValidateOutput(output);
-        Json(writer, output with { Meshes = [], Instances = [] }, BakeCacheStore.MaximumPayload(key));
-        writer.Write(output.Meshes.Count);
-        foreach (var mesh in output.Meshes) Geometry(writer, GeometryBuffer.Freeze(mesh), key);
-        writer.Write(output.Instances.Count);
-        foreach (var instance in output.Instances)
-        {
-            Text(writer, instance.Id); Prototype(writer, instance.Prototype, key);
-            Channel(writer, instance.Data.Span, key); Box(writer, instance.Bounds);
-        }
-    }
-
-    private static ContentOutput Output(BinaryReader reader, BakeKey key)
-    {
-        var output = Json<ContentOutput>(reader, BakeCacheStore.MaximumPayload(key));
-        ValidateOutput(output);
-        if (output.Meshes.Count != 0 || output.Instances.Count != 0)
-            throw new InvalidDataException("Fauna geometry must use the fixed binary encoding.");
-        var meshes = new GeometryBundle[Count(reader)];
-        for (var i = 0; i < meshes.Length; i++) meshes[i] = Geometry(reader, key);
-        var instances = new GeometryInstanceStream[Count(reader)];
-        for (var i = 0; i < instances.Length; i++)
-        {
-            var id = Text(reader, 1024); var prototype = Prototype(reader, key);
-            var data = Channel<float>(reader, key); var bounds = Box(reader);
-            instances[i] = new(id, prototype, data, bounds);
-        }
-        return output with { Meshes = Array.AsReadOnly(meshes), Instances = Array.AsReadOnly(instances) };
     }
 
     private static void ValidateOutput(ContentOutput output)

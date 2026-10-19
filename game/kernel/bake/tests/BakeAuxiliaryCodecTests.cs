@@ -3,6 +3,8 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Fauna;
 using Campus.Contracts.Vegetation;
+using Campus.Contracts.Parts;
+using Campus.Contracts.Maps;
 using Campus.Tests;
 using GdUnit4;
 
@@ -33,9 +35,14 @@ public sealed class BakeAuxiliaryCodecTests
             throw new InvalidOperationException("Vegetation round trip changed canonical bytes.");
 
         key = key with { Module = BakeModuleIds.FaunaRuntime };
-        var output = new ContentOutput([surface], [])
+        var text = new SceneTextRun(3.25f, [new(new(1, 2, 3, 4), new(.1f, .2f, .3f, .4f), 2)]);
+        var part = new PlacedPart(new(PartCatalog.Signpost), new SignParams { PrintedText = text }, Matrix4x4.CreateTranslation(4, 5, 6))
+            { Tint = new("fixture.tint"), IgnoreOcclusionCulling = true };
+        var ring = new PolygonRings([new(1, 2), new(3, 4), new(5, 6)], [[new(2, 3), new(3, 3), new(2, 4)]]);
+        var output = new ContentOutput([surface], [part], [], [new(new("fixture.occupancy"), ring, -1, 8)])
         {
-            Instances = [new("fixture.instance", prototype, record, bounds)]
+            Instances = [new("fixture.instance", prototype, record, bounds)],
+            Windows = [new(0, 2, new("window.general"), 0, 2, 1, Vector3.One, Vector3.UnitX, Vector3.UnitY, 2, 1, 1, [.75f]) { Skip = [1] }]
         };
         var fauna = new FaunaTileContent(key, default, new(
             [new("fixture.site", FaunaKind.Cat, bounds, [output, ContentOutput.Empty, output])], ["fixture log"]));
@@ -46,6 +53,12 @@ public sealed class BakeAuxiliaryCodecTests
             !site.Sets[2].Instances.Single().Data.Span.SequenceEqual(record))
             throw new InvalidOperationException("Fauna lost its three-state order or instance records.");
         Verify(site.Sets[0].Instances.Single().Prototype.Surfaces.Single());
+        var restoredPart = site.Sets[0].Parts.Single();
+        if (restoredPart.At != part.At || restoredPart.Tint != part.Tint || !restoredPart.IgnoreOcclusionCulling ||
+            restoredPart.Params is not SignParams parameters || parameters.PrintedText != text ||
+            !site.Sets[0].Occupancy![0].Rings.Holes[0].SequenceEqual(ring.Holes[0]) ||
+            !site.Sets[0].Windows[0].SillY.SequenceEqual(output.Windows[0].SillY) || !site.Sets[0].Windows[0].Skip.SequenceEqual(output.Windows[0].Skip))
+            throw new InvalidOperationException("Content output lost typed part parameters, placement or nested numeric channels.");
         if (!bytes.SequenceEqual(BakeProductCodec.Encode("fixture", animals)))
             throw new InvalidOperationException("Fauna round trip changed canonical bytes.");
     }
@@ -84,6 +97,56 @@ public sealed class BakeAuxiliaryCodecTests
             throw new InvalidOperationException("CPU channels or containers still use the single-render-upload boundary.");
         Reject(() => BakeProductCodec.Decode("fixture/large", key with { Module = "fixture.render" }, largeBytes));
         Reject(() => BakeProductCodec.Decode("fixture/large", key with { Module = "collision.world", Detail = "C/0/0" }, largeBytes));
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void TerrainAndResidentCachesPreserveLargeChannelsAndNestedDirectories()
+    {
+        var map = new MapId("fixture"); var key = new BakeKey(map, "terrain", "meta");
+        var ring = new PolygonRings([Vector2.Zero, Vector2.UnitX, Vector2.One], []);
+        var span = new TerrainBankSpan("fixture.bank", [new("fixture.water")], [], [],
+            new([Vector2.Zero, new(10, 0)]), 2, 8, 2, TerrainBankKind.Soft);
+        var stations = new[] { 0d, Math.BitIncrement(2d), 10d };
+        var terrain = new TerrainFrozenData(new(Vector2.Zero, new(64)), new("common", [new(default, "cell")]),
+            [new(new("fixture.pad"), .125f)], [new(new("fixture.water"), .375f)], [new(new("fixture.water"), [ring], [ring])],
+            [new(span, stations, [short.MinValue, 1, short.MaxValue])], [new(Vector2.Zero, Vector2.One)],
+            Enumerable.Range(0, 600_000).Select(i => (short)(i % short.MaxValue)).ToArray(), ["fixture diagnostic"]);
+        var bytes = TileBundleCodec.EncodeCache(key, terrain);
+        var restored = TileBundleCodec.DecodeCache<TerrainFrozenData>(bytes, key);
+        if (!restored.DistantHeights.SequenceEqual(terrain.DistantHeights) || !restored.Banks[0].Stations.SequenceEqual(stations) ||
+            !restored.Banks[0].Heights.SequenceEqual(terrain.Banks[0].Heights) || !restored.Pads.SequenceEqual(terrain.Pads) ||
+            !restored.WaterLevels.SequenceEqual(terrain.WaterLevels) || !restored.Supports.SequenceEqual(terrain.Supports) ||
+            !restored.Waters[0].WadeAreas[0].Outer.SequenceEqual(ring.Outer) || !restored.Diagnostics.SequenceEqual(terrain.Diagnostics))
+            throw new InvalidOperationException("Terrain cache lost frozen numeric data.");
+        Reject(() => TileBundleCodec.DecodeCache<TerrainFrozenData>(bytes[..^1], key));
+        Reject(() => TileBundleCodec.DecodeCache<TerrainFrozenData>([.. bytes, 0], key));
+
+        key = key with { Module = "resident" };
+        var facade = new WindowFacadeDecl(0, 2, new("window.general"), 0, 2, 1, Vector3.One, Vector3.UnitX, Vector3.UnitY,
+            2, 1, 1, [.75f]) { Skip = [1] };
+        var windows = new WindowMetadata([facade], []);
+        var catalog = new NightlightCatalog([new(Vector3.One, 2, 3, 4, .5f, 6, 7, .25f, 9, 10)],
+            Enumerable.Range(0, 300_000).Select(i => i * .25f).ToArray(), new float[] { -.5f, .25f }, 2, 1);
+        var lighting = new LightInventoryDocument(map, [], windows.Facades, windows.Windows, catalog)
+        { WindowNumbering = new(map, new string('a', 64), [new(new("fixture.building"), "fixture.grid", 0, 2, 1)]) };
+        var layout = new InteriorLayout(new("fixture.building"), [new(0, .125f, 3, ring.Outer)],
+            [new(0, 1, ZoneKind.Room, ring.Outer, new("window.general"), 123, true)], [], [], [], [0], [0], new(Vector3.Zero, Vector3.One), 321);
+        var resident = new BakeResidentData(new(lighting, new(map, [])), windows, [], [layout],
+            new(new Dictionary<string, IReadOnlyList<TileKey>> { ["fixture.module"] = [new(1, 2), new(-3, 4)] },
+                [new(new(map, "fixture.module", "L0/1/2"), layout.Bounds)]), [new(1, -2)]);
+        bytes = TileBundleCodec.EncodeCache(key, resident);
+        var saved = TileBundleCodec.DecodeCache<BakeResidentData>(bytes, key);
+        if (!saved.Metadata.Lighting.Nightlight.LampTable.Span.SequenceEqual(catalog.LampTable.Span) ||
+            !saved.Metadata.Lighting.Nightlight.LampGrid.Span.SequenceEqual(catalog.LampGrid.Span) ||
+            !saved.Metadata.Lighting.Nightlight.Lamps.SequenceEqual(catalog.Lamps) ||
+            !saved.Metadata.Lighting.WindowNumbering!.Allocations.SequenceEqual(lighting.WindowNumbering!.Allocations) ||
+            !saved.Windows.Facades[0].SillY.SequenceEqual(facade.SillY) || !saved.Windows.Facades[0].Skip.SequenceEqual(facade.Skip) ||
+            !saved.Layouts[0].Storeys[0].Footprint.SequenceEqual(ring.Outer) || !saved.Layouts[0].Zones[0].Ring.SequenceEqual(ring.Outer) ||
+            !saved.Directory.Modules["fixture.module"].SequenceEqual(resident.Directory.Modules["fixture.module"]) ||
+            !saved.Directory.Auxiliary.SequenceEqual(resident.Directory.Auxiliary) || !saved.TerrainPoints.SequenceEqual(resident.TerrainPoints))
+            throw new InvalidOperationException("Resident cache lost lamp, window, interior or directory data.");
+        Reject(() => TileBundleCodec.DecodeCache<BakeResidentData>(bytes, key with { Detail = "source-index" }));
     }
 
     private static void Reject(Action action)

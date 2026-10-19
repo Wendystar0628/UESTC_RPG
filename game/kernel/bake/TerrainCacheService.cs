@@ -38,14 +38,14 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
         var key = new BakeKey(map, "terrain", "meta");
         var identity = TerrainStamp(preparation.SourceInputs);
         WorldModelLoadResult? loaded = null;
-        var data = ReadJson<TerrainFrozenData>(key, identity, value => loaded = preparation.Complete(value));
+        var data = ReadProduct<TerrainFrozenData>(key, identity, value => loaded = preparation.Complete(value));
         ITerrainAssetBuilder? builder = null;
         if (data is null)
         {
             RequireMiss(key);
             builder = preparation.CreateAssets();
             data = builder.Freeze();
-            WriteJson(key, identity, data);
+            WriteProduct(key, identity, data);
         }
         loaded ??= preparation.Complete(data);
         var terrain = (IPreparedTerrain)loaded.World.Terrain;
@@ -183,15 +183,15 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     });
     internal void RequireMiss(BakeKey key)
     { if (_options.Strict && !_options.Live) throw new InvalidDataException($"Strict cache miss: {key.Map.Value}/{key.Module}/{key.Detail}"); }
-    internal T? ReadJson<T>(BakeKey key, string identity, Action<T>? validate = null) where T : class =>
-        Read(key, identity, bytes => DecodeJson(bytes, validate));
-    internal IEnumerable<T> ReadJsonCandidates<T>(BakeKey key, string identity, Action<T> validate) where T : class
+    internal T? ReadProduct<T>(BakeKey key, string identity, Action<T>? validate = null) where T : class =>
+        Read(key, identity, bytes => DecodeProduct(bytes, key, validate));
+    internal IEnumerable<T> ReadProductCandidates<T>(BakeKey key, string identity, Action<T> validate) where T : class
     {
         if (_options.Live) yield break;
-        foreach (var value in Store.ReadCandidates(key, bytes => Decode(bytes, identity, payload => DecodeJson(payload, validate))))
+        foreach (var value in Store.ReadCandidates(key, bytes => Decode(bytes, identity, payload => DecodeProduct(payload, key, validate))))
             yield return value;
     }
-    internal void WriteJson<T>(BakeKey key, string identity, T value) => Write(key, identity, JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options));
+    internal void WriteProduct<T>(BakeKey key, string identity, T value) where T : class => Write(key, identity, TileBundleCodec.EncodeCache(key, value));
     private T? Read<T>(BakeKey key, string identity, Func<byte[], T> decode) where T : class
     {
         if (_options.Live) return null;
@@ -203,9 +203,9 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
         if (reader.ReadString() != identity) throw new InvalidDataException("Cached product identity mismatch.");
         return decode(reader.ReadBytes(checked((int)(reader.BaseStream.Length - reader.BaseStream.Position))));
     }
-    private static T DecodeJson<T>(byte[] bytes, Action<T>? validate = null) where T : class
+    private static T DecodeProduct<T>(byte[] bytes, BakeKey key, Action<T>? validate = null) where T : class
     {
-        var value = JsonSerializer.Deserialize<T>(bytes, ContractJson.Options) ?? throw new JsonException("Empty cached product.");
+        var value = TileBundleCodec.DecodeCache<T>(bytes, key);
         validate?.Invoke(value);
         return value;
     }
