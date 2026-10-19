@@ -70,6 +70,7 @@ public sealed class StreamLifecycleTests
             var required = (HashSet<StreamTile>)Field(director, "_viewRequired")!;
             var refined = (HashSet<StreamTile>)Field(director, "_refined")!;
             var tree = new LodTree(new(new(0, 0, 0), new(128, 10, 128)), new());
+            Set(director, "_tree", tree);
             tree.Select(pose.Position, 0, 1080, pose.FovDeg!.Value, LodLevel.L1, required, refined);
             ((HashSet<StreamTile>)Field(director, "_destinationRequired")!).UnionWith(required);
             ((HashSet<StreamTile>)Field(director, "_destinationRefined")!).UnionWith(refined);
@@ -97,6 +98,37 @@ public sealed class StreamLifecycleTests
             visibility.Apply(visible, 0, false, (_, _, _) => { });
             if (!director.ViewReady || !director.DestinationReady)
                 throw new InvalidOperationException("Current view and formal arrival did not share complete selected-geometry readiness.");
+
+            var children = tree.Children(fine);
+            foreach (var child in children)
+            {
+                var group = getGroup.Invoke(director, [child])!;
+                group.GetType().GetField("GeometryRequested")!.SetValue(group, true);
+                group.GetType().GetField("Mounted")!.SetValue(group, true);
+            }
+            visibility.Apply(children.Skip(1).ToHashSet(), 0, false, (_, _, _) => { });
+            if (director.ViewReady || director.DestinationReady)
+                throw new InvalidOperationException("Partial descendant coverage certified a missing part of the selected tile.");
+            visibility.Apply(children.ToHashSet(), 0, false, (_, _, _) => { });
+            if (!director.ViewReady || !director.DestinationReady)
+                throw new InvalidOperationException("Complete finer coverage failed because its selected parent was no longer drawn.");
+
+            // Both orderings share the real display frontier: current finer, then destination finer.
+            var destinationRequired = (HashSet<StreamTile>)Field(director, "_destinationRequired")!;
+            var destinationRefined = (HashSet<StreamTile>)Field(director, "_destinationRefined")!;
+            var resolve = typeof(StreamDirector).GetMethod("ResolveVisible", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            foreach (var currentFiner in new[] { true, false })
+            {
+                tree.Select(pose.Position, 0, 1080, pose.FovDeg.Value,
+                    currentFiner ? LodLevel.L0 : LodLevel.L1, required, refined);
+                tree.Select(pose.Position, 0, 1080, pose.FovDeg.Value,
+                    currentFiner ? LodLevel.L1 : LodLevel.L0, destinationRequired, destinationRefined);
+                resolve.Invoke(director, null);
+                var displayed = (HashSet<StreamTile>)Field(director, "_visible")!;
+                visibility.Apply(displayed, 0, false, (_, _, _) => { });
+                if (!displayed.SetEquals(children) || !director.ViewReady || !director.DestinationReady)
+                    throw new InvalidOperationException("An active destination and current eye could not share the finer complete display frontier.");
+            }
         }
         finally { director.Free(); }
     }

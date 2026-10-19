@@ -32,7 +32,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private readonly StreamRequestQueue _requests = new();
     private readonly Dictionary<StreamTile, TileGroup> _groups = [];
     private readonly HashSet<StreamTile> _required = [], _refined = [], _destinationRequired = [], _destinationRefined = [], _visible = [];
-    private readonly HashSet<StreamTile> _viewRequired = [], _predictionRequired = [], _predictionRefined = [];
+    private readonly HashSet<StreamTile> _viewRequired = [], _displayRefined = [], _predictionRequired = [], _predictionRefined = [];
     private readonly List<Pending> _pending = [];
     private readonly List<Preparing> _preparing = [];
     private readonly HashSet<BakeKey> _issued = [];
@@ -158,7 +158,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         UnloadAuxiliary();
         _interiors?.Unload();
         _requests.Clear(); _issued.Clear(); _required.Clear(); _viewRequired.Clear(); _refined.Clear();
-        _destinationRequired.Clear(); _destinationRefined.Clear(); _visible.Clear(); _visibility.Clear();
+        _destinationRequired.Clear(); _destinationRefined.Clear(); _displayRefined.Clear(); _visible.Clear(); _visibility.Clear();
         foreach (var group in _groups.Values) foreach (var bundle in group.Bundles) bundle.Dispose();
         _groups.Clear();
         while (_retiringBundles.TryDequeue(out var retired)) retired.Dispose();
@@ -340,7 +340,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         if (_checkRetention) { _checkRetention = false; RetireUnneeded(); }
         if (_tree is null || _catalog is null || remainingMilliseconds < .1 || !PlanCurrent) return;
         RefreshReflectionWorld(remainingMilliseconds * .25);
-        _tree.ResolveVisible(_refined, IsReady, _visible);
+        ResolveVisible();
         // Capture uses the existing no-fade path: new tiles get fade_t0=0 and old tiles hide immediately.
         _visibility.Apply(_visible, FrameClock.FadeSeconds, !AppBoot.Options.CaptureMode, (tile, visible, fade) =>
         {
@@ -393,16 +393,29 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     { try { await preparation.ConfigureAwait(false); } catch (Exception) { } }
     private bool IsReady(StreamTile tile) => _groups.TryGetValue(tile, out var group) && group.GeometryRequested && group.Error is null && group.Mounted &&
         group.Bundles.All(bundle => bundle.Draws.All(_materials.IsReady));
+    private void ResolveVisible()
+    {
+        _displayRefined.Clear(); _displayRefined.UnionWith(_refined);
+        // An active arrival must be presentable even when its required detail differs from the current eye.
+        // Predictions and CPU pins schedule products but never refine the displayed frontier.
+        if (!_destinationConsumed && _destinationPlanned) _displayRefined.UnionWith(_destinationRefined);
+        _tree!.ResolveVisible(_displayRefined, IsReady, _visible);
+    }
     private bool SelectionReady(IReadOnlySet<StreamTile> required, IReadOnlySet<StreamTile> refined)
     {
         if (Error is not null || _context is null || _catalog is null || !_selectionApplied || !PlanCurrent ||
-            required.Count == 0 || !_visibility.IsSettled(FrameClock.FadeSeconds)) return false;
+            _tree is null || required.Count == 0 || !_visibility.IsSettled(FrameClock.FadeSeconds)) return false;
         foreach (var tile in required)
-        {
-            if (!IsReady(tile)) return false;
-            // A mounted fine tile still covered by an ancestor is not the selected view's presented geometry.
-            if (!refined.Contains(tile) && !_visibility.Drawn.Contains(tile)) return false;
-        }
+            if (!refined.Contains(tile) && !HasVisibleCoverage(tile)) return false;
+        return true;
+    }
+    private bool HasVisibleCoverage(StreamTile tile)
+    {
+        if (_visibility.Drawn.Contains(tile) && IsReady(tile)) return true;
+        var children = _tree!.Children(tile);
+        if (children.Count == 0) return false;
+        foreach (var child in children)
+            if (!HasVisibleCoverage(child)) return false;
         return true;
     }
     private bool IsCurrent(StreamTile tile, TileGroup group, long revision) => _context is not null && revision == _mount.Revision &&
