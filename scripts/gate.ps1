@@ -1,7 +1,7 @@
 # 门禁总入口：按工作包和改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
 # 用法：powershell scripts\gate.ps1 -Wp WP-xx [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <路径...>] [-BaseRef <基线>] [-Map qingshuihe] [-Frames 300]
 #   默认：G1、受影响模块的 G2 和 G4，再加受影响的启动、行走、存档核心专项（核心专项驱动正式生产舞台）
-#   -Plan 只读，只列出会跑什么；-Full 请求保留的 14 道门，没做完的门返回 NotImplemented
+#   -Plan 只读，只列出会跑什么；-Full 请求保留的 12 道门，没做完的门返回 NotImplemented
 #   -Full 可与 -Only 组合限定门禁；选中 G2 时跑全量（含 Slow）及 NativeRender
 #   退出码：0 请求范围内已实现的都通过；1 有失败；2 范围未完成
 [CmdletBinding()]
@@ -250,7 +250,7 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
 }
 $importRequired = $Full -or @($changes | Where-Object { $_ -match '^game/' -and $_ -notmatch '^game/(contracts|gen)/' -and $_ -notmatch '\.(md|txt|csproj|sln|props|lock\.json)$' }).Count -gt 0
 $selected = New-Object 'Collections.Generic.List[string]'
-$gateIds = @('G1','G2','G3','G4','G5','G6','G7','G10','G14','G15','G18','G19','G20','G21')
+$gateIds = @('G1','G2','G3','G4','G5','G6','G7','G10','G14','G15','G20','G21')
 if ($Only.Count) { foreach ($id in ($Only -join ',' -split ',')) { if ($id -cnotin $gateIds -and $id -cnotin @('G5Smoke','G15Core','G20Core')) { throw "Unknown gate: $id" }; if (-not $selected.Contains($id)) { $selected.Add($id) } } }
 elseif ($Smoke) { $selected.Add('G5Smoke') }
 elseif ($Full) { foreach ($id in $gateIds) { $selected.Add($id) }; foreach ($id in @('G5Smoke','G15Core','G20Core')) { $selected.Add($id) } }
@@ -457,10 +457,6 @@ foreach ($id in $selected) {
             'G7' {
                 $status = 'NotImplemented'
                 $detail = 'Fixed-pose overview, seasonal shots and three quality-preset overviews are centralized; no gate implementation yet.'
-            }
-            'G19' {
-                $status = 'NotImplemented'
-                $detail = 'G19a connectivity, G19b closure/reachability and G19c door alignment have no gate implementation yet.'
             }
             'G15Core' {
                 Assert-GodotVersion
