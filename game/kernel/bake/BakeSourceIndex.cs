@@ -11,13 +11,16 @@ namespace Campus.Kernel.Bake;
 internal sealed class BakeSourceIndex
 {
     private readonly BuildContext _context;
-    private readonly WorldFeature[] _features;
-    private readonly NetworkLine[] _roads;
-    private readonly NetworkTree[] _trees;
-    private readonly JsonElement? _planting;
-    private readonly string _plantingStamp;
-    private readonly string _namedRoadStamp;
-    private readonly float _wallReach;
+    private readonly BakeSourceIndexCache? _cache;
+    private readonly object _sourcesLock = new();
+    private bool _sourcesPrepared;
+    private WorldFeature[] _features = [];
+    private NetworkLine[] _roads = [];
+    private NetworkTree[] _trees = [];
+    private JsonElement? _planting;
+    private string _plantingStamp = "";
+    private string _namedRoadStamp = "";
+    private float _wallReach;
     private readonly Dictionary<TileKey, string> _cells = [];
     private readonly Dictionary<TileKey, string> _windows = [];
     private readonly ConcurrentDictionary<TileKey, Lazy<string>> _vegetation = new();
@@ -26,23 +29,21 @@ internal sealed class BakeSourceIndex
     public string CommonStamp { get; }
     public string PaletteStamp { get; }
 
-    public BakeSourceIndex(BuildContext context)
+    public BakeSourceIndex(BuildContext context, BakeSourceIndexCache? cache = null)
     {
         _context = context;
-        _features = context.World.Features.Values.OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();
-        _roads = context.World.Network.Roads.OrderBy(road => road.Id.Value, StringComparer.Ordinal).ToArray();
-        _trees = context.World.Network.Trees.OrderBy(tree => tree.Id.Value, StringComparer.Ordinal).ToArray();
-        if (context.SourceInputs.TryGetValue("vegetation/planting.json", out var planting))
+        _cache = cache;
+        if (cache?.Read() is { } saved)
         {
-            using var document = JsonDocument.Parse(planting);
-            _planting = document.RootElement.Clone();
+            CommonStamp = saved.CommonStamp;
+            PaletteStamp = saved.PaletteStamp;
+            foreach (var cell in saved.Cells) _cells.Add(cell.Cell, cell.Stamp);
+            foreach (var cell in saved.Windows) _windows.Add(cell.Cell, cell.Stamp);
+            Restore(_vegetation, saved.Vegetation);
+            Restore(_furniture, saved.Furniture);
+            return;
         }
-        _plantingStamp = Hash(_planting);
-        var names = _planting is { } root && root.TryGetProperty("roads", out var roads)
-            ? roads.EnumerateArray().Select(road => road.GetProperty("name").GetString()).ToHashSet(StringComparer.Ordinal) : [];
-        _namedRoadStamp = Hash(_roads.Where(road => names.Contains(RoadName(road.Props))).ToArray());
-        _wallReach = _features.Any(feature => feature.Kind.Value == "sportGroup")
-            ? Planting.SportWallReach(SpeciesTable.Parse(context.GlobalInputs.Entries["vegetation/species.json"].Span)) : 0;
+        PrepareSources();
         var cells = new Dictionary<TileKey, List<string>>();
         var windows = new Dictionary<TileKey, List<string>>();
         foreach (var feature in _features)
@@ -70,6 +71,7 @@ internal sealed class BakeSourceIndex
             fidelity = FileStamp("fidelity.json"), interior = FileStamp("interiors.json") });
         PaletteStamp = Hash(new { PaletteLayout.EncodingVersion, PaletteLayout.LayoutId,
             entries = context.Catalog.Entries.OrderBy(entry => entry.Index.Value).ToArray() });
+        cache?.Write(this);
 
         static void Add(Dictionary<TileKey, List<string>> cells, MapRect box, string stamp)
         {
@@ -80,6 +82,53 @@ internal sealed class BakeSourceIndex
             }
         }
     }
+
+    private void PrepareSources()
+    {
+        lock (_sourcesLock)
+        {
+            if (_sourcesPrepared) return;
+            _features = _context.World.Features.Values.OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();
+            _roads = _context.World.Network.Roads.OrderBy(road => road.Id.Value, StringComparer.Ordinal).ToArray();
+            _trees = _context.World.Network.Trees.OrderBy(tree => tree.Id.Value, StringComparer.Ordinal).ToArray();
+            if (_context.SourceInputs.TryGetValue("vegetation/planting.json", out var planting))
+            {
+                using var document = JsonDocument.Parse(planting);
+                _planting = document.RootElement.Clone();
+            }
+            _plantingStamp = Hash(_planting);
+            var names = _planting is { } root && root.TryGetProperty("roads", out var roads)
+                ? roads.EnumerateArray().Select(road => road.GetProperty("name").GetString()).ToHashSet(StringComparer.Ordinal) : [];
+            _namedRoadStamp = Hash(_roads.Where(road => names.Contains(RoadName(road.Props))).ToArray());
+            _wallReach = _features.Any(feature => feature.Kind.Value == "sportGroup")
+                ? Planting.SportWallReach(SpeciesTable.Parse(_context.GlobalInputs.Entries["vegetation/species.json"].Span)) : 0;
+            _sourcesPrepared = true;
+        }
+    }
+
+    private static void Restore(ConcurrentDictionary<TileKey, Lazy<string>> target, BakeSourceCell[] cells)
+    {
+        foreach (var cell in cells)
+        {
+            var stamp = new Lazy<string>(() => cell.Stamp);
+            _ = stamp.Value;
+            target.TryAdd(cell.Cell, stamp);
+        }
+    }
+
+    internal BakeSourceIndexData Snapshot() => new()
+    {
+        CommonStamp = CommonStamp,
+        PaletteStamp = PaletteStamp,
+        Cells = _cells.OrderBy(pair => pair.Key.X).ThenBy(pair => pair.Key.Z).Select(pair => new BakeSourceCell(pair.Key, pair.Value)).ToArray(),
+        Windows = _windows.OrderBy(pair => pair.Key.X).ThenBy(pair => pair.Key.Z).Select(pair => new BakeSourceCell(pair.Key, pair.Value)).ToArray(),
+        Vegetation = Completed(_vegetation),
+        Furniture = Completed(_furniture)
+    };
+
+    private static BakeSourceCell[] Completed(ConcurrentDictionary<TileKey, Lazy<string>> cells) => cells
+        .Where(pair => pair.Value.IsValueCreated).OrderBy(pair => pair.Key.X).ThenBy(pair => pair.Key.Z)
+        .Select(pair => new BakeSourceCell(pair.Key, pair.Value.Value)).ToArray();
 
     public string FileStamp(string? path, bool global = false)
     {
@@ -92,14 +141,22 @@ internal sealed class BakeSourceIndex
 
     public void AddArea(BakeInputHash input, MapRect area, bool windows, bool vegetation, bool furniture)
     {
+        var changed = false;
         AddCells(input, [area], windows);
         foreach (var cell in Cells(area))
         {
-            if (vegetation) input.Add(_vegetation.GetOrAdd(cell, key => new(() =>
-            { var hash = new BakeInputHash(); AddVegetation(hash, CellBounds(key)); return hash.Finish(); }, LazyThreadSafetyMode.ExecutionAndPublication)).Value);
-            if (furniture) input.Add(_furniture.GetOrAdd(cell, key => new(() =>
-            { var hash = new BakeInputHash(); AddFurniturePlanting(hash, CellBounds(key)); return hash.Finish(); }, LazyThreadSafetyMode.ExecutionAndPublication)).Value);
+            if (vegetation) input.Add(_vegetation.GetOrAdd(cell, key =>
+            {
+                changed = true;
+                return new(() => { var hash = new BakeInputHash(); AddVegetation(hash, CellBounds(key)); return hash.Finish(); }, LazyThreadSafetyMode.ExecutionAndPublication);
+            }).Value);
+            if (furniture) input.Add(_furniture.GetOrAdd(cell, key =>
+            {
+                changed = true;
+                return new(() => { var hash = new BakeInputHash(); AddFurniturePlanting(hash, CellBounds(key)); return hash.Finish(); }, LazyThreadSafetyMode.ExecutionAndPublication);
+            }).Value);
         }
+        if (changed) _cache?.Write(this);
     }
 
     private void AddCells(BakeInputHash input, IEnumerable<MapRect> regions, bool windows)
@@ -123,6 +180,7 @@ internal sealed class BakeSourceIndex
 
     private void AddVegetation(BakeInputHash input, MapRect area)
     {
+        PrepareSources();
         if (_planting is not { } root) { input.Add(false); return; }
         input.Add(_plantingStamp);
         var wallReach = _wallReach;
@@ -234,6 +292,7 @@ internal sealed class BakeSourceIndex
 
     private void AddFurniturePlanting(BakeInputHash input, MapRect area)
     {
+        PrepareSources();
         if (_planting is not { } root) { input.Add(false); return; }
         var roadNames = _roads.Where(road => Intersects(Bounds(road.Line.Points, road.Width * .5f), area))
             .Select(road => Name(road.Props)).OfType<string>().ToHashSet(StringComparer.Ordinal);

@@ -484,7 +484,9 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         private BakeSourceIndex? _sourceIndex;
         internal BakeSourceIndex SourceIndex(BuildContext context)
         {
-            lock (_sourceIndexLock) return _sourceIndex ??= new(context);
+            lock (_sourceIndexLock)
+                return _sourceIndex ??= new(context, TerrainCache is null ? null :
+                    new BakeSourceIndexCache(TerrainCache, Context.Descriptor.Id, Data.Value.ResidentStamp));
         }
         internal ConcurrentQueue<CollectedDiagnostic> Diagnostics { get; } = new();
 
