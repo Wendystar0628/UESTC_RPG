@@ -181,38 +181,17 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         {
             try
             {
-                var data = map.Data.Value;
-                var basic = map.CreateBuildContext("");
                 if (_options.MapOnly)
                 {
                     Schedule(map, new(context.Descriptor.Id, "map", "base"), BakePriority.Normal);
                     return;
                 }
                 var moduleTiles = map.GetPreparedModuleTilesAsync(context).GetAwaiter().GetResult();
-                var keys = moduleTiles.SelectMany(pair =>
-                {
-                    var tiles = pair.Value;
-                    return new[] { LodLevel.L4, LodLevel.L3, LodLevel.L2, LodLevel.L1, LodLevel.L0 }.SelectMany(level =>
-                        (level == LodLevel.L4 ? new[] { new TileKey(0, 0) } : tiles.Select(t => BakeRequestKeys.Parent(t, level)).Distinct())
-                        .Select(tile => BakeRequestKeys.Tile(context.Descriptor.Id, pair.Key, tile, level)));
-                }).ToArray();
-                // The initial visible rings and map base outrank the distant background catalog.
-                foreach (var key in keys.Where(k => BakeRequestKeys.Parse(k).Level == LodLevel.L4 ||
-                    BakeRequestKeys.Parse(k).Level is LodLevel.L2 or LodLevel.L3 && Distance(k, context) <= 800f * 800f)
-                    .OrderBy(k => Distance(k, context))) Schedule(map, key, BakePriority.KnownDestination);
+                foreach (var (id, tiles) in moduleTiles.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                    if (tiles.Count > 0)
+                        Schedule(map, BakeRequestKeys.Tile(context.Descriptor.Id, id, default, LodLevel.L4), BakePriority.KnownDestination);
                 var mapKey = new BakeKey(context.Descriptor.Id, "map", "base");
                 if (map.Producers.Any(p => p.Value.CanBuild(mapKey))) Schedule(map, mapKey, BakePriority.Normal);
-                foreach (var key in keys.OrderBy(k => LevelOrder(k)).ThenBy(k => Distance(k, context)).ThenBy(k => k.Module, StringComparer.Ordinal))
-                    Schedule(map, key, BakePriority.Background);
-                foreach (var binding in data.InteriorBindings.OrderBy(binding => binding.ProviderId, StringComparer.Ordinal))
-                {
-                    var name = "interior." + binding.ProviderId;
-                    var interior = map.Interiors[name];
-                    foreach (var feature in binding.FeatureIds.OrderBy(f => f.Value, StringComparer.Ordinal))
-                        foreach (var storey in InteriorAssembly.ValidatedLayout(interior.Value, binding, basic, feature).OpenStoreys.Order())
-                            foreach (var detail in new[] { "IF", "IS" })
-                                Schedule(map, new(context.Descriptor.Id, name, FormattableString.Invariant($"{feature.Value}/{storey}/{detail}")), BakePriority.Background);
-                }
             }
             catch (Exception) when (!map.Active) { }
             catch (Exception error)
@@ -408,24 +387,6 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => _options.PlayingWorkers,
         _ => throw new ArgumentOutOfRangeException(nameof(state))
     });
-    private static int LevelOrder(BakeKey key) => BakeRequestKeys.Parse(key).Level switch
-    {
-        LodLevel.L4 => 0,
-        LodLevel.L3 => 1,
-        LodLevel.L2 => 2,
-        LodLevel.L1 => 3,
-        LodLevel.L0 => 4,
-        _ => throw new InvalidDataException("Unknown LOD.")
-    };
-    private static float Distance(BakeKey key, IMapContext map)
-    {
-        var request = BakeRequestKeys.Parse(key);
-        var size = TileGrid.Edge(request.Level);
-        var center = TileGrid.Origin(request.Tile, request.Level) + new System.Numerics.Vector2(size * 0.5f);
-        var start = map.Descriptor.Title?.T0.Position;
-        var origin = start is { } p ? new System.Numerics.Vector2(p.X, p.Z) : map.Descriptor.Center;
-        return System.Numerics.Vector2.DistanceSquared(center, origin);
-    }
     /// <summary>Called by the stage only after saving has allowed process exit. Remaining workers own CPU snapshots only.</summary>
     public void StopForExit()
     {
