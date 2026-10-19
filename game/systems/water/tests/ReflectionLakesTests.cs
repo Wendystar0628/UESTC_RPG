@@ -24,11 +24,13 @@ public sealed class ReflectionLakesTests
     public void LargestLakeOnScreenWinsAndSwitchesOnlyPastHysteresis()
     {
         var lakes = TwoLakes();
-        static bool All(Vector3 p) => true;
-        if (lakes.Select(new(-200f, 10f, 0f), All) != 0) throw new InvalidOperationException("camera over the west lake must pick it");
+        var applied = lakes.Select(new(-200f, 10f, 0f), [], -1);
+        if (applied != 0) throw new InvalidOperationException("camera over the west lake must pick it");
         // Halfway between the lakes both are about the same size: keep the current one.
-        if (lakes.Select(new(5f, 10f, 0f), All) != 0) throw new InvalidOperationException("switched without hysteresis");
-        if (lakes.Select(new(200f, 10f, 0f), All) != 1) throw new InvalidOperationException("must switch to the east lake");
+        if (lakes.Select(new(5f, 10f, 0f), [], applied) != 0) throw new InvalidOperationException("switched without hysteresis");
+        if (lakes.Select(new(200f, 10f, 0f), [], applied) != 1) throw new InvalidOperationException("must switch to the east lake");
+        // A destination query must not change the real camera's previous lake.
+        if (lakes.Select(new(5f, 10f, 0f), [], applied) != 0) throw new InvalidOperationException("destination query changed applied selection");
     }
 
     [TestCase]
@@ -37,8 +39,23 @@ public sealed class ReflectionLakesTests
     public void HiddenLakesDoNotCount()
     {
         var lakes = TwoLakes();
-        bool EastOnly(Vector3 p) => p.X > 0f;
-        if (lakes.Select(new(-200f, 10f, 0f), EastOnly) != 1) throw new InvalidOperationException("a lake out of view must not win");
+        Plane[] eastOnly = [new(-Vector3.UnitX, 0f)];
+        if (lakes.Select(new(-200f, 10f, 0f), eastOnly, -1) != 1) throw new InvalidOperationException("a lake out of view must not win");
         if (Math.Abs(lakes.WaterY(1) + 0.3f) > TestTolerance.Position) throw new InvalidOperationException("water level lost");
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void ReflectedPlanesPreserveTheSourceVisibleHalfSpace()
+    {
+        const float waterY = -0.3f;
+        var plane = new Plane(Vector3.Normalize(new(1f, 2f, -1f)), -8f);
+        var reflected = ReflectionLakes.ReflectPlane(plane, waterY);
+        var point = new Vector3(4f, 12f, -3f);
+        var mirror = ReflectionLakes.ReflectPoint(point, waterY);
+        if (MathF.Abs(Plane.DotCoordinate(plane, point) - Plane.DotCoordinate(reflected, mirror)) > TestTolerance.Position)
+            throw new InvalidOperationException("reflection changed the signed frustum distance");
+        if (Vector3.Distance(ReflectionLakes.ReflectPoint(mirror, waterY), point) > TestTolerance.Position)
+            throw new InvalidOperationException("reflecting twice must recover the original eye");
     }
 }

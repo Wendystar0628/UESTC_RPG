@@ -15,12 +15,9 @@ public sealed class ReflectionLakes
 {
     public const float Hysteresis = 1.3f;
     public const int AreaSamples = 48;
-    private int _current = -1;
-
     public ReflectionLakes(IReadOnlyList<ReflectionLake> lakes) => Lakes = lakes;
 
     public IReadOnlyList<ReflectionLake> Lakes { get; }
-    public int Current => _current;
 
     public static ReflectionLakes FromBodies(IReadOnlyList<WaterReflectionSurface> bodies, int samples)
     {
@@ -36,9 +33,10 @@ public sealed class ReflectionLakes
 
     /// <summary>
     /// Solid-angle estimate per lake: each sample counts area × |cos| / distance² when the camera sees it.
-    /// <paramref name="visible"/> answers whether a world point is inside the view frustum.
+    /// The caller owns the applied lake; querying another view never changes that selection.
+    /// Frustum planes point outward and use Normal dot point + D at most zero inside.
     /// </summary>
-    public int Select(Vector3 camera, Func<Vector3, bool> visible)
+    public int Select(Vector3 camera, ReadOnlySpan<Plane> frustum, int previousSlot)
     {
         var best = -1;
         var bestScore = 0f;
@@ -48,20 +46,35 @@ public sealed class ReflectionLakes
             var score = 0f;
             foreach (var s in lake.Samples)
             {
-                if (camera.Y <= lake.WaterY || !visible(s)) continue;
+                if (camera.Y <= lake.WaterY || !Visible(s, frustum)) continue;
                 var d = s - camera;
                 var d2 = MathF.Max(d.LengthSquared(), 1f);
                 score += lake.SampleArea * (camera.Y - lake.WaterY) / (d2 * MathF.Sqrt(d2));
             }
-            if (lake.Slot == _current) currentScore = score;
+            if (lake.Slot == previousSlot) currentScore = score;
             if (score > bestScore) { bestScore = score; best = lake.Slot; }
         }
-        if (best < 0) return _current = Lakes.Any(l => l.Slot == _current) ? _current : (Lakes.Count > 0 ? Lakes[0].Slot : -1);
-        if (_current < 0 || currentScore <= 0f || bestScore > currentScore * Hysteresis) _current = best;
-        return _current;
+        if (best < 0)
+        {
+            foreach (var lake in Lakes)
+                if (lake.Slot == previousSlot) return previousSlot;
+            return Lakes.Count > 0 ? Lakes[0].Slot : -1;
+        }
+        return previousSlot < 0 || currentScore <= 0f || bestScore > currentScore * Hysteresis ? best : previousSlot;
     }
 
-    public void Reset() => _current = -1;
+    private static bool Visible(Vector3 point, ReadOnlySpan<Plane> frustum)
+    {
+        foreach (var plane in frustum)
+            if (Plane.DotCoordinate(plane, point) > 0f) return false;
+        return true;
+    }
+
+    /// <summary>Shared planar mirror geometry for both rendering and streaming demand.</summary>
+    public static Vector3 ReflectPoint(Vector3 point, float waterY) => new(point.X, 2f * waterY - point.Y, point.Z);
+    public static Vector3 ReflectDirection(Vector3 direction) => new(direction.X, -direction.Y, direction.Z);
+    public static Plane ReflectPlane(Plane plane, float waterY) =>
+        new(ReflectDirection(plane.Normal), plane.D + 2f * waterY * plane.Normal.Y);
 
     public float WaterY(int slot)
     {

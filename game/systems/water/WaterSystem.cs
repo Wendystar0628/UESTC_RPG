@@ -5,7 +5,9 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Water;
 using Campus.Kernel.Materials;
+using Campus.Kernel.Renderer;
 using Godot;
+using N = System.Numerics;
 
 namespace Campus.Systems.Water;
 
@@ -17,8 +19,9 @@ namespace Campus.Systems.Water;
 /// Water surfaces themselves are static content supplied by the map's water module.
 /// </summary>
 [KernelNode("systems.water", Owner = "WP-24")]
+[KernelService(typeof(IReflectionWorld), Owner = "WP-24")]
 [QualityResponsive(Owns = [QualityKnob.ReflectionInterval])]
-public partial class WaterSystem : Node, IMapAware, IQualityAware
+public partial class WaterSystem : Node, IMapAware, IQualityAware, IReflectionWorld
 {
     private static readonly StringName ReflectTex = ShaderGlobals.ReflectTex;
     private static readonly StringName ReflectVp = ShaderGlobals.ReflectVp;
@@ -40,10 +43,11 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
     private int _interval = 4;
     private long _frame;
     private int _lake = -1;
-    private Camera3D? _frustum;
-    private readonly Func<System.Numerics.Vector3, bool> _inFrustum;
+    private readonly N.Plane[] _renderFrustum = new N.Plane[6];
+    private readonly N.Plane[] _demandFrustum = new N.Plane[6];
+    private bool _available;
 
-    public WaterSystem() => _inFrustum = InFrustum;
+    public WaterSystem() { }
 
     public WaterSystem(IMediumState medium, IWorldState world, IShaderMaterialSource materials,
         IMapContentSource content, IBakeContextSource builds) : this()
@@ -67,10 +71,15 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
     /// </summary>
     public ShaderMaterial? ReflectionProxyMaterial => _proxyMaterial;
 
+    public Rid Scenario => _available ? ReflectionWorld?.Scenario ?? default : default;
+    public Material ProxyMaterial => Scenario.IsValid && ReflectionProxyMaterial is { } material ? material :
+        throw new InvalidOperationException("The reflection world is unavailable; check Scenario before reading ProxyMaterial.");
+    public event Action? Changed;
+
     public override void _EnterTree()
     {
         if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
-        _lakes.Reset();
+        _lake = -1;
     }
 
     public override void _Ready()
@@ -106,12 +115,18 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
         RenderingServer.GlobalShaderParameterSet(ReflectTex, _viewport.GetTexture());
         RenderingServer.GlobalShaderParameterSet(ReflectLake, -1);
         GetViewport().SizeChanged += OnSizeChanged;
+        _available = _proxyMaterial is not null;
+        if (_available) Changed?.Invoke();
     }
 
     public override void _ExitTree()
     {
+        // Consumers synchronously release their proxy RIDs while the old world and material still exist.
+        _available = false;
+        Changed?.Invoke();
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         GetViewport().SizeChanged -= OnSizeChanged;
+        _lake = -1;
         RenderingServer.GlobalShaderParameterSet(ReflectLake, -1);
     }
 
@@ -134,7 +149,44 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
         _frame = 0;
     }
 
-    private void OnWorldInstanceChanged(long _) => _lakes.Reset();
+    private void OnWorldInstanceChanged(long _)
+    {
+        _lake = -1;
+        _frame = 0;
+        RenderingServer.GlobalShaderParameterSet(ReflectLake, -1);
+    }
+
+    /// <remarks>The six planes are reusable scratch: consume the returned view before the next query.
+    /// Near remains the source's world-space ground loading envelope; reflection leaves its XZ coverage unchanged.</remarks>
+    public bool TryGetDemand(in StreamDemandView source, out StreamDemandView reflected)
+    {
+        reflected = default;
+        if (!TrySelect(source.Eye.Position, source.Frustum.Span, out _, out var h)) return false;
+        if (source.Frustum.Length != _demandFrustum.Length)
+            throw new ArgumentException("A reflection demand requires six frustum planes.", nameof(source));
+        for (var i = 0; i < _demandFrustum.Length; i++)
+            _demandFrustum[i] = ReflectionLakes.ReflectPlane(source.Frustum.Span[i], h);
+        var eye = source.Eye with
+        {
+            Position = ReflectionLakes.ReflectPoint(source.Eye.Position, h),
+            PitchDeg = -source.Eye.PitchDeg
+        };
+        reflected = new(eye, _demandFrustum, source.Near);
+        return true;
+    }
+
+    private bool TrySelect(N.Vector3 eye, ReadOnlySpan<N.Plane> frustum, out int slot, out float waterY)
+    {
+        slot = -1;
+        waterY = float.NegativeInfinity;
+        if (!Scenario.IsValid) return false;
+        // Demand is conservative for every source view. The current body's medium cannot reject a
+        // destination or prediction, and demand queries must not sample unprepared destination terrain.
+        slot = _lakes.Select(eye, frustum, _lake);
+        if (slot < 0) return false;
+        waterY = _lakes.WaterY(slot);
+        return true;
+    }
 
     public void ApplyQuality(QualityView view, in QualityChange change)
     {
@@ -147,7 +199,7 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
     public override void _Process(double delta)
     {
         if (_viewport is null || _mirror is null) return;
-        // Underground and underwater the reflection is invisible: stop rendering it (SYS-VIEW). Not a quality option.
+        // Keep the existing live rendering policy; this does not gate other source views' demand.
         var kind = _medium?.Current.Kind ?? MediumKind.Air;
         if (kind is MediumKind.Underwater or MediumKind.Underground)
         {
@@ -161,29 +213,39 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
         if (_frame++ % _interval != 0) return;
 
         var eye = main.GlobalPosition;
-        _frustum = main;
-        var slot = _lakes.Select(new(eye.X, eye.Y, eye.Z), _inFrustum);
-        var h = _lakes.WaterY(slot);
+        var transform = main.GlobalTransform;
+        var cameraTransform = main.GetCameraTransform();
+        var projection = main.GetCameraProjection();
+        // Get the existing camera's six planes without allocating an engine Array or a second camera.
+        for (var i = 0; i < _renderFrustum.Length; i++)
+        {
+            var plane = cameraTransform * projection.GetProjectionPlane((Projection.Planes)i);
+            _renderFrustum[i] = new(new(plane.Normal.X, plane.Normal.Y, plane.Normal.Z), -plane.D);
+        }
+        if (!TrySelect(new(eye.X, eye.Y, eye.Z), _renderFrustum, out var slot, out var h))
+        {
+            _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
+            return;
+        }
         if (slot != _lake)
         {
             _lake = slot;
             RenderingServer.GlobalShaderParameterSet(ReflectLake, slot);
-            if (slot >= 0) _proxyMaterial?.SetShaderParameter(WaterYParam, h);
+            _proxyMaterial?.SetShaderParameter(WaterYParam, h);
         }
-        if (slot < 0) return;
         SyncEnvironment();
-        var t = main.GlobalTransform;
-        var position = new Vector3(eye.X, 2f * h - eye.Y, eye.Z);
-        var forward = -t.Basis.Z;
-        var up = t.Basis.Y;
-        forward.Y = -forward.Y;
-        up.Y = -up.Y;
+        var position = ReflectionLakes.ReflectPoint(new(eye.X, eye.Y, eye.Z), h);
+        var f = -transform.Basis.Z;
+        var u = transform.Basis.Y;
+        var forward = ReflectionLakes.ReflectDirection(new(f.X, f.Y, f.Z));
+        var up = ReflectionLakes.ReflectDirection(new(u.X, u.Y, u.Z));
         _mirror.Fov = main.Fov;
         _mirror.Near = main.Near;
         _mirror.Far = main.Far;
         _mirror.KeepAspect = main.KeepAspect;
         _mirror.CullMask = main.CullMask;
-        _mirror.LookAtFromPosition(position, position + forward, up);
+        _mirror.LookAtFromPosition(new(position.X, position.Y, position.Z),
+            new(position.X + forward.X, position.Y + forward.Y, position.Z + forward.Z), new(up.X, up.Y, up.Z));
         var vp = _mirror.GetCameraProjection() * new Projection(_mirror.GlobalTransform.AffineInverse());
         RenderingServer.GlobalShaderParameterSet(ReflectVp, vp);
         _viewport.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
@@ -199,8 +261,6 @@ public partial class WaterSystem : Node, IMapAware, IQualityAware
         _environment.TonemapExposure = source.TonemapExposure;
         _environment.TonemapWhite = source.TonemapWhite;
     }
-
-    private bool InFrustum(System.Numerics.Vector3 p) => _frustum?.IsPositionInFrustum(new(p.X, p.Y, p.Z)) ?? false;
 
     private Vector2I ReflectionSize()
     {

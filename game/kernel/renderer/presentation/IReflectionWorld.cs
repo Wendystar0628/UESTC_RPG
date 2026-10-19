@@ -1,4 +1,5 @@
 using Godot;
+using Campus.Contracts;
 
 namespace Campus.Kernel.Renderer;
 
@@ -13,4 +14,7 @@ public interface IReflectionWorld
     Rid Scenario { get; }
     Material ProxyMaterial { get; }
     event Action? Changed;
+    /// <summary>Queries the real water reflection for this source view without changing the applied lake or mirror camera.</summary>
+    /// <remarks>Returned scratch memory must be consumed before the next query. False means no eligible lake or unavailable reflection resources.</remarks>
+    bool TryGetDemand(in StreamDemandView source, out StreamDemandView reflected);
 }
