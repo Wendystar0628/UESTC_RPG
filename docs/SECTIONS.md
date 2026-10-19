@@ -776,7 +776,7 @@
 
 ## MAP-QSH-ADDITIONS-VOCAB · 设计增补词汇与楼宇规则
 
-`docs/maps/qingshuihe/MAP-QSH-ADDITIONS-VOCAB-增补词汇与楼宇规则.md` · 8.0k 字 · 按场地分类的增补物词汇（宿舍食堂商业街、道路停车场、河渠湖岸桥、草坪楼间屋顶、运动区校界步行设施）和普通楼宇设计十二条
+`docs/maps/qingshuihe/MAP-QSH-ADDITIONS-VOCAB-增补词汇与楼宇规则.md` · 8.1k 字 · 按场地分类的增补物词汇（宿舍食堂商业街、道路停车场、河渠湖岸桥、草坪楼间屋顶、运动区校界步行设施）和普通楼宇设计十二条
 关键词：增补词汇、休憩平台、电动车充电棚、外卖挂架、徽记井盖、亲水台阶、节制闸、草阶看台、紫藤廊架、桥头卧石、读书石台、汀步、下凹雨水花园、风雨连廊、屋顶实验花园、透空栏杆、导览亭、导览桩、直饮水台、休息点、楼宇十二条、入口雨棚、学院竖牌、西立面竖向鳍片、空调机位格栅、架空层、勒脚与散水、后勤小楼
 
 - MAP-QSH-ADDITIONS-VOCAB §0 结论 · L23 · 411
@@ -785,7 +785,7 @@
 - MAP-QSH-ADDITIONS-VOCAB §2 道路、路口与停车场 · L52 · 871
 - MAP-QSH-ADDITIONS-VOCAB §3 河渠、湖岸与桥 · L66 · 1.0k
 - MAP-QSH-ADDITIONS-VOCAB §4 草坪、楼间空地与屋顶 · L83 · 867
-- MAP-QSH-ADDITIONS-VOCAB §5 运动区、校界与步行服务设施 · L99 · 1.4k
+- MAP-QSH-ADDITIONS-VOCAB §5 运动区、校界与步行服务设施 · L99 · 1.5k
 - MAP-QSH-ADDITIONS-VOCAB §6 让普通楼宇有设计感 · L121 · 1.1k
 - MAP-QSH-ADDITIONS-VOCAB §7 待验证 · L138 · 71
 
@@ -833,7 +833,7 @@
 
 ## MAP-QSH-CENTER-EAST · 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 
-`docs/maps/qingshuihe/MAP-QSH-CENTER-EAST-中部与东区.md` · 7.7k 字 · 中部科研区与东区各建筑、雕像、球场的外观与身份特征、本区设计增补、近景要求；四季昼夜、行走与声音在子文档
+`docs/maps/qingshuihe/MAP-QSH-CENTER-EAST-中部与东区.md` · 8.1k 字 · 中部科研区与东区各建筑、雕像、球场的外观与身份特征、本区设计增补、近景要求；四季昼夜、行走与声音在子文档
 关键词：中部科研区、东区、基础实验大楼、一号科研实验楼、科研楼B区、科研楼C区、麦克斯韦像、方程石、林为干院士像、科研楼碑、银杏大道跨河小桥、品学楼、第一教学楼、书法横梁门框、架空通道、叠水喷泉石台、文科楼群、友谊树、综合训练馆、筒拱、网球场树墙、绿色房间、球场标线、球场围网、高杆灯、田径场、器材室、室外游泳池组团、东区月出、world/center-east.json
 
 - MAP-QSH-CENTER-EAST §0 结论 · L22 · 971
@@ -841,8 +841,8 @@
 - MAP-QSH-CENTER-EAST §1 中部科研区 · L37 · 874
 - MAP-QSH-CENTER-EAST §2 品学楼 · L49 · 1.0k
 - MAP-QSH-CENTER-EAST §3 文科楼群 · L59 · 559
-- MAP-QSH-CENTER-EAST §4 综合训练馆与球场 · L66 · 1.0k
-- MAP-QSH-CENTER-EAST §5 东缘 · L75 · 575
+- MAP-QSH-CENTER-EAST §4 综合训练馆与球场 · L66 · 1.4k
+- MAP-QSH-CENTER-EAST §5 东缘 · L75 · 626
 - MAP-QSH-CENTER-EAST §6 本区身份特征、设计增补与近景要求 · L82 · 792
 - MAP-QSH-CENTER-EAST §7 待验证 · L103 · 357
 
@@ -948,18 +948,18 @@
 
 ## MAP-QSH-NORTH · 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅
 
-`docs/maps/qingshuihe/MAP-QSH-NORTH-北部生活区.md` · 8.0k 字 · 北部生活区各建筑的外观与身份特征、本区设计增补、近景要求；四季昼夜、行走与声音在子文档
+`docs/maps/qingshuihe/MAP-QSH-NORTH-北部生活区.md` · 8.6k 字 · 北部生活区各建筑的外观与身份特征、本区设计增补、近景要求；四季昼夜、行走与声音在子文档
 关键词：北部生活区、学生活动中心、成电会堂、赭红圆鼓、校医院、院名灯牌、商业街、玻璃拱顶步行街、店招、宿舍组团、学知苑、硕丰苑、博翰苑、留学生组团、本科楼A型、本科楼B型、组团闸机、学知一组团、阳台晾晒、银杏苑、芙蓉餐厅、思学苑、春晖苑、朝阳餐厅、西北餐厅、室外扶梯罩棚、风雨连廊、丹桂路、博士公寓、world/north.json
 
 - MAP-QSH-NORTH §0 结论 · L22 · 957
   - ★ MAP-QSH-NORTH §0.1 接入要点 · L33 · 181
-- MAP-QSH-NORTH §1 学生活动中心与成电会堂 · L38 · 435
+- MAP-QSH-NORTH §1 学生活动中心与成电会堂 · L38 · 596
 - MAP-QSH-NORTH §2 校医院 · L50 · 417
-- MAP-QSH-NORTH §3 商业街 · L57 · 798
+- MAP-QSH-NORTH §3 商业街 · L57 · 930
 - MAP-QSH-NORTH §4 宿舍 · L66 · 1.8k
-- MAP-QSH-NORTH §5 餐厅 · L80 · 1.0k
+- MAP-QSH-NORTH §5 餐厅 · L80 · 1.2k
 - MAP-QSH-NORTH §6 文化地标与丹桂路 · L94 · 188
-- MAP-QSH-NORTH §7 风雨连廊与本区增补 · L99 · 315
+- MAP-QSH-NORTH §7 风雨连廊与本区增补 · L99 · 428
 - MAP-QSH-NORTH §8 本区身份特征、设计增补与近景要求 · L109 · 570
 - MAP-QSH-NORTH §9 待验证 · L129 · 116
 
@@ -1155,23 +1155,23 @@
 
 ## MAP-QSH-WEST · 西区与西北区：六号科研楼、校训石、创新中心、经管楼、托幼园、四号/五号科研楼、湿地、西门桥头
 
-`docs/maps/qingshuihe/MAP-QSH-WEST-西区与西北区.md` · 6.4k 字 · 西区与西北区各楼、石刻、湿地与西门桥头的外观与身份特征、设计增补、近景要求；四季昼夜、行走与声音在子文档
+`docs/maps/qingshuihe/MAP-QSH-WEST-西区与西北区.md` · 6.9k 字 · 西区与西北区各楼、石刻、湿地与西门桥头的外观与身份特征、设计增补、近景要求；四季昼夜、行走与声音在子文档
 关键词：西区、西北区、六号科研楼、基础与前沿研究院、公式台阶、2F室外连廊、校训石、创新中心、经管楼、三号科研实验楼、宾诺咖啡、立人托幼公园、键盘立面、四号科研楼、扇形草坪、深蓝玻璃盒入口、五号科研楼、电子科学技术研究院大楼、微波暗室、工程训练中心、荟文楼、综合楼、核磁共振中心、国防科技园石刻、湿地公园、湿地栈道、西门桥头、水杉路、孤儿楼 6151 与 6154、world/west.json
 
 - MAP-QSH-WEST §0 结论 · L22 · 921
   - ★ MAP-QSH-WEST §0.1 接入要点 · L33 · 111
-- MAP-QSH-WEST §1 六号科研楼 · L37 · 630
-- MAP-QSH-WEST §2 校训石 · L46 · 257
-- MAP-QSH-WEST §3 创新中心 · L51 · 288
-- MAP-QSH-WEST §4 经管楼 · L57 · 73
-- MAP-QSH-WEST §5 立人托幼公园 · L61 · 204
-- MAP-QSH-WEST §6 四号科研楼 · L66 · 376
-- MAP-QSH-WEST §7 五号科研楼、研究院大楼、核磁共振中心 · L72 · 341
-- MAP-QSH-WEST §8 荟文楼（综合楼） · L79 · 68
-- MAP-QSH-WEST §9 石刻 · L83 · 65
-- MAP-QSH-WEST §10 湿地公园与西门桥头 · L87 · 683
-- MAP-QSH-WEST §11 本区身份特征、设计增补与近景要求 · L97 · 816
-- MAP-QSH-WEST §12 待验证 · L118 · 134
+- MAP-QSH-WEST §1 六号科研楼 · L37 · 631
+- MAP-QSH-WEST §2 校训石 · L46 · 255
+- MAP-QSH-WEST §3 创新中心 · L51 · 452
+- MAP-QSH-WEST §4 经管楼 · L58 · 73
+- MAP-QSH-WEST §5 立人托幼公园 · L62 · 458
+- MAP-QSH-WEST §6 四号科研楼 · L67 · 376
+- MAP-QSH-WEST §7 五号科研楼、研究院大楼、核磁共振中心 · L73 · 341
+- MAP-QSH-WEST §8 荟文楼（综合楼） · L80 · 68
+- MAP-QSH-WEST §9 石刻 · L84 · 65
+- MAP-QSH-WEST §10 湿地公园与西门桥头 · L88 · 683
+- MAP-QSH-WEST §11 本区身份特征、设计增补与近景要求 · L98 · 889
+- MAP-QSH-WEST §12 待验证 · L119 · 134
 
 ## SYS-ATLAS-TRAVEL · 标记、锚点与传送
 
