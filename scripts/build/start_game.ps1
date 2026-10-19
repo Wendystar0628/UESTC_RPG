@@ -1,4 +1,5 @@
 ﻿# 启动游戏：先编译与导入（经构建锁，WF-BUILD §4），再用窗口版引擎打开正式入口（开始页）。
+# 构建沿用 Godot Debug 装载目录；优化与调试符号由共享 Directory.Build.props 决定。
 # 用法：双击根目录 启动游戏.cmd；命令行可写 启动游戏.cmd [-NoBuild] [游戏参数…]，参数原样转到这里
 #   -NoBuild：代码没改过时跳过编译与导入，直接启动
 #   游戏参数照 BootArguments 原样传给游戏，例如 --title=0（跳过开始页直接进漫游）
@@ -15,7 +16,7 @@ if (-not $NoBuild) {
     Write-Host '编译与导入中……'
     $lease = Enter-UESTCBuildLock $layout.Locks
     try {
-        Invoke-UESTCProcess 'dotnet' @('build', "$repo\game\Campus.csproj", '-v', 'q') $repo (Join-Path $out 'build.log') | Out-Null
+        Invoke-UESTCProcess 'dotnet' @('build', "$repo\game\Campus.csproj", '-c', 'Debug', '-v', 'q') $repo (Join-Path $out 'build.log') | Out-Null
         Invoke-UESTCProcess $godot @('--headless', '--path', "$repo\game", '--import') $repo (Join-Path $out 'import.log') -TimeoutSeconds 600 | Out-Null
     } finally { Exit-UESTCBuildLock $lease }
 }
