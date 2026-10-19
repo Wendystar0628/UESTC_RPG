@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 using Campus.Tests;
 using Campus.Contracts.Vegetation;
 using Campus.Contracts.Maps;
@@ -30,7 +31,7 @@ public sealed class VegetationBuildTests
         [.. Module.Tiles(Data.Value.Context).Select(tile => (tile, Module.Build(Data.Value.Context, tile, LodLevel.L0)))]);
 
     /// <summary>The far cells that hold a tree, built once per far level.</summary>
-    private static readonly Dictionary<LodLevel, Lazy<ContentOutput[]>> Far = new[] { LodLevel.L1, LodLevel.L2 }.ToDictionary(lod => lod, lod => new Lazy<ContentOutput[]>(() =>
+    private static readonly Dictionary<LodLevel, Lazy<ContentOutput[]>> Far = new[] { LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4 }.ToDictionary(lod => lod, lod => new Lazy<ContentOutput[]>(() =>
     {
         var ctx = Data.Value.Context;
         return [.. VegetationInputs.Layout(ctx).Layout.Trees.Select(t => TileGrid.At(t.Position, lod)).Distinct().Select(tile => Module.Build(ctx, tile, lod))];
@@ -67,17 +68,14 @@ public sealed class VegetationBuildTests
         var ctx = Data.Value.Context;
         var module = Module;
         var trees = VegetationInputs.Layout(ctx).Layout.Trees;
-        var tiles = Near.Value.Select(n => n.Tile).ToArray();
-        var near = Near.Value.Select(n => n.Output).ToArray();
+        var near = Near.Value.Select(n => n.Output).Where(o => o.Instances.Count > 0).ToArray();
         AssertThat(near.All(o => o.Instances.Count > 0)).OverrideFailureMessage("an occupied cell built no instances").IsTrue();
         AssertThat(near.All(o => o.Meshes.Count == 0 && o.Parts.Count == 0)).OverrideFailureMessage("vegetation must hand over instance streams only").IsTrue();
-        Records(near, trees, VegPool.L0);
+        Records(near, trees, VegPool.Far);
 
-        // Far tiles (128 m and 256 m): the same trees on the far stand-in.
-        foreach (var lod in new[] { LodLevel.L1, LodLevel.L2 })
+        // Every geometry level, including whole-map fallback, covers the same far trees.
+        foreach (var lod in new[] { LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4 })
             Records(Far[lod].Value, trees, VegPool.Far);
-        AssertThat(module.Build(ctx, tiles[0], LodLevel.L3).Instances.Count == 0 && module.Build(ctx, new(0, 0), LodLevel.L4).Instances.Count == 0)
-            .OverrideFailureMessage("crown clouds are not built yet").IsTrue();
         AssertThat(module.Build(ctx, new(100000, 100000), LodLevel.L0) == ContentOutput.Empty).OverrideFailureMessage("an empty cell must stay empty").IsTrue();
     }
 
@@ -87,8 +85,8 @@ public sealed class VegetationBuildTests
     {
         var ctx = Data.Value.Context;
         var streams = Near.Value.SelectMany(n => n.Output.Instances).ToArray();
-        var prepared = Module.PrepareVegetation(ctx).SelectMany(m => m.Prototypes)
-            .Where(p => p.Id.StartsWith("vegetation/", StringComparison.Ordinal)).ToDictionary(p => p.Id, StringComparer.Ordinal);
+        var prepared = Module.Tiles(ctx).SelectMany(tile => Module.PrepareTrees(ctx, tile)).SelectMany(m => m.Prototypes)
+            .Concat(streams.Select(stream => stream.Prototype)).DistinctBy(p => p.Id).ToDictionary(p => p.Id, StringComparer.Ordinal);
         var species = VegetationInputs.Species(ctx);
         foreach (var prototype in prepared.Values)
         {
@@ -150,7 +148,7 @@ public sealed class VegetationBuildTests
         var trees = VegetationInputs.Layout(ctx).Layout.Trees;
         AssertThat(sources.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == sources.Length)
             .OverrideFailureMessage("all trees have stable unique source IDs").IsTrue();
-        foreach (var (tile, output) in Near.Value.Take(40))
+        foreach (var (tile, output) in Near.Value.Where(pair => pair.Output.Instances.Count > 0).Take(40))
         {
             var ids = trees.Where(t => TileGrid.At(t.Position) == tile)
                 .Select(t => "object/vegetation/" + t.Key).ToHashSet(StringComparer.Ordinal);
@@ -182,6 +180,32 @@ public sealed class VegetationBuildTests
         var factor = TestTolerance.BudgetFactor;
         AssertThat(l0 <= factor * module.Budget.TrianglesL0 && l1 <= factor * module.Budget.TrianglesL1 && draws <= factor * module.Budget.DrawCalls)
             .OverrideFailureMessage($"L0 {l0}, L1 {l1}, draws {draws} over {factor}x {module.Budget}").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
+    public void TilePayloadUsesTheConsumedSourceAndExplicitNearPrototypeOrder()
+    {
+        var source = Data.Value.Context;
+        var tile = TileGrid.At(VegetationInputs.Layout(source).Layout.Trees.First().Position);
+        var producer = new VegetationBakeProducer();
+        producer.Prepare(new Lazy<IReadOnlyList<PreparedContentModule>>(() =>
+            [new("vegetation", Module, source, Module.Tiles(source).ToArray())]), null!);
+        var key = new BakeKey(source.Map.Id, BakeModuleIds.VegetationTrees, FormattableString.Invariant($"L0/{tile.X}/{tile.Z}"));
+        // Deliberately incomplete request inputs: the producer must use the original source context.
+        var request = new BuildContext { Map = source.Map, World = source.World, WorldSeed = source.WorldSeed + 1, Catalog = source.Catalog };
+        var result = (VegetationTileContent)producer.Build(key, request);
+        var expected = Module.PrepareTrees(source, tile);
+        AssertThat(result.Key == key && result.Tile == tile && result.Mothers.Count == expected.Count).IsTrue();
+        for (var m = 0; m < result.Mothers.Count; m++)
+        {
+            var mother = result.Mothers[m];
+            AssertThat(mother.Records.Span.SequenceEqual(expected[m].Records.Span)).IsTrue();
+            AssertThat(mother.Prototypes.Select(p => VegetationPrototypes.Parse(p.Id).Pool)
+                .SequenceEqual(new[] { VegPool.L0Plus, VegPool.L0, VegPool.L1, VegPool.Shadow })).IsTrue();
+            for (var r = 0; r < mother.Records.Length; r += InstanceStreamLayout.FloatsPerInstance)
+                AssertThat(TileGrid.At(new System.Numerics.Vector3(mother.Records.Span[r + 3], mother.Records.Span[r + 7], mother.Records.Span[r + 11])) == tile).IsTrue();
+        }
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

@@ -11,31 +11,34 @@ namespace Campus.Systems.Vegetation;
 /// vegetation runtime's 10 Hz, once the eye has moved <see cref="Step"/> m, the cells within <see cref="Reach"/> of the eye are
 /// written as the buffer's prefix and the rest is hidden. veg_grass sinks the blades into the lawn before the near radius
 /// (global quality.z, 20 m at its widest) ends, and drops the clumps beyond the density (quality.y) in the shader, so the lawn's own colour is the far grass and nothing pops at the reach. Layer 6, no shadow (ENG-PERF).
-/// Capacity is the most clumps any eye position can select, so the buffer never holds the whole map.
+/// Each pool belongs to one owner tile; capacity is the most local clumps any eye position can select.
 /// </summary>
 internal sealed class GrassPool
 {
-    /// <summary>Key prefix of grass entries in IVegetationRuntimeSource.PrepareVegetation (= Campus.Gen.Vegetation.GrassClumps.KeyPrefix).</summary>
+    /// <summary>Key prefix of grass entries in IVegetationRuntimeSource.PrepareGrass (= Campus.Gen.Vegetation.GrassClumps.KeyPrefix).</summary>
     public const string KeyPrefix = "grass/";
 
     private const uint Layer = 1u << 5;   // layer 6: grass, leaves, particles (ENG-PERF)
     private const float Cell = 8f;
-    private const float Reach = 24f;      // Capacity envelope covering all preset grass ranges plus clump sway; visibility reads quality.z.
+    internal const float Reach = 24f;      // Capacity envelope covering all preset grass ranges plus clump sway; visibility reads quality.z.
     private const float Step = 2f;
     private const int Stride = InstanceStreamLayout.FloatsPerInstance;
 
     private static readonly Aabb Parked = new(new Vector3(0f, -100000f, 0f), Vector3.One);
 
     private readonly VegetationMotherData _data;
+    private readonly string _tileId;
+    public bool Ready => _pool is { IsReady: true };
     private readonly float[] _records;
     private readonly Dictionary<(int X, int Z), (List<int> Items, Box3 Box)> _cells = [];
     private readonly float[] _scratch;
     private IInstancePool? _pool;
     private N.Vector2? _at;
 
-    public GrassPool(VegetationMotherData data)
+    public GrassPool(VegetationMotherData data, string tileId)
     {
         _data = data;
+        _tileId = tileId;
         _records = data.Records.ToArray();
         for (var i = 0; i < data.Bounds.Count; i++)
         {
@@ -55,8 +58,9 @@ internal sealed class GrassPool
 
     public void Mount(IInstancePoolHost host, MapId map)
     {
-        _pool = host.Mount(new GeometryInstancePoolSpec($"vegetation.{_data.Key}", _data.Owner.Value, _data.Prototypes[0], Capacity, Parked,
+        _pool = host.Mount(new GeometryInstancePoolSpec($"vegetation.{_tileId}.{_data.Key}", _data.Owner.Value, _data.Prototypes[0], Capacity, Parked,
             Layer, GeometryInstance3D.ShadowCastingSetting.Off) { Map = map });
+        _pool.WriteBuffer(_scratch);
         _at = null;
     }
 
@@ -69,8 +73,12 @@ internal sealed class GrassPool
         var n = 0;
         var min = new N.Vector3(float.MaxValue);
         var max = new N.Vector3(float.MinValue);
-        foreach (var (items, box) in InReach(at))
+        foreach (var (key, cell) in _cells)
         {
+            var dx = MathF.Max(0f, MathF.Max(key.X * Cell - at.X, at.X - (key.X + 1) * Cell));
+            var dz = MathF.Max(0f, MathF.Max(key.Z * Cell - at.Y, at.Y - (key.Z + 1) * Cell));
+            if (dx * dx + dz * dz > Reach * Reach) continue;
+            var (items, box) = cell;
             foreach (var i in items)
             {
                 if (n == Capacity) break;

@@ -12,6 +12,7 @@ public static partial class Planting
 {
     private const float TreeScaleMinimum = 0.92f;
     private const float TreeScaleRange = 0.16f;
+    public const float MaximumTreeScale = TreeScaleMinimum + TreeScaleRange;
     // ---------------------------------------------------------------------------------------------------------
     // Common: variant, scale, terrain, clearance.
     // ---------------------------------------------------------------------------------------------------------

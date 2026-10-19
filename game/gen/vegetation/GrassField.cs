@@ -53,13 +53,17 @@ public static class GrassField
 
     /// <summary>Tall grass grows in patches: cell size of the patch noise (m) and the share of ground left open.</summary>
     public const float TallPatchCell = 7f, TallOpen = 0.4f;
+    private const float MinimumScale = 0.86f, ScaleRange = 0.28f;
+    public const float MaximumScale = MinimumScale + ScaleRange;
 
-    public static IReadOnlyList<GrassClump> Build(GrassRuntimeData data, IWorldModel world, PlantingLayout trees, uint seed)
+    public static IReadOnlyList<GrassClump> Build(GrassRuntimeData data, IWorldModel world, PlantingLayout trees, uint seed, TileKey tile)
     {
         ArgumentNullException.ThrowIfNull(data);
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(trees);
         if (data.Areas.Count == 0) return [];
+        var origin = TileGrid.Origin(tile);
+        var end = origin + new Vector2(TileGrid.BaseEdge);
         var site = new Planting.Site(world, seed);
         var trunks = new SpatialGrid<Vector2>(4f);
         foreach (var tree in trees.Trees)
@@ -84,19 +88,22 @@ public static class GrassField
             {
                 var min = polygon.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
                 var max = polygon.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
-                for (var j = (int)MathF.Floor(min.Y / step); j * step <= max.Y; j++)
-                    for (var i = (int)MathF.Floor(min.X / step); i * step <= max.X; i++)
+                if (max.X < origin.X || min.X >= end.X || max.Y < origin.Y || min.Y >= end.Y) continue;
+                var firstX = Math.Max((int)MathF.Floor(min.X / step), (int)MathF.Floor(origin.X / step) - 1);
+                var firstZ = Math.Max((int)MathF.Floor(min.Y / step), (int)MathF.Floor(origin.Y / step) - 1);
+                for (var j = firstZ; j * step <= max.Y && j * step < end.Y; j++)
+                    for (var i = firstX; i * step <= max.X && i * step < end.X; i++)
                     {
                         var h = IntegerNoise.Hash2D(unchecked((uint)i), unchecked((uint)j), salt);
                         var u = IntegerNoise.High24(h);
                         var v = IntegerNoise.Low24(h);
                         var p = new Vector2((i + 0.5f + 0.8f * (u - 0.5f)) * step, (j + 0.5f + 0.8f * (v - 0.5f)) * step);
-                        if (!PlanGeometry.Contains(polygon, p)) continue;
+                        if (TileGrid.At(p) != tile || !PlanGeometry.Contains(polygon, p)) continue;
                         if (area.SetbackMeters is { } inset && Edge(polygon, p) < inset) continue;
                         if (style == GrassStyle.Tall && IntegerNoise.Value2D(p.X / TallPatchCell, p.Y / TallPatchCell, patch) < TallOpen) continue;
                         if (Excluded(excludes, p, reach) || !OnLawn(site, trunks, p, reach)) continue;
                         var k = IntegerNoise.Mix(h ^ 0x51ED27u);
-                        var scale = 0.86f + 0.28f * IntegerNoise.High24(k);
+                        var scale = MinimumScale + ScaleRange * IntegerNoise.High24(k);
                         var y = world.Terrain.HeightAt(p.X, p.Y) + GroundLevels.Lawn;
                         var band = lawn.EdgeBand;
                         var darkEdge = band > 0f && (site.Blocked(p, band) || site.OnRoad(p, band + KerbWidth, band, band, band) || site.IsPaved(p, band));
@@ -106,6 +113,24 @@ public static class GrassField
             }
         }
         return clumps.AsReadOnly();
+    }
+
+    /// <summary>Conservative polygon directory; does not instantiate clumps or sample terrain.</summary>
+    public static IReadOnlyList<TileKey> Tiles(GrassRuntimeData data)
+    {
+        var tiles = new HashSet<TileKey>();
+        foreach (var area in data.Areas)
+        {
+            if (area.Category == GrassCategory.Exclude) continue;
+            foreach (var polygon in area.Polygons)
+            {
+                var min = TileGrid.At(polygon.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min));
+                var max = TileGrid.At(polygon.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max));
+                for (var z = min.Z; z <= max.Z; z++)
+                    for (var x = min.X; x <= max.X; x++) tiles.Add(new(x, z));
+            }
+        }
+        return tiles.OrderBy(t => t.X).ThenBy(t => t.Z).ToArray();
     }
 
     /// <summary>Lawn ground, clear of every non-lawn surface by the edge rule of each, of tree pits and of trunks.</summary>

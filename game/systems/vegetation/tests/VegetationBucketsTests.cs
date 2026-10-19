@@ -9,7 +9,7 @@ namespace Campus.Systems.Vegetation.Tests;
 
 /// <summary>
 /// Pool choice of the vegetation runtime (WLD-VEGETATION): near bands scaled by tree height, 10% hysteresis outwards,
-/// and the near / far cross-fade band where a tree is in both pools (max-011 23c2c).
+/// the near side retains the cross-fade band; static geometry owns far stand-ins.
 /// </summary>
 [TestSuite]
 public sealed class VegetationBucketsTests
@@ -36,20 +36,6 @@ public sealed class VegetationBucketsTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void TheCrossFadeBandIsInBothPools()
-    {
-        // The far pool covers the band at every detail factor (the shaders scale it by quality.x down to 0.7).
-        var start = VegFade.NearFadeStart * VegetationBuckets.MinDetail;
-        AssertThat(!VegetationBuckets.TargetFar(start - 1f, false) && VegetationBuckets.TargetFar(start + 1f, false)).OverrideFailureMessage("far pool joins at the band start").IsTrue();
-        AssertThat(VegetationBuckets.TargetFar(start - 1f, true) && !VegetationBuckets.TargetFar(start / VegetationBuckets.Hysteresis - 1f, true)).OverrideFailureMessage("far pool leaves 10% inside").IsTrue();
-        for (var d = start + 1f; d < VegFade.NearFadeEnd; d += 2f)
-            AssertThat(VegetationBuckets.Target(d, 1f, VegetationBuckets.NotNear) == 2 && VegetationBuckets.TargetFar(d, false)).OverrideFailureMessage($"{d} m in both pools").IsTrue();
-        // No crown clouds yet: the far stand-in has no outer bound.
-        AssertThat(VegetationBuckets.TargetFar(5000f, true) == !VegFade.CloudReady).OverrideFailureMessage("far pool has no outer bound").IsTrue();
-    }
-
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
     public void UpdateReportsMovesAndResetDropsTheHistory()
     {
         var records = new float[3 * InstanceStreamLayout.FloatsPerInstance];
@@ -58,9 +44,9 @@ public sealed class VegetationBucketsTests
         InstanceStreamLayout.Write(records.AsSpan(32, 16), Matrix4x4.CreateTranslation(150f, 0f, 10f), new(0.3f, 16f, 0.5f, 12f));
         var buckets = new VegetationBuckets(records);
         var eye = new Vector3(0f, 6f, 10f);   // 10 m from the first tree's middle
-        AssertThat(buckets.Update(eye, reset: false) && buckets.Level(0) == 0 && !buckets.Far(0)).OverrideFailureMessage("first bucketing: near tree").IsTrue();
-        AssertThat(buckets.Level(1) == VegetationBuckets.NotNear && buckets.Far(1)).OverrideFailureMessage("first bucketing: far tree").IsTrue();
-        AssertThat(buckets.Level(2) == 2 && buckets.Far(2)).OverrideFailureMessage("first bucketing: tree in the band is in both pools").IsTrue();
+        AssertThat(buckets.Update(eye, reset: false) && buckets.Level(0) == 0).OverrideFailureMessage("first bucketing: near tree").IsTrue();
+        AssertThat(buckets.Level(1) == VegetationBuckets.NotNear).OverrideFailureMessage("first bucketing: far tree").IsTrue();
+        AssertThat(buckets.Level(2) == 2).OverrideFailureMessage("first bucketing: near L1 covers the transition band").IsTrue();
         AssertThat(!buckets.Update(eye, reset: false)).OverrideFailureMessage("a still eye moves nothing").IsTrue();
         var back = new Vector3(0f, 6f, 16f);  // inside the 10% band: stays L0+ unless reset
         AssertThat(!buckets.Update(back, reset: false) && buckets.Level(0) == 0).OverrideFailureMessage("hysteresis holds").IsTrue();

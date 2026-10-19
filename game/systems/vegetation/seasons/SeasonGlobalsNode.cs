@@ -56,7 +56,7 @@ public sealed partial class SeasonGlobalsNode : Node, IMapAware
         try
         {
             var producer = Services.Get<IMapContentSource>().GetModule<IVegetationRuntimeSource>(ctx, ModuleId);
-            data = producer.PrepareSpeciesTable(VegetationContext.Resolve(ctx, ModuleId, Services.Get<IBakeContextSource>())());
+            data = producer.PrepareSpeciesTable(VegetationContext.Resolve(ctx, ModuleId, Services.Get<IBakeContextSource>()));
         }
         catch (Exception error)
         {

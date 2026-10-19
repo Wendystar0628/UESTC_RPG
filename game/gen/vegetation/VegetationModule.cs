@@ -9,11 +9,8 @@ namespace Campus.Gen.Vegetation;
 /// colliders per 64 m cell (WLD-VEGETATION) and owns the canopy channels of the ground masks — ground_mask R
 /// (ginkgo leaves), G (other leaves and petals), A (the maple subset of G) and ground_mask2 B (canopy shelter), painted from one crown projection.
 /// The claim is exclusive: this contributor clears and paints these channels, so the values are the projection's own.
-/// Build gives the trees as static instance streams (<see cref="ContentOutput.Instances"/>), one per mother model (species ×
-/// variant) present in the tile, over the shared prototypes of <see cref="VegetationPrototypes"/>: L0 (64 m cells) carries
-/// the near pool's trees on the L0 mother model, the source the vegetation runtime buckets into L0+ / L0 / L1 and the
-/// visible source of the trunk colliders; L1 and L2 carry the far pool (150–400 m) on its stand-in; L3 and L4 give
-/// nothing yet (crown clouds, ENG-PERF). Engine instances are made only by the kernel's instance pools.
+/// Build gives far stand-ins as static instance streams (<see cref="ContentOutput.Instances"/>), one per mother model (species ×
+/// variant) at every static geometry level. Near trees and their shadows belong exclusively to the streamed runtime.
 /// </summary>
 [ContentModule("vegetation", Owner = "WP-23")]
 public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskContributor, IContentSourceTraceProvider
@@ -34,14 +31,12 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     public const int BudgetTrianglesL1 = 30_000;
     public const int BudgetDrawCalls = 40;
 
-    public IEnumerable<TileKey> Tiles(BuildContext ctx) => Layout(ctx).Layout.Trees
-        .Select(t => TileGrid.At(t.Position))
-        .Distinct().OrderBy(t => t.X).ThenBy(t => t.Z).ToArray();
+    public IEnumerable<TileKey> Tiles(BuildContext ctx) => VegetationTiles.Read(ctx);
 
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        if (PoolOf(lod) is not { } pool) return ContentOutput.Empty;
+        var pool = PoolOf(lod);
         var trees = InTile(Layout(ctx).Layout, tile, lod);
         if (trees.Count == 0) return ContentOutput.Empty;
         var streams = new List<GeometryInstanceStream>();
@@ -54,50 +49,34 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
         return ContentOutput.Empty with { Instances = streams.AsReadOnly() };
     }
 
-    /// <summary>Plan-only grass input from the same prepared context used by trees; no grass geometry is implied.</summary>
-    public GrassRuntimeData PrepareGrass(BuildContext context) => GrassInputs.Read(context);
+    public IReadOnlyList<TileKey> GrassTiles(BuildContext context) => GrassField.Tiles(GrassInputs.Read(context));
 
-    /// <summary>The species table packed for the tree_species texture (<see cref="SpeciesTable.Pack"/>).</summary>
-    public float[] PrepareSpeciesTable(BuildContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        return VegetationInputs.Species(context).Pack(RequirePalette(context));
-    }
+    public IReadOnlyList<VegetationMotherData> PrepareGrass(BuildContext context, TileKey tile) =>
+        GrassClumps.Mothers(GrassField.Build(GrassInputs.Read(context), context.World, Layout(context).Layout, context.WorldSeed, tile));
 
-    /// <summary>
-    /// All runtime pools prepared from the same L0 streams, layout cache and shared production prototypes; then the grass pools
-    /// (<see cref="GrassClumps.Mothers"/>), which carry one prototype each and are told apart by their key prefix.
-    /// </summary>
-    public IReadOnlyList<VegetationMotherData> PrepareVegetation(BuildContext context)
+    /// <summary>The packed small, resident species table.</summary>
+    public float[] PrepareSpeciesTable(BuildContext context) =>
+        VegetationInputs.Species(context).Pack(RequirePalette(context));
+
+    /// <summary>One owner tile, using the same planting and prototype algorithm as static far geometry.</summary>
+    public IReadOnlyList<VegetationMotherData> PrepareTrees(BuildContext context, TileKey tile)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        var species = VegetationInputs.Species(context);
-        var groups = new SortedDictionary<string, (SpeciesInfo Info, int Variant, List<float> Records)>(StringComparer.Ordinal);
-        foreach (var tile in Tiles(context))
-            foreach (var stream in Build(context, tile, LodLevel.L0).Instances)
-            {
-                var (id, variant, _) = VegetationPrototypes.Parse(stream.Prototype.Id);
-                var key = id + "." + variant.ToString(CultureInfo.InvariantCulture);
-                if (!groups.TryGetValue(key, out var group)) groups.Add(key, group = (species.Get(id), variant, []));
-                group.Records.AddRange(stream.Data.ToArray());
-            }
-        var mothers = groups.ToArray();
-        var built = new VegetationMotherData[mothers.Length];
-        for (var i = 0; i < mothers.Length; i++)
+        var built = new List<VegetationMotherData>();
+        foreach (var group in ByMother(InTile(Layout(context).Layout, tile, LodLevel.L0)))
         {
-            var (key, (info, variant, records)) = (mothers[i].Key, mothers[i].Value);
-            var prototypes = Enum.GetValues<VegPool>()
-                .Select(pool => VegetationPrototypes.Get(info, variant, pool, context)).ToArray();
-            var data = records.ToArray();
-            var bounds = new Box3[data.Length / InstanceStreamLayout.FloatsPerInstance];
-            for (var tree = 0; tree < bounds.Length; tree++)
-                bounds[tree] = VegetationPrototypes.WorldBounds(prototypes[(int)VegPool.L0Plus].Bounds,
-                    InstanceMatrix(data.AsSpan(tree * InstanceStreamLayout.FloatsPerInstance, InstanceStreamLayout.FloatsPerInstance)));
-            built[i] = new(key, new WpId(VegetationPrototypes.Owner), data, prototypes, bounds);
+            var first = group[0];
+            VegPool[] order = [VegPool.L0Plus, VegPool.L0, VegPool.L1, VegPool.Shadow];
+            var prototypes = order.Select(pool => VegetationPrototypes.Get(first.Species, first.Variant, pool, context)).ToArray();
+            var stream = Stream(StreamId(tile, LodLevel.L0, first), prototypes[0], group);
+            var records = stream.Data.ToArray();
+            var bounds = new Box3[group.Count];
+            for (var i = 0; i < bounds.Length; i++)
+                bounds[i] = VegetationPrototypes.WorldBounds(prototypes[0].Bounds,
+                    InstanceMatrix(records.AsSpan(i * InstanceStreamLayout.FloatsPerInstance, InstanceStreamLayout.FloatsPerInstance)));
+            built.Add(new(first.Species.Id + "." + first.Variant.ToString(CultureInfo.InvariantCulture),
+                new WpId(VegetationPrototypes.Owner), records, prototypes, bounds));
         }
-        // Near card grass of the authored grass areas, after the trees (keys GrassClumps.KeyPrefix + style, one prototype each).
-        var grass = GrassField.Build(PrepareGrass(context), context.World, Layout(context).Layout, context.WorldSeed);
-        return [.. built, .. GrassClumps.Mothers(grass)];
+        return built.AsReadOnly();
     }
 
     private static System.Numerics.Matrix4x4 InstanceMatrix(ReadOnlySpan<float> r) =>
@@ -107,7 +86,7 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (PoolOf(level) is not { } pool) yield break;
+        var pool = PoolOf(level);
         foreach (var tree in Layout(context).Layout.Trees)
         {
             var id = "object/vegetation/" + tree.Key;
@@ -158,12 +137,10 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     private sealed record Cache(IWorldModel World, uint Seed, ReadOnlyMemory<byte> Species, ReadOnlyMemory<byte> Planting,
         PlantingLayout Layout, PlantingRules? Rules);
 
-    /// <summary>L0 cells give the near pool's source, L1 and L2 tiles the far pool; L3/L4 wait for the crown clouds.</summary>
-    private static VegPool? PoolOf(LodLevel lod) => lod switch
+    /// <summary>Every selected geometry level covers the far segment, including leaf cells and coarse ancestors.</summary>
+    private static VegPool PoolOf(LodLevel lod) => lod switch
     {
-        LodLevel.L0 => VegPool.L0,
-        LodLevel.L1 or LodLevel.L2 => VegPool.Far,
-        LodLevel.L3 or LodLevel.L4 => null,
+        LodLevel.L0 or LodLevel.L1 or LodLevel.L2 or LodLevel.L3 or LodLevel.L4 => VegPool.Far,
         _ => throw new ArgumentOutOfRangeException(nameof(lod), lod, "Unknown level.")
     };
 

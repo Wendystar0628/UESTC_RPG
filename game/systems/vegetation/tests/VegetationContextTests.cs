@@ -15,7 +15,7 @@ using static GdUnit4.Assertions;
 namespace Campus.Systems.Vegetation.Tests;
 
 /// <summary>
-/// The vegetation worker consumes the prepared production world and its frozen inputs as is.
+/// The resident species table consumes the prepared production world and its frozen inputs as is.
 /// </summary>
 [TestSuite]
 public sealed class VegetationContextTests
@@ -42,7 +42,7 @@ public sealed class VegetationContextTests
             ClaimedBy = fixture.Claims.Build(map.World).ClaimedBy
         };
         var source = new PreparedSource(prepared);
-        var context = VegetationContext.Resolve(map, Module, source)();
+        var context = VegetationContext.Resolve(map, Module, source);
         var authoredRoads = fixture.Input.SourceInputs.Entries
             .Where(pair => pair.Key.Equals("world/center-east.json", StringComparison.Ordinal))
             .SelectMany(pair => AuthoredRoadIds(pair.Value))
@@ -93,13 +93,13 @@ public sealed class VegetationContextTests
             CodeHash = "code"
         };
         var source = new PreparedSource(prepared);
-        var context = VegetationContext.Resolve(map, Module, source)();
+        var context = VegetationContext.Resolve(map, Module, source);
         AssertThat(source.Module == Module && ReferenceEquals(source.Context, map)).OverrideFailureMessage("The prepared query used another map or module.").IsTrue();
         AssertThat(ReferenceEquals(context.World, prepared.World) && ReferenceEquals(context.SourceInputs, prepared.SourceInputs) &&
               ReferenceEquals(context.ClaimedBy, prepared.ClaimedBy) && context.WorldSeed == 77 && context.DataHash == "data" &&
               context.CodeHash == "code" && ReferenceEquals(context.Catalog, prepared.Catalog)).OverrideFailureMessage("The prepared context lost a field or replaced the palette snapshot.").IsTrue();
         var own = new BuildContext { World = prepared.World, Map = prepared.Map, WorldSeed = 1, Catalog = palette };
-        AssertThat(ReferenceEquals(VegetationContext.Resolve(map, Module, new PreparedSource(own))(), own)).OverrideFailureMessage("A context with a palette must be returned as is.").IsTrue();
+        AssertThat(ReferenceEquals(VegetationContext.Resolve(map, Module, new PreparedSource(own)), own)).OverrideFailureMessage("A context with a palette must be returned as is.").IsTrue();
     }
 
     private static Aspects Lowest(Aspects aspects) => Enum.GetValues<Aspects>().First(bit => (aspects & bit) != 0);
@@ -114,7 +114,7 @@ public sealed class VegetationContextTests
 
     private sealed class FailingSource(Exception failure) : IBakeContextSource
     {
-        public Task<IReadOnlyDictionary<string, IReadOnlyList<TileKey>>> GetPreparedModuleTilesAsync(IMapContext context) => throw failure;
+        public Task<PreparedBakeTiles> GetPreparedModuleTilesAsync(IMapContext context) => throw failure;
         public int Calls { get; private set; }
         public BuildContext GetPreparedContext(IMapContext context, string moduleId)
         {
@@ -125,7 +125,7 @@ public sealed class VegetationContextTests
 
     private sealed class PreparedSource(BuildContext prepared) : IBakeContextSource
     {
-        public Task<IReadOnlyDictionary<string, IReadOnlyList<TileKey>>> GetPreparedModuleTilesAsync(IMapContext context) =>
+        public Task<PreparedBakeTiles> GetPreparedModuleTilesAsync(IMapContext context) =>
             throw new InvalidOperationException("Vegetation context resolution must not enumerate module tiles.");
         public IMapContext? Context { get; private set; }
         public string? Module { get; private set; }

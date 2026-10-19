@@ -4,14 +4,13 @@ using Campus.Contracts.Maps;
 
 namespace Campus.Systems.Vegetation;
 
-/// <summary>Workers consume the same prepared map version as the formal bake service.</summary>
+/// <summary>The resident species table consumes the formal prepared map context.</summary>
 internal static class VegetationContext
 {
-    public static Func<BuildContext> Resolve(IMapContext map, string moduleId, IBakeContextSource source)
+    public static BuildContext Resolve(IMapContext map, string moduleId, IBakeContextSource source)
     {
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(source);
-        var prepared = source.GetPreparedContext(map, moduleId);
-        return () => prepared;
+        return source.GetPreparedContext(map, moduleId);
     }
 }

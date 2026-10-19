@@ -18,7 +18,7 @@ namespace Campus.Gen.Vegetation;
 /// </summary>
 public static class GrassClumps
 {
-    /// <summary>Key prefix of the grass pools in <see cref="VegetationModule.PrepareVegetation"/> (the runtime splits on it).</summary>
+    /// <summary>Key prefix of the grass pools in <see cref="VegetationModule.PrepareGrass"/> (the runtime splits on it).</summary>
     public const string KeyPrefix = "grass/";
 
     /// <summary>Sway reach (m) added to the clump bounds.</summary>

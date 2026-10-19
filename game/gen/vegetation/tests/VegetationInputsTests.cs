@@ -6,6 +6,8 @@ using Campus.Contracts;
 using Campus.Tests;
 using Campus.Gen.Tests.Support;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Vegetation;
+using System.Numerics;
 using GdUnit4;
 
 namespace Campus.Gen.Vegetation.Tests;
@@ -42,6 +44,9 @@ public sealed class VegetationInputsTests
         var module = new VegetationModule();
         var tree = VegetationInputs.Layout(ctx).Layout.Trees.First(t => t.Source == PlantSource.Road);
         var cell = TileGrid.At(tree.Position);
+        // Owner enumeration must be source-only even with terrain access unavailable.
+        var sourceOnly = ctx.WithWorld(new FakeWorld(ctx.World) { Terrain = null! });
+        AssertThat(module.Tiles(sourceOnly).Contains(cell)).IsTrue();
         if (!module.Tiles(ctx).Contains(cell) || module.Collide(ctx, cell).Count == 0)
             throw new InvalidOperationException("tiles or trunk colliders disagree with the layout");
         var grid = new GroundMaskGrid(new MapRect(new(tree.Position.X - 32f, tree.Position.Z - 32f), new(tree.Position.X + 32f, tree.Position.Z + 32f)), 64, 64, 1f);
@@ -64,6 +69,26 @@ public sealed class VegetationInputsTests
             throw new InvalidOperationException("the A channel was not overwritten");
         if (module.Channels != (GroundMaskChannels.GinkgoLeaves | GroundMaskChannels.OtherLeaves | GroundMaskChannels.CanopyShelter | GroundMaskChannels.MapleLeaves))
             throw new InvalidOperationException("channel claim");
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void GrassTilesPartitionJitteredPlacementAcrossTheOwnerBoundary()
+    {
+        var polygon = new PolygonRings([new(-1.2f, 1f), new(1.2f, 1f), new(1.2f, 3f), new(-1.2f, 3f)]);
+        var data = new GrassRuntimeData(new MapId("fixture"),
+            [new GrassAreaData(new FeatureId("grass-test"), null, GrassCategory.Short, [polygon], null)]);
+        var tiles = GrassField.Tiles(data);
+        AssertThat(tiles.SequenceEqual(new[] { new TileKey(-1, 0), new TileKey(0, 0) })).IsTrue();
+        var all = new List<GrassClump>();
+        foreach (var tile in tiles)
+        {
+            var grass = GrassField.Build(data, new FakeWorld(), new PlantingLayout([]), 77, tile);
+            AssertThat(grass.Count > 0 && grass.All(c => TileGrid.At(c.Position) == tile)).IsTrue();
+            var repeat = GrassField.Build(data, new FakeWorld(), new PlantingLayout([]), 77, tile);
+            AssertThat(grass.SequenceEqual(repeat)).IsTrue();
+            all.AddRange(grass);
+        }
+        AssertThat(all.Select(c => c.Position).Distinct().Count() == all.Count).IsTrue();
     }
 
     private static BuildContext Context(bool withPlanting)
