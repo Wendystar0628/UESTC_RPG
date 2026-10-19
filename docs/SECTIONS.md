@@ -455,7 +455,7 @@
 
 ## ART-STYLE-SHADING · 明暗、影色与材质表现
 
-`docs/art/ART-STYLE-SHADING-明暗影色与材质.md` · 5.7k 字 · 卡通着色的明暗阶数、法线、倒角提亮，影色的推导，玻璃金属边缘光透光湿面，贴图与笔触，材质速查
+`docs/art/ART-STYLE-SHADING-明暗影色与材质.md` · 5.8k 字 · 卡通着色的明暗阶数、法线、倒角提亮，影色的推导，玻璃金属边缘光透光湿面，贴图与笔触，材质速查
 关键词：卡通材质、toon.gdshaderinc、明暗分阶、接触影、影色推导、室内暖影、倒角提亮、法线展平、边缘光、透光、湿面、斑驳、构造图案线、不用法线贴图、材质速查
 
 - ART-STYLE-SHADING §0 结论 · L22 · 645
@@ -471,7 +471,7 @@
   - ART-STYLE-SHADING §2.1 原则 · L91 · 267
   - ART-STYLE-SHADING §2.2 推导规则 · L99 · 443
   - ART-STYLE-SHADING §2.3 天光与地面反光 · L109 · 78
-  - ART-STYLE-SHADING §2.4 室内暖影 · L113 · 134
+  - ART-STYLE-SHADING §2.4 室内暖影 · L113 · 181
   - ART-STYLE-SHADING §2.5 哪些材质有色调变化 · L118 · 134
   - ART-STYLE-SHADING §2.6 夜间与阴雨 · L122 · 115
 - ART-STYLE-SHADING §3 高光、边缘光与透光 · L127 · 744
