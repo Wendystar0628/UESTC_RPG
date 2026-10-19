@@ -79,6 +79,7 @@ public sealed class EntranceTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ClaimedFacadesOpenNoDoors()
     {
         // WP-14 opens doors only on the facades it generates: a zone pack's Facade or Massing claim takes the door, its

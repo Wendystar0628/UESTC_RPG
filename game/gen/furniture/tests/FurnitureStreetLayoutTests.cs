@@ -49,6 +49,7 @@ public sealed class FurnitureStreetLayoutTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void BenchesLineAWalkAndBinsStandApart()
     {
         // Opus review 12:15: a bench lines a walk and faces it, its bay joined to the walk, a passage of 1.2 m left in front; it
@@ -129,6 +130,7 @@ public sealed class FurnitureStreetLayoutTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void AnchorsStandOnOrBesidePaving()
     {
         // Opus review 12:15: a kiosk's apron or a post's foot touches pedestrian paving (≤ 0.5 m off it); the facing never changes.

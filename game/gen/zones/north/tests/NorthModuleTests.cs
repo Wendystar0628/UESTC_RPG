@@ -20,6 +20,7 @@ public sealed class NorthModuleTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryClusterHasItsPolygonAndGateAddition()
     {
         var world = RealMapFixture.Load().World;
@@ -31,6 +32,7 @@ public sealed class NorthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryClusterGetsAMainGateAndAClosedFence()
     {
         var world = RealMapFixture.Load().World;
@@ -121,6 +123,7 @@ public sealed class NorthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void SitesStayInsideTheNorthZone()
     {
         var ctx = Context();

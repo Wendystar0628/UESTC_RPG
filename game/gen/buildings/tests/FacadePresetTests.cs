@@ -35,6 +35,7 @@ public sealed class FacadePresetTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void FacadePresetsChangeOnlyTheirBuilding()
     {
         // MAP-QSH-SOUTH on one research block among ordinary buildings: larger glass in the same window cells; every
@@ -164,6 +165,7 @@ public sealed class FacadePresetTests
 
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void DormPresetsKeepEveryWindowNumber()
     {
         // The window cells and the storeys are the family's, so no window of a building changes its number (contract-29): on
@@ -206,6 +208,7 @@ public sealed class FacadePresetTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void NorthPresetsReachTheRealBuildings()
     {
         // Presets supply nominal window dimensions; the authored storey height can cap a row's clear opening.
@@ -236,6 +239,7 @@ public sealed class FacadePresetTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void NorthUnkeyedBlocksTakeTheBohanLanguage()
     {
         // Sample dormitories take their authored keys; each takes the

@@ -17,6 +17,7 @@ using static Campus.Gen.Zones.North.Tests.NorthTestSupport;
 public sealed class NorthSiteTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void FoodCourtEscalatorsMeetTheirFloorsAndRespectTheirEntryGates()
     {
         var context = Context();
@@ -38,6 +39,7 @@ public sealed class NorthSiteTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void HallPorchMeetsTheDeclaredEntrance()
     {
         var world = RealMapFixture.Load().World;
@@ -58,6 +60,7 @@ public sealed class NorthSiteTests
     /// wall and 3 m off every road edge, the cluster's design drive included.
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void RestDeckSitsInTheShuofengTenCourtyard()
     {
         var world = RealMapFixture.Load().World;
@@ -113,6 +116,7 @@ public sealed class NorthSiteTests
     /// students' main gates; the latter two used to run into a dormitory).
     /// </summary>
     [TestCase, TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
     public void GuardHousesStandClearOfBuildings()
     {
         var world = RealMapFixture.Load().World;
@@ -136,6 +140,7 @@ public sealed class NorthSiteTests
     /// the south-east corner, and the north-west gate stays a closed lane without a house.
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void InternationalClusterMainGateIsOnItsDesignDrive()
     {
         var world = RealMapFixture.Load().World;
@@ -161,6 +166,7 @@ public sealed class NorthSiteTests
     /// far end of the street (商业街 reaches t −110.5; the run heads south into the campus, toward negative t), and keeps clear of buildings and road edges.
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CanalRailCarriesOnFromThePlazaRailing()
     {
         var ctx = Context();
@@ -210,6 +216,7 @@ public sealed class NorthSiteTests
     /// the walk, and its back keeps 8 m off every dormitory window.
     /// </summary>
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CourtyardSeatWallFacesTheHillFromTheWalk()
     {
         var world = RealMapFixture.Load().World;

@@ -22,6 +22,7 @@ using static GdUnit4.Assertions;
 public sealed class FurniturePlantingRowTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TreeRowsComeFromThePlantingInputAndAreLeftOutWithOneWarning()
     {
         // The rows are read from the map's frozen planting rules, not copied: every road the real file lists gives its rows and its band,
