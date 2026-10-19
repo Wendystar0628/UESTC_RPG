@@ -30,12 +30,4 @@ public sealed partial class BakeService
         _terrain.PrepareRegion(map.Context, new(origin, origin + new Vector2(TileGrid.BaseEdge)), map.Lifetime.Token)
             .GetAwaiter().GetResult();
     }
-
-    internal void ReleaseColdAssets()
-    {
-        var progress = _queue.Progress;
-        if (progress.Total == 0 || progress.Done != progress.Total) return;
-        lock (_sync)
-            foreach (var map in _contexts.Values.Where(map => map.Metadata is not null)) _terrain.ReleaseAssets(map.Context.World);
-    }
 }

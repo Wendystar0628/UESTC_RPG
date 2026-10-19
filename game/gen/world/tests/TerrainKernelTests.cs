@@ -88,8 +88,11 @@ public sealed class TerrainKernelTests
         AssertThat(restored.SequenceEqual(a) && !prepared.HasBlock(default)).OverrideFailureMessage("Restoring L4 required fine terrain blocks.").IsTrue();
         var point = new Vector2(40, 20.5f);
         prepared.Publish(terrain.BuildPoints([point]));
+        terrain.Attach(prepared);
         AssertThat(prepared.IsPrepared(point) && prepared.HeightAt(point.X, point.Y) == terrain.HeightAt(point.X, point.Y))
             .OverrideFailureMessage("A prepared fractional query differs from the authoritative metre nodes.").IsTrue();
+        AssertThat(terrain.SnapshotPoints().All(node => !prepared.TryReadNode(node.X, node.Z, out _)))
+            .OverrideFailureMessage("Attached assets retained nodes already owned by prepared terrain.").IsTrue();
         terrain.BuildBlock(default, prepared);
         AssertThat(prepared.HasBlock(default) && prepared.HeightAt(point.X, point.Y) == terrain.HeightAt(point.X, point.Y)
             && !terrain.SnapshotPoints().Any(node => node.X >= 0 && node.X <= TerrainRasterBlock.Edge && node.Z >= 0 && node.Z <= TerrainRasterBlock.Edge))

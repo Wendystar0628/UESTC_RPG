@@ -15,16 +15,16 @@ namespace Campus.Kernel.Bake;
 [KernelService(typeof(ITerrainPreparation), Owner = "WP-02a")]
 public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
 {
-    private sealed class Session(MapId map, WorldModelPreparation preparation, TerrainFrozenData data)
+    private sealed class Session(MapId map, WorldModelPreparation preparation, TerrainFrozenData data, IPreparedTerrain terrain)
     {
         public MapId Map { get; } = map;
         public WorldModelPreparation Preparation { get; } = preparation;
         public TerrainFrozenData Data { get; } = data;
+        public IPreparedTerrain Terrain { get; } = terrain;
         public object Sync { get; } = new();
+        // Retain the evaluator until this world unloads; an idle bake queue is not its lifetime.
         public ITerrainAssetBuilder? Assets;
         public IWorldModel? AssetWorld;
-        public int Sampling;
-        public int Sealing;
     }
     private readonly ConcurrentDictionary<ITerrain, Session> _sessions = new(ReferenceEqualityComparer.Instance);
     private readonly ConcurrentDictionary<(ITerrain Terrain, TileKey Block), Lazy<Task>> _preparing = new();
@@ -47,7 +47,9 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
             WriteJson(key, identity, data);
         }
         var loaded = preparation.Complete(data);
-        _sessions[loaded.World.Terrain] = new(map, preparation, data) { Assets = builder };
+        var terrain = (IPreparedTerrain)loaded.World.Terrain;
+        builder?.Attach(terrain);
+        _sessions[terrain] = new(map, preparation, data, terrain) { Assets = builder };
         return loaded;
     }
 
@@ -66,9 +68,6 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
                 if (prepared.HasBlock(block)) continue;
                 tasks.Add(_preparing.GetOrAdd((prepared, block), _ => new(() => Task.Run(() =>
                 {
-                    Interlocked.Increment(ref session.Sampling);
-                    try
-                    {
                     var key = new BakeKey(session.Map, "terrain", $"block/{block.X}/{block.Z}");
                     var stamp = TerrainStamp(session.Data.SourceInputs, new(new(block.X * TerrainRasterBlock.Edge, block.Z * TerrainRasterBlock.Edge),
                         new((block.X + 1) * TerrainRasterBlock.Edge, (block.Z + 1) * TerrainRasterBlock.Edge)));
@@ -87,9 +86,11 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
                         lock (session.Sync) value = Assets(session).BuildBlock(block, prepared);
                         Write(key, stamp, TerrainCacheCodec.EncodeBlock(value));
                     }
-                    prepared.Publish(value);
+                    lock (session.Sync)
+                    {
+                        prepared.Publish(value);
+                        session.Assets?.Attach(prepared);
                     }
-                    finally { Interlocked.Decrement(ref session.Sampling); }
                 }), LazyThreadSafetyMode.ExecutionAndPublication)).Value);
             }
         return Task.WhenAll(tasks).WaitAsync(cancellation);
@@ -102,9 +103,6 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
         var snapshot = points.ToArray();
         return Task.Run(() =>
         {
-            Interlocked.Increment(ref session.Sampling);
-            try
-            {
             cancellation.ThrowIfCancellationRequested();
             var key = new BakeKey(session.Map, "terrain", "points/" + product);
             var stamp = Stamp(new { terrain = TerrainStamp(session.Data.SourceInputs), points = snapshot });
@@ -124,9 +122,11 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
                 Write(key, stamp, TerrainCacheCodec.EncodePoints(values));
             }
             cancellation.ThrowIfCancellationRequested();
-            prepared.Publish(values);
+            lock (session.Sync)
+            {
+                prepared.Publish(values);
+                session.Assets?.Attach(prepared);
             }
-            finally { Interlocked.Decrement(ref session.Sampling); }
         }, cancellation);
     }
 
@@ -145,7 +145,11 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
         var groups = points.GroupBy(point => new TileKey(Block(point.X), Block(point.Z))).OrderBy(group => group.Key.X).ThenBy(group => group.Key.Z).ToArray();
         foreach (var group in groups)
             Write(new(session.Map, "terrain", $"points/resident/{group.Key.X}/{group.Key.Z}"), stamp, TerrainCacheCodec.EncodePoints(group.ToArray()));
-        prepared.Publish(points);
+        lock (session.Sync)
+        {
+            prepared.Publish(points);
+            session.Assets?.Attach(prepared);
+        }
         return groups.Select(group => group.Key).ToArray();
     }
     internal bool RestoreResidentPoints(IWorldModel world, string stamp, IReadOnlyList<TileKey> blocks)
@@ -157,28 +161,18 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
             var key = new BakeKey(session.Map, "terrain", $"points/resident/{block.X}/{block.Z}");
             var bytes = Read(key, stamp);
             if (bytes is null) return false;
-            try { prepared.Publish(TerrainCacheCodec.DecodePoints(bytes)); }
+            try
+            {
+                var points = TerrainCacheCodec.DecodePoints(bytes);
+                lock (session.Sync)
+                {
+                    prepared.Publish(points);
+                    session.Assets?.Attach(prepared);
+                }
+            }
             catch (Exception error) when (error is IOException or ArgumentException) { Store.Remove(key); return false; }
         }
         return true;
-    }
-    internal void ReleaseAssets(IWorldModel world)
-    {
-        if (!_sessions.TryGetValue(world.Terrain, out var session)) return;
-        if (session.Assets is null || Volatile.Read(ref session.Sampling) != 0 || Interlocked.CompareExchange(ref session.Sealing, 1, 0) != 0) return;
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                lock (session.Sync)
-                {
-                    if (Volatile.Read(ref session.Sampling) != 0) return;
-                    if (world.Terrain is IPreparedTerrain prepared) session.Assets?.Seal(prepared);
-                    session.Assets = null; session.AssetWorld = null;
-                }
-            }
-            finally { Volatile.Write(ref session.Sealing, 0); }
-        });
     }
     internal void Unload(IWorldModel world)
     {
@@ -187,7 +181,13 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     }
     private Session RequireSession(ITerrain terrain) => _sessions.TryGetValue(terrain, out var session) ? session
         : throw new InvalidOperationException("Prepared terrain is not attached to its source load session.");
-    private static ITerrainAssetBuilder Assets(Session session) => session.Assets ??= session.Preparation.CreateAssets();
+    private static ITerrainAssetBuilder Assets(Session session)
+    {
+        if (session.Assets is { } assets) return assets;
+        assets = session.Preparation.CreateAssets();
+        assets.Attach(session.Terrain);
+        return session.Assets = assets;
+    }
     private static int Block(float coordinate) => checked((int)MathF.Floor(coordinate / TerrainRasterBlock.Edge));
     internal static string Stamp<T>(T value) => Convert.ToHexStringLower(XxHash128.Hash(JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options)));
     private static string TerrainStamp(TerrainInputSummary inputs, MapRect? area = null) => Stamp(new
@@ -210,7 +210,8 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     private byte[]? Read(BakeKey key, string identity)
     {
         if (_options.Live) return null;
-        var maximumPayload = key.Detail == "meta" && (key.Module is "terrain" or "resident")
+        var maximumPayload = key.Module == "terrain" && key.Detail == "meta" ||
+            key.Module == "resident" && (key.Detail is "meta" or "source-index")
             ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes;
         var bytes = Store.TryRead(key, maximumPayload);
         if (bytes is null) return null;

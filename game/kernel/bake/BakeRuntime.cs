@@ -40,7 +40,6 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
 
     public override void _Process(double delta)
     {
-        _service.ReleaseColdAssets();
         while (_service.TryTakeError(out var error)) GD.PushError("[WP-02a] " + error);
         while (_service.TryTakeDiagnostic(out var collected))
         {

@@ -14,7 +14,7 @@ public readonly record struct TerrainEvaluation(TerrainDifferential Surface, Ter
 }
 
 /// <summary>
-/// Temporary cold-asset sampler. Only integer-metre nodes evaluate operations; all other positions use their centimetre lattice.
+/// Map-scoped asset sampler. Only missing integer-metre nodes evaluate operations; all other positions use their centimetre lattice.
 /// </summary>
 public sealed class TerrainHeightField : ITerrain, ITerrainLatticeNodes
 {
@@ -81,7 +81,14 @@ public sealed class TerrainHeightField : ITerrain, ITerrainLatticeNodes
     private (short Height, TerrainFacts Facts) Node(int x, int z)
     {
         if (_prepared is { } prepared && prepared.TryReadNode(x, z, out var point)) return (point.Height, point.Facts);
-        return _nodes.GetOrAdd((x, z), location => ReadNode(location.X, location.Z));
+        var value = _nodes.GetOrAdd((x, z), location => ReadNode(location.X, location.Z));
+        // A worker may finish a cold sample while its prepared block is being published.
+        if (_prepared is { } published && published.TryReadNode(x, z, out point))
+        {
+            _nodes.TryRemove((x, z), out _);
+            return (point.Height, point.Facts);
+        }
+        return value;
     }
     private (short Height, TerrainFacts Facts) ReadNode(int x, int z)
     {
@@ -90,9 +97,19 @@ public sealed class TerrainHeightField : ITerrain, ITerrainLatticeNodes
     }
     (short Height, TerrainFacts Facts) ITerrainLatticeNodes.Node(int x, int z) => Node(x, z);
 
+    internal void Attach(IPreparedTerrain terrain)
+    {
+        ArgumentNullException.ThrowIfNull(terrain);
+        if (_prepared is not null && !ReferenceEquals(_prepared, terrain))
+            throw new InvalidOperationException("Terrain assets cannot attach to another prepared world.");
+        _prepared = terrain;
+        foreach (var node in _nodes)
+            if (terrain.TryReadNode(node.Key.X, node.Key.Z, out _)) _nodes.TryRemove(node.Key, out _);
+    }
+
     internal TerrainRasterBlock BuildBlock(TileKey block, IPreparedTerrain terrain)
     {
-        _prepared = terrain;
+        Attach(terrain);
         var heights = new short[TerrainRasterBlock.Count];
         var facts = new TerrainFacts[TerrainRasterBlock.Count];
         for (var z = 0; z < TerrainRasterBlock.Width; z++)

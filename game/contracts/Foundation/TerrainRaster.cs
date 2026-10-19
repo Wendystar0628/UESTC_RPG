@@ -25,11 +25,11 @@ public readonly record struct TerrainRasterPoint(int X, int Z, short Height, Ter
 public interface ITerrainAssetBuilder : ITerrain
 {
     IReadOnlyList<string> Diagnostics { get; }
+    void Attach(IPreparedTerrain terrain);
     TerrainFrozenData Freeze();
     TerrainRasterBlock BuildBlock(TileKey block, IPreparedTerrain terrain);
     TerrainRasterPoint[] BuildPoints(IReadOnlyList<Vector2> points);
     TerrainRasterPoint[] SnapshotPoints();
-    void Seal(IPreparedTerrain terrain);
 }
 
 /// <summary>Publishes immutable blocks before exposing the corresponding query region. Sampling itself performs no IO.</summary>
