@@ -49,6 +49,12 @@ public sealed class TerrainHeightField : ITerrain
 
     public float HeightAt(float x, float z) => (float)Evaluate(x, z).Surface.Height;
 
+    public (float Height, TerrainFacts Facts) SampleAt(float x, float z)
+    {
+        var value = Evaluate(x, z);
+        return ((float)value.Surface.Height, Facts(value));
+    }
+
     public void FillTile(TileKey tile, int level, Span<short> cm)
     {
         if (cm.Length != TerrainSampling.SampleCount(level)) throw new ArgumentException("Unexpected terrain sample count.", nameof(cm));
@@ -64,9 +70,10 @@ public sealed class TerrainHeightField : ITerrain
     public bool TryGetPadY(FeatureId feature, out float y) => _pads.TryGetValue(feature, out y);
     public float? WaterY(FeatureId water) => _waters.TryGetValue(water, out var height) ? height : null;
 
-    public TerrainFacts FactsAt(float x, float z)
+    public TerrainFacts FactsAt(float x, float z) => Facts(Evaluate(x, z));
+
+    private static TerrainFacts Facts(TerrainEvaluation value)
     {
-        var value = Evaluate(x, z);
         var surface = value.Surface;
         var grade = Math.Sqrt(surface.Dx * surface.Dx + surface.Dz * surface.Dz);
         if (!double.IsFinite(grade) || grade > float.MaxValue) throw new InvalidOperationException("Terrain gradient is not representable.");

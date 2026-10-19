@@ -37,8 +37,9 @@ public static partial class Planting
         if (site.Blocked(p, keep) || site.OnRoad(p, crownClear ? crown * 0.5f + TrunkClearance : TrunkClearance)) return false;
         if (crownClear && !site.Spaced(p, crown * StandOverlap)) return false;
         var terrain = site.World.Terrain;
-        if (terrain.FactsAt(p.X, p.Y).Grade > MaxGrade) return false;
-        var position = new Vector3(p.X, terrain.HeightAt(p.X, p.Y), p.Y);
+        var (height, facts) = terrain.SampleAt(p.X, p.Y);
+        if (facts.Grade > MaxGrade) return false;
+        var position = new Vector3(p.X, height, p.Y);
         var tree = probe with { Position = position, Wash = wash, Source = source, WindPos = site.WindPos(p.X) };
         site.Occupy(p, crown * (crownClear ? StandOverlap : 1f));
         // Pavement is tested last and the tree still counts as planted (its place stays taken, a grove's count and keys go on),

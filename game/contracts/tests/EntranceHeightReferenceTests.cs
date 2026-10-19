@@ -197,6 +197,7 @@ public sealed class EntranceHeightReferenceTests
         }
         public bool IsFlat(TileKey tile) => throw new NotSupportedException();
         public float HeightAt(float x, float z) => throw new NotSupportedException();
+        public (float Height, TerrainFacts Facts) SampleAt(float x, float z) => throw new NotSupportedException();
         public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();
         public float? WaterY(FeatureId water) => throw new NotSupportedException();
         public TerrainFacts FactsAt(float x, float z) => throw new NotSupportedException();

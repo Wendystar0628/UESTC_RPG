@@ -37,7 +37,9 @@ public sealed class BakeInputTests
         var actual = new string[keys.Length];
         Parallel.For(0, keys.Length, index => actual[index] =
             BakeInputFingerprint.Compute(context, keys[index], "runtime-code", samples: map.FingerprintSamples));
-        if (!actual.SequenceEqual(expected) || field.PointReads.Values.Any(count => count != 1) || field.TileReads.Values.Any(count => count != 1))
+        if (!actual.SequenceEqual(expected) || field.PointReads.IsEmpty ||
+            field.PointReads.Keys.Any(key => key.Kind is "height" or "facts") ||
+            !field.PointReads.Keys.Any(key => key.Kind == "sample") || field.PointReads.Values.Any(count => count != 1) || field.TileReads.Values.Any(count => count != 1))
             throw new InvalidOperationException("Concurrent keys changed their fingerprints or repeated a shared terrain/fidelity read.");
 
         var changedField = new CountingFingerprintField(2);
@@ -46,6 +48,9 @@ public sealed class BakeInputTests
         using var nextLifetime = nextMap.Lifetime;
         var next = BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", samples: nextMap.FingerprintSamples);
         if (next == actual[0] || changedField.PointReads.IsEmpty || changedField.TileReads.IsEmpty ||
+            !changedField.PointReads.Keys.Any(key => key.Kind == "sample") ||
+            changedField.PointReads.Keys.Any(key => key.Kind is "height" or "facts") ||
+            changedField.PointReads.Values.Any(count => count != 1) || changedField.TileReads.Values.Any(count => count != 1) ||
             next != BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", new(changed.World)))
             throw new InvalidOperationException("The next MapBuild reused the preceding world's samples.");
 
@@ -192,6 +197,11 @@ public sealed class BakeInputTests
             (kind, BitConverter.SingleToInt32Bits(x), BitConverter.SingleToInt32Bits(z)), 1, (_, count) => count + 1);
         public bool IsFlat(TileKey tile) => height == 0;
         public float HeightAt(float x, float z) { Read("height", x, z); return height; }
+        public (float Height, TerrainFacts Facts) SampleAt(float x, float z)
+        {
+            Read("sample", x, z);
+            return (height, new(0, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity));
+        }
         public TerrainFacts FactsAt(float x, float z) { Read("facts", x, z); return new(0, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity); }
         public void FillTile(TileKey tile, int level, Span<short> cm)
         {

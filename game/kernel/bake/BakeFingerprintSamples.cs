@@ -26,8 +26,7 @@ internal sealed class BakeFingerprintSamples(IWorldModel world)
 
     private static PointSample Read(IWorldModel world, Vector2 point)
     {
-        var height = world.Terrain.HeightAt(point.X, point.Y);
-        var facts = world.Terrain.FactsAt(point.X, point.Y);
+        var (height, facts) = world.Terrain.SampleAt(point.X, point.Y);
         var fidelity = world.Fidelity;
         return new(height, facts, fidelity is null ? null : (float)fidelity.GroundAt(point.X, point.Y),
             fidelity?.WalkDistanceAt(point.X, point.Y) ?? 0);

@@ -161,6 +161,7 @@ internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource, ITerrainWa
 
     public bool IsFlat(TileKey tile) => _field.IsFlat(tile);
     public float HeightAt(float x, float z) => _field.HeightAt(x, z);
+    public (float Height, TerrainFacts Facts) SampleAt(float x, float z) => _field.SampleAt(x, z);
     public void FillTile(TileKey tile, int level, Span<short> cm) => _field.FillTile(tile, level, cm);
     public float PadY(FeatureId feature) => _field.PadY(feature);
     public bool TryGetPadY(FeatureId feature, out float y) => _field.TryGetPadY(feature, out y);

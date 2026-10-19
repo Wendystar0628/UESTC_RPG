@@ -114,8 +114,7 @@ internal sealed class MinimapController
         {
             case ViewMode.Walk: return WalkHalfWidth;
             case ViewMode.Fly:
-                // 离地高度 h 应取常驻的低精度地形（SYS-VIEW）；界面拿不到地形，观光期地面是相对平面
-                // （campus.json 的 heightNote），先按眼高计
+                // 缩放按眼高近似离地高度：全图地形起伏只有几米，对旁观时的小地图缩放看不出差别
                 var h = MathF.Max(0, _s.Observer.Eye.Y);
                 return Math.Clamp(WalkHalfWidth + 1.1f * h + 2.5f * speed, WalkHalfWidth, 1300);
             default: throw new InvalidOperationException(_s.Observer.Mode.ToString());

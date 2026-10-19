@@ -54,9 +54,9 @@ public static class Land
     public static float? Point(ITerrain terrain, Vector2 p, float radius)
     {
         ArgumentNullException.ThrowIfNull(terrain);
-        var grade = terrain.FactsAt(p.X, p.Y).Grade;
+        var (h, facts) = terrain.SampleAt(p.X, p.Y);
+        var grade = facts.Grade;
         if (!(grade <= S.PointMaxGrade)) return null;
-        var h = terrain.HeightAt(p.X, p.Y);
         var low = h;
         foreach (var (dx, dz) in Around)
             low = MathF.Min(low, terrain.HeightAt(p.X + dx * radius, p.Y + dz * radius));
@@ -75,19 +75,27 @@ public static class Land
     {
         ArgumentNullException.ThrowIfNull(terrain);
         float low = float.MaxValue, high = float.MinValue;
+        var centreGrade = 0f;
         if (baseY is { } level) low = high = level;
         else
             for (var i = -1; i <= 1; i++)
                 for (var k = -1; k <= 1; k++)
                 {
                     var q = Xf.Point(frame, new(i * halfWidth, 0, k * halfDepth));
-                    var h = terrain.HeightAt(q.X, q.Z);
+                    float h;
+                    if (i == 0 && k == 0)
+                    {
+                        var centre = terrain.SampleAt(q.X, q.Z);
+                        h = centre.Height;
+                        centreGrade = centre.Facts.Grade;
+                    }
+                    else h = terrain.HeightAt(q.X, q.Z);
                     low = MathF.Min(low, h);
                     high = MathF.Max(high, h);
                 }
         if (high - low > S.PlinthMaxDrop) return null;
         var span = 2f * MathF.Sqrt(halfWidth * halfWidth + halfDepth * halfDepth);
-        var grade = baseY is null ? MathF.Max(terrain.FactsAt(frame.M41, frame.M43).Grade, (high - low) / span) : 0f;
+        var grade = baseY is null ? MathF.Max(centreGrade, (high - low) / span) : 0f;
         return new Pad(frame, halfWidth, halfDepth, low - S.PadSkirt, high + GroundLevels.Paving + S.PadProud, grade > S.SmallMaxGrade);
     }
 

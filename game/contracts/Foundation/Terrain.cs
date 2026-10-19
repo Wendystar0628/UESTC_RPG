@@ -13,6 +13,8 @@ public interface ITerrain
     bool IsFlat(TileKey tile);
     /// <summary>Analytical height in metres. At 1 m lattice points it differs from FillTile's centimetres by at most 0.005 m.</summary>
     float HeightAt(float x, float z);
+    /// <summary>Height and facts from one analytical evaluation at the same world position.</summary>
+    (float Height, TerrainFacts Facts) SampleAt(float x, float z);
     /// <summary>Fills exactly 65 * 65 samples for levels 0-3, or exactly 81 * 81 samples for level 4.</summary>
     /// <remarks>
     /// Row-major index is z * width + x, including both boundary rows and columns.
@@ -106,6 +108,7 @@ public sealed class FlatTerrain : ITerrain
 
     public bool IsFlat(TileKey tile) => true;
     public float HeightAt(float x, float z) => 0f;
+    public (float Height, TerrainFacts Facts) SampleAt(float x, float z) => (0f, FactsAt(x, z));
     public void FillTile(TileKey tile, int level, Span<short> cm)
     {
         if (cm.Length != TerrainSampling.SampleCount(level))

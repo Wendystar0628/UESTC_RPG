@@ -10,6 +10,21 @@ namespace Campus.Gen.World.Tests;
 [TestSuite]
 public sealed class TerrainKernelTests
 {
+    [TestCase, TestCategory(TestReason.Contract), TestCategory(TestTag.Determinism)]
+    public void CombinedSampleSharesOneEvaluationAndMatchesSeparateQueries()
+    {
+        var calls = 0;
+        var terrain = new TerrainHeightField(new(new(-64), new(64)), (_, _) =>
+        {
+            calls++;
+            return new(new(2, 0.3, 0.4), TerrainClass.Transition, 7, 9);
+        }, []);
+        var sample = terrain.SampleAt(3, 5);
+        AssertThat(calls == 1).OverrideFailureMessage("Combined terrain query evaluated its source more than once.").IsTrue();
+        AssertThat(sample.Height == terrain.HeightAt(3, 5) && sample.Facts == terrain.FactsAt(3, 5))
+            .OverrideFailureMessage("Combined terrain query differs from the separate height and facts queries.").IsTrue();
+    }
+
     [TestCase, TestCategory(TestReason.Contract)]
     public void HermiteMoundHasAnalyticalGradeAndExactCompactSupport()
     {
