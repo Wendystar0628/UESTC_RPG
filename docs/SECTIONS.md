@@ -1327,7 +1327,7 @@
 
 ## SYS-MOTION-ENV · 风、飘落、远景与季节氛围
 
-`docs/systems/SYS-MOTION-ENV-风与环境动态.md` · 4.9k 字 · 风及其连锁反应、飘落物与瞬时痕迹、流体、光与远景的缓慢变化、季节氛围、粒子类的解析运动
+`docs/systems/SYS-MOTION-ENV-风与环境动态.md` · 5.0k 字 · 风及其连锁反应、飘落物与瞬时痕迹、流体、光与远景的缓慢变化、季节氛围、粒子类的解析运动
 关键词：风场、阵风、IWindField、飘落池、飘落物、萤火虫、解析运动、季节氛围、风量、雾海、云漂移、MultiMesh
 
 - SYS-MOTION-ENV §0 结论 · L23 · 569
@@ -1340,8 +1340,8 @@
 - SYS-MOTION-ENV §4 光的缓慢变化 · L70 · 450
 - SYS-MOTION-ENV §5 远景 · L79 · 349
 - SYS-MOTION-ENV §6 季节氛围 · L85 · 646
-- SYS-MOTION-ENV §7 粒子类与解析运动 · L95 · 656
-- SYS-MOTION-ENV §8 待验证 · L105 · 53
+- SYS-MOTION-ENV §7 粒子类与解析运动 · L95 · 749
+- SYS-MOTION-ENV §8 待验证 · L106 · 53
 
 ## SYS-MOTION-LIFE · 生命体、室内微动与偶发事件
 
