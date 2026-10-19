@@ -9,6 +9,39 @@ namespace Campus.Kernel.Renderer;
 /// </summary>
 public static class GeometrySurfaceUpload
 {
+    /// <summary>Build-time layout of the uncompressed frozen-prototype upload path.</summary>
+    public static ulong FormatOf(GeometryBuffer source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return FormatOf(source.Uv is not null, source.Uv2 is not null, source.Custom0 is not null,
+            source.Custom1 is not null, source.Custom2 is not null);
+    }
+
+    /// <summary>Build-time layout of the default dynamic-geometry upload path.</summary>
+    public static ulong FormatOf(GeometryBundle source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return FormatOf(source.Uv is not null, source.Uv2 is not null, source.Custom0 is not null,
+            source.Custom1 is not null, source.Custom2 is not null);
+    }
+
+    private static ulong FormatOf(bool uv, bool uv2, bool custom0, bool custom1, bool custom2)
+    {
+        // AddSurfaceFromArrays supplies an arbitrary tangent whenever normals are present.
+        var format = (ulong)(RenderingServer.ArrayFormat.FlagFormatVersion2 | RenderingServer.ArrayFormat.FormatVertex |
+            RenderingServer.ArrayFormat.FormatNormal | RenderingServer.ArrayFormat.FormatTangent |
+            RenderingServer.ArrayFormat.FormatColor | RenderingServer.ArrayFormat.FormatIndex);
+        if (uv) format |= (ulong)RenderingServer.ArrayFormat.FormatTexUV;
+        if (uv2) format |= (ulong)RenderingServer.ArrayFormat.FormatTexUV2;
+        if (custom0) Custom(RenderingServer.ArrayFormat.FormatCustom0, RenderingServer.ArrayFormat.FormatCustom0Shift);
+        if (custom1) Custom(RenderingServer.ArrayFormat.FormatCustom1, RenderingServer.ArrayFormat.FormatCustom1Shift);
+        if (custom2) Custom(RenderingServer.ArrayFormat.FormatCustom2, RenderingServer.ArrayFormat.FormatCustom2Shift);
+        return format;
+
+        void Custom(RenderingServer.ArrayFormat bit, RenderingServer.ArrayFormat shift) =>
+            format |= (ulong)bit | ((ulong)Mesh.ArrayCustomFormat.RgbaFloat << (int)shift);
+    }
+
     public static int Append(ArrayMesh target, GeometryBuffer source, PaletteCatalog catalog,
         PaletteToken? tint = null)
     {

@@ -56,7 +56,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private readonly Queue<PreparedTile> _retiringBundles = [];
     private readonly Queue<PreparedTile> _detachPending = [];
     private int _reflectionCursor;
-    private bool _reflectionDirty = true, _reflectionReady;
+    private bool _reflectionDirty = true;
     private Rid _reflectionScenario;
     private Material? _reflectionMaterial;
     private InteriorStream? _interiors;
@@ -174,7 +174,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _selectionApplied = false; _planReady = false; CancelTerrainPlan();
         _destinationPlanned = false; _destinationConsumed = false; _destinationRequired.Clear(); _destinationRefined.Clear();
         _destinationSequence++; _requests.Clear();
-        var targetTransition = _maps.Transition is { Stage: MapStage.Mount or MapStage.Warm or MapStage.Spawn } transition ? transition : null;
+        var targetTransition = _maps.Transition is { Stage: MapStage.Mount or MapStage.Arrival or MapStage.Spawn } transition ? transition : null;
         if (!ReferenceEquals(targetTransition, _destinationTransition))
         {
             _destinationTransition = targetTransition; _arrivedSequence = 0;
@@ -391,8 +391,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     private static async Task ObserveDiscardedTerrain(Task preparation)
     { try { await preparation.ConfigureAwait(false); } catch (Exception) { } }
-    private bool IsReady(StreamTile tile) => _groups.TryGetValue(tile, out var group) && group.GeometryRequested && group.Error is null && group.Mounted &&
-        group.Bundles.All(bundle => bundle.Draws.All(_materials.IsReady));
+    private bool IsReady(StreamTile tile) => _groups.TryGetValue(tile, out var group) && group.GeometryRequested && group.Error is null && group.Mounted;
     private void ResolveVisible()
     {
         _displayRefined.Clear(); _displayRefined.UnionWith(_refined);
@@ -405,10 +404,6 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         if (!ResidentReady || !_selectionApplied || !PlanCurrent ||
             _tree is null || required.Count == 0 || !_visibility.IsSettled(FrameClock.FadeSeconds)) return false;
-        // Root backdrop draws stay visible independently of the replaceable geometry frontier.
-        foreach (var bundle in _groups[StreamTile.Root].Bundles)
-            foreach (var draw in bundle.Draws)
-                if (draw.Resident && !_materials.IsReady(draw)) return false;
         foreach (var tile in required)
             if (!refined.Contains(tile) && !HasVisibleCoverage(tile)) return false;
         return true;
@@ -427,7 +422,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private bool CanUseLiveCamera() => _maps.Transition?.Stage switch
     {
         null or MapStage.Done => true,
-        MapStage.LoadData or MapStage.Mount or MapStage.Warm or MapStage.Spawn => false,
+        MapStage.LoadData or MapStage.Mount or MapStage.Arrival or MapStage.Spawn => false,
         _ => throw new InvalidOperationException("Unknown map transition stage.")
     };
     private void OnMapArrived(MapId map, MapTravelCause cause)
@@ -497,7 +492,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             _catalogTask = null;
             _ = ObserveDiscardedCatalog(catalog);
         }
-        // Shutdown is under the veil and is allowed to wait; no GPU task survives engine teardown.
+        // Shutdown is under the loading screen and is allowed to wait; no GPU task survives engine teardown.
         foreach (var preparing in _preparing)
             try { preparing.Task.GetAwaiter().GetResult().Dispose(); } catch (Exception error) { GD.PushError(error.Message); }
         _preparing.Clear();

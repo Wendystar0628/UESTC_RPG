@@ -7,7 +7,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Instances;
 
-/// <summary>Kernel-owned dynamic instances, with map cleanup and the existing material/prewarm bridges.</summary>
+/// <summary>Kernel-owned dynamic instances, with map cleanup and shared material providers.</summary>
 [KernelNode("kernel.instance-pools", Owner = "WP-00")]
 [KernelService(typeof(IInstancePoolHost), Owner = "WP-00")]
 public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAware
@@ -24,7 +24,6 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     private bool _mounted;
     private bool _exiting;
     private long _nextNodeId;
-    private long? _preparationRevision;
 
     public InstancePoolHost() { }
     public InstancePoolHost(IToonMaterialProvider materials, IShaderMaterialSource shaderSource, PaletteCatalog catalog)
@@ -43,29 +42,6 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         ProcessPriority = FramePriority.StreamMount;
         _mounted = true;
         _exiting = false;
-    }
-
-    public override void _Process(double delta) => RefreshPreparation();
-
-    internal void RefreshPreparation(InstancePool? published = null)
-    {
-        if (_materials is null || (_orderedPools.Count == 0 && published is null)) return;
-        try
-        {
-            // Capture also prunes released materials; only a changed preparation batch needs a pool traversal.
-            var revision = _materials.CapturePendingWarm().Revision;
-            if (_preparationRevision != revision)
-                foreach (var pool in _orderedPools) pool.RefreshPreparation(revision);
-            published?.RefreshPreparation(revision);
-            _preparationRevision = revision;
-        }
-        catch
-        {
-            _preparationRevision = null;
-            foreach (var pool in _orderedPools) pool.InvalidatePreparation();
-            published?.InvalidatePreparation();
-            throw;
-        }
     }
 
     public override void _ExitTree()
@@ -106,7 +82,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         _activeMap = map;
     }
 
-    /// <summary>Stable CPU allocation/submission snapshot; warm readiness is separate from requested visibility.</summary>
+    /// <summary>Stable CPU allocation/submission snapshot.</summary>
     public IReadOnlyList<InstancePoolStatistics> GetStatistics()
     {
         RequireMainThread();
@@ -120,8 +96,6 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         ValidateIdentityAndCapacity(spec.Id, spec.OwnerWp, spec.Capacity, spec.Layers, spec.CustomAabb);
         ValidateRaw(spec);
         RequireUnique(spec.OwnerWp, spec.Id);
-        var provider = _materials ??= Services.Get<IToonMaterialProvider>();
-
         var vertices = new Vector3[spec.Position.Length / 3];
         var uv = new Vector2[vertices.Length];
         for (var i = 0; i < vertices.Length; i++)
@@ -141,15 +115,11 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
             if (mesh.GetSurfaceCount() != 1) throw new InvalidOperationException("Godot rejected the instance-pool surface.");
             mesh.SurfaceSetMaterial(0, spec.Material);
-            provider.Track(spec.Shader, spec.Material);
-            provider.TrackLayout(spec.Material, new WarmDrawLayout(MeshSurfaceFormat.Read(mesh), Instanced: true));
         }
         catch { mesh.Dispose(); throw; }
-        var shader = spec.Shader;
-        var material = spec.Material;
         return Publish(spec.Id, spec.OwnerWp, spec.Capacity, spec.CustomAabb, spec.Layers,
             spec.CastShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
-            null, false, mesh, spec.Index.Length / 3, () => provider.IsReady(shader, material));
+            null, false, mesh, spec.Index.Length / 3);
     }
 
     public IInstancePool Mount(GeometryInstancePoolSpec spec)
@@ -187,7 +157,6 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         }
 
         var provider = _materials ??= Services.Get<IToonMaterialProvider>();
-        var bindings = new PoolMaterialBinding[spec.Prototype.Surfaces.Count];
         var mesh = new ArrayMesh();
         try
         {
@@ -195,25 +164,22 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             {
                 var surface = spec.Prototype.Surfaces[index];
                 var material = surface.Shader is { } shader
-                    ? ResolveShader(shader, provider) : provider.Get(surface.Material.Spec);
+                    ? ResolveShader(shader) : provider.Get(surface.Material.Spec);
                 RequireSpatialMaterial(material);
                 var slot = GeometrySurfaceUpload.Append(mesh, surface, catalog: catalog);
                 if (slot != index) throw new InvalidOperationException("Prototype material slots changed during upload.");
                 mesh.SurfaceSetMaterial(slot, material);
-                provider.TrackLayout(material, new WarmDrawLayout(MeshSurfaceFormat.Read(mesh, slot), Instanced: true));
-                bindings[index] = new(material, surface.Shader, surface.Material.Spec);
             }
         }
         catch { mesh.Dispose(); throw; }
 
         return Publish(spec.Id, spec.OwnerWp, spec.Capacity, spec.CustomAabb, spec.Layers, spec.Shadows,
-            spec.Map, spec.Prototype.Surfaces.Any(surface => surface.IgnoreOcclusionCulling), mesh, triangles,
-            () => AreMaterialsReady(provider, bindings));
+            spec.Map, spec.Prototype.Surfaces.Any(surface => surface.IgnoreOcclusionCulling), mesh, triangles);
     }
 
     private IInstancePool Publish(string id, string owner, int capacity, Aabb bounds, uint layers,
         GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, bool ignoreOcclusion,
-        ArrayMesh mesh, int triangles, Func<bool> ready)
+        ArrayMesh mesh, int triangles)
     {
         MultiMesh? multiMesh = null;
         MultiMeshInstance3D? instance = null;
@@ -244,8 +210,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             instance.SetMeta("instance_pool_id", id);
             if (map is { } mapId) instance.SetMeta("map_id", mapId.Value);
             var pool = new InstancePool(this, id, owner, capacity, triangles, shadows, map,
-                mesh.GetSurfaceCount(), instance, multiMesh, mesh, ready);
-            RefreshPreparation(pool);
+                mesh.GetSurfaceCount(), instance, multiMesh, mesh);
             AddChild(instance);
             if (instance.GetParent() != this) throw new InvalidOperationException("Godot rejected the pool node.");
             _pools.Add((owner, id), pool);
@@ -266,26 +231,16 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
         }
     }
 
-    private ShaderMaterial ResolveShader(ShaderId shader, IToonMaterialProvider provider)
+    private ShaderMaterial ResolveShader(ShaderId shader)
     {
         if (_shaderMaterials.TryGetValue(shader, out var cached)) return cached;
         var material = (_shaderSource ??= Services.Get<IShaderMaterialSource>()).Create(shader);
-        try { RequireSpatialMaterial(material); provider.Track(shader, material); }
+        try { RequireSpatialMaterial(material); }
         catch { material?.Dispose(); throw; }
         _shaderMaterials.Add(shader, material);
         return material;
     }
 
-    private static bool AreMaterialsReady(IToonMaterialProvider provider, PoolMaterialBinding[] bindings)
-    {
-        foreach (var binding in bindings)
-            if (!GodotObject.IsInstanceValid(binding.Material) ||
-                !(binding.Shader is { } shader ? provider.IsReady(shader, binding.Material) : provider.IsReady(binding.Spec)))
-                return false;
-        return true;
-    }
-
-    private readonly record struct PoolMaterialBinding(Material Material, ShaderId? Shader, ToonSpec Spec);
     internal bool IsExiting => _exiting;
     internal void Release(InstancePool pool)
     {

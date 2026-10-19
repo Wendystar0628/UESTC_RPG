@@ -36,9 +36,8 @@ internal sealed class VisualMountWork(IReadOnlyList<PreparedTile> bundles, long 
                 var draw = bundle.Draws[_draw];
                 var reflectionScenario = reflections.Scenario;
                 var reflectionMaterial = reflectionScenario.IsValid ? reflections.ProxyMaterial : null;
-                if (reflectionMaterial is not null && draw.Reflects) materials.TrackReflection(reflectionMaterial, draw);
                 bundle.MountOne(_draw++, scenario, materials.Resolve(draw).GetRid(), reflectionScenario,
-                    reflectionMaterial, reflectionMaterial is not null && materials.ReflectionReady(draw, reflectionMaterial));
+                    reflectionMaterial);
             } while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
             return false;
         }

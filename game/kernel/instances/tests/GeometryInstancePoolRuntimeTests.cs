@@ -37,7 +37,7 @@ public sealed class GeometryInstancePoolRuntimeTests
             catch (NotSupportedException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(NotSupportedException).Name}.").IsTrue();
         }
-        AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Provider.Layouts.Count == 0 &&
+        AssertThat(fixture.Host.GetChildCount() == 0 &&
             fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("Rejected surface pattern allocated/tracked a partial instance pool.").IsTrue();
     }
 
@@ -75,14 +75,6 @@ public sealed class GeometryInstancePoolRuntimeTests
         var formats = new[] { MeshSurfaceFormat.Read(mesh, 0), MeshSurfaceFormat.Read(mesh, 1) };
         var version = (ulong)RenderingServer.ArrayFormat.FlagFormatCurrentVersion;
         AssertThat(formats.All(format => (format & version) == version)).OverrideFailureMessage("The helper discarded native format-version bits.").IsTrue();
-        AssertThat(fixture.Provider.Layouts.Count == 2).OverrideFailureMessage("Each real surface must register one actual layout.").IsTrue();
-        for (var i = 0; i < 2; i++)
-        {
-            var tracked = fixture.Provider.Layouts[i];
-            AssertThat(tracked.Layout == new WarmDrawLayout(formats[i], Instanced: true)).OverrideFailureMessage("Prewarm received a guessed or non-instanced layout.").IsTrue();
-            AssertThat(ReferenceEquals(tracked.Material, mesh.SurfaceGetMaterial(i))).OverrideFailureMessage("Prewarm material and surface slot disagree.").IsTrue();
-        }
-
         // Exactly one complete native-surface dictionary read in this fixture, for calibration/LOD assertions only.
         using (var native = RenderingServer.MeshGetSurface(mesh.GetRid(), 0))
         {
@@ -108,66 +100,25 @@ public sealed class GeometryInstancePoolRuntimeTests
         var submitted = (float[])scratch.Clone();
         pool.WriteBuffer(scratch);
         pool.VisibleCount = 3;
-        AssertThat(!pool.IsReady && !node.Visible && multi.VisibleInstanceCount == 3).OverrideFailureMessage("A requested prefix escaped the pending-prewarm visibility gate.").IsTrue();
+        AssertThat(pool.IsReady && node.Visible && multi.VisibleInstanceCount == 3).OverrideFailureMessage("A complete buffer and visible prefix did not appear immediately.").IsTrue();
         var meshIdentity = mesh.GetInstanceId();
         var materialIdentity = ownedShaderMaterial.GetInstanceId();
         System.Array.Fill(scratch, float.NaN);
         await fixture.Parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         AssertThat(multi.GetBuffer().SequenceEqual(submitted)).OverrideFailureMessage("Reusing caller scratch changed the already uploaded native buffer.").IsTrue();
 
-        fixture.Provider.Ready = true; // Simulates the provider's issued evidence; this test does not certify a warm draw.
-        AssertThat(pool.IsReady && node.Visible && fixture.Host.GetStatistics().Single().MaterialReady).OverrideFailureMessage("The pool readiness query did not refresh completed provider readiness.").IsTrue();
-        var readyQueries = fixture.Provider.ReadinessQueries;
-        fixture.Host._Process(0);
-        pool.WriteBuffer(submitted);
-        pool.VisibleCount = 2;
-        AssertThat(pool.IsReady && fixture.Provider.ReadinessQueries == readyQueries).OverrideFailureMessage("Unchanged preparation queried every pool material again.").IsTrue();
         AssertThat(mesh.GetInstanceId() == meshIdentity && ownedShaderMaterial.GetInstanceId() == materialIdentity && fixture.Source.Created.Count == 1).OverrideFailureMessage("An instance-buffer update rebuilt the prototype or material.").IsTrue();
+        pool.VisibleCount = 2;
         var statistics = fixture.Host.GetStatistics().Single();
         AssertThat(statistics.SurfaceCount == 2 && statistics.MeshTriangles == 4 && statistics.VisibleTriangles == 8 &&
             statistics.InstanceBufferBytes == pool.Capacity * 64L).OverrideFailureMessage("Multi-surface allocation statistics are wrong.").IsTrue();
-        fixture.Provider.Ready = false;
-        pool.VisibleCount = 2;
-        AssertThat(!node.Visible && fixture.Host.GetStatistics().Single().ReadyVisibleTriangles == 0).OverrideFailureMessage("Invalidated readiness left a pool visible.").IsTrue();
-
-        fixture.Provider.Ready = true;
-        fixture.Host._Process(0);
         var shared = fixture.Host.Mount(Spec("shared-ready", prototype));
         var sharedNode = FindPool(fixture.Host, "shared-ready");
         AssertThat(!shared.IsReady).OverrideFailureMessage("Ready shared materials must not bypass the complete buffer requirement.").IsTrue();
         shared.WriteBuffer(new float[shared.Capacity * InstanceStreamLayout.FloatsPerInstance]);
         shared.VisibleCount = 1;
-        AssertThat(shared.IsReady && sharedNode.Visible && fixture.Host.GetStatistics().All(stat => stat.MaterialReady)).OverrideFailureMessage("A complete zero buffer at an already checked revision did not become ready.").IsTrue();
-        fixture.Provider.FirstMaterial.Dispose();
-        fixture.Host._Process(0);
-        AssertThat(!node.Visible && !sharedNode.Visible && fixture.Host.GetStatistics().All(stat => !stat.MaterialReady)).OverrideFailureMessage("Released material retained cached readiness in a sharing pool.").IsTrue();
-    }
+        AssertThat(shared.IsReady && sharedNode.Visible).OverrideFailureMessage("A complete zero buffer did not become ready.").IsTrue();
 
-    [TestCase]
-    [TestCategory(TestReason.Regression)]
-    [TestCategory("NativeRender")]
-    [RequireGodotRuntime]
-    public async Task ProviderDisposalAdvancesRevisionWithoutUnlockingUndrawnPools()
-    {
-        using var textures = new GlobalDataTextureRegistry();
-        var catalog = Catalog();
-        using var library = new ToonLibrary(new Palettes(catalog), new ShaderMaterialSource(), textures);
-        using (var fixture = Fixture.Create(catalog, library))
-        {
-            var prototype = Prototype(GeometryBuffer.Freeze(Surface(fixture.Provider.FirstSpec)));
-            var pool = fixture.Host.Mount(Spec("provider-disposal", prototype));
-            var node = FindPool(fixture.Host, "provider-disposal");
-            pool.WriteBuffer(InstanceData(pool.Capacity));
-            pool.VisibleCount = 1;
-            var pending = library.CapturePendingWarm();
-            AssertThat(pending.Materials.Count > 0 && !node.Visible && !fixture.Host.GetStatistics().Single().MaterialReady).OverrideFailureMessage("A revision alone granted readiness without real warm draws.").IsTrue();
-            library.Dispose();
-            fixture.Host._Process(0);
-            pool.VisibleCount = 2;
-            AssertThat(library.CapturePendingWarm().Revision > pending.Revision && !node.Visible &&
-                !fixture.Host.GetStatistics().Single().MaterialReady).OverrideFailureMessage("Provider disposal failed to invalidate its preparation revision and keep the pool hidden.").IsTrue();
-        }
-        await textures.ShutdownAsync();
     }
 
     [TestCase]
@@ -262,7 +213,7 @@ public sealed class GeometryInstancePoolRuntimeTests
     [TestCategory(TestReason.Contract)]
     [TestCategory("NativeRender")]
     [RequireGodotRuntime]
-    public void UnsupportedGeometryAndFailedPreparationNeverPublishPartialPools()
+    public void UnsupportedGeometryAndFailedMaterialResolutionNeverPublishPartialPools()
     {
         using var fixture = Fixture.Create();
         var basic = Surface(fixture.Provider.FirstSpec);
@@ -308,17 +259,17 @@ public sealed class GeometryInstancePoolRuntimeTests
                 AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(ArgumentException).Name}.").IsTrue();
             }
         }
-        AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0 && fixture.Provider.Layouts.Count == 0).OverrideFailureMessage("Unsupported input allocated or published a partial pool.").IsTrue();
+        AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("Unsupported input allocated or published a partial pool.").IsTrue();
 
-        fixture.Provider.ThrowAtLayout = 2;
+        fixture.Provider.ThrowAtGet = 2;
         var two = Prototype(GeometryBuffer.Freeze(basic), GeometryBuffer.Freeze(Surface(fixture.Provider.SecondSpec)));
         {
             var thrown = false;
-            try { fixture.Host.Mount(Spec("failed-layout", two)); }
+            try { fixture.Host.Mount(Spec("failed-material", two)); }
             catch (InvalidOperationException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage($"Expected {typeof(InvalidOperationException).Name}.").IsTrue();
         }
-        AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("A later surface preparation failure published a partial pool.").IsTrue();
+        AssertThat(fixture.Host.GetChildCount() == 0 && fixture.Host.GetStatistics().Count == 0).OverrideFailureMessage("A later material resolution failure published a partial pool.").IsTrue();
         AssertThat(GodotObject.IsInstanceValid(fixture.Provider.FirstMaterial) && GodotObject.IsInstanceValid(fixture.Provider.SecondMaterial)).OverrideFailureMessage("Rollback disposed a borrowed material.").IsTrue();
     }
 
@@ -517,50 +468,23 @@ public sealed class GeometryInstancePoolRuntimeTests
     }
     private sealed class RecordingProvider(ShaderMaterial first, ShaderMaterial second) : IToonMaterialProvider
     {
-        public event Action? WarmChanged;
         public ToonSpec FirstSpec { get; } = new(new("fixture.first.lit"), new("fixture.first.shade"));
         public ToonSpec SecondSpec { get; } = new(new("fixture.second.lit"), new("fixture.second.shade"));
         public ShaderMaterial FirstMaterial => first;
         public ShaderMaterial SecondMaterial => second;
-        private bool _ready;
-        private long _revision = 1;
-        private ToonWarmBatch? _batch;
-        public int ReadinessQueries { get; private set; }
-        public bool Ready
+        private int _gets;
+        private int _throwAtGet = -1;
+        public int ThrowAtGet
         {
-            get => _ready;
-            set { if (_ready != value) { _ready = value; _revision++; WarmChanged?.Invoke(); } }
+            get => _throwAtGet;
+            set { _throwAtGet = value; _gets = 0; }
         }
-        public int ThrowAtLayout { get; set; } = -1;
-        public List<(Material Material, WarmDrawLayout Layout)> Layouts { get; } = [];
-        private readonly HashSet<Material> _registered = [];
         public Material Get(ToonSpec spec)
         {
-            var material = spec == FirstSpec ? first : spec == SecondSpec ? second : throw new ArgumentException("Unknown test spec.");
-            _registered.Add(material);
-            return material;
+            if (++_gets == ThrowAtGet) throw new InvalidOperationException("Injected second-surface material failure.");
+            return spec == FirstSpec ? first : spec == SecondSpec ? second : throw new ArgumentException("Unknown test spec.");
         }
-        public bool IsReady(ToonSpec spec) { ReadinessQueries++; return Ready; }
-        public bool IsReady(ShaderId shader, Material material) { ReadinessQueries++; return Ready && _registered.Contains(material); }
-        public void Track(ShaderId shader, Material material) => _registered.Add(material);
-        public void TrackLayout(Material material, WarmDrawLayout layout)
-        {
-            if (!_registered.Contains(material)) throw new InvalidOperationException("Unregistered test material.");
-            if (Layouts.Contains((material, layout))) return;
-            if (Layouts.Count + 1 == ThrowAtLayout) throw new InvalidOperationException("Injected second-surface preparation failure.");
-            Layouts.Add((material, layout));
-            _ready = false;
-            _revision++;
-            WarmChanged?.Invoke();
-        }
-        public ToonWarmBatch CapturePendingWarm()
-        {
-            if (_registered.RemoveWhere(material => !GodotObject.IsInstanceValid(material)) > 0)
-            { _revision++; WarmChanged?.Invoke(); }
-            // This double exposes state changes only; CompleteWarm still rejects fabricated draw evidence.
-            return _batch is { } batch && batch.Revision == _revision ? batch : _batch = new(_revision, []);
-        }
-        public bool CompleteWarm(ToonWarmBatch batch) => throw new NotSupportedException("Use the real WP-04 warm-draw integration for evidence.");
+        public Material CreatePipelineMaterial(ToonKind kind) => throw new NotSupportedException();
     }
 
 }

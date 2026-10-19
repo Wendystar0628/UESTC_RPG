@@ -15,7 +15,7 @@ public sealed class PreparedTile : IDisposable
     private static readonly HashSet<PreparedTile> _live = [];
 
     public sealed record Draw(Rid Base, Rid Mesh, Transform3D At, ToonRef Material,
-        bool IgnoreOcclusionCulling, ShaderId? Shader, bool Reflect, ulong Format, bool Instanced, BakedPrimitive Primitive, bool Resident = false)
+        bool IgnoreOcclusionCulling, ShaderId? Shader, bool Reflect, bool Resident = false)
     {
         public bool IsWater => Shader is ShaderId.Water or ShaderId.WaterClear;
         public bool Reflects => Reflect && !IsWater;
@@ -23,7 +23,6 @@ public sealed class PreparedTile : IDisposable
     private readonly List<(Rid Rid, bool Multi)> _storage = [];
     private readonly List<Rid> _instances = [];
     private readonly List<Rid> _reflectionInstances = [];
-    private readonly List<bool> _reflectionReadiness = [];
     private readonly List<bool> _mainVisible = [];
     private readonly List<bool> _mainDetached = [], _reflectionDetached = [];
     private readonly List<Draw> _draws = [];
@@ -72,7 +71,7 @@ public sealed class PreparedTile : IDisposable
                 if (surface.VertexCount == 0) continue;
                 var mesh = prepared.CreateMesh(surface);
                 prepared._draws.Add(new(mesh, mesh, surface.At.ToGodot(), surface.Material,
-                    surface.IgnoreOcclusionCulling, surface.Shader, surface.Reflect, surface.Format, false, surface.Primitive, bundle.Level == LodLevel.L4 && surface.Shader == ShaderId.DioramaFar));
+                    surface.IgnoreOcclusionCulling, surface.Shader, surface.Reflect, bundle.Level == LodLevel.L4 && surface.Shader == ShaderId.DioramaFar));
             }
             foreach (var item in bundle.MultiMeshes)
             {
@@ -88,7 +87,7 @@ public sealed class PreparedTile : IDisposable
                 RenderingServer.MultimeshSetBuffer(multi, MemoryMarshal.Cast<byte, float>(item.InstanceData.Span));
                 RenderingServer.MultimeshSetCustomAabb(multi, Bounds(item.Bounds));
                 prepared._draws.Add(new(multi, mesh, Transform3D.Identity, item.Surface.Material,
-                    item.Surface.IgnoreOcclusionCulling, item.Surface.Shader, item.Surface.Reflect, item.Surface.Format, true, item.Surface.Primitive, bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar));
+                    item.Surface.IgnoreOcclusionCulling, item.Surface.Shader, item.Surface.Reflect, bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar));
             }
             lock (_liveGate) _live.Add(prepared);
             return prepared;
@@ -139,7 +138,7 @@ public sealed class PreparedTile : IDisposable
         finally { foreach (var lod in lodOwners) lod.Dispose(); }
     }
     public Rid MountOne(int index, Rid scenario, Rid material, Rid reflectionScenario = default,
-        Material? reflectionMaterial = null, bool reflectionReady = false)
+        Material? reflectionMaterial = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_retiring) throw new InvalidOperationException("A retiring tile cannot accept new native instances.");
@@ -152,7 +151,6 @@ public sealed class PreparedTile : IDisposable
         _instances.Add(instance);
 
         _reflectionInstances.Add(default);
-        _reflectionReadiness.Add(false);
         _mainVisible.Add(draw.Resident);
         _mainDetached.Add(false); _reflectionDetached.Add(false);
         // LOD selection may go directly to ready children. The resident backdrop belongs to the
@@ -165,13 +163,12 @@ public sealed class PreparedTile : IDisposable
             ? RenderingServer.ShadowCastingSetting.Off : RenderingServer.ShadowCastingSetting.On);
         RenderingServer.InstanceGeometrySetVisibilityRange(instance, 0, 0, 0, 0, RenderingServer.VisibilityRangeFadeMode.Disabled);
         RenderingServer.InstanceGeometrySetFlag(instance, RenderingServer.InstanceFlags.IgnoreOcclusionCulling, draw.IgnoreOcclusionCulling);
-        RefreshReflectionOne(index, reflectionScenario, reflectionMaterial, reflectionReady);
+        RefreshReflectionOne(index, reflectionScenario, reflectionMaterial);
         return instance;
     }
-    public void RefreshReflectionOne(int index, Rid scenario, Material? material, bool ready)
+    public void RefreshReflectionOne(int index, Rid scenario, Material? material)
     {
         if (_disposed || _retiring) return;
-        _reflectionReadiness[index] = ready;
         UpdateReflection(index, scenario, material);
     }
     private void UpdateReflection(int index, Rid scenario, Material? material)
@@ -198,7 +195,7 @@ public sealed class PreparedTile : IDisposable
         else RenderingServer.InstanceSetScenario(proxy, scenario);
         // A proxy override is required: assigning this to the shared mesh would replace the main-world material.
         RenderingServer.InstanceGeometrySetMaterialOverride(proxy, material.GetRid());
-        RenderingServer.InstanceSetVisible(proxy, _hardVisible && _reflectionReadiness[index]);
+        RenderingServer.InstanceSetVisible(proxy, _hardVisible);
     }
     public void SetVisible(bool visible, float fadeStart)
     {
@@ -222,7 +219,7 @@ public sealed class PreparedTile : IDisposable
         // Current water/reflect_flat shaders do not declare fade_t0. Replace them atomically, without overlap.
         for (var i = 0; i < _reflectionInstances.Count; i++)
             if (_reflectionInstances[i].IsValid)
-                RenderingServer.InstanceSetVisible(_reflectionInstances[i], _hardVisible && _reflectionReadiness[i]);
+                RenderingServer.InstanceSetVisible(_reflectionInstances[i], _hardVisible);
     }
     private static Aabb Bounds(Box3 box) => new(box.Min.ToGodot(), box.Size.ToGodot());
     public void Dispose()
@@ -281,7 +278,7 @@ public sealed class PreparedTile : IDisposable
                 _reflectionInstances[index] = default; return false;
             }
             FreeOwnedInstance(_instances[index]);
-            _instances.RemoveAt(index); _reflectionInstances.RemoveAt(index); _reflectionReadiness.RemoveAt(index); _mainVisible.RemoveAt(index);
+            _instances.RemoveAt(index); _reflectionInstances.RemoveAt(index); _mainVisible.RemoveAt(index);
             _mainDetached.RemoveAt(index); _reflectionDetached.RemoveAt(index);
             return false;
         }

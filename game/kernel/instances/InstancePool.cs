@@ -8,7 +8,7 @@ namespace Campus.Kernel.Instances;
 internal sealed class InstancePool(
     InstancePoolHost host, string id, string ownerWp, int capacity, int meshTriangles,
     GeometryInstance3D.ShadowCastingSetting shadows, MapId? map, int surfaceCount,
-    MultiMeshInstance3D instance, MultiMesh multiMesh, ArrayMesh mesh, Func<bool> preparation) : IInstancePool
+    MultiMeshInstance3D instance, MultiMesh multiMesh, ArrayMesh mesh) : IInstancePool
 {
     private static readonly StringName _shaderInstancePrecipD = InstanceShaderParameters.PrecipD;
     private static readonly StringName _shaderInstancePrecipK = InstanceShaderParameters.PrecipK;
@@ -18,9 +18,6 @@ internal sealed class InstancePool(
     private MultiMeshInstance3D? _instance = instance;
     private MultiMesh? _multiMesh = multiMesh;
     private ArrayMesh? _mesh = mesh;
-    private Func<bool>? _preparation = preparation;
-    private bool _materialReady;
-    private long? _preparationRevision;
     private bool _freed;
     private bool _hasBuffer;
     private int _visibleCount;
@@ -34,8 +31,7 @@ internal sealed class InstancePool(
         get
         {
             RequireLive();
-            host.RefreshPreparation(this);
-            return _hasBuffer && _materialReady;
+            return _hasBuffer;
         }
     }
     internal InstancePoolStatistics Statistics => new(Id, OwnerWp, Capacity, _visibleCount, meshTriangles,
@@ -43,8 +39,7 @@ internal sealed class InstancePool(
     {
         Map = Map,
         SurfaceCount = surfaceCount,
-        Shadows = shadows,
-        MaterialReady = _materialReady
+        Shadows = shadows
     };
 
     public void WriteBuffer(ReadOnlySpan<float> data)
@@ -66,28 +61,10 @@ internal sealed class InstancePool(
             if (value < 0 || value > Capacity) throw new ArgumentOutOfRangeException(nameof(value));
             if (value > 0 && !_hasBuffer)
                 throw new InvalidOperationException("Write the complete instance buffer before showing the pool.");
-            host.RefreshPreparation(this);
             _multiMesh!.VisibleInstanceCount = value;
             _visibleCount = value;
+            _instance!.Visible = value > 0;
         }
-    }
-
-    internal void RefreshPreparation(long revision)
-    {
-        if (_freed || _preparation is null || _preparationRevision == revision) return;
-        var ready = _preparation();
-        _preparationRevision = revision;
-        if (ready == _materialReady) return;
-        _materialReady = ready;
-        _instance!.Visible = ready;
-    }
-
-    internal void InvalidatePreparation()
-    {
-        if (_freed || _preparation is null) return;
-        _preparationRevision = null;
-        _materialReady = false;
-        _instance!.Visible = false;
     }
 
     public void SetParameter(StringName name, Vector4 value)
@@ -124,8 +101,6 @@ internal sealed class InstancePool(
         if (_freed) return;
         _freed = true;
         _visibleCount = 0;
-        _materialReady = false;
-        _preparation = null;
         host.Release(this);
         var ownedInstance = _instance;
         var ownedMultiMesh = _multiMesh;

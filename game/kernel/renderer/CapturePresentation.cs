@@ -2,7 +2,7 @@ using Godot;
 
 namespace Campus.Kernel.Renderer;
 
-/// <summary>Thumbnail-only UI lease; the world, veil and attribution layers are unaffected.</summary>
+/// <summary>Thumbnail-only UI lease; the world, loading and attribution layers are unaffected.</summary>
 public static class CapturePresentation
 {
     private static CanvasLayer? _hud;

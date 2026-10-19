@@ -13,7 +13,6 @@ public interface IRenderReadiness
 {
     string? Error { get; }
     bool Pending { get; }
-    bool PipelineReady { get; }
 }
 
 public readonly record struct RenderAccount(WpId Owner, int Handles, int Surfaces, int Triangles);
@@ -52,10 +51,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     private ulong _next;
     public string? Error { get; private set; }
     public bool Pending => _entries.Values.Any(entry => entry.Pending);
-    public bool PipelineReady => _materials is not null && _entries.Values.All(entry => !entry.Pending &&
-        entry.Draws.All(IsReady));
-    public bool IsReady(RenderHandle handle) => _entries.TryGetValue(handle.Value, out var entry) &&
-        !entry.Pending && entry.Draws.All(IsReady);
+    public bool IsReady(RenderHandle handle) => _entries.TryGetValue(handle.Value, out var entry) && !entry.Pending;
 
     /// <summary>Raw reflection instances are not scene-tree nodes; main instances are scanned there.</summary>
     public Rid[] CaptureReflectionInstances() => _entries.Values.SelectMany(entry => entry.Draws)
@@ -72,14 +68,6 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         RenderingServer.Singleton.FramePostDraw += ReportReleasedInstances;
         GD.Print($"[WP-01][phase=render-instances] event=ready globalUniformSlots=" +
             ProjectSettings.GetSetting("rendering/limits/global_shader_variables/buffer_size").AsInt64());
-    }
-    public override void _Process(double delta)
-    {
-        if (_materials is null) return;
-        // Independent visibility decisions do not depend on dictionary iteration order.
-        foreach (var entry in _entries.Values)
-            foreach (var draw in entry.Draws)
-                if (!draw.Instance.Visible && IsReady(draw)) draw.Instance.Visible = true;
     }
     public RenderHandle Mount(ContentOutput content, WpId owner)
     {
@@ -134,7 +122,6 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
                 var mesh = Upload(surface.Geometry, surface.Tint, catalog);
                 entry.Meshes.Add(mesh);
                 var material = surface.Geometry.Shader is { } shader ? ResolveShader(shader) : _materials!.Get(surface.Geometry.Material.Spec);
-                _materials!.TrackLayout(material, new WarmDrawLayout(MeshSurfaceFormat.Read(mesh), false, BakedPrimitive.Triangles));
                 var instance = new MeshInstance3D
                 {
                     Mesh = mesh,
@@ -143,13 +130,12 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
                     IgnoreOcclusionCulling = surface.IgnoreOcclusion,
                     CastShadow = surface.Geometry.Flags is { Length: > 0 } flags && flags.All(value => (value & 8) != 0)
                         ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
-                    Visible = false
+                    Visible = true
                 };
                 entry.Root.AddChild(instance);
                 var draw = new Draw(instance, mesh, surface.Geometry);
                 entry.Draws.Add(draw);
                 CreateReflectionProxy(draw);
-                instance.Visible = IsReady(draw);
                 entry.Surfaces++;
                 entry.Triangles += surface.Geometry.Index.Length / 3;
             }
@@ -251,16 +237,10 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     }
     public void OnMapLoaded(IMapContext context) { }
 
-    private bool IsReady(Draw draw) => draw.Source.Shader is { } shader
-        ? _materials!.IsReady(shader, draw.Instance.MaterialOverride)
-        : _materials!.IsReady(draw.Source.Material.Spec);
-
     private Material ResolveShader(ShaderId shader)
     {
         if (_shaderMaterials.TryGetValue(shader, out var cached)) return cached;
         var material = Services.Get<IShaderMaterialSource>().Create(shader);
-        try { _materials!.Track(shader, material); }
-        catch { material.Dispose(); throw; }
         _shaderMaterials.Add(shader, material);
         return material;
     }

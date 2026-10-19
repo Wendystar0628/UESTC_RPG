@@ -162,8 +162,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             if (layer.Preparing is not null || layer.Handle.State is BakeState.Pending or BakeState.Running) _draining.Add(layer);
         }
     }
-    private bool Ready(Layer layer) => layer.Error is null && layer.Mounted && layer.Prepared is { } prepared &&
-        prepared.Draws.All(materials.IsReady);
+    private bool Ready(Layer layer) => layer.Error is null && layer.Mounted && layer.Prepared is not null;
     private void Fail(Layer layer, string error)
     {
         layer.Error = error;

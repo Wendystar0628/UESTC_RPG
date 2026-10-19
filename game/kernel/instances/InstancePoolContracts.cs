@@ -8,7 +8,7 @@ namespace Campus.Kernel.Instances;
 /// Position contains xyz triples, Uv contains uv pairs, and Index contains triangle triples.
 /// Input arrays are copied into engine resources during Mount and are not retained.
 /// Material is borrowed: its caller must keep it alive until the pool is freed.
-/// Shader identifies this exact material for actual instanced-layout preparation.
+/// Shader identifies the material in the build-time pipeline catalog.
 /// CustomAabb is in pool-local coordinates and must include every shader-driven displacement.
 /// </summary>
 public sealed record InstancePoolSpec(
@@ -32,7 +32,7 @@ public interface IInstancePool
 {
     int Capacity { get; }
 
-    /// <summary>The live pool has its complete buffer and its actual material layouts are ready.</summary>
+    /// <summary>The live pool has its complete instance buffer.</summary>
     bool IsReady { get; }
 
     /// <summary>
@@ -42,7 +42,7 @@ public interface IInstancePool
     /// </summary>
     void WriteBuffer(ReadOnlySpan<float> data);
 
-    /// <summary>Requested prefix length in [0, Capacity]. Geometry pools remain hidden until their material layouts are warm.</summary>
+    /// <summary>Visible prefix length in [0, Capacity], after a complete buffer upload.</summary>
     int VisibleCount { get; set; }
 
     /// <summary>Sets a registered vec4 instance uniform; scalar and unregistered names are rejected.</summary>
@@ -84,9 +84,6 @@ public sealed record InstancePoolStatistics(
     public MapId? Map { get; init; }
     public int SurfaceCount { get; init; } = 1;
     public GeometryInstance3D.ShadowCastingSetting Shadows { get; init; }
-    public bool MaterialReady { get; init; } = true;
-    /// <summary>CPU-submitted triangles eligible for visibility, not measured draw calls or GPU primitives.</summary>
-    public long ReadyVisibleTriangles => MaterialReady ? VisibleTriangles : 0;
     public long InstanceBufferBytes => (long)Capacity * 16 * sizeof(float);
     public long VisibleTriangles => (long)VisibleCount * MeshTriangles;
 }

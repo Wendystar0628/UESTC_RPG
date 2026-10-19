@@ -135,7 +135,7 @@ public static class InstancePoolRuntimeFixture
             }
             buffer[^1] = 1;
             pool.WriteBuffer(buffer);
-            AssertThat(!pool.IsReady && !node.Visible).OverrideFailureMessage("Raw pool upload bypassed actual material preparation.").IsTrue();
+            AssertThat(pool.IsReady && !node.Visible).OverrideFailureMessage("Complete buffer upload must be ready while its requested prefix is empty.").IsTrue();
             AssertThat(multiMesh.GetBuffer().SequenceEqual(buffer)).OverrideFailureMessage("The native buffer lost transform or custom data.").IsTrue();
             pool.VisibleCount = 32;
             AssertThat(multiMesh.VisibleInstanceCount == 32).OverrideFailureMessage("Visible prefix did not reach Godot.").IsTrue();
