@@ -8,7 +8,7 @@ internal static class LawnAppearance
     public const ushort Grass = 150, GrassLight = 190, GrassDark = 192;
     public const string GrassFamily = "grass", LightFamily = "ground.grassLight", DarkFamily = "ground.grassDark";
 
-    public static ToonSpec Spec() => new(new(GrassFamily + ".lit"), new(GrassFamily + ".shade")) { Wet = 0.4f };
+    public static ToonSpec Spec() => new(new(GrassFamily + ".lit"), new(GrassFamily + ".shade")) { Wet = WetSurface.PorousResponse };
 }
 
 /// <summary>

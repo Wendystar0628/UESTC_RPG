@@ -16,6 +16,8 @@ public static class WetSurface
     public const float FlatTo = 0.997f;
     public const float ResponseFrom = 0.45f;
     public const float ResponseTo = 0.55f;
+    /// <summary>草地、绿篱与裸土的材质响应；由材质表上传，低于积水资格门限。</summary>
+    public const float PorousResponse = 0.4f;
 
     /// <summary>积水潜势 0–1，与着色器 precip_puddle_potential 相同。</summary>
     public static float PuddlePotential(float x, float z) =>

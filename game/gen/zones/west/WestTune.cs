@@ -65,7 +65,7 @@ public static class WestTune
         /// <summary>The motto stone's pebble bed: rounded river pebbles in pale paver grey, mottled.</summary>
         public static readonly ToonSpec Pebble = S("ground.paver", ToonFx.Mottle, LineClass.Fine, 0.9f);
         /// <summary>Low clipped planting round the motto stone's bed (hedge), soft tree lines.</summary>
-        public static readonly ToonSpec Hedge = S("hedge", ToonFx.Mottle, LineClass.Tree, 0.5f);
+        public static readonly ToonSpec Hedge = S("hedge", ToonFx.Mottle, LineClass.Tree, WetSurface.PorousResponse);
 
         // ---- 19c: wetland, bridgehead and stone carving ----
         /// <summary>Boardwalk planks and handrails (栈道木板): warm light timber, mottled, soft wet darkening.</summary>

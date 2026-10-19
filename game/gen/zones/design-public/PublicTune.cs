@@ -58,6 +58,6 @@ public static class PublicTune
         /// <summary>Dark grey steel: carriers, back posts (WP-13's DarkSteel).</summary>
         public static readonly ToonSpec Steel = S("equip.fence", ToonFx.Rim | ToonFx.AnisoBand, LineClass.Fine, 0.4f);
         /// <summary>Pit soil: the horizontal face that catches leaves, petals and snow (MAP-QSH-ADDITIONS R3).</summary>
-        public static readonly ToonSpec Soil = S("base.warmBrown", line: LineClass.None);
+        public static readonly ToonSpec Soil = S("base.warmBrown", line: LineClass.None, wet: WetSurface.PorousResponse);
     }
 }

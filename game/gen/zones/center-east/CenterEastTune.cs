@@ -47,9 +47,9 @@ public static class CenterEastTune
         public static readonly ToonSpec DarkGranite = S("roof.grey", ToonFx.BevelLift, LineClass.Fine, 0.8f);
         public static readonly ToonSpec Paving = S("ground.paver", ToonFx.None, LineClass.None);
         /// <summary>Tree-pit and planter soil: the horizontal face that catches leaves, petals and snow (MAP-QSH-ADDITIONS R3).</summary>
-        public static readonly ToonSpec Soil = S("base.warmBrown", ToonFx.None, LineClass.None);
+        public static readonly ToonSpec Soil = S("base.warmBrown", ToonFx.None, LineClass.None, WetSurface.PorousResponse);
         /// <summary>Planter beds behind the ramp seat walls: a low planted surface until WP-23 fills them with shrubs.</summary>
-        public static readonly ToonSpec Bed = S("ground.grassDark", ToonFx.None, LineClass.None);
+        public static readonly ToonSpec Bed = S("ground.grassDark", ToonFx.None, LineClass.None, WetSurface.PorousResponse);
         public static readonly ToonSpec RoofSlab = S("roof.grey", ToonFx.Mottle, LineClass.Building, 0.85f);
         /// <summary>Grey aluminium window frames and mullions (窗框灰铝).</summary>
         public static readonly ToonSpec Metal = S("frame.alu", ToonFx.BevelLift, LineClass.Fine);

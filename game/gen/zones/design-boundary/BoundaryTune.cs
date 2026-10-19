@@ -47,7 +47,7 @@ public static class BoundaryTune
         public static readonly ToonSpec Door = S("frame.alu", ToonFx.BevelLift, LineClass.Fine, 0.4f);
         /// <summary>Clipped hedge inside the fence (MAP-QSH-ADDITIONS 方整绿篱): seasonal hedge colour, soft shading.</summary>
         public static readonly ToonSpec Hedge = new(new("hedge.lit"), new("hedge.shade"))
-        { Normal = ToonNormal.Smooth, Steps = ShadeSteps.Soft, Line = LineClass.Tree };
+        { Normal = ToonNormal.Smooth, Steps = ShadeSteps.Soft, Line = LineClass.Tree, Wet = WetSurface.PorousResponse };
     }
 
     /// <summary>

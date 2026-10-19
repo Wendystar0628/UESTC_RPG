@@ -236,7 +236,9 @@ void fragment() {
 	} else {
 		tcol = pat_colors(tctx, tmat, pat_dl(UV, pat_fw, UV2, tctx.wpos, tctx.n_w));
 	}
-	float wet_gate = clamp(weather_b.x, 0.0, 1.0) * toon_wet_exposure(tctx) * smoothstep(PW_FLAT.x, PW_FLAT.y, tctx.n_w.y);
+	// 与积水/湿面天光同一材质资格门；先筛底面，覆盖其上的落叶也不能把软地面重新点亮。
+	float wet_gate = clamp(weather_b.x, 0.0, 1.0) * toon_wet_exposure(tctx) * smoothstep(PW_FLAT.x, PW_FLAT.y, tctx.n_w.y)
+		* smoothstep(PW_RESPONSE.x, PW_RESPONSE.y, tmat.wet);
 	vec3 wet_reflection = reflection_lamps_color(tctx.wpos, tctx.cam, 0.5) * wet_gate;
 	tcol.lit += wet_reflection * tmat.wet;
 	tcol.shade += wet_reflection * tmat.wet;

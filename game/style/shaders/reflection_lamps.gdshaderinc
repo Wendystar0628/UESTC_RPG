@@ -10,22 +10,26 @@
 const int REFLECTION_LAMP_CAPACITY = 16;
 const float REFLECTION_LAMP_WIDTH = 0.5;
 const float REFLECTION_LAMP_LENGTH = 8.0;
-const float REFLECTION_LAMP_BOUNDARY_JITTER = 0.18;
-const vec2 REFLECTION_LAMP_DUTY = vec2(0.50, 0.72);
+const vec2 REFLECTION_LAMP_SPACING_RATIO = vec2(0.68, 0.82);
+const vec2 REFLECTION_LAMP_DUTY = vec2(0.65, 0.85);
+const vec2 REFLECTION_LAMP_DUTY_VARIATION = vec2(0.90, 1.0);
 const float REFLECTION_LAMP_CUT_SKEW = 0.08;
 const float REFLECTION_LAMP_END_SOFT = 0.06;
 const float REFLECTION_LAMP_SIDE_SOFT = 0.05;
 const float REFLECTION_LAMP_TIP_WIDTH = 0.40;
+const float REFLECTION_LAMP_SEGMENT_FADE = 0.80;
 
-// 相邻截共用同一条边界；扰动小于半截，边界始终有序，可直接定位当前截。
-float reflection_lamp_boundary(uint seed, float index, float count, float strip_length, float across) {
+// 每灯自己的等比截距：靠投影起点最长，向相机逐截缩短；相邻截共用斜断口。
+float reflection_lamp_boundary(uint seed, float index, float count, float ratio, float strip_length, float across) {
 	if (index <= 0.0) return 0.0;
 	if (index >= count) return strip_length;
 	uint key = seed + uint(index) * 17u;
-	float jitter = (lamp_hash01(key) * 2.0 - 1.0) * REFLECTION_LAMP_BOUNDARY_JITTER;
-	float skew = (lamp_hash01(key + 1u) * 2.0 - 1.0) * REFLECTION_LAMP_CUT_SKEW;
+	float normalizer = 1.0 - pow(ratio, count);
+	float boundary = (1.0 - pow(ratio, index)) * strip_length / normalizer;
+	float next_length = pow(ratio, index) * (1.0 - ratio) * strip_length / normalizer;
+	float skew = (lamp_hash01(key + 1u) * 2.0 - 1.0) * min(REFLECTION_LAMP_CUT_SKEW, next_length * 0.15);
 	float cross_ratio = clamp(across / (REFLECTION_LAMP_WIDTH * 0.5), -1.0, 1.0);
-	return (index + jitter) * strip_length / count + cross_ratio * skew;
+	return boundary + cross_ratio * skew;
 }
 
 // 返回加到本表面雾处理之前的线性 RGB；湿润遮罩和表面朝向由消费方提供。
@@ -73,28 +77,34 @@ vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale)
 		float along = dot(offset, axis);
 		float across = dot(offset, vec2(-axis.y, axis.x));
 		float t = along / strip_length;
-		float half_width = REFLECTION_LAMP_WIDTH * 0.5 * mix(1.0, REFLECTION_LAMP_TIP_WIDTH, clamp(t, 0.0, 1.0));
-		if (along < 0.0 || along > strip_length || abs(across) > half_width + pixel) continue;
-		float width = 1.0 - smoothstep(half_width - REFLECTION_LAMP_SIDE_SOFT - pixel,
-			half_width + pixel, abs(across));
+		float half_width = REFLECTION_LAMP_WIDTH * 0.5;
+		if (along < 0.0 || along >= strip_length || abs(across) > half_width + pixel) continue;
 		// 稳定引用作种子，不读灯条表槽号，排序变化不会换一套断口。
 		uint seed = lamp_hash_u(uint(round(reference.y)) * 131u + uint(kind) * 193u);
 		float count = 5.0 + floor(lamp_hash01(seed) * 3.0);
-		float segment = min(floor(t * count), count - 1.0);
-		float lower = reflection_lamp_boundary(seed, segment, count, strip_length, across);
-		float upper = reflection_lamp_boundary(seed, segment + 1.0, count, strip_length, across);
+		float ratio = mix(REFLECTION_LAMP_SPACING_RATIO.x, REFLECTION_LAMP_SPACING_RATIO.y, lamp_hash01(seed + 3u));
+		// 等比和反解后只需看所在截与邻界，不逐灯遍历全部5–7截。
+		float segment = min(floor(log(1.0 - t * (1.0 - pow(ratio, count))) / log(ratio)), count - 1.0);
+		float lower = reflection_lamp_boundary(seed, segment, count, ratio, strip_length, across);
+		float upper = reflection_lamp_boundary(seed, segment + 1.0, count, ratio, strip_length, across);
 		if (along < lower) segment -= 1.0;
 		else if (along >= upper) segment += 1.0;
-		lower = reflection_lamp_boundary(seed, segment, count, strip_length, across);
-		upper = reflection_lamp_boundary(seed, segment + 1.0, count, strip_length, across);
+		segment = clamp(segment, 0.0, count - 1.0);
+		lower = reflection_lamp_boundary(seed, segment, count, ratio, strip_length, across);
+		upper = reflection_lamp_boundary(seed, segment + 1.0, count, ratio, strip_length, across);
 		uint key = seed + uint(segment) * 31u + 101u;
-		float duty = mix(REFLECTION_LAMP_DUTY.x, REFLECTION_LAMP_DUTY.y, lamp_hash01(key));
+		float progress = segment / (count - 1.0);
+		float duty = mix(REFLECTION_LAMP_DUTY.y, REFLECTION_LAMP_DUTY.x, progress)
+			* mix(REFLECTION_LAMP_DUTY_VARIATION.x, REFLECTION_LAMP_DUTY_VARIATION.y, lamp_hash01(key));
 		float gap = (upper - lower) * (1.0 - duty);
-		float start = lower + gap * lamp_hash01(key + 1u);
+		float start = lower + gap * (segment == 0.0 ? 0.0 : lamp_hash01(key + 1u));
 		float finish = start + (upper - lower) * duty;
+		half_width = REFLECTION_LAMP_WIDTH * 0.5 * mix(1.0, REFLECTION_LAMP_TIP_WIDTH, progress);
+		float width = 1.0 - smoothstep(half_width - REFLECTION_LAMP_SIDE_SOFT - pixel,
+			half_width + pixel, abs(across));
 		float soft = REFLECTION_LAMP_END_SOFT * length_scale + pixel;
 		float dash = smoothstep(start, start + soft, along) * (1.0 - smoothstep(finish - soft, finish, along));
-		float shape = width * dash * (1.0 - t);
+		float shape = width * dash * (1.0 - t) * pow(REFLECTION_LAMP_SEGMENT_FADE, segment);
 		vec3 contribution = lamp_color * level * shape * gain;
 		// 与灯下光斑一致，重叠处只取最亮的一盏，避免叠成路面标线。
 		if (lamp_luma(contribution) > lamp_luma(color)) color = contribution;

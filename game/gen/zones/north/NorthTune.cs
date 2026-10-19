@@ -38,7 +38,7 @@ public static class NorthTune
         public static readonly ToonSpec Glass = ZoneLooks.Glass;
         /// <summary>Clipped hedge inside the fence: the seasonal hedge colour, soft vegetation shading.</summary>
         public static readonly ToonSpec Hedge = new(new("hedge.lit"), new("hedge.shade"))
-        { Normal = ToonNormal.Smooth, Steps = ShadeSteps.Soft, Line = LineClass.Tree };
+        { Normal = ToonNormal.Smooth, Steps = ShadeSteps.Soft, Line = LineClass.Tree, Wet = WetSurface.PorousResponse };
         /// <summary>
         /// Open-lane arrow. 借用：`ground.turf`（WP-12 出口牌同样借它），`sign.green` 是发光色名、没有受光/影色对；
         /// WP-04 的发光着色与 `sign.exitGreen` 到位后换。
