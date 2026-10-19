@@ -68,11 +68,13 @@ public sealed class GroundTests
     {
         var ctx = TestWorld.Context(TestWorld.Street());
         var output = new GroundModule().Build(ctx, new TileKey(0, 0), LodLevel.L0);
-        var colours = output.Meshes.SelectMany(m => m.ColorIndices!).Distinct().ToHashSet();
+        // GeometryBundle uses Material.Spec.Lit when no per-vertex colour array is supplied (scene lettering).
+        var colours = output.Meshes.SelectMany(m => m.ColorIndices is { } ids ? ids :
+            new[] { ctx.Catalog.Resolve(m.Material.Spec.Lit).Value }).Distinct().ToHashSet();
         foreach (var expected in new[] { GroundColor.Asphalt, GroundColor.Curb, GroundColor.Paver, GroundColor.Marking })
             AssertThat(colours.Contains(GroundPalette.Id(expected))).OverrideFailureMessage($"Missing {expected}; got {string.Join(", ", colours)}.").IsTrue();
-        // Asphalt, kerb, plain paving, patterned walk pavers (Q-015), lawn and markings: one bundle each.
-        AssertThat(output.Meshes.Select(m => m.Material.Spec).Distinct().Count() <= 6).OverrideFailureMessage("At most six ground materials.").IsTrue();
+        // Asphalt, kerb, plain paving, patterned walk pavers, lawn, markings and the shared scene lettering.
+        AssertThat(output.Meshes.Select(m => m.Material.Spec).Distinct().Count() <= 7).OverrideFailureMessage("At most seven ground materials including lettering.").IsTrue();
         foreach (var mesh in output.Meshes)
         {
             mesh.ValidateVertexData();
@@ -192,8 +194,6 @@ public sealed class GroundTests
         AssertThat(Snow(10.2f, 30.2f) == 255).OverrideFailureMessage("Lawn snow potential 1.").IsTrue();
         AssertThat(Shelter(-30.5f, 30.5f) == 0 && Snow(-30.5f, 30.5f) == 0).OverrideFailureMessage("Under a building is sheltered and snowless.").IsTrue();
         AssertThat(Shelter(10.2f, 30.2f) == 255).OverrideFailureMessage("Open lawn is exposed.").IsTrue();
-        AssertThat(masks.Mask1.Where((_, i) => i % 4 == 3).All(b => b == 0)).OverrideFailureMessage("Mask A stays reserved.").IsTrue();
-        AssertThat(masks.Terrain.All(float.IsFinite)).OverrideFailureMessage("Terrain heights finite.").IsTrue();
         masks.Write(MaskChannel.GinkgoLeaves, 3, 4, 200);
         AssertThat(masks.Read(MaskChannel.GinkgoLeaves, 3, 4) == 200).OverrideFailureMessage("Channel write round-trips.").IsTrue();
     }
@@ -213,9 +213,10 @@ public sealed class GroundTests
             m.ValidateVertexData();
             for (var v = 0; v < m.Position.Length / 3; v++)
             {
-                if (m.ColorIndices![v] != GroundPalette.Id(GroundColor.Grass) &&
-                    m.ColorIndices[v] != GroundPalette.Id(GroundColor.GrassLight) &&
-                    m.ColorIndices[v] != GroundPalette.Id(GroundColor.GrassDark)) continue;
+                var color = m.ColorIndices is { } ids ? ids[v] : ctx.Catalog.Resolve(m.Material.Spec.Lit).Value;
+                if (color != GroundPalette.Id(GroundColor.Grass) &&
+                    color != GroundPalette.Id(GroundColor.GrassLight) &&
+                    color != GroundPalette.Id(GroundColor.GrassDark)) continue;
                 if (OnTileBorder(m.Position[3 * v], m.Position[3 * v + 2])) continue;
                 float x = m.Position[3 * v], y = m.Position[3 * v + 1], z = m.Position[3 * v + 2];
                 if (z < 12f) continue;   // away from the flattened road verge
@@ -372,8 +373,14 @@ internal static class TestWorld
             new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
             new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
         return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = map,
-            WorldSeed = 1u, SourceInputs = MaterialInputs.Value.Entries };
+            WorldSeed = 1u, SourceInputs = MaterialInputs.Value.Entries, GlobalInputs = GlobalInputs.Value };
     }
+
+    private static readonly Lazy<BuildInputSnapshot> GlobalInputs = new(() => BuildInputSnapshot.Freeze(
+        new Dictionary<string, ReadOnlyMemory<byte>>
+        {
+            [SceneTextInputs.AtlasKey] = System.IO.File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
+        }));
 
     private static readonly Lazy<BuildInputSnapshot> MaterialInputs = new(() => BuildInputSnapshot.Freeze(
         new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)

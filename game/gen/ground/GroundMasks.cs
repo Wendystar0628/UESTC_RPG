@@ -13,8 +13,8 @@ public enum MaskChannel : byte
     OtherLeaves = 1,
     /// <summary>ground_mask B: snow potential: lawn 1, paths 0.5, carriageway 0.2, under eaves 0 (WP-15).</summary>
     Snow = 2,
-    /// <summary>ground_mask A: reserved, always 0.</summary>
-    Reserved1 = 3,
+    /// <summary>ground_mask A: maple leaf potential, a subset of OtherLeaves (WP-23).</summary>
+    MapleLeaves = 3,
     /// <summary>ground_mask2 R: puddle potential (WP-15 with WP-45b).</summary>
     Puddle = 4,
     /// <summary>ground_mask2 G: building shelter, 0 under eaves, canopies and covered walks (WP-15 with WP-45b).</summary>
@@ -26,16 +26,16 @@ public enum MaskChannel : byte
 }
 
 /// <summary>
-/// CPU-side bytes of ground_mask and ground_mask2 (RGBA8, uncompressed, rows along +z) and terrain_height (RF), all
+/// CPU-side bytes of ground_mask and ground_mask2 (RGBA8, uncompressed, rows along +z), both
 /// covering the map's data rectangle (map_rect). The Godot side uploads these unchanged; the same bytes serve as the
 /// read-only CPU copy for IGroundCover and footsteps (SYS-AUDIO 21.2). Writes go through the channel methods only.
 /// </summary>
 public sealed class GroundMaskSet
 {
-    public GroundMaskSet(MapRect rect, float metersPerPixel, float terrainMetersPerPixel)
+    public GroundMaskSet(MapRect rect, float metersPerPixel)
     {
         ArgumentNullException.ThrowIfNull(rect);
-        if (!(metersPerPixel > 0f) || !(terrainMetersPerPixel > 0f)) throw new ArgumentOutOfRangeException(nameof(metersPerPixel));
+        if (!(metersPerPixel > 0f)) throw new ArgumentOutOfRangeException(nameof(metersPerPixel));
         Rect = rect;
         MetersPerPixel = metersPerPixel;
         Width = (int)MathF.Round((rect.Max.X - rect.Min.X) / metersPerPixel);
@@ -43,10 +43,6 @@ public sealed class GroundMaskSet
         if (Width < 1 || Height < 1) throw new ArgumentException("Empty mask rectangle.", nameof(rect));
         Mask1 = new byte[Width * Height * 4];
         Mask2 = new byte[Width * Height * 4];
-        TerrainMetersPerPixel = terrainMetersPerPixel;
-        TerrainWidth = (int)MathF.Round((rect.Max.X - rect.Min.X) / terrainMetersPerPixel);
-        TerrainHeight = (int)MathF.Round((rect.Max.Y - rect.Min.Y) / terrainMetersPerPixel);
-        Terrain = new float[TerrainWidth * TerrainHeight];
     }
 
     public MapRect Rect { get; }
@@ -57,11 +53,6 @@ public sealed class GroundMaskSet
     public byte[] Mask1 { get; }
     /// <summary>ground_mask2, RGBA8, same layout as Mask1.</summary>
     public byte[] Mask2 { get; }
-    public float TerrainMetersPerPixel { get; }
-    public int TerrainWidth { get; }
-    public int TerrainHeight { get; }
-    /// <summary>terrain_height, one float per texel (Image.Format.Rf).</summary>
-    public float[] Terrain { get; }
 
     /// <summary>World centre of pixel (px, pz).</summary>
     public Vector2 Centre(int px, int pz) =>
@@ -75,7 +66,7 @@ public sealed class GroundMaskSet
 
     public void Write(MaskChannel channel, int px, int pz, byte value)
     {
-        if (channel is MaskChannel.Reserved1 or MaskChannel.Reserved2)
+        if (channel is MaskChannel.Reserved2)
             throw new ArgumentOutOfRangeException(nameof(channel), channel, "Reserved channels stay zero.");
         var (buffer, offset) = Slot(channel, px, pz);
         buffer[offset] = value;
@@ -133,7 +124,7 @@ public sealed class GroundMaskSet
         var index = (pz * Width + px) * 4;
         return channel switch
         {
-            MaskChannel.GinkgoLeaves or MaskChannel.OtherLeaves or MaskChannel.Snow or MaskChannel.Reserved1 => (Mask1, index + (int)channel),
+            MaskChannel.GinkgoLeaves or MaskChannel.OtherLeaves or MaskChannel.Snow or MaskChannel.MapleLeaves => (Mask1, index + (int)channel),
             MaskChannel.Puddle or MaskChannel.Shelter or MaskChannel.Canopy or MaskChannel.Reserved2 => (Mask2, index + (int)channel - 4),
             _ => throw new ArgumentOutOfRangeException(nameof(channel), channel, "Unknown mask channel.")
         };
@@ -145,7 +136,6 @@ public static class GroundMasks
 {
     /// <summary>Mask resolution (P0 decides; 1 m keeps lawn and path edges readable, 2 m saves about 39 MB).</summary>
     public const float DefaultMetersPerPixel = 1f;
-    public const float TerrainMetersPerPixel = 2f;
     /// <summary>Eave and canopy overhang counted as sheltered around a building footprint.</summary>
     public const float EaveOverhang = 0.6f;
 
@@ -155,23 +145,22 @@ public static class GroundMasks
         ArgumentNullException.ThrowIfNull(ctx);
         section ??= GroundSection.Default;
         var rect = ctx.Map.DataRect;
-        var set = new GroundMaskSet(rect, metersPerPixel, TerrainMetersPerPixel);
+        var set = new GroundMaskSet(rect, metersPerPixel);
         var layout = GroundLayout.Of(ctx.World);
-        PaintSurfaces(set, layout, section, ctx.World.Terrain);
+        PaintSurfaces(set, layout, section);
         PaintBuildings(set, layout);
-        PaintTrees(set, ctx.World);
+        var grid = new GroundMaskGrid(rect, set.Width, set.Height, set.MetersPerPixel);
+        foreach (var contributor in ctx.GroundMaskContributors)
+            contributor.Paint(ctx, in grid, set.Mask1, set.Mask2);
         return set;
     }
 
     /// <summary>
-    /// Snow potential, puddle potential along the gutter, default (unsheltered) exposure, and the terrain height as the
-    /// box average of the surface heights of the mask pixels inside each terrain texel.
+    /// Snow potential, puddle potential along the gutter, and default unsheltered exposure.
     /// </summary>
-    private static void PaintSurfaces(GroundMaskSet set, GroundLayout layout, GroundSection section, ITerrain terrain)
+    private static void PaintSurfaces(GroundMaskSet set, GroundLayout layout, GroundSection section)
     {
         var step = set.MetersPerPixel;
-        var ratio = set.TerrainMetersPerPixel / step;
-        var weight = 1f / (ratio * ratio);
         var tileCells = (int)(TileGrid.BaseEdge / step);
         if (tileCells * step != TileGrid.BaseEdge) throw new ArgumentOutOfRangeException(nameof(set), "Mask pixels must tile 64 m.");
         // Sample pixel centres: a lattice offset by half a pixel, laid out in 64 m tiles.
@@ -185,8 +174,8 @@ public static class GroundMasks
             {
                 var tile = new GroundTile(tx * TileGrid.BaseEdge + step * 0.5f, tz * TileGrid.BaseEdge + step * 0.5f,
                     TileGrid.BaseEdge, step);
-                var grid = TerrainGrid.For(terrain, new TileKey(tx, tz), LodLevel.L0,
-                    new GroundTile(tx * TileGrid.BaseEdge, tz * TileGrid.BaseEdge, TileGrid.BaseEdge, 1f));
+                // These are plan-view potentials. No height field is generated for an unused RF texture.
+                var grid = TerrainGrid.FlatPlan(tile);
                 var field = TileField.Build(layout, tile, section, grid);
                 var mesher = new GroundMesher(field, section, LodLevel.L0, layout, grid, new MeshSink());
                 for (var j = 0; j < tileCells; j++)
@@ -196,9 +185,6 @@ public static class GroundMasks
                         var (px, pz) = set.Pixel(centre);
                         if ((uint)px >= (uint)set.Width || (uint)pz >= (uint)set.Height) continue;
                         var surface = mesher.SurfaceAt(i, j);
-                        var tpx = Math.Min((int)(px / ratio), set.TerrainWidth - 1);
-                        var tpz = Math.Min((int)(pz / ratio), set.TerrainHeight - 1);
-                        set.Terrain[tpz * set.TerrainWidth + tpx] += mesher.HeightAt(i, j) * weight;
                         set.Write(MaskChannel.Snow, px, pz, SnowPotential(surface));
                         set.Write(MaskChannel.Shelter, px, pz, 255);
                         // Gutter: the metre of asphalt along a kerb holds water first.
@@ -244,19 +230,4 @@ public static class GroundMasks
         }
     }
 
-    /// <summary>
-    /// Default canopy projection from network tree points, until WP-23 writes its own (R, G of ground_mask and B of
-    /// ground_mask2 belong to WP-23; this keeps the masks meaningful before it lands).
-    /// </summary>
-    private static void PaintTrees(GroundMaskSet set, IWorldModel world)
-    {
-        foreach (var tree in world.Network.Trees.OrderBy(t => t.Id.Value, StringComparer.Ordinal))
-        {
-            var p = new Vector2(tree.Position.X, tree.Position.Z);
-            var species = tree.Species ?? "";
-            var ginkgo = species.Contains("ginkgo", StringComparison.OrdinalIgnoreCase) || species.Contains("银杏", StringComparison.Ordinal);
-            set.PaintCone(ginkgo ? MaskChannel.GinkgoLeaves : MaskChannel.OtherLeaves, p, ginkgo ? 5f : 4f, 255);
-            set.PaintCone(MaskChannel.Canopy, p, 4.5f, 255);
-        }
-    }
 }

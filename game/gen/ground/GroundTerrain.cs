@@ -26,6 +26,9 @@ internal sealed class TerrainGrid
     public int Count { get; }
     public bool IsFlat { get; }
 
+    /// <summary>Plan-view surface classification does not need terrain heights.</summary>
+    public static TerrainGrid FlatPlan(GroundTile extent) => new(extent.X0, extent.Z0, extent.Size, 2, [], true);
+
     public static TerrainGrid For(ITerrain terrain, TileKey tile, LodLevel lod, GroundTile extent)
     {
         var level = lod switch

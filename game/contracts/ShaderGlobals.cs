@@ -33,7 +33,7 @@ public static class ShaderGlobals
     public const string Wind = "wind";
     /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonGlobalsNode.</summary>
     public const string Snow = "snow";
-    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
+    /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonGlobalsNode; ginkgo, other leaves/petals, ground snow divided by 1.5, reserved zero.</summary>
     public const string GroundAmt = "ground_amt";
     /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string Veil = "veil";
@@ -97,7 +97,7 @@ public static class ShaderGlobals
     public const string MatTable = "mat_table";
     /// <summary>Sole writer: Campus.Style.Materials.ToonLibrary.</summary>
     public const string WindowCards = "window_cards";
-    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
+    /// <summary>Sole writer: Campus.Kernel.Maps.GroundCoverTextures.</summary>
     public const string GroundMask = "ground_mask";
     /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string TerrainHeight = "terrain_height";
@@ -107,9 +107,9 @@ public static class ShaderGlobals
     public const string CloudNoise = "cloud_noise";
     /// <summary>Sole writer: Campus.Systems.Weather.Precip.PrecipNode.</summary>
     public const string PrecipOcc = "precip_occ";
-    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
+    /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode; shared lamp/window reflection references.</summary>
     public const string ReflLamps = "refl_lamps";
-    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
+    /// <summary>Sole writer: Campus.Kernel.Maps.GroundCoverTextures.</summary>
     public const string GroundMask2 = "ground_mask2";
 }
 

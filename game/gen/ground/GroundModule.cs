@@ -9,7 +9,7 @@ namespace Campus.Gen.Ground;
 /// the default ground everywhere; zone packages that claim the Ground aspect of an area replace it there later.
 /// </summary>
 [ContentModule("ground", Owner = "WP-15")]
-public sealed class GroundModule : IContentModule
+public sealed class GroundModule : IGroundCoverSource
 {
     /// <summary>Tiles beyond the source data that still get lawn (the campus edge before the outskirts take over).</summary>
     public const int MarginTiles = 2;
@@ -24,6 +24,12 @@ public sealed class GroundModule : IContentModule
     }
 
     public IReadOnlyList<Claim> Claims => [];
+
+    public GroundCoverData PrepareGroundCover(BuildContext context)
+    {
+        var masks = GroundMasks.Build(context, _section);
+        return new(new GroundMaskGrid(masks.Rect, masks.Width, masks.Height, masks.MetersPerPixel), masks.Mask1, masks.Mask2);
+    }
 
     /// <summary>Per-tile upper bounds measured on Qingshuihe (G8 checks the totals); draw calls are colour slots.</summary>
     public ModuleBudget Budget { get; } = new(TrianglesL0: 60000, TrianglesL1: 30000, DrawCalls: 12);
@@ -67,8 +73,10 @@ public sealed class GroundModule : IContentModule
         var field = TileField.Build(layout, extent, _section, terrain, LawnNoise.Seed(ctx.WorldSeed), GroundLod.ToneCell(lod));
         var sink = new MeshSink(SurfaceMaterialCatalog.FromInputs(ctx.SourceInputs));
         new GroundMesher(field, _section, lod, layout, terrain, sink).Run();
-        if (GroundLod.HasMarkings(lod)) layout.Markings(_section).Emit(extent, sink, _section, terrain);
-        return new ContentOutput(sink.Finish(), []);
+        if (!GroundLod.HasMarkings(lod)) return new ContentOutput(sink.Finish(), []);
+        var markings = layout.Markings(_section);
+        markings.Emit(extent, sink, _section, terrain);
+        return new ContentOutput([.. sink.Finish(), .. markings.EmitManholeText(ctx, extent, _section, terrain)], []);
     }
 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) =>

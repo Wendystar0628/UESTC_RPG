@@ -39,7 +39,7 @@ public static class BuildInputAssembly
         foreach (var item in items) ArgumentNullException.ThrowIfNull(item);
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var owned = GroundMaskChannels.None;
-        const GroundMaskChannels known = GroundMaskChannels.GinkgoLeaves | GroundMaskChannels.OtherLeaves | GroundMaskChannels.CanopyShelter;
+        const GroundMaskChannels known = GroundMaskChannels.GinkgoLeaves | GroundMaskChannels.OtherLeaves | GroundMaskChannels.CanopyShelter | GroundMaskChannels.MapleLeaves;
         foreach (var item in items.OrderBy(item => item.Id, StringComparer.Ordinal))
         {
             if (string.IsNullOrWhiteSpace(item.Id) || !ids.Add(item.Id))

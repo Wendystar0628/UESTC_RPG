@@ -185,6 +185,11 @@ public sealed class PlantingTests
         if (At(m2, 2, ginkgo.Position.X, ginkgo.Position.Z) < 200) throw new InvalidOperationException("no canopy shelter under an avenue tree");
         var camphor = layout.Trees.First(t => t.Species.Id == "camphor" && layout.Trees.All(o => o == t || Vector3.Distance(o.Position, t.Position) > o.CrownRadius * 1.2f + 2f));
         if (At(m1, 1, camphor.Position.X, camphor.Position.Z) != 0) throw new InvalidOperationException("an evergreen dropped leaves");
+        if (At(m1, 3, camphor.Position.X, camphor.Position.Z) != 0) throw new InvalidOperationException("an evergreen contributed maple potential");
+        var maple = layout.Trees.First(t => t.Species.Deciduous && t.Species.Leaf == "maple");
+        if (At(m1, 3, maple.Position.X, maple.Position.Z) == 0) throw new InvalidOperationException("no maple potential under a maple crown");
+        for (var i = 0; i < m1.Length; i += 4)
+            if (m1[i + 3] > m1[i + 1]) throw new InvalidOperationException("maple potential exceeds other leaves");
         // The avenue carriageway: carpeted, with two lighter tracks (§6).
         var road = world.Network.Roads.First(l => l.Props?.TryGetProperty("name:zh", out var n) == true && n.GetString() == rules.Roads[0].Name && l.Line.Points.Count > 4);
         var a = road.Line.Points[2];

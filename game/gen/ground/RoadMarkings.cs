@@ -117,6 +117,7 @@ internal sealed partial class RoadMarkings
             }
         }
         result.AddPitches(layout, section);
+        result.AddGroundDetails(layout, section, junctions);
 
         return result;
     }
@@ -148,6 +149,11 @@ internal sealed partial class RoadMarkings
         var side = new Vector2(-dir.Y, dir.X) * (width * 0.5f);
         var quad = new Quad(p0 - side, p1 - side, p1 + side, p0 + side, color, level);
         var centre = (p0 + p1) * 0.5f;
+        AddQuad(quad, centre);
+    }
+
+    private void AddQuad(Quad quad, Vector2 centre)
+    {
         var cell = TileGrid.At(centre);
         var key = Key(cell.X, cell.Z);
         if (!_byTile.TryGetValue(key, out var list)) _byTile.Add(key, list = []);

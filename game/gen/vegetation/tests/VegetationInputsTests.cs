@@ -4,8 +4,8 @@ using System.IO;
 using System.Linq;
 using Campus.Contracts;
 using Campus.Tests;
+using Campus.Gen.Tests.Support;
 using Campus.Contracts.Maps;
-using Campus.Gen.World;
 using GdUnit4;
 
 namespace Campus.Gen.Vegetation.Tests;
@@ -19,17 +19,11 @@ using static GdUnit4.Assertions;
 [TestSuite]
 public sealed class VegetationInputsTests
 {
-    private static readonly Lazy<(string Root, IWorldModel World)> Data = new(() =>
-    {
-        var root = RepositoryFixture.Root;
-        return (root, PavementTests.World(false));
-    });
-
     [TestCase, TestCategory(TestReason.Contract)]
     public void InputsComeOnlyFromTheBoundary()
     {
         // No species table in the global inputs is an error naming the key; no planting file means a map without trees.
-        var empty = new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u, Catalog = Catalog };
+        var empty = new BuildContext { World = new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog };
         var caughtExpectedException = false;
         try { VegetationInputs.Layout(empty); }
         catch (KeyNotFoundException) { caughtExpectedException = true; }
@@ -41,6 +35,7 @@ public sealed class VegetationInputsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheModuleOwnsTheCanopyChannelsAndOverwritesThem()
     {
         var ctx = Context(withPlanting: true);
@@ -57,19 +52,23 @@ public sealed class VegetationInputsTests
         if (mask1[centre] < 200 || mask2[centre + 2] < 200) throw new InvalidOperationException("no leaves or shelter under an avenue ginkgo");
         for (var i = 0; i < grid.ByteCount; i += 4)
         {
-            // Only Mask1.R/G and Mask2.B are ours; everything else stays as the caller left it.
-            if (mask1[i + 2] != 77 || mask1[i + 3] != 77 || mask2[i] != 77 || mask2[i + 1] != 77 || mask2[i + 3] != 77)
+            // Only Mask1.R/G/A and Mask2.B are ours; everything else stays as the caller left it.
+            if (mask1[i + 2] != 77 || mask2[i] != 77 || mask2[i + 1] != 77 || mask2[i + 3] != 77)
                 throw new InvalidOperationException("painted outside the declared channels");
+            if (mask1[i + 3] > mask1[i + 1])
+                throw new InvalidOperationException("maple potential is not a subset of other leaves");
         }
         if (mask1.Where((_, i) => i % 4 == 1).All(v => v == 77))
             throw new InvalidOperationException("the G channel was not overwritten");
-        if (module.Channels != (GroundMaskChannels.GinkgoLeaves | GroundMaskChannels.OtherLeaves | GroundMaskChannels.CanopyShelter))
+        if (mask1.Where((_, i) => i % 4 == 3).All(v => v == 77))
+            throw new InvalidOperationException("the A channel was not overwritten");
+        if (module.Channels != (GroundMaskChannels.GinkgoLeaves | GroundMaskChannels.OtherLeaves | GroundMaskChannels.CanopyShelter | GroundMaskChannels.MapleLeaves))
             throw new InvalidOperationException("channel claim");
     }
 
     private static BuildContext Context(bool withPlanting)
     {
-        var root = Data.Value.Root;
+        var root = RepositoryFixture.Root;
         var global = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             [VegetationInputs.SpeciesKey] = File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json"))
@@ -77,7 +76,7 @@ public sealed class VegetationInputsTests
         var map = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
         if (withPlanting)
             map[VegetationInputs.PlantingKey] = RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey];
-        return new BuildContext { World = Data.Value.World, Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map).Entries };
+        return new BuildContext { World = withPlanting ? PavementTests.World(false) : new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map).Entries };
     }
 
     private static PaletteCatalog Catalog => MotherModelTests.Palette;

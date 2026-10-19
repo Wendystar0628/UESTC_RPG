@@ -4,6 +4,7 @@ shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_disabled, ambient_light_disabled;
 
 #include "res://style/shaders/toon.gdshaderinc"
+#include "res://style/shaders/reflection_lamps.gdshaderinc"
 
 // ---------------------------------------------------------------------------
 // 室外构造图案线（ART-STYLE，D-195；ToonSpec.SurfacePattern，材质库按材质类写下面三个 uniform）
@@ -97,6 +98,117 @@ ToonCol pat_colors(ToonCtx c, ToonMat m, float dl) {
 	return toon_colors_from(c, m, lit, shade, lamp);
 }
 
+// 地面覆盖只读同图的潜势与 WP-38 的季节量；不切材质、不随换季重建几何。
+// 色号来自既有调色板；图样复用湿面的低频潜势，不另加一套噪声频率。
+const int GROUND_SNOW = 64;
+const int GROUND_GINKGO = 118;
+const int GROUND_PETAL = 158;
+const int GROUND_DECIDUOUS = 130;
+const int GROUND_MAPLE = 124;
+// 近看的单叶轮廓只在着色器里表现；中央参数留给主会话看图取值。
+const float GROUND_LEAF_CELL = 0.12;
+const vec2 GROUND_LEAF_RESOLVE_PX = vec2(4.0, 12.0);
+
+bool ground_cover_surface(ToonCtx c) {
+	bool ground = c.cid == 150 || c.cid == 88 || (c.cid >= 178 && c.cid <= 199);
+	return ground && (c.flags & TOON_F_NOSHADOW) != 0 && (c.flags & TOON_F_INTERIOR) == 0 && c.n_w.y > 0.0 && in_map(c.wpos);
+}
+
+float ground_cover_edge(float amount, float rank, float aa) {
+	if (amount <= 0.0) {
+		return 0.0;
+	}
+	if (amount >= 1.0) {
+		return 1.0;
+	}
+	return smoothstep(rank - aa, rank + aa, amount);
+}
+
+// 四点线性映射；mask B 的草坪/步道/车道为 1/.5/.2，檐下为零。
+float ground_snow_coverage(float potential, float normalized_amount) {
+	float amount = clamp(normalized_amount, 0.0, 1.0) * 1.5;
+	float at07 = 0.7 * potential;
+	float at1 = min(1.0, 1.2 * potential);
+	float at15 = min(1.0, 2.0 * potential);
+	if (amount <= 0.7) {
+		return at07 * amount / 0.7;
+	}
+	if (amount <= 1.0) {
+		return mix(at07, at1, (amount - 0.7) / 0.3);
+	}
+	return mix(at1, at15, (amount - 1.0) / 0.5);
+}
+
+// 规则格只负责单叶形状；旋转和阈值固定在世界空间，镜头移动与换季不重排。
+// 远处收回面积覆盖，避免叶形成为闪烁的细碎点。
+float ground_leaf_rank(vec2 xz, bool fan, bool petal, float broad_rank) {
+	vec2 grid = xz / GROUND_LEAF_CELL;
+	ivec2 cell = ivec2(floor(grid));
+	float h = pat_hash(cell);
+	float angle = 6.2831853 * h;
+	vec2 p = fract(grid) - vec2(0.5);
+	p = mat2(vec2(cos(angle), sin(angle)), vec2(-sin(angle), cos(angle))) * p;
+	float shape;
+	if (fan) {
+		vec2 q = p + vec2(0.0, 0.28);
+		shape = max(length(q) / 0.72, abs(q.x) / max(q.y, 0.02));
+	} else {
+		shape = abs(p.x) / (petal ? 0.27 : 0.30) + p.y * p.y / 0.20;
+	}
+	float single = mix(h * 0.55, 0.55 + h * 0.45, smoothstep(0.85, 1.0, shape));
+	float leaf_px = 1.0 / max(length(fwidth(grid)), 1e-5);
+	return mix(broad_rank, single, smoothstep(GROUND_LEAF_RESOLVE_PX.x, GROUND_LEAF_RESOLVE_PX.y, leaf_px));
+}
+
+ToonCol ground_cover_colors(ToonCtx c, ToonMat m, ToonCol base, float rank, float rank_aa, vec2 leaf_rank, vec2 leaf_aa, float leaf_detail, vec3 wet_reflection) {
+	vec4 mask = texture(ground_mask, map_uv(c.wpos));
+	vec4 shelter = texture(ground_mask2, map_uv(c.wpos));
+	// 银杏叶在其他落叶/花瓣上，雪在最上；雪下仍能露出金叶。树冠投影下的雪潜势乘 0.6。
+	float ginkgo = ground_cover_edge(mask.r * ground_amt.x, leaf_rank.y, leaf_aa.y);
+	float snow_coverage = ground_snow_coverage(mask.b, ground_amt.z) * mix(1.0, 0.6, shelter.b) * shelter.g;
+	float snow_cover = ground_cover_edge(snow_coverage * clamp(c.n_w.y, 0.0, 1.0), rank, rank_aa);
+	// 春季花瓣只在春季一侧出现，换色按阈值切换，避免粉色与秋叶混色。
+	float spring = 1.0 - step(0.5, min(mod(season.x, 4.0), 4.0 - mod(season.x, 4.0)));
+	float other = ground_cover_edge(mask.g * ground_amt.y, leaf_rank.x, leaf_aa.x);
+	// A 是 G 中红枫/鸡爪槭的潜势，按实际比重作阈值切色，春季统一为花瓣。
+	float maple_share = mask.g > 0.0 ? clamp(mask.a / mask.g, 0.0, 1.0) : 0.0;
+	int other_cid = spring > 0.5 ? GROUND_PETAL : (maple_share > 1.0 - rank ? GROUND_MAPLE : GROUND_DECIDUOUS);
+	ToonCol result = base;
+	// 两层分别叠放，银杏边缘的抗锯齿不会吞掉下面的其他落叶。
+	for (int layer = 0; layer < 2; layer++) {
+		int cid = layer == 1 ? GROUND_GINKGO : other_cid;
+		float cover = layer == 1 ? ginkgo : other;
+		if (cover <= 0.0) {
+			continue;
+		}
+		ToonCtx leaf_ctx = c;
+		leaf_ctx.cid = cid;
+		ToonMat leaf_mat = m;
+		// 湿叶沿用铺装响应，低于沥青；不把草坪材质的湿润值带到叶毯上。
+		leaf_mat.wet = 0.6;
+		// 满铺时仍能辨认单叶；明度差与铺装缝线共用同一可调参数，远处归回平涂。
+		float detail = step(0.55, layer == 1 ? leaf_rank.y : leaf_rank.x) * leaf_detail * PAT_JOINT_DL;
+		ToonCol leaf = pat_colors(leaf_ctx, leaf_mat, detail);
+		leaf.lit += wet_reflection * leaf_mat.wet;
+		leaf.shade += wet_reflection * leaf_mat.wet;
+		leaf.lamp += wet_reflection * leaf_mat.wet;
+		result.lit = mix(result.lit, leaf.lit, cover);
+		result.shade = mix(result.shade, leaf.shade, cover);
+		result.lamp = mix(result.lamp, leaf.lamp, cover);
+	}
+	if (snow_cover > 0.0) {
+		ToonCtx snow_ctx = c;
+		snow_ctx.cid = GROUND_SNOW;
+		ToonMat snow_mat = m;
+		snow_mat.wet = 0.0;
+		ToonCol snow_color = toon_colors(snow_ctx, snow_mat);
+		result.lit = mix(result.lit, snow_color.lit, snow_cover);
+		result.shade = mix(result.shade, snow_color.shade, snow_cover);
+		result.lamp = mix(result.lamp, snow_color.lamp, snow_cover);
+	}
+	return result;
+}
+
 void vertex() {
 	TOON_VERTEX
 }
@@ -109,6 +221,24 @@ void fragment() {
 		tcol = toon_colors(tctx, tmat);
 	} else {
 		tcol = pat_colors(tctx, tmat, pat_dl(UV, pat_fw, UV2, tctx.wpos, tctx.n_w));
+	}
+	float wet_gate = clamp(weather_b.x, 0.0, 1.0) * toon_wet_exposure(tctx) * smoothstep(PW_FLAT.x, PW_FLAT.y, tctx.n_w.y);
+	vec3 wet_reflection = reflection_lamps_color(tctx.wpos, tctx.cam, 0.5) * wet_gate;
+	tcol.lit += wet_reflection * tmat.wet;
+	tcol.shade += wet_reflection * tmat.wet;
+	tcol.lamp += wet_reflection * tmat.wet;
+	if (ground_cover_surface(tctx)) {
+		float cover_rank = pw_value_noise(tctx.wpos.xz / PW_SCALE_A);
+		float cover_aa = max(fwidth(cover_rank), 1e-5);
+		float season_pos = mod(season.x, 4.0);
+		bool petals = min(season_pos, 4.0 - season_pos) < 0.5;
+		float leaf_rank = ground_leaf_rank(tctx.wpos.xz, false, petals, cover_rank);
+		float ginkgo_rank = ground_leaf_rank(tctx.wpos.xz, true, false, 1.0 - cover_rank);
+		vec2 ranks = vec2(leaf_rank, ginkgo_rank);
+		vec2 leaf_aa = max(fwidth(ranks), vec2(1e-5));
+		float leaf_px = GROUND_LEAF_CELL / max(length(fwidth(tctx.wpos.xz)), 1e-5);
+		float detail = smoothstep(GROUND_LEAF_RESOLVE_PX.x, GROUND_LEAF_RESOLVE_PX.y, leaf_px);
+		tcol = ground_cover_colors(tctx, tmat, tcol, cover_rank, cover_aa, ranks, leaf_aa, detail, wet_reflection);
 	}
 	TOON_FRAGMENT_END(tcol)
 }

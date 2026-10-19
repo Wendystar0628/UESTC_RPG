@@ -11,7 +11,7 @@
 // 画法的机制移植自渲染气质参照"太阳雨中的小渔港"的水面（ART-STYLE）：
 //   水体色 = 按到岸距离分档的透出色（三道硬边色带）；
 //   天空的倒影 = 按波面法线偏离与视线高度分成的几块反射率（菲涅耳色块），不是一整片渐变；
-//   物体的倒影 = 平面倒影按 5 级明度换成水色色阶（色块化），饱和的物体留 0.58 的色相；
+//   物体的倒影 = 平面倒影按 5 级明度换成水色色阶（色块化），物体留 0.58 的色相；
 //                再按波面法线投到相机右、前两个方向的偏移，以 0.012 一格量化成碎片，碎片之间 1 px 水色细缝；
 //   波纹线、主光反光带、四芒星闪点、泡沫线（外侧再一道断续的细线）叠在上面。
 //
@@ -24,6 +24,7 @@ render_mode cull_disabled, diffuse_lambert, specular_disabled, ambient_light_dis
 
 #include "res://style/shaders/globals.gdshaderinc"
 #include "res://style/shaders/fog.gdshaderinc"
+#include "res://style/shaders/reflection_lamps.gdshaderinc"
 
 // ---------------------------------------------------------------------------------------------------------------
 // 可调参数（评审定值；WLD-WATER 的出处写在每行后面）
@@ -59,7 +60,7 @@ const float WTR_QUANT = 0.012;        // 偏移按倒影 UV 0.012 一格量化
 const float WTR_SEAM_DL = 0.04;       // 碎片之间 1 px 细缝比水色暗的明度
 // 倒影的色块化：明度阈值（sRGB 明度）与色相保留
 const vec4 WTR_POSTER_TH = vec4(0.17, 0.30, 0.57, 0.86);
-const float WTR_HUE_KEEP = 0.58;      // 饱和的物体在色块里留下的原色相（55–60%）
+const float WTR_HUE_KEEP = 0.58;      // 物体在色块里留下的原色相（55–60%）
 // 波面：三列世界固定方向的正弦波，角频率是 2π/480 的整数倍（480 s 回绕无缝），按 T12 步进
 const vec3 WTR_SWELL_LEN = vec3(7.0, 4.3, 2.9);    // 波长（m）
 const vec3 WTR_SWELL_SLOPE = vec3(0.032, 0.026, 0.02);    // 坡度振幅
@@ -218,7 +219,7 @@ vec3 wtr_swell(vec2 p, float t) {
 	return normalize(vec3(-d.x, 1.0, -d.y));
 }
 
-// 倒影的色块化：明度分 5 级换成水色色阶，饱和的物体留一部分原色相（参照"小渔港"的 wPosterRefl）
+// 倒影的色块化：明度分 5 级，原色相与水色按既定 0.58 : 0.42 混合。
 vec4 wtr_poster(vec4 R, vec3 dark, vec3 deep, vec3 mid, vec3 light, vec3 top) {
 	float L = wtr_luma(R.rgb);
 	vec3 c = dark;
@@ -226,11 +227,8 @@ vec4 wtr_poster(vec4 R, vec3 dark, vec3 deep, vec3 mid, vec3 light, vec3 top) {
 	c = mix(c, mid, wtr_aa_step(WTR_POSTER_TH.y, L));
 	c = mix(c, light, wtr_aa_step(WTR_POSTER_TH.z, L));
 	c = mix(c, top, wtr_aa_step(WTR_POSTER_TH.w, L));
-	float mx = max(R.r, max(R.g, R.b));
-	float mn = min(R.r, min(R.g, R.b));
-	float sat = (mx - mn) / max(mx, 1e-3);
 	vec3 hue = R.rgb / max(wtr_luma(R.rgb), 1e-3);
-	c = mix(c, wtr_luma(c) * hue, smoothstep(0.18, 0.6, sat) * WTR_HUE_KEEP);
+	c = mix(c, wtr_luma(c) * hue, WTR_HUE_KEEP);
 	return vec4(c, wtr_aa_step(0.5, R.a));
 }
 
@@ -446,6 +444,7 @@ void fragment() {
 			glow += key_col * gain * max(sx, sy) * star_on;
 		}
 
+		glow += reflection_lamps_color(v_wpos, cam, 1.0);
 		// ---- 岸边泡沫线：有断口，线宽随波起伏；外侧再一道断续的细线；冬季更宽更白（§1.4）
 		float winter = clamp(snow, 0.0, 1.0);
 		float fw_m = mix(WTR_FOAM_W, WTR_FOAM_W_WINTER, winter) * (channel ? WTR_FOAM_CHANNEL.x : 1.0);

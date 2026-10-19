@@ -23,16 +23,20 @@ public sealed partial class SeasonGlobalsNode : Node, IMapAware
 {
     private static readonly StringName _shaderGlobalTreeSpecies = ShaderGlobals.TreeSpecies;
     private static readonly StringName _shaderGlobalSnow = ShaderGlobals.Snow;
+    private static readonly StringName _shaderGlobalGroundAmt = ShaderGlobals.GroundAmt;
 
     private const string ModuleId = "vegetation";
     /// <summary>Texels per species row (= SpeciesTable.Width and the veg_common fetches).</summary>
     private const int TableWidth = 8;
     /// <summary>Snow cover at the season anchors spring, summer, autumn, winter: winter without snowfall is 0.7 (WLD-VEGETATION).</summary>
     private static readonly float[] SnowAnchors = [0f, 0f, 0f, 0.7f];
+    private static readonly float[] GinkgoAnchors = [0f, 0f, 1f, 0.35f];
+    private static readonly float[] OtherAnchors = [0.6f, 0.05f, 0.5f, 0.15f];
 
     private IWorldState? _world;
     private ImageTexture? _table;
     private float _snow = float.NaN;
+    private Vector4 _groundAmt = new(float.NaN, 0f, 0f, 0f);
 
     public override void _Ready()
     {
@@ -74,20 +78,30 @@ public sealed partial class SeasonGlobalsNode : Node, IMapAware
     private void WriteSnow()
     {
         if (_world is null) return;
-        var snow = Math.Clamp(Math.Max(SnowAt(_world.SeasonPos), _world.WeatherNow.SnowAdd), 0f, 1f);
-        if (snow == _snow) return;
-        _snow = snow;
-        RenderingServer.GlobalShaderParameterSet(_shaderGlobalSnow, snow);
+        var groundSnow = Math.Clamp(Math.Max(SnowAt(_world.SeasonPos), _world.WeatherNow.SnowAdd), 0f, 1.5f);
+        var snow = Math.Min(groundSnow, 1f);
+        if (snow != _snow)
+        {
+            _snow = snow;
+            RenderingServer.GlobalShaderParameterSet(_shaderGlobalSnow, snow);
+        }
+        // Crown snow caps at one; ground keeps the full 1.5 range, normalized for the global texture contract.
+        var groundAmt = new Vector4(At(_world.SeasonPos, GinkgoAnchors), At(_world.SeasonPos, OtherAnchors), groundSnow / 1.5f, 0f);
+        if (groundAmt == _groundAmt) return;
+        _groundAmt = groundAmt;
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalGroundAmt, groundAmt);
     }
 
     /// <summary>Snow cover at a season position 0–4: smootherstep between neighbouring anchors, winter wraps to spring (as veg_anchor).</summary>
-    internal static float SnowAt(double season)
+    internal static float SnowAt(double season) => At(season, SnowAnchors);
+
+    private static float At(double season, float[] anchors)
     {
         var x = season % 4.0;
         if (x < 0) x += 4.0;
         var i = (int)Math.Floor(x);
         var f = (float)(x - i);
         var t = f * f * f * (f * (f * 6f - 15f) + 10f);
-        return SnowAnchors[i % 4] + (SnowAnchors[(i + 1) % 4] - SnowAnchors[i % 4]) * t;
+        return anchors[i % 4] + (anchors[(i + 1) % 4] - anchors[i % 4]) * t;
     }
 }

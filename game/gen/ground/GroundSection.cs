@@ -40,6 +40,8 @@ public sealed record GroundSection
 
     public MarkingSpec Markings { get; init; } = new();
 
+    public GroundDetailSpec Details { get; init; } = new();
+
     public PitchSpec Pitch { get; init; } = new();
 
     public PitSpec Pits { get; init; } = new();
@@ -50,6 +52,20 @@ public sealed record GroundSection
 
     /// <summary>Largest field threshold used by the surface classifier; distance fields must be exact up to here.</summary>
     internal float MaxIso => MathF.Max(MathF.Max(MathF.Max(CurbWidth, EdgingWidth), LawnEdgeRise), Lawn.EdgeBand);
+}
+
+/// <summary>Ground detail dimensions from MAP-QSH-ADDITIONS-VOCAB; geometry remains fixed across seasons.</summary>
+public sealed record GroundDetailSpec
+{
+    public float TactileWidth { get; init; } = 0.3f;
+    public float TactileEdgeClear { get; init; } = 0.4f;
+    public float TactileWarningDepth { get; init; } = 0.6f;
+    public float ManholeDiameter { get; init; } = 0.7f;
+    public float ManholeSpacingMin { get; init; } = 30f;
+    public float ManholeSpacingMax { get; init; } = 50f;
+    public float ParkingWidth { get; init; } = 2.5f;
+    public float ParkingDepth { get; init; } = 5f;
+    public float ParkingLine { get; init; } = 0.1f;
 }
 
 /// <summary>

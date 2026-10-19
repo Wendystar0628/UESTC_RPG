@@ -56,7 +56,7 @@ public sealed class BuildInputAssemblyTests
         AssertThrown(() => BuildInputAssembly.FreezeGroundMaskContributors(
             [second, new Contributor("a", GroundMaskChannels.OtherLeaves)])).IsInstanceOf<InvalidOperationException>();
         AssertThrown(() => BuildInputAssembly.FreezeGroundMaskContributors(
-            [new Contributor("unknown", (GroundMaskChannels)8)])).IsInstanceOf<InvalidOperationException>();
+            [new Contributor("unknown", (GroundMaskChannels)16)])).IsInstanceOf<InvalidOperationException>();
         AssertThat(first.PaintCalls == 0 && second.PaintCalls == 0).OverrideFailureMessage("Composition painted buffers before ownership validation completed.").IsTrue();
     }
 

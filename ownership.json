@@ -240,8 +240,28 @@
       "maintainers": ["WP-00"]
     },
     {
+      "pattern": "game/style/shaders/reflection_lamps.gdshaderinc",
+      "owner": "WP-39",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "game/style/shaders/reflection_lamps.gdshaderinc.uid",
+      "owner": "WP-39",
+      "maintainers": ["WP-00"]
+    },
+    {
       "pattern": "game/systems/ground/**",
       "owner": "WP-15"
+    },
+    {
+      "pattern": "game/kernel/map/data/GroundCoverTextures.cs",
+      "owner": "WP-15",
+      "maintainers": ["WP-00"]
+    },
+    {
+      "pattern": "game/kernel/map/data/GroundCoverTextures.cs.uid",
+      "owner": "WP-15",
+      "maintainers": ["WP-00"]
     },
     {
       "pattern": "game/data/maps/qingshuihe/overlay/interior/west-east.interior.json",
@@ -1748,6 +1768,7 @@
     "game/style/shaders/motion_wind.gdshaderinc",
     "game/style/shaders/precip.gdshader",
     "game/style/shaders/precip_wet.gdshaderinc",
+    "game/style/shaders/reflection_lamps.gdshaderinc",
     "game/style/shaders/reflect_flat.gdshader",
     "game/style/shaders/sky.gdshader",
     "game/style/shaders/toon.gdshaderinc",

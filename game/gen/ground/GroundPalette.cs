@@ -14,7 +14,7 @@ public enum GroundSurface : byte
 /// <summary>Colour slots used by ground geometry. Each slot is one Lit/Shade pair in the palette.</summary>
 public enum GroundColor : byte
 {
-    Asphalt, Concrete, Curb, Paver, Court, Turf, Track, Grass, GrassLight, GrassDark, Marking, MarkingYellow, Soil
+    Asphalt, Concrete, Curb, Paver, Court, Turf, Track, Grass, GrassLight, GrassDark, Marking, MarkingYellow, Soil, UtilityIron
 }
 
 /// <summary>
@@ -54,6 +54,7 @@ public static class GroundPalette
         GroundColor.Grass => LawnAppearance.Grass,
         GroundColor.Track => 198,
         GroundColor.Soil => 88,
+        GroundColor.UtilityIron => 178,
         _ => throw new ArgumentOutOfRangeException(nameof(color), color, "Unknown ground colour.")
     };
 
@@ -63,7 +64,7 @@ public static class GroundPalette
         GroundColor.Curb => GroundMaterial.Curb,
         GroundColor.Paver or GroundColor.Court or GroundColor.Turf or GroundColor.Track => GroundMaterial.Paving,
         GroundColor.Grass or GroundColor.GrassLight or GroundColor.GrassDark or GroundColor.Soil => GroundMaterial.Lawn,
-        GroundColor.Marking or GroundColor.MarkingYellow => GroundMaterial.Marking,
+        GroundColor.Marking or GroundColor.MarkingYellow or GroundColor.UtilityIron => GroundMaterial.Marking,
         _ => throw new ArgumentOutOfRangeException(nameof(color), color, "Unknown ground colour.")
     };
 
@@ -74,6 +75,7 @@ public static class GroundPalette
     public static string Family(GroundColor color) => color switch
     {
         GroundColor.Asphalt => "ground.asphalt",
+        GroundColor.UtilityIron => "ground.asphalt",
         GroundColor.Concrete => "ground.concrete",
         GroundColor.Curb => "ground.curb",
         GroundColor.Paver => "ground.paver",

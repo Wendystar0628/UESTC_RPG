@@ -7,9 +7,8 @@ namespace Campus.Gen.Vegetation;
 /// <summary>
 /// WP-23's content module (contract-32): reads its inputs through <see cref="VegetationInputs"/>, gives the trunk
 /// colliders per 64 m cell (WLD-VEGETATION) and owns the canopy channels of the ground masks — ground_mask R
-/// (ginkgo leaves), G (other leaves and petals) and ground_mask2 B (canopy shelter), painted from one crown projection
-/// (§9.5, §11.7). The claim is exclusive: WP-15 skips its tree fallback for these channels and this contributor
-/// overwrites them, so the painted values are the projection's own, not a maximum with anything underneath.
+/// (ginkgo leaves), G (other leaves and petals), A (the maple subset of G) and ground_mask2 B (canopy shelter), painted from one crown projection.
+/// The claim is exclusive: this contributor clears and paints these channels, so the values are the projection's own.
 /// Build gives the trees as static instance streams (<see cref="ContentOutput.Instances"/>), one per mother model (species ×
 /// variant) present in the tile, over the shared prototypes of <see cref="VegetationPrototypes"/>: L0 (64 m cells) carries
 /// the near pool's trees on the L0 mother model, the source the vegetation runtime buckets into L0+ / L0 / L1 and the
@@ -24,7 +23,7 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
 
     public string Id => "vegetation";
 
-    public GroundMaskChannels Channels => GroundMaskChannels.GinkgoLeaves | GroundMaskChannels.OtherLeaves | GroundMaskChannels.CanopyShelter;
+    public GroundMaskChannels Channels => GroundMaskChannels.GinkgoLeaves | GroundMaskChannels.OtherLeaves | GroundMaskChannels.CanopyShelter | GroundMaskChannels.MapleLeaves;
 
     public IReadOnlyList<Claim> Claims => [];
 
@@ -127,11 +126,12 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     public void Paint(BuildContext context, in GroundMaskGrid grid, Span<byte> mask1, Span<byte> mask2)
     {
         grid.Validate(mask1.Length, mask2.Length);
-        // Overwrite our three channels: clear them, then paint the projection (maximum between our own crowns only).
+        // Clear the claimed channels together, then paint the projection (maximum between our own crowns only).
         for (var i = 0; i < mask1.Length; i += 4)
         {
             mask1[i] = 0;
             mask1[i + 1] = 0;
+            mask1[i + 3] = 0;
             mask2[i + 2] = 0;
         }
         var (layout, rules) = Layout(context);

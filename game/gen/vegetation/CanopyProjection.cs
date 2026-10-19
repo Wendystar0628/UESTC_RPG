@@ -10,7 +10,7 @@ namespace Campus.Gen.Vegetation;
 /// <summary>
 /// The fallen-leaf and canopy channels WP-23 owns in the two ground masks (WLD-VEGETATION), painted
 /// from one crown projection of the planting layout:
-/// ground_mask R (ginkgo leaves), G (other leaves and petals) and ground_mask2 B (canopy shelter). Both masks are RGBA8,
+/// ground_mask R (ginkgo leaves), G (other leaves and petals), A (the maple subset of G) and ground_mask2 B (canopy shelter). Both masks are RGBA8,
 /// row-major from the map rectangle's minimum corner with rows along +z, the layout WP-15's GroundMaskSet uploads.
 /// Potentials only ever grow (max), so the projection can be painted over WP-15's defaults. Ground shading and the
 /// thresholds stay WP-15's (coverage = step(noise, mask × season amount)).
@@ -32,7 +32,7 @@ public static class CanopyProjection
     public const byte AvenuePetals = 128;
 
     /// <summary>Byte offsets of the channels within one RGBA8 texel.</summary>
-    private const int R = 0, G = 1, B = 2;
+    private const int R = 0, G = 1, B = 2, A = 3;
 
     public static void Paint(PlantingLayout layout, PlantingRules rules, IWorldModel world, MapRect rect, float metersPerPixel,
         Span<byte> mask1, Span<byte> mask2)
@@ -51,9 +51,14 @@ public static class CanopyProjection
         {
             var p = new Vector2(tree.Position.X, tree.Position.Z);
             var r = tree.CrownRadius;
-            // Ginkgo leaves go to R; the other autumn-coloured deciduous trees (and spring petals) to G; evergreens drop none.
+            // Ginkgo leaves go to R; other deciduous trees and spring petals go to G; evergreens drop none.
             if (tree.Species.Id == "ginkgo") grid.Cone(mask1, R, p, r * LeafReach, 255);
-            else if (tree.Species.Deciduous) grid.Cone(mask1, G, p, r * LeafReach, 255);
+            else if (tree.Species.Deciduous)
+            {
+                grid.Cone(mask1, G, p, r * LeafReach, 255);
+                // The existing leaf colour family identifies maple potential, with the same projection as its G contribution.
+                if (tree.Species.Leaf == "maple") grid.Cone(mask1, A, p, r * LeafReach, 255);
+            }
             grid.Cone(mask2, B, p, r * ShelterReach, 255);
         }
 

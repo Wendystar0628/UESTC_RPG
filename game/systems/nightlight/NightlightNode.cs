@@ -22,7 +22,7 @@ namespace Campus.Systems.Nightlight;
 /// <summary>
 /// 夜景灯光的时刻表节点（WP-39；SYS-TIME、MAP-QSH-ADDITIONS、ENG-PERF）。
 /// 每帧在 FramePriority.Channels 按钟点、有效太阳高度 h_eff 与季节求 32 个通道的 (L, Δ)，经 WP-03 的
-/// ILightChannelSink 写进 light_channels；按图读时刻表、建灯表（lamp_table、lamp_grid）、管窗覆盖（window_override），
+/// ILightChannelSink 写进 light_channels；按图读时刻表、建灯表与倒影索引（lamp_table、lamp_grid、refl_lamps）、管窗覆盖（window_override），
 /// 写全局参数 shaft。灯具与窗格读 WP-02 的全图清单 ILightInventory，清单的 Rev 变了就重建灯表和光晕；
 /// 灯头光晕与窗光晕各挂一个内核实例池（IInstancePoolHost）。注册 id 与 WP-03 的桩相同，合入后自动替掉桩。
 /// 同一个节点也是过场"灯光提示"钩子 ILampCueHook 的实现（contract-12 第 4 节），替掉 WP-00 的桩。
@@ -66,7 +66,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
     private IReadOnlyList<LampCueDef> _cueDefs = [];
     private LampCue? _cue;
 
-    /// <summary>本图灯表里的灯（只读，给日志、门禁和以后的倒影选灯用）。</summary>
+    /// <summary>本图灯表里的灯（只读，光斑、光晕与倒影索引共用）。</summary>
     public IReadOnlyList<LampRecord> Lamps { get; private set; } = [];
 
     public override void _EnterTree()
@@ -76,6 +76,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
         OnWorldInstanceChanged(0);
         if (_overrideTexture is not null) EnsureOverrideTexture();
+        if (_reflectionTexture is not null) ClearReflectionLamps();
     }
 
     public override void _Ready()
@@ -88,7 +89,9 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         _inventory = Services.Get<ILightInventory>();
         _pools = Services.Get<IInstancePoolHost>();
         _materials = Services.Get<IShaderMaterialSource>();
+        _reflectionCamera = Services.Get<ICameraRig>();
         EnsureOverrideTexture();
+        ClearReflectionLamps();
     }
 
     public override void _ExitTree()
@@ -98,6 +101,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         _inventoryRev = long.MinValue;
         _lampGlow.Free();
         _windowGlow.Free();
+        ClearReflectionLamps();
     }
 
     public void OnMapUnloading(MapId from)
@@ -107,6 +111,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         _map = null;
         _cueDefs = [];
         Lamps = [];
+        ClearReflectionLamps();
         _windows.Bind(null);
         _inventoryRev = long.MinValue;
         _lampGlow.Free();
@@ -145,6 +150,7 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         var input = new ScheduleInput(_world.Clock, _world.Sun.AltDeg, weather.Overcast, weather.Precip, gain, delta);
         _schedule.Evaluate(input, _channels);
         _sink.Submit(_channels);
+        UpdateReflectionLamps();
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalShaft,
             new Vector4(ShaftStrength(_world.Sun.AltDeg, weather), ShaftNear, ShaftFar, ShaftAxisFalloff));
         if (_windows.TakeUpload(delta) && _overrideImage is not null && _overrideTexture is not null)
@@ -248,8 +254,12 @@ public partial class NightlightNode : Node, IMapAware, ILampCueHook
         else _gridTexture.SetImage(gridImage);
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalLampTable, _tableTexture);
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalLampGrid, _gridTexture);
-
         var windowSet = GlowSets.Windows(facades, windows, out var windowReport);
+        // 倒影只借用同一次窗光晕构建的缓冲，不再次枚举、复制整份窗清单。
+        _reflectionWindows = windowSet;
+        _reflectionWaterfrontBuildings ??= WaterfrontWindows.Buildings(ctx.World, numbering);
+        _reflectionWindowIndices = WaterfrontWindows.Indices(numbering, _reflectionWaterfrontBuildings, windowSet);
+        UpdateReflectionLamps();
         if (_pools is not null && _materials is not null)
         {
             ShaderMaterial Material() => _materials.Create(ShaderId.FxGlow);
