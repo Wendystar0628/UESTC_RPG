@@ -45,10 +45,10 @@
       "L1-L4",
       "global resident data"
     ],
-    "firstRunRealtimeSecondsMax": 25,
+    "firstRunLauncherToTitleSecondsMax": 25,
     "atlas8ThreadBakeSecondsMax": 20,
     "titleFullMapBakeSecondsMax": 240,
-    "coldStartSecondsMax": 9,
-    "warmStartSecondsMax": 3.5
+    "titleToWalkSecondsMax": 3,
+    "warmLauncherToTitleSecondsMax": 5
   }
 }
