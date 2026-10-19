@@ -110,7 +110,7 @@ ART-FIDELITY §3 每条在任何天气下照样适用。
 
 ## 4 细节词汇（中国大学校园版）
 
-可选词汇，不是照抄清单：结构与细节的取舍见 INV-9，难看的现实元素按 MAP-QSH-ADDITIONS §5 删减。密度按区取用（ART-FIDELITY §1.3）；室内按 WLD-INTERIORS-BUILD §3.3、§4。
+可选词汇，不是照抄清单：结构与细节的取舍见 INV-9，难看的现实元素按 WLD-AMBIENCE §1.5 删减。密度按区取用（ART-FIDELITY §1.3）；室内按 WLD-INTERIORS-BUILD §3.3、§4。
 
 | 类别 | 细节 |
 | --- | --- |

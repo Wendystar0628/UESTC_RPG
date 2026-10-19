@@ -105,7 +105,15 @@ def build_sections():
             continue
         items.append((CAT_ORDER.index(fm.get('category')) if fm.get('category') in CAT_ORDER else 99,
                       0 if rel == 'README.md' else 1, rel, fm, t))
-    items.sort(key=lambda x: (x[0], x[1], x[2]))
+    # 域内按文档树排：域总纲在前，主题文档按编码，子文档紧跟在它的主题文档后面
+    def tree_key(x):
+        cat, root, rel, fm, _t = x
+        code, par = str(fm.get('id')), str(fm.get('parent') or '')
+        if root == 0 or code.endswith('-INDEX'):
+            return (cat, root, 0, '', 0, code)
+        topic = par if par and not par.endswith('-INDEX') else code
+        return (cat, root, 1, topic, 0 if topic == code else 1, code)
+    items.sort(key=tree_key)
     out = ['# 小节目录', '',
            '> 由 `scripts/docs/gen_index.py` 生成，不要手改。每份规范文档的每个小节一行：`编码 §号 标题 · L行号 · 字数`；'
            '★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（CORE-INDEX §1）。'

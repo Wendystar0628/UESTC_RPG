@@ -1,9 +1,9 @@
 ---
 id: SYS-SAVE-FLOW
-title: "保存时机与读档流程：安全时刻、退出、读档、世界实例、一致性"
+title: 保存时机与读档流程
 parent: SYS-SAVE
 category: systems
-summary: "保存时机与限频、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏、校验修复"
+summary: 保存时机、安全时刻与落定快照、退出保存、读档顺序、世界实例、状态一致、新游戏建档、校验修复
 keywords: [保存, 读档, 自动保存, 安全时刻, 落定快照, 续跑等价, 世界实例, 校验修复, 退出保存, 现实时间不计, SaveReason, LoadScope, CaptureContext, RestoreContext, NewGameContext, SaveStatus, SaveResult, LoadStatus, LoadResult, SaveState, IWorldState.Instance]
 owners: [WP-50]
 contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-25, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a, WP-54a, WP-55]
@@ -14,7 +14,7 @@ data: []
 gates: [G2, G10, G20]
 ---
 
-# SYS-SAVE-FLOW · 保存时机与读档流程：安全时刻、退出、读档、世界实例、一致性
+# SYS-SAVE-FLOW · 保存时机与读档流程
 
 > **范围**：本文规定保存时机与可靠性、安全时刻与落定快照、退出保存、保存状态反馈、读档流程、世界实例、"状态一致"的定义、新游戏的建档、校验修复、关游戏期间的现实时间不计。
 > **不在本文**：存档位模型与各段存什么（SYS-SAVE）；容器格式、坏档处理、设置文件与安全（SYS-SAVE-FORMAT）；文件布局、写盘步骤（`game/kernel/save/`）；契约签名（`game/contracts/Save/`）；性能份额（ENG-BUDGET §3）；开始页与进入游戏（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）。
@@ -103,13 +103,12 @@ gates: [G2, G10, G20]
 
 ### 2.4 天气
 
-天气种子每个存档一个（新游戏取一次熵，或用 `--weather-seed`），存进 `weather` 段，读档不重新取；自动天气是种子、世界时间、地图的纯函数，不存队列，读档后按世界时间求值即得；手动与钉住、保持晴窗口也存在这一段（SYS-WEATHER-PROCESS §2）。
+天气种子、手动与钉住、保持晴窗口存进 `weather` 段，读档不重新取种子，自动天气按世界时间求值即得；规则以 SYS-WEATHER-PROCESS §1.4、§2 为准。
 
 ### 2.5 新游戏
 
-- **交还控制时一律是落金初灯**（默认状态，SYS-TIME §1.1）；行走模式；默认图的出生点（SYS-VIEW §2.4，D-242）。
+- **交还控制时的状态与流程**见 SYS-TITLE §3.1：落金初灯（默认状态，SYS-TIME §1.1）、行走模式、默认图的出生点（SYS-VIEW §2.4，D-242）；实例在加载界面下直接建在默认状态，不推流逝（D-087）。
 - **建实例**：先定规则集（观光恒为 `sightseeing`），取新种子，`Instance` 加 1，各段用 `CreateDefault` 建出初值，记下新的世界线号。
-- **起点**：实例在加载界面下直接建在默认状态，不推流逝（SYS-TITLE §3.1，D-087）。
 - **第一代**在交还控制的那一刻写（`NewGame`）；加载途中退出，先落定终态再写。覆盖已有存档位要二次确认。
 
 ### 2.6 校验修复
@@ -138,4 +137,4 @@ gates: [G2, G10, G20]
 
 | 待验证 | 初值 | 负责 |
 | --- | --- | --- |
-| 读档的主线程恢复耗时 | 不卡帧 | WP-50（存档与持久化） 实测 |
+| 读档的主线程恢复耗时 | 不卡帧 | WP-50（存档与持久化）实测 |

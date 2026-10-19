@@ -16,7 +16,7 @@ gates: [G2, G21]
 # SYS-AUDIO-FOLEY · 观者声与空间声学
 
 > **范围**：本文规定观者（行走的人与飞行的相机）自己发出的声音：脚步、落地、材质与覆盖物、交互音、飞行风声；以及让同一动作在不同空间听起来不一样的空间声学：声学类别、遮挡、室内外传声、介质消音。
-> **不在本文**：内核、混音与响度、人迹禁区（SYS-AUDIO）；环境声景与天气声（SYS-AUDIO-AMBIENCE）；行走物理与碰撞（SYS-WALK）；自动门状态机（WLD-INTERIORS-ACCESS §2.1）；介质判定（SYS-VIEW）；契约签名（`game/contracts/Audio/`）、声学参数表（`game/audio/` 与音频数据）。
+> **不在本文**：内核、混音与响度、人迹禁区（SYS-AUDIO）；环境声景与天气声（SYS-AUDIO-AMBIENCE）；行走物理与碰撞（SYS-WALK）；自动门状态机（SYS-WALK-BOUNDS §3）；介质判定（SYS-VIEW）；契约签名（`game/contracts/Audio/`）、声学参数表（`game/audio/` 与音频数据）。
 > **查阅**：先读 §0；观者声看 §1；空间声学看 §2
 
 ## 0 结论

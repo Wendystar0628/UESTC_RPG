@@ -3,8 +3,8 @@ id: WF-BUILD
 title: 施工边界
 category: workflow
 parent: WF-INDEX
-summary: 施工时能改哪里、共享文件、契约申请与冻结、构建与测试排队、新模块怎么接入、Godot API 先查签名，以及禁用写法门禁拦不住的两条约定
-keywords: [独占目录, 共享文件, 契约申请, 契约冻结, 构建锁, 构建与测试排队, .uid, 特性接入, 穷举 switch, 几何不随时季天气变, GDScript, uid, signatures.txt, Godot API]
+summary: 施工时能改哪里、共享文件、契约申请与冻结、构建与测试排队、新模块怎么接入
+keywords: [独占目录, 共享文件, 契约申请, 契约冻结, 构建锁, 构建与测试排队, .uid, 特性接入, ownership.json, G3]
 owners: [WP-00]
 contributors: []
 depends: [WF-RULE, CORE-INDEX, ENG-ARCH]
@@ -18,15 +18,15 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 # WF-BUILD · 施工边界
 
 > **范围**：本文规定施工子代理写代码和做内容时的硬边界：能改哪些文件，哪些要提申请，契约怎么申请与冻结，构建与测试怎么排队，新模块怎么接入。
-> **不在本文**：代码边界与禁用写法：原则见 ENG-ARCH §2，清单以各程序集的 `BannedSymbols.txt` 和 G4 为准；契约的内容：`game/contracts/` 源码与 ENG-ARCH §3；冻结状态：WF-STATUS §1；目录与归属明细：`ownership.json`；共享文件清单：本文 §1；内容与画面的底线：CORE-INDEX §0；全员守则：WF-RULE。
-> **查阅**：先读 §0；改哪里与申请看 §1；G4 拦不住的约定看 §2；契约申请与冻结看 §3；构建与测试排队看 §4。
+> **不在本文**：代码边界与禁用写法：原则见 ENG-ARCH §2，清单以各程序集的 `BannedSymbols.txt` 和 G4 为准；契约的内容：`game/contracts/` 源码与 ENG-ARCH §3；冻结状态：WF-STATUS §1；目录与归属明细：`ownership.json`；共享文件清单：本文 §1；Godot 代码的写法（查签名、GDScript、场景与路径）：STD-CODE §0.1；内容与画面的底线：CORE-INDEX §0；全员守则：WF-RULE。
+> **查阅**：先读 §0；改哪里与申请看 §1；G4 拦不住的约定在哪看 §2；契约申请与冻结看 §3；构建与测试排队看 §4。
 
 ## 0 结论
 
 1. **只改本包的独占目录**（§1）：独占目录以 `ownership.json` 为准，越界由门禁 G3 拒绝。
 2. **共享文件不自己改**（§1）：工程共享件由 Codex 主线改，设计文档由主会话改；要改契约、全局着色器参数、着色器文件、程序集引用或 NuGet 包，写契约申请。
 3. **新模块用特性接入**（§1）：不改注册表、不改主场景、不加 Autoload。
-4. **代码边界和禁用写法的权威是 ENG-ARCH §2**，由门禁 G4 拦截；G4 拦不住的只有 §2 的两条。
+4. **代码边界和禁用写法的权威是 ENG-ARCH §2**，由门禁 G4 拦截；G4 拦不住的约定各有权威，见 §2。
 5. **契约申请要早、冻结分批**（§3，D-134）：写 `requests/contract-<队列行号>-<主题>.md` 交 Codex 主线；已冻结的组只增不改。
 6. **构建、导入、烘焙、门禁、截图一次只跑一个**（§4，D-211）：经构建锁排队，不绕过。
 
@@ -36,8 +36,8 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 - **要改的路径不在本包独占目录里**：不改，写进回报或契约申请。
 - **写 gen 或烘焙子任务**：随机只用契约的 `Rng` 与 `StableHash`，同机同输入同输出即可（ENG-ARCH §2，D-232）。
 - **跑构建、导入、烘焙、门禁或截图**：经构建锁排队，不绕过；只走命令行，不在编辑器里重存场景（§4）。
-- **写 Godot 代码前**：先读 `docs/godot-api/README.md`，用到的类、方法、属性都先在 `docs/godot-api/signatures.txt` 查到签名再写（D-145），着色语言查 `docs/godot-api/shaders/README.md`。
-- **写会追加值的枚举或观光规则**：几何不随时刻、季节、天气变；枚举的消费方写穷举 `switch`、`default` 报错，观光规则读 `IRuleset`（§2）。
+- **写 Godot 代码前**：先查 API 签名，写法见 STD-CODE §0.1。
+- **写会追加值的枚举或观光规则、做随时刻季节天气变化的东西**：权威见 §2 指向的 INV-8 与 STD-CONVENTIONS §3.6。
 
 ## 1 改哪里
 
@@ -45,12 +45,11 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 - **共享文件不自己改**：工程共享件（契约、csproj、`Directory.*.props`、`project.godot`、`ownership.json`、`gate.ps1`、`scripts/` 下的工程脚本等）由 Codex 主线直接提交推送；`docs/` 由主会话改。
 - **要提申请的事**：改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，都写成契约申请交 Codex 主线（§3）。
 - **新模块用特性接入**：接入特性的清单见 ENG-ARCH §2；不改注册表、不改主场景、不加 Autoload。
-- **场景与路径**：不在编辑器里打开或重存场景，场景尽量由代码生成；代码里只用 `res://` 路径，不手写 `uid://`；`.uid` 的处理见 §4；不写 GDScript。
+- **场景、路径与 `.uid`**：Godot 代码的写法（场景由代码生成、`res://` 路径、不手写 `uid://`）见 STD-CODE §0.1；`.uid` 的处理见 §4。
 
-## 2 G4 拦不住的约定
+## 2 G4 拦不住的约定在哪
 
-- **几何不随时季和天气变**：只走调色板、灯光通道、变体掩码和天气向量（SYS-TIME §0.1、SYS-WEATHER §0.1）。
-- **规则集与枚举**：观光专属常量读 `IRuleset`；会追加值的枚举写穷举 `switch`，`default` 报错（细则见 STD-CONVENTIONS §3.6）。
+几何不随时刻、季节、天气变见 INV-8（细则 SYS-TIME §0.1、SYS-WEATHER §0.1）；观光专属常量读 `IRuleset`、会追加值的枚举写穷举 `switch` 见 STD-CONVENTIONS §3.6。本文不重复。
 
 ## 3 契约申请与冻结
 

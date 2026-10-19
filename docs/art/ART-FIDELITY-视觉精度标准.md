@@ -1,9 +1,9 @@
 ---
 id: ART-FIDELITY
-title: 视觉精度标准：处处不粗糙，细节按区分级
+title: 视觉精度标准
 category: art
 parent: ART-INDEX
-summary: 处处成立的精度底线 B1–B13、五个精度区的判定距离与取用、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
+summary: 处处不粗糙、细节按区分级：精度底线 B1–B13、五个精度区、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
 keywords: [视觉精度, 精度区, K1–K5, 判定距离, 底线清单, B1–B13, 不粗糙, 一票否决, 区界规则, 可读规则, 巡检点, 行走走廊, 外围分级]
 owners: [WP-27]
 contributors: [WP-04, WP-07, WP-10, WP-12, WP-14, WP-15, WP-23, WP-24, WP-44, WP-47, WP-51, WP-52]
@@ -13,7 +13,7 @@ contracts: []
 data: []
 gates: [G2, G7]
 ---
-# ART-FIDELITY · 视觉精度标准：处处不粗糙，细节按区分级
+# ART-FIDELITY · 视觉精度标准
 
 > **范围**：本文规定视觉精度的标准与判据：处处成立的底线 B1–B13，五个精度区 K1–K5 的判定距离与细节取用，一票否决，巡检点，以及行走走廊加密和外围分级。底线与各区标准对任何时刻、季节、天气都不放宽。
 > **不在本文**：每栋楼、地面、贴脸的细节做法与细节词汇（ART-FIDELITY-DETAIL）；风格、配色与描线（ART-STYLE）；造型比例与最低合格构件（ART-MODELING）；细节级别与预算（ENG-BUDGET）；门禁的执行与截图方式（ENG-GATES）；穿楼、入地的运行时（SYS-VIEW-MEDIUM §1）；室内清单（WLD-INTERIORS）。

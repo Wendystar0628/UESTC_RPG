@@ -3,8 +3,8 @@ id: SYS-ATLAS
 title: 平面地图与传送
 category: systems
 parent: SYS-INDEX
-summary: 平面地图的总则：允许与禁止什么、多地图下的数据归属、设置里存什么；主线全开放，自定义标记、追踪、解锁策略在主线之后；界面与传送分在两份子文档
-keywords: [平面地图, 地图只活在界面层, 3D 里不标注, IAtlasService, MarkerId, 前往方式, 图层筛选, AtlasSave, TransitPreference]
+summary: 平面地图总则：允许与禁止什么、多图数据归属、设置里存什么；界面与传送见子文档
+keywords: [平面地图, 地图只活在界面层, 3D 里不标注, IAtlasService, MarkerId, 前往方式, 图层筛选, AtlasSave, TransitPreference, 小地图, 大地图, 传送, 锚点, 全开放, 自定义标记, 追踪]
 owners: [WP-48]
 contributors: [WP-01, WP-35, WP-36, WP-51, WP-53a]
 depends: [CORE-INDEX, ENG-ARCH, UI-NAV, SYS-WALK, UI-VISUAL, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS]
@@ -33,9 +33,9 @@ gates: [G2]
 
 ### 0.1 接入要点
 
-- 想在 3D 画面里标出地点、路线、选中或追踪：不许，只画在小地图和大地图上（§1、SYS-ATLAS-TRAVEL §2）
-- 要知道玩家在哪、在哪个区：观者位置读 `IObserverState`，区域名用 `IAtlasService.RegionAt()`；`ICameraRig.Pose` 不当观者位置（SYS-ATLAS-UI §2）
-- 从界面发起传送或飞过去：一律调 `IAtlasService.Travel`；同图走 `ICameraRig.Transit`，目标在别的图上才走 `IMapService.Travel`（SYS-ATLAS-TRAVEL §3.1）
+- **想在 3D 画面里标出地点、路线、选中或追踪**：不许，只画在小地图和大地图上（§1、SYS-ATLAS-TRAVEL §2）
+- **要知道玩家在哪、在哪个区**：观者位置读 `IObserverState`，区域名用 `IAtlasService.RegionAt()`；`ICameraRig.Pose` 不当观者位置（SYS-ATLAS-UI §2）
+- **从界面发起传送或飞过去**：一律调 `IAtlasService.Travel`；同图走 `ICameraRig.Transit`，目标在别的图上才走 `IMapService.Travel`（SYS-ATLAS-TRAVEL §3.1）
 
 ## 1 允许什么、禁止什么
 
@@ -52,7 +52,7 @@ gates: [G2]
 ## 2 多地图下的数据
 
 - 地图标识一律用 `MapId("qingshuihe")`；`MarkerId` 只在一张图内唯一，跨图引用写成"地图 + 标记"。服务名是 `IAtlasService`，与地图加载切换的 `IMapService` 不得混名。
-- 平面地图的数据在本图 `atlas/`（`markers.json`、`labels.json`）、世界文件 `world/atlas.json` 和缩略图目录 `game/assets/maps/qingshuihe/thumbs/`；底图与标注布局是烘焙产物，不进 git，随全图烘焙缓存发（D-165，SYS-MAPS §1.2）。点位表归 UI-NAV-WAYPOINTS §1，开放清单归 WLD-INTERIORS。
+- 平面地图的数据在本图 `atlas/`（`markers.json`、`labels.json`）和世界文件 `world/atlas.json`，传送卡的缩略图主线之后随缩略图一起建目录；底图与标注布局是烘焙产物，不进 git，随全图烘焙缓存发（D-165，SYS-MAPS §1.2）。点位表归 UI-NAV-WAYPOINTS §1，开放清单归 WLD-INTERIORS。
 - 按图与全局的划分以 SYS-MAPS §1.1 为准：筛选偏好和小地图设置是全局的，底图、标记、标注、区域表、锚点实体、缩略图、自定义标记、解锁状态都按图。
 - **换图**（主线之后）：卸载时释放本图的地图纹理和缩略图，加载时读新图数据并重建标记；换图经加载界面（SYS-TITLE §3.1），小地图随之隐藏。多图时"MAP 01/01"变成切换标签；楼层图以后作为同一张图的"地图层"，现在不用。
 

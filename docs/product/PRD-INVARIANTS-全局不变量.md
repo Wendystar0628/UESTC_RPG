@@ -3,7 +3,7 @@ id: PRD-INVARIANTS
 title: 全局不变量
 category: product
 parent: PRD-INDEX
-summary: 观光规则集的 12 条硬约束 INV-1–INV-12：平台与范围、观察模式、界面、场景文字、画风、不出现人物、日式边界、世界状态、格局与地图数据、动态与声音、精度底线、性能；每条只写长期不变的约束，具体设计与数值在"详见"的文档
+summary: 观光规则集的 12 条硬约束 INV-1–INV-12；每条只写长期不变的约束，具体设计与数值在"详见"的文档
 keywords: [全局不变量, INV, 硬约束, 观光规则集, sightseeing, 不变量, 世界规则]
 owners: []
 contributors: []

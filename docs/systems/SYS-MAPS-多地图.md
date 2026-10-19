@@ -1,23 +1,23 @@
 ---
 id: SYS-MAPS
-title: "多地图：按图数据、`IMapService` 与切换"
+title: 多地图
 category: systems
 parent: SYS-INDEX
-summary: "按图数据与全局的划分、map_rect、单图半径等多图约定；先卸后装的切图运行时在主线之后"
+summary: "按图数据与全局的划分、map.json 约定、归属、map_rect、单图规模；先卸后装的切图运行时在主线之后"
 keywords: [多地图, 换图, 切图, 地图服务, 按图数据, 先卸后装, 同图重载, 天气按图, 单图半径, 本机烘焙缓存, IMapService, IMapAware, MapScope, MapDescriptor, map.json, map_rect]
 owners: [WP-46]
 contributors: [WP-00, WP-01, WP-02, WP-08, WP-15, WP-22, WP-23, WP-24, WP-26, WP-27, WP-34, WP-35, WP-36, WP-39, WP-40, WP-43, WP-44, WP-45, WP-47, WP-48, WP-49, WP-50, WP-51, WP-53]
 depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-SAVE, WLD-OUTSKIRTS]
 related: [CORE-INDEX, WLD-OUTSKIRTS-DIORAMA, ENG-GATES, ENG-BUDGET, PLAN-WP, UI-NAV, SYS-WALK, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
 contracts: [MapId, WaypointRef, MapKind, MapTimeRule, GeoFrame, MapRect, RoamLimits, MapTitle, MapSpawn, MapWorldRules, MapEnvironment, MapPortal, MapDescriptor, MapScopeAttribute, IMapContext, MapTravelCause, MapTravelRequest, MapStage, MapTravelResult, IMapTransition, IMapService, IMapAware, MapVisit]
-data: ["game/data/maps/index.json", "game/data/maps/qingshuihe/map.json", "game/data/maps/qingshuihe/", "game/contracts/schemas/map.schema.json"]
+data: ["game/data/maps/index.json", "game/data/maps/qingshuihe/map.json", "game/data/maps/qingshuihe/"]
 gates: [G2, G4, G5, G6, G7]
 paths: ["game/data/maps/**"]
 ---
-# SYS-MAPS · 多地图：按图数据、`IMapService` 与切换
+# SYS-MAPS · 多地图
 
-> **范围**：本文规定多地图的模型：哪些数据按图存放、哪些全局共用，一个 World3D 内先卸后装的切图，时间与季节全局、天气按图，全图数据纹理的范围 `map_rect`，单图规模上限。现在只有一张图 `qingshuihe`，数据与采样的约定（地图编号、数据根目录、`map_rect`）从第一天起按多张图写；**切图的运行时、请求排队、失败回退和同图重载不泄漏在主线之后**，主线只做启动时加载当前图（§3）。
-> **不在本文**：`map.json` 的字段（`game/contracts/schemas/map.schema.json` 与各图的 `map.json`）；契约签名（`game/contracts/Maps/`）；帧顺序（ENG-ARCH §3 的 `FramePriority`）；命令行与同图重载门禁的做法（ENG-GATES-SHOTS §1、ENG-GATES §1）；平面地图的标记与传送（SYS-ATLAS）；活动范围与外围（WLD-OUTSKIRTS）；存档格式（SYS-SAVE）；开始页与进入游戏（SYS-TITLE）；换图时的声音（SYS-AUDIO）。
+> **范围**：本文规定多地图的模型：哪些数据按图存放、哪些全局共用，`map.json` 的约定，一个 World3D 内先卸后装的切图，时间与季节全局、天气按图，切图时的相机、行走与安全点，区代码的程序集归属 `MapScope`，全图数据纹理的范围 `map_rect`，单图规模上限。现在只有一张图 `qingshuihe`，数据与采样的约定（地图编号、数据根目录、`map_rect`）一律按多张图写；**切图的运行时、请求排队、失败回退和同图重载不泄漏在主线之后**，主线只做启动时加载当前图（§3）。
+> **不在本文**：`map.json` 的字段（`game/contracts/Maps/MapContracts.cs`、`MapFiles.cs` 与各图的 `map.json`）；契约签名（`game/contracts/Maps/`、`game/contracts/Runtime/Maps/`）；帧顺序（契约 `FramePriority`）；命令行与同图重载门禁的做法（ENG-GATES-SHOTS §1、ENG-GATES §1）；平面地图的标记与传送（SYS-ATLAS）；活动范围与外围（WLD-OUTSKIRTS）；存档格式（SYS-SAVE）；开始页与进入游戏（SYS-TITLE）；换图时的声音（SYS-AUDIO）。
 > **查阅**：先读 §0；按图与全局的划分、烘焙缓存看 §1；`map.json` 的约定看 §2；切图看 §3（运行时在主线之后）；时间与天气看 §4；相机、行走与安全点看 §5；归属看 §6；`map_rect` 看 §7；规模上限看 §8；以后的方向看 §9
 
 ## 0 结论
@@ -35,7 +35,7 @@ paths: ["game/data/maps/**"]
 
 - **改地图数据**：只改项目的世界文件 `game/data/maps/<图>/world/`，增删改写明理由；不从 OSM 或其他在线地图取数据，也不照着改；OSM 只剩署名与随版本发的地图数据包（D-252、ENG-RELEASE §5）
 - **读本图的数据文件**：路径由 `IMapContext.DataRoot` 拼出，烘焙产物用 `BakeRoot`；内核、系统、界面和通用程序集里不写地图 ID、`res://data/maps/…` 路径和完整实体 ID 的字面量（G4，§6）
-- **加数据或资源**：放 `game/data/maps/<地图>/` 下本包自己的文件，资源放各资源目录的 `<地图>/` 子目录；`map.json` 归 WP-46（地图服务与多地图），字段增改须经主代理批准（§1、§2）
+- **加数据或资源**：放 `game/data/maps/<地图>/` 下本包自己的文件，资源放各资源目录的 `<地图>/` 子目录；`map.json` 归 WP-46（地图服务与多地图），字段增改须经主会话批准（§1、§2）
 - **写区内容**：区代码靠程序集的 `MapScope`；通用模块只读 `BuildContext.Map` 和本图数据，不认领具体实体，出现 `FeatureClaim` 由 G5 报错（§6）
 - **全局常驻的 `[KernelNode]` 用到按图的数据**：实现 `IMapAware`，在 `OnMapLoaded` 重建；`OnMapUnloading` 释放本图的实例、纹理内容和缓存，随切图运行时在主线之后；不得跨图持有 `IWorldModel`、`FeatureId`、格子句柄或纹理内容（§3.3）
 - **写或采样全图数据纹理**：按 `map_rect` 换算，在 `OnMapLoaded` 里重建；罩住整张图的 `CustomAabb` 切图时重设（§7）
@@ -64,12 +64,12 @@ paths: ["game/data/maps/**"]
 
 ### 1.2 烘焙缓存
 
-- 各图的 TileBundle、碰撞级 C、室内包与碰撞包、平面地图底图，发布时全图烘好随包发，缺失时由同一个 `Build()` 本机补烘（D-165）；查找顺序：本机缓存 → 随包缓存 → 本机补烘。做法见 ENG-PERF-STREAM §1、ENG-ARCH §4。
+- 烘焙什么、随包、查找顺序与判鲜归 ENG-ARCH §4（D-165）。
 - 缓存按图分开；本机缓存与画面设置、世界状态、存档无关，跨存档、跨画质共用，它不是存档（STD-CONVENTIONS §4）。不另做几何启动集；主 PCK 只留全局资源和各图的 JSON。
 
 ## 2 地图描述 `map.json`
 
-字段与取值以 `game/contracts/schemas/map.schema.json` 和各图的 `map.json` 为准，G2 校验，G5 检查 `defaultSpawn` 能解析、`dataRect` 盖住校界外接框、倒影湖实体存在。约定如下：
+字段与取值以 `game/contracts/Maps/MapContracts.cs`、`MapFiles.cs` 和各图的 `map.json` 为准，G5 检查 `defaultSpawn` 能解析、`dataRect` 盖住校界外接框、倒影湖实体存在。约定如下：
 
 - `map.json` 只写手写部分；原点与投影、中心、箱庭包围盒、格范围由加载器从世界模型和烘焙统计派生，不手写。
 - **`dataRect`** 是全图数据纹理的覆盖范围，边长是 64 m 的整数倍，必须盖住校界外接框和外围街道带（§7）。平面地图的页面范围 `atlasRect` 不在这里（SYS-ATLAS）。
@@ -97,7 +97,7 @@ paths: ["game/data/maps/**"]
 4. **预热与出生**（Warm、Spawn）：只预热本图新出现的组合，等管线编译计数稳定（同图重载为 0）；设位姿并合法化，行走模式等碰撞就绪，清相机插值缓冲，重判介质，`Current` 换成新图。
 5. **撤遮挡**：加载界面淡出，环境声淡入；跨图到达显示一次到达标题；释放输入占用，返回 `Arrived`。
 
-- **热切图目标**：整体几秒内（按出生点周围已在缓存里计）；冷启动按 ENG-PERF-STREAM §4。缓存里没有出生点周围的格时现场本机烘焙，遮挡保持到就绪，不限时；预取清单有键进入 `BakeState.Failed` 或连续 60 s 没有进展，按 Failed 处理（§3.3）。
+- **热切图目标**：整体几秒内（按出生点周围已在缓存里计）；冷启动目标见 SYS-TITLE §1。缓存里没有出生点周围的格时现场本机烘焙，遮挡保持到就绪，不限时；预取清单有键进入 `BakeState.Failed` 或连续 60 s 没有进展，按 Failed 处理（§3.3）。
 - **Boot**：窗口启动时就是扉页，跳过卸载，从装载起在扉页后面完成（SYS-TITLE）。
 - 生产本图数据的实例（烘焙服务等）实现 `IMapDataParticipant`：装时全部 `Prepare` 完成才分发 `OnMapLoaded`；卸时先等在途的 `Prepare` 结束，消费者全部释放后才 `Unload`。已挂着一张图、正在卸载或 `Prepare` 未完成时再 Mount 一律报错。
 
@@ -155,14 +155,14 @@ paths: ["game/data/maps/**"]
 ## 6 归属与 `MapScope`
 
 - **求法**：注册器照常扫描全部程序集，给每个模块求所属的图：类上的 `Map` → 程序集的 `MapScope` → 都没有就是通用模块。每次 LoadData 只启用"通用 + 当前图"的模块。
-- **区代码**（core、south、west 等各区程序集）由 WP-00（契约、桩与拆除） 在 csproj 里标 `MapScope`，各区包自己不写。**通用程序集**（建筑、地面、植被、水、家具、碰撞、外围、室内生成器等）不标归属，每张图都跑，只读 `BuildContext.Map` 和本图数据，不认识任何具体的图。
+- **区代码**（core、south、west 等各区程序集）由 WP-00（契约、桩与拆除）在 csproj 里标 `MapScope`，各区包自己不写。**通用程序集**（建筑、地面、植被、水、家具、碰撞、外围、室内生成器等）不标归属，每张图都跑，只读 `BuildContext.Map` 和本图数据，不认识任何具体的图。
 - `[KernelNode]` 带 `Map` 的属于本图，Mount 时实例化、Unload 时释放；不带的全局常驻。世界文件按图，只读当前图的目录。
 - **规则**：归属不同图的程序集互不引用；通用程序集不得引用带 `MapScope` 的程序集。**通用模块里出现 `FeatureClaim`（认领具体实体）直接报错**，因为它说明该模块属于某张图（G5）。
 - **G4**：通用程序集、内核、系统、界面代码里不得出现完整实体 ID、地图 ID 和 `res://data/maps/…` 的字面量，数据路径一律由 `IMapContext.DataRoot` 拼出；例外只有 `kernel/map` 和门禁夹具。
 
 ## 7 全局参数 `map_rect`
 
-`map_rect`（vec4：xz 起点与宽深的倒数）是全图数据纹理的覆盖范围，取 `map.json` 的 `dataRect`，由 WP-46（地图服务与多地图） 在切图的 Mount 一步写入，登记在 ENG-PERF §1.5。
+`map_rect`（vec4：xz 起点与宽深的倒数）是全图数据纹理的覆盖范围，取 `map.json` 的 `dataRect`，由 WP-46（地图服务与多地图）在切图的 Mount 一步写入，登记在 ENG-PERF §1.5。
 
 - **用它的纹理**：`ground_mask`、`ground_mask2`、`terrain_height`、`precip_occ`、`lamp_grid`，以及以后任何全图纹理；它们共用同一个 `map_rect`，分辨率可以不同。不按"全校"隐式换算，否则换一张尺寸不同的图就会错位，这是最典型的"以为只有一张图"。
 - **范围外**取"无数据"的默认值：遮罩为 0、`precip_occ` 视为没有顶面、地形高度取 0（着色器用 `map_uv()`、`in_map()`）。
@@ -184,6 +184,6 @@ paths: ["game/data/maps/**"]
 
 | 待验证 | 初值 |
 | --- | --- |
-| 热切图整体是否在几秒内（§3.2，主线之后，WP-46（地图服务与多地图） 用同图重载看） | 几秒内 |
+| 热切图整体是否在几秒内（§3.2，主线之后，WP-46（地图服务与多地图）用同图重载看） | 几秒内 |
 | 给全局 sampler 换一张尺寸不同的 `ImageTexture` 后，RID 是否保持、材质是否失效、是否触发管线编译（§7） | 按可行处理；不行就各图一律同尺寸、范围外留空 |
-| 雾幕里清材质缓存、按本图重新分配材质 ID 是否触发编译（全场 128 个，ENG-ARCH §3） | 不行就把全部图的材质并集控制在 128 以内 |
+| 雾幕里清材质缓存、按本图重新分配材质 ID 是否触发编译（全场 128 个，ENG-PERF §3） | 不行就把全部图的材质并集控制在 128 以内 |

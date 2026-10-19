@@ -1,9 +1,9 @@
 ---
 id: SYS-SAVE-FORMAT
-title: "格式、损坏处理与安全：容器、段版本、坏档、设置文件"
+title: 格式、损坏处理与安全
 parent: SYS-SAVE
 category: systems
-summary: "存档容器与序列化约定、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全"
+summary: 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
 keywords: [存档容器, 序列化, 格式号, 段版本, 存档损坏, 设置文件, settings.json, 存档安全, 缩略图, ReadOnlyReason]
 owners: [WP-50]
 contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-25, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a, WP-54a, WP-55]
@@ -14,7 +14,7 @@ data: ["user://settings.json"]
 gates: [G4, G20]
 ---
 
-# SYS-SAVE-FORMAT · 格式、损坏处理与安全：容器、段版本、坏档、设置文件
+# SYS-SAVE-FORMAT · 格式、损坏处理与安全
 
 > **范围**：本文规定存档容器与序列化约定、格式号与段版本、存档损坏的处理、唯一的设置文件 `settings.json`、禁止用 Resource 与 ConfigFile 存读档的安全原则。
 > **不在本文**：存档位模型与各段存什么（SYS-SAVE）；保存时机、读档流程与一致性（SYS-SAVE-FLOW）；文件布局、DTO、写盘步骤（`game/kernel/save/format/`）；契约签名（`game/contracts/Save/`）；命令行与 G4、G20（ENG-GATES）。

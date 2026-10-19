@@ -3,14 +3,14 @@ id: SYS-ATLAS-TRAVEL
 title: 标记、锚点与传送
 category: systems
 parent: SYS-ATLAS
-summary: 标记类型与可传送范围、锚点实体（导览亭与导览桩，主线先放 3–4 座）、传送流程与落点；主线全开放，解锁策略在主线之后
+summary: 标记类型与可传送范围、锚点实体（导览亭与导览桩）、传送流程与落点；主线全开放，解锁策略在主线之后
 keywords: [地图标记, 标记类型, 锚点, 传送点, 导览亭, 导览桩, 传送, 雾幕瞬移, 飞过去, 传送落点, 落地检查, 解锁策略, all-unlocked, proximity, 开放室内标记, 停放点标记, IUnlockPolicy, TeleportSpec, TravelStyle, TravelRefusal, UnlockState, AnchorForm, MarkerKind, AtlasMarker]
 owners: [WP-48c]
 contributors: [WP-06, WP-13, WP-35, WP-36, WP-44, WP-51, WP-53a, WP-55]
 depends: [SYS-ATLAS, UI-NAV, SYS-WALK, SYS-MAPS, WLD-INTERIORS, SYS-TITLE]
 related: [SYS-ATLAS-UI, SYS-VIEW, SYS-SAVE, SYS-AUDIO, MAP-QSH-ADDITIONS, ENG-GATES, ENG-ROADMAP, WLD-LIFE]
 contracts: [IUnlockPolicy, MarkerKind, AnchorForm, UnlockState, TravelStyle, TravelRefusal, TeleportSpec, AtlasMarker]
-data: ["game/data/maps/qingshuihe/atlas/markers.json", "game/data/maps/qingshuihe/world/atlas.json", "game/assets/maps/qingshuihe/thumbs/"]
+data: ["game/data/maps/qingshuihe/atlas/markers.json", "game/data/maps/qingshuihe/world/atlas.json"]
 gates: [G15]
 ---
 
@@ -23,27 +23,27 @@ gates: [G15]
 ## 0 结论
 
 1. **可传送的标记只有四类**：锚点、观景点、可进入室内的门口、路线起点；其余只显示（追踪在主线之后）。可进入的室内由开放清单驱动（§1）。
-2. **锚点设计 13 个**：6 个导览亭加 7 个导览桩；主线先放 3–4 座（§2）。
+2. **锚点分导览亭和导览桩两种**：数量、名称与坐标以 `atlas/markers.json` 为准，主线先放 3–4 座（§2）。
 3. **传送卡有两个按钮**：【传送】是雾幕瞬移，为默认，约 1.1–2.4 s；【飞过去】走 UI-NAV-WAYPOINTS §2.1（§3）。
 4. **主线全开放**：所有标记一开始就可用；解锁策略在主线之后（§4）。
 
 ### 0.1 接入要点
 
 - **传送或飞过去到达之后**：到达不触发保存（D-241），保存时机以 SYS-SAVE-FLOW §1.1 为准（§3.2）
-- 新增锚点：在 `world/atlas.json` 加记录，`atlas/markers.json` 的锚点条目直接引用它的坐标（不另抄一份）并写 `Fly`、`Stand`（§2）
-- 新增观景点、可进入的室内、共享单车停放点：在各自的点位表、开放清单、停放点数据里登记，标记自动生成，不复制位姿；停放点不是锚点，不可传送（§1）
-- 新增可传送标记：出缩略图；`Stand` 过落地检查，`Fly` 处介质必须是空气（§3.3）
+- **新增锚点**：在 `world/atlas.json` 加记录，`atlas/markers.json` 的锚点条目直接引用它的坐标（不另抄一份）并写 `Fly`、`Stand`（§2）
+- **新增观景点、可进入的室内、共享单车停放点**：在各自的点位表、开放清单、停放点数据里登记，标记自动生成，不复制位姿；停放点不是锚点，不可传送（§1）
+- **新增可传送标记**：出缩略图；`Stand` 过落地检查，`Fly` 处介质必须是空气（§3.3）
 
 ## 1 标记类型
 
 | 类型 | 数量（清水河） | 可传送 | 落点 | 数据来源 | 最低显示档 | 小地图 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 锚点 | 13（6 亭 + 7 桩；主线先放 3–4 座） | 是 | 旁观 `Fly`；行走 `Stand`（§2） | `atlas/markers.json` | Z0 | 显示 |
-| 观景点 | 见 `game/data/maps/qingshuihe/waypoints.json` | 是 | 点位的 `Fly`、`Stand`、`Entry` | 引用点位表 | Z1 | 不显示 |
+| 锚点 | 以 `atlas/markers.json` 为准（主线先放 3–4 座） | 是 | 旁观 `Fly`；行走 `Stand`（§2） | `atlas/markers.json` | Z0 | 显示 |
+| 观景点 | 以 `game/data/maps/qingshuihe/waypoints.json` 为准 | 是 | 点位的 `Fly`、`Stand`、`Entry` | 引用点位表 | Z1 | 不显示 |
 | 可进入的室内 | 每个开放入口一枚 | 是，到门口 | 入口声明的门外点 | 开放清单，运行时生成 | Z2 | 显示 |
-| 路线 | R1–R14 | 是，到起点 | 路线第一个节点 | SYS-WALK-BOUNDS §6 | Z1 | 只在追踪时画折线 |
-| 地标 | 约 12 | 否，只能追踪 | — | `atlas/markers.json` | Z1 | 不显示 |
-| 设施 | 约 40 | 否，只能追踪 | — | 世界模型类别 | Z2 | 不显示 |
+| 路线 | 见 SYS-WALK-BOUNDS §6 | 是，到起点 | 路线第一个节点 | SYS-WALK-BOUNDS §6 | Z1 | 只在追踪时画折线 |
+| 地标 | 以 `atlas/markers.json` 为准 | 否，只能追踪 | — | `atlas/markers.json` | Z1 | 不显示 |
+| 设施 | 以世界模型的类别为准 | 否，只能追踪 | — | 世界模型类别 | Z2 | 不显示 |
 | 停放点 | P0 先 3 处，铺开后每区 1–2 处（WLD-LIFE-STREET §1） | 否，只能追踪 | — | 停放点数据，运行时生成 | Z2 | 显示 |
 | 自定义（主线之后） | 每图 ≤ 50 | 否，只能追踪 | — | 存档 | Z0 | 显示 |
 
@@ -61,9 +61,9 @@ gates: [G15]
 - **碰撞**：都是阻挡，由部件参数生成（SYS-WALK-BOUNDS §7）。
 - **放置**：在主网大拍节点或节点旁，离路缘 ≥ 1.5 m，不挡主人流，牌面朝向广场或主要来人方向，相邻锚点约 250–450 m。
 - **登记**：每个锚点在 `world/atlas.json` 有一条记录（ID `design:anchor:A01`……）；`atlas/markers.json` 直接引用它的坐标，不另抄一份。
-- **13 个锚点**：亭 6 个（A01–A06），桩 7 个（A07–A13）；名称、坐标、朝向、`Fly`、`Stand` 以 `atlas/markers.json` 为准。导览设施只有这 13 个。**主线先放 3–4 座**，其余等内容阶段，每座在 `markers.json` 独立登记，缺哪座就不出现那座的标记。
+- **锚点清单**：导览亭与导览桩的名称、坐标、朝向、`Fly`、`Stand` 以 `atlas/markers.json` 为准，导览设施只有这些。**主线先放 3–4 座**，其余等内容阶段，每座在 `markers.json` 独立登记，缺哪座就不出现那座的标记。
 - **落点规则**：`Stand` 在锚点侧前方约 2 m，面向它朝向的广场；`Fly` 默认在锚点后方 8 m、上方 6 m，俯仰 −12°，可逐个调整。
-- **锚点挪位**：三条都满足就直接改数据：离原位置不超过 30 m；底座和 `Stand` 都完整落在人行铺装上；离行车道、水和墙都 ≥ 3 m。有一条不满足，不自己往外找，把该处 30 m 范围的俯视图和路网图层报给主代理。
+- **锚点挪位**：三条都满足就直接改数据：离原位置不超过 30 m；底座和 `Stand` 都完整落在人行铺装上；离行车道、水和墙都 ≥ 3 m。有一条不满足，不自己往外找，把该处 30 m 范围的俯视图和路网图层报给主会话。
 
 ## 3 传送流程
 
@@ -113,4 +113,4 @@ gates: [G15]
 
 ## 5 待验证
 
-- 锚点 A01–A13 的坐标、朝向与落点，尤其是 A04（品学楼门框前广场，叠水喷泉西侧约 20 m）：按截图和落地检查定稿。
+- 锚点的坐标、朝向与落点：按截图和落地检查定稿。

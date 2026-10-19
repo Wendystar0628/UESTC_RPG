@@ -1,10 +1,10 @@
 ---
 id: UI-VISUAL-COMPONENTS
-title: 界面字体、形状、图标、组件外观与画面布局
+title: 字体、形状、图标、组件与布局
 category: ui
 parent: UI-VISUAL
-summary: 界面字体与字号、形状与材质、图标体系、组件六种状态与时间环等外观、画面布局
-keywords: [界面字体, 思源黑体, 字号阶梯, 切角, 1号脚, 发丝线, 过孔灯, 走线, 衍射光边, 面板材质, 轻度磨砂, 图标体系, 窗口图标, 八角晶片, 气象填图符号, 通电隐喻, 时间环外观, 天气签条, 速度LED条, 存档卡, 存储模组, 等待灯, 画面布局, 中央60%, ui_metrics.json, IPaletteProbe]
+summary: 界面字体与字号、形状与材质、图标体系，组件外观（含时间环、存档卡、加载界面）与画面布局（含大地图、设置卡、制作人员与许可）
+keywords: [加载界面, 制作人员与许可, 界面字体, 思源黑体, 字号阶梯, 切角, 1号脚, 发丝线, 过孔灯, 走线, 衍射光边, 面板材质, 轻度磨砂, 图标体系, 窗口图标, 八角晶片, 气象填图符号, 通电隐喻, 时间环外观, 天气签条, 速度LED条, 存档卡, 存储模组, 等待灯, 画面布局, 中央60%, ui_metrics.json, IPaletteProbe]
 owners: [WP-35]
 contributors: [WP-01, WP-27, WP-48, WP-49, WP-50, WP-53]
 depends: [UI-VISUAL, ART-STYLE, SYS-TIME, UI-NAV]
@@ -13,9 +13,9 @@ contracts: [IPaletteProbe]
 data: ["game/hud/style/ui_metrics.json", "game/assets/hud/icons/", "game/assets/hud/manifest.json"]
 gates: [G14]
 ---
-# UI-VISUAL-COMPONENTS · 界面字体、形状、图标、组件外观与画面布局
+# UI-VISUAL-COMPONENTS · 字体、形状、图标、组件与布局
 
-> **范围**：界面的字体与字号、形状与材质、图标体系、组件外观（六种状态、控件、时间环、天气签条、速度条、到达标题、存档卡与等待灯）和画面布局。色彩令牌与主题见 UI-VISUAL。
+> **范围**：界面的字体与字号、形状与材质、图标体系、组件外观（六种状态、控件、时间环、天气签条、速度条、到达标题、存档卡、等待灯与加载界面）和画面布局（含大地图、设置卡、制作人员与许可的布局）。色彩令牌与主题见 UI-VISUAL。
 > **不在本文**：设计原则、色彩分工、令牌、昼夜主题与实现边界（UI-VISUAL）；动效与减少动态效果（UI-VISUAL-MOTION）；界面有什么、怎么操作、四角归属（UI-NAV）；地图与传送卡（SYS-ATLAS）；开始页与加载界面（SYS-TITLE）；存档位语义（SYS-SAVE）。
 > **查阅**：先读 §0；字体看 §1；形状与材质看 §2；图标看 §3；组件看 §4；画面布局看 §5
 

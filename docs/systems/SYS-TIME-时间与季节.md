@@ -1,6 +1,6 @@
 ---
 id: SYS-TIME
-title: 时间与季节系统：世界状态、美术日月、过渡口径
+title: 时间与季节
 category: systems
 parent: SYS-INDEX
 summary: 世界状态三个量与只向前的时间规则、默认状态落金初灯、美术太阳与月亮、过渡的定目标顺序与用时、质量底线
@@ -14,10 +14,10 @@ data: []
 gates: [G2, G7]
 ---
 
-# SYS-TIME · 时间与季节系统：世界状态、美术日月、过渡口径
+# SYS-TIME · 时间与季节
 
 > **范围**：本文规定世界状态（钟点、季节、天气）的语义、时间只向前的规则、默认状态、美术太阳与月亮的轨迹、过渡的定目标顺序与改时间用时、质量底线。
-> **不在本文**：色彩脚本、四季内容、灯光时刻表（ART-COLORSCRIPT）；过渡的编排、时长与同时转场（SYS-MOTION §3）；偶发事件（SYS-MOTION-LIFE §3）；天空、主光、阴影、雾的观感取值（ART-SKYLIGHT）；天气清单、画面与自动天气（SYS-WEATHER）；接口签名与每帧顺序（`game/contracts/`、ENG-ARCH §3）；存档与世界实例（SYS-SAVE）；按图的默认状态（SYS-MAPS）；时间环与界面主题（UI-NAV、UI-VISUAL）。
+> **不在本文**：色彩脚本、四季内容、灯光时刻表（ART-COLORSCRIPT）；过渡的编排、时长与同时转场（SYS-MOTION §3）；偶发事件（SYS-MOTION-LIFE §3）；天空、主光、阴影、雾的观感取值（ART-SKYLIGHT）；天气清单、画面与自动天气（SYS-WEATHER）；接口签名与每帧顺序（`game/contracts/`，帧顺序以 `FramePriority` 为准）；存档与世界实例（SYS-SAVE）；按图的默认状态（SYS-MAPS）；时间环与界面主题（UI-NAV、UI-VISUAL）。
 > **查阅**：先读 §0；世界状态与时间规则看 §1；日月看 §2；定目标的顺序与改时间用时看 §3；质量底线看 §4；色彩脚本、四季内容与灯光时刻表看 ART-COLORSCRIPT
 
 ## 0 结论
@@ -30,12 +30,11 @@ gates: [G2, G7]
 4. **过渡只有一份详述**：改时间像延时摄影快进；换季走扬起、雾幕、落定；换天气连续插值。编排、时长和改时间用时公式以 SYS-MOTION §3 为准，本文只定目标的顺序（§3）。
 5. **质量底线**：无硬切、明度、影色、只改参数与全局纹理内容（§4）。
 
-
 ### 0.1 接入要点
 
 - **读钟点、季节、日月、天气**：C# 只经 `IWorldState`，不自己写计时器；着色器只读 WorldState 写的全局着色器参数（§1）
 - **改时间、季节、天气或套用推荐状态**：只经 `IWorldControl`；时间只向前，换季一律正向转场；读档经存档段恢复，不经它（§1.2、SYS-MOTION §3）
-- **每帧要用本帧世界状态**：用 `ProcessPriority` 排在 WorldState（−1000）之后，顺序以 `FramePriority`（ENG-ARCH §3）为准，任何两步不得同值
+- **每帧要用本帧世界状态**：用 `ProcessPriority` 排在 WorldState（−1000）之后，顺序以契约 `FramePriority` 为准，任何两步不得同值
 - **着色器要用时间**：禁用内置 `TIME`，周期动画读 `anim_time`（480 s 循环，与世界时间无关）
 - **界面显示世界状态或天气**：直接读世界状态的只读接口，不另存副本（§1.2）
 - **世界实例换了（读档、新游戏）**：不跨实例比较 `WorldHours`；换值规则以 SYS-SAVE-FLOW §2.2 为准（§1.2）

@@ -102,7 +102,7 @@ INV（PRD-INVARIANTS）和作者明确禁止的事是硬约束，其余是默认
 
 **界面**（`ui/`）：UI-INDEX 界面总纲。界面有什么、长什么样。
 
-**工程**（`engineering/`）：ENG-INDEX 工程总纲。架构、性能、验收、发布与开发工具。
+**工程**（`engineering/`）：ENG-INDEX 工程总纲。架构、性能、验收、发布与开发工具（内容预览）。
 
 **计划**（`plan/`）：PLAN-INDEX 计划总纲。工作包与阶段。
 

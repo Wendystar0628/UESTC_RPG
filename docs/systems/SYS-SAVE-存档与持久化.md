@@ -1,10 +1,10 @@
 ---
 id: SYS-SAVE
-title: "存档与持久化：存档模型、存什么、不存什么"
+title: 存档与持久化
 category: systems
 parent: SYS-INDEX
-summary: "存档位与世界线、各存档段存什么不存什么；保存读档与格式安全见子文档"
-keywords: [存档, 存档位, 世界线, 存档段, 单实例锁, ISaveService, ISaveSection, SaveSectionAttribute, RestorePhase]
+summary: 存档位与世界线、各存档段存什么不存什么；保存读档与格式安全见子文档
+keywords: [存档, 存档位, 世界线, 存档段, 单实例锁, 保留 3 代, 继续, 新游戏, 不存什么, 恢复阶段, ISaveService, ISaveSection, SaveSectionAttribute, RestorePhase]
 owners: [WP-50]
 contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-25, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a, WP-54a, WP-55]
 depends: [ENG-ARCH, SYS-TIME, SYS-WEATHER, SYS-MAPS]
@@ -14,10 +14,10 @@ data: ["user://saves/"]
 gates: [G5, G20]
 ---
 
-# SYS-SAVE · 存档与持久化：存档模型、存什么、不存什么
+# SYS-SAVE · 存档与持久化
 
 > **范围**：本文规定存档服务 `ISaveService` 的存档位与世界线、各存档段存什么与不存什么。保存时机、读档流程与格式、损坏处理、安全在子文档。
-> **不在本文**：文件布局、DTO、写盘步骤（`game/kernel/save/`）；契约签名（`game/contracts/Save/`）；帧顺序（ENG-ARCH §3）；命令行与 G20（ENG-GATES）；性能份额（ENG-BUDGET §3）；各段的字段（各包）；开始页与进入游戏（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）。
+> **不在本文**：文件布局、DTO、写盘步骤（`game/kernel/save/`）；契约签名（`game/contracts/Save/`）；帧顺序（契约 `FramePriority`）；命令行与 G20（ENG-GATES）；性能份额（ENG-BUDGET §3）；各段的字段（各包）；开始页与进入游戏（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）。
 > **查阅**：先读 §0；存档位与世界线看 §1；各段存什么看 §2；保存时机、读档与一致性看 SYS-SAVE-FLOW；格式、损坏与安全看 SYS-SAVE-FORMAT
 
 ## 0 结论
@@ -61,5 +61,5 @@ gates: [G5, G20]
 - 游玩时长、代号、世界线号、本局规则集 ID 存在 meta 里，不另设段；规则集的内容不进存档。
 - **不存**（读档后重建）：音频状态；打开的面板、纯净模式；偶发事件的进度与计时；流式与画质的统计；玩家身体的姿态、湿度与平滑历史；泳态；动物的反应；骑姿与速度；开放室内房门与防火门的状态（存档时一律按关好记）。
 - **游泳与骑行**：在水里或骑行中保存，`walk`、`view`、`maps` 与 meta 的位姿都指向同一个最近的岸上安全点。保存只记下这个点，不把人真的挪走。
-- **共享单车**（SYS-WALK-BIKE §1）：车辆一段由 WP-55（共享单车运行与取还） 负责，按图记每辆可借车的停放归属；保存时借的车按归还记；旧档缺这一段时按基线初始化一次。
+- **共享单车**（SYS-WALK-BIKE §1）：车辆一段由 WP-55（共享单车运行与取还）负责，按图记每辆可借车的停放归属；保存时借的车按归还记；旧档缺这一段时按基线初始化一次。
 - **设置文件**不进存档，换存档位不变：只有一份 `user://settings.json`，界面、输入、画面、声音各占一节（SYS-SAVE-FORMAT §3）。`user://cache/bake/` 是本机烘焙缓存，不是存档（SYS-MAPS §1.2）。

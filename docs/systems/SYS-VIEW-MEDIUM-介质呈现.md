@@ -1,6 +1,6 @@
 ---
 id: SYS-VIEW-MEDIUM
-title: 介质呈现：镜头在楼里、地下、水下、雾海里
+title: 介质呈现
 category: systems
 parent: SYS-VIEW
 summary: 镜头处在空气、楼里、地下、水下、雾海时的画面与声音规则：介质判定与仲裁、楼体剖切变体、地层雾、水下与半入水、雾海兜底
@@ -14,7 +14,7 @@ data: []
 gates: [G7, G21]
 ---
 
-# SYS-VIEW-MEDIUM · 介质呈现：镜头在楼里、地下、水下、雾海里
+# SYS-VIEW-MEDIUM · 介质呈现
 
 > **范围**：本文规定镜头处在空气、楼里、地下、水下（含半入水）、雾海时的介质判定与仲裁、画面呈现和声音，以及楼体剖切变体与简化室内的显示规则。
 > **不在本文**：观察模式、旁观漫游、镜头规则与 3D/平面地图的分工（SYS-VIEW）；行走的镜头与身体入水判定（SYS-WALK）；开放室内的清单、加载与门（WLD-INTERIORS）；水体的范围与水面（WLD-WATER）；地层与雾海的几何（WLD-OUTSKIRTS-DIORAMA）；介质与相机的实现（`game/camera/`、`game/contracts/` 里的 `IMediumState`）。

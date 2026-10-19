@@ -1,9 +1,9 @@
 ---
 id: UI-VISUAL
-title: 界面视觉语言：设计原则、色彩令牌、主题与实现边界
+title: 界面视觉语言
 category: ui
 parent: UI-INDEX
-summary: 界面设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界；字体形状图标组件布局与动效见子文档
+summary: 界面外观的根：设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界；字体形状图标组件布局与动效见子文档
 keywords: [界面视觉, 色彩令牌, 清蓝, 晶白, 深屏, 昼夜交班, 常驻件, 对比度规则, ui.json, ui_night, UiThemeBuilder, UiThemeClock, ui_panel, ui_screen]
 owners: [WP-35]
 contributors: [WP-01, WP-04, WP-27, WP-37, WP-48, WP-49, WP-50, WP-53]
@@ -13,7 +13,7 @@ contracts: []
 data: ["game/style/palette/ext/ui.json", "game/hud/style/ui_metrics.json"]
 gates: [G4, G5, G14]
 ---
-# UI-VISUAL · 界面视觉语言：设计原则、色彩令牌、主题与实现边界
+# UI-VISUAL · 界面视觉语言
 
 > **范围**：界面外观规范的根：设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界。主题是信息、芯片、光与计算，主色清蓝 #73C9F9，专业克制；界面、图标和锚点里不用银杏。字体、形状、图标、组件、画面布局与动效在子文档。
 > **不在本文**：字体、形状材质、图标、组件外观与画面布局（UI-VISUAL-COMPONENTS）；动效与减少动态效果（UI-VISUAL-MOTION）；界面有什么、怎么操作见 UI-NAV；地图与传送卡见 SYS-ATLAS；开始页与加载界面见 SYS-TITLE；提示音见 SYS-AUDIO；份额见 ENG-BUDGET；门禁判据见 ENG-GATES G14。
@@ -32,7 +32,7 @@ gates: [G4, G5, G14]
 
 | 编码 | 简题 | 什么时候读 |
 | --- | --- | --- |
-| UI-VISUAL-COMPONENTS | 字体、形状、图标、组件外观与画面布局 | 画字体、面板按钮、图标、时间环、存档卡，排画面布局 |
+| UI-VISUAL-COMPONENTS | 字体、形状、图标、组件与布局 | 画字体、面板按钮、图标、时间环、存档卡，排画面布局 |
 | UI-VISUAL-MOTION | 界面动效与减少动态效果 | 做界面动效、"减少动态效果"替代、闪烁与辉光上限 |
 
 ### 0.1 接入要点

@@ -8,7 +8,7 @@ keywords: [环境声, 声景, 七层, 发声器, 声景场, 床, 鸟声, 生命�
 owners: [WP-53b]
 contributors: [WP-53, WP-24, WP-25, WP-26, WP-27, WP-28, WP-30, WP-31, WP-38, WP-39, WP-40, WP-41, WP-45]
 depends: [SYS-AUDIO, SYS-MOTION, SYS-TIME, SYS-WEATHER, WLD-INTERIORS]
-related: [WLD-LIFE, WLD-OUTSKIRTS, SYS-VIEW, ENG-GATES]
+related: [WLD-LIFE, WLD-AMBIENCE, WLD-OUTSKIRTS, SYS-VIEW, ENG-GATES]
 contracts: [SoundSetId, AmbienceProfileId, EmitterShape, DayBand, WeatherMask, TraceKind, AmbientEmitterDecl, AmbientEmitterAttribute, IAmbientEmitterSource, SoundSocketDecl, AmbienceCue, AmbienceSnapshot, IAmbienceService, LightningFlash, ILightningFeed, IChannelReader]
 data: ["game/data/maps/qingshuihe/audio/"]
 gates: [G21]
@@ -28,7 +28,7 @@ gates: [G21]
 
 ### 0.1 接入要点
 
-- **画面里有要配声的一次性变化**（抖落、雪团落地、动物小动作）：调 `IAmbienceService.Cue`，落地时刻已知的用 `DelaySec`，同批同一个 `Group`，被转场打断时 `CancelCues`；远雷由 WP-40（全日天空） 经 `ILightningFeed` 发事件（§3）
+- **画面里有要配声的一次性变化**（抖落、雪团落地、动物小动作）：调 `IAmbienceService.Cue`，落地时刻已知的用 `DelaySec`，同批同一个 `Group`，被转场打断时 `CancelCues`；远雷由 WP-40（全日天空）经 `ILightningFeed` 发事件（§3）
 - **会移动的发声物**（天鹅、猫、鸽群，主线之后）：调 `AddDynamic`、`MoveDynamic`，卸载与切图时 `RemoveDynamic`（§1.2）
 - **部件自带声音**（主线之后）：返回 `SoundSocketDecl`，区域包不另摆发声器；**批量生成发声器**：写带 `[AmbientEmitter]` 的来源，ID 以 `amb:` 开头（§1.2）
 
@@ -46,12 +46,13 @@ gates: [G21]
 发声器全部离线生成，不在场景里手摆：各 `[AmbientEmitter]` 来源读世界模型生成发声器表与声景场（64 m 粗格的 0–1 的量，加权组合出底噪床配比，各格床层大体均衡；也可运行时按区域类型直接配比），产物随本图数据发布；部件自带声音插座；动物走动态发声器；手工点只留少数。数据位置：全局 `game/data/audio/`，按图 `game/data/maps/<图>/audio/`。
 
 - 河渠缓流几乎无声，有声的是桥墩、暗涵口、堰等扰流处；湖岸拍水只在 15 m 内听得到。雨水箅只在雨中和雨后有声；檐滴雨停后再滴 60–120 s，与画面同长。变压器、售货机的嗡声只在数米内。
-- 西湖喷泉按时段表切换形态（白天全开，黄昏低排，夜里三柱到 22:00，下雪停喷）；**主楼喷泉是静止的浅水池，不发声**；品学楼叠水全天常流。
+- 西湖喷泉的声音随 MAP-QSH-CORE §7 的时段表切换形态，形态切换时 3–5 s 交叉；**主楼喷泉是静止的浅水池，不发声**；品学楼叠水全天常流。
 
 ### 1.3 季节与出没
 
 - **鸟声按"角色"挑素材，不求物种本地准确**；不用喜鹊（与 WLD-LIFE 一致）和一听就是异域的声音。
 - **默认状态（SYS-TIME §1.1）的主声是麻雀类黄昏归巢**，天黑透（太阳高度 < −7°）后很快安静；蝉只在夏，秋虫只在秋夜，蛙在夏夜与雨后。乌鸦只做远处、黄昏为主，雨雪时归零；画面里停着的剪影 25 m 内不出声。孔雀很少出声。季节权重同 SYS-MOTION-ENV §6，换季在雾幕段交叉。
+- **日式街景的声音**（WLD-AMBIENCE）：夏日黄昏的蝉用暮蝉式，一两只此起彼伏，天黑透后停；风铃只在夏季窗边，阵风时才响，不连成一片；远处的管乐练习 16:30–18:30 从校内活动场所方向传来（清水河见 MAP-QSH-ADDITIONS-VOCAB §8.2），长音和断续的一两小节，听不出曲目；防犯灯的电流声（灯下 3–4 m）与电线的风啸（冬季大风）是很轻的一层。黄昏的乌鸦、傍晚广播和钟声见本节与 §3；人声一律听不清（INV-6）。
 
 ### 1.4 生命感规则
 

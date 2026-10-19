@@ -1,6 +1,6 @@
 ---
 id: SYS-AUDIO
-title: "音频：内核、混音、加速节制、人迹禁区、界面音效与素材"
+title: 音频
 category: systems
 parent: SYS-INDEX
 summary: "声音共守的规则：内核与生命周期、混音与响度、加速节制与转场、人迹禁区、界面音、开场音乐、设置、素材许可、预算验收"
@@ -13,10 +13,10 @@ contracts: [AudioBuses, AudioGroup, BackgroundBehavior, SuddenSoundMode, AudioSe
 data: ["game/data/audio/", "user://settings.json"]
 gates: [G4, G5, G6, G14, G21]
 ---
-# SYS-AUDIO · 音频：内核、混音、加速节制、人迹禁区、界面音效与素材
+# SYS-AUDIO · 音频
 
 > **范围**：本文规定全部声音共守的规则：内核与生命周期、混音与响度、加速流逝的节制与转场、人迹禁区、界面音效、开场音乐的挂点、设置、素材与许可、预算与验收。声音只读世界状态，要和画面、所处环境对得上；同一动作在不同地方听起来不一样。
-> **不在本文**：环境声景、天气声、远雷钟声与广播（SYS-AUDIO-AMBIENCE）；观者声与空间声学（SYS-AUDIO-FOLEY）；契约签名（`game/contracts/Audio/`）；总线树、声源池、声学参数表、素材格式（`game/audio/` 源码与数据）；帧顺序（ENG-ARCH §3）；性能份额（ENG-BUDGET）；G21 做法（ENG-GATES §1）；介质判定（SYS-VIEW）；界面视觉（UI-VISUAL）；进入游戏（SYS-TITLE）；切图（SYS-MAPS）。
+> **不在本文**：环境声景、天气声、远雷钟声与广播（SYS-AUDIO-AMBIENCE）；观者声与空间声学（SYS-AUDIO-FOLEY）；契约签名（`game/contracts/Audio/`）；总线树、声源池、声学参数表、素材格式（`game/audio/` 源码与数据）；帧顺序（契约 `FramePriority`）；性能份额（ENG-BUDGET）；G21 做法（ENG-GATES §1）；介质判定（SYS-VIEW）；界面视觉（UI-VISUAL）；进入游戏（SYS-TITLE）；切图（SYS-MAPS）。
 > **查阅**：先读 §0；总体与生命周期看 §1；混音与响度看 §2；加速与转场看 §3；人迹禁区看 §4；界面音看 §5；设置看 §7；素材许可看 §8；环境声、天气声看 SYS-AUDIO-AMBIENCE；观者声、空间声学看 SYS-AUDIO-FOLEY
 
 ## 0 结论
@@ -38,7 +38,7 @@ gates: [G4, G5, G6, G14, G21]
 
 ### 0.1 接入要点
 
-- **要发出任何声音**：只经 `IAudioService`、`IAmbienceService`、`IFoleyService`；不创建 `AudioStreamPlayer*`，不调 `AudioServer.Set*`、`AddBus*`；`AudioListener3D` 只由 WP-06（相机与输入） 的相机创建（§1）
+- **要发出任何声音**：只经 `IAudioService`、`IAmbienceService`、`IFoleyService`；不创建 `AudioStreamPlayer*`，不调 `AudioServer.Set*`、`AddBus*`；`AudioListener3D` 只由 WP-06（相机与输入）的相机创建（§1）
 - **音频要读你的状态**（灯光通道、介质、雾幕、闪电、脚下覆盖物、门的开度）：提供只读的 C# 值，与着色器参数同源（§1）
 - **声音里要用随机**：只用 `StableHash` 和 `Rng`；不用 `AudioStreamRandomizer`，不给 `AudioServer.PlaybackSpeedScale` 赋值；消费会追加值的音频枚举时写穷举的 `switch`，`default` 拒绝或报错
 
@@ -111,7 +111,7 @@ gates: [G4, G5, G6, G14, G21]
 
 ## 7 设置
 
-设置卡加一页"声音"（UI-NAV §3.5；WP-35（界面） 做）。设置存进 `user://settings.json` 的 `audio` 节，文件的读写规则在 SYS-SAVE-FORMAT §3；开机时音频要比界面更早拿到音量，所以设置文件在启动最早期读入，音量先于界面应用。
+设置卡加一页"声音"（UI-NAV §3.5；WP-35（界面）做）。设置存进 `user://settings.json` 的 `audio` 节，文件的读写规则在 SYS-SAVE-FORMAT §3；开机时音频要比界面更早拿到音量，所以设置文件在启动最早期读入，音量先于界面应用。
 
 设置项：总音量与环境 / 动作 / 界面 / 音乐四组音量；界面音效开关、悬停与聚焦音（默认关）；突发声音（雷、钟、孔雀）正常 / 柔和（−8 dB、更远）/ 关；安静模式（散布密度 × 0.5，人迹全关，不报时、不放广播，雷声柔和）；单声道；窗口在后台时照常（默认）/ 降低 / 静音；输出设备。默认值以 `AudioSettings` 为准。单声道、突发声音、安静模式作为无障碍项登记，"声音"页要能用键盘走完（G14）。画面设置不影响声音。
 
@@ -120,11 +120,12 @@ gates: [G4, G5, G6, G14, G21]
 - **素材不追求真实**：免费开源、可商用，CC0 优先，不做实地采录。
 - **可用**：Freesound CC0；Kenney 与 OpenGameArt 的 CC0；Sonniss #GameAudioGDC 免费包（**不得再分发原始文件，不进公开仓库**）；CC BY（必须署名）；程序合成；委托或自制的音乐（签授权）。**不用**：NC；ND（声音与动态影像同步就构成改编）；BBC Sound Effects；BY-SA、GPL；订阅制素材库；来源不清的素材站。
 - **入库**（`pipeline/audio/`）：每个源文件先在 `game/data/audio/licenses.json` 登记，没有记录不许入库；再体检、创作性处理（统一 EQ、变调、分层、剪掉一切人声）、统一到差不多的电平（3D 一律单声道）、循环听一遍接缝。主床每段 150–300 s，段间 A/B 交叉，床里不放可辨认的单个事件。
+- **版本库**：Git LFS 条目以 `.gitattributes` 为准；只许随游戏发布、不许公开分发的素材放私有素材库。
 - **署名页**从 `licenses.json` 自动生成，放进数据手册页、设置卡的"许可"页和安装包的 `LICENSES.txt`。
 
 ## 9 预算（设计目标）
 
-份额与帧顺序归 ENG-BUDGET、ENG-ARCH §3。
+份额归 ENG-BUDGET，帧顺序以契约 `FramePriority` 为准。
 
 - 主线程不到 1 ms；混音线程只占一个核的一小部分；GPU 为 0；常驻内存和导出包里的音频都在百兆级。
 - **超支时的降级顺序**：先减在播 3D 声源数、床退成 2 个锚点；再降散布密度；再关声源侧混响区；最后降到最少声部。

@@ -1,23 +1,23 @@
 ---
-id: WLD-OUTSKIRTS-BORDER
-title: 边界阻挡与提示：行走阻挡、飞行阻挡、提示文案
-category: world
-parent: WLD-OUTSKIRTS
+id: SYS-BORDER
+title: 边界阻挡与提示
+category: systems
+parent: SYS-INDEX
 summary: 校界的行走阻挡与缓停、旁观飞行的可达空间与推回、edge_fog、提示文案、多地图衔接
 keywords: [行走阻挡, 飞行阻挡, 缓停, 推回, 缓冲带, 软地板, 可达空间, 活动范围, edge_fog, 边缘雾, 前方暂未开放, 合法化, 地图入口]
 owners: [WP-06, WP-30, WP-42, WP-44]
 contributors: [WP-02, WP-04, WP-05, WP-06, WP-08, WP-13, WP-14, WP-15, WP-18, WP-22, WP-23, WP-24, WP-27, WP-28, WP-30, WP-33, WP-35, WP-36, WP-37, WP-38, WP-39, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-53]
-depends: [CORE-INDEX, WLD-OUTSKIRTS, SYS-VIEW, ENG-ARCH, SYS-WALK, SYS-MAPS]
+depends: [CORE-INDEX, WLD-OUTSKIRTS, SYS-VIEW, ENG-ARCH, SYS-WALK, SYS-WALK-BOUNDS, SYS-MAPS]
 related: [WLD-OUTSKIRTS-BAND, MAP-QSH-OUTSKIRTS, MAP-QSH-SOUTH, UI-NAV, ENG-GATES, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-AUDIO, WLD-TERRAIN]
 contracts: [SurfaceTag.Boundary, OutskirtsBand, OutskirtsKind, OutskirtsBlock, IOutskirtsModel, IWorldModel.Outskirts, RoamLimits.PushRate, RoamLimits.PushMax, RoamLimits.EdgeFogMax, MapEnvironment.Outskirts, ICameraRig.EdgeFog, ShaderGlobals.EdgeFog]
 data: []
 gates: [G2, G7, G15]
 ---
 
-# WLD-OUTSKIRTS-BORDER · 边界阻挡与提示：行走阻挡、飞行阻挡、提示文案
+# SYS-BORDER · 边界阻挡与提示
 
 > **范围**：本文规定行走和旁观在边界处的阻挡、推回与提示：校界的行走阻挡与缓停，旁观飞行的可达空间、缓冲带与 `edge_fog`，提示文案，与多地图、平面地图、存档的衔接。旁观活动范围（SYS-VIEW）的细则以本文为准。
-> **不在本文**：三条线的定义（WLD-OUTSKIRTS）；外围分层与内容（WLD-OUTSKIRTS-BAND）；河渠格栅和看街长椅的具体位置与做法（MAP-QSH-OUTSKIRTS）；南门细节（MAP-QSH-SOUTH）；行走控制器与碰撞数据（SYS-WALK）；活动范围的契约字段与按图数据（SYS-MAPS、`map.json` 的 `roam`）；声音的实现（SYS-AUDIO）。
+> **不在本文**：三条线的定义（WLD-OUTSKIRTS）；外围分层与内容（WLD-OUTSKIRTS-BAND）；河渠格栅和看街长椅的具体位置与做法（MAP-QSH-OUTSKIRTS）；南门细节（MAP-QSH-SOUTH）；行走控制器（SYS-WALK）；碰撞与可行走数据（SYS-WALK-BOUNDS）；旁观相机与模式（SYS-VIEW）；活动范围的契约字段与按图数据（SYS-MAPS、`map.json` 的 `roam`）；声音的实现（SYS-AUDIO）。
 > **查阅**：先读 §0；行走阻挡看 §1；飞行阻挡与 `edge_fog` 看 §2；提示文案与多地图衔接看 §3
 
 ## 0 结论
@@ -54,8 +54,6 @@ gates: [G2, G7, G15]
 越出校界立即回位（SYS-WALK-BOUNDS §4），只作异常兜底，G15 统计触发次数应为 0。
 
 ## 2 飞行阻挡（旁观模式）
-
-
 
 ### 2.1 可达空间
 
@@ -97,13 +95,13 @@ gates: [G2, G7, G15]
 | 场合 | 触发 | 中文 | English |
 | --- | --- | --- | --- |
 | 旁观，飞到可达空间的水平边缘 | 在缓冲带里朝外的输入持续 0.5 s，或发生了一次推回 | 前方暂未开放 | Area ahead · not open yet |
-| 将来：可达空间边缘有地图入口时 | 同"前方暂未开放" | 前方：××（目标地图名） | Ahead: ×× |
+| 可达空间边缘有地图入口时（主线之后） | 同"前方暂未开放" | 前方：××（目标地图名） | Ahead: ×× |
 
 "同一处"按前沿线每 100 m 一段；软地板、高度上限不出提示。
 
 ### 3.2 与多地图、平面地图、存档的衔接
 
 - **每张地图一只箱庭**：截面线以外是雾海，切换地图就是飞越雾海；外围数据、世界文件和活动范围参数按图放。没有外围数据的图，截面线就是校界。
-- **地图入口**（预留）：入口落在可达空间边缘的一段上时，提示换成"前方：××"，继续朝外推 1.5 s 就进雾幕换图；清水河没有入口。
+- **地图入口**（主线之后）：入口落在可达空间边缘的一段上时，提示换成"前方：××"，继续朝外推 1.5 s 就进雾幕换图；清水河没有入口。
 - **平面地图**：底图读外围数据，O0、O1 的街区轮廓、道路边线和河道画成淡线，截面线就是底图上的箱庭外缘（SYS-ATLAS-UI §1.3）；外围没有锚点，也不能传送。
 - **存档**：存的位姿在读档时按 §2.4 合法化；外围数据更新后截面线可能移动，旧档照样能读。

@@ -9,8 +9,8 @@ owners: [WP-34, WP-03]
 contributors: [WP-04, WP-05, WP-06, WP-07, WP-37, WP-39, WP-45]
 depends: [CORE-INDEX, ART-STYLE, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS]
 related: [WLD-OUTSKIRTS-DIORAMA, WLD-WATER, SYS-MOTION, SYS-VIEW, UI-NAV, UI-VISUAL, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-AMBIENCE]
-contracts: [IWorldState, Body, Flow, WorldTransition]
-data: ["game/data/maps/qingshuihe/lighting-schedule.json", "game/style/palette/keys/"]
+contracts: []
+data: ["game/style/palette/keys/"]
 gates: [G2, G7, G10]
 ---
 # ART-SKYLIGHT · 天空、光照与大气
@@ -67,7 +67,7 @@ gates: [G2, G7, G10]
 
 只有一个方向光，**太阳或月亮二选一**。它决定明暗分阶的交界（ART-STYLE-SHADING §1.1）和投影；投影覆盖整个校区（距离按画面预设，SYS-GRAPHICS §1）；影子边缘清楚，尾端变软。无论谁当主光，都用同一套明暗分阶。
 
-- **实现原则**：场景里只有一盏 DirectionalLight3D；阴影用引擎原生级联；阴影方向钳制、室内抬高、月影与强度的取值以本节为准，预设档、方向量化与引擎做法见 ENG-PERF-LIGHT §2.1 和 `game/kernel/lighting/ShadowSettings.cs`；会改特化常量的阴影开关运行时一律不动。要的是干脆的影边。
+- **实现原则**：场景里只有一盏方向光；阴影用引擎原生级联；阴影方向钳制、室内抬高、月影与强度的取值以本节为准，预设档、方向量化与引擎做法见 ENG-PERF-LIGHT §2.1 和 `game/kernel/lighting/ShadowSettings.cs`；会改特化常量的阴影开关运行时一律不动。要的是干脆的影边。
 - **无影蓝调与日月交接**：太阳高度从 −2° 降到 −7° 是"无影蓝调"，全局 `shadow_strength` = 0。在这段里任选一帧，把主光转到月亮方向；**转向的那一帧 `shadow_strength` 必须是 0**，快速拖动时一帧跨过整段蓝调也在这一帧转向并按 0 处理。黎明按相反顺序。这样影子不会在某个钟点突然从另一个方向冒出来。
 - **月影**：太阳从 −7° 降到 −12° 时月影淡入到最深 0.45，比日影浅；月亮低于 15° 时为 0，15°–20° 之间淡入。
 - **强度**：太阳作主光时强度随高度从 −2° 到 4° 平滑升起，0° 时仍有约四分之一，所以日出日落的受光面看得见颜色；月光要太阳落到 −7° 以下才有，月亮自身低于 −2° 时为 0，强度取关键帧。
@@ -99,9 +99,9 @@ gates: [G2, G7, G10]
 
 | 光源 | 颜色与说明 |
 | --- | --- |
-| 窗灯 | 约六成暖白（`window.warm`）、三成冷白（`window.cool`）、一成不亮，带光晕（ART-STYLE-LINES §2.5）；默认状态的黄昏全校窗灯从约两成亮到约七成 |
+| 窗灯 | 约六成暖白（`window.warm`）、三成冷白（`window.cool`）、一成不亮，带光晕（ART-STYLE-LINES §2.5）；默认状态黄昏的亮灯比例见 ART-COLORSCRIPT §3 |
 | 图书馆檐口灯带与采光顶 | 暖黄，天暗后常亮，由内向外透出；白天采光顶只映天光 |
-| 路灯 | 暖色，地面投出一圈圈暖色光斑；初灯组在太阳 8° 降到 4° 间逐盏亮起，默认状态约六成，霞光和灯光同框；冬季夜间光斑放大 |
+| 路灯 | 暖色，地面投出一圈圈暖色光斑；初灯组先亮，让霞光和灯光同框，机制与默认状态的比例见 ART-COLORSCRIPT §3；冬季夜间光斑放大 |
 | 球场灯、门厅灯、店招 | 球场灯冷白；门厅灯暖色，有名字的楼宇入口都有（SYS-VIEW §4）；店招各店颜色 |
 
 **路灯光斑的画法**（`lamp_pool_shade`，参数见 ENG-PERF-LIGHT §2.3）：

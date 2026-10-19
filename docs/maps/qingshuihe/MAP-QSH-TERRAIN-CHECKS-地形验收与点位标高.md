@@ -1,10 +1,10 @@
 ---
 id: MAP-QSH-TERRAIN-CHECKS
-title: 地形验收镜头、冲突检查与点位标高
+title: 地形验收与点位标高
 category: maps
 parent: MAP-QSH-TERRAIN
-summary: 地形验收用的四个镜头、垫层与跳跃链等冲突检查结论、点位与锚点标高
-keywords: [地形验收镜头, 冲突检查, 垫层与楼体高差, 点位标高, 锚点标高, 室内同位点, 地形求值]
+summary: 地形验收的四个镜头、冲突检查结论与点位、锚点的标高处理
+keywords: [地形验收镜头, 冲突检查, 垫层与楼体高差, 点位标高, 锚点标高, 室内同位点, 地形求值, 仰望镜头, 水边镜头, 俯瞰镜头, 回望镜头, 跳跃链, 道路走廊, 栏杆碰撞顶]
 owners: [WP-16, WP-18, WP-19, WP-20, WP-21, WP-36, WP-44]
 contributors: [WP-17, WP-31b, WP-31c, WP-48]
 depends: [CORE-INDEX, MAP-QSH-TERRAIN, WLD-TERRAIN, SYS-WALK, ENG-GATES]
@@ -14,16 +14,16 @@ data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G7, G15]
 ---
 
-# MAP-QSH-TERRAIN-CHECKS · 地形验收镜头、冲突检查与点位标高
+# MAP-QSH-TERRAIN-CHECKS · 地形验收与点位标高
 
-> **范围**：本文规定清水河地形定稿时的验收：四个验收镜头、垫层与跳跃链等冲突检查的结论、点位与锚点的标高处理。
-> **不在本文**：全图骨架与常水位（MAP-QSH-TERRAIN）；各分区的标高与连接（MAP-QSH-TERRAIN-DISTRICTS）；地形的通用规则（WLD-TERRAIN）；截图方式与门禁（ENG-GATES）；点位清单（UI-NAV）；点位与锚点的坐标（`waypoints.json`、`atlas.d`）；各处标高与地形初值（MAP-QSH-TERRAIN、MAP-QSH-TERRAIN-DISTRICTS）。
+> **范围**：本文规定交付清水河地形前必须满足的检查：四个验收镜头、垫层与跳跃链等冲突检查的规则、点位与锚点的标高处理。
+> **不在本文**：全图骨架与常水位（MAP-QSH-TERRAIN）；各分区的标高与连接（MAP-QSH-TERRAIN-DISTRICTS）；地形的通用规则（WLD-TERRAIN）；截图方式与门禁（ENG-GATES）；点位清单（UI-NAV）；点位与锚点的坐标（`waypoints.json`、`world/atlas.json`、`atlas/markers.json`）；各处标高与地形初值（MAP-QSH-TERRAIN、MAP-QSH-TERRAIN-DISTRICTS）。
 > **查阅**：先读 §0；验收镜头看 §1，冲突检查看 §2，点位与锚点标高看 §3
 
 ## 0 结论
 
 1. **验收镜头**：A 仰望、C 水边、E 俯瞰、J 回望四个，默认状态（秋 17:30）各看一眼总览（§1）。
-2. **冲突检查**：垫层与楼体高差、道路走廊、栏杆与跳跃链、开放室内首层四项都有结论（§2）。
+2. **冲突检查**：垫层与楼体高差、道路走廊、栏杆与跳跃链三项按 §2 的规则交付。
 3. **点位**：P02 落到下沉广场地面（−0.9），P09 落到东湖看台第二级（+0.8），P13 与 P22 随宿舍上台升 3.0 m，P23 随品学楼台基升 1.5 m；室内同位点按"楼面 = 垫层 + 室内外高差"求值（§3）。
 
 ### 0.1 接入要点
@@ -44,7 +44,7 @@ gates: [G2, G7, G15]
 | E 俯瞰 | 红枫丘顶台北缘 | 西湖、博物馆白坡顶与穹顶，落日在身后 |
 | J 回望 | 通学坡坡顶 | 坡面与退台花池、品学楼台基边线、露顶的穹顶 |
 
-## 2 冲突检查的结论
+## 2 冲突检查
 
 - **垫层与楼体高差**：图书馆、博物馆垫层 0；品学楼 +1.5；宿舍台原上的楼按台面求垫层，其余开放楼垫层都是 0，室内索引按垫层求楼面；主楼门廊、大台阶、大平台、宿舍首层架高、食堂台阶广场是楼体，不进高度场。
 - **道路走廊**：纵坡按 WLD-TERRAIN-SHAPE §2.3 的坡度类，做不到的由 WP-20（北部生活区）、WP-21（中部与东区） 加长坡段或改台阶。

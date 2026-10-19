@@ -4,11 +4,11 @@ title: 内容预览
 category: engineering
 parent: ENG-INDEX
 summary: 开发时预览与回看自己做的内容：用 --pose 放机位、预览只读不写、改了以后重启回看；按实体定位与机位恢复在主线之后
-keywords: [内容预览, 预览, 回看, 开发构建, 机位, 预览只读不写, 同图重载, 按实体定位, 机位恢复]
+keywords: [内容预览, 预览, 回看, 开发构建, 机位, --pose, 预览只读不写, 同图重载, 按实体定位, 机位恢复, 开发工具]
 owners: [WP-01, WP-08]
 contributors: [WP-02, WP-46]
 depends: [ENG-GATES, ENG-ARCH]
-related: [SYS-MAPS, WLD-OUTSKIRTS, ART-FIDELITY, PLAN-WP, STD-CONVENTIONS]
+related: [ENG-GATES-SHOTS, SYS-MAPS, WLD-OUTSKIRTS, ART-FIDELITY, PLAN-WP, STD-CONVENTIONS]
 contracts: []
 data: []
 gates: []
@@ -28,7 +28,7 @@ gates: []
 
 ### 0.1 接入要点
 
-- **预览或回看自己的内容**：从开发构建启动，起点用 `--pose=<编号>`，世界参数的写法与截图默认串相同；不要用 `--focus`、`--pose-file`，它们现在只被解析、不可用（§1）。
+- **预览或回看自己的内容**：从开发构建启动，起点用 `--pose=<编号>`，世界参数的写法与截图默认串相同；没有 `--focus`、`--pose-file`，传入按未知参数以非零退出码结束（§1、§3）。
 - **说明截图从哪里拍**：在回报里贴出整串命令行（§1）。
 - **只看效果的截图**：`--pose` 配合截图参数，不算门禁（ENG-GATES-SHOTS §1.2）。
 - **新增点位或审查视角**：把机位交给负责的包登记（`waypoints.json` 归 WP-36（点位与跳转），`review.json` 归 WP-27（门禁、截图与巡检自动化）），预览不改这两份文件（§1）。
@@ -48,7 +48,7 @@ gates: []
 | 世界文件、按图的 JSON 数据、着色器、调色板、树种表等 | 关掉程序后带同一串参数重新启动（`--gen=live` 下重新生成） |
 | C# 代码（生成器、部件参数） | 重新编译（资源有变再 `--import`）后带同一串参数重新启动 |
 
-- 数据校验不过（JSON 语法、schema、重复 ID、引用了不存在的记录）时，加载按数据错误报出并退出；改好后再启动。
+- 数据校验不过（JSON 语法、字段、重复 ID、引用了不存在的记录）时，加载按数据错误报出并退出；改好后再启动。
 - 预览里不能做的：拖动、摆放物体，改颜色或参数后直接存盘。
 
 ## 3 主线之后

@@ -3,11 +3,11 @@ id: ENG-GATES-VETO
 title: 一票否决与收尾清单
 category: engineering
 parent: ENG-GATES
-summary: 23 条一票否决（任一条即不通过；系统类条目指向各系统文档）与收尾阶段主代理逐项检查的全局清单
+summary: 23 条一票否决（任一条即不通过，系统类条目指向各系统文档）与收尾阶段的全局清单
 keywords: [一票否决, 全局清单, 收尾清单, 死黑, 季节残留, 硬切, 切图残留, 丢档, 声音否决, 观光规则集判据]
 owners: [WP-27]
 contributors: []
-depends: [CORE-INDEX, ENG-GATES, ENG-BUDGET, ART-FIDELITY, ART-STYLE, SYS-GRAPHICS, SYS-WALK]
+depends: [CORE-INDEX, PRD-INVARIANTS, ENG-GATES, ENG-BUDGET, ART-FIDELITY, ART-STYLE, SYS-GRAPHICS, SYS-WALK]
 related: [ENG-ROADMAP, SYS-VIEW]
 contracts: []
 data: []
@@ -23,7 +23,7 @@ gates: []
 
 1. **一票否决 23 条，任一条即不通过**；集中测试时全面检查，平时只要求不违反（§1）。
 2. **与视觉精度、硬规则、各系统重叠的条目只指向它们**：精度类以 ART-FIDELITY §3 为准，硬规则以 ENG-BUDGET-RULES §1 为准，行走、天气、存档、声音等系统类以各自文档的验收节为准；条号不变（§1）。
-3. **收尾清单由主代理逐项检查**：INV-1 至 INV-12、风格、增补与翻新、箱庭、帧率、导出、门禁、新游戏（§2）。
+3. **收尾清单由主会话逐项检查**：PRD-INVARIANTS 的 INV-1 至 INV-12、风格、增补与翻新、箱庭、帧率、导出、门禁、新游戏（§2）。
 
 ### 0.1 接入要点
 
@@ -59,9 +59,9 @@ gates: []
 
 ## 2 全局清单
 
-收尾阶段由主代理逐项检查：
+收尾阶段由主会话逐项检查：
 
-- [ ] CORE-INDEX 的 INV-1 至 INV-12 全部成立，§1 无一命中。
+- [ ] PRD-INVARIANTS 的 INV-1 至 INV-12 全部成立，§1 无一命中。
 - [ ] 风格符合 ART-STYLE、ART-MODELING，固定机位总览加每季一张英雄帧；视觉精度满足底线 B1–B13，各区评分按精度区达标（ART-FIDELITY）。
 - [ ] 设计增补与翻新清单全部落实，夜间灯光与天空冷暖对照成立，立面与地面无做旧痕迹（D-174）。
 - [ ] 大箱庭完整（外围 O0–O3、截面、雾海、360° 远景）；各区、植被、水、动物与家具、动态的验收项通过。
