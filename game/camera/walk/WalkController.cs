@@ -80,13 +80,13 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     public IMapArrival? PlacementArrival => _placementArrival;
     public int SpeedStep { get; private set; } = WalkRules.DefaultSpeedStep;
     public int SafetyReturnCount { get; private set; }
-    public bool IsSettled => !Active || (Grounded && CollisionReady && _descentDuration <= 0 && !_safetyFailed
+    public bool IsSettled => !Active || (!_swimming && Grounded && CollisionReady && _descentDuration <= 0 && !_safetyFailed
         && _map is not null && !WalkSafetyQueries.InWater(_map.World.Spatial, _feet));
     public Pose BodyPose => new(_feet, _yaw, _pitch);
     public N.Vector3 ObserverEye => _feet + N.Vector3.UnitY * EyeHeight;
     N.Vector3 IWalkController.Velocity => Velocity.ToNumerics();
 
-    public Pose SettledEyePose => EyeAt(ResolveSettledFeet().Position);
+    public Pose SettledEyePose => new(ResolveSettledFeet().Position + N.Vector3.UnitY * ShoreEyeHeight, _yaw, _pitch, _fov);
     public NavSpace? Space
     {
         get
@@ -118,7 +118,9 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
             return RenderEye();
         }
     }
-    private float EyeHeight => _crouching ? WalkRules.CrouchingEye : WalkRules.StandingEye;
+    private float EyeHeight => _swimming ? WaterMotionRules.FeetBelowSurface + WaterMotionRules.EyeAboveSurface
+        : ShoreEyeHeight;
+    private float ShoreEyeHeight => _crouching ? WalkRules.CrouchingEye : WalkRules.StandingEye;
     private float WalkFov => _uiSettings?.Get(UiSettingDefinitions.WalkFov) ?? UiSettingDefinitions.WalkFov.Default;
 
     public WalkController()
@@ -176,6 +178,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private void OnWorldInstanceChanged(long instance)
     {
         _worldResetPending = true;
+        ResetSwimming();
         ResetGait();
         _safePoints.Clear();
         _placementArrival = null;
@@ -184,6 +187,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     private void ResolveServices()
     {
         _collision ??= Services.Get<ICollisionWorld>();
+        _water ??= Services.Get<IWaterTraversalQuery>();
         _world ??= Services.Get<IWorldState>();
         _view ??= Services.Get<IViewControl>();
         _map = Services.Get<IMapService>().Context;
@@ -210,6 +214,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     public void Leave()
     {
         _takeoffPending |= Active;
+        ResetSwimming();
         ResetGait();
         _appFrozen = false;
         _input = default;
@@ -225,6 +230,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
 
     private void RequestExit()
     {
+        ResetSwimming();
         ResetGait();
         _safetyFailed = true;
         _input = default;
@@ -267,6 +273,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     {
         ValidatePose(feet);
         SetLook(feet.YawDeg, feet.PitchDeg);
+        ResetSwimming();
         ResetGait();
         _touchdownPending = false;
         _placementTarget = feet;
@@ -310,7 +317,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         if ((!Active && _entryFrom is null) || _shape is null || _map is null || _collision is null || _safetyFailed) return;
         // Resolve only after the node is live, never while constructing the flow/save/view dependency graph.
         _appFlow ??= Services.Get<IAppFlow>();
-        CollisionReady = _collision.Ready(_feet, WalkRules.Radius);
+        CollisionReady = _collision.Ready(_feet, _cylinder.Radius);
         if (_placementNeedsCheck)
         {
             if (!ResolvePlacement()) { CollisionReady = false; _previousFeet = _feet; return; }
@@ -350,6 +357,8 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
             _touchdownPending = true;
             Velocity = Vector3.Down * WalkTuning.LandingSpeed;
         }
+        if (!ReadWater(_feet, out var water)) { FreezeWaterMotion(); return; }
+        UpdateSwimming(water);
         _sinceJump += dt;
         _sinceSafe += dt;
         _sinceReturn += dt;
@@ -357,15 +366,18 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
         _coyote = wasGrounded ? WalkTuning.CoyoteSeconds : MathF.Max(0, _coyote - dt);
         _jumpBuffer = _jumpQueued ? WalkTuning.JumpBufferSeconds : MathF.Max(0, _jumpBuffer - dt);
         _jumpQueued = false;
-        UpdateCrouch();
+        if (!_swimming) UpdateCrouch();
         float multiplier = WalkRules.SpeedMultiplier(SpeedStep);
-        bool sprint = _input.Sprint && !_crouching && _input.Move.Y > 0;
-        float speed = (_crouching ? WalkTuning.CrouchSpeed : sprint ? WalkTuning.SprintSpeed : WalkRules.WalkSpeed) * multiplier;
-        if (_map.World.Spatial.WalkClassAt(_feet.X, _feet.Z) == WalkClass.Wade) speed *= WaterMotionRules.WadeSpeedMultiplier;
+        bool sprint = !_swimming && _input.Sprint && !_crouching && _input.Move.Y > 0;
+        float speed = _swimming ? WaterMotionRules.SwimSpeed
+            : (_crouching ? WalkTuning.CrouchSpeed : sprint ? WalkTuning.SprintSpeed : WalkRules.WalkSpeed) * multiplier;
+        if (!_swimming && (_map.World.Spatial.WalkClassAt(_feet.X, _feet.Z) == WalkClass.Wade
+            || (wasGrounded && water.Sample is { } wade && _feet.Y < wade.SurfaceY))) speed *= WaterMotionRules.WadeSpeedMultiplier;
         var direction = WalkMath.Direction(_input.Move, _yaw);
         float previousSpeed = new N.Vector2(Velocity.X, Velocity.Z).Length();
-        var velocity = WalkMath.HorizontalVelocity(Velocity.ToNumerics(), direction * speed, wasGrounded, dt);
-        bool jump = _coyote > 0 && (_jumpBuffer > 0 || (_input.JumpHeld && _sinceJump >= WalkTuning.HeldJumpInterval)
+        var velocity = _swimming ? direction * speed
+            : WalkMath.HorizontalVelocity(Velocity.ToNumerics(), direction * speed, wasGrounded, dt);
+        bool jump = !_swimming && _coyote > 0 && (_jumpBuffer > 0 || (_input.JumpHeld && _sinceJump >= WalkTuning.HeldJumpInterval)
             || (wasGrounded && WantsAutoJump(velocity, dt)));
         if (jump)
         {
@@ -374,29 +386,39 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
             velocity = WalkMath.LimitHorizontal(velocity);
             _coyote = _jumpBuffer = _sinceJump = 0;
         }
-        else velocity.Y = MathF.Max(-WalkTuning.TerminalFallSpeed, velocity.Y - WalkTuning.Gravity * dt);
+        else if (!_swimming) velocity.Y = MathF.Max(-WalkTuning.TerminalFallSpeed, velocity.Y - WalkTuning.Gravity * dt);
         Span<BoundaryHit> boundaries = stackalloc BoundaryHit[8];
-        int boundaryCount = _collision.NearbyBoundaries(_feet, WalkRules.Radius, _cylinder.Height, boundaries);
+        int boundaryCount = _collision.NearbyBoundaries(_feet, _cylinder.Radius, _cylinder.Height, boundaries);
         velocity = WalkMath.SlowAtBoundaries(velocity, boundaries[..boundaryCount]);
         var requested = new Vector3(velocity.X * dt, 0, velocity.Z * dt);
         requested = LimitRegions(requested);
+        if (!CollisionReady || _safetyFailed) { FreezeWaterMotion(); return; }
         if (_crouching && wasGrounded && !jump) requested = LimitCrouchEdge(requested);
         velocity.X = requested.X / dt;
         velocity.Z = requested.Z / dt;
         var next = _feet + new N.Vector3(requested.X, 0, requested.Z);
-        if (!_collision.Ready(next, WalkRules.Radius)) { CollisionReady = false; _previousFeet = _feet; return; }
+        if (!_collision.Ready(next, _cylinder.Radius)) { CollisionReady = false; _previousFeet = _feet; return; }
+        if (!ReadWater(next, out _)) { FreezeWaterMotion(); return; }
         _previousFeet = _feet;
         Velocity = velocity.ToGodot();
-        FloorSnapLength = jump ? 0 : WalkTuning.SnapLength;
+        FloorSnapLength = _swimming || jump ? 0 : WalkTuning.SnapLength;
         MoveAndSlide();
         bool stepped = false;
-        if (wasGrounded && !jump && IsOnWall()) stepped = TryStep(requested, _previousFeet.ToGodot());
+        if (!_swimming && wasGrounded && !jump && IsOnWall()) stepped = TryStep(requested, _previousFeet.ToGodot());
         if (stepped) Velocity = new(velocity.X, 0, velocity.Z);
         if (IsOnCeiling()) Velocity = new(Velocity.X, MathF.Min(0, Velocity.Y), Velocity.Z);
-        LimitSteepSlide();
-        Grounded = IsOnFloor() || stepped;
+        if (!_swimming) LimitSteepSlide();
+        Grounded = !_swimming && (IsOnFloor() || stepped);
         _feet = GlobalPosition.ToNumerics();
-        if (NeedsRecovery()) { Recover(); return; }
+        if (!ReadWater(_feet, out water))
+        {
+            _feet = _previousFeet;
+            GlobalPosition = _feet.ToGodot();
+            FreezeWaterMotion();
+            return;
+        }
+        UpdateSwimming(water);
+        if (NeedsRecovery(water)) { Recover(); return; }
         PublishMovement(dt, wasGrounded, jump, stepped, velocity, previousSpeed);
         AdvanceComfort(dt, wasGrounded, jump, stepped, sprint);
         if (Grounded && _sinceSafe >= WalkTuning.SafetyRecordSeconds && IsSafeRecordPoint())
@@ -418,7 +440,9 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
 
     private void ApplyHeight()
     {
-        _cylinder.Height = _crouching ? WalkTuning.CrouchingHeight : WalkRules.StandingHeight;
+        _cylinder.Radius = _swimming ? WaterMotionRules.SwimmingShape.Radius : WalkRules.Radius;
+        _cylinder.Height = _swimming ? WaterMotionRules.SwimmingShape.Height
+            : _crouching ? WalkTuning.CrouchingHeight : WalkRules.StandingHeight;
         if (_shape is not null) _shape.Position = Vector3.Up * (_cylinder.Height * .5f);
     }
 

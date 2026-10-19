@@ -39,11 +39,13 @@ public static class WalkSafetyQueries
         _ => throw new ArgumentOutOfRangeException(nameof(feet))
     };
 
-    public static bool NeedsRecovery(ISpatialIndex spatial, Vector3 feet)
+    public static bool NeedsRecovery(ISpatialIndex spatial, Vector3 feet, bool permittedWater)
     {
-        if (!VectorMath.Finite(feet) || !AllowsFeet(spatial, feet)) return true;
+        if (!VectorMath.Finite(feet)) return true;
+        var classification = spatial.WalkClassAt(feet.X, feet.Z);
+        if (!(permittedWater && classification == WalkClass.Water) && !AllowsFeet(spatial, feet)) return true;
         var medium = spatial.MediumAt(feet);
-        if (spatial.WalkClassAt(feet.X, feet.Z) != WalkClass.Wade && medium.Kind == MediumKind.Underwater
+        if (!permittedWater && classification != WalkClass.Wade && medium.Kind == MediumKind.Underwater
             && (!float.IsFinite(medium.Depth) || medium.Depth > WaterMotionRules.ShallowWadeDepth)) return true;
         return feet.Y < spatial.GroundY(feet.X, feet.Z) - WalkTuning.BelowSupportLimit;
     }

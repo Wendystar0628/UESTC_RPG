@@ -188,25 +188,28 @@ public partial class WalkController
 
     private bool RegionAllowsMotion(Vector3 motion)
     {
-        int count = Math.Max(1, (int)MathF.Ceiling(motion.Length() / WalkRules.Radius));
+        float radius = _cylinder.Radius;
+        int count = Math.Max(1, (int)MathF.Ceiling(motion.Length() / radius));
         for (int i = 1; i <= count; i++)
         {
             var center = _feet + (motion * ((float)i / count)).ToNumerics();
             if (!RegionAllowsPoint(center)
-                || !RegionAllowsPoint(center + N.Vector3.UnitX * WalkRules.Radius)
-                || !RegionAllowsPoint(center - N.Vector3.UnitX * WalkRules.Radius)
-                || !RegionAllowsPoint(center + N.Vector3.UnitZ * WalkRules.Radius)
-                || !RegionAllowsPoint(center - N.Vector3.UnitZ * WalkRules.Radius)) return false;
+                || !RegionAllowsPoint(center + N.Vector3.UnitX * radius)
+                || !RegionAllowsPoint(center - N.Vector3.UnitX * radius)
+                || !RegionAllowsPoint(center + N.Vector3.UnitZ * radius)
+                || !RegionAllowsPoint(center - N.Vector3.UnitZ * radius)) return false;
         }
         return true;
     }
 
     private bool RegionAllowsPoint(N.Vector3 point)
     {
+        if (!ReadWater(point, out var water)) return false;
         var spatial = _map!.World.Spatial;
         var classification = spatial.WalkClassAt(point.X, point.Z);
         if (classification != WalkClass.Water) return WalkMath.CanWalk(classification);
-        if (!_collision!.Ready(point, WalkRules.Radius)) return false;
+        if (water.Sample is { CanSwim: true }) return true;
+        if (!_collision!.Ready(point, _cylinder.Radius)) return false;
         // A dry bridge is allowed only when the native floor, rather than airborne feet, is above water.
         var support = _collision.SupportY(point.X, point.Z, point.Y + WalkRules.StepHeight);
         return support is { } hit && float.IsFinite(hit.Y)
@@ -215,7 +218,7 @@ public partial class WalkController
 
     private bool IsSafeRecordPoint()
     {
-        if (!Grounded || !CollisionReady || _map is null || _collision is null
+        if (_swimming || !Grounded || !CollisionReady || _map is null || _collision is null
             || WalkSafetyQueries.InWater(_map.World.Spatial, _feet)) return false;
         if (GetFloorNormal().Y < MathF.Cos(WalkTuning.SafetyRecordSlopeDegrees * (float.Pi / 180f))) return false;
         if (_map.World.Spatial.WalkClassAt(_feet.X, _feet.Z) is not (WalkClass.Walk or WalkClass.Interior)) return false;
@@ -226,7 +229,8 @@ public partial class WalkController
             && _admission.ClearOfBoundary(_feet, _cylinder.Height);
     }
 
-    private bool NeedsRecovery() => WalkSafetyQueries.NeedsRecovery(_map!.World.Spatial, _feet);
+    private bool NeedsRecovery(WaterQueryResult water) => WalkSafetyQueries.NeedsRecovery(_map!.World.Spatial, _feet,
+        water.Sample is { CanSwim: true });
 
     public bool ReturnToSafety() => Active && _map is not null && _appFlow?.IsPlaying == true
         && (_appFlow.Activity & AppActivity.MapTransition) == 0 && Recover(manual: true);

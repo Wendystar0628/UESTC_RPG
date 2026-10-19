@@ -161,10 +161,19 @@ public sealed class WalkRulesTests
         var spatial = new SafetySpatial(-1f, -.5f, WalkClass.Water, nearShore: true);
         var feet = new Vector3(0, -1, 0);
         AssertThat(spatial.GroundY(0, 0) == -1f && spatial.MediumAt(feet).Depth == .5f).OverrideFailureMessage("Regression fixture must distinguish bed height from water height.").IsTrue();
-        AssertThat(WalkSafetyQueries.NeedsRecovery(spatial, feet)).OverrideFailureMessage("Standing on the riverbed beside a walkable bank prevents the water return.").IsTrue();
+        AssertThat(WalkSafetyQueries.NeedsRecovery(spatial, feet, false)).OverrideFailureMessage("Standing on the riverbed beside a walkable bank prevents the water return.").IsTrue();
         AssertThat(WalkSafetyQueries.InWater(spatial, feet) && !WalkSafetyQueries.AllowsFeet(spatial, feet)).OverrideFailureMessage("A supported underwater position is treated as a settled safe snapshot.").IsTrue();
         var walkCell = new SafetySpatial(-1f, -.5f, WalkClass.Walk);
-        AssertThat(WalkSafetyQueries.NeedsRecovery(walkCell, feet)).OverrideFailureMessage("A coarse walk cell hides actual submersion at the feet.").IsTrue();
+        AssertThat(WalkSafetyQueries.NeedsRecovery(walkCell, feet, false)).OverrideFailureMessage("A coarse walk cell hides actual submersion at the feet.").IsTrue();
+        AssertThat(!WalkSafetyQueries.NeedsRecovery(spatial, feet, true)).OverrideFailureMessage("Permitted swimming or supported wading still triggers deep-water recovery.").IsTrue();
+        var entry = new WaterSample(0, -WaterMotionRules.EnterColumnDepth, true);
+        var exit = entry with { BottomY = -WaterMotionRules.ExitColumnDepth };
+        var between = entry with { BottomY = -(WaterMotionRules.EnterColumnDepth + WaterMotionRules.ExitColumnDepth) * .5f };
+        AssertThat(WalkMath.SwimmingAt(entry, feet.Y, false)
+            && WalkMath.SwimmingAt(between, feet.Y, true) && !WalkMath.SwimmingAt(between, feet.Y, false)
+            && !WalkMath.SwimmingAt(exit, feet.Y, true)).OverrideFailureMessage("Swimming entry and exit lost the shared depth hysteresis.").IsTrue();
+        AssertThat(!WalkMath.SwimmingAt(entry with { CanSwim = false }, feet.Y, true)
+            && !WalkMath.SwimmingAt(entry, WalkRules.StandingHeight, false)).OverrideFailureMessage("Swimming ignores permission or captures dry bridge feet above the water.").IsTrue();
     }
 
     [TestCase]
@@ -173,10 +182,10 @@ public sealed class WalkRulesTests
     {
         var feet = new Vector3(0, 2, 0);
         var bridge = new SafetySpatial(2f, -.5f, WalkClass.Walk, ground: -1f);
-        AssertThat(!WalkSafetyQueries.InWater(bridge, feet) && !WalkSafetyQueries.NeedsRecovery(bridge, feet)).OverrideFailureMessage("A dry supported bridge is mistaken for the riverbed beneath it.").IsTrue();
+        AssertThat(!WalkSafetyQueries.InWater(bridge, feet) && !WalkSafetyQueries.NeedsRecovery(bridge, feet, false)).OverrideFailureMessage("A dry supported bridge is mistaken for the riverbed beneath it.").IsTrue();
         AssertThat(WalkSafetyQueries.AllowsFeet(bridge, feet)).OverrideFailureMessage("A dry bridge region is rejected before native support checks.").IsTrue();
         var coarseWaterCell = new SafetySpatial(2f, -.5f, WalkClass.Water, ground: -1f);
-        AssertThat(!WalkSafetyQueries.NeedsRecovery(coarseWaterCell, feet)).OverrideFailureMessage("A supported dry bridge over a coarse water cell triggers a water return.").IsTrue();
+        AssertThat(!WalkSafetyQueries.NeedsRecovery(coarseWaterCell, feet, false)).OverrideFailureMessage("A supported dry bridge over a coarse water cell triggers a water return.").IsTrue();
     }
 
     [TestCase]

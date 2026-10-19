@@ -21,6 +21,11 @@ public static class WalkMath
     public static bool ValidCylinderDimensions(float radius, float height) =>
         float.IsFinite(radius) && float.IsFinite(height) && radius > 0 && height > 0;
 
+    public static bool SwimmingAt(WaterSample water, float feetY, bool swimming) =>
+        water.CanSwim && feetY <= water.SurfaceY && (swimming
+            ? water.SurfaceY - water.BottomY > WaterMotionRules.ExitColumnDepth
+            : water.SurfaceY - water.BottomY >= WaterMotionRules.EnterColumnDepth);
+
     public static bool FreezeUnlessPlaying(bool isPlaying, Vector3 feet, ref Vector3 previousFeet, ref Vector3 velocity)
     {
         if (isPlaying) return false;
