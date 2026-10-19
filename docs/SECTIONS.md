@@ -1822,7 +1822,7 @@
 
 - ENG-GATES §0 结论 · L21 · 808
   - ★ ENG-GATES §0.1 接入要点 · L34 · 255
-- ENG-GATES §1 门禁与测试节奏 · L40 · 3.3k
+- ENG-GATES §1 门禁与测试节奏 · L40 · 3.2k
   - ENG-GATES §1.1 测试三档 · L44 · 1.5k
   - ENG-GATES §1.2 门禁表 · L68 · 1.4k
   - ENG-GATES §1.4 入口与交付分工 · L89 · 220
