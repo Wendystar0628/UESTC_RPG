@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
 using Campus.Gen.World;
 using S = Campus.Gen.Furniture.FurnitureStyle;
@@ -74,10 +75,15 @@ public static partial class FurniturePlanner
     /// <param name="world">The world model.</param>
     /// <param name="claimedBy">The claims query (<see cref="BuildContext.ClaimedBy"/>); none means nothing is claimed.</param>
     /// <param name="inputs">The map's preloaded source inputs (<see cref="BuildContext.SourceInputs"/>): the tree rows come from its <see cref="S.PlantingKey"/>.</param>
-    public static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null)
+    public static FurnitureLayout Build(BuildInputSnapshot globalInputs, PaletteCatalog catalog, IWorldModel world,
+        Func<FeatureId, Aspects, WpId?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         claimedBy ??= (_, _) => null;
+        var atlas = new SceneTextAtlas(globalInputs.Require(SceneTextInputs.AtlasKey));
+        var openSign = S.OpenSign with { PrintedText = atlas.Layout(StreetStyle.OpenTitle), PrintedTextBaseColor = catalog.Resolve(StreetStyle.Lit(StreetStyle.SignGreen)) };
+        var stop = S.Stop with { PrintedText = atlas.Layout(StreetStyle.StopTitle), PrintedTextBaseColor = catalog.Resolve(StreetStyle.Lit(StreetStyle.SignBlue)) };
+        var fountain = S.Fountain with { PrintedText = atlas.Layout(StreetStyle.FountainTitle), PrintedTextBaseColor = catalog.Resolve(StreetStyle.Lit(StreetStyle.PaintWhite)) };
         var (rows, plantingDiagnostics) = PlantingRows.Resolve(inputs);
         var site = new StreetSite(world);
         foreach (var road in rows) site.AddRows(world.Network.Roads.Where(l => StreetSite.RoadName(l) == road.Name), road.Offsets);
@@ -85,12 +91,12 @@ public static partial class FurniturePlanner
         var items = new List<FurnitureItem>();
         var diagnostics = new List<BuildDiagnostic>(plantingDiagnostics);
         Anchors(site, items, diagnostics);
-        Entrances(site, items, claimedBy);
-        Stops(site, items);
+        Entrances(site, items, claimedBy, openSign);
+        Stops(site, items, stop);
         foreach (var road in roads) Road(site, items, diagnostics, road);
         foreach (var road in roads.Where(r => r.KerbRamps)) KerbRamps(site, items, diagnostics, road);
         Cars(site, items);
-        Fountains(site, items, diagnostics);
+        Fountains(site, items, diagnostics, fountain);
         Signposts(site, items, diagnostics);
         Services(site, items, diagnostics, roads);
         Barriers(site, items, diagnostics);

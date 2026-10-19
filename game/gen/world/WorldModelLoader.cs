@@ -14,7 +14,6 @@ public sealed record WorldLoadOptions
     public IInteriorIndex? Interiors { get; init; }
     public IOutskirtsModel? Outskirts { get; init; }
     public IFidelityModel? Fidelity { get; init; }
-    public ITerrain Terrain { get; init; } = FlatTerrain.Default;
     /// <summary>Explicit registered feature claims, supplied by the map adapter; an overlay Owner is not a claim.</summary>
     public IReadOnlyDictionary<FeatureId, WpId>? ClaimedBy { get; init; }
 }
@@ -24,11 +23,10 @@ public sealed class WorldDataException(string file, string entry, string message
 {
     public string File { get; } = file;
     public string Entry { get; } = entry;
-    internal bool CanNarrowAutomaticRoad { get; init; }
 }
 
 /// <summary>Pure parser. The kernel supplies only the active map's relative filenames and bytes.</summary>
-public static class WorldModelLoader
+public static partial class WorldModelLoader
 {
     /// <summary>
     /// Storey height for a building the world data gives no height for. This layer is below the building styles, which supply
@@ -36,22 +34,66 @@ public static class WorldModelLoader
     /// </summary>
     public const float DefaultStoreyHeight = 3.6f;
     private static readonly Encoding Utf8 = new UTF8Encoding(false, true);
+    /// <summary>Topology-only parsing for synthetic callers; terrain files require the descriptor-based production entry.</summary>
     public static WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, WorldLoadOptions? options = null) =>
         Load(map, files.ToDictionary(p => p.Key, p => Decode(p.Key, p.Value), StringComparer.Ordinal), options);
+
+    /// <summary>Production entry: the frozen map descriptor and bytes compile one terrain before world publication.</summary>
+    public static WorldModelLoadResult LoadWorld(WorldModelLoadInputs inputs,
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, WorldLoadOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(inputs);
+        return LoadChecked(inputs.Descriptor.Id,
+            files.ToDictionary(p => p.Key, p => Decode(p.Key, p.Value), StringComparer.Ordinal), options, inputs);
+    }
 
     private static string Decode(string file, ReadOnlyMemory<byte> bytes)
     { try { return Utf8.GetString(bytes.Span).TrimStart('\uFEFF'); } catch (DecoderFallbackException error) { throw new WorldDataException(file, "encoding", "Invalid UTF-8.", error); } }
 
     public static WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, string> files, WorldLoadOptions? options = null)
+        => LoadChecked(map, files, options, null);
+
+    /// <summary>Claims baseline only. This entry rejects terrain input and never compiles automatic constraints.</summary>
+    public static IReadOnlyDictionary<FeatureId, WorldFeature> LoadTopology(MapId map,
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
     {
-        try { return LoadCore(map, files, options); }
+        try
+        {
+            var topology = ReadTopology(map,
+                files.ToDictionary(pair => pair.Key, pair => Decode(pair.Key, pair.Value), StringComparer.Ordinal), null);
+            var sources = ReadTerrainSources(map, topology.Input);
+            if (sources.Count != 0)
+                throw new WorldDataException(sources[0].File, sources[0].Data.Ops.FirstOrDefault()?.Id ?? "root",
+                    "Topology-only loading cannot consume terrain files.");
+            return topology.Features;
+        }
         catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
         { throw new WorldDataException("campus.json", "root", error.Message, error); }
     }
 
-    private static WorldModelLoadResult LoadCore(MapId map, IReadOnlyDictionary<string, string> files, WorldLoadOptions? options)
+    private static WorldModelLoadResult LoadChecked(MapId map, IReadOnlyDictionary<string, string> files,
+        WorldLoadOptions? options, WorldModelLoadInputs? inputs)
+    {
+        try { return LoadCore(map, files, options, inputs); }
+        catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
+        { throw new WorldDataException("campus.json", "root", error.Message, error); }
+    }
+
+    private static WorldModelLoadResult LoadCore(MapId map, IReadOnlyDictionary<string, string> files,
+        WorldLoadOptions? options, WorldModelLoadInputs? inputs)
     {
         options ??= new();
+        var topology = ReadTopology(map, files, inputs is null ? options.ClaimedBy : inputs.ClaimedBy);
+        return Publish(topology, options, inputs);
+    }
+
+    private sealed record WorldTopology(MapId Map, SortedDictionary<string, string> Input, GeoFrame Geo,
+        PolygonRings Boundary, IReadOnlyDictionary<FeatureId, WorldFeature> Features, WorldNetwork Network,
+        string? EntityPrefix, IReadOnlyList<InteriorOverlayFile> InteriorOverlays);
+
+    private static WorldTopology ReadTopology(MapId map, IReadOnlyDictionary<string, string> files,
+        IReadOnlyDictionary<FeatureId, WpId>? claimedBy)
+    {
         var input = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var pair in files.OrderBy(p => p.Key, StringComparer.Ordinal))
         {
@@ -152,7 +194,7 @@ public static class WorldModelLoader
             {
                 var overlay = Deserialize<OverlayFile>(pair.Key, pair.Value);
                 CheckMap(map, overlay.Map, pair.Key);
-                ApplyOverlay(pair.Key, overlay, features, aliases, overlayWrites, options.ClaimedBy, roads);
+                ApplyOverlay(pair.Key, overlay, features, aliases, overlayWrites, claimedBy, roads);
             }
             else if (pair.Key.EndsWith(".overlay.json", StringComparison.Ordinal) &&
                 !IsDedicatedOverlayGroup(pair.Key["overlay/".Length..].Split('/')[0].Replace(".overlay.json", "", StringComparison.Ordinal)))
@@ -160,37 +202,31 @@ public static class WorldModelLoader
         }
         var network = roads.Publish(features);
         var frozen = new ReadOnlyDictionary<FeatureId, WorldFeature>(features.Values.ToDictionary(f => f.Id));
-        var interiors = options.Interiors ?? new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"));
+        return new(map, input, geo, boundary, frozen, network, prefix, interiorOverlays.AsReadOnly());
+    }
+
+    private static WorldModelLoadResult Publish(WorldTopology topology, WorldLoadOptions options, WorldModelLoadInputs? inputs)
+    {
+        var (map, input, geo, boundary, frozen, network, prefix, interiorOverlays) = topology;
+        var sources = ReadTerrainSources(map, input);
+        var (terrain, diagnostics) = CompileTerrain(inputs, sources, boundary, frozen, network, prefix);
+        var interiors = options.Interiors ?? new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"),
+            inputs is null ? null : terrain);
         // The outskirts producer owns its document format; do not silently discard a supplied layer.
         if (input.ContainsKey("outskirts.json") && options.Outskirts is null)
             throw new WorldDataException("outskirts.json", "root", "A parsed outskirts model is required until the producer's file contract is available.");
         var outskirts = options.Outskirts;
-        var world = new WorldModelSnapshot(frozen, boundary, network, interiors, outskirts, interiorOverlays.AsReadOnly(), options,
-            ReadTerrainOperations(map, input));
+        var world = new WorldModelSnapshot(frozen, boundary, network, interiors, outskirts, interiorOverlays, options,
+            TerrainOperations(sources), terrain);
         var limitRing = outskirts?.CutLine is { Count: >= 3 } cutLine ? cutLine : boundary.Outer;
         var roam = ReadRoam(map, input);
         var margin = outskirts is null ? roam?.FallbackMargin ?? 0 : 0;
         var bounds = new Box3(new(limitRing.Min(p => p.X) - margin, roam?.FloorY ?? 0, limitRing.Min(p => p.Y) - margin),
-            new(limitRing.Max(p => p.X) + margin, roam?.CeilY ?? Math.Max(1, features.Count > 0 ? features.Values.Max(f => f.Bounds.Max.Y) : 0), limitRing.Max(p => p.Y) + margin));
+            new(limitRing.Max(p => p.X) + margin, roam?.CeilY ?? Math.Max(1, frozen.Count > 0 ? frozen.Values.Max(f => f.Bounds.Max.Y) : 0), limitRing.Max(p => p.Y) + margin));
         return new(world, geo, PlanGeometry.Centroid(boundary.Outer), bounds,
             TileGrid.At(bounds.Min),
             TileGrid.At(bounds.Max))
-        { Diagnostics = ["Terrain uses the current source relative plane. Designed slopes, platforms and sunken areas remain incomplete."] };
-    }
-
-    private static IReadOnlyDictionary<string, TerrainOp> ReadTerrainOperations(MapId map, SortedDictionary<string, string> input)
-    {
-        var operations = new SortedDictionary<string, TerrainOp>(StringComparer.Ordinal);
-        foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("overlay/terrain/", StringComparison.Ordinal)
-            && pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 3))
-        {
-            var overlay = TerrainOverlayJson.Parse(Utf8.GetBytes(text));
-            CheckMap(map, overlay.Map, file);
-            foreach (var operation in overlay.Ops)
-                if (!operations.TryAdd(operation.Id, operation))
-                    throw new WorldDataException(file, operation.Id, "Duplicate terrain operation ID.");
-        }
-        return new ReadOnlyDictionary<string, TerrainOp>(operations);
+        { Diagnostics = diagnostics };
     }
 
     private static void ApplyZones(SortedDictionary<string, string> input, SortedDictionary<string, WorldFeature> features, Dictionary<string, List<string>> aliases)

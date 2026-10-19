@@ -76,11 +76,9 @@ public static class WaterCatalog
         var perimeter = Perimeter(rings);
         var elongation = perimeter * perimeter / (4f * float.Pi * area);
         var kind = slot < 0 && elongation > p.ChannelElongation ? WaterKind.Channel : WaterKind.Lake;
-        var centre = (min + max) * 0.5f;
-        // One normal water level per body (D-180): bank top minus the bank-type drop. Mesh, reflection mirror plane and
-        // everything else read this same h. ITerrain.WaterY (contract-15) replaces the rule when it lands.
-        var bank = world.Spatial.GroundY(centre.X, centre.Y);
-        var y = kind == WaterKind.Lake ? bank - p.LakeDrop + p.LakeLift : bank - p.ChannelDrop;
+        // The terrain owns the absolute level; its ground height here is the already carved bed, not the bank top.
+        var y = world.Terrain.WaterY(id)
+            ?? throw new WorldDataException("ITerrain.WaterY", id.Value, "Water feature has no terrain water level.");
         return new(id, kind, rings, y, slot, min, max, area);
     }
 

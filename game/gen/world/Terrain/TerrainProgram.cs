@@ -3,7 +3,7 @@ using Campus.Contracts.Maps;
 
 namespace Campus.Gen.World;
 
-internal enum TerrainGroup { Regional, Linear, Water, Pad, Corridor }
+internal enum TerrainGroup { Regional, Linear, Water, Pad, Corridor = 5, CorridorGrading = 4, PadCore = 6, ZeroBandCore = 7 }
 internal sealed record TerrainSource(string File, TerrainOverlayFile Data);
 internal sealed record TerrainAutoSettings(double LakeBankGrade, double LakeDepth, double ChannelBankGrade,
     double ChannelDepth, double CorridorShoulder);
@@ -163,6 +163,7 @@ internal sealed class CompiledTerrain : ITerrain, ITerrainBankSource, ITerrainWa
     public float HeightAt(float x, float z) => _field.HeightAt(x, z);
     public void FillTile(TileKey tile, int level, Span<short> cm) => _field.FillTile(tile, level, cm);
     public float PadY(FeatureId feature) => _field.PadY(feature);
+    public bool TryGetPadY(FeatureId feature, out float y) => _field.TryGetPadY(feature, out y);
     public float? WaterY(FeatureId water) => _field.WaterY(water);
     public TerrainFacts FactsAt(float x, float z) => _field.FactsAt(x, z);
     public float BankTopY(string id, double station)

@@ -48,10 +48,8 @@ internal static partial class TerrainCompiler
         foreach (var feature in b.Context.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             if (b.WrittenPads.Contains(feature.Id)) continue;
-            var polygons = WorldFeatureKinds.Parts(feature, "building").SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray();
-            if (polygons.Length == 0) continue;
-            var region = new TerrainRegion(polygons);
-            AddPad(b, region, feature.Id, TouchesZeroBand(b, region) ? 0 : Median(prePad, region), 0.8, 6, null, null);
+            if (b.References.StructuralPadArea(feature) is not { } region) continue;
+            AddPad(b, region, feature.Id, Median(prePad, region), 0.8, 6, null, null);
         }
     }
 
@@ -75,6 +73,8 @@ internal static partial class TerrainCompiler
             {
                 if (op is null && y == 0 && previous.BoundaryWeight is { Height: 0 } && previous.Surface == TerrainDifferential.Constant(0)) return previous;
                 var distance = region.Distance(x, z);
+                if (distance.Height <= 0) RequireZeroBandCore(b, TerrainDifferential.Constant(y), x, z, file, id);
+                if (distance.Height > 0 && InsideOtherPadCore(b, id, x, z)) return previous;
                 var beyond = distance - TerrainDifferential.Constant(apron);
                 if (beyond.Height > gradeWidth) return previous;
                 var target = TerrainDifferential.Constant(y);
@@ -91,7 +91,7 @@ internal static partial class TerrainCompiler
                 return Constrain(previous, target, beyond, fill, fill, 2, covered);
             }, op is null);
         b.Nodes.Add(node);
-        b.PadChecks.Add(new(feature, region, y, gradeWidth, structure, file, id));
+        b.PadChecks.Add(new(feature, region, y, apron, gradeWidth, structure, file, id));
         if (structure is not null) b.Diagnostics.Add($"NOT_VERIFIED: pad edge '{edge!.StructureId}' plan reference resolved; generated vertical collision connections require the content/physics acceptance pass.");
     }
 
@@ -139,27 +139,15 @@ internal static partial class TerrainCompiler
         throw new ArgumentException("Pad footprint has no usable interior sample; its holes or dimensions need correction.");
     }
 
-    private sealed class AutomaticShoulder(double width)
-    {
-        public double Width { get; private set; } = width;
-        public bool FixedBoundaryProfile { get; set; }
-        public bool Shrink()
-        {
-            if (Width == 0) return false;
-            Width = Width / 2 < 0.001 ? 0 : Width / 2;
-            return true;
-        }
-    }
     // Private compile-time builder. Trial profiles are replaced only while Hard banks are
     // being planned; every published node closes over an entry frozen before validation.
     private sealed class RoadEntry(TerrainRoad road, TerrainRoadProfile profile, TerrainCorridorOp? operation,
-        string file, AutomaticShoulder? grading)
+        string file)
     {
         public TerrainRoad Road { get; } = road;
         public TerrainRoadProfile Profile { get; private set; } = profile;
         public TerrainCorridorOp? Operation { get; } = operation;
         public string File { get; } = file;
-        public AutomaticShoulder? Grading { get; } = grading;
         public CorridorPlan? Plan { get; init; }
         public double MaximumCrossFall => Plan is { } plan ? Math.Max(plan.HasGaps ? 0.015 : 0, plan.Operations.Max(op => Math.Abs(op.CrossFall))) : Math.Abs(Operation?.CrossFall ?? 0.015);
         private bool _frozen;
@@ -175,6 +163,7 @@ internal static partial class TerrainCompiler
     {
         var roads = new List<RoadEntry>();
         var plans = CorridorPlans(b, operations);
+        PreparePadRoadComposition(b, plans);
         foreach (var plan in plans)
         {
             b.WrittenRoads.Add(plan.Road.Source);
@@ -187,8 +176,8 @@ internal static partial class TerrainCompiler
         var ranged = plans.Where(plan => plan.Operations.Any(op => op.Range is not null)).ToArray();
         var automatic = b.References.AutomaticRoads().Where(road => !b.WrittenRoads.Contains(road.Source)).ToArray();
         b.RoadFit = new(automatic.Select(road => new TerrainRoadProfile.Request(road,
-            BridgeExclusions(b, road), IsMotorRoad(road) ? 0.06 : 1d / 12))
-            .Concat(ranged.Select(plan => new TerrainRoadProfile.Request(plan.Road, plan.Exclusions, IsMotorRoad(plan.Road) ? 0.06 : 1d / 12,
+            BridgeExclusions(b, road), MaximumRoadGrade(road)))
+            .Concat(ranged.Select(plan => new TerrainRoadProfile.Request(plan.Road, plan.Exclusions, MaximumRoadGrade(plan.Road),
                 plan.Operations.Select(op => new TerrainRoadProfile.Interval(op.Anchors, b.Files[op.Id], op.Id)).ToArray()))).ToArray(), b.LandBeforeCorridors,
             roads.Select(entry => (entry.Road, entry.Profile)).ToArray(), (x, z) => ZeroBandWeight(b, x, z).Height == 0);
         var profiles = b.RoadFit.Solve();
@@ -197,34 +186,37 @@ internal static partial class TerrainCompiler
             var op = plan.Operations[0];
             if (plan.HasGaps && b.Context.Defaults is null)
                 throw new WorldDataException("map.json", "terrainDefaults", "Automatic road gaps require explicit map defaults.");
-            var entry = new RoadEntry(plan.Road, profiles[plan.Road.Source], op, b.Files[op.Id], null) { Plan = plan };
+            var entry = new RoadEntry(plan.Road, profiles[plan.Road.Source], op, b.Files[op.Id]) { Plan = plan };
             foreach (var interval in plan.Operations) AddCorridor(b, plan.Road, interval, b.Files[interval.Id], sharedEntry: entry);
-            if (plan.HasGaps)
-            {
-                AddCorridor(b, plan.Road, null, "network.json", sharedEntry: entry);
-                b.AutomaticRoads.Add("auto-corridor-" + plan.Road.Feature.Value, entry);
-            }
+            if (plan.HasGaps) AddCorridor(b, plan.Road, null, "network.json", sharedEntry: entry);
             roads.Add(entry);
         }
         foreach (var road in automatic)
         {
             if (!b.WrittenRoads.Add(road.Source)) continue;
             var entry = AddCorridor(b, road, null, "network.json", profiles[road.Source]); roads.Add(entry);
-            b.AutomaticRoads.Add("auto-corridor-" + road.Feature.Value, entry);
         }
-        ValidateRoadJunctions(roads);
+        ValidateRoadJunctions(b, roads);
         b.Roads.AddRange(roads);
+        AddPadCoreComposition(b);
     }
 
     private static bool IsMotorRoad(TerrainRoad road) => road.Kind is "motorway" or "trunk" or "primary" or "secondary" or "tertiary" or "residential" or "service";
 
+    private static double MaximumRoadGrade(TerrainRoad road) => IsMotorRoad(road) ? 0.06 : 1d / 12;
+
     private static List<(double From, double To)> BridgeExclusions(Builder b, TerrainRoad road)
     {
+        const double join = 0.05;
         var exclusions = new List<(double From, double To)>();
-        foreach (var bridge in b.Context.Network.Bridges)
+        foreach (var bridge in b.Context.Network.Bridges.OrderBy(bridge => bridge.Id.Value, StringComparer.Ordinal))
         {
-            var stations = bridge.Line.Points.Select(p => road.Path.Project(p.X, p.Y)).ToArray();
-            if (stations.Length >= 2 && stations.All(hit => hit.Distance <= 0.02)) exclusions.Add((stations.Min(hit => hit.Station), stations.Max(hit => hit.Station)));
+            var deck = b.References.BridgeArea(bridge.Id);
+            var bounds = TerrainRegion.Expand(deck?.Bounds ?? new TerrainPath(bridge.Line).Bounds,
+                join + (deck is null ? bridge.Width / 2d : 0));
+            if (road.Path.Bounds.Max.X < bounds.Min.X || road.Path.Bounds.Min.X > bounds.Max.X
+                || road.Path.Bounds.Max.Y < bounds.Min.Y || road.Path.Bounds.Min.Y > bounds.Max.Y) continue;
+            exclusions.AddRange(TerrainUnion.CoveredPathIntervals(road.Path, deck, bridge, join));
         }
         return exclusions;
     }
@@ -235,31 +227,36 @@ internal static partial class TerrainCompiler
         var id = op?.Id ?? "auto-corridor-" + road.Feature.Value;
         var exclusions = exclusionsOverride ?? BridgeExclusions(b, road);
         var motor = IsMotorRoad(road);
-        var maximumGrade = motor ? 0.06 : 1d / 12;
+        var maximumGrade = MaximumRoadGrade(road);
         var profile = sharedEntry?.Profile ?? automaticProfile ?? (op is null
             ? throw new InvalidOperationException("Automatic roads require the completed shared network profile solve.")
             : new TerrainRoadProfile(op.Anchors, road.Path.Length, exclusions, maximumGrade, file, id));
         var shoulder = op?.Shoulder ?? b.Context.Defaults?.CorridorShoulder
             ?? throw new WorldDataException("map.json", "terrainDefaults", "Automatic road constraints require explicit map defaults.");
-        var grading = op is null ? sharedEntry?.Grading ?? new AutomaticShoulder(shoulder) : null;
         var width = road.Width / 2 + (sharedEntry?.Plan is { } planWidth ? Math.Max(shoulder, planWidth.Operations.Max(operation => operation.Shoulder)) : shoulder);
         var crossMagnitude = sharedEntry?.MaximumCrossFall ?? Math.Abs(op?.CrossFall ?? 0.015);
         var reach = width + (b.RangeBound + TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight + crossMagnitude * width) / (1d / 3 - crossMagnitude) + 4;
         var support = TerrainRegion.Expand(road.Path.Bounds, reach);
         var patches = PathPatches(road.Path, reach);
-        var entry = sharedEntry ?? new RoadEntry(road, profile, op, file, grading);
-        b.Nodes.Add(new(id, file, op?.Zone ?? default, TerrainGroup.Corridor, op?.Priority ?? 50, support, (previous, x, z) =>
+        var entry = sharedEntry ?? new RoadEntry(road, profile, op, file);
+        TerrainEvaluation Apply(TerrainEvaluation previous, double x, double z, bool pavement)
         {
             if (op is null && previous.BoundaryWeight is { Height: 0 } && previous.Surface == TerrainDifferential.Constant(0)) return previous;
             var pointHit = road.Path.Project(x, z);
+            // SurfaceAt evaluates this projection, not the separately projected footprint
+            // contact. A structural interval has no ground surface or grading contribution.
+            if (entry.Profile.Excluded(pointHit.Station)) return previous;
             if (entry.Plan is { } plan && plan.At(pointHit.Station)?.Id != op?.Id) return previous;
+            // Pavement is composed after every road's shoulders and earthworks. A later
+            // road's falloff can therefore never cut through an earlier road surface.
+            if ((CorridorContactAt(road, 0, x, z).Distance.Height <= 0) != pavement) return previous;
             var parameters = entry.Plan?.Parameters(pointHit, shoulder);
-            var widthAt = parameters?.Shoulder ?? TerrainDifferential.Constant(grading?.Width ?? shoulder);
+            var widthAt = parameters?.Shoulder ?? TerrainDifferential.Constant(shoulder);
             var contact = CorridorContactAt(road, widthAt.Height, x, z);
             contact = contact with { Distance = contact.Distance - new TerrainDifferential(0, widthAt.Dx, widthAt.Dz) };
             var hit = road.Path.Project(contact.X, contact.Z);
             if (entry.Profile.Excluded(hit.Station)) return previous;
-            var longitudinal = entry.Profile.SurfaceAt(road.Path, x, z, road.Width, road.Path.Project(x, z));
+            var longitudinal = entry.Profile.SurfaceAt(road.Path, x, z, road.Width, pointHit);
             var cross = parameters?.Cross ?? TerrainDifferential.Constant(op?.CrossFall ?? 0.015);
             if (op is null)
             {
@@ -270,23 +267,22 @@ internal static partial class TerrainCompiler
             var target = new TerrainDifferential(longitudinal.Height + cross.Height * offset.Height,
                 longitudinal.Dx + cross.Height * offset.Dx + cross.Dx * offset.Height,
                 longitudinal.Dz + cross.Height * offset.Dz + cross.Dz * offset.Height);
+            if (pavement) RequireZeroBandCore(b, target, x, z, file, id);
             var proposed = Constrain(previous, target, contact.Distance, 1d / 3, 1d / 3, 2);
-            if (Math.Abs(proposed.Surface.Height - previous.Surface.Height) > TerrainMath.HeightTolerance
-                && (op is not null || CorridorContactAt(road, 0, x, z).Distance.Height < 0))
-            {
-                foreach (var water in b.WaterShores)
-                    if (water.Region.Distance(x, z).Height < -TerrainMath.HeightTolerance)
-                        throw new WorldDataException(file, id,
-                            $"Road core/author constraint changes registered surface-water bed '{water.Id}' without a real bridge/underpass exclusion at ({x:R},{z:R}): previousH={previous.Surface.Height:R}, proposedH={proposed.Surface.Height:R}. Smoothing does not authorize filling a channel or inventing a bridge.");
-            }
-            return op is null ? ConstrainAutomaticRoadAtWater(b, road, file, id, previous, proposed, x, z) : proposed;
-        }, op is null)
+            return ConstrainRoadAtWater(b, previous, proposed, x, z);
+        }
+        b.Nodes.Add(new(id, file, op?.Zone ?? default, TerrainGroup.CorridorGrading, op?.Priority ?? 50, support,
+            (previous, x, z) => Apply(previous, x, z, false), op is null) { IndexPatches = patches });
+        var coreReach = (road.Footprint is null ? road.Width / 2 : 0) + TerrainMath.RoadCoreJoinTolerance;
+        var coreSupport = TerrainRegion.Expand(road.Footprint?.Bounds ?? road.Path.Bounds, coreReach);
+        b.Nodes.Add(new(id, file, op?.Zone ?? default, TerrainGroup.Corridor, op?.Priority ?? 50, coreSupport,
+            (previous, x, z) => Apply(previous, x, z, true), op is null)
         {
-            IndexPatches = patches,
+            IndexPatches = road.Footprint is null ? PathPatches(road.Path, coreReach) : null,
             ExplainPoint = (x, z) =>
             {
                 var hit = road.Path.Project(x, z); var center = road.Path.At(hit.Station);
-                var contact = CorridorContactAt(road, grading?.Width ?? shoulder, x, z); var sx = contact.X; var sz = contact.Z;
+                var contact = CorridorContactAt(road, shoulder, x, z); var sx = contact.X; var sz = contact.Z;
                 var oldShoulder = b.LandBeforeCorridors.Evaluate(sx, sz).Surface.Height;
                 var shoulderHit = road.Path.Project(sx, sz);
                 var shoulderOffset = motor ? -Math.Abs(shoulderHit.Offset) : shoulderHit.Offset;
@@ -314,18 +310,21 @@ internal static partial class TerrainCompiler
 
     internal static CorridorContact CorridorContactAt(TerrainRoad road, double shoulder, double x, double z)
     {
+        // Source centreline endpoints and their rounded paving polygons join at demo
+        // centimetre precision. Exterior shoulders retain their authored geometric width.
+        var contactOffset = shoulder == 0 ? TerrainMath.RoadCoreJoinTolerance : shoulder;
         TerrainDifferential distance; double tx; double tz; double curvatureScale;
         if (road.Footprint is { } footprint)
         {
             var sourceDistance = footprint.Distance(x, z);
-            distance = sourceDistance - TerrainDifferential.Constant(shoulder);
+            distance = sourceDistance - TerrainDifferential.Constant(contactOffset);
             if (distance.Height <= 0) return new(distance, x, z, 1, 0, 1);
             var boundary = footprint.NearestBoundary(x, z); tx = boundary.Tx; tz = boundary.Tz;
-            curvatureScale = shoulder / sourceDistance.Height;
+            curvatureScale = contactOffset / sourceDistance.Height;
         }
         else
         {
-            var hit = road.Path.Project(x, z); var width = road.Width / 2 + shoulder;
+            var hit = road.Path.Project(x, z); var width = road.Width / 2 + contactOffset;
             distance = new(hit.Distance - width, hit.DistanceDx, hit.DistanceDz);
             if (distance.Height <= 0) return new(distance, x, z, 1, 0, 1);
             tx = hit.StationDx; tz = hit.StationDz; curvatureScale = width / hit.Distance;
@@ -365,21 +364,7 @@ internal static partial class TerrainCompiler
         return new(TerrainMath.Hermite(t), inside.Dx * derivative, inside.Dz * derivative);
     }
 
-    private static bool TouchesZeroBand(Builder b, TerrainRegion region)
-    {
-        foreach (var polygon in region.Polygons)
-            for (var i = 0; i < polygon.Outer.Count; i++)
-            {
-                var a = polygon.Outer[i]; var c = polygon.Outer[(i + 1) % polygon.Outer.Count];
-                var dx = (double)c.X - a.X; var dz = (double)c.Y - a.Y;
-                var count = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(dx * dx + dz * dz)));
-                for (var j = 0; j <= count; j++)
-                    if (-b.Campus.Distance(a.X + dx * j / count, a.Y + dz * j / count).Height <= 20) return true;
-            }
-        return false;
-    }
-
-    private static void ValidateRoadJunctions(IReadOnlyList<RoadEntry> roads)
+    private static void ValidateRoadJunctions(Builder b, IReadOnlyList<RoadEntry> roads)
     {
         var nodes = new Dictionary<(long X, long Z), List<(RoadEntry Road, double Station)>>();
         foreach (var road in roads)
@@ -399,14 +384,29 @@ internal static partial class TerrainCompiler
             foreach (var (road, station) in connected)
             {
                 if (road.Profile.Excluded(station)) continue;
-                if (Math.Abs(road.Profile.At(station).Y - first) > TerrainRoadProfile.JunctionHeightTolerance)
+                var height = road.Profile.At(station).Y;
+                if (!double.IsFinite(first) || !double.IsFinite(height) || Math.Abs(height - first) > TerrainRoadProfile.JunctionHeightTolerance)
                     throw new WorldDataException(road.File, road.Operation?.Id ?? road.Road.Feature.Value, "Road centreline junction has inconsistent elevations.");
+                var maximumGrade = MaximumRoadGrade(road.Road);
+                (double Station, double Height, double Grade)? comfortExceeded = null;
                 for (var delta = -10; delta <= 10; delta++)
                 {
                     var sample = Math.Max(0, Math.Min(road.Profile.Length, station + delta));
-                    if (!road.Profile.Excluded(sample) && Math.Abs(road.Profile.At(sample).Grade) > 0.03 + TerrainMath.GradeTolerance)
+                    if (road.Profile.Excluded(sample)) continue;
+                    var point = road.Profile.At(sample);
+                    if (!double.IsFinite(point.Y) || !double.IsFinite(point.Grade) || Math.Abs(point.Grade) > maximumGrade + TerrainMath.GradeTolerance)
                         throw new WorldDataException(road.File, road.Operation?.Id ?? road.Road.Feature.Value,
-                            $"Road profile exceeds 3% within 10 m of a junction: node=({node.Key.X},{node.Key.Z}) mm, station={station:R}, sample={sample:R}, height={road.Profile.At(sample).Y:R}, grade={road.Profile.At(sample).Grade:R}.");
+                            $"Road profile is non-finite or exceeds hard grade {maximumGrade:R} within 10 m of a junction: node=({node.Key.X},{node.Key.Z}) mm, station={station:R}, sample={sample:R}, height={point.Y:R}, grade={point.Grade:R}.");
+                    if (Math.Abs(point.Grade) > 0.03 + TerrainMath.GradeTolerance
+                        && (comfortExceeded is null || Math.Abs(point.Grade) > Math.Abs(comfortExceeded.Value.Grade)))
+                        comfortExceeded = (sample, point.Y, point.Grade);
+                }
+                // The 3% junction buffer is a comfort target; the road-class ceiling above
+                // remains blocking. Keep the authored profile and report its worst existing sample.
+                if (comfortExceeded is { } issue)
+                {
+                    var diagnostic = $"Road junction exceeds 3% comfort target within 10 m (non-blocking content issue): file='{road.File}', entry='{road.Operation?.Id ?? road.Road.Feature.Value}', source='{road.Road.Source.Value}', node=({node.Key.X},{node.Key.Z}) mm, station={station:R}, sample={issue.Station:R}, height={issue.Height:R}, grade={issue.Grade:R}, hardMaximumGrade={maximumGrade:R}.";
+                    if (!b.Diagnostics.Contains(diagnostic, StringComparer.Ordinal)) b.Diagnostics.Add(diagnostic);
                 }
             }
         }

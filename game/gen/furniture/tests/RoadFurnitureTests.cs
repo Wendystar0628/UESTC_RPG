@@ -146,7 +146,7 @@ public sealed class RoadFurnitureTests
             { Props = JsonSerializer.SerializeToElement(new { highway = "residential" }) };
         var walk = new NetworkLine(new("design:furniture-test-mouth"), new Polyline([spot + new Vector2(0f, -14f), spot + new Vector2(0f, -1.1f)]), 4f)
             { Props = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 4f }) };
-        var layout = FurniturePlanner.Build(MadeWorld(OpenWorld.Value, [road, walk], []), null, Inputs());
+        var layout = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, MadeWorld(OpenWorld.Value, [road, walk], []), null, Inputs());
         var spheres = layout.Items.Where(i => i.Kind == FurnitureKind.Barrier).OrderBy(i => i.Anchor.X).ToList();
         AssertThat(spheres.Count >= 2).OverrideFailureMessage($"{spheres.Count} spheres across a 4 m walk's mouth").IsTrue();
         var radius = ((PostCollider)spheres[0].Colliders[0]).R;

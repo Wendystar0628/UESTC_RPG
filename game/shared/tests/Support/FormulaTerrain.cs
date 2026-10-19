@@ -22,6 +22,7 @@ internal sealed class FormulaTerrain(
     public bool IsFlat(TileKey tile) => isFlat?.Invoke(tile) ?? false;
     public float HeightAt(float x, float z) => height(x, z);
     public float PadY(FeatureId feature) => padY?.Invoke(feature) ?? 0f;
+    public bool TryGetPadY(FeatureId feature, out float y) { y = PadY(feature); return true; }
     public float? WaterY(FeatureId water) => null;
     public TerrainFacts FactsAt(float x, float z) => facts?.Invoke(x, z) ?? LevelFacts;
 

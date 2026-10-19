@@ -49,7 +49,7 @@ public sealed class FurniturePlantingRowTests
         {
             var (none, warnings) = PlantingRows.Resolve(inputs);
             AssertThat(none.Count == 0 && warnings.Count == 1 && warnings[0].Level == DiagnosticLevel.Warning && warnings[0].Code == code).OverrideFailureMessage($"{warnings.Count} diagnostics for {code}").IsTrue();
-            var layout = FurniturePlanner.Build(OpenWorld.Value, null, inputs);
+            var layout = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, OpenWorld.Value, null, inputs);
             AssertThat(layout.Diagnostics.Where(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal)).SequenceEqual(warnings) && layout.Items.Any(i => i.Kind == FurnitureKind.StreetLamp)).OverrideFailureMessage("the layout without rows does not build with the one warning").IsTrue();
         }
         AssertThat(!RealLayout.Value.Diagnostics.Any(d => d.Code.StartsWith("furniture.planting.", StringComparison.Ordinal))).OverrideFailureMessage("the real layout warns").IsTrue();

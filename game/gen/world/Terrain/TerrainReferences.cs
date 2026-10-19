@@ -8,6 +8,7 @@ internal sealed record TerrainRoad(FeatureId Feature, FeatureId Source, TerrainP
 
 internal sealed class TerrainReferences(TerrainCompileContext context)
 {
+    private readonly Dictionary<FeatureId, TerrainRegion?> _bridgeAreas = [];
     public TerrainRegion Area(FeatureId id, string kind, string file, string op)
     {
         if (!context.Features.TryGetValue(id, out var feature)) throw new WorldDataException(file, op, $"Missing {kind} entity '{id.Value}'.");
@@ -19,12 +20,27 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
     public TerrainRegion PadArea(FeatureId id, string file, string op)
     {
         if (!context.Features.TryGetValue(id, out var feature)) throw new WorldDataException(file, op, $"Missing pad entity '{id.Value}'.");
-        var buildings = WorldFeatureKinds.Parts(feature, "building").SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray();
-        if (buildings.Length > 0) return new(buildings);
-        if (feature.Kind.Value is not ("plaza" or "platform" or "pavilion" or "shelter" or "kiosk") && !IsArealRoad(id))
+        if (StructuralPadArea(feature) is { } structure) return structure;
+        if (feature.Kind.Value is not ("plaza" or "platform") && !IsArealRoad(id))
             throw new WorldDataException(file, op, $"Pad entity '{id.Value}' is neither an actual building nor an explicitly typed supported structure/plaza.");
         return new(WorldFeatureGeometry.PolygonsOf(feature.Geometry));
     }
+
+    public TerrainRegion? StructuralPadArea(WorldFeature feature)
+    {
+        // Parts are physical footprints; aggregate geometry is only an envelope when parts exist.
+        IEnumerable<WorldFeaturePart> parts = feature.Parts.Count > 0 ? feature.Parts
+            : [new("", feature.Geometry, feature.Height, feature.Storeys) { Props = feature.Props }];
+        var polygons = parts.Where(part => IsPadStructure(
+                WorldProps.TryText(part.Props, "kind") ?? feature.Kind.Value,
+                WorldProps.TryText(part.Props, "form") ?? WorldProps.TryText(feature.Props, "form")))
+            .SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray();
+        // groundY describes a separate raised deck, never a terrain pad elevation.
+        return polygons.Length > 0 ? new(polygons) : null;
+    }
+
+    private static bool IsPadStructure(string kind, string? form) =>
+        kind is "building" or "pavilion" or "shelter" or "kiosk" || kind == "anchor" && form == "kiosk";
 
     public TerrainRoad Road(FeatureId id, string file, string op)
     {
@@ -118,6 +134,18 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
             var polygons = parts.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray();
             yield return new(line.Id, line.Id, new(line.Line), line.Width, kind, polygons.Length > 0 ? new(polygons) : null);
         }
+    }
+
+    public TerrainRegion? BridgeArea(FeatureId source)
+    {
+        if (_bridgeAreas.TryGetValue(source, out var known)) return known;
+        var polygons = context.Features.Values.OrderBy(feature => feature.Id.Value, StringComparer.Ordinal)
+            .SelectMany(feature => WorldFeatureKinds.Parts(feature, "road")
+                .Where(part => SourceNetworkId(part.SourceId) == source || feature.Id == source && part.SourceId.Length == 0))
+            .SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray();
+        TerrainRegion? area = polygons.Length > 0 ? new(polygons) : null;
+        _bridgeAreas.Add(source, area);
+        return area;
     }
 
     private static string RoadKind(NetworkLine line)

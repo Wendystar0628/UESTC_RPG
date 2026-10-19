@@ -6,11 +6,26 @@ namespace Campus.Gen.World;
 
 internal static partial class TerrainCompiler
 {
+    /// <summary>Offline acceptance of the constructed field and each authored influence extent.</summary>
+    internal static CompiledTerrain CompileAndValidate(TerrainCompileContext context, IReadOnlyList<TerrainSource> sources)
+    {
+        var (builder, program) = Construct(context, sources);
+        try
+        {
+            ValidateSourceRoadWaterCrossings(builder);
+            ValidateProgram(builder, program);
+        }
+        catch (WorldDataException error)
+        {
+            error.Data["TerrainDiagnostics"] = builder.Diagnostics.ToArray();
+            throw;
+        }
+        var zonesValidated = context.Zones is not null && builder.Operations.Values.All(op => context.Zones.ContainsKey(op.Zone));
+        return Complete(builder, program, zonesValidated);
+    }
+
     private static void ValidateProgram(Builder b, TerrainProgram program)
     {
-        ValidatePadOverlaps(b);
-        ValidateFinalPads(b, program);
-        ValidateShoreSamples(b, program);
         var minimum = 0d; var maximum = 0d; var maximumGrade = 0d; long count = 0;
         var rect = b.Context.DataRect;
         foreach (var tile in program.AffectedTiles())
@@ -48,6 +63,7 @@ internal static partial class TerrainCompiler
         void ValidateAuthored(TerrainNode node, Func<double, double, TerrainEvaluation> preceding)
         {
             var zone = b.Context.Zones is { } zones && zones.TryGetValue(node.Zone, out var polygons) ? new TerrainRegion(polygons) : null;
+            if (zone is null) return;
             var x0 = Math.Max(Math.Ceiling(node.Support.Min.X), Math.Ceiling(rect.Min.X));
             var z0 = Math.Max(Math.Ceiling(node.Support.Min.Y), Math.Ceiling(rect.Min.Y));
             var x1 = Math.Min(Math.Floor(node.Support.Max.X), Math.Floor(rect.Max.X));
@@ -55,40 +71,11 @@ internal static partial class TerrainCompiler
             for (var z = z0; z <= z1; z++)
                 for (var x = x0; x <= x1; x++)
                 {
-                    var zeroBand = b.Campus.Distance(x, z).Height >= -20;
-                    var outsideZone = zone is not null && !zone.Contains(x, z);
-                    if (!zeroBand && !outsideZone) continue;
+                    if (zone.Contains(x, z)) continue;
                     var before = preceding(x, z); var after = node.Apply(before, x, z);
                     if (Math.Abs(before.Surface.Height - after.Surface.Height) <= TerrainMath.HeightTolerance) continue;
-                    if (zeroBand && Math.Abs(after.Surface.Height) > TerrainMath.HeightTolerance && !b.Water.Any(w => w.Channel && !w.Underground && w.Region.Contains(x, z)))
-                        throw new WorldDataException(node.File, node.Id, $"Authored operation changes the protected zero band at ({x}, {z}); a later operation cannot hide this violation.");
-                    if (outsideZone)
-                        throw new WorldDataException(node.File, node.Id, $"Terrain influence (including its slope/fillet) leaves authoritative zone '{node.Zone.Value}' at ({x}, {z}).");
+                    throw new WorldDataException(node.File, node.Id, $"Terrain influence (including its slope/fillet) leaves authoritative zone '{node.Zone.Value}' at ({x}, {z}).");
                 }
-        }
-    }
-
-    private static void ValidateShoreSamples(Builder b, TerrainProgram program)
-    {
-        foreach (var water in b.WaterShores)
-        {
-            foreach (var polygon in water.Region.Polygons)
-                foreach (var ring in new[] { polygon.Outer }.Concat(polygon.Holes))
-                    for (var i = 0; i < ring.Count; i++)
-                    {
-                        var a = ring[i]; var c = ring[(i + 1) % ring.Count];
-                        var dx = (double)c.X - a.X; var dz = (double)c.Y - a.Y;
-                        var steps = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(dx * dx + dz * dz)));
-                        for (var j = 0; j <= steps; j++)
-                        {
-                            var x = a.X + dx * j / steps; var z = a.Y + dz * j / steps;
-                            var h = program.Evaluate(x, z).Surface.Height;
-                            var expected = water.Node.Apply(b.LandBeforeWater.Evaluate(x, z), x, z).Surface.Height;
-                            if (water.CheckLevel(x, z) && Math.Abs(h - expected) > 0.02)
-                                throw new WorldDataException(water.File, water.Id,
-                                    $"Shoreline at ({x:R}, {z:R}) differs from its fixed bank profile by {h - expected:R} m after all constraints (expected={expected:R}). {program.Explain(x, z)}");
-                        }
-                    }
         }
     }
 

@@ -34,6 +34,19 @@ public sealed partial class TerrainCompilerTests
             try { TerrainRoadProfile.ResolveStation(55.499, 55.5, roundedEnd.Length, "fixture", "steps"); } catch (WorldDataException error) { rejection = error; }
             AssertThat(rejection is not null).IsTrue();
         }
+        var end = new Vector2(10, 0);
+        var paving = new PolygonGeometry(Box(0, -1, end.X - (float)TerrainMath.RoadCoreJoinTolerance / 2, 1));
+        var feature = new WorldFeature(new("fixture:core-join-road"), FeatureSource.Osm, new("road"), paving)
+            { Parts = [new("osm:way:1", paving, null, null) { Props = Kind("road") }] };
+        var high = new NetworkLine(new("fixture:source:way:1"), new([Vector2.Zero, end]), 2)
+            { Props = JsonSerializer.SerializeToElement(new { highway = "service" }) };
+        var low = high with { Id = new("fixture:source:way:2"), Line = new([new(0, 4), new(20, 4)]) };
+        var highOp = new TerrainCorridorOp("design:terrain:core-high", "fixed endpoint/core join regression", high.Id,
+            [new(0, 0.6), new(10, 0.6)], 0, Defaults.CorridorShoulder) { Zone = Zone };
+        var lowOp = highOp with { Id = "design:terrain:core-low", Road = low.Id, Anchors = [new(0, 0), new(20, 0)] };
+        var terrain = TerrainCompiler.Compile(Context([feature]) with { Network = new([high, low], [], [], [], []) }, [Source([highOp, lowOp])]);
+        AssertThat(Math.Abs(terrain.HeightAt(end.X, end.Y) - highOp.Anchors[^1].Y) <= TestTolerance.Position)
+            .OverrideFailureMessage("An endpoint within the core join tolerance was left in outer grading and cut by another road's falloff.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using Campus.Contracts;
 using Campus.Tests;
 using GdUnit4;
@@ -24,19 +25,21 @@ public sealed class HidePartRealCampusTests
                     : Array.Empty<HidePartOp>();
             }).ToArray();
         AssertThat(removals.Length > 0).OverrideFailureMessage("The authored campus contains no source-removal scenario.").IsTrue();
+        // Isolate the authored source-removal operations: terrain is outside this feature-membership contract.
         var files = captured.Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
-            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-        var before = RealMapFixture.LoadPrepared(files, options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() }).World;
-        files["overlay/hide-part-review.d/0000-fixture.json"] = JsonSerializer.Serialize(
+            .ToDictionary(pair => pair.Key, pair => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(pair.Value), StringComparer.Ordinal);
+        var map = RealMapFixture.Entry().Descriptor.Id;
+        var before = WorldModelLoader.LoadTopology(map, files);
+        files["overlay/hide-part-review.d/0000-fixture.json"] = JsonSerializer.SerializeToUtf8Bytes(
             new OverlayFile(new("review"), new("WP-14"), removals), ContractJson.Options);
-        var after = RealMapFixture.LoadPrepared(files, options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() }).World;
-        AssertThat(after.Features.Count == before.Features.Count).OverrideFailureMessage("Source-only removal deleted an entity identity.").IsTrue();
-        AssertThat(after.Features.Values.Sum(feature => feature.Parts.Count) ==
-            before.Features.Values.Sum(feature => feature.Parts.Count) - removals.Length).OverrideFailureMessage("Unexpected source parts were removed.").IsTrue();
+        var after = WorldModelLoader.LoadTopology(map, files);
+        AssertThat(after.Count == before.Count).OverrideFailureMessage("Source-only removal deleted an entity identity.").IsTrue();
+        AssertThat(after.Values.Sum(feature => feature.Parts.Count) ==
+            before.Values.Sum(feature => feature.Parts.Count) - removals.Length).OverrideFailureMessage("Unexpected source parts were removed.").IsTrue();
         var targets = removals.Select(op => op.Target).ToHashSet();
         foreach (var id in targets)
         {
-            var old = before.Features[id]; var current = after.Features[id];
+            var old = before[id]; var current = after[id];
             AssertThat(current.Name == old.Name && current.Zone == old.Zone && current.Family == old.Family &&
                 current.Facade == old.Facade && current.Props?.GetRawText() == old.Props?.GetRawText()).OverrideFailureMessage("Parent properties changed.").IsTrue();
             var removed = removals.Where(op => op.Target == id).Select(op => op.SourceId).ToHashSet(StringComparer.Ordinal);
@@ -46,8 +49,8 @@ public sealed class HidePartRealCampusTests
             foreach (var part in current.Parts)
                 AssertThat(Canonical(part) == Canonical(old.Parts.Single(previous => previous.SourceId == part.SourceId))).OverrideFailureMessage("A surviving real source part changed.").IsTrue();
         }
-        foreach (var id in before.Features.Keys.Where(id => !targets.Contains(id)))
-            AssertThat(Canonical(after.Features[id]) == Canonical(before.Features[id])).OverrideFailureMessage("An independent A/B entity or one of its parts changed.").IsTrue();
+        foreach (var id in before.Keys.Where(id => !targets.Contains(id)))
+            AssertThat(Canonical(after[id]) == Canonical(before[id])).OverrideFailureMessage("An independent A/B entity or one of its parts changed.").IsTrue();
     }
 
     private static string Canonical<T>(T value) => JsonSerializer.Serialize(value, ContractJson.Options);

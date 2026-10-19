@@ -29,8 +29,11 @@ public sealed class WaterCatalogTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void EveryBodyHasItsOwnLevelAndPartsAreBuiltSeparately()
     {
-        var lake = new FeatureId("lake");
-        var river = new FeatureId("river");
+        var source = RealMapFixture.Load().World;
+        var reflectLakes = RealMapFixture.Entry().Descriptor.Env.ReflectLakes;
+        var lake = reflectLakes.First();
+        var river = source.Features.Values.Where(f => f.Kind == WaterCatalog.WaterKindKey && !reflectLakes.Contains(f.Id))
+            .OrderBy(f => f.Id.Value, StringComparer.Ordinal).First().Id;
         var features = new Dictionary<FeatureId, WorldFeature>
         {
             [lake] = WorldFeatureFixture.Create(lake.Value, "water", new PolygonGeometry(Rect(0, 0, 80, 60)), source: FeatureSource.Osm),
@@ -44,12 +47,16 @@ public sealed class WaterCatalogTests
                 ],
             },
         };
-        var bodies = WaterCatalog.Build(new FakeWorld { Features = features, Spatial = new FlatSpatial((_, _) => 2f) }, Map(lake));
-        var p = WaterParams.Default;
+        // Keep the multipart fixture, but use the production terrain's levels and forbid the old ground-height path.
+        var bodies = WaterCatalog.Build(new FakeWorld(source)
+        {
+            Features = features,
+            Spatial = new FlatSpatial(forbidden: "Water surfaces must read ITerrain.WaterY."),
+        }, Map(lake));
         AssertThat(bodies.Count != 4).OverrideFailureMessage($"expected 4 bodies, got {bodies.Count}").IsFalse();
         var l = bodies.Single(b => b.Id == lake);
-        AssertThat(l.Kind != WaterKind.Lake || l.ReflectSlot != 0 || MathF.Abs(l.SurfaceY - (2f - p.LakeDrop + p.LakeLift)) > TestTolerance.Position).OverrideFailureMessage("lake level or slot wrong").IsFalse();
+        AssertThat(l.Kind != WaterKind.Lake || l.ReflectSlot != 0 || MathF.Abs(l.SurfaceY - source.Terrain.WaterY(lake)!.Value) > TestTolerance.Position).OverrideFailureMessage("lake level or slot wrong").IsFalse();
         foreach (var r in bodies.Where(b => b.Id == river))
-            AssertThat(r.Kind != WaterKind.Channel || r.ReflectSlot != -1 || MathF.Abs(r.SurfaceY - (2f - p.ChannelDrop)) > TestTolerance.Position).OverrideFailureMessage("channel level, kind or slot wrong").IsFalse();
+            AssertThat(r.Kind != WaterKind.Channel || r.ReflectSlot != -1 || MathF.Abs(r.SurfaceY - source.Terrain.WaterY(river)!.Value) > TestTolerance.Position).OverrideFailureMessage("channel level, kind or slot wrong").IsFalse();
     }
 }

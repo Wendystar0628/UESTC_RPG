@@ -32,9 +32,6 @@ public sealed record GroundSection
     /// <summary>Darker paver border just inside every plaza (ART-MODELING 7.8 edge band at plaza scale).</summary>
     public float PlazaBorder { get; init; } = 0.5f;
 
-    /// <summary>Bank faces at water edges drop to this level; the water surface itself belongs to WP-24.</summary>
-    public float BankBottomY { get; init; } = -0.6f;
-
     /// <summary>Lift of decal geometry (markings) above the surface it lies on.</summary>
     public float DecalLift { get; init; } = GroundLevels.Decal;
 

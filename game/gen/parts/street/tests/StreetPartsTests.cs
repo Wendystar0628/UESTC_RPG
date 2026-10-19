@@ -13,6 +13,9 @@ namespace Campus.Gen.Parts.Street.Tests;
 [TestSuite]
 public sealed class StreetPartsTests
 {
+    private static BuildInputSnapshot GlobalInputs { get; } = BuildInputSnapshot.Freeze(
+        new Dictionary<string, ReadOnlyMemory<byte>> { [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json")) });
+    private static PaletteCatalog Catalog => Campus.Contracts.Tests.PaletteFixture.Catalog;
     private static IEnumerable<Type> StreetTypes => typeof(StreetGallery).Assembly.GetTypes()
         .Where(type => type.Namespace == typeof(StreetGallery).Namespace ||
             type.Namespace?.StartsWith(typeof(StreetGallery).Namespace + ".", StringComparison.Ordinal) == true);
@@ -53,11 +56,18 @@ public sealed class StreetPartsTests
             var entry = Entry(type.GetCustomAttribute<PartAttribute>()!.Id);
             var part = Activator.CreateInstance(type)!;
             var lods = (System.Collections.IDictionary)type.GetProperty("Lods")!.GetValue(part)!;
-            var bounds = (Box3)type.GetMethod("Bounds")!.Invoke(part, [entry.Defaults])!;
+            var sample = StreetGallery.CreateSamples(GlobalInputs, Catalog).FirstOrDefault(sample => sample.Part == entry.Id);
+            var parameters = entry.Defaults switch
+            {
+                SignParams sign when sample?.Params is SignParams printed => sign with { PrintedText = printed.PrintedText, PrintedTextBaseColor = printed.PrintedTextBaseColor },
+                EquipmentParams equipment when sample?.Params is EquipmentParams printed => equipment with { PrintedText = printed.PrintedText, PrintedTextBaseColor = printed.PrintedTextBaseColor },
+                _ => entry.Defaults
+            };
+            var bounds = (Box3)type.GetMethod("Bounds")!.Invoke(part, [parameters])!;
             AssertThat(lods.Contains(LodLevel.L0) && lods.Contains(LodLevel.L1)).OverrideFailureMessage($"{entry.Id.Value} lacks near levels.").IsTrue();
             foreach (System.Collections.DictionaryEntry level in lods)
             {
-                var geometry = (PartGeometry)((Delegate)level.Value!).DynamicInvoke(entry.Defaults)!;
+                var geometry = (PartGeometry)((Delegate)level.Value!).DynamicInvoke(parameters)!;
                 ClosedClockwise(geometry, $"{entry.Id.Value} {level.Key}");
                 AssertThat(geometry.Bounds == bounds).OverrideFailureMessage($"{entry.Id.Value} {level.Key} moved the bounds.").IsTrue();
             }
@@ -67,7 +77,7 @@ public sealed class StreetPartsTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void ReviewSamplesAreClosedAndBounded()
     {
-        var samples = StreetGallery.CreateSamples();
+        var samples = StreetGallery.CreateSamples(GlobalInputs, Catalog);
         AssertThat(samples.Select(s => s.Part.Value).Distinct().Count() == Parts.Length).OverrideFailureMessage("The gallery misses a part.").IsTrue();
         foreach (var sample in samples)
             foreach (var level in Enum.GetValues<LodLevel>())
@@ -84,7 +94,7 @@ public sealed class StreetPartsTests
     [TestCategory(TestReason.Contract)]
     public void GenerationIsBitwiseRepeatable()
     {
-        var first = StreetGallery.CreateExamples(); var second = StreetGallery.CreateExamples();
+        var first = StreetGallery.CreateExamples(GlobalInputs, Catalog); var second = StreetGallery.CreateExamples(GlobalInputs, Catalog);
         AssertThat(first.Count == second.Count && first.Count >= Parts.Length).OverrideFailureMessage("Missing gallery examples.").IsTrue();
         for (var i = 0; i < first.Count; i++)
         {
@@ -103,7 +113,7 @@ public sealed class StreetPartsTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void CollidersFillFootStayCloseAndFollowTheWalkTable()
     {
-        foreach (var sample in StreetGallery.CreateSamples())
+        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
         {
             var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var colliders = (IReadOnlyList<Collider>)Contract(type).GetMethod("Collision")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
@@ -153,7 +163,7 @@ public sealed class StreetPartsTests
         AssertThat(Math.Abs(edge.Facing.X - -1f) < TestTolerance.Position && Math.Abs((edge.From.Y + edge.To.Y) * 0.5f - 0.4f) < TestTolerance.Position).OverrideFailureMessage("A box turned a quarter faces −X.").IsTrue();
         AssertThat(Seating.FromBox(new BoxCollider(Matrix4x4.CreateTranslation(0, 0.6f, 0), new(1, 0.6f, 0.3f), SurfaceTag.Prop), SeatSide.Front).Count == 0).OverrideFailureMessage("A 1.2 m top is not a seat.").IsTrue();
         // Every street part reaches its seats through the contract: only the bench declares any, and nothing returns another seat type.
-        foreach (var sample in StreetGallery.CreateSamples())
+        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
         {
             var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var declared = (IReadOnlyList<SeatDecl>)Contract(type).GetMethod("Seats")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
@@ -165,7 +175,7 @@ public sealed class StreetPartsTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void LampMarkersUseScheduledChannelsAndSitUnderTheLens()
     {
-        foreach (var sample in StreetGallery.CreateSamples())
+        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
         {
             var at = Matrix4x4.CreateTranslation(10, 1, -4);
             foreach (var emitter in sample.Emitters(at))
@@ -207,7 +217,7 @@ public sealed class StreetPartsTests
                 if (entry.TryGetProperty("token", out var token)) tokens.Add(token.GetString()!);
         }
         AssertThat(tokens.Contains(StreetStyle.LampWarm.Value)).OverrideFailureMessage("The lamp colour is registered.").IsTrue();
-        foreach (var sample in StreetGallery.CreateSamples())
+        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
             foreach (var level in Enum.GetValues<LodLevel>())
             {
                 if (sample.Build(level) is not { } geometry) continue;
@@ -227,7 +237,9 @@ public sealed class StreetPartsTests
         var granite = new ToonSpec(new("stone.beige.lit"), new("stone.beige.shade"));
         var sphere = new StoneSpherePart().Lods[LodLevel.L0](new FurnitureParams(0.6f, 0.6f, 0.6f) { Material = granite });
         AssertThat(sphere.Meshes.All(m => m.Material.Spec.Lit.Value == "stone.beige.lit")).OverrideFailureMessage("A caller's stone colours the sphere.").IsTrue();
-        AssertThat(StrokeText.Covers(StreetStyle.StopTitle) && StrokeText.Covers(StreetStyle.OpenTitle)).OverrideFailureMessage("Fixed labels have stroke glyphs.").IsTrue();
+        var lettering = new SceneTextAtlas(GlobalInputs.Require(SceneTextInputs.AtlasKey));
+        AssertThat(lettering.Layout(StreetStyle.StopTitle).Glyphs.Count == StreetStyle.StopTitle.Length &&
+            lettering.Layout(StreetStyle.OpenTitle).Glyphs.Count == StreetStyle.OpenTitle.Length).OverrideFailureMessage("Fixed labels have no atlas glyphs.").IsTrue();
         AssertThat(StreetStyle.BinDoors.Length == 4 && StreetStyle.BinDoors.Distinct().Count() == 4).OverrideFailureMessage("Four distinct sorting colours.").IsTrue();
         AssertThat(StreetStyle.BinDoors[2] == "equip.fireRed" && StreetStyle.BinDoors[1] == StreetStyle.SignBlue).OverrideFailureMessage("Bin red is the campus red; bin and stop share the street blue (Opus review 10:07).").IsTrue();
     }
@@ -262,7 +274,7 @@ public sealed class StreetPartsTests
     public void StreetLifePartsDeclareTheirSoundsSocketsAndSizes()
     {
         // WLD-LIFE: only the vending machine, the pole transformer, the rain grate and the broadcast horn make sound; every other part is silent.
-        foreach (var sample in StreetGallery.CreateSamples())
+        foreach (var sample in StreetGallery.CreateSamples(GlobalInputs, Catalog))
         {
             var type = StreetTypes.Single(t => t.GetCustomAttribute<PartAttribute>()?.Id == sample.Part.Value);
             var sounds = (IReadOnlyList<SoundSocketDecl>)Contract(type).GetMethod("Sounds")!.Invoke(Activator.CreateInstance(type), [sample.Params])!;
@@ -289,7 +301,7 @@ public sealed class StreetPartsTests
         // Sizes from MAP-QSH-ADDITIONS: the fountain's top at 1.1 m on 0.6 × 0.45, the signpost 2.6 m with 3–5 boards.
         var fountain = new DrinkingFountainPart().Bounds(new EquipmentParams(0.6f, 1.1f, 0.45f));
         AssertThat(Math.Abs(fountain.Max.Y - 1.1f) < TestTolerance.Position).OverrideFailureMessage("The fountain's top is not at 1.1 m.").IsTrue();
-        AssertThat(StrokeText.Covers(StreetStyle.FountainTitle)).OverrideFailureMessage("The fountain's plate has no glyphs.").IsTrue();
+        AssertThat(new SceneTextAtlas(GlobalInputs.Require(SceneTextInputs.AtlasKey)).Layout(StreetStyle.FountainTitle).Glyphs.Count == StreetStyle.FountainTitle.Length).OverrideFailureMessage("The fountain's plate has no atlas glyphs.").IsTrue();
         foreach (var boards in new[] { 0, 1, 2 })
         {
             var sign = new SignpostPart();

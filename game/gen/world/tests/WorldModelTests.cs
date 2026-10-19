@@ -141,6 +141,7 @@ public sealed class WorldModelTests
     }
 
     [TestCase, TestCategory(TestReason.Smoke)]
+    [TestCategory("Slow")]
     public void RealMigratedCampusLoadsEverySourcePartOnce()
     {
         var files = RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
@@ -245,6 +246,7 @@ public sealed class WorldModelTests
         });
 
     [TestCase, TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
     public void ArchitectureReviewMixedParentsKeepBuildingPartsAndOpenParkDistinct()
     {
         var result = RealMapFixture.LoadPrepared(RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
@@ -319,6 +321,7 @@ public sealed class WorldModelTests
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
     public void ArchitectureReviewBoundsUseAuthoredRoamLimits()
     {
         var files = new Dictionary<string, string>
@@ -336,6 +339,7 @@ public sealed class WorldModelTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void SyntheticBeatAnchorsLoadOverRealCampusWithoutBecomingBuildings()
     {
         // contract-25 / MAP-QSH-CORE 8.6: synthetic regression inputs, not an authored campus walk layout.

@@ -18,8 +18,12 @@ public sealed record StreetSample(string Id, string Label, PartId Part, BoxPartP
 /// </summary>
 public static class StreetGallery
 {
-    public static IReadOnlyList<StreetSample> CreateSamples()
+    public static IReadOnlyList<StreetSample> CreateSamples(BuildInputSnapshot globalInputs, PaletteCatalog catalog)
     {
+        var atlas = new SceneTextAtlas(globalInputs.Require(SceneTextInputs.AtlasKey));
+        var stopText = atlas.Layout(StreetStyle.StopTitle);
+        var openText = atlas.Layout(StreetStyle.OpenTitle);
+        var fountainText = atlas.Layout(StreetStyle.FountainTitle);
         var discLamp = new LampParams(0.85f, 6f, 0.85f);
         var armLamp = new LampParams(1.7f, 7f, 0.5f) { Variation = 1 };
         var doorLamp = new LampParams(0.28f, 0.3f, 0.18f);
@@ -37,12 +41,12 @@ public static class StreetGallery
             Sample("bollard-stone", "石护柱", PartCatalog.Bollard, new BollardPart(), new ColumnParams(0.25f, 0.7f, 0.25f) { Variation = 2 }),
             Sample("sphere-white", "石球（白）", PartCatalog.StoneSphere, new StoneSpherePart(), new FurnitureParams(0.6f, 0.6f, 0.6f)),
             Sample("sphere-grey", "石球（灰）", PartCatalog.StoneSphere, new StoneSpherePart(), new FurnitureParams(0.6f, 0.6f, 0.6f) { Variation = 1 }),
-            Sample("bus-stop", "班车站牌", PartCatalog.BusStop, new BusStopPart(), new SignParams(1.2f, 2.5f, 0.18f)),
+            Sample("bus-stop", "班车站牌", PartCatalog.BusStop, new BusStopPart(), new SignParams(1.2f, 2.5f, 0.18f) { PrintedText = stopText, PrintedTextBaseColor = catalog.Resolve(StreetStyle.Lit(StreetStyle.SignBlue)) }),
             Sample("atlas-kiosk", "导览亭", PartCatalog.AtlasKiosk, new AtlasKioskPart(), kiosk) with { Emitters = at => [AtlasKioskPart.Emitter(kiosk, at)] },
             Sample("atlas-post", "导览桩", PartCatalog.AtlasPost, new AtlasPostPart(), post) with { Emitters = at => [AtlasPostPart.Emitter(post, at)] },
             Sample("entrance-mat", "开放入口地垫", PartCatalog.EntranceMat, new EntranceMatPart(), new PanelParams(1.6f, 0.025f, 1f)),
-            Sample("open-sign-stand", "绿色开放牌（落地）", PartCatalog.OpenSign, new OpenSignPart(), new SignParams(0.45f, 1.3f, 0.32f) { Variation = 1 }),
-            Sample("open-sign-wall", "绿色开放牌（贴墙）", PartCatalog.OpenSign, new OpenSignPart(), new SignParams(0.42f, 0.24f, 0.02f)),
+            Sample("open-sign-stand", "绿色开放牌（落地）", PartCatalog.OpenSign, new OpenSignPart(), new SignParams(0.45f, 1.3f, 0.32f) { Variation = 1, PrintedText = openText, PrintedTextBaseColor = catalog.Resolve(StreetStyle.Lit(StreetStyle.SignGreen)) }),
+            Sample("open-sign-wall", "绿色开放牌（贴墙）", PartCatalog.OpenSign, new OpenSignPart(), new SignParams(0.42f, 0.24f, 0.02f) { PrintedText = openText, PrintedTextBaseColor = catalog.Resolve(StreetStyle.Lit(StreetStyle.SignGreen)) }),
             Sample("entrance-lamp", "门口灯灯具", PartCatalog.EntranceLamp, new EntranceLampPart(), doorLamp) with { Emitters = at => [EntranceLampPart.Emitter(doorLamp, at)] },
             // 13c2b.
             Sample("car-saloon", "停着的轿车（三厢）", PartCatalog.ParkedCar, new ParkedCarPart(), new VehicleParams(1.8f, 1.47f, 4.5f) { Material = Body(StreetStyle.CarBodies[1]) }),
@@ -52,7 +56,7 @@ public static class StreetGallery
             Sample("vending", "售货机", PartCatalog.VendingMachine, new VendingMachinePart(), new EquipmentParams(1f, 1.85f, 0.78f)),
             Sample("vending-odd", "售货机（低彩度混一台）", PartCatalog.VendingMachine, new VendingMachinePart(), new EquipmentParams(1f, 1.85f, 0.78f) { Variation = 1 }),
             Sample("locker", "外卖柜", PartCatalog.DeliveryLocker, new DeliveryLockerPart(), new EquipmentParams(2.4f, 2f, 0.6f)),
-            Sample("fountain", "直饮水台", PartCatalog.DrinkingFountain, new DrinkingFountainPart(), new EquipmentParams(0.6f, 1.1f, 0.45f)),
+            Sample("fountain", "直饮水台", PartCatalog.DrinkingFountain, new DrinkingFountainPart(), new EquipmentParams(0.6f, 1.1f, 0.45f) { PrintedText = fountainText, PrintedTextBaseColor = catalog.Resolve(StreetStyle.Lit(StreetStyle.PaintWhite)) }),
             Sample("signpost", "双柱指路牌", PartCatalog.Signpost, new SignpostPart(), new SignParams(1.2f, 2.6f, 0.12f) { Variation = 1 }),
             Sample("kerb-ramp", "缘石坡道", StreetStyle.KerbRampId, new KerbRampPart(), new RampParams(1.5f, 0.15f, 1.2f)),
             // Street-set completion.
@@ -79,8 +83,8 @@ public static class StreetGallery
     private static ToonSpec Body(string family) => new(StreetStyle.Lit(family), StreetStyle.Shade(family));
 
     /// <summary>Near-level geometry of every sample, in the same order (part gallery examples).</summary>
-    public static IReadOnlyList<GalleryExample> CreateExamples() =>
-        Array.AsReadOnly(CreateSamples().Select(s => new GalleryExample(s.Id, s.Label, s.Build(LodLevel.L0)!)).ToArray());
+    public static IReadOnlyList<GalleryExample> CreateExamples(BuildInputSnapshot globalInputs, PaletteCatalog catalog) =>
+        Array.AsReadOnly(CreateSamples(globalInputs, catalog).Select(s => new GalleryExample(s.Id, s.Label, s.Build(LodLevel.L0)!)).ToArray());
 
     private static StreetSample Sample<TParams>(string id, string label, string part, IPartDef<TParams> def, TParams p) where TParams : BoxPartParams =>
         new(id, label, new(part), p, level => def.Lods.TryGetValue(level, out var build) ? build(p) : null, def.Bounds(p));

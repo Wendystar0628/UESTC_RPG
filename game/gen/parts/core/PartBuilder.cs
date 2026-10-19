@@ -29,12 +29,17 @@ public sealed class PartBuilder
                 group.Position.Add(p.X); group.Position.Add(p.Y); group.Position.Add(p.Z);
                 group.Normal.Add(n.X); group.Normal.Add(n.Y); group.Normal.Add(n.Z);
                 group.Uv.Add(mesh.Uv?[2 * i] ?? 0f); group.Uv.Add(mesh.Uv?[2 * i + 1] ?? 0f);
+                group.Uv2.Add(mesh.Uv2?[2 * i] ?? 0f); group.Uv2.Add(mesh.Uv2?[2 * i + 1] ?? 0f);
+                group.DecalBase.Add(mesh.DecalBaseColorIndices?[i] ?? 0);
                 var visibility = (mesh.Ao?[i] ?? 1f) * ao;
-                group.Flags.Add(flags); group.Ao.Add(visibility);
+                var combinedFlags = (byte)(flags | (mesh.Flags?[i] ?? 0));
+                group.Flags.Add(combinedFlags); group.Ao.Add(visibility);
+                group.HasFlags |= combinedFlags != 0;
                 group.HasAo |= visibility < 1f;
             }
             foreach (var index in mesh.Index) group.Index.Add(first + index);
-            group.HasFlags |= flags != 0;
+            group.HasUv2 |= mesh.Uv2 is not null;
+            group.HasDecalBase |= mesh.DecalBaseColorIndices is not null;
             if (group.Count > 65536) throw new ArgumentException("A part surface exceeds 65,536 vertices.");
         }
         return this;
@@ -63,9 +68,10 @@ public sealed class PartBuilder
         {
             var group = _groups[g];
             var mesh = new GeometryBundle(new ToonRef(group.Spec), [.. group.Position], [.. group.Normal], [.. group.Index],
-                group.HasAo ? [.. group.Ao] : null, [.. group.Uv])
+                group.HasAo ? [.. group.Ao] : null, [.. group.Uv], group.HasUv2 ? [.. group.Uv2] : null)
             {
                 Flags = group.HasFlags ? [.. group.Flags] : null,
+                DecalBaseColorIndices = group.HasDecalBase ? [.. group.DecalBase] : null,
             };
             mesh.ValidateVertexData();
             meshes[g] = mesh;
@@ -88,11 +94,15 @@ public sealed class PartBuilder
         public List<float> Position { get; } = [];
         public List<float> Normal { get; } = [];
         public List<float> Uv { get; } = [];
+        public List<float> Uv2 { get; } = [];
+        public List<ushort> DecalBase { get; } = [];
         public List<int> Index { get; } = [];
         public List<byte> Flags { get; } = [];
         public List<float> Ao { get; } = [];
         public bool HasFlags { get; set; }
         public bool HasAo { get; set; }
+        public bool HasUv2 { get; set; }
+        public bool HasDecalBase { get; set; }
         public int Count => Position.Count / 3;
     }
 }

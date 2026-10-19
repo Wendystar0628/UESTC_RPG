@@ -165,7 +165,7 @@ public sealed class FurnitureModuleTests
             new TileKey(-20, -20), new TileKey(19, 19), "P00", [],
             new MapWorldRules(MapTimeRule.Shared, new WorldPreset(17.5, Season.Autumn), new LocalizedName("落金初灯", "Golden Hour"), true, "chengdu"),
             new MapEnvironment("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []);
-        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World.Value, Map = map, WorldSeed = 1u, SourceInputs = inputs };
+        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World.Value, Map = map, WorldSeed = 1u, SourceInputs = inputs, GlobalInputs = FurnitureTestSupport.GlobalInputs };
     }
 
     /// <summary>A uniform tilt along x with a constant grade.</summary>

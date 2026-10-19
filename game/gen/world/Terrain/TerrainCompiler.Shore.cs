@@ -20,16 +20,21 @@ internal static partial class TerrainCompiler
                     entry.Road.Footprint?.Polygons.SelectMany(p => p.Outer).ToArray() ?? entry.Road.Path.Line.Points,
                     (x, z) =>
                     {
+                        var pointHit = entry.Road.Path.Project(x, z);
+                        if (entry.Profile.Excluded(pointHit.Station)) return null;
                         var contact = CorridorContactAt(entry.Road, 0, x, z);
                         var hit = entry.Road.Path.Project(contact.X, contact.Z);
                         if (entry.Profile.Excluded(hit.Station)) return null;
-                        return (contact.Distance, RoadCoreTop(b, entry, contact, x, z));
+                        return (contact.Distance, RoadCoreTop(b, entry, contact, pointHit, x, z));
                     })
                 {
                     Explain = (x, z) =>
                     {
+                        var pointHit = entry.Road.Path.Project(x, z);
                         var core = CorridorContactAt(entry.Road, 0, x, z); var hit = entry.Road.Path.Project(core.X, core.Z);
-                        return $"{entry.Road.Source.Value}: core=({core.X:R},{core.Z:R}), segment={hit.Segment}, station={hit.Station:R}, offset={hit.Offset:R}, profile={entry.Profile.At(hit.Station)}, top={RoadCoreTop(b, entry, core, x, z)}";
+                        if (entry.Profile.Excluded(pointHit.Station) || entry.Profile.Excluded(hit.Station))
+                            return $"{entry.Road.Source.Value}: structural interval has no ground-road bank contact; pointStation={pointHit.Station:R}, coreStation={hit.Station:R}.";
+                        return $"{entry.Road.Source.Value}: core=({core.X:R},{core.Z:R}), segment={hit.Segment}, station={hit.Station:R}, offset={hit.Offset:R}, profile={entry.Profile.At(hit.Station)}, top={RoadCoreTop(b, entry, core, pointHit, x, z)}";
                     }
                 }).ToArray();
         var shores = b.WaterShores.Where(shore => shore.Banks is not null).OrderBy(shore => shore.Id, StringComparer.Ordinal).ToArray();
@@ -76,7 +81,7 @@ internal static partial class TerrainCompiler
             foreach (var entry in b.Roads.Where(entry => entry.Operation is null || entry.Plan is not null)) entry.ReplaceProfile(profiles[entry.Road.Source]);
         }
         if (!completed) throw UnsupportedFreeboard("Finite conservative freeboard closure did not converge; no approximate profile/bank snapshot is published.");
-        ValidateRoadJunctions(b.Roads);
+        ValidateRoadJunctions(b, b.Roads);
         // Snapshot lifetime boundary: final profiles can no longer change, and only the last
         // freshly planned real Hard geometry is committed (never the conservative support).
         foreach (var entry in b.Roads) entry.FreezeProfile();
@@ -175,10 +180,9 @@ internal static partial class TerrainCompiler
         }
     }
 
-    private static TerrainDifferential RoadCoreTop(Builder b, RoadEntry entry, CorridorContact core, double x, double z)
+    private static TerrainDifferential RoadCoreTop(Builder b, RoadEntry entry, CorridorContact core, TerrainPathHit hit, double x, double z)
     {
-        var longitudinal = entry.Profile.SurfaceAt(entry.Road.Path, x, z, entry.Road.Width, entry.Road.Path.Project(x, z));
-        var hit = entry.Road.Path.Project(x, z);
+        var longitudinal = entry.Profile.SurfaceAt(entry.Road.Path, x, z, entry.Road.Width, hit);
         var cross = entry.Plan?.Parameters(hit, b.Context.Defaults?.CorridorShoulder ?? entry.Operation!.Shoulder).Cross
             ?? (entry.Operation is { } op ? TerrainDifferential.Constant(op.CrossFall) : ZeroBandWeight(b, x, z) * 0.015);
         if (entry.Plan is { } plan && plan.At(hit.Station) is null) cross = TerrainDifferential.Product(cross, ZeroBandWeight(b, x, z));
@@ -214,84 +218,85 @@ internal static partial class TerrainCompiler
         return result;
     }
 
-    private static TerrainEvaluation ConstrainAutomaticRoadAtWater(Builder b, TerrainRoad road, string file, string id,
-        TerrainEvaluation previous, TerrainEvaluation proposed, double x, double z)
+    private sealed record RoadWaterComposition(WaterShore Shore, TerrainShoreEnvelope Envelope);
+
+    private static void PrepareRoadWaterComposition(Builder b)
     {
-        if (b.Water.Count == 0 || proposed.Surface == previous.Surface) return proposed;
-        var roadDistance = CorridorContactAt(road, 0, x, z).Distance;
-        if (roadDistance.Height < 0) return proposed; // The road core is fixed; incompatible core/shore contact fails validation.
-        WaterShore? nearest = null; var waterDistance = new TerrainDifferential(double.PositiveInfinity, 0, 0);
-        // The compiled union owns the exposed shore. Member polygons retain identity only;
-        // their internal edges must never become grading constraints or projection tangents.
-        foreach (var water in b.WaterShores)
-        {
-            var distance = water.Region.Distance(x, z);
-            if (distance.Height < waterDistance.Height) { nearest = water; waterDistance = distance; }
-        }
-        if (nearest is null) return proposed;
-        if (roadDistance.Height == 0 && waterDistance.Height <= 0)
-        {
-            if (Math.Abs(proposed.Surface.Height - previous.Surface.Height) <= TerrainMath.HeightTolerance) return previous;
-            throw new WorldDataException(file, id, $"Fixed road core and water '{nearest.Id}' meet without room for a shoulder/slope at ({x:R},{z:R}).");
-        }
-        if (waterDistance.Height <= 0) return previous; // Signed interior: no road-side fill can reappear inside water.
-        var weight = WaterSideWeight(waterDistance, roadDistance);
-        var delta = proposed.Surface - previous.Surface;
-        var surface = previous.Surface + new TerrainDifferential(delta.Height * weight.Height,
-            delta.Dx * weight.Height + delta.Height * weight.Dx,
-            delta.Dz * weight.Height + delta.Height * weight.Dz);
-        var profile = default(RoadBoundaryProfile);
-        if (b.AutomaticRoads[id].Grading?.FixedBoundaryProfile == true)
-            surface = FixedBoundaryRoadSurface(b, b.AutomaticRoads[id], nearest, waterDistance, roadDistance, previous.Surface, proposed.Surface, x, z, out profile);
-        if (surface == previous.Surface) return previous;
-        var transverse = Math.Abs(surface.Dx * roadDistance.Dx + surface.Dz * roadDistance.Dz);
-        var total = Math.Sqrt(surface.Dx * surface.Dx + surface.Dz * surface.Dz);
-        if (total > 1 + TerrainMath.GradeTolerance || previous.Class != TerrainClass.Transition && (total > 0.5 + TerrainMath.GradeTolerance || transverse > 1d / 3 + TerrainMath.GradeTolerance))
-            throw new WorldDataException(file, id, $"Road-water side envelope cannot fit its grade: water='{nearest.Id}', point=({x:R},{z:R}), transverseGrade={transverse:R}, totalGrade={total:R}, roadDistance={roadDistance.Height:R}, waterDistance={waterDistance.Height:R}, previous={previous.Surface}, proposed={proposed.Surface}, final={surface}, class={previous.Class}, shoulder={b.AutomaticRoads[id].Grading?.Width:R}, profile={profile}.")
-            { CanNarrowAutomaticRoad = true };
-        return WithSurface(previous, surface, proposed.CrestDistance, Math.Min(proposed.ToeDistance, waterDistance.Height));
+        ValidateFixedRoadWaterAnchors(b);
+        if (b.Roads.Count == 0) return;
+        foreach (var shore in b.WaterShores.OrderBy(shore => shore.Id, StringComparer.Ordinal))
+            b.RoadWaterCompositions.Add(new(shore, new(shore.Region,
+                (x, z) => b.LandBeforeCorridors.Evaluate(x, z).Surface.Height, shore.File, shore.Id, 1d / 3)));
     }
 
-    private readonly record struct RoadBoundaryProfile(double X, double Z, double Tx, double Tz,
-        TerrainDifferential RawBank, TerrainDifferential Bank, TerrainDifferential Core);
-
-    private static TerrainDifferential FixedBoundaryRoadSurface(Builder b, RoadEntry entry, WaterShore water,
-        TerrainDifferential waterDistance, TerrainDifferential roadDistance, TerrainDifferential previous,
-        TerrainDifferential proposed, double x, double z, out RoadBoundaryProfile profile)
+    private static void ValidateFixedRoadWaterAnchors(Builder b)
     {
-        var bank = water.Region.NearestBoundary(x, z);
-        var atBank = b.LandBeforeCorridors.Evaluate(bank.X, bank.Z).Surface;
-        var bankTangent = atBank.Dx * bank.Tx + atBank.Dz * bank.Tz;
-        var a = new TerrainDifferential(atBank.Height, bankTangent * bank.Tx, bankTangent * bank.Tz);
-        var c = RoadCoreTop(b, entry, CorridorContactAt(entry.Road, 0, x, z), x, z);
-        profile = new(bank.X, bank.Z, bank.Tx, bank.Tz, atBank, a, c);
-        var gap = waterDistance + roadDistance; var change = c - a;
-        var t = waterDistance.Height / gap.Height;
-        var tx = (waterDistance.Dx * gap.Height - waterDistance.Height * gap.Dx) / (gap.Height * gap.Height);
-        var tz = (waterDistance.Dz * gap.Height - waterDistance.Height * gap.Dz) / (gap.Height * gap.Height);
-        var peak = 1.5; var px = 0d; var pz = 0d;
-        if (Math.Abs(change.Height) > 0.000000001)
-        {
-            var magnitude = Math.Abs(change.Height); var sign = change.Height > 0 ? 1 : -1;
-            var limit = gap.Height / (3 * magnitude);
-            if (limit <= 1) throw new WorldDataException(entry.File, "auto-corridor-" + entry.Road.Feature.Value,
-                $"Fixed water and road-core heights require a mean side grade above 1:3; neither height can be silently moved. point=({x:R},{z:R}), gap={gap.Height:R}, bank={a}, core={c}, previous={previous}, proposed={proposed}, profile={profile}.");
-            peak = Math.Min(1.5, (1 + limit) / 2);
-            if (peak < 1.5)
+        foreach (var anchor in b.RoadAnchors)
+            foreach (var shore in b.WaterShores)
             {
-                px = (gap.Dx / magnitude - gap.Height * sign * change.Dx / (magnitude * magnitude)) / 6;
-                pz = (gap.Dz / magnitude - gap.Height * sign * change.Dz / (magnitude * magnitude)) / 6;
+                if (shore.Region.Distance(anchor.X, anchor.Z).Height > 0) continue;
+                var bed = b.LandBeforeCorridors.Evaluate(anchor.X, anchor.Z).Surface.Height;
+                if (Math.Abs(anchor.Y - bed) > TerrainMath.HeightTolerance)
+                    throw new WorldDataException(anchor.File, anchor.Id,
+                        $"Authored centreline anchor conflicts with fixed water core '{shore.Id}' at ({anchor.X:R},{anchor.Z:R}): anchorY={anchor.Y:R}, waterBedY={bed:R}, deltaY={bed - anchor.Y:R}; a real bridge/underpass exclusion is required.");
             }
+    }
+
+    private static void ValidateSourceRoadWaterCrossings(Builder b)
+    {
+        foreach (var entry in b.Roads)
+            foreach (var shore in b.WaterShores)
+            {
+                var road = entry.Road;
+                if (road.Path.Bounds.Max.X < shore.Region.Bounds.Min.X || road.Path.Bounds.Min.X > shore.Region.Bounds.Max.X
+                    || road.Path.Bounds.Max.Y < shore.Region.Bounds.Min.Y || road.Path.Bounds.Min.Y > shore.Region.Bounds.Max.Y) continue;
+                // Split only at real source vertices, shore intersections and structural
+                // interval ends. Containment is constant on each resulting straight span.
+                var stations = new SortedSet<double>(road.Path.VertexStations);
+                foreach (var polygon in shore.Region.Polygons)
+                    foreach (var ring in new[] { polygon.Outer }.Concat(polygon.Holes))
+                        foreach (var hit in road.Path.Intersections(new(new(ring.Append(ring[0]).ToArray())))) stations.Add(hit.Station);
+                var exclusions = entry.Plan?.Exclusions ?? BridgeExclusions(b, road)
+                    .Concat(entry.Operation?.Steps.Select(step => (From: step.S0, To: step.S1)) ?? []).ToArray();
+                foreach (var span in exclusions)
+                {
+                    stations.Add(Math.Clamp(span.From, 0, road.Path.Length));
+                    stations.Add(Math.Clamp(span.To, 0, road.Path.Length));
+                }
+                var values = stations.ToArray();
+                for (var i = 1; i < values.Length; i++)
+                {
+                    var station = (values[i - 1] + values[i]) / 2;
+                    if (entry.Profile.Excluded(station)) continue;
+                    var point = road.Path.AtDouble(station);
+                    if (shore.Region.Distance(point.X, point.Z).Height >= -TerrainMath.HeightTolerance) continue;
+                    var op = entry.Plan?.At(station) ?? entry.Operation;
+                    var file = op is null ? entry.File : b.Files[op.Id];
+                    throw new WorldDataException(file, op?.Id ?? "auto-corridor-" + road.Feature.Value,
+                        $"Source road centreline crosses registered surface-water core '{shore.Id}' without a real bridge/underpass exclusion: road='{road.Source.Value}', station={station:R}, point=({point.X:R},{point.Z:R}). Pavement-edge grading cannot authorize a crossing.");
+                }
+            }
+    }
+
+    private static TerrainEvaluation ConstrainRoadAtWater(Builder b,
+        TerrainEvaluation previous, TerrainEvaluation proposed, double x, double z)
+    {
+        if (proposed.Surface == previous.Surface) return proposed;
+        var surface = proposed.Surface; var toe = proposed.ToeDistance;
+        foreach (var composition in b.RoadWaterCompositions)
+        {
+            var distance = composition.Shore.Region.Distance(x, z).Height;
+            // The union's real bed and shoreline outrank every corridor edge and shoulder.
+            // Source-centreline crossings are content acceptance, checked offline; they
+            // never authorize road-side fill or an invented bridge in the published field.
+            if (distance <= 0) return previous;
+            // Intersect with fixed-shore slope cones instead of multiplying competing masks.
+            // Min/max preserves the original field's grade and finite support: inherited banks
+            // can remain, but a road cannot create a steeper connection or reverse fill/cut.
+            surface = composition.Envelope.Restrict(previous.Surface, surface, x, z);
+            toe = Math.Min(toe, distance);
         }
-        var (value, derivative) = LimitedEase(t, peak); var dp = LimitedEasePeakDerivative(t, peak);
-        var result = a + new TerrainDifferential(change.Height * value,
-            change.Dx * value + change.Height * (derivative * tx + dp * px),
-            change.Dz * value + change.Height * (derivative * tz + dp * pz));
-        // This is a restriction of the original finite grading envelope. It cannot reverse a
-        // fill into a cut, or introduce a new influence where the original operation was identity.
-        if (proposed.Height >= previous.Height)
-            return result.Height <= previous.Height ? previous : result.Height >= proposed.Height ? proposed : result;
-        return result.Height >= previous.Height ? previous : result.Height <= proposed.Height ? proposed : result;
+        return WithSurface(previous, surface, proposed.CrestDistance, toe);
     }
 
     private static double LimitedEasePeakDerivative(double t, double peak)
@@ -303,18 +308,4 @@ internal static partial class TerrainCompiler
         return t - 0.5;
     }
 
-    internal static TerrainDifferential WaterSideWeight(TerrainDifferential water, TerrainDifferential road)
-    {
-        if (road.Height < 0) throw new ArgumentException("Water-side weight is only defined outside the fixed road core.");
-        if (water.Height <= 0)
-        {
-            if (road.Height == 0) throw new ArgumentException("Coincident road and water boundaries have no interpolation interval.");
-            return TerrainDifferential.Constant(0);
-        }
-        var denominator = water.Height + road.Height;
-        if (!(denominator > 0) || !double.IsFinite(denominator)) throw new ArgumentException("Invalid road-water boundary interval.");
-        var t = water.Height / denominator; var derivative = 6 * t * (1 - t);
-        return new(TerrainMath.Hermite(t), derivative * (water.Dx * road.Height - water.Height * road.Dx) / (denominator * denominator),
-            derivative * (water.Dz * road.Height - water.Height * road.Dz) / (denominator * denominator));
-    }
 }

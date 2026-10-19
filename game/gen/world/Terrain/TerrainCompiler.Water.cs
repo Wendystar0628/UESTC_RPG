@@ -68,7 +68,7 @@ internal static partial class TerrainCompiler
         var grade = TerrainReferences.Grade(bank.Slope!);
         var zone = op?.Zone ?? default; var priority = op?.Priority ?? 50;
         var support = TerrainRegion.Expand(region.Bounds, (b.RangeBound + Math.Abs(level) + depth) / grade + 4);
-        return new(name, file, zone, TerrainGroup.Water, priority, support, (previous, x, z) =>
+        var node = new TerrainNode(name, file, zone, TerrainGroup.Water, priority, support, (previous, x, z) =>
         {
             if (bank.Kind == TerrainBankKind.Hard && previous.Surface.Height >= level + 0.3 && !region.Contains(x, z)) return previous;
             if (bank.Kind is TerrainBankKind.Soft or TerrainBankKind.Wetland && (bridgeBanks?.RoadSpans.Count ?? 0) == 0
@@ -130,6 +130,16 @@ internal static partial class TerrainCompiler
                 default: throw new WorldDataException(file, name, "A wet water segment cannot use a swale bank.");
             }
         }, op is null);
+        if (spec.Channel) return node;
+        return node with
+        {
+            Apply = (previous, x, z) =>
+            {
+                var value = node.Apply(previous, x, z);
+                if (region.Contains(x, z)) RequireZeroBandCore(b, value.Surface, x, z, file, name);
+                return value;
+            }
+        };
     }
 
     private static TerrainDifferential WadeSurface(TerrainDifferential bed, TerrainDifferential inward,
@@ -265,7 +275,7 @@ internal static partial class TerrainCompiler
             }
         }
         if (underpasses.Any(p => p.Station >= end)) throw new WorldDataException(file, op.Id, "An underpass lies beyond the declared end-before termination.");
-        var prefix = new TerrainProgram(b.Nodes);
+        var prefix = ComposeProgram(b, b.Nodes);
         var reach = radius + (outer is { } g ? b.RangeBound / g : 0);
         var support = TerrainRegion.Expand(path.Bounds, reach);
         var recoveryEnd = end;

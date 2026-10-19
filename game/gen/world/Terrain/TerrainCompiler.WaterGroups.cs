@@ -109,7 +109,7 @@ internal static partial class TerrainCompiler
         {
             var members = indices.Select(i => specs[i]).ToArray();
             // Unioning geometry must not let a lexically earlier automatic member erase an
-            // author's zone/zero-band obligation. Validate each declared operation on its own
+            // author's zone-extent obligation. Validate each declared operation on its own
             // resolved footprint, before any same-level composition can hide its influence.
             foreach (var spec in members.Where(spec => spec.Op is not null))
                 b.WaterAuthorValidation.Add(WaterNode(b, spec, spec.Region, null));

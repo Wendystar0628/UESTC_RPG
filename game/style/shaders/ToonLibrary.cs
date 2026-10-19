@@ -40,6 +40,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private readonly Dictionary<Material, WarmState> _states = new(ReferenceEqualityComparer.Instance);
     private readonly List<WarmState> _order = [];   // 分配与登记的先后：批内顺序不依赖字典遍历
     private readonly Dictionary<string, Shader> _shaders = new(StringComparer.Ordinal);
+    private SceneTextTextures? _sceneTextTextures;
     private readonly byte[] _matBytes = new byte[MatTable.ByteCount];
     private readonly Image _matImage;
     private readonly ImageTexture _matTexture;
@@ -343,12 +344,21 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
             ToonKind.VegImpostor => Whitelisted(ShaderId.VegImpostor),
             ToonKind.VegGrass => Whitelisted(ShaderId.VegGrass),
             ToonKind.Lotus => Whitelisted(ShaderId.VegLotus),
+            ToonKind.SceneText => SceneTextMaterial(),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown ToonKind.")
         };
     }
 
     private ShaderMaterial Whitelisted(ShaderId id) =>
         ShaderMaterialSource.Exists(id) ? _source.Create(id) : Toon("toon_static", "toon_static");
+
+    private ShaderMaterial SceneTextMaterial()
+    {
+        _sceneTextTextures ??= new SceneTextTextures();
+        var material = Toon("toon_scene_text", "toon_scene_text");
+        _sceneTextTextures.Bind(material);
+        return material;
+    }
 
     private ShaderMaterial Toon(string file, string fallback) => new()
     {
@@ -403,6 +413,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
                 _windowCardsRegistration = null;
                 foreach (var material in owned)
                     if (GodotObject.IsInstanceValid(material)) material.Dispose();
+                _sceneTextTextures?.Dispose();
                 if (GodotObject.IsInstanceValid(_matImage)) _matImage.Dispose();
             }
         }

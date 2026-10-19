@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using Campus.Contracts;
 using Campus.Tests;
 using GdUnit4;
@@ -10,11 +11,27 @@ namespace Campus.Gen.World.Tests;
 public sealed class EffectiveRoadNetworkRealCampusTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryCurrentDesignCenterlineProjectsOnceAndKeepsOtherNetworkCategories()
     {
         var files = RealMapFixture.ReadTextFiles();
         var previous = JsonSerializer.Deserialize<WorldNetwork>(files["network.json"], ContractJson.Options)!;
         var loaded = RealMapFixture.LoadPrepared(files).World;
+        var terrain = files.Where(pair => pair.Key.StartsWith("overlay/terrain/", StringComparison.Ordinal)
+                && pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 3)
+            .SelectMany(pair => TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(pair.Value)).Ops).ToArray();
+        AssertThat(loaded.Terrain is ITerrainWaterSource && loaded.Terrain is ITerrainBankSource &&
+            loaded.TerrainOperations.Keys.Order(StringComparer.Ordinal).SequenceEqual(terrain.Select(op => op.Id).Order(StringComparer.Ordinal)))
+            .OverrideFailureMessage("The real map did not publish the complete authored terrain evaluator.").IsTrue();
+        foreach (var op in terrain)
+        {
+            if (op is TerrainPadOp { PadY: { } pad } authoredPad)
+                AssertThat(Math.Abs(loaded.Terrain.PadY(authoredPad.Feature) - pad) <= TestTolerance.Position).IsTrue();
+            if (op is TerrainLakeOp lake)
+                AssertThat(loaded.Terrain.WaterY(lake.Water) is { } lakeY && Math.Abs(lakeY - lake.WaterY) <= TestTolerance.Position).IsTrue();
+            if (op is TerrainChannelOp { Dry: false, Water: { } water, WaterY: { } waterY })
+                AssertThat(loaded.Terrain.WaterY(water) is { } channelY && Math.Abs(channelY - waterY) <= TestTolerance.Position).IsTrue();
+        }
         var expected = loaded.Features.Values.Where(feature => feature.Id.Value.StartsWith("design:", StringComparison.Ordinal) &&
             feature.Kind.Value == "road" && feature.Geometry is PolylineGeometry && PedestrianType(feature.Props) && !Area(feature.Props))
             .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();

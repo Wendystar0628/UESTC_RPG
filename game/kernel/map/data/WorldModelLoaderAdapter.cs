@@ -7,10 +7,13 @@ namespace Campus.Kernel.Maps;
 [KernelService(typeof(IWorldModelLoader), Owner = "WP-00")]
 public sealed class WorldModelLoaderAdapter : IWorldModelLoader
 {
+    public IReadOnlyDictionary<FeatureId, WorldFeature> LoadTopology(MapId map,
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) => WorldModelLoader.LoadTopology(map, files);
+
     public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
         WorldModelLoadInputs inputs)
     {
         if (inputs.Descriptor.Id != map) throw new InvalidDataException("World load descriptor does not match the target map.");
-        return WorldModelLoader.Load(map, files, new() { ClaimedBy = inputs.ClaimedBy });
+        return WorldModelLoader.LoadWorld(inputs, files);
     }
 }

@@ -61,6 +61,7 @@ public sealed class TerrainHeightField : ITerrain
 
     public float PadY(FeatureId feature) => _pads.TryGetValue(feature, out var height) ? height
         : throw new KeyNotFoundException($"No compiled pad for feature '{feature.Value}'.");
+    public bool TryGetPadY(FeatureId feature, out float y) => _pads.TryGetValue(feature, out y);
     public float? WaterY(FeatureId water) => _waters.TryGetValue(water, out var height) ? height : null;
 
     public TerrainFacts FactsAt(float x, float z)

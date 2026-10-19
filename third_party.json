@@ -690,8 +690,8 @@
       "sourceMetadataStatus": "OFFICIAL_RELEASE_URL_AND_ASSET_SIZE_VERIFIED",
       "archiveName": "09_SourceHanSansSC.zip",
       "modifiedByProvider": false,
-      "installedInThisWorktree": false,
-      "installationStatus": "PROVIDER_DOWNLOADED_NOT_INSTALLED_IN_WP00",
+      "installedInThisWorktree": true,
+      "installationStatus": "INSTALLED_HUD_AND_SCENE_SUBSET",
       "intendedPath": "game/assets/hud/fonts/",
       "gitStorage": "ordinary-git-binary-not-lfs",
       "sourceMetadataSha256MatchesProvider": true,
@@ -700,7 +700,16 @@
         "Regular",
         "Medium"
       ],
-      "selectedFormat": "OTF"
+      "selectedFormat": "OTF",
+      "sceneTextSubset": {
+        "path": "game/assets/scene-text/CampusSceneTextSC-Regular.otf",
+        "family": "Campus Scene Text SC",
+        "postScriptName": "CampusSceneTextSC-Regular",
+        "licenseFile": "game/assets/scene-text/OFL-SourceHanSans.txt",
+        "modified": true,
+        "modifications": "fontTools subset of the existing SC Regular 2.005 font, renamed under OFL; native Godot MSDF pages",
+        "atlasMetadata": "game/data/scene-text/atlas.json"
+      }
     },
     {
       "name": "Inter",

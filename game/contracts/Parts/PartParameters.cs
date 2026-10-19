@@ -45,12 +45,20 @@ public sealed record RoofParams(float Width = 4f, float Height = 0.3f, float Dep
     [property: Param(Min = 0, Max = 60)] float SlopeDeg = 0f)
     : BoxPartParams(Width, Height, Depth);
 public sealed record EquipmentParams(float Width = 0.8f, float Height = 1.2f, float Depth = 0.5f)
-    : BoxPartParams(Width, Height, Depth);
+    : BoxPartParams(Width, Height, Depth)
+{
+    public SceneTextRun? PrintedText { get; init; }
+    public PaletteIndex? PrintedTextBaseColor { get; init; }
+}
 public sealed record FurnitureParams(float Width = 1.8f, float Height = 0.8f, float Depth = 0.6f)
     : BoxPartParams(Width, Height, Depth);
 public sealed record LampParams(float Width = 0.5f, float Height = 4f, float Depth = 0.5f)
     : BoxPartParams(Width, Height, Depth);
 public sealed record SignParams(float Width = 1.2f, float Height = 1.8f, float Depth = 0.12f)
-    : BoxPartParams(Width, Height, Depth);
+    : BoxPartParams(Width, Height, Depth)
+{
+    public SceneTextRun? PrintedText { get; init; }
+    public PaletteIndex? PrintedTextBaseColor { get; init; }
+}
 public sealed record VehicleParams(float Width = 1.8f, float Height = 1.5f, float Depth = 4.2f)
     : BoxPartParams(Width, Height, Depth);

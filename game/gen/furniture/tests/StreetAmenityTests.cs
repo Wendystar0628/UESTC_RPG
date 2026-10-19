@@ -57,7 +57,7 @@ public sealed class StreetAmenityTests
         List<NetworkLine> Star(string tag, Vector2 at) => [Walk(tag + "-w", at, at + new Vector2(-14f, 0f)), Walk(tag + "-e", at, at + new Vector2(14f, 0f)), Walk(tag + "-n", at, at + new Vector2(0f, 14f))];
         var landmarkAt = spot + new Vector2(6f, -20f);
         var landmark = WorldFeatureFixture.Create("design:furniture-test-landmark", "poi", new PointGeometry(new Vector3(landmarkAt.X, 0f, landmarkAt.Y)), JsonSerializer.Serialize(new { category = "landscape", subcategory = "landmark" }));
-        int Signs(IWorldModel world) => FurniturePlanner.Build(world, null, Inputs()).Count(FurnitureKind.Signpost);
+        int Signs(IWorldModel world) => FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, world, null, Inputs()).Count(FurnitureKind.Signpost);
         var baseline = Signs(open);
         var one = Signs(MadeWorld(open, Star("a", spot), [landmark]));
         var bare = Signs(MadeWorld(open, Star("a", spot), []));

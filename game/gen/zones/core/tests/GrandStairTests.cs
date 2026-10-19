@@ -116,7 +116,8 @@ public sealed class GrandStairTests
             CoreSite.Claims.OfType<FeatureClaim>().Any(c => c.Feature == feature && (c.Aspects & aspects) == aspects) ? zone : null;
         AssertThat(ClaimedBy(CoreIds.Library, Aspects.Props) is null).OverrideFailureMessage("the zone leaves the library's props unclaimed").IsTrue();
         var entrance = world.Interiors.Get(CoreIds.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
-        var layout = Campus.Gen.Furniture.FurniturePlanner.Build(world, ClaimedBy);
+        var layout = Campus.Gen.Furniture.FurniturePlanner.Build(Campus.Gen.Furniture.Tests.FurnitureTestSupport.GlobalInputs,
+            Campus.Contracts.Tests.PaletteFixture.Catalog, world, ClaimedBy);
         AssertThat(layout.Items.Count(i => i.Key.StartsWith("door:" + entrance.Id + ":", StringComparison.Ordinal)) == 3).OverrideFailureMessage("WP-13 places mat, sign and lamp at the front door").IsTrue();
     }
 

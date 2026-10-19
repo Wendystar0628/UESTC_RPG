@@ -12,7 +12,7 @@ public enum ToonNormal { Flat, Smooth, Spherical, AnalyticSphere, AnalyticCylind
 public enum LineClass { Building, Tree, Fine, None, Figure }
 public enum ShadeSteps : byte { Two, TwoHalf, Soft, Three }
 // Append new kinds only. The material library selects its shader from Kind, not from Fx.
-public enum ToonKind { Static, Glass, GlassNear, Cut, VegTrunk, VegCard, VegImpostor, VegGrass, Lotus, Figure }
+public enum ToonKind { Static, Glass, GlassNear, Cut, VegTrunk, VegCard, VegImpostor, VegGrass, Lotus, Figure, SceneText }
 
 /// <summary>
 /// Stable WP-04 layer and physical grid dimensions. Period includes the joint; Joint is the full

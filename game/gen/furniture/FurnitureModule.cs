@@ -17,7 +17,7 @@ namespace Campus.Gen.Furniture;
 [ContentModule("furniture", Owner = "WP-13")]
 public sealed class FurnitureModule : IContentModule, ILightMetadataSource
 {
-    private static readonly ConditionalWeakTable<IWorldModel, List<(Func<FeatureId, Aspects, WpId?> Claims, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs, FurnitureLayout Layout)>> Cache = new();
+    private static readonly ConditionalWeakTable<IWorldModel, List<(Func<FeatureId, Aspects, WpId?> Claims, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs, BuildInputSnapshot Globals, PaletteCatalog Catalog, FurnitureLayout Layout)>> Cache = new();
     private static readonly object Sync = new();
 
     public IReadOnlyList<Claim> Claims { get; } = [];
@@ -77,10 +77,11 @@ public sealed class FurnitureModule : IContentModule, ILightMetadataSource
         lock (Sync)
         {
             var built = Cache.GetValue(ctx.World, _ => []);
-            foreach (var (claims, inputs, layout) in built)
-                if (ReferenceEquals(claims, ctx.ClaimedBy) && ReferenceEquals(inputs, ctx.SourceInputs)) return layout;
-            var fresh = FurniturePlanner.Build(ctx.World, ctx.ClaimedBy, ctx.SourceInputs);
-            built.Add((ctx.ClaimedBy, ctx.SourceInputs, fresh));
+            foreach (var (claims, inputs, globals, catalog, layout) in built)
+                if (ReferenceEquals(claims, ctx.ClaimedBy) && ReferenceEquals(inputs, ctx.SourceInputs)
+                    && ReferenceEquals(globals, ctx.GlobalInputs) && ReferenceEquals(catalog, ctx.Catalog)) return layout;
+            var fresh = FurniturePlanner.Build(ctx.GlobalInputs, ctx.Catalog, ctx.World, ctx.ClaimedBy, ctx.SourceInputs);
+            built.Add((ctx.ClaimedBy, ctx.SourceInputs, ctx.GlobalInputs, ctx.Catalog, fresh));
             return fresh;
         }
     }

@@ -5,7 +5,7 @@ namespace Campus.Pipeline.Map;
 /// <summary>Freeze global resources and discovered ground-mask capabilities at the loading boundary.</summary>
 public static class BuildInputAssembly
 {
-    public static IReadOnlyList<string> RequiredGlobalKeys { get; } = Array.AsReadOnly(new[] { "vegetation/species.json" });
+    public static IReadOnlyList<string> RequiredGlobalKeys { get; } = Array.AsReadOnly(new[] { "vegetation/species.json", SceneTextInputs.AtlasKey });
 
     /// <summary>Read an explicit global asset manifest and freeze its bytes once. Keys are relative to game/data.</summary>
     public static BuildInputSnapshot ReadRequiredGlobalInputs(IEnumerable<string> requiredGlobalKeys,

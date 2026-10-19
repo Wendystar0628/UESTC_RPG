@@ -112,7 +112,8 @@ internal sealed partial class GroundMesher
         var bevel = _s.CurbBevel;
         return h + surface switch
         {
-            GroundSurface.Water => _s.BankBottomY,
+            // Terrain already evaluates the lake/channel bed; do not carve it a second time here.
+            GroundSurface.Water => 0f,
             GroundSurface.Asphalt or GroundSurface.Parking => _s.RoadY,
             GroundSurface.Bevel => _s.PavingY - bevel + Math.Clamp(v[offset + TileField.A], 0f, bevel),
             GroundSurface.Curb or GroundSurface.Edging or GroundSurface.Track or GroundSurface.Turf or GroundSurface.Court or

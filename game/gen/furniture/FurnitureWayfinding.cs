@@ -20,9 +20,8 @@ public static partial class FurniturePlanner
     /// <see cref="FurnitureStyle.FountainFar"/> in front of the door, the nearest spot that fits first, on a bay joined to the paving and
     /// facing it, under the walk furniture's rules (<see cref="PavingSlot"/>). The count and the buildings left without go to the diagnostics.
     /// </summary>
-    private static void Fountains(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics)
+    private static void Fountains(StreetSite site, List<FurnitureItem> items, List<BuildDiagnostic> diagnostics, EquipmentParams p)
     {
-        var p = S.Fountain;
         var done = new HashSet<FeatureId>();
         var placed = 0;
         var left = new List<string>();

@@ -11,7 +11,7 @@ namespace Campus.Gen.Parts.Street;
 /// Shuttle stop sign (班车站牌, WLD-LIFE): a blue board with white lettering on a grey pole. Width and Height are the board
 /// width and the overall height. The pole stands inside the board's left edge (seen from −Z) and the board is clamped on it,
 /// centred in Z, so both faces (−Z and +Z) carry the lettering clear of the pole. Depth is the footprint and must hold the
-/// pole's flange. Lettering is the fixed title "班车" and three timetable rules; stop names wait for the scene-text atlas.
+/// pole's flange. Lettering is a frozen native-font run and three timetable rules.
 /// Collision: the pole as a post, the board as a thin box (its bottom edge is near head height).
 /// </summary>
 [Part(PartCatalog.BusStop, Owner = "WP-13")]
@@ -68,14 +68,15 @@ public sealed class BusStopPart : IPartDef<SignParams>
         b.AddBox(new(x0, fy, back - 0.002f), new(x1, fy + fh, back + 0.004f), 0, blue);
         var ink = S.Ink(S.PaintWhite);
         var fw = x1 - x0; var cx = (x0 + x1) * 0.5f;
-        var titleHeight = Math.Min(fh * 0.32f, fw / (StrokeText.Width(S.StopTitle, 1) * 1.15f)); var titleY = fy + fh * 0.74f;
+        var text = p.PrintedText ?? throw new ArgumentException("A shuttle stop requires frozen scene lettering.", nameof(p));
+        var titleHeight = Math.Min(fh * 0.32f, fw / (text.Width * 1.15f)); var titleY = fy + fh * 0.74f;
         var ruleWidth = fw * 0.72f; var rule = Math.Max(0.022f, fh * 0.03f);
         foreach (var (z, isBack) in new[] { (front - 0.004f, false), (back + 0.004f, true) })
         {
             var u = isBack ? cx : -cx;
             if (near)
             {
-                Lettering.Write(b, S.StopTitle, u, titleY, z, isBack, titleHeight, ink);
+                Lettering.Write(b, text, p.PrintedTextBaseColor, u, titleY, z, isBack, titleHeight, ink);
                 for (var k = 0; k < 3; k++)
                 {
                     var y = fy + fh * (0.42f - k * 0.13f);
@@ -85,7 +86,7 @@ public sealed class BusStopPart : IPartDef<SignParams>
             else
             {
                 // Beyond the near level the strokes are under 4 px: one light block per label (ART-MODELING "干净" 2).
-                var w = StrokeText.Width(S.StopTitle, titleHeight) * 0.9f;
+                var w = text.Width * titleHeight * 0.9f;
                 Lettering.Segment(b, new(u - w * 0.5f, titleY), new(u + w * 0.5f, titleY), titleHeight * 0.55f, z, isBack, ink);
             }
         }
@@ -109,7 +110,7 @@ public sealed class BusStopPart : IPartDef<SignParams>
 /// upward arrow (the arrow is self-lit on the signal channel, like the gate arrows it matches). Variation 0: wall plate — Width ×
 /// Height × Depth is the plate, origin at its bottom centre, back on +Z (the wall), visual only. Variation 1: free-standing
 /// sign by the door — Width is the panel, Height the overall height, Depth the base; collision is one thin box, Metal.
-/// Building name and open range need the scene-text atlas; the mainline sign carries the fixed title only.
+/// The mainline sign carries its fixed title through the scene-text atlas.
 /// </summary>
 [Part(PartCatalog.OpenSign, Owner = "WP-13")]
 public sealed class OpenSignPart : IPartDef<SignParams>
@@ -167,7 +168,7 @@ public sealed class OpenSignPart : IPartDef<SignParams>
         var arrowY = fy + (fh - band) * 0.5f;
         if (near)
         {
-            Lettering.Write(b, S.OpenTitle, 0, fy + fh - band * 0.5f, front - 0.0045f, false, band * 0.6f, S.Ink(S.PaintWhite));
+            Lettering.Write(b, p.PrintedText, p.PrintedTextBaseColor, 0, fy + fh - band * 0.5f, front - 0.0045f, false, band * 0.6f, S.Ink(S.PaintWhite));
             Lettering.ArrowUp(b, 0, arrowY, arrowSize, front - 0.003f, false, S.Lens(S.SignGreen, S.Signal));
         }
         else

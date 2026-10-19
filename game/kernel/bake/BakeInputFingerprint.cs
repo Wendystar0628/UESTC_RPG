@@ -22,7 +22,7 @@ internal static class BakeInputFingerprint
 
     public static string Identity(BakeKey key, string stamp) => $"{BakeOptions.Abi}/{key.Map.Value}/{key.Module}/{key.Detail}/{stamp}";
 
-    public static string Compute(BuildContext context, BakeKey key, string runtimeCode,
+    public static string Compute(BuildContext context, BakeKey key, string runtimeCode, BakeFingerprintSamples samples,
         IReadOnlyDictionary<string, string>? dependencyCodes = null)
     {
         if (string.IsNullOrWhiteSpace(context.CodeHash) || string.IsNullOrWhiteSpace(runtimeCode))
@@ -54,7 +54,7 @@ internal static class BakeInputFingerprint
                 windows = UsesWindows(key.Module) ? context.WindowNumbering?.Allocations.Where(allocation => allocation.Feature == feature.Id)
                     .OrderBy(allocation => allocation.Key, StringComparer.Ordinal).ToArray() : null
             });
-            input.Number(context.World.Terrain.PadY(feature.Id));
+            AddPad(context.World.Terrain, input, feature.Id);
             input.Add(context.World.Terrain.WaterY(feature.Id));
             if (context.World.Fidelity is { } fidelity && key.Module is "buildings" or "map")
             {
@@ -62,10 +62,10 @@ internal static class BakeInputFingerprint
                     { facade.Building, facade.Index, facade.A, facade.B, facade.Zone, facade.GroundBand }).ToArray());
                 input.Add(fidelity.Roof(feature.Id).Zone);
             }
-            foreach (var point in Points(feature.Geometry)) Sample(context, input, point);
+            foreach (var point in Points(feature.Geometry)) Sample(input, point, samples);
             foreach (var part in feature.Parts)
-                foreach (var point in Points(part.Geometry)) Sample(context, input, point);
-            Sample(context, input, new(feature.Bounds.Center.X, feature.Bounds.Center.Z));
+                foreach (var point in Points(part.Geometry)) Sample(input, point, samples);
+            Sample(input, new(feature.Bounds.Center.X, feature.Bounds.Center.Z), samples);
         }
 
         if (key.Module != "buildings" && !key.Module.StartsWith("interior.", StringComparison.Ordinal))
@@ -79,13 +79,15 @@ internal static class BakeInputFingerprint
                     .OrderBy(tree => tree.Id.Value, StringComparer.Ordinal).ToArray());
         }
         AddBoundary(input, context.World.Boundary, area);
-        AddTerrain(context, key, input, area);
+        AddTerrain(key, input, area, samples);
         var vegetation = key.Module == "vegetation" || key.Module == "collision.world" && dependencyCodes?.ContainsKey("vegetation") == true;
-        if (vegetation) AddVegetation(context, input, area);
+        if (vegetation) AddVegetation(context, input, area, samples);
         if (key.Module == "furniture" || key.Module == "collision.world" && dependencyCodes?.ContainsKey("furniture") == true)
             AddFurniturePlanting(context, input, area);
         if (vegetation)
             input.File(context.GlobalInputs.Entries, "vegetation/species.json");
+        if (!collision && key.Module == "furniture")
+            input.File(context.GlobalInputs.Entries, SceneTextInputs.AtlasKey);
         if (!collision && (key.Module is "ground" or "buildings"))
             input.File(context.SourceInputs, SurfaceMaterialCatalog.SourcePath);
         if (key.Module == "water") input.Add(context.Map.Env.ReflectLakes);
@@ -103,11 +105,11 @@ internal static class BakeInputFingerprint
                 .OrderBy(line => line.Id.Value, StringComparer.Ordinal).ToArray();
             input.Add(selected);
             foreach (var line in selected)
-                foreach (var point in line.Line.Points) Sample(context, input, point);
+                foreach (var point in line.Line.Points) Sample(input, point, samples);
         }
     }
 
-    private static void AddVegetation(BuildContext context, InputHash input, MapRect area)
+    private static void AddVegetation(BuildContext context, InputHash input, MapRect area, BakeFingerprintSamples samples)
     {
         if (!context.SourceInputs.TryGetValue("vegetation/planting.json", out var bytes)) { input.Add(false); return; }
         using var document = JsonDocument.Parse(bytes);
@@ -194,14 +196,14 @@ internal static class BakeInputFingerprint
             windMax = outer.Count > 0 ? outer.Max(point => point.X) : 1000f, context.Map.TerrainDefaults });
         foreach (var feature in features)
         {
-            input.Number(context.World.Terrain.PadY(feature.Id));
+            AddPad(context.World.Terrain, input, feature.Id);
             input.Add(context.World.Terrain.WaterY(feature.Id));
-            foreach (var point in Points(feature.Geometry)) Sample(context, input, point);
+            foreach (var point in Points(feature.Geometry)) Sample(input, point, samples);
             foreach (var part in feature.Parts)
-                foreach (var point in Points(part.FacadeGeometry ?? part.Geometry)) Sample(context, input, point);
-            Sample(context, input, new(feature.Bounds.Center.X, feature.Bounds.Center.Z));
+                foreach (var point in Points(part.FacadeGeometry ?? part.Geometry)) Sample(input, point, samples);
+            Sample(input, new(feature.Bounds.Center.X, feature.Bounds.Center.Z), samples);
         }
-        foreach (var tree in selected) Sample(context, input, new(tree.Position.X, tree.Position.Z));
+        foreach (var tree in selected) Sample(input, new(tree.Position.X, tree.Position.Z), samples);
         foreach (var region in regions) AddBoundary(input, context.World.Boundary, region);
         // Terrain is analytic at candidate positions; retain its authored program rather than treating metre
         // samples as an exact substitute. This is independent of the removed map-wide grove quota.
@@ -287,33 +289,38 @@ internal static class BakeInputFingerprint
         _ => true
     };
 
-    private static void AddTerrain(BuildContext context, BakeKey key, InputHash input, MapRect area)
+    private static void AddTerrain(BakeKey key, InputHash input, MapRect area, BakeFingerprintSamples samples)
     {
-        var terrain = context.World.Terrain;
         if (key.Detail.StartsWith("C/", StringComparison.Ordinal) || key.Detail.StartsWith('L'))
         {
             var request = BakeRequestKeys.Parse(key);
-            var heights = new short[TerrainSampling.SampleCount((int)request.Level)];
-            terrain.FillTile(request.Tile, (int)request.Level, heights);
+            var heights = samples.Tile(request.Tile, (int)request.Level);
             input.Add(heights);
         }
         // Canonical metre samples include the shared border; coarser requests retain their actual terrain spacing.
         var spacing = key.Detail.StartsWith('L') ? 1 << (int)BakeRequestKeys.Parse(key).Level : 1;
         if (key.Module == "map") spacing = 8;
         for (var z = area.Min.Y; z <= area.Max.Y; z += spacing)
-            for (var x = area.Min.X; x <= area.Max.X; x += spacing) Sample(context, input, new(x, z));
+            for (var x = area.Min.X; x <= area.Max.X; x += spacing) Sample(input, new(x, z), samples);
     }
 
-    private static void Sample(BuildContext context, InputHash input, Vector2 point)
+    private static void AddPad(ITerrain terrain, InputHash input, FeatureId feature)
     {
-        var terrain = context.World.Terrain;
-        input.Number(terrain.HeightAt(point.X, point.Y));
-        var facts = terrain.FactsAt(point.X, point.Y);
+        var present = terrain.TryGetPadY(feature, out var y);
+        input.Add(present);
+        if (present) input.Number(y);
+    }
+
+    private static void Sample(InputHash input, Vector2 point, BakeFingerprintSamples samples)
+    {
+        var sample = samples.At(point);
+        input.Number(sample.Height);
+        var facts = sample.Facts;
         input.Number(facts.Grade); input.Number((float)facts.Class); input.Number(facts.CrestDist); input.Number(facts.ToeDist);
-        if (context.World.Fidelity is { } fidelity)
+        if (sample.Ground is { } ground)
         {
-            input.Number((float)fidelity.GroundAt(point.X, point.Y));
-            input.Number(fidelity.WalkDistanceAt(point.X, point.Y));
+            input.Number(ground);
+            input.Number(sample.WalkDistance);
         }
     }
 

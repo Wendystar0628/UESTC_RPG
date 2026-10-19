@@ -11,19 +11,6 @@ public sealed record WaterParams
     /// <summary>Grid step of the surface mesh in metres. Must divide <see cref="Campus.Contracts.TileGrid.BaseEdge"/>.</summary>
     public float MeshStep { get; init; } = 3.2f;
 
-    /// <summary>
-    /// Normal water level below the bank top (m), per water body, until ITerrain.WaterY (contract-15, D-180) lands:
-    /// lakes and ponds have soft banks (bank − 0.5 m); channels run between revetments with railings (bank − 0.6 m).
-    /// Per-segment channel levels and the steps at weirs, sluices and culvert mouths come from MAP-QSH-TERRAIN.
-    /// </summary>
-    public float LakeDrop { get; init; } = 0.5f;
-
-    /// <summary>See <see cref="LakeDrop"/>.</summary>
-    public float ChannelDrop { get; init; } = 0.6f;
-
-    /// <summary>Lakes sit this much above channels so overlapping OSM polygons never z-fight.</summary>
-    public float LakeLift { get; init; } = 0.004f;
-
     /// <summary>Shore distances are clamped here; bands end at 9 m (WLD-WATER).</summary>
     public float SdfClamp { get; init; } = 24f;
 

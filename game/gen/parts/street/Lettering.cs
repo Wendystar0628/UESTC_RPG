@@ -5,19 +5,41 @@ using Campus.Gen.Parts.Core;
 namespace Campus.Gen.Parts.Street;
 
 /// <summary>
-/// Printed stroke lettering for the few fixed labels the street parts carry (shuttle stop, open sign, fountain plate) and the
-/// arrow and bicycle pictograms. Glyphs and layout come from <see cref="StrokeText"/>. Each stroke is face geometry (ART-MODELING):
-/// one flat quad, two triangles, lifted <see cref="StreetStyle.PrintLift"/> off the face, line class "not drawn", out of the
-/// shadow pass.
+/// Printed scene text uses frozen native MSDF glyphs. Arrow and bicycle pictograms remain flat stroke geometry.
 /// </summary>
 public static class Lettering
 {
     /// <summary>
-    /// Writes <paramref name="text"/> centred on face point (<paramref name="cx"/>, <paramref name="cy"/>) on the plane z = <paramref name="zFace"/>.
-    /// A front face looks along −Z (the viewer's right is −X); a back face looks along +Z. Unknown characters throw.
+    /// Writes an already laid-out run centred on the face, with the board's registered background colour.
     /// </summary>
-    public static void Write(PartBuilder builder, string text, float cx, float cy, float zFace, bool back, float height, ToonSpec material) =>
-        StrokeText.Write(text, cx, cy, height, 1f, (a, b, width) => Segment(builder, a, b, width, zFace, back, material));
+    public static void Write(PartBuilder builder, SceneTextRun? text, PaletteIndex? baseColor, float cx, float cy,
+        float zFace, bool back, float height, ToonSpec material)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        if (baseColor is not { } background) throw new ArgumentException("Printed text requires its board's palette index.", nameof(baseColor));
+        var outward = back ? 1f : -1f;
+        var z = zFace + outward * StreetStyle.PrintLift;
+        foreach (var glyph in text.Glyphs)
+        {
+            var p = glyph.PlaneBounds;
+            var left = cx + (p.X - text.Width * .5f) * height;
+            var right = cx + (p.Z - text.Width * .5f) * height;
+            var bottom = cy + p.Y * height; var top = cy + p.W * height;
+            Vector3 Point(float u, float v) => new(back ? u : -u, v, z);
+            var quad = PartShapes.FlatQuad(Point(left, top), Point(right, top), Point(right, bottom), Point(left, bottom),
+                new(0, 0, outward), Print(material) with { Kind = ToonKind.SceneText });
+            var mesh = quad.Meshes[0];
+            var uv = glyph.UvRect;
+            mesh = mesh with
+            {
+                Uv = [uv.X, uv.Y, uv.Z, uv.Y, uv.Z, uv.W, uv.X, uv.W],
+                Uv2 = [glyph.Page, 0, glyph.Page, 0, glyph.Page, 0, glyph.Page, 0],
+                Flags = [PaletteEncoding.DecalFlag, PaletteEncoding.DecalFlag, PaletteEncoding.DecalFlag, PaletteEncoding.DecalFlag],
+                DecalBaseColorIndices = [background.Value, background.Value, background.Value, background.Value]
+            };
+            builder.Add(new PartGeometry([mesh], quad.Bounds), VertexFlag.NoShadow);
+        }
+    }
 
     /// <summary>Upward arrow ("this way in") centred on (cx, cy): a shaft and a two-stroke head.</summary>
     public static void ArrowUp(PartBuilder builder, float cx, float cy, float size, float zFace, bool back, ToonSpec material)

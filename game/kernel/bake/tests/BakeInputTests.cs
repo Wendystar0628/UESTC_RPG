@@ -1,5 +1,7 @@
 using Campus.Gen.Tests.Support;
+using Campus.Gen.World;
 using Campus.Pipeline.Map;
+using System.Collections.Concurrent;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
@@ -15,6 +17,70 @@ namespace Campus.Kernel.Bake.Tests;
 [TestSuite]
 public sealed class BakeInputTests
 {
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void MapBuildSamplesAreSharedAcrossKeysWithoutChangingFingerprintsOrCrossingWorlds()
+    {
+        var field = new CountingFingerprintField(1);
+        var context = Context(new FakeWorld { Boundary = new([]), Terrain = field, Fidelity = field });
+        var map = Map(context);
+        using var lifetime = map.Lifetime;
+        var keys = new[]
+        {
+            new BakeKey(context.Map.Id, "collision.world", "C/0/0"),
+            new BakeKey(context.Map.Id, "collision.world", "C/1/0"),
+            BakeRequestKeys.Tile(context.Map.Id, "ground", default, LodLevel.L0)
+        };
+        var referenceField = new CountingFingerprintField(1);
+        var reference = Context(new FakeWorld { Boundary = new([]), Terrain = referenceField, Fidelity = referenceField });
+        var expected = keys.Select(key => BakeInputFingerprint.Compute(reference, key, "runtime-code", new(reference.World))).ToArray();
+        var actual = new string[keys.Length];
+        Parallel.For(0, keys.Length, index => actual[index] =
+            BakeInputFingerprint.Compute(context, keys[index], "runtime-code", samples: map.FingerprintSamples));
+        if (!actual.SequenceEqual(expected) || field.PointReads.Values.Any(count => count != 1) || field.TileReads.Values.Any(count => count != 1))
+            throw new InvalidOperationException("Concurrent keys changed their fingerprints or repeated a shared terrain/fidelity read.");
+
+        var changedField = new CountingFingerprintField(2);
+        var changed = Context(new FakeWorld { Boundary = new([]), Terrain = changedField, Fidelity = changedField });
+        var nextMap = Map(changed);
+        using var nextLifetime = nextMap.Lifetime;
+        var next = BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", samples: nextMap.FingerprintSamples);
+        if (next == actual[0] || changedField.PointReads.IsEmpty || changedField.TileReads.IsEmpty ||
+            next != BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", new(changed.World)))
+            throw new InvalidOperationException("The next MapBuild reused the preceding world's samples.");
+
+        static BakeService.MapBuild Map(BuildContext context) => new(
+            new TestMapContext(context.Map, context.World), new Dictionary<string, ContentModuleInput>(),
+            new Dictionary<string, BakeService.Interior>(), [], null!, null!, context.ClaimedBy, null!,
+            context.GlobalInputs, context.GroundMaskContributors, context.PartLods!, context.Catalog);
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void MissingPadsDoNotBlockFingerprintsAndPadPresenceAndHeightChangeThem()
+    {
+        var prop = Feature("fixture:prop", 10, "牌", "说明", "入口");
+        var green = prop with { Id = new("fixture:green"), Kind = new("green") };
+        var building = prop with { Id = new("fixture:building"), Kind = new("building") };
+        var world = new FakeWorld { Boundary = new([]), Features = ((WorldFeature[])[prop, green, building]).ToDictionary(feature => feature.Id) };
+        const string planting = """{"roads":[],"groves":{"mix":{},"areas":[],"washNear":[]}}""";
+        foreach (var module in new[] { "furniture", "vegetation" })
+        {
+            var context = Context(world, planting: planting);
+            world.Terrain = Terrain(new Dictionary<FeatureId, float>());
+            var absent = Hash(context, module);
+            world.Terrain = Terrain(new Dictionary<FeatureId, float> { [building.Id] = 0f });
+            var atZero = Hash(context, module);
+            world.Terrain = Terrain(new Dictionary<FeatureId, float> { [building.Id] = 2f });
+            var raised = Hash(context, module);
+            if (absent == atZero || atZero == raised)
+                throw new InvalidOperationException("Pad presence or elevation did not invalidate its consumers.");
+        }
+
+        static TerrainHeightField Terrain(IReadOnlyDictionary<FeatureId, float> pads) => new(
+            new(Vector2.Zero, new(64, 64)), (_, _) => new(TerrainDifferential.Constant(0), TerrainClass.Flat), [], pads);
+    }
+
     [TestCase]
     [TestCategory(TestReason.Contract)]
     public void CellInputsIgnoreExplanationsAndDistantObjectsButKeepDisplayedText()
@@ -96,7 +162,7 @@ public sealed class BakeInputTests
     }
 
     private static string Hash(BuildContext context, string module) => BakeInputFingerprint.Compute(context,
-        BakeRequestKeys.Tile(context.Map.Id, module, new(0, 0), LodLevel.L0), "runtime-code");
+        BakeRequestKeys.Tile(context.Map.Id, module, new(0, 0), LodLevel.L0), "runtime-code", new(context.World));
     private static WorldFeature Feature(string id, float x, string name, string note, string text) =>
         WorldFeatureFixture.Create(id, "prop", new PointGeometry(new(x, 0, 10))) with
         {
@@ -117,6 +183,30 @@ public sealed class BakeInputTests
             new Dictionary<string, ReadOnlyMemory<byte>> { ["vegetation/planting.json"] = Encoding.UTF8.GetBytes(planting) },
         PartLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())])
     };
+
+    private sealed class CountingFingerprintField(float height) : ITerrain, IFidelityModel
+    {
+        public ConcurrentDictionary<(string Kind, int X, int Z), int> PointReads { get; } = new();
+        public ConcurrentDictionary<(TileKey Tile, int Level), int> TileReads { get; } = new();
+        private void Read(string kind, float x, float z) => PointReads.AddOrUpdate(
+            (kind, BitConverter.SingleToInt32Bits(x), BitConverter.SingleToInt32Bits(z)), 1, (_, count) => count + 1);
+        public bool IsFlat(TileKey tile) => height == 0;
+        public float HeightAt(float x, float z) { Read("height", x, z); return height; }
+        public TerrainFacts FactsAt(float x, float z) { Read("facts", x, z); return new(0, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity); }
+        public void FillTile(TileKey tile, int level, Span<short> cm)
+        {
+            TileReads.AddOrUpdate((tile, level), 1, (_, count) => count + 1);
+            cm.Fill(checked((short)(height / TerrainSampling.Centimetre)));
+        }
+        public float PadY(FeatureId feature) => throw new KeyNotFoundException();
+        public bool TryGetPadY(FeatureId feature, out float y) { y = 0; return false; }
+        public float? WaterY(FeatureId water) => null;
+        public IReadOnlyList<FacadeSegment> Facades(FeatureId building) => [];
+        public RoofZone Roof(FeatureId building) => new(building, FidelityZone.K3);
+        public FidelityZone GroundAt(float x, float z) { Read("ground", x, z); return FidelityZone.K3; }
+        public float WalkDistanceAt(float x, float z) { Read("walk", x, z); return 0; }
+        public string InputHash => "fixture";
+    }
 }
 
 internal sealed class BakeFixturePart : IPartDef

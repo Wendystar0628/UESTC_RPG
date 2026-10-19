@@ -231,7 +231,7 @@ public sealed class DrinkingFountainPart : IPartDef<EquipmentParams>
         var plate = (Y: p.Height * 0.66f, H: 0.11f, W: 0.27f);
         b.AddBox(new(hx - S.Joint, plate.Y - plate.H * 0.5f, -plate.W * 0.5f), new(hx + 0.006f, plate.Y + plate.H * 0.5f, plate.W * 0.5f), 0, S.Board(S.PaintWhite), VertexFlag.NoShadow);
         var print = new PartBuilder();
-        Lettering.Write(print, S.FountainTitle, 0, plate.Y, 0, false, plate.H * 0.62f, S.Ink(S.StreetBlue));
+        Lettering.Write(print, p.PrintedText, p.PrintedTextBaseColor, 0, plate.Y, 0, false, plate.H * 0.62f, S.Ink(S.StreetBlue));
         b.Add(print.Finish(new(new(-plate.W, 0, -0.01f), new(plate.W, p.Height, 0.01f))), Xf.RotY(-90f).Then(Xf.Move(hx + 0.006f, 0, 0)), VertexFlag.NoShadow);
         return b.Finish(Bounds(p));
     }

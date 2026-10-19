@@ -14,7 +14,7 @@ public static partial class FurniturePlanner
     // Open entrances: mat, standing open sign and door lamp on the entrance anchor.
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void Entrances(StreetSite site, List<FurnitureItem> items, Func<FeatureId, Aspects, WpId?> claimedBy)
+    private static void Entrances(StreetSite site, List<FurnitureItem> items, Func<FeatureId, Aspects, WpId?> claimedBy, SignParams sign)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var feature in site.World.Features.Keys.OrderBy(f => f.Value, StringComparer.Ordinal))
@@ -35,7 +35,6 @@ public static partial class FurniturePlanner
                 var mat = new PanelParams(matWidth, S.MatThickness, S.MatDepth);
                 items.Add(Item(key + ":mat", FurnitureKind.EntranceMat, PartCatalog.EntranceMat, mat,
                     Xf.Move(0, 0, -(S.MatDepth * 0.5f + S.MatGap)).Then(floor), [], []));
-                var sign = S.OpenSign;
                 var signAt = Xf.Move(matWidth * 0.5f + S.SignBeside + sign.Width * 0.5f, 0, -S.SignOut).Then(floor);
                 items.Add(Item(key + ":sign", FurnitureKind.OpenSign, PartCatalog.OpenSign, sign, signAt, SignDef.Collision(sign), []));
                 // The door lamp hangs above head height on the wall, whose collider stands in for it (visual only, like the part).
@@ -53,7 +52,7 @@ public static partial class FurniturePlanner
     // Shuttle stops: a sign at the kerb of the carriageway nearest each bus feature (WLD-LIFE).
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void Stops(StreetSite site, List<FurnitureItem> items)
+    private static void Stops(StreetSite site, List<FurnitureItem> items, SignParams p)
     {
         var terrain = site.World.Terrain;
         foreach (var feature in site.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
@@ -64,7 +63,6 @@ public static partial class FurniturePlanner
             var normal = new Vector2(-near.Along.Y, near.Along.X);
             var side = Vector2.Dot(anchor - near.Point, normal) >= 0f ? 1f : -1f;
             var offset = StreetSite.HalfWidth(near.Line) + S.StopKerbGap;
-            var p = S.Stop;
             foreach (var shift in Shifts(S.LampMaxShift))
             {
                 var pos = near.Point + near.Along * shift + normal * (side * offset);

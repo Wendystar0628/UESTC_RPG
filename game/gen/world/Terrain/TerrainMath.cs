@@ -22,6 +22,7 @@ public static class TerrainMath
 {
     internal const double HeightTolerance = 0.02;
     internal const double GradeTolerance = 0.01;
+    internal const double RoadCoreJoinTolerance = 0.02;
 
     public static double Hermite(double t)
     {

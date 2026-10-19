@@ -181,6 +181,12 @@ public sealed class InteriorEntranceHeightReferenceTests
             if (feature != Feature) throw new KeyNotFoundException(feature.Value);
             return 2;
         }
+        public bool TryGetPadY(FeatureId feature, out float y)
+        {
+            Calls++;
+            y = feature == Feature ? 2 : default;
+            return feature == Feature;
+        }
         public bool IsFlat(TileKey tile) => throw new NotSupportedException();
         public float HeightAt(float x, float z) => throw new NotSupportedException();
         public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();

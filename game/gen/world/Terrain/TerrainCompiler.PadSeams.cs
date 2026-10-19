@@ -7,8 +7,14 @@ internal static partial class TerrainCompiler
 {
     private static void ValidateFinalPads(Builder b, TerrainProgram program)
     {
+        var failures = new List<(PadCheck Pad, string Detail)>();
         foreach (var pad in b.PadChecks.OrderBy(pad => pad.Feature.Value, StringComparer.Ordinal))
-            new PadSeamChecker(pad, program).Run();
+            if (new PadSeamChecker(pad, program).Run() is { } detail)
+                failures.Add((pad, detail));
+        if (failures.Count > 0)
+            throw new WorldDataException(failures[0].Pad.File, failures[0].Pad.Id,
+                $"Final pad boundary conflicts ({failures.Count} pads; first invalid boundary per pad):\n"
+                + string.Join("\n", failures.Select(failure => $"{failure.Pad.Id} ({failure.Pad.File}): {failure.Detail}")));
     }
 
     /// <summary>Checks final building-edge height against available grading space or an actual structure.</summary>
@@ -26,29 +32,32 @@ internal static partial class TerrainCompiler
             }
         }
 
-        public void Run()
+        public string? Run()
         {
             foreach (var polygon in exposed.Polygons)
                 foreach (var ring in new[] { polygon.Outer }.Concat(polygon.Holes))
-                    for (var i = 0; i < ring.Count; i++) CheckEdge(ring, i);
+                    for (var i = 0; i < ring.Count; i++)
+                        if (CheckEdge(ring, i) is { } detail) return detail;
+            return null;
         }
 
-        private void CheckEdge(IReadOnlyList<Vector2> ring, int i)
+        private string? CheckEdge(IReadOnlyList<Vector2> ring, int i)
         {
             var a = ring[i]; var c = ring[(i + 1) % ring.Count];
             var dx = (double)c.X - a.X; var dz = (double)c.Y - a.Y;
             var steps = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(dx * dx + dz * dz)));
             for (var j = 0; j <= steps; j++)
-                CheckBoundaryHeight(a.X + dx * j / steps, a.Y + dz * j / steps);
+                if (CheckBoundaryHeight(a.X + dx * j / steps, a.Y + dz * j / steps) is { } detail) return detail;
+            return null;
         }
 
-        private void CheckBoundaryHeight(double x, double z)
+        private string? CheckBoundaryHeight(double x, double z)
         {
             var ground = program.Evaluate(x, z).Surface.Height;
             var difference = Math.Abs(ground - pad.Y);
             if ((difference > 1.2 + 2 * TerrainSampling.Centimetre || difference > 0.25 * pad.GradeWidth + 2 * TerrainSampling.Centimetre) && !Covered(x, z))
-                throw new WorldDataException(pad.File, pad.Id,
-                    $"Pad needs an actual edge/terrace structure after all corridors: feature='{pad.Feature.Value}', boundary=({x:R},{z:R}), padY={pad.Y:R}, groundY={ground:R}, ground difference={difference:R} m, available grade width={pad.GradeWidth:R} m. Contributors: {program.Explain(x, z)}");
+                return $"Pad needs an actual edge/terrace structure after all corridors: feature='{pad.Feature.Value}', boundary=({x:R},{z:R}), padY={pad.Y:R}, groundY={ground:R}, ground difference={difference:R} m, available grade width={pad.GradeWidth:R} m. Contributors: {program.Explain(x, z)}";
+            return null;
         }
 
         private bool Covered(double x, double z) => pad.Structure is { } structure

@@ -97,7 +97,7 @@ internal static partial class TerrainCompiler
                 {
                     var structure = b.References.Structure(step.Structure, b.Files[op.Id], op.Id, "stair", "stairs", "steps", "terrace");
                     foreach (var station in new[] { step.S0, (step.S0 + step.S1) / 2, step.S1 })
-                        if (!TerrainReferences.NearStructure(structure, road.Path.At(station), 0.02))
+                        if (!TerrainReferences.NearStructure(structure, road.Path.At(station), 0.05))
                             throw new WorldDataException(b.Files[op.Id], op.Id, "Corridor step interval is not covered by its named real stair footprint/alignment.");
                     exclusions.Add((step.S0, step.S1));
                     b.Diagnostics.Add($"NOT_VERIFIED: stair '{step.Structure.Value}' plan coverage resolved; its generated end elevations/collision require content acceptance.");

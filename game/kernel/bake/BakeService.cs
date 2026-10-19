@@ -271,7 +271,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                     value.Bounds.Min.Z <= area.Max.Y && value.Bounds.Max.Z >= area.Min.Y)) dependencies[id] = source.CodeHash;
             dependencies.Add("collision", GenerationInputAssembly.CodeVersion(typeof(Campus.Gen.Collision.CollisionGeometry).Assembly));
         }
-        var inputHash = BakeInputFingerprint.Compute(context, key, runtimeCode, dependencies);
+        var inputHash = BakeInputFingerprint.Compute(context, key, runtimeCode, map.FingerprintSamples, dependencies);
         var identity = BakeInputFingerprint.Identity(key, inputHash);
         if (!_options.Live)
         {
@@ -472,6 +472,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         BakeGeometryBuilder Geometry, Lazy<MapClaimLedger> Claims, Func<FeatureId, Aspects, WpId?> ClaimLookup, Lazy<LoadedMap> Data,
         BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog Catalog)
     {
+        internal BakeFingerprintSamples FingerprintSamples { get; } = new(Context.World);
         internal ConcurrentQueue<CollectedDiagnostic> Diagnostics { get; } = new();
 
         internal void Collect(string module, string stage, IReadOnlyList<BuildDiagnostic> diagnostics, FeatureId? feature = null)

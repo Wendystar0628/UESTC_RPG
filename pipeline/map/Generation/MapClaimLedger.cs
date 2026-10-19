@@ -15,7 +15,7 @@ public sealed class MapClaimSnapshot
     public IReadOnlyList<MapClaimSource> Sources { get; }
     public bool RequiresAreaResolution => Sources.Any(source => source.Claims.Any(claim => claim is AreaClaim));
     public MapClaimLedger Build(IWorldModel world) => new(world, Sources);
-    public IReadOnlyDictionary<FeatureId, WpId> OverlayOwners(IWorldModel? baseline = null)
+    public IReadOnlyDictionary<FeatureId, WpId> OverlayOwners(IReadOnlyDictionary<FeatureId, WorldFeature>? baseline = null)
     {
         var candidates = new Dictionary<FeatureId, HashSet<WpId>>();
         foreach (var source in Sources)
@@ -25,7 +25,7 @@ public sealed class MapClaimSnapshot
                 {
                     FeatureClaim feature when !source.Global => [feature.Feature],
                     FeatureClaim => throw new InvalidDataException($"Global FeatureClaim: {source.Module}"),
-                    AreaClaim area when baseline is not null => baseline.Features.Values.Where(f => f.Zone == area.Zone).Select(f => f.Id),
+                    AreaClaim area when baseline is not null => baseline.Values.Where(f => f.Zone == area.Zone).Select(f => f.Id),
                     AreaClaim => [],
                     _ => throw new InvalidDataException("Unknown claim kind.")
                 };

@@ -189,6 +189,12 @@ public sealed class EntranceHeightReferenceTests
         public int Calls { get; private set; }
         public FeatureId LastFeature { get; private set; }
         public float PadY(FeatureId feature) { Calls++; LastFeature = feature; if (failure is not null) throw failure; return padY; }
+        public bool TryGetPadY(FeatureId feature, out float y)
+        {
+            if (failure is KeyNotFoundException) { Calls++; LastFeature = feature; y = default; return false; }
+            y = PadY(feature);
+            return true;
+        }
         public bool IsFlat(TileKey tile) => throw new NotSupportedException();
         public float HeightAt(float x, float z) => throw new NotSupportedException();
         public void FillTile(TileKey tile, int level, Span<short> cm) => throw new NotSupportedException();

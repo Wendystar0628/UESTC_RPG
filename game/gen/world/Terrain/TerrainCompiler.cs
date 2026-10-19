@@ -7,7 +7,7 @@ namespace Campus.Gen.World;
 internal static partial class TerrainCompiler
 {
     private sealed record PadCheck(FeatureId Feature, TerrainRegion Region, double Y,
-        double GradeWidth, WorldFeature? Structure, string File, string Id);
+        double Apron, double GradeWidth, WorldFeature? Structure, string File, string Id);
 
     private sealed class Builder(TerrainCompileContext context)
     {
@@ -23,6 +23,8 @@ internal static partial class TerrainCompiler
         public Dictionary<FeatureId, float> Pads { get; } = [];
         public Dictionary<FeatureId, TerrainRegion> PadRegions { get; } = [];
         public List<PadCheck> PadChecks { get; } = [];
+        public Dictionary<string, PadRoadComposition> PadRoadCompositions { get; } = new(StringComparer.Ordinal);
+        public FixedRoadAnchor[] RoadAnchors { get; set; } = [];
         public List<string> Diagnostics { get; } = [];
         public double RangeBound { get; set; }
         public Dictionary<string, TerrainOp> Operations { get; } = new(StringComparer.Ordinal);
@@ -32,13 +34,19 @@ internal static partial class TerrainCompiler
         public HashSet<FeatureId> WrittenRoads { get; } = [];
         public TerrainProgram LandBeforeWater { get; set; } = new([]);
         public TerrainProgram LandBeforeCorridors { get; set; } = new([]);
-        public Dictionary<string, RoadEntry> AutomaticRoads { get; } = new(StringComparer.Ordinal);
+        public List<RoadWaterComposition> RoadWaterCompositions { get; } = [];
         public List<RoadEntry> Roads { get; } = [];
         public TerrainRoadProfile.NetworkFit? RoadFit { get; set; }
         public List<Action> ShoreEnvelopeRefresh { get; } = [];
     }
 
     public static CompiledTerrain Compile(TerrainCompileContext context, IReadOnlyList<TerrainSource> sources)
+    {
+        var (builder, program) = Construct(context, sources);
+        return Complete(builder, program, zonesValidated: false);
+    }
+
+    private static (Builder Builder, TerrainProgram Program) Construct(TerrainCompileContext context, IReadOnlyList<TerrainSource> sources)
     {
         var builder = new Builder(context);
         foreach (var source in sources.OrderBy(s => s.File, StringComparer.Ordinal))
@@ -85,54 +93,45 @@ internal static partial class TerrainCompiler
             }
             catch (ArgumentException error) { throw new WorldDataException(file, op.Id, error.Message, error); }
         }
-        builder.LandBeforeWater = new(builder.Nodes.Where(node => (int)node.Group < (int)TerrainGroup.Water && !node.WaterBed));
+        builder.LandBeforeWater = ComposeProgram(builder, builder.Nodes.Where(node => (int)node.Group < (int)TerrainGroup.Water && !node.WaterBed));
         AddDefaultWater(builder);
         CompileWaterGroups(builder);
         ResolveUndergroundLevels(builder);
         ValidateWeirs(builder, ordered.OfType<TerrainChannelOp>());
-        var prePad = new TerrainProgram(builder.Nodes);
+        var prePad = ComposeProgram(builder, builder.Nodes);
         AddPads(builder, ordered.OfType<TerrainPadOp>(), prePad);
-        builder.LandBeforeCorridors = new(builder.Nodes, (x, z) => ZeroBandWeight(builder, x, z));
+        builder.LandBeforeCorridors = ComposeProgram(builder, builder.Nodes);
         try
         {
             AddCorridors(builder, ordered.OfType<TerrainCorridorOp>());
             ResolveFootwayBanks(builder);
+            PrepareRoadWaterComposition(builder);
         }
         catch (WorldDataException error)
         {
             error.Data["TerrainDiagnostics"] = builder.Diagnostics.ToArray();
             throw;
         }
-        var program = new TerrainProgram(builder.Nodes, (x, z) => ZeroBandWeight(builder, x, z));
-        while (true)
+        var program = ComposeProgram(builder, builder.Nodes);
+        try
         {
-            try { ValidateProgram(builder, program); break; }
-            catch (WorldDataException error) when (error.CanNarrowAutomaticRoad
-                && builder.AutomaticRoads.TryGetValue(error.Entry, out var road) && road.Grading is { } grading
-                && (!grading.FixedBoundaryProfile || grading.Width > 0))
-            {
-                var entry = builder.AutomaticRoads[error.Entry]; var before = entry.Grading!.Width;
-                if (!entry.Grading.FixedBoundaryProfile)
-                {
-                    entry.Grading.FixedBoundaryProfile = true;
-                    builder.Diagnostics.Add($"Automatic road '{entry.Road.Feature.Value}' uses the fixed water/core boundary profile after a measured grade failure; both endpoint heights and the source core remain unchanged.");
-                }
-                else
-                {
-                    entry.Grading.Shrink();
-                    builder.Diagnostics.Add($"Automatic road '{entry.Road.Feature.Value}' grading shoulder reduced {before:R}->{entry.Grading.Width:R} m after an actual water-side grade failure; fixed road core/profile unchanged.");
-                }
-            }
-            catch (WorldDataException error)
-            {
-                error.Data["TerrainDiagnostics"] = builder.Diagnostics.ToArray();
-                throw;
-            }
+            ValidateFinalRoadAnchors(builder, program);
+            ValidatePadOverlaps(builder);
+            ValidateFinalPads(builder, program);
         }
-        var zonesValidated = context.Zones is not null && builder.Operations.Values.All(op => context.Zones.ContainsKey(op.Zone));
-        if (!zonesValidated) builder.Diagnostics.Add("NOT_VERIFIED: authoritative zone polygons were not supplied; terrain is evaluated, but operation zone membership and cross-zone influence extents are not accepted.");
+        catch (WorldDataException error)
+        {
+            error.Data["TerrainDiagnostics"] = builder.Diagnostics.ToArray();
+            throw;
+        }
+        return (builder, program);
+    }
+
+    private static CompiledTerrain Complete(Builder builder, TerrainProgram program, bool zonesValidated)
+    {
+        if (!zonesValidated) builder.Diagnostics.Add("NOT_VERIFIED: terrain is evaluated, but operation zone membership and cross-zone influence extents have not been accepted by offline validation with authoritative zone polygons.");
         builder.Diagnostics.Add($"Terrain compiled: authored={builder.Operations.Count}, nodes={program.Nodes.Count}, pads={builder.Pads.Count}, waterSegments={builder.Water.Count}.");
-        return new(context.DataRect, program, builder.Pads, builder.Water, builder.Diagnostics, zonesValidated, ExportBanks(builder));
+        return new(builder.Context.DataRect, program, builder.Pads, builder.Water, builder.Diagnostics, zonesValidated, ExportBanks(builder));
     }
 
     private static TerrainGroup Group(TerrainOp op) => op switch
@@ -185,7 +184,12 @@ internal static partial class TerrainCompiler
     {
         var region = new TerrainRegion([op.Rings]); var fill = TerrainReferences.Grade(op.Side.Fill); var cut = TerrainReferences.Grade(op.Side.Cut);
         b.Nodes.Add(new(op.Id, file, op.Zone, TerrainGroup.Regional, op.Priority, ConstraintBounds(b, region.Bounds, fill, cut, op.Fillet),
-            (previous, x, z) => Constrain(previous, TerrainDifferential.Constant(op.Y), region.Distance(x, z), fill, cut, op.Fillet)));
+            (previous, x, z) =>
+            {
+                var distance = region.Distance(x, z); var target = TerrainDifferential.Constant(op.Y);
+                if (distance.Height <= 0) RequireZeroBandCore(b, target, x, z, file, op.Id);
+                return Constrain(previous, target, distance, fill, cut, op.Fillet);
+            }));
     }
 
     private static void Mound(Builder b, TerrainShape shape, double amplitude, TerrainOp op, string file)
@@ -228,7 +232,9 @@ internal static partial class TerrainCompiler
                     var offset = -(x - from.X) * tz + (z - from.Y) * tx;
                     var target = new TerrainDifferential(op.Y0 + (op.Y1 - op.Y0) * t + op.CrossFall * offset,
                         derivative * tx - op.CrossFall * tz, derivative * tz + op.CrossFall * tx);
-                    return Constrain(previous, target, region.Distance(x, z), fill, cut, op.Fillet);
+                    var distance = region.Distance(x, z);
+                    if (distance.Height <= 0) RequireZeroBandCore(b, target, x, z, file, op.Id);
+                    return Constrain(previous, target, distance, fill, cut, op.Fillet);
                 }));
                 break;
             }
@@ -240,7 +246,9 @@ internal static partial class TerrainCompiler
                     var hit = path.Project(x, z); var gradient = (op.Y1 - op.Y0) / path.Length;
                     var target = new TerrainDifferential(op.Y0 + gradient * hit.Station + op.CrossFall * hit.Offset,
                         gradient * hit.StationDx + op.CrossFall * hit.OffsetDx, gradient * hit.StationDz + op.CrossFall * hit.OffsetDz);
-                    return Constrain(previous, target, new(hit.Distance - half, hit.DistanceDx, hit.DistanceDz), fill, cut, op.Fillet);
+                    var distance = new TerrainDifferential(hit.Distance - half, hit.DistanceDx, hit.DistanceDz);
+                    if (distance.Height <= 0) RequireZeroBandCore(b, target, x, z, file, op.Id);
+                    return Constrain(previous, target, distance, fill, cut, op.Fillet);
                 }));
                 break;
             }
@@ -270,7 +278,9 @@ internal static partial class TerrainCompiler
             var alongTangent = nx * segmentX / segmentLength + nz * segmentZ / segmentLength;
             var target = new TerrainDifferential(op.FrontY + rise * t / depth - 0.10,
                 slope * (nx - alongTangent * hit.StationDx), slope * (nz - alongTangent * hit.StationDz));
-            return Constrain(previous, target, region.Distance(x, z), 0.5, 0.5, 2);
+            var distance = region.Distance(x, z);
+            if (distance.Height <= 0) RequireZeroBandCore(b, target, x, z, file, op.Id);
+            return Constrain(previous, target, distance, 0.5, 0.5, 2);
         }));
     }
 }

@@ -68,12 +68,11 @@ internal static class RealMapFixture
                 .Select(entry => new MapClaimSource(entry.Id, new(entry.Owner), entry.Map is null,
                     ((IContentModule)Activator.CreateInstance(entry.Type)!).Claims)));
             var baseline = claims.RequiresAreaResolution
-                ? WorldModelLoader.Load(id, files.Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
-                    .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal), options).World
+                ? WorldModelLoader.LoadTopology(id, WorldInputFiles.TopologyBaseline(files))
                 : null;
             options = options with { ClaimedBy = claims.OverlayOwners(baseline) };
         }
-        var loaded = WorldModelLoader.Load(id, files, options);
+        var loaded = WorldModelLoader.LoadWorld(new(entry.Descriptor, options.ClaimedBy), files, options);
         _ = claims?.Build(loaded.World);
         return loaded;
     }

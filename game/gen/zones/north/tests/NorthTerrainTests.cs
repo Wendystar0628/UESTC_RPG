@@ -20,12 +20,16 @@ public sealed class NorthTerrainTests
     {
         var file = Terrain();
         AssertThat(file.Zone.Value == "north" && file.Owner.Value == "WP-20").OverrideFailureMessage("file zone and owner").IsTrue();
-        var roads = RealMapFixture.Load().World.Network.Roads.ToDictionary(r => r.Id);
+        var world = RealMapFixture.Load().World;
+        var roads = world.Network.Roads.ToDictionary(r => r.Id);
         foreach (var op in file.Ops)
             switch (op)
             {
                 case TerrainPlatformOp p:
                     AssertThat(p.Y > 0).OverrideFailureMessage($"{op.Id}: terrace is raised above the base ground").IsTrue(); break;
+                case TerrainPadOp pad:
+                    // TerrainOverlayJson validates pad fields; its feature reference must resolve in the real map.
+                    AssertThat(world.Features.ContainsKey(pad.Feature)).OverrideFailureMessage($"{op.Id}: pad feature {pad.Feature.Value} exists").IsTrue(); break;
                 case TerrainMoundOp or TerrainBasinOp:
                     var (shape, height) = op is TerrainMoundOp m ? (m.Shape, m.Height) : (((TerrainBasinOp)op).Shape, ((TerrainBasinOp)op).Height);
                     var ellipse = (TerrainEllipse)shape;

@@ -1,6 +1,8 @@
 using System.Numerics;
 using Campus.Contracts;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.Geometries.Utilities;
+using NetTopologySuite.Operation.Buffer;
 using NetTopologySuite.Operation.OverlayNG;
 using NetTopologySuite.Precision;
 using NtsGeometry = NetTopologySuite.Geometries.Geometry;
@@ -21,6 +23,42 @@ internal static class TerrainUnion
         var coordinates = new[] { from }.Concat(path.VertexStations.Where(station => station > from && station < to)).Append(to)
             .Select(station => { var p = path.AtDouble(station); return new Coordinate(p.X, p.Z); }).ToArray();
         return GeometryOf(region).Covers(GeometryPrecisionReducer.Reduce(Factory.CreateLineString(coordinates), Precision));
+    }
+
+    public static IReadOnlyList<(double From, double To)> CoveredPathIntervals(TerrainPath path, TerrainRegion? footprint,
+        NetworkLine structure, double join)
+    {
+        var alignment = Factory.CreateLineString(structure.Line.Points.Select(point => new Coordinate(point.X, point.Y)).ToArray());
+        // Prefer the registered physical deck. A line-only registration uses its real width
+        // with flat ends; only the ordinary planar join tolerance extends those ends.
+        var deck = footprint is not null ? GeometryOf(footprint)
+            : structure.Width > 0 ? alignment.Buffer(structure.Width / 2d, EndCapStyle.Flat) : alignment;
+        var cover = deck.Buffer(join);
+        var intervals = new List<(double From, double To)>();
+        for (var i = 1; i < path.Line.Points.Count; i++)
+        {
+            var a = path.Line.Points[i - 1]; var c = path.Line.Points[i];
+            var line = Factory.CreateLineString([new(a.X, a.Y), new(c.X, c.Y)]);
+            if (!line.EnvelopeInternal.Intersects(cover.EnvelopeInternal)) continue;
+            var segment = new LineSegment(line.GetCoordinateN(0), line.GetCoordinateN(1));
+            var length = path.VertexStations[i] - path.VertexStations[i - 1];
+            foreach (var part in LinearComponentExtracter.GetLines(line.Intersection(cover)))
+            {
+                var stations = part.Coordinates.Select(point => path.VertexStations[i - 1]
+                    + Math.Clamp(segment.SegmentFraction(point), 0, 1) * length).ToArray();
+                if (stations.Length > 1) intervals.Add((stations.Min(), stations.Max()));
+            }
+        }
+        // Merge actual covered pieces only. In particular, a bridge touching one endpoint
+        // cannot exclude the rest of an approach, nor a second uncovered water crossing.
+        var merged = new List<(double From, double To)>();
+        foreach (var interval in intervals.OrderBy(interval => interval.From).ThenBy(interval => interval.To))
+        {
+            if (merged.Count > 0 && interval.From <= merged[^1].To)
+                merged[^1] = (merged[^1].From, Math.Max(merged[^1].To, interval.To));
+            else merged.Add(interval);
+        }
+        return merged;
     }
 
     private static NtsGeometry GeometryOf(TerrainRegion region) =>

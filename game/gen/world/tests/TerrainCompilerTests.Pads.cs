@@ -9,30 +9,73 @@ namespace Campus.Gen.World.Tests;
 
 public sealed partial class TerrainCompilerTests
 {
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void PadBoundaryValidationUsesTheFinalCorridorSurface()
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void PolygonKioskAnchorsHaveGroundPadsWhilePostsAndRaisedDeckLevelsStaySeparate()
     {
-        var building = WorldFeatureFixture.Create("fixture:final-pad", "building", new PolygonGeometry(Box(-2, -8, 2, 8)), height: 8);
+        var kiosk = WorldFeatureFixture.Create("fixture:kiosk-anchor", "anchor", new PolygonGeometry(Box(-2, -2, 2, 2)),
+            props: "{\"form\":\"kiosk\",\"groundY\":0}");
+        var post = WorldFeatureFixture.Create("fixture:post-anchor", "anchor", new PolygonGeometry(Box(20, -1, 21, 1)),
+            props: "{\"form\":\"post\",\"groundY\":0}");
+        var deck = WorldFeatureFixture.Create("fixture:raised-kiosk-anchor", "anchor", new PolygonGeometry(Box(40, -2, 44, 2)),
+            props: "{\"form\":\"kiosk\",\"groundY\":5}");
+        var ground = new TerrainPlatformOp("design:terrain:kiosk-ground", "pre-pad ground", Box(-60, -60, 60, 60),
+            0.5, new("1:4", "1:4"), 2) { Zone = Zone };
+        var authored = new TerrainPadOp("design:terrain:kiosk-pad", "explicit kiosk pad", kiosk.Id, 6, PadY: 0.7) { Zone = Zone };
+        foreach (var operations in new TerrainOp[][] { [ground], [ground, authored] })
+        {
+            var terrain = Compile(operations, [kiosk, post, deck]);
+            var expected = operations.Length == 1 ? ground.Y : authored.PadY!.Value;
+            AssertThat(Math.Abs(terrain.PadY(kiosk.Id) - expected) <= TestTolerance.Position).IsTrue();
+            AssertThat(Math.Abs(terrain.HeightAt(0, 0) - terrain.PadY(kiosk.Id)) <= TestTolerance.Position).IsTrue();
+            AssertThat(Math.Abs(terrain.PadY(deck.Id) - ground.Y) <= TestTolerance.Position).IsTrue();
+            KeyNotFoundException? rejection = null;
+            try { terrain.PadY(post.Id); } catch (KeyNotFoundException error) { rejection = error; }
+            AssertThat(rejection is not null).OverrideFailureMessage("A small post acquired a structural terrain pad.").IsTrue();
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void BuildingCoreSurvivesEveryCorridorKindWhileAuthoredAnchorsStayFixed()
+    {
+        var building = WorldFeatureFixture.Create("fixture:final-pad", "building", new PolygonGeometry(Box(-2, -2, 2, 2)), height: 8);
         var road = new NetworkLine(new("fixture:pad-road"), new([new(-30, 0), new(30, 0)]), 2.5f)
             { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
-        var context = Context([building]) with { Network = new([road], [], [], [], []) };
-        TerrainCorridorOp Corridor(double y) => new("design:terrain:pad-road", "final-ground regression", road.Id,
-            [new(0, y), new(60, y)], 0, 0.75) { Zone = Zone };
-        // All original building corners remain clear of the road. The final mid-edge sample
-        // must still see a later corridor crossing; the earlier pre-pad field was flat zero.
+        var context = Context([building]) with { Network = new([road], [], [], [], []), DataRect = new(new(-40), new(40)) };
+        const double roadY = 0.6;
+        var full = new TerrainCorridorOp("design:terrain:pad-road", "core priority regression", road.Id,
+            [new(0, roadY), new(60, roadY)], 0, 0.75) { Zone = Zone };
+        var explicitPad = new TerrainPadOp("design:terrain:pad", "fixed building core", building.Id, 6, PadY: roadY) { Zone = Zone };
+        TerrainOp[][] cases =
+        [
+            [explicitPad],
+            [full],
+            [full with { Id = "design:terrain:left-range", Anchors = [new(0, roadY), new(10, roadY)], Range = new(0, 10) },
+             full with { Id = "design:terrain:right-range", Anchors = [new(50, roadY), new(60, roadY)], Range = new(50, 60) }]
+        ];
+        System.Numerics.Vector2[] points = [new(0, 0), new(2, 0), new(-2, 2)];
+        for (var i = 0; i < cases.Length; i++)
+        {
+            var terrain = TerrainCompiler.Compile(context, [Source(cases[i])]);
+            var padY = terrain.PadY(building.Id);
+            AssertThat(Math.Abs(padY - (i == 0 ? roadY : 0)) <= TestTolerance.Position).IsTrue();
+            foreach (var point in points)
+                AssertThat(Math.Abs(terrain.HeightAt(point.X, point.Y) - padY) <= TestTolerance.Position)
+                    .OverrideFailureMessage("A corridor or its shoulder changed the building core.").IsTrue();
+            if (i > 0)
+            {
+                AssertThat(Math.Abs(terrain.HeightAt(-30, 0) - roadY) <= TestTolerance.Position).IsTrue();
+                AssertThat(Math.Abs(terrain.HeightAt(30, 0) - roadY) <= TestTolerance.Position).IsTrue();
+            }
+            if (i == 1)
+                AssertThat(Math.Abs(terrain.HeightAt(12, 0) - roadY) <= TestTolerance.Position)
+                    .OverrideFailureMessage("Pad protection escaped its finite exterior grading band.").IsTrue();
+        }
+        var conflicting = full with { Anchors = [new(0, roadY), new(30, roadY), new(60, roadY)] };
         {
             WorldDataException? rejection = null;
-            try { TerrainCompiler.Compile(context, [Source([Corridor(1.3)])]); } catch (WorldDataException error) { rejection = error; }
+            try { TerrainCompiler.Compile(context, [Source([conflicting])]); } catch (WorldDataException error) { rejection = error; }
             AssertThat(rejection is not null).IsTrue();
         }
-        var narrow = new TerrainPadOp("design:terrain:narrow-pad", "grade width is still binding", building.Id, 1, PadY: 0) { Zone = Zone };
-        {
-            WorldDataException? rejection = null;
-            try { TerrainCompiler.Compile(context, [Source([narrow, Corridor(0.3)])]); } catch (WorldDataException error) { rejection = error; }
-            AssertThat(rejection is not null).IsTrue();
-        }
-        var accepted = TerrainCompiler.Compile(context, [Source([Corridor(0.2)])]);
-        AssertThat(Math.Abs((double)(0) - (double)(accepted.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0.2) - (double)(accepted.HeightAt(2, 0))) <= TestTolerance.Position).IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -54,20 +97,6 @@ public sealed partial class TerrainCompilerTests
             AssertThat(Math.Abs((double)(0) - (double)(terrain.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue();
             AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(-2, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(2, 0))) <= TestTolerance.Position).IsTrue();
         }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void PadAndLaterCorridorUseTheFinalSurface()
-    {
-        var building = WorldFeatureFixture.Create("fixture:replaced-pad", "building", new PolygonGeometry(Box(-2, -2, 2, 2)), height: 8);
-        var road = new NetworkLine(new("fixture:wide-pad-road"), new([new(-30, 0), new(30, 0)]), 30)
-            { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };
-        var pad = new TerrainPadOp("design:terrain:replaced-pad", "authored building level", building.Id, 6, PadY: 1.3) { Zone = Zone };
-        var corridor = new TerrainCorridorOp("design:terrain:replacing-road", "final road constraint", road.Id,
-            [new(0, 1.3), new(60, 1.3)], 0, 0.75) { Zone = Zone };
-        var context = Context([building]) with { Network = new([road], [], [], [], []) };
-        var terrain = TerrainCompiler.Compile(context, [Source([pad, corridor])]);
-        AssertThat(Math.Abs((double)(1.3) - (double)(terrain.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(1.3) - (double)(terrain.HeightAt(2, 0))) <= TestTolerance.Position).IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

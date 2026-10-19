@@ -1,6 +1,5 @@
 using Campus.Gen.World;
 using Campus.Pipeline.Map;
-using System.Collections.ObjectModel;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -40,12 +39,8 @@ public static class MapWorldLoading
             // does not constitute a module claim and cannot grant a conflict exception.
             if (claims.RequiresAreaResolution)
             {
-                var baselineFiles = new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(input.Files
-                    .Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
-                    .OrderBy(pair => pair.Key, StringComparer.Ordinal)
-                    .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal));
-                var baseline = loader.Load(map.Id, baselineFiles, new(map));
-                claimedBy = claims.OverlayOwners(baseline.World);
+                var baseline = loader.LoadTopology(map.Id, WorldInputFiles.TopologyBaseline(input.Files));
+                claimedBy = claims.OverlayOwners(baseline);
             }
             else claimedBy = claims.OverlayOwners();
         }

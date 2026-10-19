@@ -18,6 +18,9 @@ namespace Campus.Gen.Furniture.Tests;
 /// <summary>The real world, the layout builder and the fixtures shared by the furniture test suites.</summary>
 internal static class FurnitureTestSupport
 {
+    internal static BuildInputSnapshot GlobalInputs { get; } = BuildInputSnapshot.Freeze(
+        new Dictionary<string, ReadOnlyMemory<byte>> { [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json")) });
+
     internal static readonly Lazy<IWorldModel> World = new(() => RealMapFixture.Load().World);
 
     internal static readonly Lazy<byte[]> PlantingBytes = new(() => RealMapFixture.ReadFiles()[FurnitureStyle.PlantingKey].ToArray());
@@ -30,7 +33,7 @@ internal static class FurnitureTestSupport
         planting is null ? RealInputs.Value : new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { [FurnitureStyle.PlantingKey] = planting };
 
     internal static FurnitureLayout Build(IWorldModel world, Func<FeatureId, Aspects, WpId?>? claimedBy = null, IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? inputs = null) =>
-        FurniturePlanner.Build(world, claimedBy, inputs ?? Inputs());
+        FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, world, claimedBy, inputs ?? Inputs());
 
     /// <summary>The real map's furniture layout, planned once; tests that only read the default result share it.</summary>
     internal static readonly Lazy<FurnitureLayout> RealLayout = new(() => Build(World.Value));

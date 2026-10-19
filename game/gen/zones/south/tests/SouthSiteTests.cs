@@ -143,6 +143,9 @@ public sealed class SouthSiteTests
         var barriers = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).OfType<WallCollider>().Where(w => w.Tag == SurfaceTag.Barrier).ToArray();
         var water = EastLake.EastLakeSite.Water(ctx.World);
         var shore = EastLake.EastLakeSite.ShoreOf(ctx.World);
+        // The bank and its collision share the authored platform's terrain height.
+        var bankOrigin = shore.Bank[shore.WadeSegment];
+        var bankY = ctx.World.Terrain.HeightAt(bankOrigin.X, bankOrigin.Y);
         AssertThat(EastLake.EastLakeSite.InWater(water, shore.WadeFrame.P(shore.WadeLength * 0.5f, 1f))).OverrideFailureMessage("the wade frame looks over the water").IsTrue();
         AssertThat(shore.Tread2 < -0.5f && shore.Tread2 > -0.8f).OverrideFailureMessage("the wade tread is under the -0.5 m water by less than 0.3 m").IsTrue();
         AssertThat(SouthTune.Lake.RailTop >= new Campus.Contracts.Parts.RailingParams().Height).OverrideFailureMessage("balustrade at least the railing part's height").IsTrue();
@@ -154,7 +157,7 @@ public sealed class SouthSiteTests
                 var p = f.P(u, -SouthTune.Lake.RailSetback);
                 var inOpening = openings.Any(o => u > o.U0 + 0.5f && u < o.U1 - 0.5f);
                 var nearOpening = openings.Any(o => u > o.U0 - 0.5f && u < o.U1 + 0.5f);
-                var guarded = barriers.Any(w => w.Y1 >= WalkRules.BarrierHeight && Covers(w, p, 1.0f));
+                var guarded = barriers.Any(w => w.Y1 >= bankY + WalkRules.BarrierHeight && Covers(w, p, bankY + 1.0f));
                 if (inOpening) AssertThat(!guarded).OverrideFailureMessage($"the wade step at {p} is open").IsTrue();
                 else if (!nearOpening) AssertThat(guarded).OverrideFailureMessage($"the bank at {p} is guarded").IsTrue();
             }

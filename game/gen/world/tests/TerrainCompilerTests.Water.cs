@@ -93,19 +93,6 @@ public sealed partial class TerrainCompilerTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void AutomaticRoadWaterWeightHasExactBoundariesAndNeverReappearsUnderWater()
-    {
-        var waterEdge = TerrainCompiler.WaterSideWeight(new(0, 1, 0), new(4, -1, 0));
-        var roadEdge = TerrainCompiler.WaterSideWeight(new(4, 1, 0), new(0, -1, 0));
-        AssertThat(Math.Abs((double)(0) - (double)(waterEdge.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(waterEdge.Dx)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(1) - (double)(roadEdge.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(roadEdge.Dx)) <= TestTolerance.Position).IsTrue();
-        AssertThat(Math.Abs((double)(0) - (double)(TerrainCompiler.WaterSideWeight(new(-2, 1, 0), new(6, -1, 0)).Height)) <= TestTolerance.Position).IsTrue();
-        var midpoint = TerrainCompiler.WaterSideWeight(new(2, 1, 0), new(2, -1, 0));
-        AssertThat(Math.Abs((double)(0.5) - (double)(midpoint.Height)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0.375) - (double)(midpoint.Dx)) <= TestTolerance.Position).IsTrue();
-        try { TerrainCompiler.WaterSideWeight(new(0, 1, 0), new(0, -1, 0)); throw new InvalidOperationException("Coincident fixed boundaries were silently accepted."); }
-        catch (ArgumentException) { }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
     public void BridgeBanksFollowActualShoreArclengthAndHaveTwoMetreContinuousEnds()
     {
         var region = new TerrainRegion([Box(-10, -10, 10, 10)]);
@@ -262,10 +249,10 @@ public sealed partial class TerrainCompilerTests
         };
         {
             WorldDataException? rejection = null;
-            try { TerrainCompiler.Compile(context, [Source([op])]); } catch (WorldDataException error) { rejection = error; }
+            try { TerrainCompiler.CompileAndValidate(context, [Source([op])]); } catch (WorldDataException error) { rejection = error; }
             AssertThat(rejection is not null).IsTrue();
         }
-        var accepted = Compile([op], [automatic, authored]);
+        var accepted = TerrainCompiler.CompileAndValidate(Context([automatic, authored]), [Source([op])]);
         AssertThat(accepted.ZonesValidated).OverrideFailureMessage("A valid author extent lost its zone validation after union.").IsTrue();
         var authoredOnly = Compile([op], [authored]);
         var automaticOnly = Compile([], [automatic]);

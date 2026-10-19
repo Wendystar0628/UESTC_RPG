@@ -26,7 +26,10 @@ public interface ITerrain
     /// </remarks>
     void FillTile(TileKey tile, int level, Span<short> cm);
     /// <summary>Absolute pad elevation for a building, plaza or other supported feature.</summary>
+    /// <exception cref="KeyNotFoundException">The feature has no pad in this terrain.</exception>
     float PadY(FeatureId feature);
+    /// <summary>Returns the same absolute pad elevation as PadY when present; false means the feature has no pad.</summary>
+    bool TryGetPadY(FeatureId feature, out float y);
     /// <summary>Logical constant water level. Unknown features and non-water features return null.</summary>
     float? WaterY(FeatureId water);
     TerrainFacts FactsAt(float x, float z);
@@ -110,6 +113,7 @@ public sealed class FlatTerrain : ITerrain
         cm.Clear();
     }
     public float PadY(FeatureId feature) => 0f;
+    public bool TryGetPadY(FeatureId feature, out float y) { y = 0f; return true; }
     public float? WaterY(FeatureId water) => _waterLevels.TryGetValue(water, out float level) ? level : null;
     public TerrainFacts FactsAt(float x, float z) => new(0, TerrainClass.Flat, float.PositiveInfinity, float.PositiveInfinity);
 }

@@ -22,11 +22,11 @@ public sealed class WorldModelSnapshot : IWorldModel
     internal WorldModelSnapshot(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary,
         WorldNetwork network, IInteriorIndex interiors, IOutskirtsModel? outskirts,
         IReadOnlyList<InteriorOverlayFile> interiorOverlays, WorldLoadOptions options,
-        IReadOnlyDictionary<string, TerrainOp> terrainOperations)
+        IReadOnlyDictionary<string, TerrainOp> terrainOperations, ITerrain terrain)
     {
         Features = features; Boundary = boundary; Network = network; Interiors = interiors;
         Outskirts = outskirts; Fidelity = options.Fidelity; InteriorOverlays = interiorOverlays;
-        Terrain = options.Terrain;
+        Terrain = terrain;
         TerrainOperations = terrainOperations;
         Spatial = new WorldSpatialIndex(features, boundary, network, interiors, Terrain);
     }
@@ -54,19 +54,21 @@ internal static class WorldFeatureKinds
 internal sealed class WorldInteriorIndex : IInteriorIndex
 {
     private readonly IReadOnlyDictionary<FeatureId, InteriorIndexEntry> _entries;
-    public WorldInteriorIndex(IEnumerable<WorldFeature> features, string? catalog = null)
+    public WorldInteriorIndex(IEnumerable<WorldFeature> features, string? catalog = null, ITerrain? terrain = null)
     {
         var entries = new Dictionary<FeatureId, InteriorIndexEntry>();
         foreach (var feature in features.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             var storeys = new List<StoreyInfo>();
-            foreach (var part in WorldFeatureKinds.Parts(feature, "building"))
+            var parts = WorldFeatureKinds.Parts(feature, "building").ToArray();
+            var padY = parts.Length == 0 ? 0 : terrain?.PadY(feature.Id) ?? 0;
+            foreach (var part in parts)
             {
                 var count = Math.Max(1, part.Storeys ?? (int)MathF.Ceiling((part.Height ?? WorldModelLoader.DefaultStoreyHeight) / WorldModelLoader.DefaultStoreyHeight));
                 var height = (part.Height ?? count * WorldModelLoader.DefaultStoreyHeight) / count;
                 foreach (var polygon in WorldFeatureGeometry.PolygonsOf(part.Geometry))
                     for (var floor = 1; floor <= count; floor++)
-                        storeys.Add(new(floor, (floor - 1) * height, height, polygon.Outer));
+                        storeys.Add(new(floor, padY + (floor - 1) * height, height, polygon.Outer));
             }
             if (storeys.Count > 0) entries.Add(feature.Id, new(feature.Id, storeys.AsReadOnly(), [], false, null, []));
         }
@@ -74,7 +76,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
         {
             using var document = WorldModelLoader.Parse("interiors.json", catalog);
             IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> closed;
-            try { closed = InteriorEntranceJson.ParseClosedEntrances(document.RootElement); }
+            try { closed = InteriorEntranceJson.ParseClosedEntrances(document.RootElement, terrain); }
             catch (JsonException error) { throw new WorldDataException("interiors.json", error.Path ?? "entrances", error.Message, error); }
             foreach (var pair in closed.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal))
             {
@@ -94,11 +96,10 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
                     foreach (var door in item.GetProperty("entrances").EnumerateArray())
                     {
                         if (WorldModelLoader.Text(door, "featureId") != id.Value) continue;
-                        var entrance = new EntranceDecl(WorldModelLoader.Text(door, "id"),
-                            Vector(door.GetProperty("outsideLanding")), Vector(door.GetProperty("insideLanding")),
-                            WorldModelLoader.Finite(door.GetProperty("clearWidth")), door.GetProperty("open").GetBoolean())
-                        { Center = Vector(door.GetProperty("doorCenter")), YawDeg = WorldModelLoader.Finite(door.GetProperty("facingDeg")) };
-                        if (entrance.ClearWidth <= 0) throw new WorldDataException("interiors.json", entrance.Id, "Invalid entrance width.");
+                        EntranceDecl entrance;
+                        try { entrance = InteriorEntranceJson.Parse(door, id, terrain); }
+                        catch (JsonException error)
+                        { throw new WorldDataException("interiors.json", WorldModelLoader.Text(door, "id"), error.Message, error); }
                         entrances.Add(entrance);
                     }
                     entries[id] = entry with { Open = true, ProviderId = provider, Entrances = entrances.AsReadOnly(), OpenStoreys = openStoreys };
@@ -107,7 +108,6 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
         }
         _entries = new ReadOnlyDictionary<FeatureId, InteriorIndexEntry>(entries);
     }
-    private static Vector3 Vector(JsonElement e) => new(WorldModelLoader.Finite(e[0]), WorldModelLoader.Finite(e[1]), WorldModelLoader.Finite(e[2]));
     public InteriorIndexEntry? Get(FeatureId id) => _entries.GetValueOrDefault(id);
     public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => _entries.OrderBy(e => e.Key.Value, StringComparer.Ordinal)
         .SelectMany(e => e.Value.Entrances).Where(e => Vector3.DistanceSquared(e.Center, p) <= r * r).ToArray();
@@ -159,6 +159,9 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
     public CameraMedium MediumAt(Vector3 p)
     {
         var ground = GroundY(p.X, p.Z);
+        if (_terrain is ITerrainWaterSource terrain && terrain.WaterAt(p.X, p.Z) is { } water
+            && p.Y < water.Surface && p.Y >= ground)
+            return new(MediumKind.Underwater, water.Id, Depth: water.Surface - p.Y);
         foreach (var feature in At(p.X, p.Z))
         {
             var point = new Vector2(p.X, p.Z);
@@ -175,7 +178,7 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
                     : storey?.Index ?? 1;
                 return new(MediumKind.Interior, feature.Id, localFloor, distance);
             }
-            if (p.Y < ground && p.Y >= ground - 6 && WorldFeatureKinds.Parts(feature, "water")
+            if (_terrain is FlatTerrain && p.Y < ground && p.Y >= ground - 6 && WorldFeatureKinds.Parts(feature, "water")
                 .Any(water => WorldFeatureGeometry.PolygonsOf(water.Geometry).Any(r => PlanGeometry.Contains(r, point))))
                 return new(MediumKind.Underwater, feature.Id, Depth: ground - p.Y);
         }

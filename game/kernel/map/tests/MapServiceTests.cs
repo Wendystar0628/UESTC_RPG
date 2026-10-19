@@ -455,6 +455,8 @@ public sealed class MapServiceTests
         public void DelayNext(MapId map)
         { _delayMap = map; _delayedEntered = new(); _releaseDelayed = new(); }
         public void ReleaseDelayed() => _releaseDelayed?.TrySetResult();
+        public IReadOnlyDictionary<FeatureId, WorldFeature> LoadTopology(MapId map,
+            IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) => new Dictionary<FeatureId, WorldFeature>();
         public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
             WorldModelLoadInputs inputs)
         {
