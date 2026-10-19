@@ -4,9 +4,9 @@
 //   UV  ：窗格坐标，floor(UV) = (列, 行)，fract(UV) = 格内位置；UV.x 沿立面向右，UV.y 向上
 //   UV2 ：x = 本块玻璃的窗号基址；y = 灯光通道号 + 32 × 列数
 //   窗号 = 基址 + 行 × 列数 + 列
-// 主线版的室内是程序化的房间盒（背墙、侧墙、顶棚、地面和一条家具剪影），窗卡图层（Texture2DArray）接入后替换。
+// 外侧用窗卡表现房间；内侧只叠玻璃反射与高光，透出真实校园。
 shader_type spatial;
-render_mode blend_mix, depth_draw_opaque, cull_back, diffuse_lambert, specular_disabled, ambient_light_disabled;
+render_mode blend_mix, depth_prepass_alpha, cull_disabled, diffuse_lambert, specular_disabled, ambient_light_disabled;
 
 #include "res://style/shaders/toon.gdshaderinc"
 // 窗卡与门厅卡的内容（WP-51b）：按窗位类型字节查 window_cards 表，程序化画出房间
@@ -124,7 +124,8 @@ void fragment() {
 	int wbase = int(round(UV2.x));
 	int wid = wbase + pane.y * cols + pane.x;
 	vec4 wov = toon_window_override(wid, (tctx.flags & TOON_F_OUTSKIRT) == 0);
-	float on = lamp_window_on(wid, wbase, cols, ch, wov);
+	// 虚拟房间与窗灯只从外侧看；背面不能把窗卡当成遮住校园的墙。
+	float on = FRONT_FACING ? lamp_window_on(wid, wbase, cols, ch, wov) : 0.0;
 	bool cool = lamp_window_cool(wid, wov);
 	// 冷白窗的室内压低一点明度，夜里近看不成白块
 	vec3 lampc = cool ? pal_cur(PAL_WINDOW_COOL) * GLASS_COOL_ROOM : pal_cur(PAL_WINDOW_WARM);
@@ -135,10 +136,11 @@ void fragment() {
 	vec3 right = cross(vec3(0.0, 1.0, 0.0), n);
 	right = length(right) > 1e-3 ? normalize(right) : vec3(1.0, 0.0, 0.0);
 	vec3 up = cross(n, right);
-	float nv = clamp(dot(-vdir, n), 0.0, 1.0);
+	float nv = dot(-vdir, n);
+	nv = clamp(FRONT_FACING ? nv : abs(nv), 0.0, 1.0);
 
 	// 0. 窗卡（WLD-INTERIORS，内容归 WP-51b）：有窗格编码的玻璃，关灯时里面也是一间房；导数在统一控制流里取
-	bool carded = cols > 0;
+	bool carded = FRONT_FACING && cols > 0;
 	float aa_m = max(length(fwidth(UV)) * GLASS_PANE_M.x * 0.7, 1e-4);
 	vec3 rd = vec3(dot(vdir, right), dot(vdir, up), dot(vdir, -n));
 	float night = smoothstep(-0.03, -0.12, sun_dir.y);
@@ -165,8 +167,14 @@ void fragment() {
 	rdir.y = max(rdir.y, 0.0) * (1.0 - GLASS_SKY_LIFT) + GLASS_SKY_LIFT;
 	vec3 sky = fog_sky(rdir);
 	float fres = mix(GLASS_REFLECT_MIN, GLASS_REFLECT_MAX, pow(1.0 - nv, 4.0));
-	tcol.lit = mix(tcol.lit, sky, fres);
-	tcol.shade = mix(tcol.shade, sky * 0.85, fres);
+	if (FRONT_FACING) {
+		tcol.lit = mix(tcol.lit, sky, fres);
+		tcol.shade = mix(tcol.shade, sky * 0.85, fres);
+	} else {
+		// 同一个反射比例交给混合通道，其余直接透出窗外的真实几何。
+		tcol.lit = sky;
+		tcol.shade = sky * 0.85;
+	}
 
 	// 2. 低太阳眩光（ART-STYLE）：只在受光的玻璃上，经"受光 − 影"交给 light()
 	float h_sun = degrees(asin(clamp(sun_dir.y, -1.0, 1.0)));
@@ -232,6 +240,8 @@ void fragment() {
 	tcol.extra += card_glow * (1.0 - fres * 0.5);
 
 	TOON_FRAGMENT_END(tcol)
+	// 正面保持不透明；闭楼的玻璃在阴影预通道照旧封壳，开放楼仍由 TOON_VERTEX 的 NoShadow 控制。
+	ALPHA = (FRONT_FACING || IN_SHADOW_PASS) ? 1.0 : fres;
 }
 
 void light() {
