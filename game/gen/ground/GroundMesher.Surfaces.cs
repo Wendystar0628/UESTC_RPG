@@ -20,6 +20,7 @@ internal sealed partial class GroundMesher
     {
         var code = CodeOf(Mean(poly));
         var surface = Classify(code);
+        if (CoveredLawn(code, surface)) return;
         if (surface != GroundSurface.Water)
         {
             var points = new Vector3[poly.Count];
@@ -198,6 +199,7 @@ internal sealed partial class GroundMesher
             TileField.Turf => Of(SurfaceKind.Turf),
             TileField.Court => Of(SurfaceKind.Court),
             TileField.Plaza => Of(SurfaceKind.Plaza),
+            TileField.Building => Of(SurfaceKind.Building),
             // Core is Pit plus the frame thickness of the nearest pit: the same gradient.
             TileField.Pit or TileField.Core => Of(SurfaceKind.Pit),
             _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown field.")
@@ -210,11 +212,15 @@ internal sealed partial class GroundMesher
     {
         var code = 0;
         for (var t = 0; t < _t.Length; t++)
-            if ((_enabled & (1 << t)) != 0 && values[offset + _t[t].Field] < _t[t].Iso) code |= 1 << t;
+            if ((_enabled & (1 << t)) != 0 && _t[t].Contains(values[offset + _t[t].Field])) code |= 1 << t;
         return code;
     }
 
     private int CodeOf(float[] values) => CodeAt(values, 0);
+
+    // Buildings replace visible lawn; surface/height queries keep the ground below the building's own floor.
+    private static bool CoveredLawn(int code, GroundSurface surface) =>
+        (code & (1 << TBuilding)) != 0 && GroundPalette.IsLawn(surface);
 
     /// <summary>Priority: water, carriageway level, kerb bevel and kerb, paved surfaces (edging band first), lawn.</summary>
     public GroundSurface Classify(int code)

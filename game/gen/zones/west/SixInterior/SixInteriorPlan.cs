@@ -16,7 +16,10 @@ internal sealed record SixInteriorPlan(float GroundY, PolygonRings CBase, Polygo
     float FormulaWidth, float FormulaRun, PlanFrame ReturnFrame, float ReturnWidth, float ReturnDepth,
     IReadOnlyList<Vector2> CRoute)
 {
+    public float FloorY => GroundY + GroundLevels.Paving;
     public float UpperY => GroundY + S.BaseStorey;
+    public float StairRise => UpperY - FloorY;
+    public float LandingY => FloorY + StairRise * 0.5f;
     public float FormulaLanding => CirculationStyle.StairLandingMin;
     public float FormulaFlightRun => (FormulaRun - FormulaLanding) * 0.5f;
     public float CeilingY => GroundY + S.BaseHeight - 0.45f;

@@ -13,11 +13,12 @@ internal sealed class TileField
 {
     // Field slots per lattice point.
     // Tone: lawn tone noise in [0, 1]; LawnEdge: distance from the lawn to the nearest kerb, paving or building foot;
+    // Building: footprint distance, with courtyard holes, retained for clipping lawn beneath buildings.
     // H: base height of the ground (designed terrain with flattened carriageways), not a threshold field.
     // Pit: distance to the outer face of the nearest tree pit's frame; Core: the same distance plus that pit's frame thickness, so
     // its zero contour is the frame's inner face; PitRim, PitSoil: that pit's frame top and soil top (heights, like H, not thresholds).
     public const int W = 0, A = 1, Car = 2, P = 3, Track = 4, Turf = 5, Court = 6, Plaza = 7, Tone = 8, LawnEdge = 9, H = 10,
-        Pit = 11, Core = 12, PitRim = 13, PitSoil = 14, Count = 15;
+        Pit = 11, Core = 12, PitRim = 13, PitSoil = 14, Building = 15, Count = 16;
 
     public int N { get; }
     public int S { get; }
@@ -118,7 +119,8 @@ internal sealed class TileField
             v[o + Core] = core[k];
             v[o + PitRim] = rim[k];
             v[o + PitSoil] = soil[k];
-            v[o + LawnEdge] = MathF.Min(MathF.Min(v[o + P], v[o + A] - section.CurbWidth), kinds[(int)SurfaceKind.Building][k]);
+            v[o + Building] = kinds[(int)SurfaceKind.Building][k];
+            v[o + LawnEdge] = MathF.Min(MathF.Min(v[o + P], v[o + A] - section.CurbWidth), v[o + Building]);
         }
         for (var j = 0; j < field.S; j++)
             for (var i = 0; i < field.S; i++)
@@ -147,14 +149,16 @@ internal sealed class TileField
                     v[(j * field.S + i) * Count + Tone] = CellSplit.Lerp(T(0, 0), T(1, 0), T(0, 1), T(1, 1), u, w);
                 }
         }
-        // No contour may pass (almost) exactly through a lattice point: a contour lying on a lattice line would never be
+        // Building coverage keeps exact boundary zeros: treating its aligned corner as outside can leave a lawn triangle
+        // entirely inside the footprint. It uses closed-set coverage, unlike the height-step contours below.
+        // No height-step contour may pass (almost) exactly through a lattice point: a contour lying on a lattice line would never be
         // cut, its step face would be lost and its pieces would leave pinholes. Values within a micrometre of a
         // threshold move ten micrometres outside. Same rule on both sides of a seam, so tiles still agree bit for bit.
         float[] isos = [0f, section.CurbBevel, -section.CurbBevel, section.CurbWidth, -section.EdgingWidth, -section.PlazaBorder,
             section.Lawn.EdgeBand, section.Lawn.Low, section.Lawn.High];
         for (var k = 0; k < v.Length; k++)
         {
-            if (k % Count is H or PitRim or PitSoil) continue;
+            if (k % Count is H or PitRim or PitSoil or Building) continue;
             foreach (var iso in isos)
                 if (MathF.Abs(v[k] - iso) < 1e-6f) v[k] = iso + 1e-5f;
         }

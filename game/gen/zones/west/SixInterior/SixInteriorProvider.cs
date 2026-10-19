@@ -23,8 +23,9 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
     private IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> _entrances =
         new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>();
     private static readonly DormitoryPlanOptions Rules = new();
-    internal static readonly ToonSpec FloorMaterial = PartMaterials.Trim("wall.greyWhite");
-    internal static readonly ToonSpec WallMaterial = PartMaterials.Trim("wall");
+    internal static readonly ToonSpec FloorMaterial = CirculationStyle.StairBody;
+    internal static readonly ToonSpec WallMaterial = PartMaterials.Trim("wall.greyWhite");
+    // Existing campus light-wood family (also used by the library's light timber).
     internal static readonly ToonSpec WoodMaterial = PartMaterials.Trim("panel.brown");
     public IReadOnlyList<FeatureId> FeatureIds => _features;
     public int Priority => 100;
@@ -45,7 +46,8 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         var isC = id.Value == S.EntityC;
         var floors = _floors.Where(f => (f is 1 or 2) && (isC || f == 2)).ToArray();
         var footprint = isC ? p.CBase : p.PublicB;
-        var storeys = floors.Select(f => new StoreyInfo(f, f == 1 ? p.GroundY : p.UpperY, S.BaseStorey, footprint.Outer)).ToArray();
+        var storeys = floors.Select(f => new StoreyInfo(f, f == 1 ? p.FloorY : p.UpperY,
+            f == 1 ? p.StairRise : S.BaseStorey, footprint.Outer)).ToArray();
         var zones = floors.Select(f => new ZoneVolume(f, f * 100, f == 1 ? ZoneKind.Lobby : ZoneKind.Corridor,
             (isC ? f == 1 ? p.Hall : p.UpperC : p.PublicB).Outer,
             new("interior.main"), StableHash.Hash32(ctx.WorldSeed, id.Value, "six.hall", f.ToString(CultureInfo.InvariantCulture)), true)).ToList();
@@ -55,8 +57,8 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         {
             var frame = SixSite.EastFace(ctx.World, SixSite.EastDoor(ctx.World)).Face.Frame;
             var c = new Vector2(entrance.Center.X, entrance.Center.Z);
-            portals.Add(new(1, -1, 100, V(c - frame.U * entrance.ClearWidth * 0.5f, p.GroundY),
-                V(c + frame.U * entrance.ClearWidth * 0.5f, p.GroundY), S.DoorHeight, PortalKind.Door));
+            portals.Add(new(1, -1, 100, V(c - frame.U * entrance.ClearWidth * 0.5f, p.FloorY),
+                V(c + frame.U * entrance.ClearWidth * 0.5f, p.FloorY), S.DoorHeight, PortalKind.Door));
         }
         if (isC)
             portals.Add(new(2, 100, 200, V(p.FormulaFrame.P(-p.FormulaWidth * 0.5f, p.FormulaRun * 0.5f), p.UpperY),
@@ -67,14 +69,14 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
             {
                 var returning = ReturnDoor(p, floor);
                 var hinge = returning.Hinge;
-                var y = floor == 1 ? p.GroundY : p.UpperY;
+                var y = floor == 1 ? p.FloorY : p.UpperY;
                 zones.Add(new(floor, floor * 100 + 10, ZoneKind.Stair, p.ReturnOpening.Outer, new("interior.main"),
                     StableHash.Hash32(ctx.WorldSeed, id.Value, "six.return", floor.ToString(CultureInfo.InvariantCulture)), true));
                 portals.Add(new(floor, floor * 100, floor * 100 + 10, V(hinge, y),
                     V(hinge + p.ReturnFrame.U * Rules.DoorClearWidth, y), Rules.DoorHeight, PortalKind.Door));
                 var yaw = MathF.Atan2(-p.ReturnFrame.U.Y, p.ReturnFrame.U.X) * (180f / float.Pi);
                 doors.Add(new($"six.return/{floor}", floor, floor * 100, floor * 100 + 10,
-                    V(hinge, floor == 1 ? p.GroundY : p.UpperY), yaw, 90, Rules.DoorClearWidth, Rules.DoorHeight, DoorLeafKind.FireDoor));
+                    V(hinge, floor == 1 ? p.FloorY : p.UpperY), yaw, 90, Rules.DoorClearWidth, Rules.DoorHeight, DoorLeafKind.FireDoor));
             }
         var extent = isC ? footprint.Outer.Concat(SixSite.Plan(ctx.World, S.EntityC, S.LinkBC).Outer)
             .Concat(SixSite.Bridges(ctx.World).SelectMany(b => new[] { b.From, b.To })).ToArray() : footprint.Outer.ToArray();
@@ -131,11 +133,11 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         else if (storey == 1)
         {
             var entrance = _entrances[id].Single(e => e.Id == S.EastDoorId);
-            var entry = Node(S.EntityC, 1, "entry", new(entrance.Inside.X, entrance.Inside.Z), p.GroundY);
-            var foot = Node(S.EntityC, 1, "formula.foot", p.FormulaFrame.P(0, -p.FormulaRun * 0.5f), p.GroundY);
+            var entry = Node(S.EntityC, 1, "entry", new(entrance.Inside.X, entrance.Inside.Z), p.FloorY);
+            var foot = Node(S.EntityC, 1, "formula.foot", p.FormulaFrame.P(0, -p.FormulaRun * 0.5f), p.FloorY);
             Link(entry, foot, NavEdgeKind.Room, p.FormulaWidth);
             Link(foot, Node(S.EntityC, 2, "formula.top", p.FormulaFrame.P(0, p.FormulaRun * 0.5f), p.UpperY), NavEdgeKind.Stair, p.FormulaWidth);
-            var returning = Node(S.EntityC, 1, "return.lower", ReturnDoor(p, 1).Centre, p.GroundY);
+            var returning = Node(S.EntityC, 1, "return.lower", ReturnDoor(p, 1).Centre, p.FloorY);
             Link(entry, returning, NavEdgeKind.Room, Rules.DoorClearWidth);
             Link(returning, Node(S.EntityC, 2, "return.upper", ReturnDoor(p, 2).Centre, p.UpperY), NavEdgeKind.Stair, Rules.StairFlightWidth);
         }
@@ -173,12 +175,12 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         }
         if (storey == 1)
         {
-            sink.Floor(p.Hall, p.GroundY, SixInteriorPlan.SlabThickness, FloorMaterial, FootMat.Tile);
+            sink.Floor(p.Hall, p.FloorY, SixInteriorPlan.SlabThickness, FloorMaterial, FootMat.Terrazzo);
             var (face, x) = SixSite.EastFace(ctx.World, SixSite.EastDoor(ctx.World));
             sink.Floor(new(face.Frame.Rect(x - S.VestibuleWidth * 0.5f, -S.Recess,
-                x + S.VestibuleWidth * 0.5f, 0)), p.GroundY, SixInteriorPlan.SlabThickness, L.Granite, FootMat.StonePaving);
+                x + S.VestibuleWidth * 0.5f, 0)), p.FloorY, SixInteriorPlan.SlabThickness, L.Granite, FootMat.StonePaving);
             sink.Plate(p.Hall, p.CeilingY, SixInteriorPlan.SlabThickness, WallMaterial);
-            Enclose(ctx, sink, p, p.Hall, p.CBase, p.GroundY, false);
+            Enclose(ctx, sink, p, p.Hall, p.CBase, p.FloorY, false);
             Formula(sink, p);
             ReturnStair(sink, p, true);
             if (full) SixInteriorFurnishing.Hall(ctx, sink, p);
@@ -198,13 +200,13 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
     {
         var run = p.FormulaFlightRun;
         var part = new StairOpenPart();
-        var parameters = new StairParams(p.FormulaWidth, S.BaseStorey * 0.5f, run, 15)
+        var parameters = new StairParams(p.FormulaWidth, p.StairRise * 0.5f, run, 15)
         { Material = WoodMaterial, Foot = FootMat.WoodFloor };
-        sink.Part(part, parameters, p.FormulaFrame.At(0, p.GroundY, -(p.FormulaLanding + run) * 0.5f), true);
+        sink.Part(part, parameters, p.FormulaFrame.At(0, p.FloorY, -(p.FormulaLanding + run) * 0.5f), true);
         sink.Floor(new(p.FormulaFrame.Rect(-p.FormulaWidth * 0.5f, -p.FormulaLanding * 0.5f,
-            p.FormulaWidth * 0.5f, p.FormulaLanding * 0.5f)), p.GroundY + S.BaseStorey * 0.5f,
+            p.FormulaWidth * 0.5f, p.FormulaLanding * 0.5f)), p.LandingY,
             SixInteriorPlan.SlabThickness, WoodMaterial, FootMat.WoodFloor);
-        sink.Part(part, parameters, p.FormulaFrame.At(0, p.GroundY + S.BaseStorey * 0.5f,
+        sink.Part(part, parameters, p.FormulaFrame.At(0, p.LandingY,
             (p.FormulaLanding + run) * 0.5f), true);
     }
 
@@ -215,9 +217,9 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         var z0 = -p.ReturnDepth * 0.5f; var z1 = p.ReturnDepth * 0.5f;
         var x0 = -p.ReturnWidth * 0.5f; var x1 = p.ReturnWidth * 0.5f;
         if (lower)
-            sink.Part(new StairDoublePart(), new StairParams(p.ReturnWidth, S.BaseStorey, p.ReturnDepth, 15)
-            { Foot = FootMat.Terrazzo }, frame.At(0, p.GroundY, 0), true);
-        var y = lower ? p.GroundY : p.UpperY;
+            sink.Part(new StairDoublePart(), new StairParams(p.ReturnWidth, p.StairRise, p.ReturnDepth, 15)
+            { Foot = FootMat.Terrazzo }, frame.At(0, p.FloorY, 0), true);
+        var y = lower ? p.FloorY : p.UpperY;
         // The upper floor is the end of the return stair; its room is capped here, with no continuation upstairs.
         foreach (var (a, b) in new[] { (frame.P(x0, z0), frame.P(x0, z1)), (frame.P(x0, z1), frame.P(x1, z1)),
             (frame.P(x1, z1), frame.P(x1, z0)) })
@@ -240,7 +242,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
             // The northern route ends on the real bridge opening; that threshold remains open.
             if (SixSite.BridgeDoors(ctx.World).Any(d => PlanLines.SegmentDistanceSquared(d.Centre, a, b) < 0.04f)) continue;
             if (gallery && atrium) sink.GlassGuard(a, b, y, 1.2f);
-            else if (y == p.GroundY)
+            else if (y == p.FloorY)
                 foreach (var span in p.LowerWallSegments(a, b))
                     sink.Wall(span.A, span.B, y, span.Top, Rules.PartitionThickness, WallMaterial, SurfaceTag.DoorClosed);
             else

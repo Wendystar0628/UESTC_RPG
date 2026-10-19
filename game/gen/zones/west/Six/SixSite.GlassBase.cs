@@ -88,7 +88,24 @@ public sealed partial class SixSite
                 var middle = (levels[j - 1] + levels[j]) * 0.5f - y;
                 foreach (var (x0, x1) in GridFacade.Open(0, e.Length,
                     openings.Where(o => middle >= o.Bottom && middle <= o.Top).Select(o => (o.From, o.To))))
-                    GridFacade.Box(b, e.Frame, x0, x1, levels[j - 1], levels[j], -0.05f, 0.05f, coarse ? L.DarkGrey : L.Glass, 0);
+                {
+                    if (coarse)
+                    {
+                        GridFacade.Box(b, e.Frame, x0, x1, levels[j - 1], levels[j], -0.05f, 0.05f, L.DarkGrey, 0);
+                        continue;
+                    }
+                    // One outward-facing sheet: a closed thin box adds an inward-facing front face,
+                    // so the glass shader never reaches its transparent back face from inside the hall.
+                    var mesh = new MeshWriter(L.Glass);
+                    float width = x1 - x0, height = levels[j] - levels[j - 1];
+                    var lowerLeft = mesh.Vertex(Vector3.Zero, Vector3.UnitZ, new(width, 0));
+                    var lowerRight = mesh.Vertex(new(width, 0, 0), Vector3.UnitZ, Vector2.Zero);
+                    var upperRight = mesh.Vertex(new(width, height, 0), Vector3.UnitZ, new(0, height));
+                    var upperLeft = mesh.Vertex(new(0, height, 0), Vector3.UnitZ, new(width, height));
+                    mesh.Triangle(lowerLeft, lowerRight, upperRight, Vector3.UnitZ);
+                    mesh.Triangle(lowerLeft, upperRight, upperLeft, Vector3.UnitZ);
+                    b.Add(mesh.Finish(), e.Frame.At(x0, levels[j - 1], 0.05f));
+                }
             }
         }
         b.Add(PartGeometryKernel.Extrude(plan, 0.45f, L.Trim, soffit), Matrix4x4.Identity);

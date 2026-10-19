@@ -46,9 +46,10 @@ internal sealed partial class GroundMesher
 
     private void Split(List<Vert> poly, int t, List<List<Vert>> output)
     {
-        var (field, iso) = _t[t];
+        var threshold = _t[t];
+        var (field, iso) = threshold;
         var inside = 0;
-        foreach (var v in poly) if (v.Vals[field] < iso) inside++;
+        foreach (var v in poly) if (threshold.Contains(v.Vals[field])) inside++;
         if (inside == 0 || inside == poly.Count)
         {
             output.Add(poly);
@@ -60,8 +61,8 @@ internal sealed partial class GroundMesher
         {
             var p = poly[k];
             var q = poly[(k + 1) % poly.Count];
-            var pin = p.Vals[field] < iso;
-            var qin = q.Vals[field] < iso;
+            var pin = threshold.Contains(p.Vals[field]);
+            var qin = threshold.Contains(q.Vals[field]);
             var target = pin ? a : b;
             target.Add(Copy(p, p.Tag));
             if (pin != qin)

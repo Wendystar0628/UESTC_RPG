@@ -92,9 +92,26 @@ public sealed class GroundSourcesTests
         AssertThat(Shelter(35.5f, 0.5f) == 0).OverrideFailureMessage("Under the annex is sheltered (a part of a multi-part parent).").IsTrue();
         AssertThat(Shelter(25.5f, 0.5f) == 255).OverrideFailureMessage("The gap between the parts is exposed.").IsTrue();
 
-        var tile = new GroundModule().Build(TestWorld.Context(world), new TileKey(0, 0), LodLevel.L0);
-        AssertThat(tile.Meshes.Count > 0).OverrideFailureMessage("A world with a multi-part building builds ground.").IsTrue();
-        foreach (var mesh in tile.Meshes) mesh.ValidateVertexData();
+        foreach (var lod in new[] { LodLevel.L0, LodLevel.L2 })
+        {
+            var tile = new GroundModule().Build(TestWorld.Context(world), new TileKey(0, 0), lod);
+            var centres = new List<Vector2>();
+            foreach (var mesh in tile.Meshes)
+            {
+                mesh.ValidateVertexData();
+                for (var t = 0; t < mesh.Index.Length; t += 3)
+                {
+                    Vector2 P(int k) => new(mesh.Position[3 * mesh.Index[t + k]], mesh.Position[3 * mesh.Index[t + k] + 2]);
+                    centres.Add((P(0) + P(1) + P(2)) / 3f);
+                }
+            }
+            var deepest = centres.MinBy(p => layout.SignedDistance(SurfaceKind.Building, p, 50f));
+            AssertThat(centres.All(p => layout.SignedDistance(SurfaceKind.Building, p, 50f) >= -TestTolerance.Layout))
+                .OverrideFailureMessage($"{lod}: buildings replace the lawn beneath every part; deepest triangle centre {deepest}, distance {layout.SignedDistance(SurfaceKind.Building, deepest, 50f)} m.").IsTrue();
+            AssertThat(centres.Any(p => p.X > 0f && p.X < 6f && p.Y > 0f && p.Y < 6f) &&
+                centres.Any(p => p.X > 20f && p.X < 30f && p.Y > 0f && p.Y < 5f))
+                .OverrideFailureMessage($"{lod}: courtyard lawn and the open gap between parts stay visible.").IsTrue();
+        }
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

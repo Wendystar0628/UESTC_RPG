@@ -7,7 +7,7 @@ namespace Campus.Gen.Ground;
 /// Turns the tile's distance fields into ground geometry.
 /// <list type="bullet">
 /// <item>Each lattice cell is split along its anti-diagonal, (1,0)-(0,1) (<see cref="CellSplit"/>, the diagonal of the
-/// collision height field); fields are linear on each triangle, so clipping a triangle by "field &lt; iso" is exact and
+/// collision height field); fields are linear on each triangle, so clipping a triangle at a field threshold is exact and
 /// neighbouring regions share their boundary vertices exactly.</item>
 /// <item>Cells whose four corners resolve to the same surface merge into quadtree blocks. A block's outline keeps
 /// every lattice vertex used by its neighbours, so there are no T-junction cracks.</item>
@@ -17,7 +17,11 @@ namespace Campus.Gen.Ground;
 /// </summary>
 internal sealed partial class GroundMesher
 {
-    private readonly record struct Threshold(int Field, float Iso);
+    private readonly record struct Threshold(int Field, float Iso)
+    {
+        // A building owns its boundary; its zero-valued corner samples must not classify an interior triangle as lawn.
+        public bool Contains(float value) => Field == TileField.Building ? value <= Iso : value < Iso;
+    }
 
     private sealed class Vert
     {
@@ -29,7 +33,7 @@ internal sealed partial class GroundMesher
 
     private const int TWater = 0, TRoad = 1, TBevel = 2, TCurb = 3, TCar = 4, TPaved = 5, TEdge = 6,
         TTrack = 7, TTurf = 8, TCourt = 9, TPlaza = 10, TPlazaBorder = 11, TLawnEdge = 12, TLawnLow = 13, TLawnHigh = 14,
-        TPit = 15, TPitTop = 16, TPitCoreBevel = 17, TPitCore = 18;
+        TPit = 15, TPitTop = 16, TPitCoreBevel = 17, TPitCore = 18, TBuilding = 19;
 
     private static readonly Vector3 Up = Vector3.UnitY;
 
@@ -93,7 +97,8 @@ internal sealed partial class GroundMesher
             new(TileField.Pit, 0f),
             new(TileField.Pit, _bevel ? -section.CurbBevel : 0f),
             new(TileField.Core, _bevel ? section.CurbBevel : 0f),
-            new(TileField.Core, 0f)
+            new(TileField.Core, 0f),
+            new(TileField.Building, 0f)
         ];
         // Disabled thresholds are never split on: a duplicate contour would steal the face tag of the real one.
         _enabled = (1 << _t.Length) - 1;

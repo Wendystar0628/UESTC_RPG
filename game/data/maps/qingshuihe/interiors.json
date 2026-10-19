@@ -340,20 +340,21 @@
         {
           "id": "six.c.east",
           "featureId": "qsh:relation:14153711",
+          "heightRef": "pad",
           "doorCenter": [
             -588.3,
-            0,
+            0.15,
             230
           ],
           "facingDeg": 77,
           "outsideLanding": [
             -585.8,
-            0,
+            0.15,
             229.4
           ],
           "insideLanding": [
             -591.2231,
-            0,
+            0.15,
             230.6749
           ],
           "clearWidth": 1.1,

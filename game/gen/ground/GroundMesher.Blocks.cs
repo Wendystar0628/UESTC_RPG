@@ -8,7 +8,7 @@ internal sealed partial class GroundMesher
     private void Block(int i0, int j0, int size, int code)
     {
         var surface = Classify(code);
-        if (surface == GroundSurface.Water) return;
+        if (surface == GroundSurface.Water || CoveredLawn(code, surface)) return;
         var ring = new List<Vector3>();
         void Walk(int i, int j)
         {
@@ -154,7 +154,8 @@ internal sealed partial class GroundMesher
                 var closest = float.MaxValue;
                 foreach (var iso in isos)
                 {
-                    if ((value < iso) != (plane < iso)) return false;
+                    var threshold = new Threshold(field, iso);
+                    if (threshold.Contains(value) != threshold.Contains(plane)) return false;
                     closest = MathF.Min(closest, MathF.Abs(plane - iso));
                 }
                 if (closest < near && MathF.Abs(value - plane) > tolerance) return false;
