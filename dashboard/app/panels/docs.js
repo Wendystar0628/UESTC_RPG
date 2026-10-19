@@ -1,4 +1,4 @@
-/* 文档页：域 → 主文档 → 子文档 → 节的可展开树 + 引用关系图（自绘 SVG，不引库）。数据 docs（10 min 刷新）。 */
+/* 文档页：顶层文档单列，其下域 → 主文档 → 子文档 → 节的可展开树 + 引用关系图（自绘 SVG，不引库）。数据 docs（10 min 刷新）。 */
 (function () {
   const NS = 'http://www.w3.org/2000/svg';
   const LEVELS = [
@@ -62,6 +62,11 @@
       return { id: 'd:' + dm.key, kind: 'domain', name: dm.name, count: docs.length, children: roots };
     });
   }
+  function topNode(d) {
+    const id = 'c:' + d.code;
+    const secs = Array.isArray(d.sections) ? d.sections : [];
+    return { id: id, kind: 'doc', top: true, doc: d, children: secs.map((x) => sectionNode(x, id, d.path, id)) };
+  }
   function treeLabel(n) {
     if (n.kind === 'domain') return h('span', 'dc-line', [h('span', 'dc-dname', n.name), h('span', 'dc-dcount', n.count + ' 份')]);
     if (n.kind === 'section') {
@@ -71,15 +76,15 @@
     const bar = h('span', 'dc-size');
     for (let i = 1; i <= 4; i++) bar.append(h('i', i <= sizeLevel(d.chars) ? 'on' : ''));
     bar.title = charsText(d.chars);
-    return h('span', 'dc-line', [h('span', 'dc-code', d.code), h('span', 'dc-title', Dash.a(d.path, d.title)), bar, h('span', 'dc-sum', d.summary || '')]);
+    return h('span', 'dc-line', [n.top ? h('span', 'dc-dname', '顶层') : null, h('span', 'dc-code', d.code), h('span', 'dc-title', Dash.a(d.path, d.title)), bar, h('span', 'dc-sum', d.summary || '')]);
   }
-  function docTree(domains) {
-    return Dash.tree({ key: 'docs', nodes: buildTree(domains), id: (n) => n.id, label: treeLabel, openDepth: 0 });
+  function docTree(top, domains) {
+    return Dash.tree({ key: 'docs', nodes: (top ? [topNode(top)] : []).concat(buildTree(domains)), id: (n) => n.id, label: treeLabel, openDepth: 0 });
   }
 
   /* ---------- 引用关系图 ---------- */
   function graph(data) {
-    const domains = data.domains || [];
+    const domains = (data.top ? [{ key: 'top', name: '顶层', docs: [data.top] }] : []).concat(data.domains || []);
     const nodes = [];
     const byCode = {};
     domains.forEach((dm, di) => (dm.docs || []).forEach((d) => {
@@ -240,12 +245,12 @@
       el.classList.add('dc');
       if (!d) { el.append(h('p', 'muted', '还没有文档数据')); return; }
       const domains = d.domains || [];
-      const all = domains.reduce((a, x) => a.concat(x.docs || []), []);
+      const all = domains.reduce((a, x) => a.concat(x.docs || []), d.top ? [d.top] : []);
       const over = ((Dash.get('health') || {}).docs || {}).over || 0; // 口径以 doc_size.py 为准
       const top = status(over ? 'auto' : 'muted');
-      top.body.append(domains.length + ' 个域，' + all.length + ' 份文档');
+      top.body.append((d.top ? '顶层 ' + d.top.code + ' 加 ' : '') + domains.length + ' 个域，共 ' + all.length + ' 份文档');
       if (over) top.body.append('，', h('span', 'dc-over', over + ' 份超过体量上限'));
-      el.append(top, docTree(domains));
+      el.append(top, docTree(d.top, domains));
     },
   });
 

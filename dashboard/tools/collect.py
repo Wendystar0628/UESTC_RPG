@@ -30,12 +30,8 @@ SKIP_DIRS = {'bin', 'obj', '.godot', '.venv', '__pycache__', 'godot-api', 'addon
 SKIP_PATHS = {'game/bake'}  # 本机生成的暂存
 MAX_DEPTH = 4  # 目录树列到离仓库根第几层
 
-# 文档域（CORE-INDEX §1）：键、名称、所在目录
-DOMAINS = [('collab', '协作'), ('eng', '工程'), ('plan', '计划与登记'), ('art', '画面'),
-           ('sys', '系统与界面'), ('world', '世界规则'), ('map', '地图：清水河')]
-DOMAIN_OF_DIR = {'workflow': 'collab', 'engineering': 'eng', 'ops': 'eng', 'tools': 'eng', 'core': 'plan',
-                 'art': 'art', 'systems': 'sys', 'ui': 'sys', 'world': 'world', 'maps': 'map', '.': 'plan'}
-PLAN_CODES = ('ENG-WP', 'ENG-ROADMAP')  # 放在 engineering/ 里但属于计划与登记
+# 文档地图照 AI 读的结构：顶层 CORE-INDEX，其下按 CORE-INDEX §1 的域与主文档，子文档按文件头 parent 挂到主文档下
+TOP_DOC = 'docs/README.md'  # 唯一的顶层文档（CORE-INDEX）
 
 # 项目分层（ENG-ARCH 分层）：层名 → 目录；game/gen、game/kernel、game/systems 取下一层
 LAYERS = ['契约', '世界与公共几何', '内容生成', '运行时', '数据与工具']
@@ -230,10 +226,23 @@ def doc_sections():
     return out
 
 
-def parent_code(code, codes):
-    """主文档：同目录里编码是它前缀（以 - 分段）的最长一份；没有就 None。"""
-    best = [c for c in codes if c != code and code.startswith(c + '-')]
-    return max(best, key=len) if best else None
+def code_pattern(codes):
+    """匹配文档编码的正则：长编码优先，免得 ENG-GATES 吃掉 ENG-GATES-SHOTS。"""
+    return re.compile(r'(?<![A-Za-z0-9-])(' + '|'.join(re.escape(c) for c in sorted(codes, key=len, reverse=True)) + r')(?![A-Za-z0-9-])')
+
+
+def index_domains(index_text, pattern):
+    """CORE-INDEX §1 的域与主文档，顺序照原文：[(域名, [编码…])]。域是加粗名字开头的段，段里先出现的编码是它的主文档；
+    一份文档只归第一次出现的那个域，所以后面"常用脚本"这类段里顺带提到的不算。"""
+    m = re.search(r'^## 1 .*?(?=^## 2 )', index_text, re.S | re.M)
+    seen, out = set(), []
+    for block in re.split(r'\n(?=\*\*)', m.group(0) if m else ''):
+        name = re.match(r'\*\*([^*]+)\*\*', block)
+        codes = [c for c in dict.fromkeys(pattern.findall(block)) if c not in seen]
+        if name and codes:
+            seen.update(codes)
+            out.append((name.group(1), codes))
+    return out
 
 
 def doc_files():
@@ -243,13 +252,6 @@ def doc_files():
         if not r.startswith('docs/godot-api/') and r != 'docs/SECTIONS.md':
             out.append(r)
     return out
-
-
-def domain_of(path, code):
-    if code.startswith(PLAN_CODES):
-        return 'plan'
-    parts = path.split('/')
-    return DOMAIN_OF_DIR.get(parts[1] if len(parts) > 2 else '.', 'plan')
 
 
 def docs_data():
@@ -262,21 +264,37 @@ def docs_data():
         code, chars, _ = doc_size.measure(os.path.join(ROOT, path))
         summary = fm.get('summary', '')
         items.append({'code': code, 'title': fm.get('title', code), 'path': path, 'summary': summary,
-                      'chars': chars, 'parent': None, 'sections': sections.get(code, []), '_body': text})
+                      'chars': chars, 'parent': fm.get('parent') or None, 'sections': sections.get(code, []), '_body': text})
+    by_code = {d['code']: d for d in items}
+    pattern = code_pattern(by_code)
+    top = next((d for d in items if d['path'] == TOP_DOC), None)
+    # 树：§1 的主文档照原文顺序，子文档照它在主文档里第一次被提到的位置
+    kids = {}
     for d in items:
-        same = [x['code'] for x in items if os.path.dirname(x['path']) == os.path.dirname(d['path'])]
-        d['parent'] = parent_code(d['code'], same)
-    # 引用关系：正文里出现的其他文档编码，按 from→to 计次；长编码优先，免得 ENG-GATES 吃掉 ENG-GATES-SHOTS
-    codes = sorted({d['code'] for d in items}, key=len, reverse=True)
-    pattern = re.compile(r'(?<![A-Za-z0-9-])(' + '|'.join(re.escape(c) for c in codes) + r')(?![A-Za-z0-9])')
+        if d['parent'] in by_code:
+            kids.setdefault(d['parent'], []).append(d)
+    for parent, ds in kids.items():
+        body = by_code[parent]['_body']
+        ds.sort(key=lambda d: (body.find(d['code']) if d['code'] in body else len(body), d['code']))
+
+    def subtree(d):
+        return [d] + [x for k in kids.get(d['code'], []) for x in subtree(k)]
+
+    domains, placed = [], {top['code']} if top else set()
+    for i, (name, mains) in enumerate(index_domains(top['_body'] if top else '', pattern)):
+        docs = [x for c in mains if c not in placed for x in subtree(by_code[c])]
+        placed.update(x['code'] for x in docs)
+        domains.append({'key': 'd%d' % i, 'name': name, 'docs': docs})
+    loose = [d for d in items if d['code'] not in placed]   # 索引里找不到的（check_docs 会报），单列出来不藏
+    if loose:
+        domains.append({'key': 'loose', 'name': '索引里没有', 'docs': loose})
+    # 引用关系：正文里出现的其他文档编码，按 from→to 计次
     edges = {}
     for d in items:
         for to in pattern.findall(d.pop('_body')):
             if to != d['code']:
                 edges[(d['code'], to)] = edges.get((d['code'], to), 0) + 1
-    domains = [{'key': k, 'name': n, 'docs': sorted((d for d in items if domain_of(d['path'], d['code']) == k),
-                                                    key=lambda d: d['code'])} for k, n in DOMAINS]
-    return {'domains': [d for d in domains if d['docs']],
+    return {'top': top, 'domains': domains,
             'edges': [{'from': a, 'to': b, 'n': n} for (a, b), n in sorted(edges.items())]}
 
 
