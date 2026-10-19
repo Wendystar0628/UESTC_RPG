@@ -891,15 +891,15 @@
 
 ## MAP-QSH-INTERIORS · 其余开放楼室内与开放的高处
 
-`docs/maps/qingshuihe/MAP-QSH-INTERIORS-其余开放楼室内.md` · 5.0k 字 · 清水河其余 13 处开放楼的开放范围、封口与观景时刻总表，以及 3 处开放的屋顶与高处
+`docs/maps/qingshuihe/MAP-QSH-INTERIORS-其余开放楼室内.md` · 5.2k 字 · 清水河其余 13 处开放楼的开放范围、封口与观景时刻总表，以及 3 处开放的屋顶与高处
 关键词：其余开放楼、开放楼总表、开放范围要点、封口与限制、观景时刻、学知苑 4 人间、钟楼楼梯、钟室、灯笼观景环、主楼屋顶空廊、电梯关门换位、开放的屋顶与高处、屋顶危险、interiors.json
 
 - MAP-QSH-INTERIORS §0 结论 · L22 · 712
   - ★ MAP-QSH-INTERIORS §0.1 接入要点 · L30 · 368
 - MAP-QSH-INTERIORS §1 南区 · L36 · 878
-- MAP-QSH-INTERIORS §2 西区与中东区 · L45 · 830
-- MAP-QSH-INTERIORS §3 北区 · L54 · 938
-- MAP-QSH-INTERIORS §4 开放的屋顶与高处（3 处） · L64 · 707
+- MAP-QSH-INTERIORS §2 西区与中东区 · L45 · 1.0k
+- MAP-QSH-INTERIORS §3 北区 · L56 · 938
+- MAP-QSH-INTERIORS §4 开放的屋顶与高处（3 处） · L66 · 707
 
 ## MAP-QSH-LIBRARY · 图书馆与博物馆室内
 
