@@ -17,7 +17,7 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
     private const float Shell = 0.03f;
     private const float Arm = 0.25f;
 
-    public AntennaPart() => Lods = Levels.Of<EquipmentParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2);
+    public AntennaPart() => Lods = Levels.Of<EquipmentParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4);
     public IReadOnlyDictionary<LodLevel, Func<EquipmentParams, PartGeometry>> Lods { get; }
     public PartBudget Budget { get; } = new(440, 130);
 
@@ -42,6 +42,7 @@ public sealed class AntennaPart : IPartDef<EquipmentParams>
 
     private static PartBuilder Dish(EquipmentParams p, LodLevel lod)
     {
+        // Keep the dish and supporting post through L4; only the feed hardware and fine rings are near-only.
         var near = lod == LodLevel.L0;
         var radius = Math.Min(p.Width * 0.5f * 0.95f, (p.Height - 0.35f) / 1.9f);
         var bowl = 2 * radius * RoofStyle.DishDepthRatio;

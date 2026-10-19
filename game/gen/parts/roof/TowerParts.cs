@@ -14,7 +14,7 @@ namespace Campus.Gen.Parts.Roof;
 [Part(PartCatalog.TestTower, Owner = "WP-12")]
 public sealed class TestTowerPart : IPartDef<EquipmentParams>
 {
-    public TestTowerPart() => Lods = Levels.Of<EquipmentParams>(Build, LodLevel.L0, LodLevel.L1);
+    public TestTowerPart() => Lods = Levels.Of<EquipmentParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4);
     public IReadOnlyDictionary<LodLevel, Func<EquipmentParams, PartGeometry>> Lods { get; }
     public PartBudget Budget { get; } = new(1600, 360);
 
@@ -27,6 +27,7 @@ public sealed class TestTowerPart : IPartDef<EquipmentParams>
     private PartGeometry Build(EquipmentParams p, LodLevel lod)
     {
         Validate(p);
+        // Distant levels keep the tapered legs, platform and mast; braces and cross-arm are near-only.
         var near = lod == LodLevel.L0;
         var seg = near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar;
         var legs = p.Variation == 1 ? 3 : 4;
@@ -94,7 +95,7 @@ public sealed class TestTowerPart : IPartDef<EquipmentParams>
 [Part(PartCatalog.SolarPanel, Owner = "WP-12")]
 public sealed class SolarPanelPart : IPartDef<PanelParams>
 {
-    public SolarPanelPart() => Lods = Levels.Of<PanelParams>(Build, LodLevel.L0, LodLevel.L1);
+    public SolarPanelPart() => Lods = Levels.Of<PanelParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4);
     public IReadOnlyDictionary<LodLevel, Func<PanelParams, PartGeometry>> Lods { get; }
     public PartBudget Budget { get; } = new(300, 60);
 
@@ -107,6 +108,7 @@ public sealed class SolarPanelPart : IPartDef<PanelParams>
     private PartGeometry Build(PanelParams p, LodLevel lod)
     {
         Validate(p);
+        // The framed panel is the canopy silhouette at every level; the cell grid is near-only.
         var near = lod == LodLevel.L0;
         var b = new PartBuilder();
         var hx = p.Width * 0.5f; var hz = p.Depth * 0.5f; var h = p.Height; var f = RoofStyle.SolarFrame;

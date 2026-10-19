@@ -18,7 +18,7 @@ namespace Campus.Gen.Parts.Street;
 [Part(PartCatalog.Drain, Owner = "WP-13")]
 public sealed class DrainPart : IPartDef<TrimParams>
 {
-    public DrainPart() => Lods = Levels.Of<TrimParams>(Build, LodLevel.L0, LodLevel.L1);
+    public DrainPart() => Lods = Levels.Of<TrimParams>(Build, LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4);
     public IReadOnlyDictionary<LodLevel, Func<TrimParams, PartGeometry>> Lods { get; }
     public PartBudget Budget { get; } = new(520, 80);
 
