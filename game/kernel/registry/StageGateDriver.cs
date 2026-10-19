@@ -74,6 +74,7 @@ public sealed partial class StageGateDriver(IStageGateHost host)
                 SlotId? selected = options.Save.WriteSlot ?? options.Flow.Slot;
                 var slot = selected ?? saves.Slots.FirstOrDefault(info => info.Health == SlotHealth.Empty)?.Slot
                     ?? throw new InvalidOperationException("Named new-game playback requires an empty or explicitly selected slot.");
+                GD.Print($"STARTUP_PHASE new-game-enter {FrameClock.MonotonicMilliseconds:R}");
                 if (await flow.Enter(new(EnterKind.NewGame, slot)) != EnterResult.Entered)
                     throw new InvalidOperationException("Named new-game playback failed.");
                 break;

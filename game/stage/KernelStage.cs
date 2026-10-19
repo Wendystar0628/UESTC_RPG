@@ -45,6 +45,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         {
             _phase = value;
             RegistryGateRunner.TraceBootPhase(value);
+            GD.Print($"STARTUP_PHASE {value} {FrameClock.MonotonicMilliseconds:R}");
         }
     }
     public string? Failure { get; private set; }
@@ -115,6 +116,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _flow = registry.Get<IAppFlow>();
         if (!ReferenceEquals(_flow, registry.Get<IAppBootFlow>()))
             throw new InvalidOperationException("IAppFlow and IAppBootFlow must resolve to the same instance.");
+        _flow.Changed += OnFlowChanged;
         _mapRuntime = registry.Get<IMapRuntime>();
         _mapLifetime = registry.Get<IMapLifetime>();
         view.Bind(registry.Get<ICameraRig>());
@@ -210,6 +212,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         await bootVeil.Reveal(showTitle ? BootTuning.TitleRevealSeconds : BootTuning.WorldRevealSeconds);
         CheckStartupActive();
         await appBoot.CompleteBoot();
+        if (_flow!.State == AppState.Title)
+            GD.Print($"STARTUP_PHASE title-ready {FrameClock.MonotonicMilliseconds:R}");
         await _gate.RunNamedCinematic();
         _ready = true;
         Phase = "realtime";
@@ -231,6 +235,20 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private void CheckStartupActive()
     {
         if (_closing || _shutdownStarted) throw new OperationCanceledException("Startup stopped by the exit request.");
+    }
+
+    private void OnFlowChanged(AppState before, AppState after)
+    {
+        // Playing is published immediately before ReleaseInput, with no await between them.
+        // Observe after that stack unwinds, without waiting for the first save to finish.
+        if (before == AppState.Entering && after == AppState.Playing)
+            Callable.From(TraceInputReady).CallDeferred();
+    }
+
+    private void TraceInputReady()
+    {
+        if (_closing || _flow?.State != AppState.Playing) return;
+        GD.Print($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} mode={Services.Get<ICameraRig>().Mode}");
     }
 
     private async Task RunBakeCommand()
@@ -294,6 +312,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     public override void _ExitTree()
     {
         _closing = true;
+        if (_flow is not null) _flow.Changed -= OnFlowChanged;
         _captureLifetime.Cancel();
         _failureVeil?.Dispose();
         _failureFlow?.Dispose();
