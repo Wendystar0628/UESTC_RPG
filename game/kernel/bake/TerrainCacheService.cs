@@ -10,7 +10,7 @@ using Campus.Pipeline.Map;
 
 namespace Campus.Kernel.Bake;
 
-/// <summary>Owns the shared local product store and prepares terrain before pure readers receive it.</summary>
+/// <summary>Owns layered product reads and local writes, preparing terrain before pure readers receive it.</summary>
 [KernelService(typeof(TerrainCacheService), Owner = "WP-02a")]
 [KernelService(typeof(ITerrainPreparation), Owner = "WP-02a")]
 public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
@@ -31,13 +31,14 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     private readonly BakeOptions _options;
     internal BakeCacheStore Store { get; }
     public TerrainCacheService() : this(BakeOptions.FromApplication()) { }
-    internal TerrainCacheService(BakeOptions options) { _options = options; Store = new(options.CacheRoot); }
+    internal TerrainCacheService(BakeOptions options) { _options = options; Store = new(options.CacheRoot, packagedRoot: options.PackagedCacheRoot); }
 
     internal WorldModelLoadResult Load(MapId map, WorldModelPreparation preparation)
     {
         var key = new BakeKey(map, "terrain", "meta");
         var identity = TerrainStamp(preparation.SourceInputs);
-        var data = ReadJson<TerrainFrozenData>(key, identity);
+        WorldModelLoadResult? loaded = null;
+        var data = ReadJson<TerrainFrozenData>(key, identity, value => loaded = preparation.Complete(value));
         ITerrainAssetBuilder? builder = null;
         if (data is null)
         {
@@ -46,7 +47,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
             data = builder.Freeze();
             WriteJson(key, identity, data);
         }
-        var loaded = preparation.Complete(data);
+        loaded ??= preparation.Complete(data);
         var terrain = (IPreparedTerrain)loaded.World.Terrain;
         builder?.Attach(terrain);
         _sessions[terrain] = new(map, preparation, data, terrain) { Assets = builder };
@@ -71,14 +72,8 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
                     var key = new BakeKey(session.Map, "terrain", $"block/{block.X}/{block.Z}");
                     var stamp = TerrainStamp(session.Data.SourceInputs, new(new(block.X * TerrainRasterBlock.Edge, block.Z * TerrainRasterBlock.Edge),
                         new((block.X + 1) * TerrainRasterBlock.Edge, (block.Z + 1) * TerrainRasterBlock.Edge)));
-                    var bytes = Read(key, stamp);
                     TerrainRasterBlock value;
-                    TerrainRasterBlock? cached = null;
-                    if (bytes is not null)
-                    {
-                        try { cached = TerrainCacheCodec.DecodeBlock(bytes); }
-                        catch (Exception error) when (error is IOException or ArgumentException) { Store.Remove(key); }
-                    }
+                    var cached = Read(key, stamp, TerrainCacheCodec.DecodeBlock);
                     if (cached is not null) value = cached;
                     else
                     {
@@ -106,14 +101,8 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
             cancellation.ThrowIfCancellationRequested();
             var key = new BakeKey(session.Map, "terrain", "points/" + product);
             var stamp = Stamp(new { terrain = TerrainStamp(session.Data.SourceInputs), points = snapshot });
-            var bytes = Read(key, stamp);
             TerrainRasterPoint[] values;
-            TerrainRasterPoint[]? cached = null;
-            if (bytes is not null)
-            {
-                try { cached = TerrainCacheCodec.DecodePoints(bytes); }
-                catch (Exception error) when (error is IOException or ArgumentException) { Store.Remove(key); }
-            }
+            var cached = Read(key, stamp, TerrainCacheCodec.DecodePoints);
             if (cached is not null) values = cached;
             else
             {
@@ -159,18 +148,13 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
         foreach (var block in blocks)
         {
             var key = new BakeKey(session.Map, "terrain", $"points/resident/{block.X}/{block.Z}");
-            var bytes = Read(key, stamp);
-            if (bytes is null) return false;
-            try
+            var points = Read(key, stamp, TerrainCacheCodec.DecodePoints);
+            if (points is null) return false;
+            lock (session.Sync)
             {
-                var points = TerrainCacheCodec.DecodePoints(bytes);
-                lock (session.Sync)
-                {
-                    prepared.Publish(points);
-                    session.Assets?.Attach(prepared);
-                }
+                prepared.Publish(points);
+                session.Assets?.Attach(prepared);
             }
-            catch (Exception error) when (error is IOException or ArgumentException) { Store.Remove(key); return false; }
         }
         return true;
     }
@@ -199,29 +183,34 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     });
     internal void RequireMiss(BakeKey key)
     { if (_options.Strict && !_options.Live) throw new InvalidDataException($"Strict cache miss: {key.Map.Value}/{key.Module}/{key.Detail}"); }
-    internal T? ReadJson<T>(BakeKey key, string identity) where T : class
+    internal T? ReadJson<T>(BakeKey key, string identity, Action<T>? validate = null) where T : class =>
+        Read(key, identity, bytes => DecodeJson(bytes, validate));
+    internal IEnumerable<T> ReadJsonCandidates<T>(BakeKey key, string identity, Action<T> validate) where T : class
     {
-        var bytes = Read(key, identity);
-        if (bytes is null) return null;
-        try { return JsonSerializer.Deserialize<T>(bytes, ContractJson.Options) ?? throw new JsonException("Empty cached product."); }
-        catch (Exception error) when (error is JsonException or ArgumentException) { Store.Remove(key); return null; }
+        if (_options.Live) yield break;
+        foreach (var value in Store.ReadCandidates(key, bytes => Decode(bytes, identity, payload => DecodeJson(payload, validate)), MaximumPayload(key)))
+            yield return value;
     }
     internal void WriteJson<T>(BakeKey key, string identity, T value) => Write(key, identity, JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options));
-    private byte[]? Read(BakeKey key, string identity)
+    private T? Read<T>(BakeKey key, string identity, Func<byte[], T> decode) where T : class
     {
         if (_options.Live) return null;
-        var maximumPayload = key.Module == "terrain" && key.Detail == "meta" ||
-            key.Module == "resident" && (key.Detail is "meta" or "source-index")
-            ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes;
-        var bytes = Store.TryRead(key, maximumPayload);
-        if (bytes is null) return null;
-        try
-        {
-            using var reader = new BinaryReader(new MemoryStream(bytes));
-            if (reader.ReadString() != identity) { Store.Remove(key); return null; }
-            return reader.ReadBytes(checked((int)(reader.BaseStream.Length - reader.BaseStream.Position)));
-        }
-        catch (IOException) { Store.Remove(key); return null; }
+        return Store.TryRead(key, bytes => Decode(bytes, identity, decode), MaximumPayload(key));
+    }
+    private static int MaximumPayload(BakeKey key) => key.Module == "terrain" && key.Detail == "meta" ||
+        key.Module == "resident" && (key.Detail is "meta" or "source-index")
+        ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes;
+    private static T Decode<T>(byte[] bytes, string identity, Func<byte[], T> decode)
+    {
+        using var reader = new BinaryReader(new MemoryStream(bytes));
+        if (reader.ReadString() != identity) throw new InvalidDataException("Cached product identity mismatch.");
+        return decode(reader.ReadBytes(checked((int)(reader.BaseStream.Length - reader.BaseStream.Position))));
+    }
+    private static T DecodeJson<T>(byte[] bytes, Action<T>? validate = null) where T : class
+    {
+        var value = JsonSerializer.Deserialize<T>(bytes, ContractJson.Options) ?? throw new JsonException("Empty cached product.");
+        validate?.Invoke(value);
+        return value;
     }
     private void Write(BakeKey key, string identity, byte[] bytes)
     {

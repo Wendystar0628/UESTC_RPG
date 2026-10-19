@@ -3,17 +3,6 @@
   "instanceShaderParameters": {
     "warningRatio": 0.8
   },
-  "export": {
-    "install": {
-      "limitBytes": 966367641
-    },
-    "archive": {
-      "limitBytes": 751619276
-    },
-    "audio": {
-      "limitBytes": 173015040
-    }
-  },
   "deviceTargets": {
     "minimum": {
       "preset": "balanced",

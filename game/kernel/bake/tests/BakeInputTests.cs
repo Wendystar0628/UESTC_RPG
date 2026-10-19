@@ -202,6 +202,44 @@ public sealed class BakeInputTests
             throw new InvalidOperationException("Preparation dropped a frozen resource or capability.");
     }
 
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public void PartialLocalSourceIndexKeepsPackagedStampsWithoutRecomputingSources()
+    {
+        var context = Context(new FakeWorld { Boundary = new([]) });
+        var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-source-index-" + Guid.NewGuid().ToString("N"));
+        var options = new BakeOptions(Path.Combine(directory, "packaged"), false, false, false, false, 1, null);
+        var key = new BakeKey(context.Map.Id, "resident", "source-index");
+        var identity = BakeOptions.Abi + "/source-index-2";
+        var stamp = new string('a', 32);
+        var source = new BakeSourceIndex(context);
+        var product = BakeRequestKeys.Tile(context.Map.Id, "ground", default, LodLevel.L0);
+        source.RememberProduct(product, new string('b', 32));
+        source.RememberProduct(product with { Detail = "L4/0/0" }, new string('c', 32));
+        var saved = source.Snapshot("current", stamp);
+        try
+        {
+            using var packaged = new TerrainCacheService(options);
+            packaged.WriteJson(key, identity, saved);
+            using var local = new TerrainCacheService(options with { CacheRoot = Path.Combine(directory, "local"), PackagedCacheRoot = options.CacheRoot });
+            var own = saved.Products[0] with { Stamp = new string('d', 32) };
+            local.WriteJson(key, identity, saved with { SourceVersion = "older", Products = [own] });
+            var cache = new BakeSourceIndexCache(local, context.Map.Id, "current");
+            if (cache.ResolveResidentStamp(() => throw new InvalidOperationException("Warm source inputs were expanded.")) != stamp)
+                throw new InvalidOperationException("The matching packaged source version was ignored.");
+            var restored = new BakeSourceIndex(context, cache);
+            if (!restored.TryProduct(own.Key, out var value) || value != own.Stamp ||
+                saved.Products.Any(item => !restored.TryProduct(item.Key, out _)))
+                throw new InvalidOperationException("A partial local index hid packaged keys or lost local precedence.");
+            restored.Persist();
+            var persisted = local.ReadJson<BakeSourceIndexData>(key, identity)!;
+            if (persisted.SourceVersion != saved.SourceVersion || persisted.Products.Length != saved.Products.Length)
+                throw new InvalidOperationException("Merged product stamps were not persisted for the next startup.");
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
+    }
+
     private static string Hash(BuildContext context, string module) => BakeInputFingerprint.Compute(context,
         BakeRequestKeys.Tile(context.Map.Id, module, new(0, 0), LodLevel.L0), "runtime-code", new(context));
     private static WorldFeature Feature(string id, float x, string name, string note, string text) =>
@@ -256,7 +294,6 @@ public sealed class BakeInputTests
         public string InputHash => "fixture";
     }
 }
-
 internal sealed class BakeFixturePart : IPartDef
 {
     public IReadOnlyList<LodLevel> SupportedLods => [LodLevel.L0, LodLevel.L2];

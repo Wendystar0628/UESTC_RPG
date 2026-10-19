@@ -227,6 +227,15 @@ public sealed class BakeWindowTests
             !tiles["counted"].SequenceEqual(counted.Cells.Distinct().OrderBy(tile => tile.X).ThenBy(tile => tile.Z)))
             throw new InvalidOperationException("Prepared map consumers re-enumerated Tiles or lost the frozen module context.");
         AssertThrown(() => indexed.GetPreparedModuleTilesAsync(mapContext with { })).IsInstanceOf<InvalidOperationException>();
+        var catalogue = BakeService.CatalogKeys(indexed, mapOnly: false).ToArray();
+        var tree = new Campus.Kernel.Lod.LodTree(context.Map.Bounds, new Campus.Kernel.Lod.StreamSettings());
+        if (catalogue.Distinct().Count() != catalogue.Length || counted.Calls != 1 ||
+            !catalogue.Any(key => BakeRequestKeys.Parse(key).Level == LodLevel.L4) ||
+            catalogue.Any(key => { var request = BakeRequestKeys.Parse(key); return !tree.Contains(new(request.Tile, request.Level)); }) ||
+            BakeService.CatalogKeys(indexed, mapOnly: true).Any())
+            throw new InvalidOperationException("Full baking duplicated or re-enumerated modules, escaped the stream tree, or ignored map-only mode.");
+        indexed.Lifetime.Cancel();
+        AssertThrown(() => BakeService.CatalogKeys(indexed, mapOnly: false).ToArray()).IsInstanceOf<OperationCanceledException>();
         var warning = new BuildDiagnostic(DiagnosticLevel.Warning, "fixture.warning", "fixture warning");
         map.Collect("source", "metadata", [warning], Feature);
         if (!map.Diagnostics.TryDequeue(out var diagnostic) || diagnostic.Map != context.Map.Id || diagnostic.Owner != Owner ||

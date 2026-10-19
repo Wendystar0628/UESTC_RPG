@@ -18,20 +18,28 @@ internal sealed class BakeSourceIndexCache(TerrainCacheService terrain, MapId ma
 
     internal string ResolveResidentStamp(Func<string> compute)
     {
-        _saved = terrain.ReadJson<BakeSourceIndexData>(_key, _identity);
-        if (_saved is not null && !Complete(_saved))
+        var candidates = terrain.ReadJsonCandidates<BakeSourceIndexData>(_key, _identity, saved =>
         {
-            terrain.Store.Remove(_key);
-            _saved = null;
-        }
-        _residentStamp = _saved?.SourceVersion == sourceVersion ? _saved.ResidentStamp : compute();
-        if (_saved?.ResidentStamp != _residentStamp) _saved = null;
-        if (_saved is not null)
+            if (!Complete(saved)) throw new InvalidDataException("Incomplete cached source index.");
+        }).ToArray();
+        _saved = null;
+        _residentStamp = candidates.FirstOrDefault(saved => saved.SourceVersion == sourceVersion)?.ResidentStamp ?? compute();
+        var matching = candidates.Where(saved => saved.ResidentStamp == _residentStamp).ToArray();
+        if (matching.Length > 0)
         {
-            _writtenVersion = _saved.SourceVersion;
-            _vegetationCount = _saved.Vegetation.Length;
-            _furnitureCount = _saved.Furniture.Length;
-            _productCount = _saved.Products.Length;
+            var preferred = matching[0];
+            _writtenVersion = preferred.SourceVersion;
+            _vegetationCount = preferred.Vegetation.Length;
+            _furnitureCount = preferred.Furniture.Length;
+            _productCount = preferred.Products.Length;
+            // Local entries win; a partial local snapshot must not hide packaged product stamps.
+            _saved = preferred with
+            {
+                SourceVersion = sourceVersion,
+                Vegetation = matching.SelectMany(saved => saved.Vegetation).DistinctBy(cell => cell.Cell).ToArray(),
+                Furniture = matching.SelectMany(saved => saved.Furniture).DistinctBy(cell => cell.Cell).ToArray(),
+                Products = matching.SelectMany(saved => saved.Products).DistinctBy(product => product.Key).ToArray()
+            };
         }
         return _residentStamp;
     }

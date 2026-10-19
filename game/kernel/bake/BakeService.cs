@@ -33,6 +33,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     private Task? _clearing;
     private bool _stopped;
     private bool _exiting;
+    private AppState _phase;
 
     public BakeService(IMapService maps, IAppFlow flow, TerrainCacheService terrain) : this(BakeOptions.FromApplication(), terrain)
     {
@@ -191,46 +192,6 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         return metadata;
     }
 
-    internal void Prebake(IMapContext context)
-    {
-        var map = Mount(context);
-        if (!_options.MapOnly && !_options.Background) return;
-        lock (_sync)
-        {
-            if (map.EnumerationStarted) return;
-            map.EnumerationStarted = true;
-        }
-        _queue.BeginCatalog();
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                if (_options.MapOnly)
-                {
-                    Schedule(map, new(context.Descriptor.Id, "map", "base"), BakePriority.Normal);
-                    return;
-                }
-                var moduleTiles = map.GetPreparedModuleTilesAsync(context).GetAwaiter().GetResult();
-                foreach (var (id, tiles) in moduleTiles.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-                    if (tiles.Count > 0)
-                        Schedule(map, BakeRequestKeys.Tile(context.Descriptor.Id, id, default, LodLevel.L4), BakePriority.KnownDestination);
-                var mapKey = new BakeKey(context.Descriptor.Id, "map", "base");
-                if (map.Producers.Any(p => p.Value.CanBuild(mapKey))) Schedule(map, mapKey, BakePriority.Normal);
-            }
-            catch (Exception) when (!map.Active) { }
-            catch (Exception error)
-            {
-                lock (_sync)
-                    if (map.Active && !_stopped)
-                        _queue.Ensure(new(context.Descriptor.Id, "bake.catalog", "enumerate"), BakePriority.Background,
-                            () => throw new InvalidDataException("Background catalog failed: " + error.Message, error));
-            }
-            finally { map.EnumerationComplete = true; _queue.EndCatalog(); }
-        })
-        { IsBackground = true, Priority = ThreadPriority.BelowNormal, Name = "Campus bake catalog" };
-        thread.Start();
-    }
-
     private IBakeHandle Schedule(MapBuild map, BakeKey key, BakePriority priority)
     {
         lock (_sync)
@@ -266,19 +227,14 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         PrepareProductTerrain(map, key);
         if (!_options.Live)
         {
-            var cached = _cache.TryRead(key,
-                key.Module == "map" ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes, cancellation);
-            if (cached is not null)
+            var cached = _cache.TryRead(key, payload =>
             {
-                try
-                {
-                    var product = Decode(identity, key, cached);
-                    cancellation.ThrowIfCancellationRequested();
-                    RequireInteriorProduct(map, key, product);
-                    return product;
-                }
-                catch (InvalidDataException) { _cache.Remove(key, cancellation); }
-            }
+                var product = Decode(identity, key, payload);
+                RequireInteriorProduct(map, key, product);
+                return product;
+            },
+                key.Module == "map" ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes, cancellation);
+            if (cached is not null) return cached;
             if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
         }
         var buildContext = (module is not null ? context : map.CreateBuildContext(codeHash, inputHash)).WithWorld(_terrain.AssetWorld(context.World));
@@ -320,8 +276,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             BuildingOverlapValidator.Validate(context.World, claimLookup);
             return ResidentStamp(context, seed, catalog, interiors, modules, globalInputs, claimLookup);
         });
-        var resident = _terrain.ReadJson<BakeResidentData>(new(context.Descriptor.Id, "resident", "meta"), residentStamp);
-        if (resident is not null && !_terrain.RestoreResidentPoints(context.World, residentStamp, resident.TerrainPoints)) resident = null;
+        var resident = _terrain.ReadJson<BakeResidentData>(new(context.Descriptor.Id, "resident", "meta"), residentStamp, candidate =>
+        {
+            if (!_terrain.RestoreResidentPoints(context.World, residentStamp, candidate.TerrainPoints))
+                throw new InvalidDataException("Resident metadata has missing terrain points.");
+        });
         if (resident is not null)
             return new(seed, inputs, bindings, activeInteriors,
                 new(resident.Metadata.Lighting.WindowNumbering, resident.Windows), resident, residentStamp);
@@ -402,12 +361,20 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                 throw new InvalidDataException($"Entrance inventory omits configured interior entries: {coverage.ProviderId}.");
     }
     private void PhaseChanged(AppState previous, AppState next) => ApplyPhase(next);
-    private void ApplyPhase(AppState state) => _queue.SetLimit(state switch
+    private void ApplyPhase(AppState state)
     {
-        AppState.Boot or AppState.Title => _options.MaximumWorkers,
-        AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => _options.PlayingWorkers,
-        _ => throw new ArgumentOutOfRangeException(nameof(state))
-    });
+        _phase = state;
+        _queue.SetLimit(state switch
+        {
+            AppState.Boot or AppState.Title => _options.MaximumWorkers,
+            AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => _options.PlayingWorkers,
+            _ => throw new ArgumentOutOfRangeException(nameof(state))
+        });
+        if (state is not (AppState.Title or AppState.Playing)) return;
+        MapBuild[] maps;
+        lock (_sync) maps = _contexts.Values.Where(map => map.Active && map.Metadata is not null).ToArray();
+        foreach (var map in maps) StartBackgroundCatalog(map);
+    }
     /// <summary>Called by the stage only after saving has allowed process exit. Remaining workers own CPU snapshots only.</summary>
     public void StopForExit()
     {

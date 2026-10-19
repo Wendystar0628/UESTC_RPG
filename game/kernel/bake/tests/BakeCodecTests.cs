@@ -176,32 +176,61 @@ public sealed class BakeCodecTests
     [TestCase]
     [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
-    public void CorruptCacheIsAMissAndGameVersionChangesClearProducts()
+    public void LayeredCacheDecodesCandidatesAndOnlyChangesLocalProducts()
     {
         var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cache-" + Guid.NewGuid().ToString("N"));
+        var localRoot = Path.Combine(directory, "local");
+        var packagedRoot = Path.Combine(directory, "packaged");
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
-        var writer = new BakeCacheStore(directory, "version-one");
-        byte[] payload = [1, 2, 3, 4];
+        var writer = new BakeCacheStore(localRoot, "version-one", packagedRoot);
+        var package = new BakeCacheStore(packagedRoot, "version-one");
+        var original = new TileBundle(key, default, LodLevel.L0, new(Vector3.Zero, new(64, 64, 64)), []);
+        var local = new TileBundle(key, default, LodLevel.L0, new(Vector3.Zero, new(64, 80, 64)), []);
+        TileBundle Decode(byte[] bytes) => (TileBundle)TileBundleCodec.Decode("fixture/identity", key, bytes);
         try
         {
-            writer.Write(key, payload);
-            if (writer.TryRead(key) is not { } restored || !restored.SequenceEqual(payload))
-                throw new InvalidOperationException("A local product failed to round trip without an index.");
-            File.WriteAllBytes(Directory.GetFiles(directory, "*.tbin", SearchOption.AllDirectories).Single(), [1, 2, 3]);
-            if (writer.TryRead(key) is not null || Directory.GetFiles(directory, "*.tbin", SearchOption.AllDirectories).Length != 0)
-                throw new InvalidOperationException("A corrupt local product was trusted or left in place.");
-            writer.Write(key, payload);
-            var updated = new BakeCacheStore(directory, "version-two");
+            package.Write(key, TileBundleCodec.Encode("fixture/identity", original));
+            var packagedPath = Directory.GetFiles(packagedRoot, "*.tbin", SearchOption.AllDirectories).Single();
+            var packagedBytes = File.ReadAllBytes(packagedPath);
+            writer.Write(key, TileBundleCodec.Encode("fixture/identity", local));
+            if (writer.TryRead(key, Decode)?.Bounds != local.Bounds)
+                throw new InvalidOperationException("A packaged product hid a valid local override.");
+            var localPath = Directory.GetFiles(localRoot, "*.tbin", SearchOption.AllDirectories).Single();
+            File.WriteAllBytes(localPath, [1, 2, 3]);
+            RequirePackaged();
+            foreach (var invalid in new[] { TileBundleCodec.Encode("stale/identity", local), new byte[] { 1, 2, 3 } })
+            {
+                writer.Write(key, invalid);
+                RequirePackaged();
+            }
+            writer.Write(key, TileBundleCodec.Encode("fixture/identity", local));
+            writer.Clear();
+            RequirePackaged();
+            writer.Write(key, TileBundleCodec.Encode("fixture/identity", local));
+            var updated = new BakeCacheStore(localRoot, "version-two", packagedRoot);
             updated.Initialize();
-            if (updated.CacheBytes != 0 || updated.TryRead(key) is not null)
-                throw new InvalidOperationException("A game version change reused player products.");
+            if (updated.CacheBytes != 0 || updated.TryRead(key, Decode) is not null ||
+                !File.ReadAllBytes(packagedPath).SequenceEqual(packagedBytes))
+                throw new InvalidOperationException("Version migration reused incompatible products or changed the installation.");
+            File.WriteAllBytes(packagedPath, [1, 2, 3]);
+            var corrupt = new BakeCacheStore(localRoot, "version-one", packagedRoot);
+            if (corrupt.TryRead(key, Decode) is not null || !File.ReadAllBytes(packagedPath).SequenceEqual(new byte[] { 1, 2, 3 }))
+                throw new InvalidOperationException("A corrupt packaged product was accepted or removed.");
+            corrupt.Write(key, TileBundleCodec.Encode("fixture/identity", local));
+            if (corrupt.TryRead(key, Decode)?.Bounds != local.Bounds)
+                throw new InvalidOperationException("A missing packaged product could not be replaced locally.");
             writer.Stop();
-            AssertThrown(() => writer.Write(key, payload)).IsInstanceOf<OperationCanceledException>();
-            AssertThrown(() => writer.TryRead(key)).IsInstanceOf<OperationCanceledException>();
+            AssertThrown(() => writer.Write(key, [1])).IsInstanceOf<OperationCanceledException>();
+            AssertThrown(() => writer.TryRead(key, Decode)).IsInstanceOf<OperationCanceledException>();
+            void RequirePackaged()
+            {
+                if (writer.TryRead(key, Decode)?.Bounds != original.Bounds || File.Exists(localPath) ||
+                    !File.ReadAllBytes(packagedPath).SequenceEqual(packagedBytes))
+                    throw new InvalidOperationException("A bad local candidate hid the package or caused a packaged write.");
+            }
         }
         finally
         {
-            new BakeCacheStore(directory, "version-two").Clear();
             if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
     }
