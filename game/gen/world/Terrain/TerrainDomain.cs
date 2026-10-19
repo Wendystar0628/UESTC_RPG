@@ -178,6 +178,8 @@ internal sealed class TerrainPath
     public double Length => _stations[^1];
     public MapRect Bounds { get; }
     private readonly double[] _stations;
+    private readonly TerrainRingIndex? _segmentIndex;
+    private readonly Func<int, double, double, double>? _squaredDistance;
 
     public TerrainPath(Polyline line)
     {
@@ -194,42 +196,54 @@ internal sealed class TerrainPath
             _stations[i] = _stations[i - 1] + length;
         }
         Bounds = new(new(line.Points.Min(p => p.X), line.Points.Min(p => p.Y)), new(line.Points.Max(p => p.X), line.Points.Max(p => p.Y)));
+        if (Line.Points.Count > 2)
+        {
+            _segmentIndex = new(Enumerable.Range(0, Line.Points.Count - 1)
+                .Select(i => (Line.Points[i], Line.Points[i + 1])).ToArray());
+            _squaredDistance = SquaredDistance;
+        }
     }
 
     public TerrainPathHit Project(double x, double z)
     {
-        var best = double.PositiveInfinity; var result = default(TerrainPathHit);
-        for (var i = 0; i < Line.Points.Count - 1; i++)
+        // A single segment needs no nearest-edge query.
+        var i = _segmentIndex is null ? 0 : _segmentIndex.NearestEdge(x, z, _squaredDistance!);
+        var (length, tx, tz, raw, along, dx, dz) = ProjectSegment(i, x, z);
+        var a = Line.Points[i];
+        var distance = Math.Sqrt(dx * dx + dz * dz);
+        var offset = -tz * (x - a.X) + tx * (z - a.Y); var offsetDx = -tz; var offsetDz = tx;
+        var corner = raw <= 0 && i > 0 ? i : raw >= length && i + 1 < Line.Points.Count - 1 ? i + 1 : -1;
+        if (corner >= 0)
         {
-            var a = Line.Points[i]; var b = Line.Points[i + 1];
-            var length = _stations[i + 1] - _stations[i];
-            var tx = ((double)b.X - a.X) / length; var tz = ((double)b.Y - a.Y) / length;
-            var raw = (x - a.X) * tx + (z - a.Y) * tz;
-            var along = x == b.X && z == b.Y ? length : x == a.X && z == a.Y ? 0 : Math.Max(0, Math.Min(length, raw));
-            var dx = x - (a.X + tx * along); var dz = z - (a.Y + tz * along);
-            var squared = dx * dx + dz * dz;
-            if (squared >= best) continue;
-            best = squared;
-            var distance = Math.Sqrt(squared);
-            var offset = -tz * (x - a.X) + tx * (z - a.Y); var offsetDx = -tz; var offsetDz = tx;
-            var corner = raw <= 0 && i > 0 ? i : raw >= length && i + 1 < Line.Points.Count - 1 ? i + 1 : -1;
-            if (corner >= 0)
-            {
-                var vertex = Line.Points[corner]; var before = Line.Points[corner - 1]; var after = Line.Points[corner + 1];
-                var incomingLength = _stations[corner] - _stations[corner - 1]; var outgoingLength = _stations[corner + 1] - _stations[corner];
-                var sumX = ((double)vertex.X - before.X) / incomingLength + ((double)after.X - vertex.X) / outgoingLength;
-                var sumZ = ((double)vertex.Y - before.Y) / incomingLength + ((double)after.Y - vertex.Y) / outgoingLength;
-                var side = sumX * (z - vertex.Y) - sumZ * (x - vertex.X); var sign = side < 0 ? -1 : side > 0 ? 1 : 0;
-                // In an internal vertex's Voronoi wedge the signed radial distance joins both
-                // adjacent lateral offsets. Reusing one segment's perpendicular projection
-                // would jump when the nearest segment changes. Actual open ends stay planar.
-                offset = sign * distance; offsetDx = distance == 0 ? 0 : sign * dx / distance; offsetDz = distance == 0 ? 0 : sign * dz / distance;
-            }
-            result = new(along == length ? _stations[i + 1] : _stations[i] + along, distance, offset,
-                raw > 0 && raw < length ? tx : 0, raw > 0 && raw < length ? tz : 0,
-                distance == 0 ? 0 : dx / distance, distance == 0 ? 0 : dz / distance, offsetDx, offsetDz, i);
+            var vertex = Line.Points[corner]; var before = Line.Points[corner - 1]; var after = Line.Points[corner + 1];
+            var incomingLength = _stations[corner] - _stations[corner - 1]; var outgoingLength = _stations[corner + 1] - _stations[corner];
+            var sumX = ((double)vertex.X - before.X) / incomingLength + ((double)after.X - vertex.X) / outgoingLength;
+            var sumZ = ((double)vertex.Y - before.Y) / incomingLength + ((double)after.Y - vertex.Y) / outgoingLength;
+            var side = sumX * (z - vertex.Y) - sumZ * (x - vertex.X); var sign = side < 0 ? -1 : side > 0 ? 1 : 0;
+            // In an internal vertex's Voronoi wedge the signed radial distance joins both
+            // adjacent lateral offsets. Reusing one segment's perpendicular projection
+            // would jump when the nearest segment changes. Actual open ends stay planar.
+            offset = sign * distance; offsetDx = distance == 0 ? 0 : sign * dx / distance; offsetDz = distance == 0 ? 0 : sign * dz / distance;
         }
-        return result;
+        return new(along == length ? _stations[i + 1] : _stations[i] + along, distance, offset,
+            raw > 0 && raw < length ? tx : 0, raw > 0 && raw < length ? tz : 0,
+            distance == 0 ? 0 : dx / distance, distance == 0 ? 0 : dz / distance, offsetDx, offsetDz, i);
+    }
+
+    private double SquaredDistance(int segment, double x, double z)
+    {
+        var projection = ProjectSegment(segment, x, z);
+        return projection.Dx * projection.Dx + projection.Dz * projection.Dz;
+    }
+
+    private (double Length, double Tx, double Tz, double Raw, double Along, double Dx, double Dz) ProjectSegment(int i, double x, double z)
+    {
+        var a = Line.Points[i]; var b = Line.Points[i + 1];
+        var length = _stations[i + 1] - _stations[i];
+        var tx = ((double)b.X - a.X) / length; var tz = ((double)b.Y - a.Y) / length;
+        var raw = (x - a.X) * tx + (z - a.Y) * tz;
+        var along = x == b.X && z == b.Y ? length : x == a.X && z == a.Y ? 0 : Math.Max(0, Math.Min(length, raw));
+        return (length, tx, tz, raw, along, x - (a.X + tx * along), z - (a.Y + tz * along));
     }
 
     internal (double Station, double Dx, double Dz, TerrainDifferential Distance) ProjectStationSegment(int index, double x, double z)

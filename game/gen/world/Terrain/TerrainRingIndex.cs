@@ -70,7 +70,12 @@ internal sealed class TerrainRingIndex
         }
     }
 
-    public Hit Nearest(double x, double z)
+    public Hit Nearest(double x, double z) => Nearest(x, z, null);
+
+    internal int NearestEdge(double x, double z, Func<int, double, double, double> squaredDistance) =>
+        Nearest(x, z, squaredDistance).Edge;
+
+    private Hit Nearest(double x, double z, Func<int, double, double, double>? squaredDistance)
     {
         var best = new Hit(0, 0, double.PositiveInfinity, 0, 0, int.MaxValue);
         Visit(_root); return best;
@@ -81,6 +86,13 @@ internal sealed class TerrainRingIndex
             {
                 foreach (var edge in edges)
                 {
+                    if (squaredDistance is not null)
+                    {
+                        var pathSquared = squaredDistance(edge.Id, x, z);
+                        if (pathSquared > best.Squared || pathSquared == best.Squared && edge.Id >= best.Edge) continue;
+                        best = new(0, 0, pathSquared, 0, 0, edge.Id);
+                        continue;
+                    }
                     var a = edge.A; var dx = (double)edge.B.X - a.X; var dz = (double)edge.B.Y - a.Y;
                     var squared = dx * dx + dz * dz;
                     var raw = ((x - a.X) * dx + (z - a.Y) * dz) / squared;

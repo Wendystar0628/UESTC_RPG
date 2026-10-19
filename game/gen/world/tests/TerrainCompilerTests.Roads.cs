@@ -156,6 +156,25 @@ public sealed partial class TerrainCompilerTests
         AssertThat(Math.Abs((double)(0) - (double)(straight.Project(0, -2).Offset)) <= TestTolerance.Position).IsTrue();
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void LongRoadProjectionKeepsSourceOrderAndEndpointGradients()
+    {
+        var points = Enumerable.Range(0, 17).Select(i => new Vector2(20, i * 4))
+            .Concat(Enumerable.Range(0, 17).Select(i => new Vector2(0, 64 - i * 4))).ToArray();
+        var path = new TerrainPath(new(points));
+        var tied = path.Project(10, 6);
+        AssertThat(tied.Segment == 1).OverrideFailureMessage("Equidistant path segments did not retain source order.").IsTrue();
+        AssertThat(Math.Abs(tied.Station - 6) <= TestTolerance.Position && Math.Abs(tied.Offset - 10) <= TestTolerance.Position).IsTrue();
+        AssertThat(Math.Abs(tied.StationDz - 1) <= TestTolerance.Position && Math.Abs(tied.OffsetDx + 1) <= TestTolerance.Position).IsTrue();
+        var end = points[^1];
+        var atEnd = path.Project(end.X, end.Y);
+        AssertThat(atEnd.Segment == points.Length - 2 && Math.Abs(atEnd.Station - path.Length) <= TestTolerance.Position).IsTrue();
+        var outside = path.Project(end.X - 3, end.Y - 4);
+        AssertThat(Math.Abs(outside.Station - path.Length) <= TestTolerance.Position && Math.Abs(outside.Distance - 5) <= TestTolerance.Position).IsTrue();
+        AssertThat(outside.StationDx == 0 && outside.StationDz == 0).IsTrue();
+        AssertThat(Math.Abs(outside.DistanceDx + .6) <= TestTolerance.Position && Math.Abs(outside.DistanceDz + .8) <= TestTolerance.Position).IsTrue();
+    }
+
     [TestCase, TestCategory(TestReason.Contract)]
     public void RoadLongitudinalSurfaceIsContinuousAcrossTheInnerCorner()
     {
