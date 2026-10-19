@@ -62,9 +62,9 @@ gates: []
 **身份**：施工与调研共用，Claude 与 Codex 共用。向派你的一方回报：主会话开的向主会话，Codex 主线开的向 Codex 主线。
 
 **开工**：
-1. 读派工简报和任务单；本包在 PLAN-WP-LIST 包表里的行用 `grep "^| WP-xx " docs/plan/PLAN-WP-LIST-工作包一览与子包拆法.md` 取。
+1. 读派工简报和任务单；本包在 PLAN-WP-LIST 包表里的行用 `grep "^| WP-xx " docs/plan/PLAN-WP-LIST-*.md` 取。
 2. 写在哪以简报给的路径为准：Claude 侧的施工在简报指定的临时工作树，Codex 侧在主检出 `E:\Project\UESTC_RPG` 的 `main`（WF-FLOW §3.1）；先 `git status`，读简报里同时在干活的邻居（WF-FLOW §2.1）。
-3. 只在简报给的路径读写。默认只写不编译、不跑测试、不提交，由指挥统一编译（WF-FLOW §3.1）；调试类任务或简报要求编译的才编译，排构建锁（WF-BUILD §4），引擎路径读环境变量 `UESTC_GODOT`；简报要求提交的，只带自己改的路径 `git commit -- <路径>`。
+3. 只在简报给的路径读写，新文件只建在简报列出的位置。默认只写不编译、不跑测试、不提交，由指挥统一编译（WF-FLOW §3.1）；调试类任务或简报要求编译的才编译，排构建锁（WF-BUILD §4），引擎路径读环境变量 `UESTC_GODOT`；简报要求提交的，只带自己改的路径 `git commit -- <路径>`。
 
 **独有必守**：
 - 不改 `docs/`（简报分派的文档整理除外），发现冲突写进回报（STD-DOC §6）。
@@ -84,7 +84,7 @@ gates: []
 | 写来信、回报 | WF-COMMS |
 | 改世界文件、共用数据 | WF-RULE §10 |
 | 跑门禁、截图 | ENG-GATES-SHOTS §1、ENG-GATES §1 |
-| 碰别的系统 | 那份文档的接入要点（CORE-INDEX §1 找域总纲，再按标题找文档） |
+| 碰别的系统 | 那份文档的接入要点（CORE-INDEX §1 找域总纲） |
 
 ## 3 Codex 主线
 
