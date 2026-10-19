@@ -117,8 +117,8 @@ internal static class BuildingsTestSupport
     /// </summary>
     internal static Func<FeatureId, Aspects, WpId?> RealClaims(IWorldModel world)
     {
-        IContentModule[] zones = [new Campus.Gen.Zones.Core.CoreModule(), new Campus.Gen.Zones.South.SouthModule(),
-            new Campus.Gen.Zones.CenterEast.CenterEastModule(), new Campus.Gen.Zones.North.NorthModule()];
+        IContentModule[] zones = [new Campus.Gen.Maps.Qingshuihe.Core.CoreModule(), new Campus.Gen.Maps.Qingshuihe.South.SouthModule(),
+            new Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastModule(), new Campus.Gen.Maps.Qingshuihe.North.NorthModule()];
         var owners = new Dictionary<(FeatureId, Aspects), WpId>();
         foreach (var zone in zones)
         {

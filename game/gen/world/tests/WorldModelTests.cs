@@ -222,7 +222,7 @@ public sealed class WorldModelTests
         var samples = new[]
         {
             (Id: result.World.Features.Values.Single(feature => feature.Name == "电子科技大学立人托幼公园").Id, Point: new Vector3(-672.712f, 1, -106.672f)),
-            (Id: new FeatureId(global::Campus.Gen.Zones.CenterEast.CenterEastIds.Wenke.Entity), Point: new Vector3(375.455f, 1, 80.05f))
+            (Id: new FeatureId(global::Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastIds.Wenke.Entity), Point: new Vector3(375.455f, 1, 80.05f))
         };
         foreach (var sample in samples)
         {

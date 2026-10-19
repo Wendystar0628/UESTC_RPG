@@ -1,6 +1,6 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
+
 using ArchUnitNET.Domain;
 using ArchUnitNET.Fluent;
 using ArchUnitNET.Loader;
@@ -13,19 +13,17 @@ namespace Campus.Arch.Tests;
 [TestSuite]
 public sealed class ArchitectureTests
 {
-    private const string ZoneIdCatalogPattern = @"^Campus\.Gen\.Zones\.(?:South\.SouthIds|North\.NorthFeatureIds|Core\.CoreIds|" +
-        @"CenterEast\.CenterEastIds(?:\+(?:Pinxue|Research|Monuments|Wenke|Friendship|Layout))?|West\.WestIds|" +
-        @"DesignBoundary\.BoundaryFeatureIds|DesignPublic\.PublicIds)$";
-
     private static readonly Lazy<ReflectionAssembly[]> Production = new(LoadProduction);
     private static readonly Lazy<Architecture> Model = new(() => new ArchLoader()
         .LoadAssemblies(Production.Value.Append(ReflectionAssembly.Load("GodotSharp")).ToArray()).Build());
 
     private static ReflectionAssembly[] LoadProduction()
     {
-        string[] names = ["Campus.Contracts", "Campus.Contracts.Runtime", "Campus.Gen", "Campus.Gen.Maps.Qingshuihe", "Campus"];
+        var composition = ReflectionAssembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "Campus.dll"));
+        var names = (string[])composition.GetType("Campus.Kernel.Registry.BuildInfo", throwOnError: true)!
+            .GetField("ModuleAssemblies", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
         var paths = names.Select(name => Path.Combine(AppContext.BaseDirectory, name + ".dll")).ToArray();
-        if (paths.Any(path => !File.Exists(path)))
+        if (paths.Length == 0 || paths.Any(path => !File.Exists(path)))
         {
             throw new InvalidOperationException("Production binaries missing; architecture checks cannot run on an empty model.");
         }
@@ -112,31 +110,19 @@ public sealed class ArchitectureTests
         {
             var forbidden = packages.Where(target => !AssertReference(origin, target)).Select(NamespacePattern).ToArray();
             // D-244: a zone reads another zone's identity catalog, never its implementation.
-            var allowedCatalogs = origin.StartsWith("Campus.Gen.Zones.", StringComparison.Ordinal) && origin != "Campus.Gen.Zones.Common"
-                ? ZoneIdCatalogPattern : "(?!)";
+            var allowedCatalogs = MapNamespace(origin) is { } map
+                ? "^" + Regex.Escape(map) + @"\.[^.]+\.[^.+]+(?:Feature)?Ids(?:\+[^.]+)?$" : "(?!)";
             if (forbidden.Length > 0)
                 Check(Types().That().ResideInNamespaceMatching(NamespacePattern(origin)).Should()
                     .NotDependOnAny(Types().That().ResideInNamespaceMatching(string.Join('|', forbidden))
                         .And().DoNotHaveFullNameMatching(allowedCatalogs))
                     .WithoutRequiringPositiveResults());
         }
-        // An empty project can lose unused references during compilation. Inspect its declaration too.
-        var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? FindRepository();
-        foreach (var path in Directory.EnumerateFiles(Path.Combine(root, "game", "gen"), "*.csproj", SearchOption.AllDirectories)
-                     .Append(Path.Combine(root, "game", "contracts", "Campus.Contracts.csproj"))
-                     .Append(Path.Combine(root, "game", "contracts", "Runtime", "Campus.Contracts.Runtime.csproj"))
-                     .Append(Path.Combine(root, "game", "Campus.csproj")))
-        {
-            var document = XDocument.Load(path);
-            foreach (var item in document.Descendants().Where(element => element.Name.LocalName == "ProjectReference"))
-            {
-                var target = (string?)item.Attribute("Include") ?? throw new InvalidOperationException("ProjectReference missing Include");
-                foreach (var reference in target.Split(';', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    AssertAssemblyReference(Path.GetFileNameWithoutExtension(path), Path.GetFileNameWithoutExtension(reference.Replace('\\', '/')));
-                }
-            }
-        }
+        // Evaluate wildcard references as MSBuild does, including references a compiler may elide.
+        foreach (var project in SourceModel.ProjectItems())
+            foreach (var reference in project.References)
+                AssertAssemblyReference(Path.GetFileNameWithoutExtension(project.Path), Path.GetFileNameWithoutExtension(reference));
+
     }
 
     private static string? MapScope(ReflectionAssembly assembly) => assembly.GetCustomAttributesData()
@@ -148,9 +134,14 @@ public sealed class ArchitectureTests
         if (name == "Campus.Pipeline.Map" || name.StartsWith("Campus.Pipeline.Map.", StringComparison.Ordinal)) return "Campus.Pipeline.Map";
         if (!name.StartsWith("Campus.Gen.", StringComparison.Ordinal)) return null;
         var parts = name.Split('.');
-        var length = parts[2] is "Parts" or "Zones" || name.StartsWith("Campus.Gen.Interior.Shell", StringComparison.Ordinal) ? 4 : 3;
+        var length = MapNamespace(name) is not null ? 5 : parts[2] is "Parts" || name.StartsWith("Campus.Gen.Interior.Shell", StringComparison.Ordinal) ? 4 : 3;
         return string.Join('.', parts.Take(length));
     }
+
+    private static string? MapNamespace(string name) => Production.Value
+        .Where(assembly => MapScope(assembly) is not null)
+        .Select(assembly => assembly.GetName().Name!)
+        .SingleOrDefault(map => name == map || name.StartsWith(map + ".", StringComparison.Ordinal));
 
     private static string NamespacePattern(string owner) => owner == "Campus.Gen.Interior"
         ? @"^Campus\.Gen\.Interior(?!(?:\.Shell)(?:\.|$))(?:\.|$)"
@@ -170,15 +161,17 @@ public sealed class ArchitectureTests
         else if (origin == "Campus.Contracts") allowed = false;
         else if (target == "Campus.Contracts") allowed = true;
         else if (origin == "Campus.Contracts.Runtime") allowed = false;
-        else allowed = origin == "Campus.Gen.Maps.Qingshuihe" && target == "Campus.Gen";
+        else allowed = Production.Value.Any(assembly => assembly.GetName().Name == origin && MapScope(assembly) is not null) && target == "Campus.Gen";
         if (!allowed) throw new InvalidOperationException($"Assembly boundary: {origin} -> {target}");
     }
 
     private static bool AssertReference(string origin, string target)
     {
-        // Includes map registration classes -> generic BoxInteriorProvider in the same shell namespace.
+        // Map namespaces own registrations; generic sites are shared by every map.
         if (origin == target) return true;
-        if (target == "Campus.Gen.Zones.Common") return origin.StartsWith("Campus.Gen.Zones.", StringComparison.Ordinal);
+        if (target == "Campus.Gen.Sites") return MapNamespace(origin) is not null;
+        if (target == "Campus.Gen.Interior.Shell" && MapNamespace(origin) is not null) return true;
+        if (MapNamespace(origin) is { } map && target == map) return true;
         if (origin == "Campus.Gen.Geometry") return false;
         if (origin is "Campus.Gen.World" or "Campus.Gen.Parts.Core") return target == "Campus.Gen.Geometry";
         if (origin.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal)) return target is "Campus.Gen.Parts.Core" or "Campus.Gen.Geometry";

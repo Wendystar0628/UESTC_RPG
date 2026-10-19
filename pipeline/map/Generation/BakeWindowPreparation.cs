@@ -1,4 +1,3 @@
-using System.Numerics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Campus.Contracts;
@@ -136,7 +135,7 @@ public static class BakeWindowPreparation
                 facade.ColumnStart < 0 || (long)facade.ColumnStart + facade.Columns > facade.TotalColumns ||
                 facade.SillY is null || facade.SillY.Count != facade.Rows || facade.Skip is null ||
                 (long)facade.Rows * facade.Columns > 1_000_000 ||
-                facade.SillY.Any(y => !float.IsFinite(y)) || !Finite(facade.Origin) || !Finite(facade.Right) || !Finite(facade.Up) ||
+                facade.SillY.Any(y => !float.IsFinite(y)) || !VectorMath.Finite(facade.Origin) || !VectorMath.Finite(facade.Right) || !VectorMath.Finite(facade.Up) ||
                 !Positive(facade.Pitch) || !Positive(facade.Width) || !Positive(facade.Height) || LightChannelCatalog.Slot(facade.Channel) < 0)
                 throw new InvalidDataException("Invalid window facade metadata.");
             var skip = facade.Skip.ToHashSet();
@@ -152,8 +151,8 @@ public static class BakeWindowPreparation
         }
         foreach (var window in metadata.Windows)
         {
-            if (window is null || window.Id < 0 || window.BaseId < 0 || window.TotalColumns <= 0 || !Finite(window.Center) ||
-                !Finite(window.Right) || !Finite(window.Up) || !Positive(window.Width) || !Positive(window.Height) || LightChannelCatalog.Slot(window.Channel) < 0)
+            if (window is null || window.Id < 0 || window.BaseId < 0 || window.TotalColumns <= 0 || !VectorMath.Finite(window.Center) ||
+                !VectorMath.Finite(window.Right) || !VectorMath.Finite(window.Up) || !Positive(window.Width) || !Positive(window.Height) || LightChannelCatalog.Slot(window.Channel) < 0)
                 throw new InvalidDataException("Invalid individual window metadata.");
             Add(window.Id, Block(window.BaseId, window.TotalColumns));
             if (window.Id < window.BaseId) throw new InvalidDataException("Window ID is below its declared base.");
@@ -175,5 +174,4 @@ public static class BakeWindowPreparation
     }
 
     private static bool Positive(float value) => float.IsFinite(value) && value > 0;
-    private static bool Finite(Vector3 value) => float.IsFinite(value.X) && float.IsFinite(value.Y) && float.IsFinite(value.Z);
 }

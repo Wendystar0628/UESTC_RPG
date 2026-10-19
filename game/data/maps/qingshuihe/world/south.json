@@ -1094,6 +1094,7 @@
       "storeys": 1,
       "family": "entrance",
       "props": {
+        "guardHouseSize": 5.6,
         "name": "南门",
         "category": "entrance",
         "kind": "building",

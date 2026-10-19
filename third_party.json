@@ -185,7 +185,7 @@
         "game/contracts/Campus.Contracts.csproj",
         "game/contracts/Runtime/Campus.Contracts.Runtime.csproj",
         "game/gen/Campus.Gen.csproj",
-        "game/gen/zones/Campus.Gen.Maps.Qingshuihe.csproj",
+        "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj",
         "scripts/gates/arch/Campus.Arch.Tests.csproj",
         "scripts/godot-api/ApiDump/ApiDump.csproj"
       ],
@@ -391,7 +391,7 @@
         "game/Campus.Tests.csproj",
         "game/Campus.csproj",
         "game/gen/Campus.Gen.csproj",
-        "game/gen/zones/Campus.Gen.Maps.Qingshuihe.csproj",
+        "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj",
         "scripts/gates/arch/Campus.Arch.Tests.csproj"
       ],
       "license": "BSD-3-Clause",
@@ -1260,7 +1260,7 @@
       "game/contracts/Campus.Contracts.csproj",
       "game/contracts/Runtime/Campus.Contracts.Runtime.csproj",
       "game/gen/Campus.Gen.csproj",
-      "game/gen/zones/Campus.Gen.Maps.Qingshuihe.csproj",
+      "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj",
       "scripts/gates/arch/Campus.Arch.Tests.csproj",
       "scripts/godot-api/ApiDump/ApiDump.csproj"
     ],

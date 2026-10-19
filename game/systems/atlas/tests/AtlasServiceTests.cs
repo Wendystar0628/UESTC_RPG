@@ -8,7 +8,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Maps;
 using Campus.Contracts.Save;
-using Campus.Gen.Zones.Core.LibraryInterior;
+using Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
 using Campus.Gen.Tests.Support;
 using Campus.Hud.Map;
 using Campus.Systems.Atlas;

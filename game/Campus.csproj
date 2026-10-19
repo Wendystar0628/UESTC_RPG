@@ -5,7 +5,7 @@
     <PackageReference Include="NetTopologySuite" />
     <PackageReference Include="gdUnit4.api" PrivateAssets="all" Condition="'$(Configuration)' == 'Debug'" />
     <Compile Remove="contracts/**/*.cs;gen/**/*.cs;**/tests/**/*.cs" />
-    <ProjectReference Include="contracts/Campus.Contracts.csproj;contracts/Runtime/Campus.Contracts.Runtime.csproj;gen/Campus.Gen.csproj;gen/zones/Campus.Gen.Maps.Qingshuihe.csproj" />
+    <ProjectReference Include="contracts/Campus.Contracts.csproj;contracts/Runtime/Campus.Contracts.Runtime.csproj;gen/Campus.Gen.csproj;gen/maps/*/*.csproj" />
     <AdditionalFiles Include="../scripts/gates/arch/BannedSymbols.Common.txt" />
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)' != 'Debug'">
@@ -23,7 +23,7 @@
     </ItemGroup>
   </Target>
   <Target Name="GenerateBuildInformation" BeforeTargets="CoreCompile">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(IntermediateOutputPath)BuildInfo.g.cs&quot; -Configuration &quot;$(Configuration)&quot;" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(IntermediateOutputPath)BuildInfo.g.cs&quot; -Configuration &quot;$(Configuration)&quot; -ModuleAssemblies &quot;$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)', ';')&quot;" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" /></ItemGroup>
   </Target>
 </Project>

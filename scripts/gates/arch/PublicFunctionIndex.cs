@@ -11,7 +11,7 @@ internal static class PublicFunctionIndex
     private const string Angles = "Campus.Contracts.Angles";
     private const string Plan = "Campus.Gen.Geometry.PlanGeometry";
     private const string Lines = "Campus.Contracts.PlanLines";
-    private const string Reads = "Campus.Gen.Zones.Common.FeatureReads";
+    private const string Reads = "Campus.Gen.Sites.FeatureReads";
     private const string Features = "Campus.Gen.World.WorldFeatureGeometry";
     private const string Props = "Campus.Gen.World.WorldProps";
 

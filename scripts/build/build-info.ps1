@@ -1,6 +1,6 @@
 ﻿# 生成构建信息源码 BuildInfo.g.cs（版本号、提交、构建种类 dev 或 export、模块程序集名单），并更新 game/data/build-commit.txt。
-# 用法：powershell scripts\build\build-info.ps1 -Root <仓库根> -Output <BuildInfo.g.cs 路径> [-Configuration Debug|Release]；平时由 game\Campus.csproj 在编译时调用
-param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$Output,[string]$Configuration='Debug')
+# 用法：powershell scripts\build\build-info.ps1 -Root <仓库根> -Output <BuildInfo.g.cs 路径> [-Configuration Debug|Release] -ModuleAssemblies <MSBuild resolved assembly names separated by semicolons>；平时由 game\Campus.csproj 在编译时调用
+param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$Output,[string]$Configuration='Debug',[Parameter(Mandatory)][string]$ModuleAssemblies)
 $ErrorActionPreference='Stop'
 . (Join-Path $Root 'scripts/lib/common.ps1')
 $rootPath=[IO.Path]::GetFullPath($Root)
@@ -12,14 +12,7 @@ $commitSource="$commit`n"
 [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($commitFile)) | Out-Null
 if(-not(Test-Path -LiteralPath $commitFile) -or [IO.File]::ReadAllText($commitFile) -ne $commitSource){[IO.File]::WriteAllText($commitFile,$commitSource,[Text.UTF8Encoding]::new($false))}
 $kind=if($Configuration -eq 'Debug'){'dev'}else{'export'}
-$moduleProjects=@(
-    'game/Campus.csproj'
-    'game/contracts/Campus.Contracts.csproj'
-    'game/contracts/Runtime/Campus.Contracts.Runtime.csproj'
-    'game/gen/Campus.Gen.csproj'
-    'game/gen/zones/Campus.Gen.Maps.Qingshuihe.csproj'
-) | ForEach-Object { Get-Item -LiteralPath (Join-Path $rootPath $_) }
-$moduleNames=[string[]]@($moduleProjects | ForEach-Object BaseName)
+$moduleNames=[string[]]@($ModuleAssemblies.Split(';', [StringSplitOptions]::RemoveEmptyEntries) | Select-Object -Unique)
 [Array]::Sort($moduleNames,[StringComparer]::Ordinal)
 $names=@($moduleNames | ForEach-Object {'"'+$_+'"'}) -join ','
 $source=@"

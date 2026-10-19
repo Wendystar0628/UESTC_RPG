@@ -7,7 +7,7 @@ using Campus.Kernel.Bake;
 using Campus.Kernel.Registry;
 using GdUnit4;
 using System.Text.Json;
-using Campus.Gen.Zones.Core.LibraryInterior;
+using Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
 
 namespace Campus.Tests;
 

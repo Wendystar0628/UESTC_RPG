@@ -1,3 +1,4 @@
+using Campus.Contracts;
 using Campus.Contracts.Atlas;
 using System.Buffers.Binary;
 using System.Text;
@@ -128,13 +129,11 @@ public static class MapBakeCodec
             foreach (var label in band.Labels)
             {
                 if (label is null || string.IsNullOrWhiteSpace(label.Id) || !ids.Add(label.Id) || string.IsNullOrWhiteSpace(label.Text) || label.Text.Length > 4096 ||
-                    !Finite(label.At) || !Finite(label.OffsetPixels) || !Finite(label.Size) || label.Size.X <= 0 || label.Size.Y <= 0 || label.Size.X > 4096 || label.Size.Y > 4096)
+                    !VectorMath.Finite(label.At) || !VectorMath.Finite(label.OffsetPixels) || !VectorMath.Finite(label.Size) || label.Size.X <= 0 || label.Size.Y <= 0 || label.Size.X > 4096 || label.Size.Y > 4096)
                     throw new InvalidDataException("Invalid placed label.");
             }
         }
     }
-
-    private static bool Finite(System.Numerics.Vector2 point) => float.IsFinite(point.X) && float.IsFinite(point.Y);
 
     private static bool AllowedFile(string name) => name is "map.manifest.json" or "regions.u8" or "labels.bake" ||
         TextureNames.Any(texture => name == texture + ".rgba8");

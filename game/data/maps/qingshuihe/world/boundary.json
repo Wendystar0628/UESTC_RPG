@@ -20,6 +20,9 @@
       "id": "design:boundary-north-bank-contour",
       "kind": "contourSegment",
       "props": {
+        "railJointT": -24.6,
+        "railN": 0.35,
+        "railJointPost": 0.08,
         "parent": "qsh:source:way:687770522"
       },
       "note": "选段登记：北门水岸广场与北区商业街栏杆共用红光右支渠东岸，按父轮廓逆时针由北端指向南端；只指明原有岸段，不改水体与摆放。",

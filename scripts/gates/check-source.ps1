@@ -239,7 +239,7 @@ function Test-UESTCSourceBoundaries {
             if ($path -notmatch '^game/kernel/save/') { $checks['save path outside save kernel'] = 'user://saves' }
             if ($path -notmatch '^game/kernel/bake/') { $checks['bake cache outside bake kernel'] = 'user://cache/bake' }
             if ($path -notmatch '^game/kernel/quality/') { $checks['quality settings outside quality kernel'] = 'user://graphics\.cfg' }
-            if ($path -notmatch '^game/kernel/map/|^game/gates/|^game/gen/zones/') {
+            if ($path -notmatch '^game/kernel/map/|^game/gates/|^game/gen/maps/') {
                 $checks['map data path in generic code'] = 'res://data/maps/'
                 $checks['entity ID in generic code'] = '"(?:[a-z][a-z0-9_-]*:[a-z][a-z0-9_-]*:[^"\s]+|(?:design|walk):[^"\s]+)"'
                 foreach ($mapId in $mapIds) { $checks["map ID $mapId in generic code"] = '"' + [regex]::Escape($mapId) + '"' }
