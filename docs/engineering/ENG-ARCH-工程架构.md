@@ -11,6 +11,7 @@ related: [ENG-GATES, ENG-WP, ENG-PERF, ENG-BUDGET, ENG-ROADMAP, CORE-CONVENTIONS
 contracts: []
 data: ["ownership.json", "third_party.json", "tools/godot-version.txt", "version.txt"]
 gates: [G1, G2, G3, G4, G5, G6]
+paths: ["game/**/*.cs"]
 ---
 # ENG-ARCH · 工程架构
 

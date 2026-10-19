@@ -155,6 +155,7 @@
   },
   {
    "docs": [
+    "ENG-ARCH",
     "ENG-CODE",
     "WF-BUILD"
    ],
@@ -162,6 +163,7 @@
   },
   {
    "docs": [
+    "ENG-BUDGET-RULES",
     "WF-BUILD"
    ],
    "glob": "game/**/*.gdshader*"
@@ -176,7 +178,19 @@
    "docs": [
     "ENG-BUDGET-RULES"
    ],
+   "glob": "game/kernel/**/*.cs"
+  },
+  {
+   "docs": [
+    "ENG-BUDGET-RULES"
+   ],
    "glob": "game/project.godot"
+  },
+  {
+   "docs": [
+    "ENG-BUDGET-RULES"
+   ],
+   "glob": "game/style/**"
   },
   {
    "docs": [
@@ -189,6 +203,18 @@
     "ENG-CODE"
    ],
    "glob": "pipeline/**/*.py"
+  },
+  {
+   "docs": [
+    "ENG-CODE"
+   ],
+   "glob": "scripts/**/*.ps1"
+  },
+  {
+   "docs": [
+    "ENG-CODE"
+   ],
+   "glob": "scripts/**/*.py"
   }
  ],
  "version": 1,

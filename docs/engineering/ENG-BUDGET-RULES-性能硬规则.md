@@ -12,7 +12,7 @@ related: [ENG-GATES, WF-BUILD]
 contracts: []
 data: []
 gates: [G4, G5, G7, G20, G21]
-paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"]
+paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props", "game/**/*.gdshader*", "game/kernel/**/*.cs", "game/style/**"]
 ---
 # ENG-BUDGET-RULES · 性能硬规则与工程设置
 

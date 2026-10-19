@@ -11,7 +11,7 @@ related: [CORE-INDEX, WF-RULE, ENG-GATES, ENG-BUDGET, SYS-WALK]
 contracts: []
 data: []
 gates: []
-paths: ["game/**/*.cs", "pipeline/**/*.cs", "pipeline/**/*.py"]
+paths: ["game/**/*.cs", "pipeline/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1"]
 ---
 # ENG-CODE · 代码结构准则
 
