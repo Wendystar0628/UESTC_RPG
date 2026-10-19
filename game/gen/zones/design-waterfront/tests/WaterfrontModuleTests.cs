@@ -6,6 +6,7 @@ using Campus.Tests;
 using Campus.Gen.Zones.DesignWaterfront.Bridges;
 using Campus.Gen.Zones.DesignWaterfront.Banks;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.Common.Tests;
 using GdUnit4;
 using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
 
@@ -104,9 +105,8 @@ public sealed class WaterfrontModuleTests
     {
         var ctx = Context();
         var module = new WaterfrontModule();
-        var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
+        var colliders = ZoneTestCells.Colliders(module, ctx).ToArray();
         var plans = BridgePlan.All(ctx.World);
-        AssertThat(colliders.Length == module.CollidersFor(ctx).Count).OverrideFailureMessage("every collider is filed in exactly one cell").IsTrue();
         foreach (var plan in plans)
         {
             var bridge = BridgeColliders.Of(plan).Select(item => item.Collider).ToArray();

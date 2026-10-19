@@ -19,7 +19,7 @@ public sealed class WaterfrontModule : ZoneModuleBase
     public override ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
     {
         var output = base.Build(context, tile, lod);
-        var occupancy = BridgePlan.All(context.World)
+        var occupancy = BridgePlan.All(context.World, source => SiteTileRequest.Includes(tile, lod, source))
             .Where(plan => lod == LodLevel.L4 || TileGrid.At(plan.Centre, lod) == tile)
             .Select(plan => new Footprint2D(plan.Id, new PolygonRings(plan.Footprint),
                 plan.RoadY - T.SlabDepth, plan.WalkY + T.HeadTop)).ToArray();
@@ -31,20 +31,23 @@ internal sealed class BridgeSite : ZoneSite
 {
     public override string Id => "28a.bridges";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. BridgePlan.Ranges(world), .. BridgeStone.Sources(world).Select(feature => SiteRanges.Point(BridgeStone.PositionOf(feature), T.StoneLength))];
+
     public override void Build(SiteBuilder builder)
     {
-        foreach (var plan in BridgePlan.All(builder.Context.World))
+        foreach (var plan in BridgePlan.All(builder.Context.World, builder.Includes))
             if (BridgeMesher.Build(plan, builder.Lod) is { } geometry)
                 builder.Add(geometry, Matrix4x4.Identity, plan.Centre);
-        foreach (var stone in BridgeStone.All(builder.Context.World))
+        foreach (var stone in BridgeStone.All(builder.Context.World, builder.Includes))
             if (stone.Build(builder.Lod) is { } geometry)
                 builder.Add(geometry, Matrix4x4.Identity, stone.Position);
     }
 
     public override void Collide(SiteColliders colliders)
     {
-        foreach (var plan in BridgePlan.All(colliders.Context.World))
+        foreach (var plan in BridgePlan.All(colliders.Context.World, colliders.Includes))
             foreach (var (anchor, collider) in BridgeColliders.Of(plan)) colliders.Add(collider, anchor);
-        foreach (var stone in BridgeStone.All(colliders.Context.World)) colliders.Add(stone.Collider, stone.Position);
+        foreach (var stone in BridgeStone.All(colliders.Context.World, colliders.Includes)) colliders.Add(stone.Collider, stone.Position);
     }
 }

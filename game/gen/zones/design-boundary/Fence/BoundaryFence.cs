@@ -61,6 +61,7 @@ public static class BoundaryFence
             var (q, _, qp, qe) = posts[j + 1];
             var length = Vector2.Distance(p, q);
             if (length < 0.05f) continue;
+            if (!b.Includes(SiteRanges.Bounds([p, q], F.CapSize))) continue;
             var u = (q - p) / length;
             var y = MathF.Min(b.Ground(p), b.Ground(q));
             // Panels run between the pillar faces; an end without a pillar runs to the point itself.
@@ -81,8 +82,9 @@ public static class BoundaryFence
                 b.Box(L.SteelBar, a + u * (start + k * pitch), u, F.BarSize, F.BarSize, y + F.BaseHeight, y + F.BarTop, caps: false, noShadow: true);
         }
         foreach (var (at, along, pillar, end) in posts)
-            if (pillar) Pillar(b, at, along, end);
-        foreach (var hedge in run.Hedges) Hedge(b, hedge);
+            if (pillar && b.Includes(SiteRanges.Point(at, F.CapSize))) Pillar(b, at, along, end);
+        foreach (var hedge in run.Hedges)
+            if (b.Includes(SiteRanges.Bounds(hedge, F.HedgeWidth))) Hedge(b, hedge);
     }
 
     private static float Half(bool end) => (end ? F.EndPillarSize : F.PillarSize) * 0.5f;
@@ -116,6 +118,7 @@ public static class BoundaryFence
             Vector2 p = line[i], q = line[Math.Min(i + step, line.Count - 1)];
             var length = Vector2.Distance(p, q);
             if (length < 0.05f) continue;
+            if (!b.Includes(SiteRanges.Bounds([p, q], F.HedgeWidth))) continue;
             var u = (q - p) / length;
             var y = MathF.Min(b.Ground(p), b.Ground(q));
             // Blocks overlap their neighbours a little at corners; the ends stop flush with the line's ends.
@@ -137,6 +140,7 @@ public static class BoundaryFence
         {
             Vector2 p = run.Line[i], q = run.Line[i + 1];
             if (Vector2.Distance(p, q) < 0.05f) continue;
+            if (!c.Includes(SiteRanges.Bounds([p, q], F.ColliderHalf))) continue;
             var lo = MathF.Min(c.Ground(p), c.Ground(q));
             var hi = MathF.Max(c.Ground(p), c.Ground(q));
             c.Wall(p, q, F.ColliderHalf, lo - 0.5f, hi + WalkRules.BoundaryHeight, SurfaceTag.Boundary, FootMat.Metal);
@@ -146,6 +150,7 @@ public static class BoundaryFence
             {
                 Vector2 p = hedge[i], q = hedge[i + 1];
                 if (Vector2.Distance(p, q) < 0.05f) continue;
+                if (!c.Includes(SiteRanges.Bounds([p, q], F.HedgeWidth))) continue;
                 var lo = MathF.Min(c.Ground(p), c.Ground(q));
                 var hi = MathF.Max(c.Ground(p), c.Ground(q));
                 c.Wall(p, q, F.HedgeWidth * 0.5f, lo - 0.5f, hi + WalkRules.BarrierHeight, SurfaceTag.Boundary, FootMat.Hedge);

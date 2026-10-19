@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.World;
 using Campus.Gen.Zones.Common;
@@ -15,7 +16,7 @@ internal sealed class BankPlan
     private readonly double _start;
 
     private BankPlan(WorldFeature feature, IWorldModel world, ITerrainBankSource source, TerrainBankSpan span,
-        double start, double end)
+        double start, double end, Func<MapRect, bool>? includes)
     {
         Id = feature.Id; Span = span; _source = source; _start = start;
         Shore = PlanLines.Subline(span.Shore.Points, start, end);
@@ -23,6 +24,7 @@ internal sealed class BankPlan
         WaterY = world.Terrain.WaterY(new(feature.Text("water")))
             ?? throw new InvalidOperationException($"{Id.Value}: its registered water has no WaterY.");
         var exits = new List<BankExit>();
+        var openings = new List<BankOpening>();
         if (feature.RequiredProps().TryGetProperty("treads", out var treads))
         {
             if (treads.ValueKind != JsonValueKind.Array) throw new InvalidOperationException($"{Id.Value}: treads must be an array.");
@@ -33,6 +35,8 @@ internal sealed class BankPlan
                 var width = tread.Number("width");
                 if (width <= 0 || centre.Distance > T.BankEndpointTolerance || centre.Station - width / 2 < 0 || centre.Station + width / 2 > Length)
                     throw new InvalidOperationException($"{Id.Value}: exit centre {authoredCentre} projects to {centre.Point} at {centre.Distance:F3} m from the shore; width {width:F2} m, station {centre.Station:F3}/{Length:F3} m. The exit must fit inside the selected shore.");
+                openings.Add(new(centre.Station, width));
+                if (includes is not null && !includes(SiteRanges.Point(centre.Point, MathF.Max(width / 2, T.BankExitReach)))) continue;
                 var frame = new PlanFrame(centre.Point, centre.Tangent);
                 var top = TopAt(centre.Station);
                 var low = WaterY - T.BankSubmersion;
@@ -45,7 +49,6 @@ internal sealed class BankPlan
             }
         }
         Exits = exits.OrderBy(exit => exit.Station).ToArray();
-        var openings = Exits.Select(exit => new BankOpening(exit.Station, exit.Steps.Width)).ToList();
         if (feature.RequiredProps().TryGetProperty("openings", out var authoredOpenings))
         {
             if (authoredOpenings.ValueKind != JsonValueKind.Array) throw new InvalidOperationException($"{Id.Value}: openings must be an array.");
@@ -71,14 +74,20 @@ internal sealed class BankPlan
     public IReadOnlyList<BankOpening> Openings { get; }
     public float TopAt(double station) => _source.BankTopY(Span.Id, _start + station);
 
-    public static IReadOnlyList<BankPlan> All(IWorldModel world)
+    public static IReadOnlyList<MapRect> Ranges(IWorldModel world) => [.. Sources(world).SelectMany(source => source.Ranges)];
+
+    public static IReadOnlyList<BankPlan> All(IWorldModel world, Func<MapRect, bool>? includes = null) =>
+        [.. Sources(world).Where(source => includes is null || source.Ranges.Any(includes)).Select(source =>
+            new BankPlan(source.Feature, world, (ITerrainBankSource)world.Terrain, source.Span, source.Start, source.End, includes))];
+
+    private static IEnumerable<BankSource> Sources(IWorldModel world)
     {
         var registrations = world.Features.Values.Where(feature => feature.Kind.Value == T.BankKind && feature.OptionalText("form") == T.HardBankForm)
             .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();
-        if (registrations.Length == 0) return [];
+        if (registrations.Length == 0) yield break;
         var source = world.Terrain as ITerrainBankSource
             ?? throw new InvalidOperationException("Registered bank structures require the world's compiled ITerrainBankSource.");
-        return registrations.Select(feature =>
+        foreach (var feature in registrations)
         {
             var (a, b) = feature.PointPair();
             var water = new FeatureId(feature.Text("water"));
@@ -90,14 +99,20 @@ internal sealed class BankPlan
             if (candidates.Length != 1)
                 throw new InvalidOperationException($"{feature.Id.Value}: both registered endpoints must select one compiled Hard bank core.");
             var selected = candidates[0];
-            return new BankPlan(feature, world, source, selected.Span,
-                Math.Max(selected.Span.CoreFrom, Math.Min(selected.A.Station, selected.B.Station)),
-                Math.Min(selected.Span.CoreTo, Math.Max(selected.A.Station, selected.B.Station)));
-        }).ToArray();
+            var start = Math.Max(selected.Span.CoreFrom, Math.Min(selected.A.Station, selected.B.Station));
+            var end = Math.Min(selected.Span.CoreTo, Math.Max(selected.A.Station, selected.B.Station));
+            var shore = PlanLines.Subline(selected.Span.Shore.Points, start, end);
+            var ranges = new List<MapRect> { SiteRanges.Bounds(shore, T.BankCopingWidth) };
+            if (feature.RequiredProps().TryGetProperty("treads", out var treads))
+                foreach (var tread in treads.EnumerateArray())
+                    ranges.Add(SiteRanges.Point(PlanLines.Project(shore, tread.Pair("centre")).Point,
+                        MathF.Max(T.BankExitReach, tread.Number("width") / 2)));
+            yield return new(feature, selected.Span, start, end, ranges);
+        }
     }
 
     /// <summary>Short terrain-following pieces; the exit cuts remove the wall and coping together.</summary>
-    public IEnumerable<BankPiece> Pieces()
+    public IEnumerable<BankPiece> Pieces(Func<MapRect, bool>? includes = null)
     {
         var cuts = new SortedSet<double> { 0, Length };
         var station = 0d;
@@ -120,9 +135,14 @@ internal sealed class BankPlan
         {
             var from = ordered[i - 1]; var to = ordered[i];
             if (to - from < 0.001 || Openings.Any(opening => Math.Abs((from + to) / 2 - opening.Station) < opening.Width / 2)) continue;
-            yield return new(PlanLines.Sample(Shore, from).Point, PlanLines.Sample(Shore, to).Point, TopAt(from), TopAt(to));
+            var a = PlanLines.Sample(Shore, from).Point;
+            var b = PlanLines.Sample(Shore, to).Point;
+            if (includes is not null && !includes(SiteRanges.Bounds([a, b], T.BankCopingWidth))) continue;
+            yield return new(a, b, TopAt(from), TopAt(to));
         }
     }
+
+    private sealed record BankSource(WorldFeature Feature, TerrainBankSpan Span, double Start, double End, IReadOnlyList<MapRect> Ranges);
 }
 
 internal readonly record struct BankPiece(Vector2 A, Vector2 B, float TopA, float TopB);

@@ -26,14 +26,23 @@ internal sealed record BridgeStone(FeatureId Id, Vector2 Position, float FaceDeg
         new(-0.50f, 0.00f), new(0.50f, 0.00f), new(0.51f, 0.52f), new(0.38f, 0.86f),
         new(-0.12f, 1.00f), new(-0.44f, 0.80f), new(-0.51f, 0.40f),
     ];
-    public static IReadOnlyList<BridgeStone> All(IWorldModel world) =>
-        [.. world.Features.Values.Where(f => f.Kind.Value == T.StoneKind && f.Geometry is PointGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
+    public static IEnumerable<WorldFeature> Sources(IWorldModel world) =>
+        world.Features.Values.Where(f => f.Kind.Value == T.StoneKind && f.Geometry is PointGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal);
+
+    public static IReadOnlyList<BridgeStone> All(IWorldModel world, Func<Vector2, bool>? includes = null) =>
+        [.. Sources(world).Where(f => includes is null || includes(PositionOf(f)))
             .Select(f =>
             {
                 var p = ((PointGeometry)f.Geometry).Position;
                 var face = f.Number("faceDeg");
                 return new BridgeStone(f.Id, new(p.X, p.Z), face, world.Terrain.HeightAt(p.X, p.Z));
             })];
+
+    public static Vector2 PositionOf(WorldFeature feature)
+    {
+        var p = ((PointGeometry)feature.Geometry).Position;
+        return new(p.X, p.Z);
+    }
 
     /// <summary>Unit vector of the face's outward normal in (X, Z): bearing 0° is north (−Z), 90° east (+X).</summary>
     public Vector2 Facing => Angles.Heading(FaceDeg);

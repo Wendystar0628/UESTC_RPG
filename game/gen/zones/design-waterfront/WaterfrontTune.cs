@@ -22,6 +22,8 @@ public static class WaterfrontTune
     public const float BankWetHeight = 0.2f, BankCopingBevel = 0.015f;
     public const float BankRiser = 0.15f, BankTread = 0.35f, BankSubmersion = 0.15f;
     public const float BankPieceLength = 2f, BankJoinTolerance = 0.02f;
+    /// <summary>Plan envelope for water-access steps, bounded by the terrain's supported vertical range without sampling it.</summary>
+    public const float BankExitReach = (TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight + BankSubmersion + 2 * BankRiser) * BankTread / BankRiser;
     public const float BankEndpointTolerance = Campus.Gen.World.WorldFeatureGeometry.SelectionEndpointTolerance;
     public const string BankWet = "ground.bankWet";
     public static ToonSpec BankWallSpec => ConcreteSpec;

@@ -2,6 +2,7 @@ using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.Maps;
 using Campus.Gen.World;
 using Campus.Gen.Zones.Common;
 using T = Campus.Gen.Zones.DesignWaterfront.WaterfrontTune;
@@ -27,10 +28,10 @@ internal readonly record struct Abutment(Vector2 A, Vector2 B, Vector2 C, Vector
 internal sealed class BridgePlan
 {
     private BridgePlan(FeatureId id, Vector2 origin, Vector2 axis, IReadOnlyList<Band> bands, float startA, float startK,
-        float endA, float endK, float roadY, IReadOnlyList<FeatureId> lines)
+        float endA, float endK, IReadOnlyList<Vector2> heightPoints, IReadOnlyList<FeatureId> lines)
     {
         Id = id; Origin = origin; Axis = axis; Normal = new(-axis.Y, axis.X); Bands = bands;
-        StartA = startA; StartK = startK; EndA = endA; EndK = endK; RoadY = roadY; Lines = lines;
+        StartA = startA; StartK = startK; EndA = endA; EndK = endK; HeightPoints = heightPoints; Lines = lines;
         Left = bands.Min(b => b.U0); Right = bands.Max(b => b.U1);
     }
 
@@ -45,7 +46,8 @@ internal sealed class BridgePlan
     public float EndA { get; private set; }
     public float EndK { get; private set; }
     /// <summary>Carriageway surface; walking bands are <see cref="WalkY"/>.</summary>
-    public float RoadY { get; }
+    public float RoadY { get; private set; }
+    private IReadOnlyList<Vector2> HeightPoints { get; }
     public float WalkY => RoadY + GroundLevels.Paving;
     public bool HasCarriage => Bands.Any(b => b.Kind == BandKind.Carriage);
     /// <summary>Outer edges of the walking surface; the parapet bases stand outside them.</summary>
@@ -69,23 +71,38 @@ internal sealed class BridgePlan
     /// <summary>The deck footprint, slab faces included (not the base overhang).</summary>
     public Vector2[] Footprint => Strip(OuterLeft, OuterRight);
 
+    public MapRect Range => SiteRanges.Bounds(Footprint.Concat(HeightPoints), T.HeadCap + T.BaseOverhang);
+
+    public static IReadOnlyList<MapRect> Ranges(IWorldModel world) => [.. Sources(world).Select(plan => plan.Range)];
+
     /// <summary>Resolves every bridge registered in the overlay (kind <see cref="T.BridgeKind"/>), in ID order.</summary>
-    public static IReadOnlyList<BridgePlan> All(IWorldModel world)
+    public static IReadOnlyList<BridgePlan> All(IWorldModel world, Func<MapRect, bool>? includes = null)
     {
-        ArgumentNullException.ThrowIfNull(world);
-        var lines = world.Network.Bridges.Concat(world.Network.Roads).GroupBy(l => l.Id.Value, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         var plans = new List<BridgePlan>();
-        foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == T.BridgeKind).OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        foreach (var plan in Sources(world))
         {
-            var plan = Resolve(world, feature, lines);
-            plan.FitToWater(world, feature.Text("banks", "start"), feature.Text("banks", "end"));
+            if (includes is not null && !includes(plan.Range)) continue;
+            plan.RoadY = (world.Terrain.HeightAt(plan.HeightPoints[0].X, plan.HeightPoints[0].Y)
+                + world.Terrain.HeightAt(plan.HeightPoints[1].X, plan.HeightPoints[1].Y)) * 0.5f;
             plans.Add(plan);
         }
         return plans;
     }
 
-    private static BridgePlan Resolve(IWorldModel world, WorldFeature feature, IReadOnlyDictionary<string, NetworkLine> lines)
+    private static IEnumerable<BridgePlan> Sources(IWorldModel world)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        var lines = world.Network.Bridges.Concat(world.Network.Roads).GroupBy(l => l.Id.Value, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+        foreach (var feature in world.Features.Values.Where(f => f.Kind.Value == T.BridgeKind).OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        {
+            var plan = Resolve(feature, lines);
+            plan.FitToWater(world, feature.Text("banks", "start"), feature.Text("banks", "end"));
+            yield return plan;
+        }
+    }
+
+    private static BridgePlan Resolve(WorldFeature feature, IReadOnlyDictionary<string, NetworkLine> lines)
     {
         if (feature.Props is not { ValueKind: JsonValueKind.Object } props)
             throw new InvalidOperationException($"{feature.Id.Value} needs props naming its axis line.");
@@ -126,10 +143,8 @@ internal sealed class BridgePlan
 
         var (startA, startK) = Fit(starts, min: true);
         var (endA, endK) = Fit(ends, min: false);
-        var terrain = world.Terrain;
-        var roadY = (terrain.HeightAt(points[0].X, points[0].Y) + terrain.HeightAt(points[^1].X, points[^1].Y)) * 0.5f;
         var ids = new[] { axisLine.Id }.Concat(walks.Select(l => l.Id)).ToArray();
-        return new(feature.Id, origin, axis, [.. bands.OrderBy(b => b.U0)], startA, startK, endA, endK, roadY, ids);
+        return new(feature.Id, origin, axis, [.. bands.OrderBy(b => b.U0)], startA, startK, endA, endK, [points[0], points[^1]], ids);
     }
 
     /// <summary>

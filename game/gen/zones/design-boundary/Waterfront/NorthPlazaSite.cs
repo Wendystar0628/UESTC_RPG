@@ -23,6 +23,15 @@ public sealed class NorthPlazaSite : ZoneSite
 
     public override string Id => "30a.north-plaza";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        if (FrameOf(world) is not { } frame) return [];
+        return [RailRange(frame), .. P.Benches.Select(at => SiteRanges.Point(frame.P(at.X, at.Y), P.BenchSize.Width))];
+    }
+
+    private static Campus.Contracts.Maps.MapRect RailRange(PlanFrame frame) =>
+        SiteRanges.Bounds([frame.P(P.RailT0, P.RailN), frame.P(P.RailT1, P.RailN)], P.EndPostSize + 0.04f);
+
     /// <summary>
     /// The registered bank frame: origin at the selected edge's north end, X toward that end, +Z off the water.
     /// Null when the plaza or bank selection is not in the map.
@@ -36,11 +45,12 @@ public sealed class NorthPlazaSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         if (FrameOf(b.Context.World) is not { } frame) return;
-        Railing(b, frame);
+        if (b.Includes(RailRange(frame))) Railing(b, frame);
         if (b.Detail == SiteDetail.Mass) return;
         foreach (var at in P.Benches)
         {
             var bench = frame.Shift(at.X, at.Y);
+            if (!b.Includes(bench.Origin)) continue;
             b.Place(PartCatalog.Bench, P.BenchSize, bench.At(0, b.Ground(bench.Origin) + GroundLevels.Paving, 0));
         }
     }
@@ -89,12 +99,16 @@ public sealed class NorthPlazaSite : ZoneSite
         if (FrameOf(c.Context.World) is not { } frame) return;
         var a = frame.P(P.RailT0, P.RailN);
         var d = frame.P(P.RailT1, P.RailN);
-        var y = MathF.Min(c.Ground(a), c.Ground(d)) + GroundLevels.Paving;
-        // Inside the campus: an ordinary waterside barrier, not the boundary (WLD-OUTSKIRTS), top 1.5 m (SYS-WALK).
-        c.Wall(a, d, 0.08f, y - 0.6f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);
+        if (c.Includes(RailRange(frame)))
+        {
+            var y = MathF.Min(c.Ground(a), c.Ground(d)) + GroundLevels.Paving;
+            // Inside the campus: an ordinary waterside barrier, not the boundary (WLD-OUTSKIRTS), top 1.5 m (SYS-WALK).
+            c.Wall(a, d, 0.08f, y - 0.6f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);
+        }
         foreach (var at in P.Benches)
         {
             var bench = frame.Shift(at.X, at.Y);
+            if (!c.Includes(SiteRanges.Point(bench.Origin, P.BenchSize.Width))) continue;
             c.Add(Bench.Collision(P.BenchSize), bench.At(0, c.Ground(bench.Origin) + GroundLevels.Paving, 0));
         }
     }

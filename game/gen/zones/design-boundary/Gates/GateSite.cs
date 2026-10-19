@@ -64,9 +64,27 @@ public sealed record GateLayout(PlanFrame Frame, float S, float Carriage, Bounda
 /// </summary>
 public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
 {
+    private static readonly ColumnParams BollardSize = new(0.18f, 0.8f, 0.18f);
     public BoundaryTune.GateSpec Spec { get; } = spec;
 
     public override string Id => "30." + Spec.Key + "-gate";
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        if (Of(world, Spec) is not { } g) return [];
+        return [BodyRange(g), .. Spec.Bollards.Select(p => SiteRanges.Point(g.P(p.X, p.Y), BollardSize.Width)),
+            .. (Spec.Locker is { } locker ? new[] { SiteRanges.Point(g.P(locker.X, locker.Y), LockerSize.Width) } : [])];
+    }
+
+    private static Campus.Contracts.Maps.MapRect BodyRange(GateLayout g)
+    {
+        var left = MathF.Min(g.LeftEnd, g.LeftPierX - G.PierSize);
+        var right = g.HouseEnd + G.HouseEave;
+        var back = MathF.Min(-G.IslandLength, G.HouseFront - G.HouseDepth - G.HouseEave);
+        Vector2[] points = [g.P(left, back), g.P(right, back), g.P(right, G.PierZ + G.PierSize),
+            g.P(left, G.PierZ + G.PierSize), g.Frame.Origin];
+        return SiteRanges.Bounds(points, G.PierCapOver);
+    }
 
     /// <summary>The resolved plan; null when the map has no such road or it does not cross the boundary.</summary>
     public static GateLayout? Of(IWorldModel world, BoundaryTune.GateSpec spec)
@@ -109,19 +127,22 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
     public override void Build(SiteBuilder b)
     {
         if (Of(b.Context.World, Spec) is not { } g) return;
-        var y = b.Ground(g.Frame.Origin);
-        Pier(b, g, g.LeftPierX, y, Spec.Plaque);
-        Island(b, g, y);
-        Barrier(b, g, y);
-        Turnstiles(b, g, g.BankStart, y);
-        GuardHouse(b, g, y);
-        if (g.HasWicket)
+        if (b.Includes(BodyRange(g)))
         {
-            Turnstiles(b, g, g.WicketFar, y);
-            BoundaryFence.Pillar(b, g.P(g.WicketPierX, -F.Inset), g.Frame.U, end: true);
+            var y = b.Ground(g.Frame.Origin);
+            Pier(b, g, g.LeftPierX, y, Spec.Plaque);
+            Island(b, g, y);
+            Barrier(b, g, y);
+            Turnstiles(b, g, g.BankStart, y);
+            GuardHouse(b, g, y);
+            if (g.HasWicket)
+            {
+                Turnstiles(b, g, g.WicketFar, y);
+                BoundaryFence.Pillar(b, g.P(g.WicketPierX, -F.Inset), g.Frame.U, end: true);
+            }
         }
         Bollards(b, g);
-        if (Spec.Locker is { } locker && b.Detail != SiteDetail.Mass)
+        if (Spec.Locker is { } locker && b.Detail != SiteDetail.Mass && b.Includes(g.P(locker.X, locker.Y)))
             b.Place(PartCatalog.DeliveryLocker, LockerSize, g.Frame.AtReversed(g.S * locker.X, b.Ground(g.P(locker.X, locker.Y)), locker.Y));
     }
 
@@ -249,9 +270,9 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
     private void Bollards(SiteBuilder b, GateLayout g)
     {
         if (b.Detail == SiteDetail.Mass || Spec.Bollards.Length == 0) return;
-        var bollard = new ColumnParams(0.18f, 0.8f, 0.18f);
         foreach (var p in Spec.Bollards)
-            b.Place(PartCatalog.Bollard, bollard, g.At(p.X, b.Ground(g.P(p.X, p.Y)) + GroundLevels.Paving, p.Y));
+            if (b.Includes(g.P(p.X, p.Y)))
+                b.Place(PartCatalog.Bollard, BollardSize, g.At(p.X, b.Ground(g.P(p.X, p.Y)) + GroundLevels.Paving, p.Y));
     }
 
     // ---- Collision (SYS-WALK, WLD-OUTSKIRTS): Boundary, gaps under 0.5 m ----
@@ -259,6 +280,13 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
     public override void Collide(SiteColliders c)
     {
         if (Of(c.Context.World, Spec) is not { } g) return;
+        if (c.Includes(BodyRange(g))) CollideBody(c, g);
+        if (Spec.Locker is { } locker && c.Includes(g.P(locker.X, locker.Y)))
+            c.Box(g.At(locker.X, c.Ground(g.P(locker.X, locker.Y)) + LockerSize.Height * 0.5f, locker.Y), new(LockerSize.Width * 0.5f, LockerSize.Height * 0.5f, LockerSize.Depth * 0.5f), SurfaceTag.Barrier, FootMat.Metal);
+    }
+
+    private static void CollideBody(SiteColliders c, GateLayout g)
+    {
         var y = c.Ground(g.Frame.Origin);
         var pierHalf = G.PierSize * 0.5f;
         // Left pier, and the L that closes the carriageway: the lane line behind the arm (the gate's invisible top-up to
@@ -281,8 +309,6 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
         for (var i = 0; i < 4; i++)
             c.Wall(ring[i], ring[(i + 1) % 4], 0.12f, y - 0.5f, y + G.HouseHeight + G.HouseRoof, SurfaceTag.Boundary, FootMat.StonePaving);
         c.Wall(g.P(g.BankEnd - 0.05f, G.TurnstileZ), g.P(g.HouseStart + 0.1f, G.TurnstileZ), 0.12f, y - 0.5f, y + WalkRules.BarrierHeight, SurfaceTag.Boundary, FootMat.Metal);
-        if (Spec.Locker is { } locker)
-            c.Box(g.At(locker.X, c.Ground(g.P(locker.X, locker.Y)) + LockerSize.Height * 0.5f, locker.Y), new(LockerSize.Width * 0.5f, LockerSize.Height * 0.5f, LockerSize.Depth * 0.5f), SurfaceTag.Barrier, FootMat.Metal);
     }
 
     private static void Bank(SiteColliders c, GateLayout g, float bankStart, float y) =>

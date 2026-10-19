@@ -4,6 +4,7 @@ using Campus.Contracts.Audio;
 using Campus.Gen.Geometry;
 using Campus.Gen.World;
 using Campus.Gen.Zones.Common;
+using Campus.Gen.Zones.Common.Tests;
 using Campus.Gen.Zones.South;
 using Campus.Tests;
 using Campus.Gen.Zones.DesignBoundary.Framework;
@@ -104,7 +105,7 @@ public sealed class BoundaryModuleTests
     public void NothingWalksOutThroughAGate()
     {
         var ctx = Context();
-        var colliders = new BoundaryModule().CollidersFor(ctx).Select(i => i.Collider).ToArray();
+        var colliders = ZoneTestCells.Colliders(new BoundaryModule(), ctx).ToArray();
         foreach (var spec in BoundaryTune.Gates)
         {
             var g = GateSite.Of(ctx.World, spec)!;
@@ -135,7 +136,7 @@ public sealed class BoundaryModuleTests
         var ctx = Context();
         var plan = BoundaryPlan.Of(ctx.World)!;
         var ring = plan.Ring;
-        var colliders = new BoundaryModule().CollidersFor(ctx).Select(i => i.Collider).Where(c => c.Tag == SurfaceTag.Boundary).ToArray();
+        var colliders = ZoneTestCells.Colliders(new BoundaryModule(), ctx).Where(c => c.Tag == SurfaceTag.Boundary).ToArray();
         // Bucket the colliders by 8 m cells of their plan extent.
         var buckets = new Dictionary<(int, int), List<Collider>>();
         foreach (var c in colliders)
@@ -171,7 +172,7 @@ public sealed class BoundaryModuleTests
     public void CollidersAreTaggedAndCarryAFootMaterial()
     {
         var ctx = Context();
-        var colliders = new BoundaryModule().CollidersFor(ctx).Select(i => i.Collider).ToArray();
+        var colliders = ZoneTestCells.Colliders(new BoundaryModule(), ctx).ToArray();
         AssertThat(colliders.Length > 0).OverrideFailureMessage("colliders exist").IsTrue();
         AssertThat(colliders.All(c => c.Foot != FootMat.Auto)).OverrideFailureMessage("every collider fills Foot").IsTrue();
         var rail = NorthPlazaSite.FrameOf(ctx.World)!.Value.P((P.RailT0 + P.RailT1) * 0.5f, P.RailN);
@@ -202,7 +203,7 @@ public sealed class BoundaryModuleTests
         AssertThat(module.Tiles(ctx).Any()).OverrideFailureMessage("the module occupies cells").IsTrue();
         foreach (var lod in Levels)
         {
-            var items = module.ItemsFor(ctx, lod);
+            var items = ZoneTestCells.Items(module, ctx, lod);
             AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
             var cells = items.Select(i => TileGrid.At(i.Anchor, lod)).Distinct().ToArray();
             var parts = 0;

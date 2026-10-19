@@ -14,12 +14,14 @@ internal sealed class BankSite : ZoneSite
     private static readonly StepsPart Steps = new();
     public override string Id => "28b.registered-banks";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) => BankPlan.Ranges(world);
+
     public override void Build(SiteBuilder builder)
     {
         if (builder.Lod == LodLevel.L4) return;
-        foreach (var bank in BankPlan.All(builder.Context.World))
+        foreach (var bank in BankPlan.All(builder.Context.World, builder.Includes))
         {
-            foreach (var piece in bank.Pieces())
+            foreach (var piece in bank.Pieces(builder.Includes))
             {
                 var frame = PlanFrame.Toward(piece.A, piece.B);
                 var length = Vector2.Distance(piece.A, piece.B);
@@ -43,9 +45,9 @@ internal sealed class BankSite : ZoneSite
 
     public override void Collide(SiteColliders colliders)
     {
-        foreach (var bank in BankPlan.All(colliders.Context.World))
+        foreach (var bank in BankPlan.All(colliders.Context.World, colliders.Includes))
         {
-            foreach (var piece in bank.Pieces())
+            foreach (var piece in bank.Pieces(colliders.Includes))
             {
                 var frame = PlanFrame.Toward(piece.A, piece.B);
                 // The terrain owns the bank slope. This narrow walkable top matches the visible coping.

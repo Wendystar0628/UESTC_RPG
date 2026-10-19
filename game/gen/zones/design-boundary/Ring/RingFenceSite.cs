@@ -21,12 +21,29 @@ public sealed class RingFenceSite : ZoneSite
 {
     public override string Id => "30b.ring";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        if (BoundaryPlan.Of(world) is not { } plan) return [];
+        return [.. plan.Runs.Select(run => SiteRanges.Bounds(run.Line, F.CapSize)),
+            .. plan.Runs.SelectMany(run => run.Hedges).Select(hedge => SiteRanges.Bounds(hedge, F.HedgeWidth)),
+            .. plan.Openings.Where(o => o.Kind != OpeningKind.Gate).Select(o => OpeningRange(plan, o))];
+    }
+
+    private static Campus.Contracts.Maps.MapRect OpeningRange(BoundaryPlan plan, Opening opening)
+    {
+        var (a, b) = plan.Ends(opening);
+        return SiteRanges.Bounds([a, b], F.EndPillarSize);
+    }
+
     public override void Build(SiteBuilder b)
     {
         if (BoundaryPlan.Of(b.Context.World) is not { } plan) return;
-        foreach (var run in plan.Runs) BoundaryFence.Build(b, run);
+        foreach (var run in plan.Runs)
+            if (b.Includes(SiteRanges.Bounds(run.Line.Concat(run.Hedges.SelectMany(line => line)), F.HedgeWidth)))
+                BoundaryFence.Build(b, run);
         foreach (var o in plan.Openings)
         {
+            if (!b.Includes(OpeningRange(plan, o))) continue;
             switch (o.Kind)
             {
                 case OpeningKind.Gate: break;
@@ -40,9 +57,12 @@ public sealed class RingFenceSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         if (BoundaryPlan.Of(c.Context.World) is not { } plan) return;
-        foreach (var run in plan.Runs) BoundaryFence.Collide(c, run);
+        foreach (var run in plan.Runs)
+            if (c.Includes(SiteRanges.Bounds(run.Line.Concat(run.Hedges.SelectMany(line => line)), F.HedgeWidth)))
+                BoundaryFence.Collide(c, run);
         foreach (var o in plan.Openings)
         {
+            if (!c.Includes(OpeningRange(plan, o))) continue;
             switch (o.Kind)
             {
                 case OpeningKind.Gate: break;
