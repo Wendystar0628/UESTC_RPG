@@ -14,7 +14,7 @@ public readonly record struct WeatherVec(       // 天气向量：每帧插值�
     float Overcast, float Precip, float PrecipKind,   // 阴度、降水量、降水类型（0 雨 → 1 雪）
     float Wet, float Puddle,                    // 湿润、积水
     float Fog, float GroundFog,                 // 雾密度倍率（晴为 1）、贴地雾
-    float Storm, float SnowAdd,                 // 风暴度、新雪
+    float Storm, float SnowAdd,                 // 风暴度、天气积雪量 0..1.5；树冠消费自行封顶 1
     float Rainbow, float Lightning);            // 彩虹、闪光
 public sealed record WorldPreset(double Clock, Season Season, WeatherKind? Weather = null, float? Intensity = null);
 

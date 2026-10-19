@@ -19,8 +19,8 @@ public static class WeatherVectors
             WeatherKind.Rain => new(.94f, .75f, .35f, .82f, .35f + .65f * i, 0, .7f + .3f * i, .2f + .6f * i, 1.4f, .1f, .25f * i, 0, 0, 0),
             WeatherKind.Thunderstorm => new(1, .9f, .9f, .95f, .5f + .5f * i, 0, 1, .45f + .5f * i, 1.5f, .1f, .6f + .4f * i, 0, 0, 0),
             WeatherKind.AfterRain => new(.35f, .35f, 0, .15f, 0, 0, .7f, .25f, 1.05f, .08f, 0, 0, 0, 0),
-            WeatherKind.Snow => new(.88f, .6f, .05f, .65f, .2f + .8f * i, 1, .2f, 0, 1.2f, 0, .1f * i, .35f + .65f * i, 0, 0),
-            WeatherKind.AfterSnow => new(.25f, .25f, 0, .1f, 0, 1, .15f, 0, 1, 0, 0, .65f, 0, 0),
+            WeatherKind.Snow => new(.88f, .6f, .05f, .65f, .2f + .8f * i, 1, .2f, 0, 1.2f, 0, .1f * i, 0, 0, 0),
+            WeatherKind.AfterSnow => new(.25f, .25f, 0, .1f, 0, 1, .15f, 0, 1, 0, 0, 0, 0, 0),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
     }

@@ -105,7 +105,7 @@ public sealed record WeatherProcessState(    // 全局天气设定的落定快�
 {
     public Season Season { get; init; } = Season.Autumn;
     public double ClockOffset { get; init; }
-    public float SnowAdd { get; init; }                // 保存时的新雪余量，与 Wet/Puddle 同属落定状态。
+    public float SnowAdd { get; init; }                // 保存时的天气积雪余量 0..1.5，与 Wet/Puddle 同属落定状态。
     public float? WetOverride { get; init; }           // --wet 的固定读数覆盖；自然推进保留，人工 Select/Reseason/Quiet/Pin 清除，无衰减计时锚点。
     // 不存可重建的 WeatherNow；自然天气直接按世界时间求值。
     // 手动、换季、显式快进的视觉过渡 Capture 取终点，Restore 直接落定，不重播过渡。

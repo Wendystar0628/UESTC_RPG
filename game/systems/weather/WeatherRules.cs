@@ -5,6 +5,23 @@ namespace Campus.Systems.Weather;
 /// <summary>Season legality and the SYS-TIME art-sun boundaries used by forward generation.</summary>
 public static class WeatherRules
 {
+    public const float MaxSnow = 1.5f;
+    public const float LightSnowIntensity = .25f, HeavySnowIntensity = .75f;
+    private const float LightSnowTarget = .6f, HeavySnowTarget = 1;
+    public const double SnowGrowthPerHour = .2, HeavySnowGrowthPerHour = .1;
+
+    public static double SnowTarget(float intensity) => LightSnowTarget + (HeavySnowTarget - LightSnowTarget) *
+        Math.Clamp((double)(intensity - LightSnowIntensity) / (HeavySnowIntensity - LightSnowIntensity), 0, 1);
+
+    public static double SnowDrainHours(WeatherKind kind) => kind switch
+    {
+        WeatherKind.Clear or WeatherKind.FewClouds or WeatherKind.AfterRain or WeatherKind.AfterSnow => WeatherSettings.SnowHours,
+        WeatherKind.Cloudy => WeatherSettings.SnowHours * 2,
+        WeatherKind.Overcast or WeatherKind.Fog or WeatherKind.LightRain or WeatherKind.Rain or WeatherKind.Thunderstorm => WeatherSettings.SnowHours * 3,
+        WeatherKind.Snow => throw new ArgumentException("Snow grows while it is falling.", nameof(kind)),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind))
+    };
+
     public static bool IsNative(WeatherKind kind, Season season)
     {
         ValidateSeason(season);

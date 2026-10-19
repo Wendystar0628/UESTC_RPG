@@ -106,8 +106,9 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         WeatherRules.ValidateIntensity(sel.Intensity);
         if (!IsNative(sel.Kind, _set.Season)) throw new ArgumentException($"{sel.Kind} is unavailable in {_set.Season}; use {WeatherRules.MapToSeason(sel.Kind, _set.Season)}.", nameof(sel));
         var line = Line();
+        var settled = Vector(_hours);
         BeginBlend();
-        _set.SetResidue(Now, _hours);
+        _set.SetResidue(settled, _hours);
         _set.ClearChoices();
         _set.Manual = sel.Mode == WeatherMode.Manual ? sel : null;
         Refresh(line);
@@ -119,6 +120,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         if (!double.IsFinite(clockOffset)) throw new ArgumentOutOfRangeException(nameof(clockOffset));
         WeatherRules.ValidateSeason(to);
         var line = Line();
+        _set.SetSnowAnchor(line.SnowAt(worldHours), worldHours);
         BeginBlend();
         _hours = worldHours;
         _set.Reseason(to, clockOffset);
@@ -135,6 +137,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         _hours = worldHours;
         _set.ClearChoices();
         _set.ClearResidue();
+        _set.ResidueAt = worldHours;
         _set.QuietUntil = untilHours;
         Refresh(line);
     }
@@ -149,10 +152,14 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         // Before the first Step the season is not known yet; the first Step maps the kind to it.
         if (_set.FrameBound && !IsNative(k, _set.Season)) throw new ArgumentException("Pinned weather is not native to the target season.", nameof(k));
         var line = Line();
+        double snowFrom = Math.Min(worldHours, fromHours);
+        float snow = line.SnowAt(snowFrom);
         BeginBlend();
         _hours = worldHours;
         _set.ClearChoices();
         _set.ClearResidue();
+        _set.ResidueSnow = snow;
+        _set.ResidueAt = snowFrom;
         _set.PinKind = k;
         _set.PinIntensity = strength;
         _set.PinFrom = fromHours;
@@ -190,7 +197,10 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         WeatherRules.ValidateSeason(moment.Season);
         var copy = _set.Copy();
         if (!copy.FrameBound || copy.Season != moment.Season || copy.ClockOffset != moment.ClockOffset)
+        {
+            copy.SetSnowAnchor(Line().SnowAt(_hours), _hours);
             copy.Reseason(moment.Season, moment.ClockOffset);
+        }
         return Snapshot(copy, moment.WorldHours);
     }
 
@@ -239,7 +249,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         {
             Season = s.Season,
             ClockOffset = s.ClockOffset,
-            SnowAdd = residue.Snow,
+            SnowAdd = new WeatherTimeline(_profile!, Seed, _map.Value, s).SnowAt(hours),
             WetOverride = s.WetOverride
         };
     }
@@ -279,6 +289,7 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         _set.Manual = null;
         _set.QuietUntil = 0;
         _set.PinKind = null;
+        _set.ResidueAt = hours;
         if (boot.RemainingMinutes is { } remaining)
         {
             _set.PinKind = kind;
@@ -299,7 +310,8 @@ public sealed class WeatherProcess(IWeatherProfileSource profiles) : IWeatherPro
         WeatherRules.ValidateIntensity(saved.Selection.Intensity);
         WeatherRules.ValidateIntensity(saved.Wet);
         WeatherRules.ValidateIntensity(saved.Puddle);
-        WeatherRules.ValidateIntensity(saved.SnowAdd);
+        if (!float.IsFinite(saved.SnowAdd) || saved.SnowAdd < 0 || saved.SnowAdd > WeatherRules.MaxSnow)
+            throw new InvalidDataException("Invalid saved snow amount.");
         if (saved.WetOverride is { } wet) WeatherRules.ValidateIntensity(wet);
         if (saved.Selection.Mode is not (WeatherMode.Auto or WeatherMode.Manual)) throw new InvalidDataException("Unknown weather mode.");
         if (!WeatherRules.IsNative(saved.Selection.Kind, saved.Season)) throw new InvalidDataException("Saved weather is not native to its season.");

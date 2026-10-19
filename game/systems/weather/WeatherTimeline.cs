@@ -16,7 +16,7 @@ internal sealed class WeatherSettings
     public float? PinIntensity;
     public double QuietUntil;
     public float? WetOverride;
-    /// <summary>Wetness left behind by a manual change, draining from <see cref="ResidueAt"/>.</summary>
+    /// <summary>Surface amounts at <see cref="ResidueAt"/>; snow grows or drains along the subsequent weather spans.</summary>
     public float ResidueWet, ResiduePuddle, ResidueSnow;
     public double ResidueAt;
 
@@ -42,10 +42,20 @@ internal sealed class WeatherSettings
         ResidueAt = hours;
     }
 
-    public (float Wet, float Puddle, float Snow) ResidueNow(double hours)
+    /// <summary>A season/clock change preserves existing wet residue; only snow samples the settled weather.</summary>
+    public void SetSnowAnchor(float amount, double hours)
+    {
+        var residue = ResidueNow(hours);
+        ResidueWet = residue.Wet;
+        ResiduePuddle = residue.Puddle;
+        ResidueSnow = amount;
+        ResidueAt = hours;
+    }
+
+    public (float Wet, float Puddle) ResidueNow(double hours)
     {
         double age = Math.Max(0, hours - ResidueAt);
-        return (Drain(ResidueWet, age, WetHours), Drain(ResiduePuddle, age, PuddleHours), Drain(ResidueSnow, age, SnowHours));
+        return (Drain(ResidueWet, age, WetHours), Drain(ResiduePuddle, age, PuddleHours));
     }
 
     // A constant drain rate (a full reading empties in the given hours) lets a save re-anchor the residue without changing its course.
@@ -63,6 +73,7 @@ internal sealed class WeatherSettings
         }
         if (PinKind is { } pin) PinKind = WeatherRules.MapToSeason(pin, to);
         WetOverride = null;
+        if (to != Season.Winter) ResidueSnow = 0;
         Season = to;
         ClockOffset = offset;
         FrameBound = true;
@@ -92,15 +103,14 @@ internal sealed class WeatherTimeline(WeatherProfile profile, uint seed, MapId m
     {
         var selection = SelectionAt(hours);
         var vector = WeatherVectors.For(selection.Kind, selection.Intensity);
-        // Pinned and quiet windows show exactly what was asked for.
-        if (hours < settings.QuietUntil || InPin(hours)) return vector;
-        float wet = vector.Wet, puddle = vector.Puddle, snow = vector.SnowAdd;
+        // Pin/quiet still fix the atmosphere, while snow follows elapsed world time.
+        if (hours < settings.QuietUntil || InPin(hours)) return vector with { SnowAdd = SnowAt(hours) };
+        float wet = vector.Wet, puddle = vector.Puddle;
         if (settings.Manual is null)
         {
             vector = Blend(hours);
             wet = vector.Wet;
             puddle = vector.Puddle;
-            snow = vector.SnowAdd;
             foreach (var span in Segments(hours - WeatherSettings.SnowHours, hours))
             {
                 if (!WeatherRules.IsPrecipitation(span.Kind)) continue;
@@ -109,11 +119,49 @@ internal sealed class WeatherTimeline(WeatherProfile profile, uint seed, MapId m
                 float rise = ScalarMath.Smoothstep((float)((hours - span.FromHours) / profile.BlendHours));
                 wet = Math.Max(wet, peak.Wet * rise * WeatherSettings.Fade(age, WeatherSettings.WetHours));
                 puddle = Math.Max(puddle, peak.Puddle * rise * WeatherSettings.Fade(age, WeatherSettings.PuddleHours));
-                snow = Math.Max(snow, peak.SnowAdd * rise * WeatherSettings.Fade(age, WeatherSettings.SnowHours));
             }
         }
         var residue = settings.ResidueNow(hours);
-        return vector with { Wet = Math.Max(wet, residue.Wet), Puddle = Math.Max(puddle, residue.Puddle), SnowAdd = Math.Max(snow, residue.Snow) };
+        return vector with { Wet = Math.Max(wet, residue.Wet), Puddle = Math.Max(puddle, residue.Puddle), SnowAdd = SnowAt(hours) };
+    }
+
+    /// <summary>Integrates whole weather spans, never frames. The saved residue is the only surface-state anchor.</summary>
+    public float SnowAt(double hours)
+    {
+        if (settings.Season != Season.Winter) return 0;
+        double anchor = settings.ResidueAt;
+        if (hours <= anchor) return settings.ResidueSnow;
+        if (settings.Manual is { } manual)
+            return (float)SnowAfter(settings.ResidueSnow, hours - anchor, manual.Kind, manual.Intensity);
+
+        // Most queries forget earlier snow after one dry interval. Extend only until the possible
+        // [0, maximum] readings agree, or until the actual saved/manual-choice anchor is reached.
+        double window = 24;
+        while (true)
+        {
+            double from = Math.Max(anchor, hours - window);
+            double low = from == anchor ? settings.ResidueSnow : 0;
+            double high = from == anchor ? low : WeatherRules.MaxSnow;
+            foreach (var span in Segments(from, hours))
+            {
+                double duration = span.ToHours - span.FromHours;
+                low = SnowAfter(low, duration, span.Kind, span.Intensity);
+                high = SnowAfter(high, duration, span.Kind, span.Intensity);
+            }
+            if (low == high) return (float)low;
+            window *= 2;
+        }
+    }
+
+    private static double SnowAfter(double amount, double hours, WeatherKind kind, float intensity)
+    {
+        if (kind != WeatherKind.Snow) return Math.Max(0, amount - hours / WeatherRules.SnowDrainHours(kind));
+        double target = WeatherRules.SnowTarget(intensity);
+        double toTarget = Math.Max(0, target - amount) / WeatherRules.SnowGrowthPerHour;
+        amount += Math.Min(hours, toTarget) * WeatherRules.SnowGrowthPerHour;
+        if (intensity >= WeatherRules.HeavySnowIntensity)
+            amount = Math.Min(WeatherRules.MaxSnow, amount + Math.Max(0, hours - toTarget) * WeatherRules.HeavySnowGrowthPerHour);
+        return amount;
     }
 
     /// <summary>The next 24 hours as contiguous spans, merged where the weather does not change.</summary>

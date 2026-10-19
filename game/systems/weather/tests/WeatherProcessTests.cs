@@ -23,11 +23,14 @@ public sealed class WeatherProcessTests
     public void SameSeedMapAndTimeGiveTheSameWeatherInAnyCallOrder()
     {
         var profile = Profile;
-        var a = Create(127, Season.Autumn, profile);
-        var b = Create(127, Season.Autumn, profile);
-        for (int hour = 1; hour <= 240; hour++) b.Step(Tick(hour));
-        a.Step(Tick(240));
-        Equal(a, b);
+        foreach (var season in new[] { Season.Autumn, Season.Winter })
+        {
+            var a = Create(127, season, profile);
+            var b = Create(127, season, profile);
+            for (int hour = 1; hour <= 240; hour++) b.Step(Tick(hour, season));
+            a.Step(Tick(240, season));
+            Equal(a, b);
+        }
         var c = Create(128, Season.Autumn, profile);
         AssertThat(!Forecast(Create(127, Season.Autumn, profile), Season.Autumn, 30).SequenceEqual(Forecast(c, Season.Autumn, 30))).OverrideFailureMessage("Different seeds must change the weather.").IsTrue();
     }
@@ -113,28 +116,31 @@ public sealed class WeatherProcessTests
             var rain = season == Season.Winter ? WeatherKind.Snow : WeatherKind.Rain;
             var a = Create(17, season, profile);
             a.Step(Tick(150, season));
-            a.Select(new(WeatherMode.Manual, rain, .6f));
-            a.Step(Tick(150.5, season)); a.Step(Tick(150.5, season));
+            a.Select(new(WeatherMode.Manual, rain, 1));
+            double savedAt = season == Season.Winter ? 157.5 : 150.5;
+            a.Step(Tick(savedAt, season)); a.Step(Tick(savedAt, season));
             var section = new WeatherSection(a, TestMaps(), source);
             var saved = section.Capture(new CaptureContext(SaveReason.Quit, Map, true));
             var restored = JsonSerializer.Deserialize(JsonSerializer.Serialize(saved, section.TypeInfo), section.TypeInfo)!;
             var b = new WeatherProcess(source);
             new WeatherSection(b, TestMaps(), source).Restore(restored, new RestoreContext { Map = Map, FromVersion = 2, Missing = false });
-            b.Enter(Map, "test", 150.5);
-            Equal(a, b);
+            b.Enter(Map, "test", savedAt);
+            Equal(a, b, restoredSnow: true);
+            if (season == Season.Winter)
+                AssertThat(saved.Process.SnowAdd > 1 && saved.Process.SnowAdd <= WeatherRules.MaxSnow).OverrideFailureMessage("Deep snow did not survive the save section.").IsTrue();
             a.Select(new(WeatherMode.Auto, rain, .6f)); b.Select(new(WeatherMode.Auto, rain, .6f));
             for (int i = 0; i < 300; i++)
             {
-                double hours = 150.5 + i * .137;
+                double hours = savedAt + i * .137;
                 a.Step(Tick(hours, season)); b.Step(Tick(hours, season));
-                if (i >= 2) Equal(a, b);
+                if (i >= 2) Equal(a, b, restoredSnow: true);
             }
         }
     }
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void ManualWetnessDrainsAfterReturningToAuto()
+    public void ManualSurfaceAmountsGrowAndDrainWithWorldTime()
     {
         var p = Create(5, Season.Autumn, Profile);
         p.Select(new(WeatherMode.Manual, WeatherKind.Rain, .6f));
@@ -145,6 +151,44 @@ public sealed class WeatherProcessTests
         p.Step(Tick(13));
         var saved = p.Capture();
         AssertThat(saved.Wet == 0 && saved.Puddle == 0).OverrideFailureMessage("Leftover wetness did not drain.").IsTrue();
+
+        var snow = Create(5, Season.Winter, Profile);
+        snow.Select(new(WeatherMode.Manual, WeatherKind.Snow, 1));
+        AssertThat(snow.Capture().SnowAdd == 0).OverrideFailureMessage("Selecting snow created an instant snow target.").IsTrue();
+        snow.Step(Tick(1, Season.Winter));
+        AssertThat(Math.Abs(snow.Now.SnowAdd - WeatherRules.SnowGrowthPerHour) <= TestTolerance.FloatRelative).OverrideFailureMessage("Snow did not grow by world time.").IsTrue();
+        var paused = snow.Now;
+        snow.Step(Tick(1, Season.Winter) with { RealDt = 20, FlowRate = 0 });
+        AssertThat(snow.Now == paused).OverrideFailureMessage("Paused snow grew with real time.").IsTrue();
+        var landing = new WorldSaveMoment(10, 0, Season.Winter, 0);
+        var deep = snow.CaptureAt(in landing);
+        AssertThat(deep.SnowAdd == WeatherRules.MaxSnow && snow.Now == paused && snow.Capture().LeftAtHours == 1).OverrideFailureMessage("Projected snow did not reach its cap, or capture advanced the live world.").IsTrue();
+        snow.Step(Tick(10, Season.Winter));
+        var pinned = Create(5, Season.Winter, Profile);
+        pinned.Pin(0, WeatherKind.Snow, 1, 0, 10);
+        pinned.Step(Tick(9, Season.Winter));
+        AssertThat(pinned.Now.SnowAdd > 1 && pinned.Now.SnowAdd < deep.SnowAdd).OverrideFailureMessage("Pinned snow bypassed accumulation.").IsTrue();
+        snow.Select(new(WeatherMode.Manual, WeatherKind.AfterSnow, 1));
+        snow.Step(Tick(11, Season.Winter));
+        AssertThat(snow.Now.SnowAdd < deep.SnowAdd && snow.Now.SnowAdd > 1).OverrideFailureMessage("After-snow weather injected a fresh target instead of draining the saved snow.").IsTrue();
+        foreach (float intensity in new[] { WeatherRules.LightSnowIntensity, .5f, .8f })
+        {
+            var strength = Create(5, Season.Winter, Profile);
+            strength.Select(new(WeatherMode.Manual, WeatherKind.Snow, intensity));
+            var late = new WorldSaveMoment(20, 0, Season.Winter, 0);
+            double target = intensity >= WeatherRules.HeavySnowIntensity ? WeatherRules.MaxSnow : WeatherRules.SnowTarget(intensity);
+            AssertThat(Math.Abs(strength.CaptureAt(in late).SnowAdd - target) <= TestTolerance.FloatRelative).OverrideFailureMessage("Snow missed its intensity target or natural heavy snow could not reach maximum.").IsTrue();
+        }
+        float previous = 0;
+        foreach (var kind in new[] { WeatherKind.Clear, WeatherKind.Cloudy, WeatherKind.Overcast })
+        {
+            var melting = Create(5, Season.Winter, Profile);
+            melting.Restore(deep);
+            melting.Select(new(WeatherMode.Manual, kind, 1));
+            melting.Step(Tick(11, Season.Winter));
+            AssertThat(melting.Now.SnowAdd > previous && melting.Now.SnowAdd < deep.SnowAdd).OverrideFailureMessage("Snow did not melt faster in clear weather than under clouds.").IsTrue();
+            previous = melting.Now.SnowAdd;
+        }
     }
 
     [TestCase]
@@ -178,6 +222,15 @@ public sealed class WeatherProcessTests
         AssertThat(restored.Selection.Kind == WeatherKind.Fog && !restored.Transitioning).OverrideFailureMessage("Pinned weather must restore settled.").IsTrue();
         restored.Step(Tick(5));
         AssertThat(restored.Now.Fog > 1).OverrideFailureMessage("First restored step must preserve the pin.").IsTrue();
+        var snow = Create(15, Season.Winter, Profile);
+        snow.Pin(0, WeatherKind.Snow, .8f, 0, 20);
+        snow.Step(Tick(1, Season.Winter) with { TargetHours = 7.5 });
+        var snowSave = snow.Capture();
+        AssertThat(snowSave.LeftAtHours == 7.5 && snowSave.SnowAdd > 1).OverrideFailureMessage("Fast-forward snow capture used the visual frame instead of the landing time.").IsTrue();
+        var snowResume = Create(15, Season.Winter, Profile);
+        snowResume.Restore(snowSave);
+        snow.Step(Tick(8, Season.Winter)); snowResume.Step(Tick(8, Season.Winter));
+        Equal(snow, snowResume, restoredSnow: true);
     }
 
     [TestCase]
@@ -210,7 +263,7 @@ public sealed class WeatherProcessTests
         var moment = new WorldSaveMoment(2, 1.25, Season.Winter, 0);
         var saved = process.CaptureAt(in moment);
         AssertThat(saved.LeftAtHours == 2 && saved.Season == Season.Winter && saved.ClockOffset == 1.25 &&
-            saved.Selection.Kind == WeatherKind.Snow && saved.Selection.Intensity == 1).OverrideFailureMessage("Save moment's season/offset were not applied to the private snapshot.").IsTrue();
+            saved.Selection.Kind == WeatherKind.Snow && saved.Selection.Intensity == 1 && saved.Wet == 0 && saved.Puddle == 0).OverrideFailureMessage("Save projection changed existing wet residue or missed the moment's season/offset.").IsTrue();
         AssertThat(before == SnapshotJson(process.Capture()) && process.Now == beforeNow && process.Ahead.SequenceEqual(beforeAhead) && process.Transitioning).OverrideFailureMessage("CaptureAt changed live state.").IsTrue();
         var resumed = Create(9, Season.Winter, profile);
         resumed.Restore(JsonSerializer.Deserialize(SnapshotJson(saved), TestJson.Contract.WeatherProcessState)!);
@@ -221,7 +274,7 @@ public sealed class WeatherProcessTests
         {
             var tick = Tick(2 + i * .17, Season.Winter) with { ClockOffset = 1.25 };
             process.Step(tick); resumed.Step(tick);
-            Equal(process, resumed);
+            Equal(process, resumed, restoredSnow: true);
         }
     }
 
@@ -317,10 +370,17 @@ public sealed class WeatherProcessTests
         return p;
     }
     private static WeatherTick Tick(double hours, Season season = Season.Autumn) => new(hours, hours, 0, season, 10, 60, 3);
-    private static void Equal(WeatherProcess a, WeatherProcess b)
+    private static void Equal(WeatherProcess a, WeatherProcess b, bool restoredSnow = false)
     {
         var nowA = a.Now;
         var nowB = b.Now;
+        if (restoredSnow)
+        {
+            // Re-anchoring the saved float can change the last bit of later double arithmetic.
+            AssertThat(Math.Abs(nowA.SnowAdd - nowB.SnowAdd) <= TestTolerance.FloatRelative).OverrideFailureMessage("Restored snow diverged.").IsTrue();
+            nowA = nowA with { SnowAdd = 0 };
+            nowB = nowB with { SnowAdd = 0 };
+        }
         var liveEqual = a.Selection.Mode == b.Selection.Mode && a.Selection.Kind == b.Selection.Kind
             && BitConverter.SingleToInt32Bits(a.Selection.Intensity) == BitConverter.SingleToInt32Bits(b.Selection.Intensity)
             && MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref nowA, 1))
@@ -331,7 +391,15 @@ public sealed class WeatherProcessTests
             && pair.First.Kind == pair.Second.Kind
             && BitConverter.SingleToInt32Bits(pair.First.Intensity) == BitConverter.SingleToInt32Bits(pair.Second.Intensity));
         AssertThat(liveEqual && forecastEqual).OverrideFailureMessage("Live weather or forecast differs bitwise.").IsTrue();
-        AssertThat(SnapshotJson(a.Capture()) == SnapshotJson(b.Capture())).OverrideFailureMessage("Captured weather state differs.").IsTrue();
+        var savedA = a.Capture();
+        var savedB = b.Capture();
+        if (restoredSnow)
+        {
+            AssertThat(Math.Abs(savedA.SnowAdd - savedB.SnowAdd) <= TestTolerance.FloatRelative).OverrideFailureMessage("Captured snow differs after restore.").IsTrue();
+            savedA = savedA with { SnowAdd = 0 };
+            savedB = savedB with { SnowAdd = 0 };
+        }
+        AssertThat(SnapshotJson(savedA) == SnapshotJson(savedB)).OverrideFailureMessage("Captured weather state differs.").IsTrue();
     }
     private static string SnapshotJson(WeatherProcessState state) => JsonSerializer.Serialize(state, TestJson.Contract.WeatherProcessState);
 
