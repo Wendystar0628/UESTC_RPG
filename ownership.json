@@ -2,6 +2,62 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/sites/**",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/waterfront/**",
+      "owner": "WP-28"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/boundary/**",
+      "owner": "WP-30"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/public/**",
+      "owner": "WP-29"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/center-east/**",
+      "owner": "WP-21"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/north/**",
+      "owner": "WP-20"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/south/**",
+      "owner": "WP-18"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/core/LibraryInterior/**",
+      "owner": "WP-17"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/core/tests/LibraryInteriorTests.cs",
+      "owner": "WP-17"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/core/**",
+      "owner": "WP-16"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/west/SixInterior/**",
+      "owner": "WP-31b"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/west/**",
+      "owner": "WP-19"
+    },
+    {
+      "pattern": "game/gen/maps/qingshuihe/interiors/**",
+      "owner": "WP-51b"
+    },
+    {
       "pattern": ".collab/tools/**",
       "owner": "WP-00"
     },
@@ -70,14 +126,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/gen/zones/Campus.Gen.Maps.Qingshuihe.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/common/**",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/kernel/map/data/**",
       "owner": "WP-00"
     },
@@ -122,74 +170,6 @@
       "owner": "WP-23"
     },
     {
-      "pattern": "game/entities/character/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/entities/character/**/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/entities/character/**",
-      "owner": "WP-54a"
-    },
-    {
-      "pattern": "game/kernel/figure/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/figure/**/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/figure/**",
-      "owner": "WP-54a"
-    },
-    {
-      "pattern": "pipeline/character/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "pipeline/character/**/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "pipeline/character/**",
-      "owner": "WP-54b"
-    },
-    {
-      "pattern": "game/assets/characters/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/assets/characters/**/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/assets/characters/**",
-      "owner": "WP-54b"
-    },
-    {
-      "pattern": "game/data/characters/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/characters/**/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/characters/**",
-      "owner": "WP-54b"
-    },
-    {
-      "pattern": "game/style/shaders/toon_figure.gdshader",
-      "owner": "WP-04"
-    },
-    {
-      "pattern": "game/style/shaders/toon_figure.gdshader.uid",
-      "owner": "WP-04"
-    },
-    {
       "pattern": "game/data/maps/qingshuihe/world/core.terrain.json",
       "owner": "WP-16"
     },
@@ -210,28 +190,25 @@
       "owner": "WP-21"
     },
     {
-      "pattern": "game/kernel/renderer/ShaderNames.cs",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "scripts/gates/native-render.ps1",
       "owner": "WP-27",
-      "maintainers": ["WP-00"]
-    },
-    {
-      "pattern": "game/kernel/lighting/LightChannels.cs",
-      "owner": "WP-03",
-      "maintainers": ["WP-00"]
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/kernel/lighting/KeyLightState.cs",
       "owner": "WP-03",
-      "maintainers": ["WP-00"]
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/kernel/lighting/KeyLightModel.cs",
       "owner": "WP-03",
-      "maintainers": ["WP-00"]
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/style/shaders/precip_wet.gdshaderinc",
@@ -244,56 +221,44 @@
     {
       "pattern": "game/style/shaders/lamp.gdshaderinc",
       "owner": "WP-39",
-      "maintainers": ["WP-00"]
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/style/shaders/lamp.gdshaderinc.uid",
       "owner": "WP-39",
-      "maintainers": ["WP-00"]
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/style/shaders/reflection_lamps.gdshaderinc",
       "owner": "WP-39",
-      "maintainers": ["WP-00"]
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/style/shaders/reflection_lamps.gdshaderinc.uid",
       "owner": "WP-39",
-      "maintainers": ["WP-00"]
-    },
-    {
-      "pattern": "game/systems/ground/**",
-      "owner": "WP-15"
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/kernel/map/data/GroundCoverTextures.cs",
       "owner": "WP-15",
-      "maintainers": ["WP-00"]
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/kernel/map/data/GroundCoverTextures.cs.uid",
       "owner": "WP-15",
-      "maintainers": ["WP-00"]
-    },
-    {
-      "pattern": "game/data/maps/qingshuihe/overlay/interior/west-east.interior.json",
-      "owner": "WP-31b"
-    },
-    {
-      "pattern": "game/data/maps/qingshuihe/overlay/interior/library.interior.json",
-      "owner": "WP-17"
-    },
-    {
-      "pattern": "game/data/maps/qingshuihe/overlay/interior/museum.interior.json",
-      "owner": "WP-17"
-    },
-    {
-      "pattern": "game/data/maps/qingshuihe/overlay/interior/north.interior.json",
-      "owner": "WP-31c"
-    },
-    {
-      "pattern": "game/data/maps/qingshuihe/overlay/interior/south.interior.json",
-      "owner": "WP-31a"
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/data/maps/qingshuihe/world/center-east.json",
@@ -328,72 +293,16 @@
       "owner": "WP-19"
     },
     {
-      "pattern": "game/style/outline/post_tiltshift_blur.glsl.uid",
-      "owner": "WP-05"
-    },
-    {
-      "pattern": "game/style/shaders/diorama_section.gdshader.uid",
-      "owner": "WP-22"
-    },
-    {
-      "pattern": "game/style/shaders/toon_glass_near.gdshader.uid",
-      "owner": "WP-04"
-    },
-    {
-      "pattern": "game/style/shaders/medium_overlay.gdshader.uid",
-      "owner": "WP-07"
-    },
-    {
-      "pattern": "game/style/shaders/motion_wind.gdshaderinc.uid",
-      "owner": "WP-26"
-    },
-    {
-      "pattern": "game/data/maps/*/overlay/outskirts.overlay.json",
-      "owner": "WP-47a"
-    },
-    {
-      "pattern": "game/style/shaders/bake_impostor.gdshader.uid",
-      "owner": "WP-23"
-    },
-    {
-      "pattern": "game/data/maps/*/overlay/fidelity.overlay.json",
-      "owner": "WP-44"
-    },
-    {
-      "pattern": "game/data/maps/*/overlay/walkable.overlay.json",
-      "owner": "WP-44"
-    },
-    {
       "pattern": "game/style/shaders/reflect_flat.gdshader.uid",
       "owner": "WP-24"
-    },
-    {
-      "pattern": "game/style/shaders/veg_impostor.gdshader.uid",
-      "owner": "WP-23"
-    },
-    {
-      "pattern": "game/style/outline/post_tiltshift_blur.glsl",
-      "owner": "WP-05"
     },
     {
       "pattern": "game/style/shaders/diorama_far.gdshader.uid",
       "owner": "WP-22"
     },
     {
-      "pattern": "game/style/shaders/diorama_section.gdshader",
-      "owner": "WP-22"
-    },
-    {
-      "pattern": "game/style/shaders/toon_glass_near.gdshader",
-      "owner": "WP-04"
-    },
-    {
       "pattern": "game/style/shaders/toon_static.gdshader.uid",
       "owner": "WP-04"
-    },
-    {
-      "pattern": "game/style/shaders/water_clear.gdshader.uid",
-      "owner": "WP-24"
     },
     {
       "pattern": "scripts/gates/arch/Campus.Arch.Tests.csproj",
@@ -408,32 +317,17 @@
       "owner": "WP-01"
     },
     {
-      "pattern": "game/style/shaders/medium_overlay.gdshader",
-      "owner": "WP-07"
-    },
-    {
-      "pattern": "game/style/shaders/motion_wind.gdshaderinc",
-      "owner": "WP-26"
-    },
-    {
-      "pattern": "game/style/shaders/toon_decal.gdshader.uid",
-      "owner": "WP-04"
-    },
-    {
       "pattern": "game/style/shaders/toon_glass.gdshader.uid",
       "owner": "WP-04"
     },
     {
       "pattern": "game/data/maps/*/audio/manual_emitters.json",
-      "owner": "WP-53b"
+      "owner": "WP-53b",
+      "note": "预留: Per-map authored emitters; deferred data-driven emitter implementation is explicitly designed."
     },
     {
       "pattern": "game/data/maps/*/world/atlas.json",
       "owner": "WP-48c"
-    },
-    {
-      "pattern": "game/style/shaders/bake_impostor.gdshader",
-      "owner": "WP-23"
     },
     {
       "pattern": "game/style/shaders/ui_screen.gdshader.uid",
@@ -444,20 +338,12 @@
       "owner": "WP-23"
     },
     {
-      "pattern": "game/style/shaders/veg_lotus.gdshader.uid",
-      "owner": "WP-38"
-    },
-    {
       "pattern": "game/style/shaders/veg_trunk.gdshader.uid",
       "owner": "WP-23"
     },
     {
       "pattern": "game/style/shaders/veg_twig_mass.gdshader.uid",
       "owner": "WP-23"
-    },
-    {
-      "pattern": "game/style/outline/post_outline.glsl.uid",
-      "owner": "WP-05"
     },
     {
       "pattern": "game/style/shaders/map_base.gdshader.uid",
@@ -468,19 +354,11 @@
       "owner": "WP-24"
     },
     {
-      "pattern": "game/style/shaders/toon_cut.gdshader.uid",
-      "owner": "WP-04"
-    },
-    {
       "pattern": "game/style/shaders/ui_panel.gdshader.uid",
       "owner": "WP-35a"
     },
     {
       "pattern": "game/style/shaders/veg_card.gdshader.uid",
-      "owner": "WP-23"
-    },
-    {
-      "pattern": "game/style/shaders/veg_impostor.gdshader",
       "owner": "WP-23"
     },
     {
@@ -490,10 +368,6 @@
     {
       "pattern": "game/style/shaders/diorama_far.gdshader",
       "owner": "WP-22"
-    },
-    {
-      "pattern": "game/style/shaders/fx_fall.gdshader.uid",
-      "owner": "WP-38"
     },
     {
       "pattern": "game/style/shaders/fx_glow.gdshader.uid",
@@ -508,14 +382,6 @@
       "owner": "WP-04"
     },
     {
-      "pattern": "game/style/shaders/water_clear.gdshader",
-      "owner": "WP-24"
-    },
-    {
-      "pattern": "game/systems/vegetation/seasons/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/contracts/Runtime/Campus.Contracts.Runtime.csproj",
       "owner": "WP-00"
     },
@@ -526,10 +392,6 @@
     {
       "pattern": "game/data/maps/qingshuihe/world/offcampus.json",
       "owner": "WP-08"
-    },
-    {
-      "pattern": "game/style/outline/post_flare.glsl.uid",
-      "owner": "WP-05"
     },
     {
       "pattern": "game/style/shaders/cine_cloud.gdshader",
@@ -548,16 +410,8 @@
       "owner": "WP-45b"
     },
     {
-      "pattern": "game/style/shaders/toon_decal.gdshader",
-      "owner": "WP-04"
-    },
-    {
       "pattern": "game/style/shaders/toon_glass.gdshader",
       "owner": "WP-04"
-    },
-    {
-      "pattern": "game/data/maps/*/audio/foley_banks.json",
-      "owner": "WP-53d"
     },
     {
       "pattern": "game/data/maps/*/lighting-schedule.json",
@@ -568,20 +422,12 @@
       "owner": "WP-08"
     },
     {
-      "pattern": "game/style/outline/post_fxaa.glsl.uid",
-      "owner": "WP-05"
-    },
-    {
       "pattern": "game/style/shaders/ui_screen.gdshader",
       "owner": "WP-35a"
     },
     {
       "pattern": "game/style/shaders/veg_grass.gdshader",
       "owner": "WP-23"
-    },
-    {
-      "pattern": "game/style/shaders/veg_lotus.gdshader",
-      "owner": "WP-38"
     },
     {
       "pattern": "game/style/shaders/veg_trunk.gdshader",
@@ -596,20 +442,12 @@
       "owner": "WP-24"
     },
     {
-      "pattern": "game/data/audio/manual_emitters.json",
-      "owner": "WP-53b"
-    },
-    {
       "pattern": "game/style/outline/post_outline.glsl",
       "owner": "WP-05"
     },
     {
       "pattern": "game/style/shaders/map_base.gdshader",
       "owner": "WP-48b"
-    },
-    {
-      "pattern": "game/style/shaders/toon_cut.gdshader",
-      "owner": "WP-04"
     },
     {
       "pattern": "game/style/shaders/ui_panel.gdshader",
@@ -620,16 +458,9 @@
       "owner": "WP-23"
     },
     {
-      "pattern": "game/kernel/quality/settings/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/data/maps/*/audio/acoustics*.json",
-      "owner": "WP-53c"
-    },
-    {
-      "pattern": "game/style/shaders/fx_fall.gdshader",
-      "owner": "WP-38"
+      "owner": "WP-53c",
+      "note": "预留: Per-map acoustic probes and room/portal data; spatial-acoustics package is explicitly deferred."
     },
     {
       "pattern": "game/style/shaders/fx_glow.gdshader",
@@ -645,30 +476,11 @@
     },
     {
       "pattern": "game/data/maps/*/audio/farfield.json",
-      "owner": "WP-53b"
-    },
-    {
-      "pattern": "game/data/maps/*/audio/licenses.json",
-      "owner": "WP-53e"
-    },
-    {
-      "pattern": "game/systems/weather/precip/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/assets/style/backdrop/*/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/style/outline/post_flare.glsl",
-      "owner": "WP-05"
+      "owner": "WP-53b",
+      "note": "预留: Per-map distant-city bed directions/range derive from this map exterior; reserved for the designed ambience package."
     },
     {
       "pattern": "game/style/shaders/fog.gdshaderinc",
-      "owner": "WP-04"
-    },
-    {
-      "pattern": "game/style/shaders/fog.glslinc.uid",
       "owner": "WP-04"
     },
     {
@@ -680,22 +492,6 @@
       "owner": "WP-48c"
     },
     {
-      "pattern": "game/data/maps/*/audio/ui_cues.json",
-      "owner": "WP-53a"
-    },
-    {
-      "pattern": "game/data/maps/*/audio/recipes*.json",
-      "owner": "WP-53b"
-    },
-    {
-      "pattern": "game/data/maps/*/audio/sets/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/style/outline/post_fxaa.glsl",
-      "owner": "WP-05"
-    },
-    {
       "pattern": "game/style/shaders/water.gdshader",
       "owner": "WP-24"
     },
@@ -704,24 +500,9 @@
       "owner": "WP-48a"
     },
     {
-      "pattern": "game/gen/zones/design-waterfront/**",
-      "owner": "WP-28"
-    },
-    {
       "pattern": "game/data/audio/foley_banks.json",
-      "owner": "WP-53d"
-    },
-    {
-      "pattern": "game/data/maps/*/audio/music.json",
-      "owner": "WP-53a"
-    },
-    {
-      "pattern": "game/assets/maps/*/thumbs/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/maps/*/entities/*.csproj",
-      "owner": "WP-00"
+      "owner": "WP-53d",
+      "note": "预留: Global material/speed-based sample banks for the explicitly planned observer-footstep package; no per-map duplicate."
     },
     {
       "pattern": "game/systems/vegetation/seasons/**",
@@ -730,22 +511,6 @@
     {
       "pattern": "game/style/shaders/sky.gdshader",
       "owner": "WP-40"
-    },
-    {
-      "pattern": "game/style/palette/keys/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/nightlight/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/vegetation/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/design-boundary/**",
-      "owner": "WP-30"
     },
     {
       "pattern": "game/data/quality-presets.json",
@@ -760,16 +525,14 @@
       "owner": "WP-35"
     },
     {
-      "pattern": "game/style/shaders/fog.glslinc",
-      "owner": "WP-04"
-    },
-    {
       "pattern": "game/data/audio/acoustics*.json",
-      "owner": "WP-53c"
+      "owner": "WP-53c",
+      "note": "预留: Global acoustic-class tuning tables, distinct from the per-map spatial probe data; package is explicitly deferred."
     },
     {
       "pattern": "game/data/maps/*/incidents.json",
-      "owner": "WP-26"
+      "owner": "WP-26",
+      "note": "预留: Per-map late-returner route/version data is explicitly designed and its event ID is already enabled in the ruleset."
     },
     {
       "pattern": "game/data/maps/*/interiors.json",
@@ -777,19 +540,12 @@
     },
     {
       "pattern": "game/data/maps/*/outskirts.json",
-      "owner": "WP-47a"
+      "owner": "WP-47a",
+      "note": "预留: Explicit map environment input with current contract/loader consumption, although no current map provides it."
     },
     {
       "pattern": "game/data/maps/*/waypoints.json",
       "owner": "WP-36"
-    },
-    {
-      "pattern": "game/systems/furniture/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/audio/farfield.json",
-      "owner": "WP-53b"
     },
     {
       "pattern": "game/data/audio/licenses.json",
@@ -798,26 +554,6 @@
     {
       "pattern": "game/data/maps/*/backdrop.json",
       "owner": "WP-22"
-    },
-    {
-      "pattern": "game/data/maps/*/fidelity.json",
-      "owner": "WP-44"
-    },
-    {
-      "pattern": "game/kernel/collision/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/occlusion/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/seasonfx/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gen/zones/design-public/**",
-      "owner": "WP-29"
     },
     {
       "pattern": "game/kernel/quality/settings/**",
@@ -832,92 +568,16 @@
       "owner": "WP-53a"
     },
     {
-      "pattern": "game/audio/acoustics/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/audio/recipes*.json",
-      "owner": "WP-53b"
-    },
-    {
-      "pattern": "game/data/audio/sets/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/vegetation/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/lighting/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/registry/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/renderer/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/weather/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/systems/weather/precip/**",
       "owner": "WP-45b"
-    },
-    {
-      "pattern": "game/assets/style/backdrop/*/**",
-      "owner": "WP-22"
-    },
-    {
-      "pattern": "game/audio/ambience/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/camera/transit/*.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/data/maps/*/review.json",
       "owner": "WP-27"
     },
     {
-      "pattern": "game/kernel/inspect/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/quality/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/style/textures/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/motion/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/traces/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/maps/*/nav/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/gen/parts/circulation/**",
       "owner": "WP-11"
-    },
-    {
-      "pattern": "game/gen/zones/center-east/**",
-      "owner": "WP-21"
-    },
-    {
-      "pattern": "game/data/maps/*/audio/sets/**",
-      "owner": "WP-53b"
     },
     {
       "pattern": "game/data/maps/*/title-clouds.json",
@@ -928,84 +588,8 @@
       "owner": "WP-53a"
     },
     {
-      "pattern": "game/data/rulesets/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/stream/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/style/outline/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/style/palette/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/style/shaders/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/atlas/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/fauna/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/water/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "pipeline/outskirts/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/data/maps/index.json",
       "owner": "WP-46"
-    },
-    {
-      "pattern": "game/assets/audio/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/assets/style/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/assets/title/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/weather/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/gates/matrix/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/frame/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/stubs/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/world/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/assets/maps/*/thumbs/**",
-      "owner": "WP-27"
-    },
-    {
-      "pattern": "game/data/maps/*/entities/**",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/Campus.Tests.csproj",
@@ -1016,53 +600,19 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/audio/foley/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/camera/walk/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/data/maps/*/map.json",
       "owner": "WP-46"
     },
     {
       "pattern": "game/data/maps/qingshuihe/map.json",
       "owner": "WP-46",
-      "maintainers": ["WP-00"]
+      "maintainers": [
+        "WP-00"
+      ]
     },
     {
       "pattern": "game/data/maps/*/sky.json",
       "owner": "WP-40"
-    },
-    {
-      "pattern": "game/hud/gallery/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/hud/widgets/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/bake/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/boot/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/post/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/save/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/systems/sky/*.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/gen/interior/shell/**",
@@ -1089,51 +639,11 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/assets/hud/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/audio/core/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/hud/motion/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/lod/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/map/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "pipeline/assets/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/gen/interior/core/**",
       "owner": "WP-51a"
     },
     {
-      "pattern": "game/systems/furniture/**",
-      "owner": "WP-13"
-    },
-    {
       "pattern": "game/contracts/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/text/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/hud/style/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "pipeline/audio/*.csproj",
       "owner": "WP-00"
     },
     {
@@ -1145,28 +655,14 @@
       "owner": "WP-43"
     },
     {
-      "pattern": "game/kernel/occlusion/**",
-      "owner": "WP-33"
-    },
-    {
-      "pattern": "game/systems/seasonfx/**",
-      "owner": "WP-38"
-    },
-    {
-      "pattern": "game/entities/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/hud/i18n/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/audio/acoustics/**",
-      "owner": "WP-53c"
+      "owner": "WP-53c",
+      "note": "预留: Deferred WP-53c service implementation with a current IAcousticEnv contract and explicit design."
     },
     {
       "pattern": "game/data/audio/sets/**",
-      "owner": "WP-53b"
+      "owner": "WP-53b",
+      "note": "预留: Global SoundSetId catalogue has an exact source contract path; per-map duplicate is removed."
     },
     {
       "pattern": "game/data/vegetation/**",
@@ -1175,14 +671,6 @@
     {
       "pattern": "game/data/maps/*/vegetation/**",
       "owner": "WP-23"
-    },
-    {
-      "pattern": "game/gen/zones/north/**",
-      "owner": "WP-20"
-    },
-    {
-      "pattern": "game/gen/zones/south/**",
-      "owner": "WP-18"
     },
     {
       "pattern": "game/kernel/lighting/**",
@@ -1201,24 +689,9 @@
       "owner": "WP-45a"
     },
     {
-      "pattern": "scripts/gates/matrix/**",
-      "owner": "WP-41"
-    },
-    {
-      "pattern": "game/hud/map/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "pipeline/nav/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/audio/ambience/**",
-      "owner": "WP-53b"
-    },
-    {
-      "pattern": "game/camera/transit/**",
-      "owner": "WP-36"
+      "owner": "WP-53b",
+      "note": "预留: WP-53b ambience implementation has an explicit work-package/design allocation, currently represented by service contracts."
     },
     {
       "pattern": "game/gen/parts/core/**",
@@ -1233,60 +706,12 @@
       "owner": "WP-23"
     },
     {
-      "pattern": "game/gen/zones/core/LibraryInterior/**",
-      "owner": "WP-17"
-    },
-    {
-      "pattern": "game/gen/zones/core/tests/LibraryInteriorTests.cs",
-      "owner": "WP-17"
-    },
-    {
-      "pattern": "game/gen/zones/core/**",
-      "owner": "WP-16"
-    },
-    {
-      "pattern": "game/gen/zones/west/SixInterior/**",
-      "owner": "WP-31b"
-    },
-    {
-      "pattern": "game/gen/zones/west/**",
-      "owner": "WP-19"
-    },
-    {
       "pattern": "game/kernel/inspect/**",
       "owner": "WP-01"
     },
     {
       "pattern": "game/kernel/quality/**",
       "owner": "WP-32"
-    },
-    {
-      "pattern": "game/style/textures/**",
-      "owner": "WP-04"
-    },
-    {
-      "pattern": "game/systems/motion/**",
-      "owner": "WP-26"
-    },
-    {
-      "pattern": "game/systems/traces/**",
-      "owner": "WP-25"
-    },
-    {
-      "pattern": "game/data/maps/*/nav/**",
-      "owner": "WP-44"
-    },
-    {
-      "pattern": "game/addons/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/camera/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/medium/*.csproj",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/data/rulesets/**",
@@ -1333,19 +758,11 @@
       "owner": "WP-24"
     },
     {
-      "pattern": "pipeline/outskirts/**",
-      "owner": "WP-47a"
-    },
-    {
       "pattern": "scripts/gates/arch/**",
       "owner": "WP-00"
     },
     {
       "pattern": "**/Directory.*.targets",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "export_presets.cfg",
       "owner": "WP-00"
     },
     {
@@ -1365,36 +782,12 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/gates/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/stage/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/stubs/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/assets/audio/**",
       "owner": "WP-53e"
     },
     {
-      "pattern": "game/assets/style/**",
-      "owner": "WP-04"
-    },
-    {
-      "pattern": "game/assets/title/**",
-      "owner": "WP-49b"
-    },
-    {
       "pattern": "game/data/weather/**",
       "owner": "WP-45a"
-    },
-    {
-      "pattern": "game/gates/matrix/**",
-      "owner": "WP-41"
     },
     {
       "pattern": "game/kernel/frame/**",
@@ -1413,12 +806,9 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/flow/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/audio/foley/**",
-      "owner": "WP-53d"
+      "owner": "WP-53d",
+      "note": "预留: WP-53d observer-footstep implementation has an explicit mainline deliverable and work-package allocation."
     },
     {
       "pattern": "game/camera/walk/**",
@@ -1427,10 +817,6 @@
     {
       "pattern": "game/gen/diorama/**",
       "owner": "WP-22"
-    },
-    {
-      "pattern": "game/hud/gallery/**",
-      "owner": "WP-35c"
     },
     {
       "pattern": "game/hud/widgets/**",
@@ -1481,14 +867,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/hud/*.csproj",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "pipeline/*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/assets/hud/**",
       "owner": "WP-35c"
     },
@@ -1513,20 +891,8 @@
       "owner": "WP-46"
     },
     {
-      "pattern": "pipeline/assets/**",
-      "owner": "WP-04"
-    },
-    {
       "pattern": "scripts/devices/**",
       "owner": "WP-32b"
-    },
-    {
-      "pattern": "scripts/release/**",
-      "owner": "WP-01"
-    },
-    {
-      "pattern": "game/*.lock.json",
-      "owner": "WP-00"
     },
     {
       "pattern": "docs/godot-api/**",
@@ -1534,10 +900,6 @@
     },
     {
       "pattern": "game/contracts/**",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/text/**",
       "owner": "WP-00"
     },
     {
@@ -1569,10 +931,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/entities/**",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/hud/i18n/**",
       "owner": "WP-35c"
     },
@@ -1593,10 +951,6 @@
       "owner": "WP-00"
     },
     {
-      "pattern": ".editorconfig",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/hud/map/**",
       "owner": "WP-48b"
     },
@@ -1609,23 +963,11 @@
       "owner": "WP-48a"
     },
     {
-      "pattern": "pipeline/nav/**",
-      "owner": "WP-44"
-    },
-    {
       "pattern": "scripts/docs/**",
       "owner": "WP-00"
     },
     {
-      "pattern": "NuGet.Config",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "budgets.json",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "nuget.config",
       "owner": "WP-00"
     },
     {
@@ -1641,10 +983,6 @@
       "owner": "WP-06"
     },
     {
-      "pattern": "game/medium/**",
-      "owner": "WP-07"
-    },
-    {
       "pattern": "global.json",
       "owner": "WP-00"
     },
@@ -1654,15 +992,12 @@
     },
     {
       "pattern": "game/gates/**",
-      "owner": "WP-27"
+      "owner": "WP-27",
+      "note": "预留: Q-077d explicitly moves the existing production registry gate drivers here; retain the already registered target rather than deleting it immediately before that queued move."
     },
     {
       "pattern": "game/stage/**",
       "owner": "WP-01"
-    },
-    {
-      "pattern": "game/stubs/**",
-      "owner": "WP-00"
     },
     {
       "pattern": "scripts/lib/**",
@@ -1717,23 +1052,11 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "*.csproj",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "tools/**",
       "owner": "WP-00"
     },
     {
-      "pattern": "*.slnx",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "**/*.sln",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "*.sln",
       "owner": "WP-00"
     },
     {
@@ -1753,6 +1076,22 @@
       "maintainers": [
         "WP-00"
       ]
+    },
+    {
+      "pattern": "game/gen/parts/sport/**",
+      "owner": "WP-21"
+    },
+    {
+      "pattern": "**/tests/Support/**",
+      "owner": "WP-00"
+    },
+    {
+      "pattern": "game/data/maps/*/materials.json",
+      "owner": "WP-04"
+    },
+    {
+      "pattern": "scripts/git-hooks/**",
+      "owner": "WP-00"
     }
   ],
   "shaderWhitelist": [
