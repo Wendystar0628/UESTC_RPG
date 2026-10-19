@@ -61,8 +61,14 @@ public sealed record CaptureBootOptions
     public string? Output { get; init; }
     public IReadOnlyList<string> Shots { get; init; } = [];
     public int? FrameLimit { get; init; }
+    public int? MovieFrames { get; init; }
+    public IReadOnlyList<CaptureMovieEvent> MovieEvents { get; init; } = [];
     public bool IncludeCanvas { get; init; } = true;
 }
+/// <summary>Zero-based frames after the fixed capture pose has been presented.</summary>
+public sealed record CaptureMovieEvent(int Frame, Season? Season = null, double? Clock = null,
+    WeatherKind? Weather = null, bool AutomaticWeather = false, float? Intensity = null);
+
 public sealed record QualityBootOptions
 {
     public QualityPreset? Preset { get; init; }

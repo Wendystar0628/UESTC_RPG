@@ -24,6 +24,11 @@ public static class CaptureSequence
         Directory.CreateDirectory(destination);
         var shots = AppBoot.FixedShots.Count > 0 ? AppBoot.FixedShots
             : options.Capture.Shots.Select(id => new FixedShot(id, id, options)).ToArray();
+        if (options.Capture.MovieFrames is not null)
+        {
+            if (shots.Count != 1) throw new ArgumentException("Movie Maker captures exactly one fixed pose per process.");
+            MovieCapture.RequireMovieMaker();
+        }
         foreach (var shot in shots)
         {
             var id = shot.Pose;
@@ -75,6 +80,12 @@ public static class CaptureSequence
             }
             finally { arrival.ProgressChanged -= ReportProgress; }
             cancellationToken.ThrowIfCancellationRequested();
+            if (shotOptions.Capture.MovieFrames is not null)
+            {
+                await MovieCapture.RunAsync(host, shotOptions.Capture, appliedPose, contentReady, cancellationToken);
+                LogPhase("movie-complete");
+                continue;
+            }
             using var image = host.GetViewport().GetTexture().GetImage();
             if (image.IsEmpty()) throw new IOException("Screenshot viewport returned an empty image.");
             LogPhase("readback-complete");

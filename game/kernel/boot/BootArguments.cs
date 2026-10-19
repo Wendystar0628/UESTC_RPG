@@ -19,11 +19,11 @@ public sealed class BootArguments
         "gen", "bake", "bake-cache", "bake-bg", "bake-strict", "title", "save", "slot",
         "load", "save-dir", "save-at", "audio", "audio-fixed", "audio-seed", "audio-limiter", "audio-log",
         "ui-theme", "motion", "ui-scale", "ui-gallery", "ui-export-theme", "amb-solo", "amb-off", "amb-debug",
-        "audio-probe", "audio-out", "preset", "travel-sequence"
+        "audio-probe", "audio-out", "preset", "travel-sequence", "movie-frames", "movie-events"
     };
     private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "audio-probe" };
     private static readonly string[] WorldKeys = ["clock", "season", "anim", "flow", "seed", "weather", "weather-intensity",
-        "weather-seed", "weather-remaining", "sunshower", "wet", "pose", "mode", "map", "spawn"];
+        "weather-seed", "weather-remaining", "sunshower", "wet", "pose", "mode", "map", "spawn", "movie-events"];
     private readonly Dictionary<string, string> _values;
     private readonly HashSet<string> _provided;
     private IReadOnlyDictionary<QualityKnob, float> _qualityOverrides = new Dictionary<QualityKnob, float>();
@@ -34,7 +34,7 @@ public sealed class BootArguments
         _provided = new(values.Keys, StringComparer.Ordinal);
     }
 
-    private bool CaptureMode => _provided.Overlaps(["gate", "shots", "bench", "frames"]);
+    private bool CaptureMode => _provided.Overlaps(["gate", "shots", "bench", "frames", "movie-frames"]);
     private bool CpuBakeMode => Has("bake");
     private bool Title => Value("title", "1") == "1";
     private bool HasLoad => Has("slot") || Has("load");
@@ -76,6 +76,12 @@ public sealed class BootArguments
         result.AddDefaults();
         if (result.Value("pose") == "T0" && !result.Title) throw Invalid("T0 requires --title=1.");
         if (result.Has("shots") && !result.Has("out")) throw Invalid("--shots requires an absolute --out directory.");
+        if (result.Has("movie-events") && !result.Has("movie-frames"))
+            throw Invalid("--movie-events requires --movie-frames.");
+        if (result.Has("movie-frames") && (!development || !result.Has("shots") || result.HasLoad || result.Title ||
+            result._provided.Overlaps(["frames", "gate", "bench", "inspect", "travel-sequence", "bake"]) ||
+            result.Value("flow") != "0" || result.Value("mode") != "fly"))
+            throw Invalid("Movie capture requires development fixed shots in paused fly mode and no other run command.");
         return result.Resolve();
     }
 
@@ -103,7 +109,7 @@ public sealed class BootArguments
         Number("weather-remaining", 0, double.MaxValue);
         foreach (var key in new[] { "seed", "weather-seed", "audio-seed" })
             if (Has(key) && !uint.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out _)) throw Invalid(key);
-        foreach (var key in new[] { "frames", "save-at" })
+        foreach (var key in new[] { "frames", "save-at", "movie-frames" })
             if (Has(key) && (!int.TryParse(Value(key), NumberStyles.None, CultureInfo.InvariantCulture, out var value) || value <= 0)) throw Invalid(key);
         foreach (var key in new[] { "out", "load", "save-dir", "bake-cache", "audio-out", "ui-export-theme" })
             if (Has(key) && !Path.IsPathFullyQualified(Value(key))) throw Invalid($"--{key} must be absolute.");
@@ -156,21 +162,12 @@ public sealed class BootArguments
         uint? Seed(string key, bool explicitOnly = false) => (explicitOnly ? Explicit(key) : Text(key)) is { } value
             ? uint.Parse(value, CultureInfo.InvariantCulture) : null;
         SlotId? Slot(string? value) => value is null or "off" ? null : new SlotId("s" + value.TrimStart('s'));
-        var weather = Text("weather") switch
-        {
-            null or "auto" => (WeatherKind?)null,
-            "clear" => WeatherKind.Clear, "few-clouds" => WeatherKind.FewClouds,
-            "cloudy" => WeatherKind.Cloudy, "overcast" => WeatherKind.Overcast,
-            "fog" => WeatherKind.Fog, "light-rain" => WeatherKind.LightRain,
-            "rain" => WeatherKind.Rain, "thunderstorm" => WeatherKind.Thunderstorm,
-            "after-rain" => WeatherKind.AfterRain, "snow" => WeatherKind.Snow,
-            "after-snow" => WeatherKind.AfterSnow, _ => throw Invalid("weather")
-        };
+        var weather = Text("weather") is { } weatherText ? ParseWeather(weatherText) : null;
         return new BootRunOptions
         {
             Mode = CpuBakeMode ? BootRunMode.CpuBake : CaptureMode ? BootRunMode.Capture : BootRunMode.Interactive,
             Automated = CaptureMode || Has("inspect"),
-            FreezeAnimation = Has("shots") && !Has("bench"),
+            FreezeAnimation = Has("shots") && !Has("bench") && !Has("movie-frames"),
             Title = Title,
             SaveDirectory = Text("save-dir"),
             TravelSequence = Text("travel-sequence")?.Split(',') ?? [],
@@ -205,6 +202,8 @@ public sealed class BootArguments
                 Gate = Text("gate"), Inspect = Text("inspect"), Output = Text("out"),
                 Shots = Text("shots")?.Split(',') ?? [],
                 FrameLimit = NumberValue("frames") is { } frames ? (int)frames : null,
+                MovieFrames = NumberValue("movie-frames") is { } movieFrames ? (int)movieFrames : null,
+                MovieEvents = MovieEvents(),
                 IncludeCanvas = Value("ui") == "1"
             },
             Quality = new()
@@ -214,6 +213,74 @@ public sealed class BootArguments
             }
         };
     }
+
+    private IReadOnlyList<CaptureMovieEvent> MovieEvents()
+    {
+        if (!Has("movie-events")) return [];
+        var limit = int.Parse(Value("movie-frames"), CultureInfo.InvariantCulture);
+        var events = new List<CaptureMovieEvent>();
+        foreach (var item in Value("movie-events").Split(';'))
+        {
+            var parts = item.Split(':', 2);
+            if (parts.Length != 2 || !int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var frame) ||
+                frame < 0 || frame >= limit || events.Count > 0 && frame <= events[^1].Frame)
+                throw Invalid("Movie event frames must be strictly increasing and inside --movie-frames.");
+            Season? season = null;
+            double? clock = null;
+            WeatherKind? weather = null;
+            float? intensity = null;
+            var automatic = false;
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var field in parts[1].Split(','))
+            {
+                var pair = field.Split('=', 2);
+                if (pair.Length != 2 || string.IsNullOrWhiteSpace(pair[1]) || !keys.Add(pair[0]))
+                    throw Invalid("Invalid or duplicate movie event field: " + field);
+                switch (pair[0])
+                {
+                    case "season":
+                        season = pair[1] switch
+                        {
+                            "spring" => Season.Spring, "summer" => Season.Summer,
+                            "autumn" => Season.Autumn, "winter" => Season.Winter,
+                            _ => throw Invalid("movie-events season=" + pair[1])
+                        };
+                        break;
+                    case "clock":
+                        if (!double.TryParse(pair[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var hours) ||
+                            !double.IsFinite(hours) || hours < 0 || hours >= 24) throw Invalid(field);
+                        clock = hours;
+                        break;
+                    case "weather":
+                        weather = ParseWeather(pair[1]);
+                        automatic = pair[1] == "auto";
+                        break;
+                    case "intensity":
+                        if (!float.TryParse(pair[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var amount) ||
+                            !float.IsFinite(amount) || amount < 0 || amount > 1) throw Invalid(field);
+                        intensity = amount;
+                        break;
+                    default: throw Invalid("Unknown movie event field: " + pair[0]);
+                }
+            }
+            if (season is null && clock is null && weather is null && !automatic ||
+                intensity is not null && weather is null)
+                throw Invalid("Movie events require a world change; intensity requires a manual weather choice.");
+            events.Add(new(frame, season, clock, weather, automatic, intensity));
+        }
+        return events;
+    }
+
+    private static WeatherKind? ParseWeather(string value) => value switch
+    {
+        "auto" => null,
+        "clear" => WeatherKind.Clear, "few-clouds" => WeatherKind.FewClouds,
+        "cloudy" => WeatherKind.Cloudy, "overcast" => WeatherKind.Overcast,
+        "fog" => WeatherKind.Fog, "light-rain" => WeatherKind.LightRain,
+        "rain" => WeatherKind.Rain, "thunderstorm" => WeatherKind.Thunderstorm,
+        "after-rain" => WeatherKind.AfterRain, "snow" => WeatherKind.Snow,
+        "after-snow" => WeatherKind.AfterSnow, _ => throw Invalid("weather=" + value)
+    };
 
     private static string Snake(string value) => string.Concat(value.Select((c, i) => i > 0 && char.IsUpper(c) &&
         (!char.IsUpper(value[i - 1]) || i + 1 < value.Length && char.IsLower(value[i + 1])) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));

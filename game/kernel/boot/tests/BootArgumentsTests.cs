@@ -60,6 +60,40 @@ public sealed class BootArgumentsTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void MovieEventsKeepTheirFrameOrderAndAnimationRunning()
+    {
+        var options = BootArguments.Parse(["--shots=P00", "--out=C:\\shots", "--movie-frames=180",
+            "--movie-events=60:season=winter;90:season=spring,clock=8,weather=clear,intensity=0.5"], true);
+        if (!options.CaptureMode || options.FreezeAnimation || options.Capture.MovieFrames != 180 ||
+            options.Capture.MovieEvents.Count != 2)
+            throw new InvalidOperationException("Movie capture did not retain its frame count and live animation.");
+        var first = options.Capture.MovieEvents[0];
+        var second = options.Capture.MovieEvents[1];
+        if (first.Frame != 60 || first.Season != Season.Winter || first.Clock is not null || first.Weather is not null ||
+            second.Frame != 90 || second.Season != Season.Spring || second.Clock != 8 ||
+            second.Weather != WeatherKind.Clear || second.Intensity != .5f || second.AutomaticWeather)
+            throw new InvalidOperationException("Movie events lost their frame order or typed world changes.");
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void MovieEventsRejectOutOfRangeOrRepeatedFrames()
+    {
+        foreach (var events in new[] { "180:season=winter", "60:season=winter;60:season=spring" })
+        {
+            var rejected = false;
+            try
+            {
+                BootArguments.Parse(["--shots=P00", "--out=C:\\shots", "--movie-frames=180",
+                    "--movie-events=" + events], true);
+            }
+            catch (ArgumentException) { rejected = true; }
+            if (!rejected) throw new InvalidOperationException("Invalid movie event frames were accepted: " + events);
+        }
+    }
+
+    [TestCase]
     [TestCategory(TestReason.Smoke)]
     public void NormalBootKeepsTitle()
     {
