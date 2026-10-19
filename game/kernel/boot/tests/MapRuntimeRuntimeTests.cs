@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Renderer;
 using GdUnit4;
@@ -61,11 +62,17 @@ public sealed partial class MaterialWarmupRuntimeTests
         await next.Done;
 
         var late = fixture.Mount("arrival-late", fixture.Spec with { Line = LineClass.Fine });
+        var releaseContent = false;
+        fixture.Renderer.ContentReady = () => late.Visible && releaseContent;
         var accepted = fixture.Provider.Accepted;
         var warming = runtime.Arrive(destination, ViewMode.Fly);
         runtime._Process(0);
         AssertThat(!warming.Done.IsCompleted && !late.Visible && fixture.Veil.Opacity == 1f &&
             fixture.Provider.Accepted == accepted).OverrideFailureMessage("New materials must obtain coverage before producing draw evidence.").IsTrue();
+        await fixture.Until(() => late.Visible && fixture.Warmup.SamplesReleased);
+        AssertThat(!warming.Done.IsCompleted && warming.Completed < warming.Total).
+            OverrideFailureMessage("Warming must unblock shader-dependent content without skipping final content readiness.").IsTrue();
+        releaseContent = true;
         await fixture.Until(() => warming.Done.IsCompleted);
         await warming.Done;
         AssertThat(late.Visible && fixture.Warmup.SamplesReleased && fixture.Veil.Opacity == 0f &&
@@ -117,6 +124,7 @@ public sealed partial class MaterialWarmupRuntimeTests
         private Action? _arrivalDraw;
         public ArrivalStream Stream { get; } = new();
         public ArrivalLoading Loading { get; } = new();
+        public ArrivalRenderer Renderer { get; private set; } = null!;
 
         public MapRuntime StartArrivalRuntime()
         {
@@ -126,7 +134,8 @@ public sealed partial class MaterialWarmupRuntimeTests
                 BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(runtime, value);
             Set("_mountPrepared", true);
             Set("_stream", Stream);
-            Set("_renderer", new ArrivalRenderer());
+            Parent.AddChild(Renderer = new ArrivalRenderer());
+            Set("_renderer", Renderer);
             Set("_materials", Warmup);
             Set("_materialSource", Provider);
             Set("_camera", new TestCameraRig());
@@ -164,8 +173,10 @@ public sealed partial class MaterialWarmupRuntimeTests
         public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) => Destination = new(destination, mode, space);
     }
 
-    private sealed class ArrivalRenderer : IRenderReadiness
+    private sealed partial class ArrivalRenderer : Node, IRenderReadiness, IViewContentReadiness
     {
+        public Func<bool>? ContentReady { get; set; }
+        public bool IsReady(Pose pose) => ContentReady?.Invoke() ?? true;
         public string? Error => null;
         public bool Pending => false;
         public bool PipelineReady => true;

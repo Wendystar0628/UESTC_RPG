@@ -321,7 +321,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             // Visible arrivals own only their temporary cover; external transit/boot covers stay with their callers.
             if (!IsCovered && _loading?.Active != true)
                 _readinessCover ??= _veil!.Cover(VeilReason.Transit, 0f);
-            if (_coveredDrawFrame <= _arrivalFrame || !IsCovered || !ContentReady) return;
+            if (_coveredDrawFrame <= _arrivalFrame || !IsCovered) return;
             _reuseWarmth = false;
             _materials!.Begin();
             _samplesStarted = true;
