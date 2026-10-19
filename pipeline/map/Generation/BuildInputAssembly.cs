@@ -9,10 +9,11 @@ public static class BuildInputAssembly
 
     /// <summary>Read an explicit global asset manifest and freeze its bytes once. Keys are relative to game/data.</summary>
     public static BuildInputSnapshot ReadRequiredGlobalInputs(IEnumerable<string> requiredGlobalKeys,
-        Func<string, ReadOnlyMemory<byte>> read)
+        Func<string, ReadOnlyMemory<byte>> read, string version)
     {
         ArgumentNullException.ThrowIfNull(requiredGlobalKeys);
         ArgumentNullException.ThrowIfNull(read);
+        ArgumentException.ThrowIfNullOrWhiteSpace(version);
         var keys = requiredGlobalKeys.Order(StringComparer.Ordinal).ToArray();
         foreach (var key in keys) ValidateKey("global", key);
         if (keys.Distinct(StringComparer.Ordinal).Count() != keys.Length)
@@ -28,7 +29,7 @@ public static class BuildInputAssembly
             if (input.IsEmpty) throw new InvalidDataException($"Missing or empty required build input: scope=global key='{key}'.");
             bytes.Add(key, input);
         }
-        return BuildInputSnapshot.Freeze(bytes);
+        return BuildInputSnapshot.Freeze(bytes, version);
     }
 
     /// <summary>Publish a stable read-only capability list, rejecting duplicate IDs/channel owners before any Paint call.</summary>

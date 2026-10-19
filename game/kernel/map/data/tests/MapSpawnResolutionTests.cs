@@ -36,7 +36,7 @@ public sealed class MapSpawnResolutionTests
         {
             ["waypoints.json"] = JsonSerializer.SerializeToUtf8Bytes(new WaypointFile(1, entry.Waypoints), ContractJson.Options),
             ["review.json"] = System.Text.Encoding.UTF8.GetBytes("{\"version\":1,\"poses\":[{\"id\":\"V1\",\"waypoint\":\"P00\"}]}")
-        });
+        }, "fixture");
         var context = new MapContext(entry.Descriptor, new FakeWorld { Boundary = new([]) }, entry.DataRoot, inputs);
         AssertThat(ReviewPoseResolver.Resolve("V1", context) == entry.Waypoints[0].Fly).OverrideFailureMessage("The V1 overview did not follow the authored P00 relation.").IsTrue();
         AssertThat(ReviewPoseResolver.Resolve("P01", context) == entry.Waypoints[1].Fly).OverrideFailureMessage("Capture did not resolve the named waypoint in the frozen input version.").IsTrue();

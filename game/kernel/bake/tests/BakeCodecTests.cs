@@ -114,7 +114,7 @@ public sealed class BakeCodecTests
         using var started = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
-        var queue = new BakeQueue(1);
+        var queue = new BakeQueue(1, static () => { });
         try
         {
             var handle = queue.Ensure(key, BakePriority.KnownDestination, () =>
@@ -142,7 +142,7 @@ public sealed class BakeCodecTests
         using var started = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
-        var queue = new BakeQueue(1);
+        var queue = new BakeQueue(1, static () => { });
         var finished = false;
         var pendingRan = false;
         try

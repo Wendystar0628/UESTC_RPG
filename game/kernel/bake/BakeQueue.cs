@@ -11,6 +11,7 @@ internal sealed class BakeQueue : IDisposable
     private readonly Dictionary<BakeKey, Job> _jobs = [];
     private readonly List<Thread> _workers = [];
     private readonly int _maximum;
+    private readonly Action _idle;
     private int _limit;
     private int _running;
     private long _order;
@@ -20,9 +21,13 @@ internal sealed class BakeQueue : IDisposable
     private bool _disposed;
     public ConcurrentQueue<string> Failures { get; } = new();
 
-    public BakeQueue(int maximum) { _maximum = Math.Max(1, maximum); _limit = _maximum; }
+    public BakeQueue(int maximum, Action idle) { _maximum = Math.Max(1, maximum); _limit = _maximum; _idle = idle; }
     public void BeginCatalog() { lock (_sync) _total++; }
-    public void EndCatalog() { lock (_sync) _done++; }
+    public void EndCatalog()
+    {
+        lock (_sync) _done++;
+        NotifyIdle();
+    }
 
     public BakeProgress Progress
     {
@@ -153,7 +158,20 @@ internal sealed class BakeQueue : IDisposable
                     }
                     Monitor.PulseAll(_sync);
                 }
+                NotifyIdle();
             }
+        }
+    }
+
+    private void NotifyIdle()
+    {
+        lock (_sync)
+            if (_disposed || _done != _total) return;
+        try { _idle(); }
+        catch (Exception error)
+        {
+            lock (_sync) _failed++;
+            Failures.Enqueue("Source index persistence failed: " + error);
         }
     }
 

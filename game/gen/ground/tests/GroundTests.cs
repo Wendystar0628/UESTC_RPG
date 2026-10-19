@@ -380,14 +380,14 @@ internal static class TestWorld
         new Dictionary<string, ReadOnlyMemory<byte>>
         {
             [SceneTextInputs.AtlasKey] = System.IO.File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
-        }));
+        }, "fixture"));
 
     private static readonly Lazy<BuildInputSnapshot> MaterialInputs = new(() => BuildInputSnapshot.Freeze(
         new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             [SurfaceMaterialCatalog.SourcePath] = System.IO.File.ReadAllBytes(
                 System.IO.Path.Combine(RealMapFixture.DataDirectory(), SurfaceMaterialCatalog.SourcePath))
-        }));
+        }, "fixture"));
 
     private static PolygonRings Rect(float x0, float z0, float x1, float z1) =>
         new([new(x0, z0), new(x1, z0), new(x1, z1), new(x0, z1)]);

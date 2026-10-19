@@ -19,7 +19,7 @@ namespace Campus.Gen.Furniture.Tests;
 internal static class FurnitureTestSupport
 {
     internal static BuildInputSnapshot GlobalInputs { get; } = BuildInputSnapshot.Freeze(
-        new Dictionary<string, ReadOnlyMemory<byte>> { [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json")) });
+        new Dictionary<string, ReadOnlyMemory<byte>> { [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json")) }, "fixture");
 
     internal static readonly Lazy<IWorldModel> World = new(() => RealMapFixture.Load().World);
 

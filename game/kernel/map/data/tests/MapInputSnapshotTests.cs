@@ -31,7 +31,7 @@ public sealed class MapInputSnapshotTests
     {
         var raw = new byte[] { 1, 2, 3 };
         var files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["world/geo.json"] = raw };
-        var input = new MapLoadInput(Entry: Entry(), Files: files);
+        var input = new MapLoadInput(Entry: Entry(), SourceInputs: BuildInputSnapshot.Freeze(files, "fixture-map-1"));
         raw[0] = 9;
         files["world/geo.json"] = new byte[] { 7 };
         files["world/core.json"] = new byte[] { 8 };
@@ -41,17 +41,19 @@ public sealed class MapInputSnapshotTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void ReplacementFilesFreezeANewInputVersion()
+    public void ReplacementSnapshotPublishesANewInputVersion()
     {
-        var original = new MapLoadInput(Entry(), Files(1));
+        var original = new MapLoadInput(Entry(), BuildInputSnapshot.Freeze(Files(1), "fixture-map-1"));
         var replacementBytes = new byte[] { 6 };
         var replaced = original with
         {
-            Files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["world/geo.json"] = replacementBytes }
+            SourceInputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
+                { ["world/geo.json"] = replacementBytes }, "fixture-map-2")
         };
         replacementBytes[0] = 9;
         AssertThat(!ReferenceEquals(replaced.SourceInputs, original.SourceInputs) &&
-            replaced.Files["world/geo.json"].Span[0] == 6 && original.Files["world/geo.json"].Span[0] == 1).OverrideFailureMessage("Files with did not create a separate frozen version.").IsTrue();
+            replaced.SourceInputs.Version == "fixture-map-2" && original.SourceInputs.Version == "fixture-map-1" &&
+            replaced.Files["world/geo.json"].Span[0] == 6 && original.Files["world/geo.json"].Span[0] == 1).OverrideFailureMessage("Snapshot replacement did not retain separate frozen versions.").IsTrue();
     }
 
     [TestCase]
@@ -59,8 +61,8 @@ public sealed class MapInputSnapshotTests
     public void OldAndNewContextsRetainTheirOwnParsedInputVersionWithoutRefreezing()
     {
         var entry = Entry();
-        var oldInput = new MapLoadInput(entry, Files(1));
-        var newInput = new MapLoadInput(entry, Files(2));
+        var oldInput = new MapLoadInput(entry, BuildInputSnapshot.Freeze(Files(1), "fixture-map-1"));
+        var newInput = new MapLoadInput(entry, BuildInputSnapshot.Freeze(Files(2), "fixture-map-2"));
         var oldWorld = Loaded(entry);
         var newWorld = Loaded(entry);
         var oldContext = MapWorldLoading.CreateContext(entry, oldWorld, oldInput.SourceInputs);

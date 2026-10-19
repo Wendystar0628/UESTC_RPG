@@ -28,6 +28,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     private readonly bool _ownsTerrain;
     private readonly Dictionary<MapId, MapBuild> _contexts = [];
     private readonly object _sync = new();
+    private readonly object _inputIdentitySync = new();
     private long _cacheGeneration;
     private Task? _clearing;
     private bool _stopped;
@@ -45,7 +46,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     internal BakeService(BakeOptions options, TerrainCacheService terrain)
     {
         _options = options;
-        _queue = new(_options.MaximumWorkers);
+        _queue = new(_options.MaximumWorkers, FlushInputIdentities);
         _terrain = terrain;
         _cache = terrain.Store;
         ApplyPhase(AppState.Boot);
@@ -129,13 +130,12 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             var claims = MapClaimCapture.Capture(registry, context.Descriptor.Id);
             var ledger = new Lazy<MapClaimLedger>(() => claims.Build(context.World), LazyThreadSafetyMode.ExecutionAndPublication);
             Func<FeatureId, Aspects, WpId?> claimLookup = (feature, aspects) => ledger.Value.ClaimedBy(feature, aspects);
+            var sourceCache = new BakeSourceIndexCache(_terrain, context.Descriptor.Id,
+                SourceVersion(context, seed, globalInputs, modules, interiors));
             var map = new MapBuild(context, modules, interiors, producers, geometry,
-                ledger, claimLookup, new(() =>
-                {
-                    _ = ledger.Value; // Empty maps also resolve their captured declaration before preparation publishes.
-                    return Load(context, seed, catalog, interiors, modules, claimLookup, globalInputs, groundContributors, partLods);
-                },
-                    LazyThreadSafetyMode.ExecutionAndPublication), globalInputs, groundContributors, partLods, catalog) { TerrainCache = _terrain };
+                ledger, claimLookup, new(() => Load(context, seed, catalog, interiors, modules, claimLookup, globalInputs,
+                    groundContributors, partLods, sourceCache), LazyThreadSafetyMode.ExecutionAndPublication),
+                globalInputs, groundContributors, partLods, catalog) { TerrainCache = _terrain, SourceCache = sourceCache };
             _contexts.Add(context.Descriptor.Id, map);
             return map;
         }
@@ -151,7 +151,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         }
         _queue.ForgetMap(map);
         removed?.Lifetime.Cancel(); // Forget first: cancellation is not a failed active-map build.
-        if (removed is not null) _terrain.Unload(removed.Context.World);
+        if (removed is not null)
+        {
+            PersistInputIdentities([removed]);
+            _terrain.Unload(removed.Context.World);
+        }
     }
 
     internal async Task<BakeMapMetadata> PrepareMapData(IMapContext context)
@@ -255,23 +259,9 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         if (module is null && interior is null && matches.Length == 0) throw new InvalidDataException("No bake producer is registered for this key.");
         var codeHash = module?.CodeHash ?? interior?.CodeHash ?? matches[0].CodeHash;
         var context = module is not null ? map.GetPreparedContext(map.Context, key.Module) : map.CreateBuildContext(codeHash);
-        var runtimeCode = RuntimeCodeHash();
-        var dependencies = new SortedDictionary<string, string>(StringComparer.Ordinal);
-        if (key.Detail.StartsWith("C/", StringComparison.Ordinal))
-        {
-            var area = BakeInputFingerprint.Area(context, key);
-            var moduleTiles = map.GetPreparedModuleTilesAsync(map.Context).GetAwaiter().GetResult();
-            foreach (var (id, tiles) in moduleTiles)
-                if (tiles.Any(tile =>
-                    (tile.X + 1) * TileGrid.BaseEdge >= area.Min.X && tile.X * TileGrid.BaseEdge <= area.Max.X &&
-                    (tile.Z + 1) * TileGrid.BaseEdge >= area.Min.Y && tile.Z * TileGrid.BaseEdge <= area.Max.Y)) dependencies[id] = map.Modules[id].CodeHash;
-            foreach (var (id, source) in map.Interiors)
-                if (source.Value.FeatureIds.Any(feature => context.World.Features.TryGetValue(feature, out var value) &&
-                    value.Bounds.Min.X <= area.Max.X && value.Bounds.Max.X >= area.Min.X &&
-                    value.Bounds.Min.Z <= area.Max.Y && value.Bounds.Max.Z >= area.Min.Y)) dependencies[id] = source.CodeHash;
-            dependencies.Add("collision", GenerationInputAssembly.CodeVersion(typeof(Campus.Gen.Collision.CollisionGeometry).Assembly));
-        }
-        var inputHash = BakeInputFingerprint.Compute(context, key, runtimeCode, map.SourceIndex(context), dependencies);
+        var sources = map.SourceIndex(context);
+        var inputHash = sources.TryProduct(key, out var preparedHash) ? preparedHash : ProductInputHash(map, context, key);
+        sources.RememberProduct(key, inputHash);
         var identity = BakeInputFingerprint.Identity(key, inputHash);
         PrepareProductTerrain(map, key);
         if (!_options.Live)
@@ -310,11 +300,8 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
 
     private LoadedMap Load(IMapContext context, uint seed, PaletteCatalog catalog, IReadOnlyDictionary<string, Interior> interiors,
         IReadOnlyDictionary<string, ContentModuleInput> modules, Func<FeatureId, Aspects, WpId?> claimLookup, BuildInputSnapshot globalInputs,
-        IReadOnlyList<IGroundMaskContributor> groundContributors, PartLodCatalog partLods)
+        IReadOnlyList<IGroundMaskContributor> groundContributors, PartLodCatalog partLods, BakeSourceIndexCache sourceCache)
     {
-        // Validate the final post-overlay world once, before cache hits or geometry can bypass it.
-        // Claims add diagnostics only; validation failures must remain terminal for this map load.
-        BuildingOverlapValidator.Validate(context.World, claimLookup);
         if (!_options.Live)
         {
             _cache.Initialize();
@@ -327,16 +314,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             ? InteriorAssembly.ConfigureForWorld(interiorCatalogBytes, providers, context.World) : [];
         var activeInteriors = new ReadOnlyDictionary<string, IInteriorProvider>(bindings.ToDictionary(binding => binding.ProviderId,
             binding => providers[binding.ProviderId], StringComparer.Ordinal));
-        var residentStamp = TerrainCacheService.Stamp(new
+        var residentStamp = sourceCache.ResolveResidentStamp(() =>
         {
-            seed, runtime = RuntimeCodeHash(), map = context.Descriptor,
-            inputs = inputs.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToArray(),
-            globals = globalInputs.Entries.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToArray(),
-            modules = modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new { pair.Key, pair.Value.CodeHash }).ToArray(),
-            interiors = interiors.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new { pair.Key, pair.Value.CodeHash }).ToArray(),
-            catalog = catalog.Entries.OrderBy(entry => entry.Index.Value).ToArray(),
-            claims = context.World.Features.Keys.OrderBy(id => id.Value, StringComparer.Ordinal).Select(id => new
-                { id, owners = Enum.GetValues<Aspects>().Select(aspect => new { aspect, owner = claimLookup(id, aspect) }).ToArray() }).ToArray()
+            // Revalidate changed inputs before publishing a replacement resident version.
+            BuildingOverlapValidator.Validate(context.World, claimLookup);
+            return ResidentStamp(context, seed, catalog, interiors, modules, globalInputs, claimLookup);
         });
         var resident = _terrain.ReadJson<BakeResidentData>(new(context.Descriptor.Id, "resident", "meta"), residentStamp);
         if (resident is not null && !_terrain.RestoreResidentPoints(context.World, residentStamp, resident.TerrainPoints)) resident = null;
@@ -452,13 +434,18 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             map.Lifetime.Cancel();
         }
         _queue.Stop();
+        PersistInputIdentities(maps);
     }
 
     public void Dispose()
     {
         Stop();
         // Ordinary disposal/restart still drains owned workers; process exit has closed native access above.
-        if (!_exiting) _queue.Dispose();
+        if (!_exiting)
+        {
+            _queue.Dispose();
+            PersistInputIdentities(_contexts.Values.ToArray());
+        }
         if (_ownsTerrain) _terrain.Dispose();
     }
 
@@ -475,6 +462,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog Catalog)
     {
         internal TerrainCacheService? TerrainCache { get; init; }
+        internal BakeSourceIndexCache? SourceCache { get; init; }
         internal BuildContext CreateAssetContext(string codeHash)
         {
             var context = CreateBuildContext(codeHash);
@@ -485,9 +473,9 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         internal BakeSourceIndex SourceIndex(BuildContext context)
         {
             lock (_sourceIndexLock)
-                return _sourceIndex ??= new(context, TerrainCache is null ? null :
-                    new BakeSourceIndexCache(TerrainCache, Context.Descriptor.Id, Data.Value.ResidentStamp));
+                return _sourceIndex ??= new(context, SourceCache);
         }
+        internal void PersistInputIdentities() => Volatile.Read(ref _sourceIndex)?.Persist();
         internal ConcurrentQueue<CollectedDiagnostic> Diagnostics { get; } = new();
 
         internal void Collect(string module, string stage, IReadOnlyList<BuildDiagnostic> diagnostics, FeatureId? feature = null)
@@ -534,7 +522,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
 
         internal void CompletePreparation(BakeMapMetadata metadata)
         {
-            if (!Active || !Data.IsValueCreated || !Claims.IsValueCreated)
+            if (!Active || !Data.IsValueCreated)
                 throw new InvalidOperationException("Map preparation has not completed.");
             var data = Data.Value;
             if (!ReferenceEquals(metadata.Lighting.WindowNumbering, data.Windows.Snapshot))

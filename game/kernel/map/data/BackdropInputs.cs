@@ -10,11 +10,11 @@ public static class BackdropInputs
 {
     public static BuildInputSnapshot Freeze(MapDescriptor map, string dataRoot,
         IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, Func<string, bool> exists,
-        Func<string, ReadOnlyMemory<byte>> read)
+        Func<string, ReadOnlyMemory<byte>> read, string version)
     {
         var inputs = new Dictionary<string, ReadOnlyMemory<byte>>(files, StringComparer.Ordinal);
         AddOptional(map, dataRoot, inputs, exists, read);
-        return BuildInputSnapshot.Freeze(inputs);
+        return BuildInputSnapshot.Freeze(inputs, version);
     }
 
     /// <summary>Borrow already captured bytes; explicitly read the authored path even when its extension is not .json.</summary>

@@ -43,11 +43,11 @@ public sealed class VegetationBuildTests
         var global = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             [VegetationInputs.SpeciesKey] = File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json"))
-        });
+        }, "fixture");
         var map = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             [VegetationInputs.PlantingKey] = RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey]
-        });
+        }, "fixture");
         var ctx = new BuildContext
         {
             World = world,
@@ -134,7 +134,7 @@ public sealed class VegetationBuildTests
         var otherInputs = new BuildContext
         {
             World = ctx.World, Map = ctx.Map, WorldSeed = ctx.WorldSeed, Catalog = ctx.Catalog,
-            GlobalInputs = BuildInputSnapshot.Freeze(ctx.GlobalInputs.Entries)
+            GlobalInputs = BuildInputSnapshot.Freeze(ctx.GlobalInputs.Entries, "fixture")
         };
         AssertThat(!ReferenceEquals(l1, VegetationPrototypes.Get(info, variant, VegPool.L1, otherInputs)))
             .OverrideFailureMessage("another frozen input snapshot reused a mother prototype").IsTrue();

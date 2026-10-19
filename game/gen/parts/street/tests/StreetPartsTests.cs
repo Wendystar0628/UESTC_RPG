@@ -14,7 +14,7 @@ namespace Campus.Gen.Parts.Street.Tests;
 public sealed class StreetPartsTests
 {
     private static BuildInputSnapshot GlobalInputs { get; } = BuildInputSnapshot.Freeze(
-        new Dictionary<string, ReadOnlyMemory<byte>> { [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json")) });
+        new Dictionary<string, ReadOnlyMemory<byte>> { [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json")) }, "fixture");
     private static PaletteCatalog Catalog => Campus.Contracts.Tests.PaletteFixture.Catalog;
     private static IEnumerable<Type> StreetTypes => typeof(StreetGallery).Assembly.GetTypes()
         .Where(type => type.Namespace == typeof(StreetGallery).Namespace ||

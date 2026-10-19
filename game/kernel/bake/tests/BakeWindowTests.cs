@@ -150,8 +150,8 @@ public sealed class BakeWindowTests
     {
         var source = new Source { Layouts = [new(Feature, [])] };
         var baseline = Context();
-        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["world/geo.json"] = new byte[] { 1 } });
-        var globals = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["vegetation/species.json"] = new byte[] { 2 } });
+        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["world/geo.json"] = new byte[] { 1 } }, "fixture");
+        var globals = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["vegetation/species.json"] = new byte[] { 2 } }, "fixture");
         IReadOnlyList<IGroundMaskContributor> contributors = Array.AsReadOnly<IGroundMaskContributor>([new Contributor()]);
         var partLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())]);
         var context = new BuildContext
@@ -252,7 +252,7 @@ public sealed class BakeWindowTests
     public void UnloadedBuildStopsBeforeEncodingAndNeverPublishesItsOldHandle()
     {
         var context = Context();
-        var snapshot = BuildInputSnapshot.Freeze(context.SourceInputs);
+        var snapshot = BuildInputSnapshot.Freeze(context.SourceInputs, "fixture");
         var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", snapshot);
         using var started = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
@@ -264,7 +264,7 @@ public sealed class BakeWindowTests
             context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog);
         var cache = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cancel-" + Guid.NewGuid().ToString("N"));
         using var service = new BakeService(new(cache, true, false, false, false, 1, null));
-        var queue = new BakeQueue(1);
+        var queue = new BakeQueue(1, static () => { });
         Exception? stopped = null;
         try
         {

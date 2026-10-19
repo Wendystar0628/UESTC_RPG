@@ -33,7 +33,7 @@ public sealed class DioramaModuleTests
         WorldSeed = seed,
         SourceInputs = backdrop is null
             ? BuildInputSnapshot.Empty.Entries
-            : BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["backdrop.json"] = backdrop }).Entries,
+            : BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["backdrop.json"] = backdrop }, "fixture").Entries,
     };
 
     private static IEnumerable<string> BackdropFiles()

@@ -435,7 +435,7 @@ public sealed class MapServiceTests
         {
             _reads[entry.Descriptor.Id] = ReadCount(entry.Descriptor.Id) + 1;
             var files = ReadWorldFiles(entry);
-            var input = new MapLoadInput(entry, files);
+            var input = new MapLoadInput(entry, BuildInputSnapshot.Freeze(files, "fixture/" + Inputs.Count));
             Inputs.Add(input);
             return input;
         }

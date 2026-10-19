@@ -19,13 +19,13 @@ public sealed class BuildInputAssemblyTests
         var raw = Encoding.UTF8.GetBytes("species-version-one");
         var reads = 0;
         var assets = new Lazy<BuildInputSnapshot>(() => BuildInputAssembly.ReadRequiredGlobalInputs(
-            ["vegetation/species.json"], key => { reads++; return raw; }));
+            ["vegetation/species.json"], key => { reads++; return raw; }, "fixture"));
         var firstMap = assets.Value;
         raw[0] = 0;
         var secondMap = assets.Value;
         AssertThat(reads == 1 && ReferenceEquals(firstMap, secondMap)).OverrideFailureMessage("Asset bytes were read or frozen again per map.").IsTrue();
         AssertThat(firstMap.Require("vegetation/species.json").Span[0] == (byte)'s').OverrideFailureMessage("Published bytes alias a caller-owned mutable array.").IsTrue();
-        var empty = BuildInputAssembly.ReadRequiredGlobalInputs([], _ => throw new InvalidOperationException("Unexpected fixture IO."));
+        var empty = BuildInputAssembly.ReadRequiredGlobalInputs([], _ => throw new InvalidOperationException("Unexpected fixture IO."), "fixture");
         AssertThat(ReferenceEquals(empty, BuildInputSnapshot.Empty)).OverrideFailureMessage("A fixture with no requested global assets lost its empty default.").IsTrue();
     }
 
@@ -34,10 +34,10 @@ public sealed class BuildInputAssemblyTests
     public void RequiredInputsFailBeforeAnyConsumerRuns()
     {
         AssertThrown(() => BuildInputAssembly.ReadRequiredGlobalInputs(
-            ["vegetation/species.json"], _ => ReadOnlyMemory<byte>.Empty)).IsInstanceOf<InvalidDataException>();
+            ["vegetation/species.json"], _ => ReadOnlyMemory<byte>.Empty, "fixture")).IsInstanceOf<InvalidDataException>();
         var read = false;
         AssertThrown(() => BuildInputAssembly.ReadRequiredGlobalInputs(
-            ["res://data/vegetation/species.json"], _ => { read = true; return new byte[] { 1 }; })).IsInstanceOf<ArgumentException>();
+            ["res://data/vegetation/species.json"], _ => { read = true; return new byte[] { 1 }; }, "fixture")).IsInstanceOf<ArgumentException>();
         AssertThat(!read).OverrideFailureMessage("A non-canonical key reached the IO boundary.").IsTrue();
     }
 

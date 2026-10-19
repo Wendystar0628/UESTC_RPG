@@ -137,5 +137,5 @@ public sealed class StreamLifecycleTests
     private static void Set(StreamDirector target, string name, object value) =>
         typeof(StreamDirector).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(target, value);
     private static IMapContext Context() => new TestMapContext(BackdropInputsTests.Descriptor(), new FakeWorld { Boundary = new([]) },
-        BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>()), "res://fixture/");
+        BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(), "fixture"), "res://fixture/");
 }

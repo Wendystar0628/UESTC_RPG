@@ -29,7 +29,7 @@ internal static class NorthTestSupport
         var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
         {
             [SceneTextInputs.AtlasKey] = System.IO.File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
-        });
+        }, "fixture");
         var context = new BuildContext
         {
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,

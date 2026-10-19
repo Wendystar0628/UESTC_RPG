@@ -21,7 +21,7 @@ public sealed class BackdropInputsTests
         var files = new Dictionary<string, ReadOnlyMemory<byte>> { ["world/geo.json"] = new byte[] { 1 } };
         var reads = new List<string>();
         var snapshot = BackdropInputs.Freeze(map, "res://fixture/", files,
-            path => path == "res://fixture/environment/far.json", path => { reads.Add(path); return raw; });
+            path => path == "res://fixture/environment/far.json", path => { reads.Add(path); return raw; }, "fixture");
         raw[0] = 0;
         files.Clear();
         AssertThat(snapshot.Entries.Count == 2 && reads.SequenceEqual(["res://fixture/environment/far.json"])).OverrideFailureMessage("Wrong optional input path.").IsTrue();
@@ -47,7 +47,7 @@ public sealed class BackdropInputsTests
             _ => throw new InvalidOperationException("Captured file was probed twice."),
             _ => throw new InvalidOperationException("Captured file was read twice."));
         AssertThat(reads == 1 && files[map.Env.Backdrop].Equals((ReadOnlyMemory<byte>)bytes)).OverrideFailureMessage("Capture copied or reread the source.").IsTrue();
-        var input = new MapLoadInput(new(map, "res://fixture/", []), files);
+        var input = new MapLoadInput(new(map, "res://fixture/", []), BuildInputSnapshot.Freeze(files, "fixture"));
         bytes[0] = 0;
         AssertThat(input.SourceInputs.Require(map.Env.Backdrop).Span[0] == (byte)'{').OverrideFailureMessage("Formal load input did not freeze the captured bytes.").IsTrue();
     }
@@ -58,11 +58,11 @@ public sealed class BackdropInputsTests
     {
         var map = Descriptor("nested/backdrop.json");
         var missing = BackdropInputs.Freeze(map, "res://fixture/", new Dictionary<string, ReadOnlyMemory<byte>>(),
-            _ => false, _ => throw new InvalidOperationException("An absent input must not be read."));
+            _ => false, _ => throw new InvalidOperationException("An absent input must not be read."), "fixture");
         AssertThat(missing.Entries.Count == 0).OverrideFailureMessage("An absent backdrop was synthesized.").IsTrue();
         {
             var rejected = false;
-            try { BackdropInputs.Freeze(map, "res://fixture/", missing.Entries, _ => true, _ => ReadOnlyMemory<byte>.Empty); }
+            try { BackdropInputs.Freeze(map, "res://fixture/", missing.Entries, _ => true, _ => ReadOnlyMemory<byte>.Empty, "fixture"); }
             catch (InvalidDataException) { rejected = true; }
             AssertThat(rejected).OverrideFailureMessage("Expected invalid backdrop input to fail.").IsTrue();
         }
@@ -70,7 +70,7 @@ public sealed class BackdropInputsTests
             {
                 var rejected = false;
                 try { BackdropInputs.Freeze(Descriptor(key), "res://fixture/", missing.Entries,
-                _ => throw new InvalidOperationException("Invalid keys reached I/O."), _ => ReadOnlyMemory<byte>.Empty); }
+                _ => throw new InvalidOperationException("Invalid keys reached I/O."), _ => ReadOnlyMemory<byte>.Empty, "fixture"); }
                 catch (InvalidDataException) { rejected = true; }
                 AssertThat(rejected).OverrideFailureMessage("Expected invalid backdrop input to fail.").IsTrue();
             }
@@ -105,5 +105,5 @@ public sealed class BackdropInputsTests
         new("sky.json", backdrop, []), []);
 
     internal static BuildInputSnapshot Snapshot(string key, string json) =>
-        BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { [key] = Encoding.UTF8.GetBytes(json) });
+        BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { [key] = Encoding.UTF8.GetBytes(json) }, "fixture");
 }

@@ -102,7 +102,7 @@ public sealed class StreamSchedulingTests
             throw new InvalidOperationException("Off-origin discovery failed to produce one whole-map root.");
         var key = BakeRequestKeys.Tile(context.Map.Id, "fixture.root", StreamTile.Root.Tile, LodLevel.L4);
         var builder = new BakeGeometryBuilder(context.Catalog, new ServiceRegistry());
-        using var queue = new BakeQueue(1);
+        using var queue = new BakeQueue(1, static () => { });
         using var entered = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var caller = Environment.CurrentManagedThreadId;
@@ -131,7 +131,7 @@ public sealed class StreamSchedulingTests
     [TestCategory(TestReason.Contract)]
     public void ActualBakeQueueKeepsFailuresAndDiscardsForgottenSameIdResults()
     {
-        using var queue = new BakeQueue(1);
+        using var queue = new BakeQueue(1, static () => { });
         using var entered = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var key = new BakeKey(new("fixture-map"), "fixture.root", "L4/0/0");

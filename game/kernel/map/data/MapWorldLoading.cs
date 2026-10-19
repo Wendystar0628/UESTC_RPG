@@ -7,17 +7,9 @@ using Campus.Contracts.Maps;
 namespace Campus.Kernel.Maps;
 
 /// <summary>One frozen version of the authored map inputs.</summary>
-public sealed record MapLoadInput(MapCatalogEntry Entry,
-    IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files)
+public sealed record MapLoadInput(MapCatalogEntry Entry, BuildInputSnapshot SourceInputs)
 {
-    private BuildInputSnapshot _sourceInputs = BuildInputSnapshot.Freeze(Files);
-    /// <summary>Map bytes freeze at construction and whenever a replacement is supplied.</summary>
-    public IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files
-    {
-        get => _sourceInputs.Entries;
-        init => _sourceInputs = BuildInputSnapshot.Freeze(value);
-    }
-    public BuildInputSnapshot SourceInputs => _sourceInputs;
+    public IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files => SourceInputs.Entries;
 }
 
 public static class MapWorldLoading

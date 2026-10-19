@@ -78,7 +78,7 @@ public sealed class VegetationContextTests
         var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             ["snapshot.json"] = "{}"u8.ToArray()
-        });
+        }, "fixture");
         var map = new TestMapContext(RealMapFixture.Entry().Descriptor, new FakeWorld(), inputs);
         var palette = Palette();
         var prepared = new BuildContext
@@ -149,7 +149,7 @@ public sealed class VegetationContextTests
             var registry = new ServiceRegistry();
             registry.Discover(assemblies);
             var claims = MapClaimCapture.Capture(registry, id);
-            return new(new MapLoadInput(entry, all), claims);
+            return new(new MapLoadInput(entry, BuildInputSnapshot.Freeze(all, "fixture")), claims);
         }
     }
 }

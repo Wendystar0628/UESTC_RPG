@@ -20,7 +20,7 @@ public sealed class VegetationInputBoundaryTests
         {
             ["vegetation/species.json"] = loaderBuffer.AsMemory(1, 3)
         };
-        var snapshot = BuildInputSnapshot.Freeze(inputs);
+        var snapshot = BuildInputSnapshot.Freeze(inputs, "fixture");
         Array.Fill(loaderBuffer, (byte)0);
         inputs["vegetation/species.json"] = new byte[] { 99 };
         inputs["vegetation/planting.json"] = new byte[] { 88 };
@@ -37,7 +37,7 @@ public sealed class VegetationInputBoundaryTests
         var snapshot = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             ["vegetation/species.json"] = new byte[] { 1 }
-        });
+        }, "fixture");
         foreach (var key in new[]
         {
             "", " ", " vegetation/species.json", "vegetation/species.json ",
@@ -47,7 +47,7 @@ public sealed class VegetationInputBoundaryTests
         })
         {
             var invalid = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { [key] = new byte[] { 1 } };
-            AssertThrown(() => BuildInputSnapshot.Freeze(invalid)).IsInstanceOf<ArgumentException>();
+            AssertThrown(() => BuildInputSnapshot.Freeze(invalid, "fixture")).IsInstanceOf<ArgumentException>();
             AssertThrown(() => snapshot.Require(key)).IsInstanceOf<ArgumentException>();
         }
         AssertThrown(() => snapshot.Require("Vegetation/species.json")).IsInstanceOf<KeyNotFoundException>();

@@ -212,7 +212,7 @@ public sealed partial class CenterEastModuleTests
     private static BuildInputSnapshot TextInputs() => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
     {
         [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
-    });
+    }, "fixture");
 
     private static MapDescriptor Descriptor() => RealMapFixture.Entry().Descriptor;
 

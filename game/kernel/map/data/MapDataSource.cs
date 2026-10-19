@@ -29,9 +29,22 @@ public class MapDataSource
     /// <summary>Capture authored map resources on the engine thread before worker loading.</summary>
     public virtual MapLoadInput ReadLoadInput(MapCatalogEntry entry)
     {
-        var input = new MapLoadInput(entry,
-            WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot), ReadWorldFiles(entry)));
+        var files = WorldInputFiles.ReadLoadInput(entry.Descriptor, new ResourceInputs(entry.DataRoot), ReadWorldFiles(entry));
+        var input = new MapLoadInput(entry, BuildInputSnapshot.Freeze(files,
+            CaptureInputVersion(files.Keys.Select(key => entry.DataRoot + key))));
         return input with { Entry = MapCatalog.ReadEntry(entry, input.Files) };
+    }
+
+    // Capture file revisions once at the IO boundary, never on a tile worker.
+    internal static string CaptureInputVersion(IEnumerable<string> paths)
+    {
+        if (!string.Equals(BuildInfo.Kind, "dev", StringComparison.Ordinal)) return "release/" + BuildInfo.Version;
+        return "dev\n" + string.Join("\n", paths.Order(StringComparer.Ordinal).Select(path =>
+        {
+            var file = new FileInfo(ProjectSettings.GlobalizePath(path));
+            return path + "|" + file.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + "|" +
+                file.LastWriteTimeUtc.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }));
     }
 
     public virtual MapClaimSnapshot? ReadClaims(MapId map) => MapClaimCapture.Capture(Campus.Kernel.Registry.Kernel.Services, map);

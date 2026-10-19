@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Gen.Vegetation;
 
@@ -25,6 +26,7 @@ internal sealed class BakeSourceIndex
     private readonly Dictionary<TileKey, string> _windows = [];
     private readonly ConcurrentDictionary<TileKey, Lazy<string>> _vegetation = new();
     private readonly ConcurrentDictionary<TileKey, Lazy<string>> _furniture = new();
+    private readonly ConcurrentDictionary<BakeKey, string> _products = new();
     private readonly ConcurrentDictionary<string, string> _files = new(StringComparer.Ordinal);
     public string CommonStamp { get; }
     public string PaletteStamp { get; }
@@ -41,6 +43,7 @@ internal sealed class BakeSourceIndex
             foreach (var cell in saved.Windows) _windows.Add(cell.Cell, cell.Stamp);
             Restore(_vegetation, saved.Vegetation);
             Restore(_furniture, saved.Furniture);
+            foreach (var product in saved.Products) _products.TryAdd(product.Key, product.Stamp);
             return;
         }
         PrepareSources();
@@ -71,7 +74,6 @@ internal sealed class BakeSourceIndex
             fidelity = FileStamp("fidelity.json"), interior = FileStamp("interiors.json") });
         PaletteStamp = Hash(new { PaletteLayout.EncodingVersion, PaletteLayout.LayoutId,
             entries = context.Catalog.Entries.OrderBy(entry => entry.Index.Value).ToArray() });
-        cache?.Write(this);
 
         static void Add(Dictionary<TileKey, List<string>> cells, MapRect box, string stamp)
         {
@@ -116,14 +118,25 @@ internal sealed class BakeSourceIndex
         }
     }
 
-    internal BakeSourceIndexData Snapshot() => new()
+    internal bool TryProduct(BakeKey key, out string stamp) => _products.TryGetValue(key, out stamp!);
+    internal void RememberProduct(BakeKey key, string stamp) => _products.TryAdd(key, stamp);
+    internal int VegetationCount => _vegetation.Count;
+    internal int FurnitureCount => _furniture.Count;
+    internal int ProductCount => _products.Count;
+    internal void Persist() => _cache?.Write(this);
+
+    internal BakeSourceIndexData Snapshot(string sourceVersion, string residentStamp) => new()
     {
+        SourceVersion = sourceVersion,
+        ResidentStamp = residentStamp,
         CommonStamp = CommonStamp,
         PaletteStamp = PaletteStamp,
         Cells = _cells.OrderBy(pair => pair.Key.X).ThenBy(pair => pair.Key.Z).Select(pair => new BakeSourceCell(pair.Key, pair.Value)).ToArray(),
         Windows = _windows.OrderBy(pair => pair.Key.X).ThenBy(pair => pair.Key.Z).Select(pair => new BakeSourceCell(pair.Key, pair.Value)).ToArray(),
         Vegetation = Completed(_vegetation),
-        Furniture = Completed(_furniture)
+        Furniture = Completed(_furniture),
+        Products = _products.OrderBy(pair => pair.Key.Module, StringComparer.Ordinal).ThenBy(pair => pair.Key.Detail, StringComparer.Ordinal)
+            .Select(pair => new BakeProductInput(pair.Key, pair.Value)).ToArray()
     };
 
     private static BakeSourceCell[] Completed(ConcurrentDictionary<TileKey, Lazy<string>> cells) => cells
@@ -141,22 +154,18 @@ internal sealed class BakeSourceIndex
 
     public void AddArea(BakeInputHash input, MapRect area, bool windows, bool vegetation, bool furniture)
     {
-        var changed = false;
         AddCells(input, [area], windows);
         foreach (var cell in Cells(area))
         {
             if (vegetation) input.Add(_vegetation.GetOrAdd(cell, key =>
             {
-                changed = true;
                 return new(() => { var hash = new BakeInputHash(); AddVegetation(hash, CellBounds(key)); return hash.Finish(); }, LazyThreadSafetyMode.ExecutionAndPublication);
             }).Value);
             if (furniture) input.Add(_furniture.GetOrAdd(cell, key =>
             {
-                changed = true;
                 return new(() => { var hash = new BakeInputHash(); AddFurniturePlanting(hash, CellBounds(key)); return hash.Finish(); }, LazyThreadSafetyMode.ExecutionAndPublication);
             }).Value);
         }
-        if (changed) _cache?.Write(this);
     }
 
     private void AddCells(BakeInputHash input, IEnumerable<MapRect> regions, bool windows)

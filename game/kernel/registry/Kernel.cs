@@ -19,9 +19,18 @@ public partial class Kernel : Node
     {
         Services = new ServiceRegistry();
         // Explicit composition-root asset manifest. Old pure fixtures can keep BuildInputSnapshot.Empty.
-        _globalBuildInputs = new(() => BuildInputAssembly.ReadRequiredGlobalInputs(
-            BuildInputAssembly.RequiredGlobalKeys, key => Godot.FileAccess.GetFileAsBytes("res://data/" + key)),
-            LazyThreadSafetyMode.ExecutionAndPublication);
+        _globalBuildInputs = new(() =>
+        {
+            var keys = BuildInputAssembly.RequiredGlobalKeys;
+            var paths = keys.Select(key => "res://data/" + key)
+                .Append("res://style/palette/core.json")
+                .Concat(DirAccess.GetFilesAt("res://style/palette/ext")
+                    .Where(name => name.EndsWith(".json", StringComparison.Ordinal))
+                    .Select(name => "res://style/palette/ext/" + name));
+            var version = MapDataSource.CaptureInputVersion(paths);
+            return BuildInputAssembly.ReadRequiredGlobalInputs(keys,
+                key => Godot.FileAccess.GetFileAsBytes("res://data/" + key), version);
+        }, LazyThreadSafetyMode.ExecutionAndPublication);
         var bytes = Godot.FileAccess.GetFileAsBytes(ProjectSettings.GetSetting("campus/rulesets/default").AsString());
         var descriptor = JsonSerializer.Deserialize<RulesetDescriptor>(bytes, ContractJson.Options)
             ?? throw new InvalidDataException("Ruleset data is missing.");

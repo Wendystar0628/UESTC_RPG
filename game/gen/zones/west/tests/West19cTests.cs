@@ -206,7 +206,7 @@ public sealed class West19cTests
     private static BuildInputSnapshot TextInputs() => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
     {
         [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
-    });
+    }, "fixture");
 
     private static IWorldModel World() => RealMapFixture.Load().World;
 

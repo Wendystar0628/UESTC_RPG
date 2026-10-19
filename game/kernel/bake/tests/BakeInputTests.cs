@@ -38,7 +38,7 @@ public sealed class BakeInputTests
 
         static BuildInputSnapshot Atlas(int size) => BuildInputSnapshot.Freeze(
             new Dictionary<string, ReadOnlyMemory<byte>>
-            { [SceneTextInputs.AtlasKey] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { size })) });
+            { [SceneTextInputs.AtlasKey] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { size })) }, "fixture");
     }
 
     [TestCase]
@@ -142,7 +142,7 @@ public sealed class BakeInputTests
                 gateGap = 3f, treePitch = 3f, treeOffset = 1.5f, sharedGapBelow = 8f })
         };
         var globals = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
-        { ["vegetation/species.json"] = File.ReadAllBytes(Path.Combine(RepositoryFixture.Root, "game", "data", "vegetation", "species.json")) });
+        { ["vegetation/species.json"] = File.ReadAllBytes(Path.Combine(RepositoryFixture.Root, "game", "data", "vegetation", "species.json")) }, "fixture");
         world.Features = ((WorldFeature[])[parcel, group, remoteParcel]).ToDictionary(feature => feature.Id);
         baseline = Hash(Context(world, planting: planting, global: globals), "vegetation");
         world.Features = ((WorldFeature[])[parcel, Green("fixture:group", 180, 190) with
@@ -178,7 +178,7 @@ public sealed class BakeInputTests
     public void InputReaderBorrowsTheFrozenLoadingVersion()
     {
         var raw = Encoding.UTF8.GetBytes("old-geo");
-        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["world/geo.json"] = raw });
+        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["world/geo.json"] = raw }, "fixture");
         var world = new FakeWorld { Boundary = new([]) };
         var map = new TestMapContext(Context(world).Map, world, inputs, "must-not-reread-source-files");
         var captured = BakeInputFingerprint.ReadInputs(map);
@@ -220,7 +220,7 @@ public sealed class BakeInputTests
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Default", "Default"), false, "fixture"),
             new("sky.json", "backdrop.json", []), []),
         GlobalInputs = global ?? BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
-            { ["vegetation/species.json"] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { species })) }),
+            { ["vegetation/species.json"] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { species })) }, "fixture"),
         SourceInputs = planting is null ? new Dictionary<string, ReadOnlyMemory<byte>>() :
             new Dictionary<string, ReadOnlyMemory<byte>> { ["vegetation/planting.json"] = Encoding.UTF8.GetBytes(planting) },
         PartLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())])
