@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
+using Campus.Kernel.Frame;
 using Campus.Kernel.Renderer;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
@@ -28,20 +29,28 @@ public static class CaptureSequence
         {
             var id = shot.Pose;
             var shotOptions = shot.Options;
+            var started = FrameClock.MonotonicMilliseconds;
+            var previousPhase = started;
+            LogPhase("start");
             cancellationToken.ThrowIfCancellationRequested();
             if (id == "FRONTIS") throw new NotSupportedException("FRONTIS capture requires the unconnected frontispiece presentation.");
             var pose = id == "T0"
                 ? shotOptions.Title ? context.Descriptor.Title?.T0 ?? throw new InvalidDataException("This map has no title pose.")
                     : throw new ArgumentException("T0 requires --title=1.")
                 : ReviewPoseResolver.Resolve(id, context);
+            var terrainPoint = new System.Numerics.Vector2(pose.Position.X, pose.Position.Z);
+            await Services.Get<ITerrainPreparation>().PrepareRegion(context, new(terrainPoint, terrainPoint), cancellationToken);
             if (id != "T0") validatePose?.Invoke(pose);
+            LogPhase("terrain-ready");
             using var cover = veil.Cover(VeilReason.Boot, 0);
             await cover.Covered.WaitAsync(cancellationToken);
+            LogPhase("cover-ready");
             if (AppBoot.FixedShots.Count > 0) CaptureWorldState.Start(shotOptions, context.Descriptor);
             rig.SetPose(pose);
             syncCamera();
             var appliedPose = rig.Pose;
             producers.PrepareCapture(appliedPose);
+            LogPhase("pose-applied");
             // The veil layer processes before this stage in a frame, so the cover set above is first drawn one frame later.
             var presentation = Services.Get<IVeilPresentation>();
             for (var frame = 0; frame < 2 && !presentation.IsCovered; frame++)
@@ -52,17 +61,30 @@ public static class CaptureSequence
             if (!presentation.IsCovered)
                 throw new InvalidOperationException("Capture warmup requires a drawn opaque veil.");
             var arrival = runtime.Arrive(appliedPose, rig.Mode);
+            LogPhase("arrival-requested");
             await CaptureBarrier.WaitForReadyAsync(host, producers, arrival, () => rig.Pose == appliedPose && contentReady(),
                 cancellationToken, includeCanvas: shotOptions.Capture.IncludeCanvas);
+            LogPhase("covered-ready");
             await cover.Reveal(0).WaitAsync(cancellationToken);
+            LogPhase("revealed");
             await CaptureBarrier.WaitForReadyAsync(host, producers, arrival, () => rig.Pose == appliedPose && contentReady() && veil.Opacity == 0,
                 cancellationToken, includeCanvas: shotOptions.Capture.IncludeCanvas);
+            LogPhase("visible-ready");
             cancellationToken.ThrowIfCancellationRequested();
             using var image = host.GetViewport().GetTexture().GetImage();
             if (image.IsEmpty()) throw new IOException("Screenshot viewport returned an empty image.");
+            LogPhase("readback-complete");
             var path = Path.Combine(destination, shot.Name + ".png");
             if (image.SavePng(path) != Error.Ok) throw new IOException("Screenshot could not be saved.");
+            LogPhase("png-written");
             GD.Print($"[WP-01][phase=capture] pose={id} {path}");
+
+            void LogPhase(string stage)
+            {
+                var now = FrameClock.MonotonicMilliseconds;
+                GD.Print(FormattableString.Invariant($"[WP-01][phase=capture-timing] shot={shot.Name} pose={id} stage={stage} monotonicMs={now:F1} shotMs={now - started:F1} phaseMs={now - previousPhase:F1}"));
+                previousPhase = now;
+            }
         }
     }
 }
