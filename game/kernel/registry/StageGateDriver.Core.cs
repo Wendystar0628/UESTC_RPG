@@ -7,6 +7,8 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Frame;
+using Campus.Kernel.Renderer;
+using Campus.Kernel.Stream;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 
@@ -109,8 +111,73 @@ public sealed partial class StageGateDriver
             throw new InvalidOperationException("The closing window must have captured mouse input.");
         var window = (nint)DisplayServer.WindowGetNativeHandle(DisplayServer.HandleType.WindowHandle);
         if (window == 0) throw new InvalidOperationException("Core lifecycle requires a native window handle.");
+        GD.Print("CORE_INSTANCE_PARAMETERS " + JsonSerializer.Serialize(CaptureInstanceParameters(stage)));
         _awaitingClose = true;
         GD.Print("CORE_READY_CLOSE " + window);
+    }
+
+    private static object CaptureInstanceParameters(Node stage)
+    {
+        // Godot ed1daf0bf: InstanceUniforms::materials_finish requests one fixed 16-slot block per
+        // instance with parameters, shared with global uniforms. This is declared demand, not allocator occupancy.
+        const int slotsPerBlock = 16;
+        var capacity = Math.Max(4096L,
+            ProjectSettings.GetSetting("rendering/limits/global_shader_variables/buffer_size").AsInt64());
+        var instances = new HashSet<Rid>();
+        var nodes = new HashSet<ulong>();
+        var spatialRids = 0;
+        var canvasRids = 0;
+        var spatialBlocks = 0;
+        var canvasBlocks = 0;
+        var streamed = PreparedTile.CaptureParameterInstances();
+        foreach (var instance in streamed.Instances) AddSpatial(instance);
+        Visit(stage.GetTree().Root);
+        var blocks = spatialBlocks + canvasBlocks;
+        var slots = (long)blocks * slotsPerBlock;
+        return new
+        {
+            Phase = "pre-close",
+            NativeActualSlots = (long?)null,
+            NativeActualStatus = "Unavailable: native allocator occupancy has no public API",
+            CapacitySlots = capacity,
+            SlotsPerParameterBlock = slotsPerBlock,
+            TrackedDeclaredParameterBlocks = blocks,
+            TrackedDeclaredParameterSlots = slots,
+            TrackedDeclaredDemandRatio = blocks > 0 ? (double?)slots / capacity : null,
+            Coverage = new
+            {
+                SpatialRids = spatialRids, CanvasRids = canvasRids,
+                SpatialParameterBlocks = spatialBlocks, CanvasParameterBlocks = canvasBlocks,
+                DetachedRetiringSpatialRids = streamed.Detached,
+                Sources = "Live PreparedTile owners (hidden/retiring/reflection); scene-tree geometry and CanvasItems (including instance pools/UI); RenderHost reflection; active/retiring warmup roots; RID-deduplicated",
+                Limits = "Current native parameter declarations only; global uniforms, invalid retained parameter blocks, allocator failures/fragmentation and earlier peaks are not counted. Ratio is tracked demand over shared capacity, not native utilization."
+            }
+        };
+
+        void Visit(Node node)
+        {
+            if (!GodotObject.IsInstanceValid(node) || !nodes.Add(node.GetInstanceId())) return;
+            if (node is GeometryInstance3D geometry) AddSpatial(geometry.GetInstance());
+            if (node is CanvasItem canvas && instances.Add(canvas.GetCanvasItem()))
+            {
+                canvasRids++;
+                var parameters = RenderingServer.CanvasItemGetInstanceShaderParameterList(canvas.GetCanvasItem());
+                if (parameters.Count > 0) canvasBlocks++;
+            }
+            if (node is RenderHost renderHost)
+                foreach (var instance in renderHost.CaptureReflectionInstances()) AddSpatial(instance);
+            if (node is MaterialWarmup warmup)
+                foreach (var root in warmup.CaptureParameterRoots()) Visit(root);
+            var children = node.GetChildren(includeInternal: true);
+            foreach (var child in children) Visit(child);
+        }
+        void AddSpatial(Rid instance)
+        {
+            if (!instance.IsValid || !instances.Add(instance)) return;
+            spatialRids++;
+            var parameters = RenderingServer.InstanceGeometryGetShaderParameterList(instance);
+            if (parameters.Count > 0) spatialBlocks++;
+        }
     }
 
     private static string CaptureCoreSections()

@@ -55,6 +55,10 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     public bool PipelineReady => _materials is not null && _entries.Values.All(entry => !entry.Pending &&
         entry.Draws.All(IsReady));
 
+    /// <summary>Raw reflection instances are not scene-tree nodes; main instances are scanned there.</summary>
+    public Rid[] CaptureReflectionInstances() => _entries.Values.SelectMany(entry => entry.Draws)
+        .Select(draw => draw.Proxy).Where(rid => rid.IsValid).ToArray();
+
     public override void _Ready()
     {
         _materials = Services.Get<IToonMaterialProvider>();

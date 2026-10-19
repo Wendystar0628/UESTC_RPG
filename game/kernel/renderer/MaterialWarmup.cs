@@ -45,6 +45,20 @@ public partial class MaterialWarmup : Node
     public string? Error { get; private set; }
     public bool SamplesReleased => _samples3D is null && _samples2D is null && _retiring.Count == 0;
 
+    /// <summary>Includes detached roots awaiting QueueFree, which a scene-tree census cannot reach.</summary>
+    public IReadOnlyList<Node> CaptureParameterRoots()
+    {
+        var roots = new List<Node>();
+        Add(_samples3D); Add(_samples2D);
+        foreach (var retired in _retiring) { Add(retired.Spatial); Add(retired.Canvas); }
+        return roots;
+
+        void Add(Node? node)
+        {
+            if (node is not null && GodotObject.IsInstanceValid(node)) roots.Add(node);
+        }
+    }
+
     /// <summary>Explicit composition for renderer fixtures; production uses the registered services.</summary>
     public void Configure(IToonMaterialProvider materials, IVeilState veil, IVeilPresentation presentation, Camera3D camera,
         IPaletteIndexResolver palettes)

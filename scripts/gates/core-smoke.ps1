@@ -1,4 +1,4 @@
-﻿# 核心冒烟：用正式主场景开窗口跑一轮存档、关闭、再读档恢复，供 G5 启动与退出和 G20 存档核心共用；结果只在同一次门禁调用内共享，G20 不重复 G5 的窗口对。
+﻿# 核心冒烟：正式场景完成存档、关闭与恢复，拒绝引擎错误/泄漏，报告实例参数需求与容量，供 G5 与 G20 核心共用。
 # 用法：由 scripts\gate.ps1 点引用（. scripts\gates\core-smoke.ps1）后调用 Invoke-UESTCMainlineSmoke 与 Invoke-UESTCSaveCore，不单独运行
 if (-not (Get-Variable UESTCCoreSmokeResults -Scope Script -ErrorAction SilentlyContinue)) {
     $script:UESTCCoreSmokeResults = @{}
@@ -49,6 +49,7 @@ function Invoke-UESTCMainlineSmoke {
     $null = [IO.Directory]::CreateDirectory($shots)
     $lease = $null
     try {
+        $godotFailurePattern = '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)|\bleaked\b|\bRIDs?\b[^\r\n]*\bleak\w*|\bleak\w*[^\r\n]*\bRIDs?\b'
         if (-not $BuildLease) { $lease = Enter-UESTCBuildLock $Locks }
         $engineArgs = @('--path',(Join-Path $rootPath 'game'),'--rendering-method','forward_plus',
             '--rendering-driver','d3d12','--resolution','1280x720','--fixed-fps','60','--')
@@ -58,8 +59,8 @@ function Invoke-UESTCMainlineSmoke {
         $close = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-close','--title=1',
             '--save=1',"--map=$Map",'--flow=0','--seed=1','--weather-seed=1')) $rootPath (Join-Path $work 'save-close.log') -Visible -TimeoutSeconds 600 -ObserveOutput $closeObserver
         $closeEnded = [Diagnostics.Stopwatch]::GetTimestamp()
-        if ($close.Output -match '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)') {
-            throw 'The production close process reported an engine/shader error.'
+        if ($close.Output -match $godotFailurePattern) {
+            throw 'The production close process reported an engine/shader error or resource leak.'
         }
         foreach ($marker in @('CORE_TITLE_READY','CORE_INPUT_READY','CORE_ROUNDTRIP_READY')) {
             if (-not $close.StdOut.Contains($marker)) { throw "The production close process missed $marker." }
@@ -80,8 +81,8 @@ function Invoke-UESTCMainlineSmoke {
         $resumeObserver = New-UESTCCoreCloseObserver $resumeObservation
         $resume = Invoke-UESTCProcess $Godot ($engineArgs + $captureArgs + @('--gate=save-resume','--title=0',
             '--slot=1','--save=off')) $rootPath (Join-Path $work 'save-resume.log') -Visible -TimeoutSeconds 600 -ObserveOutput $resumeObserver
-        if ($resume.Output -match '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)') {
-            throw 'The production resume process reported an engine/shader error.'
+        if ($resume.Output -match $godotFailurePattern) {
+            throw 'The production resume process reported an engine/shader error or resource leak.'
         }
         $loaded = [regex]::Match($resume.StdOut,'(?m)^CORE_GENERATION (\d+)\r?$')
         if (-not $loaded.Success -or [UInt64]$loaded.Groups[1].Value -ne [UInt64]$latest) {
@@ -95,10 +96,29 @@ function Invoke-UESTCMainlineSmoke {
         if (-not (Test-Path -LiteralPath $firstImage -PathType Leaf) -or -not (Test-Path -LiteralPath $secondImage -PathType Leaf)) {
             throw 'The production lifecycle did not capture both screenshots.'
         }
+        $warningRatio = (Get-Content -Raw -LiteralPath (Join-Path $rootPath 'budgets.json') | ConvertFrom-Json).instanceShaderParameters.warningRatio
+        $parameterUsage = [ordered]@{ WarningRatio=$warningRatio }
+        $parameterWarnings = @()
+        foreach ($sample in @(@{ Name='Close'; Process=$close }, @{ Name='Resume'; Process=$resume })) {
+            $parameterMarker = [regex]::Match($sample.Process.StdOut, '(?m)^CORE_INSTANCE_PARAMETERS[ \t]+(.+)\r?$')
+            if ($parameterMarker.Success) {
+                $usage = ConvertFrom-Json -InputObject $parameterMarker.Groups[1].Value
+                $parameterUsage[$sample.Name] = $usage
+                if ($null -ne $usage.TrackedDeclaredDemandRatio -and $usage.TrackedDeclaredDemandRatio -gt $warningRatio) {
+                    $message = "$($sample.Name): tracked instance-parameter demand $($usage.TrackedDeclaredParameterSlots)/$($usage.CapacitySlots) slots exceeds warning ratio $warningRatio; native actual remains unavailable."
+                    $parameterWarnings += $message
+                    Write-Warning $message -WarningAction Continue
+                }
+            } else {
+                $parameterUsage[$sample.Name] = [pscustomobject]@{ NativeActualSlots=$null; Status='Unavailable'; Coverage='CORE_INSTANCE_PARAMETERS snapshot missing' }
+            }
+        }
+        $parameterUsage['Warnings'] = $parameterWarnings
         $result = [pscustomobject]@{ Status='Passed';
             Scope='G5 startup/exit automatic assertions; full UI/transit mainline remains centralized'; CloseMilliseconds=$closeMs;
             Generation=[UInt64]$latest; PersistedFields='RuntimeMatched (CoreSnapshotsMatch spatial position tolerance; other fields exact)';
             Screenshot='Both captured for Opus visual review; no G7 pixel comparison or tolerance claim';
+            InstanceShaderParameters=[pscustomobject]$parameterUsage;
             Logs=$work; Screenshots=$shots }
     } catch {
         $result = [pscustomobject]@{ Status='Failed'; Scope='G5 startup/exit core'; Error=$_.Exception.Message; Logs=$work; Screenshots=$shots }

@@ -1,5 +1,8 @@
 {
   "version": 1,
+  "instanceShaderParameters": {
+    "warningRatio": 0.8
+  },
   "export": {
     "install": {
       "limitBytes": 966367641

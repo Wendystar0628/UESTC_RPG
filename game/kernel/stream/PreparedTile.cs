@@ -10,6 +10,9 @@ namespace Campus.Kernel.Stream;
 public sealed class PreparedTile : IDisposable
 {
     private static readonly StringName _shaderInstanceFadeT0 = InstanceShaderParameters.FadeT0;
+    // Diagnostic index of existing owners; release remains entirely with each PreparedTile.
+    private static readonly object _liveGate = new();
+    private static readonly HashSet<PreparedTile> _live = [];
 
     public sealed record Draw(Rid Base, Rid Mesh, Transform3D At, ToonRef Material,
         bool IgnoreOcclusionCulling, ShaderId? Shader, bool Reflect, ulong Format, bool Instanced, BakedPrimitive Primitive, bool Resident = false)
@@ -39,6 +42,26 @@ public sealed class PreparedTile : IDisposable
     public long Bytes { get; }
     private PreparedTile(TileBundle bundle) { Key = bundle.Key; Bytes = bundle.Stats.Bytes; }
 
+    /// <summary>Main-thread diagnostic snapshot, including hidden and retiring native instances.</summary>
+    public static (Rid[] Instances, int Detached) CaptureParameterInstances()
+    {
+        lock (_liveGate)
+        {
+            var instances = new List<Rid>();
+            var detached = 0;
+            foreach (var tile in _live)
+                for (var index = 0; index < tile._instances.Count; index++)
+                {
+                    instances.Add(tile._instances[index]);
+                    if (tile._mainDetached[index]) detached++;
+                    if (!tile._reflectionInstances[index].IsValid) continue;
+                    instances.Add(tile._reflectionInstances[index]);
+                    if (tile._reflectionDetached[index]) detached++;
+                }
+            return (instances.ToArray(), detached);
+        }
+    }
+
     public static PreparedTile Create(TileBundle bundle)
     {
         var prepared = new PreparedTile(bundle);
@@ -67,6 +90,7 @@ public sealed class PreparedTile : IDisposable
                 prepared._draws.Add(new(multi, mesh, Transform3D.Identity, item.Surface.Material,
                     item.Surface.IgnoreOcclusionCulling, item.Surface.Shader, item.Surface.Reflect, item.Surface.Format, true, item.Surface.Primitive, bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar));
             }
+            lock (_liveGate) _live.Add(prepared);
             return prepared;
         }
         catch { prepared.Dispose(); throw; }
@@ -268,6 +292,8 @@ public sealed class PreparedTile : IDisposable
             RenderingServer.FreeRid(storage.Rid); _storage.RemoveAt(index);
             return false;
         }
-        _disposed = true; _draws.Clear(); return true;
+        _disposed = true; _draws.Clear();
+        lock (_liveGate) _live.Remove(this);
+        return true;
     }
 }
