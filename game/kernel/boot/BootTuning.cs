@@ -10,8 +10,5 @@ public static class BootTuning
     public const float CameraNear = .05f;
     public const float CameraFar = 12000f;
     public const int WarmFrames = 30;
-    // Producer readiness owns loading; two unchanged draws and one final draw cover publication/readback.
-    public const int CaptureStableFrames = 2;
-    public const int CaptureSettleFrames = 1;
     public const double StalledSeconds = 60;
 }

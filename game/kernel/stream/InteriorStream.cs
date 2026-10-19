@@ -22,17 +22,6 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     public IEnumerable<PreparedTile> Prepared => _layers.OrderBy(pair => pair.Key.Detail, StringComparer.Ordinal)
         .Select(pair => pair.Value.Prepared).OfType<PreparedTile>();
     public bool DestinationReady => Error is null && _destination.All(key => Ready(_layers[key]));
-    public bool CaptureReady(float clock, float fadeSeconds)
-    {
-        if (Error is not null || _context is null) return false;
-        foreach (var key in _visible)
-        {
-            var layer = _layers[key];
-            if (!layer.Visible || !Ready(layer) ||
-                layer.FadeStart > 0 && TileVisibility.Elapsed(clock, layer.FadeStart) < fadeSeconds) return false;
-        }
-        return true;
-    }
     public void Load(IMapContext context, BuildContext? generation = null)
     {
         _context = context; Error = null; _atriumStoreys.Clear();
@@ -127,8 +116,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             var visible = _visible.Contains(layer.Key) && Ready(layer);
             if (layer.Visible == visible) continue;
             layer.Visible = visible;
-            layer.FadeStart = visible ? FrameClock.FadeSeconds : 0;
-            layer.Prepared.SetVisible(visible, layer.FadeStart);
+            layer.Prepared.SetVisible(visible, visible ? FrameClock.FadeSeconds : 0);
         }
         for (var i = _draining.Count - 1; i >= 0; i--)
         {
@@ -202,7 +190,6 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         public BakePriority Priority { get; } = priority;
         public FeatureId Building { get; } = building;
         public double IdleSeconds;
-        public float FadeStart;
         public VisualMountWork? Work;
         public Task<PreparedTile>? Preparing;
         public PreparedTile? Prepared;

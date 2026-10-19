@@ -20,8 +20,7 @@ public static class CaptureSequence
         var destination = options.Capture.Output ?? throw new ArgumentException("--out must be an absolute directory.");
         var context = Services.Get<IMapService>().Context ?? throw new InvalidOperationException("Capture requires a loaded map.");
         var rig = Services.Get<ICameraRig>();
-        var runtime = Services.Get<IMapRuntime>();
-        var veil = Services.Get<IVeilService>();
+        var stream = Services.Get<IMapStreamState>();
         Directory.CreateDirectory(destination);
         var shots = AppBoot.FixedShots.Count > 0 ? AppBoot.FixedShots
             : options.Capture.Shots.Select(id => new FixedShot(id, id, options)).ToArray();
@@ -42,34 +41,15 @@ public static class CaptureSequence
             await Services.Get<ITerrainPreparation>().PrepareRegion(context, new(terrainPoint, terrainPoint), cancellationToken);
             if (id != "T0") validatePose?.Invoke(pose);
             LogPhase("terrain-ready");
-            using var cover = veil.Cover(VeilReason.Boot, 0);
-            await cover.Covered.WaitAsync(cancellationToken);
-            LogPhase("cover-ready");
             if (AppBoot.FixedShots.Count > 0) CaptureWorldState.Start(shotOptions, context.Descriptor);
             rig.SetPose(pose);
             syncCamera();
             var appliedPose = rig.Pose;
             producers.PrepareCapture(appliedPose);
+            stream.Prefetch(appliedPose, rig.Mode);
             LogPhase("pose-applied");
-            // The veil layer processes before this stage in a frame, so the cover set above is first drawn one frame later.
-            var presentation = Services.Get<IVeilPresentation>();
-            for (var frame = 0; frame < 2 && !presentation.IsCovered; frame++)
-            {
-                await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-            if (!presentation.IsCovered)
-                throw new InvalidOperationException("Capture warmup requires a drawn opaque veil.");
-            var arrival = runtime.Arrive(appliedPose, rig.Mode);
-            LogPhase("arrival-requested");
-            await CaptureBarrier.WaitForReadyAsync(host, producers, arrival, () => rig.Pose == appliedPose && contentReady(),
-                cancellationToken, includeCanvas: shotOptions.Capture.IncludeCanvas);
-            LogPhase("covered-ready");
-            await cover.Reveal(0).WaitAsync(cancellationToken);
-            LogPhase("revealed");
-            await CaptureBarrier.WaitForReadyAsync(host, producers, arrival, () => rig.Pose == appliedPose && contentReady() && veil.Opacity == 0,
-                cancellationToken, includeCanvas: shotOptions.Capture.IncludeCanvas);
-            LogPhase("visible-ready");
+            await CaptureBarrier.WaitForReadyAsync(host, appliedPose, contentReady, cancellationToken);
+            LogPhase("coarse-ready");
             cancellationToken.ThrowIfCancellationRequested();
             using var image = host.GetViewport().GetTexture().GetImage();
             if (image.IsEmpty()) throw new IOException("Screenshot viewport returned an empty image.");

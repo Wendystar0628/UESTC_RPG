@@ -1,4 +1,4 @@
-﻿# 固定机位截图：一个 Godot 进程按 poses.txt 拍完所选机位，地图只加载一次，再拼一张缩略总览。
+﻿# 固定机位截图：一个 Godot 进程按机位表以 1280×720 粗就绪即拍，地图只加载一次，再拼一张缩略总览。
 # 用法：powershell -NoProfile -File fixed_shots.ps1 [-Only 名字,名字] [-Build] [-Poses 机位文件]
 #   -Build：按共享 Directory.Build.props 编译优化 Debug 并导入（代码改过、还没编译时用）
 #   -Poses：换一份机位表（格式同 poses.txt），临时加拍的机位放仓库外，不改 poses.txt
@@ -18,7 +18,7 @@ if ($Only.Count) {
     foreach ($name in $Only) { if ($name -notin $names) { throw "未知固定机位：$name" } }
     $names = @($names | Where-Object { $_ -in $Only })
 }
-$arguments = @('--path', "$repo\game", '--windowed', '--resolution', '1920x1080', '--rendering-driver', 'd3d12', '--fixed-fps', '60',
+$arguments = @('--path', "$repo\game", '--windowed', '--resolution', '1280x720', '--rendering-driver', 'd3d12', '--fixed-fps', '60',
     '--', "--shots-file=$poses", "--out=$out", '--anim=240', '--flow=0', '--mode=fly', '--ui=0', '--seed=1', '--weather-seed=1',
     '--quality=fine', '--map=qingshuihe', '--title=0', '--save=off', '--audio=off')
 if ($Only.Count) { $arguments += "--shots=$($names -join ',')" }
@@ -30,7 +30,7 @@ try {
         Invoke-UESTCProcess 'dotnet' @('build', "$repo\game\Campus.sln", '-c', 'Debug', '-v', 'q') $repo (Join-Path $out 'build.log') | Out-Null
         Invoke-UESTCProcess $godot @('--headless', '--path', "$repo\game", '--import') $repo (Join-Path $out 'import.log') -TimeoutSeconds 600 | Out-Null
     }
-    # 缓存失效时仍给首次烘焙留足时间；有缓存时按内容就绪抓取，不再先空跑 300 帧。
+    # 首次地图加载仍走正式就绪；逐机位只等 L2–L4 已挂载，不等近景与淡化。
     try { $r = Invoke-UESTCProcess $godot $arguments $repo (Join-Path $out 'capture.log') -AllowFailure -Visible -TimeoutSeconds 900; $code = $r.ExitCode }
     catch { $code = '超时或启动失败' }
     foreach ($name in $names) {

@@ -199,7 +199,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         await Initialize(BootPhase.BeforeReveal);
         _contentReadiness = ViewContentReadiness.Capture(this);
         Phase = "warm-final-view";
-        await CaptureBarrier.WaitForReadyAsync(this, _contentReadiness, arrival, () =>
+        await _contentReadiness.WaitForReadyAsync(this, arrival, () =>
         {
             CheckStartupActive();
             return true;

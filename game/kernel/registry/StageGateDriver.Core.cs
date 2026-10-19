@@ -7,7 +7,6 @@ using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Frame;
-using Campus.Kernel.Inspect;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 
@@ -81,11 +80,11 @@ public sealed partial class StageGateDriver
 
         if (world.Flow.Rate != 0) throw new InvalidOperationException("The core lifecycle lease did not pause the world.");
         var arrival = host.MapRuntime.Arrival ?? throw new InvalidOperationException("Core lifecycle has no map arrival.");
-        await CaptureBarrier.WaitForReadyAsync(stage, host.Readiness, arrival, () =>
+        await host.Readiness.WaitForReadyAsync(stage, arrival, () =>
         {
             host.CheckActive();
             return true;
-        }, host.Lifetime, includeCanvas: false);
+        }, host.Lifetime);
         var output = AppBoot.Options.Capture.Output ?? "";
         Directory.CreateDirectory(output);
         using (var image = stage.GetViewport().GetTexture().GetImage())

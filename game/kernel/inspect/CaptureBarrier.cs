@@ -3,63 +3,49 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
-using Campus.Kernel.Renderer;
 using Campus.Kernel.Stream;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
-/// <summary>Requires the current arrival, settled stream fades, world/weather and producer content.</summary>
+/// <summary>One drawn frame with the current pose's coarse outdoor content and applied world state.</summary>
 public static class CaptureBarrier
 {
-    public static async Task WaitForReadyAsync(Node host, ViewContentReadiness producers, IMapArrival arrival, Func<bool> contentReady,
-        CancellationToken cancellationToken = default, bool includeCanvas = true)
+    public static async Task WaitForReadyAsync(Node host, Pose pose, Func<bool> contentReady,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(host);
-        ArgumentNullException.ThrowIfNull(producers);
-        ArgumentNullException.ThrowIfNull(arrival);
         ArgumentNullException.ThrowIfNull(contentReady);
         var world = Services.Get<IWorldState>();
         var weather = Services.Get<IWeatherProcess>();
         var bake = Services.Get<IBakeService>();
-        var runtime = Services.Get<IMapRuntime>();
+        var mapStream = Services.Get<IMapStreamState>();
         var stream = Services.Get<IStreamVisualFrame>();
         var rig = Services.Get<ICameraRig>();
-        using var cancellation = cancellationToken.Register(arrival.Cancel);
-        var previous = PipelineCounts.Read(includeCanvas);
-        var stable = 0;
-        var settled = 0;
         var started = FrameClock.MonotonicMilliseconds;
         var lastProgress = started;
         var nextDiagnostic = started;
-        var wasReady = false;
-        var progress = (bake.Progress, arrival.Done.Status);
-        while (settled < BootTuning.CaptureSettleFrames)
+        var progress = bake.Progress;
+        while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
             await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             cancellationToken.ThrowIfCancellationRequested();
             if (!host.IsInsideTree()) throw new OperationCanceledException("Capture stage left the tree.");
-            if (arrival.Done.IsCompleted) await arrival.Done;
-            if (!ReferenceEquals(runtime.Arrival, arrival))
-                throw new OperationCanceledException("Capture arrival was replaced.");
-            var current = PipelineCounts.Read(includeCanvas);
+            if (rig.Pose != pose) throw new OperationCanceledException("Capture pose was replaced.");
+            if (mapStream.Error is { } error) throw new InvalidOperationException("Capture stream failed: " + error);
             var content = contentReady();
-            content &= arrival.Done.IsCompletedSuccessfully && producers.IsReady(rig.Pose);
             var scrubbing = world.Scrubbing;
             var transition = world.Transition;
             var weatherTransitioning = weather.Transitioning;
             var streamReady = stream.CaptureReady;
             var ready = content && streamReady && !scrubbing && transition == WorldTransition.None && !weatherTransitioning;
-            var pipelineChanged = current != previous;
+            if (ready) return;
             var now = FrameClock.MonotonicMilliseconds;
-            var nextProgress = (bake.Progress, arrival.Done.Status);
-            if (pipelineChanged || ready != wasReady || nextProgress != progress) lastProgress = now;
+            var nextProgress = bake.Progress;
+            if (nextProgress != progress) lastProgress = now;
             progress = nextProgress;
-            if (!ready || pipelineChanged) { stable = 0; settled = 0; }
-            else if (stable < BootTuning.CaptureStableFrames) stable++;
-            else settled++;
             if (now >= nextDiagnostic)
             {
                 GD.Print("[WP-01][phase=capture-readiness] " + Describe());
@@ -67,29 +53,10 @@ public static class CaptureBarrier
             }
             if (now - lastProgress > BootTuning.StalledSeconds * 1000)
                 throw new TimeoutException("Screenshot readiness stalled; " + Describe());
-            previous = current;
-            wasReady = ready;
-
             string Describe() =>
                 $"frame={Engine.GetProcessFrames()},waitMs={now - started:F1},noProgressMs={now - lastProgress:F1}," +
                 $"content={content},streamReady={streamReady},scrubbing={scrubbing},worldTransition={transition},weatherTransitioning={weatherTransitioning}," +
-                $"ready={ready},stable={stable}/{BootTuning.CaptureStableFrames},settled={settled}/{BootTuning.CaptureSettleFrames}," +
-                $"pipelineChanged={pipelineChanged},pipelineBefore={previous},pipelineNow={current},canvasIncluded={includeCanvas}," +
-                $"instance={world.Instance},worldHours={world.WorldHours:R}," +
-                $"contentProducers=[{producers.Describe(rig.Pose)}]; {DescribeProducers()}";
+                $"pose={pose},instance={world.Instance},worldHours={world.WorldHours:R}";
         }
-    }
-
-    private static string DescribeProducers()
-    {
-        try
-        {
-            var lifetime = Services.Get<IMapLifetime>();
-            var veil = Services.Get<IVeilState>();
-            var presentation = Services.Get<IVeilPresentation>();
-            var map = lifetime.DescribeReadiness();
-            return $"veil[opacity={veil.Opacity},reason={veil.Reason},covered={presentation.IsCovered}]; runtime[{map}]";
-        }
-        catch (Exception error) { return $"producerDiagnosticsUnavailable={error.GetBaseException().Message}"; }
     }
 }

@@ -92,15 +92,14 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public int MountedTiles => _groups.Values.Count(group => group.Mounted);
     public int VisibleTiles => _visibility.Drawn.Count;
     public bool CanActivateVisual => _retiringBundles.Count == 0 && _detachPending.Count == 0;
+    /// <summary>Only the current plan's L2 and coarser geometry; refinement and shader fades can continue.</summary>
     public bool CaptureReady
     {
         get
         {
-            if (Error is not null || _context is null || _catalog is null || !_selectionApplied || !PlanCurrent ||
-                !_visibility.CaptureReady(FrameClock.FadeSeconds) ||
-                !(_interiors?.CaptureReady(FrameClock.FadeSeconds, _settings.FadeSeconds) ?? false)) return false;
+            if (Error is not null || _context is null || _catalog is null || !_selectionApplied || !PlanCurrent) return false;
             foreach (var tile in _required)
-                if (!IsReady(tile)) return false;
+                if (tile.Level >= LodLevel.L2 && !IsReady(tile)) return false;
             return true;
         }
     }
