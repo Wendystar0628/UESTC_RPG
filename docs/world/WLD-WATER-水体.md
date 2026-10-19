@@ -2,11 +2,12 @@
 id: WLD-WATER
 title: 水体：动画式水面画法、反光带与倒影、涉水与泳区规则
 category: world
+parent: WLD-INDEX
 summary: 动画式水面画法、反光带与倒影、四季天气、涉水与开放泳区规则、水体系统规则
 keywords: [水体, 水面, 开放泳区, 波纹线, 主光反光带, 碎金带, 月光银带, 四芒星闪点, 泡沫线, 倒影, 平面反射, 伪深度色带, 雨点环, 灯的竖条倒影, refl_lamps]
 owners: [WP-24]
 contributors: [WP-07, WP-08, WP-16, WP-18, WP-21, WP-23, WP-26, WP-28, WP-30, WP-31a, WP-37, WP-42, WP-44, WP-45b, WP-47, WP-53]
-depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-DIORAMA, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS]
+depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, WLD-OUTSKIRTS-DIORAMA, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS]
 related: [MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-CENTER-EAST, WLD-VEGETATION, WLD-LIFE, SYS-MOTION, SYS-VIEW, SYS-WALK, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, WLD-TERRAIN, MAP-QSH-WATER]
 contracts: [refl_lamps, reflect_tex, reflect_vp, reflect_lake]
 data: ["game/data/maps/qingshuihe/map.json"]

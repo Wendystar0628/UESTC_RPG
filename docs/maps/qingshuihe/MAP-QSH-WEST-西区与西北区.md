@@ -2,12 +2,13 @@
 id: MAP-QSH-WEST
 title: 西区与西北区：六号科研楼、校训石、创新中心、经管楼、托幼园、四号/五号科研楼、湿地、西门桥头
 category: maps
+parent: MAP-QSH-INDEX
 summary: 西区与西北区各楼、石刻、湿地与西门桥头的外观与身份特征、设计增补、近景要求；四季昼夜、行走与声音在子文档
 keywords: [西区, 西北区, 六号科研楼, 基础与前沿研究院, 公式台阶, 2F室外连廊, 校训石, 创新中心, 经管楼, 三号科研实验楼, 宾诺咖啡, 立人托幼公园, 键盘立面, 四号科研楼, 扇形草坪, 深蓝玻璃盒入口, 五号科研楼, 电子科学技术研究院大楼, 微波暗室, 工程训练中心, 荟文楼, 综合楼, 核磁共振中心, 国防科技园石刻, 湿地公园, 湿地栈道, 西门桥头, 水杉路, 孤儿楼 6151 与 6154, world/west.json]
 owners: [WP-19]
 contributors: [WP-12, WP-13, WP-23, WP-24, WP-28]
-depends: [CORE-INDEX, ART-STYLE, ART-MODELING, ART-RENOVATION, ENG-ARCH, WLD-INTERIORS]
-related: [WLD-DIORAMA, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-NORTH, MAP-QSH-RENOVATION, MAP-QSH-LIBRARY, WLD-VEGETATION, WLD-WATER, WLD-LIFE, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, WLD-OUTSKIRTS]
+depends: [CORE-INDEX, ART-STYLE, ART-MODELING, WLD-RENOVATION, ENG-ARCH, WLD-INTERIORS]
+related: [WLD-OUTSKIRTS-DIORAMA, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-NORTH, MAP-QSH-RENOVATION, MAP-QSH-INTERIORS-LIBRARY, WLD-VEGETATION, WLD-WATER, WLD-LIFE, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, WLD-OUTSKIRTS]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/west.json"]
 gates: [G5, G7]
@@ -100,7 +101,7 @@ gates: [G5, G7]
 
 ## 11 本区身份特征、设计增补与近景要求
 
-口径见 MAP-QSH-ADDITIONS §8.1，形制以 §1–§10 写明的为准。创新中心、研究院大楼、经管楼、荟文楼、核磁共振中心、孤儿楼 6151 与 6154 按 ART-RENOVATION 翻新（MAP-QSH-RENOVATION §5、§8）。
+口径见 MAP-QSH-ADDITIONS §8.1，形制以 §1–§10 写明的为准。创新中心、研究院大楼、经管楼、荟文楼、核磁共振中心、孤儿楼 6151 与 6154 按 WLD-RENOVATION 翻新（MAP-QSH-RENOVATION §5、§8）。
 
 | 对象 | 必须认得出的特征 |
 | --- | --- |

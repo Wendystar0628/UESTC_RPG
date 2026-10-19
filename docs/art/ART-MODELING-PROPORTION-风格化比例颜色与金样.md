@@ -8,7 +8,7 @@ keywords: [风格化造型, 风格化比例, 身份特征, 比例表, 重复上�
 owners: [WP-09]
 contributors: [WP-10, WP-11, WP-12, WP-13, WP-14, WP-15, WP-23, WP-31c, WP-37, WP-51, WP-52]
 depends: [CORE-INDEX, ART-MODELING, ART-STYLE, ART-FIDELITY, SYS-TIME, WLD-INTERIORS]
-related: [WLD-VEGETATION, WLD-WATER, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-BUDGET, ENG-WP, ART-RENOVATION, ART-AMBIENCE, WLD-TERRAIN]
+related: [WLD-VEGETATION, WLD-WATER, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-BUDGET, PLAN-WP, WLD-RENOVATION, WLD-AMBIENCE, WLD-TERRAIN]
 contracts: [IPartDef]
 data: []
 gates: [G4, G5, G7]
@@ -38,8 +38,8 @@ gates: [G4, G5, G7]
 ## 1 先定身份，再放开
 
 - **身份特征**：每栋有名字的楼先列 3–5 项，从平面轮廓、层数、屋顶标志物、主入口、特色色或材质里选，误差 ±10%（底线 B1）。
-- **其余构件**允许 ±20–30% 的风格化调整；竖线笔直，不学 Fortnite 式的歪扭；层数不改，层高最多加 8%（翻新楼不加，ART-RENOVATION §1.2）。
-- 结构与细节的取舍、增删与登记按 INV-9（难看的现实元素的删减见 MAP-QSH-ADDITIONS §5）。老楼全部翻新（ART-RENOVATION）；日式日常元素按 ART-AMBIENCE。
+- **其余构件**允许 ±20–30% 的风格化调整；竖线笔直，不学 Fortnite 式的歪扭；层数不改，层高最多加 8%（翻新楼不加，WLD-RENOVATION §1.2）。
+- 结构与细节的取舍、增删与登记按 INV-9（难看的现实元素的删减见 MAP-QSH-ADDITIONS §5）。老楼全部翻新（WLD-RENOVATION）；日式日常元素按 WLD-AMBIENCE。
 
 ## 2 现代混凝土和石材楼的比例规则
 
@@ -66,7 +66,7 @@ gates: [G4, G5, G7]
 
 - **树冠**：轮廓曲直搭配，留出缺口；云团画法与法线见 WLD-VEGETATION §1.1、§1.2。
 - **不让树长得一模一样**：每种至少 4 个母模型（幼、成、老，对称与偏冠）；每株缩放范围见 `game/gen/vegetation/Planting.Placement.cs`、绕竖轴随机转、倾斜 ≤ 3°，随机量由稳定 ID 的带种子哈希算出（G4 禁用 `System.Random`）；世界坐标低频噪声给色相 ±4–8°、明度约 6% 的偏移，相邻的树颜色接近；留 5–10% 的离群个体（秋季偏绿、全黄、半落叶的几棵）。
-- **四季不换模型**（INV-8）：靠插片缩放、换枝条笔触、换季相色（SYS-TIME-LOOK §2），所以落叶树的母模型从一开始就带可信的枝序，叶量为 0 时剪影仍成立。
+- **四季不换模型**（INV-8）：靠插片缩放、换枝条笔触、换季相色（ART-COLORSCRIPT §2），所以落叶树的母模型从一开始就带可信的枝序，叶量为 0 时剪影仍成立。
 - **绿篱和灌木**：圆角盒或馒头形，倒角半径取高度的 20–30%，顶面比侧面亮一阶。
 - **草坪**：平涂加 5–15 m 的低频色斑，远处变浅、偏黄绿；近景草叶见 ART-FIDELITY-DETAIL §2。
 - **水面**：平面加深浅渐变，岸边硬边泡沫线（WLD-WATER）。
@@ -99,4 +99,4 @@ gates: [G4, G5, G7]
 5. **共同口号："走进剧场版动画的校园，清透、敦实、干净、有生活。"** 拿不准风格取舍时回到这句话。
 6. **审查**：
    - 自动查：颜色已登记、最小尺寸、开间重复、倒角、最低合格构件、面数；
-   - 人工查：与金样并排；默认状态下 3 秒内认出是哪栋楼；翻新楼另按 ART-RENOVATION §7。
+   - 人工查：与金样并排；默认状态下 3 秒内认出是哪栋楼；翻新楼另按 WLD-RENOVATION §7。

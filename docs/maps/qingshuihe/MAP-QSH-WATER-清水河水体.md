@@ -2,12 +2,13 @@
 id: MAP-QSH-WATER
 title: 清水河水体：西湖、东湖、河渠、池水与叠水喷泉
 category: maps
+parent: MAP-QSH-INDEX
 summary: 清水河各水体的具体水面：西湖与喷泉水柱、东湖、河渠、游泳池池水、叠水喷泉、截面水柱，开放泳区名单与倒影时段
 keywords: [西湖水下森林, 西湖喷泉水柱, 东湖荷区, 锦鲤, 冬季浅滩, 走马河, 红光右支渠, 磨底河, 河渠中线, 漂浮物, 游泳馆池水, 品学楼叠水喷泉, 截面水柱, 泳区名单, 主要倒影按时段]
 owners: [WP-24]
 contributors: [WP-08, WP-16, WP-18, WP-21, WP-23, WP-26, WP-28, WP-30, WP-31a, WP-37, WP-47, WP-53]
 depends: [CORE-INDEX, WLD-WATER, ART-STYLE, ART-SKYLIGHT]
-related: [MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-CENTER-EAST, MAP-QSH-TERRAIN, MAP-QSH-VEGETATION, WLD-DIORAMA, WLD-TERRAIN, SYS-MOTION, SYS-AUDIO, SYS-WALK]
+related: [MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-CENTER-EAST, MAP-QSH-TERRAIN, MAP-QSH-VEGETATION, WLD-OUTSKIRTS-DIORAMA, WLD-TERRAIN, SYS-MOTION, SYS-AUDIO, SYS-WALK]
 contracts: []
 data: []
 gates: [G7]
@@ -97,7 +98,7 @@ gates: [G7]
 ### 4.3 主楼水池与截面水柱
 
 - **主楼前圆形浅水池**（可选）：水面完全静止，不画波纹线；默认状态映着落日和主楼门廊，夜间映着主楼泛光，冬季也不结冰；静水，不发声。
-- **截面水柱的水色**（WLD-DIORAMA）：上层浅青绿 #7FB8B0，下层深青绿 #2F5C5E，分层处一条略亮的细线，侧面像玻璃，边缘一道白色高光竖线；其他时段由 WP-37（日相与季节调色板） 推导，夜间不低于暗部下限。河渠与截面线的每个交点一个水柱，交点由外围管线求出；河渠穿出校界的地方不画水柱，做格栅或节制闸。可选的分级色带默认不开，P0 看图决定。
+- **截面水柱的水色**（WLD-OUTSKIRTS-DIORAMA）：上层浅青绿 #7FB8B0，下层深青绿 #2F5C5E，分层处一条略亮的细线，侧面像玻璃，边缘一道白色高光竖线；其他时段由 WP-37（日相与季节调色板） 推导，夜间不低于暗部下限。河渠与截面线的每个交点一个水柱，交点由外围管线求出；河渠穿出校界的地方不画水柱，做格栅或节制闸。可选的分级色带默认不开，P0 看图决定。
 
 ## 5 开放泳区的名单与登记
 

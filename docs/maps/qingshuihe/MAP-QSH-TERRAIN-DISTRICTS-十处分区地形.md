@@ -8,7 +8,7 @@ keywords: [分区地形, 下沉时间广场, 落金沟, 湖岸丘链, 草阶看�
 owners: [WP-16, WP-18, WP-19, WP-20, WP-21]
 contributors: [WP-08, WP-13, WP-15, WP-23, WP-25]
 depends: [CORE-INDEX, MAP-QSH-TERRAIN, WLD-TERRAIN, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, SYS-WALK]
-related: [MAP-QSH-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-OUTSKIRTS, WLD-VEGETATION, UI-NAV]
+related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-OUTSKIRTS, WLD-VEGETATION, UI-NAV]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G7, G15]

@@ -17,7 +17,7 @@ gates: [G7]
 # MAP-QSH-CENTER-EAST-SEASONS · 中部与东区四季昼夜与天气：月出与光、夜间角色、四季表、避雨处与积水点
 
 > **范围**：本文规定中部与东区的光（傍晚月出、清晨、白天、夜间）、四季与昼夜清单（夜间角色、默认的秋格；其余季节、球场积雪主线之后）、天气要点（避雨处与雨帘、积水点、雨夜与雷雨、雾里读形、雨天的生活痕迹）。
-> **不在本文**：各楼的外观与身份特征（MAP-QSH-CENTER-EAST）；行走、点位与声音（MAP-QSH-CENTER-EAST-WALK）；灯光时刻表（SYS-TIME-LOOK §3）；作用代号（MAP-QSH-ADDITIONS §2）；雨帘与积水的做法（MAP-QSH-ADDITIONS-ATMOSPHERE §4、§5，SYS-WEATHER）；植被与季相（WLD-VEGETATION）。
+> **不在本文**：各楼的外观与身份特征（MAP-QSH-CENTER-EAST）；行走、点位与声音（MAP-QSH-CENTER-EAST-WALK）；灯光时刻表（ART-COLORSCRIPT §3）；作用代号（MAP-QSH-ADDITIONS §2）；雨帘与积水的做法（MAP-QSH-ADDITIONS-ATMOSPHERE §4、§5，SYS-WEATHER）；植被与季相（WLD-VEGETATION）。
 > **查阅**：先读 §0；月出与光看 §1；四季昼夜看 §2；天气看 §3
 
 ## 0 结论
@@ -28,7 +28,7 @@ gates: [G7]
 
 ### 0.1 接入要点
 
-- **WP-39（夜景灯光与时刻表） 排灯时**：教学楼窗灯、球场高杆灯、训练馆采光带按 SYS-TIME-LOOK §3；品学楼那间阶梯教室夜里固定亮着（§2 表）
+- **WP-39（夜景灯光与时刻表） 排灯时**：教学楼窗灯、球场高杆灯、训练馆采光带按 ART-COLORSCRIPT §3；品学楼那间阶梯教室夜里固定亮着（§2 表）
 - **WP-25（动物与生活痕迹） 放生活痕迹时**：白猫在科 C 楼台阶，校车在职工班车停车点，单车聚在品学楼一带的非机动车停放区（MAP-QSH-CENTER-EAST §1、MAP-QSH-CENTER-EAST-SEASONS §2）
 
 ## 1 本区的光（主线之后）

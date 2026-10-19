@@ -2,11 +2,12 @@
 id: MAP-QSH-INTERIORS
 title: 其余开放楼室内与开放的高处
 category: maps
+parent: MAP-QSH-INDEX
 summary: 清水河其余 13 处开放楼的开放范围、封口与观景时刻总表，以及 3 处开放的屋顶与高处
 keywords: [其余开放楼, 开放楼总表, 开放范围要点, 封口与限制, 观景时刻, 学知苑 4 人间, 钟楼楼梯, 钟室, 灯笼观景环, 主楼屋顶空廊, 电梯关门换位, 开放的屋顶与高处, 屋顶危险, interiors.json]
 owners: [WP-31a, WP-31b, WP-31c]
 contributors: [WP-17, WP-25, WP-36, WP-39, WP-51, WP-52, WP-53]
-depends: [CORE-INDEX, MAP-QSH-LIBRARY, WLD-INTERIORS, SYS-WALK]
+depends: [CORE-INDEX, MAP-QSH-INTERIORS-LIBRARY, WLD-INTERIORS, SYS-WALK]
 related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, MAP-QSH-CORE, SYS-ATLAS, SYS-AUDIO, UI-NAV]
 contracts: []
 data: ["game/data/maps/qingshuihe/interiors.json"]
@@ -16,7 +17,7 @@ gates: []
 # MAP-QSH-INTERIORS · 其余开放楼室内与开放的高处
 
 > **范围**：本文规定清水河其余 13 处开放楼（南区 4 栋、西区与中东区 4 栋、北区 5 栋）的设计要点：开放范围、封口与限制、主空间与观景时刻；以及 3 处开放的屋顶与高处的上法与挡路。
-> **不在本文**：图书馆与博物馆的室内（MAP-QSH-LIBRARY）；开放原则、门的区分、加载、楼梯与碰撞、生活痕迹规则、新开一栋楼的做法（WLD-INTERIORS）；各楼外观与门口表现（各区文档）；开放清单的楼层、入口、封口数据（`interiors.json`）；点位位置（`waypoints.json`）；行走规则（SYS-WALK）。
+> **不在本文**：图书馆与博物馆的室内（MAP-QSH-INTERIORS-LIBRARY）；开放原则、门的区分、加载、楼梯与碰撞、生活痕迹规则、新开一栋楼的做法（WLD-INTERIORS）；各楼外观与门口表现（各区文档）；开放清单的楼层、入口、封口数据（`interiors.json`）；点位位置（`waypoints.json`）；行走规则（SYS-WALK）。
 > **查阅**：先读 §0；南区看 §1，西区与中东区看 §2，北区看 §3，开放的屋顶与高处看 §4
 
 ## 0 结论
@@ -27,6 +28,8 @@ gates: []
 4. **北区 5 栋**：学知苑 1 栋、银杏苑、学生活动中心与成电会堂、商业街、朝阳餐厅（§3）。
 5. **高处只有 3 处**：宣邦楼钟楼、主楼屋顶空廊、图书馆二三楼露台，只能经开放室内的楼梯或电梯到达，其余屋顶门锁着；"关门换位"电梯只用于主楼这一部（§4）。
 
+
+**子文档**：MAP-QSH-INTERIORS-LIBRARY 图书馆与博物馆室内，做这两栋楼的室内时读。
 ### 0.1 接入要点
 
 - **做某栋开放楼的室内（WP-31a（南区精选室内）、31b、31c）**：开放范围、封口、主空间与观景时刻照本文该楼一行；门、加载、楼梯与碰撞、生活痕迹按 WLD-INTERIORS；增删开放楼先改 `interiors.json`，新开一栋按 WLD-INTERIORS-ACCESS §4

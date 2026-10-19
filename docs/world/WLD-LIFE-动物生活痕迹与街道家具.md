@@ -2,12 +2,13 @@
 id: WLD-LIFE
 title: 动物、生活痕迹与街道家具
 category: world
+parent: WLD-INDEX
 summary: 动物、生活痕迹、停着的车与街道家具的目录：共同底线，动物痕迹与车家具分子文档
 keywords: [动物与生活痕迹总则, 艺术化处理, 世界里不画人]
 owners: [WP-25, WP-13]
 contributors: [WP-12, WP-16, WP-20, WP-26, WP-39, WP-42, WP-43, WP-44, WP-48a, WP-48c, WP-49b, WP-52, WP-53, WP-55]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ENG-ARCH, SYS-TIME, SYS-WALK, SYS-WEATHER]
-related: [MAP-QSH-CORE, MAP-QSH-LIBRARY, MAP-QSH-SOUTH, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, WLD-VEGETATION, WLD-WATER, SYS-MOTION, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-BUDGET, ENG-WP, ENG-PERF, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, WLD-LIFE-FAUNA, WLD-LIFE-STREET]
+related: [MAP-QSH-CORE, MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-SOUTH, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, WLD-VEGETATION, WLD-WATER, SYS-MOTION, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-BUDGET, PLAN-WP, ENG-PERF, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, WLD-LIFE-FAUNA, WLD-LIFE-STREET]
 contracts: []
 data: []
 gates: []
@@ -16,7 +17,7 @@ gates: []
 # WLD-LIFE · 动物、生活痕迹与街道家具
 
 > **范围**：本文规定全校动物、室外生活痕迹、停着的车和街道家具共同遵守的底线与艺术化处理，并说明分哪两块、各自什么时候读。
-> **不在本文**：动物与布料的动作节奏（SYS-MOTION）；图书馆与博物馆室内的道具（MAP-QSH-LIBRARY）；其余开放室内的家具与痕迹（WLD-INTERIORS）；路灯亮度曲线（SYS-TIME-LOOK §3）；导览亭与导览桩的外观与放置（SYS-ATLAS-TRAVEL §2）；发声（SYS-AUDIO）。
+> **不在本文**：动物与布料的动作节奏（SYS-MOTION）；图书馆与博物馆室内的道具（MAP-QSH-INTERIORS-LIBRARY）；其余开放室内的家具与痕迹（WLD-INTERIORS）；路灯亮度曲线（ART-COLORSCRIPT §3）；导览亭与导览桩的外观与放置（SYS-ATLAS-TRAVEL §2）；发声（SYS-AUDIO）。
 > **查阅**：先读 §0；动物、生活痕迹、显隐看 WLD-LIFE-FAUNA；停着的车、街道家具、碰撞看 WLD-LIFE-STREET
 
 ## 0 结论

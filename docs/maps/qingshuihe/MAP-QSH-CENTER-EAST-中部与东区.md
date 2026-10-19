@@ -2,12 +2,13 @@
 id: MAP-QSH-CENTER-EAST
 title: 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 category: maps
+parent: MAP-QSH-INDEX
 summary: 中部科研区与东区各建筑、雕像、球场的外观与身份特征、本区设计增补、近景要求；四季昼夜、行走与声音在子文档
 keywords: [中部科研区, 东区, 基础实验大楼, 一号科研实验楼, 科研楼B区, 科研楼C区, 麦克斯韦像, 方程石, 林为干院士像, 科研楼碑, 银杏大道跨河小桥, 品学楼, 第一教学楼, 书法横梁门框, 架空通道, 叠水喷泉石台, 文科楼群, 友谊树, 综合训练馆, 筒拱, 网球场树墙, 绿色房间, 球场标线, 球场围网, 高杆灯, 田径场, 器材室, 室外游泳池组团, 东区月出, world/center-east.json]
 owners: [WP-21]
 contributors: [WP-13, WP-23, WP-24, WP-28]
-depends: [CORE-INDEX, ART-STYLE, WLD-WATER, ART-FIDELITY, ART-MODELING, ART-RENOVATION, MAP-QSH-ADDITIONS, ENG-ARCH]
-related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-RENOVATION, MAP-QSH-LIBRARY, ART-AMBIENCE, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, SYS-MAPS]
+depends: [CORE-INDEX, ART-STYLE, WLD-WATER, ART-FIDELITY, ART-MODELING, WLD-RENOVATION, MAP-QSH-ADDITIONS, ENG-ARCH]
+related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-RENOVATION, MAP-QSH-INTERIORS-LIBRARY, WLD-AMBIENCE, WLD-VEGETATION, WLD-LIFE, ENG-GATES, PLAN-WP, SYS-MAPS]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/center-east.json"]
 gates: [G5, G7, G10]
@@ -16,13 +17,13 @@ gates: [G5, G7, G10]
 # MAP-QSH-CENTER-EAST · 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 
 > **范围**：本文规定中部科研区与东区（科研楼群、雕像与石刻、品学楼、文科楼群、综合训练馆、球场、田径场、室外游泳池组团、东缘河岸）的建筑外观与身份特征、本区设计增补、近景要求，并列出本区的子文档。
-> **不在本文**：四季昼夜与天气（MAP-QSH-CENTER-EAST-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-CENTER-EAST-WALK）；楼的实体 ID、位置、层数（以 `game/data/maps/qingshuihe/world/center-east.json` 为准）；品学楼与综合训练馆的室内（MAP-QSH-INTERIORS §2、WLD-INTERIORS）；植被与季相（WLD-VEGETATION、SYS-TIME-LOOK §2）；水面（WLD-WATER）；校车、单车、白猫（WLD-LIFE）；磨底河外的外围（WLD-OUTSKIRTS）；锚点位置（SYS-ATLAS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §6、§8、§10）。
+> **不在本文**：四季昼夜与天气（MAP-QSH-CENTER-EAST-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-CENTER-EAST-WALK）；楼的实体 ID、位置、层数（以 `game/data/maps/qingshuihe/world/center-east.json` 为准）；品学楼与综合训练馆的室内（MAP-QSH-INTERIORS §2、WLD-INTERIORS）；植被与季相（WLD-VEGETATION、ART-COLORSCRIPT §2）；水面（WLD-WATER）；校车、单车、白猫（WLD-LIFE）；磨底河外的外围（WLD-OUTSKIRTS）；锚点位置（SYS-ATLAS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §6、§8、§10）。
 > **查阅**：先读 §0；科研区与雕像看 §1；品学楼看 §2；文科楼看 §3；训练馆与球场看 §4；东缘与游泳池组团看 §5；身份特征与近景要求看 §6；待验证看 §7；光、四季昼夜与天气看 MAP-QSH-CENTER-EAST-SEASONS；行走、开放入口与声音看 MAP-QSH-CENTER-EAST-WALK
 
 ## 0 结论
 
 1. **身份特征**：品学楼的书法横梁门框与门前叠水喷泉；文科楼十五六层的塔楼与圆角退台；训练馆银白筒拱；网球场三片一组的树墙"绿色房间"；麦克斯韦像旁的方程石（§1.3、§2.2、§3.2、§4.1–§4.2）。
-2. **层数与翻新**：基础实验大楼和科研楼 C 区按 5 层；品学楼 C 区外观升到约 19 m，在记录里改层数；早期建成的楼和球场、围网、灯杆按 ART-RENOVATION 翻新，守 D-174（ART-FIDELITY-DETAIL §1.5），品学楼、综合训练馆有身份特征例外，其余按预设，见 MAP-QSH-RENOVATION。
+2. **层数与翻新**：基础实验大楼和科研楼 C 区按 5 层；品学楼 C 区外观升到约 19 m，在记录里改层数；早期建成的楼和球场、围网、灯杆按 WLD-RENOVATION 翻新，守 D-174（ART-FIDELITY-DETAIL §1.5），品学楼、综合训练馆有身份特征例外，其余按预设，见 MAP-QSH-RENOVATION。
 3. **文科楼**：画成"建成、正在搬入"，不开放；全校不画施工网架（§3.3）。
 4. **开放入口**：品学楼 A 区大厅、A 区侧门、C 区大厅和训练馆北附楼门厅做门口表现，室内归 WP-31b（MAP-QSH-INTERIORS §2）。
 5. **光**：傍晚东区背对落日、迎着方位 62° 升起的满月，V8 和 P14 里球场、筒拱和月亮同框；19:00–22:00 球场高杆灯是东区夜里的主光源（§4.4、MAP-QSH-CENTER-EAST-SEASONS §1）。
@@ -43,7 +44,7 @@ gates: [G5, G7, G10]
 中部科研区在走马河两岸。
 
 - **1.1 一号科研实验楼**：就是科 B 加科 C。信通学院在科研楼 B 区，C 区大厅也归信通使用；楼里有 6 层的部分（科研楼 B 区 5 层、东段局部 6 层）。外观按科研楼家族处理：浅暖灰石材，加成组的窗或玻璃基座。它和基础实验大楼都是早期建成的楼，翻新按 MAP-QSH-RENOVATION 的预设。
-- **1.2 基础实验大楼、科研楼 B/C 区**：外观与翻新同 §1.1。基础实验大楼就是科 A（原一号科研楼），楼型是"コ"字加东侧一个透镜形的弧厅，门厅朝东，正对跨走马河的小桥（待验证，§7）；屋顶加一道高围网和一座塔屋水箱，与品学楼 C 区同一做法（ART-AMBIENCE §2）。基础实验大楼和科研楼 C 区按 5 层。都不开放：门关着，门玻璃里是门厅卡，窗里是窗卡 `W-LAB : W-OFF` = 7 : 3。科研楼 C 区和研究院大楼一带有一只白猫（WP-25（动物与生活痕迹））。
+- **1.2 基础实验大楼、科研楼 B/C 区**：外观与翻新同 §1.1。基础实验大楼就是科 A（原一号科研楼），楼型是"コ"字加东侧一个透镜形的弧厅，门厅朝东，正对跨走马河的小桥（待验证，§7）；屋顶加一道高围网和一座塔屋水箱，与品学楼 C 区同一做法（WLD-AMBIENCE §2）。基础实验大楼和科研楼 C 区按 5 层。都不开放：门关着，门玻璃里是门厅卡，窗里是窗卡 `W-LAB : W-OFF` = 7 : 3。科研楼 C 区和研究院大楼一带有一只白猫（WP-25（动物与生活痕迹））。
 - **1.3 麦克斯韦像**：2015 年落成，立在科研楼前草坪上。青铜色全身立像：络腮胡，长礼服，手握书卷；浅灰花岗岩底座刻"电子工程学院"；旁边一块圆浑的景石上刻着麦克斯韦方程组。数据把材质标成石材，不用，按青铜画。雕像和方程石是 R5 的一个大拍；冬季肩头、书卷和方程石顶各压一线雪，方程组仍读得出。
 - **1.4 林为干院士像**：青铜胸像，人物穿西装、面带微笑，深色基座，在科 C 楼前的大树下。
 - **1.5 科研楼碑**：校内石刻的统一做法：粗凿白石，墨绿行书"科研楼"，斜立在路口。
@@ -85,7 +86,7 @@ gates: [G5, G7, G10]
 
 ## 6 本区身份特征、设计增补与近景要求
 
-口径见 MAP-QSH-ADDITIONS §8.1。品学楼、一号科研实验楼、基础实验大楼、综合训练馆、器材室、游泳池组团的两栋房和球场、围网、灯杆按 ART-RENOVATION 的翻新预设翻新（MAP-QSH-RENOVATION）。
+口径见 MAP-QSH-ADDITIONS §8.1。品学楼、一号科研实验楼、基础实验大楼、综合训练馆、器材室、游泳池组团的两栋房和球场、围网、灯杆按 WLD-RENOVATION 的翻新预设翻新（MAP-QSH-RENOVATION）。
 
 | 对象 | 必须认得出的特征 |
 | --- | --- |

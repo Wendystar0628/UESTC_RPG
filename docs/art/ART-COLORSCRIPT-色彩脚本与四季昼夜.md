@@ -1,8 +1,8 @@
 ---
-id: SYS-TIME-LOOK
+id: ART-COLORSCRIPT
 title: 色彩脚本、四季内容与灯光时刻表
-category: systems
-parent: SYS-TIME
+category: art
+parent: ART-INDEX
 summary: 色彩脚本的组织与情绪、四季修正与英雄帧、四季内容与阈值生长、灯光与生活痕迹的时刻表设计意图
 keywords: [色彩脚本, 关键帧, 英雄帧, 四季内容, 阈值生长, 四季修正, 难看时段, 灯光时刻表, 有效太阳高度, 初灯组, 生活痕迹]
 owners: [WP-37, WP-38, WP-39]
@@ -14,7 +14,7 @@ data: ["game/data/maps/<地图>/lighting-schedule.json", "game/style/palette/key
 gates: [G7]
 ---
 
-# SYS-TIME-LOOK · 色彩脚本、四季内容与灯光时刻表
+# ART-COLORSCRIPT · 色彩脚本、四季内容与灯光时刻表
 
 > **范围**：本文规定色彩脚本的组织方式与情绪取向、四季修正与专属覆盖、难看时段的改造、英雄帧、四季内容与季节变化的原则、灯光与生活痕迹的时刻表设计意图。
 > **不在本文**：世界状态、时间规则与美术日月（SYS-TIME）；过渡的编排（SYS-MOTION §3）；天空、主光、阴影、雾的观感取值（ART-SKYLIGHT）；天气的画面（SYS-WEATHER）；季节氛围粒子与风量（SYS-MOTION-ENV §6）；植物规则（WLD-VEGETATION）；外围农田（WLD-OUTSKIRTS）。
@@ -130,7 +130,7 @@ gates: [G7]
 - **荷花**四种状态：小荷钱、满塘、残荷、枯梗。
 - **季节氛围粒子**：春樱瓣、秋落叶、冬雪团、夏夜萤火虫的节奏和出没见 SYS-MOTION-ENV §2.1、§6。
 - **风量**随季节、昼夜、天气变化，系数见 SYS-MOTION-ENV §6.4。
-- **雪山**可见度和雪线是季节参数，晴天有下限；夜里画成月光下的银灰（WLD-DIORAMA §6）。
+- **雪山**可见度和雪线是季节参数，晴天有下限；夜里画成月光下的银灰（WLD-OUTSKIRTS-DIORAMA §6）。
 
 ## 3 灯光与生活痕迹的时刻表
 

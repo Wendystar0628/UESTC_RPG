@@ -1,37 +1,38 @@
 ---
-id: ENG-WP
+id: PLAN-WP
 title: 工作包派工单：56 个工作包，可并行 55 个
-category: engineering
-summary: 56 个工作包的划分、阶段与主线闸口，契约、版本、插件、开放室内清单与预算核账的工程维护事项；包表与子包拆法在 ENG-WP-LIST
+category: plan
+parent: PLAN-INDEX
+summary: 56 个工作包的划分、阶段与主线闸口，契约、版本、插件、开放室内清单与预算核账的工程维护事项；包表与子包拆法在 PLAN-WP-LIST
 keywords: [工作包, 派工单, 派工, 依赖, 主线版, 主线可见结果, 后置细节, 阶段与闸口, 主线闸口, 阶段名 P0–P3, 工程维护, 开放室内清单审批, 插件清单, ownership.json, third_party.json, 目标框架]
 owners: [WP-00]
 contributors: []
 depends: [CORE-INDEX, ENG-ARCH, ENG-BUDGET]
-related: [WF-ROLE, WF-MODEL, WF-STATUS, ENG-GATES, ENG-ROADMAP, OPS-RELEASE, TOOL-PREVIEW]
+related: [WF-ROLE, WF-MODEL, WF-STATUS, ENG-GATES, ENG-ROADMAP, ENG-RELEASE, ENG-PREVIEW]
 contracts: []
 data: ["ownership.json", "third_party.json"]
 gates: [G1, G3, G5]
 ---
-# ENG-WP · 工作包派工单：56 个工作包，可并行 55 个
+# PLAN-WP · 工作包派工单：56 个工作包，可并行 55 个
 
-> **范围**：本文规定工作包的划分原则（WP-00（契约、桩与拆除） 至 WP-55（共享单车运行与取还））、阶段与主线闸口，以及契约、版本、插件、开放室内清单与预算核账这些工程维护事项；每包一行的包表、插入项、候选包、子包拆法在 ENG-WP-LIST。
+> **范围**：本文规定工作包的划分原则（WP-00（契约、桩与拆除） 至 WP-55（共享单车运行与取还））、阶段与主线闸口，以及契约、版本、插件、开放室内清单与预算核账这些工程维护事项；每包一行的包表、插入项、候选包、子包拆法在 PLAN-WP-LIST。
 > **不在本文**：独占目录以 `ownership.json` 为准；文档的主责与贡献以各文档文件头的 `owners`、`contributors` 为准；施工状态见 WF-STATUS 与 `.collab/status/`；份额见 ENG-BUDGET §3；契约见 `game/contracts/` 与 ENG-ARCH §3；门禁见 ENG-GATES；派工简报模板见 WF-MODEL。
-> **查阅**：先读 §0；阶段与主线闸口看 §1；各包一行、插入项、候选包与子包拆法看 ENG-WP-LIST；工程维护事项看 §2
-> **读者**：派工的一方读全文；子代理只读本包在 ENG-WP-LIST §1 的那一行和派工简报。
+> **查阅**：先读 §0；阶段与主线闸口看 §1；各包一行、插入项、候选包与子包拆法看 PLAN-WP-LIST；工程维护事项看 §2
+> **读者**：派工的一方读全文；子代理只读本包在 PLAN-WP-LIST §1 的那一行和派工简报。
 
 ## 0 结论
 
-子文档：**ENG-WP-LIST 工作包一览与子包拆法**，放每包一行的包表（规格文档、依赖、归属侧、主线版）、插入项、候选包和子包拆法；开工时看自己那一行、拆子包时读它。
+子文档：**PLAN-WP-LIST 工作包一览与子包拆法**，放每包一行的包表（规格文档、依赖、归属侧、主线版）、插入项、候选包和子包拆法；开工时看自己那一行、拆子包时读它。
 
-1. 共 56 个包（WP-00 至 WP-55）；每包一行：规格文档、依赖、归属侧、主线版交什么。独占目录看 `ownership.json`，状态看 WF-STATUS；大包可再拆，子包共用原包的目录和程序集（ENG-WP-LIST §2）。
-2. 主线版先行：闸口之前每包按 ENG-WP-LIST §1 的"主线版"列交付，后置细节留到闸口之后；闸口以主线冒烟（G5）通过为准（§1，WF-RULE §8）。
+1. 共 56 个包（WP-00 至 WP-55）；每包一行：规格文档、依赖、归属侧、主线版交什么。独占目录看 `ownership.json`，状态看 WF-STATUS；大包可再拆，子包共用原包的目录和程序集（PLAN-WP-LIST §2）。
+2. 主线版先行：闸口之前每包按 PLAN-WP-LIST §1 的"主线版"列交付，后置细节留到闸口之后；闸口以主线冒烟（G5）通过为准（§1，WF-RULE §8）。
 3. 建模完成度是主线（D-183）：派工先做建筑、部件、分区、植被、街道家具、箱庭与室内包，再做游泳、生物、角色本体等系统新功能，不等 WP-02（格子分级、烘焙与流式加载）、按桩开工。
 4. 契约分批冻结、共享文件、版本与插件、开放室内清单和预算核账由主会话与 Codex 主线负责（§2）。
 
 ### 0.1 接入要点
 
-- **主线闸口之前**：只交 ENG-WP-LIST §1 本包"主线版"列写的东西，细节留到闸口之后（ENG-WP-LIST §1）
-- **闸口之后排细节**：按施工队列里本包的行做（ENG-WP-LIST §1.2）；ENG-WP-LIST §1.3 的候选范围在定下归属与编号之前不开工
+- **主线闸口之前**：只交 PLAN-WP-LIST §1 本包"主线版"列写的东西，细节留到闸口之后（PLAN-WP-LIST §1）
+- **闸口之后排细节**：按施工队列里本包的行做（PLAN-WP-LIST §1.2）；PLAN-WP-LIST §1.3 的候选范围在定下归属与编号之前不开工
 - **要增删开放室内、改 `map.json` 的字段**：经回报提交，由主会话审批（§2 第 4 条）
 - **要加插件**：只收 MIT、ISC、Apache、BSD、OFL，由 Codex 主线登记进 `third_party.json`（§2 第 3 条）
 
@@ -39,7 +40,7 @@ gates: [G1, G3, G5]
 
 | 阶段 | 内容 | 闸口 |
 | --- | --- | --- |
-| 主线闸口 | 主线打通（CORE-SCOPE §3）：各包主线版全部接通；从扉页、开始页、新游戏或继续，到飞行与行走、切换时间季节天气、小地图与传送、存档退出再继续，完整走一遍；地形、道路、水体、楼宇体量成形，主要地标认得出；默认状态风格方向对、无明显卡顿 | 主线冒烟（G5）通过；随后第一次集中测试 |
+| 主线闸口 | 主线打通（PRD-SCOPE §3）：各包主线版全部接通；从扉页、开始页、新游戏或继续，到飞行与行走、切换时间季节天气、小地图与传送、存档退出再继续，完整走一遍；地形、道路、水体、楼宇体量成形，主要地标认得出；默认状态风格方向对、无明显卡顿 | 主线冒烟（G5）通过；随后第一次集中测试 |
 | 闸口之后 | 各区包按预设同时做细节，不设先后评审的串行门；各区的四季昼夜与行走附属文档主线之后；精选室内按 I1、I2、I3 顺序 | 风格负责人看图横向比对 |
 | 收尾 | WP-26（动态与偶发事件）、WP-39（夜景灯光与时刻表）接上所有通道；做集中测试（ENG-GATES §1）；主会话统一调优，按实测核账 GPU 与主线程余量 | ENG-GATES-VETO §2 全部清单通过 |
 
@@ -54,8 +55,8 @@ gates: [G1, G3, G5]
 角色与日常职责见 WF-ROLE；下面是契约、版本、插件、清单与预算这些工程维护事项。
 
 1. **契约分批冻结**（D-134，ENG-ARCH §3）：申请、冻结与共享文件的改法见 WF-BUILD §1、§3；冻结的组记进施工状态。
-2. **版本**：Godot 4.7.2 与 net10.0（C# 14）以 `tools/godot-version.txt`、`global.json`、csproj 为准，三处一致，门禁比对引擎 `--version`；升级单独评估，经主会话（D-177），升级后按 `docs/godot-api/README.md` 重新生成 API 参考并通知各包。导出链的验证见 ENG-ARCH §8，导出模板的下载与登记见 WF-RULE §6、OPS-RELEASE §7。
-3. **插件清单**：`game/addons/` 与 `third_party.json`（名称、版本、提交、许可证、哈希）；许可白名单见 OPS-RELEASE §7，插件须声明支持当前小版本；NuGet 包在 `Directory.Packages.props` 集中锁版本。
+2. **版本**：Godot 4.7.2 与 net10.0（C# 14）以 `tools/godot-version.txt`、`global.json`、csproj 为准，三处一致，门禁比对引擎 `--version`；升级单独评估，经主会话（D-177），升级后按 `docs/godot-api/README.md` 重新生成 API 参考并通知各包。导出链的验证见 ENG-ARCH §8，导出模板的下载与登记见 WF-RULE §6、ENG-RELEASE §7。
+3. **插件清单**：`game/addons/` 与 `third_party.json`（名称、版本、提交、许可证、哈希）；许可白名单见 ENG-RELEASE §7，插件须声明支持当前小版本；NuGet 包在 `Directory.Packages.props` 集中锁版本。
 4. **开放室内清单**：`game/data/maps/qingshuihe/interiors.json` 的格式与 schema 归 WP-51（室内生成器与壳体），条目由负责包经回报提交，增删由主会话审批，以作者的决定为准；加一栋楼按 WLD-INTERIORS-ACCESS §4。`map.json` 的字段增改也由主会话批准。
 5. **预算核账**：GPU 与主线程的余量所剩无几（外围、室内、平面地图都可能动用），统一核账，写回 ENG-BUDGET §3。
 6. **音频素材与版本库**：Git LFS 条目以 `.gitattributes` 为准；只许随游戏发布、不许公开分发的素材放私有素材库；开场音乐的委托或自制由 53e 跟进（SYS-AUDIO §6、SYS-AUDIO §8）。

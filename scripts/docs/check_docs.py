@@ -66,8 +66,8 @@ for code, d in docs.items():
         if not m.group(1).startswith('http') and not os.path.exists(tgt):
             bad.append((code, 'link', m.group(1)))
 
-# 工作包与门禁编号以 ENG-WP、ENG-GATES 为准
-wp_text = ''.join(open(p, encoding='utf-8').read() for p in glob.glob(os.path.join(D, 'engineering', 'ENG-WP*.md')))
+# 工作包与门禁编号以 PLAN-WP、ENG-GATES 为准
+wp_text = ''.join(open(p, encoding='utf-8').read() for p in glob.glob(os.path.join(D, 'plan', 'PLAN-WP*.md')))
 wps = set(re.findall(r'^\|\s*(WP-\d+[a-z]?)\s*\|', wp_text, re.M))
 gates = set(re.findall(r'\b(G\d{1,2})\b', open(os.path.join(D, 'engineering', 'ENG-GATES-验收与门禁.md'), encoding='utf-8').read()))
 for code, d in docs.items():
@@ -81,7 +81,7 @@ for code, d in docs.items():
         if str(g) not in gates:
             bad.append((code, 'gate', g))
 
-# 导航树（WF-DOC §5.1）：主文档要列在 CORE-INDEX §1，子文档写 parent 并列在主文档里；不许有孤儿文档
+# 导航树（STD-DOC §5.1）：主文档要列在 CORE-INDEX §1，子文档写 parent 并列在主文档里；不许有孤儿文档
 index = docs.get('CORE-INDEX', {}).get('text', '')
 m = re.search(r'^## 1 .*?(?=^## |\Z)', index, re.S | re.M)
 index1 = m.group(0) if m else ''
@@ -129,7 +129,7 @@ if own_dirty:
 elif not os.path.exists(rt_path) or open(rt_path, 'rb').read().decode('utf-8') != gen_index.build_routes(gen_index.load()):
     bad.append(('ROUTES', 'stale', '重跑 scripts/docs/gen_index.py'))
 
-# 体量上限（WF-DOC §5）：只列出，不算 problems；量法只在 doc_size.py
+# 体量上限（STD-DOC §5）：只列出，不算 problems；量法只在 doc_size.py
 import doc_size
 over = [(code, where, n) for p in doc_size.docs_in() for code, _, ov in [doc_size.check(p)] for where, n, _cap in ov]
 print('docs', len(docs), 'problems', len(bad), dict(Counter(b[1] for b in bad)))
@@ -138,7 +138,7 @@ for n in notes:   # 说明走 stderr：stdout 第一行之后每行都算问题�
 for b in bad:
     print('%s\t%s\t%s' % b)
 if over:
-    print('超体量上限', len(over), '处（WF-DOC §5）')
+    print('超体量上限', len(over), '处（STD-DOC §5）')
     for o in over:
         print('  %s\t%s\t%d 字' % o)
 sys.exit(1 if bad else 0)

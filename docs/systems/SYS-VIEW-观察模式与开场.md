@@ -2,12 +2,13 @@
 id: SYS-VIEW
 title: 观察模式与旁观漫游
 category: systems
+parent: SYS-INDEX
 summary: 两种观察模式总述、旁观漫游的操作与活动范围、初始位置、镜头规则、3D 与平面地图的分工
 keywords: [旁观模式, 观察模式, 飞行速度档, 视场角, 鼠标灵敏度, 活动范围, 初始位置, 镜头不会自己动, 自动运镜, 命令行参数, ICameraRig, Pose]
 owners: [WP-06, WP-01]
 contributors: [WP-00, WP-04, WP-08, WP-24, WP-35, WP-36, WP-49, WP-51, WP-53, WP-54a]
 depends: [ENG-ARCH, ENG-PERF, UI-NAV, SYS-WALK, SYS-TITLE, WLD-OUTSKIRTS]
-related: [WLD-DIORAMA, SYS-MOTION, ENG-GATES, ART-FIDELITY, ENG-BUDGET, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-SAVE, SYS-MAPS, SYS-AUDIO, OPS-RELEASE]
+related: [WLD-OUTSKIRTS-DIORAMA, SYS-MOTION, ENG-GATES, ART-FIDELITY, ENG-BUDGET, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-SAVE, SYS-MAPS, SYS-AUDIO, ENG-RELEASE]
 contracts: [ICameraRig, Pose]
 data: []
 gates: [G1, G2, G7]
@@ -16,7 +17,7 @@ gates: [G1, G2, G7]
 # SYS-VIEW · 观察模式与旁观漫游
 
 > **范围**：本文规定两种观察模式的总述和旁观者漫游（操作、活动范围、初始位置、镜头规则、提示），以及 3D 画面与平面地图的分工。
-> **不在本文**：行走的手感、身体、游泳与行走的第一、第三人称镜头（SYS-WALK）；镜头在楼里、地下、水下、雾海里的介质呈现（SYS-VIEW-MEDIUM）；署名、许可、窗口标题与图标（OPS-RELEASE）；界面、点位跳转与操作说明（UI-NAV、UI-VISUAL）；平面地图与传送（SYS-ATLAS）；扉页、开始页与进入游戏（SYS-TITLE）；存档（SYS-SAVE）；多地图（SYS-MAPS）；活动范围的细则与数值（WLD-OUTSKIRTS）；声音（SYS-AUDIO）；命令行参数全表与截图默认串（ENG-GATES-SHOTS §1）；相机的实现（`game/camera/`、`game/contracts/` 里的 `ICameraRig`）。
+> **不在本文**：行走的手感、身体、游泳与行走的第一、第三人称镜头（SYS-WALK）；镜头在楼里、地下、水下、雾海里的介质呈现（SYS-VIEW-MEDIUM）；署名、许可、窗口标题与图标（ENG-RELEASE）；界面、点位跳转与操作说明（UI-NAV、UI-VISUAL）；平面地图与传送（SYS-ATLAS）；扉页、开始页与进入游戏（SYS-TITLE）；存档（SYS-SAVE）；多地图（SYS-MAPS）；活动范围的细则与数值（WLD-OUTSKIRTS）；声音（SYS-AUDIO）；命令行参数全表与截图默认串（ENG-GATES-SHOTS §1）；相机的实现（`game/camera/`、`game/contracts/` 里的 `ICameraRig`）。
 > **查阅**：先读 §0；旁观操作、速度与视场角看 §2.1；活动范围看 §2.3；初始位置看 §2.4；镜头规则看 §2.5；命令行参数看 §2.7；3D 画面与平面地图的分工看 §4
 
 ## 0 结论
@@ -32,7 +33,7 @@ gates: [G1, G2, G7]
 **子文档**
 
 - SYS-VIEW-MEDIUM 介质呈现：碰到镜头在楼里、地下、水下、雾海，楼体剖切变体或半入水时读。
-- 署名、许可页、窗口标题与图标在 OPS-RELEASE §7.1。
+- 署名、许可页、窗口标题与图标在 ENG-RELEASE §7.1。
 
 ### 0.1 接入要点
 

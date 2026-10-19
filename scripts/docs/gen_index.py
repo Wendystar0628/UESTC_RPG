@@ -9,14 +9,10 @@ import yaml
 sys.stdout.reconfigure(encoding='utf-8')
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 D = os.path.join(ROOT, 'docs')
-CAT_ORDER = ['core', 'workflow', 'art', 'world', 'maps', 'systems', 'ui', 'engineering', 'reference',
-             'gameplay', 'narrative', 'characters', 'content', 'tools', 'qa', 'ops', 'localization',
-             'decisions', 'proposals', 'issues', 'experiments']
-CAT_NAME = {'core': '共识层', 'workflow': '协作与流程', 'art': '美术方向', 'world': '世界内容（通用）', 'maps': '地图：清水河',
-            'systems': '运行时系统', 'ui': '界面', 'engineering': '工程', 'reference': '参考',
-            'gameplay': '玩法', 'narrative': '叙事', 'characters': '角色', 'content': '内容',
-            'tools': '工具', 'qa': '测试', 'ops': '运维', 'localization': '本地化',
-            'decisions': '决策记录', 'proposals': '提案', 'issues': '问题', 'experiments': '实验'}
+CAT_ORDER = ['core', 'product', 'art', 'world', 'maps', 'systems', 'ui', 'engineering', 'plan', 'workflow',
+             'standards', 'registry']
+CAT_NAME = {'core': '总纲', 'product': '作品', 'art': '画面', 'world': '世界', 'maps': '地图：清水河', 'systems': '系统',
+            'ui': '界面', 'engineering': '工程', 'plan': '计划', 'workflow': '协作', 'standards': '规范', 'registry': '登记'}
 NL = chr(10)
 
 
@@ -92,7 +88,7 @@ def outline(text):
 
 
 def build_sections():
-    """小节目录：每份规范文档的每个 ##、### 小节一行，带行号和字数，供 grep 定位（WF-DOC §1）。"""
+    """小节目录：每份规范文档的每个 ##、### 小节一行，带行号和字数，供 grep 定位（STD-DOC §1）。"""
     items = []
     for p in glob.glob(os.path.join(D, '**', '*.md'), recursive=True):
         rel = os.path.relpath(p, D).replace(chr(92), '/')

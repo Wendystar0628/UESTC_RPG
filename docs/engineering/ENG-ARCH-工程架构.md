@@ -2,12 +2,13 @@
 id: ENG-ARCH
 title: 工程架构
 category: engineering
+parent: ENG-INDEX
 summary: 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 keywords: [工程架构, 分层, 依赖方向, 命名空间边界, 程序集, 唯一生产链, KernelStage, 组合根, 数据流, 自动发现, 特性注册, ContentModule, KernelService, KernelNode, Autoload, 原生资源创建方, 确定性, 同机同输入同输出, StableHash, Rng, BannedApiAnalyzers, 架构规则, 生命周期, 契约, 契约申请, 枚举穷举, 本机烘焙, .tbin, 缓存键, 英雄资产, 桩, 占位, 仓库脚本自成一体, 架构导向, 扩展方式, net10.0, 技术栈]
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-04, WP-08, WP-27]
-depends: [CORE-INDEX, ENG-CODE]
-related: [ENG-GATES, ENG-WP, ENG-PERF, ENG-BUDGET, ENG-ROADMAP, CORE-CONVENTIONS, SYS-MAPS, SYS-SAVE, SYS-MOTION, SYS-AUDIO, OPS-RELEASE]
+depends: [CORE-INDEX, STD-CODE]
+related: [ENG-GATES, PLAN-WP, ENG-PERF, ENG-BUDGET, ENG-ROADMAP, STD-CONVENTIONS, SYS-MAPS, SYS-SAVE, SYS-MOTION, SYS-AUDIO, ENG-RELEASE]
 contracts: []
 data: ["ownership.json", "third_party.json", "tools/godot-version.txt", "version.txt"]
 gates: [G1, G2, G3, G4, G5, G6]
@@ -16,7 +17,7 @@ paths: ["game/**/*.cs"]
 # ENG-ARCH · 工程架构
 
 > **范围**：本文说明当前的工程架构（技术栈、分层、生产链与数据流），架构层面的准则（边界、确定性、契约、烘焙、桩），以及后续设计的导向。只写结构、规则和方向。
-> **不在本文**：类型签名、目录明细、文件格式、参数与清单以代码和数据为准；写代码的结构规矩见 ENG-CODE；命名与目录约定见 CORE-CONVENTIONS §3、§5；性能与预算见 ENG-PERF、ENG-BUDGET；门禁见 ENG-GATES；工作包分工见 ENG-WP；RPG 路线见 ENG-ROADMAP。
+> **不在本文**：类型签名、目录明细、文件格式、参数与清单以代码和数据为准；写代码的结构规矩见 STD-CODE；命名与目录约定见 STD-CONVENTIONS §3、§5；性能与预算见 ENG-PERF、ENG-BUDGET；门禁见 ENG-GATES；工作包分工见 PLAN-WP；RPG 路线见 ENG-ROADMAP。
 > **查阅**：先读 §0；当前架构看 §1；边界与确定性看 §2；契约看 §3；资源与烘焙看 §4；桩看 §5；架构导向看 §6；RPG 扩展方式看 §7；待验证看 §8
 
 ## 0 结论
@@ -28,7 +29,7 @@ paths: ["game/**/*.cs"]
 5. **确定性**：随机和哈希只用契约的 `Rng`、`StableHash`；同一台机器上同一输入烘出同样的字节，不要求本机与别的机器逐字节一致（§2，D-232）。
 6. **契约以源码为准**：签名只在 `game/contracts/`；改动先申请，与全部使用方同批迁移（§3）。
 7. **几何构建期烘焙、随包发**：几何由代码生成，发布时全图烘好随包发；缓存查找、判鲜与补烘只在 §4。
-8. **往哪走**：运行时状态只有一个写入方，按职责拆；其余落地写法在 ENG-CODE（§6）。
+8. **往哪走**：运行时状态只有一个写入方，按职责拆；其余落地写法在 STD-CODE（§6）。
 
 ### 0.1 接入要点
 
@@ -119,7 +120,7 @@ paths: ["game/**/*.cs"]
 - 画面相关的契约（`ToonSpec`、调色板、着色器全局参数、界面令牌）由主会话确认字段够用、命名与美术文档一致。
 - **枚举纪律**：枚举只在末尾追加值，JSON 按字符串存；会追加值的枚举，消费方写穷举 `switch`，`default` 分支拒绝或报错，不写二值判断；读到不认识的字符串按不合法处理（SYS-SAVE-FORMAT §1.3）。
 - JSON 一律用 `ContractJson.Options`；存读档用 System.Text.Json 源生成（SYS-SAVE-FORMAT §4）。
-- 契约用 `System.Numerics`，Godot 侧用引擎的向量与变换，两边转换只用内核的一组扩展方法（CORE-CONVENTIONS §1）。
+- 契约用 `System.Numerics`，Godot 侧用引擎的向量与变换，两边转换只用内核的一组扩展方法（STD-CONVENTIONS §1）。
 
 ## 4 资源与烘焙
 
@@ -131,7 +132,7 @@ paths: ["game/**/*.cs"]
 - **构建期做完，运行时只读**（D-256）：能在构建期或收口预烘里算好的不放到运行时。启动路径只读不建：双击启动不编译、不导入，现成构建对不上时才编，收口预烘时一并编好；启动到能走只起引擎与服务、核对缓存、读首视角与出生点要的格；核对只比输入标识、不重算输入，生成只在缓存缺失时发生；全图级的系统随格挂载，不在启动时整图挂。
 - **管线输入**：`pipeline/` 离线生成按图数据。同一台机器上用同一份已提交输入重建，输出逐字节相同；世界文件不由管线生成（D-252）；Python 依赖按 `pipeline/requirements.lock` 锁定。
 - **贴图与字体**：PNG 源图加 Godot 导入，贴图规则见 ENG-BUDGET-RULES §1 第 5 条；数据纹理在运行时创建；字体只用开源许可并只截取用到的字（UI-VISUAL-COMPONENTS §1）。音频素材见 SYS-AUDIO §9、§10。
-- **登记与版本**：资源的许可与来源登记、版本号与构建信息、导出内容见 OPS-RELEASE；版本号只有 `version.txt` 一个来源。
+- **登记与版本**：资源的许可与来源登记、版本号与构建信息、导出内容见 ENG-RELEASE；版本号只有 `version.txt` 一个来源。
 
 ## 5 未交付能力的占位边界
 
@@ -143,7 +144,7 @@ paths: ["game/**/*.cs"]
 
 ## 6 架构导向
 
-新代码直接按这里写；边界、整图流程、公共层、程序集、测试的落地写法见 ENG-CODE §1–§3、§5、§6。
+新代码直接按这里写；边界、整图流程、公共层、程序集、测试的落地写法见 STD-CODE §1–§3、§5、§6。
 
 - **数据驱动内容**：实体的坐标、轮廓、层数、名称只在按图数据里，代码按 ID 从世界模型读，不抄副本。要用某个要素的一段（一条边、一段岸线），由数据里的选段要素写两个端点指明，代码按端点取，不按顶点序号、最长、最靠某侧去挑，端点对不上轮廓就报数据错误（D-243）；本图专用的造型与组合留在每图程序集，尺寸各在本区一处（D-239）。
 - **运行时状态只有一个写入方**（D-244）：模式、位姿、流速、雾幕、就绪、主题这类状态各有唯一持有者；别处要改，向它申请租约（释放即恢复）或发一个命令（如到达），不各自复位标志；查询不改状态；模块之间经契约或注入接上，不按节点名、字符串键去找；全局着色器参数各有登记的唯一写入方。

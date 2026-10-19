@@ -8,7 +8,7 @@ keywords: [西区行走, 行走主网, 水杉路, 湿地栈道, 能看不能进,
 owners: [WP-19]
 contributors: [WP-16, WP-25, WP-30, WP-31b, WP-36, WP-43, WP-44, WP-47, WP-48c, WP-53]
 depends: [MAP-QSH-WEST, ART-FIDELITY, SYS-WALK, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
-related: [MAP-QSH-WEST-SEASONS, MAP-QSH-LIBRARY, MAP-QSH-CORE, MAP-QSH-TERRAIN, UI-NAV, ENG-GATES]
+related: [MAP-QSH-WEST-SEASONS, MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-CORE, MAP-QSH-TERRAIN, UI-NAV, ENG-GATES]
 contracts: []
 data: []
 gates: [G4, G15, G21]
@@ -51,7 +51,7 @@ gates: [G4, G15, G21]
 | 开放楼里的"到此为止"（六号门厅一侧报告厅、电梯厅、2F 深处防火门；研究院暗室屏蔽门、中庭报告厅） | 封口 | 隔着门玻璃或观察窗看到里面 |
 | 光伏车棚顶 | 棚檐 2.6 m，跳不上去；紧贴车棚的石笼墙顶到棚檐的高差超过跳跃上限 | — |
 
-**开放室内**范围见 MAP-QSH-INTERIORS §2；西湖东岸的电子科技博物馆见 MAP-QSH-LIBRARY。
+**开放室内**范围见 MAP-QSH-INTERIORS §2；西湖东岸的电子科技博物馆见 MAP-QSH-INTERIORS-LIBRARY。
 
 **涉水区**：湿地登记一处卵石滩（石桥下游、栈道转弯处，长 10–15 m）；红光右支渠亲水台阶的最下一级。其余岸线不能下水。
 

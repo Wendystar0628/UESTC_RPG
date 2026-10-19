@@ -2,6 +2,7 @@
 id: SYS-MOTION
 title: 动态与事件：时钟、节奏与转场
 category: systems
+parent: SYS-INDEX
 summary: 两个时钟与一拍二、动作幅度上限、转场的唯一详述（改时间、换季、换天气、跳转与同时转场）；风与环境动态、生命体与偶发事件见子文档
 keywords: [动态, 两个时钟, 动画时钟, AnimTime, 一拍二, step_rate, 480 s 回绕, 转场, 换季转场, 改时间, 同时转场, 减少动态效果]
 owners: [WP-26]

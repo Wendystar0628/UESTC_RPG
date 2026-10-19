@@ -2,12 +2,13 @@
 id: WLD-VEGETATION
 title: 植被：树冠画法、草坪、地面覆盖与季相
 category: world
+parent: WLD-INDEX
 summary: 树木、灌木、草坪与水生植物的观感规则、树种色名与季相行、地面覆盖、季相与天气、碰撞与声音数据
 keywords: [植被, 植物, 树冠画法, 云团型, 插片型, 冬季裸枝, 叶量, 开花, 季相, 局部季节, 四季变色, 草坪, 绿篱, 荷, 芦苇, 落叶地毯, 树冠遮蔽, 覆雪, 过渡绿地, species.json]
 owners: [WP-23]
 contributors: [WP-02, WP-08, WP-15, WP-20, WP-25, WP-26, WP-27, WP-37, WP-38, WP-43, WP-45a, WP-45b, WP-47, WP-53]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-GRAPHICS]
-related: [WLD-DIORAMA, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, WLD-WATER, WLD-LIFE, SYS-MOTION, ENG-GATES, ART-FIDELITY, ART-MODELING, ENG-BUDGET, ENG-WP, SYS-WALK, WLD-OUTSKIRTS, SYS-AUDIO, MAP-QSH-VEGETATION, MAP-QSH-OUTSKIRTS]
+related: [WLD-OUTSKIRTS-DIORAMA, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, WLD-WATER, WLD-LIFE, SYS-MOTION, ENG-GATES, ART-FIDELITY, ART-MODELING, ENG-BUDGET, PLAN-WP, SYS-WALK, WLD-OUTSKIRTS, SYS-AUDIO, MAP-QSH-VEGETATION, MAP-QSH-OUTSKIRTS]
 contracts: []
 data: ["game/data/vegetation/species.json"]
 gates: [G2, G4, G5, G7, G10, G15, G21]
@@ -99,7 +100,7 @@ gates: [G2, G4, G5, G7, G10, G15, G21]
 
 - 色名（`ginkgo.*`、`metaseq.*`、`camphor.*`、`grass.*`、`bloom.*`、`plume.*`、`tree.bare` 等）与四季的受光 / 影色值以 `game/style/palette/core.json` 为准；受光色按各季英雄帧（春清晨、夏午后、秋黄金、冬雪后正午）给出，其他关键帧由脚本按 ART-STYLE 推导，本文和区域包都不另调。
 - **影色一律推导**：植被的影色按 ART-STYLE 的影色规则（明度比 r 默认格 0.78、彩度略降、色相只向天光小转，黄、橙不往绿转）推导；深影由着色器从影色算出，不另登记色名。受光一栏春夏草坪在英雄帧的受光彩度不低于 0.14，其余帧不超过英雄帧。
-- **行数**：季相行有上限（上限见调色板，SYS-TIME-LOOK）。新增色名之前先看能不能合并；开花色四季不变，必要时可挪到第 0 行。外围其余植物不新增色名：林泽杜鹃的花用 `bloom.rose`、叶用 `nanmu.*`，竹丛用 `camphor.*`，桤木用 `deciduous.*`。外围作物色由 WP-04（调色板、卡通材质与贴图） 登记、WP-37（日相与季节调色板） 定值、WP-38（物候、季节植被与季节氛围） 驱动。
+- **行数**：季相行有上限（上限见调色板，ART-COLORSCRIPT）。新增色名之前先看能不能合并；开花色四季不变，必要时可挪到第 0 行。外围其余植物不新增色名：林泽杜鹃的花用 `bloom.rose`、叶用 `nanmu.*`，竹丛用 `camphor.*`，桤木用 `deciduous.*`。外围作物色由 WP-04（调色板、卡通材质与贴图） 登记、WP-37（日相与季节调色板） 定值、WP-38（物候、季节植被与季节氛围） 驱动。
 
 ## 3 草坪
 

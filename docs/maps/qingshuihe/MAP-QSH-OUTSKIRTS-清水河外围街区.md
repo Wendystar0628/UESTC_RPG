@@ -2,12 +2,13 @@
 id: MAP-QSH-OUTSKIRTS
 title: 清水河外围街区：周边结构、地标、灯光、农田与氛围增补
 category: maps
+parent: MAP-QSH-INDEX
 summary: 清水河校界外一圈街区的方位结构、截面线距离、身份地标、夜间灯光、农田四季、氛围增补、河渠格栅与看街长椅
 keywords: [周边结构, 西源大道, 蓉 2 号线, 电子科大站, 龙湖时代天街, 绕城高架, 蓉昌高速, 220 kV 变电站, 顺江片区, 综保区, 农田, 油菜花, 林泽杜鹃, 川西林盘, 绕城绿道, 草坪轨道, 看街长椅, 河渠格栅, 清水河银带]
 owners: [WP-47]
 contributors: [WP-04, WP-08, WP-22, WP-23, WP-24, WP-28, WP-30, WP-36, WP-37, WP-38, WP-39, WP-44, WP-53]
 depends: [CORE-INDEX, WLD-OUTSKIRTS, WLD-OUTSKIRTS-BAND, WLD-OUTSKIRTS-BORDER, ART-STYLE]
-related: [MAP-QSH-SOUTH, MAP-QSH-ADDITIONS, MAP-QSH-VEGETATION, MAP-QSH-WATER, WLD-VEGETATION, WLD-WATER, WLD-DIORAMA, SYS-TIME, SYS-AUDIO]
+related: [MAP-QSH-SOUTH, MAP-QSH-ADDITIONS, MAP-QSH-VEGETATION, MAP-QSH-WATER, WLD-VEGETATION, WLD-WATER, WLD-OUTSKIRTS-DIORAMA, SYS-TIME, SYS-AUDIO]
 contracts: []
 data: []
 gates: [G7]

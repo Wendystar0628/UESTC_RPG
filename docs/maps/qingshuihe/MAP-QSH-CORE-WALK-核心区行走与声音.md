@@ -8,7 +8,7 @@ keywords: [核心区行走, 核心区主网, 能看不能进, 涉水区, 核心�
 owners: [WP-16]
 contributors: [WP-13, WP-36, WP-43, WP-44, WP-48c, WP-53b]
 depends: [CORE-INDEX, MAP-QSH-CORE, SYS-WALK, WLD-INTERIORS, SYS-AUDIO]
-related: [MAP-QSH-LIBRARY, MAP-QSH-SOUTH, MAP-QSH-WEST, UI-NAV, SYS-ATLAS]
+related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-SOUTH, MAP-QSH-WEST, UI-NAV, SYS-ATLAS]
 contracts: []
 data: ["game/data/maps/qingshuihe/audio/manual_emitters.json"]
 gates: [G15, G21]
@@ -17,7 +17,7 @@ gates: [G15, G21]
 # MAP-QSH-CORE-WALK · 核心区行走与声音
 
 > **范围**：本文规定核心区的行走主网、能看不能进的阻挡、开放入口与门口责任、涉水区、点位、节奏与锚点，以及声音要点。
-> **不在本文**：各楼与构筑物的外观与身份特征（MAP-QSH-CORE）；灯光、四季昼夜与天气（MAP-QSH-CORE-SEASONS）；图书馆与博物馆的室内（MAP-QSH-LIBRARY）；室内开放清单与门的通用做法（WLD-INTERIORS-ACCESS §2）；栏杆、碰撞与提示（SYS-WALK-BOUNDS §2）；声音规则（SYS-AUDIO）。
+> **不在本文**：各楼与构筑物的外观与身份特征（MAP-QSH-CORE）；灯光、四季昼夜与天气（MAP-QSH-CORE-SEASONS）；图书馆与博物馆的室内（MAP-QSH-INTERIORS-LIBRARY）；室内开放清单与门的通用做法（WLD-INTERIORS-ACCESS §2）；栏杆、碰撞与提示（SYS-WALK-BOUNDS §2）；声音规则（SYS-AUDIO）。
 > **查阅**：先读 §0；主网、挡路物与开放入口看 §1，点位、节奏与锚点看 §2，声音看 §3
 
 ## 0 结论
@@ -47,7 +47,7 @@ gates: [G15, G21]
 | 小林岛、喷泉、箱涵 | 四面隔水；箱涵两端堰口接岸处设栏杆，顶面不进可行走遮罩；喷泉只能飞到 |
 | 北辅楼与北内院的门、西南塔和西北塔底的疏散门、东侧平房 8399、大台阶下设备间 | 关着，门玻璃里是门厅卡；宁静苑从一楼北面落地窗和三楼 G 区露台看 |
 
-**开放入口**：开放范围与室内路线见 MAP-QSH-LIBRARY。本区负责门洞、门前台阶和门口表现：图书馆二楼正门（大台阶上去，门斗里闸机常开）、品·悦吧店面门（第二个入口）、博物馆门廊（感应门常开）和朝湖侧门（接木栈道，R3 从博物馆穿过）。
+**开放入口**：开放范围与室内路线见 MAP-QSH-INTERIORS-LIBRARY。本区负责门洞、门前台阶和门口表现：图书馆二楼正门（大台阶上去，门斗里闸机常开）、品·悦吧店面门（第二个入口）、博物馆门廊（感应门常开）和朝湖侧门（接木栈道，R3 从博物馆穿过）。
 
 **涉水区**：北岸台阶花坛最下一级；西湖东岸草阶看台前的一段卵石滩；西岸、南岸再登记 1–2 段卵石滩；范围四季不变。
 
@@ -60,7 +60,7 @@ gates: [G15, G21]
 | P01 日晷 · 望穹顶 | 晷盘作前景，穹顶不被树冠挡住 |
 | P02 图书馆正门 | 三根旗杆、大台阶、正门连成一线；位姿和落点都在时间广场地面上（下沉 −0.9 m），不挪到台阶顶平台 |
 | P03 八角采光顶 | 仅旁观 |
-| P04 图书馆中庭 | 同位，见 MAP-QSH-LIBRARY §8 |
+| P04 图书馆中庭 | 同位，见 MAP-QSH-INTERIORS-LIBRARY §8 |
 | P16 图书馆 · 五楼西窗 | 室内同位，`Entry = Door`；西窗越过博物馆白色坡顶看得见西湖和落日，博物馆屋顶不加挡视线的设备 |
 | P05 西湖 · 隔湖望馆 | 水杉路地面（MAP-QSH-WEST）；入水口荷花在视线前景里 |
 | P06 西湖 · 栈桥逆光 | 栈桥桥面，落点不在栏杆上 |

@@ -1,22 +1,22 @@
 ---
-id: ENG-WP-LIST
+id: PLAN-WP-LIST
 title: 工作包一览与子包拆法
-category: engineering
-parent: ENG-WP
+category: plan
+parent: PLAN-WP
 summary: 每个工作包一行的包表（规格文档、依赖、归属侧、主线版），插入项，细节阶段待办的去处与候选包，子包拆法
 keywords: [工作包一览, 包表, 规格文档列, 主线版列, 归属侧, 插入项, 细节阶段待办, 候选包, 拆包, 子包, 子包拆法]
 owners: [WP-00]
 contributors: []
-depends: [ENG-WP]
+depends: [PLAN-WP]
 related: [WF-STATUS, WF-MODEL, ENG-GATES]
 contracts: []
 data: []
 gates: []
 ---
-# ENG-WP-LIST · 工作包一览与子包拆法
+# PLAN-WP-LIST · 工作包一览与子包拆法
 
 > **范围**：本文列出每个工作包一行：规格文档、依赖、归属侧、主线版交什么，两个插入项，细节阶段待办的去处与候选包，以及子包拆法。
-> **不在本文**：阶段与闸口、工程维护事项：ENG-WP；独占目录以 `ownership.json` 为准；施工状态见 WF-STATUS；份额见 ENG-BUDGET §3。
+> **不在本文**：阶段与闸口、工程维护事项：PLAN-WP；独占目录以 `ownership.json` 为准；施工状态见 WF-STATUS；份额见 ENG-BUDGET §3。
 > **查阅**：先读 §0；各包一行看 §1；插入项看 §1.1；细节阶段待办的去处看 §1.2；候选包看 §1.3；子包拆法看 §2
 > **读者**：子代理只读本包在包表里的那一行和派工简报，用 `grep "^| WP-xx "` 取；派工和排细节的一方读全文。
 
@@ -38,29 +38,29 @@ gates: []
 
 | 包 | 名称 | 规格文档 | 依赖 | 归属侧 | 主线版 |
 | --- | --- | --- | --- | --- | --- |
-| WP-00 | 契约、桩与拆除 | ENG-ARCH、ENG-BUDGET、ENG-CODE、CORE-CONVENTIONS | — | Codex 侧 | 无单独画面；契约、注册器和桩接成能编译启动的工程 |
-| WP-01 | 渲染内核与舞台 | SYS-VIEW、ENG-PERF、TOOL-PREVIEW | 契约 | Codex 侧 | 窗口从雾色经扉页淡化成实时画面，关窗经退出编排正常结束 |
+| WP-00 | 契约、桩与拆除 | ENG-ARCH、ENG-BUDGET、STD-CODE、STD-CONVENTIONS | — | Codex 侧 | 无单独画面；契约、注册器和桩接成能编译启动的工程 |
+| WP-01 | 渲染内核与舞台 | SYS-VIEW、ENG-PERF、ENG-PREVIEW | 契约 | Codex 侧 | 窗口从雾色经扉页淡化成实时画面，关窗经退出编排正常结束 |
 | WP-02 | 格子分级、烘焙与流式加载（02a 烘焙，02b 流式） | ENG-PERF、ENG-ARCH §4 | 契约 | Codex 侧 | 首次运行在扉页与开始页期间本机烘焙全校，再启动读缓存，飞行时格子按距离换级不卡顿 |
 | WP-03 | 主光、阴影与灯光通道 | ART-SKYLIGHT | WP-34、WP-04 | Claude 侧 | 主光随时刻在日月间轮换并投实时阴影，阴雨天阴影减弱 |
 | WP-04 | 调色板、卡通材质与贴图 | ART-STYLE | — | Claude 侧 | 全校同一套卡通材质，分阶明暗与影色随时刻、季节、天气变化；广场铺装、人行道铺装、宿舍外墙砖三族纹理上屏（D-195） |
 | WP-05 | 描线与后期 | ART-STYLE | WP-01 | Claude 侧 | 随底色染色的细描线与按关键帧的柔光、LUT，雾幕遮住扉页、转场和跳转 |
 | WP-06 | 相机与输入 | SYS-VIEW、UI-NAV | 契约、世界模型空间接口 | Codex 侧 | 旁观按 INV-2 飞行，Esc 切漫游态与界面态，改键可用并存盘，镜头出不了可达空间 |
 | WP-07 | 介质呈现与室内运行时 | SYS-VIEW、WLD-INTERIORS | WP-08、05、02、51 | Codex 侧 | 进楼体、地下、水下有介质兜底（关着的楼至少显示 I0），室内金样可走进并按层显示 |
-| WP-08 | 世界模型与世界数据 | WLD-TERRAIN、SYS-MAPS、TOOL-PREVIEW | 契约 | Codex 侧 | 全校地形、道路、水体、楼块与树点来自世界文件，增删记录在画面上生效，地形按地形覆盖层起伏 |
+| WP-08 | 世界模型与世界数据 | WLD-TERRAIN、SYS-MAPS、ENG-PREVIEW | 契约 | Codex 侧 | 全校地形、道路、水体、楼块与树点来自世界文件，增删记录在画面上生效，地形按地形覆盖层起伏 |
 | WP-09 | 部件库内核与金样 | ART-MODELING | 契约 | Codex 侧 | 扫掠、挤出、开洞墙板等内核让楼和道具有真实几何，部件画廊可逐件查看 |
 | WP-10 | 门窗与幕墙部件 | ART-FIDELITY、WLD-INTERIORS | WP-09 | Claude 侧 | 楼的立面换上真实的门、窗与幕墙 |
 | WP-11 | 栏杆、楼梯、阳台部件 | ART-MODELING、WLD-INTERIORS | WP-09 | Claude 侧 | 栏杆、楼梯、台阶、阳台有几何和碰撞，行走能上下台阶、翻不出栏杆 |
 | WP-12 | 屋顶与设备部件 | ART-FIDELITY、WLD-INTERIORS | WP-09 | Claude 侧 | 屋顶有女儿墙压顶、水箱、外机等设备，室内金样有开水器等室内设备 |
-| WP-13 | 街道家具 | WLD-LIFE、MAP-QSH-ADDITIONS、ART-AMBIENCE | WP-09、WP-08 | Claude 侧 | 沿路网摆好路灯、长椅、垃圾箱、站牌，导览亭与导览桩立在锚点上 |
-| WP-14 | 通用建筑生成器 | ART-RENOVATION、MAP-QSH-RENOVATION | 部件、世界文件、WP-51 | Claude 侧 | 没被认领的楼都按立面规则有体量、层数和开间，夜里按窗号亮灯，开放入口处开门；翻新只用通用预设加十来条身份特征例外，逐栋条目主线之后 |
+| WP-13 | 街道家具 | WLD-LIFE、MAP-QSH-ADDITIONS、WLD-AMBIENCE | WP-09、WP-08 | Claude 侧 | 沿路网摆好路灯、长椅、垃圾箱、站牌，导览亭与导览桩立在锚点上 |
+| WP-14 | 通用建筑生成器 | WLD-RENOVATION、MAP-QSH-RENOVATION | 部件、世界文件、WP-51 | Claude 侧 | 没被认领的楼都按立面规则有体量、层数和开间，夜里按窗号亮灯，开放入口处开门；翻新只用通用预设加十来条身份特征例外，逐栋条目主线之后 |
 | WP-15 | 地表、道路、铺装 | WLD-TERRAIN | WP-08、部件 | Claude 侧 | 地形、道路、路缘、铺装、斑马线成形，行走踩在与画面一致的地面上，起伏处台缘带、台阶、坡道接通 |
 | WP-16 | 核心区 | MAP-QSH-CORE、MAP-QSH-TERRAIN | 契约 | Claude 侧 | 图书馆与核心区主要楼宇体量和屋顶轮廓认得出，本区能飞能走 |
-| WP-17 | 图书馆与博物馆室内 | MAP-QSH-LIBRARY、WLD-INTERIORS | 室内提供者接口、WP-51、WP-52 | Claude 侧 | 按层提供者替换方块桩，开放范围用体块走通 |
+| WP-17 | 图书馆与博物馆室内 | MAP-QSH-INTERIORS-LIBRARY、WLD-INTERIORS | 室内提供者接口、WP-51、WP-52 | Claude 侧 | 按层提供者替换方块桩，开放范围用体块走通 |
 | WP-18 | 南区 | MAP-QSH-SOUTH、MAP-QSH-TERRAIN | 契约 | Claude 侧 | 主楼、宣邦楼钟楼、立人楼、体育馆与游泳馆等地标体量认得出，能从南门走进校园 |
 | WP-19 | 西区与西北区 | MAP-QSH-WEST、MAP-QSH-TERRAIN | 契约 | Claude 侧 | 四号 C 区、研究院大楼、托幼园等按层数成形，本区能飞能走 |
 | WP-20 | 北部生活区 | MAP-QSH-NORTH、MAP-QSH-TERRAIN | 契约 | Claude 侧 | 硕丰苑、银杏苑、商业街玻璃拱顶、学生活动中心体量成形，学知一组团闸机按开放表现能走过 |
 | WP-21 | 中部与东区 | MAP-QSH-CENTER-EAST、MAP-QSH-TERRAIN | 契约 | Claude 侧 | 基础实验大楼、文科楼、品学楼、东区田径场体量成形，本区能飞能走 |
-| WP-22 | 箱庭截面与远景 | WLD-DIORAMA | WP-03、WP-40 | Claude 侧 | 校园四周有截面、雾海与远景环，远处有雪山，看不到世界的边 |
+| WP-22 | 箱庭截面与远景 | WLD-OUTSKIRTS-DIORAMA | WP-03、WP-40 | Claude 侧 | 校园四周有截面、雾海与远景环，远处有雪山，看不到世界的边 |
 | WP-23 | 植被系统 | WLD-VEGETATION | WP-08、风场 | Claude 侧 | 全校树点种上对应树种，银杏大道认得出，远处有替身；草坪近处有草丛、远处是草色场（D-205） |
 | WP-24 | 水体系统 | WLD-WATER | WP-03 | Claude 侧 | 河渠与湖面有不透明水面和硬边色带，西湖有倒影，水下有介质染色 |
 | WP-25 | 动物与生活痕迹 | WLD-LIFE | 部件、通道、WP-42 感知快照、WP-26 调度、WP-44 栖地查询 | Claude 侧 | 默认秋傍晚有少量动物与生活痕迹，场景不显得空 |
@@ -111,7 +111,7 @@ gates: []
 
 ### 1.3 候选包
 
-还没有定为工作包，不占 WP 编号，不在 §1 里，也不影响主线版；定下归属与编号后才进 §1。发布只按 OPS-RELEASE 的 GitHub 整包方式，不做商店页、宣传素材、成就、云存档和平台集成（D-181），所以这里只收游戏内的可选功能。
+还没有定为工作包，不占 WP 编号，不在 §1 里，也不影响主线版；定下归属与编号后才进 §1。发布只按 ENG-RELEASE 的 GitHub 整包方式，不做商店页、宣传素材、成就、云存档和平台集成（D-181），所以这里只收游戏内的可选功能。
 
 | 候选包 | 范围 | 状态 |
 | --- | --- | --- |

@@ -2,12 +2,13 @@
 id: MAP-QSH-TERRAIN
 title: 全图地形骨架：层分布、地标丘、揭示路线与常水位
 category: maps
+parent: MAP-QSH-INDEX
 summary: 清水河地形的全图骨架：层分布、红枫丘、遮挡与揭示路线、各水体常水位、坡度与着色的本图实例
 keywords: [地形骨架, 红枫丘, 地标丘, 下沉时间广场, 常水位表, 湖口跌水, 箱涵堰口, 遮挡与揭示, 揭示路线, 中轴落金线, 湿地堤, 起伏的理由, 水位阶梯, 分面平法线]
 owners: [WP-16, WP-18, WP-19, WP-20, WP-21]
 contributors: [WP-08, WP-15, WP-24, WP-28]
 depends: [CORE-INDEX, WLD-TERRAIN, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, SYS-WALK]
-related: [MAP-QSH-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-DIORAMA, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-VEGETATION, SYS-TITLE, UI-NAV, SYS-ATLAS, ART-SKYLIGHT, ENG-GATES, ENG-WP]
+related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-OUTSKIRTS-DIORAMA, WLD-OUTSKIRTS, WLD-INTERIORS, WLD-VEGETATION, SYS-TITLE, UI-NAV, SYS-ATLAS, ART-SKYLIGHT, ENG-GATES, PLAN-WP]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G7, G15]

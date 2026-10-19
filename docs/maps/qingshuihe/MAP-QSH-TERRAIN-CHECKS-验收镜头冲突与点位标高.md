@@ -8,7 +8,7 @@ keywords: [地形验收镜头, 冲突检查, 垫层与楼体高差, 点位标高
 owners: [WP-16, WP-18, WP-19, WP-20, WP-21, WP-36, WP-44]
 contributors: [WP-17, WP-31b, WP-31c, WP-48]
 depends: [CORE-INDEX, MAP-QSH-TERRAIN, WLD-TERRAIN, SYS-WALK, ENG-GATES]
-related: [MAP-QSH-TERRAIN-DISTRICTS, MAP-QSH-LIBRARY, MAP-QSH-INTERIORS, UI-NAV, SYS-ATLAS]
+related: [MAP-QSH-TERRAIN-DISTRICTS, MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-INTERIORS, UI-NAV, SYS-ATLAS]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G7, G15]

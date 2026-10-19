@@ -148,7 +148,7 @@ Dash.liveGap(live, key, 块名们, 空时的话)
 | `#models` 模型 | `models.js` | 会话 → 子代理（与总览同一个 `Dash.who`）；后台脚本与构建锁（同一个 `Dash.scripts`） |
 | `#structure` 结构 | `structure.js` | 层 → 目录 → 子目录的树，默认展开第一层；每行文件数（确切）、代码行（数量级）、一句说明 |
 | `#docs` 文档 | `docs.js` | 域 → 主文档 → 子文档 → 节的树，默认只展开到域，点文档或节打开文件；树下是引用关系图 |
-| `#scripts` 脚本 | `scripts.js` | 所有脚本与作用，全部由程序从脚本自己读出：顶部一行“共几个脚本、几个没写开头说明”；按组（仓库工程脚本、观察台入口、数据管线、本机协作工具、双击入口）各一张卡，组内按子目录成可展开的树；每个脚本一行：文件名、作用（长的给摘要）、签条（语言、进 git 或仅本机、在跑、缺说明）；点开看用法、开头说明全文、路径、行数、修改时刻。写法见 ENG-CODE 接入要点“写或改脚本时”，改了脚本页面自动跟着变 |
+| `#scripts` 脚本 | `scripts.js` | 所有脚本与作用，全部由程序从脚本自己读出：顶部一行“共几个脚本、几个没写开头说明”；按组（仓库工程脚本、观察台入口、数据管线、本机协作工具、双击入口）各一张卡，组内按子目录成可展开的树；每个脚本一行：文件名、作用（长的给摘要）、签条（语言、进 git 或仅本机、在跑、缺说明）；点开看用法、开头说明全文、路径、行数、修改时刻。写法见 STD-CODE 接入要点“写或改脚本时”，改了脚本页面自动跟着变 |
 | `#audit` 审计 | `audit.js` | 需要作者审的事（自动发现 + 模型挂的），可点开对应文件 |
 | `#notices` 通知 | `notices.js` | 通知时间线，过期自动收起 |
 | `#decisions` 决策 | `decisions.js` | 最近的决策 |
@@ -163,6 +163,6 @@ Dash.liveGap(live, key, 块名们, 空时的话)
 
 ## 6 采集与维护
 
-- `collect.py`：由 `live.py --loop` 每 10 分钟跑一次（也可手动 `python -I -X utf8 dashboard/tools/collect.py`），读权威来源：`docs/`（各文档头部与 `docs/SECTIONS.md`）、`docs/core/CORE-DECISIONS-*`、`output/shots`、`output/posters`、`output/reports`，以及经监控库读的本机协作数据与健康检查（见第 1 节）。顺手删掉过期的通知。
+- `collect.py`：由 `live.py --loop` 每 10 分钟跑一次（也可手动 `python -I -X utf8 dashboard/tools/collect.py`），读权威来源：`docs/`（各文档头部与 `docs/SECTIONS.md`）、`docs/registry/REG-DECISIONS-*`、`output/shots`、`output/posters`、`output/reports`，以及经监控库读的本机协作数据与健康检查（见第 1 节）。顺手删掉过期的通知。
 - `live.py --loop`：主会话开局与重启后在后台起（来信监视同一套做法），巡逻发现没在跑会提醒；`打开观察台.cmd` 也会在它没跑时起一个。改了 `live.py` 或监控库以后要重启它。
 - `post.py`：所有会话与子代理改了高层信息时用它发布或结项，规则见 WF-COMMS。

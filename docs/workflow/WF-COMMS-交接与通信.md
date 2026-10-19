@@ -2,6 +2,7 @@
 id: WF-COMMS
 title: 交接与通信
 category: workflow
+parent: WF-INDEX
 summary: .collab 交接目录与文件布局，命名与写法，任务单与请求文件的格式，契约申请短头部，完成回报格式，来信与消息，Codex 会话与引导信箱，作者观察台
 keywords: [.collab, 交接目录, 文件布局, 结案即删, D-228, 不归档, 下一个编号, 任务单, 施工单, 旁路单, 调研目录, 契约申请, 评审请求, 六行短头部, 完成回报, 回报格式, 截图命名, 文件命名, 来信, 收件箱, notes, 一条一个文件, 【需定】【待审】【知会】, Codex 会话, codex queue, 引导信箱, steer, HANDOVER.md, D-207, D-208, 作者观察台, dashboard, post.py, 审计项, 通知]
 owners: [WP-00]
@@ -61,7 +62,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 ## 2 命名与写法
 
 - 任务单与请求文件只追加、不改写，每条带时间，路径一律写绝对路径；唯一的例外是 `research/INDEX.md` 的"主会话审计"一列（调研子代理标"待审"，主会话审计后改写）。
-- **文件名一看就懂**（D-208）：任务单、旁路单、调研、来信、请求文件、截图、提交与子代理名的格式只在 CORE-CONVENTIONS §3.8，规范文档的文件名见 WF-DOC §3。
+- **文件名一看就懂**（D-208）：任务单、旁路单、调研、来信、请求文件、截图、提交与子代理名的格式只在 STD-CONVENTIONS §3.8，规范文档的文件名见 STD-DOC §3。
 - **编号**：单内步骤写"第 n 步"，不另起字母编号。旁路单与调研的编号各自递增，取 `status/施工状态.md` 开头记的下一个号，用掉就改；调研号看 `research/INDEX.md` 末行；子单在编号后加 a、b。
 - **请求文件**：类型是 `contract`、`review`；先确认文件不存在再创建，已有同名时末尾加 `-2`、`-3`。
 
@@ -99,7 +100,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 假设与申请：做过的假设；契约修改申请 <路径>或"无"；需其他包配合的事
 ```
 
-- 截图存 `output/render-review/`（不进 git），命名格式见 CORE-CONVENTIONS §3.8。
+- 截图存 `output/render-review/`（不进 git），命名格式见 STD-CONVENTIONS §3.8。
 - 门禁运行方式与判据见 ENG-GATES-SHOTS §1、ENG-GATES §1。
 
 ## 4 来信与消息
@@ -117,7 +118,7 @@ paths: [".collab/notes/**", ".collab/requests/**", ".collab/tasks/**"]
 
 - **收件箱只由来信监视清**：带回的信移到 `.collab/tools/state/inbox_wait/delivered/`（留最近 50 封备查），会话不手删收件箱，读过也不删。
 
-写给谁，就在谁的收件箱 `notes/<收件方>/` 新建一个文件，文件名格式见 CORE-CONVENTIONS §3.8；时间取真实读数。写完不改，不往别的文件里追加。收件方处理完就删掉这封信，收件箱里只剩没处理的（D-228）。主会话的收件箱由事件等待脚本带回全文后自动删掉。
+写给谁，就在谁的收件箱 `notes/<收件方>/` 新建一个文件，文件名格式见 STD-CONVENTIONS §3.8；时间取真实读数。写完不改，不往别的文件里追加。收件方处理完就删掉这封信，收件箱里只剩没处理的（D-228）。主会话的收件箱由事件等待脚本带回全文后自动删掉。
 
 ### 4.3 三级标记与写法
 

@@ -2,12 +2,13 @@
 id: UI-NAV
 title: 界面与操作说明
 category: ui
+parent: UI-INDEX
 summary: 界面有什么、怎么操作：界面态与漫游态、组件的内容与交互、输入优先级与关键键位、无障碍与文本约定；点位与跳转见子文档
 keywords: [界面交互, 快捷键, 输入优先级, 界面态, 漫游态, 自动隐藏, 四角归属, 时间环操作, 天气签条, 速度档, 临时提示, 到达标题, 设置项, 无障碍, 读屏, 文本键, 地名来源]
 owners: [WP-35]
 contributors: [WP-01, WP-06, WP-27, WP-48, WP-49, WP-50, WP-53, WP-55]
 depends: [ENG-ARCH, SYS-TIME, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-AUDIO]
-related: [CORE-INDEX, ART-STYLE, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, OPS-RELEASE]
+related: [CORE-INDEX, ART-STYLE, SYS-MOTION, SYS-VIEW, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, ENG-RELEASE]
 contracts: [LocalizedName]
 data: ["user://settings.json", "game/hud/i18n/"]
 gates: [G2, G4, G7, G14, G15]
@@ -100,7 +101,7 @@ gates: [G2, G4, G7, G14, G15]
 可展开的卡，分"键位""设置""画面""声音""改键""许可"页（许可页含版本说明），先显示当前模式的键位图；打开时才建、关闭即释放；开始页也能打开。卡底有 **返回标题**（先保存再经加载界面回开始页）和 **退出**（先写设置再保存，保存不成也直接退出，SYS-SAVE-FLOW §1.4）；"键位"页底有 [打开日志目录] 与 [导出诊断…]（确认框里"附带存档"默认不勾，不联网，ENG-PERF-ADAPT §2）。
 
 - **存储**：界面设置存 `user://settings.json` 的 `ui` 节，改键存 `input` 节，画面和声音各有自己的节；整份是档案级，不进存档，读写规则以 SYS-SAVE-FORMAT §3 为准。
-- **画面页**：分组列出 SYS-GRAPHICS §3 的单项，页首是预设分段（均衡、精致、极致、自定义）；每行是"名称｜控件｜生效标签"，无标签即时生效，"雾幕""重启"各有标签；悬停或聚焦一行时底部注释栏显示说明与负载标签（GPU、显存、CPU 的大中小），雾幕类配两张对比小图；即时类直接看身后实景，画面页只占左侧约 1/3，不压暗；有雾幕类改动待生效时"应用"才亮，未应用的改动跨开关保留。"界面缩放""大页磨砂""降低透明度""界面主题"不是画面单项，留在"设置"页。**声音页**按 SYS-AUDIO §7；**许可页**与开始页的"制作人员与许可"是同一个组件（OPS-RELEASE §7.1）。另有只读两行：本机缓存与烘焙进度（附 [清除缓存]）。
+- **画面页**：分组列出 SYS-GRAPHICS §3 的单项，页首是预设分段（均衡、精致、极致、自定义）；每行是"名称｜控件｜生效标签"，无标签即时生效，"雾幕""重启"各有标签；悬停或聚焦一行时底部注释栏显示说明与负载标签（GPU、显存、CPU 的大中小），雾幕类配两张对比小图；即时类直接看身后实景，画面页只占左侧约 1/3，不压暗；有雾幕类改动待生效时"应用"才亮，未应用的改动跨开关保留。"界面缩放""大页磨砂""降低透明度""界面主题"不是画面单项，留在"设置"页。**声音页**按 SYS-AUDIO §7；**许可页**与开始页的"制作人员与许可"是同一个组件（ENG-RELEASE §7.1）。另有只读两行：本机缓存与烘焙进度（附 [清除缓存]）。
 - **设置项**的取值与默认以 `game/hud/HudSettings.cs` 为准。设计要求：有**单键快捷键总开关**（WCAG 2.1.4）；减少动态效果和语言默认跟随系统；跳转后自动应用推荐状态默认关；界面缩放 75–150%；显示性能信息默认关。
 
 ### 3.6 临时提示

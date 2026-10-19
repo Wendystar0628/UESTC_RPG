@@ -7,7 +7,7 @@ summary: 镜头处在空气、楼里、地下、水下、雾海时的画面与�
 keywords: [介质呈现, 介质判定, 介质仲裁, 剖切变体, 剖切色, I0 兜底层, 简化室内, 完整室内, 地层雾, 水下, 半入水, 水下回差, 雾海, 共用雾函数, IMediumState, IMediumPresenter, CameraMedium, MediumKind]
 owners: [WP-07]
 contributors: [WP-06, WP-08, WP-24, WP-42, WP-51, WP-53]
-depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, WLD-INTERIORS, WLD-DIORAMA, WLD-WATER, SYS-WEATHER, SYS-AUDIO]
+depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, WLD-INTERIORS, WLD-OUTSKIRTS-DIORAMA, WLD-WATER, SYS-WEATHER, SYS-AUDIO]
 related: [SYS-WALK, SYS-GRAPHICS, ART-FIDELITY]
 contracts: [CameraMedium, MediumKind, IMediumPresenter, IMediumState]
 data: []
@@ -17,7 +17,7 @@ gates: [G7, G21]
 # SYS-VIEW-MEDIUM · 介质呈现：镜头在楼里、地下、水下、雾海里
 
 > **范围**：本文规定镜头处在空气、楼里、地下、水下（含半入水）、雾海时的介质判定与仲裁、画面呈现和声音，以及楼体剖切变体与简化室内的显示规则。
-> **不在本文**：观察模式、旁观漫游、镜头规则与 3D/平面地图的分工（SYS-VIEW）；行走的镜头与身体入水判定（SYS-WALK）；开放室内的清单、加载与门（WLD-INTERIORS）；水体的范围与水面（WLD-WATER）；地层与雾海的几何（WLD-DIORAMA）；介质与相机的实现（`game/camera/`、`game/contracts/` 里的 `IMediumState`）。
+> **不在本文**：观察模式、旁观漫游、镜头规则与 3D/平面地图的分工（SYS-VIEW）；行走的镜头与身体入水判定（SYS-WALK）；开放室内的清单、加载与门（WLD-INTERIORS）；水体的范围与水面（WLD-WATER）；地层与雾海的几何（WLD-OUTSKIRTS-DIORAMA）；介质与相机的实现（`game/camera/`、`game/contracts/` 里的 `IMediumState`）。
 > **查阅**：先读 §0；判定、仲裁与渲染原则看 §1；楼里看 §2；地下看 §3；水下与半入水看 §4；雾海看 §5
 
 ## 0 结论
@@ -56,7 +56,7 @@ gates: [G7, G21]
 
 ## 3 地下
 
-- 画面按镜头所在地层的颜色上雾（WLD-DIORAMA §2），能见度 8–15 m。
+- 画面按镜头所在地层的颜色上雾（WLD-OUTSKIRTS-DIORAMA §2），能见度 8–15 m。
 - 看得到楼基与桩基的体块、涵洞和地下水线；树根团和管沟只在 K1 地标的楼角可加。地下属精度区 K4(c)，只判底线：地层雾、切面色、不见天。
 - **地上的图层全部剔除**：相机只留地面、地下内容和截面，被剔除的层影子随之消失，西湖的倒影视口停止更新。
 - 从地下往上看，地表背面显示表土的切面色（做法同 §2）。
@@ -73,7 +73,7 @@ gates: [G7, G21]
 
 ## 5 雾海
 
-截面线以外的最低合法高度约 300 m，正常飞行到不了雾海顶面以下。雾海分支只作兜底：推回滞后时。镜头沉到雾海顶面以下时，画面是浓雾；顶面高度读当前值，雾天雾海抬升，最高到地面以下约 1 m（WLD-DIORAMA §4）；活动范围照常把镜头推回。声音只有一层很轻的白噪和风，远景声消失。
+截面线以外的最低合法高度约 300 m，正常飞行到不了雾海顶面以下。雾海分支只作兜底：推回滞后时。镜头沉到雾海顶面以下时，画面是浓雾；顶面高度读当前值，雾天雾海抬升，最高到地面以下约 1 m（WLD-OUTSKIRTS-DIORAMA §4）；活动范围照常把镜头推回。声音只有一层很轻的白噪和风，远景声消失。
 
 ## 6 待验证
 

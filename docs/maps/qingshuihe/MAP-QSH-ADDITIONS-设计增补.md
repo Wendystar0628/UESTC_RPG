@@ -2,12 +2,13 @@
 id: MAP-QSH-ADDITIONS
 title: 设计增补：通用规则与区文档共同口径
 category: maps
+parent: MAP-QSH-INDEX
 summary: 全校设计增补的通用规则（登记、用色、默认状态与作用代号、空地整理、转译、禁做、新颜色、行走分类）和五个区文档共用的身份特征、近景与四季昼夜口径
 keywords: [设计增补, 增补物, 增补登记, 作用代号, 默认状态规则, 大片空地, 功能开敞面, 过渡绿地, 参照与转译, 禁做清单, 新颜色登记, 可跳上, 增补物行走分类, 区文档共同口径, 身份特征, 近景要求]
 owners: [WP-13, WP-14, WP-29]
 contributors: [WP-04, WP-12, WP-15, WP-16, WP-18, WP-19, WP-20, WP-21, WP-23, WP-24, WP-26, WP-28, WP-30, WP-31a, WP-31b, WP-31c, WP-37, WP-38, WP-39, WP-43, WP-44, WP-45, WP-47, WP-48, WP-51, WP-52]
 depends: [CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, SYS-TIME, SYS-WALK]
-related: [WLD-VEGETATION, WLD-LIFE, SYS-MOTION, ENG-GATES, ENG-ARCH, ENG-BUDGET, ENG-WP, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, SYS-WEATHER, ART-RENOVATION, ART-AMBIENCE, MAP-QSH-RENOVATION]
+related: [WLD-VEGETATION, WLD-LIFE, SYS-MOTION, ENG-GATES, ENG-ARCH, ENG-BUDGET, PLAN-WP, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, SYS-WEATHER, WLD-RENOVATION, WLD-AMBIENCE, MAP-QSH-RENOVATION]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/"]
 gates: [G5, G7, G15]
@@ -16,7 +17,7 @@ gates: [G5, G7, G15]
 # MAP-QSH-ADDITIONS · 设计增补：通用规则与区文档共同口径
 
 > **范围**：本文规定校园里原本没有设计感的地方怎么补设计的通用规则，让常被近看的地方放大后都有看头、其余地方不粗糙：以中国校园的景观和建筑细部为底，掺入日式日常街景物件，用日式动画背景的画法来画。含增补物的登记与用色、默认状态规则与作用代号、大片空地的整理、参照与转译、禁做清单、新颜色、行走分类，以及五个区文档共用的身份特征、近景与四季昼夜口径。
-> **不在本文**：按场地分类的增补词汇和楼宇设计规则（MAP-QSH-ADDITIONS-VOCAB）；夜间灯光与雨天增补（MAP-QSH-ADDITIONS-ATMOSPHERE）；各区的主体建筑与景观（本区的楼归本区文档）；老楼翻新（ART-RENOVATION、MAP-QSH-RENOVATION）；日式街景物件的目录与画法（ART-AMBIENCE）；树种与季相（WLD-VEGETATION）；灯光曲线（SYS-TIME-LOOK §3）和逐盏调度（`lighting-schedule.json`）；天气数值（SYS-WEATHER）；室内陈设（WLD-INTERIORS）；外围增补（WLD-OUTSKIRTS-BAND §4）；钟声与广播（SYS-AUDIO-AMBIENCE §3）。
+> **不在本文**：按场地分类的增补词汇和楼宇设计规则（MAP-QSH-ADDITIONS-VOCAB）；夜间灯光与雨天增补（MAP-QSH-ADDITIONS-ATMOSPHERE）；各区的主体建筑与景观（本区的楼归本区文档）；老楼翻新（WLD-RENOVATION、MAP-QSH-RENOVATION）；日式街景物件的目录与画法（WLD-AMBIENCE）；树种与季相（WLD-VEGETATION）；灯光曲线（ART-COLORSCRIPT §3）和逐盏调度（`lighting-schedule.json`）；天气数值（SYS-WEATHER）；室内陈设（WLD-INTERIORS）；外围增补（WLD-OUTSKIRTS-BAND §4）；钟声与广播（SYS-AUDIO-AMBIENCE §3）。
 > **查阅**：先读 §0；登记与用色、默认状态、空地、转译看 §1–§4，禁做 §5，新颜色 §6，行走分类 §7，区文档共同口径看 §8；增补词汇与楼宇规则看 MAP-QSH-ADDITIONS-VOCAB，夜间灯光与雨天看 MAP-QSH-ADDITIONS-ATMOSPHERE
 
 ## 0 结论
@@ -45,7 +46,7 @@ gates: [G5, G7, G15]
 
 ## 1 通用规则
 
-1. **登记**：每个增补物作为一条记录加在本区的世界文件 `world/<区>.json` 里（格式见 CORE-CONVENTIONS §3.1；跨区的包用自己的文件，如 `world/waterfront.json`），ID 以 `design:` 开头并写 `note`；删除就是删记录，原因写进提交说明。
+1. **登记**：每个增补物作为一条记录加在本区的世界文件 `world/<区>.json` 里（格式见 STD-CONVENTIONS §3.1；跨区的包用自己的文件，如 `world/waterfront.json`），ID 以 `design:` 开头并写 `note`；删除就是删记录，原因写进提交说明。
 2. **用色**：只能用调色板里的颜色（ART-STYLE §2）；新颜色先登记（§6）。
 3. **一处一个主题**：设计感来自三件事：把功能件做好看；每处只讲一件事；给人留下停留的位置。
 4. **步道与路网**：新增的步道进路网，和原路一视同仁。设计步道与原人行道平行重合（中线相距 ≤ 5 m）时合成一条直道：删掉那条原人行道记录或改短它，再加保留的各段和新连接，并迁移地形覆盖层对它的引用；命名路、与桥或水道交叉的不动，不隐藏原车行道。
@@ -63,7 +64,7 @@ gates: [G5, G7, G15]
 | --- | --- |
 | 受光 | 主面朝西，对着落日，被照成杏色（四季日落方位 244°–272°，黄昏都受光；清晨受光的是朝东的面） |
 | 长影 | 石柱、横杆、墙体和大件投出有节奏的长影，阵列大致南北排开才显；栏杆立杆这类细杆不投影（ART-MODELING §1.4） |
-| 接季 | 每个增补物至少有一个水平面接住当季落物：秋落叶、春花瓣、冬积雪（SYS-TIME-LOOK §2）；夏季干净，只有树荫光斑 |
+| 接季 | 每个增补物至少有一个水平面接住当季落物：秋落叶、春花瓣、冬积雪（ART-COLORSCRIPT §2）；夏季干净，只有树荫光斑 |
 | 初灯 | 默认状态下刚亮起的暖色光点，属初灯组（MAP-QSH-ADDITIONS-ATMOSPHERE §2） |
 | 透光 | 半透明材料逆光（夜间被身后或身下的灯）发亮 |
 | 剪影 | 细线轮廓压在亮天或亮水（夜间比它亮的夜空）前 |
@@ -85,11 +86,11 @@ gates: [G5, G7, G15]
 
 ## 4 参照与转译规则
 
-本作以中国校园的物件为底，掺入日式日常街景物件（ART-STYLE §3.1）；日式物件的目录、形制、放置见 ART-AMBIENCE，售货机组见 WLD-LIFE-STREET §2，外围增补见 WLD-OUTSKIRTS-BAND §4，钟与广播见 SYS-AUDIO-AMBIENCE §3。
+本作以中国校园的物件为底，掺入日式日常街景物件（ART-STYLE §3.1）；日式物件的目录、形制、放置见 WLD-AMBIENCE，售货机组见 WLD-LIFE-STREET §2，外围增补见 WLD-OUTSKIRTS-BAND §4，钟与广播见 SYS-AUDIO-AMBIENCE §3。
 
 1. **氛围靠物件，不靠地标**：中国感来自外卖袋、桶装水、竹椅、PVC 门帘、电动车挡风被；日式氛围来自成组售货机、背街的电线杆、砌块矮墙、暖帘。
 2. **场景里的字一律简体中文**，内容具体：楼号、"水深危险"、"非机动车停放区"。
-3. **四季都要有中国校园的样子**，视觉效果优先，不求物候精确，不同时开的花可以同框；各季的景物与生活痕迹按 SYS-TIME-LOOK §2。
+3. **四季都要有中国校园的样子**，视觉效果优先，不求物候精确，不同时开的花可以同框；各季的景物与生活痕迹按 ART-COLORSCRIPT §2。
 4. **新旧并存**只表现为新设备（热泵、充电棚、光伏）与老楼建筑语言的并置，不表现为旧痕；老楼全部翻新（D-173）。
 5. **物件真实**：保留中国校园的真实物件，守 D-174（ART-FIDELITY-DETAIL §1.5）；生命迹象只有车、猫、灯和晾晒物（INV-6）。
 
@@ -111,7 +112,7 @@ gates: [G5, G7, G15]
 14. 在功能开敞面的中心放东西，或每个路口都放小品。
 15. 刻字景观石过多：校内已有 6–7 块，新增的桥头卧石最多 2 块。
 16. 外围：大型广告牌、楼顶广告大字、LED 大屏、门架式交通标志、工地与围挡、塔吊、临时板房、杂乱的线束与通信杆、违停车辆。
-17. 守 D-174（ART-FIDELITY-DETAIL §1.5）：现实里显旧的东西按 ART-RENOVATION 换成新件。
+17. 守 D-174（ART-FIDELITY-DETAIL §1.5）：现实里显旧的东西按 WLD-RENOVATION 换成新件。
 
 室内同样适用（WLD-INTERIORS-BUILD §3）：删去杂乱的线槽与管线、临时围挡、刺眼的广告与横幅、成片的指示牌和制度牌（每间房最多一两块）、过多的消防标识（保留"安全出口"绿灯和消火栓箱）。
 
@@ -126,14 +127,14 @@ gates: [G5, G7, G15]
 | 爬山虎橙 | #C8743A |
 | 爬山虎暗紫红 | #7A3646 |
 | 乒乓台灰绿 | 沿用 MAP-QSH-CENTER-EAST §4.3 的低饱和绿 |
-| 消防红 | 与消防栓共用一个色名；ART-AMBIENCE §4 的邮筒与电话亭也用它 |
-| 凸面镜橙 | 压低彩度的橙，WP-04 定色值；只用在 ART-AMBIENCE §6 凸面镜的杆和镜框 |
+| 消防红 | 与消防栓共用一个色名；WLD-AMBIENCE §4 的邮筒与电话亭也用它 |
+| 凸面镜橙 | 压低彩度的橙，WP-04 定色值；只用在 WLD-AMBIENCE §6 凸面镜的杆和镜框 |
 | PVC 门帘灰蓝 | 玻璃色提亮 |
 | 剖切色 | 偏暖的灰紫，WP-04 定色值（SYS-VIEW-MEDIUM §2） |
 | 季节花色：紫藤紫、凌霄橙红、鸢尾蓝紫 | 进季相行，WP-37（日相与季节调色板） 定色值；面积小，不算新的跳色（ART-STYLE §2.2） |
 | 直饮水台指示灯绿 | 与闸机待机的绿灯共用一个色名 |
 
-老楼翻新的墙色见 ART-RENOVATION §3.3，室内色名在 `game/style/palette/ext/`，都不在本表；导览亭牌面、桩铭牌只用场景调色板里已有的颜色。
+老楼翻新的墙色见 WLD-RENOVATION §3.3，室内色名在 `game/style/palette/ext/`，都不在本表；导览亭牌面、桩铭牌只用场景调色板里已有的颜色。
 
 ## 7 增补物的行走分类
 
@@ -153,11 +154,11 @@ gates: [G5, G7, G15]
 
 - **保留什么**：主要建筑、道路、设施的位置和大体形状要保留，其余按 ART-MODELING 风格化。区文档的身份特征表和写明结构（体量、层数、平面、屋顶标志物、主入口、特色色或材质）的条目是身份特征，造型和配色要让人认得出来；照片和资料只定结构，材质、陈设、标识、生活痕迹按氛围处理，写明"按画面处理"的细节同样。
 - **轮廓调整**：直接改本区世界文件里的记录，10 m 以内算轻微，超过 10 m 或新增设计物要写理由（`note` 或提交说明）。
-- **视觉精度**（ART-FIDELITY）：底线处处满足；身份特征对象、本区主轴和点位落点 30 m 内是 K1，行走走廊和开放室内是 K2。主轴有哪些、哪些楼按 ART-RENOVATION 翻新（MAP-QSH-RENOVATION 的身份特征例外），由各区文档自己写。
+- **视觉精度**（ART-FIDELITY）：底线处处满足；身份特征对象、本区主轴和点位落点 30 m 内是 K1，行走走廊和开放室内是 K2。主轴有哪些、哪些楼按 WLD-RENOVATION 翻新（MAP-QSH-RENOVATION 的身份特征例外），由各区文档自己写。
 
 ### 8.2 四季与昼夜
 
 - **视觉效果优先**：四季和昼夜一律视觉效果优先，真实花期和作息只作参考，不同时开的花可以同框。
 - **默认状态**：秋 17:30。区文档四季表的"秋"一列就是该区外观各节写的现状，"—"或"同秋"表示相同。
-- **怎么做**：全部靠 SYS-TIME-LOOK §2 的连续参数（季相行、地面遮罩、按法线覆雪）和灯光通道完成，季节小物做进同一组实例，不换模型；植被由 WP-23（植被系统） 种、WP-38（物候、季节植被与季节氛围） 驱动季相，生活痕迹由 WP-25（动物与生活痕迹） 放置，颜色取自调色板。
+- **怎么做**：全部靠 ART-COLORSCRIPT §2 的连续参数（季相行、地面遮罩、按法线覆雪）和灯光通道完成，季节小物做进同一组实例，不换模型；植被由 WP-23（植被系统） 种、WP-38（物候、季节植被与季节氛围） 驱动季相，生活痕迹由 WP-25（动物与生活痕迹） 放置，颜色取自调色板。
 - **夜间角色**：用 §2 的作用代号，夜间暗部亮度下限见 SYS-TIME §4。

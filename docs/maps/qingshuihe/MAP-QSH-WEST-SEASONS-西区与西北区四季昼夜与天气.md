@@ -17,7 +17,7 @@ gates: [G7]
 # MAP-QSH-WEST-SEASONS · 西区与西北区四季昼夜与天气：夜间角色、四季表、避雨处与积水点
 
 > **范围**：本文规定西区与西北区的四季与昼夜清单（夜间角色、默认的秋格；其余季节主线之后）、开放室内的灯、天气要点（避雨处与雨帘、积水点、雾里读形、雨天的生活痕迹、推荐状态）。
-> **不在本文**：各楼、石刻与湿地的外观和身份特征（MAP-QSH-WEST）；行走、点位与声音（MAP-QSH-WEST-WALK）；灯光时刻表（SYS-TIME-LOOK §3）；萤火虫的出没（SYS-MOTION-ENV §6.2）；作用代号（MAP-QSH-ADDITIONS §2）；雨帘与积水的做法（MAP-QSH-ADDITIONS-ATMOSPHERE §4、§5，SYS-WEATHER）；植被与季相（WLD-VEGETATION）。
+> **不在本文**：各楼、石刻与湿地的外观和身份特征（MAP-QSH-WEST）；行走、点位与声音（MAP-QSH-WEST-WALK）；灯光时刻表（ART-COLORSCRIPT §3）；萤火虫的出没（SYS-MOTION-ENV §6.2）；作用代号（MAP-QSH-ADDITIONS §2）；雨帘与积水的做法（MAP-QSH-ADDITIONS-ATMOSPHERE §4、§5，SYS-WEATHER）；植被与季相（WLD-VEGETATION）。
 > **查阅**：先读 §0；四季与夜间角色看 §1；天气看 §2
 
 ## 0 结论

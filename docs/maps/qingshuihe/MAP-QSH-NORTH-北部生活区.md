@@ -2,12 +2,13 @@
 id: MAP-QSH-NORTH
 title: 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅
 category: maps
+parent: MAP-QSH-INDEX
 summary: 北部生活区各建筑的外观与身份特征、本区设计增补、近景要求；四季昼夜、行走与声音在子文档
 keywords: [北部生活区, 学生活动中心, 成电会堂, 赭红圆鼓, 校医院, 院名灯牌, 商业街, 玻璃拱顶步行街, 店招, 宿舍组团, 学知苑, 硕丰苑, 博翰苑, 留学生组团, 本科楼A型, 本科楼B型, 组团闸机, 学知一组团, 阳台晾晒, 银杏苑, 芙蓉餐厅, 思学苑, 春晖苑, 朝阳餐厅, 西北餐厅, 室外扶梯罩棚, 风雨连廊, 丹桂路, 博士公寓, world/north.json]
 owners: [WP-20]
 contributors: [WP-13, WP-23, WP-25]
-depends: [CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, ART-RENOVATION, MAP-QSH-ADDITIONS, WLD-INTERIORS, ENG-ARCH]
-related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-CENTER-EAST, MAP-QSH-RENOVATION, MAP-QSH-LIBRARY, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, ENG-PERF, SYS-MAPS]
+depends: [CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, WLD-RENOVATION, MAP-QSH-ADDITIONS, WLD-INTERIORS, ENG-ARCH]
+related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-CENTER-EAST, MAP-QSH-RENOVATION, MAP-QSH-INTERIORS-LIBRARY, WLD-VEGETATION, WLD-LIFE, ENG-GATES, PLAN-WP, ENG-PERF, SYS-MAPS]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/north.json"]
 gates: [G5, G7, G10]
@@ -16,7 +17,7 @@ gates: [G5, G7, G10]
 # MAP-QSH-NORTH · 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅
 
 > **范围**：本文规定北部生活区（学生活动中心与成电会堂、校医院、商业街、宿舍组团、餐厅）的建筑外观与身份特征、本区设计增补、近景要求，并列出本区的子文档。
-> **不在本文**：四季昼夜与天气（MAP-QSH-NORTH-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-NORTH-WALK）；楼的实体 ID、位置、层数与店面点位（以 `game/data/maps/qingshuihe/world/north.json` 为准）；开放室内的内部（MAP-QSH-INTERIORS §3、WLD-INTERIORS）；植被与季相（WLD-VEGETATION、SYS-TIME-LOOK §2）；猫、单车、晾晒物的放置（WLD-LIFE）；北门外的外围街道（WLD-OUTSKIRTS）；锚点位置（SYS-ATLAS）；本区地形（MAP-QSH-TERRAIN-DISTRICTS §7、§9、§11）。
+> **不在本文**：四季昼夜与天气（MAP-QSH-NORTH-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-NORTH-WALK）；楼的实体 ID、位置、层数与店面点位（以 `game/data/maps/qingshuihe/world/north.json` 为准）；开放室内的内部（MAP-QSH-INTERIORS §3、WLD-INTERIORS）；植被与季相（WLD-VEGETATION、ART-COLORSCRIPT §2）；猫、单车、晾晒物的放置（WLD-LIFE）；北门外的外围街道（WLD-OUTSKIRTS）；锚点位置（SYS-ATLAS）；本区地形（MAP-QSH-TERRAIN-DISTRICTS §7、§9、§11）。
 > **查阅**：先读 §0；各楼外观看 §1–§4、§5–§6；本区增补看 §7；身份特征与近景要求看 §8；四季昼夜、天气看 MAP-QSH-NORTH-SEASONS；行走、开放入口与声音看 MAP-QSH-NORTH-WALK
 
 ## 0 结论
@@ -64,7 +65,7 @@ gates: [G5, G7, G10]
 - **3.3 店招**：店名可参考真实店铺（凑近能读出蜜雪冰城、兰州拉面、书店、银行这类字样），按画面取舍，以暖色为主，远看是一排暖色发光条；不画品牌标志，过多的广告和横幅按 MAP-QSH-ADDITIONS §5 删减。亮灭按 `game/data/maps/qingshuihe/lighting-schedule.json` 的店招通道：白天灯箱不亮，靠字形和底色读出；默认状态（秋 17:30）刚亮起；深夜按哈希熄一半，留下易购、蜜雪冰城这类夜里还开着的店，再晚只剩一两块，是深夜的亮点。冬季下雪的傍晚（P12 的推荐状态）三层店招全亮：雪只落在两端街口和外立面，街内在采光顶下没有雪，从街外看雪落在店招前、街内一片暖光。
 - **3.4 生活细节**：水站门前成排的蓝色桶装水，旁边一辆红色电动三轮车；校园超市天花板挂着粉、橙、黄、蓝、紫渐变的 70 周年吊旗，橱窗里只露一点。
 - **3.5 开放室内**：范围见 MAP-QSH-INTERIORS §3；两端街口、两家店和关着的店门的门口表现见 MAP-QSH-NORTH-WALK。
-- **3.6 外立面**：翻新见 MAP-QSH-RENOVATION §2 商业街的例外；玻璃拱顶的玻璃和框是新的，框色深灰。小餐馆门口可挂暖帘，后巷可立电线杆，街里放一处邮筒和电话亭（ART-AMBIENCE §4–§5）。
+- **3.6 外立面**：翻新见 MAP-QSH-RENOVATION §2 商业街的例外；玻璃拱顶的玻璃和框是新的，框色深灰。小餐馆门口可挂暖帘，后巷可立电线杆，街里放一处邮筒和电话亭（WLD-AMBIENCE §4–§5）。
 
 ## 4 宿舍
 
@@ -73,11 +74,11 @@ gates: [G5, G7, G10]
 - **4.3 本科楼 B 型**（原型学知六组团）：围合中庭，开间密集；米白竖横框与灰粉或浅砂色窗间板交替，深灰蓝窗玻璃，阳台或开廊成一个个暗孔洞；平屋顶，低女儿墙；浅粉砂色的阳台实体栏板凸出墙面。同样按翻新预设做新；中庭的铺装和廊架只用调色板里的低彩度色。
 - **4.4 硕士楼**：灰米色石材质感外墙，深色窗框；阳台开敞，金属栏杆后挂白窗帘，阳台上有晾衣杆；外机装在深灰百叶格里。硕丰苑 1–20 栋同这套语言，窗框用灰铝框；入口是与主墙同色的墙面加浅色石材门套、深灰铝框玻璃门，台阶和不锈钢扶手都是新的。
 - **4.5 老宿舍**：宿舍暖米黄和浅奶咖两种暖色外墙的老楼，不是清一色的白；组团之间用大块墙色区分，同一栋楼不随机换色。全部翻新，做法见 MAP-QSH-RENOVATION §1.5。
-- **4.6 屋顶**：屋面、女儿墙与出屋面小机房按 ART-RENOVATION §5.4。本区屋面设备是 2026 年暑期换的空气源热泵：深灰机组和不锈钢水箱收进设备围挡，只露顶部。
+- **4.6 屋顶**：屋面、女儿墙与出屋面小机房按 WLD-RENOVATION §5.4。本区屋面设备是 2026 年暑期换的空气源热泵：深灰机组和不锈钢水箱收进设备围挡，只露顶部。
 - **4.7 组团大门**：值班室，门禁刷脸或一卡通。楼门一侧放桌椅、公告栏、体重秤，以及一组 2–3 台的自动售货机（WLD-LIFE-STREET §2，白色机身、蓝色取货口，WP-13（街道家具）），屏幕夜里发光、亮度压低，是门口的一小块光；值班室通宵亮灯。坡道装不锈钢扶手，铺黄色盲道和蓝色边砖。闸机、车行门、值班室、围栏都是新件：刷脸闸机，深灰抬杆车行门，2.2 m 透空栏杆加 1.2 m 绿篱；门头不挂横幅，门口不立展板，指向牌只用 MAP-QSH-ADDITIONS-VOCAB §1、§5 的楼号和指路牌。学知一组团的闸机在行走模式下翼门收起、绿箭头亮，中庭可走（抬杆照旧放下）；其余组团闸机关着、红叉灯，中庭能看不能进。
 - **4.8 车场**：组团外新建约 1300 m² 的非机动车场，红色透水砖地面，白线车位框里画白色自行车图标，停满电动车；行道树干下半截刷白。共享单车只能停在组团外。
 - **4.9 窗里**：上床下桌；亮灯的窗里能看到窗帘和床架的剪影，没有人。窗卡 `W-DORM`（室内视差、床架剪影、窗帘、灯光色块）5 m 以内也不换实体，也不与房间逐间对应。亮灭按 `game/data/maps/qingshuihe/lighting-schedule.json` 的宿舍通道：晚间成片亮，23:30 成片熄灭，只剩零星台灯和手机微光，后半夜近乎全暗。夜里拉窗帘的比例提高，窗帘比例以 `game/gen/parts/openings/OpeningStyle.cs` 为准。
-- **4.10 阳台晾晒**（WP-25（动物与生活痕迹） 放置）：衬衫、毛巾和一床浅色被子挂在晾衣杆上，也有搭在栏杆上拍晒的。按干净版：挂在阳台里的晾衣杆上，没有阳台的楼挂在每间窗外一根统一的伸出杆上，不挂在机位格栅和杂乱支架上，颜色低饱和（ART-RENOVATION §4.3）。晾晒的比例与时段按 WLD-LIFE-FAUNA §2。春秋薄被和衬衫，夏季 T 恤和凉席，冬季厚被和棉衣。
+- **4.10 阳台晾晒**（WP-25（动物与生活痕迹） 放置）：衬衫、毛巾和一床浅色被子挂在晾衣杆上，也有搭在栏杆上拍晒的。按干净版：挂在阳台里的晾衣杆上，没有阳台的楼挂在每间窗外一根统一的伸出杆上，不挂在机位格栅和杂乱支架上，颜色低饱和（WLD-RENOVATION §4.3）。晾晒的比例与时段按 WLD-LIFE-FAUNA §2。春秋薄被和衬衫，夏季 T 恤和凉席，冬季厚被和棉衣。
 
 ## 5 餐厅
 

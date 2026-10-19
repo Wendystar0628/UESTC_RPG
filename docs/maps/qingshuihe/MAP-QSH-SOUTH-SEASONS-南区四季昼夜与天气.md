@@ -82,7 +82,7 @@ gates: [G7]
 
 ### 1.2 交给 WP-39 的灯具（主线之后）
 
-写进 `game/data/maps/qingshuihe/lighting-schedule.json`（曲线以 SYS-TIME-LOOK §3、MAP-QSH-ADDITIONS-ATMOSPHERE §1–§3 为准）：岗亭与闸机指示灯、校名墙与国旗杆地埋灯、主楼泛光与窗灯、门厅灯、吴立人像地埋灯、钟面背光、宣邦楼窗灯与山花洗墙灯、六角亭小灯、东湖路灯与步道灯、跑道休息点庭院灯、体育场投光灯、游泳馆玻璃带、桃园餐厅、科创餐厅店招、国际创新中心、各开放入口的门口灯。
+写进 `game/data/maps/qingshuihe/lighting-schedule.json`（曲线以 ART-COLORSCRIPT §3、MAP-QSH-ADDITIONS-ATMOSPHERE §1–§3 为准）：岗亭与闸机指示灯、校名墙与国旗杆地埋灯、主楼泛光与窗灯、门厅灯、吴立人像地埋灯、钟面背光、宣邦楼窗灯与山花洗墙灯、六角亭小灯、东湖路灯与步道灯、跑道休息点庭院灯、体育场投光灯、游泳馆玻璃带、桃园餐厅、科创餐厅店招、国际创新中心、各开放入口的门口灯。
 
 ## 2 天气要点（主线之后）
 

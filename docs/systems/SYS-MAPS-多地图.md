@@ -2,12 +2,13 @@
 id: SYS-MAPS
 title: "多地图：按图数据、`IMapService` 与切换"
 category: systems
+parent: SYS-INDEX
 summary: "按图数据与全局的划分、map_rect、单图半径等多图约定；先卸后装的切图运行时在主线之后"
 keywords: [多地图, 换图, 切图, 地图服务, 按图数据, 先卸后装, 同图重载, 天气按图, 单图半径, 本机烘焙缓存, IMapService, IMapAware, MapScope, MapDescriptor, map.json, map_rect]
 owners: [WP-46]
 contributors: [WP-00, WP-01, WP-02, WP-08, WP-15, WP-22, WP-23, WP-24, WP-26, WP-27, WP-34, WP-35, WP-36, WP-39, WP-40, WP-43, WP-44, WP-45, WP-47, WP-48, WP-49, WP-50, WP-51, WP-53]
 depends: [SYS-VIEW, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-SAVE, WLD-OUTSKIRTS]
-related: [CORE-INDEX, WLD-DIORAMA, ENG-GATES, ENG-BUDGET, ENG-WP, UI-NAV, SYS-WALK, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
+related: [CORE-INDEX, WLD-OUTSKIRTS-DIORAMA, ENG-GATES, ENG-BUDGET, PLAN-WP, UI-NAV, SYS-WALK, SYS-GRAPHICS, SYS-ATLAS, SYS-TITLE, WLD-INTERIORS, SYS-AUDIO, ENG-ROADMAP]
 contracts: [MapId, WaypointRef, MapKind, MapTimeRule, GeoFrame, MapRect, RoamLimits, MapTitle, MapSpawn, MapWorldRules, MapEnvironment, MapPortal, MapDescriptor, MapScopeAttribute, IMapContext, MapTravelCause, MapTravelRequest, MapStage, MapTravelResult, IMapTransition, IMapService, IMapAware, MapVisit]
 data: ["game/data/maps/index.json", "game/data/maps/qingshuihe/map.json", "game/data/maps/qingshuihe/", "game/contracts/schemas/map.schema.json"]
 gates: [G2, G4, G5, G6, G7]
@@ -32,7 +33,7 @@ paths: ["game/data/maps/**"]
 
 ### 0.1 接入要点
 
-- **改地图数据**：只改项目的世界文件 `game/data/maps/<图>/world/`，增删改写明理由；不从 OSM 或其他在线地图取数据，也不照着改；OSM 只剩署名与随版本发的地图数据包（D-252、OPS-RELEASE §5）
+- **改地图数据**：只改项目的世界文件 `game/data/maps/<图>/world/`，增删改写明理由；不从 OSM 或其他在线地图取数据，也不照着改；OSM 只剩署名与随版本发的地图数据包（D-252、ENG-RELEASE §5）
 - **读本图的数据文件**：路径由 `IMapContext.DataRoot` 拼出，烘焙产物用 `BakeRoot`；内核、系统、界面和通用程序集里不写地图 ID、`res://data/maps/…` 路径和完整实体 ID 的字面量（G4，§6）
 - **加数据或资源**：放 `game/data/maps/<地图>/` 下本包自己的文件，资源放各资源目录的 `<地图>/` 子目录；`map.json` 归 WP-46（地图服务与多地图），字段增改须经主代理批准（§1、§2）
 - **写区内容**：区代码靠程序集的 `MapScope`；通用模块只读 `BuildContext.Map` 和本图数据，不认领具体实体，出现 `FeatureClaim` 由 G5 报错（§6）
@@ -58,13 +59,13 @@ paths: ["game/data/maps/**"]
 
 - 目录与文件清单以 `game/data/maps/` 和 `ownership.json` 为准；按图的资源放在各资源目录的 `<地图>/` 子目录。
 - 实体 ID 只在本图内唯一；跨图引用写成"地图 + ID"。`qsh:` 前缀属于数据，不是地图 ID。以后的图用自己的前缀，G5 检查前缀不冲突。
-- 世界文件 `world/<区>.json`：每区一份，记录就是 `WorldFeature`，格式见 CORE-CONVENTIONS §3.1，加载以 `game/gen/world/WorldModelLoader.cs` 为准；原点与投影在 `world/geo.json`。
+- 世界文件 `world/<区>.json`：每区一份，记录就是 `WorldFeature`，格式见 STD-CONVENTIONS §3.1，加载以 `game/gen/world/WorldModelLoader.cs` 为准；原点与投影在 `world/geo.json`。
 - 精选室内属于所在的图，不是单独的图，随本图的流式加载进出（WLD-INTERIORS）。
 
 ### 1.2 烘焙缓存
 
 - 各图的 TileBundle、碰撞级 C、室内包与碰撞包、平面地图底图，发布时全图烘好随包发，缺失时由同一个 `Build()` 本机补烘（D-165）；查找顺序：本机缓存 → 随包缓存 → 本机补烘。做法见 ENG-PERF-STREAM §1、ENG-ARCH §4。
-- 缓存按图分开；本机缓存与画面设置、世界状态、存档无关，跨存档、跨画质共用，它不是存档（CORE-CONVENTIONS §4）。不另做几何启动集；主 PCK 只留全局资源和各图的 JSON。
+- 缓存按图分开；本机缓存与画面设置、世界状态、存档无关，跨存档、跨画质共用，它不是存档（STD-CONVENTIONS §4）。不另做几何启动集；主 PCK 只留全局资源和各图的 JSON。
 
 ## 2 地图描述 `map.json`
 

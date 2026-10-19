@@ -2,12 +2,13 @@
 id: SYS-GRAPHICS
 title: 画面设置：预设、单项、风格底线、应用与持久化
 category: systems
+parent: SYS-INDEX
 summary: 主线三个画面预设与约 10 个单项、风格底线、应用方式、持久化；自动调节、首次分档、15 秒确认等在主线之后
 keywords: [画面设置, 画质, 画面预设, 设备档, 均衡, 精致, 极致, 单项, 风格底线, 风格默认, 渲染比例, 雾幕类设置, 画面页, IQualityService, IQualityAware, QualityResponsive, QualityKnob, quality-presets.json, settings.json]
 owners: [WP-32]
 contributors: [WP-01, WP-02, WP-03, WP-04, WP-05, WP-07, WP-23, WP-24, WP-27, WP-35, WP-38, WP-41, WP-45, WP-47]
 depends: [ART-STYLE, ENG-ARCH, ENG-BUDGET, ENG-PERF]
-related: [CORE-INDEX, ENG-GATES, ART-FIDELITY, SYS-TIME, UI-NAV, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, OPS-RELEASE]
+related: [CORE-INDEX, ENG-GATES, ART-FIDELITY, SYS-TIME, UI-NAV, UI-VISUAL, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO, ENG-RELEASE]
 contracts: [QualityPreset, DeviceTier, ApplyClass, KnobKind, QualityKnob, KnobSpec, QualityProfile, QualityView, ApplyOrigin, QualityChange, KnobDelta, ApplyPlan, ApplyStatus, ApplyResult, IQualityService, IQualityAware, QualityResponsiveAttribute]
 data: ["game/data/quality-presets.json", "user://settings.json"]
 gates: [G2, G5, G7, G10, G14]

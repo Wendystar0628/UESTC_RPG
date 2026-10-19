@@ -8,7 +8,7 @@ keywords: [南区行走, 南区主网, 能看不能进, 开放入口, 涉水区,
 owners: [WP-18]
 contributors: [WP-30, WP-31a, WP-36, WP-43, WP-44, WP-47, WP-48c, WP-53]
 depends: [CORE-INDEX, MAP-QSH-SOUTH, SYS-WALK, WLD-INTERIORS, WLD-OUTSKIRTS, SYS-AUDIO]
-related: [MAP-QSH-LIBRARY, MAP-QSH-CORE, UI-NAV, SYS-ATLAS]
+related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-CORE, UI-NAV, SYS-ATLAS]
 contracts: []
 data: []
 gates: [G15, G21]

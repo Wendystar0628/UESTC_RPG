@@ -2,12 +2,13 @@
 id: ART-FIDELITY
 title: 视觉精度标准：处处不粗糙，细节按区分级
 category: art
+parent: ART-INDEX
 summary: 处处成立的精度底线 B1–B13、五个精度区的判定距离与取用、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
 keywords: [视觉精度, 精度区, K1–K5, 判定距离, 底线清单, B1–B13, 不粗糙, 一票否决, 区界规则, 可读规则, 巡检点, 行走走廊, 外围分级]
 owners: [WP-27]
 contributors: [WP-04, WP-07, WP-10, WP-12, WP-14, WP-15, WP-23, WP-24, WP-44, WP-47, WP-51, WP-52]
 depends: [CORE-INDEX, ART-STYLE, ART-MODELING, ENG-BUDGET, SYS-TIME, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, WLD-OUTSKIRTS, WLD-INTERIORS]
-related: [MAP-QSH-CORE, MAP-QSH-SOUTH, WLD-WATER, SYS-VIEW, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, ENG-WP, ENG-PERF, ART-RENOVATION, ART-AMBIENCE]
+related: [MAP-QSH-CORE, MAP-QSH-SOUTH, WLD-WATER, SYS-VIEW, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, PLAN-WP, ENG-PERF, WLD-RENOVATION, WLD-AMBIENCE]
 contracts: []
 data: []
 gates: [G2, G7]
@@ -77,7 +78,7 @@ gates: [G2, G7]
 
 ### 1.4 划分与数据
 
-- WP-44（可行走范围、边界与安全点） 在构建期划分：立面段从主网、道路、点位落点做可见性采样，60 m 内主网或道路旁能正面看到记 K3，否则记 K4 (b)；屋顶默认 K4 (a)，K1 楼的屋顶随楼；外围沿用 WLD-OUTSKIRTS-BAND §2 的级别。立面段、屋顶和 2 m 地面栅格各写一个区，生成器只读结果；提级写进覆盖层（CORE-CONVENTIONS §3.1）。
+- WP-44（可行走范围、边界与安全点） 在构建期划分：立面段从主网、道路、点位落点做可见性采样，60 m 内主网或道路旁能正面看到记 K3，否则记 K4 (b)；屋顶默认 K4 (a)，K1 楼的屋顶随楼；外围沿用 WLD-OUTSKIRTS-BAND §2 的级别。立面段、屋顶和 2 m 地面栅格各写一个区，生成器只读结果；提级写进覆盖层（STD-CONVENTIONS §3.1）。
 - ENG-BUDGET 的上限不因分区而变。
 
 ### 1.5 换算基准
@@ -115,7 +116,7 @@ gates: [G2, G7]
 违反 §2.0 的 B1–B13 任一条即一票否决，对所有区判；K1–K3 画面里完全没有生活痕迹同样否决（K4 不判）。下面是 B13 与开放室内的具体判法，条号沿用（ENG-GATES-VETO 按条号引用）：
 
 17. **季节残留**：叶量为 0 的树还挂着插片；换季落定后留着上一季的粒子、覆盖、植被色或积雪；草与雪、花与叶直接混色（SYS-MOTION §3）。
-18. **亮灯不一致**：开放楼内启用对齐时玩家所在房间与它的窗亮灭不一致；或同一窗、同一灯的亮灭因到达方式不同而不同（SYS-TIME-LOOK §3）。只管开放室内和关着的楼。
+18. **亮灯不一致**：开放楼内启用对齐时玩家所在房间与它的窗亮灭不一致；或同一窗、同一灯的亮灭因到达方式不同而不同（ART-COLORSCRIPT §3）。只管开放室内和关着的楼。
 19. **影发脏**：非绿色材质的影落在橄榄区（100°–150°），或浅色面白天影低于 ART-STYLE-SHADING §2.2 的下限。
 20. **墙面发脏**：立面或地面出现做旧痕迹，或中景墙面斑驳起伏超过 ART-STYLE-SHADING §4.2 的幅度。
 21–27. 开放室内的空房间、墙体穿帮、楼内穿帮、楼梯对不上、门洞过窄、空门厅、门扇扫人；只管开放室内和关着的楼，集中测试时进楼看一眼。
@@ -143,7 +144,7 @@ gates: [G2, G7]
 
 ### 5.3 细节优先级
 
-1. **地面**：铺装批次色差、路缘分缝、盲道、井盖、卡着落叶的雨水箅、L 形边沟（ART-AMBIENCE §6）。
+1. **地面**：铺装批次色差、路缘分缝、盲道、井盖、卡着落叶的雨水箅、L 形边沟（WLD-AMBIENCE §6）。
 2. **离地 0.3–2.5 m 的竖向物**：刷白的树干、灯杆底板和检修门、长椅螺栓、分类垃圾箱。
 3. **读得出的字**：树牌、开放时间牌、店招、新贴的海报、导览牌。
 4. **抬头看到的底面**：雨棚筒灯、连廊底、逆光的树冠底。

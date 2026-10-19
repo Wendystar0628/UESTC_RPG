@@ -302,7 +302,7 @@ def docs_data():
 
 def decisions_data():
     rows = []
-    for p in sorted(glob.glob(os.path.join(ROOT, 'docs', 'core', 'CORE-DECISIONS-*.md'))):
+    for p in sorted(glob.glob(os.path.join(ROOT, 'docs', 'registry', 'REG-DECISIONS-*.md'))):
         for l in read_text(rel(p)).splitlines():
             c = cells(l)
             if len(c) >= 5 and re.match(r'^D-\d+$', c[0]):

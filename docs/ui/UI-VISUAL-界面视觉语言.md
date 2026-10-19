@@ -2,6 +2,7 @@
 id: UI-VISUAL
 title: 界面视觉语言：设计原则、色彩令牌、主题与实现边界
 category: ui
+parent: UI-INDEX
 summary: 界面设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界；字体形状图标组件布局与动效见子文档
 keywords: [界面视觉, 色彩令牌, 清蓝, 晶白, 深屏, 昼夜交班, 常驻件, 对比度规则, ui.json, ui_night, UiThemeBuilder, UiThemeClock, ui_panel, ui_screen]
 owners: [WP-35]

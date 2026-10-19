@@ -16,7 +16,7 @@ gates: [G6, G7]
 # ART-STYLE-SHADING · 明暗、影色与材质表现
 
 > **范围**：本文规定全局卡通着色：明暗阶数与法线、影色的推导、高光边缘光与透光、贴图与笔触，以及材质速查。
-> **不在本文**：目标、参照、调色板与排除元素（ART-STYLE）；描线与后期（ART-STYLE-LINES）；天空、太阳与雾（ART-SKYLIGHT）；各时季格的取值（SYS-TIME-LOOK §1）；着色器的参数与写法（`game/style/`，白名单清单见 ENG-PERF）。
+> **不在本文**：目标、参照、调色板与排除元素（ART-STYLE）；描线与后期（ART-STYLE-LINES）；天空、太阳与雾（ART-SKYLIGHT）；各时季格的取值（ART-COLORSCRIPT §1）；着色器的参数与写法（`game/style/`，白名单清单见 ENG-PERF）。
 > **查阅**：先读 §0；明暗 §1，影色 §2，高光与透光 §3，贴图 §4，材质速查 §5
 
 ## 0 结论
@@ -97,7 +97,7 @@ gates: [G6, G7]
 
 ### 2.2 推导规则
 
-- 各"关键帧 × 季节"格的受光色和影色由色彩脚本在 OKLab 里推导（SYS-TIME-LOOK §1），不拿白天的颜色乘实时灯光；公式与明度比等参数以 `game/style/palette/keys/derive.json` 为准，花、布、灯罩、水面的影最浅。
+- 各"关键帧 × 季节"格的受光色和影色由色彩脚本在 OKLab 里推导（ART-COLORSCRIPT §1），不拿白天的颜色乘实时灯光；公式与明度比等参数以 `game/style/palette/keys/derive.json` 为准，花、布、灯罩、水面的影最浅。
 - **自检约束**（SYS-TIME §4、ART-FIDELITY §3 第 19 条按这里判）：
   - 浅色面（受光 L ≥ 0.85）的影 L 白天 ≥ 约 0.74，默认格 ≥ 约 0.68；
   - 非绿色材质的影不落在 100°–150°（橄榄区）。

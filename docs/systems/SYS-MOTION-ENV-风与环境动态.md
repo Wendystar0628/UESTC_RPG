@@ -8,7 +8,7 @@ keywords: [风场, 阵风, IWindField, 飘落池, 飘落物, 萤火虫, 解析�
 owners: [WP-26]
 contributors: [WP-38, WP-40, WP-45]
 depends: [SYS-MOTION, ART-STYLE, ART-SKYLIGHT, ENG-PERF, SYS-TIME, SYS-WEATHER]
-related: [WLD-VEGETATION, WLD-WATER, WLD-DIORAMA, WLD-INTERIORS, SYS-WALK, SYS-AUDIO]
+related: [WLD-VEGETATION, WLD-WATER, WLD-OUTSKIRTS-DIORAMA, WLD-INTERIORS, SYS-WALK, SYS-AUDIO]
 contracts: [IWindField, WindSample]
 data: []
 gates: []
@@ -17,7 +17,7 @@ gates: []
 # SYS-MOTION-ENV · 风、飘落、远景与季节氛围
 
 > **范围**：本文规定风及其连锁反应、飘落物与行走时的瞬时痕迹、流体、光的缓慢变化、远景、季节氛围，以及粒子类的解析运动规则。
-> **不在本文**：两个时钟、一拍二、节奏上限与转场（SYS-MOTION）；生命体、室内微动、偶发事件（SYS-MOTION-LIFE）；天气向量、降水池与天气画面、闪电与彩虹（SYS-WEATHER）；植被与季相本体（WLD-VEGETATION）；季节内容本身（SYS-TIME-LOOK）。
+> **不在本文**：两个时钟、一拍二、节奏上限与转场（SYS-MOTION）；生命体、室内微动、偶发事件（SYS-MOTION-LIFE）；天气向量、降水池与天气画面、闪电与彩虹（SYS-WEATHER）；植被与季相本体（WLD-VEGETATION）；季节内容本身（ART-COLORSCRIPT）。
 > **查阅**：先读 §0；风看 §1、§6.4；飘落物与瞬时痕迹看 §2；流体看 §3；光与远景看 §4、§5；天象看 §5.2；季节氛围看 §6；粒子类的规则看 §7
 
 ## 0 结论
@@ -72,7 +72,7 @@ gates: []
 由世界时钟驱动，数值与曲线以 SYS-TIME、ART-SKYLIGHT 为准，本节只定节奏的设计意图。
 
 - **太阳与受光**：默认状态起太阳按 1× 缓慢下沉，长影慢慢爬上墙面；太阳低于 2.5° 后，受光区域沿墙面一层层往上退，宣邦楼的电子管穹顶最后一个暗下（ART-SKYLIGHT §3.4）；日出时反向。多云时大块云影以 4–6 m/s 扫过地面，随云连续移动，不步进。
-- **窗灯**：每扇窗按哈希阈值亮起，不闪烁，快进时过渡自动加宽，熄灭用同一条曲线反向；曲线与各楼的亮灭时刻见 SYS-TIME-LOOK §3。
+- **窗灯**：每扇窗按哈希阈值亮起，不闪烁，快进时过渡自动加宽，熄灭用同一条曲线反向；曲线与各楼的亮灭时刻见 ART-COLORSCRIPT §3。
 - **满月**沿美术弧线升降，低于 5° 淡奶油，高于 25° 银白；阴雨雪时藏在云后。
 - **室内光条**只在太阳照到竖缝窗时出现，随太阳慢慢变长变短，阴雨时淡出；**顶棚波光**随西湖波纹线起伏，只在白天；**银杏灯**明暗如呼吸，周期约 6 s，±8%。
 
@@ -89,7 +89,7 @@ gates: []
 
 ## 6 季节氛围
 
-节奏和出没条件在本节；全部按动画时钟走，出没随世界状态（含天气）连续变化，不硬切；季节内容本身见 SYS-TIME-LOOK §2。
+节奏和出没条件在本节；全部按动画时钟走，出没随世界状态（含天气）连续变化，不硬切；季节内容本身见 ART-COLORSCRIPT §2。
 
 ### 6.1 季节权重
 

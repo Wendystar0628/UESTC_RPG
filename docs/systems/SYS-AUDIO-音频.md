@@ -2,6 +2,7 @@
 id: SYS-AUDIO
 title: "音频：内核、混音、加速节制、人迹禁区、界面音效与素材"
 category: systems
+parent: SYS-INDEX
 summary: "声音共守的规则：内核与生命周期、混音与响度、加速节制与转场、人迹禁区、界面音、开场音乐、设置、素材许可、预算验收"
 keywords: [音频, 声音, 混音, 响度, 加速节制, 转场, 人迹声, 界面音效, 开场音乐, 音频设置, 素材许可, 署名页, IAudioService, AudioBuses, AudioSettings, settings.json, G21]
 owners: [WP-53]

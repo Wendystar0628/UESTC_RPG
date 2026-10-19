@@ -8,7 +8,7 @@ keywords: [地形操作, 地形覆盖层, terrain.json, 合成顺序, 先平后�
 owners: [WP-08, WP-15]
 contributors: []
 depends: [WLD-TERRAIN, CORE-INDEX, ENG-ARCH, SYS-WALK, ART-STYLE, ART-MODELING, ENG-PERF, ENG-BUDGET]
-related: [WLD-TERRAIN-SHAPE, WLD-WATER, WLD-VEGETATION, WLD-INTERIORS, MAP-QSH-TERRAIN, MAP-QSH-ADDITIONS, ART-FIDELITY, ART-SKYLIGHT, SYS-VIEW, ENG-GATES, TOOL-PREVIEW]
+related: [WLD-TERRAIN-SHAPE, WLD-WATER, WLD-VEGETATION, WLD-INTERIORS, MAP-QSH-TERRAIN, MAP-QSH-ADDITIONS, ART-FIDELITY, ART-SKYLIGHT, SYS-VIEW, ENG-GATES, ENG-PREVIEW]
 contracts: [ITerrain, TerrainFacts, TerrainClass, TerrainOverlayFile, TerrainOp]
 data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G5, G6, G15]
@@ -39,7 +39,7 @@ gates: [G2, G5, G6, G15]
 ## 1 地形的表达与合成
 
 - **只用矢量操作**：地形写在按区的地形覆盖层 `world/<区>.terrain.json` 里，一个文件只归一个区包。操作类型与字段以 `game/contracts/` 的 `TerrainOp` 与 `terrain.schema.json` 为准（台地、丘与盆、斜面、退台、渠、湖、垫层、走廊）。不画高度图；覆盖层是地形唯一保存源。
-- **平面归世界文件，地形只加竖向**：操作按 ID 引用 `world/<区>.json` 里的楼、路、水体记录（CORE-CONVENTIONS §3.1）；记录被删，或路的中线挪开使手写锚点不再落在路上，加载报错，同批改地形文件。
+- **平面归世界文件，地形只加竖向**：操作按 ID 引用 `world/<区>.json` 里的楼、路、水体记录（STD-CONVENTIONS §3.1）；记录被删，或路的中线挪开使手写锚点不再落在路上，加载报错，同批改地形文件。
 - **每条操作带三样东西**：`design:terrain:` 开头且本图唯一的 ID、写明理由的 `reason`（取 WLD-TERRAIN-SHAPE §1.2 第 1 条的五类，并说明服务的镜头、路线或功能）、所属的区。标高是绝对世界 y，坡比写成 `1:n`。
 - **合成顺序固定**，与操作在文件里的先后无关：底层 B = 0 → 区域类（台地、丘、盆、多边形斜面、退台）→ 线状类（渠、折线斜面）→ 强约束类（水体、楼宇垫层、道路走廊）→ 夹到 −5…+10 m；后作用的覆盖或衰减之前的结果，同类内按优先级再按 ID 排。**地形迁就路，不是路迁就地形**：装饰性起伏在走廊、垫层附近衰减。
 - **坡度由构造保证**：每个操作自带坡度上限，用包络而不是噪声。台地、垫层、走廊与水体在区域内取约束标高，区域外按填、挖坡度衰减；冠与脚做圆角，合并处平滑。走廊的桥段不钳制高度场（桥面是部件，桥下取河床），暗涵段照常钳制。
@@ -78,7 +78,7 @@ gates: [G2, G5, G6, G15]
 - **垫层 `PadY`**：默认取楼脚印内地形高度的中位数，按 0.05 m 取整；覆盖层可以覆盖。
 - **散水与整地带**：脚印外 0.8 m 散水带内恒为 PadY；再往外一圈 ≤ 6 m 的整地带，以不陡于 1:4 接回。放不下（> 6 m 或 ΔH > 1.2 m）时在垫层外缘加台缘带或退台，并声明。
 - **地坪**：楼面 F = PadY + 室内外高差，默认 0.15 m；首层架高的楼由楼自己定，垫层不为架高去抬。墙体从 PadY − 0.3 m 起。
-- **勒脚**：0.3–0.9 m（ART-FIDELITY-DETAIL §1.1），翻新楼 0.6 m 勒脚加 0.8 m 散水（ART-RENOVATION）。勒脚顶线水平，可见高 = clamp(顶线 − 立面各点地面, 0.3, 0.9)；超出 0.9 m 说明地形没整好，回到垫层调整。
+- **勒脚**：0.3–0.9 m（ART-FIDELITY-DETAIL §1.1），翻新楼 0.6 m 勒脚加 0.8 m 散水（WLD-RENOVATION）。勒脚顶线水平，可见高 = clamp(顶线 − 立面各点地面, 0.3, 0.9)；超出 0.9 m 说明地形没整好，回到垫层调整。
 - **入口**：门槛 = F。室外落点与 F 的差按 WLD-TERRAIN-SHAPE §3.1 连接。
 - **大平台与台基**（图书馆大台阶、体育馆大平台）是建筑体，高度场在它们脚下是平的，四周用台阶、坡道接回。开放室内首层楼面以本楼 `PadY` 为基准，y 读室内索引，不假设 0。
 

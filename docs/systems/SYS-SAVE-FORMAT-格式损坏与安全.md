@@ -8,7 +8,7 @@ keywords: [存档容器, 序列化, 格式号, 段版本, 存档损坏, 设置�
 owners: [WP-50]
 contributors: [WP-00, WP-01, WP-02, WP-03, WP-06, WP-23, WP-25, WP-26, WP-27, WP-32, WP-34, WP-35, WP-36, WP-39, WP-42, WP-43, WP-45a, WP-46, WP-48c, WP-49, WP-53a, WP-54a, WP-55]
 depends: [SYS-SAVE, ENG-ARCH]
-related: [CORE-INDEX, ENG-GATES, ENG-BUDGET, SYS-GRAPHICS, SYS-AUDIO, UI-NAV, CORE-CONVENTIONS]
+related: [CORE-INDEX, ENG-GATES, ENG-BUDGET, SYS-GRAPHICS, SYS-AUDIO, UI-NAV, STD-CONVENTIONS]
 contracts: [ReadOnlyReason]
 data: ["user://settings.json"]
 gates: [G4, G20]
@@ -62,7 +62,7 @@ WebP 缩略图（尺寸以 `game/kernel/save/format/` 为准）。只在退出�
 - **段版本**：一段的字段有任何增减都升 `v`，纪律同契约的"只增不改"。
 - **不写迁移**（D-232）：`format` 或某段的 `v` 与本构建不同，不论旧还是新，都按坏档处理（§2）：核心段对不上整代作废，其余段换成默认值。
 - **往返测试**：只留当前格式一份往返读写测试（G20）；没有金档，发布之后再按需加旧格式的样本。序列化与解码往返保持数据一致。
-- **持久化 ID**（CORE-CONVENTIONS §3.7）：ID 不复用，改名不改身份；真正删除的对象，读档时按 SYS-SAVE-FLOW §2.6 修复。
+- **持久化 ID**（STD-CONVENTIONS §3.7）：ID 不复用，改名不改身份；真正删除的对象，读档时按 SYS-SAVE-FLOW §2.6 修复。
 
 ## 2 存档损坏
 

@@ -59,13 +59,13 @@ function Test-UESTCSourceNaming {
         $fileName = [IO.Path]::GetFileName($path)
         if ($path -match '^docs/.*\.md$' -and $path -notmatch '^docs/godot-api/' -and $fileName -cnotin @('README.md', 'SECTIONS.md')) {
             if ($fileName -cnotmatch '^[A-Z]+(?:-[A-Z]+)+-[^-]+\.md$' -or $fileName -notmatch '[\p{IsCJKUnifiedIdeographs}]') {
-                $failures.Add("${path}: docs file names require an uppercase hyphenated code and a Chinese title (CORE-CONVENTIONS)")
+                $failures.Add("${path}: docs file names require an uppercase hyphenated code and a Chinese title (STD-CONVENTIONS)")
             }
             $checked++
         }
         if ($path -match '^game/data/') {
             if ($fileName -match 'v2|^WP-') {
-                $failures.Add("${path}: data leaf file names must not contain v2 or start with WP- (CORE-CONVENTIONS)")
+                $failures.Add("${path}: data leaf file names must not contain v2 or start with WP- (STD-CONVENTIONS)")
             }
             $checked++
         }
@@ -105,5 +105,5 @@ function Test-UESTCSourceNaming {
         $checked++
     }
     if ($failures.Count) { throw ($failures -join "`n") }
-    [pscustomobject]@{ CheckedFiles=$checked; Rule='CORE-CONVENTIONS: docs/data file names, PascalCase and assembly responsibility; no literal directory-case coupling' }
+    [pscustomobject]@{ CheckedFiles=$checked; Rule='STD-CONVENTIONS: docs/data file names, PascalCase and assembly responsibility; no literal directory-case coupling' }
 }

@@ -2,12 +2,13 @@
 id: WF-BUILD
 title: 施工边界
 category: workflow
+parent: WF-INDEX
 summary: 施工时能改哪里、共享文件、契约申请与冻结、构建与测试排队、新模块怎么接入、Godot API 先查签名，以及禁用写法门禁拦不住的两条约定
 keywords: [独占目录, 共享文件, 契约申请, 契约冻结, 构建锁, 构建与测试排队, .uid, 特性接入, 穷举 switch, 几何不随时季天气变, GDScript, uid, signatures.txt, Godot API]
 owners: [WP-00]
 contributors: []
 depends: [WF-RULE, CORE-INDEX, ENG-ARCH]
-related: [WF-ENTRY, WF-FLOW, WF-STATUS, ENG-WP, CORE-CONVENTIONS, ENG-GATES]
+related: [WF-ENTRY, WF-FLOW, WF-STATUS, PLAN-WP, STD-CONVENTIONS, ENG-GATES]
 contracts: []
 data: ["ownership.json"]
 gates: [G3, G4]
@@ -40,7 +41,7 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 
 ## 1 改哪里
 
-- **只改本包的独占目录**：以 `ownership.json` 为准；子包独占原包目录下的一个子目录（ENG-WP-LIST §2）。这是"同一批文件同一时间只有一个写者"的分工依据（WF-FLOW §2.1）。
+- **只改本包的独占目录**：以 `ownership.json` 为准；子包独占原包目录下的一个子目录（PLAN-WP-LIST §2）。这是"同一批文件同一时间只有一个写者"的分工依据（WF-FLOW §2.1）。
 - **共享文件不自己改**：工程共享件（契约、csproj、`Directory.*.props`、`project.godot`、`ownership.json`、`gate.ps1`、`scripts/` 下的工程脚本等）由 Codex 主线直接提交推送；`docs/` 由主会话改。
 - **要提申请的事**：改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，都写成契约申请交 Codex 主线（§3）。
 - **新模块用特性接入**：接入特性的清单见 ENG-ARCH §2；不改注册表、不改主场景、不加 Autoload。
@@ -49,7 +50,7 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 ## 2 G4 拦不住的约定
 
 - **几何不随时季和天气变**：只走调色板、灯光通道、变体掩码和天气向量（SYS-TIME §0.1、SYS-WEATHER §0.1）。
-- **规则集与枚举**：观光专属常量读 `IRuleset`；会追加值的枚举写穷举 `switch`，`default` 报错（细则见 CORE-CONVENTIONS §3.6）。
+- **规则集与枚举**：观光专属常量读 `IRuleset`；会追加值的枚举写穷举 `switch`，`default` 报错（细则见 STD-CONVENTIONS §3.6）。
 
 ## 3 契约申请与冻结
 

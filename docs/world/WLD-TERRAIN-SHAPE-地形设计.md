@@ -8,7 +8,7 @@ keywords: [地形设计原则, 地形分层, 高度预算, 主模数, 手感刻�
 owners: [WP-15]
 contributors: []
 depends: [WLD-TERRAIN, CORE-INDEX, SYS-WALK, ART-STYLE, ART-MODELING]
-related: [WLD-TERRAIN-APPLY, WLD-WATER, WLD-OUTSKIRTS, WLD-DIORAMA, MAP-QSH-TERRAIN, ART-FIDELITY, ART-RENOVATION]
+related: [WLD-TERRAIN-APPLY, WLD-WATER, WLD-OUTSKIRTS, WLD-OUTSKIRTS-DIORAMA, MAP-QSH-TERRAIN, ART-FIDELITY, WLD-RENOVATION]
 contracts: []
 data: []
 gates: [G5]
@@ -167,7 +167,7 @@ gates: [G5]
 
 ### 4.4 穿出校界
 
-河渠在零带里断面照常继续，岸顶恒为 0；校界处的 waterY 与外围数据里的交点记录一致，截面水柱上缘同值（WLD-OUTSKIRTS、WLD-DIORAMA）。
+河渠在零带里断面照常继续，岸顶恒为 0；校界处的 waterY 与外围数据里的交点记录一致，截面水柱上缘同值（WLD-OUTSKIRTS、WLD-OUTSKIRTS-DIORAMA）。
 
 ### 4.5 开放泳区的泳岸型与支撑面
 

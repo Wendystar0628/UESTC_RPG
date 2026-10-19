@@ -8,7 +8,7 @@ keywords: [图书馆灯光, 檐口灯带, 外墙泛光, 灯岛, 考试周通宵,
 owners: [WP-16]
 contributors: [WP-15, WP-38, WP-39]
 depends: [CORE-INDEX, MAP-QSH-CORE, SYS-TIME, ART-SKYLIGHT, MAP-QSH-ADDITIONS, SYS-WEATHER]
-related: [MAP-QSH-LIBRARY, MAP-QSH-SOUTH, WLD-VEGETATION, WLD-LIFE]
+related: [MAP-QSH-INTERIORS-LIBRARY, MAP-QSH-SOUTH, WLD-VEGETATION, WLD-LIFE]
 contracts: []
 data: ["game/data/maps/qingshuihe/lighting-schedule.json"]
 gates: [G7]
@@ -17,7 +17,7 @@ gates: [G7]
 # MAP-QSH-CORE-SEASONS · 核心区灯光、四季昼夜与天气
 
 > **范围**：本文规定核心区图书馆灯光的全天变化、各对象在四季与昼夜里的状态（夜间角色、默认的秋格；春、夏、冬主线之后）、交给 WP-39（夜景灯光与时刻表） 的灯具清单，以及天气要点（避雨处与雨帘、积水点、雾里要读出的地标）。
-> **不在本文**：各楼与构筑物的外观、身份特征与近景要求（MAP-QSH-CORE）；行走、点位、锚点与声音（MAP-QSH-CORE-WALK）；光照规则（ART-SKYLIGHT）；时刻与季节参数（SYS-TIME）；天气规则（SYS-WEATHER）；雨帘、积水的通用做法（MAP-QSH-ADDITIONS-ATMOSPHERE §4、§5）；图书馆室内的光（MAP-QSH-LIBRARY）。
+> **不在本文**：各楼与构筑物的外观、身份特征与近景要求（MAP-QSH-CORE）；行走、点位、锚点与声音（MAP-QSH-CORE-WALK）；光照规则（ART-SKYLIGHT）；时刻与季节参数（SYS-TIME）；天气规则（SYS-WEATHER）；雨帘、积水的通用做法（MAP-QSH-ADDITIONS-ATMOSPHERE §4、§5）；图书馆室内的光（MAP-QSH-INTERIORS-LIBRARY）。
 > **查阅**：先读 §0；图书馆灯光看 §1，夜间角色与四季看 §2.1，灯具看 §2.2，天气看 §3
 
 ## 0 结论
@@ -37,9 +37,9 @@ gates: [G7]
 默认状态（秋 17:30）：室内灯刚亮，暖黄光从采光顶网格里透出；檐口一圈灯带亮着；外墙琥珀色泛光刚开，强度还弱；窗灯按 `lighting-schedule.json` 的图书馆曲线（默认状态比例见 ART-SKYLIGHT §3.5）。全天变化按灯光时刻表，曲线由 WP-39（夜景灯光与时刻表） 统一实现：
 
 - **黎明前**（太阳 −12° 起）：全校第一栋亮灯，一楼先亮、逐层往上，采光顶透出全校第一点暖光；檐口灯带保持夜里的一部分亮度，日出后关。
-- **白天**：室内照常开灯，从外面看接近不亮；采光顶映天，反射率低（MAP-QSH-LIBRARY §2）。
+- **白天**：室内照常开灯，从外面看接近不亮；采光顶映天，反射率低（MAP-QSH-INTERIORS-LIBRARY §2）。
 - **黄昏到入夜**：泛光太阳 8° 起渐开，−1° 到 −4° 之间升到 100%；入夜到 22:30 采光顶是全校最亮的一块暖光，檐口灯带全亮。
-- **22:30 闭馆后**：楼层灯一层层熄灭，只留品·悦吧（24 h）和中庭红桌上的台灯（MAP-QSH-LIBRARY §6），是深夜的"灯岛"；二楼正门门厅只留门斗灯；檐口灯带保留一部分整夜，夜里靠它读出八角形；外墙泛光 23:00 关闭。
+- **22:30 闭馆后**：楼层灯一层层熄灭，只留品·悦吧（24 h）和中庭红桌上的台灯（MAP-QSH-INTERIORS-LIBRARY §6），是深夜的"灯岛"；二楼正门门厅只留门斗灯；檐口灯带保留一部分整夜，夜里靠它读出八角形；外墙泛光 23:00 关闭。
 - **冬季考试周**：22:30 以后楼层灯不熄，各层通宵亮着；泛光照常 23:00 关闭，让窗格自己发光。
 - 方塔的 6 层通高玻璃槽入夜后是一条竖向灯带，是图书馆夜间最好认的一笔。
 

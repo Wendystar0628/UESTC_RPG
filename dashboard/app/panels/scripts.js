@@ -26,7 +26,7 @@
     return h('div.sx-detail',
       s.usage ? h('div.sx-block', h('div.sx-cap', '用法'), h('pre.sx-pre', s.usage.replace(/^(用法|usage)\s*[：:]\s*/i, ''))) : null,
       s.intro ? h('div.sx-block', h('div.sx-cap', '开头说明'), h('pre.sx-pre', s.intro))
-        : h('div.sx-block.muted', '没写开头说明：按 ENG-CODE 接入要点在开头补一句话作用，另起一行写“用法：”。'),
+        : h('div.sx-block.muted', '没写开头说明：按 STD-CODE 接入要点在开头补一句话作用，另起一行写“用法：”。'),
       h('div.sx-meta',
         Dash.a(s.path, s.path), h('span', s.lines + ' 行'), h('span', '修改 ' + Dash.at(s.mtime)),
         s.running ? h('span', '在跑 ' + s.running.n + ' 个进程，最早 ' + Dash.at(s.running.since) + ' 起') : null));

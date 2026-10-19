@@ -8,7 +8,7 @@ keywords: [审查视角, 截图默认串, 命令行规则, 截图方式, 截图�
 owners: [WP-27]
 contributors: []
 depends: [CORE-INDEX, ENG-GATES, ENG-ARCH, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-WALK, SYS-GRAPHICS, ART-FIDELITY, UI-NAV, SYS-TITLE, WLD-OUTSKIRTS]
-related: [ENG-BUDGET, TOOL-PREVIEW]
+related: [ENG-BUDGET, ENG-PREVIEW]
 contracts: []
 data: ["game/data/maps/qingshuihe/review.json"]
 gates: [G7]
@@ -66,7 +66,7 @@ G7 的截图方式：
 
 ### 1.3 固定机位表与审查视角表
 
-主线只用固定机位表，即 `scripts/shots/poses.txt`，由 `fixed_shots.ps1` 一机位一进程出图、拼成缩略总览，看一眼，不做像素比对。点位取自 `waypoints.json`（UI-NAV-WAYPOINTS §1），状态以 `poses.txt` 为准；机位名格式见 CORE-CONVENTIONS §3.8。
+主线只用固定机位表，即 `scripts/shots/poses.txt`，由 `fixed_shots.ps1` 一机位一进程出图、拼成缩略总览，看一眼，不做像素比对。点位取自 `waypoints.json`（UI-NAV-WAYPOINTS §1），状态以 `poses.txt` 为准；机位名格式见 STD-CONVENTIONS §3.8。
 
 **主线之后**：下面的 V、E、T 视角表。
 
@@ -102,7 +102,7 @@ V 组写作"目标点 / 方位° / 仰角° / 距离 m"，相机朝向目标点�
 - **F2 压力路线**：绕过速度律，离地 5 m 以 87 m/s 横穿全校；只查不崩溃、无超过 200 ms 的卡顿、停下后恢复正常。
 - **F3 跳转压力**：旁观下每个点位跳进跳出一次，或随机抽 30 次；到达帧就绪或在雾幕里，途中不穿楼，卡顿不超过 200 ms。
 - **F4 传送压力**：全部可传送标记之间随机传送 30 次，旁观、行走各半；到达帧就绪，卡顿不超过 100 ms，单次约 3 s 内。
-- **P00–P23 点位**：位姿与推荐状态以 `waypoints.json` 为准（UI-NAV-WAYPOINTS §1）；P00 即 V1，P15 与 V9 同位姿；英雄帧见 SYS-TIME-LOOK §1.5。G7 里 P 组每个点只截推荐状态一张。
+- **P00–P23 点位**：位姿与推荐状态以 `waypoints.json` 为准（UI-NAV-WAYPOINTS §1）；P00 即 V1，P15 与 V9 同位姿；英雄帧见 ART-COLORSCRIPT §1.5。G7 里 P 组每个点只截推荐状态一张。
 - **W1–W14 行走路线**：脚本见 SYS-WALK-BOUNDS §6、WLD-INTERIORS-ACCESS §4；`--mode=walk`，步速 3.6 m/s，按推荐状态起步；没有卡点、每 30–50 m 有一拍、不违反 ART-FIDELITY §3 第 4、13 条。集中测试录一遍全程（`--flow=0`），R1 另录 `--flow=1`。
 
 ### 1.5 时季抽样（主线之后）
@@ -111,5 +111,5 @@ V 组写作"目标点 / 方位° / 仰角° / 距离 m"，相机朝向目标点�
 - **其他组合**：按 SYS-TIME §4，默认格加每季一张英雄帧截图，看一眼好看即可；不做正交表抽样。
 - **外围与开始页**：V11、E6、E7 加入 G7 的视角轮换，联表至少一格是外围视角；T0 默认状态一张，另按 G7 轮换时季。
 - **天气与预设**：需要时在英雄帧上换一种天气或预设再看一眼，不另做联表。
-- **巡检点轮换**：各包 3–4 个巡检点，编号 1–4（ART-FIDELITY §4）除默认状态外，每次集中测试换一个时季组合（SYS-TIME-LOOK §1.2 的关键帧 × 4 季）。
+- **巡检点轮换**：各包 3–4 个巡检点，编号 1–4（ART-FIDELITY §4）除默认状态外，每次集中测试换一个时季组合（ART-COLORSCRIPT §1.2 的关键帧 × 4 季）。
 - **截图一律 `--flow=0`**；过渡、跳转、模式切换要看连续性，用录像看。

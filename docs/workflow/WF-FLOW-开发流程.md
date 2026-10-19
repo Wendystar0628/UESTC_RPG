@@ -2,11 +2,12 @@
 id: WF-FLOW
 title: 开发流程
 category: workflow
+parent: WF-INDEX
 summary: 一个包从派工、施工（只写不编译）、统一编译推送、回报到评审的流程，防打架，按工作量拆单，可调参数集中放
 keywords: [开发流程, 派工, 施工单, 按工作量拆单, 子单 1 小时, 回报, 评审, 防打架, 邻居, 可调参数, D-184, D-211, 评审通用结论]
 owners: [WP-00]
 contributors: []
-depends: [WF-ROLE, ENG-WP, ENG-ARCH]
+depends: [WF-ROLE, PLAN-WP, ENG-ARCH]
 related: [WF-MODEL, WF-COMMS, WF-STATUS, WF-BUILD, WF-RULE]
 contracts: []
 data: []
@@ -16,7 +17,7 @@ gates: []
 # WF-FLOW · 开发流程
 
 > **范围**：本文规定一个包从派工到评审的流程：派工与拆单、防打架、施工与回报、评审与可调参数。
-> **不在本文**：包的归属与阶段：ENG-WP、ENG-WP-LIST §1；git、推送与回滚：WF-RULE §7；构建与测试排队：WF-BUILD §4；模型选择与简报：WF-MODEL；文件格式与回报格式：WF-COMMS；队列、状态与调研入队：WF-STATUS；额度与并发：WF-MODEL §9；契约申请与共享工程文件：WF-BUILD。
+> **不在本文**：包的归属与阶段：PLAN-WP、PLAN-WP-LIST §1；git、推送与回滚：WF-RULE §7；构建与测试排队：WF-BUILD §4；模型选择与简报：WF-MODEL；文件格式与回报格式：WF-COMMS；队列、状态与调研入队：WF-STATUS；额度与并发：WF-MODEL §9；契约申请与共享工程文件：WF-BUILD。
 > **查阅**：先读 §0；全流程一览看 §1；派工、拆单与防打架看 §2；施工与回报看 §3；评审与可调参数看 §4。
 
 ## 0 结论
@@ -36,7 +37,7 @@ gates: []
 
 | 步 | 谁做 | 产出 |
 | --- | --- | --- |
-| 1 派工 | 主会话（Claude 侧的包）；Codex 主线（Codex 侧的包） | 任务单（格式见 CORE-CONVENTIONS §3.8），或 Codex 主线给子代理的简报；简报写邻居（§2.1） |
+| 1 派工 | 主会话（Claude 侧的包）；Codex 主线（Codex 侧的包） | 任务单（格式见 STD-CONVENTIONS §3.8），或 Codex 主线给子代理的简报；简报写邻居（§2.1） |
 | 2 施工 | 施工子代理，在简报给的路径上写 | 本包独占目录里的改动；默认不编译、不跑测试、不提交（§3.1） |
 | 3 回报 | 子代理向派它的一方回报 | 改动路径与要点（WF-COMMS §3.4）；指挥把施工队列对应行改待编译；代码类旁路单同样交 Codex 主线 |
 | 4 统一编译、提交推送 | 指挥：Codex 主线管 Codex 侧的包，主会话管 Claude 侧的包 | 核对改动；一批交回后编译一次、修错、跑快检，按子代理分路径提交并推送，提交后删队列行（§3.1、WF-RULE §7） |
@@ -47,7 +48,7 @@ gates: []
 
 **从施工队列派**：要做的活先进施工队列（WF-STATUS §2；调研审计采纳的见 WF-STATUS §4）。主会话与 Codex 主线按优先级与并发余量（WF-MODEL §9）从"可派"的行里派，派出后改进行中、写上谁。
 
-**Claude 侧的包**：主会话写任务单 `.collab/tasks/claude/`（格式见 CORE-CONVENTIONS §3.8），一张单对应一件完整且工作量受控的事。单子写：目标；给子代理的简报（WF-MODEL §8 模板）；Opus 还是 Sonnet 与推理档（WF-MODEL §1–§4）；交付标准（截图、快检）；评审方式；然后直接开子代理（WF-MODEL §6）。派单分批，按 WF-MODEL §9 的并发与队列平衡（WF-STATUS §2）。
+**Claude 侧的包**：主会话写任务单 `.collab/tasks/claude/`（格式见 STD-CONVENTIONS §3.8），一张单对应一件完整且工作量受控的事。单子写：目标；给子代理的简报（WF-MODEL §8 模板）；Opus 还是 Sonnet 与推理档（WF-MODEL §1–§4）；交付标准（截图、快检）；评审方式；然后直接开子代理（WF-MODEL §6）。派单分批，按 WF-MODEL §9 的并发与队列平衡（WF-STATUS §2）。
 
 **Codex 侧的包**：Codex 主线用 `spawn_agent` 开子代理，简报照 WF-MODEL §8，写明邻居；施工模型按 WF-ROLE §6。
 

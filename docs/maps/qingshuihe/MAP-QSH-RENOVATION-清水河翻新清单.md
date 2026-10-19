@@ -2,12 +2,13 @@
 id: MAP-QSH-RENOVATION
 title: 清水河翻新清单
 category: maps
+parent: MAP-QSH-INDEX
 summary: 清水河老楼与环境的翻新：统一预设加十来条身份特征例外，部位代号、三种楼型样板、全校环境、年代未查到与不列入的楼
 keywords: [翻新预设, 身份特征例外, 部位代号, 楼型, 楼型样板, 老式宿舍楼, 老教学楼, 老食堂, 翻新对照楼, 年代未查到的楼, 不列入的楼, 2015 年以后的新楼, 全校环境翻新, 老楼翻新理由, 商业街店招, 体育场看台]
 owners: [WP-14]
 contributors: [WP-13, WP-15, WP-16, WP-18, WP-19, WP-20, WP-21]
-depends: [CORE-INDEX, ART-RENOVATION, ART-MODELING, MAP-QSH-ADDITIONS]
-related: [ART-STYLE, ART-FIDELITY, ART-AMBIENCE, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-CORE, WLD-LIFE, ENG-WP, ENG-GATES]
+depends: [CORE-INDEX, WLD-RENOVATION, ART-MODELING, MAP-QSH-ADDITIONS]
+related: [ART-STYLE, ART-FIDELITY, WLD-AMBIENCE, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-CORE, WLD-LIFE, PLAN-WP, ENG-GATES]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/"]
 gates: [G5, G7]
@@ -15,8 +16,8 @@ gates: [G5, G7]
 
 # MAP-QSH-RENOVATION · 清水河翻新清单
 
-> **范围**：本文规定清水河校区老楼与环境怎么翻新：所有老楼按 ART-RENOVATION 的同一套翻新预设做，不逐栋列条目；只列十来栋身份特征要保的楼的例外，另有部位代号、三种楼型的样板、全校环境、年代未查到的楼和不列入的新楼。
-> **不在本文**：翻新规则本身（ART-RENOVATION）；楼的位置、体量与身份特征（各区 MAP-QSH 文档）；楼的实体 ID（`game/data/maps/qingshuihe/world/`）；增补物与禁做清单（MAP-QSH-ADDITIONS）；生活痕迹（WLD-LIFE）；室内（WLD-INTERIORS）。
+> **范围**：本文规定清水河校区老楼与环境怎么翻新：所有老楼按 WLD-RENOVATION 的同一套翻新预设做，不逐栋列条目；只列十来栋身份特征要保的楼的例外，另有部位代号、三种楼型的样板、全校环境、年代未查到的楼和不列入的新楼。
+> **不在本文**：翻新规则本身（WLD-RENOVATION）；楼的位置、体量与身份特征（各区 MAP-QSH 文档）；楼的实体 ID（`game/data/maps/qingshuihe/world/`）；增补物与禁做清单（MAP-QSH-ADDITIONS）；生活痕迹（WLD-LIFE）；室内（WLD-INTERIORS）。
 > **查阅**：先读 §0；预设、部位代号与三种楼型的样板看 §1；各区的身份特征例外看 §2–§6；全校环境看 §7；年代未查到的楼看 §8；不列入的新楼看 §9；世界文件登记与验收看 §10
 
 ## 0 结论
@@ -41,7 +42,7 @@ gates: [G5, G7]
 
 ### 1.1 翻新预设
 
-所有老楼、早期建成的楼和环境（路、铺装、河渠、路灯、球场、停车场、校界）一律用同一套翻新预设一次做完，翻新到与新楼同一洁净度；预设做什么见下面的部位代号（§1.3）和 ART-RENOVATION。预设之外不单独精修某一栋，除非 §2–§6 为它写了例外。
+所有老楼、早期建成的楼和环境（路、铺装、河渠、路灯、球场、停车场、校界）一律用同一套翻新预设一次做完，翻新到与新楼同一洁净度；预设做什么见下面的部位代号（§1.3）和 WLD-RENOVATION。预设之外不单独精修某一栋，除非 §2–§6 为它写了例外。
 
 ### 1.2 例外的写法
 
@@ -53,22 +54,22 @@ gates: [G5, G7]
 
 | 代号 | 部位 | 规则 |
 | --- | --- | --- |
-| 墙 | 主墙、副色 | ART-RENOVATION §3.2–§3.4、§4.1 |
-| 砖 | 面砖（只给面砖色是身份特征的楼） | ART-RENOVATION §3.5 |
-| 窗 | 窗框、窗套、窗台、窗楣 | ART-RENOVATION §5.1、§2.2 |
-| 机 | 空调外机与冷凝水管 | ART-RENOVATION §4.2；MAP-QSH-ADDITIONS-VOCAB §6 第 4 条 |
-| 管 | 外挂管线、落水管、线槽 | ART-RENOVATION §4.1、§4.2 |
-| 网 | 防盗网 | ART-RENOVATION §4.1 |
-| 梯 | 楼梯间与外挂楼梯 | ART-RENOVATION §5.3 |
-| 顶 | 屋面、女儿墙、屋面设备 | ART-RENOVATION §5.2、§5.4；MAP-QSH-ADDITIONS-VOCAB §4 |
-| 台 | 阳台与晾晒 | ART-RENOVATION §4.3、§5.5；WLD-LIFE-FAUNA §2 |
-| 底 | 首层、入口与墙根 | ART-RENOVATION §5.5、§2.2；MAP-QSH-ADDITIONS-VOCAB §6 |
-| 招 | 标识、店招与临时布置 | ART-RENOVATION §4.1、§4.2；MAP-QSH-ADDITIONS §5 |
+| 墙 | 主墙、副色 | WLD-RENOVATION §3.2–§3.4、§4.1 |
+| 砖 | 面砖（只给面砖色是身份特征的楼） | WLD-RENOVATION §3.5 |
+| 窗 | 窗框、窗套、窗台、窗楣 | WLD-RENOVATION §5.1、§2.2 |
+| 机 | 空调外机与冷凝水管 | WLD-RENOVATION §4.2；MAP-QSH-ADDITIONS-VOCAB §6 第 4 条 |
+| 管 | 外挂管线、落水管、线槽 | WLD-RENOVATION §4.1、§4.2 |
+| 网 | 防盗网 | WLD-RENOVATION §4.1 |
+| 梯 | 楼梯间与外挂楼梯 | WLD-RENOVATION §5.3 |
+| 顶 | 屋面、女儿墙、屋面设备 | WLD-RENOVATION §5.2、§5.4；MAP-QSH-ADDITIONS-VOCAB §4 |
+| 台 | 阳台与晾晒 | WLD-RENOVATION §4.3、§5.5；WLD-LIFE-FAUNA §2 |
+| 底 | 首层、入口与墙根 | WLD-RENOVATION §5.5、§2.2；MAP-QSH-ADDITIONS-VOCAB §6 |
+| 招 | 标识、店招与临时布置 | WLD-RENOVATION §4.1、§4.2；MAP-QSH-ADDITIONS §5 |
 | 附 | 日式附属件，只给商业街和后勤小楼 | MAP-QSH-ADDITIONS-VOCAB §6 第 12 条；D-175 |
 
 ### 1.4 楼型
 
-老宿舍、老教学楼与科研楼、老食堂分别按 §1.5 的样板；商业、文体与场馆按翻新预设，有例外的看 §2–§6；后勤小楼按翻新预设，可加"附"。身份特征以各区文档的"本区身份特征"表和 ART-MODELING-PROPORTION §1 为准，翻新不碰；身份特征本身显旧时只换新材料（ART-RENOVATION §6.3）。
+老宿舍、老教学楼与科研楼、老食堂分别按 §1.5 的样板；商业、文体与场馆按翻新预设，有例外的看 §2–§6；后勤小楼按翻新预设，可加"附"。身份特征以各区文档的"本区身份特征"表和 ART-MODELING-PROPORTION §1 为准，翻新不碰；身份特征本身显旧时只换新材料（WLD-RENOVATION §6.3）。
 
 ### 1.5 三种楼型的样板
 
@@ -76,7 +77,7 @@ gates: [G5, G7]
 
 - **不动**：6 层与平面轮廓；米黄主墙配竖向红墙带；白窗框；组团门口的值班室。
 - **配色**：主墙宿舍暖米黄墙（暖棕组团换浅奶咖墙）；墙带陶红墙带；勒脚低饱和棕板，格栅与竖管深灰；窗框、窗台顶、压顶顶用宿舍米白墙。
-- **改了什么**：按 ART-RENOVATION §4、§5 删防盗网、散挂外机、流挂、褪色遮阳篷、外伸晾衣架、线槽、屋顶热水器；加窗套、带滴水窗台、灰铝窗楣、全楼对齐的机位格栅、实心阳台栏板；楼梯间窗带用陶红实板相隔；M 档压顶加避雷带；勒脚、散水、绿篱；山墙大号楼号和约 1/3 爬山虎。
+- **改了什么**：按 WLD-RENOVATION §4、§5 删防盗网、散挂外机、流挂、褪色遮阳篷、外伸晾衣架、线槽、屋顶热水器；加窗套、带滴水窗台、灰铝窗楣、全楼对齐的机位格栅、实心阳台栏板；楼梯间窗带用陶红实板相隔；M 档压顶加避雷带；勒脚、散水、绿篱；山墙大号楼号和约 1/3 爬山虎。
 
 **老教学楼**：原型是 4–5 层框架教学楼，条楼或回字形，朝内院有单面外廊（品学楼 A、B 区，MAP-QSH-CENTER-EAST §2；立人楼同楼型）。
 
@@ -88,7 +89,7 @@ gates: [G5, G7]
 
 - **不动**：低层大开间体量、暖砂色面砖、水平檐板或大挑檐、室外扶梯罩棚或直跑外楼梯、PVC 门帘入口。
 - **配色**：主墙食堂暖砂面砖；柱面或腰带第二种面砖色；檐板按原楼米白或暖棕；金属深灰。
-- **改了什么**：删面砖色差与补砖、油渍、散挂外机群、乱走的燃气与排烟管、锈蚀雨棚、褪色店招与灯箱、窗上贴纸、后场杂物；面砖按 ART-RENOVATION §3.5，首层深色玻璃加灰铝竖框，二三层带形窗，原挑檐翻新、檐底嵌筒灯；外机和油烟净化器进围挡，排烟管并成一条屋面直管；后院用同面砖围墙加绿篱遮住；店名只用浮雕字或立体字。
+- **改了什么**：删面砖色差与补砖、油渍、散挂外机群、乱走的燃气与排烟管、锈蚀雨棚、褪色店招与灯箱、窗上贴纸、后场杂物；面砖按 WLD-RENOVATION §3.5，首层深色玻璃加灰铝竖框，二三层带形窗，原挑檐翻新、檐底嵌筒灯；外机和油烟净化器进围挡，排烟管并成一条屋面直管；后院用同面砖围墙加绿篱遮住；店名只用浮雕字或立体字。
 
 ## 2 北部生活区的例外（MAP-QSH-NORTH，WP-20）
 
@@ -162,4 +163,4 @@ gates: [G5, G7]
 
 - **世界文件登记**：翻新由 WP-14（通用建筑生成器） 的翻新预设生成，窗、压顶、格栅、围挡这些随楼生成的构件不逐件登记。数据里有、要删的旧元素（如屋顶的临时构筑物）在所在区世界文件里删记录；新加的构件成组加记录（如商业街店头布篷、屋顶围网与塔屋水箱），ID 以 `design:` 开头，`note` 写"老楼翻新：<楼名>：<部位>"。
 - **构件来源**：窗、栏板、格栅、围挡、管廊、雨棚从部件库取，区包不自己写几何常量（ART-MODELING-PROPORTION §6 第 3 条）；没有区包认领的楼由 WP-14 照预设执行。
-- **验收**：按 ART-RENOVATION §7，看固定机位截图：看不到旧痕，翻新楼与相邻新楼同框分不出新旧，认得出是哪栋楼，删掉旧痕以后立面不变空。
+- **验收**：按 WLD-RENOVATION §7，看固定机位截图：看不到旧痕，翻新楼与相邻新楼同框分不出新旧，认得出是哪栋楼，删掉旧痕以后立面不变空。

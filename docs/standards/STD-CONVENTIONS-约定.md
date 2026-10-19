@@ -1,22 +1,23 @@
 ---
-id: CORE-CONVENTIONS
+id: STD-CONVENTIONS
 title: 约定
-category: core
+category: standards
+parent: STD-INDEX
 summary: 跨文档共同约定：坐标与单位、方位角、时间写法、编号与命名、实体 ID 规则、确定性原则
 keywords: [约定, 坐标系, 单位, 角度, 方位角, 时间写法, 编号体系, 命名, 实体 ID, 色名, 枚举纪律, 持久化 ID, 确定性]
 owners: [WP-00]
 contributors: [WP-27]
 depends: [CORE-INDEX]
-related: [ENG-ARCH, ENG-GATES, SYS-TIME, SYS-SAVE, SYS-MAPS, CORE-DECISIONS, CORE-GLOSSARY]
+related: [ENG-ARCH, ENG-GATES, SYS-TIME, SYS-SAVE, SYS-MAPS, REG-DECISIONS, REG-GLOSSARY]
 contracts: []
 data: []
 gates: [G1, G5]
 ---
 
-# CORE-CONVENTIONS · 约定
+# STD-CONVENTIONS · 约定
 
 > **范围**：本文规定所有文档和代码共同遵守的写法：坐标与单位、方位角、时间写法、编号与命名、实体 ID 规则、确定性原则。
-> **不在本文**：契约与帧顺序（`game/contracts/` 源码，说明见 ENG-ARCH §3）；命令行与门禁（ENG-GATES）；预算（ENG-BUDGET）；工作包与目录归属（ENG-WP、`ownership.json`）；按图文件归属（SYS-MAPS、MAP-QSH-*）；决策（CORE-DECISIONS）；术语（CORE-GLOSSARY）；文档写法（WF-DOC）。
+> **不在本文**：契约与帧顺序（`game/contracts/` 源码，说明见 ENG-ARCH §3）；命令行与门禁（ENG-GATES）；预算（ENG-BUDGET）；工作包与目录归属（PLAN-WP、`ownership.json`）；按图文件归属（SYS-MAPS、MAP-QSH-*）；决策（REG-DECISIONS）；术语（REG-GLOSSARY）；文档写法（STD-DOC）。
 > **查阅**：先读 §0；坐标、角度、单位看 §1；时间写法看 §2；ID、编号、命名、枚举纪律看 §3；确定性看 §4；路径看 §5
 
 ## 0 结论
@@ -37,7 +38,7 @@ gates: [G1, G5]
 - **加枚举值**：只在末尾追加；消费方写穷举 `switch`，不做二值判断（§3.6）。
 - **删或改被引用的对象**：ID 不复用，改名不改身份，确需换 ID 给旧新映射（§3.7）。
 - **生成或随机的结果要能复现**：只用契约的随机来源，细则见 ENG-ARCH §2（§4）。
-- **写或改文档**：按 WF-DOC；**施工**：入口见 WF-ENTRY，核心准则见 CORE-INDEX §0。
+- **写或改文档**：按 STD-DOC；**施工**：入口见 WF-ENTRY，核心准则见 CORE-INDEX §0。
 
 ## 1 坐标与单位
 
@@ -114,8 +115,8 @@ gates: [G1, G5]
 | F | 飞行路线脚本 | ENG-GATES-SHOTS §1 |
 | T | 开始页镜头 | SYS-TITLE §2.1 |
 | G | 门禁 | ENG-GATES §1 |
-| WP | 工作包；子包写 WP-31a；RPG 包另起编号，由 ENG-ROADMAP 登记 | ENG-WP、ENG-ROADMAP |
-| D | 决策，D-001 起，三位数，全文连续，只增不复用 | CORE-DECISIONS §0 |
+| WP | 工作包；子包写 WP-31a；RPG 包另起编号，由 ENG-ROADMAP 登记 | PLAN-WP、ENG-ROADMAP |
+| D | 决策，D-001 起，三位数，全文连续，只增不复用 | REG-DECISIONS §0 |
 | Q-、C-、S- | 施工队列的行：Q 产品施工，C 协作与工具，S 旁路单；三位数，拆出的子行加小写字母（Q-034a） | WF-STATUS §2 |
 | r | 调研单，r001 起 | WF-STATUS §4 |
 | O0–O3 | 外围分层 | WLD-OUTSKIRTS-BAND §2.2 |
@@ -132,7 +133,7 @@ gates: [G1, G5]
 | --- | --- | --- |
 | G | 只指 ENG-GATES 的门禁 | 核心准则的条目写"CORE-INDEX §0 第 n 条"，不写 G |
 | E、O | E1–E7 是审查视角；O0–O3 是外围分层 | E 只指审查视角，写"视角 E1"或 `--pose=E1`；外围写"外围 O1"（D-157） |
-| P0、P1… | 点位 P00–P23（两位数）、图书馆的三条"看进去"路径 P1–P3、开发阶段 P0–P3 | 点位一律两位数；路径写"MAP-QSH-LIBRARY 的路径 P1"；阶段写"P0 阶段" |
+| P0、P1… | 点位 P00–P23（两位数）、图书馆的三条"看进去"路径 P1–P3、开发阶段 P0–P3 | 点位一律两位数；路径写"MAP-QSH-INTERIORS-LIBRARY 的路径 P1"；阶段写"P0 阶段" |
 | L0、L2… | 细节级别 L0+–L4，或声景七层 L0–L6 | 声景层写"声景 L2" |
 | I0、I1… | 室内兜底层 I0，或室内推进批次 I1–I3 | 批次写"室内批次 I1" |
 | 第 N 条 | 各文档编号列表里的一条（流式不变量、一票否决、硬规则等） | 带文档与小节写，如"ENG-BUDGET-RULES §1 第 9 条"，不写"不变量 5" |
@@ -142,7 +143,7 @@ gates: [G1, G5]
 ### 3.4 命名写法
 
 **命名原则**（全项目，D-251）：
-1. **编号-主题**：带编号的名字一律"编号-中文主题"，编号只做索引，意思靠主题读出；正文里提到工作包号也带名（WF-DOC §4.2）。
+1. **编号-主题**：带编号的名字一律"编号-中文主题"，编号只做索引，意思靠主题读出；正文里提到工作包号也带名（STD-DOC §4.2）。
 2. **一物一名**：同一个角色或东西只有一种叫法——主会话、Codex 主线、Claude 侧、Codex 侧；Opus、Sonnet、Sol、Astra 只指模型；"指挥"只指主会话或 Codex 主线（WF-FLOW §3.1）。
 3. **名字写内容，不写来源**：不用工作包号、会话名、日期、版本号当名字。
 4. **不造缩写**：字母前缀与缩写都在 §3.2 登记，不再新增单字母前缀。
@@ -193,14 +194,14 @@ gates: [G1, G5]
 
 | 类 | 格式 | 例子 |
 | --- | --- | --- |
-| 规范文档 | `编码-中文简题.md`，简题 ≤14 字；编码规则见 WF-DOC §3；`docs/godot-api/` 下生成的 API 参考不在此列 | `SYS-WEATHER-天气.md` |
+| 规范文档 | `编码-中文简题.md`，简题 ≤14 字；编码规则见 STD-DOC §3；`docs/godot-api/` 下生成的 API 参考不在此列 | `SYS-WEATHER-天气.md` |
 | 任务单 | `tasks/<claude 或 codex>/<队列行号>-<主题>.md`；一张单管几行时用主行的号 | `Q-036-广场图样稳定性采集.md` |
 | 旁路单 | `side/cards/S-<nnn>-<主题>.md` | `S-007-清点外围楼名.md` |
 | 调研 | `research/r<nnn>-<主题>/`，日期只记在 INDEX | `r025-命名规范/` |
 | 来信 | `notes/<claude 或 codex>/<年月日-时分秒>-<发件方>-<短词>.md`，发件方写 `claude` 或 `codex` | `20261019-024457-claude-编号统一.md` |
 | 契约申请 | `requests/contract-<队列行号>-<主题>.md` | `contract-Q-003-地形求值.md` |
 | 世界文件 | 区文件 `world/<区>.json`；原点、投影与校界 `world/geo.json` | `world/core.json` |
-| 脚本 | 按语言惯例；开头一句话作用加"用法："（ENG-CODE） | `check-naming.ps1`、`clean_artifacts.py` |
+| 脚本 | 按语言惯例；开头一句话作用加"用法："（STD-CODE） | `check-naming.ps1`、`clean_artifacts.py` |
 | 固定机位 | `<昼、夜或雨>-<点位>-<地点>` | `夜-P00-全景` |
 | 临时截图 | `output/render-review/<点位>-<模式>-<年月日>.png` | `P16-旁观-20261019.png` |
 | 临时工作树 | `E:\Project\UESTC_RPG.wt\<队列行号或用途>`（WF-RULE §13） | `Q-015b` |

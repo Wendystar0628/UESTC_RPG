@@ -2,6 +2,7 @@
 id: SYS-ATLAS
 title: 平面地图与传送
 category: systems
+parent: SYS-INDEX
 summary: 平面地图的总则：允许与禁止什么、多地图下的数据归属、设置里存什么；主线全开放，自定义标记、追踪、解锁策略在主线之后；界面与传送分在两份子文档
 keywords: [平面地图, 地图只活在界面层, 3D 里不标注, IAtlasService, MarkerId, 前往方式, 图层筛选, AtlasSave, TransitPreference]
 owners: [WP-48]

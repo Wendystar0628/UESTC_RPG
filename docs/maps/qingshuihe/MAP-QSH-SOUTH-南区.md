@@ -2,12 +2,13 @@
 id: MAP-QSH-SOUTH
 title: 南区：南门、主楼、东湖、宣邦楼、立人楼、体育场馆、国际创新中心
 category: maps
+parent: MAP-QSH-INDEX
 summary: 南区各楼与构筑物的外观与身份特征、设计增补、近景要求；四季昼夜与天气、行走与声音在子文档
 keywords: [南区, 南门, 校名墙, 主楼, 主轴线, 屋顶空廊, 过街楼, 主楼泛光, 森林公园, 孔雀之家, 东湖岸线, 环湖跑道, 里程标, 六角亭, 亲水平台, 荷角, 吴立人像, 宣邦楼, 钟楼, 电子管穹顶, 交班的钟, 钟面指针, 立人楼, 体育馆, 游泳馆, 体育运动中心大平台, 看台罩棚, 国际创新中心, 1–8 号楼, world/south.json]
 owners: [WP-18]
 contributors: [WP-03, WP-04, WP-13, WP-23, WP-24, WP-26, WP-28, WP-31a]
-depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-MODELING, ART-RENOVATION, ENG-ARCH, SYS-TIME, SYS-WALK, WLD-INTERIORS]
-related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-WP, UI-NAV, SYS-WEATHER, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
+depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-MODELING, WLD-RENOVATION, ENG-ARCH, SYS-TIME, SYS-WALK, WLD-INTERIORS]
+related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, PLAN-WP, UI-NAV, SYS-WEATHER, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/south.json"]
 gates: [G4, G5, G7]
@@ -57,7 +58,7 @@ gates: [G4, G5, G7]
 - **2.5 门前广场**：四块草坪围出中轴，中央立国旗杆；草坪上是红黄两色的模纹花坛；两侧是银杏林（WP-23（植被系统））。
 - **2.6 主楼喷泉**（可选）：轴线上的"主楼喷泉"若做（§12），画成不出水的圆形浅水池，白天映落日，夜里映主楼泛光。
 - **2.7 受光**：默认状态朝西南的正面被照成一整片杏色，东北的背面拖出整片浅而透的影，影长约 480 m，影色以明度为主、只带一点天光色（ART-STYLE-SHADING §2）。上午背面受光、正面在影里；正午影缩到楼脚，空廊女儿墙在立面上投一道细影；日出时空廊和中央最高处先受光。
-- **2.8 泛光**：主楼夜间整栋泛金黄色，按灯光时刻表（SYS-TIME-LOOK §3）：默认状态只开到约 20%，让檐口有一线暖光；太阳 −1° 到 −4° 之间升到 100%；22:30 降到 40%，只留空廊和中央体量；23:30 关闭；白天不开。窗灯按教学楼曲线。雪夜泛光把屋檐和空廊上的雪线照成暖白，是冬夜的一条亮线。
+- **2.8 泛光**：主楼夜间整栋泛金黄色，按灯光时刻表（ART-COLORSCRIPT §3）：默认状态只开到约 20%，让檐口有一线暖光；太阳 −1° 到 −4° 之间升到 100%；22:30 降到 40%，只留空廊和中央体量；23:30 关闭；白天不开。窗灯按教学楼曲线。雪夜泛光把屋檐和空廊上的雪线照成暖白，是冬夜的一条亮线。
 
 ## 3 过街楼、开放室内与周边
 
@@ -119,7 +120,7 @@ gates: [G4, G5, G7]
 
 ## 9 南区中部的 1–8 号楼
 
-宣邦楼以南、体育场以东，有 8 栋 1–3 层的低矮楼，按后勤与实训用房处理；数据里的"未命名 9136"是一座公共卫生间。按服务辅助建筑画：较大的一层窗，不加装饰；不开放，只做外壳加窗卡。它们算后勤小楼，可用店头布篷、外挂钢楼梯、波纹铁皮雨棚、卷帘门（MAP-QSH-ADDITIONS-VOCAB §6 第 12 条）；屋顶太阳能热水器见 MAP-QSH-ADDITIONS-VOCAB §4；楼间服务路可安排电线杆与架空线、砌块矮墙、橙色凸面镜，守 ART-AMBIENCE §5–§6 和主视线范围（MAP-QSH-CORE §8.4）。翻新按 MAP-QSH-RENOVATION 的预设。
+宣邦楼以南、体育场以东，有 8 栋 1–3 层的低矮楼，按后勤与实训用房处理；数据里的"未命名 9136"是一座公共卫生间。按服务辅助建筑画：较大的一层窗，不加装饰；不开放，只做外壳加窗卡。它们算后勤小楼，可用店头布篷、外挂钢楼梯、波纹铁皮雨棚、卷帘门（MAP-QSH-ADDITIONS-VOCAB §6 第 12 条）；屋顶太阳能热水器见 MAP-QSH-ADDITIONS-VOCAB §4；楼间服务路可安排电线杆与架空线、砌块矮墙、橙色凸面镜，守 WLD-AMBIENCE §5–§6 和主视线范围（MAP-QSH-CORE §8.4）。翻新按 MAP-QSH-RENOVATION 的预设。
 
 ## 10 本区的水道
 

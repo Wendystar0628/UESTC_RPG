@@ -1,4 +1,4 @@
-"""统计 docs/ 里每份文档的字数，列出超体量上限的（上限只写在 WF-DOC §5 的表里，这里每次从表里读）。
+"""统计 docs/ 里每份文档的字数，列出超体量上限的（上限只写在 STD-DOC §5 的表里，这里每次从表里读）。
 
 用法：
   python -I -X utf8 scripts/docs/doc_size.py            每份文档一行，从大到小，超限的标 ✗
@@ -15,13 +15,13 @@ import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 D = os.path.join(ROOT, 'docs')
-# WF-DOC §5 表里"部分"一栏的开头 → 本脚本的键；放宽上限只改那张表
+# STD-DOC §5 表里"部分"一栏的开头 → 本脚本的键；放宽上限只改那张表
 ROWS = {'CORE-INDEX §0': 'core0', 'CORE-INDEX §1': 'core1', 'WF-ENTRY': 'entry', '每份文档的 §0': 's0',
         '§0.1': 'hooks', '单节': 'section', '单份规格': 'doc', '单份地图': 'map'}
 
 
 def limits():
-    path = glob.glob(os.path.join(D, 'workflow', 'WF-DOC-*.md'))[0]
+    path = glob.glob(os.path.join(D, 'standards', 'STD-DOC-*.md'))[0]
     sec = open(path, encoding='utf-8').read().split('## 5 体量上限', 1)[1].split('\n## ', 1)[0]
     out = {}
     for part, n in re.findall(r'^\| (.+?) \| ([\d,]+) 字 \|$', sec, re.M):
@@ -30,12 +30,12 @@ def limits():
             out[key] = int(n.replace(',', ''))
     missing = sorted(set(ROWS.values()) - set(out))
     if missing:
-        sys.exit('WF-DOC §5 的上限表里读不到：' + '、'.join(missing))
+        sys.exit('STD-DOC §5 的上限表里读不到：' + '、'.join(missing))
     return out
 
 
 LIMIT = limits()
-REGISTRY = {'CORE-DECISIONS', 'CORE-GLOSSARY', 'ENG-WP'}  # 登记类（连同它们的子文档）：每条一行，不量全文与单节
+REGISTRY = {'REG-DECISIONS', 'REG-GLOSSARY', 'PLAN-WP'}  # 登记类（连同它们的子文档）：每条一行，不量全文与单节
 
 
 def registry(code):

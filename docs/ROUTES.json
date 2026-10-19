@@ -1,40 +1,32 @@
 {
  "docs": {
-  "ART-AMBIENCE": "docs/art/ART-AMBIENCE-日式日常街景.md",
+  "ART-COLORSCRIPT": "docs/art/ART-COLORSCRIPT-色彩脚本与四季昼夜.md",
   "ART-FIDELITY": "docs/art/ART-FIDELITY-视觉精度标准.md",
   "ART-FIDELITY-DETAIL": "docs/art/ART-FIDELITY-DETAIL-细节密度与贴脸做法.md",
+  "ART-INDEX": "docs/art/ART-INDEX-画面总纲.md",
   "ART-MODELING": "docs/art/ART-MODELING-风格化造型规则.md",
   "ART-MODELING-PROPORTION": "docs/art/ART-MODELING-PROPORTION-风格化比例颜色与金样.md",
-  "ART-RENOVATION": "docs/art/ART-RENOVATION-老楼翻新.md",
   "ART-SKYLIGHT": "docs/art/ART-SKYLIGHT-天空光照与大气.md",
   "ART-SKYLIGHT-ATMOSPHERE": "docs/art/ART-SKYLIGHT-ATMOSPHERE-天空月亮与雾.md",
   "ART-STYLE": "docs/art/ART-STYLE-风格基础.md",
   "ART-STYLE-LINES": "docs/art/ART-STYLE-LINES-描线与后期.md",
   "ART-STYLE-SHADING": "docs/art/ART-STYLE-SHADING-明暗影色与材质.md",
-  "CORE-CONVENTIONS": "docs/core/CORE-CONVENTIONS-约定.md",
-  "CORE-DECISIONS": "docs/core/CORE-DECISIONS-决策登记.md",
-  "CORE-DECISIONS-PROCESS": "docs/core/CORE-DECISIONS-PROCESS-协作与流程决策.md",
-  "CORE-DECISIONS-SYSTEMS": "docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md",
-  "CORE-DECISIONS-WORLD": "docs/core/CORE-DECISIONS-WORLD-世界与画面决策.md",
-  "CORE-GLOSSARY": "docs/core/CORE-GLOSSARY-术语表.md",
   "CORE-INDEX": "docs/README.md",
-  "CORE-INVARIANTS": "docs/core/CORE-INVARIANTS-全局不变量.md",
-  "CORE-SCOPE": "docs/core/CORE-SCOPE-作品与范围.md",
   "ENG-ARCH": "docs/engineering/ENG-ARCH-工程架构.md",
   "ENG-BUDGET": "docs/engineering/ENG-BUDGET-性能预算.md",
   "ENG-BUDGET-LOD": "docs/engineering/ENG-BUDGET-LOD-细节级别与速度律.md",
   "ENG-BUDGET-RULES": "docs/engineering/ENG-BUDGET-RULES-性能硬规则.md",
-  "ENG-CODE": "docs/engineering/ENG-CODE-代码结构准则.md",
   "ENG-GATES": "docs/engineering/ENG-GATES-验收与门禁.md",
   "ENG-GATES-SHOTS": "docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md",
   "ENG-GATES-VETO": "docs/engineering/ENG-GATES-VETO-一票否决与收尾清单.md",
+  "ENG-INDEX": "docs/engineering/ENG-INDEX-工程总纲.md",
   "ENG-PERF": "docs/engineering/ENG-PERF-性能工程.md",
   "ENG-PERF-ADAPT": "docs/engineering/ENG-PERF-ADAPT-设备档与自适应.md",
   "ENG-PERF-LIGHT": "docs/engineering/ENG-PERF-LIGHT-植被阴影与后期.md",
   "ENG-PERF-STREAM": "docs/engineering/ENG-PERF-STREAM-流式加载与烘焙.md",
+  "ENG-PREVIEW": "docs/engineering/ENG-PREVIEW-内容预览.md",
+  "ENG-RELEASE": "docs/engineering/ENG-RELEASE-发布与交付.md",
   "ENG-ROADMAP": "docs/engineering/ENG-ROADMAP-扩展路线.md",
-  "ENG-WP": "docs/engineering/ENG-WP-工作包派工单.md",
-  "ENG-WP-LIST": "docs/engineering/ENG-WP-LIST-工作包一览与子包拆法.md",
   "MAP-QSH-ADDITIONS": "docs/maps/qingshuihe/MAP-QSH-ADDITIONS-设计增补.md",
   "MAP-QSH-ADDITIONS-ATMOSPHERE": "docs/maps/qingshuihe/MAP-QSH-ADDITIONS-ATMOSPHERE-夜间灯光与雨天.md",
   "MAP-QSH-ADDITIONS-VOCAB": "docs/maps/qingshuihe/MAP-QSH-ADDITIONS-VOCAB-增补词汇与楼宇规则.md",
@@ -44,8 +36,9 @@
   "MAP-QSH-CORE": "docs/maps/qingshuihe/MAP-QSH-CORE-核心区.md",
   "MAP-QSH-CORE-SEASONS": "docs/maps/qingshuihe/MAP-QSH-CORE-SEASONS-核心区灯光四季昼夜与天气.md",
   "MAP-QSH-CORE-WALK": "docs/maps/qingshuihe/MAP-QSH-CORE-WALK-核心区行走与声音.md",
+  "MAP-QSH-INDEX": "docs/maps/qingshuihe/MAP-QSH-INDEX-清水河总纲.md",
   "MAP-QSH-INTERIORS": "docs/maps/qingshuihe/MAP-QSH-INTERIORS-其余开放楼室内.md",
-  "MAP-QSH-LIBRARY": "docs/maps/qingshuihe/MAP-QSH-LIBRARY-图书馆与博物馆室内.md",
+  "MAP-QSH-INTERIORS-LIBRARY": "docs/maps/qingshuihe/MAP-QSH-INTERIORS-LIBRARY-图书馆与博物馆室内.md",
   "MAP-QSH-NORTH": "docs/maps/qingshuihe/MAP-QSH-NORTH-北部生活区.md",
   "MAP-QSH-NORTH-SEASONS": "docs/maps/qingshuihe/MAP-QSH-NORTH-SEASONS-北部生活区四季昼夜与天气.md",
   "MAP-QSH-NORTH-WALK": "docs/maps/qingshuihe/MAP-QSH-NORTH-WALK-北部生活区行走与声音.md",
@@ -62,7 +55,22 @@
   "MAP-QSH-WEST": "docs/maps/qingshuihe/MAP-QSH-WEST-西区与西北区.md",
   "MAP-QSH-WEST-SEASONS": "docs/maps/qingshuihe/MAP-QSH-WEST-SEASONS-西区与西北区四季昼夜与天气.md",
   "MAP-QSH-WEST-WALK": "docs/maps/qingshuihe/MAP-QSH-WEST-WALK-西区与西北区行走与声音.md",
-  "OPS-RELEASE": "docs/ops/OPS-RELEASE-发布与交付.md",
+  "PLAN-INDEX": "docs/plan/PLAN-INDEX-计划总纲.md",
+  "PLAN-WP": "docs/plan/PLAN-WP-工作包派工单.md",
+  "PLAN-WP-LIST": "docs/plan/PLAN-WP-LIST-工作包一览与子包拆法.md",
+  "PRD-INDEX": "docs/product/PRD-INDEX-作品总纲.md",
+  "PRD-INVARIANTS": "docs/product/PRD-INVARIANTS-全局不变量.md",
+  "PRD-SCOPE": "docs/product/PRD-SCOPE-作品与范围.md",
+  "REG-DECISIONS": "docs/registry/REG-DECISIONS-决策登记.md",
+  "REG-DECISIONS-PROCESS": "docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md",
+  "REG-DECISIONS-SYSTEMS": "docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md",
+  "REG-DECISIONS-WORLD": "docs/registry/REG-DECISIONS-WORLD-世界与画面决策.md",
+  "REG-GLOSSARY": "docs/registry/REG-GLOSSARY-术语表.md",
+  "REG-INDEX": "docs/registry/REG-INDEX-登记总纲.md",
+  "STD-CODE": "docs/standards/STD-CODE-代码结构准则.md",
+  "STD-CONVENTIONS": "docs/standards/STD-CONVENTIONS-约定.md",
+  "STD-DOC": "docs/standards/STD-DOC-文档写法.md",
+  "STD-INDEX": "docs/standards/STD-INDEX-规范总纲.md",
   "SYS-ATLAS": "docs/systems/SYS-ATLAS-平面地图与传送.md",
   "SYS-ATLAS-TRAVEL": "docs/systems/SYS-ATLAS-TRAVEL-标记锚点与传送.md",
   "SYS-ATLAS-UI": "docs/systems/SYS-ATLAS-UI-地图界面.md",
@@ -70,6 +78,7 @@
   "SYS-AUDIO-AMBIENCE": "docs/systems/SYS-AUDIO-AMBIENCE-环境声景与天气事件声.md",
   "SYS-AUDIO-FOLEY": "docs/systems/SYS-AUDIO-FOLEY-观者声与空间声学.md",
   "SYS-GRAPHICS": "docs/systems/SYS-GRAPHICS-画面设置.md",
+  "SYS-INDEX": "docs/systems/SYS-INDEX-系统总纲.md",
   "SYS-MAPS": "docs/systems/SYS-MAPS-多地图.md",
   "SYS-MOTION": "docs/systems/SYS-MOTION-动态与事件.md",
   "SYS-MOTION-ENV": "docs/systems/SYS-MOTION-ENV-风与环境动态.md",
@@ -78,7 +87,6 @@
   "SYS-SAVE-FLOW": "docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md",
   "SYS-SAVE-FORMAT": "docs/systems/SYS-SAVE-FORMAT-格式损坏与安全.md",
   "SYS-TIME": "docs/systems/SYS-TIME-时间与季节.md",
-  "SYS-TIME-LOOK": "docs/systems/SYS-TIME-LOOK-色彩脚本四季与灯光.md",
   "SYS-TITLE": "docs/systems/SYS-TITLE-开始页与启动.md",
   "SYS-VIEW": "docs/systems/SYS-VIEW-观察模式与开场.md",
   "SYS-VIEW-MEDIUM": "docs/systems/SYS-VIEW-MEDIUM-介质呈现.md",
@@ -87,7 +95,7 @@
   "SYS-WALK-BOUNDS": "docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md",
   "SYS-WEATHER": "docs/systems/SYS-WEATHER-天气.md",
   "SYS-WEATHER-PROCESS": "docs/systems/SYS-WEATHER-PROCESS-自动天气与存档语义.md",
-  "TOOL-PREVIEW": "docs/tools/TOOL-PREVIEW-内容预览.md",
+  "UI-INDEX": "docs/ui/UI-INDEX-界面总纲.md",
   "UI-NAV": "docs/ui/UI-NAV-界面与操作说明.md",
   "UI-NAV-WAYPOINTS": "docs/ui/UI-NAV-WAYPOINTS-点位跳转与传送.md",
   "UI-VISUAL": "docs/ui/UI-VISUAL-界面视觉语言.md",
@@ -95,14 +103,15 @@
   "UI-VISUAL-MOTION": "docs/ui/UI-VISUAL-MOTION-动效与减少动态效果.md",
   "WF-BUILD": "docs/workflow/WF-BUILD-施工边界.md",
   "WF-COMMS": "docs/workflow/WF-COMMS-交接与通信.md",
-  "WF-DOC": "docs/workflow/WF-DOC-文档写法.md",
   "WF-ENTRY": "docs/workflow/WF-ENTRY-角色入口卡.md",
   "WF-FLOW": "docs/workflow/WF-FLOW-开发流程.md",
+  "WF-INDEX": "docs/workflow/WF-INDEX-协作总纲.md",
   "WF-MODEL": "docs/workflow/WF-MODEL-模型、子代理与额度.md",
   "WF-ROLE": "docs/workflow/WF-ROLE-参与者与分工.md",
   "WF-RULE": "docs/workflow/WF-RULE-全员守则.md",
   "WF-STATUS": "docs/workflow/WF-STATUS-施工状态、队列与调研入队.md",
-  "WLD-DIORAMA": "docs/world/WLD-DIORAMA-箱庭边界截面与远景.md",
+  "WLD-AMBIENCE": "docs/world/WLD-AMBIENCE-日式日常街景.md",
+  "WLD-INDEX": "docs/world/WLD-INDEX-世界总纲.md",
   "WLD-INTERIORS": "docs/world/WLD-INTERIORS-室内.md",
   "WLD-INTERIORS-ACCESS": "docs/world/WLD-INTERIORS-ACCESS-室内开放与门.md",
   "WLD-INTERIORS-BUILD": "docs/world/WLD-INTERIORS-BUILD-室内制作.md",
@@ -112,6 +121,8 @@
   "WLD-OUTSKIRTS": "docs/world/WLD-OUTSKIRTS-边界与外围.md",
   "WLD-OUTSKIRTS-BAND": "docs/world/WLD-OUTSKIRTS-BAND-外围环境带.md",
   "WLD-OUTSKIRTS-BORDER": "docs/world/WLD-OUTSKIRTS-BORDER-边界阻挡与提示.md",
+  "WLD-OUTSKIRTS-DIORAMA": "docs/world/WLD-OUTSKIRTS-DIORAMA-箱庭截面与远景.md",
+  "WLD-RENOVATION": "docs/world/WLD-RENOVATION-老楼翻新.md",
   "WLD-TERRAIN": "docs/world/WLD-TERRAIN-地形.md",
   "WLD-TERRAIN-APPLY": "docs/world/WLD-TERRAIN-APPLY-地形落地.md",
   "WLD-TERRAIN-SHAPE": "docs/world/WLD-TERRAIN-SHAPE-地形设计.md",
@@ -151,14 +162,14 @@
   },
   {
    "docs": [
-    "WF-DOC"
+    "STD-DOC"
    ],
    "glob": "docs/**"
   },
   {
    "docs": [
     "ENG-ARCH",
-    "ENG-CODE",
+    "STD-CODE",
     "WF-BUILD"
    ],
    "glob": "game/**/*.cs"
@@ -202,25 +213,25 @@
   },
   {
    "docs": [
-    "ENG-CODE"
+    "STD-CODE"
    ],
    "glob": "pipeline/**/*.cs"
   },
   {
    "docs": [
-    "ENG-CODE"
+    "STD-CODE"
    ],
    "glob": "pipeline/**/*.py"
   },
   {
    "docs": [
-    "ENG-CODE"
+    "STD-CODE"
    ],
    "glob": "scripts/**/*.ps1"
   },
   {
    "docs": [
-    "ENG-CODE"
+    "STD-CODE"
    ],
    "glob": "scripts/**/*.py"
   }
@@ -228,21 +239,21 @@
  "version": 1,
  "wp": {
   "WP-00": [
-   "CORE-CONVENTIONS",
    "CORE-INDEX",
    "ENG-ARCH",
    "ENG-BUDGET",
    "ENG-BUDGET-RULES",
-   "ENG-CODE",
+   "ENG-RELEASE",
    "ENG-ROADMAP",
-   "ENG-WP",
-   "ENG-WP-LIST",
-   "OPS-RELEASE"
+   "PLAN-WP",
+   "PLAN-WP-LIST",
+   "STD-CODE",
+   "STD-CONVENTIONS"
   ],
   "WP-01": [
    "ENG-PERF",
-   "SYS-VIEW",
-   "TOOL-PREVIEW"
+   "ENG-PREVIEW",
+   "SYS-VIEW"
   ],
   "WP-02a": [
    "ENG-BUDGET-LOD",
@@ -272,7 +283,7 @@
    "SYS-VIEW-MEDIUM"
   ],
   "WP-08": [
-   "TOOL-PREVIEW",
+   "ENG-PREVIEW",
    "WLD-TERRAIN",
    "WLD-TERRAIN-APPLY"
   ],
@@ -284,17 +295,17 @@
   "WP-11": [],
   "WP-12": [],
   "WP-13": [
-   "ART-AMBIENCE",
    "MAP-QSH-ADDITIONS",
    "MAP-QSH-ADDITIONS-VOCAB",
+   "WLD-AMBIENCE",
    "WLD-LIFE",
    "WLD-LIFE-STREET"
   ],
   "WP-14": [
-   "ART-RENOVATION",
    "MAP-QSH-ADDITIONS",
    "MAP-QSH-ADDITIONS-VOCAB",
-   "MAP-QSH-RENOVATION"
+   "MAP-QSH-RENOVATION",
+   "WLD-RENOVATION"
   ],
   "WP-15": [
    "WLD-TERRAIN",
@@ -310,7 +321,7 @@
    "MAP-QSH-TERRAIN-DISTRICTS"
   ],
   "WP-17": [
-   "MAP-QSH-LIBRARY",
+   "MAP-QSH-INTERIORS-LIBRARY",
    "WLD-INTERIORS",
    "WLD-INTERIORS-ACCESS"
   ],
@@ -347,7 +358,7 @@
    "MAP-QSH-TERRAIN-DISTRICTS"
   ],
   "WP-22": [
-   "WLD-DIORAMA"
+   "WLD-OUTSKIRTS-DIORAMA"
   ],
   "WP-23": [
    "MAP-QSH-VEGETATION",
@@ -439,14 +450,14 @@
    "UI-NAV-WAYPOINTS"
   ],
   "WP-37": [
-   "SYS-TIME-LOOK"
+   "ART-COLORSCRIPT"
   ],
   "WP-38": [
-   "SYS-TIME-LOOK"
+   "ART-COLORSCRIPT"
   ],
   "WP-39": [
-   "MAP-QSH-ADDITIONS-ATMOSPHERE",
-   "SYS-TIME-LOOK"
+   "ART-COLORSCRIPT",
+   "MAP-QSH-ADDITIONS-ATMOSPHERE"
   ],
   "WP-40": [
    "ART-SKYLIGHT-ATMOSPHERE"

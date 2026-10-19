@@ -7,8 +7,8 @@ summary: 截面线位置规则、外围 O0–O3 的内容与精度、灯光季�
 keywords: [外围环境带, O0–O3, 距离环, 外围覆盖层, offcampus.json, 外围画法, 楼型, 程序化布局, ODbL]
 owners: [WP-47]
 contributors: [WP-02, WP-04, WP-05, WP-06, WP-08, WP-13, WP-14, WP-15, WP-18, WP-22, WP-23, WP-24, WP-27, WP-28, WP-30, WP-33, WP-35, WP-36, WP-37, WP-38, WP-39, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-53]
-depends: [CORE-INDEX, WLD-OUTSKIRTS, ART-STYLE, WLD-DIORAMA, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF]
-related: [MAP-QSH-OUTSKIRTS, WLD-OUTSKIRTS-BORDER, ART-SKYLIGHT, ENG-GATES, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER, SYS-AUDIO, OPS-RELEASE, WLD-TERRAIN]
+depends: [CORE-INDEX, WLD-OUTSKIRTS, ART-STYLE, WLD-OUTSKIRTS-DIORAMA, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF]
+related: [MAP-QSH-OUTSKIRTS, WLD-OUTSKIRTS-BORDER, ART-SKYLIGHT, ENG-GATES, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER, SYS-AUDIO, ENG-RELEASE, WLD-TERRAIN]
 contracts: []
 data: ["game/data/maps/qingshuihe/world/offcampus.json"]
 gates: [G2, G6, G7]
@@ -17,20 +17,20 @@ gates: [G2, G6, G7]
 # WLD-OUTSKIRTS-BAND · 外围环境带：截面、分层与精度、灯光季节、保留删除新增、画法、数据
 
 > **范围**：本文规定截面线的位置规则与截面精度，外围环境带 O0–O3 的内容、精度、灯光与季节的通用规则，外围的保留、删除与新增规则，外围画法，外围数据与许可。
-> **不在本文**：三条线的定义（WLD-OUTSKIRTS）；截面的画法与精度（WLD-DIORAMA §2）；行走与飞行阻挡、提示文案（WLD-OUTSKIRTS-BORDER）；清水河具体的街区、地标、灯光表与农田（MAP-QSH-OUTSKIRTS）；截面、雾海与远景卡片的画法（WLD-DIORAMA）；外围增补物的逐项外观（MAP-QSH-ADDITIONS）；外围数据的契约（`game/contracts/Spatial/OutskirtsContracts.cs`）；性能份额（ENG-BUDGET）；声音的实现（SYS-AUDIO）。
+> **不在本文**：三条线的定义（WLD-OUTSKIRTS）；截面的画法与精度（WLD-OUTSKIRTS-DIORAMA §2）；行走与飞行阻挡、提示文案（WLD-OUTSKIRTS-BORDER）；清水河具体的街区、地标、灯光表与农田（MAP-QSH-OUTSKIRTS）；截面、雾海与远景卡片的画法（WLD-OUTSKIRTS-DIORAMA）；外围增补物的逐项外观（MAP-QSH-ADDITIONS）；外围数据的契约（`game/contracts/Spatial/OutskirtsContracts.cs`）；性能份额（ENG-BUDGET）；声音的实现（SYS-AUDIO）。
 > **查阅**：先读 §0；截面线看 §1；外围分层与精度看 §2；灯光、季节与车流看 §3；保留删除新增看 §4；外围的画法看 §5；数据与许可看 §6
 
 ## 0 结论
 
 1. **外围只保留结构和地标**：道路、轨道、水系、用地和楼的体量等级照外围数据，其余按氛围做（INV-9）；画法与校内同一套清透风格，越远越干净（§4、§5）。
 2. **分四层**：O0 街道带（校界到前沿线，复用校内部件，按精度区 K3 判）；O1 外围街区（前沿线到截面线，朝校园的第一排立面 L1、临街店面 L0、其余 L2）；O2 雾中楼顶（截面线以外，常驻合并块）；O3 远景卡片和雪山。外围精度按离校界、前沿线的距离环判（§2）。不画车流（§3.3）。
-3. **截面线**沿道路中线、绿带、园区内部路和河岸走，不切楼、不切桥（§1.1）；截面的画法与精度见 WLD-DIORAMA §2。
+3. **截面线**沿道路中线、绿带、园区内部路和河岸走，不切楼、不切桥（§1.1）；截面的画法与精度见 WLD-OUTSKIRTS-DIORAMA §2。
 4. **数据**：外围数据是项目自有的地图数据（D-252），楼块用程序化楼型，地标和风格化改动写进覆盖层；现状与许可见 §6。
 
 ### 0.1 接入要点
 
 - **给外围的表面定精度**：按距离环套 ENG-BUDGET 的级别表；外围整体 K5，O0 按 K3，底线在任何距离都成立（§2.1）
-- **画截面或远景（WP-22（箱庭截面与远景））**：截面画法与精度见 WLD-DIORAMA §2；近层卡片只画 1.5–3 km 的楼群和高架剪影（§2.2）
+- **画截面或远景（WP-22（箱庭截面与远景））**：截面画法与精度见 WLD-OUTSKIRTS-DIORAMA §2；近层卡片只画 1.5–3 km 的楼群和高架剪影（§2.2）
 - **在外围加或改内容**：写进外围覆盖层（WP-47（外围环境带） 独占，ID 以 `design:` 开头并写明理由）；不画车流（ART-STYLE §3.2）、不加动态，不用霓虹和 LED 屏（§3.3、§4）
 - **外围的灯与地面覆盖**：灯接 WP-39（夜景灯光与时刻表） 的时刻表，不新增灯光通道；O0 读地面遮罩，O1、O2 和截面上缘读顶点潜势（§3.1、§3.2）
 
@@ -43,7 +43,7 @@ gates: [G2, G6, G7]
 
 ### 1.2 截面精度
 
-截面的画法、厚度、可见条件与精度见 WLD-DIORAMA §2。
+截面的画法、厚度、可见条件与精度见 WLD-OUTSKIRTS-DIORAMA §2。
 
 ## 2 外围分层 O0–O3
 
@@ -58,7 +58,7 @@ gates: [G2, G6, G7]
 | **O0 街道带** | 校界到前沿线（约 20–125 m） | 路面、路缘、人行道、行道树、路灯、轨道、接触网、站台、公交站，复用校内部件，L0–L1 两级；按 K3 判：5 m 以外满足 K3 的细节密度，5 m 以内只判底线；外围不开放地下 | 真实投影 |
 | **O1 外围街区** | 前沿线到截面线 | 临街店面和裙房、商场、站台这类地标 L0（离前沿线约 6–40 m）；第一排楼的朝校立面和屋顶 L1（40–150 m）；背面、第二排起 L2，远处随距离到 L3、L4 | 只投低模盒体代理 |
 | **O2 雾中楼顶** | 截面线以外到离校界约 1.5 km | 体量加窗带，常驻，按方位合并成不超过 16 块；底面在雾海顶面以下约 10 m | 不投影 |
-| **O3 远景** | 3 km 以外 | WLD-DIORAMA 的三层卡片和雪山；近层卡片画 1.5–3 km 的楼群和高架剪影，不画街道（街道是 O0、O1 的三维内容） | 不投影 |
+| **O3 远景** | 3 km 以外 | WLD-OUTSKIRTS-DIORAMA 的三层卡片和雪山；近层卡片画 1.5–3 km 的楼群和高架剪影，不画街道（街道是 O0、O1 的三维内容） | 不投影 |
 
 **O1 的布局约束**：临街店面离前沿线不小于 6 m，中间是人行道和树池带，店面里用室内视差；店面以外的楼，朝校立面离前沿线不小于 40 m，中间放裙房、围墙、绿带和小区入口；商场、站台这类地标可以更近，立面按 L0。
 
@@ -116,4 +116,4 @@ gates: [G2, G6, G7]
 
 - **外围数据**：现有的是 `game/data/maps/qingshuihe/world/offcampus.json`（校外道路与水系，随世界文件加载）；外围楼块、前沿线与截面线的数据文件、生成器和外围覆盖层尚未实现，属主线之后；契约见 `game/contracts/Spatial/OutskirtsContracts.cs`，`map.json` 的 `env.outskirts` 在数据文件落地前为空。改动直接改记录（D-252、D-253），运行时由世界模型解析，作为单独一层，不并进校内实体。
 - **外围覆盖层**（WP-47（外围环境带） 独占，主线之后）：地标（天街商场、电子科大站、发展变电站、高架的特殊段）、风格化改动（把 `construction` 用地画成建成的小区、挪高压线、整理铁塔间距）和新增的氛围元素；每条写明理由。
-- **许可**：署名同校内，为"© OpenStreetMap contributors"；外围数据和校内数据一样是 ODbL 派生数据库，随安装包分发，见 OPS-RELEASE。
+- **许可**：署名同校内，为"© OpenStreetMap contributors"；外围数据和校内数据一样是 ODbL 派生数据库，随安装包分发，见 ENG-RELEASE。

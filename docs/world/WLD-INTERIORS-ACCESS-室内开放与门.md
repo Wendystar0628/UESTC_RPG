@@ -7,7 +7,7 @@ summary: 室内的精选开放原则、门的区分与自动门、关着的楼�
 keywords: [楼内, 开放室内, 开放清单, interiors.json, 开放入口, 自动门, 封口, 门厅卡, 窗卡, 简化室内, I0 兜底层, 看进去例外, 导航图]
 owners: [WP-17, WP-31a, WP-31b, WP-31c]
 contributors: []
-depends: [WLD-INTERIORS, CORE-INDEX, MAP-QSH-LIBRARY, SYS-VIEW, ART-FIDELITY, ENG-ARCH, SYS-TIME, SYS-WALK, SYS-ATLAS, SYS-MAPS, SYS-AUDIO]
+depends: [WLD-INTERIORS, CORE-INDEX, MAP-QSH-INTERIORS-LIBRARY, SYS-VIEW, ART-FIDELITY, ENG-ARCH, SYS-TIME, SYS-WALK, SYS-ATLAS, SYS-MAPS, SYS-AUDIO]
 related: [WLD-INTERIORS-BUILD, WLD-LIFE, WLD-OUTSKIRTS, SYS-SAVE, ENG-GATES, UI-NAV, ENG-ROADMAP, MAP-QSH-ADDITIONS]
 contracts: [EntranceDecl, DoorLeafKind, DoorLeafDecl, DoorPhase, DoorEvent, IInteriorDoors, InteriorIndexEntry, IInteriorIndex, SurfaceTag.DoorClosed, NavNodeId, NavSpace, NavEdgeKind, NavFlags, DoorKind, DoorState, NavNode, NavEdge, NavPortal, NavFloorGraph, NavQuery, NavPath, INavGraph]
 data: ["game/data/maps/qingshuihe/interiors.json", "game/data/maps/qingshuihe/nav/routes.json", "game/data/maps/qingshuihe/nav/views.json"]
@@ -17,7 +17,7 @@ gates: [G5]
 # WLD-INTERIORS-ACCESS · 室内开放：原则、门、关着的楼、新开一栋
 
 > **范围**：本文规定不分图的室内开放规则：精选开放的原则与共用约定，门的开与关（含自动门），关着的楼，导航图与开放更多楼的做法。
-> **不在本文**：室内加载、生成器、风格、痕迹、楼梯与碰撞（WLD-INTERIORS-BUILD）；开放的屋顶与高处、电梯（MAP-QSH-INTERIORS）；清水河各楼的开放范围、陈设与观景时刻（MAP-QSH-LIBRARY，含开放楼总表）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；地图门口传送（SYS-ATLAS）；契约（`game/contracts/`）。
+> **不在本文**：室内加载、生成器、风格、痕迹、楼梯与碰撞（WLD-INTERIORS-BUILD）；开放的屋顶与高处、电梯（MAP-QSH-INTERIORS）；清水河各楼的开放范围、陈设与观景时刻（MAP-QSH-INTERIORS-LIBRARY，含开放楼总表）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；地图门口传送（SYS-ATLAS）；契约（`game/contracts/`）。
 > **查阅**：先读 §0；开放原则与共用约定看 §1；门看 §2；关着的楼看 §3；导航图与新开一栋楼看 §4
 
 ## 0 结论
@@ -47,7 +47,7 @@ gates: [G5]
 - **房间的门**：公共房间多数不设门；能进的房间（教室约三成、个别办公室和实验室、各处登记的主空间）用自动门；其余房门锁着。
 - **入口**：每个开放入口的门口表现按 §2。
 - **半室外**（外廊、步行街、平台下街廊）按室外介质，降水由 `precip_occ` 挡在顶下，进房间或店里才切室内介质。
-- **看进去例外**：图书馆的三条路径和品·悦吧大玻璃从室外就要看见真实几何，镜头 150 m 以内加载 IS 层（MAP-QSH-LIBRARY §2）；其余开放楼从外面看照样是窗卡。
+- **看进去例外**：图书馆的三条路径和品·悦吧大玻璃从室外就要看见真实几何，镜头 150 m 以内加载 IS 层（MAP-QSH-INTERIORS-LIBRARY §2）；其余开放楼从外面看照样是窗卡。
 - **层数与层高**：OSM 的层数错误按各区调研修正，在记录里改层数。
 - **高处**：其余屋顶锁着，只有登记的高处可走（MAP-QSH-INTERIORS §4）。
 - **点位**：室内与高处点位 `Entry = Door`，位置读 `waypoints.json`（UI-NAV-WAYPOINTS §1）。
@@ -79,7 +79,7 @@ gates: [G5]
 
 ## 3 关着的楼：外壳、窗卡、门厅卡与简化室内
 
-- **窗卡**：窗里一律是窗卡：室内视差（深度 3、4.5、6 m 三档）、家具剪影、窗帘或百叶、灯光色块；5 m 以内也不换实体几何。窗卡不对应真实房间，窗灯按窗号哈希和灯光通道亮灭（SYS-TIME-LOOK §3）。窗卡种类（约 15 种，按房间用途分）以数据为准。
+- **窗卡**：窗里一律是窗卡：室内视差（深度 3、4.5、6 m 三档）、家具剪影、窗帘或百叶、灯光色块；5 m 以内也不换实体几何。窗卡不对应真实房间，窗灯按窗号哈希和灯光通道亮灭（ART-COLORSCRIPT §3）。窗卡种类（约 15 种，按房间用途分）以数据为准。
 - **窗位类型**：立面生成时先按楼型骨架标出楼梯间列、走廊尽端、卫生间列，其余按楼的类别配比，所以外面看大致合理，进楼后这三处天然一致。
 - **玻璃投影**：关着的楼外壳是空心的，玻璃要投影，否则低太阳穿过窗洞在楼后漏出条纹光；开放楼内玻璃不投影（WLD-INTERIORS-BUILD §3.2）。
 - **关着的门**：门扇是实体几何（把手、地锁、读卡器红点），墙段记 `DoorClosed`；门玻璃里是**门厅卡**（门厅、闸机绿灯、楼层索引牌、电梯门剪影），必须有内容，不能是空盒子（ART-FIDELITY §2.0 的 B11）。关着的入口也登记进室内索引（`Open = false`；清单外的已有建筑登记在 `interiors.json` 的 `closedEntrances`），不生成室内导航门户。

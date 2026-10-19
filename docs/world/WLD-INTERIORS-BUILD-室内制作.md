@@ -8,7 +8,7 @@ keywords: [室内加载, 进楼衔接, 平面内核, 楼型, 室内风格, 窗�
 owners: [WP-51, WP-52]
 contributors: []
 depends: [WLD-INTERIORS, CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-VIEW, SYS-TIME, SYS-WALK, SYS-AUDIO]
-related: [WLD-INTERIORS-ACCESS, WLD-LIFE, SYS-WEATHER, ENG-GATES, ENG-WP, MAP-QSH-ADDITIONS, ART-SKYLIGHT]
+related: [WLD-INTERIORS-ACCESS, WLD-LIFE, SYS-WEATHER, ENG-GATES, PLAN-WP, MAP-QSH-ADDITIONS, ART-SKYLIGHT]
 contracts: [IInteriorProvider, InteriorLayout, InteriorDetail, ZoneKind, PortalKind, StoreyInfo, ZoneVolume, PortalDecl, ElevatorDecl, SlopedWallCollider]
 data: ["game/data/maps/qingshuihe/overlay/interior/", "game/style/palette/ext/interior.json"]
 gates: [G5, G6, G15]
@@ -17,7 +17,7 @@ gates: [G5, G6, G15]
 # WLD-INTERIORS-BUILD · 室内制作：加载、生成器、风格、痕迹、楼梯与碰撞
 
 > **范围**：本文规定不分图的室内制作规则：室内加载与进楼衔接，生成器的设计原则，室内风格与生活痕迹，楼梯、门洞与碰撞。
-> **不在本文**：开放原则、门、关着的楼、新开一栋楼（WLD-INTERIORS-ACCESS）；清水河各楼的陈设（MAP-QSH-LIBRARY）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；契约（`game/contracts/`）；室内预算（ENG-BUDGET）。
+> **不在本文**：开放原则、门、关着的楼、新开一栋楼（WLD-INTERIORS-ACCESS）；清水河各楼的陈设（MAP-QSH-INTERIORS-LIBRARY）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；契约（`game/contracts/`）；室内预算（ENG-BUDGET）。
 > **查阅**：先读 §0；加载看 §1；生成器看 §2；风格与痕迹看 §3、§4；楼梯与碰撞看 §5；待验证看 §6
 
 ## 0 结论
@@ -86,7 +86,7 @@ gates: [G5, G6, G15]
 
 - **色名**：室内色名约 22 个，与室外分开计数，只登记固有色，登记进 `game/style/palette/ext/` 的扩展色板。一间房最多 4 个大面积色；跳色只来自生活痕迹，面积不超过画面的 5%；饱和色只有安全出口绿、消防红、洁净室琥珀三处；界面的清蓝不进室内材质。这条只约束固有色，光造成的颜色不受限。
 - **中国高校识别要素**：每类房间至少用 2 个：矿棉板格栅顶、推拉黑板加投影幕、水磨石或抛光砖、绿或灰墙裙、不锈钢扶手、"安全出口 EXIT"绿灯、红框消火栓箱、吊扇、上床下桌、电开水器、锦旗与档案盒等。日式元素边界以 ART-STYLE §3.1 为准，室内不得替代这些要素。可以加楼门口鞋柜、教室后墙储物格、成组售货机（WLD-LIFE-STREET §2）；不要教室推拉门、横贯前墙的大黑板和长条讲坛、"非常口"诱导灯、日式消火栓、榻榻米与和室宿舍、定食托盘、保健室、体育馆一端的舞台、屋顶天台场景。字一律简体中文。
-- **夜间不死黑**：光源层级由亮到暗：亮灯房间 → 走廊灯 → 屏幕与台灯 → 出口绿灯、应急灯、设备指示灯 → 窗外月光光斑 → 夜空。关灯的房间至少有后三层里的两样，暗部不低于 SYS-TIME-LOOK §1.4 的下限；楼梯间夜里的主光是出口绿灯，墙上留半径 0.4 m 的平涂绿晕。
+- **夜间不死黑**：光源层级由亮到暗：亮灯房间 → 走廊灯 → 屏幕与台灯 → 出口绿灯、应急灯、设备指示灯 → 窗外月光光斑 → 夜空。关灯的房间至少有后三层里的两样，暗部不低于 ART-COLORSCRIPT §1.4 的下限；楼梯间夜里的主光是出口绿灯，墙上留半径 0.4 m 的平涂绿晕。
 
 ## 4 生活痕迹规则
 

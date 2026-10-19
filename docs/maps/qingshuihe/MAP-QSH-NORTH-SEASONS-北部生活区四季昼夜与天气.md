@@ -8,7 +8,7 @@ keywords: [北部生活区四季, 夜间角色, 宿舍熄灯, 23:30 熄灯, 店�
 owners: [WP-20]
 contributors: [WP-03, WP-15, WP-23, WP-25, WP-38, WP-39]
 depends: [MAP-QSH-NORTH, ART-SKYLIGHT, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER]
-related: [MAP-QSH-NORTH-WALK, MAP-QSH-LIBRARY, WLD-VEGETATION, WLD-LIFE, ART-FIDELITY, ENG-GATES]
+related: [MAP-QSH-NORTH-WALK, MAP-QSH-INTERIORS-LIBRARY, WLD-VEGETATION, WLD-LIFE, ART-FIDELITY, ENG-GATES]
 contracts: []
 data: []
 gates: [G7]
@@ -17,7 +17,7 @@ gates: [G7]
 # MAP-QSH-NORTH-SEASONS · 北部生活区四季昼夜与天气：夜间角色、四季表、开放室内的灯、避雨处与积水点
 
 > **范围**：本文规定北部生活区的四季与昼夜清单（夜间角色、默认的秋格；其余季节主线之后）、开放室内的灯、天气要点（避雨处与雨帘、积水点、雾里读形、推荐状态）。
-> **不在本文**：各楼的外观与身份特征（MAP-QSH-NORTH）；行走、点位与声音（MAP-QSH-NORTH-WALK）；灯光时刻表（SYS-TIME-LOOK §3）；作用代号（MAP-QSH-ADDITIONS §2）；雨帘与积水的做法（MAP-QSH-ADDITIONS-ATMOSPHERE §4、§5，SYS-WEATHER）；植被与季相（WLD-VEGETATION）。
+> **不在本文**：各楼的外观与身份特征（MAP-QSH-NORTH）；行走、点位与声音（MAP-QSH-NORTH-WALK）；灯光时刻表（ART-COLORSCRIPT §3）；作用代号（MAP-QSH-ADDITIONS §2）；雨帘与积水的做法（MAP-QSH-ADDITIONS-ATMOSPHERE §4、§5，SYS-WEATHER）；植被与季相（WLD-VEGETATION）。
 > **查阅**：先读 §0；夜间角色与四季看 §1.1；开放室内的灯看 §1.2；天气看 §2
 
 ## 0 结论
@@ -28,7 +28,7 @@ gates: [G7]
 
 ### 0.1 接入要点
 
-- **WP-39（夜景灯光与时刻表） 排灯时**：宿舍窗灯、店招、食堂灯按 SYS-TIME-LOOK §3；开放室内的灯按 §1.2（MAP-QSH-NORTH §3.3、§4.9）
+- **WP-39（夜景灯光与时刻表） 排灯时**：宿舍窗灯、店招、食堂灯按 ART-COLORSCRIPT §3；开放室内的灯按 §1.2（MAP-QSH-NORTH §3.3、§4.9）
 - **WP-15（地表、道路、铺装） 画积水潜势时**：位置按 §2 的积水点；红色透水砖车场只在边角积水（§2）
 
 ## 1 季节与昼夜清单

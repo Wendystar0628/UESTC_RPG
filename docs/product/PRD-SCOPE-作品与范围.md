@@ -1,22 +1,23 @@
 ---
-id: CORE-SCOPE
+id: PRD-SCOPE
 title: 作品与范围
-category: core
+category: product
+parent: PRD-INDEX
 summary: 作品是什么、画面与地图的总体取舍、当前范围做什么不做什么、主线的定义；每项一两句加指向
 keywords: [作品定位, 作品与范围, 当前范围, 不做什么, 主线, 主线版, 观光规则集, sightseeing, 落金初灯, 视觉优先, 不是地图复刻, 电光年华]
 owners: []
 contributors: []
 depends: [CORE-INDEX]
-related: [CORE-INVARIANTS, CORE-DECISIONS, ENG-ROADMAP, ENG-WP]
+related: [PRD-INVARIANTS, REG-DECISIONS, ENG-ROADMAP, PLAN-WP]
 contracts: []
 data: []
 gates: []
 ---
 
-# CORE-SCOPE · 作品与范围
+# PRD-SCOPE · 作品与范围
 
 > **范围**：本文规定作品是什么、画面与地图上的总体取舍、当前范围做什么不做什么，以及主线的定义。
-> **不在本文**：硬约束（CORE-INVARIANTS）；工作方法（CORE-INDEX §0）；各部分怎么做（各项指向的文档）；主线闸口的验收（ENG-WP §1）；RPG 扩展（ENG-ROADMAP）。
+> **不在本文**：硬约束（PRD-INVARIANTS）；工作方法（CORE-INDEX §0）；各部分怎么做（各项指向的文档）；主线闸口的验收（PLAN-WP §1）；RPG 扩展（ENG-ROADMAP）。
 > **查阅**：先读 §0；作品与取舍看 §1，做什么不做什么看 §2，主线看 §3
 
 ## 0 结论
@@ -27,7 +28,7 @@ gates: []
 
 ### 0.1 接入要点
 
-- **要判断一件事该不该做**：先看 §2 的"不做"和 CORE-INVARIANTS。
+- **要判断一件事该不该做**：先看 §2 的"不做"和 PRD-INVARIANTS。
 - **加或删一项范围**：先登记决策，再改 §2 和对应文档。
 
 ## 1 作品与取舍
@@ -37,7 +38,7 @@ gates: []
 - **地图**：首张是电子科技大学清水河校区；多地图架构，当前只做这一张（SYS-MAPS）。
 - **画风**：清透干净的三渲二日式动画背景（INV-5，ART-STYLE）。
 - **视觉优先**：四季、昼夜、天气以画面好看为先，真实数据只作参考和保住"认得出是成电"；银杏只是真实植被，不是画面主题（D-006、D-063）。
-- **不是地图复刻**：平面格局大体对，竖向地形主动设计；结构以照片和资料为起点，可按设计增删改，材质、色彩、陈设、标识按氛围做；可以加强氛围，也可以删掉难看的；增补带日式日常街景的氛围，主轴保持成电身份；老楼一律翻新，不做旧（D-007、D-180，INV-9，MAP-QSH-ADDITIONS、ART-AMBIENCE、ART-RENOVATION）。
+- **不是地图复刻**：平面格局大体对，竖向地形主动设计；结构以照片和资料为起点，可按设计增删改，材质、色彩、陈设、标识按氛围做；可以加强氛围，也可以删掉难看的；增补带日式日常街景的氛围，主轴保持成电身份；老楼一律翻新，不做旧（D-007、D-180，INV-9，MAP-QSH-ADDITIONS、WLD-AMBIENCE、WLD-RENOVATION）。
 - **默认状态"落金初灯"**：秋日黄昏，落日金光斜铺校园，八角图书馆刚亮灯，满月东升（取值见 SYS-TIME §1.1，D-011、D-062）。
 
 ## 2 当前范围
@@ -47,7 +48,7 @@ gates: []
 - **进入与存档**：开始页经加载界面进入，新游戏落到默认图出生点；三个存档位持续自动保存，继续回到离开时的样子（SYS-TITLE、SYS-SAVE）。
 - **地图与传送**：小地图、大地图与传送（SYS-ATLAS）。
 - **室内**：精选开放，其余楼只做外壳加窗卡（WLD-INTERIORS）。
-- **外围**：校界外的外围箱庭、截面与远景（WLD-OUTSKIRTS、WLD-DIORAMA）。
+- **外围**：校界外的外围箱庭、截面与远景（WLD-OUTSKIRTS、WLD-OUTSKIRTS-DIORAMA）。
 - **动态与声音**：轻、慢、持续（INV-10，SYS-MOTION、SYS-AUDIO）。
 - **画面设置与界面**：SYS-GRAPHICS、UI-NAV、UI-VISUAL。
 - **不做**：玩法、角色、剧情、NPC、过场动画（ENG-ROADMAP，INV-6，D-087）。
@@ -55,4 +56,4 @@ gates: []
 ## 3 主线（D-168）
 
 - **主线**：扉页与开始页 → 新游戏或继续 → 全校飞行与行走 → 切换时间、季节、天气 → 小地图与传送 → 存档、退出、再继续。
-- **主线版**：每个包先交能接进主线、跑得通、不崩的主线版，全部接通后再按完整规格做细节；主线版能做什么、不能做什么见 WF-RULE §8，闸口验收见 ENG-WP §1。
+- **主线版**：每个包先交能接进主线、跑得通、不崩的主线版，全部接通后再按完整规格做细节；主线版能做什么、不能做什么见 WF-RULE §8，闸口验收见 PLAN-WP §1。

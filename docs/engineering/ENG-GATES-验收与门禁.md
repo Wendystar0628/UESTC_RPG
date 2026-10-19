@@ -2,12 +2,13 @@
 id: ENG-GATES
 title: 验收：测试三档与门禁
 category: engineering
+parent: ENG-INDEX
 summary: 测试三档与何时跑（日常只有编译、受影响的测试、G4）、12 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 keywords: [门禁, 验收, 测试三档, 快检, 核心专项, 集中测试, gate.ps1, 门禁表, 门禁编号, D-238, 入口与交付分工, 测试只锁本包输出, 构建锁]
 owners: [WP-27]
 contributors: [WP-00, WP-01, WP-02, WP-06, WP-32, WP-35, WP-36, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-50, WP-53]
 depends: [CORE-INDEX, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF, SYS-TIME, SYS-WEATHER, SYS-WALK, SYS-SAVE, SYS-AUDIO]
-related: [ART-STYLE, SYS-GRAPHICS, SYS-MAPS, SYS-TITLE, SYS-ATLAS, UI-NAV, UI-VISUAL, WLD-INTERIORS, WLD-OUTSKIRTS, ENG-WP, ENG-ROADMAP, TOOL-PREVIEW]
+related: [ART-STYLE, SYS-GRAPHICS, SYS-MAPS, SYS-TITLE, SYS-ATLAS, UI-NAV, UI-VISUAL, WLD-INTERIORS, WLD-OUTSKIRTS, PLAN-WP, ENG-ROADMAP, ENG-PREVIEW]
 contracts: []
 data: []
 gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
@@ -15,7 +16,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
 # ENG-GATES · 验收：测试三档与门禁
 
 > **范围**：测试三档与何时跑、12 项门禁各验什么（各文档文件头 `gates` 字段以这里的编号为准）、入口与交付分工。
-> **不在本文**：审查视角、命令行规则与截图方式（ENG-GATES-SHOTS）；一票否决与收尾清单（ENG-GATES-VETO）；门禁命令、选域、缓存和阈值实现，以 `scripts/gate.ps1` 和 `scripts/gates/` 为准；各门禁的判据细则在对应系统文档的验收节；预算数值见 ENG-BUDGET；工作包分工见 ENG-WP。
+> **不在本文**：审查视角、命令行规则与截图方式（ENG-GATES-SHOTS）；一票否决与收尾清单（ENG-GATES-VETO）；门禁命令、选域、缓存和阈值实现，以 `scripts/gate.ps1` 和 `scripts/gates/` 为准；各门禁的判据细则在对应系统文档的验收节；预算数值见 ENG-BUDGET；工作包分工见 PLAN-WP。
 > **查阅**：先读 §0；测试三档看 §1.1；门禁表看 §1.2；入口看 §1.4
 
 ## 0 结论
@@ -53,7 +54,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
 - **阈值按数量级看**：门禁里预算、数量、精度这类阈值超了，实测仍在同一量级又不挡核心体验的，记为已知问题照常推送，阈值按实测调（WF-RULE §15）。
 - **按改动选**：gate.ps1 比对 `origin/main`，只取自己的路径；G2 按改动所在的模块挑测试（命名空间过滤），契约改动才全跑。
 - **专项失败**按 WF-RULE §7 处理，不挡推送的登记即可。整图专项（整图撒点、整图往返）只在阶段收尾跑。
-- **不静默放过**（D-244）：有改动却选出 0 项门禁或 0 个测试，算未完成，不算通过；共用夹具改了，带上使用它的测试；容差与样本量只在共用测试规则常量里（ENG-CODE §6），时间预算只在本文，别处引用。
+- **不静默放过**（D-244）：有改动却选出 0 项门禁或 0 个测试，算未完成，不算通过；共用夹具改了，带上使用它的测试；容差与样本量只在共用测试规则常量里（STD-CODE §6），时间预算只在本文，别处引用。
 - **时间预算**（D-246）：快检里单个测试不超过 2 s，超过的标 `Slow`，只在阶段收尾的集中测试里跑，平时不跑；核心专项每项几分钟内跑完。门禁记下每个测试的耗时与结果（只留最近一段），快检里超时的由巡逻列出。
 - **增长预算**：测试代码不超过生产代码的四成；一次提交新增的测试代码不超过生产新增的一半（提交后钩子提示）；巡逻按周比对测试个数与代码量，超出就提示精简。
 - **定期削减**：集中测试时列出长期没失败过又慢的、与别的测试守同一件事的，由主会话决定删。
@@ -70,7 +71,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
 | 门禁 | 验什么 | 档 |
 | --- | --- | --- |
 | G1 类型 | 编译警告当错误（含非穷举 `switch`）、命名与格式；`--import` 日志无 ERROR | 快检（编译）；集中测试（`--import` 日志） |
-| G2 单元测试 | 纯 .NET 与引擎内单测，测行为；类别标签与写法见 ENG-CODE §6 | 快检（受影响模块）；集中测试（全部） |
+| G2 单元测试 | 纯 .NET 与引擎内单测，测行为；类别标签与写法见 STD-CODE §6 | 快检（受影响模块）；集中测试（全部） |
 | G3 归属 | 改动在 `ownership.json` 给本包的范围内；`.uid` 齐全且不重复 | 集中测试 |
 | G4 边界 | 命名空间依赖方向、禁用 API、创建权与读写权、着色器白名单（规则在 `scripts/gates/arch/` 与各程序集的 `BannedSymbols.txt`，ENG-ARCH §2） | 快检 |
 | G5 注册与启动进出 | 无界面注册检查（模块与 ID、认领、调色板、世界文件、存档段）；启动核心 = Boot → Title → 新游戏 → 关窗口退出不报错 | 核心专项（启动核心）；集中测试（注册检查） |
@@ -86,7 +87,7 @@ gates: [G1, G2, G3, G4, G5, G6, G7, G10, G14, G15, G20, G21]
 
 入口 `scripts\gate.ps1 -Wp WP-xx`：默认跑快检，改动碰到核心体验时加核心专项；`-Smoke` 只跑主线冒烟；`-Full` 跑集中测试全量；`-Only G7,G10` 只跑指定门禁；入口先核对引擎版本，要显卡的门禁经构建锁一次只跑一个（WF-BUILD §4）。
 
-各检查器与测试的交付分工见 ENG-WP；全部由 WP-27（门禁、截图与巡检自动化） 接进同一个入口。
+各检查器与测试的交付分工见 PLAN-WP；全部由 WP-27（门禁、截图与巡检自动化） 接进同一个入口。
 
 ## 2 待验证（P0）
 

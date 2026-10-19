@@ -1,21 +1,22 @@
 ---
-id: OPS-RELEASE
+id: ENG-RELEASE
 title: 发布与交付
-category: ops
+category: engineering
+parent: ENG-INDEX
 summary: 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
 keywords: [发布, 交付, 版本号, version.txt, 构建信息, 导出, 导出入口, scripts/release, 分发压缩包, UESTC-<版本>-win64.7z, 地图数据包, map-data-<版本>.zip, ODbL, 正式用户目录, '%APPDATA%\UESTC', 安装, 更新, 卸载, 诊断包, 导出诊断, 许可, MIT, LICENSE, 干净环境验证, OSM 署名, 许可页, 制作人员与许可, 窗口标题, 窗口图标, 八角晶片]
 owners: [WP-00]
 contributors: [WP-01, WP-02, WP-08, WP-35, WP-47, WP-50]
 depends: [ENG-ARCH, ENG-PERF, ENG-GATES]
-related: [ENG-WP, CORE-CONVENTIONS, SYS-SAVE, SYS-TITLE, SYS-GRAPHICS, UI-NAV, UI-VISUAL, SYS-AUDIO, WLD-OUTSKIRTS]
+related: [PLAN-WP, STD-CONVENTIONS, SYS-SAVE, SYS-TITLE, SYS-GRAPHICS, UI-NAV, UI-VISUAL, SYS-AUDIO, WLD-OUTSKIRTS]
 contracts: []
 data: ["LICENSES.txt"]
 gates: [G6]
 ---
-# OPS-RELEASE · 发布与交付
+# ENG-RELEASE · 发布与交付
 
 > **范围**：本文规定对外交付：版本号与构建信息从哪里来、正式版的用户目录、一次导出与发布怎么做、玩家怎样安装更新卸载、每个公开版本附带的地图数据包、试玩出问题时怎样交回诊断材料，以及各部分按什么许可公开、画面右下角的署名、许可页、窗口标题与图标。
-> **不在本文**：导出入口脚本的步骤（`scripts/release/`，主线之后建）；构建信息的生成（`scripts/build/build-info.ps1`）；安装包的组成与体积（ENG-PERF-STREAM §4，G6 见 ENG-GATES §1.2）；日志的写法（ENG-CODE §0.1）；存档的格式与失败处理（SYS-SAVE）；许可页的界面（UI-NAV §3.5）；图标的画法（UI-VISUAL-COMPONENTS §3.3）。
+> **不在本文**：导出入口脚本的步骤（`scripts/release/`，主线之后建）；构建信息的生成（`scripts/build/build-info.ps1`）；安装包的组成与体积（ENG-PERF-STREAM §4，G6 见 ENG-GATES §1.2）；日志的写法（STD-CODE §0.1）；存档的格式与失败处理（SYS-SAVE）；许可页的界面（UI-NAV §3.5）；图标的画法（UI-VISUAL-COMPONENTS §3.3）。
 > **查阅**：先读 §0；版本号与构建信息看 §1；用户数据目录看 §2；导出与发布看 §3；安装、更新与卸载看 §4；地图数据包看 §5；故障与诊断看 §6；许可看 §7；署名、许可页、窗口标题与图标看 §7.1
 
 ## 0 结论
@@ -34,7 +35,7 @@ gates: [G6]
 - **判断存档能不能读**：只看存档自己的各层版本号，构建信息只用于显示和定位问题（§1）。
 - **读写用户数据**：正式版 `user://` 是 `%APPDATA%\UESTC\`，不改名；开发态用 `UESTC_DEV`（§2）。
 - **改了导出配置、用户目录或存档格式**：再走一遍干净环境验证，在回报里点明改了哪一项（§3）。
-- **打地图数据包**：与安装包里是同一份字节，分工见 ENG-WP-LIST（§5）。
+- **打地图数据包**：与安装包里是同一份字节，分工见 PLAN-WP-LIST（§5）。
 - **引入第三方素材或代码**：只收白名单里的许可，登记后汇总进 `LICENSES.txt`（§7）。
 - **改署名、窗口标题或图标，写许可页、`LICENSES.txt` 或数据包说明**：署名只有一行 OSM 文字，`--ui=0` 时也保留；各处对同一类内容写同一种许可，并指向本版本的 `map-data-<版本>.zip`（§5、§7、§7.1）。
 - **场景或文案涉及学校标识**：本作不是校方作品，校徽、红十字换成原创图形（§7）。

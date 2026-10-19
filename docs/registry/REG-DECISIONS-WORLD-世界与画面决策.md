@@ -1,23 +1,23 @@
 ---
-id: CORE-DECISIONS-WORLD
+id: REG-DECISIONS-WORLD
 title: 世界与画面决策
-category: core
-parent: CORE-DECISIONS
+category: registry
+parent: REG-DECISIONS
 summary: 作品定位与范围、世界与地图、时间季节天气、美术风格四个领域的已定决策
 keywords: [决策, 世界, 画面, 作品定位, 地图, 时间, 季节, 天气, 美术风格]
 owners: []
 contributors: []
-depends: [CORE-DECISIONS]
+depends: [REG-DECISIONS]
 related: []
 contracts: []
 data: []
 gates: []
 ---
 
-# CORE-DECISIONS-WORLD · 世界与画面决策
+# REG-DECISIONS-WORLD · 世界与画面决策
 
 > **范围**：本卷登记作品定位与范围、世界与地图、时间季节天气、美术风格四个领域的决策，每条一句结论，附适用范围、细则所在的小节和状态。
-> **不在本卷**：用法、编号规则、状态含义和归卷规则在 CORE-DECISIONS §0；数值与规则的细则以"细则所在"指向的文档为准；其他领域的决策在 CORE-DECISIONS 列出的别的卷。
+> **不在本卷**：用法、编号规则、状态含义和归卷规则在 REG-DECISIONS §0；数值与规则的细则以"细则所在"指向的文档为准；其他领域的决策在 REG-DECISIONS 列出的别的卷。
 > **查阅**：先读 §0；按 D 编号或关键词 grep；作品与范围看 §1，世界与地图看 §2，时间季节天气看 §3，美术风格看 §4
 
 ## 0 结论
@@ -26,30 +26,30 @@ gates: []
 
 ### 0.1 接入要点
 
-本文只约束登记，对其他包没有要求；用法见主文档 CORE-DECISIONS §0。
+本文只约束登记，对其他包没有要求；用法见主文档 REG-DECISIONS §0。
 
 ## 1 作品定位与范围
 
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
 | --- | --- | --- | --- | --- |
-| D-001 | 作品是校园题材的独立 RPG；当前阶段只做 PC 上实时渲染的三渲二世界与观光模式，不做游戏玩法 | 全项目 | CORE-SCOPE §1；INV-1 | 生效 |
+| D-001 | 作品是校园题材的独立 RPG；当前阶段只做 PC 上实时渲染的三渲二世界与观光模式，不做游戏玩法 | 全项目 | PRD-SCOPE §1；INV-1 | 生效 |
 | D-002 | 观察方式只有两种：旁观飞行（穿透一切）和《我的世界》式行走（新游戏以行走开局，D-242）；不做环绕、俯视、导览和自动运镜 | 观光模式 | INV-2；SYS-VIEW §2；SYS-WALK §0 | 生效 |
 | D-003 | 不出现 NPC 与他人：人只以生活痕迹出现，展陈不放人物肖像，声音里没有听得清的人声；旁观模式观者没有身体、影子和脚印；行走模式玩家有自己的角色本体（D-182） | 全项目 | INV-6；SYS-WALK §1；SYS-WALK §3.2；WLD-INTERIORS-BUILD §4；SYS-AUDIO §4 | 生效 |
 | D-004 | 只做 PC（Windows）；手机、网页、触屏不做 | 全项目 | INV-1；SYS-VIEW §2.2；ENG-ARCH §1 | 生效 |
-| D-005 | 引擎用 Godot 4.7.2-stable .NET，代码全部用 C#、不写 GDScript，渲染器 Forward+，默认 D3D12 | 全项目 | ENG-ARCH §1；CORE-SCOPE §1；ENG-PERF-ADAPT §3 | 生效 |
-| D-006 | 视觉效果最优先：四季、昼夜、天象、花期、天气以画面好看为准，真实数据只作参考和"认得出是成电"的身份特征 | 全项目 | CORE-SCOPE §1；SYS-TIME §0 | 生效 |
-| D-007 | 不是地图复刻：结构（体量、层数、平面、入口、交通核、道路、水体）以照片和底板为起点，可按设计增删改，材质、色彩、陈设、标识、生活痕迹按氛围艺术化处理 | 全部内容包 | CORE-SCOPE §1；INV-9 | 生效 |
+| D-005 | 引擎用 Godot 4.7.2-stable .NET，代码全部用 C#、不写 GDScript，渲染器 Forward+，默认 D3D12 | 全项目 | ENG-ARCH §1；PRD-SCOPE §1；ENG-PERF-ADAPT §3 | 生效 |
+| D-006 | 视觉效果最优先：四季、昼夜、天象、花期、天气以画面好看为准，真实数据只作参考和"认得出是成电"的身份特征 | 全项目 | PRD-SCOPE §1；SYS-TIME §0 | 生效 |
+| D-007 | 不是地图复刻：结构（体量、层数、平面、入口、交通核、道路、水体）以照片和底板为起点，可按设计增删改，材质、色彩、陈设、标识、生活痕迹按氛围艺术化处理 | 全部内容包 | PRD-SCOPE §1；INV-9 | 生效 |
 | D-008 | 可以新增校园里没有的氛围元素，也可以删掉现实里有、放进画面难看的元素（杂乱管线、临时围挡、刺眼广告、施工网架、过多指示牌）；增删一律改世界文件里的记录并写明理由 | 全部内容包 | INV-9；MAP-QSH-ADDITIONS §0；MAP-QSH-ADDITIONS §5；WLD-OUTSKIRTS-BAND §4 | 生效 |
 | D-009 | 视觉精度分两层：底线（比例对、有厚度倒角和收边、没有光秃拉伸体块、不穿帮不跳变）对任何位置、任何距离都成立，含只有飞行才到的地方；细节密度按精度区 K1–K5 分级，越常被近看越密；外围按距离环分级，关着的楼只做外壳、窗卡和简化室内 | 全部建模包 | INV-11；ART-FIDELITY §0；WLD-OUTSKIRTS-BAND §2.1；WLD-INTERIORS-ACCESS §3 | 待原型验证（方向已定，判定距离和分数线在 P0 校准） |
 | D-010 | RPG（入学到毕业）方向暂缓，只留架构接口（存档段与迁移、地图服务、解锁策略 `proximity`、多地图、门的锁状态），重新提出之前不展开设计 | 全项目 | ENG-ROADMAP；ENG-ARCH §7 | 生效 |
-| D-011 | 作品名《电光年华》（英文 *Electric Years*）；默认状态的名字是"落金初灯" | 全项目 | CORE-SCOPE §1；SYS-TIME §0 | 生效 |
-| D-186 | 共享单车：本期载具只做匿名共享单车，不用真实品牌；骑行是行走模式里的运动分支，与步行、游泳互斥，不新增 ViewMode，用运动学解算、不做刚体平衡；首版只在许可区骑，固定停放点借还，切旁观、传送、换图时自动回收，读档一律恢复成步行；归新包 WP-55（共享单车运行与取还），按 D-183 排在建模包之后 | 行走模式 | SYS-WALK-BIKE §1；SYS-WALK §3.2；SYS-SAVE §2；UI-NAV §4；WLD-LIFE-STREET §1；ENG-WP-LIST §1 | 待原型验证 |
+| D-011 | 作品名《电光年华》（英文 *Electric Years*）；默认状态的名字是"落金初灯" | 全项目 | PRD-SCOPE §1；SYS-TIME §0 | 生效 |
+| D-186 | 共享单车：本期载具只做匿名共享单车，不用真实品牌；骑行是行走模式里的运动分支，与步行、游泳互斥，不新增 ViewMode，用运动学解算、不做刚体平衡；首版只在许可区骑，固定停放点借还，切旁观、传送、换图时自动回收，读档一律恢复成步行；归新包 WP-55（共享单车运行与取还），按 D-183 排在建模包之后 | 行走模式 | SYS-WALK-BIKE §1；SYS-WALK §3.2；SYS-SAVE §2；UI-NAV §4；WLD-LIFE-STREET §1；PLAN-WP-LIST §1 | 待原型验证 |
 
 ## 2 世界与地图
 
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
 | --- | --- | --- | --- | --- |
-| D-012 | 地图边界用"大箱庭"：箱庭扩到校界外一圈街区（截面线在校界外约 250–500 m），能看不能进；截面以外照旧是雾海和远景 | 清水河 | WLD-OUTSKIRTS §0；WLD-OUTSKIRTS-BAND §1.1；WLD-DIORAMA §4 | 生效 |
+| D-012 | 地图边界用"大箱庭"：箱庭扩到校界外一圈街区（截面线在校界外约 250–500 m），能看不能进；截面以外照旧是雾海和远景 | 清水河 | WLD-OUTSKIRTS §0；WLD-OUTSKIRTS-BAND §1.1；WLD-OUTSKIRTS-DIORAMA §4 | 生效 |
 | D-013 | 外围分四层：O0 街道带、O1 外围街区、O2 雾中楼顶、O3 远景卡片与雪山；只保留结构和身份地标，车流不画 | 外围 | WLD-OUTSKIRTS-BAND §2.2；WLD-OUTSKIRTS-BAND §3.3；WLD-OUTSKIRTS-BAND §4 | 生效 |
 | D-014 | 行走被栏杆、关着的校门和闸机轻轻挡住（边界 0.6 m 内缓停，不撞停），顶住 0.8 s 提示"校外暂未开放"；河渠穿校界处用拦污格栅，不用隐形墙 | 行走模式 | WLD-OUTSKIRTS-BORDER §1；WLD-OUTSKIRTS-BORDER §3.1 | 生效 |
 | D-015 | 旁观飞行到边缘减速，朝外一侧雾变浓（`edge_fog`），越出的部分被推回，提示"前方暂未开放"；水平范围 = 前沿线 + 0.9 × max(0, h − 30 m)，离中心不超过 3 km | 旁观模式 | WLD-OUTSKIRTS-BORDER §2；WLD-OUTSKIRTS-BORDER §3.1 | 生效 |
@@ -66,15 +66,15 @@ gates: []
 | D-026 | 关着的门是实体、有碰撞，门玻璃用门厅卡，顶住 0.8 s 提示"此处暂不开放"；旁观飞进关着的楼看到简化室内（楼板、隔墙、室内雾、灯） | 关着的楼 | WLD-INTERIORS-ACCESS §3；WLD-INTERIORS-ACCESS §3 | 生效 |
 | D-027 | 开放室内的房门和开放路线上的防火门、玻璃门：观者走近自动推开，闭门器缓缓关上；不加交互键，门扇转动期间无碰撞，关好才有碰撞 | 开放室内 | WLD-INTERIORS-ACCESS §2.1；SYS-WALK-BOUNDS §3 | 生效 |
 | D-028 | 从窗外看室内精度不重要：室内视差、窗卡、窗帘、灯光色块，窗灯不必与房间逐间对应；走进开放室内才是全精度 | 全部楼宇 | WLD-INTERIORS-ACCESS §3；INV-11 | 生效 |
-| D-029 | 再开一栋楼只需在开放清单 `interiors.json` 加一项，再注册 `IInteriorProvider` 或加一条楼型配置，不改契约和流式架构；清单由主会话维护 | 室内扩展 | WLD-INTERIORS-ACCESS §4；ENG-WP §2 | 生效 |
+| D-029 | 再开一栋楼只需在开放清单 `interiors.json` 加一项，再注册 `IInteriorProvider` 或加一条楼型配置，不改契约和流式架构；清单由主会话维护 | 室内扩展 | WLD-INTERIORS-ACCESS §4；PLAN-WP §2 | 生效 |
 | D-030 | 托幼园和楼里的洁净室不开放；地下层不可进 | 清水河 | WLD-INTERIORS-BUILD §2；MAP-QSH-WEST §7；ENG-GATES §1 | 生效 |
 | D-031 | 室外的道路、广场、桥、台阶、球场、看台、草坪全部可走；室内只有开放部分可走 | 行走模式 | SYS-WALK §0；SYS-WALK-BOUNDS §1 | 生效 |
 | D-032 | 展陈不出现人物肖像，只用实物、文献、模型、风景照；实验室门牌的楼层单位用真实名称、房间级用通用名称；主楼一楼按柱厅做主题墙，不用《沁园春·雪》书法墙 | 开放室内 | WLD-INTERIORS-BUILD §4；MAP-QSH-INTERIORS §1 | 生效 |
-| D-033 | 观景点共 P00–P23，其中 P16–P23 以 WLD-INTERIORS为准；再新增的点位从 P24 起编 | 点位 | WLD-INTERIORS-ACCESS §1；UI-NAV-WAYPOINTS §1；CORE-CONVENTIONS §3.2 | 生效 |
-| D-157 | 外围分层编号 O0–O3：O0 街道带、O1 外围街区、O2 雾中楼顶、O3 远景卡片与雪山；E 只指审查视角 E1–E7 | 全项目 | WLD-OUTSKIRTS-BAND §2.2；CORE-CONVENTIONS §3.2；CORE-CONVENTIONS §3.3 | 生效 |
-| D-164 | 开放清单 `interiors.json` 由主会话管：schema 与格式归 WP-51（室内生成器与壳体），条目由负责包经回报提交，增删由主会话审批 | 开放室内 | ENG-WP §2 第 4 条；SYS-MAPS §1.1；WLD-INTERIORS-ACCESS §4 | 生效 |
+| D-033 | 观景点共 P00–P23，其中 P16–P23 以 WLD-INTERIORS为准；再新增的点位从 P24 起编 | 点位 | WLD-INTERIORS-ACCESS §1；UI-NAV-WAYPOINTS §1；STD-CONVENTIONS §3.2 | 生效 |
+| D-157 | 外围分层编号 O0–O3：O0 街道带、O1 外围街区、O2 雾中楼顶、O3 远景卡片与雪山；E 只指审查视角 E1–E7 | 全项目 | WLD-OUTSKIRTS-BAND §2.2；STD-CONVENTIONS §3.2；STD-CONVENTIONS §3.3 | 生效 |
+| D-164 | 开放清单 `interiors.json` 由主会话管：schema 与格式归 WP-51（室内生成器与壳体），条目由负责包经回报提交，增删由主会话审批 | 开放室内 | PLAN-WP §2 第 4 条；SYS-MAPS §1.1；WLD-INTERIORS-ACCESS §4 | 生效 |
 | D-180 | 地形分层：清水河不做平地，主动设计有层次的地形（平缓底板、少量强垂直、遮挡与揭示），与真实地形不符也可以；全图高差约 −5…+10 m；地形是矢量地形操作合成的确定性高度函数，竖直落差一律做成实体，楼坐在垫层上，每个水体有自己的常水位 | 清水河 | WLD-TERRAIN §0；MAP-QSH-TERRAIN；ENG-ARCH §3 | 生效 |
-| D-185 | 空地按游戏设计理念组织，不照校内实际布局：开阔草坪不默认中心留白；较大的空地由所在区包归为功能开敞面（保持空旷但说明用途）或过渡绿地（重组，至少有远处参照、停留点和走动中的发现，不堆设施）；重组的草丘、浅洼登记在本区地形覆盖层；区包管本区空地，无主空地的草丘、浅洼由所属区包代为登记 | 清水河 | MAP-QSH-ADDITIONS §0；WLD-VEGETATION §3.2；WLD-VEGETATION §3.4；ENG-WP-LIST §1 | 生效 |
+| D-185 | 空地按游戏设计理念组织，不照校内实际布局：开阔草坪不默认中心留白；较大的空地由所在区包归为功能开敞面（保持空旷但说明用途）或过渡绿地（重组，至少有远处参照、停留点和走动中的发现，不堆设施）；重组的草丘、浅洼登记在本区地形覆盖层；区包管本区空地，无主空地的草丘、浅洼由所属区包代为登记 | 清水河 | MAP-QSH-ADDITIONS §0；WLD-VEGETATION §3.2；WLD-VEGETATION §3.4；PLAN-WP-LIST §1 | 生效 |
 
 ## 3 时间、季节、天气
 
@@ -92,14 +92,14 @@ gates: []
 | D-043 | 自动天气是前向随机过程：随机时段、随机时长，只走验证过的组合，晴约占四分之三；自动时显示一行预报（预报行） | 全项目 | SYS-WEATHER-PROCESS §1；UI-NAV §3.7；UI-VISUAL-COMPONENTS §4.4 | 生效 |
 | D-044 | 天气种子每个存档一个，种子和已生成的天气队列都存进存档 | 存档 | SYS-WEATHER-PROCESS §1.4；SYS-SAVE-FLOW §2.4 | 生效 |
 | D-045 | 闪电只做远处积雨云的云内闪，不画落地闪电、不全屏闪白；闪电和彩虹都不算偶发事件 | 全项目 | SYS-WEATHER §5；INV-10 | 生效 |
-| D-046 | 太阳雨不新增天气格，是"雨 → 雨后初晴"这条转移边开头的 30–90 s；英雄帧第 12 张是"秋 17:30 太阳雨" | 天气 | SYS-WEATHER §2；SYS-WEATHER-PROCESS §1.3；SYS-TIME-LOOK §1.5 | 生效 |
+| D-046 | 太阳雨不新增天气格，是"雨 → 雨后初晴"这条转移边开头的 30–90 s；英雄帧第 12 张是"秋 17:30 太阳雨" | 天气 | SYS-WEATHER §2；SYS-WEATHER-PROCESS §1.3；ART-COLORSCRIPT §1.5 | 生效 |
 | D-047 | 彩虹只在雨后初晴出现，主虹半径随太阳升高在 30–42° 之间放大（不按真实的固定 42°），太阳在 34–40° 之间时淡出 | 天气 | SYS-WEATHER §5；ART-SKYLIGHT-ATMOSPHERE §1 | 生效 |
 | D-048 | 全片只有一个偶发事件；用户触发的时间、季节、天气、跳转、传送过渡和进入游戏的加载都不算 | 全项目 | INV-10；SYS-MOTION-LIFE §3；SYS-MOTION-LIFE §3 | 生效 |
-| D-049 | 下雪由天气过程决定（冬季夜雪多在 19–23 时开始），不按固定时段 | 冬季 | SYS-WEATHER-PROCESS §1.3；SYS-TIME-LOOK §2 | 生效 |
+| D-049 | 下雪由天气过程决定（冬季夜雪多在 19–23 时开始），不按固定时段 | 冬季 | SYS-WEATHER-PROCESS §1.3；ART-COLORSCRIPT §2 | 生效 |
 | D-050 | 阴雨天两阶不丢：投影强度乘 (1 − 0.8 × 阴度)，白天不低于 0.2 | 天气 | SYS-WEATHER §6；ENG-PERF-LIGHT §2.1 | 生效 |
 | D-051 | 所有切换都自然过渡、不硬切；每种时刻 × 季节 × 天气的组合都要好看 | 全项目 | INV-8；SYS-TIME §4；SYS-WEATHER §7 | 生效 |
 | D-158 | 一拍二的 CPU 侧节拍（`IWorldState.Step12`、飘落池的发射时刻）与着色器同读 `step_rate`（WP-32（设备分档、画面设置与自适应） 写：一般 12 Hz，帧率上限 30 时 15 Hz），两侧在同一帧换姿态 | 全项目 | SYS-MOTION §2.2；ENG-ARCH §3；ENG-PERF §1.5 | 生效 |
-| D-162 | 秋季黄昏带（太阳 +8° 到 −7°）约 17:16–19:36；初灯组开始亮灯的时刻、SYS-AUDIO声景的"黄昏"段和默认状态"保持晴"的终点都与它一致 | 清水河 | SYS-WEATHER-PROCESS §1.2；SYS-TIME-LOOK §3；SYS-AUDIO-AMBIENCE §1.1 | 生效 |
+| D-162 | 秋季黄昏带（太阳 +8° 到 −7°）约 17:16–19:36；初灯组开始亮灯的时刻、SYS-AUDIO声景的"黄昏"段和默认状态"保持晴"的终点都与它一致 | 清水河 | SYS-WEATHER-PROCESS §1.2；ART-COLORSCRIPT §3；SYS-AUDIO-AMBIENCE §1.1 | 生效 |
 
 ## 4 美术风格
 
@@ -115,9 +115,9 @@ gates: []
 | D-059 | 室内用窗格光柱和光斑把画面灌满光；低角度阳光下，地板上的格子光斑只出现在落地窗、门和竖缝窗处 | 开放室内 | WLD-INTERIORS-BUILD §3.2；ART-STYLE-LINES §2 | 生效 |
 | D-060 | 进入室内时，阴影方向的最低高度从 4° 抬到 14°（在 12–16° 之间看图定） | 开放室内 | WLD-INTERIORS-BUILD §1.3；ENG-PERF-LIGHT §2.1；ENG-BUDGET-LOD §4 | 待原型验证 |
 | D-061 | 樱花、桂花这类团块型树冠做成厚实的云团 | 植被 | WLD-VEGETATION §1；ART-MODELING-PROPORTION §3 | 生效 |
-| D-062 | 不设收束意象：画面的变化由时间、季节、天气的组合产生；落日金光、初灯、八角穹顶、西湖、满月、宣邦楼的钟只是组合里效果好的画面，保留但不当统领原则；英雄帧只是验收样张；"落金"指落日的金光，不是银杏叶 | 全项目 | CORE-SCOPE §1；SYS-TIME-LOOK §1.5 | 生效 |
-| D-063 | 银杏只作真实植被按实际分布种植；不当界面母题、图标、锚点造型、窗口图标，文案不夸大银杏 | 全项目 | CORE-SCOPE §1；WLD-VEGETATION §2；UI-VISUAL-COMPONENTS §3.2 | 生效 |
-| D-064 | 日本元素只放开日常街景物件（成组售货机、背街的电线杆与架空线、自行车棚等），室内同样适用，主轴保持成电身份；日本的宗教符号、地标符号、日文文字和传统和式建筑构件不出现；声音允许黄昏乌鸦叫和傍晚广播里的一段原创旋律，钟楼仍只敲单音铜钟 | 全项目 | INV-7；ART-AMBIENCE；ART-STYLE §3.1；WLD-INTERIORS-BUILD §3.3；SYS-AUDIO | 生效 |
+| D-062 | 不设收束意象：画面的变化由时间、季节、天气的组合产生；落日金光、初灯、八角穹顶、西湖、满月、宣邦楼的钟只是组合里效果好的画面，保留但不当统领原则；英雄帧只是验收样张；"落金"指落日的金光，不是银杏叶 | 全项目 | PRD-SCOPE §1；ART-COLORSCRIPT §1.5 | 生效 |
+| D-063 | 银杏只作真实植被按实际分布种植；不当界面母题、图标、锚点造型、窗口图标，文案不夸大银杏 | 全项目 | PRD-SCOPE §1；WLD-VEGETATION §2；UI-VISUAL-COMPONENTS §3.2 | 生效 |
+| D-064 | 日本元素只放开日常街景物件（成组售货机、背街的电线杆与架空线、自行车棚等），室内同样适用，主轴保持成电身份；日本的宗教符号、地标符号、日文文字和传统和式建筑构件不出现；声音允许黄昏乌鸦叫和傍晚广播里的一段原创旋律，钟楼仍只敲单音铜钟 | 全项目 | INV-7；WLD-AMBIENCE；ART-STYLE §3.1；WLD-INTERIORS-BUILD §3.3；SYS-AUDIO | 生效 |
 | D-065 | 场景里本来就有的字（楼名题字、店招、路牌）保留，一律用简体中文；校徽、红十字这类受专门规定保护的标志不原样使用，换成风格相近的原创图形，医院用院名灯牌或原创医疗图标 | 全项目 | INV-4；ART-STYLE §4 | 生效 |
 | D-066 | 色彩分工：场景暖、界面冷；清蓝只在界面层，不进 3D 材质，世界里不放蓝色全息；场景里的 `uestc.blue` 只给旗面、校车、单车 | 全项目 | UI-VISUAL §2.1；ART-STYLE §2.4 | 生效 |
 | D-163 | 树种表有栾树：云团型落叶树，秋叶金黄、枝头挂红褐蒴果；叶色用 `deciduous.*`，蒴果用开花色 `bloom.capsule`；种在 MAP-QSH-ADDITIONS 的树阵、方树池和停车场绿岛 | 植被 | WLD-VEGETATION §1.1；MAP-QSH-VEGETATION §1；WLD-VEGETATION §2.1；MAP-QSH-ADDITIONS-VOCAB §1；MAP-QSH-ADDITIONS-VOCAB §2 | 生效 |

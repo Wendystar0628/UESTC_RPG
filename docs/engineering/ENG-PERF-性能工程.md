@@ -2,12 +2,13 @@
 id: ENG-PERF
 title: 性能工程：总原则、绘制管线与剔除
 category: engineering
+parent: ENG-INDEX
 summary: 性能策略总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与渲染图层
 keywords: [着色器白名单, 全局着色器参数, ShaderGlobals, 数据纹理, 合批, 自动实例化, MultiMesh, 容器选型, 管线预热, 抖动淡化, 级别过渡, 填充率, 遮挡剔除, 渲染图层, 顶点格式, D3D12]
 owners: [WP-01]
 contributors: [WP-02, WP-03, WP-04, WP-05, WP-07, WP-23, WP-24, WP-27, WP-32, WP-33, WP-34, WP-37, WP-38, WP-39, WP-40, WP-42, WP-43, WP-45, WP-46, WP-47, WP-48, WP-49, WP-50, WP-51, WP-53]
 depends: [ENG-ARCH, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, UI-VISUAL, SYS-ATLAS, SYS-TITLE, SYS-SAVE, SYS-MAPS, WLD-OUTSKIRTS, WLD-INTERIORS, SYS-AUDIO]
-related: [ART-STYLE, ART-SKYLIGHT, WLD-VEGETATION, WLD-WATER, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, ENG-WP, WLD-TERRAIN]
+related: [ART-STYLE, ART-SKYLIGHT, WLD-VEGETATION, WLD-WATER, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, PLAN-WP, WLD-TERRAIN]
 contracts: [ShaderGlobals]
 data: ["game/style/shaders/", "game/style/outline/"]
 gates: [G5, G7, G20, G21]
@@ -77,7 +78,7 @@ gates: [G5, G7, G20, G21]
 - **登记以代码为准**：名字见 `game/contracts/ShaderGlobals.cs`，类型与默认值见 `game/project.godot` 的 `[shader_globals]`，G5 比对；未登记着色器编译失败，新增先申请。
 - 写入方与读回的规则见 ENG-BUDGET-RULES §1 第 13 条。计算着色器读不到全局参数，Compositor 的 C# 每帧把需要的项写进 push constant。
 - 数据纹理只更新内容、不换 RID；全图纹理共用 `map_rect`，范围外取"无数据"；外围不读全图纹理，季节覆盖潜势写进顶点；切图时写入方在 `OnMapLoaded` 重建；释放权归内核全局纹理登记处。色号编解码只在契约 `PaletteEncoding` 里一份。
-- 数据纹理同样以代码登记为准；调色板行布局见 SYS-TIME-LOOK §1.1。
+- 数据纹理同样以代码登记为准；调色板行布局见 ART-COLORSCRIPT §1.1。
 
 ## 2 着色器与编译
 

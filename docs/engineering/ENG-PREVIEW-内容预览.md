@@ -1,21 +1,22 @@
 ---
-id: TOOL-PREVIEW
+id: ENG-PREVIEW
 title: 内容预览
-category: tools
+category: engineering
+parent: ENG-INDEX
 summary: 开发时预览与回看自己做的内容：用 --pose 放机位、预览只读不写、改了以后重启回看；按实体定位与机位恢复在主线之后
 keywords: [内容预览, 预览, 回看, 开发构建, 机位, 预览只读不写, 同图重载, 按实体定位, 机位恢复]
 owners: [WP-01, WP-08]
 contributors: [WP-02, WP-46]
 depends: [ENG-GATES, ENG-ARCH]
-related: [SYS-MAPS, WLD-OUTSKIRTS, ART-FIDELITY, ENG-WP, CORE-CONVENTIONS]
+related: [SYS-MAPS, WLD-OUTSKIRTS, ART-FIDELITY, PLAN-WP, STD-CONVENTIONS]
 contracts: []
 data: []
 gates: []
 ---
-# TOOL-PREVIEW · 内容预览
+# ENG-PREVIEW · 内容预览
 
 > **范围**：本文规定开发时怎样预览和回看自己做的内容：从开发入口启动，用 `--pose` 放到机位，改了世界文件或参数以后在同一机位、同一时季天气下重新启动回看。按实体定位、机位恢复与热重载在主线之后（§3）。
-> **不在本文**：命令行参数表（`game/kernel/boot/BootArguments.cs`；截图默认串见 ENG-GATES-SHOTS §1）；世界文件的格式（CORE-CONVENTIONS §3.1）；`--gen=live` 与烘焙（ENG-ARCH §4）；同图重载（SYS-MAPS §3.5）；近景巡检点（ART-FIDELITY §4）。
+> **不在本文**：命令行参数表（`game/kernel/boot/BootArguments.cs`；截图默认串见 ENG-GATES-SHOTS §1）；世界文件的格式（STD-CONVENTIONS §3.1）；`--gen=live` 与烘焙（ENG-ARCH §4）；同图重载（SYS-MAPS §3.5）；近景巡检点（ART-FIDELITY §4）。
 > **查阅**：先读 §0；起点参数看 §1；改了以后怎么回看看 §2；主线之后的预览能力看 §3
 
 ## 0 结论
