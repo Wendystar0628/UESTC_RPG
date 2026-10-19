@@ -116,20 +116,22 @@ public static class VegetationPrototypes
                 // The far stand-in (MotherModels.FarStandIn, 23c2c): a five-sided trunk and the L1 merged masses at icosphere
                 // level 0, tagged so veg_card / veg_trunk cross-fade it against the near pool's L1; stemless balls have no wood.
                 var l1 = Get(species, variant, VegPool.L1, palette);
-                var (farWood, farCrown) = MotherModels.FarStandIn(species, variant, palette);
-                var far = new List<GeometryBuffer>(2);
+                var (farWood, farCrown, farTwig) = MotherModels.FarStandIn(species, variant, palette);
+                var far = new List<GeometryBuffer>(3);
                 if (farWood.Index.Length > 0) far.Add(GeometryBuffer.Freeze(farWood));
                 far.Add(GeometryBuffer.Freeze(farCrown));
+                if (farTwig is not null) far.Add(GeometryBuffer.Freeze(farTwig));
                 return new GeometryPrototype(id, far, l1.Bounds);
             case VegPool.L0Plus:
             case VegPool.L0:
             case VegPool.L1:
                 var level = pool switch { VegPool.L0Plus => VegLevel.L0Plus, VegPool.L0 => VegLevel.L0, _ => VegLevel.L1 };
                 var model = MotherModels.Build(species, variant, level, palette);
-                var surfaces = new List<GeometryBuffer>(2);
+                var surfaces = new List<GeometryBuffer>(3);
                 // A pool surface must draw triangles; a level without wood or crown simply has one surface.
                 if (model.Wood.Index.Length > 0) surfaces.Add(GeometryBuffer.Freeze(model.Wood));
                 if (model.Crown.Index.Length > 0) surfaces.Add(GeometryBuffer.Freeze(model.Crown));
+                if (model.TwigMass is not null) surfaces.Add(GeometryBuffer.Freeze(model.TwigMass));
                 return new GeometryPrototype(id, surfaces, Pad(model.Bounds));
             default:
                 throw new ArgumentOutOfRangeException(nameof(pool), pool, "Unknown vegetation pool.");

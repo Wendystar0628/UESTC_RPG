@@ -26,7 +26,10 @@ public sealed record MotherModel(
     float CrownRadius,
     Box3 Bounds)
 {
-    public int Triangles => (Wood.Index.Length + Crown.Index.Length) / 3;
+    public int Triangles => (Wood.Index.Length + Crown.Index.Length + (TwigMass?.Index.Length ?? 0)) / 3;
+
+    /// <summary>The winter twig mass (veg_twig_mass, <see cref="MotherModels.HasTwigMass"/>); null for other species.</summary>
+    public GeometryBundle? TwigMass { get; init; }
 
     /// <summary>Leaf cards at the front of <see cref="Crown"/> (4 vertices and 2 triangles each); the masses follow.</summary>
     public int Cards { get; init; }

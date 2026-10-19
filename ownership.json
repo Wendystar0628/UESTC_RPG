@@ -420,6 +420,10 @@
       "owner": "WP-23"
     },
     {
+      "pattern": "game/style/shaders/veg_twig_mass.gdshader.uid",
+      "owner": "WP-23"
+    },
+    {
       "pattern": "game/style/outline/post_outline.glsl.uid",
       "owner": "WP-05"
     },
@@ -549,6 +553,10 @@
     },
     {
       "pattern": "game/style/shaders/veg_trunk.gdshader",
+      "owner": "WP-23"
+    },
+    {
+      "pattern": "game/style/shaders/veg_twig_mass.gdshader",
       "owner": "WP-23"
     },
     {
@@ -1759,6 +1767,7 @@
     "game/style/shaders/veg_impostor.gdshader",
     "game/style/shaders/veg_lotus.gdshader",
     "game/style/shaders/veg_trunk.gdshader",
+    "game/style/shaders/veg_twig_mass.gdshader",
     "game/style/shaders/water.gdshader",
     "game/style/shaders/water_clear.gdshader"
   ]

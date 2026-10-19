@@ -21,7 +21,7 @@ public sealed class VegFadeTests
         foreach (var s in Table.Value.Species)
             for (var v = 0; v < TreeForms.Variants; v++)
             {
-                var (wood, crown) = MotherModels.FarStandIn(s, v, palette);
+                var (wood, crown, _) = MotherModels.FarStandIn(s, v, palette);
                 var tris = (wood.Index.Length + crown.Index.Length) / 3;
                 if (tris <= 0) throw new InvalidOperationException($"{s.Id}/{v}: no triangles");
                 if (crown.Index.Length == 0) throw new InvalidOperationException($"{s.Id}/{v}: no crown");

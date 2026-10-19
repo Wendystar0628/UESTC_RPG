@@ -21,5 +21,6 @@ public enum ShaderId : byte
     CineCloud = 15,
     UiPanel = 16,
     UiScreen = 17,
-    MapBase = 18
+    MapBase = 18,
+    VegTwigMass = 19
 }

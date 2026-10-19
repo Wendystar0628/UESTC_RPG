@@ -45,6 +45,8 @@ const float VEG_WIND_SPEED = 6.0;          // 风的相位沿风向传播的速�
 const float VEG_BLOB_SWAY = 0.045;         // 团块摆动（m，3–6 cm，0.6–1.2 Hz）
 const float VEG_CARD_FLUTTER = 0.015;      // 叶片颤动（m，1–2 cm，3–6 Hz）
 const float VEG_TRANS_FILL = 0.55;         // 透光最多把逆光影面补到 影 → 透光色 的这个比例（23d）
+const float VEG_LOD_L0 = 15.0;             // 近池三级的切换距离（12 m 树，ENG-PERF），乘 树高/12 × 细节系数
+const float VEG_LOD_L1 = 40.0;
 const float VEG_BAND_AA = 0.75;            // 明暗档边的最小宽度：屏幕导数 fwidth(N·L) 的这个倍数（23c2c）
 
 struct VegInst {
@@ -70,6 +72,7 @@ struct VegSpecies {
 	int twig_cid;     // 枝条笔触的受光色号（tree.bare）
 	int whitewash_cid; // 树干下半截刷白的受光色号（wall.greyWhite）
 	int snow_cid;     // 覆雪的受光色号（snow.lit），−1 = 树种表没写，不覆雪
+	int winter_cid;   // 中距冬季细枝体的受光色号（tree.winterTwig），−1 = 该树种没有细枝体
 };
 
 // 每株量（WLD-VEGETATION）：x 种子，y 树种号 × 16 + 变体号，z 风向位置，w 树高。
@@ -99,6 +102,7 @@ VegSpecies veg_species(int row) {
 	s.twig_cid = 0;
 	s.whitewash_cid = 0;
 	s.snow_cid = -1;
+	s.winter_cid = -1;
 	if (row < 0 || row > 31) {
 		return s;
 	}
@@ -122,7 +126,9 @@ VegSpecies veg_species(int row) {
 	s.flags = int(round(t3.w));
 	s.twig_cid = int(round(t4.z));
 	s.whitewash_cid = int(round(t4.w));
-	s.snow_cid = int(round(texelFetch(tree_species, ivec2(5, row), 0).x));
+	vec4 t5 = texelFetch(tree_species, ivec2(5, row), 0);
+	s.snow_cid = int(round(t5.x));
+	s.winter_cid = int(round(t5.y));
 	return s;
 }
 
@@ -279,6 +285,44 @@ ToonCol veg_colors(ToonCtx c, ToonMat m, vec3 lit, vec3 shade, vec3 lamp, float 
 	vec3 rim = pal_cur(PAL_RIM) * lit * m.k_rim;
 	return ToonCol(lit, shade, lamp, trans, rim, vec3(0.0), deep_mix, bw, t_grad >= 0.0 ? VEG_HALF_LEVEL : 1.0, push, 1.0);
 }
+// 碎边噪声（veg_card 的外轮廓碎边、veg_twig_mass 的细枝体边缘）
+const float VEG_EDGE_CELL = 0.42;          // 噪声格（m），乘树种叶卡的格子系数；约一个叶团大小
+const float VEG_EDGE_CONTRAST = 2.2;       // 噪声对比
+// 碎边噪声：世界坐标的三维值噪声，两级叠加，按树种行错开；格子随叶卡形状（细叶小、阔叶大）
+float veg_edge_noise(vec3 wp, int row, int layer) {
+	float cell = VEG_EDGE_CELL * (layer == VEG_CARD_NEEDLE || layer == VEG_CARD_STRAND ? 0.75 : (layer == VEG_CARD_FAN || layer == VEG_CARD_PALMATE ? 1.15 : 1.0));
+	uint salt = uint(max(row, 0)) * 2246822519u + 97u;
+	float n = 0.0;
+	float w = 0.65;
+	vec3 g = wp / cell;
+	for (int o = 0; o < 2; o++) {
+		vec3 i = floor(g);
+		vec3 f = g - i;
+		f = f * f * (3.0 - 2.0 * f);
+		float v = 0.0;
+		for (int k = 0; k < 8; k++) {
+			vec3 c = i + vec3(float(k & 1), float((k >> 1) & 1), float(k >> 2));
+			uint h = (uint(int(c.x) * 73856093) ^ uint(int(c.y) * 19349663) ^ uint(int(c.z) * 83492791)) + salt;
+			float wk = mix(1.0 - f.x, f.x, float(k & 1)) * mix(1.0 - f.y, f.y, float((k >> 1) & 1)) * mix(1.0 - f.z, f.z, float(k >> 2));
+			v += wk * lamp_hash01(h);
+		}
+		n += w * v;
+		w = 0.35;
+		g = g * 2.3 + vec3(17.1, 5.3, 11.7);
+	}
+	// 值噪声的和挤在 0.5 附近，拉开对比，剪切比例才跟 cut 接近线性
+	return clamp((n - 0.5) * VEG_EDGE_CONTRAST + 0.5, 0.0, 1.0);
+}
+
+// 中距冬季细枝体（Q-057，veg_twig_mass）与近处枝梢笔触的交叉淡化：每株一个距离（主相机到树干脚点上方半个树高，与远近池交接同一个点），
+// 按 L0+ 的切换距离（12 m 树 15 m，乘 树高/12 × 细节系数）的倍数从前者到后者，近处 0、中距以外 1。两个着色器用同一个函数，所以互补
+const vec2 VEG_WINTER_MASS_NEAR = vec2(0.8, 1.3);
+float veg_winter_far(vec3 cam, vec3 origin, VegInst inst) {
+	float l0 = VEG_LOD_L0 * max(inst.height, 1.0) / 12.0 * max(quality.x, 0.5);
+	float d = length(cam - (origin + vec3(0.0, 0.5 * inst.height, 0.0)));
+	return smoothstep(l0 * VEG_WINTER_MASS_NEAR.x, l0 * VEG_WINTER_MASS_NEAR.y, d);
+}
+
 // 远近池交接与淡出（WLD-VEGETATION、ENG-PERF，max-011 23c2c）。只用 4×4 Bayer 抖动（与 toon 的淡化同一张表），不用引擎的
 // visibility range 淡化。每株一个距离：主相机到树干脚点上方半个树高（与运行时分桶同一个点），两池同一个函数，所以像素互补：
 // 过渡带里近池（L1）留下 b ≥ t 的像素、远池替身留下 b < t 的像素。过渡带里的树同时在两池里（运行时按 Campus.Systems.Vegetation.VegetationBuckets 分桶）。

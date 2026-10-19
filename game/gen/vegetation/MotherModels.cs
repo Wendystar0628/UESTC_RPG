@@ -23,9 +23,6 @@ public static partial class MotherModels
     /// <summary>Winter twig strokes keep the bare-branch name (WLD-VEGETATION); packed into the species table.</summary>
     public static readonly PaletteToken Twig = new("tree.bare.lit");
 
-    /// <summary>Reviewed warm red-brown strokes on the middle-distance winter outline of deciduous needle crowns.</summary>
-    public static readonly PaletteToken WinterTwig = new("tree.winterTwig.lit");
-
     /// <summary>Lime-washed lower trunk (WLD-VEGETATION), switched per instance by the variant bit in veg_trunk.</summary>
     public static readonly PaletteToken Whitewash = new("wall.greyWhite.lit");
 
@@ -177,6 +174,7 @@ public static partial class MotherModels
         var crown = new MeshWriter(withUv: true);
 
         WriteWood(wood, plan, level, ids);
+        var twig = TwigMass(plan, palette, tag: 0f);
         var palm = species.Form == "palm";
         var cardTarget = palm ? (level switch { VegLevel.L0Plus => 20, VegLevel.L0 => 16, _ => 10 }) : CardCount(species.Crown, level);
         var allCards = palm ? PalmFronds(plan, 20) : PlaceCards(plan, shell, CardCount(species.Crown, VegLevel.L0Plus));
@@ -206,7 +204,7 @@ public static partial class MotherModels
         // Near levels draw only the faces of each mass that no other mass swallows (23d), so the triangles go to the
         // outline: every mass can be a finer icosphere within the same budget.
         var hidden = level == VegLevel.L1 ? null : new HiddenFaces(plan, blobs);
-        int Total() => wood.Triangles + crown.Triangles + (hidden?.Cost(blobs) ?? CostOf(blobs));
+        int Total() => wood.Triangles + crown.Triangles + (twig?.Triangles ?? 0) + (hidden?.Cost(blobs) ?? CostOf(blobs));
         // Fits the masses under a triangle limit: the least exposed step down one icosphere level (not below minDetail; cores
         // last), and only when none can step down does the least exposed free non-core mass go (which may unhide faces of others).
         void Fit(int limit, int minDetail)
@@ -275,9 +273,13 @@ public static partial class MotherModels
         var woodBundle = wood.Bundle(WoodSpec(), flags: 0);
         var crownBundle = crown.Bundle(CrownSpec(species), flags: 8);
         var bounds = Union(wood.Bounds(), crown.Bounds());
+        if (twig is not null) bounds = Union(bounds, twig.Bounds());
         return new MotherModel(species.Id, variant, level, woodBundle, crownBundle, plan.Height,
             plan.TrunkRadius, plan.BranchY, plan.CrownRx, bounds)
-        { Cards = cards, UnderCards = underTake, CrownDiameter = shell.Diameter, BranchTips = plan.BranchTips().ToArray() };
+        {
+            Cards = cards, UnderCards = underTake, CrownDiameter = shell.Diameter, BranchTips = plan.BranchTips().ToArray(),
+            TwigMass = twig?.Bundle(TwigMassSpec(), flags: 8)
+        };
     }
 
     /// <summary>
@@ -313,9 +315,10 @@ public static partial class MotherModels
     /// on the same surface as the L1 masses (so the two meet in the cross-fade band with the same bulk, normals, colour and
     /// crown gradient), no cards and no branches; about 130 triangles. Stemless balls (shrubs) have no wood. Wood is drawn
     /// with veg_trunk; the crown with veg_card in the same vertex layout as the near crown. Both carry the far tags
-    /// (<see cref="FarWoodTag"/>, <see cref="FarMassTag"/>). The crown casts no shadow (the far pool has none).
+    /// (<see cref="FarWoodTag"/>, <see cref="FarMassTag"/>). The crown casts no shadow (the far pool has none). Species with a
+    /// winter twig mass carry it too, tagged like the far wood.
     /// </summary>
-    public static (GeometryBundle Wood, GeometryBundle Crown) FarStandIn(SpeciesInfo species, int variant, PaletteCatalog palette)
+    public static (GeometryBundle Wood, GeometryBundle Crown, GeometryBundle? TwigMass) FarStandIn(SpeciesInfo species, int variant, PaletteCatalog palette)
     {
         ArgumentNullException.ThrowIfNull(species);
         ArgumentNullException.ThrowIfNull(palette);
@@ -341,13 +344,14 @@ public static partial class MotherModels
             var s = palm ? MathF.Max(scale, (blob.Radius * 0.6f + plan.Form.CardSize) * 0.8f / MathF.Max(blob.Radius, 0.1f)) : scale;
             WriteBlob(crown, plan, shell, blob, index, s, detail: 0, ids, FarMassTag);
         }
-        return (wood.Bundle(WoodSpec(), flags: 0), crown.Bundle(CrownSpec(species), flags: 8));
+        return (wood.Bundle(WoodSpec(), flags: 0), crown.Bundle(CrownSpec(species), flags: 8),
+            TwigMass(plan, palette, FarWoodTag)?.Bundle(TwigMassSpec(), flags: 8));
     }
 
     private static Ids IdsOf(SpeciesInfo species, PaletteCatalog palette) =>
-        new(palette.Resolve(species.LeafLit).Value, palette.Resolve(Bark).Value, palette.Resolve(WinterTwig).Value);
+        new(palette.Resolve(species.LeafLit).Value, palette.Resolve(Bark).Value);
 
-    private readonly record struct Ids(ushort Leaf, ushort Bark, ushort WinterTwig);
+    private readonly record struct Ids(ushort Leaf, ushort Bark);
 
 
 }

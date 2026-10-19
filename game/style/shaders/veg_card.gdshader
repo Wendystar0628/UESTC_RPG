@@ -17,13 +17,10 @@ render_mode blend_mix, depth_draw_opaque, cull_disabled, diffuse_lambert, specul
 #include "res://style/shaders/veg_common.gdshaderinc"
 
 const float VEG_NEAR_COLLAPSE = 1.5;       // 1.5 m 内插片塌缩（§11.3）
-const float VEG_LOD_L0 = 15.0;             // 近池三级的切换距离（12 m 树，ENG-PERF），乘 树高/12 × 细节系数
-const float VEG_LOD_L1 = 40.0;
 const float VEG_KEEP_L0 = 0.4;             // L0 留下的插片比例（MotherModels.CardCount 的前缀）
 const float VEG_KEEP_L1 = 0.0556;          // L1 留下的插片比例
 const float VEG_COVER_GROW = 1.5;          // 远处按像素外扩叶形的上限，保住树冠覆盖率（§11.1）
 const float VEG_TWIG_MIN_PX = 0.5;         // 裸枝笔触按像素外扩的量（像素），保住约一个像素的线宽，不外扩成团
-const float VEG_WINTER_TWIG_OPACITY = 0.55; // Q-053b 已批：中距落叶针叶树的红褐细枝轮廓，用既有 Bayer 覆盖率表示
 // 远处叶卡化简（23c2c）：一张插片在屏幕上只剩几个像素时，叶形的细节逐像素闪烁；按 UV 的像素导数从前者到后者，叶形换成一个圆润的叶团
 // （覆盖率与叶簇相近）。枝条笔触、棕榈扇叶不换
 const vec2 VEG_CARD_SIMPLE = vec2(0.1, 0.25);
@@ -37,9 +34,7 @@ const float VEG_CARD_DL = 0.03;            // 插片的明度起伏（OKLab L，
 const float VEG_EDGE_RIM0 = 0.3;           // 远处：rim 从这里起进入碎边带
 const float VEG_EDGE_RIM1 = 0.82;          // 远处：rim 到这里碎边最深
 const float VEG_EDGE_DEPTH = 0.62;         // 远处：带内最深处剪掉的比例
-const float VEG_EDGE_CELL = 0.42;          // 噪声格（m），乘树种叶卡的格子系数；约一个叶团大小
 const float VEG_EDGE_FAR = 1.0;            // L0 以外的碎边强度
-const float VEG_EDGE_CONTRAST = 2.2;       // 噪声对比
 // 远处碎边按像素收（23c2c）：噪声格在屏幕上小于几个像素时，逐像素的剪切会随镜头移动闪烁、出锯齿。按噪声格的像素宽，从前者到后者
 // 把剪切量从 0 放到满（1080p、60° 视角下约 80 m 以内满剪，200 m 以外不剪），远处的树冠轮廓只剩团块本身的外形，读成干净的体块
 const vec2 VEG_EDGE_PX = vec2(2.0, 5.0);
@@ -86,7 +81,7 @@ const float VEG_UNDER_DL = 0.035;          // 冠底叶簇的明度起伏（OKLa
 const float VEG_UNDER_FIT = 1.3;           // 冠底叶卡正对镜头：卡片放大这么多（MotherModels.UnderCardScale），叶形按叶柄端缩回原大，不让卡片的直边切出叶形
 
 // toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个（已用满，交接编码并进 v_row）：层号与标志合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
-varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切），位 7 冠底叶卡，位 8–15 叶形种子，位 16–23 中距冬枝混合量
+varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切），位 7 冠底叶卡，位 8–15 插片自己的叶形种子
 varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的编码 × 1000（veg_pool_code，23c2c）
 varying flat float v_seed;
 varying flat vec2 v_tint;
@@ -170,16 +165,10 @@ void vertex() {
 
 		// 朝向：mix(外壳法线, 视线, 0.5)，按主相机算，阴影通道也一样（§11.3）
 		vec3 cam_w = MAIN_CAM_INV_VIEW_MATRIX[3].xyz;
-		float winter_mid = 0.0;
-		if (twig && !under && sp.leaf_card == VEG_CARD_NEEDLE) {
-			// 中距复用原轮廓叶簇的插片画细枝；近处收回原枝梢，交给母模型的真实主枝、二级枝。
-			// 沿用叶团消隐阈值及 L0 的距离过渡，春季满冠时不启用这一层；同类落叶针叶树共用。
-			float l0 = VEG_LOD_L0 * max(inst.height, 1.0) / 12.0 * max(quality.x, 0.5);
-			float crown_dist = length(cam_w - (MODEL_MATRIX * vec4(c, 1.0)).xyz);
-			winter_mid = (1.0 - smoothstep(0.15, 0.6, a)) * smoothstep(l0 * 0.9, l0, crown_dist);
-			center = mix(center, c, winter_mid);
+		// 有中距细枝体的树种（veg_twig_mass）：枝梢笔触只在近处画，中距缩掉，交给细枝体
+		if (twig && sp.winter_cid >= 0) {
+			size *= 1.0 - veg_winter_far(cam_w, origin, inst);
 		}
-		v_bits |= int(round(winter_mid * 255.0)) << 16;
 		vec3 center_w = (MODEL_MATRIX * vec4(center, 1.0)).xyz;
 		float dist = length(cam_w - center_w);
 		vec3 view_m = normalize(inv3 * (cam_w - center_w));
@@ -194,13 +183,11 @@ void vertex() {
 		size *= under ? veg_under_keep(CUSTOM2.w, dist, inst.height) : veg_card_keep(CUSTOM2.w, dist, inst.height);
 		size *= smoothstep(VEG_NEAR_COLLAPSE * 0.6, VEG_NEAR_COLLAPSE, dist);
 		// 叶卡集中在外轮廓一圈，打碎轮廓边；朝向镜头的内部插片只留少数、缩小（max-011）。
-		// 近处的枝条笔触不受此限；中距针叶裸冠只出轮廓，不保留内部散点。棕榈扇叶与冠底叶卡照旧。
+		// 冬季的枝条笔触不受此限（按叶量过渡），棕榈的扇叶本身就是树冠，也不受此限；冠底叶卡要在仰看时正对镜头，也不受此限。
 		if (sp.leaf_card != VEG_CARD_FROND && !under) {
 			float rim = 1.0 - abs(dot(nb, view_m));
 			float inner = veg_hash(h2, 31u) < VEG_INNER_KEEP ? VEG_INNER_SIZE : 0.0;
-			float outline = smoothstep(VEG_RIM_IN, VEG_RIM_OUT, rim);
-			float leaf_mask = mix(1.0, mix(inner, 1.0, outline), leafy);
-			size *= mix(leaf_mask, outline, winter_mid);
+			size *= mix(1.0, mix(inner, 1.0, smoothstep(VEG_RIM_IN, VEG_RIM_OUT, rim)), leafy);
 		}
 		VERTEX = center + (uw.x * t1 + uw.y * b1) * size;
 		// 插片用外壳法线（max-011 的统一树冠法线；棕榈扇叶用自己的法线）
@@ -379,32 +366,6 @@ float veg_card_shape(int layer, vec2 uv, float seed, float uv_px) {
 	return d;
 }
 
-// 碎边噪声：世界坐标的三维值噪声，两级叠加，按树种行错开；格子随叶卡形状（细叶小、阔叶大）
-float veg_edge_noise(vec3 wp, int row, int layer) {
-	float cell = VEG_EDGE_CELL * (layer == VEG_CARD_NEEDLE || layer == VEG_CARD_STRAND ? 0.75 : (layer == VEG_CARD_FAN || layer == VEG_CARD_PALMATE ? 1.15 : 1.0));
-	uint salt = uint(max(row, 0)) * 2246822519u + 97u;
-	float n = 0.0;
-	float w = 0.65;
-	vec3 g = wp / cell;
-	for (int o = 0; o < 2; o++) {
-		vec3 i = floor(g);
-		vec3 f = g - i;
-		f = f * f * (3.0 - 2.0 * f);
-		float v = 0.0;
-		for (int k = 0; k < 8; k++) {
-			vec3 c = i + vec3(float(k & 1), float((k >> 1) & 1), float(k >> 2));
-			uint h = (uint(int(c.x) * 73856093) ^ uint(int(c.y) * 19349663) ^ uint(int(c.z) * 83492791)) + salt;
-			float wk = mix(1.0 - f.x, f.x, float(k & 1)) * mix(1.0 - f.y, f.y, float((k >> 1) & 1)) * mix(1.0 - f.z, f.z, float(k >> 2));
-			v += wk * lamp_hash01(h);
-		}
-		n += w * v;
-		w = 0.35;
-		g = g * 2.3 + vec3(17.1, 5.3, 11.7);
-	}
-	// 值噪声的和挤在 0.5 附近，拉开对比，剪切比例才跟 cut 接近线性
-	return clamp((n - 0.5) * VEG_EDGE_CONTRAST + 0.5, 0.0, 1.0);
-}
-
 void fragment() {
 	if (veg_pool_discard(FRAGCOORD.xy, float(v_row >> 6) / 1000.0)) {
 		discard;
@@ -422,11 +383,6 @@ void fragment() {
 	int row = v_row & 63;
 	VegSpecies sp = veg_species(row);
 	bool mass = (v_bits & 64) != 0;
-	float winter_mid = float((v_bits >> 16) & 255) / 255.0;
-	// 沿用不透明通道的有序覆盖淡化，不把整冠送进透明排序；只裁现有细枝笔触的像素。
-	if (veg_pool_discard(FRAGCOORD.xy, winter_mid * (1.0 - VEG_WINTER_TWIG_OPACITY))) {
-		discard;
-	}
 	// 团块自己的法线（视空间）：团心指向片元，底部按世界的 y 压扁 0.7（树只绕竖轴转，模型的 y 就是世界的 y）
 	vec3 clump_w = mat3(INV_VIEW_MATRIX) * (VERTEX - v_center);
 	clump_w.y /= clump_w.y < 0.0 ? 0.49 : 1.0;
@@ -487,11 +443,11 @@ void fragment() {
 	float trans_k = 1.0 + VEG_TRANS_RIM * smoothstep(VEG_TRANS_RIM_BAND.x, VEG_TRANS_RIM_BAND.y, 1.0 - abs(dot(clump, VIEW))) * back_view;
 	bool twig = (v_bits & 32) != 0;
 	if (twig) {
-		// 近处枝条笔触用 tree.bare；中距针叶裸冠混到顶点传入的 tree.winterTwig，均不透光。
+		// 枝条笔触用 tree.bare，不透光（§1.4、§1.8）
 		int cid = sp.twig_cid;
-		lit = mix(pal_cur(cid), pal_cur(v_cid), winter_mid);
-		shade = mix(pal_cur(cid + PAL_SHADE_OFFSET), pal_cur(v_cid + PAL_SHADE_OFFSET), winter_mid);
-		lamp = mix(pal_fetch(cid, PAL_ROW_LAMP), pal_fetch(v_cid, PAL_ROW_LAMP), winter_mid);
+		lit = pal_cur(cid);
+		shade = pal_cur(cid + PAL_SHADE_OFFSET);
+		lamp = pal_fetch(cid, PAL_ROW_LAMP);
 		trans_k = 0.0;
 	} else {
 		bool bloom = (v_bits & 16) != 0;

@@ -43,7 +43,7 @@ public sealed record SpeciesInfo(
 /// <see cref="Width"/> RGBA32F texels per row:
 /// x0 leaf amount A at s = 0..3; x1 bloom B at s = 0..3; x2 (sway°, leaf lit row, bloom lit row or −1, bloom lit colour ID or −1);
 /// x3 (leaf card, bloom card, twig card, flags: 1 deciduous, 2 bloom on blobs); x4 (crown, leaf lit colour ID, twig-stroke lit colour ID, whitewash lit colour ID);
-/// x5 (crown-snow lit colour ID, 0, 0, 0); x6 reserved; x7.w = <see cref="Tag"/> marks a written row (an unset or default texture never carries it).
+/// x5 (crown-snow lit colour ID, winter twig-mass lit colour ID or −1, 0, 0); x6 reserved; x7.w = <see cref="Tag"/> marks a written row (an unset or default texture never carries it).
 /// </summary>
 public sealed class SpeciesTable
 {
@@ -117,7 +117,8 @@ public sealed class SpeciesTable
             Put(data, s.Row, 2, s.SwayDeg, leaf.Row ?? -1, bloom?.Row ?? -1, bloom is null ? -1 : bloom.Index.Value);
             Put(data, s.Row, 3, (float)s.Card, (float)s.BloomCard, (float)CardShape.Twig, flags);
             Put(data, s.Row, 4, (float)s.Crown, leaf.Index.Value, palette.Resolve(MotherModels.Twig).Value, palette.Resolve(MotherModels.Whitewash).Value);
-            Put(data, s.Row, 5, palette.Resolve(Snow).Value, 0f, 0f, 0f);
+            var winter = MotherModels.HasTwigMass(s) ? palette.Resolve(MotherModels.WinterTwig).Value : -1f;
+            Put(data, s.Row, 5, palette.Resolve(Snow).Value, winter, 0f, 0f);
             Put(data, s.Row, 7, 0f, 0f, 0f, Tag);
         }
         return data;

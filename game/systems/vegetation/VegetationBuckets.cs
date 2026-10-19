@@ -7,7 +7,7 @@ namespace Campus.Systems.Vegetation;
 /// <summary>
 /// Pool choice per tree of one mother model (WLD-VEGETATION, ENG-PERF): L0+, L0 and L1 within the near pool, and
 /// the far pool (<see cref="VegFade"/>). The L0+ / L0 / L1 switch distances are for a 12 m tree and scale with the tree height
-/// (veg_card's VEG_LOD_L0 / VEG_LOD_L1); veg_card has already shrunk the finer level's extra cards at the distance itself,
+/// (veg_common's VEG_LOD_L0 / VEG_LOD_L1); veg_card has already shrunk the finer level's extra cards at the distance itself,
 /// so those swaps do not show. Between the near pool's L1 and the far stand-in a tree is in both pools over the
 /// cross-fade band (<see cref="VegFade.NearFadeStart"/>–<see cref="VegFade.NearFadeEnd"/>) and the shaders split its pixels
 /// with complementary Bayer dither (max-011 23c2c). The far pool starts at the band for the lowest detail factor

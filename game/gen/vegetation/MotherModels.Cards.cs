@@ -213,14 +213,11 @@ public static partial class MotherModels
     {
         var first = w.VertexCount;
         var t0 = Gradient(plan, card.Center, plan.Form.Id == "palm" ? card.Normal : shell.Normal(card.Center));
-        // Needle species still take their foliage colour from the seasonal row. Their card colour ID carries the
-        // reviewed winter-outline colour through the existing vertex layout; near twig strokes keep tree.bare.
-        var color = plan.Species.Deciduous && plan.Species.Card == CardShape.Needle ? ids.WinterTwig : ids.Leaf;
         ReadOnlySpan<Vector2> corners = [new(0f, 0f), new(1f, 0f), new(1f, 1f), new(0f, 1f)];
         foreach (var uv in corners)
         {
             var p = card.Center + card.U * ((uv.X - 0.5f) * card.Width) + card.V * ((uv.Y - 0.5f) * card.Height);
-            w.Add(p, card.Normal, 1f, color, t0, new Vector4(card.Center, card.H2), new Vector4(card.Anchor, card.H3),
+            w.Add(p, card.Normal, 1f, ids.Leaf, t0, new Vector4(card.Center, card.H2), new Vector4(card.Anchor, card.H3),
                 new Vector4(card.BlobCenter, importance), uv);
         }
         w.Tri(first, first + 2, first + 1);

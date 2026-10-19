@@ -41,6 +41,7 @@ public sealed class ShaderMaterialSource : IShaderMaterialSource
         ShaderId.UiPanel => "ui_panel",
         ShaderId.UiScreen => "ui_screen",
         ShaderId.MapBase => "map_base",
+        ShaderId.VegTwigMass => "veg_twig_mass",
         _ => throw new ArgumentOutOfRangeException(nameof(shader), shader, "Shader ID is not registered in the material whitelist.")
     } + ".gdshader";
 

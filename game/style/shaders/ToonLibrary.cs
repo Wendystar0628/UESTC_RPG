@@ -345,6 +345,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
             ToonKind.VegGrass => Whitelisted(ShaderId.VegGrass),
             ToonKind.Lotus => Whitelisted(ShaderId.VegLotus),
             ToonKind.SceneText => SceneTextMaterial(),
+            ToonKind.VegTwigMass => Whitelisted(ShaderId.VegTwigMass),
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown ToonKind.")
         };
     }
