@@ -11,13 +11,13 @@ depends: [SYS-ATLAS, ENG-ARCH, UI-NAV, UI-VISUAL, WLD-OUTSKIRTS, SYS-TITLE]
 related: [SYS-ATLAS-TRAVEL, SYS-VIEW, SYS-MAPS, ENG-GATES, ENG-BUDGET, ENG-PERF, SYS-AUDIO]
 contracts: [AtlasLayer, AtlasRegion, CustomPin, PinShape]
 data: ["game/data/maps/qingshuihe/atlas/labels.json"]
-gates: [G14, G18]
+gates: [G14]
 ---
 
 # SYS-ATLAS-UI · 地图界面：底图、小地图与大地图
 
 > **范围**：本文规定平面地图的界面：底图的来源、内容与上色，外围、校界与箱庭外缘的画法，文字与标注，小地图，大地图的布局、缩放、图层、目录、传送卡。自定义标记与追踪在主线之后（§2 末、§3.5）。
-> **不在本文**：允许与禁止什么、多地图下的数据、存档与设置里存什么（SYS-ATLAS）；标记类型、锚点实体、传送流程与落点、解锁策略（SYS-ATLAS-TRAVEL）；界面令牌、`map.*` 色值与画面布局（UI-VISUAL）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；外围与截面线（WLD-OUTSKIRTS）；底图烘焙与着色器的实现（`pipeline/map/`、`game/hud/map/`）、服务契约（`game/contracts/Atlas/`）；地图一致性验收（ENG-GATES G18）。
+> **不在本文**：允许与禁止什么、多地图下的数据、存档与设置里存什么（SYS-ATLAS）；标记类型、锚点实体、传送流程与落点、解锁策略（SYS-ATLAS-TRAVEL）；界面令牌、`map.*` 色值与画面布局（UI-VISUAL）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；外围与截面线（WLD-OUTSKIRTS）；底图烘焙与着色器的实现（`pipeline/map/`、`game/hud/map/`）、服务契约（`game/contracts/Atlas/`）。
 > **查阅**：先读 §0；底图看 §1；小地图看 §2；大地图看 §3
 
 ## 0 结论
@@ -27,7 +27,7 @@ gates: [G14, G18]
 
 ### 0.1 接入要点
 
-- 改了世界文件或挪了被标记的实体：底图自动重烘；标记直接引用实体坐标（G18）
+- 改了世界文件或挪了被标记的实体：底图自动重烘；标记直接引用实体坐标
 - 显示区域名或地点名：取 `atlas/labels.json` 的区域与地点表，那是唯一来源（§1.5）
 - 新增单键快捷键：大地图打开期间只认 M、G、N、Esc 和页内的键（§3.1）
 
@@ -115,5 +115,5 @@ M 关闭并回到打开前的状态，G 在"图层"和"目录"之间切换，Esc
 
 ## 4 待验证
 
-- 截面线是否全在地图页内：初值按 WLD-OUTSKIRTS 的估计取 `atlasRect` ±1536 m；截面线定稿后 G18 报告被裁掉的长度，超出时按 64 m 对齐外扩。
+- 截面线是否全在地图页内：初值按 WLD-OUTSKIRTS 的估计取 `atlasRect` ±1536 m；截面线定稿后若超出，按 64 m 对齐外扩。
 - 底图本机烘焙的全图耗时（十几秒到半分钟）与小地图主线程开销（不到 1 ms）：P0 实测。

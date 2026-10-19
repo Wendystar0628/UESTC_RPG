@@ -49,7 +49,7 @@
 
 ## CORE-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 14.2k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/core/CORE-DECISIONS-SYSTEMS-系统与工程决策.md` · 14.3k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - CORE-DECISIONS-SYSTEMS §0 结论 · L23 · 164
@@ -58,7 +58,7 @@
 - CORE-DECISIONS-SYSTEMS §2 存档 · L61 · 1.4k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L79 · 2.1k
 - CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.9k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L133 · 2.9k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L133 · 3.0k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -528,7 +528,7 @@
 ## WLD-INTERIORS-ACCESS · 室内开放：原则、门、关着的楼、新开一栋
 
 `docs/world/WLD-INTERIORS-ACCESS-室内开放与门.md` · 6.2k 字 · 室内的精选开放原则、门的区分与自动门、关着的楼、导航图与新开一栋楼的做法
-关键词：楼内、开放室内、开放清单、interiors.json、开放入口、自动门、封口、门厅卡、窗卡、简化室内、I0 兜底层、看进去例外、导航图、G19
+关键词：楼内、开放室内、开放清单、interiors.json、开放入口、自动门、封口、门厅卡、窗卡、简化室内、I0 兜底层、看进去例外、导航图
 
 - WLD-INTERIORS-ACCESS §0 结论 · L23 · 877
   - ★ WLD-INTERIORS-ACCESS §0.1 接入要点 · L32 · 522
@@ -536,7 +536,7 @@
 - WLD-INTERIORS-ACCESS §2 门的区分：开与关 · L55 · 1.3k
   - WLD-INTERIORS-ACCESS §2.1 楼里的门：走近推开，闭门器关上 · L70 · 678
 - WLD-INTERIORS-ACCESS §3 关着的楼：外壳、窗卡、门厅卡与简化室内 · L80 · 822
-- WLD-INTERIORS-ACCESS §4 导航图、路线与扩展 · L90 · 816
+- WLD-INTERIORS-ACCESS §4 导航图、路线与扩展 · L90 · 818
 
 ## WLD-INTERIORS-BUILD · 室内制作：加载、生成器、风格、痕迹、楼梯与碰撞
 
@@ -1083,7 +1083,7 @@
 
 ## MAP-QSH-TERRAIN · 全图地形骨架：层分布、地标丘、揭示路线与常水位
 
-`docs/maps/qingshuihe/MAP-QSH-TERRAIN-全图地形骨架.md` · 5.8k 字 · 清水河地形的全图骨架：层分布、红枫丘、遮挡与揭示路线、各水体常水位、坡度与着色的本图实例
+`docs/maps/qingshuihe/MAP-QSH-TERRAIN-全图地形骨架.md` · 5.7k 字 · 清水河地形的全图骨架：层分布、红枫丘、遮挡与揭示路线、各水体常水位、坡度与着色的本图实例
 关键词：地形骨架、红枫丘、地标丘、下沉时间广场、常水位表、湖口跌水、箱涵堰口、遮挡与揭示、揭示路线、中轴落金线、湿地堤、起伏的理由、水位阶梯、分面平法线
 
 - MAP-QSH-TERRAIN §0 结论 · L22 · 1.2k
@@ -1195,8 +1195,8 @@
 `docs/systems/SYS-ATLAS-UI-地图界面.md` · 6.3k 字 · 平面地图的界面：底图内容与上色、外围与校界画法、文字与标注、小地图、大地图的布局缩放图层目录传送卡；自定义标记与追踪在主线之后
 关键词：底图、小地图、大地图、地图页、atlasRect、距离场、map.* 色值、区域名、地名标注、labels.json、缩放档、目录页、传送卡、图层
 
-- SYS-ATLAS-UI §0 结论 · L23 · 369
-  - ★ SYS-ATLAS-UI §0.1 接入要点 · L28 · 153
+- SYS-ATLAS-UI §0 结论 · L23 · 364
+  - ★ SYS-ATLAS-UI §0.1 接入要点 · L28 · 148
 - SYS-ATLAS-UI §1 底图 · L34 · 1.9k
   - SYS-ATLAS-UI §1.1 来源：世界模型，不是原始 OSM · L36 · 426
   - SYS-ATLAS-UI §1.2 上色 · L45 · 497
@@ -1211,11 +1211,11 @@
   - SYS-ATLAS-UI §3.4 传送卡 · L101 · 354
   - SYS-ATLAS-UI §3.5 自定义标记与追踪（主线之后） · L107 · 285
   - SYS-ATLAS-UI §3.6 按键 · L112 · 114
-- SYS-ATLAS-UI §4 待验证 · L116 · 152
+- SYS-ATLAS-UI §4 待验证 · L116 · 139
 
 ## SYS-ATLAS · 平面地图与传送
 
-`docs/systems/SYS-ATLAS-平面地图与传送.md` · 3.2k 字 · 平面地图的总则：允许与禁止什么、多地图下的数据归属、设置里存什么；主线全开放，自定义标记、追踪、解锁策略在主线之后；界面与传送分在两份子文档
+`docs/systems/SYS-ATLAS-平面地图与传送.md` · 3.1k 字 · 平面地图的总则：允许与禁止什么、多地图下的数据归属、设置里存什么；主线全开放，自定义标记、追踪、解锁策略在主线之后；界面与传送分在两份子文档
 关键词：平面地图、地图只活在界面层、3D 里不标注、IAtlasService、MarkerId、前往方式、图层筛选、AtlasSave、TransitPreference
 
 - SYS-ATLAS §0 结论 · L22 · 660
@@ -1817,16 +1817,16 @@
 
 ## ENG-GATES · 验收：测试三档与门禁
 
-`docs/engineering/ENG-GATES-验收与门禁.md` · 5.3k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、14 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
+`docs/engineering/ENG-GATES-验收与门禁.md` · 5.1k 字 · 测试三档与何时跑（日常只有编译、受影响的测试、G4）、14 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 关键词：门禁、验收、测试三档、快检、核心专项、集中测试、gate.ps1、门禁表、门禁编号、D-238、入口与交付分工、测试只锁本包输出、构建锁
 
-- ENG-GATES §0 结论 · L21 · 808
+- ENG-GATES §0 结论 · L21 · 804
   - ★ ENG-GATES §0.1 接入要点 · L34 · 255
-- ENG-GATES §1 门禁与测试节奏 · L40 · 3.2k
+- ENG-GATES §1 门禁与测试节奏 · L40 · 3.1k
   - ENG-GATES §1.1 测试三档 · L44 · 1.5k
-  - ENG-GATES §1.2 门禁表 · L68 · 1.4k
-  - ENG-GATES §1.4 入口与交付分工 · L89 · 220
-- ENG-GATES §2 待验证（P0） · L95 · 179
+  - ENG-GATES §1.2 门禁表 · L68 · 1.3k
+  - ENG-GATES §1.4 入口与交付分工 · L87 · 220
+- ENG-GATES §2 待验证（P0） · L93 · 179
 
 ## ENG-PERF-ADAPT · 设备档、自适应与测量
 

@@ -11,7 +11,7 @@ depends: [MAP-QSH-WEST, ART-FIDELITY, SYS-WALK, SYS-ATLAS, WLD-OUTSKIRTS, WLD-IN
 related: [MAP-QSH-WEST-SEASONS, MAP-QSH-LIBRARY, MAP-QSH-CORE, MAP-QSH-TERRAIN, UI-NAV, ENG-GATES]
 contracts: []
 data: []
-gates: [G4, G15, G19, G21]
+gates: [G4, G15, G21]
 ---
 
 # MAP-QSH-WEST-WALK · 西区与西北区行走与声音：主网、挡路物、开放入口、点位与锚点、声音

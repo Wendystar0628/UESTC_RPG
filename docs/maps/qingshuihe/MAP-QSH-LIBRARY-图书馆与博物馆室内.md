@@ -10,7 +10,7 @@ depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, MAP-QSH-CORE, ENG-ARCH, SYS-TIME,
 related: [MAP-QSH-INTERIORS, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, ART-MODELING, MAP-QSH-ADDITIONS, ENG-BUDGET, ENG-PERF, UI-NAV, SYS-WEATHER, SYS-ATLAS, SYS-AUDIO]
 contracts: []
 data: ["game/data/maps/qingshuihe/overlay/interior/core.interior.json", "game/data/maps/qingshuihe/interiors.json", "game/data/maps/qingshuihe/lighting-schedule.json"]
-gates: [G4, G7, G15, G19, G21]
+gates: [G4, G7, G15, G21]
 ---
 
 # MAP-QSH-LIBRARY · 图书馆与博物馆室内

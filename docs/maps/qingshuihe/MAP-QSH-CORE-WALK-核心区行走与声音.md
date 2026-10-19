@@ -11,7 +11,7 @@ depends: [CORE-INDEX, MAP-QSH-CORE, SYS-WALK, WLD-INTERIORS, SYS-AUDIO]
 related: [MAP-QSH-LIBRARY, MAP-QSH-SOUTH, MAP-QSH-WEST, UI-NAV, SYS-ATLAS]
 contracts: []
 data: ["game/data/maps/qingshuihe/audio/manual_emitters.json"]
-gates: [G15, G18, G19, G21]
+gates: [G15, G21]
 ---
 
 # MAP-QSH-CORE-WALK · 核心区行走与声音

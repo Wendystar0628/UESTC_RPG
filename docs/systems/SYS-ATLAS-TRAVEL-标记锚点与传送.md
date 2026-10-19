@@ -11,7 +11,7 @@ depends: [SYS-ATLAS, UI-NAV, SYS-WALK, SYS-MAPS, WLD-INTERIORS, SYS-TITLE]
 related: [SYS-ATLAS-UI, SYS-VIEW, SYS-SAVE, SYS-AUDIO, MAP-QSH-ADDITIONS, ENG-GATES, ENG-ROADMAP, WLD-LIFE]
 contracts: [IUnlockPolicy, MarkerKind, AnchorForm, UnlockState, TravelStyle, TravelRefusal, TeleportSpec, AtlasMarker]
 data: ["game/data/maps/qingshuihe/atlas/markers.json", "game/data/maps/qingshuihe/world/atlas.json", "game/assets/maps/qingshuihe/thumbs/"]
-gates: [G15, G18]
+gates: [G15]
 ---
 
 # SYS-ATLAS-TRAVEL · 标记、锚点与传送

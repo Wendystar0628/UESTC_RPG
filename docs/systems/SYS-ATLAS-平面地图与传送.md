@@ -16,7 +16,7 @@ gates: [G2]
 # SYS-ATLAS · 平面地图与传送
 
 > **范围**：本文规定平面地图的总则：界面层与 3D 画面的分界（允许什么、禁止什么）、多地图下的数据归属、存档与设置里存什么。主线范围：全开放，先放 3–4 座锚点；解锁策略、自定义标记、追踪在主线之后。底图、小地图、大地图见 SYS-ATLAS-UI，标记、锚点、传送与解锁见 SYS-ATLAS-TRAVEL。
-> **不在本文**：地图加载与切换 `IMapService`（SYS-MAPS）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；界面令牌与画面布局（UI-VISUAL）；开放室内的清单与入口（WLD-INTERIORS）；外围与截面线（WLD-OUTSKIRTS）；声音（SYS-AUDIO）；存档容器与保存时机（SYS-SAVE）；服务契约（`game/contracts/Atlas/`）、锚点与标记数据（`game/data/maps/qingshuihe/atlas/`、`world/atlas.json`）、地图一致性验收（ENG-GATES G18）。
+> **不在本文**：地图加载与切换 `IMapService`（SYS-MAPS）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；界面令牌与画面布局（UI-VISUAL）；开放室内的清单与入口（WLD-INTERIORS）；外围与截面线（WLD-OUTSKIRTS）；声音（SYS-AUDIO）；存档容器与保存时机（SYS-SAVE）；服务契约（`game/contracts/Atlas/`）、锚点与标记数据（`game/data/maps/qingshuihe/atlas/`、`world/atlas.json`）。
 > **查阅**：先读 §0；允许与禁止看 §1；多地图下的数据看 §2；存档与设置看 §3
 
 ## 0 结论

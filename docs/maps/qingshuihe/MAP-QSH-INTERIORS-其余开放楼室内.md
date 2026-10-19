@@ -10,7 +10,7 @@ depends: [CORE-INDEX, MAP-QSH-LIBRARY, WLD-INTERIORS, SYS-WALK]
 related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, MAP-QSH-CORE, SYS-ATLAS, SYS-AUDIO, UI-NAV]
 contracts: []
 data: ["game/data/maps/qingshuihe/interiors.json"]
-gates: [G19]
+gates: []
 ---
 
 # MAP-QSH-INTERIORS · 其余开放楼室内与开放的高处

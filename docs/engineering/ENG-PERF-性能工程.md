@@ -10,7 +10,7 @@ depends: [ENG-ARCH, ENG-BUDGET, SYS-TIME, UI-NAV, SYS-WALK, SYS-WEATHER, SYS-GRA
 related: [ART-STYLE, ART-SKYLIGHT, WLD-VEGETATION, WLD-WATER, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, ENG-WP, WLD-TERRAIN]
 contracts: [ShaderGlobals]
 data: ["game/style/shaders/", "game/style/outline/"]
-gates: [G5, G7, G19, G20, G21]
+gates: [G5, G7, G20, G21]
 ---
 # ENG-PERF · 性能工程：总原则、绘制管线与剔除
 

@@ -4,20 +4,20 @@ title: 室内开放：原则、门、关着的楼、新开一栋
 category: world
 parent: WLD-INTERIORS
 summary: 室内的精选开放原则、门的区分与自动门、关着的楼、导航图与新开一栋楼的做法
-keywords: [楼内, 开放室内, 开放清单, interiors.json, 开放入口, 自动门, 封口, 门厅卡, 窗卡, 简化室内, I0 兜底层, 看进去例外, 导航图, G19]
+keywords: [楼内, 开放室内, 开放清单, interiors.json, 开放入口, 自动门, 封口, 门厅卡, 窗卡, 简化室内, I0 兜底层, 看进去例外, 导航图]
 owners: [WP-17, WP-31a, WP-31b, WP-31c]
 contributors: []
 depends: [WLD-INTERIORS, CORE-INDEX, MAP-QSH-LIBRARY, SYS-VIEW, ART-FIDELITY, ENG-ARCH, SYS-TIME, SYS-WALK, SYS-ATLAS, SYS-MAPS, SYS-AUDIO]
 related: [WLD-INTERIORS-BUILD, WLD-LIFE, WLD-OUTSKIRTS, SYS-SAVE, ENG-GATES, UI-NAV, ENG-ROADMAP, MAP-QSH-ADDITIONS]
 contracts: [EntranceDecl, DoorLeafKind, DoorLeafDecl, DoorPhase, DoorEvent, IInteriorDoors, InteriorIndexEntry, IInteriorIndex, SurfaceTag.DoorClosed, NavNodeId, NavSpace, NavEdgeKind, NavFlags, DoorKind, DoorState, NavNode, NavEdge, NavPortal, NavFloorGraph, NavQuery, NavPath, INavGraph]
 data: ["game/data/maps/qingshuihe/interiors.json", "game/data/maps/qingshuihe/nav/routes.json", "game/data/maps/qingshuihe/nav/views.json"]
-gates: [G5, G19]
+gates: [G5]
 ---
 
 # WLD-INTERIORS-ACCESS · 室内开放：原则、门、关着的楼、新开一栋
 
 > **范围**：本文规定不分图的室内开放规则：精选开放的原则与共用约定，门的开与关（含自动门），关着的楼，导航图与开放更多楼的做法。
-> **不在本文**：室内加载、生成器、风格、痕迹、楼梯与碰撞（WLD-INTERIORS-BUILD）；开放的屋顶与高处、电梯（MAP-QSH-INTERIORS）；清水河各楼的开放范围、陈设与观景时刻（MAP-QSH-LIBRARY，含开放楼总表）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；地图门口传送（SYS-ATLAS）；契约（`game/contracts/`）；门禁 G19（ENG-GATES §1.2）。
+> **不在本文**：室内加载、生成器、风格、痕迹、楼梯与碰撞（WLD-INTERIORS-BUILD）；开放的屋顶与高处、电梯（MAP-QSH-INTERIORS）；清水河各楼的开放范围、陈设与观景时刻（MAP-QSH-LIBRARY，含开放楼总表）；各楼外观（各区 MAP-QSH 文档）；行走控制器（SYS-WALK）；楼内介质（SYS-VIEW）；声音（SYS-AUDIO）；地图门口传送（SYS-ATLAS）；契约（`game/contracts/`）。
 > **查阅**：先读 §0；开放原则与共用约定看 §1；门看 §2；关着的楼看 §3；导航图与新开一栋楼看 §4
 
 ## 0 结论
@@ -89,7 +89,7 @@ gates: [G5, G19]
 
 ## 4 导航图、路线与扩展
 
-**导航图**：离线烘焙的分层图，用于路线预览、G19 连通检查、模式切换落点和存档里的"当前所在空间"，以后给 RPG 宏观寻路；定义见 `game/contracts/Navigation/`。楼里的自动门是 `AutoOpen` 的门边，锁着的房门记 `Locked`，关着的楼只有 `Locked` 的门户。室外的道路、广场、桥、台阶、球场、看台、草坪全部可走；室内只有开放部分和登记的高处（MAP-QSH-INTERIORS §4）可走；宿舍组团只开学知一组团（SYS-WALK-BOUNDS §2）。路线 R1–R14 见 SYS-WALK-BOUNDS §6。
+**导航图**：离线烘焙的分层图，用于路线预览、G15 行走路线检查、模式切换落点和存档里的"当前所在空间"，以后给 RPG 宏观寻路；定义见 `game/contracts/Navigation/`。楼里的自动门是 `AutoOpen` 的门边，锁着的房门记 `Locked`，关着的楼只有 `Locked` 的门户。室外的道路、广场、桥、台阶、球场、看台、草坪全部可走；室内只有开放部分和登记的高处（MAP-QSH-INTERIORS §4）可走；宿舍组团只开学知一组团（SYS-WALK-BOUNDS §2）。路线 R1–R14 见 SYS-WALK-BOUNDS §6。
 
 **开放更多室内**（不改契约，也不改流式架构）：
 
@@ -98,7 +98,7 @@ gates: [G5, G19]
 3. 注册提供者：没有地标空间的普通楼只在世界文件的记录里写楼型，不写代码；有门厅、中庭、展厅的楼写一个 `[InteriorProvider]`，普通部分仍调平面内核。
 4. 补门的表现：入口设为 `Open`、换入口部件、登记门口灯；楼里的门登记 `DoorLeafDecl`。
 5. 补声学声明（SYS-AUDIO），没写时音频退到声学网格加射线，只是听起来泛。
-6. 进 G19；需要时补点位和路线。
+6. 进 G15；需要时补点位和路线。
 
 开放前后无缝替换：窗卡、门厅卡、简化室内与完整室内同源（WLD-INTERIORS-BUILD §2），从外面看开放楼仍是窗卡，只有门口从"关门 + 门厅卡"换成"敞开 + 门口灯 + 地垫 + 开放牌"。
 

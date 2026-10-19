@@ -11,7 +11,7 @@ depends: [SYS-WALK, CORE-INDEX, ENG-ARCH, ENG-BUDGET, ENG-PERF, WLD-OUTSKIRTS, W
 related: [SYS-VIEW, SYS-ATLAS, SYS-WALK-BIKE, ART-FIDELITY, WLD-TERRAIN, WLD-WATER, WLD-LIFE, MAP-QSH-ADDITIONS, ENG-GATES]
 contracts: [WalkClass, SurfaceTag, Collider, WallCollider, RampCollider, PostCollider, BoxCollider, SlabCollider, HeightFieldCollider, SlopedWallCollider, SweepHit, SupportHit, ICollisionWorld]
 data: ["game/data/maps/qingshuihe/overlay/walkable.overlay.json", "game/data/maps/qingshuihe/nav/routes.json"]
-gates: [G4, G15, G19]
+gates: [G4, G15]
 ---
 
 # SYS-WALK-BOUNDS · 可行走范围、边界与碰撞

@@ -11,7 +11,7 @@ depends: [CORE-INDEX, MAP-QSH-SOUTH, SYS-WALK, WLD-INTERIORS, WLD-OUTSKIRTS, SYS
 related: [MAP-QSH-LIBRARY, MAP-QSH-CORE, UI-NAV, SYS-ATLAS]
 contracts: []
 data: []
-gates: [G15, G19, G21]
+gates: [G15, G21]
 ---
 
 # MAP-QSH-SOUTH-WALK · 南区行走与声音

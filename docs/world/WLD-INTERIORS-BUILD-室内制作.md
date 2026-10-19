@@ -11,7 +11,7 @@ depends: [WLD-INTERIORS, CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, ENG-
 related: [WLD-INTERIORS-ACCESS, WLD-LIFE, SYS-WEATHER, ENG-GATES, ENG-WP, MAP-QSH-ADDITIONS, ART-SKYLIGHT]
 contracts: [IInteriorProvider, InteriorLayout, InteriorDetail, ZoneKind, PortalKind, StoreyInfo, ZoneVolume, PortalDecl, ElevatorDecl, SlopedWallCollider]
 data: ["game/data/maps/qingshuihe/overlay/interior/", "game/style/palette/ext/interior.json"]
-gates: [G5, G6, G15, G18]
+gates: [G5, G6, G15]
 ---
 
 # WLD-INTERIORS-BUILD · 室内制作：加载、生成器、风格、痕迹、楼梯与碰撞
