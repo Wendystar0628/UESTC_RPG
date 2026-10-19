@@ -4,6 +4,6 @@ namespace Campus.Contracts;
 public static class GroundLevels
 {
     public const float Paving = .15f;
-    public const float Lawn = .10f;
+    public const float Lawn = Paving - .04f;
     public const float Decal = .004f;
 }

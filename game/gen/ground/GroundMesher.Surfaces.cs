@@ -118,7 +118,8 @@ internal sealed partial class GroundMesher
             GroundSurface.Bevel => _s.PavingY - bevel + Math.Clamp(v[offset + TileField.A], 0f, bevel),
             GroundSurface.Curb or GroundSurface.Edging or GroundSurface.Track or GroundSurface.Turf or GroundSurface.Court or
                 GroundSurface.Granite or GroundSurface.PlazaBorder or GroundSurface.Paver => _pavingY,
-            GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark => _grassY,
+            GroundSurface.Grass or GroundSurface.GrassLight or GroundSurface.GrassDark =>
+                _grassY + (_pavingY - _grassY) * (1f - Math.Clamp(v[offset + TileField.LawnEdge] / _s.LawnEdgeRise, 0f, 1f)),
             GroundSurface.PitRim => v[offset + TileField.PitRim],
             GroundSurface.PitSoil => v[offset + TileField.PitSoil],
             GroundSurface.PitBevel => v[offset + TileField.PitRim] - bevel +

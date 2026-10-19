@@ -14,8 +14,11 @@ public sealed record GroundSection
     /// <summary>Kerb stone top and the flush paving level (sidewalks, plazas, courts).</summary>
     public float PavingY { get; init; } = GroundLevels.Paving;
 
-    /// <summary>Lawn level: 5 cm below paving so that every lawn edge reads as a small step.</summary>
+    /// <summary>Lawn level below paving; the edge rises smoothly to the paving over LawnEdgeRise.</summary>
     public float GrassY { get; init; } = GroundLevels.Lawn;
+
+    /// <summary>Width of the lawn's rise to paving at its edge (Q-016, metres).</summary>
+    public float LawnEdgeRise { get; init; } = 0.4f;
 
     /// <summary>Carriageway and parking level.</summary>
     public float RoadY { get; init; }
@@ -46,7 +49,7 @@ public sealed record GroundSection
     public static GroundSection Default { get; } = new();
 
     /// <summary>Largest field threshold used by the surface classifier; distance fields must be exact up to here.</summary>
-    internal float MaxIso => MathF.Max(MathF.Max(CurbWidth, EdgingWidth), Lawn.EdgeBand);
+    internal float MaxIso => MathF.Max(MathF.Max(MathF.Max(CurbWidth, EdgingWidth), LawnEdgeRise), Lawn.EdgeBand);
 }
 
 /// <summary>

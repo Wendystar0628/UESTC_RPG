@@ -107,7 +107,9 @@ public sealed class GroundDiagonalTests
         world.Terrain = terrain;
         var ctx = TestWorld.Context(world);
         var section = GroundSection.Default;
-        var grid = TerrainGrid.For(terrain, tile, LodLevel.L0, GroundLod.Tile(tile, LodLevel.L0, ctx.Map.DataRect));
+        var extent = GroundLod.Tile(tile, LodLevel.L0, ctx.Map.DataRect);
+        var grid = TerrainGrid.For(terrain, tile, LodLevel.L0, extent);
+        var field = TileField.Build(GroundLayout.Of(world), extent, section, grid);
         var output = new GroundModule(section).Build(ctx, tile, LodLevel.L0);
         var checkedTriangles = 0;
         var nearArc = 0;
@@ -121,14 +123,35 @@ public sealed class GroundDiagonalTests
                 if (p.Any(q => q.X % 64f == 0f || q.Z % 64f == 0f)) continue;
                 var cross = Vector3.Cross(p[1] - p[0], p[2] - p[0]);
                 if (cross.Length() < 1e-5f || MathF.Abs(cross.Y) < 0.5f * cross.Length()) continue;
-                var points = new[] { (p[0] + p[1] + p[2]) / 3f, (p[0] + p[1]) / 2f, (p[1] + p[2]) / 2f, (p[2] + p[0]) / 2f };
-                foreach (var q in points) worst = MathF.Max(worst, MathF.Abs(q.Y - section.GrassY - grid.At(q.X, q.Z)));
+                var lift = p.Select(LawnLift).ToArray();
+                var points = new[]
+                {
+                    (Point: (p[0] + p[1] + p[2]) / 3f, Lift: (lift[0] + lift[1] + lift[2]) / 3f),
+                    (Point: (p[0] + p[1]) / 2f, Lift: (lift[0] + lift[1]) / 2f),
+                    (Point: (p[1] + p[2]) / 2f, Lift: (lift[1] + lift[2]) / 2f),
+                    (Point: (p[2] + p[0]) / 2f, Lift: (lift[2] + lift[0]) / 2f)
+                };
+                foreach (var (q, surfaceLift) in points) worst = MathF.Max(worst, MathF.Abs(q.Y - surfaceLift - grid.At(q.X, q.Z)));
                 checkedTriangles++;
                 if (p.All(q => q.X > 3f && q.X < 8f && q.Z > 3f && q.Z < 8f)) nearArc++;
             }
         AssertThat(checkedTriangles > 500).OverrideFailureMessage($"Only {checkedTriangles} lawn triangles checked.").IsTrue();
         AssertThat(nearArc > 20).OverrideFailureMessage($"Only {nearArc} lawn triangles beside the junction fillet.").IsTrue();
         AssertThat(worst <= 0.01f).OverrideFailureMessage($"Lawn leaves the draped terrain by {worst} m.").IsTrue();
+
+        // The lowered lawn rises to paving at its edge. Read the mesher's same distance field and diagonal;
+        // interpolate those vertex lifts along the tested triangle before checking the underlying terrain.
+        float LawnLift(Vector3 p)
+        {
+            var u = (p.X - field.X0) / field.Cell;
+            var w = (p.Z - field.Z0) / field.Cell;
+            var i = Math.Clamp((int)MathF.Floor(u), 0, field.N - 1);
+            var j = Math.Clamp((int)MathF.Floor(w), 0, field.N - 1);
+            var distance = CellSplit.Lerp(field.Get(i, j, TileField.LawnEdge), field.Get(i + 1, j, TileField.LawnEdge),
+                field.Get(i, j + 1, TileField.LawnEdge), field.Get(i + 1, j + 1, TileField.LawnEdge), u - i, w - j);
+            return section.GrassY + (section.PavingY - section.GrassY) *
+                (1f - Math.Clamp(distance / section.LawnEdgeRise, 0f, 1f));
+        }
     }
 
     /// <summary>A terrain whose only non-flat tile is <paramref name="tile"/> at level 0, filled from a ready 65 x 65 centimetre field.</summary>
