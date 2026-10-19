@@ -23,6 +23,18 @@ public sealed class LeveeStepsSite : ZoneSite
 
     public override string Id => "19c.levee-steps";
 
+    private static Campus.Contracts.Maps.MapRect JunctionRange(IWorldModel world, (string Key, Vector2 Top, Vector2 Toward) junction)
+    {
+        var direction = Vector2.Normalize(junction.Toward - junction.Top);
+        var across = MathF.Max(0.5f, Square(world.TerrainLine(WestIds.Levee), junction.Top, direction));
+        var run = T.LeveeRise(world) * T.SideRun(world) / across;
+        var foot = junction.Top + direction * (T.CrestHalf(world) / across + run);
+        return SiteRanges.Bounds([junction.Top, junction.Toward, foot], T.Width);
+    }
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. T.Junctions(world).Select(junction => JunctionRange(world, junction))];
+
     /// <summary>One junction's flight: its frame (origin at the slope foot on the path, +Z up the path toward the levee), foot level and part.</summary>
     internal static (PlanFrame Frame, float Foot, StairParams Flight)? Flight(IWorldModel world, (string Key, Vector2 Top, Vector2 Toward) j, Func<float, float, float> ground)
     {
@@ -59,14 +71,14 @@ public sealed class LeveeStepsSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         foreach (var j in T.Junctions(b.Context.World))
-            if (Flight(b.Context.World, j, b.Ground) is { } f)
+            if (b.Includes(JunctionRange(b.Context.World, j)) && Flight(b.Context.World, j, b.Ground) is { } f)
                 b.Place(PartCatalog.Steps, f.Flight, f.Frame.At(0, f.Foot, f.Flight.Depth * 0.5f));
     }
 
     public override void Collide(SiteColliders c)
     {
         foreach (var j in T.Junctions(c.Context.World))
-            if (Flight(c.Context.World, j, c.Ground) is { } f)
+            if (c.Includes(JunctionRange(c.Context.World, j)) && Flight(c.Context.World, j, c.Ground) is { } f)
                 c.Add(Steps.Collision(f.Flight), f.Frame.At(0, f.Foot, f.Flight.Depth * 0.5f));
     }
 }

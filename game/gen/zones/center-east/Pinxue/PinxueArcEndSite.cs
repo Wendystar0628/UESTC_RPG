@@ -20,6 +20,9 @@ public sealed class PinxueArcEndSite : ZoneSite
 {
     public override string Id => "21a.pinxue-arc-end";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(world.Feature(CenterEastIds.Layout.PinxueArcChord), P.ArcSagitta + 0.6f)];
+
     private static Vector2 Side => Vector2.Normalize(P.ArcBulge);
 
     /// <summary>The bay's chord (the registered outline's ends) and the height and storeys of the lobby it wraps, read by ID.</summary>

@@ -46,6 +46,10 @@ public sealed partial class SixSite : ZoneSite
 
     public override string Id => "19a.six";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. new[] { S.EntityA, S.EntityB, S.EntityC }.Select(id => SiteRanges.Bounds(world.Feature(id), S.ApronDepth)),
+         .. Bridges(world).Select(bridge => SiteRanges.Bounds([bridge.From, bridge.To], S.Recess))];
+
     public override IReadOnlyList<Claim> Claims =>
         [.. new[] { S.EntityA, S.EntityB, S.EntityC }.Select(e => (Claim)new FeatureClaim(new(e), Aspects.Massing | Aspects.Facade | Aspects.Roof))];
 

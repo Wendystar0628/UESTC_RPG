@@ -24,13 +24,23 @@ public sealed class FourSite : ZoneSite
 {
     public override string Id => "19b.four";
 
+    private static Campus.Contracts.Maps.MapRect BoxRange((string Entity, string Key, Vector2 Door, float Facing) box) =>
+        SiteRanges.Bounds(Frame(box).Rect(-F.GlassWidth * 0.5f - F.FrameMember - 0.1f, -0.3f,
+            F.GlassWidth * 0.5f + F.FrameMember + 0.1f, F.GlassDepth + F.FrameProud + F.LandingDepth));
+
+    private static Campus.Contracts.Maps.MapRect SeatRange(IReadOnlyList<Vector2> arc) =>
+        SiteRanges.Bounds(arc, F.SeatInset + F.SeatWidth);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. F.Boxes(world).Select(BoxRange), .. F.SeatArcs(world).Select(SeatRange)];
+
     internal static PlanFrame Frame((string Entity, string Key, Vector2 Door, float Facing) box) => PlanMath.Facing(box.Door, box.Facing);
 
     public override void Build(SiteBuilder b)
     {
         var world = b.Context.World;
-        foreach (var box in F.Boxes(world)) GlassBox(b, Frame(box), b.Ground(box.Door), box.Key);
-        foreach (var arc in F.SeatArcs(world)) SeatWall(b, SeatLine(world, arc));
+        foreach (var box in F.Boxes(world).Where(box => b.Includes(BoxRange(box)))) GlassBox(b, Frame(box), b.Ground(box.Door), box.Key);
+        foreach (var arc in F.SeatArcs(world).Where(arc => b.Includes(SeatRange(arc)))) SeatWall(b, SeatLine(world, arc));
     }
 
     // ---- The deep-blue glass box in its white frame ----
@@ -120,7 +130,7 @@ public sealed class FourSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var world = c.Context.World;
-        foreach (var box in F.Boxes(world))
+        foreach (var box in F.Boxes(world).Where(box => c.Includes(BoxRange(box))))
         {
             var f = Frame(box);
             var y = c.Ground(box.Door.X, box.Door.Y);
@@ -132,7 +142,7 @@ public sealed class FourSite : ZoneSite
             // The shut front: walking into the recess between the jambs reports a closed door (WLD-INTERIORS).
             c.Wall(f.P(-hw, d + 0.12f), f.P(hw, d + 0.12f), 0.1f, y, y + F.DoorHeight + 0.4f, SurfaceTag.DoorClosed, FootMat.Glass);
         }
-        foreach (var arc in F.SeatArcs(world))
+        foreach (var arc in F.SeatArcs(world).Where(arc => c.Includes(SeatRange(arc))))
         {
             var line = SeatLine(world, arc);
             var (y0, y1) = SeatSpan(line, c.Ground);

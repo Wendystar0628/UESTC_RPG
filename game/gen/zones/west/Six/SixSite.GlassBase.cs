@@ -25,6 +25,7 @@ public sealed partial class SixSite
         var volumes = Volumes(world);
         foreach (var k in Blocks.Where(k => entity is null || k.Entity == entity))
         {
+            if (!b.Includes(SiteRanges.Bounds(Plan(world, k.Entity, k.Part).Outer, S.ApronDepth))) continue;
             var plan = Plan(world, k.Entity, k.Part);
             var y = BaseY(b.Context, k.Entity);
             var style = Style(k.Upper(world));
@@ -36,18 +37,21 @@ public sealed partial class SixSite
         }
         if (entity is not null && entity != S.EntityC)
         {
-            foreach (var at in S.ShutDoors(world).Where(at => ShutEntity(b.Context.World, at) == entity)) ShutDoor(b, at);
+            foreach (var at in S.ShutDoors(world).Where(at => ShutEntity(b.Context.World, at) == entity && b.Includes(SiteRanges.Point(at, S.ApronWidth)))) ShutDoor(b, at);
             return;
         }
         var c = Plan(world, S.EntityC, S.PartC);
         var yc = BaseY(b.Context, S.EntityC);
         var (face, door) = EastFace(world, EastDoor(world));
-        Vestibule(b, face, door, yc);
-        Sign(b, face, yc + S.BaseHeight + Style(S.UpperC).Top);
-        foreach (var at in S.ShutDoors(world).Where(at => entity is null || ShutEntity(world, at) == entity)) ShutDoor(b, at);
-        LinkAB(b, Plan(world, S.EntityC, S.LinkAB).Outer, yc);
-        LinkBC(b, world, yc);
-        Tower(b, Plan(world, S.EntityC, S.Tower).Outer, yc);
+        if (b.Includes(SiteRanges.Point(EastDoor(world), S.SignWidth)))
+        {
+            Vestibule(b, face, door, yc);
+            Sign(b, face, yc + S.BaseHeight + Style(S.UpperC).Top);
+        }
+        foreach (var at in S.ShutDoors(world).Where(at => (entity is null || ShutEntity(world, at) == entity) && b.Includes(SiteRanges.Point(at, S.ApronWidth)))) ShutDoor(b, at);
+        if (b.Includes(SiteRanges.Bounds(Plan(world, S.EntityC, S.LinkAB).Outer, S.PierDepth))) LinkAB(b, Plan(world, S.EntityC, S.LinkAB).Outer, yc);
+        if (b.Includes(SiteRanges.Bounds(Plan(world, S.EntityC, S.LinkBC).Outer, S.ApronDepth)) || Bridges(world).Any(bridge => b.Includes(SiteRanges.Bounds([bridge.From, bridge.To], S.Recess)))) LinkBC(b, world, yc);
+        if (b.Includes(SiteRanges.Bounds(Plan(world, S.EntityC, S.Tower).Outer, S.PierDepth))) Tower(b, Plan(world, S.EntityC, S.Tower).Outer, yc);
     }
 
     // ---- The two-storey glass base set back under the stone ----

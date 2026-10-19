@@ -14,6 +14,12 @@ public sealed class CourtSites : ZoneSite
 {
     public override string Id => "21d.courts";
 
+    private static Campus.Contracts.Maps.MapRect AreaRange(WorldFeature feature) =>
+        SiteRanges.Bounds(feature, S.CourtGateWidth + S.FenceGroundBand);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. Areas(world).Select(AreaRange)];
+
     internal static IEnumerable<WorldFeature> Areas(IWorldModel world) => SportsLayout.Courts(world)
         .Append(world.Feature(CenterEastIds.Sports.Track.Entity));
 
@@ -58,7 +64,7 @@ public sealed class CourtSites : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        foreach (var feature in Areas(b.Context.World))
+        foreach (var feature in Areas(b.Context.World).Where(feature => b.Includes(AreaRange(feature))))
         {
             if (feature.Id.Value != CenterEastIds.Sports.Track.Entity)
             {
@@ -94,7 +100,7 @@ public sealed class CourtSites : ZoneSite
             }
         }
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
-        foreach (var (p, height) in Lamps(b.Context.World))
+        foreach (var (p, height) in Lamps(b.Context.World).Where(lamp => b.Includes(SiteRanges.Point(lamp.Position, S.Cover + StreetStyle.ArmHeadLength))))
         {
             var y = b.Ground(p);
             b.Add(SportsParts.Floodlight(height, b.Detail == SiteDetail.Full), Matrix4x4.CreateTranslation(p.X, y, p.Y));
@@ -104,7 +110,7 @@ public sealed class CourtSites : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        foreach (var feature in Areas(c.Context.World))
+        foreach (var feature in Areas(c.Context.World).Where(feature => c.Includes(AreaRange(feature))))
         {
             var court = feature.Rectangle(SportsLayout.Axis(feature));
             if (feature.Props.TryText("sport") == "tennis" && feature.OptionalNumber("practiceWallHeight") is null)
@@ -136,6 +142,6 @@ public sealed class CourtSites : ZoneSite
                 c.Wall(a, b, S.Slab * 0.5f, c.Ground(a), c.Ground(a) + wall, SurfaceTag.Prop, FootMat.Concrete);
             }
         }
-        foreach (var (p, height) in Lamps(c.Context.World)) c.Add(new PostCollider(p, S.PoleRadius, c.Ground(p), c.Ground(p) + height, SurfaceTag.Prop) { Foot = FootMat.Metal });
+        foreach (var (p, height) in Lamps(c.Context.World).Where(lamp => c.Includes(SiteRanges.Point(lamp.Position, S.PoleRadius)))) c.Add(new PostCollider(p, S.PoleRadius, c.Ground(p), c.Ground(p) + height, SurfaceTag.Prop) { Foot = FootMat.Metal });
     }
 }

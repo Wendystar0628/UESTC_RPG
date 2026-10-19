@@ -15,6 +15,21 @@ namespace Campus.Gen.Zones.CenterEast.Sports;
 public sealed class SportsFurnitureSite : ZoneSite
 {
     public override string Id => "21d.sports-furniture";
+
+    private static Campus.Contracts.Maps.MapRect SeatsRange(IWorldModel world)
+    {
+        var frame = Seats(world);
+        var length = world.Feature(CenterEastIds.Sports.TrackSeats).Number("length");
+        return SiteRanges.Bounds(frame.Rect(-length * 0.5f, -S.SeatDepth, length * 0.5f, S.SeatRows * S.SeatDepth), S.Post * 2);
+    }
+
+    private static Campus.Contracts.Maps.MapRect SignRange(WorldFeature sign) =>
+        SiteRanges.Bounds(PlanFrame.Along(sign.Point(), sign.Pair("direction")).Rect(-sign.Number("width") * 0.5f,
+            -sign.Number("depth") * 0.5f, sign.Number("width") * 0.5f, sign.Number("depth") * 0.5f), S.Post);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SeatsRange(world), SiteRanges.Bounds(world.Feature(CenterEastIds.Sports.Equipment.Entity), S.Cover * 2),
+         .. world.Features.Values.Where(feature => feature.Kind.Value == "sportsSign").Select(SignRange)];
     private static PlanFrame Seats(IWorldModel world)
     {
         var record = world.Feature(CenterEastIds.Sports.TrackSeats);
@@ -28,18 +43,22 @@ public sealed class SportsFurnitureSite : ZoneSite
         var world = b.Context.World;
         var seats = Seats(world);
         var length = world.Feature(CenterEastIds.Sports.TrackSeats).Number("length");
-        b.Add(SportsParts.Seats(length, b.Detail == SiteDetail.Full), seats.At(0, b.Ground(seats.Origin), 0));
+        if (b.Includes(SeatsRange(world))) b.Add(SportsParts.Seats(length, b.Detail == SiteDetail.Full), seats.At(0, b.Ground(seats.Origin), 0));
         if (b.Detail == SiteDetail.Mass) return;
-        var door = EquipmentDoor(world);
-        var defaults = (DoorParams)PartCatalog.Find(new(PartCatalog.DoorRoller))!.Defaults;
-        var y = world.Terrain.PadY(new(CenterEastIds.Sports.Equipment.Entity));
-        b.Place(PartCatalog.DoorRoller, defaults, door.Frame.AtReversed(door.Length * 0.5f, y, S.Cover));
-        var canopy = (RoofParams)PartCatalog.Find(new(PartCatalog.Canopy))!.Defaults;
-        canopy = canopy with { Depth = MathF.Min(canopy.Depth, S.Cover * 2) };
-        b.Place(PartCatalog.Canopy, canopy, door.Frame.At(door.Length * 0.5f, y + defaults.Height + S.Slab, canopy.Depth * 0.5f));
+        if (b.Includes(SiteRanges.Bounds(world.Feature(CenterEastIds.Sports.Equipment.Entity), S.Cover * 2)))
+        {
+            var door = EquipmentDoor(world);
+            var defaults = (DoorParams)PartCatalog.Find(new(PartCatalog.DoorRoller))!.Defaults;
+            var y = world.Terrain.PadY(new(CenterEastIds.Sports.Equipment.Entity));
+            b.Place(PartCatalog.DoorRoller, defaults, door.Frame.AtReversed(door.Length * 0.5f, y, S.Cover));
+            var canopy = (RoofParams)PartCatalog.Find(new(PartCatalog.Canopy))!.Defaults;
+            canopy = canopy with { Depth = MathF.Min(canopy.Depth, S.Cover * 2) };
+            b.Place(PartCatalog.Canopy, canopy, door.Frame.At(door.Length * 0.5f, y + defaults.Height + S.Slab, canopy.Depth * 0.5f));
+        }
         var atlas = new SceneTextAtlas(b.Context.GlobalInputs.Require(SceneTextInputs.AtlasKey));
         foreach (var sign in world.Features.Values.Where(f => f.Kind.Value == "sportsSign").OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
+            if (!b.Includes(SignRange(sign))) continue;
             var f = PlanFrame.Along(sign.Point(), sign.Pair("direction"));
             var width = sign.Number("width"); var height = sign.Number("height"); var depth = sign.Number("depth");
             var board = new PartBuilder();
@@ -55,6 +74,7 @@ public sealed class SportsFurnitureSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
+        if (!c.Includes(SeatsRange(c.Context.World))) return;
         var record = c.Context.World.Feature(CenterEastIds.Sports.TrackSeats);
         var f = Seats(c.Context.World);
         var y = c.Ground(f.Origin);

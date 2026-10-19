@@ -12,6 +12,9 @@ namespace Campus.Gen.Zones.West.Kindergarten;
 public sealed class PocketGardenSite : ZoneSite
 {
     public override string Id => "19c.pocket-garden";
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(world.Feature(WestIds.PocketSeat), 0.3f)];
     private static Vector2[] Seat(IWorldModel world) => world.Feature(WestIds.PocketSeat).Line().ToArray();
 
     public override void Build(SiteBuilder b)
@@ -20,6 +23,7 @@ public sealed class PocketGardenSite : ZoneSite
         for (var i = 1; i < line.Length; i++)
         {
             var a = line[i - 1]; var z = line[i];
+            if (!b.Includes(SiteRanges.Bounds([a, z], 0.3f))) continue;
             var f = PlanFrame.Toward((a + z) * .5f, z);
             var length = Vector2.Distance(a, z);
             var y = b.Ground(f.Origin);
@@ -34,6 +38,7 @@ public sealed class PocketGardenSite : ZoneSite
         for (var i = 1; i < line.Length; i++)
         {
             var a = line[i - 1]; var z = line[i];
+            if (!c.Includes(SiteRanges.Bounds([a, z], 0.3f))) continue;
             var f = PlanFrame.Toward((a + z) * .5f, z);
             c.Box(f.At(0, c.Ground(f.Origin) + .225f, 0), new(Vector2.Distance(a, z) * .5f, .225f, .28f), SurfaceTag.Prop, FootMat.WoodDeck);
         }

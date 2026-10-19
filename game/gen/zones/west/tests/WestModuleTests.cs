@@ -37,7 +37,7 @@ public sealed class WestModuleTests
             foreach (var claim in module.Claims.OfType<FeatureClaim>())
                 AssertThat(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0)).OverrideFailureMessage($"{lod}: claimed source {claim.Feature} carries production output, collision and solid contours").IsTrue();
             var size = TileGrid.Edge(lod);
-            var cells = module.ItemsFor(ctx, lod).Select(i => new TileKey((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
+            var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => new TileKey((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct();
             var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
             AssertThat(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes)))).OverrideFailureMessage($"{lod}: source triangles reproduce tiled production").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
@@ -138,7 +138,7 @@ public sealed class WestModuleTests
         AssertThat(module.Tiles(ctx).Any()).OverrideFailureMessage("the module occupies cells").IsTrue();
         foreach (var lod in Levels)
         {
-            var items = module.ItemsFor(ctx, lod);
+            var items = ZoneTestCells.Items(module, ctx, lod);
             AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
             var size = TileGrid.Edge(lod);
             var cells = items.Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct().ToArray();
@@ -240,7 +240,7 @@ public sealed class WestModuleTests
         AssertThat(declared.All(id => allocations.Any(a => id >= a.BaseId && id < a.BaseId + a.Count && a.Feature.Value != "a-earlier"))).OverrideFailureMessage("declared IDs lie in the zone's grids").IsTrue();
         var ids = new HashSet<int>();
         var size = 64;
-        foreach (var (x, z) in module.ItemsFor(ctx, LodLevel.L0).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct())
+        foreach (var (x, z) in ZoneTestCells.Items(module, ctx, LodLevel.L0).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct())
             foreach (var mesh in module.Build(ctx, new(x, z), LodLevel.L0).Meshes.Where(m => m.Uv2 is not null && m.Material.Spec.Kind != ToonKind.SceneText))
                 for (var v = 0; v < mesh.Uv2!.Length / 2; v++)
                 {

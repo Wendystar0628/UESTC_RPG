@@ -33,6 +33,11 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
 
     public override string Id => "19c.boardwalk";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(W.Route(world), W.Width + W.StepTread * 2f),
+         SiteRanges.Bounds(BeachFrame(world).Rect(-W.BeachHalfLength, -W.BeachHalfWidth,
+             W.BeachHalfLength, W.BeachHalfWidth), W.BeachHalfLength * 0.06f + W.PebbleMax)];
+
     /// <summary>Deck top: the higher mouth's paving plus a small lip, constant along the boardwalk.</summary>
     internal static float DeckTop(IWorldModel world, Func<float, float, float> ground)
     {
@@ -90,8 +95,11 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         foreach (var side in new[] { -1f, 1f })
             foreach (var (s0, s1) in RailRuns(world, side)) Railing(b, path, y, side, s0, s1, detail);
         foreach (var s in LampStations(world)) Lamp(b, path, y, s, -Beach(world).Side, detail);
-        BeachSteps(b, path, y);
-        PebbleBeach(b, detail);
+        if (b.Includes(SiteRanges.Point(W.BeachCentre(world), W.BeachHalfLength + W.Width)))
+        {
+            BeachSteps(b, path, y);
+            PebbleBeach(b, detail);
+        }
     }
 
     // ---- Deck ----
@@ -105,6 +113,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         for (var i = 0; i < count; i++)
         {
             var (p, t) = path.At((i + 0.5f) * pitch);
+            if (!b.Includes(SiteRanges.Point(p, W.Width))) continue;
             b.Add(plank, PlanFrame.Along(p, Route.Right(t)).At(0, y - W.Plank, 0));
         }
     }
@@ -115,6 +124,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         for (var s = 1f; s < path.Length - 0.5f; s += W.PilePitch)
         {
             var (p, t) = path.At(s);
+            if (!b.Includes(SiteRanges.Point(p, W.Width))) continue;
             var r = Route.Right(t);
             // A joist across under the planks on each pile pair.
             b.Add(pile, PlanFrame.Along(p, r).At(0, y - W.Plank - 0.12f, 0));
@@ -136,6 +146,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         if (s1 - s0 < 0.5f) return;
         var lateral = side * RailLateral;
         var line = PlanGeometry.MitreOffset(path.Sub(s0, s1), lateral, closed: false);
+        if (!b.Includes(SiteRanges.Bounds(line, W.HandrailWidth))) return;
         var bevel = detail == SiteDetail.Full ? 0.025f : 0f;
         b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(W.HandrailWidth, W.HandrailDepth, bevel), line, L.Deck, baseY: y + W.RailHeight - W.HandrailDepth), Matrix4x4.Identity);
         b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(W.MidRailSize, W.MidRailSize, detail == SiteDetail.Full ? 0.01f : 0f), line, L.DeckDark, baseY: y + W.MidRail), Matrix4x4.Identity);
@@ -174,6 +185,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
     private static void Lamp(SiteBuilder b, Route path, float y, float s, float side, SiteDetail detail)
     {
         var (q, emitter) = LampLayout(path, y, s, side);
+        if (!b.Includes(SiteRanges.Point(q, W.LampRadius * 1.3f))) return;
         var segments = detail == SiteDetail.Full ? 14 : 8;
         var h = W.LampHeight;
         b.Add(Shapes.Shaft(W.LampRadius * 1.25f, W.LampRadius * 1.15f, 0.04f, segments, L.LampBody), Matrix4x4.CreateTranslation(q.X, y, q.Y));
@@ -281,6 +293,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         for (var i = 0; i < slabs; i++)
         {
             var (p, t) = path.At((i + 0.5f) * piece);
+            if (!c.Includes(SiteRanges.Point(p, W.Width))) continue;
             c.Box(PlanFrame.Along(p, t).At(0, y - W.SlabThick * 0.5f, 0), new(piece * 0.5f + 0.05f, W.SlabThick * 0.5f, W.Width * 0.5f), SurfaceTag.Ground, FootMat.WoodDeck);
         }
         // Railings: one barrier per polyline segment, top max(1.05, 1.5).
@@ -290,14 +303,16 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
                 if (s1 - s0 < 0.5f) continue;
                 var line = PlanGeometry.MitreOffset(path.Sub(s0, s1), side * RailLateral, closed: false);
                 for (var i = 0; i + 1 < line.Length; i++)
-                    c.Wall(line[i], line[i + 1], W.PostSize * 0.5f, y - 0.1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDeck);
+                    if (c.Includes(SiteRanges.Bounds([line[i], line[i + 1]], W.PostSize * 0.5f))) c.Wall(line[i], line[i + 1], W.PostSize * 0.5f, y - 0.1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDeck);
             }
         foreach (var s in LampStations(world))
         {
             var (p, t) = path.At(s);
             var q = p + Route.Right(t) * (-Beach(world).Side) * (W.Width * 0.5f - W.LampInset);
+            if (!c.Includes(SiteRanges.Point(q, W.LampRadius * 1.3f))) continue;
             c.Add(new PostCollider(q, W.LampRadius * 1.3f, y, y + W.LampHeight, SurfaceTag.Prop) { Foot = FootMat.Metal });
         }
+        if (!c.Includes(SiteRanges.Point(W.BeachCentre(world), W.BeachHalfLength + W.Width))) return;
         var (frame, foot, flight) = BeachFlight(c.Context.World, c.Ground);
         if (flight is not null) c.Add(Steps.Collision(flight), frame.At(0, foot, -flight.Depth * 0.5f));
     }

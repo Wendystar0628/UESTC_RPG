@@ -24,6 +24,9 @@ public sealed class ResearchSteleSite : ZoneSite
 
     public override string Id => "21b2.research-stele";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Point(Frame(world).Origin, M.SteleOutline.Max(point => point.Length()) + M.SteleThickness)];
+
     /// <summary>
     /// Placement of the stone: the outline's x runs across the face, its y up, the thickness (local Y) through the stele's
     /// point toward its back; the whole stone turned back by the lean about its foot's centre line. Rows are rigid

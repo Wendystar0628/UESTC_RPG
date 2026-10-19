@@ -18,6 +18,10 @@ namespace Campus.Gen.Zones.CenterEast.Sports;
 public sealed class PoolSite : ZoneSite
 {
     public override string Id => "21d.pool-enclosure";
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(world.Feature(CenterEastIds.Sports.PoolEnclosure.Entity), S.PoolGateWidth + S.FenceGroundBand),
+         .. CenterEastIds.Sports.Pools.Select(pool => SiteRanges.Bounds(world.Feature(pool.Entity), S.Cover + S.Rail))];
     private static IEnumerable<(Vector2 A, Vector2 B, float Bottom, float Top, bool Closed)> Runs(IWorldModel world) =>
         CourtSites.FenceRuns(world.Feature(CenterEastIds.Sports.PoolEnclosure.Entity).Contour(), world.Feature(CenterEastIds.Sports.PoolGate).Point(), S.PoolFence, S.PoolGateWidth, true);
 
@@ -25,12 +29,14 @@ public sealed class PoolSite : ZoneSite
     {
         foreach (var (a, end, bottom, top, locked) in Runs(b.Context.World))
         {
+            if (!b.Includes(SiteRanges.Bounds([a, end], S.Post * 3))) continue;
             var length = Vector2.Distance(a, end);
             if (length > S.Post) b.Add(SportsParts.Fence(length, top - bottom, b.Detail == SiteDetail.Full, locked), PlanFrame.Toward(a, end).At(0, b.Ground(a) + bottom, 0));
         }
         foreach (var pool in CenterEastIds.Sports.Pools)
         {
             var feature = b.Context.World.Feature(pool.Entity);
+            if (!b.Includes(SiteRanges.Bounds(feature, S.Cover + S.Rail))) continue;
             var ring = feature.Contour();
             var waterY = b.Context.World.Terrain.WaterY(feature.Id)
                 ?? throw new InvalidOperationException($"Pool {feature.Id.Value} has no terrain water level.");
@@ -48,7 +54,7 @@ public sealed class PoolSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         foreach (var (a, b, bottom, top, locked) in Runs(c.Context.World))
-            if (Vector2.Distance(a, b) > S.Post)
+            if (c.Includes(SiteRanges.Bounds([a, b], S.FenceGroundBand)) && Vector2.Distance(a, b) > S.Post)
             {
                 var ground = SportsLayout.FenceGround(c.Context.World, a, b);
                 c.Wall(a, b, S.Post, ground.Low + bottom, ground.High + top, locked ? SurfaceTag.DoorClosed : SurfaceTag.Prop, FootMat.Metal);
@@ -60,6 +66,9 @@ public sealed class PoolSite : ZoneSite
 public sealed class PoolRoomsSite : ZoneSite
 {
     public override string Id => "21d.pool-rooms";
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. Entities.Select(id => SiteRanges.Bounds(world.Feature(id), S.Cover + S.Slab))];
     private static readonly string[] Entities = [CenterEastIds.Sports.PoolLargeRoom.Entity, CenterEastIds.Sports.PoolSmallRoom.Entity];
     public override IReadOnlyList<Claim> Claims => Entities.Select(id => (Claim)new FeatureClaim(new(id), Aspects.Massing | Aspects.Facade | Aspects.Roof)).ToArray();
     // Source traces are per house because one site can carry more than one claim.
@@ -96,7 +105,7 @@ public sealed class PoolRoomsSite : ZoneSite
             GridFacade.Declare(facades, f.Contour(), ctx.World.Terrain.PadY(f.Id), Style(f), Dress, Numbering(id), WindowNumbers.Required(ctx, f.Id, "service"));
         }
     }
-    public override void Build(SiteBuilder b) { foreach (var id in Entities) BuildRoom(b, id); }
+    public override void Build(SiteBuilder b) { foreach (var id in Entities.Where(id => b.Includes(SiteRanges.Bounds(b.Context.World.Feature(id), S.Cover + S.Slab)))) BuildRoom(b, id); }
     private static void BuildRoom(SiteBuilder b, string id)
     {
         var f = b.Context.World.Feature(id);
@@ -108,7 +117,7 @@ public sealed class PoolRoomsSite : ZoneSite
             b.Place(Campus.Contracts.Parts.PartCatalog.DoorFire, door, edge.Frame.AtReversed(edge.Length * 0.5f, b.Context.World.Terrain.PadY(f.Id), S.Cover));
         }
     }
-    public override void Collide(SiteColliders c) { foreach (var id in Entities) CollideRoom(c, id); }
+    public override void Collide(SiteColliders c) { foreach (var id in Entities.Where(id => c.Includes(SiteRanges.Bounds(c.Context.World.Feature(id), S.Cover + S.Slab)))) CollideRoom(c, id); }
     private static void CollideRoom(SiteColliders c, string id)
     {
         var f = c.Context.World.Feature(id);

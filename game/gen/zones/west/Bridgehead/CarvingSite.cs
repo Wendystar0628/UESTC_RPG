@@ -18,6 +18,10 @@ public sealed class CarvingSite : ZoneSite
 {
     public override string Id => "19c.carving";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(PlanMath.Facing(At(world), C.Facing).Rect(-C.Length * 0.5f - 0.6f,
+            -C.Depth * 0.5f - 0.5f, C.Length * 0.5f + 0.6f, C.Depth * 0.5f + 0.5f))];
+
     /// <summary>The carving's position: its node's anchor in the world model.</summary>
     internal static Vector2 At(IWorldModel world) =>
         world.Feature(C.Entity).Point();

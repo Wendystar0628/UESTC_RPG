@@ -14,6 +14,16 @@ public sealed class ParkingSite : ZoneSite
 {
     public override string Id => "19b.innovation-parking";
 
+    private static Campus.Contracts.Maps.MapRect FrontRange(IWorldModel world)
+    {
+        var (frame, length) = Edge(world);
+        return SiteRanges.Bounds(frame.Rect(0, 0, length, 31f + world.Feature(WestIds.ParkingFront).Number("bayDepth")), 0.1f);
+    }
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [FrontRange(world), SiteRanges.Bounds(world.Feature(WestIds.ParkingBack), 0.4f),
+         SiteRanges.Bounds(world.Feature(WestIds.ParkingDrain), 1f)];
+
     private static (PlanFrame Frame, float Length) Edge(IWorldModel world)
     {
         var (a, z) = world.Feature(WestIds.ParkingFront).PointPair();
@@ -34,6 +44,7 @@ public sealed class ParkingSite : ZoneSite
             foreach (var (lo, hi) in new[] { (0f, length * .5f - gap * .5f), (length * .5f + gap * .5f, length) })
                 for (var x = lo; x + bay <= hi + .01f; x += bay)
                 {
+                    if (!b.Includes(SiteRanges.Bounds(f.Rect(x, row, x + bay, row + depth)))) continue;
                     var y = b.Ground(f.P(x, row)) + .11f;
                     GridFacade.Box(b, f, x, x + .1f, y, y + .008f, row, row + depth, L.WhiteFrame, 0);
                     GridFacade.Box(b, f, x, x + bay, y, y + .008f, row + depth - .1f, row + depth, L.WhiteFrame, 0);
@@ -43,6 +54,7 @@ public sealed class ParkingSite : ZoneSite
         {
             for (var x = lo + bay * .5f; x + bay * .5f <= hi + .01f; x += bay)
             {
+                if (!b.Includes(SiteRanges.Bounds(f.Rect(x - bay * .5f, 0, x + bay * .5f, depth)))) continue;
                 var y = b.Ground(f.P(x, 0));
                 GridFacade.Box(b, f, x - bay * .5f, x + bay * .5f, y + clear, y + clear + .18f, 0, depth, L.Metal, .025f);
                 b.Place(PartCatalog.SolarPanel, new PanelParams(bay - .08f, .08f, depth - .08f), f.At(x, y + clear + .18f, depth * .5f));
@@ -55,6 +67,7 @@ public sealed class ParkingSite : ZoneSite
         for (var x = 0f; x < backLength; x += 2f)
         {
             var end = MathF.Min(x + 2f, backLength);
+            if (!b.Includes(SiteRanges.Bounds([back.P(x, 0), back.P(end, 0)], .4f))) continue;
             var y = b.Ground(back.P((x + end) * .5f, 0));
             GridFacade.Box(b, back, x, end, y, y + .45f, -.3f, .3f, L.Granite, .025f);
             if (b.Detail == SiteDetail.Mass) continue;
@@ -77,12 +90,13 @@ public sealed class ParkingSite : ZoneSite
                 for (var k = 0; k <= count; k++)
                 {
                     var at = Vector2.Lerp(line[i - 1], line[i], (float)k / count);
+                    if (!b.Includes(SiteRanges.Point(at, .11f))) continue;
                     b.Add(Shapes.Shaft(.11f, .09f, .09f, 6, L.Pebble), Matrix4x4.CreateTranslation(at.X, b.Ground(at) - .02f, at.Y));
                 }
             }
         }
         var grate = Vector2.Lerp(drain[0], drain[^1], .5f);
-        b.Place(PartCatalog.Drain, new TrimParams(2f, .12f, .3f),
+        if (b.Includes(SiteRanges.Point(grate, 1f))) b.Place(PartCatalog.Drain, new TrimParams(2f, .12f, .3f),
             back.At(back.Local(grate).X, b.Ground(grate) + .1f, back.Local(grate).Y));
     }
 
@@ -96,13 +110,14 @@ public sealed class ParkingSite : ZoneSite
         var height = layout.Number("clearHeight");
         foreach (var (lo, hi) in new[] { (0f, length * .5f - gap * .5f), (length * .5f + gap * .5f, length) })
             for (var x = lo + bay * .5f; x + bay * .5f <= hi + .01f; x += bay)
-                c.Box(f.At(x, c.Ground(f.P(x, depth - .21f)) + height * .5f, depth - .21f), new(.09f, height * .5f, .09f), SurfaceTag.Prop, FootMat.Metal);
+                if (c.Includes(SiteRanges.Point(f.P(x, depth - .21f), .09f))) c.Box(f.At(x, c.Ground(f.P(x, depth - .21f)) + height * .5f, depth - .21f), new(.09f, height * .5f, .09f), SurfaceTag.Prop, FootMat.Metal);
         var (a, z) = c.Context.World.Feature(WestIds.ParkingBack).PointPair();
         var back = PlanFrame.Toward(a, z);
         var len = Vector2.Distance(a, z);
         for (var x = 0f; x < len; x += 2f)
         {
             var end = MathF.Min(x + 2f, len);
+            if (!c.Includes(SiteRanges.Bounds([back.P(x, 0), back.P(end, 0)], .3f))) continue;
             var mid = (x + end) * .5f;
             c.Box(back.At(mid, c.Ground(back.P(mid, 0)) + .225f, 0), new((end - x) * .5f, .225f, .3f), SurfaceTag.Prop, FootMat.StonePaving);
         }

@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -80,7 +81,7 @@ public sealed partial class CenterEastModuleTests
         HashSet<int> Glass(LodLevel lod)
         {
             var ids = new HashSet<int>();
-            var cells = module.ItemsFor(ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
+            var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
             foreach (var tile in lod == LodLevel.L4 ? [new TileKey(0, 0)] : cells)
                 foreach (var mesh in module.Build(ctx, tile, lod).Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass && m.Uv2 is not null))
                     for (var v = 0; v < mesh.Uv2!.Length / 2; v++)

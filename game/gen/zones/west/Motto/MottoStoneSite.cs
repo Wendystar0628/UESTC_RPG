@@ -28,6 +28,12 @@ public sealed class MottoStoneSite : ZoneSite
 
     public override string Id => "19a.motto";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var half = Kerb + new Vector2(M.KerbWidth * 0.5f + M.HedgeGap + M.HedgeWidth);
+        return [SiteRanges.Bounds(PlanMath.Facing(At(world), M.Facing).Rect(-half.X, -half.Y, half.X, half.Y))];
+    }
+
     public override void Build(SiteBuilder b)
     {
         var at = At(b.Context.World);

@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -94,8 +95,9 @@ public sealed class West19cTests
         var world = World();
         var ctx = Context(world);
         var module = new WestModule();
-        var lights = module.ItemsFor(ctx, LodLevel.L0).Where(i => i.Light is not null).Select(i => i.Light!).ToArray();
-        AssertThat(module.DescribeLights(ctx).SequenceEqual(lights)).OverrideFailureMessage("light metadata matches every site's L0 output").IsTrue();
+        var lights = ZoneTestCells.Items(module, ctx, LodLevel.L0).Where(i => i.Light is not null).Select(i => i.Light!).ToArray();
+        AssertThat(module.DescribeLights(ctx).OrderBy(light => light.ToString(), StringComparer.Ordinal)
+            .SequenceEqual(lights.OrderBy(light => light.ToString(), StringComparer.Ordinal))).OverrideFailureMessage("light metadata matches every site's L0 output").IsTrue();
         var lamps = lights.Where(l => l.Channel.Value == "lamp.landscape").ToArray();
         AssertThat(lamps.Length == BoardwalkSite.LampStations(world).Length).OverrideFailureMessage($"one landscape marker per boardwalk lamp, got {lamps.Length}").IsTrue();
         var path = BoardwalkSite.Path(world);

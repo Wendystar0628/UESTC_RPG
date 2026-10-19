@@ -30,16 +30,27 @@ public sealed class StatueLawnSite : ZoneSite
 
     public override string Id => "21b2.statue-lawn";
 
+    private static Campus.Contracts.Maps.MapRect LinRange(IWorldModel world) => SiteRanges.Point(LinFrame(world).Origin, 1.1f);
+    private static Campus.Contracts.Maps.MapRect MaxwellRange(IWorldModel world) => SiteRanges.Point(MaxwellFrame(world).Origin, 2f);
+    private static Campus.Contracts.Maps.MapRect StoneRange(IWorldModel world) =>
+        SiteRanges.Point(StoneFrame(world).Origin, M.Stone.Length + MathF.Abs(M.Stone.Shear));
+    private static Campus.Contracts.Maps.MapRect ApronRange(IWorldModel world) =>
+        SiteRanges.Bounds(world.Feature(CenterEastIds.Monuments.ApronId), M.ApronKerb);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [LinRange(world), MaxwellRange(world), StoneRange(world), ApronRange(world),
+         .. (Island(world) is { } island ? new[] { SiteRanges.Bounds(island, M.IslandKerbWidth) } : [])];
+
     public override void Build(SiteBuilder b)
     {
         var world = b.Context.World;
         var maxwell = MaxwellFrame(world);
         var stone = StoneFrame(world);
-        IslandKerb(b);
-        LinBust(b, b.Ground(LinFrame(world).Origin));
-        Apron(b);
-        Maxwell(b, maxwell, b.Ground(maxwell.Origin));
-        EquationStone(b, stone, b.Ground(stone.Origin));
+        if (Island(world) is { } island && b.Includes(SiteRanges.Bounds(island, M.IslandKerbWidth))) IslandKerb(b);
+        if (b.Includes(LinRange(world))) LinBust(b, b.Ground(LinFrame(world).Origin));
+        if (b.Includes(ApronRange(world))) Apron(b);
+        if (b.Includes(MaxwellRange(world))) Maxwell(b, maxwell, b.Ground(maxwell.Origin));
+        if (b.Includes(StoneRange(world))) EquationStone(b, stone, b.Ground(stone.Origin));
     }
 
     private static int Segments(SiteDetail detail) => detail switch { SiteDetail.Full => 48, SiteDetail.Plain => 28, _ => 16 };
@@ -263,18 +274,28 @@ public sealed class StatueLawnSite : ZoneSite
         var world = c.Context.World;
         var maxwellFrame = MaxwellFrame(world);
         var stoneFrame = StoneFrame(world);
-        var lg = c.Ground(LinFrame(world).Origin.X, LinFrame(world).Origin.Y);
-        var lt = LinPedestalTop;
-        c.Box(LinFrame(world).At(0, lg + (lt - 0.05f) * 0.5f, 0), new(0.55f, (lt + 0.05f) * 0.5f, 0.55f), SurfaceTag.Prop, FootMat.PolishedStone);
-        var mg = c.Ground(maxwellFrame.Origin.X, maxwellFrame.Origin.Y);
-        var mt = M.MaxwellPedestalTop;
-        c.Box(maxwellFrame.At(0, mg + (mt - 0.05f) * 0.5f, 0), new(1.0f, (mt + 0.05f) * 0.5f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);
-        var (min, max) = ApronRect(world);
-        var mid = (min + max) * 0.5f;
-        var apron = R.P(mid.X, mid.Y);
-        var ag = c.Ground(apron.X, apron.Y);
-        c.Box(R.At(mid.X, ag + (M.ApronTop - 0.1f) * 0.5f, mid.Y), new((max.X - min.X) * 0.5f, (M.ApronTop + 0.1f) * 0.5f, (max.Y - min.Y) * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
+        if (c.Includes(LinRange(world)))
+        {
+            var lg = c.Ground(LinFrame(world).Origin.X, LinFrame(world).Origin.Y);
+            var lt = LinPedestalTop;
+            c.Box(LinFrame(world).At(0, lg + (lt - 0.05f) * 0.5f, 0), new(0.55f, (lt + 0.05f) * 0.5f, 0.55f), SurfaceTag.Prop, FootMat.PolishedStone);
+        }
+        if (c.Includes(MaxwellRange(world)))
+        {
+            var mg = c.Ground(maxwellFrame.Origin.X, maxwellFrame.Origin.Y);
+            var mt = M.MaxwellPedestalTop;
+            c.Box(maxwellFrame.At(0, mg + (mt - 0.05f) * 0.5f, 0), new(1.0f, (mt + 0.05f) * 0.5f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);
+        }
+        if (c.Includes(ApronRange(world)))
+        {
+            var (min, max) = ApronRect(world);
+            var mid = (min + max) * 0.5f;
+            var apron = R.P(mid.X, mid.Y);
+            var ag = c.Ground(apron.X, apron.Y);
+            c.Box(R.At(mid.X, ag + (M.ApronTop - 0.1f) * 0.5f, mid.Y), new((max.X - min.X) * 0.5f, (M.ApronTop + 0.1f) * 0.5f, (max.Y - min.Y) * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
+        }
         // The stone: its body behind the dressed face, kept within 0.3 m of the rounded outline (SYS-WALK).
+        if (!c.Includes(StoneRange(world))) return;
         var st = M.Stone;
         var sg = c.Ground(stoneFrame.Origin.X, stoneFrame.Origin.Y);
         var back = st.Depth * 0.5f;

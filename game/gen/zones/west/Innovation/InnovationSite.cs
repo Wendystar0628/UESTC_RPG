@@ -24,6 +24,18 @@ public sealed class InnovationSite : ZoneSite
 {
     public override string Id => "19b.innovation";
 
+    private static Campus.Contracts.Maps.MapRect ShaftRange(Vector2 centre, float length) =>
+        SiteRanges.Bounds(ShaftFrame(centre).Rect(-length * 0.5f, -I.ShaftWidth * 0.5f - 0.2f,
+            length * 0.5f, I.ShaftWidth * 0.5f + 0.2f));
+
+    private static Campus.Contracts.Maps.MapRect PortalRange(IWorldModel world) =>
+        SiteRanges.Bounds(PortalFrame(world).Rect(-I.PortalWidth * 0.5f - 0.1f, -0.3f,
+            I.PortalWidth * 0.5f + 0.1f, I.PortalDepth + 2.4f));
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. I.Shafts(world).Select(shaft => ShaftRange(shaft.Centre, shaft.Length)), PortalRange(world),
+         SiteRanges.Bounds(world.Feature(I.Entity).Part(WestIds.InnovationEastWing.Part).Contour(), I.PortalDepth)];
+
     internal static PlanFrame ShaftFrame(Vector2 centre) => PlanFrame.Along(centre, I.WingAxis);
 
     internal static PlanFrame PortalFrame(IWorldModel world) => PlanMath.Facing(I.MainDoor(world), I.MainFacing);
@@ -31,9 +43,9 @@ public sealed class InnovationSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var world = b.Context.World;
-        foreach (var (centre, length) in I.Shafts(world)) Shaft(b, ShaftFrame(centre), length, b.Ground(centre));
-        Portal(b, PortalFrame(world), b.Ground(I.MainDoor(world)));
-        if (b.Detail != SiteDetail.Mass)
+        foreach (var (centre, length) in I.Shafts(world).Where(shaft => b.Includes(ShaftRange(shaft.Centre, shaft.Length)))) Shaft(b, ShaftFrame(centre), length, b.Ground(centre));
+        if (b.Includes(PortalRange(world))) Portal(b, PortalFrame(world), b.Ground(I.MainDoor(world)));
+        if (b.Detail != SiteDetail.Mass && b.Includes(SiteRanges.Bounds(world.Feature(I.Entity).Part(WestIds.InnovationEastWing.Part).Contour(), I.PortalDepth)))
         {
             var parent = world.Feature(I.Entity);
             var wing = parent.Part(WestIds.InnovationEastWing.Part);
@@ -105,12 +117,13 @@ public sealed class InnovationSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var world = c.Context.World;
-        foreach (var (centre, length) in I.Shafts(world))
+        foreach (var (centre, length) in I.Shafts(world).Where(shaft => c.Includes(ShaftRange(shaft.Centre, shaft.Length))))
         {
             var g = ShaftFrame(centre);
             var y = c.Ground(centre.X, centre.Y);
             c.Box(g.At(0, y + I.ShaftHeight * 0.5f, 0), new(length * 0.5f, I.ShaftHeight * 0.5f, I.ShaftWidth * 0.5f), SurfaceTag.Wall, FootMat.Glass);
         }
+        if (!c.Includes(PortalRange(world))) return;
         var f = PortalFrame(world);
         var yp = c.Ground(I.MainDoor(world).X, I.MainDoor(world).Y);
         float hw = I.PortalWidth * 0.5f, m = I.PortalMember, d = I.PortalDepth;

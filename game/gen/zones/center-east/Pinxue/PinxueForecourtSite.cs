@@ -25,6 +25,23 @@ public sealed class PinxueForecourtSite : ZoneSite
 
     public override string Id => "21a.pinxue-forecourt";
 
+    private static Campus.Contracts.Maps.MapRect TreeRange(PlanFrame frame, Vector2 point) =>
+        SiteRanges.Bounds((frame with { Origin = point }).Rect(-P.TreePitSize * 0.5f, -P.TreePitSize * 0.5f,
+            P.TreePitSize * 0.5f, P.TreePitSize * 0.5f));
+
+    private static Campus.Contracts.Maps.MapRect FountainRange(IWorldModel world) =>
+        SiteRanges.Bounds(FountainFrame(world).Rect(-P.BasinHalf.X, -P.BasinHalf.Y, P.BasinHalf.X, P.BasinHalf.Y));
+
+    private static Campus.Contracts.Maps.MapRect RampRange(PlanFrame frame, float x, float z0, float z1) =>
+        SiteRanges.Bounds([frame.P(x, z0), frame.P(x, z1)], P.RampWallThickness + P.RampBedWidth + P.RampBedKerb);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. TreePitCentres(world).Select(point => TreeRange(Frame(world), point)), FountainRange(world),
+         .. (HoleNear(world, world.Feature(CenterEastIds.Pinxue.FountainId).Point()) is { } hole
+             ? new[] { SiteRanges.Bounds(hole, P.PanelKerbWidth) } : []),
+         SiteRanges.Point(world.Feature(CenterEastIds.Pinxue.RoundBedId).Point(), P.RoundBedRadius + P.SeatWidth),
+         .. RampWalls(world).Select(wall => RampRange(Frame(world), wall.X, wall.Z0, wall.Z1))];
+
     public override IReadOnlyList<InspectionProbe> Probes =>
         // Q4 (wall-hugging, K1): 0.5 m from the A hall's ground-floor glazing and dark plinth, on the forecourt.
         [Probe("Q4", CenterEastIds.Pinxue.WingA, new(P.Q4Eye.X, P.PlatformY + WalkRules.StandingEye, P.Q4Eye.Y), P.Q4Look, -20f, 0.5f)];
@@ -50,7 +67,7 @@ public sealed class PinxueForecourtSite : ZoneSite
     {
         float h = (P.TreePitSize - P.TreePitKerb) * 0.5f, inner = P.TreePitSize - 2 * P.TreePitKerb;
         var kerb = PartGeometryKernel.BeveledRectangleProfile(P.TreePitKerb, P.TreePitHeight + 0.05f, 0.02f);
-        foreach (var centre in TreePitCentres(b.Context.World))
+        foreach (var centre in TreePitCentres(b.Context.World).Where(centre => b.Includes(TreeRange(f, centre))))
         {
             var local = f.Local(centre);
             float x = local.X, z = local.Y;
@@ -74,6 +91,7 @@ public sealed class PinxueForecourtSite : ZoneSite
     {
         var fountain = b.Context.World.Feature(CenterEastIds.Pinxue.FountainId).Point();
         if (HoleNear(b.Context.World, fountain) is not { } hole) return;
+        if (!b.Includes(SiteRanges.Bounds(hole, P.PanelKerbWidth))) return;
         var g = b.Ground(fountain);
         var kerb = PartGeometryKernel.BeveledRectangleProfile(P.PanelKerbWidth, P.PanelKerbHeight + 0.05f, 0.02f);
         b.Add(PartGeometryKernel.Sweep(kerb, hole.ToArray(), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
@@ -97,6 +115,7 @@ public sealed class PinxueForecourtSite : ZoneSite
     /// </summary>
     private static void Fountain(SiteBuilder b)
     {
+        if (!b.Includes(FountainRange(b.Context.World))) return;
         var f = FountainFrame(b.Context.World);
         var g = b.Ground(f.Origin);
         var baseY = g - 0.05f;
@@ -118,6 +137,7 @@ public sealed class PinxueForecourtSite : ZoneSite
     private static void RoundBed(SiteBuilder b)
     {
         var at = b.Context.World.Feature(CenterEastIds.Pinxue.RoundBedId).Point();
+        if (!b.Includes(SiteRanges.Point(at, P.RoundBedRadius + P.SeatWidth))) return;
         var (low, high) = GroundRange(b, at, P.RoundBedRadius);
         var n = b.Detail == SiteDetail.Full ? 40 : 20;
         b.Add(Shapes.Ring(at, P.RoundBedRadius, P.SeatWidth, high + P.SeatHeight - (low - 0.1f), n, L.Granite), Matrix4x4.CreateTranslation(0, low - 0.1f, 0));
@@ -182,6 +202,7 @@ public sealed class PinxueForecourtSite : ZoneSite
 
     private static void RampWall(SiteBuilder b, PlanFrame f, float axis, float x, float wallZ0, float wallZ1)
     {
+        if (!b.Includes(RampRange(f, x, wallZ0, wallZ1))) return;
         var o = Outward(axis, x);
         float t = P.RampWallThickness, bed = P.RampBedWidth, kerb = P.RampBedKerb;
         foreach (var (z0, z1, baseY, top) in RampRuns(b.Ground, f, x, wallZ0, wallZ1))
@@ -201,7 +222,7 @@ public sealed class PinxueForecourtSite : ZoneSite
         var gate = PinxueFrameSite.GateOf(world);
         var f = gate.F;
         float Ground(Vector2 p) => c.Ground(p.X, p.Y);
-        foreach (var p in TreePitCentres(world))
+        foreach (var p in TreePitCentres(world).Where(point => c.Includes(TreeRange(f, point))))
         {
             var g = Ground(p);
             var local = f.Local(p);
@@ -209,15 +230,22 @@ public sealed class PinxueForecourtSite : ZoneSite
         }
         // One box per tier up to its rim: the low copings can be stepped onto, as a seat edge would.
         var fountainFrame = FountainFrame(world);
-        var fg = Ground(fountainFrame.Origin);
-        foreach (var (half, _, rim, _) in FountainTiers())
-            c.Box(fountainFrame.At(0, fg + (rim - 0.05f) * 0.5f, 0), new(half.X, (rim + 0.05f) * 0.5f, half.Y), SurfaceTag.Prop, FootMat.StonePaving);
+        if (c.Includes(FountainRange(world)))
+        {
+            var fg = Ground(fountainFrame.Origin);
+            foreach (var (half, _, rim, _) in FountainTiers())
+                c.Box(fountainFrame.At(0, fg + (rim - 0.05f) * 0.5f, 0), new(half.X, (rim + 0.05f) * 0.5f, half.Y), SurfaceTag.Prop, FootMat.StonePaving);
+        }
         var bed = P.RoundBedRadius + P.SeatWidth * 0.5f;
         var roundBed = world.Feature(CenterEastIds.Pinxue.RoundBedId).Point();
-        var rg = Ground(roundBed);
-        c.Add(new PostCollider(roundBed, bed, rg - 0.1f, rg + P.SeatHeight, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
+        if (c.Includes(SiteRanges.Point(roundBed, P.RoundBedRadius + P.SeatWidth)))
+        {
+            var rg = Ground(roundBed);
+            c.Add(new PostCollider(roundBed, bed, rg - 0.1f, rg + P.SeatHeight, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
+        }
         foreach (var (x, wallZ0, wallZ1) in RampWalls(world))
         {
+            if (!c.Includes(RampRange(f, x, wallZ0, wallZ1))) continue;
             var o = Outward(gate.Axis, x);
             var width = P.RampWallThickness + P.RampBedWidth + P.RampBedKerb;
             foreach (var (z0, z1, baseY, top) in RampRuns(Ground, f, x, wallZ0, wallZ1))

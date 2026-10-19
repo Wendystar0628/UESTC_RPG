@@ -22,6 +22,10 @@ public sealed class ShelterSite : ZoneSite, ILightMetadataSource
 {
     public override string Id => "19c.shelter";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(Frame(world).Rect(-MathF.Max(H.PlatformMargin, 0.45f), -H.RoofBack,
+            Length(world) + MathF.Max(H.PlatformMargin, 0.45f), H.Depth + H.RoofFront))];
+
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(H.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>The registered back line runs south to north, with the platform opening toward the road.</summary>

@@ -38,7 +38,7 @@ public sealed partial class CenterEastModuleTests
             AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length).OverrideFailureMessage("source IDs are unique").IsTrue();
             foreach (var claim in module.Claims.OfType<FeatureClaim>())
                 AssertThat(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0)).OverrideFailureMessage($"{lod}: claimed source {claim.Feature} carries production output, collision and solid contours").IsTrue();
-            var cells = module.ItemsFor(ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
+            var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
             var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
             AssertThat(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes)))).OverrideFailureMessage($"{lod}: source triangles reproduce tiled production").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
@@ -148,7 +148,7 @@ public sealed partial class CenterEastModuleTests
         AssertThat(module.Tiles(ctx).Any()).OverrideFailureMessage("the module occupies cells").IsTrue();
         foreach (var lod in Levels)
         {
-            var items = module.ItemsFor(ctx, lod);
+            var items = ZoneTestCells.Items(module, ctx, lod);
             AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
             var cells = items.Select(i => TileGrid.At(i.Anchor, lod)).Distinct().ToArray();
             var meshes = 0;

@@ -32,6 +32,22 @@ public sealed class WenkeSite : ZoneSite
 
     public override string Id => "21c.wenke";
 
+    private static Campus.Contracts.Maps.MapRect PorchRange(IWorldModel world) =>
+        SiteRanges.Bounds(Door(world).Rect(-K.PorchHalfWidth - K.PorchJamb - 0.15f, -0.4f,
+            K.PorchHalfWidth + K.PorchJamb + 0.15f, K.PorchDepth + 0.15f));
+
+    private static Campus.Contracts.Maps.MapRect AtriumRange(IWorldModel world)
+    {
+        var (frame, half) = AtriumOf(world);
+        return SiteRanges.Bounds(frame.Rect(-half.X, -half.Y, half.X, half.Y), K.AtriumCurb);
+    }
+
+    private static Campus.Contracts.Maps.MapRect BlockRange(IWorldModel world, string part) =>
+        SiteRanges.Bounds(world.Feature(CenterEastIds.Wenke.Entity).Contour(part), K.BandOut * 2.5f + K.ParapetThickness);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. K.Blocks.Select(block => BlockRange(world, block.Part)), PorchRange(world), AtriumRange(world)];
+
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(CenterEastIds.Wenke.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod) =>
@@ -190,10 +206,10 @@ public sealed class WenkeSite : ZoneSite
     {
         var plan = Footprints(b.Context.World);
         var y = BaseY(b.Context);
-        foreach (var block in plan.Blocks) BuildBlock(b, plan, block, y);
-        Porch(b, Door(b.Context.World), y);
-        Atrium(b, AtriumOf(b.Context.World), y);
-        TowerRoof(b, plan.Blocks.Single(k => k.Part == CenterEastIds.Wenke.Tower), y);
+        foreach (var block in plan.Blocks.Where(block => b.Includes(BlockRange(b.Context.World, block.Part)))) BuildBlock(b, plan, block, y);
+        if (b.Includes(PorchRange(b.Context.World))) Porch(b, Door(b.Context.World), y);
+        if (b.Includes(AtriumRange(b.Context.World))) Atrium(b, AtriumOf(b.Context.World), y);
+        if (b.Includes(BlockRange(b.Context.World, CenterEastIds.Wenke.Tower))) TowerRoof(b, plan.Blocks.Single(k => k.Part == CenterEastIds.Wenke.Tower), y);
     }
 
     private static void BuildBlock(SiteBuilder b, Plan plan, Block block, float y)
@@ -480,7 +496,7 @@ public sealed class WenkeSite : ZoneSite
     {
         var plan = Footprints(c.Context.World);
         var y = BaseY(c.Context);
-        foreach (var block in plan.Blocks)
+        foreach (var block in plan.Blocks.Where(block => c.Includes(BlockRange(c.Context.World, block.Part))))
         {
             var top = y + Floor(block.Storeys) + K.Parapet;
             foreach (var cell in block.Rows[0].Where(cell => cell.Kind != CellKind.Hidden))
@@ -490,6 +506,7 @@ public sealed class WenkeSite : ZoneSite
                 c.Wall(a + shift, e + shift, K.BandOut * 0.5f + 0.1f, y, top, SurfaceTag.Wall, FootMat.Glass);
             }
         }
+        if (!c.Includes(PorchRange(c.Context.World))) return;
         var f = Door(c.Context.World);
         float hw = K.PorchHalfWidth, j = K.PorchJamb, d = K.PorchDepth, porchTop = y + PorchTop;
         foreach (var s in new[] { -1f, 1f })

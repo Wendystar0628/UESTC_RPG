@@ -48,6 +48,15 @@ public sealed class WenkeForecourtSite : ZoneSite
 
     public override string Id => "21c.wenke-forecourt";
 
+    private static Campus.Contracts.Maps.MapRect TreeRange(IWorldModel world) =>
+        SiteRanges.Point(TreeAt(world), F.StakeFoot + F.StakeRadius);
+    private static Campus.Contracts.Maps.MapRect StoneRange(IWorldModel world) =>
+        SiteRanges.Point(StoneFrame(world).Origin, F.Stone.Length + MathF.Abs(F.Stone.Shear));
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(world.Feature(CenterEastIds.Wenke.ForecourtId), K.PavingKerb),
+         SiteRanges.Bounds(world.Feature(CenterEastIds.Wenke.WalkId), K.PavingKerb), TreeRange(world), StoneRange(world)];
+
     /// <summary>The forecourt and the walk as world rings (outside on the right), as registered in the overlay.</summary>
     internal static Vector2[] ForecourtRing(IWorldModel world)
     {
@@ -76,9 +85,9 @@ public sealed class WenkeForecourtSite : ZoneSite
         var world = b.Context.World;
         Paving(b);
         var tree = TreeAt(world);
-        Tree(b, tree, b.Ground(tree));
+        if (b.Includes(TreeRange(world))) Tree(b, tree, b.Ground(tree));
         var stone = StoneFrame(world);
-        Stone(b, stone, b.Ground(stone.Origin));
+        if (b.Includes(StoneRange(world))) Stone(b, stone, b.Ground(stone.Origin));
     }
 
     // ---- Paving: granite stop and walk, a few centimetres over WP-15's lawn, kerbed in light stone ----
@@ -90,16 +99,18 @@ public sealed class WenkeForecourtSite : ZoneSite
         var (min, max) = ForecourtRect(world);
         var mid = (min + max) * 0.5f;
         var bevel = b.Detail == SiteDetail.Mass ? 0f : 0.01f;
-        var g = b.Ground(door.P(mid.X, mid.Y));
-        b.Add(PartGeometryKernel.BeveledBox(max.X - min.X, K.PavingTop + 0.1f, max.Y - min.Y, bevel, L.Paving), door.At(mid.X, g - 0.1f, mid.Y));
+        var forecourt = b.Includes(SiteRanges.Bounds(world.Feature(CenterEastIds.Wenke.ForecourtId), K.PavingKerb));
+        var walking = b.Includes(SiteRanges.Bounds(world.Feature(CenterEastIds.Wenke.WalkId), K.PavingKerb));
+        var g = forecourt ? b.Ground(door.P(mid.X, mid.Y)) : 0f;
+        if (forecourt) b.Add(PartGeometryKernel.BeveledBox(max.X - min.X, K.PavingTop + 0.1f, max.Y - min.Y, bevel, L.Paving), door.At(mid.X, g - 0.1f, mid.Y));
         var (walk, walkLength, walkWidth) = Walk(world);
-        var gw = b.Ground(walk.P(walkLength * 0.5f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(walkLength, K.PavingTop + 0.1f, walkWidth, bevel, L.Paving), walk.At(walkLength * 0.5f, gw - 0.1f, 0));
+        var gw = walking ? b.Ground(walk.P(walkLength * 0.5f, 0)) : 0f;
+        if (walking) b.Add(PartGeometryKernel.BeveledBox(walkLength, K.PavingTop + 0.1f, walkWidth, bevel, L.Paving), walk.At(walkLength * 0.5f, gw - 0.1f, 0));
         if (b.Detail == SiteDetail.Mass) return;
         var kerb = PartGeometryKernel.BeveledRectangleProfile(K.PavingKerb, K.PavingTop + 0.12f, 0.015f);
-        b.Add(PartGeometryKernel.Sweep(kerb, ForecourtRing(world), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.1f, 0));
+        if (forecourt) b.Add(PartGeometryKernel.Sweep(kerb, ForecourtRing(world), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.1f, 0));
         // The walk's kerbs run along its two long sides only, so it opens into the forecourt and onto the road.
-        foreach (var s in new[] { -1f, 1f })
+        foreach (var s in new[] { -1f, 1f }.Where(_ => walking))
         {
             var w = s * (walkWidth * 0.5f - K.PavingKerb * 0.5f);
             Vector2 a = walk.P(0.1f, w), e = walk.P(walkLength, w);
@@ -161,16 +172,26 @@ public sealed class WenkeForecourtSite : ZoneSite
         var door = WenkeSite.Door(world);
         var (min, max) = ForecourtRect(world);
         var mid = (min + max) * 0.5f;
-        var g = c.Ground(door.P(mid.X, mid.Y).X, door.P(mid.X, mid.Y).Y);
-        c.Box(door.At(mid.X, g + (K.PavingTop - 0.1f) * 0.5f, mid.Y), new((max.X - min.X) * 0.5f, (K.PavingTop + 0.1f) * 0.5f, (max.Y - min.Y) * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
+        if (c.Includes(SiteRanges.Bounds(world.Feature(CenterEastIds.Wenke.ForecourtId), K.PavingKerb)))
+        {
+            var g = c.Ground(door.P(mid.X, mid.Y).X, door.P(mid.X, mid.Y).Y);
+            c.Box(door.At(mid.X, g + (K.PavingTop - 0.1f) * 0.5f, mid.Y), new((max.X - min.X) * 0.5f, (K.PavingTop + 0.1f) * 0.5f, (max.Y - min.Y) * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
+        }
         var (walk, walkLength, walkWidth) = Walk(world);
-        var centre = walk.P(walkLength * 0.5f, 0);
-        var gw = c.Ground(centre.X, centre.Y);
-        c.Box(walk.At(walkLength * 0.5f, gw + (K.PavingTop - 0.1f) * 0.5f, 0), new(walkLength * 0.5f, (K.PavingTop + 0.1f) * 0.5f, walkWidth * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
+        if (c.Includes(SiteRanges.Bounds(world.Feature(CenterEastIds.Wenke.WalkId), K.PavingKerb)))
+        {
+            var centre = walk.P(walkLength * 0.5f, 0);
+            var gw = c.Ground(centre.X, centre.Y);
+            c.Box(walk.At(walkLength * 0.5f, gw + (K.PavingTop - 0.1f) * 0.5f, 0), new(walkLength * 0.5f, (K.PavingTop + 0.1f) * 0.5f, walkWidth * 0.5f), SurfaceTag.Ground, FootMat.StonePaving);
+        }
         var tree = TreeAt(world);
-        var gt = c.Ground(tree.X, tree.Y);
-        foreach (var (foot, top) in Stakes(tree))
-            c.Add(new PostCollider((foot * 0.6f + top * 0.4f), F.StakeRadius + 0.1f, gt, gt + F.StakeTop * 0.6f, SurfaceTag.Prop) { Foot = FootMat.Bark });
+        if (c.Includes(TreeRange(world)))
+        {
+            var gt = c.Ground(tree.X, tree.Y);
+            foreach (var (foot, top) in Stakes(tree))
+                c.Add(new PostCollider((foot * 0.6f + top * 0.4f), F.StakeRadius + 0.1f, gt, gt + F.StakeTop * 0.6f, SurfaceTag.Prop) { Foot = FootMat.Bark });
+        }
+        if (!c.Includes(StoneRange(world))) return;
         var stoneFrame = StoneFrame(world);
         var st = F.Stone;
         var sg = c.Ground(stoneFrame.Origin.X, stoneFrame.Origin.Y);

@@ -65,6 +65,20 @@ public abstract class ResearchSite : ZoneSite
     internal abstract IReadOnlyList<string> StairIds { get; }
     internal abstract IReadOnlyList<string> PlantIds { get; }
 
+    private string RoofId => Entity == CenterEastIds.Research.KeA ? CenterEastIds.Research.KeARoofId
+        : Entity == CenterEastIds.Research.KeB ? CenterEastIds.Research.KeBRoofId : CenterEastIds.Research.KeCGardenId;
+
+    private Campus.Contracts.Maps.MapRect HallRange(IWorldModel world) =>
+        SiteRanges.Bounds(world.ContourSegment(HallBackId), world.Feature(HallId).Number("sagitta") + R.HallCanopyDepth + 3 * R.TreadDepth);
+
+    private static float BlockPadding => R.PortalHalfWidth + R.PortalJamb + R.PortalDepth + 3 * R.TreadDepth;
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(world.Feature(Entity), BlockPadding), HallRange(world),
+         SiteRanges.Bounds(world.Feature(RoofId), R.KeATankSize.X),
+         .. StairIds.Select(id => SiteRanges.Point(world.Feature(id).Point(), R.StairSize.Length() * 0.5f)),
+         .. PlantIds.Select(id => SiteRanges.Point(world.Feature(id).Point(), R.PlantSize.Length() * 0.5f))];
+
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
@@ -208,17 +222,18 @@ public abstract class ResearchSite : ZoneSite
         var y = BaseY(b.Context);
         foreach (var (key, ring, style, lift, dress) in GridBlocks(plan))
         {
+            if (!b.Includes(SiteRanges.Bounds(ring, BlockPadding))) continue;
             var windowed = GridFacade.Layout(ring, style, dress).Columns > 0;
             GridFacade.Build(b, ring, y + lift, style, dress, windowed ? Numbering(key) : null);
         }
         foreach (var ring in plan.Blocks)
             foreach (var (e, _, _) in GridFacade.Edges(ring))
-                if (DoorOn(e, plan) is { } x) Portal(b, e.Frame, x, y);
-        Hall(b, plan, y);
+                if (DoorOn(e, plan) is { } x && b.Includes(SiteRanges.Point(e.Frame.P(x, 0), BlockPadding))) Portal(b, e.Frame, x, y);
+        if (b.Includes(HallRange(b.Context.World))) Hall(b, plan, y);
         var roof = y + Style.RoofTop;
-        foreach (var id in StairIds) Penthouse(b, Frame.Local(b.Context.World.Feature(id).Point()), roof);
-        foreach (var id in PlantIds) Plant(b, Frame.Local(b.Context.World.Feature(id).Point()), roof);
-        Roof(b, plan, y);
+        foreach (var id in StairIds.Where(id => b.Includes(SiteRanges.Point(b.Context.World.Feature(id).Point(), R.StairSize.Length() * 0.5f)))) Penthouse(b, Frame.Local(b.Context.World.Feature(id).Point()), roof);
+        foreach (var id in PlantIds.Where(id => b.Includes(SiteRanges.Point(b.Context.World.Feature(id).Point(), R.PlantSize.Length() * 0.5f)))) Plant(b, Frame.Local(b.Context.World.Feature(id).Point()), roof);
+        if (b.Includes(SiteRanges.Bounds(b.Context.World.Feature(RoofId), R.KeATankSize.X))) Roof(b, plan, y);
     }
 
     /// <summary>Each building's own roof features (fence and tank, attic and antennas, garden).</summary>
@@ -384,11 +399,13 @@ public abstract class ResearchSite : ZoneSite
         var y = BaseY(c.Context);
         foreach (var ring in plan.Blocks)
         {
+            if (!c.Includes(SiteRanges.Bounds(ring, BlockPadding))) continue;
             GridFacade.Collide(c, ring, y, Style, e => Dress(e, plan), FootMat.StonePaving);
             foreach (var (e, _, _) in GridFacade.Edges(ring))
                 if (DoorOn(e, plan) is { } x) PortalCollide(c, e.Frame, x, y);
         }
         // Hall faces at the glass, 0.15 m inside it; the two arc segments meeting at the apex are the shut doors.
+        if (!c.Includes(HallRange(c.Context.World))) return;
         var door = plan.Door is null ? HallApex(plan) : ((Vector2, Vector2)?)null;
         foreach (var (a, e) in HallFaces(plan, plan.Hall))
         {

@@ -11,6 +11,9 @@ public sealed class KeyboardSite : ZoneSite
 {
     public override string Id => "19c.keyboard";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(world.Feature(WestIds.KeyboardFace), 0.5f)];
+
     public override void Build(SiteBuilder b)
     {
         var face = b.Context.World.Feature(WestIds.KeyboardFace);

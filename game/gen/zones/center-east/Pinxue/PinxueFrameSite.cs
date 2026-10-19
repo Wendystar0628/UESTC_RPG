@@ -46,6 +46,9 @@ public sealed class PinxueFrameSite : ZoneSite
 
     public override string Id => "21a.pinxue-frame";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(world.Feature(CenterEastIds.Pinxue.Complex), P.ColumnSize)];
+
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(CenterEastIds.Pinxue.Complex), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)
@@ -72,11 +75,11 @@ public sealed class PinxueFrameSite : ZoneSite
         var world = b.Context.World;
         var g = GateOf(world);
         var y = BaseY(b.Context);
-        Passage(b, g, y);
-        foreach (var x in P.ColumnX) Column(b, g, x, y);
+        if (b.Includes(SiteRanges.Bounds(g.F.Rect(0, -g.Depth, g.Length, 0)))) Passage(b, g, y);
+        foreach (var x in P.ColumnX.Where(x => b.Includes(SiteRanges.Point(g.F.P(x, -g.Depth * 0.5f), P.ColumnSize)))) Column(b, g, x, y);
         var bridges = Bridges(world);
-        foreach (var box in bridges) Bridge(b, box, y, WindowNumbers.Allocation(b.Context, new(CenterEastIds.Pinxue.Complex), box.Key));
-        Beam(b, g, y);
+        foreach (var box in bridges.Where(box => b.Includes(SiteRanges.Bounds(box.Frame.Rect(box.X0, box.Z0, box.X1, box.Z1), 0.2f)))) Bridge(b, box, y, WindowNumbers.Allocation(b.Context, new(CenterEastIds.Pinxue.Complex), box.Key));
+        if (b.Includes(SiteRanges.Bounds(g.F.Rect(0, -g.Depth, g.Length, P.PlaqueProud)))) Beam(b, g, y);
         foreach (var source in new[] { CenterEastIds.Pinxue.BridgeAC, CenterEastIds.Pinxue.BridgeBC }) LinkColumns(b, Bar(world, source), g, y);
     }
 
@@ -282,6 +285,7 @@ public sealed class PinxueFrameSite : ZoneSite
     private static void LinkColumns(SiteBuilder b, (PlanFrame Frame, float X0, float X1, float Z0, float Z1) bar, Gate g, float y)
     {
         var f = bar.Frame;
+        if (!b.Includes(SiteRanges.Bounds(f.Rect(bar.X0, bar.Z0, bar.X1, bar.Z1), P.BridgeColumnRadius))) return;
         var segments = b.Detail == SiteDetail.Full ? 16 : 8;
         foreach (var (x, z) in BridgeColumns(bar))
         {
@@ -304,14 +308,15 @@ public sealed class PinxueFrameSite : ZoneSite
         var g = GateOf(c.Context.World);
         var y = BaseY(c.Context);
         var z = -g.Depth * 0.5f;
-        foreach (var x in P.ColumnX)
+        foreach (var x in P.ColumnX.Where(x => c.Includes(SiteRanges.Point(g.F.P(x, z), P.ColumnSize))))
             c.Box(g.F.At(x, y + g.BeamBottom * 0.5f, z), new(P.ColumnSize * 0.5f + 0.05f, g.BeamBottom * 0.5f, P.ColumnSize * 0.5f + 0.05f), SurfaceTag.Wall, FootMat.StonePaving);
-        foreach (var box in Bridges(c.Context.World))
+        foreach (var box in Bridges(c.Context.World).Where(box => c.Includes(SiteRanges.Bounds(box.Frame.Rect(box.X0, box.Z0, box.X1, box.Z1), 0.2f))))
             c.Box(box.Frame.At((box.X0 + box.X1) * 0.5f, y + (box.Bottom + box.Top) * 0.5f, (box.Z0 + box.Z1) * 0.5f),
                 new((box.X1 - box.X0) * 0.5f, (box.Top - box.Bottom) * 0.5f, (box.Z1 - box.Z0) * 0.5f), SurfaceTag.Wall, FootMat.Concrete);
         foreach (var source in new[] { CenterEastIds.Pinxue.BridgeAC, CenterEastIds.Pinxue.BridgeBC })
         {
             var bar = Bar(c.Context.World, source);
+            if (!c.Includes(SiteRanges.Bounds(bar.Frame.Rect(bar.X0, bar.Z0, bar.X1, bar.Z1), P.BridgeColumnRadius))) continue;
             foreach (var (x, zc) in BridgeColumns(bar))
                 c.Add(new PostCollider(bar.Frame.P(x, zc), P.BridgeColumnRadius + 0.05f, y, y + g.BridgeBottom, SurfaceTag.Prop) { Foot = FootMat.Concrete });
         }

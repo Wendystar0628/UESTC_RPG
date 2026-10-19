@@ -27,6 +27,7 @@ public sealed partial class SixSite
         var east = (Face: default(GridEdgeInfo), X: 0f);
         foreach (var k in Blocks.Where(k => entity is null || k.Entity == entity))
         {
+            if (!c.Includes(SiteRanges.Bounds(Plan(world, k.Entity, k.Part).Outer, S.ApronDepth))) continue;
             var plan = Plan(world, k.Entity, k.Part);
             var y = BaseY(c.Context, k.Entity);
             var style = Style(k.Upper(world));
@@ -57,14 +58,15 @@ public sealed partial class SixSite
         if (entity is not null && entity != S.EntityC) return;
         // Vestibule cheeks; the doorway between them stays open for WP-31b's hall (EntranceDecl.Open).
         var yc = BaseY(c.Context, S.EntityC);
+        east = EastFace(world, eastDoor);
         var vf = east.Face.Frame;
-        foreach (var s in new[] { -1f, 1f })
+        foreach (var s in new[] { -1f, 1f }.Where(_ => c.Includes(SiteRanges.Point(eastDoor, S.ApronWidth))))
             c.Wall(vf.P(east.X + s * S.VestibuleWidth * 0.5f, -S.Recess), vf.P(east.X + s * S.VestibuleWidth * 0.5f, 0), 0.15f, yc, yc + S.VestibuleHeight, SurfaceTag.Wall, FootMat.Glass);
         // Links and tower: the A–B link and the tower are closed volumes; the B–C link stands on its piers.
-        foreach (var ring in new[] { Plan(world, S.EntityC, S.LinkAB).Outer, Plan(world, S.EntityC, S.Tower).Outer })
+        foreach (var ring in new[] { Plan(world, S.EntityC, S.LinkAB).Outer, Plan(world, S.EntityC, S.Tower).Outer }.Where(ring => c.Includes(SiteRanges.Bounds(ring, S.PierDepth))))
             foreach (var (e, _, _) in GridFacade.Edges(ring))
                 c.Wall(e.Frame.P(0, -0.15f), e.Frame.P(e.Length, -0.15f), 0.15f, yc, yc + S.TowerHeight, SurfaceTag.Wall, FootMat.StonePaving);
-        foreach (var (e, _, _) in GridFacade.Edges(Plan(world, S.EntityC, S.LinkBC).Outer))
+        foreach (var (e, _, _) in GridFacade.Edges(Plan(world, S.EntityC, S.LinkBC).Outer).Where(edge => c.Includes(SiteRanges.Bounds([edge.Item1.A, edge.Item1.B], S.LinkPier))))
             foreach (var x in new[] { S.LinkPier * 0.5f, e.Length * 0.5f })
                 c.Box(e.Frame.At(x, yc + S.BaseHeight * 0.5f, -S.LinkPier * 0.5f), new(S.LinkPier * 0.5f, S.BaseHeight * 0.5f, S.LinkPier * 0.5f), SurfaceTag.Wall, FootMat.StonePaving);
     }

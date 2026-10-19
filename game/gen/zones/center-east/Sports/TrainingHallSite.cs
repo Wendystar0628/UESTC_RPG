@@ -16,6 +16,9 @@ namespace Campus.Gen.Zones.CenterEast.Sports;
 public sealed class TrainingHallSite : ZoneSite
 {
     public override string Id => "21d.training-hall";
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(world.Feature(CenterEastIds.Sports.Training.Entity), S.Cover)];
     public override IReadOnlyList<Claim> Claims => [new FeatureClaim(new(CenterEastIds.Sports.Training.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
     private static readonly ChannelId Channel = new("window.gym");
 
@@ -69,12 +72,14 @@ public sealed class TrainingHallSite : ZoneSite
         var y = world.Terrain.PadY(feature.Id);
         foreach (var (part, ring, key) in Annexes(world))
         {
+            if (!b.Includes(SiteRanges.Bounds(ring.Outer, S.Cover))) continue;
             GridFacade.Build(b, ring, y, Style(part), e => Dress(part, ring, e), GridFacade.Layout(ring, Style(part), e => Dress(part, ring, e)).Columns > 0 ? Numbering(key) : null);
             if (part.SourceId != CenterEastIds.Sports.NorthAnnex.Part) continue;
             var north = GridFacade.Edges(ring).OrderBy(e => (e.Info.A.Y + e.Info.B.Y) * 0.5f).First().Info;
             b.Place(Campus.Contracts.Parts.PartCatalog.DoorGlass, Door with { OpenAngleDeg = 90 }, north.Frame.AtReversed(north.Length * 0.5f, y, 0));
         }
         var hall = feature.Part(CenterEastIds.Sports.Hall.Part).Contour();
+        if (!b.Includes(SiteRanges.Bounds(hall, S.Cover))) return;
         b.Add(Contour.Wall(hall, S.Slab, y, y + S.Spring, L.Wall), Matrix4x4.Identity);
         var r = feature.Rectangle(SportsLayout.Axis(feature), CenterEastIds.Sports.Hall.Part);
         b.Add(TrainingRoof.Build(r.Width, r.Depth, b.Detail == SiteDetail.Full), r.Frame.At(0, y, 0));
@@ -84,8 +89,9 @@ public sealed class TrainingHallSite : ZoneSite
     {
         var world = c.Context.World;
         var y = world.Terrain.PadY(new(CenterEastIds.Sports.Training.Entity));
-        foreach (var (part, ring, _) in Annexes(world)) GridFacade.Collide(c, ring, y, Style(part), e => Dress(part, ring, e), FootMat.Concrete);
+        foreach (var (part, ring, _) in Annexes(world).Where(annex => c.Includes(SiteRanges.Bounds(annex.Ring.Outer, S.Cover)))) GridFacade.Collide(c, ring, y, Style(part), e => Dress(part, ring, e), FootMat.Concrete);
         var hall = world.Feature(CenterEastIds.Sports.Training.Entity).Part(CenterEastIds.Sports.Hall.Part).Contour();
+        if (!c.Includes(SiteRanges.Bounds(hall, S.Cover))) return;
         foreach (var (a, b) in SportsLayout.Edges(hall)) c.Wall(a, b, S.Slab * 0.5f, y, y + S.Spring, SurfaceTag.Wall, FootMat.Concrete);
     }
 }
