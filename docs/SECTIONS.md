@@ -664,7 +664,7 @@
 - WLD-TERRAIN-APPLY §2 贴地 · L54 · 1.4k
   - WLD-TERRAIN-APPLY §2.1 先平后贴 · L56 · 322
   - WLD-TERRAIN-APPLY §2.2 道路与铺装 · L69 · 269
-  - WLD-TERRAIN-APPLY §2.3 楼宇：垫层、勒脚与入口 · L76 · 590
+  - WLD-TERRAIN-APPLY §2.3 楼宇：垫层、勒脚与入口 · L76 · 548
   - WLD-TERRAIN-APPLY §2.4 树与道具落地 · L85 · 257
 - WLD-TERRAIN-APPLY §3 可走性与碰撞 · L92 · 679
 - WLD-TERRAIN-APPLY §4 地面着色与描线 · L101 · 881
@@ -686,7 +686,7 @@
   - WLD-TERRAIN-SHAPE §2.3 坡度类 · L88 · 494
   - WLD-TERRAIN-SHAPE §2.4 全图范围与零带 · L101 · 258
 - WLD-TERRAIN-SHAPE §3 竖直落差 · L108 · 1.3k
-  - WLD-TERRAIN-SHAPE §3.1 连接规则 · L110 · 509
+  - WLD-TERRAIN-SHAPE §3.1 连接规则 · L110 · 542
   - WLD-TERRAIN-SHAPE §3.2 台缘带（v1 的挡墙） · L126 · 337
   - WLD-TERRAIN-SHAPE §3.3 退台与高墙 · L133 · 184
   - WLD-TERRAIN-SHAPE §3.4 防护与谁来做 · L138 · 247
@@ -729,11 +729,11 @@
   - WLD-VEGETATION §3.5 草叶的表示与交界（D-205，取值是初值，样板同位姿定） · L128 · 305
 - WLD-VEGETATION §4 落叶、花瓣与积雪（地面覆盖） · L133 · 800
 - WLD-VEGETATION §5 水生植物 · L143 · 464
-- WLD-VEGETATION §6 季相与天气 · L158 · 1.2k
+- WLD-VEGETATION §6 季相与天气 · L158 · 1.3k
   - WLD-VEGETATION §6.1 逐株错相与叶量 · L160 · 193
   - WLD-VEGETATION §6.2 季节颜色 · L165 · 194
   - WLD-VEGETATION §6.3 摆动与飘落（给 SYS-MOTION 的参数） · L170 · 160
-  - WLD-VEGETATION §6.4 覆雪 · L175 · 410
+  - WLD-VEGETATION §6.4 覆雪 · L175 · 455
   - WLD-VEGETATION §6.5 换季与天气切换 · L181 · 237
 - WLD-VEGETATION §7 碰撞、画面设置与声音 · L187 · 1.1k
   - WLD-VEGETATION §7.1 行走碰撞 · L189 · 381
@@ -753,7 +753,7 @@
   - WLD-WATER §1.2 波纹线与泡沫线 · L53 · 284
 - WLD-WATER §2 反光带、灯条与倒影 · L59 · 1.1k
   - WLD-WATER §2.1 主光反光带 · L61 · 441
-  - WLD-WATER §2.2 灯的竖条倒影 · L69 · 257
+  - WLD-WATER §2.2 灯的竖条倒影 · L69 · 289
   - WLD-WATER §2.3 倒影 · L73 · 402
 - WLD-WATER §3 四季与天气的水面 · L79 · 838
 - WLD-WATER §4 涉水与开放泳区 · L106 · 313
