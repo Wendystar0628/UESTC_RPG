@@ -15,9 +15,8 @@ namespace Campus.Systems.Vegetation;
 /// <summary>
 /// WP-38's seasonal globals (WLD-VEGETATION): the tree_species table that the veg_* shaders read for leaf amount, bloom,
 /// bare twigs and the per-species season rows, uploaded on map load from the vegetation module's packed table; and the
-/// snow cover, the winter baseline eased between the four season anchors on the world's season position, so a change of
-/// season ramps it inside the transition veil and no season but winter keeps any snow. Weather accumulation is not
-/// folded in yet (no weather source carries it).
+/// snow cover, the maximum of the eased seasonal baseline and the weather process's SnowAdd. Weather owns the snow
+/// residue and its world-time decay; this node only publishes the current combined amount.
 /// </summary>
 [KernelNode("systems.season-globals", Owner = "WP-38")]
 public sealed partial class SeasonGlobalsNode : Node, IMapAware
@@ -75,7 +74,7 @@ public sealed partial class SeasonGlobalsNode : Node, IMapAware
     private void WriteSnow()
     {
         if (_world is null) return;
-        var snow = SnowAt(_world.SeasonPos);
+        var snow = Math.Clamp(Math.Max(SnowAt(_world.SeasonPos), _world.WeatherNow.SnowAdd), 0f, 1f);
         if (snow == _snow) return;
         _snow = snow;
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalSnow, snow);
