@@ -25,6 +25,12 @@ public sealed class GatePlazaSite : ZoneSite
 
     public override string Id => "18c3.gate-plaza";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        FrameOf(world) is { } plaza ? [.. Items(plaza.Frame).Select(i => ItemRange(i.Params, i.At))] : [];
+
+    private static Campus.Contracts.Maps.MapRect ItemRange(FurnitureParams p, PlanFrame at) =>
+        SiteRanges.Bounds(at.Rect(-p.Width * .5f, -p.Depth * .5f, p.Width * .5f, p.Depth * .5f));
+
     /// <summary>
     /// The plaza's frame from its overlay rectangle, whatever the ring's start and winding: origin at the centre, Z along the long
     /// sides toward the campus (the gate's inward direction), X across toward the north-west lawn. Null when the map has no plaza.
@@ -52,7 +58,7 @@ public sealed class GatePlazaSite : ZoneSite
     {
         if (b.Detail == SiteDetail.Mass || FrameOf(b.Context.World) is not { } plaza) return;
         foreach (var (part, p, at) in Items(plaza.Frame))
-            b.Place(part, p, at.At(0, b.Ground(at.Origin) + P.PavingTop, 0));
+            if (b.Includes(ItemRange(p, at))) b.Place(part, p, at.At(0, b.Ground(at.Origin) + P.PavingTop, 0));
     }
 
     public override void Collide(SiteColliders c)
@@ -60,6 +66,7 @@ public sealed class GatePlazaSite : ZoneSite
         if (FrameOf(c.Context.World) is not { } plaza) return;
         foreach (var (part, p, at) in Items(plaza.Frame))
         {
+            if (!c.Includes(ItemRange(p, at))) continue;
             var local = part == PartCatalog.Bench ? Bench.Collision(p) : Planter.Collision(p);
             c.Add(local, at.At(0, c.Ground(at.Origin.X, at.Origin.Y) + P.PavingTop, 0));
         }

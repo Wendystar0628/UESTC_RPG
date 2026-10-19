@@ -21,6 +21,9 @@ public sealed class CourtyardSite : ZoneSite
 {
     public override string Id => "20a2.xz1-court";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        Locate(world) is { } wall ? [SiteRanges.Bounds(Path(wall, C.SeatSegments).Concat(PadOutline(wall)), C.SeatWidth)] : [];
+
     /// <summary>The wall's start, mid and end points: the overlay polyline (D-239).</summary>
     internal readonly record struct Wall(Vector2 Start, Vector2 Mid, Vector2 End);
 

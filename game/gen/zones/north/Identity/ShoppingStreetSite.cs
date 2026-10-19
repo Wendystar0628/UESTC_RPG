@@ -14,6 +14,18 @@ public sealed class ShoppingStreetSite : ZoneSite
 {
     private static readonly RailingPart Rail = new();
     public override string Id => "20c.shopping-street";
+
+    private static Campus.Contracts.Maps.MapRect BlockRange(Block block) => SiteRanges.Bounds(block.Rings.Outer,
+        MathF.Max(Style(block).CorniceProjection, Style(block).PierDepth) + new RailingParams().Depth);
+
+    private static Campus.Contracts.Maps.MapRect ArcadeRange(IWorldModel world)
+    {
+        var record = world.Feature(NorthFeatureIds.ShoppingAxis);
+        return SiteRanges.Bounds(record, record.Number("width") * .5f + new RailingParams().Depth);
+    }
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [.. Blocks(world).Select(BlockRange), ArcadeRange(world)];
     public override IReadOnlyList<Claim> Claims =>
         [new FeatureClaim(new(NorthFeatureIds.Shopping.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
@@ -82,13 +94,16 @@ public sealed class ShoppingStreetSite : ZoneSite
     {
         var world = b.Context.World;
         var feature = world.Feature(NorthFeatureIds.Shopping.Entity);
-        var y = world.Terrain.PadY(feature.Id);
         foreach (var block in Blocks(world))
         {
+            if (!b.Includes(BlockRange(block))) continue;
+            var blockY = world.Terrain.PadY(feature.Id);
             var style = Style(block);
             var grid = GridFacade.Layout(block.Rings, style, Dress);
-            GridFacade.Build(b, block.Rings, y, style, Dress, grid.Columns > 0 ? Numbering(world, block) : null);
+            GridFacade.Build(b, block.Rings, blockY, style, Dress, grid.Columns > 0 ? Numbering(world, block) : null);
         }
+        if (!b.Includes(ArcadeRange(world))) return;
+        var y = world.Terrain.PadY(feature.Id);
         var record = world.Feature(NorthFeatureIds.ShoppingAxis);
         var (a, z) = record.PointPair();
         var frame = PlanFrame.Toward((a + z) * .5f, z);
@@ -124,7 +139,8 @@ public sealed class ShoppingStreetSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         foreach (var block in Blocks(c.Context.World))
-            GridFacade.Collide(c, block.Rings, c.Context.World.Terrain.PadY(new(NorthFeatureIds.Shopping.Entity)), Style(block), Dress, FootMat.Concrete);
+            if (c.Includes(BlockRange(block)))
+                GridFacade.Collide(c, block.Rings, c.Context.World.Terrain.PadY(new(NorthFeatureIds.Shopping.Entity)), Style(block), Dress, FootMat.Concrete);
         // Upper galleries and bridges are blocked at their entrances; the ground-floor arcade stays open at both ends.
     }
 }

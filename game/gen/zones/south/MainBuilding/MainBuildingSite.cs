@@ -75,6 +75,23 @@ public sealed class MainBuildingSite : ZoneSite
 
     public override string Id => "18a.main-building";
 
+    private static Campus.Contracts.Maps.MapRect FrontRange(Layout g) => SiteRanges.Bounds(
+        g.F.Rect(MathF.Min(g.StepsX0, g.Xc - M.PorticoHalfWidth), -.3f,
+            MathF.Max(g.StepsX1, g.Xc + M.PorticoHalfWidth), MathF.Max(g.StepsZ, M.PorticoFront)), .4f);
+
+    private static Campus.Contracts.Maps.MapRect GalleryRange(Layout g) => SiteRanges.Bounds(
+        g.F.Rect(M.GalleryX0, M.GalleryZ0, M.GalleryX1, M.GalleryZ1), M.GalleryColumn);
+
+    private static Campus.Contracts.Maps.MapRect RearRange(Layout g) => SiteRanges.Bounds(
+        g.R.Rect(-M.RearLandingWidth * .5f, -.3f, M.RearLandingWidth * .5f,
+            RearBlockFront + M.RearLandingDepth + M.RearTread * (M.RisersLower + M.RisersUpper) + 1.5f), .3f);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var g = LayoutOf(world);
+        return [FrontRange(g), GalleryRange(g), RearRange(g)];
+    }
+
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(FrontSteps), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     public override IReadOnlyList<InspectionProbe> Probes =>
@@ -137,9 +154,9 @@ public sealed class MainBuildingSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var g = LayoutOf(b.Context.World);
-        Front(b, g);
-        RoofGallery(b, g, b.Ground(g.F.P(36f, -20f)));
-        RearPorch(b, g, b.Ground(g.R.Origin));
+        if (b.Includes(FrontRange(g))) Front(b, g);
+        if (b.Includes(GalleryRange(g))) RoofGallery(b, g, b.Ground(g.F.P(36f, -20f)));
+        if (b.Includes(RearRange(g))) RearPorch(b, g, b.Ground(g.R.Origin));
     }
 
     private static void Front(SiteBuilder b, Layout g)
@@ -400,9 +417,9 @@ public sealed class MainBuildingSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var g = LayoutOf(c.Context.World);
-        CollideFront(c, g);
-        CollideGallery(c, g);
-        CollideRear(c, g);
+        if (c.Includes(FrontRange(g))) CollideFront(c, g);
+        if (c.Includes(GalleryRange(g))) CollideGallery(c, g);
+        if (c.Includes(RearRange(g))) CollideRear(c, g);
     }
 
     private static void CollideFront(SiteColliders c, Layout g)

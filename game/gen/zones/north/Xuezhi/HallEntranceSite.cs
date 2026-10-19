@@ -27,6 +27,18 @@ public sealed class HallEntranceSite : ZoneSite
 
     public override string Id => "20a.xz1-hall";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var id = new FeatureId(NorthFeatureIds.Hall.Entity);
+        if (!world.Features.ContainsKey(id) || world.Interiors.Get(id)?.Entrances.FirstOrDefault(e => e.Open) is not { } entrance) return [];
+        var edge = world.ContourSegment(NorthFeatureIds.HallFacade);
+        var door = new Vector2(entrance.Center.X, entrance.Center.Z);
+        var foot = PlanLines.ClosestPoint(door, edge[0], edge[^1], 1e-12f);
+        var f = PlanFrame.Along(foot, edge[0] - edge[^1]);
+        return [SiteRanges.Bounds(f.Rect(-H.LandingWidth * .5f - .1f, -.1f,
+            H.LandingWidth * .5f + .1f, H.WallFace + H.LandingDepth + H.MaxRisers * H.Tread + .1f))];
+    }
+
     public override IReadOnlyList<InspectionProbe> Probes =>
         [Probe("Q4", NorthFeatureIds.Hall.Entity, NorthTune.Probes.WallEye, NorthTune.Probes.WallLook, -20f, 0.5f)];
 

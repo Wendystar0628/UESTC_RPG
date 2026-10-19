@@ -9,6 +9,16 @@ namespace Campus.Gen.Zones.North.Identity;
 public sealed class ActivityRoofSite : ZoneSite
 {
     public override string Id => "20c.activity-roof";
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var record = world.Feature(NorthFeatureIds.ActivityRoofGarden);
+        var f = PlanFrame.Along(record.Point(), record.Pair("direction"));
+        var roof = new RoofParams(); var column = new ColumnParams(); var planter = new FurnitureParams();
+        return [SiteRanges.Bounds(f.Rect(-MathF.Max(roof.Width + column.Width, planter.Width) * .5f,
+            -(roof.Depth + column.Depth) * .5f, MathF.Max(roof.Width + column.Width, planter.Width) * .5f,
+            MathF.Max((roof.Depth + column.Depth) * .5f, roof.Depth + planter.Depth * .5f)))];
+    }
     public override void Build(SiteBuilder b)
     {
         var record = b.Context.World.Feature(NorthFeatureIds.ActivityRoofGarden);

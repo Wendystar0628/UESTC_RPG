@@ -79,6 +79,32 @@ public sealed class XuanbangSite : ZoneSite
 
     public override string Id => "18b.xuanbang";
 
+    private static Campus.Contracts.Maps.MapRect MainRange(Footprints f) => SiteRanges.Bounds(f.Main,
+        MathF.Max(f.MainStyle.CorniceProjection, f.MainStyle.PierDepth) + .5f);
+
+    private static Campus.Contracts.Maps.MapRect TowerRange(Footprints f) => SiteRanges.Bounds(f.Tower,
+        MathF.Max(f.TowerStyle.CorniceProjection, f.TowerStyle.PierDepth) + .5f);
+
+    private static Campus.Contracts.Maps.MapRect ClockRange(Footprints f)
+    {
+        var (frame, hx, hz) = ClockTower.FrameOf(f.ClockPlan);
+        return SiteRanges.Bounds(frame.Rect(-hx, -hz, hx, hz), MathF.Max(X.DialProud, X.DomeRadius));
+    }
+
+    private static Campus.Contracts.Maps.MapRect PorticoRange(PlanFrame p) => SiteRanges.Bounds(
+        p.Rect(-X.PorticoHalfWidth - .6f, -.3f, X.PorticoHalfWidth + .6f,
+            X.PorticoDepth + .3f + Flight().Depth), .05f);
+
+    private static Campus.Contracts.Maps.MapRect SkylightRange(Footprints f) => SiteRanges.Bounds(
+        PlanFrame.Along(f.Skylight, X.SlabAxis).Rect(-(X.SkylightSize + .6f) * .5f, -(X.SkylightSize + .6f) * .5f,
+            (X.SkylightSize + .6f) * .5f, (X.SkylightSize + .6f) * .5f));
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var f = Rings(world);
+        return [MainRange(f), TowerRange(f), ClockRange(f), SkylightRange(f), .. Porticoes(f).Select(PorticoRange)];
+    }
+
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>
@@ -224,16 +250,21 @@ public sealed class XuanbangSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);
-        var y = b.Ground(PlanGeometry.Centroid(f.Main, meanIfDegenerate: true));
-        GridFacade.Build(b, f.Main, y, f.MainStyle, e => MainEdge(e, f), MainNumbering);
-        foreach (var (e, _, _) in GridFacade.Edges(f.Main))
-            if (f.Gables.Any(edge => (e.A == edge[0] && e.B == edge[^1]) || (e.B == edge[0] && e.A == edge[^1]))) EndGable(b, f.MainStyle, e, y);
+        float MainY() => b.Ground(PlanGeometry.Centroid(f.Main, meanIfDegenerate: true));
+        if (b.Includes(MainRange(f)))
+        {
+            var y = MainY();
+            GridFacade.Build(b, f.Main, y, f.MainStyle, e => MainEdge(e, f), MainNumbering);
+            foreach (var (e, _, _) in GridFacade.Edges(f.Main))
+                if (f.Gables.Any(edge => (e.A == edge[0] && e.B == edge[^1]) || (e.B == edge[0] && e.A == edge[^1]))) EndGable(b, f.MainStyle, e, y);
+        }
         var porticoes = Porticoes(f);
         var hall = porticoes.Count > 0 ? PorticoAllocation(b.Context, porticoes.Count) : null;
-        for (var i = 0; i < porticoes.Count; i++) Portico(b, porticoes[i], y, i, hall);
-        Skylight(b, f, y);
-        GridFacade.Build(b, f.Tower, b.Ground(PlanGeometry.Centroid(f.Tower, meanIfDegenerate: true)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering);
-        ClockTower.Build(b, f.ClockPlan, f.ClockTop, b.Ground(PlanGeometry.Centroid(f.Clock, meanIfDegenerate: true)));
+        for (var i = 0; i < porticoes.Count; i++)
+            if (b.Includes(PorticoRange(porticoes[i]))) Portico(b, porticoes[i], MainY(), i, hall);
+        if (b.Includes(SkylightRange(f))) Skylight(b, f, MainY());
+        if (b.Includes(TowerRange(f))) GridFacade.Build(b, f.Tower, b.Ground(PlanGeometry.Centroid(f.Tower, meanIfDegenerate: true)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering);
+        if (b.Includes(ClockRange(f))) ClockTower.Build(b, f.ClockPlan, f.ClockTop, b.Ground(PlanGeometry.Centroid(f.Clock, meanIfDegenerate: true)));
     }
 
     // ---- Pediment portico (§5.6): four round columns, entablature with dentils, pediment with the name panel ----
@@ -373,13 +404,13 @@ public sealed class XuanbangSite : ZoneSite
     {
         var f = Rings(c.Context.World);
         var centre = PlanGeometry.Centroid(f.Main, meanIfDegenerate: true);
-        var y = c.Ground(centre.X, centre.Y);
-        GridFacade.Collide(c, f.Main, y, f.MainStyle, e => MainEdge(e, f), FootMat.StonePaving);
+        if (c.Includes(MainRange(f))) GridFacade.Collide(c, f.Main, c.Ground(centre.X, centre.Y), f.MainStyle, e => MainEdge(e, f), FootMat.StonePaving);
         var t = PlanGeometry.Centroid(f.Tower, meanIfDegenerate: true);
-        GridFacade.Collide(c, f.Tower, c.Ground(t.X, t.Y), f.TowerStyle, _ => new(EdgeKind.Plain), FootMat.StonePaving);
-        foreach (var p in Porticoes(f)) PorticoCollide(c, p, y);
+        if (c.Includes(TowerRange(f))) GridFacade.Collide(c, f.Tower, c.Ground(t.X, t.Y), f.TowerStyle, _ => new(EdgeKind.Plain), FootMat.StonePaving);
+        foreach (var p in Porticoes(f))
+            if (c.Includes(PorticoRange(p))) PorticoCollide(c, p, c.Ground(centre.X, centre.Y));
         var k = PlanGeometry.Centroid(f.Clock, meanIfDegenerate: true);
-        ClockTower.Collide(c, f.ClockPlan, c.Ground(k.X, k.Y));
+        if (c.Includes(ClockRange(f))) ClockTower.Collide(c, f.ClockPlan, c.Ground(k.X, k.Y));
     }
 
     private static void PorticoCollide(SiteColliders c, PlanFrame p, float y)

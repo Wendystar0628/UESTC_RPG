@@ -71,6 +71,18 @@ public sealed class SouthGateSite : ZoneSite
 
     public override string Id => "18a.gate";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var g = LayoutOf(world);
+        var houseHalf = T.HouseSize * .5f + T.HouseEave;
+        var minX = MathF.Min(T.NameWallX0 - .1f, -g.HouseX - houseHalf);
+        var maxX = MathF.Max(T.GridX1, g.HouseX + houseHalf);
+        var minZ = MathF.Min(-houseHalf, g.IslandZ - g.IslandLength * .5f);
+        var maxZ = MathF.Max(T.GridZ1, MathF.Max(T.NameWallZ + T.NameWallThickness,
+            g.IslandZ + g.IslandLength * .5f + .8f));
+        return [SiteRanges.Bounds(g.Frame.Rect(minX, minZ, maxX, maxZ), .15f)];
+    }
+
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     public override IReadOnlyList<InspectionProbe> Probes =>

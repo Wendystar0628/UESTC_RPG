@@ -15,6 +15,12 @@ public sealed class EscalatorSite(string recordId) : ZoneSite
     private static readonly FoldingGatePart Gate = new();
     public override string Id => "20c." + recordId;
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var record = world.Feature(recordId);
+        return [SiteRanges.Bounds(record, MathF.Max(record.Number("coverSpan"), new StairParams().Width) * .5f + new RailingParams().Depth)];
+    }
+
     internal sealed record Layout(PlanFrame Frame, float Length, float Base, float Rise, float Landing,
         float Width, WorldFeature Record)
     {

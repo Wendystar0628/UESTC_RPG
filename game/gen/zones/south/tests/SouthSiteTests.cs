@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common.Tests;
 using Campus.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
@@ -47,7 +48,7 @@ public sealed class SouthSiteTests
     public void GateBollardsAreCrashBollardsInTheirOwnColours()
     {
         // §1.4: yellow-and-black; a tint or a material would paint the black stripe yellow as well (13b, 12:00).
-        var bollards = new SouthModule().ItemsFor(Context(), LodLevel.L0).Select(i => i.Part).Where(p => p?.Part.Value == PartCatalog.Bollard).ToArray();
+        var bollards = ZoneTestCells.Items(new SouthModule(), Context(), LodLevel.L0).Select(i => i.Part).Where(p => p?.Part.Value == PartCatalog.Bollard).ToArray();
         AssertThat(bollards.Length > 0).OverrideFailureMessage($"three bollards off each island nose ({bollards.Length})").IsTrue();
         AssertThat(bollards.All(p => p!.Tint is null && p.Params is ColumnParams { Variation: 1 } c && c.Material == new ColumnParams().Material)).OverrideFailureMessage("variation 1, no tint, no material").IsTrue();
     }
@@ -104,7 +105,7 @@ public sealed class SouthSiteTests
         var clearance = corners.Min(p => lanes.Min(r => MathF.Sqrt(PlanLines.PolylineDistanceSquared(r.Line.Points, p)) - r.Width * 0.5f));
         AssertThat(clearance >= 3f).OverrideFailureMessage($"the kiosk stands {clearance:0.00} m from the nearest carriageway edge").IsTrue();
         // The planter and benches stay on the paving and clear of the kiosk and the space in front of its panel.
-        var items = new SouthModule().ItemsFor(Context(), LodLevel.L0).Where(i => i.Part?.Part.Value is PartCatalog.Bench or PartCatalog.Planter).ToArray();
+        var items = ZoneTestCells.Items(new SouthModule(), Context(), LodLevel.L0).Where(i => i.Part?.Part.Value is PartCatalog.Bench or PartCatalog.Planter).ToArray();
         AssertThat(items.Length > 0).OverrideFailureMessage($"the plaza carries its planter and benches ({items.Length})").IsTrue();
         AssertThat(items.All(i => PlanGeometry.Contains(ring, i.Anchor) && Vector2.Distance(i.Anchor, kioskSpot) > 6f)).OverrideFailureMessage("furniture on the plaza, clear of the kiosk").IsTrue();
     }
@@ -114,7 +115,7 @@ public sealed class SouthSiteTests
     public void XuanbangKeepsItsSkyline()
     {
         var ctx = Context();
-        var items = new SouthModule().ItemsFor(ctx, LodLevel.L0).Where(i => i.Mesh is not null).ToArray();
+        var items = ZoneTestCells.Items(new SouthModule(), ctx, LodLevel.L0).Where(i => i.Mesh is not null).ToArray();
         var f = Xuanbang.XuanbangSite.Rings(ctx.World);
         float Top(IReadOnlyList<Vector2> ring) => items.Where(i => Near(ring, i.Anchor, 3f)).Max(i => MaxY(GeometryPublication.Publish(i.Mesh!, i.HasLodChannel)));
         AssertThat(MathF.Abs(Top(f.Clock) - f.ClockTop) < TestTolerance.Layout).OverrideFailureMessage($"clock tower top {Top(f.Clock)}").IsTrue();
@@ -216,7 +217,7 @@ public sealed class SouthSiteTests
     {
         var ctx = Context();
         var module = new SouthModule();
-        var items = module.ItemsFor(ctx, LodLevel.L0).Where(i => i.Mesh is not null).ToArray();
+        var items = ZoneTestCells.Items(module, ctx, LodLevel.L0).Where(i => i.Mesh is not null).ToArray();
         var gym = Sports.GymSite.PlanOf(ctx.World);
         var pool = Sports.NatatoriumSite.PlanOf(ctx.World);
         AssertThat(pool.A >= pool.B && pool.B > 0f).OverrideFailureMessage($"natatorium ellipse {pool.A} × {pool.B}").IsTrue();

@@ -56,7 +56,7 @@ public sealed class NorthModuleTests
     {
         var ctx = Context();
         var module = new NorthModule();
-        var colliders = module.CollidersFor(ctx).Select(i => i.Collider).ToArray();
+        var colliders = ZoneTestCells.Colliders(module, ctx).ToArray();
         foreach (var cluster in NorthTune.Clusters)
         {
             var layout = ClusterLayout.Of(ctx.World, cluster)!;
@@ -87,7 +87,7 @@ public sealed class NorthModuleTests
         AssertThat(module.Tiles(ctx).Any()).OverrideFailureMessage("the module occupies cells").IsTrue();
         foreach (var lod in Levels)
         {
-            var items = module.ItemsFor(ctx, lod);
+            var items = ZoneTestCells.Items(module, ctx, lod);
             AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
             var cells = items.Select(i => TileGrid.At(i.Anchor, lod)).Distinct().ToArray();
             var meshes = 0;
@@ -132,7 +132,7 @@ public sealed class NorthModuleTests
             .Concat(ctx.World.ContourSegment(Campus.Gen.Zones.DesignBoundary.BoundaryFeatureIds.NorthBankContour)).ToArray();
         var min = sourcePoints.Aggregate(Vector2.Min) - new Vector2(TileGrid.BaseEdge);
         var max = sourcePoints.Aggregate(Vector2.Max) + new Vector2(TileGrid.BaseEdge);
-        foreach (var item in module.ItemsFor(ctx, LodLevel.L0))
+        foreach (var item in ZoneTestCells.Items(module, ctx, LodLevel.L0))
             AssertThat(item.Anchor.X >= min.X && item.Anchor.X <= max.X && item.Anchor.Y >= min.Y && item.Anchor.Y <= max.Y)
                 .OverrideFailureMessage($"item at {item.Anchor} is within the north sources' cells").IsTrue();
     }

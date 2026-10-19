@@ -15,6 +15,15 @@ public sealed class CoveredWalkSite : ZoneSite
 {
     public override string Id => "20c.covered-walk";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var record = world.Feature(NorthFeatureIds.CoveredWalk);
+        var line = Route(record);
+        var half = record.Number("width") * .5f;
+        return [SiteRanges.Bounds(PlanGeometry.MitreOffset(line, half, false)
+            .Concat(PlanGeometry.MitreOffset(line, -half, false)).Concat(line), record.Number("post") * MathF.Sqrt(2))];
+    }
+
     private static IReadOnlyList<Vector2> Route(WorldFeature record)
     {
         var input = record.Line();
@@ -52,6 +61,7 @@ public sealed class CoveredWalkSite : ZoneSite
         var left = PlanGeometry.MitreOffset(line, -width * .5f, false);
         for (var i = 0; i + 1 < line.Count; i++)
         {
+            if (!b.Includes(SiteRanges.Bounds([left[i], left[i + 1], right[i], right[i + 1]], post))) continue;
             var a = line[i]; var z = line[i + 1];
             var length = Vector2.Distance(a, z);
             var frame = PlanFrame.Toward((a + z) * .5f, z);
@@ -79,7 +89,9 @@ public sealed class CoveredWalkSite : ZoneSite
             foreach (var sign in new[] { -1f, 1f })
             {
                 var side = sign * (width - post) * .5f;
-                var p = frame.P(0, side); var ground = b.Ground(p);
+                var p = frame.P(0, side);
+                if (!b.Includes(SiteRanges.Point(p, post * 2))) continue;
+                var ground = b.Ground(p);
                 var y = b.Ground(sample.Point) + clear;
                 NorthIdentityGeometry.Box(b, frame, 0, ground, side, post, y - ground, post, steel);
                 if (b.Detail == SiteDetail.Full)
@@ -102,6 +114,7 @@ public sealed class CoveredWalkSite : ZoneSite
             foreach (var side in new[] { -1f, 1f })
             {
                 var p = frame.P(0, side * (width - post) * .5f);
+                if (!c.Includes(SiteRanges.Point(p, post))) continue;
                 var y = c.Ground(p);
                 c.Box(frame.At(0, y + record.Number("clear") * .5f,
                         side * (width - post) * .5f), new(post * .5f, record.Number("clear") * .5f, post * .5f),

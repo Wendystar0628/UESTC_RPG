@@ -19,6 +19,10 @@ public sealed class RestDeckSite : ZoneSite
 {
     public override string Id => "20b1.sf10-deck";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        Locate(world) is { } plan ? [SiteRanges.Bounds(plan.Frame.Rect(-plan.Length * .5f - D.Overhang,
+            -plan.Width * .5f - D.Overhang, plan.Length * .5f + D.Overhang, plan.Width * .5f + D.Overhang))] : [];
+
     /// <summary>The deck's plan from the overlay polygon (D-239): centre, long axis, length and width, and the height above the ground.</summary>
     internal sealed record Layout(PlanFrame Frame, float Length, float Width, float Height)
     {

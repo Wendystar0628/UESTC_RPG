@@ -29,6 +29,16 @@ public sealed class NatatoriumSite : ZoneSite
 
     public override string Id => "18c.natatorium";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var p = PlanOf(world);
+        var entry = EntryFrame(p, out var reach);
+        var half = S.PoolEntryWidth * .5f;
+        return [SiteRanges.Bounds(p.Frame.Rect(-p.A * (1 + S.PoolRing), -p.B * (1 + S.PoolRing),
+            p.A * (1 + S.PoolRing), p.B * (1 + S.PoolRing)), .05f),
+            SiteRanges.Bounds(entry.Rect(-half, reach - 3f, half, reach + S.PoolEntryDepth), .1f)];
+    }
+
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>The dome's LOD-free plan: the fitted ellipse (local X along the major axis), the glass band's facet count and the platform storey's height (the platform feature's, D-239).</summary>

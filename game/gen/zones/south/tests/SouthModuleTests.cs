@@ -57,7 +57,7 @@ public sealed class SouthModuleTests
             AssertThat(traces.Select(t => t.SourceId).Distinct(StringComparer.Ordinal).Count() == traces.Length).OverrideFailureMessage("source IDs are unique").IsTrue();
             foreach (var claim in module.Claims.OfType<FeatureClaim>())
                 AssertThat(traces.Any(t => t.Feature == claim.Feature && t.Output.Meshes.Count > 0 && t.Colliders.Count > 0 && t.OccupiedContours.Count > 0)).OverrideFailureMessage($"{lod}: claimed source {claim.Feature} has actual geometry, collision and material contours").IsTrue();
-            var cells = module.ItemsFor(ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
+            var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
             var built = cells.Select(t => module.Build(ctx, t, lod)).ToArray();
             AssertThat(Triangles(traces.SelectMany(t => t.Output.Meshes)).SequenceEqual(Triangles(built.SelectMany(o => o.Meshes)))).OverrideFailureMessage($"{lod}: complete source geometry reproduces the tiled production geometry").IsTrue();
             AssertThat(traces.SelectMany(t => t.Output.Parts).OrderBy(p => p.ToString(), StringComparer.Ordinal)
@@ -104,7 +104,7 @@ public sealed class SouthModuleTests
         AssertThat(tiles.Length > 0).OverrideFailureMessage("the module occupies cells").IsTrue();
         foreach (var lod in Levels)
         {
-            var items = module.ItemsFor(ctx, lod);
+            var items = ZoneTestCells.Items(module, ctx, lod);
             AssertThat(items.Count > 0).OverrideFailureMessage($"{lod} has items").IsTrue();
             var cells = items.Select(i => (TileGrid.At(i.Anchor, lod).X, TileGrid.At(i.Anchor, lod).Z)).Distinct().ToArray();
             var meshes = 0;
@@ -139,12 +139,12 @@ public sealed class SouthModuleTests
 
     [TestCase, TestCategory(TestReason.Regression)]
     [TestCategory("Slow")]
-    public void WritableBuildOutputCannotModifySharedSiteGeometry()
+    public void WritableBuildOutputCannotModifySubsequentBuilds()
     {
         var ctx = Context();
         var module = new SouthModule();
-        var cached = module.ItemsFor(ctx, LodLevel.L0);
-        var anchor = cached.First(i => i.Mesh is not null).Anchor;
+        var items = ZoneTestCells.Items(module, ctx, LodLevel.L0);
+        var anchor = items.First(i => i.Mesh is not null).Anchor;
         var tile = TileGrid.At(anchor);
         var output = module.Build(ctx, tile, LodLevel.L0);
         var positions = output.Meshes.Select(m => m.Position.ToArray()).ToArray();
@@ -155,8 +155,7 @@ public sealed class SouthModuleTests
             Array.Fill(mesh.Index, 99);
         }
         var again = module.Build(ctx, tile, LodLevel.L0);
-        AssertThat(ReferenceEquals(cached, module.ItemsFor(ctx, LodLevel.L0))).OverrideFailureMessage("the regression must exercise the same shared cache").IsTrue();
-        AssertThat(again.Meshes.Count == positions.Length && again.Meshes.Select((m, i) => m.Position.SequenceEqual(positions[i]) && m.Index.SequenceEqual(indices[i])).All(same => same)).OverrideFailureMessage("a caller's writable output changed the next build from the cached site").IsTrue();
+        AssertThat(again.Meshes.Count == positions.Length && again.Meshes.Select((m, i) => m.Position.SequenceEqual(positions[i]) && m.Index.SequenceEqual(indices[i])).All(same => same)).OverrideFailureMessage("a caller's writable output changed a subsequent build").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -165,7 +164,7 @@ public sealed class SouthModuleTests
     {
         // WLD-INTERIORS: WP-13 places the mat, open sign and door lamp on every open entrance anchor; the zone builds the doorway only.
         string[] kit = [PartCatalog.EntranceMat, PartCatalog.OpenSign, PartCatalog.EntranceLamp];
-        var placed = new SouthModule().ItemsFor(Context(), LodLevel.L0).Where(i => i.Part is not null).Select(i => i.Part!.Part.Value).ToArray();
+        var placed = ZoneTestCells.Items(new SouthModule(), Context(), LodLevel.L0).Where(i => i.Part is not null).Select(i => i.Part!.Part.Value).ToArray();
         AssertThat(!placed.Any(kit.Contains)).OverrideFailureMessage($"the zone places no entrance kit ({string.Join(", ", placed.Where(kit.Contains))})").IsTrue();
         AssertThat(!new SouthModule().Claims.OfType<FeatureClaim>().Any(c => (c.Aspects & Aspects.Props) != 0)).OverrideFailureMessage("no Props claim keeps WP-13 off the zone's entrances").IsTrue();
     }
@@ -176,7 +175,7 @@ public sealed class SouthModuleTests
     {
         var ctx = Context();
         var module = new SouthModule();
-        foreach (var item in module.ItemsFor(ctx, LodLevel.L0))
+        foreach (var item in ZoneTestCells.Items(module, ctx, LodLevel.L0))
             AssertThat(item.Anchor.X is > -1000 and < 1000 && item.Anchor.Y is > 90 and < 1000).OverrideFailureMessage($"item at {item.Anchor} is in the south zone").IsTrue();
     }
 

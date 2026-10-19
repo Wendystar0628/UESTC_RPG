@@ -30,6 +30,17 @@ public sealed class GrandstandSite : ZoneSite
 
     public override string Id => "18c.stand";
 
+    private static Campus.Contracts.Maps.MapRect StationRange(IEnumerable<Station> stations) => SiteRanges.Bounds(
+        stations.SelectMany(s => new[] { s.Front, s.Back }), T.CanopyBack + T.CanopyThickness * .5f + T.Column);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var p = LayoutOf(world);
+        return [StationRange(p.Stations), .. (p.Low.Count > 0 ? new[] { StationRange(p.Low) } : []),
+            SiteRanges.Point(p.Centre), SiteRanges.Point(PlanGeometry.Centroid(
+                world.Feature(PlatformSite.Feature).Contour(SouthIds.Platform.Part), meanIfDegenerate: true))];
+    }
+
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>One ray through the tiers: its angle (degrees), the front point on the track side, the back point, the outward unit.</summary>
@@ -43,12 +54,17 @@ public sealed class GrandstandSite : ZoneSite
 
     internal static Plan PlanOf(IWorldModel world)
     {
+        var p = LayoutOf(world);
+        return p with { Y = world.Terrain.HeightAt(p.Centre.X, p.Centre.Y) };
+    }
+
+    private static Plan LayoutOf(IWorldModel world)
+    {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Stand {Feature} is missing from the world model.");
         var ring = PlanGeometry.DeduplicateRing(feature.Contour(Part));
         var track = world.Features.TryGetValue(new(Track), out var t) ? t.Contour() : null;
         var centre = PlanGeometry.Centroid(track ?? ring, meanIfDegenerate: true);
-        var y = world.Terrain.HeightAt(centre.X, centre.Y);
         var found = new List<Station>();
         var count = (int)MathF.Round(360f / T.StationStep);
         for (var i = 0; i < count; i++)
@@ -82,7 +98,7 @@ public sealed class GrandstandSite : ZoneSite
             low.Add(new(0, p0, p0 + out_ * depth, out_));
             low.Add(new(0, p1, p1 + out_ * depth, out_));
         }
-        return new(y, centre, stations, low);
+        return new(0, centre, stations, low);
     }
 
     /// <summary>Surfaces of a section's segments: walls and walks, seat treads, the risers between rows.</summary>
@@ -152,7 +168,11 @@ public sealed class GrandstandSite : ZoneSite
 
     private static void Build(SiteBuilder b, bool main, bool low)
     {
-        var p = PlanOf(b.Context.World);
+        var p = LayoutOf(b.Context.World);
+        main &= b.Includes(StationRange(p.Stations));
+        low &= p.Low.Count > 0 && b.Includes(StationRange(p.Low));
+        if (!main && !low) return;
+        p = p with { Y = b.Ground(p.Centre) };
         var (stride, rows) = b.Detail switch { SiteDetail.Full => (1, T.Rows), SiteDetail.Plain => (2, T.Rows / 2), _ => (4, 0) };
         var picked = new List<Station>();
         for (var i = 0; i < p.Stations.Count; i += stride) picked.Add(p.Stations[i]);
@@ -173,6 +193,7 @@ public sealed class GrandstandSite : ZoneSite
     {
         for (var c0 = 0; c0 + 1 < stations.Count; c0 += 8)
         {
+            if (!b.Includes(StationRange(stations.Skip(c0).Take(Math.Min(9, stations.Count - c0))))) continue;
             var writers = new Dictionary<ToonSpec, (Shapes.Writer Writer, int Count)>();
             void Quad(ToonSpec m, Vector3 a, Vector3 e, Vector3 f, Vector3 g, Vector3 n)
             {
@@ -205,6 +226,7 @@ public sealed class GrandstandSite : ZoneSite
         }
         foreach (var (s, sign) in new[] { (stations[0], -1f), (stations[^1], 1f) })
         {
+            if (!b.Includes(StationRange([s]))) continue;
             var face = Simplify(section(s).Points);
             // The cap's plane holds the ray; its local X runs out along the ray, Z across it.
             var across = new Vector2(-s.Out.Y, s.Out.X) * sign;
@@ -220,6 +242,7 @@ public sealed class GrandstandSite : ZoneSite
         for (var i = 0; i + 1 < stations.Count; i++)
         {
             Station s0 = stations[i], s1 = stations[i + 1];
+            if (!b.Includes(StationRange([s0, s1]))) continue;
             var top0 = Main(s0, 0).Top;
             Vector2 a = s0.Back - s0.Out * 0.15f, c = s1.Back - s1.Out * 0.15f;
             var f = PlanFrame.Toward(a, c);
@@ -237,6 +260,7 @@ public sealed class GrandstandSite : ZoneSite
     {
         var stations = picked.Where(s => s.Angle >= T.CanopyFrom && s.Angle <= T.CanopyTo).ToArray();
         if (stations.Length < 2) return;
+        if (!b.Includes(StationRange(stations))) return;
         var n = b.Detail == SiteDetail.Full ? T.CanopySamples : T.CanopySamples / 2;
         var rings = stations.Select(s => CanopyRing(p, s, n)).ToArray();
         var count = rings[0].Length;
@@ -257,6 +281,7 @@ public sealed class GrandstandSite : ZoneSite
         }
         for (var c0 = 0; c0 + 1 < stations.Length; c0 += 8)
         {
+            if (!b.Includes(StationRange(stations.Skip(c0).Take(Math.Min(9, stations.Length - c0))))) continue;
             Shapes.Writer silver = new(L.Silver), gold = new(L.CanopyGold);
             int silverCount = 0, goldCount = 0;
             for (var i = c0; i < Math.Min(c0 + 8, stations.Length - 1); i++)
@@ -281,6 +306,7 @@ public sealed class GrandstandSite : ZoneSite
         // Caps over the thin ends.
         foreach (var (i, sign) in new[] { (0, -1f), (stations.Length - 1, 1f) })
         {
+            if (!b.Includes(StationRange([stations[i]]))) continue;
             var cap = new Shapes.Writer(L.Silver);
             var normal = new Vector3(-stations[i].Out.Y, 0, stations[i].Out.X) * sign;
             var centre = rings[i].Aggregate(Vector3.Zero, (acc, v) => acc + v) / count;
@@ -293,6 +319,7 @@ public sealed class GrandstandSite : ZoneSite
         // Vertical division of the gold section: a slim dark seam over the top at every other station.
         for (var i = 0; i < stations.Length; i += 2)
         {
+            if (!b.Includes(StationRange([stations[i]]))) continue;
             if (stations[i].Angle < T.GoldFrom || stations[i].Angle > T.GoldTo) continue;
             for (var k = 0; k < n; k++)
             {
@@ -343,6 +370,7 @@ public sealed class GrandstandSite : ZoneSite
         for (var i = 0; i < stations.Length; i += T.SupportEvery)
         {
             var s = stations[i];
+            if (!b.Includes(StationRange([s]))) continue;
             var ring = CanopyRing(p, s, T.CanopySamples);
             var top = Main(s, 0).Top;
             var foot = s.At(s.Depth - T.Concourse * 0.5f, p.Y + top);
@@ -373,6 +401,7 @@ public sealed class GrandstandSite : ZoneSite
             if (arc - last < T.PortalPitch) continue;
             if (!deck.Decks.Any(r => PlanGeometry.InsideByCrossings(r, s.Back + s.Out * 1.0f))) continue;
             last = arc;
+            if (!b.Includes(StationRange([s]))) continue;
             var f = new PlanFrame(s.Back, new(s.Out.Y, -s.Out.X));
             float floor = deck.Top, hw = T.PortalWidth * 0.5f;
             GridFacade.Box(b, f, -hw - 0.3f, hw + 0.3f, floor, floor + T.PortalHeight + 0.3f, -0.02f, 0.12f, L.White, 0.02f);
@@ -386,7 +415,11 @@ public sealed class GrandstandSite : ZoneSite
 
     private static void Collide(SiteColliders c, bool main, bool includeLow)
     {
-        var p = PlanOf(c.Context.World);
+        var p = LayoutOf(c.Context.World);
+        main &= c.Includes(StationRange(p.Stations));
+        includeLow &= p.Low.Count > 0 && c.Includes(StationRange(p.Low));
+        if (!main && !includeLow) return;
+        p = p with { Y = c.Ground(p.Centre) };
         foreach (var stations in new[] { p.Stations, p.Low }.Where(s => ReferenceEquals(s, p.Low) ? includeLow : main))
         {
             if (stations.Count < 2) continue;
@@ -394,6 +427,7 @@ public sealed class GrandstandSite : ZoneSite
             for (var i = 0; i + 1 < stations.Count; i++)
             {
                 Station s0 = stations[i], s1 = stations[i + 1];
+                if (!c.Includes(StationRange([s0, s1]))) continue;
                 var top0 = low ? LowProfile(0).Top : Main(s0, 0).Top;
                 var top1 = low ? LowProfile(0).Top : Main(s1, 0).Top;
                 float front = low ? T.LowFront : T.Front, walk = low ? T.LowWalk : T.FrontWalk, concourse = low ? T.LowBack : T.Concourse;
@@ -406,6 +440,7 @@ public sealed class GrandstandSite : ZoneSite
             }
             foreach (var s in new[] { stations[0], stations[^1] })
             {
+                if (!c.Includes(StationRange([s]))) continue;
                 var top = low ? LowProfile(0).Top : Main(s, 0).Top;
                 c.Wall(s.Front, s.Back, 0.2f, p.Y - 0.2f, p.Y + top + 1.1f, SurfaceTag.Wall, FootMat.Concrete);
             }

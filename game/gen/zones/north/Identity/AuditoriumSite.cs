@@ -11,6 +11,13 @@ namespace Campus.Gen.Zones.North.Identity;
 public sealed class AuditoriumSite : ZoneSite
 {
     public override string Id => "20c.auditorium";
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var record = world.Feature(NorthFeatureIds.DrumDesign);
+        return [SiteRanges.Point(record.Point(), record.Number("diameter") * .5f + record.Number("wallThickness")),
+            SiteRanges.Bounds(world.Feature(record.Text("backstage")), record.Number("wallThickness"))];
+    }
     public override IReadOnlyList<Claim> Claims =>
         [new FeatureClaim(new(NorthFeatureIds.Auditorium.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 

@@ -38,11 +38,22 @@ public sealed class ForestParkSite : ZoneSite
 
     public override string Id => "18a.forest-park";
 
+    private static Campus.Contracts.Maps.MapRect CageRange(IWorldModel world) => SiteRanges.Bounds(
+        CageOf(world).Rect(-P.CageWidth * .5f, -P.CageDepth * .5f, P.CageWidth * .5f, P.CageDepth * .5f), .15f);
+
+    private static Campus.Contracts.Maps.MapRect HillRange(Hilltop hill) => SiteRanges.Bounds(
+        hill.Frame.Rect(-(hill.Size + 1.2f) * .5f, -(hill.Size + 1.2f) * .5f,
+            (hill.Size + 1.2f) * .5f, (hill.Size + 1.2f) * .5f)
+            .Concat(SeatArc(hill).SelectMany(s => new[] { s.A, s.B })), .25f);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [CageRange(world), HillRange(HilltopOf(world))];
+
     public override void Build(SiteBuilder b)
     {
         var hill = HilltopOf(b.Context.World);
-        PeacockHouse(b, b.Ground(CageOf(b.Context.World).Origin));
-        HillPavilion(b, hill, b.Ground(hill.At));
+        if (b.Includes(CageRange(b.Context.World))) PeacockHouse(b, b.Ground(CageOf(b.Context.World).Origin));
+        if (b.Includes(HillRange(hill))) HillPavilion(b, hill, b.Ground(hill.At));
     }
 
     // ---- Peacock house (孔雀之家) ----
@@ -162,6 +173,7 @@ public sealed class ForestParkSite : ZoneSite
         // Stone seat wall on the north rim, facing the lake and the museum: a polygonal arc of 0.45 m blocks.
         foreach (var (a, e) in SeatArc(hill))
         {
+            if (!b.Includes(SiteRanges.Bounds([a, e], .25f))) continue;
             var seg = PlanFrame.Along((a + e) * 0.5f, e - a);
             var ground = b.Ground(seg.Origin);
             b.Add(PartGeometryKernel.BeveledBox(Vector2.Distance(a, e) + 0.02f, hill.SeatHeight + 0.1f, 0.42f, 0.025f, L.Granite), seg.At(0, ground - 0.1f, 0));
@@ -182,11 +194,21 @@ public sealed class ForestParkSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
+        if (c.Includes(CageRange(c.Context.World))) CollideCage(c);
+        var hill = HilltopOf(c.Context.World);
+        if (c.Includes(HillRange(hill))) CollideHill(c, hill);
+    }
+
+    private static void CollideCage(SiteColliders c)
+    {
         var cage = CageOf(c.Context.World);
         var y = c.Ground(cage.Origin.X, cage.Origin.Y);
         var ring = cage.Rect(-P.CageWidth * 0.5f, -P.CageDepth * 0.5f, P.CageWidth * 0.5f, P.CageDepth * 0.5f);
         for (var i = 0; i < 4; i++) c.Wall(ring[i], ring[(i + 1) % 4], 0.08f, y, y + 0.3f + P.CageWall + P.CageRoofRise, SurfaceTag.Wall, FootMat.Metal);
-        var hill = HilltopOf(c.Context.World);
+    }
+
+    private static void CollideHill(SiteColliders c, Hilltop hill)
+    {
         var pad = hill.Frame;
         var hy = c.Ground(hill.At.X, hill.At.Y);
         var half = hill.Size * 0.5f - P.PavilionPost * 0.5f;
@@ -195,6 +217,7 @@ public sealed class ForestParkSite : ZoneSite
                 c.Add(new PostCollider(pad.P(x, z), P.PavilionPost * 0.75f, hy, hy + 0.3f + P.PavilionEave, SurfaceTag.Prop) { Foot = FootMat.WoodDeck });
         foreach (var (a, e) in SeatArc(hill))
         {
+            if (!c.Includes(SiteRanges.Bounds([a, e], .25f))) continue;
             var seg = PlanFrame.Along((a + e) * 0.5f, e - a);
             var ground = c.Ground(seg.Origin.X, seg.Origin.Y);
             c.Box(seg.At(0, ground + hill.SeatHeight * 0.5f, 0), new(Vector2.Distance(a, e) * 0.5f, hill.SeatHeight * 0.5f, 0.21f), SurfaceTag.Prop, FootMat.StonePaving);

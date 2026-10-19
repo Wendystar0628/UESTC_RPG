@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common.Tests;
 using Campus.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
@@ -141,7 +142,7 @@ public sealed class SouthWindowTests
         HashSet<int> Glass(LodLevel lod)
         {
             var ids = new HashSet<int>();
-            var cells = module.ItemsFor(ctx, lod).Select(i => (TileGrid.At(i.Anchor, lod).X, TileGrid.At(i.Anchor, lod).Z)).Distinct();
+            var cells = ZoneTestCells.Items(module, ctx, lod).Select(i => (TileGrid.At(i.Anchor, lod).X, TileGrid.At(i.Anchor, lod).Z)).Distinct();
             foreach (var (x, z) in lod == LodLevel.L4 ? [(0, 0)] : cells)
             {
                 var glass = module.Build(ctx, new(x, z), lod).Meshes.Where(m => m.Uv2 is not null).ToArray();

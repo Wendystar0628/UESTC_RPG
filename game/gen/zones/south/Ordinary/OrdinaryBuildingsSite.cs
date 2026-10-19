@@ -17,6 +17,8 @@ public sealed class OrdinaryBuildingsSite : ZoneSite
 
     public override string Id => "18c.ordinary";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) => [];
+
     public override IReadOnlyList<InspectionProbe> Probes =>
     [
         // Q5 · K3: 20 m in front of A block's road front (osm:way:779496157, facing 37°), eye height.

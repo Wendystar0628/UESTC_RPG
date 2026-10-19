@@ -20,6 +20,9 @@ public sealed class EntranceAxisSite : ZoneSite
 
     public override string Id => "18a.entrance-axis";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(FrameOf(world).Rect(-2.1f, -2.1f, 2.1f, 2.1f))];
+
     public override void Build(SiteBuilder b)
     {
         var frame = FrameOf(b.Context.World);

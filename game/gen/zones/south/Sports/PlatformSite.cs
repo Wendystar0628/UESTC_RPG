@@ -38,6 +38,21 @@ public sealed class PlatformSite : ZoneSite
 
     public override string Id => "18c.platform";
 
+    private static Campus.Contracts.Maps.MapRect StairRange(Stair s) => SiteRanges.Bounds(
+        s.Frame.Rect(-s.Width * .5f - .2f, -.2f, s.Width * .5f + .2f, 2 * FlightDepth + P.StairLanding + .2f));
+
+    private static Campus.Contracts.Maps.MapRect EdgeRange(Edge e) => SiteRanges.Bounds([e.A, e.B], .5f);
+
+    private static Campus.Contracts.Maps.MapRect BayRange(Bay bay) => SiteRanges.Bounds(
+        bay.Frame.Rect(-bay.Width * .5f, -.4f, bay.Width * .5f, .4f));
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var p = LayoutOf(world);
+        return [.. p.Decks.Select(r => SiteRanges.Bounds(r, .5f)), SiteRanges.Bounds(p.Core, .5f),
+            .. p.Stairs.Select(StairRange)];
+    }
+
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>A deck edge: its ends, outward unit normal and whether it is free (no venue or deck beyond it).</summary>
@@ -67,11 +82,17 @@ public sealed class PlatformSite : ZoneSite
 
     internal static Plan PlanOf(IWorldModel world)
     {
+        var p = LayoutOf(world);
+        var centre = PlanGeometry.Centroid(p.Decks[0], meanIfDegenerate: true);
+        return p with { Y = world.Terrain.HeightAt(centre.X, centre.Y) };
+    }
+
+    private static Plan LayoutOf(IWorldModel world)
+    {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Platform {Feature} is missing from the world model.");
         var deck = PlanGeometry.OpenRing(feature.Contour(Part)).ToArray();
         var decks = new List<Vector2[]> { deck };
-        var y = world.Terrain.HeightAt(PlanGeometry.Centroid(deck, meanIfDegenerate: true).X, PlanGeometry.Centroid(deck, meanIfDegenerate: true).Y);
         var rise = feature.Height ?? throw new InvalidOperationException($"Platform {Feature} has no height.");
 
         var closed = new List<Vector2[]>(decks);
@@ -128,7 +149,7 @@ public sealed class PlatformSite : ZoneSite
                 columns.Add(c);
             }
         }
-        return new(y, rise, decks, edges, core, bays, columns, stairs);
+        return new(0, rise, decks, edges, core, bays, columns, stairs);
     }
 
     /// <summary>
@@ -193,13 +214,16 @@ public sealed class PlatformSite : ZoneSite
     {
         var p = PlanOf(b.Context.World);
         Deck(b, p);
-        Core(b, p);
+        if (b.Includes(SiteRanges.Bounds(p.Core, .5f))) Core(b, p);
         if (b.Detail == SiteDetail.Mass) return;
-        foreach (var c in p.Columns) Column(b, p, c);
+        foreach (var c in p.Columns)
+            if (b.Includes(SiteRanges.Point(c, .71f))) Column(b, p, c);
         Shopfronts(b, p);
-        foreach (var e in p.Edges.Where(e => e.Free)) Parapet(b, p, e);
-        foreach (var s in p.Stairs) Flights(b, p, s);
-        if (b.Detail == SiteDetail.Full) Joints(b, p);
+        foreach (var e in p.Edges.Where(e => e.Free))
+            if (b.Includes(EdgeRange(e))) Parapet(b, p, e);
+        foreach (var s in p.Stairs)
+            if (b.Includes(StairRange(s))) Flights(b, p, s);
+        if (b.Detail == SiteDetail.Full && p.Decks.Any(r => b.Includes(SiteRanges.Bounds(r)))) Joints(b, p);
     }
 
     /// <summary>The deck: a white slab under the top paving, a fascia band on every free edge.</summary>
@@ -207,12 +231,13 @@ public sealed class PlatformSite : ZoneSite
     {
         foreach (var ring in p.Decks)
         {
+            if (!b.Includes(SiteRanges.Bounds(ring))) continue;
             b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), P.Slab - 0.15f, L.White, p.Soffit), Matrix4x4.Identity);
             b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), 0.15f, L.DeckPaving, p.Top - 0.15f), Matrix4x4.Identity);
         }
         var bevel = b.Detail == SiteDetail.Full ? 0.03f : 0;
         foreach (var e in p.Edges.Where(e => e.Free))
-            b.Add(PartGeometryKernel.BeveledBox(e.Length + 0.24f, P.Fascia, 0.4f, bevel, L.White), e.Frame.At(0, p.Top - P.Fascia + 0.02f, P.FasciaProud - 0.2f));
+            if (b.Includes(EdgeRange(e))) b.Add(PartGeometryKernel.BeveledBox(e.Length + 0.24f, P.Fascia, 0.4f, bevel, L.White), e.Frame.At(0, p.Top - P.Fascia + 0.02f, P.FasciaProud - 0.2f));
     }
 
     /// <summary>The closed shop block under the deck, up to the soffit.</summary>
@@ -240,6 +265,7 @@ public sealed class PlatformSite : ZoneSite
         var full = b.Detail == SiteDetail.Full;
         foreach (var bay in p.Bays)
         {
+            if (!b.Includes(BayRange(bay))) continue;
             var f = bay.Frame;
             float hw = bay.Width * 0.5f, inner = hw - P.Pilaster * 0.5f;
             GridFacade.Box(b, f, -hw, -hw + P.Pilaster, floor - 0.1f, p.Soffit, -0.05f, 0.16f, L.Sand, full ? 0.02f : 0);
@@ -271,9 +297,11 @@ public sealed class PlatformSite : ZoneSite
         for (var i = 0; i < p.Core.Length; i++)
         {
             var c = p.Core[i];
+            if (!b.Includes(SiteRanges.Point(c, .43f))) continue;
             GridFacade.Box(b, new(c, new(1, 0)), -0.3f, 0.3f, floor - 0.1f, p.Soffit, -0.3f, 0.3f, L.Sand, full ? 0.02f : 0);
         }
-        if (Allocation(b.Context, p) is { } allocation) WindowNumbers.Panes(b, Openings(p), allocation, W.General, W.Office);
+        if (b.Includes(SiteRanges.Bounds(p.Core, .5f)) && Allocation(b.Context, p) is { } allocation)
+            WindowNumbers.Panes(b, Openings(p), allocation, W.General, W.Office);
     }
 
     /// <summary>Parapet panels (PartCatalog.Railing, solid infill) along a free edge, open where a stair lands.</summary>
@@ -367,14 +395,18 @@ public sealed class PlatformSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var p = PlanOf(c.Context.World);
-        foreach (var ring in p.Decks) c.Add(new SlabCollider(ring, p.Top, P.Slab, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
+        foreach (var ring in p.Decks)
+            if (c.Includes(SiteRanges.Bounds(ring))) c.Add(new SlabCollider(ring, p.Top, P.Slab, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
         var railing = new RailingPart();
         foreach (var e in p.Edges.Where(e => e.Free))
+            if (c.Includes(EdgeRange(e)))
             foreach (var (rail, at) in ParapetPieces(p, e)) c.Add(railing.Collision(rail), at);
-        foreach (var col in p.Columns) c.Add(new PostCollider(col, P.ColumnRadius + 0.05f, p.Y, p.Soffit, SurfaceTag.Wall) { Foot = FootMat.Concrete });
+        foreach (var col in p.Columns)
+            if (c.Includes(SiteRanges.Point(col, P.ColumnRadius + .05f))) c.Add(new PostCollider(col, P.ColumnRadius + 0.05f, p.Y, p.Soffit, SurfaceTag.Wall) { Foot = FootMat.Concrete });
         var floor = p.Y + SouthTune.Plaza.PavingTop;
         foreach (var bay in p.Bays)
         {
+            if (!c.Includes(BayRange(bay))) continue;
             var f = bay.Frame;
             var hw = bay.Width * 0.5f;
             if (!bay.Door)
@@ -392,11 +424,13 @@ public sealed class PlatformSite : ZoneSite
         for (var i = 0; i < p.Core.Length; i++)
         {
             Vector2 a = p.Core[i], e = p.Core[(i + 1) % p.Core.Length];
+            if (!c.Includes(SiteRanges.Bounds([a, e], .15f))) continue;
             if (Vector2.Distance(a, e) < 3.5f) c.Wall(a, e, 0.15f, p.Y - 0.2f, p.Soffit, SurfaceTag.Wall, FootMat.Concrete);
         }
         float d = FlightDepth, half = p.Rise * 0.5f;
         foreach (var s in p.Stairs)
         {
+            if (!c.Includes(StairRange(s))) continue;
             var f = s.Frame;
             var fl = Flight(s.Width, p.Rise);
             c.Add(Steps.Collision(fl), f.AtReversed(0, p.Y + half, d * 0.5f));

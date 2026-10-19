@@ -63,6 +63,18 @@ public sealed class LirenSite : ZoneSite
 
     public override string Id => "18b.liren";
 
+    private static Campus.Contracts.Maps.MapRect BlockRange(IReadOnlyList<Vector2> ring, GridStyle style) =>
+        SiteRanges.Bounds(ring, MathF.Max(style.CorniceProjection, style.PierDepth) + .2f);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var f = Rings(world);
+        return [.. f.Piers.Select(r => BlockRange(r, f.PierStyle)), BlockRange(f.Link, f.LinkStyle),
+            BlockRange(f.Bridge, f.BridgeStyle), .. Columns(f).Select(c => SiteRanges.Bounds(
+                new PlanFrame(c.Point, c.Along).Rect(-(T.ColumnSize + .3f) * .5f, -(T.ColumnSize + .3f) * .5f,
+                    (T.ColumnSize + .3f) * .5f, (T.ColumnSize + .3f) * .5f)))];
+    }
+
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Connector), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>The connector's parts and, for each, the volumes its faces may lie against (the void under the bridge is open).</summary>
@@ -171,14 +183,17 @@ public sealed class LirenSite : ZoneSite
         var f = Rings(b.Context.World);
         var y = b.Ground(PlanGeometry.Centroid(f.Bridge, meanIfDegenerate: true));
         // Piers, the east link and the bridge storey over the void; the soffit slab under it reads the void's ceiling at three storeys.
-        foreach (var (ring, style, dress, lift, numbering) in Blocks(f)) GridFacade.Build(b, ring, y + lift, style, dress, numbering);
+        foreach (var (ring, style, dress, lift, numbering) in Blocks(f))
+            if (b.Includes(BlockRange(ring, style))) GridFacade.Build(b, ring, y + lift, style, dress, numbering);
         var bridge = new PolygonRings(f.Bridge);
-        b.Add(PartGeometryKernel.Extrude(bridge, T.BridgeFloor - T.Soffit, L.White, y + T.Soffit), Matrix4x4.Identity);
+        if (b.Includes(BlockRange(f.Bridge, f.BridgeStyle)))
+            b.Add(PartGeometryKernel.Extrude(bridge, T.BridgeFloor - T.Soffit, L.White, y + T.Soffit), Matrix4x4.Identity);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
-        b.Add(PartGeometryKernel.Extrude(bridge, 0.04f, L.Paving, y - 0.01f), Matrix4x4.Identity);
+        if (b.Includes(BlockRange(f.Bridge, f.BridgeStyle))) b.Add(PartGeometryKernel.Extrude(bridge, 0.04f, L.Paving, y - 0.01f), Matrix4x4.Identity);
         var bevel = b.Detail == SiteDetail.Full ? 0.03f : 0f;
         foreach (var at in Columns(f))
         {
+            if (!b.Includes(SiteRanges.Point(at.Point, T.ColumnSize + .3f))) continue;
             var col = new PlanFrame(at.Point, at.Along);
             b.Add(PartGeometryKernel.BeveledBox(T.ColumnSize + 0.3f, 0.45f, T.ColumnSize + 0.3f, bevel, L.GreyPlinth), col.At(0, y - 0.05f, 0));
             b.Add(PartGeometryKernel.BeveledBox(T.ColumnSize, T.Soffit - 0.4f, T.ColumnSize, bevel, L.White), col.At(0, y + 0.4f, 0));
@@ -203,9 +218,11 @@ public sealed class LirenSite : ZoneSite
         var f = Rings(c.Context.World);
         var centre = PlanGeometry.Centroid(f.Bridge, meanIfDegenerate: true);
         var y = c.Ground(centre.X, centre.Y);
-        foreach (var pier in f.Piers) GridFacade.Collide(c, pier, y, f.PierStyle, e => Dress(e, f.PierNeighbours), FootMat.Concrete);
-        GridFacade.Collide(c, f.Link, y, f.LinkStyle, e => Dress(e, f.LinkNeighbours), FootMat.Concrete);
+        foreach (var pier in f.Piers)
+            if (c.Includes(BlockRange(pier, f.PierStyle))) GridFacade.Collide(c, pier, y, f.PierStyle, e => Dress(e, f.PierNeighbours), FootMat.Concrete);
+        if (c.Includes(BlockRange(f.Link, f.LinkStyle))) GridFacade.Collide(c, f.Link, y, f.LinkStyle, e => Dress(e, f.LinkNeighbours), FootMat.Concrete);
         foreach (var (point, along) in Columns(f))
-            c.Box(new PlanFrame(point, along).At(0, y + T.Soffit * 0.5f, 0), new(T.ColumnSize * 0.5f + 0.05f, T.Soffit * 0.5f, T.ColumnSize * 0.5f + 0.05f), SurfaceTag.Wall, FootMat.Concrete);
+            if (c.Includes(SiteRanges.Point(point, T.ColumnSize + .3f)))
+                c.Box(new PlanFrame(point, along).At(0, y + T.Soffit * 0.5f, 0), new(T.ColumnSize * 0.5f + 0.05f, T.Soffit * 0.5f, T.ColumnSize * 0.5f + 0.05f), SurfaceTag.Wall, FootMat.Concrete);
     }
 }

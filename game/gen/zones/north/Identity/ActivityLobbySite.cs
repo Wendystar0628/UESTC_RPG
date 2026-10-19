@@ -11,6 +11,10 @@ namespace Campus.Gen.Zones.North.Identity;
 public sealed class ActivityLobbySite : ZoneSite
 {
     public override string Id => "20c.activity-lobby";
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        [SiteRanges.Bounds(world.Feature(NorthFeatureIds.ActivityLobby.Entity), new Campus.Contracts.Parts.PanelParams().Depth),
+            SiteRanges.Bounds(world.Feature(NorthFeatureIds.ActivityLobbyDoor), world.Feature(NorthFeatureIds.ActivityLobbyDoor).Number("canopyDepth") + new Campus.Contracts.Parts.PanelParams().Depth)];
     public override IReadOnlyList<Claim> Claims =>
         [new FeatureClaim(new(NorthFeatureIds.ActivityLobby.Entity), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 

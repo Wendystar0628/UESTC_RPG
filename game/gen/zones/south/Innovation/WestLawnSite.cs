@@ -21,6 +21,12 @@ public sealed class WestLawnSite : ZoneSite
 
     public override string Id => "18c.west-lawn";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var wall = WallOf(world);
+        return [SiteRanges.Bounds(SeatArc(wall).SelectMany(s => new[] { s.A, s.B }), wall.Thickness * .5f + .05f)];
+    }
+
     /// <summary>The seat wall from its overlay feature (D-239): the crest, the arc's radius and bearing range, its height and thickness.</summary>
     internal readonly record struct SeatWall(Vector2 Crest, float Radius, float From, float To, float Height, float Thickness);
 
@@ -44,6 +50,7 @@ public sealed class WestLawnSite : ZoneSite
         var wall = WallOf(b.Context.World);
         foreach (var (a, e) in SeatArc(wall))
         {
+            if (!b.Includes(SiteRanges.Bounds([a, e], wall.Thickness * .5f + .05f))) continue;
             var seg = PlanFrame.Along((a + e) * 0.5f, e - a);
             var ground = b.Ground(seg.Origin);
             var length = Vector2.Distance(a, e) + 0.03f;
@@ -59,6 +66,7 @@ public sealed class WestLawnSite : ZoneSite
         var wall = WallOf(c.Context.World);
         foreach (var (a, e) in SeatArc(wall))
         {
+            if (!c.Includes(SiteRanges.Bounds([a, e], wall.Thickness * .5f + .05f))) continue;
             var seg = PlanFrame.Along((a + e) * 0.5f, e - a);
             var ground = c.Ground(seg.Origin.X, seg.Origin.Y);
             c.Box(seg.At(0, ground + wall.Height * 0.5f, 0), new(Vector2.Distance(a, e) * 0.5f, wall.Height * 0.5f, wall.Thickness * 0.5f), SurfaceTag.Prop, FootMat.StonePaving);

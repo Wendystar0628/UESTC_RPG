@@ -1,3 +1,4 @@
+using Campus.Gen.Zones.Common.Tests;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Tests;
@@ -183,7 +184,7 @@ public sealed class NorthSiteTests
             var step = Vector2.Distance(Canal.CanalRailSite.Post(frame, k), Canal.CanalRailSite.Post(frame, k + 1));
             AssertThat(step <= NorthTune.Bank.PostPitch + TestTolerance.Position && step > 1f).OverrideFailureMessage($"panel {k} is a post pitch long ({step})").IsTrue();
         }
-        var walls = new NorthModule().CollidersFor(ctx).Select(i => i.Collider).OfType<WallCollider>()
+        var walls = ZoneTestCells.Colliders(new NorthModule(), ctx).OfType<WallCollider>()
             .Where(c => MathF.Abs(Vector2.Dot(c.A - joint, w)) < TestTolerance.Position && MathF.Abs(Vector2.Dot(c.B - joint, w)) < TestTolerance.Position)
             .OrderBy(c => Vector2.Dot(joint - c.A, u)).ToArray();
         AssertThat(walls.Length == panels).OverrideFailureMessage($"one collider per panel ({walls.Length} of {panels})").IsTrue();

@@ -15,6 +15,13 @@ public sealed class ChaoyangStairSite : ZoneSite
     private static readonly IronGatePart Gate = new();
     public override string Id => "20c.chaoyang-stair";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var record = world.Feature(NorthFeatureIds.ChaoyangStair);
+        return [SiteRanges.Bounds(record, record.Number("width") * .5f + new DoorParams().Depth),
+            SiteRanges.Bounds([record.Pair("frontFrom"), record.Pair("frontTo")], new RoofParams().Depth + new ColumnParams().Width)];
+    }
+
     public override void Build(SiteBuilder b)
     {
         var record = b.Context.World.Feature(NorthFeatureIds.ChaoyangStair);

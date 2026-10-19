@@ -35,6 +35,27 @@ public sealed class EastLakeSite : ZoneSite
 
     public override string Id => "18b.east-lake";
 
+    private static Campus.Contracts.Maps.MapRect WadeRange(Shore shore)
+    {
+        var (u0, u1) = shore.Openings(shore.WadeSegment, shore.WadeLength)[0];
+        return SiteRanges.Bounds(shore.WadeFrame.Rect(MathF.Min(u0 - .8f, shore.WadeLength * .5f - K.BoatLength * 1.1f),
+            -.8f, MathF.Max(u1 + .8f, shore.WadeLength * .5f + K.BoatLength * 1.1f),
+            K.Tread1Depth + K.Tread2Depth + .35f + K.BoatBeam), .05f);
+    }
+
+    private static Campus.Contracts.Maps.MapRect PavilionRange(IWorldModel world) => SiteRanges.Bounds(
+        Hexagon(PavilionFrame(world), MathF.Max(K.LowerEave, K.PavilionPlatform + .08f))
+            .Concat(PavilionFrame(world).Rect(-PavilionFlight().Width * .5f, 0, PavilionFlight().Width * .5f,
+                Apothem(K.PavilionPlatform) + PavilionFlight().Depth)), .05f);
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var shore = ShoreOf(world);
+        var rail = RailLine(shore, BankSegments(shore, Water(world)).ToArray());
+        return [.. Enumerable.Range(0, rail.Length - 1).Select(i => SiteRanges.Bounds([rail[i], rail[i + 1]], .31f)),
+            SiteRanges.Bounds(shore.Bank), WadeRange(shore), SiteRanges.Point(shore.StatueAt, 1.42f), PavilionRange(world)];
+    }
+
     /// <summary>
     /// The shore read from the map data: the registered Liren-side hard bank, west to east, the bank segment the wade step
     /// lies on, the step's width and two tread levels (design:south-eastlake-wade-step), and the statue's place.
@@ -73,24 +94,28 @@ public sealed class EastLakeSite : ZoneSite
     {
         var shore = ShoreOf(b.Context.World);
         var water = Water(b.Context.World);
-        var y = b.Ground(shore.Bank[shore.WadeSegment]);
         var segments = BankSegments(shore, water).ToArray();
         var rail = RailLine(shore, segments);
         var bevel = b.Detail == SiteDetail.Full ? 0.02f : 0f;
-        foreach (var (f, l, i) in segments)
+        if (segments.Any(s => b.Includes(SiteRanges.Bounds([rail[s.Index], rail[s.Index + 1]], .31f))) || b.Includes(WadeRange(shore)))
         {
-            Balustrade(b, rail[i], rail[i + 1], RailOpenings(shore, f, l, i, rail[i], rail[i + 1]), y + K.CopingTop, b.Detail);
+            var y = b.Ground(shore.Bank[shore.WadeSegment]);
+            foreach (var (f, l, i) in segments)
+            {
+                if (!b.Includes(SiteRanges.Bounds([rail[i], rail[i + 1]], .31f))) continue;
+                Balustrade(b, rail[i], rail[i + 1], RailOpenings(shore, f, l, i, rail[i], rail[i + 1]), y + K.CopingTop, b.Detail);
+            }
+            // A white newel at every bank vertex; the continuous coping belongs to WP-28.
+            foreach (var p in rail)
+            {
+                if (!b.Includes(SiteRanges.Point(p, .31f))) continue;
+                var corner = new PlanFrame(p, Vector2.UnitX);
+                Newel(b, corner, 0, y + K.CopingTop + 0.03f, bevel);
+            }
+            if (b.Includes(WadeRange(shore))) { WadeSteps(b, shore, y); Boats(b, shore, y); }
         }
-        // A white newel at every bank vertex; the continuous coping belongs to WP-28.
-        foreach (var p in rail)
-        {
-            var corner = new PlanFrame(p, Vector2.UnitX);
-            Newel(b, corner, 0, y + K.CopingTop + 0.03f, bevel);
-        }
-        WadeSteps(b, shore, y);
-        Boats(b, shore, y);
-        WuLiren(b, shore, b.Ground(shore.StatueAt));
-        Pavilion(b, b.Ground(PavilionFrame(b.Context.World).Origin));
+        if (b.Includes(SiteRanges.Point(shore.StatueAt, 1.42f))) WuLiren(b, shore, b.Ground(shore.StatueAt));
+        if (b.Includes(PavilionRange(b.Context.World))) Pavilion(b, b.Ground(PavilionFrame(b.Context.World).Origin));
     }
 
     /// <summary>
@@ -427,15 +452,30 @@ public sealed class EastLakeSite : ZoneSite
     {
         var shore = ShoreOf(c.Context.World);
         var water = Water(c.Context.World);
-        var y = c.Ground(shore.Bank[shore.WadeSegment].X, shore.Bank[shore.WadeSegment].Y);
         var segments = BankSegments(shore, water).ToArray();
         var rail = RailLine(shore, segments);
-        foreach (var (f, l, i) in segments)
+        if (segments.Any(s => c.Includes(SiteRanges.Bounds([rail[s.Index], rail[s.Index + 1]], .31f))) || c.Includes(WadeRange(shore)))
         {
-            var line = PlanFrame.Toward(rail[i], rail[i + 1]);
-            foreach (var (u0, u1) in GridFacade.Open(-0.17f, Vector2.Distance(rail[i], rail[i + 1]) + 0.17f, RailOpenings(shore, f, l, i, rail[i], rail[i + 1])))
-                c.Wall(line.P(u0, 0), line.P(u1, 0), 0.17f, y - 1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
+            var y = c.Ground(shore.Bank[shore.WadeSegment]);
+            foreach (var (f, l, i) in segments)
+            {
+                if (!c.Includes(SiteRanges.Bounds([rail[i], rail[i + 1]], .31f))) continue;
+                var line = PlanFrame.Toward(rail[i], rail[i + 1]);
+                foreach (var (u0, u1) in GridFacade.Open(-0.17f, Vector2.Distance(rail[i], rail[i + 1]) + 0.17f, RailOpenings(shore, f, l, i, rail[i], rail[i + 1])))
+                    c.Wall(line.P(u0, 0), line.P(u1, 0), 0.17f, y - 1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
+            }
+            if (c.Includes(WadeRange(shore))) CollideWade(c, shore, y);
         }
+        if (c.Includes(SiteRanges.Point(shore.StatueAt, 1.42f)))
+        {
+            var sy = c.Ground(shore.StatueAt);
+            c.Box(StatueFrame(shore).At(0, sy + 1.0f, 0), new(1.0f, 1.0f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);
+        }
+        if (c.Includes(PavilionRange(c.Context.World))) CollidePavilion(c);
+    }
+
+    private static void CollideWade(SiteColliders c, Shore shore, float y)
+    {
         // Wade treads (auto-step 0.30 and 0.35 m) and the mooring posts.
         var w = shore.WadeFrame;
         var (o0, o1) = shore.Openings(shore.WadeSegment, shore.WadeLength)[0];
@@ -445,10 +485,10 @@ public sealed class EastLakeSite : ZoneSite
         c.Box(w.At(mid, y + shore.Tread2 - 0.15f, K.Tread1Depth + K.Tread2Depth * 0.5f), new(half, 0.15f, K.Tread2Depth * 0.5f), SurfaceTag.Stair, FootMat.StonePaving);
         foreach (var u in new[] { o0 - 0.6f, o1 + 0.6f })
             c.Add(new PostCollider(w.P(u, -0.6f), 0.2f, y, y + 0.65f, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
-        // Statue pedestal.
-        var sy = c.Ground(shore.StatueAt.X, shore.StatueAt.Y);
-        c.Box(StatueFrame(shore).At(0, sy + 1.0f, 0), new(1.0f, 1.0f, 1.0f), SurfaceTag.Prop, FootMat.PolishedStone);
-        // Pavilion: platform, steps, columns, benches.
+    }
+
+    private static void CollidePavilion(SiteColliders c)
+    {
         var p = PavilionFrame(c.Context.World);
         var py = c.Ground(p.Origin.X, p.Origin.Y);
         c.Add(new SlabCollider(Hexagon(p, K.PavilionPlatform), py + K.PavilionFloor, K.PavilionFloor + 0.1f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });

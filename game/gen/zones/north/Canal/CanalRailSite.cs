@@ -21,6 +21,9 @@ public sealed class CanalRailSite : ZoneSite
 {
     public override string Id => "20a4.canal-rail";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        FrameOf(world) is { } frame ? [SiteRanges.Bounds([Post(frame, 0), Post(frame, Panels)], B.ColliderHalf)] : [];
+
     /// <summary>
     /// The registered bank frame: origin at the selected edge's north end, X toward that end, +Z off the water.
     /// Null when the bank selection is not in the map.
@@ -40,21 +43,27 @@ public sealed class CanalRailSite : ZoneSite
     /// <summary>Where panel k's handrail starts: post centre, except at the joint, where it starts on the shared post's campus-side face.</summary>
     private static Vector2 PanelStart(PlanFrame frame, int k) => k == 0 ? frame.P(B.JointT - B.JointPost * 0.5f, B.RailN) : Post(frame, k);
 
+    private static Campus.Contracts.Maps.MapRect PanelRange(PlanFrame frame, int k, float padding = B.ColliderHalf) =>
+        SiteRanges.Bounds([Post(frame, k), Post(frame, k + 1)], padding);
+
     public override void Build(SiteBuilder b)
     {
         if (FrameOf(b.Context.World) is not { } frame) return;
         var panels = Panels;
         var u = frame.U;
         var y = new float[panels];
-        for (var k = 0; k < panels; k++) y[k] = MathF.Min(b.Ground(Post(frame, k)), b.Ground(Post(frame, k + 1))) + GroundLevels.Paving;
         for (var k = 0; k < panels; k++)
-            b.Run(L.LightSteel, PanelStart(frame, k), Post(frame, k + 1), B.HandRail, y[k] + B.Height - B.HandRail * 0.7f, y[k] + B.Height);
+            if (b.Includes(PanelRange(frame, k, B.PostPitch + B.ColliderHalf)))
+                y[k] = MathF.Min(b.Ground(Post(frame, k)), b.Ground(Post(frame, k + 1))) + GroundLevels.Paving;
+        for (var k = 0; k < panels; k++)
+            if (b.Includes(PanelRange(frame, k))) b.Run(L.LightSteel, PanelStart(frame, k), Post(frame, k + 1), B.HandRail, y[k] + B.Height - B.HandRail * 0.7f, y[k] + B.Height);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
         for (var k = 0; k < panels; k++)
-            b.Run(L.LightSteel, PanelStart(frame, k), Post(frame, k + 1), 0.04f, y[k] + B.BottomRail, y[k] + B.BottomRail + 0.04f);
+            if (b.Includes(PanelRange(frame, k))) b.Run(L.LightSteel, PanelStart(frame, k), Post(frame, k + 1), 0.04f, y[k] + B.BottomRail, y[k] + B.BottomRail + 0.04f);
         for (var k = 1; k <= panels; k++)
         {
             var at = Post(frame, k);
+            if (!b.Includes(SiteRanges.Point(at, B.ColliderHalf))) continue;
             var end = k == panels;
             var size = end ? B.PostSize + 0.02f : B.PostSize;
             var base0 = end ? y[k - 1] : MathF.Min(y[k - 1], y[k]);
@@ -67,6 +76,7 @@ public sealed class CanalRailSite : ZoneSite
         var length = B.JointT - B.EndT;
         for (var k = 0; k < panels; k++)
         {
+            if (!b.Includes(PanelRange(frame, k))) continue;
             // Bars stand between the posts' faces; distances run from the joint along the run.
             var s0 = length * k / panels + B.PostSize;
             var s1 = length * (k + 1) / panels - B.PostSize;
@@ -86,6 +96,7 @@ public sealed class CanalRailSite : ZoneSite
         if (FrameOf(c.Context.World) is not { } frame) return;
         for (var k = 0; k < Panels; k++)
         {
+            if (!c.Includes(PanelRange(frame, k))) continue;
             Vector2 a = Post(frame, k), d = Post(frame, k + 1);
             var y = MathF.Min(c.Ground(a), c.Ground(d)) + GroundLevels.Paving;
             c.Wall(a, d, B.ColliderHalf, y - 0.6f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);

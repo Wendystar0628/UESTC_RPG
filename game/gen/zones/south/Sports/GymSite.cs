@@ -33,6 +33,13 @@ public sealed class GymSite : ZoneSite
 
     public override string Id => "18c.gym";
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world)
+    {
+        var p = PlanOf(world);
+        return [SiteRanges.Point(p.Centre, MathF.Max(p.Radius + S.GymRibProfile.Max(v => v.X) + S.GymRibDepth,
+            p.Radius * S.GymRoofProfile.Max(v => v.X)))];
+    }
+
     public override IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(new(Feature), Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     /// <summary>

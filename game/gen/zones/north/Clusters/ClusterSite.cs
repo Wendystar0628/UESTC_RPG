@@ -28,6 +28,15 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
 
     public override string Id => "cluster." + Cluster.Key;
 
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        world.Features.TryGetValue(new(Cluster.Id), out var feature)
+            ? [SiteRanges.Bounds(feature, F.MaxInset + F.HedgeOffset + F.HedgeWidth + G.HouseWidth +
+                G.HouseGap + G.IslandWidth + G.Passages * G.OpenPassage + (G.Passages + 1) * G.CabinetWidth + G.HouseEave)] : [];
+
+    private static Campus.Contracts.Maps.MapRect GateRange(GateSpot gate) => SiteRanges.Bounds(
+        gate.Frame.Rect(MathF.Min(gate.SpanMinus, -gate.LaneHalf - G.PierSize), -G.HouseDepth - G.HouseEave,
+            MathF.Max(gate.SpanPlus, gate.Main ? gate.HouseEnd : gate.BankEnd + G.PierSize), G.HouseOut + G.HouseEave), G.HouseEave);
+
     /// <summary>Q1 (walk, K1) outside the open main gate and Q6 (45° down, K2–K3) over its courtyard.</summary>
     public override IReadOnlyList<InspectionProbe> Probes => Cluster.Key == NorthTune.Probes.OpenCluster
         ?
@@ -43,6 +52,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         foreach (var run in layout.Runs) Fence(b, run);
         foreach (var gate in layout.Gates)
         {
+            if (!b.Includes(GateRange(gate))) continue;
             switch (gate.Kind)
             {
                 case GateKind.Vehicle: VehicleGate(b, gate); break;
@@ -66,6 +76,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         for (var i = 0; i + 1 < posts.Count; i++)
         {
             Vector2 p = posts[i], q = posts[i + 1];
+            if (!b.Includes(SiteRanges.Bounds([p, q, run.Hedge[i], run.Hedge[i + 1]], F.HedgeWidth))) continue;
             var length = Vector2.Distance(p, q);
             if (length < 0.05f) continue;
             float y0 = b.Ground(p), y1 = b.Ground(q), y = MathF.Min(y0, y1);
@@ -92,6 +103,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         for (var j = 0; j < posts.Count; j++)
         {
             var p = posts[j];
+            if (!b.Includes(SiteRanges.Point(p, F.PostSize + .04f))) continue;
             var y = b.Ground(p);
             // Square posts turn with the run: along the chord of their two neighbours.
             var u = VectorMath.Unit(posts[Math.Min(j + 1, posts.Count - 1)] - posts[Math.Max(j - 1, 0)], Vector2.Zero, 1e-9);
@@ -103,6 +115,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
 
     private static void Hedge(SiteBuilder b, Vector2 p, Vector2 q)
     {
+        if (!b.Includes(SiteRanges.Bounds([p, q], F.HedgeWidth))) return;
         var length = Vector2.Distance(p, q);
         if (length < 0.05f) return;
         var u = (q - p) / length;
@@ -250,6 +263,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
             for (var i = 0; i + 1 < run.Posts.Count; i++)
             {
                 Vector2 p = run.Posts[i], q = run.Posts[i + 1];
+                if (!c.Includes(SiteRanges.Bounds([p, q, run.Hedge[i], run.Hedge[i + 1]], F.HedgeWidth))) continue;
                 if (Vector2.Distance(p, q) < 0.05f) continue;
                 var lo = MathF.Min(c.Ground(p), c.Ground(q));
                 var hi = MathF.Max(c.Ground(p), c.Ground(q));
@@ -260,6 +274,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
             }
         foreach (var g in layout.Gates)
         {
+            if (!c.Includes(GateRange(g))) continue;
             var f = g.Frame;
             var y = c.Ground(f.Origin);
             var top = y + WalkRules.BarrierHeight;
