@@ -97,9 +97,6 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             // Drain preparation before releasing its data, so a late CPU result cannot republish an unloaded map.
             if (preparation is not null) await preparation;
             var receivers = Instances(from).ToArray();
-            foreach (var detachable in receivers.OfType<IMapRenderDetach>())
-                try { detachable.DetachMapInstances(from); }
-                catch (Exception error) { ReportFailure(from, "map-render-detach", detachable.GetType().FullName, error); failures.Add(error); }
             foreach (var aware in receivers.OfType<IMapAware>())
                 try { aware.OnMapUnloading(from); }
                 catch (Exception error) { ReportFailure(from, "map-aware-unload", aware.GetType().FullName, error); failures.Add(error); }

@@ -23,7 +23,7 @@ public interface IStreamVisualFrame
 [KernelService(typeof(IStreamVisualFrame), Owner = "WP-02b")]
 [KernelService(typeof(IMapStreamState), Owner = "WP-02b")]
 [KernelNode("stream.select", Owner = "WP-02b")]
-public partial class StreamDirector : Node, IMapAware, IMapRenderDetach, IMapStreamState, IStreamVisualFrame
+public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamVisualFrame
 {
     private readonly StreamSettings _settings = new();
     private readonly LodSpeedPolicy _speed = new();
@@ -138,16 +138,12 @@ public partial class StreamDirector : Node, IMapAware, IMapRenderDetach, IMapStr
         _catalogTask = BuildCatalog(contextSource.GetPreparedModuleTilesAsync(context));
         _replan = _settings.ReplanSeconds;
     }
-    public void DetachMapInstances(MapId from)
+    public void OnMapUnloading(MapId from)
     {
         // Detach the ENTIRE retiring scene before the first FreeRid. FreeRid itself flushes all dirty
         // instances; freeing one bundle at a time would initialize uniforms for the other doomed bundles.
         foreach (var bundle in _groups.Values.SelectMany(group => group.Bundles)
                      .Concat(_interiors?.Prepared ?? []).Concat(_retiringBundles).Distinct()) bundle.DetachAll();
-    }
-    public void OnMapUnloading(MapId from)
-    {
-        DetachMapInstances(from);
         _mapGeneration++;
         _context = null; _error = null; _destination = null; _destinationState = null; _catalog = null; _tree = null;
         _selectionApplied = false;

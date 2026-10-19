@@ -62,10 +62,6 @@ public sealed class StreamLifecycleTests
                 var context = Context();
                 var work = new TaskCompletionSource<ModuleTileCatalog>();
                 BindUnrenderedCatalog(director, context, work.Task);
-                director.DetachMapInstances(context.Descriptor.Id);
-                director.DetachMapInstances(context.Descriptor.Id);
-                if (Field(director, "_context") is null || !ReferenceEquals(Field(director, "_catalogTask"), work.Task))
-                    throw new InvalidOperationException("Render detachment released map state before the unload phase.");
                 director.OnMapUnloading(context.Descriptor.Id);
                 if (director.IsUnloaded) throw new InvalidOperationException("Unload did not retain its real pending CPU task.");
                 if (fail) work.SetException(new InvalidOperationException("Retired catalog failed."));
