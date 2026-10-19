@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Water;
 
 namespace Campus.Gen.World;
 
@@ -13,6 +14,14 @@ internal static partial class TerrainCompiler
             if (b.WrittenWater.Contains(feature.Id)) continue;
             var polygons = WorldFeatureKinds.Parts(feature, "water").SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray();
             if (polygons.Length == 0) continue;
+            if (WaterPoolLayout.IsPool(feature))
+            {
+                var poolRegion = new TerrainRegion(polygons);
+                AddWater(b, null, b.References.SourceFiles(feature.Id), feature.Id, poolRegion,
+                    DefaultShoreTop(b, poolRegion, feature.Id) - WaterPoolRules.RimDrop,
+                    new TerrainBank(TerrainBankKind.Hard, "1:1"), WaterPoolRules.DeepDepth, 1, [], false);
+                continue;
+            }
             var defaults = b.Context.Defaults ?? throw new WorldDataException("map.json", "terrainDefaults", "Automatic water constraints require explicit map defaults.");
             var channel = b.References.IsChannelWater(feature);
             var slope = channel ? defaults.ChannelBankGrade : defaults.LakeBankGrade;

@@ -1,6 +1,39 @@
 {
   "features": [
     {
+      "id": "qsh:way:852606258",
+      "kind": "building",
+      "name": "未命名建筑 · 6258",
+      "height": 7,
+      "storeys": 2,
+      "family": "unknown",
+      "props": {
+        "name": "未命名建筑 · 6258",
+        "category": "unknown",
+        "kind": "building",
+        "anchor": [-111.21,7.0,-583.54]
+      },
+      "parts": [
+        {
+          "id": "osm:way:852606258",
+          "height": 7,
+          "storeys": 2,
+          "props": {
+            "kind": "building",
+            "category": "unknown",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-107.31,-585.06],[-110.15,-577.44],[-116.05,-579.86],[-112.96,-587.39]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
       "id": "design:north-dangui-kerb-ramps",
       "kind": "kerbRamps",
       "props": {
@@ -1073,38 +1106,6 @@
         "type": "point",
         "position": [-25.08,0,-845.91]
       }
-    },
-    {
-      "id": "qsh:relation:11583700",
-      "kind": "sport",
-      "name": "田径场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "name": "田径场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [616.19,0,216.09]
-      },
-      "parts": [
-        {
-          "id": "osm:relation:11583700",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[519.52,161.32],[524.96,161.95],[525.13,143.95],[532.15,142.86],[536.24,138.25],[539.55,134.18],[543.95,131.02],[550.44,126.87],[559.39,122.74],[568.82,121.03],[578.91,120.66],[587.01,122.92],[593.75,126.5],[599.28,130.57],[603.45,134.62],[611.14,144.38],[616.5,154.11],[618.65,173.11],[625.82,172.9],[626,259.16],[617.05,259.07],[616.09,278.04],[608.6,288.42],[594.5,297.57],[580.46,301.71],[563.72,300.77],[547.69,298.62],[532.35,290.42],[523.84,279.48],[519.32,264.34]],
-              "holes": [[[536.14,169.08],[535.25,262.39],[537.53,270.64],[605.08,270.4],[606.62,263.37],[606.33,169.16],[604.63,162.39],[537.97,161.76]]]
-            }
-          }
-        }
-      ]
     },
     {
       "id": "qsh:source:relation:7849822",
@@ -7733,133 +7734,6 @@
       ]
     },
     {
-      "id": "qsh:way:217855231",
-      "kind": "building",
-      "name": "综合训练馆",
-      "height": 30,
-      "storeys": 4,
-      "family": "sport",
-      "props": {
-        "name": "综合训练馆",
-        "category": "sport",
-        "subcategory": "gym",
-        "kind": "building",
-        "anchor": [548.05,15.0,21.34]
-      },
-      "parts": [
-        {
-          "id": "osm:way:217855231",
-          "height": 15,
-          "storeys": 2,
-          "props": {
-            "kind": "building",
-            "category": "sport",
-            "highway": null
-          },
-          "geometry": {
-            "type": "multiPolygon",
-            "polygons": [
-              {
-                "outer": [[566.41,-43.65],[562.92,-59.2],[575.87,-60.38],[577.77,-44.62]],
-                "holes": []
-              },
-              {
-                "outer": [[588.2,29],[584.21,-0.47],[591.72,-1.42],[593.24,10.3],[595.58,28.25]],
-                "holes": []
-              },
-              {
-                "outer": [[583.97,90.67],[582.53,74.76],[593.53,73.48],[594.98,89.33]],
-                "holes": []
-              }
-            ]
-          },
-          "facadePolygons": [
-            {
-              "outer": [[566.41,-43.65],[562.92,-59.2],[575.87,-60.38],[577.77,-44.62]],
-              "holes": []
-            },
-            {
-              "outer": [[588.2,29],[584.21,-0.47],[591.72,-1.42],[595.58,28.25]],
-              "holes": []
-            },
-            {
-              "outer": [[583.97,90.67],[582.53,74.76],[593.53,73.48],[594.98,89.33]],
-              "holes": []
-            }
-          ]
-        },
-        {
-          "id": "osm:way:949704500",
-          "height": 30,
-          "storeys": 4,
-          "props": {
-            "kind": "building",
-            "category": "sport",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[581.91,67.95],[523.06,87.39],[518.68,88.13],[514.16,88.76],[512.35,88.73],[511.16,87.47],[510.64,86.06],[502.32,28.81],[501.72,23.86],[501.12,18.83],[494.37,-37.76],[499,-38.21],[505.04,-38.49],[568.27,-35.33],[579.53,-35.16],[584.21,-0.47],[588.2,29],[592.78,62.93]],
-              "holes": []
-            }
-          },
-          "facadePolygons": [
-            {
-              "outer": [[581.91,67.95],[523.06,87.39],[514.16,88.76],[512.35,88.73],[511.16,87.47],[510.64,86.06],[502.32,28.81],[494.37,-37.76],[499,-38.21],[505.04,-38.49],[568.27,-35.33],[579.53,-35.16],[592.78,62.93]],
-              "holes": []
-            }
-          ]
-        },
-        {
-          "id": "osm:way:949704501",
-          "height": 22.5,
-          "storeys": 3,
-          "props": {
-            "kind": "building",
-            "category": "sport",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[581.91,67.95],[582.53,74.76],[583.97,90.67],[584.31,94.46],[573.39,100.68],[566.17,104.58],[565.72,104.81],[558.37,106.99],[556.46,107.1],[549.75,107.47],[543.68,106.99],[534.39,105.08],[527.15,102.51],[525.61,101.34],[524.73,99.8],[523.06,87.39]],
-              "holes": []
-            }
-          },
-          "facadePolygons": [
-            {
-              "outer": [[581.91,67.95],[584.31,94.46],[573.39,100.68],[565.72,104.81],[558.37,106.99],[549.75,107.47],[543.68,106.99],[534.39,105.08],[527.15,102.51],[525.61,101.34],[524.73,99.8],[523.06,87.39]],
-              "holes": []
-            }
-          ]
-        },
-        {
-          "id": "osm:way:949704502",
-          "height": 22.5,
-          "storeys": 3,
-          "props": {
-            "kind": "building",
-            "category": "sport",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[505.04,-38.49],[504.57,-48.66],[505.1,-52.92],[509.91,-56.79],[514.86,-59.08],[526.51,-64],[536.76,-65.39],[548.77,-65.01],[561.71,-61.76],[562.65,-60.4],[562.92,-59.2],[566.41,-43.65],[568.27,-35.33]],
-              "holes": []
-            }
-          },
-          "facadePolygons": [
-            {
-              "outer": [[505.04,-38.49],[504.57,-48.66],[505.1,-52.92],[509.91,-56.79],[514.86,-59.08],[526.51,-64],[536.76,-65.39],[548.77,-65.01],[561.71,-61.76],[562.65,-60.4],[568.27,-35.33]],
-              "holes": []
-            }
-          ]
-        }
-      ]
-    },
-    {
       "id": "qsh:way:217855232",
       "kind": "building",
       "name": "博翰苑3栋",
@@ -8305,7 +8179,7 @@
       "id": "qsh:way:217855263",
       "kind": "building",
       "name": "成电会堂",
-      "height": 12.6,
+      "height": 18,
       "storeys": 3,
       "family": "service",
       "props": {
@@ -8313,12 +8187,16 @@
         "category": "service",
         "subcategory": "service",
         "kind": "building",
-        "anchor": [-96.95,12.6,-613.9]
+        "anchor": [
+          -96.95,
+          12.6,
+          -613.9
+        ]
       },
       "parts": [
         {
           "id": "osm:way:217855263",
-          "height": 12.6,
+          "height": 18,
           "storeys": 3,
           "props": {
             "kind": "building",
@@ -8328,7 +8206,24 @@
           "geometry": {
             "type": "polygon",
             "rings": {
-              "outer": [[-67.2,-634.78],[-90.64,-578.23],[-126.69,-593.02],[-103.26,-649.58]],
+              "outer": [
+                [
+                  -67.2,
+                  -634.78
+                ],
+                [
+                  -90.64,
+                  -578.23
+                ],
+                [
+                  -126.69,
+                  -593.02
+                ],
+                [
+                  -103.26,
+                  -649.58
+                ]
+              ],
               "holes": []
             }
           }
@@ -9322,720 +9217,6 @@
       ]
     },
     {
-      "id": "qsh:way:544269702",
-      "kind": "sport",
-      "name": "球场 · 9702",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9702",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [564.44,0,444.84]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269702",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[554.48,427.05],[574.68,427.21],[574.41,462.63],[554.2,462.46]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269703",
-      "kind": "sport",
-      "name": "球场 · 9703",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9703",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [584.28,0,445.0]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269703",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[574.68,427.21],[594.15,427.36],[593.87,462.79],[574.41,462.63]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269704",
-      "kind": "sport",
-      "name": "球场 · 9704",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9704",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [610.6,0,444.87]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269704",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[601.54,428.04],[619.82,428.23],[619.8,461.69],[601.22,461.51]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269705",
-      "kind": "sport",
-      "name": "球场 · 9705",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9705",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [629.18,0,445.05]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269705",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[619.8,461.69],[619.82,428.23],[638.7,428.41],[638.38,461.87]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269706",
-      "kind": "sport",
-      "name": "球场 · 9706",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9706",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [647.69,0,445.22]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269706",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[638.7,428.41],[656.99,428.58],[656.68,462.04],[638.38,461.87]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269707",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [570.32,0,396.37]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269707",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[560.9,378.84],[580.18,379.14],[579.85,413.92],[560.35,413.61]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269708",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [588.46,0,396.66]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269708",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[580.18,379.14],[597.17,379.4],[596.63,414.18],[579.85,413.92]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269709",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [611.43,0,397.71]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269709",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[603.12,379.88],[620.04,380],[619.68,415.55],[602.86,415.42]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269710",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [628.62,0,397.84]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269710",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[620.04,380],[637.52,380.14],[637.25,415.68],[619.68,415.55]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269711",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [652.56,0,397.5]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269711",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[644.17,379.44],[661.02,379.46],[660.92,415.55],[644.14,415.54]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269712",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [669.82,0,397.51]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269712",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[661.02,379.46],[678.68,379.48],[678.65,415.56],[660.92,415.55]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269713",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [613.27,0,346.76]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269713",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[604.25,330.06],[622.59,330.31],[622.29,363.32],[603.94,363.21]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269714",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [631.37,0,346.9]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269714",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[622.29,363.32],[622.59,330.31],[640.45,330.48],[640.13,363.48]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269715",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [656.07,0,347.22]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269715",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[647.75,330.91],[664.75,330.97],[664.33,363.83],[647.44,363.47]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269716",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [673.57,0,347.54]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269716",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[664.75,330.97],[682.93,331.24],[682.28,364.25],[664.33,363.83]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269717",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [691.6,0,347.93]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269717",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[682.93,331.24],[700.93,331.6],[700.26,364.61],[682.28,364.25]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269718",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [645.15,0,300.12]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269718",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[636.38,282.04],[654.43,282.29],[653.92,318.21],[635.86,317.95]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269719",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [663.4,0,300.38]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269719",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[654.43,282.29],[672.98,282.55],[672.27,318.49],[653.92,318.21]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269720",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [681.98,0,300.69]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269720",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[672.98,282.55],[691.57,282.89],[691.11,318.89],[672.27,318.49]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269721",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [706.09,0,299.19]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269721",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[697.68,282.01],[714.66,282.11],[714.47,316.36],[697.56,316.27]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269722",
-      "kind": "sport",
-      "name": "网球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "网球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [722.58,0,299.28]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269722",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[714.66,282.11],[730.68,282.2],[730.49,316.46],[714.47,316.36]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
       "id": "qsh:way:544269723",
       "kind": "sport",
       "name": "球场 · 9723",
@@ -10342,1228 +9523,6 @@
       ]
     },
     {
-      "id": "qsh:way:544269732",
-      "kind": "sport",
-      "name": "球场 · 9732",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9732",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [586.02,0,482.23]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269732",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[576.22,475.85],[595.78,476.1],[596.05,488.61],[576.06,488.35]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269733",
-      "kind": "sport",
-      "name": "球场 · 9733",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9733",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [605.25,0,482.47]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269733",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[595.78,476.1],[614.36,476.34],[614.83,488.85],[596.05,488.61]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269734",
-      "kind": "sport",
-      "name": "球场 · 9734",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9734",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [623.97,0,482.72]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269734",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[614.36,476.34],[633.43,476.58],[633.27,489.09],[614.83,488.85]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:544269738",
-      "kind": "sport",
-      "name": "球场 · 9738",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9738",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [613.94,0,520.03]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269738",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[605.75,513.56],[622.45,513.48],[622.53,526.49],[605.04,526.59]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364384",
-      "kind": "sport",
-      "name": "球场 · 4384",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4384",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [720.11,0,202.26]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364384",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[711.34,187.07],[729.25,187.35],[728.85,217.37],[711,217.18]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364386",
-      "kind": "sport",
-      "name": "球场 · 4386",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4386",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [737.48,0,202.49]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364386",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[729.25,187.35],[746.17,187.61],[745.64,217.49],[728.85,217.37]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364387",
-      "kind": "sport",
-      "name": "球场 · 4387",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4387",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [754.38,0,202.67]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364387",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[746.17,187.61],[763.22,187.86],[762.48,217.74],[745.64,217.49]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364389",
-      "kind": "sport",
-      "name": "球场 · 4389",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4389",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [771.5,0,203.03]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364389",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[763.22,187.86],[780.54,188.32],[779.74,218.24],[762.48,217.74]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364391",
-      "kind": "sport",
-      "name": "球场 · 4391",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4391",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [719.8,0,232.14]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364391",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[711,217.18],[728.85,217.37],[728.58,247.03],[710.75,246.92]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364392",
-      "kind": "sport",
-      "name": "球场 · 4392",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4392",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [737.07,0,232.26]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364392",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[728.85,217.37],[745.64,217.49],[745.19,247.4],[728.58,247.03]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364394",
-      "kind": "sport",
-      "name": "球场 · 4394",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4394",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [753.84,0,232.57]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364394",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[745.64,217.49],[762.48,217.74],[762.03,247.66],[745.19,247.4]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364396",
-      "kind": "sport",
-      "name": "球场 · 4396",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4396",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [720.95,0,161.38]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364396",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[712.43,147.69],[729.43,147.63],[729.45,175.1],[712.49,175.07]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364397",
-      "kind": "sport",
-      "name": "球场 · 4397",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4397",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [738.29,0,161.39]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364397",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[729.43,147.63],[747.27,147.67],[747.03,175.28],[729.45,175.1]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364399",
-      "kind": "sport",
-      "name": "球场 · 4399",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4399",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [755.96,0,161.56]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364399",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[747.27,147.67],[764.94,147.84],[764.6,175.5],[747.03,175.28]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364401",
-      "kind": "sport",
-      "name": "球场 · 4401",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4401",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [774.16,0,161.79]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364401",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[764.94,147.84],[783.73,148.09],[783.36,175.76],[764.6,175.5]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364402",
-      "kind": "sport",
-      "name": "球场 · 4402",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 4402",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [792.07,0,162.04]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364402",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[783.73,148.09],[800.79,148.31],[800.41,176],[783.36,175.76]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364404",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [636.54,0,89.46]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364404",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[627.63,73.91],[645.58,73.98],[645.46,105],[627.5,104.93]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364406",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [654.5,0,89.53]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364406",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[645.58,73.98],[663.54,74.06],[663.42,105.07],[645.46,105]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364407",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [672.16,0,89.59]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364407",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[663.54,74.06],[680.9,74.12],[680.77,105.13],[663.42,105.07]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364409",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [636.42,0,119.41]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364409",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[627.5,104.93],[645.46,105],[645.35,133.9],[627.38,133.83]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364411",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [654.38,0,119.48]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364411",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[645.46,105],[663.42,105.07],[663.3,133.97],[645.35,133.9]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364413",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [672.04,0,119.55]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364413",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[663.42,105.07],[680.77,105.13],[680.66,134.04],[663.3,133.97]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364414",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [654.27,0,148.27]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364414",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[645.35,133.9],[663.3,133.97],[663.19,162.65],[645.24,162.58]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364416",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [671.92,0,148.34]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364416",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[663.3,133.97],[680.66,134.04],[680.55,162.72],[663.19,162.65]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364418",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [699.64,0,90.4]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364418",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[690.69,75.69],[708.88,75.87],[708.58,105.12],[690.4,104.94]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364420",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [717.6,0,90.59]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364420",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[708.88,75.87],[726.61,76.05],[726.31,105.3],[708.58,105.12]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364421",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [734.76,0,90.76]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364421",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[726.61,76.05],[743.21,76.22],[742.91,105.47],[726.31,105.3]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364423",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [699.34,0,119.69]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364423",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[690.4,104.94],[708.58,105.12],[708.29,134.45],[690.1,134.26]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364425",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [717.3,0,119.87]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364425",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[708.58,105.12],[726.31,105.3],[726.01,134.62],[708.29,134.45]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:546364426",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [734.46,0,120.05]
-      },
-      "parts": [
-        {
-          "id": "osm:way:546364426",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[726.31,105.3],[742.91,105.47],[742.61,134.79],[726.01,134.62]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:549782169",
-      "kind": "sport",
-      "name": "游泳 · 2169",
-      "height": 0,
-      "props": {
-        "leisure": "swimming_pool",
-        "sport": "swimming",
-        "name": "游泳 · 2169",
-        "category": "sport",
-        "subcategory": "swimming",
-        "kind": "sport",
-        "anchor": [689.39,0,-149.99]
-      },
-      "parts": [
-        {
-          "id": "osm:way:549782169",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "swimming",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[677.05,-174.88],[701.92,-174.79],[701.73,-125.09],[676.86,-125.19]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:549782170",
-      "kind": "sport",
-      "name": "游泳 · 2170",
-      "height": 0,
-      "props": {
-        "leisure": "swimming_pool",
-        "sport": "swimming",
-        "name": "游泳 · 2170",
-        "category": "sport",
-        "subcategory": "swimming",
-        "kind": "sport",
-        "anchor": [653.65,0,-164.57]
-      },
-      "parts": [
-        {
-          "id": "osm:way:549782170",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "swimming",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[640.67,-140.38],[640.93,-188.89],[666.63,-188.76],[666.37,-140.25]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:549782171",
-      "kind": "building",
-      "name": "未命名建筑 · 2171",
-      "height": 3.5,
-      "storeys": 1,
-      "family": "unknown",
-      "props": {
-        "name": "未命名建筑 · 2171",
-        "category": "unknown",
-        "kind": "building",
-        "anchor": [627.7,3.5,-157.29]
-      },
-      "parts": [
-        {
-          "id": "osm:way:549782171",
-          "height": 3.5,
-          "storeys": 1,
-          "props": {
-            "kind": "building",
-            "category": "unknown",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[635.18,-145.52],[620.14,-145.58],[620.23,-169.02],[624.65,-169],[624.67,-175.38],[635.29,-175.35]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:549782172",
-      "kind": "building",
-      "name": "未命名建筑 · 2172",
-      "height": 7,
-      "storeys": 2,
-      "family": "unknown",
-      "props": {
-        "name": "未命名建筑 · 2172",
-        "category": "unknown",
-        "kind": "building",
-        "anchor": [641.6,7.0,-119.13]
-      },
-      "parts": [
-        {
-          "id": "osm:way:549782172",
-          "height": 7,
-          "storeys": 2,
-          "props": {
-            "kind": "building",
-            "category": "unknown",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[644.86,-97.78],[644.88,-100.46],[621.56,-100.55],[621.6,-112.19],[615.89,-112.21],[615.96,-131.96],[631.05,-131.91],[631.04,-128.68],[637.82,-128.66],[637.82,-126.17],[667.31,-126.05],[667.2,-97.7]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:549782173",
-      "kind": "sport",
-      "name": "游泳 · 2173",
-      "height": 0,
-      "props": {
-        "leisure": "swimming_pool",
-        "sport": "swimming",
-        "name": "游泳 · 2173",
-        "category": "sport",
-        "subcategory": "swimming",
-        "kind": "sport",
-        "anchor": [663.94,0,-64.91]
-      },
-      "parts": [
-        {
-          "id": "osm:way:549782173",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "swimming",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[651.31,-89.83],[677.24,-89.48],[676.56,-39.99],[650.63,-40.33]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:549782174",
-      "kind": "sport",
-      "name": "游泳 · 2174",
-      "height": 0,
-      "props": {
-        "leisure": "swimming_pool",
-        "sport": "swimming",
-        "name": "游泳 · 2174",
-        "category": "sport",
-        "subcategory": "swimming",
-        "kind": "sport",
-        "anchor": [631.59,0,-64.53]
-      },
-      "parts": [
-        {
-          "id": "osm:way:549782174",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "swimming",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[618.96,-89.46],[644.89,-89.1],[644.21,-39.61],[618.28,-39.96]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
       "id": "qsh:way:550365561",
       "kind": "building",
       "name": "未命名建筑 · 5561",
@@ -11657,40 +9616,6 @@
             "type": "polygon",
             "rings": {
               "outer": [[442.56,-193.99],[440.78,-196.81],[450.9,-204.72],[460.05,-193.83],[449.81,-185.06]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:574644712",
-      "kind": "building",
-      "name": "器材室",
-      "height": 7.2,
-      "storeys": 2,
-      "family": "other",
-      "props": {
-        "name": "器材室",
-        "category": "other",
-        "subcategory": "equipment",
-        "kind": "building",
-        "anchor": [627.18,7.2,320.25]
-      },
-      "parts": [
-        {
-          "id": "osm:way:574644712",
-          "height": 7.2,
-          "storeys": 2,
-          "props": {
-            "kind": "building",
-            "category": "other",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[630.7,302.97],[631.31,326.17],[623.36,326.37],[623.04,314.08],[613.19,314.33],[613.09,310.75],[623.51,310.48],[623.32,303.17]],
               "holes": []
             }
           }
@@ -12189,15 +10114,24 @@
       "id": "qsh:way:596973487",
       "kind": "building",
       "name": "银杏苑",
-      "height": 18,
-      "storeys": 4,
+      "height": 13.5,
+      "storeys": 3,
       "family": "dining",
       "props": {
         "name": "银杏苑",
         "category": "dining",
         "subcategory": "restaurant",
         "kind": "building",
-        "anchor": [25.4,13.5,-431.91]
+        "anchor": [
+          25.4,
+          13.5,
+          -431.91
+        ],
+        "facadeColors": {
+          "wall": "panel.pinkSand",
+          "trim": "wall.greyWhite",
+          "accent": "panel.pinkSand"
+        }
       },
       "parts": [
         {
@@ -12212,13 +10146,87 @@
           "geometry": {
             "type": "polygon",
             "rings": {
-              "outer": [[36.5,-401.14],[41.71,-414.28],[34.47,-417.12],[51.65,-460.12],[87.17,-461.39],[79.54,-441.93],[74.98,-430.29],[70.1,-417.86],[63.95,-402.15],[61.53,-395.96],[57.68,-386.19],[53.94,-388.84]],
+              "outer": [
+                [
+                  36.5,
+                  -401.14
+                ],
+                [
+                  41.71,
+                  -414.28
+                ],
+                [
+                  34.47,
+                  -417.12
+                ],
+                [
+                  51.65,
+                  -460.12
+                ],
+                [
+                  87.17,
+                  -461.39
+                ],
+                [
+                  79.54,
+                  -441.93
+                ],
+                [
+                  74.98,
+                  -430.29
+                ],
+                [
+                  70.1,
+                  -417.86
+                ],
+                [
+                  63.95,
+                  -402.15
+                ],
+                [
+                  61.53,
+                  -395.96
+                ],
+                [
+                  57.68,
+                  -386.19
+                ],
+                [
+                  53.94,
+                  -388.84
+                ]
+              ],
               "holes": []
             }
           },
           "facadePolygons": [
             {
-              "outer": [[41.71,-414.28],[34.47,-417.12],[51.65,-460.12],[87.17,-461.39],[57.68,-386.19],[36.5,-401.14]],
+              "outer": [
+                [
+                  41.71,
+                  -414.28
+                ],
+                [
+                  34.47,
+                  -417.12
+                ],
+                [
+                  51.65,
+                  -460.12
+                ],
+                [
+                  87.17,
+                  -461.39
+                ],
+                [
+                  57.68,
+                  -386.19
+                ],
+                [
+                  36.5,
+                  -401.14
+                ]
+              ],
               "holes": []
             }
           ]
@@ -12235,36 +10243,160 @@
           "geometry": {
             "type": "polygon",
             "rings": {
-              "outer": [[51.65,-460.12],[34.47,-417.12],[31.48,-409.58],[-28.89,-433.52],[-16.91,-463.61],[-9.31,-460.58],[-1.21,-480.81],[6.38,-477.8],[4.34,-472.7],[40.55,-458.34],[42.68,-463.67]],
+              "outer": [
+                [
+                  51.65,
+                  -460.12
+                ],
+                [
+                  34.47,
+                  -417.12
+                ],
+                [
+                  31.48,
+                  -409.58
+                ],
+                [
+                  -28.89,
+                  -433.52
+                ],
+                [
+                  -16.91,
+                  -463.61
+                ],
+                [
+                  -9.31,
+                  -460.58
+                ],
+                [
+                  -1.21,
+                  -480.81
+                ],
+                [
+                  6.38,
+                  -477.8
+                ],
+                [
+                  4.34,
+                  -472.7
+                ],
+                [
+                  40.55,
+                  -458.34
+                ],
+                [
+                  42.68,
+                  -463.67
+                ]
+              ],
               "holes": []
             }
           },
           "facadePolygons": [
             {
-              "outer": [[51.65,-460.12],[31.48,-409.58],[-28.89,-433.52],[-16.91,-463.61],[-9.31,-460.58],[-1.21,-480.81],[6.38,-477.8],[4.34,-472.7],[40.55,-458.34],[42.68,-463.67]],
+              "outer": [
+                [
+                  51.65,
+                  -460.12
+                ],
+                [
+                  31.48,
+                  -409.58
+                ],
+                [
+                  -28.89,
+                  -433.52
+                ],
+                [
+                  -16.91,
+                  -463.61
+                ],
+                [
+                  -9.31,
+                  -460.58
+                ],
+                [
+                  -1.21,
+                  -480.81
+                ],
+                [
+                  6.38,
+                  -477.8
+                ],
+                [
+                  4.34,
+                  -472.7
+                ],
+                [
+                  40.55,
+                  -458.34
+                ],
+                [
+                  42.68,
+                  -463.67
+                ]
+              ],
               "holes": []
             }
           ]
         },
         {
           "id": "osm:way:950008616",
-          "height": 18,
-          "storeys": 4,
+          "height": 0,
+          "storeys": 0,
           "props": {
-            "kind": "building",
+            "kind": "escalatorCanopy",
             "category": "dining",
             "highway": null
           },
           "geometry": {
             "type": "polygon",
             "rings": {
-              "outer": [[34.47,-417.12],[41.71,-414.28],[36.5,-401.14],[29.26,-403.98],[31.48,-409.58]],
+              "outer": [
+                [
+                  34.47,
+                  -417.12
+                ],
+                [
+                  41.71,
+                  -414.28
+                ],
+                [
+                  36.5,
+                  -401.14
+                ],
+                [
+                  29.26,
+                  -403.98
+                ],
+                [
+                  31.48,
+                  -409.58
+                ]
+              ],
               "holes": []
             }
           },
           "facadePolygons": [
             {
-              "outer": [[34.47,-417.12],[41.71,-414.28],[36.5,-401.14],[29.26,-403.98]],
+              "outer": [
+                [
+                  34.47,
+                  -417.12
+                ],
+                [
+                  41.71,
+                  -414.28
+                ],
+                [
+                  36.5,
+                  -401.14
+                ],
+                [
+                  29.26,
+                  -403.98
+                ]
+              ],
               "holes": []
             }
           ]
@@ -12360,312 +10492,6 @@
           },
           "line": [[134.52,-679.78],[140.95,-676.32],[147.01,-669.48],[155.97,-653.74],[159.6,-646.71],[165.48,-626.18],[168.6,-612.6],[170.5,-599.74],[173.18,-587.47],[175.93,-570.87],[179.04,-556.45],[182.73,-543.78],[187.02,-532.66],[203.2,-501.21],[213.35,-488.57],[226.35,-473.03],[268.83,-414.61],[273.82,-401.13],[275.4,-391.13],[274.93,-383.72],[274.94,-379.37],[273.86,-370.33],[271.83,-360.27],[262.59,-332.45],[255.28,-320.29],[250.23,-312.93],[242.82,-304.04],[239.75,-300.89],[229.96,-294.83],[207.09,-278.19],[196.06,-266.96],[184.19,-251.16],[171.12,-234.12],[163.39,-222.91],[124.75,-170.67],[97.09,-131],[81.85,-110.78],[73.23,-99.35],[72.63,-97.72],[70.86,-92.88],[70.91,-86.58],[74.77,-59.28],[76.72,-45.43],[79.36,-26.66],[79.83,-23.37],[80.92,-15.53]],
           "width": 6
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:618498341",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [761.86,0,49.47]
-      },
-      "parts": [
-        {
-          "id": "osm:way:618498341",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[752.94,32.7],[771.2,32.91],[770.72,66.39],[752.56,66.03]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:618498342",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [779.89,0,49.76]
-      },
-      "parts": [
-        {
-          "id": "osm:way:618498342",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[771.2,32.91],[789.1,33.12],[788.52,66.56],[770.72,66.39]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:618498343",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [797.33,0,49.94]
-      },
-      "parts": [
-        {
-          "id": "osm:way:618498343",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[789.1,33.12],[806.04,33.31],[805.65,66.69],[788.52,66.56]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:618498344",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [761.48,0,82.0]
-      },
-      "parts": [
-        {
-          "id": "osm:way:618498344",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[752.56,66.03],[770.72,66.39],[770.45,97.83],[752.19,97.61]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:618498345",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [796.93,0,82.36]
-      },
-      "parts": [
-        {
-          "id": "osm:way:618498345",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[788.52,66.56],[805.65,66.69],[805.29,98.22],[788.28,98.03]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:618498346",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [779.49,0,82.2]
-      },
-      "parts": [
-        {
-          "id": "osm:way:618498346",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[770.72,66.39],[788.52,66.56],[788.28,98.03],[770.45,97.83]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:618498347",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [786.01,0,121.71]
-      },
-      "parts": [
-        {
-          "id": "osm:way:618498347",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[776.94,105.5],[795.67,105.84],[795.09,137.93],[776.34,137.59]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:618498348",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [822.06,0,122.36]
-      },
-      "parts": [
-        {
-          "id": "osm:way:618498348",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[830.67,106.47],[830.09,138.55],[813.45,138.26],[814.03,106.17]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:618498350",
-      "kind": "sport",
-      "name": "篮球场",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "篮球场",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [804.56,0,122.05]
-      },
-      "parts": [
-        {
-          "id": "osm:way:618498350",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[795.67,105.84],[814.03,106.17],[813.45,138.26],[795.09,137.93]],
-              "holes": []
-            }
-          }
         }
       ]
     },
@@ -12766,20 +10592,29 @@
       "id": "qsh:way:683651630",
       "kind": "building",
       "name": "电子科技大学医院",
-      "height": 31.2,
-      "storeys": 8,
+      "height": 19.5,
+      "storeys": 5,
       "family": "medical",
       "props": {
         "name": "电子科技大学医院",
         "category": "medical",
         "kind": "building",
-        "anchor": [-165.6,19.5,-711.7]
+        "anchor": [
+          -165.6,
+          19.5,
+          -711.7
+        ],
+        "facadeColors": {
+          "wall": "wall.greyWhite",
+          "trim": "wall.greyWhite",
+          "accent": "wall.greyWhite"
+        }
       },
       "parts": [
         {
           "id": "osm:way:683646724",
-          "height": 23.4,
-          "storeys": 6,
+          "height": 19.5,
+          "storeys": 5,
           "props": {
             "kind": "building",
             "category": "medical",
@@ -12788,21 +10623,171 @@
           "geometry": {
             "type": "polygon",
             "rings": {
-              "outer": [[-191.97,-702.74],[-176.48,-691.09],[-168.02,-702.03],[-183.19,-713.91],[-149.01,-757.28],[-132.44,-745],[-154.51,-718.26],[-157.56,-714.56],[-151.11,-709.17],[-169.65,-685.71],[-164.95,-682.01],[-160.98,-679.01],[-162.99,-676.96],[-168.43,-681.21],[-170.6,-678.19],[-160.9,-670.65],[-162.44,-668.68],[-167.68,-662.01],[-186.18,-676.34],[-195.02,-683.29],[-202.64,-689.18]],
+              "outer": [
+                [
+                  -191.97,
+                  -702.74
+                ],
+                [
+                  -176.48,
+                  -691.09
+                ],
+                [
+                  -168.02,
+                  -702.03
+                ],
+                [
+                  -183.19,
+                  -713.91
+                ],
+                [
+                  -149.01,
+                  -757.28
+                ],
+                [
+                  -132.44,
+                  -745
+                ],
+                [
+                  -154.51,
+                  -718.26
+                ],
+                [
+                  -157.56,
+                  -714.56
+                ],
+                [
+                  -151.11,
+                  -709.17
+                ],
+                [
+                  -169.65,
+                  -685.71
+                ],
+                [
+                  -164.95,
+                  -682.01
+                ],
+                [
+                  -160.98,
+                  -679.01
+                ],
+                [
+                  -162.99,
+                  -676.96
+                ],
+                [
+                  -168.43,
+                  -681.21
+                ],
+                [
+                  -170.6,
+                  -678.19
+                ],
+                [
+                  -160.9,
+                  -670.65
+                ],
+                [
+                  -162.44,
+                  -668.68
+                ],
+                [
+                  -167.68,
+                  -662.01
+                ],
+                [
+                  -186.18,
+                  -676.34
+                ],
+                [
+                  -195.02,
+                  -683.29
+                ],
+                [
+                  -202.64,
+                  -689.18
+                ]
+              ],
               "holes": []
             }
           },
           "facadePolygons": [
             {
-              "outer": [[-191.97,-702.74],[-176.48,-691.09],[-168.02,-702.03],[-183.19,-713.91],[-149.01,-757.28],[-132.44,-745],[-157.56,-714.56],[-151.11,-709.17],[-169.65,-685.71],[-160.98,-679.01],[-162.99,-676.96],[-168.43,-681.21],[-170.6,-678.19],[-160.9,-670.65],[-167.68,-662.01],[-202.64,-689.18]],
+              "outer": [
+                [
+                  -191.97,
+                  -702.74
+                ],
+                [
+                  -176.48,
+                  -691.09
+                ],
+                [
+                  -168.02,
+                  -702.03
+                ],
+                [
+                  -183.19,
+                  -713.91
+                ],
+                [
+                  -149.01,
+                  -757.28
+                ],
+                [
+                  -132.44,
+                  -745
+                ],
+                [
+                  -157.56,
+                  -714.56
+                ],
+                [
+                  -151.11,
+                  -709.17
+                ],
+                [
+                  -169.65,
+                  -685.71
+                ],
+                [
+                  -160.98,
+                  -679.01
+                ],
+                [
+                  -162.99,
+                  -676.96
+                ],
+                [
+                  -168.43,
+                  -681.21
+                ],
+                [
+                  -170.6,
+                  -678.19
+                ],
+                [
+                  -160.9,
+                  -670.65
+                ],
+                [
+                  -167.68,
+                  -662.01
+                ],
+                [
+                  -202.64,
+                  -689.18
+                ]
+              ],
               "holes": []
             }
           ]
         },
         {
           "id": "osm:way:683646733",
-          "height": 31.2,
-          "storeys": 8,
+          "height": 19.5,
+          "storeys": 5,
           "props": {
             "kind": "building",
             "category": "medical",
@@ -12811,13 +10796,59 @@
           "geometry": {
             "type": "polygon",
             "rings": {
-              "outer": [[-168.43,-681.21],[-162.99,-676.96],[-156.41,-671.81],[-158.72,-669.14],[-160.9,-670.65],[-170.6,-678.19]],
+              "outer": [
+                [
+                  -168.43,
+                  -681.21
+                ],
+                [
+                  -162.99,
+                  -676.96
+                ],
+                [
+                  -156.41,
+                  -671.81
+                ],
+                [
+                  -158.72,
+                  -669.14
+                ],
+                [
+                  -160.9,
+                  -670.65
+                ],
+                [
+                  -170.6,
+                  -678.19
+                ]
+              ],
               "holes": []
             }
           },
           "facadePolygons": [
             {
-              "outer": [[-168.43,-681.21],[-156.41,-671.81],[-158.72,-669.14],[-160.9,-670.65],[-170.6,-678.19]],
+              "outer": [
+                [
+                  -168.43,
+                  -681.21
+                ],
+                [
+                  -156.41,
+                  -671.81
+                ],
+                [
+                  -158.72,
+                  -669.14
+                ],
+                [
+                  -160.9,
+                  -670.65
+                ],
+                [
+                  -170.6,
+                  -678.19
+                ]
+              ],
               "holes": []
             }
           ]
@@ -12835,22 +10866,114 @@
             "type": "multiPolygon",
             "polygons": [
               {
-                "outer": [[-183.19,-713.91],[-168.02,-702.03],[-176.48,-691.09],[-191.97,-702.74]],
+                "outer": [
+                  [
+                    -183.19,
+                    -713.91
+                  ],
+                  [
+                    -168.02,
+                    -702.03
+                  ],
+                  [
+                    -176.48,
+                    -691.09
+                  ],
+                  [
+                    -191.97,
+                    -702.74
+                  ]
+                ],
                 "holes": []
               },
               {
-                "outer": [[-164.95,-682.01],[-169.65,-685.71],[-151.11,-709.17],[-157.56,-714.56],[-154.51,-718.26],[-149.77,-714.49],[-143.51,-709.49],[-154.32,-695.64]],
+                "outer": [
+                  [
+                    -164.95,
+                    -682.01
+                  ],
+                  [
+                    -169.65,
+                    -685.71
+                  ],
+                  [
+                    -151.11,
+                    -709.17
+                  ],
+                  [
+                    -157.56,
+                    -714.56
+                  ],
+                  [
+                    -154.51,
+                    -718.26
+                  ],
+                  [
+                    -149.77,
+                    -714.49
+                  ],
+                  [
+                    -143.51,
+                    -709.49
+                  ],
+                  [
+                    -154.32,
+                    -695.64
+                  ]
+                ],
                 "holes": []
               }
             ]
           },
           "facadePolygons": [
             {
-              "outer": [[-183.19,-713.91],[-168.02,-702.03],[-176.48,-691.09],[-191.97,-702.74]],
+              "outer": [
+                [
+                  -183.19,
+                  -713.91
+                ],
+                [
+                  -168.02,
+                  -702.03
+                ],
+                [
+                  -176.48,
+                  -691.09
+                ],
+                [
+                  -191.97,
+                  -702.74
+                ]
+              ],
               "holes": []
             },
             {
-              "outer": [[-169.65,-685.71],[-151.11,-709.17],[-157.56,-714.56],[-154.51,-718.26],[-143.51,-709.49],[-164.95,-682.01]],
+              "outer": [
+                [
+                  -169.65,
+                  -685.71
+                ],
+                [
+                  -151.11,
+                  -709.17
+                ],
+                [
+                  -157.56,
+                  -714.56
+                ],
+                [
+                  -154.51,
+                  -718.26
+                ],
+                [
+                  -143.51,
+                  -709.49
+                ],
+                [
+                  -164.95,
+                  -682.01
+                ]
+              ],
               "holes": []
             }
           ]
@@ -14070,176 +12193,6 @@
       ]
     },
     {
-      "id": "qsh:way:844549010",
-      "kind": "sport",
-      "name": "球场 · 9010",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 9010",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [824.07,0,47.7]
-      },
-      "parts": [
-        {
-          "id": "osm:way:844549010",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[832.38,64.72],[815.77,64.59],[815.89,30.75],[832.23,30.8]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:844549011",
-      "kind": "sport",
-      "name": "球场 · 9011",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 9011",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [840.53,0,47.77]
-      },
-      "parts": [
-        {
-          "id": "osm:way:844549011",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[848.68,64.69],[832.38,64.72],[832.23,30.8],[848.83,30.86]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:844549012",
-      "kind": "sport",
-      "name": "球场 · 9012",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 9012",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [857.02,0,47.8]
-      },
-      "parts": [
-        {
-          "id": "osm:way:844549012",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[865.22,64.74],[848.68,64.69],[848.83,30.86],[865.34,30.91]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:844549013",
-      "kind": "sport",
-      "name": "球场 · 9013",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 9013",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [823.98,0,81.51]
-      },
-      "parts": [
-        {
-          "id": "osm:way:844549013",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[832.11,98.38],[815.65,98.31],[815.77,64.59],[832.38,64.72]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "id": "qsh:way:844549014",
-      "kind": "sport",
-      "name": "球场 · 9014",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "basketball",
-        "name": "球场 · 9014",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [840.43,0,81.55]
-      },
-      "parts": [
-        {
-          "id": "osm:way:844549014",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "basketball",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[848.56,98.43],[832.11,98.38],[832.38,64.72],[848.68,64.69]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
       "id": "qsh:way:848026371",
       "kind": "poi",
       "name": "留学生组团",
@@ -14399,38 +12352,6 @@
       ]
     },
     {
-      "id": "qsh:way:949704496",
-      "kind": "sport",
-      "name": "体育场馆 · 4496",
-      "height": 0,
-      "props": {
-        "leisure": "sports_centre",
-        "name": "体育场馆 · 4496",
-        "category": "sport",
-        "subcategory": "gym",
-        "kind": "sport",
-        "anchor": [662.32,0,-131.93]
-      },
-      "parts": [
-        {
-          "id": "osm:way:949704496",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[680.66,-41.09],[676.78,-34.77],[619.77,-37.48],[612.61,-43.94],[614.99,-172.38],[636.65,-197],[692.58,-196.75],[710.46,-181.99],[710.36,-90.78],[690.12,-91.48],[690.62,-63.12],[681.97,-63.37]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
       "id": "qsh:way:949704499",
       "kind": "building",
       "name": "未命名建筑 · 4499",
@@ -14530,6 +12451,1762 @@
           }
         }
       ]
+    },
+    {
+      "id": "qsh:way:552816777",
+      "kind": "building",
+      "name": "学生活动中心",
+      "height": 11.7,
+      "storeys": 3,
+      "family": "academic",
+      "props": {
+        "name": "学生活动中心",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [
+          -134.1,
+          11.7,
+          -522.18
+        ],
+        "facadeColors": {
+          "wall": "wall.dormYellow",
+          "trim": "band.ochre",
+          "accent": "band.ochre"
+        }
+      },
+      "parts": [
+        {
+          "id": "osm:way:552816777",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [
+                [
+                  -147.93,
+                  -486.24
+                ],
+                [
+                  -159.11,
+                  -491
+                ],
+                [
+                  -151.7,
+                  -508.9
+                ],
+                [
+                  -135.14,
+                  -502.18
+                ],
+                [
+                  -118.54,
+                  -542.63
+                ],
+                [
+                  -131.46,
+                  -547.88
+                ],
+                [
+                  -133.65,
+                  -542.57
+                ],
+                [
+                  -137.16,
+                  -544
+                ],
+                [
+                  -121.4,
+                  -582.05
+                ],
+                [
+                  -116.05,
+                  -579.86
+                ],
+                [
+                  -110.15,
+                  -577.44
+                ],
+                [
+                  -101.18,
+                  -573.69
+                ],
+                [
+                  -114.87,
+                  -539.43
+                ],
+                [
+                  -121.01,
+                  -524.6
+                ],
+                [
+                  -123.01,
+                  -519.77
+                ],
+                [
+                  -125.67,
+                  -513.36
+                ],
+                [
+                  -127.23,
+                  -513.99
+                ],
+                [
+                  -131.71,
+                  -503.15
+                ],
+                [
+                  -111.63,
+                  -494.92
+                ],
+                [
+                  -116.54,
+                  -483.02
+                ],
+                [
+                  -120.74,
+                  -472.84
+                ],
+                [
+                  -122.8,
+                  -468.11
+                ],
+                [
+                  -126.29,
+                  -464.32
+                ],
+                [
+                  -130.84,
+                  -461.88
+                ],
+                [
+                  -135.95,
+                  -461.05
+                ],
+                [
+                  -141.05,
+                  -461.94
+                ],
+                [
+                  -145.58,
+                  -464.47
+                ],
+                [
+                  -149.03,
+                  -468.34
+                ],
+                [
+                  -150.97,
+                  -472.99
+                ],
+                [
+                  -151.31,
+                  -478.01
+                ],
+                [
+                  -150,
+                  -482.89
+                ]
+              ],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [
+                [
+                  -147.93,
+                  -486.24
+                ],
+                [
+                  -159.11,
+                  -491
+                ],
+                [
+                  -151.7,
+                  -508.9
+                ],
+                [
+                  -135.14,
+                  -502.18
+                ],
+                [
+                  -118.54,
+                  -542.63
+                ],
+                [
+                  -131.46,
+                  -547.88
+                ],
+                [
+                  -133.65,
+                  -542.57
+                ],
+                [
+                  -137.16,
+                  -544
+                ],
+                [
+                  -121.4,
+                  -582.05
+                ],
+                [
+                  -101.18,
+                  -573.69
+                ],
+                [
+                  -114.87,
+                  -539.43
+                ],
+                [
+                  -125.67,
+                  -513.36
+                ],
+                [
+                  -127.23,
+                  -513.99
+                ],
+                [
+                  -131.71,
+                  -503.15
+                ],
+                [
+                  -111.63,
+                  -494.92
+                ],
+                [
+                  -122.8,
+                  -468.11
+                ],
+                [
+                  -126.29,
+                  -464.32
+                ],
+                [
+                  -130.84,
+                  -461.88
+                ],
+                [
+                  -135.95,
+                  -461.05
+                ],
+                [
+                  -141.05,
+                  -461.94
+                ],
+                [
+                  -145.58,
+                  -464.47
+                ],
+                [
+                  -149.03,
+                  -468.34
+                ],
+                [
+                  -150.97,
+                  -472.99
+                ],
+                [
+                  -151.31,
+                  -478.01
+                ],
+                [
+                  -150,
+                  -482.89
+                ]
+              ],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:852606257",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [
+                [
+                  -151.7,
+                  -508.9
+                ],
+                [
+                  -137.16,
+                  -544
+                ],
+                [
+                  -133.65,
+                  -542.57
+                ],
+                [
+                  -131.46,
+                  -547.88
+                ],
+                [
+                  -118.54,
+                  -542.63
+                ],
+                [
+                  -135.14,
+                  -502.18
+                ]
+              ],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:603368212",
+      "kind": "building",
+      "name": "商业街",
+      "height": 12.6,
+      "storeys": 3,
+      "family": "service",
+      "props": {
+        "name": "商业街",
+        "category": "service",
+        "subcategory": "commercial",
+        "kind": "building",
+        "anchor": [
+          -52.71,
+          12.6,
+          -721.6
+        ]
+      },
+      "parts": [
+        {
+          "id": "osm:way:603368212",
+          "height": 12.6,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "service",
+            "highway": null
+          },
+          "geometry": {
+            "type": "multiPolygon",
+            "polygons": [
+              {
+                "outer": [
+                  [
+                    -69.52,
+                    -657.6
+                  ],
+                  [
+                    -68.52,
+                    -660.01
+                  ],
+                  [
+                    -70.41,
+                    -662.01
+                  ],
+                  [
+                    -71.59,
+                    -664.48
+                  ],
+                  [
+                    -71.94,
+                    -667.2
+                  ],
+                  [
+                    -71.42,
+                    -669.9
+                  ],
+                  [
+                    -70.1,
+                    -672.3
+                  ],
+                  [
+                    -68.1,
+                    -674.18
+                  ],
+                  [
+                    -65.61,
+                    -675.35
+                  ],
+                  [
+                    -62.88,
+                    -675.7
+                  ],
+                  [
+                    -59.92,
+                    -675.11
+                  ],
+                  [
+                    -57.35,
+                    -673.57
+                  ],
+                  [
+                    -56.26,
+                    -672.23
+                  ],
+                  [
+                    -45.11,
+                    -683.34
+                  ],
+                  [
+                    -41.26,
+                    -694.38
+                  ],
+                  [
+                    -39.32,
+                    -693.89
+                  ],
+                  [
+                    -15.69,
+                    -752.81
+                  ],
+                  [
+                    -40.155,
+                    -762.706
+                  ],
+                  [
+                    -81.639,
+                    -662.488
+                  ]
+                ],
+                "holes": []
+              },
+              {
+                "outer": [
+                  [
+                    -51.71,
+                    -767.38
+                  ],
+                  [
+                    -54.77,
+                    -760.13
+                  ],
+                  [
+                    -65.95,
+                    -748.81
+                  ],
+                  [
+                    -98.8,
+                    -669.41
+                  ],
+                  [
+                    -90.913,
+                    -666.229
+                  ],
+                  [
+                    -49.426,
+                    -766.456
+                  ]
+                ],
+                "holes": []
+              }
+            ]
+          }
+        },
+        {
+          "id": "osm:way:723349792",
+          "height": 8.4,
+          "storeys": 2,
+          "props": {
+            "kind": "building",
+            "category": "service",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [
+                [
+                  -55.46,
+                  -662.62
+                ],
+                [
+                  -57.37,
+                  -660.31
+                ],
+                [
+                  -59.94,
+                  -658.77
+                ],
+                [
+                  -62.89,
+                  -658.18
+                ],
+                [
+                  -65.86,
+                  -658.61
+                ],
+                [
+                  -68.52,
+                  -660.01
+                ],
+                [
+                  -70.41,
+                  -662.01
+                ],
+                [
+                  -71.59,
+                  -664.48
+                ],
+                [
+                  -71.94,
+                  -667.2
+                ],
+                [
+                  -71.42,
+                  -669.9
+                ],
+                [
+                  -70.1,
+                  -672.3
+                ],
+                [
+                  -68.1,
+                  -674.18
+                ],
+                [
+                  -65.61,
+                  -675.35
+                ],
+                [
+                  -62.88,
+                  -675.7
+                ],
+                [
+                  -59.92,
+                  -675.11
+                ],
+                [
+                  -57.35,
+                  -673.57
+                ],
+                [
+                  -56.26,
+                  -672.23
+                ],
+                [
+                  -55.45,
+                  -671.24
+                ],
+                [
+                  -54.45,
+                  -668.43
+                ],
+                [
+                  -54.45,
+                  -665.44
+                ]
+              ],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [
+                [
+                  -55.46,
+                  -662.62
+                ],
+                [
+                  -57.37,
+                  -660.31
+                ],
+                [
+                  -59.94,
+                  -658.77
+                ],
+                [
+                  -62.89,
+                  -658.18
+                ],
+                [
+                  -65.86,
+                  -658.61
+                ],
+                [
+                  -68.52,
+                  -660.01
+                ],
+                [
+                  -70.41,
+                  -662.01
+                ],
+                [
+                  -71.59,
+                  -664.48
+                ],
+                [
+                  -71.94,
+                  -667.2
+                ],
+                [
+                  -71.42,
+                  -669.9
+                ],
+                [
+                  -70.1,
+                  -672.3
+                ],
+                [
+                  -68.1,
+                  -674.18
+                ],
+                [
+                  -65.61,
+                  -675.35
+                ],
+                [
+                  -62.88,
+                  -675.7
+                ],
+                [
+                  -59.92,
+                  -675.11
+                ],
+                [
+                  -57.35,
+                  -673.57
+                ],
+                [
+                  -55.45,
+                  -671.24
+                ],
+                [
+                  -54.45,
+                  -668.43
+                ],
+                [
+                  -54.45,
+                  -665.44
+                ]
+              ],
+              "holes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:574644721",
+      "kind": "building",
+      "name": "思学苑",
+      "height": 13.5,
+      "storeys": 3,
+      "family": "dining",
+      "props": {
+        "name": "思学苑",
+        "category": "dining",
+        "subcategory": "restaurant",
+        "kind": "building",
+        "anchor": [342.88,10.0,-262.34]
+      },
+      "parts": [
+        {
+          "id": "osm:way:950008594",
+          "height": 13.5,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "dining",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[309.82,-250.49],[308.87,-249.24],[263.78,-283.08],[279.83,-304.63],[286.7,-299.41],[318.13,-275.73],[322.89,-281.99],[367.99,-248.02],[369.29,-249.73],[377.2,-243.77],[370.32,-234.71],[368.35,-232.12],[365.57,-234.22],[353.13,-217.87]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[309.82,-250.49],[308.87,-249.24],[263.78,-283.08],[279.83,-304.63],[318.13,-275.73],[322.89,-281.99],[367.99,-248.02],[369.29,-249.73],[377.2,-243.77],[368.35,-232.12],[365.57,-234.22],[353.13,-217.87]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:950008595",
+          "height": 9,
+          "storeys": 2,
+          "props": {
+            "kind": "building",
+            "category": "dining",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[377.2,-243.77],[369.29,-249.73],[367.99,-248.02],[322.89,-281.99],[318.13,-275.73],[286.7,-299.41],[289.59,-305.65],[340.86,-284.84],[343.13,-290.16],[352.31,-286.7],[354.47,-292.14],[398.99,-274.18],[381.77,-230.21],[370.32,-234.71]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:950008596",
+          "height": 4.5,
+          "storeys": 1,
+          "props": {
+            "kind": "building",
+            "category": "dining",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[263.78,-283.08],[260.37,-285.64],[254.93,-289.72],[256.71,-292.04],[266.46,-304.69],[271.36,-311.07],[279.83,-304.63]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[263.78,-283.08],[254.93,-289.72],[271.36,-311.07],[279.83,-304.63]],
+              "holes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "design:north-auditorium-backstage",
+      "kind": "buildingDetail",
+      "props": {
+        "height": 11.7,
+        "wall": "wall.dormYellow",
+        "walk": "building"
+      },
+      "note": "设计增补：成电会堂圆鼓后余下原轮廓作后台，延续主体高度与墙色，删除原全轮廓12.6m通用块（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -67.2,
+              -634.78
+            ],
+            [
+              -103.26,
+              -649.58
+            ],
+            [
+              -113.646,
+              -624.509
+            ],
+            [
+              -77.64,
+              -609.593
+            ]
+          ],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:north-auditorium-drum",
+      "kind": "buildingDetail",
+      "props": {
+        "diameter": 38,
+        "height": 18,
+        "beltBase": 11.7,
+        "beltHeight": 0.8,
+        "windowHeight": 1.5,
+        "wallThickness": 0.12,
+        "segments": 96,
+        "segmentsFar": 48,
+        "wall": "band.ochre",
+        "trim": "wall.greyWhite",
+        "roof": "roof.grey",
+        "direction": [
+          0.38271244464873827,
+          -0.9238675146962287
+        ],
+        "backstage": "design:north-auditorium-backstage",
+        "walk": "building"
+      },
+      "note": "设计增补：赭红圆鼓按38m直径18m高、白腰线与主体顶对齐；后台侧不开带窗（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -101.4,
+          0,
+          -603.2
+        ]
+      }
+    },
+    {
+      "id": "design:north-activity-lobby-door",
+      "kind": "entranceDetail",
+      "props": {
+        "width": 1.8,
+        "height": 2.5,
+        "canopyDepth": 1.5,
+        "walk": "walk"
+      },
+      "note": "设计增补：沿已有连接体东侧外墙居中留玻璃门廊开放门洞，双扇默认尺度，净入口不封玻璃（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -108.73,
+          0,
+          -581.25
+        ]
+      }
+    },
+    {
+      "id": "design:north-shopping-axis",
+      "kind": "buildingDetail",
+      "props": {
+        "width": 10,
+        "balcony": 2,
+        "archRise": 3,
+        "ribPitch": 3,
+        "walk": "walk",
+        "windowCard": 11
+      },
+      "note": "设计增补：商业街两端贯通的10m净内街；原源块只切去明确内街，保留外轮廓与北圆亭，三层店面和2m回廊夹出亮街（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -86.3,
+              -664.3
+            ],
+            [
+              -44.7,
+              -764.8
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:north-shopping-bridge-2",
+      "kind": "buildingDetail",
+      "props": {
+        "floor": 1,
+        "width": 3,
+        "walk": "building"
+      },
+      "note": "设计增补：商业街跨街廊桥连二层，宽3m，只看不可上（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -72.4,
+          0,
+          -697.8
+        ]
+      }
+    },
+    {
+      "id": "design:north-shopping-bridge-3",
+      "kind": "buildingDetail",
+      "props": {
+        "floor": 2,
+        "width": 3,
+        "walk": "building"
+      },
+      "note": "设计增补：商业街跨街廊桥连三层，宽3m，只看不可上（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -58.6,
+          0,
+          -731.3
+        ]
+      }
+    },
+    {
+      "id": "design:north-yinxing-escalator",
+      "kind": "escalator",
+      "props": {
+        "building": "qsh:way:596973487",
+        "floorBase": 0.15,
+        "minLanding": 2.5,
+        "slopeDeg": 30,
+        "coverSpan": 3.2,
+        "coverStraight": 2.4,
+        "coverRise": 0.8,
+        "ribPitch": 1.5,
+        "open": 1,
+        "walk": "walk",
+        "entrance": "yx.2f"
+      },
+      "note": "设计增补：银杏苑扶梯上端接yx.2f门位，下端取本楼地坪；净爬升由入口权威y减本楼PadY与地坪抬高求得，不另存爬升副本。旧18m/4层罩棚作废；坡段30度，固定端点余下平距均分两端平台且不小于2.5m。夜间罩棚与门口灯；四季几何固定、罩棚接季（MAP-QSH-NORTH，1258）。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              32.9,
+              -402.6
+            ],
+            [
+              38.1,
+              -415.7
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:north-sixue-escalator-west",
+      "kind": "escalator",
+      "props": {
+        "building": "qsh:way:574644721",
+        "floorBase": 0.15,
+        "rise": 4.425,
+        "minLanding": 2.5,
+        "slopeDeg": 30,
+        "coverSpan": 3.2,
+        "coverStraight": 2.4,
+        "coverRise": 0.8,
+        "ribPitch": 1.5,
+        "open": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：30度扶梯接收二层门，2.5m为最小净平台；固定端点和门高推得两端平台均分剩余平距；思学苑起步伸缩门锁闭（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              361.1,
+              -287.3
+            ],
+            [
+              374.1,
+              -282.1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:north-sixue-escalator-east",
+      "kind": "escalator",
+      "props": {
+        "building": "qsh:way:574644721",
+        "floorBase": 0.15,
+        "rise": 4.425,
+        "minLanding": 2.5,
+        "slopeDeg": 30,
+        "coverSpan": 3.2,
+        "coverStraight": 2.4,
+        "coverRise": 0.8,
+        "ribPitch": 1.5,
+        "open": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：30度扶梯接收二层门，2.5m为最小净平台；固定端点和门高推得两端平台均分剩余平距；思学苑起步伸缩门锁闭（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              390.8,
+              -275.3
+            ],
+            [
+              377.8,
+              -280.6
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:north-chaoyang-stair",
+      "kind": "buildingDetail",
+      "props": {
+        "floorBase": 0.15,
+        "rise": 4.5,
+        "width": 1.5,
+        "landing": 1.2,
+        "walk": "building",
+        "frontFrom": [
+          315.8,
+          -569.1
+        ],
+        "frontTo": [
+          363.7,
+          -589.7
+        ]
+      },
+      "note": "设计增补：朝阳餐厅南立面西段外梯，居中休息平台、顶平台与二层门，起步铁栅门锁闭（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              327.5,
+              -573.3
+            ],
+            [
+              317.7,
+              -569.1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:north-covered-walk",
+      "kind": "shelter",
+      "props": {
+        "width": 3.6,
+        "clear": 3.2,
+        "post": 0.12,
+        "postPitch": 3.6,
+        "steel": "equip.fence",
+        "roof": "wall.greyWhite",
+        "walk": "walk"
+      },
+      "note": "设计增补：学知一组团主门隔路至银杏苑扶梯罩棚的135m连廊，深灰柱白铝平顶，檐口暖灯带，路线沿已定广场外缘（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              99.9,
+              -464.1
+            ],
+            [
+              102.7,
+              -451.4
+            ],
+            [
+              103,
+              -433.3
+            ],
+            [
+              100,
+              -420.7
+            ],
+            [
+              93.9,
+              -407.8
+            ],
+            [
+              84.6,
+              -398.6
+            ],
+            [
+              75.5,
+              -391.7
+            ],
+            [
+              60.9,
+              -384.9
+            ],
+            [
+              58.7,
+              -382.8
+            ],
+            [
+              55.7,
+              -383.3
+            ],
+            [
+              34.5,
+              -398.3
+            ],
+            [
+              32.1,
+              -400.7
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:north-identity-sign-activity",
+      "kind": "sign",
+      "props": {
+        "text": "学生活动中心",
+        "direction": [
+          0.37,
+          -0.929
+        ],
+        "base": 2,
+        "width": 1.2,
+        "height": 8,
+        "depth": 0.12,
+        "board": "wall.dormYellow",
+        "ink": "band.ochre",
+        "vertical": 1,
+        "walk": "building"
+      },
+      "note": "设计增补：老楼翻新：学生活动中心：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -112.1,
+          0,
+          -546.2
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-hospital",
+      "kind": "sign",
+      "props": {
+        "text": "电子科技大学医院",
+        "direction": [
+          0.63,
+          -0.777
+        ],
+        "base": 3,
+        "width": 1.2,
+        "height": 12,
+        "depth": 0.12,
+        "board": "wall.greyWhite",
+        "ink": "equip.fireRed",
+        "vertical": 1,
+        "icon": "pulse",
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：电子科技大学医院：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -157.2,
+          0,
+          -697.4
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-yinhua",
+      "kind": "sign",
+      "props": {
+        "text": "银桦餐厅",
+        "direction": [
+          0.926,
+          0.377
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 1,
+        "depth": 0.12,
+        "board": "panel.pinkSand",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：老楼翻新：银桦餐厅：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          24.9,
+          0,
+          -405.8
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-zijing",
+      "kind": "sign",
+      "props": {
+        "text": "紫荆餐厅",
+        "direction": [
+          0.926,
+          0.377
+        ],
+        "base": 7,
+        "width": 5.4,
+        "height": 1,
+        "depth": 0.12,
+        "board": "panel.pinkSand",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：老楼翻新：紫荆餐厅：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          38.1,
+          0,
+          -415.7
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-furong",
+      "kind": "sign",
+      "props": {
+        "text": "芙蓉餐厅",
+        "direction": [
+          0.926,
+          0.377
+        ],
+        "base": 11.5,
+        "width": 5.4,
+        "height": 1,
+        "depth": 0.12,
+        "board": "panel.pinkSand",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：老楼翻新：芙蓉餐厅：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          43.4,
+          0,
+          -428.7
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-xuezi",
+      "kind": "sign",
+      "props": {
+        "text": "学子餐厅",
+        "direction": [
+          0.927,
+          0.374
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 1,
+        "depth": 0.12,
+        "board": "tile.canteen",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：老楼翻新：学子餐厅：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          376.7,
+          0,
+          -283.2
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-siyuan",
+      "kind": "sign",
+      "props": {
+        "text": "思源餐厅",
+        "direction": [
+          0.927,
+          0.374
+        ],
+        "base": 7.2,
+        "width": 5.4,
+        "height": 1,
+        "depth": 0.12,
+        "board": "tile.canteen",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：老楼翻新：思源餐厅：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          376.7,
+          0,
+          -283.2
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-jiayuan",
+      "kind": "sign",
+      "props": {
+        "text": "家园餐厅",
+        "direction": [
+          0.927,
+          0.374
+        ],
+        "base": 11.4,
+        "width": 5.4,
+        "height": 1,
+        "depth": 0.12,
+        "board": "tile.canteen",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：老楼翻新：家园餐厅：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          376.7,
+          0,
+          -283.2
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-chaoyang",
+      "kind": "sign",
+      "props": {
+        "text": "朝阳餐厅",
+        "direction": [
+          0.919,
+          -0.395
+        ],
+        "base": 3,
+        "width": 6,
+        "height": 1,
+        "depth": 0.12,
+        "board": "tile.canteen",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：老楼翻新：朝阳餐厅：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          343.5,
+          0,
+          -580.9
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-northwest",
+      "kind": "sign",
+      "props": {
+        "text": "西北餐厅",
+        "direction": [
+          0.928,
+          0.373
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 1,
+        "depth": 0.12,
+        "board": "tile.canteen",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building"
+      },
+      "note": "设计增补：老楼翻新：西北餐厅：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -45.7,
+          0,
+          -440.3
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-0-0",
+      "kind": "sign",
+      "props": {
+        "text": "校园超市",
+        "direction": [
+          -0.38246006169253094,
+          0.9239720240408501
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：校园超市：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -85.1872524649922,
+          0,
+          -679.6693108926318
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-0-1",
+      "kind": "sign",
+      "props": {
+        "text": "蜜雪冰城",
+        "direction": [
+          0.38246006169253094,
+          -0.9239720240408501
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：蜜雪冰城：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -71.15606111566458,
+          0,
+          -688.2046550964064
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-0-2",
+      "kind": "sign",
+      "props": {
+        "text": "兰州拉面",
+        "direction": [
+          -0.38246006169253094,
+          0.9239720240408501
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：兰州拉面：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -75.04992703272949,
+          0,
+          -704.1597244970164
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-0-3",
+      "kind": "sign",
+      "props": {
+        "text": "德仁堂",
+        "direction": [
+          0.38246006169253094,
+          -0.9239720240408501
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：德仁堂：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -61.01873568340188,
+          0,
+          -712.6950687007911
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-0-4",
+      "kind": "sign",
+      "props": {
+        "text": "中国电信",
+        "direction": [
+          -0.38246006169253094,
+          0.9239720240408501
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：中国电信：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -64.91260160046677,
+          0,
+          -728.6501381014011
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-0-5",
+      "kind": "sign",
+      "props": {
+        "text": "中国建设银行",
+        "direction": [
+          0.38246006169253094,
+          -0.9239720240408501
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：中国建设银行：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -50.881410251139165,
+          0,
+          -737.1854823051758
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-0-6",
+      "kind": "sign",
+      "props": {
+        "text": "菜鸟驿站",
+        "direction": [
+          -0.38246006169253094,
+          0.9239720240408501
+        ],
+        "base": 2.8,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：菜鸟驿站：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -54.77527616820405,
+          0,
+          -753.1405517057858
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-1-0",
+      "kind": "sign",
+      "props": {
+        "text": "校园超市",
+        "direction": [
+          -0.38246006169253094,
+          0.9239720240408501
+        ],
+        "base": 7.0,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：校园超市：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -83.28650394644293,
+          0,
+          -684.2612634434539
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-1-1",
+      "kind": "sign",
+      "props": {
+        "text": "知博书店",
+        "direction": [
+          0.38246006169253094,
+          -0.9239720240408501
+        ],
+        "base": 7.0,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：知博书店：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -65.4538155600168,
+          0,
+          -701.9805127488728
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-1-2",
+      "kind": "sign",
+      "props": {
+        "text": "干洗",
+        "direction": [
+          -0.38246006169253094,
+          0.9239720240408501
+        ],
+        "base": 7.0,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：干洗：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -65.5461844399832,
+          0,
+          -727.1194872511271
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-1-3",
+      "kind": "sign",
+      "props": {
+        "text": "邮政",
+        "direction": [
+          0.38246006169253094,
+          -0.9239720240408501
+        ],
+        "base": 7.0,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：邮政：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -47.713496053557066,
+          0,
+          -744.838736556546
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-2-0",
+      "kind": "sign",
+      "props": {
+        "text": "健身房",
+        "direction": [
+          -0.38246006169253094,
+          0.9239720240408501
+        ],
+        "base": 11.2,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：健身房：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -78.851424069828,
+          0,
+          -694.9758193953721
+        ]
+      }
+    },
+    {
+      "id": "design:north-identity-sign-shop-2-1",
+      "kind": "sign",
+      "props": {
+        "text": "顺丰",
+        "direction": [
+          0.38246006169253094,
+          -0.9239720240408501
+        ],
+        "base": 11.2,
+        "width": 5.4,
+        "height": 0.9,
+        "depth": 0.12,
+        "board": "wall.creamCoffee",
+        "ink": "wall.greyWhite",
+        "vertical": 0,
+        "walk": "building",
+        "channel": "sign.shop"
+      },
+      "note": "设计增补：老楼翻新：顺丰：统一新招牌，仅简体中文店名，不画品牌标志；立面或店头挂点（MAP-QSH-NORTH，1258）。夜间按对应灯光通道；四季几何固定、屋面接季。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -52.14857593017201,
+          0,
+          -734.1241806046278
+        ]
+      }
+    },
+    {
+      "id": "design:north-activity-roof-garden",
+      "kind": "roofDetail",
+      "props": {
+        "sourceId": "osm:way:852606257",
+        "direction": [
+          14.539999999999992,
+          -35.10000000000002
+        ],
+        "walk": "building"
+      },
+      "note": "设计增补：学生活动中心屋顶花架与小种植庭院，落在已有连接翼屋顶内；沿用Parts默认花架与种植箱尺度，不增建筑体量。夜间门廊余光；四季屋面与植物接季（MAP-QSH-NORTH）。",
+      "geometry": {
+        "type": "point",
+        "position": [
+          -134.608,
+          0,
+          -531.36
+        ]
+      }
     }
   ],
   "trees": [

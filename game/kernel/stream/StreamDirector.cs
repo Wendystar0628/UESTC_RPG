@@ -8,7 +8,6 @@ using Campus.Kernel.Materials;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
 using N = System.Numerics;
-using System.Collections.ObjectModel;
 
 namespace Campus.Kernel.Stream;
 
@@ -132,16 +131,11 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _reflectionDirty = true;
         _tree = new(context.Descriptor.Bounds, _settings);
         _visibility = new(_settings.FadeSeconds);
-        var modules = Services.Services.ForMap(context.Descriptor.Id.Value).Where(entry => entry.Kind == "content")
-            .Select(entry => new StreamModule(entry.Id, CreateModule(entry.Type))).ToArray();
-        // All data participants finished Prepare before this callback. Resolve prepared module contexts on
-        // the main thread; enumeration on the worker must not fabricate hashes, inputs or window tables.
         var contextSource = Services.Get<IBakeContextSource>();
-        var preparedContexts = new ReadOnlyDictionary<string, BuildContext>(modules.ToDictionary(
-            module => module.Id, module => contextSource.GetPreparedContext(context, module.Id), StringComparer.Ordinal));
-        _interiors!.Load(context, preparedContexts.Values.FirstOrDefault());
+        var firstModule = Services.Services.ForMap(context.Descriptor.Id.Value).FirstOrDefault(entry => entry.Kind == "content");
+        _interiors!.Load(context, firstModule is null ? null : contextSource.GetPreparedContext(context, firstModule.Id));
         _catalogGeneration = _mapGeneration;
-        _catalogTask = RunWorker(() => ModuleTileCatalog.Build(preparedContexts, modules));
+        _catalogTask = BuildCatalog(contextSource.GetPreparedModuleTilesAsync(context));
         _replan = _settings.ReplanSeconds;
     }
     public void OnMapUnloading(MapId from)
@@ -477,12 +471,10 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         if (tile == StreamTile.Root || _destinationRequired.Contains(tile)) _error ??= error;
         GD.PushError(error);
     }
-    private static IContentModule CreateModule(Type type)
+    private static async Task<ModuleTileCatalog> BuildCatalog(Task<IReadOnlyDictionary<string, IReadOnlyList<TileKey>>> tiles)
     {
-        if (type.GetConstructor(Type.EmptyTypes) is null || typeof(GodotObject).IsAssignableFrom(type))
-            throw new InvalidOperationException($"Streaming modules must be parameterless CPU content: {type.FullName}.");
-        return (IContentModule)(Activator.CreateInstance(type)
-            ?? throw new InvalidOperationException($"Cannot create streaming module {type.FullName}."));
+        var index = await tiles.ConfigureAwait(false);
+        return await RunWorker(() => ModuleTileCatalog.Build(index)).ConfigureAwait(false);
     }
     private static Task<T> RunWorker<T>(Func<T> work) => Task.Factory.StartNew(() =>
     {

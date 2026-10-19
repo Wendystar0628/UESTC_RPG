@@ -75,6 +75,7 @@ public static class BuildingPlanner
         var cluster = StableHash.Hash32(worldSeed, "wp14.cluster",
             cell.X.ToString(CultureInfo.InvariantCulture), cell.Y.ToString(CultureInfo.InvariantCulture));
         var profile = FacadePresets.Apply(FacadeRules.ProfileFor(style, cluster), FacadePresets.Find(feature.Facade, presets));
+        profile = FacadePresets.ApplyColors(profile, feature);
         var seed = StableHash.Hash32(worldSeed, feature.Id.Value, src.Key, "wp14.building");
 
         // Facade bay grid from the WP-51a plan kernel: canonical rings (mm, fixed start vertex), bays on the glass

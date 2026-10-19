@@ -188,10 +188,10 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                     Schedule(map, new(context.Descriptor.Id, "map", "base"), BakePriority.Normal);
                     return;
                 }
-                var keys = map.Modules.OrderBy(p => p.Key, StringComparer.Ordinal).SelectMany(pair =>
+                var moduleTiles = map.GetPreparedModuleTilesAsync(context).GetAwaiter().GetResult();
+                var keys = moduleTiles.SelectMany(pair =>
                 {
-                    var tiles = pair.Value.Value.Tiles(map.GetPreparedContext(context, pair.Key))
-                        .Distinct().OrderBy(t => t.X).ThenBy(t => t.Z).ToArray();
+                    var tiles = pair.Value;
                     return new[] { LodLevel.L4, LodLevel.L3, LodLevel.L2, LodLevel.L1, LodLevel.L0 }.SelectMany(level =>
                         (level == LodLevel.L4 ? new[] { new TileKey(0, 0) } : tiles.Select(t => BakeRequestKeys.Parent(t, level)).Distinct())
                         .Select(tile => BakeRequestKeys.Tile(context.Descriptor.Id, pair.Key, tile, level)));
@@ -255,16 +255,17 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             throw new InvalidDataException("More than one producer claims this bake key.");
         if (module is null && interior is null && matches.Length == 0) throw new InvalidDataException("No bake producer is registered for this key.");
         var codeHash = module?.CodeHash ?? interior?.CodeHash ?? matches[0].CodeHash;
-        var context = map.CreateBuildContext(codeHash);
+        var context = module is not null ? map.GetPreparedContext(map.Context, key.Module) : map.CreateBuildContext(codeHash);
         var runtimeCode = RuntimeCodeHash();
         var dependencies = new SortedDictionary<string, string>(StringComparer.Ordinal);
         if (key.Detail.StartsWith("C/", StringComparison.Ordinal))
         {
             var area = BakeInputFingerprint.Area(context, key);
-            foreach (var (id, source) in map.Modules)
-                if (source.Value.Tiles(context).Any(tile =>
+            var moduleTiles = map.GetPreparedModuleTilesAsync(map.Context).GetAwaiter().GetResult();
+            foreach (var (id, tiles) in moduleTiles)
+                if (tiles.Any(tile =>
                     (tile.X + 1) * TileGrid.BaseEdge >= area.Min.X && tile.X * TileGrid.BaseEdge <= area.Max.X &&
-                    (tile.Z + 1) * TileGrid.BaseEdge >= area.Min.Y && tile.Z * TileGrid.BaseEdge <= area.Max.Y)) dependencies[id] = source.CodeHash;
+                    (tile.Z + 1) * TileGrid.BaseEdge >= area.Min.Y && tile.Z * TileGrid.BaseEdge <= area.Max.Y)) dependencies[id] = map.Modules[id].CodeHash;
             foreach (var (id, source) in map.Interiors)
                 if (source.Value.FeatureIds.Any(feature => context.World.Features.TryGetValue(feature, out var value) &&
                     value.Bounds.Min.X <= area.Max.X && value.Bounds.Max.X >= area.Min.X &&
@@ -290,7 +291,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             }
             if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
         }
-        var buildContext = map.CreateBuildContext(codeHash, inputHash);
+        var buildContext = module is not null ? context : map.CreateBuildContext(codeHash, inputHash);
         var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics)) :
             interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext);
         cancellation.ThrowIfCancellationRequested();
@@ -468,7 +469,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     internal sealed record LoadedMap(uint Seed, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs,
         IReadOnlyList<InteriorProviderBinding> InteriorBindings, IReadOnlyDictionary<string, IInteriorProvider> InteriorProviders,
         BakeWindowPreparation.Result Windows);
-    internal sealed record MapBuild(IMapContext Context, IReadOnlyDictionary<string, ContentModuleInput> Modules, IReadOnlyDictionary<string, Interior> Interiors, Producer[] Producers,
+    internal sealed partial record MapBuild(IMapContext Context, IReadOnlyDictionary<string, ContentModuleInput> Modules, IReadOnlyDictionary<string, Interior> Interiors, Producer[] Producers,
         BakeGeometryBuilder Geometry, Lazy<MapClaimLedger> Claims, Func<FeatureId, Aspects, WpId?> ClaimLookup, Lazy<LoadedMap> Data,
         BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog Catalog)
     {
@@ -524,6 +525,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             _preparedContexts = new ReadOnlyDictionary<string, BuildContext>(Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal)
                 .ToDictionary(pair => pair.Key, pair => CreateBuildContext(pair.Value.CodeHash), StringComparer.Ordinal));
             Metadata = metadata;
+            PrepareModuleTiles();
         }
 
         internal BuildContext GetPreparedContext(IMapContext context, string moduleId)

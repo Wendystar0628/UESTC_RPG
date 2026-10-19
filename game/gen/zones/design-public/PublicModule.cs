@@ -12,7 +12,7 @@ public sealed class PublicModule : ZoneModuleBase
     private static readonly IReadOnlyList<ZoneSite> Sites = [new PocketGreenSite()];
 
     public PublicModule() : base(Sites, new(TrianglesL0: 12_000, TrianglesL1: 6_000, DrawCalls: 4),
-        GeometryMergePolicy.MaterialGroups, cacheColliders: true) { }
+        GeometryMergePolicy.MaterialGroups) { }
 
     public override ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
     {

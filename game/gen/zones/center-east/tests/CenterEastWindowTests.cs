@@ -53,7 +53,7 @@ public sealed partial class CenterEastModuleTests
             allocations.Add(new(feature, grid.Key, next, grid.Columns, grid.Rows));
             next += grid.Columns * grid.Rows;
         }
-        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(Descriptor().Id, new string('a', 64), allocations) };
+        var ctx = new BuildContext { GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = Descriptor(), WorldSeed = 1, WindowNumbering = new(Descriptor().Id, new string('a', 64), allocations) };
         var exceptionThrown = false;
         try { module.DescribeWindows(Context()); }
         catch (InvalidOperationException) { exceptionThrown = true; }
@@ -70,14 +70,17 @@ public sealed partial class CenterEastModuleTests
         AssertThat(declared.All(id => allocations.Any(a => id >= a.BaseId && id < a.BaseId + a.Count && a.Feature.Value != "a-earlier"))).OverrideFailureMessage("declared IDs lie in the zone's grids").IsTrue();
         AssertThat(metadata.Windows.Count > 0 && metadata.Facades.Count > 0).OverrideFailureMessage("bridges give loose windows, research blocks facade runs").IsTrue();
         // The portal cells under the entrance frames carry no window.
-        AssertThat(metadata.Facades.Count(f => f.Skip.Count > 0) == CenterEastSites.All.OfType<ResearchSite>().Count(site => site.BlockDoorId is not null)).OverrideFailureMessage("科 A and 科 B each skip their portal cells").IsTrue();
+        var research = CenterEastSites.All.OfType<ResearchSite>().ToArray();
+        var researchIds = research.Select(site => site.Entity).ToHashSet(StringComparer.Ordinal);
+        AssertThat(metadata.Facades.Count(f => f.Skip.Count > 0 && allocations.Any(a => a.BaseId == f.BaseId && researchIds.Contains(a.Feature.Value)))
+            == research.Count(site => site.BlockDoorId is not null)).OverrideFailureMessage("research entrances skip their own portal cells").IsTrue();
 
         HashSet<int> Glass(LodLevel lod)
         {
             var ids = new HashSet<int>();
             var cells = module.ItemsFor(ctx, lod).Select(i => TileGrid.At(i.Anchor, lod)).Distinct();
             foreach (var tile in lod == LodLevel.L4 ? [new TileKey(0, 0)] : cells)
-                foreach (var mesh in module.Build(ctx, tile, lod).Meshes.Where(m => m.Uv2 is not null))
+                foreach (var mesh in module.Build(ctx, tile, lod).Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass && m.Uv2 is not null))
                     for (var v = 0; v < mesh.Uv2!.Length / 2; v++)
                     {
                         var columns = (int)MathF.Floor(mesh.Uv2[2 * v + 1] / 32f);

@@ -19,6 +19,30 @@ public sealed class BakeInputTests
 {
     [TestCase]
     [TestCategory(TestReason.Regression)]
+    public void SceneAtlasChangesInvalidateItsRenderConsumersWithoutChangingCollision()
+    {
+        var world = new FakeWorld { Boundary = new([]) };
+        var before = Context(world, global: Atlas(512));
+        var after = Context(world, global: Atlas(1024));
+        foreach (var module in new[] { "furniture", "zone.north", "zone.center-east", "zone.west" })
+        {
+            if (Hash(before, module) == Hash(after, module))
+                throw new InvalidOperationException("Scene atlas UV changes did not invalidate a rendered consumer.");
+            var key = new BakeKey(before.Map.Id, module, "C/0/0");
+            if (BakeInputFingerprint.Compute(before, key, "runtime-code", new(world)) !=
+                BakeInputFingerprint.Compute(after, key, "runtime-code", new(world)))
+                throw new InvalidOperationException("Scene atlas changes invalidated collision.");
+        }
+        if (Hash(before, "ground") != Hash(after, "ground"))
+            throw new InvalidOperationException("Scene atlas changes invalidated unrelated content.");
+
+        static BuildInputSnapshot Atlas(int size) => BuildInputSnapshot.Freeze(
+            new Dictionary<string, ReadOnlyMemory<byte>>
+            { [SceneTextInputs.AtlasKey] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { size })) });
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
     public void MapBuildSamplesAreSharedAcrossKeysWithoutChangingFingerprintsOrCrossingWorlds()
     {
         var field = new CountingFingerprintField(1);
@@ -114,6 +138,21 @@ public sealed class BakeInputTests
         if (Hash(Context(world, planting: planting), "vegetation") == baseline)
             throw new InvalidOperationException("The far end of this cell's green parcel did not invalidate its vegetation.");
 
+        var group = Green("fixture:group", 180, 180) with
+        {
+            Kind = new("sportGroup"),
+            Props = JsonSerializer.SerializeToElement(new { members = new[] { "fixture:court" }, gate = new[] { 180f, 30f },
+                gateGap = 3f, treePitch = 3f, treeOffset = 1.5f, sharedGapBelow = 8f })
+        };
+        var globals = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
+        { ["vegetation/species.json"] = File.ReadAllBytes(Path.Combine(RepositoryFixture.Root, "game", "data", "vegetation", "species.json")) });
+        world.Features = ((WorldFeature[])[parcel, group, remoteParcel]).ToDictionary(feature => feature.Id);
+        baseline = Hash(Context(world, planting: planting, global: globals), "vegetation");
+        world.Features = ((WorldFeature[])[parcel, Green("fixture:group", 180, 190) with
+        { Kind = group.Kind, Props = group.Props }, remoteParcel]).ToDictionary(feature => feature.Id);
+        if (Hash(Context(world, planting: planting, global: globals), "vegetation") == baseline)
+            throw new InvalidOperationException("A sport wall in this parcel's connected neighbourhood did not invalidate vegetation.");
+
         static WorldFeature Green(string id, float x, float length) => WorldFeatureFixture.Create(id, "green",
             new PolygonGeometry(new([new(x, 10), new(x + length, 10), new(x + length, 50), new(x, 50)])));
     }
@@ -174,7 +213,8 @@ public sealed class BakeInputTests
             Bounds = new(new(x, 0, 10), new(x + 1, 2, 11)), Name = name,
             Props = JsonSerializer.SerializeToElement(new { note, text }, ContractJson.Options)
         };
-    private static BuildContext Context(IWorldModel world, string species = "one", WindowNumberingSnapshot? numbering = null, string? planting = null) => new()
+    private static BuildContext Context(IWorldModel world, string species = "one", WindowNumberingSnapshot? numbering = null, string? planting = null,
+        BuildInputSnapshot? global = null) => new()
     {
         Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, WorldSeed = 1, CodeHash = "module-code", WindowNumbering = numbering,
         Map = new(new("fixture"), new("Fixture", "Fixture"), MapKind.Outdoor, 1, 1,
@@ -182,7 +222,7 @@ public sealed class BakeInputTests
             new(Vector2.Zero, new(64, 64)), new(1, 0, 64, 0, 64, 1, 1, 1), new(0, 0), new(0, 0), "start", [],
             new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Default", "Default"), false, "fixture"),
             new("sky.json", "backdrop.json", []), new Dictionary<string, string>(), []),
-        GlobalInputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
+        GlobalInputs = global ?? BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
             { ["vegetation/species.json"] = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { species })) }),
         SourceInputs = planting is null ? new Dictionary<string, ReadOnlyMemory<byte>>() :
             new Dictionary<string, ReadOnlyMemory<byte>> { ["vegetation/planting.json"] = Encoding.UTF8.GetBytes(planting) },

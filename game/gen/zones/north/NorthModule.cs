@@ -10,13 +10,12 @@ namespace Campus.Gen.Zones.North;
 /// identity parts. Pure .NET: reads the world model, the interior index and the terrain only.
 /// </summary>
 [ContentModule("zone.north", Owner = "WP-20")]
-public sealed class NorthModule : ZoneModuleBase
+public sealed class NorthModule : ZoneModuleBase, IWindowMetadataSource, IContentSourceTraceProvider
 {
     public NorthModule() : this(NorthSites.All) { }
 
     internal NorthModule(IReadOnlyList<ZoneSite> sites)
-        : base(sites, new(NorthTune.BudgetTrianglesL0, NorthTune.BudgetTrianglesL1, NorthTune.BudgetDrawCalls),
-            cacheResults: ReferenceEquals(sites, NorthSites.All), cacheColliders: true) { }
+        : base(sites, new(NorthTune.BudgetTrianglesL0, NorthTune.BudgetTrianglesL1, NorthTune.BudgetDrawCalls)) { }
 }
 
 /// <summary>
@@ -40,6 +39,17 @@ public static class NorthSites
         // through the family and facade fields in world/north.json.
         // 20a-4: the canal-bank railing from the north-gate plaza's (WP-30) up the 商业街 side
         new Canal.CanalRailSite(),
-        // 20c: append here.
+        // 20c: identity geometry replaces the solid drum, link and arcade, and completes the food-court route.
+        new Identity.AuditoriumSite(),
+        new Identity.ActivityLobbySite(),
+        new Identity.ActivityRoofSite(),
+        new Identity.ShoppingStreetSite(),
+        new Identity.EscalatorSite(NorthFeatureIds.EscalatorYinxing),
+        new Identity.EscalatorSite(NorthFeatureIds.EscalatorSixueWest),
+        new Identity.EscalatorSite(NorthFeatureIds.EscalatorSixueEast),
+        new Identity.ChaoyangStairSite(),
+        new Identity.CoveredWalkSite(),
+        new Identity.CulturalStonesSite(),
+        new Identity.IdentitySignsSite(),
     ]);
 }

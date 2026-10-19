@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using System.Numerics;
+using Campus.Contracts.Water;
 
 namespace Campus.Gen.World;
 
@@ -127,7 +128,7 @@ internal static partial class TerrainCompiler
                 members.Select(spec => spec.Id).ToArray(), originalHard));
             foreach (var spec in members)
             {
-                b.Water.Add(new(spec.Id, spec.Region, spec.Level, spec.Wade, spec.Channel, bridgeBanks, spec.Level + (spec.Channel ? 1.2 : 0.5)));
+                b.Water.Add(new(spec.Id, spec.Region, spec.Level, spec.Wade, spec.Channel, bridgeBanks, spec.Level + (WaterPoolLayout.IsPool(b.Context.Features[spec.Id]) ? WaterPoolRules.RimDrop : spec.Channel ? 1.2 : 0.5)));
                 if (spec.Bank.Kind == TerrainBankKind.Hard)
                     b.Diagnostics.Add($"NOT_VERIFIED: generated structural bank coverage for '{spec.Id.Value}' still requires the content/physics acceptance pass.");
             }

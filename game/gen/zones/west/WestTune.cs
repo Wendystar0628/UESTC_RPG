@@ -162,8 +162,7 @@ public static class WestTune
 
         /// <summary>
         /// The crown sign on C's east face (§1.2, ART-STYLE), centred on the face above the door: a solid stone panel over the
-        /// top two storeys rising above the parapet, the red emblem at its head, a line of silver characters below and a thin
-        /// English line under them. Text slots are blank until the scene text atlas (contract-26): 楼顶"基础与前沿研究院"加一行英文.
+        /// top two storeys rising above the parapet, the red emblem at its head and silver Chinese lettering below.
         /// </summary>
         public const float SignWidth = 21f;
         public const float SignRise = 3.4f;
@@ -171,11 +170,7 @@ public static class WestTune
         public const float SignProud = 0.95f;
         public const float EmblemDiameter = 3.6f;
         public const float EmblemDepth = 0.18f;
-        public const int SignCharacters = 8;
         public const float CharacterSize = 1.75f;
-        public const float CharacterGap = 0.42f;
-        public const float EnglishHeight = 0.32f;
-        public const float EnglishLength = 15.6f;
 
         /// <summary>B–C link: deck at the first-floor line, roof at the base top, glass railing on its long sides.</summary>
         public const float LinkDeck = 4.5f;
@@ -210,9 +205,8 @@ public static class WestTune
         public const float Length = 6.6f;
         public const float Depth = 1.85f;
         public const float Height = 1.8f;
-        /// <summary>Two lines "求实求真" / "大气大为" layout slots; blank until the scene text atlas (contract-26): 校训石正面"求实求真 大气大为".</summary>
+        /// <summary>Two scene-text lines "求实求真" / "大气大为" on the stone face.</summary>
         public const float CharacterSize = 0.56f;
-        public const float CharacterPitch = 0.72f;
         public const float LineGap = 0.78f;
         /// <summary>Granite pad round the foot (石脚的分界线) and the low lawn-lamp spot on the P10 side, for WP-39.</summary>
         public const float PadMargin = 0.5f;
@@ -278,7 +272,7 @@ public static class WestTune
     /// 创新中心 (MAP-QSH-WEST, MAP-QSH-RENOVATION W-01): the two six-storey bars and the two four-storey cross wings are WP-14's
     /// (research, with its rooftop plant enclosure and stair penthouses under the main coping); this zone builds the dark glass
     /// stair shafts where the wings meet the bars (§3.3) and the main entrance frame on the east wing's face to the parking
-    /// square, with the slot for the red-brown calligraphy sign (§3.2) left blank until contract-26.
+    /// square, with the red-brown entrance sign.
     /// </summary>
     public static class Innovation
     {
@@ -301,7 +295,7 @@ public static class WestTune
         public const float PortalWidth = 9.0f, PortalHeight = 6.2f, PortalDepth = 3.4f, PortalMember = 0.7f;
         /// <summary>The glass screen stands this far behind the portal's front, proud of anything WP-14 hangs on the wall.</summary>
         public const float ScreenBack = 0.25f;
-        /// <summary>The sign slot on the portal head, for "创新中心" in red-brown calligraphy (blank until contract-26).</summary>
+        /// <summary>The entrance sign panel for "创新中心".</summary>
         public const float SignHeight = 1.3f;
         public const float DoorWidth = 2.6f, DoorHeight = 2.8f;
     }
@@ -414,7 +408,7 @@ public static class WestTune
     /// <summary>
     /// 国防科技园石刻 (MAP-QSH-WEST): one rough-hewn white lying stone in the green wedge north of the bridgehead junction,
     /// its inscribed face turned south-south-west toward the junction (bearing 200°), so the low evening sun rakes it and it reads from the
-    /// west gate road. The inscription "国防科技园" (墨绿行书) is left blank until the scene text atlas (contract-26). The
+    /// west gate road. The inscription "国防科技园" uses the shared scene-text atlas. The
     /// WP-28 bridge-head stone (design:waterfront-stone-ximen, −238.4, −411.9) stands 14 m away across the road.
     /// </summary>
     public static class Carving

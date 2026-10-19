@@ -128,7 +128,7 @@ public sealed partial class CenterEastModuleTests
         {
             var plan = site.Footprints(ctx.World);
             var walls = colliders.OfType<WallCollider>().Where(w => plan.Blocks.Any(r => NearRing(r, (w.A + w.B) * 0.5f))).ToArray();
-            AssertThat(walls.Any(w => w.Tag == SurfaceTag.Wall && MathF.Abs(w.Y1 - top) < TestTolerance.Position)).OverrideFailureMessage($"{site.Id} walls reach the coping").IsTrue();
+            AssertThat(walls.Any(w => w.Tag == SurfaceTag.Wall && MathF.Abs(w.Y1 - site.BaseY(ctx) - top) < TestTolerance.Position)).OverrideFailureMessage($"{site.Id} walls reach the coping above their terrain pad").IsTrue();
             var door = plan.Door ?? site.HallApex(plan).Apex;
             AssertThat(colliders.OfType<WallCollider>().Count(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, door) < 3f) is >= 1 and <= 2).OverrideFailureMessage($"{site.Id} has its shut entrance at the door").IsTrue();
         }
@@ -201,11 +201,16 @@ public sealed partial class CenterEastModuleTests
     private static BuildContext Context()
     {
         // The center-east sites never read the map descriptor; the world model and seed are their whole input.
-        return new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = Descriptor(), WorldSeed = 1 };
+        return new BuildContext { GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = Descriptor(), WorldSeed = 1 };
     }
+
+    private static BuildInputSnapshot TextInputs() => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
+    {
+        [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
+    });
 
     private static MapDescriptor Descriptor() => RealMapFixture.Entry().Descriptor;
 
-    // Load and validate all registered production claims before applying this suite's explicit flat-terrain view.
-    private static IWorldModel World() => new FakeWorld(RealMapFixture.Load().World) { Terrain = FlatTerrain.Default };
+    // Geometry, pads and pool water levels all come from the same registered production world.
+    private static IWorldModel World() => RealMapFixture.Load().World;
 }

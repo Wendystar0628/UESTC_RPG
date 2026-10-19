@@ -14,7 +14,7 @@ namespace Campus.Gen.Zones.West.Motto;
 /// 21:28 and 19b): a few big flat planes with a low, gently tilted top and one flat dressed face, not a crumpled box and not
 /// a smooth dome (MottoStone); it no longer stands straight on the paving: it lies in an oval bed of river pebbles held by a low granite kerb, with a crescent of low
 /// clipped planting round its back and ends. The front stays open, so the face still reads from P10 and from Q1's 3 m spot.
-/// The face is left blank until the scene text atlas carries the motto (contract-26). The low lawn lamp beside it is WP-39's
+/// The face uses the shared scene-text atlas. The low lawn lamp beside it is WP-39's
 /// (lighting-schedule.json).
 /// </summary>
 public sealed class MottoStoneSite : ZoneSite
@@ -46,8 +46,13 @@ public sealed class MottoStoneSite : ZoneSite
         // Planting crescent round the back and both ends, open toward the face.
         var hedge = Kerb + new Vector2(M.KerbWidth * 0.5f + M.HedgeGap + M.HedgeWidth * 0.5f);
         b.Add(PartGeometryKernel.Sweep(HedgeProfile(), Oval(f, hedge, around, -90f - M.HedgeSweep, -90f + M.HedgeSweep, closed: false), L.Hedge, baseY: y - 0.05f), Matrix4x4.Identity);
-        // Text hook: the stone face stays blank until the scene text atlas (contract-26) arrives. Then add on the dressed face
-        // (MottoStone.OnFace / FaceNormal, between heights 0.35 and 1.3, Look.Red lacquer) two lines "求实求真" / "大气大为" laid out by CharacterSize, CharacterPitch, LineGap.
+        var tilt = System.Numerics.Matrix4x4.CreateRotationX(-MathF.Atan(.16f));
+        foreach (var (text, lineY) in new[] { ("求实求真", 1.3f), ("大气大为", 1.3f - M.LineGap) })
+        {
+            var point = MottoStone.OnFace(0, lineY);
+            Framework.WestLettering.Write(b, text, M.CharacterSize, L.Red, L.CreamStone,
+                tilt * f.At(point.X, y - .03f + point.Y, point.Z + .015f));
+        }
     }
 
     /// <summary>

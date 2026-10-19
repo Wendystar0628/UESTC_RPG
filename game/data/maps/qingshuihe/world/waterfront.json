@@ -1,6 +1,63 @@
 {
   "features": [
     {
+      "id": "design:waterfront-bank-eastlake-north",
+      "kind": "bank",
+      "props": {
+        "form": "hard",
+        "water": "qsh:relation:7849760",
+        "openings": [
+          {
+            "edge": "design:south-eastlake-wade-edge",
+            "widthFrom": "design:south-eastlake-wade-step"
+          }
+        ]
+      },
+      "note": "MAP-QSH-TERRAIN、MAP-QSH-WATER：沿南区已登记北岸选段统一生成混凝土墙、浅湿带和 ground.curb 压顶，替代南区旧砖红墙与砂岩压顶；已有涉水口按原边段中点和原宽度断开，不另加台阶，白栏与原 10 m 涉水两级仍由南区生成。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[105.86,299.29],[223.39,327.3]]
+        }
+      }
+    },
+    {
+      "id": "design:waterfront-bank-westlake-shuishan-exit-clearance",
+      "kind": "grass-area",
+      "props": {
+        "category": "exclude"
+      },
+      "note": "MAP-QSH-WATER：水杉路侧硬岸中点 3 m 台阶，出口两侧各留 1 m 无草，岸顶接入口至水侧踏步沿用硬岸样板排草范围；方向取同源岸线入射切向。",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-467.201099,167.140855],[-467.417035,162.14552],[-463.920301,161.994364],[-463.704364,166.989699]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:waterfront-bank-westlake-shuishan",
+      "kind": "bank",
+      "props": {
+        "form": "hard",
+        "water": "qsh:relation:7849759",
+        "treads": [
+          {
+            "centre": [-466.31,164.6],
+            "width": 3.0
+          }
+        ]
+      },
+      "note": "MAP-QSH-TERRAIN、MAP-QSH-WATER：以西湖岸线距水杉路 qsh:way:544277137 中线最近点为中心，沿岸两侧各 60 m 的 120 m 硬岸，中点仅一处 3 m 亲水台阶；北岸半圆台阶花坛不做岸墙。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-427.336123,178.050822],[-437.887758,114.04806]]
+        }
+      }
+    },
+    {
       "id": "design:waterfront-bank-library-north-end",
       "kind": "contourSegment",
       "props": {
@@ -678,39 +735,6 @@
         "type": "point",
         "position": [93.37,0,78.83]
       }
-    },
-    {
-      "id": "qsh:way:852606258",
-      "kind": "building",
-      "name": "未命名建筑 · 6258",
-      "height": 7,
-      "storeys": 2,
-      "family": "unknown",
-      "props": {
-        "name": "未命名建筑 · 6258",
-        "category": "unknown",
-        "kind": "building",
-        "anchor": [-111.21,7.0,-583.54]
-      },
-      "parts": [
-        {
-          "id": "osm:way:852606258",
-          "height": 7,
-          "storeys": 2,
-          "props": {
-            "kind": "building",
-            "category": "unknown",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[-107.31,-585.06],[-110.15,-577.44],[-116.05,-579.86],[-112.96,-587.39]],
-              "holes": []
-            }
-          }
-        }
-      ]
     }
   ],
   "trees": []

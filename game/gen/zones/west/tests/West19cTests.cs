@@ -193,7 +193,12 @@ public sealed class West19cTests
     private static float Distance(IReadOnlyList<Vector2> line, Vector2 point) =>
         MathF.Sqrt(PlanLines.PolylineDistanceSquared(line, point));
 
-    private static BuildContext Context(IWorldModel world) => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1 };
+    private static BuildContext Context(IWorldModel world) => new() { GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1 };
+
+    private static BuildInputSnapshot TextInputs() => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
+    {
+        [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
+    });
 
     private static IWorldModel World() => RealMapFixture.Load().World;
 

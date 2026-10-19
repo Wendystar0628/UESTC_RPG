@@ -21,13 +21,29 @@ internal static class NorthTestSupport
         yield return line[^1];
     }
 
-    internal static BuildContext Context() => new()
+    internal static BuildContext Context()
     {
-        Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
-        World = RealMapFixture.Load().World,
-        Map = null!,
-        WorldSeed = 1,
-    };
+        var world = RealMapFixture.Load().World;
+        var module = new NorthModule();
+        var claims = module.Claims.OfType<FeatureClaim>().Select(c => c.Feature).ToHashSet();
+        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
+        {
+            [SceneTextInputs.AtlasKey] = System.IO.File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
+        });
+        var context = new BuildContext
+        {
+            Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
+            World = world,
+            Map = RealMapFixture.Entry().Descriptor,
+            WorldSeed = 1,
+            GlobalInputs = inputs,
+            ClaimedBy = (feature, _) => claims.Contains(feature) ? new WpId("WP-20") : null,
+        };
+        var numbering = new Campus.Gen.Buildings.BuildingsModule()
+            .PrepareWindowNumbering(context, module.DescribeWindowLayouts(world, context.WorldSeed));
+        return new BuildContext { Catalog = context.Catalog, World = world, Map = context.Map,
+            WorldSeed = context.WorldSeed, GlobalInputs = inputs, ClaimedBy = context.ClaimedBy, WindowNumbering = numbering };
+    }
 
     internal static TerrainOverlayFile Terrain() =>
         TerrainOverlayJson.Parse(RealMapFixture.ReadFiles()["world/north.terrain.json"].Span);

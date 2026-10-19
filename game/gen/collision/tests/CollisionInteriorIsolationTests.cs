@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Gen.Tests.Support;
 using Campus.Tests;
@@ -94,8 +95,34 @@ public sealed class CollisionInteriorIsolationTests
     {
         var map = new MapId("fixture-no-interiors");
         var context = new BuildContext { Map = Descriptor(map), World = FixtureWorld(open: false), WorldSeed = 1, Catalog = Catalog };
-        var result = new CollisionTileBuilder([], _ => []).Build(context, new(0, 0));
+        var moduleContext = new BuildContext { Map = context.Map, World = context.World, WorldSeed = 2, Catalog = Catalog };
+        var module = new PreparedModule(moduleContext);
+        var tile = new TileKey(0, 0);
+        var builder = new CollisionTileBuilder([new("prepared", module, moduleContext, Array.AsReadOnly(new[] { tile }))], _ => []);
+        var result = builder.Build(context, tile);
+        _ = builder.Build(context, tile);
         AssertThat(result.Count == 0).OverrideFailureMessage("A map without interior declarations produced extra collision shapes.").IsTrue();
+        AssertThat(module.Builds == 2 && module.Collisions == 2).OverrideFailureMessage("Collision jobs must use the prepared module context and shared tile index.").IsTrue();
+    }
+
+    private sealed class PreparedModule(BuildContext prepared) : IContentModule
+    {
+        public int Builds, Collisions;
+        public IReadOnlyList<Claim> Claims => [];
+        public ModuleBudget Budget => new(0, 0, 0);
+        public IEnumerable<TileKey> Tiles(BuildContext context) => throw new InvalidOperationException("Collision jobs must not enumerate Tiles.");
+        public ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
+        {
+            if (!ReferenceEquals(context, prepared)) throw new InvalidOperationException("Module generation lost its prepared context.");
+            Builds++;
+            return ContentOutput.Empty;
+        }
+        public IReadOnlyList<Collider> Collide(BuildContext context, TileKey tile)
+        {
+            if (!ReferenceEquals(context, prepared)) throw new InvalidOperationException("Module collision lost its prepared context.");
+            Collisions++;
+            return [];
+        }
     }
 
     private static BuildContext Context(MapId map, IReadOnlyDictionary<string, IInteriorProvider> providers, bool open, bool catalog)

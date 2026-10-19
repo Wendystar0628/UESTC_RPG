@@ -14,4 +14,11 @@ public interface IBakeContextSource
     /// readable; the worker owner must still reject late results using its map generation/cancellation.
     /// </summary>
     BuildContext GetPreparedContext(IMapContext context, string moduleId);
+
+    /// <summary>
+    /// Returns the current prepared map's single immutable L0 tile index, keyed by module ID.
+    /// Construction runs once on a worker and is shared by streaming and collision dependencies.
+    /// Invalid or stale map contexts fail at entry; callers reject late results with their map generation.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, IReadOnlyList<TileKey>>> GetPreparedModuleTilesAsync(IMapContext context);
 }

@@ -14,8 +14,7 @@ public sealed class WaterfrontModule : ZoneModuleBase
 {
     private static readonly IReadOnlyList<ZoneSite> Sites = [new BridgeSite(), new BankSite()];
 
-    public WaterfrontModule() : base(Sites, new(T.BudgetTrianglesL0, T.BudgetTrianglesL1, T.BudgetDrawCalls),
-        cacheColliders: true) { }
+    public WaterfrontModule() : base(Sites, new(T.BudgetTrianglesL0, T.BudgetTrianglesL1, T.BudgetDrawCalls)) { }
 
     public override ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
     {

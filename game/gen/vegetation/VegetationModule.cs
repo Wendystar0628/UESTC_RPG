@@ -116,7 +116,8 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
             var output = ContentOutput.Empty with { Instances = [Stream(id, prototype, [tree])] };
             var tile = TileGrid.At(tree.Position);
             var colliders = level == LodLevel.L0 ? TreeColliders.For(new PlantingLayout([tree]), tile, context.World.Terrain) : [];
-            FeatureId? feature = context.World.Features.ContainsKey(new(tree.Key)) ? new FeatureId(tree.Key) : null;
+            var source = tree.Source == PlantSource.SportWall ? Planting.SportWallFeature(tree.Key) : tree.Key;
+            FeatureId? feature = source is not null && context.World.Features.ContainsKey(new(source)) ? new FeatureId(source) : null;
             yield return new ContentSourceTrace(id, feature, output, colliders, []);
         }
     }

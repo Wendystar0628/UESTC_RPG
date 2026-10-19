@@ -5,6 +5,24 @@ namespace Campus.Gen.Zones.CenterEast;
 /// <summary>Zone identities; each OSM member is declared once.</summary>
 public static class CenterEastIds
 {
+    public static class Sports
+    {
+        public static readonly WorldFeatureIds Training = WorldFeatureIds.Way(Prefix, 217855231);
+        public static readonly WorldFeatureIds Hall = WorldFeatureIds.Way(Prefix, 949704500);
+        public static readonly WorldFeatureIds SouthAnnex = WorldFeatureIds.Way(Prefix, 949704501);
+        public static readonly WorldFeatureIds NorthAnnex = WorldFeatureIds.Way(Prefix, 949704502);
+        public static readonly WorldFeatureIds Track = WorldFeatureIds.Relation(Prefix, 11583700);
+        public static readonly WorldFeatureIds Equipment = WorldFeatureIds.Way(Prefix, 574644712);
+        public static readonly WorldFeatureIds PoolEnclosure = WorldFeatureIds.Way(Prefix, 949704496);
+        public static readonly WorldFeatureIds PoolLargeRoom = WorldFeatureIds.Way(Prefix, 549782172);
+        public static readonly WorldFeatureIds PoolSmallRoom = WorldFeatureIds.Way(Prefix, 549782171);
+        public static readonly WorldFeatureIds[] Pools = [
+            WorldFeatureIds.Way(Prefix, 549782169), WorldFeatureIds.Way(Prefix, 549782170),
+            WorldFeatureIds.Way(Prefix, 549782173), WorldFeatureIds.Way(Prefix, 549782174)];
+        public const string PoolGate = "design:center-east-pool-gate";
+        public const string TrackSeats = "design:center-east-track-seats";
+    }
+
     private const string Prefix = "qsh";
     private static readonly WorldFeatureIds Relation11043355 = WorldFeatureIds.Relation(Prefix, 11043355);
     private static readonly WorldFeatureIds Relation11043352 = WorldFeatureIds.Relation(Prefix, 11043352);

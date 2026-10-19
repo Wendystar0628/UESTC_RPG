@@ -5,6 +5,8 @@
 // cull_disabled，从水下看到背面画成浅色的"水下天花板"；自身不投影（顶点标志 8，阴影通道里塌成一点）。
 //
 // 水面顶点数据：UV = 流速 (vx, vz) m/s，湖为 0；UV2 = (到岸距离 m, 倒影湖号，-1 = 不做平面倒影)。
+// 泳池 UV.x 为标线宽；CUSTOM0=(泳池标志,沿轴米数,横轴米数,池长)，
+// CUSTOM1=(浅深,深深,浅区比例,泳道数)，CUSTOM2=(首泳道中心,道距,T长,T距端)，均由共享规则上传。
 // 颜色全部来自调色板：水色四档与泡沫是 WP-24 登记的表面色对（palette/ext/WP-24.json，色号 214–223），
 // 天空倒影、主光色、雾色是随帧色（WP-37）。着色器里不写色值。
 //
@@ -108,6 +110,14 @@ const int WTR_PAL_MID = 216;
 const int WTR_PAL_FAR = 218;
 const int WTR_PAL_DEEP = 220;
 const int WTR_PAL_FOAM = 222;
+const int WTR_PAL_POOL_TILE = 464;
+const int WTR_PAL_POOL_LINE = 466;
+// MAP-QSH-WATER approved pool values, relative to the existing lake wave parameters.
+const float WTR_POOL_DEEP_L = 0.82;
+const float WTR_POOL_EDGE = 0.08;
+const float WTR_POOL_DENSITY = 0.5;
+const float WTR_POOL_LINE = 0.6;
+const float WTR_POOL_PERIOD = 1.5;
 
 uniform int mat_id : hint_range(0, 127) = 0;   // 材质库分配的材质 ID，写进 ROUGHNESS（描线据此不描水面）
 
@@ -115,6 +125,10 @@ varying vec3 v_wpos;
 varying vec2 v_flow;
 varying float v_shore;
 varying flat int v_slot;
+varying vec4 v_pool;
+varying flat vec4 v_pool_profile;
+varying flat vec4 v_pool_lanes;
+varying flat float v_pool_line_width;
 varying vec3 v_diff;
 
 vec3 wtr_pal(int col) {
@@ -238,6 +252,11 @@ void vertex() {
 	v_flow = UV;
 	v_shore = UV2.x;
 	v_slot = int(round(UV2.y));
+	v_pool = CUSTOM0;
+	v_pool_profile = CUSTOM1;
+	v_pool_lanes = CUSTOM2;
+	v_pool_line_width = UV.x;
+	if (CUSTOM0.x > 0.5) v_flow = vec2(0.0);
 	if (IN_SHADOW_PASS) {
 		VERTEX = vec3(0.0);
 	}
@@ -265,7 +284,8 @@ void fragment() {
 	vec2 g;
 	vec2 dir;
 	int period_x = 0;
-	float phase = t12 / WTR_DASH_PERIOD;
+	bool pool = v_pool.x > 0.5;
+	float phase = t12 / (WTR_DASH_PERIOD * (pool ? WTR_POOL_PERIOD : 1.0));
 	if (flow_speed > 1e-4) {
 		// 河渠：格沿流向排，整体顺流平移；哈希按 135 格回绕，480 s 回绕无缝
 		vec2 along = v_flow / flow_speed;
@@ -282,10 +302,12 @@ void fragment() {
 	float fwa = max(fwidth(dot(g, dir)), 1e-5);
 	float line_fade = 1.0 - smoothstep(0.12, 0.3, max(fwa, fwb));   // 格小到三五个像素时淡出，交给雾
 	float px = mix(WTR_LINE_PX.x, WTR_LINE_PX.y, smoothstep(15.0, 160.0, dist)) * (1.0 - 0.6 * precip);
+	if (pool) px *= WTR_POOL_LINE;
+	float pool_density = pool ? WTR_POOL_DENSITY : 1.0;
 	bool channel = flow_speed > 1e-4;
-	WtrDash dh = wtr_dash(g, dir, fwb, (channel ? WTR_FLOW_DASH : WTR_DASH_DENSITY) * (1.0 - 0.7 * precip),
+	WtrDash dh = wtr_dash(g, dir, fwb, (channel ? WTR_FLOW_DASH : WTR_DASH_DENSITY) * pool_density * (1.0 - 0.7 * precip),
 			channel ? WTR_FLOW_HL : WTR_DASH_HL, channel ? px * 0.8 : px, 101u, phase, period_x);
-	WtrDash dd = wtr_dash(g * 0.73 + 0.37, dir, fwb * 0.73, WTR_DARK_DENSITY, WTR_DARK_HL, px, 211u, phase + 0.5, 0);
+	WtrDash dd = wtr_dash(g * 0.73 + 0.37, dir, fwb * 0.73, WTR_DARK_DENSITY * pool_density, WTR_DARK_HL, px, 211u, phase + 0.5, 0);
 	WtrDash dg = wtr_dash(g * WTR_GLINT_SCALE + 0.11, dir, fwb * WTR_GLINT_SCALE, WTR_GLINT_DENSITY, vec2(0.30, 0.46), px * WTR_GLINT_PX, 307u, phase * 1.5, 0);
 	float hi = dh.mask * line_fade * (1.0 - calm);
 	float lo = dd.mask * line_fade * (1.0 - hi) * (1.0 - calm);
@@ -302,6 +324,19 @@ void fragment() {
 	vec3 body_lit = mix(mix(mix(near_lit, mid_lit, s1b), far_lit, s2b), deep_lit, s3b);
 	vec3 body_sh = mix(mix(mix(wtr_pal(WTR_PAL_NEAR + 1), wtr_pal(WTR_PAL_MID + 1), s1b), wtr_pal(WTR_PAL_FAR + 1), s2b), wtr_pal(WTR_PAL_DEEP + 1), s3b);
 	// 影比：水面按 r_mat 1.10 推出的影（WP-37）与受光之比，暗线、影里的倒影都用它（ART-STYLE）
+	if (pool) {
+		float depth = mix(v_pool_profile.x, v_pool_profile.y, step(v_pool.w * v_pool_profile.z, v_pool.y));
+		float depth_l = mix(1.0, WTR_POOL_DEEP_L, step(v_pool_profile.y, depth));
+		float lane = clamp(round((v_pool.z - v_pool_lanes.x) / v_pool_lanes.y), 0.0, v_pool_profile.w - 1.0);
+		float across = abs(v_pool.z - (v_pool_lanes.x + lane * v_pool_lanes.y));
+		float end_distance = min(v_pool.y, v_pool.w - v_pool.y);
+		float stripe = (1.0 - wtr_aa_step(v_pool_line_width * 0.5, across)) * step(v_pool_lanes.w, end_distance);
+		float end_bar = (1.0 - wtr_aa_step(v_pool_lanes.z * 0.5, across)) *
+			(1.0 - wtr_aa_step(v_pool_line_width * 0.5, abs(end_distance - v_pool_lanes.w)));
+		float marking = max(stripe, end_bar);
+		body_lit = mix(wtr_pal(WTR_PAL_POOL_TILE) * depth_l, wtr_pal(WTR_PAL_POOL_LINE), marking);
+		body_sh = mix(wtr_pal(WTR_PAL_POOL_TILE + 1) * depth_l, wtr_pal(WTR_PAL_POOL_LINE + 1), marking);
+	}
 	float shade_ratio = clamp(wtr_luma(wtr_pal(WTR_PAL_FAR + 1)) / max(wtr_luma(far_lit), 1e-4), 0.3, 1.0);
 	// 底色：天空倒影抬向高处天色再压暗（默认格约 #5B6FA8 一类的蓝紫）；夜里抬得少、压得轻，
 	// 夜空的地平线最亮，水面要比岸上的楼亮，剪影才看得清（§1.1、SYS-TIME）
@@ -352,7 +387,7 @@ void fragment() {
 		// ---- 物体的倒影：平面倒影 → 色块化 → 碎片（§1.5、§7.2）
 		vec4 P = vec4(0.0);
 		float crack = 0.0;
-		if (reflect_lake >= 0 && v_slot == reflect_lake) {
+		if (v_pool.x < 0.5 && reflect_lake >= 0 && v_slot == reflect_lake) {
 			vec4 clip = reflect_vp * vec4(v_wpos, 1.0);
 			if (clip.w > 1e-4) {
 				vec2 uv = clip.xy / clip.w * 0.5 + 0.5;
@@ -453,6 +488,7 @@ void fragment() {
 		float foam = (1.0 - wtr_aa_step(fw_m, d)) * step(gaps, wtr_noise(p * 0.32 + vec2(13.0, 71.0)));
 		float band2 = wtr_aa_step(fw_m * 1.9, d) * (1.0 - wtr_aa_step(fw_m * 1.9 + 0.08, d)) * step(0.52, wtr_noise(p * 1.7 + vec2(5.0, 29.0)));
 		foam = max(foam, band2 * (channel ? 0.0 : 0.85)) * mix(channel ? WTR_FOAM_CHANNEL.y : WTR_FOAM_ALPHA, 1.0, winter);
+		if (pool) foam = 1.0 - wtr_aa_step(WTR_POOL_EDGE, d);
 		lit = mix(lit, wtr_pal(WTR_PAL_FOAM), foam);
 		sh = mix(sh, wtr_pal(WTR_PAL_FOAM + 1), foam);
 		glow *= 1.0 - foam;

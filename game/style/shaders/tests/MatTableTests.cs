@@ -14,6 +14,24 @@ public sealed class MatTableTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
+    public void EscalatorSurvivesMaterialPackingWithoutChangingNormalOrMetalResponse()
+    {
+        var plain = new byte[MatTable.ByteCount];
+        var moving = new byte[MatTable.ByteCount];
+        var metal = Plain with { Normal = ToonNormal.AnalyticCylinder, Fx = ToonFx.AnisoBand | ToonFx.Rim | ToonFx.BevelLift };
+        MatTable.WriteRows(plain, 9, metal);
+        MatTable.WriteRows(moving, 9, metal with { Fx = metal.Fx | ToonFx.Escalator });
+        for (var row = 0; row < MatTable.Height; row++)
+            for (var channel = 0; channel < 4; channel++)
+            {
+                var expected = Texel(plain, 9, row, channel);
+                if (row == 3 && channel == 0) expected |= (int)ToonFx.Escalator;
+                AssertThat(Texel(moving, 9, row, channel) == expected).IsTrue();
+            }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
     public void EmissiveChannelIsWrittenAsSlotPlusOneInRowTwoAlpha()
     {
         var bytes = new byte[MatTable.ByteCount];

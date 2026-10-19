@@ -1,5 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Parts;
+using Campus.Gen.World;
+using System.Text.Json;
 
 namespace Campus.Gen.Buildings.Rules;
 
@@ -194,6 +196,14 @@ public static class FacadePresets
     /// <summary>The preset of a key in <paramref name="presets"/> (default: <see cref="All"/>); null for no key or an unknown one.</summary>
     public static FacadeLook? Find(FacadePreset? key, IReadOnlyList<FacadeLook>? presets = null) =>
         key is { Value: { Length: > 0 } name } ? (presets ?? All).FirstOrDefault(p => p.Key == name) : null;
+
+    /// <summary>Authored three-colour overrides affect colours only, preserving the family's complete shape and window plan.</summary>
+    public static FacadeProfile ApplyColors(FacadeProfile profile, WorldFeature feature)
+    {
+        if (feature.Props is not { ValueKind: JsonValueKind.Object } props || !props.TryGetProperty("facadeColors", out var colors))
+            return profile;
+        return profile with { Wall = colors.Text("wall"), Trim = colors.Text("trim"), Accent = colors.Text("accent") };
+    }
 
     /// <summary>The family profile with the preset's values over it.</summary>
     public static FacadeProfile Apply(FacadeProfile profile, FacadeLook? look) => look is null ? profile : profile with

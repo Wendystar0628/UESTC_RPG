@@ -137,6 +137,17 @@ public sealed class WaterfrontModuleTests
             AssertThat(bank.Pieces().All(piece =>
                 PlanLines.SegmentDistanceSquared(exit.Frame.Origin, piece.A, piece.B) >= MathF.Pow(exit.Steps.Width / 2 - TestTolerance.Position, 2))).IsTrue();
         }
+        foreach (var existing in BankPlan.All(world).Where(plan => world.Feature(plan.Id.Value).RequiredProps().TryGetProperty("openings", out _)))
+        {
+            AssertThat(existing.Exits.Count == 0).OverrideFailureMessage("existing water-access treads are kept by their owner, without replacement steps").IsTrue();
+            foreach (var opening in existing.Openings)
+            {
+                var centre = PlanLines.Sample(existing.Shore, opening.Station).Point;
+                AssertThat(existing.Pieces().All(piece =>
+                    PlanLines.SegmentDistanceSquared(centre, piece.A, piece.B) >= MathF.Pow(opening.Width / 2 - TestTolerance.Position, 2)))
+                    .OverrideFailureMessage("wall and coping leave the existing water-access opening clear").IsTrue();
+            }
+        }
     }
 
     private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1u };

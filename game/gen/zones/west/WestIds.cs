@@ -36,6 +36,15 @@ public static class WestIds
     public static readonly WorldFeatureIds Way795677483 = WorldFeatureIds.Way("qsh", 795677483);
     public static readonly WorldFeatureIds Way950008613 = WorldFeatureIds.Way("qsh", 950008613);
 
+    public static readonly WorldFeatureIds InnovationEastWing = WorldFeatureIds.Way("qsh", 795677486);
+
+    public const string KeyboardFace = "design:west-keyboard-face";
+    public const string FourRoofScience = "design:west-four-roof-science";
+    public const string ParkingFront = "design:west-parking-front";
+    public const string ParkingBack = "design:west-parking-back";
+    public const string ParkingDrain = "design:west-parking-drain";
+    public const string PocketSeat = "design:west-pocket-seat";
+
     public const string TerrainPrefix = "design:terrain:west-";
     public const string A10Plaza = "design:west-a10-plaza";
     public const string BoardwalkRoute = "design:west-boardwalk-route";

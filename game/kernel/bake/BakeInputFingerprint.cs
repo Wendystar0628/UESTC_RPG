@@ -86,7 +86,7 @@ internal static class BakeInputFingerprint
             AddFurniturePlanting(context, input, area);
         if (vegetation)
             input.File(context.GlobalInputs.Entries, "vegetation/species.json");
-        if (!collision && key.Module == "furniture")
+        if (!collision && (key.Module is "furniture" or "zone.north" or "zone.center-east" or "zone.west"))
             input.File(context.GlobalInputs.Entries, SceneTextInputs.AtlasKey);
         if (!collision && (key.Module is "ground" or "buildings"))
             input.File(context.SourceInputs, SurfaceMaterialCatalog.SourcePath);
@@ -118,6 +118,8 @@ internal static class BakeInputFingerprint
         foreach (var key in new[] { "roads", "osmTrees", "groves", "pits" })
             if (root.TryGetProperty(key, out var value)) rules.Add(key, value);
         input.Add(rules);
+        var wallReach = context.World.Features.Values.Any(feature => feature.Kind.Value == "sportGroup")
+            ? Planting.SportWallReach(SpeciesTable.Parse(context.GlobalInputs.Entries["vegetation/species.json"].Span)) : 0f;
 
         // A parcel's accepted count can change a later candidate anywhere in that parcel. Crown spacing also
         // couples neighbouring parcels, transitively. Keep whole entities and their connected neighbourhood,
@@ -126,14 +128,14 @@ internal static class BakeInputFingerprint
         // A long pit is held if any earlier tree stands anywhere in it; design trees also suppress later
         // design trees. Include these complete entities before resolving their upstream grove neighbourhood.
         var remaining = context.World.Features.Values.Where(feature => HasKind(feature, "green") ||
-            feature.Kind.Value is "tree-pit" or "tree")
+            feature.Kind.Value is "tree-pit" or "tree" or "sportGroup")
             .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToList();
         for (var changed = true; changed;)
         {
             changed = false;
             for (var i = remaining.Count - 1; i >= 0; i--)
             {
-                var box = VegetationBounds(remaining[i]);
+                var box = VegetationBounds(remaining[i], wallReach);
                 if (!regions.Any(region => Intersects(box, region))) continue;
                 // Spaced reads the adjacent 32 m occupation buckets: their full reach fits this guard band.
                 regions.Add(Expand(box, TileGrid.BaseEdge));
@@ -163,9 +165,9 @@ internal static class BakeInputFingerprint
         }
         input.Add(selected);
 
-        string[] kinds = ["building", "water", "sport", "parking", "green", "road", "tree-pit", "tree"];
+        string[] kinds = ["building", "water", "sport", "sportGroup", "parking", "green", "road", "tree-pit", "tree"];
         var features = context.World.Features.Values.Where(feature => kinds.Any(kind => HasKind(feature, kind)) &&
-            regions.Any(region => Intersects(VegetationBounds(feature), region)))
+            regions.Any(region => Intersects(VegetationBounds(feature, wallReach), region)))
             .OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();
         input.Add(features);
 
@@ -204,6 +206,10 @@ internal static class BakeInputFingerprint
             Sample(input, new(feature.Bounds.Center.X, feature.Bounds.Center.Z), samples);
         }
         foreach (var tree in selected) Sample(input, new(tree.Position.X, tree.Position.Z), samples);
+        var wallGroups = features.Where(feature => feature.Kind.Value == "sportGroup").Select(feature => feature.Id).ToHashSet();
+        if (wallGroups.Count > 0)
+            foreach (var wall in Planting.SportWallPoints(context.World))
+                if (wallGroups.Contains(wall.Feature)) Sample(input, wall.Position, samples);
         foreach (var region in regions) AddBoundary(input, context.World.Boundary, region);
         // Terrain is analytic at candidate positions; retain its authored program rather than treating metre
         // samples as an exact substitute. This is independent of the removed map-wide grove quota.
@@ -214,7 +220,7 @@ internal static class BakeInputFingerprint
     private static bool HasKind(WorldFeature feature, string kind) => feature.Kind.Value == kind || feature.Parts.Any(part =>
         part.Props is { ValueKind: JsonValueKind.Object } props && props.TryGetProperty("kind", out var value) && value.GetString() == kind);
 
-    private static MapRect VegetationBounds(WorldFeature feature)
+    private static MapRect VegetationBounds(WorldFeature feature, float wallReach)
     {
         var points = Points(feature.Geometry).Concat(feature.Parts.SelectMany(part => Points(part.FacadeGeometry ?? part.Geometry)))
             .Append(new(feature.Bounds.Min.X, feature.Bounds.Min.Z)).Append(new(feature.Bounds.Max.X, feature.Bounds.Max.Z)).ToArray();
@@ -224,6 +230,13 @@ internal static class BakeInputFingerprint
                 if (props is { ValueKind: JsonValueKind.Object } value && value.TryGetProperty(key, out var number) &&
                     number.ValueKind == JsonValueKind.Number && number.TryGetSingle(out var n))
                     margin = MathF.Max(margin, key == "radius" ? n : n * .5f);
+        if (feature.Kind.Value == "sportGroup" && feature.Props is { ValueKind: JsonValueKind.Object } wall)
+        {
+            // A shared row can stand halfway into the permitted gap; crowns extend beyond either row.
+            var offset = wall.GetProperty("treeOffset").GetSingle();
+            var shared = wall.GetProperty("sharedGapBelow").GetSingle() * .5f;
+            margin = MathF.Max(margin, MathF.Max(offset, shared) + wallReach);
+        }
         return Bounds(points, margin);
     }
 

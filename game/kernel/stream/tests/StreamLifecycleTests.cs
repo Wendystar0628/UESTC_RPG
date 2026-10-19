@@ -65,7 +65,7 @@ public sealed class StreamLifecycleTests
                 director.OnMapUnloading(context.Descriptor.Id);
                 if (director.IsUnloaded) throw new InvalidOperationException("Unload did not retain its real pending CPU task.");
                 if (fail) work.SetException(new InvalidOperationException("Retired catalog failed."));
-                else work.SetResult(ModuleTileCatalog.Build(Build(context), []));
+                else work.SetResult(ModuleTileCatalog.Build(new Dictionary<string, IReadOnlyList<TileKey>>()));
                 director._Process(0);
                 if (!director.IsUnloaded || director.ResidentReady || director.Error is not null || Field(director, "_catalog") is not null)
                     throw new InvalidOperationException("A retired catalog became active map data or an active-map error.");
@@ -91,7 +91,7 @@ public sealed class StreamLifecycleTests
                 director._ExitTree();
                 if (Field(director, "_catalogTask") is not null) throw new InvalidOperationException("Exited node retained catalog publication ownership.");
                 if (fail) work.SetException(new InvalidOperationException("Exited catalog failed."));
-                else work.SetResult(ModuleTileCatalog.Build(Build(context), []));
+                else work.SetResult(ModuleTileCatalog.Build(new Dictionary<string, IReadOnlyList<TileKey>>()));
                 await Task.Yield();
                 director._Process(0);
                 if (director.ResidentReady || Field(director, "_catalog") is not null)
@@ -114,6 +114,4 @@ public sealed class StreamLifecycleTests
         typeof(StreamDirector).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(target, value);
     private static IMapContext Context() => new TestMapContext(BackdropInputsTests.Descriptor(), new FakeWorld { Boundary = new([]) },
         BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>()), "res://fixture/");
-    private static BuildContext Build(IMapContext context) => new()
-    { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = context.World, Map = context.Descriptor, WorldSeed = 1 };
 }

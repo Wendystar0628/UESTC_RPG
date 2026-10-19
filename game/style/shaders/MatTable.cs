@@ -8,7 +8,7 @@ namespace Campus.Style.Materials;
 /// <item>行 0 线表（WP-05 的布局）：R 线宽系数（值/255×2）、G 线色染色强度、B 标志位（1 擦除、2 只描外轮廓、4 内部软线、8 不描）、A 小件淡出终点（值×2 m）</item>
 /// <item>行 1：R 明暗档（ShadeSteps 原值）、G half_level、B 过渡带（两阶与三阶存固定半宽×1000，两阶半与软物存 fwidth 倍数×50）、A 湿润响应</item>
 /// <item>行 2：R 透光 k_t、G 受光侧暖边 k_rim、B 闪点系数、A 自发光通道（灯光通道槽位 + 1；0 = 不自发光）</item>
-/// <item>行 3：R 解析法线（0 不用、1 球、2 柱）、G 倒角提亮的受光幅度、B 影里幅度（值/255×0.25 L）、A 硬卡通高光强度（值/255）</item>
+/// <item>行 3：R 低两位解析法线（0 不用、1 球、2 柱）、bit7 扶梯滚动；G 倒角提亮的受光幅度、B 影里幅度（值/255×0.25 L）、A 硬卡通高光强度（值/255）</item>
 /// </list>
 /// toon.gdshaderinc 的 toon_mat() 按同一布局解码。
 /// </summary>
@@ -109,7 +109,8 @@ public static class MatTable
         };
         var bevel = spec.Fx.HasFlag(ToonFx.BevelLift);
         var gloss = spec.Fx.HasFlag(ToonFx.AnisoBand) ? SpecMetal : 0f;
-        return Bytes(normal, bevel ? Byte(BevelLitL / 0.25f) : 0, bevel ? Byte(BevelShadeL / 0.25f) : 0, Byte(gloss));
+        var escalator = spec.Fx.HasFlag(ToonFx.Escalator) ? 128 : 0;
+        return Bytes(normal | escalator, bevel ? Byte(BevelLitL / 0.25f) : 0, bevel ? Byte(BevelShadeL / 0.25f) : 0, Byte(gloss));
     }
 
     private static int Byte(float unit) => Math.Clamp((int)MathF.Round(unit * 255f), 0, 255);

@@ -181,6 +181,7 @@ public sealed class BakeWindowTests
         var map = new BakeService.MapBuild(mapContext, modules, new Dictionary<string, BakeService.Interior>(), [], null!, claims, claimLookup, data,
             context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
         AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
+        AssertThrown(() => map.GetPreparedModuleTilesAsync(mapContext)).IsInstanceOf<InvalidOperationException>();
         if (reads != 0) throw new InvalidOperationException("Reading an unprepared context triggered lazy IO.");
         var loaded = data.Value;
         _ = claims.Value;
@@ -206,6 +207,20 @@ public sealed class BakeWindowTests
             throw new InvalidOperationException("Catalog contexts mixed preparation generations or module identities.");
         AssertThrown(() => map.GetPreparedContext(mapContext with { }, "source")).IsInstanceOf<InvalidOperationException>();
         AssertThrown(() => map.GetPreparedContext(mapContext, "unknown")).IsInstanceOf<InvalidOperationException>();
+        var counted = new TilesOnlyModule();
+        var indexed = new BakeService.MapBuild(mapContext,
+            new Dictionary<string, ContentModuleInput> { ["counted"] = new(counted, "counted-code", Owner, false) },
+            new Dictionary<string, BakeService.Interior>(), [], null!, claims, claimLookup, data,
+            context.GlobalInputs, context.GroundMaskContributors, partLods, context.Catalog);
+        indexed.CompletePreparation(map.Metadata!);
+        var firstTiles = indexed.GetPreparedModuleTilesAsync(mapContext);
+        var secondTiles = indexed.GetPreparedModuleTilesAsync(mapContext);
+        var tiles = firstTiles.GetAwaiter().GetResult();
+        if (!ReferenceEquals(firstTiles, secondTiles) || !ReferenceEquals(tiles, secondTiles.GetAwaiter().GetResult()) ||
+            counted.Calls != 1 || !ReferenceEquals(counted.Context, indexed.GetPreparedContext(mapContext, "counted")) ||
+            !tiles["counted"].SequenceEqual(counted.Cells.Distinct().OrderBy(tile => tile.X).ThenBy(tile => tile.Z)))
+            throw new InvalidOperationException("Prepared map consumers re-enumerated Tiles or lost the frozen module context.");
+        AssertThrown(() => indexed.GetPreparedModuleTilesAsync(mapContext with { })).IsInstanceOf<InvalidOperationException>();
         var warning = new BuildDiagnostic(DiagnosticLevel.Warning, "fixture.warning", "fixture warning");
         map.Collect("source", "metadata", [warning], Feature);
         if (!map.Diagnostics.TryDequeue(out var diagnostic) || diagnostic.Map != context.Map.Id || diagnostic.Owner != Owner ||
@@ -216,6 +231,8 @@ public sealed class BakeWindowTests
         catch (ArgumentException) { }
         if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Invalid diagnostics partially entered the collection.");
         map.Active = false;
+        indexed.Active = false;
+        AssertThrown(() => indexed.GetPreparedModuleTilesAsync(mapContext)).IsInstanceOf<InvalidOperationException>();
         map.Collect("source", "geometry", [warning]);
         if (!map.Diagnostics.IsEmpty) throw new InvalidOperationException("Unloaded map accepted late diagnostics.");
         AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
@@ -304,7 +321,7 @@ public sealed class BakeWindowTests
     {
         public IReadOnlyList<Claim> Claims => [];
         public ModuleBudget Budget => new(0, 0, 0);
-        public IEnumerable<TileKey> Tiles(BuildContext ctx) => throw new InvalidOperationException("Metadata must not call Tiles.");
+        public virtual IEnumerable<TileKey> Tiles(BuildContext ctx) => throw new InvalidOperationException("Metadata must not call Tiles.");
         public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod) => throw new InvalidOperationException("Metadata must not call Build.");
         public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) => throw new InvalidOperationException("Metadata must not call Collide.");
     }
@@ -315,6 +332,14 @@ public sealed class BakeWindowTests
         public BuildContext? SeenContext { get; private set; }
         public IReadOnlyList<ClaimedWindowLayout> DescribeWindowLayouts(IWorldModel world, uint seed) => Layouts;
         public WindowMetadata DescribeWindows(BuildContext context) { SeenContext = context; return Metadata; }
+    }
+    private sealed class TilesOnlyModule : Module
+    {
+        public readonly TileKey[] Cells = [new(2, 3), new(-1, 2), new(2, 3)];
+        public int Calls;
+        public BuildContext? Context;
+        public override IEnumerable<TileKey> Tiles(BuildContext context)
+        { Interlocked.Increment(ref Calls); Context = context; return Cells; }
     }
     private sealed class Provider(WindowNumberingSnapshot snapshot) : Module, IWindowNumberingProvider
     {

@@ -6462,40 +6462,6 @@
       ]
     },
     {
-      "id": "qsh:way:544269736",
-      "kind": "sport",
-      "name": "球场 · 9736",
-      "height": 0,
-      "props": {
-        "leisure": "pitch",
-        "sport": "tennis",
-        "name": "球场 · 9736",
-        "category": "sport",
-        "subcategory": "pitch",
-        "kind": "sport",
-        "anchor": [596.17,0,520.13]
-      },
-      "parts": [
-        {
-          "id": "osm:way:544269736",
-          "height": 0,
-          "props": {
-            "kind": "sport",
-            "category": "sport",
-            "sport": "tennis",
-            "highway": null
-          },
-          "geometry": {
-            "type": "polygon",
-            "rings": {
-              "outer": [[586.91,513.66],[605.75,513.56],[605.04,526.59],[586.99,526.7]],
-              "holes": []
-            }
-          }
-        }
-      ]
-    },
-    {
       "id": "qsh:way:544278528",
       "kind": "parking",
       "name": "停车 · 8528",

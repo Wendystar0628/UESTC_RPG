@@ -5297,7 +5297,7 @@
         "kind": "poi",
         "anchor": [-641.02,0,-95.67]
       },
-      "note": "立人托幼公园：按 3 层（WLD-INTERIORS、MAP-QSH-WEST 数据定位），11.7 m；OSM 估的 2 层与 4 层部件统一到 3 层，键盘立面的三排彩色玻璃一层一排。楼本体留给 19c",
+      "note": "立人托幼公园：按 3 层（WLD-INTERIORS、MAP-QSH-WEST 数据定位），11.7 m；OSM 估的 2 层与 4 层部件统一到 3 层；东北立面三排键盘玻璃由本区生成，其余沿用普通浅灰白墙窗",
       "parts": [
         {
           "id": "osm:way:682336066",
@@ -5937,34 +5937,56 @@
     },
     {
       "id": "qsh:way:950008612",
-      "kind": "poi",
-      "name": "施工用地 · 8612",
+      "kind": "parking",
+      "name": "创新中心西停车场",
       "height": 0,
       "props": {
-        "name": "施工用地 · 8612",
-        "category": "other",
-        "subcategory": "construction",
-        "kind": "poi",
-        "anchor": [-689.99,0,33.34]
+        "name": "创新中心西停车场",
+        "category": "transport",
+        "subcategory": "parking",
+        "kind": "parking",
+        "anchor": [
+          -689.99,
+          0,
+          33.34
+        ]
       },
       "parts": [
         {
           "id": "osm:way:950008612",
           "height": 0,
           "props": {
-            "kind": "poi",
-            "category": "other",
+            "kind": "parking",
+            "category": "transport",
             "highway": null
           },
           "geometry": {
             "type": "polygon",
             "rings": {
-              "outer": [[-596.73,26.31],[-670.58,126.29],[-783.33,40.37],[-708.42,-59.6]],
+              "outer": [
+                [
+                  -596.7,
+                  26.3
+                ],
+                [
+                  -670.6,
+                  126.3
+                ],
+                [
+                  -699.5,
+                  104.9
+                ],
+                [
+                  -625.7,
+                  4.9
+                ]
+              ],
               "holes": []
             }
           }
         }
-      ]
+      ],
+      "note": "设计增补：MAP-QSH-WEST；原施工地东南36 m带改停车场，两组双排车位，7 m中口接服务路；车棚不发光，草沟排水，四季保持几何。"
     },
     {
       "id": "qsh:way:991512814",
@@ -5996,7 +6018,453 @@
           }
         }
       ]
+    },
+    {
+      "id": "design:west-keyboard-face",
+      "kind": "layout",
+      "props": {
+        "parent": "qsh:way:682336066",
+        "sourceId": "osm:way:779496175",
+        "height": 11.7,
+        "pitch": 3.6,
+        "gap": 0.3,
+        "units": 15,
+        "rows": [
+          [
+            {
+              "units": 1.5,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 1.5,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 7,
+              "color": "glass.key.coral"
+            },
+            {
+              "units": 1.5,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 1.5,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.apricot"
+            }
+          ],
+          [
+            {
+              "units": 2,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 2,
+              "color": "glass.key.coral"
+            }
+          ],
+          [
+            {
+              "units": 1.5,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.mint"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 1,
+              "color": "glass.key.apricot"
+            },
+            {
+              "units": 1.5,
+              "color": "glass.key.apricot"
+            }
+          ]
+        ]
+      },
+      "note": "设计增补：MAP-QSH-WEST 既定布局；夜间不发光，四季保持几何。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -640.8,
+              -161.6
+            ],
+            [
+              -577.3,
+              -112.4
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:west-four-roof-science",
+      "kind": "layout",
+      "props": {
+        "parent": "qsh:relation:11334253",
+        "sourceId": "osm:relation:11334252",
+        "facing": 180
+      },
+      "note": "设计增补：MAP-QSH-WEST 既定布局；夜间不发光，四季保持几何。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -393.5,
+              -276
+            ],
+            [
+              -394.6,
+              -268
+            ],
+            [
+              -395.6,
+              -261
+            ],
+            [
+              -396.5,
+              -254
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:west-parking-front",
+      "kind": "layout",
+      "props": {
+        "entranceWidth": 7,
+        "bayWidth": 2.5,
+        "bayDepth": 5,
+        "clearHeight": 2.6
+      },
+      "note": "设计增补：MAP-QSH-WEST 既定布局；夜间不发光，四季保持几何。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -596.7,
+              26.3
+            ],
+            [
+              -670.6,
+              126.3
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:west-parking-back",
+      "kind": "layout",
+      "props": {},
+      "note": "设计增补：MAP-QSH-WEST 既定布局；夜间不发光，四季保持几何。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -625.7,
+              4.9
+            ],
+            [
+              -699.5,
+              104.9
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:west-parking-drain",
+      "kind": "layout",
+      "props": {
+        "width": 1.5,
+        "depth": 0.2
+      },
+      "note": "设计增补：MAP-QSH-WEST 既定布局；夜间不发光，四季保持几何。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -626.585,
+              4.247
+            ],
+            [
+              -700.385,
+              104.247
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:west-pocket-paving",
+      "kind": "road",
+      "props": {
+        "highway": "pedestrian",
+        "walk": "walk"
+      },
+      "note": "设计增补：MAP-QSH-WEST 托幼园东北丁字口，约6×6 m；不发光，四季保持铺装。",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -566.3,
+              -121
+            ],
+            [
+              -560.3,
+              -121
+            ],
+            [
+              -560.3,
+              -115
+            ],
+            [
+              -566.3,
+              -115
+            ]
+          ],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:west-pocket-seat",
+      "kind": "layout",
+      "props": {
+        "walk": "solid"
+      },
+      "note": "设计增补：MAP-QSH-WEST 既定布局；夜间不发光，四季保持几何。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -565.6,
+              -119.8
+            ],
+            [
+              -564.7,
+              -120.4
+            ],
+            [
+              -563.6,
+              -120.6
+            ],
+            [
+              -562.5,
+              -120.4
+            ],
+            [
+              -561.6,
+              -119.8
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "design:west-parking-grove",
+      "kind": "green",
+      "props": {
+        "landuse": "grass"
+      },
+      "note": "设计增补：MAP-QSH-WEST；原施工地停车带以外整理草坪疏林，夜间暗区，树木随既有季相。",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [
+            [
+              -625.7,
+              4.9
+            ],
+            [
+              -699.5,
+              104.9
+            ],
+            [
+              -783.33,
+              40.37
+            ],
+            [
+              -708.42,
+              -59.6
+            ]
+          ],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:west-parking-entry",
+      "kind": "road",
+      "props": {
+        "highway": "service",
+        "width": 7
+      },
+      "note": "设计增补：MAP-QSH-WEST；停车场东南长边中口接服务路1061419143，不发光，四季通行。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [
+            [
+              -633.7,
+              76.3
+            ],
+            [
+              -640.1,
+              71.6
+            ]
+          ]
+        }
+      }
     }
   ],
-  "trees": []
+  "trees": [
+  {
+    "id": "design:west-pocket-camphor",
+    "position": [
+      -563.3,
+      0,
+      -118
+    ],
+    "species": "camphor"
+  },
+  {
+    "id": "design:west-parking-camphor-1",
+    "position": [
+      -660,
+      0,
+      -10
+    ],
+    "species": "camphor"
+  },
+  {
+    "id": "design:west-parking-camphor-2",
+    "position": [
+      -690,
+      0,
+      20
+    ],
+    "species": "camphor"
+  },
+  {
+    "id": "design:west-parking-camphor-3",
+    "position": [
+      -720,
+      0,
+      40
+    ],
+    "species": "camphor"
+  },
+  {
+    "id": "design:west-parking-camphor-4",
+    "position": [
+      -735,
+      0,
+      65
+    ],
+    "species": "camphor"
+  }
+]
 }

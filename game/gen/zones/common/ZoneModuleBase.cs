@@ -8,26 +8,32 @@ namespace Campus.Gen.Zones.Common;
 /// <summary>Shared routing, caching and metadata assembly for site-based zones.</summary>
 public abstract class ZoneModuleBase : IContentModule
 {
-    private sealed class CachedWorld
+    private sealed class PreparedProducts
     {
-        public Dictionary<(uint Seed, LodLevel Lod, string Numbering), IReadOnlyList<SiteItem>> Items { get; } = [];
-        public IReadOnlyList<(Vector2 Anchor, Collider Collider)>? Colliders { get; set; }
+        public PreparedProducts(ZoneModuleBase module, BuildContext context)
+        {
+            Items = Enum.GetValues<LodLevel>().ToDictionary(lod => lod,
+                lod => new Lazy<IReadOnlyList<SiteItem>>(() => module.CreateItems(context, lod), LazyThreadSafetyMode.ExecutionAndPublication));
+            Colliders = new(() =>
+            {
+                var colliders = new SiteColliders(context);
+                foreach (var site in module._sites) site.Collide(colliders);
+                return Array.AsReadOnly(colliders.Items.ToArray());
+            }, LazyThreadSafetyMode.ExecutionAndPublication);
+        }
+        public IReadOnlyDictionary<LodLevel, Lazy<IReadOnlyList<SiteItem>>> Items { get; }
+        public Lazy<IReadOnlyList<(Vector2 Anchor, Collider Collider)>> Colliders { get; }
     }
 
-    private static readonly ConditionalWeakTable<IWorldModel, ConditionalWeakTable<object, CachedWorld>> Cache = new();
-    private static readonly object Sync = new();
+    private readonly ConditionalWeakTable<BuildContext, PreparedProducts> _prepared = new();
     private readonly IReadOnlyList<ZoneSite> _sites;
     private readonly GeometryMergePolicy _mergePolicy;
-    private readonly bool _cacheResults;
-    private readonly bool _cacheColliders;
 
     protected ZoneModuleBase(IReadOnlyList<ZoneSite> sites, ModuleBudget budget,
-        GeometryMergePolicy mergePolicy = GeometryMergePolicy.Plain, bool cacheResults = true, bool cacheColliders = false)
+        GeometryMergePolicy mergePolicy = GeometryMergePolicy.Plain)
     {
         _sites = sites;
         _mergePolicy = mergePolicy;
-        _cacheResults = cacheResults;
-        _cacheColliders = cacheColliders;
         Budget = budget;
         Claims = sites.SelectMany(site => site.Claims).ToArray();
         Probes = sites.SelectMany(site => site.Probes).ToArray();
@@ -106,37 +112,21 @@ public abstract class ZoneModuleBase : IContentModule
         _sites.OfType<ILightMetadataSource>().SelectMany(site => site.DescribeLights(context)).ToArray();
 
     internal IReadOnlyList<SiteItem> ItemsFor(BuildContext context, LodLevel lod)
+        => _prepared.GetValue(context, value => new(this, value)).Items[lod].Value;
+
+    private IReadOnlyList<SiteItem> CreateItems(BuildContext context, LodLevel lod)
     {
-        lock (Sync)
+        var builder = new SiteBuilder(context, lod, lod switch
         {
-            var cache = Cache.GetValue(context.World, _ => new()).GetValue(_sites, _ => new());
-            var key = (context.WorldSeed, lod, context.WindowNumbering?.Fingerprint ?? "");
-            if (_cacheResults && cache.Items.TryGetValue(key, out var found)) return found;
-            var builder = new SiteBuilder(context, lod, lod switch
-            {
-                LodLevel.L0 => SiteDetail.Full,
-                LodLevel.L1 => SiteDetail.Plain,
-                LodLevel.L2 or LodLevel.L3 or LodLevel.L4 => SiteDetail.Mass,
-                _ => throw new ArgumentOutOfRangeException(nameof(lod)),
-            });
-            foreach (var site in _sites) site.Build(builder);
-            var items = Array.AsReadOnly(builder.Items.ToArray());
-            if (_cacheResults) cache.Items[key] = items;
-            return items;
-        }
+            LodLevel.L0 => SiteDetail.Full,
+            LodLevel.L1 => SiteDetail.Plain,
+            LodLevel.L2 or LodLevel.L3 or LodLevel.L4 => SiteDetail.Mass,
+            _ => throw new ArgumentOutOfRangeException(nameof(lod)),
+        });
+        foreach (var site in _sites) site.Build(builder);
+        return Array.AsReadOnly(builder.Items.ToArray());
     }
 
     internal IReadOnlyList<(Vector2 Anchor, Collider Collider)> CollidersFor(BuildContext context)
-    {
-        lock (Sync)
-        {
-            var cache = Cache.GetValue(context.World, _ => new()).GetValue(_sites, _ => new());
-            if (_cacheResults && _cacheColliders && cache.Colliders is { } found) return found;
-            var colliders = new SiteColliders(context);
-            foreach (var site in _sites) site.Collide(colliders);
-            var items = colliders.Items.ToArray();
-            if (_cacheResults && _cacheColliders) cache.Colliders = items;
-            return items;
-        }
-    }
+        => _prepared.GetValue(context, value => new(this, value)).Colliders.Value;
 }

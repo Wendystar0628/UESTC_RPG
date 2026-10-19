@@ -8,34 +8,37 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Collision;
 
-/// <summary>Snapshots content/part generators on the main thread. Interiors come only from each captured map context.</summary>
+/// <summary>Consumes prepared map content and snapshots part generators on the main thread.</summary>
 // Registration activates with the formal Boot composition.
 [BakeProducer("collision.world", Owner = "WP-43")]
-public sealed class CollisionBakeProducer : IBakeProducer
+public sealed class CollisionBakeProducer : IBakeProducer, IBakeContentConsumer
 {
     public const string Module = "collision.world";
-    private readonly (Registration Registration, object Instance)[] _sources;
+    private readonly (Registration Registration, object Instance)[] _parts;
+    private Lazy<IReadOnlyList<PreparedContentModule>>? _modules;
 
     public CollisionBakeProducer()
     {
         var registry = Services.Services;
-        // Interior instances belong to one MapBuild, not to the global service registry.
-        _sources = registry.Entries.Where(r => r.Kind is "content" or "part")
-            .OrderBy(r => r.Kind, StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal)
+        // Content and interior instances belong to one MapBuild, never the global registry.
+        _parts = registry.Entries.Where(r => r.Kind == "part")
+            .OrderBy(r => r.Id, StringComparer.Ordinal)
             .Select(r => (r, registry.Create(r.Type))).ToArray();
     }
 
     public bool CanBuild(BakeKey key) => key.Module == Module && key.Detail.StartsWith("C/", StringComparison.Ordinal);
 
+    public void Prepare(Lazy<IReadOnlyList<PreparedContentModule>> modules) => _modules = modules;
+
     public object Build(BakeKey key, BuildContext context)
     {
         if (key.Map != context.Map.Id || !CanBuild(key)) throw new ArgumentException("Collision bake key does not match its map.");
         var tile = ParseTile(key.Detail);
-        var sources = _sources.Where(s => string.IsNullOrEmpty(s.Registration.Map) || s.Registration.Map == key.Map.Value).ToArray();
-        var partCollision = new PartCollisionBinding(sources.Where(source => source.Registration.Kind == "part")
+        var sources = _parts.Where(s => string.IsNullOrEmpty(s.Registration.Map) || s.Registration.Map == key.Map.Value);
+        var partCollision = new PartCollisionBinding(sources
             .Select(source => new KeyValuePair<PartId, IPartDef>(new(source.Registration.Id), (IPartDef)source.Instance)));
         var builder = new CollisionTileBuilder(
-            sources.Where(s => s.Registration.Kind == "content").Select(s => new CollisionModule(s.Registration.Id, (IContentModule)s.Instance)).ToArray(),
+            (_modules ?? throw new InvalidOperationException("Collision content modules have not completed map preparation.")).Value,
             partCollision.Collision);
         var colliders = builder.Build(context, tile);
         var origin = TileGrid.Origin(tile);

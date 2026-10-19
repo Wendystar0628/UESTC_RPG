@@ -165,7 +165,7 @@ float toon_overcast() {
 // 材质表 mat_table（128×4 RGBA8，最近邻；行 0 线表归 WP-05 的布局）
 //   行 1：R 明暗档；G half_level×255；B 过渡带（两阶、三阶存固定半宽 ×1000，两阶半、软物存 fwidth 倍数 ×50）；A 湿润响应×255
 //   行 2：R 透光 k_t×255；G 受光侧暖边 k_rim×255；B 闪点系数×255；A 自发光通道（槽位 + 1，0 = 不自发光）
-//   行 3：R 解析法线（0 不用、1 球、2 柱）；G 倒角提亮的受光幅度、B 影里幅度（值/255×0.25 L，0 = 不提亮）；A 硬卡通高光强度
+//   行 3：R 低两位解析法线（0 不用、1 球、2 柱）、bit7 扶梯滚动；G 倒角提亮的受光幅度、B 影里幅度（值/255×0.25 L，0 = 不提亮）；A 硬卡通高光强度
 // ---------------------------------------------------------------------------
 struct ToonMat {
 	int steps;
@@ -180,6 +180,7 @@ struct ToonMat {
 	float bevel_shade;
 	int emit_slot;     // 自发光的灯光通道槽位，−1 = 不自发光
 	float k_spec;      // 硬卡通高光强度，0 = 没有
+	bool escalator;    // 静止带面上的上行踏级纹，不改变顶点与碰撞
 };
 
 ToonMat toon_mat(int id) {
@@ -189,8 +190,9 @@ ToonMat toon_mat(int id) {
 	int steps = int(round(r1.r * 255.0));
 	bool fw_band = steps == TOON_STEPS_TWO_HALF || steps == TOON_STEPS_SOFT;
 	float band = fw_band ? r1.b * 255.0 / 50.0 : r1.b * 255.0 / 1000.0;
+	int normal_fx = int(round(r3.r * 255.0));
 	return ToonMat(steps, r1.g, band, r1.a, r2.r, r2.g, r2.b,
-			int(round(r3.r * 255.0)), r3.g * 0.25, r3.b * 0.25, int(round(r2.a * 255.0)) - 1, r3.a);
+			normal_fx & 3, r3.g * 0.25, r3.b * 0.25, int(round(r2.a * 255.0)) - 1, r3.a, (normal_fx & 128) != 0);
 }
 
 // 按材质类取 vec4 参数的一个分量（顺序：两阶、两阶半、软物、植被三阶）

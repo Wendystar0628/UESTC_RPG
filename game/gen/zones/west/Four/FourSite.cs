@@ -29,13 +29,13 @@ public sealed class FourSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var world = b.Context.World;
-        foreach (var box in F.Boxes(world)) GlassBox(b, Frame(box), b.Ground(box.Door));
+        foreach (var box in F.Boxes(world)) GlassBox(b, Frame(box), b.Ground(box.Door), box.Key);
         foreach (var arc in F.SeatArcs(world)) SeatWall(b, SeatLine(world, arc));
     }
 
     // ---- The deep-blue glass box in its white frame ----
 
-    private static void GlassBox(SiteBuilder b, PlanFrame f, float y)
+    private static void GlassBox(SiteBuilder b, PlanFrame f, float y, string key)
     {
         float hw = F.GlassWidth * 0.5f, d = F.GlassDepth, top = y + F.GlassHeight, m = F.FrameMember, front = d + F.FrameProud;
         float bevel = b.Detail == SiteDetail.Full ? 0.04f : 0f, head = top + F.SignBand;
@@ -90,8 +90,8 @@ public sealed class FourSite : ZoneSite
         b.Place(PartCatalog.DoorGlass, new DoorParams(F.DoorWidth, F.DoorHeight, 0.08f, 0f, 2) { Foot = FootMat.Glass }, f.AtReversed(0, y, d - 0.04f));
         b.Place(PartCatalog.InteriorCard, new PanelParams(F.GlassWidth - 1.2f, F.DoorHeight + 1.2f, 0.06f) { Variation = 1 }, f.AtReversed(0, y, d - 1.5f));
         GridFacade.Box(b, f, -hw - m, hw + m, y - 0.12f, y + F.PavingTop + 0.03f, d - 0.2f, front + F.LandingDepth, L.Granite, 0.02f);
-        // Text hook: the sign band on the head stays blank until the scene text atlas (contract-26) arrives; then add the block's
-        // name ("四号科研楼" with its A / B / C 区) centred on the head's front face (z = front), height about 0.6 of SignBand.
+        Framework.WestLettering.Write(b, "四号科研楼 " + key.ToUpperInvariant() + "区", F.SignBand * .6f,
+            L.DarkGrey, L.WhiteFrame, f.At(0, top + F.SignBand * .5f, front + .015f));
     }
 
     // ---- Seat wall on the fan lawn's outer arc ----

@@ -17,8 +17,8 @@ namespace Campus.Gen.Zones.South.EastLake;
 /// <summary>
 /// East lake shore (MAP-QSH-SOUTH). The water is WP-24's, the trees, reeds and lotus WP-23's and WP-38's, the paving of the
 /// waterside platform WP-15's; this site builds:
-/// - the Liren-side hard bank along the lake's rectilinear north edge: brick-red retaining wall, red sandstone coping and a
-///   white vase-baluster balustrade (1.08 m, collision 1.5 m, SYS-WALK), opened in the bay for the wade step (§4.3,
+/// - the Liren-side white vase-baluster balustrade (collision 1.5 m, SYS-WALK); WP-28 builds the wall and coping.
+///   The balustrade is opened in the bay for the wade step (§4.3,
 ///   design:south-eastlake-wade-step): two treads down from the platform, the second 0.15 m under the normal water level;
 /// - two wooden rowing boats moored off the wade step (§4.6) and two stone mooring posts;
 /// - the Wu Liren statue on its polished dark stone pedestal, facing the lake (§4.9);
@@ -79,14 +79,12 @@ public sealed class EastLakeSite : ZoneSite
         var bevel = b.Detail == SiteDetail.Full ? 0.02f : 0f;
         foreach (var (f, l, i) in segments)
         {
-            Bank(b, shore, f, l, i, y);
             Balustrade(b, rail[i], rail[i + 1], RailOpenings(shore, f, l, i, rail[i], rail[i + 1]), y + K.CopingTop, b.Detail);
         }
-        // A raised coping block and a newel at every bank vertex: the mitred segments meet under it.
+        // A white newel at every bank vertex; the continuous coping belongs to WP-28.
         foreach (var p in rail)
         {
             var corner = new PlanFrame(p, Vector2.UnitX);
-            b.Add(PartGeometryKernel.BeveledBox(0.85f, K.CopingTop + 0.14f, 0.85f, bevel, L.Sandstone), corner.At(0, y - 0.1f, 0));
             Newel(b, corner, 0, y + K.CopingTop + 0.03f, bevel);
         }
         WadeSteps(b, shore, y);
@@ -154,19 +152,6 @@ public sealed class EastLakeSite : ZoneSite
             var u1 = line.Local(segment.P(o.U1, 0)).X;
             return (MathF.Min(u0, u1), MathF.Max(u0, u1));
         })];
-    }
-
-    // ---- Hard bank (§4.3) ----
-
-    private static void Bank(SiteBuilder b, Shore shore, PlanFrame f, float l, int index, float y)
-    {
-        var bevel = b.Detail == SiteDetail.Full ? 0.02f : 0f;
-        foreach (var (u0, u1) in GridFacade.Open(0, l, shore.Openings(index, l)))
-        {
-            // Retaining wall from below the water to the coping, its face on the waterline; the coping overhangs 8 cm.
-            GridFacade.Box(b, f, u0 - 0.2f, u1 + 0.2f, y + K.WallBottom, y - 0.1f, -0.5f, 0, L.BrickRed, 0);
-            GridFacade.Box(b, f, u0, u1, y - 0.1f, y + K.CopingTop, -0.55f, 0.08f, L.Sandstone, bevel);
-        }
     }
 
     /// <summary>

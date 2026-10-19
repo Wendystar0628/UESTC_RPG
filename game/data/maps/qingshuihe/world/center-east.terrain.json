@@ -161,6 +161,10 @@
       "y": -0.7,
       "side": {"fill": "1:3", "cut": "1:3"},
       "fillet": 2.0
-    }
+    },
+    {"op": "terrace", "id": "design:terrain:center-east-moon-grass-steps", "zone": "center-east", "reason": "台基与座位（MAP-QSH-TERRAIN-DISTRICTS §8）：田径场西侧看月台，东面四级草阶向8m平地展开。", "front": {"points": [[511.32000000000005, 140.66], [511.32000000000005, 281.71]]}, "inward": [-1, 0], "frontY": 0, "tiers": 4, "riser": 0.4, "tread": 2, "stairAt": []},
+    {"op": "platform", "id": "design:terrain:center-east-moon-platform", "zone": "center-east", "reason": "台基与座位（MAP-QSH-TERRAIN-DISTRICTS §8）：看月台顶+1.6m，顶面北段承载三级铝座席；背坡朝西1:4。", "rings": {"outer": [[498.52000000000004, 140.66], [503.32000000000005, 140.66], [503.32000000000005, 281.71], [498.52000000000004, 281.71]], "holes": []}, "y": 1.6, "side": {"fill": "1:4", "cut": "1:4"}, "fillet": 2},
+    {"op": "slope", "id": "design:terrain:center-east-moon-ramp-north", "zone": "center-east", "reason": "连接（MAP-QSH-TERRAIN-DISTRICTS §8）：看月台南北端1:12坡道接0m平地。", "geometry": {"type": "polyline", "line": {"points": [[500.9200000000001, 121.46], [500.9200000000001, 140.66]]}}, "y0": 0, "y1": 1.6, "width": 2, "crossFall": 0, "side": {"fill": "1:3", "cut": "1:3"}, "fillet": 2},
+    {"op": "slope", "id": "design:terrain:center-east-moon-ramp-south", "zone": "center-east", "reason": "连接（MAP-QSH-TERRAIN-DISTRICTS §8）：看月台南北端1:12坡道接0m平地。", "geometry": {"type": "polyline", "line": {"points": [[500.9200000000001, 300.90999999999997], [500.9200000000001, 281.71]]}}, "y0": 0, "y1": 1.6, "width": 2, "crossFall": 0, "side": {"fill": "1:3", "cut": "1:3"}, "fillet": 2}
   ]
 }

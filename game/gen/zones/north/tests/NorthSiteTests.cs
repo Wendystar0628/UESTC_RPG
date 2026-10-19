@@ -17,6 +17,27 @@ using static Campus.Gen.Zones.North.Tests.NorthTestSupport;
 public sealed class NorthSiteTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    public void FoodCourtEscalatorsMeetTheirFloorsAndRespectTheirEntryGates()
+    {
+        var context = Context();
+        foreach (var id in new[] { NorthFeatureIds.EscalatorYinxing, NorthFeatureIds.EscalatorSixueWest, NorthFeatureIds.EscalatorSixueEast })
+        {
+            var p = Identity.EscalatorSite.Locate(context.World, id);
+            var expected = MathF.Tan(p.Record.Number("slopeDeg") * MathF.PI / 180);
+            AssertThat(MathF.Abs(p.Slope - expected) <= TestTolerance.FloatRelative).IsTrue();
+            AssertThat(p.Landing >= p.Record.Number("minLanding") - TestTolerance.Position).IsTrue();
+            var colliders = new SiteColliders(context);
+            new Identity.EscalatorSite(id).Collide(colliders);
+            AssertThat(colliders.Items.Any(i => i.Collider.Tag == SurfaceTag.DoorClosed) == (p.Record.Number("open") == 0)).IsTrue();
+            if (id == NorthFeatureIds.EscalatorYinxing)
+            {
+                var entrance = context.World.Interiors.Get(new(NorthFeatureIds.Yinxing.Entity))!.Entrances.Single(e => e.Open);
+                AssertThat(Vector3.Distance(p.Point(0, p.Length), entrance.Center) <= TestTolerance.Position).IsTrue();
+            }
+        }
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
     public void HallPorchMeetsTheDeclaredEntrance()
     {
         var world = RealMapFixture.Load().World;

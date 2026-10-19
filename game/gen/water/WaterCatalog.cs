@@ -6,7 +6,7 @@ using Campus.Gen.World;
 
 namespace Campus.Gen.Water;
 
-public enum WaterKind : byte { Lake, Channel }
+public enum WaterKind : byte { Lake, Channel, Pool }
 
 /// <summary>One water surface: a lake, pond or a piece of channel, in plan coordinates (x, z).</summary>
 public sealed record WaterBody(
@@ -19,6 +19,8 @@ public sealed record WaterBody(
     Vector2 Max,
     float Area)
 {
+    public WaterPoolFrame? PoolFrame { get; init; }
+
     /// <summary>Even-odd containment over the outer ring and holes.</summary>
     public bool Contains(Vector2 p)
     {
@@ -49,12 +51,13 @@ public static class WaterCatalog
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             if (feature.Kind != WaterKindKey) continue;
-            var slot = slots.TryGetValue(feature.Id, out var s) ? s : -1;
+            var pool = WaterPoolLayout.IsPool(feature);
+            var slot = !pool && slots.TryGetValue(feature.Id, out var s) ? s : -1;
             // A feature with parts is built part by part; its aggregate geometry is only the query envelope.
             var geometries = feature.Parts.Count > 0 ? feature.Parts.Select(part => part.Geometry) : [feature.Geometry];
             foreach (var geometry in geometries)
                 foreach (var polygon in Polygons(geometry))
-                    if (Body(world, feature.Id, polygon, slot, p) is { } body) bodies.Add(body);
+                    if (Body(world, feature.Id, polygon, slot, p) is { } body) bodies.Add(pool ? body with { Kind = WaterKind.Pool, PoolFrame = WaterPoolLayout.Frame(feature) } : body);
         }
         return bodies.AsReadOnly();
     }

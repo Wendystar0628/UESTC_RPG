@@ -37,6 +37,18 @@ float pat_line(float x, float j, float w) {
 	return clamp((ib - ia) / w, 0.0, 1.0);
 }
 
+// 三台扶梯共用：米 UV 的 +V 朝上；0.8 s 一节，480 s 动画回卷时相位连续。
+// 只把既有金属灰压出踏级分界，不动几何、碰撞、法线或材质 ID。
+const float ESCALATOR_SPEED = 0.5;          // m/s，SYS-MOTION-ENV
+const float ESCALATOR_PITCH = 0.4;          // m，SYS-MOTION-ENV
+
+float escalator_dl(float v, float fw) {
+	float w = max(fw / ESCALATOR_PITCH, 1e-6);
+	float j = min(PAT_MIN_LINE_PX * w, 0.5);
+	float cover = pat_line((v - anim_time * ESCALATOR_SPEED) / ESCALATOR_PITCH, j, w);
+	return PAT_JOINT_DL * cover * smoothstep(PAT_FADE_PX.x, PAT_FADE_PX.y, 1.0 / w);
+}
+
 // 错缝的竖缝：偶数行缝在整数处，奇数行错半格；足迹跨行时按落在奇数行的份额混合两种相位（仍是盒式滤波）
 float pat_bond_line(vec2 g, float j, vec2 w) {
 	float even = pat_line(g.x, j, w.x);
@@ -217,7 +229,9 @@ void fragment() {
 	TOON_FRAGMENT_BEGIN
 	vec2 pat_fw = fwidth(UV);
 	ToonCol tcol;
-	if (pattern_layer == 0) {
+	if (tmat.escalator) {
+		tcol = pat_colors(tctx, tmat, escalator_dl(UV.y, pat_fw.y));
+	} else if (pattern_layer == 0) {
 		tcol = toon_colors(tctx, tmat);
 	} else {
 		tcol = pat_colors(tctx, tmat, pat_dl(UV, pat_fw, UV2, tctx.wpos, tctx.n_w));

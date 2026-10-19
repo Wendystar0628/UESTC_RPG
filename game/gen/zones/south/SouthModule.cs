@@ -12,7 +12,7 @@ public sealed class SouthModule : ZoneModuleBase, IWindowMetadataSource, IConten
 
     internal SouthModule(IReadOnlyList<ZoneSite> sites) : base(sites,
         new(SouthTune.BudgetTrianglesL0, SouthTune.BudgetTrianglesL1, SouthTune.BudgetDrawCalls),
-        GeometryMergePolicy.WindowChannels, cacheResults: ReferenceEquals(sites, SouthSites.All)) { }
+        GeometryMergePolicy.WindowChannels) { }
 }
 
 /// <summary>

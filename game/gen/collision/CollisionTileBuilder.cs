@@ -1,18 +1,18 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Audio;
 using Campus.Gen.World;
 
 namespace Campus.Gen.Collision;
 
-public sealed record CollisionModule(string Id, IContentModule Module);
 public sealed record CollisionInterior(string Id, IInteriorProvider Provider, IReadOnlyList<FeatureId> FeatureIds);
 public sealed record CollisionBuildingFootprint(string SourceId, PolygonRings Rings, float? Height, int? Storeys);
 
 /// <summary>Combines the registered pure generators. Call only from the bake worker.</summary>
 public sealed class CollisionTileBuilder(
-    IReadOnlyList<CollisionModule> modules,
+    IReadOnlyList<PreparedContentModule> modules,
     Func<PlacedPart, IReadOnlyList<Collider>> partCollision)
 {
     public IReadOnlyList<Collider> Build(BuildContext context, TileKey tile)
@@ -21,9 +21,9 @@ public sealed class CollisionTileBuilder(
         var world = new List<Collider>();
         foreach (var entry in modules.OrderBy(m => m.Id, StringComparer.Ordinal))
         {
-            if (!entry.Module.Tiles(context).Contains(tile)) continue;
-            world.AddRange(entry.Module.Collide(context, tile));
-            foreach (var part in entry.Module.Build(context, tile, LodLevel.L0).Parts)
+            if (!entry.Tiles.Contains(tile)) continue;
+            world.AddRange(entry.Module.Collide(entry.Context, tile));
+            foreach (var part in entry.Module.Build(entry.Context, tile, LodLevel.L0).Parts)
                 world.AddRange(partCollision(part).Select(c => CollisionGeometry.Transform(c, part.At)));
         }
         foreach (var feature in context.World.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))

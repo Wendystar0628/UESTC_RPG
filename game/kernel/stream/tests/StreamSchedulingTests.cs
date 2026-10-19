@@ -93,7 +93,7 @@ public sealed class StreamSchedulingTests
             WorldSeed = 1
         };
         var module = new RootModule();
-        var catalog = ModuleTileCatalog.Build(context, [new("fixture.root", module)]);
+        var catalog = ModuleTileCatalog.Build(new Dictionary<string, IReadOnlyList<TileKey>> { ["fixture.root"] = module.Tiles(context).ToArray() });
         if (!catalog.Modules(StreamTile.Root).SequenceEqual(["fixture.root"]))
             throw new InvalidOperationException("Off-origin discovery failed to produce one whole-map root.");
         var key = BakeRequestKeys.Tile(context.Map.Id, "fixture.root", StreamTile.Root.Tile, LodLevel.L4);

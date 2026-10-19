@@ -10,6 +10,8 @@ namespace Campus.Gen.Vegetation;
 /// <summary>Planting, common: variant, scale, terrain, clearance and the pavement giving-way.</summary>
 public static partial class Planting
 {
+    private const float TreeScaleMinimum = 0.92f;
+    private const float TreeScaleRange = 0.16f;
     // ---------------------------------------------------------------------------------------------------------
     // Common: variant, scale, terrain, clearance.
     // ---------------------------------------------------------------------------------------------------------
@@ -21,7 +23,7 @@ public static partial class Planting
         var seed = IntegerNoise.High24(h);
         var h2 = StableHash.Hash32(h, "look");
         var variant = (int)(h2 % TreeForms.Variants);
-        var scale = 0.92f + 0.16f * ((h2 >> 8) & 0xffff) / 65535f;
+        var scale = TreeScaleMinimum + TreeScaleRange * ((h2 >> 8) & 0xffff) / 65535f;
         var yaw = MathF.Tau * IntegerNoise.High24(StableHash.Hash32(h, "yaw"));
         var height = TreeForms.HeightOf(info, variant) * scale;
         return new PlantedTree(key, info, variant, Vector3.Zero, yaw, scale, height, false, PlantSource.Grove, seed, 0f);
@@ -30,6 +32,7 @@ public static partial class Planting
     private static bool Try(Site site, SpeciesInfo info, Vector2 p, string key, bool wash, PlantSource source, List<PlantedTree> trees, bool crownClear)
     {
         if (!PlanGeometry.Contains(site.World.Boundary, p)) return false;
+        if (trees.Any(t => t.Source == PlantSource.SportWall && Vector2.Distance(new(t.Position.X, t.Position.Z), p) < SameTree)) return false;
         var probe = Probe(site, info, key);
         var crown = probe.CrownRadius;
         // Trunks keep off building, water, court and parking outlines and road surfaces; grove crowns keep clear entirely.

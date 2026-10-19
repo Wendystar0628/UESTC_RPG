@@ -16,8 +16,7 @@ public sealed class WestModule : ZoneModuleBase, IWindowMetadataSource, ILightMe
     public WestModule() : this(WestSites.All) { }
 
     internal WestModule(IReadOnlyList<ZoneSite> sites) : base(sites,
-        new(TrianglesL0: WestTune.BudgetTrianglesL0, TrianglesL1: WestTune.BudgetTrianglesL1, DrawCalls: WestTune.BudgetDrawCalls),
-        cacheResults: ReferenceEquals(sites, WestSites.All)) { }
+        new(TrianglesL0: WestTune.BudgetTrianglesL0, TrianglesL1: WestTune.BudgetTrianglesL1, DrawCalls: WestTune.BudgetDrawCalls)) { }
 }
 
 /// <summary>
@@ -33,7 +32,11 @@ public static class WestSites
         new Six.SixSite(),
         new Motto.MottoStoneSite(),
         new Four.FourSite(),
+        new Four.RoofScienceSite(),
         new Innovation.InnovationSite(),
+        new Innovation.ParkingSite(),
+        new Kindergarten.KeyboardSite(),
+        new Kindergarten.PocketGardenSite(),
         new Wetland.BoardwalkSite(),
         new Wetland.LeveeStepsSite(),
         new Bridgehead.ShelterSite(),

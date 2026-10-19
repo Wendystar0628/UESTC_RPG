@@ -33,6 +33,18 @@ public sealed class InnovationSite : ZoneSite
         var world = b.Context.World;
         foreach (var (centre, length) in I.Shafts(world)) Shaft(b, ShaftFrame(centre), length, b.Ground(centre));
         Portal(b, PortalFrame(world), b.Ground(I.MainDoor(world)));
+        if (b.Detail != SiteDetail.Mass)
+        {
+            var parent = world.Feature(I.Entity);
+            var wing = parent.Part(WestIds.InnovationEastWing.Part);
+            var f = PortalFrame(world);
+            var corners = wing.Contour().Select(f.Local).ToArray();
+            var right = corners.Max(p => p.X);
+            var front = corners.Max(p => p.Y);
+            var roof = world.Terrain.PadY(parent.Id) + wing.Levels().Height;
+            Framework.WestLettering.Write(b, "创新中心", .7f, L.DarkGrey, L.Stone,
+                f.At(right - 2.1f, roof - 1.4f, front + .025f));
+        }
     }
 
     private static void Shaft(SiteBuilder b, PlanFrame g, float length, float y)
@@ -86,8 +98,8 @@ public sealed class InnovationSite : ZoneSite
         b.Place(PartCatalog.DoorGlass, new DoorParams(I.DoorWidth, I.DoorHeight, 0.08f, 0f, 2) { Foot = FootMat.Glass }, f.AtReversed(0, y, zs - 0.04f));
         b.Place(PartCatalog.InteriorCard, new PanelParams(I.PortalWidth - 2f * m - 0.6f, I.DoorHeight + 0.8f, 0.06f) { Variation = 1 }, f.AtReversed(0, y, 0.25f));
         GridFacade.Box(b, f, -hw, hw, y - 0.12f, y + 0.18f, -0.2f, d + 2.4f, L.Granite, 0.02f);
-        // Text hook: "创新中心" in red-brown calligraphy (MAP-QSH-WEST) goes on the sign panel (z = d + 0.34, between
-        // top − SignHeight − 0.2 and top − 0.2) once the scene text atlas (contract-26) arrives; the panel stays blank until then.
+        Framework.WestLettering.Write(b, "创新中心", I.SignHeight * .7f, ZoneLooks.S("panel.brown", ToonFx.None, LineClass.None), L.Trim,
+            f.At(0, top - I.SignHeight * .5f - .2f, d + .355f));
     }
 
     public override void Collide(SiteColliders c)

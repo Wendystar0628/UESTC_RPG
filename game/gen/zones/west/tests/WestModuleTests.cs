@@ -221,7 +221,7 @@ public sealed class WestModuleTests
             allocations.Add(new(feature, grid.Key, next, grid.Columns, grid.Rows));
             next += grid.Columns * grid.Rows;
         }
-        var ctx = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, WindowNumbering = new(RealMapFixture.Entry().Descriptor.Id, new string('a', 64), allocations) };
+        var ctx = new BuildContext { GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, WindowNumbering = new(RealMapFixture.Entry().Descriptor.Id, new string('a', 64), allocations) };
         var metadata = module.DescribeWindows(ctx);
         var declared = new List<int>();
         foreach (var f in metadata.Facades)
@@ -233,7 +233,7 @@ public sealed class WestModuleTests
         var ids = new HashSet<int>();
         var size = 64;
         foreach (var (x, z) in module.ItemsFor(ctx, LodLevel.L0).Select(i => ((int)MathF.Floor(i.Anchor.X / size), (int)MathF.Floor(i.Anchor.Y / size))).Distinct())
-            foreach (var mesh in module.Build(ctx, new(x, z), LodLevel.L0).Meshes.Where(m => m.Uv2 is not null))
+            foreach (var mesh in module.Build(ctx, new(x, z), LodLevel.L0).Meshes.Where(m => m.Uv2 is not null && m.Material.Spec.Kind != ToonKind.SceneText))
                 for (var v = 0; v < mesh.Uv2!.Length / 2; v++)
                 {
                     var columns = (int)MathF.Floor(mesh.Uv2[2 * v + 1] / 32f);
@@ -249,13 +249,13 @@ public sealed class WestModuleTests
         var module = new WestModule();
         var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
         WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-19") : null;
-        var prepass = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner };
+        var prepass = new BuildContext { GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner };
         var layouts = module.DescribeWindowLayouts(world, 1);
         var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
         var ours = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();
         AssertThat(ours.Length == layouts.Sum(l => l.Grids.Count) && ours.All(a => a.Columns > 0 && a.Rows > 0)).OverrideFailureMessage("every west grid is allocated with cells").IsTrue();
         AssertThat(snapshot.WindowCount <= WindowNumberingSnapshot.Capacity).OverrideFailureMessage($"the table fits ({snapshot.WindowCount})").IsTrue();
-        var metadata = module.DescribeWindows(new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
+        var metadata = module.DescribeWindows(new BuildContext { GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner, WindowNumbering = snapshot });
         AssertThat(metadata.Facades.Count > 0).OverrideFailureMessage("the west zone declares facade runs").IsTrue();
     }
 
@@ -387,7 +387,12 @@ public sealed class WestModuleTests
         return stream.ToArray();
     }
 
-    private static BuildContext Context() => new() { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1 };
+    private static BuildContext Context() => new() { GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = null!, WorldSeed = 1 };
+
+    private static BuildInputSnapshot TextInputs() => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
+    {
+        [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
+    });
 
     private static IWorldModel World() => RealMapFixture.Load().World;
 

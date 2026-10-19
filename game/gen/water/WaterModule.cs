@@ -6,6 +6,9 @@ namespace Campus.Gen.Water;
 /// <summary>
 /// Water surfaces of every map (WLD-WATER): lakes, ponds and channels as one opaque surface per cell.
 /// Vertex layout: UV = flow velocity (m/s, x and z), UV2 = (shore distance in m, reflection lake number or -1),
+/// Pools use UV.x for line width; CUSTOM0 = (pool flag, along m, across m, length),
+/// CUSTOM1 = (shallow depth, deep depth, shallow fraction, lane count),
+/// CUSTOM2 = (first lane centre, lane spacing, end-bar length, end inset).
 /// COLOR flag 8 = never casts. Banks, bridges and culvert structures belong to the zone packages.
 /// </summary>
 [ContentModule("water", Owner = "WP-24")]

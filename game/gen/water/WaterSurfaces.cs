@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Water;
 
 namespace Campus.Gen.Water;
 
@@ -47,6 +48,9 @@ public sealed class WaterSurfaces
         var position = new List<float>();
         var uv = new List<float>();
         var uv2 = new List<float>();
+        var poolData = new List<float>();
+        var poolProfile = new List<float>();
+        var poolLanes = new List<float>();
         var index = new List<int>();
         foreach (var mesh in Meshes)
         {
@@ -64,10 +68,25 @@ public sealed class WaterSurfaces
                         position.Add(mesh.Position[3 * v]);
                         position.Add(mesh.Position[3 * v + 1]);
                         position.Add(mesh.Position[3 * v + 2]);
-                        uv.Add(mesh.Flow[2 * v]);
+                        uv.Add(mesh.Body.Kind == WaterKind.Pool ? WaterPoolRules.LineWidth : mesh.Flow[2 * v]);
                         uv.Add(mesh.Flow[2 * v + 1]);
                         uv2.Add(mesh.Shore[v]);
                         uv2.Add(mesh.Body.ReflectSlot);
+                        if (mesh.Body.PoolFrame is { } frame)
+                        {
+                            var local = frame.Coordinates(new(mesh.Position[3 * v], mesh.Position[3 * v + 2]));
+                            poolData.AddRange([1f, local.X, local.Y, frame.Length]);
+                            poolProfile.AddRange([WaterPoolRules.ShallowDepth, WaterPoolRules.DeepDepth,
+                                WaterPoolRules.ShallowFraction, WaterPoolRules.LaneCount(frame.Width)]);
+                            poolLanes.AddRange([WaterPoolRules.LaneCenter(0, WaterPoolRules.LaneCount(frame.Width)),
+                                WaterPoolRules.LaneWidth, WaterPoolRules.LaneEndBarLength, WaterPoolRules.LaneEndInset]);
+                        }
+                        else
+                        {
+                            poolData.AddRange([0f, 0f, 0f, 0f]);
+                            poolProfile.AddRange([0f, 0f, 0f, 0f]);
+                            poolLanes.AddRange([0f, 0f, 0f, 0f]);
+                        }
                     }
                     index.Add(n);
                 }
@@ -83,6 +102,9 @@ public sealed class WaterSurfaces
             Uv: uv.ToArray(), Uv2: uv2.ToArray())
         {
             Flags = flags,
+            Custom0 = poolData.ToArray(),
+            Custom1 = poolProfile.ToArray(),
+            Custom2 = poolLanes.ToArray(),
         };
         bundle.ValidateVertexData();
         return bundle;

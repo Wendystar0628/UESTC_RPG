@@ -14,13 +14,13 @@ internal sealed class BankPlan
     private readonly ITerrainBankSource _source;
     private readonly double _start;
 
-    private BankPlan(WorldFeature feature, ITerrain terrain, ITerrainBankSource source, TerrainBankSpan span,
+    private BankPlan(WorldFeature feature, IWorldModel world, ITerrainBankSource source, TerrainBankSpan span,
         double start, double end)
     {
         Id = feature.Id; Span = span; _source = source; _start = start;
         Shore = PlanLines.Subline(span.Shore.Points, start, end);
         Length = PlanLines.Length(Shore);
-        WaterY = terrain.WaterY(new(feature.Text("water")))
+        WaterY = world.Terrain.WaterY(new(feature.Text("water")))
             ?? throw new InvalidOperationException($"{Id.Value}: its registered water has no WaterY.");
         var exits = new List<BankExit>();
         if (feature.RequiredProps().TryGetProperty("treads", out var treads))
@@ -45,6 +45,21 @@ internal sealed class BankPlan
             }
         }
         Exits = exits.OrderBy(exit => exit.Station).ToArray();
+        var openings = Exits.Select(exit => new BankOpening(exit.Station, exit.Steps.Width)).ToList();
+        if (feature.RequiredProps().TryGetProperty("openings", out var authoredOpenings))
+        {
+            if (authoredOpenings.ValueKind != JsonValueKind.Array) throw new InvalidOperationException($"{Id.Value}: openings must be an array.");
+            foreach (var opening in authoredOpenings.EnumerateArray())
+            {
+                var edge = world.ContourSegment(opening.GetProperty("edge").GetString()!);
+                var centre = PlanLines.Project(Shore, PlanLines.Sample(edge, PlanLines.Length(edge) / 2).Point);
+                var width = world.Feature(opening.GetProperty("widthFrom").GetString()!).Number("width");
+                if (width <= 0 || centre.Distance > T.BankEndpointTolerance || centre.Station - width / 2 < 0 || centre.Station + width / 2 > Length)
+                    throw new InvalidOperationException($"{Id.Value}: existing water-access opening must fit inside the selected shore.");
+                openings.Add(new(centre.Station, width));
+            }
+        }
+        Openings = openings.OrderBy(opening => opening.Station).ToArray();
     }
 
     public FeatureId Id { get; }
@@ -53,6 +68,7 @@ internal sealed class BankPlan
     public double Length { get; }
     public float WaterY { get; }
     public IReadOnlyList<BankExit> Exits { get; }
+    public IReadOnlyList<BankOpening> Openings { get; }
     public float TopAt(double station) => _source.BankTopY(Span.Id, _start + station);
 
     public static IReadOnlyList<BankPlan> All(IWorldModel world)
@@ -74,7 +90,7 @@ internal sealed class BankPlan
             if (candidates.Length != 1)
                 throw new InvalidOperationException($"{feature.Id.Value}: both registered endpoints must select one compiled Hard bank core.");
             var selected = candidates[0];
-            return new BankPlan(feature, world.Terrain, source, selected.Span,
+            return new BankPlan(feature, world, source, selected.Span,
                 Math.Max(selected.Span.CoreFrom, Math.Min(selected.A.Station, selected.B.Station)),
                 Math.Min(selected.Span.CoreTo, Math.Max(selected.A.Station, selected.B.Station)));
         }).ToArray();
@@ -94,22 +110,23 @@ internal sealed class BankPlan
             for (var part = 1; part <= count; part++) cuts.Add(station + length * part / count);
             station += length;
         }
-        foreach (var exit in Exits)
+        foreach (var opening in Openings)
         {
-            cuts.Add(exit.Station - exit.Steps.Width / 2);
-            cuts.Add(exit.Station + exit.Steps.Width / 2);
+            cuts.Add(opening.Station - opening.Width / 2);
+            cuts.Add(opening.Station + opening.Width / 2);
         }
         var ordered = cuts.ToArray();
         for (var i = 1; i < ordered.Length; i++)
         {
             var from = ordered[i - 1]; var to = ordered[i];
-            if (to - from < 0.001 || Exits.Any(exit => Math.Abs((from + to) / 2 - exit.Station) < exit.Steps.Width / 2)) continue;
+            if (to - from < 0.001 || Openings.Any(opening => Math.Abs((from + to) / 2 - opening.Station) < opening.Width / 2)) continue;
             yield return new(PlanLines.Sample(Shore, from).Point, PlanLines.Sample(Shore, to).Point, TopAt(from), TopAt(to));
         }
     }
 }
 
 internal readonly record struct BankPiece(Vector2 A, Vector2 B, float TopA, float TopB);
+internal readonly record struct BankOpening(double Station, float Width);
 internal sealed record BankExit(double Station, PlanFrame Frame, float BaseY, StairParams Steps)
 {
     // Local +Z climbs toward land: opposite the source shore's mathematical left (the water side).

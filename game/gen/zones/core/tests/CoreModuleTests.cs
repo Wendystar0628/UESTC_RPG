@@ -183,14 +183,16 @@ public sealed class CoreModuleTests
         var world = Campus.Tests.RealMapFixture.Load().World;
         var plaza = CoreSite.Pieces(world)[0];
         var tile = TileGrid.At(plaza.Anchor, LodLevel.L0);
+        var module = new CoreModule();
+        _ = module.Build(Context(world), tile, LodLevel.L0);
         var bare = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
         InvalidOperationException? missingLods = null;
-        try { new CoreModule().Build(bare, tile, LodLevel.L0); }
+        try { module.Build(bare, tile, LodLevel.L0); }
         catch (InvalidOperationException ex) { missingLods = ex; }
         AssertThat(missingLods is InvalidOperationException).OverrideFailureMessage("placed parts without BuildContext.PartLods are refused").IsTrue();
         var empty = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u, PartLods = new PartLodCatalog([]) };
         KeyNotFoundException? unknownPart = null;
-        try { new CoreModule().Build(empty, tile, LodLevel.L0); }
+        try { module.Build(empty, tile, LodLevel.L0); }
         catch (KeyNotFoundException ex) { unknownPart = ex; }
         AssertThat(unknownPart is KeyNotFoundException).OverrideFailureMessage("a part the catalogue does not know is refused").IsTrue();
     }

@@ -6,7 +6,7 @@ namespace Campus.Contracts;
 public enum ToonFx
 {
     None = 0, GlassStreak = 1, Glare = 2, AnisoBand = 4, Rim = 8,
-    Mottle = 16, DetailTiling = 32, BevelLift = 64
+    Mottle = 16, DetailTiling = 32, BevelLift = 64, Escalator = 128
 }
 public enum ToonNormal { Flat, Smooth, Spherical, AnalyticSphere, AnalyticCylinder }
 public enum LineClass { Building, Tree, Fine, None, Figure }

@@ -20,6 +20,42 @@ public sealed class PlantingTests
 {
     private static readonly Lazy<(IWorldModel World, SpeciesTable Species, PlantingRules Rules)> Data = new(Load);
 
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void ExplicitSportGroupsShareNarrowGapsAndKeepDoorsClear()
+    {
+        foreach (var gap in new[] { 6f, 8f, 12f })
+        {
+            var world = PavementTests.Fixture(Group("a", -80, -65), Group("b", -65 + gap, -45 + gap));
+            var trees = PavementTests.PlantFixture(world).Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
+            if (trees.Length == 0 || trees.Any(t => t.Species.Id != "metaseq" || t.Species.Deciduous == false))
+                throw new InvalidOperationException("sport walls must use the deciduous metasequoia pipeline");
+            var points = trees.Select(t => Vector2.Transform(new(t.Position.X, t.Position.Z), Matrix3x2.CreateRotation(-0.3f))).ToArray();
+            var interior = points.Where(p => p.Y > -57 && p.Y < -33).ToArray();
+            var expected = gap < 8 ? new[] { -65 + gap * 0.5f } : new[] { -63.5f, -66.5f + gap };
+            foreach (var x in expected)
+                if (!interior.Any(p => MathF.Abs(p.X - x) < TestTolerance.Position))
+                    throw new InvalidOperationException($"missing wall row at gap {gap}, x {x}");
+            if (gap < 8 && interior.Any(p => p.X > -65 && p.X < -65 + gap && MathF.Abs(p.X - expected[0]) > TestTolerance.Position))
+                throw new InvalidOperationException("a narrow gap has duplicate wall rows");
+            if (points.Any(p => p.Y < -60 && MathF.Abs(p.X + 72.5f) <= 1.5f))
+                throw new InvalidOperationException("the explicit gate was planted shut");
+            if (trees.Any(t => MathF.Abs(t.Position.Y - world.Terrain.HeightAt(t.Position.X, t.Position.Z)) > TestTolerance.Position))
+                throw new InvalidOperationException("sport wall is not on terrain");
+        }
+
+        static string Group(string id, float west, float east) => JsonSerializer.Serialize(new
+        {
+            id = "design:fixture-group-" + id, kind = "sportGroup",
+            props = new { members = new[] { "fixture-court-" + id }, gate = Rotate((west + east) * 0.5f, -60f), gateGap = 3, treePitch = 3, treeOffset = 1.5, sharedGapBelow = 8 },
+            geometry = new { type = "polygon", rings = new { outer = new[] { Rotate(west, -60f), Rotate(east, -60f), Rotate(east, -30f), Rotate(west, -30f) }, holes = Array.Empty<float[][]>() } }
+        });
+        static float[] Rotate(float x, float z)
+        {
+            var point = Vector2.Transform(new(x, z), Matrix3x2.CreateRotation(0.3f));
+            return [point.X, point.Y];
+        }
+    }
+
     private static (IWorldModel, SpeciesTable, PlantingRules) Load()
     {
         var root = RepositoryFixture.Root;

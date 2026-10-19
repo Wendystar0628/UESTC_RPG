@@ -120,6 +120,54 @@
    "materialClass": "water",
    "seasonal": false,
    "role": "shade"
+  },
+  {
+   "token": "water.poolTile.lit",
+   "index": 464,
+   "albedo": [
+    0.49217464,
+    0.78976779,
+    0.86818001
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "water.poolTile.shade",
+   "index": 465,
+   "albedo": [
+    0.49217464,
+    0.78976779,
+    0.86818001
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "shade"
+  },
+  {
+   "token": "water.poolLine.lit",
+   "index": 466,
+   "albedo": [
+    0.0,
+    0.31178669,
+    0.54054753
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "lit"
+  },
+  {
+   "token": "water.poolLine.shade",
+   "index": 467,
+   "albedo": [
+    0.0,
+    0.31178669,
+    0.54054753
+   ],
+   "materialClass": "water",
+   "seasonal": false,
+   "role": "shade"
   }
  ]
 }

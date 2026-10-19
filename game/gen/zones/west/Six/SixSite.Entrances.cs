@@ -110,8 +110,7 @@ public sealed partial class SixSite
             var pad = new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, c * r * 0.62f, 0, s * r * 0.62f, 1);
             b.Add(Shapes.Shaft(0.11f, 0.11f, d, 12, L.Red), GeometryPlacement.Multiply(pad, centre));
         }
-        // Text hook: left blank until the scene text atlas (contract-26) arrives. Then add here, under the emblem, the silver
-        // line "基础与前沿研究院" (SignCharacters of CharacterSize, CharacterGap, Look.Silver) and one English line
-        // (EnglishHeight, EnglishLength) below it. No placeholder strokes are drawn: scene text is real Chinese or nothing.
+        Framework.WestLettering.Write(b, "基础与前沿研究院", S.CharacterSize, L.Silver, L.Stone,
+            f.At(x, y0 + 1.8f, z1 + .015f));
     }
 }

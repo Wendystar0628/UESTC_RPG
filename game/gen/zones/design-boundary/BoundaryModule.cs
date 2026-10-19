@@ -16,8 +16,7 @@ public sealed class BoundaryModule : ZoneModuleBase
     public BoundaryModule() : this(BoundarySites.All) { }
 
     internal BoundaryModule(IReadOnlyList<ZoneSite> sites) : base(sites,
-        new(TrianglesL0: BoundaryTune.BudgetTrianglesL0, TrianglesL1: BoundaryTune.BudgetTrianglesL1, DrawCalls: BoundaryTune.BudgetDrawCalls),
-        cacheResults: ReferenceEquals(sites, BoundarySites.All), cacheColliders: true) { }
+        new(TrianglesL0: BoundaryTune.BudgetTrianglesL0, TrianglesL1: BoundaryTune.BudgetTrianglesL1, DrawCalls: BoundaryTune.BudgetDrawCalls)) { }
 }
 
 /// <summary>The boundary package's sites in a fixed order; later sub-tickets append theirs after these.</summary>

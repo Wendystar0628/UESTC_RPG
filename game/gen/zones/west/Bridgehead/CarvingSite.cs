@@ -12,8 +12,7 @@ namespace Campus.Gen.Zones.West.Bridgehead;
 /// <summary>
 /// 国防科技园石刻 (MAP-QSH-WEST): the campus stone-carving manner (粗凿的白色卧石, as the 体育运动中心 stone), here the
 /// motto stone's faceted body at about half size: a few big cut planes, a low tilted top and one flat dressed face toward
-/// the bridgehead junction. It lies in a low oval of pebbles so its foot meets the lawn softly. The face is blank until the
-/// scene text atlas (contract-26) carries "国防科技园" in dark green running script. Night role: dark area (§11).
+/// the bridgehead junction. It lies in a low oval of pebbles so its foot meets the lawn softly. The face carries "国防科技园" through the shared scene-text atlas. Night role: dark area (§11).
 /// </summary>
 public sealed class CarvingSite : ZoneSite
 {
@@ -33,7 +32,10 @@ public sealed class CarvingSite : ZoneSite
         Vector2[] dome = [new(1f, 0f), new(0.95f, 0.08f), new(0.7f, 0.15f), new(0f, 0.18f)];
         b.Add(Solids.Lathe(dome, around, L.Pebble, C.Length * 0.5f + 0.6f, C.Depth * 0.5f + 0.5f), f.At(0, y + 0.02f, 0));
         b.Add(Scaled(MottoStone.Build(L.WhiteStone), C.Scale), f.At(0, y + 0.06f, 0));
-        // Text hook: "国防科技园" in dark green on the dressed face (MottoStone.OnFace scaled by C.Scale), once contract-26 lands.
+        var textAt = MottoStone.OnFace(0, 1f) * C.Scale;
+        Framework.WestLettering.Write(b, "国防科技园", .3f, L.Hedge, L.WhiteStone,
+            Matrix4x4.CreateRotationX(-MathF.Atan(.16f * C.Scale.Z / C.Scale.Y)) *
+            f.At(textAt.X, y + .06f + textAt.Y, textAt.Z + .015f));
     }
 
     /// <summary>Scales a geometry about its origin; normals by the inverse scale so the facets keep their true shading.</summary>

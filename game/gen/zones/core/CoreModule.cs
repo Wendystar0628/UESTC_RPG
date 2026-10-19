@@ -19,7 +19,7 @@ namespace Campus.Gen.Zones.Core;
 /// </summary>
 [ContentModule("core", Owner = "WP-16")]
 public sealed class CoreModule() : ZoneModuleBase([new CoreZoneSite()],
-    new(TrianglesL0: 60_000, TrianglesL1: 30_000, DrawCalls: 12), cacheResults: false),
+    new(TrianglesL0: 60_000, TrianglesL1: 30_000, DrawCalls: 12)),
     IWindowMetadataSource, ILightMetadataSource, IContentSourceTraceProvider { }
 
 /// <summary>Keeps the core's shared stone and glass sinks together while common owns routing and metadata.</summary>

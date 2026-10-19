@@ -29,17 +29,18 @@ public sealed partial class CenterEastModuleTests
         var module = new CenterEastModule();
         var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
         var gate = PinxueFrameSite.GateOf(ctx.World);
+        var baseY = PinxueFrameSite.BaseY(ctx);
         AssertThat(colliders.All(c => c.Foot != Contracts.Audio.FootMat.Auto)).OverrideFailureMessage("every collider fills its foot material").IsTrue();
-        var boxes = colliders.OfType<BoxCollider>().Where(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y > 1f).ToArray();
+        var boxes = colliders.OfType<BoxCollider>().Where(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y > baseY + 1f).ToArray();
         AssertThat(boxes.Length == PinxueFrameSite.Bridges(ctx.World).Count).OverrideFailureMessage($"the beam and the two bridges are lifted boxes, got {boxes.Length}").IsTrue();
-        AssertThat(boxes.All(b => b.At.M42 - b.Half.Y >= gate.BridgeBottom - TestTolerance.Position)).OverrideFailureMessage("nothing walls off the passage or the paths under the bridges").IsTrue();
+        AssertThat(boxes.All(b => b.At.M42 - b.Half.Y >= baseY + gate.BridgeBottom - TestTolerance.Position)).OverrideFailureMessage("nothing walls off the passage or the paths under the bridges").IsTrue();
         var frame = gate.F.P(gate.Axis, -gate.Depth * 0.5f);
-        var columns = colliders.OfType<BoxCollider>().Count(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y < TestTolerance.Position && b.Half.Y * 2 >= gate.BeamBottom - TestTolerance.Position
+        var columns = colliders.OfType<BoxCollider>().Count(b => b.Tag == SurfaceTag.Wall && b.At.M42 - b.Half.Y < baseY + TestTolerance.Position && b.Half.Y * 2 >= gate.BeamBottom - TestTolerance.Position
             && Vector2.Distance(new(b.At.M41, b.At.M43), frame) < 25f);
         AssertThat(columns == P.ColumnX.Length).OverrideFailureMessage("the four columns reach the beam soffit").IsTrue();
         // The beam leaves the two-storey passage open between the columns.
         var beam = boxes.OrderByDescending(b => b.At.M42).First();
-        AssertThat(MathF.Abs(beam.At.M42 - beam.Half.Y - gate.BeamBottom) < TestTolerance.Position).OverrideFailureMessage("the beam soffit sits at two storeys").IsTrue();
+        AssertThat(MathF.Abs(beam.At.M42 - beam.Half.Y - baseY - gate.BeamBottom) < TestTolerance.Position).OverrideFailureMessage("the beam soffit sits at two storeys above its terrain pad").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

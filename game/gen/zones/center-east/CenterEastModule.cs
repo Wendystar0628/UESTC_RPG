@@ -10,8 +10,7 @@ public sealed class CenterEastModule : ZoneModuleBase, IWindowMetadataSource, IC
     public CenterEastModule() : this(CenterEastSites.All) { }
 
     internal CenterEastModule(IReadOnlyList<ZoneSite> sites) : base(sites,
-        new(CenterEastTune.BudgetTrianglesL0, CenterEastTune.BudgetTrianglesL1, CenterEastTune.BudgetDrawCalls),
-        cacheResults: ReferenceEquals(sites, CenterEastSites.All)) { }
+        new(CenterEastTune.BudgetTrianglesL0, CenterEastTune.BudgetTrianglesL1, CenterEastTune.BudgetDrawCalls)) { }
 }
 
 /// <summary>
@@ -35,5 +34,10 @@ public static class CenterEastSites
         new Research.ResearchSteleSite(),
         new Wenke.WenkeSite(),
         new Wenke.WenkeForecourtSite(),
+        new Sports.TrainingHallSite(),
+        new Sports.CourtSites(),
+        new Sports.PoolSite(),
+        new Sports.PoolRoomsSite(),
+        new Sports.SportsFurnitureSite(),
     ]);
 }

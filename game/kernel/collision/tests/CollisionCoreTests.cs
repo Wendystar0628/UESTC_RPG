@@ -43,6 +43,7 @@ public sealed class CollisionCoreTests
         using var bake = new BakeService(new(cache.Path, Live: false, Strict: false, Background: false,
             MapOnly: false, LogicalProcessors: 3, SeedOverride: null));
         var map = bake.Mount(context);
+        await bake.PrepareMapData(context);
         using var native = new World3D();
         var viewport = new SubViewport { World3D = native, Size = new(32, 32) };
         var root = new Node3D();

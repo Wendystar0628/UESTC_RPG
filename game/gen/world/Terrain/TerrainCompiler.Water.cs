@@ -2,6 +2,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Geometry;
+using Campus.Contracts.Water;
 
 namespace Campus.Gen.World;
 
@@ -65,6 +66,18 @@ internal static partial class TerrainCompiler
     {
         var (op, file, id, _, level, bank, depth, shelf, wade, _) = spec;
         var name = op?.Id ?? "auto-water-" + id.Value;
+        if (WaterPoolLayout.IsPool(b.Context.Features[id]))
+        {
+            var frame = WaterPoolLayout.Frame(b.Context.Features[id]);
+            return new TerrainNode(name, file, op?.Zone ?? default, TerrainGroup.Water, op?.Priority ?? 50,
+                region.Bounds, (previous, x, z) =>
+                {
+                    if (!region.Contains(x, z)) return previous;
+                    var along = frame.Coordinates(new((float)x, (float)z)).X;
+                    return WithSurface(previous, TerrainDifferential.Constant(level - WaterPoolRules.DepthAt(along, frame.Length)),
+                        double.PositiveInfinity, double.PositiveInfinity, true);
+                }, op is null);
+        }
         var grade = TerrainReferences.Grade(bank.Slope!);
         var zone = op?.Zone ?? default; var priority = op?.Priority ?? 50;
         var support = TerrainRegion.Expand(region.Bounds, (b.RangeBound + Math.Abs(level) + depth) / grade + 4);
