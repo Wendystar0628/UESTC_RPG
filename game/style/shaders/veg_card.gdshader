@@ -23,6 +23,7 @@ const float VEG_KEEP_L0 = 0.4;             // L0 留下的插片比例（MotherM
 const float VEG_KEEP_L1 = 0.0556;          // L1 留下的插片比例
 const float VEG_COVER_GROW = 1.5;          // 远处按像素外扩叶形的上限，保住树冠覆盖率（§11.1）
 const float VEG_TWIG_MIN_PX = 0.5;         // 裸枝笔触按像素外扩的量（像素），保住约一个像素的线宽，不外扩成团
+const float VEG_WINTER_TWIG_OPACITY = 0.55; // Q-053b 已批：中距落叶针叶树的红褐细枝轮廓，用既有 Bayer 覆盖率表示
 // 远处叶卡化简（23c2c）：一张插片在屏幕上只剩几个像素时，叶形的细节逐像素闪烁；按 UV 的像素导数从前者到后者，叶形换成一个圆润的叶团
 // （覆盖率与叶簇相近）。枝条笔触、棕榈扇叶不换
 const vec2 VEG_CARD_SIMPLE = vec2(0.1, 0.25);
@@ -85,7 +86,7 @@ const float VEG_UNDER_DL = 0.035;          // 冠底叶簇的明度起伏（OKLa
 const float VEG_UNDER_FIT = 1.3;           // 冠底叶卡正对镜头：卡片放大这么多（MotherModels.UnderCardScale），叶形按叶柄端缩回原大，不让卡片的直边切出叶形
 
 // toon.gdshaderinc 已占 25 个 varying 分量，本着色器只剩 7 个（已用满，交接编码并进 v_row）：层号与标志合进一个整数，t0 直接读 v_spare（同是 COLOR.a）。
-varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切），位 7 冠底叶卡，位 8–15 插片自己的叶形种子
+varying flat int v_bits;      // 位 0–3 叶卡层号，位 4 开花，位 5 枝条笔触，位 6 团块（不裁切），位 7 冠底叶卡，位 8–15 叶形种子，位 16–23 中距冬枝混合量
 varying flat int v_row;       // 位 0–5 树种号（−1 记成 63），位 6 起是远近池交接的编码 × 1000（veg_pool_code，23c2c）
 varying flat float v_seed;
 varying flat vec2 v_tint;
@@ -169,6 +170,16 @@ void vertex() {
 
 		// 朝向：mix(外壳法线, 视线, 0.5)，按主相机算，阴影通道也一样（§11.3）
 		vec3 cam_w = MAIN_CAM_INV_VIEW_MATRIX[3].xyz;
+		float winter_mid = 0.0;
+		if (twig && !under && sp.leaf_card == VEG_CARD_NEEDLE) {
+			// 中距复用原轮廓叶簇的插片画细枝；近处收回原枝梢，交给母模型的真实主枝、二级枝。
+			// 沿用叶团消隐阈值及 L0 的距离过渡，春季满冠时不启用这一层；同类落叶针叶树共用。
+			float l0 = VEG_LOD_L0 * max(inst.height, 1.0) / 12.0 * max(quality.x, 0.5);
+			float crown_dist = length(cam_w - (MODEL_MATRIX * vec4(c, 1.0)).xyz);
+			winter_mid = (1.0 - smoothstep(0.15, 0.6, a)) * smoothstep(l0 * 0.9, l0, crown_dist);
+			center = mix(center, c, winter_mid);
+		}
+		v_bits |= int(round(winter_mid * 255.0)) << 16;
 		vec3 center_w = (MODEL_MATRIX * vec4(center, 1.0)).xyz;
 		float dist = length(cam_w - center_w);
 		vec3 view_m = normalize(inv3 * (cam_w - center_w));
@@ -183,11 +194,13 @@ void vertex() {
 		size *= under ? veg_under_keep(CUSTOM2.w, dist, inst.height) : veg_card_keep(CUSTOM2.w, dist, inst.height);
 		size *= smoothstep(VEG_NEAR_COLLAPSE * 0.6, VEG_NEAR_COLLAPSE, dist);
 		// 叶卡集中在外轮廓一圈，打碎轮廓边；朝向镜头的内部插片只留少数、缩小（max-011）。
-		// 冬季的枝条笔触不受此限（按叶量过渡），棕榈的扇叶本身就是树冠，也不受此限；冠底叶卡要在仰看时正对镜头，也不受此限。
+		// 近处的枝条笔触不受此限；中距针叶裸冠只出轮廓，不保留内部散点。棕榈扇叶与冠底叶卡照旧。
 		if (sp.leaf_card != VEG_CARD_FROND && !under) {
 			float rim = 1.0 - abs(dot(nb, view_m));
 			float inner = veg_hash(h2, 31u) < VEG_INNER_KEEP ? VEG_INNER_SIZE : 0.0;
-			size *= mix(1.0, mix(inner, 1.0, smoothstep(VEG_RIM_IN, VEG_RIM_OUT, rim)), leafy);
+			float outline = smoothstep(VEG_RIM_IN, VEG_RIM_OUT, rim);
+			float leaf_mask = mix(1.0, mix(inner, 1.0, outline), leafy);
+			size *= mix(leaf_mask, outline, winter_mid);
 		}
 		VERTEX = center + (uw.x * t1 + uw.y * b1) * size;
 		// 插片用外壳法线（max-011 的统一树冠法线；棕榈扇叶用自己的法线）
@@ -409,6 +422,11 @@ void fragment() {
 	int row = v_row & 63;
 	VegSpecies sp = veg_species(row);
 	bool mass = (v_bits & 64) != 0;
+	float winter_mid = float((v_bits >> 16) & 255) / 255.0;
+	// 沿用不透明通道的有序覆盖淡化，不把整冠送进透明排序；只裁现有细枝笔触的像素。
+	if (veg_pool_discard(FRAGCOORD.xy, winter_mid * (1.0 - VEG_WINTER_TWIG_OPACITY))) {
+		discard;
+	}
 	// 团块自己的法线（视空间）：团心指向片元，底部按世界的 y 压扁 0.7（树只绕竖轴转，模型的 y 就是世界的 y）
 	vec3 clump_w = mat3(INV_VIEW_MATRIX) * (VERTEX - v_center);
 	clump_w.y /= clump_w.y < 0.0 ? 0.49 : 1.0;
@@ -469,11 +487,11 @@ void fragment() {
 	float trans_k = 1.0 + VEG_TRANS_RIM * smoothstep(VEG_TRANS_RIM_BAND.x, VEG_TRANS_RIM_BAND.y, 1.0 - abs(dot(clump, VIEW))) * back_view;
 	bool twig = (v_bits & 32) != 0;
 	if (twig) {
-		// 枝条笔触用 tree.bare，不透光（§1.4、§1.8）
+		// 近处枝条笔触用 tree.bare；中距针叶裸冠混到顶点传入的 tree.winterTwig，均不透光。
 		int cid = sp.twig_cid;
-		lit = pal_cur(cid);
-		shade = pal_cur(cid + PAL_SHADE_OFFSET);
-		lamp = pal_fetch(cid, PAL_ROW_LAMP);
+		lit = mix(pal_cur(cid), pal_cur(v_cid), winter_mid);
+		shade = mix(pal_cur(cid + PAL_SHADE_OFFSET), pal_cur(v_cid + PAL_SHADE_OFFSET), winter_mid);
+		lamp = mix(pal_fetch(cid, PAL_ROW_LAMP), pal_fetch(v_cid, PAL_ROW_LAMP), winter_mid);
 		trans_k = 0.0;
 	} else {
 		bool bloom = (v_bits & 16) != 0;

@@ -2,6 +2,8 @@
   "schema": 2,
   "entries": [
     {"token": "tree.bark.lit", "index": 252, "albedo": [0.500763, 0.396822, 0.308028], "materialClass": "building", "seasonal": false, "role": "lit"},
-    {"token": "tree.bark.shade", "index": 253, "albedo": [0.500763, 0.396822, 0.308028], "materialClass": "building", "seasonal": false, "role": "shade"}
+    {"token": "tree.bark.shade", "index": 253, "albedo": [0.500763, 0.396822, 0.308028], "materialClass": "building", "seasonal": false, "role": "shade"},
+    {"token": "tree.winterTwig.lit", "index": 452, "albedo": [0.541176, 0.352941, 0.282353], "materialClass": "building", "seasonal": false, "role": "lit"},
+    {"token": "tree.winterTwig.shade", "index": 453, "albedo": [0.541176, 0.352941, 0.282353], "materialClass": "building", "seasonal": false, "role": "shade"}
   ]
 }

@@ -23,6 +23,9 @@ public static partial class MotherModels
     /// <summary>Winter twig strokes keep the bare-branch name (WLD-VEGETATION); packed into the species table.</summary>
     public static readonly PaletteToken Twig = new("tree.bare.lit");
 
+    /// <summary>Reviewed warm red-brown strokes on the middle-distance winter outline of deciduous needle crowns.</summary>
+    public static readonly PaletteToken WinterTwig = new("tree.winterTwig.lit");
+
     /// <summary>Lime-washed lower trunk (WLD-VEGETATION), switched per instance by the variant bit in veg_trunk.</summary>
     public static readonly PaletteToken Whitewash = new("wall.greyWhite.lit");
 
@@ -342,9 +345,9 @@ public static partial class MotherModels
     }
 
     private static Ids IdsOf(SpeciesInfo species, PaletteCatalog palette) =>
-        new(palette.Resolve(species.LeafLit).Value, palette.Resolve(Bark).Value);
+        new(palette.Resolve(species.LeafLit).Value, palette.Resolve(Bark).Value, palette.Resolve(WinterTwig).Value);
 
-    private readonly record struct Ids(ushort Leaf, ushort Bark);
+    private readonly record struct Ids(ushort Leaf, ushort Bark, ushort WinterTwig);
 
 
 }
