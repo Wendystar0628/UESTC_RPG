@@ -92,6 +92,7 @@ public sealed class QualityCatalog
     {
         if (preset is < QualityPreset.Balanced or > QualityPreset.Ultra) throw new ArgumentOutOfRangeException(nameof(preset));
         _ = this[knob];
+        if (knob == QualityKnob.AntiAliasing) return Resolve(Profile(preset), preset)[(int)knob];
         if (knob != QualityKnob.RenderScale) return _presets[(int)preset][(int)knob];
         return ScaleForOutput(preset, OutputWidth, OutputHeight);
     }
@@ -127,14 +128,29 @@ public sealed class QualityCatalog
     public float[] Resolve(QualityProfile profile, QualityPreset customBase)
     {
         var preset = profile.Preset == QualityPreset.Custom ? customBase : profile.Preset;
-        var values = All.Select(knob => PresetValue(preset, knob)).ToArray();
+        var values = All.Select(knob => knob == QualityKnob.AntiAliasing
+            ? _presets[(int)preset][(int)knob] : PresetValue(preset, knob)).ToArray();
         foreach (var pair in profile.Overrides.OrderBy(pair => pair.Key)) values[(int)pair.Key] = pair.Value;
         if (!PreserveOutputSize && values[(int)QualityKnob.DisplayMode] == 0 && !profile.Overrides.ContainsKey(QualityKnob.RenderScale))
         {
             var size = WindowSizes[(int)values[(int)QualityKnob.WindowSize]];
             values[(int)QualityKnob.RenderScale] = ScaleForOutput(preset, size.Width, size.Height);
         }
+        // The project's supported FSR1 path uses FXAA; native rendering keeps the chosen AA.
+        if (values[(int)QualityKnob.RenderScale] < 1)
+            values[(int)QualityKnob.AntiAliasing] = 1;
         return values;
+    }
+
+    public QualityProfile Normalize(QualityProfile profile, QualityPreset customBase)
+    {
+        var preset = profile.Preset == QualityPreset.Custom ? customBase : profile.Preset;
+        var values = Resolve(profile, customBase);
+        var overrides = profile.Overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
+        var aa = QualityKnob.AntiAliasing;
+        var requested = overrides.GetValueOrDefault(aa, PresetValue(preset, aa));
+        if (requested != values[(int)aa]) overrides[aa] = values[(int)aa];
+        return profile with { Overrides = new ReadOnlyDictionary<QualityKnob, float>(overrides) };
     }
 
     public static int FrameLimit(float encoded, float refresh)

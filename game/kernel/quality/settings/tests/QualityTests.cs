@@ -55,6 +55,36 @@ public sealed class QualityTests
         if (catalog.PresetValue(QualityPreset.Ultra, QualityKnob.RenderScale) != .77f ||
             catalog.PresetValue(QualityPreset.Fine, QualityKnob.RenderScale) != .5f)
             throw new InvalidOperationException("4K preset used the 1080p scaling column.");
+        var state = new QualityState(catalog);
+        if (state.Effective[QualityKnob.AntiAliasing] != 1 || catalog.PresetValue(QualityPreset.Fine, QualityKnob.AntiAliasing) != 1 ||
+            state.Requested.Overrides.ContainsKey(QualityKnob.AntiAliasing) ||
+            state.Plan(QualityCatalog.Profile(QualityPreset.Ultra)).Next.Overrides.ContainsKey(QualityKnob.AntiAliasing))
+            throw new InvalidOperationException("Output-derived FSR1 presets did not normalize their AA.");
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void FsrProfilesNormalizeRequestsAndPersistenceWhileNativeSmaaRemainsAvailable()
+    {
+        foreach (var origin in new[] { ApplyOrigin.Startup, ApplyOrigin.CommandLine, ApplyOrigin.User, ApplyOrigin.Gate })
+        {
+            var state = new QualityState(Catalog());
+            var input = new Dictionary<QualityKnob, float> { [QualityKnob.RenderScale] = .77f, [QualityKnob.AntiAliasing] = 0 };
+            var profile = new QualityProfile(QualityPreset.Fine, input);
+            if (state.Plan(profile).Next.Overrides[QualityKnob.AntiAliasing] != 1 || input[QualityKnob.AntiAliasing] != 0)
+                throw new InvalidOperationException("FSR1 planning did not normalize a copy of the request.");
+            state.Commit(profile, origin, true);
+            if (state.Effective[QualityKnob.AntiAliasing] != 1 || state.Requested.Overrides[QualityKnob.AntiAliasing] != 1)
+                throw new InvalidOperationException("Requested and applied FSR1 AA disagree.");
+            var restored = new QualityState(Catalog());
+            restored.Commit(state.Requested, ApplyOrigin.Startup, true);
+            if (restored.Effective[QualityKnob.AntiAliasing] != 1 || restored.Effective[QualityKnob.RenderScale] != .77f)
+                throw new InvalidOperationException("The canonical saved profile lost the supported FSR1 combination.");
+            state.Commit(new(QualityPreset.Fine, new Dictionary<QualityKnob, float>
+                { [QualityKnob.RenderScale] = 1, [QualityKnob.AntiAliasing] = 0 }), origin, true);
+            if (state.Effective[QualityKnob.AntiAliasing] != 0 || state.Requested.Overrides.ContainsKey(QualityKnob.AntiAliasing))
+                throw new InvalidOperationException("Native rendering lost SMAA or retained a stale AA override.");
+        }
     }
 
     [TestCase]

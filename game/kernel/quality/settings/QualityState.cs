@@ -21,7 +21,7 @@ public sealed class QualityState
     {
         _catalog = catalog;
         _basePreset = catalog.DefaultPreset;
-        Requested = catalog.DefaultProfile;
+        Requested = catalog.Normalize(catalog.DefaultProfile, _basePreset);
         _values = catalog.Resolve(Requested, _basePreset);
         Effective = MakeView();
     }
@@ -32,8 +32,8 @@ public sealed class QualityState
         ArgumentNullException.ThrowIfNull(next.Overrides);
         if (!Enum.IsDefined(next.Preset) || next.Schema != 1) throw new ArgumentException("Unsupported quality profile.", nameof(next));
         var rejected = next.Overrides.Where(pair => !_catalog.IsValid(pair.Key, pair.Value)).Select(pair => pair.Key).Order().ToArray();
-        var frozen = QualityCatalog.Freeze(next);
-        if (rejected.Length != 0) return new(frozen, [], ApplyClass.Immediate, 0, 0, rejected);
+        if (rejected.Length != 0) return new(QualityCatalog.Freeze(next), [], ApplyClass.Immediate, 0, 0, rejected);
+        var frozen = _catalog.Normalize(next, _basePreset);
         var values = _catalog.Resolve(frozen, _basePreset);
         var preset = frozen.Preset == QualityPreset.Custom ? _basePreset : frozen.Preset;
         var grassRangeChanged = _catalog.GrassRadius(preset) != GrassRadius;
@@ -48,6 +48,7 @@ public sealed class QualityState
     {
         var plan = Plan(next);
         if (plan.Rejected.Count != 0) throw new ArgumentException("Cannot commit invalid quality values.", nameof(next));
+        next = plan.Next;
         var values = _catalog.Resolve(next, _basePreset);
         var previousGrassRadius = GrassRadius;
         if (next.Preset != QualityPreset.Custom) _basePreset = next.Preset;
