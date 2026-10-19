@@ -32,6 +32,8 @@ hud.perf.frame,帧时,Frame time
 hud.perf.cpu_render,CPU 渲染,CPU render
 hud.perf.gpu_render,GPU 渲染,GPU render
 hud.perf.cpu_usage,CPU 占用,CPU use
+hud.perf.mem,内存,RAM
+hud.perf.vram,显存,VRAM
 hud.wait.preparing,正在准备画面,Preparing the view
 hud.wait.first_shader,首次启动需要编译着色器，只会发生一次,First launch needs to compile shaders. This only happens once.
 time.shichen.zi,子时,Zi hour
