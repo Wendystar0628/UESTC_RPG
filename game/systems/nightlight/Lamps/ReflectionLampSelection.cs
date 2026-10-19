@@ -20,33 +20,37 @@ internal sealed class ReflectionLampSelection
 
     public void Clear() => Array.Clear(_data);
 
-    private readonly record struct Candidate(int Kind, int Index, float Priority, float Distance);
+    private readonly record struct Candidate(int Kind, int Tile, int Index, int StableId, float Priority, float Distance);
 
-    public bool Select(IReadOnlyList<LampRecord> lamps, GlowSet? windows, ReadOnlySpan<int> windowIndices,
+    public bool Select(IReadOnlyList<LampRecord> lamps, IReadOnlyList<NightlightTileContent> tiles,
         ReadOnlySpan<Vector2> channels, ReadOnlySpan<byte> windowOverrides, Vector3 camera)
     {
         Span<Candidate> selected = stackalloc Candidate[Capacity];
         var count = 0;
         var eye = new Vector2(camera.X, camera.Z);
-        for (var i = 0; i < lamps.Count; i++)
+        for (var t = 0; t < tiles.Count; t++)
         {
-            var lamp = lamps[i];
-            // 一级与钟面在先，二级其次；三级只保留原有光斑（WLD-WATER）。
-            var priority = lamp.Slot == ClockFaceSlot || lamp.Energy >= 1f ? 3 :
-                lamp.Energy >= SecondLevelEnergy ? 2 : 0;
-            if (priority == 0) continue;
-            var distance = Vector2.DistanceSquared(new Vector2(lamp.Base.X, lamp.Base.Z), eye);
-            count = Insert(selected, count, new(1, i, priority, distance));
-        }
-        if (windows is not null && count < Capacity)
-            foreach (var i in windowIndices)
+            var tile = tiles[t];
+            for (var n = 0; n < tile.LampIds.Count; n++)
             {
+                var id = tile.LampIds[n];
+                var lamp = lamps[id];
+                var priority = lamp.Slot == ClockFaceSlot || lamp.Energy >= 1f ? 3 :
+                    lamp.Energy >= SecondLevelEnergy ? 2 : 0;
+                if (priority == 0) continue;
+                var distance = Vector2.DistanceSquared(new Vector2(lamp.Base.X, lamp.Base.Z), eye);
+                count = Insert(selected, count, new(1, t, id, id, priority, distance));
+            }
+            var windows = tile.Glow;
+            for (var n = 0; n < tile.ReflectionWindowIndices.Count; n++)
+            {
+                var i = tile.ReflectionWindowIndices[n];
                 var o = i * GlowSet.Stride;
                 if (!WindowLit(windows.Buffer, o, channels, windowOverrides)) continue;
                 var position = new Vector2(windows.Buffer[o + 3], windows.Buffer[o + 11]);
-                count = Insert(selected, count, new(2, i, 1, Vector2.DistanceSquared(position, eye)));
+                count = Insert(selected, count, new(2, t, i, (int)windows.Buffer[o + 12], 1, Vector2.DistanceSquared(position, eye)));
             }
-
+        }
         Span<float> next = stackalloc float[Capacity * Rows * 4];
         next.Clear();
         for (var i = 0; i < count; i++)
@@ -60,7 +64,7 @@ internal sealed class ReflectionLampSelection
                 continue;
             }
             var o = candidate.Index * GlowSet.Stride;
-            var buffer = windows!.Buffer;
+            var buffer = tiles[candidate.Tile].Glow.Buffer;
             next[r0 + 1] = buffer[o + 12];
             next[r0 + 2] = buffer[o + 13];
             next[r0 + 3] = buffer[o + 14];
@@ -98,7 +102,8 @@ internal sealed class ReflectionLampSelection
         {
             var other = selected[at];
             if (candidate.Priority > other.Priority ||
-                (candidate.Priority == other.Priority && candidate.Distance < other.Distance)) break;
+                (candidate.Priority == other.Priority && (candidate.Distance < other.Distance ||
+                    candidate.Distance == other.Distance && candidate.StableId < other.StableId))) break;
             at++;
         }
         if (at == Capacity) return count;

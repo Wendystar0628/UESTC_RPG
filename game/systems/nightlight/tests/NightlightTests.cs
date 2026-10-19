@@ -187,9 +187,9 @@ public sealed class NightlightTests
         {
             Skip = [1],
         };
-        var loose = new WindowDecl(70000, 70000, 6, LightChannelCatalog.Id(6), new Vector3(0f, 3f, 0f), Vector3.UnitZ, Vector3.UnitY, 1f, 2f);
+        var loose = new WindowDecl(70000, 70000, 6, LightChannelCatalog.Id(6), new Vector3(1f, 3f, 1f), Vector3.UnitZ, Vector3.UnitY, 1f, 2f);
         var unknown = new WindowDecl(5, 0, 4, new ChannelId("window.nowhere"), Vector3.Zero, Vector3.UnitX, Vector3.UnitY, 1f, 1f);
-        var set = GlowSets.Windows([facade], [loose, unknown], out var report);
+        var set = GlowSets.Windows([facade], [loose, unknown], new TileKey(0, 0), out var report);
         AssertThat(set.Kind == GlowKind.Window && set.Count == 6 && report.UnknownChannel == 1 && report.BadFacade == 0).OverrideFailureMessage($"5 facade cells + 1 loose window, got {set.Count}").IsTrue();
         // 第一格：窗号 = 基址 + 行 × 总列数 + 列起点 + 列；custom.z = 槽位 + 32 × 总列数（与玻璃的 UV2.y 同一写法）
         AssertThat(set.Buffer[12] == 1004f && set.Buffer[13] == 1000f && set.Buffer[14] == 1 + 32f * 12 && set.Buffer[15] == 0f).OverrideFailureMessage("first facade cell custom data").IsTrue();
@@ -250,7 +250,7 @@ public sealed class NightlightTests
         // 窗户类通道上的窗格声明照常进窗光晕
         var facade = new WindowFacadeDecl(2000, 4, new ChannelId("interior.public"), 0, 4, 1, Vector3.Zero, Vector3.UnitX, Vector3.UnitY,
             3f, 1.5f, 1.5f, [1f]);
-        var set = GlowSets.Windows([facade], [], out var report);
+        var set = GlowSets.Windows([facade], [], new TileKey(0, 0), out var report);
         AssertThat(set.Count == 4 && report.UnknownChannel == 0 && set.Buffer[14] == interior + 32f * 4).OverrideFailureMessage("window-channel facades still glow as windows").IsTrue();
     }
 

@@ -6,22 +6,6 @@ using Campus.Systems.Nightlight.Schedule;
 
 namespace Campus.Systems.Nightlight.Lamps;
 
-/// <summary>一盏灯在灯表里的全部数据（灯脚、灯头、光斑、通道、两个阈值）。</summary>
-public readonly record struct LampRecord(
-    Vector3 Base,          // 灯脚处的地面点（x, 地面高度, z）
-    float HeadHeight,      // 灯头离地高度（m），光晕与灯锥从这里出
-    float Radius,          // 地面光斑半径（m），冬夜再乘 sys.poolGain
-    int ColorColumn,       // 调色板色号 0–511（灯色，bank 1 为 256 起）
-    float Energy,          // 级别：一级 1.0、二级 0.75、三级 0.5（MAP-QSH-ADDITIONS）
-    int Slot,              // 灯光通道槽位
-    float ThresholdDeg,    // 开灯阈值（太阳高度，度）：h_eff 低于它就亮；≥ 89° 为常亮
-    float Keep,            // 保留阈值 κ ∈ [0, 1)：通道保留比例低于它时熄（熄一半、整组关）
-    int Sequence,          // 偶发事件序号（0 = 不参与）
-    float GlowRadius)      // 灯头光晕半径（m）
-{
-    public Vector3 Head => Base + new Vector3(0f, HeadHeight, 0f);
-}
-
 /// <summary>
 /// lamp_table（N×2 RGBA32F）与 lamp_grid（map_rect 上 8 m 一格，RGBA32F，每格 4 个灯号）的打包。
 /// 编码与 fx_glow、toon.gdshaderinc、precip 里的解码一致：
