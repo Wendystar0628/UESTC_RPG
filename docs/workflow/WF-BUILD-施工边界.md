@@ -22,7 +22,7 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 
 ## 0 结论
 
-1. **只改本包的独占目录**（§1）：独占目录见 ENG-WP-LIST §1 与 `ownership.json`，越界由门禁 G3 拒绝。
+1. **只改本包的独占目录**（§1）：独占目录以 `ownership.json` 为准，越界由门禁 G3 拒绝。
 2. **共享文件不自己改**（§1）：工程共享件由 Codex 主线改，设计文档由主会话改；要改契约、全局着色器参数、着色器文件、程序集引用或 NuGet 包，写契约申请。
 3. **新模块用特性接入**（§1）：不改注册表、不改主场景、不加 Autoload。
 4. **代码边界和禁用写法的权威是 ENG-ARCH §2**，由门禁 G4 拦截；G4 拦不住的只有 §2 的两条。
@@ -36,10 +36,11 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 - **写 gen 或烘焙子任务**：随机只用契约的 `Rng` 与 `StableHash`，同机同输入同输出即可（ENG-ARCH §2，D-232）。
 - **跑构建、导入、烘焙、门禁或截图**：经构建锁排队，不绕过；只走命令行，不在编辑器里重存场景（§4）。
 - **写 Godot 代码前**：先读 `docs/godot-api/README.md`，用到的类、方法、属性都先在 `docs/godot-api/signatures.txt` 查到签名再写（D-145），着色语言查 `docs/godot-api/shaders/README.md`。
+- **写会追加值的枚举或观光规则**：几何不随时刻、季节、天气变；枚举的消费方写穷举 `switch`、`default` 报错，观光规则读 `IRuleset`（§2）。
 
 ## 1 改哪里
 
-- **只改本包的独占目录**：见 ENG-WP-LIST §1 的"独占目录"一列和 `ownership.json`；子包独占原包目录下的一个子目录（ENG-WP-LIST §2）。这是"同一批文件同一时间只有一个写者"的分工依据（WF-FLOW §2.1）。
+- **只改本包的独占目录**：以 `ownership.json` 为准；子包独占原包目录下的一个子目录（ENG-WP-LIST §2）。这是"同一批文件同一时间只有一个写者"的分工依据（WF-FLOW §2.1）。
 - **共享文件不自己改**：工程共享件（契约、csproj、`Directory.*.props`、`project.godot`、`ownership.json`、`gate.ps1`、`scripts/` 下的工程脚本等）由 Codex 主线直接提交推送；`docs/` 由主会话改。
 - **要提申请的事**：改契约、加全局着色器参数、加着色器文件、加程序集引用或 NuGet 包，都写成契约申请交 Codex 主线（§3）。
 - **新模块用特性接入**：接入特性的清单见 ENG-ARCH §2；不改注册表、不改主场景、不加 Autoload。
@@ -48,7 +49,7 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 ## 2 G4 拦不住的约定
 
 - **几何不随时季和天气变**：只走调色板、灯光通道、变体掩码和天气向量（SYS-TIME §0.1、SYS-WEATHER §0.1）。
-- **规则集与枚举**：观光专属常量读 `IRuleset`；会追加值的枚举写穷举 `switch`，`default` 报错（ENG-ROADMAP §3）。
+- **规则集与枚举**：观光专属常量读 `IRuleset`；会追加值的枚举写穷举 `switch`，`default` 报错（细则见 CORE-CONVENTIONS §3.6）。
 
 ## 3 契约申请与冻结
 
@@ -59,7 +60,7 @@ paths: ["game/**/*.cs", "game/**/*.gdshader*"]
 
 ## 4 构建与测试排队
 
-所有代理共用主检出 `E:\Project\UESTC_RPG`，`bin/`、`obj/`、`.godot/` 和烘焙缓存也共用。git 与回滚见 WF-RULE §7，防打架见 WF-FLOW §2，共享文件谁能改见 §1。引擎路径从环境变量 `UESTC_GODOT` 读命令行版 exe，门禁比对 `--version` 与 `tools/godot-version.txt`。
+Codex 侧的代理共用主检出 `E:\Project\UESTC_RPG`，`bin/`、`obj/`、`.godot/` 和烘焙缓存也共用；Claude 侧的施工在临时工作树里（WF-FLOW §3.1）。git 与回滚见 WF-RULE §7，防打架见 WF-FLOW §2，共享文件谁能改见 §1。引擎路径从环境变量 `UESTC_GODOT` 读命令行版 exe，门禁比对 `--version` 与 `tools/godot-version.txt`。
 
 1. **一次只跑一个**：`dotnet build`、`--headless --import`、烘焙、`gate.ps1`、截图和基准同一时刻只许一个在跑，用 `scripts\` 里那把锁（容量 1）排队。拿不到就等，不绕过：不另起进程抢跑，不删锁文件，不为赶时间并行。施工子代理默认不编译，构建由指挥在一批交回后统一跑（WF-FLOW §3.1）。
 2. **只走命令行**：不在编辑器里打开或重存场景，场景由代码生成；导入日志里不得有 `ERROR` 或 `SCRIPT ERROR`（G1）。截图类和性能类门禁要在交互式会话的窗口模式下跑。测量、验证一律后台跑：用命令行启动、读日志里的时间戳和结果，不用 computer use 去点击、截屏或操作作者的桌面。

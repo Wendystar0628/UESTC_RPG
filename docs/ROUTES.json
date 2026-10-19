@@ -74,7 +74,7 @@
   "SYS-MOTION-LIFE": "docs/systems/SYS-MOTION-LIFE-生命体与偶发事件.md",
   "SYS-SAVE": "docs/systems/SYS-SAVE-存档与持久化.md",
   "SYS-SAVE-FLOW": "docs/systems/SYS-SAVE-FLOW-保存时机与读档流程.md",
-  "SYS-SAVE-FORMAT": "docs/systems/SYS-SAVE-FORMAT-格式迁移损坏与安全.md",
+  "SYS-SAVE-FORMAT": "docs/systems/SYS-SAVE-FORMAT-格式损坏与安全.md",
   "SYS-TIME": "docs/systems/SYS-TIME-时间与季节.md",
   "SYS-TIME-LOOK": "docs/systems/SYS-TIME-LOOK-色彩脚本四季与灯光.md",
   "SYS-TITLE": "docs/systems/SYS-TITLE-开始页与启动.md",
@@ -167,6 +167,12 @@
     "WF-BUILD"
    ],
    "glob": "game/**/*.gdshader*"
+  },
+  {
+   "docs": [
+    "SYS-MAPS"
+   ],
+   "glob": "game/data/maps/**"
   },
   {
    "docs": [

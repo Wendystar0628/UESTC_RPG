@@ -28,13 +28,14 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 
 ### 0.1 接入要点
 
-- **写材质或着色器**：只经 `ToonSpec` 和调色板色名，只用白名单着色器（§1 第 1 条）
-- **想加光源、SubViewport、CompositorEffect、全屏通道或 Environment**：不得新增，只有 WP-01（渲染内核与舞台）、03、05 可以，先申请（§1 第 2 条）
-- **交付几何或碰撞**：经登记处按格交付；`Build()` 在工作线程上跑，不读世界状态和画面设置（§1 第 3、11、12、18 条）
-- **写逐帧代码**：零托管分配，不用 `System.Random`、`DateTime.Now`、`Stopwatch`（§1 第 4 条）；gen 里随机与哈希只用 `Rng`、`StableHash`（§1 第 22 条）
-- **要全局着色器参数**：先登记，运行时不增不读回（§1 第 13 条）
-- **读写 `user://`**：不用 `ResourceLoader`、`ResourceSaver`；存档只经 `ISaveService`（§1 第 19、23 条）
-- **要改 `project.godot`、`game/export_presets.cfg`、`Directory.Build.props`**：由主代理维护，申请（§2）
+- **写材质或着色器**：只经 `ToonSpec` 和调色板色名，只用白名单着色器，不逐物体建材质；着色器不用 `TIME`、`LIGHT_COLOR`，按距离判断用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`（§1 第 1、4、15 条）。
+- **想加光源、SubViewport、CompositorEffect、全屏通道或 Environment**：不得新增，先申请（§1 第 2 条）。
+- **运行时改渲染设置**：阴影开关、软影滤波、MSAA、TAA、FSR2、深度预通道、Environment 的各项开关会触发管线重编译，启动时定，运行时不改（§1 第 9 条）。
+- **交付几何或碰撞**：经登记处按格交付；`Build()` 在工作线程上跑，不读世界状态和画面设置，所以时刻、季节、天气不让任何烘焙产物失效（§1 第 3、11、12、18 条）。
+- **写逐帧代码**：零托管分配，不用 `System.Random`、`DateTime.Now`、`Stopwatch`（§1 第 4 条）。
+- **要全局着色器参数**：先登记，运行时不增不读回（§1 第 13 条）。
+- **读写 `user://`**：存档只经 `ISaveService`，不用 `ResourceLoader`、`ResourceSaver`（§1 第 19、23 条）。
+- **要改 `project.godot`、`export_presets.cfg`、`Directory.Build.props`**：由主代理维护，申请（§2）。
 
 ## 1 硬规则（违反任何一条都不能推送）
 
@@ -43,7 +44,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 1. **材质只用白名单着色器**：只经 `ToonSpec` 和调色板色名获得；白名单以 `ownership.json` 的 `shaderWhitelist` 为准，新增文件要主代理批准；禁止逐物体建材质，逐物体变化放顶点属性、`INSTANCE_CUSTOM` 或 instance uniform（ENG-ARCH §2）。
 2. **不得新增**光源、SubViewport、CompositorEffect、全屏通道、WorldEnvironment、Environment；只有 WP-01（渲染内核与舞台）、03、05 可以，先申请；WP-24（水体系统） 倒影视口已登记。
 3. **几何经登记处按格交付**，烘焙器按级别给一个典型误差，不逐件上报；全部级别烘焙成 TileBundle，`Build()` 在工作线程上跑，主线程不生成几何；只有内核创建渲染实例（`MeshInstance3D`、`MultiMeshInstance3D`、`OccluderInstance3D`，ENG-ARCH §2），静态几何经 RenderingServer 挂载。
-4. **计时与逐帧路径**：计时只由 WP-26（动态与偶发事件） 的通道驱动（世界时间例外）；钟点、季节、天气只在 WorldState 那一步推进；风、水、一拍二、雨丝只读 `anim_time`；`Engine.TimeScale` 固定 1，着色器不用 `TIME`；随机与计时的禁用写法见 ENG-ARCH §2（G4），例外是新游戏时取一次的天气种子；逐帧零托管分配，不在 `_Process` 里 `GetNode`；界面每秒刷新 ≤ 10 次，动效只改 `Modulate`、非容器的 `Position` / `Rotation`、instance uniform 和 `ui_night`，小地图与大地图是登记例外。
+4. **计时与逐帧路径**：计时只由 WP-26（动态与偶发事件） 的通道驱动（世界时间例外）；钟点、季节、天气只在 WorldState 那一步推进；风、水、一拍二、雨丝只读 `anim_time`；`Engine.TimeScale` 固定 1，着色器不用 `TIME`；禁用写法见 ENG-ARCH §2（G4）；逐帧零托管分配，不在 `_Process` 里 `GetNode`；界面每秒刷新 ≤ 10 次，动效只改 `Modulate`、非容器的 `Position` / `Rotation`、instance uniform 和 `ui_night`，小地图与大地图是登记例外。
 5. **纹理**：导入为 VRAM Compressed，数据纹理运行时创建；区域包不得自带大于 512² 的贴图。
 6. **容器**按 ENG-PERF §1.1 选；MultiMesh 不用实例色、成批整块写；GPUParticles3D 只作备选，用要批准。
 7. **顶点格式**：内核或烘焙器打包成压缩 20 B/顶点，每个表面 ≤ 65 536 个顶点，只用 ENG-PERF §2 登记的格式。
@@ -64,17 +65,16 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 19. **存档只走一条路**：只经 `ISaveService` 与 `[SaveSection]`，禁用 Godot Resource、ConfigFile、`StrToVar`、`BytesToVar*`、`GetVar`；只有 `Campus.Kernel.Save` 写 `user://saves`；快照不造成可见卡顿（主线程单帧 ≲ 1 ms），其余在线程池（SYS-SAVE-FORMAT §3）。
 20. **室内只在开放清单里**（WLD-INTERIORS-BUILD §5）：清单外的楼没有完整室内和楼内碰撞；可走性不随钟点、季节、天气变；会动的门只由观者位置触发，剧情锁门也只走运行时门体。
 21. **音频硬上限**：同时在播的声源数以 `game/audio/core/AudioVoicePool.cs` 为准；不在主线程同步加载素材；只有 `Campus.Audio.*` 能建播放器和改总线（SYS-AUDIO §1、§9）。
-22. **本机烘焙要确定**（D-165、D-232）：同一台机器上同一输入烘出同样的字节，不要求本机与别的机器逐字节一致；gen 与烘焙子任务的随机和哈希只用契约的 `Rng`、`StableHash`，不用 `System.Random`、系统时钟、`string.GetHashCode`、`Guid.NewGuid`，遍历字典、集合先排序。
-23. **`user://` 不用 Godot 资源格式**（D-165）：`ResourceLoader`、`ResourceSaver` 不得读写 `user://`；本机缓存用自定义 `.tbin`，每格按它用到的输入判鲜，不符就重烘（ENG-ARCH §4、ENG-PERF-STREAM §1）。
+22. **本机烘焙要确定**（D-165、D-232）：同一台机器上同一输入烘出同样的字节；gen 与烘焙子任务的随机、哈希和遍历顺序按 ENG-ARCH §2。
+23. **`user://` 不用 Godot 资源格式**（D-165）：`ResourceLoader`、`ResourceSaver` 不得读写 `user://`；本机缓存用自定义 `.tbin`（ENG-ARCH §4）。
 
 ## 2 工程设置
 
-`game/project.godot`、`game/export_presets.cfg`、`Directory.Build.props` 由主代理维护（WF-BUILD §1），改动要申请；已在 `game/project.godot` 里的值以该文件为准。运行时的规则：
+`game/project.godot`、`game/export_presets.cfg`、`Directory.Build.props` 由主代理维护（WF-BUILD §1），改动要申请；已在 `game/project.godot` 里的值以该文件为准。
 
 - **固定项**四预设相同，运行时一律不动（§1 第 9 条）；随画面设置改的项按 SYS-GRAPHICS §3 的类别改。
 - **渲染器**：Forward+；D3D12 不可用时回落 Vulkan，不回落兼容渲染器；渲染线程模式 Safe；导出开 Shader Baker（只烘 D3D12，要窗口模式导出）。
-- **深度与抗锯齿**：深度预通道开且不改（描线读 normal_roughness）；`screen_space_roughness_limiter` 关（会改坏材质 ID）；MSAA、TAA 关；渲染比例用 FSR1；`hdr_2d` 固定关。
-- **阴影与灯光**：不用带阴影的点光与聚光、引擎 Decal、反射探针；`force_vertex_shading` 关，否则 `light()` 不执行。
-- **剔除与帧节奏**：内置遮挡剔除开，离地 60 m 以上运行时关；垂直同步默认开；`low_processor_mode` 关（不做静止降频）。
-- **Environment**：背景用 Sky，环境光与反射源关，Tonemap Linear，Glow 常开，雾、体积雾、SSAO、SSIL、SSR、SDFGI 关，运行时不切。
+- **不用的引擎特性**（全项目唯一的清单）：SSAO、SSIL、SSR、SDFGI、体积雾、Environment 雾、反射探针、引擎 Decal、带阴影的点光与聚光；这些效果由自写的着色器与代理实现（ENG-PERF-LIGHT）。
+- **Environment**：背景用 Sky，环境光与反射源关，Tonemap Linear，Glow 常开，运行时不切。
+- **固定的渲染项**：深度预通道开且不改（描线读 normal_roughness），`screen_space_roughness_limiter`、MSAA、TAA、`hdr_2d` 关；`force_vertex_shading` 关，否则 `light()` 不执行。
 - **C#**：工作站并发 GC，雾幕结束后设 `SustainedLowLatency`。

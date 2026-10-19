@@ -51,7 +51,7 @@ gates: [G10]
 - **三层分工**：格子间的语义级别由流式管理器切换；网格内部的细节用网格 LOD，只换索引（D-172）；HLOD 与距离截断用 visibility range。植被按单株选级，不跟随格子（ENG-PERF-LIGHT §1）。四季共用一套模型和替身。
 - 级别过渡的做法见 ENG-PERF §1.2；前后两级平均明度差不超过 10%。
 
-**分块**：64 m 网格的四叉树，每张图一棵，覆盖本图包围盒（清水河约 ±1.5 km），格号 |ix|、|iz| < 512（SYS-MAPS §8）。预算按视角核算，格上限只是防呆：每格三角形约 50 万，不分级；单格产物约 10 MB 内（zstd），读入约 50 ms 内；L4 每图一份、≤ 4 MB，清水河约 26 万三角形。
+**分块**：64 m 网格的四叉树，每张图一棵，覆盖本图包围盒（清水河约 ±1.5 km），格号 |ix|、|iz| < 512（SYS-MAPS §8）。预算按视角核算，格上限只是防呆、不是内容上限，超了按 WF-RULE §15 的数量级判断：每格三角形约 50 万，不分级；单格产物约 10 MB 内（zstd），读入约 50 ms 内；L4 每图一份、≤ 4 MB，清水河约 26 万三角形。
 
 - 主线程每帧最多激活 1 格，不超过 1.0 ms；开放室内一帧挂一层，外围 O1 与校内共用这 1.0 ms（ENG-PERF-STREAM §1）。
 - **精度区**（ART-FIDELITY §0；数据由 WP-44（可行走范围、边界与安全点） 划分）：不改选级距离，只决定各级里生成什么，生成器读数据、不自己判断。K3–K5 的 L0+ 不加几何；K4 的 L0 不含生活痕迹、事件贴花、微构件与逐 1 m 避雷带支架，屋顶轮廓与设备体量照常；镜头飞近 K4 时 L0 照常加载；底线各区相同。
@@ -75,10 +75,10 @@ gates: [G10]
 
 做法见 ENG-PERF-LIGHT §2，阴影方向、强度、月影与天气修正的取值见 ART-SKYLIGHT §3.1，这里只列分级与预算参数。
 
-- **阴影**：一盏 DirectionalLight3D，太阳与月亮轮流；PSSM 4 级，split 0.03 / 0.12 / 0.40（约 48 / 192 / 640 m），均衡与流畅 2 级；`LightAngularDistance` 为 0（不开 PCSS），软影滤波固定 Soft Medium；不用 SSAO。图尺寸、级联、距离随预设（ENG-BUDGET §2）；介质为室内时主光第一级范围缩到 8–12 m（0.5 s 过渡）。
-- **后期**：Compositor 在 POST_SKY 画描线与边缘光，POST_TRANSPARENT 画移轴与光斑，之后 Glow、Tonemap Linear、LUT、抗锯齿（精致、极致 SMAA 1x，均衡、流畅 FXAA；不用 TAA、MSAA）。合计约 1.3–2.4 ms。移轴、光斑、光柱、暗角玩家可关，关时 0.5 s 淡出。
+- **阴影**：一盏 DirectionalLight3D，太阳与月亮轮流；PSSM 4 级（均衡 2 级），级联边界、图尺寸与距离以 `game/kernel/lighting/ShadowSettings.cs` 为准；`LightAngularDistance` 为 0（不开 PCSS），软影滤波固定 Soft Medium；介质为室内时主光第一级范围缩到 8–12 m（0.5 s 过渡）。
+- **后期**：Compositor 在 POST_SKY 画描线与边缘光，POST_TRANSPARENT 画移轴与光斑，之后 Glow、Tonemap Linear、LUT、抗锯齿（SMAA 或 FXAA 随预设，SYS-GRAPHICS §1）。移轴、光斑、光柱、暗角玩家可关，关时 0.5 s 淡出。
 - **光柱**：室外每屏几根，室内同屏几组，计入楼内额度；细尘每屏几百粒。
-- **倒影**：独立 World3D 的 SubViewport，每轴 1/4 分辨率，每帧只给一个湖，每 2–4 帧更新。
+- **倒影**：SubViewport 每轴 1/4 分辨率，每帧只给一个湖，更新间隔随预设。
 - **灯**：不建真实点光，全部走灯表（含开放入口的门口灯）。
 
 ## 5 待验证（P0）

@@ -546,9 +546,10 @@
     {
       "id": "qsh:node:7867995301",
       "kind": "poi",
-      "name": "孙立人像",
+      "name": "吴立人像",
+      "note": "名称按实际雕像修正",
       "props": {
-        "name": "孙立人像",
+        "name": "吴立人像",
         "category": "landscape",
         "subcategory": "landmark",
         "kind": "poi",
