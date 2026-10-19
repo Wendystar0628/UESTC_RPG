@@ -42,7 +42,7 @@ gates: []
 | INV-6 | 不出现 NPC 和他人，也不加人物剪影，人只以生活痕迹出现；玩家自己的角色是唯一例外（D-182）。展陈里不出现人物肖像；声音里没有听得清的人声 | WLD-LIFE、SYS-WALK、WLD-INTERIORS、SYS-AUDIO |
 | INV-7 | 日本元素仅限日常街景；边界以 ART-STYLE 为准，物件与分区见 ART-AMBIENCE；室内与声音同样适用 | ART-STYLE、ART-AMBIENCE、WLD-INTERIORS、SYS-AUDIO |
 | INV-8 | 世界状态只有时刻、季节、天气三个量。世界时间在一个实例内只向前，新游戏、读档是换实例，不算倒流；几何、碰撞和门的静止状态不随这三个量变；切换自然过渡，每种组合都要好看 | SYS-TIME、SYS-WEATHER、SYS-SAVE |
-| INV-9 | 不是地图复刻：保留大体的平面格局（楼、路、水体的位置与形状），竖向地形主动设计（D-180），其余按氛围风格化；地图只改项目的世界文件并写明理由，不从 OSM 等外部地图取数据（D-252、D-253） | CORE-INDEX §2、WLD-TERRAIN、SYS-MAPS、MAP-QSH-ADDITIONS |
+| INV-9 | 不是地图复刻：保留大体的平面格局（楼、路、水体的位置与形状），竖向地形主动设计（D-180），其余按氛围风格化；地图只改项目的世界文件并写明理由，不从 OSM 等外部地图取数据（D-252、D-253） | CORE-SCOPE §1、WLD-TERRAIN、SYS-MAPS、MAP-QSH-ADDITIONS |
 | INV-10 | 所有动态和声音都轻、慢、持续；偶发事件极少，数量与例外以 SYS-MOTION-LIFE §3 为准 | SYS-MOTION、SYS-AUDIO |
 | INV-11 | 看得见的东西在任何位置、任何距离都满足视觉精度的底线：比例对，有倒角和收边，没有光秃的拉伸体块，不穿帮、不跳变，外观全新不做旧，包括只有旁观飞行才到的地方；细节密度按精度区分级，越常被近看越密 | ART-FIDELITY、ART-RENOVATION、WLD-OUTSKIRTS、WLD-INTERIORS |
 | INV-12 | 满足性能预算与硬规则；安装包不设体积上限，按数量级看与内容是否相称（D-125） | ENG-BUDGET、ENG-BUDGET-RULES、ENG-PERF |

@@ -232,12 +232,12 @@ def code_pattern(codes):
 
 
 def index_domains(index_text, pattern):
-    """CORE-INDEX §1 的域与主文档，顺序照原文：[(域名, [编码…])]。域是加粗名字开头的段，段里先出现的编码是它的主文档；
-    一份文档只归第一次出现的那个域，所以后面"常用脚本"这类段里顺带提到的不算。"""
-    m = re.search(r'^## 1 .*?(?=^## 2 )', index_text, re.S | re.M)
+    """CORE-INDEX §1 文档地图里的域与主文档，顺序照原文：[(域名, [编码…])]。域是"**名字**（`文件夹`）"开头的段，
+    段里先出现的编码是它的主文档；"信息在哪""仓库目录"这类不带文件夹的段不算域，一份文档只归第一次出现的那个域。"""
+    m = re.search(r'^## 1 .*?(?=^## |\Z)', index_text, re.S | re.M)
     seen, out = set(), []
     for block in re.split(r'\n(?=\*\*)', m.group(0) if m else ''):
-        name = re.match(r'\*\*([^*]+)\*\*', block)
+        name = re.match(r'\*\*([^*]+)\*\*（', block)
         codes = [c for c in dict.fromkeys(pattern.findall(block)) if c not in seen]
         if name and codes:
             seen.update(codes)

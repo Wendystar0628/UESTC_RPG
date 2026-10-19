@@ -83,7 +83,7 @@ for code, d in docs.items():
 
 # 导航树（WF-DOC §5.1）：主文档要列在 CORE-INDEX §1，子文档写 parent 并列在主文档里；不许有孤儿文档
 index = docs.get('CORE-INDEX', {}).get('text', '')
-m = re.search(r'^## 1 .*?(?=^## 2 )', index, re.S | re.M)
+m = re.search(r'^## 1 .*?(?=^## |\Z)', index, re.S | re.M)
 index1 = m.group(0) if m else ''
 for code, d in docs.items():
     if code == 'CORE-INDEX' or d['fm'].get('category') in RECORDS:

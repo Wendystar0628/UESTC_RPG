@@ -19,6 +19,7 @@
   "CORE-GLOSSARY": "docs/core/CORE-GLOSSARY-术语表.md",
   "CORE-INDEX": "docs/README.md",
   "CORE-INVARIANTS": "docs/core/CORE-INVARIANTS-全局不变量.md",
+  "CORE-SCOPE": "docs/core/CORE-SCOPE-作品与范围.md",
   "ENG-ARCH": "docs/engineering/ENG-ARCH-工程架构.md",
   "ENG-BUDGET": "docs/engineering/ENG-BUDGET-性能预算.md",
   "ENG-BUDGET-LOD": "docs/engineering/ENG-BUDGET-LOD-细节级别与速度律.md",
