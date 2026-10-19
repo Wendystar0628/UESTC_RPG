@@ -12,6 +12,7 @@ internal static partial class TerrainCompiler
         var (builder, program) = Construct(context, sources);
         try
         {
+            ValidateFinalPads(builder, program);
             ValidateSourceRoadWaterCrossings(builder);
             ValidateProgram(builder, program);
         }

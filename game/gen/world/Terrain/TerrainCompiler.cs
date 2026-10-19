@@ -117,7 +117,6 @@ internal static partial class TerrainCompiler
         {
             ValidateFinalRoadAnchors(builder, program);
             ValidatePadOverlaps(builder);
-            ValidateFinalPads(builder, program);
         }
         catch (WorldDataException error)
         {

@@ -93,7 +93,7 @@ public sealed partial class TerrainCompilerTests
                 Parts = wings.Select((wing, index) => new WorldFeaturePart("fixture:wing:" + index,
                     new PolygonGeometry(wing), null, null) { Props = Kind("building") }).ToArray()
             };
-            var terrain = Compile([], [building]);
+            var terrain = TerrainCompiler.CompileAndValidate(Context([building]), []);
             AssertThat(Math.Abs((double)(0) - (double)(terrain.PadY(building.Id))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue();
             AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(-2, 0))) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(terrain.HeightAt(2, 0))) <= TestTolerance.Position).IsTrue();
         }
