@@ -5,6 +5,7 @@
      （同一张图下 *-tbin-N 只留 N 最大的）；
   3. 已删工程留下的 bin/、obj/：所在目录里已经没有 .csproj；
   4. git 已失效的工作树登记（git worktree prune）；还登记着的工作树只列出，不删。
+观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录（作者还要看）。
 按提交轮次而不按时间算：不开发就没有提交，什么都不会过期。
 
 用法：
@@ -12,6 +13,7 @@
   python -I -X utf8 scripts/build/clean_artifacts.py --delete       删掉它们
   python -I -X utf8 scripts/build/clean_artifacts.py --commits 10   改轮次
 """
+import json
 import os
 import re
 import shutil
@@ -91,8 +93,26 @@ def orphan_builds():
     return out
 
 
+def linked():
+    """观察台未结的审计项与通知引用的 output/ 下文件（绝对路径）：dashboard/data/curated/*.js 是 Dash.put(名, {...}); 的本地数据。"""
+    out = set()
+    for name in ('audit', 'notices'):
+        f = os.path.join(ROOT, 'dashboard', 'data', 'curated', name + '.js')
+        if not os.path.isfile(f):
+            continue
+        text = open(f, encoding='utf-8').read().strip()
+        start, end = text.find('{'), text.rfind('}')
+        if start < 0 or end < start:
+            continue
+        for item in json.loads(text[start:end + 1]).get('items', []):
+            link = item.get('link') or ''
+            if item.get('status') != 'done' and link.startswith('output/'):
+                out.add(os.path.normpath(os.path.join(ROOT, link)))
+    return out
+
+
 def stale(commits=COMMITS):
-    """返回可删的绝对路径（四类合在一起）。"""
+    """返回可删的绝对路径（四类合在一起），去掉观察台还引用着的。"""
     out = old_formats() + orphan_builds()
     before = cutoff(commits)
     if before is not None and os.path.isdir(OUT):
@@ -100,6 +120,8 @@ def stale(commits=COMMITS):
         cache = os.path.join(OUT, 'cache')
         if os.path.isdir(cache):
             out += aged(cache, before, 1, skip=CACHE_KEEP)
+    keep = linked()
+    out = [p for p in out if not any(k == os.path.normpath(p) or k.startswith(os.path.normpath(p) + os.sep) for k in keep)]
     return sorted(set(out))
 
 
