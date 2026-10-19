@@ -13,7 +13,7 @@ internal static partial class TerrainCompiler
         var support = new MapRect(new(patches.Min(box => box.Min.X), patches.Min(box => box.Min.Y)),
             new(patches.Max(box => box.Max.X), patches.Max(box => box.Max.Y)));
         var channels = b.Water.Where(water => water.Channel && !water.Underground).ToArray();
-        var zeroBand = new TerrainNode("compiled-zero-band-core", "overlay/terrain", default, TerrainGroup.ZeroBandCore, 0, support,
+        var zeroBand = new TerrainNode("compiled-zero-band-core", "world", default, TerrainGroup.ZeroBandCore, 0, support,
             (previous, x, z) =>
             {
                 if (previous.Surface == TerrainDifferential.Constant(0)) return previous;
@@ -107,7 +107,7 @@ internal static partial class TerrainCompiler
         var patches = b.LandBeforeCorridors.Nodes.Where(node => node.Group == TerrainGroup.Pad).Select(node => node.Support).ToArray();
         var support = new MapRect(new(patches.Min(box => box.Min.X), patches.Min(box => box.Min.Y)),
             new(patches.Max(box => box.Max.X), patches.Max(box => box.Max.Y)));
-        b.Nodes.Add(new("compiled-pad-cores", "overlay/terrain", default, TerrainGroup.PadCore, 0, support,
+        b.Nodes.Add(new("compiled-pad-cores", "world", default, TerrainGroup.PadCore, 0, support,
             (previous, x, z) =>
             {
                 var beforeRoads = b.LandBeforeCorridors.Evaluate(x, z);

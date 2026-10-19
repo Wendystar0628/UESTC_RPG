@@ -10,25 +10,25 @@ namespace Campus.Gen.Zones.Core;
 public static class CoreIds
 {
     private const string OsmPrefix = "qsh";
-    private static readonly OsmFeatureIds LibraryIdentity = OsmFeatureIds.Way(OsmPrefix, 806848396);
-    private static readonly OsmFeatureIds MuseumIdentity = OsmFeatureIds.Way(OsmPrefix, 806848402);
-    public static readonly FeatureId TimePlaza = new(OsmFeatureIds.Way(OsmPrefix, 552968505).Entity);
+    private static readonly WorldFeatureIds LibraryIdentity = WorldFeatureIds.Way(OsmPrefix, 806848396);
+    private static readonly WorldFeatureIds MuseumIdentity = WorldFeatureIds.Way(OsmPrefix, 806848402);
+    public static readonly FeatureId TimePlaza = new(WorldFeatureIds.Way(OsmPrefix, 552968505).Entity);
     /// <summary>Grand stair base of the library (8398): the axis runs from the plaza centre to it.</summary>
-    public static readonly FeatureId LibraryStair = new(OsmFeatureIds.Way(OsmPrefix, 806848398).Entity);
+    public static readonly FeatureId LibraryStair = new(WorldFeatureIds.Way(OsmPrefix, 806848398).Entity);
     public static readonly FeatureId Library = new(LibraryIdentity.Entity);
     public static readonly FeatureId Museum = new(MuseumIdentity.Entity);
     /// <summary>品·悦吧 store front (8407) against the podium's north-east end: the 1F cafe door (lib.cafe) opens beside it.</summary>
-    public static readonly FeatureId CafeStore = new(OsmFeatureIds.Way(OsmPrefix, 806848407).Entity);
+    public static readonly FeatureId CafeStore = new(WorldFeatureIds.Way(OsmPrefix, 806848407).Entity);
 
     /// <summary>16e: the library's north blocks this zone builds (WLD-INTERIORS), each its own entity.</summary>
-    public static readonly FeatureId NorthAnnex = new(OsmFeatureIds.Way(OsmPrefix, 806848403).Entity);
-    public static readonly FeatureId CourtWing = new(OsmFeatureIds.Way(OsmPrefix, 806848406).Entity);
-    public static readonly FeatureId LowBlock = new(OsmFeatureIds.Way(OsmPrefix, 806848408).Entity);
-    public static readonly FeatureId NorthWestLink = new(OsmFeatureIds.Way(OsmPrefix, 806848409).Entity);
-    public static readonly FeatureId NorthWestJoint = new(OsmFeatureIds.Way(OsmPrefix, 806848410).Entity);
+    public static readonly FeatureId NorthAnnex = new(WorldFeatureIds.Way(OsmPrefix, 806848403).Entity);
+    public static readonly FeatureId CourtWing = new(WorldFeatureIds.Way(OsmPrefix, 806848406).Entity);
+    public static readonly FeatureId LowBlock = new(WorldFeatureIds.Way(OsmPrefix, 806848408).Entity);
+    public static readonly FeatureId NorthWestLink = new(WorldFeatureIds.Way(OsmPrefix, 806848409).Entity);
+    public static readonly FeatureId NorthWestJoint = new(WorldFeatureIds.Way(OsmPrefix, 806848410).Entity);
     /// <summary>The north-east connector and bridge (8404, 8405, 16f): here only as blocks the north walls stand against.</summary>
-    public static readonly FeatureId NorthEastConnector = new(OsmFeatureIds.Way(OsmPrefix, 806848404).Entity);
-    public static readonly FeatureId NorthEastBridge = new(OsmFeatureIds.Way(OsmPrefix, 806848405).Entity);
+    public static readonly FeatureId NorthEastConnector = new(WorldFeatureIds.Way(OsmPrefix, 806848404).Entity);
+    public static readonly FeatureId NorthEastBridge = new(WorldFeatureIds.Way(OsmPrefix, 806848405).Entity);
 
     /// <summary>Ring steps of the sunken plaza: registered so the axis corridor's steps interval names a real structure.</summary>
     public static readonly FeatureId PlazaRingSteps = new("design:core-plaza-ring-steps");
@@ -38,17 +38,17 @@ public static class CoreIds
     public const string PlazaBenchPrefix = "design:core-plaza-bench-";
 
     /// <summary>Source parts of the library entity (WorldFeaturePart.SourceId, MAP-QSH-CORE "数据定位").</summary>
-    public static readonly string LibraryCore = OsmFeatureIds.Way(OsmPrefix, 806848395).Part;
+    public static readonly string LibraryCore = WorldFeatureIds.Way(OsmPrefix, 806848395).Part;
     public static readonly string LibraryWings = LibraryIdentity.Part;
-    public static readonly string LibraryPodium = OsmFeatureIds.Way(OsmPrefix, 806848397).Part;
-    public static readonly string LibraryTowerNe = OsmFeatureIds.Way(OsmPrefix, 806848391).Part;
+    public static readonly string LibraryPodium = WorldFeatureIds.Way(OsmPrefix, 806848397).Part;
+    public static readonly string LibraryTowerNe = WorldFeatureIds.Way(OsmPrefix, 806848391).Part;
     /// <summary>The south-east corner block is the front square tower facing the time plaza (正面方塔).</summary>
-    public static readonly string LibraryTowerSe = OsmFeatureIds.Way(OsmPrefix, 806848392).Part;
-    public static readonly string LibraryTowerNw = OsmFeatureIds.Way(OsmPrefix, 806848393).Part;
-    public static readonly string LibraryTowerSw = OsmFeatureIds.Way(OsmPrefix, 806848394).Part;
+    public static readonly string LibraryTowerSe = WorldFeatureIds.Way(OsmPrefix, 806848392).Part;
+    public static readonly string LibraryTowerNw = WorldFeatureIds.Way(OsmPrefix, 806848393).Part;
+    public static readonly string LibraryTowerSw = WorldFeatureIds.Way(OsmPrefix, 806848394).Part;
 
     /// <summary>Source parts of the museum entity: the hall body (8401) and the colonnade ring round it (8402, its hole is 8401).</summary>
-    public static readonly string MuseumHall = OsmFeatureIds.Way(OsmPrefix, 806848401).Part;
+    public static readonly string MuseumHall = WorldFeatureIds.Way(OsmPrefix, 806848401).Part;
     public static readonly string MuseumRing = MuseumIdentity.Part;
 
     public const string LibraryRoofFace = "design:core-library-roof-face";
@@ -77,19 +77,19 @@ public static class CoreIds
         (MuseumNorthFace, "design:core-museum-ring-edge-8"),
     ];
     public const string GardenPalmPrefix = "design:core-quiet-garden-palm-";
-    public static readonly string GinkgoAvenue = OsmFeatureIds.Way(OsmPrefix, 544688571).Source;
+    public static readonly string GinkgoAvenue = WorldFeatureIds.Way(OsmPrefix, 544688571).Source;
     public const string GinkgoWalkWest = "design:core-ginkgo-walk-west";
     public const string GinkgoWalkEast = "design:core-ginkgo-walk-east";
     public static readonly string[] GinkgoWalks = [GinkgoWalkWest, GinkgoWalkEast];
     public static readonly (string Hidden, string Walk, string Kept)[] GinkgoSidewalks =
     [
-        (OsmFeatureIds.Way(OsmPrefix, 544161548).Source, GinkgoWalkWest, "design:core-ginkgo-sidewalk-west-bridge"),
-        (OsmFeatureIds.Way(OsmPrefix, 544161558).Source, GinkgoWalkEast, "design:core-ginkgo-sidewalk-east-bridge"),
+        (WorldFeatureIds.Way(OsmPrefix, 544161548).Source, GinkgoWalkWest, "design:core-ginkgo-sidewalk-west-bridge"),
+        (WorldFeatureIds.Way(OsmPrefix, 544161558).Source, GinkgoWalkEast, "design:core-ginkgo-sidewalk-east-bridge"),
     ];
     // OSM side paths whose end reached into the east walk's paving: hidden whole, re-added cut back to 2.5 m off its centre line.
     public static readonly (string Hidden, string Kept)[] GinkgoSpurs =
     [
-        (OsmFeatureIds.Way(OsmPrefix, 572770116).Source, "design:core-ginkgo-spur-572770116"),
-        (OsmFeatureIds.Way(OsmPrefix, 572770120).Source, "design:core-ginkgo-spur-572770120"),
+        (WorldFeatureIds.Way(OsmPrefix, 572770116).Source, "design:core-ginkgo-spur-572770116"),
+        (WorldFeatureIds.Way(OsmPrefix, 572770120).Source, "design:core-ginkgo-spur-572770120"),
     ];
 }

@@ -71,7 +71,7 @@ internal static class WaterfrontWindows
         }
     }
 
-    private static IEnumerable<PolygonRings> Polygons(OverlayGeometry geometry) => geometry switch
+    private static IEnumerable<PolygonRings> Polygons(WorldGeometry geometry) => geometry switch
     {
         PolygonGeometry polygon => [polygon.Rings],
         MultiPolygonGeometry multi => multi.Polygons,

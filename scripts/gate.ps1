@@ -265,7 +265,7 @@ $saveChanges = @()
 if (-not ($Full -or $Smoke -or $Only.Count)) {
     $startupChanges = @(Get-UESTCAttributedChanges $root $BaseRef $runtimeChanges 'Kernel(?:Service|Node)')
     $walkChanges = @($runtimeChanges | Where-Object {
-        $_ -match '^game/(camera/walk/|kernel/collision/|gen/(collision|ground)/|contracts/((?:Runtime/)?Spatial/(Walk|WaterTraversal|Collision|Stair)|Foundation/Terrain))|^game/data/maps/[^/]+/(world/|nav/|waypoints\.json$|overlay/(terrain/|walkable\.overlay\.json$))'
+        $_ -match '^game/(camera/walk/|kernel/collision/|gen/(collision|ground)/|contracts/((?:Runtime/)?Spatial/(Walk|WaterTraversal|Collision|Stair)|Foundation/Terrain))|^game/data/maps/[^/]+/(world/|nav/|waypoints\.json$|overlay/walkable\.overlay\.json$)'
     })
     $saveChanges = @(@($runtimeChanges | Where-Object {
         $_ -match '^game/(kernel/save/|contracts/(?:Runtime/)?Save/)|^game/.*Save[^/]*\.cs$'

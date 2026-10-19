@@ -71,7 +71,7 @@ internal static partial class TerrainCompiler
             }
         }
         builder.RangeBound += TerrainSampling.MaximumHeight - TerrainSampling.MinimumHeight;
-        if (!double.IsFinite(builder.RangeBound)) throw new WorldDataException("overlay/terrain", "range", "Terrain operation amplitudes overflow.");
+        if (!double.IsFinite(builder.RangeBound)) throw new WorldDataException("world", "range", "Terrain operation amplitudes overflow.");
         var ordered = builder.Operations.Values.OrderBy(Group).ThenBy(op => op.Priority).ThenBy(op => op.Id, StringComparer.Ordinal).ToArray();
         foreach (var op in ordered)
         {

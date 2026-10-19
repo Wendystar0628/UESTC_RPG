@@ -10,14 +10,14 @@ contributors: [WP-08, WP-13, WP-15, WP-23, WP-25]
 depends: [CORE-INDEX, MAP-QSH-TERRAIN, WLD-TERRAIN, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-CENTER-EAST, SYS-WALK]
 related: [MAP-QSH-LIBRARY, MAP-QSH-ADDITIONS, WLD-WATER, WLD-OUTSKIRTS, WLD-VEGETATION, UI-NAV]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/terrain/"]
+data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G7, G15]
 ---
 
 # MAP-QSH-TERRAIN-DISTRICTS · 十处分区地形
 
 > **范围**：本文规定清水河十处分区的地形设计：中轴广场与图书馆、银杏大道、西湖与红枫丘、东湖、河渠与箱涵、宿舍区、运动场与体育区、食堂与商业街、教学科研区、校门与校界各自的标高、坡度、连接和对点位的约束，以及五份地形文件各管什么。
-> **不在本文**：全图骨架、红枫丘、揭示路线、各水体常水位（MAP-QSH-TERRAIN）；验收镜头、冲突检查与点位标高（MAP-QSH-TERRAIN-CHECKS）；地形的通用规则（WLD-TERRAIN）；各操作的坐标与实体 ID（`game/data/maps/qingshuihe/overlay/terrain/`，以它们为准）；各区楼与构筑物的外观（各区文档）；水面画法（WLD-WATER）。
+> **不在本文**：全图骨架、红枫丘、揭示路线、各水体常水位（MAP-QSH-TERRAIN）；验收镜头、冲突检查与点位标高（MAP-QSH-TERRAIN-CHECKS）；地形的通用规则（WLD-TERRAIN）；各操作的坐标与实体 ID（`game/data/maps/qingshuihe/world/`，以它们为准）；各区楼与构筑物的外观（各区文档）；水面画法（WLD-WATER）。
 > **查阅**：先读 §0；文件归属看 §1；中轴广场与图书馆看 §2，银杏大道看 §3，西湖与红枫丘看 §4，东湖看 §5，河渠与箱涵看 §6，宿舍区看 §7，运动场看 §8，食堂与商业街看 §9，教学科研区看 §10，校门与校界看 §11
 
 ## 0 结论

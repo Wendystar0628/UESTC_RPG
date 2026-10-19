@@ -17,12 +17,12 @@ public sealed record Polyline(IReadOnlyList<Vector2> Points);
 [JsonDerivedType(typeof(PolylineGeometry), "polyline")]
 [JsonDerivedType(typeof(MultiPolygonGeometry), "multiPolygon")]
 [JsonDerivedType(typeof(PointGeometry), "point")]
-public abstract record OverlayGeometry;
-public sealed record PolygonGeometry(PolygonRings Rings) : OverlayGeometry;
-public sealed record PolylineGeometry(Polyline Line) : OverlayGeometry;
-public sealed record MultiPolygonGeometry(IReadOnlyList<PolygonRings> Polygons) : OverlayGeometry;
+public abstract record WorldGeometry;
+public sealed record PolygonGeometry(PolygonRings Rings) : WorldGeometry;
+public sealed record PolylineGeometry(Polyline Line) : WorldGeometry;
+public sealed record MultiPolygonGeometry(IReadOnlyList<PolygonRings> Polygons) : WorldGeometry;
 /// <summary>A non-area POI in world X/Y/Z; Y is its known ground height or zero when unavailable.</summary>
-public sealed record PointGeometry(Vector3 Position) : OverlayGeometry;
+public sealed record PointGeometry(Vector3 Position) : WorldGeometry;
 
 // Open-ended vocabulary keys. New building/appearance families are data additions, not enum renumbering.
 public readonly record struct BuildingFamily(string Value);
@@ -30,10 +30,10 @@ public readonly record struct FacadePreset(string Value);
 public readonly record struct DesignKind(string Value);
 
 /// <summary>One source geometry of an entity, retaining its own height and storey count. SourceId is provenance, not a FeatureId.</summary>
-public sealed record WorldFeaturePart(string SourceId, OverlayGeometry Geometry, float? Height, int? Storeys)
+public sealed record WorldFeaturePart(string SourceId, WorldGeometry Geometry, float? Height, int? Storeys)
 {
     /// <summary>Optional source-derived facade layout; Geometry retains the detailed physical footprint.</summary>
-    public OverlayGeometry? FacadeGeometry { get; init; }
+    public WorldGeometry? FacadeGeometry { get; init; }
     public JsonElement? Props { get; init; }
 }
 
@@ -42,7 +42,7 @@ public sealed record WorldFeaturePart(string SourceId, OverlayGeometry Geometry,
 /// When Parts is non-empty, generators build each part and must not additionally build aggregate Geometry.
 /// Simple design features may leave Parts empty and generate directly from Geometry.
 /// </summary>
-public sealed record WorldFeature(FeatureId Id, DesignKind Kind, OverlayGeometry Geometry)
+public sealed record WorldFeature(FeatureId Id, DesignKind Kind, WorldGeometry Geometry)
 {
     public IReadOnlyList<WorldFeaturePart> Parts { get; init; } = [];
     public string? Name { get; init; }

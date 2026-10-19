@@ -262,7 +262,7 @@ public sealed class WestModuleTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void TerrainOverlayParsesAndKeepsTheA10PlazaAndTheGatesLevel()
     {
-        var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "overlay", "terrain", "west.terrain.json")));
+        var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "world", "west.terrain.json")));
         AssertThat(file.Zone.Value == "west" && file.Owner.Value == "WP-19").OverrideFailureMessage("the file belongs to WP-19's west zone").IsTrue();
         AssertThat(file.Ops.All(o => o.Id.StartsWith(WestIds.TerrainPrefix, StringComparison.Ordinal) && o.Zone.Value == "west")).OverrideFailureMessage("ids and zones").IsTrue();
         var low = file.Ops.OfType<TerrainPlatformOp>().Single(o => o.Id == WestIds.WetlandLow);
@@ -358,7 +358,7 @@ public sealed class WestModuleTests
     public void FourFanLawnIsAShallowDish()
     {
         var world = World();
-        var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "overlay", "terrain", "west.terrain.json")));
+        var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "world", "west.terrain.json")));
         var dish = file.Ops.OfType<TerrainBasinOp>().Single(o => o.Id == WestIds.FourFanLawn);
         AssertThat(dish.Height > 0 && dish.Shape is TerrainCircle { Radius: > 0 } c && Vector2.Distance(c.Center, F4.LawnCentre(world)) < TestTolerance.Position).OverrideFailureMessage("the fan lawn is a shallow circular dish centred on the authored layout").IsTrue();
     }

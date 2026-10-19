@@ -65,7 +65,7 @@ public sealed record TerrainBasinOp(string Id, string Reason, TerrainShape Shape
 /// PolylineGeometry requires Width and no From/To; line order establishes the Y0-to-Y1 direction.
 /// MultiPolygonGeometry and PointGeometry are explicitly rejected in stage 1.
 /// </summary>
-public sealed record TerrainSlopeOp(string Id, string Reason, OverlayGeometry Geometry, double Y0, double Y1,
+public sealed record TerrainSlopeOp(string Id, string Reason, WorldGeometry Geometry, double Y0, double Y1,
     double CrossFall, TerrainSide Side, double Fillet, Vector2? From = null, Vector2? To = null,
     double? Width = null, int Priority = 200) : TerrainOp(Id, Reason, Priority);
 

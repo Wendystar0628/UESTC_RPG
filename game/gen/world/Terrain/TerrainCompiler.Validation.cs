@@ -41,13 +41,13 @@ internal static partial class TerrainCompiler
                     var sample = program.Evaluate(x, z); var h = sample.Surface.Height;
                     var grade = Math.Sqrt(sample.Surface.Dx * sample.Surface.Dx + sample.Surface.Dz * sample.Surface.Dz);
                     if (h < TerrainSampling.MinimumHeight || h > TerrainSampling.MaximumHeight)
-                        throw new WorldDataException("overlay/terrain", "height", $"Unclamped height {h:R} at ({x}, {z}) is outside [-5,10].");
+                        throw new WorldDataException("world", "height", $"Unclamped height {h:R} at ({x}, {z}) is outside [-5,10].");
                     if (grade > 1 + TerrainMath.GradeTolerance || grade > 0.5 + TerrainMath.GradeTolerance && sample.Class != TerrainClass.Transition)
-                        throw new WorldDataException("overlay/terrain", "grade", $"Final composed grade {grade:R} at ({x}, {z}) exceeds its terrain class limit. {program.Explain(x, z)}");
+                        throw new WorldDataException("world", "grade", $"Final composed grade {grade:R} at ({x}, {z}) exceeds its terrain class limit. {program.Explain(x, z)}");
                     var protectedBand = sample.BoundaryWeight?.Height == 0;
                     var channel = b.Water.Any(w => w.Channel && !w.Underground && w.Region.Contains(x, z));
                     if (protectedBand && Math.Abs(h) > TerrainMath.HeightTolerance && !channel)
-                        throw new WorldDataException("overlay/terrain", "zeroBand", $"Height {h:R} at ({x}, {z}) changes the protected campus zero band/outside area. {program.Explain(x, z)}");
+                        throw new WorldDataException("world", "zeroBand", $"Height {h:R} at ({x}, {z}) changes the protected campus zero band/outside area. {program.Explain(x, z)}");
                     minimum = Math.Min(minimum, h); maximum = Math.Max(maximum, h); maximumGrade = Math.Max(maximumGrade, grade); count++;
                 }
         }
@@ -90,7 +90,7 @@ internal static partial class TerrainCompiler
                 var a = pads[i].Value; var c = pads[j].Value;
                 if (a.Bounds.Max.X <= c.Bounds.Min.X || c.Bounds.Max.X <= a.Bounds.Min.X || a.Bounds.Max.Y <= c.Bounds.Min.Y || c.Bounds.Max.Y <= a.Bounds.Min.Y) continue;
                 var overlap = a.InteriorOverlaps(c);
-                if (overlap) throw new WorldDataException("overlay/terrain", "pad", $"Overlapping pads '{pads[i].Key.Value}' and '{pads[j].Key.Value}' differ by more than 0.15 m.");
+                if (overlap) throw new WorldDataException("world", "pad", $"Overlapping pads '{pads[i].Key.Value}' and '{pads[j].Key.Value}' differ by more than 0.15 m.");
             }
     }
 }

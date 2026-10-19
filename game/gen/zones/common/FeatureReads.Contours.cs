@@ -83,7 +83,7 @@ public static partial class FeatureReads
         return distance <= WorldFeatureGeometry.SelectionEndpointTolerance * WorldFeatureGeometry.SelectionEndpointTolerance ? best : -1;
     }
 
-    private static IReadOnlyList<IReadOnlyList<Vector2>> ContourOuters(OverlayGeometry geometry, string selectionId) => geometry switch
+    private static IReadOnlyList<IReadOnlyList<Vector2>> ContourOuters(WorldGeometry geometry, string selectionId) => geometry switch
     {
         PolygonGeometry polygon => [polygon.Rings.Outer],
         MultiPolygonGeometry multi => multi.Polygons.Select(p => p.Outer).ToArray(),

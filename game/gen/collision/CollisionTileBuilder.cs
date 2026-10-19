@@ -96,7 +96,7 @@ public sealed class CollisionTileBuilder(
         return exterior.Polygons.Select(rings => new CollisionBuildingFootprint(feature.Id.Value, rings,
             result.Max(part => part.Height), result.Max(part => part.Storeys))).ToArray();
 
-        void Add(string sourceId, OverlayGeometry geometry, float? height, int? storeys)
+        void Add(string sourceId, WorldGeometry geometry, float? height, int? storeys)
         {
             switch (geometry)
             {

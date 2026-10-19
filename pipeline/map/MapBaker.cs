@@ -159,7 +159,7 @@ public static class MapBaker
         else warnings.Add("outskirts-model-missing");
         return shapes;
 
-        void AddGeometry(WorldFeature feature, OverlayGeometry geometry, string kind, JsonElement? properties, string diagnosticId)
+        void AddGeometry(WorldFeature feature, WorldGeometry geometry, string kind, JsonElement? properties, string diagnosticId)
         {
             if (Classify(kind) is not { } c) return;
             if (c.Class == MapFeatureClass.Building && landmarks.Contains(feature.Id.Value)) c.Class = MapFeatureClass.Landmark;

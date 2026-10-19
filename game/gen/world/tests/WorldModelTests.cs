@@ -114,7 +114,7 @@ public sealed class WorldModelTests
     {
         var files = RealMapFixture.ReadTextFiles();
         var result = RealMapFixture.Load();
-        var records = files.Where(file => file.Key.StartsWith("world/", StringComparison.Ordinal) && file.Key != "world/geo.json")
+        var records = files.Where(file => file.Key.StartsWith("world/", StringComparison.Ordinal) && file.Key != "world/geo.json" && !file.Key.EndsWith(".terrain.json", StringComparison.Ordinal))
             .SelectMany(file =>
             {
                 using var document = JsonDocument.Parse(file.Value);

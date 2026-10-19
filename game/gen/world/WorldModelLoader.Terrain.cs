@@ -9,8 +9,8 @@ public static partial class WorldModelLoader
     private static IReadOnlyList<TerrainSource> ReadTerrainSources(MapId map, SortedDictionary<string, string> input)
     {
         var sources = new List<TerrainSource>();
-        foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("overlay/terrain/", StringComparison.Ordinal)
-            && pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 3))
+        foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("world/", StringComparison.Ordinal)
+            && pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 2))
         {
             TerrainOverlayFile overlay;
             try { overlay = TerrainOverlayJson.Parse(Utf8.GetBytes(text)); }

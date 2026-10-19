@@ -41,7 +41,7 @@ public static class BuildingPlanner
             yield return new BuildingSource(f, key, rings, f.Height, f.Storeys, f.Props);
     }
 
-    private static IEnumerable<(string Key, PolygonRings Rings)> Polygons(string key, OverlayGeometry geometry)
+    private static IEnumerable<(string Key, PolygonRings Rings)> Polygons(string key, WorldGeometry geometry)
     {
         switch (geometry)
         {

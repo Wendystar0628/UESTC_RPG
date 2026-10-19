@@ -75,7 +75,7 @@ public static class BuildingOverlapValidator
                 result.Add(new(id, i, source.Polygons[i], source.References.ToArray()));
         return result;
 
-        void Add(WorldFeature feature, string id, OverlayGeometry geometry)
+        void Add(WorldFeature feature, string id, WorldGeometry geometry)
         {
             var reference = DescribeReference(feature, claimedBy);
             if (string.IsNullOrWhiteSpace(id))
@@ -118,7 +118,7 @@ public static class BuildingOverlapValidator
         }
     }
 
-    private static bool SameNonArea(OverlayGeometry a, OverlayGeometry b) => (a, b) switch
+    private static bool SameNonArea(WorldGeometry a, WorldGeometry b) => (a, b) switch
     {
         (PointGeometry x, PointGeometry y) => x.Position == y.Position,
         (PolylineGeometry x, PolylineGeometry y) => x.Line.Points.SequenceEqual(y.Line.Points) || x.Line.Points.SequenceEqual(y.Line.Points.Reverse()),
@@ -211,10 +211,10 @@ public static class BuildingOverlapValidator
         public Envelope Bounds { get; } = Geometry.EnvelopeInternal;
     }
     private sealed record Footprint(string Source, int PolygonIndex, PolygonShape Shape, string[] References);
-    private sealed class Source(PolygonShape[] polygons, OverlayGeometry geometry, string reference)
+    private sealed class Source(PolygonShape[] polygons, WorldGeometry geometry, string reference)
     {
         public PolygonShape[] Polygons { get; } = polygons;
-        public OverlayGeometry Geometry { get; } = geometry;
+        public WorldGeometry Geometry { get; } = geometry;
         public SortedSet<string> References { get; } = new(StringComparer.Ordinal) { reference };
         public SortedSet<string> Conflicts { get; } = new(StringComparer.Ordinal);
     }

@@ -237,7 +237,7 @@ public sealed class GroundSourcesTests
 
     // ---------------------------------------------------------------- helpers
 
-    private sealed record Unsupported : OverlayGeometry;
+    private sealed record Unsupported : WorldGeometry;
 
     private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement.Clone();
 
@@ -258,7 +258,7 @@ public sealed class GroundSourcesTests
             MultiPolygonGeometry multi => multi.Polygons.ToArray(),
             _ => Array.Empty<PolygonRings>()
         }).ToArray();
-        OverlayGeometry geometry = polygons.Length switch
+        WorldGeometry geometry = polygons.Length switch
         {
             0 => new PointGeometry(Vector3.Zero),
             1 => new PolygonGeometry(polygons[0]),

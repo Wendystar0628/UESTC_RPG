@@ -31,7 +31,7 @@ internal sealed class WaterTraversalCatalog
         return false;
     }
 
-    private static PolygonRings[] Polygons(OverlayGeometry geometry)
+    private static PolygonRings[] Polygons(WorldGeometry geometry)
     {
         var values = WorldFeatureGeometry.PolygonsOf(geometry);
         if (values.Count == 0) throw new JsonException("A swim area needs a nonempty polygon.");

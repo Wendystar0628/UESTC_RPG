@@ -191,7 +191,7 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
     {
         var colon = source.IndexOf(':');
         if (colon < 0 || string.IsNullOrWhiteSpace(context.EntityPrefix)) return default;
-        return new(OsmFeatureIds.FromPart(context.EntityPrefix, source).Source);
+        return new(WorldFeatureIds.FromPart(context.EntityPrefix, source).Source);
     }
 
     public static double Grade(string ratio) => 1 / double.Parse(ratio.AsSpan(2), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
@@ -228,6 +228,6 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
         return false;
     }
 
-    private static IEnumerable<OverlayGeometry> StructuralGeometry(WorldFeature feature) => feature.Parts.Count > 0
+    private static IEnumerable<WorldGeometry> StructuralGeometry(WorldFeature feature) => feature.Parts.Count > 0
         ? feature.Parts.Select(part => part.Geometry) : [feature.Geometry];
 }

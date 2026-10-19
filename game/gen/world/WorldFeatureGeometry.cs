@@ -14,7 +14,7 @@ public static class WorldFeatureGeometry
             : throw new InvalidOperationException($"{feature.Id.Value} is not an area.");
 
     /// <summary>Physical polygon rings in authored order; points and lines have no polygon footprint.</summary>
-    public static IReadOnlyList<PolygonRings> PolygonsOf(OverlayGeometry geometry) => geometry switch
+    public static IReadOnlyList<PolygonRings> PolygonsOf(WorldGeometry geometry) => geometry switch
     {
         PolygonGeometry polygon => [polygon.Rings],
         MultiPolygonGeometry multi => multi.Polygons,
@@ -23,7 +23,7 @@ public static class WorldFeatureGeometry
     };
 
     /// <summary>Facade layout follows the current source part, falling back to its physical geometry.</summary>
-    public static OverlayGeometry FacadeGeometryOf(WorldFeaturePart part) => part.FacadeGeometry ?? part.Geometry;
+    public static WorldGeometry FacadeGeometryOf(WorldFeaturePart part) => part.FacadeGeometry ?? part.Geometry;
 
     /// <summary>Current parts in their existing order, or the current authored geometry after reshape/add.</summary>
     public static IReadOnlyList<PolygonRings> FacadePolygonsOf(WorldFeature feature) => feature.Parts.Count == 0
@@ -33,7 +33,7 @@ public static class WorldFeatureGeometry
     /// <summary>Facade polygons of one kind, with source-part kinds taking precedence over the entity kind.</summary>
     public static IEnumerable<PolygonRings> FacadePolygonsOf(WorldFeature feature, string kind)
     {
-        IEnumerable<OverlayGeometry> geometries;
+        IEnumerable<WorldGeometry> geometries;
         if (feature.Parts.Count == 0)
             geometries = feature.Kind.Value == kind ? [feature.Geometry] : [];
         else

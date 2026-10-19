@@ -211,7 +211,7 @@ public sealed partial class TerrainCompilerTests
 
     private static CompiledTerrain Compile(IReadOnlyList<TerrainOp> operations, IReadOnlyList<WorldFeature>? features = null) =>
         TerrainCompiler.Compile(Context(features ?? []), [Source(operations)]);
-    private static TerrainSource Source(IReadOnlyList<TerrainOp> operations) => new("overlay/terrain/fixture.terrain.json", new(Zone, new("WP-08"), operations));
+    private static TerrainSource Source(IReadOnlyList<TerrainOp> operations) => new("world/fixture.terrain.json", new(Zone, new("WP-08"), operations));
     private static TerrainCompileContext Context(IReadOnlyList<WorldFeature> features) => new(new("fixture"), new(new(-128), new(128)),
         Box(-512, -512, 512, 512), features.ToDictionary(f => f.Id), WorldNetwork.Empty, "fixture", Defaults,
         new Dictionary<ZoneId, IReadOnlyList<PolygonRings>> { [Zone] = [Box(-512, -512, 512, 512)] });

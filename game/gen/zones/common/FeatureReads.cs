@@ -33,7 +33,7 @@ public static partial class FeatureReads
     /// <summary>The outer rings of the feature's source parts (their facade layout), or of its geometry when it has none.</summary>
     public static IReadOnlyList<IReadOnlyList<Vector2>> Outers(this WorldFeature feature)
     {
-        static IEnumerable<IReadOnlyList<Vector2>> Of(OverlayGeometry geometry) =>
+        static IEnumerable<IReadOnlyList<Vector2>> Of(WorldGeometry geometry) =>
             WorldFeatureGeometry.PolygonsOf(geometry).Select(rings => rings.Outer);
         return [.. feature.Parts.Count > 0 ? feature.Parts.SelectMany(p => Of(WorldFeatureGeometry.FacadeGeometryOf(p))) : Of(feature.Geometry)];
     }

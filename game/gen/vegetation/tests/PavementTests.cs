@@ -349,7 +349,7 @@ public sealed class PavementTests
             return census;
         }
 
-        private static IEnumerable<(JsonElement? Props, OverlayGeometry Geometry)> RoadSources(WorldFeature feature)
+        private static IEnumerable<(JsonElement? Props, WorldGeometry Geometry)> RoadSources(WorldFeature feature)
         {
             if (feature.Parts.Count == 0)
             {

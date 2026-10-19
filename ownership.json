@@ -178,23 +178,23 @@
       "owner": "WP-04"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/terrain/core.terrain.json",
+      "pattern": "game/data/maps/qingshuihe/world/core.terrain.json",
       "owner": "WP-16"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/terrain/south.terrain.json",
+      "pattern": "game/data/maps/qingshuihe/world/south.terrain.json",
       "owner": "WP-18"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/terrain/west.terrain.json",
+      "pattern": "game/data/maps/qingshuihe/world/west.terrain.json",
       "owner": "WP-19"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/terrain/north.terrain.json",
+      "pattern": "game/data/maps/qingshuihe/world/north.terrain.json",
       "owner": "WP-20"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/terrain/center-east.terrain.json",
+      "pattern": "game/data/maps/qingshuihe/world/center-east.terrain.json",
       "owner": "WP-21"
     },
     {

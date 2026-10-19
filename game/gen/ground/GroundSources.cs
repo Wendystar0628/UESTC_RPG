@@ -110,7 +110,7 @@ internal static class GroundSources
     /// One source record of a feature; <see cref="Label"/> names it in error messages. <see cref="Entity"/> is the owning
     /// entity's record (its OSM tags), which a part's own record does not repeat.
     /// </summary>
-    private readonly record struct Source(string Label, string Kind, JsonElement? Props, OverlayGeometry Geometry,
+    private readonly record struct Source(string Label, string Kind, JsonElement? Props, WorldGeometry Geometry,
         JsonElement? Entity = null, string? PartSourceId = null);
 
     private static IEnumerable<Source> Sources(WorldFeature feature)

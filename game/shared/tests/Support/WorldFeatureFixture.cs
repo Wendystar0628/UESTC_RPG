@@ -7,7 +7,7 @@ namespace Campus.Tests;
 /// <summary>Small authored features for tests; properties are detached from their JSON document.</summary>
 internal static class WorldFeatureFixture
 {
-    public static WorldFeature Create(string id, string kind, OverlayGeometry geometry, string? props = null,
+    public static WorldFeature Create(string id, string kind, WorldGeometry geometry, string? props = null,
         float? height = null, int? storeys = null,
         IReadOnlyList<WorldFeaturePart>? parts = null)
     {
@@ -31,7 +31,7 @@ internal static class WorldFeatureFixture
         };
     }
 
-    private static IEnumerable<Vector3> Points(OverlayGeometry geometry) => geometry switch
+    private static IEnumerable<Vector3> Points(WorldGeometry geometry) => geometry switch
     {
         PointGeometry point => [point.Position],
         PolylineGeometry line => line.Line.Points.Select(p => new Vector3(p.X, 0f, p.Y)),

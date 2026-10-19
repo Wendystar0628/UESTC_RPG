@@ -48,7 +48,7 @@ internal class FakeWorld : IWorldModel
         }),
     };
 
-    private static OverlayGeometry Envelope(Vector2[] points)
+    private static WorldGeometry Envelope(Vector2[] points)
     {
         if (points.Length == 0) return new PointGeometry(Vector3.Zero);
         float x0 = points.Min(p => p.X), x1 = points.Max(p => p.X), z0 = points.Min(p => p.Y), z1 = points.Max(p => p.Y);

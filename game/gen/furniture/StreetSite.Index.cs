@@ -17,7 +17,7 @@ internal sealed partial class StreetSite
         rings.Holes.Aggregate(PlanGeometry.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h)));
 
     /// <summary>Road areas of a feature, part by part (a part's own kind and props win over its feature's, as WP-15 reads them).</summary>
-    private static IEnumerable<(JsonElement? Props, OverlayGeometry Geometry)> RoadSources(WorldFeature feature)
+    private static IEnumerable<(JsonElement? Props, WorldGeometry Geometry)> RoadSources(WorldFeature feature)
     {
         if (feature.Parts.Count == 0)
         {
@@ -33,7 +33,7 @@ internal sealed partial class StreetSite
         }
     }
 
-    private void IndexPaving(OverlayGeometry geometry, JsonElement? props, float half = 0f, NetworkLine? road = null)
+    private void IndexPaving(WorldGeometry geometry, JsonElement? props, float half = 0f, NetworkLine? road = null)
     {
         switch (geometry)
         {

@@ -180,7 +180,7 @@ public static partial class Planting
         }
 
         /// <summary>The road sources of a feature: its parts of kind road, else its own geometry; each with the props that carry the road type.</summary>
-        private static IEnumerable<(JsonElement? Props, OverlayGeometry Geometry)> RoadSources(WorldFeature feature)
+        private static IEnumerable<(JsonElement? Props, WorldGeometry Geometry)> RoadSources(WorldFeature feature)
         {
             if (feature.Parts.Count == 0)
             {
@@ -193,7 +193,7 @@ public static partial class Planting
         /// <summary>A feature that is just a polyline of its own (a design walk): the form in which the network line of its ID is also filed.</summary>
         private static bool IsWalk(WorldFeature feature) => feature.Parts.Count == 0 && feature.Geometry is PolylineGeometry;
 
-        private void IndexPavement(JsonElement? props, OverlayGeometry geometry, float width = 0f)
+        private void IndexPavement(JsonElement? props, WorldGeometry geometry, float width = 0f)
         {
             var type = props?.OptionalText("highway");
             if (type is null || !Paved.Contains(type)) return;

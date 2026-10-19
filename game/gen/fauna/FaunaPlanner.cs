@@ -394,7 +394,7 @@ public static class FaunaPlanner
         }
     }
 
-    private static IEnumerable<PolygonRings> Polygons(OverlayGeometry g) => g switch
+    private static IEnumerable<PolygonRings> Polygons(WorldGeometry g) => g switch
     {
         PolygonGeometry p => [p.Rings],
         MultiPolygonGeometry m => m.Polygons,

@@ -82,7 +82,7 @@ internal sealed class TerrainRoadProfile
                     if (locked.TryGetValue(key, out var prior) && Math.Abs(prior - value) > JunctionHeightTolerance)
                     {
                         var first = firstLockedSource[key];
-                        throw new WorldDataException(entry.Profile._authoredFile ?? "overlay/terrain", entry.Profile._authoredEntry ?? "corridor",
+                        throw new WorldDataException(entry.Profile._authoredFile ?? "world", entry.Profile._authoredEntry ?? "corridor",
                             $"Authored road profiles disagree at a shared source node: world=({p.X:R},{p.Y:R}), millimetreKey=({key.X},{key.Z}); "
                             + $"firstSource='{first.Road.Source.Value}', firstWorld=({first.X:R},{first.Z:R}), firstHeight={first.Height:R}, firstFile='{first.Profile._authoredFile ?? "<automatic>"}', firstEntry='{first.Profile._authoredEntry ?? "<automatic>"}'; "
                             + $"secondSource='{entry.Road.Source.Value}', secondHeight={value:R}, secondFile='{entry.Profile._authoredFile ?? "<automatic>"}', secondEntry='{entry.Profile._authoredEntry ?? "<automatic>"}', deltaSecondMinusFirst={value - first.Height:R}, comparedLockedHeight={prior:R}, deltaSecondMinusLocked={value - prior:R}.");
@@ -141,7 +141,7 @@ internal sealed class TerrainRoadProfile
                         authorY = fixedY; isAuthored = true;
                     }
                     if (isZero && isAuthored && Math.Abs(authorY) > TerrainMath.HeightTolerance)
-                        throw new WorldDataException(interval?.File ?? "overlay/terrain", interval?.Id ?? "corridor", "An authored shared road node conflicts with the protected zero band.");
+                        throw new WorldDataException(interval?.File ?? "world", interval?.Id ?? "corridor", "An authored shared road node conflicts with the protected zero band.");
                     if (!keys.TryGetValue(key, out var node))
                     {
                         node = values.Count; keys.Add(key, node);
@@ -152,7 +152,7 @@ internal sealed class TerrainRoadProfile
                     else if (isAuthored)
                     {
                         if (fixedValues[node] && Math.Abs(values[node] - authorY) > JunctionHeightTolerance)
-                            throw new WorldDataException(interval?.File ?? "overlay/terrain", interval?.Id ?? "corridor",
+                            throw new WorldDataException(interval?.File ?? "world", interval?.Id ?? "corridor",
                                 "Fixed corridor intervals disagree at a shared network node.");
                         values[node] = authorY; fixedValues[node] = true;
                     }

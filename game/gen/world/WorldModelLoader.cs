@@ -95,7 +95,7 @@ public static partial class WorldModelLoader
         var waterways = new List<NetworkLine>();
         var trees = new List<NetworkTree>();
         foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("world/", StringComparison.Ordinal)
-            && pair.Key.EndsWith(".json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 2 && pair.Key != geoFile))
+            && pair.Key.EndsWith(".json", StringComparison.Ordinal) && !pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 2 && pair.Key != geoFile))
         {
             using var zoneDocument = Parse(file, text);
             var zone = new ZoneId(file["world/".Length..^".json".Length]);
@@ -113,7 +113,7 @@ public static partial class WorldModelLoader
                             if (!partIds.Add(partId)) throw new WorldDataException(file, partId, "Duplicate part ID.");
                             Polyline? line = member.TryGetProperty("line", out var nodes) ? new(Value<Vector2[]>(nodes)) : null;
                             var width = OptionalFloat(member, "width") ?? 0;
-                            var geometry = member.TryGetProperty("geometry", out var shape) ? Value<OverlayGeometry>(shape)
+                            var geometry = member.TryGetProperty("geometry", out var shape) ? Value<WorldGeometry>(shape)
                                 : Buffer(line ?? throw new ArgumentException("Missing part geometry: " + partId), width, boundary)
                                     ?? throw new ArgumentException("Empty buffered part: " + partId);
                             var part = new WorldFeaturePart(partId, geometry, OptionalFloat(member, "height"), OptionalInteger(member, "storeys"))
@@ -123,9 +123,9 @@ public static partial class WorldModelLoader
                             };
                             parts.Add(part);
                             if (line is not null)
-                                AddLine(new(new(OsmFeatureIds.FromPart(prefix, partId).Source), line, width) { Props = part.Props }, kind.Value, file);
+                                AddLine(new(new(WorldFeatureIds.FromPart(prefix, partId).Source), line, width) { Props = part.Props }, kind.Value, file);
                         }
-                    var combined = parts.Count == 0 ? Value<OverlayGeometry>(raw.GetProperty("geometry"))
+                    var combined = parts.Count == 0 ? Value<WorldGeometry>(raw.GetProperty("geometry"))
                         : Geometry(parts.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
                     var height = OptionalFloat(raw, "height");
                     var feature = new WorldFeature(new(id), kind, combined)
@@ -136,7 +136,7 @@ public static partial class WorldModelLoader
                         Facade = OptionalText(raw, "facade") is { } facade ? new(facade) : null
                     };
                     if (!features.TryAdd(id, feature)) throw new WorldDataException(file, id, "Duplicate world feature ID.");
-                    var sourceLine = OsmFeatureIds.TryFromSource(prefix, id, out _);
+                    var sourceLine = WorldFeatureIds.TryFromSource(prefix, id, out _);
                     var designRoad = kind.Value == "road" && feature.TryText("highway") is "footway" or "path" or "pedestrian";
                     if (parts.Count == 0 && combined is PolylineGeometry polyline && (sourceLine || designRoad && feature.TryText("area") != "yes"))
                         AddLine(new(feature.Id, polyline.Line, feature.TryNumber("width") ?? 0) { Props = feature.Props }, kind.Value, file);
@@ -189,8 +189,8 @@ public static partial class WorldModelLoader
     }
 
     private static IEnumerable<T> OrderNetwork<T>(IEnumerable<T> items, Func<T, FeatureId> id, string prefix) => items
-        .OrderBy(item => OsmFeatureIds.TryFromSource(prefix, id(item).Value, out _) ? 0 : 1)
-        .ThenBy(item => OsmFeatureIds.TryFromSource(prefix, id(item).Value, out _) ? long.Parse(id(item).Value.Split(':')[^1], CultureInfo.InvariantCulture) : 0)
+        .OrderBy(item => WorldFeatureIds.TryFromSource(prefix, id(item).Value, out _) ? 0 : 1)
+        .ThenBy(item => WorldFeatureIds.TryFromSource(prefix, id(item).Value, out _) ? long.Parse(id(item).Value.Split(':')[^1], CultureInfo.InvariantCulture) : 0)
         .ThenBy(item => id(item).Value, StringComparer.Ordinal);
 
     private static IReadOnlyList<InteriorOverlayFile> ReadInteriorOverlays(MapId map, SortedDictionary<string, string> input,
@@ -226,7 +226,7 @@ public static partial class WorldModelLoader
         return roam;
     }
 
-    private static OverlayGeometry? ReadFacadeGeometry(JsonElement raw, IReadOnlyList<PolygonRings> physical)
+    private static WorldGeometry? ReadFacadeGeometry(JsonElement raw, IReadOnlyList<PolygonRings> physical)
     {
         if (!raw.TryGetProperty("facadePolygons", out var value)) return null;
         var polygons = Value<PolygonRings[]>(value);
@@ -236,7 +236,7 @@ public static partial class WorldModelLoader
         return Geometry(polygons);
     }
 
-    private static OverlayGeometry? Buffer(Polyline line, float width, PolygonRings boundary)
+    private static WorldGeometry? Buffer(Polyline line, float width, PolygonRings boundary)
     {
         var alignment = Factory.CreateLineString(line.Points.Select(point => new Coordinate(point.X, point.Y)).ToArray());
         var parameters = new BufferParameters { EndCapStyle = EndCapStyle.Flat, JoinStyle = JoinStyle.Mitre };
@@ -259,8 +259,8 @@ public static partial class WorldModelLoader
 
     private static void CheckMap(MapId map, MapId? declared, string file)
     { if (declared is { } id && id != map) throw new WorldDataException(file, "map", "Overlay belongs to a different map."); }
-    internal static OverlayGeometry Geometry(IReadOnlyList<PolygonRings> polygons) => polygons.Count == 1 ? new PolygonGeometry(polygons[0]) : new MultiPolygonGeometry(polygons);
-    internal static Box3 BoundsOf(OverlayGeometry geometry, float height)
+    internal static WorldGeometry Geometry(IReadOnlyList<PolygonRings> polygons) => polygons.Count == 1 ? new PolygonGeometry(polygons[0]) : new MultiPolygonGeometry(polygons);
+    internal static Box3 BoundsOf(WorldGeometry geometry, float height)
     {
         if (!float.IsFinite(height) || height < 0) throw new ArgumentException("Invalid feature height.");
         if (geometry is PointGeometry point) return new(point.Position, point.Position);

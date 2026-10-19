@@ -61,7 +61,7 @@ internal static class TerrainBankGeometry
             return new(id, waters, interval.Roads, interval.Bridges, path.Line, 0, path.Length, 0, TerrainBankKind.Hard);
         var transition = TerrainBridgeBanks.TransitionLength;
         if (interval.To - interval.From + 2 * transition >= path.Length)
-            throw new WorldDataException("overlay/terrain", id,
+            throw new WorldDataException("world", id,
                 "A partial Hard ring has overlapping end transitions around its entire seam; author an explicit complete bank or split before exporting structural geometry.");
         var start = interval.From - transition; var end = interval.To + transition;
         for (var attempt = 0; attempt < 4; attempt++)
@@ -111,6 +111,6 @@ internal static class TerrainBankGeometry
             if (coreFrom < transition) start -= transition - coreFrom + padding;
             if (coreTo > length - transition) end += transition - (length - coreTo) + padding;
         }
-        throw new WorldDataException("overlay/terrain", id, "Final shore coordinates cannot retain both exact 2 m transition margins.");
+        throw new WorldDataException("world", id, "Final shore coordinates cannot retain both exact 2 m transition margins.");
     }
 }

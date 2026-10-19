@@ -45,7 +45,7 @@ internal static class PublicFunctionIndex
             m => m.Parameters.Length > 0 && SourceModel.Name(m.Parameters[0].Type) is
                 "Campus.Contracts.WorldFeature" or "Campus.Contracts.WorldFeaturePart" or "Campus.Contracts.IWorldModel"),
         new(["Polygons"], [Features], m => m.Parameters.Length == 1 && SourceModel.Name(m.Parameters[0].Type) == "Campus.Contracts.WorldFeature"),
-        new(["PolygonsOf"], [Features], m => m.Parameters.Length == 1 && SourceModel.Name(m.Parameters[0].Type) == "Campus.Contracts.OverlayGeometry"),
+        new(["PolygonsOf"], [Features], m => m.Parameters.Length == 1 && SourceModel.Name(m.Parameters[0].Type) == "Campus.Contracts.WorldGeometry"),
         new(["FacadePolygonsOf"], [Features], m => m.Parameters.Length is 1 or 2 && SourceModel.Name(m.Parameters[0].Type) == "Campus.Contracts.WorldFeature"),
         new(["FacadeGeometryOf"], [Features], m => m.Parameters.Length == 1 && SourceModel.Name(m.Parameters[0].Type) == "Campus.Contracts.WorldFeaturePart"),
         new(["Text", "OptionalText", "Number", "OptionalNumber", "Numbers", "Pair", "TryText", "TryNumber"], [Props],

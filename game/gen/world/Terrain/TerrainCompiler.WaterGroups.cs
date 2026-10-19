@@ -90,7 +90,7 @@ internal static partial class TerrainCompiler
             if (lakes.Length == 0) continue;
             var level = specs[lakes[0]].Level;
             if (lakes.Any(i => Math.Abs(specs[i].Level - level) > TerrainMath.HeightTolerance))
-                throw new WorldDataException("overlay/terrain", "water", "Connected natural water reaches lakes with different constant levels and no registered separating weir.");
+                throw new WorldDataException("world", "water", "Connected natural water reaches lakes with different constant levels and no registered separating weir.");
             foreach (var i in group)
             {
                 if (!specs[i].Channel) continue;

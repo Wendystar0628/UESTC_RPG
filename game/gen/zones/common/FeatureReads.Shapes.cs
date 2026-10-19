@@ -8,7 +8,7 @@ public readonly record struct FeatureRectangle(PlanFrame Frame, float Width, flo
 public static partial class FeatureReads
 {
     /// <summary>Explicit source part, otherwise the first part, otherwise the feature's own geometry.</summary>
-    public static OverlayGeometry ContourGeometry(this WorldFeature feature, string? sourceId = null, bool facade = true)
+    public static WorldGeometry ContourGeometry(this WorldFeature feature, string? sourceId = null, bool facade = true)
     {
         var part = sourceId is not null ? feature.Part(sourceId) : feature.Parts.FirstOrDefault();
         return part is null ? feature.Geometry : facade ? WorldFeatureGeometry.FacadeGeometryOf(part) : part.Geometry;
@@ -51,7 +51,7 @@ public static partial class FeatureReads
         };
     }
 
-    private static IReadOnlyList<Vector2> OuterOf(OverlayGeometry geometry) => geometry switch
+    private static IReadOnlyList<Vector2> OuterOf(WorldGeometry geometry) => geometry switch
     {
         PolygonGeometry polygon => polygon.Rings.Outer,
         MultiPolygonGeometry { Polygons.Count: > 0 } multi => multi.Polygons[0].Outer,

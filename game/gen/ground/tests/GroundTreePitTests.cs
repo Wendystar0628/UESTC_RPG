@@ -329,7 +329,7 @@ public sealed class GroundTreePitTests
         public TestWorldBuilder Pit(string id, PolygonRings? single, float height, string props, params PolygonRings[] polygons)
         {
             PolygonRings[] all = single is null ? polygons : [single, .. polygons];
-            OverlayGeometry geometry = all.Length > 0 ? new MultiPolygonGeometry(all) : new PointGeometry(new Vector3(20f, 0f, 20f));
+            WorldGeometry geometry = all.Length > 0 ? new MultiPolygonGeometry(all) : new PointGeometry(new Vector3(20f, 0f, 20f));
             _features.Add(WorldFeatureFixture.Create(id, GroundSources.PitKind, geometry, props, height: height)
                 with { Bounds = new Box3(new(4f, 0f, 4f), new(60f, height, 60f)) });
             return this;

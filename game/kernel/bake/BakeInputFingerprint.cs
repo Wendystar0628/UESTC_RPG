@@ -207,7 +207,7 @@ internal static class BakeInputFingerprint
         foreach (var region in regions) AddBoundary(input, context.World.Boundary, region);
         // Terrain is analytic at candidate positions; retain its authored program rather than treating metre
         // samples as an exact substitute. This is independent of the removed map-wide grove quota.
-        foreach (var file in context.SourceInputs.Keys.Where(path => path.StartsWith("overlay/terrain", StringComparison.Ordinal)).Order(StringComparer.Ordinal))
+        foreach (var file in context.SourceInputs.Keys.Where(path => path.StartsWith("world/", StringComparison.Ordinal) && path.EndsWith(".terrain.json", StringComparison.Ordinal)).Order(StringComparer.Ordinal))
             input.File(context.SourceInputs, file);
     }
 
@@ -355,7 +355,7 @@ internal static class BakeInputFingerprint
     private static bool Intersects(MapRect box, MapRect area) => box.Min.X <= area.Max.X && box.Max.X >= area.Min.X && box.Min.Y <= area.Max.Y && box.Max.Y >= area.Min.Y;
     private static MapRect Bounds(IReadOnlyList<Vector2> points, float margin = 0) => Expand(new(
         points.Aggregate(new Vector2(float.MaxValue), Vector2.Min), points.Aggregate(new Vector2(float.MinValue), Vector2.Max)), margin);
-    private static IEnumerable<Vector2> Points(OverlayGeometry geometry) => geometry switch
+    private static IEnumerable<Vector2> Points(WorldGeometry geometry) => geometry switch
     {
         PointGeometry point => [new(point.Position.X, point.Position.Z)],
         PolylineGeometry line => line.Line.Points,

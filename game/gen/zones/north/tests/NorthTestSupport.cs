@@ -30,5 +30,5 @@ internal static class NorthTestSupport
     };
 
     internal static TerrainOverlayFile Terrain() =>
-        TerrainOverlayJson.Parse(RealMapFixture.ReadFiles()["overlay/terrain/north.terrain.json"].Span);
+        TerrainOverlayJson.Parse(RealMapFixture.ReadFiles()["world/north.terrain.json"].Span);
 }

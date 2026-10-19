@@ -211,7 +211,7 @@ public sealed class CoreModuleTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void TerrainOverlayIsWellFormed()
     {
-        var path = Path.Combine(Campus.Tests.RealMapFixture.DataDirectory(), "overlay", "terrain", "core.terrain.json");
+        var path = Path.Combine(Campus.Tests.RealMapFixture.DataDirectory(), "world", "core.terrain.json");
         // The contract parser checks field names, discriminators and numeric bounds.
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(path));
         AssertThat(file.Zone.Value == "core" && file.Owner.Value == "WP-16").OverrideFailureMessage("zone and owner").IsTrue();

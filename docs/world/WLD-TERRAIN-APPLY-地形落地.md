@@ -10,7 +10,7 @@ contributors: []
 depends: [WLD-TERRAIN, CORE-INDEX, ENG-ARCH, SYS-WALK, ART-STYLE, ART-MODELING, ENG-PERF, ENG-BUDGET]
 related: [WLD-TERRAIN-SHAPE, WLD-WATER, WLD-VEGETATION, WLD-INTERIORS, MAP-QSH-TERRAIN, MAP-QSH-ADDITIONS, ART-FIDELITY, ART-SKYLIGHT, SYS-VIEW, ENG-GATES, TOOL-PREVIEW]
 contracts: [ITerrain, TerrainFacts, TerrainClass, TerrainOverlayFile, TerrainOp]
-data: ["game/data/maps/qingshuihe/overlay/terrain/"]
+data: ["game/data/maps/qingshuihe/world/*.terrain.json"]
 gates: [G2, G5, G6, G15]
 ---
 
@@ -38,7 +38,7 @@ gates: [G2, G5, G6, G15]
 
 ## 1 地形的表达与合成
 
-- **只用矢量操作**：地形写在按区的地形覆盖层 `overlay/terrain/<区>.terrain.json` 里，一个文件只归一个区包。操作类型与字段以 `game/contracts/` 的 `TerrainOp` 与 `terrain.schema.json` 为准（台地、丘与盆、斜面、退台、渠、湖、垫层、走廊）。不画高度图；覆盖层是地形唯一保存源。
+- **只用矢量操作**：地形写在按区的地形覆盖层 `world/<区>.terrain.json` 里，一个文件只归一个区包。操作类型与字段以 `game/contracts/` 的 `TerrainOp` 与 `terrain.schema.json` 为准（台地、丘与盆、斜面、退台、渠、湖、垫层、走廊）。不画高度图；覆盖层是地形唯一保存源。
 - **平面归世界文件，地形只加竖向**：操作按 ID 引用 `world/<区>.json` 里的楼、路、水体记录（CORE-CONVENTIONS §3.1）；记录被删，或路的中线挪开使手写锚点不再落在路上，加载报错，同批改地形文件。
 - **每条操作带三样东西**：`design:terrain:` 开头且本图唯一的 ID、写明理由的 `reason`（取 WLD-TERRAIN-SHAPE §1.2 第 1 条的五类，并说明服务的镜头、路线或功能）、所属的区。标高是绝对世界 y，坡比写成 `1:n`。
 - **合成顺序固定**，与操作在文件里的先后无关：底层 B = 0 → 区域类（台地、丘、盆、多边形斜面、退台）→ 线状类（渠、折线斜面）→ 强约束类（水体、楼宇垫层、道路走廊）→ 夹到 −5…+10 m；后作用的覆盖或衰减之前的结果，同类内按优先级再按 ID 排。**地形迁就路，不是路迁就地形**：装饰性起伏在走廊、垫层附近衰减。

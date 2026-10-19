@@ -100,7 +100,7 @@ public sealed class TestPolicyGateTests
             foreach (var call in file.Root.DescendantNodes().OfType<InvocationExpressionSyntax>())
             {
                 var method = SourceModel.Method(file, call);
-                if (method is null || SourceModel.Name(method.ContainingType) != "Campus.Gen.World.OsmFeatureIds" ||
+                if (method is null || SourceModel.Name(method.ContainingType) != "Campus.Gen.World.WorldFeatureIds" ||
                     method.Name is not ("Way" or "Relation" or "Node") || call.ArgumentList.Arguments.Count != 2) continue;
                 var prefix = SourceModel.Constant(file.Model, call.ArgumentList.Arguments[0].Expression) as string;
                 var number = call.ArgumentList.Arguments[1].Expression;

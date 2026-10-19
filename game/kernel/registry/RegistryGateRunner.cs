@@ -58,7 +58,7 @@ public static partial class RegistryGateRunner
                 ValidatePose(entry.Id, pose);
 
             var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var name in files(entry.Dir + "world/").Where(name => name != "geo.json" && name.EndsWith(".json", StringComparison.Ordinal))
+            foreach (var name in files(entry.Dir + "world/").Where(name => name != "geo.json" && !name.EndsWith(".terrain.json", StringComparison.Ordinal) && name.EndsWith(".json", StringComparison.Ordinal))
                          .Order(StringComparer.Ordinal))
             {
                 using var world = JsonDocument.Parse(read(entry.Dir + "world/" + name));
