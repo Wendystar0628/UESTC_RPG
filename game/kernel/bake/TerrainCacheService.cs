@@ -210,7 +210,9 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     private byte[]? Read(BakeKey key, string identity)
     {
         if (_options.Live) return null;
-        var bytes = Store.TryRead(key);
+        var maximumPayload = key.Detail == "meta" && (key.Module is "terrain" or "resident")
+            ? BakeCacheStore.MaximumProductBytes : BakeCacheStore.MaximumPayloadBytes;
+        var bytes = Store.TryRead(key, maximumPayload);
         if (bytes is null) return null;
         try
         {
