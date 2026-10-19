@@ -23,7 +23,7 @@ public sealed class StreamLifecycleTests
         {
             var context = new TestMapContext(BackdropInputsTests.Descriptor(), new FakeWorld
                 { Spatial = new FlatSpatial(forbidden: "Terrain has not been prepared.") });
-            var catalog = ModuleTileCatalog.Build(new Dictionary<string, IReadOnlyList<TileKey>>());
+            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
             BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
             var interiors = new InteriorStream(null!, null!, null!, null!, _ => { }); interiors.Load(context);
             Set(director, "_catalog", catalog); Set(director, "_maps", new TestMapService()); Set(director, "_interiors", interiors);
@@ -89,7 +89,7 @@ public sealed class StreamLifecycleTests
                 director.OnMapUnloading(context.Descriptor.Id);
                 if (director.IsUnloaded) throw new InvalidOperationException("Unload did not retain its real pending CPU task.");
                 if (fail) work.SetException(new InvalidOperationException("Retired catalog failed."));
-                else work.SetResult(ModuleTileCatalog.Build(new Dictionary<string, IReadOnlyList<TileKey>>()));
+                else work.SetResult(ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), [])));
                 director._Process(0);
                 if (!director.IsUnloaded || director.ResidentReady || director.Error is not null || Field(director, "_catalog") is not null)
                     throw new InvalidOperationException("A retired catalog became active map data or an active-map error.");
@@ -115,7 +115,7 @@ public sealed class StreamLifecycleTests
                 director._ExitTree();
                 if (Field(director, "_catalogTask") is not null) throw new InvalidOperationException("Exited node retained catalog publication ownership.");
                 if (fail) work.SetException(new InvalidOperationException("Exited catalog failed."));
-                else work.SetResult(ModuleTileCatalog.Build(new Dictionary<string, IReadOnlyList<TileKey>>()));
+                else work.SetResult(ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), [])));
                 await Task.Yield();
                 director._Process(0);
                 if (director.ResidentReady || Field(director, "_catalog") is not null)
