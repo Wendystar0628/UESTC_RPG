@@ -104,16 +104,7 @@ public partial class CollisionStreamingNode : Node3D, IMapAware
         var map = _context!.Descriptor;
         foreach (var center in centers)
         {
-            var min = TileGrid.At(center - new N.Vector3(LoadRadius, 0, LoadRadius));
-            var max = TileGrid.At(center + new N.Vector3(LoadRadius, 0, LoadRadius));
-            var wanted = new List<TileKey>();
-            for (var x = Math.Max(min.X, map.TileMin.X); x <= Math.Min(max.X, map.TileMax.X); x++)
-                for (var z = Math.Max(min.Z, map.TileMin.Z); z <= Math.Min(max.Z, map.TileMax.Z); z++)
-                {
-                    var tile = new TileKey(x, z);
-                    if (DistanceSquared(tile, center) <= LoadRadius * LoadRadius) wanted.Add(tile);
-                }
-            foreach (var tile in wanted.OrderBy(t => DistanceSquared(t, center)).ThenBy(t => t.X).ThenBy(t => t.Z))
+            foreach (var tile in RequiredTiles(map, center))
                 if (!_pending.ContainsKey(tile) && !_mounting.ContainsKey(tile) && !_resident.Contains(tile) && !_failed.Contains(tile))
                     _pending.Add(tile, _bake!.Ensure(CollisionBakeProducer.Key(map.Id, tile), BakePriority.Collision));
         }
@@ -123,6 +114,20 @@ public partial class CollisionStreamingNode : Node3D, IMapAware
         { _mounting[tile].Cancel(); _world!.RemoveTile(tile); _mounting.Remove(tile); }
         foreach (var tile in _resident.Where(Outside).ToArray())
         { _world!.RemoveTile(tile); _resident.Remove(tile); }
+    }
+
+    internal static IEnumerable<TileKey> RequiredTiles(MapDescriptor map, N.Vector3 center)
+    {
+        var min = TileGrid.At(center - new N.Vector3(LoadRadius, 0, LoadRadius));
+        var max = TileGrid.At(center + new N.Vector3(LoadRadius, 0, LoadRadius));
+        var wanted = new List<TileKey>();
+        for (var x = Math.Max(min.X, map.TileMin.X); x <= Math.Min(max.X, map.TileMax.X); x++)
+            for (var z = Math.Max(min.Z, map.TileMin.Z); z <= Math.Min(max.Z, map.TileMax.Z); z++)
+            {
+                var tile = new TileKey(x, z);
+                if (DistanceSquared(tile, center) <= LoadRadius * LoadRadius) wanted.Add(tile);
+            }
+        return wanted.OrderBy(t => DistanceSquared(t, center)).ThenBy(t => t.X).ThenBy(t => t.Z);
     }
 
     private void ClearTiles()

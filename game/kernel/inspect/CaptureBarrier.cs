@@ -10,7 +10,7 @@ using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
-/// <summary>Readback barriers for coarse outdoor content and presented indoor destinations.</summary>
+/// <summary>Readback barriers consuming the production view and destination presentation state.</summary>
 public static class CaptureBarrier
 {
     /// <summary>Draw the released indoor destination after its existing warmup cover has been withdrawn.</summary>
@@ -78,7 +78,7 @@ public static class CaptureBarrier
             var scrubbing = world.Scrubbing;
             var transition = world.Transition;
             var weatherTransitioning = weather.Transitioning;
-            var streamReady = stream.CaptureReady;
+            var streamReady = stream.ViewReady;
             var ready = content && streamReady && !scrubbing && transition == WorldTransition.None && !weatherTransitioning;
             if (ready) return;
             var now = FrameClock.MonotonicMilliseconds;

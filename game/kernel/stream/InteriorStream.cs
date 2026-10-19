@@ -41,7 +41,11 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         if (medium.Kind == MediumKind.Interior && medium.Feature is { } building)
             Request(new(building, checked((short)medium.Storey)), BakePriority.InteriorPrefetch, _visible, false);
     }
-    private void Request(NavSpace space, BakePriority priority, HashSet<BakeKey> target, bool blocking)
+    public void Preload(NavSpace? space, Action<BakeKey> enqueue)
+    {
+        if (space is { Building: not null } value) Request(value, BakePriority.KnownDestination, null, false, enqueue);
+    }
+    private void Request(NavSpace space, BakePriority priority, HashSet<BakeKey>? target, bool blocking, Action<BakeKey>? preload = null)
     {
         if (_context is null || space.Building is not { } building) return;
         var entry = _context.World.Interiors.Get(building);
@@ -62,7 +66,8 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             var detail = storey == space.Floor ? "IF" : "IS";
             var key = new BakeKey(_context.Descriptor.Id, "interior." + entry.ProviderId,
                 FormattableString.Invariant($"{building.Value}/{storey}/{detail}"));
-            target.Add(key);
+            if (preload is not null) { preload(key); continue; }
+            target?.Add(key);
             if (!_layers.ContainsKey(key)) _layers.Add(key, new(key, bake.Ensure(key, priority), mount.Revision, priority, building));
             else if (priority == BakePriority.KnownDestination) bake.Ensure(key, priority);
             if (blocking && _layers[key].Error is { } error) Error ??= error;

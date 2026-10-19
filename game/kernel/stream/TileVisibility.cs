@@ -9,8 +9,16 @@ public sealed class TileVisibility(float fadeSeconds)
     private readonly HashSet<StreamTile> _target = [];
     private readonly HashSet<StreamTile> _drawn = [];
     private readonly Dictionary<StreamTile, float> _retiring = [];
+    private readonly Dictionary<StreamTile, float> _entering = [];
     private readonly List<StreamTile> _scratch = [];
     public IReadOnlySet<StreamTile> Drawn => _drawn;
+    public bool IsSettled(float clock)
+    {
+        if (_retiring.Count != 0) return false;
+        foreach (var started in _entering.Values)
+            if (Elapsed(clock, started) < fadeSeconds) return false;
+        return true;
+    }
     public void Apply(IReadOnlySet<StreamTile> desired, float clock, bool fadesReady,
         Action<StreamTile, bool, float> change)
     {
@@ -22,6 +30,10 @@ public sealed class TileVisibility(float fadeSeconds)
         {
             _retiring.Remove(tile); _drawn.Remove(tile); change(tile, false, 0);
         }
+        _scratch.Clear();
+        foreach (var pair in _entering)
+            if (Elapsed(clock, pair.Value) >= fadeSeconds) _scratch.Add(pair.Key);
+        foreach (var tile in _scratch) _entering.Remove(tile);
         if (_target.SetEquals(desired)) return;
 
         var count = _target.Count(t => !desired.Contains(t)) + desired.Count(t => !_target.Contains(t));
@@ -30,6 +42,7 @@ public sealed class TileVisibility(float fadeSeconds)
         _scratch.Clear(); _scratch.AddRange(_drawn.Where(t => !desired.Contains(t)).Order());
         foreach (var tile in _scratch)
         {
+            _entering.Remove(tile);
             if (fade) { _retiring[tile] = clock; change(tile, true, -clock); }
             else { _retiring.Remove(tile); _drawn.Remove(tile); change(tile, false, 0); }
         }
@@ -39,6 +52,7 @@ public sealed class TileVisibility(float fadeSeconds)
             _retiring.Remove(tile); _drawn.Add(tile);
             if (entering)
             {
+                if (fade) _entering[tile] = clock;
                 change(tile, true, fade ? clock : 0);
             }
         }
@@ -46,7 +60,7 @@ public sealed class TileVisibility(float fadeSeconds)
     }
     public void Clear()
     {
-        _target.Clear(); _drawn.Clear(); _retiring.Clear(); _scratch.Clear();
+        _target.Clear(); _drawn.Clear(); _retiring.Clear(); _entering.Clear(); _scratch.Clear();
     }
     public static float Elapsed(float now, float then) => now >= then ? now - then : now + WorldTime.AnimLoopSeconds - then;
 }

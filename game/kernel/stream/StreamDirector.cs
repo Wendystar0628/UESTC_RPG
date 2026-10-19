@@ -17,7 +17,7 @@ namespace Campus.Kernel.Stream;
 public interface IStreamVisualFrame
 {
     bool CanActivateVisual { get; }
-    bool CaptureReady { get; }
+    bool ViewReady { get; }
     void FinishMountFrame(double remainingMilliseconds);
     void ReleaseRetired(double budgetMilliseconds);
 }
@@ -32,7 +32,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private readonly StreamRequestQueue _requests = new();
     private readonly Dictionary<StreamTile, TileGroup> _groups = [];
     private readonly HashSet<StreamTile> _required = [], _refined = [], _destinationRequired = [], _destinationRefined = [], _visible = [];
-    private readonly HashSet<StreamTile> _predictionRequired = [], _predictionRefined = [];
+    private readonly HashSet<StreamTile> _viewRequired = [], _predictionRequired = [], _predictionRefined = [];
     private readonly List<Pending> _pending = [];
     private readonly List<Preparing> _preparing = [];
     private readonly HashSet<BakeKey> _issued = [];
@@ -82,29 +82,20 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public bool IsUnloaded => _context is null && _pending.Count == 0 && _preparing.Count == 0 && _catalogTask is null && _retiringBundles.Count == 0 && (_interiors?.IsUnloaded ?? true);
     public bool ResidentReady => Error is null && _context is not null && _catalog is not null &&
         _groups.TryGetValue(StreamTile.Root, out var root) && root.Error is null && root.Mounted;
-    public bool DestinationReady => Error is null && _context is not null && PlanCurrent && _selectionApplied && (_destinationConsumed || _destinationPlanned && _destination is { } destination && _catalog is not null &&
-        _destinationRequired.All(IsReady) && AuxiliaryReady(destination: true) && (_interiors?.DestinationReady ?? true) && (_destinationMode switch
+    public bool DestinationReady => _destinationConsumed ? Error is null && _context is not null : _destinationPlanned && _destination is { } destination &&
+        SelectionReady(_destinationRequired, _destinationRefined) && AuxiliaryReady(destination: true) && (_interiors?.DestinationReady ?? true) && (_destinationMode switch
         {
             ViewMode.Fly => true,
             ViewMode.Walk => _collision.Ready(destination.Position, WalkRules.ArrivalCollisionRadius),
             _ => throw new ArgumentOutOfRangeException(nameof(_destinationMode))
-        }));
+        });
     private string? _error;
     public string? Error => _error ?? _collision?.Error;
     public int MountedTiles => _groups.Values.Count(group => group.Mounted);
     public int VisibleTiles => _visibility.Drawn.Count;
     public bool CanActivateVisual => _retiringBundles.Count == 0 && _detachPending.Count == 0;
-    /// <summary>The current plan's coarse geometry and required auxiliary content; geometry refinement and shader fades can continue.</summary>
-    public bool CaptureReady
-    {
-        get
-        {
-            if (Error is not null || _context is null || _catalog is null || !_selectionApplied || !PlanCurrent) return false;
-            foreach (var tile in _required)
-                if (tile.Level >= LodLevel.L2 && !IsReady(tile)) return false;
-            return AuxiliaryReady(destination: false);
-        }
-    }
+    /// <summary>The current view uses the same complete selected-geometry barrier as a formal arrival.</summary>
+    public bool ViewReady => SelectionReady(_viewRequired, _refined) && AuxiliaryReady(destination: false);
     /// <summary>Raw packed-buffer bytes from TileBundle stats; not compressed disk size or measured VRAM.</summary>
     public long ResidentBytes => _groups.Values.Sum(group => group.Bundles.Sum(bundle => bundle.Bytes));
 
@@ -157,6 +148,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
                      .Concat(_interiors?.Prepared ?? []).Concat(_retiringBundles).Distinct()) bundle.DetachAll();
         _mapGeneration++;
         CancelTerrainPlan(); _planReady = false; _interiorDestinationSequence = -1;
+        SetPinnedDestinations(Array.Empty<MapStreamDestination>());
         _context = null; _error = null; _destination = null; _destinationState = null; _catalog = null; _tree = null;
         _plannedContext = null; _plannedWorld = null;
         _selectionApplied = false;
@@ -165,7 +157,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _mount.RemoveMap(from);
         UnloadAuxiliary();
         _interiors?.Unload();
-        _requests.Clear(); _issued.Clear(); _required.Clear(); _refined.Clear();
+        _requests.Clear(); _issued.Clear(); _required.Clear(); _viewRequired.Clear(); _refined.Clear();
         _destinationRequired.Clear(); _destinationRefined.Clear(); _visible.Clear(); _visibility.Clear();
         foreach (var group in _groups.Values) foreach (var bundle in group.Bundles) bundle.Dispose();
         _groups.Clear();
@@ -195,6 +187,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         if (_exiting) return;
         HarvestCatalog();
+        PollPinnedPreparation();
         _interiors?.Poll(Math.Max(0, _settings.MaximumPreparations - _preparing.Count - _interiors.Preparations));
         if (_interiors?.Error is { } interiorError) _error ??= interiorError;
         PollHandles();
@@ -236,6 +229,11 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         {
             if (!_issued.Add(request.Key)) continue;
             var handle = _bake.Ensure(request.Key, request.Priority);
+            if (request.PreloadOnly)
+            {
+                _pending.Add(new(request, handle, _mount.Revision, null, 0, null) { Pinned = true });
+                continue;
+            }
             var group = _groups[request.Tile];
             group.Auxiliary.TryGetValue(request.Key, out var auxiliary);
             _pending.Add(new(request, handle, _mount.Revision, group, group.GeometryRevision, auxiliary));
@@ -271,101 +269,20 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
                 Fail(StreamTile.Root, "Module tile enumeration failed: " + error);
         }
     }
-    private void Replan(bool exempt)
-    {
-        _selectionApplied = false;
-        var pose = _camera.Pose;
-        var live = CanUseLiveCamera();
-        if (!live && _destination is { } mounting) pose = mounting;
-        if (!PreparePlanningTerrain(pose, live)) return;
-        var tree = _tree ?? throw new InvalidOperationException("A map tree is required before planning.");
-        var viewport = GetViewport();
-        var height = viewport.GetVisibleRect().Size.Y * viewport.Scaling3DScale;
-        if (!_destinationConsumed && _destination is { } accepted && _interiorDestinationSequence != _destinationSequence)
-        {
-            var space = _destinationState!.Space;
-            if (space is null && _context!.World.Spatial.MediumAt(accepted.Position) is { Kind: MediumKind.Interior, Feature: { } building } medium)
-                space = new(building, checked((short)medium.Storey));
-            _destinationState = new(accepted, _destinationMode, space);
-            _interiors!.Prefetch(space);
-            _interiorDestinationSequence = _destinationSequence;
-        }
-        _required.Clear(); _refined.Clear(); _required.Add(StreamTile.Root);
-        ResetAuxiliaryDemand();
-        if (live)
-        {
-            _interiors!.Select(_context!.World.Spatial.MediumAt(pose.Position));
-            tree.Select(pose.Position, exempt ? 0 : _camera.Speed, height, pose.FovDeg ?? 60, _speed.Minimum, _required, _refined);
-            SelectAuxiliary(pose, _required, destination: false, live: true);
-        }
-        else if (_destination is { } mountingDestination)
-        {
-            pose = mountingDestination;
-            _interiors!.Select(_context!.World.Spatial.MediumAt(pose.Position));
-            tree.Select(pose.Position, 0, height, pose.FovDeg ?? 60, LodLevel.L0, _required, _refined);
-            SelectAuxiliary(pose, _required, destination: false, live: false);
-        }
-        if (live && !exempt)
-            foreach (var seconds in _settings.PrefetchSeconds)
-            {
-                var map = _context!.Descriptor;
-                var predicted = pose.Position + _velocity * seconds;
-                predicted.Y = Math.Clamp(predicted.Y, map.Roam.FloorY, map.Roam.CeilY);
-                var offset = new N.Vector2(predicted.X, predicted.Z) - map.Center;
-                if (offset.Length() > map.Roam.MaxRadius)
-                {
-                    var limit = map.Center + N.Vector2.Normalize(offset) * map.Roam.MaxRadius;
-                    predicted.X = limit.X; predicted.Z = limit.Y;
-                }
-                tree.Select(predicted, _camera.Speed, height, pose.FovDeg ?? 60, _speed.Minimum, _predictionRequired, _predictionRefined);
-                SelectAuxiliary(pose with { Position = predicted }, _predictionRequired, destination: false, live: false);
-                _required.UnionWith(_predictionRequired);
-            }
-        if (!_destinationConsumed && _destination is { } destination)
-        {
-            tree.Select(destination.Position, 0, height, destination.FovDeg ?? 60, LodLevel.L0, _destinationRequired, _destinationRefined);
-            SelectAuxiliary(destination, _destinationRequired, destination: true, live: false);
-            _destinationPlanned = true;
-        }
-        var wanted = _required.Concat(_destinationRequired).Distinct().Order().ToArray();
-        var requests = new List<StreamRequest>();
-        foreach (var tile in wanted)
-        {
-            var group = GetGroup(tile);
-            if (!group.GeometryRequested)
-            {
-                group.GeometryRequested = true; group.Expected = _catalog!.Modules(tile).Count;
-                group.Mounted = group.Expected == 0; // Empty quadrants are valid geometry coverage.
-            }
-            var priority = tile == StreamTile.Root || _destinationRequired.Contains(tile) ? BakePriority.KnownDestination : BakePriority.Normal;
-            if (group.Error is not null && priority == BakePriority.KnownDestination) _error ??= group.Error;
-            group.Priority = priority;
-            var distance = LodTree.Distance(pose.Position, tree.Bounds(tile));
-            var toTile = tree.Bounds(tile).Center - pose.Position;
-            var approach = toTile.LengthSquared() > 0 ? N.Vector3.Dot(_velocity, N.Vector3.Normalize(toTile)) : 0;
-            var radius = _settings.Distances[Math.Min((int)tile.Level, 3)];
-            var neededIn = (distance - radius) / Math.Max(1, approach);
-            foreach (var module in _catalog!.Modules(tile))
-            {
-                var key = BakeRequestKeys.Tile(_context!.Descriptor.Id, module, tile.Tile, tile.Level);
-                group.Keys.Add(key);
-                if (!_issued.Contains(key)) requests.Add(new(key, tile, priority, neededIn));
-                // Re-Ensure promotes an already issued background request without restarting it.
-                else if (priority == BakePriority.KnownDestination) _bake.Ensure(key, priority);
-            }
-        }
-        QueueAuxiliary(requests, pose);
-        _requests.Replace(requests);
-        _checkRetention = true;
-        _plannedContext = _context; _plannedWorld = _context!.World; _plannedPose = pose;
-        _plannedLive = live; _plannedSequence = _destinationSequence; _planReady = true;
-    }
     private void PollHandles()
     {
         for (var i = 0; i < _pending.Count;)
         {
             var pending = _pending[i];
             if (pending.Handle.State is BakeState.Pending or BakeState.Running) { i++; continue; }
+            if (pending.Request.PreloadOnly)
+            {
+                if (pending.Pinned && _context?.Descriptor.Id == pending.Request.Key.Map && pending.Revision == _mount.Revision)
+                { i++; continue; }
+                if (_context?.Descriptor.Id == pending.Request.Key.Map && pending.Revision == _mount.Revision)
+                    _issued.Remove(pending.Request.Key);
+                _pending.RemoveAt(i); continue;
+            }
             if (!IsCurrent(pending)) { _pending.RemoveAt(i); continue; }
             if (pending.Handle.State == BakeState.Failed)
             {
@@ -385,7 +302,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
                 Fail(pending.Request.Tile, $"Bake returned the wrong product for {pending.Request.Key}.");
                 _pending.RemoveAt(i); continue;
             }
-            _preparing.Add(new(pending.Request.Tile, pending.Revision, RunWorker(() => PreparedTile.Create(bundle)), pending.Group, pending.GeometryRevision));
+            _preparing.Add(new(pending.Request.Tile, pending.Revision, RunWorker(() => PreparedTile.Create(bundle)), pending.Group!, pending.GeometryRevision));
             _pending.RemoveAt(i);
         }
     }
@@ -476,6 +393,18 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     { try { await preparation.ConfigureAwait(false); } catch (Exception) { } }
     private bool IsReady(StreamTile tile) => _groups.TryGetValue(tile, out var group) && group.GeometryRequested && group.Error is null && group.Mounted &&
         group.Bundles.All(bundle => bundle.Draws.All(_materials.IsReady));
+    private bool SelectionReady(IReadOnlySet<StreamTile> required, IReadOnlySet<StreamTile> refined)
+    {
+        if (Error is not null || _context is null || _catalog is null || !_selectionApplied || !PlanCurrent ||
+            required.Count == 0 || !_visibility.IsSettled(FrameClock.FadeSeconds)) return false;
+        foreach (var tile in required)
+        {
+            if (!IsReady(tile)) return false;
+            // A mounted fine tile still covered by an ancestor is not the selected view's presented geometry.
+            if (!refined.Contains(tile) && !_visibility.Drawn.Contains(tile)) return false;
+        }
+        return true;
+    }
     private bool IsCurrent(StreamTile tile, TileGroup group, long revision) => _context is not null && revision == _mount.Revision &&
         _groups.TryGetValue(tile, out var current) && ReferenceEquals(current, group);
     private bool CanUseLiveCamera() => _maps.Transition?.Stage switch
@@ -569,8 +498,9 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         try { await catalog.ConfigureAwait(false); }
         catch (Exception) { }
     }
-    private sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup Group,
-        long GeometryRevision, AuxiliaryTile? Auxiliary);
+    private sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup? Group,
+        long GeometryRevision, AuxiliaryTile? Auxiliary)
+    { public bool Pinned { get; set; } }
     private sealed record Preparing(StreamTile Tile, long Revision, Task<PreparedTile> Task, TileGroup Group, long GeometryRevision);
     private sealed record TerrainPlan(IMapContext Context, IWorldModel World, long Generation, long Sequence,
         Pose Pose, bool Live, Task Preparation, CancellationTokenSource Cancellation);

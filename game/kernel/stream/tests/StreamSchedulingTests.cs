@@ -39,10 +39,14 @@ public sealed class StreamSchedulingTests
         var bake = new InteriorRequests();
         var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { });
         stream.Load(context, generation);
-        stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)));
         var expected = layout.OpenStoreys.Where(floor => Math.Abs(floor - atriumFloor) <= 1 || layout.AtriumVisibleStoreys.Contains(floor)).Order()
             .Select(floor => new BakeKey(context.Descriptor.Id, "interior." + providerId,
                 FormattableString.Invariant($"{layout.Feature.Value}/{floor}/{(floor == atriumFloor ? "IF" : "IS")}"))).ToArray();
+        var preloads = new List<BakeKey>();
+        stream.Preload(new(layout.Feature, checked((short)atriumFloor)), preloads.Add);
+        if (!preloads.SequenceEqual(expected) || bake.Keys.Count != 0 || stream.Prepared.Any() || !stream.DestinationReady)
+            throw new InvalidOperationException("Interior CPU preload changed native residency or the active destination barrier.");
+        stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)));
         if (!bake.Keys.SequenceEqual(expected)) throw new InvalidOperationException("Atrium-visible open storeys did not reach the baker.");
         stream.Unload(); bake.Clear(); stream.Load(context);
         stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)));
@@ -237,12 +241,14 @@ public sealed class StreamSchedulingTests
         var visibility = new TileVisibility(.25f); var root = StreamTile.Root;
         var child = new StreamTile(new(0, 0), LodLevel.L3);
         visibility.Apply(new HashSet<StreamTile> { root }, 479.5f, true, (_, _, _) => { });
+        if (visibility.IsSettled(479.5f)) throw new InvalidOperationException("Newly entering geometry was certified before its shader fade.");
         visibility.Apply(new HashSet<StreamTile> { root }, 479.8f, true, (_, _, _) => { });
+        if (!visibility.IsSettled(479.8f)) throw new InvalidOperationException("Fully presented geometry was not ready.");
         visibility.Apply(new HashSet<StreamTile> { child }, 479.9f, true, (_, _, _) => { });
         visibility.Apply(new HashSet<StreamTile> { child }, .1f, true, (_, _, _) => { });
-        if (!visibility.Drawn.Contains(root)) throw new InvalidOperationException("Parent faded out before 250 ms.");
+        if (!visibility.Drawn.Contains(root) || visibility.IsSettled(.1f)) throw new InvalidOperationException("A partially presented replacement was certified ready.");
         visibility.Apply(new HashSet<StreamTile> { child }, .2f, true, (_, _, _) => { });
-        if (visibility.Drawn.Contains(root) || !visibility.Drawn.Contains(child)) throw new InvalidOperationException("Fade completion left stale parent coverage.");
+        if (visibility.Drawn.Contains(root) || !visibility.Drawn.Contains(child) || !visibility.IsSettled(.2f)) throw new InvalidOperationException("Fade completion left stale parent coverage or unreadiness.");
     }
     private sealed class InteriorRequests : IBakeService, IBakeHandle
     {

@@ -70,7 +70,7 @@ public static class CaptureSequence
                 stream.Prefetch(appliedPose, rig.Mode);
                 LogPhase("pose-applied");
                 await CaptureBarrier.WaitForReadyAsync(host, appliedPose, contentReady, cancellationToken);
-                LogPhase("coarse-ready");
+                LogPhase("view-ready");
             }
             cancellationToken.ThrowIfCancellationRequested();
             using var image = host.GetViewport().GetTexture().GetImage();

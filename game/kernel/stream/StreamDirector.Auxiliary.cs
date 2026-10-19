@@ -58,7 +58,7 @@ public partial class StreamDirector
             { item.Need = StreamTileNeed.None; item.CurrentRequired = item.DestinationRequired = false; }
     }
 
-    private void SelectAuxiliary(Pose pose, HashSet<StreamTile> required, bool destination, bool live)
+    private void SelectAuxiliary(Pose pose, HashSet<StreamTile> required, bool destination, bool live, List<StreamRequest>? preload = null)
     {
         var camera = GetViewport().GetCamera3D()
             ?? throw new InvalidOperationException("Stream demand requires the existing view camera.");
@@ -83,12 +83,12 @@ public partial class StreamDirector
         foreach (var tile in required)
             if (tile.Level == LodLevel.L0) _demandNearBuffer[nearCount++] = _tree!.Bounds(tile);
         var view = new StreamDemandView(pose, _demandFrustum, _demandNearBuffer.AsMemory(0, nearCount));
-        ApplyAuxiliaryDemand(in view, destination);
+        ApplyAuxiliaryDemand(in view, destination, preload);
         // The real reflection bridge reuses its own scratch; consume it before querying the next source view.
-        if (_reflections.TryGetDemand(in view, out var reflected)) ApplyAuxiliaryDemand(in reflected, destination);
+        if (_reflections.TryGetDemand(in view, out var reflected)) ApplyAuxiliaryDemand(in reflected, destination, preload);
     }
 
-    private void ApplyAuxiliaryDemand(in StreamDemandView view, bool destination)
+    private void ApplyAuxiliaryDemand(in StreamDemandView view, bool destination, List<StreamRequest>? preload)
     {
         foreach (var auxiliary in _catalog!.Auxiliary)
         {
@@ -98,6 +98,17 @@ public partial class StreamDirector
             if (_groups.TryGetValue(tile, out var existing)) existing.Auxiliary.TryGetValue(entry.Key, out item);
             var participant = item?.Participant ?? Participant(entry.Key);
             var need = participant.Demand(in entry, in view, item is { Mounted: true });
+            if (preload is not null)
+            {
+                switch (need)
+                {
+                    case StreamTileNeed.None:
+                    case StreamTileNeed.Retain: break;
+                    case StreamTileNeed.Required: QueueCpuRead(entry.Key, tile, preload); break;
+                    default: throw new ArgumentOutOfRangeException(nameof(need));
+                }
+                continue;
+            }
             switch (need)
             {
                 case StreamTileNeed.None: continue;
@@ -129,14 +140,18 @@ public partial class StreamDirector
                 if (item.Error is not null && item.DestinationRequired) _error ??= item.Error;
                 if (!_issued.Contains(key))
                     requests.Add(new(key, group.Tile, priority, LodTree.Distance(pose.Position, item.Entry.Bounds) / Math.Max(1, _camera.Speed)));
-                else if (priority == BakePriority.KnownDestination) _bake.Ensure(key, priority);
+                else
+                {
+                    PromotePreload(new(key, group.Tile, priority, 0), group, item);
+                    if (priority == BakePriority.KnownDestination) _bake.Ensure(key, priority);
+                }
             }
     }
 
-    private bool IsCurrent(Pending pending) => IsCurrent(pending.Request.Tile, pending.Group, pending.Revision) &&
+    private bool IsCurrent(Pending pending) => pending.Group is { } group && IsCurrent(pending.Request.Tile, group, pending.Revision) &&
         (pending.Auxiliary is { } auxiliary
-            ? pending.Group.Auxiliary.TryGetValue(pending.Request.Key, out var current) && ReferenceEquals(current, auxiliary)
-            : pending.Group.GeometryRequested && pending.Group.GeometryRevision == pending.GeometryRevision);
+            ? group.Auxiliary.TryGetValue(pending.Request.Key, out var current) && ReferenceEquals(current, auxiliary)
+            : group.GeometryRequested && group.GeometryRevision == pending.GeometryRevision);
 
     private bool IsCurrentGeometry(StreamTile tile, TileGroup group, long revision, long geometryRevision) =>
         IsCurrent(tile, group, revision) && group.GeometryRequested && group.GeometryRevision == geometryRevision;
@@ -154,10 +169,10 @@ public partial class StreamDirector
                 throw new InvalidDataException($"Auxiliary mount identity mismatch: {pending.Request.Key}.");
             }
             item.Work = new(work, () => IsCurrent(pending), () => item.Mounted = true,
-                error => FailAuxiliary(pending.Group, item, error));
+                error => FailAuxiliary(pending.Group!, item, error));
             _mount.Enqueue(item.Work);
         }
-        catch (Exception error) { FailAuxiliary(pending.Group, item, error.GetBaseException().Message); }
+        catch (Exception error) { FailAuxiliary(pending.Group!, item, error.GetBaseException().Message); }
     }
 
     private bool AuxiliaryReady(bool destination)

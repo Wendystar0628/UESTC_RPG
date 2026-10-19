@@ -170,6 +170,9 @@ public sealed partial class MaterialWarmupRuntimeTests
         public string? Error { get; set; }
         public MapStreamDestination? Destination { get; private set; }
         public bool HasPendingDestination => !DestinationReady;
+        public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = Array.Empty<MapStreamDestination>();
+        public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) =>
+            PinnedDestinations = Array.AsReadOnly(destinations.ToArray());
         public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) => Destination = new(destination, mode, space);
     }
 

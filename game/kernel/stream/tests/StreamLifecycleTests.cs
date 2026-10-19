@@ -28,12 +28,75 @@ public sealed class StreamLifecycleTests
             var interiors = new InteriorStream(null!, null!, null!, null!, _ => { }); interiors.Load(context);
             Set(director, "_catalog", catalog); Set(director, "_maps", new TestMapService()); Set(director, "_interiors", interiors);
             Set(director, "_destinationConsumed", true); Set(director, "_destinationPlanned", true); Set(director, "_selectionApplied", true);
+            if (!director.DestinationReady || director.ViewReady)
+                throw new InvalidOperationException("The consumed arrival inherited readiness from an unrelated unprepared view.");
             var target = new Pose(new(1, 2, 3), 0, 0);
             director.Prefetch(target, ViewMode.Fly);
             // A mount finishing for the old view must not certify this newly registered destination.
             Set(director, "_selectionApplied", true);
-            if (director.Destination?.Pose != target || !director.HasPendingDestination || director.DestinationReady || director.CaptureReady)
+            if (director.Destination?.Pose != target || !director.HasPendingDestination || director.DestinationReady || director.ViewReady)
                 throw new InvalidOperationException("A pending unprepared destination inherited the previous view's readiness.");
+            var destination = director.Destination;
+            var pins = new[] { new MapStreamDestination(target, ViewMode.Walk), new MapStreamDestination(target, ViewMode.Fly) };
+            director.SetPinnedDestinations(pins);
+            pins[0] = pins[1];
+            if (director.PinnedDestinations.Count != pins.Length || director.PinnedDestinations[0].Mode != ViewMode.Walk ||
+                !ReferenceEquals(director.Destination, destination) || !director.HasPendingDestination || director.DestinationReady || director.ViewReady)
+                throw new InvalidOperationException("Pinned CPU preloads changed the active arrival or retained the caller's mutable collection.");
+            director.SetPinnedDestinations(Array.Empty<MapStreamDestination>());
+            if (director.PinnedDestinations.Count != 0 || !ReferenceEquals(director.Destination, destination))
+                throw new InvalidOperationException("Clearing CPU preloads replaced the active destination.");
+        }
+        finally { director.Free(); }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public void CurrentViewAndArrivalRequireFineGeometryToReplaceItsCoarseAncestor()
+    {
+        var director = new StreamDirector();
+        try
+        {
+            var context = Context();
+            var pose = new Pose(new(64, 2, 64), 0, 0, 60);
+            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
+            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
+            Set(director, "_catalog", catalog); Set(director, "_maps", new TestMapService());
+            Set(director, "_camera", new TestCameraRig(pose: pose));
+            Set(director, "_plannedContext", context); Set(director, "_plannedWorld", context.World);
+            Set(director, "_plannedPose", pose); Set(director, "_plannedLive", true); Set(director, "_planReady", true);
+            Set(director, "_selectionApplied", true); Set(director, "_destinationPlanned", true);
+            Set(director, "_destination", pose); Set(director, "_destinationMode", ViewMode.Fly);
+            var required = (HashSet<StreamTile>)Field(director, "_viewRequired")!;
+            var refined = (HashSet<StreamTile>)Field(director, "_refined")!;
+            var tree = new LodTree(new(new(0, 0, 0), new(128, 10, 128)), new());
+            tree.Select(pose.Position, 0, 1080, pose.FovDeg!.Value, LodLevel.L1, required, refined);
+            ((HashSet<StreamTile>)Field(director, "_destinationRequired")!).UnionWith(required);
+            ((HashSet<StreamTile>)Field(director, "_destinationRefined")!).UnionWith(refined);
+            var fine = required.Single(tile => tile.Level == LodLevel.L1);
+            var ready = required.Where(tile => tile != fine).ToHashSet();
+            var getGroup = typeof(StreamDirector).GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            object? fineGroup = null;
+            foreach (var tile in required)
+            {
+                var group = getGroup.Invoke(director, [tile])!;
+                group.GetType().GetField("GeometryRequested")!.SetValue(group, true);
+                group.GetType().GetField("Mounted")!.SetValue(group, ready.Contains(tile));
+                if (tile == fine) fineGroup = group;
+            }
+            var visibility = (TileVisibility)Field(director, "_visibility")!;
+            var visible = new HashSet<StreamTile>();
+            tree.ResolveVisible(refined, ready.Contains, visible);
+            visibility.Apply(visible, 0, false, (_, _, _) => { });
+            if (director.ViewReady || director.DestinationReady)
+                throw new InvalidOperationException("Coarse coverage certified missing selected fine geometry.");
+            fineGroup!.GetType().GetField("Mounted")!.SetValue(fineGroup, true);
+            if (director.ViewReady || director.DestinationReady)
+                throw new InvalidOperationException("Mounted fine geometry was certified while its ancestor was still presented.");
+            ready.Add(fine); tree.ResolveVisible(refined, ready.Contains, visible);
+            visibility.Apply(visible, 0, false, (_, _, _) => { });
+            if (!director.ViewReady || !director.DestinationReady)
+                throw new InvalidOperationException("Current view and formal arrival did not share complete selected-geometry readiness.");
         }
         finally { director.Free(); }
     }
