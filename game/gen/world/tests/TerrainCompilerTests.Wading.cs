@@ -13,7 +13,7 @@ public sealed partial class TerrainCompilerTests
     public void SoftWaterIncludesAllPartsAndLeavesIslandHolesDry()
     {
         var island = new PolygonRings(Box(-20, -20, 20, 20).Outer, [Box(-5, -5, 5, 5).Outer]);
-        var water = new WorldFeature(new("fixture:water"), FeatureSource.Design, new("poi"), new MultiPolygonGeometry([island, Box(40, -10, 60, 10)]))
+        var water = new WorldFeature(new("fixture:water"), new("poi"), new MultiPolygonGeometry([island, Box(40, -10, 60, 10)]))
         {
             Parts = [new("a", new PolygonGeometry(island), null, null) { Props = Kind("water") },
                 new("b", new PolygonGeometry(Box(40, -10, 60, 10)), null, null) { Props = Kind("water") }]
@@ -85,7 +85,7 @@ public sealed partial class TerrainCompilerTests
     public void RegisteredUndergroundCulvertPreservesSurfaceAndLogicalWaterIdentity()
     {
         var shape = new PolygonGeometry(Box(-10, -2, 10, 2));
-        var water = new WorldFeature(new("fixture:source:way:44"), FeatureSource.Osm, new("water"), shape)
+        var water = new WorldFeature(new("fixture:source:way:44"), new("water"), shape)
         {
             Parts = [new("osm:way:44", shape, null, null) { Props = Kind("water") }]
         };
@@ -104,7 +104,7 @@ public sealed partial class TerrainCompilerTests
         var connected = TerrainCompiler.Compile(Context([water, lake]) with { Network = context.Network }, []);
         AssertThat(Math.Abs((double)(-0.5) - (double)(connected.WaterY(water.Id)!.Value)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(0) - (double)(connected.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue();
         var drainShape = new PolygonGeometry(Box(8, -2, 30, 2));
-        var drain = new WorldFeature(new("fixture:source:way:45"), FeatureSource.Osm, new("water"), drainShape)
+        var drain = new WorldFeature(new("fixture:source:way:45"), new("water"), drainShape)
             { Parts = [new("osm:way:45", drainShape, null, null) { Props = Kind("water") }] };
         var drainLine = new NetworkLine(drain.Id, new([new(10, 0), new(30, 0)]), 4)
             { Props = JsonSerializer.SerializeToElement(new { waterway = "drain" }) };

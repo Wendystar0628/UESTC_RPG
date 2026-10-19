@@ -25,7 +25,7 @@ public sealed class FeatureContourTests
             {
                 var ring = Enumerable.Range(0, Square.Length).Select(i => Square[(i + shift) % Square.Length]).ToArray();
                 if (reversed) Array.Reverse(ring);
-                var world = World(new(new("parent"), FeatureSource.Osm, new("water"), new PolygonGeometry(new(ring))), selection);
+                var world = World(new(new("parent"), new("water"), new PolygonGeometry(new(ring))), selection);
                 AssertThat(world.ContourSegment(Selection).SequenceEqual(expected))
                     .OverrideFailureMessage("The explicit CCW arc changed with the ring's start/direction or was shortened.").IsTrue();
                 var frame = world.ContourFrame(Selection, originAtEnd: false, forward: false);
@@ -41,7 +41,7 @@ public sealed class FeatureContourTests
     {
         foreach (var endpoints in new[] { (new Vector2(4.6f, 0), Vector2.Zero), (Square[1], Square[1]) })
         {
-            var world = World(new(new("parent"), FeatureSource.Osm, new("water"), new PolygonGeometry(new(Square))), Segment(endpoints.Item1, endpoints.Item2));
+            var world = World(new(new("parent"), new("water"), new PolygonGeometry(new(Square))), Segment(endpoints.Item1, endpoints.Item2));
             WorldDataException? failure = null;
             try { world.ContourSegment(Selection); }
             catch (WorldDataException error) { failure = error; }
@@ -54,7 +54,7 @@ public sealed class FeatureContourTests
     public void SourcePartAndFacadeAreExplicitReferences()
     {
         var facade = Square.Select(p => p + new Vector2(10, 0)).ToArray();
-        var parent = new WorldFeature(new("parent"), FeatureSource.Osm, new("building"), new PolygonGeometry(new(Square)))
+        var parent = new WorldFeature(new("parent"), new("building"), new PolygonGeometry(new(Square)))
         {
             Parts = [new("source-a", new PolygonGeometry(new(Square)), null, null)
                 { FacadeGeometry = new PolygonGeometry(new(facade)) },
@@ -67,19 +67,20 @@ public sealed class FeatureContourTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void OverlaySelectionLoadsWithoutPublishingARoad()
+    public void WorldSelectionLoadsWithoutPublishingARoad()
     {
         var world = WorldModelLoader.Load(new("test"), new Dictionary<string, string>
         {
-            ["campus.json"] = """
-                {"meta":{"origin":[103,30],"crs":"EPSG:32648","bounds":[-20,-20,20,20],"entityPrefix":"fixture"},
-                 "boundary":[[[-20,-20],[20,-20],[20,20],[-20,20],[-20,-20]]],"entities":[],"features":[
-                 {"id":"osm:way:1","entityId":null,"kind":"water","height":0,"polygons":[[[[0,0],[4,0],[4,4],[0,4],[0,0]]]]}]}
+            ["world/geo.json"] = """
+                {"origin":[103,30],"crs":"EPSG:32648","bounds":[-20,-20,20,20],"entityPrefix":"fixture",
+                 "boundary":{"outer":[[-20,-20],[20,-20],[20,20],[-20,20]],"holes":[]}}
                 """,
-            ["overlay/test.d/0000-fixture.json"] = """
-                {"zone":"test","owner":"WP-08","ops":[{"op":"add","id":"design:test-contour","kind":"contourSegment",
-                 "geometry":{"type":"polyline","line":{"points":[[4,0],[0,0]]}},
-                 "props":{"parent":"fixture:source:way:1"},"reason":"Test contour reference, without rendered geometry."}]}
+            ["world/test.json"] = """
+                {"features":[
+                  {"id":"fixture:source:way:1","kind":"water","geometry":{"type":"polygon","rings":{"outer":[[0,0],[4,0],[4,4],[0,4]],"holes":[]}}},
+                  {"id":"design:test-contour","kind":"contourSegment","geometry":{"type":"polyline","line":{"points":[[4,0],[0,0]]}},
+                   "props":{"parent":"fixture:source:way:1"},"note":"Test contour reference, without rendered geometry."}
+                ],"trees":[]}
                 """
         }).World;
         AssertThat(world.ContourSegment(Selection).SequenceEqual(new[] { Square[1], Square[2], Square[3], Square[0] })).IsTrue();
@@ -87,7 +88,7 @@ public sealed class FeatureContourTests
             .OverrideFailureMessage("A contour reference must not enter the rendered network.").IsTrue();
     }
 
-    private static WorldFeature Segment(Vector2 a, Vector2 b) => new(new(Selection), FeatureSource.Design, new("contourSegment"), new PolylineGeometry(new([a, b])))
+    private static WorldFeature Segment(Vector2 a, Vector2 b) => new(new(Selection), new("contourSegment"), new PolylineGeometry(new([a, b])))
         { Props = JsonSerializer.SerializeToElement(new { parent = "parent" }) };
 
     private static FakeWorld World(WorldFeature parent, WorldFeature selection) => new()

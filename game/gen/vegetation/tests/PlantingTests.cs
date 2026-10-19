@@ -25,7 +25,7 @@ public sealed class PlantingTests
         var root = RepositoryFixture.Root;
         var species = SpeciesTable.Parse(File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json")));
         var rules = PlantingRules.Parse(RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey].Span, species);
-        return (PavementTests.World(false), species, rules);
+        return (PavementTests.World(), species, rules);
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -33,7 +33,7 @@ public sealed class PlantingTests
     public void TheCampusIsPlantedAndTheAvenueHasOneRowEachSide()
     {
         var (world, species, rules) = Data.Value;
-        var a = PavementTests.BareLayout.Value;
+        var a = PavementTests.WorldLayout.Value;
         var b = Planting.Build(world, species, rules, 1u);
         if (!a.Trees.Select(t => (t.Key, t.Position, t.Variant, t.Species.Id)).SequenceEqual(b.Trees.Select(t => (t.Key, t.Position, t.Variant, t.Species.Id))))
             throw new InvalidOperationException("two builds differ");
@@ -72,8 +72,8 @@ public sealed class PlantingTests
             throw new InvalidOperationException("enlarging the distant parcel did not exercise a planting change");
 
         static string RemoteGreen(float east) =>
-            "{\"op\":\"add\",\"id\":\"design:fixture-remote-green\",\"kind\":\"green\",\"geometry\":{\"type\":\"polygon\",\"rings\":{\"outer\":[[-95,-70],[" +
-            PavementTests.F(east) + ",-70],[" + PavementTests.F(east) + ",70],[-95,70]],\"holes\":[]}},\"reason\":\"Fixture: a distant green parcel.\"}";
+            "{\"id\":\"design:fixture-remote-green\",\"kind\":\"green\",\"geometry\":{\"type\":\"polygon\",\"rings\":{\"outer\":[[-95,-70],[" +
+            PavementTests.F(east) + ",-70],[" + PavementTests.F(east) + ",70],[-95,70]],\"holes\":[]}},\"note\":\"Fixture: a distant green parcel.\"}";
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -83,7 +83,7 @@ public sealed class PlantingTests
         // WLD-VEGETATION: ginkgo only on the avenue (with its OSM street trees), beside the main building and at the
         // student centre; never spread elsewhere.
         var (world, _, rules) = Data.Value;
-        var layout = PavementTests.BareLayout.Value;
+        var layout = PavementTests.WorldLayout.Value;
         var allowed = rules.Groves.Areas.Where(a => a.Mix.Any(m => m.Species == "ginkgo"))
             .Select(a => (a.Radius, Features: world.Features.Values.Where(f => f.Name == a.Name).ToList())).ToList();
         foreach (var t in layout.Trees.Where(t => t.Species.Id == "ginkgo" && t.Source == PlantSource.Grove))
@@ -98,7 +98,7 @@ public sealed class PlantingTests
     public void TrunksKeepOffBuildingsWaterAndRoads()
     {
         var world = Data.Value.World;
-        var layout = PavementTests.BareLayout.Value;
+        var layout = PavementTests.WorldLayout.Value;
         var blocking = world.Features.Values.SelectMany(f => new[] { "building", "water", "sport", "parking" }
             .SelectMany(kind => Parts(f, kind))).SelectMany(p => p.Geometry switch
             {
@@ -170,7 +170,7 @@ public sealed class PlantingTests
     public void LeavesFallUnderTheCrownsAndCarpetTheAvenue()
     {
         var (world, _, rules) = Data.Value;
-        var layout = PavementTests.BareLayout.Value;
+        var layout = PavementTests.WorldLayout.Value;
         var rect = new MapRect(world.Boundary.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min),
             world.Boundary.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max));
         const float step = 1f;

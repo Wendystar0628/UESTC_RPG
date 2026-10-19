@@ -1,0 +1,503 @@
+{
+  "features": [
+    {
+      "id": "design:boundary-north-a05-plaza",
+      "kind": "road",
+      "props": {
+        "anchor": "A05",
+        "highway": "pedestrian"
+      },
+      "note": "设计增补：北门内水岸小广场，给 A05 落脚（SYS-ATLAS，R4 生活区晚归的头一拍）。原锚点落在红光右支渠的水面上，30 m 内只有车道、水和非机动车道，没有人行硬面。在渠东岸、渠与东侧车道 osm:way:987943170 之间补一块 14 × 8.6 m 的硬质铺装，长边顺渠（朝约 22°），接非机动车道 osm:way:950008623 的端头：这段落在广场里的端头连同它拐向车道的一小段按人车混行处理，铺装连成一片。临水一侧一道 1.1 m 浅色栏杆，栏杆内两张长椅朝渠和北门桥；导览亭离车道边约 5.9 m、离栏杆约 3.6 m，朝 165°（朝校内）。默认状态受光、接季；夜间在导览亭牌面小灯下",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-84.392,-755.657],[-79.198,-768.658],[-71.212,-765.467],[-76.406,-752.467]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:boundary-north-bank-contour",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:source:way:687770522"
+      },
+      "note": "选段登记：北门水岸广场与北区商业街栏杆共用红光右支渠东岸，按父轮廓逆时针由北端指向南端；只指明原有岸段，不改水体与摆放。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-75.21,-778.91],[-288.56,-244.89]]
+        }
+      }
+    },
+    {
+      "id": "design:boundary-north-forecourt",
+      "kind": "road",
+      "props": {
+        "highway": "pedestrian"
+      },
+      "note": "设计增补：北门门前人行区。校界在北门处折了一下：门外道路贴着校界西南侧出校，在门线与天润路之间留下约 8 × 13 m 的一块校内地，正好在闸机和值班室外侧。铺成人行硬地，接天润路人行道（外围 O0），闸机前有排队和回望校门的余地；临门外道路一侧立一排挡车桩，外侧收边由本包的闭合围栏（值班室西南角出发、到天润路转角）完成。默认状态受光、接季；夜间在值班室窗光下",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-108.332,-824.739],[-112.736,-818.18],[-124.359,-825.984],[-119.958,-831.642]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:boundary-north-gate-apron",
+      "kind": "road",
+      "props": {
+        "highway": "pedestrian"
+      },
+      "note": "设计增补：北门闸机内侧的一小块人行硬地。门内道路没有人行道，闸机背后原是草地；铺一块 L 形硬地，从闸机背后绕过安全岛的校内端接到门内车道边，进门的人不踩草。默认状态受光、接季；夜间在值班室窗光下",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-104.513,-822.175],[-106.659,-818.979],[-110.437,-821.515],[-108.848,-823.881],[-106.357,-822.209],[-105.8,-823.039]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "qsh:node:6403469798",
+      "kind": "poi",
+      "name": "兰州拉面",
+      "props": {
+        "name": "兰州拉面",
+        "category": "dining",
+        "subcategory": "restaurant",
+        "kind": "poi",
+        "anchor": [-74.43,0,-714.52]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-74.43,0,-714.52]
+      }
+    },
+    {
+      "id": "qsh:node:6403469799",
+      "kind": "poi",
+      "name": "蜜雪冰城",
+      "props": {
+        "name": "蜜雪冰城",
+        "category": "dining",
+        "subcategory": "cafe",
+        "kind": "poi",
+        "anchor": [-56.68,0,-701.45]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-56.68,0,-701.45]
+      }
+    },
+    {
+      "id": "qsh:node:6759019377",
+      "kind": "poi",
+      "name": "重庆鸡公煲",
+      "props": {
+        "name": "重庆鸡公煲",
+        "category": "dining",
+        "subcategory": "restaurant",
+        "kind": "poi",
+        "anchor": [-61.14,0,-739.64]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-61.14,0,-739.64]
+      }
+    },
+    {
+      "id": "qsh:node:6759019378",
+      "kind": "poi",
+      "name": "亮亮麻辣烫",
+      "props": {
+        "name": "亮亮麻辣烫",
+        "category": "dining",
+        "subcategory": "restaurant",
+        "kind": "poi",
+        "anchor": [-67.41,0,-722.52]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-67.41,0,-722.52]
+      }
+    },
+    {
+      "id": "qsh:node:6784723437",
+      "kind": "poi",
+      "name": "出入口 · 3437",
+      "props": {
+        "name": "出入口 · 3437",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-104.9,0,-756.95]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-104.9,0,-756.95]
+      }
+    },
+    {
+      "id": "qsh:node:6784723438",
+      "kind": "poi",
+      "name": "北门",
+      "props": {
+        "name": "北门",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-106.66,0,-827.23]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-106.66,0,-827.23]
+      }
+    },
+    {
+      "id": "qsh:source:way:1047605193",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1047605193",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-53.45,-799.85],[-44.71,-807.02],[-40.3,-811.32],[-36.39,-816.9],[-25.08,-845.91]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:574644708",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:574644708",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-113.23,-736.25],[-127.17,-745.98],[-130.96,-749.28],[-145.93,-760.27],[-157.48,-768.75]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:683646741",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:683646741",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-127.17,-745.98],[-138.48,-730.23],[-142.49,-724.64]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:683646742",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:683646742",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-138.48,-730.23],[-120.66,-718.07]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:723349795",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "residential"
+      },
+      "parts": [
+        {
+          "id": "osm:way:723349795",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "residential"
+          },
+          "line": [[-75.01,-807.77],[-82.51,-812.52],[-106.66,-827.23],[-126.34,-840.09],[-129.46,-842.12],[-131.8,-843.65],[-136.79,-846.92]],
+          "width": 6,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-80.93,-815.07],[-73.41,-810.31],[-76.62,-805.24],[-84.09,-809.98],[-108.22,-824.67],[-104.99,-829.72]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:851437317",
+      "kind": "water",
+      "height": 0,
+      "props": {
+        "water": "river",
+        "kind": "water",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:851437317",
+          "height": 0,
+          "props": {
+            "water": "river",
+            "kind": "water",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-71.07,-793.36],[-79.02,-796.61],[-36.17,-908.18],[-29.36,-903.38]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:852606260",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:852606260",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-123.01,-519.77],[-116.33,-517.16],[-119.49,-509.01],[-111.63,-494.92],[-131.71,-503.15],[-127.23,-513.99],[-125.67,-513.36]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:217855271",
+      "kind": "building",
+      "name": "校安保中心",
+      "height": 8.4,
+      "storeys": 2,
+      "family": "service",
+      "props": {
+        "name": "校安保中心",
+        "category": "service",
+        "subcategory": "service",
+        "kind": "building",
+        "anchor": [-112.91,8.4,-773.83]
+      },
+      "parts": [
+        {
+          "id": "osm:way:217855271",
+          "height": 8.4,
+          "storeys": 2,
+          "props": {
+            "kind": "building",
+            "category": "service",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-133.67,-778.41],[-130.24,-787.06],[-102.87,-776.06],[-111.02,-757.24],[-120.48,-761.16],[-116.27,-771.59]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:552816777",
+      "kind": "building",
+      "name": "学生活动中心",
+      "height": 11.7,
+      "storeys": 3,
+      "family": "academic",
+      "props": {
+        "name": "学生活动中心",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [-134.1,11.7,-522.18]
+      },
+      "parts": [
+        {
+          "id": "osm:way:552816777",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-147.93,-486.24],[-159.11,-491],[-151.7,-508.9],[-135.14,-502.18],[-118.54,-542.63],[-131.46,-547.88],[-133.65,-542.57],[-137.16,-544],[-121.4,-582.05],[-116.05,-579.86],[-110.15,-577.44],[-101.18,-573.69],[-114.87,-539.43],[-121.01,-524.6],[-123.01,-519.77],[-125.67,-513.36],[-127.23,-513.99],[-131.71,-503.15],[-111.63,-494.92],[-116.54,-483.02],[-120.74,-472.84],[-122.8,-468.11],[-126.29,-464.32],[-130.84,-461.88],[-135.95,-461.05],[-141.05,-461.94],[-145.58,-464.47],[-149.03,-468.34],[-150.97,-472.99],[-151.31,-478.01],[-150,-482.89]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-147.93,-486.24],[-159.11,-491],[-151.7,-508.9],[-135.14,-502.18],[-118.54,-542.63],[-131.46,-547.88],[-133.65,-542.57],[-137.16,-544],[-121.4,-582.05],[-101.18,-573.69],[-114.87,-539.43],[-125.67,-513.36],[-127.23,-513.99],[-131.71,-503.15],[-111.63,-494.92],[-122.8,-468.11],[-126.29,-464.32],[-130.84,-461.88],[-135.95,-461.05],[-141.05,-461.94],[-145.58,-464.47],[-149.03,-468.34],[-150.97,-472.99],[-151.31,-478.01],[-150,-482.89]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:852606257",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-151.7,-508.9],[-137.16,-544],[-133.65,-542.57],[-131.46,-547.88],[-118.54,-542.63],[-135.14,-502.18]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:603368212",
+      "kind": "building",
+      "name": "商业街",
+      "height": 12.6,
+      "storeys": 3,
+      "family": "service",
+      "props": {
+        "name": "商业街",
+        "category": "service",
+        "subcategory": "commercial",
+        "kind": "building",
+        "anchor": [-52.71,12.6,-721.6]
+      },
+      "parts": [
+        {
+          "id": "osm:way:603368212",
+          "height": 12.6,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "service",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-56.26,-672.23],[-57.35,-673.57],[-59.92,-675.11],[-62.88,-675.7],[-65.61,-675.35],[-68.1,-674.18],[-70.1,-672.3],[-71.42,-669.9],[-71.94,-667.2],[-71.59,-664.48],[-70.41,-662.01],[-68.52,-660.01],[-69.52,-657.6],[-98.8,-669.41],[-65.95,-748.81],[-54.77,-760.13],[-51.71,-767.38],[-15.69,-752.81],[-39.32,-693.89],[-41.26,-694.38],[-45.11,-683.34]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:723349792",
+          "height": 8.4,
+          "storeys": 2,
+          "props": {
+            "kind": "building",
+            "category": "service",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-55.46,-662.62],[-57.37,-660.31],[-59.94,-658.77],[-62.89,-658.18],[-65.86,-658.61],[-68.52,-660.01],[-70.41,-662.01],[-71.59,-664.48],[-71.94,-667.2],[-71.42,-669.9],[-70.1,-672.3],[-68.1,-674.18],[-65.61,-675.35],[-62.88,-675.7],[-59.92,-675.11],[-57.35,-673.57],[-56.26,-672.23],[-55.45,-671.24],[-54.45,-668.43],[-54.45,-665.44]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-55.46,-662.62],[-57.37,-660.31],[-59.94,-658.77],[-62.89,-658.18],[-65.86,-658.61],[-68.52,-660.01],[-70.41,-662.01],[-71.59,-664.48],[-71.94,-667.2],[-71.42,-669.9],[-70.1,-672.3],[-68.1,-674.18],[-65.61,-675.35],[-62.88,-675.7],[-59.92,-675.11],[-57.35,-673.57],[-55.45,-671.24],[-54.45,-668.43],[-54.45,-665.44]],
+              "holes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:723349813",
+      "kind": "poi",
+      "name": "道森石油",
+      "props": {
+        "name": "道森石油",
+        "category": "service",
+        "subcategory": "service",
+        "kind": "poi",
+        "anchor": [-65.36,0,-849.8]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-65.36,0,-849.8]
+      }
+    }
+  ],
+  "trees": []
+}

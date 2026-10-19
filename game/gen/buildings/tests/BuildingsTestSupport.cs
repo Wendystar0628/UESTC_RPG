@@ -175,7 +175,7 @@ internal static class BuildingsTestSupport
     /// <summary>Level at 0 (pads too) north of <paramref name="edge"/> (z), <paramref name="drop"/> lower south of it.</summary>
     internal static FormulaTerrain Falling(float edge, float drop) => new((x, z) => z < edge ? -drop : 0f);
 
-    /// <summary>A loaded world with its features rewritten (as an overlay op would), everything else as loaded.</summary>
+    /// <summary>A loaded world with its features replaced, everything else as loaded.</summary>
     internal static FakeWorld Styled(IWorldModel inner, Func<WorldFeature, WorldFeature> rewrite) =>
         new(inner) { Features = inner.Features.ToDictionary(p => p.Key, p => rewrite(p.Value)) };
 

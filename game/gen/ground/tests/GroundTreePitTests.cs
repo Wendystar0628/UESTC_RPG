@@ -15,7 +15,7 @@ namespace Campus.Gen.Ground.Tests;
 using static GdUnit4.Assertions;
 
 /// <summary>
-/// Tree pits and planting strips (overlay kind tree-pit): the ground carves them out of the paving round them, lays a
+/// Tree pits and planting strips (world kind tree-pit): the ground carves them out of the paving round them, lays a
 /// granite frame of the authored height and thickness and a sunken soil face inside, never lays anything over them, and
 /// makes the tall ones solid. Also: a pitch that names no sport is plain grass whatever its proportions.
 /// </summary>
@@ -305,7 +305,7 @@ public sealed class GroundTreePitTests
         var props = sport is null ? """{"kind":"sport"}""" : $$"""{"kind":"sport","sport":"{{sport}}"}""";
         var part = new WorldFeaturePart(id.Replace("test:", "osm:", StringComparison.Ordinal), new PolygonGeometry(rings), null, null) { Props = Json(props) };
         return WorldFeatureFixture.Create(id, "sport", new PolygonGeometry(rings),
-            $$"""{"id":"{{id}}","kind":"sport","sourceTags":{{tags}}}""", FeatureSource.Osm, parts: [part]);
+            tags, parts: [part]);
     }
 
 
@@ -321,7 +321,7 @@ public sealed class GroundTreePitTests
         {
             var rings = new PolygonRings([new(4f, 4f), new(60f, 4f), new(60f, 60f), new(4f, 60f)]);
             _features.Add(WorldFeatureFixture.Create("osm:way:plaza", "road", new PolygonGeometry(rings),
-                """{"roadType":"pedestrian"}""", FeatureSource.Osm));
+                """{"highway":"pedestrian"}"""));
             return this;
         }
 

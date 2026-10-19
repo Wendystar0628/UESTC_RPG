@@ -43,7 +43,7 @@ public sealed class MapBakeTests
     public void MixedPoiUsesOnlyBuildingPartsAndLeavesCampusGroundUnfilled()
     {
         var grounds = new PolygonGeometry(Square(-14, -14, 14, 14));
-        var poi = WorldFeatureFixture.Create("fixture:campus", "poi", grounds, source: FeatureSource.Osm, parts:
+        var poi = WorldFeatureFixture.Create("fixture:campus", "poi", grounds, parts:
             [
                 new("source:grounds", grounds, null, null) { Props = JsonSerializer.SerializeToElement(new { kind = "poi" }) },
                 new("source:building-a", new MultiPolygonGeometry([Square(-12, -12, -8, -8), Square(8, 8, 12, 12)]), 15.6f, 4)

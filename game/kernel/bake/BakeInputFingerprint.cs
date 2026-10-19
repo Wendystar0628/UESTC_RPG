@@ -15,8 +15,8 @@ internal static class BakeInputFingerprint
     public static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadInputs(IMapContext map)
     {
         var snapshot = map.SourceInputs;
-        if (snapshot is null || snapshot.Entries.Count == 0 || !snapshot.Entries.TryGetValue("campus.json", out var campus) || campus.IsEmpty)
-            throw new InvalidDataException($"Map {map.Descriptor.Id.Value} has no frozen campus.json input. Publish MapLoadInput.SourceInputs when creating IMapContext.");
+        if (snapshot is null || snapshot.Entries.Count == 0 || !snapshot.Entries.TryGetValue("world/geo.json", out var geo) || geo.IsEmpty)
+            throw new InvalidDataException($"Map {map.Descriptor.Id.Value} has no frozen world/geo.json input. Publish MapLoadInput.SourceInputs when creating IMapContext.");
         return snapshot.Entries;
     }
 

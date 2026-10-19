@@ -3,26 +3,26 @@ id: MAP-QSH-CENTER-EAST
 title: 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 category: maps
 summary: 中部科研区与东区各建筑、雕像、球场的外观与身份特征、本区设计增补、近景要求；四季昼夜、行走与声音在子文档
-keywords: [中部科研区, 东区, 基础实验大楼, 一号科研实验楼, 科研楼B区, 科研楼C区, 麦克斯韦像, 方程石, 林为干院士像, 科研楼碑, 银杏大道跨河小桥, 品学楼, 第一教学楼, 书法横梁门框, 架空通道, 叠水喷泉石台, 文科楼群, 友谊树, 综合训练馆, 筒拱, 网球场树墙, 绿色房间, 球场标线, 球场围网, 高杆灯, 田径场, 器材室, 室外游泳池组团, 东区月出, overlay/center-east.d]
+keywords: [中部科研区, 东区, 基础实验大楼, 一号科研实验楼, 科研楼B区, 科研楼C区, 麦克斯韦像, 方程石, 林为干院士像, 科研楼碑, 银杏大道跨河小桥, 品学楼, 第一教学楼, 书法横梁门框, 架空通道, 叠水喷泉石台, 文科楼群, 友谊树, 综合训练馆, 筒拱, 网球场树墙, 绿色房间, 球场标线, 球场围网, 高杆灯, 田径场, 器材室, 室外游泳池组团, 东区月出, world/center-east.json]
 owners: [WP-21]
 contributors: [WP-13, WP-23, WP-24, WP-28]
 depends: [CORE-INDEX, ART-STYLE, WLD-WATER, ART-FIDELITY, ART-MODELING, ART-RENOVATION, MAP-QSH-ADDITIONS, ENG-ARCH]
 related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-NORTH, MAP-QSH-RENOVATION, MAP-QSH-LIBRARY, ART-AMBIENCE, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, SYS-MAPS]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/center-east.d/"]
+data: ["game/data/maps/qingshuihe/world/center-east.json"]
 gates: [G5, G7, G10]
 ---
 
 # MAP-QSH-CENTER-EAST · 中部与东区：中部科研区、雕像、品学楼、文科楼群、训练馆、球场、田径场
 
 > **范围**：本文规定中部科研区与东区（科研楼群、雕像与石刻、品学楼、文科楼群、综合训练馆、球场、田径场、室外游泳池组团、东缘河岸）的建筑外观与身份特征、本区设计增补、近景要求，并列出本区的子文档。
-> **不在本文**：四季昼夜与天气（MAP-QSH-CENTER-EAST-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-CENTER-EAST-WALK）；楼的实体 ID、位置、层数（以 `game/data/maps/qingshuihe/campus.json` 和 `overlay/center-east.d/` 为准）；品学楼与综合训练馆的室内（MAP-QSH-INTERIORS §2、WLD-INTERIORS）；植被与季相（WLD-VEGETATION、SYS-TIME-LOOK §2）；水面（WLD-WATER）；校车、单车、白猫（WLD-LIFE）；磨底河外的外围（WLD-OUTSKIRTS）；锚点位置（SYS-ATLAS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §6、§8、§10）。
+> **不在本文**：四季昼夜与天气（MAP-QSH-CENTER-EAST-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-CENTER-EAST-WALK）；楼的实体 ID、位置、层数（以 `game/data/maps/qingshuihe/world/center-east.json` 为准）；品学楼与综合训练馆的室内（MAP-QSH-INTERIORS §2、WLD-INTERIORS）；植被与季相（WLD-VEGETATION、SYS-TIME-LOOK §2）；水面（WLD-WATER）；校车、单车、白猫（WLD-LIFE）；磨底河外的外围（WLD-OUTSKIRTS）；锚点位置（SYS-ATLAS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §6、§8、§10）。
 > **查阅**：先读 §0；科研区与雕像看 §1；品学楼看 §2；文科楼看 §3；训练馆与球场看 §4；东缘与游泳池组团看 §5；身份特征与近景要求看 §6；待验证看 §7；光、四季昼夜与天气看 MAP-QSH-CENTER-EAST-SEASONS；行走、开放入口与声音看 MAP-QSH-CENTER-EAST-WALK
 
 ## 0 结论
 
 1. **身份特征**：品学楼的书法横梁门框与门前叠水喷泉；文科楼十五六层的塔楼与圆角退台；训练馆银白筒拱；网球场三片一组的树墙"绿色房间"；麦克斯韦像旁的方程石（§1.3、§2.2、§3.2、§4.1–§4.2）。
-2. **层数与翻新**：基础实验大楼和科研楼 C 区按 5 层；品学楼 C 区外观升到约 19 m，写 `HeightOp`；早期建成的楼和球场、围网、灯杆按 ART-RENOVATION 翻新，守 D-174（ART-FIDELITY-DETAIL §1.5），品学楼、综合训练馆有身份特征例外，其余按预设，见 MAP-QSH-RENOVATION。
+2. **层数与翻新**：基础实验大楼和科研楼 C 区按 5 层；品学楼 C 区外观升到约 19 m，在记录里改层数；早期建成的楼和球场、围网、灯杆按 ART-RENOVATION 翻新，守 D-174（ART-FIDELITY-DETAIL §1.5），品学楼、综合训练馆有身份特征例外，其余按预设，见 MAP-QSH-RENOVATION。
 3. **文科楼**：画成"建成、正在搬入"，不开放；全校不画施工网架（§3.3）。
 4. **开放入口**：品学楼 A 区大厅、A 区侧门、C 区大厅和训练馆北附楼门厅做门口表现，室内归 WP-31b（MAP-QSH-INTERIORS §2）。
 5. **光**：傍晚东区背对落日、迎着方位 62° 升起的满月，V8 和 P14 里球场、筒拱和月亮同框；19:00–22:00 球场高杆灯是东区夜里的主光源（§4.4、MAP-QSH-CENTER-EAST-SEASONS §1）。
@@ -31,7 +31,7 @@ gates: [G5, G7, G10]
 
 ### 0.1 接入要点
 
-- **WP-24（水体系统） 做叠水喷泉、游泳池和河面时**：石台、池沿和碰撞归本区，水面和落水归 WP-24；喷泉位置以本区覆盖层为准（§2.3、§5.3）
+- **WP-24（水体系统） 做叠水喷泉、游泳池和河面时**：石台、池沿和碰撞归本区，水面和落水归 WP-24；喷泉位置以本区世界文件为准（§2.3、§5.3）
 - **WP-23（植被系统）、WP-38（物候、季节植被与季节氛围） 种银杏大道、网球场树墙和友谊树时**：友谊树的三根撑杆和绿布归本区；树墙和小桥桥面的四季按 MAP-QSH-CENTER-EAST-SEASONS §2 的季节表（§3.4）
 
 ## 1 中部科研区
@@ -48,7 +48,7 @@ gates: [G5, G7, G10]
 
 ## 2 品学楼
 
-- **2.1 名称与体量**：别名第一教学楼。A、B 区 4 层，C 区 5 层，高 16 m。A、B 区各是一个约 70 × 80 m 的"回"字：西侧两个转角是斜放的门厅，各配一个伸进内院的半圆楼梯厅，东侧是封闭的疏散梯；条楼外侧是教室，内侧是沿内院的单面廊；东条楼较宽，放阶梯教室（待验证，§7）。C 区是中廊两侧的小班智慧教室，外观升到约 19 m（5 × 3.6 m 加女儿墙），A–C、B–C 连廊在 C 区一端用两级台阶或坡道接上层差，写覆盖层 `HeightOp`。
+- **2.1 名称与体量**：别名第一教学楼。A、B 区 4 层，C 区 5 层，高 16 m。A、B 区各是一个约 70 × 80 m 的"回"字：西侧两个转角是斜放的门厅，各配一个伸进内院的半圆楼梯厅，东侧是封闭的疏散梯；条楼外侧是教室，内侧是沿内院的单面廊；东条楼较宽，放阶梯教室（待验证，§7）。C 区是中廊两侧的小班智慧教室，外观升到约 19 m（5 × 3.6 m 加女儿墙），A–C、B–C 连廊在 C 区一端用两级台阶或坡道接上层差，在记录里改层数。
 - **2.2 门框**：正中是一座巨大的门框：四根方柱托起一道约两层高的横梁连廊，梁上书法写着"求实求真 大气大为"，梁下是架空通道。横梁下的 1–2 层是架空通道，3–4 层是连廊连通 A、B 两区；A–C、B–C 另有两条 2–3 层的连廊跨过校内路（待验证，§7）。这几条连廊都不开放。
 - **2.3 门前**：浅灰铺装广场，排着方形树池。品学楼整组坐在 +1.5 m 的台基上，门框前广场西段是一片 5% 的坡广场，从银杏大道北段坡上来，尽头就是书法横梁（MAP-QSH-TERRAIN-DISTRICTS §10）。**叠水喷泉**：门框正前方一座多层深色花岗岩叠水喷泉，三层，直径约 6 m（位置待验证，§7）；石台归本区，水面和落水归 WP-24（水体系统）；石材颜色、叠水层高按画面处理；它在书法横梁前，是 R5 走到门框下之前的一拍。门前红色"梦想在成电启航"字牌属临时布置，不画。
 - **2.4 端部与屋顶**：右翼端部是一个弧形体量；深灰屋面上一条玻璃脊式采光带；多联机等设备收进深灰穿孔铝板围挡（MAP-QSH-ADDITIONS-VOCAB §4）。
@@ -81,7 +81,7 @@ gates: [G5, G7, G10]
 
 ## 6 本区身份特征、设计增补与近景要求
 
-通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节；轮廓调整写进 `overlay/center-east.d/` 本包分片。品学楼、一号科研实验楼、基础实验大楼、综合训练馆、器材室、游泳池组团的两栋房和球场、围网、灯杆按 ART-RENOVATION 的翻新预设翻新（MAP-QSH-RENOVATION）。
+通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节；轮廓调整直接改 `world/center-east.json` 里的记录。品学楼、一号科研实验楼、基础实验大楼、综合训练馆、器材室、游泳池组团的两栋房和球场、围网、灯杆按 ART-RENOVATION 的翻新预设翻新（MAP-QSH-RENOVATION）。
 
 | 对象 | 必须认得出的特征 |
 | --- | --- |

@@ -21,7 +21,7 @@ public sealed class WindowNumberingTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void WindowDeclarationsMatchTheGlass()
     {
-        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(LShape(0, 0))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4));
+        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(LShape(0, 0))), props: "{\"category\":\"teaching\"}", height: 15.6f, storeys: 4));
         var set = BuildingSet.For(world, 2u);
         var plan = set.Plans[0];
         var ctx = Prepared(Ctx(world, 2u));
@@ -52,8 +52,8 @@ public sealed class WindowNumberingTests
     public void WindowNumbersFollowFeatureOrder()
     {
         var world = World(
-            WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3),
-            WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3));
+            WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 30, 12))), props: "{\"category\":\"teaching\"}", height: 10.5f, storeys: 3),
+            WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"teaching\"}", height: 10.5f, storeys: 3));
         var blocks = WindowNumbering.For(world, 1u);
         AssertThat(blocks.Count == 2 && blocks[0].Feature.Value == "t:a" && blocks[0].Base == 0).OverrideFailureMessage("Expected: " + ("ordinal FeatureId order from zero")).IsTrue();
         AssertThat(blocks[1].Base == blocks[0].Count).OverrideFailureMessage("Expected: " + ("contiguous allocation")).IsTrue();
@@ -65,10 +65,10 @@ public sealed class WindowNumberingTests
     public void TheProviderKeepsTheGenericNumbersWhenNothingIsClaimed()
     {
         var world = World(
-            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6),
-            WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4),
-            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 12f, storeys: 3),
-            WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 30))), props: "{\"category\":\"sport\"}", source: FeatureSource.Osm, height: 9f, storeys: 1));
+            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6),
+            WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4),
+            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", height: 12f, storeys: 3),
+            WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 30))), props: "{\"category\":\"sport\"}", height: 9f, storeys: 1));
         var set = BuildingSet.For(world, 4u);
         var module = new BuildingsModule();
         AssertThat(module is IWindowNumberingProvider and IWindowMetadataSource).OverrideFailureMessage("Expected: " + ("the registered module is the provider")).IsTrue();
@@ -112,8 +112,8 @@ public sealed class WindowNumberingTests
             new WorldFeaturePart("osm:way:1", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), 21f, 6),
             new WorldFeaturePart("osm:way:2", new PolygonGeometry(new PolygonRings(Rect(40, 0, 20, 12))), 7f, 2),
         };
-        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 21f, storeys: 6) with { Parts = parts },
-            WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3));
+        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 12))), props: "{\"category\":\"teaching\"}", height: 21f, storeys: 6) with { Parts = parts },
+            WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 30, 12))), props: "{\"category\":\"teaching\"}", height: 10.5f, storeys: 3));
         var generic = WindowNumbering.For(world, 1u);
         var module = new BuildingsModule();
         var snapshot = module.PrepareWindowNumbering(Ctx(world, 1u, claims: ["t:a"]), [Layout("t:a", ("shell", 7, 3))]);
@@ -140,8 +140,8 @@ public sealed class WindowNumberingTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void AnEmptyLayoutDeclaresNoWindowsInAnyOrder()
     {
-        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3), WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3),
-            WorldFeatureFixture.Create("t:c", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3));
+        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"teaching\"}", height: 10.5f, storeys: 3), WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 30, 12))), props: "{\"category\":\"teaching\"}", height: 10.5f, storeys: 3),
+            WorldFeatureFixture.Create("t:c", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 30, 12))), props: "{\"category\":\"teaching\"}", height: 10.5f, storeys: 3));
         var module = new BuildingsModule();
         var ctx = Ctx(world, 1u, claims: ["t:a", "t:b"]);
         var snapshot = module.PrepareWindowNumbering(ctx, [Layout("t:b"), Layout("t:a", ("tower", 2, 5), ("main", 4, 3))]);
@@ -157,8 +157,8 @@ public sealed class WindowNumberingTests
     {
         var parts = new[] { new WorldFeaturePart("osm:way:1", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), 10.5f, 3) };
         var shared = new[] { parts[0], new WorldFeaturePart("osm:way:2", new PolygonGeometry(new PolygonRings(Rect(40, 0, 20, 12))), 7f, 2) };
-        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3) with { Parts = parts },
-            WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3) with { Parts = shared });
+        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"teaching\"}", height: 10.5f, storeys: 3) with { Parts = parts },
+            WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 12))), props: "{\"category\":\"teaching\"}", height: 10.5f, storeys: 3) with { Parts = shared });
         var module = new BuildingsModule();
         var ctx = Ctx(world, 1u, claims: ["t:a", "t:b"]);
         AssertThrown(() => module.PrepareWindowNumbering(ctx, [Layout("t:a", ("x", 1, 1)), Layout("t:a")])).IsInstanceOf<ArgumentException>();
@@ -178,7 +178,7 @@ public sealed class WindowNumberingTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void TheTableStopsAtTheOverrideCapacity()
     {
-        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"service\"}", source: FeatureSource.Osm, height: 3.5f, storeys: 1), WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 30, 12))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 10.5f, storeys: 3));
+        var world = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 30, 12))), props: "{\"category\":\"service\"}", height: 3.5f, storeys: 1), WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 30, 12))), props: "{\"category\":\"teaching\"}", height: 10.5f, storeys: 3));
         var generic = WindowNumbering.For(world, 1u)[1].Count;
         var module = new BuildingsModule();
         var ctx = Ctx(world, 1u, claims: ["t:a"]);

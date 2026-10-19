@@ -10,14 +10,14 @@ contributors: [WP-04, WP-12, WP-16, WP-18, WP-19, WP-20, WP-21, WP-23, WP-24, WP
 depends: [CORE-INDEX, MAP-QSH-ADDITIONS, ART-STYLE, ART-FIDELITY, ART-MODELING, SYS-WALK]
 related: [WLD-VEGETATION, WLD-LIFE, SYS-ATLAS, WLD-OUTSKIRTS, WLD-INTERIORS, ART-RENOVATION, ART-AMBIENCE, MAP-QSH-RENOVATION]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/"]
+data: ["game/data/maps/qingshuihe/world/"]
 gates: [G5, G7, G15]
 ---
 
 # MAP-QSH-ADDITIONS-VOCAB · 设计增补词汇与楼宇规则
 
 > **范围**：本文规定按场地分类的增补物词汇：宿舍组团、食堂与商业街前，道路、路口与停车场，河渠、湖岸与桥，草坪、楼间空地与屋顶，运动区、校界与步行服务设施，每件写外观、放置与尺度要点、夜间与四季；以及让普通楼宇有设计感的十二条规则。
-> **不在本文**：增补物的登记、用色、默认状态规则、空地整理、禁做清单、新颜色、行走分类（MAP-QSH-ADDITIONS）；夜间灯光与雨天（MAP-QSH-ADDITIONS-ATMOSPHERE）；老楼翻新（ART-RENOVATION、MAP-QSH-RENOVATION）；日式街景物件的目录与画法（ART-AMBIENCE）；具体尺寸与坐标（`overlay/` 与区模块的调参，以它们为准）。
+> **不在本文**：增补物的登记、用色、默认状态规则、空地整理、禁做清单、新颜色、行走分类（MAP-QSH-ADDITIONS）；夜间灯光与雨天（MAP-QSH-ADDITIONS-ATMOSPHERE）；老楼翻新（ART-RENOVATION、MAP-QSH-RENOVATION）；日式街景物件的目录与画法（ART-AMBIENCE）；具体尺寸与坐标（`world/` 与区模块的调参，以它们为准）。
 > **查阅**：先读 §0；宿舍与食堂看 §1，道路与停车场看 §2，河渠湖岸与桥看 §3，草坪楼间与屋顶看 §4，运动区、校界与步行服务设施看 §5，楼宇十二条看 §6，待验证看 §7
 
 ## 0 结论
@@ -29,11 +29,11 @@ gates: [G5, G7, G15]
 
 ### 0.1 接入要点
 
-- **做导览亭、导览桩（WP-13（街道家具）、WP-48（平面地图、标记与传送））**：只是场景物件，不发光、不做传送特效，按 `overlay/atlas.d/` 摆放；牌面只用场景调色板里已有的颜色（§5）
+- **做导览亭、导览桩（WP-13（街道家具）、WP-48（平面地图、标记与传送））**：只是场景物件，不发光、不做传送特效，按 `world/atlas.json` 摆放；牌面只用场景调色板里已有的颜色（§5）
 
 ## 1 宿舍组团、食堂与商业街前
 
-写法：名称——外观；放置与尺度要点；夜间与四季。具体尺寸以 `overlay/` 与区模块的调参为准。
+写法：名称——外观；放置与尺度要点；夜间与四季。具体尺寸以 `world/` 与区模块的调参为准。
 
 - **休憩平台**——防腐木面深灰钢框，中间留树池绕开大树，边沿兼座位；约 8×12 m、高 0.45 m；每个组团中庭 1 处，二、四组团必须做；旁一盏 3.5 m 庭院灯（初灯）；冬季平台积雪、树池露出深色土。
 - **电动车充电棚**——单坡钢棚，乳白 PC 板顶，每 2 个车位一台白色充电桩、琥珀指示灯；檐高 2.6 m；沿红砖车场长边；夜里一排桩灯、棚顶被照透、车位停满。

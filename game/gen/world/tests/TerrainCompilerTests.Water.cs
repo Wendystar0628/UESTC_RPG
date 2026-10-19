@@ -68,7 +68,7 @@ public sealed partial class TerrainCompilerTests
         var river = WorldFeatureFixture.Create("fixture:river-area", "water", new PolygonGeometry(polygon)) with
         {
             Parts = [new("osm:way:1", new PolygonGeometry(polygon), null, null)
-                { Props = JsonSerializer.SerializeToElement(new { kind = "water", sourceTags = new { water = "river" } }) }]
+                { Props = JsonSerializer.SerializeToElement(new { kind = "water", water = "river" }) }]
         };
         var context = Context([river]) with { Boundary = Box(-50, -50, 50, 50) };
         var terrain = TerrainCompiler.Compile(context, []);
@@ -169,7 +169,7 @@ public sealed partial class TerrainCompilerTests
         CompiledTerrain Build(float center, float width)
         {
             var roadGeometry = new PolygonGeometry(Box(center - width / 2, -15, center + width / 2, 15));
-            var road = new WorldFeature(new("fixture:road"), FeatureSource.Osm, new("road"), roadGeometry)
+            var road = new WorldFeature(new("fixture:road"), new("road"), roadGeometry)
                 { Parts = [new("osm:way:8", roadGeometry, null, null) { Props = Kind("road") }] };
             var line = new NetworkLine(new("fixture:source:way:8"), new([new(center, -15), new(center, 15)]), width)
                 { Props = JsonSerializer.SerializeToElement(new { highway = "footway" }) };

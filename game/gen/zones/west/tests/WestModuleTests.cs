@@ -67,18 +67,26 @@ public sealed class WestModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void OverlayCorrectsStoreysAndRegistersTheA10Plaza()
+    public void AuthoredStoreysAndTheA10PlazaLoad()
     {
         var world = World();
-        var overlay = System.Text.Json.JsonSerializer.Deserialize<OverlayFile>(
-            File.ReadAllText(Path.Combine(RealMapFixture.DataDirectory(), "overlay", "west.d", "0000-wp-19-base.json")), ContractJson.Options)!;
-        foreach (var op in overlay.Ops.OfType<HeightOp>())
+        using var authored = System.Text.Json.JsonDocument.Parse(RealMapFixture.ReadFiles()["world/west.json"]);
+        foreach (var record in authored.RootElement.GetProperty("features").EnumerateArray())
         {
-            var feature = world.Features[op.Target];
-            AssertThat(feature.Height == op.Height && feature.Storeys == op.Storeys).OverrideFailureMessage("registered height applies to the entity").IsTrue();
-            AssertThat(feature.Parts.All(part => part.Height == op.Height && part.Storeys == op.Storeys)).OverrideFailureMessage("registered height applies to every part").IsTrue();
+            var feature = world.Features[new(record.GetProperty("id").GetString()!)];
+            float? height = record.TryGetProperty("height", out var authoredHeight) ? authoredHeight.GetSingle() : null;
+            int? storeys = record.TryGetProperty("storeys", out var authoredStoreys) ? authoredStoreys.GetInt32() : null;
+            AssertThat(feature.Height == height && feature.Storeys == storeys).OverrideFailureMessage("registered height and storeys apply to the record").IsTrue();
+            if (!record.TryGetProperty("parts", out var parts)) continue;
+            AssertThat(parts.EnumerateArray().All(raw =>
+            {
+                var part = feature.Parts.Single(part => part.SourceId == raw.GetProperty("id").GetString());
+                float? partHeight = raw.TryGetProperty("height", out var h) ? h.GetSingle() : null;
+                int? partStoreys = raw.TryGetProperty("storeys", out var n) ? n.GetInt32() : null;
+                return part.Height == partHeight && part.Storeys == partStoreys;
+            })).OverrideFailureMessage("registered height and storeys apply to every part").IsTrue();
         }
-        // 研究院大楼 keeps its per-part 4–7 storeys: an entity-wide HeightOp would flatten them (contract-31).
+        // 研究院大楼 keeps its per-part 4–7 storeys: one aggregate floor count would flatten them (contract-31).
         var institute = world.Features[new(WestIds.Relation11031411.Entity)].Parts.Where(p => p.Storeys is not null).Select(p => p.Storeys!.Value).ToArray();
         AssertThat(institute.Distinct().Count() > 1).OverrideFailureMessage("研究院大楼 keeps distinct per-part floor counts").IsTrue();
         AssertThat(!world.Features.ContainsKey(new(WestIds.Way779496166.Entity))).OverrideFailureMessage("六号's duplicate C shell stays hidden").IsTrue();

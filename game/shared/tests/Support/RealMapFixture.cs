@@ -17,7 +17,7 @@ internal static class RealMapFixture
             ?? throw new ArgumentException("The requested map is not in the authored catalogue.", nameof(map));
         var source = new DiskWorldInputSource(ResourceDirectory(entry.Dir));
         return MapCatalog.ReadEntry(entry, Required(source, "map.json").Span,
-            Required(source, "campus.json"), (source.Read("waypoints.json") ?? ReadOnlyMemory<byte>.Empty).Span);
+            Required(source, "world/geo.json"), (source.Read("waypoints.json") ?? ReadOnlyMemory<byte>.Empty).Span);
     }
 
     public static string DataDirectory(MapId? map = null) => ResourceDirectory(Entry(map).DataRoot);
@@ -58,22 +58,14 @@ internal static class RealMapFixture
         var entry = MapCatalog.ReadEntry(Entry(map), files);
         var id = entry.Descriptor.Id;
         options ??= new();
-        MapClaimSnapshot? claims = null;
-        if (options.ClaimedBy is null)
-        {
-            var registrations = RegistrationDiscovery.Discover(
-                new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }.Select(Assembly.Load));
-            claims = new(RegistrationDiscovery.ForMap(registrations, entry => entry.Map, id.Value)
-                .Where(entry => entry.Kind == "content")
-                .Select(entry => new MapClaimSource(entry.Id, new(entry.Owner), entry.Map is null,
-                    ((IContentModule)Activator.CreateInstance(entry.Type)!).Claims)));
-            var baseline = claims.RequiresAreaResolution
-                ? WorldModelLoader.LoadTopology(id, WorldInputFiles.TopologyBaseline(files))
-                : null;
-            options = options with { ClaimedBy = claims.OverlayOwners(baseline) };
-        }
-        var loaded = WorldModelLoader.LoadWorld(new(entry.Descriptor, options.ClaimedBy), files, options);
-        _ = claims?.Build(loaded.World);
+        var registrations = RegistrationDiscovery.Discover(
+            new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }.Select(Assembly.Load));
+        var claims = new MapClaimSnapshot(RegistrationDiscovery.ForMap(registrations, entry => entry.Map, id.Value)
+            .Where(entry => entry.Kind == "content")
+            .Select(entry => new MapClaimSource(entry.Id, new(entry.Owner), entry.Map is null,
+                ((IContentModule)Activator.CreateInstance(entry.Type)!).Claims)));
+        var loaded = WorldModelLoader.LoadWorld(new(entry.Descriptor), files, options);
+        _ = claims.Build(loaded.World);
         return loaded;
     }
 

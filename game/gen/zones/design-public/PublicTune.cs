@@ -7,7 +7,7 @@ namespace Campus.Gen.Zones.DesignPublic;
 /// Every tunable value of WP-29's public spaces in one place (WF-FLOW). Sizes follow MAP-QSH-ADDITIONS
 /// (转角口袋绿地: about 6 × 6 m of paving, a 4 m curved bench, one tree) and §7 (walk: the pad walkable, the bench
 /// jumpable). Where the pocket greens are, how big their pads are and which way their benches face is data, in
-/// overlay/public.d/; this class holds the section of the bench and the pit, and the material families.
+/// world/public.json; this class holds the section of the bench and the pit, and the material families.
 /// </summary>
 public static class PublicTune
 {

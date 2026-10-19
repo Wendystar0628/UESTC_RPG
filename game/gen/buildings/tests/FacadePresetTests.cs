@@ -23,9 +23,9 @@ public sealed class FacadePresetTests
         // cell. Anchored buildings only move their door; their window blocks never change.
         var features = new[]
         {
-            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4),
-            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 12f, storeys: 3), WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 30))), props: "{\"category\":\"sport\"}", source: FeatureSource.Osm, height: 9f, storeys: 1),
-            WorldFeatureFixture.Create("t:small", "building", new PolygonGeometry(new PolygonRings(Rect(300, 0, 5, 6))), props: "{\"category\":\"service\"}", source: FeatureSource.Osm, height: 3f, storeys: 1),
+            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4),
+            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", height: 12f, storeys: 3), WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 30))), props: "{\"category\":\"sport\"}", height: 9f, storeys: 1),
+            WorldFeatureFixture.Create("t:small", "building", new PolygonGeometry(new PolygonRings(Rect(300, 0, 5, 6))), props: "{\"category\":\"service\"}", height: 3f, storeys: 1),
         };
         var plain = BuildingSet.For(World(features), 4u);
         AssertThat(Layout(BuildingSet.For(World(features), 4u)) == Layout(plain)).OverrideFailureMessage("Expected: " + ("the same input lays out ordinary buildings cell for cell")).IsTrue();
@@ -42,8 +42,8 @@ public sealed class FacadePresetTests
         var preset = Rules.FacadePresets.ResearchStoneFrame;
         var features = new[]
         {
-            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4),
-            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 12f, storeys: 3), WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 30))), props: "{\"category\":\"sport\"}", source: FeatureSource.Osm, height: 9f, storeys: 1),
+            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4),
+            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"teaching\"}", height: 12f, storeys: 3), WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 40, 30))), props: "{\"category\":\"sport\"}", height: 9f, storeys: 1),
         };
         var plain = BuildingSet.For(World(features), 4u);
         var styled = BuildingSet.For(World([.. features.Select(f => f.Id.Value == "t:lab" ? f with { Facade = new FacadePreset(preset.Key) } : f)]), 4u);
@@ -77,7 +77,7 @@ public sealed class FacadePresetTests
         AssertThat(BuildingsModule.UnknownPreset(BuildingSet.For(World(lab), 4u).Plans.Single()).Single().Level == DiagnosticLevel.Warning &&
             BuildingSet.For(World(lab), 4u).Plans.Single().Profile.Preset is null).OverrideFailureMessage("Expected: " + ("a key WP-14 does not know keeps the family, with a warning")).IsTrue();
 
-        // The real campus with the innovation centre's five buildings on the preset (the StyleOps of overlay/south.d/): no
+        // The real campus with the innovation centre's five buildings on the preset (the authored world/south.json): no
         // window number of the map moves, the other buildings stay cell for cell, and every footprint of the five takes it.
         var real = RealMapFixture.Load().World;
         var innovation = real.Features.Values.Where(f => f.Facade?.Value == preset.Key).Select(f => f.Id.Value).ToHashSet(StringComparer.Ordinal);
@@ -112,7 +112,7 @@ public sealed class FacadePresetTests
     public void DormPresetAccentDoesNotFollowTheClusterHash()
     {
         // DormA (pink-sand spandrels) and DormB (brown) by cluster: the same footprint on two world seeds, each way.
-        var feature = WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.2f, storeys: 6);
+        var feature = WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.2f, storeys: 6);
         uint? seedA = null, seedB = null;
         for (var seed = 1u; seed <= 64u && (seedA is null || seedB is null); seed++)
             switch (BuildingSet.For(World(feature), seed).Plans[0].Profile.Accent)
@@ -148,7 +148,7 @@ public sealed class FacadePresetTests
         BuildingPlan Plan(WorldFeature f, Rules.FacadeLook look) => BuildingPlanner.Plan(BuildingPlanner.Sources(f).Single(), World(f), 4u, [look])!;
         foreach (var footprint in new PolygonRings[] { new(Rect(0, 0, 60, 18)), new(LShape(0, 0)), Courtyard(0, 0), new(Rect(0, 0, 40, 14)) })
         {
-            var feature = WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(footprint), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.2f, storeys: 6);
+            var feature = WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(footprint), props: "{\"category\":\"residence\"}", height: 19.2f, storeys: 6);
             foreach (var look in new[] { Rules.FacadePresets.DormAYellow, Rules.FacadePresets.DormACreamCoffee })
             {
                 var (apron, wide) = (Plan(feature with { Facade = new FacadePreset(look.Key) }, look), Plan(feature with { Facade = new FacadePreset(full.Key) }, full with { Frame = look.Frame }));
@@ -170,8 +170,8 @@ public sealed class FacadePresetTests
         // fixtures of every plan shape, and on the real campus with its dormitories spread over the five presets.
         var features = new[]
         {
-            WorldFeatureFixture.Create("t:slab", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.2f, storeys: 6), WorldFeatureFixture.Create("t:ell", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.2f, storeys: 6),
-            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 16f, storeys: 5), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(300, 0, 40, 16))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4),
+            WorldFeatureFixture.Create("t:slab", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.2f, storeys: 6), WorldFeatureFixture.Create("t:ell", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"residence\"}", height: 19.2f, storeys: 6),
+            WorldFeatureFixture.Create("t:court", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"residence\"}", height: 16f, storeys: 5), WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(300, 0, 40, 16))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4),
         };
         var plain = BuildingSet.For(World(features), 4u);
         foreach (var look in DormLooks)
@@ -238,7 +238,7 @@ public sealed class FacadePresetTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void NorthUnkeyedBlocksTakeTheBohanLanguage()
     {
-        // Sample dormitories take keys as an overlay op would; each takes the
+        // Sample dormitories take their authored keys; each takes the
         // preset over whatever family the data gives it, and not one window changes its number (contract-29).
         var real = RealMapFixture.Load().World;
         var was = BuildingSet.For(real, 1u);

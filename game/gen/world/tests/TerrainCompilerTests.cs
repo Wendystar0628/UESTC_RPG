@@ -179,7 +179,7 @@ public sealed partial class TerrainCompilerTests
     {
         var lake = WorldFeatureFixture.Create("fixture:lake", "water", new PolygonGeometry(Box(-10, -10, 10, 10)));
         var shape = new PolygonGeometry(Box(-4, -25, 4, 0));
-        var stream = new WorldFeature(new("fixture:stream"), FeatureSource.Osm, new("water"), shape)
+        var stream = new WorldFeature(new("fixture:stream"), new("water"), shape)
             { Parts = [new("osm:way:9", shape, null, null) { Props = Kind("water") }] };
         var line = new NetworkLine(new("fixture:source:way:9"), new([new(0, -25), new(0, 0)]), 8)
             { Props = JsonSerializer.SerializeToElement(new { waterway = "stream" }) };

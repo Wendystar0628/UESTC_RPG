@@ -28,7 +28,6 @@ public sealed record PointGeometry(Vector3 Position) : OverlayGeometry;
 public readonly record struct BuildingFamily(string Value);
 public readonly record struct FacadePreset(string Value);
 public readonly record struct DesignKind(string Value);
-public enum FeatureSource { Osm, OsmOverlay, Design }
 
 /// <summary>One source geometry of an entity, retaining its own height and storey count. SourceId is provenance, not a FeatureId.</summary>
 public sealed record WorldFeaturePart(string SourceId, OverlayGeometry Geometry, float? Height, int? Storeys)
@@ -43,7 +42,7 @@ public sealed record WorldFeaturePart(string SourceId, OverlayGeometry Geometry,
 /// When Parts is non-empty, generators build each part and must not additionally build aggregate Geometry.
 /// Simple design features may leave Parts empty and generate directly from Geometry.
 /// </summary>
-public sealed record WorldFeature(FeatureId Id, FeatureSource Source, DesignKind Kind, OverlayGeometry Geometry)
+public sealed record WorldFeature(FeatureId Id, DesignKind Kind, OverlayGeometry Geometry)
 {
     public IReadOnlyList<WorldFeaturePart> Parts { get; init; } = [];
     public string? Name { get; init; }

@@ -77,6 +77,7 @@ public sealed class FurnitureModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void CollidersFollowThePartsWithTheirFootMaterial()
     {
         foreach (var item in RealLayout.Value.Items)
@@ -116,6 +117,7 @@ public sealed class FurnitureModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ModuleTilesCarryEveryItemOnce()
     {
         var ctx = Context(Inputs());
@@ -138,6 +140,7 @@ public sealed class FurnitureModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void LayoutDiagnosticsTravelWithTheFirstCellOnly()
     {
         // Structured diagnostics (ContentOutput.Diagnostics) are reported once per layout: with the first cell's L0 output.

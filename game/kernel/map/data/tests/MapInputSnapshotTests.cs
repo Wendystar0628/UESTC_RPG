@@ -30,12 +30,12 @@ public sealed class MapInputSnapshotTests
     public void ConstructionFreezesBothCallerDictionaryAndRawArrays()
     {
         var raw = new byte[] { 1, 2, 3 };
-        var files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["campus.json"] = raw };
+        var files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["world/geo.json"] = raw };
         var input = new MapLoadInput(Entry: Entry(), Files: files);
         raw[0] = 9;
-        files["campus.json"] = new byte[] { 7 };
-        files["network.json"] = new byte[] { 8 };
-        AssertThat(input.Files.Count == 1 && input.Files["campus.json"].Span.SequenceEqual(new byte[] { 1, 2, 3 })).OverrideFailureMessage("Published map bytes still alias the caller's dictionary or array.").IsTrue();
+        files["world/geo.json"] = new byte[] { 7 };
+        files["world/core.json"] = new byte[] { 8 };
+        AssertThat(input.Files.Count == 1 && input.Files["world/geo.json"].Span.SequenceEqual(new byte[] { 1, 2, 3 })).OverrideFailureMessage("Published map bytes still alias the caller's dictionary or array.").IsTrue();
         AssertThat(ReferenceEquals(input.Files, input.SourceInputs.Entries)).OverrideFailureMessage("Files is not backed by the frozen snapshot.").IsTrue();
     }
 
@@ -47,11 +47,11 @@ public sealed class MapInputSnapshotTests
         var replacementBytes = new byte[] { 6 };
         var replaced = original with
         {
-            Files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["campus.json"] = replacementBytes }
+            Files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["world/geo.json"] = replacementBytes }
         };
         replacementBytes[0] = 9;
         AssertThat(!ReferenceEquals(replaced.SourceInputs, original.SourceInputs) &&
-            replaced.Files["campus.json"].Span[0] == 6 && original.Files["campus.json"].Span[0] == 1).OverrideFailureMessage("Files with did not create a separate frozen version.").IsTrue();
+            replaced.Files["world/geo.json"].Span[0] == 6 && original.Files["world/geo.json"].Span[0] == 1).OverrideFailureMessage("Files with did not create a separate frozen version.").IsTrue();
     }
 
     [TestCase]
@@ -69,12 +69,12 @@ public sealed class MapInputSnapshotTests
         AssertThat(ReferenceEquals(oldContext.SourceInputs, oldInput.SourceInputs) &&
             ReferenceEquals(newContext.SourceInputs, newInput.SourceInputs) &&
             !ReferenceEquals(oldContext.SourceInputs, newContext.SourceInputs)).OverrideFailureMessage("Context construction refroze or mixed map versions.").IsTrue();
-        AssertThat(oldContext.SourceInputs.Require("campus.json").Span[0] == 1 &&
-            newContext.SourceInputs.Require("campus.json").Span[0] == 2).OverrideFailureMessage("An old context observed newer source bytes.").IsTrue();
+        AssertThat(oldContext.SourceInputs.Require("world/geo.json").Span[0] == 1 &&
+            newContext.SourceInputs.Require("world/geo.json").Span[0] == 2).OverrideFailureMessage("An old context observed newer source bytes.").IsTrue();
     }
 
     private static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files(byte version) =>
-        new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["campus.json"] = new byte[] { version } };
+        new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal) { ["world/geo.json"] = new byte[] { version } };
     private static MapCatalogEntry Entry()
     {
         var descriptor = new MapDescriptor(new("fixture-map"), new("测试地图", "Fixture"), MapKind.Outdoor, 1, 1,

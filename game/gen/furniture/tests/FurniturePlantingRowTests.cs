@@ -56,6 +56,7 @@ public sealed class FurniturePlantingRowTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ChangingARowOffsetInThePlantingInputMovesTheBenches()
     {
         // A bench keeps RowClear off the planted rows, so moving a row onto an avenue bench forces that bench off its slot (or off

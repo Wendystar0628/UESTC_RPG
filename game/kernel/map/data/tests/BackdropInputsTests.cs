@@ -18,7 +18,7 @@ public sealed class BackdropInputsTests
     {
         var map = Descriptor("environment/far.json");
         var raw = Encoding.UTF8.GetBytes("{ \"farClip\":12000 }");
-        var files = new Dictionary<string, ReadOnlyMemory<byte>> { ["campus.json"] = new byte[] { 1 } };
+        var files = new Dictionary<string, ReadOnlyMemory<byte>> { ["world/geo.json"] = new byte[] { 1 } };
         var reads = new List<string>();
         var snapshot = BackdropInputs.Freeze(map, "res://fixture/", files,
             path => path == "res://fixture/environment/far.json", path => { reads.Add(path); return raw; });

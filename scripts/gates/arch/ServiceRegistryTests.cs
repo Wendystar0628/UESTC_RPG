@@ -23,7 +23,7 @@ namespace Campus.Arch.Tests
                 sections.Single(entry => entry.Scope == SaveScope.PerMap).Type != typeof(PerMapWeatherSection))
                 throw new InvalidOperationException("Fallback replacement crossed a save scope.");
             // Exercise the runner's effective-map grouping and attribute selection too.
-            RegistryGateRunner.Run(registry, "fixture/index.json", "*", ReadFixture, []);
+            RegistryGateRunner.Run(registry, "fixture/index.json", "*", ReadFixture, [], FixtureFiles);
         }
 
         [TestCase]
@@ -72,10 +72,14 @@ namespace Campus.Arch.Tests
             "fixture/index.json" => """{"version":1,"defaultMap":"fixture","maps":[{"id":"fixture","dir":"res://fixture/"}]}""",
             "res://fixture/map.json" => """{"id":"fixture","version":1,"dataRect":{"min":[0,0],"max":[64,64]},"defaultSpawn":"start","spawns":[{"id":"start","fly":{"position":[0,2,0],"yawDeg":0,"pitchDeg":0}}],"env":{"sky":"sky.json","backdrop":"backdrop.json","reflectLakes":[]}}""",
             "res://fixture/waypoints.json" => """{"version":1,"waypoints":[]}""",
-            "res://fixture/campus.json" => """{"entities":[]}""",
+            "res://fixture/world/geo.json" => """{"origin":[0,0],"crs":"EPSG:3857","bounds":[0,0,64,64],"entityPrefix":"fixture","license":"fixture","source":"fixture","date":"2026-10-19","boundary":{"outer":[[0,0],[64,0],[64,64],[0,64]],"holes":[]}}""",
+            "res://fixture/world/core.json" => """{"features":[],"trees":[]}""",
             "res://fixture/interiors.json" => """{"version":1,"interiors":[]}""",
             _ => throw new InvalidOperationException($"Unexpected fixture input: {path}")
         });
+
+        private static IEnumerable<string> FixtureFiles(string directory) =>
+            directory.TrimEnd('/') == "res://fixture/world" ? ["core.json"] : [];
     }
 
     public interface ILifetimeFirst { }

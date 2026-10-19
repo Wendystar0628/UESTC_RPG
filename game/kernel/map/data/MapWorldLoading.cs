@@ -23,8 +23,8 @@ public sealed record MapLoadInput(MapCatalogEntry Entry,
 public static class MapWorldLoading
 {
     /// <summary>
-    /// Worker-safe loading. Claims are detached on the main thread. Area ownership is resolved
-    /// from the real base world zones; this method never accesses a registry or engine object.
+    /// Worker-safe loading. Claims are detached on the main thread and resolved against the
+    /// final world zones; this method never accesses a registry or engine object.
     /// </summary>
     public static WorldModelLoadResult LoadPrepared(IWorldModelLoader loader, MapLoadInput input,
         MapClaimSnapshot? claims = null)
@@ -32,19 +32,7 @@ public static class MapWorldLoading
         ArgumentNullException.ThrowIfNull(loader);
         ArgumentNullException.ThrowIfNull(input);
         var map = input.Entry.Descriptor;
-        IReadOnlyDictionary<FeatureId, WpId>? claimedBy = null;
-        if (claims is not null)
-        {
-            // Resolve AreaClaim only against parsed WorldFeature.Zone. Overlay owner/zone metadata
-            // does not constitute a module claim and cannot grant a conflict exception.
-            if (claims.RequiresAreaResolution)
-            {
-                var baseline = loader.LoadTopology(map.Id, WorldInputFiles.TopologyBaseline(input.Files));
-                claimedBy = claims.OverlayOwners(baseline);
-            }
-            else claimedBy = claims.OverlayOwners();
-        }
-        var loaded = loader.Load(map.Id, input.Files, new(map, claimedBy));
+        var loaded = loader.Load(map.Id, input.Files, new(map));
         _ = claims?.Build(loaded.World); // Validate final per-aspect ownership before exposing the context.
         return loaded;
     }

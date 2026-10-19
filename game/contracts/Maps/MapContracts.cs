@@ -6,7 +6,7 @@ namespace Campus.Contracts.Maps;
 public enum MapKind : byte { Outdoor, Interior, Instance }       // 现在只有 Outdoor；精选室内属于所在的图（SYS-MAPS）
 public enum MapTimeRule : byte { Shared, Fixed }                 // Fixed 预留，WP-34 现在只实现 Shared（SYS-MAPS）
 public sealed record GeoFrame(double OriginLon, double OriginLat, int Epsg,
-    Vector2 BoundaryMin, Vector2 BoundaryMax);                   // 从 campus.json 的 meta 读，不手写
+    Vector2 BoundaryMin, Vector2 BoundaryMax);                   // 从 world/geo.json 读，不手写
 public sealed record MapRect(Vector2 Min, Vector2 Max);          // 全图数据纹理的 xz 范围，边长为 64 m 的整数倍；清水河 ±1280 m（SYS-MAPS）
 public sealed record RoamLimits(                                 // 旁观活动范围（SYS-VIEW）；公式与前沿线见 WLD-OUTSKIRTS
     float HeightFactor, float HeightStart, float MaxRadius,      // 0.9、30 m、3000 m：水平范围 = 前沿线 + 0.9 × max(0, h − 30 m)

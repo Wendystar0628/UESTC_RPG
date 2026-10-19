@@ -10,14 +10,14 @@ contributors: [WP-06, WP-13, WP-35, WP-36, WP-44, WP-51, WP-53a, WP-55]
 depends: [SYS-ATLAS, UI-NAV, SYS-WALK, SYS-MAPS, WLD-INTERIORS, SYS-TITLE]
 related: [SYS-ATLAS-UI, SYS-VIEW, SYS-SAVE, SYS-AUDIO, MAP-QSH-ADDITIONS, ENG-GATES, ENG-ROADMAP, WLD-LIFE]
 contracts: [IUnlockPolicy, MarkerKind, AnchorForm, UnlockState, TravelStyle, TravelRefusal, TeleportSpec, AtlasMarker]
-data: ["game/data/maps/qingshuihe/atlas/markers.json", "game/data/maps/qingshuihe/overlay/atlas.d/", "game/assets/maps/qingshuihe/thumbs/"]
+data: ["game/data/maps/qingshuihe/atlas/markers.json", "game/data/maps/qingshuihe/world/atlas.json", "game/assets/maps/qingshuihe/thumbs/"]
 gates: [G15, G18]
 ---
 
 # SYS-ATLAS-TRAVEL · 标记、锚点与传送
 
 > **范围**：本文规定平面地图上的标记类型与哪些可传送，场景里的锚点实体（导览亭与导览桩），传送的两种方式、时序、落点、预取与打断，以及解锁。主线范围：全开放，锚点先放 3–4 座；追踪、自定义标记和解锁策略在主线之后。
-> **不在本文**：允许与禁止什么、多地图下的数据、存档与设置里存什么（SYS-ATLAS）；底图、小地图、大地图与传送卡的界面（SYS-ATLAS-UI）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；地图加载与切换 `IMapService`（SYS-MAPS）；开放室内的清单与入口（WLD-INTERIORS）；声音（SYS-AUDIO）；存档容器与保存时机（SYS-SAVE）；服务契约（`game/contracts/Atlas/`）、锚点与标记数据（`game/data/maps/qingshuihe/atlas/`、`overlay/atlas.d/`）。
+> **不在本文**：允许与禁止什么、多地图下的数据、存档与设置里存什么（SYS-ATLAS）；底图、小地图、大地图与传送卡的界面（SYS-ATLAS-UI）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；地图加载与切换 `IMapService`（SYS-MAPS）；开放室内的清单与入口（WLD-INTERIORS）；声音（SYS-AUDIO）；存档容器与保存时机（SYS-SAVE）；服务契约（`game/contracts/Atlas/`）、锚点与标记数据（`game/data/maps/qingshuihe/atlas/`、`world/atlas.json`）。
 > **查阅**：先读 §0；标记类型看 §1；锚点实体看 §2；传送时序与落点看 §3；解锁看 §4
 
 ## 0 结论
@@ -29,7 +29,7 @@ gates: [G15, G18]
 
 ### 0.1 接入要点
 
-- 新增锚点：在 `overlay/atlas.d/` 加实体，`atlas/markers.json` 的锚点条目直接引用它的坐标（不另抄一份）并写 `Fly`、`Stand`（§2）
+- 新增锚点：在 `world/atlas.json` 加记录，`atlas/markers.json` 的锚点条目直接引用它的坐标（不另抄一份）并写 `Fly`、`Stand`（§2）
 - 新增观景点、可进入的室内、共享单车停放点：在各自的点位表、开放清单、停放点数据里登记，标记自动生成，不复制位姿；停放点不是锚点，不可传送（§1）
 - 新增可传送标记：出缩略图；`Stand` 过落地检查，`Fly` 处介质必须是空气（§3.3）
 
@@ -62,7 +62,7 @@ gates: [G15, G18]
 
 - **碰撞**：都是阻挡，由部件参数生成（SYS-WALK-BOUNDS §7）。
 - **放置**：在主网大拍节点或节点旁，离路缘 ≥ 1.5 m，不挡主人流，牌面朝向广场或主要来人方向，相邻锚点约 250–450 m。
-- **登记**：每个锚点在 `overlay/atlas.d/` 有一条 `add`（ID `design:anchor:A01`……）；`atlas/markers.json` 直接引用它的坐标，不另抄一份。
+- **登记**：每个锚点在 `world/atlas.json` 有一条记录（ID `design:anchor:A01`……）；`atlas/markers.json` 直接引用它的坐标，不另抄一份。
 - **13 个锚点**：亭 6 个（A01–A06），桩 7 个（A07–A13）；名称、坐标、朝向、`Fly`、`Stand` 以 `atlas/markers.json` 为准。导览设施只有这 13 个。**主线先放 3–4 座**，其余等内容阶段，每座在 `markers.json` 独立登记，缺哪座就不出现那座的标记。
 - **落点规则**：`Stand` 在锚点侧前方约 2 m，面向它朝向的广场；`Fly` 默认在锚点后方 8 m、上方 6 m，俯仰 −12°，可逐个调整。
 - **锚点挪位**：三条都满足就直接改数据：离原位置不超过 30 m；底座和 `Stand` 都完整落在人行铺装上；离行车道、水和墙都 ≥ 3 m。有一条不满足，不自己往外找，把该处 30 m 范围的俯视图和路网图层报给主代理。

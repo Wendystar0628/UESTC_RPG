@@ -160,7 +160,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         var bounds = new Box3(new(-16, 0, -16), new(16, 8, 16));
         var ring = new PolygonRings([new(-16, -16), new(16, -16), new(16, 16), new(-16, 16)]);
         var world = new FakeWorld { Boundary = new([]) };
-        world.Features = ((WorldFeature[])[new WorldFeature(Feature, FeatureSource.Osm, new("building"), new PolygonGeometry(ring))
+        world.Features = ((WorldFeature[])[new WorldFeature(Feature, new("building"), new PolygonGeometry(ring))
         { Bounds = bounds, Height = 8, Storeys = 2 }]).ToDictionary(feature => feature.Id);
         world.Boundary = ring;
         var map = new MapDescriptor(new("height-test"), new("Test", "Test"), MapKind.Outdoor, 1, 1,

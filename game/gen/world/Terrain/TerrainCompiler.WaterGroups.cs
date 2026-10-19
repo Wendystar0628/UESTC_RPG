@@ -50,7 +50,7 @@ internal static partial class TerrainCompiler
             }
             var level = anchors.Count == 0 ? -1.2 : anchors.OrderBy(anchor => anchor.Id.Value, StringComparer.Ordinal).First().Level;
             if (anchors.Any(anchor => Math.Abs(anchor.Level - level) > TerrainMath.HeightTolerance))
-                throw new WorldDataException("network.json", string.Join(",", group.Select(i => pipes[i].Id.Value)),
+                throw new WorldDataException(b.References.SourceFiles(group.Select(i => pipes[i].Id).Concat(anchors.Select(anchor => anchor.Id)).ToArray()), string.Join(",", group.Select(i => pipes[i].Id.Value)),
                     "Registered underground water connects incompatible explicit/resolved constant levels without a separating weir; no pipe gradient is inferred. Anchors: "
                     + string.Join(", ", anchors.OrderBy(anchor => anchor.Id.Value, StringComparer.Ordinal).Select(anchor => $"{anchor.Id.Value}={anchor.Level:R}")));
             foreach (var i in group)
@@ -116,11 +116,11 @@ internal static partial class TerrainCompiler
                 b.WaterAuthorValidation.Add(WaterNode(b, spec, spec.Region, null));
             TerrainRegion domain;
             try { domain = members.Length == 1 ? members[0].Region : TerrainUnion.Build(members.Select(spec => spec.Region)); }
-            catch (ArgumentException error) { throw new WorldDataException("campus.json", string.Join(",", members.Select(spec => spec.Id.Value)), error.Message, error); }
+            catch (ArgumentException error) { throw new WorldDataException(string.Join(",", members.Select(spec => spec.File).Distinct(StringComparer.Ordinal)), string.Join(",", members.Select(spec => spec.Id.Value)), error.Message, error); }
             var representative = members.OrderBy(spec => spec.Op?.Priority ?? 50).ThenBy(spec => spec.Name, StringComparer.Ordinal).First();
             var registeredHard = RegisteredBankIntervals(registeredBanks, members, domain);
             var bridgeBanks = members.Any(spec => spec.Bank.Kind is TerrainBankKind.Soft or TerrainBankKind.Wetland)
-                ? new TerrainBridgeBanks(domain, b.Context.Network.Bridges, registeredHard) : null;
+                ? new TerrainBridgeBanks(domain, b.Context.Network.Bridges, registeredHard, id => b.References.SourceFiles(id)) : null;
             var (node, check, originalHard) = ComposeWaterProfiles(b, members, domain, bridgeBanks, representative);
             b.Nodes.Add(node);
             b.WaterShores.Add(new(representative.File, representative.Name, domain, node, check, bridgeBanks,
@@ -250,7 +250,7 @@ internal static partial class TerrainCompiler
             var level = specs[anchors[0]].Level;
             if (anchors.Any(i => Math.Abs(specs[i].Level - level) > TerrainMath.HeightTolerance)
                 || group.Any(i => specs[i].Op is not null && Math.Abs(specs[i].Level - level) > TerrainMath.HeightTolerance))
-                throw new WorldDataException("network.json", string.Join(",", group.Select(i => specs[i].Id.Value)),
+                throw new WorldDataException(string.Join(",", group.Select(i => specs[i].File).Distinct(StringComparer.Ordinal)), string.Join(",", group.Select(i => specs[i].Id.Value)),
                     "A water component connected through actual source nodes/registered culverts has incompatible authored/lake levels without a separating weir.");
             foreach (var i in group)
             {

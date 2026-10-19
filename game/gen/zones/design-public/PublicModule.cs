@@ -5,7 +5,7 @@ using Campus.Gen.Zones.Common;
 
 namespace Campus.Gen.Zones.DesignPublic;
 
-/// <summary>WP-29 pocket greens from overlay/public.d/; paving and trees remain with their respective producers.</summary>
+/// <summary>WP-29 pocket greens from world/public.json; paving and trees remain with their respective producers.</summary>
 [ContentModule("zone.design-public", Owner = "WP-29")]
 public sealed class PublicModule : ZoneModuleBase
 {

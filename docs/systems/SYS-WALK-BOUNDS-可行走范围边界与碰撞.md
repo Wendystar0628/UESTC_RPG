@@ -33,7 +33,7 @@ gates: [G4, G15, G19]
 - 区域包与部件包交碰撞体：契约 `Collider` 记录，与可见几何同参数生成，不拿可见网格做碰撞（§7）
 - 挡路的栏杆、绿篱、护岸：可见高 ≥ 0.9 m（临水 ≥ 1.05 m），碰撞顶、外扩、缝隙按 §2
 - `SurfaceTag` 是碰撞语义，不是材质；材质另填 `FootMat`，`Auto` 的面积占比必须为 0（§7）
-- 登记可行走数据、泳区、单车停放点：以 `game/data/maps/qingshuihe/overlay/` 与源码为准
+- 登记可行走数据、泳区、单车停放点：以 `game/data/maps/qingshuihe/world/`、`overlay/` 与源码为准
 - 放 `Stand` 与安全点：不在缓冲带里，离校界 ≥ 1 m（§2）
 
 ## 1 可行走范围

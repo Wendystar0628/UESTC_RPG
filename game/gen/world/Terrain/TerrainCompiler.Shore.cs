@@ -43,7 +43,7 @@ internal static partial class TerrainCompiler
         // Candidate values depend only on resolved water levels and frozen real core geometry.
         // The finite candidate identities are frozen here; geometry-only values are memoized
         // lazily once for participating roads, and never depend on the current trial profile.
-        var radii = entries.ToDictionary(entry => entry.Road.Source, entry => new Lazy<double>(() => RoadCorePathRadius(entry.Road)));
+        var radii = entries.ToDictionary(entry => entry.Road.Source, entry => new Lazy<double>(() => RoadCorePathRadius(entry.Road, b.References.SourceFiles(entry.Road.Source))));
         var candidates = (from shore in shores from entry in entries where entry.Operation is null || entry.Plan is not null
             select (Key: (shore.Id, entry.Road.Source), Value: new Lazy<TerrainRoadProfile.Bound>(() => new(
                 levels[shore.Id] + 0.3 + entry.MaximumCrossFall * radii[entry.Road.Source].Value, string.Join(",", shore.Waters.OrderBy(w => w.Value, StringComparer.Ordinal).Select(w => w.Value))))))
@@ -103,13 +103,13 @@ internal static partial class TerrainCompiler
         b.RoadFit = null;
     }
 
-    private static WorldDataException UnsupportedFreeboard(string detail)
+    private static WorldDataException UnsupportedFreeboard(string detail, string file = "world")
     {
-        var error = new WorldDataException("network.json", "automatic-profiles", "UNSUPPORTED: " + detail);
+        var error = new WorldDataException(file, "automatic-profiles", "UNSUPPORTED: " + detail);
         error.Data["TerrainConstraintKind"] = "unsupported"; return error;
     }
 
-    internal static double RoadCorePathRadius(TerrainRoad road)
+    internal static double RoadCorePathRadius(TerrainRoad road, string file = "world")
     {
         if (road.Footprint is not { } core) return road.Width / 2;
         const double cell = 0.25; var radius = Math.Sqrt(2) * cell / 2; var maximum = 0d; var found = false;
@@ -125,7 +125,7 @@ internal static partial class TerrainCompiler
                 if (core.Distance(x, z).Height > radius) continue;
                 maximum = Math.Max(maximum, road.Path.Project(x, z).Distance + radius); found = true;
             }
-        if (!found || !double.IsFinite(maximum)) throw UnsupportedFreeboard($"Real road core '{road.Source.Value}' has no finite coverage radius.");
+        if (!found || !double.IsFinite(maximum)) throw UnsupportedFreeboard($"Real road core '{road.Source.Value}' has no finite coverage radius.", file);
         return maximum;
     }
 

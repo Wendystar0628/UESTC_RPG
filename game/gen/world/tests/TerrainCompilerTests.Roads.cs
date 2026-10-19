@@ -36,7 +36,7 @@ public sealed partial class TerrainCompilerTests
         }
         var end = new Vector2(10, 0);
         var paving = new PolygonGeometry(Box(0, -1, end.X - (float)TerrainMath.RoadCoreJoinTolerance / 2, 1));
-        var feature = new WorldFeature(new("fixture:core-join-road"), FeatureSource.Osm, new("road"), paving)
+        var feature = new WorldFeature(new("fixture:core-join-road"), new("road"), paving)
             { Parts = [new("osm:way:1", paving, null, null) { Props = Kind("road") }] };
         var high = new NetworkLine(new("fixture:source:way:1"), new([Vector2.Zero, end]), 2)
             { Props = JsonSerializer.SerializeToElement(new { highway = "service" }) };
@@ -66,14 +66,13 @@ public sealed partial class TerrainCompilerTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void AutomaticTerrainConsumesEffectiveDesignRoadTypeAndLegacyHighway()
+    public void AutomaticTerrainConsumesAuthoredHighwayClassification()
     {
-        foreach (var (kind, legacy) in new[] { ("footway", false), ("path", false), ("pedestrian", false), ("footway", true) })
+        foreach (var kind in new[] { "footway", "path", "pedestrian" })
         {
             var road = new NetworkLine(new("design:road:effective-" + kind), new([new(-10, 0), new(10, 0)]), 2.5f)
             {
-                Props = legacy ? JsonSerializer.SerializeToElement(new { highway = kind })
-                    : JsonSerializer.SerializeToElement(new { roadType = kind })
+                Props = JsonSerializer.SerializeToElement(new { highway = kind })
             };
             var context = Context([]) with { Network = new([road], [], [], [], []) };
             var references = new TerrainReferences(context);

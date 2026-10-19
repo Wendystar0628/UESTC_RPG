@@ -1,0 +1,13 @@
+{
+  "features": [
+    {
+      "id": "fixture-building",
+      "name": "整数楼层回归样例",
+      "kind": "building",
+      "geometry": { "type": "polygon", "rings": { "outer": [[2, 2], [8, 2], [8, 8], [2, 8]], "holes": [] } },
+      "height": 7.0,
+      "storeys": 2.0
+    }
+  ],
+  "trees": []
+}

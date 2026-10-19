@@ -76,7 +76,7 @@ public sealed class VegetationInputsTests
         var map = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
         if (withPlanting)
             map[VegetationInputs.PlantingKey] = RealMapFixture.ReadFiles()[VegetationInputs.PlantingKey];
-        return new BuildContext { World = withPlanting ? PavementTests.World(false) : new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map).Entries };
+        return new BuildContext { World = withPlanting ? PavementTests.World() : new FakeWorld(), Map = null!, WorldSeed = 1u, Catalog = Catalog, GlobalInputs = global, SourceInputs = BuildInputSnapshot.Freeze(map).Entries };
     }
 
     private static PaletteCatalog Catalog => MotherModelTests.Palette;

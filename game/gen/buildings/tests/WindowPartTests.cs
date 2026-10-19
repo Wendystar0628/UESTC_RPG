@@ -25,7 +25,7 @@ public sealed class WindowPartTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void PhysicalCurtainFlagMatchesActualPerOpeningGeometryAtEachLodAndZone()
     {
-        var world = World(WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6));
+        var world = World(WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6));
         var set = BuildingSet.For(world, 1u);
         var plan = set.Plans[0];
         var present = 0;
@@ -64,7 +64,7 @@ public sealed class WindowPartTests
     public void K1AndK2OpeningsTakeTheWp10Parts()
     {
         // The walking corridor's ground band is K2, the facade above it K3 (ENG-ARCH FacadeSegment).
-        var world = World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K2), WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6));
+        var world = World(new ZonedFidelity(FidelityZone.K3, FidelityZone.K2), WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6));
         var set = BuildingSet.For(world, 1u);
         var plan = set.Plans[0];
         for (var fi = 0; fi < plan.Facades.Count; fi++)
@@ -86,10 +86,10 @@ public sealed class WindowPartTests
     public void K3OpeningsTakeTheSimpleWindow()
     {
         var world = World(
-            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6),
-            WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 40, 30))), props: "{\"category\":\"sport\"}", source: FeatureSource.Osm, height: 9f, storeys: 1),
-            WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 48, 16))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 21f, storeys: 5),
-            WorldFeatureFixture.Create("t:canteen", "building", new PolygonGeometry(new PolygonRings(Rect(300, 0, 40, 24))), props: "{\"category\":\"dining\"}", source: FeatureSource.Osm, height: 9.5f, storeys: 2));
+            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6),
+            WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 40, 30))), props: "{\"category\":\"sport\"}", height: 9f, storeys: 1),
+            WorldFeatureFixture.Create("t:lab", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 48, 16))), props: "{\"category\":\"research\"}", height: 21f, storeys: 5),
+            WorldFeatureFixture.Create("t:canteen", "building", new PolygonGeometry(new PolygonRings(Rect(300, 0, 40, 24))), props: "{\"category\":\"dining\"}", height: 9.5f, storeys: 2));
         var set = BuildingSet.For(world, 3u);
         var module = new BuildingsModule();
         for (var i = 0; i < set.Plans.Count; i++)

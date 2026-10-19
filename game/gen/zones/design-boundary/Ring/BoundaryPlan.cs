@@ -25,7 +25,7 @@ public enum OpeningKind { Gate, SideGate, Grate }
 public sealed record Opening(string Key, OpeningKind Kind, float Start, float Length, RunEnd StartPost, RunEnd EndPost, float Width = 0f);
 
 /// <summary>
-/// The campus boundary as one closed plan (WLD-OUTSKIRTS, MAP-QSH-ADDITIONS): the ring from campus.json opened at
+/// The campus boundary as one closed plan (WLD-OUTSKIRTS, MAP-QSH-ADDITIONS): the ring from world/geo.json opened at
 /// every gate (the five of <see cref="BoundaryTune.Gates"/> and WP-18's south gate), at every water crossing (a grate) and at
 /// every other road crossing (a closed side gate); the fence runs fill the rest, each with its hedge pieces where the strip
 /// inside is clear. Built once per world, from the world model only.

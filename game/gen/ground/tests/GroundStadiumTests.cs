@@ -75,7 +75,7 @@ public sealed class GroundStadiumTests
         // A track mapped as a closed line is a band along it that closes on itself.
         var points = Oval(0f, 0f, 40f, 30f).Outer;
         var line = WorldFeatureFixture.Create("test:way:12", "sport",
-            new PolylineGeometry(new Polyline([.. points, points[0]])), """{"kind":"sport","sport":"running"}""", FeatureSource.Osm);
+            new PolylineGeometry(new Polyline([.. points, points[0]])), """{"kind":"sport","sport":"running"}""");
         var shape = GroundSources.Read(TestWorld.Of([line])).Shapes.Single(s => s.Kind == SurfaceKind.Track);
         AssertThat(shape.Line is { } chain && chain.Length == points.Count + 1 && chain[0] == chain[^1]).OverrideFailureMessage("A closed track line stays closed.").IsTrue();
         AssertThat(Math.Abs((double)(SportGround.TrackWidth * 0.5) - (double)(shape.HalfWidth)) <= TestTolerance.Position).OverrideFailureMessage($"track line half width: expected {SportGround.TrackWidth * 0.5}, got {shape.HalfWidth}.").IsTrue();
@@ -182,7 +182,7 @@ public sealed class GroundStadiumTests
         var world = RealMapFixture.Load().World;
         var shapes = GroundSources.Read(world).Shapes;
         var sportsSites = world.Features.Values.Where(feature => feature.Props is { } props &&
-            props.TryGetProperty("sourceTags", out var tags) && tags.TryGetProperty("leisure", out var leisure) &&
+            props.TryGetProperty("leisure", out var leisure) &&
             leisure.GetString() is "stadium" or "sports_centre").ToArray();
         // The leisure tag also describes buildings such as the gym and swimming hall; only sport-kind enclosures
         // are empty outlines. Buildings keep their footprints regardless of their leisure tag.
@@ -272,10 +272,10 @@ public sealed class GroundStadiumTests
     private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement.Clone();
 
     /// <summary>An entity as the world loader builds one: the entity record carries the OSM tags, its part only the source record.</summary>
-    private static WorldFeature Entity(string id, string sourceTags, string partProps, PolygonRings rings)
+    private static WorldFeature Entity(string id, string featureProps, string partProps, PolygonRings rings)
     {
         var part = new WorldFeaturePart(id.Replace("test:", "osm:", StringComparison.Ordinal), new PolygonGeometry(rings), null, null) { Props = Json(partProps) };
         return WorldFeatureFixture.Create(id, "sport", new PolygonGeometry(rings),
-            $$"""{"id":"{{id}}","kind":"sport","sourceTags":{{sourceTags}}}""", FeatureSource.Osm, parts: [part]);
+            featureProps, parts: [part]);
     }
 }

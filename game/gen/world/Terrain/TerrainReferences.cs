@@ -9,6 +9,17 @@ internal sealed record TerrainRoad(FeatureId Feature, FeatureId Source, TerrainP
 internal sealed class TerrainReferences(TerrainCompileContext context)
 {
     private readonly Dictionary<FeatureId, TerrainRegion?> _bridgeAreas = [];
+    public string SourceFiles(params FeatureId[] ids)
+    {
+        var wanted = ids.ToHashSet();
+        var files = context.Features.Values.Where(feature => wanted.Contains(feature.Id)
+                || feature.Parts.Any(part => wanted.Contains(SourceNetworkId(part.SourceId))))
+            .Select(feature => feature.Zone?.Value).Where(zone => !string.IsNullOrEmpty(zone))
+            .Distinct(StringComparer.Ordinal).OrderBy(zone => zone, StringComparer.Ordinal)
+            .Select(zone => $"world/{zone}.json").ToArray();
+        return files.Length == 0 ? "world" : string.Join(",", files);
+    }
+
     public TerrainRegion Area(FeatureId id, string kind, string file, string op)
     {
         if (!context.Features.TryGetValue(id, out var feature)) throw new WorldDataException(file, op, $"Missing {kind} entity '{id.Value}'.");
@@ -90,9 +101,9 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
         if (HasWaterLine(feature.Id)) return true;
         foreach (var part in WorldFeatureKinds.Parts(feature, "water"))
         {
-            if (part.Props is not { } props || !props.TryGetProperty("sourceTags", out var tags)) continue;
-            if (tags.TryGetProperty("water", out var water) && water.GetString() is "river" or "stream" or "canal" or "drain" or "ditch") return true;
-            if (tags.TryGetProperty("waterway", out var channel) && channel.GetString() is "river" or "stream" or "canal" or "drain" or "ditch") return true;
+            if (part.Props is not { } props) continue;
+            if (props.TryGetProperty("water", out var water) && water.GetString() is "river" or "stream" or "canal" or "drain" or "ditch") return true;
+            if (props.TryGetProperty("waterway", out var channel) && channel.GetString() is "river" or "stream" or "canal" or "drain" or "ditch") return true;
         }
         return false;
     }
@@ -109,14 +120,14 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
         var parts = WorldFeatureKinds.Parts(feature, "water").ToArray();
         if (feature.Parts.Count == 0)
         {
-            if (declared.Contains(id) && !registered.Contains(id)) throw new WorldDataException("network.json", id.Value, "Underground water requires matching WorldNetwork.Culverts registration.");
+            if (declared.Contains(id) && !registered.Contains(id)) throw new WorldDataException(SourceFiles(id), id.Value, "Underground water requires matching WorldNetwork.Culverts registration.");
             return underground.Contains(id);
         }
         if (parts.Any(part => declared.Contains(SourceNetworkId(part.SourceId)) && !registered.Contains(SourceNetworkId(part.SourceId))))
-            throw new WorldDataException("network.json", id.Value, "Underground water requires matching WorldNetwork.Culverts registration.");
+            throw new WorldDataException(SourceFiles(id), id.Value, "Underground water requires matching WorldNetwork.Culverts registration.");
         var count = parts.Count(part => underground.Contains(SourceNetworkId(part.SourceId)));
         if (count != 0 && count != parts.Length)
-            throw new WorldDataException("network.json", id.Value, "One water entity mixes registered underground culvert parts with surface parts; separate their explicit water identities before terrain compilation.");
+            throw new WorldDataException(SourceFiles(id), id.Value, "One water entity mixes registered underground culvert parts with surface parts; separate their explicit water identities before terrain compilation.");
         return count > 0;
     }
 
@@ -128,7 +139,7 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
             var kind = RoadKind(line);
             if (string.IsNullOrWhiteSpace(kind)) continue;
             if (props.TryGetProperty("area", out var area) && area.GetString() == "yes") continue;
-            if (line.Width <= 0) throw new WorldDataException("network.json", line.Id.Value, "A line-shaped highway requires its actual positive width.");
+            if (line.Width <= 0) throw new WorldDataException(SourceFiles(line.Id), line.Id.Value, "A line-shaped highway requires its actual positive width.");
             var parts = context.Features.Values.OrderBy(feature => feature.Id.Value, StringComparer.Ordinal)
                 .SelectMany(feature => WorldFeatureKinds.Parts(feature, "road").Where(part => SourceNetworkId(part.SourceId) == line.Id)).ToArray();
             var polygons = parts.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray();
@@ -151,7 +162,6 @@ internal sealed class TerrainReferences(TerrainCompileContext context)
     private static string RoadKind(NetworkLine line)
     {
         if (line.Props is not { ValueKind: System.Text.Json.JsonValueKind.Object } props) return "";
-        if (props.TryGetProperty("roadType", out var roadType)) return roadType.GetString() ?? "";
         return props.TryGetProperty("highway", out var highway) ? highway.GetString() ?? "" : "";
     }
 

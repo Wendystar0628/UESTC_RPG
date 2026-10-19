@@ -3,26 +3,26 @@ id: MAP-QSH-NORTH
 title: 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅
 category: maps
 summary: 北部生活区各建筑的外观与身份特征、本区设计增补、近景要求；四季昼夜、行走与声音在子文档
-keywords: [北部生活区, 学生活动中心, 成电会堂, 赭红圆鼓, 校医院, 院名灯牌, 商业街, 玻璃拱顶步行街, 店招, 宿舍组团, 学知苑, 硕丰苑, 博翰苑, 留学生组团, 本科楼A型, 本科楼B型, 组团闸机, 学知一组团, 阳台晾晒, 银杏苑, 芙蓉餐厅, 思学苑, 春晖苑, 朝阳餐厅, 西北餐厅, 室外扶梯罩棚, 风雨连廊, 丹桂路, 博士公寓, overlay/north.d]
+keywords: [北部生活区, 学生活动中心, 成电会堂, 赭红圆鼓, 校医院, 院名灯牌, 商业街, 玻璃拱顶步行街, 店招, 宿舍组团, 学知苑, 硕丰苑, 博翰苑, 留学生组团, 本科楼A型, 本科楼B型, 组团闸机, 学知一组团, 阳台晾晒, 银杏苑, 芙蓉餐厅, 思学苑, 春晖苑, 朝阳餐厅, 西北餐厅, 室外扶梯罩棚, 风雨连廊, 丹桂路, 博士公寓, world/north.json]
 owners: [WP-20]
 contributors: [WP-13, WP-23, WP-25]
 depends: [CORE-INDEX, ART-STYLE, ART-FIDELITY, ART-MODELING, ART-RENOVATION, MAP-QSH-ADDITIONS, WLD-INTERIORS, ENG-ARCH]
 related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-CENTER-EAST, MAP-QSH-RENOVATION, MAP-QSH-LIBRARY, WLD-VEGETATION, WLD-LIFE, ENG-GATES, ENG-WP, ENG-PERF, SYS-MAPS]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/north.d/"]
+data: ["game/data/maps/qingshuihe/world/north.json"]
 gates: [G5, G7, G10]
 ---
 
 # MAP-QSH-NORTH · 北部生活区：学生活动中心、校医院、商业街、宿舍组团、餐厅
 
 > **范围**：本文规定北部生活区（学生活动中心与成电会堂、校医院、商业街、宿舍组团、餐厅）的建筑外观与身份特征、本区设计增补、近景要求，并列出本区的子文档。
-> **不在本文**：四季昼夜与天气（MAP-QSH-NORTH-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-NORTH-WALK）；楼的实体 ID、位置、层数与店面点位（以 `game/data/maps/qingshuihe/campus.json` 和 `overlay/north.d/` 为准）；开放室内的内部（MAP-QSH-INTERIORS §3、WLD-INTERIORS）；植被与季相（WLD-VEGETATION、SYS-TIME-LOOK §2）；猫、单车、晾晒物的放置（WLD-LIFE）；北门外的外围街道（WLD-OUTSKIRTS）；锚点位置（SYS-ATLAS）；本区地形（MAP-QSH-TERRAIN-DISTRICTS §7、§9、§11）。
+> **不在本文**：四季昼夜与天气（MAP-QSH-NORTH-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-NORTH-WALK）；楼的实体 ID、位置、层数与店面点位（以 `game/data/maps/qingshuihe/world/north.json` 为准）；开放室内的内部（MAP-QSH-INTERIORS §3、WLD-INTERIORS）；植被与季相（WLD-VEGETATION、SYS-TIME-LOOK §2）；猫、单车、晾晒物的放置（WLD-LIFE）；北门外的外围街道（WLD-OUTSKIRTS）；锚点位置（SYS-ATLAS）；本区地形（MAP-QSH-TERRAIN-DISTRICTS §7、§9、§11）。
 > **查阅**：先读 §0；各楼外观看 §1–§4、§5–§6；本区增补看 §7；身份特征与近景要求看 §8；待验证看 §9；四季昼夜、天气看 MAP-QSH-NORTH-SEASONS；行走、开放入口与声音看 MAP-QSH-NORTH-WALK
 
 ## 0 结论
 
 1. **身份特征**：学生活动中心的赭红圆鼓与竖排楼名；商业街玻璃拱顶下的三层亮街；宿舍 A/B 型配色与开敞阳台；芙蓉餐厅的豆沙粉墙；朝阳餐厅的外挂楼梯与大挑檐；银杏苑带拱形罩棚的室外扶梯（§1–§4、§5）。
-2. **层数**：学生活动中心至少 3 层、银杏苑 3 层、春晖苑 2 层，数据里的层数不对，按本文写覆盖层 `HeightOp`；2026-07 交付的博士公寓不在数据里，不新增（§4.11）。
+2. **层数**：学生活动中心至少 3 层、银杏苑 3 层、春晖苑 2 层，数据里的层数不对，按本文改记录里的层数；2026-07 交付的博士公寓不在数据里，不新增（§4.11）。
 3. **翻新**：老楼全部翻新并守 D-174（ART-FIDELITY-DETAIL §1.5），按 MAP-QSH-RENOVATION 的翻新预设，A、B 型宿舍、商业街、学生活动中心有例外；宿舍外机进机位格栅，屋面热泵进设备围挡（§4.2、§4.6）。
 4. **商业街**：一层步行街按室外介质，雨雪被采光顶挡住；店招只画店名、不画品牌标志（§3）。
 5. **宿舍的窗**：从外面看一律是窗卡 `W-DORM`；亮灭按宿舍曲线，23:30 成片熄灭，是本区夜里的一次"呼吸"（§4.9、MAP-QSH-NORTH-SEASONS §1）。
@@ -108,7 +108,7 @@ gates: [G5, G7, G10]
 
 ## 8 本区身份特征、设计增补与近景要求
 
-通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节；轮廓调整写进 `overlay/north.d/` 本包分片。
+通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节；轮廓调整直接改 `world/north.json` 里的记录。
 
 | 对象 | 必须认得出的特征 |
 | --- | --- |

@@ -16,7 +16,7 @@ gates: [G2]
 # SYS-ATLAS · 平面地图与传送
 
 > **范围**：本文规定平面地图的总则：界面层与 3D 画面的分界（允许什么、禁止什么）、多地图下的数据归属、存档与设置里存什么。主线范围：全开放，先放 3–4 座锚点；解锁策略、自定义标记、追踪在主线之后。底图、小地图、大地图见 SYS-ATLAS-UI，标记、锚点、传送与解锁见 SYS-ATLAS-TRAVEL。
-> **不在本文**：地图加载与切换 `IMapService`（SYS-MAPS）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；界面令牌与画面布局（UI-VISUAL）；开放室内的清单与入口（WLD-INTERIORS）；外围与截面线（WLD-OUTSKIRTS）；声音（SYS-AUDIO）；存档容器与保存时机（SYS-SAVE）；服务契约（`game/contracts/Atlas/`）、锚点与标记数据（`game/data/maps/qingshuihe/atlas/`、`overlay/atlas.d/`）、地图一致性验收（ENG-GATES G18）。
+> **不在本文**：地图加载与切换 `IMapService`（SYS-MAPS）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；界面令牌与画面布局（UI-VISUAL）；开放室内的清单与入口（WLD-INTERIORS）；外围与截面线（WLD-OUTSKIRTS）；声音（SYS-AUDIO）；存档容器与保存时机（SYS-SAVE）；服务契约（`game/contracts/Atlas/`）、锚点与标记数据（`game/data/maps/qingshuihe/atlas/`、`world/atlas.json`）、地图一致性验收（ENG-GATES G18）。
 > **查阅**：先读 §0；允许与禁止看 §1；多地图下的数据看 §2；存档与设置看 §3
 
 ## 0 结论
@@ -51,7 +51,7 @@ gates: [G2]
 ## 2 多地图下的数据
 
 - 地图标识一律用 `MapId("qingshuihe")`；`MarkerId` 只在一张图内唯一，跨图引用写成"地图 + 标记"。服务名是 `IAtlasService`，与地图加载切换的 `IMapService` 不得混名。
-- 平面地图的数据在本图 `atlas/`（`markers.json`、`labels.json`）、覆盖层 `overlay/atlas.d/` 和缩略图目录 `game/assets/maps/qingshuihe/thumbs/`；底图与标注布局是本机烘焙产物，不进 git、不随包发（SYS-MAPS §1.2）。点位表归 UI-NAV-WAYPOINTS §1，开放清单归 WLD-INTERIORS。
+- 平面地图的数据在本图 `atlas/`（`markers.json`、`labels.json`）、世界文件 `world/atlas.json` 和缩略图目录 `game/assets/maps/qingshuihe/thumbs/`；底图与标注布局是本机烘焙产物，不进 git、不随包发（SYS-MAPS §1.2）。点位表归 UI-NAV-WAYPOINTS §1，开放清单归 WLD-INTERIORS。
 - 按图与全局的划分以 SYS-MAPS §1.1 为准：筛选偏好和小地图设置是全局的，底图、标记、标注、区域表、锚点实体、缩略图、自定义标记、解锁状态都按图。
 - **换图**（主线之后）：卸载时释放本图的地图纹理和缩略图，加载时读新图数据并重建标记；换图在雾幕里完成，小地图跟着雾幕淡出淡回。多图时"MAP 01/01"变成切换标签；楼层图以后作为同一张图的"地图层"，现在不用。
 

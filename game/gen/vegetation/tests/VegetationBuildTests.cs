@@ -39,7 +39,7 @@ public sealed class VegetationBuildTests
     private static (string, BuildContext) Load()
     {
         var root = RepositoryFixture.Root;
-        var world = PavementTests.World(false);
+        var world = PavementTests.World();
         var global = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
             [VegetationInputs.SpeciesKey] = File.ReadAllBytes(Path.Combine(root, "game", "data", "vegetation", "species.json"))
@@ -154,7 +154,7 @@ public sealed class VegetationBuildTests
     public void OnlyTheKernelMakesEngineInstances()
     {
         // ENG-ARCH (G4 / arch rules): WP-23 code hands geometry over; it never creates engine instances itself.
-        var root = Data.Value.Root;
+        var root = RepositoryFixture.Root;
         string[] banned = ["MultiMeshInstance3D", "MeshInstance3D", "RenderingServer.InstanceCreate", "RenderingServer.Multimesh", "MeshCreate"];
         foreach (var dir in new[] { Path.Combine(root, "game", "gen", "vegetation"), Path.Combine(root, "game", "systems", "vegetation") })
             foreach (var file in Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories)

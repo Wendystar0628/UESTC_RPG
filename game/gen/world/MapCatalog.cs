@@ -38,8 +38,8 @@ public sealed class MapCatalog
     public static MapCatalogEntry ReadEntry(MapCatalogEntry entry, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
     {
         if (!files.TryGetValue("map.json", out var map)) throw new WorldDataException("map.json", "root", "Required map descriptor is missing.");
-        if (!files.TryGetValue("campus.json", out var campus)) throw new WorldDataException("campus.json", "root", "Required map data is missing.");
-        return ReadEntry(new(entry.Descriptor.Id, entry.DataRoot), map.Span, campus,
+        if (!files.TryGetValue("world/geo.json", out var geo)) throw new WorldDataException("world/geo.json", "root", "Required geographic metadata is missing.");
+        return ReadEntry(new(entry.Descriptor.Id, entry.DataRoot), map.Span, geo,
             files.GetValueOrDefault("waypoints.json").Span);
     }
 
@@ -64,7 +64,7 @@ public sealed class MapCatalog
     }
 
     public static MapCatalogEntry ReadEntry(MapIndexEntry entry, ReadOnlySpan<byte> mapBytes,
-        ReadOnlyMemory<byte> campusBytes, ReadOnlySpan<byte> waypointBytes)
+        ReadOnlyMemory<byte> geoBytes, ReadOnlySpan<byte> waypointBytes)
     {
         var file = JsonSerializer.Deserialize<MapFile>(mapBytes, ContractJson.Options)
             ?? throw new InvalidDataException("Map file is null.");
@@ -72,11 +72,11 @@ public sealed class MapCatalog
         ValidateRoot(entry.Dir);
         if (file.Id != entry.Id || file.Version < 1) throw new InvalidDataException("Map file identity or version is invalid.");
         Validate(file);
-        using var campus = JsonDocument.Parse(campusBytes);
-        var meta = campus.RootElement.GetProperty("meta");
+        using var geo = JsonDocument.Parse(geoBytes);
+        var meta = geo.RootElement;
         var origin = meta.GetProperty("origin");
         var bounds = meta.GetProperty("bounds");
-        if (origin.GetArrayLength() != 2 || bounds.GetArrayLength() != 4) throw new InvalidDataException("Invalid campus metadata dimensions.");
+        if (origin.GetArrayLength() != 2 || bounds.GetArrayLength() != 4) throw new InvalidDataException("Invalid geographic metadata dimensions.");
         var lon = origin[0].GetDouble();
         var lat = origin[1].GetDouble();
         var crs = meta.GetProperty("crs").GetString() ?? "";
@@ -88,8 +88,8 @@ public sealed class MapCatalog
         var max = new Vector2(bounds[2].GetSingle(), bounds[3].GetSingle());
         ValidateRect(min, max);
         if (file.DataRect.Min.X > min.X || file.DataRect.Min.Y > min.Y || file.DataRect.Max.X < max.X || file.DataRect.Max.Y < max.Y)
-            throw new InvalidDataException("Data rectangle does not cover the campus boundary.");
-        var center = BoundaryCenter(campus.RootElement.GetProperty("boundary"));
+            throw new InvalidDataException("Data rectangle does not cover the map boundary.");
+        var center = BoundaryCenter(meta.GetProperty("boundary"));
         var margin = new Vector2(file.Roam.FallbackMargin);
         var box = new Box3(new(min.X - margin.X, file.Roam.FloorY, min.Y - margin.Y),
             new(max.X + margin.X, file.Roam.CeilY, max.Y + margin.Y));
@@ -175,11 +175,13 @@ public sealed class MapCatalog
 
     private static Vector2 BoundaryCenter(JsonElement boundary)
     {
-        var rings = boundary.EnumerateArray().Select(ring => (IReadOnlyList<Vector2>)ring.EnumerateArray()
-            .Select(point => new Vector2(point[0].GetSingle(), point[1].GetSingle())).ToArray()).ToArray();
-        if (rings.Length == 0) throw new InvalidDataException("Campus boundary has no outer ring.");
-        try { return PlanGeometry.Centroid(new PolygonRings(rings[0], rings.Skip(1).ToArray())); }
-        catch (ArgumentException error) { throw new InvalidDataException("Invalid campus boundary.", error); }
+        static IReadOnlyList<Vector2> Ring(JsonElement ring) => ring.EnumerateArray()
+            .Select(point => new Vector2(point[0].GetSingle(), point[1].GetSingle())).ToArray();
+        var outer = Ring(boundary.GetProperty("outer"));
+        var holes = boundary.GetProperty("holes").EnumerateArray().Select(Ring).ToArray();
+        if (outer.Count == 0) throw new InvalidDataException("Map boundary has no outer ring.");
+        try { return PlanGeometry.Centroid(new PolygonRings(outer, holes)); }
+        catch (ArgumentException error) { throw new InvalidDataException("Invalid map boundary.", error); }
     }
 }
 

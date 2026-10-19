@@ -6,6 +6,9 @@ using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.Operation.Buffer;
+using NtsGeometry = NetTopologySuite.Geometries.Geometry;
 
 namespace Campus.Gen.World;
 
@@ -14,8 +17,6 @@ public sealed record WorldLoadOptions
     public IInteriorIndex? Interiors { get; init; }
     public IOutskirtsModel? Outskirts { get; init; }
     public IFidelityModel? Fidelity { get; init; }
-    /// <summary>Explicit registered feature claims, supplied by the map adapter; an overlay Owner is not a claim.</summary>
-    public IReadOnlyDictionary<FeatureId, WpId>? ClaimedBy { get; init; }
 }
 
 public sealed class WorldDataException(string file, string entry, string message, Exception? inner = null)
@@ -28,17 +29,16 @@ public sealed class WorldDataException(string file, string entry, string message
 /// <summary>Pure parser. The kernel supplies only the active map's relative filenames and bytes.</summary>
 public static partial class WorldModelLoader
 {
-    /// <summary>
-    /// Storey height for a building the world data gives no height for. This layer is below the building styles, which supply
-    /// their own storey height once a footprint is planned (FacadeRules); everything in the world layer that needs one reads this.
-    /// </summary>
+    /// <summary>Fallback storey height when a building's world record gives no height.</summary>
     public const float DefaultStoreyHeight = 3.6f;
     private static readonly Encoding Utf8 = new UTF8Encoding(false, true);
-    /// <summary>Topology-only parsing for synthetic callers; terrain files require the descriptor-based production entry.</summary>
+    private static readonly GeometryFactory Factory = new();
+
+    /// <summary>Load a world without terrain; terrain files require the descriptor-based production entry.</summary>
     public static WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, WorldLoadOptions? options = null) =>
         Load(map, files.ToDictionary(p => p.Key, p => Decode(p.Key, p.Value), StringComparer.Ordinal), options);
 
-    /// <summary>Production entry: the frozen map descriptor and bytes compile one terrain before world publication.</summary>
+    /// <summary>The frozen map descriptor and bytes compile one terrain before world publication.</summary>
     public static WorldModelLoadResult LoadWorld(WorldModelLoadInputs inputs,
         IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, WorldLoadOptions? options = null)
     {
@@ -53,46 +53,16 @@ public static partial class WorldModelLoader
     public static WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, string> files, WorldLoadOptions? options = null)
         => LoadChecked(map, files, options, null);
 
-    /// <summary>Claims baseline only. This entry rejects terrain input and never compiles automatic constraints.</summary>
-    public static IReadOnlyDictionary<FeatureId, WorldFeature> LoadTopology(MapId map,
-        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
-    {
-        try
-        {
-            var topology = ReadTopology(map,
-                files.ToDictionary(pair => pair.Key, pair => Decode(pair.Key, pair.Value), StringComparer.Ordinal), null);
-            var sources = ReadTerrainSources(map, topology.Input);
-            if (sources.Count != 0)
-                throw new WorldDataException(sources[0].File, sources[0].Data.Ops.FirstOrDefault()?.Id ?? "root",
-                    "Topology-only loading cannot consume terrain files.");
-            return topology.Features;
-        }
-        catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
-        { throw new WorldDataException("campus.json", "root", error.Message, error); }
-    }
-
     private static WorldModelLoadResult LoadChecked(MapId map, IReadOnlyDictionary<string, string> files,
         WorldLoadOptions? options, WorldModelLoadInputs? inputs)
     {
-        try { return LoadCore(map, files, options, inputs); }
+        try { return LoadCore(map, files, options ?? new(), inputs); }
         catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
-        { throw new WorldDataException("campus.json", "root", error.Message, error); }
+        { throw new WorldDataException("world/geo.json", "root", error.Message, error); }
     }
 
     private static WorldModelLoadResult LoadCore(MapId map, IReadOnlyDictionary<string, string> files,
-        WorldLoadOptions? options, WorldModelLoadInputs? inputs)
-    {
-        options ??= new();
-        var topology = ReadTopology(map, files, inputs is null ? options.ClaimedBy : inputs.ClaimedBy);
-        return Publish(topology, options, inputs);
-    }
-
-    private sealed record WorldTopology(MapId Map, SortedDictionary<string, string> Input, GeoFrame Geo,
-        PolygonRings Boundary, IReadOnlyDictionary<FeatureId, WorldFeature> Features, WorldNetwork Network,
-        string? EntityPrefix, IReadOnlyList<InteriorOverlayFile> InteriorOverlays);
-
-    private static WorldTopology ReadTopology(MapId map, IReadOnlyDictionary<string, string> files,
-        IReadOnlyDictionary<FeatureId, WpId>? claimedBy)
+        WorldLoadOptions options, WorldModelLoadInputs? inputs)
     {
         var input = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var pair in files.OrderBy(p => p.Key, StringComparer.Ordinal))
@@ -100,119 +70,100 @@ public static partial class WorldModelLoader
             var key = pair.Key.Replace('\\', '/');
             if (key.StartsWith('/') || key.Contains(':') || key.Split('/').Any(s => s is ".." or "." or ""))
                 throw new WorldDataException(pair.Key, "path", "Expected a relative path within the current map.");
+            if (key.StartsWith("overlay/", StringComparison.Ordinal) && key["overlay/".Length..].Split('/')[0].EndsWith(".d", StringComparison.Ordinal))
+                throw new WorldDataException(key, "path", "Retired feature overlay input; edit world/<zone>.json.");
             if (!input.TryAdd(key, pair.Value)) throw new WorldDataException(key, "path", "Duplicate normalized path.");
         }
-        if (!input.TryGetValue("campus.json", out var campusText)) throw new WorldDataException("campus.json", "root", "Required map data is missing.");
-        using var document = Parse("campus.json", campusText);
+        const string geoFile = "world/geo.json";
+        if (!input.TryGetValue(geoFile, out var geoText)) throw new WorldDataException(geoFile, "root", "Required map data is missing.");
+        using var document = Parse(geoFile, geoText);
         var root = document.RootElement;
-        var meta = root.GetProperty("meta");
-        var origin = meta.GetProperty("origin");
-        var limits = meta.GetProperty("bounds");
+        var origin = root.GetProperty("origin");
+        var limits = root.GetProperty("bounds");
         var geo = new GeoFrame(origin[0].GetDouble(), origin[1].GetDouble(),
-            int.Parse(Text(meta, "crs").Split(':')[^1], CultureInfo.InvariantCulture),
+            int.Parse(Text(root, "crs").Split(':')[^1], CultureInfo.InvariantCulture),
             new(Finite(limits[0]), Finite(limits[1])), new(Finite(limits[2]), Finite(limits[3])));
         if (geo.BoundaryMin.X >= geo.BoundaryMax.X || geo.BoundaryMin.Y >= geo.BoundaryMax.Y)
-            throw new WorldDataException("campus.json", "meta.bounds", "Invalid bounds.");
-        var boundary = Rings(root.GetProperty("boundary"));
-        var entities = root.GetProperty("entities").EnumerateArray()
-            .ToDictionary(e => Text(e, "id"), e => e, StringComparer.Ordinal);
+            throw new WorldDataException(geoFile, "bounds", "Invalid bounds.");
+        var boundary = Value<PolygonRings>(root.GetProperty("boundary"));
+        var prefix = Text(root, "entityPrefix");
         var features = new SortedDictionary<string, WorldFeature>(StringComparer.Ordinal);
-        var aliases = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-        var prefix = OptionalText(meta, "entityPrefix");
-        var sourceIds = new HashSet<string>(StringComparer.Ordinal);
-        var groups = new SortedDictionary<string, List<(JsonElement Raw, WorldFeaturePart Part)>>(StringComparer.Ordinal);
-        foreach (var raw in root.GetProperty("features").EnumerateArray())
+        var partIds = new HashSet<string>(StringComparer.Ordinal);
+        var lineIds = new HashSet<FeatureId>();
+        var treeIds = new HashSet<FeatureId>();
+        var roads = new List<NetworkLine>();
+        var waterways = new List<NetworkLine>();
+        var trees = new List<NetworkTree>();
+        foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("world/", StringComparison.Ordinal)
+            && pair.Key.EndsWith(".json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 2 && pair.Key != geoFile))
         {
-            var sourceId = Text(raw, "id");
-            if (!sourceIds.Add(sourceId)) throw new WorldDataException("campus.json", sourceId, "Duplicate source geometry.");
-            var entityId = OptionalText(raw, "entityId");
-            var id = entityId ?? (prefix is null ? throw new WorldDataException("campus.json", "meta.entityPrefix", "Anonymous geometry needs a map entity prefix.") : OsmFeatureIds.FromPart(prefix, sourceId).Source);
-            if (entityId is null && entities.ContainsKey(id)) throw new WorldDataException("campus.json", sourceId, "Anonymous feature ID collides with an authored entity.");
-            var polygons = raw.GetProperty("polygons").EnumerateArray().Select(Rings).ToArray();
-            if (polygons.Length == 0) throw new WorldDataException("campus.json", sourceId, "Missing footprint.");
-            var height = OptionalFloat(raw, "height");
-            var storeys = OptionalFloat(raw, "levels");
-            var part = new WorldFeaturePart(sourceId, Geometry(polygons), height,
-                storeys is > 0 ? (int)MathF.Ceiling(storeys.Value) : null)
-            { FacadeGeometry = ReadFacadeGeometry(raw, sourceId, polygons), Props = raw.Clone() };
-            if (!groups.TryGetValue(id, out var group)) groups[id] = group = [];
-            group.Add((raw, part));
-            Alias(aliases, sourceId, id);
-            Alias(aliases, id, id);
-        }
-        foreach (var pair in groups)
-        {
-            var parts = pair.Value.OrderBy(p => p.Part.SourceId, StringComparer.Ordinal).Select(p => p.Part).ToArray();
-            var raw = pair.Value[0].Raw;
-            entities.TryGetValue(pair.Key, out var entity);
-            var geometry = Geometry(parts.SelectMany(p => WorldFeatureGeometry.PolygonsOf(p.Geometry)).ToArray());
-            var height = parts.Max(p => p.Height);
-            var kind = entity.ValueKind == JsonValueKind.Object ? Text(entity, "kind") : Text(raw, "kind");
-            features.Add(pair.Key, new(new(pair.Key), FeatureSource.Osm, new(kind), geometry)
+            using var zoneDocument = Parse(file, text);
+            var zone = new ZoneId(file["world/".Length..^".json".Length]);
+            foreach (var raw in zoneDocument.RootElement.GetProperty("features").EnumerateArray())
             {
-                Name = entity.ValueKind == JsonValueKind.Object ? OptionalText(entity, "name") : null,
-                Height = height,
-                Storeys = parts.Max(p => p.Storeys),
-                Family = OptionalText(raw, "family") is { } family ? new(family) : null,
-                Bounds = BoundsOf(geometry, height ?? 0),
-                Parts = parts,
-                Props = entity.ValueKind == JsonValueKind.Object ? entity.Clone() : raw.Clone()
-            });
-        }
-        foreach (var pair in entities.OrderBy(p => p.Key, StringComparer.Ordinal))
-        {
-            if (features.ContainsKey(pair.Key)) continue;
-            var anchor = pair.Value.GetProperty("anchor");
-            var point = new Vector3(Finite(anchor[0]), Finite(anchor[1]), Finite(anchor[2]));
-            var geometry = new PointGeometry(point);
-            features.Add(pair.Key, new(new(pair.Key), FeatureSource.Osm, new(Text(pair.Value, "kind")), geometry)
-            { Name = OptionalText(pair.Value, "name"), Bounds = new(point, point), Props = pair.Value.Clone() });
-            Alias(aliases, pair.Key, pair.Key);
-        }
-        ApplyZones(input, features, aliases);
-        var originalNetwork = input.TryGetValue("network.json", out var networkText) ? Deserialize<WorldNetwork>("network.json", networkText) : WorldNetwork.Empty;
-        ValidateNetwork(originalNetwork);
-        var roads = new EffectiveRoadNetwork(originalNetwork, prefix, features);
-        var overlayWrites = new Dictionary<string, List<OverlayWrite>>(StringComparer.Ordinal);
-        var interiorOverlays = new List<InteriorOverlayFile>();
-        foreach (var pair in input.Where(p => p.Key.StartsWith("overlay/", StringComparison.Ordinal))
-            .OrderBy(p => FeatureOverlayShardGroup(p.Key) is { } group ? "overlay/" + group : p.Key, StringComparer.Ordinal)
-            .ThenBy(p => p.Key, StringComparer.Ordinal))
-        {
-            if (pair.Key.StartsWith("overlay/interior/", StringComparison.Ordinal) && pair.Key.EndsWith(".interior.json", StringComparison.Ordinal))
-            {
-                var overlay = Deserialize<InteriorOverlayFile>(pair.Key, pair.Value);
-                CheckMap(map, overlay.Map, pair.Key);
-                foreach (var op in overlay.Ops)
+                var id = Text(raw, "id");
+                try
                 {
-                    var id = op switch { SealOp seal => seal.Building, InteriorConfigOp config => config.Building, _ => throw new WorldDataException(pair.Key, "op", "Unknown interior operation.") };
-                    Resolve(features, aliases, id, pair.Key);
+                    var kind = new DesignKind(Text(raw, "kind"));
+                    var parts = new List<WorldFeaturePart>();
+                    if (raw.TryGetProperty("parts", out var members))
+                        foreach (var member in members.EnumerateArray())
+                        {
+                            var partId = Text(member, "id");
+                            if (!partIds.Add(partId)) throw new WorldDataException(file, partId, "Duplicate part ID.");
+                            Polyline? line = member.TryGetProperty("line", out var nodes) ? new(Value<Vector2[]>(nodes)) : null;
+                            var width = OptionalFloat(member, "width") ?? 0;
+                            var geometry = member.TryGetProperty("geometry", out var shape) ? Value<OverlayGeometry>(shape)
+                                : Buffer(line ?? throw new ArgumentException("Missing part geometry: " + partId), width, boundary)
+                                    ?? throw new ArgumentException("Empty buffered part: " + partId);
+                            var part = new WorldFeaturePart(partId, geometry, OptionalFloat(member, "height"), OptionalInteger(member, "storeys"))
+                            {
+                                Props = Props(member),
+                                FacadeGeometry = ReadFacadeGeometry(member, WorldFeatureGeometry.PolygonsOf(geometry))
+                            };
+                            parts.Add(part);
+                            if (line is not null)
+                                AddLine(new(new(OsmFeatureIds.FromPart(prefix, partId).Source), line, width) { Props = part.Props }, kind.Value, file);
+                        }
+                    var combined = parts.Count == 0 ? Value<OverlayGeometry>(raw.GetProperty("geometry"))
+                        : Geometry(parts.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
+                    var height = OptionalFloat(raw, "height");
+                    var feature = new WorldFeature(new(id), kind, combined)
+                    {
+                        Parts = parts.ToArray(), Zone = zone, Name = OptionalText(raw, "name"), Height = height,
+                        Storeys = OptionalInteger(raw, "storeys"), Props = Props(raw), Bounds = BoundsOf(combined, height ?? 0),
+                        Family = OptionalText(raw, "family") is { } family ? new(family) : null,
+                        Facade = OptionalText(raw, "facade") is { } facade ? new(facade) : null
+                    };
+                    if (!features.TryAdd(id, feature)) throw new WorldDataException(file, id, "Duplicate world feature ID.");
+                    var sourceLine = OsmFeatureIds.TryFromSource(prefix, id, out _);
+                    var designRoad = kind.Value == "road" && feature.TryText("highway") is "footway" or "path" or "pedestrian";
+                    if (parts.Count == 0 && combined is PolylineGeometry polyline && (sourceLine || designRoad && feature.TryText("area") != "yes"))
+                        AddLine(new(feature.Id, polyline.Line, feature.TryNumber("width") ?? 0) { Props = feature.Props }, kind.Value, file);
                 }
-                interiorOverlays.Add(overlay);
+                catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
+                { throw new WorldDataException(file, id, error.Message, error); }
             }
-            else if (FeatureOverlayShardGroup(pair.Key) is not null)
+            foreach (var raw in zoneDocument.RootElement.GetProperty("trees").EnumerateArray())
             {
-                var overlay = Deserialize<OverlayFile>(pair.Key, pair.Value);
-                CheckMap(map, overlay.Map, pair.Key);
-                ApplyOverlay(pair.Key, overlay, features, aliases, overlayWrites, claimedBy, roads);
+                var tree = Value<NetworkTree>(raw);
+                if (!treeIds.Add(tree.Id)) throw new WorldDataException(file, tree.Id.Value, "Duplicate tree ID.");
+                if (!VectorMath.Finite(tree.Position)) throw new WorldDataException(file, tree.Id.Value, "Invalid tree coordinate.");
+                trees.Add(tree);
             }
-            else if (pair.Key.EndsWith(".overlay.json", StringComparison.Ordinal) &&
-                !IsDedicatedOverlayGroup(pair.Key["overlay/".Length..].Split('/')[0].Replace(".overlay.json", "", StringComparison.Ordinal)))
-                throw new WorldDataException(pair.Key, "path", "Retired feature overlay input; use overlay/<group>.d/<file>.json.");
         }
-        var network = roads.Publish(features);
+        var orderedRoads = OrderNetwork(roads, line => line.Id, prefix).ToArray();
+        var orderedWater = OrderNetwork(waterways, line => line.Id, prefix).ToArray();
+        var network = new WorldNetwork(orderedRoads, orderedWater,
+            orderedRoads.Where(line => line.Props.TryText("bridge") == "yes").ToArray(),
+            orderedWater.Where(line => line.Props.TryText("tunnel") == "culvert").ToArray(),
+            OrderNetwork(trees, tree => tree.Id, prefix).ToArray());
         var frozen = new ReadOnlyDictionary<FeatureId, WorldFeature>(features.Values.ToDictionary(f => f.Id));
-        return new(map, input, geo, boundary, frozen, network, prefix, interiorOverlays.AsReadOnly());
-    }
-
-    private static WorldModelLoadResult Publish(WorldTopology topology, WorldLoadOptions options, WorldModelLoadInputs? inputs)
-    {
-        var (map, input, geo, boundary, frozen, network, prefix, interiorOverlays) = topology;
+        var interiorOverlays = ReadInteriorOverlays(map, input, frozen);
         var sources = ReadTerrainSources(map, input);
         var (terrain, diagnostics) = CompileTerrain(inputs, sources, boundary, frozen, network, prefix);
         var interiors = options.Interiors ?? new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"),
             inputs is null ? null : terrain);
-        // The outskirts producer owns its document format; do not silently discard a supplied layer.
         if (input.ContainsKey("outskirts.json") && options.Outskirts is null)
             throw new WorldDataException("outskirts.json", "root", "A parsed outskirts model is required until the producer's file contract is available.");
         var outskirts = options.Outskirts;
@@ -223,61 +174,42 @@ public static partial class WorldModelLoader
         var margin = outskirts is null ? roam?.FallbackMargin ?? 0 : 0;
         var bounds = new Box3(new(limitRing.Min(p => p.X) - margin, roam?.FloorY ?? 0, limitRing.Min(p => p.Y) - margin),
             new(limitRing.Max(p => p.X) + margin, roam?.CeilY ?? Math.Max(1, frozen.Count > 0 ? frozen.Values.Max(f => f.Bounds.Max.Y) : 0), limitRing.Max(p => p.Y) + margin));
-        return new(world, geo, PlanGeometry.Centroid(boundary.Outer), bounds,
-            TileGrid.At(bounds.Min),
-            TileGrid.At(bounds.Max))
+        return new(world, geo, PlanGeometry.Centroid(boundary.Outer), bounds, TileGrid.At(bounds.Min), TileGrid.At(bounds.Max))
         { Diagnostics = diagnostics };
-    }
 
-    private static void ApplyZones(SortedDictionary<string, string> input, SortedDictionary<string, WorldFeature> features, Dictionary<string, List<string>> aliases)
-    {
-        if (!input.TryGetValue("zones.json", out var text)) return;
-        using var document = Parse("zones.json", text);
-        if (!document.RootElement.TryGetProperty("zones", out var zones)) return;
-        foreach (var zone in zones.EnumerateArray())
+        void AddLine(NetworkLine line, string kind, string file)
         {
-            var id = new ZoneId(Text(zone, "id"));
-            if (!zone.TryGetProperty("features", out var members)) continue;
-            foreach (var member in members.EnumerateArray())
-                foreach (var key in Resolve(features, aliases, new(member.GetString()!), "zones.json")) features[key] = features[key] with { Zone = id };
+            if (!lineIds.Add(line.Id)) throw new WorldDataException(file, line.Id.Value, "Duplicate network line ID.");
+            if (line.Line.Points.Count < 2 || line.Width < 0 || !float.IsFinite(line.Width) || line.Line.Points.Any(p => !VectorMath.Finite(p)))
+                throw new WorldDataException(file, line.Id.Value, "Invalid centerline or width.");
+            if (kind == "road" || line.Props.TryText("highway") is not null) roads.Add(line);
+            else if (kind is "water" or "weir" || line.Props.TryText("waterway") is not null) waterways.Add(line);
+            else throw new WorldDataException(file, line.Id.Value, "Unclassified network line.");
         }
     }
 
-    private sealed record OverlayWrite(string File, WpId Owner, string Target);
+    private static IEnumerable<T> OrderNetwork<T>(IEnumerable<T> items, Func<T, FeatureId> id, string prefix) => items
+        .OrderBy(item => OsmFeatureIds.TryFromSource(prefix, id(item).Value, out _) ? 0 : 1)
+        .ThenBy(item => OsmFeatureIds.TryFromSource(prefix, id(item).Value, out _) ? long.Parse(id(item).Value.Split(':')[^1], CultureInfo.InvariantCulture) : 0)
+        .ThenBy(item => id(item).Value, StringComparer.Ordinal);
 
-    // Only root-level feature groups opt into splitting. Dedicated overlay formats keep their own loaders.
-    private static bool IsDedicatedOverlayGroup(string group) =>
-        group is "interior" or "terrain" or "outskirts" or "walkable" or "fidelity";
-
-    private static string? FeatureOverlayShardGroup(string file)
+    private static IReadOnlyList<InteriorOverlayFile> ReadInteriorOverlays(MapId map, SortedDictionary<string, string> input,
+        IReadOnlyDictionary<FeatureId, WorldFeature> features)
     {
-        if (!file.StartsWith("overlay/", StringComparison.Ordinal)) return null;
-        var relative = file["overlay/".Length..];
-        var separator = relative.IndexOf('/');
-        if (separator < 3 || !relative[..separator].EndsWith(".d", StringComparison.Ordinal)) return null;
-        var group = relative[..(separator - 2)];
-        var child = relative[(separator + 1)..];
-        return !IsDedicatedOverlayGroup(group) && child.EndsWith(".json", StringComparison.Ordinal) && !child.Contains('/')
-            ? group : null;
-    }
-
-    private static void RegisterWrite(string entity, string target, string file, WpId owner,
-        Dictionary<string, List<OverlayWrite>> writes, IReadOnlyDictionary<FeatureId, WpId>? claimedBy)
-    {
-        if (!writes.TryGetValue(entity, out var previous)) writes[entity] = previous = [];
-        var splitGroup = FeatureOverlayShardGroup(file);
-        foreach (var write in previous)
+        var overlays = new List<InteriorOverlayFile>();
+        foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("overlay/interior/", StringComparison.Ordinal)
+            && pair.Key.EndsWith(".interior.json", StringComparison.Ordinal)))
         {
-            if (write.File == file) continue;
-            // Same-owner shards in one group apply sequentially, preserving real error paths.
-            if (splitGroup is not null && splitGroup == FeatureOverlayShardGroup(write.File) && owner == write.Owner) continue;
-            var explicitlyClaimed = claimedBy is not null && claimedBy.TryGetValue(new(entity), out var claimant)
-                && (claimant == owner || claimant == write.Owner);
-            if (!explicitlyClaimed)
-                throw new WorldDataException(file, target,
-                    $"Overlay conflict for resolved entity '{entity}': '{write.File}' (owner '{write.Owner.Value}', target '{write.Target}') and '{file}' (owner '{owner.Value}', target '{target}'); neither overlay has an explicit registered claim.");
+            var overlay = Deserialize<InteriorOverlayFile>(file, text);
+            CheckMap(map, overlay.Map, file);
+            foreach (var op in overlay.Ops)
+            {
+                var id = op switch { SealOp seal => seal.Building, InteriorConfigOp config => config.Building, _ => throw new WorldDataException(file, "op", "Unknown interior operation.") };
+                if (!features.ContainsKey(id)) throw new WorldDataException(file, id.Value, "Target feature does not exist.");
+            }
+            overlays.Add(overlay);
         }
-        if (!previous.Any(write => write.File == file)) previous.Add(new(file, owner, target));
+        return overlays.AsReadOnly();
     }
 
     private static RoamLimits? ReadRoam(MapId map, SortedDictionary<string, string> input)
@@ -294,167 +226,40 @@ public static partial class WorldModelLoader
         return roam;
     }
 
-    private static void ApplyOverlay(string file, OverlayFile overlay, SortedDictionary<string, WorldFeature> features,
-        Dictionary<string, List<string>> aliases, Dictionary<string, List<OverlayWrite>> writes, IReadOnlyDictionary<FeatureId, WpId>? claimedBy,
-        EffectiveRoadNetwork roads)
-    {
-        for (var i = 0; i < overlay.Ops.Count; i++)
-        {
-            try
-            {
-                var op = overlay.Ops[i];
-                if (op is HideOp roadHide && roads.IsOriginalRoad(roadHide.Target.Value))
-                {
-                    RequireReason(roadHide.Reason);
-                    var removal = roads.PlanRoadHide(roadHide.Target.Value, features, file);
-                    RegisterWrite(removal.Road, roadHide.Target.Value, file, overlay.Owner, writes, claimedBy);
-                    if (removal.Entity is { } entity && entity != removal.Road)
-                        RegisterWrite(entity, roadHide.Target.Value, file, overlay.Owner, writes, claimedBy);
-                    roads.ApplyHide(removal, features, file, roadHide.Target.Value);
-                    continue;
-                }
-                if (op is HidePartOp hidePart)
-                {
-                    RequireReason(hidePart.Reason);
-                    // Unlike legacy hide, this operation accepts only the exact current entity key, never a source alias.
-                    var entityId = hidePart.Target.Value;
-                    if (string.IsNullOrWhiteSpace(entityId) || !features.TryGetValue(entityId, out var current))
-                        throw new ArgumentException($"hidePart target must be an exact existing entity ID: '{entityId}'.");
-                    if (string.IsNullOrWhiteSpace(hidePart.SourceId) || hidePart.SourceId != hidePart.SourceId.Trim())
-                        throw new ArgumentException("hidePart sourceId must be the exact canonical source ID of one current part.");
-                    var matches = current.Parts.Count(part => string.Equals(part.SourceId, hidePart.SourceId, StringComparison.Ordinal));
-                    if (matches != 1)
-                        throw new ArgumentException($"hidePart sourceId '{hidePart.SourceId}' must match exactly one part of '{entityId}'; found {matches}.");
-                    roads.RequireNonRoadPartRemoval(entityId, hidePart.SourceId, file);
-                    if (current.Parts.Count == 1)
-                        throw new ArgumentException("hidePart cannot remove the final part; use hide to remove the entity explicitly.");
-                    var remaining = current.Parts.Where(part => !string.Equals(part.SourceId, hidePart.SourceId, StringComparison.Ordinal)).ToArray();
-                    // Match LoadCore's aggregation, preserving the remaining part records, polygon rings and holes.
-                    var geometry = Geometry(remaining.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
-                    var height = remaining.Max(part => part.Height);
-                    var bounds = BoundsOf(geometry, height ?? 0);
-                    RegisterWrite(entityId, entityId, file, overlay.Owner, writes, claimedBy);
-                    features[entityId] = current with
-                    {
-                        Parts = Array.AsReadOnly(remaining),
-                        Geometry = geometry,
-                        Height = height,
-                        Storeys = remaining.Max(part => part.Storeys),
-                        Bounds = bounds,
-                        Source = FeatureSource.OsmOverlay
-                    };
-                    if (aliases.TryGetValue(hidePart.SourceId, out var sourceTargets))
-                    {
-                        sourceTargets.RemoveAll(mappedEntity => string.Equals(mappedEntity, entityId, StringComparison.Ordinal));
-                        if (sourceTargets.Count == 0) aliases.Remove(hidePart.SourceId);
-                    }
-                    continue;
-                }
-                if (op is AddOp add)
-                {
-                    RequireReason(add.Reason);
-                    var designId = add.Id.Value.StartsWith("design:", StringComparison.Ordinal);
-                    var walkBeat = add.Id.Value.StartsWith("walk:", StringComparison.Ordinal) && add.Id.Value.Length > 5
-                        && add.Kind.Value == "beat" && add.Height is null
-                        && add.Geometry is PointGeometry or PolygonGeometry or MultiPolygonGeometry;
-                    if (!designId && !walkBeat)
-                        throw new ArgumentException("Added features require a design: identifier, or a walk: beat anchor with point/area geometry and no height.");
-                    RegisterWrite(add.Id.Value, add.Id.Value, file, overlay.Owner, writes, claimedBy);
-                    var geometry = Normalize(add.Geometry);
-                    var feature = new WorldFeature(add.Id, FeatureSource.Design, add.Kind, geometry)
-                    { Height = add.Height, Zone = overlay.Zone, Props = add.Props?.Clone(), Bounds = BoundsOf(geometry, add.Height ?? 0) };
-                    if (!features.TryAdd(add.Id.Value, feature)) throw new ArgumentException("Added ID already exists.");
-                    Alias(aliases, add.Id.Value, add.Id.Value);
-                    roads.RecordAdd(add.Id);
-                    continue;
-                }
-                var target = op switch
-                {
-                    ReshapeOp reshape => reshape.Target,
-                    HeightOp height => height.Target,
-                    StyleOp style => style.Target,
-                    HideOp hide => hide.Target,
-                    _ => throw new ArgumentException("Unknown overlay operation.")
-                };
-                // Keep aliases after a hide so a later file reports the two conflicting writers, not only a missing target.
-                var keys = aliases.TryGetValue(target.Value, out var resolved) ? resolved : Resolve(features, aliases, target, file);
-                if (op is ReshapeOp && keys.Count != 1) throw new ArgumentException("Reshape must target one source feature, not a multi-wing entity.");
-                foreach (var key in keys)
-                {
-                    RegisterWrite(key, target.Value, file, overlay.Owner, writes, claimedBy);
-                    if (!features.TryGetValue(key, out var current)) throw new WorldDataException(file, target.Value, "Target was already hidden.");
-                    switch (op)
-                    {
-                        case HideOp hide:
-                            RequireReason(hide.Reason);
-                            if (roads.PlanFeatureHide(key, features, file) is { } removal)
-                            {
-                                if (removal.Road != key) RegisterWrite(removal.Road, target.Value, file, overlay.Owner, writes, claimedBy);
-                                roads.ApplyHide(removal, features, file, target.Value);
-                            }
-                            else features.Remove(key);
-                            break;
-                        case HeightOp height:
-                            RequireReason(height.Reason);
-                            if (height.Height is <= 0 || height.Storeys is <= 0) throw new ArgumentException("Height and storeys must be positive.");
-                            var newHeight = height.Height ?? (height.Storeys is { } count ? count * (current.Height / current.Storeys ?? DefaultStoreyHeight) : current.Height);
-                            features[key] = current with { Height = newHeight, Storeys = height.Storeys ?? current.Storeys, Parts = current.Parts.Select(p => p with { Height = height.Height ?? (height.Storeys is { } floors ? floors * (p.Height / p.Storeys ?? DefaultStoreyHeight) : p.Height), Storeys = height.Storeys ?? p.Storeys }).ToArray(), Source = FeatureSource.OsmOverlay, Bounds = BoundsOf(current.Geometry, newHeight ?? 0) };
-                            break;
-                        case StyleOp style:
-                            features[key] = current with { Family = style.Family, Facade = style.Facade, Source = FeatureSource.OsmOverlay }; break;
-                        case ReshapeOp reshape:
-                            RequireReason(reshape.Reason);
-                            var geometry = Normalize(new PolygonGeometry(reshape.Rings));
-                            features[key] = current with { Geometry = geometry, Parts = [], Source = FeatureSource.OsmOverlay, Bounds = BoundsOf(geometry, current.Height ?? 0) }; break;
-                        default: throw new ArgumentException("Unknown overlay operation.");
-                    }
-                }
-            }
-            catch (Exception error) when (error is ArgumentException or InvalidOperationException)
-            { throw new WorldDataException(file, $"ops[{i}]", error.Message, error); }
-        }
-    }
-
-    private static void RequireReason(string reason) { if (string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("An authored change requires a reason."); }
-    private static void CheckMap(MapId map, MapId? declared, string file)
-    { if (declared is { } id && id != map) throw new WorldDataException(file, "map", "Overlay belongs to a different map."); }
-    private static void Alias(Dictionary<string, List<string>> aliases, string key, string value)
-    { if (!aliases.TryGetValue(key, out var list)) aliases[key] = list = []; if (!list.Contains(value, StringComparer.Ordinal)) list.Add(value); }
-    private static IReadOnlyList<string> Resolve(SortedDictionary<string, WorldFeature> features, Dictionary<string, List<string>> aliases, FeatureId id, string file)
-    {
-        if (features.ContainsKey(id.Value)) return [id.Value];
-        if (aliases.TryGetValue(id.Value, out var values))
-        {
-            var active = values.Where(features.ContainsKey).ToArray();
-            if (active.Length > 0) return active;
-        }
-        throw new WorldDataException(file, id.Value, "Target feature does not exist (or was hidden).");
-    }
-    private static OverlayGeometry? ReadFacadeGeometry(JsonElement raw, string sourceId, IReadOnlyList<PolygonRings> physical)
+    private static OverlayGeometry? ReadFacadeGeometry(JsonElement raw, IReadOnlyList<PolygonRings> physical)
     {
         if (!raw.TryGetProperty("facadePolygons", out var value)) return null;
-        try
-        {
-            var polygons = value.EnumerateArray().Select(Rings).ToArray();
-            if (polygons.Length == 0) throw new ArgumentException("Empty facade footprint.");
-            if (polygons.Length != physical.Count || polygons.Where((polygon, i) => polygon.Holes.Count != physical[i].Holes.Count).Any())
-                throw new ArgumentException("Facade polygons and holes must correspond to the physical footprint.");
-            return Geometry(polygons);
-        }
-        catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or IndexOutOfRangeException)
-        { throw new WorldDataException("campus.json", sourceId + ".facadePolygons", error.Message, error); }
+        var polygons = Value<PolygonRings[]>(value);
+        if (polygons.Length == 0 || polygons.Length != physical.Count
+            || polygons.Where((polygon, i) => polygon.Holes.Count != physical[i].Holes.Count).Any())
+            throw new ArgumentException("Facade polygons and holes must correspond to the physical footprint.");
+        return Geometry(polygons);
     }
 
-    internal static OverlayGeometry Geometry(IReadOnlyList<PolygonRings> polygons) => polygons.Count == 1 ? new PolygonGeometry(polygons[0]) : new MultiPolygonGeometry(polygons);
-    internal static OverlayGeometry Normalize(OverlayGeometry geometry) => geometry switch
+    private static OverlayGeometry? Buffer(Polyline line, float width, PolygonRings boundary)
     {
-        PolygonGeometry polygon => new PolygonGeometry(Normalize(polygon.Rings)),
-        MultiPolygonGeometry multi => Geometry(multi.Polygons.Select(Normalize).ToArray()),
-        PolylineGeometry line when line.Line.Points.Count >= 2 => line,
-        PointGeometry point when VectorMath.Finite(point.Position) => point,
-        _ => throw new ArgumentException("Invalid geometry.")
-    };
-    private static PolygonRings Normalize(PolygonRings rings) => new(PlanGeometry.OpenRing(rings.Outer), rings.Holes.Select(h => PlanGeometry.OpenRing(h, false)).ToArray());
+        var alignment = Factory.CreateLineString(line.Points.Select(point => new Coordinate(point.X, point.Y)).ToArray());
+        var parameters = new BufferParameters { EndCapStyle = EndCapStyle.Flat, JoinStyle = JoinStyle.Mitre };
+        var clipped = BufferOp.Buffer(alignment, width / 2d, parameters).Intersection(Polygon(boundary));
+        var polygons = Polygons(clipped).Select(polygon => new PolygonRings(Ring(polygon.ExteriorRing),
+            Enumerable.Range(0, polygon.NumInteriorRings).Select(index => Ring(polygon.GetInteriorRingN(index))).ToArray())).ToArray();
+        return polygons.Length == 0 ? null : Geometry(polygons);
+    }
+
+    private static Polygon Polygon(PolygonRings polygon) => Factory.CreatePolygon(Closed(polygon.Outer), polygon.Holes.Select(Closed).ToArray());
+    private static LinearRing Closed(IReadOnlyList<Vector2> points) => Factory.CreateLinearRing(points.Select(point => new Coordinate(point.X, point.Y)).Append(new(points[0].X, points[0].Y)).ToArray());
+    private static IReadOnlyList<Vector2> Ring(LineString ring) => ring.Coordinates.Take(ring.NumPoints - 1).Select(point => new Vector2((float)point.X, (float)point.Y)).ToArray();
+    private static IEnumerable<Polygon> Polygons(NtsGeometry geometry)
+    {
+        if (geometry.IsEmpty) yield break;
+        if (geometry is Polygon polygon) { yield return polygon; yield break; }
+        if (geometry is GeometryCollection collection)
+            for (var i = 0; i < collection.NumGeometries; i++) foreach (var item in Polygons(collection.GetGeometryN(i))) yield return item;
+    }
+
+    private static void CheckMap(MapId map, MapId? declared, string file)
+    { if (declared is { } id && id != map) throw new WorldDataException(file, "map", "Overlay belongs to a different map."); }
+    internal static OverlayGeometry Geometry(IReadOnlyList<PolygonRings> polygons) => polygons.Count == 1 ? new PolygonGeometry(polygons[0]) : new MultiPolygonGeometry(polygons);
     internal static Box3 BoundsOf(OverlayGeometry geometry, float height)
     {
         if (!float.IsFinite(height) || height < 0) throw new ArgumentException("Invalid feature height.");
@@ -463,13 +268,15 @@ public static partial class WorldModelLoader
         if (points.Count == 0) throw new ArgumentException("Empty feature geometry.");
         return new(new(points.Min(p => p.X), 0, points.Min(p => p.Y)), new(points.Max(p => p.X), height, points.Max(p => p.Y)));
     }
-    internal static PolygonRings Rings(JsonElement array)
+    private static T Value<T>(JsonElement element) => element.Deserialize<T>(ContractJson.Options) ?? throw new JsonException("Null value.");
+    private static JsonElement? Props(JsonElement element) => element.TryGetProperty("props", out var value) ? value.Clone() : null;
+    private static int? OptionalInteger(JsonElement element, string key)
     {
-        var rings = array.EnumerateArray().Select((ring, index) => PlanGeometry.OpenRing(ring.EnumerateArray().Select(Vector), index == 0)).ToArray();
-        if (rings.Length == 0) throw new ArgumentException("Empty polygon.");
-        return new(rings[0], rings.Skip(1).ToArray());
+        if (!element.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null) return null;
+        if (!value.TryGetDecimal(out var number) || number != decimal.Truncate(number) || number < int.MinValue || number > int.MaxValue)
+            throw new JsonException($"{key} must be an integer in the Int32 range.");
+        return (int)number;
     }
-    internal static Vector2 Vector(JsonElement e) => new(Finite(e[0]), Finite(e[1]));
     internal static float Finite(JsonElement e) { var n = e.GetSingle(); return float.IsFinite(n) ? n : throw new JsonException("Non-finite number."); }
     internal static string Text(JsonElement e, string key) => e.GetProperty(key).GetString() ?? throw new JsonException($"Missing {key}.");
     internal static string? OptionalText(JsonElement e, string key) => e.TryGetProperty(key, out var value) && value.ValueKind != JsonValueKind.Null ? value.GetString() : null;
@@ -478,12 +285,4 @@ public static partial class WorldModelLoader
     { try { return JsonDocument.Parse(text); } catch (JsonException error) { throw new WorldDataException(file, error.Path ?? "root", error.Message, error); } }
     internal static T Deserialize<T>(string file, string text)
     { try { return JsonSerializer.Deserialize<T>(text, ContractJson.Options) ?? throw new JsonException("Null document."); } catch (JsonException error) { throw new WorldDataException(file, error.Path ?? "root", error.Message, error); } }
-    private static void ValidateNetwork(WorldNetwork network)
-    {
-        foreach (var line in network.Roads.Concat(network.Waterways).Concat(network.Bridges).Concat(network.Culverts))
-            if (line.Line.Points.Count < 2 || line.Width < 0 || !float.IsFinite(line.Width) || line.Line.Points.Any(p => !VectorMath.Finite(p)))
-                throw new WorldDataException("network.json", line.Id.Value, "Invalid centerline or width.");
-        foreach (var tree in network.Trees)
-            if (!VectorMath.Finite(tree.Position)) throw new WorldDataException("network.json", tree.Id.Value, "Invalid tree coordinate.");
-    }
 }

@@ -9,7 +9,7 @@ namespace Campus.Gen.Zones.West;
 /// <summary>
 /// Every tunable value of the west zone in one place, for review (WF-FLOW): materials as colour names, and the
 /// dimensions of each site. Footprints, storeys and entity positions are read from the world model by ID (D-239); the
-/// authored positions and routes are read from overlay/west.d/. Values marked
+/// authored positions and routes are read from world/west.json. Values marked
 /// "初值" are starting values awaiting the main session's call. 19b and 19c add their own nested classes after these.
 /// </summary>
 public static class WestTune
@@ -89,7 +89,7 @@ public static class WestTune
     /// <summary>
     /// 六号科研楼 (MAP-QSH-WEST), named by the OSM blocks A, B and C. Three claimed entities: A and B are their own entities;
     /// the C block, the two links and the north tower are the parts of qsh:relation:14153711 (the duplicate C shell
-    /// qsh:way:779496166 is hidden in overlay/west.d/). Every block stands on a two-storey glass base set back under the
+    /// qsh:way:779496166 is hidden in world/west.json). Every block stands on a two-storey glass base set back under the
     /// stone (底层两层通高、向内退的深色玻璃幕墙), with deep square windows above and one dark louvre strip per floor.
     /// </summary>
     public static class Six
@@ -148,7 +148,7 @@ public static class WestTune
         /// <summary>
         /// The granite threshold apron in front of the open door, 3 cm proud of the forecourt paving (WP-15 draws paving at
         /// <see cref="PavingTop"/>; the interior floor is ±0 in interiors.json, so no risers); the forecourt itself is
-        /// overlay/west.d/'s design:west-six-forecourt.
+        /// world/west.json's design:west-six-forecourt.
         /// </summary>
         public const float ApronDepth = 4.0f;
         /// <summary>Top of WP-15's paving (GroundSection.PavingY); the paving under the overhang sits 1 cm above it.</summary>
@@ -231,7 +231,7 @@ public static class WestTune
     }
 
     /// <summary>
-    /// 四号科研楼 (MAP-QSH-WEST): the three courtyard blocks are WP-14's (family research, overlay/west.d/ style); this
+    /// 四号科研楼 (MAP-QSH-WEST): the three courtyard blocks are WP-14's (research family set in world/west.json); this
     /// zone adds what the rules cannot: each block's entrance, a two-storey deep-blue glass box in a white door frame with a
     /// sign band (§6.3), shut (WLD-INTERIORS: glass doors, lobby card, DoorClosed); and the fan lawn's 0.45 m seat wall
     /// on its outer arc (MAP-QSH-TERRAIN; the lawn's dish is west.terrain.json's basin).
@@ -308,8 +308,8 @@ public static class WestTune
 
     /// <summary>
     /// 湿地栈道 (MAP-QSH-WEST; 19c): a timber boardwalk through the wetland low ground east of the levee and the wetland
-    /// stream, from the A10 plaza (south mouth; design:west-a10-plaza in overlay/west.d/) to the footway at the 西门车行桥's east head (north mouth), on the main network.
-    /// No OSM line: the route is authored in overlay/west.d/ (初值), kept 10 m and more inside the low ground's east edge, swinging west to the
+    /// stream, from the A10 plaza (south mouth; design:west-a10-plaza in world/west.json) to the footway at the 西门车行桥's east head (north mouth), on the main network.
+    /// No OSM line: the route is authored in world/west.json (初值), kept 10 m and more inside the low ground's east edge, swinging west to the
     /// stream once (the turn, with the pebble wading beach), and passing P11's spot (−193, −300) so the 250° view opens over
     /// the reeds. The bridges (湿地石桥 692240860, 西门车行桥) and the canal banks are WP-28's (r005); this route touches neither.
     /// </summary>

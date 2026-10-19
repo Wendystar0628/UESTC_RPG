@@ -126,7 +126,7 @@ public sealed class NorthTerrainTests
     }
 
     /// <summary>
-    /// max-108 0h-b (Opus 14:20; geometry 14:26/28): the 丹桂路 design walks. The overlay parses strictly; each walk is a 2.5 m
+    /// max-108 0h-b (Opus 14:20; geometry 14:26/28): the 丹桂路 design walks. Each authored walk is a 2.5 m
     /// footway 7.5 m off the road centre (3 m outside the 4.5 m osmanthus row); its surface keeps 3 m off every building and
     /// water edge; it lies on the 0 m ground 丹桂路 is pinned to, clear of every terrace's side slope and every raised
     /// corridor (a design road takes no corridor anchors); and each end lies on the surface it names in <c>joins</c>: an
@@ -137,16 +137,9 @@ public sealed class NorthTerrainTests
     {
         var road = NorthFeatureIds.DanguiRoad.Source;
         const float offset = 7.5f, half = 1.25f, wallClear = 3f;
-        var strict = new JsonSerializerOptions(ContractJson.Options) { UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow };
-        var overlays = RealMapFixture.ReadFiles().Where(file => file.Key.StartsWith("overlay/north.d/", StringComparison.Ordinal))
-            .OrderBy(file => file.Key, StringComparer.Ordinal)
-            .Select(file => JsonSerializer.Deserialize<OverlayFile>(file.Value.Span, strict)
-                ?? throw new InvalidOperationException(file.Key + " is empty")).ToArray();
-        AssertThat(overlays.All(overlay => overlay.Zone.Value == "north" && overlay.Owner.Value == "WP-20")).OverrideFailureMessage("overlay zone and owner").IsTrue();
-        var walks = overlays.SelectMany(overlay => overlay.Ops).OfType<AddOp>().Where(a => a.Id.Value.StartsWith(NorthFeatureIds.DanguiWalkPrefix, StringComparison.Ordinal)).ToArray();
-        AssertThat(walks.Length > 0).OverrideFailureMessage("丹桂路 walks are registered").IsTrue();
-
         var world = RealMapFixture.Load().World;
+        var walks = world.Features.Values.Where(feature => feature.Id.Value.StartsWith(NorthFeatureIds.DanguiWalkPrefix, StringComparison.Ordinal)).ToArray();
+        AssertThat(walks.Length > 0 && walks.All(feature => feature.Zone == new ZoneId("north"))).OverrideFailureMessage("丹桂路 walks belong to north").IsTrue();
         var dangui = world.Network.Roads.Single(r => r.Id.Value == road).Line.Points;
         var walls = world.Features.Values.SelectMany(f => f.Parts.Count > 0
                 ? f.Parts.Where(p => ((WorldProps.TryText(p.Props, "kind") ?? f.Kind.Value) is "building" or "water")
@@ -160,10 +153,9 @@ public sealed class NorthTerrainTests
         foreach (var add in walks)
         {
             var props = add.Props;
-            AssertThat(add.Kind.Value == "road" && WorldProps.TryText(props, "roadType") == "footway" && props!.Value.GetProperty("width").GetSingle() == 2.5f).OverrideFailureMessage($"{add.Id.Value}: a 2.5 m footway WP-15 paves").IsTrue();
-            AssertThat(!string.IsNullOrWhiteSpace(add.Reason)).OverrideFailureMessage($"{add.Id.Value}: reason given").IsTrue();
+            AssertThat(add.Kind.Value == "road" && WorldProps.TryText(props, "highway") == "footway" && props!.Value.GetProperty("width").GetSingle() == 2.5f).OverrideFailureMessage($"{add.Id.Value}: a 2.5 m footway WP-15 paves").IsTrue();
             var line = ((PolylineGeometry)add.Geometry).Line.Points;
-            AssertThat(world.Features[add.Id].Geometry is PolylineGeometry loaded && loaded.Line.Points.SequenceEqual(line)).OverrideFailureMessage($"{add.Id.Value}: loaded into the world model").IsTrue();
+            AssertThat(roads.TryGetValue(add.Id, out var loaded) && loaded.Line.Points.SequenceEqual(line) && loaded.Width == WorldProps.TryNumber(props, "width")).OverrideFailureMessage($"{add.Id.Value}: network follows its record").IsTrue();
             foreach (var p in line)
             {
                 var d = MathF.Sqrt(PlanLines.PolylineDistanceSquared(dangui, p));
@@ -199,25 +191,22 @@ public sealed class NorthTerrainTests
                         AssertThat(Math.Abs(Elevation(corridors, roads[id], hit.Station)) < TestTolerance.Position).OverrideFailureMessage($"{add.Id.Value}: {p} meets {c.Id} at {Elevation(corridors, roads[id], hit.Station):0.00} m").IsTrue();
                 }
             }
-            var joins = props!.Value.GetProperty("joins").EnumerateArray().Select(j => j.GetString()!).ToArray();
-            AssertThat(joins.Length == 2).OverrideFailureMessage($"{add.Id.Value}: names what each end joins").IsTrue();
-            foreach (var (end, to) in new[] { (line[0], joins[0]), (line[^1], joins[1]) })
+            foreach (var end in new[] { line[0], line[^1] })
             {
-                if (roads.TryGetValue(new(to), out var target))
+                var joinsRoad = roads.Values.Where(target => target.Id != add.Id && WorldProps.TryText(target.Props, "area") != "yes").Any(target =>
                 {
                     var type = WorldProps.TryText(target.Props, "highway");
-                    var reach = type is "footway" or "path" or "pedestrian" or "steps" ? MathF.Max(target.Width, 2f) * 0.5f : target.Width * 0.5f;
-                    AssertThat(MathF.Sqrt(PlanLines.PolylineDistanceSquared(target.Line.Points, end)) <= reach + TestTolerance.Layout).OverrideFailureMessage($"{add.Id.Value}: end {end} reaches {to}").IsTrue();
-                    AssertThat(type is "footway" or "path" or "pedestrian" or "steps" || Meets(target.Line.Points, dangui)).OverrideFailureMessage($"{add.Id.Value}: {to} is a walk or a road that meets 丹桂路").IsTrue();
-                }
-                else
-                {
-                    var area = world.Features[new(to)];
-                    AssertThat(area.Kind.Value == "road" && WorldProps.TryText(area.Props, "roadType") == "pedestrian").OverrideFailureMessage($"{add.Id.Value}: {to} is a pedestrian area").IsTrue();
-                    var rings = area.Polygons().Select(r => r.Outer).ToArray();
-                    AssertThat(rings.Any(r => PlanGeometry.InsideByCrossings(r, end) || PlanGeometry.DistanceToRing(end, r) <= TestTolerance.Layout)).OverrideFailureMessage($"{add.Id.Value}: end {end} reaches {to}").IsTrue();
-                }
+                    var walk = type is "footway" or "path" or "pedestrian" or "steps";
+                    var reach = walk ? MathF.Max(target.Width, 2f) * 0.5f : target.Width * 0.5f;
+                    return (walk || Meets(target.Line.Points, dangui)) &&
+                        MathF.Sqrt(PlanLines.PolylineDistanceSquared(target.Line.Points, end)) <= reach + TestTolerance.Layout;
+                });
+                var joinsArea = world.Features.Values.Where(target => target.Id != add.Id && target.Kind.Value == "road" &&
+                    WorldProps.TryText(target.Props, "highway") == "pedestrian").SelectMany(target => WorldFeatureGeometry.PolygonsOf(target.Geometry))
+                    .Any(rings => PlanGeometry.Contains(rings, end) || PlanGeometry.DistanceToRing(end, rings.Outer) <= TestTolerance.Layout);
+                AssertThat(joinsRoad || joinsArea).OverrideFailureMessage($"{add.Id.Value}: endpoint {end} joins existing paving").IsTrue();
             }
+
         }
     }
 

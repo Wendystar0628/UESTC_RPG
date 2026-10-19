@@ -12,19 +12,6 @@ public sealed class MapBridgeBoundaryTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void ExplicitLoadInputsSnapshotOwnership()
-    {
-        var feature = new FeatureId("fixture");
-        var claims = new Dictionary<FeatureId, WpId> { [feature] = new("WP-01") };
-        var inputs = new WorldModelLoadInputs(Map(), ClaimedBy: claims);
-        claims[feature] = new("WP-02");
-        if (inputs.ClaimedBy![feature] != new WpId("WP-01")) throw new InvalidOperationException("Claim input was not snapshotted.");
-        if (inputs.ClaimedBy is IDictionary<FeatureId, WpId> exposed)
-            AssertThrown(() => exposed[feature] = new("WP-02")).IsInstanceOf<NotSupportedException>();
-    }
-
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
     public void AtlasPublicationOwnsInputsAndKeepsOptionalReadinessIndependent()
     {
         var pixels = new byte[16]; pixels[0] = 128;

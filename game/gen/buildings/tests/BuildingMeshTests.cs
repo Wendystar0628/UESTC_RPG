@@ -22,7 +22,7 @@ public sealed class BuildingMeshTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void DormitoryHasStoreysBaysAndNumberedWindows()
     {
-        var world = World(WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6));
+        var world = World(WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6));
         var set = BuildingSet.For(world, 1u);
         AssertThat(set.Plans.Count == 1).OverrideFailureMessage("Expected: " + ("one plan")).IsTrue();
         var plan = set.Plans[0];
@@ -52,10 +52,10 @@ public sealed class BuildingMeshTests
     public void EveryLevelIsValidWoundAndFinite()
     {
         var world = World(
-            WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 48, 16))), props: "{\"category\":\"teaching\"}", source: FeatureSource.Osm, height: 19.5f, storeys: 5),
-            WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", source: FeatureSource.Osm, height: 15.6f, storeys: 4),
-            WorldFeatureFixture.Create("t:c", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 12f, storeys: 3),
-            WorldFeatureFixture.Create("t:d", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 5, 6))), props: "{\"category\":\"service\"}", source: FeatureSource.Osm, height: 3f, storeys: 1));
+            WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 48, 16))), props: "{\"category\":\"teaching\"}", height: 19.5f, storeys: 5),
+            WorldFeatureFixture.Create("t:b", "building", new PolygonGeometry(new PolygonRings(LShape(100, 0))), props: "{\"category\":\"research\"}", height: 15.6f, storeys: 4),
+            WorldFeatureFixture.Create("t:c", "building", new PolygonGeometry(Courtyard(0, 100)), props: "{\"category\":\"residence\"}", height: 12f, storeys: 3),
+            WorldFeatureFixture.Create("t:d", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 5, 6))), props: "{\"category\":\"service\"}", height: 3f, storeys: 1));
         var set = BuildingSet.For(world, 7u);
         AssertThat(set.Plans.Count == 4).OverrideFailureMessage("Expected: " + ("four plans")).IsTrue();
         var module = new BuildingsModule();
@@ -90,8 +90,8 @@ public sealed class BuildingMeshTests
     [TestCategory(TestReason.Contract)]
     public void GenerationIsDeterministic()
     {
-        var world1 = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(LShape(0, 0))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 21f, storeys: 6));
-        var world2 = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(LShape(0, 0))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 21f, storeys: 6));
+        var world1 = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(LShape(0, 0))), props: "{\"category\":\"residence\"}", height: 21f, storeys: 6));
+        var world2 = World(WorldFeatureFixture.Create("t:a", "building", new PolygonGeometry(new PolygonRings(LShape(0, 0))), props: "{\"category\":\"residence\"}", height: 21f, storeys: 6));
         var s1 = BuildingSet.For(world1, 3u);
         var s2 = BuildingSet.For(world2, 3u);
         var b1 = new BuildingsModule().BuildOne(s1.Plans[0], s1.Blocks[0], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
@@ -110,9 +110,9 @@ public sealed class BuildingMeshTests
     public void PartGlassKeepsTheWindowNumbersAndCards()
     {
         var world = World(
-            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", source: FeatureSource.Osm, height: 19.8f, storeys: 6),
-            WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 40, 30))), props: "{\"category\":\"sport\"}", source: FeatureSource.Osm, height: 9f, storeys: 1),
-            WorldFeatureFixture.Create("t:plant", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 20, 12))), props: "{\"category\":\"utility\"}", source: FeatureSource.Osm, height: 8f, storeys: 2));
+            WorldFeatureFixture.Create("t:dorm", "building", new PolygonGeometry(new PolygonRings(Rect(0, 0, 60, 18))), props: "{\"category\":\"residence\"}", height: 19.8f, storeys: 6),
+            WorldFeatureFixture.Create("t:hall", "building", new PolygonGeometry(new PolygonRings(Rect(100, 0, 40, 30))), props: "{\"category\":\"sport\"}", height: 9f, storeys: 1),
+            WorldFeatureFixture.Create("t:plant", "building", new PolygonGeometry(new PolygonRings(Rect(200, 0, 20, 12))), props: "{\"category\":\"utility\"}", height: 8f, storeys: 2));
         var set = BuildingSet.For(world, 5u);
         var module = new BuildingsModule();
         for (var b = 0; b < set.Plans.Count; b++)

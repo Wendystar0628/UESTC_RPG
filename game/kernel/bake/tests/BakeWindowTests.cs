@@ -101,7 +101,7 @@ public sealed class BakeWindowTests
         var empty = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World([]), Map = Map(), WorldSeed = 9 };
         if (BakeWindowPreparation.Prepare(empty, new Dictionary<string, ContentModuleInput>()).Snapshot is not null)
             throw new InvalidOperationException("A windowless legacy fixture unexpectedly acquired an allocation.");
-        var building = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World([new(Feature, FeatureSource.Design, new("building"), new PointGeometry(Vector3.Zero))]), Map = Map(), WorldSeed = 9 };
+        var building = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World([new(Feature, new("building"), new PointGeometry(Vector3.Zero))]), Map = Map(), WorldSeed = 9 };
         AssertThrown(() => BakeWindowPreparation.Prepare(building, new Dictionary<string, ContentModuleInput>())).IsInstanceOf<InvalidDataException>();
     }
 
@@ -150,7 +150,7 @@ public sealed class BakeWindowTests
     {
         var source = new Source { Layouts = [new(Feature, [])] };
         var baseline = Context();
-        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["campus.json"] = new byte[] { 1 } });
+        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["world/geo.json"] = new byte[] { 1 } });
         var globals = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["vegetation/species.json"] = new byte[] { 2 } });
         IReadOnlyList<IGroundMaskContributor> contributors = Array.AsReadOnly<IGroundMaskContributor>([new Contributor()]);
         var partLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())]);
@@ -288,7 +288,7 @@ public sealed class BakeWindowTests
     private static BuildContext Context(WpId? owner = null, bool claimed = true) => new()
     {
         Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
-        World = World([new(Feature, FeatureSource.Design, new("poi"), new PointGeometry(Vector3.Zero))]),
+        World = World([new(Feature, new("poi"), new PointGeometry(Vector3.Zero))]),
         Map = Map(),
         WorldSeed = 9,
         DataHash = "base-input",

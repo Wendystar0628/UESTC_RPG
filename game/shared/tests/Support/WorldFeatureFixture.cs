@@ -8,7 +8,7 @@ namespace Campus.Tests;
 internal static class WorldFeatureFixture
 {
     public static WorldFeature Create(string id, string kind, OverlayGeometry geometry, string? props = null,
-        FeatureSource source = FeatureSource.Design, float? height = null, int? storeys = null,
+        float? height = null, int? storeys = null,
         IReadOnlyList<WorldFeaturePart>? parts = null)
     {
         var points = Points(geometry).ToArray();
@@ -21,7 +21,7 @@ internal static class WorldFeatureFixture
             using var document = JsonDocument.Parse(props);
             properties = document.RootElement.Clone();
         }
-        return new(new(id), source, new(kind), geometry)
+        return new(new(id), new(kind), geometry)
         {
             Props = properties,
             Height = height,

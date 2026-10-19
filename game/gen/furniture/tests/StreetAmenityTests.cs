@@ -52,7 +52,7 @@ public sealed class StreetAmenityTests
         // none; a second such junction 40 m away (inside the 80 m line of sight) adds none.
         var open = OpenWorld.Value;
         var spot = OpenSpot.Value;
-        var props = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 2.5f });
+        var props = JsonSerializer.SerializeToElement(new { highway = "footway", width = 2.5f });
         NetworkLine Walk(string id, Vector2 a, Vector2 b) => new(new($"design:furniture-test-{id}"), new Polyline([a, b]), 2.5f) { Props = props };
         List<NetworkLine> Star(string tag, Vector2 at) => [Walk(tag + "-w", at, at + new Vector2(-14f, 0f)), Walk(tag + "-e", at, at + new Vector2(14f, 0f)), Walk(tag + "-n", at, at + new Vector2(0f, 14f))];
         var landmarkAt = spot + new Vector2(6f, -20f);

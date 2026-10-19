@@ -212,7 +212,7 @@ internal sealed class TerrainRoadProfile
                     {
                         var sign = difference < 0 ? -1 : 1;
                         if (_fixed[edge.A] && _fixed[edge.B])
-                            throw new WorldDataException("network.json", "automatic-profiles", "Fixed road nodes cannot satisfy their longitudinal grade; provide a feasible authored route/profile.");
+                            throw new WorldDataException("world", "automatic-profiles", "Fixed road nodes cannot satisfy their longitudinal grade; provide a feasible authored route/profile.");
                         if (_fixed[edge.A]) nextB -= sign * excess;
                         else if (_fixed[edge.B]) nextA += sign * excess;
                         else { nextA += sign * excess / 2; nextB -= sign * excess / 2; }
@@ -237,7 +237,7 @@ internal sealed class TerrainRoadProfile
             if (!converged)
             {
                 var constrained = _bounds.Any(bound => bound is not null);
-                var error = new WorldDataException("network.json", "automatic-profiles",
+                var error = new WorldDataException("world", "automatic-profiles",
                     (constrained ? "UNSUPPORTED: conservative freeboard bounds and fixed graph constraints could not be proved feasible. " : "")
                     + "Deterministic road-network smoothing did not converge; no approximate invalid profile is published.");
                 if (constrained) error.Data["TerrainConstraintKind"] = "unsupported";

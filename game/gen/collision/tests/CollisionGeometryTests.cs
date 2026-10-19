@@ -86,7 +86,7 @@ public sealed class CollisionGeometryTests
     {
         var buildingA = Rectangle(10, 10, 20, 20);
         var buildingB = Rectangle(40, 10, 50, 20);
-        var parent = WorldFeatureFixture.Create("fixture:park", "poi", new PolygonGeometry(Rectangle(0, 0, 60, 40)), source: FeatureSource.Osm) with
+        var parent = WorldFeatureFixture.Create("fixture:park", "poi", new PolygonGeometry(Rectangle(0, 0, 60, 40))) with
         {
             Height = 900,
             Parts =
@@ -116,7 +116,7 @@ public sealed class CollisionGeometryTests
     [TestCase, TestCategory(TestReason.Regression)]
     public void GroupedBuildingParentKeepsSeparateMultiPolygonsAndNonBuildingPartsOpen()
     {
-        var parent = WorldFeatureFixture.Create("fixture:group", "building", new PolygonGeometry(Rectangle(0, 0, 80, 40)), source: FeatureSource.Osm) with
+        var parent = WorldFeatureFixture.Create("fixture:group", "building", new PolygonGeometry(Rectangle(0, 0, 80, 40))) with
         {
             Parts =
             [

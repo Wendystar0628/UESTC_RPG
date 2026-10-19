@@ -18,7 +18,7 @@ namespace Campus.Gen.Zones.South.Sports;
 /// - the silver-white pillow canopy (枕形罩棚) over the main stand, thick in the middle and rounded off at both ends, with a
 ///   pale gold middle section divided by vertical seams, carried by dark grey steel columns and struts on the concourse;
 /// - closed concourse portals in the back wall where the sports platform's deck meets it;
-/// - the low dark seats across the track (design:south-stadium-east-seats in overlay/south.d/).
+/// - the low dark seats across the track (design:south-stadium-east-seats in world/south.json).
 /// The track, the pitch and their markings are WP-15's ground. The stand has no glass: its window declaration is empty.
 /// </summary>
 public sealed class GrandstandSite : ZoneSite

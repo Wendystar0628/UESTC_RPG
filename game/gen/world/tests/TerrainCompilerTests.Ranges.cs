@@ -16,7 +16,7 @@ public sealed partial class TerrainCompilerTests
         foreach (var center in new[] { -1f, -0.5f })
         {
             var geometry = new PolygonGeometry(Box(center - 1, -15, center + 1, 15));
-            var road = new WorldFeature(new("fixture:edge-road"), FeatureSource.Osm, new("road"), geometry)
+            var road = new WorldFeature(new("fixture:edge-road"), new("road"), geometry)
                 { Parts = [new("osm:way:77", geometry, null, null) { Props = Kind("road") }] };
             var line = new NetworkLine(new("fixture:source:way:77"), new([new(center, -15), new(center, 15)]), 2)
                 { Props = JsonSerializer.SerializeToElement(new { highway = "service" }) };

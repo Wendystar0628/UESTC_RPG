@@ -136,13 +136,13 @@ public sealed class BakeInputTests
     [TestCategory(TestReason.Contract)]
     public void InputReaderBorrowsTheFrozenLoadingVersion()
     {
-        var raw = Encoding.UTF8.GetBytes("old-campus");
-        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["campus.json"] = raw });
+        var raw = Encoding.UTF8.GetBytes("old-geo");
+        var inputs = BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>> { ["world/geo.json"] = raw });
         var world = new FakeWorld { Boundary = new([]) };
         var map = new TestMapContext(Context(world).Map, world, inputs, "must-not-reread-source-files");
         var captured = BakeInputFingerprint.ReadInputs(map);
         raw[0] = (byte)'X';
-        if (!ReferenceEquals(captured, inputs.Entries) || Encoding.UTF8.GetString(captured["campus.json"].Span) != "old-campus")
+        if (!ReferenceEquals(captured, inputs.Entries) || Encoding.UTF8.GetString(captured["world/geo.json"].Span) != "old-geo")
             throw new InvalidOperationException("The baker changed the captured input version.");
         try { BakeInputFingerprint.ReadInputs(map with { Inputs = BuildInputSnapshot.Empty }); }
         catch (InvalidDataException) { return; }

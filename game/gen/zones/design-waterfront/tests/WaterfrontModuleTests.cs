@@ -20,7 +20,7 @@ public sealed class WaterfrontModuleTests
     private static readonly Lazy<IWorldModel> Loaded = new(() => RealMapFixture.Load().World);
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void OverlayRegistersTheBridgesAndKeepsTheNetwork()
+    public void WorldRecordsRegisterTheBridgesAndKeepTheNetwork()
     {
         var world = World();
         var plans = BridgePlan.All(world);

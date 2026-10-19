@@ -5,7 +5,7 @@ namespace Campus.Gen.Zones.Core;
 
 /// <summary>
 /// Entity IDs of the core zone (MAP-QSH-CORE "数据定位"). The `qsh:` prefix is the data pipeline's, not a map ID.
-/// Design additions carry the `design:core-` IDs registered in overlay/core.d/.
+/// Design additions carry the `design:core-` IDs registered in world/core.json.
 /// </summary>
 public static class CoreIds
 {
@@ -32,7 +32,7 @@ public static class CoreIds
 
     /// <summary>Ring steps of the sunken plaza: registered so the axis corridor's steps interval names a real structure.</summary>
     public static readonly FeatureId PlazaRingSteps = new("design:core-plaza-ring-steps");
-    /// <summary>Sundial (real, not in OSM): registered with its position in overlay/core.d/.</summary>
+    /// <summary>Sundial (real, not in OSM): registered with its position in world/core.json.</summary>
     public static readonly FeatureId Sundial = new("design:core-sundial");
     /// <summary>Benches under the plaza's rim lamps (MAP-QSH-CORE "本区设计增补"): design:core-plaza-bench-1, -2, ….</summary>
     public const string PlazaBenchPrefix = "design:core-plaza-bench-";

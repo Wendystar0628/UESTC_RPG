@@ -70,7 +70,7 @@ public static partial class Planting
                 if (road.Line.Points.Count < 2) continue;
                 // A design walk is pavement, not a road: it takes the trunks that stand on it (tree pits excepted) and not the ones
                 // beside it, and a tree on it still counts as planted. Only the walk's own line is read, at the network's width.
-                if (world.Features.TryGetValue(road.Id, out var walk) && IsWalk(walk) && (road.Props?.OptionalText("roadType") ?? road.Props?.OptionalText("highway")) is { } type && Paved.Contains(type))
+                if (world.Features.TryGetValue(road.Id, out var walk) && IsWalk(walk) && road.Props?.OptionalText("highway") is { } type && Paved.Contains(type))
                 {
                     IndexPavement(road.Props, new PolylineGeometry(road.Line), road.Width);
                     continue;
@@ -125,7 +125,7 @@ public static partial class Planting
         {
             foreach (var road in _roads.In(p))
             {
-                var type = road.Props?.OptionalText("roadType") ?? road.Props?.OptionalText("highway");
+                var type = road.Props?.OptionalText("highway");
                 var clearance = type is null || !Paved.Contains(type) ? carriageway
                     : type == "steps" ? steps : road.Width < GrassField.SoftEdgeWidth ? soft : clean;
                 if (PlanLines.Project(road.Line.Points, p).Distance < road.Width * 0.5f + clearance) return true;
@@ -195,7 +195,7 @@ public static partial class Planting
 
         private void IndexPavement(JsonElement? props, OverlayGeometry geometry, float width = 0f)
         {
-            var type = (props?.OptionalText("roadType") ?? props?.OptionalText("highway"));
+            var type = props?.OptionalText("highway");
             if (type is null || !Paved.Contains(type)) return;
             var steps = type == "steps" ? PaveEdge.Steps : PaveEdge.Clean;
             switch (geometry)

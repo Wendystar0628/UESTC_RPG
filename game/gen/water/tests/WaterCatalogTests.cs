@@ -32,13 +32,15 @@ public sealed class WaterCatalogTests
         var source = RealMapFixture.Load().World;
         var reflectLakes = RealMapFixture.Entry().Descriptor.Env.ReflectLakes;
         var lake = reflectLakes.First();
-        var river = source.Features.Values.Where(f => f.Kind == WaterCatalog.WaterKindKey && !reflectLakes.Contains(f.Id))
+        // Source centrelines now also live in Features; only a real surface polygon supplies this fixture's identity.
+        var river = source.Features.Values.Where(f => f.Kind == WaterCatalog.WaterKindKey && !reflectLakes.Contains(f.Id)
+                && f.Geometry is PolygonGeometry or MultiPolygonGeometry)
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal).First().Id;
         var features = new Dictionary<FeatureId, WorldFeature>
         {
-            [lake] = WorldFeatureFixture.Create(lake.Value, "water", new PolygonGeometry(Rect(0, 0, 80, 60)), source: FeatureSource.Osm),
+            [lake] = WorldFeatureFixture.Create(lake.Value, "water", new PolygonGeometry(Rect(0, 0, 80, 60))),
             // Two parts: the aggregate geometry must not be built in addition.
-            [river] = WorldFeatureFixture.Create(river.Value, "water", new PolygonGeometry(Rect(-500, -500, 500, 500)), source: FeatureSource.Osm) with
+            [river] = WorldFeatureFixture.Create(river.Value, "water", new PolygonGeometry(Rect(-500, -500, 500, 500))) with
             {
                 Parts =
                 [

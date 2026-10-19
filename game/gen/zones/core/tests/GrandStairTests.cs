@@ -29,13 +29,13 @@ public sealed class GrandStairTests
         AssertThat(stair.Flights.All(f => f.Risers * stair.Riser <= WalkRules.OutdoorFlightMaxRise + TestTolerance.Position)).OverrideFailureMessage("every flight rises at most 1.5 m").IsTrue();
         AssertThat(stair.Landings.Count(l => l.Middle) == 1 && stair.Landings.Count == stair.Flights.Count - 1).OverrideFailureMessage("two runs split by one middle landing").IsTrue();
         AssertThat(stair.Flights[0].Foot == stair.FrontS && MathF.Abs(stair.Flights[^1].Top(stair.Tread) - CoreStyle.TopLandingDepth) < TestTolerance.Position).OverrideFailureMessage("flights run from the foot to the top landing").IsTrue();
-        // The data footprint (overlay/core.d/ reshape) is the built stair: the same rectangle within 0.15 m.
+        // The data footprint (world/core.json geometry) is the built stair: the same rectangle within 0.15 m.
         var ring = FeatureReads.Contour(world.Features[CoreIds.LibraryStair]);
         var h = GrandStair.HalfWidth;
         Vector2[] corners = [stair.At(0, -h), stair.At(0, h), stair.At(stair.FrontS, h), stair.At(stair.FrontS, -h)];
         Console.WriteLine("stair corners: " + string.Join(", ", corners.Select(c => $"[{c.X:F2}, {c.Y:F2}]")));
         foreach (var c in corners)
-            AssertThat(ring.Min(p => Vector2.Distance(p, c)) < 0.15f).OverrideFailureMessage($"footprint corner {c} is in the overlay outline").IsTrue();
+            AssertThat(ring.Min(p => Vector2.Distance(p, c)) < 0.15f).OverrideFailureMessage($"footprint corner {c} is in the authored outline").IsTrue();
         // The axis is the front door's (interiors.json lib.main, WLD-INTERIORS).
         var entrance = world.Interiors.Get(CoreIds.Library)!.Entrances.Single(e => e.Open && e.Id == "lib.main");
         var centre = new Vector2(entrance.Center.X, entrance.Center.Z);
@@ -108,6 +108,7 @@ public sealed class GrandStairTests
     private static ToonSpec CanopySpec => CoreStyle.Spec(CoreMaterial.Sheet, CoreStyle.CanopyFamily);
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WpThirteenDressesTheLibraryFrontDoor()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;

@@ -49,6 +49,7 @@ public sealed class NorthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void OpenGateLeavesPassagesAndClosedGatesBarTheLine()
     {
         var ctx = Context();
@@ -76,6 +77,7 @@ public sealed class NorthModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryLevelIsValidAndEveryItemLandsInOneCell()
     {
         var ctx = Context();

@@ -3,20 +3,20 @@ id: MAP-QSH-SOUTH
 title: 南区：南门、主楼、东湖、宣邦楼、立人楼、体育场馆、国际创新中心
 category: maps
 summary: 南区各楼与构筑物的外观与身份特征、设计增补、近景要求；四季昼夜与天气、行走与声音在子文档
-keywords: [南区, 南门, 校名墙, 主楼, 主轴线, 屋顶空廊, 过街楼, 主楼泛光, 森林公园, 孔雀之家, 东湖岸线, 环湖跑道, 里程标, 六角亭, 亲水平台, 荷角, 吴立人像, 宣邦楼, 钟楼, 电子管穹顶, 交班的钟, 钟面指针, 立人楼, 体育馆, 游泳馆, 体育运动中心大平台, 看台罩棚, 国际创新中心, 1–8 号楼, overlay/south.d]
+keywords: [南区, 南门, 校名墙, 主楼, 主轴线, 屋顶空廊, 过街楼, 主楼泛光, 森林公园, 孔雀之家, 东湖岸线, 环湖跑道, 里程标, 六角亭, 亲水平台, 荷角, 吴立人像, 宣邦楼, 钟楼, 电子管穹顶, 交班的钟, 钟面指针, 立人楼, 体育馆, 游泳馆, 体育运动中心大平台, 看台罩棚, 国际创新中心, 1–8 号楼, world/south.json]
 owners: [WP-18]
 contributors: [WP-03, WP-04, WP-13, WP-23, WP-24, WP-26, WP-28, WP-31a]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, ART-MODELING, ART-RENOVATION, ENG-ARCH, SYS-TIME, SYS-WALK, WLD-INTERIORS]
 related: [MAP-QSH-CORE, MAP-QSH-WEST, MAP-QSH-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, ENG-WP, UI-NAV, SYS-WEATHER, SYS-ATLAS, SYS-MAPS, WLD-OUTSKIRTS, SYS-AUDIO]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/south.d/"]
+data: ["game/data/maps/qingshuihe/world/south.json"]
 gates: [G4, G5, G7]
 ---
 
 # MAP-QSH-SOUTH · 南区：南门、主楼、东湖、宣邦楼、立人楼、体育场馆、国际创新中心
 
 > **范围**：本文规定南区（南门、主楼与森林公园、东湖、宣邦楼、立人楼、体育场馆、国际创新中心与科创餐厅、1–8 号楼、本区水道）的建筑与构筑物外观、身份特征、设计增补与近景要求。§1–§10 写的是默认状态（秋 17:30）的样子，其他时段和季节见 MAP-QSH-SOUTH-SEASONS。
-> **不在本文**：四季昼夜与天气（MAP-QSH-SOUTH-SEASONS）；行走、开放入口、点位与声音（MAP-QSH-SOUTH-WALK）；楼的实体 ID、位置、层数与坐标（以 `game/data/maps/qingshuihe/campus.json` 和 `overlay/south.d/` 为准）；树木与植被（WLD-VEGETATION）；东湖水面（WLD-WATER）；动物与生活痕迹（WLD-LIFE）；光照（ART-SKYLIGHT）；动态（SYS-MOTION）；开放室内的楼板、楼梯与家具（WLD-INTERIORS）；南门外的外围街区（WLD-OUTSKIRTS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §4–§6、§11）。
+> **不在本文**：四季昼夜与天气（MAP-QSH-SOUTH-SEASONS）；行走、开放入口、点位与声音（MAP-QSH-SOUTH-WALK）；楼的实体 ID、位置、层数与坐标（以 `game/data/maps/qingshuihe/world/south.json` 为准）；树木与植被（WLD-VEGETATION）；东湖水面（WLD-WATER）；动物与生活痕迹（WLD-LIFE）；光照（ART-SKYLIGHT）；动态（SYS-MOTION）；开放室内的楼板、楼梯与家具（WLD-INTERIORS）；南门外的外围街区（WLD-OUTSKIRTS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §4–§6、§11）。
 > **查阅**：先读 §0；各楼与构筑物 §1–§10，身份特征与近景要求 §11，待验证 §12
 
 ## 0 结论
@@ -129,7 +129,7 @@ gates: [G4, G5, G7]
 
 ## 11 本区身份特征、设计增补与近景要求
 
-通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节。本区的 K1 是身份特征对象、主轴（南门—主楼—银杏大道、东湖主岸线）和点位落点 30 m 内，K2 是行走走廊和开放室内；轮廓调整写进 `overlay/south.d/` 本包分片；翻新见 MAP-QSH-RENOVATION §4。
+通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节。本区的 K1 是身份特征对象、主轴（南门—主楼—银杏大道、东湖主岸线）和点位落点 30 m 内，K2 是行走走廊和开放室内；轮廓调整直接改 `world/south.json` 里的记录；翻新见 MAP-QSH-RENOVATION §4。
 
 | 对象 | 必须认得出的特征 |
 | --- | --- |

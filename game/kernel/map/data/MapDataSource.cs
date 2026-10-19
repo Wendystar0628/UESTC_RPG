@@ -17,10 +17,10 @@ public class MapDataSource
         var indexPath = ProjectSettings.GetSetting("campus/maps/index").AsString();
         var index = MapCatalog.ReadIndex(ReadRequired(indexPath));
         var bytes = index.Maps.Select(entry => (Entry: entry,
-            Map: ReadRequired(entry.Dir + "map.json"), Campus: ReadRequired(entry.Dir + "campus.json"),
+            Map: ReadRequired(entry.Dir + "map.json"), Geo: ReadRequired(entry.Dir + "world/geo.json"),
             Waypoints: ReadOptional(entry.Dir + "waypoints.json"))).ToArray();
         return Task.Run(() => new MapCatalog(index, bytes.Select(b =>
-            MapCatalog.ReadEntry(b.Entry, b.Map, b.Campus, b.Waypoints)).ToArray()));
+            MapCatalog.ReadEntry(b.Entry, b.Map, b.Geo, b.Waypoints)).ToArray()));
     }
 
     public virtual IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadWorldFiles(MapCatalogEntry entry) =>

@@ -11,7 +11,7 @@ namespace Campus.Gen.Ground;
 /// <see cref="GroundShape"/> and <see cref="RoadLine"/>.
 /// A feature with <see cref="WorldFeature.Parts"/> is read part by part and its aggregate geometry is never built: each
 /// part's surface kind comes from its own source record (<c>kind</c> in the part's props, else the parent's kind),
-/// the type properties (roadType, sport, width) from that same record, and the shapes from the part's own geometry.
+/// the type properties (highway, sport, width) from that same record, and the shapes from the part's own geometry.
 /// A multi-polygon part gives one shape per polygon, each with its own holes, so a hole stays a hole and polygons
 /// never flip each other's inside. A feature without parts is read from its own kind, props and geometry.
 /// Centre lines come from the effective road network (<see cref="OwnedByNetwork"/>); areas are always laid as areas.
@@ -21,9 +21,7 @@ internal static class GroundSources
 {
     public static (List<GroundShape> Shapes, List<RoadLine> Roads) Read(IWorldModel world)
     {
-        // The network holds the effective centre lines (WP-08: original ways minus hidden ones, plus the authored
-        // footways, paths and pedestrian lines). A centre line is laid from there and only there: a polyline feature the
-        // network already owns is skipped below, so it is never laid twice or brought back after a hide.
+        // Centre lines held by the network are laid from there and only there.
         var network = world.Network.Roads.Select(l => l.Id).ToHashSet();
         var shapes = new List<GroundShape>();
         foreach (var feature in world.Features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
@@ -43,7 +41,7 @@ internal static class GroundSources
         var roads = new List<RoadLine>();
         foreach (var line in world.Network.Roads.OrderBy(l => l.Id.Value, StringComparer.Ordinal))
         {
-            // An area way's network line is its perimeter; its real polygon is already laid above.
+            // area=yes marks an area perimeter, not a paved centre line.
             if (WorldProps.TryText(line.Props, "area") == "yes") continue;
             var points = PlanLines.CleanPath(line.Line.Points);
             if (points.Length < 2) continue;
@@ -135,18 +133,12 @@ internal static class GroundSources
 
     /// <summary>
     /// True for a road drawn as a centre line whose effective copy lives in <c>Network.Roads</c>, so that copy is the one
-    /// laid (a capsule per line, in <see cref="Read"/>). Two cases, by ID and tags and never by comparing geometry:
-    /// the feature's ID is in the network, or it is an authored footway, path or pedestrian line (the classes WP-08
-    /// projects into the network) that the network lacks, which means it was hidden. Areas never match: a polygon or a
+    /// laid (a capsule per line, in <see cref="Read"/>). The feature's ID must be in the network. Areas never match: a polygon or a
     /// multi-polygon, holes included, is laid as the area it is, whatever the network holds under its ID.
     /// </summary>
     private static bool OwnedByNetwork(WorldFeature feature, Source source, HashSet<FeatureId> network)
     {
-        if (source.Geometry is not PolylineGeometry || source.Kind != "road") return false;
-        if (network.Contains(feature.Id)) return true;
-        return feature.Source == FeatureSource.Design &&
-            GroundClassifier.RoadType(source.Props) is "footway" or "path" or "pedestrian" &&
-            WorldProps.TryText(source.Props, "area") != "yes";
+        return source.Geometry is PolylineGeometry && source.Kind == "road" && network.Contains(feature.Id);
     }
 
     /// <summary>Overlay kind of a tree pit or planting strip.</summary>

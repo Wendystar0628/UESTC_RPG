@@ -75,7 +75,7 @@ public static class FaunaStyle
     /// <summary>Coping top above pad + height on WP-14's generic buildings (parapet rise 0.8 m + coping 0.15 m, plus the coping lip the birds stand on; checked in the 25a review shots).</summary>
     public const float CrowCopingRise = 1.12f;
 
-    /// <summary>Categories read from the entity's "category" property (campus.json), never feature IDs.</summary>
+    /// <summary>Categories read from the entity's "category" property (world files), never feature IDs.</summary>
     public const string Residence = "residence";
     public const string Research = "research";
     public const string Dining = "dining";

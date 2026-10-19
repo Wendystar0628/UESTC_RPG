@@ -13,11 +13,6 @@ public sealed record WorldModelLoadResult(IWorldModel World, GeoFrame Geo, Vecto
 
 public interface IWorldModelLoader
 {
-    /// <summary>Parse source/overlay topology through the same parser, without terrain or interior construction.
-    /// Only claim resolution and pure parsing callers use this; terrain files are rejected.</summary>
-    IReadOnlyDictionary<FeatureId, WorldFeature> LoadTopology(MapId map,
-        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files);
-
     /// <summary>
     /// Files are preloaded by the kernel adapter, keyed by forward-slash paths relative to this map's DataRoot.
     /// Implementations parse only the supplied bytes; no path access or engine resource loading occurs here.

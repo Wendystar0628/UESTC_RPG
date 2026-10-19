@@ -23,6 +23,7 @@ using static GdUnit4.Assertions;
 public sealed class NodeBenchTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void ARoadWithRestNodesHasItsBenchesAtTheNodesNotAlongItsLine()
     {
         // Opus review 16:23: a road with rest nodes has no rest stops along its line; its benches stand at the nodes, on the pedestrian
@@ -88,7 +89,7 @@ public sealed class NodeBenchTests
         var open = OpenWorld.Value;
         var spot = OpenSpot.Value;
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
-        var props = JsonSerializer.SerializeToElement(new { roadType = "pedestrian" });
+        var props = JsonSerializer.SerializeToElement(new { highway = "pedestrian" });
         var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), props.GetRawText());
         IWorldModel world = MadeWorld(NodeWorld(WalkWorld(open, null, square), spot), [], [], SquareTrees(spot));
         var layout = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, world, null, Inputs());
@@ -131,8 +132,8 @@ public sealed class NodeBenchTests
         var open = OpenWorld.Value;
         var spot = OpenSpot.Value;
         Vector2[] ring = [spot + new Vector2(-6f, -5f), spot + new Vector2(6f, -5f), spot + new Vector2(6f, 5f), spot + new Vector2(-6f, 5f)];
-        var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), JsonSerializer.Serialize(new { roadType = "pedestrian" }));
-        var walkProps = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 2.5f });
+        var square = WorldFeatureFixture.Create("design:furniture-test-square", "road", new PolygonGeometry(new PolygonRings(ring, [])), JsonSerializer.Serialize(new { highway = "pedestrian" }));
+        var walkProps = JsonSerializer.SerializeToElement(new { highway = "footway", width = 2.5f });
         var walk = new NetworkLine(new("design:furniture-test-through"), new Polyline([spot + new Vector2(-14f, 0f), spot + new Vector2(14f, 0f)]), 2.5f) { Props = walkProps };
         IWorldModel world = MadeWorld(NodeWorld(open, spot), [walk], [square], SquareTrees(spot));
         var layout = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, world, null, Inputs());
@@ -146,7 +147,7 @@ public sealed class NodeBenchTests
     [TestCategory("Slow")]
     public void ADesignWalkFiledAsFeatureAndAsNetworkLineHasItsNodeBenchesOnce()
     {
-        // WP-08's effective network files a design walk twice under one ID: as the feature the overlay added and as a network line.
+        // WP-08's effective network files a design walk twice under one ID: as the authored feature and as a network line.
         // The walk is one walk: whichever way it is filed (line only, feature only, both) its node gets the same benches, standing
         // just off its edge and facing it, and a walk that is filed nowhere (hidden) gets none. Judged on a walk made up on open
         // ground, so it holds on a world with or without the effective network.
@@ -174,11 +175,7 @@ public sealed class NodeBenchTests
         }
         foreach (var (name, filed) in new[] { ("line only", Layout(line, null)), ("feature only", Layout(null, feature)) })
             AssertThat(Benches(filed).Select(b => (b.Key, b.Anchor, b.Part.Params)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor, b.Part.Params)))).OverrideFailureMessage($"the walk filed as {name} has other node benches than filed twice").IsTrue();
-        // The same through the loader: an overlay adds the walk (with and without a hide that takes it away again).
-        var shown = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, NodeWorld(Pared(Loaded(spot, hide: false), feature.Id), spot), null, Inputs());
-        var hidden = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, NodeWorld(Pared(Loaded(spot, hide: true), feature.Id), spot), null, Inputs());
-        AssertThat(Benches(shown).Select(b => (b.Key, b.Anchor)).SequenceEqual(benches.Select(b => (b.Key, b.Anchor)))).OverrideFailureMessage("the loaded walk has other node benches than the walk filed by hand").IsTrue();
-        AssertThat(hidden.Items.Count == none.Items.Count && Benches(hidden).Count == 0 && hidden.Diagnostics.SequenceEqual(none.Diagnostics)).OverrideFailureMessage("a hidden design walk still gets furniture").IsTrue();
+
     }
 
     /// <summary>
@@ -239,7 +236,7 @@ public sealed class NodeBenchTests
 
     private const string TestNode = "design:furniture-test-node";
 
-    /// <summary><paramref name="inner"/> with the overlay's way of giving the avenue one rest node at <paramref name="spot"/>: the node's benches are keyed <c>node:{Avenue.Key}:0:</c>.</summary>
+    /// <summary><paramref name="inner"/> with an authored avenue one rest node at <paramref name="spot"/>: the node's benches are keyed <c>node:{Avenue.Key}:0:</c>.</summary>
     private static FakeWorld NodeWorld(IWorldModel inner, Vector2 spot) =>
         MadeWorld(inner, [], [WorldFeatureFixture.Create(TestNode, FurnitureStyle.RestNodeKind, new PointGeometry(new(spot.X, 0f, spot.Y)), JsonSerializer.Serialize(new { road = Avenue.Name }))]);
 
@@ -248,20 +245,8 @@ public sealed class NodeBenchTests
     {
         var id = new FeatureId("design:furniture-test-walk");
         var points = new Polyline([spot + new Vector2(-8f, 0f), spot + new Vector2(8f, 0f)]);
-        var props = JsonSerializer.SerializeToElement(new { roadType = "footway", width });
+        var props = JsonSerializer.SerializeToElement(new { highway = "footway", width });
         return (new NetworkLine(id, points, width) { Props = props }, WorldFeatureFixture.Create(id.Value, "road", new PolylineGeometry(points), props.GetRawText()));
-    }
-
-    /// <summary>The real world with an overlay that adds the made-up design walk, and takes it away again when <paramref name="hide"/>.</summary>
-    private static IWorldModel Loaded(Vector2 spot, bool hide)
-    {
-        var entry = RealMapFixture.Entry();
-        var files = RealMapFixture.ReadTextFiles(entry.Descriptor.Id);
-        var (line, feature) = DesignWalk(spot);
-        var ops = new List<OverlayOp> { new AddOp(feature.Id, feature.Kind, feature.Geometry, null, feature.Props, "furniture test walk") };
-        if (hide) ops.Add(new HideOp(feature.Id, "furniture test: hidden again"));
-        files["overlay/zz-furniture-test.d/0000-fixture.json"] = JsonSerializer.Serialize(new OverlayFile(new("furniture-test"), new("WP-13"), ops) { Map = entry.Descriptor.Id }, ContractJson.Options);
-        return RealMapFixture.LoadPrepared(files, entry.Descriptor.Id).World;
     }
 
     /// <summary>The world with a walk filed the way the effective network files a design walk: as a network line, as a feature, or both (null leaves that stack alone).</summary>

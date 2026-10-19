@@ -9,7 +9,7 @@ namespace Campus.Gen.Zones.North;
 
 /// <summary>
 /// Every tunable value of the north zone in one place, for review (WF-FLOW): materials as colour names, the cluster
-/// table and the dimensions of each site. Coordinates are world (x, z) in metres from campus.json; local frames are
+/// table and the dimensions of each site. Coordinates are world (x, z) in metres in world/north.json; local frames are
 /// described per block. Values marked "初值" are starting values awaiting the main session's call.
 /// </summary>
 public static class NorthTune
@@ -55,11 +55,11 @@ public static class NorthTune
 
     /// <summary>
     /// One dormitory cluster (MAP-QSH-NORTH 数据定位 · 宿舍组团; MAP-QSH-RENOVATION N-22). Its OSM polygon is the fence line.
-    /// The main gate point, whether that gate is open, and the wall presets come from the overlay (D-239): the gate is
-    /// <c>design:north-gate-{Key}</c> (props.open), the presets are the StyleOps of the buildings.
+    /// The main gate point, whether that gate is open, and the wall presets come from world/north.json (D-239): the gate is
+    /// <c>design:north-gate-{Key}</c> (props.open), the presets are the buildings' family and facade fields in world/north.json.
     /// </summary>
     /// <param name="Id">Cluster entity.</param>
-    /// <param name="Key">Short key for site IDs and the overlay's gate ID.</param>
+    /// <param name="Key">Short key for site IDs and the world record's gate ID.</param>
     public sealed record Cluster(string Id, string Key);
 
     /// <summary>20a-20b2 clusters in site order: 学知苑, the international students' cluster, 硕丰苑 and 博翰苑.</summary>

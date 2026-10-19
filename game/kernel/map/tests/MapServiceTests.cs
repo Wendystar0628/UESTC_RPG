@@ -341,7 +341,10 @@ public sealed class MapServiceTests
                 map.DefaultSpawn, map.Spawns, map.World, map.Env, map.Cinematics, map.Portals);
             var entry = MapCatalog.ReadEntry(new(map.Id, "res://data/" + map.Id.Value + '/'),
                 JsonSerializer.SerializeToUtf8Bytes(file, ContractJson.Options),
-                Encoding.UTF8.GetBytes("{\"meta\":{\"origin\":[104,31],\"crs\":\"EPSG:32648\",\"bounds\":[0,0,10,10]},\"boundary\":[[[0,0],[10,0],[0,10]]] }"), []);
+                Encoding.UTF8.GetBytes("""
+                    {"origin":[104,31],"crs":"EPSG:32648","bounds":[0,0,10,10],
+                     "boundary":{"outer":[[0,0],[10,0],[0,10]],"holes":[]}}
+                    """), []);
             AssertThat(Vector2.Distance(entry.Descriptor.Center, new(10f / 3, 10f / 3)) < TestTolerance.Position).OverrideFailureMessage("Map center used bounding-box center instead of polygon centroid.").IsTrue();
             return;
         }
@@ -350,7 +353,7 @@ public sealed class MapServiceTests
 
     private static int SnapshotVersion(IMapContext context)
     {
-        using var document = JsonDocument.Parse(context.SourceInputs.Require("campus.json"));
+        using var document = JsonDocument.Parse(context.SourceInputs.Require("world/geo.json"));
         return document.RootElement.GetProperty("revision").GetInt32();
     }
 
@@ -426,7 +429,7 @@ public sealed class MapServiceTests
             new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
             {
                 ["map.json"] = JsonSerializer.SerializeToUtf8Bytes(new { id = entry.Descriptor.Id.Value }),
-                ["campus.json"] = JsonSerializer.SerializeToUtf8Bytes(new { revision = _versions.GetValueOrDefault(entry.Descriptor.Id, 1) })
+                ["world/geo.json"] = JsonSerializer.SerializeToUtf8Bytes(new { revision = _versions.GetValueOrDefault(entry.Descriptor.Id, 1) })
             };
         public override MapLoadInput ReadLoadInput(MapCatalogEntry entry)
         {
@@ -455,8 +458,6 @@ public sealed class MapServiceTests
         public void DelayNext(MapId map)
         { _delayMap = map; _delayedEntered = new(); _releaseDelayed = new(); }
         public void ReleaseDelayed() => _releaseDelayed?.TrySetResult();
-        public IReadOnlyDictionary<FeatureId, WorldFeature> LoadTopology(MapId map,
-            IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) => new Dictionary<FeatureId, WorldFeature>();
         public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
             WorldModelLoadInputs inputs)
         {
@@ -472,7 +473,7 @@ public sealed class MapServiceTests
             catalog.TryGet(map, out var entry);
             var d = entry.Descriptor;
             var world = new FakeWorld { Boundary = new([]) };
-            using var document = JsonDocument.Parse(files["campus.json"]);
+            using var document = JsonDocument.Parse(files["world/geo.json"]);
             _worldVersions[world] = document.RootElement.GetProperty("revision").GetInt32();
             return new(world, d.Geo, d.Center, d.Bounds, d.TileMin, d.TileMax);
         }

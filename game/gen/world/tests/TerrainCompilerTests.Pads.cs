@@ -87,7 +87,7 @@ public sealed partial class TerrainCompilerTests
             new[] { Box(-4, -4, 1, 4), Box(-1, -4, 4, 4) }
         })
         {
-            var building = new WorldFeature(new("fixture:multipart-pad"), FeatureSource.Design, new("building"), new MultiPolygonGeometry(wings))
+            var building = new WorldFeature(new("fixture:multipart-pad"), new("building"), new MultiPolygonGeometry(wings))
             {
                 Height = 8,
                 Parts = wings.Select((wing, index) => new WorldFeaturePart("fixture:wing:" + index,

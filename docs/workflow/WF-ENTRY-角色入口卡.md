@@ -79,7 +79,7 @@ gates: []
 | --- | --- |
 | 提契约申请 | WF-BUILD §3 |
 | 写来信、回报 | WF-COMMS |
-| 改覆盖层、共用数据 | WF-RULE §10 |
+| 改世界文件、共用数据 | WF-RULE §10 |
 | 跑门禁、截图 | ENG-GATES-SHOTS §1、ENG-GATES §1 |
 | 碰别的系统 | 那份文档的接入要点（CORE-INDEX §1 找文档） |
 

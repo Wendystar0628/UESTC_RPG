@@ -11,28 +11,30 @@ namespace Campus.Gen.World.Tests;
 [TestSuite]
 public sealed class WorldModelTests
 {
-    private const string Campus = """
-        {"meta":{"origin":[103,30],"crs":"EPSG:32648","bounds":[-20,-20,20,20],"entityPrefix":"fixture"},
-         "boundary":[[[-20,-20],[20,-20],[20,20],[-20,20],[-20,-20]]],
-         "entities":[{"id":"fixture:relation:1","name":"Building","kind":"building"}],
-         "features":[
-           {"id":"osm:way:10","entityId":"fixture:relation:1","kind":"building","height":8,"levels":2,
-            "polygons":[[[[-10,-10],[-2,-10],[-2,-2],[-10,-2],[-10,-10]]]]},
-           {"id":"osm:way:11","entityId":"fixture:relation:1","kind":"building","height":16,"levels":4,
-            "polygons":[[[[2,2],[10,2],[10,10],[2,10],[2,2]]]]},
-           {"id":"osm:way:20","entityId":null,"kind":"water","height":0,
-            "polygons":[[[[-10,2],[-2,2],[-2,10],[-10,10],[-10,2]],[[-8,4],[-4,4],[-4,8],[-8,8],[-8,4]]]]}
-         ]}
+    private const string Geo = """
+        {"origin":[103,30],"crs":"EPSG:32648","bounds":[-20,-20,20,20],"entityPrefix":"fixture",
+         "boundary":{"outer":[[-20,-20],[20,-20],[20,20],[-20,20]],"holes":[]}}
+        """;
+    private const string Features = """
+        {"features":[
+          {"id":"fixture:relation:1","name":"Building","kind":"building","parts":[
+            {"id":"osm:way:10","height":8,"storeys":2,
+             "geometry":{"type":"polygon","rings":{"outer":[[-10,-10],[-2,-10],[-2,-2],[-10,-2]],"holes":[]}}},
+            {"id":"osm:way:11","height":16,"storeys":4,
+             "geometry":{"type":"polygon","rings":{"outer":[[2,2],[10,2],[10,10],[2,10]],"holes":[]}}}]},
+          {"id":"fixture:source:way:20","kind":"water",
+           "geometry":{"type":"polygon","rings":{"outer":[[-10,2],[-2,2],[-2,10],[-10,10]],"holes":[[[-8,4],[-4,4],[-4,8],[-8,8]]]}}}
+        ],"trees":[]}
         """;
 
     [TestCase, TestCategory(TestReason.Contract)]
     public void FacadeFootprintsUseTheSameRingConversionAndKeepPhysicalGeometry()
     {
-        var root = System.Text.Json.Nodes.JsonNode.Parse(Campus)!;
-        var first = root["features"]![0]!;
-        first["facadePolygons"] = System.Text.Json.Nodes.JsonNode.Parse("""[[[[-10,-10],[-2,-10],[-2,-2],[-10,-2],[-10,-10]]]]""");
-        first["polygons"] = System.Text.Json.Nodes.JsonNode.Parse("""[[[[-10,-10],[-6,-10.02],[-2,-10],[-2,-2],[-10,-2],[-10,-10]]]]""");
-        var world = WorldModelLoader.Load(new("test"), new Dictionary<string, string> { ["campus.json"] = root.ToJsonString() }).World;
+        var root = System.Text.Json.Nodes.JsonNode.Parse(Features)!;
+        var first = root["features"]![0]!["parts"]![0]!;
+        first["facadePolygons"] = System.Text.Json.Nodes.JsonNode.Parse("""[{"outer":[[-10,-10],[-2,-10],[-2,-2],[-10,-2]],"holes":[]}]""");
+        first["geometry"]!["rings"]!["outer"] = System.Text.Json.Nodes.JsonNode.Parse("""[[-10,-10],[-6,-10.02],[-2,-10],[-2,-2],[-10,-2]]""");
+        var world = WorldModelLoader.Load(new("test"), Files(root.ToJsonString())).World;
         var feature = world.Features[new("fixture:relation:1")];
         var part = feature.Parts[0];
         AssertThat(((PolygonGeometry)part.Geometry).Rings.Outer.Count == 5).OverrideFailureMessage("Physical source detail was simplified.").IsTrue();
@@ -47,38 +49,16 @@ public sealed class WorldModelTests
     {
         foreach (var value in new[] { "null", "{}", "[]", "[[]]", "[[[[0,0],[1,1],[2,2]]]]", "[[[[0],[1,0],[0,1]]]]", "[[[[0,0],[1,0],[0,1]]],[[[2,2],[3,2],[2,3]]]]", "[[[[0,0],[4,0],[0,4]],[[1,1],[2,1],[1,2]]]]" })
         {
-            var root = System.Text.Json.Nodes.JsonNode.Parse(Campus)!;
-            root["features"]![0]!["facadePolygons"] = System.Text.Json.Nodes.JsonNode.Parse(value);
+            var root = System.Text.Json.Nodes.JsonNode.Parse(Features)!;
+            root["features"]![0]!["parts"]![0]!["facadePolygons"] = System.Text.Json.Nodes.JsonNode.Parse(value);
             try
             {
-                WorldModelLoader.Load(new("test"), new Dictionary<string, string> { ["campus.json"] = root.ToJsonString() });
+                WorldModelLoader.Load(new("test"), Files(root.ToJsonString()));
                 throw new InvalidOperationException("Malformed facade footprint accepted: " + value);
             }
             catch (WorldDataException error)
-            { AssertThat(error.File == "campus.json" && error.Entry == "osm:way:10.facadePolygons").OverrideFailureMessage("Lost source facade error context.").IsTrue(); }
+            { AssertThat(error.File == "world/test.json").OverrideFailureMessage("Lost source facade error context.").IsTrue(); }
         }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void FacadeFootprintsFollowOverlayPartLifecycle()
-    {
-        var root = System.Text.Json.Nodes.JsonNode.Parse(Campus)!;
-        foreach (var raw in root["features"]!.AsArray()) raw!["facadePolygons"] = raw["polygons"]!.DeepClone();
-        WorldFeature Apply(string ops, string id = "fixture:relation:1") => WorldModelLoader.Load(new("test"), new Dictionary<string, string>
-        {
-            ["campus.json"] = root.ToJsonString(),
-            ["overlay/test.d/0000-fixture.json"] = "{\"zone\":\"test\",\"owner\":\"WP-08\",\"ops\":[" + ops + "]}"
-        }).World.Features[new(id)];
-        var height = Apply("""{"op":"height","target":"fixture:relation:1","height":20,"reason":"test"}""");
-        AssertThat(height.Parts.All(p => p.FacadeGeometry is not null && p.Height == 20)).OverrideFailureMessage("Height discarded facade geometry.").IsTrue();
-        var style = Apply("""{"op":"style","target":"fixture:relation:1","family":"test"}""");
-        AssertThat(style.Parts.All(p => p.FacadeGeometry is not null)).OverrideFailureMessage("Style discarded facade geometry.").IsTrue();
-        var hidden = Apply("""{"op":"hidePart","target":"fixture:relation:1","sourceId":"osm:way:10","reason":"test"}""");
-        AssertThat(hidden.Parts.Count == 1 && hidden.Parts[0].SourceId == "osm:way:11" && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(hidden)[0], ((PolygonGeometry)hidden.Parts[0].FacadeGeometry!).Rings)).OverrideFailureMessage("Hidden part survived in facade aggregation.").IsTrue();
-        var reshaped = Apply("""{"op":"reshape","target":"fixture:relation:1","rings":{"outer":[[0,0],[3,0],[3,2],[0,2]],"holes":[]},"reason":"test"}""");
-        AssertThat(reshaped.Parts.Count == 0 && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(reshaped)[0], ((PolygonGeometry)reshaped.Geometry).Rings)).OverrideFailureMessage("Reshape resurrected stale source facade geometry.").IsTrue();
-        var added = Apply("""{"op":"add","id":"design:test","kind":"building","geometry":{"type":"polygon","rings":{"outer":[[0,0],[3,0],[3,2],[0,2]],"holes":[]}},"reason":"test"}""", "design:test");
-        AssertThat(added.Parts.Count == 0 && ReferenceEquals(WorldFeatureGeometry.FacadePolygonsOf(added)[0], ((PolygonGeometry)added.Geometry).Rings)).OverrideFailureMessage("Add ignored current authored geometry.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -88,7 +68,7 @@ public sealed class WorldModelTests
         var second = new PolygonRings([new(6, 6), new(6, 4), new(4, 4), new(4, 6)]);
         var physical = new PointGeometry(Vector3.Zero);
         var part = new WorldFeaturePart("second-source", physical, null, null) { FacadeGeometry = new MultiPolygonGeometry([first, second]) };
-        var feature = new WorldFeature(new("fixture"), FeatureSource.Osm, new("building"), physical)
+        var feature = new WorldFeature(new("fixture"), new("building"), physical)
         { Parts = [part, new("first-source", new PolygonGeometry(second), null, null)] };
         var polygons = WorldFeatureGeometry.FacadePolygonsOf(feature);
         AssertThat(polygons.Count == 3 && ReferenceEquals(polygons[0], first) && ReferenceEquals(polygons[1], second) && ReferenceEquals(polygons[2], second)).OverrideFailureMessage("Facade aggregation reordered or rebuilt rings.").IsTrue();
@@ -119,18 +99,6 @@ public sealed class WorldModelTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void OverlayFailureNeverMutatesThePreviousSnapshot()
-    {
-        var previous = Load();
-        const string invalid = """{"zone":"test","owner":"WP-08","ops":[{"op":"hide","target":"fixture:relation:1","reason":"test"},{"op":"hide","target":"missing","reason":"test"}]}""";
-        try { Load(invalid); throw new InvalidOperationException("Invalid overlay accepted."); }
-        catch (WorldDataException e) { AssertThat(e.File == "overlay/test.d/0000-fixture.json").OverrideFailureMessage("Lost error filename.").IsTrue(); }
-        AssertThat(previous.World.Features.ContainsKey(new("fixture:relation:1"))).OverrideFailureMessage("Previous immutable snapshot changed.").IsTrue();
-        var hidden = Load("""{"zone":"test","owner":"WP-08","ops":[{"op":"hide","target":"fixture:relation:1","reason":"test"}]}""");
-        AssertThat(!hidden.World.Features.ContainsKey(new("fixture:relation:1"))).OverrideFailureMessage("Hide did not remove entity and its parts.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
     public void RingNormalizationKeepsOrientationAndRejectsDegenerateInput()
     {
         var ring = PlanGeometry.OpenRing([new(0, 0), new(0, 2), new(2, 2), new(2, 0), new(0, 0)]);
@@ -144,22 +112,22 @@ public sealed class WorldModelTests
     [TestCategory("Slow")]
     public void RealMigratedCampusLoadsEverySourcePartOnce()
     {
-        var files = RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
-            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-        var campus = files["campus.json"];
+        var files = RealMapFixture.ReadTextFiles();
+        var result = RealMapFixture.Load();
+        var records = files.Where(file => file.Key.StartsWith("world/", StringComparison.Ordinal) && file.Key != "world/geo.json")
+            .SelectMany(file =>
+            {
+                using var document = JsonDocument.Parse(file.Value);
+                return document.RootElement.GetProperty("features").EnumerateArray().Select(record => record.Clone()).ToArray();
+            }).ToArray();
+        AssertThat(records.Select(record => record.GetProperty("id").GetString()).Order(StringComparer.Ordinal)
+            .SequenceEqual(result.World.Features.Keys.Select(id => id.Value).Order(StringComparer.Ordinal)))
+            .OverrideFailureMessage("World records were lost or duplicated.").IsTrue();
+        var expectedParts = records.SelectMany(record => record.TryGetProperty("parts", out var parts) ? parts.EnumerateArray() : Enumerable.Empty<JsonElement>())
+            .Select(part => part.GetProperty("id").GetString()).Order(StringComparer.Ordinal);
+        AssertThat(expectedParts.SequenceEqual(result.World.Features.Values.SelectMany(feature => feature.Parts).Select(part => part.SourceId).Order(StringComparer.Ordinal)))
+            .OverrideFailureMessage("World parts were lost or duplicated.").IsTrue();
         var interiors = files["interiors.json"];
-        var networkJson = files["network.json"];
-        var result = RealMapFixture.LoadPrepared(files, options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() });
-        using var original = JsonDocument.Parse(campus);
-        foreach (var entity in original.RootElement.GetProperty("entities").EnumerateArray())
-            AssertThat(result.World.Features.ContainsKey(new(entity.GetProperty("id").GetString()!))).OverrideFailureMessage("Lost an existing entity identity.").IsTrue();
-        var sourceParts = result.World.Features.Values.SelectMany(f => f.Parts).ToArray();
-        var sourceCount = original.RootElement.GetProperty("features").GetArrayLength();
-        AssertThat(sourceParts.Length == sourceCount && sourceParts.Select(p => p.SourceId).Distinct(StringComparer.Ordinal).Count() == sourceCount).OverrideFailureMessage("Source geometry was lost or duplicated.").IsTrue();
-        using var network = JsonDocument.Parse(networkJson);
-        int Authored(string name) => network.RootElement.GetProperty(name).GetArrayLength();
-        AssertThat(result.World.Network.Bridges.Count == Authored("bridges") && result.World.Network.Culverts.Count == Authored("culverts") &&
-            result.World.Network.Trees.Count == Authored("trees")).OverrideFailureMessage("Network snapshot incomplete.").IsTrue();
         using var authoredInteriors = JsonDocument.Parse(interiors);
         var expectedEntrances = authoredInteriors.RootElement.GetProperty("interiors").EnumerateArray()
             .SelectMany(interior => interior.GetProperty("entrances").EnumerateArray())
@@ -241,7 +209,8 @@ public sealed class WorldModelTests
     private static WorldModelLoadResult LoadClosed(string record = ClosedDoor, string open = "") =>
         WorldModelLoader.Load(new("test"), new Dictionary<string, string>
         {
-            ["campus.json"] = Campus,
+            ["world/geo.json"] = Geo,
+            ["world/test.json"] = Features,
             ["interiors.json"] = "{\"version\":1,\"interiors\":[" + open + "],\"closedEntrances\":[" + record + "]}"
         });
 
@@ -249,8 +218,7 @@ public sealed class WorldModelTests
     [TestCategory("Slow")]
     public void ArchitectureReviewMixedParentsKeepBuildingPartsAndOpenParkDistinct()
     {
-        var result = RealMapFixture.LoadPrepared(RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
-            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal), options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() });
+        var result = RealMapFixture.Load();
         var samples = new[]
         {
             (Id: result.World.Features.Values.Single(feature => feature.Name == "电子科技大学立人托幼公园").Id, Point: new Vector3(-672.712f, 1, -106.672f)),
@@ -284,230 +252,38 @@ public sealed class WorldModelTests
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
-    public void ArchitectureReviewOverlayAliasesCannotSilentlyOverwriteAnotherFile()
-    {
-        var previous = Load();
-        var files = new Dictionary<string, string>
-        {
-            ["campus.json"] = Campus,
-            ["overlay/a.d/0000-fixture.json"] = """{"zone":"test","owner":"WP-14","ops":[{"op":"height","target":"fixture:relation:1","height":20,"reason":"test"}]}""",
-            ["overlay/b.d/0000-fixture.json"] = """{"zone":"test","owner":"WP-15","ops":[{"op":"height","target":"osm:way:10","height":30,"reason":"test"}]}"""
-        };
-        try { WorldModelLoader.Load(new("test"), files); throw new InvalidOperationException("Conflicting overlays silently overwrote the same resolved entity."); }
-        catch (WorldDataException) { }
-        AssertThat(previous.World.Features[new("fixture:relation:1")].Height == 16).OverrideFailureMessage("Failed reload mutated the previous snapshot.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Regression)]
-    public void ArchitectureReviewOverlayClaimsMustBeExplicit()
-    {
-        var files = new Dictionary<string, string>
-        {
-            ["campus.json"] = Campus,
-            ["overlay/a.d/0000-fixture.json"] = """{"zone":"test","owner":"WP-14","ops":[{"op":"height","target":"fixture:relation:1","height":20,"reason":"test"}]}""",
-            ["overlay/b.d/0000-fixture.json"] = """{"zone":"test","owner":"WP-14","ops":[{"op":"height","target":"osm:way:10","height":30,"reason":"test"}]}"""
-        };
-        try { WorldModelLoader.Load(new("test"), files); throw new InvalidOperationException("Matching owner strings were treated as a claim."); }
-        catch (WorldDataException) { }
-        var claimedBy = new Dictionary<FeatureId, WpId> { [new("fixture:relation:1")] = new("WP-14") };
-        var result = WorldModelLoader.Load(new("test"), files, new() { ClaimedBy = claimedBy });
-        AssertThat(result.World.Features[new("fixture:relation:1")].Height == 30).OverrideFailureMessage("Explicit registered claim did not allow the overlay exception.").IsTrue();
-        claimedBy[new("fixture:relation:1")] = new("WP-99");
-        try { WorldModelLoader.Load(new("test"), files, new() { ClaimedBy = claimedBy }); throw new InvalidOperationException("An unrelated owner's claim bypassed a conflict."); }
-        catch (WorldDataException) { }
-        files["overlay/a.d/0000-fixture.json"] = """{"zone":"test","owner":"WP-14","ops":[{"op":"hide","target":"fixture:relation:1","reason":"test"}]}""";
-        try { WorldModelLoader.Load(new("test"), files); throw new InvalidOperationException("Hide conflict was accepted."); }
-        catch (WorldDataException) { }
-    }
-
-    [TestCase, TestCategory(TestReason.Regression)]
     [TestCategory("Slow")]
     public void ArchitectureReviewBoundsUseAuthoredRoamLimits()
     {
         var files = new Dictionary<string, string>
         {
-            ["campus.json"] = Campus,
+            ["world/geo.json"] = Geo,
+            ["world/test.json"] = Features,
             ["map.json"] = """{"id":"test","roam":{"heightFactor":0.9,"heightStart":30,"maxRadius":3000,"floorY":-40,"ceilY":1500,"buffer":30,"softFloorClearance":40,"fallbackMargin":25}}"""
         };
         var result = WorldModelLoader.Load(new("test"), files);
         AssertThat(result.Bounds == new Box3(new(-45, -40, -45), new(45, 1500, 45))).OverrideFailureMessage($"Authored roam bounds ignored: {result.Bounds}.").IsTrue();
-        var real = RealMapFixture.LoadPrepared(RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
-            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal), options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() });
+        var real = RealMapFixture.Load();
         var roam = RealMapFixture.Entry().Descriptor.Roam;
         AssertThat(real.Bounds.Min.Y == roam.FloorY && real.Bounds.Max.Y == roam.CeilY).OverrideFailureMessage("Real campus vertical roam bounds were replaced with building heights.").IsTrue();
         AssertThat(Math.Abs(real.Bounds.Min.X - (real.Boundary.Outer.Min(p => p.X) - roam.FallbackMargin)) < TestTolerance.Position).OverrideFailureMessage("Real campus fallback margin missing.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    [TestCategory("Slow")]
-    public void SyntheticBeatAnchorsLoadOverRealCampusWithoutBecomingBuildings()
+    public void RetiredFeatureOverlayFilesAreRejectedWithoutChangingPublishedWorld()
     {
-        // contract-25 / MAP-QSH-CORE 8.6: synthetic regression inputs, not an authored campus walk layout.
-        var files = RealMapFixture.ReadTextFiles().Where(pair => !pair.Key.StartsWith("overlay/", StringComparison.Ordinal))
-            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-        files["overlay/core-beat-fixture.d/0000-fixture.json"] = """
-            {"zone":"core","owner":"WP-16","map":"qingshuihe","ops":[
-              {"op":"add","id":"walk:beat-fixture-point","kind":"beat","geometry":{"type":"point","position":[-100,0,168]},"reason":"Regression fixture: time-square walking beat; not an authored map placement."},
-              {"op":"add","id":"walk:beat-fixture-area","kind":"beat","geometry":{"type":"polygon","rings":{"outer":[[-331,94],[-329,94],[-329,96],[-331,96]],"holes":[]}},"reason":"Regression fixture: polygon beat area over real campus data."},
-              {"op":"add","id":"walk:beat-fixture-multi","kind":"beat","geometry":{"type":"multiPolygon","polygons":[{"outer":[[-110,160],[-108,160],[-108,162],[-110,162]],"holes":[]},{"outer":[[-106,160],[-104,160],[-104,162],[-106,162]],"holes":[]}]},"reason":"Regression fixture: multi-area beat anchor, not building massing."}
-            ]}
-            """;
-        var result = RealMapFixture.LoadPrepared(files, options: new() { ClaimedBy = new Dictionary<FeatureId, WpId>() });
-        foreach (var id in new[] { "walk:beat-fixture-point", "walk:beat-fixture-area", "walk:beat-fixture-multi" })
-        {
-            var anchor = result.World.Features[new(id)];
-            AssertThat(anchor.Kind.Value == "beat" && anchor.Height is null && anchor.Parts.Count == 0).OverrideFailureMessage("Beat anchor acquired building semantics.").IsTrue();
-            AssertThat(anchor.Source == FeatureSource.Design && anchor.Zone == new ZoneId("core")).OverrideFailureMessage("Beat anchor lost overlay provenance.").IsTrue();
-            AssertThat(result.World.Interiors.Get(anchor.Id) is null).OverrideFailureMessage("Beat anchor created an interior.").IsTrue();
-        }
-        AssertThat(result.World.Features[new("walk:beat-fixture-point")].Geometry is PointGeometry).OverrideFailureMessage("Point anchor shape changed.").IsTrue();
-        AssertThat(result.World.Features[new("walk:beat-fixture-area")].Geometry is PolygonGeometry).OverrideFailureMessage("Area anchor shape changed.").IsTrue();
-        AssertThat(result.World.Features[new("walk:beat-fixture-multi")].Geometry is MultiPolygonGeometry { Polygons.Count: 2 }).OverrideFailureMessage("Multi-area anchor lost a part.").IsTrue();
+        var previous = Load().World;
+        var files = Files();
+        files["overlay/test.d/0000-fixture.json"] = "{\"ops\":[]}";
+        AssertThrown(() => WorldModelLoader.Load(new("test"), files)).IsInstanceOf<WorldDataException>();
+        AssertThat(previous.Features.Keys.SequenceEqual(Load().World.Features.Keys)).IsTrue();
     }
 
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void WalkPrefixRejectsNonBeatGeometryAndVolume()
+    private static Dictionary<string, string> Files(string features = Features) => new()
     {
-        var point = new PointGeometry(Vector3.Zero);
-        var area = new PolygonGeometry(new([new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)]));
-        var line = new PolylineGeometry(new([new(0, 0), new(1, 0)]));
-        var invalid = new AddOp[]
-        {
-            new(new("walk:invalid-building"), new("building"), area, 8, null, "negative fixture"),
-            new(new("walk:invalid-safe"), new("safe"), area, null, null, "negative fixture"),
-            new(new("walk:invalid-anchor-alias"), new("anchor"), point, null, null, "negative fixture"),
-            new(new("walk:invalid-line"), new("beat"), line, null, null, "negative fixture"),
-            new(new("walk:invalid-volume"), new("beat"), point, 2, null, "negative fixture"),
-            new(new("walk:"), new("beat"), point, null, null, "negative fixture")
-        };
-        foreach (var op in invalid)
-        {
-            var overlay = JsonSerializer.Serialize(new OverlayFile(new("test"), new("WP-16"), [op]), ContractJson.Options);
-            try { Load(overlay); throw new InvalidOperationException($"Invalid walk add '{op.Id.Value}' was accepted."); }
-            catch (WorldDataException error)
-            {
-                AssertThat(error.File == "overlay/test.d/0000-fixture.json").OverrideFailureMessage("Invalid walk add lost a precise validation error.").IsTrue();
-            }
-        }
-    }
+        ["world/geo.json"] = Geo,
+        ["world/test.json"] = features
+    };
 
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void SplitOverlaysKeepOperationOrderAndDerivedQueries()
-    {
-        var files = new Dictionary<string, string>
-        {
-            ["campus.json"] = Campus,
-            ["overlay/test.d/02-detail.json"] = Overlay([new StyleOp(new("fixture:relation:1"), new("fixture-style"), null),
-                new HideOp(new("fixture:source:way:20"), "fixture removal"),
-                new AddOp(new("design:split-fixture"), new("building"), new PointGeometry(new(15, 0, 15)), 4, null, "fixture addition")]),
-            ["overlay/test.d/01-shape.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 24, 6, "fixture height"),
-                new HeightOp(new("fixture:relation:1"), null, 3, "fixture storeys")])
-        };
-        var world = WorldModelLoader.Load(new("test"), files).World;
-        AssertThat(world.Features[new("fixture:relation:1")].Height == 12).OverrideFailureMessage("Operations within a shard were reordered.").IsTrue();
-        AssertThat(world.Features[new("fixture:relation:1")].Family?.Value == "fixture-style").OverrideFailureMessage("Later shard style did not apply.").IsTrue();
-        AssertThat(!world.Features.ContainsKey(new("fixture:source:way:20")) && world.Features.ContainsKey(new("design:split-fixture"))).OverrideFailureMessage("Shard hide/add did not apply.").IsTrue();
-        AssertThat(world.Spatial.MediumAt(new(5, 10, 5)).Kind == MediumKind.Interior).OverrideFailureMessage("Shard height did not enter the spatial query.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void SplitOverlaysUseOrdinalGroupNamesAndFilenames()
-    {
-        var files = new Dictionary<string, string>
-        {
-            ["campus.json"] = Campus,
-            ["overlay/a.d/a.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 40, null, "last ordinal shard")]),
-            ["overlay/a.more.d/01.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 19, null, "last ordinal group")]),
-            ["overlay/a.d/B.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 30, null, "first ordinal shard")])
-        };
-        var options = new WorldLoadOptions { ClaimedBy = new Dictionary<FeatureId, WpId> { [new("fixture:relation:1")] = new("WP-08") } };
-        AssertThat(WorldModelLoader.Load(new("test"), files, options).World.Features[new("fixture:relation:1")].Height == 19).OverrideFailureMessage("Group names are not Ordinal.").IsTrue();
-        files.Remove("overlay/a.more.d/01.json");
-        AssertThat(WorldModelLoader.Load(new("test"), files).World.Features[new("fixture:relation:1")].Height == 40).OverrideFailureMessage("Shard filenames are not Ordinal.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void SplitOverlaysKeepInteriorBetweenEarlierAndLaterGroups()
-    {
-        var interior = new InteriorOverlayFile(new("test"), new("WP-08"),
-            [new SealOp(new("design:before-interior"), 0, Vector2.Zero, Vector2.One, SealKind.FireDoor, "earlier group"),
-                new SealOp(new("fixture:relation:1"), 0, Vector2.Zero, Vector2.One, SealKind.FireDoor, "later group")]);
-        var files = new Dictionary<string, string>
-        {
-            ["campus.json"] = Campus,
-            ["overlay/north.d/01.json"] = Overlay([new HideOp(new("fixture:relation:1"), "after interior")]),
-            ["overlay/interior/test.interior.json"] = JsonSerializer.Serialize(interior, ContractJson.Options),
-            ["overlay/alpha.d/01.json"] = Overlay([new AddOp(new("design:before-interior"), new("building"),
-                new PointGeometry(new(15, 0, 15)), 4, null, "before interior")])
-        };
-        var world = (WorldModelSnapshot)WorldModelLoader.Load(new("test"), files).World;
-        AssertThat(world.InteriorOverlays.Single().Ops.Count == 2).OverrideFailureMessage("Interior references must resolve between the alpha add and north hide.").IsTrue();
-        AssertThat(world.Features.ContainsKey(new("design:before-interior")) && !world.Features.ContainsKey(new("fixture:relation:1"))).OverrideFailureMessage("Groups around the interior did not apply.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void FeatureOverlaysRejectRetiredInputsEvenWhenEmpty()
-    {
-        foreach (var path in new[] { "overlay/test.overlay.json", "overlay/another/test.overlay.json", "overlay/test.d/nested/03.overlay.json" })
-            foreach (var operations in new OverlayOp[][] { [], [new HeightOp(new("fixture:relation:1"), 20, null, "retired")] })
-            {
-                var files = new Dictionary<string, string> { ["campus.json"] = Campus, [path] = Overlay(operations) };
-                var error = OverlayError(files);
-                AssertThat(error.File == path && error.Entry == "path").OverrideFailureMessage("Retired input was ignored or lost its path.").IsTrue();
-            }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void SplitOverlaysKeepRealMapOperationAndConflictErrorSources()
-    {
-        var files = new Dictionary<string, string> { ["campus.json"] = Campus, ["overlay/test.d/01.json"] = "{" };
-        AssertThat(OverlayError(files).File == "overlay/test.d/01.json").OverrideFailureMessage("Malformed shard lost its filename.").IsTrue();
-        files["overlay/test.d/01.json"] = Overlay([], map: "another-map");
-        var mapError = OverlayError(files);
-        AssertThat(mapError.File == "overlay/test.d/01.json" && mapError.Entry == "map").OverrideFailureMessage("Shard map validation lost its source.").IsTrue();
-        files["overlay/test.d/01.json"] = Overlay([new HeightOp(new("fixture:relation:1"), -1, null, "invalid")]);
-        var operationError = OverlayError(files);
-        AssertThat(operationError.File == "overlay/test.d/01.json" && operationError.Entry == "ops[0]").OverrideFailureMessage("Shard operation validation lost its source.").IsTrue();
-        files["overlay/test.d/01.json"] = Overlay([new HeightOp(new("fixture:relation:1"), 20, null, "first")], "WP-14");
-        files["overlay/test.d/02.json"] = Overlay([new HeightOp(new("osm:way:10"), 30, null, "second")], "WP-15");
-        var conflict = OverlayError(files);
-        AssertThat(conflict.File == "overlay/test.d/02.json").IsTrue();
-        var options = new WorldLoadOptions { ClaimedBy = new Dictionary<FeatureId, WpId> { [new("fixture:relation:1")] = new("WP-14") } };
-        AssertThat(WorldModelLoader.Load(new("test"), files, options).World.Features[new("fixture:relation:1")].Height == 30).OverrideFailureMessage("Different shard owners did not respect a real claim.").IsTrue();
-        files.Remove("overlay/test.d/02.json");
-        files["overlay/other.d/01.json"] = Overlay([new HeightOp(new("osm:way:10"), 30, null, "same owner across groups")], "WP-14");
-        _ = OverlayError(files);
-
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void SplitOverlaysReadOnlyDirectJsonChildrenAndLeaveDedicatedFormatsAlone()
-    {
-        var files = new Dictionary<string, string> { ["campus.json"] = Campus, ["overlay/test.d/01.json"] = Overlay([]) };
-        foreach (var path in new[] { "overlay/test.d/nested/02.json", "overlay/test.d/04.txt",
-            "overlay/test.d/05.JSON", "overlay/terrain.d/01.json", "overlay/interior.d/01.json", "overlay/outskirts.d/01.json",
-            "overlay/walkable.d/01.json", "overlay/fidelity.d/01.json", "overlay/terrain/test.d/01.json", "overlay/interior/test.d/01.json",
-            "overlay/terrain/test.overlay.json", "overlay/outskirts.overlay.json", "overlay/walkable.overlay.json", "overlay/fidelity.overlay.json" })
-            files[path] = "not a feature overlay";
-        files["overlay/interior/test.interior.json"] = """{"zone":"test","owner":"WP-08","ops":[]}""";
-        var world = WorldModelLoader.Load(new("test"), files).World;
-        AssertThat(world.Features.Count == Load().World.Features.Count && ((WorldModelSnapshot)world).InteriorOverlays.Count == 1).OverrideFailureMessage("Feature splitting consumed a dedicated format or nested/non-JSON file.").IsTrue();
-    }
-
-    private static string Overlay(IReadOnlyList<OverlayOp> operations, string owner = "WP-08", string map = "test") =>
-        JsonSerializer.Serialize(new OverlayFile(new("test"), new(owner), operations) { Map = new(map) }, ContractJson.Options);
-
-    private static WorldDataException OverlayError(IReadOnlyDictionary<string, string> files)
-    {
-        try { WorldModelLoader.Load(new("test"), files); }
-        catch (WorldDataException error) { return error; }
-        throw new InvalidOperationException("Invalid feature overlay was accepted.");
-    }
-
-    private static WorldModelLoadResult Load(string? overlay = null)
-    {
-        var files = new Dictionary<string, string> { ["campus.json"] = Campus };
-        if (overlay is not null) files["overlay/test.d/0000-fixture.json"] = overlay;
-        return WorldModelLoader.Load(new("test"), files);
-    }
+    private static WorldModelLoadResult Load() => WorldModelLoader.Load(new("test"), Files());
 }

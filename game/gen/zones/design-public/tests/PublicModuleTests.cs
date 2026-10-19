@@ -11,7 +11,7 @@ namespace Campus.Gen.Zones.DesignPublic.Tests;
 
 using static GdUnit4.Assertions;
 
-/// <summary>WP-29 29a: the registered corner pocket greens of overlay/public.d/, loaded with every other overlay of the map.</summary>
+/// <summary>WP-29 29a: the registered corner pocket greens of world/public.json, loaded with every other world file of the map.</summary>
 [TestSuite]
 public sealed class PublicModuleTests
 {
@@ -19,7 +19,7 @@ public sealed class PublicModuleTests
     private static readonly Lazy<IWorldModel> Loaded = new(() => RealMapFixture.Load().World);
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void OverlayLoadsBesideEveryOtherOverlay()
+    public void AuthoredPocketGreensLoadWithTheWorld()
     {
         var world = Loaded.Value;
         var benches = PocketGreens.Benches(world);
@@ -30,7 +30,7 @@ public sealed class PublicModuleTests
         {
             var pad = Pad(world, bench);
             AssertThat(pad.Zone?.Value == "public").OverrideFailureMessage($"{pad.Id.Value} is filed under the public zone").IsTrue();
-            AssertThat(pad.TryText("roadType") == "pedestrian").OverrideFailureMessage($"{pad.Id.Value} is a pedestrian area WP-15 paves").IsTrue();
+            AssertThat(pad.TryText("highway") == "pedestrian").OverrideFailureMessage($"{pad.Id.Value} is a pedestrian area WP-15 paves").IsTrue();
         }
     }
 
@@ -45,7 +45,7 @@ public sealed class PublicModuleTests
             AssertThat(Vector2.Distance(c, bench.Centre) < TestTolerance.Position).OverrideFailureMessage($"{bench.Id.Value} is centred on its pad").IsTrue();
             foreach (var road in world.Network.Roads)
             {
-                var type = road.Props.TryText("highway") ?? road.Props.TryText("roadType") ?? "";
+                var type = road.Props.TryText("highway") ?? "";
                 var edge = road.Width * 0.5f + (Carriageway.Contains(type) ? 0.15f : 0f);
                 var d = MathF.Sqrt(PlanLines.PolylineDistanceSquared(road.Line.Points, c)) - edge - r;
                 AssertThat(d > 0.2f).OverrideFailureMessage($"{bench.Id.Value} pad comes within {d:F2} m of road {road.Id.Value} ({type})").IsTrue();
@@ -57,7 +57,7 @@ public sealed class PublicModuleTests
                 if ((kind is "building" or "water" or "parking" or "sport" or "road") && (f.Geometry is PolygonGeometry or MultiPolygonGeometry))
                     foreach (var ring in f.Polygons().Select(p => p.Outer))
                         AssertThat(PlanGeometry.DistanceToRing(c, ring) - r > 0.2f && !PlanGeometry.PointInRing(c, ring)).OverrideFailureMessage($"{bench.Id.Value} pad overlaps {f.Id.Value} ({kind})").IsTrue();
-                if (f.Source == FeatureSource.Design && f.Geometry is PointGeometry p)
+                if (f.Id.Value.StartsWith("design:", StringComparison.Ordinal) && f.Geometry is PointGeometry p)
                     AssertThat(Vector2.Distance(c, new(p.Position.X, p.Position.Z)) > r + 1f).OverrideFailureMessage($"{bench.Id.Value} pad sits on {f.Id.Value}").IsTrue();
             }
             foreach (var tree in world.Network.Trees)

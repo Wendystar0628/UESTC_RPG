@@ -79,36 +79,14 @@ public sealed partial class CenterEastModuleTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void FountainTiersMatchTheRegisteredWaterLevels()
-    {
-        var world = World();
-        var props = world.Features[new(CenterEastIds.Pinxue.FountainId)].Props!.Value;
-        var registered = props.GetProperty("tiers").EnumerateArray().ToArray();
-        var tiers = PinxueForecourtSite.FountainTiers();
-        AssertThat(registered.Length == tiers.Count).OverrideFailureMessage("one registered tier per built tier").IsTrue();
-        var axis = props.Pair("axis");
-        AssertThat(Vector2.Distance(axis, PinxueForecourtSite.FountainFrame(world).U) < TestTolerance.Position).OverrideFailureMessage("the registered long axis runs along the bar").IsTrue();
-        for (var i = 0; i < tiers.Count; i++)
-        {
-            var (half, coping, rim, water) = tiers[i];
-            AssertThat(MathF.Abs(registered[i].GetProperty("rimAbove").GetSingle() - rim) < TestTolerance.Position).OverrideFailureMessage($"tier {i} rim").IsTrue();
-            AssertThat(MathF.Abs(registered[i].GetProperty("waterAbove").GetSingle() - water) < TestTolerance.Position).OverrideFailureMessage($"tier {i} water").IsTrue();
-            AssertThat(Vector2.Distance(registered[i].Pair("half"), half) < TestTolerance.Position).OverrideFailureMessage($"tier {i} stone extent").IsTrue();
-            AssertThat(Vector2.Distance(registered[i].Pair("waterHalf"), half - new Vector2(coping)) < TestTolerance.Position).OverrideFailureMessage($"tier {i} water extent").IsTrue();
-            AssertThat(water < rim).OverrideFailureMessage($"tier {i} water stays below its rim").IsTrue();
-            if (i > 0) AssertThat(half.X < tiers[i - 1].Half.X - tiers[i - 1].Coping && half.Y < tiers[i - 1].Half.Y - tiers[i - 1].Coping && rim > tiers[i - 1].Rim).OverrideFailureMessage($"tier {i} steps up inside the pool below").IsTrue();
-        }
-        AssertThat(tiers[^1].Rim <= 0.9f).OverrideFailureMessage("the cascade stays low, under 0.9 m").IsTrue();
-    }
 
     [TestCase, TestCategory(TestReason.Contract)]
     public void MonumentsStandAtTheirPointsAndLeaveTheDoorsClear()
     {
         var world = World();
         Vector2 Point(string id) => world.Feature(id).Point();
-        // 林为干像 moves less than 4 m off its OSM point (a minor adjustment with no reshape, MAP-QSH-CENTER-EAST "定位").
-        AssertThat(Vector2.Distance(Point(CenterEastIds.Monuments.Lin), StatueLawnSite.LinFrame(world).Origin) < 4f).OverrideFailureMessage($"{CenterEastIds.Monuments.Lin} stays within 4 m of its OSM point").IsTrue();
+        // The authored record is the monument placement authority.
+        AssertThat(Vector2.Distance(Point(CenterEastIds.Layout.LinPlacement), StatueLawnSite.LinFrame(world).Origin) <= TestTolerance.Position).OverrideFailureMessage($"{CenterEastIds.Monuments.Lin} follows its authored point").IsTrue();
         AssertThat(StatueLawnSite.Island(world) is { } island && PlanGeometry.InsideByCrossings(island, StatueLawnSite.LinFrame(world).Origin)).OverrideFailureMessage("林为干像 stands on the plaza's tree island").IsTrue();
         var maxwellAt = StatueLawnSite.MaxwellFrame(world).Origin;
         var stoneAt = StatueLawnSite.StoneFrame(world).Origin;

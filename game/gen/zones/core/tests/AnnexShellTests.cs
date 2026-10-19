@@ -70,7 +70,7 @@ public sealed class AnnexShellTests
             garden.Build(build, lod);
             AssertThat(build.Finish(lod).Meshes.Count > 0).OverrideFailureMessage($"garden {lod}").IsTrue();
         }
-        // The palms WP-23 plants (overlay/core.d/) stand in the planters.
+        // The palms WP-23 plants (world/core.json) stand in the planters.
         var palms = world.Features.Values.Where(f => f.Id.Value.StartsWith(CoreIds.GardenPalmPrefix, StringComparison.Ordinal)).ToArray();
         AssertThat(palms.Length == garden.Planters.Count).OverrideFailureMessage($"two palms registered, got {palms.Length}").IsTrue();
         foreach (var palm in palms)

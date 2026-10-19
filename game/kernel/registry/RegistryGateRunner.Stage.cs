@@ -16,7 +16,7 @@ public static partial class RegistryGateRunner
         if (AppBoot.Options.Capture.Gate != "registry") return false;
         var report = Run(Kernel.Services, ProjectSettings.GetSetting("campus/maps/index").AsString(),
             AppBoot.Options.Flow.Map?.Value ?? "", ReadData, [typeof(IRuleset), typeof(IRulesetActivation), typeof(PaletteCatalog), typeof(IAppExit),
-                typeof(Camera3D), typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)]);
+                typeof(Camera3D), typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)], DirAccess.GetFilesAt);
         GD.Print("G5_REGISTRY_RESULT " + JsonSerializer.Serialize(report, ContractJson.Options));
         stage.GetTree().Quit();
         return true;

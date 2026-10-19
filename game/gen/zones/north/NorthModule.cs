@@ -37,7 +37,7 @@ public static class NorthSites
         // 20b1 (its clusters are in NorthTune.Clusters above)
         new Shuofeng.RestDeckSite(),
         // 20b2 adds no site: 博翰's clusters are in NorthTune.Clusters above, the WLD-INTERIORS blocks go to WP-14
-        // through the overlay's StyleOps.
+        // through the family and facade fields in world/north.json.
         // 20a-4: the canal-bank railing from the north-gate plaza's (WP-30) up the 商业街 side
         new Canal.CanalRailSite(),
         // 20c: append here.

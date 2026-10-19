@@ -284,35 +284,35 @@
       "owner": "WP-31a"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/center-east.d/**",
+      "pattern": "game/data/maps/qingshuihe/world/center-east.json",
       "owner": "WP-21"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/waterfront.d/**",
+      "pattern": "game/data/maps/qingshuihe/world/waterfront.json",
       "owner": "WP-28"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/boundary.d/**",
+      "pattern": "game/data/maps/qingshuihe/world/boundary.json",
       "owner": "WP-30"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/public.d/**",
+      "pattern": "game/data/maps/qingshuihe/world/public.json",
       "owner": "WP-29"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/north.d/**",
+      "pattern": "game/data/maps/qingshuihe/world/north.json",
       "owner": "WP-20"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/south.d/**",
+      "pattern": "game/data/maps/qingshuihe/world/south.json",
       "owner": "WP-18"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/core.d/**",
+      "pattern": "game/data/maps/qingshuihe/world/core.json",
       "owner": "WP-16"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/overlay/west.d/**",
+      "pattern": "game/data/maps/qingshuihe/world/west.json",
       "owner": "WP-19"
     },
     {
@@ -416,7 +416,7 @@
       "owner": "WP-53b"
     },
     {
-      "pattern": "game/data/maps/*/overlay/atlas.d/**",
+      "pattern": "game/data/maps/*/world/atlas.json",
       "owner": "WP-48c"
     },
     {
@@ -512,7 +512,7 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/network.json",
+      "pattern": "game/data/maps/qingshuihe/world/offcampus.json",
       "owner": "WP-08"
     },
     {
@@ -552,7 +552,7 @@
       "owner": "WP-39"
     },
     {
-      "pattern": "game/data/maps/qingshuihe/campus.json",
+      "pattern": "game/data/maps/qingshuihe/world/geo.json",
       "owner": "WP-08"
     },
     {
@@ -586,10 +586,6 @@
     {
       "pattern": "game/data/audio/manual_emitters.json",
       "owner": "WP-53b"
-    },
-    {
-      "pattern": "game/data/maps/qingshuihe/zones.json",
-      "owner": "WP-08"
     },
     {
       "pattern": "game/style/outline/post_outline.glsl",

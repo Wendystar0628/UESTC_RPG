@@ -293,7 +293,7 @@ public static class SouthTune
         public const float PortalWidth = 3.2f, PortalSpring = 4.4f;
         /// <summary>
         /// Floor and door threshold above the ground: the top of WP-15's paving (GroundSection.PavingY), so the side door's forecourt
-        /// (design:south-clock-forecourt in overlay/south.d/) runs level into the doorway.
+        /// (design:south-clock-forecourt in world/south.json) runs level into the doorway.
         /// </summary>
         public const float Threshold = GroundLevels.Paving;
         /// <summary>A pair of narrow windows per storey on every face.</summary>

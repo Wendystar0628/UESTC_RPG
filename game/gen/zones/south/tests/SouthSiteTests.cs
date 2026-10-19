@@ -1,6 +1,7 @@
 using Campus.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
+using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
@@ -54,12 +55,14 @@ public sealed class SouthSiteTests
     {
         // 13b review: an open doorway stands on paving at least the door width + 1 m wide and 2 m deep, tied to the nearest paving.
         var world = RealMapFixture.Load().World;
-        var court = world.Features.Values.Single(feature => feature.Kind.Value == "road" && feature.TryText("entrance") == "xb.clock");
-        var walk = world.Features.Values.Single(feature => feature.Kind.Value == "road"
-            && feature.TryText("roadType") == "footway" && feature.Geometry is PolylineGeometry path
-            && PlanGeometry.Contains(((PolygonGeometry)court.Geometry).Rings, path.Line.Points[0]));
-        AssertThat(court.Kind.Value == "road" && court.TryText("roadType") == "pedestrian" && walk.TryText("roadType") == "footway").OverrideFailureMessage("plaza paving and a footway, drawn by WP-15").IsTrue();
         var door = world.Interiors.Get(new(Xuanbang.XuanbangSite.Feature))!.Entrances.Single(e => e.Id == "xb.clock");
+        var outside = new Vector2(door.Outside.X, door.Outside.Z);
+        var court = world.Features.Values.Single(feature => feature.Kind.Value == "road" && feature.TryText("highway") == "pedestrian"
+            && feature.Geometry is PolygonGeometry area && PlanGeometry.Contains(area.Rings, outside));
+        var walk = world.Features.Values.Single(feature => feature.Kind.Value == "road"
+            && feature.TryText("highway") == "footway" && feature.Geometry is PolylineGeometry path
+            && PlanGeometry.Contains(((PolygonGeometry)court.Geometry).Rings, path.Line.Points[0]));
+        AssertThat(court.Kind.Value == "road" && court.TryText("highway") == "pedestrian" && walk.TryText("highway") == "footway").OverrideFailureMessage("plaza paving and a footway, drawn by WP-15").IsTrue();
         var yaw = door.YawDeg * MathF.PI / 180f;
         var outward = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
         var across = new Vector2(-outward.Y, outward.X);
@@ -81,12 +84,12 @@ public sealed class SouthSiteTests
     {
         var world = RealMapFixture.Load().World;
         var plaza = world.Features[new(Gate.GatePlazaSite.Feature)];
-        AssertThat(plaza.Kind.Value == "road" && plaza.TryText("roadType") == "pedestrian").OverrideFailureMessage("plaza paving, drawn by WP-15 with its kerbs and edging").IsTrue();
+        AssertThat(plaza.Kind.Value == "road" && plaza.TryText("highway") == "pedestrian").OverrideFailureMessage("plaza paving, drawn by WP-15 with its kerbs and edging").IsTrue();
         var (frame, across, along) = Gate.GatePlazaSite.FrameOf(world)!.Value;
         AssertThat(MathF.Abs(Angles.Bearing(frame.W) - 36.8f) < TestTolerance.AngleDegrees).OverrideFailureMessage($"the long side runs along the main axis ({Angles.Bearing(frame.W):0.0}°)").IsTrue();
         var ring = ((PolygonGeometry)plaza.Geometry).Rings;
-        // WP-13's kiosk (2 × 0.8 m) on the A01 anchor (WP-48c's overlay): on the paving, at least 3 m from every carriageway edge.
-        var a01 = world.Features.Values.Single(feature => feature.Kind.Value == "anchor" && feature.TryText("number") == "A01");
+        // WP-13's kiosk (2 × 0.8 m) on the A01 anchor (WP-48c's world record): on the paving, at least 3 m from every carriageway edge.
+        var a01 = AtlasAnchor(world, "A01");
         var kioskSpot = PlanGeometry.Centroid(((PolygonGeometry)a01.Geometry).Rings.Outer, meanIfDegenerate: true);
         var yaw = a01.Number("yawDeg") * MathF.PI / 180f;
         var face = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
@@ -170,7 +173,7 @@ public sealed class SouthSiteTests
         var ctx = Context();
         var p = Sports.PlatformSite.PlanOf(ctx.World);
         AssertThat(p.Decks.Count == 1).OverrideFailureMessage("one deck: A06 moves onto it, no terrace is added").IsTrue();
-        var a06 = ctx.World.Features.Values.Single(feature => feature.Kind.Value == "anchor" && feature.TryText("number") == "A06");
+        var a06 = AtlasAnchor(ctx.World, "A06");
         AssertThat(MathF.Abs(p.Top - p.Y - a06.Number("groundY")) < TestTolerance.Position).OverrideFailureMessage("the deck top is A06's y, the platform storey").IsTrue();
         // A06's kiosk (2 × 0.8 m, WP-13's) on the deck between the gym and the natatorium, its panel toward the stadium: every corner
         // on the deck and at least 3 m from the deck's edges and the parapets' inner faces.
@@ -222,4 +225,11 @@ public sealed class SouthSiteTests
         AssertThat(walls.Any(w => Covers(w, back, gym.DeckTop + 1.5f))).OverrideFailureMessage("the drum is closed opposite the door").IsTrue();
     }
 
+    private static WorldFeature AtlasAnchor(IWorldModel world, string number)
+    {
+        using var markers = JsonDocument.Parse(RealMapFixture.ReadFiles()["atlas/markers.json"]);
+        var marker = markers.RootElement.GetProperty("markers").EnumerateArray()
+            .Single(marker => marker.GetProperty("id").GetString() == number);
+        return world.Features[new(marker.GetProperty("feature").GetString()!)];
+    }
 }

@@ -21,18 +21,25 @@ public sealed class WorldInputCompatibilityTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void CampusIntegerLevelsAcceptDecimalAndExponentEncoding()
+    public void WorldIntegerStoreysAcceptDecimalAndExponentEncoding()
     {
-        using var stream = typeof(WorldInputCompatibilityTests).Assembly.GetManifestResourceStream("Campus.Tests.campus-levels-integer.json")!;
+        using var stream = typeof(WorldInputCompatibilityTests).Assembly.GetManifestResourceStream("Campus.Tests.world-levels-integer.json")!;
         using var reader = new StreamReader(stream);
         var json = reader.ReadToEnd();
         foreach (var encoded in new[] { "2.0", "2e0" })
         {
-            var bytes = Encoding.UTF8.GetBytes(json.Replace("\"levels\": 2.0", "\"levels\": " + encoded, StringComparison.Ordinal));
+            var bytes = Encoding.UTF8.GetBytes(json.Replace("\"storeys\": 2.0", "\"storeys\": " + encoded, StringComparison.Ordinal));
             var data = Campus.Gen.World.WorldModelLoader.Load(new("integer-levels"),
-                new Dictionary<string, ReadOnlyMemory<byte>> { ["campus.json"] = bytes });
+                new Dictionary<string, ReadOnlyMemory<byte>>
+                {
+                    ["world/geo.json"] = Encoding.UTF8.GetBytes("""
+                        {"origin":[0,0],"crs":"EPSG:32648","bounds":[0,0,10,10],"entityPrefix":"fixture",
+                         "boundary":{"outer":[[0,0],[10,0],[10,10],[0,10]],"holes":[]}}
+                        """),
+                    ["world/fixture.json"] = bytes
+                });
             if (data.World.Features.Single().Value.Storeys != 2)
-                throw new InvalidOperationException("Integral source level encoding was lost.");
+                throw new InvalidOperationException("Integral world storey encoding was lost.");
         }
     }
 

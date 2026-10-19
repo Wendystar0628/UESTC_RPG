@@ -3,26 +3,26 @@ id: MAP-QSH-WEST
 title: 西区与西北区：六号科研楼、校训石、创新中心、经管楼、托幼园、四号/五号科研楼、湿地、西门桥头
 category: maps
 summary: 西区与西北区各楼、石刻、湿地与西门桥头的外观与身份特征、设计增补、近景要求；四季昼夜、行走与声音在子文档
-keywords: [西区, 西北区, 六号科研楼, 基础与前沿研究院, 公式台阶, 2F室外连廊, 校训石, 创新中心, 经管楼, 三号科研实验楼, 宾诺咖啡, 立人托幼公园, 键盘立面, 四号科研楼, 扇形草坪, 深蓝玻璃盒入口, 五号科研楼, 电子科学技术研究院大楼, 微波暗室, 工程训练中心, 荟文楼, 综合楼, 核磁共振中心, 国防科技园石刻, 湿地公园, 湿地栈道, 西门桥头, 水杉路, 孤儿楼 6151 与 6154, overlay/west.d]
+keywords: [西区, 西北区, 六号科研楼, 基础与前沿研究院, 公式台阶, 2F室外连廊, 校训石, 创新中心, 经管楼, 三号科研实验楼, 宾诺咖啡, 立人托幼公园, 键盘立面, 四号科研楼, 扇形草坪, 深蓝玻璃盒入口, 五号科研楼, 电子科学技术研究院大楼, 微波暗室, 工程训练中心, 荟文楼, 综合楼, 核磁共振中心, 国防科技园石刻, 湿地公园, 湿地栈道, 西门桥头, 水杉路, 孤儿楼 6151 与 6154, world/west.json]
 owners: [WP-19]
 contributors: [WP-12, WP-13, WP-23, WP-24, WP-28]
 depends: [CORE-INDEX, ART-STYLE, ART-MODELING, ART-RENOVATION, ENG-ARCH, WLD-INTERIORS]
 related: [WLD-DIORAMA, MAP-QSH-CORE, MAP-QSH-SOUTH, MAP-QSH-NORTH, MAP-QSH-RENOVATION, MAP-QSH-LIBRARY, WLD-VEGETATION, WLD-WATER, WLD-LIFE, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, WLD-OUTSKIRTS]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/west.d/"]
+data: ["game/data/maps/qingshuihe/world/west.json"]
 gates: [G5, G7]
 ---
 
 # MAP-QSH-WEST · 西区与西北区：六号科研楼、校训石、创新中心、经管楼、托幼园、四号/五号科研楼、湿地、西门桥头
 
 > **范围**：本文规定西区与西北区（六号科研楼、校训石、创新中心、经管楼、托幼园、四号与五号科研楼、研究院大楼、核磁共振中心、荟文楼、石刻、湿地公园与西门桥头）的建筑、石刻、桥梁与护岸外观，设计增补与近景要求，并列出本区的子文档。红光右支渠以西是西部科研区，西北角是四号、五号科研楼和行政楼，西门内是湿地公园。§1–§10 写的是默认状态（秋 17:30）的样子，其他时段和季节见 MAP-QSH-WEST-SEASONS。
-> **不在本文**：四季昼夜与天气（MAP-QSH-WEST-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-WEST-WALK）；楼的实体 ID、位置、层数与坐标（以 `game/data/maps/qingshuihe/campus.json` 和 `overlay/west.d/` 为准）；树木、芦苇芒草与杏树（WLD-VEGETATION）；水面（WLD-WATER）；白鹭与单车（WLD-LIFE）；校门与校界栏杆、门外街区（WLD-OUTSKIRTS）；开放室内的内部（MAP-QSH-INTERIORS §2、WLD-INTERIORS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §6、§10、§11）。
+> **不在本文**：四季昼夜与天气（MAP-QSH-WEST-SEASONS）；行走、开放入口的门口表现与声音（MAP-QSH-WEST-WALK）；楼的实体 ID、位置、层数与坐标（以 `game/data/maps/qingshuihe/world/west.json` 为准）；树木、芦苇芒草与杏树（WLD-VEGETATION）；水面（WLD-WATER）；白鹭与单车（WLD-LIFE）；校门与校界栏杆、门外街区（WLD-OUTSKIRTS）；开放室内的内部（MAP-QSH-INTERIORS §2、WLD-INTERIORS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §6、§10、§11）。
 > **查阅**：先读 §0；各楼、石刻与湿地的外观看 §1–§10；身份特征与近景要求看 §11；待验证看 §12；四季与夜间角色、天气看 MAP-QSH-WEST-SEASONS；挡路物、开放入口、点位与声音看 MAP-QSH-WEST-WALK
 
 ## 0 结论
 
 1. **身份特征**：六号科研楼顶部的红色徽记与银色大字、水平百叶带和底层退后的玻璃；约 2 m × 6–7 m 的米白校训石与红色行书；创新中心的红褐书法招牌与玻璃楼梯井；托幼园的键盘立面；四号科研楼的扇形草坪与深蓝玻璃盒入口（§1–§6）。
-2. **分区与层数**：六号科研楼一律用 OSM 的 A/B/C 分区名（A 区 9 层最高）；四号 C 区 5 层（OSM 记 2 层）、研究院大楼部件 4–7 层、五号科研楼 5 层、托幼园 3 层，写覆盖层 `HeightOp`（§1.1、§6、§7）。
+2. **分区与层数**：六号科研楼一律用 OSM 的 A/B/C 分区名（A 区 9 层最高）；四号 C 区 5 层（OSM 记 2 层）、研究院大楼部件 4–7 层、五号科研楼 5 层、托幼园 3 层，在记录里改层数（§1.1、§6、§7）。
 3. **归属**：六号科研楼的两个连接体和北端小塔、经管楼单层体、孤儿楼 6151 与 6154 归本区，都不开放，只做外壳加窗卡（科研楼家族，`W-OFF` 为主）；荟文楼东北角的 6735 归 MAP-QSH-NORTH。
 4. **受光**：受光和暗下按实时主光判定，不写死时刻；六号 A 区楼顶傍晚最后暗下、日出最先亮起（§1.5）。
 5. **夜**：西区是全校最安静的一块，夜里不亮成一片；湿地是暗区，栈道两侧贴水处不加路灯，留给萤火虫（§10.1、MAP-QSH-WEST-SEASONS §1）。
@@ -96,7 +96,7 @@ gates: [G5, G7]
 
 ## 11 本区身份特征、设计增补与近景要求
 
-通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节；形制以 §1–§10 写明的为准，照片和 OSM 只定结构，材质、陈设、标识、生活痕迹按氛围处理。轮廓调整写进 `overlay/west.d/` 本包分片。创新中心、研究院大楼、经管楼、荟文楼、核磁共振中心、孤儿楼 6151 与 6154 按 ART-RENOVATION 翻新（MAP-QSH-RENOVATION §5、§8）。
+通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节；形制以 §1–§10 写明的为准，照片和 OSM 只定结构，材质、陈设、标识、生活痕迹按氛围处理。轮廓调整直接改 `world/west.json` 里的记录。创新中心、研究院大楼、经管楼、荟文楼、核磁共振中心、孤儿楼 6151 与 6154 按 ART-RENOVATION 翻新（MAP-QSH-RENOVATION §5、§8）。
 
 | 对象 | 必须认得出的特征 |
 | --- | --- |

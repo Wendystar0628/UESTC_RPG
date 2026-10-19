@@ -6,7 +6,7 @@ using Campus.Gen.World;
 namespace Campus.Gen.Zones.DesignBoundary.Framework;
 
 /// <summary>
-/// The campus boundary ring (campus.json `boundary`, through <see cref="IWorldModel.Boundary"/>) with the plan queries the
+/// The campus boundary ring (world/geo.json `boundary`, through <see cref="IWorldModel.Boundary"/>) with the plan queries the
 /// gates and fences need: crossings, projections, arc positions and inset slices, sharing geometry queries with
 /// <see cref="PlanGeometry"/>. Index order follows the data; <see cref="Inward"/> gives the interior side of each edge.
 /// </summary>

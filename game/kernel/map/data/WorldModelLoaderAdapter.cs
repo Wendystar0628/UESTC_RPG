@@ -7,9 +7,6 @@ namespace Campus.Kernel.Maps;
 [KernelService(typeof(IWorldModelLoader), Owner = "WP-00")]
 public sealed class WorldModelLoaderAdapter : IWorldModelLoader
 {
-    public IReadOnlyDictionary<FeatureId, WorldFeature> LoadTopology(MapId map,
-        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) => WorldModelLoader.LoadTopology(map, files);
-
     public WorldModelLoadResult Load(MapId map, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files,
         WorldModelLoadInputs inputs)
     {

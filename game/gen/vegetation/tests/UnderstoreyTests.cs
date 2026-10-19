@@ -12,7 +12,7 @@ using Campus.Tests;
 namespace Campus.Gen.Vegetation.Tests;
 
 /// <summary>
-/// max-011 23c2b: the empty tree pits and the overlays' design trees are two new tree sources planted after the others; the
+/// max-011 23c2b: the empty tree pits and authored design trees are two new tree sources planted after the others; the
 /// understorey (pit cover, border shrubs and hedges) keeps off hard pavement and roads.
 /// </summary>
 [TestSuite]
@@ -22,13 +22,13 @@ public sealed class UnderstoreyTests
     [TestCategory("Slow")]
     public void NewSourcesComeLastAndAreStable()
     {
-        var layout = PavementTests.OverlaidLayout.Value;
+        var layout = PavementTests.WorldLayout.Value;
         var all = layout.BeforeGivingWay();
         var first = all.TakeWhile(t => t.Source <= PlantSource.Grove).Count();
         if (all.Skip(first).Any(t => t.Source <= PlantSource.Grove)) throw new InvalidOperationException("a rule tree follows a pit or design tree");
         var added = all.Skip(first).ToList();
         if (layout.Avoided.Any(a => a.Tree.Source > PlantSource.Grove)) throw new InvalidOperationException("a pit or design tree gave way");
-        var again = PavementTests.Plant(PavementTests.World(true)).Trees.Where(t => t.Source > PlantSource.Grove).ToList();
+        var again = PavementTests.Plant(PavementTests.World()).Trees.Where(t => t.Source > PlantSource.Grove).ToList();
         if (!PavementTests.SameRecords(again, added)) throw new InvalidOperationException("the new sources differ between two builds");
         // Pit trees come before design trees; repeatability above also checks their complete order.
         var firstDesign = added.FindIndex(t => t.Source == PlantSource.Design);
@@ -61,17 +61,15 @@ public sealed class UnderstoreyTests
 
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
-    public void TheTwoLibraryCamphorsArePlanted()
+    public void TheAuthoredCoreCamphorsArePlanted()
     {
-        using var overlay = JsonDocument.Parse(RealMapFixture.ReadFiles()["overlay/core.d/0000-wp-16-base.json"]);
-        var ids = overlay.RootElement.GetProperty("ops").EnumerateArray()
-            .Where(op => op.TryGetProperty("kind", out var kind) && kind.GetString() == "tree"
-                && op.GetProperty("props").GetProperty("species").GetString() == "camphor")
-            .Select(op => op.GetProperty("id").GetString()!).ToArray();
+        var world = PavementTests.World();
+        var ids = world.Features.Values.Where(feature => feature.Zone == new ZoneId("core") &&
+            feature.Kind.Value == "tree" && feature.TryText("species") == "camphor").Select(feature => feature.Id.Value).ToArray();
         foreach (var id in ids)
         {
-            var tree = PavementTests.OverlaidLayout.Value.Trees.SingleOrDefault(t => t.Key == id) ?? throw new InvalidOperationException($"{id} is not planted");
-            var feature = PavementTests.World(true).Features.Values.Single(f => f.Id.Value == id);
+            var tree = PavementTests.WorldLayout.Value.Trees.SingleOrDefault(t => t.Key == id) ?? throw new InvalidOperationException($"{id} is not planted");
+            var feature = PavementTests.World().Features.Values.Single(f => f.Id.Value == id);
             var at = ((PointGeometry)feature.Geometry).Position;
             if (tree.Source != PlantSource.Design || tree.Species.Id != "camphor" || MathF.Abs(tree.Height - feature.Height!.Value) > TestTolerance.Position ||
                 MathF.Abs(tree.Position.X - at.X) > TestTolerance.Position || MathF.Abs(tree.Position.Z - at.Z) > TestTolerance.Position)
@@ -106,7 +104,7 @@ public sealed class UnderstoreyTests
         var rules = PavementTests.FixtureRules;
         var trees = PavementTests.PlantFixture(world);
         CheckUnderstorey(world, species, rules, trees, requireKinds: true);
-        CheckUnderstorey(PavementTests.World(true), species, PavementTests.Data.Rules, PavementTests.OverlaidLayout.Value, requireKinds: false);
+        CheckUnderstorey(PavementTests.World(), species, PavementTests.Data.Rules, PavementTests.WorldLayout.Value, requireKinds: false);
     }
 
     private static void CheckUnderstorey(IWorldModel world, SpeciesTable species, PlantingRules rules, PlantingLayout trees, bool requireKinds)
@@ -151,14 +149,14 @@ public sealed class UnderstoreyTests
     // ---------------------------------------------------------------------------------------------------------
 
     private static string DesignTree(string id, float x, float z) =>
-        "{\"op\":\"add\",\"id\":\"" + id + "\",\"kind\":\"tree\",\"geometry\":{\"type\":\"point\",\"position\":[" + PavementTests.F(x) + ",0," + PavementTests.F(z) +
-        "]},\"height\":8,\"props\":{\"planter\":\"WP-23\",\"species\":\"camphor\"},\"reason\":\"Fixture: an explicitly planted tree.\"}";
+        "{\"id\":\"" + id + "\",\"kind\":\"tree\",\"geometry\":{\"type\":\"point\",\"position\":[" + PavementTests.F(x) + ",0," + PavementTests.F(z) +
+        "]},\"height\":8,\"props\":{\"planter\":\"WP-23\",\"species\":\"camphor\"},\"note\":\"Fixture: an explicitly planted tree.\"}";
 
     private static string Pit(string id, float x, float z)
     {
         string F(float v) => PavementTests.F(v);
         var ring = $"[[{F(x - 0.9f)},{F(z - 0.9f)}],[{F(x + 0.9f)},{F(z - 0.9f)}],[{F(x + 0.9f)},{F(z + 0.9f)}],[{F(x - 0.9f)},{F(z + 0.9f)}]]";
-        return "{\"op\":\"add\",\"id\":\"" + id + "\",\"kind\":\"tree-pit\",\"geometry\":{\"type\":\"polygon\",\"rings\":{\"outer\":" + ring +
-            ",\"holes\":[]}},\"height\":0.42,\"props\":{\"plant\":\"tree\",\"perPit\":1,\"size\":1.8},\"reason\":\"Fixture: a square tree pit.\"}";
+        return "{\"id\":\"" + id + "\",\"kind\":\"tree-pit\",\"geometry\":{\"type\":\"polygon\",\"rings\":{\"outer\":" + ring +
+            ",\"holes\":[]}},\"height\":0.42,\"props\":{\"plant\":\"tree\",\"perPit\":1,\"size\":1.8},\"note\":\"Fixture: a square tree pit.\"}";
     }
 }

@@ -21,6 +21,7 @@ public sealed class CoreModuleTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void WholeSourceTracesRestoreProductionGeometryAndCollisions()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -66,7 +67,7 @@ public sealed class CoreModuleTests
         })).GroupBy(t => t).ToDictionary(g => g.Key, g => g.Count());
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void RealMapLoadsTheOverlayAndBothAxisPieces()
+    public void RealMapLoadsTheAuthoredWorldAndBothAxisPieces()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
         var pieces = CoreSite.Pieces(world);
@@ -89,7 +90,7 @@ public sealed class CoreModuleTests
         var plaza = (TimePlaza)CoreSite.Pieces(world)[0];
         var output = module.Build(ctx, TileGrid.At(plaza.Anchor, LodLevel.L0), LodLevel.L0);
         AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps).OverrideFailureMessage("sixteen rim lamps").IsTrue();
-        AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.Bench) == world.Features.Keys.Count(id => id.Value.StartsWith(CoreIds.PlazaBenchPrefix, StringComparison.Ordinal))).OverrideFailureMessage("benches follow their overlay registration").IsTrue();
+        AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.Bench) == world.Features.Keys.Count(id => id.Value.StartsWith(CoreIds.PlazaBenchPrefix, StringComparison.Ordinal))).OverrideFailureMessage("benches follow their world records").IsTrue();
         AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.RimLampChannel) == CoreStyle.RimLamps).OverrideFailureMessage("one first-light emitter per lamp").IsTrue();
         AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.FlagLightChannel) > 0).OverrideFailureMessage("flag uplights").IsTrue();
         AssertThat(module.DescribeLights(ctx).SequenceEqual(output.Emitters!)).OverrideFailureMessage("light metadata matches the plaza's L0 output").IsTrue();
@@ -123,6 +124,7 @@ public sealed class CoreModuleTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void EveryLevelIsValidAndWound()
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
@@ -231,62 +233,22 @@ public sealed class CoreModuleTests
         }
     }
 
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void OverlayParsesStrictly()
-    {
-        // Every key of the core overlay maps onto the contract records: a misspelt or stray field fails here, not silently in a build.
-        var path = Path.Combine(Campus.Tests.RealMapFixture.DataDirectory(), "overlay", "core.d");
-        var strict = new JsonSerializerOptions(ContractJson.Options)
-        {
-            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-            RespectNullableAnnotations = true,
-        };
-        var files = Directory.GetFiles(path, "*.json").Order(StringComparer.Ordinal)
-            .Select(file => JsonSerializer.Deserialize<OverlayFile>(File.ReadAllBytes(file), strict)!).ToArray();
-        AssertThat(files.All(file => file.Zone.Value == "core" && file.Owner.Value == "WP-16" && file.Map == Campus.Tests.RealMapFixture.Entry().Descriptor.Id)).OverrideFailureMessage("zone, owner and map").IsTrue();
-        var operations = files.SelectMany(file => file.Ops).ToArray();
-        foreach (var op in operations.OfType<AddOp>())
-        {
-            AssertThat(op.Id.Value.StartsWith("design:core-", StringComparison.Ordinal)).OverrideFailureMessage($"core design ID {op.Id.Value}").IsTrue();
-            AssertThat(op.Reason.Length > 10).OverrideFailureMessage($"{op.Id.Value} has a reason").IsTrue();
-        }
-        AssertThat(operations.OfType<AddOp>().Where(op => op.Kind.Value == "road" && op.Geometry is PolylineGeometry).Select(op => op.Id.Value)
-            .SequenceEqual(CoreIds.GinkgoWalks.Concat(CoreIds.GinkgoSidewalks.Select(s => s.Kept)).Concat(CoreIds.GinkgoSpurs.Select(s => s.Kept))))
-            .OverrideFailureMessage("the ginkgo walks, the kept sidewalk ends and the cut-back spurs are the overlay's only added roads").IsTrue();
-        AssertThat(operations.OfType<HideOp>().Select(op => op.Target.Value).SequenceEqual(CoreIds.GinkgoSidewalks.Select(s => s.Hidden).Concat(CoreIds.GinkgoSpurs.Select(s => s.Hidden))))
-            .OverrideFailureMessage("the two ginkgo sidewalks and the two spurs are the overlay's only hides").IsTrue();
-    }
 
     [TestCase, TestCategory(TestReason.Contract)]
     public void GinkgoSidewalksGiveWayToTheWalks()
     {
-        // 0h follow-up (Opus 16:00 ① and 19:40): each OSM sidewalk running within 2.5 m of a ginkgo walk is hidden whole, from the
-        // features and from the road network; its ends off the walk come back as a kept piece in the original point order, width
-        // and type, joined to the walk's end. Nothing of the old sidewalk is lost: every stretch is under the walk or the kept piece.
         var world = Campus.Tests.RealMapFixture.Load().World;
-        var path = Path.Combine(Campus.Tests.RealMapFixture.DataDirectory(), "network.json");
-        var original = JsonSerializer.Deserialize<WorldNetwork>(File.ReadAllBytes(path), ContractJson.Options)!;
-        foreach (var (hidden, walk, kept) in CoreIds.GinkgoSidewalks)
+        foreach (var (removed, walk, kept) in CoreIds.GinkgoSidewalks)
         {
-            AssertThat(world.Network.Roads.All(r => r.Id.Value != hidden) && !world.Features.ContainsKey(new(hidden))).OverrideFailureMessage($"{hidden} is gone from the roads and the features").IsTrue();
-            var old = original.Roads.Single(r => r.Id.Value == hidden);
-            var walkLine = world.Network.Roads.Single(r => r.Id.Value == walk).Line.Points;
-            var piece = world.Network.Roads.Single(r => r.Id.Value == kept);
-            AssertThat(piece.Width == old.Width && WorldProps.TryText(piece.Props, "roadType") == WorldProps.TryText(old.Props, "highway")
-                && WorldProps.TryText(piece.Props, "footway") == WorldProps.TryText(old.Props, "footway")).OverrideFailureMessage($"{kept}: the old width and type").IsTrue();
-            var points = piece.Line.Points;
-            var joined = points[0] == walkLine[^1] ? points.Skip(1).ToArray() : points[^1] == walkLine[^1] ? points.Take(points.Count - 1).ToArray() : null;
-            AssertThat(joined is { Length: >= 2 }).OverrideFailureMessage($"{kept}: one end is the walk's end").IsTrue();
-            var at = old.Line.Points.ToList().IndexOf(joined![0]);
-            AssertThat(at >= 0 && joined.Select((p, i) => at + i < old.Line.Points.Count && old.Line.Points[at + i] == p).All(same => same)
-                && (at == 0 || at + joined.Length == old.Line.Points.Count)).OverrideFailureMessage($"{kept}: the old points in the old order, out to the old end").IsTrue();
-            var line = old.Line.Points;
-            for (var s = 0f; s <= PlanLines.Length(line); s += 0.5f)
-            {
-                var p = PlanLines.Sample(line, s).Point;
-                // The kept piece leaves the old line only where it bends onto the walk's end (1.26 m at most).
-                AssertThat(MathF.Sqrt(PlanLines.PolylineDistanceSquared(walkLine, p)) <= 2.5f || MathF.Sqrt(PlanLines.PolylineDistanceSquared(points, p)) <= 1.3f).OverrideFailureMessage($"{hidden}: ({p.X:0.0}, {p.Y:0.0}) at s {s:0.0} is under neither {walk} nor {kept}").IsTrue();
-            }
+            AssertThat(world.Network.Roads.All(road => road.Id.Value != removed) && !world.Features.ContainsKey(new(removed)))
+                .OverrideFailureMessage("The removed duplicate sidewalk remains in the world.").IsTrue();
+            var walkLine = world.Network.Roads.Single(road => road.Id.Value == walk).Line.Points;
+            var piece = world.Network.Roads.Single(road => road.Id.Value == kept);
+            var record = world.Features[piece.Id];
+            AssertThat(record.Geometry is PolylineGeometry authored && authored.Line.Points.SequenceEqual(piece.Line.Points) &&
+                WorldProps.TryNumber(record.Props, "width") == piece.Width).OverrideFailureMessage("The road differs from its authored record.").IsTrue();
+            AssertThat(Vector2.Distance(piece.Line.Points[0], walkLine[^1]) <= TestTolerance.Position ||
+                Vector2.Distance(piece.Line.Points[^1], walkLine[^1]) <= TestTolerance.Position).OverrideFailureMessage("The kept sidewalk must join its walk.").IsTrue();
         }
     }
 
@@ -300,12 +262,12 @@ public sealed class CoreModuleTests
         var avenue = world.Network.Roads.Single(r => r.Id.Value == CoreIds.GinkgoAvenue).Line.Points;
         // Any other walk of the network counts, design or OSM: the kept sidewalk ends at the bridges are design roads.
         var walks = world.Network.Roads.Where(r => !CoreIds.GinkgoWalks.Contains(r.Id.Value) &&
-            (WorldProps.TryText(r.Props, "roadType") ?? WorldProps.TryText(r.Props, "highway")) is "footway" or "path" or "pedestrian").ToArray();
+            WorldProps.TryText(r.Props, "highway") is "footway" or "path" or "pedestrian").ToArray();
         foreach (var id in CoreIds.GinkgoWalks)
         {
             var feature = world.Features[new(id)];
             AssertThat(feature.Kind.Value == "road" && feature.Zone?.Value == "core").OverrideFailureMessage($"{id}: a core road feature").IsTrue();
-            AssertThat(WorldProps.TryText(feature.Props, "roadType") == "footway" && WorldProps.TryNumber(feature.Props, "width") == 2 * half).OverrideFailureMessage($"{id}: a 2.5 m footway").IsTrue();
+            AssertThat(WorldProps.TryText(feature.Props, "highway") == "footway" && WorldProps.TryNumber(feature.Props, "width") == 2 * half).OverrideFailureMessage($"{id}: a 2.5 m footway").IsTrue();
             var line = ((PolylineGeometry)feature.Geometry).Line.Points;
             var min = line.Aggregate(new Vector2(float.MaxValue), Vector2.Min) - new Vector2(20f);
             var max = line.Aggregate(new Vector2(float.MinValue), Vector2.Max) + new Vector2(20f);

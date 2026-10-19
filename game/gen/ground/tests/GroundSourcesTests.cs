@@ -20,7 +20,7 @@ public sealed class GroundSourcesTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void FaceInputQueriesActualPositionAndKeepsAmbiguousSourcesUnresolved()
     {
-        const string plaza = """{"kind":"road","roadType":"pedestrian"}""";
+        const string plaza = """{"kind":"road","highway":"pedestrian"}""";
         var world = TestWorld.Of([
             Entity("fixture:plaza-a", "road", plaza, Part("source:a", plaza, Rect(0, 0, 10, 10))),
             Entity("fixture:plaza-b", "road", plaza, Part("source:b", plaza, Rect(8, 0, 18, 10))),
@@ -40,7 +40,7 @@ public sealed class GroundSourcesTests
     {
         Vector2[] points = [new(0, 20), new(10, 20), new(10, 30)];
         var feature = WorldFeatureFixture.Create("fixture:walk", "road", new PolylineGeometry(new(points)),
-            """{"roadType":"footway","width":2.5}""", FeatureSource.Osm);
+            """{"highway":"footway","width":2.5}""");
         var layout = GroundLayout.Of(TestWorld.Of([feature]));
         var context = new GroundSourceContext(layout.Near(new(0, 0), new(64, 64)), GroundSection.Default, 0f);
         var source = new GroundFaceInput(GroundSurface.Paver, GroundFaceRole.Top, context).SourcesAt(new(5, 20)).Single();
@@ -101,7 +101,7 @@ public sealed class GroundSourcesTests
     public void MixedPoiParentIsClassifiedPartByPart()
     {
         // A poi entity (a park) that owns building parts, a car park, a track and a pool: the parent's kind says nothing
-        // about its parts. Type properties come from each part's own record: the entity has no roadType or sport.
+        // about its parts. Type properties come from each part's own record: the entity has no highway or sport.
         var parts = new[]
         {
             Part("osm:way:10", """{"kind":"poi"}""", Rect(-10f, -10f, 10f, 10f)),
@@ -110,8 +110,8 @@ public sealed class GroundSourcesTests
             Part("osm:way:13", """{"kind":"parking"}""", Rect(12f, 0f, 20f, 6f)),
             Part("osm:way:14", """{"kind":"sport","sport":"running"}""", Rect(40f, 0f, 60f, 10f)),
             Part("osm:way:15", """{"kind":"sport","sport":"swimming"}""", Rect(40f, 20f, 50f, 30f)),
-            Part("osm:way:16", """{"kind":"road","roadType":"residential"}""", Rect(-30f, 40f, 30f, 46f)),
-            Part("osm:way:17", """{"kind":"road","roadType":"footway"}""", Rect(-30f, 50f, 30f, 52f)),
+            Part("osm:way:16", """{"kind":"road","highway":"residential"}""", Rect(-30f, 40f, 30f, 46f)),
+            Part("osm:way:17", """{"kind":"road","highway":"footway"}""", Rect(-30f, 50f, 30f, 52f)),
         };
         var world = TestWorld.Of([Entity("test:way:1", "poi", """{"id":"test:way:1","kind":"poi"}""", parts)]);
 
@@ -122,7 +122,7 @@ public sealed class GroundSourcesTests
         AssertThat(kinds.GetValueOrDefault(SurfaceKind.Parking) == 1).OverrideFailureMessage("Parking part.").IsTrue();
         AssertThat(kinds.GetValueOrDefault(SurfaceKind.Track) == 1).OverrideFailureMessage("Running track part (sport read from the part).").IsTrue();
         AssertThat(kinds.GetValueOrDefault(SurfaceKind.Water) == 1).OverrideFailureMessage("Swimming pool part (sport read from the part).").IsTrue();
-        AssertThat(kinds.GetValueOrDefault(SurfaceKind.Carriageway) == 1).OverrideFailureMessage("Residential road part (roadType read from the part).").IsTrue();
+        AssertThat(kinds.GetValueOrDefault(SurfaceKind.Carriageway) == 1).OverrideFailureMessage("Residential road part (highway read from the part).").IsTrue();
         AssertThat(kinds.GetValueOrDefault(SurfaceKind.Walk) == 1).OverrideFailureMessage("Footway part.").IsTrue();
 
         var layout = GroundLayout.Of(world);
@@ -179,8 +179,8 @@ public sealed class GroundSourcesTests
         catch (Exception caught) { buildError = caught; }
         AssertThat(buildError).OverrideFailureMessage("Expected the unsupported geometry to be rejected.").IsNotNull();
         AssertThat(buildError!).IsInstanceOf<InvalidOperationException>();
-        var withoutParts = TestWorld.Of([new WorldFeature(new FeatureId("test:way:8"), FeatureSource.Osm, new DesignKind("road"), odd)
-            { Props = Json("""{"roadType":"service"}""") }]);
+        var withoutParts = TestWorld.Of([new WorldFeature(new FeatureId("test:way:8"), new DesignKind("road"), odd)
+            { Props = Json("""{"highway":"service"}""") }]);
         Exception? plainError = null;
         try { GroundSources.Read(withoutParts); }
         catch (Exception caught) { plainError = caught; }
@@ -200,8 +200,8 @@ public sealed class GroundSourcesTests
         var anchor = new PointGeometry(new Vector3(10f, 0f, 10f));
         var world = TestWorld.Of(
         [
-            WorldFeatureFixture.Create("test:way:20", "building", anchor, Building, FeatureSource.Osm),
-            WorldFeatureFixture.Create("test:way:21", "water", anchor, source: FeatureSource.Osm),
+            WorldFeatureFixture.Create("test:way:20", "building", anchor, Building),
+            WorldFeatureFixture.Create("test:way:21", "water", anchor),
             Entity("test:way:22", "poi", """{"kind":"poi"}""", new WorldFeaturePart("osm:way:220", anchor, null, null) { Props = Json(Building) }),
         ]);
         AssertThat(GroundSources.Read(world).Shapes.Count == 0).OverrideFailureMessage("Point geometry yields no ground shape.").IsTrue();
@@ -264,7 +264,7 @@ public sealed class GroundSourcesTests
             1 => new PolygonGeometry(polygons[0]),
             _ => new MultiPolygonGeometry(polygons)
         };
-        return WorldFeatureFixture.Create(id, kind, geometry, props, FeatureSource.Osm,
+        return WorldFeatureFixture.Create(id, kind, geometry, props,
             height: 10f, parts: parts.OrderBy(p => p.SourceId, StringComparer.Ordinal).ToArray());
     }
 }

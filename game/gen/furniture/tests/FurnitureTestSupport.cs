@@ -128,7 +128,7 @@ internal static class FurnitureTestSupport
     internal static string? Highway(NetworkLine line) => RoadType(line.Props);
 
     internal static string? RoadType(JsonElement? props) =>
-        props is { ValueKind: JsonValueKind.Object } p && (p.TryGetProperty("roadType", out var type) || p.TryGetProperty("highway", out type))
+        props is { ValueKind: JsonValueKind.Object } p && (p.TryGetProperty("highway", out var type) || p.TryGetProperty("highway", out type))
             ? WorldProps.TryText(type) : null;
 
     internal static float Half(NetworkLine line) => MathF.Max(line.Width, 2f) * 0.5f;

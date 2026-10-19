@@ -112,14 +112,14 @@ public sealed class GroundPavingTests
         public static FakeWorld Library(string category, float yaw, Func<float, FidelityZone>? zone = null, bool side = false)
         {
             var building = WorldFeatureFixture.Create("fixture:hall", "building", new PolygonGeometry(Rect(-20f, -15f, 0f, 15f)),
-                $$"""{"kind":"building","category":"{{category}}"}""", FeatureSource.Osm, height: 20f);
-            const string pedestrian = """{"kind":"road","roadType":"pedestrian"}""";
+                $$"""{"kind":"building","category":"{{category}}"}""", height: 20f);
+            const string pedestrian = """{"kind":"road","highway":"pedestrian"}""";
             var features = new List<WorldFeature>
             {
                 building,
-                WorldFeatureFixture.Create("fixture:forecourt", "road", new PolygonGeometry(Rect(10f, -20f, 60f, 20f)), pedestrian, FeatureSource.Osm),
-                WorldFeatureFixture.Create("fixture:place", "road", new PolygonGeometry(Rect(30f, -5f, 40f, 5f)), pedestrian, FeatureSource.Osm),
-                WorldFeatureFixture.Create("fixture:neighbour", "road", new PolygonGeometry(Rect(10f, 30f, 60f, 50f)), pedestrian, FeatureSource.Osm),
+                WorldFeatureFixture.Create("fixture:forecourt", "road", new PolygonGeometry(Rect(10f, -20f, 60f, 20f)), pedestrian),
+                WorldFeatureFixture.Create("fixture:place", "road", new PolygonGeometry(Rect(30f, -5f, 40f, 5f)), pedestrian),
+                WorldFeatureFixture.Create("fixture:neighbour", "road", new PolygonGeometry(Rect(10f, 30f, 60f, 50f)), pedestrian),
             };
             var entrances = new List<EntranceDecl> { Entrance("hall.main", Door, yaw) };
             if (side) entrances.Add(Entrance("hall.side", new(20f, -25f), 180f));   // faces south across the forecourt (40 m run)

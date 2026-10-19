@@ -22,7 +22,7 @@ internal static partial class TerrainCompiler
             var underground = b.References.IsUndergroundWater(feature.Id);
             var pending = !underground && channel;
             var shoreTop = underground || pending ? 0 : DefaultShoreTop(b, region, feature.Id);
-            AddWater(b, null, "map.json", feature.Id, region, shoreTop - (channel ? 1.2 : 0.5), bank,
+            AddWater(b, null, b.References.SourceFiles(feature.Id), feature.Id, region, shoreTop - (channel ? 1.2 : 0.5), bank,
                 channel ? defaults.ChannelDepth : defaults.LakeDepth, 1d / 7, [], channel);
             if (pending) b.WaterSpecs[^1] = b.WaterSpecs[^1] with { AutoLevelPending = true };
         }
@@ -31,7 +31,7 @@ internal static partial class TerrainCompiler
     private static double DefaultShoreTop(Builder b, TerrainRegion region, FeatureId id)
     {
         if (region.Polygons.Length == 0 || region.Polygons[0].Outer.Count == 0)
-            throw new WorldDataException("campus.json", id.Value, "Water has no shore-top sample.");
+            throw new WorldDataException(b.References.SourceFiles(id), id.Value, "Water has no shore-top sample.");
         if (b.LandBeforeWater.Nodes.Count == 0) return 0;
         var point = region.Polygons[0].Outer[0];
         return b.LandBeforeWater.Evaluate(point.X, point.Y).Surface.Height;
@@ -56,7 +56,7 @@ internal static partial class TerrainCompiler
     private static void AddPad(Builder b, TerrainRegion region, FeatureId feature, double y, double apron, double gradeWidth,
         TerrainPadEdge? edge, TerrainPadOp? op)
     {
-        var file = op is null ? "campus.json" : b.Files[op.Id]; var id = op?.Id ?? "auto-pad-" + feature.Value;
+        var file = op is null ? b.References.SourceFiles(feature) : b.Files[op.Id]; var id = op?.Id ?? "auto-pad-" + feature.Value;
         b.Pads.Add(feature, (float)y);
         b.PadRegions.Add(feature, region);
         var structure = edge is null ? null : b.References.Structure(new(edge.StructureId), file, id, "edgeBand", "terrace", "retainingWall");
@@ -188,13 +188,13 @@ internal static partial class TerrainCompiler
                 throw new WorldDataException("map.json", "terrainDefaults", "Automatic road gaps require explicit map defaults.");
             var entry = new RoadEntry(plan.Road, profiles[plan.Road.Source], op, b.Files[op.Id]) { Plan = plan };
             foreach (var interval in plan.Operations) AddCorridor(b, plan.Road, interval, b.Files[interval.Id], sharedEntry: entry);
-            if (plan.HasGaps) AddCorridor(b, plan.Road, null, "network.json", sharedEntry: entry);
+            if (plan.HasGaps) AddCorridor(b, plan.Road, null, b.References.SourceFiles(plan.Road.Source), sharedEntry: entry);
             roads.Add(entry);
         }
         foreach (var road in automatic)
         {
             if (!b.WrittenRoads.Add(road.Source)) continue;
-            var entry = AddCorridor(b, road, null, "network.json", profiles[road.Source]); roads.Add(entry);
+            var entry = AddCorridor(b, road, null, b.References.SourceFiles(road.Source), profiles[road.Source]); roads.Add(entry);
         }
         ValidateRoadJunctions(b, roads);
         b.Roads.AddRange(roads);

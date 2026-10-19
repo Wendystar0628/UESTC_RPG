@@ -24,7 +24,7 @@ public sealed class BoundaryModuleTests
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void OverlayRegistersTheForecourtAndThePlaza()
+    public void WorldRecordsRegisterTheForecourtAndThePlaza()
     {
         var world = RealMapFixture.Load().World;
         AssertThat(world.Features.ContainsKey(new(BoundaryFeatureIds.NorthForecourt))).OverrideFailureMessage("north forecourt registered").IsTrue();

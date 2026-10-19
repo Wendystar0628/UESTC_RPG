@@ -5,7 +5,7 @@ namespace Campus.Gen.Buildings.Rules;
 
 /// <summary>
 /// A facade preset: the facade parameters a building takes over its family profile when its zone pack names the preset
-/// in the overlay (StyleOp.Facade, read as WorldFeature.Facade). Null keeps the family's value. A preset never changes
+/// in the world record's facade field (read as WorldFeature.Facade). Null keeps the family's value. A preset never changes
 /// the bay grid's columns or the storeys, so every window keeps its number (contract-29).
 /// </summary>
 public sealed record FacadeLook(string Key)

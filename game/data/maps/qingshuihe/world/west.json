@@ -1,0 +1,6002 @@
+{
+  "features": [
+    {
+      "id": "design:west-a10-plaza",
+      "kind": "road",
+      "props": {
+        "anchor": "A10",
+        "highway": "pedestrian"
+      },
+      "note": "设计增补：给导览桩 A10 落脚（MAP-QSH-WEST 锚点表）。原锚点 (−205, −330) 落在湿地低地中间，10 m 内没有人行硬面；按锚点表的节点「湿地栈道南口」和 MAP-QSH-TERRAIN「落在栈道口的园路上（0 m），不落进湿地低地」，把小广场放在栈道南口：湿地环路 osm:way:544166204 与石桥引道 osm:way:692240859 的交点 (−239.8, −155.1) 东侧，长轴朝 250°，约 9.8 × 7 m，切角。导览桩立在广场东缘 (−232.5, −159.6)、朝 250° 看芦苇荡，暖色小灯落在铺装上；广场把桩和水隔开约 8 m，西侧栈道与石桥两边贴水的暗处不进灯，留给萤火虫（§10.1、P11）。地形覆盖层 design:terrain:west-wetland-low 在这里留洞，广场保持 0 m",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-241.01,-156.46],[-240.7,-160.29],[-234.31,-162.62],[-232.35,-161.31],[-231.25,-158.31],[-231.92,-156.04],[-238.31,-153.72]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:west-boardwalk-route",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-236.6,-162.4],[-233.5,-176],[-236,-190],[-236.4,-203],[-233,-216],[-221.5,-238],[-205.5,-262],[-195,-287],[-193,-312],[-198,-340],[-206,-361],[-211.5,-372.9]]
+        }
+      }
+    },
+    {
+      "id": "design:west-four-door-a",
+      "kind": "layout",
+      "props": {
+        "facing": 178.4
+      },
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-306.69,0,-357.83]
+      }
+    },
+    {
+      "id": "design:west-four-door-b",
+      "kind": "layout",
+      "props": {
+        "facing": 128.4
+      },
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-359.35,0,-322.52]
+      }
+    },
+    {
+      "id": "design:west-four-door-c",
+      "kind": "layout",
+      "props": {
+        "facing": 96.8
+      },
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-384.75,0,-262.87]
+      }
+    },
+    {
+      "id": "design:west-four-seat-arc-1",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-335,-211],[-344,-220],[-352,-230],[-357,-241],[-360,-252]]
+        }
+      }
+    },
+    {
+      "id": "design:west-four-seat-arc-2",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-361,-259],[-360,-271],[-359,-282],[-357,-291],[-353,-300]]
+        }
+      }
+    },
+    {
+      "id": "design:west-four-seat-arc-3",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-343,-316],[-334,-324],[-326,-330],[-320,-333],[-315,-334],[-311,-334.5]]
+        }
+      }
+    },
+    {
+      "id": "design:west-innovation-door",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-564.7,0,134.12]
+      }
+    },
+    {
+      "id": "design:west-innovation-shaft-1",
+      "kind": "layout",
+      "props": {
+        "length": 6.2
+      },
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-591.9,0,77.2]
+      }
+    },
+    {
+      "id": "design:west-innovation-shaft-2",
+      "kind": "layout",
+      "props": {
+        "length": 7
+      },
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-626.9,0,119.7]
+      }
+    },
+    {
+      "id": "design:west-innovation-shaft-3",
+      "kind": "layout",
+      "props": {
+        "length": 6.6
+      },
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-553.4,0,106.4]
+      }
+    },
+    {
+      "id": "design:west-innovation-shaft-4",
+      "kind": "layout",
+      "props": {
+        "length": 7.6
+      },
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-586.7,0,149.6]
+      }
+    },
+    {
+      "id": "design:west-levee-lake-mouth",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-304,-154.9],[-285.8,-147.8]]
+        }
+      }
+    },
+    {
+      "id": "design:west-levee-stone-bridge",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-296.28,-164.94],[-283.7,-160.1]]
+        }
+      }
+    },
+    {
+      "id": "design:west-shelter-back",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:way:604832425",
+        "sourceId": "osm:way:604832425",
+        "contour": "facade"
+      },
+      "note": "登记西门候车亭后墙所用的当前来源外立面西侧边，沿父轮廓逆时针从南端到北端读取，保持现有候车亭朝向、尺寸与碰撞。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-214.98,-417.82],[-210.09,-430.99]]
+        }
+      }
+    },
+    {
+      "id": "design:west-six-bridge-b-end",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:way:779496169",
+        "sourceId": "osm:way:779496169",
+        "contour": "facade"
+      },
+      "note": "D-243：登记六号科研楼实际使用的来源 facadePolygons 完整立面边，生成器只读选段，不使用物理轮廓中已简化掉的中间顶点。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-729.11,191.49],[-689.79,221.04]]
+        }
+      }
+    },
+    {
+      "id": "design:west-six-bridge-b-start",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:14153711",
+        "contour": "facade"
+      },
+      "note": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-688.6,213.7],[-712.4,195.54]]
+        }
+      }
+    },
+    {
+      "id": "design:west-six-bridge-c-end",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:10807930",
+        "contour": "facade"
+      },
+      "note": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-652.57,191.22],[-684.99,167.28]]
+        }
+      }
+    },
+    {
+      "id": "design:west-six-bridge-c-start",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:14153711",
+        "contour": "facade"
+      },
+      "note": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-697.34,176],[-673.55,194.16]]
+        }
+      }
+    },
+    {
+      "id": "design:west-six-east-face",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:10807930",
+        "contour": "facade"
+      },
+      "note": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-593.76,206.75],[-583.28,251.04]]
+        }
+      }
+    },
+    {
+      "id": "design:west-six-forecourt",
+      "kind": "road",
+      "props": {
+        "highway": "pedestrian"
+      },
+      "note": "设计增补：六号科研楼 C 区东门（开放入口 six.c.east）前到校训石的门前广场（MAP-QSH-WEST 主网「六号科研楼（含校训石前的广场）」）。原地是草坪，东门 13 m 内只有平行立面的 2.5 m 步道 osm:way:1061419176，门前没有硬面；补一条 14 m 宽的入口铺装从石材立面线伸到步道，再在步道外接一块约 22 × 17 m 的广场，把校训石围在中间、留出石前 3 m 的看字位（巡检点 Q1）。地垫、开放牌落在铺装上；广场不碰服务路 osm:way:635473031，离 P10 落点约 30 m，不进 P10 前景的石与楼叠影",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-589.29,223.04],[-574.28,219.58],[-566.68,221.42],[-550.11,217.59],[-545.54,226.29],[-545.05,239.52],[-561.62,243.34],[-571.14,233.22],[-586.14,236.69]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:west-six-plant-1",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-804.1,0,99.8]
+      }
+    },
+    {
+      "id": "design:west-six-plant-2",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-732.2,0,117.3]
+      }
+    },
+    {
+      "id": "design:west-six-plant-3",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-607.1,0,267.4]
+      }
+    },
+    {
+      "id": "design:west-six-shut-door-1",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-804.19,0,160.62]
+      }
+    },
+    {
+      "id": "design:west-six-shut-door-2",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-728.73,0,217.39]
+      }
+    },
+    {
+      "id": "design:west-six-shut-door-3",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-601.64,0,275.48]
+      }
+    },
+    {
+      "id": "design:west-six-shut-face-1",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:way:779496168",
+        "sourceId": "osm:way:779496168",
+        "contour": "facade"
+      },
+      "note": "D-243：登记六号科研楼既有入口或连廊使用的来源边，生成器只读选段，不再按几何位置猜边。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-768.12,187.65],[-840.26,133.59]]
+        }
+      }
+    },
+    {
+      "id": "design:west-six-shut-face-2",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:way:779496169",
+        "sourceId": "osm:way:779496169",
+        "contour": "facade"
+      },
+      "note": "D-243：登记六号科研楼实际使用的来源 facadePolygons 完整立面边，生成器只读选段，不使用物理轮廓中已简化掉的中间顶点。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-702.18,237.35],[-755.27,197.42]]
+        }
+      }
+    },
+    {
+      "id": "design:west-six-shut-face-3",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:relation:14153711",
+        "sourceId": "osm:relation:10807930",
+        "contour": "facade"
+      },
+      "note": "D-243：登记六号科研楼实际使用的来源 facadePolygons 完整立面边，生成器只读选段，不使用物理轮廓中已简化掉的中间顶点。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-583.28,251.04],[-620,299.93]]
+        }
+      }
+    },
+    {
+      "id": "design:west-wetland-beach",
+      "kind": "layout",
+      "note": "D-239：西区既有设计点位与造型控制线从生成器迁入覆盖层，保持原位置和形态。",
+      "geometry": {
+        "type": "point",
+        "position": [-240.4,0,-203.2]
+      }
+    },
+    {
+      "id": "design:west-wetland-culvert-weir-in",
+      "kind": "weir",
+      "props": {
+      },
+      "note": "实物登记（MAP-QSH-TERRAIN 水位阶梯）：湿地溪（−0.5）入穿堤暗涵 osm:way:1172471444 的第一级跌水堰，落差 0.35 m，立在暗涵入口 (−254.4, −247.8)，约 1.6 m 厚、横跨 4 m 溪宽两侧各出 0.4 m 搭岸；是 west.terrain.json 里 design:terrain:west-wetland-culvert 第一座 weir 引用的构筑物，堰下水面白色翻花，收为发声器。涵内水位 −0.85。",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-255.26,-245.33],[-256.4,-246.45],[-253.03,-249.87],[-251.89,-248.75]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:west-wetland-culvert-weir-out",
+      "kind": "weir",
+      "props": {
+      },
+      "note": "实物登记（MAP-QSH-TERRAIN 水位阶梯）：暗涵（−0.85）出口跌进红光右支渠北段（−1.2）的第二级跌水堰，落差 0.35 m，立在暗涵口约 (−282.5, −275.5)，一半在涵口、一半搭上渠壁，约 1.6 m 厚；是 design:terrain:west-wetland-culvert 第二座 weir 引用的构筑物，与入口堰相距约 39.5 m，各是各的构筑物；堰下水面白色翻花，收为发声器（暗涵口水声，MAP-QSH-WEST）。",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-283.77,-273.39],[-284.91,-274.51],[-281.54,-277.93],[-280.4,-276.81]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:west-wetland-wade",
+      "kind": "layout",
+      "note": "D-239：迁移既有涉水卵石滩设计轮廓，未改变地形与涉水登记。",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-241.2,-196.9],[-243.1,-197.6],[-243.4,-203.2],[-243.1,-208.8],[-241.2,-209.5]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "qsh:node:11020008573",
+      "kind": "poi",
+      "name": "先进毫米波技术集成攻关研究院",
+      "props": {
+        "name": "先进毫米波技术集成攻关研究院",
+        "category": "research",
+        "kind": "poi",
+        "anchor": [-380.48,0,-220.76]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-380.48,0,-220.76]
+      }
+    },
+    {
+      "id": "qsh:node:11020008574",
+      "kind": "poi",
+      "name": "卫生间 · 8574",
+      "props": {
+        "name": "卫生间 · 8574",
+        "category": "service",
+        "subcategory": "toilets",
+        "kind": "poi",
+        "anchor": [-487.93,0,-299.59]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-487.93,0,-299.59]
+      }
+    },
+    {
+      "id": "qsh:node:11020008575",
+      "kind": "green",
+      "name": "湿地公园",
+      "props": {
+        "leisure": "park",
+        "name": "湿地公园",
+        "category": "landscape",
+        "subcategory": "garden",
+        "kind": "green",
+        "anchor": [-213.15,0,-296.46]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-213.15,0,-296.46]
+      }
+    },
+    {
+      "id": "qsh:node:11361252903",
+      "kind": "poi",
+      "name": "校训石",
+      "props": {
+        "name": "校训石",
+        "category": "landscape",
+        "subcategory": "landmark",
+        "kind": "poi",
+        "anchor": [-554.76,0,233.83]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-554.76,0,233.83]
+      }
+    },
+    {
+      "id": "qsh:node:7736111165",
+      "kind": "poi",
+      "name": "停车 · 1165",
+      "props": {
+        "name": "停车 · 1165",
+        "category": "transport",
+        "subcategory": "parking",
+        "kind": "poi",
+        "anchor": [-405.36,0,-428.94]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-405.36,0,-428.94]
+      }
+    },
+    {
+      "id": "qsh:node:7736111220",
+      "kind": "poi",
+      "name": "出入口 · 1220",
+      "props": {
+        "name": "出入口 · 1220",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-700.79,0,-73.45]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-700.79,0,-73.45]
+      }
+    },
+    {
+      "id": "qsh:node:9139805611",
+      "kind": "poi",
+      "name": "宾诺咖啡",
+      "props": {
+        "name": "宾诺咖啡",
+        "category": "dining",
+        "subcategory": "cafe",
+        "kind": "poi",
+        "anchor": [-519.05,0,34.28]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-519.05,0,34.28]
+      }
+    },
+    {
+      "id": "qsh:node:9160823850",
+      "kind": "poi",
+      "name": "出入口 · 3850",
+      "props": {
+        "name": "出入口 · 3850",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-626.59,0,-169.44]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-626.59,0,-169.44]
+      }
+    },
+    {
+      "id": "qsh:node:9160823851",
+      "kind": "poi",
+      "name": "出入口 · 3851",
+      "props": {
+        "name": "出入口 · 3851",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-571.46,0,-114.12]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-571.46,0,-114.12]
+      }
+    },
+    {
+      "id": "qsh:node:9751988420",
+      "kind": "poi",
+      "name": "停车 · 8420",
+      "props": {
+        "name": "停车 · 8420",
+        "category": "transport",
+        "subcategory": "parking",
+        "kind": "poi",
+        "anchor": [-731.4,0,234.33]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-731.4,0,234.33]
+      }
+    },
+    {
+      "id": "qsh:node:9751988479",
+      "kind": "poi",
+      "name": "停车 · 8479",
+      "props": {
+        "name": "停车 · 8479",
+        "category": "transport",
+        "subcategory": "parking",
+        "kind": "poi",
+        "anchor": [-664.44,0,146.68]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-664.44,0,146.68]
+      }
+    },
+    {
+      "id": "qsh:node:9775114746",
+      "kind": "poi",
+      "name": "出入口 · 4746",
+      "props": {
+        "name": "出入口 · 4746",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-637.57,0,-29.93]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-637.57,0,-29.93]
+      }
+    },
+    {
+      "id": "qsh:relation:11031411",
+      "kind": "building",
+      "name": "电子科学技术研究院大楼",
+      "height": 27.3,
+      "storeys": 7,
+      "family": "research",
+      "props": {
+        "name": "电子科学技术研究院大楼",
+        "category": "research",
+        "kind": "building",
+        "anchor": [-434.96,23.4,-199.93]
+      },
+      "parts": [
+        {
+          "id": "osm:relation:11031411",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "multiPolygon",
+            "polygons": [
+              {
+                "outer": [[-416.34,-213.76],[-444.35,-178.36],[-427,-200.35],[-421.69,-207.1],[-459.37,-236.79],[-464.84,-229.91],[-472,-235.5],[-482.79,-243.93],[-477.45,-250.7],[-462.84,-239.33],[-457.69,-245.88]],
+                "holes": []
+              },
+              {
+                "outer": [[-449.01,-171.95],[-444.35,-178.36],[-419.61,-159.24],[-424.58,-152.92]],
+                "holes": []
+              },
+              {
+                "outer": [[-468.52,-124.64],[-451.79,-146.2],[-436.41,-134.23],[-453.29,-112.78],[-466.94,-123.41]],
+                "holes": []
+              },
+              {
+                "outer": [[-559.18,-215.38],[-551.55,-209.55],[-555.26,-204.87],[-543.58,-195.74],[-548.69,-189.25],[-567.93,-204.26]],
+                "holes": []
+              },
+              {
+                "outer": [[-503.38,-270.47],[-518.63,-251.18],[-540.32,-268.17],[-525.16,-287.44]],
+                "holes": []
+              },
+              {
+                "outer": [[-459,-173.55],[-464.69,-166.13],[-479.7,-172.48],[-485.23,-178.99],[-476.61,-191.36],[-468.39,-187.49]],
+                "holes": []
+              }
+            ]
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-416.34,-213.76],[-444.35,-178.36],[-421.69,-207.1],[-459.37,-236.79],[-464.84,-229.91],[-482.79,-243.93],[-477.45,-250.7],[-462.84,-239.33],[-457.69,-245.88]],
+              "holes": []
+            },
+            {
+              "outer": [[-449.01,-171.95],[-444.35,-178.36],[-419.61,-159.24],[-424.58,-152.92]],
+              "holes": []
+            },
+            {
+              "outer": [[-451.79,-146.2],[-436.41,-134.23],[-453.29,-112.78],[-468.52,-124.64]],
+              "holes": []
+            },
+            {
+              "outer": [[-559.18,-215.38],[-551.55,-209.55],[-555.26,-204.87],[-543.58,-195.74],[-548.69,-189.25],[-567.93,-204.26]],
+              "holes": []
+            },
+            {
+              "outer": [[-503.38,-270.47],[-518.63,-251.18],[-540.32,-268.17],[-525.16,-287.44]],
+              "holes": []
+            },
+            {
+              "outer": [[-459,-173.55],[-464.69,-166.13],[-479.7,-172.48],[-485.23,-178.99],[-476.61,-191.36],[-468.39,-187.49]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795600225",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-472,-235.5],[-464.84,-229.91],[-469.24,-224.33],[-476.4,-229.7]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:795600229",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-449.01,-171.95],[-455.81,-163.3],[-462.62,-154.64],[-469.49,-159.89],[-464.69,-166.13],[-459,-173.55],[-455.83,-177.66]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-449.01,-171.95],[-462.62,-154.64],[-469.49,-159.89],[-455.83,-177.66]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795600230",
+          "height": 27.3,
+          "storeys": 7,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-453.67,-147.66],[-463.98,-134.61],[-471.2,-140.26],[-460.89,-153.29]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:795600232",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-416.34,-213.76],[-385.06,-189.42],[-392.8,-179.57],[-412.9,-154.02],[-419.61,-159.24],[-444.35,-178.36]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-416.34,-213.76],[-385.06,-189.42],[-412.9,-154.02],[-444.35,-178.36]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795612386",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-492.57,-262.04],[-505.84,-245.17],[-509.96,-239.93],[-534.33,-209.12],[-528.49,-204.11],[-538.12,-191.5],[-543.58,-195.74],[-555.26,-204.87],[-551.55,-209.55],[-518.63,-251.18],[-503.38,-270.47]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-492.57,-262.04],[-534.33,-209.12],[-528.49,-204.11],[-538.12,-191.5],[-555.26,-204.87],[-503.38,-270.47]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795612388",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-482.79,-243.93],[-472,-235.5],[-476.4,-229.7],[-469.24,-224.33],[-464.84,-229.91],[-427,-200.35],[-444.35,-178.36],[-449.01,-171.95],[-455.83,-177.66],[-457.43,-178.92],[-452.49,-185.18],[-499.99,-222.28],[-495.07,-228.51],[-490.94,-233.55]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-472,-235.5],[-476.4,-229.7],[-469.24,-224.33],[-464.84,-229.91],[-427,-200.35],[-444.35,-178.36],[-449.01,-171.95],[-457.43,-178.92],[-452.49,-185.18],[-499.99,-222.28],[-482.79,-243.93]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795612389",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-551.55,-209.55],[-559.18,-215.38],[-563.9,-219.06],[-550.93,-235.54],[-541.86,-247.07],[-551.2,-254.35],[-540.32,-268.17],[-518.63,-251.18]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-551.55,-209.55],[-563.9,-219.06],[-541.86,-247.07],[-551.2,-254.35],[-540.32,-268.17],[-518.63,-251.18]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795612390",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-527.52,-205.33],[-469.49,-159.89],[-462.62,-154.64],[-460.89,-153.29],[-471.2,-140.26],[-463.98,-134.61],[-453.67,-147.66],[-451.79,-146.2],[-468.52,-124.64],[-505.73,-153.61],[-519.88,-164.65],[-529.82,-172.39],[-544.3,-183.66],[-538.12,-191.5],[-528.49,-204.11]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-469.49,-159.89],[-460.89,-153.29],[-471.2,-140.26],[-463.98,-134.61],[-453.67,-147.66],[-451.79,-146.2],[-468.52,-124.64],[-544.3,-183.66],[-538.12,-191.5],[-527.52,-205.33]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795612393",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-464.84,-229.91],[-459.37,-236.79],[-421.69,-207.1],[-427,-200.35]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:795612395",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-505.84,-245.17],[-490.94,-233.55],[-495.07,-228.51],[-509.96,-239.93]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:relation:11032065",
+      "kind": "building",
+      "name": "创新中心",
+      "height": 23.4,
+      "storeys": 6,
+      "family": "research",
+      "props": {
+        "name": "创新中心",
+        "category": "research",
+        "kind": "building",
+        "anchor": [-561.78,23.4,116.98]
+      },
+      "parts": [
+        {
+          "id": "osm:relation:11032065",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "multiPolygon",
+            "polygons": [
+              {
+                "outer": [[-549.64,105.31],[-553.4,102.52],[-589.86,74.76],[-592.73,72.62],[-605.55,62.74],[-594.99,49],[-528.14,99.87],[-538.69,113.6]],
+                "holes": []
+              },
+              {
+                "outer": [[-630.4,121.27],[-627.45,123.46],[-590.27,151.45],[-587.48,153.51],[-565.75,169.59],[-575.72,182.71],[-651.98,125.32],[-642.01,112.18]],
+                "holes": []
+              },
+              {
+                "outer": [[-629.04,108.63],[-623.82,112.51],[-626.33,115.85],[-631.33,112.04]],
+                "holes": []
+              },
+              {
+                "outer": [[-596.28,77.36],[-599.75,81.99],[-605.74,77.55],[-602.35,72.98]],
+                "holes": []
+              }
+            ]
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-592.73,72.62],[-605.55,62.74],[-594.99,49],[-528.14,99.87],[-538.69,113.6]],
+              "holes": []
+            },
+            {
+              "outer": [[-630.4,121.27],[-590.27,151.45],[-565.75,169.59],[-575.72,182.71],[-651.98,125.32],[-642.01,112.18]],
+              "holes": []
+            },
+            {
+              "outer": [[-629.04,108.63],[-623.82,112.51],[-626.33,115.85],[-631.33,112.04]],
+              "holes": []
+            },
+            {
+              "outer": [[-596.28,77.36],[-599.75,81.99],[-605.74,77.55],[-602.35,72.98]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795677485",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-630.4,121.27],[-626.33,115.85],[-623.82,112.51],[-629.04,108.63],[-605.74,77.55],[-599.75,81.99],[-596.28,77.36],[-592.73,72.62],[-589.86,74.76],[-593.37,79.45],[-589.76,82.04],[-619.19,121.27],[-623.45,118.11],[-627.45,123.46]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-630.4,121.27],[-623.82,112.51],[-629.04,108.63],[-605.74,77.55],[-599.75,81.99],[-592.73,72.62],[-589.86,74.76],[-593.37,79.45],[-589.76,82.04],[-619.19,121.27],[-623.45,118.11],[-627.45,123.46]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795677486",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-590.27,151.45],[-585.91,145.63],[-590.53,142.21],[-561.96,103.99],[-557.17,107.54],[-553.4,102.52],[-549.64,105.31],[-553.4,110.33],[-549.22,113.41],[-562.84,131.65],[-577.78,151.64],[-583.11,147.69],[-587.48,153.51]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-590.27,151.45],[-585.91,145.63],[-590.53,142.21],[-561.96,103.99],[-557.17,107.54],[-553.4,102.52],[-549.64,105.31],[-553.4,110.33],[-549.22,113.41],[-577.78,151.64],[-583.11,147.69],[-587.48,153.51]],
+              "holes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qsh:relation:11334253",
+      "kind": "building",
+      "name": "C区",
+      "height": 19.5,
+      "storeys": 5,
+      "family": "research",
+      "facade": "research.stoneFrame",
+      "props": {
+        "name": "C区",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [-439.58,19.5,-264.73]
+      },
+      "note": "四号科研楼 C 区：5 层（OSM 记 2 层，WLD-INTERIORS、MAP-QSH-WEST 数据定位）；按科研楼层高 3.9 m 取 19.5 m，三个部件同高。楼本体与扇形草坪、深蓝玻璃盒入口留给 19b",
+      "parts": [
+        {
+          "id": "osm:relation:11334252",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-451.84,-335.63],[-448.69,-333.19],[-382.49,-281.88],[-386.67,-246.65],[-387,-243.85],[-389.66,-240.57],[-403.28,-223.77],[-491.33,-291.88],[-507.93,-304.72],[-504.34,-309.19],[-484.71,-333.55],[-471.05,-350.51]],
+              "holes": [[[-403.22,-280.06],[-423.43,-295.85],[-426.73,-298.43],[-463.37,-327.05],[-478.36,-308.05],[-441.73,-279.43],[-438.43,-276.85],[-407.4,-252.61]]]
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-471.05,-350.51],[-382.49,-281.88],[-387,-243.85],[-403.28,-223.77],[-507.93,-304.72]],
+              "holes": [[[-403.22,-280.06],[-463.37,-327.05],[-478.36,-308.05],[-407.4,-252.61]]]
+            }
+          ]
+        },
+        {
+          "id": "osm:relation:11334253",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-403.28,-223.77],[-389.66,-240.57],[-379.83,-232.76],[-379.06,-232.14],[-377.68,-231.05],[-366.65,-222.26],[-356.04,-213.83],[-369.58,-196.95],[-371.99,-198.86]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-389.66,-240.57],[-356.04,-213.83],[-369.58,-196.95],[-403.28,-223.77]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:828726352",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-423.43,-295.85],[-438.43,-276.85],[-441.73,-279.43],[-426.73,-298.43]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:relation:11334255",
+      "kind": "building",
+      "name": "A区",
+      "height": 19.5,
+      "storeys": 5,
+      "family": "research",
+      "facade": "research.stoneFrame",
+      "props": {
+        "name": "A区",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [-298.82,19.5,-412.06]
+      },
+      "parts": [
+        {
+          "id": "osm:relation:11334255",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-343.96,-460.46],[-299.11,-425.74],[-295.81,-423.17],[-265.85,-399.97],[-282.94,-358.48],[-295.46,-358.14],[-320.89,-357.44],[-330.45,-357.17],[-354.28,-396.3],[-356.44,-399.84],[-378.79,-436.53],[-354.03,-468.25]],
+              "holes": [[[-324.05,-418.19],[-328.02,-421.27],[-344.26,-433.91],[-350.27,-438.6],[-357.57,-429.25],[-353.31,-422.25],[-341.7,-403.15],[-339.23,-399.1],[-326.19,-377.64],[-297.06,-378.61],[-291.64,-392.95]]]
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-265.85,-399.97],[-282.94,-358.48],[-330.45,-357.17],[-378.79,-436.53],[-354.03,-468.25]],
+              "holes": [[[-350.27,-438.6],[-357.57,-429.25],[-326.19,-377.64],[-297.06,-378.61],[-291.64,-392.95]]]
+            }
+          ]
+        },
+        {
+          "id": "osm:way:828726358",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-350.27,-438.6],[-344.26,-433.91],[-353.31,-422.25],[-357.57,-429.25]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:828726359",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-341.7,-403.15],[-328.02,-421.27],[-324.05,-418.19],[-327.12,-414.22],[-325.95,-413.36],[-328.76,-409.6],[-330.34,-410.76],[-339.23,-399.1]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:relation:11665640",
+      "kind": "building",
+      "name": "四号科研楼",
+      "height": 7.8,
+      "storeys": 2,
+      "family": "research",
+      "props": {
+        "name": "四号科研楼",
+        "category": "research",
+        "kind": "building",
+        "anchor": [-379.43,3.9,-330.12]
+      },
+      "parts": [
+        {
+          "id": "osm:relation:11665640",
+          "height": 3.9,
+          "storeys": 1,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-507.93,-304.72],[-491.33,-291.88],[-403.28,-223.77],[-371.99,-198.86],[-369.58,-196.95]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-507.93,-304.72],[-403.28,-223.77],[-369.58,-196.95]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:828726368",
+          "height": 7.8,
+          "storeys": 2,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-354.28,-396.3],[-363.18,-391.04],[-373.28,-385.07],[-375.26,-388.26],[-365.22,-394.44],[-356.44,-399.84]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-354.28,-396.3],[-373.28,-385.07],[-375.26,-388.26],[-356.44,-399.84]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:828726369",
+          "height": 7.8,
+          "storeys": 2,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-434.2,-352.6],[-441.88,-342.31],[-448.69,-333.19],[-451.84,-335.63],[-445.05,-344.96],[-437.57,-355.23]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-434.2,-352.6],[-448.69,-333.19],[-451.84,-335.63],[-437.57,-355.23]],
+              "holes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qsh:relation:11665641",
+      "kind": "building",
+      "name": "B区",
+      "height": 19.5,
+      "storeys": 5,
+      "family": "research",
+      "facade": "research.stoneFrame",
+      "props": {
+        "name": "B区",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [-430.95,19.5,-363.64]
+      },
+      "parts": [
+        {
+          "id": "osm:relation:11665641",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-419,-420.17],[-418.29,-420.95],[-412.11,-428.84],[-411.2,-430],[-391.4,-414.22],[-375.26,-388.26],[-373.28,-385.07],[-345.39,-340.17],[-373.31,-304.88],[-434.2,-352.6],[-437.57,-355.23],[-457.48,-370.83]],
+              "holes": [[[-380.85,-369.75],[-383.47,-373.97],[-391.02,-386.15],[-408.34,-398.96],[-427.72,-374.53],[-399.52,-352.78],[-395.74,-349.86],[-376.6,-335.11],[-366.83,-347.15]]]
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-419,-420.17],[-411.2,-430],[-391.4,-414.22],[-345.39,-340.17],[-373.31,-304.88],[-457.48,-370.83]],
+              "holes": [[[-391.02,-386.15],[-408.34,-398.96],[-427.72,-374.53],[-376.6,-335.11],[-366.83,-347.15]]]
+            }
+          ]
+        },
+        {
+          "id": "osm:way:828726357",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-380.85,-369.75],[-390.39,-357.53],[-388.83,-356.34],[-391.69,-352.61],[-392.85,-353.48],[-395.74,-349.86],[-399.52,-352.78],[-383.47,-373.97]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:relation:14153711",
+      "kind": "building",
+      "name": "六号科研楼",
+      "height": 27.3,
+      "storeys": 7,
+      "family": "research",
+      "props": {
+        "name": "六号科研楼",
+        "category": "research",
+        "kind": "building",
+        "anchor": [-692.97,15.6,194.85]
+      },
+      "parts": [
+        {
+          "id": "osm:relation:10807930",
+          "height": 24,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-593.76,206.75],[-583.28,251.04],[-591.12,261.48],[-598.43,271.21],[-605.05,280.04],[-620,299.93],[-693.14,245.54],[-680.4,228.57],[-659.84,200.98],[-652.57,191.22],[-684.99,167.28],[-671.57,149.28]],
+              "holes": [[[-653.39,206.17],[-673.87,233.43],[-622.1,271.94],[-613.52,260.51],[-603.04,246.56],[-607.64,224.39],[-645.87,196.17]]]
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-593.76,206.75],[-583.28,251.04],[-620,299.93],[-693.14,245.54],[-652.57,191.22],[-684.99,167.28],[-671.57,149.28]],
+              "holes": [[[-645.87,196.17],[-673.87,233.43],[-622.1,271.94],[-603.04,246.56],[-607.64,224.39]]]
+            }
+          ]
+        },
+        {
+          "id": "osm:relation:14153711",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-688.6,213.7],[-712.4,195.54],[-697.34,176],[-673.55,194.16]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:779496167",
+          "height": 27.3,
+          "storeys": 7,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-762.04,86.34],[-769.92,96.7],[-775.74,92.36],[-783.53,86.55],[-775.7,76.22],[-767.68,82.16]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-769.92,96.7],[-783.53,86.55],[-775.7,76.22],[-762.04,86.34]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:950008613",
+          "height": 7.8,
+          "storeys": 2,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-739.01,176.01],[-756.51,162.95],[-755.4,158.52],[-753.35,153.79],[-750.69,150.14],[-745.72,145.74],[-742.01,143.94],[-724.37,156.74]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:relation:8426842",
+      "kind": "building",
+      "name": "五号科研楼",
+      "height": 19.5,
+      "storeys": 5,
+      "family": "research",
+      "facade": "research.stoneFrame",
+      "props": {
+        "name": "五号科研楼",
+        "category": "research",
+        "kind": "building",
+        "anchor": [-314.24,19.5,-512.0]
+      },
+      "note": "五号科研楼：按 5 层（OSM 无层数，MAP-QSH-WEST 数据定位），19.5 m，与四号 C 区同一层线。楼本体留给 19b",
+      "parts": [
+        {
+          "id": "osm:relation:8426842",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-323.51,-533.28],[-320.78,-531.31],[-303.81,-553.79],[-305.72,-555.94],[-292.68,-572.06],[-213.51,-509.36],[-226.51,-492.43],[-234.43,-499.09],[-252.16,-476.23],[-243.66,-469.56],[-257.45,-452.26],[-337,-516]],
+              "holes": [[[-298.76,-513.76],[-266.16,-488.4],[-249.01,-510.23],[-281.62,-535.59]]]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:relation:9545585",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "unknown",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:relation:9545585",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "unknown",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-115.56,-385.68],[-92.21,-384.44],[-72.64,-379.86],[-54.09,-371.26],[-35.2,-357.85],[1.1,-331.77],[-5.24,-327.7],[-95.45,-207.7],[-100.21,-200.13],[-102.98,-191.27],[-104.27,-181.31],[-104.78,-169.82],[-97.57,-99.6],[-223.52,-90.91],[-241.58,-82.39],[-254.77,-77.66],[-264.87,-74.94],[-270.66,-76.98],[-274.38,-81.04],[-286.21,-106.96],[-275.78,-123.34],[-276.18,-134.71],[-287.2,-135.84],[-299.62,-118.37],[-316.89,-81.51],[-330.21,-77.9],[-341.42,-70.31],[-345.29,-67.49],[-347.84,-63.34],[-350.65,-60.77],[-353.98,-60.96],[-356.46,-62.77],[-357.06,-68],[-358.11,-73.47],[-357.55,-80.82],[-350.93,-93.28],[-343.51,-107.96],[-336.99,-124.08],[-335.63,-129.72],[-326.99,-150.08],[-288.56,-244.89],[-231.66,-387.42],[-225.01,-383.77],[-211.07,-377.66],[-201.7,-380.72],[-184.76,-378.75],[-160.07,-378.47]],
+              "holes": [[[-228.86,-311.44],[-236.1,-305.38],[-234.43,-292.08],[-237.82,-287.25],[-226.06,-282.03],[-219.38,-282.22],[-215.36,-273.49],[-221.86,-264.11],[-231.12,-263.17],[-222.99,-253.39],[-225.4,-243.71],[-240.61,-236.69],[-271.48,-179.09],[-268.99,-153.47],[-236.7,-189.98],[-220.58,-236.76],[-219.99,-245.95],[-213.76,-252.27],[-206.62,-247.35],[-198.68,-244.98],[-194.14,-237.79],[-198.35,-226.83],[-185.68,-234.64],[-189.89,-251.54],[-194.61,-267.93],[-201.5,-272.6],[-197.6,-277.92],[-202.61,-290.24],[-204.09,-297.15],[-191.21,-300.86],[-183.04,-297.2],[-187.73,-289.84],[-182.61,-287.49],[-171.05,-288.14],[-163.62,-286.54],[-173.26,-299.67],[-180.62,-307.65],[-181.86,-312.78],[-180.03,-315.83],[-171.02,-318.29],[-175.81,-328.05],[-182.15,-336.03],[-174.89,-343.62],[-180.91,-358.24],[-198.65,-356.12],[-203.52,-356.68],[-213.16,-341.95],[-221.23,-330.01],[-223.65,-319.05]]]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419136",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "pedestrian"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419136",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "pedestrian",
+            "area": "yes"
+          },
+          "line": [[-534.85,324.78],[-563.55,303.43],[-564.74,304.83],[-571.26,300.1],[-594.52,283.25],[-596.91,286.16],[-598.28,285.12],[-600.34,283.57],[-605.05,280.04],[-598.43,271.21],[-591.12,261.48],[-582.29,268.46],[-579.47,270.67],[-563.7,283.11],[-557.29,288.15],[-555.79,292.04],[-530.07,311.74],[-532.65,318.8],[-534.85,324.78]],
+          "width": 5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-563.55,303.43],[-564.74,304.83],[-594.52,283.25],[-596.91,286.16],[-605.05,280.04],[-591.12,261.48],[-557.29,288.15],[-555.79,292.04],[-530.07,311.74],[-534.85,324.78]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419138",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419138",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-531.25,319.81],[-532.65,318.8],[-566.69,294.11],[-589.73,277.46],[-598.43,271.21]],
+          "width": 2.5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-531.99,320.82],[-599.16,272.23],[-597.7,270.2],[-530.52,318.79]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419139",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419139",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-596.91,286.16],[-593.82,299.39],[-577.15,299.69],[-573.25,302.7],[-567.84,306.86],[-563.52,337.6],[-561,341.19],[-555.61,380.93]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419141",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419141",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-573.25,302.7],[-571.26,300.1],[-566.69,294.11]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419142",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419142",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-575.27,219.95],[-681,141.14]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419143",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419143",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-667.25,132.57],[-590.1,25.87],[-582.21,15.29]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419144",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419144",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-672.04,129.1],[-681,141.14],[-702.2,169.64],[-722.27,196.63]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419145",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419145",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-734.88,212.76],[-739.59,218.95],[-756.93,241.76]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419146",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419146",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "tunnel": "building_passage"
+          },
+          "line": [[-722.27,196.63],[-734.88,212.76]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419147",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419147",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-811.19,123.12],[-794.59,131.84],[-772.45,117.64],[-722.9,154.8]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419148",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419148",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "tunnel": "building_passage"
+          },
+          "line": [[-613.52,260.51],[-598.43,271.21]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419149",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419149",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-653.39,206.17],[-628.39,225.06],[-619.68,256.34],[-613.52,260.51]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419150",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419150",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "tunnel": "building_passage"
+          },
+          "line": [[-659.84,200.98],[-653.39,206.17]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419151",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419151",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-708.85,164.79],[-702.2,169.64],[-663.85,198.01],[-659.84,200.98]],
+          "width": 2.5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-708.11,163.78],[-659.1,199.97],[-660.59,201.98],[-709.58,165.8]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419152",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419152",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "tunnel": "building_passage"
+          },
+          "line": [[-722.9,154.8],[-708.85,164.79]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419154",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419154",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-700.25,248.71],[-663.85,198.01]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419155",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419155",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-707.4,279.33],[-697.34,264.25],[-700.25,248.71],[-739.59,218.95],[-768.19,197.31],[-852.62,133.45],[-831.89,107.18],[-836.73,103.37]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419156",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419156",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-720.35,269.52],[-713.04,259.58],[-711.59,255.85],[-711.33,252.57],[-712.01,249.51],[-714.33,247.15],[-731.4,234.33]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419158",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419158",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-762.69,237.4],[-760.03,229.83],[-759.46,226.82],[-759.79,224.16],[-761.2,222.02],[-852.24,154.39],[-855.09,153.83],[-857.96,155.04],[-864.65,160.07]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419161",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419161",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-563.52,337.6],[-564.88,341.97],[-599.41,346.89],[-601.87,345.17],[-608.99,353.97]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419162",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419162",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-563.55,303.43],[-534.85,324.78],[-554.19,376.67],[-564.74,304.83]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419163",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419163",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-600.34,283.57],[-598.28,285.12],[-594.78,301.17],[-581.27,301.77],[-570.63,309.13],[-566.44,341.02],[-598.31,345.19],[-603.56,342.04],[-605.16,344.12],[-676.36,290.67],[-679.21,294.42],[-700.79,278.05],[-692.59,264.68],[-694.76,248.59],[-693.51,246.91],[-617.02,304.36]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419167",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419167",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-632.47,158.8],[-640.96,159.88],[-644.07,160.01],[-647.32,159.05],[-664.44,146.68]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419175",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419175",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-577.76,200.06],[-578.76,203.39]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419176",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419176",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-578.76,203.39],[-575.27,219.95],[-568.56,251.83]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419177",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419177",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-568.56,251.83],[-582.29,268.46],[-589.73,277.46],[-594.52,283.25],[-596.91,286.16]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419178",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419178",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-564.52,248.69],[-574.21,206.72],[-528.88,240.69]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1061419179",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419179",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-580.51,215.32],[-650.2,162.72],[-632.34,162.89],[-584.54,198.9]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1064351719",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1064351719",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-633.87,-27.15],[-637.57,-29.93],[-698.32,-76.58],[-713.56,-88.27]],
+          "width": 2.5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-634.62,-26.15],[-707.08,-81.73],[-705.55,-83.7],[-633.12,-28.15]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1064351720",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1064351720",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-700.79,-73.45],[-698.32,-76.58]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1065537682",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:1065537682",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-708.29,272.75],[-711.47,270.54],[-711.31,266.2],[-710.95,263.45],[-707.36,257.56],[-706.89,255],[-707.05,251.62],[-707.73,249.31],[-709.88,245.84],[-705.03,249.27],[-701.84,263.03]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1065537683",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:1065537683",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-724.67,260.72],[-721.64,256.7],[-741.16,242.1],[-744.2,246.12],[-747.99,243.11],[-748.05,235.9],[-738.24,224.43],[-729.71,231.27],[-734,237.5],[-717.82,249.98],[-716.82,251.97],[-716.32,254.15],[-716.98,255.99],[-719.45,258.58],[-722.03,260.16],[-723.83,260.78]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1065537684",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:1065537684",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-757.96,235.18],[-772.69,222.88],[-763.49,210.91],[-845.59,148.42],[-848.86,152.67],[-852.64,150.33],[-855.59,150.67],[-862.85,154.49],[-865.06,154.53],[-866.17,154.01],[-866.96,152.83],[-866.94,150.78],[-866.63,148.43],[-865.65,145.5],[-856.91,135.25],[-828.36,156.5],[-829.48,157.81],[-788.34,188.66],[-787.37,187.13],[-773.61,197.68],[-773.2,200.76],[-770.87,204.23],[-767.79,206.18],[-764.48,207.31],[-759.99,207.86],[-743.74,220.64],[-755.16,234.4]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1101952065",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1101952065",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "tunnel": "building_passage"
+          },
+          "line": [[-772.45,117.64],[-775.74,92.36],[-767.68,82.16]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1101952066",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1101952066",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-767.68,82.16],[-755.33,65.74]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1101952067",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1101952067",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-768.19,197.31],[-750.42,173.75]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1172471445",
+      "kind": "dam",
+      "height": 0,
+      "props": {
+        "waterway": "dam",
+        "kind": "dam",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:1172471445",
+          "height": 0,
+          "props": {
+            "waterway": "dam",
+            "kind": "dam",
+            "category": "landscape",
+            "highway": null
+          },
+          "line": [[-366.58,-101.27],[-367.96,-100.01],[-351.66,-91.9],[-350.93,-93.28],[-366.58,-101.27]],
+          "width": 4,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-366.58,-101.27],[-350.93,-93.28],[-351.66,-91.9],[-367.96,-100.01]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1344791584",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "cycleway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1344791584",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "cycleway"
+          },
+          "line": [[-683.66,297.34],[-741.15,313.08],[-767.58,320.75],[-775.64,320.87],[-779.97,320.39],[-781.53,320.22],[-786.82,318.31],[-791.71,315.43],[-798.34,310.47],[-809.17,301.37],[-822.46,293.6],[-839.09,284.64],[-849.97,280.73],[-858.78,277.46],[-864.37,275.4],[-882.82,271.41],[-895.38,270.01],[-914.49,268.55],[-928.2,268.72],[-936.18,269.9],[-949.92,272.59],[-956.66,275.34],[-958.31,276.65]],
+          "width": 3,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-741.55,311.63],[-684.06,295.89],[-683.27,298.78],[-740.74,314.52],[-767.35,322.24],[-775.71,322.37],[-781.87,321.7],[-787.46,319.67],[-792.54,316.68],[-799.27,311.65],[-810.03,302.6],[-823.2,294.91],[-839.71,286.02],[-864.79,276.84],[-883.06,272.89],[-895.52,271.51],[-914.54,270.05],[-928.08,270.22],[-935.93,271.37],[-949.49,274.03],[-955.89,276.65],[-957.37,277.83],[-959.24,275.48],[-957.42,274.03],[-950.35,271.15],[-936.44,268.42],[-928.32,267.22],[-914.44,267.05],[-895.24,268.52],[-882.58,269.93],[-863.95,273.96],[-838.48,283.27],[-821.73,292.3],[-808.3,300.14],[-797.41,309.3],[-790.87,314.18],[-786.18,316.95],[-781.19,318.75],[-775.57,319.37],[-767.8,319.25]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:1344791585",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "cycleway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:1344791585",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "cycleway"
+          },
+          "line": [[-713.85,274.44],[-723.21,283],[-728.45,285.76],[-764.42,299.21],[-769.72,300.28],[-774.79,300.45],[-779.47,299.28],[-784.88,295.31],[-806.4,279.08],[-819.59,271.32],[-832.05,265.49],[-843.7,260.41],[-851.49,257],[-859.21,254.4],[-872.75,252.12],[-893.51,249.48],[-905.43,248.84],[-920.18,248.7],[-934.86,249.15],[-958.73,250.85],[-962.91,251.4]],
+          "width": 3,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-724.08,281.76],[-714.87,273.34],[-712.84,275.55],[-722.34,284.24],[-727.83,287.14],[-764.01,300.65],[-769.55,301.77],[-774.95,301.95],[-780.12,300.67],[-807.24,280.33],[-820.29,272.65],[-832.67,266.86],[-852.03,258.4],[-859.58,255.86],[-872.97,253.6],[-893.65,250.98],[-905.48,250.34],[-920.17,250.2],[-934.79,250.65],[-958.57,252.34],[-962.71,252.89],[-963.1,249.92],[-958.88,249.35],[-934.94,247.65],[-920.2,247.2],[-905.39,247.34],[-893.38,247.99],[-872.53,250.64],[-858.84,252.94],[-850.95,255.6],[-831.44,264.12],[-818.89,269.99],[-805.57,277.83],[-778.82,297.9],[-774.63,298.94],[-769.9,298.78],[-764.83,297.76],[-729.06,284.39]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:217855140",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:217855140",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-347.51,-164.21],[-352.43,-168.04],[-523.85,-301.61]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:543806110",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "path"
+      },
+      "parts": [
+        {
+          "id": "osm:way:543806110",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "path"
+          },
+          "line": [[-349.07,-74.37],[-335.26,-90.35],[-332.79,-97.55],[-321.61,-108.21],[-316.92,-131.43],[-307.28,-150.63],[-303.98,-154.91],[-296.28,-164.94],[-293.69,-168.33],[-281.59,-184.05],[-277.98,-198.37],[-269.87,-213.63],[-266.24,-228.94],[-267.72,-238.86],[-269.04,-247.77],[-271.38,-263.14],[-265.3,-275.46],[-260.17,-291.25],[-253.61,-302.07],[-246.52,-313.88],[-236.46,-326.16],[-233.36,-338.5],[-226.22,-356.74],[-222.12,-369.57],[-218.24,-378.01],[-216.36,-388.45]],
+          "width": 2,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-334.38,-89.84],[-348.31,-73.71],[-349.82,-75.02],[-336.15,-90.86],[-333.66,-98.11],[-322.53,-108.71],[-317.87,-131.76],[-308.13,-151.17],[-282.51,-184.49],[-278.92,-198.73],[-270.81,-213.99],[-267.26,-228.98],[-272.42,-263.3],[-266.23,-275.84],[-261.09,-291.67],[-247.34,-314.46],[-237.38,-326.62],[-234.31,-338.8],[-227.16,-357.07],[-223.05,-369.93],[-219.21,-378.31],[-217.35,-388.62],[-215.38,-388.27],[-217.28,-377.71],[-221.18,-369.21],[-225.28,-356.4],[-232.4,-338.19],[-235.55,-325.7],[-245.7,-313.31],[-259.26,-290.83],[-264.37,-275.08],[-270.35,-262.98],[-265.23,-228.89],[-268.92,-213.28],[-277.04,-198.01],[-280.67,-183.6],[-306.43,-150.1],[-315.97,-131.1],[-320.69,-107.7],[-331.92,-97]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:544161580",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "residential"
+      },
+      "parts": [
+        {
+          "id": "osm:way:544161580",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "residential"
+          },
+          "line": [[-471.89,-77.98],[-430.87,-77],[-423.83,-76.15],[-405.97,-84.43],[-388.11,-105.48],[-377.86,-120.28],[-347.51,-164.21],[-341.05,-177.94],[-331.98,-201.28],[-278.07,-331.53],[-248.34,-405.29],[-246.37,-410.17],[-243.85,-416.14],[-203.92,-510.88],[-188.54,-550.45],[-185.07,-555.48]],
+          "width": 6
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:544161581",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "residential"
+      },
+      "parts": [
+        {
+          "id": "osm:way:544161581",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "residential"
+          },
+          "line": [[-240.58,-405.58],[-246.37,-410.17],[-254.34,-416.47],[-357.76,-498.29],[-370.78,-507.43],[-385.91,-518.56],[-391.37,-522.57]],
+          "width": 6,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-242.45,-403.23],[-359.55,-495.89],[-372.51,-504.97],[-370.78,-507.43],[-368.95,-509.8],[-355.96,-500.7],[-238.72,-407.93]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:544161583",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "path"
+      },
+      "parts": [
+        {
+          "id": "osm:way:544161583",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "path"
+          },
+          "line": [[-303.98,-154.91],[-285.82,-147.84]],
+          "width": 2
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:544166204",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "path"
+      },
+      "parts": [
+        {
+          "id": "osm:way:544166204",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "path"
+          },
+          "line": [[-160.07,-378.47],[-159.46,-371.84],[-159.25,-371.3],[-154.44,-359.53],[-151.43,-353.37],[-145.33,-346.15],[-143.34,-338.99],[-138.31,-328.21],[-136.36,-316.95],[-136.44,-308.77],[-137.56,-298.56],[-139.19,-289.89],[-141.83,-282.76],[-155.22,-278.29],[-168.55,-280.98],[-180.32,-284.66],[-186.57,-276.55],[-189.23,-266.36],[-185.23,-255.59],[-175.22,-249],[-170.84,-244.65],[-175.07,-231.65],[-181.3,-223.4],[-198.44,-215.86],[-203.64,-213.16],[-214.63,-204.47],[-218.87,-195.45],[-221.28,-185.43],[-228.8,-172.08],[-238.9,-158.14],[-239.83,-155.12],[-248.29,-127.8],[-255.89,-115.4],[-257.6,-108.19],[-255.09,-101.95],[-241.04,-97.32],[-233.09,-92.06],[-226.98,-86.13],[-204.09,-90.24],[-194.84,-89.9],[-157.86,-91.6],[-140.92,-91.18],[-122.94,-91.01],[-100.37,-89.52],[-92.48,-88.04]],
+          "width": 2
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:552816791",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "path"
+      },
+      "parts": [
+        {
+          "id": "osm:way:552816791",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "path"
+          },
+          "line": [[-332.79,-97.55],[-339.84,-100.7]],
+          "width": 2
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:552816792",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "path"
+      },
+      "parts": [
+        {
+          "id": "osm:way:552816792",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "path",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-339.84,-100.7],[-365.3,-114.11]],
+          "width": 2
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:552816793",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "path"
+      },
+      "parts": [
+        {
+          "id": "osm:way:552816793",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "path"
+          },
+          "line": [[-365.3,-114.11],[-377.86,-120.28]],
+          "width": 2
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:574644707",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:574644707",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-143.71,-787.51],[-157.48,-768.75],[-188.6,-728.44],[-233.24,-670.59],[-285.51,-607.01],[-298.38,-589.2],[-338.11,-538.56],[-342.28,-532.55],[-343.93,-527.86],[-345.06,-523.69],[-345.75,-519],[-347.35,-512.98],[-352.02,-505.18],[-357.76,-498.29],[-360.78,-494.52],[-364.94,-489.34],[-369.45,-485.68],[-375.48,-484.2],[-381.01,-482.93],[-386.22,-478],[-402.5,-455.96],[-416.38,-437.29],[-425.44,-425.49],[-472.37,-365.34],[-523.85,-301.61],[-562.39,-252.03],[-567.64,-245.29],[-595.42,-209.6],[-608.8,-192.44],[-612.79,-187.21]],
+          "width": 5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-145.72,-788.99],[-141.69,-786.03],[-155.48,-767.25],[-231.29,-669.03],[-283.52,-605.48],[-296.38,-587.69],[-336.1,-537.08],[-340.03,-531.4],[-341.54,-527.12],[-342.61,-523.18],[-343.29,-518.5],[-345.03,-512],[-349.98,-503.73],[-355.82,-496.71],[-363.15,-487.57],[-368.31,-483.39],[-379.79,-480.65],[-384.34,-476.34],[-414.39,-435.79],[-423.47,-423.96],[-470.41,-363.79],[-521.89,-300.05],[-610.81,-185.69],[-614.78,-188.73],[-525.81,-303.16],[-474.33,-366.9],[-427.42,-427.02],[-418.38,-438.8],[-388.1,-479.67],[-382.24,-485.22],[-370.59,-487.97],[-366.72,-491.11],[-359.69,-499.87],[-354.07,-506.63],[-349.68,-513.96],[-348.2,-519.51],[-347.51,-524.2],[-346.32,-528.61],[-344.52,-533.7],[-340.12,-540.05],[-300.38,-590.7],[-287.49,-608.54],[-235.2,-672.14],[-159.47,-770.25]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:581275173",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:581275173",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-507.99,-4.54],[-492.45,-3.05],[-481.34,-2.54]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:584727572",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:584727572",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-629.62,-192.89],[-616.47,-182.52],[-615.33,-181.62],[-483.03,-78.51],[-481.53,-75.45],[-485.15,-50.27],[-492.45,-3.05],[-494.74,27.11],[-495.28,34.22],[-496.55,51],[-497.71,81.46],[-497.64,85.31],[-495.57,182.92],[-495.67,190.03],[-494.22,199.75],[-507.28,237.66],[-511.46,249.79]],
+          "width": 2.5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-622.48,-188.85],[-482.03,-79.32],[-480.24,-75.65],[-483.92,-50.08],[-491.21,-2.91],[-495.3,51.07],[-496.46,81.47],[-494.32,182.91],[-494.42,189.95],[-492.94,199.86],[-510.28,250.2],[-512.65,249.38],[-495.5,199.63],[-496.92,190.12],[-496.82,182.92],[-498.96,81.44],[-497.8,50.93],[-493.7,-3.2],[-486.39,-50.45],[-482.83,-75.25],[-484.02,-77.7],[-624.02,-186.88]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:596904667",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:596904667",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-203.03,-421.6],[-138.12,-396.86],[-133.41,-395.07],[-129.86,-393.71],[-124.88,-407.79]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:604832428",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "pedestrian"
+      },
+      "parts": [
+        {
+          "id": "osm:way:604832428",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "pedestrian",
+            "area": "yes"
+          },
+          "line": [[-243.66,-469.56],[-235.53,-463.52],[-232.4,-461.02],[-228.75,-458.25],[-218.23,-486.06],[-226.51,-492.43],[-234.43,-499.09],[-252.16,-476.23],[-243.66,-469.56]],
+          "width": 5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-243.66,-469.56],[-252.16,-476.23],[-234.43,-499.09],[-226.51,-492.43],[-218.23,-486.06],[-228.75,-458.25],[-235.53,-463.52]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:604832429",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "unknown",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:604832429",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "unknown",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-232.4,-461.02],[-228.75,-458.25],[-245.94,-419.31],[-350.25,-497.42],[-350.45,-501.92],[-340.32,-505.75],[-273.99,-454.05],[-263.43,-445.19],[-255.45,-442.73],[-247.52,-444.19],[-242.61,-448.87]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:627377941",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "path"
+      },
+      "parts": [
+        {
+          "id": "osm:way:627377941",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "path"
+          },
+          "line": [[-263.05,-133.49],[-248.29,-127.8]],
+          "width": 2
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:627377943",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "path"
+      },
+      "parts": [
+        {
+          "id": "osm:way:627377943",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "path",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-285.82,-147.84],[-263.05,-133.49]],
+          "width": 2
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:635473031",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:635473031",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-503.11,254.75],[-506.45,252.76],[-511.46,249.79],[-522.51,241.5],[-577.76,200.06],[-632.47,158.8],[-667.25,132.57],[-672.04,129.1],[-755.33,65.74],[-787.65,41.17]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:683646729",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:683646729",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-203.92,-510.88],[-231.85,-534.04],[-298.38,-589.2]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:687770522",
+      "kind": "water",
+      "height": 0,
+      "props": {
+        "water": "drain",
+        "kind": "water",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:687770522",
+          "height": 0,
+          "props": {
+            "water": "drain",
+            "kind": "water",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-350.93,-93.28],[-366.58,-101.27],[-348.93,-130.13],[-336.58,-158.01],[-330.62,-173.86],[-242.62,-395.77],[-84.07,-788.39],[-79.02,-796.61],[-71.07,-793.36],[-74.83,-784.83],[-75.21,-778.91],[-288.56,-244.89],[-326.99,-150.08],[-335.63,-129.72],[-336.99,-124.08],[-343.51,-107.96]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:692240859",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:692240859",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-239.83,-155.12],[-244.77,-157.28]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:692240860",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:692240860",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-244.77,-157.28],[-261.28,-162.18],[-262.92,-156.17],[-277.16,-160.9]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:692240861",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:692240861",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-277.16,-160.9],[-282.32,-162.5],[-283.69,-160.07],[-296.28,-164.94]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:692240862",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "path"
+      },
+      "parts": [
+        {
+          "id": "osm:way:692240862",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "path"
+          },
+          "line": [[-141.83,-282.76],[-140.93,-277.74],[-141.55,-273.63],[-146.01,-269.86],[-158.47,-263.23],[-162.94,-258.87],[-166.23,-254.2],[-168.04,-248.94],[-170.84,-244.65]],
+          "width": 2
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:692240863",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:692240863",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-138.31,-328.21],[-100.44,-192.41]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:692240864",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:692240864",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-235.53,-463.52],[-244.42,-452.17],[-248.38,-448.26],[-252.96,-446.89],[-255.68,-446.63],[-260.07,-447.06],[-263.63,-449.11],[-347.35,-512.98]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:723349800",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:723349800",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-418.81,-135.3],[-455.81,-163.3]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:723349810",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:723349810",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-188.54,-550.45],[-211.67,-566.6]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:725234160",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "pedestrian"
+      },
+      "parts": [
+        {
+          "id": "osm:way:725234160",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "pedestrian"
+          },
+          "line": [[-331.98,-201.28],[-335.78,-203.5],[-338.15,-204.89],[-347.61,-213.86],[-357.24,-227.29],[-362.72,-237.55],[-365.84,-250.13],[-367.19,-258.1],[-366.72,-274.19],[-366.16,-282.9],[-363.55,-294.26],[-358.89,-305.61],[-355.08,-312.6],[-347.84,-320.71],[-338.29,-329.2],[-328.53,-336.53],[-321.65,-339.89],[-314.58,-341.73],[-308.35,-342.12],[-299.41,-340.87],[-291.11,-337.92],[-286.41,-335.33],[-283.22,-333.88],[-278.07,-331.53]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:795600241",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "unknown",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:795600241",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "unknown",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-585.97,-198.4],[-436.56,-81.73],[-436.37,-79.59],[-467.79,-81.77],[-471.71,-83.1],[-476.21,-85.92],[-596.65,-178.84],[-604.35,-185.5],[-605.2,-187.38],[-605.71,-189.6],[-605.45,-192.2],[-604.26,-194.11],[-598.82,-200.89],[-596.09,-201.57],[-591.86,-201.24],[-589.08,-200.44]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:795612401",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "unknown",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:795612401",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "unknown",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-550.93,-235.54],[-563.9,-219.06],[-559.18,-215.38],[-567.93,-204.26],[-548.69,-189.25],[-543.58,-195.74],[-538.12,-191.5],[-544.3,-183.66],[-529.82,-172.39],[-532.94,-168.6],[-585.44,-209.2],[-585.63,-216.11],[-563.27,-245.02]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:795612402",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:795612402",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-526.57,-156.05],[-519.88,-164.65]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:795612405",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:795612405",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-611.95,-182.47],[-483.97,-81.94],[-479.54,-77.72],[-476.98,-71.94],[-476.11,-66.53],[-480.28,-46.06],[-483.67,-8.01],[-486.43,14.22],[-488.28,36.4],[-490.04,52.33],[-490.71,69.21],[-491.34,72.22],[-493.13,74.05],[-496.1,75.6],[-500.06,74.65],[-504.2,71.86],[-564.99,25.55],[-565.2,24.02],[-560.71,17.45],[-529.58,41.05],[-526.22,36.08],[-518.02,42.47],[-510.47,31.29],[-505.68,35.01],[-506.77,22.91],[-507.66,14.97],[-508.31,0.63],[-507.62,-10.78],[-505.49,-28.57],[-503.24,-41.33],[-501.62,-45.6],[-499.06,-50.78],[-497.78,-52.82],[-496.89,-55.18],[-496.78,-58.52],[-498.06,-61.53],[-502.25,-65.64],[-568.44,-118.04],[-622.16,-159.79],[-623.28,-166.87]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:795677489",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "pedestrian"
+      },
+      "parts": [
+        {
+          "id": "osm:way:795677489",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "pedestrian",
+            "area": "yes"
+          },
+          "line": [[-549.64,105.31],[-553.4,110.33],[-549.22,113.41],[-562.84,131.65],[-577.78,151.64],[-583.11,147.69],[-587.48,153.51],[-565.75,169.59],[-575.72,182.71],[-569.07,187.41],[-567.81,189.2],[-555.54,171.97],[-550.87,165.44],[-507.23,197.97],[-507.75,173.63],[-505.96,157.63],[-531.48,138.18],[-524.62,128.28],[-533.74,121.18],[-532,118.87],[-533.27,117.77],[-538.69,113.6],[-549.64,105.31]],
+          "width": 5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-549.64,105.31],[-538.69,113.6],[-532,118.87],[-533.74,121.18],[-524.62,128.28],[-531.48,138.18],[-505.96,157.63],[-507.75,173.63],[-507.23,197.97],[-550.87,165.44],[-567.81,189.2],[-569.07,187.41],[-575.72,182.71],[-565.75,169.59],[-587.48,153.51],[-583.11,147.69],[-577.78,151.64],[-549.22,113.41],[-553.4,110.33]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:795677490",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:795677490",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-507.23,197.97],[-507.75,173.63],[-505.96,157.63],[-531.48,138.18],[-524.62,128.28],[-533.74,121.18],[-515.72,97.13],[-593.44,37.51],[-589.29,31.98],[-524.43,81.34],[-517.27,72.02],[-490.78,90.12],[-489.03,168.39],[-489.24,193.55],[-492.01,210.85],[-503.98,245.04],[-511.31,244.11],[-571.79,199.91],[-572.73,196.1],[-550.87,165.44]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:795677493",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:795677493",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-495.57,182.92],[-507.75,173.63],[-540.91,148.37],[-550.18,141.22],[-562.84,131.65]],
+          "width": 2.5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-496.33,183.91],[-563.6,132.65],[-562.09,130.65],[-494.81,181.92]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:795677494",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:795677494",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-577.76,200.06],[-570.87,190.04],[-569.07,187.41],[-556.69,170.58],[-540.91,148.37]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:795677495",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:795677495",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-497.64,85.31],[-516.8,95.97],[-533.27,117.77],[-550.18,141.22]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803679394",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:803679394",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-595.42,-209.6],[-526.57,-156.05],[-448.86,-95.62],[-433.14,-83.4],[-431.19,-81.87],[-423.83,-76.15]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803679395",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:803679395",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-305.47,-278.24],[-307.13,-279.38],[-328.7,-293.94],[-349.34,-308.47],[-355.08,-312.6]],
+          "width": 2.5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-304.76,-279.27],[-306.18,-277.21],[-329.41,-292.92],[-355.81,-311.58],[-354.35,-313.61],[-327.99,-294.97]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803679396",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:803679396",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-308.35,-342.12],[-308.35,-334.86],[-309.99,-311.5],[-324.88,-301.07],[-328.7,-293.94],[-332.08,-285.33],[-336.31,-274.61],[-337.64,-267.04],[-336.87,-257.32],[-334.9,-250.68],[-330.08,-241.29],[-325.54,-235.61],[-323.23,-233.75]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803679397",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:803679397",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-309.99,-311.5],[-294.87,-304.82]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803679398",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:803679398",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-334.9,-250.68],[-360.56,-256.41],[-367.19,-258.1]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693980",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693980",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service",
+            "covered": "yes"
+          },
+          "line": [[-365.22,-394.44],[-363.18,-391.04]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693981",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693981",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-472.37,-365.34],[-445.05,-344.96]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693982",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "pedestrian"
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693982",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "pedestrian",
+            "area": "yes"
+          },
+          "line": [[-281.6,-346.59],[-294.85,-351.71],[-295.46,-358.14],[-320.89,-357.44],[-330.45,-357.17],[-329.08,-354.39],[-337.29,-351.34],[-339.86,-350.29],[-338.57,-344.15],[-345.39,-340.17],[-373.31,-304.88],[-380.37,-295.84],[-380.59,-294.14],[-382.49,-281.88],[-386.67,-246.65],[-374.83,-244.23],[-373.03,-242.2],[-372.05,-241.09],[-370.94,-239.84],[-368.4,-236.97],[-364.89,-228.34],[-363.67,-224.79],[-356.04,-213.83],[-349.49,-206.47],[-340.03,-199.28],[-338.15,-204.89],[-335.3,-210.81],[-344.34,-219.62],[-352.03,-230.35],[-357.18,-241.05],[-359.6,-252.29],[-360.53,-254.96],[-360.56,-256.41],[-360.6,-258.59],[-360.2,-270.88],[-358.93,-281.52],[-356.61,-291.23],[-353.29,-299.86],[-349.34,-308.47],[-343.41,-315.61],[-334.08,-323.92],[-325.76,-329.54],[-319.79,-332.71],[-315.25,-334.11],[-312.17,-334.87],[-309.61,-334.74],[-308.35,-334.86],[-306.84,-334.54],[-303.84,-334.4],[-298.37,-333.18],[-293.62,-331.45],[-289.34,-329.49],[-286.41,-335.33],[-281.6,-346.59]],
+          "width": 5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-281.6,-346.59],[-286.41,-335.33],[-289.34,-329.49],[-293.62,-331.45],[-298.37,-333.18],[-303.84,-334.4],[-306.84,-334.54],[-308.35,-334.86],[-309.61,-334.74],[-312.17,-334.87],[-315.25,-334.11],[-319.79,-332.71],[-325.76,-329.54],[-334.08,-323.92],[-343.41,-315.61],[-349.34,-308.47],[-353.29,-299.86],[-356.61,-291.23],[-358.93,-281.52],[-360.2,-270.88],[-360.6,-258.59],[-360.53,-254.96],[-359.6,-252.29],[-357.18,-241.05],[-352.03,-230.35],[-344.34,-219.62],[-335.3,-210.81],[-338.15,-204.89],[-340.03,-199.28],[-349.49,-206.47],[-356.04,-213.83],[-363.67,-224.79],[-364.89,-228.34],[-368.4,-236.97],[-374.83,-244.23],[-386.67,-246.65],[-382.49,-281.88],[-380.37,-295.84],[-345.39,-340.17],[-338.57,-344.15],[-339.86,-350.29],[-329.08,-354.39],[-330.45,-357.17],[-295.46,-358.14],[-294.85,-351.71]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693983",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "pedestrian"
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693983",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "pedestrian",
+            "area": "yes"
+          },
+          "line": [[-304.21,-285.78],[-323.27,-300.21],[-324.88,-301.07],[-325.99,-302.01],[-343.41,-315.61],[-349.34,-308.47],[-353.29,-299.86],[-333.56,-286.23],[-332.08,-285.33],[-330.77,-284.5],[-310.83,-269.67],[-307.13,-279.38],[-304.21,-285.78]],
+          "width": 5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-304.21,-285.78],[-307.13,-279.38],[-310.83,-269.67],[-330.77,-284.5],[-333.56,-286.23],[-353.29,-299.86],[-349.34,-308.47],[-343.41,-315.61],[-324.88,-301.07],[-323.27,-300.21]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693984",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693984",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-360.53,-254.96],[-336.31,-249.13],[-330.66,-239.06],[-325.56,-233.55],[-335.3,-210.81],[-344.34,-219.62],[-352.03,-230.35],[-357.18,-241.05],[-359.6,-252.29]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693985",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693985",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-360.6,-258.59],[-360.2,-270.88],[-358.93,-281.52],[-356.61,-291.23],[-353.29,-299.86],[-333.56,-286.23],[-337.45,-277.06],[-339.45,-266.67],[-339.1,-259.91],[-338.17,-252.95]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693986",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693986",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-325.99,-302.01],[-343.41,-315.61],[-334.08,-323.92],[-325.76,-329.54],[-319.79,-332.71],[-315.25,-334.11],[-312.17,-334.87],[-309.61,-334.74],[-311.25,-312.94]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693987",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693987",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-310.83,-269.67],[-324.26,-237.1],[-327.85,-241.66],[-330.32,-245.77],[-333.51,-251.53],[-335.05,-256.97],[-336.14,-263.18],[-335.92,-268.7],[-334.4,-275.93],[-330.77,-284.5]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693988",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693988",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-289.34,-329.49],[-287.49,-328.22],[-295.91,-306.82],[-308.15,-312.42],[-306.84,-334.54],[-303.84,-334.4],[-298.37,-333.18],[-293.62,-331.45]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:803693989",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:803693989",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-323.27,-300.21],[-309.66,-309.4],[-297.29,-303.33],[-304.21,-285.78]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726363",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726363",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-372.05,-241.09],[-379.06,-232.14]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726365",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726365",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-290.79,-437.45],[-299.11,-425.74],[-343.96,-460.46],[-341.37,-464.12],[-361.5,-480.03],[-355.39,-488.02]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726366",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726366",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-368.1,-459.07],[-387.34,-435.62],[-396.89,-451.21],[-397.37,-453.75],[-397.51,-457.12],[-385.68,-472.17]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726367",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726367",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-376.59,-480.57],[-370.1,-481.24],[-365.95,-483.25],[-363.57,-485.28],[-360.88,-488.78],[-358.66,-489.93],[-356.6,-489.18],[-369.27,-475.07]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726370",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726370",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-373.03,-242.2],[-379.83,-232.76],[-389.66,-240.57],[-387,-243.85],[-386.67,-246.65],[-374.83,-244.23]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726371",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726371",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-370.94,-239.84],[-368.4,-236.97],[-364.89,-228.34],[-363.67,-224.79],[-366.65,-222.26],[-377.68,-231.05]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726372",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726372",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-356.04,-213.83],[-349.49,-206.47],[-340.03,-199.28],[-340.15,-198.18],[-351,-173.93],[-353.46,-173.73],[-377.21,-191.86],[-371.99,-198.86],[-369.58,-196.95]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726373",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726373",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-416.38,-437.29],[-405.36,-428.94]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726374",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726374",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-410.47,-437.76],[-410.75,-439.67],[-405.66,-446.81],[-403.45,-447.08],[-400.95,-446.47],[-398.9,-444.69],[-380.47,-414.28]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726375",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726375",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-412.11,-428.84],[-418.29,-420.95],[-422.69,-424.52],[-417.76,-431.22],[-416.28,-431.35],[-414.81,-431.05]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726376",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726376",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-425.44,-425.49],[-419,-420.17]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726378",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726378",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-389.3,-514.19],[-365.01,-497.79],[-360.78,-494.52],[-255.3,-412.7],[-253.78,-409.01],[-254.39,-405.54],[-283.22,-333.88],[-290.08,-316.82],[-294.87,-304.82],[-305.47,-278.24],[-323.23,-233.75],[-328.95,-219.41],[-335.78,-203.5],[-339.3,-195.3],[-348.06,-175.64],[-350.32,-171.49]],
+          "width": 2.5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-374.44,-502.65],[-372.96,-504.67],[-364.28,-498.8],[-254.27,-413.49],[-252.48,-409.15],[-253.19,-405.19],[-288.92,-316.35],[-327.8,-218.93],[-338.15,-194.8],[-346.93,-175.09],[-349.22,-170.89],[-351.42,-172.08],[-349.18,-176.2],[-340.45,-195.8],[-330.11,-219.89],[-291.24,-317.28],[-255.6,-405.88],[-255.07,-408.87],[-256.33,-411.92],[-365.74,-496.77]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726381",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726381",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-350.32,-171.49],[-352.43,-168.04],[-355.02,-162.87]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726383",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726383",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-700.79,-73.45],[-787.65,41.17],[-836.73,103.37],[-875.11,152.12]],
+          "width": 5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-702.78,-74.96],[-698.8,-71.94],[-785.68,42.7],[-873.15,153.66],[-877.07,150.57],[-789.63,39.64]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726384",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726384",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-568.17,-111.71],[-571.46,-114.12],[-631.3,-163.63],[-626.59,-169.44],[-616.47,-182.52],[-612.79,-187.21]],
+          "width": 2.5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-570.69,-115.11],[-567.43,-112.71],[-568.91,-110.7],[-572.23,-113.14],[-633.05,-163.46],[-627.57,-170.22],[-613.77,-187.98],[-611.81,-186.44],[-625.61,-168.66],[-629.55,-163.81]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726385",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726385",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-487.59,86.02],[-497.71,81.46],[-512.18,70.37],[-582.21,15.29],[-634.95,-25.76],[-633.87,-27.15],[-568.17,-111.71],[-502.22,-62.23],[-499.92,-59.3],[-499.94,-56.6],[-501.32,-52.75],[-501.74,-51.57],[-539.51,-2.89]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726386",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726386",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service",
+            "area": "yes"
+          },
+          "line": [[-505.15,-52.59],[-503.69,-54.5],[-501.32,-52.75],[-499.06,-50.78],[-501.62,-45.6],[-503.24,-41.33],[-505.49,-28.57],[-507.62,-10.78],[-507.99,-4.54],[-508.31,0.63],[-507.66,14.97],[-506.77,22.91],[-506.19,29.3],[-505.68,35.01],[-510.47,31.29],[-518.62,25.07],[-577.1,-19.57],[-574.22,-23.28],[-571.64,-21.29],[-565.83,-28.8],[-562.22,-26.01],[-559.91,-28.99],[-547.91,-19.75],[-540.28,-29.57],[-552.71,-39.14],[-550.89,-41.48],[-554.09,-43.95],[-550.03,-49.2],[-554.13,-52.34],[-550.81,-56.61],[-527.35,-38.64],[-522.66,-44.65],[-515.06,-38.92],[-505.15,-52.59]],
+          "width": 5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-503.69,-54.5],[-501.32,-52.75],[-499.06,-50.78],[-501.62,-45.6],[-503.24,-41.33],[-505.49,-28.57],[-507.62,-10.78],[-508.31,0.63],[-507.66,14.97],[-506.77,22.91],[-505.68,35.01],[-577.1,-19.57],[-574.22,-23.28],[-571.64,-21.29],[-565.83,-28.8],[-562.22,-26.01],[-559.91,-28.99],[-547.91,-19.75],[-540.28,-29.57],[-552.71,-39.14],[-550.89,-41.48],[-554.09,-43.95],[-550.03,-49.2],[-554.13,-52.34],[-550.81,-56.61],[-527.35,-38.64],[-522.66,-44.65],[-515.06,-38.92]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726388",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726388",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-506.19,29.3],[-495.28,34.22]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726389",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726389",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-494.74,27.11],[-484.95,28.56]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726390",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726390",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-505.68,35.01],[-508.36,46.14],[-511.38,56.75],[-512.18,70.37]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:842746198",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "residential"
+      },
+      "parts": [
+        {
+          "id": "osm:way:842746198",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "residential"
+          },
+          "line": [[-705.91,280.46],[-707.4,279.33],[-713.85,274.44],[-720.35,269.52],[-756.93,241.76],[-762.69,237.4],[-864.65,160.07],[-875.11,152.12],[-882.61,146.44],[-891.84,139.43],[-898.46,134.41]],
+          "width": 6,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-707.72,282.85],[-884.42,148.83],[-880.78,144.06],[-704.09,278.07]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:842746199",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "residential"
+      },
+      "parts": [
+        {
+          "id": "osm:way:842746199",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "residential",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-692.77,290.43],[-705.91,280.46]],
+          "width": 6
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:844239449",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:844239449",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-634.95,-25.76],[-642.68,-16.17],[-590.1,25.87],[-519.87,80.54],[-512.18,70.37]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:851437273",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:851437273",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-504.34,-309.19],[-510.54,-313.39],[-491.3,-338.35],[-484.71,-333.55]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:851437274",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:851437274",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-507.93,-304.72],[-491.33,-291.88],[-496.62,-284.57],[-498.84,-286.49],[-496.83,-289.16],[-514.31,-302.17],[-515.74,-300.26],[-516.54,-305.56],[-514.05,-308.87]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:862482048",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "cycleway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:862482048",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "cycleway"
+          },
+          "line": [[-380.59,-294.14],[-366.16,-282.9]],
+          "width": 3
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:862482049",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "pedestrian"
+      },
+      "parts": [
+        {
+          "id": "osm:way:862482049",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "pedestrian"
+          },
+          "line": [[-337.29,-351.34],[-328.53,-336.53]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:868013622",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:868013622",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-634.33,-117.45],[-619.96,-102.16]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:868013623",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:868013623",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-619.96,-102.16],[-607.4,-115.29]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:868013624",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:868013624",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-619.96,-102.16],[-622.07,-88.13]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:950008605",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:950008605",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-202.23,-532.98],[-220.29,-547.54],[-244.89,-567.36]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:950008606",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:950008606",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-220.29,-547.54],[-231.85,-534.04]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:978102533",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:978102533",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-363.18,-391.04],[-337.29,-351.34]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:978102534",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:978102534",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-402.5,-455.96],[-365.22,-394.44]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:978102535",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:978102535",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-441.88,-342.31],[-380.59,-294.14]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:978102536",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:978102536",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service",
+            "covered": "yes"
+          },
+          "line": [[-445.05,-344.96],[-441.88,-342.31]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:988863094",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:988863094",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-363.08,-156.23],[-392.8,-179.57],[-383.61,-190.77],[-356.55,-168.04]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:988863095",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:988863095",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-236.85,-577.97],[-251.91,-560.69],[-275.09,-579.3],[-268,-587.75],[-284.79,-601.27],[-271.41,-617.99],[-263.17,-611.85],[-269.75,-603.43]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:1061419135",
+      "kind": "water",
+      "name": "走马河",
+      "height": 0,
+      "props": {
+        "name": "走马河",
+        "category": "landscape",
+        "subcategory": "water",
+        "kind": "water",
+        "anchor": [-568.1,0,293.86]
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419135",
+          "height": 0,
+          "props": {
+            "waterway": "stream",
+            "kind": "water",
+            "category": "landscape",
+            "highway": null,
+            "layer": "-1",
+            "name": "走马河",
+            "name:zh": "走马河",
+            "tunnel": "culvert"
+          },
+          "line": [[-576.64,305.55],[-559.55,282.18]],
+          "width": 4
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:1061419157",
+      "kind": "parking",
+      "name": "停车 · 9157",
+      "height": 0,
+      "props": {
+        "name": "停车 · 9157",
+        "category": "transport",
+        "subcategory": "parking",
+        "kind": "parking",
+        "anchor": [-809.14,0,185.65]
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419157",
+          "height": 0,
+          "props": {
+            "kind": "parking",
+            "category": "transport",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-772.69,222.88],[-854.79,160.39],[-845.59,148.42],[-763.49,210.91]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:1061419159",
+      "kind": "poi",
+      "name": "其他服务 · 9159",
+      "height": 0,
+      "props": {
+        "name": "其他服务 · 9159",
+        "category": "service",
+        "subcategory": "service",
+        "kind": "poi",
+        "anchor": [-732.92,0,251.41]
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419159",
+          "height": 0,
+          "props": {
+            "kind": "poi",
+            "category": "service",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-744.2,246.12],[-741.16,242.1],[-721.64,256.7],[-724.67,260.72]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:1061419160",
+      "kind": "poi",
+      "name": "其他服务 · 9160",
+      "height": 0,
+      "props": {
+        "name": "其他服务 · 9160",
+        "category": "service",
+        "subcategory": "service",
+        "kind": "poi",
+        "anchor": [-642.19,0,319.27]
+      },
+      "parts": [
+        {
+          "id": "osm:way:1061419160",
+          "height": 0,
+          "props": {
+            "kind": "poi",
+            "category": "service",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-679.21,294.42],[-676.36,290.67],[-594.47,352.15],[-597.33,355.93]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:1064351726",
+      "kind": "poi",
+      "name": "出入口 · 1726",
+      "props": {
+        "name": "出入口 · 1726",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-626.36,0,-169.26]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-626.36,0,-169.26]
+      }
+    },
+    {
+      "id": "qsh:way:1064351727",
+      "kind": "poi",
+      "name": "出入口 · 1727",
+      "props": {
+        "name": "出入口 · 1727",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-570.91,0,-114.84]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-570.91,0,-114.84]
+      }
+    },
+    {
+      "id": "qsh:way:1064351728",
+      "kind": "poi",
+      "name": "出入口 · 1728",
+      "props": {
+        "name": "出入口 · 1728",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-636.58,0,-31.19]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-636.58,0,-31.19]
+      }
+    },
+    {
+      "id": "qsh:way:1064351729",
+      "kind": "poi",
+      "name": "出入口 · 1729",
+      "props": {
+        "name": "出入口 · 1729",
+        "category": "entrance",
+        "kind": "poi",
+        "anchor": [-700.79,0,-73.45]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-700.79,0,-73.45]
+      }
+    },
+    {
+      "id": "qsh:way:1065537685",
+      "kind": "poi",
+      "name": "非机动车 · 7685",
+      "height": 0,
+      "props": {
+        "name": "非机动车 · 7685",
+        "category": "transport",
+        "subcategory": "bicycle",
+        "kind": "poi",
+        "anchor": [-808.46,0,172.47]
+      },
+      "parts": [
+        {
+          "id": "osm:way:1065537685",
+          "height": 0,
+          "props": {
+            "kind": "poi",
+            "category": "transport",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-787.37,187.13],[-788.34,188.66],[-829.48,157.81],[-828.36,156.5]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:1172471444",
+      "kind": "water",
+      "name": "走马河",
+      "height": 0,
+      "props": {
+        "name": "走马河",
+        "category": "landscape",
+        "subcategory": "water",
+        "kind": "water",
+        "anchor": [-268.46,0,-261.69]
+      },
+      "parts": [
+        {
+          "id": "osm:way:1172471444",
+          "height": 0,
+          "props": {
+            "waterway": "stream",
+            "kind": "water",
+            "category": "landscape",
+            "highway": null,
+            "layer": "-1",
+            "name": "走马河",
+            "name:zh": "走马河",
+            "tunnel": "culvert"
+          },
+          "line": [[-282.93,-275.93],[-254,-247.46]],
+          "width": 4
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:217855313",
+      "kind": "water",
+      "name": "走马河",
+      "height": 0,
+      "props": {
+        "name": "走马河",
+        "category": "landscape",
+        "subcategory": "water",
+        "kind": "water",
+        "anchor": [-210.0,0,-78.27]
+      },
+      "parts": [
+        {
+          "id": "osm:way:217855313",
+          "height": 0,
+          "props": {
+            "waterway": "stream",
+            "kind": "water",
+            "category": "landscape",
+            "highway": null,
+            "name": "走马河",
+            "name:zh": "走马河"
+          },
+          "line": [[-254,-247.46],[-248.96,-242.51],[-244.16,-211.2],[-244.08,-196.37],[-263.35,-168.19],[-268.99,-153.47],[-276.18,-134.71],[-302.87,-70.72],[-282.89,-52.17],[-252.61,-70.9],[-241.31,-72.35],[-236.91,-77.86],[-220.46,-79.48],[-208.4,-78.08],[-199.69,-76.73],[-190.21,-73.83],[-170.46,-72.62],[-151.93,-77.3],[-139.82,-80.75],[-127.5,-80.9],[-117.26,-77.22],[-96.54,-70.37],[-75.66,-75.95],[-35.16,-81.62],[-14.09,-84.23],[1.08,-85.87],[8.05,-89.64],[19.63,-92.85],[38.11,-92.67],[47.31,-87.22],[50.32,-79.53],[51.25,-70.07],[52.85,-60.38],[54.29,-51.78]],
+          "width": 4
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:544277137",
+      "kind": "road",
+      "name": "水杉路",
+      "height": 0,
+      "props": {
+        "name": "水杉路",
+        "category": "transport",
+        "subcategory": "road",
+        "kind": "road",
+        "anchor": [-487.14,0,70.27]
+      },
+      "parts": [
+        {
+          "id": "osm:way:544277137",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "transport",
+            "highway": "residential",
+            "name": "水杉路",
+            "name:zh": "水杉路"
+          },
+          "line": [[-556.83,393.67],[-551.84,382.57],[-503.11,254.75],[-499.5,245.34],[-488.18,208.52],[-486.28,200.56],[-485.15,191.08],[-487.59,86.02],[-486.39,44.43],[-484.95,28.56],[-484.5,23.7],[-481.34,-2.54],[-475.43,-51.8],[-472.59,-67.08],[-471.89,-77.98],[-476.36,-81.45],[-612.79,-187.21],[-619.65,-192.53],[-625.89,-197.37],[-634.54,-204.08]],
+          "width": 6
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:570145228",
+      "kind": "building",
+      "name": "荟文楼",
+      "height": 23.4,
+      "storeys": 6,
+      "family": "office",
+      "props": {
+        "name": "荟文楼",
+        "category": "administration",
+        "kind": "building",
+        "anchor": [-254.57,23.4,-608.49]
+      },
+      "parts": [
+        {
+          "id": "osm:way:570145228",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "administration",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-222.05,-635.73],[-245.97,-605.13],[-207.53,-575.37],[-217.31,-562.85],[-269.75,-603.43],[-226.69,-658.51],[-219.38,-652.55],[-217.63,-651.49],[-210.56,-645.62],[-186.77,-627.6],[-196.11,-615.64]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:603368216",
+      "kind": "building",
+      "name": "核磁共振中心",
+      "height": 19.5,
+      "storeys": 5,
+      "family": "research",
+      "props": {
+        "name": "核磁共振中心",
+        "category": "research",
+        "kind": "building",
+        "anchor": [-186.34,11.7,-577.31]
+      },
+      "parts": [
+        {
+          "id": "osm:way:603368216",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-196.61,-593.6],[-200.26,-584.5],[-186.21,-578.96],[-183.28,-586.31],[-177.35,-583.97],[-178.05,-582.23],[-179.12,-582.66],[-181.38,-577.03],[-183.43,-577.82],[-186.82,-569.38],[-199.79,-574.76],[-197.74,-579.85],[-201.55,-581.31],[-201,-582.71],[-216.24,-588.83],[-211.84,-599.7]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:852606262",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-182.61,-588.02],[-183.28,-586.31],[-186.21,-578.96],[-200.26,-584.5],[-196.61,-593.6]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-182.61,-588.02],[-186.21,-578.96],[-200.26,-584.5],[-196.61,-593.6]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:852606263",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-181.38,-577.03],[-175.03,-574.53],[-181.36,-558.53],[-189.77,-561.83],[-186.82,-569.38],[-183.43,-577.82]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-175.03,-574.53],[-181.36,-558.53],[-189.77,-561.83],[-183.43,-577.82]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:852606264",
+          "height": 19.5,
+          "storeys": 5,
+          "props": {
+            "kind": "building",
+            "category": "research",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-181.38,-577.03],[-179.12,-582.66],[-178.05,-582.23],[-177.35,-583.97],[-176.62,-585.8],[-171.35,-583.71],[-175.03,-574.53]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-181.38,-577.03],[-179.12,-582.66],[-178.05,-582.23],[-176.62,-585.8],[-171.35,-583.71],[-175.03,-574.53]],
+              "holes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:604832425",
+      "kind": "building",
+      "name": "西门桥头候车点",
+      "height": 3.6,
+      "storeys": 1,
+      "family": "transport",
+      "props": {
+        "name": "西门桥头候车点",
+        "category": "transport",
+        "subcategory": "bus",
+        "kind": "building",
+        "anchor": [-211.01,3.6,-423.84]
+      },
+      "parts": [
+        {
+          "id": "osm:way:604832425",
+          "height": 3.6,
+          "storeys": 1,
+          "props": {
+            "kind": "building",
+            "category": "transport",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-214.98,-417.82],[-210.09,-430.99],[-207.04,-429.87],[-211.94,-416.7]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:682336066",
+      "kind": "poi",
+      "name": "电子科技大学立人托幼公园",
+      "height": 11.7,
+      "storeys": 3,
+      "props": {
+        "name": "电子科技大学立人托幼公园",
+        "category": "teaching",
+        "subcategory": "kindergarten",
+        "kind": "poi",
+        "anchor": [-641.02,0,-95.67]
+      },
+      "note": "立人托幼公园：按 3 层（WLD-INTERIORS、MAP-QSH-WEST 数据定位），11.7 m；OSM 估的 2 层与 4 层部件统一到 3 层，键盘立面的三排彩色玻璃一层一排。楼本体留给 19c",
+      "parts": [
+        {
+          "id": "osm:way:682336066",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "poi",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-568.44,-118.04],[-639.33,-27.69],[-694.84,-71.24],[-698.36,-71.53],[-708.73,-79.68],[-633.52,-174.82],[-623.28,-166.87],[-622.16,-159.79]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:779496173",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "multiPolygon",
+            "polygons": [
+              {
+                "outer": [[-636.59,-137.9],[-625.4,-129.24],[-634.33,-117.45],[-644.49,-104.04],[-658.78,-110.24]],
+                "holes": []
+              },
+              {
+                "outer": [[-595.01,-105.69],[-592.43,-103.69],[-598.05,-96.63],[-600.81,-98.75]],
+                "holes": []
+              }
+            ]
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-636.59,-137.9],[-625.4,-129.24],[-644.49,-104.04],[-658.78,-110.24]],
+              "holes": []
+            },
+            {
+              "outer": [[-595.01,-105.69],[-592.43,-103.69],[-598.05,-96.63],[-600.81,-98.75]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:779496174",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-622.07,-88.13],[-620.32,-86.89],[-630.06,-73.96],[-653.4,-91.72],[-675.47,-100.71],[-669.33,-114.85],[-658.78,-110.24],[-644.49,-104.04]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-620.32,-86.89],[-630.06,-73.96],[-653.4,-91.72],[-675.47,-100.71],[-669.33,-114.85],[-644.49,-104.04]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:779496175",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-577.3,-112.38],[-587.24,-99.68],[-592.43,-103.69],[-595.01,-105.69],[-607.4,-115.29],[-625.4,-129.24],[-636.59,-137.9],[-650.75,-148.88],[-640.8,-161.6]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-577.3,-112.38],[-587.24,-99.68],[-650.75,-148.88],[-640.8,-161.6]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:779496176",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-616.06,-59.51],[-627.51,-68.34],[-602.68,-100.2],[-600.81,-98.75],[-598.05,-96.63],[-591.24,-91.37]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-616.06,-59.51],[-627.51,-68.34],[-602.68,-100.2],[-591.24,-91.37]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:868013621",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-627.92,-53.64],[-640.93,-37.01],[-658.49,-50.62],[-645.48,-67.24]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:693513895",
+      "kind": "water",
+      "name": "走马河",
+      "height": 0,
+      "props": {
+        "name": "走马河",
+        "category": "landscape",
+        "subcategory": "water",
+        "kind": "water",
+        "anchor": [-769.7,0,312.2]
+      },
+      "parts": [
+        {
+          "id": "osm:way:693513895",
+          "height": 0,
+          "props": {
+            "waterway": "stream",
+            "kind": "water",
+            "category": "landscape",
+            "highway": null,
+            "name": "走马河",
+            "name:zh": "走马河"
+          },
+          "line": [[-980.6,265.04],[-974.8,267.88],[-966.74,269.3],[-957,267.06],[-946.56,263.32],[-937.96,261.51],[-909.9,259.62],[-886.8,261.87],[-870.3,264.2],[-860.74,267.14],[-846.24,272.37],[-827.62,280.8],[-814.01,288.28],[-802.74,295.57],[-788.59,306.61],[-781.08,310.75],[-776.24,312.06],[-771.59,312.28],[-762.44,311.9],[-742.9,304.26],[-734.18,300.86],[-704.35,292],[-686.44,283.28],[-681.35,281.76],[-670.77,284.68],[-618.2,324.48],[-608.9,330.79],[-596.48,329.05],[-576.64,305.55]],
+          "width": 4
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:693515475",
+      "kind": "water",
+      "name": "红光右支渠",
+      "height": 0,
+      "props": {
+        "name": "红光右支渠",
+        "category": "landscape",
+        "subcategory": "water",
+        "kind": "water",
+        "anchor": [-193.48,0,-500.37]
+      },
+      "parts": [
+        {
+          "id": "osm:way:693515475",
+          "height": 0,
+          "props": {
+            "waterway": "drain",
+            "kind": "water",
+            "category": "landscape",
+            "highway": null,
+            "name": "红光右支渠",
+            "name:zh": "红光右支渠"
+          },
+          "line": [[14.52,-1012.77],[-20.37,-936.3],[-62.71,-829.27],[-229.17,-410.61],[-282.93,-275.93],[-336.05,-142.85],[-355,-95.36]],
+          "width": 4,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-64.57,-830.01],[-34.37,-906.34],[-32.51,-905.61],[-30.83,-904.42],[-60.85,-828.53],[-227.31,-409.87],[-353.14,-94.62],[-356.86,-96.1],[-231.03,-411.35]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:779496151",
+      "kind": "building",
+      "name": "未命名建筑 · 6151",
+      "height": 11.7,
+      "storeys": 3,
+      "family": "research",
+      "props": {
+        "name": "未命名建筑 · 6151",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [-825.61,11.7,234.82]
+      },
+      "parts": [
+        {
+          "id": "osm:way:779496151",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "multiPolygon",
+            "polygons": [
+              {
+                "outer": [[-809.34,240.26],[-815.97,249.28],[-832.09,236.87],[-830.43,234.65],[-825.1,238.61],[-820.09,231.94]],
+                "holes": []
+              },
+              {
+                "outer": [[-788.41,277.37],[-773.1,256.55],[-775.77,254.61],[-772.82,250.85],[-751.13,267.76],[-766.58,289.52],[-772.68,289.46]],
+                "holes": []
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:779496154",
+      "kind": "building",
+      "name": "未命名建筑 · 6154",
+      "height": 15.6,
+      "storeys": 4,
+      "family": "research",
+      "props": {
+        "name": "未命名建筑 · 6154",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [-797.16,15.6,256.48]
+      },
+      "parts": [
+        {
+          "id": "osm:way:779496154",
+          "height": 15.6,
+          "storeys": 4,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-804.5,233.68],[-775.77,254.61],[-773.1,256.55],[-788.41,277.37],[-789.82,279.28],[-821.22,256.42],[-815.97,249.28],[-809.34,240.26]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-804.5,233.68],[-773.1,256.55],[-789.82,279.28],[-821.22,256.42]],
+              "holes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:779496168",
+      "kind": "building",
+      "name": "A区",
+      "height": 41.5,
+      "storeys": 9,
+      "family": "research",
+      "props": {
+        "name": "A区",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [-823.66,41.5,125.63]
+      },
+      "parts": [
+        {
+          "id": "osm:way:779496168",
+          "height": 41.5,
+          "storeys": 9,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-773.89,73.83],[-775.7,76.22],[-783.53,86.55],[-811.19,123.12],[-814.99,128.15],[-756.34,172.08],[-768.12,187.65],[-840.26,133.59],[-787.37,63.73]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-773.89,73.83],[-814.99,128.15],[-756.34,172.08],[-768.12,187.65],[-840.26,133.59],[-787.37,63.73]],
+              "holes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:779496169",
+      "kind": "building",
+      "name": "B区",
+      "height": 32.5,
+      "storeys": 7,
+      "family": "research",
+      "props": {
+        "name": "B区",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [-716.61,32.5,160.77]
+      },
+      "parts": [
+        {
+          "id": "osm:way:779496169",
+          "height": 32.5,
+          "storeys": 7,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-688.15,137.55],[-708.85,164.79],[-729.11,191.49],[-722.27,196.63],[-689.79,221.04],[-702.18,237.35],[-734.88,212.76],[-755.27,197.42],[-739.01,176.01],[-724.37,156.74],[-722.9,154.8],[-714.3,143.48],[-766.27,104.4],[-763.87,101.25],[-769.92,96.7],[-762.04,86.34],[-759.95,83.58]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-688.15,137.55],[-729.11,191.49],[-689.79,221.04],[-702.18,237.35],[-755.27,197.42],[-714.3,143.48],[-766.27,104.4],[-763.87,101.25],[-769.92,96.7],[-759.95,83.58]],
+              "holes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:795677482",
+      "kind": "building",
+      "name": "未命名建筑 · 7482",
+      "height": 3.5,
+      "storeys": 1,
+      "family": "research",
+      "props": {
+        "name": "未命名建筑 · 7482",
+        "category": "unknown",
+        "kind": "building",
+        "anchor": [-554.01,3.5,-34.35]
+      },
+      "parts": [
+        {
+          "id": "osm:way:795677482",
+          "height": 3.5,
+          "storeys": 1,
+          "props": {
+            "kind": "building",
+            "category": "unknown",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-554.09,-43.95],[-550.89,-41.48],[-552.71,-39.14],[-540.28,-29.57],[-547.91,-19.75],[-559.91,-28.99],[-562.22,-26.01],[-565.83,-28.8]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:795677483",
+      "kind": "building",
+      "name": "经管楼",
+      "height": 23.4,
+      "storeys": 6,
+      "family": "research",
+      "props": {
+        "name": "经管楼",
+        "category": "teaching",
+        "subcategory": "classroom",
+        "kind": "building",
+        "anchor": [-606.58,11.7,-29.79]
+      },
+      "parts": [
+        {
+          "id": "osm:way:795677477",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-624.34,-30.78],[-618.8,-37.91],[-611.64,-32.48],[-605.92,-40.18],[-605.07,-41.27],[-587.1,-27.47],[-577.1,-19.57],[-518.62,25.07],[-526.22,36.08],[-529.58,41.05],[-560.71,17.45]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-624.34,-30.78],[-618.8,-37.91],[-611.64,-32.48],[-605.07,-41.27],[-587.1,-27.47],[-577.1,-19.57],[-518.62,25.07],[-529.58,41.05]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795677478",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-612.89,-45.53],[-605.92,-40.18],[-611.64,-32.48],[-618.8,-37.91]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:795677479",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-512.14,-58.33],[-522.66,-44.65],[-527.35,-38.64],[-550.81,-56.61],[-559.49,-63.25],[-577.6,-77.13],[-574.24,-81.46],[-569.09,-88.13],[-575.4,-92.97],[-568.71,-101.61]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-512.14,-58.33],[-527.35,-38.64],[-577.6,-77.13],[-569.09,-88.13],[-575.4,-92.97],[-568.71,-101.61]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795677480",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-569.09,-88.13],[-574.24,-81.46],[-580.56,-86.3],[-575.4,-92.97]],
+              "holes": []
+            }
+          }
+        },
+        {
+          "id": "osm:way:795677481",
+          "height": 23.4,
+          "storeys": 6,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-550.81,-56.61],[-554.13,-52.34],[-550.03,-49.2],[-554.09,-43.95],[-565.83,-28.8],[-571.64,-21.29],[-574.22,-23.28],[-577.1,-19.57],[-587.1,-27.47],[-584.36,-31],[-587.55,-33.45],[-584.88,-36.92],[-566.64,-60.42],[-564.65,-62.99],[-561.53,-60.6],[-559.49,-63.25]],
+              "holes": []
+            }
+          },
+          "facadePolygons": [
+            {
+              "outer": [[-550.81,-56.61],[-554.13,-52.34],[-550.03,-49.2],[-571.64,-21.29],[-574.22,-23.28],[-577.1,-19.57],[-587.1,-27.47],[-584.36,-31],[-587.55,-33.45],[-564.65,-62.99],[-561.53,-60.6],[-559.49,-63.25]],
+              "holes": []
+            }
+          ]
+        },
+        {
+          "id": "osm:way:795677483",
+          "height": 11.7,
+          "storeys": 3,
+          "props": {
+            "kind": "building",
+            "category": "teaching",
+            "highway": null
+          },
+          "geometry": {
+            "type": "multiPolygon",
+            "polygons": [
+              {
+                "outer": [[-566.64,-60.42],[-584.88,-36.92],[-595,-44.69],[-600.59,-58.66],[-592.38,-69.7],[-575.98,-67.58]],
+                "holes": []
+              },
+              {
+                "outer": [[-526.22,36.08],[-518.62,25.07],[-510.47,31.29],[-518.02,42.47]],
+                "holes": []
+              },
+              {
+                "outer": [[-522.66,-44.65],[-512.14,-58.33],[-505.15,-52.59],[-515.06,-38.92]],
+                "holes": []
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:862482050",
+      "kind": "poi",
+      "name": "其他服务 · 2050",
+      "height": 0,
+      "props": {
+        "name": "其他服务 · 2050",
+        "category": "service",
+        "subcategory": "service",
+        "kind": "poi",
+        "anchor": [-506.57,0,-294.32]
+      },
+      "parts": [
+        {
+          "id": "osm:way:862482050",
+          "height": 0,
+          "props": {
+            "kind": "poi",
+            "category": "service",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-496.83,-289.16],[-498.84,-286.49],[-516.32,-299.48],[-514.31,-302.17]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:862482051",
+      "kind": "parking",
+      "name": "停车 · 2051",
+      "height": 0,
+      "props": {
+        "name": "停车 · 2051",
+        "category": "transport",
+        "subcategory": "parking",
+        "kind": "parking",
+        "anchor": [-467.09,0,-263.56]
+      },
+      "parts": [
+        {
+          "id": "osm:way:862482051",
+          "height": 0,
+          "props": {
+            "kind": "parking",
+            "category": "transport",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-491.64,-284.71],[-440.49,-244.98],[-442.53,-242.39],[-493.68,-282.13]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:862482052",
+      "kind": "parking",
+      "name": "停车 · 2052",
+      "height": 0,
+      "props": {
+        "name": "停车 · 2052",
+        "category": "transport",
+        "subcategory": "parking",
+        "kind": "parking",
+        "anchor": [-427.84,0,-232.87]
+      },
+      "parts": [
+        {
+          "id": "osm:way:862482052",
+          "height": 0,
+          "props": {
+            "kind": "parking",
+            "category": "transport",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-435.4,-241],[-418.02,-227.67],[-420.28,-224.75],[-437.66,-238.07]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:950008612",
+      "kind": "poi",
+      "name": "施工用地 · 8612",
+      "height": 0,
+      "props": {
+        "name": "施工用地 · 8612",
+        "category": "other",
+        "subcategory": "construction",
+        "kind": "poi",
+        "anchor": [-689.99,0,33.34]
+      },
+      "parts": [
+        {
+          "id": "osm:way:950008612",
+          "height": 0,
+          "props": {
+            "kind": "poi",
+            "category": "other",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-596.73,26.31],[-670.58,126.29],[-783.33,40.37],[-708.42,-59.6]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:991512814",
+      "kind": "poi",
+      "name": "非机动车 · 2814",
+      "height": 0,
+      "props": {
+        "name": "非机动车 · 2814",
+        "category": "transport",
+        "subcategory": "bicycle",
+        "kind": "poi",
+        "anchor": [-601.1,0,-211.61]
+      },
+      "parts": [
+        {
+          "id": "osm:way:991512814",
+          "height": 0,
+          "props": {
+            "kind": "poi",
+            "category": "transport",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-610.55,-204.09],[-595.95,-222.52],[-591.64,-219.14],[-606.25,-200.71]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "trees": []
+}

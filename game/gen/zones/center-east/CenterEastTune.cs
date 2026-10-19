@@ -6,8 +6,8 @@ namespace Campus.Gen.Zones.CenterEast;
 
 /// <summary>
 /// Every tunable value of the center-east zone in one place, for review (WF-FLOW): materials as colour names, and
-/// the modelling sizes of each site. Positions, outlines, storeys and heights that campus.json or overlay/center-east.d/
-/// already hold are read from the world model by the IDs below (D-239); only inspection viewpoints remain here because probes have no world input. Local frames are described per block. Values marked "初值" are starting values awaiting the main
+/// the modelling sizes of each site. Positions, outlines, storeys and heights that world/center-east.json
+/// already holds are read from the world model by the IDs below (D-239); only inspection viewpoints remain here because probes have no world input. Local frames are described per block. Values marked "初值" are starting values awaiting the main
 /// session's call. 21b–21d add their own nested classes after <see cref="Pinxue"/>.
 /// </summary>
 public static class CenterEastTune
@@ -179,7 +179,7 @@ public static class CenterEastTune
     /// as the renovated research family: warm light stone frame over recessed glass, a glazed ground storey, windows
     /// grouped in pairs by giant pilasters, grey-white cornice and sills, dark plinth (MAP-QSH-RENOVATION E-02, E-03).
     /// All blocks share one plan direction; positions are in its local frame R (u along <see cref="Axis"/>, w = (−Axis.y,
-    /// Axis.x), roughly south). Roof outlines and fittings registered in overlay/center-east.d/ (the three IDs below) are read
+    /// Axis.x), roughly south). Roof outlines and fittings registered in world/center-east.json (the three IDs below) are read
     /// back from the world model and put into R; doors, stairs and plant enclosures are read from the zone layout points.
     /// </summary>
     public static class Research
@@ -242,8 +242,8 @@ public static class CenterEastTune
     /// <summary>
     /// 中部科研区 monuments (MAP-QSH-CENTER-EAST): 林为干像 and 麦克斯韦像 on the statue lawn east of 科 B/C, the
     /// equation stone beside Maxwell and the 科研楼 stele by 银杏大道 between 科 A and 科 B. The OSM points move less than
-    /// 4 m (minor, no reshape): 麦克斯韦像 and the stele stand on theirs (read by Maxwell, Stele), 林为干像 on a moved spot below;
-    /// the equation stone and Maxwell's granite apron are design additions in overlay/center-east.d/.
+    /// 4 m (a minor position adjustment): 麦克斯韦像 and the stele stand on theirs (read by Maxwell, Stele), 林为干像 on a moved spot below;
+    /// the equation stone and Maxwell's granite apron are design additions in world/center-east.json.
     /// Facings are bearings (0 north, 90 east). The figures are sculpture volumes after 吴立人像 (18c1 review): clothes,
     /// posture and hair as masses, the face one smooth volume with no features or likeness (CORE-INDEX). Inscriptions wait
     /// for the scene text atlas (contract-26): the pedestal and stele faces stay blank, the equation stone carries four

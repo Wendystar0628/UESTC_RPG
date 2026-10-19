@@ -138,7 +138,7 @@ internal sealed class GroundSourceContext(IReadOnlyList<GroundShape> candidates,
 /// <summary>Maps world-model kinds and OSM-style road types to ground surface classes.</summary>
 internal static class GroundClassifier
 {
-    // Default widths when the data has none (same table as the dataset builder that produced campus.json).
+    // Default widths when the data has none (same table as the world dataset builder).
     private static float DefaultWidth(string type) => type switch
     {
         "footway" => 2.5f,
@@ -169,12 +169,12 @@ internal static class GroundClassifier
     };
 
     public static string RoadType(JsonElement? props) =>
-        WorldProps.TryText(props, "roadType") ?? WorldProps.TryText(props, "highway") ?? "";
+        WorldProps.TryText(props, "highway") ?? "";
 
     /// <summary>
     /// Surface class of one source record from its kind and its own props; null for kinds that leave the lawn untouched
     /// (POIs, green areas, the frame of a stadium). Buildings return <see cref="SurfaceKind.Building"/>: a footprint, not
-    /// paving. <paramref name="entity"/> is the owning entity's record, which carries the OSM tags (<c>sourceTags</c>)
+    /// paving. <paramref name="entity"/> is the owning entity's record, which carries the flattened OSM tags
     /// that a part's own record does not.
     /// </summary>
     public static SurfaceKind? KindOf(string kind, JsonElement? props, JsonElement? entity = null)
@@ -219,7 +219,7 @@ internal static class GroundClassifier
     };
 
     private static string? Leisure(JsonElement? props, JsonElement? entity) =>
-        WorldProps.TryText(props, "leisure") ?? WorldProps.TryText(props, "sourceTags", "leisure") ?? WorldProps.TryText(entity, "sourceTags", "leisure");
+        WorldProps.TryText(props, "leisure") ?? WorldProps.TryText(entity, "leisure");
 
     public static float Width(JsonElement? props, string type, float given) =>
         given > 0f && float.IsFinite(given) ? given : WorldProps.TryNumber(props, "width") is { } w && w > 0f ? w : DefaultWidth(type);

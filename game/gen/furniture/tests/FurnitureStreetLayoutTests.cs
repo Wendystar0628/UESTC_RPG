@@ -22,6 +22,7 @@ using static GdUnit4.Assertions;
 public sealed class FurnitureStreetLayoutTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void TheLitRoadsAreFurnishedDeterministically()
     {
         var a = RealLayout.Value;
@@ -90,6 +91,7 @@ public sealed class FurnitureStreetLayoutTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    [TestCategory("Slow")]
     public void AnchorsOnACarriagewayInWaterOrInABuildingAreLeftOutAndLogged()
     {
         // An anchor whose point lands on a carriageway, in water or in a building gets nothing and one structured diagnostic. Judged from the world data (StreetSite.LandingAt), not by anchor ID: moving an anchor needs no change here.

@@ -16,23 +16,16 @@ public interface IWorldInputSource
 /// <summary>One authored input selection for production loads and offline callers; performs no filesystem IO.</summary>
 public static class WorldInputFiles
 {
-    /// <summary>Claim resolution reads source feature zones before any overlay writes.</summary>
-    public static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> TopologyBaseline(
-        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) =>
-        new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(files
-            .Where(pair => !pair.Key.Replace('\\', '/').StartsWith("overlay/", StringComparison.Ordinal))
-            .OrderBy(pair => pair.Key, StringComparer.Ordinal)
-            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal));
-
     public static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadWorldFiles(MapDescriptor map, IWorldInputSource source)
     {
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(source);
         var files = new SortedDictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
         {
-            ["campus.json"] = Required(source, "campus.json")
+            ["world/geo.json"] = Required(source, "world/geo.json")
         };
-        foreach (var name in new[] { "map.json", "network.json", "zones.json", "interiors.json", "fidelity.json" })
+        ReadJsonDirectory(source, "world/", files);
+        foreach (var name in new[] { "map.json", "interiors.json", "fidelity.json" })
             AddOptional(source, name, files);
         if (map.Env.Outskirts is { } outskirts)
         {

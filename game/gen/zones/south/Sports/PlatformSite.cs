@@ -60,7 +60,7 @@ public sealed class PlatformSite : ZoneSite
     internal sealed record Plan(float Y, float Rise, IReadOnlyList<Vector2[]> Decks, IReadOnlyList<Edge> Edges, Vector2[] Core, IReadOnlyList<Bay> Bays,
         IReadOnlyList<Vector2> Columns, IReadOnlyList<Stair> Stairs)
     {
-        /// <summary>The deck top above the ground, the feature's height set in overlay/south.d/ (D-239).</summary>
+        /// <summary>The deck top above the ground, the feature's height set in world/south.json (D-239).</summary>
         public float Top => Y + Rise;
         public float Soffit => Top - P.Slab;
     }
@@ -424,7 +424,7 @@ public sealed class PlatformSite : ZoneSite
         var list = new List<Road>();
         foreach (var line in world.Network.Roads)
         {
-            var type = line.Props.TryText("roadType");
+            var type = line.Props.TryText("highway");
             if (type is "footway" or "path" or "steps" or "pedestrian" or "cycleway" or "track" or "corridor") continue;
             list.Add(new(line.Line.Points, (line.Width > 0 ? line.Width : 5f) * 0.5f));
         }

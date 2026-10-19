@@ -14,8 +14,8 @@ namespace Campus.Gen.Ground.Tests;
 using static GdUnit4.Assertions;
 
 /// <summary>
-/// The ground lays centre lines from the effective road network only (WP-08 batch 4): an authored footway that is in the
-/// feature table and in <c>Network.Roads</c> is paved once, a hidden one is gone, an area stays an area, and the markings
+/// The ground lays centre lines from the effective road network only (WP-08 batch 4): a footway that is in the
+/// feature table and in <c>Network.Roads</c> is paved once, an area stays an area, and the markings
 /// and kerbs follow the same lines.
 /// </summary>
 [TestSuite]
@@ -41,29 +41,15 @@ public sealed class GroundEffectiveRoadsTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void HiddenAuthoredLineIsNotLaidAgain()
+    public void LinesOutsideTheNetworkKeepTheirFeatureSurface()
     {
-        // A feature of a class the network owns, with no road under its ID, has been hidden: nothing is paved.
-        foreach (var type in new[] { "footway", "path", "pedestrian" })
+        foreach (var type in new[] { "footway", "path", "pedestrian", "service" })
         {
-            var stale = TestWorld.Of([WorldFeatureFixture.Create("design:t-" + type, "road", new PolylineGeometry(new Polyline([new(0f, 0f), new(40f, 0f)])), RoadProps(type, 3f))]);
-            var (shapes, roads) = GroundSources.Read(stale);
-            AssertThat(shapes.Count == 0 && roads.Count == 0).OverrideFailureMessage($"A {type} line missing from the network was laid anyway.").IsTrue();
+            var feature = WorldFeatureFixture.Create("fixture:" + type, "road",
+                new PolylineGeometry(new Polyline([new(0f, 0f), new(40f, 0f)])), RoadProps(type, 3f));
+            var (shapes, roads) = GroundSources.Read(TestWorld.Of([feature]));
+            AssertThat(shapes.Count == 1 && roads.Count == 0).OverrideFailureMessage("A feature line outside the network keeps its surface.").IsTrue();
         }
-        // A class the network does not take is still laid from its feature, and so is an original way.
-        var service = TestWorld.Of([WorldFeatureFixture.Create("design:t-service", "road", new PolylineGeometry(new Polyline([new(0f, 0f), new(40f, 0f)])), RoadProps("service", 5f))]);
-        AssertThat(GroundSources.Read(service).Shapes.Single().Kind == SurfaceKind.Carriageway).OverrideFailureMessage("A service line outside the network keeps its surface.").IsTrue();
-        var original = WorldFeatureFixture.Create("osm:way:9", "road", new PolylineGeometry(new Polyline([new(0f, 0f), new(40f, 0f)])), RoadProps("footway", 3f), FeatureSource.Osm);
-        AssertThat(GroundSources.Read(TestWorld.Of([original])).Shapes.Count == 1).OverrideFailureMessage("An original way is not an authored line.").IsTrue();
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void HideThroughTheLoaderLeavesNoShape()
-    {
-        var added = GroundSources.Read(Load([Add("design:line")]).World);
-        AssertThat(added.Shapes.Count(s => s.Id.Value == "design:line") == 1 && added.Roads.Count(r => r.Id.Value == "design:line") == 1).OverrideFailureMessage("The authored line is paved once from the loaded world.").IsTrue();
-        var hidden = GroundSources.Read(Load([Add("design:line"), new HideOp(new("design:line"), "remove the line")]).World);
-        AssertThat(hidden.Shapes.All(s => s.Id.Value != "design:line") && hidden.Roads.All(r => r.Id.Value != "design:line")).OverrideFailureMessage("A hidden authored line is not paved from anywhere.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -86,7 +72,7 @@ public sealed class GroundEffectiveRoadsTests
         AssertThat(layout.SignedDistance(SurfaceKind.Plaza, new(120f, 20f), 20f) > 0f && layout.SignedDistance(SurfaceKind.Plaza, new(70f, 10f), 20f) > 0f).OverrideFailureMessage("The holes of a multi-polygon are open ground too.").IsTrue();
 
         // An original way is a polygon in the feature table and a centre line in the network under one ID: both are laid.
-        var polygon = WorldFeatureFixture.Create("osm:way:5", "road", new PolygonGeometry(plaza), RoadProps("footway", null), FeatureSource.Osm);
+        var polygon = WorldFeatureFixture.Create("osm:way:5", "road", new PolygonGeometry(plaza), RoadProps("footway", null));
         var both = TestWorld.Of([polygon], new WorldNetwork([Road("osm:way:5", [new(0f, 20f), new(40f, 20f)], 2.5f)], [], [], [], []));
         var laid = GroundSources.Read(both).Shapes;
         AssertThat(laid.Count == 2 && laid.Count(s => s.Rings is not null) == 1 && laid.Count(s => s.Line is not null) == 1).OverrideFailureMessage("Polygon as polygon, centre line as capsule.").IsTrue();
@@ -98,8 +84,8 @@ public sealed class GroundEffectiveRoadsTests
         var walk = new Vector2[] { new(30f, 4.25f), new(30f, 40f) };
         var street = new List<WorldFeature>
         {
-            WorldFeatureFixture.Create("osm:way:1", "road", new PolygonGeometry(Rect(-100f, -3f, 100f, 3f)), RoadProps("residential", null), FeatureSource.Osm),
-            WorldFeatureFixture.Create("osm:way:2", "road", new PolygonGeometry(Rect(-100f, 3f, 100f, 5.5f)), RoadProps("footway", null), FeatureSource.Osm),
+            WorldFeatureFixture.Create("osm:way:1", "road", new PolygonGeometry(Rect(-100f, -3f, 100f, 3f)), RoadProps("residential", null)),
+            WorldFeatureFixture.Create("osm:way:2", "road", new PolygonGeometry(Rect(-100f, 3f, 100f, 5.5f)), RoadProps("footway", null)),
         };
         var network = new List<NetworkLine> { Road("osm:way:1", [new(-100f, 0f), new(100f, 0f)], 6f, "residential") };
         var bare = TestWorld.Of(street, new WorldNetwork(network, [], [], [], []));
@@ -137,7 +123,8 @@ public sealed class GroundEffectiveRoadsTests
         var world = RealMapFixture.Load().World;
         var (shapes, roads) = GroundSources.Read(world);
         // Only the classes WP-08 projects into the network (footway, path, pedestrian); a design drive or service lane is laid from its own feature.
-        var authored = world.Features.Values.Where(f => f.Source == FeatureSource.Design && f.Kind.Value == "road" && f.Geometry is PolylineGeometry &&
+        var authored = world.Features.Values.Where(f => f.Kind.Value == "road" && f.Geometry is PolylineGeometry &&
+            WorldProps.TryText(f.Props, "area") != "yes" &&
             GroundClassifier.RoadType(f.Props) is "footway" or "path" or "pedestrian").ToArray();
         AssertThat(authored.Length > 0).OverrideFailureMessage($"The campus has authored footway lines, got {authored.Length}.").IsTrue();
         foreach (var feature in authored)
@@ -148,16 +135,21 @@ public sealed class GroundEffectiveRoadsTests
             AssertThat(laid.Length == 1 && laid[0].Kind == SurfaceKind.Walk && laid[0].Line is not null).OverrideFailureMessage($"{feature.Id.Value} must be laid once as a footway, got {laid.Length}.").IsTrue();
             AssertThat(laid[0].Line!.SequenceEqual(PlanLines.CleanPath(road!.Line.Points)) && laid[0].HalfWidth == road.Width * 0.5f).OverrideFailureMessage($"{feature.Id.Value} is not laid along its network line.").IsTrue();
         }
+        // OSM area perimeters retain their network identity but never become extra paved capsule bands.
+        var perimeters = world.Network.Roads.Where(r => WorldProps.TryText(r.Props, "area") == "yes").ToArray();
+        AssertThat(perimeters.Length > 0).IsTrue();
+        foreach (var perimeter in perimeters)
+            AssertThat(roads.All(r => r.Id != perimeter.Id) && shapes.All(s => s.Id != perimeter.Id || s.Line is null))
+                .OverrideFailureMessage($"{perimeter.Id} is an area perimeter, not a paved centre line.").IsTrue();
         // No centre line is laid twice anywhere: every network road has exactly one capsule chain, and no other line shape shares its ID.
         var chains = shapes.Where(s => s.Line is not null && s.Kind is SurfaceKind.Carriageway or SurfaceKind.Walk or SurfaceKind.Plaza && !s.Id.Value.Contains(":footprint:", StringComparison.Ordinal)).ToArray();
         AssertThat(chains.GroupBy(s => s.Id).All(g => g.Count() == 1)).OverrideFailureMessage("A road ID is laid as more than one centre line.").IsTrue();
         // An authored line of a class the network does not take (a design drive) is laid from its own feature, once.
-        var outside = world.Features.Values.Count(f => f.Source == FeatureSource.Design && f.Kind.Value == "road" && f.Geometry is PolylineGeometry &&
+        var outside = world.Features.Values.Count(f => f.Kind.Value == "road" && f.Geometry is PolylineGeometry &&
             world.Network.Roads.All(r => r.Id != f.Id));
         AssertThat(chains.Length == roads.Count + outside).OverrideFailureMessage($"{roads.Count} network roads and {outside} lines outside it give {chains.Length} line shapes.").IsTrue();
         // Authored pedestrian areas keep their data identity and polygon geometry.
-        var areas = world.Features.Values.Where(feature => feature.Source == FeatureSource.Design &&
-            feature.Kind.Value == "road" && GroundClassifier.RoadType(feature.Props) == "pedestrian" &&
+        var areas = world.Features.Values.Where(feature => feature.Kind.Value == "road" && GroundClassifier.RoadType(feature.Props) == "pedestrian" &&
             feature.Geometry is PolygonGeometry or MultiPolygonGeometry).ToArray();
         AssertThat(areas.Length > 0).IsTrue();
         foreach (var area in areas)
@@ -172,7 +164,7 @@ public sealed class GroundEffectiveRoadsTests
     private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement.Clone();
 
     private static string RoadProps(string type, float? width) =>
-        width is { } w ? $$"""{"roadType":"{{type}}","width":{{w.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}""" : $$"""{"roadType":"{{type}}"}""";
+        width is { } w ? $$"""{"highway":"{{type}}","width":{{w.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}""" : $$"""{"highway":"{{type}}"}""";
 
     private static NetworkLine Road(string id, Vector2[] points, float width, string type = "footway") =>
         new(new FeatureId(id), new Polyline(points), width) { Props = Json($$"""{"highway":"{{type}}"}""") };
@@ -182,26 +174,4 @@ public sealed class GroundEffectiveRoadsTests
 
     private static IReadOnlyList<Vector2> Shift(IReadOnlyList<Vector2> ring, float dx) => ring.Select(p => new Vector2(p.X + dx, p.Y)).ToArray();
 
-    // The loader fixture of the road tests: one original road polygon, a network with its centre line, and overlay operations.
-    private const string Campus = """
-        {"meta":{"origin":[103,30],"crs":"EPSG:32648","bounds":[-20,-20,20,20],"entityPrefix":"campus-test"},
-         "boundary":[[[-20,-20],[20,-20],[20,20],[-20,20]]],"entities":[],"features":[
-           {"id":"osm:way:10","entityId":null,"kind":"road","height":0,"polygons":[[[[-10,-10],[-2,-10],[-2,-2],[-10,-2]]]]}
-         ]}
-        """;
-
-    private static AddOp Add(string id) => new(new(id), new("road"), new PolylineGeometry(new Polyline([new(-5f, 4f), new(3f, 6f), new(1f, 8f)])), null,
-        Json("""{"roadType":"footway","width":2.5}"""), "ground regression");
-
-    private static WorldModelLoadResult Load(IReadOnlyList<OverlayOp> ops)
-    {
-        var line = new NetworkLine(new("campus-test:source:way:10"), new Polyline([new(-10f, -6f), new(-2f, -6f)]), 2f) { Props = Json("""{"highway":"footway"}""") };
-        var files = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["campus.json"] = Campus,
-            ["network.json"] = JsonSerializer.Serialize(new WorldNetwork([line], [], [], [], []), ContractJson.Options),
-            ["overlay/a.d/0000-fixture.json"] = JsonSerializer.Serialize(new OverlayFile(new("test"), new("WP-08"), ops), ContractJson.Options)
-        };
-        return WorldModelLoader.Load(new("test"), files);
-    }
 }

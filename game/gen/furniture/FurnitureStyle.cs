@@ -6,7 +6,7 @@ namespace Campus.Gen.Furniture;
 
 /// <summary>
 /// The class of a road for street furniture (WLD-LIFE-STREET §2, MAP-QSH-ADDITIONS-ATMOSPHERE §1), read from the network line's own
-/// <c>roadType</c>/<c>highway</c> by <see cref="FurnitureStyle.TierOf"/>: how often it has lamps and rest stops is <see cref="FurnitureStyle.Rule"/>.
+/// <c>highway</c> by <see cref="FurnitureStyle.TierOf"/>: how often it has lamps and rest stops is <see cref="FurnitureStyle.Rule"/>.
 /// </summary>
 public enum RoadTier
 {
@@ -52,7 +52,7 @@ public static class FurnitureStyle
     };
 
     /// <summary>
-    /// The class of a network line by its <c>roadType</c>/<c>highway</c> (<paramref name="type"/>); null for what gets no lamps (footways,
+    /// The class of a network line by its <c>highway</c> (<paramref name="type"/>); null for what gets no lamps (footways,
     /// paths, steps, cycleways, tracks, roads under construction, motorways). A carriageway the planting rules give a tree row and a band
     /// (<see cref="AvenueRows"/> offsets) is the avenue.
     /// </summary>

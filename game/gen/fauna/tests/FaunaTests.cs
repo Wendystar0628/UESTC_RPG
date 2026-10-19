@@ -54,12 +54,12 @@ public sealed class FaunaTests
 
     private static FakeWorld NoNetworkWorld(IWorldModel inner) => new(inner)
     {
-        Features = inner.Features.Where(p => p.Value.Source != FeatureSource.Design).ToDictionary(p => p.Key, p => p.Value),
+        Features = inner.Features.Where(p => !p.Key.Value.StartsWith("design:", StringComparison.Ordinal)).ToDictionary(p => p.Key, p => p.Value),
         Network = WorldNetwork.Empty,
     };
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void AStubWorldWithoutNetworkOrOverlaysDegradesQuietly()
+    public void AStubWorldWithoutNetworkOrDesignFeaturesDegradesQuietly()
     {
         var layout = FaunaPlanner.Build(NoNetworkWorld(World.Value), 1, Lakes.Value);
         AssertThat(layout.Sites.Any(s => s.Kind == FaunaKind.Cat)).OverrideFailureMessage("Cats still find a wall without roads.").IsTrue();

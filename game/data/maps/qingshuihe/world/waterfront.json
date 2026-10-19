@@ -1,0 +1,717 @@
+{
+  "features": [
+    {
+      "id": "design:waterfront-bank-library-north-end",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:way:217855313",
+        "sourceId": "osm:way:217855313"
+      },
+      "note": "D-243：明确登记桥台所在的原水体岸边段，只引用源轮廓端点；不改水体、桥面或路网。非显示选段，夜间及四季不变。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-220.47,-77.47],[-235.87,-75.95]]
+        }
+      }
+    },
+    {
+      "id": "design:waterfront-bank-library-north-start",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:way:217855313",
+        "sourceId": "osm:way:217855313"
+      },
+      "note": "D-243：明确登记桥台所在的原水体岸边段，只引用源轮廓端点；不改水体、桥面或路网。非显示选段，夜间及四季不变。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-237.94,-79.76],[-220.44,-81.49]]
+        }
+      }
+    },
+    {
+      "id": "design:waterfront-bank-library-south-exit-clearance",
+      "kind": "grass-area",
+      "props": {
+        "category": "exclude"
+      },
+      "note": "MAP-QSH-WATER：亲水台阶宽 3 m，出口两侧各留 1 m 无草，连同岸顶接入口与水侧踏步一起留空；使用既有 grass-area 排除登记。",
+      "geometry": {
+        "type": "polygon",
+        "rings": {
+          "outer": [[-193.659,-75.41],[-188.878,-73.946],[-189.902,-70.6],[-194.683,-72.063]],
+          "holes": []
+        }
+      }
+    },
+    {
+      "id": "design:waterfront-bank-library-south-sample",
+      "kind": "bank",
+      "props": {
+        "form": "hard",
+        "water": "qsh:way:217855313",
+        "treads": [
+          {
+            "centre": [-192.0,-72.287806],
+            "width": 3.0
+          }
+        ]
+      },
+      "note": "MAP-QSH-WATER 硬岸接水样板：主会话定走马河南岸图书馆一侧此段，压顶与常水湿带连续，中心 x=-192 正对图书馆轴线留一处 3 m 亲水台阶；岸顶、水侧与水位由同一编译地形提供，末级没入常水位 0.15 m。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-220.5,-77.5],[-170.3,-70.6]]
+        }
+      }
+    },
+    {
+      "id": "design:waterfront-bank-ximen-end",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:source:way:687770522",
+        "sourceId": "osm:way:687770522"
+      },
+      "note": "D-243：明确登记桥台所在的原水体岸边段，只引用源轮廓端点；不改水体、桥面或路网。非显示选段，夜间及四季不变。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[-242.62,-395.77],[-84.07,-788.39]]
+        }
+      }
+    },
+    {
+      "id": "design:waterfront-bank-yinxing-end",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:way:844548974",
+        "sourceId": "osm:way:844548974"
+      },
+      "note": "D-243：明确登记桥台所在的原水体岸边段，只引用源轮廓端点；不改水体、桥面或路网。非显示选段，夜间及四季不变。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[158.3,54.35],[62.68,-18.18]]
+        }
+      }
+    },
+    {
+      "id": "design:waterfront-bank-yinxing-start",
+      "kind": "contourSegment",
+      "props": {
+        "parent": "qsh:way:844548974",
+        "sourceId": "osm:way:844548974"
+      },
+      "note": "D-243：明确登记桥台所在的原水体岸边段，只引用源轮廓端点；不改水体、桥面或路网。非显示选段，夜间及四季不变。",
+      "geometry": {
+        "type": "polyline",
+        "line": {
+          "points": [[65.68,-20.93],[160.71,51.15]]
+        }
+      }
+    },
+    {
+      "id": "design:waterfront-bridge-library-north",
+      "kind": "bridge-deck",
+      "props": {
+        "axis": "qsh:source:way:544161584",
+        "carriage": false,
+        "banks": {
+          "start": "design:waterfront-bank-library-north-start",
+          "end": "design:waterfront-bank-library-north-end"
+        }
+      },
+      "note": "设计增补：西湖东北湾湖口跌水旁跨湿地溪的人行桥（2.5 m，MAP-QSH-TERRAIN），离湖口最近的一座人行小桥，也是全校人行小桥的样板：桥面与两头园路同为铺装面高，两侧同款石栏。默认状态与夜间、四季同银杏大道小桥。walk：桥面可走，桥栏阻挡。",
+      "geometry": {
+        "type": "point",
+        "position": [-226.92,0,-78.59]
+      }
+    },
+    {
+      "id": "design:waterfront-bridge-ximen",
+      "kind": "bridge-deck",
+      "props": {
+        "axis": "qsh:source:way:552816781",
+        "carriage": true,
+        "sidewalk": 1.5,
+        "banks": {
+          "start": "design:boundary-north-bank-contour",
+          "end": "design:waterfront-bank-ximen-end"
+        }
+      },
+      "note": "设计增补：西门车行桥（MAP-QSH-WEST），进西门后第一座桥，是两座主桥之一（MAP-QSH-ADDITIONS）。OSM 只有一条 6 m 车道，桥上没有人走的地方；桥体两侧各加 1.5 m 人行道（高出 0.15 m、路缘石分开），外侧同银杏大道小桥的石栏。桥面平，取两端路面（MAP-QSH-TERRAIN）。默认状态与夜间、四季同银杏大道小桥。walk：桥面可走，桥栏阻挡。",
+      "geometry": {
+        "type": "point",
+        "position": [-233.15,0,-400.07]
+      }
+    },
+    {
+      "id": "design:waterfront-bridge-yinxing",
+      "kind": "bridge-deck",
+      "props": {
+        "axis": "qsh:source:way:683646721",
+        "carriage": true,
+        "walks": ["qsh:source:way:988857960","qsh:source:way:988857962"],
+        "banks": {
+          "start": "design:waterfront-bank-yinxing-start",
+          "end": "design:waterfront-bank-yinxing-end"
+        }
+      },
+      "note": "设计增补：银杏大道跨走马河的小桥（MAP-QSH-CENTER-EAST）。现实里是一座车行桥和两侧各一座人行桥并排，三块桥板中间各留一道窄缝，读成三座拼在一起的板桥；这里合成一座桥体：中间 6 m 车行道，两侧人行道高出 0.15 m 并以路缘石分开，外侧灰白石地栿、望柱和两道不锈钢细横管（MAP-QSH-ADDITIONS 护栏细部、§2.12）。路网三条线和它们的拓扑照旧，只改桥体与栏杆。桥两端斜交，端线顺着三条线的端点。默认状态望柱在桥面投出梳齿长影，横管顶面一条亮带，地栿顶接季；夜间灯下（路灯）；冬季横管顶一线积雪。walk：桥面可走（2 m 分段斜放盒），桥栏阻挡（碰撞顶 1.5 m）。",
+      "geometry": {
+        "type": "point",
+        "position": [82,0,-8.5]
+      }
+    },
+    {
+      "id": "design:waterfront-stone-ximen",
+      "kind": "bridge-stone",
+      "height": 0.62,
+      "props": {
+        "bridge": "design:waterfront-bridge-ximen",
+        "faceDeg": 255
+      },
+      "note": "设计增补：桥头卧石（MAP-QSH-ADDITIONS），西门车行桥西头北侧，刻字面朝 255°，迎着从西门进来的人，也接傍晚低日（R1）。桥名留白，等场景文字图集（contract-26）。默认状态、夜间、四季同银杏大道小桥的卧石。walk：可跳上。",
+      "geometry": {
+        "type": "point",
+        "position": [-238.37,0,-411.91]
+      }
+    },
+    {
+      "id": "design:waterfront-stone-yinxing",
+      "kind": "bridge-stone",
+      "height": 0.62,
+      "props": {
+        "bridge": "design:waterfront-bridge-yinxing",
+        "faceDeg": 210
+      },
+      "note": "设计增补：桥头卧石（MAP-QSH-ADDITIONS），粗凿白石，长 1.8 m，卧在银杏大道小桥南头西侧的草地上，刻字面朝 210°，迎着从主楼方向往北走来的人，也接得住傍晚低日（R1）。桥名的墨绿行书等场景文字图集（contract-26），先留白。默认状态斜光照出石面的起伏；夜间月光；冬季石顶积雪。walk：可跳上（高 0.62 m）。",
+      "geometry": {
+        "type": "point",
+        "position": [74.46,0,-4.29]
+      }
+    },
+    {
+      "id": "qsh:node:6784744448",
+      "kind": "poi",
+      "name": "国防科技园石刻",
+      "props": {
+        "name": "国防科技园石刻",
+        "category": "landscape",
+        "subcategory": "landmark",
+        "kind": "poi",
+        "anchor": [-246.99,0,-423.05]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [-246.99,0,-423.05]
+      }
+    },
+    {
+      "id": "qsh:source:way:544161578",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:544161578",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-144.58,-593.23],[-159.16,-599.25]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:544161579",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:544161579",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-159.16,-599.25],[-167.33,-602.84]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:544161584",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:544161584",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-226.98,-86.13],[-226.86,-71.05]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:544161585",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:544161585",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-226.86,-71.05],[-233.94,-44.39],[-234.09,-41.48]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:552816780",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:552816780",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-159.25,-371.3],[-178.9,-367.72],[-196.76,-369.68],[-211.48,-372.94],[-218.24,-378.01]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:552816781",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "residential"
+      },
+      "parts": [
+        {
+          "id": "osm:way:552816781",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "residential",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[-225.71,-394.56],[-240.58,-405.58]],
+          "width": 6
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:723349811",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "service"
+      },
+      "parts": [
+        {
+          "id": "osm:way:723349811",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "service"
+          },
+          "line": [[-167.33,-602.84],[-172.89,-605.09],[-190.76,-616.53]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:797290201",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "unknown",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:797290201",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "unknown",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[89.49,-6],[85.28,-33.98],[108.85,-38.01],[109.53,-33.36],[124.98,-35.62],[124.31,-40.13],[117.44,-39.2],[116.36,-46.5],[126.24,-47.93],[127.33,-40.54],[132.42,-41.24],[133.49,-34.39],[148.38,-20.62],[147.55,-19.49],[153.74,23.55],[158.01,26.77],[149.66,37.44]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:828726364",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:828726364",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-295.46,-358.14],[-282.94,-358.48],[-265.85,-399.97],[-295.81,-423.17],[-293.66,-426.16],[-295.39,-427.62],[-289.19,-436.02],[-256.33,-409.97],[-255.98,-406.39],[-280.19,-346.33],[-281.6,-346.59],[-294.85,-351.71]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:844548975",
+      "kind": "green",
+      "height": 0,
+      "props": {
+        "kind": "green",
+        "category": "landscape",
+        "highway": null
+      },
+      "parts": [
+        {
+          "id": "osm:way:844548975",
+          "height": 0,
+          "props": {
+            "kind": "green",
+            "category": "landscape",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[77.77,8.7],[73,15.73],[48.86,18.83],[47.71,8.65],[43.13,9.05],[39.16,-20.38],[47.05,-20.99],[46.04,-31.96],[71.61,-34.46]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:852382273",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "pedestrian"
+      },
+      "parts": [
+        {
+          "id": "osm:way:852382273",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "pedestrian"
+          },
+          "line": [[-183.31,-471.51],[-181.9,-475.09],[-136.43,-590.16],[-107.37,-662.32],[-106.26,-665.06]],
+          "width": 5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:950008623",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "cycleway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:950008623",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "cycleway"
+          },
+          "line": [[-183.31,-471.51],[-189.4,-473.62],[-141.99,-592.26],[-112.01,-667.31],[-75.67,-758.26],[-70.4,-756.93]],
+          "width": 3
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:950008624",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:950008624",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[-115.17,-582.01],[-136.43,-590.16],[-141.99,-592.26],[-144.58,-593.23]],
+          "width": 2.5,
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-115.61,-580.84],[-145.02,-592.06],[-144.14,-594.4],[-114.72,-583.18]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:950008625",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:950008625",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "layer": "-1",
+            "tunnel": "yes"
+          },
+          "line": [[-109.28,-579.76],[-115.17,-582.01]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:988857959",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:988857959",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway"
+          },
+          "line": [[76.05,-17.99],[72.48,-44.85],[71.28,-53.87]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:988857960",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:988857960",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[77.85,-4.39],[76.05,-17.99]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:source:way:988857962",
+      "kind": "road",
+      "height": 0,
+      "props": {
+        "kind": "road",
+        "category": "unknown",
+        "highway": "footway"
+      },
+      "parts": [
+        {
+          "id": "osm:way:988857962",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "unknown",
+            "highway": "footway",
+            "bridge": "yes",
+            "layer": "1"
+          },
+          "line": [[86.18,-13.38],[88.24,1.14]],
+          "width": 2.5
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:683646721",
+      "kind": "road",
+      "name": "银杏大道",
+      "height": 0,
+      "props": {
+        "name": "银杏大道",
+        "category": "transport",
+        "subcategory": "road",
+        "kind": "road",
+        "anchor": [81.93,0,-8.51]
+      },
+      "parts": [
+        {
+          "id": "osm:way:683646721",
+          "height": 0,
+          "props": {
+            "kind": "road",
+            "category": "transport",
+            "highway": "residential",
+            "bridge": "yes",
+            "layer": "1",
+            "name": "银杏大道",
+            "name:zh": "银杏大道"
+          },
+          "line": [[80.92,-15.53],[82.94,-1.5]],
+          "width": 6
+        }
+      ]
+    },
+    {
+      "id": "qsh:way:844548978",
+      "kind": "poi",
+      "name": "行道树 · 8978",
+      "props": {
+        "name": "行道树 · 8978",
+        "category": "landscape",
+        "subcategory": "tree_row",
+        "kind": "poi",
+        "anchor": [93.37,0,78.83]
+      },
+      "geometry": {
+        "type": "point",
+        "position": [93.37,0,78.83]
+      }
+    },
+    {
+      "id": "qsh:way:852606258",
+      "kind": "building",
+      "name": "未命名建筑 · 6258",
+      "height": 7,
+      "storeys": 2,
+      "family": "unknown",
+      "props": {
+        "name": "未命名建筑 · 6258",
+        "category": "unknown",
+        "kind": "building",
+        "anchor": [-111.21,7.0,-583.54]
+      },
+      "parts": [
+        {
+          "id": "osm:way:852606258",
+          "height": 7,
+          "storeys": 2,
+          "props": {
+            "kind": "building",
+            "category": "unknown",
+            "highway": null
+          },
+          "geometry": {
+            "type": "polygon",
+            "rings": {
+              "outer": [[-107.31,-585.06],[-110.15,-577.44],[-116.05,-579.86],[-112.96,-587.39]],
+              "holes": []
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "trees": []
+}

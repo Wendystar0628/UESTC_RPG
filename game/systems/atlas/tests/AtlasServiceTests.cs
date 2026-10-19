@@ -228,6 +228,7 @@ public sealed class AtlasServiceTests
 
     [TestCase]
     [TestCategory(TestReason.Regression)]
+    [TestCategory("Slow")]
     public void RealCampusAndInteriorAssemblyProduceUniqueAtlasDoorMarkers()
     {
         var files = RealMapFixture.ReadFiles();

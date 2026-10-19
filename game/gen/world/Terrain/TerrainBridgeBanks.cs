@@ -16,6 +16,7 @@ internal sealed class TerrainBridgeBanks
     private readonly (int Polygon, int Ring, TerrainPath Path)[] _rings;
     private RoadSpan[] _roadSpans = [];
     private bool _footwaysCommitted;
+    private readonly Func<FeatureId, string>? _sourceFile;
     public IReadOnlyList<Contact> Contacts { get; }
     public IReadOnlyList<TerrainBankInterval> RegisteredHard { get; }
     public IReadOnlyList<RoadSpan> RoadSpans => _roadSpans;
@@ -24,8 +25,9 @@ internal sealed class TerrainBridgeBanks
     internal const double FootwayExtension = 3; // Opus 2026-10-16 13:39.
 
     public TerrainBridgeBanks(TerrainRegion region, IReadOnlyList<NetworkLine> bridges,
-        IReadOnlyList<TerrainBankInterval>? registeredHard = null)
+        IReadOnlyList<TerrainBankInterval>? registeredHard = null, Func<FeatureId, string>? sourceFile = null)
     {
+        _sourceFile = sourceFile;
         RegisteredHard = registeredHard?.ToArray() ?? [];
         var rings = new List<(int Polygon, int Ring, TerrainPath Path)>();
         for (var polygon = 0; polygon < region.Polygons.Length; polygon++)
@@ -142,7 +144,7 @@ internal sealed class TerrainBridgeBanks
                 // ordinal road's derivative; incompatible shared-core heights remain an error.
                 roadTop = cores[0].Top;
                 if (cores.Any(value => Math.Abs(value.Top.Height - roadTop.Height) > TerrainMath.HeightTolerance))
-                    throw new WorldDataException("network.json", string.Join(",", cores.Select(value => value.Road.Value)),
+                    throw new WorldDataException(string.Join(",", cores.Select(value => _sourceFile?.Invoke(value.Road) ?? "world").Distinct(StringComparer.Ordinal)), string.Join(",", cores.Select(value => value.Road.Value)),
                         $"Coincident road cores have incompatible bank tops at ({x:R},{z:R}): "
                         + string.Join("; ", cores.Select(value => $"{value.Road.Value}={value.Top.Height:R}")));
             }
@@ -172,7 +174,7 @@ internal sealed class TerrainBridgeBanks
                     dz += influence * value.Top.Dz + distanceTerm * value.Distance.Dz;
                 }
                 roadTop = new(height, dx / sum, dz / sum);
-                if (!Finite(roadTop)) throw new WorldDataException("network.json", string.Join(",", contributors.Select(value => value.Road.Value)),
+                if (!Finite(roadTop)) throw new WorldDataException(string.Join(",", contributors.Select(value => _sourceFile?.Invoke(value.Road) ?? "world").Distinct(StringComparer.Ordinal)), string.Join(",", contributors.Select(value => value.Road.Value)),
                     $"Road bank composition is non-finite at ({x:R},{z:R}).");
             }
             // Smooth union of overlapping transition bands. Choosing the largest weight and
@@ -253,11 +255,11 @@ internal sealed class TerrainBridgeBanks
     private static bool Finite(TerrainDifferential value) =>
         double.IsFinite(value.Height) && double.IsFinite(value.Dx) && double.IsFinite(value.Dz);
 
-    private static (TerrainDifferential Distance, TerrainDifferential Top)? EvaluateRoadContact(RoadContact road, double x, double z)
+    private (TerrainDifferential Distance, TerrainDifferential Top)? EvaluateRoadContact(RoadContact road, double x, double z)
     {
         if (road.Evaluate(x, z) is not { } value) return null;
         if (!Finite(value.Distance) || !Finite(value.Top))
-            throw new WorldDataException("network.json", road.Road.Value, $"Road bank contact is non-finite at ({x:R},{z:R}).");
+            throw new WorldDataException(_sourceFile?.Invoke(road.Road) ?? "world", road.Road.Value, $"Road bank contact is non-finite at ({x:R},{z:R}).");
         return (value.Distance.Height < 0 ? TerrainDifferential.Constant(0) : value.Distance, value.Top);
     }
 

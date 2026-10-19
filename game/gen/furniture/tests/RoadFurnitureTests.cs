@@ -43,7 +43,7 @@ public sealed class RoadFurnitureTests
             AssertThat(car.Colliders.Count == 1 && car.Colliders[0].Foot == FootMat.Metal).OverrideFailureMessage($"{car.Key}: one Metal box (WLD-LIFE)").IsTrue();
             AssertThat(StreetStyle.CarBodies.Any(c => p.Material.Lit.Value == c + ".lit")).OverrideFailureMessage($"{car.Key} is not in a car body colour").IsTrue();
         }
-        // Kerb ramps on the road the overlay gives them, where its walks reach the kerb: on the carriageway against the kerb, rising towards the walk.
+        // Kerb ramps on their authored road, where its walks reach the kerb: on the carriageway against the kerb, rising towards the walk.
         var ramped = Groups.Value.First(g => g.KerbRamps);
         var ramps = layout.Items.Where(i => i.Kind == FurnitureKind.KerbRamp).ToList();
         AssertThat(ramps.All(r => r.Key.StartsWith($"ramp:{ramped.Key}:", StringComparison.Ordinal))).OverrideFailureMessage("a kerb ramp on another road").IsTrue();
@@ -145,7 +145,7 @@ public sealed class RoadFurnitureTests
         var road = new NetworkLine(new("design:furniture-test-road"), new Polyline([spot + new Vector2(-12f, 0f), spot + new Vector2(12f, 0f)]), 6f)
             { Props = JsonSerializer.SerializeToElement(new { highway = "residential" }) };
         var walk = new NetworkLine(new("design:furniture-test-mouth"), new Polyline([spot + new Vector2(0f, -14f), spot + new Vector2(0f, -1.1f)]), 4f)
-            { Props = JsonSerializer.SerializeToElement(new { roadType = "footway", width = 4f }) };
+            { Props = JsonSerializer.SerializeToElement(new { highway = "footway", width = 4f }) };
         var layout = FurniturePlanner.Build(FurnitureTestSupport.GlobalInputs, Campus.Contracts.Tests.PaletteFixture.Catalog, MadeWorld(OpenWorld.Value, [road, walk], []), null, Inputs());
         var spheres = layout.Items.Where(i => i.Kind == FurnitureKind.Barrier).OrderBy(i => i.Anchor.X).ToList();
         AssertThat(spheres.Count >= 2).OverrideFailureMessage($"{spheres.Count} spheres across a 4 m walk's mouth").IsTrue();

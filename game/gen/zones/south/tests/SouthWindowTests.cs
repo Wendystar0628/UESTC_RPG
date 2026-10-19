@@ -31,7 +31,7 @@ public sealed class SouthWindowTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void EveryDeclaredGridIsValidOnTheRealMap()
     {
-        // The map as the kernel loads it: every authored overlay, not only the south one. One invalid grid withholds the whole table.
+        // The map as the kernel loads it: all authored world records. One invalid grid withholds the whole table.
         var world = RealMapFixture.Load().World;
         // The contract only promises an aggregate query envelope in WorldFeature.Geometry (the D0 world model gives a bounding
         // rectangle): the sites must read footprints from the parts, so the same declarations hold over such a view.

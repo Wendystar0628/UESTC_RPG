@@ -328,11 +328,11 @@ internal static class TestWorld
     {
         var features = new List<WorldFeature>
         {
-            WorldFeatureFixture.Create("osm:way:1", "road", new PolygonGeometry(Rect(-200f, -3f, 200f, 3f)), """{"roadType":"residential"}""", FeatureSource.Osm),
-            WorldFeatureFixture.Create("osm:way:2", "road", new PolygonGeometry(Rect(-200f, 3f, 200f, 5.5f)), """{"roadType":"footway"}""", FeatureSource.Osm),
-            WorldFeatureFixture.Create("osm:way:3", "road", new PolygonGeometry(Rect(20f, 8f, 40f, 20f)), """{"roadType":"pedestrian"}""", FeatureSource.Osm),
-            WorldFeatureFixture.Create("osm:way:4", "road", new PolygonGeometry(Rect(30f, -12f, 32.5f, 8f)), """{"roadType":"footway"}""", FeatureSource.Osm),
-            WorldFeatureFixture.Create("osm:way:5", "building", new PolygonGeometry(Rect(-40f, 20f, -20f, 40f)), "{}", FeatureSource.Osm, height: 20f),
+            WorldFeatureFixture.Create("osm:way:1", "road", new PolygonGeometry(Rect(-200f, -3f, 200f, 3f)), """{"highway":"residential"}"""),
+            WorldFeatureFixture.Create("osm:way:2", "road", new PolygonGeometry(Rect(-200f, 3f, 200f, 5.5f)), """{"highway":"footway"}"""),
+            WorldFeatureFixture.Create("osm:way:3", "road", new PolygonGeometry(Rect(20f, 8f, 40f, 20f)), """{"highway":"pedestrian"}"""),
+            WorldFeatureFixture.Create("osm:way:4", "road", new PolygonGeometry(Rect(30f, -12f, 32.5f, 8f)), """{"highway":"footway"}"""),
+            WorldFeatureFixture.Create("osm:way:5", "building", new PolygonGeometry(Rect(-40f, 20f, -20f, 40f)), "{}", height: 20f),
         };
         var roads = new List<NetworkLine>
         {
@@ -349,8 +349,8 @@ internal static class TestWorld
     {
         var features = new List<WorldFeature>
         {
-            WorldFeatureFixture.Create("osm:way:11", "road", new PolygonGeometry(Rect(-60f, -3f, 60f, 3f)), """{"roadType":"residential"}""", FeatureSource.Osm),
-            WorldFeatureFixture.Create("osm:way:12", "road", new PolygonGeometry(Rect(-3f, 0f, 3f, 60f)), """{"roadType":"residential"}""", FeatureSource.Osm),
+            WorldFeatureFixture.Create("osm:way:11", "road", new PolygonGeometry(Rect(-60f, -3f, 60f, 3f)), """{"highway":"residential"}"""),
+            WorldFeatureFixture.Create("osm:way:12", "road", new PolygonGeometry(Rect(-3f, 0f, 3f, 60f)), """{"highway":"residential"}"""),
         };
         var roads = new List<NetworkLine>
         {

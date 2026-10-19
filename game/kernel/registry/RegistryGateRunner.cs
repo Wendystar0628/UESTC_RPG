@@ -17,7 +17,7 @@ public sealed record RegistryGateReport(string Scope, int Maps, int Services, in
 public static partial class RegistryGateRunner
 {
     public static RegistryGateReport Run(ServiceRegistry registry, string indexPath, string requestedMap,
-        Func<string, byte[]> read, IReadOnlyCollection<Type> compositionInputs)
+        Func<string, byte[]> read, IReadOnlyCollection<Type> compositionInputs, Func<string, IEnumerable<string>> files)
     {
         var index = JsonSerializer.Deserialize<MapIndex>(read(indexPath), ContractJson.Options)
             ?? throw new InvalidDataException("Map index is null.");
@@ -57,17 +57,21 @@ public static partial class RegistryGateRunner
             foreach (var pose in map.Spawns.Select(item => item.Fly).Concat(points.Waypoints.Select(item => item.Fly)).Append(spawn))
                 ValidatePose(entry.Id, pose);
 
-            using var campus = JsonDocument.Parse(read(entry.Dir + "campus.json"));
             var ids = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var entity in campus.RootElement.GetProperty("entities").EnumerateArray())
+            foreach (var name in files(entry.Dir + "world/").Where(name => name != "geo.json" && name.EndsWith(".json", StringComparison.Ordinal))
+                         .Order(StringComparer.Ordinal))
             {
-                var id = entity.GetProperty("id").GetString();
-                if (string.IsNullOrWhiteSpace(id) || !ids.Add(id)) throw new InvalidDataException($"Empty or duplicate entity ID: {entry.Id}/{id}");
-                var prefix = id.Split(':', 2)[0];
-                if (prefix is "npc" or "item" or "quest") throw new InvalidDataException($"Reserved RPG entity prefix: {id}");
-                if (prefixes.TryGetValue(prefix, out var owner) && owner != entry.Id)
-                    throw new InvalidDataException($"Entity prefix shared by maps: {prefix} ({owner}, {entry.Id})");
-                prefixes[prefix] = entry.Id;
+                using var world = JsonDocument.Parse(read(entry.Dir + "world/" + name));
+                foreach (var entity in world.RootElement.GetProperty("features").EnumerateArray())
+                {
+                    var id = entity.GetProperty("id").GetString();
+                    if (string.IsNullOrWhiteSpace(id) || !ids.Add(id)) throw new InvalidDataException($"Empty or duplicate entity ID: {entry.Id}/{id}");
+                    var prefix = id.Split(':', 2)[0];
+                    if (prefix is "npc" or "item" or "quest") throw new InvalidDataException($"Reserved RPG entity prefix: {id}");
+                    if (prefixes.TryGetValue(prefix, out var owner) && owner != entry.Id)
+                        throw new InvalidDataException($"Entity prefix shared by maps: {prefix} ({owner}, {entry.Id})");
+                    prefixes[prefix] = entry.Id;
+                }
             }
             if (map.Env.ReflectLakes.Select(id => id.Value).Distinct(StringComparer.Ordinal).Count() != map.Env.ReflectLakes.Count ||
                 map.Env.ReflectLakes.Any(id => !ids.Contains(id.Value)))

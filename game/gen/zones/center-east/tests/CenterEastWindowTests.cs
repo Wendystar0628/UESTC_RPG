@@ -93,7 +93,7 @@ public sealed partial class CenterEastModuleTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void WindowTablePublishesWithTheCenterEastDeclarations()
     {
-        // The end-to-end reach before WP-02's orchestration: WP-14's provider allocates the whole real map (every authored overlay)
+        // The end-to-end reach before WP-02's orchestration: WP-14's provider allocates the whole real map (all authored world records)
         // with the zone's real declarations, then the zone describes its windows from the published snapshot.
         var world = RealMapFixture.Load().World;
         var module = new CenterEastModule();

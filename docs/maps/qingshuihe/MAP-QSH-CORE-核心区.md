@@ -3,20 +3,20 @@ id: MAP-QSH-CORE
 title: 核心区：八角图书馆、时间广场、日晷、博物馆、西湖
 category: maps
 summary: 核心区图书馆、时间广场、日晷、博物馆外观与西湖岸线构筑物的外观与身份特征、设计增补、近景要求；灯光、四季、天气和行走、声音在子文档
-keywords: [核心区, 图书馆外观, 八角采光顶, 穹顶, 方塔玻璃槽, 竖缝窗, 大台阶, 二楼正门, 品·悦吧店面, 宁静苑, 无主体块, 时间广场, 旗杆, 十二时辰刻度, 日晷, 晷针, 博物馆外观, 柱廊环, 西湖, 折线栈桥, 白色拱桥, 湖心岛观景平台, 西湖喷泉, 箱涵, 天鹅屋, 入水口荷花, 草阶看台, overlay/core.d]
+keywords: [核心区, 图书馆外观, 八角采光顶, 穹顶, 方塔玻璃槽, 竖缝窗, 大台阶, 二楼正门, 品·悦吧店面, 宁静苑, 无主体块, 时间广场, 旗杆, 十二时辰刻度, 日晷, 晷针, 博物馆外观, 柱廊环, 西湖, 折线栈桥, 白色拱桥, 湖心岛观景平台, 西湖喷泉, 箱涵, 天鹅屋, 入水口荷花, 草阶看台, world/core.json]
 owners: [WP-16]
 contributors: [WP-13, WP-17, WP-23, WP-24, WP-25, WP-26, WP-38, WP-51]
 depends: [CORE-INDEX, ART-STYLE, ART-SKYLIGHT, MAP-QSH-LIBRARY, ART-MODELING, ENG-ARCH, SYS-TIME, SYS-WALK, WLD-INTERIORS]
 related: [MAP-QSH-SOUTH, MAP-QSH-WEST, MAP-QSH-RENOVATION, ART-RENOVATION, WLD-VEGETATION, WLD-WATER, WLD-LIFE, SYS-MOTION, SYS-VIEW, ENG-GATES, ART-FIDELITY, MAP-QSH-ADDITIONS, UI-NAV, SYS-WEATHER, UI-VISUAL, SYS-ATLAS, SYS-MAPS, SYS-AUDIO]
 contracts: []
-data: ["game/data/maps/qingshuihe/overlay/core.d/"]
+data: ["game/data/maps/qingshuihe/world/core.json"]
 gates: [G4, G7]
 ---
 
 # MAP-QSH-CORE · 核心区：八角图书馆、时间广场、日晷、博物馆、西湖
 
 > **范围**：本文规定核心区的图书馆外观与屋顶、入口台阶、时间广场与日晷、电子科技博物馆外观、西湖岸线构筑物、图书馆周边 14 个无主体块的外观和本区开放入口的门口表现，以及身份特征、设计增补与近景要求。这里是全片的重心：图书馆是核心，西湖是与它对望的次主体。§1、§2–§8 写的是默认状态（秋 17:30）的样子，图书馆灯光、其他时段和季节见 MAP-QSH-CORE-SEASONS。
-> **不在本文**：图书馆灯光、四季昼夜与天气（MAP-QSH-CORE-SEASONS）；行走、点位、锚点与声音（MAP-QSH-CORE-WALK）；楼的实体 ID、坐标与层数（以 `game/data/maps/qingshuihe/campus.json` 和 `overlay/core.d/` 为准）；图书馆与博物馆的室内（MAP-QSH-LIBRARY）；时刻与季节（SYS-TIME）；点位（UI-NAV-WAYPOINTS §1）；界面时间环（UI-VISUAL）；锚点与门口标记（SYS-ATLAS）；室内开放清单（WLD-INTERIORS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §2–§4、§6）。
+> **不在本文**：图书馆灯光、四季昼夜与天气（MAP-QSH-CORE-SEASONS）；行走、点位、锚点与声音（MAP-QSH-CORE-WALK）；楼的实体 ID、坐标与层数（以 `game/data/maps/qingshuihe/world/core.json` 为准）；图书馆与博物馆的室内（MAP-QSH-LIBRARY）；时刻与季节（SYS-TIME）；点位（UI-NAV-WAYPOINTS §1）；界面时间环（UI-VISUAL）；锚点与门口标记（SYS-ATLAS）；室内开放清单（WLD-INTERIORS）；本区地形与水位（MAP-QSH-TERRAIN-DISTRICTS §2–§4、§6）。
 > **查阅**：先读 §0；图书馆看 §1、§2，时间广场与日晷看 §3–§4；博物馆看 §5；西湖看 §6–§7；构图看 §8；身份特征与近景要求看 §9；初值看 §10
 
 ## 0 结论
@@ -91,7 +91,7 @@ gates: [G4, G7]
 - **6.6 箱涵**：红光右支渠从湖区穿过，用一条南北向、长约 290 m 的混凝土箱涵和湖隔开，两端设堰；画在湖的西部，是一道笔直的灰白细线，顶面略高于水面，两端各一道小堰口。
 - **6.7 水下森林**：湖水碧绿清澈，湖底长着沉水植物，近岸浅水处透过水面能看到几团暗绿色的水草剪影（着色 WP-24（水体系统））；四季形态见 WLD-VEGETATION §5，夜间留暗。从涉水区往深处走沉到水下停 2 秒，看到的就是这片水草。
 - **6.8 天鹅屋**：湖上一座青绿色的小木屋，放在竹筏上，给天鹅住，作为生活感道具保留；夜间天鹅聚到屋旁打盹，屋檐下可挂一盏小暖灯（可选），是西湖夜里离岸最远的一点灯；冬季屋顶压一线雪。
-- **6.9 湖心岛观景平台**：栈桥在湖心岛边落到一个 5×8 m 的木面观景平台，与栈桥同色；设栏杆，朝湖的三面视野敞开，要能同时望见图书馆和落日方向；平台后密植水杉（WP-23），立一块深灰底白字"湿地保护 请勿入内"的小牌；岛的其余部分能看不能进，斑头雁在岛岸边打盹。平台是新增设计物，写进覆盖层，ID 以 `design:` 开头。
+- **6.9 湖心岛观景平台**：栈桥在湖心岛边落到一个 5×8 m 的木面观景平台，与栈桥同色；设栏杆，朝湖的三面视野敞开，要能同时望见图书馆和落日方向；平台后密植水杉（WP-23），立一块深灰底白字"湿地保护 请勿入内"的小牌；岛的其余部分能看不能进，斑头雁在岛岸边打盹。平台是新增设计物，加进本区世界文件，ID 以 `design:` 开头。
 - **6.10 入水口荷花**：荷花在西湖只放入水口一处，在箱涵南端堰口附近的西南岸湾，离岸 3–15 m 的浅水里，是 P05 视线前方 60–100 m 的夏季前景；四季状态同东湖（MAP-QSH-SOUTH §4.7）。
 
 ## 7 西湖喷泉
@@ -117,7 +117,7 @@ gates: [G4, G7]
 
 ## 9 本区身份特征、设计增补与近景要求
 
-通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节。本区的 K1 是身份特征对象、主轴（银杏大道南段—时间广场—图书馆、西湖主岸线）和点位落点 30 m 内，K2 是行走走廊和开放室内；轮廓调整写进 `overlay/core.d/` 本包分片；翻新见 MAP-QSH-RENOVATION §6。
+通用口径见 MAP-QSH-ADDITIONS 的区文档共同口径一节。本区的 K1 是身份特征对象、主轴（银杏大道南段—时间广场—图书馆、西湖主岸线）和点位落点 30 m 内，K2 是行走走廊和开放室内；轮廓调整直接改 `world/core.json` 里的记录；翻新见 MAP-QSH-RENOVATION §6。
 
 | 对象 | 必须认得出的特征 |
 | --- | --- |

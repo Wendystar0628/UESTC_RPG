@@ -16,7 +16,7 @@ namespace Campus.Gen.Zones.Core.Annex;
 /// and from the 3F G terrace above, so it is composed from above: a cut-granite court with a lighter stepping path, a red
 /// timber pergola along the wing, a grey granite colonnade along the library wall, a hexagonal timber pavilion in the
 /// widest free spot and two timber-edged planters with clipped shrubs, each holding a palm (棕榈, planted by WP-23 from
-/// overlay/core.d/). Everything is laid out from the court's own walls, so it follows the data, not coordinates.
+/// world/core.json). Everything is laid out from the court's own walls, so it follows the data, not coordinates.
 /// </summary>
 public sealed class QuietGarden : ICorePiece
 {

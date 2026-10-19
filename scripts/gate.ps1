@@ -1,4 +1,4 @@
-﻿# 门禁总入口：按工作包和改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
+# 门禁总入口：按工作包和改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
 # 用法：powershell scripts\gate.ps1 -Wp WP-xx [-Only G1,G2,... | -Smoke | -Full] [-Plan] [-Paths <路径...>] [-BaseRef <基线>] [-Map qingshuihe] [-Frames 300]
 #   默认：G1、受影响模块的 G2 和 G4，再加受影响的启动、行走、存档核心专项（核心专项驱动正式生产舞台）
 #   -Plan 只读，只列出会跑什么；-Full 请求保留的 14 道门，没做完的门返回 NotImplemented
@@ -265,7 +265,7 @@ $saveChanges = @()
 if (-not ($Full -or $Smoke -or $Only.Count)) {
     $startupChanges = @(Get-UESTCAttributedChanges $root $BaseRef $runtimeChanges 'Kernel(?:Service|Node)')
     $walkChanges = @($runtimeChanges | Where-Object {
-        $_ -match '^game/(camera/walk/|kernel/collision/|gen/(collision|ground)/|contracts/((?:Runtime/)?Spatial/(Walk|WaterTraversal|Collision|Stair)|Foundation/Terrain))|^game/data/maps/[^/]+/(nav/|waypoints\.json$|overlay/(terrain/|walkable\.overlay\.json$))'
+        $_ -match '^game/(camera/walk/|kernel/collision/|gen/(collision|ground)/|contracts/((?:Runtime/)?Spatial/(Walk|WaterTraversal|Collision|Stair)|Foundation/Terrain))|^game/data/maps/[^/]+/(world/|nav/|waypoints\.json$|overlay/(terrain/|walkable\.overlay\.json$))'
     })
     $saveChanges = @(@($runtimeChanges | Where-Object {
         $_ -match '^game/(kernel/save/|contracts/(?:Runtime/)?Save/)|^game/.*Save[^/]*\.cs$'

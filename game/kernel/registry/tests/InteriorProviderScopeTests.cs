@@ -137,7 +137,7 @@ public sealed class InteriorProviderScopeTests
         var ring = new PolygonRings([new(offset, offset), new(offset + 32f, offset),
             new(offset + 32f, offset + 40f), new(offset, offset + 40f)]);
         var world = new FakeWorld { Boundary = new([]) };
-        world.Features = ((WorldFeature[])[new WorldFeature(feature, FeatureSource.Osm, new("building"), new PolygonGeometry(ring))
+        world.Features = ((WorldFeature[])[new WorldFeature(feature, new("building"), new PolygonGeometry(ring))
         { Bounds = bounds, Height = 24f, Storeys = 6 }]).ToDictionary(feature => feature.Id);
         world.Boundary = ring;
         var descriptor = new MapDescriptor(map, new("测试地图", "Fixture"), MapKind.Outdoor, 1, 7,
