@@ -167,7 +167,7 @@ gates: [G5]
 
 ### 4.4 穿出校界
 
-河渠在零带里断面照常继续，岸顶恒为 0；校界处的 waterY 与 `outskirts.json` 交点记录一致，截面水柱上缘同值（WLD-OUTSKIRTS、WLD-DIORAMA）。
+河渠在零带里断面照常继续，岸顶恒为 0；校界处的 waterY 与外围数据里的交点记录一致，截面水柱上缘同值（WLD-OUTSKIRTS、WLD-DIORAMA）。
 
 ### 4.5 开放泳区的泳岸型与支撑面
 

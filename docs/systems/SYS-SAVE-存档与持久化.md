@@ -16,7 +16,7 @@ gates: [G5, G20]
 # SYS-SAVE · 存档与持久化：存档模型、存什么、不存什么
 
 > **范围**：本文规定存档服务 `ISaveService` 的存档位与世界线、各存档段存什么与不存什么。保存时机、读档流程与格式、损坏处理、安全在子文档。
-> **不在本文**：文件布局、DTO、写盘步骤（`game/kernel/save/`）；契约签名（`game/contracts/Save/`）；帧顺序（ENG-ARCH §3）；命令行与 G20（ENG-GATES）；性能额度（ENG-BUDGET §3）；各段的字段（各包）；开始页与进入游戏（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）。
+> **不在本文**：文件布局、DTO、写盘步骤（`game/kernel/save/`）；契约签名（`game/contracts/Save/`）；帧顺序（ENG-ARCH §3）；命令行与 G20（ENG-GATES）；性能份额（ENG-BUDGET §3）；各段的字段（各包）；开始页与进入游戏（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）。
 > **查阅**：先读 §0；存档位与世界线看 §1；各段存什么看 §2；保存时机、读档与一致性看 SYS-SAVE-FLOW；格式、损坏与安全看 SYS-SAVE-FORMAT
 
 ## 0 结论

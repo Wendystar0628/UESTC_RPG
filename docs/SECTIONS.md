@@ -4,14 +4,14 @@
 
 ## CORE-INDEX · 《电光年华》开发总纲
 
-`docs/README.md` · 7.9k 字 · 全项目唯一的顶层：核心准则（钩子注入）、按功能分域的文档地图、作品定位与当前范围、全局不变量 INV-1–INV-12
+`docs/README.md` · 6.3k 字 · 全项目唯一的顶层：核心准则（钩子注入）、按功能分域的文档地图、作品定位与当前范围、全局不变量的摘要（全文在 CORE-INVARIANTS）
 关键词：总纲、核心准则、文档地图、怎么查文档、作品定位、电光年华、当前范围、主线、全局不变量、INV、清水河、实现优先、不过度工程化、测试最小、改设计必清旧、直接改主线、一份权威、文档精简、落金初灯
 
 - CORE-INDEX §0 核心准则 · L21 · 2.0k
   - ★ CORE-INDEX §0.1 接入要点 · L48 · 119
 - CORE-INDEX §1 文档地图 · L54 · 2.4k
-- CORE-INDEX §2 作品与范围 · L89 · 973
-- CORE-INDEX §3 全局不变量 · L99 · 1.9k
+- CORE-INDEX §2 作品与范围 · L89 · 986
+- CORE-INDEX §3 全局不变量 · L99 · 240
 
 ## CORE-CONVENTIONS · 约定
 
@@ -58,7 +58,7 @@
 - CORE-DECISIONS-SYSTEMS §2 存档 · L61 · 1.4k
 - CORE-DECISIONS-SYSTEMS §3 音频 · L79 · 2.1k
 - CORE-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.4k
-- CORE-DECISIONS-SYSTEMS §5 工程 · L132 · 3.1k
+- CORE-DECISIONS-SYSTEMS §5 工程 · L132 · 3.2k
 
 ## CORE-DECISIONS-WORLD · 世界与画面决策
 
@@ -104,6 +104,15 @@
 - CORE-GLOSSARY §14 工程与流程 · L304 · 2.1k
 - CORE-GLOSSARY §15 同名异义 · L338 · 1.6k
 
+## CORE-INVARIANTS · 全局不变量
+
+`docs/core/CORE-INVARIANTS-全局不变量.md` · 2.6k 字 · 观光规则集的 12 条硬约束 INV-1–INV-12：平台与范围、观察模式、界面、场景文字、画风、不出现人物、日式边界、世界状态、格局与地图数据、动态与声音、精度底线、性能；每条只写长期不变的约束，具体设计与数值在"详见"的文档
+关键词：全局不变量、INV、硬约束、观光规则集、sightseeing、不变量、世界规则
+
+- CORE-INVARIANTS §0 结论 · L22 · 387
+  - ★ CORE-INVARIANTS §0.1 接入要点 · L28 · 133
+- CORE-INVARIANTS §1 不变量 · L33 · 1.5k
+
 ## WF-BUILD · 施工边界
 
 `docs/workflow/WF-BUILD-施工边界.md` · 3.7k 字 · 施工时能改哪里、共享文件、契约申请与冻结、构建与测试排队、新模块怎么接入、Godot API 先查签名，以及禁用写法门禁拦不住的两条约定
@@ -140,24 +149,24 @@
 
 ## WF-DOC · 文档写法
 
-`docs/workflow/WF-DOC-文档写法.md` · 8.6k 字 · 文档网的五层、每份文档的形状、编码与引用、只写什么不写什么、体量上限、冲突层级、新增与维护
+`docs/workflow/WF-DOC-文档写法.md` · 8.9k 字 · 文档网的五层、每份文档的形状、编码与引用、只写什么不写什么、体量上限、冲突层级、新增与维护
 关键词：文档写法、D-220、D-222、D-227、文档网、五层、渐进式披露、核心准则、文档地图、接入要点、文件头、front matter、范围块、查阅行、编码、文件名、小节编号、引用写法、全局替换、只写现行规则、不写实现、一份权威、体量上限、字数上限、待验证、冲突层级、规则放哪份、新增文档、登记决策、gen_index、check_docs、SECTIONS.md、D-178、D-200、D-208、D-215、D-216、D-217
 
-- WF-DOC §0 结论 · L22 · 735
-  - ★ WF-DOC §0.1 接入要点 · L31 · 235
-- WF-DOC §1 五层 · L38 · 583
-- WF-DOC §2 文档形状 · L51 · 933
-- WF-DOC §3 编码、小节编号与引用 · L77 · 920
-- WF-DOC §4 写什么，怎么写 · L95 · 1.3k
-  - WF-DOC §4.1 取舍 · L97 · 530
-  - WF-DOC §4.2 写法（D-220） · L106 · 760
-- WF-DOC §5 体量上限 · L120 · 1.5k
-  - WF-DOC §5.1 长大了怎么拆（D-222） · L138 · 504
-  - WF-DOC §5.2 新内容放哪 · L145 · 239
-- WF-DOC §6 冲突与规则放哪 · L152 · 773
-- WF-DOC §7 新增文档 · L181 · 245
-- WF-DOC §8 登记新决策 · L187 · 180
-- WF-DOC §9 维护 · L193 · 594
+- WF-DOC §0 结论 · L22 · 787
+  - ★ WF-DOC §0.1 接入要点 · L31 · 287
+- WF-DOC §1 五层 · L39 · 583
+- WF-DOC §2 文档形状 · L52 · 933
+- WF-DOC §3 编码、小节编号与引用 · L78 · 920
+- WF-DOC §4 写什么，怎么写 · L96 · 1.5k
+  - WF-DOC §4.1 取舍 · L98 · 569
+  - WF-DOC §4.2 写法（D-220） · L107 · 914
+- WF-DOC §5 体量上限 · L122 · 1.5k
+  - WF-DOC §5.1 长大了怎么拆（D-222） · L140 · 504
+  - WF-DOC §5.2 新内容放哪 · L147 · 239
+- WF-DOC §6 冲突与规则放哪 · L154 · 835
+- WF-DOC §7 新增文档 · L184 · 245
+- WF-DOC §8 登记新决策 · L190 · 180
+- WF-DOC §9 维护 · L196 · 594
 
 ## WF-ENTRY · 角色入口卡
 
@@ -497,9 +506,9 @@
   - ART-STYLE §2.4 界面色 · L81 · 145
   - ART-STYLE §2.5 色名登记 · L86 · 413
   - ART-STYLE §2.6 天气色 · L94 · 126
-- ART-STYLE §3 排除元素 · L99 · 919
+- ART-STYLE §3 排除元素 · L99 · 922
   - ART-STYLE §3.1 日本元素的边界 · L101 · 690
-  - ART-STYLE §3.2 其他排除项 · L115 · 218
+  - ART-STYLE §3.2 其他排除项 · L115 · 221
 - ART-STYLE §4 场景内的文字与标识 · L121 · 328
 - ART-STYLE §5 情绪弧线 · L129 · 447
 
@@ -509,11 +518,11 @@
 关键词：箱庭边界、地层截面、剖面、截面上缘、地下水线、卵石层、河渠水柱截面、雾海、雾海顶面、雾天雾海上升、清水河银带、深夜雾海微光、远景、远景视差、色调层、坡向层、发光层、雪山、日照金山、雪线、雪山可见度、backdrop.json、diorama_section、diorama_far、Camera3D.Far
 
 - WLD-DIORAMA §0 结论 · L21 · 1.6k
-  - ★ WLD-DIORAMA §0.1 接入要点 · L34 · 742
+  - ★ WLD-DIORAMA §0.1 接入要点 · L34 · 729
 - WLD-DIORAMA §1 截面线与校界 · L46 · 60
 - WLD-DIORAMA §2 地层截面 · L50 · 1.3k
   - WLD-DIORAMA §2.1 截面的受光与阴影 · L68 · 307
-- WLD-DIORAMA §3 河渠水柱截面 · L76 · 394
+- WLD-DIORAMA §3 河渠水柱截面 · L76 · 381
 - WLD-DIORAMA §4 截面下缘与雾海 · L82 · 840
 - WLD-DIORAMA §5 远景（360° 不留空白） · L92 · 1.7k
 - WLD-DIORAMA §6 雪山 · L123 · 881
@@ -562,16 +571,16 @@
 
 ## WLD-LIFE-FAUNA · 动物与生活痕迹：动物、反应动物、痕迹、显隐
 
-`docs/world/WLD-LIFE-FAUNA-动物与生活痕迹.md` · 6.1k 字 · 全校动物与反应动物、室外生活痕迹，以及随时段、季节、天气的显隐做法
+`docs/world/WLD-LIFE-FAUNA-动物与生活痕迹.md` · 6.2k 字 · 全校动物与反应动物、室外生活痕迹，以及随时段、季节、天气的显隐做法
 关键词：动物、鸟、校园猫、鸽群、反应动物、黄昏乌鸦、季节性动物、生活痕迹、晾晒、黑天鹅、雨天生活痕迹、小心地滑、日夜两套
 
 - WLD-LIFE-FAUNA §0 结论 · L23 · 748
   - ★ WLD-LIFE-FAUNA §0.1 接入要点 · L30 · 413
-- WLD-LIFE-FAUNA §1 动物 · L38 · 2.1k
-  - WLD-LIFE-FAUNA §1.1 反应动物：猫与鸽群 · L65 · 762
-- WLD-LIFE-FAUNA §2 生活痕迹 · L81 · 1.4k
-- WLD-LIFE-FAUNA §3 显隐：随时段、季节、天气的做法 · L96 · 757
-- WLD-LIFE-FAUNA §4 待验证（P0） · L108 · 230
+- WLD-LIFE-FAUNA §1 动物 · L38 · 2.2k
+  - WLD-LIFE-FAUNA §1.1 反应动物：猫与鸽群 · L65 · 852
+- WLD-LIFE-FAUNA §2 生活痕迹 · L82 · 1.4k
+- WLD-LIFE-FAUNA §3 显隐：随时段、季节、天气的做法 · L97 · 757
+- WLD-LIFE-FAUNA §4 待验证（P0） · L109 · 230
 
 ## WLD-LIFE-STREET · 停着的车与街道家具：车、家具、碰撞
 
@@ -581,7 +590,7 @@
 - WLD-LIFE-STREET §0 结论 · L23 · 693
   - ★ WLD-LIFE-STREET §0.1 接入要点 · L28 · 552
 - WLD-LIFE-STREET §1 停着的车 · L37 · 768
-- WLD-LIFE-STREET §2 街道家具 · L47 · 1.4k
+- WLD-LIFE-STREET §2 街道家具 · L47 · 1.5k
 - WLD-LIFE-STREET §3 行走模式下的碰撞 · L59 · 680
 - WLD-LIFE-STREET §4 待验证（P0） · L76 · 65
 
@@ -596,12 +605,12 @@
 ## WLD-OUTSKIRTS-BAND · 外围环境带：截面、分层与精度、灯光季节、保留删除新增、画法、数据
 
 `docs/world/WLD-OUTSKIRTS-BAND-外围环境带.md` · 5.4k 字 · 截面线位置规则、外围 O0–O3 的内容与精度、灯光季节车流的通用规则、保留删除新增、外围画法、数据与许可
-关键词：外围环境带、O0–O3、距离环、外围覆盖层、outskirts.json、外围画法、楼型、程序化布局、ODbL
+关键词：外围环境带、O0–O3、距离环、外围覆盖层、offcampus.json、外围画法、楼型、程序化布局、ODbL
 
-- WLD-OUTSKIRTS-BAND §0 结论 · L23 · 764
+- WLD-OUTSKIRTS-BAND §0 结论 · L23 · 746
   - ★ WLD-OUTSKIRTS-BAND §0.1 接入要点 · L30 · 365
-- WLD-OUTSKIRTS-BAND §1 截面线与截面精度 · L37 · 248
-  - WLD-OUTSKIRTS-BAND §1.1 截面线的位置规则 · L39 · 184
+- WLD-OUTSKIRTS-BAND §1 截面线与截面精度 · L37 · 245
+  - WLD-OUTSKIRTS-BAND §1.1 截面线的位置规则 · L39 · 181
   - WLD-OUTSKIRTS-BAND §1.2 截面精度 · L44 · 49
 - WLD-OUTSKIRTS-BAND §2 外围分层 O0–O3 · L48 · 1.3k
   - WLD-OUTSKIRTS-BAND §2.1 判定原则：距离环 · L50 · 257
@@ -615,7 +624,7 @@
   - WLD-OUTSKIRTS-BAND §4.1 删掉的 · L101 · 181
   - WLD-OUTSKIRTS-BAND §4.2 新增的规则 · L105 · 147
 - WLD-OUTSKIRTS-BAND §5 外围的画法：清透、细线 · L111 · 78
-- WLD-OUTSKIRTS-BAND §6 数据与许可 · L115 · 340
+- WLD-OUTSKIRTS-BAND §6 数据与许可 · L115 · 489
 
 ## WLD-OUTSKIRTS-BORDER · 边界阻挡与提示：行走阻挡、飞行阻挡、提示文案
 
@@ -687,7 +696,7 @@
   - WLD-TERRAIN-SHAPE §4.1 常水位 · L145 · 263
   - WLD-TERRAIN-SHAPE §4.2 岸型 · L151 · 563
   - WLD-TERRAIN-SHAPE §4.3 涉水带、湖盆与河渠 · L162 · 341
-  - WLD-TERRAIN-SHAPE §4.4 穿出校界 · L168 · 110
+  - WLD-TERRAIN-SHAPE §4.4 穿出校界 · L168 · 98
   - WLD-TERRAIN-SHAPE §4.5 开放泳区的泳岸型与支撑面 · L172 · 247
 
 ## WLD-TERRAIN · 地形：设计规则与落地规则
@@ -700,7 +709,7 @@
 
 ## WLD-VEGETATION · 植被：树冠画法、草坪、地面覆盖与季相
 
-`docs/world/WLD-VEGETATION-植被.md` · 10.2k 字 · 树木、灌木、草坪与水生植物的观感规则、树种色名与季相行、地面覆盖、季相与天气、碰撞与声音数据
+`docs/world/WLD-VEGETATION-植被.md` · 10.3k 字 · 树木、灌木、草坪与水生植物的观感规则、树种色名与季相行、地面覆盖、季相与天气、碰撞与声音数据
 关键词：植被、植物、树冠画法、云团型、插片型、冬季裸枝、叶量、开花、季相、局部季节、四季变色、草坪、绿篱、荷、芦苇、落叶地毯、树冠遮蔽、覆雪、过渡绿地、species.json
 
 - WLD-VEGETATION §0 结论 · L22 · 1.4k
@@ -718,19 +727,19 @@
   - WLD-VEGETATION §3.2 开阔草坪 · L111 · 331
   - WLD-VEGETATION §3.3 积雪与季节花境 · L119 · 280
   - WLD-VEGETATION §3.4 过渡绿地的草本与草面（D-185） · L124 · 231
-  - WLD-VEGETATION §3.5 草叶的表示与交界（D-205，取值是初值，样板同位姿定） · L131 · 305
-- WLD-VEGETATION §4 落叶、花瓣与积雪（地面覆盖） · L136 · 817
-- WLD-VEGETATION §5 水生植物 · L146 · 464
-- WLD-VEGETATION §6 季相与天气 · L161 · 1.2k
-  - WLD-VEGETATION §6.1 逐株错相与叶量 · L163 · 193
-  - WLD-VEGETATION §6.2 季节颜色 · L168 · 194
-  - WLD-VEGETATION §6.3 摆动与飘落（给 SYS-MOTION 的参数） · L173 · 160
-  - WLD-VEGETATION §6.4 覆雪 · L178 · 375
-  - WLD-VEGETATION §6.5 换季与天气切换 · L184 · 228
-- WLD-VEGETATION §7 碰撞、画面设置与声音 · L190 · 1.1k
-  - WLD-VEGETATION §7.1 行走碰撞 · L192 · 379
-  - WLD-VEGETATION §7.2 画面设置（SYS-GRAPHICS） · L201 · 362
-  - WLD-VEGETATION §7.3 声音的接口（SYS-AUDIO） · L208 · 292
+  - WLD-VEGETATION §3.5 草叶的表示与交界（D-205，取值是初值，样板同位姿定） · L131 · 350
+- WLD-VEGETATION §4 落叶、花瓣与积雪（地面覆盖） · L137 · 817
+- WLD-VEGETATION §5 水生植物 · L147 · 464
+- WLD-VEGETATION §6 季相与天气 · L162 · 1.2k
+  - WLD-VEGETATION §6.1 逐株错相与叶量 · L164 · 193
+  - WLD-VEGETATION §6.2 季节颜色 · L169 · 194
+  - WLD-VEGETATION §6.3 摆动与飘落（给 SYS-MOTION 的参数） · L174 · 160
+  - WLD-VEGETATION §6.4 覆雪 · L179 · 375
+  - WLD-VEGETATION §6.5 换季与天气切换 · L185 · 228
+- WLD-VEGETATION §7 碰撞、画面设置与声音 · L191 · 1.1k
+  - WLD-VEGETATION §7.1 行走碰撞 · L193 · 379
+  - WLD-VEGETATION §7.2 画面设置（SYS-GRAPHICS） · L202 · 362
+  - WLD-VEGETATION §7.3 声音的接口（SYS-AUDIO） · L209 · 292
 
 ## WLD-WATER · 水体：动画式水面画法、反光带与倒影、涉水与泳区规则
 
@@ -1176,7 +1185,7 @@
 
 ## SYS-ATLAS-UI · 地图界面：底图、小地图与大地图
 
-`docs/systems/SYS-ATLAS-UI-地图界面.md` · 6.1k 字 · 平面地图的界面：底图内容与上色、外围与校界画法、文字与标注、小地图、大地图的布局缩放图层目录传送卡；自定义标记与追踪在主线之后
+`docs/systems/SYS-ATLAS-UI-地图界面.md` · 6.2k 字 · 平面地图的界面：底图内容与上色、外围与校界画法、文字与标注、小地图、大地图的布局缩放图层目录传送卡；自定义标记与追踪在主线之后
 关键词：底图、小地图、大地图、地图页、atlasRect、距离场、map.* 色值、区域名、地名标注、labels.json、缩放档、目录页、传送卡、图层
 
 - SYS-ATLAS-UI §0 结论 · L23 · 398
@@ -1187,7 +1196,7 @@
   - SYS-ATLAS-UI §1.3 外围、校界与箱庭外缘 · L51 · 426
   - SYS-ATLAS-UI §1.4 季节与昼夜：只做轻微变化 · L58 · 193
   - SYS-ATLAS-UI §1.5 文字与标注 · L63 · 388
-- SYS-ATLAS-UI §2 小地图 · L70 · 854
+- SYS-ATLAS-UI §2 小地图 · L70 · 896
 - SYS-ATLAS-UI §3 大地图 · L82 · 1.7k
   - SYS-ATLAS-UI §3.1 布局与开合 · L84 · 466
   - SYS-ATLAS-UI §3.2 缩放与平移 · L91 · 288
@@ -1231,14 +1240,14 @@
 
 ## SYS-AUDIO-FOLEY · 观者声与空间声学
 
-`docs/systems/SYS-AUDIO-FOLEY-观者声与空间声学.md` · 3.9k 字 · 脚步与交互音、材质与覆盖物、飞行风声，窄处脚步更明显的空间声学、遮挡与室内外传声
+`docs/systems/SYS-AUDIO-FOLEY-观者声与空间声学.md` · 4.0k 字 · 脚步与交互音、材质与覆盖物、飞行风声，窄处脚步更明显的空间声学、遮挡与室内外传声
 关键词：观者声、脚步声、步相、落地、材质、覆盖物、交互音、飞行风声、空间声学、混响、声学网格、门户、遮挡、室内外传声、FootMat、IGroundCover、IAcousticEnv、IFoleyService、IWalkTelemetry、洗牌袋
 
 - SYS-AUDIO-FOLEY §0 结论 · L22 · 325
   - ★ SYS-AUDIO-FOLEY §0.1 接入要点 · L28 · 135
 - SYS-AUDIO-FOLEY §1 观者声 · L32 · 1.4k
   - SYS-AUDIO-FOLEY §1.1 原则 · L34 · 156
-  - SYS-AUDIO-FOLEY §1.2 步相与步频 · L39 · 204
+  - SYS-AUDIO-FOLEY §1.2 步相与步频 · L39 · 220
   - SYS-AUDIO-FOLEY §1.3 材质与覆盖物 · L45 · 358
   - SYS-AUDIO-FOLEY §1.4 分层与变体 · L51 · 171
   - SYS-AUDIO-FOLEY §1.5 交互音 · L56 · 295
@@ -1261,7 +1270,7 @@
 - SYS-AUDIO §3 加速流逝的节制与转场 · L75 · 481
 - SYS-AUDIO §4 人迹声：确保不出现清晰人声 · L87 · 511
 - SYS-AUDIO §5 界面音效 · L98 · 415
-- SYS-AUDIO §6 开场音乐 · L106 · 262
+- SYS-AUDIO §6 开场音乐 · L106 · 290
 - SYS-AUDIO §7 设置 · L111 · 380
 - SYS-AUDIO §8 素材策略与许可 · L117 · 504
 - SYS-AUDIO §9 预算（设计目标） · L124 · 167
@@ -1336,7 +1345,7 @@
 
 ## SYS-MOTION-LIFE · 生命体、室内微动与偶发事件
 
-`docs/systems/SYS-MOTION-LIFE-生命体与偶发事件.md` · 4.3k 字 · 动物的小动作节奏与对行走身体作出反应的动物、室内与钟楼的微动、全片唯一的偶发事件
+`docs/systems/SYS-MOTION-LIFE-生命体与偶发事件.md` · 4.4k 字 · 动物的小动作节奏与对行走身体作出反应的动物、室内与钟楼的微动、全片唯一的偶发事件
 关键词：反应动物、动物小动作、室内微动、钟锤、偶发事件、晚归者、late-returner、incidents.json
 
 - SYS-MOTION-LIFE §0 结论 · L23 · 434
@@ -1350,7 +1359,7 @@
   - SYS-MOTION-LIFE §3.3 夜间版本 · L85 · 194
   - SYS-MOTION-LIFE §3.4 白天版本 · L89 · 126
   - SYS-MOTION-LIFE §3.5 克制 · L93 · 83
-  - SYS-MOTION-LIFE §3.6 数据与写法 · L97 · 182
+  - SYS-MOTION-LIFE §3.6 数据与写法 · L97 · 207
   - SYS-MOTION-LIFE §3.7 天气版本 · L101 · 146
 - SYS-MOTION-LIFE §4 待验证 · L105 · 153
 
@@ -1506,9 +1515,9 @@
 - SYS-VIEW §0 结论 · L22 · 941
   - ★ SYS-VIEW §0.1 接入要点 · L37 · 277
 - SYS-VIEW §1 不做的事 · L44 · 199
-- SYS-VIEW §2 旁观者漫游 · L48 · 2.2k
+- SYS-VIEW §2 旁观者漫游 · L48 · 2.3k
   - SYS-VIEW §2.1 操作 · L52 · 447
-  - SYS-VIEW §2.2 鼠标与碰撞 · L59 · 129
+  - SYS-VIEW §2.2 鼠标与碰撞 · L59 · 149
   - SYS-VIEW §2.3 活动范围 · L64 · 245
   - SYS-VIEW §2.4 初始位置 · L72 · 479
   - SYS-VIEW §2.5 镜头不会自己动 · L81 · 288
@@ -1534,7 +1543,7 @@
 
 ## SYS-WALK-BOUNDS · 可行走范围、边界与碰撞
 
-`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.4k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
+`docs/systems/SYS-WALK-BOUNDS-可行走范围边界与碰撞.md` · 7.5k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪
 关键词：可行走范围、可行走数据、禁行区、高度场地面、边界收口、隐形墙、校界缓停、碰撞顶加高、水平外扩、安全点、回位、涉水、开放泳区、游泳、碰撞就绪、自动门、电梯关门换位、行走走廊、推荐路线、碰撞级 C、SurfaceTag、FootMat、WalkClass、Collider、ICollisionWorld
 
 - SYS-WALK-BOUNDS §0 结论 · L23 · 543
@@ -1544,7 +1553,7 @@
 - SYS-WALK-BOUNDS §3 楼内的门与电梯 · L79 · 717
 - SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L93 · 957
 - SYS-WALK-BOUNDS §5 行走走廊与节奏 · L118 · 188
-- SYS-WALK-BOUNDS §6 推荐路线 · L124 · 193
+- SYS-WALK-BOUNDS §6 推荐路线 · L124 · 233
 - SYS-WALK-BOUNDS §7 碰撞与就绪 · L128 · 1.6k
 
 ## SYS-WALK · 行走模式：身体、手感、视角与切换
@@ -1554,14 +1563,14 @@
 
 - SYS-WALK §0 结论 · L22 · 593
   - ★ SYS-WALK §0.1 接入要点 · L34 · 188
-- SYS-WALK §1 身体、声音与步相 · L40 · 543
-- SYS-WALK §2 手感目标 · L51 · 620
-- SYS-WALK §3 视角、镜头与舒适度 · L65 · 2.0k
-  - SYS-WALK §3.1 视场角、舒适度与键位 · L67 · 629
-  - SYS-WALK §3.2 行走模式的镜头 · L77 · 1.3k
-- SYS-WALK §4 模式切换 · L109 · 791
-- SYS-WALK §5 控制器的规则 · L124 · 704
-- SYS-WALK §6 待验证 · L135 · 293
+- SYS-WALK §1 身体、声音与步相 · L40 · 572
+- SYS-WALK §2 手感目标 · L52 · 620
+- SYS-WALK §3 视角、镜头与舒适度 · L66 · 2.0k
+  - SYS-WALK §3.1 视场角、舒适度与键位 · L68 · 629
+  - SYS-WALK §3.2 行走模式的镜头 · L78 · 1.3k
+- SYS-WALK §4 模式切换 · L110 · 791
+- SYS-WALK §5 控制器的规则 · L125 · 704
+- SYS-WALK §6 待验证 · L136 · 293
 
 ## SYS-WEATHER-PROCESS · 自动天气与存档语义
 
@@ -1592,18 +1601,18 @@
 - SYS-WEATHER §3 雨的可读性规则 · L91 · 583
 - SYS-WEATHER §4 与四季、昼夜的配合 · L103 · 168
 - SYS-WEATHER §5 闪电与彩虹 · L110 · 467
-- SYS-WEATHER §6 湿润、积水与降水的规则 · L121 · 845
-- SYS-WEATHER §7 质量底线 · L134 · 375
-- SYS-WEATHER §8 待验证 · L144 · 72
+- SYS-WEATHER §6 湿润、积水与降水的规则 · L121 · 906
+- SYS-WEATHER §7 质量底线 · L135 · 375
+- SYS-WEATHER §8 待验证 · L145 · 72
 
 ## UI-NAV-WAYPOINTS · 点位、跳转与传送
 
 `docs/ui/UI-NAV-WAYPOINTS-点位跳转与传送.md` · 3.3k 字 · 观景点位的设计意图与合法性，飞过去的方式与到达打断，预取与传送的界面侧约定
 关键词：点位、观景点、点位目录编号、waypoints.json、锚点不是点位、推荐状态、进场路径、飞过去、滑移、弧线飞行、雾幕弧线、到达与打断、传送、跳转压力
 
-- UI-NAV-WAYPOINTS §0 结论 · L22 · 537
+- UI-NAV-WAYPOINTS §0 结论 · L22 · 531
   - ★ UI-NAV-WAYPOINTS §0.1 接入要点 · L30 · 176
-- UI-NAV-WAYPOINTS §1 点位 · L35 · 797
+- UI-NAV-WAYPOINTS §1 点位 · L35 · 818
 - UI-NAV-WAYPOINTS §2 跳转与传送 · L46 · 966
   - UI-NAV-WAYPOINTS §2.1 飞过去 · L48 · 255
   - UI-NAV-WAYPOINTS §2.2 到达与打断 · L54 · 251
@@ -1625,7 +1634,7 @@
   - UI-NAV §3.2 季节、速度与观察模式 · L83 · 369
   - UI-NAV §3.3 点位目录 · L89 · 218
   - UI-NAV §3.4 首次进入与到达标题 · L93 · 382
-  - UI-NAV §3.5 操作说明与设置 · L98 · 808
+  - UI-NAV §3.5 操作说明与设置 · L98 · 818
   - UI-NAV §3.6 临时提示 · L106 · 408
   - UI-NAV §3.7 天气签条 · L114 · 506
 - UI-NAV §4 输入 · L124 · 1.4k
@@ -1669,9 +1678,9 @@
   - UI-VISUAL-MOTION §1.2 八个母题 · L45 · 653
   - UI-VISUAL-MOTION §1.3 频率分级与声音 · L58 · 325
   - UI-VISUAL-MOTION §1.4 曲线、时长与上限 · L64 · 478
-- UI-VISUAL-MOTION §2 减少动态效果与无障碍 · L71 · 490
-  - UI-VISUAL-MOTION §2.1 "减少动态效果"下的替代 · L73 · 317
-  - UI-VISUAL-MOTION §2.2 无障碍 · L81 · 156
+- UI-VISUAL-MOTION §2 减少动态效果与无障碍 · L71 · 580
+  - UI-VISUAL-MOTION §2.1 "减少动态效果"下的替代 · L73 · 407
+  - UI-VISUAL-MOTION §2.2 无障碍 · L82 · 156
 
 ## UI-VISUAL · 界面视觉语言：设计原则、色彩令牌、主题与实现边界
 
@@ -1696,7 +1705,7 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 8.6k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 8.7k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、ContentModule、KernelService、KernelNode、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、架构规则、生命周期、契约、契约申请、枚举穷举、本机烘焙、.tbin、缓存键、英雄资产、桩、占位、仓库脚本自成一体、架构导向、扩展方式、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L22 · 1.4k
@@ -1713,7 +1722,7 @@
   - ENG-ARCH 仓库脚本自成一体 · L104 · 101
   - ENG-ARCH 生命周期与发布 · L108 · 281
 - ENG-ARCH §3 契约 · L115 · 560
-- ENG-ARCH §4 资源与烘焙 · L124 · 1.2k
+- ENG-ARCH §4 资源与烘焙 · L124 · 1.3k
 - ENG-ARCH §5 未交付能力的占位边界 · L136 · 257
 - ENG-ARCH §6 架构导向 · L144 · 446
 - ENG-ARCH §7 扩展点（RPG） · L152 · 210
@@ -1746,14 +1755,14 @@
 
 ## ENG-BUDGET · 性能预算
 
-`docs/engineering/ENG-BUDGET-性能预算.md` · 4.3k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、额度怎么分与超了怎么办、怎么测；细节级别、速度律与性能硬规则在子文档
-关键词：性能预算、额度、额度分配、budgets.json、KernelBudgets、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角额度、GPU 帧时分配、阴影图档位、纹理上限
+`docs/engineering/ENG-BUDGET-性能预算.md` · 4.3k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、份额怎么分与超了怎么办、怎么测；细节级别、速度律与性能硬规则在子文档
+关键词：性能预算、份额、份额分配、budgets.json、KernelBudgets、主代理余量、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角份额、GPU 帧时分配、阴影图档位、纹理上限
 
 - ENG-BUDGET §0 结论 · L21 · 779
   - ★ ENG-BUDGET §0.1 接入要点 · L35 · 187
 - ENG-BUDGET §1 界面、外围、室内与音频的份额 · L41 · 135
 - ENG-BUDGET §2 预设与设备档的预算 · L45 · 1.6k
-- ENG-BUDGET §3 额度怎么分 · L76 · 396
+- ENG-BUDGET §3 份额怎么分 · L76 · 396
 - ENG-BUDGET §4 怎么测 · L84 · 197
 - ENG-BUDGET §5 待验证（P0） · L88 · 185
 
@@ -1874,15 +1883,15 @@
 
 ## ENG-ROADMAP · 扩展路线：从观光到 RPG
 
-`docs/engineering/ENG-ROADMAP-扩展路线.md` · 3.4k 字 · 规定观光版给以后 RPG 留的扩展原则、现在不能写死的地方和 v1 冻结前的最小预留（6 条）
+`docs/engineering/ENG-ROADMAP-扩展路线.md` · 3.5k 字 · 规定观光版给以后 RPG 留的扩展原则、现在不能写死的地方和 v1 冻结前的最小预留（6 条）
 关键词：扩展路线、从观光到 RPG、扩展原则、规则集、sightseeing、观光规则集、观者状态、输入占用按原因计、枚举的穷举纪律、偶发事件数据化、名字占位、RPG 预留目录、实体 ID 前缀、存档预留段名、v1 冻结前的预留、写法纪律
 
 - ENG-ROADMAP §0 结论 · L21 · 812
   - ★ ENG-ROADMAP §0.1 接入要点 · L30 · 421
 - ENG-ROADMAP §1 扩展原则 · L38 · 588
 - ENG-ROADMAP §2 写死的规定与写法纪律 · L49 · 368
-- ENG-ROADMAP §3 v1 冻结前的预留 · L55 · 761
-  - ENG-ROADMAP §3.1 清单 · L57 · 608
+- ENG-ROADMAP §3 v1 冻结前的预留 · L55 · 850
+  - ENG-ROADMAP §3.1 清单 · L57 · 697
   - ENG-ROADMAP §3.2 不需要现在预留的 · L68 · 137
 
 ## ENG-WP-LIST · 工作包一览与子包拆法
@@ -1921,16 +1930,16 @@
 
 ## OPS-RELEASE · 发布与交付
 
-`docs/ops/OPS-RELEASE-发布与交付.md` · 6.1k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
+`docs/ops/OPS-RELEASE-发布与交付.md` · 6.2k 字 · 版本号与构建信息、正式用户目录、导出与发布、安装更新卸载、地图数据包、故障诊断、许可、署名与图标
 关键词：发布、交付、版本号、version.txt、构建信息、导出、导出入口、scripts/release、分发压缩包、UESTC-<版本>-win64.7z、地图数据包、map-data-<版本>.zip、ODbL、正式用户目录、%APPDATA%\UESTC、安装、更新、卸载、诊断包、导出诊断、许可、MIT、LICENSE、干净环境验证、OSM 署名、许可页、制作人员与许可、窗口标题、窗口图标、八角晶片
 
 - OPS-RELEASE §0 结论 · L21 · 1.0k
   - ★ OPS-RELEASE §0.1 接入要点 · L31 · 522
 - OPS-RELEASE §1 版本号与构建信息 · L42 · 268
 - OPS-RELEASE §2 用户数据目录 · L49 · 275
-- OPS-RELEASE §3 导出与发布 · L55 · 618
+- OPS-RELEASE §3 导出与发布 · L55 · 753
 - OPS-RELEASE §4 安装、更新与卸载 · L64 · 507
-- OPS-RELEASE §5 地图数据包（ODbL） · L76 · 359
+- OPS-RELEASE §5 地图数据包（ODbL） · L76 · 365
 - OPS-RELEASE §6 故障处理与诊断 · L83 · 340
 - OPS-RELEASE §7 许可 · L89 · 1.6k
   - OPS-RELEASE §7.1 署名、许可页、窗口标题与图标 · L104 · 708

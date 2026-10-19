@@ -17,7 +17,7 @@ gates: [G2, G10, G20]
 # SYS-SAVE-FLOW · 保存时机与读档流程：安全时刻、退出、读档、世界实例、一致性
 
 > **范围**：本文规定保存时机与可靠性、安全时刻与落定快照、退出保存、保存状态反馈、读档流程、世界实例、"状态一致"的定义、新游戏的建档、校验修复、关游戏期间的现实时间不计。
-> **不在本文**：存档位模型与各段存什么（SYS-SAVE）；容器格式、坏档处理、设置文件与安全（SYS-SAVE-FORMAT）；文件布局、写盘步骤（`game/kernel/save/`）；契约签名（`game/contracts/Save/`）；性能额度（ENG-BUDGET §3）；开始页与进入游戏（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）。
+> **不在本文**：存档位模型与各段存什么（SYS-SAVE）；容器格式、坏档处理、设置文件与安全（SYS-SAVE-FORMAT）；文件布局、写盘步骤（`game/kernel/save/`）；契约签名（`game/contracts/Save/`）；性能份额（ENG-BUDGET §3）；开始页与进入游戏（SYS-TITLE）；换图（SYS-MAPS）；天气过程（SYS-WEATHER）。
 > **查阅**：先读 §0；保存时机、安全时刻与退出看 §1；读档顺序与世界实例看 §2；现实时间不计看 §3；待验证看 §4
 
 ## 0 结论

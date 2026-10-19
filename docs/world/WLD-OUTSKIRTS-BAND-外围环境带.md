@@ -4,20 +4,20 @@ title: 外围环境带：截面、分层与精度、灯光季节、保留删除�
 category: world
 parent: WLD-OUTSKIRTS
 summary: 截面线位置规则、外围 O0–O3 的内容与精度、灯光季节车流的通用规则、保留删除新增、外围画法、数据与许可
-keywords: [外围环境带, O0–O3, 距离环, 外围覆盖层, outskirts.json, 外围画法, 楼型, 程序化布局, ODbL]
+keywords: [外围环境带, O0–O3, 距离环, 外围覆盖层, offcampus.json, 外围画法, 楼型, 程序化布局, ODbL]
 owners: [WP-47]
 contributors: [WP-02, WP-04, WP-05, WP-06, WP-08, WP-13, WP-14, WP-15, WP-18, WP-22, WP-23, WP-24, WP-27, WP-28, WP-30, WP-33, WP-35, WP-36, WP-37, WP-38, WP-39, WP-41, WP-42, WP-43, WP-44, WP-45, WP-46, WP-48, WP-49, WP-53]
 depends: [CORE-INDEX, WLD-OUTSKIRTS, ART-STYLE, WLD-DIORAMA, ART-FIDELITY, ENG-ARCH, ENG-BUDGET, ENG-PERF]
 related: [MAP-QSH-OUTSKIRTS, WLD-OUTSKIRTS-BORDER, ART-SKYLIGHT, ENG-GATES, MAP-QSH-ADDITIONS, SYS-TIME, SYS-WEATHER, SYS-AUDIO, OPS-RELEASE, WLD-TERRAIN]
 contracts: []
-data: ["pipeline/outskirts/", "game/data/maps/qingshuihe/outskirts.json", "game/data/maps/qingshuihe/overlay/outskirts.overlay.json"]
+data: ["game/data/maps/qingshuihe/world/offcampus.json"]
 gates: [G2, G6, G7]
 ---
 
 # WLD-OUTSKIRTS-BAND · 外围环境带：截面、分层与精度、灯光季节、保留删除新增、画法、数据
 
 > **范围**：本文规定截面线的位置规则与截面精度，外围环境带 O0–O3 的内容、精度、灯光与季节的通用规则，外围的保留、删除与新增规则，外围画法，外围数据与许可。
-> **不在本文**：三条线的定义（WLD-OUTSKIRTS）；截面的画法与精度（WLD-DIORAMA §2）；行走与飞行阻挡、提示文案（WLD-OUTSKIRTS-BORDER）；清水河具体的街区、地标、灯光表与农田（MAP-QSH-OUTSKIRTS）；截面、雾海与远景卡片的画法（WLD-DIORAMA）；外围增补物的逐项外观（MAP-QSH-ADDITIONS）；外围数据管线与产物格式（`pipeline/outskirts/`、`game/contracts/`）；性能额度（ENG-BUDGET）；声音的实现（SYS-AUDIO）。
+> **不在本文**：三条线的定义（WLD-OUTSKIRTS）；截面的画法与精度（WLD-DIORAMA §2）；行走与飞行阻挡、提示文案（WLD-OUTSKIRTS-BORDER）；清水河具体的街区、地标、灯光表与农田（MAP-QSH-OUTSKIRTS）；截面、雾海与远景卡片的画法（WLD-DIORAMA）；外围增补物的逐项外观（MAP-QSH-ADDITIONS）；外围数据的契约（`game/contracts/Spatial/OutskirtsContracts.cs`）；性能份额（ENG-BUDGET）；声音的实现（SYS-AUDIO）。
 > **查阅**：先读 §0；截面线看 §1；外围分层与精度看 §2；灯光、季节与车流看 §3；保留删除新增看 §4；外围的画法看 §5；数据与许可看 §6
 
 ## 0 结论
@@ -25,7 +25,7 @@ gates: [G2, G6, G7]
 1. **外围只保留结构和地标**：道路、轨道、水系、用地和楼的体量等级照外围数据，其余按氛围做（INV-9）；画法与校内同一套清透风格，越远越干净（§4、§5）。
 2. **分四层**：O0 街道带（校界到前沿线，复用校内部件，按精度区 K3 判）；O1 外围街区（前沿线到截面线，朝校园的第一排立面 L1、临街店面 L0、其余 L2）；O2 雾中楼顶（截面线以外，常驻合并块）；O3 远景卡片和雪山。外围精度按离校界、前沿线的距离环判（§2）。不画车流（§3.3）。
 3. **截面线**沿道路中线、绿带、园区内部路和河岸走，不切楼、不切桥（§1.1）；截面的画法与精度见 WLD-DIORAMA §2。
-4. **数据**：外围数据 `outskirts.json` 是项目自有的地图数据（D-252），楼块用程序化楼型，地标和风格化改动写进覆盖层；署名与许可见 §6。
+4. **数据**：外围数据是项目自有的地图数据（D-252），楼块用程序化楼型，地标和风格化改动写进覆盖层；现状与许可见 §6。
 
 ### 0.1 接入要点
 
@@ -39,7 +39,7 @@ gates: [G2, G6, G7]
 ### 1.1 截面线的位置规则
 
 - **沿道路中线、绿带、园区内部路、河岸走，不切楼、不切桥**。道路和轨道穿出截面线的地方优先挑地面段和路堤段；非穿高架不可时，穿过点放在桥墩中线，桥面画出梁体和铺装层断面。
-- **各地段的远近**：清水河各方位的截面线距离、周长和银带的画法见 MAP-QSH-OUTSKIRTS §1.2；具体多边形由管线按本节规则定稿。
+- **各地段的远近**：清水河各方位的截面线距离、周长和银带的画法见 MAP-QSH-OUTSKIRTS §1.2；具体多边形按本节规则定稿。
 
 ### 1.2 截面精度
 
@@ -114,6 +114,6 @@ gates: [G2, G6, G7]
 
 ## 6 数据与许可
 
-- **外围数据**：`game/data/maps/qingshuihe/outskirts.json`，改动直接改记录（D-252、D-253）；运行时由世界模型解析，作为单独一层，不并进校内实体。
-- **外围覆盖层**（WP-47（外围环境带） 独占）：地标（天街商场、电子科大站、发展变电站、高架的特殊段）、风格化改动（把 `construction` 用地画成建成的小区、挪高压线、整理铁塔间距）和新增的氛围元素；每条写明理由。
-- **许可**：署名同校内，为"© OpenStreetMap contributors"；`outskirts.json` 和校内数据一样是 ODbL 派生数据库，随安装包分发，见 OPS-RELEASE。
+- **外围数据**：现有的是 `game/data/maps/qingshuihe/world/offcampus.json`（校外道路与水系，随世界文件加载）；外围楼块、前沿线与截面线的数据文件、生成器和外围覆盖层尚未实现，属主线之后；契约见 `game/contracts/Spatial/OutskirtsContracts.cs`，`map.json` 的 `env.outskirts` 在数据文件落地前为空。改动直接改记录（D-252、D-253），运行时由世界模型解析，作为单独一层，不并进校内实体。
+- **外围覆盖层**（WP-47（外围环境带） 独占，主线之后）：地标（天街商场、电子科大站、发展变电站、高架的特殊段）、风格化改动（把 `construction` 用地画成建成的小区、挪高压线、整理铁塔间距）和新增的氛围元素；每条写明理由。
+- **许可**：署名同校内，为"© OpenStreetMap contributors"；外围数据和校内数据一样是 ODbL 派生数据库，随安装包分发，见 OPS-RELEASE。

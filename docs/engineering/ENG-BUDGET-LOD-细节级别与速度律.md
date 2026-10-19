@@ -16,7 +16,7 @@ gates: [G10]
 # ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
 
 > **范围**：细节级别 L0+–L4 与 64 m 分块（§1）、旁观速度律与目的地预取（§2）、深度与近裁剪面（§3）、阴影、后期、倒影、灯光的预算参数（§4）。
-> **不在本文**：设备档、预设口径与额度怎么分（ENG-BUDGET）；性能硬规则（ENG-BUDGET-RULES）；流式与阴影的做法（ENG-PERF）；阴影方向、强度与月影的取值（ART-SKYLIGHT §3.1）。
+> **不在本文**：设备档、预设口径与份额怎么分（ENG-BUDGET）；性能硬规则（ENG-BUDGET-RULES）；流式与阴影的做法（ENG-PERF）；阴影方向、强度与月影的取值（ART-SKYLIGHT §3.1）。
 > **查阅**：先读 §0；级别与分块看 §1；速度律看 §2；深度看 §3；阴影与后期参数看 §4
 
 ## 0 结论
@@ -77,7 +77,7 @@ gates: [G10]
 
 - **阴影**：一盏 DirectionalLight3D，太阳与月亮轮流；PSSM 4 级（均衡 2 级），级联边界、图尺寸与距离以 `game/kernel/lighting/ShadowSettings.cs` 为准；`LightAngularDistance` 为 0（不开 PCSS），软影滤波固定 Soft Medium；介质为室内时主光第一级范围缩到 8–12 m（0.5 s 过渡）。
 - **后期**：Compositor 在 POST_SKY 画描线与边缘光，POST_TRANSPARENT 画移轴与光斑，之后 Glow、Tonemap Linear、LUT、抗锯齿（SMAA 或 FXAA 随预设，SYS-GRAPHICS §1）。移轴、光斑、光柱、暗角玩家可关，关时 0.5 s 淡出。
-- **光柱**：室外每屏几根，室内同屏几组，计入楼内额度；细尘每屏几百粒。
+- **光柱**：室外每屏几根，室内同屏几组，计入楼内份额；细尘每屏几百粒。
 - **倒影**：SubViewport 每轴 1/4 分辨率，每帧只给一个湖，更新间隔随预设。
 - **灯**：不建真实点光，全部走灯表（含开放入口的门口灯）。
 

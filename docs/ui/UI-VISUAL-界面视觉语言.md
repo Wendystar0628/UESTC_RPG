@@ -15,7 +15,7 @@ gates: [G4, G5, G14]
 # UI-VISUAL · 界面视觉语言：设计原则、色彩令牌、主题与实现边界
 
 > **范围**：界面外观规范的根：设计原则、色彩分工与令牌、晶白与深屏两套主题、实现边界。主题是信息、芯片、光与计算，主色清蓝 #73C9F9，专业克制；界面、图标和锚点里不用银杏。字体、形状、图标、组件、画面布局与动效在子文档。
-> **不在本文**：字体、形状材质、图标、组件外观与画面布局（UI-VISUAL-COMPONENTS）；动效与减少动态效果（UI-VISUAL-MOTION）；界面有什么、怎么操作见 UI-NAV；地图与传送卡见 SYS-ATLAS；开始页与加载界面见 SYS-TITLE；提示音见 SYS-AUDIO；额度见 ENG-BUDGET；门禁判据见 ENG-GATES G14。
+> **不在本文**：字体、形状材质、图标、组件外观与画面布局（UI-VISUAL-COMPONENTS）；动效与减少动态效果（UI-VISUAL-MOTION）；界面有什么、怎么操作见 UI-NAV；地图与传送卡见 SYS-ATLAS；开始页与加载界面见 SYS-TITLE；提示音见 SYS-AUDIO；份额见 ENG-BUDGET；门禁判据见 ENG-GATES G14。
 > **查阅**：先读 §0，再按节号查；字体、形状、图标、组件、布局看 UI-VISUAL-COMPONENTS；动效看 UI-VISUAL-MOTION
 
 ## 0 结论

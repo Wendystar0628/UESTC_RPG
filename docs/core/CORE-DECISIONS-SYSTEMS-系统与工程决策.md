@@ -96,7 +96,7 @@ gates: []
 | D-114 | 没有听得清的人声：人迹只用远处、听不清、来自看不见处的群声；界面悬停默认无声，不加语音提示 | 全项目 | SYS-AUDIO §4；SYS-AUDIO §5；INV-3 | 生效 |
 | D-115 | 一次性声一律按真实秒排程，任何流逝倍率下任意 1 s 不超过 3 个 | 全项目 | SYS-AUDIO §3；INV-10 | 生效 |
 | D-116 | 音频预算：主线程不到 1 ms（从帧时余量里划出），同时在播的声源有上限（以 `AudioVoicePool` 为准），常驻内存与导出包里的音频都在百兆级 | 性能 | SYS-AUDIO §9 | 生效 |
-| D-159 | 空间声学（WP-53c）的主线程占用含在音频合计里，不另列额度 | 音频 | SYS-AUDIO §9；SYS-AUDIO §10 | 生效 |
+| D-159 | 空间声学（WP-53c）的主线程占用含在音频合计里，不另列份额 | 音频 | SYS-AUDIO §9；SYS-AUDIO §10 | 生效 |
 
 ## 4 性能与画面设置
 
@@ -134,7 +134,7 @@ gates: []
 | 编号 | 决定 | 适用范围 | 细则所在 | 状态 |
 | --- | --- | --- | --- | --- |
 | D-131 | 工作包以 ENG-WP 为准（含 WP-54a（角色运行时）、54b） | 全项目 | ENG-WP-LIST §1 | 生效 |
-| D-132 | 门禁编号以 ENG-GATES §1.2 的门禁表为准；全局不变量改名为 INV-1 至 INV-12，与门禁区分（引用写法见 D-156） | 全项目 | ENG-GATES §1；CORE-INDEX §3；CORE-CONVENTIONS §3.3 | 生效 |
+| D-132 | 门禁编号以 ENG-GATES §1.2 的门禁表为准；全局不变量改名为 INV-1 至 INV-12，与门禁区分（引用写法见 D-156） | 全项目 | ENG-GATES §1；CORE-INVARIANTS §1；CORE-CONVENTIONS §3.3 | 生效 |
 | D-133 | 权威文档分工：契约与帧顺序以 `game/contracts/` 源码为准（说明见 ENG-ARCH §3），全局参数以 ENG-PERF §1.5 为准，预算与硬规则以 ENG-BUDGET 为准，门禁以 ENG-GATES 为准，工作包以 ENG-WP 为准，某系统的细则以该系统自己的文档为准 | 全项目 | ENG-ARCH §3；ENG-PERF §1.5；ENG-BUDGET §1；ENG-BUDGET-RULES §1；ENG-GATES §1；ENG-WP-LIST §1 | 生效 |
 | D-134 | 契约分批冻结：某组契约的真实生产方与使用方在主线上接通、相关核心专项通过后，由主会话宣布冻结，之后只增不改；改契约、全局着色器参数、着色器文件、程序集引用，一律写申请交 Codex 主线 | 全项目 | WF-BUILD §3；ENG-ARCH §5 | 生效 |
 | D-135 | 帧顺序的每一步有唯一的优先级值，用节点 `ProcessPriority` 固定，任何两步不同值；权威是契约里的 `FramePriority` | 全项目 | `game/contracts/` 源码；ENG-ARCH §3；SYS-TIME §1 | 生效 |
@@ -149,7 +149,7 @@ gates: []
 | D-144 | 坐标单位米，x 向东、y 向上、z 向南；方位角是罗盘方位，从正北顺时针；数据坐标直接当 Godot 世界坐标用 | 全项目 | CORE-CONVENTIONS §1.1；CORE-CONVENTIONS §1.2 | 生效 |
 | D-145 | 写 Godot 代码以 `docs/godot-api/` 的签名为准，不凭记忆写 API | 写代码的包 | WF-BUILD §0.1 | 生效 |
 | D-146 | 截图与门禁的默认参数串固定：默认状态、流逝暂停、界面隐藏、精致预设、自动调节关、清水河、不写存档、不开声音 | 门禁 | ENG-GATES-SHOTS §1 | 生效 |
-| D-156 | CORE-INDEX 的全局不变量写作 INV-1–INV-12，别处引用写"INV-n"；不加限定的 G 一律指 ENG-GATES §1.2 门禁表里的门禁；不用 I#，因为 I0、I1 已指室内兜底层和室内批次 | 全项目 | CORE-INDEX §3；CORE-CONVENTIONS §3.2；CORE-CONVENTIONS §3.3 | 生效 |
+| D-156 | 全局不变量（CORE-INVARIANTS）写作 INV-1–INV-12，别处引用写"INV-n"；不加限定的 G 一律指 ENG-GATES §1.2 门禁表里的门禁；不用 I#，因为 I0、I1 已指室内兜底层和室内批次 | 全项目 | CORE-INVARIANTS §1；CORE-CONVENTIONS §3.2；CORE-CONVENTIONS §3.3 | 生效 |
 | D-160 | v1 冻结前做 ENG-ROADMAP §3 的六条预留：规则集、观者状态、按原因计数的输入占用、枚举穷举纪律、偶发事件数据化、RPG 名字占位；观光规则本身不变，写进 `sightseeing` 规则集 | 全项目 | ENG-ROADMAP §3；ENG-ARCH §2；ENG-ARCH §3；ENG-WP-LIST §1；CORE-CONVENTIONS §3.6 | 生效 |
 | D-177 | 目标框架用 net10.0（C# 14），SDK 由 `global.json` 锁定；升级经主会话评估，不自行退回 net8.0 | 全部 C# 工程 | ENG-WP §2 第 2 条；ENG-ARCH §8 | 生效 |
 | D-254 | 删去从未实现的 G18 地图一致性与 G19 连通（含 G19a–c），门禁收到 12 项；连通与可达由 G15 行走路线兜底，标记一致性靠集中测试的截图与界面检查；编号不复用 | 全部工程 | ENG-GATES §1.2 | 生效 |

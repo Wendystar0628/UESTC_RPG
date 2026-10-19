@@ -17,7 +17,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 # ENG-BUDGET-RULES · 性能硬规则与工程设置
 
 > **范围**：性能硬规则 23 条（§1，条号不变，引用写"第 n 条"）与工程设置的规则（§2）。所有包交付前必须满足。
-> **不在本文**：额度与设备档（ENG-BUDGET）；细节级别与速度律（ENG-BUDGET-LOD）；各条规则背后的策略（ENG-PERF）；已在 `game/project.godot` 里的值，以该文件为准。
+> **不在本文**：份额与设备档（ENG-BUDGET）；细节级别与速度律（ENG-BUDGET-LOD）；各条规则背后的策略（ENG-PERF）；已在 `game/project.godot` 里的值，以该文件为准。
 > **查阅**：先读 §0；第 1–10 条（渲染、材质与时间）看 §1.1；第 11–23 条（烘焙、线程、存档与音频）看 §1.2；工程设置看 §2
 
 ## 0 结论
