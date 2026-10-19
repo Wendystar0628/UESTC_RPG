@@ -8,6 +8,7 @@ global uniform float anim_loop_seconds;
 global uniform float fade_clock;
 global uniform float step_rate;
 global uniform vec4 season;
+global uniform float season_atmosphere;
 global uniform vec3 sun_dir;
 global uniform vec3 moon_dir;
 global uniform vec4 moon_lit;

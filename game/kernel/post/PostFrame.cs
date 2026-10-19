@@ -23,6 +23,7 @@ internal struct PostFrame
     // Copies of the global shader parameters read by fog.glslinc (same values as the globals)
     public Vector4 Fog;
     public Vector4 FogLow;
+    public float SeasonAtmosphere;
     public Vector4 WeatherFog;
     public Vector4 MapRect;
     public Vector4 Medium;

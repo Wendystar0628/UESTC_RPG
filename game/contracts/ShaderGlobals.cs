@@ -16,6 +16,8 @@ public static class ShaderGlobals
     /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string Season = "season";
     /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
+    public const string SeasonAtmosphere = "season_atmosphere";
+    /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string SunDir = "sun_dir";
     /// <summary>Sole writer: Campus.Kernel.World.WorldStateNode.</summary>
     public const string MoonDir = "moon_dir";
@@ -35,7 +37,6 @@ public static class ShaderGlobals
     public const string Snow = "snow";
     /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonGlobalsNode; ginkgo, other leaves/petals, ground snow divided by 1.5, reserved zero.</summary>
     public const string GroundAmt = "ground_amt";
-    /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     /// <summary>Sole writer: Campus.Systems.Sky.SkyNode.</summary>
     public const string Stars = "stars";
     /// <summary>Sole writer: Campus.Style.Palette.Keys.PaletteNode.</summary>

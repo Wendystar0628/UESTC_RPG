@@ -190,7 +190,7 @@ public partial class OutlineEffect : CompositorEffect
         Put(72, f.Medium);
         Put(76, new Vector4(f.MediumColor.R, f.MediumColor.G, f.MediumColor.B, 0));
         Put(80, f.FogLow);
-        Put(84, new Vector4(f.SunDir.X, f.SunDir.Y, f.SunDir.Z, 0));
+        Put(84, new Vector4(f.SunDir.X, f.SunDir.Y, f.SunDir.Z, f.SeasonAtmosphere));
         Put(88, new Vector4(f.MoonDir.X, f.MoonDir.Y, f.MoonDir.Z, 0));
         System.Buffer.BlockCopy(_ubo, 0, _uboBytes, 0, _uboBytes.Length);
     }

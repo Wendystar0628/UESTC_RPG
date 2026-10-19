@@ -1,6 +1,5 @@
 // fog.glslinc — GLSL mirror of game/style/shaders/fog.gdshaderinc (WP-04), for the WP-05 compute passes.
-// The body below is a verbatim copy of fog.gdshaderinc at main d618f5a (WP-04 bank 1, PaletteLayout banked9-rows-v1) from the include guard on
-// (only the guard name differs):
+// The implementation below mirrors fog.gdshaderinc, including the shared seasonal distance contraction.
 // any change to fog.gdshaderinc is copied here, the mirror stamp in post_outline.glsl is bumped (Godot re-imports
 // a .glsl only when its own bytes change), and the sandbox parity test (fog amount and colour per pixel) is re-run.
 //
@@ -8,7 +7,7 @@
 // file, the same names the material side reads, filled each frame by C# from the same state that writes the
 // globals (ENG-PERF §1.5) — as macros onto its uniform buffer:
 //   fog, fog_low, weather_fog, map_rect, medium (vec4), medium_color (vec4, linear rgb),
-//   sun_dir, moon_dir (vec3), edge_fog (float), and `sampler2D palette` bound to the palette's RD texture
+//   sun_dir, moon_dir (vec3), edge_fog, season_atmosphere (float), and `sampler2D palette` bound to the palette's RD texture
 //   through its sRGB view (RenderingServer.TextureGetRdTexture(rid, true)), so texelFetch returns linear values
 //   like the source_color global does on the material side.
 //
@@ -299,6 +298,10 @@ vec2 fog_range(float exempt) {
 	sil = mix(sil, max(sil, FOG_EXEMPT_SIL), k);
 	start = mix(start, max(start, FOG_EXEMPT_START), k);
 	start = min(start, sil * 0.5);
+	// 换季从远到近收，两段距离一起收到镜头前；天气与地标先求值，不另加遮挡效果。
+	float remaining = 1.0 - clamp(season_atmosphere, 0.0, 1.0);
+	start *= remaining;
+	sil *= remaining;
 	return vec2(start, max(sil, start + 1.0));
 }
 
@@ -316,7 +319,7 @@ float fog_equiv_dist(vec3 world_pos, vec3 cam_pos) {
 
 vec3 fog_desaturate(vec3 c, float dist) {
 	float start = fog_range(0.0).x;
-	float k = FOG_DESAT * smoothstep(start, start * 2.0, dist);
+	float k = FOG_DESAT * smoothstep(start, max(start * 2.0, start + 1.0), dist);
 	float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
 	return mix(c, vec3(l), k);
 }

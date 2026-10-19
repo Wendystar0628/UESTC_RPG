@@ -8,7 +8,7 @@
 // 对外签名（定稿，不再改）：
 //   vec4 fog_eval(vec3 world_pos, vec3 cam_pos)                    rgb = 雾色（线性），a = 混合量，直接赋给 FOG
 //   vec4 fog_eval_biased(vec3 world_pos, vec3 cam_pos, float exempt)     exempt：地标雾豁免系数 0–1（instance uniform fog_exempt，
-//                                                                        ENG-PERF）；1 时起雾不近于 200 m、剪影不近于 800 m
+//                                                                        ENG-PERF）；1 时非换季起雾不近于 200 m、剪影不近于 800 m
 //   vec3 fog_desaturate(vec3 c, float dist)                        起雾距离（取各时刻关键帧）起降饱和，作用在受光色和影色上
 //   float fog_equiv_dist(vec3 world_pos, vec3 cam_pos)             等效雾程（按高度积分），fog_desaturate 的 dist 用它
 //   vec3 fog_sky(vec3 dir_w)                                       天空渐变（五段 OKLab 单调三次 + 霾带），与天空着色器同一规则
@@ -16,7 +16,7 @@
 //   vec3 sky_column_lab(int base, float e)                         一列天空色带在仰角 e（度）处的 OKLab 值
 //   vec3 sky_gradient(vec3 dir, float w_sun) / sky_haze_color(float w_sun)   天空着色器用
 //
-// 天气只修正输入（weather_fog），签名不变；介质（楼里、地下、水下）由 medium、medium_color 混入。
+// 天气只修正输入（weather_fog），换季权重 season_atmosphere 收近距离；介质由 medium、medium_color 混入。
 
 #ifndef CAMPUS_FOG_INCLUDED
 #define CAMPUS_FOG_INCLUDED
@@ -296,6 +296,10 @@ vec2 fog_range(float exempt) {
 	sil = mix(sil, max(sil, FOG_EXEMPT_SIL), k);
 	start = mix(start, max(start, FOG_EXEMPT_START), k);
 	start = min(start, sil * 0.5);
+	// 换季从远到近收，两段距离一起收到镜头前；天气与地标先求值，不另加遮挡效果。
+	float remaining = 1.0 - clamp(season_atmosphere, 0.0, 1.0);
+	start *= remaining;
+	sil *= remaining;
 	return vec2(start, max(sil, start + 1.0));
 }
 
@@ -313,7 +317,7 @@ float fog_equiv_dist(vec3 world_pos, vec3 cam_pos) {
 
 vec3 fog_desaturate(vec3 c, float dist) {
 	float start = fog_range(0.0).x;
-	float k = FOG_DESAT * smoothstep(start, start * 2.0, dist);
+	float k = FOG_DESAT * smoothstep(start, max(start * 2.0, start + 1.0), dist);
 	float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
 	return mix(c, vec3(l), k);
 }

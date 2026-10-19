@@ -153,10 +153,13 @@ public sealed class WorldStateTests
             AssertThat(world.WorldHours).IsEqual(17.5);
         }
         var before = world.SeasonPos;
+        var atmosphereBefore = world.SeasonAtmosphere;
         world.SetSeason(Season.Summer);
         AssertThat(Math.Abs((world.SeasonFrom) - (before)) <= TestTolerance.FloatRelative).OverrideFailureMessage($"Expected {before:R}, got {world.SeasonFrom:R}.").IsTrue();
+        AssertThat(Math.Abs(world.SeasonAtmosphere - atmosphereBefore) <= TestTolerance.FloatRelative).OverrideFailureMessage("Interrupting a season transition must preserve the current atmosphere weight.").IsTrue();
         for (var i = 0; i < 60; i++) world.Tick(.1);
         AssertThat(world.SeasonPos).IsEqual(1);
+        AssertThat(Math.Abs(world.SeasonAtmosphere) <= TestTolerance.FloatRelative).OverrideFailureMessage("Settled seasons must clear the atmosphere weight.").IsTrue();
         AssertThat(Math.Abs((ArtEphemeris.Phase(world.Clock, world.SeasonPos)) - (phase)) <= TestTolerance.FloatRelative).OverrideFailureMessage($"Expected {phase:R}, got {ArtEphemeris.Phase(world.Clock, world.SeasonPos):R}.").IsTrue();
         AssertThat(world.WorldHours).IsEqual(17.5);
         AssertThat(world.Instance).IsEqual(instance);
@@ -177,13 +180,19 @@ public sealed class WorldStateTests
                         world.Freeze(17.5, start, 240);
                         var target = (Season)(((int)start + distance) % 4);
                         world.SetSeason(target);
+                        if (reduced) AssertThat(Math.Abs(world.SeasonAtmosphere) <= TestTolerance.FloatRelative).OverrideFailureMessage("Reduced-motion transitions must leave atmosphere neutral.").IsTrue();
                         AssertThat(world.SeasonTo).IsEqual((double)(int)start + distance);
                         var duration = reduced ? .5 : distance == 1 ? 4 : 5.5;
                         var frames = (int)Math.Round(duration / dt);
                         // Cover exact binary intervals and decimal accumulation rounding.
-                        for (var frame = 0; frame < frames - 1; frame++) world.Tick(dt);
+                        for (var frame = 0; frame < frames - 1; frame++)
+                        {
+                            world.Tick(dt);
+                            if (reduced) AssertThat(Math.Abs(world.SeasonAtmosphere) <= TestTolerance.FloatRelative).OverrideFailureMessage("Reduced-motion transitions must leave atmosphere neutral.").IsTrue();
+                        }
                         AssertThat((world.Transition & WorldTransition.Season) != 0).OverrideFailureMessage($"Season transition finished early: {start}, +{distance}, reduced={reduced}, dt={dt}.").IsTrue();
                         world.Tick(dt);
+                        if (reduced) AssertThat(Math.Abs(world.SeasonAtmosphere) <= TestTolerance.FloatRelative).OverrideFailureMessage("Reduced-motion transitions must leave atmosphere neutral.").IsTrue();
                         AssertThat((world.Transition & WorldTransition.Season) == 0).OverrideFailureMessage($"Season transition exceeded its duration: {start}, +{distance}, reduced={reduced}, dt={dt}.").IsTrue();
                         AssertThat(world.SeasonPos).IsEqual((double)(int)target);
                         AssertThat(world.WorldHours).IsEqual(17.5);

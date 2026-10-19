@@ -18,6 +18,7 @@ internal sealed class TestWorldState(IWeatherProcess weather, IRuleset ruleset) 
     public double WorldHours { get; private set; } = 17.5;
     public double Clock => ((WorldHours + _clockOffset) % 24 + 24) % 24;
     public double SeasonPos => (int)SeasonTarget;
+    public float SeasonAtmosphere => 0;
     public Season SeasonTarget { get; private set; } = Season.Autumn;
     public Body Sun { get; } = new(new Vector3(-0.870593f, 0.095846f, 0.482578f), 5.5f, 241, 1);
     public Body Moon { get; } = new(new Vector3(0.870593f, -0.095846f, -0.482578f), -5.5f, 61, 0);

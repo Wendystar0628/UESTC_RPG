@@ -9,6 +9,8 @@ public static class WorldTime
     public const double InitialAnimTime = AnimLoopSeconds / 2d;
     public const int DefaultStepRate = 12;
     public const int ThirtyFpsStepRate = 15;
+    public const float SeasonGlowBoost = .1f;
+    public const float SeasonBrightnessBoost = .25f;
 
     public static bool IsStepRate(int rate) => rate is DefaultStepRate or ThirtyFpsStepRate;
 

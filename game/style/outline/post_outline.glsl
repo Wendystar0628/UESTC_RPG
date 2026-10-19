@@ -96,7 +96,7 @@ layout(set = 0, binding = 0, std140) uniform OutlineParams {
 	vec4 g_medium;       // medium
 	vec4 g_medium_color; // medium_color (linear)
 	vec4 g_fog_low;      // fog_low
-	vec4 g_sun_dir;      // xyz: sun_dir (real sun direction, unquantised)
+	vec4 g_sun_dir;      // xyz: sun_dir (real sun direction, unquantised), w: season_atmosphere
 	vec4 g_moon_dir;     // xyz: moon_dir
 } P;
 
@@ -119,12 +119,13 @@ layout(set = 0, binding = 6) uniform sampler2D palette;   // global palette, sRG
 #define map_rect (P.g_map_rect)
 #define edge_fog (P.g_key_dir.w)
 #define sun_dir (P.g_sun_dir.xyz)
+#define season_atmosphere (P.g_sun_dir.w)
 #define moon_dir (P.g_moon_dir.xyz)
 #define medium (P.g_medium)
 #define medium_color (P.g_medium_color)
 // Godot re-imports a .glsl only when its own bytes change, not when an included file does: bump this stamp
 // whenever fog.glslinc is re-synced, or the old fog stays compiled in.
-// D-263 removes the inactive transition input. fog.glslinc mirror stamp: fog.gdshaderinc @ main d618f5a + 0p FOG_SCALE_HEIGHT 120 (WP-04 bank 1, PaletteLayout banked9-rows-v1)
+// Q-076: season_atmosphere contracts both fog distances; fog.glslinc mirror stamp: season-atmosphere-v1.
 #include "fog.glslinc"
 #endif
 

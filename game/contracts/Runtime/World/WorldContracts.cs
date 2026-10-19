@@ -26,6 +26,7 @@ public interface IWorldState                // Kernel 的服务（WP-34），不
     double PresetClock(ClockPreset preset, Season season);   // 只读查询该季美术预设钟点，不修改世界；晨=日出+40 min，午=日出日落中点，昏=日落-35 min，夜=21:00（SYS-TIME）
     double SeasonPos { get; }               // 旧网页版的 season：0–4，连续，循环；0 春 1 夏 2 秋 3 冬
     Season SeasonTarget { get; }
+    float SeasonAtmosphere { get; }         // 换季大气权重 0–1；唯一生产方 WorldStateService
     Body Sun { get; }
     /// <summary>Queries the art-directed solar altitude without advancing or modifying the world.</summary>
     float SunAltDegAt(double clock, Season season);

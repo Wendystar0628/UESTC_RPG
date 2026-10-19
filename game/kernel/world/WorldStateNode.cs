@@ -79,6 +79,7 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.Season, _motion?.ReduceMotion == true
             ? new Vector4(season, season, season, 1f)
             : new Vector4(season, (float)world.SeasonFrom, (float)world.SeasonTo, (float)world.SeasonProgress));
+        RenderingServer.GlobalShaderParameterSet(ShaderGlobals.SeasonAtmosphere, world.SeasonAtmosphere);
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.SunDir, new Vector3(world.Sun.Dir.X, world.Sun.Dir.Y, world.Sun.Dir.Z));
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.MoonDir, new Vector3(world.Moon.Dir.X, world.Moon.Dir.Y, world.Moon.Dir.Z));
         // Facing the viewer gives the authored full moon; phase does not flash through a calendar during a season change.

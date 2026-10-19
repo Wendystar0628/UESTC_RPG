@@ -320,6 +320,10 @@ season={
 "type": "vec4",
 "value": Vector4(2, 2, 2, 1)
 }
+season_atmosphere={
+"type": "float",
+"value": 0.0
+}
 sun_dir={
 "type": "vec3",
 "value": Vector3(-0.870594, 0.095846, 0.482578)

@@ -141,6 +141,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             DebugView = 0,
             Fog = new Vector4(cs.Fog.X, cs.Fog.Y, cs.Fog.Z, cs.Fog.W),
             FogLow = new Vector4(cs.FogLow.X, cs.FogLow.Y, cs.FogLow.Z, cs.FogLow.W),
+            SeasonAtmosphere = _world.SeasonAtmosphere,
             WeatherFog = new Vector4(weatherFog.X, weatherFog.Y, weatherFog.Z, weatherFog.W),
             MapRect = _mapRect,
             Medium = new Vector4(medium.X, medium.Y, medium.Z, medium.W),
@@ -161,12 +162,13 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             _textures.TryAcquire(ShaderGlobals.MatTable, out var matTable) ? matTable : null);
 
         if (_environment is null) return;
-        var bloom = cs.Glow + FlashBloom * frame.Flash;
+        var bloom = cs.Glow + WorldTime.SeasonGlowBoost * frame.SeasonAtmosphere + FlashBloom * frame.Flash;
         _environment.GlowBloom = Mathf.Max(bloom, 0f);
         _environment.GlowIntensity = cs.GlowIntensity;
         _environment.GlowHdrThreshold = Mathf.Max(cs.GlowHdrThreshold, GlowThresholdFloor);
         _environment.GlowHdrScale = cs.GlowHdrScale;
-        _environment.TonemapExposure = Mathf.Pow(2f, cs.Exposure);
+        _environment.TonemapExposure = Mathf.Pow(2f, cs.Exposure)
+            * (1f + WorldTime.SeasonBrightnessBoost * frame.SeasonAtmosphere);
         UpdateGlowLevels(_world.Sun.AltDeg, step);
         if (_lut is null && _finish.LutTexture.IsValid)
         {

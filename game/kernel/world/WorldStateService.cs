@@ -26,6 +26,11 @@ public interface IWorldFrame : IWorldState, IMapAware
 public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSettings? motion = null) : IWorldFrame, IWorldControl,
     IWorldRestore, ISaveSection<WorldSaveV1>
 {
+    private const double SeasonSingleSeconds = 4;
+    private const double SeasonMultipleSeconds = 5.5;
+    private const double SeasonFogStart = .6;
+    private const double SeasonFogPeak = 2;
+    private const double SeasonFogRelease = 2.6;
     private double _targetHours;
     private double _offset;
     private double _velocity;
@@ -38,6 +43,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     private double _seasonTo;
     private double _seasonElapsed;
     private double _seasonDuration;
+    private float _seasonAtmosphereFrom;
     private double _seasonStartOffset;
     private double _seasonArc;
     private double _seasonStartArcClock;
@@ -82,6 +88,18 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
     public double SeasonFrom => _seasonFrom;
     public double SeasonTo => _seasonTo;
     public double SeasonProgress => SeasonMoving ? Math.Clamp(_seasonElapsed / _seasonDuration, 0, 1) : 1;
+    public float SeasonAtmosphere
+    {
+        get
+        {
+            if (!SeasonMoving || motion?.ReduceMotion == true) return 0f;
+            // Use the same four-second phases for both durations; interruptions keep the current fog weight.
+            var phase = SeasonProgress * SeasonSingleSeconds;
+            var rise = ScalarMath.Smoothstep(SeasonFogStart, SeasonFogPeak, phase);
+            var fall = 1 - ScalarMath.Smoothstep(SeasonFogRelease, SeasonSingleSeconds, phase);
+            return (float)(ScalarMath.Lerp(_seasonAtmosphereFrom, 1d, rise) * fall);
+        }
+    }
     public double ClockOffset => _offset;
     public double TargetHours => _targetHours;
     public JsonTypeInfo<WorldSaveV1> TypeInfo => WorldSaveJson.Contract.WorldSaveV1;
@@ -214,8 +232,9 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         _seasonFrom = SeasonPos;
         var distance = ArtEphemeris.Wrap((int)season - SeasonPos, 4);
         _seasonTo = _seasonFrom + distance;
+        _seasonAtmosphereFrom = SeasonAtmosphere;
         _seasonElapsed = 0;
-        _seasonDuration = motion?.ReduceMotion == true ? .5 : distance <= 1 ? 4 : 5.5;
+        _seasonDuration = motion?.ReduceMotion == true ? .5 : distance <= 1 ? SeasonSingleSeconds : SeasonMultipleSeconds;
         _seasonStartOffset = _offset;
         _seasonArc = ArtEphemeris.Phase(Clock, SeasonPos);
         _seasonStartArcClock = ArtEphemeris.ClockAtPhase(_seasonArc, SeasonPos);
@@ -405,6 +424,7 @@ public sealed partial class WorldStateService(IWeatherProcess weather, IMotionSe
         _flowBeforePause = dto.FlowRateBeforePause;
         AnimTime = dto.AnimTime;
         _velocity = _jumpDuration = _jumpElapsed = _seasonDuration = _seasonElapsed = 0;
+        _seasonAtmosphereFrom = 0;
         _dragging = false;
         _dragIdle = 1;
         (Sun, Moon) = ArtEphemeris.Evaluate(Clock, SeasonPos);
