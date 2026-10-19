@@ -1588,7 +1588,7 @@
 
 - ENG-BUDGET-LOD §0 结论 · L22 · 609
   - ★ ENG-BUDGET-LOD §0.1 接入要点 · L29 · 278
-- ENG-BUDGET-LOD §1 细节级别与分块 · L35 · 1.3k
+- ENG-BUDGET-LOD §1 细节级别与分块 · L35 · 1.4k
 - ENG-BUDGET-LOD §2 流式加载与速度 · L59 · 472
 - ENG-BUDGET-LOD §3 深度与近裁剪面 · L66 · 360
 - ENG-BUDGET-LOD §4 阴影、后期、倒影、灯光 · L74 · 572
@@ -1690,15 +1690,15 @@
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
-`docs/engineering/ENG-PERF-STREAM-流式加载、本机烘焙与内存.md` · 3.5k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
+`docs/engineering/ENG-PERF-STREAM-流式加载、本机烘焙与内存.md` · 3.6k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
 关键词：TileBundle、流式加载、本机烘焙缓存、tbin、六条不变量、看门狗、碰撞级、室内包、目的地预取、零分配、GC、显存记账、安装包布局、不泄漏
 
-- ENG-PERF-STREAM §0 结论 · L22 · 512
+- ENG-PERF-STREAM §0 结论 · L22 · 525
   - ★ ENG-PERF-STREAM §0.1 接入要点 · L29 · 222
-- ENG-PERF-STREAM §1 流式加载 · L35 · 1.4k
+- ENG-PERF-STREAM §1 流式加载 · L35 · 1.5k
   - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L37 · 523
-  - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L45 · 495
-  - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L58 · 168
+  - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L45 · 567
+  - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L58 · 185
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L62 · 177
 - ENG-PERF-STREAM §2 主线程与 C# · L66 · 315
 - ENG-PERF-STREAM §3 内存与显存 · L72 · 279
@@ -2016,7 +2016,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 17.0k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 17.2k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L23 · 124
@@ -2025,9 +2025,9 @@
 - REG-DECISIONS-SYSTEMS §2 存档 · L60 · 1.5k
 - REG-DECISIONS-SYSTEMS §3 音频 · L79 · 2.1k
 - REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L101 · 3.1k
-- REG-DECISIONS-SYSTEMS §5 工程 · L130 · 3.2k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L157 · 983
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L168 · 2.3k
+- REG-DECISIONS-SYSTEMS §5 工程 · L130 · 3.3k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L158 · 983
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L169 · 2.3k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
