@@ -708,7 +708,7 @@
 
 ## WLD-VEGETATION · 植被：树冠画法、草坪、地面覆盖与季相
 
-`docs/world/WLD-VEGETATION-植被.md` · 10.1k 字 · 树木、灌木、草坪与水生植物的观感规则、树种色名与季相行、地面覆盖、季相与天气、碰撞与声音数据
+`docs/world/WLD-VEGETATION-植被.md` · 10.3k 字 · 树木、灌木、草坪与水生植物的观感规则、树种色名与季相行、地面覆盖、季相与天气、碰撞与声音数据
 关键词：植被、植物、树冠画法、云团型、插片型、冬季裸枝、叶量、开花、季相、局部季节、四季变色、草坪、绿篱、荷、芦苇、落叶地毯、树冠遮蔽、覆雪、过渡绿地、species.json
 
 - WLD-VEGETATION §0 结论 · L22 · 1.4k
@@ -727,13 +727,13 @@
   - WLD-VEGETATION §3.3 积雪与季节花境 · L116 · 309
   - WLD-VEGETATION §3.4 过渡绿地的草本与草面（D-185） · L121 · 231
   - WLD-VEGETATION §3.5 草叶的表示与交界（D-205，取值是初值，样板同位姿定） · L128 · 305
-- WLD-VEGETATION §4 落叶、花瓣与积雪（地面覆盖） · L133 · 745
+- WLD-VEGETATION §4 落叶、花瓣与积雪（地面覆盖） · L133 · 800
 - WLD-VEGETATION §5 水生植物 · L143 · 464
-- WLD-VEGETATION §6 季相与天气 · L158 · 1.1k
+- WLD-VEGETATION §6 季相与天气 · L158 · 1.2k
   - WLD-VEGETATION §6.1 逐株错相与叶量 · L160 · 193
   - WLD-VEGETATION §6.2 季节颜色 · L165 · 194
   - WLD-VEGETATION §6.3 摆动与飘落（给 SYS-MOTION 的参数） · L170 · 160
-  - WLD-VEGETATION §6.4 覆雪 · L175 · 309
+  - WLD-VEGETATION §6.4 覆雪 · L175 · 410
   - WLD-VEGETATION §6.5 换季与天气切换 · L181 · 237
 - WLD-VEGETATION §7 碰撞、画面设置与声音 · L187 · 1.1k
   - WLD-VEGETATION §7.1 行走碰撞 · L189 · 381
@@ -743,7 +743,7 @@
 
 ## WLD-WATER · 水体：动画式水面画法、反光带与倒影、涉水与泳区规则
 
-`docs/world/WLD-WATER-水体.md` · 6.3k 字 · 动画式水面画法、反光带与倒影、四季天气、涉水与开放泳区规则、水体系统规则
+`docs/world/WLD-WATER-水体.md` · 6.4k 字 · 动画式水面画法、反光带与倒影、四季天气、涉水与开放泳区规则、水体系统规则
 关键词：水体、水面、开放泳区、波纹线、主光反光带、碎金带、月光银带、四芒星闪点、泡沫线、倒影、平面反射、伪深度色带、雨点环、灯的竖条倒影、refl_lamps
 
 - WLD-WATER §0 结论 · L22 · 1.2k
@@ -751,9 +751,9 @@
 - WLD-WATER §1 水面的通用画法 · L43 · 747
   - WLD-WATER §1.1 底色与色带 · L47 · 367
   - WLD-WATER §1.2 波纹线与泡沫线 · L53 · 284
-- WLD-WATER §2 反光带、灯条与倒影 · L59 · 1.0k
+- WLD-WATER §2 反光带、灯条与倒影 · L59 · 1.1k
   - WLD-WATER §2.1 主光反光带 · L61 · 441
-  - WLD-WATER §2.2 灯的竖条倒影 · L69 · 169
+  - WLD-WATER §2.2 灯的竖条倒影 · L69 · 257
   - WLD-WATER §2.3 倒影 · L73 · 402
 - WLD-WATER §3 四季与天气的水面 · L79 · 838
 - WLD-WATER §4 涉水与开放泳区 · L106 · 313
@@ -776,18 +776,18 @@
 
 ## MAP-QSH-ADDITIONS-VOCAB · 设计增补词汇与楼宇规则
 
-`docs/maps/qingshuihe/MAP-QSH-ADDITIONS-VOCAB-增补词汇与楼宇规则.md` · 7.9k 字 · 按场地分类的增补物词汇（宿舍食堂商业街、道路停车场、河渠湖岸桥、草坪楼间屋顶、运动区校界步行设施）和普通楼宇设计十二条
+`docs/maps/qingshuihe/MAP-QSH-ADDITIONS-VOCAB-增补词汇与楼宇规则.md` · 8.0k 字 · 按场地分类的增补物词汇（宿舍食堂商业街、道路停车场、河渠湖岸桥、草坪楼间屋顶、运动区校界步行设施）和普通楼宇设计十二条
 关键词：增补词汇、休憩平台、电动车充电棚、外卖挂架、徽记井盖、亲水台阶、节制闸、草阶看台、紫藤廊架、桥头卧石、读书石台、汀步、下凹雨水花园、风雨连廊、屋顶实验花园、透空栏杆、导览亭、导览桩、直饮水台、休息点、楼宇十二条、入口雨棚、学院竖牌、西立面竖向鳍片、空调机位格栅、架空层、勒脚与散水、后勤小楼
 
 - MAP-QSH-ADDITIONS-VOCAB §0 结论 · L23 · 411
   - ★ MAP-QSH-ADDITIONS-VOCAB §0.1 接入要点 · L30 · 123
 - MAP-QSH-ADDITIONS-VOCAB §1 宿舍组团、食堂与商业街前 · L34 · 946
-- MAP-QSH-ADDITIONS-VOCAB §2 道路、路口与停车场 · L52 · 728
-- MAP-QSH-ADDITIONS-VOCAB §3 河渠、湖岸与桥 · L65 · 1.0k
-- MAP-QSH-ADDITIONS-VOCAB §4 草坪、楼间空地与屋顶 · L82 · 867
-- MAP-QSH-ADDITIONS-VOCAB §5 运动区、校界与步行服务设施 · L98 · 1.4k
-- MAP-QSH-ADDITIONS-VOCAB §6 让普通楼宇有设计感 · L120 · 1.1k
-- MAP-QSH-ADDITIONS-VOCAB §7 待验证 · L137 · 71
+- MAP-QSH-ADDITIONS-VOCAB §2 道路、路口与停车场 · L52 · 871
+- MAP-QSH-ADDITIONS-VOCAB §3 河渠、湖岸与桥 · L66 · 1.0k
+- MAP-QSH-ADDITIONS-VOCAB §4 草坪、楼间空地与屋顶 · L83 · 867
+- MAP-QSH-ADDITIONS-VOCAB §5 运动区、校界与步行服务设施 · L99 · 1.4k
+- MAP-QSH-ADDITIONS-VOCAB §6 让普通楼宇有设计感 · L121 · 1.1k
+- MAP-QSH-ADDITIONS-VOCAB §7 待验证 · L138 · 71
 
 ## MAP-QSH-ADDITIONS · 设计增补：通用规则与区文档共同口径
 
@@ -1113,7 +1113,7 @@
 
 ## MAP-QSH-WATER · 清水河水体：西湖、东湖、河渠、池水与叠水喷泉
 
-`docs/maps/qingshuihe/MAP-QSH-WATER-清水河水体.md` · 5.4k 字 · 清水河各水体的具体水面：西湖与喷泉水柱、东湖、河渠、游泳池池水、叠水喷泉、截面水柱，开放泳区名单与倒影时段
+`docs/maps/qingshuihe/MAP-QSH-WATER-清水河水体.md` · 5.5k 字 · 清水河各水体的具体水面：西湖与喷泉水柱、东湖、河渠、游泳池池水、叠水喷泉、截面水柱，开放泳区名单与倒影时段
 关键词：西湖水下森林、西湖喷泉水柱、东湖荷区、锦鲤、冬季浅滩、走马河、红光右支渠、磨底河、河渠中线、漂浮物、游泳馆池水、品学楼叠水喷泉、截面水柱、泳区名单、主要倒影按时段
 
 - MAP-QSH-WATER §0 结论 · L22 · 619
@@ -1122,7 +1122,7 @@
   - MAP-QSH-WATER §1.1 水下森林与反光带 · L40 · 314
   - MAP-QSH-WATER §1.2 扇形喷泉 · L46 · 323
 - MAP-QSH-WATER §2 东湖 · L55 · 460
-- MAP-QSH-WATER §3 河渠 · L62 · 899
+- MAP-QSH-WATER §3 河渠 · L62 · 975
 - MAP-QSH-WATER §4 池水、叠水喷泉与截面水柱 · L77 · 1.1k
   - MAP-QSH-WATER §4.1 游泳馆与室外游泳池 · L79 · 346
   - MAP-QSH-WATER §4.2 品学楼门前叠水喷泉 · L88 · 451
