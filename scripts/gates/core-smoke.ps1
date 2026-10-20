@@ -37,14 +37,14 @@ namespace Uestc.Gates {
 
 function Invoke-UESTCMainlineSmoke {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
-        [Parameter(Mandatory)][string]$Locks, [Parameter(Mandatory)][string]$Wp,
+        [Parameter(Mandatory)][string]$Locks,
         [Parameter(Mandatory)][string]$Map, [IO.FileStream]$BuildLease = $null)
     $rootPath = [IO.Path]::GetFullPath($Root)
     $key = $rootPath + '|' + $Godot + '|' + $Map
     if ($script:UESTCCoreSmokeResults.ContainsKey($key)) { return $script:UESTCCoreSmokeResults[$key] }
     $tag = [Guid]::NewGuid().ToString('N').Substring(0,8)
-    $work = Join-Path $rootPath ("output/build/gates/{0}-core-{1}" -f $Wp,$tag)
-    $shots = Join-Path $rootPath ("output/render-review/{0}-core-{1}" -f $Wp,$tag)
+    $work = Join-Path $rootPath ("output/build/gates/core-{0}" -f $tag)
+    $shots = Join-Path $rootPath ("output/render-review/core-{0}" -f $tag)
     $saves = Join-Path $work 'saves'
     $null = [IO.Directory]::CreateDirectory($work)
     $null = [IO.Directory]::CreateDirectory($shots)
@@ -134,14 +134,14 @@ function Invoke-UESTCMainlineSmoke {
 
 function Invoke-UESTCSaveCore {
     param([Parameter(Mandatory)][string]$Root, [Parameter(Mandatory)][string]$Godot,
-        [Parameter(Mandatory)][string]$Locks, [Parameter(Mandatory)][string]$Wp,
+        [Parameter(Mandatory)][string]$Locks,
         [Parameter(Mandatory)][string]$Map, [switch]$SaveTestsAlreadyPassed, [IO.FileStream]$BuildLease = $null)
     $rootPath = [IO.Path]::GetFullPath($Root)
     $lease = $null
     try {
         if (-not $BuildLease) { $lease = Enter-UESTCBuildLock $Locks; $BuildLease = $lease }
         if (-not $SaveTestsAlreadyPassed) {
-            $work = Join-Path $rootPath ('output/build/gates/' + $Wp + '-save-core')
+            $work = Join-Path $rootPath 'output/build/gates/save-core'
             $null = [IO.Directory]::CreateDirectory($work)
             $settings = Join-Path $work 'save.runsettings'
             $engine = [Security.SecurityElement]::Escape($Godot)
@@ -166,7 +166,7 @@ function Invoke-UESTCSaveCore {
             }
             if ($saveTests.ExitCode -ne 0) { throw "Save core exited $($saveTests.ExitCode). See $($saveTests.Log)" }
         }
-        $window = Invoke-UESTCMainlineSmoke -Root $rootPath -Godot $Godot -Locks $Locks -Wp $Wp -Map $Map -BuildLease $BuildLease
+        $window = Invoke-UESTCMainlineSmoke -Root $rootPath -Godot $Godot -Locks $Locks -Map $Map -BuildLease $BuildLease
         return [pscustomobject]@{ Status=$window.Status; Scope='G20 roundtrip, migration, corruption and exit-save core';
             SaveTests=$(if ($SaveTestsAlreadyPassed) { 'Covered by this invocation G2' } else { 'Existing save suites passed' }); Window=$window }
     } finally { Exit-UESTCBuildLock $lease }

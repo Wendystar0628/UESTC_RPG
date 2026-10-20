@@ -1,13 +1,12 @@
-﻿# 门禁总入口：按工作包和改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
+﻿# 门禁总入口：按改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
 # 产出：output/build/gates/、output/build/test-record.tsv、build/windows/（G7）
-# 用法：powershell scripts\gate.ps1 -Wp WP-xx [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <路径...>] [-BaseRef <基线>] [-Map qingshuihe] [-Frames 300]
+# 用法：powershell scripts\gate.ps1 [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <路径...>] [-BaseRef <基线>] [-Map qingshuihe] [-Frames 300]
 #   默认：G1、受影响模块的 G2 和 G4，再加受影响的启动、行走、存档核心专项（核心专项驱动正式生产舞台）
 #   -Plan 只读，只列出会跑什么；-Full 请求保留的 12 道门，没做完的门返回 NotImplemented
 #   -Full 可与 -Only 组合限定门禁；选中 G2 时跑全量（含 Slow）及 NativeRender
 #   退出码：0 请求范围内已实现的都通过；1 有失败；2 范围未完成
 [CmdletBinding()]
-param([Parameter(Mandatory)][ValidatePattern('^WP-\d{2}[a-z]?$')][string]$Wp,
-    [string[]]$Only = @(), [switch]$Smoke, [switch]$Full,
+param([string[]]$Only = @(), [switch]$Smoke, [switch]$Full,
     [switch]$Plan, [string[]]$Paths = @(), [string]$BaseRef = '',
     [string]$Map = 'qingshuihe', [int]$Frames = 300,
     [ValidateSet('Debug')][string]$Configuration = 'Debug')
@@ -221,7 +220,7 @@ if (-not $BaseRef) {
 }
 if ($Smoke -and ($Only.Count -gt 0 -or $Full)) { throw '-Smoke cannot be combined with -Only or -Full.' }
 if ($Frames -lt 1) { throw 'Frames must be positive.' }
-$unfilteredChanges = @(if ($PSBoundParameters.ContainsKey('Paths')) {
+$changes = @(if ($PSBoundParameters.ContainsKey('Paths')) {
     $Paths | ForEach-Object {
         $absolute = [IO.Path]::GetFullPath($(if ([IO.Path]::IsPathRooted($_)) { $_ } else { Join-Path $root $_ }))
         if (-not $absolute.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
@@ -232,9 +231,6 @@ $unfilteredChanges = @(if ($PSBoundParameters.ContainsKey('Paths')) {
 } else {
     Get-UESTCChanges $root $BaseRef
 })
-# Keep additions before package selection so unowned new code cannot disappear from G4.
-$changes = @(if ($PSBoundParameters.ContainsKey('Paths') -or $Wp -eq 'WP-00') { $unfilteredChanges }
-    else { Select-UESTCChanges $root $Wp $unfilteredChanges $BaseRef })
 $formatPaths = @($changes | Where-Object { $_ -match '\.cs$' -and $_ -notmatch '^game/addons/' -and (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf) })
 $runtimeChanges = @($changes | Where-Object { $_ -notmatch '^docs/|\.md$|^\.collab/' })
 if (-not ($Full -or $Smoke -or $Only.Count)) {
@@ -272,7 +268,7 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
     if ($saveChanges.Count) { $selected.Add('G20Core') }
 }
 $scope = if ($Full) { 'Full' } elseif ($Only.Count) { 'Selected' } elseif ($Smoke) { 'Core' } else { 'Quick' }
-$planObject = [ordered]@{ Scope = $scope; WorkPackage = $Wp; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
+$planObject = [ordered]@{ Scope = $scope; BaseRef = $BaseRef; Branch = $branch; Gates = $selected.ToArray(); ImportRequired = $importRequired; ChangedPaths = $changes; Godot = $godot; Locks = $layout.Locks; BuildCapacity = 1; FormatPaths = $formatPaths; Bake = 'No pre-bake in quick/core; centralized bake gates not implemented' }
 $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $root $runtimeChanges ([bool]$Full) $Configuration) } else { @() }
 $planObject['G2Selection'] = $g2Selection
 $selectionIncomplete = @(
@@ -421,9 +417,9 @@ foreach ($id in $selected) {
                 }
                 $detail = "Test projects run=$runCount; tests executed=$testCount. " + ($notes -join '; ')
             }
-            'G3' { $detail = Test-UESTCOwnership $root $Wp $changes -BaseRef $BaseRef | ConvertTo-Json -Depth 5 -Compress }
+            'G3' { $detail = Test-UESTCOwnership $root $changes -BaseRef $BaseRef | ConvertTo-Json -Depth 5 -Compress }
             'G4' {
-                $newFiles = Test-UESTCNewCodeFiles $root $unfilteredChanges -BaseRef $BaseRef
+                $newFiles = Test-UESTCNewCodeFiles $root $changes -BaseRef $BaseRef
                 $null = Test-UESTCSourceBoundaries $root
                 $settings = Write-TestSettings
                 $null = Invoke-GateProcess 'G4-architecture' dotnet @('test',(Join-Path $root 'scripts/gates/arch/Campus.Arch.Tests.csproj'),'-c','Debug','--settings',$settings,'--logger','trx','--results-directory',(Join-Path $work 'arch-results'))
@@ -445,7 +441,7 @@ foreach ($id in $selected) {
                 } else {
                     . $coreScript
                     Assert-GodotVersion
-                    $detail = Invoke-UESTCMainlineSmoke -Root $root -Godot $godot -Locks $layout.Locks -Wp $Wp -Map $Map -BuildLease $gateLease
+                    $detail = Invoke-UESTCMainlineSmoke -Root $root -Godot $godot -Locks $layout.Locks -Map $Map -BuildLease $gateLease
                     if ($detail.Status -notin @('Passed','Failed','NotImplemented')) { throw 'The core entry returned an invalid status.' }
                     $status = $detail.Status
                 }
@@ -494,7 +490,7 @@ foreach ($id in $selected) {
                     . $coreScript
                     $saveSuitesPassed = @($results | Where-Object { $_.Gate -eq 'G2' -and $_.Status -eq 'Passed' }).Count -gt 0 -and
                         @($g2Selection | Where-Object { $_.Selected -and $_.HasCompileFiles -and $_.Project -eq 'game/Campus.Tests.csproj' -and $_.Filter -notmatch 'FullyQualifiedName' }).Count -gt 0
-                    $detail = Invoke-UESTCSaveCore -Root $root -Godot $godot -Locks $layout.Locks -Wp $Wp -Map $Map -SaveTestsAlreadyPassed:$saveSuitesPassed -BuildLease $gateLease
+                    $detail = Invoke-UESTCSaveCore -Root $root -Godot $godot -Locks $layout.Locks -Map $Map -SaveTestsAlreadyPassed:$saveSuitesPassed -BuildLease $gateLease
                     $status = $detail.Status
                 }
             }
@@ -511,7 +507,7 @@ foreach ($id in $selected) {
     }
 }
 $report = [ordered]@{ Plan=$planObject; Results=$results.ToArray(); GeneratedAt=[DateTime]::UtcNow.ToString('o') }
-$reportPath = Join-Path $work "$Wp-result.json"
+$reportPath = Join-Path $work 'gate-result.json'
 [IO.File]::WriteAllText($reportPath, ($report | ConvertTo-Json -Depth 10), $utf8)
 Write-Host "Report: $reportPath"
 if (@($results | Where-Object { $_.Status -eq 'Failed' }).Count) { exit 1 }

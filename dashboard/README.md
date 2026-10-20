@@ -68,7 +68,7 @@ health:    {coverage, at, level, summary, late: bool|null, counts: {ok, warn, ba
                       items: [{id, level, title, summary, advice|null}]}],
             rounds: [{at, warn, bad, flagged: [{group, label, items: [{level, title}]}]|null}],
             roundsSummary: {n, flagged, last: {at, warn, bad}|null},
-            gates: [{checkout, at, pkg, gates: [{name: G1..G5, ok: true|false|null}], run, failed, failedNames}],
+            gates: [{checkout, at, scope, gates: [{name: G1..G5, ok: true|false|null}], run, failed, failedNames}],
             tests: {days: [{day, count, lines, ratio, quickSec}]},
             hooks: {selftest: {ok, total, failed: [一句], level}, errors: [{hook, n, last}]}}
 system:    {coverage, timings: [{key, label}], hooks: [{id, side, name, timings, purpose, ok}],

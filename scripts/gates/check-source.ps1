@@ -153,16 +153,14 @@ function Get-UESTCPathOwnership {
     }
     foreach ($path in $Paths) {
         $owner = ''
-        $maintainers = @()
         $pathRules = if ($path -in $deleted -and $path -in $basePaths) { $baseRules } else { $rules }
         foreach ($rule in $pathRules) {
             if (Test-UESTCGlob $path $rule.pattern) {
                 $owner = [string]$rule.owner
-                if ($rule.PSObject.Properties['maintainers']) { $maintainers = @($rule.maintainers) }
                 break
             }
         }
-        [pscustomobject]@{ Path=$path; Owner=$owner; Maintainers=$maintainers }
+        [pscustomobject]@{ Path=$path; Owner=$owner }
     }
 }
 
@@ -191,19 +189,6 @@ function Test-UESTCNewCodeFiles {
     [pscustomobject]@{ CheckedNewCodeFiles=$added.Count }
 }
 
-function Test-UESTCPackageOwner {
-    param([string]$Wp, [string]$Owner)
-    return $Owner -eq $Wp -or ($Wp -cmatch '^WP-[0-9]{2}$' -and $Owner -cmatch ('^'+[regex]::Escape($Wp)+'[a-z]$'))
-}
-
-function Select-UESTCChanges {
-    param([string]$Root, [string]$Wp, [string[]]$Changes, [string]$BaseRef)
-    # WP-00's general shared/main permission is not a claim to a neighbour's edits.
-    Get-UESTCPathOwnership $Root $Changes $BaseRef | Where-Object {
-        (Test-UESTCPackageOwner $Wp $_.Owner) -or $Wp -in $_.Maintainers
-    } | ForEach-Object Path
-}
-
 function Get-UESTCScopedUidPaths {
     param([string[]]$Paths, [string[]]$Files)
     $sources = [Collections.Generic.HashSet[string]]::new($Files, [StringComparer]::Ordinal)
@@ -229,12 +214,10 @@ function Get-UESTCUidInputs {
 }
 
 function Test-UESTCOwnership {
-    param([string]$Root, [string]$Wp, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef)
+    param([string]$Root, [string[]]$Changes, [Parameter(Mandatory)][string]$BaseRef)
     $failures = New-Object 'Collections.Generic.List[string]'
     foreach ($entry in (Get-UESTCPathOwnership $Root $Changes $BaseRef)) {
-        if ($Wp -in $entry.Maintainers -or (Test-UESTCPackageOwner $Wp $entry.Owner) -or
-            ($Wp -eq 'WP-00' -and $entry.Owner -in @('shared','main'))) { continue }
-        $failures.Add("Ownership: $($entry.Path) belongs to '$($entry.Owner)', requested $Wp")
+        if (-not $entry.Owner) { $failures.Add("Ownership: $($entry.Path) has no registered ownership rule") }
     }
     $tracked = @(Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached'))
     $files = @(Get-UESTCFiles $Root)

@@ -153,7 +153,7 @@ def main():
                 refresh.add('worktrees')
         if path in checkout_paths or (directory and any(within(target, path) for target in checkout_paths)):
             result.add('shots')
-        if any(within(path, root) for root in gate_roots) and (path.endswith('-result.json') or directory):
+        if any(within(path, root) for root in gate_roots) and (os.path.basename(path) == 'gate-result.json' or directory):
             result.add('gates')
         if any(within(path, root) for root in code_roots) and (path.endswith('.cs') or directory):
             result.add('code')
