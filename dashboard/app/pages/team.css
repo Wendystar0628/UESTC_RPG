@@ -1,30 +1,84 @@
-/* 团队页。只用令牌。 */
-.leads-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); }
-@media (max-width: 820px) { .leads-grid { grid-template-columns: minmax(0, 1fr); } }
-.lead { display: flex; align-items: center; gap: var(--s4); padding: 18px 20px; border-radius: 14px;
-  background: var(--tone-bg); border: 1px solid color-mix(in srgb, var(--tone) 25%, transparent); min-width: 0; }
-.lead-avatar { position: relative; flex: none; width: 64px; height: 64px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; letter-spacing: -.02em;
-  color: var(--on-strong); background: var(--tone); }
-.lead-light { position: absolute; right: 0; bottom: 2px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--surface); background: var(--ok); }
-.lead-light.is-off { background: var(--text-3); }
-.lead-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.lead-name { font-size: var(--fs-xl); font-weight: 700; display: flex; align-items: baseline; gap: var(--s2); }
-.lead-state { font-size: var(--fs-sm); font-weight: 600; color: var(--tone); }
-.lead-model { font-size: var(--fs-md); color: var(--text-2); }
-.lead-row { font-size: var(--fs-md); overflow-wrap: anywhere; }
-.lead-agents { flex: none; text-align: center; padding-left: var(--s4); border-left: 1px solid color-mix(in srgb, var(--tone) 25%, transparent); }
-.lead-agents-n { font-size: 36px; font-weight: 700; line-height: 1; color: var(--tone); }
-.lead-agents-label { font-size: var(--fs-xs); color: var(--text-2); margin-top: 4px; }
-@media (max-width: 560px) { .lead { flex-wrap: wrap; } .lead-agents { border-left: 0; padding-left: 0; } }
+/* 团队页。只用令牌与通用类；类名都带 tm- 前缀。 */
 
-.usage-sum { font-size: var(--fs-md); color: var(--text-2); margin-bottom: var(--s3); }
-.usage-sum b { color: var(--text); font-size: var(--fs-lg); }
+/* 可点的一行：按钮去掉默认外观 */
+.tm-row, .tm-agent { appearance: none; width: 100%; margin: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.tm-row:hover, .tm-agent:hover { background: var(--surface-2); }
+.tm-row:focus-visible, .tm-agent:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-.rules { display: flex; flex-direction: column; }
-.rule { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: var(--s3); padding: 9px 0; border-top: 1px solid var(--line-2); align-items: baseline; }
-.rule:first-child { border-top: 0; }
-.rule-model { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; white-space: nowrap; }
-.rule-swatch { width: 10px; height: 10px; border-radius: 3px; background: var(--tone); }
-.rule-use { font-size: var(--fs-sm); color: var(--text-2); overflow-wrap: anywhere; }
-@media (max-width: 560px) { .rule { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+.tm-none { padding: var(--s2) 0; color: var(--text-3); font-size: var(--fs-sm); }
+.tm-sub { margin: var(--s3) 0 var(--s1); font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
+.tm-tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+
+/* ---------- 两位指挥 ---------- */
+.tm-leads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); }
+@media (max-width: 820px) { .tm-leads { grid-template-columns: minmax(0, 1fr); } }
+.tm-lead {
+  display: flex; flex-direction: column; gap: var(--s3); min-width: 0; padding: var(--s4);
+  border: 1px solid color-mix(in srgb, var(--tone) 25%, transparent); border-radius: var(--radius); background: var(--tone-bg);
+}
+.tm-lead-head { display: flex; align-items: center; gap: var(--s3); }
+.tm-avatar {
+  flex: none; width: 48px; height: 48px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--fs-xl); font-weight: 700; color: var(--on-strong); background: var(--tone);
+}
+.tm-lead-id { min-width: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.tm-lead-name { font-size: var(--fs-xl); font-weight: 700; line-height: 1.2; }
+.tm-lead-state { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); font-size: var(--fs-md); }
+.tm-lead-state b { color: var(--tone); }
+.tm-lamp { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--text-3); }
+.tm-lamp.is-on { background: var(--ok); outline: 3px solid var(--ok-bg); }
+.tm-lamp.is-unknown { background: none; border: 1.5px solid var(--text-3); }
+.tm-lead-rows { display: flex; flex-direction: column; min-width: 0; }
+.tm-row { display: flex; align-items: baseline; gap: var(--s3); padding: 7px var(--s2); border-radius: var(--radius-sm); font-size: var(--fs-md); }
+.tm-row-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.tm-lead-agents { font-size: var(--fs-sm); color: var(--text-2); }
+.tm-lead-agents b { font-size: var(--fs-xl); color: var(--tone); margin-right: 2px; }
+
+/* ---------- 实时子代理 ---------- */
+.tm-col { display: flex; flex-direction: column; gap: var(--s1); }
+.tm-col-head { display: flex; align-items: baseline; gap: var(--s3); padding-bottom: var(--s2); border-bottom: 2px solid var(--tone); font-size: var(--fs-sm); }
+.tm-col-name { font-size: var(--fs-lg); font-weight: 700; color: var(--tone); }
+.tm-agent { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s2); border-radius: var(--radius-sm); border-bottom: 1px solid var(--line-2); }
+.tm-agent.is-stalled { border-left: 3px solid var(--warn); background: var(--warn-bg); }
+.tm-adot { flex: none; width: 10px; height: 10px; margin-top: 8px; border-radius: 50%; background: var(--tone); }
+.tm-agent-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.tm-agent-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.tm-agent-name { font-weight: 650; overflow-wrap: anywhere; }
+.tm-agent-row { font-size: var(--fs-sm); color: var(--text-2); overflow-wrap: anywhere; }
+.tm-agent-time { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: var(--fs-sm); color: var(--text-2); white-space: nowrap; }
+.tm-quiet { color: var(--warn); font-weight: 650; }
+.tm-col .fold { margin-top: var(--s2); font-size: var(--fs-sm); color: var(--text-2); }
+
+/* ---------- 来信往来 ---------- */
+.tm-letters { display: flex; flex-direction: column; }
+.tm-letter { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2) var(--s3); padding: 8px 0; border-top: 1px solid var(--line-2); }
+.tm-letter:first-child { border-top: 0; }
+.tm-letter-first { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.tm-letter-wait { flex: none; font-size: var(--fs-sm); color: var(--text-3); }
+
+/* ---------- 收口审计 ---------- */
+.tm-audit { display: flex; align-items: center; gap: var(--s5); flex-wrap: wrap; }
+.tm-ring { flex: 0 0 124px; width: 124px; }
+.tm-stats { flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: var(--s2); }
+.tm-stat { font-size: var(--fs-sm); color: var(--text-2); }
+.tm-stat b { font-size: var(--fs-xl); color: var(--text); margin-right: var(--s2); }
+.tm-list { display: flex; flex-direction: column; }
+
+/* ---------- 派单合规 ---------- */
+.tm-sum { font-size: var(--fs-md); color: var(--text-2); margin-bottom: var(--s2); }
+.tm-sum b { font-size: var(--fs-xl); color: var(--text); }
+.tm-filter { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s2); font-size: var(--fs-sm); color: var(--text-2); }
+.tm-viols { display: flex; flex-direction: column; margin-top: var(--s2); }
+.tm-viol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: 8px 0; border-top: 1px solid var(--line-2); font-size: var(--fs-sm); }
+.tm-viol:first-child { border-top: 0; }
+.tm-viol-name { font-weight: 650; font-size: var(--fs-md); overflow-wrap: anywhere; }
+.tm-ok .status { font-size: var(--fs-md); }
+.tm-viols + .fold, .tm-viols ~ .fold { margin-top: var(--s3); font-size: var(--fs-sm); color: var(--text-2); }
+
+/* ---------- 抽屉 ---------- */
+.tm-drawer { display: flex; flex-direction: column; gap: var(--s3); }
+.tm-kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s2) var(--s4); margin: 0; font-size: var(--fs-md); }
+.tm-kv dt { color: var(--text-3); font-size: var(--fs-sm); }
+.tm-kv dd { margin: 0; overflow-wrap: anywhere; }
+.tm-go { align-self: flex-start; }

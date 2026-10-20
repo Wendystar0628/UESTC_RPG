@@ -1,0 +1,64 @@
+/* 健康页。只用令牌变量与通用 tone 类（.t-ok .t-warn .t-risk .t-muted）。 */
+
+/* 共用的小件 */
+.hl-foot { margin-top: var(--s3); font-size: var(--fs-sm); color: var(--text-2); }
+.hi { display: flex; gap: var(--s3); align-items: flex-start; padding: var(--s2) 0; }
+.hi-lamp { flex: none; display: flex; padding-top: var(--s1); }
+.hi-main { flex: 1; min-width: 0; }
+.hi-title { font-weight: 650; overflow-wrap: anywhere; }
+.hi-sum { font-size: var(--fs-sm); color: var(--text-2); overflow-wrap: anywhere; }
+.hi-advice { margin-top: var(--s1); padding: var(--s1) var(--s2); border-radius: var(--radius-sm); background: var(--tone-bg); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.hi-advice b { color: var(--tone); margin-right: var(--s2); }
+
+/* 1 总体 */
+.hl-head { display: flex; align-items: center; gap: var(--s4); }
+.hl-big { flex: none; display: block; width: calc(var(--s6) * 2); height: calc(var(--s6) * 2); border-radius: 50%; background: var(--tone); border: var(--s2) solid var(--tone-bg); }
+.hl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.hl-sentence { font-size: var(--fs-xl); font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.hl-when { font-size: var(--fs-sm); color: var(--text-2); display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); }
+.hl-late { color: var(--warn); font-weight: 650; }
+.hl-counts { font-size: var(--fs-sm); color: var(--text-3); }
+.hl-blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s3); margin-top: var(--s4); }
+.hl-block { display: flex; flex-direction: column; gap: var(--s1); align-items: flex-start; text-align: left; padding: var(--s3); border: 0; border-radius: var(--radius-sm); background: var(--tone-bg); cursor: pointer; min-width: 0; }
+.hl-block:hover, .hl-block:focus-visible { outline: 2px solid var(--tone); }
+.hl-block-top { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.hl-block-name { font-weight: 650; overflow-wrap: anywhere; }
+.hl-block-n { font-size: var(--fs-sm); color: var(--text-2); }
+.hl-block-n b { color: var(--text); }
+@media (max-width: 560px) { .hl-head { align-items: flex-start; } }
+
+/* 2 各组检查 */
+.hg-list { display: flex; flex-direction: column; gap: var(--s3); }
+.hg-list > details { scroll-margin-top: calc(var(--s6) * 2 + var(--s4)); }
+.hg-sum { display: inline-flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.hg-name { font-weight: 650; }
+.hg-count { font-size: var(--fs-sm); color: var(--text-2); font-weight: 400; }
+.hg-count .t-risk { color: var(--tone); font-weight: 650; }
+.hg-count .t-warn { color: var(--tone); font-weight: 650; }
+.hi-ok { padding: var(--s2) 0; font-size: var(--fs-sm); color: var(--text-2); overflow-wrap: anywhere; }
+.hi-ok b { color: var(--ok); }
+
+/* 4 门禁 */
+.gt-list { display: flex; flex-direction: column; }
+.gt-row { display: flex; flex-direction: column; gap: var(--s2); width: 100%; padding: var(--s3) var(--s2); border: 0; border-bottom: 1px solid var(--line-2); border-radius: var(--radius-sm); background: none; text-align: left; cursor: pointer; }
+.gt-row:last-child { border-bottom: 0; }
+.gt-row:hover, .gt-row:focus-visible { background: var(--surface-2); }
+.gt-top { display: flex; align-items: baseline; gap: var(--s3); min-width: 0; }
+.gt-checkout { flex: none; }
+.gt-pkg { flex: 1; min-width: 0; color: var(--text-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.gt-at { flex: none; color: var(--text-3); font-size: var(--fs-sm); }
+.gt-bottom { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s2) var(--s3); }
+.gt-caps { display: inline-flex; gap: var(--s1); }
+.gt-run { font-size: var(--fs-sm); color: var(--text-2); }
+.gt-run.t-risk { color: var(--tone); font-weight: 650; }
+
+/* 6 钩子 */
+.hk-self { display: flex; align-items: center; gap: var(--s3); font-size: var(--fs-md); }
+.hk-failed { margin: var(--s2) 0 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--s1); font-size: var(--fs-sm); color: var(--risk); overflow-wrap: anywhere; }
+.hk-sub { margin: var(--s4) 0 var(--s2); font-size: var(--fs-sm); font-weight: 650; color: var(--text-2); }
+
+/* 抽屉里的列表（抽屉本身归外壳） */
+.dr-groups { display: flex; flex-direction: column; gap: var(--s4); }
+.dr-group-name { font-size: var(--fs-sm); font-weight: 650; color: var(--text-2); border-bottom: 1px solid var(--line-2); padding-bottom: var(--s1); }
+.dr-names { display: flex; flex-direction: column; gap: var(--s1); }
+.dr-name { padding: var(--s2) var(--s3); border-radius: var(--radius-sm); background: var(--surface-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }

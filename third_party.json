@@ -1205,6 +1205,23 @@
       "scope": "Author dashboard charts (dashboard/app); loaded by dashboard/index.html, not part of the game build."
     },
     {
+      "name": "marked",
+      "version": "15.0.7",
+      "kind": "browser-script",
+      "managedBy": "manual",
+      "license": "MIT",
+      "licenseUrl": "https://github.com/markedjs/marked/blob/v15.0.7/LICENSE.md",
+      "source": "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js",
+      "projectUrl": "https://github.com/markedjs/marked",
+      "sha256": "934e3e36e9e2da0afb1a6e75075bb0f09af05293a844e84a7477ef40911c349a",
+      "bytes": 39589,
+      "path": "dashboard/vendor/marked.min.js",
+      "licenseFile": "dashboard/vendor/marked-LICENSE.txt",
+      "modified": false,
+      "exported": false,
+      "scope": "Author dashboard document reader (dashboard/app/reader.js); loaded by dashboard/index.html, not part of the game build."
+    },
+    {
       "name": "watchdog",
       "version": "6.0.0",
       "kind": "python-wheel",

@@ -168,149 +168,173 @@ GET /api/doc/search?q=词  → {ok, items: [{code, title, sec: {n, title, anchor
 
 ```
 dashboard/
-  index.html            外壳：页眉（一句总述、两位指挥在不在跑、数据时刻）、导航、页面容器、右下角提示条；按序加载 vendor/echarts、manifest、core、ui、palette、charts
-  打开观察台.cmd         启动实时采集（没在跑时）、跑一次项目采集、用默认浏览器打开 index.html
+  index.html            外壳：页眉（两位指挥在不在跑、"N 份旧了"）、导航、页面容器、右下角提示条；按序加载 vendor/echarts、vendor/marked、/api/data-names.js（后端数据名单）、manifest、core、ui、palette、charts、reader
   vendor/
-    echarts.min.js      Apache ECharts 单文件；许可文本在同目录 echarts-LICENSE.txt、echarts-NOTICE.txt
+    echarts.min.js      Apache ECharts；许可在同目录 echarts-LICENSE.txt、echarts-NOTICE.txt
+    marked.min.js       marked（Markdown 渲染）；许可在同目录 marked-LICENSE.txt
   app/
-    manifest.js         页面与数据源的唯一清单；加页面、数据源只改这里
-    core.js             Dash 运行时：数据按需加载与版本索引、路由、面板注册与渲染、页眉与导航角标、写回（知道了、留言）
-    ui.js               格式化与小组件：h()、确切的数与时刻、状态句、空状态、折叠、编号对象一行、流水线比例条、指挥与模型的中文名
-    palette.js          色表：语义（组、键）→ CSS 变量与中文名；签条
-    charts.js           统计小图（基于 ECharts）：趋势小柱、环形占比、横向条形、面积图
-    style.css           令牌（颜色、字号、间距、字体，浅色与深色各一份）与通用组件样式
-    pages/<页>.js|css   一页一对文件：home、progress、team、system、library；只经 Dash 读数据
-  data/                 本地状态，不进 git（.gitignore）
-    auto/<名字>.js      采集脚本生成，任何人不手改
-    curated/<名字>.js   只经 tools/post.py 改
+    manifest.js         页面与筛选的清单，以及每份数据的展示信息；有哪些数据只由后端名单（§1 AUTO_NAMES）定
+    core.js             运行时：推送订阅与按需加载、路由与筛选、面板注册与渲染（各种状态）、页眉与角标、写回
+    ui.js               格式化与小组件、抽屉、悬停框
+    palette.js          色表：语义（组, 键）→ CSS 变量与中文名；签条
+    charts.js           统计图（ECharts；桑基、密度条自绘）
+    reader.js           文档阅读器
+    style.css           令牌（浅色、深色各一份）与通用组件样式
+    pages/<页>.js|css   一页一对文件，只经 Dash 读数据
 ```
 
-### 3.1 数据与加载
+页面不经本地服务打开（file://）时整页只写"请双击「打开观察台」，经本地服务打开"。
 
-`manifest.js` 的 `data` 登记契约 v2 的数据：`name`、`label`（页眉弹层与"还没有数据"提示里的中文名）、`path`（相对 `dashboard/`）、`every`（秒，定时拉取间隔）、`stale`（秒，超过算"数据旧了"，`null` 不判断），以及两个开关：
+### 3.1 推送与加载
 
-- `poll: true`：不看版本索引，每 `every` 秒拉一次，永远要（`live`、`index`）。
-- `keep: true`：页眉与导航要用，不管在哪一页都保持最新（`attention`、`progress`）。
-- 其余数据只在当前页有面板 `needs` 它时才拉。
+有哪些数据只在后端一处：serve 的 `/api/data-names.js` 给出 `window.DashDataNames`（来自 `AUTO_NAMES`）与各份的应有间隔；`manifest.js` 的 `data` 由这份名单生成，只给每份补展示信息 `label`（提示里的中文名）与 `keep`（为真时不管在哪页都保持最新：`live` 给页眉，`attention` 给角标），名单与展示信息对不上就直接报错。其余数据只在当前页有面板 `needs` 它时才拉。
 
-**版本索引**：`index` 是 `{ versions: { 名字: 版本串 } }`，每 15 s 拉一次；某份数据在索引里的版本变了才重拉；版本只在这次请求的文件真的执行了 `Dash.put` 之后才记下，下载失败或文件执行出错不推进版本、隔 15 s 再试，期间这份数据按没读到处理（面板写"没读到"），旧缓存不冒充新数据。索引没到、没有 `versions`、旧了，或索引里没列这份数据时，这份数据按自己的 `every` 定时拉，右下角提示条写明。第一次读完索引之前不拉非 `poll` 数据。
+- 页面订阅 `GET /api/events`（§2 推送）。`versions` 事件里某份数据的版本和已交付的不同、且此刻要它，就重拉那份文件，只重画 `needs` 它的面板；此刻不要的先丢掉缓存，切过去时显示骨架再拉，不先画旧的。全量（`full`）里没列的数据按"还没有数据"。
+- 版本只在这次请求的文件真的执行了 `Dash.put` 后才记下；下载或执行失败的这份按"没读到"，下一次推送（版本或 15 s 心跳）再试。
+- `versions.app` 变了整页刷新。连接断开时右下角写"推送断开，正在重连"，3 s 后重连（服务返回错误时浏览器不会自己重连，由 core 重建）；连上后服务端先发全量，页面按它对一遍。
+- 旧了：由后端判，推送的 `checked[名字]` 带 `stale` 与 `ratio`，页面只照着画，不写阈值；`stale` 为 null 不判断。页面没有按秒轮询，"旧了"随推送的 15 s 心跳更新。
 
-**整页刷新**：`live` 带 `appStamp`（界面代码最后改动时刻），变了就 `location.reload()`，开着的页面不跑旧代码。
+**页眉**：两位指挥的状态签（`live.leads`：在跑实心、空闲空心、未确认灰）；右侧按钮写"数据都新"或"N 份旧了"，点了到 `#health/health-fresh`。导航角标：现在页是 `attention` 里没点"知道了"的条数。
 
-**页眉**：一句总述（在做、收尾几行，今天完成几行，取 `progress`）；两位指挥的状态签（`live.leads`：在跑实心灯、空闲空心灯）；右侧数据时刻按钮，点开列每份数据的更新时刻与旧不旧。导航角标：首页是 `attention` 里没点"知道了"的条数。
-
-### 3.2 面板
+### 3.2 面板与各种状态
 
 ```
-Dash.panel({ id, page, title?, note?, span?, order?, needs?, partial?, fixed?(el), render(el, data) })
+Dash.panel({ id, page, title, note, caliber?, span: 12|8|7|6|5|4, order, needs: [数据名], partial?,
+             window?: '24h'|'7d'|'14d'|'30d'|'range', uses?: ['side'|'range'|'type'|'params'], fixed?(el), render(el, data, ctx) })
+ctx = { filters: {side, range, type: [键]}, params: {路由参数}, stale: bool, coverage: 时刻|null }
 ```
 
-| 字段 | 含义 |
+- `needs` 里任一份推来新版本就重画；`uses` 里的筛选或路由参数变了也重画；`needs: []` 的面板照常画。面板不自己订阅、不自己拉数据；面板内部状态变了（块内开关、搜索词）调 `Dash.redraw(id)`。
+- render 只在数据到齐时调用；`partial` 时到一份就画，没到的那份是 null。render 抛异常时这块写"这块出错了"，细节进浏览器控制台，不影响别的面板。
+- `fixed(el)` 只在面板建立时画一次，重画只换正文，不清掉它（输入框、搜索框放这里）。
+- 重绘时 `<details>` 的开合在个数不变时保持。只画当前页的面板，别的页记着脏，切过去再画。
+- `ctx.coverage` 取 needs 里各份 `coverage.from` 最晚的一个。
+- `span` 在 1100 px 以下一律整行。
+
+| 情形 | 外壳的表现 |
 | --- | --- |
-| `id` | 面板 id，全局唯一；也是 `#页/块` 路由的块名 |
-| `page` | 挂在哪一页（manifest 的页 id） |
-| `title`、`note` | 卡片标题与"这块回答什么"那一句；不写 `title` 就没有卡片头 |
-| `span` | 占 12 栏里的几栏：12（默认）、8、7、6、5、4；1100 px 以下一律整行 |
-| `order` | 页内排序，小的在上（默认 100） |
-| `needs` | 数据名数组：进到本页就拉，全部到齐才画（`partial: true` 时到一份就画，没到的是 `null`）；任一份变了重绘 |
-| `fixed(el)` | 只在挂上时画一次、之后不随数据重画的部分（留言输入框），画在数据内容上面 |
-| `render(el, data)` | 往 `el` 里画；`data` 是 `{ 名字: 数据 }`；抛异常时这块显示"这块出错了"，不影响别的面板 |
+| 读取中 | 骨架 |
+| 读过但没有这份 | "还没有数据" + 缺哪份（中文名） |
+| 读取失败 | "没读到" + 一句原因，不显示旧值 |
+| 旧了 | 卡头"更新 HH:MM · 旧了"橙字，正文 60% 不透明，照样能交互 |
+| 记账不够一个时间窗 | 卡底一行"记账从 M 月 D 日 HH:MM 起，之前的不全"；窗口取面板的 `window`（不写按 `'range'`：筛选条的 range，地址里拖选了 `from` 就从那天起）；"前 7 天"对比由面板按 `ctx.coverage` 自己隐藏 |
+| 口径 | 有 `caliber` 的卡头带 ⓘ，悬停显示；图的悬停框末行也带这句（图的 `opts.caliber`） |
 
-只画当前页的面板，别的页记着脏，切过去再画。重绘时 `<details>` 的开合状态在个数不变时保持。卡片右上角写"更新 HH:MM"（`needs` 里最旧的一份），数据旧了变灰。数据还没读到时画骨架，读过一次仍没有写"还没有数据"并列出缺哪份（中文名）；有读取失败的数据时写"没读到"。
-
-### 3.3 运行时接口与写回
+### 3.3 路由、筛选与写回
 
 ```
-Dash.put(name, data)            数据文件调用（§2）
-Dash.dataState(name)            "wait" 读取中 / "missing" 读过但没有 / "error" 没读到 / "ok"
-Dash.redraw(id) / redrawAll()   重画一个面板（本地交互改了显示）/ 全部（主题切换时图按新色重建）
-Dash.ack(id, revision)                    "知道了"：POST /api/attention/ack {id, revision} → {ok: true}；成功后重读 attention 与 index
-Dash.feedback(text)             留言：POST /api/feedback {text} → {ok: true, at}；成功后重读 feedback 与 index
-Dash.isStale(name)              按 manifest 的 stale 判断；没有数据、stale 为 null 都是 false
-Dash.stale(data, seconds)       按数据自带的 updated 判断
+Dash.go(page, params?, block?)          地址 #page/block?k=v；同页换参数时保留地址里已有的 side、range、type（params 里写了的以它为准），换页不带
+Dash.openDoc(code, {sec?, find?})       等于 Dash.go('docs', {code, sec, find})
+Dash.setFilter(key, value)              改一个筛选，保留其余筛选与路由参数；默认值（side=all、range=7d、type 全选）不写进地址；改 range 时去掉 from、to
+Dash.drawer({title, sub?, body}) / Dash.drawer.close()     右侧抽屉，Esc 或点外面关掉，路由不变，换页时关掉
+Dash.redraw(id) / Dash.redrawAll()
+Dash.dataState(name)                    wait / missing / error / ok
+Dash.checkedAt(name)
+Dash.ack(id, revision)                  POST /api/attention/ack {id, revision}；内容已变（409）时换成新内容，Promise 带"内容刚变过，已换成新内容，请重新过目"
+Dash.feedback(text)                     POST /api/feedback {text} → {ok, at}
 ```
 
-写回只经本地服务 `tools/serve.py`，不存浏览器。失败时 Promise 带一句人话原因，面板照写：页面是直接打开的文件（没经本地服务）、本地服务没在运行、本地服务不认这个操作（旧版服务，返回非 JSON）、服务给的 `error`。留言框：空文本发不出，发送中按钮置灰，成功后清空并写"已送到主会话 HH:MM"，失败保留原文并写原因；Ctrl + Enter 也能发。
-
-路由是 `#页` 或 `#页/块`（块 id 就是面板 id，如 `#library/library-notices`）；页名不认识取首页。
+- `side`、`range`、`type` 是筛选（`ctx.filters`），其余查询键是路由参数（`ctx.params`）。`type` 写成逗号分隔，空数组即全选。页头的筛选条按 manifest `pages[].filters` 画：side 是 全部 / Claude / Codex，range 是 近 24 小时 / 近 7 天 / 近 30 天，type 是动态六类的多选签。
+- 写回只经本地服务，不存浏览器；失败时 Promise 带一句人话原因（服务没在跑、服务不认这个操作、服务给的 `error`），面板照写。成功后马上重拉那份数据，推送随后到达时再对一遍。
 
 ### 3.4 格式化与小组件（ui.js）
 
 ```
-Dash.h(tag.cls, props?, ...kids)  建节点；props 有 cls、text、on:{事件}、dataset，其余当属性；kids 可为节点、文字、数组
-Dash.esc(s)                       转义 HTML
-Dash.num(n)                       千位加逗号，小数留一位（12,345、19.9）；没有数据写 —
-Dash.at(iso)                      今天 "HH:MM"，不是今天 "M-D HH:MM"；解析不了写 —
+Dash.h(tag.cls, props?, ...kids)  建节点；props 有 cls、text、on:{事件}、dataset，其余当属性
+Dash.esc(s)  Dash.parseTime(iso)
+Dash.num(n)                       千位逗号、小数一位；没有写 —
+Dash.at(iso)                      今天 "HH:MM"，不是今天 "M-D HH:MM"
 Dash.day(iso)                     "M 月 D 日"
-Dash.minutes(m)                   "45 分钟""2 小时 5 分钟"；缺事实写 —
-Dash.parseTime(iso)               解析为毫秒数
-Dash.status(text, tone)           一句状态；tone：ok warn risk claude codex author auto muted
-Dash.open(path, text?, cls?)      打开仓库里的产物（新标签页），只写动作不露路径；path 相对仓库根
-Dash.empty(title, sub?, compact?) 空状态
-Dash.fold(summary, content, open?)  折叠，默认合上
-Dash.item(id, title, side?)       编号对象一行：编号 + 一句话 + 右侧签条
-Dash.flowbar(counts, link?)       任务流水线比例条：排着、在做、收尾、暂停四段，长度按个数；link(段) 给跳转地址
-Dash.stageKeys                    四段的键，按先后：queued doing finishing paused
-Dash.sideKey(who)                 指挥或负责方 → claude / codex / author / muted
-Dash.modelName(m)                 claude-opus-5-5 → Opus 5.5；别的照原样
-Dash.effortName(e)                推理档的中文名：low 低、medium 中、high 高、xhigh 很高、max 最高
+Dash.minutes(m)                   "45 分钟""2 小时 5 分钟""3 天 4 小时"
+Dash.ago(iso) / Dash.since(iso) / Dash.sinceMin(iso)   "12 分钟前" / "已 2 小时 5 分钟" / 距此刻的分钟数（解析不了为 null）
+Dash.pct(a, b)                    "37%"；b 是 0 或 null 写 —
+Dash.status(text, tone)  Dash.empty(title, sub?, compact?)  Dash.fold(summary, content, open?)
+Dash.open(path, text?, cls?)      新标签页打开仓库里的产物，只写动作不露路径
+Dash.item(id, title, side?)       编号 + 一句话 + 右侧签
+Dash.flowbar(counts, link?)       流水线四段比例条；link(段) 给跳转地址；Dash.stageKeys 四段的键
+Dash.sideKey(who)  Dash.modelName(m)  Dash.effortName(e)
+Dash.lamp(level)                  ok|warn|bad 的灯，null 空心"未确认"
+Dash.kpi({label, value, unit, note, trend, href})   指标卡；trend better 绿"↑ 变好"、worse 橙"↓ 变坏"、same"→ 持平"、null 不画
+Dash.timeline(items, {compact?, onClick?})   items [{at, tone: [组, 键], tag, side?, title, sub?, body?}]；按天分组（compact 不分组）；side 画侧签；有 body 的点开展开；onClick(条目, 下标)
+Dash.tree(nodes, {onClick?, filter?})        nodes [{key, label, sub?, tone?, count?, kids?, open?, current?}]；onClick(节点)；
+                                             返回的节点有 .filter(文字)：按 opts.filter(节点, 文字) → bool（缺省比 label、sub、key）过滤并展开命中路径；current 高亮
+Dash.dots(cells, {onHover?})      cells [{tone, tip}] 点阵，悬停显示 tip
+Dash.chips(options, value, onChange, {multi?})   options [{key, label, tone?}]；单选 onChange(键)，多选 onChange(键数组)
+Dash.freshness()                  [{name, label, checked, stale: bool, ratio}]；调用它的面板随推送心跳重画
+Dash.tip.show(行数组, x, y) / Dash.tip.hide()    悬停框；带 data-tip 的元素自动用它（多行用换行分隔）
+Dash.reader(el, {code, sec?, find?})   文档阅读器（reader.js）
 ```
+
+**文档阅读器**：调 `GET /api/doc?code=`（§2），用 marked 渲染原文（文件头元数据不显示，原始 HTML 当文字）。左边小节目录（`toc` 的 2、3 级，可折叠，当前节随滚动高亮），右边正文；头部写编码、标题、所在域、更新时刻。小节标题的 id 用服务端给的 `anchor`；`sec` 认 `anchor`，也认小节号 `n`。正文里文档目录里有的"编码 §n"、紧跟其后的单独"§n"变成 `#docs?code=&sec=` 链接；文档里的相对链接按文档位置解析、新标签页打开，页内锚点只滚动。`find` 先到 `sec` 那一节（没给就全文）找第一处，高亮并滚过去。读不到时写"这份文档没读到：原因"。同一份文档按 `docs` 里的更新时刻缓存。
 
 ### 3.5 颜色语义（palette.js）
 
-颜色只按语义定一套：值写在 `style.css` 的 CSS 变量里（浅色与深色各一份），`Dash.palette` 登记"（组, 键）→ 变量 + 中文名"，签条、色块和所有图都从这里取；页面与图不写颜色字面量，图里的项只传 `tone: [组, 键]`。
+颜色只按语义定一套：值写在 `style.css` 的 CSS 变量里（浅色与深色各一份），`Dash.palette` 登记"（组, 键）→ 变量 + 中文名"，签条、色块和所有图都从这里取；页面与图不写颜色字面量，只传 `tone: [组, 键]`。
 
 | 组 | 键 |
 | --- | --- |
 | `stage` | `queued` 排着、`doing` 在做、`finishing` 收尾、`paused` 暂停 |
 | `side` | `claude` `codex` `author` `muted` |
-| `model` | `opus` `sonnet` `haiku` `gpt-6.1-sol` `gpt-6-luna` `gpt-6-astra` `other`（Claude 一族紫、Codex 一族青，按深浅分） |
+| `model` | `opus` `sonnet` `haiku` `gpt-6.1-sol` `gpt-6-luna` `gpt-6-astra` `other` |
 | `level` | `ok` 正常、`warn` 要看、`bad` 有问题 |
-| `kind` | `audit` 观感、`shots` 截图、`poster` 海报、`review` 评审（等你过目的种类） |
-| `seq` | 数组 6 项，一组蓝，键是下标（脚本分组、文档域按顺序取） |
+| `kind` | `audit` 观感、`shots` 截图、`poster` 海报、`review` 评审 |
+| `agent` | `running` 在跑（蓝）、`stalled` 可能卡住（橙）、`done` 已交回（灰）、`unknown` |
+| `mark` | `需定`（橙）、`待审`（主色）、`知会`（灰）、`插队`（琥珀） |
+| `feed` | `decision` 决策、`notice` 通知、`milestone` 里程碑、`done` 完成、`revert` 回滚、`audit` 审计 |
+| `inject` | `规则`、`接入要点`、`提醒`（键用后端给的类别名） |
+| `gate` | `pass` 过、`fail` 没过、`skip` 没跑 |
+| `seq`、`timing` | 一组蓝，键是下标 |
 
 ```
-Dash.colorVar(组, 键)     CSS 变量名；Dash.color(组, 键) 当前主题下的色值（给 ECharts）；Dash.cssVar(name) 读任一 CSS 变量
-Dash.label(组, 键)        中文名
-Dash.mark(组, 键, 字?)    语义签条（节点），字省略用中文名
-Dash.modelKey(型号)       型号 → 色表键：claude-opus-5-5 → opus；gpt-6.1-sol 原样；认不出是 other
+Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组, 键)  Dash.mark(组, 键, 字?)  Dash.modelKey(型号)
 ```
 
-### 3.6 统计小图（charts.js）
+### 3.6 统计图（charts.js）
 
-只画统计，不画原始数据与牵连关系。各返回一个节点，直接 append；节点进到可见页面且有了宽度才初始化，容器变宽变窄自动重排，面板重绘时 core 释放旧图，主题切换自动重画。`opts` 通用项：`height`（像素）、`label`（无障碍名）。
+每个函数返回一个节点；节点进到可见页面、有了宽度才画，变宽变窄自动重排，面板重绘与抽屉关闭时释放，主题切换全部重画。通用 `opts`：`height`、`label`（无障碍名）、`caliber`（悬停框末行）、`unit`、`onClick(p)`，`p = {index 类别下标, key, label, value, series 系列的 key}`。
 
-| `Dash.charts.` | 数据 | 用途 |
+| `Dash.charts.` | 数据 | 说明 |
 | --- | --- | --- |
-| `spark(values, opts)` | 数组，最右是今天 | 近 N 天的小柱，今天用主色；统计卡上的趋势；`opts.unit` |
-| `ring(parts, opts)` | `[{ label, value, tone }]` | 环形占比；`opts.center` 环心的字、`opts.unit` |
-| `bars(items, opts)` | `[{ label, value, text?, tone }]` | 横向条形，条尾写 `text`（省略写数值） |
-| `treemap(items, opts)` | `[{ label, value, note?, tone }]` | 面积图，悬停写 `note`；`opts.unit` |
+| `spark(values, opts)` | 数组，最右是今天 | 近 N 天小柱 |
+| `ring(parts, opts)` | `[{label, value, tone, key?}]` | 环形占比；`opts.center` 环心字 |
+| `bars(items, opts)` | `[{label, value, text?, note?, tone, key?}]` | 横向条形；条尾写 text；悬停写 label、值与单位、note；`opts.max` 定满格；标签过长折行（`opts.labelWidth`） |
+| `treemap(items, opts)` | `[{label, value, note?, tone, key?}]` | 面积图 |
+| `box(groups, opts)` | `[{key, label, tone, cur: 分布, prev: 分布|null}]`，分布 `{n, q: [min, p25, p50, p80, max]|null}` | 箱线，值是分钟；本 7 天实色、前 7 天浅色虚线；样本少于 3 的组只画点并标"样本少"；`p.series` 是 cur 或 prev |
+| `stack(cats, series, opts)` | `series [{key, label, tone, values}]` | 堆叠条；`opts.horizontal` 横向 |
+| `combo(days, bars, line, opts)` | `bars [{key, label, tone, values}]`（多条堆叠）、`line {key?, label, tone, values}` | 柱线组合；`opts.tips` 每天一段补充，悬停附上 |
+| `heat(rows, cols, cells, opts)` | rows、cols 是标签数组；`cells [{r, c, value, text?}]` | 热力；text 是格内小字；`p.index` 是 cells 下标 |
+| `trend(xs, series, opts)` | `series [{key?, label, tone, values, axis: 0|1}]` | 折线，axis 1 用右轴；`opts.units` 两轴单位；`opts.notes` 每点一句 |
+| `sankey(nodes, links, opts)` | `nodes [{id, label, tone, depth, note?}]`（id 全图唯一）；`links [{from, to, value}]` | 自绘 SVG；值为 0 的连线画细灰虚线；悬停节点高亮相连的线并写 note；`p.key` 是节点 id，`p.series` 是 node 或 link |
+| `strip(days, opts)` | `[{day, value}]` | 密度条，一天一格，深浅按数；`opts.coverage` 之前的格画虚线框；拖选 → `opts.onBrush({from, to})`，点一格 → `onClick`；`opts.selected {from, to}` 高亮 |
 
 ## 4 页面与面板
 
-导航 5 页，每页顶部一句"这页回答什么"（`manifest.js` 的 `ask`）；每块一个标题加一句"这块回答什么"（面板的 `note`）。
+导航七页，每页顶部一句"这页回答什么"（manifest 的 `ask`），右侧是这页的筛选条；每块一个标题、一句"这块回答什么"（`note`）与 ⓘ 口径（`caliber`）。各页的块 id 列在 `pages/<页>.js` 的头注释里，每块回答什么、口径是什么写在它的 `note` 与 `caliber` 里。
 
-| 页 | 回答什么 | 面板（id，用到的数据） |
-| --- | --- | --- |
-| `#home` 首页 | 要不要我动手、项目推进得怎样 | `home-attention` 等你过目（没点"知道了"的前 3 条，其余折叠；种类签、一句标题、一句"已按 X 在做"、时刻、"打开""知道了"，`attention`，7 栏）；`home-feedback` 给主会话留言（输入框、发送、送达结果，下面最近 3 条与主会话读没读，`feedback`，5 栏）；`home-progress` 进展一览（流水线比例条、今天与本周完成数、在做的前 5 行，`progress`，7 栏）；`home-milestones` 最近里程碑（最近 3 条通知的竖时间线，`notices`，5 栏）；`home-stats` 关键统计（约 6 张卡，一个数一句说明，带趋势小柱或环形占比，`stats`）。1440×900 一屏放得下这 5 块 |
-| `#progress` 进展 | 还没做完的活各在哪一段 | `progress-board` 任务流水线（比例条加今天、本周完成数；四列卡片：排着 → 在做 → 收尾 → 暂停，列头写行数，卡片是编号 + 标题、谁、一句状态，`progress`） |
-| `#team` 团队 | 两边各在忙什么、用了哪些模型 | `team-leads` 两位指挥（头像卡带在跑灯：模型与推理档、在做行数与单行编号标题、在跑子代理数，`team`、`live`）；`team-usage` 今天各模型做了多少（条长是累计时长，条尾写个数与时长，`team`，7 栏）；`team-rules` 模型分工（模型 → 做什么，`team`，5 栏） |
-| `#system` 体系 | 这套开发机器由什么组成、是否正常 | `system-health` 健康（正常 / 要看 / 有问题的环形占比、一句结论、要看的问题，`system`）；`system-hooks` 钩子（按负责方分组色块，每个一盏灯、一句作用，`system`，5 栏）；`system-scripts` 脚本（按个数分段的色带、分组色块：组名、个数、一句作用，`system`，7 栏）；`system-hookfeed` 最近注入了什么（主会话、Claude 子代理、Codex 主线、Codex 子代理四道，每道最近 10 次：时刻、事件、注入了哪几块、字数，不展示正文，`hookfeed`）；`system-docs` 文档（按域的面积图与各域一句话，`system`） |
-| `#library` 资料 | 查文档、决策和通知 | `library-docs` 文档目录（一域一行，点开看编码、简题、一句话摘要，`docs`）；`library-decisions` 最近决策（最近 15 条的竖时间线，D 编号加一句结论，`records`，7 栏）；`library-notices` 通知（竖时间线，`notices`，5 栏） |
+| 页 | 回答什么 | 筛选 | 用到的数据 |
+| --- | --- | --- | --- |
+| `#now` 现在 | 要不要我过目、推进到哪、机器正不正常 | — | attention、feedback、now、progress、health、team、feed |
+| `#work` 施工 | 活在哪一段、流得顺不顺 | side | progress、flow |
+| `#team` 团队 | 谁在做哪行、两边配合得怎样 | — | team、collab、progress |
+| `#health` 健康 | 这套开发机器正不正常 | — | health；新鲜度用 `Dash.freshness()` |
+| `#system` 体系 | 钩子与脚本怎么搭起来、在送什么 | side | system、hookfeed、docs |
+| `#feed` 动态 | 最近发生了什么 | range、side、type | feed |
+| `#docs` 文档 | 查文档、读文档 | — | docs、`/api/doc`、`/api/doc/search` |
+
+现在页六块：`now-attention` 等你过目（没点"知道了"的前 3 条，其余折叠；打开、知道了，7 栏）、`now-feedback` 给主会话留言（5 栏）、`now-progress` 推进到哪（P0–P3 四格阶段条、当前阶段与当前优先级两句、流水线比例条，点段到 `#work/work-board?stage=`；阶段号为 null 不画格，8 栏）、`now-pulse` 机器与人（健康灯与要看、有问题的个数 → `#health`；两位指挥的灯与在跑子代理数 → `#team`，4 栏）、`now-kpis` 六张指标卡（点卡到 `kpis[].href`）、`now-feed` 最近 5 条动态（点了到 `#feed`）。1440×900 一屏放下前三排。
 
 **加页面、面板、数据源**：
-- 加页面：在 `manifest.js` 的 `pages` 加一项（`id`、`title`、`ask`、`file`），建 `pages/<页>.js` 与同名 `.css`，用 `Dash.panel` 注册。
-- 加面板：在所属页文件里再写一个 `Dash.panel`，写清 `title` 与 `note`。
-- 加数据源：先按 §2 在契约里定形状并让采集写出、版本索引列出，再在 `manifest.js` 的 `data` 登记。
-- 面板只用 `Dash.*` 与 `style.css` 的通用类，自己的样式写进同名 `.css`，只用令牌，不写颜色字面量。
+- 加页面：manifest 的 `pages` 加一项（`id`、`title`、`ask`、`file`、`filters?`），建 `pages/<页>.js` 与同名 `.css`，用 `Dash.panel` 注册。
+- 加面板：所属页文件里再写一个 `Dash.panel`，写清 `title`、`note`，有统计口径的写 `caliber`。
+- 加数据源：先按 §2 定形状并让采集写出、推送列出，再在 manifest 的 `data` 登记。
+- 面板只用 `Dash.*` 与 `style.css` 的通用类（`.card .chip .mark .item .status .empty .fold .btn .id .muted .kpi .lamp .tl .tree .dots .drawer .seg .note-line .cols .col`），自己的样式写进同名 `.css`，只用令牌，不写颜色字面量、阴影与渐变。
 
 ## 5 视觉
 
-- **颜色有固定语义**（§3.5），与协作方法海报一致：玫红＝作者，紫＝Claude 侧，青绿＝Codex 侧，琥珀＝自动机制，红＝有问题，橙＝要看，绿＝正常；流水线四段各一色；结构、文字、分隔一律用中性蓝灰。浅蓝主色只给当前页、今天与主按钮，不为装饰换色。
-- **一眼读懂**：字号偏大（正文 15 px、块标题 17 px、关键数 26–36 px），留白够；每块先给一个数或一句结论，再给小图；红色只给有问题的事；时刻写具体时间。
-- 浅色为主，跟随系统深色（`prefers-color-scheme`，`style.css` 令牌各一份）；字体用系统中文无衬线，数字等宽；统计图统一用 ECharts，流水线比例条、色带、时间线这类简单图形用 HTML 与 CSS。窄屏（390 px）单列、不横向溢出。
-- **本地预览**：`python -I -X utf8 dashboard/tools/serve.py`，打开 `http://127.0.0.1:8765/`，读取采集的真实数据；已在运行时直接打开该地址。
+- **颜色有固定语义**（§3.5），与协作方法海报一致：玫红＝作者，紫＝Claude 侧，青绿＝Codex 侧，琥珀＝自动机制，红＝有问题，橙＝要看，绿＝正常；流水线四段各一色；结构、文字、分隔一律用中性蓝灰。浅蓝主色只给当前页、当前项、今天与主按钮，不为装饰换色。
+- **一眼读懂**：字号偏大（正文 15 px、块标题 17 px、关键数 26–36 px），留白够；每块先给一个数或一句结论，再给图；红色只给有问题的事；时刻写具体时间。页面上不出现英文字段名、路径、哈希与原始 JSON。
+- 浅色为主，跟随系统深色（`prefers-color-scheme`，令牌各一份）；字体用系统中文无衬线，数字等宽；统计图统一经 charts.js，比例条、时间线、点阵这类简单图形用 HTML 与 CSS。窄屏（390 px）单列、不横向溢出。
+- **本地预览**：`python -I -X utf8 dashboard/tools/serve.py`，打开 `http://127.0.0.1:8765/`；已在运行时直接打开该地址。
 
 ## 6 采集与维护
 

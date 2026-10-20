@@ -1,66 +1,46 @@
 /* 体系页。只用令牌。 */
 
-/* 健康 */
-.health { display: flex; align-items: center; gap: var(--s5); }
-.health-ring { flex: none; width: 96px; }
-.health-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--s2); }
-.health-main > .status { margin: 0; }
-.health-counts { display: flex; flex-wrap: wrap; gap: var(--s4); font-size: var(--fs-sm); color: var(--text-2); }
-.health-counts > span { display: inline-flex; align-items: center; gap: 6px; }
-.health-probs { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-md); }
-.health-probs li::marker { color: var(--warn); }
-@media (max-width: 560px) { .health { flex-direction: column; align-items: flex-start; } }
+/* 钩子结构图：图例一行 */
+.sy-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); font-size: var(--fs-sm); color: var(--text-2); margin-bottom: var(--s2); }
 
-/* 钩子：按负责方分组的色块，每个一盏灯 */
-.hook-group { border-radius: 12px; background: var(--tone-bg); padding: 10px 12px; margin-bottom: var(--s3); }
-.hook-group:last-child { margin-bottom: 0; }
-.hook-group-name { font-size: var(--fs-sm); font-weight: 650; color: var(--tone); margin-bottom: 6px; }
-.hook { display: flex; align-items: center; gap: var(--s3); padding: 8px 10px; border-radius: 9px; background: var(--surface); margin-top: 6px; }
-.hook-light { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px var(--ok-bg); }
-.hook.is-bad .hook-light { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-bg); }
-.hook-main { flex: 1; min-width: 0; }
-.hook-purpose { font-weight: 600; overflow-wrap: anywhere; }
-.hook-name { font-size: var(--fs-xs); color: var(--text-3); }
-.hook-state { flex: none; font-size: var(--fs-sm); font-weight: 600; color: var(--ok); }
-.hook.is-bad .hook-state { color: var(--warn); }
-
-/* 脚本：一条按个数分段的色带 + 分组色块 */
-.sc-total { font-size: var(--fs-md); color: var(--text-2); margin-bottom: var(--s2); }
-.sc-total b { color: var(--text); font-size: var(--fs-lg); }
-.sc-strip { display: flex; gap: 3px; height: 14px; margin-bottom: var(--s3); }
-.sc-seg { border-radius: 4px; min-width: 6px; }
-.sc-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--s2); }
-.sc-group { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border-left: 4px solid var(--tone); min-width: 0; }
-.sc-head { display: flex; align-items: center; gap: 8px; }
-.sc-swatch { flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--tone); display: inline-block; }
-.sc-group .sc-swatch { display: none; }
-.sc-name { font-weight: 650; flex: 1; min-width: 0; }
-.sc-n { font-weight: 650; color: var(--text-2); white-space: nowrap; }
-.sc-purpose { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; overflow-wrap: anywhere; }
-
-/* 文档：面积图 + 各域一句话 */
-.dom-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 4px var(--s5); margin-top: var(--s3); }
-.dom { display: flex; gap: var(--s2); align-items: baseline; padding: 4px 0; font-size: var(--fs-sm); min-width: 0; }
-.dom-name { flex: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 650; white-space: nowrap; }
-.dom-n { font-weight: 500; color: var(--text-3); margin-left: 2px; }
-.dom-sum { color: var(--text-2); min-width: 0; overflow-wrap: anywhere; }
+/* 抽屉 */
+.sy-drawer { display: flex; flex-direction: column; gap: var(--s4); }
+.sy-row { display: flex; flex-direction: column; gap: 4px; }
+.sy-k { font-size: var(--fs-xs); font-weight: 650; color: var(--text-3); }
+.sy-v { font-size: var(--fs-md); display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.sy-lamp { display: inline-flex; align-items: center; gap: 6px; }
+.sy-list { width: 100%; display: flex; flex-direction: column; }
+.sy-li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); padding: 6px 0; border-top: 1px solid var(--line-2); }
+.sy-li:first-child { border-top: 0; }
+.sy-li.is-zero { color: var(--text-3); }
+.sy-n { flex: none; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.sy-docs { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.sy-docs > .btn { margin-bottom: var(--s2); }
+.sy-doc { display: flex; align-items: baseline; gap: var(--s2); width: 100%; padding: 6px 8px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
+.sy-doc:hover { background: var(--surface-2); }
+.sy-doc.is-sub { padding-left: var(--s5); }
+.sy-doc-title { min-width: 0; overflow-wrap: anywhere; color: var(--text-2); }
 
 /* 最近注入了什么：四条泳道，主会话实色头、子代理浅色头 */
-.feed { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s3); align-items: start; }
-@media (max-width: 1100px) { .feed { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .feed { grid-template-columns: minmax(0, 1fr); } }
-.feed-lane { border-radius: 12px; background: var(--surface-2); overflow: hidden; min-width: 0; }
-.feed-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); padding: 9px 12px; }
-.feed-lane.is-main .feed-head { background: var(--tone); color: var(--on-strong); }
-.feed-lane.is-sub .feed-head { background: var(--tone-bg); color: var(--tone); }
-.feed-role { font-weight: 700; font-size: var(--fs-md); }
-.feed-n { font-size: var(--fs-xs); opacity: .85; }
-.feed-items { display: flex; flex-direction: column; padding: 4px 12px 10px; }
-.feed-item { padding: 7px 0; border-top: 1px solid var(--line-2); }
-.feed-item:first-child { border-top: 0; }
-.feed-meta { display: flex; align-items: baseline; gap: var(--s2); font-size: var(--fs-xs); color: var(--text-3); }
-.feed-at { font-weight: 650; color: var(--text-2); }
-.feed-ev { flex: 1; min-width: 0; }
-.feed-blocks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.feed-block { font-size: var(--fs-xs); line-height: 20px; padding: 0 8px; border-radius: 999px; color: var(--tone); background: var(--tone-bg); white-space: nowrap; }
-.feed-none { font-size: var(--fs-sm); color: var(--text-3); padding: 10px 12px; }
+.sy-lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s3); align-items: start; }
+.sy-lane { border-radius: var(--radius-sm); background: var(--surface-2); overflow: hidden; min-width: 0; }
+.sy-lane-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); padding: 9px 12px; }
+.sy-lane.is-main .sy-lane-head { background: var(--tone); color: var(--on-strong); }
+.sy-lane.is-sub .sy-lane-head { background: var(--tone-bg); color: var(--tone); }
+.sy-lane-role { font-weight: 700; font-size: var(--fs-md); }
+.sy-lane-n { font-size: var(--fs-xs); opacity: .85; }
+.sy-lane-items { display: flex; flex-direction: column; padding: 4px 12px 10px; }
+.sy-lane-item { padding: 7px 0; border-top: 1px solid var(--line-2); }
+.sy-lane-item:first-child { border-top: 0; }
+.sy-lane-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--s2); font-size: var(--fs-xs); color: var(--text-3); }
+.sy-lane-at { font-weight: 650; color: var(--text-2); }
+.sy-lane-chars { margin-left: auto; }
+.sy-lane-ev { order: 3; flex: 1 0 100%; min-width: 0; overflow-wrap: anywhere; }
+.sy-lane-blocks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.sy-lane-block { font-size: var(--fs-xs); line-height: 20px; padding: 0 8px; border-radius: 999px; color: var(--tone); background: var(--tone-bg); white-space: nowrap; }
+.sy-lane-none { font-size: var(--fs-sm); color: var(--text-3); padding: 10px 12px; }
+
+/* 脚本树：搜索条在树上面（放在 fixed 里） */
+.sy-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin-bottom: var(--s3); font-size: var(--fs-sm); }
+.sy-search { flex: 0 1 320px; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; font-size: var(--fs-md); }
+.sy-search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }

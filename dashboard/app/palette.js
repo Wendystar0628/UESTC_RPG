@@ -1,5 +1,5 @@
 /* 观察台色表：颜色按语义只定一套，值写在 style.css 的 CSS 变量里（浅色与深色各一份），这里只登记"哪个语义用哪个变量、叫什么"。
-   签条、色块、所有图（charts*.js）都从这里取色，页面不自己挑颜色。
+   签条、色块、所有图（charts.js）都从这里取色，页面不自己挑颜色。
    Dash.colorVar(组, 键) → CSS 变量名      Dash.color(组, 键) → 当前主题下的色值（给 ECharts）
    Dash.label(组, 键)    → 中文名          Dash.mark(组, 键, 字?) → 语义签条（节点）
    Dash.modelKey(型号)   → 型号的色表键：claude-opus-5-5 → opus，gpt-6.1-sol 原样 */
@@ -7,6 +7,7 @@
   'use strict';
 
   var Dash = window.Dash;
+  if (!Dash.internal) return;
   var h = Dash.h;
 
   var P = Dash.palette = {
@@ -47,9 +48,45 @@
       poster: ['--auto', '海报'],
       review: ['--muted', '评审']
     },
-    /* 分组色块：按顺序取的一组蓝（脚本分组、文档域），键是下标 */
+    /* 子代理状态（契约 team.agents[].state） */
+    agent: {
+      running: ['--accent', '在跑'],
+      stalled: ['--warn', '可能卡住'],
+      done:    ['--muted', '已交回'],
+      unknown: ['--muted', '未确认']
+    },
+    /* 来信标记（契约 collab.letters.cells[].mark） */
+    mark: {
+      '需定': ['--warn', '需定'],
+      '待审': ['--accent', '待审'],
+      '知会': ['--muted', '知会'],
+      '插队': ['--auto', '插队']
+    },
+    /* 动态类型（契约 feed.items[].type） */
+    feed: {
+      decision:  ['--seq-1', '决策'],
+      notice:    ['--auto', '通知'],
+      milestone: ['--accent', '里程碑'],
+      done:      ['--ok', '完成'],
+      revert:    ['--risk', '回滚'],
+      audit:     ['--seq-4', '审计']
+    },
+    /* 注入类别的大类（契约 system.kinds[].group） */
+    inject: {
+      '规则':     ['--seq-1', '规则'],
+      '接入要点': ['--seq-3', '接入要点'],
+      '提醒':     ['--auto', '提醒']
+    },
+    /* 门禁结果 */
+    gate: {
+      pass: ['--ok', '过'],
+      fail: ['--risk', '没过'],
+      skip: ['--muted', '没跑']
+    },
+    /* 分组色块：按顺序取的一组蓝（脚本分组、文档域），键是下标；timing（钩子时机）同用这一组 */
     seq: ['--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5', '--seq-6']
   };
+  P.timing = P.seq;
 
   var cache = {};
   var cacheTheme = null;

@@ -1,0 +1,71 @@
+/* 施工页。只用令牌。 */
+
+/* 看板 */
+.wk-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s3); align-items: start; }
+@media (max-width: 1100px) { .wk-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .wk-cols { grid-template-columns: minmax(0, 1fr); } }
+.wk-col { background: var(--surface-2); border-radius: var(--radius-sm); padding: var(--s3); border-top: 4px solid var(--tone); min-width: 0; }
+.wk-col.is-hit { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wk-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.wk-col-name { font-size: var(--fs-lg); font-weight: 700; }
+.wk-col-n { font-size: var(--fs-md); font-weight: 650; color: var(--text-2); }
+.wk-col-med { font-size: var(--fs-xs); color: var(--text-3); margin-bottom: var(--s3); min-height: 1.6em; }
+.wk-cards { display: flex; flex-direction: column; gap: var(--s2); }
+.wk-cards > .fold { margin-top: var(--s1); font-size: var(--fs-sm); color: var(--text-2); }
+.wk-none { font-size: var(--fs-sm); color: var(--text-3); padding: var(--s2) 0; }
+
+.wk-card {
+  display: flex; flex-direction: column; gap: 3px; width: 100%; min-width: 0; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--tone);
+  border-radius: var(--radius-sm); padding: 9px 11px;
+}
+.wk-card:hover { background: var(--accent-bg); }
+.wk-card.is-long { border-left-color: var(--warn); }
+.wk-card-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.wk-card-side { margin-left: auto; }
+.wk-card-title { font-size: var(--fs-md); font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.wk-card-time { font-size: var(--fs-xs); color: var(--text-3); }
+.wk-card.is-long .wk-card-time { color: var(--warn); }
+
+/* 块内小件 */
+.wk-lead { font-size: var(--fs-md); color: var(--text-2); line-height: 1.5; margin-bottom: var(--s3); }
+.wk-lead b { font-size: var(--fs-lg); color: var(--text); }
+.wk-sec { margin-top: var(--s4); }
+.wk-sec-title { font-size: var(--fs-sm); font-weight: 650; color: var(--text-2); margin-bottom: var(--s2); }
+.wk-right { display: inline-flex; align-items: center; gap: var(--s2); }
+.wk-legend { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
+
+.wk-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); margin-bottom: var(--s2); }
+
+/* 插队 */
+.wk-ringrow { display: flex; align-items: center; gap: var(--s4); margin-bottom: var(--s3); }
+.wk-ring { flex: none; width: 112px; }
+.wk-ringtext { flex: 1; min-width: 0; }
+.wk-ringtext .wk-lead { margin-bottom: var(--s1); }
+.wk-list { display: flex; flex-direction: column; }
+.wk-jrow {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--s3); row-gap: 2px; text-align: left; cursor: pointer;
+  width: 100%; padding: 9px var(--s2); background: transparent; border: 0; border-top: 1px solid var(--line-2);
+}
+.wk-jrow:first-child { border-top: 0; }
+.wk-jrow:hover { background: var(--surface-2); }
+.wk-jrow-title { overflow-wrap: anywhere; }
+.wk-jrow-sub { grid-column: 2; font-size: var(--fs-xs); color: var(--text-3); }
+
+/* 抽屉 */
+.wk-drawer { display: flex; flex-direction: column; }
+.wk-band { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; }
+.wk-band-seg { flex: var(--n) 1 0; min-width: 6px; background: var(--tone); }
+.wk-hist { list-style: none; margin: var(--s3) 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
+.wk-hist li { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.wk-hist-name { font-weight: 600; min-width: 3em; }
+.wk-hist-len { margin-left: auto; color: var(--text-2); }
+.wk-refs { display: flex; flex-direction: column; }
+.wk-ref {
+  display: flex; align-items: baseline; gap: var(--s3); text-align: left; width: 100%;
+  padding: 8px 0; background: transparent; border: 0; border-top: 1px solid var(--line-2); cursor: pointer;
+}
+.wk-ref:first-child { border-top: 0; }
+.wk-ref:hover .wk-ref-title { color: var(--accent); }
+.wk-ref.is-gone { cursor: default; }
+.wk-ref-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }

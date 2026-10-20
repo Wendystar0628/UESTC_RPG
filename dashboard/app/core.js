@@ -1,91 +1,79 @@
-/* 观察台运行时：数据按需加载（版本索引）、页面路由、面板注册与渲染、页眉与导航角标、写回（"知道了"、留言）。
-   通用格式化与小组件在 ui.js，色表在 palette.js，图在 charts*.js；接口见 dashboard/README.md §3。
-   面板只经 Dash.* 读数据，不直接拉文件。 */
+/* 观察台运行时：推送订阅（/api/events）与按需加载数据、路由与筛选、面板注册与渲染、页眉与导航角标、写回（"知道了"、留言）。
+   通用格式化与小组件在 ui.js，色表在 palette.js，图在 charts.js，文档阅读器在 reader.js；接口见 dashboard/README.md §3。
+   面板只经 Dash.panel 声明要哪几份数据，不自己订阅、不自己拉文件。 */
 (function () {
   'use strict';
 
-  var M = window.DashManifest || { pages: [], data: [] };
+  var M = window.DashManifest;
   var Dash = window.Dash = {};
 
+  /* 页面不经本地服务打开时，推送与写回都没有：整页只写一句 */
+  if (!/^https?:$/.test(location.protocol)) {
+    var only = function () {
+      document.body.replaceChildren();
+      var p = document.createElement('p');
+      p.className = 'only-line';
+      p.textContent = '请双击「打开观察台」，经本地服务打开';
+      document.body.appendChild(p);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', only); else only();
+    Dash.panel = function () {};
+    return;
+  }
+
   var store = {};      // 数据名 -> 数据
-  var meta = {};       // 数据名 -> { sig, tried, loading, at, ver, reqVer, got, fail }；got 本次请求的文件执行了 Dash.put，fail 最近一次读取失败的原因（fetch 下载失败 / run 执行出错 / null）
-  var panels = {};     // 面板 id -> 面板记录
+  var meta = {};       // 数据名 -> { ver 已交付的版本, loading, reqVer, got 本次请求执行了 Dash.put, fail 'fetch'|'run'|null }
+  var remote = {};     // 数据名 -> 推送来的最新版本
+  var checked = {};    // 数据名 -> { at 采集最后一次确认它仍是现状的时刻, stale 旧了吗 true|false|null, ratio 已用掉旧期限的比例 }；全部由后端在推送里给
   var srcs = {};       // 数据名 -> manifest 条目
-  var dirty = {};      // 待重绘的面板 id
+  var panels = {};     // 面板 id -> 面板记录
+  var dirty = {};
   var flushTimer = 0;
   var booted = false;
-  var view = { page: null };
-  var index = { state: 'wait', versions: null };   // wait | ready | missing | stale
+  var push = { full: false, on: false, es: null, app: null };
+  var view = { page: null, block: null, params: {}, filters: null };
+  var current = null;  // 正在画的面板（Dash.freshness 据此知道这块要跟着 checked 重画）
 
   M.data.forEach(function (s) { srcs[s.name] = s; });
-  Dash.internal = { store: store, srcs: srcs, indexState: function () { return index.state; } };
 
   function h() { return Dash.h.apply(null, arguments); }
   function pageOf(id) { return M.pages.filter(function (p) { return p.id === id; })[0] || null; }
+  function labelOf(n) { return srcs[n] ? srcs[n].label : n; }
 
   /* ================= 数据 ================= */
 
-  function signature(data) {
-    try {
-      return JSON.stringify(data, function (k, v) { return (this === data && (k === 'updated' || k === 'source')) ? undefined : v; });
-    } catch (e) { return String(Math.random()); }
-  }
-
-  var appStamp = null;   // 界面代码的时刻（live 带来）：变了就整页刷新，开着的页面不跑旧代码
   Dash.put = function (name, data) {
-    if (name === 'live' && data && data.appStamp) {
-      if (appStamp === null) appStamp = data.appStamp;
-      else if (data.appStamp !== appStamp) { location.reload(); return; }
-    }
-    var m = meta[name] || (meta[name] = {});
-    var sig = signature(data);
-    var changed = m.sig !== sig;
+    if (!srcs[name]) return;
     store[name] = data;
-    m.sig = sig; m.tried = true;
-    if (name === 'index') readIndex(data);
-    if (changed) dependents(name).forEach(schedule);
-    m.got = true;   // 走到这里才算交付（上面任何一步抛错，loadData 都不会记新版本）
-    afterData();
+    var m = meta[name] || (meta[name] = {});
+    m.got = true;   // 走到这里才算交付；文件执行出错时 loadData 不记新版本
   };
 
-  /* 当前数据；最近一次读取失败的数据不给（旧缓存不冒充新数据），原因看 dataState */
+  /* 能画的数据：最近一次读取失败的不给（不显示旧值） */
   function have(name) {
     var m = meta[name];
     return m && m.fail ? null : (store[name] || null);
   }
 
-  /* 索引就绪：有 versions、且没旧；否则其余数据按 every 定时拉 */
-  function readIndex(data) {
-    var ok = data && data.versions && typeof data.versions === 'object';
-    index.versions = ok ? data.versions : null;
-    index.state = !ok ? 'missing' : (Dash.stale(data, srcs.index.stale) ? 'stale' : 'ready');
-    sync();
-  }
-
-  function loadData(s, ver) {
+  function loadData(s) {
     var m = meta[s.name] || (meta[s.name] = {});
-    if (m.loading && Date.now() - m.loading < 15000) return;
-    m.loading = Date.now();
-    m.at = Date.now();
-    m.reqVer = ver == null ? null : ver;
+    if (m.loading) return;
+    m.loading = true;
+    m.reqVer = remote[s.name];
     m.got = false;
-    Array.prototype.forEach.call(document.querySelectorAll('script[data-dash="' + s.name + '"]'), function (e) { e.remove(); });
     var el = document.createElement('script');
-    el.dataset.dash = s.name;
-    el.src = s.path + '?t=' + Date.now();
-    /* 只有这次请求的文件真的执行了 Dash.put 才算交付：版本在此时才记，失败不推进版本 */
+    el.src = s.path + '?v=' + encodeURIComponent(m.reqVer || Date.now());
     function done(ok) {
-      m.loading = 0;
-      var delivered = ok && m.got, before = m.fail || null;
-      if (delivered) { m.ver = m.reqVer; m.fail = null; }
+      m.loading = false;
+      el.remove();
+      var before = m.fail;
+      if (ok && m.got) { m.ver = m.reqVer; m.fail = null; }
       else {
         m.fail = ok ? 'run' : 'fetch';
-        console.warn('[Dash] 数据 ' + s.name + (ok ? ' 的文件执行出错或没有调用 Dash.put：' : ' 下载失败：') + s.path);
+        console.warn('[Dash] 数据 ' + s.name + (ok ? ' 的文件执行出错或没有调用 Dash.put' : ' 下载失败'));
       }
-      if (!m.tried) m.tried = true;
-      if (!delivered || before) dependents(s.name).forEach(schedule);   // 第一次读完仍没有、读取失败、从失败恢复：重画面板
-      el.remove();
-      if (s.name === 'index' && !delivered) { index.state = 'missing'; index.versions = null; sync(); }
+      if (m.ver !== remote[s.name] && !m.fail) { loadData(s); return; }   // 加载期间又推来新版本
+      if (!m.fail || !before) dependents(s.name).forEach(schedule);
       afterData();
     }
     el.onload = function () { done(true); };
@@ -93,83 +81,134 @@
     document.head.appendChild(el);
   }
 
-  /* 这份数据此刻要不要：页眉导航要用的、当前页面板 needs 的 */
+  /* 这份数据此刻要不要：页眉导航要用的（keep）、当前页面板 needs 的 */
   function wanted(name) {
-    var s = srcs[name];
-    if (!s) return false;
-    if (s.poll || s.keep) return true;
+    if (srcs[name].keep) return true;
     return Object.keys(panels).some(function (id) {
       var p = panels[id];
       return p.page === view.page && p.needs.indexOf(name) >= 0;
     });
   }
 
-  /* 数据的拉取方式：poll（定时）、version（按版本）、timer（索引没就绪或没列这份，按 every 定时） */
-  function modeOf(s) {
-    if (s.poll) return 'poll';
-    return index.state === 'ready' && index.versions && s.name in index.versions ? 'version' : 'timer';
-  }
-
-  function sync() {
-    if (!booted || index.state === 'wait') return;   // 先等索引第一次读完，免得同一份数据开头拉两遍
+  /* 要的数据里，版本落后于推送的就拉；读取失败的等下一次推送（版本或心跳）再试 */
+  function sync(retry) {
+    if (!booted || !push.full) return;
     M.data.forEach(function (s) {
-      if (s.poll || !wanted(s.name)) return;
       var m = meta[s.name] || {};
-      if (modeOf(s) === 'version') {
-        var v = index.versions[s.name];
-        if (m.ver !== v && !m.loading && !(m.fail && Date.now() - m.at < 15000)) loadData(s, v);   // 读取失败后隔 15 s 再试
-      } else if (!m.at || Date.now() - m.at >= Math.max(5, s.every || 60) * 1000) {
-        loadData(s, null);
-      }
+      if (!(s.name in remote) || !wanted(s.name) || m.loading) return;
+      if (m.fail ? retry : m.ver !== remote[s.name]) loadData(s);
     });
-    updateCorner();
   }
 
-  function tick() {
-    if (document.hidden) return;
-    M.data.forEach(function (s) {
-      if (!s.poll) return;
-      var m = meta[s.name] || {};
-      if (!m.at || Date.now() - m.at >= Math.max(5, s.every || 15) * 1000 - 500) loadData(s, null);
+  /* 推送：versions（连上先来一次全量，之后只来变了的）与 checked（每 15 s，兼当心跳） */
+  function onVersions(ev) {
+    var msg = JSON.parse(ev.data);
+    var vs = msg.versions || {};
+    if ('app' in vs) {
+      if (push.app == null) push.app = vs.app;
+      else if (vs.app !== push.app) { location.reload(); return; }
+    }
+    if (msg.full) {
+      push.full = true;
+      M.data.forEach(function (s) {
+        if (s.name in vs) return;
+        delete remote[s.name]; delete store[s.name];   // 服务端没有这份：按"还没有数据"
+        meta[s.name] = { tried: true };
+        dependents(s.name).forEach(schedule);
+      });
+    }
+    Object.keys(vs).forEach(function (n) {
+      if (!srcs[n] || remote[n] === vs[n]) return;
+      remote[n] = vs[n];
+      if (!wanted(n)) delete store[n];   // 用不到的先丢掉，切过去时重拉，不先画旧的
     });
-    if (index.state === 'ready' && store.index && Dash.stale(store.index, srcs.index.stale)) index.state = 'stale';
-    sync();
+    Object.assign(checked, msg.checked || {});
+    setPush(true);
+    sync(msg.full);
+    afterData();
   }
 
-  /* 数据状态，给面板说清"没有"的原因：wait 读取中 / missing 读过但没有这份文件 / error 读取失败（文件执行出错，或已有数据后重读失败）/ ok */
+  function onChecked(ev) {
+    var msg = JSON.parse(ev.data);
+    Object.assign(checked, msg.checked || {});
+    sync(true);
+    Object.keys(panels).forEach(function (id) { if (panels[id].fresh) schedule(panels[id]); });
+    afterData();
+  }
+
+  function connect() {
+    var es = push.es = new EventSource('/api/events');
+    es.addEventListener('versions', onVersions);
+    es.addEventListener('checked', onChecked);
+    es.onerror = function () {
+      setPush(false);
+      if (es.readyState === EventSource.CLOSED) setTimeout(connect, 3000);   // 服务返回错误时浏览器不会自己重连
+    };
+  }
+
+  function setPush(on) {
+    push.on = on;
+    var c = document.getElementById('corner');
+    c.hidden = on;
+    c.textContent = on ? '' : '推送断开，正在重连';
+  }
+
+  /* wait 读取中 / missing 读过但没有这份 / error 没读到 / ok */
   Dash.dataState = function (name) {
-    var m = meta[name];
-    if (m && m.fail && (m.fail === 'run' || store[name])) return 'error';
+    var m = meta[name] || {};
+    if (m.fail) return 'error';
     if (store[name]) return 'ok';
-    return m && m.tried ? 'missing' : 'wait';
+    return push.full && !(name in remote) ? 'missing' : 'wait';
   };
+
+  function failReason(name) {
+    return (meta[name] || {}).fail === 'fetch' ? '下载没成功，下一次推送时再试' : '数据文件有误，没有交出数据';
+  }
+
+  Dash.checkedAt = function (name) { return (checked[name] || {}).at || null; };
+
+  /* 旧不旧、已用掉旧期限的多少，都是后端在 checked 推送里算好的；null 是后端不判断 */
+  function freshOf(name) {
+    var c = checked[name] || {};
+    return { stale: c.stale == null ? null : c.stale, ratio: c.ratio == null ? null : c.ratio };
+  }
+  function isStale(name) { return freshOf(name).stale === true; }
+
+  Dash.internal = { srcs: srcs, store: store, freshOf: freshOf, beginFresh: function () { if (current) current.fresh = true; } };
 
   /* ================= 写回：本地服务 serve.py ================= */
 
-  /* 把一次 POST 的失败说成人话：没由本地服务打开、服务没在跑、服务不认这个操作、服务给的原因 */
   function post(url, body) {
-    if (!/^https?:$/.test(location.protocol)) return Promise.reject(new Error('页面是直接打开的文件，没经过观察台本地服务；双击"打开观察台"再试'));
     return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .catch(function () { throw new Error('观察台本地服务没在运行，没有送出；双击"打开观察台"再试'); })
       .then(function (r) {
         return r.json().catch(function () { return null; }).then(function (j) {
-          if (!j) throw new Error('本地服务不认这个操作（返回 ' + r.status + '），要先换成新版本地服务');
-          if (!r.ok || !j || j.ok !== true) throw new Error((j && j.error) || '本地服务返回 ' + r.status);
+          if (!j) throw new Error('本地服务不认这个操作，要先换成新版本地服务');
+          if (!r.ok || j.ok !== true) {
+            var e = new Error(j.error || '本地服务没有接受');
+            e.status = r.status;
+            throw e;
+          }
           return j;
         });
       });
   }
 
-  /* "知道了"：POST /api/attention/ack {id, revision} → {ok: true}；成功后马上重读 attention 与索引。失败时 Promise 带原因，面板写出来；不存浏览器 */
+  function reload(name) { var m = meta[name]; if (m) m.ver = null; loadData(srcs[name]); }
+
+  /* "知道了"：带着作者看到的那一版（revision）确认；内容已经变了（409）就换成新内容，请作者重新过目 */
   Dash.ack = function (id, revision) {
-    return post('/api/attention/ack', { id: id, revision: revision })
-      .then(function (j) { loadData(srcs.attention, null); loadData(srcs.index, null); return j; });
+    return post('/api/attention/ack', { id: id, revision: revision }).then(function (j) {
+      reload('attention');
+      return j;
+    }, function (e) {
+      if (e.status === 409) { reload('attention'); throw new Error('内容刚变过，已换成新内容，请重新过目'); }
+      throw e;
+    });
   };
 
-  /* 给主会话留言：POST /api/feedback {text} → {ok: true, at}；成功后重读 feedback 与索引 */
   Dash.feedback = function (text) {
-    return post('/api/feedback', { text: text })
-      .then(function (j) { loadData(srcs.feedback, null); loadData(srcs.index, null); return j; });
+    return post('/api/feedback', { text: text }).then(function (j) { reload('feedback'); return j; });
   };
 
   /* ================= 面板 ================= */
@@ -179,24 +218,22 @@
       .filter(function (p) { return p.needs.indexOf(name) >= 0; });
   }
 
-  /* Dash.panel({ id, page, title?, note?, span?, order?, needs?, partial?, fixed?(el), render(el, data) })
-     needs 打开这页就拉、到齐才画（partial 为真时到一份就画）；任一份变了重绘。
-     fixed(el) 只在挂上时画一次、之后不随数据重画的部分（输入框），在数据内容上面。
-     span 占 12 栏里的几栏：12（默认）、8、7、6、5、4（style.css 定义的这几种）；note 是标题下一行"这块回答什么" */
   Dash.panel = function (def) {
-    if (!def || !def.id) return;
-    var p = panels[def.id] = Object.assign({ needs: [], order: 100, span: 12 }, def);
+    var p = panels[def.id] = Object.assign({ needs: [], uses: [], order: 100, span: 12 }, def);
     if (booted) { mount(p); sync(); }
   };
 
   function mount(p) {
-    var page = document.getElementById('page-' + p.page);
-    var host = page && page.querySelector('.page-body');
-    if (!host) { console.warn('[Dash] 面板 ' + p.id + ' 的页面 ' + p.page + ' 不在 manifest 里'); return; }
+    var host = document.querySelector('#page-' + p.page + ' .page-body');
+    if (!host) { console.warn('[Dash] 面板 ' + p.id + ' 的页面不在清单里'); return; }
     var box = h('section.panel.card.span-' + p.span, { dataset: { panel: p.id, order: p.order } });
     p.metaEl = h('span.card-meta');
     if (p.title) {
-      box.appendChild(h('header.card-head', h('div.card-titles', h('h2.card-title', p.title), p.note ? h('p.card-note', p.note) : null), p.metaEl));
+      box.appendChild(h('header.card-head',
+        h('div.card-titles', h('h2.card-title', p.title,
+          p.caliber ? h('span.cal', { tabindex: '0', 'aria-label': '口径：' + p.caliber, dataset: { tip: p.caliber } }, 'ⓘ') : null),
+          p.note ? h('p.card-note', p.note) : null),
+        p.metaEl));
     }
     if (p.fixed) {
       var fixedEl = h('div.card-fixed');
@@ -204,7 +241,9 @@
       p.fixed(fixedEl);
     }
     p.bodyEl = h('div.card-body');
+    p.footEl = h('div.card-foot', { hidden: true });
     box.appendChild(p.bodyEl);
+    box.appendChild(p.footEl);
     p.el = box;
     var after = null;
     Array.prototype.forEach.call(host.children, function (c) {
@@ -232,51 +271,83 @@
     refreshMeta();
   }
 
-  function labelOf(n) { return srcs[n] ? srcs[n].label : n; }
+  /* needs 里各份数据的 coverage.from 取最晚的：那份记账最短 */
+  function coverageOf(p) {
+    var latest = null;
+    p.needs.forEach(function (n) {
+      var c = have(n) && store[n].coverage, t = c ? Dash.parseTime(c.from) : NaN;
+      if (!isNaN(t) && (latest == null || t > Dash.parseTime(latest))) latest = c.from;
+    });
+    return latest;
+  }
+
+  var WINDOW_MS = { '24h': 864e5, '7d': 7 * 864e5, '14d': 14 * 864e5, '30d': 30 * 864e5 };
+
+  /* 面板数据的时间窗起点：window 缺省按筛选条的 range（地址里拖选了 from 就从那天起） */
+  function windowStart(p) {
+    var w = p.window || 'range';
+    if (w !== 'range') return Date.now() - WINDOW_MS[w];
+    var from = Dash.parseTime(view.params.from);
+    return isNaN(from) ? Date.now() - WINDOW_MS[view.filters.range] : from;
+  }
 
   function renderPanel(p) {
-    var data = {}, got = 0, missing = [], waiting = false;
+    var data = {}, missing = [], waiting = false, failed = [];
     p.needs.forEach(function (n) {
       data[n] = have(n);
-      if (data[n]) got++;
-      else {
-        missing.push(n);
-        if (!(meta[n] && meta[n].tried)) waiting = true;
-      }
+      if (data[n]) return;
+      var st = Dash.dataState(n);
+      if (st === 'error') failed.push(n);
+      else if (st === 'wait') waiting = true;
+      else missing.push(n);
     });
-    var failed = p.needs.filter(function (n) { return Dash.dataState(n) === 'error'; });
-    var failText = failed.map(labelOf).join('、') + '这次没读到，先不显示旧内容，会自动重试';
-    var ready = p.needs.length === 0 || (p.partial ? got > 0 : missing.length === 0);
+    var got = p.needs.length - failed.length - missing.length - (waiting ? 1 : 0);
     var body = p.bodyEl;
-    if (Dash.charts) Dash.charts.release(body);
+    Dash.charts.release(body);
     p.el.classList.remove('is-error', 'is-loading');
+    p.footEl.hidden = true;
+    var ready = p.partial ? (got > 0 || !p.needs.length) && !waiting : !failed.length && !missing.length && !waiting;
     if (!ready) {
-      if (waiting) { p.el.classList.add('is-loading'); body.replaceChildren(h('div.skeleton')); return; }
-      body.replaceChildren(failed.length ? Dash.empty('没读到', failText, true)
-        : Dash.empty('还没有数据', missing.map(labelOf).join('、') + '还没有数据，后台采集写出之后会自动出现', true));
+      if (failed.length) {
+        body.replaceChildren(Dash.empty('没读到', failed.map(function (n) { return labelOf(n) + '：' + failReason(n); }).join('；'), true));
+      } else if (waiting) {
+        p.el.classList.add('is-loading');
+        body.replaceChildren(h('div.skeleton'));
+      } else {
+        body.replaceChildren(Dash.empty('还没有数据', '缺' + missing.map(labelOf).join('、') + '，后台采集写出之后会自动出现', true));
+      }
       return;
     }
+    var ctx = {
+      filters: view.filters, params: view.params,
+      stale: p.needs.some(isStale), coverage: coverageOf(p)
+    };
     var opens = Array.prototype.map.call(body.querySelectorAll('details'), function (d) { return d.open; });
     var inner = h('div.panel-inner');
     body.replaceChildren(inner);
-    if (failed.length) inner.appendChild(Dash.status(failText, 'risk'));
+    current = p;
+    p.fresh = false;
     try {
-      p.render(inner, data);
+      p.render(inner, data, ctx);
     } catch (e) {
       console.error('[Dash] 面板 ' + p.id + ' 出错', e);
       p.el.classList.add('is-error');
-      body.replaceChildren(Dash.empty('这块出错了', String(e && e.message || e), true));
+      Dash.charts.release(body);
+      body.replaceChildren(Dash.empty('这块出错了', '别的面板不受影响；细节在浏览器控制台', true));
       return;
-    }
+    } finally { current = null; }
     var ds = inner.querySelectorAll('details');
     if (ds.length === opens.length) Array.prototype.forEach.call(ds, function (d, i) { if (opens[i]) d.open = true; });
+    if (ctx.coverage && Dash.parseTime(ctx.coverage) > windowStart(p)) {
+      p.footEl.hidden = false;
+      p.footEl.textContent = '记账从 ' + Dash.day(ctx.coverage) + ' ' + Dash.at(ctx.coverage).slice(-5) + ' 起，之前的不全';
+    }
   }
 
-  /* 重画一个面板（本地交互改了显示，如"知道了"正在写回）；全部重画给主题切换用（图要按新色重建） */
   Dash.redraw = function (id) { schedule(panels[id]); };
   Dash.redrawAll = function () { Object.keys(panels).forEach(function (id) { schedule(panels[id]); }); };
 
-  /* 卡片右上角的"更新于"、数据旧了变灰 */
+  /* 卡头的"更新 HH:MM"（needs 里最旧的一份）；旧了写"· 旧了"，橙字，正文降透明 */
   function refreshMeta() {
     Object.keys(panels).forEach(function (id) {
       var p = panels[id];
@@ -286,79 +357,34 @@
         if (!have(n)) return;
         var t = Dash.parseTime(store[n].updated);
         if (!isNaN(t) && (isNaN(oldest) || t < oldest)) oldest = t;
-        if (Dash.isStale(n)) stale = true;
+        if (isStale(n)) stale = true;
       });
       p.el.classList.toggle('is-stale', stale);
-      p.metaEl.textContent = stale ? '数据旧了 · ' + Dash.at(oldest) : (isNaN(oldest) ? '' : '更新 ' + Dash.at(oldest));
+      p.metaEl.textContent = isNaN(oldest) ? '' : '更新 ' + Dash.at(oldest) + (stale ? ' · 旧了' : '');
     });
     updateHeader();
   }
 
   /* ================= 页眉、导航、角标 ================= */
 
-  function headlineText() {
-    var g = have('progress'), parts = [];
-    if (g && g.counts) {
-      parts.push('在做 ' + Dash.num(g.counts.doing) + ' 行');
-      parts.push('收尾 ' + Dash.num(g.counts.finishing) + ' 行');
-    }
-    if (g && g.done) parts.push('今天完成 ' + Dash.num(g.done.today) + ' 行');
-    return parts.length ? parts.join(' · ') : '等数据';
-  }
-
-  /* 两位指挥在不在跑：live.leads [{ who, running }] */
-  function updateLeads() {
+  function updateHeader() {
     var box = document.getElementById('leads');
-    if (!box) return;
     var l = have('live');
     box.replaceChildren.apply(box, (l && l.leads || []).map(function (x) {
-      var side = Dash.sideKey(x.who);
-      var state = x.running === true ? ' 在跑' : x.running === false ? ' 空闲' : ' 未确认';
-      return h('span.lead-pill.t-' + side, { title: x.who + state },
-        x.running == null ? null : h('span.dot.' + (x.running ? 'is-on' : 'is-off')), x.who + state);
+      var state = x.running === true ? '在跑' : x.running === false ? '空闲' : '未确认';
+      return h('span.lead-pill.t-' + Dash.sideKey(x.who), { title: x.who + ' ' + state + (x.since ? '，自 ' + Dash.at(x.since) : '') },
+        h('span.dot' + (x.running === true ? '.is-on' : x.running === false ? '.is-off' : '.is-unknown')), x.who + ' ' + state);
     }));
+    var n = M.data.filter(function (s) { return isStale(s.name); }).length;
+    var btn = document.getElementById('fresh');
+    btn.className = 'fresh t-' + (n ? 'warn' : 'ok');
+    document.getElementById('fresh-text').textContent = n ? n + ' 份旧了' : '数据都新';
   }
 
-  function updateHeader() {
-    var hl = document.getElementById('headline');
-    if (hl) { hl.textContent = headlineText(); hl.title = hl.textContent; }
-    updateLeads();
-    var dot = document.getElementById('fresh-dot'), txt = document.getElementById('fresh-text');
-    if (!dot || !txt) return;
-    var l = have('live'), stale = Dash.isStale('live'), bad = Dash.dataState('live') === 'error';
-    dot.className = 'dot t-' + (bad ? 'risk' : !l ? 'muted' : stale ? 'warn' : 'ok');
-    txt.textContent = bad ? '实时数据没读到' : !l ? '等数据' : (stale ? '实时数据旧了 · ' : '实时 ') + Dash.at(l.updated);
-    var pop = document.getElementById('fresh-pop');
-    if (pop && !pop.hidden) fillPop(pop);
-  }
-
-  function fillPop(pop) {
-    var rows = M.data.map(function (s) {
-      var d = have(s.name), m = meta[s.name] || {}, tone, text;
-      if (Dash.dataState(s.name) === 'error') { tone = 'risk'; text = '没读到'; }
-      else if (!d) { tone = 'muted'; text = m.tried ? '还没有' : (wanted(s.name) ? '读取中' : '这页用不到'); }
-      else if (Dash.isStale(s.name)) { tone = 'warn'; text = '旧了 · ' + Dash.at(d.updated); }
-      else { tone = 'ok'; text = Dash.at(d.updated); }
-      return h('div.pop-row.t-' + tone, h('span.dot'), h('span.grow', s.label), h('span.ago', text));
-    });
-    pop.replaceChildren(h('div.pop-title', '各份数据的更新时刻'), rows);
-  }
-
-  function updateCorner() {
-    var c = document.getElementById('corner');
-    if (!c) return;
-    var text = index.state === 'missing' ? '后台的数据索引还没就绪，页面先按固定间隔刷新'
-      : index.state === 'stale' ? '后台的数据索引停在 ' + Dash.at(store.index && store.index.updated) + '，页面先按固定间隔刷新' : '';
-    c.hidden = !text;
-    c.textContent = text;
-  }
-
-  /* 导航角标：首页是还没点"知道了"的过目条数 */
   function updateBadges() {
-    var att = have('attention') && store.attention.items || [];
-    var open = att.filter(function (x) { return !x.acked; }).length;
-    var a = document.querySelector('#nav a[data-page="home"]');
-    if (!a) return;
+    var att = have('attention');
+    var open = att ? att.open : 0;
+    var a = document.querySelector('#nav a[data-page="now"]');
     var b = a.querySelector('.nav-badge');
     if (!open) { if (b) b.remove(); return; }
     if (!b) { b = h('span.nav-badge'); a.appendChild(b); }
@@ -367,34 +393,110 @@
   }
 
   function afterData() {
+    if (!booted) return;
     refreshMeta();
     updateBadges();
-    updateCorner();
   }
 
-  /* ================= 路由 ================= */
-  /* #页 、#页/块（块 id 就是面板 id） */
+  /* ================= 路由与筛选 ================= */
+  /* 地址：#页/块?k=v；side、range、type 是筛选，其余是路由参数 */
+
+  var FILTERS = {
+    side: { def: 'all', options: [['all', '全部'], ['claude', 'Claude'], ['codex', 'Codex']] },
+    range: { def: '7d', options: [['24h', '近 24 小时'], ['7d', '近 7 天'], ['30d', '近 30 天']] },
+    type: { multi: true }
+  };
+  function typeKeys() { return Object.keys(Dash.palette.feed); }
+  function isDefault(k, v) { return k === 'type' ? !v.length : v === FILTERS[k].def; }
+  function filterParams(f) {
+    var out = {};
+    Object.keys(FILTERS).forEach(function (k) { if (!isDefault(k, f[k])) out[k] = f[k]; });
+    return out;
+  }
+
+  function parseHash() {
+    var raw = (location.hash || '').replace(/^#/, ''), q = raw.indexOf('?');
+    var path = (q < 0 ? raw : raw.slice(0, q)).split('/').map(decodeURIComponent);
+    var params = {}, filters = { side: FILTERS.side.def, range: FILTERS.range.def, type: [] };   // type 空数组即全选
+    new URLSearchParams(q < 0 ? '' : raw.slice(q + 1)).forEach(function (v, k) {
+      if (k === 'type') filters.type = v ? v.split(',') : [];
+      else if (k in FILTERS) filters[k] = v;
+      else params[k] = v;
+    });
+    return { page: (pageOf(path[0]) || M.pages[0]).id, block: path[1] || null, params: params, filters: filters };
+  }
+
+  function hashOf(page, params, block) {
+    var q = new URLSearchParams();
+    Object.keys(params || {}).forEach(function (k) {
+      var v = params[k];
+      if (v == null || v === '') return;
+      q.set(k, Array.isArray(v) ? v.join(',') : String(v));
+    });
+    var qs = q.toString();
+    return '#' + encodeURIComponent(page) + (block ? '/' + encodeURIComponent(block) : '') + (qs ? '?' + qs : '');
+  }
+
+  /* 同页换参数时保留地址里已有的筛选（params 里写了筛选键的以它为准）；换页不带筛选 */
+  Dash.go = function (page, params, block) {
+    var all = page === view.page ? Object.assign(filterParams(view.filters), params || {}) : params;
+    location.hash = hashOf(page, all, block);
+  };
+  Dash.openDoc = function (code, o) { o = o || {}; Dash.go('docs', { code: code, sec: o.sec, find: o.find }); };
+
+  /* 改一个筛选：保留这页的其他筛选与路由参数；默认值不写进地址；改时间范围时去掉拖选出的 from、to */
+  Dash.setFilter = function (key, value) {
+    var f = Object.assign({}, view.filters);
+    f[key] = key === 'type' && value.length === typeKeys().length ? [] : value;
+    var params = Object.assign({}, view.params);
+    if (key === 'range') { delete params.from; delete params.to; }
+    location.hash = hashOf(view.page, Object.assign(params, filterParams(f)), null);
+  };
+
+  function filterBar(pg) {
+    var bar = document.querySelector('#page-' + pg.id + ' .page-filters');
+    bar.replaceChildren.apply(bar, (pg.filters || []).map(function (k) {
+      var f = FILTERS[k];
+      var opts = k === 'type' ? typeKeys().map(function (t) { return { key: t, label: Dash.label('feed', t), tone: ['feed', t] }; })
+        : f.options.map(function (o) { return { key: o[0], label: o[1] }; });
+      var v = k === 'type' && !view.filters.type.length ? typeKeys() : view.filters[k];
+      return Dash.chips(opts, v, function (nv) { Dash.setFilter(k, nv); }, { multi: !!f.multi });
+    }));
+  }
+
+  function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 
   function route() {
-    var parts = (location.hash || '').replace(/^#/, '').split('/').map(decodeURIComponent);
-    var pg = pageOf(parts[0]) || M.pages[0];
-    var block = parts[1];
-    var changed = view.page !== pg.id;
-    view.page = pg.id;
+    var r = parseHash(), prev = view;
+    view = r;
+    var pageChanged = prev.page !== r.page;
     M.pages.forEach(function (p) {
-      var sec = document.getElementById('page-' + p.id);
-      if (sec) sec.classList.toggle('is-active', p.id === pg.id);
+      document.getElementById('page-' + p.id).classList.toggle('is-active', p.id === r.page);
     });
     Array.prototype.forEach.call(document.querySelectorAll('#nav a'), function (a) {
-      if (a.dataset.page === pg.id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      if (a.dataset.page === r.page) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
+    var pg = pageOf(r.page);
     document.title = pg.title + ' · 作者观察台';
-    if (changed) window.scrollTo(0, 0);
-    if (!flushTimer) flushTimer = setTimeout(flush, 0);
+    filterBar(pg);
+    if (!pageChanged) {
+      Object.keys(panels).forEach(function (id) {
+        var p = panels[id];
+        if (p.page !== r.page) return;
+        var hit = p.uses.some(function (u) {
+          return u === 'params' ? !same(prev.params, r.params) : !same(prev.filters[u], r.filters[u]);
+        });
+        if (hit) schedule(p);
+      });
+    } else {
+      window.scrollTo(0, 0);
+      Dash.drawer.close();
+      if (!flushTimer) flushTimer = setTimeout(flush, 0);
+    }
     sync();
-    if (block) {
+    if (r.block && (pageChanged || r.block !== prev.block)) {
       var jump = function () {
-        var box = document.querySelector('#page-' + pg.id + ' [data-panel="' + block + '"]');
+        var box = document.querySelector('#page-' + r.page + ' [data-panel="' + r.block + '"]');
         if (box) box.scrollIntoView({ block: 'start' });
       };
       setTimeout(jump, 60);
@@ -404,51 +506,34 @@
 
   /* ================= 启动 ================= */
 
-  function loadAsset(kind, url, onerror) {
+  function loadAsset(kind, url) {
     var el = kind === 'css' ? h('link', { rel: 'stylesheet', href: url }) : h('script', { src: url });
-    el.onerror = onerror || function () { console.warn('[Dash] 加载失败：' + url); };
+    el.onerror = function () { console.warn('[Dash] 加载失败：' + url); };
     document.head.appendChild(el);
-  }
-
-  function pageSection(p) {
-    return h('section.page', { id: 'page-' + p.id },
-      h('header.page-head', h('div.page-kicker', p.title), h('h1.page-ask', p.ask || p.title)),
-      h('div.page-body'));
   }
 
   function boot() {
     var nav = document.getElementById('nav'), main = document.getElementById('main');
     M.pages.forEach(function (p) {
-      nav.appendChild(h('a', { href: '#' + p.id, dataset: { page: p.id }, title: p.ask || '' }, h('span.nav-title', p.title)));
-      main.appendChild(pageSection(p));
+      nav.appendChild(h('a', { href: '#' + p.id, dataset: { page: p.id }, title: p.ask }, h('span.nav-title', p.title)));
+      main.appendChild(h('section.page', { id: 'page-' + p.id },
+        h('header.page-head', h('div.page-kicker', p.title), h('h1.page-ask', p.ask), h('div.page-filters')),
+        h('div.page-body')));
     });
-
-    var btn = document.getElementById('fresh'), pop = document.getElementById('fresh-pop');
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      pop.hidden = !pop.hidden;
-      btn.setAttribute('aria-expanded', String(!pop.hidden));
-      if (!pop.hidden) fillPop(pop);
-    });
-    document.addEventListener('click', function (e) {
-      if (!pop.hidden && !pop.contains(e.target)) { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); }
-    });
+    document.getElementById('fresh').addEventListener('click', function () { Dash.go('health', null, 'health-fresh'); });
 
     booted = true;
     var stamp = '?t=' + Date.now();
     M.pages.forEach(function (p) {
       loadAsset('css', 'app/' + p.file.replace(/\.js$/, '.css') + stamp);
-      loadAsset('js', 'app/' + p.file + stamp, function () { console.warn('[Dash] 页面文件没找到：' + p.file); });
+      loadAsset('js', 'app/' + p.file + stamp);
     });
     Object.keys(panels).forEach(function (id) { mount(panels[id]); });
 
     window.addEventListener('hashchange', route);
     route();
-    tick();
-    setInterval(tick, 5000);
-    setInterval(refreshMeta, 20000);
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
     updateHeader();
+    connect();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

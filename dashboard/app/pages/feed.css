@@ -1,0 +1,5 @@
+/* 动态页。只用令牌。 */
+.fd-clear { margin-left: var(--s2); }
+
+.fd-body { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); }
+.fd-detail { margin: 0; font-size: var(--fs-md); color: var(--text-2); line-height: 1.55; overflow-wrap: anywhere; }
