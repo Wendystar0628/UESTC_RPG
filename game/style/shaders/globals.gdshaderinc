@@ -39,7 +39,6 @@ global uniform vec3 overcast_dir;
 global uniform vec4 quality;
 global uniform vec4 map_rect;
 global uniform float edge_fog;
-global uniform vec4 shaft;
 global uniform vec4 interior_light;
 global uniform sampler2D palette : source_color, filter_nearest, repeat_disable;
 global uniform sampler2D light_channels : filter_nearest, repeat_disable;

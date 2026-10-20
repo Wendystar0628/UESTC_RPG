@@ -215,7 +215,7 @@ vec3 veg_tint(vec3 c, vec2 tint) {
 	return ok_to_linear(o);
 }
 
-// 风（WP-26 的 motion_wind.gdshaderinc 进来前的桩，同一组参数）：主干 (y/H)^1.5 弯曲、团块摆动、叶片颤动。
+// 风：公共植被形变：主干 (y/H)^1.5 弯曲、团块摆动、叶片颤动。
 // wind = (风向 x, 风向 z, 幅度系数, 湍流)；幅度系数为 0 时不动。dir_m 是模型空间的风向。
 vec3 veg_wind(vec3 v, vec3 origin, vec3 dir_m, VegInst inst, VegSpecies sp, float blob_hash, float crown, float card) {
 	float amp = wind.z;

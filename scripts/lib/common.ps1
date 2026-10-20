@@ -2,6 +2,11 @@
 # 用法：由其他脚本点引用（. scripts\lib\common.ps1），不单独运行
 Set-StrictMode -Version Latest
 
+function Assert-UESTCCleanGodotLog {
+    param($ProcessResult)
+    if ($ProcessResult.Output -match '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)') { throw "Godot reported errors: $($ProcessResult.Log)" }
+}
+
 function Get-UESTCLayout {
     param([Parameter(Mandatory)][string]$Repository)
     $root = [IO.Path]::GetFullPath($Repository).TrimEnd('\', '/')

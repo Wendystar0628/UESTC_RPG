@@ -1,0 +1,128 @@
+#ifdef PASS_COMPOSITE
+
+const ivec2 N3[9] = ivec2[9](ivec2(-1, -1), ivec2(0, -1), ivec2(1, -1),
+		ivec2(-1, 0), ivec2(0, 0), ivec2(1, 0),
+		ivec2(-1, 1), ivec2(0, 1), ivec2(1, 1));
+const float LINE_PIXEL = 0.04;   // a mask value counted as a "line pixel" for speck removal (thin far lines are
+                                 // drawn as low coverage and must still count, or they vanish whole)
+
+vec3 line_colour(vec3 base, uint id, ivec2 at) {
+	LineCls l = line_class(id);
+	base = min(base, vec3(1.0));
+	float bl = dot(base, vec3(0.2126, 0.7152, 0.0722));
+	float warm = smoothstep(-0.01, 0.03, oklab_b(base));   // warm base -> warm brown, cool -> blue-grey
+	vec3 tint = mix(pal_cur(PAL_LINE_COOL), pal_cur(PAL_LINE_WARM), warm);   // line.cool / line.warm
+	float darken = P.line_a.x * (1.0 - 0.3 * P.line_a.z);   // lightning flash: line_darken x 0.7 (SYS-WEATHER §5)
+	vec3 lc = mix(base, vec3(bl), 0.35) * darken;
+	lc = mix(lc, tint, l.tint);
+	// Toward the fog with distance, same fog function as the materials (ART-STYLE §4.2).
+	float d = texelFetch(depth_tex, at, 0).r;
+	vec3 vp = view_pos(at, d);
+	vec3 wp = (P.inv_view * vec4(vp, 1.0)).xyz;
+	vec4 f = fog_eval(wp, P.inv_view[3].xyz);
+	return mix(lc, f.rgb, f.a);
+}
+
+void main() {
+	ivec2 c = ivec2(gl_GlobalInvocationID.xy);
+	if (any(greaterThanEqual(c, ivec2(P.size.xy)))) {
+		return;
+	}
+
+	float m[9];
+	uint g[9];
+	int count = 0;
+	bool any_flag = false;
+	for (int k = 0; k < 9; k++) {
+		vec2 mv = imageLoad(line_mask, clamp_px(c + N3[k])).rg;
+		m[k] = mv.r;
+		g[k] = uint(round(mv.g * 255.0));
+		count += m[k] > LINE_PIXEL ? 1 : 0;
+		any_flag = any_flag || (g[k] & 128u) != 0u;
+	}
+	float m0 = m[4];
+
+	// Fragment filter (after the reference line pass _8, which keeps a pixel only when its 5x5 window holds enough
+	// line pixels): here the count is taken on the window's outer ring, so a line keeps its ink when it runs at
+	// least 2 px out of the pixel and a speck or a short dash inside the window goes, whatever the line's width
+	// (an area count would also cut thin lines where their rasterised width drops to one row). Line ends taper.
+	float cov;
+	ivec2 src = c;   // pixel whose depth / ID the line colour is taken from
+	uint src_id = g[4] & 127u;
+	if (m0 > 0.0) {
+		float ring = 0.0;
+		for (int dy = -2; dy <= 2; dy++) {
+			for (int dx = -2; dx <= 2; dx++) {
+				if (max(abs(dx), abs(dy)) == 2) {
+					ring += imageLoad(line_mask, clamp_px(c + ivec2(dx, dy))).r > LINE_PIXEL ? 1.0 : 0.0;
+				}
+			}
+		}
+		// The 3x3 rule (fewer than 3 line pixels -> dropped) still takes dotted lines whose dots the ring would see.
+		cov = count >= 3 ? m0 * smoothstep(FRAG_RING_LO, FRAG_RING_HI, ring) : 0.0;
+	} else {
+		cov = 0.0;
+	}
+
+	if (cov < 1.0 / 255.0 && !any_flag) {
+		return;
+	}
+
+	vec4 col = imageLoad(color_image, c);
+	vec3 rgb = col.rgb;
+
+	// Convex bright line on the lit side, next to the dark crease line (ART-STYLE §4.7, ENG-PERF).
+	if (any_flag && m0 < 0.5) {
+		bool bright = (g[4] & 128u) != 0u;
+		Surf s = fetch_surf(c);
+		if (!bright) {
+			// The dark line sits on a flagged pixel of this same face: put the bright line just inside it.
+			const int AX[4] = int[4](1, 3, 5, 7);
+			for (int i = 0; i < 4; i++) {
+				int k = AX[i];
+				if ((g[k] & 128u) != 0u && m[k] >= 0.5) {
+					vec3 nk = normalize(texelFetch(normal_roughness_tex, clamp_px(c + N3[k]), 0).xyz * 2.0 - 1.0);
+					if (dot(nk, s.nrm) > 0.95) {
+						bright = true;
+						break;
+					}
+				}
+			}
+		}
+		if (bright && !s.sky && dot(s.nrm, P.key_light.xyz) > 0.0) {
+			// Fades with distance and sinks into the fog like the surface it sits on.
+			vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
+			float fog_a = fog_eval(wp, P.inv_view[3].xyz).a;
+			float lift = bevel_lift(s.id) * P.key_light.w * (1.0 - smoothstep(BRIGHT_FAR0, BRIGHT_FAR1, s.z)) * (1.0 - fog_a);
+			if (lift > 0.0) {
+				// Same continuity rule as the dark lines: flagged pixels must run on past the 5x5 window, or a bevel
+				// that rasterises only now and then prints as a row of light dashes.
+				float flags = 0.0;
+				for (int dy = -2; dy <= 2; dy++) {
+					for (int dx = -2; dx <= 2; dx++) {
+						if (max(abs(dx), abs(dy)) == 2) {
+							uint gk = uint(round(imageLoad(line_mask, clamp_px(c + ivec2(dx, dy))).g * 255.0));
+							flags += (gk & 128u) != 0u ? 1.0 : 0.0;
+						}
+					}
+				}
+				lift *= smoothstep(BRIGHT_RING_LO, BRIGHT_RING_HI, flags);
+			}
+			if (lift > 0.0) {
+				vec3 lab = linear_to_oklab(max(rgb, vec3(0.0)));
+				lab.x += lift;
+				rgb = max(oklab_to_linear(lab), vec3(0.0));
+			}
+		}
+	}
+
+	if (cov >= 1.0 / 255.0) {
+		vec3 lc = line_colour(rgb, src_id, src);
+		rgb = mix(rgb, lc, clamp(cov, 0.0, 1.0));
+	}
+
+	imageStore(color_image, c, vec4(rgb, col.a));
+}
+
+#endif // PASS_COMPOSITE
+

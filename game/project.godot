@@ -24,7 +24,6 @@ driver/mix_rate=48000
 [autoload]
 
 Boot="*res://kernel/boot/Boot.cs"
-Kernel="*res://kernel/registry/Kernel.cs"
 
 [campus]
 
@@ -41,6 +40,10 @@ window/stretch/aspect="expand"
 [dotnet]
 
 project/assembly_name="Campus"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/build_import/plugin.cfg")
 
 [gui]
 
@@ -443,10 +446,6 @@ map_rect={
 edge_fog={
 "type": "float",
 "value": 0.0
-}
-shaft={
-"type": "vec4",
-"value": Vector4(0, 1.2, 5.5, 0.4)
 }
 interior_light={
 "type": "vec4",

@@ -16,7 +16,6 @@
   ],
   "lit": {
     "adaptRef": 0.7,
-    "tintK": 0.45,
     "vegetationTintK": 0.45,
     "vegetationWarmCap": { "k": 0.3, "altDeg": [6.0, 25.0], "keyC": [0.03, 0.09], "hueMax": 12.0, "albedoChromaGain": 1.1 },
     "heroGuard": { "hueRange": [40.0, 100.0], "minHeroC": 0.04, "warmMirror": 0.5, "chromaFloor": 0.44 },
@@ -53,7 +52,7 @@
   },
   "frameTokens": [
     "sun.light", "ambient.sky", "bounce.ground", "interior.warm", "line.warm", "line.cool",
-    "shaft.near", "shaft.far", "rim", "glass.glare", "shadow.1", "fog.sun", "fog.anti",
+    "rim", "glass.glare", "shadow.1", "fog.sun", "fog.anti",
     "sky.sun.0", "sky.sun.1", "sky.sun.2", "sky.sun.3", "sky.sun.4",
     "sky.anti.0", "sky.anti.1", "sky.anti.2", "sky.anti.3", "sky.anti.4",
     "sky.cloudLit", "sky.cloudRim", "sky.cloudBelly", "sky.cloudDeep", "sky.moon",

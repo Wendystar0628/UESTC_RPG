@@ -1,13 +1,22 @@
 using System.Numerics;
+using Campus.Contracts;
 
 namespace Campus.Systems.Nightlight.Schedule;
 
 /// <summary>时刻表用到的纯函数：与着色器一侧（lamp_heff、窗灯 smoothstep）同一写法，G2 用同一组输入比对两边。</summary>
 public static class ScheduleMath
 {
+    public const float OvercastDeg = 6f;
+    public const float PrecipDeg = 4f;
+    public const uint WindowRowSalt = 17u;
+    public const uint WindowGridSalt = 131u;
+    public const int WindowGroupColumns = 3;
+    public const float WindowIndependent = 0.3f;
+    public const float WindowBuildingSpread = 0.5f;
+
     /// <summary>有效太阳高度 h_eff = h − 6° × 阴度 − 4° × 降水（SYS-WEATHER、SYS-TIME）。</summary>
-    public static float EffectiveSun(float sunAltDeg, float overcast, float precip, EffectiveSunSpec spec) =>
-        sunAltDeg - spec.OvercastDeg * Math.Clamp(overcast, 0f, 1f) - spec.PrecipDeg * Math.Clamp(precip, 0f, 1f);
+    public static float EffectiveSun(float sunAltDeg, float overcast, float precip) =>
+        sunAltDeg - OvercastDeg * Math.Clamp(overcast, 0f, 1f) - PrecipDeg * Math.Clamp(precip, 0f, 1f);
 
     /// <summary>按美术钟点求关键帧曲线：线性插值，最后一个键与第一个键跨 24 h 衔接；只有一个键时为常数。</summary>
     public static float Curve(IReadOnlyList<Vector2> keys, double clock)
@@ -37,7 +46,7 @@ public static class ScheduleMath
     }
 
     /// <summary>把 32 位哈希映射到 [0, 1)，取高 24 位，与着色器的 hash01 一致。</summary>
-    public static float Unit(uint hash) => (hash >> 8) / 16777216f;
+    public static float Unit(uint hash) => (hash >> 8) / IntegerNoise.Unit24;
 
     /// <summary>与 lamp.gdshaderinc 的 lamp_hash_u 同一常数（窗阈值、窗冷暖）；toon、fx_glow 都 include 它，G2 比对。</summary>
     public static uint ShaderHash(uint x)
@@ -45,9 +54,9 @@ public static class ScheduleMath
         unchecked
         {
             x ^= x >> 16;
-            x *= 2146121005u;
+            x *= IntegerNoise.PuddleMixA;
             x ^= x >> 15;
-            x *= 2221713035u;
+            x *= IntegerNoise.PuddleMixB;
             x ^= x >> 16;
             return x;
         }
@@ -61,11 +70,11 @@ public static class ScheduleMath
             var c = Math.Max(columns, 1);
             var row = local / c;
             var col = local - row * c;
-            var seg = seed * 131u + (uint)row * 17u + (uint)(col / 3);
-            var t = Unit(ShaderHash((seed ^ (uint)local) * 2u + 1u)) * 0.3f + Unit(ShaderHash(seg * 2u + 11u));
+            var seg = seed * WindowGridSalt + (uint)row * WindowRowSalt + (uint)(col / WindowGroupColumns);
+            var t = Unit(ShaderHash((seed ^ (uint)local) * 2u + 1u)) * WindowIndependent + Unit(ShaderHash(seg * 2u + 11u));
             t -= MathF.Floor(t);
             var building = Unit(ShaderHash(seed * 2u + 7u));
-            return Math.Clamp(t + 0.5f * (building - 0.5f), 0f, 1f);
+            return Math.Clamp(t + WindowBuildingSpread * (building - 0.5f), 0f, 1f);
         }
     }
 
@@ -81,11 +90,11 @@ public static class ScheduleMath
             var c = Math.Max(columns, 1);
             var row = local / c;
             var col = local - row * c;
-            var seg = (uint)baseId * 131u + (uint)row * 17u + (uint)(col / 3);
-            var t = Unit(ShaderHash((uint)windowId * 2u + 1u)) * 0.3f + Unit(ShaderHash(seg * 2u + 11u));
+            var seg = (uint)baseId * WindowGridSalt + (uint)row * WindowRowSalt + (uint)(col / WindowGroupColumns);
+            var t = Unit(ShaderHash((uint)windowId * 2u + 1u)) * WindowIndependent + Unit(ShaderHash(seg * 2u + 11u));
             t -= MathF.Floor(t);
             var building = Unit(ShaderHash((uint)baseId * 2u + 7u));
-            return Math.Clamp(t + 0.5f * (building - 0.5f), 0f, 1f);
+            return Math.Clamp(t + WindowBuildingSpread * (building - 0.5f), 0f, 1f);
         }
     }
 }

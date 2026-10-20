@@ -13,7 +13,7 @@ namespace Campus.Style.Shaders.Cards;
 /// <item>x4 (sill drop m, ceiling rise m, cool share, layer base)</item>
 /// <item>x5 (layer count, 0, 0, <see cref="Tag"/>): a default or unset texture never carries the tag</item>
 /// </list>
-/// Enum fields are stored as their numeric values; the shader's constants mirror the enums in WindowCardKinds.cs.
+/// Enum fields are stored as their numeric values; the build generates shader constants from WindowCardKinds.cs.
 /// </summary>
 public static class WindowCardTable
 {

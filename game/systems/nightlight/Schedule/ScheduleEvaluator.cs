@@ -47,7 +47,7 @@ public sealed class ScheduleEvaluator
     public ThresholdGroup? GroupOf(int slot) => _groupBySlot[slot];
 
     public float EffectiveSun(in ScheduleInput input) =>
-        ScheduleMath.EffectiveSun(input.SunAltDeg, input.Overcast, input.Precip, _file.Heff);
+        ScheduleMath.EffectiveSun(input.SunAltDeg, input.Overcast, input.Precip);
 
     /// <summary>不含过渡宽度的目标值：窗灯类为亮窗比例，灯具类为保留比例（0–1），系统槽位按各自约定。</summary>
     public float Target(int slot, in ScheduleInput input)

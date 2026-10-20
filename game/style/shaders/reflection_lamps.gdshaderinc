@@ -57,8 +57,8 @@ vec3 reflection_lamps_color(vec3 p_world, vec3 camera_world, float length_scale)
 			vec4 window = texelFetch(refl_lamps, ivec2(i, 1), 0);
 			int id = int(round(reference.y));
 			int base_id = int(round(reference.z));
-			int slot = int(mod(reference.w, 32.0));
-			int cols = int(floor(reference.w / 32.0));
+			int slot = int(mod(reference.w, float(LIGHT_CHANNEL_COUNT)));
+			int cols = int(floor(reference.w / float(LIGHT_CHANNEL_COUNT)));
 			bool outskirts = (int(round(window.w)) & 1) != 0;
 			vec4 override_value = outskirts ? vec4(0.0) : lamp_window_override(id);
 			source = window.xyz;

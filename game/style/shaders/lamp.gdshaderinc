@@ -42,31 +42,29 @@ const float LAMP_WALL_SPREAD = 0.75;     // 光罩半径 ∝ 深度^它：1 是�
 const float LAMP_WALL_FOOT = 0.5;        // 竖直面在灯脚高度处的亮度（灯头下为 1，线性变暗）
 const vec2 LAMP_WALL_NY = vec2(0.5, 0.7);    // 世界法线 n.y 在这一段里地面一支与竖直面一支按 smoothstep 混合：低于 .x 全按竖直面，高于 .y 全按地面
 const vec2 LAMP_DOWN_NY = vec2(-0.3, -0.1);  // 朝下的面不受光斑：n.y 低于 .x 不画，到 .y 渐入（檐口与雨棚底面、球底、扶手下沿）
-const int LAMP_PAL_ENV = 12;             // shadow.1，与 fog.gdshaderinc 的 PAL_SHADOW_1 一致
-const int LAMP_PAL_WARM = 51;            // lamp.warm，与 fog.gdshaderinc 的 PAL_LAMP_WARM 一致：行 1 的灯照色按它推
 
 uint lamp_hash_u(uint x) {
 	x ^= x >> 16u;
-	x *= 2146121005u;
+	x *= STYLE_HASH_MIX_A;
 	x ^= x >> 15u;
-	x *= 2221713035u;
+	x *= STYLE_HASH_MIX_B;
 	x ^= x >> 16u;
 	return x;
 }
 
 float lamp_hash01(uint x) {
-	return float(lamp_hash_u(x) >> 8u) / 16777216.0;
+	return float(lamp_hash_u(x) >> 8u) / STYLE_UNIT24;
 }
 
 // light_channels：32×1 RGF，x = L，y = Δ
 vec2 lamp_channel(int slot) {
-	return texelFetch(light_channels, ivec2(clamp(slot, 0, 31), 0), 0).rg;
+	return texelFetch(light_channels, ivec2(clamp(slot, 0, LIGHT_CHANNEL_COUNT - 1), 0), 0).rg;
 }
 
 // 有效太阳高度 h_eff = h − 6° × 阴度 − 4° × 降水（SYS-WEATHER），与 C# 的 ScheduleMath.EffectiveSun 一致
 float lamp_heff() {
 	float h = degrees(asin(clamp(sun_dir.y, -1.0, 1.0)));
-	return h - 6.0 * clamp(weather_a.y, 0.0, 1.0) - 4.0 * clamp(weather_a.z, 0.0, 1.0);
+	return h - LAMP_HEFF_OVERCAST * clamp(weather_a.y, 0.0, 1.0) - LAMP_HEFF_PRECIP * clamp(weather_a.z, 0.0, 1.0);
 }
 
 // 窗的亮灯阈值（与 toon_window_threshold、C# 的 ScheduleMath.WindowThreshold 一致）：
@@ -74,22 +72,22 @@ float lamp_heff() {
 // 整栋楼再加 ±0.25 的偏置，有的楼整体亮、有的暗。cols = 楼窗网格的总列数
 float lamp_window_threshold(int id, int base, int cols) {
 	// Campus thresholds are baked from stable feature/grid keys. Absolute IDs only address the texture.
-	if (id >= 0 && id < 65536) {
+	if (id >= 0 && id < WINDOW_CAMPUS_CAPACITY) {
 		return texelFetch(window_thresholds, ivec2(id % 256, id / 256), 0).r;
 	}
 	int local = max(id - base, 0);
 	int c = max(cols, 1);
 	int row = local / c;
 	int col = local - row * c;
-	uint seg = uint(base) * 131u + uint(row) * 17u + uint(col / 3);
-	float t = fract(lamp_hash01(uint(id) * 2u + 1u) * 0.3 + lamp_hash01(seg * 2u + 11u));
+	uint seg = uint(base) * LAMP_WINDOW_GRID_SALT + uint(row) * LAMP_WINDOW_ROW_SALT + uint(col / LAMP_WINDOW_GROUP_COLUMNS);
+	float t = fract(lamp_hash01(uint(id) * 2u + 1u) * LAMP_WINDOW_INDEPENDENT + lamp_hash01(seg * 2u + 11u));
 	float bld = lamp_hash01(uint(base) * 2u + 7u);
-	return clamp(t + 0.5 * (bld - 0.5), 0.0, 1.0);
+	return clamp(t + LAMP_WINDOW_BUILDING_SPREAD * (bld - 0.5), 0.0, 1.0);
 }
 
 // window_override：R 0 不覆盖、128 强制灭、255 强制亮；G 0 按哈希、128 暖、255 冷；B 窗帘；只覆盖 0–65535 号
 vec4 lamp_window_override(int id) {
-	if (id < 0 || id >= 65536) {
+	if (id < 0 || id >= WINDOW_CAMPUS_CAPACITY) {
 		return vec4(0.0);
 	}
 	return texelFetch(window_override, ivec2(id % 256, id / 256), 0);
@@ -137,13 +135,13 @@ LampData lamp_fetch(int i) {
 	LampData l;
 	l.base = r0.xyz;
 	l.radius = r0.w;
-	float bank = floor(r1.x / 32768.0);
-	float packed = r1.x - 32768.0 * bank;   // 色号低字节 + 256 × 能量%（PaletteEncoding.UnpackLampColor）
-	l.col = int(mod(packed, 256.0)) + 256 * int(bank);
-	l.energy = floor(packed / 256.0) / 100.0;
-	l.slot = int(mod(r1.y, 32.0));
-	l.head = mod(floor(r1.y / 32.0), 1024.0) * 0.1;
-	l.seq = floor(r1.y / 32768.0);
+	float bank = floor(r1.x / float(LAMP_COLOR_BANK_UNIT));
+	float packed = r1.x - float(LAMP_COLOR_BANK_UNIT) * bank;   // 色号低字节 + 256 × 能量%（PaletteEncoding.UnpackLampColor）
+	l.col = int(mod(packed, float(LAMP_ENERGY_UNIT))) + PAL_WIDTH * int(bank);
+	l.energy = floor(packed / float(LAMP_ENERGY_UNIT)) / float(LAMP_ENERGY_PERCENT);
+	l.slot = int(mod(r1.y, float(LIGHT_CHANNEL_COUNT)));
+	l.head = mod(floor(r1.y / float(LIGHT_CHANNEL_COUNT)), LAMP_HEAD_LEVELS) * LAMP_HEAD_METRES;
+	l.seq = floor(r1.y / LAMP_SEQUENCE_UNIT);
 	l.theta = r1.z;
 	l.kappa = r1.w;
 	return l;
@@ -216,7 +214,7 @@ vec3 lamp_chroma_cap(vec3 c, float cap) {
 // 环境暗度 0–1：黄昏最亮时 0，入夜 1。读调色板 shadow.1 影色的线性亮度（阴雨天调色板更暗，跟着提前）。
 // 光斑、降水的灯锥与雪花提亮等"随天色变强的灯光效果"共用这一个系数，不各自计时
 float lamp_env_dark() {
-	float env = lamp_luma(texelFetch(palette, ivec2(LAMP_PAL_ENV, 0), 0).rgb);
+	float env = lamp_luma(texelFetch(palette, ivec2(PAL_SHADOW_1, 0), 0).rgb);
 	return 1.0 - smoothstep(LAMP_POOL_ENV_Y.x, LAMP_POOL_ENV_Y.y, env);
 }
 
@@ -332,7 +330,7 @@ void lamp_pool_shade(vec3 p, vec3 n_w, float aa, vec3 lamp_lit, inout vec3 lit, 
 	if (q.col < 0 || q.core + q.rim <= 0.0) {
 		return;
 	}
-	vec3 warm = texelFetch(palette, ivec2(LAMP_PAL_WARM, 0), 0).rgb;
+	vec3 warm = texelFetch(palette, ivec2(PAL_LAMP_WARM, 0), 0).rgb;
 	vec3 lc = pal_cur(q.col);
 	vec3 tint = lamp_desat(lc / max(warm, vec3(0.02)), LAMP_POOL_CORE_SAT);
 	vec3 core = lamp_chroma_cap(lamp_lit * tint, LAMP_POOL_CHROMA_CAP);

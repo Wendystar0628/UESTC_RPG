@@ -79,7 +79,7 @@ function Test-UESTCLaunchBuild {
             if (-not $found) { return $false }
         }
     }
-    foreach ($name in @('global.json', 'version.txt', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'scripts\build\build-info.ps1', 'scripts\build\fingerprints\Campus.CodeFingerprints.csproj', 'scripts\setup\install-test-runner.ps1')) {
+    foreach ($name in @('global.json', 'version.txt', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'scripts\build\build-info.ps1', 'scripts\build\generate-style-shaders.py', 'game\addons\build_import\plugin.cfg', 'game\addons\build_import\plugin.gd', 'scripts\build\fingerprints\Campus.CodeFingerprints.csproj', 'scripts\setup\install-test-runner.ps1')) {
         $inputs.Add((Get-Item -LiteralPath (Join-Path $Root $name)))
     }
     foreach ($name in @('NuGet.Config', 'nuget.config', '.editorconfig')) {
@@ -89,9 +89,9 @@ function Test-UESTCLaunchBuild {
     foreach ($file in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts\gates\arch') -Filter 'BannedSymbols.*.txt' -File) { $inputs.Add($file) }
     $sourceDirectories = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($file in $Files) {
-        if ($file.Extension -in @('.cs', '.props', '.targets', '.ruleset') -or $file.Name -match '^(\.editorconfig|BannedSymbols.*\.txt|packages\.lock\.json|nuget\.config)$') {
+        if ($file.Extension -in @('.cs', '.props', '.targets', '.ruleset', '.glsl', '.glslinc', '.gdshaderinc') -or $file.Name -match '^(\.editorconfig|BannedSymbols.*\.txt|packages\.lock\.json|nuget\.config)$') {
             $inputs.Add($file)
-            if ($file.Extension -eq '.cs') {
+            if ($file.Extension -in @('.cs', '.glsl', '.glslinc', '.gdshaderinc')) {
                 $directory = $file.DirectoryName
                 while ($directory.Length -gt $Root.Length -and $sourceDirectories.Add($directory)) { $directory = [IO.Path]::GetDirectoryName($directory) }
             }
@@ -115,7 +115,7 @@ function Test-UESTCLaunchBuild {
     }
     foreach ($buildInput in $inputs) { if ($buildInput.LastWriteTimeUtc -gt $builtAt) { return $false } }
     # Directory write times also detect deleted/renamed sources, which a scan of
-    # the surviving .cs files alone would miss. Resource-only trees are excluded.
+    # the surviving build inputs alone would miss. Unrelated resource trees are excluded.
     foreach ($directory in $sourceDirectories) { if ([IO.Directory]::GetLastWriteTimeUtc($directory) -gt $builtAt) { return $false } }
     return $true
 }
@@ -139,12 +139,16 @@ function Test-UESTCLaunchImport {
     }
     # The filesystem cache records both source and .import mtimes, as integer
     # Unix seconds. Read that Godot metadata instead of hashing every asset.
+    $importedAt = [IO.File]::GetLastWriteTimeUtc($cache)
     $epoch = [DateTime]::SpecifyKind([DateTime]'1970-01-01', [DateTimeKind]::Utc)
     foreach ($file in @(Get-UESTCLaunchFiles $game -Import)) {
         if ($file.Extension -eq '.import') {
             if (-not [IO.File]::Exists($file.FullName.Substring(0, $file.FullName.Length - 7))) { return $false }
             continue
         }
+        # Includes have no .import sidecar. The existing scan timestamp is only
+        # a cheap trigger; dependency selection belongs to the editor import step.
+        if ($file.Extension -in @('.glslinc', '.gdshaderinc') -and $file.LastWriteTimeUtc -gt $importedAt) { return $false }
         $relative = $file.FullName.Substring($game.Length + 1).Replace('\', '/')
         $sidecar = $file.FullName + '.import'
         if (-not [IO.File]::Exists($sidecar)) {
@@ -175,9 +179,11 @@ function Initialize-UESTCLaunch {
         Write-Host '构建有变化，编译中……'
         Invoke-UESTCProcess 'dotnet' @('build', "$Root\game\Campus.csproj", '-c', 'Debug', '-v', 'q') $Root (Join-Path $out 'build.log') | Out-Null
     }
-    if (-not (Test-UESTCLaunchImport $Root $Godot)) {
+    # A build can change generated includes without changing an RD main source.
+    if ($built -or -not (Test-UESTCLaunchImport $Root $Godot)) {
         Write-Host '导入资源有变化，导入中……'
-        Invoke-UESTCProcess $Godot @('--headless', '--path', "$Root\game", '--import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600 | Out-Null
+        $import = Invoke-UESTCProcess $Godot @('--headless', '--editor', '--path', "$Root\game", '--', '--build-import') $Root (Join-Path $out 'import.log') -TimeoutSeconds 600
+        Assert-UESTCCleanGodotLog $import
     }
     # Import can create .uid/.import files beside sources. Record success after
     # that step too, so generated sidecars do not cause another no-op build.

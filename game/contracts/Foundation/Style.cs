@@ -10,7 +10,7 @@ public enum ToonFx
 }
 public enum ToonNormal { Flat, Smooth, Spherical, AnalyticSphere, AnalyticCylinder }
 public enum LineClass { Building, Tree, Fine, None, Figure }
-public enum ShadeSteps : byte { Two, TwoHalf, Soft, Three }
+public enum ShadeSteps : byte { Two = 0, TwoHalf = 1, Soft = 2, Three = 3 }
 // Numeric identities are stable; removed placeholder IDs are not reused. MaterialShaders selects the shader.
 public enum ToonKind { Static = 0, Glass = 1, GlassNear = 2, VegTrunk = 4, VegCard = 5, VegGrass = 7, SceneText = 10, VegTwigMass = 11 }
 

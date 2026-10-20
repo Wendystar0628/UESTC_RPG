@@ -24,10 +24,13 @@ public readonly record struct MaterialColors(Lab Lit, Lab Shade, Lab ShadeIn, La
 /// <summary>Lit/shade derivation of ART-STYLE with the WP-37 rules in derive.json.</summary>
 public sealed class Deriver
 {
+    public const double LampIntensityM = 0.95;
+    public const double TintK = 0.45;
+
     private readonly record struct ClassParams(double RMat, double KC, double DhMax, bool Three);
 
     private readonly Dictionary<string, ClassParams> _classes = new(StringComparer.Ordinal);
-    private readonly double _adaptRef, _tintK, _vegTintK, _capRatio, _capMinC, _chromaMulMax, _neutral0, _neutral1;
+    private readonly double _adaptRef, _vegTintK, _capRatio, _capMinC, _chromaMulMax, _neutral0, _neutral1;
     private readonly double _yellowLo, _yellowHi, _greenLo, _greenHi;
     private readonly bool _scaleChroma;
     private readonly double _warmK, _warmAlt0, _warmAlt1, _warmC0, _warmC1, _hueMax, _albedoGain;
@@ -40,7 +43,6 @@ public sealed class Deriver
     {
         var lit = derive.Lit;
         _adaptRef = lit.AdaptRef;
-        _tintK = lit.TintK;
         _vegTintK = lit.VegetationTintK;
         _capRatio = lit.ChromaCap.Ratio;
         _capMinC = lit.ChromaCap.MinAlbedoC;
@@ -82,7 +84,7 @@ public sealed class Deriver
         var l = m * (1.0 - Math.Pow(1.0 - Math.Clamp(albedo.L, 0.0, 1.0), v[LitLift]));
         double ka = v[Key + 1], kb = v[Key + 2];
         if (hero is null || hero.Mode == VegetationMode.Albedo)
-            return new(l, m * (v[SatGain] * albedo.A + _tintK * ka), m * (v[SatGain] * albedo.B + _tintK * kb));
+            return new(l, m * (v[SatGain] * albedo.A + TintK * ka), m * (v[SatGain] * albedo.B + TintK * kb));
         var g = v[SatGain] / hero.SatGain;
         return new(l, m * (g * albedo.A + _vegTintK * (ka - hero.KeyA)), m * (g * albedo.B + _vegTintK * (kb - hero.KeyB)));
     }
@@ -232,9 +234,8 @@ public sealed class Deriver
     /// <summary>Lamp-pool colour (palette row 1, mainline placeholder): albedo under the warm window/lamp light.</summary>
     public Lab LampLit(Lab albedo, Lab lamp)
     {
-        const double lampIntensityM = 0.95;     // (0.6 / adaptRef)^(1/3) at adaptRef 0.7
-        var l = lampIntensityM * Math.Clamp(albedo.L, 0.0, 1.0);
-        return new(l, lampIntensityM * (albedo.A + _tintK * lamp.A), lampIntensityM * (albedo.B + _tintK * lamp.B));
+        var l = LampIntensityM * Math.Clamp(albedo.L, 0.0, 1.0);
+        return new(l, LampIntensityM * (albedo.A + TintK * lamp.A), LampIntensityM * (albedo.B + TintK * lamp.B));
     }
 }
 

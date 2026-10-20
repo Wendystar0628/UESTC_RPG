@@ -7,6 +7,12 @@ namespace Campus.Contracts;
 /// </summary>
 public static class IntegerNoise
 {
+    public const uint PuddleMixA = 2146121005u;
+    public const uint PuddleMixB = 2221713035u;
+    public const uint PuddleSaltX = 73856093u;
+    public const uint PuddleSaltZ = 19349663u;
+    public const float Unit24 = 16777216f;
+
     /// <summary>The shared scenery/lawn/cloud avalanche; callers supply the already combined integer seed.</summary>
     public static uint Mix(uint value)
     {
@@ -29,8 +35,8 @@ public static class IntegerNoise
     public static uint Hash3D(uint x, uint y, uint z) => Hash2D(x, y, unchecked(z * 0xCB1AB31Fu));
 
     /// <summary>Scenery, lawn and StableHash samples use the high 24 bits; clouds use the low 24 bits.</summary>
-    public static float High24(uint hash) => (hash >> 8) * (1f / 16777216f);
-    public static float Low24(uint hash) => (hash & 0xFFFFFFu) / 16777216f;
+    public static float High24(uint hash) => (hash >> 8) * (1f / Unit24);
+    public static float Low24(uint hash) => (hash & 0xFFFFFFu) / Unit24;
 
     /// <summary>Cubic 1D noise in [-1,1), optionally periodic in lattice cells, as used by the diorama.</summary>
     public static float Value1D(float t, uint seed, int wrap = 0)
@@ -73,7 +79,7 @@ public static class IntegerNoise
             {
                 Lattice.Lawn => High24(Hash2D((uint)x, (uint)z, seed)),
                 Lattice.Cloud => Low24(Hash3D((uint)CellIndex(x, period), (uint)CellIndex(z, period), seed)),
-                Lattice.Puddle => High24(PuddleHash((uint)x * 73856093u ^ PuddleHash((uint)z * 19349663u + 1u))),
+                Lattice.Puddle => High24(PuddleHash((uint)x * PuddleSaltX ^ PuddleHash((uint)z * PuddleSaltZ + 1u))),
                 _ => throw new ArgumentOutOfRangeException(nameof(lattice))
             };
         }
@@ -84,9 +90,9 @@ public static class IntegerNoise
         unchecked
         {
             value ^= value >> 16;
-            value *= 2146121005u;
+            value *= PuddleMixA;
             value ^= value >> 15;
-            value *= 2221713035u;
+            value *= PuddleMixB;
             return value ^ (value >> 16);
         }
     }

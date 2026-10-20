@@ -55,8 +55,6 @@ public sealed record KeyLineJson(double Darken, Lab Warm, Lab Cool);
 
 public sealed record KeyColorsJson(
     [property: JsonPropertyName("bounce.ground")] Lab BounceGround,
-    [property: JsonPropertyName("shaft.near")] Lab ShaftNear,
-    [property: JsonPropertyName("shaft.far")] Lab ShaftFar,
     Lab Rim,
     [property: JsonPropertyName("glass.glare")] Lab GlassGlare,
     [property: JsonPropertyName("sky.cloudLit")] Lab SkyCloudLit,
@@ -88,7 +86,7 @@ public sealed record DeriveFile(string Format, DeriveLitJson Lit, DeriveShadeJso
     SwatchLJson SwatchL, Lab ShadowReference, Dictionary<string, MaterialClassJson> MaterialClasses, string[] FrameTokens,
     string? Owner = null, string? Doc = null, string[]? Notes = null, DeepJson? Deep = null);
 
-public sealed record DeriveLitJson(double AdaptRef, double TintK, double VegetationTintK, WarmCapJson VegetationWarmCap,
+public sealed record DeriveLitJson(double AdaptRef, double VegetationTintK, WarmCapJson VegetationWarmCap,
     HeroGuardJson HeroGuard, ChromaCapJson ChromaCap);
 
 public sealed record WarmCapJson(double K, DoublePair AltDeg, DoublePair KeyC, double HueMax, double AlbedoChromaGain);

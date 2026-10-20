@@ -2,6 +2,30 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "game/style/shaders/sky_params.gdshaderinc",
+      "owner": "WP-40"
+    },
+    {
+      "pattern": "game/style/shaders/sky_params.gdshaderinc.uid",
+      "owner": "WP-40"
+    },
+    {
+      "pattern": "game/style/shaders/sky_bodies.gdshaderinc",
+      "owner": "WP-40"
+    },
+    {
+      "pattern": "game/style/shaders/sky_bodies.gdshaderinc.uid",
+      "owner": "WP-40"
+    },
+    {
+      "pattern": "game/style/shaders/sky_clouds.gdshaderinc",
+      "owner": "WP-40"
+    },
+    {
+      "pattern": "game/style/shaders/sky_clouds.gdshaderinc.uid",
+      "owner": "WP-40"
+    },
+    {
       "pattern": "game/data/build-code-fingerprints.json",
       "owner": "WP-00"
     },
@@ -1103,6 +1127,17 @@
     }
   ],
   "shaderWhitelist": [
+    "game/style/shaders/toon_surface.gdshaderinc",
+    "game/style/shaders/toon_look.gdshaderinc",
+    "game/style/shaders/style_consts.gdshaderinc",
+    "game/style/shaders/sky_params.gdshaderinc",
+    "game/style/shaders/sky_clouds.gdshaderinc",
+    "game/style/shaders/sky_bodies.gdshaderinc",
+    "game/style/outline/post_outline_shared.glslinc",
+    "game/style/outline/post_outline_mask.glslinc",
+    "game/style/outline/post_outline_lut.glslinc",
+    "game/style/outline/post_outline_finish.glslinc",
+    "game/style/outline/post_outline_composite.glslinc",
     "game/style/outline/fog.glslinc",
     "game/style/outline/post_outline.glsl",
     "game/style/shaders/cine_cloud.gdshader",

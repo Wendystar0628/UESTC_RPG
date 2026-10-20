@@ -122,8 +122,8 @@ void fragment() {
 	ivec2 pane = ivec2(floor(UV));
 	vec2 puv = fract(UV);
 	float packed = round(UV2.y);
-	int ch = int(mod(packed, 32.0));
-	int cols = int(floor(packed / 32.0));
+	int ch = int(mod(packed, float(LIGHT_CHANNEL_COUNT)));
+	int cols = int(floor(packed / float(LIGHT_CHANNEL_COUNT)));
 	int wbase = int(round(UV2.x));
 	int wid = wbase + pane.y * cols + pane.x;
 	vec4 wov = toon_window_override(wid, (tctx.flags & TOON_F_OUTSKIRT) == 0);
@@ -150,8 +150,8 @@ void fragment() {
 	vec3 card_glow = vec3(0.0);
 	// VF-B Reserved：低七位卡类型，高位表示当前 LOD 已有实体窗帘。
 	int card_byte = int(round(tctx.spare * 255.0));
-	bool card_screen_enabled = (card_byte & 128) == 0;
-	WCard wcard = wcard_fetch(card_byte & 127);
+	bool card_screen_enabled = (card_byte & WCARD_PHYSICAL_CURTAIN) == 0;
+	WCard wcard = wcard_fetch(card_byte & WCARD_TYPE_MASK);
 	uint wkey = uint(wid) * 2u + 4u;
 	if (carded && on < 1.0) {
 		// 白天的室内是暖影（WLD-INTERIORS）。明度按天光给定值，不随玻璃底色（玻璃底色太深，房间读不出来）；夜里退回玻璃底色

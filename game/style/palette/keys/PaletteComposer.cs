@@ -234,7 +234,7 @@ public sealed class PaletteComposer
     public void ComposeCurrent(WorldFrame w)
     {
         var d = _script.Deriver;
-        foreach (var (id, token, constant) in _frame) PutFrame(id, 0, FrameColor(token, constant, w));
+        foreach (var (id, token, constant) in _frame) PutFrame(id, PaletteLayout.CurrentRow, FrameColor(token, constant, w));
         foreach (var p in _pairs)
         {
             var m = p.Veg is { } veg
@@ -258,13 +258,13 @@ public sealed class PaletteComposer
 
     private void WritePair(int litId, MaterialColors m, Lab lamp)
     {
-        PutFrame(litId, 0, m.Lit);
-        PutFrame(litId + 1, 0, m.Shade);
-        for (var c = litId; c <= litId + 1; c++)
+        PutFrame(litId, PaletteLayout.CurrentRow, m.Lit);
+        PutFrame(litId + PaletteLayout.ShadeOffset, PaletteLayout.CurrentRow, m.Shade);
+        for (var c = litId; c <= litId + PaletteLayout.ShadeOffset; c++)
         {
-            PutFrame(c, 1, lamp);
-            PutFrame(c, 2, m.ShadeIn);
-            PutFrame(c, 3, m.LitIn);
+            PutFrame(c, PaletteLayout.LampRow, lamp);
+            PutFrame(c, PaletteLayout.InteriorShadeRow, m.ShadeIn);
+            PutFrame(c, PaletteLayout.InteriorLitRow, m.LitIn);
         }
     }
 

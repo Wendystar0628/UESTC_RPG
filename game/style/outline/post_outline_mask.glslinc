@@ -1,0 +1,376 @@
+#ifdef PASS_MASK
+
+// Nominal outer-contour width in px at 1080p by linear depth (ART-STYLE).
+float outer_width_nominal(float z) {
+	float w;
+	if (z < 5.0) {
+		w = mix(1.6, 1.25, z / 5.0);
+	} else if (z < 30.0) {
+		w = 1.25;
+	} else if (z < 60.0) {
+		w = mix(1.25, 1.1, (z - 30.0) / 30.0);
+	} else if (z < 150.0) {
+		w = mix(1.1, 0.75, (z - 60.0) / 90.0);
+	} else {
+		w = mix(0.75, 0.0, clamp((z - 150.0) / (LINE_FAR - 150.0), 0.0, 1.0));
+	}
+	return min(w, 2.0);   // close-up cap 2 px
+}
+
+// Nominal -> internal pixels. Lines whose nominal width reaches 1 px keep at least one internal pixel so that
+// they stay a clear ~1 px line after FSR1 upscaling (SYS-GRAPHICS §2); the floor ramps in over 0.85-1.0 px.
+float to_internal(float w_nom) {
+	return max(w_nom * P.line_a.y, smoothstep(0.85, 1.0, w_nom));
+}
+
+// Coverage of a line of width w (px) on a pixel whose centre is d px from the edge (1 px box filter).
+float box_cov(float w, float d) {
+	return clamp(w + 0.5 - d, 0.0, 1.0);
+}
+
+uint hash_u(uvec4 v) {
+	uint h = v.x * 0x8da6b343u ^ v.y * 0xd8163841u ^ v.z * 0xcb1ab31fu ^ v.w * 0x165667b1u;
+	h ^= h >> 15;
+	h *= 0x2c1b3c6du;
+	h ^= h >> 12;
+	h *= 0x297a2d39u;
+	h ^= h >> 15;
+	return h;
+}
+
+float hash_f(ivec3 cell, uint seed) {
+	return float(hash_u(uvec4(uvec3(cell + ivec3(1 << 20)), seed)) & 0xffffu) / 65535.0;
+}
+
+// Line weight variation (ART-STYLE §4.4): smooth value noise on a 0.4 m world grid, seeded by material ID,
+// so it is anchored to geometry and does not swim with the camera or change over time.
+float weight_noise(vec3 world, uint id) {
+	vec3 g = world / 0.4;
+	ivec3 i = ivec3(floor(g));
+	vec3 f = fract(g);
+	f = f * f * (3.0 - 2.0 * f);
+	float n000 = hash_f(i + ivec3(0, 0, 0), id);
+	float n100 = hash_f(i + ivec3(1, 0, 0), id);
+	float n010 = hash_f(i + ivec3(0, 1, 0), id);
+	float n110 = hash_f(i + ivec3(1, 1, 0), id);
+	float n001 = hash_f(i + ivec3(0, 0, 1), id);
+	float n101 = hash_f(i + ivec3(1, 0, 1), id);
+	float n011 = hash_f(i + ivec3(0, 1, 1), id);
+	float n111 = hash_f(i + ivec3(1, 1, 1), id);
+	return mix(mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
+			mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y), f.z);
+}
+
+const int RING1 = 8;
+const ivec2 RING1_OFS[8] = ivec2[8](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1),
+		ivec2(1, 1), ivec2(-1, 1), ivec2(1, -1), ivec2(-1, -1));
+// Diagonal-only hits come from raster stair corners next to an axis-detected line, whose true distance to the
+// edge is >= ~1.2 px; counting them at 0.71 px grows "ticks" under near-horizontal edges. They only add width
+// to lines wider than one pixel.
+const float RING1_D[8] = float[8](0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5, 1.5);
+const int RING2 = 4;
+const ivec2 RING2_OFS[4] = ivec2[4](ivec2(2, 0), ivec2(-2, 0), ivec2(0, 2), ivec2(0, -2));
+const float RING2_D = 1.5;
+
+// Edge strengths between centre s0 and neighbour at c: x depth (silhouette), y normal crease, z material ID.
+// All are already restricted to the case where the centre is the nearer side. w: 1 if convex and the centre is
+// the more lit face (candidate for the bright line), else 0.
+vec4 edge_strengths(Surf s0, LineCls l0, ivec2 c, out float qz) {
+	Surf q = fetch_surf(c);
+	qz = q.sky ? 1e9 : q.z;
+	if (q.sky) {
+		// Background is sky: a pure silhouette.
+		return vec4(1.0, 0.0, 0.0, 0.0);
+	}
+	LineCls lq = q.id == s0.id ? l0 : line_class(q.id);
+	bool q_noline = (lq.flags & LF_NOLINE) != 0u;
+	if (q_noline && q.z <= s0.z) {
+		// A nearer "no line" neighbour (petal, cloud card, particle) counts as same depth: nothing is outlined.
+		return vec4(0.0);
+	}
+
+	// Depth: compare the neighbour with the centre's plane along the neighbour's view ray.
+	// s = |predicted| / |actual|; rel = 1 - s > 0 means the neighbour lies behind the centre's plane.
+	float pn0 = dot(s0.pos, s0.nrm);
+	float pnq = dot(q.pos, s0.nrm);
+	float rel = -1.0;
+	if (pn0 * pnq > 0.0) {
+		rel = 1.0 - pn0 / pnq;
+	}
+	// 8-bit normals make the prediction noisy where the plane is seen edge-on; widen the threshold by the
+	// expected error (normal quantisation ~0.004) so grazing ground does not break into false lines.
+	float slack = 2.0 * 0.004 * length(q.pos - s0.pos) / max(abs(pn0), 1e-3);
+	float t0 = 0.012 + slack;
+	float e_depth = smoothstep(t0, t0 + 0.008, rel) * step(s0.z, q.z);
+
+	// Side for crease and ID lines (one-sided, full width): the face turned more toward the camera draws, which is
+	// constant along an edge and so cannot zigzag; parallel faces (an ID boundary on one plane, a protruding
+	// strip) fall back to the lower material ID. Silhouettes always sit on the nearer side (e_depth above).
+	float f0 = dot(s0.nrm, -normalize(s0.pos));
+	float fq = dot(q.nrm, -normalize(q.pos));
+	float side;
+	if (abs(f0 - fq) > 0.02) {
+		side = clamp(0.5 + (f0 - fq) / 0.04, 0.0, 1.0);
+	} else {
+		side = s0.id < q.id ? 1.0 : (s0.id > q.id ? 0.0 : 0.5);
+	}
+
+	float e_crease = 0.0;
+	float e_id = 0.0;
+	float convex_lit = 0.0;
+	bool same_id = q.id == s0.id;
+	bool outer_only = (l0.flags & LF_OUTER_ONLY) != 0u;
+	if (!q_noline) {
+		if (!(outer_only && same_id)) {
+			float nd = dot(s0.nrm, q.nrm);
+			e_crease = (1.0 - smoothstep(0.62, 0.78, nd));
+			if ((l0.flags & LF_INNER_SOFT) != 0u && (lq.flags & LF_INNER_SOFT) != 0u) {
+				e_crease *= INNER_SOFT_GAIN;
+			}
+			// Convex bright line candidate (ART-STYLE §4.7): convex when (P_b - P_a) . N_a < 0, and the centre
+			// is the face turned more toward the key light.
+			if (e_crease > 0.25 && s0.z < BRIGHT_FAR1) {
+				float lp = dot(s0.nrm, P.key_light.xyz);
+				float lq_dot = dot(q.nrm, P.key_light.xyz);
+				bool convex = dot(q.pos - s0.pos, s0.nrm) < 0.0;
+				if (convex && lp > 0.0 && lp >= lq_dot) {
+					convex_lit = 1.0;
+				}
+			}
+			e_crease *= side;
+		}
+		if (!same_id && !outer_only) {
+			e_id = side;
+		}
+	} else {
+		// Farther "no line" neighbour (water behind a wall, a cloud card behind a roof): keep the silhouette
+		// and the object boundary on this side (the no-line side never draws), skip creases.
+		e_id = 1.0;
+	}
+	if (outer_only && same_id) {
+		// Card / mixed canopies: cards of the same canopy never outline each other.
+		e_depth = 0.0;
+	}
+	return vec4(e_depth, e_crease, e_id, convex_lit);
+}
+
+// True if pixel p lies behind the plane of s0 by the depth step of a silhouette (the same plane test as e_depth in
+// edge_strengths, a little stricter), so a part standing in front of a nearby surface counts as well as one
+// against the sky, while a plane seen at a grazing angle does not.
+bool behind_plane(Surf s0, ivec2 p) {
+	float d = texelFetch(depth_tex, p, 0).r;
+	if (d <= 0.0) {
+		return true;
+	}
+	vec3 q = view_pos(p, d);
+	if (-q.z > s0.z * 1.03 + 0.1) {
+		return true;   // far behind whatever the normal says (a round rod's silhouette normal is edge-on)
+	}
+	float pn0 = dot(s0.pos, s0.nrm);
+	float pnq = dot(q, s0.nrm);
+	return pn0 * pnq > 0.0 && 1.0 - pn0 / pnq > THIN_DEPTH_REL;
+}
+
+uint id_at(ivec2 p) {
+	return decode_id(texelFetch(normal_roughness_tex, clamp_px(p), 0).w);
+}
+
+// Width in pixels of the run of material id through p across dir, counted up to n pixels each way.
+float id_width(ivec2 p, ivec2 dir, uint id, int n) {
+	float w = 1.0;
+	for (int i = 1; i <= n; i++) {
+		if (id_at(p + dir * i) != id) {
+			break;
+		}
+		w += 1.0;
+	}
+	for (int i = 1; i <= n; i++) {
+		if (id_at(p - dir * i) != id) {
+			break;
+		}
+		w += 1.0;
+	}
+	return w;
+}
+
+float inv_z(ivec2 p) {
+	float d = texelFetch(depth_tex, p, 0).r;
+	return d <= 0.0 ? 0.0 : 1.0 / max(-view_pos(p, d).z, 1e-4);
+}
+
+// Depth step from the centre c (linear depth z0) to c + dir inside one card canopy, after the reference's foliage
+// edge test (S8): the linear extrapolations of 1/z from either side of the pair both miss the other side by more
+// than FOLIAGE_DEPTH_REL of the nearer 1/z, and the centre is the nearer side. 1/z is linear in screen space on any
+// plane, so cards seen at a grazing angle and the fake clump normals play no part; only one clump standing in front
+// of another, or one tree's crown in front of the next, draws.
+float foliage_step(ivec2 c, ivec2 dir, float z0) {
+	float wc = 1.0 / max(z0, 1e-4);
+	float wq = inv_z(clamp_px(c + dir));
+	if (wq >= wc) {
+		return 0.0;
+	}
+	float thr = FOLIAGE_DEPTH_REL * wc;
+	float miss_c = abs(wq - (2.0 * wc - inv_z(clamp_px(c - dir))));
+	float miss_q = abs(wc - (2.0 * wq - inv_z(clamp_px(c + dir * 2))));
+	return smoothstep(thr, 1.4 * thr, miss_c) * smoothstep(thr, 1.4 * thr, miss_q);
+}
+
+// Foreground thickness in internal pixels at p across a silhouette that lies in direction dir: walks toward -dir
+// until the background shows again. 0 if p itself is background, 99 if the foreground goes on for more than n px.
+float thickness(Surf s0, ivec2 p, ivec2 dir, int n) {
+	if (behind_plane(s0, p)) {
+		return 0.0;
+	}
+	for (int i = 1; i <= n; i++) {
+		if (behind_plane(s0, clamp_px(p - dir * i))) {
+			return float(i);
+		}
+	}
+	return 99.0;
+}
+
+void main() {
+	ivec2 c = ivec2(gl_GlobalInvocationID.xy);
+	if (any(greaterThanEqual(c, ivec2(P.size.xy)))) {
+		return;
+	}
+	Surf s0 = fetch_surf(c);
+	// Early out: sky and beyond 400 m (ENG-PERF). Not by tilt-shift blur circle.
+	if (s0.sky || s0.z >= LINE_FAR) {
+		imageStore(line_mask, c, vec4(0.0));
+		return;
+	}
+	LineCls l0 = line_class(s0.id);
+	float id_bits = float(s0.id);
+	if ((l0.flags & (LF_ERASE | LF_NOLINE)) != 0u) {
+		imageStore(line_mask, c, vec4(0.0, id_bits / 255.0, 0.0, 0.0));
+		return;
+	}
+
+	vec4 e1[8];
+	float qz[8];
+	float any_edge = 0.0;
+	float convex_lit = 0.0;
+	for (int k = 0; k < RING1; k++) {
+		e1[k] = edge_strengths(s0, l0, clamp_px(c + RING1_OFS[k]), qz[k]);
+		convex_lit = max(convex_lit, e1[k].w);
+	}
+
+	// Card canopies (only the outer contour against other materials): their own cards never outline each other by
+	// the solid criteria, but a clump in front of another clump does, by the foliage depth step.
+	if ((l0.flags & LF_OUTER_ONLY) != 0u && s0.z < FOLIAGE_FADE1) {
+		float gain = FOLIAGE_INNER_GAIN * (1.0 - smoothstep(FOLIAGE_FADE0, FOLIAGE_FADE1, s0.z));
+		for (int k = 0; k < 4; k++) {
+			if (id_at(c + RING1_OFS[k]) == s0.id) {
+				e1[k].x = max(e1[k].x, gain * foliage_step(c, RING1_OFS[k], s0.z));
+			}
+		}
+	}
+
+	// Speck rule and thin parts, on the four axis neighbours. sil_keep carries the result to the silhouettes found by
+	// the diagonal and second-ring taps of this pixel.
+	int probe = int(min(ceil(THIN_NONE_PX * P.line_a.y), 4.0));
+	float sil_keep = 1.0;
+	for (int k = 0; k < 4; k++) {
+		if (e1[k].x <= 0.0) {
+			continue;
+		}
+		ivec2 dir = RING1_OFS[k];
+		ivec2 perp = ivec2(dir.y, dir.x);
+		// Speck rule (reference S8): the occluder must continue along the edge on at least one side, or a lone pixel
+		// (a raster dropout of a thin rod, a leaf tip) would print as a dark dot.
+		float jump = qz[k] - s0.z;
+		float z1 = -view_pos(clamp_px(c + perp), texelFetch(depth_tex, clamp_px(c + perp), 0).r).z;
+		float z2 = -view_pos(clamp_px(c - perp), texelFetch(depth_tex, clamp_px(c - perp), 0).r).z;
+		if (abs(z1 - s0.z) >= 0.5 * jump && abs(z2 - s0.z) >= 0.5 * jump) {
+			e1[k].x = 0.0;
+			sil_keep = 0.0;
+			continue;
+		}
+		// Thin part: the thickest of this pixel and its two neighbours along the edge, so a part whose rasterised
+		// thickness flickers between one and two pixels keeps a steady line instead of turning into dashes.
+		float t = max(thickness(s0, c, dir, probe), max(thickness(s0, clamp_px(c + perp), dir, probe),
+				thickness(s0, clamp_px(c - perp), dir, probe)));
+		float keep = mix(THIN_KEEP, 1.0, smoothstep(THIN_FULL_PX, THIN_NONE_PX, t / P.line_a.y));
+		e1[k].x *= keep;
+		sil_keep = min(sil_keep, keep);
+	}
+	for (int k = 4; k < RING1; k++) {
+		e1[k].x *= sil_keep;
+	}
+	// The same for material lines: a narrow part between two other materials (a coping seen from above, a bracket, a
+	// far rail, a band) is all line when it is a pixel or two wide. Measured as the widest of this pixel and its
+	// neighbours of the same material along the edge, so a part whose width flickers keeps a steady line.
+	float strip_keep = 1.0;
+	int strip_probe = int(min(ceil(STRIP_NONE_PX * P.line_a.y), 4.0));
+	for (int k = 0; k < 4; k += 2) {
+		if (max(max(e1[k].z, e1[k].y), max(e1[k + 1].z, e1[k + 1].y)) <= 0.0) {
+			continue;
+		}
+		ivec2 dir = RING1_OFS[k];
+		ivec2 perp = ivec2(dir.y, dir.x);
+		float w = id_width(c, dir, s0.id, strip_probe);
+		if (id_at(c + perp) == s0.id) {
+			w = max(w, id_width(clamp_px(c + perp), dir, s0.id, strip_probe));
+		}
+		if (id_at(c - perp) == s0.id) {
+			w = max(w, id_width(clamp_px(c - perp), dir, s0.id, strip_probe));
+		}
+		strip_keep = min(strip_keep, mix(THIN_KEEP, 1.0, smoothstep(STRIP_FULL_PX, STRIP_NONE_PX, w / P.line_a.y)));
+	}
+	for (int k = 0; k < RING1; k++) {
+		e1[k].yz *= strip_keep;
+	}
+	for (int k = 0; k < RING1; k++) {
+		any_edge = max(any_edge, max(e1[k].x, max(e1[k].y, e1[k].z)));
+	}
+
+	float bright_ok = bevel_lift(s0.id) > 0.0 ? 1.0 : 0.0;
+	uint flag_bits = (convex_lit * bright_ok > 0.5) ? 128u : 0u;
+	float g_out = float(s0.id | flag_bits) / 255.0;
+
+	if (any_edge <= 0.0) {
+		imageStore(line_mask, c, vec4(0.0, g_out, 0.0, 0.0));
+		return;
+	}
+
+	// Width per line kind at this depth, with weight variation and the material's width coefficient.
+	vec3 world = (P.inv_view * vec4(s0.pos, 1.0)).xyz;
+	float n = weight_noise(world, s0.id);
+	float strength = mix(0.85, 1.0, n);
+	float wmul = mix(0.9, 1.1, n) * l0.width;
+	float w_nom = outer_width_nominal(s0.z) * wmul;
+	float w_outer = to_internal(min(w_nom, 2.0));
+	float w_crease = to_internal(min(w_nom * 0.8, 2.0));
+	float w_id = to_internal(min(w_nom * 0.6, 2.0));
+
+	float cov = 0.0;
+	for (int k = 0; k < RING1; k++) {
+		float d = RING1_D[k];
+		cov = max(cov, e1[k].x * box_cov(w_outer, d));
+		cov = max(cov, e1[k].y * box_cov(w_crease, d));
+		cov = max(cov, e1[k].z * box_cov(w_id, d));
+	}
+	// Second ring only where a line is wider than one internal pixel (close range, high internal resolution).
+	if (max(w_outer, max(w_crease, w_id)) > 1.0) {
+		for (int k = 0; k < RING2; k++) {
+			float qz2;
+			vec4 e = edge_strengths(s0, l0, clamp_px(c + RING2_OFS[k]), qz2);
+			cov = max(cov, e.x * sil_keep * box_cov(w_outer, RING2_D));
+			cov = max(cov, e.y * strip_keep * box_cov(w_crease, RING2_D));
+			cov = max(cov, e.z * strip_keep * box_cov(w_id, RING2_D));
+		}
+	}
+
+	// Small-item fade (lines go before the geometry is culled, ART-STYLE §4.1).
+	if (l0.fade_end > 0.0) {
+		cov *= 1.0 - smoothstep(0.42 * l0.fade_end, l0.fade_end, s0.z);
+	}
+	cov *= strength;
+
+	imageStore(line_mask, c, vec4(cov, g_out, 0.0, 0.0));
+}
+
+#endif // PASS_MASK
+
+// ---------------------------------------------------------------------------------------------------------------

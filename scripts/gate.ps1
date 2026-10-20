@@ -13,6 +13,7 @@ param([Parameter(Mandatory)][ValidatePattern('^WP-\d{2}[a-z]?$')][string]$Wp,
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'lib/common.ps1')
+. (Join-Path $PSScriptRoot 'lib/start-game.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-source.ps1')
 . (Join-Path $PSScriptRoot 'gates/check-naming.ps1')
 # Test budget (D-246): quick-check tests over this many seconds are listed; the record keeps the recent runs only.
@@ -348,10 +349,6 @@ function Assert-GodotVersion {
     $expected = (Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $root 'tools/godot-version.txt')).Trim()
     if ($version.Output.Trim() -ne $expected) { throw "Godot version mismatch: expected $expected; got $($version.Output.Trim())" }
 }
-function Assert-CleanGodotLog {
-    param($ProcessResult)
-    if ($ProcessResult.Output -match '(?im)(?:SCRIPT )?ERROR:|shader[^\r\n]*(?:compilation failed|compile error)') { throw "Godot reported errors: $($ProcessResult.Log)" }
-}
 function Write-TestSettings {
     $settings = Join-Path $work 'tests.runsettings'
     $escapedGodot = [Security.SecurityElement]::Escape($godot)
@@ -377,9 +374,12 @@ foreach ($id in $selected) {
                     $formatArgs = @('format',(Join-Path $game 'Campus.sln'),'--verify-no-changes','--no-restore','--include') + @($formatPaths | ForEach-Object { Join-Path $root $_ })
                     $null = Invoke-GateProcess 'G1-format' dotnet $formatArgs
                 }
+                # The build can refresh generated includes even when the changed
+                # paths themselves do not select a resource import (for example contracts).
+                $importRequired = $importRequired -or -not (Test-UESTCLaunchImport $root $godot)
                 if ($importRequired) {
-                    $r = Invoke-GateProcess 'G1-import' $godot @('--headless','--path',$game,'--import')
-                    Assert-CleanGodotLog $r
+                    $r = Invoke-GateProcess 'G1-import' $godot @('--headless','--editor','--path',$game,'--','--build-import')
+                    Assert-UESTCCleanGodotLog $r
                 }
                 $formatDetail = "changed-source format verified ($($formatPaths.Count) files)"
                 $detail = "Naming files=$($naming.CheckedFiles); build verified; $formatDetail; import=$importRequired"
@@ -417,6 +417,7 @@ foreach ($id in $selected) {
             }
             'G3' { $detail = Test-UESTCOwnership $root $Wp $changes -BaseRef $BaseRef | ConvertTo-Json -Depth 5 -Compress }
             'G4' {
+                $null = Invoke-GateProcess 'G4-style-generated' 'python' @('-X','utf8',(Join-Path $root 'scripts/build/generate-style-shaders.py'),'--root',$root,'--check')
                 $newFiles = Test-UESTCNewCodeFiles $root $unfilteredChanges -BaseRef $BaseRef
                 $null = Test-UESTCSourceBoundaries $root
                 $settings = Write-TestSettings
@@ -426,7 +427,7 @@ foreach ($id in $selected) {
             'G5' {
                 Assert-GodotVersion
                 $r = Invoke-GateProcess 'G5-registry' $godot @('--headless','--path',$game,'--','--gate=registry','--map=*','--save=off','--audio=off')
-                Assert-CleanGodotLog $r
+                Assert-UESTCCleanGodotLog $r
                 $registryReport = [regex]::Match($r.Output, '(?m)^G5_REGISTRY_RESULT[ \t]+(.+)$')
                 if (-not $registryReport.Success) { throw 'The formal registry check did not return its result.' }
                 $detail = ConvertFrom-Json -InputObject $registryReport.Groups[1].Value
@@ -449,7 +450,7 @@ foreach ($id in $selected) {
                 $release = Join-Path $root 'build/windows'
                 $null = [IO.Directory]::CreateDirectory($release)
                 $r = Invoke-GateProcess 'G6-export' $godot @('--path',$game,'--export-release','Windows Desktop',(Join-Path $release 'UESTC.exe')) -Visible
-                Assert-CleanGodotLog $r
+                Assert-UESTCCleanGodotLog $r
                 if (-not (Test-Path -LiteralPath (Join-Path $release 'UESTC.exe'))) { throw 'Export command did not produce UESTC.exe.' }
                 $bytes = (Get-ChildItem -LiteralPath $release -File -Recurse | Measure-Object Length -Sum).Sum
                 $detail = "Windows Desktop release export; directory bytes=$bytes. Archive/PCK/license/production-budget checks: NotImplemented."

@@ -70,15 +70,15 @@ varying flat float v_seed;
 
 uint pc_hash(uint x) {
 	x ^= x >> 16u;
-	x *= 2146121005u;
+	x *= STYLE_HASH_MIX_A;
 	x ^= x >> 15u;
-	x *= 2221713035u;
+	x *= STYLE_HASH_MIX_B;
 	x ^= x >> 16u;
 	return x;
 }
 
 float pc_rand(uint x) {
-	return float(pc_hash(x) >> 8u) / 16777216.0;
+	return float(pc_hash(x) >> 8u) / STYLE_UNIT24;
 }
 
 float pc_luma(vec3 c) {

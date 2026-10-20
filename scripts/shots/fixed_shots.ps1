@@ -31,7 +31,8 @@ try {
     Get-ChildItem -LiteralPath $out -File | Where-Object { $_.Extension -in '.png', '.log', '.jpg' } | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force }
     if ($Build) {
         Invoke-UESTCProcess 'dotnet' @('build', "$repo\game\Campus.sln", '-c', 'Debug', '-v', 'q') $repo (Join-Path $out 'build.log') | Out-Null
-        Invoke-UESTCProcess $godot @('--headless', '--path', "$repo\game", '--import') $repo (Join-Path $out 'import.log') -TimeoutSeconds 600 | Out-Null
+        $import = Invoke-UESTCProcess $godot @('--headless', '--editor', '--path', "$repo\game", '--', '--build-import') $repo (Join-Path $out 'import.log') -TimeoutSeconds 600
+        Assert-UESTCCleanGodotLog $import
     }
     if ($MovieFrames) {
         foreach ($name in $names) {

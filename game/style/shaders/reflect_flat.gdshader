@@ -13,8 +13,6 @@ render_mode unshaded, cull_back, shadows_disabled, ambient_light_disabled;
 uniform float water_y = -10000.0;   // 当前做倒影的湖的水面高度，倒影节点在换湖时写入
 
 // 色号 0–511：COLOR.r 是低字节，COLOR.b 的 bank 位（16）是第 9 位，与 toon.gdshaderinc 的 v_cid 同一规则
-// （PaletteEncoding.DecodeColor，contract-28）。反射着色器不 include toon，常量在此镜像。
-const int REFLECT_F_COLOR_BANK = 16;   // = TOON_F_COLOR_BANK
 
 varying flat int v_cid;
 varying vec3 v_wpos;
@@ -22,7 +20,7 @@ varying vec3 v_nrm;
 
 void vertex() {
 	int flags = int(round(COLOR.b * 255.0));
-	v_cid = int(round(COLOR.r * 255.0)) + ((flags & REFLECT_F_COLOR_BANK) != 0 ? 256 : 0);
+	v_cid = int(round(COLOR.r * 255.0)) + ((flags & TOON_F_COLOR_BANK) != 0 ? PAL_WIDTH : 0);
 	v_wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	v_nrm = normalize(mat3(MODEL_MATRIX) * NORMAL);
 }

@@ -3,6 +3,12 @@ namespace Campus.Contracts;
 /// <summary>Contract-28 route B. Logical colour indices and seasonal sample coordinates are separate domains.</summary>
 public static class PaletteLayout
 {
+    public const int CurrentRow = 0;
+    public const int LampRow = 1;
+    public const int InteriorShadeRow = 2;
+    public const int InteriorLitRow = 3;
+    public const int ShadeOffset = 1;
+
     public const int EncodingVersion = 2;
     public const string LayoutId = "banked9-rows-v1";
     public const int LegacyCapacity = 256;
@@ -38,9 +44,9 @@ public static class PaletteEncoding
     public const byte ColorBankFlag = 16;
     public const byte DecalBaseBankFlag = 32;
     public const byte PackedFlagsMask = 63;
-    private const int LampBankUnit = 32768;
-    private const int LampEnergyUnit = 256;
-    private const int LampMaxEnergyPercent = 100;
+    public const int LampBankUnit = 32768;
+    public const int LampEnergyUnit = 256;
+    public const int LampMaxEnergyPercent = 100;
 
     /// <summary>
     /// R=colour low byte, G=unchanged AO byte, B=semantic flags plus the two bank bits, A=unchanged reserved byte.

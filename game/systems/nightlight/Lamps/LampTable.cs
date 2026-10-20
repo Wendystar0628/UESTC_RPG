@@ -14,6 +14,11 @@ namespace Campus.Systems.Nightlight.Lamps;
 /// </summary>
 public static class LampTable
 {
+    public const float HeadLevels = 1024f;
+    public const float HeadUnitsPerMetre = 10f;
+    public const float HeadMetresPerUnit = 0.1f;
+    public const float SequenceUnit = 32768f;
+
     public const float CellMetres = 8f;
     public const int MaxLamps = 16384;          // 纹理宽度上限
     public const int SlotsPerCell = 4;
@@ -36,7 +41,7 @@ public static class LampTable
 
     /// <summary>行 1 第二个分量：槽位、灯头高度（分米，0–1023）与事件序号。</summary>
     public static float PackSlot(int slot, float headHeight, int sequence) =>
-        Math.Clamp(slot, 0, 31) + 32f * MathF.Round(Math.Clamp(headHeight, 0f, 102.3f) * 10f) + 32768f * Math.Clamp(sequence, 0, 500);
+        Math.Clamp(slot, 0, LightChannelCatalog.Count - 1) + (float)LightChannelCatalog.Count * MathF.Round(Math.Clamp(headHeight, 0f, 102.3f) * HeadUnitsPerMetre) + SequenceUnit * Math.Clamp(sequence, 0, 500);
 
     /// <summary>写出 N×2 的灯表：返回长度 N × 2 × 4 的数组，先是 N 个行 0 纹素，再是 N 个行 1 纹素。</summary>
     public static float[] PackTable(IReadOnlyList<LampRecord> lamps)

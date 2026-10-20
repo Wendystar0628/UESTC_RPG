@@ -127,7 +127,7 @@ public sealed class PaletteRegistry
         spec.ValidateSurfacePattern();
         var lit = Get(spec.Lit);
         var shade = Get(spec.Shade);
-        if (lit.Role != PaletteRole.Lit || shade.Role != PaletteRole.Shade || shade.Index.Value != lit.Index.Value + 1)
+        if (lit.Role != PaletteRole.Lit || shade.Role != PaletteRole.Shade || shade.Index.Value != lit.Index.Value + PaletteLayout.ShadeOffset)
             throw new ArgumentException($"ToonSpec pair '{lit.Token.Value}' ({lit.Index.Value}, {lit.Role}) / '{shade.Token.Value}' ({shade.Index.Value}, {shade.Role}) must be Lit/adjacent Shade.", nameof(spec));
         if (spec.Deep is { } deep) _ = Get(deep);
         if (spec.Backface is { } backface) _ = Get(backface);

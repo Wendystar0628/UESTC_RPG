@@ -14,6 +14,13 @@ namespace Campus.Style.Materials;
 /// </summary>
 public static class MatTable
 {
+    public const float FixedBandScale = 1000f;
+    public const float FwidthBandScale = 50f;
+    public const float BevelScale = 0.25f;
+    public const int LineOuterOnly = 2;
+    public const int LineInnerSoft = 4;
+    public const int LineNone = 8;
+
     public const int Width = 128;
     public const int Height = 4;
 
@@ -57,9 +64,9 @@ public static class MatTable
         var (flags, fade) = spec.Line switch
         {
             LineClass.Building => (0, 0f),
-            LineClass.Tree => (spec.Kind == ToonKind.VegCard ? 2 : 4, 0f),   // 插片树冠只描外轮廓，云团树冠内部软线
+            LineClass.Tree => (spec.Kind == ToonKind.VegCard ? LineOuterOnly : LineInnerSoft, 0f),   // 插片树冠只描外轮廓，云团树冠内部软线
             LineClass.Fine => (0, FineFadeEndMeters),
-            LineClass.None => (8, 0f),
+            LineClass.None => (LineNone, 0f),
             _ => throw new ArgumentOutOfRangeException(nameof(spec), spec.Line, "Unknown LineClass.")
         };
         return Bytes(Byte(LineWidth / 2f), Byte(LineTint), flags, Math.Clamp((int)MathF.Round(fade / 2f), 0, 255));
@@ -69,10 +76,10 @@ public static class MatTable
     {
         var (half, band) = spec.Steps switch
         {
-            ShadeSteps.Two => (1f, spec.Band * 1000f),
-            ShadeSteps.Three => (1f, spec.Band * 1000f),
-            ShadeSteps.TwoHalf => (HalfLevel, BandTwoHalf * 50f),
-            ShadeSteps.Soft => (HalfLevel, BandSoft * 50f),
+            ShadeSteps.Two => (1f, spec.Band * FixedBandScale),
+            ShadeSteps.Three => (1f, spec.Band * FixedBandScale),
+            ShadeSteps.TwoHalf => (HalfLevel, BandTwoHalf * FwidthBandScale),
+            ShadeSteps.Soft => (HalfLevel, BandSoft * FwidthBandScale),
             _ => throw new ArgumentOutOfRangeException(nameof(spec), spec.Steps, "Unknown ShadeSteps.")
         };
         return Bytes((int)spec.Steps, Byte(half), Math.Clamp((int)MathF.Round(band), 0, 255), Byte(spec.Wet));
@@ -109,8 +116,8 @@ public static class MatTable
         };
         var bevel = spec.Fx.HasFlag(ToonFx.BevelLift);
         var gloss = spec.Fx.HasFlag(ToonFx.AnisoBand) ? SpecMetal : 0f;
-        var escalator = spec.Fx.HasFlag(ToonFx.Escalator) ? 128 : 0;
-        return Bytes(normal | escalator, bevel ? Byte(BevelLitL / 0.25f) : 0, bevel ? Byte(BevelShadeL / 0.25f) : 0, Byte(gloss));
+        var escalator = spec.Fx.HasFlag(ToonFx.Escalator) ? (int)ToonFx.Escalator : 0;
+        return Bytes(normal | escalator, bevel ? Byte(BevelLitL / BevelScale) : 0, bevel ? Byte(BevelShadeL / BevelScale) : 0, Byte(gloss));
     }
 
     private static int Byte(float unit) => Math.Clamp((int)MathF.Round(unit * 255f), 0, 255);

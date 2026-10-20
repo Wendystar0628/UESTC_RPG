@@ -22,6 +22,9 @@
       <Compile Include="gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs" Condition="Exists('gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs')" />
     </ItemGroup>
   </Target>
+  <Target Name="GenerateStyleShaders" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="python -X utf8 &quot;$(MSBuildProjectDirectory)/../scripts/build/generate-style-shaders.py&quot; --root &quot;$(MSBuildProjectDirectory)/..&quot;" />
+  </Target>
   <Target Name="GenerateBuildInformation" BeforeTargets="CoreCompile">
     <Exec Condition="'$(DesignTimeBuild)' != 'true'" Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(IntermediateOutputPath)BuildInfo.g.cs&quot; -Configuration &quot;$(Configuration)&quot; -ModuleAssemblies &quot;$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)', ';')&quot;" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" /></ItemGroup>

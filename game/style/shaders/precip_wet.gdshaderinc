@@ -3,7 +3,7 @@
 // 挂点归 WP-04：toon.gdshaderinc 在 fog.gdshaderinc 之后 include 本文件，toon_wet_exposure、toon_wet、toon_puddle
 // 三个挂点的函数体调这里。water 与外围也可以 include（雨点环）。本文件只读 globals 与 fog 的函数，自己不 include。
 //
-// C# 侧的同一判定（IGroundCover 用，G2 比对）是契约里的 Campus.Contracts.WetSurface，阈值与哈希逐项一致；改这里就同时改那边。
+// 共用规则值来自 Campus.Contracts.WetSurface，经构建步骤生成；G2 比对同一组输入。
 // 主线版：地面遮罩 2 还没有烘焙（R 积水潜势、G 建筑遮蔽、B 树冠遮蔽），积水潜势先用程序噪声，遮蔽只按朝向；
 // 积水倒影：天空按视线分成硬边色带（地平线亮、高天暗）；precip_occ 有内容时沿它步进，把楼和树切成剪影色块映进去
 // （主线版的 precip_occ 是常量小图，不步进）；夜间灯条与湿路面竖向拉长的倒影带在后置细节里接。
@@ -13,14 +13,9 @@
 #ifndef PRECIP_WET_GDSHADERINC
 #define PRECIP_WET_GDSHADERINC
 
-// ---- 可调参数（与 WetSurface 一致） ----
-const float PW_SCALE_A = 2.4;           // 积水潜势：两层值噪声的尺度（m）与权重
-const float PW_SCALE_B = 0.9;
-const float PW_WEIGHT_A = 0.62;
-const float PW_PUDDLE_TOP = 0.80;       // 积水阈值：积水量刚大于 0 时 0.80（只有潜势最高的几处低洼，约 3%），
-const float PW_PUDDLE_SPAN = 0.22;      // 积水量 1 时降到 0.58（约三成硬质铺地成水）；轻雨阈值高、覆盖少，干的时候原地缩小
-const vec2 PW_FLAT = vec2(0.990, 0.997);   // 只有近乎水平的面积水（法线 y；约 8° 以上的坡不积）
-const vec2 PW_RESPONSE = vec2(0.45, 0.55); // 硬质面门：材质湿润响应 ≥ 0.55 才有积水和天光带（沥青 1、铺装 0.6）；草地 0.4、布与树叶更低，只做湿润变暗
+// ---- 湿面观感参数 ----
+const vec2 PW_FLAT = vec2(PW_FLAT_FROM, PW_FLAT_TO);   // 只有近乎水平的面积水（法线 y；约 8° 以上的坡不积）
+const vec2 PW_RESPONSE = vec2(PW_RESPONSE_FROM, PW_RESPONSE_TO); // 硬质面门：材质湿润响应 ≥ 0.55 才有积水和天光带（沥青 1、铺装 0.6）；草地 0.4、布与树叶更低，只做湿润变暗
 const vec2 PW_SHEEN_GRAZE = vec2(0.80, 0.985);   // 湿面掠射天光带：1 − |N·V| 在这一段里渐入天空色（远处的湿路面映天）
 const float PW_SHEEN_K = 0.5;           // 天光带的混合量 × 湿润
 const float PW_WET_EXTRA = 0.20;        // 湿面在 toon 的湿润变暗之上再压一档（× (1 − 0.20·wet)）
@@ -49,16 +44,16 @@ const float PW_RING_R = 0.32;           // 环的最大半径（m）
 
 uint pw_hash(uint x) {
 	x ^= x >> 16u;
-	x *= 2146121005u;
+	x *= STYLE_HASH_MIX_A;
 	x ^= x >> 15u;
-	x *= 2221713035u;
+	x *= STYLE_HASH_MIX_B;
 	x ^= x >> 16u;
 	return x;
 }
 
 float pw_cell(ivec2 c) {
-	uint h = pw_hash(uint(c.x) * 73856093u ^ pw_hash(uint(c.y) * 19349663u + 1u));
-	return float(h >> 8u) / 16777216.0;
+	uint h = pw_hash(uint(c.x) * PW_SALT_X ^ pw_hash(uint(c.y) * PW_SALT_Z + 1u));
+	return float(h >> 8u) / STYLE_UNIT24;
 }
 
 float pw_value_noise(vec2 p) {
@@ -75,7 +70,7 @@ float pw_value_noise(vec2 p) {
 
 // 积水潜势 0–1（主线版的程序噪声；地面遮罩 2 的 R 通道交付后改读它）
 float precip_puddle_potential(vec2 xz) {
-	return PW_WEIGHT_A * pw_value_noise(xz / PW_SCALE_A) + (1.0 - PW_WEIGHT_A) * pw_value_noise(xz / PW_SCALE_B + vec2(17.0, 5.0));
+	return PW_WEIGHT_A * pw_value_noise(xz / PW_SCALE_A) + (1.0 - PW_WEIGHT_A) * pw_value_noise(xz / PW_SCALE_B + vec2(PW_OFFSET_X, PW_OFFSET_Z));
 }
 
 // 暴露度 0–1：室内 0；朝天的面 1，立面约 0.6，朝下的面（檐底、雨篷底）0。外围同样按朝向（只做湿润变暗与天光带）
@@ -84,7 +79,7 @@ float precip_wet_exposure(vec3 wpos, vec3 n_w, bool interior, bool outskirt) {
 		return 0.0;
 	}
 	float ny = clamp(n_w.y, -1.0, 1.0);
-	return smoothstep(-0.6, 0.0, ny) * mix(0.6, 1.0, smoothstep(0.0, 0.7, ny));
+	return smoothstep(PW_EXPOSURE_FROM, 0.0, ny) * mix(PW_EXPOSURE_SIDE, 1.0, smoothstep(0.0, PW_EXPOSURE_TO, ny));
 }
 
 // 积水阈值：积水量越大阈值越低，积水从同一批低洼处长大、也原地缩小（积水量为 0 时调用方直接不画）

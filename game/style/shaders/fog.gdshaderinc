@@ -3,7 +3,7 @@
 // 卡通材质只 include toon.gdshaderinc（它会带进本文件）。天空、粒子这类不走卡通明暗的着色器
 // 先 include globals.gdshaderinc 再 include 本文件；本文件自己不 include globals。
 // 调色板取色放在这里而不放在 toon.gdshaderinc，是因为天空着色器不能用 varying 和 instance uniform，不能 include toon。
-// 计算着色器用的 GLSL 版 fog.glslinc 由 WP-05 逐行对应（ART-SKYLIGHT）。
+// 构建步骤从本文件生成计算着色器用的 fog.glslinc（ART-SKYLIGHT）。
 //
 // 对外签名（定稿，不再改）：
 //   vec4 fog_eval(vec3 world_pos, vec3 cam_pos)                    rgb = 雾色（线性），a = 混合量，直接赋给 FOG
@@ -21,23 +21,18 @@
 #ifndef CAMPUS_FOG_INCLUDED
 #define CAMPUS_FOG_INCLUDED
 
+#include "res://style/shaders/style_consts.gdshaderinc"
+
 // ---------------------------------------------------------------------------
 // 调色板（ART-STYLE、ENG-PERF）：256×68 RGBA8，存 sRGB 字节，texelFetch 取。
 // 行 0 当前色，行 1 灯照色，行 2 室内影色，行 3 室内受光色，行 4–63 季相行；行 64–67 是色号 256–511（bank 1）的行 0–3。
 // 色号与季节样本是两个域（contract-28，PaletteLayout）：表面行 0–3 按色号取，列 = 色号 & 255、行 + 64 × bank；
 // 季相行 4–63 的横坐标是 256 个季节样本，不做 bank 映射。旧的 0–255 色号落在原来的纹素上。
 // ---------------------------------------------------------------------------
-const int PAL_ROW_CUR = 0;
-const int PAL_ROW_LAMP = 1;
-const int PAL_ROW_IN_SHADE = 2;
-const int PAL_ROW_IN_LIT = 3;
-const int PAL_ROW_SEASON0 = 4;
-const int PAL_ROW_SEASON_END = 63;
-const int PAL_BANK_ROWS = 64;       // bank 1 的表面行 = 行 + 64（PaletteLayout.FrameTexel）
-const int PAL_INDEX_MAX = 511;
+const int PAL_ROW_SEASON_END = PAL_BANK_ROWS - 1;
+const int PAL_INDEX_MAX = PAL_CAPACITY - 1;
 
 // 表面色名成对登记：影的色号 = 受光的色号 + 1；顶点 COLOR.r 写受光的色号（暂定，待主代理确认）。
-const int PAL_SHADE_OFFSET = 1;
 
 // 第 0 行的单色色名的色号，与 game/style/palette/core.json 一致（布局：随帧色名 0–31，退役 32–39，
 // 天气色与发光常量 40–63，表面色对从 64 起、受光偶数、影 = 受光 + 1）。以后由登记表生成，内容代码不写这些数。
@@ -47,8 +42,6 @@ const int PAL_BOUNCE_GROUND = 2;
 const int PAL_INTERIOR_WARM = 3;    // 只用 a、b，着色器不拿它着色
 const int PAL_LINE_WARM = 4;
 const int PAL_LINE_COOL = 5;
-const int PAL_SHAFT_NEAR = 6;
-const int PAL_SHAFT_FAR = 7;
 const int PAL_RIM = 8;
 const int PAL_GLASS_GLARE = 9;
 const int PAL_WINDOW_WARM = 10;
@@ -93,9 +86,9 @@ vec3 pal_fetch(int col, int row) {
 	ivec2 t;
 	if (row < PAL_ROW_SEASON0) {
 		int id = clamp(col, 0, PAL_INDEX_MAX);
-		t = ivec2(id & 255, max(row, 0) + (id >> 8) * PAL_BANK_ROWS);
+		t = ivec2(id & (PAL_WIDTH - 1), max(row, 0) + (id >> 8) * PAL_BANK_ROWS);
 	} else {
-		t = ivec2(clamp(col, 0, 255), min(row, PAL_ROW_SEASON_END));
+		t = ivec2(clamp(col, 0, PAL_WIDTH - 1), min(row, PAL_ROW_SEASON_END));
 	}
 	vec3 c = texelFetch(palette, t, 0).rgb;
 	return PAL_MANUAL_SRGB ? toon_srgb_decode(c) : c;
@@ -107,11 +100,11 @@ vec3 pal_cur(int col) {
 
 // 季相行：横向 256 个季节样本，横坐标 = s / 4；手工取两样本线性插值，冬 → 春循环衔接。
 vec3 pal_season(int row, float s) {
-	float x = fract(s * 0.25) * 256.0 - 0.5;
+	float x = fract(s * 0.25) * float(PAL_SEASON_SAMPLES) - 0.5;
 	float x0 = floor(x);
 	float f = x - x0;
-	int i0 = int(mod(x0, 256.0));
-	int i1 = int(mod(x0 + 1.0, 256.0));
+	int i0 = int(mod(x0, float(PAL_SEASON_SAMPLES)));
+	int i1 = int(mod(x0 + 1.0, float(PAL_SEASON_SAMPLES)));
 	return mix(pal_fetch(i0, row), pal_fetch(i1, row), f);
 }
 

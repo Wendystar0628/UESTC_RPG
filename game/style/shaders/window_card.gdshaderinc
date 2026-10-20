@@ -9,41 +9,8 @@
 #ifndef CAMPUS_WINDOW_CARD_INCLUDED
 #define CAMPUS_WINDOW_CARD_INCLUDED
 
-const float WCARD_TAG = 51.0;
-const int WCARD_DEFAULT = 5;           // 窗位类型 0（未定）按办公画
 
-// 枚举与 WindowCardKinds.cs 一致
-const int WC_F_DESKS = 1;
-const int WC_F_BENCH = 2;
-const int WC_F_SHELF = 3;
-const int WC_F_BUNK = 4;
-const int WC_F_STALL = 5;
-const int WC_F_TABLES = 6;
-const int WC_F_COUNTER = 7;
-const int WC_F_EQUIP = 8;
-const int WC_F_STAIR = 9;
-const int WC_F_TURNSTILE = 10;
-const int WC_F_ELEVATOR = 11;
-const int WC_S_BOARD = 1;
-const int WC_S_BUNK = 2;
-const int WC_S_DOORS = 3;
-const int WC_S_SHELF = 4;
-const int WC_SCR_CURTAIN = 1;
-const int WC_SCR_VENETIAN = 2;
-const int WC_SCR_FROSTED = 3;
-const int WC_SCR_ROLLER = 4;
-const int WC_C_STRIPS = 1;
-const int WC_C_PANELS = 2;
-const int WC_C_SINGLE = 3;
-const int WC_C_DOWN = 4;
-const int WC_C_TRUSS = 5;
-const int WC_A_EXIT = 1;
-const int WC_A_AMBER = 2;
-const int WC_A_BEDCURTAIN = 3;
-const int WC_A_LIGHTBOX = 4;
-const int WC_A_WATER = 5;
-const int WC_A_INDICATOR = 6;
-const int WC_A_LOBBY = 7;
+// 枚举与表布局由构建步骤从 C# 生成
 
 // 观感参数（可调，主会话评审定值）
 const float WC_K_BACK = 0.80;       // 各面明度：背墙、侧墙、地面、顶棚
@@ -89,10 +56,10 @@ WCard wcard_default() {
 WCard wcard_fetch(int kind) {
 	// 未绑定 sampler 的默认纹理可能只有 1×1；任何 texelFetch 前先核尺寸。
 	ivec2 size = textureSize(window_cards, 0);
-	if (size.x != 6 || size.y != 32) {
+	if (size.x != WCARD_WIDTH || size.y != WCARD_ROWS) {
 		return wcard_default();
 	}
-	int row = kind <= 0 || kind > 31 ? WCARD_DEFAULT : kind;
+	int row = kind <= 0 || kind >= WCARD_ROWS ? WCARD_DEFAULT : kind;
 	vec4 x5 = texelFetch(window_cards, ivec2(5, row), 0);
 	if (x5.w != WCARD_TAG) {
 		row = WCARD_DEFAULT;

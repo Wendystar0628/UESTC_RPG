@@ -1,0 +1,102 @@
+// ---------------------------------------------------------------------------------------------------------------
+// Shared helpers
+
+const float LINE_FAR = 400.0;          // beyond this no line at all (ART-STYLE)
+const float BRIGHT_FAR0 = 120.0;       // convex bright line fades out 120-150 m (ENG-PERF)
+const float BRIGHT_FAR1 = 150.0;
+
+// mat_table row 0 flags (B channel bits)
+const uint LF_ERASE = 1u;              // no line drawn on this material
+
+const float INNER_SOFT_GAIN = 0.22;
+
+struct Surf {
+	vec3 pos;     // view space
+	vec3 nrm;     // view space
+	float z;      // linear depth (m)
+	uint id;      // 7-bit material ID
+	bool sky;
+};
+
+struct LineCls {
+	float width;      // width coefficient
+	float tint;       // tint strength (default 0.22)
+	uint flags;
+	float fade_end;   // small-item fade end distance (m), 0 = none
+};
+
+ivec2 clamp_px(ivec2 c) {
+	return clamp(c, ivec2(0), ivec2(P.size.xy) - 1);
+}
+
+vec3 view_pos(ivec2 c, float d) {
+	vec2 ndc = (vec2(c) + 0.5) * P.size.zw * 2.0 - 1.0;
+	vec4 v = P.inv_proj * vec4(ndc, d, 1.0);
+	return v.xyz / v.w;
+}
+
+uint decode_id(float a) {
+	// ROUGHNESS = id / 127 is stored as roughness * 127/255; dynamic objects store 1 - that (ART-STYLE §4.5).
+	float r = a > 0.5 ? 1.0 - a : a;
+	return uint(round(r * 255.0)) & 127u;
+}
+
+Surf fetch_surf(ivec2 c) {
+	Surf s;
+	float d = texelFetch(depth_tex, c, 0).r;
+	s.sky = d <= 0.0;
+	s.pos = view_pos(c, d);
+	s.z = -s.pos.z;
+	vec4 nr = texelFetch(normal_roughness_tex, c, 0);
+	s.nrm = normalize(nr.xyz * 2.0 - 1.0);
+	s.id = decode_id(nr.w);
+	return s;
+}
+
+LineCls line_class(uint id) {
+	vec4 t = texelFetch(mat_table, ivec2(int(id), 0), 0);
+	LineCls l;
+	l.width = t.r * 2.0;
+	l.tint = t.g;
+	l.flags = uint(round(t.b * 255.0));
+	l.fade_end = t.a * 510.0;
+	return l;
+}
+
+// mat_table row 3: G = bevel lift on the lit side, B = in shadow, both value/255 x 0.25 OKLab L.
+float bevel_lift(uint id) {
+	return texelFetch(mat_table, ivec2(int(id), 3), 0).g * MAT_BEVEL_SCALE;
+}
+
+vec3 linear_to_oklab(vec3 c) {
+	float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
+	float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
+	float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+	l = pow(max(l, 0.0), 1.0 / 3.0);
+	m = pow(max(m, 0.0), 1.0 / 3.0);
+	s = pow(max(s, 0.0), 1.0 / 3.0);
+	return vec3(
+			0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+			1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+			0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+}
+
+vec3 oklab_to_linear(vec3 c) {
+	float l = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z;
+	float m = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z;
+	float s = c.x - 0.0894841775 * c.y - 1.2914855480 * c.z;
+	l = l * l * l;
+	m = m * m * m;
+	s = s * s * s;
+	return vec3(
+			4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+			-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+			-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+}
+
+float oklab_b(vec3 c) {
+	return linear_to_oklab(c).z;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+

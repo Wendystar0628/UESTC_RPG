@@ -26,15 +26,12 @@ uniform int fx_kind : hint_range(0, 6) = 0;
 const float GLOW_WINDOW_PEAK = 0.18;     // 窗灯光晕的峰值（显示空间，加法）
 const float GLOW_WINDOW_FADE0 = 200.0;   // 窗灯光晕 200–250 m 淡出
 const float GLOW_WINDOW_FADE1 = 250.0;
-const float GLOW_WINDOW_RATIO = 0.25;    // 每边外扩 = 窗宽 × 0.25（与 C# 的 GlowSets.WindowHaloRatio 一致）
 const float GLOW_LAMP_HALO = 0.42;       // 灯头光晕的峰值（柔的一圈）
 const float GLOW_LAMP_CORE = 1.0;        // 灯头亮芯的峰值（初灯时在金色天光里也认得出灯亮了）
 const float GLOW_LAMP_DUSK = 0.85;       // 初灯时（太阳 4° 以上）灯头光晕相对入夜的比例
 const float GLOW_LAMP_MIN_ANGLE = 0.0022;  // 远处灯头光晕的最小张角（弧度），远处仍认得出一点灯
 const float GLOW_LAMP_PULL = 0.35;       // 灯头光晕朝镜头拉近，免得被灯罩几何挡住
 const float GLOW_FOG_RADIUS = 2.0;       // 夜雾里灯头光晕半径 ×2（SYS-WEATHER）
-const int GLOW_PAL_WINDOW_WARM = 10;     // 色号与 fog.gdshaderinc 的 PAL_WINDOW_WARM、PAL_WINDOW_COOL 一致（WP-04 登记）
-const int GLOW_PAL_WINDOW_COOL = 11;
 
 varying vec3 v_color;
 varying vec2 v_q;
@@ -63,9 +60,9 @@ void vertex() {
 		int wid = int(round(INSTANCE_CUSTOM.x));
 		int base = int(round(INSTANCE_CUSTOM.y));
 		float packed = round(INSTANCE_CUSTOM.z);
-		int slot = int(mod(packed, 32.0));
-		int cols = int(floor(packed / 32.0));
-		bool outskirts = (int(round(INSTANCE_CUSTOM.w)) & 1) != 0;
+		int slot = int(mod(packed, float(LIGHT_CHANNEL_COUNT)));
+		int cols = int(floor(packed / float(LIGHT_CHANNEL_COUNT)));
+		bool outskirts = (int(round(INSTANCE_CUSTOM.w)) & GLOW_OUTSKIRTS_FLAG) != 0;
 		vec4 o = outskirts ? vec4(0.0) : lamp_window_override(wid);
 		float on = lamp_window_on(wid, base, cols, slot, o);
 		vec3 center = MODEL_MATRIX[3].xyz;
@@ -82,7 +79,7 @@ void vertex() {
 			margin = w * GLOW_WINDOW_RATIO;
 			half_size = vec2(0.5 * sx - margin, 0.5 * sy - margin);
 			q = VERTEX.xy * vec2(sx, sy);
-			color = texelFetch(palette, ivec2(lamp_window_cool(wid, o) ? GLOW_PAL_WINDOW_COOL : GLOW_PAL_WINDOW_WARM, 0), 0).rgb;
+			color = texelFetch(palette, ivec2(lamp_window_cool(wid, o) ? PAL_WINDOW_COOL : PAL_WINDOW_WARM, 0), 0).rgb;
 			vec3 wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 			out_vertex = (VIEW_MATRIX * vec4(wpos, 1.0)).xyz;
 			out_normal = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
@@ -115,7 +112,7 @@ void vertex() {
 			level = 0.0;
 		}
 	}
-	// 2–6：光锥、光柱、细尘、萤火虫的分支主线留空（shaft 由 WP-39 照常写）
+	// 2–6：光锥、光柱、细尘、萤火虫的分支主线留空
 	VERTEX = out_vertex;
 	NORMAL = out_normal;
 	v_level = level;

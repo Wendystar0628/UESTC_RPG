@@ -38,9 +38,6 @@ public sealed record ChannelSpec(int Slot, ChannelId Id, ChannelClass Kind)
 }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed record EffectiveSunSpec(float OvercastDeg = 6f, float PrecipDeg = 4f);
-
-[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record DeltaSpec(float Min = 0.005f, float Max = 0.15f, float Seconds = 0.3f);
 
 /// <summary>阴雨天白天窗灯的下限：阴天 0.25、雨天 0.3（SYS-WEATHER），按阴度、降水量的两段 smoothstep 淡入。</summary>
@@ -52,13 +49,12 @@ public sealed record DayFloorSpec(float Overcast = 0.25f, float Rain = 0.3f,
 public sealed record LightingScheduleFile(
     int Format,
     MapId Map,
-    EffectiveSunSpec Heff,
     DeltaSpec Delta,
     DayFloorSpec DayFloor,
     IReadOnlyDictionary<string, ThresholdGroup> Groups,
     IReadOnlyList<ChannelSpec> Channels)
 {
-    public const int ChannelCount = 32;
+    public const int ChannelCount = LightChannelCatalog.Count;
     public const int CurrentFormat = 1;
     public string? Note { get; init; }
 }
