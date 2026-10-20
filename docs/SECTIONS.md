@@ -1694,13 +1694,13 @@
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
-`docs/engineering/ENG-PERF-STREAM-流式加载、本机烘焙与内存.md` · 3.7k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
+`docs/engineering/ENG-PERF-STREAM-流式加载、本机烘焙与内存.md` · 3.8k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
 关键词：TileBundle、流式加载、本机烘焙缓存、tbin、六条不变量、看门狗、碰撞级、室内包、目的地预取、零分配、GC、显存记账、安装包布局、不泄漏
 
 - ENG-PERF-STREAM §0 结论 · L22 · 525
   - ★ ENG-PERF-STREAM §0.1 接入要点 · L29 · 222
-- ENG-PERF-STREAM §1 流式加载 · L35 · 1.6k
-  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L37 · 523
+- ENG-PERF-STREAM §1 流式加载 · L35 · 1.7k
+  - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L37 · 574
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L45 · 557
   - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L58 · 364
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L62 · 177
