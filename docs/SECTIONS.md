@@ -11,7 +11,7 @@
   - ★ CORE-INDEX §0.1 接入要点 · L29 · 277
 - CORE-INDEX §1 信息地图 · L36 · 1.8k
 - CORE-INDEX §2 工作原则 · L88 · 1.4k
-- CORE-INDEX §3 协作与分工 · L100 · 861
+- CORE-INDEX §3 协作与分工 · L100 · 876
 - CORE-INDEX §4 文档规范 · L108 · 400
 - CORE-INDEX §5 代码规范 · L114 · 460
 
@@ -1874,17 +1874,17 @@
 
 ## WF-ROLE · 参与者与分工
 
-`docs/workflow/WF-ROLE-参与者与分工.md` · 4.9k 字 · 角色表与汇报关系，会话的运行方式，各模型的长处，GPT 模型不做审美，决定权与事归谁，总指挥只做什么，Codex 主线当指挥
+`docs/workflow/WF-ROLE-参与者与分工.md` · 5.1k 字 · 角色表与汇报关系，会话的运行方式，各模型的长处，GPT 模型不做审美，决定权与事归谁，总指挥只做什么，Codex 主线当指挥
 关键词：角色表、汇报给、决定权、执行人、会话、运行方式、单 Claude 账户、模型能力、长处、Opus、Sonnet、gpt-6-astra、gpt-6.1-sol、GPT 不做审美、视觉风格归属、事归谁、交叉、总指挥、主会话、风格负责人、集中测试、Codex 主线、工程指挥、D-179
 
 - WF-ROLE §0 结论 · L23 · 579
   - ★ WF-ROLE §0.1 接入要点 · L30 · 225
 - WF-ROLE §1 角色与运行方式 · L36 · 629
 - WF-ROLE §2 模型的长处与短板 · L50 · 518
-- WF-ROLE §3 GPT 模型不做审美工作 · L61 · 356
-- WF-ROLE §4 决定权与事归谁 · L68 · 690
-- WF-ROLE §5 总指挥只做什么 · L77 · 628
-- WF-ROLE §6 Codex 主线当指挥，施工默认交 gpt-6.1-sol 子代理 · L90 · 723
+- WF-ROLE §3 GPT 模型不做审美工作 · L61 · 541
+- WF-ROLE §4 决定权与事归谁 · L69 · 690
+- WF-ROLE §5 总指挥只做什么 · L78 · 628
+- WF-ROLE §6 Codex 主线当指挥，施工默认交 gpt-6.1-sol 子代理 · L91 · 723
 
 ## WF-RULE · 全员守则
 
@@ -2012,12 +2012,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 13.3k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 13.5k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L23 · 127
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L27 · 54
-- REG-DECISIONS-PROCESS §1 流程 · L31 · 12.6k
+- REG-DECISIONS-PROCESS §1 流程 · L31 · 12.8k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
