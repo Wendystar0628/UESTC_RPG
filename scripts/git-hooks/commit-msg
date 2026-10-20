@@ -1,6 +1,6 @@
 #!/bin/sh
 # 提交首行格式检查（STD-CONVENTIONS §3.8，D-251）：不合格式就拒绝提交，改好再提交。
-# 用法：复制到 .git/hooks/commit-msg（工作树共用这一份；不改 core.hooksPath，免得停掉 Git LFS 的钩子），之后每次 git commit 自动跑。
+# 用法：git config core.hooksPath scripts/git-hooks；仓库只维护本目录这一份 Git 钩子，提交时自动运行。
 first=$(head -n 1 "$1")
 if printf '%s\n' "$first" | LC_ALL=C.UTF-8 grep -qE '^([QCS]-[0-9]{3}[a-z]?(/[QCS]-[0-9]{3}[a-z]?)* |(文档|工具|数据)(：|:)|Merge |Revert |fixup! |squash! )'; then
   exit 0

@@ -17,10 +17,10 @@ CAT_NAME = {'core': '总纲', 'product': '作品', 'art': '画面', 'world': '�
 NL = chr(10)
 
 
-def load():
+def load(docs_dir=D):
     docs = {}
-    for p in glob.glob(os.path.join(D, '**', '*.md'), recursive=True):
-        rel = os.path.relpath(p, D).replace(chr(92), '/')
+    for p in glob.glob(os.path.join(docs_dir, '**', '*.md'), recursive=True):
+        rel = os.path.relpath(p, docs_dir).replace(chr(92), '/')
         if rel.startswith('godot-api/'):  # 生成的 API 参考，不是设计文档
             continue
         if os.path.basename(rel) == 'README.md' or rel == 'SECTIONS.md':
@@ -88,11 +88,11 @@ def outline(text):
     return out
 
 
-def build_sections():
+def build_sections(docs_dir=D):
     """小节目录：每份规范文档的每个 ##、### 小节一行，带行号和字数，供 grep 定位（STD-DOC §1）。"""
     items = []
-    for p in glob.glob(os.path.join(D, '**', '*.md'), recursive=True):
-        rel = os.path.relpath(p, D).replace(chr(92), '/')
+    for p in glob.glob(os.path.join(docs_dir, '**', '*.md'), recursive=True):
+        rel = os.path.relpath(p, docs_dir).replace(chr(92), '/')
         if rel.startswith('godot-api/'):  # 生成的 API 参考，不是设计文档
             continue
         if rel == 'SECTIONS.md' or (os.path.basename(rel) == 'README.md' and rel != 'README.md'):
@@ -138,18 +138,17 @@ def build_sections():
 ROUTES = os.path.join(D, 'ROUTES.json')
 
 
-def build_routes(docs):
+def build_routes(docs, docs_dir=D):
     """路线表（定案 r016 §3）：文档编码到路径、工作包到文档编码（按文件头 owners）、路径 glob 到文档编码；钩子按它在读改文件时注入。"""
     allfm = dict(docs)
-    t = open(os.path.join(D, 'README.md'), encoding='utf-8').read()
+    t = open(os.path.join(docs_dir, 'README.md'), encoding='utf-8').read()
     m = re.match(r'^---\r?\n(.*?)\r?\n---\r?\n', t, re.S)
     if m:
         fm = yaml.safe_load(m.group(1))
         fm['_path'] = 'README.md'
         allfm[str(fm.get('id'))] = fm
     paths = {c: 'docs/' + d['_path'] for c, d in allfm.items()}
-    own = json.load(open(os.path.join(ROOT, 'ownership.json'), encoding='utf-8'))
-    pkgs = {r['owner'] for r in own['rules'] if r['owner'] != 'Opus'}
+    pkgs = {w for d in allfm.values() for w in wps(d.get('owners'))}
     wp = {}
     for w in sorted(pkgs, key=wpkey):
         codes = []
@@ -157,7 +156,7 @@ def build_routes(docs):
             d = allfm[c]
             if d.get('category') == 'workflow':
                 continue
-            if any(o == w or (w.startswith(o) and re.fullmatch(r'[a-z]', w[len(o):])) for o in wps(d.get('owners'))):
+            if w in wps(d.get('owners')):
                 codes.append(c)
         wp[w] = codes
     globs = {}

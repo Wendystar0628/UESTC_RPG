@@ -1,0 +1,5 @@
+#!/bin/sh
+# 文档变更提交前，核对本次提交的文档树与两份生成索引一致。
+# 用法：git config core.hooksPath scripts/git-hooks；git commit 自动运行，不改索引。
+root=$(git rev-parse --show-toplevel) || exit 1
+exec python -I -X utf8 "$root/scripts/docs/check-staged-index.py"
