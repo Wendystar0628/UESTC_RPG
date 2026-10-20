@@ -80,18 +80,24 @@ namespace Uestc.Tools
                 stderrTask = Capture(errorRead, stderr, encoding); errorRead = IntPtr.Zero;
                 Check(ResumeThread(started.Thread) != uint.MaxValue);
             }
-            catch
+            catch (Exception failure)
             {
+                // Preserve the startup failure; its Data carries each cleanup failure.
                 // Also terminate a suspended process if assignment itself failed.
-                try
+                if (process != IntPtr.Zero)
                 {
-                    if (process != IntPtr.Zero)
+                    try { Check(TerminateProcess(process, 1)); }
+                    catch (Exception cleanup) { failure.Data["ProcessTree.TerminateProcess"] = cleanup; }
+                    try
                     {
-                        Check(TerminateProcess(process, 1));
-                        Check(WaitForSingleObject(process, 5000) == 0);
+                        uint result = WaitForSingleObject(process, 5000);
+                        Check(result != uint.MaxValue);
+                        if (result != 0) { throw new TimeoutException("Process did not exit within 5 seconds after startup failed."); }
                     }
+                    catch (Exception cleanup) { failure.Data["ProcessTree.WaitForSingleObject"] = cleanup; }
                 }
-                finally { Dispose(); }
+                try { Dispose(); }
+                catch (Exception cleanup) { failure.Data["ProcessTree.Dispose"] = cleanup; }
                 throw;
             }
             finally
