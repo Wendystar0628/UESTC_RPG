@@ -1,3 +1,5 @@
+using KernelServices = Campus.Kernel.Registry.Kernel;
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Godot;
@@ -100,7 +102,7 @@ public sealed class TransitDriver(ICameraRig camera, IAppLoadingPresentation loa
         }
         catch (Exception error)
         {
-            if (error is not OperationCanceledException) GD.PushError($"[WP-36] teleport failed: {error}");
+            if (error is not OperationCanceledException) KernelServices.Get<IDiagnosticLog>().Error("[WP-36] teleport failed:", error);
             run.Finish(TransitResult.Cancelled);
         }
         finally

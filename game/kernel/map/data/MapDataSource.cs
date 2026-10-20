@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using Campus.Gen.BakeInput;
 using Campus.Gen.World;
 using Campus.Contracts;
@@ -53,7 +54,7 @@ public class MapDataSource
         _shaderGlobalMapRect,
         new Godot.Vector4(rect.Min.X, rect.Min.Y, 1f / (rect.Max.X - rect.Min.X), 1f / (rect.Max.Y - rect.Min.Y)));
 
-    public virtual void ReportError(string message) => GD.PushError(message);
+    public virtual void ReportError(string context, Exception error) => DiagnosticLog.Error(context, error);
 
     private sealed class ResourceInputs(string root) : IWorldInputSource
     {

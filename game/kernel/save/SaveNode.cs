@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
@@ -108,7 +109,7 @@ public partial class SaveNode : Node, IBootParticipant
                 body = null;
                 mode = ViewMode.Fly;
                 arrival = _mapRuntime.Arrive(RuntimeKernel.Get<ICameraRig>().Pose, mode);
-                GD.PushWarning("[WP-50] walk: no safe landing within range; restored in fly mode.");
+                DiagnosticLog.Warning("[WP-50]", "walk: no safe landing within range; restored in fly mode.");
             }
             if (arrival.Done.IsCompleted) arrival.Done.GetAwaiter().GetResult();
             if (_drawFrame <= poseFrame || !_drawCovered || !PresentedCover) return false;

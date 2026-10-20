@@ -17,6 +17,9 @@ namespace Campus.Kernel.Inspect;
 [KernelNode("game-capture")]
 public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticipant
 {
+    // Win32 HRESULTs reported by CreateNew when the destination already exists.
+    private const int FileExists = unchecked((int)0x80070050);
+    private const int AlreadyExists = unchecked((int)0x800700B7);
     private IAppLoadingPresentation _loading = null!;
     private readonly CancellationTokenSource _exit = new();
     private TaskCompletionSource<CaptureResult>? _photo;
@@ -33,17 +36,18 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
             entry.Kind == RegistrationKind.Node && entry.Type == GetType()).Id;
     }
 
-    public Task<CaptureResult> CaptureAsync(CaptureRequest request, CancellationToken cancellationToken = default)
+    public async Task<CaptureResult> CaptureAsync(CaptureRequest request, CancellationToken cancellationToken = default)
     {
         RequireMainThread();
         if (!Available() || cancellationToken.IsCancellationRequested)
-            return Task.FromResult(new CaptureResult(CaptureStatus.Unavailable, null));
-        if (_busy) return Task.FromResult(new CaptureResult(CaptureStatus.Busy, _path));
+            return new(CaptureStatus.Unavailable, null);
+        if (_busy) return new(CaptureStatus.Busy, _path);
         _busy = true;
         _path = null;
-        _photo = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        _ = CapturePhotoAsync(request, _photo, cancellationToken);
-        return _photo.Task;
+        var completion = new TaskCompletionSource<CaptureResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _photo = completion;
+        await CapturePhotoAsync(request, completion, cancellationToken);
+        return await completion.Task;
     }
 
     private async Task CapturePhotoAsync(CaptureRequest request, TaskCompletionSource<CaptureResult> completion,
@@ -58,11 +62,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
             completion.TrySetResult(new(CaptureStatus.Saved, path));
         }
         catch (OperationCanceledException) { completion.TrySetResult(new(CaptureStatus.Unavailable, _path)); }
-        catch (Exception error)
-        {
-            GD.PushWarning($"[{_diagnosticId}] Photo export failed ({error.GetType().Name}).");
-            completion.TrySetResult(new(CaptureStatus.Failed, _path));
-        }
+        catch (Exception error) { completion.TrySetException(error); }
         finally { EndCapture(); }
     }
 
@@ -101,11 +101,6 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
             return await encoding;
         }
         catch (OperationCanceledException) { return null; }
-        catch (Exception error)
-        {
-            GD.PushWarning($"[{_diagnosticId}] Thumbnail capture failed ({error.GetType().Name}).");
-            return null;
-        }
         finally { EndCapture(); }
     }
 
@@ -153,18 +148,35 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
     {
         cancellationToken.ThrowIfCancellationRequested();
         Directory.CreateDirectory(Path.GetDirectoryName(requestedPath)!);
-        for (var suffix = 0; ; suffix++)
+        var path = requestedPath;
+        var suffix = 0;
+        while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var path = suffix == 0 ? requestedPath : Path.ChangeExtension(requestedPath, null) + $"-{suffix}.png";
             FileStream stream;
             try { stream = new(path, unique ? FileMode.CreateNew : FileMode.Create, System.IO.FileAccess.Write, FileShare.Read); }
-            catch (IOException) when (unique && File.Exists(path)) { continue; }
+            catch (IOException error) when (unique && error.HResult is FileExists or AlreadyExists)
+            {
+                path = NextPhotoPath(error, requestedPath, ++suffix);
+                continue;
+            }
             try { using (stream) stream.Write(bytes); }
-            catch { File.Delete(path); throw; }
+            catch (Exception writeError)
+            {
+                try { File.Delete(path); }
+                catch (Exception cleanupError)
+                {
+                    throw new AggregateException("Photo export and partial file cleanup failed.", writeError, cleanupError);
+                }
+                throw;
+            }
             return path;
         }
     }
+
+    // UI-NAV requires an occupied photo name to select the next suffix, never overwrite the existing photo.
+    private static string NextPhotoPath([FailureHandler("UI-NAV")] IOException error, string requestedPath, int suffix) =>
+        Path.ChangeExtension(requestedPath, null) + $"-{suffix}.png";
 
     private void HideUi(bool hideUi)
     {
@@ -198,17 +210,20 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         _exiting = true;
         _exit.Cancel();
         RestoreUi();
-        _photo?.TrySetResult(new(CaptureStatus.Unavailable, _path));
         // Drain only the worker that owns a detached native Image; it never waits for the scene thread.
         try { _encoding?.GetAwaiter().GetResult(); }
         catch (OperationCanceledException) { }
-        catch (Exception error) { GD.PushWarning($"[{_diagnosticId}] Capture shutdown failed ({error.GetType().Name})."); }
+        catch (Exception error)
+        {
+            _photo?.TrySetException(error);
+            throw;
+        }
     }
 
     public override void _ExitTree()
     {
-        StopCapture();
-        _exit.Dispose();
+        try { StopCapture(); }
+        finally { _exit.Dispose(); }
     }
 
     /// <summary>Every fixed destination uses the same service owner, presentation and image export as F12.</summary>

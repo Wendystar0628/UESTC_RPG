@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using Campus.Gates;
@@ -135,7 +136,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             Maps: registry.Get<IMapService>(),
             WorldState: registry.Get<IWorldState>(),
             Saves: registry.Get<ISaveService>(),
-            PaletteProbe: registry.Get<IPaletteProbe>()));
+            PaletteProbe: registry.Get<IPaletteProbe>(),
+            Diagnostics: registry.Get<Campus.Contracts.Diagnostics.IDiagnosticLog>()));
     }
 
     private void AttachGlobalNodes(ServiceRegistry registry)
@@ -370,7 +372,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private static async Task ObserveRegistryShutdown()
     {
         try { await KernelServices.Services.ShutdownAsync(); }
-        catch (Exception error) { GD.PushError("[WP-01][phase=exit-tree] " + error); }
+        catch (Exception error) { DiagnosticLog.Error("[WP-01][phase=exit-tree]", error); }
     }
 
     public Task FinishQuit()
@@ -400,7 +402,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         try { await KernelServices.Services.ShutdownAsync(this, _gate.TraceClose); }
         catch (Exception error) { failures.Add(error); }
         _gate.TraceClose("shutdown-complete");
-        foreach (var error in failures) GD.PushError("[WP-01][phase=shutdown] " + error);
+        foreach (var error in failures) DiagnosticLog.Error("[WP-01][phase=shutdown]", error);
         _gate.ReportShutdown();
         GetTree().Quit(failures.Count == 0 ? exitCode : 2);
     }
@@ -411,7 +413,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _ready = false;
         Failure = error.GetBaseException().Message;
         if (_flow is IAppBootFlow bootFlow) bootFlow.FailBoot(error);
-        GD.PushError($"[WP-01][phase={Phase}] {error}");
+        DiagnosticLog.Error($"[WP-01][phase={Phase}]", error);
         HoldFailure();
         // Automated runs must never turn an incomplete startup or a failed screenshot into success.
         if (_cpuCommand || AppBoot.Options.CaptureMode || !AppBoot.Options.Title) GetTree().Quit(2);
@@ -423,13 +425,13 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (loading is not null)
         {
             try { _failureLoading ??= loading.Show(); }
-            catch (Exception coverError) { GD.PushError($"[WP-01][phase=failure-cover] {coverError}"); }
+            catch (Exception coverError) { DiagnosticLog.Error("[WP-01][phase=failure-cover]", coverError); }
         }
         var world = KernelServices.Services.Created.OfType<IWorldControl>().SingleOrDefault();
         if (world is not null)
         {
             try { _failureFlow ??= world.AcquireFlow(FlowPriority.AppFlow, 0); }
-            catch (Exception flowError) { GD.PushError($"[WP-01][phase=failure-flow] {flowError}"); }
+            catch (Exception flowError) { DiagnosticLog.Error("[WP-01][phase=failure-flow]", flowError); }
         }
     }
 

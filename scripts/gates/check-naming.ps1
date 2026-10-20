@@ -1,11 +1,12 @@
 ﻿# 命名检查函数库（Test-UESTCSourceNaming）：检查规范文档、数据叶文件名及 C# 文件名与命名空间。
+# 产出：无（只读检查源码与命名并返回内存结果）。
 # 用法：由 scripts\gate.ps1 点引用（. scripts\gates\check-naming.ps1）后调用 Test-UESTCSourceNaming -Root <仓库根>，不单独运行
 function Test-UESTCNamespaceRole {
     param([string]$Path, [string]$Namespace, [string]$ProjectNamespace = '')
     if ($Namespace -cnotmatch '^Campus(?:\.[A-Z][A-Za-z0-9]*)+$') { return $false }
     if ($Path -match '/tests/|^game/testing/|^scripts/gates/arch/') { return $true }
     if ($Path -match '^game/contracts/') {
-        return $Namespace -cmatch '^Campus\.Contracts(?:\.(?:Quality|Maps|Atlas|AppFlow|Save|Audio|Bake|Parts|Entities|Startup|Settings|Content|Vegetation|Water|Fauna)(?:\.[A-Z][A-Za-z0-9]*)*)?$'
+        return $Namespace -cmatch '^Campus\.Contracts(?:\.(?:Quality|Maps|Atlas|AppFlow|Save|Audio|Bake|Diagnostics|Parts|Entities|Startup|Settings|Content|Vegetation|Water|Fauna)(?:\.[A-Z][A-Za-z0-9]*)*)?$'
     }
     if ($Path -match '^game/gen/') {
         # A merged project may contain both generic and map-specific responsibilities.

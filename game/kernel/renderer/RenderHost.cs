@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -85,7 +86,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         }
         catch (Exception error)
         {
-            GD.PushError($"[WP-01][phase=render-part-resolve][handle={handle}] {error}");
+            DiagnosticLog.Error($"[WP-01][phase=render-part-resolve][handle={handle}]", error);
             Unmount(new(handle));
             throw;
         }
@@ -129,7 +130,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         }
         catch (Exception error)
         {
-            GD.PushError($"[WP-01][phase={phase}][handle={handle}] {error}");
+            DiagnosticLog.Error($"[WP-01][phase={phase}][handle={handle}]", error);
             if (!_entries.ContainsKey(handle)) return;
             Error = $"Dynamic content mount failed for handle {handle}: {error.GetBaseException().Message}";
             Unmount(new(handle));

@@ -139,7 +139,7 @@ internal static class QualityApplicationTestFixture
             if (FailDispatch) { FailDispatch = false; throw new InvalidOperationException("Fake apply consumer failed."); }
             if (FailRollback) throw new InvalidOperationException("Fake rollback consumer failed.");
         }
-        public void ReportError(string message) => Errors.Add(message);
+        public void ReportError(string context, Exception error) => Errors.Add(context + " " + error.ToString());
         public void ReportInfo(string message) { }
     }
 }

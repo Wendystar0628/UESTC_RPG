@@ -1,3 +1,4 @@
+using Campus.Contracts.Diagnostics;
 using System.Globalization;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -54,7 +55,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
         _catalog = source.Catalog;
         CatalogSource = source.GetType().Name;
         _composer = new PaletteComposer(_script, _catalog);
-        foreach (var warning in _composer.Warnings) GD.PushWarning(warning);
+        foreach (var warning in _composer.Warnings) KernelServices.Get<IDiagnosticLog>().Warning("Palette", warning);
         // Default state until the world is read: autumn 17:30, clear (SYS-TIME).
         var first = _frame = _script.EvaluateWorld(17.5, (double)Season.Autumn, null, default);
         _composer.ComposeCurrent(first);

@@ -1,6 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Save;
-using SaveDiagnostics = Campus.Kernel.Diagnostics.Diagnostics;
+using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save.Format;
 
@@ -57,12 +57,12 @@ internal sealed class SaveMaintenance(SaveRepository repository)
         [FailureHandler("SYS-SAVE-FORMAT")] Exception error)
     {
         preserved.Add(path);
-        SaveDiagnostics.Warning("Save maintenance preserved an unreadable generation in the current world line.", error);
+        DiagnosticLog.Warning("Save maintenance preserved an unreadable generation in the current world line.", error);
     }
 
     private static void RetainSweep(Sweep sweep, [FailureHandler("SYS-SAVE-FORMAT")] Exception error)
     {
         sweep.Error = error;
-        SaveDiagnostics.Warning("Save committed; old-generation maintenance remains pending for the next commit.", error);
+        DiagnosticLog.Warning("Save committed; old-generation maintenance remains pending for the next commit.", error);
     }
 }

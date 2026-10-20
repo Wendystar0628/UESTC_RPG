@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
@@ -53,8 +54,8 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
             switch (diagnostic.Level)
             {
                 case DiagnosticLevel.Info: GD.Print(message); break;
-                case DiagnosticLevel.Warning: GD.PushWarning(message); break;
-                case DiagnosticLevel.Error: GD.PushError(message); break;
+                case DiagnosticLevel.Warning: DiagnosticLog.Warning("Bake", message); break;
+                case DiagnosticLevel.Error: DiagnosticLog.Error("Bake", message); break;
                 default: throw new InvalidDataException("Unknown build diagnostic level.");
             }
         }

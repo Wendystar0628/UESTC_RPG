@@ -2,6 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Hud.Pages;
 using Campus.Hud.Widgets;
+using Campus.Contracts.Diagnostics;
 using Godot;
 
 namespace Campus.Hud;
@@ -9,6 +10,7 @@ namespace Campus.Hud;
 /// <summary>Owns router registrations, host arbitration, weather hold, and pending photo export.</summary>
 internal sealed class HudInput
 {
+    private readonly IDiagnosticLog _diagnostics;
     private readonly CanvasLayer _owner;
     private readonly HudRootDependencies _dependencies;
     private readonly HudView _view;
@@ -22,6 +24,7 @@ internal sealed class HudInput
     public HudInput(CanvasLayer owner, HudRootDependencies dependencies, HudView view, HudPages pages,
         HudResidents residents, Func<bool> loading)
     {
+        _diagnostics = dependencies.Diagnostics;
         _owner = owner;
         _dependencies = dependencies;
         _view = view;
@@ -46,12 +49,14 @@ internal sealed class HudInput
         foreach (var layer in _layers) layer.Dispose();
         _layers.Clear();
         CancelWeatherHold();
+        ObservePhotoExport();
     }
 
     public void CancelWeatherHold() => _weatherHeld = false;
 
     public void Tick(double delta)
     {
+        ObservePhotoExport();
         SyncHostInput();
         if (!_weatherHeld) return;
         _weatherHold += (float)delta;
@@ -195,7 +200,11 @@ internal sealed class HudInput
         // F12 不是单字符键，不受单键快捷键总开关约束（UI-NAV）；纯净模式下同样可用
         if (e.Action == "photo_export")
         {
-            if (!e.Echo) _ = ExportPhoto();
+            if (!e.Echo && !_photoPending)
+            {
+                ObservePhotoExport();
+                _photoExport = ExportPhoto();
+            }
             return true;
         }
         if (!_dependencies.Settings.SingleKeyShortcuts) return false;
@@ -272,7 +281,15 @@ internal sealed class HudInput
     }
 
     private bool _photoPending;
+    private Task? _photoExport;
     private CancellationTokenSource? _photoCancellation;
+
+    private void ObservePhotoExport()
+    {
+        if (_photoExport is not { IsCompleted: true } completed) return;
+        _photoExport = null;
+        completed.GetAwaiter().GetResult();
+    }
 
     // 照片导出（UI-NAV）：后端忙、不可用时不提示；成功或失败各出一条临时提示
     private async Task ExportPhoto()
@@ -289,7 +306,14 @@ internal sealed class HudInput
         _dependencies.Flow.Changed += OnFlowChanged;
         try
         {
-            var result = await _dependencies.Capture.CaptureAsync(new(HideUi: true), cancellation.Token);
+            CaptureResult result;
+            try { result = await _dependencies.Capture.CaptureAsync(new(HideUi: true), cancellation.Token); }
+            catch (OperationCanceledException) { return; }
+            catch (Exception error)
+            {
+                PhotoFailed(error, entry);
+                return;
+            }
             if (entry != _entry || !GodotObject.IsInstanceValid(_owner) || !_owner.IsInsideTree()) return;
             switch (result.Status)
             {
@@ -312,6 +336,13 @@ internal sealed class HudInput
             _photoCancellation = null;
             _photoPending = false;
         }
+    }
+
+    private void PhotoFailed([FailureHandler("UI-NAV")] Exception error, int entry)
+    {
+        _diagnostics.Warning("[HUD] Photo export failed.", error);
+        if (entry != _entry || !GodotObject.IsInstanceValid(_owner) || !_owner.IsInsideTree()) return;
+        _pages.Toast.Show(UiKit.T("toast.photo.failed"), bar: "warning.fill");
     }
 
     private void Handled() => _owner.GetViewport().SetInputAsHandled();

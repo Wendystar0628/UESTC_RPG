@@ -10,6 +10,7 @@ using Campus.Hud;
 using Campus.Hud.Motion;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
+using Campus.Kernel.Diagnostics;
 using Campus.Kernel.Settings;
 using Campus.Kernel.World;
 using Campus.Style.Materials;
@@ -99,7 +100,8 @@ public sealed class HudLifetimeTests
                 Maps: new TestMapService(),
                 WorldState: world,
                 Saves: new UnusedSaveService(),
-                PaletteProbe: new Probe());
+                PaletteProbe: new Probe(),
+                Diagnostics: new DiagnosticLog());
             hud = new HudRoot();
             hud.Bind(dependencies);
             parent.AddChild(hud);

@@ -1,3 +1,5 @@
+using KernelServices = Campus.Kernel.Registry.Kernel;
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Settings;
 using Godot;
@@ -52,6 +54,6 @@ internal sealed class AudioSettingsStore(ISettingsStore store)
         // Retries advance on real frame delta; never block the main thread for 50 ms.
         _attempts++;
         _remaining = _attempts <= 3 ? .05f : float.PositiveInfinity;
-        if (_attempts > 3) GD.PushWarning("Audio settings remain in memory; disk write failed.");
+        if (_attempts > 3) KernelServices.Get<IDiagnosticLog>().Warning("Audio", "Audio settings remain in memory; disk write failed.");
     }
 }

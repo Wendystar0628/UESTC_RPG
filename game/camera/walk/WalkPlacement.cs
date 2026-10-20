@@ -1,3 +1,4 @@
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
@@ -191,7 +192,7 @@ internal sealed class WalkPlacement(CharacterBody3D body, Func<NavSpace?> space)
     public void WarnIfRepaired()
     {
         if (_placementRelocated && _entryFrom is null && float.IsFinite(_placementSearchRadius))
-            GD.PushWarning("[WP-42] walk: invalid feet repaired to a nearby shore safety point.");
+            KernelServices.Get<IDiagnosticLog>().Warning("[WP-42]", "walk: invalid feet repaired to a nearby shore safety point.");
     }
 
     public void FinishResolution() => _entryFrom = null;

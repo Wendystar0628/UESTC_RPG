@@ -1,3 +1,5 @@
+using KernelServices = Campus.Kernel.Registry.Kernel;
+using Campus.Contracts.Diagnostics;
 using Godot;
 
 namespace Campus.Hud.I18n;
@@ -14,7 +16,7 @@ public static class Tr
     {
         var text = TranslationServer.Translate(key).ToString();
         if (text != key) return text;
-        if (Missing.Add(key)) GD.PushWarning($"UI string key missing: {key}");
+        if (Missing.Add(key)) KernelServices.Get<IDiagnosticLog>().Warning("UI translation", $"UI string key missing: {key}");
         return key;
     }
 

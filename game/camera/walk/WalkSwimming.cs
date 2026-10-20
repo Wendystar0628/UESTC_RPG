@@ -1,3 +1,4 @@
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Renderer;
@@ -38,7 +39,7 @@ internal sealed class WalkSwimming(WalkBodyCollision collisionBody, Action notRe
                 _notReady();
                 return false;
             case WaterQueryStatus.Invalid:
-                GD.PushError($"[WP-42] invalid water query: {result.DiagnosticCode}");
+                KernelServices.Get<IDiagnosticLog>().Error("[WP-42]", $"invalid water query: {result.DiagnosticCode}");
                 _requestExit();
                 return false;
             default:

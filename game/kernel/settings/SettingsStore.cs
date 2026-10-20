@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -45,7 +46,7 @@ public sealed class SettingsStore : ISettingsStore
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException)
             {
-                GD.PushWarning($"settings.json not written: {error.Message}");
+                DiagnosticLog.Warning("user://settings.json not written:", error);
                 return false;
             }
         }
@@ -101,7 +102,7 @@ public sealed class SettingsStore : ISettingsStore
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or JsonException)
             {
-                GD.PushWarning($"{Path.GetFileName(candidate)} rejected; trying backup/defaults: {error.Message}");
+                DiagnosticLog.Warning($"user://{Path.GetFileName(candidate)} rejected; trying backup/defaults:", error);
             }
         }
         return [];

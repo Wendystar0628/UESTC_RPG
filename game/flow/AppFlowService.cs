@@ -1,3 +1,4 @@
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
@@ -30,19 +31,18 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
     private Pose _leavePose;
     private bool _quitting;
     private EnterRequest? _request;
-    internal Action<string>? DiagnosticSink { get; init; }
 
     public AppFlowService(ICameraRig camera, IAppLoadingPresentation loading, IAppTitlePresentation titlePresentation,
         ISaveService saves, IMapService maps, IWorldState world, IWorldControl control, IViewControl view,
         IWorldRestore restore, IAppExit appExit, IMapRuntime mapRuntime, IMapStreamState stream,
-        ISettingsStore? profileSettings = null)
+        IDiagnosticLog diagnostics, ISettingsStore? profileSettings = null)
     {
         this.camera = camera; this.loading = loading; this.saves = saves; this.maps = maps;
         this.world = world; this.restore = restore; this.appExit = appExit; this.stream = stream;
         _resources = new(camera, restore, control, loading, titlePresentation, mapRuntime, MarkPhase);
         _continuation = new(camera, saves, maps, world, restore, view, mapRuntime, stream,
             titlePresentation, _resources, profileSettings);
-        _recovery = new(saves, maps, _continuation, _resources, () => _quitting, Change, ReportDiagnostic);
+        _recovery = new(saves, maps, _continuation, _resources, () => _quitting, Change, diagnostics.Error);
         _startup = new(saves, maps, _continuation, _resources, titlePresentation, _recovery);
     }
     public AppState State { get; private set; } = AppState.Boot;
@@ -227,13 +227,6 @@ public sealed class AppFlowService : IAppFlow, IAppBootFlow, IBootParticipant, I
         await appExit.FinishQuit();
     }
     public string? LastError => _recovery.LastError;
-    private void ReportDiagnostic(string details)
-    {
-        // Managed fixtures supply their own sink; runtime retains full exception diagnostics.
-        if (DiagnosticSink is { } sink) { sink(details); return; }
-        if (restore.RestoreFaulted) Godot.GD.Print(details);
-        else Godot.GD.PushError(details);
-    }
     private bool In(AppState expected) => State switch { AppState.Boot or AppState.Title or AppState.Entering or AppState.Playing or AppState.Leaving or AppState.Quitting => State == expected, _ => throw new InvalidOperationException("Unknown application state.") };
     private void Change(AppState state)
     {

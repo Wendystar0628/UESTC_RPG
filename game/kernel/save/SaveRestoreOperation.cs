@@ -4,7 +4,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
 using Campus.Kernel.Maps;
-using SaveDiagnostics = Campus.Kernel.Diagnostics.Diagnostics;
+using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save;
 
@@ -38,7 +38,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
     {
         RetainFailure(failure);
         Error!.Data["SaveRestoreAbort"] = abortError;
-        SaveDiagnostics.Error("Save restoration abort failed; input remains blocked.", abortError);
+        DiagnosticLog.Error("Save restoration abort failed; input remains blocked.", abortError);
     }
 
     public void MarkFault([FailureHandler("SYS-SAVE-FLOW")] Exception error)
@@ -165,7 +165,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
     {
         context.Repair(item.Repair ?? "Replaced invalid section: " + item.Key);
         var dto = item.Registration.Section.CreateDefault(defaults);
-        SaveDiagnostics.Warning("Invalid save section replaced with its default: " + item.Key, error);
+        DiagnosticLog.Warning("Invalid save section replaced with its default: " + item.Key, error);
         return dto;
     }
 
@@ -173,7 +173,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
         [FailureHandler("SYS-SAVE-FORMAT")] Exception error, List<string> repairs)
     {
         repairs.Add("Removed section for missing map: " + item.Key);
-        SaveDiagnostics.Warning("Invalid save section removed with its missing map: " + item.Key, error);
+        DiagnosticLog.Warning("Invalid save section removed with its missing map: " + item.Key, error);
     }
 
     private static uint NewSeed() => System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(RandomNumberGenerator.GetBytes(4));

@@ -441,7 +441,7 @@ public sealed class MapServiceTests
         }
         public override MapClaimSnapshot? ReadClaims(MapId map) => null;
         public override void WriteMapRect(MapRect rect) => RectWrites++;
-        public override void ReportError(string message) { }
+        public override void ReportError(string context, Exception error) { }
     }
     private sealed class TestLoader(MapCatalog catalog) : IWorldModelLoader
     {

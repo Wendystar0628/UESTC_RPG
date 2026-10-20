@@ -335,7 +335,7 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
     private void Fail(Exception error)
     {
         _data.ReportError($"Map load failed [stage={_active?.Stage}, cause={_active?.Cause}, " +
-            $"target={_request?.Target.Value ?? "-"}]:\n{error}");
+            $"target={_request?.Target.Value ?? "-"}]:", error);
         Finish(MapTravelResult.Failed);
     }
 
@@ -363,7 +363,7 @@ public sealed class MapService : IMapService, IMapFrame, ISaveSection<MapsSave>,
         foreach (Action<MapId, MapTravelCause> handler in handlers.GetInvocationList())
         {
             try { handler(Current, cause); }
-            catch (Exception error) { _data.ReportError("Map arrival subscriber failed: " + error.Message); }
+            catch (Exception error) { _data.ReportError("Map arrival subscriber failed:", error); }
         }
     }
 

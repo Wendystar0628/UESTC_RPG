@@ -1,3 +1,5 @@
+using KernelServices = Campus.Kernel.Registry.Kernel;
+using Campus.Contracts.Diagnostics;
 using System.Text.Json;
 using Campus.Contracts.Audio;
 using Godot;
@@ -80,7 +82,7 @@ internal sealed class AudioClipLibrary
         if (!ResourceLoader.Exists(path))
         {
             _missing.Add(path);
-            GD.PushWarning("Audio asset is not available; cue remains silent: " + path);
+            KernelServices.Get<IDiagnosticLog>().Warning("Audio", "Audio asset is not available; cue remains silent: " + path);
             return null;
         }
         var source = ResourceLoader.Load<AudioStream>(path);

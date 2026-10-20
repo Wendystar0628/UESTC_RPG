@@ -1,3 +1,4 @@
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
@@ -74,7 +75,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         catch (Exception error)
         {
             Error = error.GetBaseException().Message;
-            GD.PushError($"WP-40: sky content failed: {error}");
+            KernelServices.Get<IDiagnosticLog>().Error("WP-40: sky content failed:", error);
         }
     }
 

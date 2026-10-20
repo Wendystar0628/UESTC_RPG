@@ -18,7 +18,7 @@ public interface IQualityRuntime
     IAppLoadingLease ShowLoading(CancellationToken cancellationToken);
     Task WaitForDestination(CancellationToken cancellationToken);
     void Dispatch(QualityView view, in QualityChange change);
-    void ReportError(string message);
+    void ReportError(string context, Exception error);
     void ReportInfo(string message);
 }
 
@@ -171,7 +171,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
         if (_binding is not { } binding) return;
         if (_active is { IsCompleted: true })
         {
-            if (_active.IsFaulted) binding.Runtime.ReportError($"[WP-32] Quality apply failed: {_active.Exception!.GetBaseException().Message}");
+            if (_active.IsFaulted) binding.Runtime.ReportError("[WP-32] Quality apply failed:", _active.Exception!);
             _active = null;
             _activeRequest = null;
         }
@@ -308,7 +308,7 @@ public sealed class QualityService : IQualityFrame, IBootParticipant
             catch (Exception error)
             {
                 if (binding.Token.IsCancellationRequested) return;
-                binding.Runtime.ReportError($"[WP-32] Quality observer failed: {error.Message}");
+                binding.Runtime.ReportError("[WP-32] Quality observer failed:", error);
             }
         }
     }

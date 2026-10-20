@@ -210,8 +210,8 @@ public sealed class GroundTreePitTests
         var plainShape = GroundSources.Read(plain).Shapes.Single();
         AssertThat(markedShape.Kind == SurfaceKind.Turf && markedShape.Marked).OverrideFailureMessage("A pitch that names its sport is marked turf.").IsTrue();
         AssertThat(plainShape.Kind == SurfaceKind.Turf && !plainShape.Marked).OverrideFailureMessage("A pitch without a sport tag is turf that is not marked.").IsTrue();
-        AssertThat(Quads(GroundLayout.Of(marked)).Count > 100).OverrideFailureMessage("The tagged pitch has its lines.").IsTrue();
-        AssertThat(Quads(GroundLayout.Of(plain)).Count == 0).OverrideFailureMessage("The untagged pitch has no lines.").IsTrue();
+        AssertThat(Quads(TestWorld.Context(marked)).Count > 100).OverrideFailureMessage("The tagged pitch has its lines.").IsTrue();
+        AssertThat(Quads(TestWorld.Context(plain)).Count == 0).OverrideFailureMessage("The untagged pitch has no lines.").IsTrue();
         // The same football-sized rectangle as the athletics-style untagged field of the real campus: still plain grass.
         var output = new GroundModule().Build(TestWorld.Context(plain), new TileKey(0, 0), LodLevel.L0);
         AssertThat(output.Meshes.All(m => m.Material.Spec.Lit.Value != "ground.marking.lit")).OverrideFailureMessage("No marking mesh is built for an untagged pitch.").IsTrue();
@@ -289,9 +289,9 @@ public sealed class GroundTreePitTests
     private static float HeightAt(GroundMesher mesher, TileField field, float x, float z) =>
         mesher.HeightAt((int)MathF.Round((x - field.X0) / field.Cell), (int)MathF.Round((z - field.Z0) / field.Cell));
 
-    private static List<GroundMarkings.Quad> Quads(GroundLayout layout)
+    private static List<GroundMarkings.Quad> Quads(BuildContext context)
     {
-        var markings = layout.Markings(Section).Markings;
+        var markings = GroundModule.AssembleMarkings(context, Section).Markings;
         var quads = new List<GroundMarkings.Quad>();
         for (var z = -2; z <= 2; z++)
             for (var x = -2; x <= 2; x++) quads.AddRange(markings.In(x, z));

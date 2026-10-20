@@ -7,7 +7,7 @@ namespace Campus.Flow;
 
 internal sealed class AppFlowRecovery(ISaveService saves, IMapService maps,
     AppFlowContinuation continuation, AppFlowResources resources, Func<bool> isQuitting,
-    Action<AppState> changeState, Action<string> diagnostic)
+    Action<AppState> changeState, Action<string, Exception> diagnostic)
 {
     internal const string RestoreErrorKey = "save.error.restore_world";
     private Task? _faultHold;
@@ -17,7 +17,7 @@ internal sealed class AppFlowRecovery(ISaveService saves, IMapService maps,
     internal void CaptureFailure(Exception error, AppState state)
     {
         LastError = error.Message;
-        diagnostic($"[WP-49a][map:{maps.Current.Value}][flow:{state}] {error.ToString()}");
+        diagnostic($"[WP-49a][map:{maps.Current.Value}][flow:{state}]", error);
     }
     internal void RetainRestoreError() => LastError = RestoreErrorKey;
     internal Task HoldRestoreFailure(bool keepBoot = false)

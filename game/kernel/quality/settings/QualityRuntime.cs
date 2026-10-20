@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
@@ -101,7 +102,7 @@ public partial class QualityRuntime : Node, IQualityAware, IQualityRuntime
         cancellationToken.ThrowIfCancellationRequested();
         return _screen.Show();
     }
-    public void ReportError(string message) => GD.PushError(message);
+    public void ReportError(string context, Exception error) => DiagnosticLog.Error(context, error);
     public void ReportInfo(string message) => GD.Print(message);
     public bool Booting => RuntimeKernel.Get<IAppFlow>().State switch
     {

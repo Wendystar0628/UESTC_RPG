@@ -1,3 +1,4 @@
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
@@ -110,8 +111,16 @@ internal sealed class FlowTestRig
         Runtime = new(() => Loading.Active) { CompleteArrivalImmediately = completeArrivalImmediately };
     }
     public AppFlowService CreateFlow(ISaveService saves, IMapService maps, IAppExit exit, IWorldRestore? restore = null) =>
-        new(Camera, Loading, Title, saves, maps, World, World, World, restore ?? World, exit, Runtime, Runtime)
-        { DiagnosticSink = Diagnostics.Add };
+        new(Camera, Loading, Title, saves, maps, World, World, World, restore ?? World, exit, Runtime, Runtime,
+            new FlowDiagnostics(Diagnostics));
+
+    private sealed class FlowDiagnostics(List<string> messages) : IDiagnosticLog
+    {
+        public void Error(string context, Exception error) => Error(context, error.ToString());
+        public void Error(string context, string message) => messages.Add(context + " " + message);
+        public void Warning(string context, Exception error) => Warning(context, error.ToString());
+        public void Warning(string context, string message) => messages.Add(context + " " + message);
+    }
 }
 internal sealed class FlowTerrainPreparation : ITerrainPreparation, ICameraPoseValidator
 {

@@ -2,7 +2,7 @@ using System.Globalization;
 using Campus.Contracts;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
-using SaveDiagnostics = Campus.Kernel.Diagnostics.Diagnostics;
+using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save;
 
@@ -24,7 +24,7 @@ internal sealed class SaveWriteOperation
     {
         ThumbnailError = error;
         // SYS-SAVE-FORMAT permits an absent thumbnail; keep the existing image and continue this state save.
-        SaveDiagnostics.Warning("Save thumbnail unavailable; saving state with the previous optional image.", ThumbnailError);
+        DiagnosticLog.Warning("Save thumbnail unavailable; saving state with the previous optional image.", ThumbnailError);
         return previous;
     }
 
@@ -110,7 +110,7 @@ internal sealed class SaveWriteOperation
             _ => "save.error.snapshot"
         };
         var result = new SaveResult(SaveStatus.Failed, slot, generation, key);
-        SaveDiagnostics.Error("Save operation failed.", Failure);
+        DiagnosticLog.Error("Save operation failed.", Failure);
         return result;
     }
 }

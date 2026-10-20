@@ -1,7 +1,7 @@
 using System.Globalization;
 using Campus.Contracts;
 using Campus.Contracts.Save;
-using SaveDiagnostics = Campus.Kernel.Diagnostics.Diagnostics;
+using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save.Format;
 
@@ -101,14 +101,14 @@ public sealed class SaveRepository : IDisposable
     {
         LockConflict = error;
         ReadOnly = ReadOnlyReason.OtherWindow;
-        SaveDiagnostics.Warning("Save lock is owned by another window; this process is read-only.", error);
+        DiagnosticLog.Warning("Save lock is owned by another window; this process is read-only.", error);
     }
 
     private static void RejectGeneration(List<RejectedGeneration> rejected, ulong generation, SaveMeta? metadata,
         [FailureHandler("SYS-SAVE-FORMAT")] Exception error)
     {
         rejected.Add(new(generation, error) { Metadata = metadata });
-        SaveDiagnostics.Warning("Save generation rejected; recovery requires a known matching world line.", error);
+        DiagnosticLog.Warning("Save generation rejected; recovery requires a known matching world line.", error);
     }
 
     internal IEnumerable<(string Path, ulong Generation)> Generations(SlotId slot)

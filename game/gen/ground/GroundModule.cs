@@ -80,10 +80,23 @@ public sealed class GroundModule : IGroundCoverSource
         var sink = new GroundSurfaceSink(SurfaceMaterialCatalog.FromInputs(ctx.SourceInputs));
         new GroundMesher(field, _section, lod, layout, terrain, sink).Run();
         if (!GroundLod.HasMarkings(lod)) return new ContentOutput(sink.Finish(), []);
-        var (markings, details) = layout.Markings(_section);
+        var (markings, details) = AssembleMarkings(ctx, _section);
         markings.Emit(extent, sink, _section, terrain);
         return new ContentOutput([.. sink.Finish(), .. details.EmitManholeText(ctx, extent, _section, terrain)], []);
     }
+
+    /// <summary>Builds the ordered marking and detail streams once for this frozen context.</summary>
+    internal static (GroundMarkings Markings, GroundDetails Details) AssembleMarkings(BuildContext context, GroundSection section) =>
+        context.Memo(typeof(GroundModule), () =>
+        {
+            var layout = GroundLayout.Of(context);
+            var markings = new GroundMarkings();
+            var junctions = RoadMarkings.AddTo(markings, layout, section);
+            PitchMarkings.AddTo(markings, layout, section);
+            var details = new GroundDetails(markings);
+            details.AddTo(layout, section, junctions);
+            return (markings, details);
+        });
 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) =>
         [GroundCollision.Build(ctx, tile, _section)];

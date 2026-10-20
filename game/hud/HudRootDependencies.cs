@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Audio;
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Hud.Motion;
@@ -25,4 +26,5 @@ public sealed record HudRootDependencies(
     IMapService Maps,
     IWorldState WorldState,
     ISaveService Saves,
-    IPaletteProbe PaletteProbe);
+    IPaletteProbe PaletteProbe,
+    IDiagnosticLog Diagnostics);

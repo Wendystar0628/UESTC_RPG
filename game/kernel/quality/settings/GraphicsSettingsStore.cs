@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Settings;
 using Godot;
@@ -34,7 +35,7 @@ public sealed class GraphicsSettingsStore(ISettingsStore settings, QualityCatalo
             var name = QualityCatalog.Name(knob);
             if (!knobs.TryFloat(name, out var number)) continue;
             if (catalog.IsValid(knob, number)) overrides[knob] = number;
-            else GD.PushWarning($"[WP-32] Ignoring invalid setting {name}.");
+            else DiagnosticLog.Warning("[WP-32]", $"Ignoring invalid setting {name}.");
         }
         return new(preset, overrides);
     }

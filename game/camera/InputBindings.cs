@@ -1,3 +1,5 @@
+using KernelServices = Campus.Kernel.Registry.Kernel;
+using Campus.Contracts.Diagnostics;
 using Campus.Contracts.Settings;
 using Godot;
 
@@ -62,7 +64,7 @@ public sealed class InputBindings
         var section = settings.Section(Section);
         foreach (string action in Actions) section.Set(action, _keys[action]);
         if (settings.TrySave()) return true;
-        GD.PushWarning("Input bindings were changed but could not be saved.");
+        KernelServices.Get<IDiagnosticLog>().Warning("Input bindings", "Input bindings were changed but could not be saved.");
         return false;
     }
 

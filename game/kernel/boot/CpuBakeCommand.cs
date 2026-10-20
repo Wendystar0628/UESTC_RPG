@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -99,7 +100,7 @@ public sealed class CpuBakeCommand : IBakeCommand
 
     private static int FailedCommand([FailureHandler("ENG-ARCH")] Exception error)
     {
-        GD.PushError(error.ToString());
+        DiagnosticLog.Error("CPU bake command failed.", error);
         return 2;
     }
 }

@@ -210,6 +210,22 @@ public sealed class ArchitectureTests
         SourceModel.RequireNoViolations(errors);
     }
 
+    [TestCase]
+    [TestCategory("Contract")]
+    public void ProductionDiagnosticsUseThePublishedOutput()
+    {
+        var errors = new List<string>();
+        foreach (var file in SourceModel.Production)
+        foreach (var call in file.Root.DescendantNodes().OfType<InvocationExpressionSyntax>())
+        {
+            var method = SourceModel.Method(file, call);
+            if (method?.Name is not ("PushError" or "PushWarning") ||
+                SourceModel.Name(method.ContainingType) != "Godot.GD") continue;
+            errors.Add(file.At(call, "Diagnostics use IDiagnosticLog or the kernel DiagnosticLog output."));
+        }
+        SourceModel.RequireNoViolations(errors);
+    }
+
     private static string? MapScope(ReflectionAssembly assembly) => assembly.GetCustomAttributesData()
         .SingleOrDefault(attribute => attribute.AttributeType.FullName == "Campus.Contracts.MapScopeAttribute")
         ?.ConstructorArguments[0].Value as string;

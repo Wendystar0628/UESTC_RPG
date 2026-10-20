@@ -99,7 +99,7 @@ public sealed class GroundStadiumTests
         AssertThat(TestWorld.SurfaceAt(worldContext, pitch.Centre.X + 20f * pitch.Across.X, pitch.Centre.Y + 20f * pitch.Across.Y) == GroundSurface.Turf).OverrideFailureMessage("The pitch is turf.").IsTrue();
 
         var layout = GroundLayout.Of(world);
-        var quads = QuadsNear(layout, 0f, 0f, 120f);
+        var quads = QuadsNear(worldContext, 0f, 0f, 120f);
         AssertThat(quads.Count > 100).OverrideFailureMessage($"A pitch carries over a hundred line strips (straight lines and circle chords), got {quads.Count}.").IsTrue();
         AssertThat(quads.All(q => q.Color == GroundColor.Marking && q.Level == Section.PavingY)).OverrideFailureMessage("Pitch lines are white and lie on the turf level.").IsTrue();
         // No line leaves the turf.
@@ -154,7 +154,7 @@ public sealed class GroundStadiumTests
             Entity("test:way:32", """{"sport":"soccer"}""", """{"kind":"sport","sport":"soccer"}""", trapezoid),
         ]);
         AssertThat(GroundSources.Read(world).Shapes.Count(s => s.Kind == SurfaceKind.Turf) == 3).OverrideFailureMessage("All three are still turf.").IsTrue();
-        AssertThat(QuadsNear(GroundLayout.Of(world), 100f, 100f, 400f).Count == 0).OverrideFailureMessage("Only rectangles of football proportions are marked.").IsTrue();
+        AssertThat(QuadsNear(TestWorld.Context(world), 100f, 100f, 400f).Count == 0).OverrideFailureMessage("Only rectangles of football proportions are marked.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -171,7 +171,7 @@ public sealed class GroundStadiumTests
         ]);
         var worldContext = TestWorld.Context(world);
         var layout = GroundLayout.Of(world);
-        var quads = QuadsNear(layout, 0f, 0f, 160f);
+        var quads = QuadsNear(worldContext, 0f, 0f, 160f);
         AssertThat(quads.Count > 100).OverrideFailureMessage("The pitch inside the track is marked.").IsTrue();
         AssertThat(quads.All(q => layout.SignedDistance(SurfaceKind.Track, (q.A + q.C) * 0.5f, 5f) > 0f)).OverrideFailureMessage("No pitch line lies on the track ring.").IsTrue();
         AssertThat(TestWorld.SurfaceAt(worldContext, 0f, 20f) == GroundSurface.Turf).OverrideFailureMessage("The pitch is turf.").IsTrue();
@@ -202,11 +202,10 @@ public sealed class GroundStadiumTests
             .OverrideFailureMessage("The real running track surrounds an open infield.").IsTrue();
         var pitches = shapes.Where(shape => shape.Kind == SurfaceKind.Turf && shape.Marked).ToArray();
         AssertThat(pitches.Length > 0).IsTrue();
-        var layout = GroundLayout.Of(world);
         var pitch = pitches.OrderByDescending(shape => (shape.Max.X - shape.Min.X) * (shape.Max.Y - shape.Min.Y)).First();
         var centre = (pitch.Min + pitch.Max) * 0.5f;
         var half = MathF.Max(pitch.Max.X - pitch.Min.X, pitch.Max.Y - pitch.Min.Y);
-        AssertThat(QuadsNear(layout, centre.X, centre.Y, half).Count > 0)
+        AssertThat(QuadsNear(TestWorld.Context(world), centre.X, centre.Y, half).Count > 0)
             .OverrideFailureMessage($"The real main pitch {pitch.Id} has white lines.").IsTrue();
     }
 
@@ -215,9 +214,9 @@ public sealed class GroundStadiumTests
     private static bool IsLawn(GroundSurface surface) => GroundPalette.IsLawn(surface);
 
     /// <summary>All marking quads in the 64 m cells that touch the square of the given half size around the point.</summary>
-    private static List<GroundMarkings.Quad> QuadsNear(GroundLayout layout, float cx, float cz, float half)
+    private static List<GroundMarkings.Quad> QuadsNear(BuildContext context, float cx, float cz, float half)
     {
-        var markings = layout.Markings(Section).Markings;
+        var markings = GroundModule.AssembleMarkings(context, Section).Markings;
         var quads = new List<GroundMarkings.Quad>();
         for (var z = (int)MathF.Floor((cz - half) / TileGrid.BaseEdge); z <= (int)MathF.Floor((cz + half) / TileGrid.BaseEdge); z++)
             for (var x = (int)MathF.Floor((cx - half) / TileGrid.BaseEdge); x <= (int)MathF.Floor((cx + half) / TileGrid.BaseEdge); x++)

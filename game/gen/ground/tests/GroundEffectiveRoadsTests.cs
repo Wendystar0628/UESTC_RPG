@@ -104,9 +104,9 @@ public sealed class GroundEffectiveRoadsTests
         AssertThat(RoadGraph.Fillets(GroundSources.Read(withWalk).Roads).Count == 0).OverrideFailureMessage("A footway never rounds a carriageway corner.").IsTrue();
         var crossing = new Vector2[] { new(50f, -20f), new(50f, 20f) };
         var crossed = TestWorld.Of(street, new WorldNetwork([.. network, Road("design:t-cross", crossing, 2.5f)], [], [], [], []));
-        var marks = GroundLayout.Of(crossed).Markings(Section).Markings;
+        var marks = GroundModule.AssembleMarkings(TestWorld.Context(crossed), Section).Markings;
         AssertThat(marks.Crossings.Count == 1 && Vector2.Distance(marks.Crossings[0], new(50f, 0f)) < TestTolerance.Position).OverrideFailureMessage("An authored footway across the road gets one zebra where it crosses.").IsTrue();
-        AssertThat(GroundLayout.Of(bare).Markings(Section).Markings.Crossings.Count == 0).OverrideFailureMessage("No walk, no crossing.").IsTrue();
+        AssertThat(GroundModule.AssembleMarkings(bareContext, Section).Markings.Crossings.Count == 0).OverrideFailureMessage("No walk, no crossing.").IsTrue();
 
         // Feature and network copies together build the same tile as the network alone: no second layer, no z conflict.
         var a = new GroundModule().Build(TestWorld.Context(withWalk), new TileKey(0, 0), LodLevel.L0);

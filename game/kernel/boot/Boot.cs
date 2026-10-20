@@ -1,3 +1,4 @@
+using Campus.Kernel.Diagnostics;
 using Godot;
 using Campus.Kernel.Registry;
 using Campus.Contracts.Startup;
@@ -21,16 +22,17 @@ public partial class Boot : Node
             FixedShots = fixedShots;
             KernelServices.Services.Add(Options);
         }
-        catch (ArgumentException error) { Reject(error.Message); return; }
+        catch (ArgumentException error) { Reject("Invalid or duplicate application argument:", error); return; }
         var profile = Path.GetFileName(OS.GetUserDataDir().TrimEnd('/', '\\'));
         GD.Print($"Storage profile: {profile}");
         if (BuildInfo.Kind == "dev" && !profile.StartsWith("UESTC_", StringComparison.Ordinal))
             Reject("Development build must use an isolated user directory.");
     }
-    private void Reject(string argument)
+    private void Reject(string message, Exception? error = null)
     {
         Failed = true;
-        GD.PushError($"Invalid or duplicate application argument: {argument}");
+        if (error is null) DiagnosticLog.Error("Boot", message);
+        else DiagnosticLog.Error(message, error);
         GetTree().Quit(2);
     }
 }

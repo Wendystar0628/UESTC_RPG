@@ -8,7 +8,7 @@ using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
 using Campus.Kernel.Maps;
 using Campus.Kernel.World;
-using SaveDiagnostics = Campus.Kernel.Diagnostics.Diagnostics;
+using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save;
 
@@ -452,7 +452,7 @@ public sealed class SaveService : ISaveService, IDisposable
     {
         _restore!.RetainFailure(error);
         var result = new LoadResult(LoadStatus.Corrupt, null, 0, [], _restore.Error!.Message);
-        SaveDiagnostics.Warning("External save rejected before world mutation.", _restore.Error);
+        DiagnosticLog.Warning("External save rejected before world mutation.", _restore.Error);
         return result;
     }
 
@@ -461,12 +461,12 @@ public sealed class SaveService : ISaveService, IDisposable
         if (_restore?.MutationStarted != true)
         {
             _restore?.RetainFailure(error);
-            SaveDiagnostics.Error("Save restoration failed before world mutation.", error);
+            DiagnosticLog.Error("Save restoration failed before world mutation.", error);
             return new LoadResult(LoadStatus.Failed, slot, 0, [], error.Message);
         }
         try { _restore.MarkFault(error); }
         catch (Exception abortError) { _restore.RetainAbortFailure(error, abortError); }
-        SaveDiagnostics.Error("Save restoration failed; the world is blocked until Load or NewGame.", _restore.Error!);
+        DiagnosticLog.Error("Save restoration failed; the world is blocked until Load or NewGame.", _restore.Error!);
         return new LoadResult(LoadStatus.Failed, slot, 0, [], "save.error.restore_world: " + _restore.Error!.Message);
     });
 
