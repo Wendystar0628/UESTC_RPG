@@ -20,7 +20,7 @@ $slowTestSeconds = 2
 $testRecordMaxRuns = 30
 $testRecordMaxDays = 14
 $testCutCandidateCount = 20
-# Shared layer (contracts, planar geometry, zone common tools, shared test fixtures): a change here selects every quick test.
+# Shared layer (contracts, planar geometry, public site tools, shared test fixtures): a change here selects every quick test.
 $publicLayerPattern = '^game/(contracts|gen/geometry|gen/sites|shared/tests)/'
 function Get-UESTCMainStage {
     param([string]$Root)
