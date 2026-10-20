@@ -186,7 +186,7 @@ gates: [G1, G5]
 | 任务单 | `tasks/<claude 或 codex>/<队列行号>-<主题>.md`；一张单管几行时用主行的号 | `Q-036-广场图样稳定性采集.md` |
 | 旁路单 | `side/cards/S-<nnn>-<主题>.md` | `S-007-清点外围楼名.md` |
 | 调研 | `research/r<nnn>-<主题>/`，日期只记在 INDEX | `r025-命名规范/` |
-| 来信 | `notes/<claude 或 codex>/<年月日-时分秒>-<发件方>-<短词>.md`，发件方写 `claude` 或 `codex` | `20261019-024457-claude-编号统一.md` |
+| 来信 | `notes/<claude 或 codex>/<年月日-时分秒>-<发件方>-<短词>.md`，发件方写 `claude`、`codex`，作者经观察台留言写 `author`（只进 `notes/claude/`） | `20261019-024457-claude-编号统一.md` |
 | 契约申请 | `requests/contract-<队列行号>-<主题>.md` | `contract-Q-003-地形求值.md` |
 | 世界文件 | 区文件 `world/<区>.json`；原点、投影与校界 `world/geo.json` | `world/core.json` |
 | 脚本 | `scripts/` 的 Python、PowerShell 与命令脚本文件名用小写连字符；C# 工具类型文件遵守 C# 命名。开头一句话作用加"用法："（STD-CODE） | `check-naming.ps1`、`clean-artifacts.py` |
