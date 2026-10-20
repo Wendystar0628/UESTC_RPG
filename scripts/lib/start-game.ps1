@@ -20,7 +20,14 @@ function Test-UESTCLaunchBuild {
     $assembly = Join-Path $output 'Campus.dll'
     $graphPath = Join-Path $game 'obj\Campus\Campus.csproj.nuget.dgspec.json'
     if (-not [IO.File]::Exists($assembly) -or -not [IO.File]::Exists($graphPath)) { return $false }
+    $fingerprints = Join-Path $game 'data\build-code-fingerprints.json'
+    $fingerprintsStamp = Join-Path $game '.godot\mono\temp\obj\Debug\CodeFingerprints.succeeded'
+    if (-not [IO.File]::Exists($fingerprints) -or -not [IO.File]::Exists($fingerprintsStamp)) { return $false }
+    if ([IO.File]::GetLastWriteTimeUtc($assembly) -gt [IO.File]::GetLastWriteTimeUtc($fingerprintsStamp)) { return $false }
     $builtAt = [IO.File]::GetLastWriteTimeUtc($assembly)
+    # A successful fingerprint build can leave both the game DLL and JSON unchanged.
+    if ([IO.File]::GetLastWriteTimeUtc($fingerprintsStamp) -gt $builtAt) { $builtAt = [IO.File]::GetLastWriteTimeUtc($fingerprintsStamp) }
+    if ([IO.File]::GetLastWriteTimeUtc($fingerprints) -gt [IO.File]::GetLastWriteTimeUtc($fingerprintsStamp)) { return $false }
     # A successful no-op build can leave the DLL timestamp unchanged. One empty
     # local stamp records that success; it contains no source hashes or gate results.
     $stamp = Join-Path $Root 'output\start_game\build.succeeded'
@@ -41,7 +48,8 @@ function Test-UESTCLaunchBuild {
             $inputs.Add((Get-Item -LiteralPath $config))
         }
         $name = [IO.Path]::GetFileNameWithoutExtension($path)
-        if (-not [IO.File]::Exists((Join-Path $output "$name.dll"))) { return $false }
+        $projectAssembly = Join-Path $output "$name.dll"
+        if (-not [IO.File]::Exists($projectAssembly) -or [IO.File]::GetLastWriteTimeUtc($projectAssembly) -gt [IO.File]::GetLastWriteTimeUtc($fingerprintsStamp)) { return $false }
         $intermediate = if ($name -eq 'Campus') { Join-Path $game '.godot\mono\temp\obj\Debug' }
             else { Join-Path $restore.outputPath 'Debug\net10.0' }
         $list = Join-Path $intermediate "$name.csproj.FileListAbsolute.txt"
@@ -71,7 +79,7 @@ function Test-UESTCLaunchBuild {
             if (-not $found) { return $false }
         }
     }
-    foreach ($name in @('global.json', 'version.txt', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'scripts\build\build-info.ps1', 'scripts\setup\install-test-runner.ps1')) {
+    foreach ($name in @('global.json', 'version.txt', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'scripts\build\build-info.ps1', 'scripts\build\fingerprints\Campus.CodeFingerprints.csproj', 'scripts\setup\install-test-runner.ps1')) {
         $inputs.Add((Get-Item -LiteralPath (Join-Path $Root $name)))
     }
     foreach ($name in @('NuGet.Config', 'nuget.config', '.editorconfig')) {
@@ -95,6 +103,14 @@ function Test-UESTCLaunchBuild {
             $inputs.Add($file)
             $directory = $file.DirectoryName
             while ($directory.Length -ge $pipeline.Length -and $sourceDirectories.Add($directory)) { $directory = [IO.Path]::GetDirectoryName($directory) }
+        }
+    }
+    $fingerprintTool = Join-Path $Root 'scripts\build\fingerprints'
+    foreach ($file in @(Get-UESTCLaunchFiles $fingerprintTool)) {
+        if ($file.Extension -in @('.cs', '.csproj', '.props', '.targets')) {
+            $inputs.Add($file)
+            $directory = $file.DirectoryName
+            while ($directory.Length -ge $fingerprintTool.Length -and $sourceDirectories.Add($directory)) { $directory = [IO.Path]::GetDirectoryName($directory) }
         }
     }
     foreach ($buildInput in $inputs) { if ($buildInput.LastWriteTimeUtc -gt $builtAt) { return $false } }

@@ -29,6 +29,8 @@ BUILD_ROOTS = ('game', 'scripts', 'pipeline')  # 找已删工程的 bin/obj
 DEPTH = 3
 COMMITS = 20
 FORMAT_DIR = re.compile(r'^(.+)-tbin-(\d+)$')
+START_GAME_KEEP = {os.path.join(OUT, 'start_game', name) for name in
+                   ('build.succeeded', 'build.log', 'import.log')}
 
 
 def git(*args):
@@ -54,17 +56,19 @@ def size(p):
     return sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(p) for f in fs)
 
 
-def aged(directory, before, depth, skip=()):
+def aged(directory, before, depth, skip=(), keep=()):
     """directory 下过期的项：整项过期就整项算，否则是目录就往里再查一层。"""
     out = []
     for name in sorted(os.listdir(directory)):
         p = os.path.join(directory, name)
         if name in skip:
             continue
-        if newest(p) < before:
+        protected = any(os.path.normcase(k) == os.path.normcase(p) or
+                        os.path.normcase(k).startswith(os.path.normcase(p) + os.sep) for k in keep)
+        if newest(p) < before and not protected:
             out.append(p)
         elif os.path.isdir(p) and depth > 1:
-            out += aged(p, before, depth - 1)
+            out += aged(p, before, depth - 1, keep=keep)
     return out
 
 
@@ -116,7 +120,7 @@ def stale(commits=COMMITS):
     out = old_formats() + orphan_builds()
     before = cutoff(commits)
     if before is not None and os.path.isdir(OUT):
-        out += aged(OUT, before, DEPTH, skip=KEEP)
+        out += aged(OUT, before, DEPTH, skip=KEEP, keep=START_GAME_KEEP)
         cache = os.path.join(OUT, 'cache')
         if os.path.isdir(cache):
             out += aged(cache, before, 1, skip=CACHE_KEEP)

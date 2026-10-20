@@ -2,4 +2,18 @@
   <ItemGroup Condition="'$(IsTestProject)' != 'true'">
     <Compile Remove="**/tests/**/*.cs" />
   </ItemGroup>
+  <!-- Return the real Compile/reference graph after its normal production Build. -->
+  <Target Name="GetCampusCodeFingerprintInputs" DependsOnTargets="ResolveReferences"
+          Returns="@(_CampusCodeFingerprintInput)">
+    <MSBuild Projects="@(_MSBuildProjectReferenceExistent)" Targets="GetCampusCodeFingerprintInputs"
+             Properties="%(_MSBuildProjectReferenceExistent.SetConfiguration);%(_MSBuildProjectReferenceExistent.SetPlatform);%(_MSBuildProjectReferenceExistent.SetTargetFramework)"
+             RemoveProperties="%(_MSBuildProjectReferenceExistent.GlobalPropertiesToRemove)$(_GlobalPropertiesToRemoveFromProjectReferences)"
+             Condition="'%(_MSBuildProjectReferenceExistent.BuildReference)' == 'true' And '%(_MSBuildProjectReferenceExistent.ReferenceOutputAssembly)' != 'false'"
+             BuildInParallel="false">
+      <Output TaskParameter="TargetOutputs" ItemName="_CampusCodeFingerprintInput" />
+    </MSBuild>
+    <ItemGroup>
+      <_CampusCodeFingerprintInput Include="@(Compile-&gt;'%(FullPath)');@(ReferencePath-&gt;'%(FullPath)');$(MSBuildAllProjects);$(MSBuildProjectFullPath);$(TargetPath);$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)$(MSBuildProjectFile).CoreCompileInputs.cache'))" />
+    </ItemGroup>
+  </Target>
 </Project>

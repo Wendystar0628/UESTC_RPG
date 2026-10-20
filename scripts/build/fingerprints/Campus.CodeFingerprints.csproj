@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Campus.Build.Fingerprints</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <_FingerprintRoslynDir>$(MSBuildSDKsPath)/../DotnetTools/dotnet-format</_FingerprintRoslynDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../game/contracts/Campus.Contracts.csproj" />
+    <Reference Include="$(_FingerprintRoslynDir)/*.dll" Exclude="$(_FingerprintRoslynDir)/Microsoft.Build.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Framework.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Utilities.Core.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Tasks.Core.dll;$(_FingerprintRoslynDir)/dotnet-format.dll">
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.Build.Locator">
+      <HintPath>$(_FingerprintRoslynDir)/BuildHost-netcore/Microsoft.Build.Locator.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <None Include="$(_FingerprintRoslynDir)/*.dll"
+          Exclude="$(_FingerprintRoslynDir)/Microsoft.Build.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Framework.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Utilities.Core.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Tasks.Core.dll">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(_FingerprintRoslynDir)/BuildHost-netcore/**/*">
+      <Link>BuildHost-netcore/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <Target Name="RequireSdkFingerprintWorkspace" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(_FingerprintRoslynDir)/Microsoft.CodeAnalysis.Workspaces.MSBuild.dll')"
+           Text="The selected SDK does not include MSBuildWorkspace. Install the locked SDK; no reduced fingerprint fallback is supported." />
+    <Error Condition="!Exists('$(_FingerprintRoslynDir)/BuildHost-netcore/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.dll') Or !Exists('$(_FingerprintRoslynDir)/BuildHost-netcore/Microsoft.Build.Locator.dll')"
+           Text="The selected SDK does not include the MSBuildWorkspace build host and locator." />
+  </Target>
+</Project>

@@ -186,6 +186,7 @@
         "game/contracts/Runtime/Campus.Contracts.Runtime.csproj",
         "game/gen/Campus.Gen.csproj",
         "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj",
+        "scripts/build/fingerprints/Campus.CodeFingerprints.csproj",
         "scripts/gates/arch/Campus.Arch.Tests.csproj",
         "scripts/godot-api/ApiDump/ApiDump.csproj"
       ],
@@ -1245,11 +1246,28 @@
         "status": "PENDING_POLICY_REVIEW",
         "scope": "SciPy project license only; bundled native components remain unreviewed."
       }
+    },
+    {
+      "name": ".NET SDK bundled dotnet-format",
+      "version": "10.0.402",
+      "kind": "external-build-tool",
+      "managedBy": "manual",
+      "license": "MIT",
+      "source": "https://github.com/dotnet/sdk",
+      "projectUrl": "https://github.com/dotnet/roslyn",
+      "scopes": [
+        "scripts/build/fingerprints/Campus.CodeFingerprints.csproj"
+      ],
+      "developmentOnly": true,
+      "exported": false,
+      "vendored": false,
+      "scope": "SDK-provided Roslyn/MSBuildWorkspace and BuildHost-netcore; build-time fingerprint generation only."
     }
   ],
   "nugetClosure": {
     "inputs": [
       "game/Campus.sln",
+      "scripts/build/fingerprints/Campus.CodeFingerprints.csproj",
       "scripts/gates/arch/Campus.Arch.Tests.csproj",
       "scripts/godot-api/ApiDump/ApiDump.csproj"
     ],
@@ -1261,6 +1279,7 @@
       "game/contracts/Runtime/Campus.Contracts.Runtime.csproj",
       "game/gen/Campus.Gen.csproj",
       "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj",
+      "scripts/build/fingerprints/Campus.CodeFingerprints.csproj",
       "scripts/gates/arch/Campus.Arch.Tests.csproj",
       "scripts/godot-api/ApiDump/ApiDump.csproj"
     ],

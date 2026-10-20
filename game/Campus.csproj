@@ -23,7 +23,51 @@
     </ItemGroup>
   </Target>
   <Target Name="GenerateBuildInformation" BeforeTargets="CoreCompile">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(IntermediateOutputPath)BuildInfo.g.cs&quot; -Configuration &quot;$(Configuration)&quot; -ModuleAssemblies &quot;$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)', ';')&quot;" />
+    <Exec Condition="'$(DesignTimeBuild)' != 'true'" Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../scripts/build/build-info.ps1&quot; -Root &quot;$(MSBuildProjectDirectory)/..&quot; -Output &quot;$(IntermediateOutputPath)BuildInfo.g.cs&quot; -Configuration &quot;$(Configuration)&quot; -ModuleAssemblies &quot;$(TargetName);@(_ResolvedProjectReferencePaths-&gt;'%(Filename)', ';')&quot;" />
     <ItemGroup><Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" /></ItemGroup>
+  </Target>
+  <PropertyGroup>
+    <_CampusCodeFingerprintTool>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '../scripts/build/fingerprints/Campus.CodeFingerprints.csproj'))</_CampusCodeFingerprintTool>
+    <_CampusCodeFingerprintManifest>$(MSBuildProjectDirectory)/data/build-code-fingerprints.json</_CampusCodeFingerprintManifest>
+  </PropertyGroup>
+  <Target Name="PrepareCampusCodeFingerprints" DependsOnTargets="GetCampusCodeFingerprintInputs">
+    <!-- Build the host tool inside this Build invocation; it is not a game module. -->
+    <MSBuild Projects="$(_CampusCodeFingerprintTool)" Targets="Restore"
+             Properties="Configuration=$(Configuration);Platform=$(Platform)"
+             RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained" BuildInParallel="false" />
+    <MSBuild Projects="$(_CampusCodeFingerprintTool)" Targets="Build;GetTargetPath"
+             Properties="Configuration=$(Configuration);Platform=$(Platform)"
+             RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained" BuildInParallel="false">
+      <Output TaskParameter="TargetOutputs" ItemName="_CampusCodeFingerprintToolOutput" />
+    </MSBuild>
+    <MSBuild Projects="$(_CampusCodeFingerprintTool)" Targets="GetCampusCodeFingerprintInputs"
+             Properties="Configuration=$(Configuration);Platform=$(Platform)"
+             RemoveProperties="TargetFramework;RuntimeIdentifier;SelfContained" BuildInParallel="false">
+      <Output TaskParameter="TargetOutputs" ItemName="_CampusCodeFingerprintInput" />
+    </MSBuild>
+    <PropertyGroup>
+      <_CampusCodeFingerprintStamp>$(IntermediateOutputPath)CodeFingerprints.succeeded</_CampusCodeFingerprintStamp>
+    </PropertyGroup>
+    <ItemGroup>
+      <_CampusCodeFingerprintToolPath Include="@(_CampusCodeFingerprintToolOutput)" />
+      <_CampusCodeFingerprintInput Include="$(MSBuildProjectDirectory)/../global.json" />
+      <_CampusCodeFingerprintProperty Include="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(TargetFramework)" />
+      <_CampusCodeFingerprintProperty Include="RuntimeIdentifier=$(RuntimeIdentifier)" Condition="'$(RuntimeIdentifier)' != ''" />
+      <_CampusCodeFingerprintProperty Include="SelfContained=$(SelfContained)" Condition="'$(SelfContained)' != ''" />
+    </ItemGroup>
+    <RemoveDuplicates Inputs="@(_CampusCodeFingerprintToolPath)">
+      <Output TaskParameter="Filtered" ItemName="_CampusCodeFingerprintToolTargetPath" />
+    </RemoveDuplicates>
+    <!-- The JSON may retain its timestamp when its contents are unchanged. -->
+    <Delete Files="$(_CampusCodeFingerprintStamp)" Condition="!Exists('$(_CampusCodeFingerprintManifest)')" />
+  </Target>
+  <Target Name="GenerateCampusCodeFingerprints" AfterTargets="Build"
+          DependsOnTargets="PrepareCampusCodeFingerprints"
+          Condition="'$(DesignTimeBuild)' != 'true' And '$(IsTestProject)' != 'true'"
+          Inputs="@(_CampusCodeFingerprintInput);$(_CampusCodeFingerprintManifest)"
+          Outputs="$(_CampusCodeFingerprintStamp)">
+    <Exec Command="dotnet &quot;@(_CampusCodeFingerprintToolTargetPath)&quot; --project &quot;$(MSBuildProjectFullPath)&quot; --tool-project &quot;$(_CampusCodeFingerprintTool)&quot; --output &quot;$(_CampusCodeFingerprintManifest)&quot; @(_CampusCodeFingerprintProperty-&gt;'--property &quot;%(Identity)&quot;', ' ')" />
+    <Touch Files="$(_CampusCodeFingerprintStamp)" AlwaysCreate="true" />
+    <ItemGroup><FileWrites Include="$(_CampusCodeFingerprintStamp)" /></ItemGroup>
   </Target>
 </Project>

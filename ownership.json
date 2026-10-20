@@ -2,6 +2,10 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "game/data/build-code-fingerprints.json",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/gen/maps/qingshuihe/Campus.Gen.Maps.Qingshuihe.csproj",
       "owner": "WP-00"
     },

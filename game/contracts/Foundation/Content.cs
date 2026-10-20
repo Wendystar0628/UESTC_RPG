@@ -39,8 +39,8 @@ public sealed record InspectionProbe(string Id, FeatureId Feature, Pose Pose, fl
 
 public interface IContentModule
 {
-    BakeInputDependencies BakeInputs => BakeInputDependencies.World;
-    BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
+    BakeInputDependencies BakeInputs { get; }
+    BakeInputDependencies CollisionInputs { get; }
     IReadOnlyList<Claim> Claims { get; }
     ModuleBudget Budget { get; }
     /// <summary>Enumerates conservative occupied L0 cells on the 64-metre grid from source ranges, without generating products or querying terrain heights, regardless of requested rendering LOD.</summary>
