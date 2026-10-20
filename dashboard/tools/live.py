@@ -82,6 +82,7 @@ def main():
     claude = normalized(U.CLAUDE_PROJ)
     database = {normalized(U.CODEX_DB + suffix) for suffix in ('', '-wal', '-shm')}
     local = normalized(U.COLLAB + '/tools/monitor/local.json')
+    patrol_schedule = normalized(U.COLLAB + '/tools/README.md')
     guard = normalized(U.COLLAB + '/tools/hooks/log/guard.jsonl')
     hook_stats = {normalized(U.COLLAB + '/tools/hooks/log/' + name)
                   for name in ('stats-guard.json', 'stats-steer.json')}
@@ -128,6 +129,8 @@ def main():
         result = set()
         if path == queue:
             result.add('queue')
+        if path == patrol_schedule:
+            result.add('patrol:interval')
         if path == local:
             result.update(('local', 'sessions', 'settings'))
         if path in database:
@@ -225,7 +228,7 @@ def main():
         wanted += [(root, True) for root in code_roots | gate_roots]
         exact = set(rollout_paths) | checkout_paths | database | git_files | settings | model_paths
         exact.update(root for root in script_roots if not os.path.isdir(root))
-        exact.update((queue, local, guard, agent_log, dashboard + '/index.html',
+        exact.update((queue, local, patrol_schedule, guard, agent_log, dashboard + '/index.html',
                       curated + '/audit.js', curated + '/notices.js', U.STATE + '/dashboard-ack.json'))
         wanted += [(os.path.dirname(path), False) for path in exact]
         wanted += [(path, False) for path in notes]
@@ -259,7 +262,7 @@ def main():
         mark(set(collect.INPUTS) - {'_app'})
         next_check = time.monotonic() + CHECK_S
         # 时间依赖只在真实到期点安排一次采样；不是文件轮询。
-        next_expiry, next_system = None, time.monotonic() + 600
+        next_expiry, next_system = {}, time.monotonic() + 600
         while True:
             changed.clear()
             with mutex:
@@ -282,13 +285,15 @@ def main():
                     valid.difference_update(failed)
                 dependencies = {'@' + name for name in done | failed}
                 mark({name for name, inputs in collect.INPUTS.items() if inputs & dependencies})
-                if 'team' in done or 'live' in done:
+                if (done | failed) & {'team', 'live', 'health'}:
                     # 下一次过时/离线阈值从同一份已采事实导出，不补采第二份。
                     next_expiry = collect.next_expiry()
             now = time.monotonic()
-            if next_expiry is not None and time.time() >= next_expiry:
-                mark({name for name, inputs in collect.INPUTS.items() if 'sessions' in inputs})
-                next_expiry = None
+            expired = {name for name, due in next_expiry.items() if time.time() >= due}
+            if expired:
+                mark(({name for name, inputs in collect.INPUTS.items() if 'sessions' in inputs}
+                      if 'sessions' in expired else set()) | (expired - {'sessions'}))
+                next_expiry = {name: due for name, due in next_expiry.items() if name not in expired}
             if now >= next_system:
                 mark({'system'} & set(collect.INPUTS))
                 next_system = now + 600
@@ -320,8 +325,8 @@ def main():
                              and not any(dependency[1:] in dirty or dependency[1:] in inflight
                                          for dependency in collect.INPUTS[name] if dependency.startswith('@'))]
             deadline = min([next_check, next_system] + deadlines)
-            if next_expiry is not None:
-                deadline = min(deadline, time.monotonic() + max(0, next_expiry - time.time()))
+            if next_expiry:
+                deadline = min(deadline, time.monotonic() + max(0, min(next_expiry.values()) - time.time()))
             changed.wait(max(.01, deadline - time.monotonic()))
     finally:
         stop.set()

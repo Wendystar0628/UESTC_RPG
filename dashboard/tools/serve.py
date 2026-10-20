@@ -19,9 +19,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', '..', '.collab', 'tools'))
 import datafile
-from monitor.view import attention
+from monitor.view import attention, health
 from monitor.read import documents, repo
 from monitor import util as U
+
+
+def checked_payload(publication):
+    """HTTP 只包装唯一 view 判鲜结果；内部 publication 保持时间戳表。"""
+    stamps = {name: publication['checked'].get(name) for name in datafile.AUTO_NAMES}
+    fresh = health.freshness(stamps, datafile.AUTO_NAMES, time.time())
+    return {name: {'at': stamps[name], 'stale': fresh['stale'][name], 'ratio': fresh['ratio'][name]}
+            for name in datafile.AUTO_NAMES}
 
 
 class Publications(FileSystemEventHandler):
@@ -95,7 +103,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         url = urlsplit(self.path)
         if url.path == '/api/data-names.js':
-            body = ('window.DashDataNames = ' + json.dumps(datafile.AUTO_NAMES) + ';\n').encode('utf-8')
+            body = ('window.DashDataNames = ' + json.dumps(list(datafile.AUTO_NAMES)) + ';\n'
+                    + 'window.DashDataIntervals = ' + json.dumps(datafile.AUTO_NAMES) + ';\n').encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/javascript; charset=utf-8')
             self.send_header('Cache-Control', 'no-store')
@@ -141,7 +150,8 @@ class Handler(SimpleHTTPRequestHandler):
                 if stopped:
                     return
                 publication = datafile.publication()
-            emit('versions', {**publication, 'full': True})
+            emit('versions', {'at': publication['at'], 'versions': publication['versions'],
+                              'checked': checked_payload(publication), 'full': True})
             versions = publication['versions']
             heartbeat = time.monotonic() + 15
             while True:
@@ -154,10 +164,10 @@ class Handler(SimpleHTTPRequestHandler):
                 changed = {name: value for name, value in publication['versions'].items() if versions.get(name) != value}
                 if changed:
                     emit('versions', {'at': publication['at'], 'full': False, 'versions': changed,
-                                      'checked': {name: publication['checked'][name] for name in changed if name in publication['checked']}})
+                                      'checked': checked_payload(publication)})
                 versions = publication['versions']
                 if time.monotonic() >= heartbeat:
-                    emit('checked', {'at': U.iso(time.time()), 'checked': publication['checked']})
+                    emit('checked', {'at': U.iso(time.time()), 'checked': checked_payload(publication)})
                     heartbeat = time.monotonic() + 15
         except (BrokenPipeError, ConnectionResetError, TimeoutError):
             return

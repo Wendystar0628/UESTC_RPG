@@ -12,8 +12,22 @@ import uuid
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data')
 KINDS = ('auto', 'curated')
-AUTO_NAMES = ('live', 'attention', 'feedback', 'progress', 'flow', 'collab', 'team',
-              'health', 'system', 'hookfeed', 'feed', 'docs', 'now')
+# 每份来源的确认间隔（秒）；名单与判鲜参数共用此表。
+AUTO_NAMES = {
+    'live': 90,
+    'attention': 300,
+    'feedback': 300,
+    'progress': 300,
+    'flow': 600,
+    'collab': 600,
+    'team': 300,
+    'health': 1800,
+    'system': 1800,
+    'hookfeed': 300,
+    'feed': 600,
+    'docs': 3600,
+    'now': 600,
+}
 CURATED_NAMES = ('audit', 'notices')
 sys.path.insert(0, os.path.join(ROOT, '..', '.collab', 'tools'))
 from monitor import util as U

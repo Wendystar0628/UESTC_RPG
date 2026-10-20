@@ -20,6 +20,7 @@ _VALUES = {}
 _RAW = None
 _SAMPLE = None
 _ROWS = None
+_EXPIRIES = {}
 
 # inputs 是原生通知来源名或 @公开结果；内部 _git 只供共享完成证据。
 PRODUCERS = {
@@ -37,8 +38,8 @@ INPUTS = {
     'progress': {'queue', 'history:queue'},
     'flow': {'queue', 'history:queue', 'history:pushes', 'history:audits', 'history:checkpoint', '@progress', '@_git'},
     'collab': {'queue', 'history:letters', 'history:audits', 'history:pushes', 'history:agents', 'history:leads', 'history:queue', 'history:checkpoint'},
-    'team': {'sessions', 'queue', 'history:agents'},
-    'health': {'history:patrol', 'history:checkpoint', 'gates', 'code', 'worktrees', 'hooks'},
+    'team': {'sessions', 'queue', 'history:agents', '@progress'},
+    'health': {'history:patrol', 'history:checkpoint', 'gates', 'code', 'worktrees', 'hooks', 'patrol:interval'},
     'system': {'scripts', 'settings', 'hooks', 'local', '@docs'},
     'hookfeed': {'hooks', 'local'}, 'docs': {'docs'},
     'feed': {'queue', 'history:queue', 'history:pushes', 'history:audits', 'history:checkpoint', 'docs', 'notices', '@_git'},
@@ -83,7 +84,7 @@ def context(names, recorder=None):
     with _LOCK:
         raw = _RAW
     return {'rows': rows, 'sample': sampled, 'values': values, 'rows_error': rows_error, 'sample_error': sample_error,
-            'raw': raw if raw is not None else {'errors': ['Git 来源尚未完成首次采集']}}
+            'expiries': {}, 'raw': raw if raw is not None else {'errors': ['Git 来源尚未完成首次采集']}}
 
 
 def run(names, recorder=None, app_paths=()):
@@ -137,6 +138,8 @@ def run(names, recorder=None, app_paths=()):
         datafile.write('auto', name, data, source=SOURCE + '.' + name)
         with _LOCK:
             _VALUES[name] = data
+            if name == 'health':
+                _EXPIRIES[name] = shared['expiries'].get(name) if not data.get('errors') else None
         shared['values'][name] = data
         (failed if data.get('errors') else done).add(name)
     selected = names & {'attention', 'feedback'}
@@ -151,14 +154,13 @@ def run(names, recorder=None, app_paths=()):
 
 
 def next_expiry():
-    """同一会话事实的时间阈值：活跃静默分钟、过时与交回一小时到期。"""
+    """现有会话到期点与 view 给出的巡逻到期点；返回来源名到 epoch。"""
     now = time.time()
     with _LOCK:
         sample = _SAMPLE
-    if sample is None:
-        return None
+        expiries = {name: due for name, due in _EXPIRIES.items() if due is not None}
     deadlines = []
-    for agent in sample['agents']:
+    for agent in sample['agents'] if sample is not None else ():
         last = U.epoch(agent['last']) if agent.get('last') else None
         if last and agent.get('state') in ('running', 'stalled', 'unknown'):
             deadlines.append(last + (int(max(0, now - last) / 60) + 1) * 60)
@@ -167,7 +169,9 @@ def next_expiry():
         ended = U.epoch(end) if end else None
         if ended and ended + 3600 > now:
             deadlines.append(ended + 3600)
-    return min(deadlines) if deadlines else None
+    if deadlines:
+        expiries['sessions'] = min(deadlines)
+    return expiries
 
 
 def main():
