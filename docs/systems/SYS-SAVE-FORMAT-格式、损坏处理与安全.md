@@ -17,7 +17,7 @@ gates: [G4, G20]
 # SYS-SAVE-FORMAT · 格式、损坏处理与安全
 
 > **范围**：本文规定存档容器与序列化约定、格式号与段版本、存档损坏的处理、唯一的设置文件 `settings.json`、禁止用 Resource 与 ConfigFile 存读档的安全原则。
-> **不在本文**：存档位模型与各段存什么（SYS-SAVE）；保存时机、读档流程与一致性（SYS-SAVE-FLOW）；文件布局、DTO、写盘步骤（`game/kernel/save/format/`）；契约签名（`game/contracts/Save/`）；命令行与 G4、G20（ENG-GATES）。
+> **不在本文**：存档位模型与各段存什么（SYS-SAVE）；保存时机、读档流程与一致性（SYS-SAVE-FLOW）；文件布局、DTO、写盘步骤（`game/kernel/save/format/`）；契约签名（`game/contracts/Runtime/Save/`）；命令行与 G4、G20（ENG-GATES）。
 > **查阅**：先读 §0；格式与版本看 §1；坏档看 §2；设置文件看 §3；安全看 §4
 
 ## 0 结论

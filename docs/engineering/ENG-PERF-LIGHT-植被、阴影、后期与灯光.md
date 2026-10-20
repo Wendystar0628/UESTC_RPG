@@ -59,7 +59,7 @@ gates: [G2, G4]
 - **描线**：材质 ID 编进 ROUGHNESS 的 7 位，前提是关闭 `screen_space_roughness_limiter`、不开 MSAA、预通道开。线画在前景一侧；ID 不同才描材质交界；天空与 400 m 以外提前退出。**线宽按内部分辨率换算**，名义宽度 ≥ 1 px 的线内部宽度不小于 1 个内部像素。远处倒角变窄后由凸边亮线接替倒角提亮；远雨幕带、闪光帧、边缘光并进同一次 dispatch，不另加通道。
 - **抗锯齿**：不用 TAA（一拍二、风动、细线会拖影）与 MSAA（ID 和法线不能 resolve）；SMAA 或 FXAA 随预设（SYS-GRAPHICS §1），不许侵蚀 1 px 线（ART-STYLE-LINES）。
 - **可关项**（移轴、光斑、光柱、暗角）的管线启动时就建好，关时先 0.5 s 淡到 0。
-- 窗灯光晕与光柱都走 `fx_glow`。
+- 窗灯光晕走 `fx_glow`（ENG-PERF §1.4）。
 
 ### 2.3 窗灯与路灯
 

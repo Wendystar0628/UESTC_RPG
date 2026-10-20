@@ -56,7 +56,7 @@ paths: ["game/project.godot", "game/export_presets.cfg", "Directory.Build.props"
 
 11. **内容几何不依赖时刻、季节、天气**：`Build()` 不读世界状态，差异只做成着色器参数，改时间、换季、换天气不让任何烘焙产物失效。
 12. **碰撞数据**本机烘焙，与可见几何同参数生成，不拿可见网格当 ConcavePolygonShape3D；碰撞 body 只在主线程创建、删除、入树，入树前加完形状；开放室内每个 body ≤ 250 个形状，每帧入树一个，单帧不超过 1 ms；自动门门体运行时恢复，不进烘焙碰撞；外围没有碰撞。
-13. **全局着色器参数必须先登记**（`game/contracts/ShaderGlobals.cs`，类型与默认值在 `game/project.godot` 的 `[shader_globals]`）；运行时不得 `GlobalShaderParameterAdd`、不得读回；每个参数只有一个写入方。
+13. **全局着色器参数必须先登记**（`game/contracts/Materials/ShaderGlobals.cs`，类型与默认值在 `game/project.godot` 的 `[shader_globals]`）；运行时不得 `GlobalShaderParameterAdd`、不得读回；每个参数只有一个写入方。
 14. **阴影投影物**必须在相机可见层上；草、插片、落叶、粒子、光晕、光锥一律 `cast_shadow = Off`；远处与植被的投影用 `ShadowsOnly` 代理。
 15. **着色器里按距离判断**用 `MAIN_CAM_INV_VIEW_MATRIX[3].xyz`，不用 `CAMERA_POSITION_WORLD`（阴影通道里它是灯的位置）；不用 `LIGHT_COLOR`（G4）。
 16. **线程边界**：工作线程只做纯 .NET 计算、读写本机缓存、`res://` 后台加载和 RenderingServer 资源创建；场景树、`RenderingServer.Instance*`、PhysicsServer3D 的 body 只在主线程；gen 里禁用 `Parallel`、`Task.Run`；在途生成任务不超过 max(2, 逻辑核数 − 2)。

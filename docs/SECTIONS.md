@@ -293,7 +293,7 @@
 
 ## WLD-INTERIORS-ACCESS · 室内开放
 
-`docs/world/WLD-INTERIORS-ACCESS-室内开放.md` · 5.2k 字 · 精选开放的原则与共用约定、门的开与关（含自动门的设计取向）、关着的楼、开放更多楼的做法
+`docs/world/WLD-INTERIORS-ACCESS-室内开放.md` · 5.3k 字 · 精选开放的原则与共用约定、门的开与关（含自动门的设计取向）、关着的楼、开放更多楼的做法
 关键词：楼内、开放室内、开放清单、interiors.json、开放入口、自动门、封口、门厅卡、窗卡、看进去例外
 
 - WLD-INTERIORS-ACCESS §0 结论 · L23 · 910
@@ -302,11 +302,11 @@
 - WLD-INTERIORS-ACCESS §2 门的区分：开与关 · L55 · 966
   - WLD-INTERIORS-ACCESS §2.1 楼里的门：走近推开，闭门器关上 · L70 · 319
 - WLD-INTERIORS-ACCESS §3 关着的楼：外壳、窗卡、门厅卡与简化室内 · L77 · 732
-- WLD-INTERIORS-ACCESS §4 开放更多室内 · L86 · 517
+- WLD-INTERIORS-ACCESS §4 开放更多室内 · L86 · 604
 
 ## WLD-INTERIORS-BUILD · 室内制作
 
-`docs/world/WLD-INTERIORS-BUILD-室内制作.md` · 6.5k 字 · 室内制作规则：加载与进楼衔接、平面生成器、风格与光、生活痕迹、楼梯门洞与碰撞
+`docs/world/WLD-INTERIORS-BUILD-室内制作.md` · 6.7k 字 · 室内制作规则：加载与进楼衔接、平面生成器、风格与光、生活痕迹、楼梯门洞与碰撞
 关键词：室内加载、进楼衔接、平面内核、楼型、室内风格、窗光斑、光柱、室内色名、生活痕迹、楼梯碰撞、SlopedWallCollider、门洞、落点
 
 - WLD-INTERIORS-BUILD §0 结论 · L23 · 467
@@ -315,14 +315,14 @@
   - WLD-INTERIORS-BUILD §1.1 整体加载、按层显示 · L39 · 277
   - WLD-INTERIORS-BUILD §1.2 触发 · L45 · 269
   - WLD-INTERIORS-BUILD §1.3 进楼与出楼，以及衔接保证（ENG-PERF-STREAM §1.2 第 6 条） · L52 · 266
-- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 1.0k
-- WLD-INTERIORS-BUILD §3 风格 · L68 · 1.3k
-  - WLD-INTERIORS-BUILD §3.1 明暗与暖影 · L72 · 195
-  - WLD-INTERIORS-BUILD §3.2 窗光斑与光（最重要的室内画面） · L76 · 395
-  - WLD-INTERIORS-BUILD §3.3 色名、识别要素与夜间 · L84 · 599
-- WLD-INTERIORS-BUILD §4 生活痕迹规则 · L90 · 614
-- WLD-INTERIORS-BUILD §5 楼梯、门洞与碰撞 · L99 · 906
-- WLD-INTERIORS-BUILD §6 待验证 · L117 · 254
+- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 1.2k
+- WLD-INTERIORS-BUILD §3 风格 · L69 · 1.3k
+  - WLD-INTERIORS-BUILD §3.1 明暗与暖影 · L73 · 195
+  - WLD-INTERIORS-BUILD §3.2 窗光斑与光（最重要的室内画面） · L77 · 395
+  - WLD-INTERIORS-BUILD §3.3 色名、识别要素与夜间 · L85 · 599
+- WLD-INTERIORS-BUILD §4 生活痕迹规则 · L91 · 614
+- WLD-INTERIORS-BUILD §5 楼梯、门洞与碰撞 · L100 · 906
+- WLD-INTERIORS-BUILD §6 待验证 · L118 · 254
 
 ## WLD-LIFE · 动物、生活痕迹与街道家具
 
@@ -622,7 +622,7 @@
 - MAP-QSH-CENTER-EAST §3 文科楼群 · L64 · 541
 - MAP-QSH-CENTER-EAST §4 综合训练馆与球场 · L71 · 1.4k
 - MAP-QSH-CENTER-EAST §5 东缘 · L80 · 691
-- MAP-QSH-CENTER-EAST §6 本区身份特征、设计增补与近景要求 · L87 · 746
+- MAP-QSH-CENTER-EAST §6 本区身份特征、设计增补与近景要求 · L87 · 751
 - MAP-QSH-CENTER-EAST §7 待验证 · L108 · 245
 
 ## MAP-QSH-CENTER-EAST-SEASONS · 中部与东区四季昼夜与天气
@@ -663,7 +663,7 @@
 - MAP-QSH-CORE §6 西湖的岸线与构筑物 · L94 · 974
 - MAP-QSH-CORE §7 西湖喷泉 · L107 · 489
 - MAP-QSH-CORE §8 本区的构图关系 · L121 · 375
-- MAP-QSH-CORE §9 本区身份特征、设计增补与近景要求 · L128 · 675
+- MAP-QSH-CORE §9 本区身份特征、设计增补与近景要求 · L128 · 680
 - MAP-QSH-CORE §10 待验证 · L148 · 354
 
 ## MAP-QSH-CORE-SEASONS · 核心区灯光、四季昼夜与天气
@@ -736,7 +736,7 @@
 - MAP-QSH-NORTH §5 餐厅 · L83 · 1.2k
 - MAP-QSH-NORTH §6 文化地标与丹桂路 · L97 · 143
 - MAP-QSH-NORTH §7 风雨连廊与本区增补 · L102 · 448
-- MAP-QSH-NORTH §8 本区身份特征、设计增补与近景要求 · L112 · 557
+- MAP-QSH-NORTH §8 本区身份特征、设计增补与近景要求 · L112 · 556
 
 ## MAP-QSH-NORTH-SEASONS · 北部生活区四季昼夜与天气
 
@@ -813,7 +813,7 @@
 
 ## MAP-QSH-SOUTH · 南区
 
-`docs/maps/qingshuihe/MAP-QSH-SOUTH-南区.md` · 9.5k 字 · 南区各建筑与构筑物的外观、身份特征、设计增补与近景要求
+`docs/maps/qingshuihe/MAP-QSH-SOUTH-南区.md` · 9.6k 字 · 南区各建筑与构筑物的外观、身份特征、设计增补与近景要求
 关键词：南区、南门、校名墙、主楼、主轴线、屋顶空廊、过街楼、主楼泛光、森林公园、孔雀之家、东湖岸线、环湖跑道、里程标、六角亭、亲水平台、荷角、吴立人像、宣邦楼、钟楼、电子管穹顶、交班的钟、钟面指针、立人楼、体育馆、游泳馆、体育运动中心大平台、看台罩棚、国际创新中心、1–8 号楼、world/south.json
 
 - MAP-QSH-SOUTH §0 结论 · L23 · 692
@@ -828,7 +828,7 @@
 - MAP-QSH-SOUTH §8 西南角：国际创新中心与科创餐厅 · L115 · 336
 - MAP-QSH-SOUTH §9 南区中部的 1–8 号楼 · L121 · 312
 - MAP-QSH-SOUTH §10 本区的水道 · L125 · 217
-- MAP-QSH-SOUTH §11 本区身份特征、设计增补与近景要求 · L131 · 720
+- MAP-QSH-SOUTH §11 本区身份特征、设计增补与近景要求 · L131 · 725
 - MAP-QSH-SOUTH §12 待验证 · L154 · 307
 
 ## MAP-QSH-SOUTH-SEASONS · 南区四季昼夜与天气
@@ -952,7 +952,7 @@
 - MAP-QSH-WEST §8 荟文楼（综合楼） · L84 · 68
 - MAP-QSH-WEST §9 石刻 · L88 · 65
 - MAP-QSH-WEST §10 湿地公园与西门桥头 · L92 · 629
-- MAP-QSH-WEST §11 本区身份特征、设计增补与近景要求 · L102 · 819
+- MAP-QSH-WEST §11 本区身份特征、设计增补与近景要求 · L102 · 824
 
 ## MAP-QSH-WEST-SEASONS · 西区与西北区四季昼夜与天气
 
@@ -1118,7 +1118,7 @@
 
 ## SYS-GRAPHICS · 画面设置
 
-`docs/systems/SYS-GRAPHICS-画面设置.md` · 7.0k 字 · 主线三个画面预设与约 10 个单项、风格底线、应用方式、持久化；自动调节与首次分档在主线之后
+`docs/systems/SYS-GRAPHICS-画面设置.md` · 7.1k 字 · 主线三个画面预设与约 10 个单项、风格底线、应用方式、持久化；自动调节与首次分档在主线之后
 关键词：画面设置、画质、画面预设、设备档、均衡、精致、极致、单项、风格底线、风格默认、渲染比例、加载类设置、画面页、IQualityService、IQualityAware、QualityResponsive、QualityKnob、quality-presets.json、settings.json
 
 - SYS-GRAPHICS §0 结论 · L23 · 1.5k
@@ -1126,7 +1126,7 @@
 - SYS-GRAPHICS §1 预设 · L46 · 710
 - SYS-GRAPHICS §2 风格底线与风格默认 · L63 · 694
 - SYS-GRAPHICS §3 单项与生效方式 · L76 · 1.1k
-- SYS-GRAPHICS §4 应用方式 · L100 · 380
+- SYS-GRAPHICS §4 应用方式 · L100 · 465
 - SYS-GRAPHICS §5 自动推荐与自动调节（主线之后） · L110 · 398
 - SYS-GRAPHICS §6 持久化与恢复 · L119 · 305
 - SYS-GRAPHICS §7 画面页 · L125 · 135
@@ -1281,11 +1281,11 @@
 
 ## SYS-TIME · 时间与季节
 
-`docs/systems/SYS-TIME-时间与季节.md` · 4.7k 字 · 世界状态三个量与只向前的时间规则、默认状态落金初灯、美术太阳与月亮、过渡的定目标顺序与用时、质量底线
+`docs/systems/SYS-TIME-时间与季节.md` · 4.8k 字 · 世界状态三个量与只向前的时间规则、默认状态落金初灯、美术太阳与月亮、过渡的定目标顺序与用时、质量底线
 关键词：世界状态、钟点、季节、世界时间、世界实例、流逝倍率、落金初灯、默认状态、只向前、美术太阳、美术月亮、满月、定目标顺序、质量底线
 
-- SYS-TIME §0 结论 · L23 · 996
-  - ★ SYS-TIME §0.1 接入要点 · L33 · 521
+- SYS-TIME §0 结论 · L23 · 1.0k
+  - ★ SYS-TIME §0.1 接入要点 · L33 · 538
 - SYS-TIME §1 世界状态与时间规则 · L43 · 1.4k
   - SYS-TIME §1.1 默认状态 · L45 · 359
   - SYS-TIME §1.2 三个量与时间规则 · L52 · 1.0k
@@ -1392,7 +1392,7 @@
 - SYS-WALK-BOUNDS §5 行走走廊与节奏 · L130 · 188
 - SYS-WALK-BOUNDS §6 推荐路线 · L136 · 238
 - SYS-WALK-BOUNDS §7 碰撞与就绪 · L140 · 1.6k
-- SYS-WALK-BOUNDS §8 导航图 · L169 · 429
+- SYS-WALK-BOUNDS §8 导航图 · L169 · 426
 
 ## SYS-WEATHER · 天气
 
@@ -1424,7 +1424,7 @@
   - SYS-WEATHER-PROCESS §1.4 随机数与复现 · L64 · 310
   - SYS-WEATHER-PROCESS §1.5 时间与天气 · L70 · 555
   - SYS-WEATHER-PROCESS §1.6 固定点 · L81 · 332
-- SYS-WEATHER-PROCESS §2 状态与存档语义 · L88 · 364
+- SYS-WEATHER-PROCESS §2 状态与存档语义 · L88 · 372
 - SYS-WEATHER-PROCESS §3 待验证 · L94 · 94
 
 ## UI-INDEX · 界面总纲
@@ -1545,39 +1545,39 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 10.7k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 11.4k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L23 · 1.5k
   - ★ ENG-ARCH §0.1 接入要点 · L34 · 813
-- ENG-ARCH §1 当前架构 · L46 · 1.4k
+- ENG-ARCH §1 当前架构 · L46 · 1.7k
   - ENG-ARCH 技术栈 · L48 · 174
-  - ENG-ARCH 分层 · L52 · 883
-  - ENG-ARCH 生产链 · L64 · 267
-  - ENG-ARCH 数据流 · L72 · 95
-- ENG-ARCH §2 边界与确定性 · L76 · 2.6k
-  - ENG-ARCH 依赖方向 · L78 · 1.0k
-  - ENG-ARCH 确定性与禁用写法 · L88 · 573
-  - ENG-ARCH 自动发现与模块接入 · L100 · 458
-  - ENG-ARCH 仓库脚本自成一体 · L107 · 101
-  - ENG-ARCH 生命周期与发布 · L111 · 470
-- ENG-ARCH §3 契约 · L120 · 842
-- ENG-ARCH §4 资源与烘焙 · L131 · 2.0k
-- ENG-ARCH §5 未交付能力的占位边界 · L146 · 257
-- ENG-ARCH §6 架构导向 · L154 · 448
-- ENG-ARCH §7 扩展点（RPG） · L162 · 69
-- ENG-ARCH §8 待验证（P0） · L166 · 361
+  - ENG-ARCH 分层 · L52 · 1.1k
+  - ENG-ARCH 生产链 · L65 · 312
+  - ENG-ARCH 数据流 · L73 · 95
+- ENG-ARCH §2 边界与确定性 · L77 · 2.8k
+  - ENG-ARCH 依赖方向 · L79 · 1.0k
+  - ENG-ARCH 确定性与禁用写法 · L89 · 573
+  - ENG-ARCH 自动发现与模块接入 · L101 · 596
+  - ENG-ARCH 仓库脚本自成一体 · L109 · 101
+  - ENG-ARCH 生命周期与发布 · L113 · 470
+- ENG-ARCH §3 契约 · L122 · 1.2k
+- ENG-ARCH §4 资源与烘焙 · L135 · 2.0k
+- ENG-ARCH §5 未交付能力的占位边界 · L150 · 257
+- ENG-ARCH §6 架构导向 · L158 · 448
+- ENG-ARCH §7 扩展点（RPG） · L166 · 69
+- ENG-ARCH §8 待验证（P0） · L170 · 361
 
 ## ENG-BUDGET · 性能预算
 
-`docs/engineering/ENG-BUDGET-性能预算.md` · 4.4k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、份额怎么分与超了怎么办、怎么测；细节级别、速度律与硬规则在子文档
+`docs/engineering/ENG-BUDGET-性能预算.md` · 4.5k 字 · 性能预算的口径：设备档与预设、GPU 帧时分配、份额怎么分与超了怎么办、怎么测；细节级别、速度律与硬规则在子文档
 关键词：性能预算、份额、份额分配、budgets.json、KernelBudgets、主会话余量、预算核账、预设资源上限、设备档目标、帧率目标、最低配置、独显中、独显高、楼内视角份额、GPU 帧时分配、阴影图档位、纹理上限
 
-- ENG-BUDGET §0 结论 · L22 · 777
-  - ★ ENG-BUDGET §0.1 接入要点 · L36 · 187
+- ENG-BUDGET §0 结论 · L22 · 793
+  - ★ ENG-BUDGET §0.1 接入要点 · L36 · 183
 - ENG-BUDGET §1 界面、外围、室内与音频的份额 · L42 · 134
 - ENG-BUDGET §2 预设与设备档的预算 · L46 · 1.6k
-- ENG-BUDGET §3 份额怎么分 · L77 · 417
+- ENG-BUDGET §3 份额怎么分 · L77 · 460
 - ENG-BUDGET §4 怎么测 · L85 · 197
 - ENG-BUDGET §5 待验证（P0） · L89 · 185
 
@@ -1608,7 +1608,7 @@
 
 ## ENG-GATES · 验收与门禁
 
-`docs/engineering/ENG-GATES-验收与门禁.md` · 4.8k 字 · 测试三档与何时跑、12 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
+`docs/engineering/ENG-GATES-验收与门禁.md` · 4.9k 字 · 测试三档与何时跑、12 项门禁各验什么、入口与交付分工；审查视角与截图、一票否决与收尾清单在子文档
 关键词：门禁、验收、测试三档、快检、核心专项、集中测试、gate.ps1、门禁表、门禁编号、D-238、入口与交付分工、测试只锁本包输出、构建锁
 
 - ENG-GATES §0 结论 · L22 · 787
@@ -1645,7 +1645,7 @@
 
 ## ENG-PERF · 性能工程
 
-`docs/engineering/ENG-PERF-性能工程.md` · 5.7k 字 · 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
+`docs/engineering/ENG-PERF-性能工程.md` · 5.8k 字 · 性能总原则与绘制管线：容器与合批、着色器白名单与全局参数、预热、填充率、剔除与图层
 关键词：着色器白名单、全局着色器参数、ShaderGlobals、数据纹理、合批、自动实例化、MultiMesh、容器选型、管线预热、抖动淡化、级别过渡、填充率、遮挡剔除、渲染图层、顶点格式、D3D12
 
 - ENG-PERF §0 结论 · L22 · 1.1k
@@ -1654,8 +1654,8 @@
   - ENG-PERF §1.1 容器选型 · L48 · 344
   - ENG-PERF §1.2 MultiMesh、网格 LOD 与级别过渡 · L55 · 389
   - ENG-PERF §1.3 调用口径 · L61 · 123
-  - ENG-PERF §1.4 着色器白名单 · L65 · 430
-  - ENG-PERF §1.5 全局参数与数据纹理 · L74 · 466
+  - ENG-PERF §1.4 着色器白名单 · L65 · 477
+  - ENG-PERF §1.5 全局参数与数据纹理 · L74 · 476
 - ENG-PERF §2 着色器与编译 · L83 · 772
 - ENG-PERF §3 填充率与带宽 · L93 · 214
 - ENG-PERF §4 剔除 · L99 · 496
@@ -1675,7 +1675,7 @@
 
 ## ENG-PERF-LIGHT · 植被、阴影、后期与灯光
 
-`docs/engineering/ENG-PERF-LIGHT-植被、阴影、后期与灯光.md` · 3.9k 字 · 植被分级与风、飘落池、投影代理；阴影量化与日月交接的做法；后期链顺序、描线、抗锯齿；窗灯路灯通道与倒影
+`docs/engineering/ENG-PERF-LIGHT-植被、阴影、后期与灯光.md` · 4.0k 字 · 植被分级与风、飘落池、投影代理；阴影量化与日月交接的做法；后期链顺序、描线、抗锯齿；窗灯路灯通道与倒影
 关键词：植被分级、树冠云、风三层、ShadowsOnly 代理、投影物、方向量化、太阳贴地、退光线、日月交接、后期链、Compositor、描线材质 ID、CDL、LUT、灯光通道、路灯光斑、倒影视口
 
 - ENG-PERF-LIGHT §0 结论 · L22 · 546
@@ -1683,22 +1683,22 @@
 - ENG-PERF-LIGHT §1 植被 · L34 · 640
 - ENG-PERF-LIGHT §2 阴影、光照与后期 · L43 · 1.8k
   - ENG-PERF-LIGHT §2.1 阴影 · L45 · 664
-  - ENG-PERF-LIGHT §2.2 后期链 · L56 · 579
+  - ENG-PERF-LIGHT §2.2 后期链 · L56 · 590
   - ENG-PERF-LIGHT §2.3 窗灯与路灯 · L64 · 398
   - ENG-PERF-LIGHT §2.4 倒影 · L70 · 165
 - ENG-PERF-LIGHT §3 待验证（P0） · L74 · 128
 
 ## ENG-PERF-STREAM · 流式加载、本机烘焙与内存
 
-`docs/engineering/ENG-PERF-STREAM-流式加载、本机烘焙与内存.md` · 3.6k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
+`docs/engineering/ENG-PERF-STREAM-流式加载、本机烘焙与内存.md` · 3.7k 字 · 本机烘焙与缓存、帧内请求与六条不变量、碰撞级与室内包、目的地预取的做法，主线程与 C#，内存显存，安装包布局
 关键词：TileBundle、流式加载、本机烘焙缓存、tbin、六条不变量、看门狗、碰撞级、室内包、目的地预取、零分配、GC、显存记账、安装包布局、不泄漏
 
 - ENG-PERF-STREAM §0 结论 · L22 · 525
   - ★ ENG-PERF-STREAM §0.1 接入要点 · L29 · 222
-- ENG-PERF-STREAM §1 流式加载 · L35 · 1.5k
+- ENG-PERF-STREAM §1 流式加载 · L35 · 1.6k
   - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L37 · 523
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L45 · 557
-  - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L58 · 185
+  - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L58 · 304
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L62 · 177
 - ENG-PERF-STREAM §2 主线程与 C# · L66 · 315
 - ENG-PERF-STREAM §3 内存与显存 · L72 · 279
@@ -1930,17 +1930,17 @@
 
 ## STD-CODE · 代码结构准则
 
-`docs/standards/STD-CODE-代码结构准则.md` · 5.1k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
+`docs/standards/STD-CODE-代码结构准则.md` · 5.2k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
 关键词：代码结构准则、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、signatures.txt、Godot API、GDScript
 
 - STD-CODE §0 结论 · L23 · 1.2k
   - ★ STD-CODE §0.1 接入要点 · L32 · 913
 - STD-CODE §1 依赖方向 · L46 · 351
 - STD-CODE §2 规则值与数据各一份 · L55 · 576
-- STD-CODE §3 先用现成，再复用，不复制 · L65 · 813
-- STD-CODE §4 不留死代码 · L76 · 209
-- STD-CODE §5 规模 · L83 · 160
-- STD-CODE §6 测试代码怎么写 · L89 · 767
+- STD-CODE §3 先用现成，再复用，不复制 · L65 · 949
+- STD-CODE §4 不留死代码 · L77 · 209
+- STD-CODE §5 规模 · L84 · 160
+- STD-CODE §6 测试代码怎么写 · L90 · 767
 
 ## STD-CONVENTIONS · 坐标单位与命名约定
 
