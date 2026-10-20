@@ -40,12 +40,7 @@ def hookfeed_data(context):
 
 
 def git_data(context):
-    global _RAW
-    raw = repo.progress_facts()
-    with _LOCK:
-        _RAW = raw
-    context['raw'] = raw
-    return raw
+    return repo.progress_facts()
 
 
 def app_data(context):
@@ -64,12 +59,22 @@ def producer(spec):
     return result
 
 
-# 只检查登记接合，入口启动时即发现公开名单或实际生产方遗漏。
-assert tuple(datafile.AUTO_NAMES.items()) == tuple((name, spec.interval) for name, spec in DATASETS.items()
-                                                 if spec.interval is not None), \
-    '公开采集登记与 AUTO_NAMES 不一致'
-for _spec in DATASETS.values():
-    producer(_spec)
+# 此表是实际调度绑定；普通 view 用模块实际导出的 build，作者事务用其输出表。
+PRODUCERS = {
+    'live': live_data, 'hookfeed': hookfeed_data, '_git': git_data, '_app': app_data,
+    **{module.__name__.rsplit('.', 1)[-1]: module.build
+       for module in (progress, flow, collab, team, health, system, feed, docs, now)},
+    **{name: attention.refresh for name in attention.BUILDERS},
+}
+if PRODUCERS.keys() != DATASETS.keys():
+    raise ValueError('生产方实际输出与数据登记不一致：未登记 ' + ', '.join(sorted(PRODUCERS.keys() - DATASETS.keys()))
+                     + '；未导出 ' + ', '.join(sorted(DATASETS.keys() - PRODUCERS.keys())))
+_attention_names = {name for name, spec in DATASETS.items() if producer(spec) is attention.refresh}
+if _attention_names != attention.BUILDERS.keys():
+    raise ValueError('作者事务实际输出与数据登记不一致')
+for _name, _spec in DATASETS.items():
+    if producer(_spec) is not PRODUCERS[_name]:
+        raise ValueError('登记生产方与实际绑定不一致：' + _name)
 
 
 def context(names):
@@ -99,7 +104,7 @@ def context(names):
             'raw': raw if raw is not None else {'errors': ['Git 来源尚未完成首次采集']}}
 
 
-def run(names, recorder=None, app_paths=()):
+def run(names, recorder=None, app_paths=None):
     """仅重算点名项，完成一份即发布；返回成功/失败，不吞真实错误体。"""
     global _RAW, _SAMPLE
     names = set(names)
@@ -114,7 +119,7 @@ def run(names, recorder=None, app_paths=()):
             _SAMPLE = shared['sample']
         if recorder is not None:
             recorder.observe_sample(shared['sample'])
-    selected = {name for name in names if producer(DATASETS[name]) is attention.refresh}
+    selected = {name for name in names if PRODUCERS[name] is attention.refresh}
     pending = names - selected
     while pending:
         ready = sorted((name for name in pending if not any(
@@ -131,14 +136,14 @@ def run(names, recorder=None, app_paths=()):
                 raise shared['rows_error']
             if spec.sample and shared['sample_error'] is not None:
                 raise shared['sample_error']
-            result = producer(spec)(shared)
+            result = PRODUCERS[name](shared)
             data, expiry = result if spec.expiry else (result, None)
         except Exception as error:
             message = f'{type(error).__name__}: {error}'
             print(f'collect：{name} 采集失败（{message}）', file=sys.stderr)
             data = {'errors': [message]}
-        if spec.interval is None:
-            if name == '_git' and data.get('errors'):
+        if spec.kind != 'data':
+            if spec.kind == 'raw':
                 with _LOCK:
                     _RAW = data
                 shared['raw'] = data
@@ -192,9 +197,6 @@ def main():
         if expanded == names:
             break
         names = expanded
-    if '_app' in names:
-        datafile.publish_app()
-        names.remove('_app')
     # 人工入口按同一依赖顺序计算；快慢并发只归 live 调度。
     _, failed = run(names)
     return 1 if failed else 0

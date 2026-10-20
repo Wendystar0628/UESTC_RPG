@@ -17,6 +17,7 @@ class Dataset:
     priority: int = 1
     refresh_s: int | None = None
     expiry: bool = False
+    kind: str = 'data'   # data：公开结果；raw：共享原始事实；app：界面发布
 
 
 # inputs 是原生通知来源或 @结果；interval=None 的结果不公开为数据文件。
@@ -44,6 +45,9 @@ DATASETS = {
                                          'history:checkpoint', 'docs', 'notices', '@_git'}), 600, rows=True, expiry=True),
     'docs': Dataset('docs.build', frozenset({'docs'}), 3600, lane='slow'),
     'now': Dataset('now.build', frozenset({'queue', '@progress', '@flow', '@collab'}), 600),
-    '_git': Dataset('git_data', frozenset({'git', 'history:pushes'}), lane='slow'),
-    '_app': Dataset('app_data', frozenset({'app'}), lane='slow'),
+    '_git': Dataset('git_data', frozenset({'git', 'history:pushes'}), lane='slow', kind='raw'),
+    '_app': Dataset('app_data', frozenset({'app'}), lane='slow', kind='app'),
 }
+
+# 策展输入只登记在这里；不参与自动采集调度。
+CURATED_NAMES = ('audit', 'notices')

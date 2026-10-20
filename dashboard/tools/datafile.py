@@ -8,14 +8,13 @@ import sys
 import threading
 import time
 import uuid
-from catalog import DATASETS
+from catalog import DATASETS, CURATED_NAMES
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, 'data')
 KINDS = ('auto', 'curated')
 # 公开名单与判鲜参数只从数据登记派生，保留登记顺序。
 AUTO_NAMES = {name: spec.interval for name, spec in DATASETS.items() if spec.interval is not None}
-CURATED_NAMES = ('audit', 'notices')
 sys.path.insert(0, os.path.join(ROOT, '..', '.collab', 'tools'))
 from monitor import util as U
 from monitor.read.collab import dashboard_data

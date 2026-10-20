@@ -13,7 +13,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', '..', '.collab', 'tools'))
 import collect
 import datafile
-from catalog import DATASETS
+from catalog import DATASETS, CURATED_NAMES
 from monitor import history, util as U
 from monitor.read import codex, repo
 
@@ -229,7 +229,8 @@ def main():
         exact = set(rollout_paths) | checkout_paths | database | git_files | settings | model_paths
         exact.update(root for root in script_roots if not os.path.isdir(root))
         exact.update((queue, local, patrol_schedule, guard, agent_log, dashboard + '/index.html',
-                      curated + '/audit.js', curated + '/notices.js', U.STATE + '/dashboard-ack.json'))
+                      U.STATE + '/dashboard-ack.json'))
+        exact.update(curated + '/' + name + '.js' for name in CURATED_NAMES)
         wanted += [(os.path.dirname(path), False) for path in exact]
         wanted += [(path, False) for path in notes]
         roots = {}
@@ -260,7 +261,7 @@ def main():
         observer.start()
         recorder_thread.start()
         datafile.publish_app()
-        mark(DATASETS.keys() - {'_app'})
+        mark({name for name, spec in DATASETS.items() if spec.kind != 'app'})
         next_check = time.monotonic() + CHECK_S
         # 时间依赖只在真实到期点安排一次采样；不是文件轮询。
         next_expiry = {}
@@ -316,8 +317,9 @@ def main():
                     for name in names:
                         del dirty[name]
                     inflight.update(names)
-                    paths = set(app_changes) if '_app' in names else set()
-                    if '_app' in names:
+                    app_job = any(DATASETS[name].kind == 'app' for name in names)
+                    paths = set(app_changes) if app_job else set()
+                    if app_job:
                         app_changes.clear()
                 if names:
                     future = workers[lane].submit(collect.run, names, recorder, paths)

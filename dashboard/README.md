@@ -12,6 +12,7 @@
 - `attention.py` 独占作者输入事务：输入变更、过目重建、revision 校验、确认、attention/feedback 发布。`post.py`、采集与 HTTP 入口只调用它；先持输入事务锁，再经窄发布函数取得短锁。
 - `datafile.write()` 是唯一文件发布入口：原子替换 `Dash.put` 后提交内容签名与确认时刻；签名不含 updated，相同内容只推进确认。失败可发布 errors，不能推进确认。内部 `dashboard-publication.json` 只是当前发布快照，checked 是私有 name→ISO 表，不是历史或公开 SSE 载荷。
 - `catalog.DATASETS` 是各份公开与内部结果的唯一登记，集中生产方、输入、确认间隔、通道、合批、行与样本需求、周期和到期属性。`datafile.AUTO_NAMES` 由公开项派生；collect 启动核对登记接合，live 按同表调度。`/api/data-names.js` 同次输出 `window.DashDataNames`（公开数据名）与 `window.DashQueueStates`（施工状态有序数组）；状态 key、中文名与顺序只由 `.collab/tools/monitor/queue-states.json` 定义，Python、Node 与前端共用。
+- 登记的 kind 区分公开结果、共享原始事实与界面发布；collect 把实际生产函数导出与登记名集及函数绑定相互核对。作者事务输出由 attention.BUILDERS 导出；策展输入名单统一在 catalog.CURATED_NAMES。判鲜仅对从未确认的来源返回空，已确认来源的坏时刻或坏间隔直接报错。
 - `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件、同源写入、SSE 与文档只读接口。服务 Observer 只观察发布元数据，不采集、不持发布锁等待客户端。唯一 `health.freshness(checked, intervals, now)` 纯函数算 stale/ratio；HTTP 只包装结果，业务指标不在服务计算。
 
 `dashboard/data/auto/` 是程序结果；`curated/notices.js` 与 `curated/audit.js` 是私有输入，只经 post.py 改，通知汇入公开 feed。作者信全文只从真实 inbox 与已送达档读取，截图只来自已登记检出的两种固定机位总览。index、app、vendor 内容签名发布为 versions.app。
