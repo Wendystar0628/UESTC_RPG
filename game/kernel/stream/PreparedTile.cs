@@ -92,7 +92,12 @@ public sealed class PreparedTile : IDisposable
             lock (_liveGate) _live.Add(prepared);
             return prepared;
         }
-        catch { prepared.Dispose(); throw; }
+        catch (Exception failure)
+        {
+            try { prepared.Dispose(); }
+            catch (Exception cleanup) { throw new AggregateException(failure, cleanup); }
+            throw;
+        }
     }
     private Rid CreateMesh(BakedSurface surface)
     {
@@ -224,8 +229,40 @@ public sealed class PreparedTile : IDisposable
     private static Aabb Bounds(Box3 box) => new(box.Min.ToGodot(), box.Size.ToGodot());
     public void Dispose()
     {
-        DetachAll();
-        while (!ReleaseOne()) { }
+        if (_disposed) return;
+        List<Exception>? failures = null;
+        // Shutdown releases every owned RID even if one detach/free fails. Failed RIDs remain with this owner.
+        for (var i = _instances.Count - 1; i >= 0; i--)
+        {
+            if (_reflectionInstances[i].IsValid)
+            {
+                try { DetachInstance(_reflectionInstances[i]); }
+                catch (Exception error) { (failures ??= []).Add(error); }
+                try { FreeOwnedInstance(_reflectionInstances[i]); _reflectionInstances[i] = default; }
+                catch (Exception error) { (failures ??= []).Add(error); }
+            }
+            if (_instances[i].IsValid)
+            {
+                try { DetachInstance(_instances[i]); }
+                catch (Exception error) { (failures ??= []).Add(error); }
+                try { FreeOwnedInstance(_instances[i]); _instances[i] = default; }
+                catch (Exception error) { (failures ??= []).Add(error); }
+            }
+            if (_instances[i].IsValid || _reflectionInstances[i].IsValid) continue;
+            _instances.RemoveAt(i); _reflectionInstances.RemoveAt(i); _mainVisible.RemoveAt(i);
+            _mainDetached.RemoveAt(i); _reflectionDetached.RemoveAt(i);
+        }
+        for (var i = _storage.Count - 1; i >= 0; i--)
+            try { RenderingServer.FreeRid(_storage[i].Rid); _storage.RemoveAt(i); }
+            catch (Exception error) { (failures ??= []).Add(error); }
+        _retiring = true; _detachCursor = _instances.Count - 1;
+        _disposed = _instances.Count == 0 && _storage.Count == 0;
+        if (_disposed)
+        {
+            _draws.Clear();
+            lock (_liveGate) _live.Remove(this);
+        }
+        if (failures is not null) throw new AggregateException("Prepared tile release failed.", failures);
     }
     public void BeginRetirement()
     {

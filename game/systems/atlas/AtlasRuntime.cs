@@ -39,7 +39,7 @@ public partial class AtlasRuntime : Godot.Node, IMapAware, IMapDataParticipant
         }).Distinct().ToArray();
         return _terrain.PreparePoints(context, "atlas.travel-poses", points);
     }
-    public void Unload(MapId from) { }
+    public Task UnloadAsync(MapId from) => Task.CompletedTask;
 
     public override void _Ready() => ProcessPriority = FramePriority.Systems;
     public override void _Process(double delta)

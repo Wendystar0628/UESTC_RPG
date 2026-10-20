@@ -16,17 +16,33 @@ internal sealed class BakeProductBuilder
     private readonly object _clearSync = new();
     private long _cacheGeneration;
     private Task? _clearing;
+    private readonly BakeQueue _queue;
 
-    internal BakeProductBuilder(BakeOptions options, TerrainCacheService terrain)
-    { _options = options; _terrain = terrain; _cache = terrain.Store; _terrainPreparation = new(terrain); }
+    internal BakeProductBuilder(BakeOptions options, TerrainCacheService terrain, BakeQueue queue)
+    { _options = options; _terrain = terrain; _cache = terrain.Store; _terrainPreparation = new(terrain); _queue = queue; }
 
     internal void Clear()
     {
         lock (_clearSync)
         {
+            if (_clearing is { IsCompleted: false }) return;
+            _clearing?.GetAwaiter().GetResult();
             Interlocked.Increment(ref _cacheGeneration);
-            _clearing = Task.Run(_cache.Clear);
+            _clearing = ObserveClear(Task.Run(_cache.Clear));
         }
+    }
+
+    private async Task ObserveClear(Task clearing)
+    {
+        try { await clearing.ConfigureAwait(false); }
+        catch (Exception error) { _queue.RecordFailure(error); throw; }
+    }
+
+    internal void Drain()
+    {
+        Task? clearing;
+        lock (_clearSync) clearing = _clearing;
+        clearing?.GetAwaiter().GetResult();
     }
 
     internal object Build(MapBuild map, BakeKey key)
@@ -36,7 +52,7 @@ internal sealed class BakeProductBuilder
         var generation = Interlocked.Read(ref _cacheGeneration);
         Task? clearing;
         lock (_clearSync) clearing = _clearing;
-        clearing?.WaitAsync(cancellation).GetAwaiter().GetResult();
+        clearing?.GetAwaiter().GetResult();
         cancellation.ThrowIfCancellationRequested();
         _ = map.Data.Value;
         cancellation.ThrowIfCancellationRequested();
@@ -68,7 +84,7 @@ internal sealed class BakeProductBuilder
                 map.PipelineStatistics?.Add(cached, map.Content.Geometry);
                 return cached;
             }
-            if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
+            _terrain.RequireMiss(key);
         }
         // Only a cache miss needs the evaluator; cached products keep the published read-only world.
         var buildContext = map.Content.CreateAssetContext(context);

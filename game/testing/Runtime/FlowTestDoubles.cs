@@ -51,6 +51,7 @@ internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMa
     public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = [];
     public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => PinnedDestinations = destinations.ToArray();
     public bool IsUnloaded => false;
+    public Task DrainAsync() => Task.CompletedTask;
     public bool ResidentReady => true;
     public bool DestinationReady => Arrival?.Done.IsCompletedSuccessfully == true;
     public MapStreamDestination? Destination => Arrival?.Destination;
@@ -60,11 +61,11 @@ internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMa
     public int Arrivals { get; private set; }
     public bool CompleteArrivalImmediately { get; set; } = true;
     public event Action<IMapArrival?>? ArrivalChanged;
-    private string? _error;
-    public string? Error
+    private Exception? _failure;
+    public Exception? Failure
     {
-        get => _error;
-        set { _error = value; _arrival?.TryComplete(); }
+        get => _failure;
+        set { _failure = value; _arrival?.TryComplete(); }
     }
     private ArrivalStub? _arrival;
     public IMapArrival? Arrival => _arrival;
@@ -88,7 +89,7 @@ internal sealed class FlowRuntimeTestStub(Func<bool> covered) : IMapRuntime, IMa
         public void Cancel() => _done.TrySetCanceled();
         public void TryComplete()
         {
-            if (owner.Error is { } error) _done.TrySetException(new InvalidOperationException(error));
+            if (owner.Failure is { } error) _done.TrySetException(error);
             else if (Ready && owner.IsCovered()) { _done.TrySetResult(); ProgressChanged?.Invoke(); }
         }
     }

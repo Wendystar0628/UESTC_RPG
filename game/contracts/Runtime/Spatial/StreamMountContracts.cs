@@ -25,6 +25,8 @@ public interface IStreamMountWork
 /// <summary>The sole stream-mount executor owns FramePriority.StreamMount and all shared mount time accounting.</summary>
 public interface IStreamMountQueue
 {
+    /// <summary>Original mount and cancellation failures consumed by the map lifetime owner.</summary>
+    Exception? Failure { get; }
     /// <summary>Monotonically increases on map unload, including unloading and reloading the same map.</summary>
     long Revision { get; }
     /// <summary>Main-thread enqueue. Rejects stale revisions or maps and cancels their unfinished work.</summary>

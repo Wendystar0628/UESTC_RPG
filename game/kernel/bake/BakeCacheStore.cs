@@ -1,5 +1,8 @@
 using System.Buffers.Binary;
 using System.Text.Json;
+using System.Collections.Concurrent;
+using System.Runtime.ExceptionServices;
+using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Registry;
 using Godot;
@@ -39,6 +42,14 @@ public sealed class BakeCacheStore
     private bool _packagedAvailable;
     private volatile bool _stopped;
     private static long _stagingSequence;
+    private readonly ConcurrentDictionary<(string Root, BakeKey Key), Exception> _rejected = new();
+    private Exception? _packagedFailure;
+    private readonly Dictionary<BakeKey, long> _publications = [];
+    private long _publicationSequence;
+    // ENG-ARCH: retain the cause until the owner has published a valid local replacement.
+    internal IReadOnlyList<Exception> RebuildFailures(BakeKey key) => _rejected
+        .Where(pair => pair.Key.Key == key).OrderBy(pair => pair.Key.Root, StringComparer.Ordinal)
+        .Select(pair => pair.Value).Concat(_packagedFailure is { } error ? [error] : Array.Empty<Exception>()).ToArray();
 
     public BakeCacheStore(string root, string? version = null, string? packagedRoot = null)
     {
@@ -95,11 +106,16 @@ public sealed class BakeCacheStore
                 AtomicWrite(marker, System.Text.Encoding.UTF8.GetBytes(_version));
                 _bytesKnown = true;
             }
-            if (_packagedRoot is not null && Directory.Exists(_packagedRoot) && !IsLink(_packagedRoot))
+            if (_packagedRoot is not null && Directory.Exists(_packagedRoot))
             {
                 var packagedMarker = Path.Combine(_packagedRoot, "cache.version");
-                try { _packagedAvailable = File.Exists(packagedMarker) && !IsLink(packagedMarker) && File.ReadAllText(packagedMarker) == _version; }
-                catch (Exception error) when (error is IOException or UnauthorizedAccessException) { _packagedAvailable = false; }
+                try
+                {
+                    ValidateEntry(_packagedRoot);
+                    ValidateEntry(packagedMarker);
+                    _packagedAvailable = File.Exists(packagedMarker) && File.ReadAllText(packagedMarker) == _version;
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException) { RejectPackage(error); }
             }
             _initialized = true;
         }
@@ -133,7 +149,11 @@ public sealed class BakeCacheStore
         cancellationToken.ThrowIfCancellationRequested();
         Initialize();
         if (ReadCandidate(_root, key, payload, decode, cancellationToken) is { } local) yield return local;
-        if (_packagedAvailable && ReadCandidate(_packagedRoot!, key, payload, decode, cancellationToken) is { } packaged)
+        if (_packagedFailure is { } packageFailure) ExceptionDispatchInfo.Capture(packageFailure).Throw();
+        if (_packagedRoot is not null && _rejected.TryGetValue((_packagedRoot, key), out var rejected))
+            ExceptionDispatchInfo.Capture(rejected).Throw();
+        if (_packagedAvailable &&
+            ReadCandidate(_packagedRoot!, key, payload, decode, cancellationToken) is { } packaged)
             yield return packaged;
     }
 
@@ -142,6 +162,7 @@ public sealed class BakeCacheStore
     {
         cancellationToken.ThrowIfCancellationRequested();
         var path = FilePath(root, key);
+        long publication = 0;
         try
         {
             var parts = new List<byte[]>();
@@ -149,6 +170,7 @@ public sealed class BakeCacheStore
             try
             {
                 ThrowIfStopped();
+                publication = _publications.GetValueOrDefault(key);
                 if (!File.Exists(path)) return null;
                 ValidatePath(root, path);
                 var count = BakeCacheIndex.Read(path, payload);
@@ -170,9 +192,33 @@ public sealed class BakeCacheStore
         catch (Exception error) when (error is IOException or InvalidDataException or ArgumentException or OverflowException or JsonException or UnauthorizedAccessException)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (root == _root) Remove(key, cancellationToken);
+            RejectCandidate(root, key, publication, error, cancellationToken);
             return null;
         }
+    }
+
+    private void RejectPackage([FailureHandler("ENG-ARCH")] Exception error)
+    {
+        _packagedFailure = new InvalidOperationException("Packaged bake cache initialization failed.", error);
+        _packagedAvailable = false;
+        ExceptionDispatchInfo.Capture(_packagedFailure).Throw();
+    }
+
+    private void RejectCandidate(string root, BakeKey key, long publication, [FailureHandler("ENG-ARCH")] Exception error,
+        CancellationToken cancellationToken)
+    {
+        if (root != _root)
+        {
+            // A nested packaged read must also escape an enclosing local-candidate decoder.
+            var failure = new InvalidOperationException("Packaged bake cache product is damaged.", error);
+            _rejected[(root, key)] = failure;
+            throw failure;
+        }
+        _rejected[(root, key)] = error;
+        try { Remove(key, publication, cancellationToken); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception removalError)
+        { throw new AggregateException("Damaged bake cache could not be removed.", error, removalError); }
     }
 
     public void Write(BakeKey key, BakePayloadClass payload, byte[] bytes, CancellationToken cancellationToken = default)
@@ -200,6 +246,7 @@ public sealed class BakeCacheStore
             if (parts.Count == 0) throw new InvalidDataException("A cached product needs at least one delivery part.");
             var path = FilePath(_root, key);
             ValidatePath(_root, path);
+            _publications[key] = ++_publicationSequence;
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var partDirectory = BakeCacheIndex.DirectoryPath(path);
             ValidateEntry(partDirectory);
@@ -221,6 +268,7 @@ public sealed class BakeCacheStore
             // Publishing the small logical index is the commit point; it never contains geometry buffers.
             Publish(path, BakeCacheIndex.Encode(payload, parts.Count), cancellationToken);
             foreach (var obsolete in BakeCacheIndex.Files(path).Skip(parts.Count)) DeleteProductFile(obsolete);
+            foreach (var rejected in _rejected.Keys.Where(value => value.Key == key)) _rejected.TryRemove(rejected, out _);
         }
         finally { _sync.ExitWriteLock(); }
     }
@@ -276,6 +324,7 @@ public sealed class BakeCacheStore
         {
             ThrowIfStopped();
             DeleteProducts();
+            foreach (var key in _publications.Keys.ToArray()) _publications[key] = ++_publicationSequence;
             _bytes = 0;
             _bytesKnown = true;
         }
@@ -289,12 +338,15 @@ public sealed class BakeCacheStore
             path.EndsWith(".tmp", StringComparison.Ordinal) || Path.GetFileName(path) == "cache.index")) File.Delete(path);
     }
 
-    private void Remove(BakeKey key, CancellationToken cancellationToken = default)
+    private void Remove(BakeKey key, long publication, CancellationToken cancellationToken = default)
     {
         EnterCache(cancellationToken, write: true);
         try
         {
             ThrowIfStopped();
+            // A decoder may reject a detached snapshot after another worker has already replaced its files.
+            if (_publications.GetValueOrDefault(key) != publication) return;
+            _publications[key] = ++_publicationSequence;
             var path = FilePath(_root, key);
             ValidatePath(_root, path);
             DeleteProductFile(path);
@@ -353,7 +405,17 @@ public sealed class BakeCacheStore
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(stagingPath, path, overwrite: true);
         }
-        finally { if (File.Exists(stagingPath)) File.Delete(stagingPath); }
+        catch (Exception error)
+        {
+            CleanupFailedWrite(stagingPath, error);
+            throw;
+        }
+    }
+
+    private static void CleanupFailedWrite(string path, [FailureHandler("ENG-ARCH")] Exception error)
+    {
+        try { if (File.Exists(path)) File.Delete(path); }
+        catch (Exception cleanupError) { throw new AggregateException("Bake publication and staging cleanup failed.", error, cleanupError); }
     }
 
     private static string FilePath(string root, BakeKey key)
@@ -372,10 +434,8 @@ public sealed class BakeCacheStore
 
     private static void ValidateEntry(string path)
     {
-        FileAttributes attributes;
-        try { attributes = File.GetAttributes(path); }
-        catch (FileNotFoundException) { return; }
-        catch (DirectoryNotFoundException) { return; }
+        if (!File.Exists(path) && !Directory.Exists(path)) return;
+        var attributes = File.GetAttributes(path);
         if ((attributes & FileAttributes.ReparsePoint) != 0)
             throw new IOException("Cache paths must not be reparse points.");
     }

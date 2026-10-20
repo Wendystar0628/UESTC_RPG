@@ -146,7 +146,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     }
 
     public Task Prepare(IMapContext context) => _flight.Prepare(context, _presentation.Value);
-    public void Unload(MapId from) { }
+    public Task UnloadAsync(MapId from) => Task.CompletedTask;
 
     public void OnMapUnloading(MapId from)
     {

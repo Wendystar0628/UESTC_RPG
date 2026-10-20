@@ -218,7 +218,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             return true;
         }
         protected override void Release() => _tile.Free();
-        protected override void Failed(string error) => _owner.Error = error;
+        protected override void Failed(Exception error) => _owner.Error = error.Message;
     }
 
     /// <summary>One mother model's pools: its trees' records, their buckets and the kernel pools fed from them.</summary>

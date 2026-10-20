@@ -8,7 +8,7 @@ namespace Campus.Kernel.Stream;
 
 internal sealed class VisualMountWork(IReadOnlyList<PreparedTile> bundles, long revision, Rid scenario,
     BakePriority priority, StreamMaterials materials, IReflectionWorld reflections,
-    Action mounted, Action cancelled, Action<string> fail) : IStreamMountWork, IStreamMountCancellationState
+    Action mounted, Action cancelled, Action<Exception> fail) : IStreamMountWork, IStreamMountCancellationState
 {
     private int _bundle, _draw;
     private bool _cancelled;
@@ -36,12 +36,16 @@ internal sealed class VisualMountWork(IReadOnlyList<PreparedTile> bundles, long 
             } while (FrameClock.MonotonicMilliseconds - start < budgetMilliseconds);
             return false;
         }
-        catch (Exception error) { fail($"Tile mount failed: {Key}: {error.Message}"); Cancel(); return true; }
+        catch (Exception error) { fail(error); throw; }
     }
     public void Cancel()
     {
         Abandon();
-        foreach (var bundle in bundles) bundle.Dispose();
+        List<Exception>? failures = null;
+        foreach (var bundle in bundles)
+            try { bundle.Dispose(); }
+            catch (Exception error) { (failures ??= []).Add(error); }
+        if (failures is not null) throw new AggregateException("Visual mount release failed.", failures);
     }
     public void Abandon()
     {

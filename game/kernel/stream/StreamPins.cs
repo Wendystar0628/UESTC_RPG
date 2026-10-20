@@ -14,6 +14,8 @@ internal sealed class StreamPins(StreamDirector host)
     private PinnedTarget[] _pinnedTargets = [];
     private CancellationTokenSource? _pinnedCancellation;
     private IWorldModel? _pinnedWorld;
+    private readonly List<(CancellationTokenSource Cancellation, PinnedTarget[] Targets)> _retired = [];
+    internal bool IsIdle => _pinnedCancellation is null && _retired.Count == 0;
     internal IReadOnlyList<MapStreamDestination> PinnedDestinations => _pinnedDestinations;
 
     private readonly HashSet<StreamTile> _predictionRequired = [], _predictionRefined = [];
@@ -44,7 +46,8 @@ internal sealed class StreamPins(StreamDirector host)
             if (target.Completed || !target.Preparation.IsCompleted) continue;
             target.Completed = true;
             try { target.Preparation.GetAwaiter().GetResult(); }
-            catch (Exception error) { target.Error = error.GetBaseException().Message; GD.PushError(target.Error); }
+            catch (OperationCanceledException) when (_pinnedCancellation!.IsCancellationRequested) { }
+            catch (Exception error) { target.Failure = error; _host.RecordFailure(error); }
             _host.Selection.RequestReplan();
         }
     }
@@ -72,7 +75,7 @@ internal sealed class StreamPins(StreamDirector host)
         _host.Preparation.ClearPins();
         foreach (var target in _pinnedTargets)
         {
-            if (!target.Completed || target.Error is not null) continue;
+            if (!target.Completed || target.Failure is not null) continue;
             try
             {
                 var destination = target.Destination;
@@ -95,7 +98,7 @@ internal sealed class StreamPins(StreamDirector host)
                     walkingDestination: StreamSelection.WalkingDestination(destination.Pose, destination.Mode));
                 _host.Interiors!.Preload(target.Space, destination.Pose.Position, key => _host.Preparation.QueueCpuRead(key, StreamTile.Root, requests));
             }
-            catch (Exception error) { target.Error = error.GetBaseException().Message; GD.PushError(target.Error); }
+            catch (Exception error) { target.Failure = error; _host.RecordFailure(error); }
         }
     }
 
@@ -103,10 +106,39 @@ internal sealed class StreamPins(StreamDirector host)
     {
         if (_pinnedCancellation is { } cancellation)
         {
-            _pinnedCancellation = null; cancellation.Cancel(); cancellation.Dispose();
+            _pinnedCancellation = null;
+            _retired.Add((cancellation, _pinnedTargets));
+            cancellation.Cancel();
         }
-        foreach (var target in _pinnedTargets) _ = StreamSelection.ObserveDiscardedTerrain(target.Preparation);
         _pinnedTargets = []; _pinnedWorld = null;
+    }
+
+    internal void PollRetired()
+    {
+        for (var i = _retired.Count - 1; i >= 0; i--)
+        {
+            var batch = _retired[i];
+            if (batch.Targets.Any(target => !target.Preparation.IsCompleted)) continue;
+            foreach (var target in batch.Targets)
+                try { target.Preparation.GetAwaiter().GetResult(); }
+                catch (OperationCanceledException) when (batch.Cancellation.IsCancellationRequested) { }
+                catch (Exception error) { _host.RecordFailure(error); }
+            batch.Cancellation.Dispose(); _retired.RemoveAt(i);
+        }
+    }
+
+    internal async Task DrainAsync()
+    {
+        CancelPinnedPreparation();
+        foreach (var batch in _retired)
+        {
+            foreach (var target in batch.Targets)
+                try { await target.Preparation; }
+                catch (OperationCanceledException) when (batch.Cancellation.IsCancellationRequested) { }
+                catch (Exception error) { _host.RecordFailure(error); }
+            batch.Cancellation.Dispose();
+        }
+        _retired.Clear();
     }
 
     private sealed class PinnedTarget(MapStreamDestination destination, Task preparation)
@@ -115,6 +147,6 @@ internal sealed class StreamPins(StreamDirector host)
         public Task Preparation { get; } = preparation;
         public NavSpace? Space;
         public bool Completed, Classified;
-        public string? Error;
+        public Exception? Failure;
     }
 }

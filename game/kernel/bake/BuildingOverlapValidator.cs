@@ -96,8 +96,7 @@ public static class BuildingOverlapValidator
             }
             catch (ArgumentException e)
             {
-                errors.Add($"source={Quote(id)}; {reference}; {e.Message.Replace('\r', ' ').Replace('\n', ' ')}");
-                return;
+                throw new InvalidDataException($"source={Quote(id)}; {reference}; invalid source geometry.", e);
             }
             if (!sources.TryGetValue(id, out var source))
             {

@@ -7,6 +7,6 @@ namespace Campus.Contracts.Maps;
 public interface IMapDataParticipant
 {
     Task Prepare(IMapContext context);
-    /// <summary>Called after all IMapAware.OnMapUnloaded consumers have released the previous map's data.</summary>
-    void Unload(MapId from);
+    /// <summary>Called after all IMapAware consumers stop producing and the stream drains. Completes only after owned workers drain and map data is released.</summary>
+    Task UnloadAsync(MapId from);
 }

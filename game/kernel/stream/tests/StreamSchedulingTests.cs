@@ -88,7 +88,7 @@ public sealed class StreamSchedulingTests
             stream.Load(context); stream.Select(medium, position);
             if (bake.Keys.Count != 0) throw new InvalidOperationException("Outdoor medium requested an interior shell.");
             stream.Prefetch(new(source.Feature, checked((short)area.Index)), position);
-            if (bake.Keys.Count != 0 || stream.Error is null || stream.DestinationReady)
+            if (bake.Keys.Count != 0 || stream.Failure is null || stream.DestinationReady)
                 throw new InvalidOperationException("An explicit interior space incorrectly authorized an outdoor area.");
             stream.Unload();
         }
@@ -142,10 +142,10 @@ public sealed class StreamSchedulingTests
             else stream.Select(medium, waypoint.Fly.Position);
             Console.WriteLine($"InteriorRequests waypoint={waypoint.Id} position={waypoint.Fly.Position} medium={medium} " +
                 $"selector={(knownDestination ? "Prefetch" : "Select")} receiver=collection-fixture keys=[{string.Join(",", bake.Keys)}]");
-            if (!bake.Keys.SequenceEqual(expected) || stream.Error is not null || knownDestination && stream.DestinationReady)
+            if (!bake.Keys.SequenceEqual(expected) || stream.Failure is not null || knownDestination && stream.DestinationReady)
                 throw new InvalidOperationException("Open-floor requests or pending destination readiness changed.");
             stream.Prefetch(new(building, checked((short)(medium.Storey + 1))), waypoint.Fly.Position);
-            if (bake.Keys.Count != expected.Length || stream.Error is null || stream.DestinationReady)
+            if (bake.Keys.Count != expected.Length || stream.Failure is null || stream.DestinationReady)
                 throw new InvalidOperationException("A closed destination reached the baker or became ready.");
         }
     }
@@ -172,7 +172,8 @@ public sealed class StreamSchedulingTests
         using var entered = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var caller = Environment.CurrentManagedThreadId;
-        var handle = queue.Ensure(key, BakePriority.KnownDestination, () =>
+        var session = new BakeQueue.MapSession(key.Map);
+        var handle = queue.Ensure(session, key, BakePriority.KnownDestination, () =>
         {
             entered.Set(); release.Wait();
             return builder.Build(key, context, module, _ => { });
@@ -180,7 +181,7 @@ public sealed class StreamSchedulingTests
         try
         {
             if (!entered.Wait(5000) || !ReferenceEquals(handle,
-                queue.Ensure(key, BakePriority.KnownDestination, () => throw new InvalidOperationException("Duplicate build."))))
+                queue.Ensure(session, key, BakePriority.KnownDestination, () => throw new InvalidOperationException("Duplicate build."))))
                 throw new InvalidOperationException("A repeated root request created another bake operation.");
             release.Set();
             if (!SpinWait.SpinUntil(() => handle.State is BakeState.Ready or BakeState.Failed, 5000))
@@ -201,21 +202,27 @@ public sealed class StreamSchedulingTests
         using var entered = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var key = new BakeKey(new("fixture-map"), "fixture.root", "L4/0/0");
-        var old = queue.Ensure(key, BakePriority.KnownDestination, () => { entered.Set(); release.Wait(); return new object(); });
+        var oldSession = new BakeQueue.MapSession(key.Map);
+        var old = queue.Ensure(oldSession, key, BakePriority.KnownDestination, () => { entered.Set(); release.Wait(); return new object(); });
         try
         {
             if (!entered.Wait(5000)) throw new InvalidOperationException("Old worker did not start.");
-            queue.ForgetMap(key.Map);
+            var firstDrain = queue.ForgetMap(oldSession);
+            var secondDrain = queue.ForgetMap(oldSession);
+            if (firstDrain.IsCompleted || secondDrain.IsCompleted || old.Done.IsCompleted)
+                throw new InvalidOperationException("Forget detached the old same-ID worker before it finished.");
+            var currentSession = new BakeQueue.MapSession(key.Map);
             var expected = new object();
-            var current = queue.Ensure(key, BakePriority.KnownDestination, () => expected);
+            var current = queue.Ensure(currentSession, key, BakePriority.KnownDestination, () => expected);
             release.Set();
             if (!SpinWait.SpinUntil(() => current.State is BakeState.Ready or BakeState.Failed, 5000) ||
                 old.State != BakeState.Failed || current.State != BakeState.Ready || !ReferenceEquals(current.Product, expected))
                 throw new InvalidOperationException("An old same-ID worker replaced the current map product.");
-            var failed = queue.Ensure(key with { Detail = "L3/0/0" }, BakePriority.KnownDestination,
+            Task.WhenAll(firstDrain, secondDrain).GetAwaiter().GetResult();
+            var failed = queue.Ensure(currentSession, key with { Detail = "L3/0/0" }, BakePriority.KnownDestination,
                 () => throw new InvalidOperationException("Active build failure."));
             if (!SpinWait.SpinUntil(() => failed.State == BakeState.Failed, 5000) ||
-                failed.Product is not null || failed.Error?.Contains("Active build failure.", StringComparison.Ordinal) != true)
+                failed.Product is not null || failed.Failure?.Message.Contains("Active build failure.", StringComparison.Ordinal) != true)
                 throw new InvalidOperationException("An active build failure became a ready or empty product.");
         }
         finally { release.Set(); }
@@ -258,7 +265,8 @@ public sealed class StreamSchedulingTests
         public void ClearFailures() => throw new NotSupportedException();
         public BakeState State => BakeState.Pending;
         public object? Product => null;
-        public string? Error => null;
+        public Exception? Failure => null;
+        public Task Done => Task.CompletedTask;
     }
     private sealed class RootModule : IContentModule
     {

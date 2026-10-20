@@ -41,7 +41,10 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private InteriorStream? _interiors;
     private IMapContext? _context;
     private long _mapGeneration;
-    private string? _error;
+    private Exception? _failure;
+    private readonly List<Exception> _failures = [];
+    private MapId? _unloadingMap;
+    private Task? _drain;
     private bool _exiting, _captureMode, _checkRetention;
 
     public StreamDirector()
@@ -69,10 +72,19 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public MapStreamDestination? Destination => _selection.Destination;
     public bool HasPendingDestination => _selection.HasPendingDestination;
     public IReadOnlyList<MapStreamDestination> PinnedDestinations => _pins.PinnedDestinations;
-    public bool IsUnloaded => _context is null && _preparation.IsIdle && _residency.IsIdle && (_interiors?.IsUnloaded ?? true);
-    public bool ResidentReady => Error is null && _context is not null && _preparation.Catalog is not null && _residency.RootMounted;
+    public bool IsUnloaded => _context is null && _unloadingMap is null && _selection.IsIdle && _pins.IsIdle &&
+        _preparation.IsIdle && _residency.IsIdle && (_interiors?.IsUnloaded ?? true);
+    public bool ResidentReady => Failure is null && _context is not null && _preparation.Catalog is not null && _residency.RootMounted;
     public bool DestinationReady => _selection.DestinationReady;
-    public string? Error => _error ?? _collision?.Error;
+    public Exception? Failure
+    {
+        get
+        {
+            if (_mount?.Failure is { } failure) RecordFailure(failure);
+            if (_interiors?.Failure is { } interior) RecordFailure(interior);
+            return _failure;
+        }
+    }
     public int MountedTiles => _residency.MountedTiles;
     public int VisibleTiles => _selection.VisibleTiles;
     public bool CanActivateVisual => _residency.CanActivateVisual;
@@ -108,7 +120,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         if (!IsUnloaded) throw new InvalidOperationException("Stream map must finish unloading before the next mount.");
         _mapGeneration++;
         _selection.BeginMapChange();
-        _context = context; _error = null;
+        _context = context; _failure = null; _failures.Clear(); _drain = null;
         _selection.Load(context); _residency.Load();
         var contextSource = KernelServices.Get<IBakeContextSource>();
         var firstModule = KernelServices.Services.Query<IContentModule>(RegistrationKind.Content, context.Descriptor.Id).FirstOrDefault();
@@ -118,37 +130,64 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     public void OnMapUnloading(MapId from)
     {
-        _residency.DetachMap();
+        _unloadingMap = from;
         _mapGeneration++;
-        _selection.BeginMapChange();
-        SetPinnedDestinations(Array.Empty<MapStreamDestination>());
-        _context = null; _error = null;
-        _selection.Unload();
-        _mount.RemoveMap(from);
-        _participants.UnloadParticipants();
-        _interiors?.Unload();
-        _preparation.Unload();
-        _selection.ClearDemand();
-        _residency.Unload();
+        _context = null;
+        Stop(_selection.BeginMapChange);
+        Stop(() => SetPinnedDestinations(Array.Empty<MapStreamDestination>()));
+        Stop(_selection.Unload);
+        Stop(_preparation.Unload);
+        Stop(_selection.ClearDemand);
+        // No data/native release here. Other MapAware producers must stop before the lifetime owner drains us.
+    }
+
+    public Task DrainAsync() => _drain ??= DrainMap();
+
+    private async Task DrainMap()
+    {
+        if (_context is { } context) OnMapUnloading(context.Descriptor.Id);
+        Stop(_residency.DetachMap);
+        if (_unloadingMap is { } map) Stop(() => _mount.RemoveMap(map));
+        try { await _selection.DrainAsync(); } catch (Exception error) { RecordFailure(error); }
+        try { await _pins.DrainAsync(); } catch (Exception error) { RecordFailure(error); }
+        try { await _preparation.DrainAsync(); } catch (Exception error) { RecordFailure(error); }
+        if (_interiors is not null)
+            try { await _interiors.DrainAsync(); } catch (Exception error) { RecordFailure(error); }
+        Stop(_participants.UnloadParticipants);
+        Stop(_residency.Unload);
+        _unloadingMap = null;
+        if (Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+    }
+
+    private void Stop(Action stop)
+    {
+        try { stop(); }
+        catch (Exception error) { RecordFailure(error); }
     }
     public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) => _selection.Prefetch(destination, mode, space);
     public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => _pins.SetPinnedDestinations(destinations);
     public override void _Process(double delta)
     {
-        if (_exiting) return;
-        _preparation.HarvestCatalog();
-        _pins.PollPinnedPreparation();
-        _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations));
-        if (_interiors?.Error is { } interiorError) _error ??= interiorError;
-        _preparation.PollHandles();
-        _participants.PollParticipantErrors();
-        if (_context is null || _preparation.Catalog is null || _selection.Tree is null) return;
-        _selection.Update(delta);
-        _preparation.IssueQueued();
-        _interiors?.AdvanceRetention(delta, _camera.Pose.Position);
+        if (_exiting || _context is null || Failure is not null) return;
+        try
+        {
+            _selection.PollRetired(); _pins.PollRetired();
+            _preparation.HarvestCatalog();
+            _pins.PollPinnedPreparation();
+            _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations));
+            if (_interiors?.Failure is { } interiorError) RecordFailure(interiorError);
+            _preparation.PollHandles();
+            _participants.PollParticipantErrors();
+            if (Failure is not null || _preparation.Catalog is null || _selection.Tree is null) return;
+            _selection.Update(delta);
+            _preparation.IssueQueued();
+            _interiors?.AdvanceRetention(delta, _camera.Pose.Position);
+        }
+        catch (Exception error) { RecordFailure(error); }
     }
     public void FinishMountFrame(double remainingMilliseconds)
     {
+        if (_context is null || _exiting || Failure is not null) return;
         _preparation.FinishMountFrame();
         _interiors?.Finish(GetViewport().GetWorld3D().Scenario, remainingMilliseconds >= .1);
         if (_checkRetention) { _checkRetention = false; _residency.RetireUnneeded(); }
@@ -156,20 +195,29 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _residency.RefreshReflectionWorld(remainingMilliseconds * .25);
         _selection.ApplyVisibility();
     }
-    public void ReleaseRetired(double budgetMilliseconds) => _residency.ReleaseRetired(budgetMilliseconds);
+    public void ReleaseRetired(double budgetMilliseconds)
+    {
+        if (_context is not null && !_exiting) _residency.ReleaseRetired(budgetMilliseconds);
+    }
     private void OnWorldInstanceChanged(long _) => _selection.ResetWorld();
     internal void RequestRetention() => _checkRetention = true;
-    internal void RecordError(string error) => _error ??= error;
-    internal void SetError(string error) => _error = error;
-    internal void ClearError() => _error = null;
-
-    internal void Fail(StreamTile tile, string error, ParticipantTile? participant = null)
+    internal void RecordFailure(Exception error)
     {
-        if (participant is not null) participant.Error = error;
-        else if (_residency.Groups.TryGetValue(tile, out var group)) group.Error = error;
-        if (participant is not null ? participant.DestinationRequired || participant.Participant.Kind == StreamMountKind.Collision
-            : tile == StreamTile.Root || _selection.DestinationRequired.Contains(tile)) _error ??= error;
-        GD.PushError(error);
+        if (error is AggregateException aggregate)
+        {
+            foreach (var inner in aggregate.InnerExceptions) RecordFailure(inner);
+            return;
+        }
+        if (_failures.Contains(error)) return;
+        _failures.Add(error);
+        _failure = _failures.Count == 1 ? error : new AggregateException("Stream failed.", _failures);
+    }
+
+    internal void Fail(StreamTile tile, Exception error, ParticipantTile? participant = null)
+    {
+        if (participant is not null) participant.Failure = error;
+        else if (_residency.Groups.TryGetValue(tile, out var group)) group.Failure = error;
+        RecordFailure(error);
     }
 
     internal bool CanUseLiveCamera() => _maps.Transition?.Stage switch
@@ -181,13 +229,10 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
 
     public override void _ExitTree()
     {
-        _selection.StopPlanning();
-        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
+        // Registry awaited IMapLifetime.ShutdownAsync while the main thread and all bindings were still alive.
+        // Exit callbacks only detach subscriptions; they never block or abandon asynchronous ownership.
         _exiting = true;
-        if (_context is { } context) OnMapUnloading(context.Descriptor.Id);
-        _preparation.Shutdown();
-        _residency.Shutdown();
-        _interiors?.Shutdown();
+        if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         if (_reflections is not null) _reflections.Changed -= _residency.OnReflectionChanged;
         if (_maps is not null) _maps.Arrived -= _selection.OnMapArrived;
         _residency.DisposeMaterials();

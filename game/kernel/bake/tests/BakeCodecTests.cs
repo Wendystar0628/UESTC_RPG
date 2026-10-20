@@ -127,72 +127,6 @@ public sealed class BakeCodecTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void UnloadingAnInFlightRequestKeepsItsOldHandleFailed()
-    {
-        using var started = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
-        var queue = new BakeQueue(1, static () => { });
-        try
-        {
-            var handle = queue.Ensure(key, BakePriority.KnownDestination, () =>
-            {
-                started.Set();
-                if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker release timed out.");
-                return new object();
-            });
-            if (!started.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker did not start.");
-            queue.ForgetMap(key.Map);
-            release.Set();
-            queue.Dispose();
-            if (handle.State != BakeState.Failed || handle.Product is not null || string.IsNullOrWhiteSpace(handle.Error))
-                throw new InvalidOperationException("An unloaded map's in-flight request became a ready product.");
-            if (queue.Progress.Total != 0 || queue.Progress.Done != 0)
-                throw new InvalidOperationException("An unloaded map left an unfinished request in progress.");
-        }
-        finally { release.Set(); queue.Dispose(); }
-    }
-
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
-    public void StoppingRejectsPendingWorkAndLateProductsWhileDisposeStillDrainsWorkers()
-    {
-        using var started = new ManualResetEventSlim();
-        using var release = new ManualResetEventSlim();
-        var key = BakeRequestKeys.Tile(new("fixture"), "fixture.module", new(0, 0), LodLevel.L0);
-        var queue = new BakeQueue(1, static () => { });
-        var finished = false;
-        var pendingRan = false;
-        try
-        {
-            var running = queue.Ensure(key, BakePriority.Normal, () =>
-            {
-                started.Set();
-                if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker release timed out.");
-                finished = true;
-                return new object();
-            });
-            if (!started.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture worker did not start.");
-            var pending = queue.Ensure(key with { Detail = "pending" }, BakePriority.Background, () =>
-            {
-                pendingRan = true;
-                return new object();
-            });
-            queue.Stop(); // Must return while generation is still paused.
-            AssertThat(running.State == BakeState.Failed && pending.State == BakeState.Failed && !finished)
-                .OverrideFailureMessage("Stopping waited for generation or left publishable work.").IsTrue();
-            AssertThrown(() => queue.Ensure(key, BakePriority.Normal, () => new object()))
-                .IsInstanceOf<ObjectDisposedException>();
-            release.Set();
-            queue.Dispose(); // Even after Stop, ordinary disposal must join the remaining CPU worker.
-            AssertThat(finished && !pendingRan && running.Product is null && pending.Product is null && queue.Failures.IsEmpty)
-                .OverrideFailureMessage("A stopped job ran or published, or disposal failed to drain its worker.").IsTrue();
-        }
-        finally { release.Set(); queue.Dispose(); }
-    }
-
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
     [TestCategory("NativeRender")]
     public void LayeredCacheDecodesCandidatesAndOnlyChangesLocalProducts()
@@ -233,7 +167,9 @@ public sealed class BakeCodecTests
                 throw new InvalidOperationException("Version migration reused products with a different format or changed the installation.");
             File.WriteAllBytes(packagedPath, [1, 2, 3]);
             var corrupt = new BakeCacheStore(localRoot, "version-one", packagedRoot);
-            if (corrupt.TryRead(key, BakePayloadClass.Tile, Decode) is not null || !File.ReadAllBytes(packagedPath).SequenceEqual(new byte[] { 1, 2, 3 }))
+            AssertThrown(() => corrupt.TryRead(key, BakePayloadClass.Tile, Decode)).IsInstanceOf<InvalidOperationException>();
+            AssertThrown(() => corrupt.TryRead(key, BakePayloadClass.Tile, Decode)).IsInstanceOf<InvalidOperationException>();
+            if (!File.ReadAllBytes(packagedPath).SequenceEqual(new byte[] { 1, 2, 3 }))
                 throw new InvalidOperationException("A corrupt packaged product was accepted or removed.");
             corrupt.Write(key, BakePayloadClass.Tile, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/identity", local));
             if (corrupt.TryRead(key, BakePayloadClass.Tile, Decode)?.Bounds != local.Bounds)

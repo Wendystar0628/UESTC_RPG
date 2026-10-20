@@ -4,7 +4,7 @@ namespace Campus.Kernel.Stream;
 
 /// <summary>Director-owned completion and stale-key handling around participant work.</summary>
 internal sealed class ParticipantMountWork(IStreamMountWork work, Func<bool> current,
-    Action mounted, Action<string> fail)
+    Action mounted, Action<Exception> fail)
     : StreamMountWork(work.Key, work.Priority, work.Revision, work.Kind)
 {
     protected override bool IsCurrent => current();
@@ -18,5 +18,5 @@ internal sealed class ParticipantMountWork(IStreamMountWork work, Func<bool> cur
     }
 
     protected override void Release() => work.Cancel();
-    protected override void Failed(string error) => fail($"Participant mount failed: {Key}: {error}");
+    protected override void Failed(Exception error) => fail(error);
 }

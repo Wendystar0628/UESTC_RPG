@@ -145,7 +145,7 @@ internal sealed class StreamParticipants(StreamDirector host)
             {
                 if (item.Need == StreamTileNeed.None) continue;
                 var priority = ParticipantPriority(item);
-                if (item.Error is not null && (item.DestinationRequired || priority == BakePriority.Collision)) _host.RecordError(item.Error);
+                if (item.Failure is not null && (item.DestinationRequired || priority == BakePriority.Collision)) _host.RecordFailure(item.Failure);
                 if (!_host.Preparation.IsIssued(key))
                     requests.Add(new(key, group.Tile, priority, MathF.Sqrt(item.Entry.Bounds.DistanceSquared(pose.Position)) / Math.Max(1, _host.Camera.Speed)));
                 else
@@ -180,7 +180,7 @@ internal sealed class StreamParticipants(StreamDirector host)
                 error => FailParticipant(pending.Group!, item, error));
             _host.Mount.Enqueue(item.Work);
         }
-        catch (Exception error) { FailParticipant(pending.Group!, item, error.GetBaseException().Message); }
+        catch (Exception error) { FailParticipant(pending.Group!, item, error); }
     }
 
     internal bool ParticipantsReady(bool destination)
@@ -188,7 +188,7 @@ internal sealed class StreamParticipants(StreamDirector host)
         foreach (var group in _host.Residency.Groups.Values)
             foreach (var (key, item) in group.Participants)
                 if ((destination ? item.DestinationRequired : item.CurrentRequired) &&
-                    (item.Error is not null || !item.Mounted || !item.Participant.IsReady(key))) return false;
+                    (item.Failure is not null || !item.Mounted || !item.Participant.IsReady(key))) return false;
         return true;
     }
 
@@ -196,11 +196,11 @@ internal sealed class StreamParticipants(StreamDirector host)
     {
         foreach (var group in _host.Residency.Groups.Values)
             foreach (var item in group.Participants.Values)
-                if (item.Need == StreamTileNeed.Required && item.Error is null && item.Participant.Error is { } error)
-                    FailParticipant(group, item, error);
+                if (item.Need == StreamTileNeed.Required && item.Failure is null && item.Participant.Error is { } error)
+                    FailParticipant(group, item, new InvalidOperationException(error));
     }
 
-    private void FailParticipant(TileGroup group, ParticipantTile item, string error)
+    private void FailParticipant(TileGroup group, ParticipantTile item, Exception error)
     {
         _host.Fail(group.Tile, error, item);
     }
@@ -224,15 +224,20 @@ internal sealed class StreamParticipants(StreamDirector host)
 
     private static void ReleaseParticipant(BakeKey key, ParticipantTile item)
     {
-        item.Work?.Cancel();
-        item.Participant.Unmount(key);
+        Exception? failure = null;
+        try { item.Work?.Cancel(); } catch (Exception error) { failure = error; }
+        try { item.Participant.Unmount(key); }
+        catch (Exception error) { failure = failure is null ? error : new AggregateException(failure, error); }
         item.Mounted = false;
+        if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     internal void UnloadParticipants()
     {
         foreach (var group in _host.Residency.Groups.Values)
-            foreach (var (key, item) in group.Participants) ReleaseParticipant(key, item);
+            foreach (var (key, item) in group.Participants)
+                try { ReleaseParticipant(key, item); }
+                catch (Exception error) { _host.RecordFailure(error); }
         _participants = [];
         _participantEntries = [];
     }
@@ -246,6 +251,6 @@ internal sealed class StreamParticipants(StreamDirector host)
         public ParticipantMountWork? Work;
         public StreamTileNeed Need;
         public bool CurrentRequired, DestinationRequired, Mounted;
-        public string? Error;
+        public Exception? Failure;
     }
 }

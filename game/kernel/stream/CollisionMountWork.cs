@@ -41,8 +41,8 @@ public sealed class CollisionMountWork : StreamMountWork
         if (_started && _world.Revision == _worldRevision) _world.RemoveTile(_tile.Tile);
     }
 
-    protected override void Failed(string error)
+    protected override void Failed(Exception error)
     {
-        if (_world.Revision == _worldRevision) _world.FailTile(_tile.Tile, error);
+        if (_world.Revision == _worldRevision) _world.FailTile(_tile.Tile, error.Message);
     }
 }

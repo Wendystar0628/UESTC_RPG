@@ -116,11 +116,12 @@ public sealed class MapRuntimeRuntimeTests
             AssertThat(replaced.Done.IsCanceled).IsTrue();
             runtime._Process(0);
             AssertThat(current.Done.IsCompletedSuccessfully).IsTrue();
-            stream.Error = "destination failed";
+            var original = new InvalidOperationException("destination failed");
+            stream.Failure = original;
             var failed = runtime.Arrive(destination, ViewMode.Fly);
             runtime._Process(0);
             AssertThat(failed.Done.IsFaulted).IsTrue();
-            _ = failed.Done.Exception;
+            AssertThat(ReferenceEquals(failed.Done.Exception!.InnerException, original) && ReferenceEquals(runtime.Failure, original)).IsTrue();
         }
         finally
         {
@@ -130,12 +131,90 @@ public sealed class MapRuntimeRuntimeTests
         }
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public async Task PreparationFailureStillStopsAllProducersDrainsStreamAndAwaitsEveryDataOwner()
+    {
+        var runtime = new MapRuntime();
+        var order = new List<string>();
+        var preparation = new TaskCompletionSource();
+        var stream = new DrainStream(order);
+        var original = new InvalidDataException("preparation failure");
+        var stopping = new InvalidOperationException("producer stop failure");
+        var draining = new InvalidOperationException("stream cleanup failure");
+        var releasing = new InvalidOperationException("data cleanup failure");
+        var first = new LifetimeParticipant("first", order, stopping);
+        var second = new LifetimeParticipant("second", order);
+        var map = new MapId("lifetime-fixture");
+        void Set(string name, object value) => typeof(MapRuntime).GetField(name,
+            BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(runtime, value);
+        Set("_stream", stream); Set("_preparing", preparation.Task); Set("_receivers", new object[] { first, second }); Set("_loaded", map);
+        try
+        {
+            var shutdown = runtime.ShutdownAsync(map);
+            AssertThat(order.Count == 0 && !shutdown.IsCompleted).IsTrue();
+            preparation.SetException(original);
+            await stream.Entered.Task;
+            AssertThat(order.SequenceEqual(["stop-first", "stop-second", "stream"]) && !shutdown.IsCompleted).IsTrue();
+            stream.Completion.SetException(draining);
+            await first.Entered.Task;
+            AssertThat(order.Last() == "data-first" && !order.Contains("data-second") && !shutdown.IsCompleted).IsTrue();
+            first.Completion.SetException(releasing);
+            await second.Entered.Task;
+            AssertThat(!shutdown.IsCompleted).IsTrue();
+            second.Completion.SetResult();
+            try { await shutdown; throw new InvalidOperationException("Shutdown lost its preparation and cleanup failures."); }
+            catch (AggregateException error)
+            {
+                var failures = error.Flatten().InnerExceptions;
+                AssertThat(failures.Contains(original) && failures.Contains(stopping) && failures.Contains(draining) && failures.Contains(releasing)).IsTrue();
+            }
+            AssertThat(order.SequenceEqual(["stop-first", "stop-second", "stream", "data-first", "data-second"])).IsTrue();
+            AssertThat(typeof(MapRuntime).GetField("_loaded", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(runtime) is null).IsTrue();
+        }
+        finally { runtime.Free(); }
+    }
+
+    private sealed class LifetimeParticipant(string name, List<string> order, Exception? stopping = null) : IMapAware, IMapDataParticipant
+    {
+        public TaskCompletionSource Entered { get; } = new();
+        public TaskCompletionSource Completion { get; } = new();
+        public Task Prepare(IMapContext context) => Task.CompletedTask;
+        public void OnMapLoaded(IMapContext context) { }
+        public void OnMapUnloading(MapId from)
+        {
+            order.Add("stop-" + name);
+            if (stopping is not null) throw stopping;
+        }
+        public Task UnloadAsync(MapId from)
+        {
+            order.Add("data-" + name); Entered.SetResult(); return Completion.Task;
+        }
+    }
+
+    private sealed class DrainStream(List<string> order) : IMapStreamState
+    {
+        public TaskCompletionSource Entered { get; } = new();
+        public TaskCompletionSource Completion { get; } = new();
+        public Exception? Failure => null;
+        public bool IsUnloaded => Completion.Task.IsCompleted;
+        public bool ResidentReady => false;
+        public bool DestinationReady => false;
+        public MapStreamDestination? Destination => null;
+        public bool HasPendingDestination => false;
+        public IReadOnlyList<MapStreamDestination> PinnedDestinations => [];
+        public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) { }
+        public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) => throw new NotSupportedException();
+        public Task DrainAsync() { order.Add("stream"); Entered.SetResult(); return Completion.Task; }
+    }
+
     private sealed class ArrivalStream : IMapStreamState
     {
         public bool IsUnloaded => false;
         public bool ResidentReady { get; set; }
         public bool DestinationReady { get; set; }
-        public string? Error { get; set; }
+        public Exception? Failure { get; set; }
+        public Task DrainAsync() => Task.CompletedTask;
         public MapStreamDestination? Destination { get; private set; }
         public bool HasPendingDestination => !DestinationReady;
         public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = [];

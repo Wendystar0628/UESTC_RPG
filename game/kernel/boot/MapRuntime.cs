@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Bake;
 using Campus.Kernel.Maps;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Registry;
@@ -16,6 +17,7 @@ namespace Campus.Kernel.Boot;
 public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 {
     private IMapStreamState? _stream;
+    private IBakeService? _bake;
     private ICollisionWorld? _collision;
     private IRenderReadiness? _renderer;
     private PipelineWarmup? _pipelines;
@@ -31,12 +33,15 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private Task? _shutdown;
     private bool _stopping;
     private long _mapGeneration;
-    private string? _error;
+    private Exception? _failure;
+    private readonly List<Exception> _failures = [];
+    private Exception? _rendererFailure, _collisionFailure;
+    private readonly List<Task> _arrivalPreparations = [];
     private ViewContentReadiness? _contentReadiness;
     private object[] _receivers = [];
-    private bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Error is null;
+    private bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Failure is null;
     private bool DestinationReady => _mountPrepared && _stream?.DestinationReady == true &&
-        Error is null && _arrival is { Prepared: true } arrival && (arrival.Destination.Mode switch
+        Failure is null && _arrival is { Prepared: true } arrival && (arrival.Destination.Mode switch
         {
             ViewMode.Fly => true,
             ViewMode.Walk => _collision!.Ready(arrival.Destination.Pose.Position, WalkRules.ArrivalCollisionRadius),
@@ -44,12 +49,38 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         });
     public IMapArrival? Arrival => _arrival;
     public event Action<IMapArrival?>? ArrivalChanged;
-    private string? Error => _error ?? _stream?.Error ?? _renderer?.Error ?? _collision?.Error;
+    public Exception? Failure
+    {
+        get
+        {
+            if (_stream?.Failure is { } stream) RecordFailure(stream);
+            if (_bake?.Failure is { } bake) RecordFailure(bake);
+            // These native APIs only expose text. Convert at this boundary once, then retain the exception.
+            if (_rendererFailure is null && _renderer?.Error is { } rendering)
+                RecordFailure(_rendererFailure = new InvalidOperationException(rendering));
+            if (_collisionFailure is null && _collision?.Error is { } collision)
+                RecordFailure(_collisionFailure = new InvalidOperationException(collision));
+            return _failure;
+        }
+    }
+
+    private void RecordFailure(Exception error)
+    {
+        if (error is AggregateException aggregate)
+        {
+            foreach (var inner in aggregate.InnerExceptions) RecordFailure(inner);
+            return;
+        }
+        if (_failures.Contains(error)) return;
+        _failures.Add(error);
+        _failure = _failures.Count == 1 ? error : new AggregateException("Map runtime failed.", _failures);
+    }
 
     public override void _Ready()
     {
         ProcessPriority = FramePriority.MapRuntime;
         _stream = KernelServices.Get<IMapStreamState>();
+        _bake = KernelServices.Get<IBakeService>();
         _collision = KernelServices.Get<ICollisionWorld>();
         _renderer = KernelServices.Get<IRenderReadiness>();
         _pipelines = KernelServices.Get<PipelineWarmup>();
@@ -62,43 +93,41 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 
     private async Task ShutdownMap(MapId from)
     {
-        StopNewWork();
-        _error = null;
+        try { StopNewWork(); } catch (Exception error) { RecordFailure(error); }
         _mountPrepared = false;
         _contentReadiness = null;
         _mapGeneration++;
         await ReleaseAfterPreparation(from, _preparing);
-        while (_stream?.IsUnloaded == false)
-            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-        if (Error is { } error) throw new InvalidOperationException("Map shutdown failed: " + error);
+        if (Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     private async Task ReleaseAfterPreparation(MapId from, Task? preparation)
     {
-        var failures = new List<Exception>();
-        try
-        {
-            // Drain preparation before releasing its data, so a late CPU result cannot republish an unloaded map.
-            if (preparation is not null) await preparation;
-            // Keep the load order and identities; teardown must not resolve fresh transient receivers.
-            var receivers = _receivers;
-            foreach (var aware in receivers.OfType<IMapAware>())
-                try { aware.OnMapUnloading(from); }
-                catch (Exception error) { ReportFailure(from, "map-aware-unload", aware.GetType().FullName, error); failures.Add(error); }
-            foreach (var participant in receivers.OfType<IMapDataParticipant>())
-                try { participant.Unload(from); }
-                catch (Exception error) { ReportFailure(from, "map-data-unload", participant.GetType().FullName, error); failures.Add(error); }
-        }
-        catch (Exception error) { ReportFailure(from, "map-unload", null, error); failures.Add(error); }
+        // Each phase runs even when an earlier phase failed. Await actual producer tasks before destroying their data.
+        if (preparation is not null)
+            try { await preparation; }
+            catch (OperationCanceledException) when (_exit.IsCancellationRequested && preparation.IsCanceled) { }
+            catch (Exception error) { RecordFailure(error); }
+        foreach (var arrival in _arrivalPreparations)
+            try { await arrival; }
+            catch (OperationCanceledException) when (_exit.IsCancellationRequested && arrival.IsCanceled) { }
+            catch (Exception error) { RecordFailure(error); }
+        _arrivalPreparations.Clear();
+        // Keep identities captured at preparation: never resolve new transient receivers during teardown.
+        foreach (var aware in _receivers.OfType<IMapAware>())
+            try { aware.OnMapUnloading(from); }
+            catch (Exception error) { RecordFailure(error); }
+        if (_stream is not null)
+            try { await _stream.DrainAsync(); }
+            catch (Exception error) { RecordFailure(error); }
+        foreach (var participant in _receivers.OfType<IMapDataParticipant>())
+            try { await participant.UnloadAsync(from); }
+            catch (Exception error) { RecordFailure(error); }
+        try { await KernelServices.Services.ReleaseMapAsync(from); }
+        catch (Exception error) { RecordFailure(error); }
         finally
         {
-            try { await KernelServices.Services.ReleaseMapAsync(from); }
-            catch (Exception error) { ReportFailure(from, "map-scope-release", null, error); failures.Add(error); }
-            _loaded = null;
-            _context = null;
-            _preparing = null;
-            _receivers = [];
-            if (failures.Count > 0) _error = string.Join("; ", failures.Select(error => error.GetBaseException().Message));
+            _loaded = null; _context = null; _preparing = null; _receivers = [];
         }
     }
 
@@ -108,7 +137,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (_stopping) throw new InvalidOperationException("The map runtime is shutting down.");
         if (_loaded.HasValue || _preparing is not null)
             throw new InvalidOperationException("The map runtime mounts once at startup.");
-        _error = null;
+        _failure = null; _failures.Clear(); _rendererFailure = _collisionFailure = null;
         _mountPrepared = false;
         _mountCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _contentReadiness = null;
@@ -122,9 +151,8 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
         catch (Exception error)
         {
-            _error = error.GetBaseException().Message;
+            RecordFailure(error);
             _mountCompletion.TrySetException(error);
-            ReportFailure(context.Descriptor.Id, "map-mount", null, error);
             throw;
         }
         return _mountCompletion.Task;
@@ -132,30 +160,22 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 
     private async Task PrepareMap(IMapContext context, long generation)
     {
-        var phase = "map-instances";
-        string? receiver = null;
         try
         {
             // Snapshot by reference before callbacks; producers prepare first, then consumers see one complete map.
             var receivers = _receivers = Instances(context.Descriptor.Id).ToArray();
             foreach (var participant in receivers.OfType<IMapDataParticipant>())
             {
-                phase = "map-data-prepare";
-                receiver = participant.GetType().FullName;
                 await participant.Prepare(context);
                 if (generation != _mapGeneration) return;
             }
             // Bake participants have prepared this map's build-time combination catalogue.
             // Submit it once while the caller's frontispiece/loading screen owns coverage.
-            phase = "pipeline-precompile";
-            receiver = typeof(PipelineWarmup).FullName;
             await _pipelines!.PrepareAsync(BakePipelineCatalog.Read(),
                 TimeSpan.FromSeconds(BootTuning.StalledSeconds), _exit.Token);
             if (generation != _mapGeneration) return;
             foreach (var aware in receivers.OfType<IMapAware>())
             {
-                phase = "map-aware-load";
-                receiver = aware.GetType().FullName;
                 aware.OnMapLoaded(context);
             }
             _contentReadiness = ViewContentReadiness.Capture(GetParent());
@@ -164,8 +184,9 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         catch (OperationCanceledException) when (_exit.IsCancellationRequested) { }
         catch (Exception error)
         {
-            ReportFailure(context.Descriptor.Id, phase, receiver, error);
-            if (generation == _mapGeneration) _error = error.GetBaseException().Message;
+            RecordFailure(error);
+            FailArrival(error);
+            throw;
         }
     }
 
@@ -177,7 +198,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         var arrival = new ArrivalRun(new(destination, mode, space));
         _arrival = arrival;
         ArrivalChanged?.Invoke(arrival);
-        _ = PrepareArrival(arrival, _context ?? throw new InvalidOperationException("Arrival requires the mounted map context."), _mapGeneration);
+        _arrivalPreparations.Add(PrepareArrival(arrival, _context ?? throw new InvalidOperationException("Arrival requires the mounted map context."), _mapGeneration));
         return arrival;
     }
 
@@ -209,24 +230,27 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
         catch (Exception error)
         {
-            if (_stopping || generation != _mapGeneration || !ReferenceEquals(_arrival, arrival) || arrival.Done.IsCompleted) return;
-            FailArrival(error);
+            // Replaced/cancelled arrivals cannot publish readiness, but their genuine failures still belong to this map lifetime.
+            RecordFailure(error);
+            if (!_stopping && generation == _mapGeneration && ReferenceEquals(_arrival, arrival) && !arrival.Done.IsCompleted)
+                FailArrival(error);
         }
+        finally { arrival.FinishPreparation(); }
     }
 
     public string DescribeReadiness() =>
         $"map={_loaded?.Value ?? "none"},mountPrepared={_mountPrepared},preparation={_preparing?.Status}," +
-        $"stopping={_stopping},resident={ResidentReady},destination={DestinationReady},terrainPrepared={_arrival?.Prepared},error={Error ?? "none"}; " +
+        $"stopping={_stopping},resident={ResidentReady},destination={DestinationReady},terrainPrepared={_arrival?.Prepared},failure={Failure?.Message ?? "none"}; " +
         $"stream[resident={_stream?.ResidentReady},destination={_stream?.DestinationReady},unloaded={_stream?.IsUnloaded}," +
-        $"target={_stream?.Destination},error={_stream?.Error ?? "none"}]; " +
+        $"target={_stream?.Destination},failure={_stream?.Failure?.Message ?? "none"}]; " +
         $"dynamic[pending={_renderer?.Pending},error={_renderer?.Error ?? "none"}]";
 
     public override void _Process(double delta)
     {
         if (_stopping) return;
-        if (Error is { } failure)
+        if (Failure is { } failure)
         {
-            FailArrival(new InvalidOperationException(failure));
+            FailArrival(failure);
             return;
         }
         if (ResidentReady) _mountCompletion?.TrySetResult();
@@ -246,13 +270,12 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
         catch (Exception error)
         {
-            _error = error.GetBaseException().Message;
+            RecordFailure(error);
             FailArrival(error);
-            ReportFailure(_loaded ?? default, "view-arrival", null, error);
         }
     }
 
-    private void FailArrival(Exception error)
+    private void FailArrival([FailureHandler("SYS-MAPS")] Exception error)
     {
         _mountCompletion?.TrySetException(error);
         _arrival?.Fail(error);
@@ -261,13 +284,15 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     public void StopNewWork()
     {
         _stopping = true;
-        _exit.Cancel();
+        if (Failure is { } failure)
+            try { FailArrival(failure); } catch (Exception error) { RecordFailure(error); }
+        try { _exit.Cancel(); } catch (Exception error) { RecordFailure(error); }
         _mountCompletion?.TrySetCanceled();
         if (_arrival is { } arrival)
         {
-            arrival.Cancel();
+            try { arrival.Cancel(); } catch (Exception error) { RecordFailure(error); }
             _arrival = null;
-            ArrivalChanged?.Invoke(null);
+            try { ArrivalChanged?.Invoke(null); } catch (Exception error) { RecordFailure(error); }
         }
     }
     public override void _ExitTree()
@@ -297,6 +322,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
                 _ => throw new ArgumentOutOfRangeException(nameof(destination.Mode))
             });
         private ArrivalStep _completed;
+        private bool _preparationFinished;
         public CancellationToken Token => _cancellation.Token;
         public bool Prepared { get; set; }
         public MapStreamDestination Destination => destination;
@@ -313,25 +339,21 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         public void Cancel()
         {
             if (!_done.TrySetCanceled()) return;
-            _cancellation.Cancel(); _cancellation.Dispose();
+            try { _cancellation.Cancel(); } finally { ReleaseCancellation(); }
         }
         public void Complete()
         {
             if (!_done.TrySetResult()) return;
-            _cancellation.Dispose();
+            ReleaseCancellation();
             ProgressChanged?.Invoke();
         }
+        public void FinishPreparation() { _preparationFinished = true; ReleaseCancellation(); }
+        private void ReleaseCancellation() { if (_preparationFinished && Done.IsCompleted) _cancellation.Dispose(); }
         public void Fail(Exception error)
         {
             if (!_done.TrySetException(error)) return;
-            _cancellation.Cancel(); _cancellation.Dispose();
+            try { _cancellation.Cancel(); } finally { ReleaseCancellation(); }
         }
-    }
-
-    private void ReportFailure(MapId map, string phase, string? receiver, Exception error)
-    {
-        var id = KernelServices.Services.Entries.Single(entry => entry.Kind == RegistrationKind.Node && entry.Type == GetType()).Id;
-        GD.PushError($"[{id}][map={map.Value}][phase={phase}][receiver={receiver ?? "-"}] {error}");
     }
 
     private static IEnumerable<object> Instances(MapId map) => KernelServices.Services.RuntimeInstances<object>(map);

@@ -235,7 +235,7 @@ public sealed class StreamLifecycleTests
     [TestCase]
     [TestCategory(TestReason.Contract)]
     [RequireGodotRuntime]
-    public void ShutdownDrainsTheCatalogAndLateResultsDoNotPublish()
+    public async Task ShutdownDrainsTheCatalogAndDeliversLateFailuresWithoutPublication()
     {
         foreach (var fail in new[] { false, true })
         {
@@ -244,44 +244,110 @@ public sealed class StreamLifecycleTests
             {
                 var context = Context();
                 var work = new TaskCompletionSource<ModuleTileCatalog>();
+                var original = new InvalidOperationException("Retired catalog failed.");
                 BindUnrenderedCatalog(director, context, work.Task);
                 director.OnMapUnloading(context.Descriptor.Id);
-                if (director.IsUnloaded) throw new InvalidOperationException("Unload did not retain its real pending CPU task.");
-                if (fail) work.SetException(new InvalidOperationException("Retired catalog failed."));
+                var draining = director.DrainAsync();
+                if (director.IsUnloaded || draining.IsCompleted)
+                    throw new InvalidOperationException("Unload abandoned its actual pending catalog.");
+                if (fail) work.SetException(original);
                 else work.SetResult(ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), [])));
-                director._Process(0);
-                if (!director.IsUnloaded || director.ResidentReady || director.Error is not null || Field(Field(director, "_preparation")!, "_catalog") is not null)
-                    throw new InvalidOperationException("A retired catalog became active map data or an active-map error.");
+                try { await draining; if (fail) throw new InvalidOperationException("The lifetime lost its original catalog failure."); }
+                catch (Exception error) when (ReferenceEquals(error, original)) { }
+                if (!director.IsUnloaded || director.ResidentReady ||
+                    !ReferenceEquals(director.Failure, fail ? original : null) || Field(Field(director, "_preparation")!, "_catalog") is not null)
+                    throw new InvalidOperationException("A retired catalog published or its failure lost its owning lifetime.");
                 director._ExitTree();
             }
             finally { director.Free(); }
         }
     }
 
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
+    [TestCase, TestCategory(TestReason.Regression)]
     [RequireGodotRuntime]
-    public async Task ExitDropsPendingCatalogSuccessAndObservesLateFaultWithoutNativeWork()
+    public async Task CancelledSelectionAndPinsRetainTheirTasksAndLateFailuresUntilDrain()
     {
-        foreach (var fail in new[] { false, true })
+        var director = new StreamDirector();
+        try
         {
-            var director = new StreamDirector();
-            try
+            var context = Context();
+            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
+            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
+            var terrain = new PendingTerrain();
+            Set(director, "_terrain", terrain);
+            var selection = Field(director, "_selection")!;
+            var pose = new Pose(new(1, 2, 3), 0, 0);
+            selection.GetType().GetMethod("PreparePlanningTerrain", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .Invoke(selection, [pose, true]);
+            director.SetPinnedDestinations([new(pose, ViewMode.Fly)]);
+            var pins = Field(director, "_pins")!;
+            pins.GetType().GetMethod("PollPinnedPreparation", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(pins, null);
+            director.OnMapUnloading(context.Descriptor.Id);
+            var draining = director.DrainAsync();
+            if (terrain.Work.Count != 2 || draining.IsCompleted || director.IsUnloaded || terrain.Tokens.Any(token => !token.IsCancellationRequested))
+                throw new InvalidOperationException("Cancelled planning or pins lost their actual worker lifetime.");
+            var planning = new InvalidDataException("late planning failure");
+            var pinned = new InvalidDataException("late pin failure");
+            terrain.Work[0].SetException(planning); terrain.Work[1].SetException(pinned);
+            try { await draining; throw new InvalidOperationException("Late terrain faults were not delivered."); }
+            catch (AggregateException error)
             {
-                var context = Context();
-                var work = new TaskCompletionSource<ModuleTileCatalog>();
-                BindUnrenderedCatalog(director, context, work.Task);
-                director._ExitTree();
-                if (Field(Field(director, "_preparation")!, "_catalogTask") is not null) throw new InvalidOperationException("Exited node retained catalog publication ownership.");
-                if (fail) work.SetException(new InvalidOperationException("Exited catalog failed."));
-                else work.SetResult(ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), [])));
-                await Task.Yield();
-                director._Process(0);
-                if (director.ResidentReady || Field(Field(director, "_preparation")!, "_catalog") is not null)
-                    throw new InvalidOperationException("A late result published after the real stream node exited.");
+                var failures = error.Flatten().InnerExceptions;
+                if (failures.Count != 2 || !failures.Contains(planning) || !failures.Contains(pinned)) throw;
             }
-            finally { director.Free(); }
+            if (!director.IsUnloaded || director.ResidentReady) throw new InvalidOperationException("Drained terrain republished the retired map.");
+            director._ExitTree();
         }
+        finally { director.Free(); }
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender")]
+    [RequireGodotRuntime]
+    public async Task ShutdownAwaitsLateNativePreparationAndReleasesItsActualOwner()
+    {
+        var director = new StreamDirector();
+        PreparedTile? prepared = null;
+        try
+        {
+            var context = Context();
+            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
+            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
+            var preparation = Field(director, "_preparation")!;
+            var residency = Field(director, "_residency")!;
+            var group = residency.GetType().GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(residency, [StreamTile.Root])!;
+            var work = new TaskCompletionSource<PreparedTile>();
+            var pendingType = preparation.GetType().GetNestedType("Preparing", BindingFlags.NonPublic)!;
+            var pending = pendingType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .Single(constructor => constructor.GetParameters().Length == 5).Invoke([StreamTile.Root, 1L, work.Task, group, 0L]);
+            ((System.Collections.IList)Field(preparation, "_preparing")!).Add(pending);
+            director.OnMapUnloading(context.Descriptor.Id);
+            var draining = director.DrainAsync();
+            if (draining.IsCompleted || director.IsUnloaded) throw new InvalidOperationException("Native preparation outlived its stream drain.");
+            var bounds = new Box3(System.Numerics.Vector3.Zero, System.Numerics.Vector3.One);
+            var source = new GeometryBundle(new(new ToonSpec(new("wall.lit"), new("wall.shade"))),
+                [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2]);
+            var bundle = new TileBundle(new(context.Descriptor.Id, "fixture.native", "L4/0/0"), StreamTile.Root.Tile, LodLevel.L4, bounds,
+                [BakeSurfacePacker.Pack(source, bounds, Campus.Contracts.Tests.PaletteFixture.Catalog)]);
+            prepared = PreparedTile.Create(bundle);
+            if (prepared.Draws.Count == 0) throw new InvalidOperationException("Native fixture created no actual mesh resource.");
+            work.SetResult(prepared);
+            await draining;
+            if (!prepared.IsDisposed || !director.IsUnloaded) throw new InvalidOperationException("Late native preparation was not released by the owning drain.");
+            director._ExitTree();
+        }
+        finally { prepared?.Dispose(); director.Free(); }
+    }
+
+    private sealed class PendingTerrain : ITerrainPreparation
+    {
+        public List<TaskCompletionSource> Work { get; } = [];
+        public List<CancellationToken> Tokens { get; } = [];
+        public bool IsPrepared(IWorldModel world, System.Numerics.Vector2 point) => false;
+        public Task PreparePoints(IMapContext context, string product, IReadOnlyList<System.Numerics.Vector2> points, CancellationToken cancellation = default)
+        {
+            var work = new TaskCompletionSource(); Work.Add(work); Tokens.Add(cancellation); return work.Task;
+        }
+        public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => throw new NotSupportedException();
     }
 
     private static void BindUnrenderedCatalog(StreamDirector director, IMapContext context, Task<ModuleTileCatalog> task)

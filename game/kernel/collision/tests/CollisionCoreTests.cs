@@ -61,7 +61,8 @@ public sealed class CollisionCoreTests
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
         using var bake = new BakeService(options, terrain, new GlobalBuildInputs().Snapshot);
-        var products = new BakeProductBuilder(options, terrain);
+        using var productQueue = new BakeQueue(options.MaximumWorkers, static () => { });
+        var products = new BakeProductBuilder(options, terrain, productQueue);
         var map = bake.Mount(context);
         await bake.PrepareMapData(context);
         using var native = new World3D();
@@ -129,7 +130,7 @@ public sealed class CollisionCoreTests
                     ?? throw new InvalidDataException("The formal collision producer returned another product.");
                 var work = new CollisionMountWork(collision, product, 0);
                 while (!work.Step(.3)) await root.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
-                AssertThat(work.Complete).OverrideFailureMessage("Nearby collision did not mount: " + work.Error).IsTrue();
+                AssertThat(work.Complete).OverrideFailureMessage("Nearby collision did not mount: " + work.Failure).IsTrue();
                 resident.Add(tile);
             }
             AssertThat(resident.Count <= 9).OverrideFailureMessage("The short route loaded more than a 3x3 neighbourhood.").IsTrue();

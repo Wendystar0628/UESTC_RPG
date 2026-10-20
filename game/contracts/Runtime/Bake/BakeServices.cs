@@ -8,13 +8,15 @@ public interface IBakeHandle
     object? Product { get; }
     TileBundle? Tile => Product as TileBundle;
     CollisionTile? Collision => Product as CollisionTile;
-    string? Error { get; }
+    Exception? Failure { get; }
+    Task Done { get; }
 }
 public readonly record struct BakeProgress(int Total, int Done, string Stage);
 public interface IBakeService
 {
     IBakeHandle Ensure(BakeKey key, BakePriority priority);
     BakeProgress Progress { get; }
+    Exception? Failure { get; }
     long CacheBytes { get; }
     void Clear();
     void ClearFailures();

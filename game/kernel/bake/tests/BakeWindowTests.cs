@@ -304,13 +304,13 @@ public sealed class BakeWindowTests
         var cache = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cancel-" + Guid.NewGuid().ToString("N"));
         var options = new BakeOptions(cache, true, false, false, false, 1, null);
         using var terrain = BakeInputFixture.CreateTerrainCache(options);
-        var products = new BakeProductBuilder(options, terrain);
         var queue = new BakeQueue(1, static () => { });
+        var products = new BakeProductBuilder(options, terrain, queue);
         Exception? stopped = null;
         try
         {
             var key = BakeRequestKeys.Tile(context.Map.Id, "cancelled", default, LodLevel.L0);
-            var handle = queue.Ensure(key, BakePriority.Background, () =>
+            var handle = queue.Ensure(map.Work, key, BakePriority.Background, () =>
             {
                 try { return products.Build(map, key); }
                 catch (Exception error) { stopped = error; failed.Set(); throw; }
@@ -319,12 +319,12 @@ public sealed class BakeWindowTests
             if (signal == 1) ExceptionDispatchInfo.Capture(stopped!).Throw();
             if (signal == WaitHandle.WaitTimeout) throw new TimeoutException("Build did not start.");
             map.Active = false;
-            queue.ForgetMap(key.Map);
+            queue.ForgetMap(map.Work);
             map.Lifetime.Cancel();
             release.Set();
             queue.Dispose();
             if (stopped is not OperationCanceledException || handle.State != BakeState.Failed || handle.Product is not null ||
-                !queue.Failures.IsEmpty || Directory.Exists(cache))
+                queue.Failure is not null || Directory.Exists(cache))
                 throw new InvalidOperationException("An unloaded build entered encoding, published Ready, or wrote cache data.");
         }
         finally

@@ -14,17 +14,23 @@ internal sealed class BakeCatalog
     private readonly BakeOptions _options;
     private readonly BakeQueue _queue;
     private readonly Action<MapBuild, BakeKey, BakePriority> _schedule;
-    private readonly Action<MapBuild, Exception> _failure;
     private readonly object _catalogSync = new();
     private readonly HashSet<MapBuild> _enumerating = [];
+    private readonly List<(MapBuild Map, Thread Thread, Task Completion)> _threads = [];
     private AppState _phase;
 
-    internal BakeCatalog(BakeOptions options, BakeQueue queue, Action<MapBuild, BakeKey, BakePriority> schedule,
-        Action<MapBuild, Exception> failure)
-    { _options = options; _queue = queue; _schedule = schedule; _failure = failure; }
+    internal BakeCatalog(BakeOptions options, BakeQueue queue, Action<MapBuild, BakeKey, BakePriority> schedule)
+    { _options = options; _queue = queue; _schedule = schedule; }
 
     internal void SetPhase(AppState phase) { lock (_catalogSync) _phase = phase; }
-    internal void Forget(MapBuild map) { lock (_catalogSync) _enumerating.Remove(map); }
+    internal void Forget(MapBuild map)
+    {
+        lock (_catalogSync)
+        {
+            _enumerating.Remove(map);
+            _threads.RemoveAll(entry => ReferenceEquals(entry.Map, map));
+        }
+    }
 
     // The explicit CPU batch and interactive completion enumerate exactly the same products.
     internal static IEnumerable<BakeKey> Keys(MapBuild map, bool mapOnly)
@@ -93,16 +99,46 @@ internal sealed class BakeCatalog
             _enumerating.Add(map);
             _queue.BeginCatalog();
         }
-        return new Thread(() =>
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thread = new Thread(() =>
         {
+            Exception? failure = null;
             try { Queue(map); }
-            catch (Exception) when (!map.Active) { }
+            catch (OperationCanceledException) when (map.Lifetime.IsCancellationRequested) { }
             catch (Exception error)
             {
-                _failure(map, error);
+                _queue.RecordFailure(error);
+                failure = error;
             }
-            finally { _queue.EndCatalog(); }
+            finally
+            {
+                _queue.EndCatalog();
+                failure ??= _queue.Failure;
+                if (failure is not null) completion.TrySetException(failure);
+                else completion.TrySetResult();
+            }
         })
         { IsBackground = true, Priority = ThreadPriority.BelowNormal, Name = "Campus bake catalog" };
+        lock (_catalogSync) _threads.Add((map, thread, completion.Task));
+        return thread;
+    }
+
+    internal Task DrainAsync(MapBuild map)
+    {
+        lock (_catalogSync)
+            return Task.WhenAll(_threads.Where(entry => ReferenceEquals(entry.Map, map)).Select(entry => entry.Completion));
+    }
+
+    internal void Drain()
+    {
+        (MapBuild Map, Thread Thread, Task Completion)[] threads;
+        lock (_catalogSync) threads = _threads.ToArray();
+        try { Task.WhenAll(threads.Select(entry => entry.Completion)).GetAwaiter().GetResult(); }
+        finally
+        {
+            foreach (var entry in threads)
+                if (entry.Thread != Thread.CurrentThread) entry.Thread.Join();
+            lock (_catalogSync) _threads.Clear();
+        }
     }
 }

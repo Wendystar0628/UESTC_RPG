@@ -19,7 +19,7 @@ namespace Campus.Kernel.Bake;
 [KernelService(typeof(IBakeContextSource))]
 [KernelService(typeof(IMapContentSource))]
 
-public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentSource, IDisposable, IRegistryExitParticipant
+public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentSource, IDisposable, IAsyncDisposable, IRegistryExitParticipant
 {
     private readonly IMapService? _maps;
     private readonly IAppFlow? _flow;
@@ -35,7 +35,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
     private readonly BakeMapPreparation _preparation;
     private readonly BakeCatalog _catalog;
     private bool _stopped;
-    private bool _exiting;
+    private Task? _disposal;
 
     public BakeService(IMapService maps, IAppFlow flow, TerrainCacheService terrain, GlobalBuildInputs globalInputs)
         : this(BakeOptions.FromApplication(), terrain, globalInputs.Snapshot)
@@ -52,15 +52,15 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         _queue = new(_options.MaximumWorkers, FlushInputIdentities);
         _terrain = terrain;
         _cache = terrain.Store;
-        _products = new(options, terrain);
+        _products = new(options, terrain, _queue);
         _preparation = new(options, terrain);
-        _catalog = new(options, _queue, (map, key, priority) => Schedule(map, key, priority), ReportCatalogFailure);
+        _catalog = new(options, _queue, (map, key, priority) => Schedule(map, key, priority));
         ApplyPhase(AppState.Boot);
     }
 
     public BakeProgress Progress => _queue.Progress;
     public long CacheBytes => _cache.CacheBytes;
-    internal bool TryTakeError(out string? error) => _queue.Failures.TryDequeue(out error);
+    public Exception? Failure => _queue.Failure;
 
     internal bool TryTakeDiagnostic(out CollectedDiagnostic? diagnostic)
     {
@@ -89,7 +89,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         {
             var current = _maps?.Context;
             if (current is null || current.Descriptor.Id != key.Map)
-                return _queue.Ensure(key, priority, () => throw new InvalidOperationException("Requested map is not mounted."));
+                return _queue.Ensure(new(key.Map), key, priority, () => throw new InvalidOperationException("Requested map is not mounted."));
             map = Mount(current);
         }
         return Schedule(map, key, priority);
@@ -161,26 +161,71 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         MapBuild? removed;
         lock (_sync)
         {
+            if (_contexts.TryGetValue(map, out var current) && current.Drain is not { IsCompleted: true })
+                throw new InvalidOperationException("Drain map bake work before unmounting its inputs.");
             _contexts.Remove(map, out removed);
             if (removed is not null) removed.Active = false;
         }
-        _queue.ForgetMap(map);
-        if (removed is not null) _catalog.Forget(removed);
-        removed?.Lifetime.Cancel(); // Forget first: cancellation is not a failed active-map build.
-        if (removed is not null)
+        if (removed is null) return;
+        var failures = new List<Exception>();
+        try { _catalog.Forget(removed); }
+        catch (Exception error) { failures.Add(error); }
+        try { PersistInputIdentities([removed]); }
+        catch (Exception error) { failures.Add(error); }
+        try { _terrain.Unload(removed.Context.World); }
+        catch (Exception error) { failures.Add(error); }
+        try { removed.Lifetime.Dispose(); }
+        catch (Exception error) { failures.Add(error); }
+        if (failures.Count != 0) throw new AggregateException("Bake unmount failed.", failures);
+    }
+
+    internal Task DrainAsync(MapId id)
+    {
+        lock (_sync)
         {
-            PersistInputIdentities([removed]);
-            _terrain.Unload(removed.Context.World);
+            if (!_contexts.TryGetValue(id, out var map)) return Task.CompletedTask;
+            if (map.Drain is not null) return map.Drain;
+            map.Active = false;
+            var jobs = _queue.ForgetMap(map.Work);
+            Exception? cancellationFailure = null;
+            try { map.Lifetime.Cancel(); }
+            catch (Exception error) { _queue.RecordFailure(error); cancellationFailure = error; }
+            map.Drain = DrainMap(map, jobs, cancellationFailure);
+            return map.Drain;
         }
     }
 
-    internal async Task<BakeMapMetadata> PrepareMapData(IMapContext context)
+    private async Task DrainMap(MapBuild map, Task jobs, Exception? cancellationFailure)
     {
-        var map = Mount(context);
-        var metadata = await Task.Run(() => _preparation.Prepare(map));
+        var failures = new List<Exception>();
+        if (cancellationFailure is not null) failures.Add(cancellationFailure);
+        // Producers must be terminal before terrain takes its final snapshot of submitted work.
+        var producers = Task.WhenAll(jobs, _catalog.DrainAsync(map), (Task?)map.Preparation ?? Task.CompletedTask,
+            map.Offline ?? Task.CompletedTask);
+        try { await producers.ConfigureAwait(false); }
+        catch (OperationCanceledException) when (producers.IsCanceled) { }
+        catch { failures.AddRange(producers.Exception!.InnerExceptions); }
+        try { await _terrain.DrainAsync(map.Context.World).ConfigureAwait(false); }
+        catch (Exception error) { failures.Add(error); }
+        if (failures.Count != 0) throw new AggregateException("Map bake drain failed.", failures);
+    }
+
+    internal Task<BakeMapMetadata> PrepareMapData(IMapContext context)
+    {
         lock (_sync)
         {
-            if (!map.Active || !_contexts.TryGetValue(context.Descriptor.Id, out var current) || !ReferenceEquals(map, current))
+            var map = Mount(context);
+            if (!map.Active) throw new OperationCanceledException("Map is draining.");
+            return map.Preparation ??= PrepareMapData(map);
+        }
+    }
+
+    private async Task<BakeMapMetadata> PrepareMapData(MapBuild map)
+    {
+        var metadata = await Task.Run(() => _preparation.Prepare(map)).ConfigureAwait(false);
+        lock (_sync)
+        {
+            if (!map.Active || !_contexts.TryGetValue(map.Context.Descriptor.Id, out var current) || !ReferenceEquals(map, current))
                 throw new OperationCanceledException("Map unloaded while preparing resident metadata.");
             map.Content.CompletePreparation(metadata);
             map.Directory.PublishDirectory();
@@ -193,7 +238,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         lock (_sync)
         {
             if (_stopped || !map.Active) throw new OperationCanceledException("Map unloaded before request scheduling.");
-            return _queue.Ensure(key, priority, () => _products.Build(map, key));
+            return _queue.Ensure(map.Work, key, priority, () => _products.Build(map, key));
         }
     }
 
@@ -212,14 +257,8 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         lock (_sync) maps = _contexts.Values.Where(map => map.Active && map.Content.Metadata is not null).ToArray();
         foreach (var map in maps) StartBackgroundCatalog(map);
     }
-    /// <summary>Called by the registry only after saving has allowed process exit. Remaining workers own CPU snapshots only.</summary>
-    public void PrepareForExit()
-    {
-        Stop();
-        // Drain only native compression/file publication, never the current pure generation body.
-        _terrain.Dispose();
-        _exiting = true;
-    }
+    /// <summary>Exit retains every owned map and terrain input until the real workers have terminated.</summary>
+    public void PrepareForExit() => Dispose();
 
     private void Stop()
     {
@@ -230,26 +269,40 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
             if (_stopped) return;
             _stopped = true;
             maps = _contexts.Values.ToArray();
-            foreach (var map in maps) map.Active = false;
         }
-        foreach (var map in maps)
-        {
-            _queue.ForgetMap(map.Context.Descriptor.Id);
-            map.Lifetime.Cancel();
-        }
+        foreach (var map in maps) _ = DrainAsync(map.Context.Descriptor.Id);
         _queue.Stop();
-        PersistInputIdentities(maps);
     }
 
-    public void Dispose()
+    public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
+    public ValueTask DisposeAsync()
+    {
+        lock (_sync) return new(_disposal ??= DisposeCore());
+    }
+
+    private async Task DisposeCore()
     {
         Stop();
-        // Ordinary disposal/restart still drains owned workers; process exit has closed native access above.
-        if (!_exiting)
+        MapBuild[] maps;
+        lock (_sync) maps = _contexts.Values.ToArray();
+        var failures = new List<Exception>();
+        var draining = Task.WhenAll(maps.Select(map => map.Drain!).Append(Task.Run(_catalog.Drain))
+            .Append(Task.Run(_queue.Dispose)).Append(Task.Run(_products.Drain)));
+        try { await draining.ConfigureAwait(false); }
+        catch (OperationCanceledException) when (draining.IsCanceled) { }
+        catch { failures.AddRange(draining.Exception!.InnerExceptions); }
+        foreach (var map in maps)
         {
-            _queue.Dispose();
-            PersistInputIdentities(_contexts.Values.ToArray());
+            try { PersistInputIdentities([map]); }
+            catch (Exception error) { failures.Add(error); }
+            try { _terrain.Unload(map.Context.World); }
+            catch (Exception error) { failures.Add(error); }
+            try { map.Lifetime.Dispose(); }
+            catch (Exception error) { failures.Add(error); }
         }
+        lock (_sync) _contexts.Clear();
+        if (_queue.Failure is { } failure) failures.Add(failure);
+        if (failures.Count != 0) throw new AggregateException("Bake shutdown failed.", failures);
     }
 
     public T GetModule<T>(IMapContext context, string moduleId) where T : class, IContentModule
@@ -291,20 +344,19 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         {
             if (_stopped) return;
             enumeration = _catalog.Begin(map);
+            enumeration?.Start();
         }
-        enumeration?.Start();
     }
 
-    private void ReportCatalogFailure(MapBuild map, Exception error)
+    internal Task BakeOffline(IMapContext context, BakePipelineCatalog? pipelines = null)
     {
         lock (_sync)
-            if (map.Active && !_stopped)
-                _queue.Ensure(new(map.Context.Descriptor.Id, "bake.catalog", "enumerate"), BakePriority.Background,
-                    () => throw new InvalidDataException("Background catalog failed: " + error.Message, error));
+        {
+            var map = Mount(context);
+            if (!map.Active) throw new OperationCanceledException("Map is draining.");
+            return map.Offline ??= new BakeOffline(map, pipelines, _catalog, _queue).Run();
+        }
     }
-
-    internal Task BakeOffline(IMapContext context, BakePipelineCatalog? pipelines = null) =>
-        new BakeOffline(Mount(context), pipelines, _catalog, _queue).Run();
 
     private void FlushInputIdentities()
     {
@@ -341,6 +393,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
     internal sealed class MapBuild
     {
         internal IMapContext Context { get; }
+        internal BakeQueue.MapSession Work { get; }
         internal Lazy<LoadedMap> Data { get; }
         internal BakeContentSource Content { get; }
         internal BakeModuleTiles Directory { get; }
@@ -348,6 +401,9 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
         internal BakePipelineCatalog? PipelineStatistics;
         internal volatile bool Active = true;
         internal CancellationTokenSource Lifetime { get; } = new();
+        internal Task? Drain;
+        internal Task<BakeMapMetadata>? Preparation;
+        internal Task? Offline;
         internal ConcurrentQueue<CollectedDiagnostic> Diagnostics { get; } = new();
 
         internal MapBuild(IMapContext context, IReadOnlyDictionary<string, ContentModuleInput> modules,
@@ -356,7 +412,7 @@ public sealed class BakeService : IBakeService, IBakeContextSource, IMapContentS
             BuildInputSnapshot globalInputs, IReadOnlyList<IGroundMaskContributor> contributors,
             PartLodCatalog partLods, PaletteCatalog catalog, TerrainCacheService? terrain, BakeSourceIndexCache? sourceCache)
         {
-            Context = context; Data = data; Inputs = new(sourceCache);
+            Context = context; Work = new(context.Descriptor.Id); Data = data; Inputs = new(sourceCache);
             Content = new(context, modules, interiors, producers, geometry, claimLookup, data,
                 globalInputs, contributors, partLods, catalog, () => Active, terrain);
             Directory = new(context, Content, Lifetime.Token, () => Active);

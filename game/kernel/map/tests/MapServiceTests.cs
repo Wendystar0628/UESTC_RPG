@@ -480,6 +480,7 @@ public sealed class MapServiceTests
     }
     private sealed class TestRuntime : IMapRuntime, IMapLifetime
     {
+        public Exception? Failure { get; private set; }
         private TaskCompletionSource? _mount;
         private bool _delayMount;
         private bool _arrivalReady = true;
@@ -498,7 +499,11 @@ public sealed class MapServiceTests
         public List<IMapContext> Contexts { get; } = [];
         public void DelayMount() => _delayMount = true;
         public void ReleaseMount() => _mount!.TrySetResult();
-        public void FailMount(string message) => _mount!.TrySetException(new InvalidDataException(message));
+        public void FailMount(string message)
+        {
+            Failure = new InvalidDataException(message);
+            _mount!.TrySetException(Failure);
+        }
         public string DescribeReadiness() => $"mountReady={MountReady},arrival={Arrival?.Done.Status}";
         public Task ShutdownAsync(MapId map)
         {

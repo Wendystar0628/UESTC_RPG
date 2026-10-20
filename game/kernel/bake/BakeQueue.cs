@@ -1,5 +1,6 @@
 using Campus.Contracts.Bake;
-using System.Collections.Concurrent;
+using Campus.Contracts;
+using System.Runtime.ExceptionServices;
 
 namespace Campus.Kernel.Bake;
 
@@ -8,7 +9,7 @@ internal sealed class BakeQueue : IDisposable
 {
     private readonly object _sync = new();
     private readonly PriorityQueue<Job, (int Priority, long Order)> _queue = new();
-    private readonly Dictionary<BakeKey, Job> _jobs = [];
+    private readonly Dictionary<(MapSession Session, BakeKey Key), Job> _jobs = [];
     private readonly List<Thread> _workers = [];
     private readonly int _maximum;
     private readonly Action _idle;
@@ -18,15 +19,19 @@ internal sealed class BakeQueue : IDisposable
     private int _total;
     private int _done;
     private int _failed;
+    private bool _persisting;
     private bool _disposed;
-    public ConcurrentQueue<string> Failures { get; } = new();
+    private readonly List<Exception> _failures = [];
+    private Exception? _failure;
+    public Exception? Failure { get { lock (_sync) return _failure; } }
 
     public BakeQueue(int maximum, Action idle) { _maximum = Math.Max(1, maximum); _limit = _maximum; _idle = idle; }
     public void BeginCatalog() { lock (_sync) _total++; }
     public void EndCatalog()
     {
-        lock (_sync) _done++;
-        NotifyIdle();
+        bool persist;
+        lock (_sync) { _done++; persist = BeginPersistence(); }
+        if (persist) PersistIdle();
     }
 
     public BakeProgress Progress
@@ -35,18 +40,20 @@ internal sealed class BakeQueue : IDisposable
         {
             lock (_sync)
             {
-                return new(_total, _done, _failed > 0 ? $"生成失败 {_failed} 项" : _done == _total ? "已完成" : "正在本机生成校园");
+                return new(_total, Math.Max(0, _done - (_persisting ? 1 : 0)), _failed > 0 ? $"生成失败 {_failed} 项" : !_persisting && _done == _total ? "已完成" : "正在本机生成校园");
             }
         }
     }
 
-    public IBakeHandle Ensure(BakeKey key, BakePriority priority, Func<object> build)
+    public IBakeHandle Ensure(MapSession session, BakeKey key, BakePriority priority, Func<object> build)
     {
         if (!Enum.IsDefined(priority)) throw new ArgumentOutOfRangeException(nameof(priority));
         lock (_sync)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            if (_jobs.TryGetValue(key, out var found))
+            if (session.Forgotten) throw new OperationCanceledException("Map session has been forgotten.");
+            if (session.Map != key.Map) throw new ArgumentException("Bake key belongs to another map session.", nameof(key));
+            if (_jobs.TryGetValue((session, key), out var found))
             {
                 if (priority < found.Priority)
                 {
@@ -56,8 +63,8 @@ internal sealed class BakeQueue : IDisposable
                 }
                 return found.Handle;
             }
-            var job = new Job(key, priority, build);
-            _jobs.Add(key, job);
+            var job = new Job(session, key, priority, build);
+            _jobs.Add((session, key), job);
             _total++;
             _queue.Enqueue(job, ((int)priority, ++_order));
             var desired = Math.Min(_limit, _running + _queue.Count);
@@ -84,23 +91,45 @@ internal sealed class BakeQueue : IDisposable
     public void ClearFailures()
     {
         lock (_sync)
-            foreach (var key in _jobs.Where(p => p.Value.Handle.State == BakeState.Failed).Select(p => p.Key).ToArray())
-            { _jobs.Remove(key); _total--; _done--; _failed--; }
+            foreach (var key in _jobs.Where(p => p.Value.Handle.State == BakeState.Failed && p.Value.Handle.Done.IsCompleted).Select(p => p.Key).ToArray())
+            { var job = _jobs[key]; _jobs.Remove(key); if (job.Counted) { _total--; _done--; if (job.Failure is not OperationCanceledException) _failed--; } }
     }
 
-    public void ForgetMap(Campus.Contracts.MapId map)
+    public Task ForgetMap(MapSession session)
     {
+        Job[] jobs;
         lock (_sync)
         {
-            foreach (var job in _jobs.Values.Where(j => j.Key.Map == map))
+            if (session.Drain is not null) return session.Drain;
+            session.Forgotten = true;
+            jobs = _jobs.Values.Where(job => ReferenceEquals(job.Session, session)).ToArray();
+            foreach (var job in jobs)
             {
+                if (!job.Counted) continue;
+                var pending = job.Handle.State == BakeState.Pending;
                 job.Counted = false; _total--;
                 if (job.Handle.State is BakeState.Ready or BakeState.Failed) _done--;
-                if (job.Handle.State == BakeState.Failed) _failed--;
+                if (job.Handle.State == BakeState.Failed && job.Handle.Failure is not OperationCanceledException) _failed--;
                 if (job.Handle.State is BakeState.Pending or BakeState.Running)
-                    job.Handle.Fail("Map unloaded before this bake request completed.");
+                    job.Handle.Fail(new OperationCanceledException("Map unloaded before this bake request completed."));
+                if (pending) job.Handle.Finish(job.Failure);
             }
-            foreach (var key in _jobs.Where(p => p.Key.Map == map).Select(p => p.Key).ToArray()) _jobs.Remove(key);
+            return session.Drain = DrainJobs(jobs);
+        }
+    }
+
+    private async Task DrainJobs(IReadOnlyList<Job> jobs)
+    {
+        var draining = Task.WhenAll(jobs.Select(job => job.Handle.Done));
+        try { await draining.ConfigureAwait(false); }
+        catch (OperationCanceledException) when (draining.IsCanceled) { }
+        catch { throw draining.Exception!; }
+        finally
+        {
+            lock (_sync)
+                foreach (var job in jobs)
+                    if (_jobs.TryGetValue((job.Session, job.Key), out var current) && ReferenceEquals(job, current))
+                        _jobs.Remove((job.Session, job.Key));
         }
     }
 
@@ -128,51 +157,91 @@ internal sealed class BakeQueue : IDisposable
                 if (_disposed) return;
             }
             object? product = null;
-            string? failure = null;
             try { product = job!.Build(); }
-            catch (Exception error)
-            {
-                // Preserve producer/codec frames and nested exceptions before the failure crosses the worker boundary.
-                failure = $"{job!.Key.Map.Value}/{job.Key.Module}/{job.Key.Detail} [priority={job.Priority}; worker={Thread.CurrentThread.Name}]\n{error.ToString()}";
-            }
+            catch (OperationCanceledException canceled) { job!.Failure = canceled; }
+            catch (Exception error) { FailJob(job!, error); }
             finally
             {
+                bool persist;
                 lock (_sync)
                 {
-                    if (job!.Counted)
+                    if (job!.Counted && job.Failure is null && product is null)
+                        job.Failure = new InvalidDataException("Bake producer returned no product.");
+                    if (job.Failure is { } error)
                     {
-                        if (failure is null && product is null) failure = "Bake producer returned no product.";
-                        if (failure is null) job.Handle.Complete(product!);
-                        else { job.Handle.Fail(failure); Failures.Enqueue(failure); }
+                        job.Handle.Fail(error);
+                        if (error is not OperationCanceledException) AddFailure(error);
                     }
+                    else if (job.Counted) job.Handle.Complete(product!);
                     _running--;
                     if (job!.Counted)
                     {
                         _done++;
-                        if (job.Handle.State == BakeState.Failed) _failed++;
+                        if (job.Failure is not null && job.Failure is not OperationCanceledException) _failed++;
                     }
-                    if (job!.Priority == BakePriority.Background && job.Handle.State == BakeState.Ready &&
-                        _jobs.TryGetValue(job.Key, out var current) && ReferenceEquals(job, current))
-                    {
-                        _jobs.Remove(job.Key);
-                    }
+                    persist = BeginPersistence();
                     Monitor.PulseAll(_sync);
                 }
-                NotifyIdle();
+                var persistenceFailure = persist ? PersistIdle() : null;
+                if (persistenceFailure is not null)
+                {
+                    job!.Failure = job.Failure is null ? persistenceFailure : new AggregateException(job.Failure, persistenceFailure);
+                    job.Handle.Fail(job.Failure);
+                }
+                job!.Handle.Finish(job.Failure);
+                lock (_sync)
+                    if (job.Priority == BakePriority.Background && job.Handle.State == BakeState.Ready &&
+                        _jobs.TryGetValue((job.Session, job.Key), out var current) && ReferenceEquals(job, current))
+                        _jobs.Remove((job.Session, job.Key));
             }
         }
     }
 
-    private void NotifyIdle()
+    // The queue owns the worker terminal result and publishes it to its handle and all drain waiters.
+    private static void FailJob(Job job, [FailureHandler("ENG-ARCH")] Exception error) => job.Failure = error;
+
+    // Called under _sync with the final completion, before another thread can observe Done == Total.
+    private bool BeginPersistence()
     {
-        lock (_sync)
-            if (_disposed || _done != _total) return;
-        try { _idle(); }
-        catch (Exception error)
+        if (_disposed || _done != _total || _persisting) return false;
+        _persisting = true;
+        return true;
+    }
+
+    private Exception? PersistIdle()
+    {
+        Exception? failure = null;
+        while (true)
         {
-            lock (_sync) _failed++;
-            Failures.Enqueue("Source index persistence failed: " + error);
+            int completed;
+            lock (_sync) completed = _done;
+            try { _idle(); }
+            catch (Exception error) { RecordFailure(error); failure = failure is null ? error : new AggregateException(failure, error); }
+            lock (_sync)
+            {
+                _persisting = false;
+                Monitor.PulseAll(_sync);
+                if (_done == completed || !BeginPersistence()) return failure;
+            }
         }
+    }
+
+    // ENG-ARCH: the queue terminates this batch and delivers the original failure to its owner.
+    internal void RecordFailure([FailureHandler("ENG-ARCH")] Exception error)
+    {
+        if (error is OperationCanceledException) return;
+        lock (_sync) { _failed++; AddFailure(error); }
+    }
+
+    private void AddFailure(Exception error)
+    {
+        _failures.Add(error);
+        _failure = _failures.Count == 1 ? error : new AggregateException("Bake work failed.", _failures);
+    }
+
+    internal void ThrowIfFailed()
+    {
+        if (Failure is { } failure) ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
     internal void Stop()
@@ -183,10 +252,11 @@ internal sealed class BakeQueue : IDisposable
             _disposed = true;
             foreach (var job in _jobs.Values.Where(j => j.Handle.State is BakeState.Pending or BakeState.Running))
             {
+                var running = job.Handle.State == BakeState.Running;
                 job.Counted = false;
-                job.Handle.Fail("Bake service stopped.");
+                job.Handle.Fail(new OperationCanceledException("Bake service stopped."));
+                if (!running) job.Handle.Finish(null);
                 _done++;
-                _failed++;
             }
             _queue.Clear();
             Monitor.PulseAll(_sync);
@@ -201,12 +271,22 @@ internal sealed class BakeQueue : IDisposable
             if (worker != Thread.CurrentThread) worker.Join();
     }
 
-    private sealed class Job(BakeKey key, BakePriority priority, Func<object> build)
+    // One captured map lifetime owns its requests and drain, even while another same-ID map is mounted.
+    internal sealed class MapSession(MapId map)
     {
+        internal MapId Map { get; } = map;
+        internal bool Forgotten;
+        internal Task? Drain;
+    }
+
+    private sealed class Job(MapSession session, BakeKey key, BakePriority priority, Func<object> build)
+    {
+        public MapSession Session { get; } = session;
         public BakeKey Key { get; } = key;
         public BakePriority Priority { get; set; } = priority;
         public Func<object> Build { get; } = build;
         public Handle Handle { get; } = new();
+        public Exception? Failure { get; set; }
         public bool Counted { get; set; } = true;
     }
 
@@ -214,12 +294,22 @@ internal sealed class BakeQueue : IDisposable
     {
         private int _state;
         private object? _product;
-        private string? _error;
+        private Exception? _failure;
         public BakeState State => (BakeState)Volatile.Read(ref _state);
         public object? Product => State == BakeState.Ready ? _product : null;
-        public string? Error => State == BakeState.Failed ? _error : null;
+        public Exception? Failure => State == BakeState.Failed ? _failure : null;
+        private readonly TaskCompletionSource _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Task Done => _done.Task;
+        public void Finish(Exception? actualFailure)
+        {
+            // Done represents the worker terminal state, including a real fault discovered after cancellation.
+            var failure = actualFailure ?? Failure;
+            if (failure is OperationCanceledException) _done.TrySetCanceled();
+            else if (failure is not null) _done.TrySetException(failure);
+            else _done.TrySetResult();
+        }
         public void Start() => Volatile.Write(ref _state, (int)BakeState.Running);
         public void Complete(object product) { _product = product; Volatile.Write(ref _state, (int)BakeState.Ready); }
-        public void Fail(string error) { _error = error; Volatile.Write(ref _state, (int)BakeState.Failed); }
+        public void Fail([FailureHandler("ENG-ARCH")] Exception error) { _failure = error; Volatile.Write(ref _state, (int)BakeState.Failed); }
     }
 }

@@ -32,6 +32,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private bool _closing;
     private bool _cpuCommand;
     private bool _shutdownStarted;
+    private bool _failed;
     private Task? _shutdownTask;
     private readonly CancellationTokenSource _captureLifetime = new();
     private ViewContentReadiness? _contentReadiness;
@@ -311,6 +312,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     public override void _Process(double delta)
     {
+        if (!_closing && !_failed && _mapRuntime?.Failure is { } failure && failure is not OperationCanceledException)
+            Fail(failure);
         _statistics?.Sample();
         if (_startupProfiling && _statistics is { } statistics)
         {
@@ -401,8 +404,10 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _gate.ReportShutdown();
         GetTree().Quit(failures.Count == 0 ? exitCode : 2);
     }
-    private void Fail(Exception error)
+    private void Fail([FailureHandler("ENG-ARCH")] Exception error)
     {
+        if (_failed) return;
+        _failed = true;
         _ready = false;
         Failure = error.GetBaseException().Message;
         if (_flow is IAppBootFlow bootFlow) bootFlow.FailBoot(error);

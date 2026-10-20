@@ -2,8 +2,6 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Godot;
-using KernelServices = Campus.Kernel.Registry.Kernel;
-using Campus.Contracts.Startup;
 
 namespace Campus.Kernel.Bake;
 
@@ -14,9 +12,6 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
     private readonly BakeService _service;
     private readonly BakeLightInventory _inventory;
     private BakeService.MapBuild? _map;
-    private bool _finished;
-    private bool _strict;
-    public override void _Ready() => _strict = KernelServices.Get<BootRunOptions>().Bake.Strict;
     public BakeRuntime(BakeService service, BakeLightInventory inventory)
     {
         _service = service;
@@ -29,21 +24,28 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
         var metadata = await _service.PrepareMapData(context);
         _inventory.Publish(metadata.Lighting);
     }
-    public void Unload(MapId map) { _service.Unmount(map); _inventory.Clear(); _map = null; }
+    public async Task UnloadAsync(MapId map)
+    {
+        var failures = new List<Exception>();
+        try { await _service.DrainAsync(map); }
+        catch (Exception error) { failures.Add(error); }
+        try { _service.Unmount(map); }
+        catch (Exception error) { failures.Add(error); }
+        finally { _inventory.Clear(); _map = null; }
+        if (failures.Count != 0) throw new AggregateException("Bake map unload failed.", failures);
+    }
 
     public void OnMapLoaded(IMapContext context)
     {
         _map = _service.Mount(context);
         if (_map.Content.Metadata is null)
             throw new InvalidOperationException("Bake map preparation must complete before OnMapLoaded.");
-        _finished = false;
         _service.Prebake(context);
     }
-    public void OnMapUnloading(MapId from) => _map = null;
+    public void OnMapUnloading(MapId from) { _ = _service.DrainAsync(from); _map = null; }
 
     public override void _Process(double delta)
     {
-        while (_service.TryTakeError(out var error)) GD.PushError("[WP-02a] " + error);
         while (_service.TryTakeDiagnostic(out var collected))
         {
             var diagnostic = collected!.Diagnostic;
@@ -55,12 +57,6 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
                 case DiagnosticLevel.Error: GD.PushError(message); break;
                 default: throw new InvalidDataException("Unknown build diagnostic level.");
             }
-        }
-        if (_finished || _map is null) return;
-        var progress = _service.Progress;
-        if (_strict && progress.Stage.StartsWith("生成失败", StringComparison.Ordinal))
-        {
-            _finished = true; GD.PushError("WP-02a strict bake failure."); GetTree().Quit(2); return;
         }
     }
 }

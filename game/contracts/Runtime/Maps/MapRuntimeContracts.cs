@@ -3,6 +3,8 @@ namespace Campus.Contracts.Maps;
 /// <summary>Main-thread destination preparation. The latest arrival is the only current request.</summary>
 public interface IMapRuntime
 {
+    /// <summary>Original preparation and runtime failures for this map lifetime; cancellation is separate.</summary>
+    Exception? Failure { get; }
     IMapArrival Arrive(Pose destination, ViewMode mode, NavSpace? space = null);
     IMapArrival? Arrival { get; }
     event Action<IMapArrival?>? ArrivalChanged;
@@ -47,7 +49,9 @@ public interface IMapStreamState
     bool IsUnloaded { get; }
     bool ResidentReady { get; }
     bool DestinationReady { get; }
-    string? Error { get; }
+    Exception? Failure { get; }
+    /// <summary>After OnMapUnloading stops producers, await every submitted task and release stream-owned resources.</summary>
+    Task DrainAsync();
     MapStreamDestination? Destination { get; } // Prefetch sets this; shutdown clears it. Collision/interior consumers request the same destination.
     /// <summary>True while the latest prefetch still needs destination residency. After successful arrival this becomes false;
     /// Destination and DestinationReady keep the latest result until the next request or unload. Consumers only pin an active destination.

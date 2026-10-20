@@ -34,11 +34,11 @@ public sealed class StreamMountQueueTests
     [TestCategory(TestReason.Contract)]
     public void FailedMountCancelsAndLeavesNoQueuedWork()
     {
-        var errors = new List<string>();
-        var queue = new StreamMountQueue(() => 0, errors.Add);
-        var failed = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw new InvalidOperationException("fixture failure"));
+        var original = new InvalidOperationException("fixture failure");
+        var queue = new StreamMountQueue(() => 0);
+        var failed = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw original);
         queue.Enqueue(failed); queue.Drain(false);
-        if (failed.Cancels != 1 || queue.Pending != 0 || errors.Count != 1)
+        if (failed.Cancels != 1 || queue.Pending != 0 || !ReferenceEquals(queue.Failure, original))
             throw new InvalidOperationException("Failed mount was not cancelled and removed.");
     }
     [TestCase]
@@ -134,7 +134,26 @@ public sealed class StreamMountQueueTests
         if (mounted != 3 || queue.Pending != 1 || queue.WatchdogTrips != 1)
             throw new InvalidOperationException("Covered mounts were paused by or changed the visible-frame watchdog.");
     }
-    private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1) : IStreamMountWork
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void MountAndCleanupFailuresKeepBothExceptionsAndMapRemovalContinues()
+    {
+        var queue = new StreamMountQueue(() => 0);
+        var original = new InvalidDataException("mount failure");
+        var cleanup = new InvalidOperationException("cancel failure");
+        var failed = new MountWork(StreamMountKind.Visual, queue.Revision, _ => throw original,
+            cancel: () => throw cleanup);
+        queue.Enqueue(failed); queue.Drain(false);
+        var failure = queue.Failure as AggregateException ?? throw new InvalidOperationException("Cleanup replaced the mount failure.");
+        if (!failure.Flatten().InnerExceptions.Contains(original) || !failure.Flatten().InnerExceptions.Contains(cleanup) || queue.Pending != 0)
+            throw new InvalidOperationException("The queue lost the mount or release failure.");
+        var other = new MountWork(StreamMountKind.Auxiliary, queue.Revision, _ => { });
+        var cannotCancel = new MountWork(StreamMountKind.Visual, queue.Revision, _ => { }, cancel: () => throw cleanup);
+        queue.Enqueue(other); queue.Enqueue(cannotCancel); queue.RemoveMap(new("map"));
+        if (other.Cancels != 1 || cannotCancel.Cancels != 1 || queue.Pending != 0)
+            throw new InvalidOperationException("One cancellation failure skipped the remaining map work.");
+    }
+
+    private sealed class MountWork(StreamMountKind kind, long revision, Action<double> step, string module = "module", int slices = 1, Action? cancel = null) : IStreamMountWork
     {
         public BakeKey Key => new(new("map"), module, "L0/0/0");
         public BakePriority Priority => Kind == StreamMountKind.Collision ? BakePriority.Collision : BakePriority.Normal;
@@ -143,6 +162,6 @@ public sealed class StreamMountQueueTests
         public int Cancels;
         private int _steps;
         public bool Step(double budgetMilliseconds) { step(budgetMilliseconds); return ++_steps >= slices; }
-        public void Cancel() => Cancels++;
+        public void Cancel() { Cancels++; cancel?.Invoke(); }
     }
 }

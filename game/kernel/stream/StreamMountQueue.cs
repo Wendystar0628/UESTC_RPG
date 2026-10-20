@@ -19,13 +19,12 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     private readonly Campus.Kernel.Lod.StreamSettings _settings = new();
     private readonly MountWatchdog _watchdog;
     private readonly Func<double> _clock;
-    private readonly Action<string> _reportError;
-    public StreamMountQueue(Func<double>? clock = null, Action<string>? reportError = null)
+    public StreamMountQueue(Func<double>? clock = null)
     {
         _watchdog = new(_settings.MountMilliseconds);
         _clock = clock ?? (() => FrameClock.MonotonicMilliseconds);
-        _reportError = reportError ?? (message => GD.PushError(message));
     }
+    public Exception? Failure { get; private set; }
     public long Revision { get; private set; } = 1;
     public int Pending => _pending.Count;
     public int PeakPending { get; private set; }
@@ -35,7 +34,7 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
     public void Enqueue(IStreamMountWork work)
     {
         ArgumentNullException.ThrowIfNull(work);
-        if (work.Revision != Revision) { work.Cancel(); return; }
+        if (work.Revision != Revision) { Cancel(work); return; }
         _pending.Add(work);
         PeakPending = Math.Max(PeakPending, _pending.Count);
         _pending.Sort(Compare);
@@ -62,23 +61,35 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
         for (var i = _pending.Count - 1; i >= 0; i--)
             if (_pending[i].Key.Map == map)
             {
-                _pending[i].Cancel(); _pending.RemoveAt(i);
+                Cancel(_pending[i]); _pending.RemoveAt(i);
             }
     }
+    private void Cancel(IStreamMountWork work)
+    {
+        try { work.Cancel(); }
+        catch (Exception error) { RecordFailure(error); }
+    }
+    private void RecordFailure(Exception error) =>
+        Failure = Failure is null ? error : new AggregateException(Failure, error);
+
     public void Drain(bool covered, Action<double>? finish = null, Action<double>? release = null, Func<bool>? canActivateVisual = null)
     {
         var start = _clock();
         var frameBudget = covered ? KernelBudgets.StreamCoveredMountMilliseconds : _settings.MountMilliseconds;
         var retiring = canActivateVisual is not null && !canActivateVisual();
-        release?.Invoke(covered ? frameBudget : retiring
-            ? Math.Max(0, frameBudget - KernelBudgets.CollisionMountMilliseconds) : Math.Min(.25, frameBudget));
+        try
+        {
+            release?.Invoke(covered ? frameBudget : retiring
+                ? Math.Max(0, frameBudget - KernelBudgets.CollisionMountMilliseconds) : Math.Min(.25, frameBudget));
+        }
+        catch (Exception error) { RecordFailure(error); }
         var collisionUsed = false; var visualUsed = false;
         var blockedByRetirement = false;
         for (var i = 0; i < _pending.Count;)
         {
             var work = _pending[i];
             if (work is IStreamMountCancellationState { IsCancelled: true }) { _pending.RemoveAt(i); continue; }
-            if (work.Revision != Revision) { work.Cancel(); _pending.RemoveAt(i); continue; }
+            if (work.Revision != Revision) { Cancel(work); _pending.RemoveAt(i); continue; }
             var elapsed = _clock() - start;
             var remaining = frameBudget - elapsed;
             if (remaining <= 0) break;
@@ -105,17 +116,20 @@ public sealed class StreamMountQueue : IStreamMountQueue, IStreamMountFrame
             }
             catch (Exception error)
             {
-                try { work.Cancel(); }
-                catch (Exception cancellationError) { _reportError($"Stream mount cancellation failed: {work.Key}: {cancellationError}"); }
+                RecordFailure(error);
+                Cancel(work);
                 _pending.RemoveAt(i);
-                _reportError($"Stream mount failed: {work.Key}: {error}");
             }
         }
         if (blockedByRetirement || retiring && !visualUsed &&
             _pending.Any(work => work.Kind == StreamMountKind.Visual && work is not IStreamMountCancellationState { IsCancelled: true }))
             BlockedByRetirementFrames++;
-        finish?.Invoke(covered || _watchdog.CanActivate(start)
-            ? Math.Max(0, frameBudget - (_clock() - start)) : 0);
+        try
+        {
+            finish?.Invoke(covered || _watchdog.CanActivate(start)
+                ? Math.Max(0, frameBudget - (_clock() - start)) : 0);
+        }
+        catch (Exception error) { RecordFailure(error); }
         LastMilliseconds = _clock() - start;
         if (!covered) _watchdog.Observe(LastMilliseconds, _clock());
     }

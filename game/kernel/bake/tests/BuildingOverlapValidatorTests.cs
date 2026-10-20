@@ -79,7 +79,9 @@ public sealed class BuildingOverlapValidatorTests
         { Parts = [new("same", new MultiPolygonGeometry([Rect(0, 0, 2, 2), Rect(10, 10, 11, 11)]), 5, 1)] };
         Reject(World(Feature("a", "same", Rect(0, 0, 2, 2)), b));
         var bowtie = new PolygonRings([new(0, 0), new(2, 2), new(0, 2), new(2, 0)]);
-        Reject(World(Feature("a", "invalid", bowtie)));
+        var invalid = Reject(World(Feature("a", "invalid", bowtie)));
+        if (invalid.InnerException is not ArgumentException)
+            throw new InvalidOperationException("Invalid source geometry lost its original failure.");
     }
 
     [TestCase]
@@ -127,7 +129,12 @@ public sealed class BuildingOverlapValidatorTests
             parts: [new(source, new PolygonGeometry(rings), 5, 1)]);
     static FakeWorld World(params WorldFeature[] features) => new() { Features = features.ToDictionary(f => f.Id) };
 
-    static void Reject(IWorldModel world, Func<FeatureId, Aspects, string?>? owner = null) =>
-        AssertThrown(() => BuildingOverlapValidator.Validate(world, owner)).IsInstanceOf<InvalidDataException>();
+    static InvalidDataException Reject(IWorldModel world, Func<FeatureId, Aspects, string?>? owner = null)
+    {
+        // AssertThrown unwraps InnerException; this boundary contract concerns the actual outer error.
+        try { BuildingOverlapValidator.Validate(world, owner); }
+        catch (InvalidDataException error) { return error; }
+        throw new InvalidOperationException("Invalid building source geometry was accepted.");
+    }
 
 }

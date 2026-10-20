@@ -19,7 +19,12 @@ internal sealed class StreamMaterials(IToonMaterialProvider toon, IShaderMateria
         {
             var created = shaders.Create(shader);
             try { _owned.Add(shader, created); material = created; }
-            catch { created.Dispose(); throw; }
+            catch (Exception failure)
+            {
+                try { created.Dispose(); }
+                catch (Exception cleanup) { throw new AggregateException(failure, cleanup); }
+                throw;
+            }
         }
         _bindings.Add(draw, material);
         return material;
@@ -30,8 +35,12 @@ internal sealed class StreamMaterials(IToonMaterialProvider toon, IShaderMateria
     }
     public void Dispose()
     {
-        foreach (var material in _owned.OrderBy(pair => pair.Key).Select(pair => pair.Value)) material.Dispose();
+        List<Exception>? failures = null;
+        foreach (var material in _owned.OrderBy(pair => pair.Key).Select(pair => pair.Value))
+            try { material.Dispose(); }
+            catch (Exception error) { (failures ??= []).Add(error); }
         _owned.Clear();
         _bindings.Clear();
+        if (failures is not null) throw new AggregateException("Stream material release failed.", failures);
     }
 }

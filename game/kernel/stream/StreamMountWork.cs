@@ -18,12 +18,12 @@ public abstract class StreamMountWork(BakeKey key, BakePriority priority, long r
     public StreamMountKind Kind { get; } = kind;
     public bool Complete { get; private set; }
     public bool IsCancelled { get; private set; }
-    public string? Error { get; private set; }
+    public Exception? Failure { get; private set; }
 
     protected abstract bool IsCurrent { get; }
     protected abstract bool MountStep(double budgetMilliseconds);
     protected abstract void Release();
-    protected abstract void Failed(string error);
+    protected abstract void Failed(Exception error);
 
     public bool Step(double budgetMilliseconds)
     {
@@ -38,9 +38,13 @@ public abstract class StreamMountWork(BakeKey key, BakePriority priority, long r
         }
         catch (Exception error)
         {
-            Error = error.GetBaseException().Message;
-            try { Failed(Error); }
-            finally { Cancel(); }
+            Exception failure = error;
+            try { Cancel(); }
+            catch (Exception cleanup) { failure = new AggregateException(error, cleanup); }
+            try { Failed(failure); }
+            catch (Exception reporting) { failure = new AggregateException(failure, reporting); }
+            Failure = failure;
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
             throw;
         }
     }

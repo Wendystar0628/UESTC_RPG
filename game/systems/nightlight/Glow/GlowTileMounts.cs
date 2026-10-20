@@ -116,7 +116,7 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
             _mount?.Free();
             _mount = null;
         }
-        protected override void Failed(string error) => owner.Error = error;
+        protected override void Failed(Exception error) => owner.Error = error.Message;
     }
 
 }

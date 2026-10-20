@@ -22,17 +22,17 @@ internal sealed class BakeOffline
         try
         {
             _queue.BeginCatalog();
-            try { await Task.Run(() => _catalog.Queue(_map)); }
+            try { await Task.Run(() => _catalog.Queue(_map)).ConfigureAwait(false); }
             finally { _queue.EndCatalog(); }
 
             while (true)
             {
-                if (_queue.Failures.TryDequeue(out var failure)) throw new InvalidDataException(failure);
+                _queue.ThrowIfFailed();
                 var progress = _queue.Progress;
                 if (progress.Done == progress.Total) break;
-                await Task.Delay(50);
+                await Task.Delay(50).ConfigureAwait(false);
             }
-            if (_queue.Failures.TryDequeue(out var lastFailure)) throw new InvalidDataException(lastFailure);
+            _queue.ThrowIfFailed();
         }
         finally { _map.PipelineStatistics = null; }
     }

@@ -36,7 +36,7 @@ public sealed partial class GroundCoverTextures(IMapContentSource content, IBake
     }
 
     public void OnMapUnloading(MapId from) => Release();
-    public void Unload(MapId from) => _data = null;
+    public Task UnloadAsync(MapId from) { _data = null; return Task.CompletedTask; }
     public override void _ExitTree() { Release(); _data = null; }
 
     private void Release()

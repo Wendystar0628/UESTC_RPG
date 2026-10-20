@@ -23,10 +23,13 @@ public sealed class CpuBakeCommand : IBakeCommand
         var options = BakeOptions.From(context.Run.Bake);
         var started = FrameClock.MonotonicMilliseconds;
         var exitCode = 2;
+        TerrainCacheService? terrain = null;
+        BakeService? bake = null;
+        var failures = new List<Exception>();
         try
         {
-            using var terrain = new TerrainCacheService(options);
-            using var bake = new BakeService(options, terrain, _globalInputs.Snapshot);
+            terrain = new TerrainCacheService(options);
+            bake = new BakeService(options, terrain, _globalInputs.Snapshot);
             var source = new MapDataSource();
             var catalog = await source.ReadCatalog();
             var requested = context.Run.Flow.Map ?? catalog.Default;
@@ -41,6 +44,7 @@ public sealed class CpuBakeCommand : IBakeCommand
                 var claims = source.ReadClaims(descriptor.Id);
                 var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(loader, input, claims));
                 var map = MapWorldLoading.CreateContext(input.Entry, loaded, input.SourceInputs);
+                var mapFailures = new List<Exception>();
                 try
                 {
                     var metadata = await bake.PrepareMapData(map);
@@ -56,20 +60,46 @@ public sealed class CpuBakeCommand : IBakeCommand
                         var diagnostic = collected!.Diagnostic;
                         GD.Print($"BAKE_DIAGNOSTIC map={collected.Map.Value} module={collected.Module} level={diagnostic.Level} {diagnostic.Code}: {diagnostic.Message}");
                     }
-                    GD.Print($"BAKE_MAP_COMPLETE map={descriptor.Id.Value}");
                 }
-                finally { bake.Unmount(map.Descriptor.Id); }
+                catch (Exception error) { mapFailures.Add(error); }
+                finally
+                {
+                    try { await bake.DrainAsync(map.Descriptor.Id); }
+                    catch (Exception error) { mapFailures.Add(error); }
+                    try { bake.Unmount(map.Descriptor.Id); }
+                    catch (Exception error) { mapFailures.Add(error); }
+                }
+                if (mapFailures.Count != 0) throw new AggregateException("CPU map bake failed.", mapFailures);
+                GD.Print($"BAKE_MAP_COMPLETE map={descriptor.Id.Value}");
             }
             pipelines?.Write(ProjectSettings.GlobalizePath("res://"));
             exitCode = 0;
         }
-        catch (Exception error) { GD.PushError(error.ToString()); }
+        catch (Exception error) { failures.Add(error); }
         finally
         {
-            var files = Directory.Exists(options.CacheRoot)
-                ? Directory.EnumerateFiles(options.CacheRoot, "*.tbin", SearchOption.AllDirectories).LongCount() : 0;
+            if (bake is not null)
+                try { await bake.DisposeAsync(); }
+                catch (Exception error) { failures.Add(error); }
+            if (terrain is not null)
+                try { await terrain.DisposeAsync(); }
+                catch (Exception error) { failures.Add(error); }
+            long files = 0;
+            try
+            {
+                files = Directory.Exists(options.CacheRoot)
+                    ? Directory.EnumerateFiles(options.CacheRoot, "*.tbin", SearchOption.AllDirectories).LongCount() : 0;
+            }
+            catch (Exception error) { failures.Add(error); }
+            if (failures.Count != 0) exitCode = FailedCommand(new AggregateException("CPU bake command failed.", failures));
             GD.Print(FormattableString.Invariant($"PREBAKE_COMPLETE exit={exitCode} files={files} elapsed_seconds={(FrameClock.MonotonicMilliseconds - started) / 1000:0.000}"));
         }
         return exitCode;
+    }
+
+    private static int FailedCommand([FailureHandler("ENG-ARCH")] Exception error)
+    {
+        GD.PushError(error.ToString());
+        return 2;
     }
 }

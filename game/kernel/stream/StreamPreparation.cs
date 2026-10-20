@@ -30,20 +30,14 @@ internal sealed class StreamPreparation(StreamDirector host)
     {
         if (_catalogTask is not { IsCompleted: true } task) return;
         _catalogTask = null;
-        if (task.IsCompletedSuccessfully)
+        try
         {
-            if (_host.Context is not null && _catalogGeneration == _host.MapGeneration)
-            {
-                try { _host.Participants.LoadParticipantEntries(task.Result); _catalog = task.Result; }
-                catch (Exception error) { _host.Fail(StreamTile.Root, error.GetBaseException().Message); }
-            }
+            var catalog = task.GetAwaiter().GetResult();
+            if (_host.Context is null || _catalogGeneration != _host.MapGeneration) return;
+            _host.Participants.LoadParticipantEntries(catalog); _catalog = catalog;
         }
-        else
-        {
-            var error = task.Exception?.GetBaseException().Message;
-            if (_host.Context is not null && _catalogGeneration == _host.MapGeneration)
-                _host.Fail(StreamTile.Root, "Module tile enumeration failed: " + error);
-        }
+        catch (OperationCanceledException) when (task.IsCanceled) { }
+        catch (Exception error) { _host.Fail(StreamTile.Root, error); }
     }
 
     internal void PollHandles()
@@ -52,6 +46,7 @@ internal sealed class StreamPreparation(StreamDirector host)
         {
             var pending = _pending[i];
             if (pending.Handle.State is BakeState.Pending or BakeState.Running) { i++; continue; }
+            if (pending.Handle.Failure is { } failure and not OperationCanceledException) _host.RecordFailure(failure);
             if (pending.Request.PreloadOnly)
             {
                 if (pending.Pinned && _host.Context?.Descriptor.Id == pending.Request.Key.Map && pending.Revision == _host.Mount.Revision)
@@ -63,7 +58,7 @@ internal sealed class StreamPreparation(StreamDirector host)
             if (!_host.Residency.IsCurrent(pending)) { _pending.RemoveAt(i); continue; }
             if (pending.Handle.State == BakeState.Failed)
             {
-                _host.Fail(pending.Request.Tile, pending.Handle.Error ?? $"Bake failed: {pending.Request.Key}", pending.Participant);
+                if (pending.Handle.Failure is { } error and not OperationCanceledException) _host.Fail(pending.Request.Tile, error, pending.Participant);
                 _pending.RemoveAt(i); continue;
             }
             if (pending.Handle.State != BakeState.Ready) throw new InvalidDataException("Unknown bake state.");
@@ -76,7 +71,7 @@ internal sealed class StreamPreparation(StreamDirector host)
             var bundle = pending.Handle.Tile;
             if (bundle is null || bundle.Key != pending.Request.Key || bundle.Tile != pending.Request.Tile.Tile || bundle.Level != pending.Request.Tile.Level)
             {
-                _host.Fail(pending.Request.Tile, $"Bake returned the wrong product for {pending.Request.Key}.");
+                _host.Fail(pending.Request.Tile, new InvalidDataException($"Bake returned the wrong product for {pending.Request.Key}."));
                 _pending.RemoveAt(i); continue;
             }
             _preparing.Add(new(pending.Request.Tile, pending.Revision, RunWorker(() => PreparedTile.Create(bundle)), pending.Group!, pending.GeometryRevision));
@@ -125,13 +120,6 @@ internal sealed class StreamPreparation(StreamDirector host)
         return work();
     }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-    private static async Task ObserveDiscardedCatalog(Task<ModuleTileCatalog> catalog)
-    {
-        // Pure CPU results need no native release. Observe a late fault without touching an exited node or engine.
-        try { await catalog.ConfigureAwait(false); }
-        catch (Exception) { }
-    }
-
     internal void IssueQueued()
     {
         // Ensure only queues work. Bake owns CPU concurrency and the three ResourceLoader slots.
@@ -157,20 +145,20 @@ internal sealed class StreamPreparation(StreamDirector host)
         {
             var preparing = _preparing[i];
             if (!preparing.Task.IsCompleted) continue;
-            _preparing.RemoveAt(i);
             if (!preparing.Task.IsCompletedSuccessfully)
             {
-                var error = preparing.Task.Exception?.GetBaseException().Message;
-                if (_host.Residency.IsCurrentGeometry(preparing.Tile, preparing.Group, preparing.Revision, preparing.GeometryRevision))
-                    _host.Fail(preparing.Tile, "GPU preparation failed: " + error);
-                continue;
+                try { preparing.Task.GetAwaiter().GetResult(); }
+                catch (OperationCanceledException) when (preparing.Task.IsCanceled) { }
+                catch (Exception error) { _host.Fail(preparing.Tile, error); }
+                _preparing.RemoveAt(i); continue;
             }
             var prepared = preparing.Task.Result;
             if (!_host.Residency.IsCurrentGeometry(preparing.Tile, preparing.Group, preparing.Revision, preparing.GeometryRevision))
             {
-                _host.Residency.QueueRetirement(prepared); continue;
+                _host.Residency.QueueRetirement(prepared); _preparing.RemoveAt(i); continue;
             }
             var group = _host.Residency.Groups[preparing.Tile]; group.Bundles.Add(prepared);
+            _preparing.RemoveAt(i);
             if (group.Bundles.Count == group.Expected && !group.Queued)
             {
                 group.Queued = true;
@@ -197,16 +185,30 @@ internal sealed class StreamPreparation(StreamDirector host)
         foreach (var pending in _pending)
             if (pending.Request.PreloadOnly) pending.Pinned = false;
     }
-    internal void Shutdown()
+    internal async Task DrainAsync()
     {
         if (_catalogTask is { } catalog)
         {
-            _catalogTask = null;
-            _ = ObserveDiscardedCatalog(catalog);
+            try { await catalog; }
+            catch (OperationCanceledException) when (catalog.IsCanceled) { }
+            catch (Exception error) { _host.RecordFailure(error); }
+            finally { _catalogTask = null; }
         }
-        // Shutdown is under the loading screen; no native preparation survives engine teardown.
+        foreach (var pending in _pending)
+            try { await pending.Handle.Done; }
+            catch (OperationCanceledException) when (pending.Handle.Done.IsCanceled) { }
+            catch (Exception error) { _host.RecordFailure(error); }
+        _pending.Clear();
         foreach (var preparing in _preparing)
-            try { preparing.Task.GetAwaiter().GetResult().Dispose(); } catch (Exception error) { GD.PushError(error.Message); }
+        {
+            PreparedTile? prepared = null;
+            try { prepared = await preparing.Task; }
+            catch (OperationCanceledException) when (preparing.Task.IsCanceled) { }
+            catch (Exception error) { _host.RecordFailure(error); }
+            if (prepared is not null)
+                try { prepared.Dispose(); }
+                catch (Exception error) { _host.RecordFailure(error); }
+        }
         _preparing.Clear();
     }
     internal sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup? Group,

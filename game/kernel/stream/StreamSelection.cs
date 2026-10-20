@@ -17,6 +17,8 @@ internal sealed class StreamSelection(StreamDirector host)
     private TileVisibility _visibility = new(.25f);
     private LodTree? _tree;
     private TerrainPlan? _terrainPlan;
+    private readonly List<TerrainPlan> _retiredPlans = [];
+    internal bool IsIdle => _terrainPlan is null && _retiredPlans.Count == 0;
     private IMapContext? _plannedContext;
     private IWorldModel? _plannedWorld;
     private Pose _plannedPose;
@@ -44,7 +46,7 @@ internal sealed class StreamSelection(StreamDirector host)
     internal int VisibleTiles => _visibility.Drawn.Count;
     internal bool ViewReady => SelectionReady(_viewRequired, _refined) && _host.Participants.ParticipantsReady(destination: false);
 
-    internal bool DestinationReady => _destinationConsumed ? _host.Error is null && _host.Context is not null : _destinationPlanned && _destination is { } destination &&
+    internal bool DestinationReady => _destinationConsumed ? _host.Failure is null && _host.Context is not null : _destinationPlanned && _destination is { } destination &&
         SelectionReady(_destinationRequired, _destinationRefined) && _host.Participants.ParticipantsReady(destination: true) && (_host.Interiors?.DestinationReady ?? true) && (_destinationMode switch
         {
             ViewMode.Fly => true,
@@ -113,7 +115,7 @@ internal sealed class StreamSelection(StreamDirector host)
         }
         if (!_terrainPlan.Preparation.IsCompleted) return false;
         try { _terrainPlan.Preparation.GetAwaiter().GetResult(); }
-        catch (Exception error) { _host.SetError(error.GetBaseException().Message); CancelTerrainPlan(); return false; }
+        catch (Exception error) { _host.RecordFailure(error); CancelTerrainPlan(); return false; }
         if (!points.All(point => _host.Terrain.IsPrepared(context.World, point)))
             throw new InvalidOperationException("Terrain preparation completed without the current planning points.");
         CancelTerrainPlan(); return true;
@@ -123,12 +125,35 @@ internal sealed class StreamSelection(StreamDirector host)
     {
         if (_terrainPlan is not { } pending) return;
         _terrainPlan = null;
-        pending.Cancellation.Cancel(); pending.Cancellation.Dispose();
-        _ = ObserveDiscardedTerrain(pending.Preparation);
+        _retiredPlans.Add(pending);
+        pending.Cancellation.Cancel();
     }
 
-    internal static async Task ObserveDiscardedTerrain(Task preparation)
-    { try { await preparation.ConfigureAwait(false); } catch (Exception) { } }
+    internal void PollRetired()
+    {
+        for (var i = _retiredPlans.Count - 1; i >= 0; i--)
+        {
+            var pending = _retiredPlans[i];
+            if (!pending.Preparation.IsCompleted) continue;
+            try { pending.Preparation.GetAwaiter().GetResult(); }
+            catch (OperationCanceledException) when (pending.Cancellation.IsCancellationRequested) { }
+            catch (Exception error) { _host.RecordFailure(error); }
+            finally { pending.Cancellation.Dispose(); _retiredPlans.RemoveAt(i); }
+        }
+    }
+
+    internal async Task DrainAsync()
+    {
+        CancelTerrainPlan();
+        foreach (var pending in _retiredPlans)
+        {
+            try { await pending.Preparation; }
+            catch (OperationCanceledException) when (pending.Cancellation.IsCancellationRequested) { }
+            catch (Exception error) { _host.RecordFailure(error); }
+            finally { pending.Cancellation.Dispose(); }
+        }
+        _retiredPlans.Clear();
+    }
 
     private void ResolveVisible()
     {
@@ -268,7 +293,7 @@ internal sealed class StreamSelection(StreamDirector host)
     internal void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null)
     {
         if (_host.Context is null) throw new InvalidOperationException("A map must be mounted before destination prefetch.");
-        _destination = destination; _destinationMode = mode; _destinationState = new(destination, mode, space); _host.ClearError();
+        _destination = destination; _destinationMode = mode; _destinationState = new(destination, mode, space);
         _selectionApplied = false; _planReady = false; CancelTerrainPlan();
         _destinationPlanned = false; _destinationConsumed = false; _destinationRequired.Clear(); _destinationRefined.Clear();
         _destinationSequence++; _host.Preparation.ClearRequests();
