@@ -82,7 +82,7 @@ public sealed class MapRuntimeRuntimeTests
         var viewCamera = new Camera3D();
         try
         {
-            var producer = new ArrivalRenderer();
+            var producer = new MapRuntimeReadinessProducer();
             stage.AddChild(producer);
             var stream = new ArrivalStream();
             var collision = new ArrivalCollision();
@@ -125,9 +125,20 @@ public sealed class MapRuntimeRuntimeTests
             var original = new InvalidOperationException("destination failed");
             stream.Failure = original;
             var failed = runtime.Arrive(destination, ViewMode.Fly);
+            AssertThat(runtime.Failure is null && !failed.Done.IsCompleted).OverrideFailureMessage("Reading failure advanced runtime collection.").IsTrue();
             runtime._Process(0);
             AssertThat(failed.Done.IsFaulted).IsTrue();
             AssertThat(ReferenceEquals(failed.Done.Exception!.InnerException, original) && ReferenceEquals(runtime.Failure, original)).IsTrue();
+            var rendering = new InvalidDataException("rendering failed");
+            var physical = new InvalidOperationException("collision failed");
+            producer.Failure = rendering; collision.Failure = physical;
+            AssertThat(ReferenceEquals(runtime.Failure, original)).OverrideFailureMessage("Reading failure collected new producer faults.").IsTrue();
+            runtime._Process(0);
+            var collected = runtime.Failure as AggregateException ?? throw new InvalidOperationException("Producer failures were not collected by Update.");
+            AssertThat(collected.Flatten().InnerExceptions.Count == 3 && collected.Flatten().InnerExceptions.Contains(original) &&
+                collected.Flatten().InnerExceptions.Contains(rendering) && collected.Flatten().InnerExceptions.Contains(physical)).IsTrue();
+            runtime._Process(0);
+            AssertThat(ReferenceEquals(runtime.Failure, collected)).OverrideFailureMessage("Unchanged faults were collected twice.").IsTrue();
         }
         finally
         {
@@ -158,7 +169,7 @@ public sealed class MapRuntimeRuntimeTests
         var registry = new ServiceRegistry();
         registry.Discover([typeof(FirstLifetimeParticipant), typeof(SecondLifetimeParticipant)], _ => "fixture");
         registry.Add(first); registry.Add(second);
-        var renderer = new ArrivalRenderer(); stage.AddChild(renderer);
+        var renderer = new MapRuntimeReadinessProducer(); stage.AddChild(renderer);
         runtime.Bind(new(registry, stream, new RuntimeBake(), new ArrivalCollision(), renderer,
             new RuntimePipelines(), new TestCameraRig(), new FlowTerrainPreparation(), viewCamera));
         stage.AddChild(runtime);
@@ -263,22 +274,22 @@ public sealed class MapRuntimeRuntimeTests
         public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) => Destination = new(destination, mode, space);
     }
 
-    private sealed partial class ArrivalRenderer : Node, IRenderReadiness, IViewContentReadiness
-    {
-        public bool ContentReady { get; set; }
-        public bool IsReady(Pose pose) => ContentReady;
-        public string? Error => null;
-        public bool Pending => false;
-    }
-
     private sealed class ArrivalCollision : ICollisionWorld
     {
         public bool CollisionReady { get; set; }
-        public string? Error => null;
+        public Exception? Failure { get; set; }
         public bool Ready(N.Vector3 point, float radius) => CollisionReady;
         public SweepHit? Sweep(N.Vector3 from, N.Vector3 to, float radius, float height) => null;
         public SupportHit? SupportY(float x, float z, float yHint) => null;
         public SweepHit? SupportRay(N.Vector3 from, N.Vector3 to) => null;
         public int NearbyBoundaries(N.Vector3 feet, float radius, float height, Span<BoundaryHit> hits) => 0;
     }
+}
+
+internal sealed partial class MapRuntimeReadinessProducer : Node, IRenderReadiness, IViewContentReadiness
+{
+    public bool ContentReady { get; set; }
+    public bool IsReady(Pose pose) => ContentReady;
+    public Exception? Failure { get; set; }
+    public bool Pending => false;
 }

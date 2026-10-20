@@ -27,9 +27,9 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
     private long _captureEpoch;
     private double _sinceCheck;
     private bool _force = true;
-    private string? _error;
+    private Exception? _error;
     public StreamMountKind Kind => StreamMountKind.Auxiliary;
-    public string? Error => _error ?? _renderReadiness?.Error;
+    public Exception? Failure => _error ?? _renderReadiness?.Failure;
 
     public IReadOnlyDictionary<string, FaunaSet?> Applied => _tileMounts.Tiles
         .SelectMany(tile => tile.Content.Content.Sites.Select((site, i) => (site.Key, tile.Latches[i].Set)))
@@ -56,11 +56,11 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
         return _tileMounts.CreateMount(content, priority, revision);
     }
 
-    public bool IsReady(BakeKey key) => Error is null && !_force && _tileMounts.TryGet(key, out var tile) && TileReady(tile);
+    public bool IsReady(BakeKey key) => Failure is null && !_force && _tileMounts.TryGet(key, out var tile) && TileReady(tile);
 
     public bool IsReady(Pose pose)
     {
-        if (Error is not null || _tileMounts.Map is null || _force) return false;
+        if (Failure is not null || _tileMounts.Map is null || _force) return false;
         foreach (var tile in _tileMounts.Tiles) if (!TileReady(tile)) return false;
         return true;
     }
@@ -121,7 +121,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
 
     public override void _Process(double delta)
     {
-        if (Error is not null || _world is null || _tileMounts.Map is null) return;
+        if (Failure is not null || _world is null || _tileMounts.Map is null) return;
         _sinceCheck += Math.Min(delta, 0.1);
         if (!_force && _sinceCheck < CheckSeconds) return;
         _sinceCheck = 0;
@@ -156,7 +156,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
             }
             _force = false;
         }
-        catch (Exception error) { _error = error.GetBaseException().Message; }
+        catch (Exception error) { _error = error; }
     }
 
     private FaunaSet? Target(FaunaSiteContent site) =>

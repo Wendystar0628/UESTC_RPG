@@ -52,7 +52,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
     public bool IsSettled => !_terrain.LandingPointsPending && (!Active || (!_swimming.Active && Grounded && CollisionReady
         && !_comfort.Descending && !ExitRequested && _map is not null && !WalkSafetyQueries.InWater(_map.World.Spatial, _feet)));
     public bool IsReady(Pose pose) => !_terrain.LandingPointsPending && !_persistence.HistoryPending;
-    public string? Error => _terrain.Error;
+    public Exception? Failure => _terrain.Failure;
     public Pose BodyPose => new(_feet, _yaw, _pitch);
     public N.Vector3 ObserverEye => _feet + N.Vector3.UnitY * EyeHeight;
     N.Vector3 IWalkController.Velocity => Velocity.ToNumerics();
@@ -536,8 +536,6 @@ public partial class WalkController : CharacterBody3D, IWalkController, IWalkTel
     public event Action<ContactInfo>? WallContact { add => _telemetry.WallContact += value; remove => _telemetry.WallContact -= value; }
     public event Action<ulong, float> WaterEnter { add => _telemetry.WaterEnter += value; remove => _telemetry.WaterEnter -= value; }
     public event Action<ulong> WaterExit { add => _telemetry.WaterExit += value; remove => _telemetry.WaterExit -= value; }
-    public event Action<ulong> Sink { add => _telemetry.Sink += value; remove => _telemetry.Sink -= value; }
-    public event Action<ulong, float> ElevatorDoor { add => _telemetry.ElevatorDoor += value; remove => _telemetry.ElevatorDoor -= value; }
     public event Action<ulong, float>? TurnInPlace { add => _telemetry.TurnInPlace += value; remove => _telemetry.TurnInPlace -= value; }
     public event Action<ulong>? ModeTouchdown { add => _telemetry.ModeTouchdown += value; remove => _telemetry.ModeTouchdown -= value; }
     public event Action<ulong>? ModeTakeoff { add => _telemetry.ModeTakeoff += value; remove => _telemetry.ModeTakeoff -= value; }

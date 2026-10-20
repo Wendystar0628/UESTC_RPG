@@ -75,10 +75,14 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
                 _host.Fail(pending.Request.Tile, new InvalidDataException($"Bake returned the wrong product for {pending.Request.Key}."));
                 _pending.RemoveAt(i); continue;
             }
-            _preparing.Add(new(pending.Request.Tile, pending.Revision, _geometry.PrepareAsync(bundle), pending.Group!, pending.GeometryRevision));
+            var owner = new PreparedTile(bundle);
+            _preparing.Add(new(pending.Request.Tile, pending.Revision, owner, Initialize(owner, bundle), pending.Group!, pending.GeometryRevision));
             _pending.RemoveAt(i);
         }
     }
+
+    // Capture synchronous provider faults on the same real initialization task while retaining its owner.
+    private async Task Initialize(PreparedTile owner, TileBundle bundle) => await _geometry.PrepareAsync(owner, bundle);
 
     internal void QueueCpuRead(BakeKey key, StreamTile tile, List<StreamRequest> requests)
     {
@@ -145,15 +149,17 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
         for (var i = _preparing.Count - 1; i >= 0; i--)
         {
             var preparing = _preparing[i];
-            if (!preparing.Task.IsCompleted) continue;
+            if (preparing.Failed || !preparing.Task.IsCompleted) continue;
             if (!preparing.Task.IsCompletedSuccessfully)
             {
                 try { preparing.Task.GetAwaiter().GetResult(); }
                 catch (OperationCanceledException) when (preparing.Task.IsCanceled) { }
                 catch (Exception error) { _host.Fail(preparing.Tile, error); }
-                _preparing.RemoveAt(i); continue;
+                // Failed initialization may also have failed cleanup. Keep its owner until explicit drain.
+                preparing.Failed = true;
+                continue;
             }
-            var prepared = preparing.Task.Result;
+            var prepared = preparing.Owner;
             if (!_host.Residency.IsCurrentGeometry(preparing.Tile, preparing.Group, preparing.Revision, preparing.GeometryRevision))
             {
                 _host.Residency.QueueRetirement(prepared); _preparing.RemoveAt(i); continue;
@@ -200,21 +206,22 @@ internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPrep
             catch (OperationCanceledException) when (pending.Handle.Done.IsCanceled) { }
             catch (Exception error) { _host.RecordFailure(error); }
         _pending.Clear();
-        foreach (var preparing in _preparing)
+        for (var i = _preparing.Count - 1; i >= 0; i--)
         {
-            PreparedTile? prepared = null;
-            try { prepared = await preparing.Task; }
+            var preparing = _preparing[i];
+            var prepared = preparing.Owner;
+            try { await preparing.Task; }
             catch (OperationCanceledException) when (preparing.Task.IsCanceled) { }
             catch (Exception error) { _host.RecordFailure(error); }
-            if (prepared is not null)
-                try { prepared.Dispose(); }
-                catch (Exception error) { _host.RecordFailure(error); }
+            try { prepared.Dispose(); }
+            catch (Exception error) { _host.RecordFailure(error); }
+            if (prepared.IsDisposed) _preparing.RemoveAt(i);
         }
-        _preparing.Clear();
     }
     internal sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup? Group,
         long GeometryRevision, ParticipantTile? Participant)
     { public bool Pinned { get; set; } }
-    private sealed record Preparing(StreamTile Tile, long Revision, Task<PreparedTile> Task, TileGroup Group, long GeometryRevision);
+    private sealed record Preparing(StreamTile Tile, long Revision, PreparedTile Owner, Task Task, TileGroup Group, long GeometryRevision)
+    { public bool Failed { get; set; } }
 
 }

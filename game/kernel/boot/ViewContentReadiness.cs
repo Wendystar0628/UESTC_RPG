@@ -79,8 +79,8 @@ public sealed class ViewContentReadiness
         var ready = true;
         foreach (var producer in _producers)
         {
-            if (producer.Error is { } error)
-                throw new InvalidOperationException($"Visible content failed ({producer.GetType().Name}): {error}");
+            if (producer.Failure is { } error)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
             ready &= producer.IsReady(pose);
         }
         return ready;

@@ -11,7 +11,6 @@ internal sealed class SaveWriteOperation
 {
     private readonly List<Exception> _cleanupFailures = [];
     public Exception? Failure { get; private set; }
-    public Exception? ThumbnailError { get; private set; }
 
     public async Task<byte[]?> CaptureThumbnail(Func<Task<byte[]?>> capture, byte[]? previous)
     {
@@ -22,9 +21,8 @@ internal sealed class SaveWriteOperation
 
     private byte[]? DiscardThumbnail([FailureHandler("SYS-SAVE-FORMAT")] Exception error, byte[]? previous)
     {
-        ThumbnailError = error;
         // SYS-SAVE-FORMAT permits an absent thumbnail; keep the existing image and continue this state save.
-        DiagnosticLog.Warning("Save thumbnail unavailable; saving state with the previous optional image.", ThumbnailError);
+        DiagnosticLog.Warning("Save thumbnail unavailable; saving state with the previous optional image.", error);
         return previous;
     }
 

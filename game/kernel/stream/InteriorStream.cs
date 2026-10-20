@@ -33,7 +33,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     }
     public void Prefetch(NavSpace? space, N.Vector3 position)
     {
-        _destination.Clear(); Failure = null;
+        _destination.Clear();
         if (space is { Building: not null } value) Request(value, position, BakePriority.KnownDestination, _destination, true);
     }
     public void Select(CameraMedium medium, N.Vector3 position)
@@ -52,13 +52,13 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         var entry = _context.World.Interiors.Get(building);
         if (entry is null || !entry.Open || string.IsNullOrWhiteSpace(entry.ProviderId))
         {
-            if (blocking) FailDestination(new InvalidOperationException($"Interior destination is not an open registered building: {building.Value}."));
+            if (blocking) RecordFailure(new InvalidOperationException($"Interior destination is not an open registered building: {building.Value}."));
             return;
         }
         var area = _context.World.Interiors.AreaAt(building, position);
         if (area is null || !InteriorOpenPart.IsIndoor(area.Kind) || area.Index != space.Floor)
         {
-            if (blocking) FailDestination(new InvalidOperationException($"Interior destination is outside the open area: {building.Value}/{space.Floor}."));
+            if (blocking) RecordFailure(new InvalidOperationException($"Interior destination is outside the open area: {building.Value}/{space.Floor}."));
             return;
         }
         var atrium = _atriumStoreys.GetValueOrDefault(building);
@@ -72,14 +72,13 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             target?.Add(key);
             if (!_layers.ContainsKey(key)) _layers.Add(key, new(key, bake.Ensure(key, priority), mount.Revision, priority, building));
             else if (priority == BakePriority.KnownDestination) bake.Ensure(key, priority);
-            if (blocking && _layers[key].Failure is { } error) Failure ??= error;
         }
     }
     public void Poll(int availablePreparations)
     {
         foreach (var layer in _layers.Values.OrderBy(layer => layer.Priority).ThenBy(layer => layer.Key.Detail, StringComparer.Ordinal))
         {
-            if (layer.Preparing is not null || layer.Prepared is not null || layer.Failure is not null) continue;
+            if (layer.Preparing is not null || layer.Owner is not null || layer.Failure is not null) continue;
             if (layer.Handle.State is BakeState.Pending or BakeState.Running) continue;
             if (_context is null || layer.Revision != mount.Revision) { layer.Finished = true; continue; }
             if (layer.Handle.State == BakeState.Failed)
@@ -93,10 +92,13 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             {
                 Fail(layer, new InvalidDataException($"Interior bake returned the wrong product: {layer.Key}.")); continue;
             }
-            layer.Preparing = geometry.PrepareAsync(bundle);
+            layer.Owner = new PreparedTile(bundle);
+            layer.Preparing = Initialize(layer.Owner, bundle);
             availablePreparations--;
         }
     }
+    private async Task Initialize(PreparedTile owner, TileBundle bundle) => await geometry.PrepareAsync(owner, bundle);
+
     public void Finish(Rid scenario, bool allowVisibility)
     {
         foreach (var layer in _layers.Values)
@@ -106,13 +108,12 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
                 layer.Preparing = null;
                 if (task.IsCompletedSuccessfully)
                 {
-                    layer.Prepared = task.Result;
+                    layer.Prepared = layer.Owner;
                     if (_context is null || layer.Revision != mount.Revision)
-                    { retire(layer.Prepared); layer.Prepared = null; layer.Finished = true; }
+                    { retire(layer.Owner!); layer.Owner = layer.Prepared = null; layer.Finished = true; }
                     else
                     {
-                        layer.Prepared = task.Result;
-                        layer.Work = new VisualMountWork([task.Result], layer.Revision, scenario, layer.Priority, materials, reflections,
+                        layer.Work = new VisualMountWork([layer.Prepared!], layer.Revision, scenario, layer.Priority, materials, reflections,
                             () => layer.Mounted = true, () => layer.Mounted = false, error => Fail(layer, error));
                         mount.Enqueue(layer.Work);
                     }
@@ -139,21 +140,21 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             {
                 layer.Preparing = null;
                 if (pending.IsCompletedSuccessfully)
-                { layer.Prepared = pending.Result; retire(layer.Prepared); layer.Prepared = null; }
+                { retire(layer.Owner!); layer.Owner = layer.Prepared = null; }
                 else
                     try { pending.GetAwaiter().GetResult(); }
                     catch (OperationCanceledException) when (pending.IsCanceled) { }
                     catch (Exception error) { Fail(layer, error); }
             }
-            if (layer.Preparing is null && layer.Handle.State is BakeState.Ready or BakeState.Failed)
+            if (layer.Preparing is null && layer.Owner is null && layer.Handle.State is BakeState.Ready or BakeState.Failed)
             {
                 if (layer.Handle.Failure is { } error and not OperationCanceledException) Fail(layer, error);
                 _draining.RemoveAt(i);
             }
         }
         if (_context is null)
-            foreach (var key in _layers.Where(pair => pair.Value.Finished ||
-                         pair.Value.Preparing is null && pair.Value.Handle.State is BakeState.Ready or BakeState.Failed)
+            foreach (var key in _layers.Where(pair => pair.Value.Owner is null && (pair.Value.Finished ||
+                         pair.Value.Preparing is null && pair.Value.Handle.State is BakeState.Ready or BakeState.Failed))
                      .Select(pair => pair.Key).ToArray()) _layers.Remove(key);
     }
     public void AdvanceRetention(double delta, System.Numerics.Vector3 camera)
@@ -170,23 +171,29 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
                 outside = building.Bounds.HorizontalDistanceSquared(new(p.X, 0, p.Y)) > 40 * 40;
             }
             if (!outside && layer.IdleSeconds < 20) continue;
+            if (layer.Failure is not null) continue;
             layer.Work?.Abandon();
-            if (layer.Prepared is { } prepared) { retire(prepared); layer.Prepared = null; }
+            if (layer.Preparing is null && layer.Owner is { } owner) { retire(owner); layer.Owner = layer.Prepared = null; }
             _layers.Remove(layer.Key);
             if (layer.Preparing is not null || layer.Handle.State is BakeState.Pending or BakeState.Running) _draining.Add(layer);
         }
     }
     private bool Ready(Layer layer) => layer.Failure is null && layer.Mounted && layer.Prepared is not null;
-    private void FailDestination(Exception error)
-    {
-        Failure = error;
-        if (!_failures.Contains(error)) _failures.Add(error);
-    }
     private void Fail(Layer layer, Exception error)
     {
         layer.Failure = error;
-        if (_destination.Contains(layer.Key)) Failure ??= error;
-        if (!_failures.Contains(error)) _failures.Add(error);
+        RecordFailure(error);
+    }
+    private void RecordFailure(Exception error)
+    {
+        if (error is AggregateException aggregate)
+        {
+            foreach (var inner in aggregate.InnerExceptions) RecordFailure(inner);
+            return;
+        }
+        if (_failures.Contains(error)) return;
+        _failures.Add(error);
+        Failure = _failures.Count == 1 ? error : new AggregateException("Interior stream failed.", _failures);
     }
     public void Unload()
     {
@@ -202,23 +209,27 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
     public async Task DrainAsync()
     {
         Unload();
-        foreach (var layer in _draining)
+        for (var i = _draining.Count - 1; i >= 0; i--)
         {
+            var layer = _draining[i];
             try { await layer.Handle.Done; }
             catch (OperationCanceledException) when (layer.Handle.Done.IsCanceled) { }
             catch (Exception error) { Fail(layer, error); }
             if (layer.Preparing is { } task)
             {
-                try { layer.Prepared = await task; }
+                try { await task; }
                 catch (OperationCanceledException) when (task.IsCanceled) { }
                 catch (Exception error) { Fail(layer, error); }
                 finally { layer.Preparing = null; }
             }
-            try { layer.Prepared?.Dispose(); }
+            try { layer.Owner?.Dispose(); }
             catch (Exception error) { Fail(layer, error); }
-            layer.Prepared = null; layer.Mounted = false;
+            if (layer.Owner is null || layer.Owner.IsDisposed)
+            {
+                layer.Owner = layer.Prepared = null; layer.Mounted = false;
+                _draining.RemoveAt(i);
+            }
         }
-        _draining.Clear();
         if (_failures.Count == 1) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(_failures[0]).Throw();
         if (_failures.Count > 1) throw new AggregateException("Interior stream drain failed.", _failures);
     }
@@ -231,7 +242,9 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         public FeatureId Building { get; } = building;
         public double IdleSeconds;
         public VisualMountWork? Work;
-        public Task<PreparedTile>? Preparing;
+        public Task? Preparing;
+        // Owner is retained before the worker starts; Prepared is published only after successful initialization.
+        public PreparedTile? Owner;
         public PreparedTile? Prepared;
         public Exception? Failure;
         public bool Mounted, Visible, Finished;

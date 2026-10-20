@@ -16,7 +16,7 @@ public interface ICollisionMountRuntime : ICollisionWorld
     void MountBody(TileKey tile, IReadOnlyList<Collider> colliders);
     void CompleteTile(TileKey tile);
     bool IsTileReady(TileKey tile);
-    void FailTile(TileKey tile, string error);
+    void FailTile(TileKey tile, Exception error);
     void RemoveTile(TileKey tile);
     void Unload();
 }
@@ -46,7 +46,7 @@ public sealed class CollisionWorld : ICollisionMountRuntime
     private int _unclassifiedHits;
     public MapId? Map => _context?.Descriptor.Id;
     public long Revision { get; private set; }
-    public string? Error { get; private set; }
+    public Exception? Failure { get; private set; }
 
     public CollisionDiagnostics Diagnostics
     {
@@ -69,7 +69,7 @@ public sealed class CollisionWorld : ICollisionMountRuntime
         Unload();
         _root = root;
         _context = context;
-        Error = null;
+        Failure = null;
     }
 
     public bool IsTileReady(TileKey tile) => _tiles.TryGetValue(tile, out var state) && state.Ready;
@@ -164,7 +164,12 @@ public sealed class CollisionWorld : ICollisionMountRuntime
         state.Ready = true;
     }
 
-    public void FailTile(TileKey tile, string error) { MainThread(); RemoveTile(tile); Error = error; }
+    public void FailTile(TileKey tile, Exception error)
+    {
+        MainThread();
+        Failure = Failure is null ? error : new AggregateException(Failure, error);
+        RemoveTile(tile);
+    }
 
     public void RemoveTile(TileKey tile)
     {
@@ -185,7 +190,7 @@ public sealed class CollisionWorld : ICollisionMountRuntime
         _boundaryProbe = null;
         foreach (var tile in _tiles.Keys.OrderBy(t => t.X).ThenBy(t => t.Z).ToArray()) RemoveTile(tile);
         _bodySurfaces.Clear();
-        _context = null; _root = null; Error = null; Revision++;
+        _context = null; _root = null; Failure = null; Revision++;
     }
 
     public SupportHit? SupportY(float x, float z, float yHint)

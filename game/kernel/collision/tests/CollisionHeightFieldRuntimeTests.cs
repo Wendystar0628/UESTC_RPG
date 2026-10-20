@@ -142,13 +142,16 @@ public sealed class CollisionHeightFieldRuntimeTests
             AssertThat(mounted.Bodies > 0 && mounted.MaxBodyShapes <= 250 && mounted.RegisteredBodies == mounted.Bodies
                 && mounted.MainThreadViolations == 0 && mounted.IncompleteMounts == 0).OverrideFailureMessage("Invalid atomic collision mounting.").IsTrue();
             var mountedBodies = root.GetChildren().OfType<StaticBody3D>().ToArray();
-            world.RemoveTile(new(0, 0));
+            var original = new InvalidDataException("collision tile failed");
+            world.FailTile(new(0, 0), original);
+            AssertThat(ReferenceEquals(world.Failure, original) && !world.Ready(feet, .3f)).OverrideFailureMessage("Collision failure lost its original exception or left its tile ready.").IsTrue();
             AssertThat(mountedBodies.All(body => !GodotObject.IsInstanceValid(body))).OverrideFailureMessage("Removing a tile retained its native bodies.").IsTrue();
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             await root.ToSignal(tree, SceneTree.SignalName.PhysicsFrame);
             AssertThat(world.SupportY(8, 8, 1) is null).OverrideFailureMessage("Removed height-field collision is still present.").IsTrue();
             world.Unload();
             var unloaded = world.Diagnostics;
+            AssertThat(world.Failure is null).OverrideFailureMessage("Unload retained the previous map's collision failure.").IsTrue();
             AssertThat(unloaded.Bodies == 0 && unloaded.Shapes == 0 && unloaded.Tiles == 0 && unloaded.RegisteredBodies == 0
                 && !world.Ready(feet, .3f)).OverrideFailureMessage("Unload retained native collision state.").IsTrue();
 

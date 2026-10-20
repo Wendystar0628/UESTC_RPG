@@ -17,7 +17,7 @@ public partial class CollisionTileParticipant : Node3D, IMapAware, IStreamTilePa
     private IMapContext? _context;
     private ICollisionMountRuntime? _world;
     public StreamMountKind Kind => StreamMountKind.Collision;
-    public string? Error => _world?.Error;
+    public Exception? Failure => _world?.Failure;
 
     public override void _Ready() => _world = KernelServices.Get<ICollisionMountRuntime>();
 
@@ -51,7 +51,7 @@ public partial class CollisionTileParticipant : Node3D, IMapAware, IStreamTilePa
         return new CollisionMountWork(_world!, tile, revision);
     }
 
-    public bool IsReady(BakeKey key) => Error is null && _world is { } world && world.Map == key.Map &&
+    public bool IsReady(BakeKey key) => Failure is null && _world is { } world && world.Map == key.Map &&
         world.IsTileReady(CollisionBakeProducer.ParseTile(key.Detail));
 
     public void Unmount(BakeKey key)

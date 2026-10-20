@@ -80,14 +80,11 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _preparation.IsIdle && _residency.IsIdle && (_interiors?.IsUnloaded ?? true);
     public bool ResidentReady => Failure is null && _context is not null && _preparation.Catalog is not null && _residency.RootMounted;
     public bool DestinationReady => _selection.DestinationReady;
-    public Exception? Failure
+    public Exception? Failure => _failure;
+    private void PollFailures()
     {
-        get
-        {
-            if (_mount?.Failure is { } failure) RecordFailure(failure);
-            if (_interiors?.Failure is { } interior) RecordFailure(interior);
-            return _failure;
-        }
+        if (_mount?.Failure is { } failure) RecordFailure(failure);
+        if (_interiors?.Failure is { } interior) RecordFailure(interior);
     }
     public int MountedTiles => _residency.MountedTiles;
     public int VisibleTiles => _selection.VisibleTiles;
@@ -149,7 +146,11 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         // No data/native release here. Other MapAware producers must stop before the lifetime owner drains us.
     }
 
-    public Task DrainAsync() => _drain ??= DrainMap();
+    public Task DrainAsync()
+    {
+        if (_drain is null || _drain.IsCompleted && !IsUnloaded) _drain = DrainMap();
+        return _drain;
+    }
 
     private async Task DrainMap()
     {
@@ -163,7 +164,9 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             try { await _interiors.DrainAsync(); } catch (Exception error) { RecordFailure(error); }
         Stop(_participants.UnloadParticipants);
         Stop(_residency.Unload);
-        _unloadingMap = null;
+        if (_selection.IsIdle && _pins.IsIdle && _preparation.IsIdle && _residency.IsIdle && (_interiors?.IsUnloaded ?? true))
+            _unloadingMap = null;
+        PollFailures();
         if (Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
@@ -176,7 +179,9 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => _pins.SetPinnedDestinations(destinations);
     public override void _Process(double delta)
     {
-        if (_exiting || _context is null || Failure is not null) return;
+        if (_exiting || _context is null) return;
+        PollFailures();
+        if (Failure is not null) return;
         try
         {
             _selection.PollRetired(); _pins.PollRetired();
@@ -195,9 +200,12 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     public void FinishMountFrame(double remainingMilliseconds)
     {
+        PollFailures();
         if (_context is null || _exiting || Failure is not null) return;
         _preparation.FinishMountFrame();
         _interiors?.Finish(GetViewport().GetWorld3D().Scenario, remainingMilliseconds >= .1);
+        PollFailures();
+        if (Failure is not null) return;
         if (_checkRetention) { _checkRetention = false; _residency.RetireUnneeded(); }
         if (_selection.Tree is null || _preparation.Catalog is null || remainingMilliseconds < .1 || !_selection.PlanCurrent) return;
         _residency.RefreshReflectionWorld(remainingMilliseconds * .25);
@@ -205,7 +213,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     public void ReleaseRetired(double budgetMilliseconds)
     {
-        if (_context is not null && !_exiting) _residency.ReleaseRetired(budgetMilliseconds);
+        if (_context is not null && !_exiting && Failure is null) _residency.ReleaseRetired(budgetMilliseconds);
     }
     private void OnWorldInstanceChanged(long _) => _selection.ResetWorld();
     internal void RequestRetention() => _checkRetention = true;

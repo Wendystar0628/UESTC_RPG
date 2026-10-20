@@ -76,5 +76,5 @@ internal sealed class FaunaTileMountWork(FaunaTileMounts mounts, FaunaTile tile,
     }
 
     protected override void Release() { mounts.Free(tile); tile.Work = null; }
-    protected override void Failed(Exception error) => mounts.Failed(error.Message);
+    protected override void Failed(Exception error) => mounts.Failed(error);
 }

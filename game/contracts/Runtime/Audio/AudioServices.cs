@@ -142,12 +142,10 @@ public interface IWalkTelemetry                            // WP-42；全部在 
     event Action<ContactInfo> WallContact;                 // 每个物理步里有墙接触就发
     event Action<ulong, float> WaterEnter;                 // 水深
     event Action<ulong> WaterExit;
-    event Action<ulong> Sink;
     event Action<ulong, float> TurnInPlace;                // 角度
     event Action<ulong> ModeTouchdown;
     event Action<ulong> ModeTakeoff;
     event Action<ulong> Teleport;
-    event Action<ulong, float> ElevatorDoor;               // 主楼电梯门的开度 0–1
     float StepPhase { get; }                               // 0–1，晃动和脚步共用
 }
 

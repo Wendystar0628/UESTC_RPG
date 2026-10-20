@@ -92,7 +92,12 @@ public static class SaveContainer
         if (ml == 0 || ml > MaxMeta || (ulong)HeaderSize + ml > (ulong)bytes.Length ||
             gen == 0 || expectedGeneration is { } eg && gen != eg)
             throw new SaveFormatException("Invalid metadata length or generation.");
-        // This is the sole current-format metadata reader. Retain its identity even if the body/hash is damaged.
+        if (bl == 0 || bl > MaxCompressed || tl > MaxThumbnail ||
+            (ulong)HeaderSize + ml + bl + tl != (ulong)bytes.Length)
+            throw new SaveFormatException("Invalid body or thumbnail lengths.");
+        if (!CryptographicOperations.FixedTimeEquals(Hash(bytes), bytes.Slice(32, 32)))
+            throw new SaveFormatException("SHA-256 mismatch.");
+        // Only metadata covered by a verified container hash can identify a world line for recovery.
         using var metaJson = ParseJson(memory.Slice(HeaderSize, (int)ml));
         var meta = JsonSerializer.Deserialize(metaJson.RootElement, SaveFormatJsonContext.Strict.SaveMeta)
             ?? throw new SaveFormatException("Missing metadata.");
@@ -100,11 +105,6 @@ public static class SaveContainer
         if (meta.Gen != gen || expectedSlot is { } es && meta.Slot != es)
             throw new SaveFormatException("Metadata identity disagrees with the container.");
         metadata = meta;
-        if (bl == 0 || bl > MaxCompressed || tl > MaxThumbnail ||
-            (ulong)HeaderSize + ml + bl + tl != (ulong)bytes.Length)
-            throw new SaveFormatException("Invalid body or thumbnail lengths.");
-        if (!CryptographicOperations.FixedTimeEquals(Hash(bytes), bytes.Slice(32, 32)))
-            throw new SaveFormatException("SHA-256 mismatch.");
         if (headerFormat != CurrentFormat || (flags & ~3) != 0 || (flags & 1) == 0 ||
             ((flags & 2) != 0) != (tl != 0) || meta.HasThumb != (tl != 0))
             throw new SaveFormatException("Unsupported container flags.");

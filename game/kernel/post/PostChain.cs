@@ -44,7 +44,7 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
     private Texture3Drd? _lut;
     private Vector4 _mapRect;
 
-    public string? Error => _outline.Error ?? _finish.Error;
+    public Exception? Failure => _outline.Failure ?? _finish.Failure;
     public bool IsReady(Pose pose) => _outline.Rendered && _finish.Rendered && _lut is not null;
 
     public PostChain()

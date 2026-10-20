@@ -20,12 +20,12 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
     private MapId? _map;
     public IReadOnlyList<NightlightTileContent> ReflectionTiles => _reflectionTiles;
     public long Revision { get; private set; }
-    public string? Error { get; private set; }
+    public Exception? Failure { get; private set; }
     public bool Ready
     {
         get
         {
-            if (Error is not null) return false;
+            if (Failure is not null) return false;
             foreach (var tile in _mounted.Values) if (!tile.Mount.IsReady) return false;
             return true;
         }
@@ -35,7 +35,7 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
     {
         FreeTiles();
         _map = map;
-        Error = null;
+        Failure = null;
     }
 
     public void Dispose()
@@ -73,7 +73,7 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
         return new MountWork(this, tile, priority, revision, _generation);
     }
 
-    public bool IsReady(BakeKey key) => Error is null && _map == key.Map &&
+    public bool IsReady(BakeKey key) => Failure is null && _map == key.Map &&
         _mounted.TryGetValue(key, out var tile) && tile.Mount.IsReady;
 
     public void Unmount(BakeKey key)
@@ -116,7 +116,7 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
             _mount?.Free();
             _mount = null;
         }
-        protected override void Failed(Exception error) => owner.Error = error.Message;
+        protected override void Failed(Exception error) => owner.Failure = error;
     }
 
 }

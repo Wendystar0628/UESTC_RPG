@@ -18,8 +18,6 @@ internal sealed class WalkMovementTelemetry(CharacterBody3D body, WalkBodyCollis
     private float _telemetryYaw;
     private Action<ulong, float>? _waterEnter;
     private Action<ulong>? _waterExit;
-    private Action<ulong>? _sink;
-    private Action<ulong, float>? _elevatorDoor;
 
     public float StepPhase => _stepPhase;
     public bool NextFootRight => _nextFootRight;
@@ -44,8 +42,6 @@ internal sealed class WalkMovementTelemetry(CharacterBody3D body, WalkBodyCollis
     // Traversal owners publish these when their physical state is committed, using this tick and phase.
     public event Action<ulong, float> WaterEnter { add => _waterEnter += value; remove => _waterEnter -= value; }
     public event Action<ulong> WaterExit { add => _waterExit += value; remove => _waterExit -= value; }
-    public event Action<ulong> Sink { add => _sink += value; remove => _sink -= value; }
-    public event Action<ulong, float> ElevatorDoor { add => _elevatorDoor += value; remove => _elevatorDoor -= value; }
     public event Action<ulong, float>? TurnInPlace;
     public event Action<ulong>? ModeTouchdown;
     public event Action<ulong>? ModeTakeoff;

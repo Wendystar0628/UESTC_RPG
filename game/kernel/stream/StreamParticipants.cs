@@ -146,7 +146,6 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
             {
                 if (item.Need == StreamTileNeed.None) continue;
                 var priority = ParticipantPriority(item);
-                if (item.Failure is not null && (item.DestinationRequired || priority == BakePriority.Collision)) _host.RecordFailure(item.Failure);
                 if (!_host.Preparation.IsIssued(key))
                     requests.Add(new(key, group.Tile, priority, MathF.Sqrt(item.Entry.Bounds.DistanceSquared(pose.Position)) / Math.Max(1, _host.Camera.Speed)));
                 else
@@ -197,8 +196,8 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
     {
         foreach (var group in _host.Residency.Groups.Values)
             foreach (var item in group.Participants.Values)
-                if (item.Need == StreamTileNeed.Required && item.Failure is null && item.Participant.Error is { } error)
-                    FailParticipant(group, item, new InvalidOperationException(error));
+                if (item.Need == StreamTileNeed.Required && item.Failure is null && item.Participant.Failure is { } error)
+                    FailParticipant(group, item, error);
     }
 
     private void FailParticipant(TileGroup group, ParticipantTile item, Exception error)

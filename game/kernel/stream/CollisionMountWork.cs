@@ -43,6 +43,6 @@ public sealed class CollisionMountWork : StreamMountWork
 
     protected override void Failed(Exception error)
     {
-        if (_world.Revision == _worldRevision) _world.FailTile(_tile.Tile, error.Message);
+        if (_world.Revision == _worldRevision) _world.FailTile(_tile.Tile, error);
     }
 }

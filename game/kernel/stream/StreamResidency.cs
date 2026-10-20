@@ -24,7 +24,7 @@ internal sealed class StreamResidency(StreamDirector host)
     private Material? _reflectionMaterial;
     internal IReadOnlyDictionary<StreamTile, TileGroup> Groups => _groups;
     internal StreamMaterials Materials => _materials;
-    internal bool IsIdle => _groups.Count == 0 && _retiringBundles.Count == 0 && _detachPending.Count == 0;
+    internal bool IsIdle => _groups.Count == 0 && _retiringBundles.Count == 0 && _detachPending.Count == 0 && (_materials?.IsEmpty ?? true);
     internal bool CanActivateVisual => _retiringBundles.Count == 0 && _detachPending.Count == 0;
     internal int MountedTiles => _groups.Values.Count(group => group.Mounted);
     internal long ResidentBytes => _groups.Values.Sum(group => group.Bundles.Sum(bundle => bundle.Bytes));
@@ -65,7 +65,6 @@ internal sealed class StreamResidency(StreamDirector host)
                 group.Mounted = group.Expected == 0; // Empty quadrants are valid geometry coverage.
             }
             var priority = tile == StreamTile.Root || _host.Selection.DestinationRequired.Contains(tile) ? BakePriority.KnownDestination : BakePriority.Normal;
-            if (group.Failure is not null && priority == BakePriority.KnownDestination) _host.RecordFailure(group.Failure);
             group.Priority = priority;
             var distance = MathF.Sqrt(_host.Selection.Tree!.Bounds(tile).DistanceSquared(pose.Position));
             var toTile = _host.Selection.Tree!.Bounds(tile).Center - pose.Position;
@@ -167,16 +166,28 @@ internal sealed class StreamResidency(StreamDirector host)
     internal void Unload()
     {
         foreach (var group in _groups.Values)
+        {
             foreach (var bundle in group.Bundles)
                 try { bundle.Dispose(); }
                 catch (Exception error) { _host.RecordFailure(error); }
-        _groups.Clear();
-        while (_retiringBundles.TryDequeue(out var retired))
+            group.Bundles.RemoveAll(bundle => bundle.IsDisposed);
+        }
+        foreach (var tile in _groups.Where(pair => pair.Value.Bundles.Count == 0).Select(pair => pair.Key).ToArray())
+            _groups.Remove(tile);
+        var retiredCount = _retiringBundles.Count;
+        for (var i = 0; i < retiredCount; i++)
+        {
+            var retired = _retiringBundles.Dequeue();
             try { retired.Dispose(); }
             catch (Exception error) { _host.RecordFailure(error); }
+            if (!retired.IsDisposed) _retiringBundles.Enqueue(retired);
+        }
         _detachPending.Clear();
+        foreach (var retired in _retiringBundles) _detachPending.Enqueue(retired);
         _reflectionRefresh.Clear(); _reflectionCursor = 0; _reflectionMaterial = null; _reflectionScenario = default;
-        try { _materials?.Dispose(); } catch (Exception error) { _host.RecordFailure(error); }
+        // Prepared instances still borrow these bindings, including a late worker whose release failed.
+        if (_groups.Count == 0 && _retiringBundles.Count == 0 && _host.Preparation.IsIdle && (_host.Interiors?.IsUnloaded ?? true))
+            try { _materials?.Dispose(); } catch (Exception error) { _host.RecordFailure(error); }
     }
     internal void DisposeMaterials() => _materials?.Dispose();
     internal sealed class TileGroup(StreamTile tile)

@@ -30,7 +30,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private bool _worldReset = true;
     private Pose? _capture;
     public StreamMountKind Kind => StreamMountKind.Auxiliary;
-    public string? Error { get; private set; }
+    public Exception? Failure { get; private set; }
     public int Trees => _tiles.Values.Sum(t => t.Mothers.Sum(m => m.Buckets.Count));
     public int Pools => _tiles.Values.Sum(t => t.Mothers.Length * Mother.PoolCount + t.Grass.Length);
 
@@ -58,7 +58,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     public void OnMapLoaded(IMapContext context)
     {
         FreeAll();
-        Error = null;
+        Failure = null;
         _map = context.Descriptor.Id;
     }
 
@@ -99,12 +99,12 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         return new MountWork(this, content, priority, revision, _generation);
     }
 
-    public bool IsReady(BakeKey key) => Error is null && _tiles.TryGetValue(key, out var tile) && tile.Ready &&
+    public bool IsReady(BakeKey key) => Failure is null && _tiles.TryGetValue(key, out var tile) && tile.Ready &&
         (_rig is null || !tile.NeededAt(_rig.Pose.Position) || tile.AppliedEye == _rig.Pose.Position);
 
     public bool IsReady(Pose pose)
     {
-        if (Error is not null || _map is null) return false;
+        if (Failure is not null || _map is null) return false;
         foreach (var tile in _tiles.Values)
             if (tile.NeededAt(pose.Position) && (!tile.Ready || tile.AppliedEye != pose.Position)) return false;
         return true;
@@ -119,7 +119,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
 
     public override void _Process(double delta)
     {
-        if (_map is null || _rig is null || Error is not null) return;
+        if (_map is null || _rig is null || Failure is not null) return;
         try
         {
             var eye = (_capture ?? _rig.Pose).Position;
@@ -137,7 +137,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             _worldReset = false;
             _capture = null;
         }
-        catch (Exception error) { Error = error.GetBaseException().Message; }
+        catch (Exception error) { Failure = error; }
     }
 
     private void FreeAll()
@@ -218,7 +218,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             return true;
         }
         protected override void Release() => _tile.Free();
-        protected override void Failed(Exception error) => _owner.Error = error.Message;
+        protected override void Failed(Exception error) => _owner.Failure = error;
     }
 
     /// <summary>One mother model's pools: its trees' records, their buckets and the kernel pools fed from them.</summary>

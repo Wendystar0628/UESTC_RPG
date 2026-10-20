@@ -12,14 +12,14 @@ internal sealed class FaunaTileMounts
     private IRenderHost? _host;
     private Action<FaunaTile>? _initialize;
     private Func<Box3, bool>? _visible;
-    private Action<string>? _failed;
+    private Action<Exception>? _failed;
     private long _generation;
 
     public MapId? Map { get; private set; }
     public Dictionary<BakeKey, FaunaTile>.ValueCollection Tiles => _tiles.Values;
     internal IRenderHost Host => _host!;
 
-    public void Initialize(IRenderHost host, Action<FaunaTile> initialize, Func<Box3, bool> visible, Action<string> failed)
+    public void Initialize(IRenderHost host, Action<FaunaTile> initialize, Func<Box3, bool> visible, Action<Exception> failed)
     {
         _host = host;
         _initialize = initialize;
@@ -32,7 +32,7 @@ internal sealed class FaunaTileMounts
     public bool TryGet(BakeKey key, out FaunaTile tile) => _tiles.TryGetValue(key, out tile!);
     public bool IsCurrent(FaunaTile tile) => _generation == tile.Generation && Map == tile.Content.Key.Map;
     public bool IsVisible(Box3 bounds) => _visible!(bounds);
-    public void Failed(string error) => _failed!(error);
+    public void Failed(Exception error) => _failed!(error);
 
     public IStreamMountWork CreateMount(FaunaTileContent content, BakePriority priority, long revision)
     {

@@ -15,7 +15,7 @@ internal sealed class WalkTerrainPreparation
     private Task? _landingPointsPreparation;
 
     public bool LandingPointsPending => _landingPointsPreparation is not null;
-    public string? Error => _landingPointsPreparation?.Exception?.GetBaseException().Message;
+    public Exception? Failure { get; private set; }
     public void ResolveService() => _terrain ??= KernelServices.Get<ITerrainPreparation>();
     public void BindMap(IMapContext? map) => _map = map;
     public bool IsPrepared(N.Vector3 feet) => _map is not null && _terrain is not null
@@ -24,6 +24,7 @@ internal sealed class WalkTerrainPreparation
     public void PrepareAuthoredLandings(IMapContext map)
     {
         _map = map;
+        Failure = null;
         var points = map.Descriptor.Spawns.Where(s => s.Stand is not null)
             .Select(s => new N.Vector2(s.Stand!.Feet.X, s.Stand.Feet.Z)).ToArray();
         _landingPointsPreparation = _terrain!.PreparePoints(map, "walk.authored-landings", points);
@@ -40,7 +41,13 @@ internal sealed class WalkTerrainPreparation
     {
         if (_landingPointsPreparation is not { } landingPoints) return true;
         if (!landingPoints.IsCompleted) return false;
-        landingPoints.GetAwaiter().GetResult();
+        try { landingPoints.GetAwaiter().GetResult(); }
+        catch (Exception error)
+        {
+            var failures = landingPoints.Exception;
+            Failure = failures is { InnerExceptions.Count: > 1 } ? failures : error;
+            throw;
+        }
         _landingPointsPreparation = null;
         return true;
     }
@@ -69,6 +76,7 @@ internal sealed class WalkTerrainPreparation
         _terrainPreparation = null;
         _entryTerrainPreparation = null;
         _landingPointsPreparation = null;
+        Failure = null;
     }
 
     public bool TerrainReady(N.Vector3 point, float radius)

@@ -4,7 +4,6 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Campus.Contracts;
 using Campus.Contracts.Save;
@@ -231,15 +230,51 @@ public sealed class SaveFormatTests
         AssertThat(repository.PendingMaintenanceErrors.Count == 0).OverrideFailureMessage("The next commit did not retry pending maintenance.").IsTrue();
         AssertThat(Directory.GetFiles(Path.Combine(root, "s1")).Length == 3).OverrideFailureMessage("Retention is not three generations.").IsTrue();
         var broken = Path.Combine(root, "s1", "g000005.sav");
-        var damaged = File.ReadAllBytes(broken); damaged[^1] ^= 1; File.WriteAllBytes(broken, damaged);
+        var invalidCore = Document(5) with
+        { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()) } };
+        File.WriteAllBytes(broken, SaveContainer.Encode(invalidCore));
         AssertThat(second.Scan(new("s1")).Info.Meta?.Gen == 4 && File.Exists(broken)).OverrideFailureMessage("Readonly scanner moved a file.").IsTrue();
         var recovered = repository.Scan(new("s1"));
         AssertThat(recovered.Info.Health == SlotHealth.Ok && recovered.Info.Meta?.Gen == 4).OverrideFailureMessage("Did not recover one generation.").IsTrue();
-        AssertThat(File.Exists(broken) && recovered.MaxGeneration == 5 && recovered.Rejected.Count != 0 && recovered.Rejected[0].Error is SaveFormatException).OverrideFailureMessage("Recovery moved the unreadable file or lost the generation high-water mark.").IsTrue();
+        AssertThat(File.Exists(broken) && recovered.MaxGeneration == 5).OverrideFailureMessage("Recovery moved the unreadable file or lost the generation high-water mark.").IsTrue();
         repository.Write(Document(6, 6));
         AssertThat(Directory.GetFiles(Path.Combine(root, "s1")).Length == 1).OverrideFailureMessage("Old world survived successful new-world commit.").IsTrue();
         File.WriteAllBytes(Path.Combine(root, "s1", "g000006.sav"), [0]);
         AssertThat(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt).OverrideFailureMessage("Crossed a world-line boundary.").IsTrue();
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void HashFailureCannotIdentifyAWorldLineOrSelectAnOlderGeneration()
+    {
+        using var temp = new TempSaveDirectory();
+        using var repository = new SaveRepository(temp.Path, true, Sections());
+        repository.Write(Document());
+        var damagedBody = SaveContainer.Encode(Document(2));
+        damagedBody[^1] ^= 1;
+        var damagedMeta = SaveContainer.Encode(Document(2, 2));
+        var lineOffset = damagedMeta.AsSpan(SaveContainer.HeaderSize).IndexOf("\"line\":2"u8);
+        AssertThat(lineOffset >= 0).OverrideFailureMessage("Encoded test metadata has no world-line field.").IsTrue();
+        damagedMeta[SaveContainer.HeaderSize + lineOffset + "\"line\":"u8.Length] = (byte)'1';
+        var latest = Path.Combine(temp.Path, "s1", "g000002.sav");
+        var previous = Path.Combine(temp.Path, "s1", "g000001.sav");
+        foreach (var damaged in new[] { damagedBody, damagedMeta })
+        {
+            var rejected = false;
+            try { SaveContainer.Decode(damaged); }
+            catch (SaveFormatException error)
+            {
+                rejected = true;
+                AssertThat(error.Metadata is null).OverrideFailureMessage("Unverified bytes supplied a world-line identity.").IsTrue();
+            }
+            AssertThat(rejected).OverrideFailureMessage("A hash-damaged container was accepted.").IsTrue();
+            File.WriteAllBytes(latest, damaged);
+            var snapshot = repository.Scan(new("s1"));
+            AssertThat(snapshot.Info.Health == SlotHealth.Corrupt && snapshot.Info.Meta is null && snapshot.Save is null && snapshot.MaxGeneration == 2)
+                .OverrideFailureMessage("An unidentified generation selected an older save or exposed unverified metadata.").IsTrue();
+            AssertThat(File.Exists(previous) && File.ReadAllBytes(latest).SequenceEqual(damaged))
+                .OverrideFailureMessage("Scanning an unidentified generation changed the stored files.").IsTrue();
+        }
     }
 
     [TestCase]

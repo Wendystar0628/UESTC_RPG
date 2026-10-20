@@ -2,6 +2,6 @@ namespace Campus.Contracts;
 
 public interface IRenderReadiness
 {
-    string? Error { get; }
+    Exception? Failure { get; }
     bool Pending { get; }
 }

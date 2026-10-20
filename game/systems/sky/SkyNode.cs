@@ -35,8 +35,8 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
     private SkyMapData? _map;
     private float _sentCover = -1f;
     private float _sentThr = -1f;
-    public string? Error { get; private set; }
-    public bool IsReady(Pose pose) => Error is null && _map is not null && _material is not null &&
+    public Exception? Failure { get; private set; }
+    public bool IsReady(Pose pose) => Failure is null && _map is not null && _material is not null &&
         _environment is not null && _noiseTexture is not null && _thresholds is not null;
 
     public override void _Ready()
@@ -70,11 +70,11 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
 
     public override void _Process(double delta)
     {
-        if (Error is not null) return;
+        if (Failure is not null) return;
         try { UpdateContent(); }
         catch (Exception error)
         {
-            Error = error.GetBaseException().Message;
+            Failure = error;
             KernelServices.Get<IDiagnosticLog>().Error("WP-40: sky content failed:", error);
         }
     }
@@ -142,7 +142,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         try { return KernelServices.Get<IShaderMaterialSource>().Create(ShaderId.Sky); }
         catch (Exception error)
         {
-            Error = "Sky material source unavailable: " + error.GetBaseException().Message;
+            Failure = error;
             throw;
         }
     }
@@ -164,11 +164,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         if (_noiseJob is null || !_noiseJob.IsCompleted) return;
         var job = _noiseJob;
         _noiseJob = null;
-        if (!job.IsCompletedSuccessfully)
-        {
-            throw new InvalidOperationException("cloud_noise generation failed.", job.Exception?.GetBaseException());
-        }
-        var result = job.Result;
+        var result = job.GetAwaiter().GetResult();
         var image = Image.CreateFromData(CloudNoise.Size, CloudNoise.Size, false, Image.Format.Rgba8, result.Rgba);
         image.GenerateMipmaps();
         _noiseTexture = ImageTexture.CreateFromImage(image);

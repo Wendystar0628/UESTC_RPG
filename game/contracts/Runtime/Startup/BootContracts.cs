@@ -27,12 +27,12 @@ public interface IBootParticipant
 /// <summary>
 /// Implement on an existing visible-content node. Readiness means its asynchronous work has been
 /// uploaded/mounted and applied for the supplied current capture pose, not merely scheduled.
-/// No-content configurations may be ready; a failed producer reports Error until its next load.
+/// No-content configurations may be ready; a failed producer reports Failure until its next load.
 /// </summary>
 public interface IViewContentReadiness
 {
     bool IsReady(Pose pose);
-    string? Error { get; }
+    Exception? Failure { get; }
 }
 
 /// <summary>Optional visible-content capability: discard view history before preparing a requested still.</summary>

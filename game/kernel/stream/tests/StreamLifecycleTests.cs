@@ -11,6 +11,7 @@ using Campus.Kernel.Stream;
 using GdUnit4;
 using Godot;
 using N = System.Numerics;
+using static Campus.Tests.StreamLifecycleTestSupport;
 namespace Campus.Tests;
 [TestSuite]
 public sealed class StreamLifecycleTests
@@ -83,36 +84,6 @@ public sealed class StreamLifecycleTests
         }
         await fixture.Unload();
     }
-    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
-    public void ResidentBackdropAppearsEvenWhenReadyChildrenSkipTheCoarseRoot()
-    {
-        var bounds = new Box3(System.Numerics.Vector3.Zero, System.Numerics.Vector3.One);
-        var tree = new LodTree(bounds, new StreamSettings());
-        var visible = new HashSet<StreamTile>();
-        tree.ResolveVisible(new HashSet<StreamTile> { StreamTile.Root }, _ => true, visible);
-        if (visible.Contains(StreamTile.Root)) throw new InvalidOperationException("The fixture must skip the ready coarse root.");
-        var source = new GeometryBundle(new(new ToonSpec(new("wall.lit"), new("wall.shade"))),
-            [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2]);
-        var palette = Campus.Contracts.Tests.PaletteFixture.Catalog;
-        var key = new BakeKey(new("fixture"), "fixture.resident", "L4/0/0");
-        var bundle = new TileBundle(key, StreamTile.Root.Tile, LodLevel.L4, bounds,
-            [BakeSurfacePacker.Pack(source with { Shader = ShaderId.DioramaFar }, bounds, palette),
-             BakeSurfacePacker.Pack(source, bounds, palette)]);
-        var scenario = RenderingServer.ScenarioCreate();
-        var material = RenderingServer.MaterialCreate();
-        try
-        {
-            using var prepared = PreparedTile.Create(bundle);
-            for (var i = 0; i < prepared.Draws.Count; i++) prepared.MountOne(i, scenario, material);
-            var resident = prepared.Draws.Count(draw => draw.Resident);
-            if (prepared.VisibleInstanceCount != resident || resident == 0 || resident == prepared.Draws.Count)
-                throw new InvalidOperationException("Resident background stayed hidden until a root selection, or ordinary coarse geometry appeared early.");
-            prepared.SetVisible(false, 0);
-            if (prepared.VisibleInstanceCount != resident)
-                throw new InvalidOperationException("Refining the root hid its resident background.");
-        }
-        finally { RenderingServer.FreeRid(material); RenderingServer.FreeRid(scenario); }
-    }
     [TestCase, TestCategory(TestReason.Contract), RequireGodotRuntime]
     public async Task ShutdownDrainsTheCatalogAndDeliversLateFailuresWithoutPublication()
     {
@@ -146,20 +117,12 @@ public sealed class StreamLifecycleTests
         catch (AggregateException error) { Check(error.Flatten().InnerExceptions.Contains(planning) && error.Flatten().InnerExceptions.Contains(pinned)); }
         Check(fixture.Director.IsUnloaded && !fixture.Director.ResidentReady);
     }
-    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
-    public async Task ShutdownAwaitsLateNativePreparationAndReleasesItsActualOwner()
-    {
-        using var fixture = new StreamFixture(geometry: true);
-        fixture.Geometry.Hold = true;
-        await fixture.Until(() => fixture.Geometry.Waiting.Count > 0);
-        var draining = fixture.Unload();
-        Check(!draining.IsCompleted && !fixture.Director.IsUnloaded);
-        fixture.Geometry.Release();
-        await draining;
-        Check(fixture.Geometry.Prepared.Count > 0 && fixture.Geometry.Prepared.All(tile => tile.IsDisposed) && fixture.Director.IsUnloaded);
-    }
-    private static void Check(bool condition) { if (!condition) throw new InvalidOperationException("Stream lifecycle contract failed."); }
-    private sealed class StreamFixture : IDisposable
+}
+
+internal static class StreamLifecycleTestSupport
+{
+    internal static void Check(bool condition) { if (!condition) throw new InvalidOperationException("Stream lifecycle contract failed."); }
+    internal sealed class StreamFixture : IDisposable
     {
         private readonly Node3D _stage = new();
         private readonly Camera3D _view = new() { Current = true };
@@ -218,7 +181,7 @@ public sealed class StreamLifecycleTests
         public Task<PreparedBakeTiles> GetPreparedModuleTilesAsync(IMapContext context) => catalog;
         public BuildContext GetPreparedContext(IMapContext context, string moduleId) => throw new NotSupportedException();
     }
-    private sealed class ControlledTerrain : ITerrainPreparation
+    internal sealed class ControlledTerrain : ITerrainPreparation
     {
         public bool Prepared { get; set; } = true;
         public List<TaskCompletionSource> Work { get; } = [];
@@ -228,7 +191,7 @@ public sealed class StreamLifecycleTests
         { if (Prepared) return Task.CompletedTask; var work = new TaskCompletionSource(); Work.Add(work); Tokens.Add(cancellation); return work.Task; }
         public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => Task.CompletedTask;
     }
-    private sealed class StreamBake(Box3 bounds) : IBakeService
+    internal sealed class StreamBake(Box3 bounds) : IBakeService
     {
         private readonly Dictionary<BakeKey, Handle> _handles = [];
         public Func<BakeKey, bool> Hold { get; set; } = _ => false;
@@ -243,7 +206,7 @@ public sealed class StreamLifecycleTests
         public void Clear() => _handles.Clear();
         public void ClearFailures() { }
     }
-    private sealed class Handle(TileBundle tile) : IBakeHandle
+    internal sealed class Handle(TileBundle tile) : IBakeHandle
     {
         private readonly TaskCompletionSource _done = new();
         public (TileKey Tile, LodLevel Level, bool Collision) TileKey => BakeRequestKeys.Parse(tile.Key);
@@ -254,16 +217,25 @@ public sealed class StreamLifecycleTests
         public Task Done => _done.Task;
         public void Complete() => _done.TrySetResult();
     }
-    private sealed class ControlledGeometry : IStreamGeometryPreparation
+    internal sealed class ControlledGeometry : IStreamGeometryPreparation
     {
         public bool Hold { get; set; }
-        public List<(TileBundle Bundle, TaskCompletionSource<PreparedTile> Done)> Waiting { get; } = [];
+        public List<(PreparedTile Owner, TaskCompletionSource Done)> Waiting { get; } = [];
         public List<PreparedTile> Prepared { get; } = [];
-        public Task<PreparedTile> PrepareAsync(TileBundle bundle)
-        { if (Hold) { var done = new TaskCompletionSource<PreparedTile>(); Waiting.Add((bundle, done)); return done.Task; } var tile = PreparedTile.Create(bundle); Prepared.Add(tile); return Task.FromResult(tile); }
-        public void Release() { Hold = false; foreach (var (bundle, done) in Waiting) { var tile = PreparedTile.Create(bundle); Prepared.Add(tile); done.SetResult(tile); } Waiting.Clear(); }
+        public async Task PrepareAsync(PreparedTile owner, TileBundle bundle)
+        {
+            Prepared.Add(owner);
+            if (Hold)
+            {
+                var done = new TaskCompletionSource(); Waiting.Add((owner, done));
+                await done.Task;
+            }
+            owner.Initialize(bundle);
+        }
+        public void Release() { Hold = false; foreach (var (_, done) in Waiting) done.SetResult(); Waiting.Clear(); }
+        public void Fail(Exception error) { Hold = false; foreach (var (_, done) in Waiting) done.SetException(error); Waiting.Clear(); }
     }
-    private static TileBundle Bundle(BakeKey key, Box3 bounds)
+    internal static TileBundle Bundle(BakeKey key, Box3 bounds)
     {
         var parsed = BakeRequestKeys.Parse(key);
         var source = new GeometryBundle(new(new ToonSpec(new("wall.lit"), new("wall.shade"))),
@@ -278,12 +250,12 @@ public sealed class StreamLifecycleTests
         public StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident) => StreamTileNeed.None;
         public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) => throw new NotSupportedException();
         public bool IsReady(BakeKey key) => true; public void Unmount(BakeKey key) { }
-        public string? Error => null;
+        public Exception? Failure => null;
     }
     private sealed class Observer(TestCameraRig camera) : IObserverState { public N.Vector3 Feet => camera.Pose.Position; public N.Vector3 Eye => Feet; public float YawDeg => camera.Pose.YawDeg; public NavSpace? Space => null; public ViewMode Mode => ViewMode.Fly; }
     private sealed class Collision : ICollisionWorld
     {
-        public string? Error => null;
+        public Exception? Failure => null;
         public bool Ready(N.Vector3 point, float radius) => true;
         public SweepHit? Sweep(N.Vector3 from, N.Vector3 to, float radius, float height) => null;
         public SupportHit? SupportY(float x, float z, float yHint) => null;

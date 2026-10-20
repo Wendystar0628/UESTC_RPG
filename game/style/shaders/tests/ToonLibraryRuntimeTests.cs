@@ -84,7 +84,8 @@ public sealed class ToonLibraryRuntimeTests
         var scenario = RenderingServer.ScenarioCreate();
         try
         {
-            using var prepared = PreparedTile.Create(restored);
+            using var prepared = new PreparedTile(restored);
+            prepared.Initialize(restored);
             using var materials = new StreamMaterials(fixture.Library, new ShaderMaterialSource());
             var draw = prepared.Draws.Single();
             var material = materials.Resolve(draw);

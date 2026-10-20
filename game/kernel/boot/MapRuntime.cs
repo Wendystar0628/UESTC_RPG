@@ -39,7 +39,6 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private long _mapGeneration;
     private Exception? _failure;
     private readonly List<Exception> _failures = [];
-    private Exception? _rendererFailure, _collisionFailure;
     private readonly List<Task> _arrivalPreparations = [];
     private ViewContentReadiness? _contentReadiness;
     private object[] _receivers = [];
@@ -53,19 +52,14 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         });
     public IMapArrival? Arrival => _arrival;
     public event Action<IMapArrival?>? ArrivalChanged;
-    public Exception? Failure
+    public Exception? Failure => _failure;
+
+    private void PollFailures()
     {
-        get
-        {
-            if (_stream?.Failure is { } stream) RecordFailure(stream);
-            if (_bake?.Failure is { } bake) RecordFailure(bake);
-            // These native APIs only expose text. Convert at this boundary once, then retain the exception.
-            if (_rendererFailure is null && _renderer?.Error is { } rendering)
-                RecordFailure(_rendererFailure = new InvalidOperationException(rendering));
-            if (_collisionFailure is null && _collision?.Error is { } collision)
-                RecordFailure(_collisionFailure = new InvalidOperationException(collision));
-            return _failure;
-        }
+        if (_stream?.Failure is { } stream) RecordFailure(stream);
+        if (_bake?.Failure is { } bake) RecordFailure(bake);
+        if (_renderer?.Failure is { } rendering) RecordFailure(rendering);
+        if (_collision?.Failure is { } collision) RecordFailure(collision);
     }
 
     private void RecordFailure(Exception error)
@@ -97,7 +91,11 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     }
 
     /// <summary>Stage exit only: stop producers, drain preparation and release every map-owned resource.</summary>
-    public Task ShutdownAsync(MapId map) => _shutdown ??= ShutdownMap(map);
+    public Task ShutdownAsync(MapId map)
+    {
+        if (_shutdown is null || _shutdown.IsCompleted && _loaded.HasValue) _shutdown = ShutdownMap(map);
+        return _shutdown;
+    }
 
     private async Task ShutdownMap(MapId from)
     {
@@ -106,6 +104,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _contentReadiness = null;
         _mapGeneration++;
         await ReleaseAfterPreparation(from, _preparing);
+        PollFailures();
         if (Failure is { } failure) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
     }
 
@@ -128,6 +127,8 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (_stream is not null)
             try { await _stream.DrainAsync(); }
             catch (Exception error) { RecordFailure(error); }
+        // A failed native release still owns map inputs and bindings; a later explicit shutdown resumes the drain.
+        if (_stream?.IsUnloaded == false) return;
         foreach (var participant in _receivers.OfType<IMapDataParticipant>())
             try { await participant.UnloadAsync(from); }
             catch (Exception error) { RecordFailure(error); }
@@ -146,7 +147,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (_stopping) throw new InvalidOperationException("The map runtime is shutting down.");
         if (_loaded.HasValue || _preparing is not null)
             throw new InvalidOperationException("The map runtime mounts once at startup.");
-        _failure = null; _failures.Clear(); _rendererFailure = _collisionFailure = null;
+        _failure = null; _failures.Clear();
         _mountPrepared = false;
         _mountCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _contentReadiness = null;
@@ -251,10 +252,11 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         $"stopping={_stopping},resident={ResidentReady},destination={DestinationReady},terrainPrepared={_arrival?.Prepared},failure={Failure?.Message ?? "none"}; " +
         $"stream[resident={_stream?.ResidentReady},destination={_stream?.DestinationReady},unloaded={_stream?.IsUnloaded}," +
         $"target={_stream?.Destination},failure={_stream?.Failure?.Message ?? "none"}]; " +
-        $"dynamic[pending={_renderer?.Pending},error={_renderer?.Error ?? "none"}]";
+        $"dynamic[pending={_renderer?.Pending},error={_renderer?.Failure?.Message ?? "none"}]";
 
     public override void _Process(double delta)
     {
+        PollFailures();
         if (_stopping) return;
         if (Failure is { } failure)
         {
@@ -292,6 +294,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     public void StopNewWork()
     {
         _stopping = true;
+        PollFailures();
         if (Failure is { } failure)
             try { FailArrival(failure); } catch (Exception error) { RecordFailure(error); }
         try { _exit.Cancel(); } catch (Exception error) { RecordFailure(error); }

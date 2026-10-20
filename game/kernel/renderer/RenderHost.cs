@@ -38,7 +38,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     private PaletteCatalog? _catalog;
     private IReflectionWorld? _reflection;
     private ulong _next;
-    public string? Error { get; private set; }
+    public Exception? Failure { get; private set; }
     public bool Pending => _entries.Values.Any(entry => entry.Pending);
     public bool IsReady(RenderHandle handle) => _entries.TryGetValue(handle.Value, out var entry) && !entry.Pending;
 
@@ -131,9 +131,10 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         catch (Exception error)
         {
             DiagnosticLog.Error($"[WP-01][phase={phase}][handle={handle}]", error);
+            Failure = Failure is null ? error : new AggregateException(Failure, error);
             if (!_entries.ContainsKey(handle)) return;
-            Error = $"Dynamic content mount failed for handle {handle}: {error.GetBaseException().Message}";
-            Unmount(new(handle));
+            try { Unmount(new(handle)); }
+            catch (Exception cleanup) { Failure = new AggregateException(Failure, cleanup); }
         }
     }
 
@@ -216,7 +217,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     public void OnMapUnloading(MapId from)
     {
         foreach (var handle in _entries.Keys.Order().ToArray()) Unmount(new(handle));
-        Error = null;
+        Failure = null;
     }
     public void OnMapLoaded(IMapContext context) { }
 

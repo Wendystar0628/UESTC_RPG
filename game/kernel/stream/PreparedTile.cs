@@ -26,6 +26,7 @@ public sealed class PreparedTile : IDisposable
     private readonly List<bool> _mainVisible = [];
     private readonly List<bool> _mainDetached = [], _reflectionDetached = [];
     private readonly List<Draw> _draws = [];
+    private bool _initializationStarted;
     private bool _disposed;
     private bool _retiring;
     private int _detachCursor = -1;
@@ -39,7 +40,7 @@ public sealed class PreparedTile : IDisposable
     public int ToonInstanceCount => _draws.Take(_instances.Count).Count(draw => draw.Shader is null);
     public int ReflectionInstanceCount => _reflectionInstances.Count(rid => rid.IsValid);
     public long Bytes { get; }
-    private PreparedTile(TileBundle bundle) { Key = bundle.Key; Bytes = bundle.Stats.Bytes; }
+    public PreparedTile(TileBundle bundle) { Key = bundle.Key; Bytes = bundle.Stats.Bytes; }
 
     /// <summary>Main-thread diagnostic snapshot, including hidden and retiring native instances.</summary>
     public static (Rid[] Instances, int Detached) CaptureParameterInstances()
@@ -61,40 +62,42 @@ public sealed class PreparedTile : IDisposable
         }
     }
 
-    public static PreparedTile Create(TileBundle bundle)
+    /// <summary>The caller retains this owner before initialization can fault, including cleanup failure.</summary>
+    public void Initialize(TileBundle bundle)
     {
-        var prepared = new PreparedTile(bundle);
+        if (_initializationStarted || _retiring || _disposed) throw new InvalidOperationException("Prepared tile initialization starts once.");
+        _initializationStarted = true;
+        if (bundle.Key != Key) throw new InvalidOperationException("Prepared tile input does not match its owner.");
         try
         {
             foreach (var surface in bundle.Surfaces)
             {
                 if (surface.VertexCount == 0) continue;
-                var mesh = prepared.CreateMesh(surface);
-                prepared._draws.Add(new(mesh, mesh, surface.At.ToGodot(), surface.Material,
+                var mesh = CreateMesh(surface);
+                _draws.Add(new(mesh, mesh, surface.At.ToGodot(), surface.Material,
                     surface.IgnoreOcclusionCulling, surface.Shader, surface.Reflect, bundle.Level == LodLevel.L4 && surface.Shader == ShaderId.DioramaFar));
             }
             foreach (var item in bundle.MultiMeshes)
             {
                 if (item.InstanceCount == 0 || item.Surface.VertexCount == 0) continue;
-                var mesh = prepared.CreateMesh(item.Surface);
+                var mesh = CreateMesh(item.Surface);
                 var multi = RenderingServer.MultimeshCreate();
                 if (!multi.IsValid) throw new InvalidOperationException("MultiMesh creation failed.");
-                prepared._storage.Add((multi, true));
+                _storage.Add((multi, true));
                 RenderingServer.MultimeshAllocateData(multi, item.InstanceCount,
                     RenderingServer.MultimeshTransformFormat.Transform3D, false, true);
                 RenderingServer.MultimeshSetMesh(multi, mesh);
                 if (!BitConverter.IsLittleEndian) throw new PlatformNotSupportedException("Packed instance buffers require a little-endian engine.");
                 RenderingServer.MultimeshSetBuffer(multi, MemoryMarshal.Cast<byte, float>(item.InstanceData.Span));
                 RenderingServer.MultimeshSetCustomAabb(multi, Bounds(item.Bounds));
-                prepared._draws.Add(new(multi, mesh, Transform3D.Identity, item.Surface.Material,
+                _draws.Add(new(multi, mesh, Transform3D.Identity, item.Surface.Material,
                     item.Surface.IgnoreOcclusionCulling, item.Surface.Shader, item.Surface.Reflect, bundle.Level == LodLevel.L4 && item.Surface.Shader == ShaderId.DioramaFar));
             }
-            lock (_liveGate) _live.Add(prepared);
-            return prepared;
+            lock (_liveGate) _live.Add(this);
         }
         catch (Exception failure)
         {
-            try { prepared.Dispose(); }
+            try { Dispose(); }
             catch (Exception cleanup) { throw new AggregateException(failure, cleanup); }
             throw;
         }
@@ -230,21 +233,24 @@ public sealed class PreparedTile : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        BeginRetirement();
         List<Exception>? failures = null;
-        // Shutdown releases every owned RID even if one detach/free fails. Failed RIDs remain with this owner.
+        // Each successful detach/free advances only its own ownership. A failed RID remains retryable.
         for (var i = _instances.Count - 1; i >= 0; i--)
         {
             if (_reflectionInstances[i].IsValid)
             {
-                try { DetachInstance(_reflectionInstances[i]); }
-                catch (Exception error) { (failures ??= []).Add(error); }
+                if (!_reflectionDetached[i])
+                    try { DetachInstance(_reflectionInstances[i]); _reflectionDetached[i] = true; }
+                    catch (Exception error) { (failures ??= []).Add(error); }
                 try { FreeOwnedInstance(_reflectionInstances[i]); _reflectionInstances[i] = default; }
                 catch (Exception error) { (failures ??= []).Add(error); }
             }
             if (_instances[i].IsValid)
             {
-                try { DetachInstance(_instances[i]); }
-                catch (Exception error) { (failures ??= []).Add(error); }
+                if (!_mainDetached[i])
+                    try { DetachInstance(_instances[i]); _mainDetached[i] = true; _mainVisible[i] = false; }
+                    catch (Exception error) { (failures ??= []).Add(error); }
                 try { FreeOwnedInstance(_instances[i]); _instances[i] = default; }
                 catch (Exception error) { (failures ??= []).Add(error); }
             }
@@ -252,10 +258,16 @@ public sealed class PreparedTile : IDisposable
             _instances.RemoveAt(i); _reflectionInstances.RemoveAt(i); _mainVisible.RemoveAt(i);
             _mainDetached.RemoveAt(i); _reflectionDetached.RemoveAt(i);
         }
-        for (var i = _storage.Count - 1; i >= 0; i--)
-            try { RenderingServer.FreeRid(_storage[i].Rid); _storage.RemoveAt(i); }
-            catch (Exception error) { (failures ??= []).Add(error); }
-        _retiring = true; _detachCursor = _instances.Count - 1;
+        // An instance may still borrow any base. Preserve all bases until every instance is gone.
+        // Stop on a storage failure: a MultiMesh must release before its prototype mesh.
+        if (_instances.Count == 0)
+            while (_storage.Count > 0)
+            {
+                var index = _storage.Count - 1;
+                try { RenderingServer.FreeRid(_storage[index].Rid); _storage.RemoveAt(index); }
+                catch (Exception error) { (failures ??= []).Add(error); break; }
+            }
+        _detachCursor = _instances.Count - 1;
         _disposed = _instances.Count == 0 && _storage.Count == 0;
         if (_disposed)
         {
@@ -279,7 +291,7 @@ public sealed class PreparedTile : IDisposable
         {
             DetachInstance(_reflectionInstances[index]); _reflectionDetached[index] = true; return false;
         }
-        if (!_mainDetached[index])
+        if (_instances[index].IsValid && !_mainDetached[index])
         {
             DetachInstance(_instances[index]); _mainDetached[index] = true; _mainVisible[index] = false;
         }
@@ -314,7 +326,7 @@ public sealed class PreparedTile : IDisposable
                 FreeOwnedInstance(_reflectionInstances[index]);
                 _reflectionInstances[index] = default; return false;
             }
-            FreeOwnedInstance(_instances[index]);
+            if (_instances[index].IsValid) FreeOwnedInstance(_instances[index]);
             _instances.RemoveAt(index); _reflectionInstances.RemoveAt(index); _mainVisible.RemoveAt(index);
             _mainDetached.RemoveAt(index); _reflectionDetached.RemoveAt(index);
             return false;

@@ -9,6 +9,7 @@ internal sealed class StreamMaterials(IToonMaterialProvider toon, IShaderMateria
 {
     private readonly Dictionary<ShaderId, ShaderMaterial> _owned = [];
     private readonly Dictionary<PreparedTile.Draw, Material> _bindings = new(ReferenceEqualityComparer.Instance);
+    internal bool IsEmpty => _owned.Count == 0 && _bindings.Count == 0;
     public Material Resolve(PreparedTile.Draw draw)
     {
         if (_bindings.TryGetValue(draw, out var binding)) return binding;
@@ -36,10 +37,9 @@ internal sealed class StreamMaterials(IToonMaterialProvider toon, IShaderMateria
     public void Dispose()
     {
         List<Exception>? failures = null;
-        foreach (var material in _owned.OrderBy(pair => pair.Key).Select(pair => pair.Value))
-            try { material.Dispose(); }
+        foreach (var (shader, material) in _owned.OrderBy(pair => pair.Key).ToArray())
+            try { material.Dispose(); _owned.Remove(shader); }
             catch (Exception error) { (failures ??= []).Add(error); }
-        _owned.Clear();
         _bindings.Clear();
         if (failures is not null) throw new AggregateException("Stream material release failed.", failures);
     }

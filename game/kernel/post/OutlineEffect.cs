@@ -42,7 +42,7 @@ public partial class OutlineEffect : CompositorEffect
     private bool _ready, _released;
     private bool _rendered;
     private Exception? _error;
-    internal string? Error => Volatile.Read(ref _error)?.GetBaseException().Message;
+    internal Exception? Failure => Volatile.Read(ref _error);
     internal bool Rendered => Volatile.Read(ref _rendered);
 
     internal PostFrameBox? Inputs { get; set; }

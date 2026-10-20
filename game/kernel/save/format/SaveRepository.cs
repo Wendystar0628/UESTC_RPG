@@ -5,14 +5,7 @@ using Campus.Kernel.Diagnostics;
 
 namespace Campus.Kernel.Save.Format;
 
-public sealed record RejectedGeneration(ulong Generation, Exception Error)
-{
-    public SaveMeta? Metadata { get; init; }
-}
-public sealed record SlotSnapshot(SlotInfo Info, PreparedSave? Save, ulong MaxGeneration)
-{
-    public IReadOnlyList<RejectedGeneration> Rejected { get; init; } = [];
-}
+public sealed record SlotSnapshot(SlotInfo Info, PreparedSave? Save, ulong MaxGeneration);
 
 /// <summary>One exclusive lock and immutable generation files, three per slot. No rename is used to commit a save.</summary>
 public sealed class SaveRepository : IDisposable
@@ -25,7 +18,6 @@ public sealed class SaveRepository : IDisposable
     public ReadOnlyReason ReadOnly { get; private set; }
     public string Root => _root;
     public IReadOnlyList<Exception> PendingMaintenanceErrors => _maintenance.Errors;
-    public Exception? LockConflict { get; private set; }
 
     public SaveRepository(string absoluteRoot, bool enabled, SaveSections sections)
     {
@@ -45,7 +37,7 @@ public sealed class SaveRepository : IDisposable
         var paths = Generations(slot).OrderByDescending(g => g.Generation).ToArray();
         if (paths.Length == 0) return new(new(slot, SlotKind.Auto, SlotHealth.Empty, null, 0), null, 0);
         var maximum = paths[0].Generation;
-        var rejected = new List<RejectedGeneration>();
+        var rejected = 0;
         ulong? line = null;
         SaveMeta? lastMeta = null;
         // Newest first; the first complete generation of the same world line wins. Unreadable files stay where they are.
@@ -61,19 +53,20 @@ public sealed class SaveRepository : IDisposable
                 lastMeta ??= document.Meta;
                 var save = _sections.Prepare(document);
                 return new(new(slot, SlotKind.Auto, SlotHealth.Ok, document.Meta,
-                    paths.Count(p => p.Generation >= document.Meta.Line) - rejected.Count), save, maximum) { Rejected = rejected.ToArray() };
+                    paths.Count(p => p.Generation >= document.Meta.Line) - rejected), save, maximum);
             }
             catch (Exception error) when (error is SaveFormatException or IOException or UnauthorizedAccessException)
             {
                 metadata ??= (error as SaveFormatException)?.Metadata;
-                RejectGeneration(rejected, generation, metadata, error);
+                rejected++;
+                RejectGeneration(error);
                 // An unidentified generation may start a different world line; never infer its identity from an older file.
                 if (metadata is null || line is { } expectedLine && metadata.Line != expectedLine) break;
                 line ??= metadata.Line;
                 lastMeta ??= metadata;
             }
         }
-        return new(new(slot, SlotKind.Auto, SlotHealth.Corrupt, lastMeta, paths.Length), null, maximum) { Rejected = rejected.ToArray() };
+        return new(new(slot, SlotKind.Auto, SlotHealth.Corrupt, lastMeta, paths.Length), null, maximum);
     }
 
     public PreparedSave ReadExternal(string absolutePath)
@@ -99,15 +92,12 @@ public sealed class SaveRepository : IDisposable
 
     private void EnterReadOnly([FailureHandler("SYS-SAVE")] IOException error)
     {
-        LockConflict = error;
         ReadOnly = ReadOnlyReason.OtherWindow;
         DiagnosticLog.Warning("Save lock is owned by another window; this process is read-only.", error);
     }
 
-    private static void RejectGeneration(List<RejectedGeneration> rejected, ulong generation, SaveMeta? metadata,
-        [FailureHandler("SYS-SAVE-FORMAT")] Exception error)
+    private static void RejectGeneration([FailureHandler("SYS-SAVE-FORMAT")] Exception error)
     {
-        rejected.Add(new(generation, error) { Metadata = metadata });
         DiagnosticLog.Warning("Save generation rejected; recovery requires a known matching world line.", error);
     }
 

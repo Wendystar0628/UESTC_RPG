@@ -3,15 +3,19 @@ using Campus.Contracts.Bake;
 
 namespace Campus.Kernel.Stream;
 
-/// <summary>Prepares native tile storage off-thread; the caller owns the actual returned task through drain.</summary>
+/// <summary>Initializes caller-owned native tile storage; faults remain on the actual task through drain.</summary>
 public interface IStreamGeometryPreparation
 {
-    Task<PreparedTile> PrepareAsync(TileBundle bundle);
+    Task PrepareAsync(PreparedTile owner, TileBundle bundle);
 }
 
 [KernelService(typeof(IStreamGeometryPreparation))]
 public sealed class StreamGeometryPreparation : IStreamGeometryPreparation
 {
-    public Task<PreparedTile> PrepareAsync(TileBundle bundle) =>
-        StreamPreparation.RunWorker(() => PreparedTile.Create(bundle));
+    public Task PrepareAsync(PreparedTile owner, TileBundle bundle) =>
+        StreamPreparation.RunWorker(() =>
+        {
+            owner.Initialize(bundle);
+            return owner;
+        });
 }

@@ -50,12 +50,12 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     public IReadOnlyList<LampRecord> Lamps { get; private set; } = [];
     public bool IsReady(Pose pose)
     {
-        if (Error is not null || _windows.Dirty || _map is null || _inventory is null || _inventoryRev != _inventory.Rev || _appliedPose != pose ||
+        if (Failure is not null || _windows.Dirty || _map is null || _inventory is null || _inventoryRev != _inventory.Rev || _appliedPose != pose ||
             _tableTexture is null || _gridTexture is null || _overrideTexture is null || _thresholdTexture is null || !_reflections.Ready || _glows is null || !_glows.Ready || _appliedGlowRevision != _glows.Revision) return false;
         return true;
     }
     public StreamMountKind Kind => StreamMountKind.Auxiliary;
-    public string? Error => _glows?.Error;
+    public Exception? Failure => _glows?.Failure;
 
     public void PrepareCapture(Pose pose)
     {

@@ -67,5 +67,5 @@ public interface IStreamTileParticipant
     /// <summary>Mounted content is ready; this does not certify that a frame is capturable.</summary>
     bool IsReady(BakeKey key);
     void Unmount(BakeKey key);
-    string? Error { get; }
+    Exception? Failure { get; }
 }
