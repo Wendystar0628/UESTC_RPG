@@ -21,7 +21,7 @@ public static class FogSea
 
     public static IReadOnlyList<GeometryBundle> Build(FogSeaData fog, Vector2 centre, IReadOnlyList<Vector2>? cutLine, MapRectLike rect, uint seed)
     {
-        var mesh = new MeshWriter(DioramaVertex.KindFogSea);
+        var mesh = new DioramaSurfaceWriter(DioramaVertex.KindFogSea);
         var segments = fog.Segments;
         var bank = fog.EdgeBank;
         var noiseSeed = StableHash.Hash32(seed, "diorama.fog", "bank");

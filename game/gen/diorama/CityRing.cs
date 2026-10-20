@@ -23,7 +23,7 @@ public static class CityRing
 
     public static IReadOnlyList<GeometryBundle> Build(BackdropData data, CityRingData ring, int ringIndex, Vector2 centre, uint seed)
     {
-        var mesh = new MeshWriter(DioramaVertex.KindCity);
+        var mesh = new DioramaSurfaceWriter(DioramaVertex.KindCity);
         for (var row = 0; row < ring.Rows; row++)
         {
             var rowRadius = ring.Rows == 1 ? ring.Radius : ring.Radius - ring.Depth * 0.5f + ring.Depth * row / (ring.Rows - 1);
@@ -98,7 +98,7 @@ public static class CityRing
     }
 
     /// <summary>Front, two sides and roof of one mass; shift moves it along the side axis.</summary>
-    private static void Box(MeshWriter mesh, BoxFrame f, float shift, float width, float depth, float y0, float y1, float k, float haze, byte seed)
+    private static void Box(DioramaSurfaceWriter mesh, BoxFrame f, float shift, float width, float depth, float y0, float y1, float k, float haze, byte seed)
     {
         var c = f.Centre + f.Side * shift;
         var hw = width * 0.5f;
@@ -119,7 +119,7 @@ public static class CityRing
         mesh.Quad(a, b, cc, d);
     }
 
-    private static void Wall(MeshWriter mesh, Vector3 left, Vector3 right, Vector3 normal, float y0, float y1, float length, Vector2 uv2, byte seed)
+    private static void Wall(DioramaSurfaceWriter mesh, Vector3 left, Vector3 right, Vector3 normal, float y0, float y1, float length, Vector2 uv2, byte seed)
     {
         var a = mesh.Vertex(At(left, y0), normal, new(0f, y0), uv2, seed);
         var b = mesh.Vertex(At(right, y0), normal, new(length, y0), uv2, seed);

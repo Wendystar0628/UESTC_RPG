@@ -47,7 +47,7 @@ public sealed class WorldModelTests
             Network = new([new(new("fixture:line"), path) { Props = features[1].Props },
                 new(new("fixture:wide"), new([new(-10, -7), new(10, -7)]), 4)], [], [], [], [])
         };
-        var frozen = WorldFidelityCompiler.Compile(world);
+        var frozen = CompileFidelity(world);
         var restored = JsonSerializer.Deserialize<FidelityFrozenData>(JsonSerializer.Serialize(frozen, ContractJson.Options), ContractJson.Options)!;
         var fidelity = new WorldFidelityModel(restored);
         AssertThat(fidelity.Declared(features[0].Id) == FidelityZone.K1 && fidelity.Declared(features[1].Id) == FidelityZone.K1
@@ -70,7 +70,7 @@ public sealed class WorldModelTests
             Features = new Dictionary<FeatureId, WorldFeature> { [feature.Id] = feature },
             Network = new([new(feature.Id, path, 4) { Props = feature.Props }], [], [], [], [])
         };
-        var fidelity = new WorldFidelityModel(WorldFidelityCompiler.Compile(world));
+        var fidelity = new WorldFidelityModel(CompileFidelity(world));
         AssertThat(fidelity.Declared(feature.Id) == FidelityZone.K1 && fidelity.GroundAt(1, 1) == FidelityZone.K1
             && fidelity.GroundAt(1, 5) == FidelityZone.K3)
             .OverrideFailureMessage("A wide road lost its explicit precision or promoted ground outside its authored width.").IsTrue();
@@ -319,14 +319,20 @@ public sealed class WorldModelTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void RetiredFeatureOverlayFilesAreRejectedWithoutChangingPublishedWorld()
+    public void RetiredOverlayInputsAreRejectedWithoutChangingPublishedWorld()
     {
         var previous = Load().World;
-        var files = Files();
-        files["overlay/test.d/0000-fixture.json"] = "{\"ops\":[]}";
-        AssertThrown(() => WorldModelLoader.Load(new("test"), files)).IsInstanceOf<WorldDataException>();
+        foreach (var path in new[] { "overlay/test.d/0000-fixture.json", "fidelity.json", "overlay/fidelity/fixture.json" })
+        {
+            var files = Files();
+            files[path] = "{\"ops\":[]}";
+            AssertThrown(() => WorldModelLoader.Load(new("test"), files)).IsInstanceOf<WorldDataException>();
+        }
         AssertThat(previous.Features.Keys.SequenceEqual(Load().World.Features.Keys)).IsTrue();
     }
+
+    private static FidelityFrozenData CompileFidelity(Campus.Gen.Tests.Support.FakeWorld world) =>
+        WorldFidelityCompiler.Compile(world.Features, world.Boundary, world.Network, world.Interiors, world.Outskirts, []);
 
     private static Dictionary<string, string> Files(string features = Features) => new()
     {

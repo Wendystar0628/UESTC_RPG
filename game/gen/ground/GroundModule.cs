@@ -79,7 +79,7 @@ public sealed class GroundModule : IGroundCoverSource
         // Surfaces are classified on the flat plan, then draped: every vertex takes the terrain grid's height (D-180).
         var terrain = TerrainGrid.For(ctx.World.Terrain, tile, lod, extent);
         var field = TileField.Build(layout, extent, _section, terrain, LawnNoise.Seed(ctx.WorldSeed), GroundLod.ToneCell(lod));
-        var sink = new MeshSink(SurfaceMaterialCatalog.FromInputs(ctx.SourceInputs));
+        var sink = new GroundSurfaceSink(SurfaceMaterialCatalog.FromInputs(ctx.SourceInputs));
         new GroundMesher(field, _section, lod, layout, terrain, sink).Run();
         if (!GroundLod.HasMarkings(lod)) return new ContentOutput(sink.Finish(), []);
         var markings = layout.Markings(_section);

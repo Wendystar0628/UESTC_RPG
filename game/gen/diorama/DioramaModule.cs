@@ -12,7 +12,7 @@ namespace Campus.Gen.Diorama;
 /// single L0 cell that holds the map centre so a streamer that keys products by occupied cells still finds it.
 /// Inputs: the map's backdrop file (<c>MapDescriptor.Env.Backdrop</c>) from <c>BuildContext.SourceInputs</c>, the data
 /// rectangle (the ground's extent) or the outskirts cut line for the fog sea's inner edge. A map without that file has no
-/// backdrop product (Tiles is empty). Section and water-column surfaces (diorama_section) are not built here yet.
+/// backdrop product (Tiles is empty).
 /// </summary>
 
 [ContentModule("diorama", Owner = "WP-22")]

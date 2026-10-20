@@ -58,14 +58,12 @@ public static class WorldInputFiles
         foreach (var name in source.Files(relative).Order(StringComparer.Ordinal))
         {
             ValidateRelative(name);
-            if (relative.Length == 0 && name == "fidelity.json") continue;
             if (name.EndsWith(".json", StringComparison.Ordinal) && !output.ContainsKey(relative + name))
                 output[relative + name] = Required(source, relative + name);
         }
         foreach (var name in source.Directories(relative).Order(StringComparer.Ordinal))
         {
             ValidateRelative(name);
-            if (relative == "overlay/" && name == "fidelity") continue;
             ReadJsonDirectory(source, relative + name + '/', output);
         }
     }

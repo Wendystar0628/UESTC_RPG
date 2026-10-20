@@ -7,7 +7,7 @@ namespace Campus.Gen.Vegetation;
 public static partial class MotherModels
 {
     /// <summary>Growable vertex arrays for one GeometryBundle.</summary>
-    private sealed class MeshWriter(bool withUv)
+    private sealed class VegetationPrototypeWriter(bool withUv)
     {
         private readonly List<float> _position = [];
         private readonly List<float> _normal = [];

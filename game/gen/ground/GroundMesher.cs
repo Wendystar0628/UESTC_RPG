@@ -40,7 +40,7 @@ internal sealed partial class GroundMesher
     private readonly TileField _f;
     private readonly GroundSection _s;
     private readonly GroundLayout _layout;
-    private readonly MeshSink _sink;
+    private readonly GroundSurfaceSink _sink;
     private readonly GroundSourceContext _sourceContext;
     private readonly bool _bevel;
     private readonly bool _bands;
@@ -61,7 +61,7 @@ internal sealed partial class GroundMesher
 
     private readonly TerrainGrid _grid;
 
-    public GroundMesher(TileField field, GroundSection section, LodLevel lod, GroundLayout layout, TerrainGrid grid, MeshSink sink)
+    public GroundMesher(TileField field, GroundSection section, LodLevel lod, GroundLayout layout, TerrainGrid grid, GroundSurfaceSink sink)
     {
         _f = field;
         _s = section;

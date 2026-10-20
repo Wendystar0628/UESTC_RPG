@@ -27,7 +27,7 @@ public static class FarRing
     {
         var columns = Columns(far);
         var rows = far.Rows;
-        var mesh = new MeshWriter(DioramaVertex.KindFar);
+        var mesh = new DioramaSurfaceWriter(DioramaVertex.KindFar);
         var maxPeak = far.Mountains.Count == 0 ? HillHeight(far, 0f) : far.Mountains.Max(m => MountainHeight(far, m));
         var uv2 = new Vector2(DioramaVertex.PackSeasons(snow.Visibility), DioramaVertex.PackSeasons(snow.Snowline));
         var n = columns.Count;

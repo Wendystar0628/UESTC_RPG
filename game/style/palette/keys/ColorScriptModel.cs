@@ -16,23 +16,23 @@ public static class FrameLayout
     public const int SkySun = 0;            // 5 triples, horizon → zenith
     public const int SkyAnti = 15;          // 5 triples
     public const int FogSun = 30, FogAnti = 33, Key = 36, LineWarm = 39, LineCool = 42;
-    public const int Bounce = 45, ShaftNear = 48, ShaftFar = 51, Rim = 54, Glare = 57;
-    public const int CloudLit = 60, CloudRim = 63, CloudBelly = 66, CloudDeep = 69, Moon = 72;
-    public const int ColorEnd = 75;
+    public const int Bounce = 45, Rim = 48, Glare = 51;
+    public const int CloudLit = 54, CloudRim = 57, CloudBelly = 60, CloudDeep = 63, Moon = 66;
+    public const int ColorEnd = 69;
     // ab pairs.
-    public const int AmbientA = 75, AmbientB = 76, InteriorA = 77, InteriorB = 78;
+    public const int AmbientA = 69, AmbientB = 70, InteriorA = 71, InteriorB = 72;
     // Scalars.
-    public const int Intensity = 79, SatGain = 80, LitLift = 81, R = 82, WMin = 83, LineDarken = 84;
-    public const int FogDensity = 85, HazeDeg = 86, FogStart = 87, FogSilhouette = 88;
-    public const int FogLowTop = 89, FogLowDensity = 90, FogLake = 91;
-    public const int Stars = 92, CloudAmount = 93;
-    public const int ExposureEv = 94, GlowBloom = 95, GlowIntensity = 96, GlowHdrThreshold = 97, GlowHdrScale = 98;
-    public const int Vignette = 99, VignetteTint = 100; // 3 components
-    public const int CdlSlope = 103, CdlOffset = 104, CdlPower = 105, CdlSaturation = 106;
-    public const int LampPoolGain = 107;
-    public const int VegChroma = 108;      // key.vegChroma：植被受光与影的彩度倍率（缺省 1），与雨天的倍率相乘
-    public const int VegDepth = 109;       // shade.vegDepth：三阶类（植被、花）影的明度差倍率（缺省 1）
-    public const int Count = 110;
+    public const int Intensity = 73, SatGain = 74, LitLift = 75, R = 76, WMin = 77, LineDarken = 78;
+    public const int FogDensity = 79, HazeDeg = 80, FogStart = 81, FogSilhouette = 82;
+    public const int FogLowTop = 83, FogLowDensity = 84, FogLake = 85;
+    public const int Stars = 86, CloudAmount = 87;
+    public const int ExposureEv = 88, GlowBloom = 89, GlowIntensity = 90, GlowHdrThreshold = 91, GlowHdrScale = 92;
+    public const int Vignette = 93, VignetteTint = 94; // 3 components
+    public const int CdlSlope = 97, CdlOffset = 98, CdlPower = 99, CdlSaturation = 100;
+    public const int LampPoolGain = 101;
+    public const int VegChroma = 102;      // key.vegChroma：植被受光与影的彩度倍率（缺省 1），与雨天的倍率相乘
+    public const int VegDepth = 103;       // shade.vegDepth：三阶类（植被、花）影的明度差倍率（缺省 1）
+    public const int Count = 104;
 
     /// <summary>Scalars interpolated in log2 (SYS-TIME: light intensity and fog density in the log domain).</summary>
     public static bool IsLog(int i) => i is Intensity or FogDensity or FogStart or FogSilhouette;
@@ -42,7 +42,7 @@ public static class FrameLayout
 
     public static readonly (string Token, int Index)[] ColorTokens =
     [
-        ("bounce.ground", Bounce), ("shaft.near", ShaftNear), ("shaft.far", ShaftFar), ("rim", Rim), ("glass.glare", Glare),
+        ("bounce.ground", Bounce), ("rim", Rim), ("glass.glare", Glare),
         ("sky.cloudLit", CloudLit), ("sky.cloudRim", CloudRim), ("sky.cloudBelly", CloudBelly), ("sky.cloudDeep", CloudDeep),
         ("sky.moon", Moon)
     ];
@@ -138,8 +138,6 @@ public sealed class ColorScriptData
         f.SetColor(FrameLayout.LineCool, k.Line.Cool);
         var colors = k.Colors;
         f.SetColor(FrameLayout.Bounce, colors.BounceGround);
-        f.SetColor(FrameLayout.ShaftNear, colors.ShaftNear);
-        f.SetColor(FrameLayout.ShaftFar, colors.ShaftFar);
         f.SetColor(FrameLayout.Rim, colors.Rim);
         f.SetColor(FrameLayout.Glare, colors.GlassGlare);
         f.SetColor(FrameLayout.CloudLit, colors.SkyCloudLit);

@@ -12,7 +12,7 @@ public static partial class MotherModels
     /// <summary>The existing low-detail branch section, shared by L0 secondaries and L1 branches.</summary>
     private const int SimplifiedBranchSides = 4;
 
-    private static void WriteWood(MeshWriter w, TreePlan plan, VegLevel level, Ids ids)
+    private static void WriteWood(VegetationPrototypeWriter w, TreePlan plan, VegLevel level, Ids ids)
     {
         var flarePhase = plan.Next() * 6.2831853f;
         foreach (var limb in plan.Limbs)
@@ -70,7 +70,7 @@ public static partial class MotherModels
         }
     }
 
-    private static void WriteTube(MeshWriter w, List<Vector3> points, List<float> radii, int sides, float flare,
+    private static void WriteTube(VegetationPrototypeWriter w, List<Vector3> points, List<float> radii, int sides, float flare,
         float flarePhase, bool cap, Ids ids, float tag = 0f)
     {
         var n = points.Count;

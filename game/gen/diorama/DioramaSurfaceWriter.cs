@@ -38,7 +38,7 @@ public static class DioramaVertex
 }
 
 /// <summary>Indexed diorama construction with shader metadata applied after shared surface publication.</summary>
-internal sealed class MeshWriter(byte kind)
+internal sealed class DioramaSurfaceWriter(byte kind)
 {
     private readonly List<GeometryVertex> _vertices = [];
     private readonly List<int> _index = [];

@@ -77,8 +77,6 @@ public static class ShaderGlobals
     public const string MapRect = "map_rect";
     /// <summary>Sole writer: Campus.Camera.ObserverCamera.</summary>
     public const string EdgeFog = "edge_fog";
-    /// <summary>Sole writer: Campus.Kernel.Lighting.KeyLightDirector.</summary>
-    public const string Shaft = "shaft";
     /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string InteriorLight = "interior_light";
     /// <summary>Sole writer: Campus.Style.Palette.Keys.PaletteNode.</summary>

@@ -96,7 +96,7 @@ public sealed partial class SixSite
                     }
                     // One outward-facing sheet: a closed thin box adds an inward-facing front face,
                     // so the glass shader never reaches its transparent back face from inside the hall.
-                    var mesh = new MeshWriter(L.Glass);
+                    var mesh = new PartShapeWriter(L.Glass);
                     float width = x1 - x0, height = levels[j] - levels[j - 1];
                     var lowerLeft = mesh.Vertex(Vector3.Zero, Vector3.UnitZ, new(width, 0));
                     var lowerRight = mesh.Vertex(new(width, 0, 0), Vector3.UnitZ, Vector2.Zero);

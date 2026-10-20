@@ -5,7 +5,7 @@ using Campus.Gen.Geometry;
 namespace Campus.Gen.Ground;
 
 /// <summary>Resolves ground paints and paving coordinates, then writes into the shared material accumulator.</summary>
-internal sealed class MeshSink(SurfaceMaterialCatalog? materials = null)
+internal sealed class GroundSurfaceSink(SurfaceMaterialCatalog? materials = null)
 {
     private readonly SortedDictionary<int, GeometrySink> _sinks = [];
     public int Triangles => _sinks.Values.Sum(sink => sink.Triangles);

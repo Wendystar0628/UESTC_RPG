@@ -20,7 +20,7 @@ public static class GroundCollision
         var extent = GroundLod.Tile(tile, LodLevel.L0, context.Map.DataRect);
         var terrain = TerrainGrid.For(context.World.Terrain, tile, LodLevel.L0, extent);
         var field = TileField.Build(layout, extent, section, terrain);
-        var mesher = new GroundMesher(field, section, LodLevel.L0, layout, terrain, new MeshSink());
+        var mesher = new GroundMesher(field, section, LodLevel.L0, layout, terrain, new GroundSurfaceSink());
         var cm = new short[Samples * Samples];
         var metre = field.N / (Samples - 1);
         for (var z = 0; z < Samples; z++)

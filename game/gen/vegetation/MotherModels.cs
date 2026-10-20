@@ -170,8 +170,8 @@ public static partial class MotherModels
         var plan = new TreePlan(species, variant);
         var shell = new CrownShell(plan);
         var ids = IdsOf(species, palette);
-        var wood = new MeshWriter(withUv: false);
-        var crown = new MeshWriter(withUv: true);
+        var wood = new VegetationPrototypeWriter(withUv: false);
+        var crown = new VegetationPrototypeWriter(withUv: true);
 
         WriteWood(wood, plan, level, ids);
         var twig = TwigMass(plan, palette, tag: 0f);
@@ -293,7 +293,7 @@ public static partial class MotherModels
         var plan = new TreePlan(species, variant);
         var shell = new CrownShell(plan);
         var ids = IdsOf(species, palette);
-        var w = new MeshWriter(withUv: false);
+        var w = new VegetationPrototypeWriter(withUv: false);
         WriteWood(w, plan, VegLevel.L1, ids);
         foreach (var (blob, index, _, detail) in BlobsFor(plan, VegLevel.L1))
             WriteBlob(w, plan, shell, blob, index, ProxyScale, detail, ids);
@@ -327,8 +327,8 @@ public static partial class MotherModels
         var plan = new TreePlan(species, variant);
         var shell = new CrownShell(plan);
         var ids = IdsOf(species, palette);
-        var wood = new MeshWriter(withUv: false);
-        var crown = new MeshWriter(withUv: true);
+        var wood = new VegetationPrototypeWriter(withUv: false);
+        var crown = new VegetationPrototypeWriter(withUv: true);
         var limb = TreeForms.IsBall(plan.Form.Id) ? null : plan.Limbs.FirstOrDefault(l => l.Level == 0);
         if (limb is { Points.Count: >= 2 })
         {

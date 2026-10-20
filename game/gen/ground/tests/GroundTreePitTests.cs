@@ -194,7 +194,7 @@ public sealed class GroundTreePitTests
         var tile = new GroundTile(0f, 0f, 256f, 2f);
         var grid = TerrainGrid.For(FlatTerrain.Default, new TileKey(0, 0), LodLevel.L2, tile);
         var field = TileField.Build(layout, tile, Section, grid);
-        var mesher = new GroundMesher(field, Section, LodLevel.L2, layout, grid, new MeshSink());
+        var mesher = new GroundMesher(field, Section, LodLevel.L2, layout, grid, new GroundSurfaceSink());
         for (var j = 0; j <= field.N; j++)
             for (var i = 0; i <= field.N; i++)
                 AssertThat(mesher.SurfaceAt(i, j) is not (GroundSurface.PitRim or GroundSurface.PitBevel or GroundSurface.PitSoil)).OverrideFailureMessage("L2 and beyond resolve no pits.").IsTrue();
@@ -280,7 +280,7 @@ public sealed class GroundTreePitTests
         var tile = new GroundTile(0f, 0f, TileGrid.BaseEdge, TileGrid.BaseEdge / 256f);
         var grid = TerrainGrid.For(FlatTerrain.Default, new TileKey(0, 0), LodLevel.L0, tile);
         field = TileField.Build(layout, tile, Section, grid);
-        return new GroundMesher(field, Section, LodLevel.L0, layout, grid, new MeshSink());
+        return new GroundMesher(field, Section, LodLevel.L0, layout, grid, new GroundSurfaceSink());
     }
 
     private static GroundSurface SurfaceAt(GroundMesher mesher, TileField field, float x, float z) =>

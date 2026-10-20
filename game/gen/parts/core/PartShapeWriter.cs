@@ -5,7 +5,7 @@ using Campus.Gen.Geometry;
 namespace Campus.Gen.Parts.Core;
 
 /// <summary>Indexed construction of kernel shapes; publication and surface splitting belong to GeometrySink.</summary>
-public sealed class MeshWriter(ToonSpec material)
+public sealed class PartShapeWriter(ToonSpec material)
 {
     private readonly List<GeometryVertex> _vertices = [];
     private readonly List<int> _indices = [];

@@ -56,7 +56,7 @@ public sealed class GroundSourcesTests
         var face = new GroundFaceInput(GroundSurface.Granite, GroundFaceRole.Vertical, context);
         AssertThat(GroundPalette.MaterialOf(top.Surface, top.Role, GroundColor.Curb) == GroundMaterial.Plaza &&
             GroundPalette.MaterialOf(face.Surface, face.Role, GroundColor.Curb) == GroundMaterial.Curb).OverrideFailureMessage("Granite top and its no-pattern vertical faces must not lose their distinct content roles.").IsTrue();
-        var sink = new MeshSink();
+        var sink = new GroundSurfaceSink();
         sink.Triangle(GroundColor.Curb, VertexFlag.NoShadow, new(0, 0, 0), new(1, 0, 0), new(0, 0, 1),
             Vector3.UnitY, Vector3.UnitY, Vector3.UnitY, Vector3.UnitY, top);
         sink.Triangle(GroundColor.Curb, VertexFlag.NoShadow, new(0, 0, 0), new(1, 0, 0), new(0, 1, 0),

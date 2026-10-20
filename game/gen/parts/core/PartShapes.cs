@@ -71,7 +71,7 @@ public static class PartShapes
     /// <summary>A closed tetrahedron with flat faces (corners in any order): the flared wing of a kerb ramp.</summary>
     public static PartGeometry Tetra(Vector3 a, Vector3 b, Vector3 c, Vector3 d, ToonSpec material)
     {
-        var writer = new MeshWriter(material);
+        var writer = new PartShapeWriter(material);
         var centre = (a + b + c + d) * 0.25f;
         foreach (var (p, q, r) in new[] { (a, b, c), (a, b, d), (a, c, d), (b, c, d) })
         {
@@ -136,7 +136,7 @@ public static class PartShapes
     /// </summary>
     public static PartGeometry FlatQuad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal, ToonSpec material)
     {
-        var writer = new MeshWriter(material);
+        var writer = new PartShapeWriter(material);
         var ia = writer.Vertex(a, normal, new(0, 0)); var ib = writer.Vertex(b, normal, new(1, 0));
         var ic = writer.Vertex(c, normal, new(1, 1)); var id = writer.Vertex(d, normal, new(0, 1));
         writer.Triangle(ia, ib, ic, normal); writer.Triangle(ia, ic, id, normal);
@@ -160,7 +160,7 @@ public static class PartShapes
             var angle = 2.0 * Math.PI * i / segments;
             cos[i] = (float)Math.Cos(angle); sin[i] = (float)Math.Sin(angle);
         }
-        var writer = new MeshWriter(material);
+        var writer = new PartShapeWriter(material);
         foreach (var band in bands)
         {
             if (band.R0 == 0 && band.R1 == 0) continue;

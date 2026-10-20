@@ -20,9 +20,6 @@ public static class WorldFidelityCompiler
     private const float CornerBay = 3.6f;
     private static readonly GeometryFactory Factory = new();
 
-    public static FidelityFrozenData Compile(IWorldModel world, IReadOnlyList<Waypoint>? waypoints = null) =>
-        Compile(world.Features, world.Boundary, world.Network, world.Interiors, world.Outskirts, waypoints ?? []);
-
     internal static FidelityFrozenData Compile(IReadOnlyDictionary<FeatureId, WorldFeature> features,
         PolygonRings boundary, WorldNetwork network, IInteriorIndex interiors, IOutskirtsModel? outskirts,
         IReadOnlyList<Waypoint> waypoints)

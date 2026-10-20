@@ -177,7 +177,7 @@ public static class GroundMasks
                 // These are plan-view potentials. No height field is generated for an unused RF texture.
                 var grid = TerrainGrid.FlatPlan(tile);
                 var field = TileField.Build(layout, tile, section, grid);
-                var mesher = new GroundMesher(field, section, LodLevel.L0, layout, grid, new MeshSink());
+                var mesher = new GroundMesher(field, section, LodLevel.L0, layout, grid, new GroundSurfaceSink());
                 for (var j = 0; j < tileCells; j++)
                     for (var i = 0; i < tileCells; i++)
                     {

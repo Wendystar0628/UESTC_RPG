@@ -74,30 +74,6 @@
    "role": "frame"
   },
   {
-   "token": "shaft.near",
-   "index": 6,
-   "albedo": [
-    1.0,
-    0.9412,
-    0.7843
-   ],
-   "materialClass": "light",
-   "seasonal": false,
-   "role": "frame"
-  },
-  {
-   "token": "shaft.far",
-   "index": 7,
-   "albedo": [
-    0.9569,
-    0.7098,
-    0.2314
-   ],
-   "materialClass": "light",
-   "seasonal": false,
-   "role": "frame"
-  },
-  {
    "token": "rim",
    "index": 8,
    "albedo": [

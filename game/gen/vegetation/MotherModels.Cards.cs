@@ -209,7 +209,7 @@ public static partial class MotherModels
     private static float Importance(TreePlan plan, Card card) =>
         plan.Form.Id == "palm" ? 0f : card.Cluster / (float)Math.Max(1, CardCapacity(plan));
 
-    private static void WriteCard(MeshWriter w, TreePlan plan, CrownShell shell, Card card, Ids ids, float importance)
+    private static void WriteCard(VegetationPrototypeWriter w, TreePlan plan, CrownShell shell, Card card, Ids ids, float importance)
     {
         var first = w.VertexCount;
         var t0 = Gradient(plan, card.Center, plan.Form.Id == "palm" ? card.Normal : shell.Normal(card.Center));

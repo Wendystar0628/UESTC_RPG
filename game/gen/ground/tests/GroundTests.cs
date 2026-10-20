@@ -309,7 +309,7 @@ internal static class TestWorld
             var layout = GroundLayout.Of(context);
             var grid = TerrainGrid.For(FlatTerrain.Default, key, LodLevel.L0, tile);
             var field = TileField.Build(layout, tile, GroundSection.Default, grid);
-            return new GroundMesher(field, GroundSection.Default, LodLevel.L0, layout, grid, new MeshSink());
+            return new GroundMesher(field, GroundSection.Default, LodLevel.L0, layout, grid, new GroundSurfaceSink());
         });
         return mesher.SurfaceAt((int)MathF.Round((x - tile.X0) / tile.Cell), (int)MathF.Round((z - tile.Z0) / tile.Cell));
     }

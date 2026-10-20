@@ -231,7 +231,7 @@ internal static class CarBody
         var newell = Vector3.Zero;
         for (var i = 0; i < ring.Count; i++) newell += VectorMath.Cross(ring[i], ring[(i + 1) % ring.Count]);
         if (Vector3.Dot(newell, n) < 0) ring.Reverse();
-        var writer = new MeshWriter(material);
+        var writer = new PartShapeWriter(material);
         var top = ring.Select(q => q + n * S.PaneProud).ToArray();
         var bottom = ring.Select(q => q - n * S.PaneProud).ToArray();
         void Fan(Vector3[] face, Vector3 normal)
@@ -267,7 +267,7 @@ internal static class Loft
         if (m < 2 || rings.Count != m || crease.Count != m || chamfer.Count != n || rings.Any(r => r.Length != n)) throw new ArgumentException("A loft needs matching stations, rings and flags.");
         for (var i = 1; i < m; i++)
             if (!(z[i] > z[i - 1])) throw new ArgumentException("Loft stations must ascend along Z.");
-        var w = new MeshWriter(material);
+        var w = new PartShapeWriter(material);
         Vector3 P(int i, int j) { var q = rings[i][(j % n + n) % n]; return new(q.X, q.Y, z[i]); }
         Vector3 Normal(int i, int j, int band, int gap)
         {

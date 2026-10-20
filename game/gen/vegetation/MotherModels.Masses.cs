@@ -175,7 +175,7 @@ public static partial class MotherModels
     // neighbouring masses never start their own light and shade (max-011 review).
     // ---------------------------------------------------------------------------------------------------------
 
-    private static void WriteBlob(MeshWriter w, TreePlan plan, CrownShell shell, Blob blob, int index, float scale, int detail, Ids ids,
+    private static void WriteBlob(VegetationPrototypeWriter w, TreePlan plan, CrownShell shell, Blob blob, int index, float scale, int detail, Ids ids,
         float tag = -1f, int[]? faces = null)
     {
         var sphere = Icosphere.Get(detail);

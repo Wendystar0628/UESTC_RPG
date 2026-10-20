@@ -16,7 +16,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior;
 /// </summary>
 internal sealed class InteriorSink(PaletteCatalog palette)
 {
-    private readonly SortedDictionary<string, MeshWriter> _glow = new(StringComparer.Ordinal);
+    private readonly SortedDictionary<string, PartShapeWriter> _glow = new(StringComparer.Ordinal);
 
     public GeometrySink Mesh { get; } = new(palette);
     public List<Collider> Colliders { get; } = [];
@@ -188,10 +188,10 @@ internal sealed class InteriorSink(PaletteCatalog palette)
         if (MathF.Abs(area) < 1e-8f) return;
         if (!_glow.TryGetValue(family, out var found))
         {
-            found = new MeshWriter(S.Glow(family));
+            found = new PartShapeWriter(S.Glow(family));
             _glow.Add(family, found);
         }
-        MeshWriter writer = found;
+        PartShapeWriter writer = found;
         var centre = Vector2.Zero;
         foreach (var p in ring) centre += p;
         centre /= ring.Count;
@@ -212,7 +212,7 @@ internal sealed class InteriorSink(PaletteCatalog palette)
         }
     }
 
-    private static void GlowTriangle(MeshWriter writer, Vector3 a, Vector3 b, Vector3 c, Vector3 n)
+    private static void GlowTriangle(PartShapeWriter writer, Vector3 a, Vector3 b, Vector3 c, Vector3 n)
     {
         if (Vector3.Cross(b - a, c - a).LengthSquared() <= 1e-14f) return;
         writer.Triangle(writer.Vertex(a, n, Vector2.Zero), writer.Vertex(b, n, Vector2.UnitX), writer.Vertex(c, n, Vector2.One), n);

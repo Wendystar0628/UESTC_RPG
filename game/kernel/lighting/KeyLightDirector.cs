@@ -17,7 +17,6 @@ namespace Campus.Kernel.Lighting;
 [QualityResponsive(Owns = [QualityKnob.ShadowQuality, QualityKnob.ShadowDistance])]
 public partial class KeyLightDirector : Node, IQualityAware
 {
-    private static readonly StringName _shaderGlobalShaft = ShaderGlobals.Shaft;
     private static readonly StringName _shaderGlobalKeyDir = ShaderGlobals.KeyDir;
     private static readonly StringName _shaderGlobalKeyStrength = ShaderGlobals.KeyStrength;
     private static readonly StringName _shaderGlobalOvercastDir = ShaderGlobals.OvercastDir;
@@ -115,8 +114,6 @@ public partial class KeyLightDirector : Node, IQualityAware
     {
         if (_world is null || _light is null) return;
         var frame = _model.Step(KeyLightInput.From(_world));
-        RenderingServer.GlobalShaderParameterSet(_shaderGlobalShaft,
-            new Vector4(ShaftStrength(_world.Sun.AltDeg, _world.WeatherNow), 1.2f, 5.5f, 0.4f));
         Last = frame;
         _state?.Publish(frame);
 
@@ -144,13 +141,4 @@ public partial class KeyLightDirector : Node, IQualityAware
         var mask = frame.ShadowPass ? _settings.CasterMask : 0u;
         if (_light.ShadowCasterMask != mask) _light.ShadowCasterMask = mask;
     }
-    // Existing shaft values, moved with their evaluator from WP-39; no art tuning.
-    private static float ShaftStrength(float sunAltDeg, WeatherVec weather)
-    {
-        var sun = ScalarMath.Smoothstep(2f, 6f, sunAltDeg) * (1f - ScalarMath.Smoothstep(24f, 30f, sunAltDeg));
-        var rain = ScalarMath.Smoothstep(0.05f, 0.2f, weather.Precip * (1f - weather.PrecipKind)) * ScalarMath.Smoothstep(0.4f, 0.6f, weather.Overcast);
-        var fog = 1f + 0.5f * ScalarMath.Smoothstep(1.2f, 2.5f, weather.Fog);
-        return sun * (1f - rain) * fog;
-    }
-
 }

@@ -64,7 +64,7 @@ public static partial class PartGeometryKernel
             }
         }
         Vector3 Position(int ring, Vector2 p) => new(path[ring].X + miters[ring].X * p.X, baseY + p.Y, path[ring].Y + miters[ring].Z * p.X);
-        var writer = new MeshWriter(material);
+        var writer = new PartShapeWriter(material);
         float distance = 0;
         for (var s = 0; s < segmentCount; s++)
         {

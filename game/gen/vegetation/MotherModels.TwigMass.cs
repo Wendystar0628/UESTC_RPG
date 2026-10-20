@@ -46,10 +46,10 @@ public static partial class MotherModels
     };
 
     /// <summary>The twig-mass mesh of a mother model (veg_twig_mass); null for species without one. Tag 1 marks the far stand-in's copy.</summary>
-    private static MeshWriter? TwigMass(TreePlan plan, PaletteCatalog palette, float tag)
+    private static VegetationPrototypeWriter? TwigMass(TreePlan plan, PaletteCatalog palette, float tag)
     {
         if (!HasTwigMass(plan.Species)) return null;
-        var w = new MeshWriter(withUv: false);
+        var w = new VegetationPrototypeWriter(withUv: false);
         var color = palette.Resolve(WinterTwig).Value;
         var rng = new Rng(StableHash.Hash32(0x23A5u, "twigmass", plan.Species.Id, plan.Variant.ToString(CultureInfo.InvariantCulture)));
         var bottom = plan.CrownCenter.Y - plan.CrownRy;

@@ -182,7 +182,7 @@ public static class Shapes
     /// <summary>Site-facing indexed construction uses the shared part mesh publication path.</summary>
     public sealed class Writer(ToonSpec material)
     {
-        private readonly MeshWriter _mesh = new(material);
+        private readonly PartShapeWriter _mesh = new(material);
         public int Vertex(Vector3 p, Vector3 n, Vector2 uv) => _mesh.Vertex(p, n, uv);
         public Vector3 Normal(int i) => _mesh.Normal(i);
         public void Triangle(int a, int b, int c, Vector3 outward) => _mesh.Triangle(a, b, c, outward);

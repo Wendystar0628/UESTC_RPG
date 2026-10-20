@@ -35,8 +35,6 @@
       "colors": {
         "bounce.ground": "#CFCFCF",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#E8EEFF",
-        "shaft.far": "#9AA8D8",
         "rim": "#DCE4F8",
         "glass.glare": "#E8EEFF",
         "sky.cloudLit": "#5A6290",
@@ -72,8 +70,6 @@
       "colors": {
         "bounce.ground": "#CFCFCF",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#F4E4EC",
-        "shaft.far": "#D8A8B8",
         "rim": "#C8CCE8",
         "glass.glare": "#F0E0E8",
         "sky.cloudLit": "#E8B0A8",
@@ -110,8 +106,6 @@
       "colors": {
         "bounce.ground": "#F0A878",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#FFF0D8",
-        "shaft.far": "#FF9E50",
         "rim": "#FFC080",
         "glass.glare": "#FFE8C8",
         "sky.cloudLit": "#FFD8B0",
@@ -147,8 +141,6 @@
       "colors": {
         "bounce.ground": "#DCD0BC",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#FFFAF0",
-        "shaft.far": "#F4DCA8",
         "rim": "#FFF0D8",
         "glass.glare": "#FFF8EE",
         "sky.cloudLit": "#FFF8EC",
@@ -184,8 +176,6 @@
       "colors": {
         "bounce.ground": "#D4C4A8",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#FFF8EC",
-        "shaft.far": "#F8D890",
         "rim": "#FFEED0",
         "glass.glare": "#FFF8EC",
         "sky.cloudLit": "#FFFCF4",
@@ -221,8 +211,6 @@
       "colors": {
         "bounce.ground": "#D2C6AE",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#FFFAF0",
-        "shaft.far": "#F8E0A0",
         "rim": "#FFF4DC",
         "glass.glare": "#FFFAF0",
         "sky.cloudLit": "#FFFFFF",
@@ -258,8 +246,6 @@
       "colors": {
         "bounce.ground": "#D8C0A0",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#FFF4DC",
-        "shaft.far": "#F8C878",
         "rim": "#FFE8C4",
         "glass.glare": "#FFF6E0",
         "sky.cloudLit": "#FFFAF0",
@@ -295,8 +281,6 @@
       "colors": {
         "bounce.ground": "#D8B07C",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#FFF0C8",
-        "shaft.far": "#F4B53B",
         "rim": "#FFD9A0",
         "glass.glare": "#FFF4D6",
         "sky.cloudLit": "#FFF3D0",
@@ -333,8 +317,6 @@
       "colors": {
         "bounce.ground": "#F09060",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#FFE8C0",
-        "shaft.far": "#FF8838",
         "rim": "#FFB070",
         "glass.glare": "#FFE0B8",
         "sky.cloudLit": "#FFC890",
@@ -370,8 +352,6 @@
       "colors": {
         "bounce.ground": "#CFCFCF",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#F8E0D8",
-        "shaft.far": "#D89090",
         "rim": "#C8C8E8",
         "glass.glare": "#F0DCE0",
         "sky.cloudLit": "#F0B0A0",
@@ -407,8 +387,6 @@
       "colors": {
         "bounce.ground": "#CFCFCF",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#E8E0F0",
-        "shaft.far": "#A0A0D0",
         "rim": "#D0D4EC",
         "glass.glare": "#E0E4F8",
         "sky.cloudLit": "#9A88A8",
@@ -445,8 +423,6 @@
       "colors": {
         "bounce.ground": "#CFCFCF",
         "interior.warm": {"c": 0.05, "h": 65},
-        "shaft.near": "#E8EEFF",
-        "shaft.far": "#9AA8D8",
         "rim": "#DCE4F8",
         "glass.glare": "#E8EEFF",
         "sky.cloudLit": "#5E6690",
