@@ -3,7 +3,7 @@ using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera.Walk;
 
@@ -73,14 +73,14 @@ public partial class WalkController
     }
 
     public WalkSave CreateDefault(NewGameContext c) =>
-        WalkSafetyQueries.CreateDefault(Services.Get<IMapService>(), c);
+        WalkSafetyQueries.CreateDefault(KernelServices.Get<IMapService>(), c);
 
-    private Pose DefaultFeet(MapId targetMap) => WalkSafetyQueries.DefaultFeet(Services.Get<IMapService>(), targetMap);
+    private Pose DefaultFeet(MapId targetMap) => WalkSafetyQueries.DefaultFeet(KernelServices.Get<IMapService>(), targetMap);
 
     private void RequireMap(MapId targetMap)
     {
         ResolveServices();
-        var maps = Services.Get<IMapService>();
+        var maps = KernelServices.Get<IMapService>();
         if (maps.Current == targetMap && _map?.Descriptor.Id == targetMap) return;
         RequestExit();
         throw new InvalidOperationException($"Cannot restore or capture walk feet before map {targetMap.Value} is mounted.");

@@ -198,7 +198,7 @@ public static class TerrainOverlayJson
     public static void Validate(TerrainOverlayFile data)
     {
         ArgumentNullException.ThrowIfNull(data);
-        Text(data.Zone.Value, "zone"); Text(data.Owner.Value, "owner");
+        Text(data.Zone.Value, "zone");
         if (data.Map is { } map) Text(map.Value, "map");
         ArgumentNullException.ThrowIfNull(data.Ops);
         var ids = new HashSet<string>(StringComparer.Ordinal);

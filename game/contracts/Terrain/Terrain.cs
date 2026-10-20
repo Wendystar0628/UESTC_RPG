@@ -156,7 +156,7 @@ public sealed class FlatTerrain : ITerrain
 
 /// <summary>Per-zone terrain input. Bytes are read by the kernel and interpreted by the WP-08 evaluator.</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed record TerrainOverlayFile(ZoneId Zone, WpId Owner, IReadOnlyList<TerrainOp> Ops)
+public sealed record TerrainOverlayFile(ZoneId Zone, IReadOnlyList<TerrainOp> Ops)
 {
     public MapId? Map { get; init; }
 }

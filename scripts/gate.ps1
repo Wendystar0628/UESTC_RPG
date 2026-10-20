@@ -22,7 +22,7 @@ $testRecordMaxRuns = 30
 $testRecordMaxDays = 14
 $testCutCandidateCount = 20
 # Shared layer (contracts, planar geometry, public site tools, shared test fixtures): a change here selects every quick test.
-$publicLayerPattern = '^game/(contracts|gen/geometry|gen/sites|testing)/'
+$publicLayerPattern = '^game/(contracts|gen/bakeinput|gen/geometry|gen/sites|testing)/'
 function Get-UESTCMainStage {
     param([string]$Root)
     $project = [IO.File]::ReadAllText((Join-Path $Root 'game/project.godot'))
@@ -96,7 +96,7 @@ function Get-UESTCG2ProjectSelection {
     param([string]$Root, [string[]]$Changes, [bool]$ForceAll=$false, [string]$Configuration='Debug')
     $normalizedChanges = @($Changes | ForEach-Object { $_.Replace('\','/') })
     # Contract, build and shared data changes can affect both test hosts.
-    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/(?!Runtime/|tests/)|^game/contracts/tests/PaletteFixture\.cs$|\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
+    $shared = @($normalizedChanges | Where-Object { $_ -match '^game/contracts/(?!Runtime/|tests/)|\.(props|targets|sln|slnx)$|^global\.json$|^game/(data/|style/palette/)' })
     foreach ($project in @('game/Campus.Gen.Tests.csproj','game/Campus.Tests.csproj')) {
         $scope = Get-UESTCG2CompileScope $Root $project $Configuration
         $reasons = New-Object 'Collections.Generic.List[string]'
@@ -119,13 +119,6 @@ function Get-UESTCG2ProjectSelection {
                 [IO.File]::ReadAllText($file.FullPath) -notmatch '\[TestSuite(?:\(|\])') {
                 # Shared support can be consumed across module boundaries or linked into both hosts.
                 $reasons.Add("Shared test support changed: $($file.Path)")
-            }
-        }
-        # Deleted support sources no longer appear in evaluated Compile items.
-        foreach ($path in @($normalizedChanges | Where-Object { $_ -match '/tests/Support/' })) {
-            $supportRoot = $path.Substring(0, $path.IndexOf('/tests/Support/', [StringComparison]::Ordinal)) + '/tests/'
-            if (@($compileFiles | Where-Object { $_.Path.StartsWith($supportRoot, [StringComparison]::OrdinalIgnoreCase) }).Count) {
-                $reasons.Add("Shared test support changed: $path")
             }
         }
         $allTests = $reasons.Count -gt 0

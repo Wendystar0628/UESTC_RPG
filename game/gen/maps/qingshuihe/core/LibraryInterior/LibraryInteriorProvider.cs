@@ -22,9 +22,9 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
     public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
-    private sealed record CatalogState(FeatureId[] Features, int[] Floors, IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> Entrances);
+    private sealed record CatalogState(FeatureId[] Features, int[] Floors, IReadOnlyList<InteriorOpenPart> OpenParts, IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> Entrances);
 
-    private CatalogState _catalog = new([], [], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
+    private CatalogState _catalog = new([], [], [], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
 
     public IReadOnlyList<FeatureId> FeatureIds => _catalog.Features;
     public int Priority => 0;
@@ -33,7 +33,8 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     /// <summary>Boot supplies the authoritative interiors.json fields; generators perform no file IO.</summary>
     public void Configure(InteriorCatalogConfiguration configuration)
     {
-        var (features, openFloors, entrances, buildingType, seals) = configuration;
+        var (features, openParts, entrances, buildingType, seals) = configuration;
+        var openFloors = configuration.OpenFloors;
         if (buildingType is not null || seals.Count != 0)
             throw new ArgumentException("This authored provider does not consume generated building configuration or catalog seals.", nameof(configuration));
         ArgumentNullException.ThrowIfNull(features);
@@ -45,7 +46,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         if (!ids.Contains(CoreIds.Library)) throw new ArgumentException("The library interior must include the library entity.", nameof(features));
         if (floors.Any(f => f < 1 || f > CoreStyle.LibraryStoreys.Length))
             throw new ArgumentOutOfRangeException(nameof(openFloors), "Library storeys run from 1 to the shell's storey count.");
-        _catalog = new(ids, floors, entrances);
+        _catalog = new(ids, floors, openParts, entrances);
     }
 
     public InteriorLayout Layout(BuildContext ctx, FeatureId id)
@@ -67,7 +68,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         if (!catalog.Floors.Contains(storey)) return ContentOutput.Empty;
         var sink = new InteriorGeometry(ctx.Catalog) { Full = full, SlabThickness = S.SlabThick, GlowMaterial = S.Glow };
         if (id == CoreIds.Library) Compose(ctx, id, storey, sink);
-        else Plates(ctx, id, storey, sink);
+        else Plates(ctx, id, catalog, storey, sink);
         return sink.Finish();
     }
 
@@ -149,7 +150,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         var catalog = _catalog;
         if (!catalog.Features.Contains(id)) throw new ArgumentException("Feature is not assigned to this provider.", nameof(id));
         if (!ctx.World.Features.ContainsKey(id)) throw new KeyNotFoundException(id.Value);
-        return catalog;
+        return catalog with { Floors = catalog.OpenParts.Where(part => part.FeatureId == id).SelectMany(part => part.Floors).Distinct().Order().ToArray() };
     }
 
     private static InteriorLayout LibraryLayout(BuildContext ctx, FeatureId id, CatalogState catalog, IReadOnlyList<EntranceDecl> entrances)
@@ -206,52 +207,64 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
 
     // ------------------------------------------------------------------ the entry's other features
 
-    /// <summary>A neighbour block's polygons, storey height, first floor and top, from its own data and the library's floor offset.</summary>
-    private static (IReadOnlyList<IReadOnlyList<Vector2>> Rings, float Height, float Floor, float Top, int Levels) PlateSection(BuildContext ctx, FeatureId id)
-    {
-        var feature = ctx.World.Features[id];
-        var rings = WorldFeatureGeometry.FacadePolygonsOf(feature, "building").Select(p => PlanGeometry.OpenRing(p.Outer)).ToArray();
-        if (rings.Length == 0) throw new InvalidOperationException($"Library interior feature {id.Value} has no building footprint.");
-        var levels = Math.Max(1, feature.Storeys ?? feature.Parts.Select(p => p.Storeys ?? 0).DefaultIfEmpty(0).Max());
-        var height = feature.Height ?? feature.Parts.Select(p => p.Height ?? 0f).DefaultIfEmpty(0f).Max();
-        if (height <= 0f) height = levels * WorldModelLoader.DefaultStoreyHeight;
-        var plan = LibraryFrame.Of(ctx).Plan;
-        var pad = ctx.World.Terrain.PadY(id);
-        return (rings, height / levels, pad + (plan.FloorY - plan.PadY), pad + height, levels);
-    }
+    /// <summary>Actual neighbouring building sections; the catalog decides which of their floors are open.</summary>
+    private static IReadOnlyList<(PolygonRings Footprint, IReadOnlyList<StoreyInfo> Storeys)> PlateSections(
+        BuildContext ctx, FeatureId id, CatalogState catalog) =>
+        ctx.Memo<IReadOnlyList<(PolygonRings Footprint, IReadOnlyList<StoreyInfo> Storeys)>>((catalog.OpenParts, id), () =>
+        {
+            if (catalog.Floors.Length > 0)
+                return InteriorBuildingSource.Read(ctx.World, id, catalog.Entrances.GetValueOrDefault(id) ?? [], catalog.OpenParts)
+                    .Select(part => (part.Footprint, part.Storeys)).ToArray();
 
-    private static float PlateY(float floor, float storeyHeight, float top, int storey) =>
-        MathF.Min(floor + (storey - 1) * storeyHeight, top - S.SlabThick - 0.1f);
+            var feature = ctx.World.Features[id];
+            // This authored neighbour may not silently acquire the generic closed-shell height default.
+            if (feature.Parts.Count == 0) RequireHeight(feature.Height, id.Value);
+            foreach (var part in feature.Parts)
+            {
+                var kind = part.Props is { ValueKind: System.Text.Json.JsonValueKind.Object } props
+                    && props.TryGetProperty("kind", out var declared) ? declared.GetString() : feature.Kind.Value;
+                if (kind == "building") RequireHeight(part.Height, id.Value + "/" + part.SourceId);
+            }
+            var storeys = ClosedBuildingStoreys.ClosedBuilding(feature, ctx.World.Terrain);
+            if (storeys.Count == 0) throw new InvalidDataException($"Library interior feature '{id.Value}' has no building footprint.");
+            return storeys.GroupBy(storey => storey.Footprint)
+                .Select(section => (new PolygonRings(section.Key), (IReadOnlyList<StoreyInfo>)section.ToArray())).ToArray();
+        });
+
+    private static void RequireHeight(float? height, string source)
+    {
+        if (height is not { } value || !float.IsFinite(value) || value <= 0f)
+            throw new InvalidDataException($"Library interior neighbour '{source}' needs a finite positive world height.");
+    }
 
     private static InteriorLayout PlateLayout(BuildContext ctx, FeatureId id, CatalogState catalog, IReadOnlyList<EntranceDecl> entrances)
     {
-        var (rings, height, floor, top, _) = PlateSection(ctx, id);
-        var storeys = catalog.Floors.Select(k => new StoreyInfo(k, PlateY(floor, height, top, k), height, rings[0])).ToArray();
+        var storeys = PlateSections(ctx, id, catalog).SelectMany(part => part.Storeys).ToArray();
         var feature = ctx.World.Features[id];
         return new(id, storeys, [], [], entrances, [], catalog.Floors, [], feature.Bounds,
             StableHash.Hash32(ctx.WorldSeed, id.Value, "library.plates.v1"));
     }
 
-    /// <summary>Floor plate, its soffit and the wall lining of one storey of a neighbour block (simplified interior, no collision).</summary>
-    private static void Plates(BuildContext ctx, FeatureId id, int storey, InteriorGeometry sink)
+    /// <summary>Floor plate, its soffit and the wall lining of one real neighbour storey (simplified interior, no collision).</summary>
+    private static void Plates(BuildContext ctx, FeatureId id, CatalogState catalog, int storey, InteriorGeometry sink)
     {
-        var (rings, height, floor, top, levels) = PlateSection(ctx, id);
-        var y = PlateY(floor, height, top, storey);
-        foreach (var ring in rings)
+        foreach (var part in PlateSections(ctx, id, catalog))
         {
-            var polygon = new PolygonRings(ring);
-            sink.Plate(S.Stone(S.Floor), polygon, y, true);
-            sink.Plate(S.Wall(S.CeilingWhite), polygon, y - S.SlabThick, false);
-            if (storey > levels) continue;
-            var y1 = MathF.Min(y + height, top - S.CeilingGap);
-            for (var i = 0; i < ring.Count; i++)
-            {
-                Vector2 a = ring[i], b = ring[(i + 1) % ring.Count];
-                if (Vector2.Distance(a, b) < 0.1f) continue;
-                var n = PlanGeometry.RightUnitNormal(a, b);
-                sink.Prism(S.Wall(S.WallWhite), [a - n * S.LiningOut, b - n * S.LiningOut, b - n * S.LiningIn, a - n * S.LiningIn], y, y1);
-            }
-            if (storey == levels) sink.Plate(S.Wall(S.CeilingWhite), polygon, top - S.CeilingGap, false);
+            var level = part.Storeys.SingleOrDefault(candidate => candidate.Index == storey);
+            if (level is null) continue;
+            var roof = storey == part.Storeys.Max(candidate => candidate.Index);
+            var top = level.FloorY + level.Height - (roof ? S.CeilingGap : 0f);
+            sink.Plate(S.Stone(S.Floor), part.Footprint, level.FloorY, true);
+            sink.Plate(S.Wall(S.CeilingWhite), part.Footprint, level.FloorY - S.SlabThick, false);
+            foreach (var ring in new[] { part.Footprint.Outer }.Concat(part.Footprint.Holes))
+                for (var i = 0; i < ring.Count; i++)
+                {
+                    Vector2 a = ring[i], b = ring[(i + 1) % ring.Count];
+                    if (Vector2.Distance(a, b) < 0.1f) continue;
+                    var n = PlanGeometry.RightUnitNormal(a, b);
+                    sink.Prism(S.Wall(S.WallWhite), [a - n * S.LiningOut, b - n * S.LiningOut, b - n * S.LiningIn, a - n * S.LiningIn], level.FloorY, top);
+                }
+            sink.Plate(S.Wall(S.CeilingWhite), part.Footprint, roof ? top : top - S.SlabThick, false);
         }
     }
 }

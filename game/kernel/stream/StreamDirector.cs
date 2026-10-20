@@ -7,7 +7,7 @@ using Campus.Kernel.Lod;
 using Campus.Kernel.Renderer;
 using Campus.Kernel.Bake;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using N = System.Numerics;
 
 namespace Campus.Kernel.Stream;
@@ -39,6 +39,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private IBakeService _bake = null!;
     private IStreamMountQueue _mount = null!;
     private ICameraRig _camera = null!;
+    private IObserverState _observer = null!;
     private IWorldState _world = null!;
     private ICollisionWorld _collision = null!;
     private IMapService _maps = null!;
@@ -83,7 +84,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public bool ResidentReady => Error is null && _context is not null && _catalog is not null &&
         _groups.TryGetValue(StreamTile.Root, out var root) && root.Error is null && root.Mounted;
     public bool DestinationReady => _destinationConsumed ? Error is null && _context is not null : _destinationPlanned && _destination is { } destination &&
-        SelectionReady(_destinationRequired, _destinationRefined) && AuxiliaryReady(destination: true) && (_interiors?.DestinationReady ?? true) && (_destinationMode switch
+        SelectionReady(_destinationRequired, _destinationRefined) && ParticipantsReady(destination: true) && (_interiors?.DestinationReady ?? true) && (_destinationMode switch
         {
             ViewMode.Fly => true,
             ViewMode.Walk => _collision.Ready(destination.Position, WalkRules.ArrivalCollisionRadius),
@@ -95,7 +96,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public int VisibleTiles => _visibility.Drawn.Count;
     public bool CanActivateVisual => _retiringBundles.Count == 0 && _detachPending.Count == 0;
     /// <summary>The current view uses the same complete selected-geometry barrier as a formal arrival.</summary>
-    public bool ViewReady => SelectionReady(_viewRequired, _refined) && AuxiliaryReady(destination: false);
+    public bool ViewReady => SelectionReady(_viewRequired, _refined) && ParticipantsReady(destination: false);
     /// <summary>Raw packed-buffer bytes from TileBundle stats; not compressed disk size or measured VRAM.</summary>
     public long ResidentBytes => _groups.Values.Sum(group => group.Bundles.Sum(bundle => bundle.Bytes));
 
@@ -109,16 +110,17 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Stream;
-        _captureMode = Services.Get<BootRunOptions>().CaptureMode;
-        _bake = Services.Get<IBakeService>(); _mount = Services.Get<IStreamMountQueue>();
-        _camera = Services.Get<ICameraRig>(); _world = Services.Get<IWorldState>();
+        _captureMode = KernelServices.Get<BootRunOptions>().CaptureMode;
+        _bake = KernelServices.Get<IBakeService>(); _mount = KernelServices.Get<IStreamMountQueue>();
+        _camera = KernelServices.Get<ICameraRig>(); _world = KernelServices.Get<IWorldState>();
+        _observer = KernelServices.Get<IObserverState>();
         _world.InstanceChanged += OnWorldInstanceChanged;
-        _maps = Services.Get<IMapService>(); // Resolve at node Ready, never from a constructor dependency cycle.
-        _terrain = Services.Get<ITerrainPreparation>();
+        _maps = KernelServices.Get<IMapService>(); // Resolve at node Ready, never from a constructor dependency cycle.
+        _terrain = KernelServices.Get<ITerrainPreparation>();
         _maps.Arrived += OnMapArrived;
-        _collision = Services.Get<ICollisionWorld>();
-        _materials = new(Services.Get<IToonMaterialProvider>(), Services.Get<IShaderMaterialSource>());
-        _reflections = Services.Get<IReflectionWorld>(); _reflections.Changed += OnReflectionChanged;
+        _collision = KernelServices.Get<ICollisionWorld>();
+        _materials = new(KernelServices.Get<IToonMaterialProvider>(), KernelServices.Get<IShaderMaterialSource>());
+        _reflections = KernelServices.Get<IReflectionWorld>(); _reflections.Changed += OnReflectionChanged;
         _interiors = new(_bake, _mount, _materials, _reflections, QueueRetirement, _captureMode);
     }
     public void OnMapLoaded(IMapContext context)
@@ -133,8 +135,8 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _reflectionDirty = true;
         _tree = new(context.Descriptor.Bounds, _settings);
         _visibility = new(_settings.FadeSeconds);
-        var contextSource = Services.Get<IBakeContextSource>();
-        var firstModule = Services.Services.Query<IContentModule>(RegistrationKind.Content, context.Descriptor.Id).FirstOrDefault();
+        var contextSource = KernelServices.Get<IBakeContextSource>();
+        var firstModule = KernelServices.Services.Query<IContentModule>(RegistrationKind.Content, context.Descriptor.Id).FirstOrDefault();
         _interiors!.Load(context, firstModule is null ? null : contextSource.GetPreparedContext(context, firstModule.Id));
         _catalogGeneration = _mapGeneration;
         _catalogTask = BuildCatalog(contextSource.GetPreparedModuleTilesAsync(context));
@@ -156,7 +158,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _destinationPlanned = false; _destinationConsumed = false;
         _destinationSequence++; _destinationTransition = null; _mapRequestSequence = _arrivedSequence = 0;
         _mount.RemoveMap(from);
-        UnloadAuxiliary();
+        UnloadParticipants();
         _interiors?.Unload();
         _requests.Clear(); _issued.Clear(); _required.Clear(); _viewRequired.Clear(); _refined.Clear();
         _destinationRequired.Clear(); _destinationRefined.Clear(); _displayRefined.Clear(); _visible.Clear(); _visibility.Clear();
@@ -181,7 +183,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             _destinationTransition = targetTransition; _arrivedSequence = 0;
             _mapRequestSequence = targetTransition is null ? 0 : _destinationSequence;
         }
-        _interiors?.Prefetch(null);
+        _interiors?.Prefetch(null, destination.Position);
         _replan = _settings.ReplanSeconds;
     }
     public override void _Process(double delta)
@@ -192,7 +194,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _interiors?.Poll(Math.Max(0, _settings.MaximumPreparations - _preparing.Count - _interiors.Preparations));
         if (_interiors?.Error is { } interiorError) _error ??= interiorError;
         PollHandles();
-        PollAuxiliaryErrors();
+        PollParticipantErrors();
         if (_context is null || _catalog is null || _tree is null) return;
         if (!_destinationConsumed && _destination is { } target && DestinationReady &&
             _camera.ActiveTransit is null && _camera.Mode == _destinationMode &&
@@ -201,7 +203,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
                 CanUseLiveCamera() && N.Vector3.DistanceSquared(_camera.Pose.Position, target.Position) <= 4))
         {
             _destinationConsumed = true; _destinationRequired.Clear(); _destinationRefined.Clear();
-            _interiors?.Prefetch(null); _replan = _settings.ReplanSeconds;
+            _interiors?.Prefetch(null, target.Position); _replan = _settings.ReplanSeconds;
         }
         var step = (float)Math.Min(delta, .1);
         if (_haveCamera && step > 0)
@@ -236,8 +238,8 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
                 continue;
             }
             var group = _groups[request.Tile];
-            group.Auxiliary.TryGetValue(request.Key, out var auxiliary);
-            _pending.Add(new(request, handle, _mount.Revision, group, group.GeometryRevision, auxiliary));
+            group.Participants.TryGetValue(request.Key, out var participant);
+            _pending.Add(new(request, handle, _mount.Revision, group, group.GeometryRevision, participant));
         }
         _interiors?.AdvanceRetention(delta, _camera.Pose.Position);
     }
@@ -259,7 +261,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         {
             if (_context is not null && _catalogGeneration == _mapGeneration)
             {
-                try { ValidateAuxiliary(task.Result); _catalog = task.Result; }
+                try { LoadParticipantEntries(task.Result); _catalog = task.Result; }
                 catch (Exception error) { Fail(StreamTile.Root, error.GetBaseException().Message); }
             }
         }
@@ -287,13 +289,13 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             if (!IsCurrent(pending)) { _pending.RemoveAt(i); continue; }
             if (pending.Handle.State == BakeState.Failed)
             {
-                Fail(pending.Request.Tile, pending.Handle.Error ?? $"Bake failed: {pending.Request.Key}", pending.Auxiliary);
+                Fail(pending.Request.Tile, pending.Handle.Error ?? $"Bake failed: {pending.Request.Key}", pending.Participant);
                 _pending.RemoveAt(i); continue;
             }
             if (pending.Handle.State != BakeState.Ready) throw new InvalidDataException("Unknown bake state.");
-            if (pending.Auxiliary is { } auxiliary)
+            if (pending.Participant is { } participant)
             {
-                MountAuxiliary(pending, auxiliary);
+                MountParticipant(pending, participant);
                 _pending.RemoveAt(i); continue;
             }
             if (_preparing.Count + (_interiors?.Preparations ?? 0) >= _settings.MaximumPreparations) { i++; continue; }
@@ -436,19 +438,19 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     }
     private void RetireUnneeded()
     {
-        RetireAuxiliary();
+        RetireParticipants();
         foreach (var tile in _groups.Keys.Where(tile => tile != StreamTile.Root && !_required.Contains(tile) &&
                      !_destinationRequired.Contains(tile) && !_visibility.Drawn.Contains(tile)).Order().ToArray())
         {
             var group = _groups[tile];
-            if (!group.GeometryRequested && group.Auxiliary.Count > 0) continue;
+            if (!group.GeometryRequested && group.Participants.Count > 0) continue;
             group.Work?.Abandon(); group.Work = null;
             foreach (var bundle in group.Bundles) QueueRetirement(bundle);
             foreach (var key in group.Keys) _issued.Remove(key);
             group.Bundles.Clear(); group.Keys.Clear(); group.Expected = 0;
             group.Queued = group.Mounted = group.GeometryRequested = false; group.GeometryRevision++;
             group.Error = null;
-            if (group.Auxiliary.Count == 0) _groups.Remove(tile);
+            if (group.Participants.Count == 0) _groups.Remove(tile);
         }
     }
     private void QueueRetirement(PreparedTile bundle)
@@ -465,11 +467,12 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         while (_retiringBundles.TryPeek(out var bundle) && FrameClock.MonotonicMilliseconds - start < budgetMilliseconds)
             if (bundle.ReleaseOne()) _retiringBundles.Dequeue();
     }
-    private void Fail(StreamTile tile, string error, AuxiliaryTile? auxiliary = null)
+    private void Fail(StreamTile tile, string error, ParticipantTile? participant = null)
     {
-        if (auxiliary is not null) auxiliary.Error = error;
+        if (participant is not null) participant.Error = error;
         else if (_groups.TryGetValue(tile, out var group)) group.Error = error;
-        if (auxiliary is not null ? auxiliary.DestinationRequired : tile == StreamTile.Root || _destinationRequired.Contains(tile)) _error ??= error;
+        if (participant is not null ? participant.DestinationRequired || participant.Participant.Kind == StreamMountKind.Collision
+            : tile == StreamTile.Root || _destinationRequired.Contains(tile)) _error ??= error;
         GD.PushError(error);
     }
     private static async Task<ModuleTileCatalog> BuildCatalog(Task<PreparedBakeTiles> tiles)
@@ -512,7 +515,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         catch (Exception) { }
     }
     private sealed record Pending(StreamRequest Request, IBakeHandle Handle, long Revision, TileGroup? Group,
-        long GeometryRevision, AuxiliaryTile? Auxiliary)
+        long GeometryRevision, ParticipantTile? Participant)
     { public bool Pinned { get; set; } }
     private sealed record Preparing(StreamTile Tile, long Revision, Task<PreparedTile> Task, TileGroup Group, long GeometryRevision);
     private sealed record TerrainPlan(IMapContext Context, IWorldModel World, long Generation, long Sequence,
@@ -523,7 +526,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         public int Expected;
         public bool GeometryRequested;
         public long GeometryRevision;
-        public Dictionary<BakeKey, AuxiliaryTile> Auxiliary { get; } = [];
+        public Dictionary<BakeKey, ParticipantTile> Participants { get; } = [];
         public List<PreparedTile> Bundles { get; } = [];
         public HashSet<BakeKey> Keys { get; } = [];
         public VisualMountWork? Work;

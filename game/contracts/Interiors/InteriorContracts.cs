@@ -38,6 +38,8 @@ public sealed record InteriorLayout(FeatureId Feature, IReadOnlyList<StoreyInfo>
     IReadOnlyList<ElevatorDecl> Elevators, IReadOnlyList<int> OpenStoreys, IReadOnlyList<int> AtriumVisibleStoreys,
     Box3 Bounds, uint PlanHash)
 {
+    /// <summary>Frozen once by interior input assembly; raw provider layouts have no published access areas.</summary>
+    [JsonRequired] public IReadOnlyList<StoreyInfo> OpenAreas { get; init; } = [];
     public IReadOnlyList<DoorLeafDecl> Doors { get; init; } = [];          // 会动的门扇
 }
 
@@ -64,12 +66,15 @@ public interface IInteriorProvider           // gen 里实现；加载期配置�
 }
 // ContentOutput 里室内层的实例一律带 IgnoreOcclusionCulling 的标记，室内遮挡体单独成表（WP-33 管理显隐，WLD-INTERIORS）
 
-// 室内索引：Storeys 保留整栋楼的空间层；OpenStoreys 只列正式提供者按目录开放的层，不可由 Storeys 推断。
+// 室内索引：Storeys 保留整栋楼的空间层；OpenStoreys 只用于枚举；可达许可只查已冻结 OpenAreas 与实际位置。
 public sealed record InteriorIndexEntry(FeatureId Feature, IReadOnlyList<StoreyInfo> Storeys,
     IReadOnlyList<EntranceDecl> Entrances, bool Open, string? ProviderId,
-    [property: JsonRequired] IReadOnlyList<int> OpenStoreys);
+    [property: JsonRequired] IReadOnlyList<int> OpenStoreys,
+    [property: JsonRequired] IReadOnlyList<StoreyInfo> OpenAreas);
 public interface IInteriorIndex
 {
     InteriorIndexEntry? Get(FeatureId id);
+    /// <summary>Actual point permission; OpenStoreys is only a derived enumeration for bake/stream keys.</summary>
+    bool IsOpen(FeatureId id, int storey, Vector3 position);
     IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r);       // 入口预取、地图图层（SYS-ATLAS 的"可进入的室内"）、G19
 }

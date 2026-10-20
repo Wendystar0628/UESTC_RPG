@@ -191,7 +191,8 @@ public sealed class WorldModelTests
         foreach (var interior in authoredInteriors.RootElement.GetProperty("interiors").EnumerateArray())
         foreach (var feature in interior.GetProperty("featureIds").EnumerateArray())
             AssertThat(result.World.Interiors.Get(new(feature.GetString()!))!.OpenStoreys.SequenceEqual(
-                interior.GetProperty("openFloors").EnumerateArray().Select(floor => floor.GetInt32()).Order())).OverrideFailureMessage("The interior index lost the authoritative open floor range.").IsTrue();
+                InteriorEntranceJson.ParseOpenParts(interior).Where(part => part.FeatureId == new FeatureId(feature.GetString()!))
+                    .SelectMany(part => part.Floors).Distinct().Order())).OverrideFailureMessage("The interior index lost the authoritative open floor range.").IsTrue();
         foreach (var raw in authoredInteriors.RootElement.GetProperty("closedEntrances").EnumerateArray())
         {
             var entry = result.World.Interiors.Get(new(raw.GetProperty("featureId").GetString()!))!;
@@ -260,7 +261,7 @@ public sealed class WorldModelTests
         {
             ["world/geo.json"] = Geo,
             ["world/test.json"] = Features,
-            ["interiors.json"] = "{\"version\":1,\"interiors\":[" + open + "],\"closedEntrances\":[" + record + "]}"
+            ["interiors.json"] = "{\"version\":2,\"interiors\":[" + open + "],\"closedEntrances\":[" + record + "]}"
         });
 
     [TestCase, TestCategory(TestReason.Regression)]
@@ -346,7 +347,7 @@ public sealed class WorldModelTests
         var source=Load().World;var feature=new FeatureId("fixture:relation:1");
         var ring=source.Interiors.Get(feature)!.Storeys.First().Footprint;
         var levels=new StoreyInfo[]{new(7,2,3.2f,ring),new(8,5.2f,2.4f,ring)};
-        var prepared=WorldModelSnapshot.WithInteriors(source,[new(feature,levels,[],true,"fixture.provider",[7,8])]);
+        var prepared=WorldModelSnapshot.WithInteriors(source,[new(feature,levels,[],true,"fixture.provider",[7,8],levels)]);
         AssertThat(prepared.Spatial.MediumAt(new(-5,3,-5)).Storey==7&&prepared.Spatial.MediumAt(new(-5,6,-5)).Storey==8).IsTrue();
         AssertThat(prepared.Spatial.MediumAt(new(-5,7.7f,-5)).Kind==MediumKind.Air).IsTrue();
         AssertThat(source.Interiors.Get(feature)!.Storeys[0].Index==1&&prepared.Interiors.Get(feature)!.Storeys.SequenceEqual(levels)).IsTrue();

@@ -125,5 +125,22 @@ public static partial class PlanGeometry
         return points.Append(points[0]).Select(point => new Coordinate(point.X, point.Y)).ToArray();
     }
 
+    /// <summary>Intersect real plan areas with NTS, returning hole-free triangles for point-permission storage.</summary>
+    public static IReadOnlyList<IReadOnlyList<Vector2>> IntersectionTriangles(PolygonRings a, PolygonRings b)
+    {
+        Polygon Shape(PolygonRings p) => Factory.CreatePolygon(Factory.CreateLinearRing(ClosedCoordinates(p.Outer)),
+            p.Holes.Select(hole => Factory.CreateLinearRing(ClosedCoordinates(hole))).ToArray());
+        var intersection = Shape(a).Intersection(Shape(b));
+        if (intersection.IsEmpty || intersection.Area == 0) return [];
+        var triangles = NetTopologySuite.Triangulate.Polygon.PolygonTriangulator.Triangulate(intersection);
+        var result = new List<IReadOnlyList<Vector2>>();
+        for (var index = 0; index < triangles.NumGeometries; index++)
+        {
+            var polygon = (Polygon)triangles.GetGeometryN(index);
+            result.Add(polygon.ExteriorRing.Coordinates.Take(3).Select(p => new Vector2((float)p.X, (float)p.Y)).ToArray());
+        }
+        return result.AsReadOnly();
+    }
+
     public static float CrossFloat(Vector2 a, Vector2 b) => a.X * b.Y - a.Y * b.X;
 }

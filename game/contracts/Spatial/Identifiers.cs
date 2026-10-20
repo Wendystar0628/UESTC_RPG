@@ -6,7 +6,6 @@ public readonly record struct FeatureId(string Value);
 public readonly record struct PartId(string Value);
 public readonly record struct ModuleId(string Value);
 public readonly record struct ZoneId(string Value);
-public readonly record struct WpId(string Value);
 public readonly record struct ChannelId(string Value);
 public readonly record struct PaletteToken(string Value);
 public readonly record struct MapId(string Value);

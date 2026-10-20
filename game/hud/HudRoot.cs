@@ -8,7 +8,6 @@ using Campus.Hud.Pages;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud;
 
@@ -29,6 +28,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
     private const float IdleFade = 4f;
     private const double RefreshInterval = 0.1;
 
+    private HudRootDependencies _dependencies = null!;
     private UiBootOptions _args = new();
     private UiThemeBuilder _theme = null!;
 
@@ -74,6 +74,12 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
         ProcessPriority = FramePriority.Hud;
     }
 
+    public void Bind(HudRootDependencies dependencies)
+    {
+        ArgumentNullException.ThrowIfNull(dependencies);
+        _dependencies = dependencies;
+    }
+
     public override void _Ready()
     {
         RenderingServer.Singleton.FramePostDraw += OnCoverageDrawn;
@@ -91,18 +97,18 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
             SyncState();
             return;
         }
-        _settings = Services.Get<HudSettings>();
-        _model = Services.Get<HudModel>();
-        _motion = Services.Get<MotionPolicy>();
-        _control = Services.Get<IWorldControl>();
-        _flow = Services.Get<IAppFlow>();
-        _audio = Services.Get<IAudioService>();
+        _settings = _dependencies.Settings;
+        _model = _dependencies.Model;
+        _motion = _dependencies.Motion;
+        _control = _dependencies.WorldControl;
+        _flow = _dependencies.Flow;
+        _audio = _dependencies.Audio;
 
         var tokens = UiTokens.Load();
-        var colors = UiColors.Load();
-        var materials = new UiMaterials(tokens, colors);
+        var colors = UiColors.Load(_dependencies.PaletteCatalog.Catalog);
+        var materials = new UiMaterials(tokens, colors, _dependencies.ShaderMaterials);
         var theme = new UiThemeBuilder(tokens, colors);
-        _clock = Services.Get<UiThemeClock>();
+        _clock = _dependencies.ThemeClock;
         _kit = new UiKit(tokens, colors, materials, theme, _motion, _clock);
         _theme = theme;
 
@@ -223,7 +229,7 @@ public partial class HudRoot : CanvasLayer, IBootParticipant, IAppLoadingPresent
             _settings.Changed -= OnSettingsChanged;
             _flow.Changed -= OnFlowChanged;
             _model.World.InstanceChanged -= OnWorldChanged;
-            Services.Get<IViewControl>().WalkEntryRefused -= OnWalkEntryRefused;
+            _dependencies.ViewControl.WalkEntryRefused -= OnWalkEntryRefused;
         }
         _router.InterfaceModeChanged -= OnInterfaceModeChanged;
         foreach (var layer in _layers) layer.Dispose();

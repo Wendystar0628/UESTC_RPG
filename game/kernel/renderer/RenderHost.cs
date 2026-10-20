@@ -3,12 +3,10 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using N = System.Numerics;
 
 namespace Campus.Kernel.Renderer;
-
-public readonly record struct RenderAccount(WpId Owner, int Handles, int Surfaces, int Triangles);
 
 /// <summary>Dynamic geometry host; static streamed TileBundles belong to WP-02.</summary>
 [KernelService(typeof(IRenderReadiness))]
@@ -16,12 +14,9 @@ public readonly record struct RenderAccount(WpId Owner, int Handles, int Surface
 [KernelNode("render-host")]
 public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAware
 {
-    private sealed class Entry(WpId owner, Node3D root)
+    private sealed class Entry(Node3D root)
     {
-        public WpId Owner { get; } = owner;
         public Node3D Root { get; } = root;
-        public int Surfaces { get; set; }
-        public int Triangles { get; set; }
         public bool Pending { get; set; } = true;
         public List<ArrayMesh> Meshes { get; } = [];
         public List<Draw> Draws { get; } = [];
@@ -52,46 +47,45 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
 
     public override void _Ready()
     {
-        _materials = Services.Get<IToonMaterialProvider>();
+        _materials = KernelServices.Get<IToonMaterialProvider>();
         // The source publishes one immutable object shared with the baker and other indexed hosts.
-        _catalog ??= Services.Get<IPaletteCatalogSource>().Catalog;
-        _reflection = Services.Get<IReflectionWorld>();
+        _catalog ??= KernelServices.Get<IPaletteCatalogSource>().Catalog;
+        _reflection = KernelServices.Get<IReflectionWorld>();
         _reflection.Changed += RebuildReflectionProxies;
         ProcessPriority = FramePriority.StreamMount;
         RenderingServer.Singleton.FramePostDraw += ReportReleasedInstances;
         GD.Print($"[WP-01][phase=render-instances] event=ready globalUniformSlots=" +
             ProjectSettings.GetSetting("rendering/limits/global_shader_variables/buffer_size").AsInt64());
     }
-    public RenderHandle Mount(ContentOutput content, WpId owner)
+    public RenderHandle Mount(ContentOutput content)
     {
         ArgumentNullException.ThrowIfNull(content);
         if (content.Instances.Count > 0)
             throw new NotSupportedException("Dynamic RenderHost does not support ContentOutput.Instances; submit static instance batches through the WP-02 bake/stream path.");
         if (_materials is null) throw new InvalidOperationException("RenderHost has not entered the stage.");
         var catalog = _catalog ?? throw new InvalidOperationException("RenderHost has no captured palette catalog.");
-        ArgumentException.ThrowIfNullOrWhiteSpace(owner.Value);
         var handle = ++_next;
-        var root = new Node3D { Name = $"Render_{owner.Value}_{handle}" };
-        var entry = new Entry(owner, root);
+        var root = new Node3D { Name = $"Render_{handle}" };
+        var entry = new Entry(root);
         _entries.Add(handle, entry);
         AddChild(root);
         try
         {
             var parts = content.Parts.Select(part =>
             {
-                var matches = Services.Services.Query<IPartDef>(RegistrationKind.Part).Where(item => item.Id == part.Part.Value).ToArray();
+                var matches = KernelServices.Services.Query<IPartDef>(RegistrationKind.Part).Where(item => item.Id == part.Part.Value).ToArray();
                 if (matches.Length != 1)
-                    throw new InvalidOperationException($"Dynamic content owner '{owner.Value}' requires exactly one registration for part '{part.Part.Value}' " +
+                    throw new InvalidOperationException($"Dynamic content handle '{handle}' requires exactly one registration for part '{part.Part.Value}' " +
                         $"with parameters {part.Params.GetType().FullName}; found {matches.Length}. " +
                         $"Matching types: {string.Join(", ", matches.Select(item => item.Type.FullName).Order(StringComparer.Ordinal))}.");
                 var registration = matches[0];
-                return (Part: part, Definition: Services.Services.Create(registration.Type));
+                return (Part: part, Definition: KernelServices.Services.Create(registration.Type));
             }).ToArray();
             _ = PrepareAndMount(handle, entry, content.Meshes, parts, catalog);
         }
         catch (Exception error)
         {
-            GD.PushError($"[WP-01][phase=render-part-resolve][owner={owner.Value}][handle={handle}] {error}");
+            GD.PushError($"[WP-01][phase=render-part-resolve][handle={handle}] {error}");
             Unmount(new(handle));
             throw;
         }
@@ -129,17 +123,15 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
                 var draw = new Draw(instance, mesh, surface.Geometry);
                 entry.Draws.Add(draw);
                 CreateReflectionProxy(draw);
-                entry.Surfaces++;
-                entry.Triangles += surface.Geometry.Index.Length / 3;
             }
             entry.Pending = false;
-            ReportInstanceCounts("mounted", entry.Owner.Value, handle);
+            ReportInstanceCounts("mounted", handle);
         }
         catch (Exception error)
         {
-            GD.PushError($"[WP-01][phase={phase}][owner={entry.Owner.Value}][handle={handle}] {error}");
+            GD.PushError($"[WP-01][phase={phase}][handle={handle}] {error}");
             if (!_entries.ContainsKey(handle)) return;
-            Error = $"Dynamic content mount failed for {entry.Owner.Value}: {error.GetBaseException().Message}";
+            Error = $"Dynamic content mount failed for handle {handle}: {error.GetBaseException().Message}";
             Unmount(new(handle));
         }
     }
@@ -196,20 +188,20 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         _retiring.Add((entry.Root, entry.Draws.Count));
         entry.Root.QueueFree();
         foreach (var mesh in entry.Meshes) mesh.Dispose();
-        ReportInstanceCounts("queued-free", entry.Owner.Value, handle.Value);
+        ReportInstanceCounts("queued-free", handle.Value);
     }
     private void ReportReleasedInstances()
     {
         var count = _retiring.RemoveAll(item => !GodotObject.IsInstanceValid(item.Root));
-        if (count > 0) ReportInstanceCounts("nodes-freed-postdraw", "-", 0);
+        if (count > 0) ReportInstanceCounts("nodes-freed-postdraw", 0);
     }
-    private void ReportInstanceCounts(string action, string owner, ulong handle)
+    private void ReportInstanceCounts(string action, ulong handle)
     {
         var draws = _entries.Values.SelectMany(entry => entry.Draws).ToArray();
         var retiring = _retiring.Sum(item => item.Draws);
         _peakDraws = Math.Max(_peakDraws, draws.Length + retiring);
         var materials = draws.Select(draw => draw.Instance.MaterialOverride).Distinct(ReferenceEqualityComparer.Instance).Count();
-        GD.Print($"[WP-01][phase=render-instances] event={action} owner={owner} handle={handle} handles={_entries.Count} " +
+        GD.Print($"[WP-01][phase=render-instances] event={action} handle={handle} handles={_entries.Count} " +
             $"draws={draws.Length} materials={materials} retiring={retiring} peak={_peakDraws} frame={Engine.GetProcessFrames()}");
     }
     public override void _ExitTree()
@@ -220,9 +212,6 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         foreach (var pair in _shaderMaterials.OrderBy(pair => pair.Key)) pair.Value.Dispose();
         _shaderMaterials.Clear();
     }
-    public IReadOnlyList<RenderAccount> Accounts() => _entries.Values.GroupBy(entry => entry.Owner)
-        .OrderBy(group => group.Key.Value, StringComparer.Ordinal)
-        .Select(group => new RenderAccount(group.Key, group.Count(), group.Sum(entry => entry.Surfaces), group.Sum(entry => entry.Triangles))).ToArray();
     public void OnMapUnloading(MapId from)
     {
         foreach (var handle in _entries.Keys.Order().ToArray()) Unmount(new(handle));
@@ -233,7 +222,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
     private Material ResolveShader(ShaderId shader)
     {
         if (_shaderMaterials.TryGetValue(shader, out var cached)) return cached;
-        var material = Services.Get<IShaderMaterialSource>().Create(shader);
+        var material = KernelServices.Get<IShaderMaterialSource>().Create(shader);
         _shaderMaterials.Add(shader, material);
         return material;
     }

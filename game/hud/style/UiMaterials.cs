@@ -1,6 +1,5 @@
 using Campus.Contracts;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud.Style;
 
@@ -14,9 +13,8 @@ public sealed class UiMaterials
 
     private readonly ShaderMaterial[] _panel = new ShaderMaterial[4];
 
-    public UiMaterials(UiTokens tokens, UiColors colors)
+    public UiMaterials(UiTokens tokens, UiColors colors, IShaderMaterialSource source)
     {
-        var source = Services.Get<IShaderMaterialSource>();
         var day = colors.RoleTable(tokens, "light");
         var night = colors.RoleTable(tokens, "dark");
         for (var kind = 0; kind < _panel.Length; kind++)

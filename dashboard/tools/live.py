@@ -29,7 +29,7 @@ def build_block(items, n_engine, n_build, editors):
     held = repo.lock_held()
     holder = None
     if held:   # 锁文件是空的，不记谁占着：取在跑的编译、引擎、门禁、截图里最久的那个
-        busy = [s for s in items if s["state"] == "running" and (s["kind"] in ("build", "engine", "gate") or s["name"] == "fixed_shots.ps1")]
+        busy = [s for s in items if s["state"] == "running" and (s["kind"] in ("build", "engine", "gate") or s["name"] == "fixed-shots.ps1")]
         if busy:
             b = min(busy, key=lambda s: s["since"])
             holder = f"{b['name']}（{b['where']}）" if b.get("where") else b["name"]

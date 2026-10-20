@@ -172,7 +172,7 @@ public sealed class EntranceHeightReferenceTests
             Entry.Replace("\"open\":true", "\"open\":false,\"heightRef\":\"pad\"", StringComparison.Ordinal)
         })
         {
-            using var catalog = JsonDocument.Parse("{\"interiors\":[],\"closedEntrances\":[" + door + "]}");
+            using var catalog = JsonDocument.Parse("{\"version\":2,\"interiors\":[],\"closedEntrances\":[" + door + "]}");
             AssertThrown(() => InteriorEntranceJson.ParseClosedEntrances(catalog.RootElement)).IsInstanceOf<JsonException>();
         }
     }

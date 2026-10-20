@@ -20,7 +20,7 @@ public sealed class NorthTerrainTests
     public void TerrainOverlayParsesAndReferencesRealRoads()
     {
         var file = Terrain();
-        AssertThat(file.Zone.Value == "north" && file.Owner.Value == "WP-20").OverrideFailureMessage("file zone and owner").IsTrue();
+        AssertThat(file.Zone.Value == "north").OverrideFailureMessage("north terrain zone").IsTrue();
         var world = RealMapFixture.Load().World;
         var roads = world.Network.Roads.ToDictionary(r => r.Id);
         foreach (var op in file.Ops)

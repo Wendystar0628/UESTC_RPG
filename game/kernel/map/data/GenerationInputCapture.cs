@@ -1,7 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Parts;
 using Campus.Kernel.Registry;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 
 namespace Campus.Kernel.Maps;
 

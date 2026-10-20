@@ -5,7 +5,7 @@ using Campus.Kernel.Bake;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Boot;
 
@@ -49,12 +49,12 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     public override void _Ready()
     {
         ProcessPriority = FramePriority.MapRuntime;
-        _stream = Services.Get<IMapStreamState>();
-        _collision = Services.Get<ICollisionWorld>();
-        _renderer = Services.Get<IRenderReadiness>();
-        _pipelines = Services.Get<PipelineWarmup>();
-        _camera = Services.Get<ICameraRig>();
-        _terrain = Services.Get<ITerrainPreparation>();
+        _stream = KernelServices.Get<IMapStreamState>();
+        _collision = KernelServices.Get<ICollisionWorld>();
+        _renderer = KernelServices.Get<IRenderReadiness>();
+        _pipelines = KernelServices.Get<PipelineWarmup>();
+        _camera = KernelServices.Get<ICameraRig>();
+        _terrain = KernelServices.Get<ITerrainPreparation>();
     }
 
     /// <summary>Stage exit only: stop producers, drain preparation and release every map-owned resource.</summary>
@@ -92,7 +92,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         catch (Exception error) { ReportFailure(from, "map-unload", null, error); failures.Add(error); }
         finally
         {
-            try { await Services.Services.ReleaseMapAsync(from); }
+            try { await KernelServices.Services.ReleaseMapAsync(from); }
             catch (Exception error) { ReportFailure(from, "map-scope-release", null, error); failures.Add(error); }
             _loaded = null;
             _context = null;
@@ -114,25 +114,8 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _contentReadiness = null;
         try
         {
-            var camera = Services.Get<Camera3D>();
+            var camera = KernelServices.Get<Camera3D>();
             camera.Far = BackdropInputs.CameraFar(context.Descriptor, context.SourceInputs, StageCamera.DefaultFarClip, camera.Near);
-            var nodes = Services.Services.Query<Node>(RegistrationKind.Node, context.Descriptor.Id)
-                .Where(entry => entry.Lifetime == RegistrationLifetime.Map)
-                .OrderBy(entry => entry.Id, StringComparer.Ordinal)
-                .Select(entry => (entry.Type, Node: Services.Services.Create(entry.Type, context.Descriptor.Id) as Node
-                    ?? throw new InvalidOperationException($"KernelNode does not inherit Node: {entry.Id}.")))
-                .ToArray();
-            foreach (var (_, node) in nodes) GetParent().AddChild(node);
-            // Merge map/global registration IDs so equal-priority nodes retain one tree order.
-            var nodeIds = Services.Services.Query<Node>(RegistrationKind.Node, context.Descriptor.Id)
-                .GroupBy(entry => entry.Type).ToDictionary(group => group.Key,
-                    group => group.OrderBy(entry => entry.Id, StringComparer.Ordinal).First().Id);
-            var stage = GetParent();
-            foreach (var node in stage.GetChildren().Where(node => nodeIds.ContainsKey(node.GetType()))
-                         .OrderBy(node => nodeIds[node.GetType()], StringComparer.Ordinal))
-                stage.MoveChild(node, stage.GetChildCount() - 1);
-            if (nodes.Any(item => !item.Node.IsInsideTree()))
-                throw new InvalidOperationException("Every map kernel node must enter the tree before map callbacks.");
             _loaded = context.Descriptor.Id;
             _context = context;
             _preparing = PrepareMap(context, ++_mapGeneration);
@@ -141,7 +124,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         {
             _error = error.GetBaseException().Message;
             _mountCompletion.TrySetException(error);
-            ReportFailure(context.Descriptor.Id, "map-node-mount", null, error);
+            ReportFailure(context.Descriptor.Id, "map-mount", null, error);
             throw;
         }
         return _mountCompletion.Task;
@@ -348,5 +331,5 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private static void ReportFailure(MapId map, string phase, string? receiver, Exception error) =>
         GD.PushError($"[WP-01][map={map.Value}][phase={phase}][receiver={receiver ?? "-"}] {error}");
 
-    private static IEnumerable<object> Instances(MapId map) => Services.Services.RuntimeInstances<object>(map);
+    private static IEnumerable<object> Instances(MapId map) => KernelServices.Services.RuntimeInstances<object>(map);
 }

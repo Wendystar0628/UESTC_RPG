@@ -226,8 +226,7 @@ internal static class TargetSourceFingerprint
             throw new InvalidDataException($"Unrecognized generated production Compile item: {project}: {path}.");
         if (path.StartsWith("game/contracts/", StringComparison.Ordinal)) return "shared";
         if (path.StartsWith("game/gen/", StringComparison.Ordinal) && !path.StartsWith("game/gen/maps/", StringComparison.Ordinal)) return "shared";
-        if (path.StartsWith("pipeline/map/", StringComparison.Ordinal) ||
-            path.StartsWith("game/kernel/bake/", StringComparison.Ordinal) ||
+        if (path.StartsWith("game/kernel/bake/", StringComparison.Ordinal) ||
             path is "game/kernel/map/data/GlobalBuildInputs.cs" or
                 "game/kernel/map/data/MapClaimCapture.cs" or
                 "game/kernel/map/data/GenerationInputCapture.cs" or

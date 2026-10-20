@@ -5,7 +5,7 @@ using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
@@ -17,10 +17,10 @@ public static class CaptureSequence
         Action<Pose>? validatePose = null)
     {
         var destination = options.Capture.Output ?? throw new ArgumentException("--out must be an absolute directory.");
-        var context = Services.Get<IMapService>().Context ?? throw new InvalidOperationException("Capture requires a loaded map.");
-        var rig = Services.Get<ICameraRig>();
-        var loading = Services.Get<IAppLoadingPresentation>();
-        var runtime = Services.Get<IMapRuntime>();
+        var context = KernelServices.Get<IMapService>().Context ?? throw new InvalidOperationException("Capture requires a loaded map.");
+        var rig = KernelServices.Get<ICameraRig>();
+        var loading = KernelServices.Get<IAppLoadingPresentation>();
+        var runtime = KernelServices.Get<IMapRuntime>();
         Directory.CreateDirectory(destination);
         var shots = AppBoot.FixedShots.Count > 0 ? AppBoot.FixedShots
             : options.Capture.Shots.Select(id => new FixedShot(id, id, options)).ToArray();
@@ -46,7 +46,7 @@ public static class CaptureSequence
             await cover.Covered;
             cancellationToken.ThrowIfCancellationRequested();
             var terrainPoint = new System.Numerics.Vector2(pose.Position.X, pose.Position.Z);
-            await Services.Get<ITerrainPreparation>().PrepareRegion(context, new(terrainPoint, terrainPoint), cancellationToken);
+            await KernelServices.Get<ITerrainPreparation>().PrepareRegion(context, new(terrainPoint, terrainPoint), cancellationToken);
             if (id != "T0") validatePose?.Invoke(pose);
             LogPhase("terrain-ready");
             if (AppBoot.FixedShots.Count > 0) CaptureWorldState.Start(shotOptions, context.Descriptor);

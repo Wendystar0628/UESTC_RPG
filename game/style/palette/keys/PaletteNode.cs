@@ -5,7 +5,7 @@ using Campus.Kernel.Renderer;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 using N = System.Numerics;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Style.Palette.Keys;
 
@@ -50,7 +50,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
         ProcessPriority = FramePriority.Palette;
         _script = new ColorScript(ColorScriptData.Load(Read("autumn.keys.json"), Read("derive.json"), Read("seasons.json"),
             Read("vegetation.json"), Read("weather.json")));
-        var source = Services.Get<IPaletteCatalogSource>();
+        var source = KernelServices.Get<IPaletteCatalogSource>();
         _catalog = source.Catalog;
         CatalogSource = source.GetType().Name;
         _composer = new PaletteComposer(_script, _catalog);
@@ -62,7 +62,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
         _image = Image.CreateFromData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
         _texture = ImageTexture.CreateFromImage(_image);
         // WP-37 produces the palette (ENG-PERF); once published the registry owns its lifetime: never Dispose it here.
-        _registration = Services.Get<IGlobalDataTextureRegistry>().RegisterOwned(_shaderGlobalPalette, _texture, _texture.GetRid());
+        _registration = KernelServices.Get<IGlobalDataTextureRegistry>().RegisterOwned(_shaderGlobalPalette, _texture, _texture.GetRid());
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalPalette, _texture);
         Current = _composer.Snapshot(first, ++_rev);
         WriteGlobals(first);
@@ -99,7 +99,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
     {
         if (_world is null)
         {
-            _world = Services.Get<IWorldState>();
+            _world = KernelServices.Get<IWorldState>();
             _world.InstanceChanged += OnWorldInstanceChanged;
         }
         var clock = _world.Clock;

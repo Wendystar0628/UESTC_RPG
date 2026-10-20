@@ -128,7 +128,7 @@ public sealed class GroundPavingTests
             {
                 Boundary = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]),
                 Features = features.ToDictionary(f => f.Id),
-                Interiors = new FakeInteriors(new InteriorIndexEntry(building.Id, [], entrances, true, null, [1])),
+                Interiors = new FakeInteriors(new InteriorIndexEntry(building.Id, [], entrances, true, null, [1], [])),
                 Fidelity = FidelityFixture.Create(features, groundAt: zone is { } zoneAt ? (x, _) => zoneAt(x) : null),
             };
         }

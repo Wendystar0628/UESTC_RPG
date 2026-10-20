@@ -1,5 +1,5 @@
 using Campus.Gen.World;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using System.Numerics;
 using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;

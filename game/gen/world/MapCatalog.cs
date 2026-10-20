@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Atlas;
 using Campus.Gen.Geometry;
 
 namespace Campus.Gen.World;
@@ -137,6 +138,101 @@ public sealed class MapCatalog
         ValidateRelative(file.Env.Sky);
         ValidateRelative(file.Env.Backdrop);
         if (file.Env.Outskirts is { } outskirts) ValidateRelative(outskirts);
+    }
+
+    /// <summary>Resolve every authored review input against the same frozen spawn and waypoint bytes.</summary>
+    public static IReadOnlyDictionary<string, Pose> ReviewPoses(MapDescriptor map,
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
+    {
+        var points = ReadWaypoints(files);
+        var result = points.ToDictionary(point => point.Id, point => point.Fly, StringComparer.Ordinal);
+        foreach (var spawn in map.Spawns) result[spawn.Id] = spawn.Fly;
+        if (!files.TryGetValue("review.json", out var bytes)) return result;
+        using var review = JsonDocument.Parse(bytes);
+        if (review.RootElement.GetProperty("version").GetInt32() != 1)
+            throw new WorldDataException("review.json", "version", "Unsupported review-pose version.");
+        var direct = new Dictionary<string, Pose>(result, StringComparer.Ordinal);
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in review.RootElement.GetProperty("poses").EnumerateArray())
+        {
+            var id = item.GetProperty("id").GetString() ?? "";
+            if (string.IsNullOrWhiteSpace(id) || !ids.Add(id))
+                throw new WorldDataException("review.json", id, "Empty or duplicate review pose ID.");
+            bool waypoint = item.TryGetProperty("waypoint", out var reference);
+            bool explicitPose = item.TryGetProperty("pose", out var rawPose);
+            if (waypoint == explicitPose)
+                throw new WorldDataException("review.json", id, "Requires exactly one waypoint or pose.");
+            Pose pose;
+            if (explicitPose) pose = rawPose.Deserialize<Pose>(ContractJson.Options);
+            else if (!direct.TryGetValue(reference.GetString() ?? "", out pose))
+                throw new WorldDataException("review.json", id, "References an unknown spawn or waypoint.");
+            ValidatePose(pose);
+            if (!result.TryAdd(id, pose))
+                throw new WorldDataException("review.json", id, "Review ID conflicts with a spawn or waypoint.");
+        }
+        return result;
+    }
+
+    /// <summary>Complete input validation after baked interior publication, before this map may mount.</summary>
+    public static void ValidateDestinations(MapDescriptor map,
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, IWorldModel world)
+    {
+        var interiors = world.Features.Keys.OrderBy(id => id.Value, StringComparer.Ordinal)
+            .Select(world.Interiors.Get).OfType<InteriorIndexEntry>().ToArray();
+        foreach (var point in ReadWaypoints(files))
+        {
+            Destination("waypoints.json", point.Id + ".fly", point.Fly);
+            Stand("waypoints.json", point.Id + ".stand", point.Stand);
+        }
+        foreach (var spawn in map.Spawns)
+        {
+            Destination("map.json", spawn.Id + ".fly", spawn.Fly);
+            Stand("map.json", spawn.Id + ".stand", spawn.Stand);
+        }
+        if (map.Title is { } title) Destination("map.json", "title.t0", title.T0);
+        foreach (var pair in ReviewPoses(map, files)) Destination("review.json", pair.Key, pair.Value);
+        if (files.TryGetValue("atlas/markers.json", out var atlasBytes))
+        {
+            using var atlas = JsonDocument.Parse(atlasBytes);
+            foreach (var marker in atlas.RootElement.GetProperty("markers").EnumerateArray())
+            {
+                if (!marker.TryGetProperty("teleport", out var value) || value.ValueKind == JsonValueKind.Null) continue;
+                var id = marker.GetProperty("id").Deserialize<MarkerId>(ContractJson.Options).Value;
+                var target = value.Deserialize<TeleportSpec>(ContractJson.Options)
+                    ?? throw new WorldDataException("atlas/markers.json", id, "Null teleport destination.");
+                Destination("atlas/markers.json", id + ".fly", target.Fly);
+                Stand("atlas/markers.json", id + ".stand", target.Stand);
+            }
+        }
+        return;
+
+        void Stand(string file, string id, WaypointStand? stand)
+        {
+            if (stand is not { } value) return;
+            Destination(file, id, new(value.Feet + Vector3.UnitY * WalkRules.StandingEye, value.YawDeg, 0));
+        }
+        void Destination(string file, string id, Pose pose)
+        {
+            ValidatePose(pose);
+            foreach (var entry in interiors)
+            {
+                var storey = entry.Storeys.Where(area => pose.Position.Y >= area.FloorY && pose.Position.Y < area.FloorY + area.Height &&
+                    PlanGeometry.PointInRing(new(pose.Position.X, pose.Position.Z), area.Footprint)).OrderBy(area => area.Index).FirstOrDefault();
+                if (storey is not null && !world.Interiors.IsOpen(entry.Feature, storey.Index, pose.Position))
+                    throw new WorldDataException(file, id,
+                        $"Destination is outside the catalog's open interior area: {entry.Feature.Value}/{storey.Index}.");
+            }
+        }
+    }
+
+    private static IReadOnlyList<Waypoint> ReadWaypoints(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files)
+    {
+        if (!files.TryGetValue("waypoints.json", out var bytes)) return [];
+        var points = JsonSerializer.Deserialize<WaypointFile>(bytes.Span, ContractJson.Options)
+            ?? throw new WorldDataException("waypoints.json", "root", "Waypoint file is null.");
+        if (points.Version != 1 || points.Waypoints.Select(point => point.Id).Distinct(StringComparer.Ordinal).Count() != points.Waypoints.Count)
+            throw new WorldDataException("waypoints.json", "root", "Unsupported waypoint version or duplicate IDs.");
+        return points.Waypoints;
     }
 
     public static void ValidatePose(Pose pose)

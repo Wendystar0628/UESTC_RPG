@@ -1,6 +1,6 @@
 using Campus.Contracts;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using NVector3 = System.Numerics.Vector3;
 
 namespace Campus.Kernel.Renderer;
@@ -26,8 +26,8 @@ public partial class AttributionLayer : CanvasLayer
     {
         Layer = 11;
         ProcessPriority = FramePriority.Hud;
-        _world = Services.Get<IWorldState>();
-        _palette = Services.Get<IPaletteProbe>();
+        _world = KernelServices.Get<IWorldState>();
+        _palette = KernelServices.Get<IPaletteProbe>();
         AddChild(Credit);
         Credit.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomRight);
         Credit.OffsetLeft = -215; Credit.OffsetRight = -12;

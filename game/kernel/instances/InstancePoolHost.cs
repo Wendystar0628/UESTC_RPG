@@ -2,7 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Renderer;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Instances;
 
@@ -137,8 +137,8 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             if (_activeMap != map)
                 throw new InvalidOperationException("The pool map is not active; stale or pre-load mounts are rejected.");
         }
-        _materials ??= Services.Get<IToonMaterialProvider>();
-        var catalog = _catalog ??= Services.Get<IPaletteCatalogSource>().Catalog;
+        _materials ??= KernelServices.Get<IToonMaterialProvider>();
+        var catalog = _catalog ??= KernelServices.Get<IPaletteCatalogSource>().Catalog;
         var triangles = 0;
         foreach (var surface in spec.Prototype.Surfaces)
         {
@@ -155,7 +155,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
             triangles = checked(triangles + surface.Index.Length / 3);
         }
 
-        var provider = _materials ??= Services.Get<IToonMaterialProvider>();
+        var provider = _materials ??= KernelServices.Get<IToonMaterialProvider>();
         var mesh = new ArrayMesh();
         try
         {
@@ -228,7 +228,7 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     private ShaderMaterial ResolveShader(ShaderId shader)
     {
         if (_shaderMaterials.TryGetValue(shader, out var cached)) return cached;
-        var material = (_shaderSource ??= Services.Get<IShaderMaterialSource>()).Create(shader);
+        var material = (_shaderSource ??= KernelServices.Get<IShaderMaterialSource>()).Create(shader);
         try { RequireSpatialMaterial(material); }
         catch { material?.Dispose(); throw; }
         _shaderMaterials.Add(shader, material);

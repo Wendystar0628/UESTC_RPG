@@ -1,7 +1,10 @@
+using System.Reflection;
+using Campus.Kernel.Stream;
 using Campus.Tests;
 using Campus.Camera.Walk;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Contracts.Maps;
 using Campus.Gen.Collision;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Maps;
@@ -26,6 +29,24 @@ public sealed class CollisionCoreTests
     {
         AssertThat(Engine.GetMainLoop() is SceneTree && OS.GetThreadCallerId() == OS.GetMainThreadId()).OverrideFailureMessage("G15 core requires the Godot test runner on the main thread.").IsTrue();
         var tree = (SceneTree)Engine.GetMainLoop();
+        using var cache = new TemporaryCache();
+        var options = new BakeOptions(cache.Path, Live: false, Strict: false, Background: false, MapOnly: false, LogicalProcessors: 3, SeedOverride: null);
+        using var terrain = new TerrainCacheService(options);
+        var registry = Campus.Kernel.Registry.Kernel.Services;
+        try
+        {
+            // Match the production discovery boundary before ReadClaims captures content instances.
+            registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))));
+            // These bindings borrow the same terrain/cache session used by world loading and CPU baking.
+            registry.Add(terrain);
+            registry.Add<ITerrainPreparation>(terrain);
+            await CheckNearbyWalking(tree, options, terrain);
+        }
+        finally { await registry.ShutdownAsync(); }
+    }
+
+    private static async Task CheckNearbyWalking(SceneTree tree, BakeOptions options, TerrainCacheService terrain)
+    {
         var source = new MapDataSource();
         var catalog = await source.ReadCatalog();
         var requested = System.Environment.GetEnvironmentVariable("UESTC_G15_MAP");
@@ -37,9 +58,6 @@ public sealed class CollisionCoreTests
         AssertThat(route.All(point => point.Stand is not null)).OverrideFailureMessage("The G15 short route requires both authored Stand points.").IsTrue();
         var claims = source.ReadClaims(id);
         var input = source.ReadLoadInput(entry);
-        using var cache = new TemporaryCache();
-        var options = new BakeOptions(cache.Path, Live: false, Strict: false, Background: false, MapOnly: false, LogicalProcessors: 3, SeedOverride: null);
-        using var terrain = new TerrainCacheService(options);
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
         using var bake = new BakeService(options, terrain, new GlobalBuildInputs().Snapshot);

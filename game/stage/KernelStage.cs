@@ -16,7 +16,7 @@ using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Stage;
 
@@ -58,7 +58,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (AppBoot.Failed) return;
         try
         {
-            var registry = Services.Services;
+            var registry = KernelServices.Services;
             registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))));
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
             if (RegistryGateRunner.TryRun(this)) return;
@@ -72,7 +72,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private void Compose()
     {
-        var registry = Services.Services;
+        var registry = KernelServices.Services;
         ProcessPriority = FramePriority.Stage;
         var view = new StageCamera();
         _view = view;
@@ -101,6 +101,23 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         registry.Add(ui);
         registry.Add<IAppExit>(this);
         registry.InstantiateServices();
+        registry.Get<Campus.Hud.HudRoot>().Bind(new Campus.Hud.HudRootDependencies(
+            Settings: registry.Get<Campus.Hud.HudSettings>(),
+            Model: registry.Get<Campus.Hud.HudModel>(),
+            Motion: registry.Get<Campus.Hud.Motion.MotionPolicy>(),
+            WorldControl: registry.Get<IWorldControl>(),
+            Flow: registry.Get<IAppFlow>(),
+            Audio: registry.Get<Campus.Contracts.Audio.IAudioService>(),
+            PaletteCatalog: registry.Get<IPaletteCatalogSource>(),
+            ShaderMaterials: registry.Get<IShaderMaterialSource>(),
+            ThemeClock: registry.Get<Campus.Hud.Style.UiThemeClock>(),
+            InputRouter: registry.Get<IInputRouter>(),
+            ViewControl: registry.Get<IViewControl>(),
+            PhotoExport: registry.Get<IPhotoExport>(),
+            Maps: registry.Get<IMapService>(),
+            WorldState: registry.Get<IWorldState>(),
+            Saves: registry.Get<ISaveService>(),
+            PaletteProbe: registry.Get<IPaletteProbe>()));
         // Build the complete batch, attach every node, then invoke lifecycle hooks. An fx.* consumer
         // must not depend on its instance-pool host sorting ahead of it; _Ready only prepares structure.
         var globalNodes = registry.Query<Node>(RegistrationKind.Node).Where(entry => entry.Lifetime == RegistrationLifetime.Global && entry.Map is null)
@@ -128,7 +145,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private async Task StartWorld()
     {
-        var registry = Services.Services;
+        var registry = KernelServices.Services;
         var frontispiece = registry.Get<IAppFrontispiecePresentation>();
         IAppLoadingLease? bootLoading = null;
         if (AppBoot.Options.Flow.ShowTitle) await frontispiece.Show();
@@ -148,7 +165,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     {
         var options = AppBoot.Options;
         var showTitle = options.Flow.ShowTitle;
-        var registry = Services.Services;
+        var registry = KernelServices.Services;
         var participants = registry.RuntimeInstances<IBootParticipant>().OrderBy(item => item.Order)
             .ThenBy(item => item.Id, StringComparer.Ordinal).ToArray();
         if (participants.GroupBy(item => item.Id, StringComparer.Ordinal).Any(group => group.Count() != 1))
@@ -244,7 +261,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private void TraceInputReady()
     {
         if (_closing || _flow?.State != AppState.Playing) return;
-        GD.Print(FormattableString.Invariant($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} mode={Services.Get<ICameraRig>().Mode}"));
+        GD.Print(FormattableString.Invariant($"STARTUP_PHASE input-ready {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()} mode={KernelServices.Get<ICameraRig>().Mode}"));
     }
 
     private async Task RunBakeCommand()
@@ -253,7 +270,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         Phase = "bake-command";
         // CPU batches deliberately bypass the visual composition root and map-travel warmup.
         // Only the requested command and its declared constructor dependencies are resolved.
-        var command = Services.Get<IBakeCommand>();
+        var command = KernelServices.Get<IBakeCommand>();
         if (command is Node node) AddChild(node);
         var exitCode = await command.Run(CreateBootContext());
         if (!_closing) GetTree().Quit(exitCode);
@@ -317,7 +334,13 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _captureLifetime.Cancel();
         if (_failureLoading is not null) _ = _failureLoading.DisposeAsync();
         _failureFlow?.Dispose();
-        try { Services.Services.Dispose(); } catch (Exception error) { GD.PushError("[WP-01][phase=exit-tree] " + error); }
+        _ = ObserveRegistryShutdown();
+    }
+
+    private static async Task ObserveRegistryShutdown()
+    {
+        try { await KernelServices.Services.ShutdownAsync(); }
+        catch (Exception error) { GD.PushError("[WP-01][phase=exit-tree] " + error); }
     }
 
     public Task FinishQuit()
@@ -344,7 +367,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _statistics = null;
         Phase = "shutdown";
         var failures = new List<Exception>();
-        try { await Services.Services.ShutdownAsync(this, _gate.TraceClose); }
+        try { await KernelServices.Services.ShutdownAsync(this, _gate.TraceClose); }
         catch (Exception error) { failures.Add(error); }
         _gate.TraceClose("shutdown-complete");
         foreach (var error in failures) GD.PushError("[WP-01][phase=shutdown] " + error);
@@ -364,13 +387,13 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private void HoldFailure()
     {
-        var loading = Services.Services.Created.OfType<IAppLoadingPresentation>().SingleOrDefault();
+        var loading = KernelServices.Services.Created.OfType<IAppLoadingPresentation>().SingleOrDefault();
         if (loading is not null)
         {
             try { _failureLoading ??= loading.Show(); }
             catch (Exception coverError) { GD.PushError($"[WP-01][phase=failure-cover] {coverError}"); }
         }
-        var world = Services.Services.Created.OfType<IWorldControl>().SingleOrDefault();
+        var world = KernelServices.Services.Created.OfType<IWorldControl>().SingleOrDefault();
         if (world is not null)
         {
             try { _failureFlow ??= world.AcquireFlow(FlowPriority.AppFlow, 0); }

@@ -234,7 +234,7 @@ public sealed class CoreModuleTests
         var path = Path.Combine(Campus.Tests.RealMapFixture.DataDirectory(), "world", "core.terrain.json");
         // The contract parser checks field names, discriminators and numeric bounds.
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(path));
-        AssertThat(file.Zone.Value == "core" && file.Owner.Value == "WP-16").OverrideFailureMessage("zone and owner").IsTrue();
+        AssertThat(file.Zone.Value == "core").OverrideFailureMessage("core terrain zone").IsTrue();
         var world = Campus.Tests.RealMapFixture.Load().World;
         var roads = world.Network.Roads.Select(r => r.Id).ToHashSet();
         bool Exists(FeatureId id) => world.Features.ContainsKey(id) || roads.Contains(id);

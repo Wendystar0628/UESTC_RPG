@@ -1,7 +1,7 @@
 using Godot;
 using Campus.Kernel.Registry;
 using Campus.Contracts.Startup;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Boot;
 
@@ -19,7 +19,7 @@ public partial class Boot : Node
         {
             Options = BootArguments.Parse(OS.GetCmdlineUserArgs(), OS.IsDebugBuild(), out var fixedShots);
             FixedShots = fixedShots;
-            Services.Services.Add(Options);
+            KernelServices.Services.Add(Options);
         }
         catch (ArgumentException error) { Reject(error.Message); return; }
         var profile = Path.GetFileName(OS.GetUserDataDir().TrimEnd('/', '\\'));

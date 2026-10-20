@@ -8,7 +8,7 @@ obj/
 .vs/
 *.user
 
-# Python（pipeline 的虚拟环境）
+# Python（工程脚本与离线音频工具的虚拟环境）
 .venv/
 __pycache__/
 

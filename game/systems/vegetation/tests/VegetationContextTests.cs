@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Campus.Gen.World;
 using Campus.Gen.Tests.Support;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;

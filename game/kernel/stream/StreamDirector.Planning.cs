@@ -24,23 +24,29 @@ public partial class StreamDirector
             if (space is null && _context!.World.Spatial.MediumAt(accepted.Position) is { Kind: MediumKind.Interior, Feature: { } building } medium)
                 space = new(building, checked((short)medium.Storey));
             _destinationState = new(accepted, _destinationMode, space);
-            _interiors!.Prefetch(space);
+            _interiors!.Prefetch(space, accepted.Position);
             _interiorDestinationSequence = _destinationSequence;
         }
         _required.Clear(); _refined.Clear(); _required.Add(StreamTile.Root);
-        ResetAuxiliaryDemand();
+        ResetParticipantDemand();
         if (live)
         {
-            _interiors!.Select(_context!.World.Spatial.MediumAt(pose.Position));
+            _interiors!.Select(_context!.World.Spatial.MediumAt(pose.Position), pose.Position);
             tree.Select(pose.Position, exempt ? 0 : _camera.Speed, height, pose.FovDeg ?? 60, _speed.Minimum, _required, _refined);
-            SelectAuxiliary(pose, _required, destination: false, live: true);
+            SelectParticipants(pose, _required, destination: false, live: true, walkingCenter: _observer.Mode switch
+            {
+                ViewMode.Walk => _observer.Feet,
+                ViewMode.Fly => null,
+                _ => throw new ArgumentOutOfRangeException(nameof(_observer.Mode))
+            });
         }
         else if (_destination is { } mountingDestination)
         {
             pose = mountingDestination;
-            _interiors!.Select(_context!.World.Spatial.MediumAt(pose.Position));
+            _interiors!.Select(_context!.World.Spatial.MediumAt(pose.Position), pose.Position);
             tree.Select(pose.Position, 0, height, pose.FovDeg ?? 60, LodLevel.L0, _required, _refined);
-            SelectAuxiliary(pose, _required, destination: false, live: false);
+            SelectParticipants(pose, _required, destination: false, live: false,
+                walkingDestination: WalkingDestination(mountingDestination, _destinationMode));
         }
         // Prediction is scheduling demand, not geometry that must be presented at the current eye.
         _viewRequired.Clear(); _viewRequired.UnionWith(_required);
@@ -57,17 +63,29 @@ public partial class StreamDirector
                     predicted.X = limit.X; predicted.Z = limit.Y;
                 }
                 tree.Select(predicted, _camera.Speed, height, pose.FovDeg ?? 60, _speed.Minimum, _predictionRequired, _predictionRefined);
-                SelectAuxiliary(pose with { Position = predicted }, _predictionRequired, destination: false, live: false);
+                SelectParticipants(pose with { Position = predicted }, _predictionRequired, destination: false, live: false);
                 _required.UnionWith(_predictionRequired);
             }
         if (!_destinationConsumed && _destination is { } destination)
         {
             tree.Select(destination.Position, 0, height, destination.FovDeg ?? 60, LodLevel.L0, _destinationRequired, _destinationRefined);
-            SelectAuxiliary(destination, _destinationRequired, destination: true, live: false);
+            SelectParticipants(destination, _destinationRequired, destination: true, live: false,
+                walkingDestination: WalkingDestination(destination, _destinationMode));
             _destinationPlanned = true;
         }
-        var wanted = _required.Concat(_destinationRequired).Distinct().Order().ToArray();
         var requests = new List<StreamRequest>();
+        QueueGeometryRequests(requests, pose);
+        QueueParticipants(requests, pose);
+        QueuePinned(requests, height);
+        _requests.Replace(requests);
+        _checkRetention = true;
+        _plannedContext = _context; _plannedWorld = _context!.World; _plannedPose = pose;
+        _plannedLive = live; _plannedSequence = _destinationSequence; _planReady = true;
+    }
+
+    private void QueueGeometryRequests(List<StreamRequest> requests, Pose pose)
+    {
+        var wanted = _required.Concat(_destinationRequired).Distinct().Order().ToArray();
         foreach (var tile in wanted)
         {
             var group = GetGroup(tile);
@@ -79,8 +97,8 @@ public partial class StreamDirector
             var priority = tile == StreamTile.Root || _destinationRequired.Contains(tile) ? BakePriority.KnownDestination : BakePriority.Normal;
             if (group.Error is not null && priority == BakePriority.KnownDestination) _error ??= group.Error;
             group.Priority = priority;
-            var distance = MathF.Sqrt(tree.Bounds(tile).DistanceSquared(pose.Position));
-            var toTile = tree.Bounds(tile).Center - pose.Position;
+            var distance = MathF.Sqrt(_tree!.Bounds(tile).DistanceSquared(pose.Position));
+            var toTile = _tree!.Bounds(tile).Center - pose.Position;
             var approach = toTile.LengthSquared() > 0 ? N.Vector3.Dot(_velocity, N.Vector3.Normalize(toTile)) : 0;
             var radius = _settings.Distances[Math.Min((int)tile.Level, 3)];
             var neededIn = (distance - radius) / Math.Max(1, approach);
@@ -97,11 +115,12 @@ public partial class StreamDirector
                 }
             }
         }
-        QueueAuxiliary(requests, pose);
-        QueuePinned(requests, height);
-        _requests.Replace(requests);
-        _checkRetention = true;
-        _plannedContext = _context; _plannedWorld = _context!.World; _plannedPose = pose;
-        _plannedLive = live; _plannedSequence = _destinationSequence; _planReady = true;
     }
+
+    private static N.Vector3? WalkingDestination(Pose pose, ViewMode mode) => mode switch
+    {
+        ViewMode.Walk => pose.Position,
+        ViewMode.Fly => null,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode))
+    };
 }

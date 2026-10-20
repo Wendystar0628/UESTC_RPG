@@ -2,7 +2,7 @@ using System.Text;
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Gen.World;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 
 namespace Campus.Tests;
 
@@ -89,6 +89,7 @@ internal static class RealMapFixture
                 InteriorAssembly.ValidatedLayout(providers[binding.ProviderId],binding,context,feature))).ToArray();
             loaded = loaded with { World = WorldModelSnapshot.WithInteriors(loaded.World, InteriorAssembly.IndexEntries(layouts,bindings,providers)) };
         }
+        MapCatalog.ValidateDestinations(entry.Descriptor, files, loaded.World);
         return loaded;
     }
 

@@ -8,7 +8,6 @@ using Campus.Hud.Widgets;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud;
 
@@ -176,15 +175,15 @@ public partial class HudRoot
         public ValueTask DisposeAsync() => new(Hide());
     }
 
-    private static string LoadingDestination(EnterRequest? request)
+    private string LoadingDestination(EnterRequest? request)
     {
-        var maps = Services.Get<IMapService>();
+        var maps = _dependencies.Maps;
         var descriptor = request?.Kind == EnterKind.NewGame
             ? maps.Maps.FirstOrDefault(map => map.Id == maps.Default)
             : maps.Context?.Descriptor;
         var preset = request?.Kind == EnterKind.NewGame ? descriptor?.World.Default : null;
-        var season = preset?.Season ?? Services.Get<IWorldState>().SeasonTarget;
-        var clock = preset?.Clock ?? Services.Get<IWorldState>().Clock;
+        var season = preset?.Season ?? _dependencies.WorldState.SeasonTarget;
+        var clock = preset?.Clock ?? _dependencies.WorldState.Clock;
         var place = descriptor is null ? "" : Localized(descriptor.Name);
         var action = request?.Kind switch
         {
@@ -196,7 +195,7 @@ public partial class HudRoot
         };
         if (request?.Kind is EnterKind.Continue or EnterKind.LoadSlot)
         {
-            var saves = Services.Get<ISaveService>();
+            var saves = _dependencies.Saves;
             var slot = request.Slot ?? saves.Continue;
             if (saves.Slots.FirstOrDefault(item => item.Slot == slot)?.Meta is { } meta)
             {

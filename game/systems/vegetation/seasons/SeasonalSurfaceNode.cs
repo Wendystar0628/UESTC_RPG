@@ -6,7 +6,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Vegetation;
 using Campus.Kernel.Renderer;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Systems.Vegetation;
 
@@ -32,8 +32,8 @@ public sealed partial class SeasonalSurfaceNode : Node, IMapAware
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Systems;
-        _world = Services.Get<IWorldState>();
-        _script = Services.Get<IColorScriptFrame>();
+        _world = KernelServices.Get<IWorldState>();
+        _script = KernelServices.Get<IColorScriptFrame>();
         WriteSnow();
     }
 
@@ -44,8 +44,8 @@ public sealed partial class SeasonalSurfaceNode : Node, IMapAware
     public void OnMapLoaded(IMapContext ctx)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        var producer = Services.Get<IMapContentSource>().GetModule<IVegetationRuntimeSource>(ctx, ModuleId);
-        var data = producer.PrepareSpeciesTable(VegetationContext.Resolve(ctx, ModuleId, Services.Get<IBakeContextSource>()));
+        var producer = KernelServices.Get<IMapContentSource>().GetModule<IVegetationRuntimeSource>(ctx, ModuleId);
+        var data = producer.PrepareSpeciesTable(VegetationContext.Resolve(ctx, ModuleId, KernelServices.Get<IBakeContextSource>()));
         var rows = data.Length / (TableWidth * 4);
         if (rows == 0 || rows * TableWidth * 4 != data.Length)
             throw new InvalidDataException($"Species table has {data.Length} floats, not whole rows of {TableWidth} RGBA texels.");

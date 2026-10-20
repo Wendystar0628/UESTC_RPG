@@ -2,7 +2,6 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Bake;
-using Campus.Kernel.Collision;
 using Campus.Kernel.Lod;
 using Godot;
 using N = System.Numerics;
@@ -92,17 +91,9 @@ public partial class StreamDirector
                 foreach (var tile in _predictionRequired)
                     foreach (var module in _catalog!.Modules(tile))
                         QueueCpuRead(BakeRequestKeys.Tile(_context!.Descriptor.Id, module, tile.Tile, tile.Level), tile, requests);
-                SelectAuxiliary(destination.Pose, _predictionRequired, destination: false, live: false, preload: requests);
-                _interiors!.Preload(target.Space, key => QueueCpuRead(key, StreamTile.Root, requests));
-                switch (destination.Mode)
-                {
-                    case ViewMode.Fly: break;
-                    case ViewMode.Walk:
-                        foreach (var tile in CollisionStreamingNode.RequiredTiles(_context!.Descriptor, destination.Pose.Position))
-                            QueueCpuRead(CollisionBakeProducer.Key(_context.Descriptor.Id, tile), new(tile, LodLevel.L0), requests);
-                        break;
-                    default: throw new ArgumentOutOfRangeException(nameof(destination));
-                }
+                SelectParticipants(destination.Pose, _predictionRequired, destination: false, live: false, preload: requests,
+                    walkingDestination: WalkingDestination(destination.Pose, destination.Mode));
+                _interiors!.Preload(target.Space, destination.Pose.Position, key => QueueCpuRead(key, StreamTile.Root, requests));
             }
             catch (Exception error) { target.Error = error.GetBaseException().Message; GD.PushError(target.Error); }
         }
@@ -126,13 +117,13 @@ public partial class StreamDirector
         requests.Add(new(key, tile, BakePriority.KnownDestination, 0) { PreloadOnly = true });
     }
 
-    private void PromotePreload(StreamRequest request, TileGroup group, AuxiliaryTile? auxiliary)
+    private void PromotePreload(StreamRequest request, TileGroup group, ParticipantTile? participant)
     {
         for (var i = 0; i < _pending.Count; i++)
         {
             var pending = _pending[i];
             if (!pending.Request.PreloadOnly || pending.Request.Key != request.Key || pending.Revision != _mount.Revision) continue;
-            _pending[i] = pending with { Request = request, Group = group, GeometryRevision = group.GeometryRevision, Auxiliary = auxiliary, Pinned = false };
+            _pending[i] = pending with { Request = request, Group = group, GeometryRevision = group.GeometryRevision, Participant = participant, Pinned = false };
             return;
         }
     }

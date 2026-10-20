@@ -1,5 +1,5 @@
 using static GdUnit4.Assertions;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using System.Text;
 using System.Numerics;
 using Campus.Contracts.Parts;

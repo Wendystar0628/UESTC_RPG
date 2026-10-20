@@ -1,4 +1,4 @@
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using System.Globalization;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -362,7 +362,8 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         if (binding is null || !binding.FeatureIds.Contains(feature) || !provider.FeatureIds.Contains(feature))
             throw new InvalidDataException("Interior feature is not bound to this map's authoritative catalog.");
         var detail = fields[2] switch { "IF" => InteriorDetail.Full, "IS" => InteriorDetail.Shell, _ => throw new InvalidDataException("Interior detail must be IF or IS.") };
-        var layout = InteriorAssembly.ValidatedLayout(provider, binding, context, feature);
+        if (!context.InteriorLayouts.TryGetValue(feature, out var layout))
+            throw new InvalidDataException($"Interior layout is not prepared: {feature.Value}.");
         if (!layout.OpenStoreys.Contains(storey)) throw new InvalidDataException("Interior storey is not open.");
         var center = layout.Bounds.Center;
         var tile = TileGrid.At(center);
@@ -386,7 +387,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                 foreach (var entrance in layout.Entrances) entrances.Add(System.Text.Json.JsonSerializer.Serialize(entrance, ContractJson.Options));
             }
             coverage.Add(new(binding.ProviderId, interior.IsStub, binding.FeatureIds.Count, interior.Value.FeatureIds.Count,
-                checked(binding.FeatureIds.Count * binding.OpenFloors.Count), floors, binding.AuthoredEntranceCount, entrances.Count));
+                binding.FeatureIds.Sum(feature => binding.FloorsFor(feature).Count), floors, binding.AuthoredEntranceCount, entrances.Count));
         }
         return coverage.AsReadOnly();
     }

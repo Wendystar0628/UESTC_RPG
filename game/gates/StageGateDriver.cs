@@ -7,7 +7,7 @@ using Campus.Kernel.Frame;
 using Campus.Kernel.Inspect;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Gates;
 
@@ -80,9 +80,9 @@ public sealed partial class StageGateDriver(IStageGateHost host)
     private async Task RunTravelSequence(IReadOnlyList<string> sequence)
     {
         if (!host.Flow.IsPlaying) throw new InvalidOperationException("Travel sequence requires Playing after the normal entry flow.");
-        var atlas = Services.Get<IAtlasService>();
-        var observer = Services.Get<IObserverState>();
-        var walk = Services.Get<IWalkController>();
+        var atlas = KernelServices.Get<IAtlasService>();
+        var observer = KernelServices.Get<IObserverState>();
+        var walk = KernelServices.Get<IWalkController>();
         RequireWalk();
         while (!walk.Grounded || !walk.CollisionReady || !walk.IsSettled)
             await NextFrame();
@@ -147,7 +147,7 @@ public sealed partial class StageGateDriver(IStageGateHost host)
                     return host.Ready;
                 }, host.Lifetime, pose =>
                 {
-                    if (!Services.Get<ICameraPoseValidator>().IsLegal(pose, outsideBuffer: true))
+                    if (!KernelServices.Get<ICameraPoseValidator>().IsLegal(pose, outsideBuffer: true))
                         throw new ArgumentException("Capture pose is outside the reachable space or inside its buffer.");
                 });
             await host.Close();

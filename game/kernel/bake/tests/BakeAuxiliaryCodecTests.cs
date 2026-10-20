@@ -129,7 +129,7 @@ public sealed class BakeAuxiliaryCodecTests
         var lighting = new LightInventoryDocument(map, [], windows.Facades, windows.Windows, catalog)
         { WindowNumbering = new(map, new string('a', 64), [new(new("fixture.building"), "fixture.grid", 0, 2, 1)]) };
         var layout = new InteriorLayout(new("fixture.building"), [new(0, .125f, 3, ring.Outer)],
-            [new(0, 1, ZoneKind.Room, ring.Outer, new("window.general"), 123, true)], [], [], [], [0], [0], new(Vector3.Zero, Vector3.One), 321);
+            [new(0, 1, ZoneKind.Room, ring.Outer, new("window.general"), 123, true)], [], [], [], [0], [0], new(Vector3.Zero, Vector3.One), 321) { OpenAreas = [new(0, .125f, 3, ring.Outer)] };
         var resident = new BakeResidentData(new(lighting, new(map, [])), windows, [], [layout],
             new(new Dictionary<string, IReadOnlyList<TileKey>> { ["fixture.module"] = [new(1, 2), new(-3, 4)] },
                 [new(new(map, "fixture.module", "L0/1/2"), layout.Bounds)]), [new(1, -2)]);
@@ -140,7 +140,9 @@ public sealed class BakeAuxiliaryCodecTests
             !saved.Metadata.Lighting.Nightlight.Lamps.SequenceEqual(catalog.Lamps) ||
             !saved.Metadata.Lighting.WindowNumbering!.Allocations.SequenceEqual(lighting.WindowNumbering!.Allocations) ||
             !saved.Windows.Facades[0].SillY.SequenceEqual(facade.SillY) || !saved.Windows.Facades[0].Skip.SequenceEqual(facade.Skip) ||
-            !saved.Layouts[0].Storeys[0].Footprint.SequenceEqual(ring.Outer) || !saved.Layouts[0].Zones[0].Ring.SequenceEqual(ring.Outer) ||
+            !saved.Layouts[0].Storeys[0].Footprint.SequenceEqual(ring.Outer) ||
+            !saved.Layouts[0].OpenAreas[0].Footprint.SequenceEqual(ring.Outer) ||
+            saved.Layouts[0].OpenAreas[0].FloorY != .125f || saved.Layouts[0].OpenAreas[0].Height != 3 || !saved.Layouts[0].Zones[0].Ring.SequenceEqual(ring.Outer) ||
             !saved.Directory.Modules["fixture.module"].SequenceEqual(resident.Directory.Modules["fixture.module"]) ||
             !saved.Directory.Auxiliary.SequenceEqual(resident.Directory.Auxiliary) || !saved.TerrainPoints.SequenceEqual(resident.TerrainPoints))
             throw new InvalidOperationException("Resident cache lost lamp, window, interior or directory data.");

@@ -7,7 +7,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using Campus.Gen.World;
 using Campus.Gen.Tests.Support;
 using GdUnit4;

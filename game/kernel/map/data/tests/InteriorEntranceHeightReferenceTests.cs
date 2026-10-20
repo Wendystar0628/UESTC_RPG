@@ -1,6 +1,6 @@
 using Campus.Gen.Tests.Support;
 using static GdUnit4.Assertions;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
@@ -17,8 +17,8 @@ public sealed class InteriorEntranceHeightReferenceTests
     private static readonly FeatureId Feature = new("fixture:building");
     private const string Provider = "fixture.box";
     private const string Catalog = """
-        {"version":1,"interiors":[{"providerId":"fixture.box",
-         "featureIds":["fixture:building"],"openFloors":[1],"entrances":[
+        {"version":2,"interiors":[{"providerId":"fixture.box",
+         "featureIds":["fixture:building"],"openParts":[{"featureId":"fixture:building","sourceId":"","floors":[1]}],"entrances":[
          {"id":"entry.main","featureId":"fixture:building","outsideLanding":[0,0.25,-2.5],
           "insideLanding":[0,0.5,3],"doorCenter":[0,0.75,0],"facingDeg":0,"clearWidth":1.25,"open":true@HEIGHT@}]}]}
         """;
@@ -31,6 +31,8 @@ public sealed class InteriorEntranceHeightReferenceTests
         {
             var box = new InteriorProviderScopeTests.FixtureBoxInterior();
             var providers = new Dictionary<string, IInteriorProvider> { [Provider] = box };
+            AssertThrown(() => InteriorAssembly.Configure(Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(Bytes(reference))
+                .Replace("\"version\":2", "\"version\":1", StringComparison.Ordinal)), providers)).IsInstanceOf<JsonException>();
             AssertThrown(() => InteriorAssembly.Configure(Bytes("pad"), providers)).IsInstanceOf<JsonException>();
             AssertThat(box.FeatureIds.Count == 0).OverrideFailureMessage("Missing terrain partially configured the provider.").IsTrue();
             var bindings = InteriorAssembly.Configure(Bytes(reference), providers);
@@ -104,7 +106,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         var source = context.World.Features[Feature];
         ((FakeWorld)context.World).Features = ((WorldFeature[])[source, source with { Id = closedFeature }]).ToDictionary(feature => feature.Id);
         ((FakeWorld)context.World).Interiors = new FakeInteriors(context.World.Interiors.Get(Feature)!,
-            new(closedFeature,Campus.Gen.World.ClosedBuildingStoreys.ClosedBuilding(source with {Id=closedFeature},FlatTerrain.Default),[],false,null,[]));
+            new(closedFeature,Campus.Gen.World.ClosedBuildingStoreys.ClosedBuilding(source with {Id=closedFeature},FlatTerrain.Default),[],false,null,[],[]));
         var baseline = InteriorAssembly.BuildConfigured(context, bindings, Bytes(null));
         int baselineCalls = probe.Calls;
         probe.Calls = 0;
@@ -149,7 +151,7 @@ public sealed class InteriorEntranceHeightReferenceTests
             ClosedCatalog().Replace("}]}", "}," + ClosedCatalog().Split("\"closedEntrances\":[", StringSplitOptions.None)[1], StringComparison.Ordinal)
         })
             AssertThrown(() => InteriorAssembly.BuildConfigured(context,
-                [new("must-not-be-called", [Feature], [1], 0)], Encoding.UTF8.GetBytes(catalog))).IsInstanceOf<JsonException>();
+                [new("must-not-be-called", [Feature], [new(Feature, "", [1])], 0)], Encoding.UTF8.GetBytes(catalog))).IsInstanceOf<JsonException>();
         var source = context.World.Features[Feature];
         ((FakeWorld)context.World).Features = ((WorldFeature[])[source with { Kind = new("water") }]).ToDictionary(feature => feature.Id);
         // The loaded index contains only features with building footprints.
@@ -157,8 +159,38 @@ public sealed class InteriorEntranceHeightReferenceTests
         AssertThrown(() => InteriorAssembly.BuildConfigured(context, [], Encoding.UTF8.GetBytes(ClosedCatalog()))).IsInstanceOf<JsonException>();
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void PartRangeKeepsAnotherWingsSameNumberedFloorClosedAndRejectsAnInvalidElevatorStop()
+    {
+        var provider = new InteriorProviderScopeTests.FixtureBoxInterior();
+        var providers = new Dictionary<string, IInteriorProvider> { [Provider] = provider };
+        var context = Context(providers);
+        var world = (FakeWorld)context.World;
+        var left = new PolygonRings([new(-16, -16), new(0, -16), new(0, 16), new(-16, 16)]);
+        var right = new PolygonRings([new(0, -16), new(16, -16), new(16, 16), new(0, 16)]);
+        var feature = world.Features[Feature] with { Height = 12, Storeys = 3,
+            Parts = [new("open-wing", new PolygonGeometry(left), 12, 3), new("closed-wing", new PolygonGeometry(right), 12, 3)] };
+        world.Features = new Dictionary<FeatureId, WorldFeature> { [Feature] = feature };
+        var catalog = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(Bytes(null))
+            .Replace("\"sourceId\":\"\",\"floors\":[1]", "\"sourceId\":\"open-wing\",\"floors\":[1,3]", StringComparison.Ordinal));
+        var bindings = InteriorAssembly.ConfigureForWorld(catalog, providers, world);
+        var layout = InteriorAssembly.ValidatedLayout(provider, bindings.Single(), context, Feature);
+        var entries = InteriorAssembly.IndexEntries([layout], bindings, providers);
+        var prepared = Campus.Gen.World.WorldModelSnapshot.WithInteriors(world, entries);
+        AssertThat(prepared.Interiors.IsOpen(Feature, 3, new(-8, 9, 0)) &&
+            !prepared.Interiors.IsOpen(Feature, 3, new(8, 9, 0)) &&
+            !prepared.Interiors.IsOpen(Feature, 2, new(-8, 5, 0))).OverrideFailureMessage("Part-scoped access expanded to a closed wing or middle floor.").IsTrue();
+        var invalid = layout with { Elevators = [new("lift", 1, 3,
+            new(new(-9, 1, -1), new(-7, 3, 1)), new(new(7, 9, -1), new(9, 11, 1)))] };
+        AssertThrown(() => InteriorAssembly.IndexEntries([invalid], bindings, providers)).IsInstanceOf<InvalidDataException>();
+        var missing = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(catalog).Replace("open-wing", "missing", StringComparison.Ordinal));
+        AssertThrown(() => InteriorAssembly.ConfigureForWorld(missing,
+            new Dictionary<string, IInteriorProvider> { [Provider] = new InteriorProviderScopeTests.FixtureBoxInterior() }, world))
+            .IsInstanceOf<InvalidDataException>();
+    }
+
     private static string ClosedCatalog(string feature = "fixture:building", string extra = "") =>
-        "{\"version\":1,\"interiors\":[],\"closedEntrances\":[{\"id\":\"entry.closed\",\"featureId\":\"" + feature +
+        "{\"version\":2,\"interiors\":[],\"closedEntrances\":[{\"id\":\"entry.closed\",\"featureId\":\"" + feature +
         "\",\"doorCenter\":[0,0.15,0],\"outsideLanding\":[0,0.15,-1],\"insideLanding\":[0,0.15,1],\"facingDeg\":0,\"clearWidth\":2.4,\"open\":false" + extra + "}]}";
 
     private static BuildContext Context(IReadOnlyDictionary<string, IInteriorProvider> providers)
@@ -169,7 +201,7 @@ public sealed class InteriorEntranceHeightReferenceTests
         world.Features = ((WorldFeature[])[new WorldFeature(Feature, new("building"), new PolygonGeometry(ring))
         { Bounds = bounds, Height = 8, Storeys = 2 }]).ToDictionary(feature => feature.Id);
         world.Boundary = ring;
-        world.Interiors = new FakeInteriors([new(Feature, providers.Count == 0 ? [new(1,0,4,ring.Outer),new(2,4,4,ring.Outer)] : [], [],false,null,[])]);
+        world.Interiors = new FakeInteriors([new(Feature, providers.Count == 0 ? [new(1,0,4,ring.Outer),new(2,4,4,ring.Outer)] : [], [],false,null,[],[])]);
         var map = new MapDescriptor(new("height-test"), new("Test", "Test"), MapKind.Outdoor, 1, 1,
             new(0, 0, 32648, new(-64, -64), new(64, 64)), Vector2.Zero, bounds,
             new(new(-64, -64), new(64, 64)), new(.9f, 30, 3000, -28, 2000, 30, 40, 150),

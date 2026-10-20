@@ -4,16 +4,17 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Interior;
 
-internal sealed record InteriorBuildingPart(string Key, PolygonRings Footprint, IReadOnlyList<StoreyInfo> Storeys);
+public sealed record InteriorBuildingPart(string Key, string SourceId, PolygonRings Footprint, IReadOnlyList<StoreyInfo> Storeys);
 
 /// <summary>Open-building dimensions have one source: the authored world feature, its parts and pad.</summary>
-internal static class InteriorBuildingSource
+public static class InteriorBuildingSource
 {
-    public static IReadOnlyList<InteriorBuildingPart> Read(IWorldModel world, FeatureId id, IReadOnlyList<EntranceDecl> entrances, IReadOnlyList<int> openFloors)
+    public static IReadOnlyList<InteriorBuildingPart> Read(IWorldModel world, FeatureId id, IReadOnlyList<EntranceDecl> entrances, IReadOnlyList<InteriorOpenPart> openParts)
     {
         if (!world.Features.TryGetValue(id, out var feature)) throw new InvalidDataException($"Missing interior feature '{id.Value}'.");
         IReadOnlyList<WorldFeaturePart> parts = feature.Parts.Count == 0
-            ? [new("body",feature.Geometry,feature.Height,feature.Storeys) { Props=feature.Props }] : feature.Parts;
+            ? [new("",feature.Geometry,feature.Height,feature.Storeys) { Props=feature.Props }] : feature.Parts;
+        var openFloors = openParts.Where(part => part.FeatureId == id).SelectMany(part => part.Floors).Distinct().Order().ToArray();
         var result = new List<InteriorBuildingPart>();
         foreach (var part in parts.OrderBy(p => p.SourceId, StringComparer.Ordinal))
         {
@@ -32,7 +33,7 @@ internal static class InteriorBuildingSource
                 var baseY=entrances.Count==0 ? world.Terrain.PadY(id)+GroundLevels.Paving : entrances[0].Center.Y-(openFloors.Min()-1)*height;
                 var levels = Enumerable.Range(1,count).Select(floor => new StoreyInfo(floor,
                     baseY+(floor-1)*height,height,polygon.Outer)).ToArray();
-                result.Add(new(part.SourceId+"/"+(polygonIndex++).ToString(System.Globalization.CultureInfo.InvariantCulture),polygon,levels));
+                result.Add(new(part.SourceId+"/"+(polygonIndex++).ToString(System.Globalization.CultureInfo.InvariantCulture),part.SourceId,polygon,levels));
             }
         }
         if (result.Count == 0) throw new InvalidDataException($"Interior '{id.Value}' has no authored building footprint.");

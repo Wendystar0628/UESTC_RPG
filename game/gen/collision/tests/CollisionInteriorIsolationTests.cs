@@ -150,8 +150,8 @@ public sealed class CollisionInteriorIsolationTests
         var sources = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
         if (catalog) sources.Add("interiors.json", JsonSerializer.SerializeToUtf8Bytes(new
         {
-            version = 1,
-            interiors = new[] { new { providerId = ProviderId, featureIds = new[] { Feature.Value }, openFloors = new[] { 1 } } }
+            version = 2,
+            interiors = new[] { new { providerId = ProviderId, featureIds = new[] { Feature.Value }, openParts = new[] { new { featureId = Feature.Value, sourceId = "", floors = new[] { 1 } } } } }
         }));
         return new BuildContext
         {
@@ -182,7 +182,7 @@ public sealed class CollisionInteriorIsolationTests
         Features = new ReadOnlyDictionary<FeatureId, WorldFeature>(
             new Dictionary<FeatureId, WorldFeature> { [Feature] = WorldFeatureFixture.Create(Feature.Value, "poi", new PointGeometry(new(2, 0, 2))) }),
         Spatial = new FlatSpatial(forbidden: "This isolation test must not fabricate ground support."),
-        Interiors = new FakeInteriors(new InteriorIndexEntry(Feature, [], [], open, open ? ProviderId : null, open ? [1] : [])),
+        Interiors = new FakeInteriors(new InteriorIndexEntry(Feature, [], [], open, open ? ProviderId : null, open ? [1] : [], [])),
     };
     private sealed class FixtureProvider(MapId map, float height, IReadOnlyList<FeatureId> features, Action? beforeCollision = null) : IInteriorProvider
     {

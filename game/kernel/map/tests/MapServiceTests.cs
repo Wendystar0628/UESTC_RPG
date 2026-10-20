@@ -1,7 +1,7 @@
 using Campus.Gen.World;
 using Campus.Gen.Tests.Support;
 using static GdUnit4.Assertions;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;

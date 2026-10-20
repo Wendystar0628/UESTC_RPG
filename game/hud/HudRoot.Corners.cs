@@ -3,7 +3,6 @@ using Campus.Contracts;
 using Campus.Hud.Pages;
 using Campus.Hud.Widgets;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud;
 
@@ -11,7 +10,7 @@ public partial class HudRoot
 {
     private string ResetName()
     {
-        return Services.Get<IMapService>().Context?.Descriptor.World.DefaultName.Zh ?? "";
+        return _dependencies.Maps.Context?.Descriptor.World.DefaultName.Zh ?? "";
     }
 
     // ---------------- 布局：四角贴角，中间留空（UI-VISUAL） ----------------
@@ -35,7 +34,7 @@ public partial class HudRoot
         speed.ModePicked += mode => _ = SetMode(mode);
         var weather = WeatherStrip.Create(_kit, _bottomRight, _model, _control);
         weather.Toast += text => _toast.Show(text, "weather_auto");
-        var time = TimeCard.Create(_kit, _bottomRight, _model, _control, Services.Get<IPaletteProbe>(), ResetName);
+        var time = TimeCard.Create(_kit, _bottomRight, _model, _control, _dependencies.PaletteProbe, ResetName);
         time.Toast += text => _toast.Show(text);
         var strip = TimeStrip.Create(_kit, _bottomRight, _model);
         strip.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) ToggleTime(true); };

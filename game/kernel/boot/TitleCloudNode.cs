@@ -5,7 +5,7 @@ using Campus.Contracts.Maps;
 using Campus.Kernel.Instances;
 using Godot;
 using N = System.Numerics;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Boot;
 
@@ -31,7 +31,7 @@ public sealed partial class TitleCloudNode : Node, IAppTitlePresentation, IMapAw
             ContractJson.Options) ?? throw new InvalidDataException("Title cloud layout is empty.");
         if (layout.Format != 1 || layout.Map != context.Descriptor.Id || layout.Name != title.CloudLayout)
             throw new InvalidDataException("Title cloud layout does not match the mounted map title.");
-        var host = Services.Get<IInstancePoolHost>();
+        var host = KernelServices.Get<IInstancePoolHost>();
         var prototype = CreatePrototype();
         foreach (var layer in layout.Layers.OrderBy(item => item.Layer))
         {

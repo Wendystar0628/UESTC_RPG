@@ -107,6 +107,20 @@ internal sealed class FakeInteriors(params InteriorIndexEntry[] entries) : IInte
 {
     public InteriorIndexEntry? Get(FeatureId id) => entries.FirstOrDefault(e => e.Feature == id);
 
+    public bool IsOpen(FeatureId id, int storey, Vector3 position)
+    {
+        var entry = Get(id);
+        if (entry is null || !entry.Open || string.IsNullOrWhiteSpace(entry.ProviderId)) return false;
+        var point = new Vector2(position.X, position.Z);
+        for (var index = 0; index < entry.OpenAreas.Count; index++)
+        {
+            var area = entry.OpenAreas[index];
+            if (area.Index == storey && position.Y >= area.FloorY && position.Y < area.FloorY + area.Height &&
+                Campus.Gen.Geometry.PlanGeometry.PointInRing(point, area.Footprint)) return true;
+        }
+        return false;
+    }
+
     public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) =>
         entries.SelectMany(e => e.Entrances).Where(d => Vector3.Distance(d.Center, p) <= r).ToArray();
 }

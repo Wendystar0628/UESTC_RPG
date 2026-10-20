@@ -4,7 +4,6 @@ using Campus.Hud.Pages;
 using Campus.Hud.Widgets;
 using Godot;
 using System.Threading.Tasks;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud;
 
@@ -22,7 +21,7 @@ public partial class HudRoot
     private void ConnectInput()
     {
         if (_layers.Count > 0) return;
-        _router = Services.Get<IInputRouter>();
+        _router = _dependencies.InputRouter;
         _layers.Add(_router.RegisterLayer("WP-35.dialog", LayerDialog, DialogLayer));
         _layers.Add(_router.RegisterLayer("WP-35.page", LayerPage, PageLayer));
         _layers.Add(_router.RegisterLayer("WP-35.hud", LayerHud, HudLayer));
@@ -219,7 +218,7 @@ public partial class HudRoot
         _photoPending = true;
         try
         {
-            var result = await Services.Get<IPhotoExport>().ExportCurrentAsync();
+            var result = await _dependencies.PhotoExport.ExportCurrentAsync();
             if (!IsInstanceValid(this) || !IsInsideTree()) return;
             switch (result.Status)
             {

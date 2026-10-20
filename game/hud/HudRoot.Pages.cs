@@ -3,7 +3,6 @@ using Campus.Contracts.Audio;
 using Campus.Contracts;
 using Campus.Hud.Pages;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud;
 
@@ -69,7 +68,7 @@ public partial class HudRoot
 
     private async Task SetMode(ViewMode mode)
     {
-        await Services.Get<IViewControl>().SetMode(mode, ModeSwitchVia.Ui);
+        await _dependencies.ViewControl.SetMode(mode, ModeSwitchVia.Ui);
         RefreshHud();
     }
 }

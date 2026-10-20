@@ -9,7 +9,7 @@ using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
 using AppBoot = Campus.Kernel.Boot.Boot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera.Walk;
 
@@ -152,7 +152,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     public override void _Ready()
     {
         ResolveServices();
-        _uiSettings = AppBoot.Options.Automated ? null : Services.Get<ISettingsStore>().Section("ui");
+        _uiSettings = AppBoot.Options.Automated ? null : KernelServices.Get<ISettingsStore>().Section("ui");
         _world!.InstanceChanged += OnWorldInstanceChanged;
         _shape = new CollisionShape3D { Shape = _cylinder, Position = Vector3.Up * (_cylinder.Height * .5f) };
         AddChild(_shape);
@@ -194,12 +194,12 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
 
     private void ResolveServices()
     {
-        _collision ??= Services.Get<ICollisionWorld>();
-        _terrain ??= Services.Get<ITerrainPreparation>();
-        _water ??= Services.Get<IWaterTraversalQuery>();
-        _world ??= Services.Get<IWorldState>();
-        _view ??= Services.Get<IViewControl>();
-        _map = Services.Get<IMapService>().Context;
+        _collision ??= KernelServices.Get<ICollisionWorld>();
+        _terrain ??= KernelServices.Get<ITerrainPreparation>();
+        _water ??= KernelServices.Get<IWaterTraversalQuery>();
+        _world ??= KernelServices.Get<IWorldState>();
+        _view ??= KernelServices.Get<IViewControl>();
+        _map = KernelServices.Get<IMapService>().Context;
     }
 
     public ModeSwitchResult Enter(Pose from)
@@ -346,7 +346,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
             if (candidate.Position != origin.Position) MovePlacementFocus(candidate);
         }
         // Resolve only after the node is live, never while constructing the flow/save/view dependency graph.
-        _appFlow ??= Services.Get<IAppFlow>();
+        _appFlow ??= KernelServices.Get<IAppFlow>();
         CollisionReady = _collision.Ready(_feet, _cylinder.Radius);
         if (_placementNeedsCheck)
         {
@@ -583,7 +583,7 @@ public partial class WalkController : CharacterBody3D, IWalkController, IMapAwar
     public void OnMapLoaded(IMapContext ctx)
     {
         _map = ctx;
-        _terrain ??= Services.Get<ITerrainPreparation>();
+        _terrain ??= KernelServices.Get<ITerrainPreparation>();
         var points = ctx.Descriptor.Spawns.Where(s => s.Stand is not null)
             .Select(s => new N.Vector2(s.Stand!.Feet.X, s.Stand.Feet.Z)).ToArray();
         _landingPointsPreparation = _terrain.PreparePoints(ctx, "walk.authored-landings", points);

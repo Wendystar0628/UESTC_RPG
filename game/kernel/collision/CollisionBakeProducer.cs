@@ -3,9 +3,9 @@ using System.Globalization;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Gen.Collision;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using Campus.Kernel.Registry;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Collision;
 
@@ -29,7 +29,7 @@ public sealed class CollisionBakeProducer : IBakeProducer, IBakeContentConsumer
 
     public CollisionBakeProducer()
     {
-        var registry = Services.Services;
+        var registry = KernelServices.Services;
         // Content, interior and producer instances are owned by the map scope.
         _parts = registry.Query<IPartDef>(RegistrationKind.Part)
             .Select(r => (r, registry.Create(r.Type))).ToArray();
@@ -60,9 +60,12 @@ public sealed class CollisionBakeProducer : IBakeProducer, IBakeContentConsumer
     public static BakeKey Key(MapId map, TileKey tile) => new(map, Module, FormattableString.Invariant($"C/{tile.X}/{tile.Z}"));
     public static TileKey ParseTile(string detail)
     {
-        var parts = detail.Split('/');
-        if (parts.Length != 3 || parts[0] != "C" || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
-            !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var z)) throw new ArgumentException("Invalid collision tile key.");
+        var parts = detail.AsSpan();
+        var separator = parts.Length >= 2 ? parts[2..].IndexOf('/') + 2 : -1;
+        if (parts.Length < 2 || parts[0] != 'C' || parts[1] != '/' || separator < 2 ||
+            !int.TryParse(parts[2..separator], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
+            !int.TryParse(parts[(separator + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var z))
+            throw new ArgumentException("Invalid collision tile key.");
         return new(x, z);
     }
 }

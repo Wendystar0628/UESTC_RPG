@@ -25,7 +25,7 @@ public static class WorldInputFiles
             ["world/geo.json"] = Required(source, "world/geo.json")
         };
         ReadJsonDirectory(source, "world/", files);
-        foreach (var name in new[] { "map.json", "interiors.json", "waypoints.json" })
+        foreach (var name in new[] { "map.json", "interiors.json", "waypoints.json", "review.json" })
             AddOptional(source, name, files);
         if (map.Env.Outskirts is { } outskirts)
         {

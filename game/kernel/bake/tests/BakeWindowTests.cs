@@ -1,6 +1,6 @@
 using Campus.Gen.Tests.Support;
 using Campus.Tests;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using System.Numerics;
 using System.Runtime.ExceptionServices;
 using Campus.Contracts;

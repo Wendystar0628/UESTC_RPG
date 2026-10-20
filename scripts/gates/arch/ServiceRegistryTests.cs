@@ -45,7 +45,7 @@ namespace Campus.Arch.Tests
             if (ReferenceEquals(first, second)) throw new InvalidOperationException("Reload reused the disposed map instance.");
             var global = registry.Get<ILifetimeFirst>();
             if (!ReferenceEquals(global, registry.Get<ILifetimeSecond>())) throw new InvalidOperationException("Global aliases differ.");
-            await registry.DisposeAsync();
+            await registry.ShutdownAsync();
             if (!((LifetimeService)global).Disposed || !((MapLifetimeService)second).Disposed || borrowed.Disposed)
                 throw new InvalidOperationException("Registry disposal did not respect ownership.");
         }
@@ -62,7 +62,7 @@ namespace Campus.Arch.Tests
             if (ReferenceEquals(first, second)) throw new InvalidOperationException("Transient requests reused an instance.");
             await registry.ReleaseMapAsync(map);
             if (!DisposalLog.SequenceEqual(["consumer", "consumer"])) throw new InvalidOperationException("Scope did not release its transient consumers.");
-            await registry.DisposeAsync();
+            await registry.ShutdownAsync();
             if (!DisposalLog.SequenceEqual(["consumer", "consumer", "dependency"])) throw new InvalidOperationException("Dependency release did not follow consumers.");
         }
 
@@ -93,7 +93,7 @@ namespace Campus.Arch.Tests
             "res://fixture/waypoints.json" => """{"version":1,"waypoints":[]}""",
             "res://fixture/world/geo.json" => """{"origin":[0,0],"crs":"EPSG:3857","bounds":[0,0,64,64],"entityPrefix":"fixture","license":"fixture","source":"fixture","date":"2026-10-19","boundary":{"outer":[[0,0],[64,0],[64,64],[0,64]],"holes":[]}}""",
             "res://fixture/world/core.json" => """{"features":[],"trees":[]}""",
-            "res://fixture/interiors.json" => """{"version":1,"interiors":[]}""",
+            "res://fixture/interiors.json" => """{"version":2,"interiors":[]}""",
             _ => throw new InvalidOperationException($"Unexpected fixture input: {path}")
         });
 

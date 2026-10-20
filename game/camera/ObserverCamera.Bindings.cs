@@ -1,6 +1,6 @@
 using Campus.Contracts.Settings;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera;
 
@@ -14,5 +14,5 @@ public partial class ObserverCamera
         return changed;
     }
     public int PhysicalKey(string action) => action == "menu" ? (int)Key.Escape : _bindings.PhysicalKey(action);
-    public void SaveBindings() { if (!_automated) _ = _bindings.Save(Services.Get<ISettingsStore>()); }
+    public void SaveBindings() { if (!_automated) _ = _bindings.Save(KernelServices.Get<ISettingsStore>()); }
 }

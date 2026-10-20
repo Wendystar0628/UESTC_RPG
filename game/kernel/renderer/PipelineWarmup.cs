@@ -2,7 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Frame;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Renderer;
 
@@ -50,8 +50,8 @@ public sealed partial class PipelineWarmup : Node
         if (!IsInsideTree()) throw new InvalidOperationException("Pipeline preparation requires a mounted renderer.");
         if (OS.GetThreadCallerId() != OS.GetMainThreadId())
             throw new InvalidOperationException("Pipeline instances must be mounted on the main thread.");
-        var toon = Services.Get<IToonMaterialProvider>();
-        var shaders = Services.Get<IShaderMaterialSource>();
+        var toon = KernelServices.Get<IToonMaterialProvider>();
+        var shaders = KernelServices.Get<IShaderMaterialSource>();
         var materials = new Dictionary<(ToonKind? Kind, ShaderId? Shader), Material>();
         var owned = new List<Resource>();
         var spatial = new Node3D { Name = "PipelineInstances", Visible = false };

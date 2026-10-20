@@ -4,7 +4,7 @@ using Campus.Kernel.Renderer;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
@@ -23,8 +23,8 @@ public partial class PhotoExportNode : Node, IPhotoExport
 
     public override void _Ready()
     {
-        _flow = Services.Get<IAppFlow>();
-        _loading = Services.Get<IAppLoadingPresentation>();
+        _flow = KernelServices.Get<IAppFlow>();
+        _loading = KernelServices.Get<IAppLoadingPresentation>();
     }
 
     public Task<PhotoExportResult> ExportCurrentAsync()

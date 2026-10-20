@@ -4,7 +4,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Frame;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Boot;
 
@@ -20,11 +20,11 @@ public sealed class ViewContentReadiness
     public async Task WaitForReadyAsync(Node host, IMapArrival arrival, Func<bool> contentReady,
         CancellationToken cancellationToken = default)
     {
-        var runtime = Services.Get<IMapRuntime>();
-        var rig = Services.Get<ICameraRig>();
-        var world = Services.Get<IWorldState>();
-        var weather = Services.Get<IWeatherProcess>();
-        var bake = Services.Get<IBakeService>();
+        var runtime = KernelServices.Get<IMapRuntime>();
+        var rig = KernelServices.Get<ICameraRig>();
+        var world = KernelServices.Get<IWorldState>();
+        var weather = KernelServices.Get<IWeatherProcess>();
+        var bake = KernelServices.Get<IBakeService>();
         using var cancellation = cancellationToken.Register(arrival.Cancel);
         var progress = (bake.Progress, arrival.Done.Status);
         var timeout = TimeSpan.FromSeconds(BootTuning.StalledSeconds);

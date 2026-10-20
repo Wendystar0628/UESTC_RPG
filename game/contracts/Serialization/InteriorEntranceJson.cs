@@ -25,6 +25,8 @@ public static class InteriorEntranceJson
     public static IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> ParseClosedEntrances(
         JsonElement catalog, ITerrain? terrain = null)
     {
+        if (!catalog.TryGetProperty("version", out var version) || version.ValueKind != JsonValueKind.Number || !version.TryGetInt32(out var value) || value != 2)
+            throw new JsonException("Unsupported interior catalog version.");
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var openFeatures = new HashSet<FeatureId>();
         var register = JsonSerializer.Deserialize(catalog, Context.InteriorEntranceRegister)
@@ -126,6 +128,28 @@ public static class InteriorEntranceJson
                 throw new JsonException($"Unknown heightRef '{heightRef}' for entrance '{id}'; expected 'absolute' or 'pad'.");
         }
         return new(id, outside, inside, width, data.Open) { Center = center, YawDeg = yaw, HeadY = headY };
+    }
+
+    /// <summary>Read the only open-range format. The world owner validates each SourceId before provider publication.</summary>
+    public static IReadOnlyList<InteriorOpenPart> ParseOpenParts(JsonElement interior)
+    {
+        if (interior.TryGetProperty("openFloors", out _)) throw new JsonException("Retired openFloors field; use openParts.");
+        var features = interior.GetProperty("featureIds").EnumerateArray().Select(item => new FeatureId(item.GetString()!)).ToHashSet();
+        var result = new List<InteriorOpenPart>();
+        var seen = new HashSet<(FeatureId, string)>();
+        foreach (var part in interior.GetProperty("openParts").EnumerateArray())
+        {
+            var feature = new FeatureId(Text(part.GetProperty("featureId").GetString(), "featureId"));
+            var source = part.GetProperty("sourceId").GetString() ?? throw new JsonException("Missing part sourceId.");
+            var floors = part.GetProperty("floors").EnumerateArray().Select(item => item.GetInt32()).Order().ToArray();
+            if (!features.Contains(feature) || !seen.Add((feature, source)) || floors.Length == 0 ||
+                floors.Distinct().Count() != floors.Length || floors.Any(floor => floor < short.MinValue || floor > short.MaxValue))
+                throw new JsonException($"Invalid or duplicate open part: {feature.Value}/{source}.");
+            result.Add(new(feature, source, Array.AsReadOnly(floors)));
+        }
+        if (features.Any(feature => !result.Any(part => part.FeatureId == feature)))
+            throw new JsonException("Every open feature needs an explicit open part.");
+        return result.AsReadOnly();
     }
 
     private static string Text(string? value, string name) => value is { Length: > 0 }

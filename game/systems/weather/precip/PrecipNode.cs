@@ -4,7 +4,7 @@ using Campus.Contracts.Quality;
 using Campus.Kernel.Instances;
 using Campus.Kernel.Renderer;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Systems.Weather.Precip;
 
@@ -60,13 +60,13 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRender
 
     public override void _Ready()
     {
-        _world = Services.Get<IWorldState>();
+        _world = KernelServices.Get<IWorldState>();
         _world.InstanceChanged += OnWorldInstanceChanged;
-        _wind = Services.Get<IWindField>();
-        _camera = Services.Get<ICameraRig>();
-        _material = Services.Get<IShaderMaterialSource>().Create(ShaderId.Precip);
+        _wind = KernelServices.Get<IWindField>();
+        _camera = KernelServices.Get<ICameraRig>();
+        _material = KernelServices.Get<IShaderMaterialSource>().Create(ShaderId.Precip);
         var (position, uv, index) = PrecipModel.BuildQuad();
-        _pool = Services.Get<IInstancePoolHost>().Mount(new InstancePoolSpec(
+        _pool = KernelServices.Get<IInstancePoolHost>().Mount(new InstancePoolSpec(
             "weather.precip", position, uv, index, _material, ShaderId.Precip,
             PrecipTuning.Capacity, ToAabb(PoolBounds), PoolLayers));
         _pool.WriteBuffer(PrecipModel.BuildBuffer());

@@ -1,6 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 using Godot;
 
 namespace Campus.Kernel.Maps;
@@ -12,7 +12,7 @@ public partial class MapServiceNode : Node
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Map;
-        _service = Services.Get<IMapFrame>();
+        _service = KernelServices.Get<IMapFrame>();
     }
     public override void _Process(double delta) => _service?.Step();
 }

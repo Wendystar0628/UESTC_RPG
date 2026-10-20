@@ -1,4 +1,4 @@
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using Campus.Gen.World;
 using Campus.Contracts;
 using Campus.Contracts.Maps;

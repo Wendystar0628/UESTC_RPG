@@ -12,7 +12,7 @@ using Campus.Systems.Nightlight.Lamps;
 using Campus.Systems.Nightlight.Windows;
 using Godot;
 using N = System.Numerics;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Systems.Nightlight;
 
@@ -54,6 +54,7 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
             _tableTexture is null || _gridTexture is null || _overrideTexture is null || _thresholdTexture is null || !_reflections.Ready || _glows is null || !_glows.Ready || _appliedGlowRevision != _glows.Revision) return false;
         return true;
     }
+    public StreamMountKind Kind => StreamMountKind.Auxiliary;
     public string? Error => _glows?.Error;
 
     public void PrepareCapture(Pose pose)
@@ -72,13 +73,13 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
 
     public override void _Ready()
     {
-        _world = Services.Get<IWorldState>();
+        _world = KernelServices.Get<IWorldState>();
         _world.InstanceChanged += OnWorldInstanceChanged;
-        _sink = Services.Get<ILightChannelSink>();
-        _colors = Services.Get<IColorScriptFrame>();
-        _inventory = Services.Get<ILightInventory>();
-        _glows = new(Services.Get<IInstancePoolHost>(), Services.Get<IShaderMaterialSource>());
-        _camera = Services.Get<ICameraRig>();
+        _sink = KernelServices.Get<ILightChannelSink>();
+        _colors = KernelServices.Get<IColorScriptFrame>();
+        _inventory = KernelServices.Get<ILightInventory>();
+        _glows = new(KernelServices.Get<IInstancePoolHost>(), KernelServices.Get<IShaderMaterialSource>());
+        _camera = KernelServices.Get<ICameraRig>();
     }
 
     public override void _ExitTree()

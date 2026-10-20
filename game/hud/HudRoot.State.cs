@@ -3,7 +3,6 @@ using Campus.Contracts.Audio;
 using Campus.Contracts;
 using Campus.Hud.Widgets;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud;
 
@@ -117,7 +116,7 @@ public partial class HudRoot
         _settings.Changed += OnSettingsChanged;
         _flow.Changed += OnFlowChanged;
         _model.World.InstanceChanged += OnWorldChanged;
-        Services.Get<IViewControl>().WalkEntryRefused += OnWalkEntryRefused;
+        _dependencies.ViewControl.WalkEntryRefused += OnWalkEntryRefused;
     }
 
     private void OnWalkEntryRefused()

@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Campus.Contracts;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Hud.Style;
 
@@ -21,13 +20,12 @@ public sealed class UiColors
         _palette = palette;
     }
 
-    public static UiColors Load()
+    public static UiColors Load(PaletteCatalog catalog)
     {
         var bytes = Godot.FileAccess.GetFileAsBytes(Path);
         if (bytes.Length == 0) throw new FileNotFoundException("Missing UI palette.", Path);
         var document = JsonSerializer.Deserialize<UiPaletteDocument>(bytes, ContractJson.Options)
             ?? throw new InvalidDataException("ui.json is empty.");
-        var catalog = Services.Get<IPaletteCatalogSource>().Catalog;
         UiPalette.Validate(document, catalog);
         return new UiColors(new UiPalette(document, catalog));
     }

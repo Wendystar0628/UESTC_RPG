@@ -1,6 +1,6 @@
 using Campus.Gen.Tests.Support;
 using static GdUnit4.Assertions;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
@@ -27,7 +27,7 @@ public sealed class InteriorProviderScopeTests
         var featureA = new FeatureId("fixture:building:a");
         var featureB = new FeatureId("fixture:building:b");
         var reference = (BoxInteriorProvider)registry.Create(type, new MapId("fixture-global"));
-        reference.Configure(new([referenceFeature], [1], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
+        reference.Configure(new([referenceFeature], [new(referenceFeature, "", [1])], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
         var referenceContext = Context(new("fixture-global"), referenceFeature, -200f,
             new Dictionary<string, IInteriorProvider> { [providerId] = reference });
         var referenceLayout = reference.Layout(referenceContext, referenceFeature);
@@ -112,15 +112,19 @@ public sealed class InteriorProviderScopeTests
     [TestCase, TestCategory(TestReason.Contract)]
     public async Task FactoryProductsHaveMapIdentityAndReleaseBeforeTheirFactory()
     {
-        await using var registry=ProviderRegistry();var map=new MapId("factory-scope");
-        var factory=(FixtureFactory)registry.Create(typeof(FixtureFactory),map);
-        var first=registry.CreateInterior(typeof(FixtureFactory),"fixture.family.first",map);
-        var second=registry.CreateInterior(typeof(FixtureFactory),"fixture.family.second",map);
-        var other=registry.CreateInterior(typeof(FixtureFactory),"fixture.family.first",new("other-scope"));
-        AssertThat(ReferenceEquals(first,registry.CreateInterior(typeof(FixtureFactory),"fixture.family.first",map))&&
-            !ReferenceEquals(first,second)&&!ReferenceEquals(first,other)).IsTrue();
-        await registry.ReleaseMapAsync(map);
-        AssertThat(factory.Released.SequenceEqual(["fixture.family.second","fixture.family.first","factory"])).IsTrue();
+        var registry=ProviderRegistry();var map=new MapId("factory-scope");
+        try
+        {
+            var factory=(FixtureFactory)registry.Create(typeof(FixtureFactory),map);
+            var first=registry.CreateInterior(typeof(FixtureFactory),"fixture.family.first",map);
+            var second=registry.CreateInterior(typeof(FixtureFactory),"fixture.family.second",map);
+            var other=registry.CreateInterior(typeof(FixtureFactory),"fixture.family.first",new("other-scope"));
+            AssertThat(ReferenceEquals(first,registry.CreateInterior(typeof(FixtureFactory),"fixture.family.first",map))&&
+                !ReferenceEquals(first,second)&&!ReferenceEquals(first,other)).IsTrue();
+            await registry.ReleaseMapAsync(map);
+            AssertThat(factory.Released.SequenceEqual(["fixture.family.second","fixture.family.first","factory"])).IsTrue();
+        }
+        finally { await registry.ShutdownAsync(); }
     }
 
     private static ServiceRegistry ProviderRegistry()
@@ -136,8 +140,8 @@ public sealed class InteriorProviderScopeTests
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(new
         {
-            version = 1,
-            interiors = new[] { new { providerId, featureIds = new[] { feature.Value }, openFloors = floors, entrances = Array.Empty<object>() } }
+            version = 2,
+            interiors = new[] { new { providerId, featureIds = new[] { feature.Value }, openParts = new[] { new { featureId = feature.Value, sourceId = "", floors } }, entrances = Array.Empty<object>() } }
         });
         var bindings = InteriorAssembly.Configure(bytes, providers);
         AssertThat(bindings.Count == 1 && bindings[0].FeatureIds.SequenceEqual([feature]) &&

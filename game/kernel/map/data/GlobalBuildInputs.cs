@@ -1,5 +1,5 @@
 using Campus.Contracts;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using Godot;
 
 namespace Campus.Kernel.Maps;

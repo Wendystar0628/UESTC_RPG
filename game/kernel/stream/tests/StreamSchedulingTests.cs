@@ -25,9 +25,10 @@ public sealed class StreamSchedulingTests
         var entry = file.RootElement.GetProperty("interiors").EnumerateArray()
             .Single(item => item.GetProperty("providerId").GetString() == providerId);
         var features = entry.GetProperty("featureIds").EnumerateArray().Select(item => new FeatureId(item.GetString()!)).ToArray();
-        var floors = entry.GetProperty("openFloors").EnumerateArray().Select(item => item.GetInt32()).ToArray();
+        var parts = InteriorEntranceJson.ParseOpenParts(entry);
+        var floors = parts.SelectMany(part => part.Floors).Distinct().Order().ToArray();
         var provider = new LibraryInteriorProvider();
-        provider.Configure(new(features, floors, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
+        provider.Configure(new(features, parts, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
         var context = new TestMapContext(RealMapFixture.Entry().Descriptor, world);
         var layouts = new Dictionary<FeatureId, InteriorLayout>();
         var generation = new BuildContext {
@@ -43,14 +44,17 @@ public sealed class StreamSchedulingTests
         var expected = layout.OpenStoreys.Where(floor => Math.Abs(floor - atriumFloor) <= 1 || layout.AtriumVisibleStoreys.Contains(floor)).Order()
             .Select(floor => new BakeKey(context.Descriptor.Id, "interior." + providerId,
                 FormattableString.Invariant($"{layout.Feature.Value}/{floor}/{(floor == atriumFloor ? "IF" : "IS")}"))).ToArray();
+        var area = world.Interiors.Get(layout.Feature)!.OpenAreas.First(area => area.Index == atriumFloor);
+        var center = Campus.Gen.Geometry.PlanGeometry.Centroid(area.Footprint);
+        var destination = new System.Numerics.Vector3(center.X, area.FloorY + WalkRules.StandingEye, center.Y);
         var preloads = new List<BakeKey>();
-        stream.Preload(new(layout.Feature, checked((short)atriumFloor)), preloads.Add);
+        stream.Preload(new(layout.Feature, checked((short)atriumFloor)), destination, preloads.Add);
         if (!preloads.SequenceEqual(expected) || bake.Keys.Count != 0 || stream.Prepared.Any() || !stream.DestinationReady)
             throw new InvalidOperationException("Interior CPU preload changed native residency or the active destination barrier.");
-        stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)));
+        stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)), destination);
         if (!bake.Keys.SequenceEqual(expected)) throw new InvalidOperationException("Atrium-visible open storeys did not reach the baker.");
         stream.Unload(); bake.Clear(); stream.Load(context);
-        stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)));
+        stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)), destination);
         if (bake.Keys.Count != layout.OpenStoreys.Count(floor => Math.Abs(floor - atriumFloor) <= 1))
             throw new InvalidOperationException("Atrium selection leaked into another map load.");
     }
@@ -78,13 +82,13 @@ public sealed class StreamSchedulingTests
             var bake = new InteriorRequests();
             var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false);
             stream.Load(context);
-            if (knownDestination) stream.Prefetch(new(building, checked((short)medium.Storey)));
-            else stream.Select(medium);
+            if (knownDestination) stream.Prefetch(new(building, checked((short)medium.Storey)), waypoint.Fly.Position);
+            else stream.Select(medium, waypoint.Fly.Position);
             Console.WriteLine($"InteriorRequests waypoint={waypoint.Id} position={waypoint.Fly.Position} medium={medium} " +
                 $"selector={(knownDestination ? "Prefetch" : "Select")} receiver=collection-fixture keys=[{string.Join(",", bake.Keys)}]");
             if (!bake.Keys.SequenceEqual(expected) || stream.Error is not null || knownDestination && stream.DestinationReady)
                 throw new InvalidOperationException("Open-floor requests or pending destination readiness changed.");
-            stream.Prefetch(new(building, checked((short)(medium.Storey + 1))));
+            stream.Prefetch(new(building, checked((short)(medium.Storey + 1))), waypoint.Fly.Position);
             if (bake.Keys.Count != expected.Length || stream.Error is null || stream.DestinationReady)
                 throw new InvalidOperationException("A closed destination reached the baker or became ready.");
         }

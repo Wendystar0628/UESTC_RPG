@@ -31,8 +31,6 @@ public sealed class WorldDataException(string file, string entry, string message
 
 public static partial class WorldModelLoader
 {
-    /// <summary>Fallback storey height when a building's world record gives no height.</summary>
-    public const float DefaultStoreyHeight = ClosedBuildingStoreys.DefaultHeight;
     private static readonly Encoding Utf8 = new UTF8Encoding(false, true);
     private static readonly GeometryFactory Factory = new();
 

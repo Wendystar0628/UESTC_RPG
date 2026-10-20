@@ -2,7 +2,7 @@ using Campus.Contracts;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
@@ -15,10 +15,10 @@ public static class CaptureBarrier
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(contentReady);
-        var rig = Services.Get<ICameraRig>();
-        var loading = Services.Get<IAppLoadingPresentation>();
-        var world = Services.Get<IWorldState>();
-        var weather = Services.Get<IWeatherProcess>();
+        var rig = KernelServices.Get<ICameraRig>();
+        var loading = KernelServices.Get<IAppLoadingPresentation>();
+        var world = KernelServices.Get<IWorldState>();
+        var weather = KernelServices.Get<IWeatherProcess>();
         var content = false;
         var loadingActive = false;
         try

@@ -781,45 +781,6 @@
       "scope": "Pure .NET polygon triangulation; source and notice delivered by WP-09"
     },
     {
-      "name": "certifi",
-      "version": "2026.7.22",
-      "kind": "python-wheel",
-      "managedBy": "manual",
-      "provider": "WP-08",
-      "license": "MPL-2.0",
-      "source": "https://github.com/certifi/python-certifi",
-      "packageIndex": "https://pypi.org/project/certifi/2026.7.22/",
-      "sourceStatus": "UPSTREAM_URL_DECLARED_IN_WHEEL_METADATA; WHEEL_DOWNLOAD_ORIGIN_NOT_INDEPENDENTLY_VERIFIED",
-      "archive": "output/pipeline-wheels/certifi-2026.7.22-py3-none-any.whl",
-      "bytes": 136983,
-      "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
-      "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
-      "lockfile": "pipeline/requirements.lock",
-      "lockfileOwner": "WP-08",
-      "lockfileSha256": "35609c932379f172d5e8e2c217e9d86c2479464dcbad195c945f4bc83e446557",
-      "licenseEvidence": {
-        "metadata": "certifi-2026.7.22.dist-info/METADATA",
-        "declaration": "MPL-2.0",
-        "files": [
-          {
-            "member": "certifi-2026.7.22.dist-info/licenses/LICENSE",
-            "sha256": "e93716da6b9c0d5a4a1df60fe695b370f0695603d21f6f83f053e42cfc10caf7",
-            "bytes": 989
-          }
-        ],
-        "declaredLicenseFilesMissing": []
-      },
-      "developmentOnly": true,
-      "exported": false,
-      "vendored": false,
-      "scope": "WP-08 offline map/data preprocessing tools only; not part of the game export or vendored project source.",
-      "licenseReview": {
-        "status": "APPROVED_EXCEPTION",
-        "approvedBy": "Opus",
-        "scope": "Only certifi 2026.7.22 at this SHA256, unmodified local development dependency; no export or vendoring. MPL-2.0 is not added to the general allowlist."
-      }
-    },
-    {
       "name": "numpy",
       "version": "2.5.4",
       "kind": "python-wheel",
@@ -833,7 +794,7 @@
       "bytes": 12566113,
       "sha256": "8b4d2fd2d34e5f8c9235ee787de5631a37a28402b15cb80814df973d2be54129",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
-      "lockfile": "pipeline/requirements.lock",
+      "lockfile": "pipeline/audio/requirements.lock",
       "lockfileOwner": "WP-08",
       "lockfileSha256": "35609c932379f172d5e8e2c217e9d86c2479464dcbad195c945f4bc83e446557",
       "licenseEvidence": {
@@ -937,7 +898,7 @@
         "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions.",
         "openItems": [
           "METADATA declares BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0; the exact expression exceeds the current enumerated allowlist.",
-          "Bundled LICENSE.txt separately declares OpenBLAS BSD-3-Clause, LAPACK BSD-3-Clause-Open-MPI, and GCC runtime GPL-3.0-or-later WITH GCC-exception-3.1. No certifi exception applies.",
+          "Bundled LICENSE.txt separately declares OpenBLAS BSD-3-Clause, LAPACK BSD-3-Clause-Open-MPI, and GCC runtime GPL-3.0-or-later WITH GCC-exception-3.1.",
           "The wheel contains msvcp140 and libscipy_openblas DLLs; component versions and complete MSVC license evidence are not established by the inspected notices."
         ]
       },
@@ -960,7 +921,7 @@
       "bytes": 7239691,
       "sha256": "1cca606cd25738df4ed873d5ad46bbdb3d83b5cbca291f6b4ff13a4df6b0bbe8",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
-      "lockfile": "pipeline/requirements.lock",
+      "lockfile": "scripts/requirements.lock",
       "lockfileOwner": "WP-08",
       "lockfileSha256": "35609c932379f172d5e8e2c217e9d86c2479464dcbad195c945f4bc83e446557",
       "licenseEvidence": {
@@ -1063,63 +1024,6 @@
       ]
     },
     {
-      "name": "pyproj",
-      "version": "3.8.0",
-      "kind": "python-wheel",
-      "managedBy": "manual",
-      "provider": "WP-08",
-      "license": "MIT",
-      "source": "https://github.com/pyproj4/pyproj",
-      "packageIndex": "https://pypi.org/project/pyproj/3.8.0/",
-      "sourceStatus": "UPSTREAM_URL_DECLARED_IN_WHEEL_METADATA; WHEEL_DOWNLOAD_ORIGIN_NOT_INDEPENDENTLY_VERIFIED",
-      "archive": "output/pipeline-wheels/pyproj-3.8.0-cp313-cp313-win_amd64.whl",
-      "bytes": 6710283,
-      "sha256": "d7b542e249eb593c1af737b7124648868383b69744ab6a1a0a2ffd0113c997f4",
-      "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
-      "lockfile": "pipeline/requirements.lock",
-      "lockfileOwner": "WP-08",
-      "lockfileSha256": "35609c932379f172d5e8e2c217e9d86c2479464dcbad195c945f4bc83e446557",
-      "licenseEvidence": {
-        "metadata": "pyproj-3.8.0.dist-info/METADATA",
-        "declaration": "MIT",
-        "files": [
-          {
-            "member": "pyproj-3.8.0.dist-info/licenses/LICENSE",
-            "sha256": "c25d436b6fc9009a3d337ca024ed1caf615e55e10f4a0ace1673b9953821c8da",
-            "bytes": 1137
-          },
-          {
-            "member": "pyproj-3.8.0.dist-info/licenses/LICENSE_proj",
-            "sha256": "ec8ad0defdbcfac5083e510c000c05a5b63144c685e0a879b7c081b5e44e24c7",
-            "bytes": 1753
-          }
-        ],
-        "declaredLicenseFilesMissing": []
-      },
-      "developmentOnly": true,
-      "exported": false,
-      "vendored": false,
-      "scope": "WP-08 offline map/data preprocessing tools only; not part of the game export or vendored project source.",
-      "licenseReview": {
-        "status": "PENDING_BUNDLED_LICENSE_EVIDENCE",
-        "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions.",
-        "openItems": [
-          "pyproj and PROJ license notices are MIT. The wheel also contains jpeg62, libcurl, liblzma, msvcp140, sqlite3, tiff, and zlib1 DLLs, without corresponding component notices in dist-info/licenses.",
-          "Exact native component versions, full bundled-license coverage, and any required policy approvals remain unverified; no new download was performed."
-        ]
-      },
-      "bundledNativeLibraries": [
-        "pyproj.libs/jpeg62-971fedc88cb0e86c3ad978ae1b7646db.dll",
-        "pyproj.libs/libcurl-f49442d4be7d953952a0509cdd4501fa.dll",
-        "pyproj.libs/liblzma-3c4c8780fcad6ce56344d2b5594bda5b.dll",
-        "pyproj.libs/msvcp140-7c26614e1d733892c2deac7e245ce115.dll",
-        "pyproj.libs/proj_9-7e5618bddacc5af688a84f477cf114c3.dll",
-        "pyproj.libs/sqlite3-9415ebc42378ab15b741623972c45846.dll",
-        "pyproj.libs/tiff-69dcdf91c822b00d23e8dbf49655fe78.dll",
-        "pyproj.libs/zlib1-985e9fefa27bf900be8e4df7dcc97287.dll"
-      ]
-    },
-    {
       "name": "PyYAML",
       "version": "6.0.3",
       "kind": "python-wheel",
@@ -1133,7 +1037,7 @@
       "bytes": 154090,
       "sha256": "79005a0d97d5ddabfeeea4cf676af11e647e41d81c9a7722a193022accdb6b7c",
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
-      "lockfile": "pipeline/requirements.lock",
+      "lockfile": "scripts/requirements.lock",
       "lockfileOwner": "WP-08",
       "lockfileSha256": "35609c932379f172d5e8e2c217e9d86c2479464dcbad195c945f4bc83e446557",
       "licenseEvidence": {
@@ -1158,63 +1062,6 @@
       }
     },
     {
-      "name": "shapely",
-      "version": "2.2.0",
-      "kind": "python-wheel",
-      "managedBy": "manual",
-      "provider": "WP-08",
-      "license": "BSD-3-Clause",
-      "source": "https://github.com/shapely/shapely",
-      "packageIndex": "https://pypi.org/project/shapely/2.2.0/",
-      "sourceStatus": "UPSTREAM_URL_DECLARED_IN_WHEEL_METADATA; WHEEL_DOWNLOAD_ORIGIN_NOT_INDEPENDENTLY_VERIFIED",
-      "archive": "output/pipeline-wheels/shapely-2.2.0-cp313-cp313-win_amd64.whl",
-      "bytes": 1790191,
-      "sha256": "1eaa2cb64cdedaf65d6bc86f2819c9cd7d6d68f969aa3ebfdc93743ab581f437",
-      "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
-      "lockfile": "pipeline/requirements.lock",
-      "lockfileOwner": "WP-08",
-      "lockfileSha256": "35609c932379f172d5e8e2c217e9d86c2479464dcbad195c945f4bc83e446557",
-      "licenseEvidence": {
-        "metadata": "shapely-2.2.0.dist-info/METADATA",
-        "declaration": "BSD-3-Clause",
-        "files": [
-          {
-            "member": "shapely-2.2.0.dist-info/licenses/LICENSE.txt",
-            "sha256": "e8cd7d34604d2758ff589f0f34d6ed79c3f7fb14aaf5e12fb09221421391a3bf",
-            "bytes": 1612
-          },
-          {
-            "member": "shapely-2.2.0.dist-info/licenses/LICENSE_GEOS",
-            "sha256": "7233baa9a7d4a17257b357706b7dbdc4b675e5ca45425b3418673b16990cf239",
-            "bytes": 27296
-          },
-          {
-            "member": "shapely-2.2.0.dist-info/licenses/LICENSE_win32",
-            "sha256": "fdbb2abb8c598c8888755b52340bddcee38668a2def23e51e7d9e3f187bb8d51",
-            "bytes": 1180
-          }
-        ],
-        "declaredLicenseFilesMissing": []
-      },
-      "developmentOnly": true,
-      "exported": false,
-      "vendored": false,
-      "scope": "WP-08 offline map/data preprocessing tools only; not part of the game export or vendored project source.",
-      "licenseReview": {
-        "status": "PENDING_POLICY_REVIEW",
-        "scope": "Pinned wheel and bundled notices only; no blanket approval of other artifacts or versions.",
-        "openItems": [
-          "Shapely itself declares BSD-3-Clause; LICENSE_GEOS explicitly declares bundled GEOS LGPLv2.1 and LICENSE_win32 declares Microsoft Visual C++ runtime MSVC. These are not covered by the certifi exception.",
-          "The bundled GEOS/MSVC component versions are not established by these notices; version-specific policy review remains open."
-        ]
-      },
-      "bundledNativeLibraries": [
-        "shapely.libs/geos-bf067cd6ff74ee0ad5f3ff52c7ef08c9.dll",
-        "shapely.libs/geos_c-6dd9fd915eef8a7928285416bef1e666.dll",
-        "shapely.libs/msvcp140-0fa7eb792d3fbcf2233e4ea47e9144b9.dll"
-      ]
-    },
-    {
       "name": "nuget-license",
       "version": "4.0.18",
       "kind": "dotnet-tool",
@@ -1237,7 +1084,7 @@
       "license": "BSD-3-Clause",
       "source": "https://github.com/scipy/scipy",
       "packageIndex": "https://pypi.org/project/scipy/1.16.3/",
-      "lockfile": "pipeline/requirements.lock",
+      "lockfile": "pipeline/audio/requirements.lock",
       "developmentOnly": true,
       "exported": false,
       "vendored": false,

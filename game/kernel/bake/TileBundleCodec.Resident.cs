@@ -74,11 +74,15 @@ public static partial class TileBundleCodec
     {
         Json(writer, value with
         {
-            Storeys = [], Zones = [], Portals = [], Entrances = [], Elevators = [], OpenStoreys = [], AtriumVisibleStoreys = [], Doors = []
+            Storeys = [], OpenAreas = [], Zones = [], Portals = [], Entrances = [], Elevators = [], OpenStoreys = [], AtriumVisibleStoreys = [], Doors = []
         });
         Records(writer, value.Storeys, (w, storey) =>
         {
             Json(w, storey with { Footprint = [] }); Channel<Vector2>(w, storey.Footprint.ToArray(), key);
+        });
+        Records(writer, value.OpenAreas, (w, area) =>
+        {
+            Json(w, area with { Footprint = [] }); Channel<Vector2>(w, area.Footprint.ToArray(), key);
         });
         Records(writer, value.Zones, (w, zone) => { Json(w, zone with { Ring = [] }); Channel<Vector2>(w, zone.Ring.ToArray(), key); });
         MetadataRecords(writer, value.Portals); MetadataRecords(writer, value.Entrances); MetadataRecords(writer, value.Elevators);
@@ -92,6 +96,7 @@ public static partial class TileBundleCodec
         return value with
         {
             Storeys = Records(reader, key, r => Json<StoreyInfo>(r) with { Footprint = Channel<Vector2>(r, key) }),
+            OpenAreas = Records(reader, key, r => Json<StoreyInfo>(r) with { Footprint = Channel<Vector2>(r, key) }),
             Zones = Records(reader, key, r => Json<ZoneVolume>(r) with { Ring = Channel<Vector2>(r, key) }),
             Portals = MetadataRecords<PortalDecl>(reader, key), Entrances = MetadataRecords<EntranceDecl>(reader, key),
             Elevators = MetadataRecords<ElevatorDecl>(reader, key), OpenStoreys = Channel<int>(reader, key),

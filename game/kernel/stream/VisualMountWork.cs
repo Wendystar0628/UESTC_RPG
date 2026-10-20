@@ -6,11 +6,6 @@ using Godot;
 
 namespace Campus.Kernel.Stream;
 
-internal interface IStreamMountCancellationState
-{
-    bool IsCancelled { get; }
-}
-
 internal sealed class VisualMountWork(IReadOnlyList<PreparedTile> bundles, long revision, Rid scenario,
     BakePriority priority, StreamMaterials materials, IReflectionWorld reflections,
     Action mounted, Action cancelled, Action<string> fail) : IStreamMountWork, IStreamMountCancellationState

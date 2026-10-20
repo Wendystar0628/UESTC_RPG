@@ -1,7 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Stream;
 
@@ -17,9 +17,9 @@ public partial class StreamMountNode : Node
     public override void _Ready()
     {
         ProcessPriority = FramePriority.StreamMount;
-        _queue = Services.Get<IStreamMountFrame>();
-        _director = Services.Get<IStreamVisualFrame>();
-        _coverage = Services.Get<IAppScreenCoverage>();
+        _queue = KernelServices.Get<IStreamMountFrame>();
+        _director = KernelServices.Get<IStreamVisualFrame>();
+        _coverage = KernelServices.Get<IAppScreenCoverage>();
         _finish = _director.FinishMountFrame;
         _release = _director.ReleaseRetired;
         _visualAdmission = VisualAdmission;

@@ -16,7 +16,9 @@ internal sealed record MapContext : IMapContext, IMapInteriorPreparation
     public void PublishInteriors(IReadOnlyList<InteriorIndexEntry> entries)
     {
         if (_interiorsPublished) throw new InvalidOperationException("Map interiors have already been published.");
-        World = WorldModelSnapshot.WithInteriors(World, entries);
+        var prepared = WorldModelSnapshot.WithInteriors(World, entries);
+        MapCatalog.ValidateDestinations(Descriptor, SourceInputs.Entries, prepared);
+        World = prepared;
         _interiorsPublished = true;
     }
 }

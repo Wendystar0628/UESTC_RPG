@@ -4,12 +4,12 @@ using Campus.Audio.Core;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Audio;
+using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
 using Campus.Hud;
 using Campus.Hud.Motion;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
-using Campus.Kernel.Registry;
 using Campus.Kernel.Settings;
 using Campus.Kernel.World;
 using Campus.Style.Materials;
@@ -17,7 +17,6 @@ using Campus.Style.Palette;
 using GdUnit4;
 using static GdUnit4.Assertions;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Tests;
 
@@ -62,9 +61,6 @@ public sealed class HudLifetimeTests
     [RequireGodotRuntime]
     public async Task HudRootReentryRebuildsResidentsAndOwnsOnlyItsInputLayers()
     {
-        var previousRegistry = Services.Services;
-        var servicesProperty = typeof(Services).GetProperty(nameof(Services.Services))!;
-        var registry = new ServiceRegistry();
         var ruleset = TestRuleset.ForFlow();
         using var audio = new AudioRuntime();
         var flow = new TestAppFlow();
@@ -87,24 +83,25 @@ public sealed class HudLifetimeTests
         try
         {
             // The fixture supplies only explicit dependencies; it never constructs the production boot graph.
-            registry.Add(settings);
-            registry.Add(model);
-            registry.Add<IMotionSettings>(motion);
-            registry.Add(motion);
-            registry.Add(new UiThemeClock(world, settings, motion));
-            registry.Add<IWorldState>(world);
-            registry.Add<IWorldControl>(world);
-            registry.Add<IViewControl>(view);
-            registry.Add<ICameraRig>(camera);
-            registry.Add<IPaletteCatalogSource>(new PaletteRegistrySource());
-            registry.Add<IShaderMaterialSource>(new ShaderMaterialSource());
-            registry.Add<IPaletteProbe>(new Probe());
-            registry.Add<IAudioService>(audio);
-            registry.Add<IMapService>(new TestMapService());
-            registry.Add<IAppFlow>(flow);
-            registry.Add<IInputRouter>(router);
-            servicesProperty.SetValue(null, registry);
+            var dependencies = new HudRootDependencies(
+                Settings: settings,
+                Model: model,
+                Motion: motion,
+                WorldControl: world,
+                Flow: flow,
+                Audio: audio,
+                PaletteCatalog: new PaletteRegistrySource(),
+                ShaderMaterials: new ShaderMaterialSource(),
+                ThemeClock: new UiThemeClock(world, settings, motion),
+                InputRouter: router,
+                ViewControl: view,
+                PhotoExport: new UnusedPhotoExport(),
+                Maps: new TestMapService(),
+                WorldState: world,
+                Saves: new UnusedSaveService(),
+                PaletteProbe: new Probe());
             hud = new HudRoot();
+            hud.Bind(dependencies);
             parent.AddChild(hud);
             var pages = hud.PageHost;
             var corners = hud.CornerHost;
@@ -145,7 +142,6 @@ public sealed class HudLifetimeTests
             }
             finally
             {
-                servicesProperty.SetValue(null, previousRegistry);
                 // 保留同帧重入的检查；失败时也让退树 QueueFree 的四角走完实际释放。
                 await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
                 await parent.ToSignal(parent.GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -163,6 +159,36 @@ public sealed class HudLifetimeTests
     {
         public void SampleHorizon(Season season, WeatherVec weather, Span<System.Numerics.Vector3> srgb24) =>
             srgb24.Fill(System.Numerics.Vector3.Zero);
+    }
+
+    private sealed class UnusedPhotoExport : IPhotoExport
+    {
+        public Task<PhotoExportResult> ExportCurrentAsync() => throw new NotSupportedException();
+    }
+
+    private sealed class UnusedSaveService : ISaveService
+    {
+        public bool Enabled => throw new NotSupportedException();
+        public IReadOnlyList<SlotInfo> Slots => throw new NotSupportedException();
+        public SlotId? Continue => throw new NotSupportedException();
+        public SlotId? Active => throw new NotSupportedException();
+        public bool Busy => throw new NotSupportedException();
+        public SaveState State => throw new NotSupportedException();
+        public bool HasPendingPose => throw new NotSupportedException();
+        public event Action? SlotsChanged
+        {
+            add => throw new NotSupportedException();
+            remove => throw new NotSupportedException();
+        }
+        public void Request(SaveReason reason) => throw new NotSupportedException();
+        public Task<SaveResult> SaveNow(SaveReason reason) => throw new NotSupportedException();
+        public Task<LoadResult> Load(SlotId slot, LoadScope scope = LoadScope.Full) => throw new NotSupportedException();
+        public Task CompleteResume() => throw new NotSupportedException();
+        public Task<LoadResult> LoadFile(string path) => throw new NotSupportedException();
+        public Task<LoadResult> NewGame(SlotId slot, uint? seed = null, WorldPreset? start = null) => throw new NotSupportedException();
+        public Task<LoadResult> RestoreTitlePreview() => throw new NotSupportedException();
+        public Task<SaveResult> FlushForQuit(SaveReason reason, TimeSpan timeout) => throw new NotSupportedException();
+        public byte[]? Thumbnail(SlotId slot) => throw new NotSupportedException();
     }
 
     private sealed class Router : IInputRouter

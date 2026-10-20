@@ -42,15 +42,23 @@ public interface IStreamMountQueue
 /// <remarks>The caller owns and reuses the memory; participants consume it during Demand and never retain it.</remarks>
 public readonly record struct StreamDemandView(Pose Eye,
     ReadOnlyMemory<System.Numerics.Plane> Frustum,
-    ReadOnlyMemory<Box3> Near);
+    ReadOnlyMemory<Box3> Near)
+{
+    /// <summary>The live observer's feet while walking; independent of render and reflection eyes.</summary>
+    public System.Numerics.Vector3? WalkingCenter { get; init; }
+    /// <summary>An outstanding walking arrival, or a CPU-only pinned walking destination.</summary>
+    public System.Numerics.Vector3? WalkingDestination { get; init; }
+}
 
 public enum StreamTileNeed : byte { None, Retain, Required }
 
-/// <summary>A fixed auxiliary payload owner; StreamDirector owns its request and mount lifecycle.</summary>
+/// <summary>A fixed tile payload owner; StreamDirector owns its request and mount lifecycle.</summary>
 public interface IStreamTileParticipant
 {
+    /// <summary>Collision or Auxiliary; selects the existing queue budget and request priority.</summary>
+    StreamMountKind Kind { get; }
     bool CanMount(BakeKey key);
-    /// <summary>Pure demand from frozen influence bounds, this view and residency. Retain keeps an existing mount without requesting a new one.</summary>
+    /// <summary>Pure demand from frozen influence bounds, this view and residency. Retain keeps an existing request or mount without creating a new one.</summary>
     StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident);
     /// <summary>Creates bounded work without engine side effects; the shared queue alone advances it.</summary>
     IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision);

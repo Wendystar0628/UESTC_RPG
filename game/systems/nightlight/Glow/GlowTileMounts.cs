@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Kernel.Stream;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Instances;
 using Godot;
@@ -93,52 +94,31 @@ internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSou
     }
 
     private sealed class MountWork(GlowTileMounts owner, NightlightTileContent tile,
-        BakePriority priority, long revision, long generation) : IStreamMountWork
+        BakePriority priority, long revision, long generation)
+        : StreamMountWork(tile.Key, priority, revision, StreamMountKind.Auxiliary)
     {
         private GlowMount? _mount;
-        private bool _complete;
-        private bool _cancelled;
-        public BakeKey Key => tile.Key;
-        public BakePriority Priority => priority;
-        public long Revision => revision;
-        public StreamMountKind Kind => StreamMountKind.Auxiliary;
+        protected override bool IsCurrent => owner._generation == generation && owner._map == Key.Map;
 
-        public bool Step(double budgetMilliseconds)
+        protected override bool MountStep(double budgetMilliseconds)
         {
-            if (_cancelled || _complete) return true;
-            if (budgetMilliseconds <= 0d) return false;
-            if (owner._generation != generation || owner._map != Key.Map)
-            {
-                Cancel();
-                return true;
-            }
-            try
-            {
-                _mount = new(tile.Glow.Kind, $"{Key.Module}.{tile.Tile.X}.{tile.Tile.Z}");
-                _mount.Upload(owner._pools, () => owner.GlowMaterial(tile.Glow.Kind), tile.Glow);
-                owner.Unmount(Key);
-                owner._mounted.Add(Key, new(tile, _mount));
-                owner._reflectionTiles.Add(tile);
-                owner.Revision++;
-                _complete = true;
-                return true;
-            }
-            catch (Exception error)
-            {
-                owner.Error = error.GetBaseException().Message;
-                Cancel();
-                throw;
-            }
+            _mount = new(tile.Glow.Kind, $"{Key.Module}.{tile.Tile.X}.{tile.Tile.Z}");
+            _mount.Upload(owner._pools, () => owner.GlowMaterial(tile.Glow.Kind), tile.Glow);
+            owner.Unmount(Key);
+            owner._mounted.Add(Key, new(tile, _mount));
+            owner._reflectionTiles.Add(tile);
+            owner.Revision++;
+            return true;
         }
 
-        public void Cancel()
+        protected override void Release()
         {
-            if (_cancelled || _complete) return;
-            _cancelled = true;
             _mount?.Free();
             _mount = null;
         }
+        protected override void Failed(string error) => owner.Error = error;
     }
+
 }
 
 /// <summary>Conservative bounds of the existing fx_glow shader, including ground-light reach and distant angular halos.</summary>

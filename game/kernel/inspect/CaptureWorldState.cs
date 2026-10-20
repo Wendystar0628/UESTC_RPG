@@ -3,7 +3,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Contracts.Startup;
 using Campus.Kernel.World;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
@@ -16,9 +16,9 @@ internal static class CaptureWorldState
         var clock = options.Clock ?? map.World.Default.Clock;
         var season = options.Season ?? map.World.Default.Season;
         var anim = options.AnimationTime ?? WorldTime.InitialAnimTime;
-        var weather = Services.Get<IWeatherProcess>();
-        var world = Services.Get<IWorldState>();
-        var restore = Services.Get<IWorldRestore>();
+        var weather = KernelServices.Get<IWeatherProcess>();
+        var world = KernelServices.Get<IWorldState>();
+        var restore = KernelServices.Get<IWorldRestore>();
         var boot = new WeatherBoot(options.Weather.Seed ?? options.Seed ?? map.Seed,
             options.Weather.Kind, options.Weather.Intensity, options.Weather.Wet, options.Weather.RemainingMinutes);
         weather.ValidateBoot(boot, season);

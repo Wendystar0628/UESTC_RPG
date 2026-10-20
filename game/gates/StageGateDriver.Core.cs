@@ -11,7 +11,7 @@ using Campus.Kernel.Renderer;
 using Campus.Kernel.Stream;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Gates;
 
@@ -24,17 +24,17 @@ public sealed partial class StageGateDriver
             throw new InvalidOperationException("Startup/exit coverage requires a real window.");
         var stage = host.Stage;
         var flow = host.Flow;
-        var saves = Services.Get<ISaveService>();
-        var camera = Services.Get<ICameraRig>();
-        var walk = Services.Get<IWalkController>();
-        var observer = Services.Get<IObserverState>();
-        var input = Services.Get<IInputRouter>();
-        var world = Services.Get<IWorldState>();
-        var control = Services.Get<IWorldControl>();
+        var saves = KernelServices.Get<ISaveService>();
+        var camera = KernelServices.Get<ICameraRig>();
+        var walk = KernelServices.Get<IWalkController>();
+        var observer = KernelServices.Get<IObserverState>();
+        var input = KernelServices.Get<IInputRouter>();
+        var world = KernelServices.Get<IWorldState>();
+        var control = KernelServices.Get<IWorldControl>();
         foreach (var service in new[] { typeof(ICameraRig), typeof(IObserverState), typeof(IWalkController),
             typeof(ICollisionWorld), typeof(IMapService), typeof(IMapRuntime), typeof(ISaveService), typeof(IAppFlow) })
         {
-            var registration = Services.Services.Entries.SingleOrDefault(entry => entry.Kind == RegistrationKind.Service && entry.Id == service.FullName);
+            var registration = KernelServices.Services.Entries.SingleOrDefault(entry => entry.Kind == RegistrationKind.Service && entry.Id == service.FullName);
             if (registration is null || registration.IsStub)
                 throw new InvalidOperationException("Core lifecycle requires the formal service: " + service.Name);
         }
@@ -196,9 +196,9 @@ public sealed partial class StageGateDriver
 
     private static string CaptureCoreSections()
     {
-        var map = Services.Get<IMapService>();
-        var moment = Services.Get<IWorldRestore>().GetSaveMoment();
-        var entries = Services.Services.Query<ISaveSection>(RegistrationKind.Save)
+        var map = KernelServices.Get<IMapService>();
+        var moment = KernelServices.Get<IWorldRestore>().GetSaveMoment();
+        var entries = KernelServices.Services.Query<ISaveSection>(RegistrationKind.Save)
             .OrderBy(entry => entry.Id, StringComparer.Ordinal).ThenBy(entry => entry.Scope).ToArray();
         if (!new[] { "world", "maps", "weather", "view", "walk" }.All(id => entries.Any(entry => entry.Id == id)))
             throw new InvalidOperationException("Formal core save sections are missing.");
@@ -210,7 +210,7 @@ public sealed partial class StageGateDriver
             {
                 var attribute = entry.Type.GetCustomAttributes<SaveSectionAttribute>()
                     .Single(item => item.Id == entry.Id && item.Scope.ToString() == entry.Scope);
-                var section = (ISaveSection)Services.Services.Create(entry.Type);
+                var section = (ISaveSection)KernelServices.Services.Create(entry.Type);
                 foreach (var sectionMap in attribute.Scope == SaveScope.Global ? [map.Current]
                     : map.Visits.Select(visit => visit.Map).Append(map.Current).Distinct().OrderBy(id => id.Value, StringComparer.Ordinal).ToArray())
                 {

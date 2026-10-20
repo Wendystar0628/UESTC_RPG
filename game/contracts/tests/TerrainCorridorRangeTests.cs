@@ -18,7 +18,7 @@ public sealed class TerrainCorridorRangeTests
         var legacy = new TerrainCorridorOp("design:terrain:legacy", "Synthetic range boundary", new("source:road"),
             [new(0, 1), new(100, 1)], .015, .75)
         { Zone = new("fixture") };
-        var bytes = TerrainOverlayJson.ToUtf8Bytes(new(new("fixture"), new("WP-00"), [legacy]));
+        var bytes = TerrainOverlayJson.ToUtf8Bytes(new(new("fixture"), [legacy]));
         using var wire = JsonDocument.Parse(bytes);
         AssertThat(!wire.RootElement.GetProperty("ops")[0].TryGetProperty("range", out _)).OverrideFailureMessage("Legacy serialization must not acquire a range field.").IsTrue();
         var restored = (TerrainCorridorOp)TerrainOverlayJson.Parse(bytes).Ops[0];
@@ -84,7 +84,7 @@ public sealed class TerrainCorridorRangeTests
     private static JsonObject Op(JsonObject root) => root["ops"]![0]!.AsObject();
     private static TerrainOverlayFile Parse(JsonObject root) => TerrainOverlayJson.Parse(Encoding.UTF8.GetBytes(root.ToJsonString()));
     private static JsonObject RangedFixture() => JsonNode.Parse("""
-        {"zone":"fixture","owner":"WP-00","ops":[
+        {"zone":"fixture","ops":[
           {"op":"corridor","id":"design:terrain:ranged","zone":"fixture","reason":"Synthetic range boundary",
            "road":"source:road","anchors":[{"s":20,"y":1},{"s":50,"y":2},{"s":80,"y":1}],
            "crossFall":0.015,"shoulder":0.75,"range":{"s0":20,"s1":80},

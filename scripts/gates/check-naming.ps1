@@ -7,14 +7,10 @@ function Test-UESTCNamespaceRole {
     if ($Path -match '^game/contracts/') {
         return $Namespace -cmatch '^Campus\.Contracts(?:\.(?:Quality|Maps|Atlas|AppFlow|Save|Audio|Bake|Parts|Entities|Startup|Settings|Content|Vegetation|Water|Fauna)(?:\.[A-Z][A-Za-z0-9]*)*)?$'
     }
-    if ($Path -match '^pipeline/map/') {
-        # These sources are compiled into Campus.Gen, retaining their pipeline responsibility.
-        return $Namespace -ceq 'Campus.Pipeline.Map' -or $Namespace.StartsWith('Campus.Pipeline.Map.', [StringComparison]::Ordinal)
-    }
     if ($Path -match '^game/gen/') {
         # A merged project may contain both generic and map-specific responsibilities.
         $owners = @{
-            geometry='Geometry'; world='World'; sites='Sites'; buildings='Buildings'; ground='Ground'; vegetation='Vegetation';
+            bakeinput='BakeInput'; geometry='Geometry'; world='World'; sites='Sites'; buildings='Buildings'; ground='Ground'; vegetation='Vegetation';
             water='Water'; fauna='Fauna'; furniture='Furniture'; collision='Collision'; diorama='Diorama';
             'interior/core'='Interior'; 'interior/shell'='Interior.Shell';
             'parts/core'='Parts.Core'; 'parts/openings'='Parts.Openings'; 'parts/circulation'='Parts.Circulation';

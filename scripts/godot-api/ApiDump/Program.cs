@@ -1,6 +1,6 @@
 // 用反射导出 GodotSharp / GodotSharpEditor 程序集的公开 C# API，输出 JSON。
 // 用法：dotnet run -- <GodotSharp.dll> <GodotSharpEditor.dll> <out.json>
-// 每个成员同时给出 XML 文档注释的成员 ID，供 gen_api_docs.py 对上 GodotSharp.xml 里的说明。
+// 每个成员同时给出 XML 文档注释的成员 ID，供 gen-api-docs.py 对上 GodotSharp.xml 里的说明。
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;

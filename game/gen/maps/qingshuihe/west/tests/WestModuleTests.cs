@@ -273,7 +273,7 @@ public sealed class WestModuleTests
     public void TerrainOverlayParsesAndKeepsTheA10PlazaAndTheGatesLevel()
     {
         var file = TerrainOverlayJson.Parse(File.ReadAllBytes(Path.Combine(RealMapFixture.DataDirectory(), "world", "west.terrain.json")));
-        AssertThat(file.Zone.Value == "west" && file.Owner.Value == "WP-19").OverrideFailureMessage("the file belongs to WP-19's west zone").IsTrue();
+        AssertThat(file.Zone.Value == "west").OverrideFailureMessage("west terrain zone").IsTrue();
         AssertThat(file.Ops.All(o => o.Id.StartsWith(WestIds.TerrainPrefix, StringComparison.Ordinal) && o.Zone.Value == "west")).OverrideFailureMessage("ids and zones").IsTrue();
         var low = file.Ops.OfType<TerrainPlatformOp>().Single(o => o.Id == WestIds.WetlandLow);
         var plaza = ((PolygonGeometry)World().Features[new(WestIds.A10Plaza)].Geometry).Rings.Outer;

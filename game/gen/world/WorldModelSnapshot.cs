@@ -85,7 +85,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
         foreach (var feature in features.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
         {
             var storeys = ClosedBuildingStoreys.ClosedBuilding(feature, terrain ?? FlatTerrain.Default);
-            if (storeys.Count > 0) entries.Add(feature.Id, new(feature.Id, storeys, [], false, null, []));
+            if (storeys.Count > 0) entries.Add(feature.Id, new(feature.Id, storeys, [], false, null, [], []));
         }
         if (catalog is not null)
         {
@@ -102,7 +102,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
             foreach (var item in document.RootElement.GetProperty("interiors").EnumerateArray())
             {
                 var provider = WorldModelLoader.Text(item, "providerId");
-                var openStoreys = Array.AsReadOnly(item.GetProperty("openFloors").EnumerateArray().Select(floor => floor.GetInt32()).Order().ToArray());
+                var openParts = InteriorEntranceJson.ParseOpenParts(item);
                 foreach (var idValue in item.GetProperty("featureIds").EnumerateArray())
                 {
                     var id = new FeatureId(idValue.GetString()!);
@@ -117,7 +117,9 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
                         { throw new WorldDataException("interiors.json", WorldModelLoader.Text(door, "id"), error.Message, error); }
                         entrances.Add(entrance);
                     }
-                    entries[id] = entry with { Storeys = [], Open = true, ProviderId = provider, Entrances = entrances.AsReadOnly(), OpenStoreys = openStoreys };
+                    entries[id] = entry with { Storeys = [], Open = true, ProviderId = provider, Entrances = entrances.AsReadOnly(),
+                        OpenStoreys = Array.AsReadOnly(openParts.Where(part => part.FeatureId == id).SelectMany(part => part.Floors).Distinct().Order().ToArray()),
+                        OpenAreas = [] };
                 }
             }
         }
@@ -126,6 +128,18 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
     internal WorldInteriorIndex(IEnumerable<InteriorIndexEntry> entries) =>
         _entries = new ReadOnlyDictionary<FeatureId, InteriorIndexEntry>(entries.ToDictionary(entry => entry.Feature));
     public InteriorIndexEntry? Get(FeatureId id) => _entries.GetValueOrDefault(id);
+    public bool IsOpen(FeatureId id, int storey, Vector3 position)
+    {
+        if (!_entries.TryGetValue(id, out var entry) || !entry.Open || string.IsNullOrWhiteSpace(entry.ProviderId)) return false;
+        var point = new Vector2(position.X, position.Z);
+        for (var index = 0; index < entry.OpenAreas.Count; index++)
+        {
+            var area = entry.OpenAreas[index];
+            if (area.Index == storey && position.Y >= area.FloorY && position.Y < area.FloorY + area.Height &&
+                PlanGeometry.PointInRing(point, area.Footprint)) return true;
+        }
+        return false;
+    }
     public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => _entries.OrderBy(e => e.Key.Value, StringComparer.Ordinal)
         .SelectMany(e => e.Value.Entrances).Where(e => Vector3.DistanceSquared(e.Center, p) <= r * r).ToArray();
 }

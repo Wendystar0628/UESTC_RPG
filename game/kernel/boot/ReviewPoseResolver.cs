@@ -1,31 +1,12 @@
-using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Gen.World;
 
 namespace Campus.Kernel.Boot;
 
 public static class ReviewPoseResolver
 {
-    public static Pose Resolve(string id, IMapContext context)
-    {
-        var points = context.SourceInputs.Entries.TryGetValue("waypoints.json", out var waypointBytes)
-            ? JsonSerializer.Deserialize<WaypointFile>(waypointBytes.Span, ContractJson.Options)
-                ?? throw new InvalidDataException("Waypoint file is empty.")
-            : new WaypointFile(1, []);
-        if (Direct(id) is { } pose) return pose;
-        using var review = JsonDocument.Parse(context.SourceInputs.Require("review.json"));
-        if (review.RootElement.GetProperty("version").GetInt32() != 1) throw new InvalidDataException("Unsupported review-pose version.");
-        var candidates = review.RootElement.GetProperty("poses").EnumerateArray()
-            .Where(item => item.GetProperty("id").GetString() == id).ToArray();
-        if (candidates.Length != 1) throw new ArgumentException($"Unknown or duplicate review pose: {id}.");
-        var item = candidates[0];
-        var waypoint = item.TryGetProperty("waypoint", out var pointRef);
-        var explicitPose = item.TryGetProperty("pose", out var poseData);
-        if (waypoint == explicitPose) throw new InvalidDataException($"Review pose {id} requires exactly one waypoint or pose.");
-        if (explicitPose) return poseData.Deserialize<Pose>(ContractJson.Options);
-        return Direct(pointRef.GetString() ?? "") ?? throw new InvalidDataException($"Review pose {id} references an unknown waypoint.");
-
-        Pose? Direct(string name) => context.Descriptor.Spawns.FirstOrDefault(spawn => spawn.Id == name)?.Fly
-            ?? points.Waypoints.FirstOrDefault(point => point.Id == name)?.Fly;
-    }
+    public static Pose Resolve(string id, IMapContext context) =>
+        MapCatalog.ReviewPoses(context.Descriptor, context.SourceInputs.Entries).TryGetValue(id, out var pose)
+            ? pose : throw new ArgumentException($"Unknown review pose, spawn or waypoint: {id}.", nameof(id));
 }

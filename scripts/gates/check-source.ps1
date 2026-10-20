@@ -206,7 +206,7 @@ function Test-UESTCSourceBoundaries {
         if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { continue }
         if ($path -match '\.gd$') { $failures.Add("GDScript outside addons: $path"); continue }
         if ($path -match '\.(tscn|tres)$' -and $path -notin @('game/stage/main.tscn','game/hud/ui_theme.tres')) { $failures.Add("Shared resource outside allowlist: $path") }
-        if ($path -notmatch '\.(cs|gdshader|gdshaderinc|glsl|glslinc)$' -or $path -match '/tests/') { continue }
+        if ($path -notmatch '\.(cs|gdshader|gdshaderinc|glsl|glslinc)$' -or $path -match '/tests/|^game/testing/') { continue }
         $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $file
         # Preserve strings while dropping comments, so URLs and quoted IDs remain inspectable.
         $text = [regex]::Replace($text, '(@"(?:[^"]|"")*"|"(?:\\.|[^"\\])*"|''(?:\\.|[^''\\])*'')|/\*[\s\S]*?\*/|//[^\r\n]*', { param($m) if ($m.Groups[1].Success) { $m.Value } else { '' } })

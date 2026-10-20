@@ -2,7 +2,7 @@ using System.Text.Json.Serialization.Metadata;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera;
 
@@ -61,7 +61,7 @@ public partial class ObserverCamera
     public ViewSaveData CreateDefault(NewGameContext context)
     {
         // The ruleset selects the mode; the map catalogue resolves the authored spawn before mount.
-        var spawn = Services.Get<IMapService>().ResolveSpawn(context.Map);
+        var spawn = KernelServices.Get<IMapService>().ResolveSpawn(context.Map);
         var pose = spawn.ViewPose(context.Mode);
         if (context.Mode == ViewMode.Fly)
             return new(context.Mode, pose, null, Tuning.DefaultSpeedStep, Tuning.DefaultSpeedStep);

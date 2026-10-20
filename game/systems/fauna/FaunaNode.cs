@@ -7,7 +7,7 @@ using Campus.Kernel.Bake;
 using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Systems.Fauna;
 
@@ -16,7 +16,6 @@ namespace Campus.Systems.Fauna;
 public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCapturePreparation, IStreamTileParticipant
 {
     private const double CheckSeconds = 0.25;
-    private static readonly WpId Package = new("WP-25");
     private readonly Dictionary<BakeKey, TileState> _tiles = [];
     private readonly N.Plane[] _planes = new N.Plane[6];
     private IWorldState? _world;
@@ -31,6 +30,7 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
     private double _sinceCheck;
     private bool _force = true;
     private string? _error;
+    public StreamMountKind Kind => StreamMountKind.Auxiliary;
     public string? Error => _error ?? _renderReadiness?.Error;
 
     private sealed class Latch
@@ -117,12 +117,12 @@ public partial class FaunaNode : Node, IMapAware, IViewContentReadiness, IViewCa
 
     public override void _Ready()
     {
-        _world = Services.Get<IWorldState>();
-        _host = Services.Get<IRenderHost>();
-        _renderReadiness = Services.Get<IRenderReadiness>();
-        _mount = Services.Get<IStreamMountQueue>();
-        _rig = Services.Get<ICameraRig>();
-        _reflection = Services.Get<IReflectionWorld>();
+        _world = KernelServices.Get<IWorldState>();
+        _host = KernelServices.Get<IRenderHost>();
+        _renderReadiness = KernelServices.Get<IRenderReadiness>();
+        _mount = KernelServices.Get<IStreamMountQueue>();
+        _rig = KernelServices.Get<ICameraRig>();
+        _reflection = KernelServices.Get<IReflectionWorld>();
         _world.InstanceChanged += OnWorldInstanceChanged;
     }
 

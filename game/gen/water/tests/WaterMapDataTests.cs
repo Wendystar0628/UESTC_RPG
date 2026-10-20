@@ -6,7 +6,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Gen.World;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 using Campus.Tests;
 using GdUnit4;
 

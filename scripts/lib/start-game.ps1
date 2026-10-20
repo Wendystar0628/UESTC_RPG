@@ -6,7 +6,7 @@ function Get-UESTCLaunchFiles {
     foreach ($entry in [IO.Directory]::EnumerateFileSystemEntries($Directory)) {
         $name = [IO.Path]::GetFileName($entry)
         if ([IO.Directory]::Exists($entry)) {
-            if ($name.StartsWith('.') -or $name -in @('obj', 'bin', 'bake', 'tests')) { continue }
+            if ($name.StartsWith('.') -or $name -in @('obj', 'bin', 'bake', 'tests', 'testing')) { continue }
             if ($Import -and [IO.File]::Exists((Join-Path $entry '.gdignore'))) { continue }
             Get-UESTCLaunchFiles $entry -Import:$Import
         } else { [IO.FileInfo]::new($entry) }
@@ -95,14 +95,6 @@ function Test-UESTCLaunchBuild {
                 $directory = $file.DirectoryName
                 while ($directory.Length -gt $Root.Length -and $sourceDirectories.Add($directory)) { $directory = [IO.Path]::GetDirectoryName($directory) }
             }
-        }
-    }
-    $pipeline = Join-Path $Root 'pipeline\map'
-    foreach ($file in @(Get-UESTCLaunchFiles $pipeline)) {
-        if ($file.Extension -eq '.cs') {
-            $inputs.Add($file)
-            $directory = $file.DirectoryName
-            while ($directory.Length -ge $pipeline.Length -and $sourceDirectories.Add($directory)) { $directory = [IO.Path]::GetDirectoryName($directory) }
         }
     }
     $fingerprintTool = Join-Path $Root 'scripts\build\fingerprints'

@@ -11,12 +11,15 @@ namespace Campus.Arch.Tests;
 internal sealed record SourceFile(string Path, SyntaxTree Tree, SemanticModel Model)
 {
     public CompilationUnitSyntax Root => (CompilationUnitSyntax)Tree.GetRoot();
-    public bool IsTest => Path.Contains("/tests/", StringComparison.Ordinal) || Path.StartsWith("scripts/gates/arch/", StringComparison.Ordinal);
+    public bool IsTest => SourceModel.IsTestPath(Path);
     public string At(SyntaxNode node, string message) => $"{Path}:{Tree.GetLineSpan(node.Span).StartLinePosition.Line + 1}: {message}";
 }
 
 internal static class SourceModel
 {
+    internal static bool IsTestPath(string path) => path.StartsWith("game/testing/", StringComparison.Ordinal) ||
+        path.Contains("/tests/", StringComparison.Ordinal) || path.StartsWith("scripts/gates/arch/", StringComparison.Ordinal);
+
     private static readonly Lazy<SourceFile[]> Files = new(Load);
     public static IEnumerable<SourceFile> Production => Files.Value.Where(file => !file.IsTest);
     public static IEnumerable<SourceFile> Tests => Files.Value.Where(file => file.IsTest);

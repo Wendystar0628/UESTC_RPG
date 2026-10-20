@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
+using Campus.Contracts.Atlas;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Maps;
 using GdUnit4;
@@ -41,6 +42,42 @@ public sealed class MapSpawnResolutionTests
         AssertThat(ReviewPoseResolver.Resolve("V1", context) == entry.Waypoints[0].Fly).OverrideFailureMessage("The V1 overview did not follow the authored P00 relation.").IsTrue();
         AssertThat(ReviewPoseResolver.Resolve("P01", context) == entry.Waypoints[1].Fly).OverrideFailureMessage("Capture did not resolve the named waypoint in the frozen input version.").IsTrue();
         AssertThrown(() => ReviewPoseResolver.Resolve("missing", context)).IsInstanceOf<ArgumentException>();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void EveryAuthoredDestinationIsRejectedBeforeInteriorPublicationWhenItsPartIsClosed()
+    {
+        var entry = Entry([]);
+        var feature = new FeatureId("fixture:split-building");
+        var ring = new PolygonRings([new(100, 100), new(120, 100), new(120, 120), new(100, 120)]);
+        var allowed = new StoreyInfo(1, 0, 20, [new(100, 100), new(110, 100), new(110, 120), new(100, 120)]);
+        var interior = new InteriorIndexEntry(feature, [new(1, 0, 20, ring.Outer)], [], true, "fixture.provider", [1], [allowed]);
+        var world = new FakeWorld { Boundary = ring, Features = new Dictionary<FeatureId, WorldFeature>
+            { [feature] = new(feature, new("building"), new PolygonGeometry(ring)) }, Interiors = new FakeInteriors(interior) };
+        var closedPose = new Pose(new(115, 2, 110), 0, 0);
+        var goodPose = closedPose with { Position = new(105, 2, 110) };
+        var cases = new List<(MapDescriptor Map, Dictionary<string, ReadOnlyMemory<byte>> Files)>
+        {
+            (entry.Descriptor with { Spawns = [new("bad-spawn", closedPose, null)] }, []),
+            (entry.Descriptor, new() { ["waypoints.json"] = JsonSerializer.SerializeToUtf8Bytes(
+                new WaypointFile(1, [entry.Waypoints[0] with { Fly = closedPose }]), ContractJson.Options) }),
+            (entry.Descriptor, new() { ["waypoints.json"] = JsonSerializer.SerializeToUtf8Bytes(
+                new WaypointFile(1, [entry.Waypoints[0] with { Stand = new(closedPose.Position, 0) }]), ContractJson.Options) }),
+            (entry.Descriptor, new() { ["review.json"] = JsonSerializer.SerializeToUtf8Bytes(
+                new { version = 1, poses = new[] { new { id = "unused-review", pose = closedPose } } }, ContractJson.Options) }),
+            (entry.Descriptor, new() { ["atlas/markers.json"] = JsonSerializer.SerializeToUtf8Bytes(
+                new { markers = new[] { new { id = "bad-anchor", teleport = new TeleportSpec(closedPose, null) } } }, ContractJson.Options) })
+        };
+        foreach (var item in cases)
+        {
+            var context = new MapContext(item.Map, world, entry.DataRoot, BuildInputSnapshot.Freeze(item.Files, "fixture"));
+            AssertThrown(() => context.PublishInteriors([interior])).IsInstanceOf<WorldDataException>();
+            AssertThat(ReferenceEquals(context.World, world)).OverrideFailureMessage("A bad destination published a partly prepared map.").IsTrue();
+        }
+        var valid = entry.Descriptor with { Spawns = [new("valid-spawn", goodPose, null)] };
+        var completed = new MapContext(valid, world, entry.DataRoot, BuildInputSnapshot.Empty);
+        completed.PublishInteriors([interior]);
+        AssertThat(completed.World.Interiors.IsOpen(feature, 1, goodPose.Position)).IsTrue();
     }
 
     private static MapCatalogEntry Entry(IReadOnlyList<MapSpawn> spawns)

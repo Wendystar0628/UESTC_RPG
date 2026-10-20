@@ -3,7 +3,7 @@ using Campus.Contracts.Quality;
 using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Lighting;
 
@@ -52,9 +52,9 @@ public partial class KeyLightDirector : Node, IQualityAware
 
     public override void _Ready()
     {
-        _world = Services.Get<IWorldState>();
+        _world = KernelServices.Get<IWorldState>();
         _world.InstanceChanged += OnWorldInstanceChanged;
-        _state = Services.Get<IKeyLightPublisher>();
+        _state = KernelServices.Get<IKeyLightPublisher>();
         EnsureLight();
         Step();
     }

@@ -2,6 +2,10 @@
   "version": 1,
   "rules": [
     {
+      "pattern": "scripts/requirements.*",
+      "owner": "WP-00"
+    },
+    {
       "pattern": "game/testing/**",
       "owner": "WP-00"
     },
@@ -766,6 +770,30 @@
       "owner": "WP-13"
     },
     {
+      "pattern": "game/kernel/stream/StreamMountWork.cs",
+      "owner": "WP-08"
+    },
+    {
+      "pattern": "game/kernel/stream/StreamMountWork.cs.uid",
+      "owner": "WP-08"
+    },
+    {
+      "pattern": "game/kernel/stream/CollisionMountWork.cs",
+      "owner": "WP-43"
+    },
+    {
+      "pattern": "game/kernel/stream/CollisionMountWork.cs.uid",
+      "owner": "WP-43"
+    },
+    {
+      "pattern": "game/kernel/stream/CollisionTileParticipant.cs",
+      "owner": "WP-43"
+    },
+    {
+      "pattern": "game/kernel/stream/CollisionTileParticipant.cs.uid",
+      "owner": "WP-43"
+    },
+    {
       "pattern": "game/kernel/stream/**",
       "owner": "WP-02b"
     },
@@ -991,11 +1019,11 @@
       "owner": "WP-48b"
     },
     {
-      "pattern": "pipeline/map/Generation/**",
+      "pattern": "game/gen/bakeinput/assembly/**",
       "owner": "WP-00"
     },
     {
-      "pattern": "pipeline/map/**",
+      "pattern": "game/gen/bakeinput/**",
       "owner": "WP-48a"
     },
     {

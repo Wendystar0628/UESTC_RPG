@@ -15,8 +15,6 @@ from datetime import datetime
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)  # python -I 不带脚本目录
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
-sys.path.insert(0, os.path.join(ROOT, 'scripts', 'docs'))
-sys.path.insert(0, os.path.join(ROOT, 'scripts', 'build'))
 sys.path.insert(0, os.path.join(ROOT, '.collab', 'tools'))  # 监控库 monitor：本机协作数据（.collab）只经它读，这是仓库代码引用 .collab 的唯一例外
 
 import datafile  # noqa: E402
@@ -38,10 +36,10 @@ LAYERS = ['契约', '世界与公共几何', '内容生成', '运行时', '数�
 SPLIT = ('game/gen', 'game/kernel', 'game/systems')
 LAYER_OF = {'game/contracts': '契约',
             'game/gen/world': '世界与公共几何', 'game/gen/geometry': '世界与公共几何', 'game/gen/parts': '世界与公共几何',
-            'game/data': '数据与工具', 'game/assets': '数据与工具', 'game/shared': '数据与工具',
+            'game/data': '数据与工具', 'game/assets': '数据与工具', 'game/testing': '数据与工具',
             'pipeline': '数据与工具', 'scripts': '数据与工具', 'docs': '数据与工具'}
 TOP_DIRS = ['game/contracts', 'game/gen', 'game/kernel', 'game/stage', 'game/flow', 'game/camera', 'game/systems',
-            'game/style', 'game/audio', 'game/hud', 'game/data', 'game/assets', 'game/shared', 'pipeline', 'scripts', 'docs']
+            'game/style', 'game/audio', 'game/hud', 'game/data', 'game/assets', 'game/testing', 'pipeline', 'scripts', 'docs']
 EXTRA_NOTE = {'数据与工具': '地图数据、离线管线、构建与门禁脚本、开发文档'}
 
 
@@ -255,13 +253,14 @@ def doc_files():
 
 
 def docs_data():
-    import doc_size
+    import runpy
+    doc_size = runpy.run_path(os.path.join(ROOT, 'scripts', 'docs', 'doc-size.py'))
     sections = doc_sections()
     items = []
     for path in doc_files():
         text = read_text(path)
         fm = front(text)
-        code, chars, _ = doc_size.measure(os.path.join(ROOT, path))
+        code, chars, _ = doc_size['measure'](os.path.join(ROOT, path))
         summary = fm.get('summary', '')
         items.append({'code': code, 'title': fm.get('title', code), 'path': path, 'summary': summary,
                       'chars': chars, 'parent': fm.get('parent') or None, 'sections': sections.get(code, []), '_body': text})

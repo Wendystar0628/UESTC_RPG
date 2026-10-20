@@ -126,7 +126,7 @@ internal static class AssertionCriteria
         ParenthesizedExpressionSyntax or CastExpressionSyntax || expression is InvocationExpressionSyntax call && SourceModel.CallName(call) is "Min" or "Max" or "Clamp";
     private static bool IsRuleField(SemanticModel model, ExpressionSyntax expression) => model.GetSymbolInfo(expression).Symbol is IFieldSymbol field &&
         (SourceModel.Name(field.ContainingType) == "Campus.Tests.TestTolerance" ||
-            field.IsConst && !field.DeclaringSyntaxReferences.Any(reference => reference.SyntaxTree.FilePath.Contains("/tests/", StringComparison.Ordinal)));
+            field.IsConst && !field.DeclaringSyntaxReferences.Any(reference => SourceModel.IsTestPath(reference.SyntaxTree.FilePath)));
     private static ExpressionSyntax Unwrap(ExpressionSyntax expression) => expression switch
     {
         ParenthesizedExpressionSyntax parentheses => Unwrap(parentheses.Expression),

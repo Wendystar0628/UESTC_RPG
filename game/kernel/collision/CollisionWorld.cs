@@ -15,6 +15,7 @@ public interface ICollisionMountRuntime : ICollisionWorld
     void BeginTile(TileKey tile);
     void MountBody(TileKey tile, IReadOnlyList<Collider> colliders);
     void CompleteTile(TileKey tile);
+    bool IsTileReady(TileKey tile);
     void FailTile(TileKey tile, string error);
     void RemoveTile(TileKey tile);
     void Unload();
@@ -71,7 +72,7 @@ public sealed class CollisionWorld : ICollisionMountRuntime
         Error = null;
     }
 
-    public bool HasTile(TileKey tile) => _tiles.ContainsKey(tile);
+    public bool IsTileReady(TileKey tile) => _tiles.TryGetValue(tile, out var state) && state.Ready;
 
     public bool Ready(N.Vector3 p, float r)
     {

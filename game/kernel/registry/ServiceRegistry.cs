@@ -1,13 +1,12 @@
 using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
-using Campus.Pipeline.Map;
 using Godot;
 
 namespace Campus.Kernel.Registry;
 
 /// <summary>Declaration-owned global/map/transient instances; supplied instances remain owned by their caller.</summary>
-public sealed class ServiceRegistry : IDisposable, IAsyncDisposable
+public sealed class ServiceRegistry
 {
     private readonly Dictionary<Type, object> _supplied = [];
     private readonly Dictionary<(Type Type, MapId? Map), object> _instances = [];
@@ -135,13 +134,6 @@ public sealed class ServiceRegistry : IDisposable, IAsyncDisposable
         .Where(item => item.Map is null || item.Map == map).Select(item => item.Instance)
         .OfType<T>().ToArray();
 
-    public void ValidateMap(string map)
-    {
-        foreach (var entry in Query<IContentModule>(RegistrationKind.Content, new(map)))
-            if (entry.Map is null && ((IContentModule)Create(entry.Type, new(map))).Claims.Any(claim => claim is FeatureClaim))
-                throw new InvalidOperationException($"Global module cannot claim a map feature: {entry.Id}");
-    }
-
     public async Task ReleaseMapAsync(MapId map)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -151,9 +143,9 @@ public sealed class ServiceRegistry : IDisposable, IAsyncDisposable
     }
 
     /// <summary>Stop map/background work, exit nodes with bindings intact, then release owned objects and scene children.</summary>
-    public Task ShutdownAsync(Node scene, Action<string>? trace = null) => _shutdown ??= Shutdown(scene, trace);
+    public Task ShutdownAsync(Node? scene = null, Action<string>? trace = null) => _shutdown ??= Shutdown(scene, trace);
 
-    private async Task Shutdown(Node scene, Action<string>? trace)
+    private async Task Shutdown(Node? scene, Action<string>? trace)
     {
         _closing = true;
         var failures = new List<Exception>();
@@ -171,9 +163,13 @@ public sealed class ServiceRegistry : IDisposable, IAsyncDisposable
         foreach (var participant in _created.AsEnumerable().Reverse().Select(item => item.Instance).OfType<IRegistryExitParticipant>())
             try { participant.PrepareForExit(); } catch (Exception error) { failures.Add(error); }
         trace?.Invoke("shutdown-nodes");
-        var children = scene.GetChildren(includeInternal: true);
-        Node[] roots;
-        using (var nativeChildren = (Godot.Collections.Array)children) roots = children.AsEnumerable().Reverse().ToArray();
+        Node[] roots = [];
+        if (scene is not null)
+        {
+            var children = scene.GetChildren(includeInternal: true);
+            using (var nativeChildren = (Godot.Collections.Array)children)
+                roots = children.AsEnumerable().Reverse().ToArray();
+        }
         var sceneOwned = roots.Where(node => !_created.Any(item => ReferenceEquals(item.Instance, node))).ToArray();
         // Scene-owned containers and their descendants must exit before any service binding is removed.
         ExitNodes(roots, failures);
@@ -231,44 +227,5 @@ public sealed class ServiceRegistry : IDisposable, IAsyncDisposable
                 node.GetParent()?.RemoveChild(node);
             }
             catch (Exception error) { failures.Add(error); }
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        if (_shutdown is not null) return new(_shutdown);
-        if (_disposed) return ValueTask.CompletedTask;
-        _closing = true;
-        return new(_shutdown = DisposeOwnedAsync());
-    }
-
-    private async Task DisposeOwnedAsync()
-    {
-        try { await ReleaseAsync(_ => true); }
-        finally { _supplied.Clear(); _disposed = true; }
-    }
-
-    /// <summary>Non-awaiting scene-exit fallback. Normal process exit awaits ShutdownAsync while rendering is alive.</summary>
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _closing = true;
-        var failures = new List<Exception>();
-        var owned = _created.AsEnumerable().Reverse().ToArray();
-        ExitNodes(owned.Select(item => item.Instance).OfType<Node>(), failures);
-        foreach (var item in owned)
-        {
-            Forget(item.Instance);
-            try
-            {
-                if (item.Instance is Node node) FreeNode(node, null);
-                else if (item.Instance is IDisposable disposable) disposable.Dispose();
-                else if (item.Instance is IAsyncDisposable)
-                    throw new InvalidOperationException($"{item.Instance.GetType().FullName} requires asynchronous registry disposal.");
-            }
-            catch (Exception error) { failures.Add(error); }
-        }
-        _supplied.Clear();
-        _disposed = true;
-        if (failures.Count > 0) throw new AggregateException("Registry fallback release failed.", failures);
     }
 }

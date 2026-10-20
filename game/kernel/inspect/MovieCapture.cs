@@ -2,7 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Inspect;
 
@@ -21,12 +21,12 @@ internal static class MovieCapture
         RequireMovieMaker();
         var limit = options.MovieFrames ?? throw new ArgumentException("Movie capture requires --movie-frames.");
         var tree = host.GetTree();
-        var rig = Services.Get<ICameraRig>();
-        var runtime = Services.Get<IMapRuntime>();
-        var stream = Services.Get<IMapStreamState>();
-        var loading = Services.Get<IAppLoadingPresentation>();
-        var control = Services.Get<IWorldControl>();
-        var world = Services.Get<IWorldState>();
+        var rig = KernelServices.Get<ICameraRig>();
+        var runtime = KernelServices.Get<IMapRuntime>();
+        var stream = KernelServices.Get<IMapStreamState>();
+        var loading = KernelServices.Get<IAppLoadingPresentation>();
+        var control = KernelServices.Get<IWorldControl>();
+        var world = KernelServices.Get<IWorldState>();
         var arrival = runtime.Arrival ?? throw new InvalidOperationException("Movie capture requires a prepared destination.");
         var completion = new TaskCompletionSource();
         ulong? firstFrame = null;

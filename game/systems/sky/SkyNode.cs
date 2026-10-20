@@ -3,7 +3,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Renderer;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Systems.Sky;
 
@@ -41,8 +41,8 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Systems;
-        _world = Services.Get<IWorldState>();
-        _script = Services.Get<IColorScriptFrame>();
+        _world = KernelServices.Get<IWorldState>();
+        _script = KernelServices.Get<IColorScriptFrame>();
         _material = CreateMaterial();
         _sky = new Godot.Sky
         {
@@ -138,7 +138,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
 
     private ShaderMaterial CreateMaterial()
     {
-        try { return Services.Get<IShaderMaterialSource>().Create(ShaderId.Sky); }
+        try { return KernelServices.Get<IShaderMaterialSource>().Create(ShaderId.Sky); }
         catch (Exception error)
         {
             Error = "Sky material source unavailable: " + error.GetBaseException().Message;

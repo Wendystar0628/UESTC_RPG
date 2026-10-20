@@ -2,7 +2,7 @@ using Campus.Contracts.Atlas;
 using System.Buffers.Binary;
 using System.Text;
 using Campus.Contracts.Bake;
-using Campus.Pipeline.Map;
+using Campus.Gen.BakeInput;
 
 namespace Campus.Kernel.Bake;
 

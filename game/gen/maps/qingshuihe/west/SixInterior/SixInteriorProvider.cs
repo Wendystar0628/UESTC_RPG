@@ -37,7 +37,8 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
 
     public void Configure(InteriorCatalogConfiguration configuration)
     {
-        var (features, openFloors, entrances, buildingType, seals) = configuration;
+        var (features, openParts, entrances, buildingType, seals) = configuration;
+        var openFloors = configuration.OpenFloors;
         if (buildingType is not null || seals.Count != 0)
             throw new ArgumentException("This authored provider does not consume generated building configuration or catalog seals.", nameof(configuration));
         _features = features.Distinct().OrderBy(f => f.Value, StringComparer.Ordinal).ToArray();

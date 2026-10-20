@@ -1,5 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
+using Campus.Kernel.Stream;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Contracts.Vegetation;
@@ -7,7 +8,7 @@ using Campus.Kernel.Instances;
 using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Systems.Vegetation;
 
@@ -28,6 +29,7 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     private double _since = Interval;
     private bool _worldReset = true;
     private Pose? _capture;
+    public StreamMountKind Kind => StreamMountKind.Auxiliary;
     public string? Error { get; private set; }
     public int Trees => _tiles.Values.Sum(t => t.Mothers.Sum(m => m.Buckets.Count));
     public int Pools => _tiles.Values.Sum(t => t.Mothers.Length * Mother.PoolCount + t.Grass.Length);
@@ -35,9 +37,9 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
     public override void _Ready()
     {
         ProcessPriority = FramePriority.Systems;
-        _host = Services.Get<IInstancePoolHost>();
-        _rig = Services.Get<ICameraRig>();
-        _world = Services.Get<IWorldState>();
+        _host = KernelServices.Get<IInstancePoolHost>();
+        _rig = KernelServices.Get<ICameraRig>();
+        _world = KernelServices.Get<IWorldState>();
         _world.InstanceChanged += OnWorldInstanceChanged;
     }
 
@@ -188,30 +190,22 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
         }
     }
 
-    private sealed class MountWork : IStreamMountWork
+    private sealed class MountWork : StreamMountWork
     {
         private readonly VegetationRuntime _owner;
         private readonly long _generation;
         private readonly MountedTile _tile;
         private int _unit;
-        private bool _cancelled, _complete;
         public MountWork(VegetationRuntime owner, VegetationTileContent content, BakePriority priority, long revision, long generation)
+            : base(content.Key, priority, revision, StreamMountKind.Auxiliary)
         {
             _owner = owner;
             _generation = generation;
             _tile = new(content);
-            Key = content.Key;
-            Priority = priority;
-            Revision = revision;
         }
-        public BakeKey Key { get; }
-        public BakePriority Priority { get; }
-        public long Revision { get; }
-        public StreamMountKind Kind => StreamMountKind.Auxiliary;
-        public bool Step(double budgetMilliseconds)
+        protected override bool IsCurrent => _owner._generation == _generation && _owner._map == Key.Map;
+        protected override bool MountStep(double budgetMilliseconds)
         {
-            if (_cancelled || _complete) return true;
-            if (_owner._generation != _generation || _owner._map != Key.Map) { Cancel(); return true; }
             var host = _owner._host ?? throw new InvalidOperationException("Vegetation pool host is unavailable.");
             var treeUnits = _tile.Mothers.Length * Mother.PoolCount;
             // At most one native pool upload in a queue step.
@@ -221,15 +215,10 @@ public sealed partial class VegetationRuntime : Node, IMapAware, IViewContentRea
             if (_unit < treeUnits + _tile.Grass.Length) return false;
             if (!_owner._tiles.TryAdd(Key, _tile)) throw new InvalidOperationException("Vegetation tile is already mounted.");
             _owner._since = Interval;
-            _complete = true;
             return true;
         }
-        public void Cancel()
-        {
-            if (_cancelled || _complete) return;
-            _cancelled = true;
-            _tile.Free();
-        }
+        protected override void Release() => _tile.Free();
+        protected override void Failed(string error) => _owner.Error = error;
     }
 
     /// <summary>One mother model's pools: its trees' records, their buckets and the kernel pools fed from them.</summary>

@@ -3,7 +3,7 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Godot;
 using Campus.Contracts.Startup;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.World;
 
@@ -22,12 +22,12 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
     public override void _Ready()
     {
         ProcessPriority = FramePriority.WorldState;
-        _freezeAnimation = Services.Get<BootRunOptions>().FreezeAnimation;
-        _world = Services.Get<IWorldFrame>();
-        _transition = Services.Get<IWorldTransitionPresentation>();
-        _motion = Services.Get<IMotionSettings>();
+        _freezeAnimation = KernelServices.Get<BootRunOptions>().FreezeAnimation;
+        _world = KernelServices.Get<IWorldFrame>();
+        _transition = KernelServices.Get<IWorldTransitionPresentation>();
+        _motion = KernelServices.Get<IMotionSettings>();
         _world.ReducedTransitionRequested += OnReducedTransition;
-        _stepRate = Services.Get<IQualityService>().Effective.StepRate;
+        _stepRate = KernelServices.Get<IQualityService>().Effective.StepRate;
         // Ready completes before the first rendered frame, including shader warm-up.
         RenderingServer.GlobalShaderParameterSet(ShaderGlobals.AnimLoopSeconds, WorldTime.AnimLoopSeconds);
         WriteGlobals();
@@ -70,7 +70,7 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
         WriteGlobals();
     }
 
-    private IWorldFrame World => _world ??= Services.Get<IWorldFrame>();
+    private IWorldFrame World => _world ??= KernelServices.Get<IWorldFrame>();
 
     private void WriteGlobals()
     {

@@ -5,7 +5,7 @@ using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera;
 
@@ -64,15 +64,15 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
 
     public override void _Ready()
     {
-        _flow = Services.Get<IAppFlow>(); _rules = Services.Get<IRuleset>();
-        _world = Services.Get<IWorldState>();
-        _terrain = Services.Get<ITerrainPreparation>();
+        _flow = KernelServices.Get<IAppFlow>(); _rules = KernelServices.Get<IRuleset>();
+        _world = KernelServices.Get<IWorldState>();
+        _terrain = KernelServices.Get<ITerrainPreparation>();
         _world.InstanceChanged += OnWorldInstanceChanged;
-        if (Services.Services.Query<IWalkController>(RegistrationKind.Service).Any(entry => !entry.IsStub))
-            _walk = Services.Get<IWalkController>();
-        _transit = Services.Get<ITransitDriver>();
+        if (KernelServices.Services.Query<IWalkController>(RegistrationKind.Service).Any(entry => !entry.IsStub))
+            _walk = KernelServices.Get<IWalkController>();
+        _transit = KernelServices.Get<ITransitDriver>();
         _automated = AppBoot.Options.Automated;
-        var settings = _automated ? null : Services.Get<ISettingsStore>();
+        var settings = _automated ? null : KernelServices.Get<ISettingsStore>();
         _bindings.Initialize(settings);
         _uiSettings = settings?.Section("ui");
         Input.UseAccumulatedInput = false;
@@ -188,7 +188,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
     public Task Prepare(IMapContext context)
     {
         var point = new System.Numerics.Vector2(_pose.Position.X, _pose.Position.Z);
-        return (_terrain ??= Services.Get<ITerrainPreparation>()).PreparePoints(context, "camera.presentation", new[] { point });
+        return (_terrain ??= KernelServices.Get<ITerrainPreparation>()).PreparePoints(context, "camera.presentation", new[] { point });
     }
     public void Unload(MapId from) { }
     public void OnMapUnloading(MapId from)
@@ -230,7 +230,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
             if (!pending.IsCompleted) return false;
             pending.GetAwaiter().GetResult(); _terrainPending = null;
         }
-        var terrain = _terrain ??= Services.Get<ITerrainPreparation>();
+        var terrain = _terrain ??= KernelServices.Get<ITerrainPreparation>();
         var at = new System.Numerics.Vector2(point.X, point.Z);
         if (terrain.IsPrepared(_map.World, at)) return true;
         var start = from is { } p ? new System.Numerics.Vector2(p.X, p.Z) : at;

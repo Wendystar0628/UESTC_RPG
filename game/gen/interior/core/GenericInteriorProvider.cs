@@ -19,7 +19,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
     public IReadOnlyList<FeatureId> FeatureIds=>_configuration?.Features ?? [];
     public int Priority=>0;
     public bool Walkable=>true;
-    private sealed record Wing(int Index,string Id,PolygonRings Footprint,IReadOnlyList<StoreyInfo> Storeys);
+    private sealed record Wing(int Index,string Id,PolygonRings Footprint,IReadOnlyList<StoreyInfo> Storeys, IReadOnlyList<int> OpenFloors);
     private sealed record Junction(int A,int EdgeA,int B,int EdgeB,Vector2 Start,Vector2 End);
     private sealed record Building(InteriorLayout Layout,IReadOnlyList<InteriorPlan> Plans);
     public void Configure(InteriorCatalogConfiguration configuration)
@@ -40,12 +40,13 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
         var config=_configuration ?? throw new InvalidOperationException("Interior provider is not configured.");
         if(!config.Features.Contains(feature)) throw new ArgumentException("Feature is outside this provider.");
         var entrances=config.Entrances.GetValueOrDefault(feature) ?? [];
-        var source=InteriorBuildingSource.Read(context.World,feature,entrances,config.OpenFloors);
+        var source=InteriorBuildingSource.Read(context.World,feature,entrances,config.OpenParts);
         var wings=new List<Wing>();
-        foreach(var part in source)
+        foreach(var part in source.Where(part=>config.OpenParts.Any(scope=>scope.FeatureId==feature && scope.SourceId==part.SourceId)))
             foreach(var polygon in InteriorWingDecomposition.Split(part.Footprint,feature.Value+"/"+part.Key))
                 wings.Add(new(wings.Count,"wing-"+wings.Count.ToString(CultureInfo.InvariantCulture),polygon,
-                    part.Storeys.Select(s=>s with { Footprint=polygon.Outer }).ToArray()));
+                    part.Storeys.Select(s=>s with { Footprint=polygon.Outer }).ToArray(),
+                    config.OpenParts.Single(scope=>scope.FeatureId==feature && scope.SourceId==part.SourceId).Floors));
         var joins=new List<Junction>();
         for(var a=0;a<wings.Count;a++) for(var b=a+1;b<wings.Count;b++)
             for(var ea=0;ea<4;ea++) for(var eb=0;eb<4;eb++)
@@ -75,7 +76,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
                 int edge=wing.Index==join.A?join.EdgeA:join.EdgeB;
                 var a=wing.Footprint.Outer[edge];var b=wing.Footprint.Outer[(edge+1)%4];var direction=PlanGeometry.Unit(b-a);
                 var inward=new Vector2(-direction.Y,direction.X);var centre=(a+b)*0.5f;
-                foreach(var floor in config.OpenFloors)
+                foreach(var floor in wings[join.A].OpenFloors.Intersect(wings[join.B].OpenFloors).Order())
                 {
                     var level=wing.Storeys.Single(s=>s.Index==floor);Vector3 P(Vector2 p)=>new(p.X,level.FloorY,p.Y);
                     assignments[wing.Index].Add(new($"join-{join.A}-{join.B}-{floor}",P(centre-inward*0.5f),P(centre+inward*0.5f),_options.DoorClearWidth,true)
@@ -111,13 +112,13 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
             var seals=remainingSeals.Where(s=>PlanGeometry.Contains(wing.Footprint,s.A)&&PlanGeometry.Contains(wing.Footprint,s.B)).ToArray();
             foreach(var seal in seals) remainingSeals.Remove(seal);
             plans.Add(InteriorPlanGenerator.Generate(new(feature,wing.Id,context.WorldSeed,wing.Footprint,
-                wing.Storeys.Where(s=>config.OpenFloors.Contains(s.Index)).ToArray(),assignments[wing.Index],rooms.Values.ToArray(),seals)
+                wing.Storeys.Where(s=>wing.OpenFloors.Contains(s.Index)).ToArray(),assignments[wing.Index],rooms.Values.ToArray(),seals)
                 {Options=_options,ZoneIdBase=checked(wing.Index*65536),JoinedEdges=joins.Where(j=>j.A==wing.Index||j.B==wing.Index)
                     .Select(j=>j.A==wing.Index?j.EdgeA:j.EdgeB).ToArray()}));
         }
         if(remainingSeals.Count!=0) throw new InvalidDataException("A catalog seal has no owning wing.");
         var portals=plans.SelectMany(p=>p.Portals).Where(p=>p.ZoneA!=-1 || !joins.Any(j=>PlanLines.SegmentDistanceSquared(new((p.A.X+p.B.X)*0.5f,(p.A.Z+p.B.Z)*0.5f),j.Start,j.End)<=0.000001f)).ToList();
-        foreach(var join in joins) foreach(var floor in config.OpenFloors)
+        foreach(var join in joins) foreach(var floor in wings[join.A].OpenFloors.Intersect(wings[join.B].OpenFloors).Order())
         {
             string key=$"join-{join.A}-{join.B}-{floor}";
             var first=plans[join.A];var second=plans[join.B];var entry=assignments[join.A].Single(e=>e.Id==key);
@@ -126,8 +127,8 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
             var b=second.Portals.Single(p=>p.Storey==floor&&p.ZoneA==-1&&p.Kind==PortalKind.Door&&Vector3.Distance((p.A+p.B)*0.5f,other.Center)<=0.01f);
             portals.Add(a with {ZoneA=a.ZoneB,ZoneB=b.ZoneB});
         }
-        var levels=wings.SelectMany(w=>w.Storeys).ToArray();var points=levels.SelectMany(s=>s.Footprint).ToArray();
-        var layout=new InteriorLayout(feature,levels,plans.SelectMany(p=>p.Zones).ToArray(),portals,entrances,[],config.OpenFloors,[],
+        var levels=source.SelectMany(part=>part.Storeys).ToArray();var points=levels.SelectMany(s=>s.Footprint).ToArray();
+        var layout=new InteriorLayout(feature,levels,plans.SelectMany(p=>p.Zones).ToArray(),portals,entrances,[],config.FloorsFor(feature),[],
             new(new(points.Min(p=>p.X),levels.Min(s=>s.FloorY),points.Min(p=>p.Y)),new(points.Max(p=>p.X),levels.Max(s=>s.FloorY+s.Height),points.Max(p=>p.Y))),
             StableHash.Hash32(context.WorldSeed,feature.Value,string.Join("/",plans.Select(p=>p.PlanHash.ToString(CultureInfo.InvariantCulture)))))
             {Doors=plans.SelectMany(p=>p.Doors).ToArray()};
@@ -141,7 +142,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
         _=detail switch { InteriorDetail.Proxy or InteriorDetail.Shell or InteriorDetail.Full=>0,_=>throw new ArgumentOutOfRangeException(nameof(detail)) };
         var building=Of(context,feature);if(!building.Layout.OpenStoreys.Contains(storey)) return ContentOutput.Empty;
         var sink=new InteriorGeometry(context.Catalog);var wall=new ToonSpec(new("wall.lit"),new("wall.shade"));
-        foreach(var plan in building.Plans)
+        foreach(var plan in building.Plans.Where(plan=>plan.Storeys.Any(level=>level.Index==storey)))
         {
             foreach(var slab in plan.Slabs.Where(s=>s.Storey==storey)) sink.Floor(new(slab.Ring),slab.TopY,slab.Thickness,wall,FootMat.Concrete);
             foreach(var span in plan.Walls.Where(w=>w.Storey==storey)) sink.Wall(span.A,span.B,span.BottomY,span.TopY,span.Thickness,
@@ -160,7 +161,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
         {var node=new NavNode(new(StableHash.Hash32(context.WorldSeed,feature.Value,key)),at,new(feature,checked((short)floor)),key);nodes.Add(node);return node;}
         void Link(NavNode a,NavNode b,NavEdgeKind kind,float width)=>edges.Add(new(a.Id,b.Id,kind,Vector3.Distance(a.P,b.P),width,b.P.Y-a.P.Y,NavFlags.Indoor,"interior.plan"));
         foreach(var zone in building.Layout.Zones.Where(z=>z.Open&&z.Storey==storey).OrderBy(z=>z.Id))
-        {var p=PlanGeometry.Centroid(zone.Ring);var level=building.Plans.SelectMany(p=>p.Storeys).First(s=>s.Index==storey);zones.Add(zone.Id,Node("zone/"+zone.Id,storey,new(p.X,level.FloorY,p.Y)));}
+        {var p=PlanGeometry.Centroid(zone.Ring);var level=building.Plans.Single(plan=>plan.Zones.Any(item=>item.Id==zone.Id)).Storeys.Single(level=>level.Index==storey);zones.Add(zone.Id,Node("zone/"+zone.Id,storey,new(p.X,level.FloorY,p.Y)));}
         foreach(var portal in building.Layout.Portals.Where(p=>p.Storey==storey&&p.Kind==PortalKind.Door))
         {
             if(!zones.TryGetValue(portal.ZoneA,out var a)||!zones.TryGetValue(portal.ZoneB,out var b)) continue;

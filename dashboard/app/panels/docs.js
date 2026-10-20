@@ -246,7 +246,7 @@
       if (!d) { el.append(h('p', 'muted', '还没有文档数据')); return; }
       const domains = d.domains || [];
       const all = domains.reduce((a, x) => a.concat(x.docs || []), d.top ? [d.top] : []);
-      const over = ((Dash.get('health') || {}).docs || {}).over || 0; // 口径以 doc_size.py 为准
+      const over = ((Dash.get('health') || {}).docs || {}).over || 0; // 口径以 doc-size.py 为准
       const top = status(over ? 'auto' : 'muted');
       top.body.append((d.top ? '顶层 ' + d.top.code + ' 加 ' : '') + domains.length + ' 个域，共 ' + all.length + ' 份文档');
       if (over) top.body.append('，', h('span', 'dc-over', over + ' 份超过体量上限'));

@@ -246,7 +246,7 @@ public sealed partial class TerrainCompilerTests
         float H(int dx, int dz) => TerrainSampling.DecodeHeight(cm[(iz + dz) * TerrainSampling.TileSamples + ix + dx]);
         return Campus.Gen.Ground.CellSplit.Lerp(H(0, 0), H(1, 0), H(0, 1), H(1, 1), u - ix, v - iz);
     }
-    private static TerrainSource Source(IReadOnlyList<TerrainOp> operations) => new("world/fixture.terrain.json", new(Zone, new("WP-08"), operations));
+    private static TerrainSource Source(IReadOnlyList<TerrainOp> operations) => new("world/fixture.terrain.json", new(Zone, operations));
     private static TerrainCompileContext Context(IReadOnlyList<WorldFeature> features) => new(new("fixture"), new(new(-128), new(128)),
         Box(-512, -512, 512, 512), features.ToDictionary(f => f.Id), WorldNetwork.Empty, "fixture", Defaults,
         new Dictionary<ZoneId, IReadOnlyList<PolygonRings>> { [Zone] = [Box(-512, -512, 512, 512)] });

@@ -49,7 +49,7 @@ public sealed class CollisionGeometryTests
     {
         var ring = new PolygonRings(new Vector2[] { new(0, 0), new(10, 0), new(10, 10), new(0, 10) });
         var door = new EntranceDecl("entrance", new(5, 0, -2.5f), new(5, 0, 3), 2, true) { Center = new(5, 0, 0) };
-        var entry = new InteriorIndexEntry(new("building"), [], [door], true, "provider", [1]);
+        var entry = new InteriorIndexEntry(new("building"), [], [door], true, "provider", [1], []);
         var opened = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry);
         AssertThat(!opened.Any(w => Blocks(w, new(5, 0.5f, 0)))).OverrideFailureMessage("Open doorway is blocked.").IsTrue();
         AssertThat(opened.Any(w => Blocks(w, new(5, 4, 0)))).OverrideFailureMessage("Lintel must remain above the open doorway.").IsTrue();

@@ -4,7 +4,7 @@ using Campus.Contracts.Quality;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Renderer;
 using Godot;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Post;
 
@@ -59,14 +59,14 @@ public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentRea
 
     public override void _Ready()
     {
-        _colorScript = Services.Get<IColorScriptFrame>();
-        _world = Services.Get<IWorldState>();
-        _key = Services.Get<IKeyLightState>();
-        _weather = Services.Get<IWeatherRenderState>();
-        _medium = Services.Get<IMediumRenderState>();
-        _textures = Services.Get<IGlobalDataTextureRegistry>();
-        _rig = Services.Get<ICameraRig>();
-        if (Services.Get<IMapService>().Context is { } context) OnMapLoaded(context);
+        _colorScript = KernelServices.Get<IColorScriptFrame>();
+        _world = KernelServices.Get<IWorldState>();
+        _key = KernelServices.Get<IKeyLightState>();
+        _weather = KernelServices.Get<IWeatherRenderState>();
+        _medium = KernelServices.Get<IMediumRenderState>();
+        _textures = KernelServices.Get<IGlobalDataTextureRegistry>();
+        _rig = KernelServices.Get<ICameraRig>();
+        if (KernelServices.Get<IMapService>().Context is { } context) OnMapLoaded(context);
         // Startup-only pipeline switches (ENG-PERF rule 10): set before warm-up, never toggled at runtime.
         GetViewport().UseDebanding = true;
         RenderingServer.EnvironmentGlowSetUseBicubicUpscale(false);   // standard glow upscales bilinearly

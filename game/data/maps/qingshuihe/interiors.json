@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "interiors": [
     {
       "featureIds": [
@@ -25,12 +25,94 @@
         "en": "1F atrium and cafe; 2F entrance and gallery; 3F–5F galleries; 5F west windows; 2F and 3F terraces"
       },
       "providerId": "interior.library",
-      "openFloors": [
-        1,
-        2,
-        3,
-        4,
-        5
+      "openParts": [
+        {
+          "featureId": "qsh:way:806848396",
+          "sourceId": "osm:way:806848391",
+          "floors": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "featureId": "qsh:way:806848396",
+          "sourceId": "osm:way:806848392",
+          "floors": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "featureId": "qsh:way:806848396",
+          "sourceId": "osm:way:806848393",
+          "floors": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "featureId": "qsh:way:806848396",
+          "sourceId": "osm:way:806848394",
+          "floors": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "featureId": "qsh:way:806848396",
+          "sourceId": "osm:way:806848395",
+          "floors": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "featureId": "qsh:way:806848396",
+          "sourceId": "osm:way:806848396",
+          "floors": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "featureId": "qsh:way:806848396",
+          "sourceId": "osm:way:806848397",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:806848404",
+          "sourceId": "osm:way:806848404",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:806848407",
+          "sourceId": "osm:way:806848407",
+          "floors": [
+            1
+          ]
+        }
       ],
       "entrances": [
         {
@@ -97,8 +179,21 @@
         "en": "Single-floor exhibition route"
       },
       "providerId": "interior.box.museum",
-      "openFloors": [
-        1
+      "openParts": [
+        {
+          "featureId": "qsh:way:806848402",
+          "sourceId": "osm:way:806848401",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:806848402",
+          "sourceId": "osm:way:806848402",
+          "floors": [
+            1
+          ]
+        }
       ],
       "entrances": [
         {
@@ -165,9 +260,16 @@
         "en": "1F column hall; 2F university history exhibition; rooftop colonnade"
       },
       "providerId": "interior.box.main-b2",
-      "openFloors": [
-        1,
-        2
+      "openParts": [
+        {
+          "featureId": "qsh:way:687370085",
+          "sourceId": "osm:way:687370085",
+          "floors": [
+            1,
+            2,
+            8
+          ]
+        }
       ],
       "entrances": [
         {
@@ -235,9 +337,30 @@
         "en": "1F–2F atrium; clock tower stairs, clock room and lantern gallery"
       },
       "providerId": "interior.box.xuanbang",
-      "openFloors": [
-        1,
-        2
+      "openParts": [
+        {
+          "featureId": "qsh:way:844548980",
+          "sourceId": "osm:way:1157144625",
+          "floors": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        {
+          "featureId": "qsh:way:844548980",
+          "sourceId": "osm:way:844548980",
+          "floors": [
+            1,
+            2
+          ]
+        }
       ],
       "entrances": [
         {
@@ -284,9 +407,23 @@
         "en": "Gymnasium concourse, stands and court; pool entrance hall and poolside"
       },
       "providerId": "interior.box.sports",
-      "openFloors": [
-        1,
-        2
+      "openParts": [
+        {
+          "featureId": "qsh:way:217855275",
+          "sourceId": "osm:way:217855275",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:way:217855279",
+          "sourceId": "osm:way:217855279",
+          "floors": [
+            1,
+            2
+          ]
+        }
       ],
       "entrances": [
         {
@@ -332,9 +469,39 @@
         "en": "C block entrance hall, formula stairs and 2F northern corridor"
       },
       "providerId": "interior.research-six",
-      "openFloors": [
-        1,
-        2
+      "openParts": [
+        {
+          "featureId": "qsh:relation:14153711",
+          "sourceId": "osm:relation:10807930",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:14153711",
+          "sourceId": "osm:relation:14153711",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:14153711",
+          "sourceId": "osm:way:779496167",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:14153711",
+          "sourceId": "osm:way:950008613",
+          "floors": [
+            1,
+            2
+          ]
+        }
       ],
       "entrances": [
         {
@@ -380,8 +547,14 @@
         "en": "A short public section of B block 2F"
       },
       "providerId": "interior.research-six.b",
-      "openFloors": [
-        2
+      "openParts": [
+        {
+          "featureId": "qsh:way:779496169",
+          "sourceId": "osm:way:779496169",
+          "floors": [
+            2
+          ]
+        }
       ],
       "entrances": [],
       "seals": [],
@@ -403,8 +576,84 @@
         "en": "1F lobby, engineering workshop and anechoic chamber control room"
       },
       "providerId": "interior.box.research-institute",
-      "openFloors": [
-        1
+      "openParts": [
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:relation:11031411",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795600225",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795600229",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795600230",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795600232",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795612386",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795612388",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795612389",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795612390",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795612393",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11031411",
+          "sourceId": "osm:way:795612395",
+          "floors": [
+            1
+          ]
+        }
       ],
       "entrances": [],
       "seals": [],
@@ -426,9 +675,15 @@
         "en": "1F–2F public areas and one four-bed dormitory; stairs to 3F closed"
       },
       "providerId": "interior.plan.xuezhi-1",
-      "openFloors": [
-        1,
-        2
+      "openParts": [
+        {
+          "featureId": "qsh:way:217855218",
+          "sourceId": "osm:way:217855218",
+          "floors": [
+            1,
+            2
+          ]
+        }
       ],
       "entrances": [
         {
@@ -489,10 +744,25 @@
         "en": "1F Yinhua, outdoor escalator, 2F Zijing and one corner of 3F Furong"
       },
       "providerId": "interior.box.yinxing",
-      "openFloors": [
-        1,
-        2,
-        3
+      "openParts": [
+        {
+          "featureId": "qsh:way:596973487",
+          "sourceId": "osm:way:596973487",
+          "floors": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "featureId": "qsh:way:596973487",
+          "sourceId": "osm:way:950008615",
+          "floors": [
+            1,
+            2,
+            3
+          ]
+        }
       ],
       "entrances": [
         {
@@ -542,8 +812,35 @@
         "en": "Entrance hall, auditorium and one rehearsal room; upper floors closed"
       },
       "providerId": "interior.box.student-center",
-      "openFloors": [
-        1
+      "openParts": [
+        {
+          "featureId": "qsh:way:552816777",
+          "sourceId": "osm:way:552816777",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:552816777",
+          "sourceId": "osm:way:852606257",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:852606258",
+          "sourceId": "osm:way:852606258",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:217855263",
+          "sourceId": "osm:way:217855263",
+          "floors": [
+            1
+          ]
+        }
       ],
       "entrances": [],
       "seals": [],
@@ -565,8 +862,21 @@
         "en": "1F shopping arcade, one tea shop and one parcel station"
       },
       "providerId": "interior.box.commercial",
-      "openFloors": [
-        1
+      "openParts": [
+        {
+          "featureId": "qsh:way:603368212",
+          "sourceId": "osm:way:603368212",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:603368212",
+          "sourceId": "osm:way:723349792",
+          "floors": [
+            1
+          ]
+        }
       ],
       "entrances": [],
       "seals": [],
@@ -590,9 +900,111 @@
         "en": "A block lobby and 2F stair landing, one lecture room; C block 1F"
       },
       "providerId": "interior.box.pinxue",
-      "openFloors": [
-        1,
-        2
+      "openParts": [
+        {
+          "featureId": "qsh:relation:11043352",
+          "sourceId": "osm:relation:11043352",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043352",
+          "sourceId": "osm:way:797290158",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043352",
+          "sourceId": "osm:way:797290159",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043352",
+          "sourceId": "osm:way:797290160",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043352",
+          "sourceId": "osm:way:797290161",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043352",
+          "sourceId": "osm:way:797290163",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043352",
+          "sourceId": "osm:way:797290164",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043354",
+          "sourceId": "osm:relation:11043354",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043354",
+          "sourceId": "osm:way:797290176",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043354",
+          "sourceId": "osm:way:797290177",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043354",
+          "sourceId": "osm:way:797290178",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043354",
+          "sourceId": "osm:way:797290179",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:relation:11043354",
+          "sourceId": "osm:way:797290180",
+          "floors": [
+            1,
+            2
+          ]
+        }
       ],
       "entrances": [
         {
@@ -638,9 +1050,37 @@
         "en": "Main hall, north annex lobby and 2F interior corridor"
       },
       "providerId": "interior.box.training",
-      "openFloors": [
-        1,
-        2
+      "openParts": [
+        {
+          "featureId": "qsh:way:217855231",
+          "sourceId": "osm:way:217855231",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:217855231",
+          "sourceId": "osm:way:949704500",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:217855231",
+          "sourceId": "osm:way:949704501",
+          "floors": [
+            1,
+            2
+          ]
+        },
+        {
+          "featureId": "qsh:way:217855231",
+          "sourceId": "osm:way:949704502",
+          "floors": [
+            1,
+            2
+          ]
+        }
       ],
       "entrances": [],
       "seals": [],
@@ -662,8 +1102,21 @@
         "en": "1F dining and serving areas; 2F closed"
       },
       "providerId": "interior.box.chaoyang",
-      "openFloors": [
-        1
+      "openParts": [
+        {
+          "featureId": "qsh:way:544136506",
+          "sourceId": "osm:way:544136506",
+          "floors": [
+            1
+          ]
+        },
+        {
+          "featureId": "qsh:way:544136506",
+          "sourceId": "osm:way:848026389",
+          "floors": [
+            1
+          ]
+        }
       ],
       "entrances": [],
       "seals": [],
@@ -685,8 +1138,14 @@
         "en": "B block 1F exterior corridor, selected classrooms and south entrance hall"
       },
       "providerId": "interior.box.liren",
-      "openFloors": [
-        1
+      "openParts": [
+        {
+          "featureId": "qsh:way:814133732",
+          "sourceId": "osm:way:814133732",
+          "floors": [
+            1
+          ]
+        }
       ],
       "entrances": [],
       "seals": [],

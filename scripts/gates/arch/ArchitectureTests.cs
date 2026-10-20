@@ -48,7 +48,7 @@ public sealed class ArchitectureTests
         var forbidden = Types().That().ResideInAssemblyMatching("^GodotSharp(?:,|$)")
             .Or().ResideInAssemblyMatching(@"^Campus(?:,|$)|^Campus\.Contracts\.Runtime(?:,|$)")
             .Or().HaveFullNameMatching(@"^System\.IO\.(File|Directory|FileInfo|DirectoryInfo|FileStream|FileSystemInfo|FileSystemWatcher|StreamReader|StreamWriter)$");
-        Check(Types().That().ResideInAssemblyMatching(@"^Campus\.(Gen|Pipeline)(\.|,|$)")
+        Check(Types().That().ResideInAssemblyMatching(@"^Campus\.Gen(\.|,|$)")
             .Should().NotDependOnAny(forbidden).Because("ENG-ARCH 2: generators are pure and independent of runtime state")
             .WithoutRequiringPositiveResults());
         Check(Types().That().ResideInAssemblyMatching(@"^Campus\.Contracts(?:,|$)")
@@ -61,7 +61,7 @@ public sealed class ArchitectureTests
     public void RuntimeContractsCannotDependOnImplementations()
     {
         Check(Types().That().ResideInAssemblyMatching(@"^Campus\.Contracts\.Runtime(?:,|$)")
-            .Should().NotDependOnAny(Types().That().ResideInAssemblyMatching(@"^Campus(?:,|$)|^Campus\.(?:Gen|Pipeline)(?:\.|,|$)"))
+            .Should().NotDependOnAny(Types().That().ResideInAssemblyMatching(@"^Campus(?:,|$)|^Campus\.Gen(?:\.|,|$)"))
             .WithoutRequiringPositiveResults());
     }
 
@@ -216,7 +216,6 @@ public sealed class ArchitectureTests
 
     private static string? NamespaceOwner(string name)
     {
-        if (name == "Campus.Pipeline.Map" || name.StartsWith("Campus.Pipeline.Map.", StringComparison.Ordinal)) return "Campus.Pipeline.Map";
         if (!name.StartsWith("Campus.Gen.", StringComparison.Ordinal)) return null;
         var parts = name.Split('.');
         var length = MapNamespace(name) is not null ? 5 : parts[2] is "Parts" || name.StartsWith("Campus.Gen.Interior.Shell", StringComparison.Ordinal) ? 4 : 3;
@@ -233,7 +232,7 @@ public sealed class ArchitectureTests
         : "^" + Regex.Escape(owner) + @"(?:\.|$)";
 
     private static bool IsContent(string name) => name.StartsWith("Campus.Gen.", StringComparison.Ordinal) &&
-        name is not "Campus.Gen.Geometry" and not "Campus.Gen.World" and not "Campus.Gen.Interior" &&
+        name is not "Campus.Gen.Geometry" and not "Campus.Gen.World" and not "Campus.Gen.Interior" and not "Campus.Gen.BakeInput" &&
         !name.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal);
 
     private static void AssertAssemblyReference(string origin, string target)
@@ -261,7 +260,7 @@ public sealed class ArchitectureTests
         if (origin is "Campus.Gen.World" or "Campus.Gen.Parts.Core") return target == "Campus.Gen.Geometry";
         if (origin.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal)) return target is "Campus.Gen.Parts.Core" or "Campus.Gen.Geometry";
         if (origin == "Campus.Gen.Interior") return target is "Campus.Gen.Parts.Core" or "Campus.Gen.Geometry";
-        if (origin == "Campus.Pipeline.Map") return target == "Campus.Gen.World";
+        if (origin == "Campus.Gen.BakeInput") return target is "Campus.Gen.World" or "Campus.Gen.Geometry";
         return IsContent(origin) && (target is "Campus.Gen.Geometry" or "Campus.Gen.World" or "Campus.Gen.Interior" ||
             target.StartsWith("Campus.Gen.Parts.", StringComparison.Ordinal));
     }

@@ -5,7 +5,7 @@ using Campus.Contracts.Maps;
 using Campus.Kernel.Renderer;
 using Godot;
 using N = System.Numerics;
-using Services = Campus.Kernel.Registry.Kernel;
+using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Camera.Walk;
 
@@ -116,7 +116,7 @@ public partial class WalkController
 
     private bool PlacementReady()
     {
-        _mapRuntime ??= Services.Get<IMapRuntime>();
+        _mapRuntime ??= KernelServices.Get<IMapRuntime>();
         var current = _mapRuntime.Arrival;
         if (_placementArrival is not null && !ReferenceEquals(current, _placementArrival))
         {
@@ -155,7 +155,7 @@ public partial class WalkController
         foreach (var point in _safePoints.Points.Take(Math.Max(0, _safePoints.Count - skipNewest))) Add(point);
         foreach (var spawn in map.Descriptor.Spawns)
             if (spawn.Stand is { } stand) Add(new(stand.Feet, stand.YawDeg, 0));
-        var atlas = Services.Get<IAtlasService>();
+        var atlas = KernelServices.Get<IAtlasService>();
         if (atlas.Map == map.Descriptor.Id)
             foreach (var marker in atlas.Markers)
                 if (marker.Teleport?.Stand is { } stand) Add(new(stand.Feet, stand.YawDeg, 0));

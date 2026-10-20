@@ -4,6 +4,7 @@ using Campus.Contracts.Maps;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Renderer;
 using Godot;
+using N = System.Numerics;
 
 namespace Campus.Kernel.Stream;
 
@@ -29,22 +30,22 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
         foreach (var layout in generation.InteriorLayouts.Values)
             _atriumStoreys.Add(layout.Feature, layout.AtriumVisibleStoreys);
     }
-    public void Prefetch(NavSpace? space)
+    public void Prefetch(NavSpace? space, N.Vector3 position)
     {
         _destination.Clear(); Error = null;
-        if (space is { Building: not null } value) Request(value, BakePriority.KnownDestination, _destination, true);
+        if (space is { Building: not null } value) Request(value, position, BakePriority.KnownDestination, _destination, true);
     }
-    public void Select(CameraMedium medium)
+    public void Select(CameraMedium medium, N.Vector3 position)
     {
         _visible.Clear();
         if (medium.Kind == MediumKind.Interior && medium.Feature is { } building)
-            Request(new(building, checked((short)medium.Storey)), BakePriority.InteriorPrefetch, _visible, false);
+            Request(new(building, checked((short)medium.Storey)), position, BakePriority.InteriorPrefetch, _visible, false);
     }
-    public void Preload(NavSpace? space, Action<BakeKey> enqueue)
+    public void Preload(NavSpace? space, N.Vector3 position, Action<BakeKey> enqueue)
     {
-        if (space is { Building: not null } value) Request(value, BakePriority.KnownDestination, null, false, enqueue);
+        if (space is { Building: not null } value) Request(value, position, BakePriority.KnownDestination, null, false, enqueue);
     }
-    private void Request(NavSpace space, BakePriority priority, HashSet<BakeKey>? target, bool blocking, Action<BakeKey>? preload = null)
+    private void Request(NavSpace space, N.Vector3 position, BakePriority priority, HashSet<BakeKey>? target, bool blocking, Action<BakeKey>? preload = null)
     {
         if (_context is null || space.Building is not { } building) return;
         var entry = _context.World.Interiors.Get(building);
@@ -53,9 +54,9 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             if (blocking) Error = $"Interior destination is not an open registered building: {building.Value}.";
             return;
         }
-        if (!entry.OpenStoreys.Contains(space.Floor))
+        if (!_context.World.Interiors.IsOpen(building, space.Floor, position))
         {
-            if (blocking) Error = $"Interior destination storey is not open: {building.Value}/{space.Floor}.";
+            if (blocking) Error = $"Interior destination is outside the open area: {building.Value}/{space.Floor}.";
             return;
         }
         var atrium = _atriumStoreys.GetValueOrDefault(building);
