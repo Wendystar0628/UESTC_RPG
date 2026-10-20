@@ -61,11 +61,12 @@ internal sealed class ObserverPresentation(FlightTuning tuning)
         Value = Value with { FovDeg = _fovFrom + (_fovTarget - _fovFrom) * t };
     }
 
+    public static bool IsFinite(Pose pose) =>
+        VectorMath.Finite(pose.Position) && float.IsFinite(pose.YawDeg) && float.IsFinite(pose.PitchDeg)
+        && (pose.FovDeg is not { } fov || float.IsFinite(fov) && fov > 0 && fov < 180);
+
     public static void ValidateFinite(Pose pose)
     {
-        if (!float.IsFinite(pose.Position.X) || !float.IsFinite(pose.Position.Y) || !float.IsFinite(pose.Position.Z)
-            || !float.IsFinite(pose.YawDeg) || !float.IsFinite(pose.PitchDeg)
-            || pose.FovDeg is { } fov && (!float.IsFinite(fov) || fov <= 0 || fov >= 180))
-            throw new ArgumentOutOfRangeException(nameof(pose));
+        if (!IsFinite(pose)) throw new ArgumentOutOfRangeException(nameof(pose));
     }
 }

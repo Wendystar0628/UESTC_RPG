@@ -70,8 +70,7 @@ internal sealed class ObserverFlight
 
     public bool IsLegal(Pose pose, bool outsideBuffer)
     {
-        try { ObserverPresentation.ValidateFinite(pose); }
-        catch (ArgumentOutOfRangeException) { return false; }
+        if (!ObserverPresentation.IsFinite(pose)) return false;
         return _bounds?.IsLegal(pose.Position, outsideBuffer) ?? false;
     }
 
