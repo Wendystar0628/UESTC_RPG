@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Reflection;
+using Campus.Gates;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
@@ -38,6 +40,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private IAppLoadingLease? _failureLoading;
     private IFlowLease? _failureFlow;
     private readonly StageGateDriver _gate;
+    private IGlobalDataTextureRegistry? _textures;
     private string _phase = "compose";
     public string Phase
     {
@@ -58,6 +61,9 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (AppBoot.Failed) return;
         try
         {
+            var registry = Services.Services;
+            registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))));
+            GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
             if (RegistryGateRunner.TryRun(this)) return;
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
             Compose();
@@ -97,6 +103,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         registry.Add(environment.Environment);
         registry.Add(ui);
         registry.Add<IAppExit>(this);
+        _textures = registry.Get<IGlobalDataTextureRegistry>();
         registry.InstantiateServices();
         // Build the complete batch, attach every node, then invoke lifecycle hooks. An fx.* consumer
         // must not depend on its instance-pool host sorting ahead of it; _Ready only prepares structure.
@@ -320,6 +327,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _captureLifetime.Cancel();
         if (_failureLoading is not null) _ = _failureLoading.DisposeAsync();
         _failureFlow?.Dispose();
+        _textures?.Dispose();
     }
 
     public Task FinishQuit()

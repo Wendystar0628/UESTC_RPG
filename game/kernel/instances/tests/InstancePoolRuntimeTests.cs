@@ -30,7 +30,7 @@ public sealed class InstancePoolRuntimeTests
             try
             {
                 tree.Root.AddChild(parent);
-                InstancePoolRuntimeFixture.Run(parent, material, new InstancePoolHost(provider, source, palettes.Catalog));
+                InstancePoolRuntimeFixture.Run(parent, material, new InstancePoolHost(provider, source, palettes));
             }
             finally
             {

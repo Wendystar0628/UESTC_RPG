@@ -7,8 +7,9 @@ using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
+using Campus.Kernel.Registry;
 
-namespace Campus.Kernel.Registry;
+namespace Campus.Gates;
 
 public sealed record RegistryGateReport(string Scope, int Maps, int Services, int Declarations,
     int Entities, int FramePriorities, int QualityKnobs, IReadOnlyList<string> NotImplemented);

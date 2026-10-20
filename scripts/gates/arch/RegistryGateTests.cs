@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Kernel.Registry;
+using Campus.Gates;
 using GdUnit4;
 using Godot;
 
@@ -18,8 +19,8 @@ public sealed class RegistryGateTests
         var chosen = registry.Entries.Single(entry => entry.Kind == "service" && entry.Id == typeof(IWorldModel).FullName);
         if (chosen.Type != typeof(ReplacementWorld) || chosen.IsStub) throw new InvalidOperationException("Real world replacement was not selected.");
         RegistryGateRunner.ValidateConstructorGraph(registry,
-            [typeof(IRuleset), typeof(IRulesetActivation), typeof(IAppExit), typeof(Camera3D),
-                typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer), typeof(PaletteCatalog)]);
+            [typeof(IAppExit), typeof(Camera3D),
+                typeof(WorldEnvironment), typeof(Godot.Environment), typeof(CanvasLayer)]);
         if (ReplacementWorld.Constructed) throw new InvalidOperationException("Declaration validation constructed the selected world implementation.");
     }
 
@@ -40,6 +41,6 @@ public sealed class RegistryGateTests
         public ISpatialIndex Spatial => throw new NotSupportedException();
         public IInteriorIndex Interiors => throw new NotSupportedException();
         public IOutskirtsModel? Outskirts => throw new NotSupportedException();
-        public IFidelityModel? Fidelity => throw new NotSupportedException();
+        public IFidelityModel Fidelity => throw new NotSupportedException();
     }
 }

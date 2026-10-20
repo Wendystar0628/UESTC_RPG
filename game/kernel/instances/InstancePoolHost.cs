@@ -26,13 +26,13 @@ public sealed partial class InstancePoolHost : Node3D, IInstancePoolHost, IMapAw
     private long _nextNodeId;
 
     public InstancePoolHost() { }
-    public InstancePoolHost(IToonMaterialProvider materials, IShaderMaterialSource shaderSource, PaletteCatalog catalog)
+    public InstancePoolHost(IToonMaterialProvider materials, IShaderMaterialSource shaderSource, IPaletteCatalogSource palettes)
     {
         ArgumentNullException.ThrowIfNull(materials);
         ArgumentNullException.ThrowIfNull(shaderSource);
-        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(palettes);
         _materials = materials;
-        _catalog = catalog;
+        _catalog = palettes.Catalog;
         _shaderSource = shaderSource;
     }
 

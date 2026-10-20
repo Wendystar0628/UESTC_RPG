@@ -631,6 +631,10 @@
       "owner": "WP-37"
     },
     {
+      "pattern": "game/data/maps/*/window-numbering.json",
+      "owner": "WP-14"
+    },
+    {
       "pattern": "game/systems/nightlight/**",
       "owner": "WP-39"
     },
@@ -997,7 +1001,7 @@
     {
       "pattern": "game/gates/**",
       "owner": "WP-27",
-      "note": "预留: Q-077d explicitly moves the existing production registry gate drivers here; retain the already registered target rather than deleting it immediately before that queued move."
+      "note": "运行时门禁、截图与核心生命周期驱动。"
     },
     {
       "pattern": "game/stage/**",
@@ -1100,47 +1104,31 @@
   ],
   "shaderWhitelist": [
     "game/style/outline/fog.glslinc",
-    "game/style/outline/post_flare.glsl",
-    "game/style/outline/post_fxaa.glsl",
     "game/style/outline/post_outline.glsl",
-    "game/style/outline/post_tiltshift_blur.glsl",
-    "game/style/shaders/bake_impostor.gdshader",
     "game/style/shaders/cine_cloud.gdshader",
     "game/style/shaders/diorama_far.gdshader",
-    "game/style/shaders/diorama_section.gdshader",
     "game/style/shaders/fog.gdshaderinc",
-    "game/style/shaders/fog.glslinc",
-    "game/style/shaders/fx_fall.gdshader",
     "game/style/shaders/fx_glow.gdshader",
     "game/style/shaders/globals.gdshaderinc",
     "game/style/shaders/lamp.gdshaderinc",
     "game/style/shaders/map_base.gdshader",
-    "game/style/shaders/medium_overlay.gdshader",
-    "game/style/shaders/motion_wind.gdshaderinc",
     "game/style/shaders/precip.gdshader",
     "game/style/shaders/precip_wet.gdshaderinc",
     "game/style/shaders/reflection_lamps.gdshaderinc",
     "game/style/shaders/reflect_flat.gdshader",
     "game/style/shaders/sky.gdshader",
     "game/style/shaders/toon.gdshaderinc",
-    "game/style/shaders/toon_cut.gdshader",
-    "game/style/shaders/toon_decal.gdshader",
-    "game/style/shaders/toon_figure.gdshader",
     "game/style/shaders/veg_common.gdshaderinc",
     "game/style/shaders/window_card.gdshaderinc",
     "game/style/shaders/toon_glass.gdshader",
-    "game/style/shaders/toon_glass_near.gdshader",
     "game/style/shaders/toon_scene_text.gdshader",
     "game/style/shaders/toon_static.gdshader",
     "game/style/shaders/ui_panel.gdshader",
     "game/style/shaders/ui_screen.gdshader",
     "game/style/shaders/veg_card.gdshader",
     "game/style/shaders/veg_grass.gdshader",
-    "game/style/shaders/veg_impostor.gdshader",
-    "game/style/shaders/veg_lotus.gdshader",
     "game/style/shaders/veg_trunk.gdshader",
     "game/style/shaders/veg_twig_mass.gdshader",
-    "game/style/shaders/water.gdshader",
-    "game/style/shaders/water_clear.gdshader"
+    "game/style/shaders/water.gdshader"
   ]
 }

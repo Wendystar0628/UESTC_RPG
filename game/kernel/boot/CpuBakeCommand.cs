@@ -1,9 +1,11 @@
+using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Bake;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Maps;
+using Campus.Kernel.Registry;
 using Godot;
 
 namespace Campus.Kernel.Boot;
@@ -12,6 +14,10 @@ namespace Campus.Kernel.Boot;
 [KernelService(typeof(IBakeCommand), Owner = "WP-01")]
 public sealed class CpuBakeCommand : IBakeCommand
 {
+    private readonly GlobalBuildInputs _globalInputs;
+
+    public CpuBakeCommand(GlobalBuildInputs globalInputs) => _globalInputs = globalInputs;
+
     public async Task<int> Run(BootContext context)
     {
         var options = BakeOptions.From(context.Run.Bake);
@@ -20,7 +26,7 @@ public sealed class CpuBakeCommand : IBakeCommand
         try
         {
             using var terrain = new TerrainCacheService(options);
-            using var bake = new BakeService(options, terrain);
+            using var bake = new BakeService(options, terrain, _globalInputs.Snapshot);
             var source = new MapDataSource();
             var catalog = await source.ReadCatalog();
             var requested = context.Run.Flow.Map ?? catalog.Default;
@@ -37,8 +43,14 @@ public sealed class CpuBakeCommand : IBakeCommand
                 var map = MapWorldLoading.CreateContext(input.Entry, loaded, input.SourceInputs);
                 try
                 {
-                    await bake.PrepareMapData(map);
+                    var metadata = await bake.PrepareMapData(map);
                     await bake.BakeOffline(map, pipelines);
+                    if (metadata.Lighting.WindowNumbering is { } numbering)
+                    {
+                        var path = ProjectSettings.GlobalizePath(map.DataRoot + WindowNumberingRegistry.FileName);
+                        var bytes = JsonSerializer.SerializeToUtf8Bytes(WindowNumberingRegistry.FromSnapshot(numbering), ContractJson.Options);
+                        if (!File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes)) BakeCacheStore.AtomicWrite(path, bytes);
+                    }
                     while (bake.TryTakeDiagnostic(out var collected))
                     {
                         var diagnostic = collected!.Diagnostic;

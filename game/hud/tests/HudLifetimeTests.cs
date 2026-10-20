@@ -1,5 +1,6 @@
 using System.Reflection;
 using Campus.Contracts;
+using Campus.Audio.Core;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Audio;
@@ -10,9 +11,10 @@ using Campus.Hud.Style;
 using Campus.Hud.Widgets;
 using Campus.Kernel.Materials;
 using Campus.Kernel.Registry;
+using Campus.Kernel.Settings;
 using Campus.Kernel.World;
 using Campus.Style.Materials;
-using Campus.Systems.Weather;
+using Campus.Style.Palette;
 using GdUnit4;
 using static GdUnit4.Assertions;
 using Godot;
@@ -28,10 +30,10 @@ public sealed class HudLifetimeTests
     [RequireGodotRuntime]
     public void ThemeClockStopsObservingSettingsUntilItReenters()
     {
-        var settings = new HudSettings(Services.Get<ISettingsStore>());
+        var settings = new HudSettings(new SettingsStore());
         settings.SetTheme(UiThemeMode.Light);
         settings.SetReduceMotion(ReduceMotionMode.On);
-        var world = new WorldStateService(new WeatherProcess(Services.Get<IWeatherProfileSource>()));
+        var world = new WorldStateService(new TestWeatherProcess());
         var motion = new MotionPolicy(settings);
         var baseline = Subscribers(settings, "Changed");
         var worldBaseline = Subscribers(world, "InstanceChanged");
@@ -64,13 +66,15 @@ public sealed class HudLifetimeTests
         var previousRegistry = Services.Services;
         var servicesProperty = typeof(Services).GetProperty(nameof(Services.Services))!;
         var registry = new ServiceRegistry();
+        var ruleset = TestRuleset.ForFlow();
+        using var audio = new AudioRuntime();
         var flow = new TestAppFlow();
         var router = new Router();
-        var settings = new HudSettings(Services.Get<ISettingsStore>());
+        var settings = new HudSettings(new SettingsStore());
         var world = new WorldStateService(new TestWeatherProcess());
-        var view = new TestWorldState(new TestWeatherProcess(), previousRegistry.Get<IRuleset>());
+        var view = new TestWorldState(new TestWeatherProcess(), ruleset);
         var camera = new TestCameraRig(view);
-        var model = new HudModel(world, camera, previousRegistry.Get<IRuleset>());
+        var model = new HudModel(world, camera, ruleset);
         var motion = new MotionPolicy(settings);
         var settingsBaseline = Subscribers(settings, "Changed");
         var worldBaseline = Subscribers(world, "InstanceChanged");
@@ -93,11 +97,11 @@ public sealed class HudLifetimeTests
             registry.Add<IWorldControl>(world);
             registry.Add<IViewControl>(view);
             registry.Add<ICameraRig>(camera);
-            registry.Add<IPaletteCatalogSource>(previousRegistry.Get<IPaletteCatalogSource>());
+            registry.Add<IPaletteCatalogSource>(new PaletteRegistrySource());
             registry.Add<IShaderMaterialSource>(new ShaderMaterialSource());
             registry.Add<IPaletteProbe>(new Probe());
-            registry.Add<IAudioService>(previousRegistry.Get<IAudioService>());
-            registry.Add<IMapService>(previousRegistry.Get<IMapService>());
+            registry.Add<IAudioService>(audio);
+            registry.Add<IMapService>(new TestMapService());
             registry.Add<IAppFlow>(flow);
             registry.Add<IInputRouter>(router);
             servicesProperty.SetValue(null, registry);

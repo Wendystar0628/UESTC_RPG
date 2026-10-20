@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using Campus.Kernel.Registry;
+using Campus.Gates;
 using GdUnit4;
 using static GdUnit4.Assertions;
 

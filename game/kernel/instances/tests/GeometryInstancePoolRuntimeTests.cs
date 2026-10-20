@@ -437,7 +437,7 @@ public sealed class GeometryInstancePoolRuntimeTests
                 fixture.Provider = new(fixture._first, fixture._second);
                 fixture._parent = new Node3D();
                 tree.Root.AddChild(fixture._parent);
-                fixture._host = new InstancePoolHost(materials ?? fixture.Provider, fixture.Source, catalog ?? Catalog());
+                fixture._host = new InstancePoolHost(materials ?? fixture.Provider, fixture.Source, new Palettes(catalog ?? Catalog()));
                 fixture._parent.AddChild(fixture._host);
                 return fixture;
             }

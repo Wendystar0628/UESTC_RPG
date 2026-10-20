@@ -2,7 +2,7 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
 using Godot;
-using Campus.Kernel.Registry;
+using AppBoot = Campus.Kernel.Boot.Boot;
 using Services = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.World;
@@ -56,7 +56,7 @@ public partial class WorldStateNode : Node, IMapAware, IQualityAware
     {
         if (_world is null) return;
         _world.SetStepRate(_stepRate);
-        _world.Tick(delta, RegistryGateRunner.FreezesAnimation);
+        _world.Tick(delta, AppBoot.Options.FreezeAnimation);
         WriteGlobals();
     }
 

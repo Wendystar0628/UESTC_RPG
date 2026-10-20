@@ -4,6 +4,7 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Save;
 using Campus.Kernel.Registry;
+using Campus.Gates;
 using GdUnit4;
 
 namespace Campus.Arch.Tests
@@ -104,7 +105,7 @@ namespace Campus.Arch.Tests
         public BakeProductKind ProductKind => BakeProductKind.Collision;
         public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];
         public bool CanBuild(BakeKey key) => key.Module == "fixture.bake";
-        public object Build(BakeKey key, BuildContext context) => throw new NotSupportedException("This test checks registration, not baking.");
+        public object Build(BakeKey key, BuildContext context, string inputHash) => throw new NotSupportedException("This test checks registration, not baking.");
     }
 
     public abstract class RegistrySaveFixture : ISaveSection
