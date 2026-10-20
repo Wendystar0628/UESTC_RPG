@@ -451,11 +451,6 @@
    "WLD-LIFE",
    "WLD-LIFE-FAUNA"
   ],
-  "WP-26": [
-   "SYS-MOTION",
-   "SYS-MOTION-ENV",
-   "SYS-MOTION-LIFE"
-  ],
   "WP-27": [
    "ART-FIDELITY",
    "ART-FIDELITY-DETAIL",
@@ -547,11 +542,6 @@
   "WP-46": [
    "SYS-MAPS"
   ],
-  "WP-47a": [
-   "MAP-QSH-OUTSKIRTS",
-   "WLD-OUTSKIRTS",
-   "WLD-OUTSKIRTS-BAND"
-  ],
   "WP-48a": [
    "SYS-ATLAS",
    "SYS-ATLAS-UI"
@@ -585,18 +575,6 @@
   ],
   "WP-53a": [
    "SYS-AUDIO"
-  ],
-  "WP-53b": [
-   "SYS-AUDIO",
-   "SYS-AUDIO-AMBIENCE"
-  ],
-  "WP-53c": [
-   "SYS-AUDIO",
-   "SYS-AUDIO-FOLEY"
-  ],
-  "WP-53d": [
-   "SYS-AUDIO",
-   "SYS-AUDIO-FOLEY"
   ],
   "WP-53e": [
    "SYS-AUDIO"
