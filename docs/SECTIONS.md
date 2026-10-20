@@ -1934,7 +1934,7 @@
 
 ## STD-CODE · 代码结构准则
 
-`docs/standards/STD-CODE-代码结构准则.md` · 5.6k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
+`docs/standards/STD-CODE-代码结构准则.md` · 5.8k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
 关键词：代码结构准则、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、signatures.txt、Godot API、GDScript
 
 - STD-CODE §0 结论 · L23 · 1.2k
@@ -1942,9 +1942,9 @@
 - STD-CODE §1 依赖方向 · L46 · 351
 - STD-CODE §2 规则值与数据各一份 · L55 · 576
 - STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.3k
-- STD-CODE §4 不留死代码 · L79 · 209
-- STD-CODE §5 规模 · L86 · 226
-- STD-CODE §6 测试代码怎么写 · L92 · 767
+- STD-CODE §4 不留死代码 · L79 · 427
+- STD-CODE §5 规模 · L87 · 226
+- STD-CODE §6 测试代码怎么写 · L93 · 767
 
 ## STD-CONVENTIONS · 坐标单位与命名约定
 
@@ -2012,12 +2012,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 9.5k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 9.7k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L23 · 127
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L27 · 54
-- REG-DECISIONS-PROCESS §1 流程 · L31 · 8.8k
+- REG-DECISIONS-PROCESS §1 流程 · L31 · 9.0k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
