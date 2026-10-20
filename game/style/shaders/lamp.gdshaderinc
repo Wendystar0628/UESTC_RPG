@@ -73,6 +73,10 @@ float lamp_heff() {
 // 同一层相邻 3 个开间（大致一间房）阈值相近，所以灯按房间成团亮灭；fract(均匀 + 独立量) 仍是均匀分布，L 仍约等于亮窗比例。
 // 整栋楼再加 ±0.25 的偏置，有的楼整体亮、有的暗。cols = 楼窗网格的总列数
 float lamp_window_threshold(int id, int base, int cols) {
+	// Campus thresholds are baked from stable feature/grid keys. Absolute IDs only address the texture.
+	if (id >= 0 && id < 65536) {
+		return texelFetch(window_thresholds, ivec2(id % 256, id / 256), 0).r;
+	}
 	int local = max(id - base, 0);
 	int c = max(cols, 1);
 	int row = local / c;

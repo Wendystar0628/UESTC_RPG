@@ -85,7 +85,7 @@ internal static class BakeMapMetadataBuilder
         var nightlight = builders.Length == 0
             ? new NightlightCatalog([], ReadOnlyMemory<float>.Empty, ReadOnlyMemory<float>.Empty, 0, 0)
             : ((INightlightCatalogBuilder)builders[0].Value).BuildCatalog(map.CreateAssetContext(builders[0].CodeHash), emitters);
-        nightlight = new(Array.AsReadOnly(nightlight.Lamps.ToArray()), nightlight.LampTable.ToArray(), nightlight.LampGrid.ToArray(), nightlight.GridWidth, nightlight.GridHeight);
+        nightlight = new(Array.AsReadOnly(nightlight.Lamps.ToArray()), nightlight.LampTable.ToArray(), nightlight.LampGrid.ToArray(), nightlight.GridWidth, nightlight.GridHeight) { WindowThresholds = nightlight.WindowThresholds.ToArray() };
         var lightData = new LightInventoryDocument(map.Context.Descriptor.Id,
             emitters, Array.AsReadOnly(facades.OrderBy(facade => Canonical(facade), StringComparer.Ordinal).ToArray()),
             Array.AsReadOnly(windows.OrderBy(window => window.Id).ToArray()), nightlight)
@@ -125,6 +125,7 @@ internal static class BakeMapMetadataBuilder
             catalog.Lamps.Count > 0 && catalog.LampTable.Length != catalog.Lamps.Count * 8 ||
             catalog.Lamps.Count == 0 && catalog.LampTable.Length is not (0 or 8) ||
             catalog.LampGrid.Length != (long)catalog.GridWidth * catalog.GridHeight * 4 ||
+            lights.WindowNumbering?.WindowCount > 0 && catalog.WindowThresholds.Length != WindowNumberingSnapshot.Capacity ||
             catalog.Lamps.Count > 0 && (catalog.GridWidth == 0 || catalog.GridHeight == 0))
             throw new InvalidDataException("Missing or invalid resident nightlight catalog.");
         foreach (var lamp in catalog.Lamps)
@@ -134,6 +135,9 @@ internal static class BakeMapMetadataBuilder
                 lamp.Energy < 0 || lamp.Keep < 0 || lamp.Keep >= 1 || lamp.ColorColumn < 0 || lamp.ColorColumn >= PaletteLayout.Capacity ||
                 lamp.Slot < 0 || lamp.Slot >= LightChannelCatalog.Count)
                 throw new InvalidDataException("Invalid resident lamp record.");
+        foreach (var value in catalog.WindowThresholds.Span)
+            if (!float.IsFinite(value) || value < 0f || value > 1f)
+                throw new InvalidDataException("Invalid baked window threshold.");
         foreach (var value in catalog.LampTable.Span)
             if (!float.IsFinite(value)) throw new InvalidDataException("Invalid resident lamp table.");
         foreach (var value in catalog.LampGrid.Span)

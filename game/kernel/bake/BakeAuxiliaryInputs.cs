@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Fauna;
@@ -39,17 +40,47 @@ public sealed partial class BakeService
                 codes.Add(key, new ReadOnlyDictionary<string, string>(sources));
             }
             _auxiliaryCodes = codes;
-            var hash = new BakeInputHash();
-            hash.Add(new { lighting.Nightlight, lighting.WindowNumbering });
-            var lightingStamp = hash.Finish();
             _auxiliaryStamps = PreparedTiles.Auxiliary.ToDictionary(entry => entry.Key, entry =>
             {
                 var stamp = new BakeInputHash();
                 stamp.Add(entry.Bounds);
                 var producer = Producers.Single(value => value.Value.CanBuild(entry.Key)).Value;
-                if ((producer.Inputs(entry.Key).Kinds & BakeInputKinds.Lighting) != 0) stamp.Add(lightingStamp);
+                if ((producer.Inputs(entry.Key).Kinds & BakeInputKinds.Lighting) != 0)
+                {
+                    if (entry.Key.Module == BakeModuleIds.NightlightWindows) AddWindowInputs(stamp, lighting, entry);
+                    else stamp.Add(lighting.Nightlight.Lamps);
+                }
                 return stamp.Finish();
             });
+        }
+
+        private static void AddWindowInputs(BakeInputHash stamp, LightInventoryDocument lighting, BakeTileEntry entry)
+        {
+            var facades = lighting.Facades.Where(facade => Intersects(facade, entry.Bounds)).ToArray();
+            var windows = lighting.Windows.Where(window => window.Center.X >= entry.Bounds.Min.X && window.Center.X <= entry.Bounds.Max.X &&
+                window.Center.Z >= entry.Bounds.Min.Z && window.Center.Z <= entry.Bounds.Max.Z).ToArray();
+            var bases = facades.Select(facade => facade.BaseId).Concat(windows.Select(window => window.BaseId)).ToHashSet();
+            var allocations = lighting.WindowNumbering?.Allocations.Where(allocation => bases.Contains(allocation.BaseId)).ToArray() ?? [];
+            stamp.Add(new { facades, windows, allocations });
+        }
+
+        private static bool Intersects(WindowFacadeDecl facade, Box3 bounds)
+        {
+            if (facade.Columns <= 0 || facade.Rows <= 0) return false;
+            var right = Vector3.Normalize(facade.Right);
+            var up = Vector3.Normalize(facade.Up);
+            var min = new Vector3(float.MaxValue);
+            var max = new Vector3(float.MinValue);
+            for (var row = 0; row < facade.Rows; row++)
+            {
+                var first = facade.Origin + right * (facade.Width * 0.5f) + up *
+                    (facade.SillY[row] + facade.Height * 0.5f);
+                var last = first + right * ((facade.Columns - 1) * facade.Pitch);
+                min = Vector3.Min(min, Vector3.Min(first, last));
+                max = Vector3.Max(max, Vector3.Max(first, last));
+            }
+            // The unshifted facade centers sit inside the baked halo bounds, including their stand-off.
+            return min.X <= bounds.Max.X && max.X >= bounds.Min.X && min.Z <= bounds.Max.Z && max.Z >= bounds.Min.Z;
         }
 
         internal bool TryAuxiliaryInput(BakeKey key, out BakeTileEntry entry,

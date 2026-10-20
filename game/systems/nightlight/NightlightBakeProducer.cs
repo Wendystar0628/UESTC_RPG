@@ -42,7 +42,15 @@ public sealed class NightlightBakeProducer : IBakeProducer, IBakeContentConsumer
             context.World.Terrain.HeightAt, LampSeed ^ context.Map.Seed, out _).ToArray());
         var table = LampTable.PackTable(lamps);
         var grid = LampTable.PackGrid(lamps, context.Map.DataRect, out var size, out _);
-        return new(lamps, table, grid, size.Width, size.Height);
+        var numbering = context.WindowNumbering ?? throw new InvalidDataException("Missing prepared window numbering.");
+        var thresholds = new float[WindowNumberingSnapshot.Capacity];
+        foreach (var allocation in numbering.Allocations)
+        {
+            var seed = allocation.Seed;
+            for (var local = 0; local < allocation.Count; local++)
+                thresholds[allocation.BaseId + local] = ScheduleMath.WindowThreshold(local, seed, allocation.Columns);
+        }
+        return new(lamps, table, grid, size.Width, size.Height) { WindowThresholds = thresholds };
     }
 
     internal static ScheduleEvaluator ReadSchedule(ReadOnlySpan<byte> bytes, MapId map)
@@ -99,7 +107,7 @@ public sealed class NightlightBakeProducer : IBakeProducer, IBakeContentConsumer
         return Array.AsReadOnly(entries.ToArray());
     }
 
-    public object Build(BakeKey key, BuildContext context)
+    public object Build(BakeKey key, BuildContext context, string inputHash)
     {
         var lighting = RequireLighting(context);
         if (!CanBuild(key) || key.Map != context.Map.Id) throw new ArgumentException("Nightlight key does not match its map.");

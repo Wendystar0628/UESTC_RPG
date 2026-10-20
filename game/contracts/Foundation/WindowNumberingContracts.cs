@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Text.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -57,7 +59,10 @@ public interface IWindowNumberingProvider
 /// </remarks>
 public readonly record struct WindowAllocation(FeatureId Feature, string Key, int BaseId, int Columns, int Rows)
 {
+    [JsonIgnore]
     public int Count => checked(Columns * Rows);
+    [JsonIgnore]
+    public uint Seed => StableHash.Hash32(0u, Feature.Value, Key);
 
     public int IdAt(int column, int row)
     {
@@ -72,10 +77,10 @@ public readonly record struct WindowAllocation(FeatureId Feature, string Key, in
 /// <summary>The immutable campus allocation for one map, prepared by WP-14 and shared by every producer and consumer.</summary>
 /// <remarks>
 /// The constructor validates an already allocated table; it never assigns, sorts, truncates or wraps IDs.
-/// Inputs must be in ordinal (Feature.Value, Key) order with contiguous half-open ranges starting at zero.
-/// Fingerprint is the lowercase SHA-256 of the complete resolved numbering input and table, including empty declarations.
-/// It belongs in every VF-B and lighting-inventory cache identity. Numbers are stable for identical inputs, not across
-/// edits that add, remove or resize earlier grids. This snapshot covers campus IDs only; the existing outskirts ABI is unchanged.
+/// Inputs are in ordinal (Feature.Value, Key) order. Active ranges do not overlap; gaps are retired addresses.
+/// NextId is the persisted high-water mark: adding, removing or resizing another grid cannot move existing addresses.
+/// Fingerprint identifies the resolved table for resident metadata; tile identities use only their local allocations.
+/// This snapshot covers campus IDs only; the existing outskirts ABI is unchanged.
 /// </remarks>
 public sealed class WindowNumberingSnapshot
 {
@@ -83,7 +88,7 @@ public sealed class WindowNumberingSnapshot
     public const int Capacity = OverrideTextureSide * OverrideTextureSide;
     private readonly Dictionary<(FeatureId Feature, string Key), WindowAllocation> _byKey = [];
 
-    public WindowNumberingSnapshot(MapId map, string fingerprint, IReadOnlyList<WindowAllocation> allocations)
+    public WindowNumberingSnapshot(MapId map, string fingerprint, IReadOnlyList<WindowAllocation> allocations, int? nextId = null)
     {
         if (string.IsNullOrWhiteSpace(map.Value)) throw new ArgumentException("Map is required.", nameof(map));
         if (fingerprint is null || fingerprint.Length != 64)
@@ -94,6 +99,7 @@ public sealed class WindowNumberingSnapshot
         ArgumentNullException.ThrowIfNull(allocations);
         var copy = new WindowAllocation[allocations.Count];
         long next = 0;
+        var occupied = new bool[Capacity];
         WindowAllocation? previous = null;
         for (int i = 0; i < allocations.Count; i++)
         {
@@ -108,9 +114,14 @@ public sealed class WindowNumberingSnapshot
                     throw new ArgumentException("Window allocations must have unique keys and canonical order.", nameof(allocations));
             }
             long count = (long)item.Columns * item.Rows;
-            if (item.BaseId != next || count > Capacity - next)
-                throw new ArgumentException("Window ranges must be contiguous and fit the current 65536-ID ABI.", nameof(allocations));
-            next += count;
+            if (item.BaseId < 0 || count > Capacity - item.BaseId)
+                throw new ArgumentException("Window ranges must fit the 65536-ID ABI.", nameof(allocations));
+            for (int id = item.BaseId; id < item.BaseId + count; id++)
+            {
+                if (occupied[id]) throw new ArgumentException("Window ranges overlap.", nameof(allocations));
+                occupied[id] = true;
+            }
+            next = Math.Max(next, item.BaseId + count);
             copy[i] = item;
             _byKey.Add((item.Feature, item.Key), item);
             previous = item;
@@ -118,15 +129,28 @@ public sealed class WindowNumberingSnapshot
         Map = map;
         Fingerprint = fingerprint;
         Allocations = new ReadOnlyCollection<WindowAllocation>(copy);
-        WindowCount = (int)next;
+        if (nextId is { } high && (high < next || high > Capacity))
+            throw new ArgumentOutOfRangeException(nameof(nextId), "The persisted high-water mark must contain every active range.");
+        NextId = nextId ?? (int)next;
+        WindowCount = copy.Sum(a => a.Count);
     }
 
     public MapId Map { get; }
     public string Fingerprint { get; }
     public int WindowCount { get; }
+    public int NextId { get; }
+    public bool ContainsId(int id) => Allocations.Any(a => id >= a.BaseId && id - a.BaseId < a.Count);
     public IReadOnlyList<WindowAllocation> Allocations { get; }
 
     /// <summary>Exact lookup; absent declarations fail instead of falling back to a temporary or generic base.</summary>
     public WindowAllocation Get(FeatureId feature, string key) => _byKey.TryGetValue((feature, key), out var value)
         ? value : throw new KeyNotFoundException($"No window allocation for {feature.Value} / {key} in map {Map.Value}.");
+}
+
+/// <summary>Authored address ledger, updated only by explicit offline baking. High-water addresses are never recycled.</summary>
+public sealed record WindowNumberingRegistry(MapId Map, int NextId, IReadOnlyList<WindowAllocation> Allocations)
+{
+    public const string FileName = "window-numbering.json";
+    public static WindowNumberingRegistry FromSnapshot(WindowNumberingSnapshot snapshot) =>
+        new(snapshot.Map, snapshot.NextId, snapshot.Allocations);
 }

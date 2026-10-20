@@ -43,6 +43,7 @@ global uniform vec4 shaft;
 global uniform vec4 interior_light;
 global uniform sampler2D palette : source_color, filter_nearest, repeat_disable;
 global uniform sampler2D light_channels : filter_nearest, repeat_disable;
+global uniform sampler2D window_thresholds : filter_nearest, repeat_disable;
 global uniform sampler2D window_override : filter_nearest, repeat_disable;
 global uniform sampler2D lamp_grid : filter_nearest, repeat_disable;
 global uniform sampler2D lamp_table : filter_nearest, repeat_disable;

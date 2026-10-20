@@ -172,7 +172,7 @@ public sealed class NightlightTests
         {
             var i = sample * 20000 / n;
             var baseId = (i / 400) * 400;
-            if (ScheduleMath.WindowThreshold(i, baseId, 20) < 0.5f) below++;
+            if (ScheduleMath.WindowThreshold(i - baseId, StableHash.Hash32(0u, "test:windows", baseId.ToString(System.Globalization.CultureInfo.InvariantCulture)), 20) < 0.5f) below++;
         }
         AssertThat(below / (float)n).OverrideFailureMessage($"{"half of the windows below θ = 0.5"}: expected {0.5f:R}, got {below / (float)n:R}.").IsEqualApprox(0.5f, TestTolerance.Proportion);
     }

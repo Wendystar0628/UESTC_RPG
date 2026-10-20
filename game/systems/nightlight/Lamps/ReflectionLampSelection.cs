@@ -23,7 +23,7 @@ internal sealed class ReflectionLampSelection
     private readonly record struct Candidate(int Kind, int Tile, int Index, int StableId, float Priority, float Distance);
 
     public bool Select(IReadOnlyList<LampRecord> lamps, IReadOnlyList<NightlightTileContent> tiles,
-        ReadOnlySpan<Vector2> channels, ReadOnlySpan<byte> windowOverrides, Vector3 camera)
+        ReadOnlySpan<Vector2> channels, ReadOnlySpan<byte> windowOverrides, ReadOnlySpan<float> thresholds, Vector3 camera)
     {
         Span<Candidate> selected = stackalloc Candidate[Capacity];
         var count = 0;
@@ -46,7 +46,7 @@ internal sealed class ReflectionLampSelection
             {
                 var i = tile.ReflectionWindowIndices[n];
                 var o = i * GlowSet.Stride;
-                if (!WindowLit(windows.Buffer, o, channels, windowOverrides)) continue;
+                if (!WindowLit(windows.Buffer, o, channels, windowOverrides, thresholds)) continue;
                 var position = new Vector2(windows.Buffer[o + 3], windows.Buffer[o + 11]);
                 count = Insert(selected, count, new(2, t, i, (int)windows.Buffer[o + 12], 1, Vector2.DistanceSquared(position, eye)));
             }
@@ -79,7 +79,7 @@ internal sealed class ReflectionLampSelection
         return changed;
     }
 
-    private static bool WindowLit(float[] buffer, int offset, ReadOnlySpan<Vector2> channels, ReadOnlySpan<byte> overrides)
+    private static bool WindowLit(float[] buffer, int offset, ReadOnlySpan<Vector2> channels, ReadOnlySpan<byte> overrides, ReadOnlySpan<float> thresholds)
     {
         var id = (int)buffer[offset + 12];
         var outskirts = ((int)buffer[offset + 15] & GlowSets.OutskirtsFlag) != 0;
@@ -91,7 +91,9 @@ internal sealed class ReflectionLampSelection
         }
         var packed = (int)buffer[offset + 14];
         // 只判当前候选是否发亮；阈值沿用同一个纯函数，实际亮度仍由 shader 的 lamp_window_on 求值。
-        var threshold = ScheduleMath.WindowThreshold(id, (int)buffer[offset + 13], packed / LightChannelCatalog.Count);
+        var threshold = outskirts
+            ? ScheduleMath.OutskirtsWindowThreshold(id, (int)buffer[offset + 13], packed / LightChannelCatalog.Count)
+            : thresholds[id];
         return channels[packed % LightChannelCatalog.Count].X > threshold;
     }
 

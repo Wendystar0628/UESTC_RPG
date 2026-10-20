@@ -82,11 +82,11 @@ public sealed class NightlightTileTests
         var second = Tile(1);
         var channels = Enumerable.Repeat(Vector2.One, LightChannelCatalog.Count).ToArray();
         var selection = new ReflectionLampSelection();
-        selection.Select([], [first, second], channels, ReadOnlySpan<byte>.Empty, windows[1].Center);
+        selection.Select([], [first, second], channels, ReadOnlySpan<byte>.Empty, ReadOnlySpan<float>.Empty, windows[1].Center);
         AssertThat(selection.Data[1] == windows[1].Id && selection.Data[ReflectionLampSelection.Capacity * 4] == windows[1].Center.X)
             .OverrideFailureMessage("Local index zero must address its own tile buffer.").IsTrue();
         var expected = selection.Data.ToArray();
-        selection.Select([], [second, first], channels, ReadOnlySpan<byte>.Empty, windows[1].Center);
+        selection.Select([], [second, first], channels, ReadOnlySpan<byte>.Empty, ReadOnlySpan<float>.Empty, windows[1].Center);
         AssertThat(selection.Data.SequenceEqual(expected)).OverrideFailureMessage("Mount arrival order may not change reflection candidates.").IsTrue();
     }
 

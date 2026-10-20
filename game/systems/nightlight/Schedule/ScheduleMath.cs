@@ -53,11 +53,27 @@ public static class ScheduleMath
         }
     }
 
+    /// <summary>Stable feature/grid seed and logical cell; absolute texture addresses never affect campus lighting.</summary>
+    public static float WindowThreshold(int local, uint seed, int columns)
+    {
+        unchecked
+        {
+            var c = Math.Max(columns, 1);
+            var row = local / c;
+            var col = local - row * c;
+            var seg = seed * 131u + (uint)row * 17u + (uint)(col / 3);
+            var t = Unit(ShaderHash((seed ^ (uint)local) * 2u + 1u)) * 0.3f + Unit(ShaderHash(seg * 2u + 11u));
+            t -= MathF.Floor(t);
+            var building = Unit(ShaderHash(seed * 2u + 7u));
+            return Math.Clamp(t + 0.5f * (building - 0.5f), 0f, 1f);
+        }
+    }
+
     /// <summary>
     /// 窗的亮灯阈值，与 lamp.gdshaderinc 的 lamp_window_threshold 一致：
     /// 同一层相邻 3 个开间阈值相近（灯按房间成团亮灭），fract(均匀 + 独立量) 仍是均匀分布；整栋楼再加 ±0.25 的偏置。
     /// </summary>
-    public static float WindowThreshold(int windowId, int baseId, int columns)
+    public static float OutskirtsWindowThreshold(int windowId, int baseId, int columns)
     {
         unchecked
         {

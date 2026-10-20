@@ -188,4 +188,20 @@ public sealed class WindowNumberingTests
         AssertThrown(() => module.PrepareWindowNumbering(ctx, [Layout("t:a", ("strip", WindowNumberingSnapshot.Capacity - generic + 1, 1))])).IsInstanceOf<InvalidOperationException>();
         AssertThrown(() => module.PrepareWindowNumbering(ctx, [Layout("t:a", ("strip", int.MaxValue, 2))])).IsInstanceOf<InvalidOperationException>();
     }
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void ExistingAddressesSurviveEarlierInsertResizeRemoveAndRestart()
+    {
+        var old = new WindowNumberingSnapshot(TestMap.Id, new string('a', 64), [new(new("t:b"), "main", 0, 2, 2)]);
+        var inserted = WindowNumbering.Append(old, [(new("t:a"), "main", 1, 2), (new("t:b"), "main", 2, 2)], out var next);
+        AssertThat(inserted[0].BaseId == 4 && inserted[1].BaseId == 0 && next == 6).IsTrue();
+        var persisted = System.Text.Json.JsonSerializer.Deserialize<WindowNumberingRegistry>(
+            System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new WindowNumberingRegistry(TestMap.Id, next, inserted), ContractJson.Options), ContractJson.Options)!;
+        var restart = new WindowNumberingSnapshot(persisted.Map, old.Fingerprint, persisted.Allocations, persisted.NextId);
+        var resized = WindowNumbering.Append(restart, [(new("t:a"), "main", 1, 2), (new("t:b"), "main", 3, 2)], out next);
+        AssertThat(resized[0].BaseId == 4 && resized[1].BaseId == 6 && next == 12).IsTrue();
+        var retired = new WindowNumberingSnapshot(TestMap.Id, old.Fingerprint, resized, next);
+        var replaced = WindowNumbering.Append(retired, [(new("t:b"), "main", 3, 2), (new("t:c"), "main", 1, 1)], out next);
+        AssertThat(replaced[0].BaseId == 6 && replaced[1].BaseId == 12 && next == 13).IsTrue();
+    }
+
 }

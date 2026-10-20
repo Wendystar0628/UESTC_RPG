@@ -85,12 +85,15 @@ public sealed class WindowNumberingContractTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void GapsOverlapsAndNegativeBasesFailRatherThanRenumber()
+    public void RetiredGapsStayUnusedWhileOverlapsAndNegativeBasesFail()
     {
-        AssertThrown(() => Create(new WindowAllocation(new("fixture:a"), "grid", 1, 1, 1))).IsInstanceOf<ArgumentException>();
+        var gap = new WindowNumberingSnapshot(new("fixture"), Fingerprint,
+            [new(new("fixture:a"), "grid", 1, 1, 1)], 4);
+        AssertThat(gap.NextId == 4 && gap.ContainsId(1) && !gap.ContainsId(0) && !gap.ContainsId(3)).IsTrue();
         AssertThrown(() => Create(new WindowAllocation(new("fixture:a"), "grid", -1, 1, 1))).IsInstanceOf<ArgumentException>();
         AssertThrown(() => Create(new WindowAllocation(new("fixture:a"), "grid", 0, 2, 1), new(new("fixture:b"), "grid", 1, 1, 1))).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => Create(new WindowAllocation(new("fixture:a"), "grid", 0, 2, 1), new(new("fixture:b"), "grid", 3, 1, 1))).IsInstanceOf<ArgumentException>();
+        var separated = Create(new WindowAllocation(new("fixture:a"), "grid", 0, 2, 1), new(new("fixture:b"), "grid", 3, 1, 1));
+        AssertThat(separated.WindowCount == 3 && separated.NextId == 4 && !separated.ContainsId(2)).IsTrue();
     }
 
     [TestCase]

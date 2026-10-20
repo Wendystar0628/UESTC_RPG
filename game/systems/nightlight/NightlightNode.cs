@@ -9,6 +9,7 @@ using Campus.Kernel.Materials;
 using Campus.Kernel.Renderer;
 using Campus.Systems.Nightlight.Glow;
 using Campus.Systems.Nightlight.Schedule;
+using Campus.Systems.Nightlight.Lamps;
 using Campus.Systems.Nightlight.Windows;
 using Godot;
 using N = System.Numerics;
@@ -22,13 +23,8 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
 {
     private static readonly StringName _shaderGlobalLampGrid = ShaderGlobals.LampGrid;
     private static readonly StringName _shaderGlobalLampTable = ShaderGlobals.LampTable;
-    private static readonly StringName _shaderGlobalShaft = ShaderGlobals.Shaft;
+    private static readonly StringName _shaderGlobalWindowThresholds = ShaderGlobals.WindowThresholds;
     private static readonly StringName _shaderGlobalWindowOverride = ShaderGlobals.WindowOverride;
-
-    // 光柱（ART-STYLE、ENG-PERF）：近镜 1.2 → 5.5 m 淡入、顺轴衰减 0.4；整体强度按太阳高度 2°–30° 与天气
-    private const float ShaftNear = 1.2f;
-    private const float ShaftFar = 5.5f;
-    private const float ShaftAxisFalloff = 0.4f;
 
     private readonly N.Vector2[] _channels = new N.Vector2[LightChannelCatalog.Count];
     private readonly WindowOverrides _windows = new();
@@ -37,10 +33,13 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     private ILightChannelSink? _sink;
     private IColorScriptFrame? _colors;
     private ILightInventory? _inventory;
-    private IInstancePoolHost? _pools;
-    private IShaderMaterialSource? _materials;
-    private ShaderMaterial? _lampMaterial;
-    private ShaderMaterial? _windowMaterial;
+    private GlowTileMounts? _glows;
+    private readonly NightlightReflections _reflections = new();
+    private ICameraRig? _camera;
+    private Pose? _appliedPose;
+    private long _appliedGlowRevision = -1;
+    private ReadOnlyMemory<float> _thresholds;
+    private ImageTexture? _thresholdTexture;
     private IMapContext? _map;
     private long _inventoryRev = long.MinValue;
     private Image? _overrideImage;
@@ -53,11 +52,10 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
     public bool IsReady(Pose pose)
     {
         if (Error is not null || _windows.Dirty || _map is null || _inventory is null || _inventoryRev != _inventory.Rev || _appliedPose != pose ||
-            _tableTexture is null || _gridTexture is null || _overrideTexture is null || _reflectionTexture is null) return false;
-        foreach (var tile in _mounted.Values) if (!tile.Mount.IsReady) return false;
+            _tableTexture is null || _gridTexture is null || _overrideTexture is null || _thresholdTexture is null || !_reflections.Ready || _glows is null || !_glows.Ready || _appliedGlowRevision != _glows.Revision) return false;
         return true;
     }
-    public string? Error { get; private set; }
+    public string? Error => _glows?.Error;
 
     public void PrepareCapture(Pose pose)
     {
@@ -71,8 +69,6 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         _inventoryRev = long.MinValue;
         if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
         OnWorldInstanceChanged(0);
-        if (_overrideTexture is not null) EnsureOverrideTexture();
-        if (_reflectionTexture is not null) ClearReflectionLamps();
     }
 
     public override void _Ready()
@@ -82,11 +78,8 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         _sink = Services.Get<ILightChannelSink>();
         _colors = Services.Get<IColorScriptFrame>();
         _inventory = Services.Get<ILightInventory>();
-        _pools = Services.Get<IInstancePoolHost>();
-        _materials = Services.Get<IShaderMaterialSource>();
-        _reflectionCamera = Services.Get<ICameraRig>();
-        EnsureOverrideTexture();
-        ClearReflectionLamps();
+        _glows = new(Services.Get<IInstancePoolHost>(), Services.Get<IShaderMaterialSource>());
+        _camera = Services.Get<ICameraRig>();
     }
 
     public override void _ExitTree()
@@ -94,12 +87,10 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         if (_world is not null) _world.InstanceChanged -= OnWorldInstanceChanged;
         _windows.Bind(null);
         _inventoryRev = long.MinValue;
-        FreeTiles();
-        _lampMaterial?.Dispose();
-        _windowMaterial?.Dispose();
-        _lampMaterial = null;
-        _windowMaterial = null;
-        ClearReflectionLamps();
+        _glows?.Dispose();
+        _glows = null;
+        _reflections.Dispose();
+        FreeTextures();
     }
 
     public void OnMapUnloading(MapId from)
@@ -107,10 +98,11 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         _schedule = null;
         _map = null;
         Lamps = [];
-        ClearReflectionLamps();
+        _reflections.Dispose();
         _windows.Bind(null);
         _inventoryRev = long.MinValue;
-        FreeTiles();
+        _glows?.Bind(null);
+        FreeTextures();
     }
 
     public void OnMapLoaded(IMapContext ctx)
@@ -119,29 +111,31 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         var bytes = Godot.FileAccess.GetFileAsBytes(ctx.DataRoot + NightlightBakeProducer.ScheduleFile);
         if (bytes.Length == 0) throw new InvalidDataException("Missing map lighting schedule.");
         _schedule = NightlightBakeProducer.ReadSchedule(bytes, ctx.Descriptor.Id);
+        _glows!.Bind(ctx.Descriptor.Id);
         _map = ctx;
-        Error = null;
         BindInventory(ctx);
         _windows.ClearAll();
-        EnsureOverrideTexture();
     }
 
     public override void _Process(double delta)
     {
         if (_map is not null && _inventory is not null && _inventory.Rev != _inventoryRev) BindInventory(_map);
-        if (_reflectionCamera is { } camera) ApplyLighting(camera.Pose, delta);
+        if (_camera is { } camera) ApplyLighting(camera.Pose, delta);
     }
 
     private void ApplyLighting(Pose pose, double delta)
     {
-        if (_schedule is null || _world is null || _sink is null) return;
+        if (_schedule is null || _world is null || _sink is null || _map is null ||
+            _inventory is null || _inventoryRev != _inventory.Rev) return;
         var weather = _world.WeatherNow;
         var gain = _colors?.Current.LampPoolGain ?? 1f;
         _schedule.Evaluate(new ScheduleInput(_world.Clock, _world.Sun.AltDeg, weather.Overcast, weather.Precip, gain, delta), _channels);
         _sink.Submit(_channels);
-        UpdateReflectionLamps(pose);
-        RenderingServer.GlobalShaderParameterSet(_shaderGlobalShaft,
-            new Vector4(ShaftStrength(_world.Sun.AltDeg, weather), ShaftNear, ShaftFar, ShaftAxisFalloff));
+        if (_glows is { } glows)
+        {
+            _reflections.Update(Lamps, glows.ReflectionTiles, _channels, _windows.Data, _thresholds.Span, pose);
+            _appliedGlowRevision = glows.Revision;
+        }
         if (_windows.TakeUpload(delta) && _overrideImage is not null && _overrideTexture is not null)
         {
             _overrideImage.SetData(WindowOverrides.Side, WindowOverrides.Side, false, Image.Format.Rgba8, _windows.Data);
@@ -164,6 +158,9 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         if (numbering.Map != ctx.Descriptor.Id) throw new InvalidDataException("The lighting inventory belongs to a different map.");
         _windows.Bind(numbering);
         var catalog = inventory.Nightlight;
+        if (catalog.WindowThresholds.Length != WindowNumberingSnapshot.Capacity)
+            throw new InvalidDataException("Missing baked window thresholds.");
+        _thresholds = catalog.WindowThresholds;
         Lamps = catalog.Lamps;
         var tableImage = Image.CreateFromData(Math.Max(Lamps.Count, 1), 2, false, Image.Format.Rgbaf,
             MemoryMarshal.AsBytes(catalog.LampTable.Span));
@@ -177,19 +174,15 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         gridImage.Dispose();
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalLampTable, _tableTexture);
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalLampGrid, _gridTexture);
+        using var thresholds = Image.CreateFromData(WindowOverrides.Side, WindowOverrides.Side, false,
+            Image.Format.Rf, MemoryMarshal.AsBytes(_thresholds.Span));
+        if (_thresholdTexture is null) _thresholdTexture = ImageTexture.CreateFromImage(thresholds);
+        else _thresholdTexture.SetImage(thresholds);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalWindowThresholds, _thresholdTexture);
+        EnsureOverrideTexture();
+        _reflections.Clear();
         _inventoryRev = inventory.Rev;
         _appliedPose = null;
-    }
-
-    private ShaderMaterial GlowMaterial(GlowKind kind)
-    {
-        var materials = _materials ?? throw new InvalidOperationException("Nightlight material source is not ready.");
-        return kind switch
-        {
-            GlowKind.Lamp => _lampMaterial ??= materials.Create(ShaderId.FxGlow),
-            GlowKind.Window => _windowMaterial ??= materials.Create(ShaderId.FxGlow),
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), "Only lamp and window glow tiles are mounted.")
-        };
     }
 
     private void EnsureOverrideTexture()
@@ -202,12 +195,27 @@ public partial class NightlightNode : Node, IMapAware, IViewContentReadiness, IV
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalWindowOverride, _overrideTexture);
     }
 
-    /// <summary>光柱的整体强度：太阳 2°–30° 之间才有；雨中的白天不画（太阳雨由 WP-45 的判定另算）；雾天 ×1.5。</summary>
-    private static float ShaftStrength(float sunAltDeg, WeatherVec w)
+    private void FreeTextures()
     {
-        var sun = ScalarMath.Smoothstep(2f, 6f, sunAltDeg) * (1f - ScalarMath.Smoothstep(24f, 30f, sunAltDeg));
-        var rain = ScalarMath.Smoothstep(0.05f, 0.2f, w.Precip * (1f - w.PrecipKind)) * ScalarMath.Smoothstep(0.4f, 0.6f, w.Overcast);
-        var fog = 1f + 0.5f * ScalarMath.Smoothstep(1.2f, 2.5f, w.Fog);
-        return sun * (1f - rain) * fog;
+        _overrideImage?.Dispose();
+        _overrideTexture?.Dispose();
+        _tableTexture?.Dispose();
+        _gridTexture?.Dispose();
+        _thresholdTexture?.Dispose();
+        _overrideImage = null;
+        _overrideTexture = null;
+        _tableTexture = null;
+        _gridTexture = null;
+        _thresholdTexture = null;
+        _thresholds = default;
+        _appliedPose = null;
     }
+
+    public bool CanMount(BakeKey key) => _glows?.CanMount(key) ?? false;
+    public StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident) =>
+        _glows?.Demand(entry, view, resident) ?? StreamTileNeed.None;
+    public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) =>
+        (_glows ?? throw new InvalidOperationException("Nightlight glow mounting is not ready.")).CreateMount(key, product, priority, revision);
+    public bool IsReady(BakeKey key) => _glows?.IsReady(key) ?? false;
+    public void Unmount(BakeKey key) => _glows?.Unmount(key);
 }

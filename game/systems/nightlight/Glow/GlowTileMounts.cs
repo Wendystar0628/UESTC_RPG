@@ -1,18 +1,58 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Bake;
-using Campus.Systems.Nightlight.Glow;
+using Campus.Kernel.Instances;
+using Campus.Kernel.Materials;
+using Godot;
 using N = System.Numerics;
 
-namespace Campus.Systems.Nightlight;
+namespace Campus.Systems.Nightlight.Glow;
 
-public partial class NightlightNode
+internal sealed class GlowTileMounts(IInstancePoolHost pools, IShaderMaterialSource materials)
 {
+    private readonly IInstancePoolHost _pools = pools;
     private sealed record MountedTile(NightlightTileContent Content, GlowMount Mount);
     private readonly Dictionary<BakeKey, MountedTile> _mounted = [];
     private readonly List<NightlightTileContent> _reflectionTiles = [];
     private long _generation;
-    private Pose? _appliedPose;
+    private ShaderMaterial? _lampMaterial;
+    private ShaderMaterial? _windowMaterial;
+    private MapId? _map;
+    public IReadOnlyList<NightlightTileContent> ReflectionTiles => _reflectionTiles;
+    public long Revision { get; private set; }
+    public string? Error { get; private set; }
+    public bool Ready
+    {
+        get
+        {
+            if (Error is not null) return false;
+            foreach (var tile in _mounted.Values) if (!tile.Mount.IsReady) return false;
+            return true;
+        }
+    }
+
+    public void Bind(MapId? map)
+    {
+        FreeTiles();
+        _map = map;
+        Error = null;
+    }
+
+    public void Dispose()
+    {
+        Bind(null);
+        _lampMaterial?.Dispose();
+        _windowMaterial?.Dispose();
+        _lampMaterial = null;
+        _windowMaterial = null;
+    }
+
+    private ShaderMaterial GlowMaterial(GlowKind kind) => kind switch
+    {
+        GlowKind.Lamp => _lampMaterial ??= materials.Create(ShaderId.FxGlow),
+        GlowKind.Window => _windowMaterial ??= materials.Create(ShaderId.FxGlow),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind))
+    };
 
     public bool CanMount(BakeKey key) => key.Module is BakeModuleIds.NightlightLamps or BakeModuleIds.NightlightWindows;
 
@@ -33,7 +73,7 @@ public partial class NightlightNode
         return new MountWork(this, tile, priority, revision, _generation);
     }
 
-    public bool IsReady(BakeKey key) => Error is null && _map?.Descriptor.Id == key.Map &&
+    public bool IsReady(BakeKey key) => Error is null && _map == key.Map &&
         _mounted.TryGetValue(key, out var tile) && tile.Mount.IsReady;
 
     public void Unmount(BakeKey key)
@@ -41,7 +81,7 @@ public partial class NightlightNode
         if (!_mounted.Remove(key, out var tile)) return;
         tile.Mount.Free();
         _reflectionTiles.Remove(tile.Content);
-        _appliedPose = null;
+        Revision++;
     }
 
     private void FreeTiles()
@@ -50,10 +90,10 @@ public partial class NightlightNode
         foreach (var tile in _mounted.Values) tile.Mount.Free();
         _mounted.Clear();
         _reflectionTiles.Clear();
-        _appliedPose = null;
+        Revision++;
     }
 
-    private sealed class MountWork(NightlightNode owner, NightlightTileContent tile,
+    private sealed class MountWork(GlowTileMounts owner, NightlightTileContent tile,
         BakePriority priority, long revision, long generation) : IStreamMountWork
     {
         private GlowMount? _mount;
@@ -68,20 +108,19 @@ public partial class NightlightNode
         {
             if (_cancelled || _complete) return true;
             if (budgetMilliseconds <= 0d) return false;
-            if (owner._generation != generation || owner._map?.Descriptor.Id != Key.Map)
+            if (owner._generation != generation || owner._map != Key.Map)
             {
                 Cancel();
                 return true;
             }
             try
             {
-                var pools = owner._pools ?? throw new InvalidOperationException("Nightlight instance pools are not ready.");
                 _mount = new(tile.Glow.Kind, $"{Key.Module}.{tile.Tile.X}.{tile.Tile.Z}");
-                _mount.Upload(pools, () => owner.GlowMaterial(tile.Glow.Kind), tile.Glow);
+                _mount.Upload(owner._pools, () => owner.GlowMaterial(tile.Glow.Kind), tile.Glow);
                 owner.Unmount(Key);
                 owner._mounted.Add(Key, new(tile, _mount));
                 owner._reflectionTiles.Add(tile);
-                owner._appliedPose = null;
+                owner.Revision++;
                 _complete = true;
                 return true;
             }

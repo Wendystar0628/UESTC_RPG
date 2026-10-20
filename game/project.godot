@@ -460,6 +460,10 @@ light_channels={
 "type": "sampler2D",
 "value": ""
 }
+window_thresholds={
+"type": "sampler2D",
+"value": ""
+}
 window_override={
 "type": "sampler2D",
 "value": ""

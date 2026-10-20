@@ -1,28 +1,37 @@
 using System.Runtime.InteropServices;
 using Campus.Contracts;
-using Campus.Systems.Nightlight.Lamps;
 using Godot;
 
-namespace Campus.Systems.Nightlight;
+namespace Campus.Systems.Nightlight.Lamps;
 
-public partial class NightlightNode
+internal sealed class NightlightReflections
 {
     private static readonly StringName ReflectionLampsGlobal = ShaderGlobals.ReflLamps;
     private readonly ReflectionLampSelection _reflectionSelection = new();
-    private ICameraRig? _reflectionCamera;
     private Image? _reflectionImage;
     private ImageTexture? _reflectionTexture;
 
-    private void ClearReflectionLamps()
+    public bool Ready => _reflectionTexture is not null;
+
+    public void Clear()
     {
         _reflectionSelection.Clear();
         UploadReflectionLamps();
     }
 
-    private void UpdateReflectionLamps(Pose pose)
+    public void Update(IReadOnlyList<LampRecord> lamps, IReadOnlyList<NightlightTileContent> tiles,
+        ReadOnlySpan<System.Numerics.Vector2> channels, ReadOnlySpan<byte> overrides,
+        ReadOnlySpan<float> thresholds, Pose pose)
     {
-        if (_reflectionSelection.Select(Lamps, _reflectionTiles,
-                _channels, _windows.Data, pose.Position)) UploadReflectionLamps();
+        if (_reflectionSelection.Select(lamps, tiles, channels, overrides, thresholds, pose.Position)) UploadReflectionLamps();
+    }
+
+    public void Dispose()
+    {
+        _reflectionTexture?.Dispose();
+        _reflectionImage?.Dispose();
+        _reflectionTexture = null;
+        _reflectionImage = null;
     }
 
     private void UploadReflectionLamps()

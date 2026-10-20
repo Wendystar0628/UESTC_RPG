@@ -39,7 +39,7 @@ public sealed class WindowOverrides
     public void Set(int windowId, WindowLight light, WindowTint tint = WindowTint.Auto, WindowCurtain curtain = WindowCurtain.Auto)
     {
         var numbering = Numbering ?? throw new InvalidOperationException("Bind the prepared window numbering before setting an override.");
-        if (!InRange(windowId) || windowId >= numbering.WindowCount)
+        if (!InRange(windowId) || !numbering.ContainsId(windowId))
             throw new ArgumentOutOfRangeException(nameof(windowId), windowId, "The window is outside the current map's prepared numbering.");
         var i = windowId * 4;
         var wasSet = _data[i] != 0 || _data[i + 1] != 0 || _data[i + 2] != 0;

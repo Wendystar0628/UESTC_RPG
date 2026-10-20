@@ -48,7 +48,10 @@ public sealed record NightlightTileContent(BakeKey Key, TileKey Tile,
 /// <summary>Resident full-map lamp numbering, real ground heights and prepacked textures; arrays are frozen by the producer.</summary>
 public sealed record NightlightCatalog(IReadOnlyList<LampRecord> Lamps,
     ReadOnlyMemory<float> LampTable, ReadOnlyMemory<float> LampGrid,
-    int GridWidth, int GridHeight);
+    int GridWidth, int GridHeight)
+{
+    public ReadOnlyMemory<float> WindowThresholds { get; init; }
+}
 
 /// <summary>Builds the resident lamp catalog synchronously from frozen map inputs before auxiliary directories are prepared.</summary>
 public interface INightlightCatalogBuilder

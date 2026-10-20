@@ -40,10 +40,11 @@ public static partial class TileBundleCodec
         Channel<LampRecord>(writer, value.Nightlight.Lamps.ToArray(), key);
         Channel(writer, value.Nightlight.LampTable.Span, key); Channel(writer, value.Nightlight.LampGrid.Span, key);
         writer.Write(value.Nightlight.GridWidth); writer.Write(value.Nightlight.GridHeight);
+        Channel(writer, value.Nightlight.WindowThresholds.Span, key);
         writer.Write(value.WindowNumbering is not null);
         if (value.WindowNumbering is { } numbering)
         {
-            Text(writer, numbering.Map.Value); Text(writer, numbering.Fingerprint);
+            Text(writer, numbering.Map.Value); Text(writer, numbering.Fingerprint); writer.Write(numbering.NextId);
             Records(writer, numbering.Allocations, (w, allocation) =>
             {
                 Text(w, allocation.Feature.Value); Text(w, allocation.Key);
@@ -57,13 +58,14 @@ public static partial class TileBundleCodec
         var map = new MapId(Text(reader)); var lamps = MetadataRecords<LightEmitter>(reader, key);
         var windows = Windows(reader, key);
         var records = Channel<LampRecord>(reader, key); var table = Channel<float>(reader, key); var grid = Channel<float>(reader, key);
-        var catalog = new NightlightCatalog(records, table, grid, reader.ReadInt32(), reader.ReadInt32());
+        var catalog = new NightlightCatalog(records, table, grid, reader.ReadInt32(), reader.ReadInt32())
+        { WindowThresholds = Channel<float>(reader, key) };
         WindowNumberingSnapshot? numbering = null;
         if (reader.ReadBoolean())
         {
-            var numberingMap = new MapId(Text(reader)); var fingerprint = Text(reader, 128);
+            var numberingMap = new MapId(Text(reader)); var fingerprint = Text(reader, 128); var nextId = reader.ReadInt32();
             numbering = new(numberingMap, fingerprint, Records(reader, key,
-                r => new WindowAllocation(new(Text(r)), Text(r), r.ReadInt32(), r.ReadInt32(), r.ReadInt32())));
+                r => new WindowAllocation(new(Text(r)), Text(r), r.ReadInt32(), r.ReadInt32(), r.ReadInt32())), nextId);
         }
         return new(map, lamps, windows.Facades, windows.Windows, catalog) { WindowNumbering = numbering };
     }
