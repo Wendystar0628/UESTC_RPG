@@ -1,4 +1,4 @@
-# One diagnostic batch. Root invokes only after the screenshot AND prebake completion notices.
+﻿# One diagnostic batch. Root invokes only after the screenshot AND prebake completion notices.
 # 产出：output/start_game/C215-profile/；output/start_game/；output/.locks/build.lock。
 param([Parameter(Mandatory)][string]$Output, [ValidateRange(1,120)][double]$TitleDwellSeconds = 10)
 $ErrorActionPreference = 'Stop'
