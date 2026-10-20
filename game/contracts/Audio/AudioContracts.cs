@@ -35,7 +35,7 @@ public sealed record AmbientEmitterDecl(
     string Reason = "");                  // 手工点必须写理由
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class AmbientEmitterAttribute(string id) : Attribute { public string Id { get; } = id; public string Owner { get; set; } = ""; }
+public sealed class AmbientEmitterAttribute(string id) : RegistrationAttribute(RegistrationKind.Ambient, id, RegistrationLifetime.Map) { }
 public interface IAmbientEmitterSource { IEnumerable<AmbientEmitterDecl> Emit(BuildContext ctx); }   // gen 里，纯函数，在烘焙器里跑
 
 // 部件自带的声音插座：IPartDef.Sounds() 默认方法在 §3 部件块

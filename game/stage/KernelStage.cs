@@ -24,12 +24,10 @@ namespace Campus.Stage;
 public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 {
     private StageCamera? _view;
-    private readonly List<object> _runtimeObjects = [];
     private FrameStatistics? _statistics;
     private readonly bool _startupProfiling = System.Environment.GetEnvironmentVariable("UESTC_STARTUP_PROFILE") == "1";
     private IAppFlow? _flow;
     private IMapRuntime? _mapRuntime;
-    private IMapLifetime? _mapLifetime;
     private bool _ready;
     private bool _closing;
     private bool _cpuCommand;
@@ -40,7 +38,6 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
     private IAppLoadingLease? _failureLoading;
     private IFlowLease? _failureFlow;
     private readonly StageGateDriver _gate;
-    private IGlobalDataTextureRegistry? _textures;
     private string _phase = "compose";
     public string Phase
     {
@@ -103,11 +100,10 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         registry.Add(environment.Environment);
         registry.Add(ui);
         registry.Add<IAppExit>(this);
-        _textures = registry.Get<IGlobalDataTextureRegistry>();
         registry.InstantiateServices();
         // Build the complete batch, attach every node, then invoke lifecycle hooks. An fx.* consumer
         // must not depend on its instance-pool host sorting ahead of it; _Ready only prepares structure.
-        var globalNodes = registry.Entries.Where(entry => entry.Kind == "node" && string.IsNullOrEmpty(entry.Map))
+        var globalNodes = registry.Query<Node>(RegistrationKind.Node).Where(entry => entry.Lifetime == RegistrationLifetime.Global && entry.Map is null)
             .OrderBy(entry => entry.Id, StringComparer.Ordinal)
             .Select(entry => registry.Create(entry.Type) as Node
                 ?? throw new InvalidOperationException($"KernelNode must inherit Node: {entry.Id}."))
@@ -115,12 +111,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         foreach (var node in globalNodes) AddChild(node);
         if (globalNodes.Any(node => !node.IsInsideTree()))
             throw new InvalidOperationException("Every global kernel node must enter the tree before startup callbacks.");
-        foreach (var entry in registry.Entries.Where(entry => string.IsNullOrEmpty(entry.Map) && entry.Kind is "node" or "service" or "save")
-            .OrderBy(entry => entry.Id, StringComparer.Ordinal))
-        {
-            var instance = RuntimeComposition.Resolve(registry, entry);
-            if (!_runtimeObjects.Any(item => ReferenceEquals(item, instance))) _runtimeObjects.Add(instance);
-        }
+        _ = registry.RuntimeInstances<object>();
         _flow = registry.Get<IAppFlow>();
         _flow.PhaseReached += static phase =>
             GD.Print(FormattableString.Invariant($"STARTUP_PHASE {phase} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
@@ -128,12 +119,11 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             throw new InvalidOperationException("IAppFlow and IAppBootFlow must resolve to the same instance.");
         _flow.Changed += OnFlowChanged;
         _mapRuntime = registry.Get<IMapRuntime>();
-        _mapLifetime = registry.Get<IMapLifetime>();
         view.Bind(registry.Get<ICameraRig>());
         _statistics = new(GetViewport());
         _statistics.Enable();
         DisplayServer.WindowSetTitle("电光年华");
-        GD.Print($"[WP-01][map=-][phase=compose] build={BuildInfo.Build}; global objects={_runtimeObjects.Count}");
+        GD.Print($"[WP-01][map=-][phase=compose] build={BuildInfo.Build}; global objects={registry.Created.Count}");
     }
 
     private async Task StartWorld()
@@ -159,7 +149,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         var options = AppBoot.Options;
         var showTitle = options.Flow.ShowTitle;
         var registry = Services.Services;
-        var participants = _runtimeObjects.Distinct(ReferenceEqualityComparer.Instance).OfType<IBootParticipant>().OrderBy(item => item.Order)
+        var participants = registry.RuntimeInstances<IBootParticipant>().OrderBy(item => item.Order)
             .ThenBy(item => item.Id, StringComparer.Ordinal).ToArray();
         if (participants.GroupBy(item => item.Id, StringComparer.Ordinal).Any(group => group.Count() != 1))
             throw new InvalidOperationException("Boot participant IDs must be unique.");
@@ -168,7 +158,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         if (!registry.Get<IAppScreenCoverage>().IsCovered)
             throw new InvalidOperationException("Startup has no fully opaque application presentation.");
         await Initialize(BootPhase.BeforeMap);
-        registry.Get<PipelineWarmup>().SetCanvasFont(_runtimeObjects.OfType<Campus.Hud.HudRoot>().Single().CanvasFont);
+        registry.Get<PipelineWarmup>().SetCanvasFont(registry.Created.OfType<Campus.Hud.HudRoot>().Single().CanvasFont);
         Phase = "prepare-flow";
         var appBoot = registry.Get<IAppBootFlow>();
         var target = await appBoot.PrepareBoot(options.Flow);
@@ -327,7 +317,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _captureLifetime.Cancel();
         if (_failureLoading is not null) _ = _failureLoading.DisposeAsync();
         _failureFlow?.Dispose();
-        _textures?.Dispose();
+        try { Services.Services.Dispose(); } catch (Exception error) { GD.PushError("[WP-01][phase=exit-tree] " + error); }
     }
 
     public Task FinishQuit()
@@ -352,54 +342,9 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         _shutdownStarted = true;
         _ready = false;
         _statistics = null;
-        Phase = "shutdown-map";
-        _gate.TraceClose(Phase);
+        Phase = "shutdown";
         var failures = new List<Exception>();
-        var textures = _runtimeObjects.OfType<IGlobalDataTextureRegistry>().SingleOrDefault();
-        try
-        {
-            if (_mapLifetime is { } lifetime)
-            {
-                var maps = Services.Get<IMapService>();
-                await lifetime.ShutdownAsync(maps.Context?.Descriptor.Id ?? maps.Current);
-            }
-        }
-        catch (Exception error) { failures.Add(error); }
-
-        // Saving has allowed departure and map consumers have drained. Only CPU bake bodies may outlive teardown.
-        try { _runtimeObjects.OfType<Campus.Kernel.Bake.BakeService>().SingleOrDefault()?.StopForExit(); }
-        catch (Exception error) { failures.Add(error); }
-
-        Phase = "shutdown-nodes";
-        _gate.TraceClose(Phase);
-        var children = GetChildren();
-        Node[] owned;
-        // Array<Node> is not IDisposable; its explicit untyped conversion provides deterministic disposal.
-        using (var nativeChildren = (Godot.Collections.Array)children)
-            owned = children.ToArray();
-        foreach (var node in owned)
-        {
-            try { node.SetProcess(false); node.SetPhysicsProcess(false); }
-            catch (Exception error) { failures.Add(error); }
-        }
-        // Reverse attachment releases presentation consumers before the stage camera/environment.
-        foreach (var node in owned.Reverse())
-            try
-            {
-                RemoveChild(node); node.Free();
-                _gate.TraceClose("node:" + node.GetType().Name);
-            }
-            catch (Exception error) { failures.Add(error); }
-        _gate.TraceClose("shutdown-services");
-        foreach (var instance in _runtimeObjects)
-        {
-            if (instance is GodotObject || ReferenceEquals(instance, textures) || instance is not IDisposable disposable) continue;
-            try { disposable.Dispose(); } catch (Exception error) { failures.Add(error); }
-        }
-        _runtimeObjects.Clear();
-        Phase = "shutdown-textures";
-        _gate.TraceClose(Phase);
-        try { if (textures is not null) await textures.ShutdownAsync(); }
+        try { await Services.Services.ShutdownAsync(this, _gate.TraceClose); }
         catch (Exception error) { failures.Add(error); }
         _gate.TraceClose("shutdown-complete");
         foreach (var error in failures) GD.PushError("[WP-01][phase=shutdown] " + error);
@@ -419,13 +364,13 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private void HoldFailure()
     {
-        var loading = _runtimeObjects.OfType<IAppLoadingPresentation>().SingleOrDefault();
+        var loading = Services.Services.Created.OfType<IAppLoadingPresentation>().SingleOrDefault();
         if (loading is not null)
         {
             try { _failureLoading ??= loading.Show(); }
             catch (Exception coverError) { GD.PushError($"[WP-01][phase=failure-cover] {coverError}"); }
         }
-        var world = _runtimeObjects.OfType<IWorldControl>().SingleOrDefault();
+        var world = Services.Services.Created.OfType<IWorldControl>().SingleOrDefault();
         if (world is not null)
         {
             try { _failureFlow ??= world.AcquireFlow(FlowPriority.AppFlow, 0); }

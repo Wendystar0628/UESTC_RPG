@@ -34,7 +34,7 @@ public sealed partial class StageGateDriver
         foreach (var service in new[] { typeof(ICameraRig), typeof(IObserverState), typeof(IWalkController),
             typeof(ICollisionWorld), typeof(IMapService), typeof(IMapRuntime), typeof(ISaveService), typeof(IAppFlow) })
         {
-            var registration = Services.Services.Entries.SingleOrDefault(entry => entry.Kind == "service" && entry.Id == service.FullName);
+            var registration = Services.Services.Entries.SingleOrDefault(entry => entry.Kind == RegistrationKind.Service && entry.Id == service.FullName);
             if (registration is null || registration.IsStub)
                 throw new InvalidOperationException("Core lifecycle requires the formal service: " + service.Name);
         }
@@ -198,7 +198,7 @@ public sealed partial class StageGateDriver
     {
         var map = Services.Get<IMapService>();
         var moment = Services.Get<IWorldRestore>().GetSaveMoment();
-        var entries = Services.Services.Entries.Where(entry => entry.Kind == "save")
+        var entries = Services.Services.Query<ISaveSection>(RegistrationKind.Save)
             .OrderBy(entry => entry.Id, StringComparer.Ordinal).ThenBy(entry => entry.Scope).ToArray();
         if (!new[] { "world", "maps", "weather", "view", "walk" }.All(id => entries.Any(entry => entry.Id == id)))
             throw new InvalidOperationException("Formal core save sections are missing.");
@@ -209,7 +209,7 @@ public sealed partial class StageGateDriver
             foreach (var entry in entries)
             {
                 var attribute = entry.Type.GetCustomAttributes<SaveSectionAttribute>()
-                    .Single(item => item.Id == entry.Id && item.Scope == entry.Scope);
+                    .Single(item => item.Id == entry.Id && item.Scope.ToString() == entry.Scope);
                 var section = (ISaveSection)Services.Services.Create(entry.Type);
                 foreach (var sectionMap in attribute.Scope == SaveScope.Global ? [map.Current]
                     : map.Visits.Select(visit => visit.Map).Append(map.Current).Distinct().OrderBy(id => id.Value, StringComparer.Ordinal).ToArray())

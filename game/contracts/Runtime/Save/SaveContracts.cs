@@ -35,10 +35,9 @@ public sealed record SaveMeta(
 public sealed record SlotInfo(SlotId Slot, SlotKind Kind, SlotHealth Health, SaveMeta? Meta, int Generations);
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class SaveSectionAttribute(string id) : Attribute
+public sealed class SaveSectionAttribute(string id) : RegistrationAttribute(RegistrationKind.Save, id, RegistrationLifetime.Global)
 {   // 标在实现 ISaveSection<T> 的 [KernelService] 或 [KernelNode] 类上；注册器从 Kernel 取这个实例
-    public string Id { get; } = id;               // 小写字母、数字、连字符，如 "world"；"map:<id>/" 前缀由 Scope 决定，不写进 Id
-    public string Owner { get; set; } = "";       // "WP-34"；G5 核对与 ownership.json 一致
+    public override string IdentityScope => Scope.ToString();
     public int Version { get; set; } = 1;         // 本段当前的 v；字段有任何增减都要加 1（SYS-SAVE）
     public SaveScope Scope { get; set; } = SaveScope.Global;
     public RestorePhase Phase { get; set; } = RestorePhase.Content;   // 恢复阶段（SYS-SAVE）；G5 查 Phase 与 SYS-SAVE 的表一致

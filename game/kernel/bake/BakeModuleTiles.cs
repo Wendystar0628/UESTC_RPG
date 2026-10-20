@@ -32,7 +32,8 @@ public sealed partial class BakeService
                 foreach (var (id, module) in Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal))
                 {
                     Lifetime.Token.ThrowIfCancellationRequested();
-                    var tiles = module.Value.Tiles(_preparedContexts![id]).Distinct().OrderBy(tile => tile.X).ThenBy(tile => tile.Z).ToArray();
+                    var context = CreateAssetContext(_preparedContexts![id]);
+                    var tiles = module.Value.Tiles(context).Distinct().OrderBy(tile => tile.X).ThenBy(tile => tile.Z).ToArray();
                     ValidateTiles(id, tiles);
                     moduleTiles.Add(id, Array.AsReadOnly(tiles));
                 }
@@ -51,7 +52,7 @@ public sealed partial class BakeService
             foreach (var consumer in Producers.Select(producer => producer.Value).OfType<IBakeContentConsumer>())
                 consumer.Prepare(prepared, metadata.Lighting);
             var auxiliary = restored?.Auxiliary.ToArray() ?? Producers.OrderBy(producer => producer.Id, StringComparer.Ordinal)
-                .SelectMany(producer => producer.Value.Tiles(GetPreparedBuildContext(producer.Value)))
+                .SelectMany(producer => producer.Value.Tiles(CreateAssetContext(GetPreparedBuildContext(producer.Value))))
                 .OrderBy(entry => entry.Key.Module, StringComparer.Ordinal).ThenBy(entry => entry.Key.Detail, StringComparer.Ordinal).ToArray();
             ValidateAuxiliary(auxiliary, Context.Descriptor.Id, Modules, Producers);
             _preparedTiles = new(modules, Array.AsReadOnly(auxiliary));

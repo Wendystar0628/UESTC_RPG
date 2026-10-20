@@ -9,13 +9,8 @@ namespace Campus.Kernel.Maps;
 public static class GenerationInputCapture
 {
     public static PartLodCatalog CapturePartLods(ServiceRegistry registry, MapId map) =>
-        BuildInputAssembly.CapturePartLods(RegistrationDiscovery.ForMap(Registrations(registry), entry => entry.Map, map.Value), registry.Create);
+        BuildInputAssembly.CapturePartLods(registry.ForMap(map.Value), type => registry.Create(type, map));
 
     public static IReadOnlyList<IGroundMaskContributor> CaptureGroundMaskContributors(ServiceRegistry registry, MapId map) =>
-        BuildInputAssembly.CaptureGroundMaskContributors(RegistrationDiscovery.ForMap(Registrations(registry), entry => entry.Map, map.Value), registry.Create);
-
-    private static IReadOnlyList<GenerationRegistration> Registrations(ServiceRegistry registry) => registry.Entries
-        .Where(entry => entry.Kind is "content" or "part" or "interior")
-        .Select(entry => new GenerationRegistration(entry.Kind, entry.Id, entry.Owner, entry.Map, entry.Type, entry.IsStub)).ToArray();
-
+        BuildInputAssembly.CaptureGroundMaskContributors(registry.ForMap(map.Value), type => registry.Create(type, map));
 }

@@ -67,10 +67,9 @@ internal static class RealMapFixture
         options ??= new();
         var registrations = RegistrationDiscovery.Discover(
             new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }.Select(Assembly.Load));
-        var claims = new MapClaimSnapshot(RegistrationDiscovery.ForMap(registrations, entry => entry.Map, id.Value)
-            .Where(entry => entry.Kind == "content")
+        var claims = new MapClaimSnapshot(RegistrationDiscovery.Query<IContentModule>(registrations, RegistrationKind.Content, id)
             .Select(entry => new MapClaimSource(entry.Id, new(entry.Owner), entry.Map is null,
-                ((IContentModule)Activator.CreateInstance(entry.Type)!).Claims)));
+                ((IContentModule)RegistrationDiscovery.Construct(entry.Type, parameter => parameter.HasDefaultValue ? parameter.DefaultValue : throw new InvalidOperationException("Fixture registration has an unresolved dependency."))).Claims)));
         var loaded = WorldModelLoader.LoadWorld(new(entry.Descriptor), files, options);
         _ = claims.Build(loaded.World);
         return loaded;

@@ -28,7 +28,7 @@ namespace Campus.Kernel.Bake;
 
 
 
-public sealed partial class BakeService : IBakeService, IBakeContextSource, IDisposable
+public sealed partial class BakeService : IBakeService, IBakeContextSource, IDisposable, IRegistryExitParticipant
 {
     private readonly IMapService? _maps;
     private readonly IAppFlow? _flow;
@@ -124,14 +124,13 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                 return existing;
             }
             var registry = Campus.Kernel.Registry.Kernel.Services;
-            var entries = registry.ForMap(context.Descriptor.Id.Value);
             // Instantiate all generators on the main thread. Their Build methods receive only a captured pure context.
-            var modules = entries.Where(e => e.Kind == "content").ToDictionary(e => e.Id,
-                e => new ContentModuleInput((IContentModule)registry.Create(e.Type), _terrain.CodeFingerprints.Type(e.Type), new WpId(e.Owner), e.Map is null), StringComparer.Ordinal);
-            var producers = entries.Where(e => e.Kind == "bake").Select(e =>
-                new Producer(e.Id, (IBakeProducer)registry.Create(e.Type), _terrain.CodeFingerprints.Type(e.Type))).ToArray();
-            var interiors = entries.Where(e => e.Kind == "interior").ToDictionary(e => "interior." + e.Id,
-                e => new Interior(e.Id, e.IsStub, registry.CreateInteriorProvider(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type), new WpId(e.Owner)), StringComparer.Ordinal);
+            var modules = registry.Query<IContentModule>(RegistrationKind.Content, context.Descriptor.Id).ToDictionary(e => e.Id,
+                e => new ContentModuleInput((IContentModule)registry.Create(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type), new WpId(e.Owner), e.Map is null), StringComparer.Ordinal);
+            var producers = registry.Query<IBakeProducer>(RegistrationKind.Bake, context.Descriptor.Id).Select(e =>
+                new Producer(e.Id, (IBakeProducer)registry.Create(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type))).ToArray();
+            var interiors = registry.Query<IInteriorProvider>(RegistrationKind.Interior, context.Descriptor.Id).ToDictionary(e => "interior." + e.Id,
+                e => new Interior(e.Id, e.IsStub, (IInteriorProvider)registry.Create(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type), new WpId(e.Owner)), StringComparer.Ordinal);
             // Capture one immutable source snapshot per MapBuild; never load extensions on a worker.
             var catalog = registry.Get<IPaletteCatalogSource>().Catalog;
             var globalInputs = _globalInputs;
@@ -254,7 +253,8 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             }
             if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
         }
-        var buildContext = context;
+        // Only a cache miss needs the evaluator; cached products keep the published read-only world.
+        var buildContext = map.CreateAssetContext(context);
         var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics)) :
             interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext, inputHash);
         cancellation.ThrowIfCancellationRequested();
@@ -393,8 +393,8 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         lock (_sync) maps = _contexts.Values.Where(map => map.Active && map.Metadata is not null).ToArray();
         foreach (var map in maps) StartBackgroundCatalog(map);
     }
-    /// <summary>Called by the stage only after saving has allowed process exit. Remaining workers own CPU snapshots only.</summary>
-    public void StopForExit()
+    /// <summary>Called by the registry only after saving has allowed process exit. Remaining workers own CPU snapshots only.</summary>
+    public void PrepareForExit()
     {
         Stop();
         // Drain only native compression/file publication, never the current pure generation body.
@@ -449,10 +449,13 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         internal TerrainCacheService? TerrainCache { get; init; }
         internal BakePipelineCatalog? PipelineStatistics;
         internal BakeSourceIndexCache? SourceCache { get; init; }
-        internal BuildContext CreateAssetContext(string codeHash)
+        internal BuildContext CreateAssetContext(string codeHash) => CreateAssetContext(CreateBuildContext(codeHash));
+
+        internal BuildContext CreateAssetContext(BuildContext context)
         {
-            var context = CreateBuildContext(codeHash);
-            return TerrainCache is null ? context : context.WithWorld(TerrainCache.AssetWorld(context.World));
+            if (TerrainCache is null) return context;
+            var world = TerrainCache.AssetWorld(context.World);
+            return context.Memo(world, () => context.WithWorld(world));
         }
         private readonly object _sourceIndexLock = new();
         private BakeSourceIndex? _sourceIndex;
@@ -522,11 +525,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                 throw new InvalidOperationException("Map preparation inputs are not ready.");
             var contexts = new Dictionary<object, BuildContext>(ReferenceEqualityComparer.Instance);
             foreach (var module in Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-                contexts.Add(module.Value.Value, CreateAssetContext(module.Value.CodeHash));
+                contexts.Add(module.Value.Value, CreateBuildContext(module.Value.CodeHash));
             foreach (var interior in Interiors.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-                contexts.Add(interior.Value.Value, CreateAssetContext(interior.Value.CodeHash));
+                contexts.Add(interior.Value.Value, CreateBuildContext(interior.Value.CodeHash));
             foreach (var producer in Producers.OrderBy(producer => producer.Id, StringComparer.Ordinal))
-                contexts.Add(producer.Value, CreateAssetContext(producer.CodeHash));
+                contexts.Add(producer.Value, CreateBuildContext(producer.CodeHash));
             _preparedBuildContexts = new ReadOnlyDictionary<object, BuildContext>(contexts);
             _preparedContexts = new ReadOnlyDictionary<string, BuildContext>(Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal)
                 .ToDictionary(pair => pair.Key, pair => contexts[pair.Value.Value], StringComparer.Ordinal));

@@ -1,8 +1,7 @@
-using Godot;
-
 namespace Campus.Kernel.Registry;
 
-public partial class Kernel : Node
+/// <summary>Composition access to the application's single registry; this is not an engine node.</summary>
+public static class Kernel
 {
     public static ServiceRegistry Services { get; private set; } = new();
     public static T Get<T>() where T : class => Services.Get<T>();

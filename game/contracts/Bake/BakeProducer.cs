@@ -22,11 +22,8 @@ public sealed record BakeCodeManifest(int Schema, IReadOnlyDictionary<string, st
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class BakeProducerAttribute(string id) : Attribute
-{
-    public string Id { get; } = id;
-    public string Owner { get; set; } = "";
-}
+public sealed class BakeProducerAttribute(string id) : RegistrationAttribute(RegistrationKind.Bake, id, RegistrationLifetime.Map)
+{ }
 
 /// <summary>
 /// Pure CPU production extension, discovered by the kernel. A request must resolve to exactly one producer.

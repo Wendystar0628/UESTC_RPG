@@ -42,12 +42,8 @@ public sealed record InteriorLayout(FeatureId Feature, IReadOnlyList<StoreyInfo>
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class InteriorProviderAttribute(string id) : Attribute
-{
-    public string Id { get; } = id;
-    public string Owner { get; set; } = "";
-    public string Map { get; set; } = "";    // SYS-MAPS
-}
+public sealed class InteriorProviderAttribute(string id) : RegistrationAttribute(RegistrationKind.Interior, id, RegistrationLifetime.Map)
+{ }
 /// <summary>Configure a fresh map-owned provider from the authoritative catalog before publishing it to workers.</summary>
 public interface IInteriorCatalogConfigurable
 {

@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
@@ -79,13 +80,13 @@ public static partial class RegistryGateRunner
                 throw new InvalidDataException($"Reflection lake is duplicate or absent from map entities: {entry.Id}");
             entityCount += ids.Count;
             var effective = registry.ForMap(entry.Id.Value);
-            if (effective.Where(item => item.Kind != "service").GroupBy(item => (item.Kind, item.Id, item.Scope)).Any(group => group.Count() > 1))
+            if (effective.Where(item => item.Kind != RegistrationKind.Service).GroupBy(item => (item.Kind, item.Id, item.Scope)).Any(group => group.Count() > 1))
                 throw new InvalidDataException($"Generic/map registrations conflict in map: {entry.Id}");
             using var interiors = JsonDocument.Parse(read(entry.Dir + "interiors.json"));
             foreach (var interior in interiors.RootElement.GetProperty("interiors").EnumerateArray())
             {
                 var provider = interior.GetProperty("providerId").GetString();
-                if (!effective.Any(item => item.Kind == "interior" && item.Id == provider))
+                if (!effective.Any(item => item.Kind == RegistrationKind.Interior && item.Id == provider))
                     throw new InvalidDataException($"Open interior provider is not registered: {entry.Id}/{provider}");
                 foreach (var feature in interior.GetProperty("featureIds").EnumerateArray())
                     if (!ids.Contains(feature.GetString()!)) throw new InvalidDataException($"Open interior entity is missing: {entry.Id}/{feature}");
@@ -100,7 +101,7 @@ public static partial class RegistryGateRunner
         if (knobs.Distinct().Count() != knobs.Length || knobs.Select(knob => (int)knob).Where((value, indexValue) => value != indexValue).Any())
             throw new InvalidDataException("Quality knob values must be unique and contiguous.");
         return new("declarations + constructor graph + map data; runtime core reported separately", selected.Length,
-            registry.Entries.Count(entry => entry.Kind == "service"), registry.Entries.Count, entityCount,
+            registry.Entries.Count(entry => entry.Kind == RegistrationKind.Service), registry.Entries.Count, entityCount,
             priorities.Length, knobs.Length,
             [
                 "WP-27/WP-08: evaluate runtime Claims against each loaded world, including generic FeatureClaim rejection and overlapping claims.",
@@ -114,10 +115,9 @@ public static partial class RegistryGateRunner
     public static void ValidateConstructorGraph(ServiceRegistry registry, IReadOnlyCollection<Type> compositionInputs)
     {
         var bindings = new Dictionary<Type, Type>();
-        foreach (var entry in registry.Entries.Where(item => item.Kind == "service"))
+        foreach (var entry in registry.Entries.Where(item => item.Kind == RegistrationKind.Service))
         {
-            var contract = entry.Type.GetCustomAttributes<KernelServiceAttribute>()
-                .Single(attribute => attribute.Service.FullName == entry.Id).Service;
+            var contract = entry.Contract!;
             if (!contract.IsAssignableFrom(entry.Type)) throw new InvalidDataException($"Invalid binding: {entry.Id}");
             bindings.Add(contract, entry.Type);
         }
@@ -151,19 +151,19 @@ public static partial class RegistryGateRunner
             if (entry.Map is { Length: > 0 } map && !mapIds.Contains(map)) throw new InvalidDataException($"Unknown MapScope: {entry.Id}/{map}");
             var valid = entry.Kind switch
             {
-                "service" => true,
-                "content" => typeof(IContentModule).IsAssignableFrom(entry.Type),
-                "interior" => typeof(IInteriorProvider).IsAssignableFrom(entry.Type),
-                "ambient" => typeof(IAmbientEmitterSource).IsAssignableFrom(entry.Type),
-                "bake" => typeof(IBakeProducer).IsAssignableFrom(entry.Type),
-                "medium" => typeof(IMediumPresenter).IsAssignableFrom(entry.Type),
-                "save" => typeof(ISaveSection).IsAssignableFrom(entry.Type),
-                "part" => entry.Type.GetInterfaces().Any(type => type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IPartDef<>)),
-                "node" => IsNode(entry.Type),
+                RegistrationKind.Service => true,
+                RegistrationKind.Content => typeof(IContentModule).IsAssignableFrom(entry.Type),
+                RegistrationKind.Interior => typeof(IInteriorProvider).IsAssignableFrom(entry.Type),
+                RegistrationKind.Ambient => typeof(IAmbientEmitterSource).IsAssignableFrom(entry.Type),
+                RegistrationKind.Bake => typeof(IBakeProducer).IsAssignableFrom(entry.Type),
+                RegistrationKind.Medium => typeof(IMediumPresenter).IsAssignableFrom(entry.Type),
+                RegistrationKind.Save => typeof(ISaveSection).IsAssignableFrom(entry.Type),
+                RegistrationKind.Part => entry.Type.GetInterfaces().Any(type => type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IPartDef<>)),
+                RegistrationKind.Node => IsNode(entry.Type),
                 _ => throw new InvalidDataException($"Unknown registration kind: {entry.Kind}")
             };
             if (!valid) throw new InvalidDataException($"Registration type does not implement its contract: {entry.Id}/{entry.Type.FullName}");
-            if (entry.Kind == "node" && entry.Type.GetCustomAttribute<QualityResponsiveAttribute>() is { } quality)
+            if (entry.Kind == RegistrationKind.Node && entry.Type.GetCustomAttribute<QualityResponsiveAttribute>() is { } quality)
             {
                 if (!typeof(IQualityAware).IsAssignableFrom(entry.Type)) throw new InvalidDataException($"QualityResponsive node lacks IQualityAware: {entry.Id}");
                 foreach (var knob in quality.Owns.Concat(quality.Reads))
@@ -171,11 +171,11 @@ public static partial class RegistryGateRunner
                 foreach (var knob in quality.Owns)
                     if (!qualityOwners.Add(knob)) throw new InvalidDataException($"Duplicate quality owner: {knob}");
             }
-            if (entry.Kind == "save")
+            if (entry.Kind == RegistrationKind.Save)
             {
                 if (entry.Scope is null) throw new InvalidDataException($"Save registration has no scope: {entry.Id}");
                 var section = entry.Type.GetCustomAttributes<SaveSectionAttribute>()
-                    .Single(attribute => attribute.Id == entry.Id && attribute.Scope == entry.Scope);
+                    .Single(attribute => attribute.Id == entry.Id && attribute.Scope.ToString() == entry.Scope);
                 if (section.Version < 1 || !Enum.IsDefined(section.Phase) || !Enum.IsDefined(section.Scope) || !saveOrders.Add((section.Phase, section.Order)))
                     throw new InvalidDataException($"Invalid or duplicate save-section order: {entry.Id}");
             }

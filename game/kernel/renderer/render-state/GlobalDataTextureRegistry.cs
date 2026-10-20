@@ -88,7 +88,7 @@ public sealed class GlobalDataTextureLease : IDisposable
 /// This service does not dispose producer-owned Images, shaders or compute bindings.
 /// </remarks>
 [KernelService(typeof(IGlobalDataTextureRegistry), Owner = "WP-00")]
-public sealed class GlobalDataTextureRegistry : IGlobalDataTextureRegistry
+public sealed class GlobalDataTextureRegistry : IGlobalDataTextureRegistry, IAsyncDisposable
 {
     private readonly object _gate = new();
     private readonly Dictionary<string, Entry> _published = new(StringComparer.Ordinal);
@@ -96,6 +96,8 @@ public sealed class GlobalDataTextureRegistry : IGlobalDataTextureRegistry
     private readonly Dictionary<Rid, Entry> _owned = [];
     private readonly TaskCompletionSource _shutdown = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool _closed;
+
+    public ValueTask DisposeAsync() => new(ShutdownAsync());
 
     public IDisposable RegisterOwned(string name, Texture2D texture, Rid textureRid)
     {

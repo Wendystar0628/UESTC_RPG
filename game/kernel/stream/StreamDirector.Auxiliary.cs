@@ -15,12 +15,7 @@ public partial class StreamDirector
     private Box3[] _demandNearBuffer = [];
     private readonly List<BakeKey> _retiredAuxiliary = [];
 
-    private void LoadParticipants(MapId map) => _participants = Services.Services.ForMap(map.Value)
-        .Where(entry => (entry.Kind is "node" or "service" or "save") && typeof(IStreamTileParticipant).IsAssignableFrom(entry.Type))
-        .GroupBy(entry => entry.Type)
-        .Select(group => group.OrderBy(entry => entry.Kind == "node" ? 0 : 1).ThenBy(entry => entry.Id, StringComparer.Ordinal).First())
-        .OrderBy(entry => entry.Id, StringComparer.Ordinal)
-        .Select(entry => (IStreamTileParticipant)RuntimeComposition.Resolve(Services.Services, entry)).ToArray();
+    private void LoadParticipants(MapId map) => _participants = Services.Services.RuntimeInstances<IStreamTileParticipant>(map).ToArray();
 
     private IStreamTileParticipant Participant(BakeKey key)
     {

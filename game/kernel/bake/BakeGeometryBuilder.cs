@@ -23,10 +23,9 @@ internal sealed class BakeGeometryBuilder
         _catalog = catalog;
         _instances = new BakeInstanceAdapter(catalog);
         var parts = new Dictionary<string, Func<object, LodLevel, PartGeometry>>(StringComparer.Ordinal);
-        foreach (var item in (map is { } mapId ? registry.ForMap(mapId.Value) : registry.Entries)
-            .Where(r => r.Kind == "part").OrderBy(r => r.Id, StringComparer.Ordinal))
+        foreach (var item in registry.Query<IPartDef>(RegistrationKind.Part, map))
         {
-            var part = registry.Create(item.Type);
+            var part = registry.Create(item.Type, map);
             var api = item.Type.GetInterfaces().Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPartDef<>));
             var factory = typeof(BakeGeometryBuilder).GetMethod(nameof(PartBuilder), BindingFlags.NonPublic | BindingFlags.Static)!
                 .MakeGenericMethod(api.GetGenericArguments()[0]);

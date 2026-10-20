@@ -133,7 +133,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
         _tree = new(context.Descriptor.Bounds, _settings);
         _visibility = new(_settings.FadeSeconds);
         var contextSource = Services.Get<IBakeContextSource>();
-        var firstModule = Services.Services.ForMap(context.Descriptor.Id.Value).FirstOrDefault(entry => entry.Kind == "content");
+        var firstModule = Services.Services.Query<IContentModule>(RegistrationKind.Content, context.Descriptor.Id).FirstOrDefault();
         _interiors!.Load(context, firstModule is null ? null : contextSource.GetPreparedContext(context, firstModule.Id));
         _catalogGeneration = _mapGeneration;
         _catalogTask = BuildCatalog(contextSource.GetPreparedModuleTilesAsync(context));

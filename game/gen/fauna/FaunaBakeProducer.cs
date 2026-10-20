@@ -30,7 +30,8 @@ public sealed class FaunaBakeProducer : IBakeProducer, IBakeContentConsumer
     {
         var source = Source;
         if (source.Context.Map.Id != context.Map.Id) throw new ArgumentException("Fauna directory map mismatch.");
-        return ((IFaunaContentSource)source.Module).FaunaTiles(source.Context)
+        var prepared = source.Context.Memo(context.World, () => source.Context.WithWorld(context.World));
+        return ((IFaunaContentSource)source.Module).FaunaTiles(prepared)
             .OrderBy(pair => pair.Key.X).ThenBy(pair => pair.Key.Z)
             .Select(pair => new BakeTileEntry(Key(context.Map.Id, pair.Key), pair.Value)).ToArray();
     }
@@ -41,7 +42,8 @@ public sealed class FaunaBakeProducer : IBakeProducer, IBakeContentConsumer
         var tile = Tile(key);
         var source = Source;
         if (source.Context.Map.Id != key.Map) throw new ArgumentException("Fauna source map mismatch.");
-        var content = ((IFaunaContentSource)source.Module).PrepareFauna(source.Context, tile);
+        var prepared = source.Context.Memo(context.World, () => source.Context.WithWorld(context.World));
+        var content = ((IFaunaContentSource)source.Module).PrepareFauna(prepared, tile);
         return new FaunaTileContent(key, tile, content);
     }
 

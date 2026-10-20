@@ -4,11 +4,8 @@ using Campus.Contracts.Audio;
 namespace Campus.Contracts;
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class PartAttribute(string id) : Attribute
-{
-    public string Id { get; } = id;
-    public string Owner { get; set; } = "";
-}
+public sealed class PartAttribute(string id) : RegistrationAttribute(RegistrationKind.Part, id, RegistrationLifetime.Global)
+{ }
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class ParamAttribute : Attribute
 {

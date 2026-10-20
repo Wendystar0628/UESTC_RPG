@@ -14,7 +14,6 @@ namespace Campus.Kernel.Boot;
 [KernelNode("map-runtime", Owner = "WP-01")]
 public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
 {
-    private readonly List<(Type Type, Node Node)> _scoped = [];
     private IMapStreamState? _stream;
     private ICollisionWorld? _collision;
     private IRenderReadiness? _renderer;
@@ -33,6 +32,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private long _mapGeneration;
     private string? _error;
     private ViewContentReadiness? _contentReadiness;
+    private object[] _receivers = [];
     private bool ResidentReady => _mountPrepared && _stream?.ResidentReady == true && _renderer?.Pending == false && Error is null;
     private bool DestinationReady => _mountPrepared && _stream?.DestinationReady == true &&
         Error is null && _arrival is { Prepared: true } arrival && (arrival.Destination.Mode switch
@@ -79,27 +79,24 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         {
             // Drain preparation before releasing its data, so a late CPU result cannot republish an unloaded map.
             if (preparation is not null) await preparation;
-            var receivers = Instances(from).ToArray();
+            // Keep the load order and identities; teardown must not resolve fresh transient receivers.
+            var receivers = _receivers;
             foreach (var aware in receivers.OfType<IMapAware>())
                 try { aware.OnMapUnloading(from); }
                 catch (Exception error) { ReportFailure(from, "map-aware-unload", aware.GetType().FullName, error); failures.Add(error); }
             foreach (var participant in receivers.OfType<IMapDataParticipant>())
                 try { participant.Unload(from); }
                 catch (Exception error) { ReportFailure(from, "map-data-unload", participant.GetType().FullName, error); failures.Add(error); }
-            foreach (var (type, node) in _scoped)
-            {
-                Services.Services.Release(type);
-                node.GetParent()?.RemoveChild(node);
-                node.QueueFree();
-            }
-            _scoped.Clear();
-            _loaded = null;
-            _context = null;
         }
         catch (Exception error) { ReportFailure(from, "map-unload", null, error); failures.Add(error); }
         finally
         {
+            try { await Services.Services.ReleaseMapAsync(from); }
+            catch (Exception error) { ReportFailure(from, "map-scope-release", null, error); failures.Add(error); }
+            _loaded = null;
+            _context = null;
             _preparing = null;
+            _receivers = [];
             if (failures.Count > 0) _error = string.Join("; ", failures.Select(error => error.GetBaseException().Message));
         }
     }
@@ -118,13 +115,12 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         {
             var camera = Services.Get<Camera3D>();
             camera.Far = BackdropInputs.CameraFar(context.Descriptor, context.SourceInputs, BootTuning.CameraFar, camera.Near);
-            var nodes = Services.Services.ForMap(context.Descriptor.Id.Value)
-                .Where(entry => entry.Kind == "node" && !string.IsNullOrEmpty(entry.Map))
+            var nodes = Services.Services.Query<Node>(RegistrationKind.Node, context.Descriptor.Id)
+                .Where(entry => entry.Lifetime == RegistrationLifetime.Map)
                 .OrderBy(entry => entry.Id, StringComparer.Ordinal)
-                .Select(entry => (entry.Type, Node: Services.Services.Create(entry.Type) as Node
+                .Select(entry => (entry.Type, Node: Services.Services.Create(entry.Type, context.Descriptor.Id) as Node
                     ?? throw new InvalidOperationException($"KernelNode does not inherit Node: {entry.Id}.")))
                 .ToArray();
-            _scoped.AddRange(nodes);
             foreach (var (_, node) in nodes) GetParent().AddChild(node);
             if (nodes.Any(item => !item.Node.IsInsideTree()))
                 throw new InvalidOperationException("Every map kernel node must enter the tree before map callbacks.");
@@ -149,7 +145,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         try
         {
             // Snapshot by reference before callbacks; producers prepare first, then consumers see one complete map.
-            var receivers = Instances(context.Descriptor.Id).ToArray();
+            var receivers = _receivers = Instances(context.Descriptor.Id).ToArray();
             foreach (var participant in receivers.OfType<IMapDataParticipant>())
             {
                 phase = "map-data-prepare";
@@ -342,17 +338,5 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private static void ReportFailure(MapId map, string phase, string? receiver, Exception error) =>
         GD.PushError($"[WP-01][map={map.Value}][phase={phase}][receiver={receiver ?? "-"}] {error}");
 
-    private static IEnumerable<object> Instances(MapId map) => Services.Services.ForMap(map.Value)
-        .Where(entry => entry.Kind is "node" or "service" or "save")
-        .GroupBy(entry => entry.Type)
-        .Select(group => group.OrderBy(entry => entry.Kind == "node" ? 0 : 1).ThenBy(entry => entry.Id, StringComparer.Ordinal).First())
-        .OrderBy(entry => entry.Id, StringComparer.Ordinal)
-        .Select(entry =>
-        {
-            try { return RuntimeComposition.Resolve(Services.Services, entry); }
-            catch (Exception error)
-            {
-                throw new InvalidOperationException($"Map runtime cannot resolve {entry.Kind} '{entry.Id}' ({entry.Type.FullName}).", error);
-            }
-        }).Distinct(ReferenceEqualityComparer.Instance);
+    private static IEnumerable<object> Instances(MapId map) => Services.Services.RuntimeInstances<object>(map);
 }

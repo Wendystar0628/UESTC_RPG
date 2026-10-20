@@ -15,5 +15,4 @@ public partial class MapServiceNode : Node
         _service = Services.Get<IMapFrame>();
     }
     public override void _Process(double delta) => _service?.Step();
-    public override void _ExitTree() => _service?.Dispose();
 }

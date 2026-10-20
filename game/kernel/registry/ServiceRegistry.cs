@@ -1,180 +1,251 @@
 using System.Reflection;
 using Campus.Contracts;
-using Campus.Contracts.Bake;
-using Campus.Contracts.Save;
+using Campus.Contracts.Maps;
 using Campus.Pipeline.Map;
+using Godot;
 
 namespace Campus.Kernel.Registry;
 
-public sealed record Registration(string Kind, string Id, string Owner, string? Map, Type Type, bool IsStub)
+/// <summary>Declaration-owned global/map/transient instances; supplied instances remain owned by their caller.</summary>
+public sealed class ServiceRegistry : IDisposable, IAsyncDisposable
 {
-    public SaveScope? Scope { get; init; }
-}
-
-/// <summary>Stable discovery with explicit fallback replacement and constructor injection.</summary>
-public sealed class ServiceRegistry
-{
-    private readonly Dictionary<Type, Type> _serviceTypes = [];
-    private readonly Dictionary<Type, object> _instances = [];
-    private readonly HashSet<Type> _constructing = [];
-    private readonly List<Registration> _entries = [];
+    private readonly Dictionary<Type, object> _supplied = [];
+    private readonly Dictionary<(Type Type, MapId? Map), object> _instances = [];
+    private readonly HashSet<(Type Type, MapId? Map)> _constructing = [];
+    private readonly List<(object Instance, MapId? Map)> _created = [];
+    private IReadOnlyList<Registration> _entries = [];
+    private bool _closing;
+    private bool _disposed;
+    private Task? _shutdown;
+    private readonly HashSet<MapId> _releasingMaps = [];
     public IReadOnlyList<Registration> Entries => _entries;
+    public IReadOnlyList<object> Created => _created.Select(item => item.Instance).ToArray();
 
-    public void Add<T>(T instance) where T : class => _instances[typeof(T)] = instance;
+    public void Add<T>(T instance) where T : class
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_closing) throw new InvalidOperationException("Registry is shutting down.");
+        _supplied[typeof(T)] = instance;
+    }
     public T Get<T>() where T : class => (T)Get(typeof(T));
-    public object Get(Type service)
+    public object Get(Type service, MapId? map = null)
     {
-        if (_instances.TryGetValue(service, out var existing)) return existing;
-        if (!_serviceTypes.TryGetValue(service, out var implementation))
-            throw new InvalidOperationException($"Service is not registered: {service.FullName}");
-        var instance = Create(implementation);
-        _instances[service] = instance;
-        return instance;
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_supplied.TryGetValue(service, out var supplied)) return supplied;
+        var entry = ForScope(map).SingleOrDefault(item => item.Kind == RegistrationKind.Service && item.Contract == service)
+            ?? throw new InvalidOperationException($"Service is not registered: {service.FullName}");
+        return Create(entry.Type, map);
     }
 
-    public object Create(Type implementation)
+    public object Create(Type implementation, MapId? map = null)
     {
-        if (_instances.TryGetValue(implementation, out var existing)) return existing;
-        if (!_constructing.Add(implementation))
-            throw new InvalidOperationException($"Circular service dependency: {implementation.FullName}");
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (map is { } requested && string.IsNullOrWhiteSpace(requested.Value)) throw new ArgumentException("A map ID is required.", nameof(map));
+        if (_supplied.TryGetValue(implementation, out var supplied)) return supplied;
+        var entries = ForScope(map).Where(entry => entry.Type == implementation).ToArray();
+        if (entries.Length == 0) throw new InvalidOperationException($"Type is not registered: {implementation.FullName}");
+        // A supplied service binding replaces the implementation for all of its registrations.
+        foreach (var entry in entries)
+            if (entry.Contract is { } contract && _supplied.TryGetValue(contract, out supplied)) return supplied;
+        var lifetime = entries[0].Lifetime;
+        MapId? scope = lifetime switch
+        {
+            RegistrationLifetime.Global => null,
+            RegistrationLifetime.Map => map ?? throw new InvalidOperationException($"Map scope required: {implementation.FullName}"),
+            RegistrationLifetime.Transient => map,
+            _ => throw new InvalidOperationException($"Unknown lifetime: {lifetime}")
+        };
+        var key = (implementation, scope);
+        if (lifetime != RegistrationLifetime.Transient && _instances.TryGetValue(key, out var existing)) return existing;
+        // ExitTree may still resolve existing bindings, but teardown must never construct replacements.
+        if (_closing) throw new InvalidOperationException($"Registry is shutting down: {implementation.FullName}");
+        if (map is { } releasing && _releasingMaps.Contains(releasing)) throw new InvalidOperationException($"Map scope is releasing: {releasing.Value}");
+        if (!_constructing.Add(key)) throw new InvalidOperationException($"Circular dependency: {implementation.FullName}");
         try
         {
-            var constructor = implementation.GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault()
-                ?? throw new InvalidOperationException($"No public constructor: {implementation.FullName}");
-            var args = constructor.GetParameters().Select(p =>
-                _instances.ContainsKey(p.ParameterType) || _serviceTypes.ContainsKey(p.ParameterType)
-                    ? Get(p.ParameterType)
-                    : p.HasDefaultValue ? p.DefaultValue
-                    : throw new InvalidOperationException($"Unresolved {p.ParameterType.Name} for {implementation.Name}")).ToArray();
-            var instance = constructor.Invoke(args);
-            _instances[implementation] = instance;
-            return instance;
-        }
-        finally { _constructing.Remove(implementation); }
-    }
-
-    /// <summary>
-    /// Creates one fresh, map-owned instance of an interior provider selected by ForMap.
-    /// Call on the main thread before worker publication; configure once, then keep the instance for that map's jobs.
-    /// This is not a general transient-service API and never adds the provider to the global instance cache.
-    /// </summary>
-    public IInteriorProvider CreateInteriorProvider(Type implementation, MapId map)
-    {
-        ArgumentNullException.ThrowIfNull(implementation);
-        if (string.IsNullOrWhiteSpace(map.Value)) throw new ArgumentException("A map ID is required.", nameof(map));
-        if (!implementation.IsClass || implementation.IsAbstract || implementation.ContainsGenericParameters ||
-            !typeof(IInteriorProvider).IsAssignableFrom(implementation) ||
-            !ForMap(map.Value).Any(entry => entry.Kind == "interior" && entry.Type == implementation))
-            throw new InvalidOperationException($"Interior provider {implementation.FullName} is not registered for map {map.Value}.");
-        if (typeof(Godot.GodotObject).IsAssignableFrom(implementation) ||
-            implementation.IsDefined(typeof(KernelNodeAttribute), false) ||
-            implementation.IsDefined(typeof(KernelServiceAttribute), false))
-            throw new InvalidOperationException($"Map-owned interior creation cannot construct an engine node or service: {implementation.FullName}.");
-        if (!_constructing.Add(implementation))
-            throw new InvalidOperationException($"Circular interior provider dependency: {implementation.FullName}");
-        try
-        {
-            var constructor = implementation.GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault()
-                ?? throw new InvalidOperationException($"No public constructor: {implementation.FullName}");
-            var args = constructor.GetParameters().Select(parameter =>
+            var instance = RegistrationDiscovery.Construct(implementation, parameter =>
             {
                 if (typeof(IInteriorProvider).IsAssignableFrom(parameter.ParameterType))
-                    throw new InvalidOperationException($"Interior provider {implementation.Name} must read other providers through BuildContext.InteriorProviders, not constructor injection.");
-                var dependency = _instances.ContainsKey(parameter.ParameterType) || _serviceTypes.ContainsKey(parameter.ParameterType)
-                    ? Get(parameter.ParameterType)
-                    : parameter.HasDefaultValue ? parameter.DefaultValue
-                    : throw new InvalidOperationException($"Unresolved {parameter.ParameterType.Name} for {implementation.Name}");
-                if (dependency is IInteriorProvider)
-                    throw new InvalidOperationException($"Interior provider {implementation.Name} cannot capture a globally cached interior dependency.");
-                return dependency;
-            }).ToArray();
-            return (IInteriorProvider)constructor.Invoke(args);
+                    throw new InvalidOperationException($"Interior providers are read through BuildContext: {implementation.FullName}");
+                if (_supplied.ContainsKey(parameter.ParameterType) || ForScope(scope).Any(entry => entry.Contract == parameter.ParameterType))
+                    return Get(parameter.ParameterType, scope);
+                if (parameter.HasDefaultValue) return parameter.DefaultValue;
+                throw new InvalidOperationException($"Unresolved {parameter.ParameterType.Name} for {implementation.Name}");
+            });
+            _created.Add((instance, scope));
+            if (lifetime != RegistrationLifetime.Transient) _instances.Add(key, instance);
+            return instance;
         }
-        finally { _constructing.Remove(implementation); }
-    }
-
-    /// <summary>Forget a constructed instance and every alias to it. Its owner must dispose/free it first.</summary>
-    public void Release(Type implementation)
-    {
-        ArgumentNullException.ThrowIfNull(implementation);
-        if (!_instances.TryGetValue(implementation, out var instance)) return;
-        var aliases = _instances.Where(pair => ReferenceEquals(pair.Value, instance)).Select(pair => pair.Key).ToArray();
-        foreach (var alias in aliases) _instances.Remove(alias);
+        finally { _constructing.Remove(key); }
     }
 
     public void Discover(IEnumerable<Assembly> assemblies)
     {
-        var capturedAssemblies = assemblies.Distinct().ToArray();
-        var types = capturedAssemblies.OrderBy(a => a.FullName, StringComparer.Ordinal)
-            .SelectMany(a => a.GetTypes()).Where(t => t.IsClass && !t.IsAbstract && !t.ContainsGenericParameters)
-            .OrderBy(t => t.FullName, StringComparer.Ordinal).ToArray();
-        var services = types.SelectMany(t => t.GetCustomAttributes<KernelServiceAttribute>()
-            .Select(a => (Type: t, Attribute: a))).GroupBy(x => x.Attribute.Service);
-        foreach (var group in services.OrderBy(g => g.Key.FullName, StringComparer.Ordinal))
-        {
-            var actual = group.Where(x => !x.Attribute.IsStub).ToArray();
-            var chosen = actual.Length > 0 ? actual : group.ToArray();
-            if (chosen.Length != 1) throw new InvalidOperationException($"Duplicate service: {group.Key.FullName}");
-            var item = chosen[0];
-            if (!group.Key.IsAssignableFrom(item.Type)) throw new InvalidOperationException($"Invalid service binding: {item.Type.FullName}");
-            _serviceTypes.Add(group.Key, item.Type);
-            _entries.Add(new("service", group.Key.FullName!, item.Attribute.Owner, null, item.Type, item.Attribute.IsStub));
-        }
-        foreach (var entry in RegistrationDiscovery.Discover(capturedAssemblies))
-            _entries.Add(new(entry.Kind, entry.Id, entry.Owner, entry.Map, entry.Type, entry.IsStub));
-        foreach (var type in types)
-        {
-            AddAttribute(type, type.GetCustomAttribute<Campus.Contracts.Audio.AmbientEmitterAttribute>(), "ambient");
-            AddAttribute(type, type.GetCustomAttribute<MediumPresenterAttribute>(), "medium");
-            AddAttribute(type, type.GetCustomAttribute<KernelNodeAttribute>(), "node");
-            AddAttribute(type, type.GetCustomAttribute<BakeProducerAttribute>(), "bake");
-            foreach (var section in type.GetCustomAttributes<SaveSectionAttribute>())
-                AddAttribute(type, section, "save");
-        }
-        var selected = RegistrationDiscovery.Select(_entries.Where(entry => entry.Kind != "service"),
-            entry => (entry.Kind, entry.Map, entry.Id, entry.Scope), entry => entry.IsStub);
-        _entries.RemoveAll(entry => entry.Kind != "service");
-        _entries.AddRange(selected);
-        _entries.Sort((a, b) => StringComparer.Ordinal.Compare(
-            a.Kind + ":" + a.Id + ":" + a.Map + ":" + a.Scope,
-            b.Kind + ":" + b.Id + ":" + b.Map + ":" + b.Scope));
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_closing) throw new InvalidOperationException("Registry is shutting down.");
+        if (_entries.Count > 0 || _created.Count > 0) throw new InvalidOperationException("Registry discovery runs once.");
+        _entries = RegistrationDiscovery.Discover(assemblies);
     }
 
-    private void AddAttribute(Type type, Attribute? attribute, string kind)
-    {
-        if (attribute is null) return;
-        if (attribute is BakeProducerAttribute && !typeof(IBakeProducer).IsAssignableFrom(type))
-            throw new InvalidOperationException($"Bake producer does not implement IBakeProducer: {type.FullName}");
-        var metadata = attribute.GetType();
-        var id = metadata.GetProperty("Id")?.GetValue(attribute) as string
-            ?? throw new InvalidOperationException($"Registration has no Id: {type.FullName}");
-        var owner = metadata.GetProperty("Owner")?.GetValue(attribute) as string ?? "";
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(owner))
-            throw new InvalidOperationException($"Registration has empty identity: {type.FullName}");
-        var map = metadata.GetProperty("Map")?.GetValue(attribute) as string;
-        if (string.IsNullOrEmpty(map)) map = type.Assembly.GetCustomAttribute<MapScopeAttribute>()?.Map;
-        var stub = metadata.GetProperty("IsStub")?.GetValue(attribute) is true ||
-            type.Namespace?.StartsWith("Campus.Kernel.Stubs", StringComparison.Ordinal) == true;
-        _entries.Add(new(kind, id, owner, map, type, stub)
-        {
-            Scope = attribute is SaveSectionAttribute section ? section.Scope : null
-        });
-    }
+    public IReadOnlyList<Registration> ForMap(string map) => RegistrationDiscovery.ForMap(_entries, map);
+    public IReadOnlyList<Registration> Query<T>(RegistrationKind kind, MapId? map = null) where T : class =>
+        RegistrationDiscovery.Query<T>(_entries, kind, map);
+    private IEnumerable<Registration> ForScope(MapId? map) => _entries.Where(entry => entry.Map is null || map is { } id && entry.Map == id.Value);
 
     public void InstantiateServices()
     {
-        foreach (var service in _serviceTypes.Keys.OrderBy(t => t.FullName, StringComparer.Ordinal)) Get(service);
+        foreach (var entry in Query<object>(RegistrationKind.Service).Where(entry => entry.Map is null && entry.Lifetime == RegistrationLifetime.Global))
+            Get(entry.Contract!);
     }
 
-    public IReadOnlyList<Registration> ForMap(string map) => RegistrationDiscovery.ForMap(_entries, entry => entry.Map, map);
+    public IReadOnlyList<T> RuntimeInstances<T>(MapId? map = null) where T : class => ForScope(map)
+        .Where(entry => entry.Kind is RegistrationKind.Node or RegistrationKind.Service or RegistrationKind.Save)
+        .Where(entry => typeof(T).IsAssignableFrom(entry.Type))
+        // A node's lifecycle identity is its node ID, even when service aliases sort before it.
+        .GroupBy(entry => entry.Type)
+        .Select(group => group.OrderBy(entry => entry.Kind == RegistrationKind.Node ? 0 : 1)
+            .ThenBy(entry => entry.Id, StringComparer.Ordinal).First())
+        .OrderBy(entry => entry.Id, StringComparer.Ordinal)
+        .Select(entry => entry.Kind == RegistrationKind.Service ? Get(entry.Contract!, map) : Create(entry.Type, map))
+        .OfType<T>().Distinct((IEqualityComparer<T>)ReferenceEqualityComparer.Instance).ToArray();
+
+    public IReadOnlyList<T> CreatedInstances<T>(MapId? map = null) where T : class => _created
+        .Where(item => item.Map is null || item.Map == map).Select(item => item.Instance)
+        .OfType<T>().ToArray();
 
     public void ValidateMap(string map)
     {
-        foreach (var entry in ForMap(map).Where(e => e.Kind == "content"))
-        {
-            var module = (IContentModule)Create(entry.Type);
-            if (string.IsNullOrEmpty(entry.Map) && module.Claims.Any(c => c is FeatureClaim))
+        foreach (var entry in Query<IContentModule>(RegistrationKind.Content, new(map)))
+            if (entry.Map is null && ((IContentModule)Create(entry.Type, new(map))).Claims.Any(claim => claim is FeatureClaim))
                 throw new InvalidOperationException($"Global module cannot claim a map feature: {entry.Id}");
+    }
+
+    public async Task ReleaseMapAsync(MapId map)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (!_releasingMaps.Add(map)) throw new InvalidOperationException($"Map scope is already releasing: {map.Value}");
+        try { await ReleaseAsync(item => item.Map == map); }
+        finally { _releasingMaps.Remove(map); }
+    }
+
+    /// <summary>Stop map/background work, exit nodes with bindings intact, then release owned objects and scene children.</summary>
+    public Task ShutdownAsync(Node scene, Action<string>? trace = null) => _shutdown ??= Shutdown(scene, trace);
+
+    private async Task Shutdown(Node scene, Action<string>? trace)
+    {
+        _closing = true;
+        var failures = new List<Exception>();
+        trace?.Invoke("shutdown-map");
+        try
+        {
+            var lifetime = CreatedInstances<IMapLifetime>().SingleOrDefault();
+            if (lifetime is not null)
+            {
+                var maps = Get<IMapService>();
+                await lifetime.ShutdownAsync(maps.Context?.Descriptor.Id ?? maps.Current);
+            }
         }
+        catch (Exception error) { failures.Add(error); }
+        foreach (var participant in _created.AsEnumerable().Reverse().Select(item => item.Instance).OfType<IRegistryExitParticipant>())
+            try { participant.PrepareForExit(); } catch (Exception error) { failures.Add(error); }
+        trace?.Invoke("shutdown-nodes");
+        var children = scene.GetChildren(includeInternal: true);
+        Node[] roots;
+        using (var nativeChildren = (Godot.Collections.Array)children) roots = children.AsEnumerable().Reverse().ToArray();
+        var sceneOwned = roots.Where(node => !_created.Any(item => ReferenceEquals(item.Instance, node))).ToArray();
+        // Scene-owned containers and their descendants must exit before any service binding is removed.
+        ExitNodes(roots, failures);
+        try { await ReleaseAsync(_ => true, trace); } catch (Exception error) { failures.Add(error); }
+        foreach (var node in sceneOwned)
+            try { FreeNode(node, trace); } catch (Exception error) { failures.Add(error); }
+        _supplied.Clear();
+        _disposed = true;
+        if (failures.Count > 0) throw new AggregateException("Registry shutdown failed.", failures);
+    }
+
+    private async Task ReleaseAsync(Func<(object Instance, MapId? Map), bool> select, Action<string>? trace = null)
+    {
+        var failures = new List<Exception>();
+        var owned = _created.Where(select).Reverse().ToArray();
+        ExitNodes(owned.Select(item => item.Instance).OfType<Node>(), failures);
+        foreach (var item in owned)
+        {
+            Forget(item.Instance);
+            try
+            {
+                if (item.Instance is Node node) FreeNode(node, trace);
+                else if (item.Instance is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync();
+                else if (item.Instance is IDisposable disposable) disposable.Dispose();
+            }
+            catch (Exception error) { failures.Add(error); }
+        }
+        if (failures.Count > 0) throw new AggregateException("Registered object release failed.", failures);
+    }
+
+    private void Forget(object instance)
+    {
+        _created.RemoveAll(item => ReferenceEquals(item.Instance, instance));
+        foreach (var alias in _supplied.Where(pair => ReferenceEquals(pair.Value, instance)).Select(pair => pair.Key).ToArray()) _supplied.Remove(alias);
+        foreach (var key in _instances.Where(pair => ReferenceEquals(pair.Value, instance)).Select(pair => pair.Key).ToArray()) _instances.Remove(key);
+    }
+
+    private static void FreeNode(Node node, Action<string>? trace)
+    {
+        if (!GodotObject.IsInstanceValid(node)) return;
+        node.SetProcess(false); node.SetPhysicsProcess(false);
+        node.GetParent()?.RemoveChild(node);
+        trace?.Invoke("node:" + node.GetType().Name);
+        node.Free();
+    }
+
+    private static void ExitNodes(IEnumerable<Node> nodes, List<Exception> failures)
+    {
+        foreach (var node in nodes)
+            try
+            {
+                if (!GodotObject.IsInstanceValid(node)) continue;
+                node.SetProcess(false); node.SetPhysicsProcess(false);
+                node.GetParent()?.RemoveChild(node);
+            }
+            catch (Exception error) { failures.Add(error); }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (_shutdown is not null) return new(_shutdown);
+        if (_disposed) return ValueTask.CompletedTask;
+        _closing = true;
+        return new(_shutdown = DisposeOwnedAsync());
+    }
+
+    private async Task DisposeOwnedAsync()
+    {
+        try { await ReleaseAsync(_ => true); }
+        finally { _supplied.Clear(); _disposed = true; }
+    }
+
+    /// <summary>Non-awaiting scene-exit fallback. Normal process exit awaits ShutdownAsync while rendering is alive.</summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _closing = true;
+        var failures = new List<Exception>();
+        var owned = _created.AsEnumerable().Reverse().ToArray();
+        ExitNodes(owned.Select(item => item.Instance).OfType<Node>(), failures);
+        foreach (var item in owned)
+        {
+            Forget(item.Instance);
+            try
+            {
+                if (item.Instance is Node node) FreeNode(node, null);
+                else if (item.Instance is IDisposable disposable) disposable.Dispose();
+                else if (item.Instance is IAsyncDisposable)
+                    throw new InvalidOperationException($"{item.Instance.GetType().FullName} requires asynchronous registry disposal.");
+            }
+            catch (Exception error) { failures.Add(error); }
+        }
+        _supplied.Clear();
+        _disposed = true;
+        if (failures.Count > 0) throw new AggregateException("Registry fallback release failed.", failures);
     }
 }

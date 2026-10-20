@@ -44,9 +44,9 @@ public partial class SaveNode : Node, IBootParticipant
                     var save = context.Run.Save;
                     _mapRuntime = RuntimeKernel.Get<IMapRuntime>();
                     _loading = RuntimeKernel.Get<IAppLoadingPresentation>();
-                    var sections = RuntimeKernel.Services.Entries.Where(e => e.Kind == "save").Select(e =>
+                    var sections = RuntimeKernel.Services.Query<ISaveSection>(RegistrationKind.Save).Select(e =>
                         new SaveSectionRegistration(e.Type.GetCustomAttributes<SaveSectionAttribute>()
-                            .Single(a => a.Id == e.Id && a.Scope == e.Scope),
+                            .Single(a => a.Id == e.Id && a.Scope.ToString() == e.Scope),
                             (ISaveSection)RuntimeKernel.Services.Create(e.Type))).ToArray();
                     var bindings = new SaveRuntimeBindings(RuntimeKernel.Get<IWorldState>(), RuntimeKernel.Get<IMapService>(), RuntimeKernel.Get<ICameraRig>(),
                         RuntimeKernel.Get<IObserverState>(), RuntimeKernel.Get<IRuleset>(), RuntimeKernel.Get<IAtlasService>(), RuntimeKernel.Get<IAppLoadingPresentation>(),
@@ -187,7 +187,7 @@ public partial class SaveNode : Node, IBootParticipant
         _exiting = true;
         RenderingServer.FramePostDraw -= OnFramePostDraw;
         _exit.Cancel();
-        _hiddenHud?.Dispose(); _capture?.TrySetResult(null); _save?.Dispose();
+        _hiddenHud?.Dispose(); _capture?.TrySetResult(null);
         _exit.Dispose();
     }
 }

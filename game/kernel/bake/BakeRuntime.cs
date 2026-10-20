@@ -60,5 +60,4 @@ public partial class BakeRuntime : Node, IMapAware, IMapDataParticipant
             _finished = true; GD.PushError("WP-02a strict bake failure."); GetTree().Quit(2); return;
         }
     }
-    public override void _ExitTree() => _service.Dispose();
 }

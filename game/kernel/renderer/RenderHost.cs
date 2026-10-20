@@ -86,7 +86,7 @@ public partial class RenderHost : Node3D, IRenderHost, IRenderReadiness, IMapAwa
         {
             var parts = content.Parts.Select(part =>
             {
-                var matches = Services.Services.Entries.Where(item => item.Kind == "part" && item.Id == part.Part.Value).ToArray();
+                var matches = Services.Services.Query<IPartDef>(RegistrationKind.Part).Where(item => item.Id == part.Part.Value).ToArray();
                 if (matches.Length != 1)
                     throw new InvalidOperationException($"Dynamic content owner '{owner.Value}' requires exactly one registration for part '{part.Part.Value}' " +
                         $"with parameters {part.Params.GetType().FullName}; found {matches.Length}. " +

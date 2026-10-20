@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
 
@@ -61,17 +62,17 @@ public static class BuildInputAssembly
             key.Split('/').Any(part => part.Length == 0 || part is "." or ".."))
             throw new ArgumentException($"Invalid build-input path: scope={scope} key='{key}'. Expected a canonical relative key.", nameof(key));
     }
-    public static MapGenerationInputs Capture(MapId map, IReadOnlyList<GenerationRegistration> registrations,
-        Func<Type, object> create, Func<Type, IInteriorProvider> createInterior,
+    public static MapGenerationInputs Capture(MapId map, IReadOnlyList<Registration> registrations,
+        Func<Type, object> create,
         Func<Type, string> codeHash, PaletteCatalog catalog, BuildInputSnapshot globalInputs)
     {
-        var entries = RegistrationDiscovery.ForMap(registrations, entry => entry.Map, map.Value);
-        var modules = entries.Where(entry => entry.Kind == "content").ToDictionary(entry => entry.Id,
+        var entries = RegistrationDiscovery.ForMap(registrations, map.Value);
+        var modules = RegistrationDiscovery.Query<IContentModule>(entries, RegistrationKind.Content).ToDictionary(entry => entry.Id,
             entry => new ContentModuleInput((IContentModule)create(entry.Type), codeHash(entry.Type),
                 new WpId(entry.Owner), entry.Map is null), StringComparer.Ordinal);
-        var interiors = entries.Where(entry => entry.Kind == "interior").ToDictionary(entry => entry.Id,
-            entry => createInterior(entry.Type), StringComparer.Ordinal);
-        var interiorCodeHashes = entries.Where(entry => entry.Kind == "interior").ToDictionary(entry => entry.Id,
+        var interiors = RegistrationDiscovery.Query<IInteriorProvider>(entries, RegistrationKind.Interior).ToDictionary(entry => entry.Id,
+            entry => (IInteriorProvider)create(entry.Type), StringComparer.Ordinal);
+        var interiorCodeHashes = RegistrationDiscovery.Query<IInteriorProvider>(entries, RegistrationKind.Interior).ToDictionary(entry => entry.Id,
             entry => codeHash(entry.Type), StringComparer.Ordinal);
         var definitions = CapturePartDefinitions(entries, create);
         var collision = new PartCollisionBinding(definitions);
@@ -84,15 +85,14 @@ public static class BuildInputAssembly
     /// This creates only existing pure CPU part definitions, reads no reflected properties and runs no builders.
     /// Publish the returned immutable catalog in every BuildContext for this map; workers never use the registry.
     /// </summary>
-    public static PartLodCatalog CapturePartLods(IReadOnlyList<GenerationRegistration> entries, Func<Type, object> create) =>
+    public static PartLodCatalog CapturePartLods(IReadOnlyList<Registration> entries, Func<Type, object> create) =>
         new(CapturePartDefinitions(entries, create));
 
     private static IReadOnlyList<KeyValuePair<PartId, IPartDef>> CapturePartDefinitions(
-        IReadOnlyList<GenerationRegistration> entries, Func<Type, object> create)
+        IReadOnlyList<Registration> entries, Func<Type, object> create)
     {
         var definitions = new List<KeyValuePair<PartId, IPartDef>>();
-        foreach (var entry in entries.Where(entry => entry.Kind == "part")
-            .OrderBy(entry => entry.Id, StringComparer.Ordinal))
+        foreach (var entry in RegistrationDiscovery.Query<IPartDef>(entries, RegistrationKind.Part))
         {
             if (create(entry.Type) is not IPartDef definition)
                 throw new InvalidOperationException($"Registered part '{entry.Id}' ({entry.Type.FullName}) must implement IPartDef.");
@@ -102,11 +102,9 @@ public static class BuildInputAssembly
     }
 
     /// <summary>Capture existing content-module capabilities after map filtering, on the composition thread.</summary>
-    public static IReadOnlyList<IGroundMaskContributor> CaptureGroundMaskContributors(IReadOnlyList<GenerationRegistration> entries, Func<Type, object> create)
+    public static IReadOnlyList<IGroundMaskContributor> CaptureGroundMaskContributors(IReadOnlyList<Registration> entries, Func<Type, object> create)
     {
-        var selected = entries
-            .Where(entry => entry.Kind == "content" && typeof(IGroundMaskContributor).IsAssignableFrom(entry.Type))
-            .OrderBy(entry => entry.Id, StringComparer.Ordinal).ToArray();
+        var selected = RegistrationDiscovery.Query<IGroundMaskContributor>(entries, RegistrationKind.Content);
         var contributors = new List<IGroundMaskContributor>();
         foreach (var entry in selected)
         {

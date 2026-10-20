@@ -11,12 +11,8 @@ public sealed record FeatureClaim(FeatureId Feature, Aspects Aspects) : Claim(As
 public sealed record AreaClaim(ZoneId Zone, Aspects Aspects) : Claim(Aspects);
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class ContentModuleAttribute(string id) : Attribute
-{
-    public string Id { get; } = id;
-    public string Owner { get; set; } = "";
-    public string Map { get; set; } = "";
-}
+public sealed class ContentModuleAttribute(string id) : RegistrationAttribute(RegistrationKind.Content, id, RegistrationLifetime.Map)
+{ }
 
 /// <summary>Declared upper bounds for generated L0/L1 triangles and draw calls.</summary>
 public sealed record ModuleBudget(int TrianglesL0, int TrianglesL1, int DrawCalls);

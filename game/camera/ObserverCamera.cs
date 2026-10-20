@@ -68,7 +68,7 @@ public partial class ObserverCamera : Node, ICameraRig, IObserverState, IViewCon
         _world = Services.Get<IWorldState>();
         _terrain = Services.Get<ITerrainPreparation>();
         _world.InstanceChanged += OnWorldInstanceChanged;
-        if (Services.Services.Entries.Any(e => e.Kind == "service" && e.Id == typeof(IWalkController).FullName && !e.IsStub))
+        if (Services.Services.Query<IWalkController>(RegistrationKind.Service).Any(entry => !entry.IsStub))
             _walk = Services.Get<IWalkController>();
         _transit = Services.Get<ITransitDriver>();
         _automated = AppBoot.Options.Automated;

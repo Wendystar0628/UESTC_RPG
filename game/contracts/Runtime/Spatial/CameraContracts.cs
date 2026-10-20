@@ -35,7 +35,7 @@ public interface ITransitHandle
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class MediumPresenterAttribute(string id) : Attribute { public string Id { get; } = id; public string Owner { get; set; } = ""; }
+public sealed class MediumPresenterAttribute(string id) : RegistrationAttribute(RegistrationKind.Medium, id, RegistrationLifetime.Global) { }
 public interface IMediumPresenter            // Godot 侧实现（主线程）
 {
     IReadOnlyList<MediumKind> Kinds { get; }

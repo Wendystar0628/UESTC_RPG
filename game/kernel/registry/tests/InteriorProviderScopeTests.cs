@@ -18,23 +18,23 @@ public sealed class InteriorProviderScopeTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public async Task NewMapConfigurationDoesNotChangeAnOlderRunningMapOrTheGlobalCache()
+    public async Task NewMapConfigurationDoesNotChangeAnOlderMapScope()
     {
         var registry = ProviderRegistry();
         var type = typeof(FixtureBoxInterior);
         var providerId = type.GetCustomAttribute<InteriorProviderAttribute>()!.Id;
-        var globalFeature = new FeatureId("fixture:building:global");
+        var referenceFeature = new FeatureId("fixture:building:global");
         var featureA = new FeatureId("fixture:building:a");
         var featureB = new FeatureId("fixture:building:b");
-        var global = (BoxInteriorProvider)registry.Create(type);
-        global.Configure([globalFeature], [1], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
-        var globalContext = Context(new("fixture-global"), globalFeature, -200f,
-            new Dictionary<string, IInteriorProvider> { [providerId] = global });
-        var globalLayout = global.Layout(globalContext, globalFeature);
+        var reference = (BoxInteriorProvider)registry.Create(type, new MapId("fixture-global"));
+        reference.Configure([referenceFeature], [1], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
+        var referenceContext = Context(new("fixture-global"), referenceFeature, -200f,
+            new Dictionary<string, IInteriorProvider> { [providerId] = reference });
+        var referenceLayout = reference.Layout(referenceContext, referenceFeature);
 
         var mapA = new MapId("fixture-a");
         var mapB = new MapId("fixture-b");
-        var a = registry.CreateInteriorProvider(type, mapA);
+        var a = (IInteriorProvider)registry.Create(type, mapA);
         var providersA = new Dictionary<string, IInteriorProvider> { [providerId] = a };
         Configure(providerId, featureA, [1, 2], providersA);
         var contextA = Context(mapA, featureA, 0f, providersA);
@@ -51,17 +51,17 @@ public sealed class InteriorProviderScopeTests
         try
         {
             await entered.Task;
-            var b = registry.CreateInteriorProvider(type, mapB);
-            AssertThat(!ReferenceEquals(a, b) && !ReferenceEquals(a, global) && !ReferenceEquals(b, global)).OverrideFailureMessage("Fresh map providers reused each other or the global cached instance.").IsTrue();
+            var b = (IInteriorProvider)registry.Create(type, mapB);
+            AssertThat(!ReferenceEquals(a, b) && !ReferenceEquals(a, reference) && !ReferenceEquals(b, reference)).OverrideFailureMessage("Fresh map providers reused each other or another map scope.").IsTrue();
             var providersB = new Dictionary<string, IInteriorProvider> { [providerId] = b };
             Configure(providerId, featureB, [3, 4, 5], providersB);
             var contextB = Context(mapB, featureB, 200f, providersB);
             var layoutB = b.Layout(contextB, featureB);
             AssertThat(b.FeatureIds.SequenceEqual([featureB]) && layoutB.OpenStoreys.SequenceEqual([3, 4, 5])).OverrideFailureMessage("The second map was not independently configured.").IsTrue();
-            AssertThat(ReferenceEquals(registry.Create(type), global)).OverrideFailureMessage("Fresh creation replaced the global cache.").IsTrue();
-            AssertThat(global.FeatureIds.SequenceEqual([globalFeature])).OverrideFailureMessage("Fresh-map configuration changed global feature IDs.").IsTrue();
-            var currentGlobal = global.Layout(globalContext, globalFeature);
-            AssertThat(currentGlobal.Bounds == globalLayout.Bounds && currentGlobal.OpenStoreys.SequenceEqual(globalLayout.OpenStoreys)).OverrideFailureMessage("Fresh-map configuration changed the global layout.").IsTrue();
+            AssertThat(ReferenceEquals(registry.Create(type, new MapId("fixture-global")), reference)).OverrideFailureMessage("Map creation replaced another scope.").IsTrue();
+            AssertThat(reference.FeatureIds.SequenceEqual([referenceFeature])).OverrideFailureMessage("Fresh-map configuration changed another map scope's feature IDs.").IsTrue();
+            var currentReference = reference.Layout(referenceContext, referenceFeature);
+            AssertThat(currentReference.Bounds == referenceLayout.Bounds && currentReference.OpenStoreys.SequenceEqual(referenceLayout.OpenStoreys)).OverrideFailureMessage("Fresh-map configuration changed another map scope's layout.").IsTrue();
         }
         finally { resume.TrySetResult(true); }
 
@@ -73,18 +73,18 @@ public sealed class InteriorProviderScopeTests
 
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void NarrowFactoryRejectsUnregisteredEngineAndServiceTypes()
+    public void ScopedCreationRejectsUnregisteredEngineAndServiceTypes()
     {
         var registry = ProviderRegistry();
         var map = new MapId("fixture-map");
         foreach (var type in new[] { typeof(UnregisteredInterior), typeof(Godot.Node), typeof(Campus.Kernel.Maps.MapService) })
         {
-            AssertThrown(() => registry.CreateInteriorProvider(type, map)).IsInstanceOf<InvalidOperationException>();
+            AssertThrown(() => registry.Create(type, map)).IsInstanceOf<InvalidOperationException>();
         }
         // Rejections must not leave the cycle guard or instance cache poisoned.
-        var first = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
-        var second = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
-        AssertThat(!ReferenceEquals(first, second)).OverrideFailureMessage("Factory did not recover after rejecting invalid requests.").IsTrue();
+        var first = (IInteriorProvider)registry.Create(typeof(FixtureBoxInterior), map);
+        var second = (IInteriorProvider)registry.Create(typeof(FixtureBoxInterior), new MapId(map.Value + "-second"));
+        AssertThat(!ReferenceEquals(first, second)).OverrideFailureMessage("Different map scopes reused one provider.").IsTrue();
     }
 
     [TestCase]
@@ -93,8 +93,8 @@ public sealed class InteriorProviderScopeTests
     {
         var registry = ProviderRegistry();
         var map = new MapId("fixture-snapshot");
-        var first = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
-        var second = registry.CreateInteriorProvider(typeof(FixtureBoxInterior), map);
+        var first = (IInteriorProvider)registry.Create(typeof(FixtureBoxInterior), map);
+        var second = (IInteriorProvider)registry.Create(typeof(FixtureBoxInterior), new MapId(map.Value + "-second"));
         var input = new Dictionary<string, IInteriorProvider>(StringComparer.OrdinalIgnoreCase)
         { ["z.provider"] = first, ["a.provider"] = second };
         var context = Context(map, new("fixture:building:snapshot"), 0f, input);
@@ -112,7 +112,7 @@ public sealed class InteriorProviderScopeTests
     private static ServiceRegistry ProviderRegistry()
     {
         var registry = new ServiceRegistry();
-        // The global fixture registration exercises the production box implementation across distinct test maps.
+        // The map-independent fixture declaration exercises the production box implementation across distinct test maps.
         registry.Discover([typeof(FixtureBoxInterior).Assembly]);
         return registry;
     }

@@ -30,7 +30,7 @@ public sealed class VegetationBakeProducer : IBakeProducer, IBakeContentConsumer
     public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context)
     {
         var source = Source;
-        var prepared = source.Context;
+        var prepared = source.Context.Memo(context.World, () => source.Context.WithWorld(context.World));
         if (prepared.Map.Id != context.Map.Id) throw new InvalidOperationException("Vegetation directory map mismatch.");
         var producer = (IVegetationRuntimeSource)source.Module;
         var height = VegetationInputs.Species(prepared).Species.Max(s => s.HeightMax) * Planting.MaximumTreeScale;
@@ -53,7 +53,7 @@ public sealed class VegetationBakeProducer : IBakeProducer, IBakeContentConsumer
         var source = Source;
         if (source.Context.Map.Id != key.Map) throw new InvalidOperationException("Vegetation source map mismatch.");
         var producer = (IVegetationRuntimeSource)source.Module;
-        var prepared = source.Context;
+        var prepared = source.Context.Memo(context.World, () => source.Context.WithWorld(context.World));
         var mothers = key.Module == BakeModuleIds.VegetationTrees
             ? producer.PrepareTrees(prepared, tile) : producer.PrepareGrass(prepared, tile);
         return new VegetationTileContent(key, tile, mothers);

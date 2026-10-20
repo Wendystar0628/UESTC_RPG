@@ -30,9 +30,8 @@ public sealed class CollisionBakeProducer : IBakeProducer, IBakeContentConsumer
     public CollisionBakeProducer()
     {
         var registry = Services.Services;
-        // Content and interior instances belong to one MapBuild, never the global registry.
-        _parts = registry.Entries.Where(r => r.Kind == "part")
-            .OrderBy(r => r.Id, StringComparer.Ordinal)
+        // Content, interior and producer instances are owned by the map scope.
+        _parts = registry.Query<IPartDef>(RegistrationKind.Part)
             .Select(r => (r, registry.Create(r.Type))).ToArray();
     }
 
