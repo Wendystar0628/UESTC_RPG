@@ -36,7 +36,7 @@ def live_data(context):
 
 
 def hookfeed_data(context):
-    return hookfeed.build()
+    return hookfeed.build(context)
 
 
 def git_data(context):

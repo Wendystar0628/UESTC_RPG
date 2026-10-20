@@ -28,6 +28,7 @@ live:      {leads: [{who: Claude|Codex, running: true|false|null, since}]}
 attention: {open, items: [{id, kind: audit|shots|poster|review, title, detail, link, at, revision}]}
 feedback:  {items: [{at, text, delivered}]}
 hookfeed:  {lanes: [{role: 主会话|Claude 子代理|Codex 主线|Codex 子代理,
+                    rules: {at: ISO|null, calls: 工具调用数|null, late: bool|null}|null,
                     items: [{at, event: 中文事件, blocks: [中文块名], chars}]}]}
 progress:  {counts: {waiting, ready, active, integration, paused},
             dwell: [{side: all|claude|codex, stage, n, med}],
@@ -90,6 +91,7 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
 ```
 
 - attention 仅公开当前 revision 未过目的 items，按 at 降序，未知在末尾；open 等于其条数。
+- hookfeed 四列固定按上述角色顺序，每列 items 为最近 8 次真实有注入的事件，新的在前。rules 与事件列表共读同一次 guard journal：只匹配同轮 people 样本中的当前主会话身份；子代理只取 running=true 的集合，Claude 侧还须属于当前主会话，Codex 侧沿用 people 的主线后代集合。没有在场身份时 rules=null，显示空态；有身份但最新 journal 缺 rulesAt 或 rulesCalls（含字段启用前的历史）则 at/calls/late 全为 null，显示未知，不从旧记录或其他会话补值。两字段齐全时，at 由 journal.rulesAt（最后整套顶层 stdout 成功交付的 Unix 毫秒）转 ISO，calls 原样取 journal.rulesCalls（此后工具数，刚完整交付为 0），不按事件或块名重算。多位在跑子代理取 rulesAt 最早的一位的成对事实，任一位事实未知则整列未知。late 仅由 view 用同轮当前时刻判满 30 分钟；未来到期点交既有 next_expiry，前端仅格式化时间、呈现次数及提示色。
 - progress.dwell 为三侧×五状态固定 15 项，当前已知起点的样本数为 n，med 为相同 min 的中位数。未结束 history 段 to=null；stageP80 只用同状态真实结束段。since 是进入当前状态的真实时刻。waiting 表示等前置或就绪且前置未完，或暂停。
 - flow.wip.days 固定含今天的 30 个自然日，升序；windows 的 days 分别给最近 14/30 日，done 从相同 days 汇总，任一天未知则总数 null。当前队列只有技术目录，没有可靠中文领域，所有 byDomain 保留 null，不按目录猜领域；有明确来源才使用所列数组形状。前 7 天覆盖不足时 leadTime.prev=null，stages 对应条目保留且 parts=null。
 - blocked.rate=waiting/open；jump.rate=jumped/added，others=added-jumped，jump 覆盖不足保留 rate=null。链每一级含 stage。rework.pushes 是滚动近 30 天全部真实推送，时间升序；summary 同源，revert 优先于 audit，rate=(revert+audit)/n，完整历史或分母不足时为 null。none 只表示没有显式返工证据，不表示已审计。
@@ -104,7 +106,7 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
 | live、team | 同一 people 样本；team 取 agents 历史与同轮 progress | 会话、队列、相关历史或公开依赖完成；会话到期 |
 | attention、feedback | attention 输入事务与 read 原源 | 输入、作者信归档、真实截图事件 |
 | progress | 队列与 queue 历史 | 快通道，不等 Git 或全量文档 |
-| hookfeed | guard.jsonl | 钩子记账事件 |
+| hookfeed | 同一次 guard.jsonl 与同轮 people 样本 | 钩子、会话、队列或本机标识事件；view 给出的真实到期点 |
 | flow | queue、pushes、audits、progress 与共享 Git 证据 | 慢通道，合并 10 秒内变化 |
 | collab | letters、audits、pushes、agents、leads、queue 历史 | 慢通道，合并 10 秒内变化 |
 | health | patrol 结构化历史、门禁、代码规模、钩子、巡逻周期登记 | 原报告事件、周期登记变化、view 给出的真实到期点；不重跑检查 |

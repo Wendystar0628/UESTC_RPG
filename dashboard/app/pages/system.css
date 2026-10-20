@@ -39,6 +39,7 @@
 .sy-lane-blocks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .sy-lane-block { font-size: var(--fs-xs); line-height: 20px; padding: 0 8px; border-radius: 999px; color: var(--tone); background: var(--tone-bg); white-space: nowrap; }
 .sy-lane-none { font-size: var(--fs-sm); color: var(--text-3); padding: 10px 12px; }
+.sy-lane-none.t-warn { color: var(--tone); }
 
 /* 脚本树：搜索条在树上面（放在 fixed 里） */
 .sy-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin-bottom: var(--s3); font-size: var(--fs-sm); }

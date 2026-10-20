@@ -153,15 +153,18 @@
 
   Dash.panel({
     id: 'system-lanes', page: 'system', title: '最近注入了什么', note: '钩子最近往四方的对话里送了哪几块规则或提醒',
-    caliber: '钩子记账里每个对话最近 8 次有注入的事件；只写送了哪几块，不展示正文',
+    caliber: '每方最近 8 次有注入的事件；顶层摘要取当前主会话或在跑子代理，满 30 分钟提示；子代理显示最久未完整接收的一位，有缺失则未知',
     span: 8, order: 30, needs: ['hookfeed'],
     render: function (el, d) {
       var byRole = {};
-      (d.hookfeed.lanes || []).forEach(function (l) { byRole[l.role] = l.items || []; });
+      (d.hookfeed.lanes || []).forEach(function (l) { byRole[l.role] = l; });
       el.appendChild(h('div.sy-lanes', LANES.map(function (lane) {
-        var items = (byRole[lane.role] || []).slice().sort(function (a, b) { return Dash.parseTime(b.at) - Dash.parseTime(a.at); }).slice(0, 8);
+        var source = byRole[lane.role] || {}, items = source.items || [], rules = source.rules;
+        var summary = rules === null ? '当前没有活跃会话' : '上次整套顶层：' + (rules && rules.at != null ? Dash.at(rules.at) : '未知')
+          + ' · 此后工具 ' + (rules && rules.calls != null ? Dash.num(rules.calls) : '未知') + ' 次';
         return h('section.sy-lane.t-' + lane.side + (lane.main ? '.is-main' : '.is-sub'),
           h('header.sy-lane-head', h('span.sy-lane-role', lane.role), h('span.sy-lane-n', items.length ? '最近 ' + items.length + ' 次' : '')),
+          h('div.sy-lane-none' + (rules && rules.late === true ? '.t-warn' : ''), summary),
           items.length ? h('div.sy-lane-items', items.map(function (x) {
             return h('div.sy-lane-item',
               h('div.sy-lane-meta', h('span.sy-lane-at', Dash.at(x.at)), h('span.sy-lane-ev', x.event), h('span.sy-lane-chars', Dash.num(x.chars) + ' 字')),
