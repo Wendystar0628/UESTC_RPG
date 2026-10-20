@@ -1,7 +1,8 @@
 /* 健康页：这套开发机器健不健康。
-   块（面板 id）：health-summary 总体 · health-groups 各组检查 · health-trend 最近 48 轮 · health-gates 门禁
+   块（面板 id）：health-summary 总体 · health-fail 游戏失败指标 · health-fail-types 失败类别 · health-fail-trend 失败走势 · health-fail-recent 最近登记
+                  · health-groups 各组检查 · health-trend 最近 48 轮 · health-gates 门禁
                   · health-tests 测试规模与耗时 · health-hooks 钩子 · health-fresh 数据新鲜度。
-   数据：health（健康页契约 v3 §8.1）；health-fresh 不用数据，读 Dash.freshness()，外壳随推送心跳重画它。
+   数据：health（健康页契约 v3 §8.1）、failures（游戏失败，路由参数 fmajor、fsub 选大类与子类）；health-fresh 不用数据，读 Dash.freshness()，外壳随推送心跳重画它。
    共用的过时、读取中、没数据等状态由外壳处理，这里只在数据到齐后画。 */
 (function () {
   'use strict';
@@ -17,6 +18,10 @@
     gates: '每个检出最近一次完成的门禁报告；没跑的门禁画灰，不算没过',
     tests: '取每天最后一轮巡逻的测试个数与快检耗时，近 14 天',
     hooks: '自测数的是钩子自检合预期的个数；报错取近 24 小时钩子记账里的报错',
+    fail: '窗口按提交数取（最近若干次提交），不是按天；频率是窗口内每一段提交里的登记次数，不足一段不给频率；登记数不等于实际失败数，没登记的失败这里看不到',
+    failTypes: '按根因类别数窗口内的登记；点大类看它的子类，点子类筛选下面的最近登记；未收录类别是登记的类别不在类型表里',
+    failTrend: '窗口按提交序号分段，一段一根柱，按大类堆叠；记账中途开始的段只含起点之后的登记',
+    failRecent: '窗口内最近的登记，新的在前；没选类别时是全部，选了大类或子类只列对应的',
     fresh: '距上次确认的时间 ÷ 这份数据允许的旧期限；条长满格是 1.5 倍，超过 1 就算旧了，变橙'
   };
 
@@ -77,6 +82,203 @@
           h('span.hl-block-n', '要看 ', h('b', Dash.num(t.warn)), '　有问题 ', h('b', Dash.num(t.bad)),
             t.unknown ? h('span', '　未确认 ', h('b', Dash.num(t.unknown))) : null));
       })));
+    }
+  });
+
+  /* ================= 游戏失败（四块，在总体之后） ================= */
+
+  var FAIL_BLOCK = 'health-fail-types';
+
+  function failBlank(fd) {
+    if (!fd.coverage || fd.coverage.from == null) return Dash.empty('还没开始记账', '游戏本体的失败开始登记后，这里才有次数、频率和走势', true);
+    if (!fd.window || fd.window.n == null) return Dash.empty('窗口内次数未确认', '', true);
+    return null;
+  }
+
+  function failZero(fd) {
+    if (fd.window.n !== 0) return null;
+    return h('div', Dash.status('窗口内没有登记', 'ok'), h('div.note-line', '登记数不等于实际失败数：没登记的失败，这里看不到'));
+  }
+
+  /* 路由里的 fmajor / fsub 对不上数据（例如类别已改名）时当没选 */
+  function failSel(fd, params) {
+    var majors = fd.majors || [];
+    var idx = -1;
+    majors.forEach(function (m, i) { if (m.key === params.fmajor) idx = i; });
+    var major = idx >= 0 ? majors[idx] : null;
+    var sub = major ? (major.subs || []).filter(function (s) { return s.key === params.fsub; })[0] || null : null;
+    return { major: major, sub: sub, idx: idx };
+  }
+
+  function failRateText(rate, seg) { return rate == null ? '—' : Dash.num(rate) + '/' + Dash.num(seg); }
+
+  /* 记录 id 列表 → 时间线条目；记录里的子类不在类别表里时按原名显示 */
+  function failItems(fd, ids) {
+    var subs = {};
+    (fd.majors || []).forEach(function (m, i) {
+      (m.subs || []).forEach(function (s) { subs[s.key] = { label: s.label, idx: i }; });
+    });
+    return (ids || []).map(function (id) {
+      var r = fd.records && fd.records[id];
+      if (!r) return null;
+      var s = subs[r.sub];
+      return {
+        at: r.at, tone: s ? ['seq', s.idx] : ['side', 'muted'], tag: s ? s.label : (r.sub || '未收录类别'),
+        side: r.who || null, title: r.note || '（没写说明）', sub: r.row ? '行号 ' + r.row : null
+      };
+    }).filter(Boolean);
+  }
+
+  /* ---- 指标卡 ---- */
+  Dash.panel({
+    id: 'health-fail', page: 'health', title: '游戏失败', note: '游戏本体最近失败得多不多', caliber: CAL.fail,
+    span: 12, order: 11, needs: ['failures'],
+    render: function (el, d) {
+      var fd = d.failures, w = fd.window;
+      var blank = failBlank(fd);
+      if (blank) { el.appendChild(blank); return; }
+      var seg = Dash.num(w.segment);
+      var freq = Dash.kpi({
+        label: '每 ' + seg + ' 次提交', value: w.rate, unit: '次', trend: w.trend,
+        note: w.rate == null ? '不足 ' + seg + ' 次提交，不算频率' : '窗口内的平均频率'
+      });
+      var tr = freq.querySelector('.kpi-trend');
+      if (tr) tr.title = '最新一段与此前各满段的均值相比';
+      el.appendChild(h('div.hf-kpis',
+        Dash.kpi({ label: '窗口内登记', value: w.n, unit: '次', note: '最近 ' + Dash.num(w.size) + ' 次提交' }),
+        freq,
+        Dash.kpi({ label: '最近一次登记', value: w.last ? Dash.ago(w.last.at) : null, note: w.last ? Dash.at(w.last.at) : '窗口内没有登记' }),
+        Dash.kpi({ label: '新增类别', value: w.fresh, unit: '个', note: '记账起点之后新增、窗口内的子类' })));
+      var zero = failZero(fd);
+      if (zero) el.appendChild(zero);
+      var from = fd.coverage.from;
+      el.appendChild(h('div.note-line',
+        '窗口是最近 ' + Dash.num(w.size) + ' 次提交' + (w.commits != null ? '（现有 ' + Dash.num(w.commits) + ' 次）' : '') +
+        '，每 ' + seg + ' 次一段；记账从 ' + Dash.day(from) + ' ' + Dash.at(from).slice(-5) + ' 起'));
+    }
+  });
+
+  /* ---- 大类 → 子类 ---- */
+  function failBarRow(o) {
+    return h('button.fb-row' + (o.on ? '.is-on' : ''), {
+      type: 'button', 'aria-pressed': String(!!o.on), dataset: { tip: o.tip },
+      style: '--tone: var(' + Dash.colorVar('seq', o.tone) + ')', on: { click: o.click }
+    },
+      h('span.fb-name', o.label, o.fresh ? Dash.mark('level', 'warn', '新增 ' + shortDay(o.fresh)) : null),
+      h('span.fb-track', h('span.fb-fill', { style: 'width:' + o.pct + '%' })),
+      h('span.fb-tail', o.tail));
+  }
+
+  function failPct(n, max) { return n && max ? n / max * 100 : 0; }
+
+  Dash.panel({
+    id: FAIL_BLOCK, page: 'health', title: '失败类别', note: '哪一类失败得最多', caliber: CAL.failTypes,
+    span: 5, order: 12, needs: ['failures'], uses: ['params'],
+    render: function (el, d, ctx) {
+      var fd = d.failures, w = fd.window;
+      var blank = failBlank(fd);
+      if (blank) { el.appendChild(blank); return; }
+      var zero = failZero(fd);
+      if (zero) { el.appendChild(zero); return; }
+      var seg = w.segment;
+      var sel = failSel(fd, ctx.params);
+      var anyNull = false;
+      function tail(x) {
+        if (x.rate == null) anyNull = true;
+        return Dash.num(x.n) + ' 次 · ' + failRateText(x.rate, seg);
+      }
+      if (!sel.major) {
+        var majors = fd.majors || [];
+        var maxM = majors.reduce(function (m, x) { return Math.max(m, x.n || 0); }, 0);
+        el.appendChild(h('div.fb-list', majors.map(function (m, i) {
+          return failBarRow({
+            label: m.label, tone: i, pct: failPct(m.n, maxM), tail: tail(m), tip: m.label + '\n点开看它的子类',
+            click: function () { Dash.go('health', { fmajor: m.key }, FAIL_BLOCK); }
+          });
+        })));
+      } else {
+        var m = sel.major, subs = m.subs || [];
+        var maxS = subs.reduce(function (x, s) { return Math.max(x, s.n || 0); }, 0);
+        el.appendChild(h('div.fb-head',
+          h('button.btn', { type: 'button', on: { click: function () { Dash.go('health', {}, FAIL_BLOCK); } } }, '‹ 全部大类'),
+          h('span.fb-cur', m.label, h('span.fb-cur-n', tail(m)))));
+        el.appendChild(h('div.fb-list', subs.map(function (s) {
+          var on = !!sel.sub && sel.sub.key === s.key;
+          return failBarRow({
+            label: s.label, fresh: s.fresh === true ? s.added : null, tone: sel.idx, pct: failPct(s.n, maxS), tail: tail(s), on: on,
+            tip: s.label + '\n' + s.note,
+            click: function () { Dash.go('health', on ? { fmajor: m.key } : { fmajor: m.key, fsub: s.key }, FAIL_BLOCK); }
+          });
+        })));
+      }
+      if (w.unclassified > 0) el.appendChild(Dash.status('未收录类别 ' + Dash.num(w.unclassified) + ' 次：类别不在类型表里，不计入任何大类', 'warn'));
+      el.appendChild(h('div.note-line', '条尾：窗口内次数 · 每 ' + Dash.num(seg) + ' 次提交的次数' + (anyNull ? '；—：不足 ' + Dash.num(seg) + ' 次提交，不算频率' : '')));
+    }
+  });
+
+  /* ---- 提交段走势 ---- */
+  function openFailSegment(fd, s, label) {
+    var items = failItems(fd, s.recent);
+    Dash.drawer({
+      title: '提交 ' + label.replace('\n', ' · '),
+      sub: '登记 ' + Dash.num(s.n) + ' 次' + (s.n > items.length ? '，这里列最近 ' + items.length + ' 条' : ''),
+      body: items.length ? Dash.timeline(items) : Dash.empty('这一段没有登记', '', true)
+    });
+  }
+
+  Dash.panel({
+    id: 'health-fail-trend', page: 'health', title: '失败走势', note: '失败是越来越多还是越来越少', caliber: CAL.failTrend,
+    span: 7, order: 13, needs: ['failures'],
+    render: function (el, d) {
+      var fd = d.failures;
+      var blank = failBlank(fd);
+      if (blank) { el.appendChild(blank); return; }
+      var zero = failZero(fd);
+      if (zero) { el.appendChild(zero); return; }
+      var segs = fd.segments || [];
+      if (!segs.length) { el.appendChild(Dash.empty('还没有分段', '', true)); return; }
+      var cats = segs.map(function (s) { return (s.from + 1) + '–' + s.to + (s.partial ? '\n记账中途开始' : ''); });
+      var series = (fd.majors || []).map(function (m, i) {
+        return {
+          key: m.key, label: m.label, tone: ['seq', i],
+          values: segs.map(function (s) { var v = s.byMajor ? s.byMajor[m.key] : null; return v == null ? null : v; })
+        };
+      });
+      el.appendChild(Dash.charts.stack(cats, series, {
+        height: 280, label: '每段提交里各大类的登记次数', unit: '次', caliber: CAL.failTrend,
+        onClick: function (p) { if (segs[p.index]) openFailSegment(fd, segs[p.index], cats[p.index]); }
+      }));
+      var partial = segs.some(function (s) { return s.partial; });
+      var skipped = segs.some(function (s) { return s.n == null; });
+      el.appendChild(h('div.note-line',
+        '横轴是提交序号区间，左旧右新，每段 ' + Dash.num(fd.window.segment) + ' 次提交；点一段看那段的登记' +
+        (partial ? '；标"记账中途开始"的段只含起点之后的登记' : '') + (skipped ? '；整段在记账起点之前的不画' : '') +
+        (fd.window.unclassified > 0 ? '；未收录类别的登记不在图里' : '')));
+    }
+  });
+
+  /* ---- 最近登记 ---- */
+  Dash.panel({
+    id: 'health-fail-recent', page: 'health', title: '最近登记', note: '最近都是些什么失败', caliber: CAL.failRecent,
+    span: 12, order: 14, needs: ['failures'], uses: ['params'],
+    render: function (el, d, ctx) {
+      var fd = d.failures;
+      var blank = failBlank(fd);
+      if (blank) { el.appendChild(blank); return; }
+      var zero = failZero(fd);
+      if (zero) { el.appendChild(zero); return; }
+      var sel = failSel(fd, ctx.params);
+      var ids = sel.sub ? sel.sub.recent : sel.major ? sel.major.recent : fd.recent;
+      var total = sel.sub ? sel.sub.n : sel.major ? sel.major.n : fd.window.n;
+      if (sel.major) {
+        el.appendChild(h('div.fb-head',
+          h('span.fb-cur', '只看 ', h('b', sel.major.label + (sel.sub ? ' › ' + sel.sub.label : ''))),
+          h('button.btn', { type: 'button', on: { click: function () { Dash.go('health', {}, 'health-fail-recent'); } } }, '清除筛选')));
+      }
+      var items = failItems(fd, ids);
+      if (!items.length) { el.appendChild(Dash.empty('这一类窗口内没有登记', '', true)); return; }
+      el.appendChild(h('div.hf-recent', Dash.timeline(items)));
+      if (total > items.length) el.appendChild(h('div.hl-foot', '窗口内共 ' + Dash.num(total) + ' 次，这里列最近 ' + items.length + ' 条'));
     }
   });
 

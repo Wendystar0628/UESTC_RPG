@@ -57,6 +57,27 @@
 .hk-failed { margin: var(--s2) 0 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--s1); font-size: var(--fs-sm); color: var(--risk); overflow-wrap: anywhere; }
 .hk-sub { margin: var(--s4) 0 var(--s2); font-size: var(--fs-sm); font-weight: 650; color: var(--text-2); }
 
+/* 游戏失败 */
+.hf-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s3); }
+@media (max-width: 820px) { .hf-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .hf-kpis .kpi-value { font-size: var(--fs-xl); } }
+.fb-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) var(--s3); margin-bottom: var(--s3); }
+.fb-cur { flex: 1; min-width: 0; font-weight: 650; overflow-wrap: anywhere; }
+.fb-cur b { color: var(--text); }
+.fb-cur-n { margin-left: var(--s3); font-size: var(--fs-sm); font-weight: 400; color: var(--text-2); }
+.fb-list { display: flex; flex-direction: column; gap: 2px; }
+.fb-list ~ .status { margin-top: var(--s3); }
+.fb-row { display: grid; grid-template-columns: minmax(7.5em, 10em) minmax(0, 1fr) auto; align-items: center; gap: var(--s3); width: 100%; padding: var(--s2); border: 0; border-radius: var(--radius-sm); background: none; text-align: left; cursor: pointer; }
+.fb-row:hover, .fb-row:focus-visible { background: var(--surface-2); }
+.fb-row.is-on { background: var(--accent-bg); }
+.fb-name { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); font-weight: 600; overflow-wrap: anywhere; }
+.fb-track { height: var(--s4); border-radius: var(--radius-sm); background: var(--surface-2); overflow: hidden; }
+.fb-row:hover .fb-track, .fb-row.is-on .fb-track { background: var(--surface); }
+.fb-fill { display: block; height: 100%; border-radius: var(--radius-sm); background: var(--tone); }
+.fb-tail { min-width: 9em; text-align: right; font-size: var(--fs-sm); color: var(--text-2); white-space: nowrap; }
+@media (max-width: 560px) { .fb-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--s1); } .fb-name { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .hf-recent .tl-main { flex-basis: 100%; } }
+
 /* 抽屉里的列表（抽屉本身归外壳） */
 .dr-groups { display: flex; flex-direction: column; gap: var(--s4); }
 .dr-group-name { font-size: var(--fs-sm); font-weight: 650; color: var(--text-2); border-bottom: 1px solid var(--line-2); padding-bottom: var(--s1); }
