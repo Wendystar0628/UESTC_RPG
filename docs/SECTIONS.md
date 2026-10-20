@@ -9,7 +9,7 @@
 
 - CORE-INDEX §0 项目与约束 · L22 · 629
   - ★ CORE-INDEX §0.1 接入要点 · L29 · 277
-- CORE-INDEX §1 信息地图 · L36 · 1.7k
+- CORE-INDEX §1 信息地图 · L36 · 1.8k
 - CORE-INDEX §2 工作原则 · L88 · 1.3k
 - CORE-INDEX §3 协作与分工 · L99 · 700
 - CORE-INDEX §4 文档规范 · L106 · 400
@@ -1978,7 +1978,7 @@
 - STD-DOC §0 结论 · L23 · 840
   - ★ STD-DOC §0.1 接入要点 · L32 · 286
 - STD-DOC §1 分层与文档树 · L40 · 1.1k
-  - STD-DOC §1.1 上下文分层 · L42 · 799
+  - STD-DOC §1.1 上下文分层 · L42 · 828
   - STD-DOC §1.2 文档树 · L55 · 244
 - STD-DOC §2 文档形状 · L60 · 1.3k
 - STD-DOC §3 编码、小节编号与引用 · L88 · 1.2k
@@ -2012,12 +2012,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 10.8k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 11.0k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L23 · 127
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L27 · 54
-- REG-DECISIONS-PROCESS §1 流程 · L31 · 10.1k
+- REG-DECISIONS-PROCESS §1 流程 · L31 · 10.3k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
