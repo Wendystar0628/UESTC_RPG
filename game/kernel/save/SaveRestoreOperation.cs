@@ -3,6 +3,8 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
+using Campus.Kernel.Maps;
+using SaveDiagnostics = Campus.Kernel.Diagnostics.Diagnostics;
 
 namespace Campus.Kernel.Save;
 
@@ -13,6 +15,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
     private bool _abortApplied;
     private IDisposable? _input;
 
+    public Exception? Error { get; private set; }
     public bool IsActive { get; private set; }
     public bool MutationStarted { get; private set; }
     public bool Blocked { get; private set; }
@@ -20,7 +23,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
 
     public Task<MapTravelResult>? Begin()
     {
-        IsActive = true; MutationStarted = false; _abortApplied = false;
+        IsActive = true; MutationStarted = false; _abortApplied = false; Error = null;
         _input ??= _runtime.Camera.LockInput(InputLockReason.MapTravel);
         return _runtime.Maps.Transition?.Done;
     }
@@ -29,8 +32,18 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
     public void DeferPose(PreparedSave prepared) => PendingPose = prepared;
     public void ClearPendingPose() => PendingPose = null;
 
-    public void MarkFault()
+    public void RetainFailure([FailureHandler("SYS-SAVE-FLOW")] Exception error) => Error ??= error;
+
+    public void RetainAbortFailure(Exception failure, [FailureHandler("SYS-SAVE-FLOW")] Exception abortError)
     {
+        RetainFailure(failure);
+        Error!.Data["SaveRestoreAbort"] = abortError;
+        SaveDiagnostics.Error("Save restoration abort failed; input remains blocked.", abortError);
+    }
+
+    public void MarkFault([FailureHandler("SYS-SAVE-FLOW")] Exception error)
+    {
+        RetainFailure(error);
         if (_abortApplied) return;
         Blocked = true; PendingPose = null; _abortApplied = true;
         // Abort before the next World tick can observe the failed transaction's pending state.
@@ -71,7 +84,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
             {
                 Document = prepared.Document with { Meta = meta },
                 Sections = prepared.Sections.Select(s => s.Registration.Attribute.Scope == SaveScope.Global
-                    ? s with { Map = defaultMap.Id, Dto = s.Registration.Attribute.Phase == RestorePhase.Pose || s.Registration.Attribute.Id == "maps" ? null : s.Dto }
+                    ? s with { Map = defaultMap.Id, Dto = s.Registration.Attribute.Phase == RestorePhase.Pose || s.Registration.Section.TypeInfo.Type == typeof(MapsSave) ? null : s.Dto }
                     : s).ToArray()
             };
         }
@@ -93,7 +106,7 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
             map.Id, r.Attribute.Phase == RestorePhase.World ? r.Section.CreateDefault(context) : null,
             r.Attribute.Version, null)).ToArray();
         var generation = slot is { } selected ? nextGeneration(selected) : 0;
-        var meta = new SaveMeta(1, options.Build, slot ?? metadataSlot, SlotKind.Auto, generation, generation, 0, map.Id,
+        var meta = new SaveMeta(SaveContainer.CurrentFormat, options.Build, slot ?? metadataSlot, SlotKind.Auto, generation, generation, 0, map.Id,
             context.Start.Clock, context.Start.Clock, context.Start.Season,
             context.Start.Weather ?? map.World.Default.Weather ?? throw new InvalidDataException("The map has no default weather."),
             context.Mode, default, null, null, null, _runtime.UnixTime(), SaveReason.NewGame,
@@ -107,18 +120,60 @@ internal sealed class SaveRestoreOperation(SaveRuntimeBindings runtime, Action f
     {
         foreach (var item in prepared.Sections.Where(s => s.Registration.Attribute.Phase == phase))
         {
-            var context = new RestoreContext { Map = item.Map, FromVersion = item.FromVersion, Missing = item.Dto is null };
-            if (item.Repair is not null) context.Repair(item.Repair);
+            var context = Context(item);
             var map = _runtime.Maps.Maps.FirstOrDefault(m => m.Id == item.Map);
             if (map is null && item.Registration.Attribute.Scope == SaveScope.PerMap)
-            { repairs.Add("Removed section for missing map: " + item.Key); continue; }
-            map ??= _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
-            var dto = item.Dto ?? item.Registration.Section.CreateDefault(defaults ??
-                new(_runtime.World.WeatherSeed, item.Map, map.World.Default,
-                    _runtime.Ruleset.Current.DefaultViewMode));
+            {
+                if (item.Error is { } removedError) RemoveInvalidMapSection(item, removedError, repairs);
+                else repairs.Add("Removed section for missing map: " + item.Key);
+                continue;
+            }
+            var defaultContext = defaults ?? DefaultsFor(item);
+            var dto = item.Error is { } error ? ReplaceInvalidSection(item, error, context, defaultContext)
+                : item.Dto ?? item.Registration.Section.CreateDefault(defaultContext);
             item.Registration.Section.Restore(dto, context);
             repairs.AddRange(context.Repairs);
         }
+    }
+
+    public PreparedSection PreparePoseSection(PreparedSection item, List<string> repairs, NewGameContext? defaults)
+    {
+        var context = Context(item);
+        var defaultContext = defaults ?? DefaultsFor(item);
+        var dto = item.Error is { } error ? ReplaceInvalidSection(item, error, context, defaultContext)
+            : item.Dto ?? item.Registration.Section.CreateDefault(defaultContext);
+        repairs.AddRange(context.Repairs);
+        return item with { Dto = dto, Error = null, Repair = null };
+    }
+
+    private static RestoreContext Context(PreparedSection item)
+    {
+        var context = new RestoreContext { Map = item.Map, FromVersion = item.FromVersion, Missing = item.Dto is null };
+        if (item.Error is null && item.Repair is not null) context.Repair(item.Repair);
+        return context;
+    }
+
+    private NewGameContext DefaultsFor(PreparedSection item)
+    {
+        var map = _runtime.Maps.Maps.FirstOrDefault(m => m.Id == item.Map)
+            ?? _runtime.Maps.Maps.First(m => m.Id == _runtime.Maps.Default);
+        return new(_runtime.World.WeatherSeed, item.Map, map.World.Default, _runtime.Ruleset.Current.DefaultViewMode);
+    }
+
+    private static object ReplaceInvalidSection(PreparedSection item,
+        [FailureHandler("SYS-SAVE-FORMAT")] Exception error, RestoreContext context, NewGameContext defaults)
+    {
+        context.Repair(item.Repair ?? "Replaced invalid section: " + item.Key);
+        var dto = item.Registration.Section.CreateDefault(defaults);
+        SaveDiagnostics.Warning("Invalid save section replaced with its default: " + item.Key, error);
+        return dto;
+    }
+
+    private static void RemoveInvalidMapSection(PreparedSection item,
+        [FailureHandler("SYS-SAVE-FORMAT")] Exception error, List<string> repairs)
+    {
+        repairs.Add("Removed section for missing map: " + item.Key);
+        SaveDiagnostics.Warning("Invalid save section removed with its missing map: " + item.Key, error);
     }
 
     private static uint NewSeed() => System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(RandomNumberGenerator.GetBytes(4));

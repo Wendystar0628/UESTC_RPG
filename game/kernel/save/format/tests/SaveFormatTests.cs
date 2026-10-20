@@ -111,23 +111,12 @@ public sealed class SaveFormatTests
             AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
         }
         var flags = original.ToArray(); flags[10] = 5; Rehash(flags);
-        {
-            var thrown = false;
-            try { SaveContainer.Decode(flags); }
-            catch (SaveFormatException) { thrown = true; }
-            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
-        }
         var newer = original.ToArray(); newer[8] = 2; Rehash(newer);
-        {
-            var thrown = false;
-            try { SaveContainer.Decode(newer); }
-            catch (SaveFormatException) { thrown = true; }
-            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
-        }
         var length = original.ToArray(); BinaryPrimitives.WriteUInt32LittleEndian(length.AsSpan(12), 17000); Rehash(length);
+        foreach (var invalid in new[] { flags, newer, length })
         {
             var thrown = false;
-            try { SaveContainer.Decode(length); }
+            try { SaveContainer.Decode(invalid); }
             catch (SaveFormatException) { thrown = true; }
             AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
         }
@@ -181,16 +170,14 @@ public sealed class SaveFormatTests
     public void NoncoreErrorsAndVersionMismatchBecomeDefaults()
     {
         var older = Sections(null, 3, RestorePhase.Content).Prepare(Document());
-        AssertThat(older.Sections[0].Dto is null && older.Sections[0].Repair is not null).OverrideFailureMessage("A section with another version should be replaced by its default.").IsTrue();
-        {
-            var thrown = false;
-            try { Sections(null, 3).Prepare(Document()); }
-            catch (SaveFormatException) { thrown = true; }
-            AssertThat(thrown).OverrideFailureMessage("Invalid save was accepted.").IsTrue();
-        }
+        AssertThat(older.Sections[0].Dto is null && older.Sections[0].Repair is not null && older.Sections[0].Error is SaveFormatException).OverrideFailureMessage("A section with another version should be replaced by its default.").IsTrue();
+        var newer = Document() with { Sections = new Dictionary<string, RawSaveSection>
+        { ["world"] = new(2, "{\"v\":2,\"data\":{\"hours\":17.5}}"u8.ToArray()) } };
+        AssertThat(Sections(phase: RestorePhase.Content).Prepare(newer).Sections[0].Error is SaveFormatException)
+            .OverrideFailureMessage("A noncore version mismatch must use the same default-repair path in both directions.").IsTrue();
         var noncore = Sections(phase: RestorePhase.Content).Prepare(Document() with
         { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()) } });
-        AssertThat(noncore.Sections[0].Dto is null && noncore.Sections[0].Repair is not null).OverrideFailureMessage("Invalid noncore section should be repaired independently.").IsTrue();
+        AssertThat(noncore.Sections[0].Dto is null && noncore.Sections[0].Repair is not null && noncore.Sections[0].Error is JsonException).OverrideFailureMessage("Invalid noncore section should be repaired independently.").IsTrue();
     }
 
     [TestCase]
@@ -200,8 +187,24 @@ public sealed class SaveFormatTests
         using var temp = new TempSaveDirectory();
         using var repository = new SaveRepository(temp.Path, true, Sections());
         repository.Write(Document());
-        try { repository.Write(Document(2), (stream, bytes) => { stream.Write(bytes.AsSpan(0, 40)); throw new IOException("disk full"); }); }
-        catch (IOException) { }
+        var originalFailure = new IOException("disk full");
+        Exception? received = null;
+        string? incomplete = null;
+        try
+        {
+            repository.Write(Document(2), (stream, bytes) =>
+            {
+                incomplete = stream.Name;
+                stream.Write(bytes.AsSpan(0, 40));
+                File.SetAttributes(stream.Name, FileAttributes.ReadOnly);
+                throw originalFailure;
+            });
+        }
+        catch (AggregateException error) { received = error; }
+        finally { if (incomplete is not null && File.Exists(incomplete)) File.SetAttributes(incomplete, FileAttributes.Normal); }
+        AssertThat(received is AggregateException aggregate && aggregate.InnerExceptions.Count > 1 && aggregate.InnerExceptions.Any(error => ReferenceEquals(error, originalFailure)))
+            .OverrideFailureMessage("The aggregate must contain the original write failure and the actual incomplete-file cleanup failure.").IsTrue();
+        if (incomplete is not null) File.Delete(incomplete);
         AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("Failed write destroyed the previous save.").IsTrue();
         try { repository.Write(Document(2), (stream, bytes) => stream.Write(bytes.AsSpan(0, 40))); }
         catch (SaveFormatException) { }
@@ -217,16 +220,25 @@ public sealed class SaveFormatTests
         using var repository = new SaveRepository(root, true, Sections());
         using var second = new SaveRepository(root, true, Sections());
         AssertThat(!second.Enabled && second.ReadOnly == ReadOnlyReason.OtherWindow).OverrideFailureMessage("Second writer acquired lock.").IsTrue();
-        for (ulong gen = 1; gen <= 4; gen++) repository.Write(Document(gen));
+        for (ulong gen = 1; gen <= 3; gen++) repository.Write(Document(gen));
+        using (var held = new FileStream(Path.Combine(root, "s1", "g000001.sav"), FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            var committed = repository.Write(Document(4));
+            AssertThat(committed.Info.Meta?.Gen == 4 && repository.PendingMaintenanceErrors.Count != 0)
+                .OverrideFailureMessage("A deletion conflict must leave the new generation committed and maintenance pending.").IsTrue();
+        }
+        repository.Write(Document(5));
+        AssertThat(repository.PendingMaintenanceErrors.Count == 0).OverrideFailureMessage("The next commit did not retry pending maintenance.").IsTrue();
         AssertThat(Directory.GetFiles(Path.Combine(root, "s1")).Length == 3).OverrideFailureMessage("Retention is not three generations.").IsTrue();
-        var broken = Path.Combine(root, "s1", "g000004.sav"); File.WriteAllBytes(broken, [1, 2, 3]);
-        AssertThat(second.Scan(new("s1")).Info.Meta?.Gen == 3 && File.Exists(broken)).OverrideFailureMessage("Readonly scanner moved a file.").IsTrue();
+        var broken = Path.Combine(root, "s1", "g000005.sav");
+        var damaged = File.ReadAllBytes(broken); damaged[^1] ^= 1; File.WriteAllBytes(broken, damaged);
+        AssertThat(second.Scan(new("s1")).Info.Meta?.Gen == 4 && File.Exists(broken)).OverrideFailureMessage("Readonly scanner moved a file.").IsTrue();
         var recovered = repository.Scan(new("s1"));
-        AssertThat(recovered.Info.Health == SlotHealth.Ok && recovered.Info.Meta?.Gen == 3).OverrideFailureMessage("Did not recover one generation.").IsTrue();
-        AssertThat(File.Exists(broken) && recovered.MaxGeneration == 4).OverrideFailureMessage("Recovery moved the unreadable file or lost the generation high-water mark.").IsTrue();
-        repository.Write(Document(5, 5));
+        AssertThat(recovered.Info.Health == SlotHealth.Ok && recovered.Info.Meta?.Gen == 4).OverrideFailureMessage("Did not recover one generation.").IsTrue();
+        AssertThat(File.Exists(broken) && recovered.MaxGeneration == 5 && recovered.Rejected.Count != 0 && recovered.Rejected[0].Error is SaveFormatException).OverrideFailureMessage("Recovery moved the unreadable file or lost the generation high-water mark.").IsTrue();
+        repository.Write(Document(6, 6));
         AssertThat(Directory.GetFiles(Path.Combine(root, "s1")).Length == 1).OverrideFailureMessage("Old world survived successful new-world commit.").IsTrue();
-        File.WriteAllBytes(Path.Combine(root, "s1", "g000005.sav"), [0]);
+        File.WriteAllBytes(Path.Combine(root, "s1", "g000006.sav"), [0]);
         AssertThat(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt).OverrideFailureMessage("Crossed a world-line boundary.").IsTrue();
     }
 
@@ -258,6 +270,8 @@ public sealed class SaveFormatTests
         var newer = SaveContainer.Encode(Document(2)); newer[8] = 2; Rehash(newer);
         var path = Path.Combine(root, "s1", "g000002.sav"); File.WriteAllBytes(path, newer);
         AssertThat(repository.Scan(new("s1")).Info.Meta?.Gen == 1).OverrideFailureMessage("A newer-format generation did not select the older one.").IsTrue();
+        File.WriteAllBytes(path, [0]);
+        AssertThat(repository.Scan(new("s1")).Info.Health == SlotHealth.Corrupt).OverrideFailureMessage("An unknown generation identity must not infer an older world line.").IsTrue();
         var invalidNewLine = Document(2, 2) with
         { Sections = new Dictionary<string, RawSaveSection> { ["world"] = new(1, "{\"v\":1,\"data\":{\"hours\":\"bad\"}}"u8.ToArray()) } };
         File.WriteAllBytes(path, SaveContainer.Encode(invalidNewLine));
@@ -267,7 +281,6 @@ public sealed class SaveFormatTests
         AssertThat(rejected && File.Exists(path)).OverrideFailureMessage("Automatic write replaced an unreadable slot.").IsTrue();
     }
 }
-
 public sealed record TestState(double Hours);
 public sealed class TestSection : ISaveSection<TestState>
 {

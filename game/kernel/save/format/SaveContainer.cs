@@ -9,9 +9,12 @@ using Campus.Contracts.Save;
 
 namespace Campus.Kernel.Save.Format;
 
-public sealed class SaveFormatException(string message) : Exception(message);
+public sealed class SaveFormatException(string message, Exception? innerException = null) : Exception(message, innerException)
+{
+    public SaveMeta? Metadata { get; internal set; }
+}
 
-public sealed record RawSaveSection(int Version, byte[] Envelope);
+public sealed record RawSaveSection([property: DataVersion] int Version, byte[] Envelope);
 public sealed record SaveDocument(SaveMeta Meta, IReadOnlyDictionary<string, RawSaveSection> Sections, byte[]? Thumbnail);
 
 /// <summary>One format number (header, meta and body agree). No engine types, reflection serialization, paths, or executable content.</summary>
@@ -22,6 +25,7 @@ public static class SaveContainer
     public const int MaxMeta = 16 * 1024;
     public const int MaxCompressed = 16 * 1024 * 1024;
     public const int MaxThumbnail = 256 * 1024;
+    [DataVersion]
     public const int CurrentFormat = 1;
     private static ReadOnlySpan<byte> Magic => "UESTCSAV"u8;
 
@@ -66,14 +70,16 @@ public static class SaveContainer
 
     public static SaveDocument Decode(ReadOnlyMemory<byte> bytes, ulong? expectedGeneration = null, SlotId? expectedSlot = null)
     {
-        try { return DecodeChecked(bytes, expectedGeneration, expectedSlot); }
-        catch (SaveFormatException) { throw; }
+        SaveMeta? metadata = null;
+        try { return DecodeChecked(bytes, expectedGeneration, expectedSlot, out metadata); }
+        catch (SaveFormatException error) { error.Metadata ??= metadata; throw; }
         catch (Exception error) when (error is JsonException or InvalidDataException or FormatException or OverflowException or ArgumentException or InvalidOperationException)
-        { throw new SaveFormatException("Invalid save: " + error.Message); }
+        { throw new SaveFormatException("Invalid save: " + error.Message, error) { Metadata = metadata }; }
     }
 
-    private static SaveDocument DecodeChecked(ReadOnlyMemory<byte> memory, ulong? expectedGeneration, SlotId? expectedSlot)
+    private static SaveDocument DecodeChecked(ReadOnlyMemory<byte> memory, ulong? expectedGeneration, SlotId? expectedSlot, out SaveMeta? metadata)
     {
+        metadata = null;
         var bytes = memory.Span;
         if (bytes.Length < HeaderSize || bytes.Length > MaxFile || !bytes[..8].SequenceEqual(Magic))
             throw new SaveFormatException("Invalid save header or file size.");
@@ -83,26 +89,32 @@ public static class SaveContainer
         var bl = BinaryPrimitives.ReadUInt32LittleEndian(bytes[16..]);
         var tl = BinaryPrimitives.ReadUInt32LittleEndian(bytes[20..]);
         var gen = BinaryPrimitives.ReadUInt64LittleEndian(bytes[24..]);
-        if (ml == 0 || ml > MaxMeta || bl == 0 || bl > MaxCompressed || tl > MaxThumbnail ||
-            (ulong)HeaderSize + ml + bl + tl != (ulong)bytes.Length || gen == 0 || expectedGeneration is { } eg && gen != eg)
-            throw new SaveFormatException("Invalid lengths or generation.");
-        if (!CryptographicOperations.FixedTimeEquals(Hash(bytes), bytes.Slice(32, 32)))
-            throw new SaveFormatException("SHA-256 mismatch.");
-        if (headerFormat != CurrentFormat || (flags & ~3) != 0 || (flags & 1) == 0 || ((flags & 2) != 0) != (tl != 0))
-            throw new SaveFormatException("Unsupported container flags.");
+        if (ml == 0 || ml > MaxMeta || (ulong)HeaderSize + ml > (ulong)bytes.Length ||
+            gen == 0 || expectedGeneration is { } eg && gen != eg)
+            throw new SaveFormatException("Invalid metadata length or generation.");
+        // This is the sole current-format metadata reader. Retain its identity even if the body/hash is damaged.
         using var metaJson = ParseJson(memory.Slice(HeaderSize, (int)ml));
         var meta = JsonSerializer.Deserialize(metaJson.RootElement, SaveFormatJsonContext.Strict.SaveMeta)
             ?? throw new SaveFormatException("Missing metadata.");
         ValidateMeta(meta);
-        if (meta.Gen != gen || expectedSlot is { } es && meta.Slot != es || meta.HasThumb != (tl != 0))
+        if (meta.Gen != gen || expectedSlot is { } es && meta.Slot != es)
             throw new SaveFormatException("Metadata identity disagrees with the container.");
+        metadata = meta;
+        if (bl == 0 || bl > MaxCompressed || tl > MaxThumbnail ||
+            (ulong)HeaderSize + ml + bl + tl != (ulong)bytes.Length)
+            throw new SaveFormatException("Invalid body or thumbnail lengths.");
+        if (!CryptographicOperations.FixedTimeEquals(Hash(bytes), bytes.Slice(32, 32)))
+            throw new SaveFormatException("SHA-256 mismatch.");
+        if (headerFormat != CurrentFormat || (flags & ~3) != 0 || (flags & 1) == 0 ||
+            ((flags & 2) != 0) != (tl != 0) || meta.HasThumb != (tl != 0))
+            throw new SaveFormatException("Unsupported container flags.");
         using var body = new MemoryStream();
         try
         {
             using var brotli = new BrotliStream(new MemoryStream(memory.Slice(HeaderSize + (int)ml, (int)bl).ToArray()), CompressionMode.Decompress);
             brotli.CopyTo(body);
         }
-        catch (InvalidDataException) { throw new SaveFormatException("Invalid Brotli stream."); }
+        catch (InvalidDataException error) { throw new SaveFormatException("Invalid Brotli stream.", error); }
         using var json = ParseJson(body.ToArray());
         var root = json.RootElement;
         RequireMembers(root, ["format", "sections"]);

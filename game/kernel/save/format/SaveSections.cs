@@ -3,12 +3,17 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Campus.Contracts;
 using Campus.Contracts.Save;
+using Campus.Kernel.Maps;
+using Campus.Kernel.World;
 
 namespace Campus.Kernel.Save.Format;
 
 public sealed record SaveSectionRegistration(SaveSectionAttribute Attribute, ISaveSection Section);
 public sealed record PreparedSection(string Key, SaveSectionRegistration Registration, MapId Map,
-    object? Dto, int FromVersion, string? Repair);
+    object? Dto, int FromVersion, string? Repair)
+{
+    public Exception? Error { get; init; }
+}
 public sealed record PreparedSave(SaveDocument Document, IReadOnlyList<PreparedSection> Sections);
 public sealed record CapturedSection(string Key, SaveSectionRegistration Registration, object Dto);
 
@@ -35,13 +40,6 @@ public sealed class SaveSections
 
     public PreparedSave Prepare(SaveDocument document)
     {
-        // A segment newer than this build makes the whole generation unreadable; it is never rewritten with fields dropped.
-        foreach (var (key, raw) in document.Sections)
-        {
-            var registration = Find(key);
-            if (registration is not null && raw.Version > registration.Attribute.Version)
-                throw new SaveFormatException("Newer section version: " + key);
-        }
         var maps = document.Sections.Keys.Where(k => k.StartsWith("map:", StringComparison.Ordinal))
             .Select(k => new MapId(k[4..k.IndexOf('/')])).Append(document.Meta.Map).Distinct().OrderBy(m => m.Value, StringComparer.Ordinal).ToArray();
         var prepared = new List<PreparedSection>();
@@ -58,15 +56,14 @@ public sealed class SaveSections
                     using var envelope = SaveContainer.ParseJson(raw.Envelope);
                     var data = envelope.RootElement.GetProperty("data");
                     if (raw.Version != attribute.Version) throw new SaveFormatException("Section version mismatch: " + key);
-                    ValidateData(data, attribute);
+                    ValidateData(data, registration.Section.TypeInfo.Type);
                     var dto = JsonSerializer.Deserialize(data, registration.Section.TypeInfo);
                     if (dto is null) throw new JsonException("Null section.");
                     prepared.Add(new(key, registration, map, dto, raw.Version, null));
                 }
                 catch (Exception error) when (error is JsonException or SaveFormatException or NotSupportedException or ArgumentException or InvalidOperationException or OverflowException or KeyNotFoundException or FormatException)
                 {
-                    if (IsCore(attribute)) throw new SaveFormatException("Invalid core section " + key + ": " + error.Message);
-                    prepared.Add(new(key, registration, map, null, raw.Version, "Replaced invalid section: " + key));
+                    prepared.Add(PrepareInvalidSection(key, registration, map, raw.Version, error));
                 }
             }
         }
@@ -95,10 +92,33 @@ public sealed class SaveSections
         return output;
     }
 
-    private static void AlignCurrentMapVisit(IDictionary<string, RawSaveSection> sections)
+    private static PreparedSection PrepareInvalidSection(string key, SaveSectionRegistration registration,
+        MapId map, int version, [FailureHandler("SYS-SAVE-FORMAT")] Exception error)
     {
-        if (!sections.TryGetValue("maps", out var maps) || !sections.TryGetValue("view", out var view)) return;
-        // The current visit and metadata are summaries of this exact immutable view snapshot, including forced landings.
+        if (IsCore(registration.Attribute))
+            throw new SaveFormatException("Invalid core section " + key, error);
+        return new(key, registration, map, null, version, "Replaced invalid section: " + key) { Error = error };
+    }
+
+    internal SaveSectionRegistration? ForPayload<T>() => Registered.SingleOrDefault(r => r.Section.TypeInfo.Type == typeof(T));
+
+    internal bool TryRaw<T>(IReadOnlyDictionary<string, RawSaveSection> sections, MapId map, out RawSaveSection raw)
+    {
+        var registration = ForPayload<T>();
+        if (registration is not null && sections.TryGetValue(Key(registration.Attribute, map), out var found))
+        { raw = found; return true; }
+        raw = null!; return false;
+    }
+
+    private void AlignCurrentMapVisit(IDictionary<string, RawSaveSection> sections)
+    {
+        var mapsRegistration = ForPayload<MapsSave>();
+        var viewRegistration = ForPayload<ViewSaveData>();
+        if (mapsRegistration is null || viewRegistration is null) return;
+        var mapsKey = Key(mapsRegistration.Attribute, default);
+        var viewKey = Key(viewRegistration.Attribute, default);
+        if (!sections.TryGetValue(mapsKey, out var maps) || !sections.TryGetValue(viewKey, out var view)) return;
+        // The current visit and metadata describe the immutable view snapshot, including forced landings.
         var mapEnvelope = JsonNode.Parse(maps.Envelope) ?? throw new JsonException("Missing maps envelope.");
         var viewEnvelope = JsonNode.Parse(view.Envelope) ?? throw new JsonException("Missing view envelope.");
         var data = mapEnvelope["data"] ?? throw new JsonException("Missing maps data.");
@@ -109,18 +129,18 @@ public sealed class SaveSections
         var visit = visits.FirstOrDefault(v => v?["map"]?.GetValue<string>() == current)
             ?? throw new JsonException("Current map has no visit.");
         visit["lastPose"] = pose.DeepClone(); visit["mode"] = mode.DeepClone();
-        sections["maps"] = new(maps.Version, Encoding.UTF8.GetBytes(mapEnvelope.ToJsonString()));
+        sections[mapsKey] = new(maps.Version, Encoding.UTF8.GetBytes(mapEnvelope.ToJsonString()));
     }
 
-    private static void ValidateSnapshotTimeline(IReadOnlyDictionary<string, RawSaveSection> sections, MapId? expectedMap, WorldSaveMoment? moment)
+    private void ValidateSnapshotTimeline(IReadOnlyDictionary<string, RawSaveSection> sections, MapId? expectedMap, WorldSaveMoment? moment)
     {
-        if (expectedMap is { } map && sections.TryGetValue("maps", out var maps))
+        if (expectedMap is { } map && TryRaw<MapsSave>(sections, map, out var maps))
         {
             using var json = SaveContainer.ParseJson(maps.Envelope);
             if (json.RootElement.GetProperty("data").GetProperty("current").GetString() != map.Value)
                 throw new SaveFormatException("Map changed during snapshot; the generation was not written.");
         }
-        if (!sections.TryGetValue("world", out var world))
+        if (!TryRaw<WorldSaveV1>(sections, expectedMap ?? default, out var world))
         {
             if (moment.HasValue) throw new SaveFormatException("The world snapshot section is missing.");
             return;
@@ -153,13 +173,13 @@ public sealed class SaveSections
 
     private static bool IsCore(SaveSectionAttribute attribute) => attribute.Phase == RestorePhase.World;
 
-    private static void ValidateData(JsonElement data, SaveSectionAttribute attribute)
+    private static void ValidateData(JsonElement data, Type payloadType)
     {
         ValidateFinite(data);
-        if (attribute.Id == "world")
+        if (payloadType == typeof(WorldSaveV1))
         {
             foreach (var field in new[] { "flowRate", "flowRateBeforePause" })
-                if (data.TryGetProperty(field, out var flow) && flow.GetInt32() is not (0 or 1 or 10 or 60 or 360 or 1440))
+                if (data.TryGetProperty(field, out var flow) && !FlowRates.IsValid(flow.GetInt32()))
                     throw new JsonException("Invalid world flow rate.");
             if (data.TryGetProperty("worldHours", out var hours) && hours.GetDouble() < 0)
                 throw new JsonException("Negative world time.");

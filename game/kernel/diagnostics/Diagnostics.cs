@@ -1,4 +1,4 @@
-using Godot;
+using System;
 
 namespace Campus.Kernel.Diagnostics;
 
@@ -6,8 +6,8 @@ namespace Campus.Kernel.Diagnostics;
 public static class Diagnostics
 {
     /// <summary>Records an error; recovery and termination remain with the caller.</summary>
-    public static void Error(string context, Exception error) => GD.PushError($"{context} {error.ToString()}");
+    public static void Error(string context, Exception error) => Console.Error.WriteLine($"[Error] {context} {error.ToString()}");
 
     /// <summary>Records a warning; recovery and termination remain with the caller.</summary>
-    public static void Warning(string context, Exception error) => GD.PushWarning($"{context} {error.ToString()}");
+    public static void Warning(string context, Exception error) => Console.Error.WriteLine($"[Warning] {context} {error.ToString()}");
 }

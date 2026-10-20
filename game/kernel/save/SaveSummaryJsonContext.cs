@@ -8,7 +8,6 @@ namespace Campus.Kernel.Save;
 [JsonSerializable(typeof(Pose))]
 [JsonSerializable(typeof(ViewMode))]
 [JsonSerializable(typeof(NavSpace))]
-[JsonSerializable(typeof(WeatherKind))]
 internal partial class SaveSummaryJsonContext : JsonSerializerContext
 {
     internal static SaveSummaryJsonContext Strict { get; } = new(new JsonSerializerOptions(ContractJson.Options)

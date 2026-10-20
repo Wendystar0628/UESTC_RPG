@@ -67,12 +67,8 @@ public partial class SaveNode : Node, IBootParticipant
 
     private async Task<byte[]?> CaptureThumbnail()
     {
-        try
-        {
-            var bytes = await RuntimeKernel.Get<IGameCapture>().CaptureThumbnailAsync(_exit.Token);
-            return bytes is not null && SaveContainer.ValidateThumbnail(bytes) ? bytes : null;
-        }
-        catch (Exception) { return null; } // Optional evidence never prevents a state save.
+        var bytes = await RuntimeKernel.Get<IGameCapture>().CaptureThumbnailAsync(_exit.Token);
+        return bytes is not null && SaveContainer.ValidateThumbnail(bytes) ? bytes : null;
     }
 
     private async Task WaitDestination(Pose pose, NavSpace? space, ViewMode mode)

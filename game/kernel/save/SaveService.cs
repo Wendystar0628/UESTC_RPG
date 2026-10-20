@@ -6,6 +6,9 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
+using Campus.Kernel.Maps;
+using Campus.Kernel.World;
+using SaveDiagnostics = Campus.Kernel.Diagnostics.Diagnostics;
 
 namespace Campus.Kernel.Save;
 
@@ -141,6 +144,7 @@ public sealed class SaveService : ISaveService, IDisposable
 
     private async Task<SaveResult> SaveOperation(SaveReason reason, bool forced)
     {
+        var operation = new SaveWriteOperation();
         await _operation.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -156,8 +160,11 @@ public sealed class SaveService : ISaveService, IDisposable
             byte[]? thumbnail = _thumbnail;
             if (reason is SaveReason.Quit or SaveReason.ToTitle or SaveReason.NewGame)
             {
-                var capture = await OnFrame(_runtime.CaptureThumbnail).ConfigureAwait(false);
-                thumbnail = await capture.ConfigureAwait(false) ?? thumbnail;
+                thumbnail = await operation.CaptureThumbnail(async () =>
+                {
+                    var capture = await OnFrame(_runtime.CaptureThumbnail).ConfigureAwait(false);
+                    return await capture.ConfigureAwait(false);
+                }, thumbnail).ConfigureAwait(false);
             }
             var snapshot = await OnFrame(() => Capture(reason, forced, checked(current.MaxGeneration + 1), thumbnail)).ConfigureAwait(false);
             if (snapshot is null) return new(SaveStatus.Deferred, active, 0);
@@ -176,13 +183,13 @@ public sealed class SaveService : ISaveService, IDisposable
                         ? _runtime.Atlas.RegionAt(document.Meta.Pose.Position.X, document.Meta.Pose.Position.Z) : null;
                     return document.Meta with { Region = region, PlaceKey = region is null ? null : "place." + region };
                 }).ConfigureAwait(false);
-                saved = await Task.Run(() => _repository!.Write(document with { Meta = finalMeta }, replaceUnusable: _authorizedOverwrite)).ConfigureAwait(false);
+                saved = await Task.Run(() => operation.Commit(_repository!, document with { Meta = finalMeta }, replaceUnusable: _authorizedOverwrite)).ConfigureAwait(false);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or SaveFormatException or JsonException or ArgumentException or InvalidOperationException)
             {
                 return await OnFrame(() =>
                 {
-                    var result = new SaveResult(SaveStatus.Failed, active, snapshot.Meta.Gen, ErrorKey(error));
+                    var result = operation.Fail(error, active, snapshot.Meta.Gen);
                     Publish(result); return result;
                 }).ConfigureAwait(false);
             }
@@ -197,7 +204,7 @@ public sealed class SaveService : ISaveService, IDisposable
         }
         catch (Exception error)
         {
-            return await OnFrame(() => { var result = new SaveResult(SaveStatus.Failed, Active, 0, ErrorKey(error)); Publish(result); return result; }).ConfigureAwait(false);
+            return await OnFrame(() => { var result = operation.Fail(error, Active, 0); Publish(result); return result; }).ConfigureAwait(false);
         }
         finally { _operation.Release(); }
     }
@@ -224,16 +231,16 @@ public sealed class SaveService : ISaveService, IDisposable
         var world = _runtime.World;
         var observer = _runtime.Observer;
         var region = _runtime.Atlas.RegionAt(observer.Feet.X, observer.Feet.Z);
-        var meta = new SaveMeta(1, _options.Build, Active!.Value, SlotKind.Auto, generation, _newLine ? generation : _line,
+        var meta = new SaveMeta(SaveContainer.CurrentFormat, _options.Build, Active!.Value, SlotKind.Auto, generation, _newLine ? generation : _line,
             _playSeconds, map, world.WorldHours, world.Clock, world.SeasonTarget, world.Weather.Kind,
             observer.Mode, _runtime.Camera.Pose, observer.Space, region, region is null ? null : "place." + region,
             _runtime.UnixTime(), reason, _runtime.Ruleset.Current.Id.Value, HasThumb: thumbnail is not null);
         return new(meta, moment, captures, _unknown, thumbnail);
     }
 
-    private static SaveMeta SettledMetadata(SaveMeta meta, IReadOnlyDictionary<string, RawSaveSection> sections)
+    private SaveMeta SettledMetadata(SaveMeta meta, IReadOnlyDictionary<string, RawSaveSection> sections)
     {
-        if (sections.TryGetValue("world", out var world))
+        if (_sections.TryRaw<WorldSaveV1>(sections, meta.Map, out var world))
         {
             using var json = SaveContainer.ParseJson(world.Envelope);
             var data = json.RootElement.GetProperty("data");
@@ -242,7 +249,7 @@ public sealed class SaveService : ISaveService, IDisposable
             if (data.TryGetProperty("seasonTarget", out var season) && Enum.TryParse<Season>(season.GetString(), true, out var value))
                 meta = meta with { Season = value };
         }
-        if (sections.TryGetValue("view", out var view))
+        if (_sections.TryRaw<ViewSaveData>(sections, meta.Map, out var view))
         {
             using var json = SaveContainer.ParseJson(view.Envelope);
             var data = json.RootElement.GetProperty("data");
@@ -252,17 +259,11 @@ public sealed class SaveService : ISaveService, IDisposable
                 ? JsonSerializer.Deserialize(value, SaveSummaryJsonContext.Strict.NavSpace) : (NavSpace?)null;
             meta = meta with { Pose = pose, Mode = mode, Space = space };
         }
-        if (sections.TryGetValue("maps", out var maps))
+        if (_sections.TryRaw<MapsSave>(sections, meta.Map, out var maps))
         {
             using var json = SaveContainer.ParseJson(maps.Envelope);
             if (json.RootElement.GetProperty("data").TryGetProperty("current", out var current))
                 meta = meta with { Map = new(current.GetString() ?? throw new JsonException("Missing current map.")) };
-        }
-        if (sections.TryGetValue("map:" + meta.Map.Value + "/weather", out var weather))
-        {
-            using var json = SaveContainer.ParseJson(weather.Envelope);
-            var kind = json.RootElement.GetProperty("data").GetProperty("selection").GetProperty("kind");
-            meta = meta with { Weather = JsonSerializer.Deserialize(kind, SaveSummaryJsonContext.Strict.WeatherKind) };
         }
         return meta;
     }
@@ -340,7 +341,7 @@ public sealed class SaveService : ISaveService, IDisposable
             return await Restore(prepared, _options.WriteSlot, LoadScope.Full).ConfigureAwait(false);
         }
         catch (SaveFormatException error) when (_restore?.MutationStarted != true)
-        { return new(LoadStatus.Corrupt, null, 0, [], error.Message); }
+        { return await OnFrame(() => RejectExternalFile(error)).ConfigureAwait(false); }
         catch (Exception error) { return await RestoreFailed(null, error).ConfigureAwait(false); }
         finally { await OnFrame(() => _restore?.End()).ConfigureAwait(false); _operation.Release(); }
     }
@@ -389,12 +390,10 @@ public sealed class SaveService : ISaveService, IDisposable
 
     private async Task<PreparedSave> PrepareViewPose(PreparedSave prepared, List<string> repairs, NewGameContext? defaults = null)
     {
-        var section = prepared.Sections.FirstOrDefault(item => item.Registration.Attribute.Id == "view");
+        var section = prepared.Sections.FirstOrDefault(item => item.Registration.Section.TypeInfo.Type == typeof(ViewSaveData));
         if (section is null) return prepared;
-        var dto = await OnFrame(() => section.Dto ?? section.Registration.Section.CreateDefault(defaults ??
-            new(_runtime.World.WeatherSeed, section.Map,
-                _runtime.Maps.Maps.First(map => map.Id == section.Map).World.Default,
-                _runtime.Ruleset.Current.DefaultViewMode))).ConfigureAwait(false);
+        section = await OnFrame(() => _restore!.PreparePoseSection(section, repairs, defaults)).ConfigureAwait(false);
+        var dto = section.Dto;
         if (dto is not ViewSaveData view) throw new InvalidDataException("The view section must use the shared view DTO.");
         var preparing = await OnFrame(() => (_runtime.PreparePose ?? throw new InvalidOperationException("View restoration requires terrain preparation."))(view.Pose)).ConfigureAwait(false);
         var pose = await preparing.ConfigureAwait(false);
@@ -402,7 +401,7 @@ public sealed class SaveService : ISaveService, IDisposable
         return prepared with
         {
             Document = prepared.Document with { Meta = prepared.Document.Meta with { Pose = pose } },
-            Sections = prepared.Sections.Select(item => ReferenceEquals(item, section) ? item with { Dto = view with { Pose = pose } } : item).ToArray()
+            Sections = prepared.Sections.Select(item => ReferenceEquals(item.Registration, section.Registration) && item.Map == section.Map ? section with { Dto = view with { Pose = pose } } : item).ToArray()
         };
     }
 
@@ -449,13 +448,26 @@ public sealed class SaveService : ISaveService, IDisposable
         if (previousMap is { IsCompleted: false }) await Task.WhenAny(previousMap).ConfigureAwait(false);
     }
 
-    private Task<LoadResult> RestoreFailed(SlotId? slot, Exception error) => OnFrame(() =>
+    private LoadResult RejectExternalFile([FailureHandler("SYS-SAVE-FORMAT")] SaveFormatException error)
     {
-        if (_restore?.MutationStarted != true) return new LoadResult(LoadStatus.Failed, slot, 0, [], error.Message);
-        var detail = error.Message;
-        try { _restore.MarkFault(); }
-        catch (Exception abortError) { detail += "; abort failed: " + abortError.Message; }
-        return new LoadResult(LoadStatus.Failed, slot, 0, [], "save.error.restore_world: " + detail);
+        _restore!.RetainFailure(error);
+        var result = new LoadResult(LoadStatus.Corrupt, null, 0, [], _restore.Error!.Message);
+        SaveDiagnostics.Warning("External save rejected before world mutation.", _restore.Error);
+        return result;
+    }
+
+    private Task<LoadResult> RestoreFailed(SlotId? slot, [FailureHandler("SYS-SAVE-FLOW")] Exception error) => OnFrame(() =>
+    {
+        if (_restore?.MutationStarted != true)
+        {
+            _restore?.RetainFailure(error);
+            SaveDiagnostics.Error("Save restoration failed before world mutation.", error);
+            return new LoadResult(LoadStatus.Failed, slot, 0, [], error.Message);
+        }
+        try { _restore.MarkFault(error); }
+        catch (Exception abortError) { _restore.RetainAbortFailure(error, abortError); }
+        SaveDiagnostics.Error("Save restoration failed; the world is blocked until Load or NewGame.", _restore.Error!);
+        return new LoadResult(LoadStatus.Failed, slot, 0, [], "save.error.restore_world: " + _restore.Error!.Message);
     });
 
     private void PublishRestoreFault()
@@ -519,15 +531,6 @@ public sealed class SaveService : ISaveService, IDisposable
             savedAt, _repository?.ReadOnly ?? ReadOnlyReason.None);
         SlotsChanged?.Invoke();
     }
-    private static string ErrorKey(Exception error) => error switch
-    {
-        UnauthorizedAccessException => "save.error.permission",
-        IOException io when (io.HResult & 0xffff) is 39 or 112 => "save.error.disk_full",
-        IOException => "save.error.io",
-        SaveFormatException => "save.error.verification",
-        _ => "save.error.snapshot"
-    };
-
     public Task<T> OnFrame<T>(Func<T> function)
     {
         var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -538,8 +541,8 @@ public sealed class SaveService : ISaveService, IDisposable
             {
                 if (Restoring && _restore?.MutationStarted == true)
                 {
-                    try { _restore!.MarkFault(); }
-                    catch (Exception abortError) { error = new AggregateException(error, abortError); }
+                    try { _restore!.MarkFault(error); }
+                    catch (Exception abortError) { _restore!.RetainAbortFailure(error, abortError); }
                 }
                 completion.SetException(error);
             }

@@ -8,6 +8,7 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Save;
 using Campus.Kernel.Save.Format;
+using Campus.Kernel.World;
 using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
@@ -71,7 +72,7 @@ public sealed class SaveLifecycleTests
         var quit = await fixture.Pump(fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromMilliseconds(30)));
         AssertThat(quit.Status == SaveStatus.Failed && fixture.Save.Busy && fixture.Save.State.ErrorKey == "save.error.timeout").OverrideFailureMessage("Timeout canceled or silently accepted a save.").IsTrue();
         var retry = fixture.Save.FlushForQuit(SaveReason.Quit, TimeSpan.FromSeconds(2));
-        fixture.ThumbnailBarrier.SetResult(null);
+        fixture.ThumbnailBarrier.SetException(new IOException("Thumbnail capture failed."));
         var result = await fixture.Pump(retry);
         AssertThat(result.Status == SaveStatus.Saved && fixture.Save.State.Last == SaveStatus.Saved).OverrideFailureMessage("Late write failed to finish.").IsTrue();
         AssertThat(fixture.Save.Slots[0].Meta?.Gen == 2).OverrideFailureMessage("Retry launched a duplicate write.").IsTrue();
@@ -227,7 +228,7 @@ public sealed class SaveLifecycleTests
         }
     }
 
-    private sealed class FakeWorld(Func<bool> inFrame, List<string> log) : IWorldState, IWorldRestore, ISaveSection<LifecycleWorld>
+    private sealed class FakeWorld(Func<bool> inFrame, List<string> log) : IWorldState, IWorldRestore, ISaveSection<WorldSaveV1>
     {
         public double Hours { get; set; } = 17.5;
         public double? TargetHours { get; set; }
@@ -245,7 +246,7 @@ public sealed class SaveLifecycleTests
         public WeatherSel Weather => new(WeatherMode.Auto, WeatherKind.Clear, 0); public WeatherVec WeatherNow => default;
         public IReadOnlyList<WeatherSpan> WeatherAhead => []; public uint WeatherSeed => 1; public double AnimTime => 240; public double Step12 => 240;
         public double PresetClock(ClockPreset preset, Season season) => 17.5; public bool IsNative(WeatherKind kind) => true;
-        public JsonTypeInfo<LifecycleWorld> TypeInfo => LifecycleJsonContext.Strict.LifecycleWorld;
+        public JsonTypeInfo<WorldSaveV1> TypeInfo => LifecycleJsonContext.Strict.WorldSaveV1;
         public WorldSaveMoment GetSaveMoment() => new(TargetHours ?? Hours, 0, Season.Autumn, 1);
         public void AbortRestore() { RestoreFaulted = true; _pending = false; log.Add("abort"); }
         public void CompleteRestore()
@@ -254,14 +255,15 @@ public sealed class SaveLifecycleTests
             InstanceChanged?.Invoke(Instance);
         }
         public void Tick() { if (!RestoreFaulted) AssertThat(!_pending).OverrideFailureMessage("An uncommitted World phase escaped into the next frame.").IsTrue(); }
-        public LifecycleWorld Capture(in CaptureContext context)
+        public WorldSaveV1 Capture(in CaptureContext context)
         {
             AssertThat(inFrame()).OverrideFailureMessage("Capture ran outside Save frame.").IsTrue(); var moment = context.Moment;
-            return new(moment.WorldHours, moment.ClockOffset, moment.Season, moment.FlowRate);
+            return new(moment.WorldHours, moment.ClockOffset, (int)moment.Season, moment.Season, moment.FlowRate, BaseFlow.Rate, AnimTime);
         }
-        public void Restore(LifecycleWorld dto, RestoreContext context)
+        public void Restore(WorldSaveV1 dto, RestoreContext context)
         { AssertThat(inFrame()).OverrideFailureMessage("Restore ran outside Save frame.").IsTrue(); Hours = dto.WorldHours; TargetHours = null; _pending = true; log.Add("world"); }
-        public LifecycleWorld CreateDefault(NewGameContext context) => new(context.Start.Clock, 0, context.Start.Season);
+        public WorldSaveV1 CreateDefault(NewGameContext context) =>
+            new(context.Start.Clock, 0, (int)context.Start.Season, context.Start.Season, BaseFlow.Rate, BaseFlow.Rate, AnimTime);
     }
     private sealed class FakeCamera(Func<bool> inFrame, List<string> log)
         : TestCameraRig(null, new Pose(new Vector3(1, 2, 3), 0, 0)), IObserverState, ISaveSection<ViewSaveData>
@@ -342,10 +344,9 @@ public sealed class SaveLifecycleTests
     }
 }
 
-public sealed record LifecycleWorld(double WorldHours, double ClockOffset, Season SeasonTarget, int FlowRate = 1);
 public sealed record LifecycleWeather(WeatherSel Selection, double AtHours);
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
-[JsonSerializable(typeof(LifecycleWorld))]
+[JsonSerializable(typeof(WorldSaveV1))]
 [JsonSerializable(typeof(ViewSaveData))]
 [JsonSerializable(typeof(LifecycleWeather))]
 internal partial class LifecycleJsonContext : JsonSerializerContext
