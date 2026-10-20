@@ -15,7 +15,7 @@ using static GdUnit4.Assertions;
 namespace Campus.Kernel.Save.Tests;
 
 [TestSuite]
-public sealed partial class SaveLifecycleTests
+public sealed class SaveLifecycleTests
 {
     private static long _id;
     [TestCase]

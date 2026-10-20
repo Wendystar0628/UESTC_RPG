@@ -1,12 +1,75 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Quality;
+using Campus.Contracts.Startup;
 using Campus.Kernel.Quality.Settings;
+using GdUnit4;
+using static GdUnit4.Assertions;
 
 namespace Campus.Tests;
 
-public sealed partial class QualityApplicationTests
+internal static class QualityApplicationTestFixture
 {
-    private sealed class FakeRuntime : IQualityRuntime
+    internal static async Task<(QualityService, FakeRuntime, FileStoreSpy)> CliSession(string name)
+    {
+        var runtime = new FakeRuntime();
+        var store = new FileStoreSpy(name, QualityCatalog.Profile(QualityPreset.Balanced));
+        var service = new QualityService(Catalog(), store);
+        service.Bind(runtime);
+        var originalHash = store.Hash;
+        await service.Initialize(BootPhase.AfterMapWarm, Context());
+        await service.Apply(new(QualityPreset.Ultra, new Dictionary<QualityKnob, float>
+        { [QualityKnob.ShadowDistance] = 600, [QualityKnob.RenderScale] = .67f }), ApplyOrigin.CommandLine);
+        if (store.Hash != originalHash || store.SaveCount != 0) throw new InvalidOperationException("CLI application touched the file.");
+        runtime.Booting = false;
+        return (service, runtime, store);
+    }
+
+    internal static async Task<ApplyResult> ApplyUser(QualityService service, QualityProfile profile)
+    {
+        service.Tick(0);
+        var pending = service.Apply(profile, ApplyOrigin.User);
+        service.Tick(.25);
+        var result = await pending;
+        service.Tick(0);
+        return result;
+    }
+
+    internal static BootContext Context() => new(new BootRunOptions(), Path.GetTempPath(), "quality-tests");
+
+    internal sealed class FileStoreSpy : IGraphicsSettingsStore, IDisposable
+    {
+        private static int _nextId;
+        private readonly string _path;
+        private readonly string _directory;
+        public int SaveCount { get; private set; }
+        public TaskCompletionSource? HeldWrite { get; set; }
+        public string Hash => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(_path)));
+        public FileStoreSpy(string scenario, QualityProfile? baseline)
+        {
+            _directory = Path.Combine(Path.GetTempPath(), $"uestc-rpg-quality-{scenario}-{Environment.ProcessId}-{Interlocked.Increment(ref _nextId)}");
+            Directory.CreateDirectory(_directory);
+            _path = Path.Combine(_directory, "graphics-spy.json");
+            File.WriteAllBytes(_path, baseline is null ? [] : JsonSerializer.SerializeToUtf8Bytes(baseline));
+        }
+        public QualityProfile? Read()
+        {
+            var bytes = File.ReadAllBytes(_path);
+            return bytes.Length == 0 ? null : JsonSerializer.Deserialize<QualityProfile>(bytes);
+        }
+        public Task Write(QualityProfile profile)
+        {
+            File.WriteAllBytes(_path, JsonSerializer.SerializeToUtf8Bytes(profile));
+            SaveCount++;
+            return HeldWrite?.Task ?? Task.CompletedTask;
+        }
+        public void Dispose() => Directory.Delete(_directory, recursive: true);
+    }
+
+    internal static QualityCatalog Catalog() => new(File.ReadAllText(Path.Combine(RepositoryFixture.Root, "game", "data", "quality-presets.json")));
+
+    internal sealed class FakeRuntime : IQualityRuntime
     {
         public bool Booting { get; set; } = true;
         public bool Transitioning { get; set; }

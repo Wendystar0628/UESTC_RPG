@@ -14,21 +14,16 @@ internal sealed class GroundMarkings
 
     public int Count { get; private set; }
 
-    public IReadOnlyList<Vector2> Crossings => _crossings;
-
-    private readonly List<Vector2> _crossings = [];
-    internal List<Vector2> CrossingCentres => _crossings;
-
-    public GroundDetails Details { get; }
-
-    private GroundMarkings() => Details = new GroundDetails(this);
+    internal List<Vector2> Crossings { get; } = [];
 
     /// <summary>Quads whose centre lies in the 64 m base cell (x, z).</summary>
     public IReadOnlyList<Quad> In(int x, int z) =>
         _byTile.TryGetValue(Key(x, z), out var list) ? list : [];
 
-    /// <summary>Emits every quad whose 64 m base cell lies inside the tile (tiles are multiples of 64 m).</summary>
-    /// <summary>Lines are draped in pieces of at most 1 m so they follow the terrain grid (D-180).</summary>
+    /// <summary>
+    /// Emits every quad whose 64 m base cell lies inside the tile (tiles are multiples of 64 m).
+    /// Lines are draped in pieces of at most 1 m so they follow the terrain grid (D-180).
+    /// </summary>
     public void Emit(GroundTile tile, GroundSurfaceSink sink, GroundSection section, TerrainGrid terrain)
     {
         const byte flags = VertexFlag.Decal | VertexFlag.NoShadow;
@@ -78,15 +73,6 @@ internal sealed class GroundMarkings
     }
 
     private static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
-
-    public static GroundMarkings Build(GroundLayout layout, GroundSection section)
-    {
-        var result = new GroundMarkings();
-        var junctions = RoadMarkings.AddTo(result, layout, section);
-        PitchMarkings.AddTo(result, layout, section);
-        result.Details.AddTo(layout, section, junctions);
-        return result;
-    }
 
     /// <summary>
     /// Points of the arc of the given radius around local (cu, cv), from angle <paramref name="from"/> to

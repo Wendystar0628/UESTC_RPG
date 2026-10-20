@@ -80,9 +80,9 @@ public sealed class GroundModule : IGroundCoverSource
         var sink = new GroundSurfaceSink(SurfaceMaterialCatalog.FromInputs(ctx.SourceInputs));
         new GroundMesher(field, _section, lod, layout, terrain, sink).Run();
         if (!GroundLod.HasMarkings(lod)) return new ContentOutput(sink.Finish(), []);
-        var markings = layout.Markings(_section);
+        var (markings, details) = layout.Markings(_section);
         markings.Emit(extent, sink, _section, terrain);
-        return new ContentOutput([.. sink.Finish(), .. markings.Details.EmitManholeText(ctx, extent, _section, terrain)], []);
+        return new ContentOutput([.. sink.Finish(), .. details.EmitManholeText(ctx, extent, _section, terrain)], []);
     }
 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) =>

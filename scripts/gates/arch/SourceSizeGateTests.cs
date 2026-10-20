@@ -17,7 +17,7 @@ public sealed class SourceSizeGateTests
     public void HandwrittenTypeDeclarationsStayWithinCombinedLineLimit()
     {
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? ArchitectureTests.FindRepository();
-        var files = HandwrittenSources().ToArray();
+        var files = HandwrittenSources(SourceModel.Production).ToArray();
         var errors = new List<string>();
         // The source model shares one Roslyn compilation; Compile ownership keeps assemblies distinct.
         foreach (var project in SourceModel.ProjectItems())
@@ -50,7 +50,7 @@ public sealed class SourceSizeGateTests
     public void HandwrittenMethodsAndConstructorsStayWithinLineLimit()
     {
         var errors = new List<string>();
-        foreach (var file in HandwrittenSources())
+        foreach (var file in HandwrittenSources(SourceModel.Production))
         foreach (var node in file.Root.DescendantNodes().Where(node => node is BaseMethodDeclarationSyntax or
             LocalFunctionStatementSyntax or AccessorDeclarationSyntax or
             PropertyDeclarationSyntax { ExpressionBody: not null } or IndexerDeclarationSyntax { ExpressionBody: not null }))
@@ -70,7 +70,7 @@ public sealed class SourceSizeGateTests
     public void HandwrittenPartialTypesRequireOneGeneratorOwnedDeclaration()
     {
         var errors = new List<string>();
-        var files = HandwrittenSources().ToDictionary(file => file.Tree);
+        var files = HandwrittenSources(SourceModel.Production.Concat(SourceModel.Tests)).ToDictionary(file => file.Tree);
         foreach (var file in files.Values)
         foreach (var node in file.Root.DescendantNodes().OfType<TypeDeclarationSyntax>())
         {
@@ -103,7 +103,7 @@ public sealed class SourceSizeGateTests
                 "System.Text.RegularExpressions.GeneratedRegexAttribute"));
     }
 
-    private static IEnumerable<SourceFile> HandwrittenSources()
+    private static IEnumerable<SourceFile> HandwrittenSources(IEnumerable<SourceFile> sources)
     {
         var root = Environment.GetEnvironmentVariable("UESTC_REPOSITORY") ?? ArchitectureTests.FindRepository();
         using var thirdParty = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "third_party.json")));
@@ -111,7 +111,7 @@ public sealed class SourceSizeGateTests
         var externalPaths = thirdParty.RootElement.GetProperty("entries").EnumerateArray()
             .Where(entry => entry.TryGetProperty("path", out _))
             .Select(entry => entry.GetProperty("path").GetString()!.Replace('\\', '/').TrimEnd('/')).ToArray();
-        foreach (var file in SourceModel.Production)
+        foreach (var file in sources)
         {
             if (externalPaths.Any(path => file.Path.Equals(path, StringComparison.OrdinalIgnoreCase) ||
                 file.Path.StartsWith(path + "/", StringComparison.OrdinalIgnoreCase))) continue;

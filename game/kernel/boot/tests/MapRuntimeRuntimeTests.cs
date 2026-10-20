@@ -13,7 +13,7 @@ using N = System.Numerics;
 namespace Campus.Tests;
 
 [TestSuite]
-public sealed partial class MapRuntimeRuntimeTests
+public sealed class MapRuntimeRuntimeTests
 {
     [TestCase]
     [TestCategory(TestReason.Regression)]

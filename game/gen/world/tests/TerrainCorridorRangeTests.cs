@@ -1,12 +1,17 @@
+using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.Maps;
+using Campus.Gen.Geometry;
 using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
+using static Campus.Gen.World.Tests.TerrainCompilerTestFixture;
 
 namespace Campus.Gen.World.Tests;
 
-public sealed partial class TerrainCompilerTests
+[TestSuite]
+public sealed class TerrainCorridorRangeTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
     public void CorridorWaterEdgesShareOneCompositionAndKeepFixedAnchors()

@@ -1,14 +1,17 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Tests;
 using Campus.Contracts.Maps;
+using Campus.Gen.Geometry;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
+using static Campus.Gen.World.Tests.TerrainCompilerTestFixture;
 
 namespace Campus.Gen.World.Tests;
 
-public sealed partial class TerrainCompilerTests
+[TestSuite]
+public sealed class TerrainBankTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
     public void FreeboardRaisesBankTopWithoutRaisingSoftWaterlineOrLoweringWater()
@@ -191,5 +194,4 @@ public sealed partial class TerrainCompilerTests
         try { banks.CommitFootways(initial); throw new InvalidOperationException("Banks were mutable after snapshot finalization."); }
         catch (InvalidOperationException) { }
     }
-
 }

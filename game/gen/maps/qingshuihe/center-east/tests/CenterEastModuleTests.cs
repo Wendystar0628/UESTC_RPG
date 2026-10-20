@@ -20,9 +20,10 @@ using K = Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastTune.Wenke;
 
 namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Tests;
 using static GdUnit4.Assertions;
+using static Campus.Gen.Maps.Qingshuihe.CenterEast.Tests.CenterEastTestFixture;
 
 [TestSuite]
-public sealed partial class CenterEastModuleTests
+public sealed class CenterEastModuleTests
 {
     private static readonly LodLevel[] Levels = [LodLevel.L0, LodLevel.L1, LodLevel.L2, LodLevel.L3, LodLevel.L4];
 
@@ -72,41 +73,6 @@ public sealed partial class CenterEastModuleTests
                 }
             return triangles.Order(StringComparer.Ordinal);
         }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    [TestCategory("Slow")]
-    public void ResearchRegistrationsMatchWhatIsBuilt()
-    {
-        var world = World();
-        IReadOnlyList<Vector2> Outline(string id) => ((PolygonGeometry)world.Features[new(id)].Geometry).Rings.Outer;
-        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs((float)PlanRings.SignedArea(ring));
-        foreach (var site in CenterEastSites.All.OfType<ResearchSite>())
-        {
-            var built = Area(site.Footprints(world).Hall);
-            AssertThat(MathF.Abs(Area(Outline(site.HallId)) - built) < TestTolerance.Proportion * built).OverrideFailureMessage($"{site.HallId} outline matches the built hall").IsTrue();
-        }
-    }
-
-    [TestCase, TestCategory(TestReason.Contract)]
-    [TestCategory("Slow")]
-    public void ResearchBlocksStandFiveStoreysWithOneShutEntranceEach()
-    {
-        var ctx = Context();
-        var module = new CenterEastModule();
-        var colliders = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).ToArray();
-        var top = ResearchSite.Style.Top;
-        AssertThat(MathF.Abs(top - (R.GroundStorey + (R.Storeys - 1) * R.Storey + 1.3f)) < TestTolerance.Position).OverrideFailureMessage($"five storeys to the coping, got {top}").IsTrue();
-        foreach (var site in CenterEastSites.All.OfType<ResearchSite>())
-        {
-            var plan = site.Footprints(ctx.World);
-            var walls = colliders.OfType<WallCollider>().Where(w => plan.Blocks.Any(r => NearRing(r, (w.A + w.B) * 0.5f))).ToArray();
-            AssertThat(walls.Any(w => w.Tag == SurfaceTag.Wall && MathF.Abs(w.Y1 - site.BaseY(ctx) - top) < TestTolerance.Position)).OverrideFailureMessage($"{site.Id} walls reach the coping above their terrain pad").IsTrue();
-            var door = plan.Door ?? site.HallApex(plan).Apex;
-            AssertThat(colliders.OfType<WallCollider>().Count(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, door) < 3f) is >= 1 and <= 2).OverrideFailureMessage($"{site.Id} has its shut entrance at the door").IsTrue();
-        }
-
-        static bool NearRing(IReadOnlyList<Vector2> ring, Vector2 p) => PlanRings.DistanceToRing(p, ring) < 1f;
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -172,20 +138,4 @@ public sealed partial class CenterEastModuleTests
         }
         return stream.ToArray();
     }
-
-    private static BuildContext Context()
-    {
-        // The center-east sites never read the map descriptor; the world model and seed are their whole input.
-        return new BuildContext { CodeHash = "fixture", WindowNumbering = new((Descriptor()).Id, new string('0', 64), []), GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = World(), Map = Descriptor(), WorldSeed = 1 };
-    }
-
-    private static BuildInputSnapshot TextInputs() => BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>
-    {
-        [SceneTextInputs.AtlasKey] = File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "scene-text", "atlas.json"))
-    }, "fixture");
-
-    private static MapDescriptor Descriptor() => RealMapFixture.Entry().Descriptor;
-
-    // Geometry, pads and pool water levels all come from the same registered production world.
-    private static IWorldModel World() => RealMapFixture.Load().World;
 }

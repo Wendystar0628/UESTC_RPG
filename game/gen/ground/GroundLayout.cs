@@ -14,7 +14,7 @@ internal sealed class GroundLayout
 
     private readonly Dictionary<long, int[]> _bins;
     private readonly object _markLock = new();
-    private GroundMarkings? _markings;
+    private (GroundMarkings Markings, GroundDetails Details)? _markings;
 
     public IReadOnlyList<GroundShape> Shapes { get; }
     public IReadOnlyList<RoadLine> Roads { get; }
@@ -60,10 +60,21 @@ internal sealed class GroundLayout
     public static GroundLayout Of(BuildContext context) => context.Memo(typeof(GroundLayout), () => Create(context.World));
 
     /// <summary>Markings are derived from the network once per world; they need exact distance queries.</summary>
-    public GroundMarkings Markings(GroundSection section)
+    public (GroundMarkings Markings, GroundDetails Details) Markings(GroundSection section)
     {
         lock (_markLock)
-            return _markings ??= GroundMarkings.Build(this, section);
+        {
+            if (_markings is null)
+            {
+                var markings = new GroundMarkings();
+                var junctions = RoadMarkings.AddTo(markings, this, section);
+                PitchMarkings.AddTo(markings, this, section);
+                var details = new GroundDetails(markings);
+                details.AddTo(this, section, junctions);
+                _markings = (markings, details);
+            }
+            return _markings.Value;
+        }
     }
 
 

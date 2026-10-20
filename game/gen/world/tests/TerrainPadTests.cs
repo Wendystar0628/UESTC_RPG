@@ -1,13 +1,17 @@
+using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Tests;
 using Campus.Contracts.Maps;
+using Campus.Gen.Geometry;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
+using static Campus.Gen.World.Tests.TerrainCompilerTestFixture;
 
 namespace Campus.Gen.World.Tests;
 
-public sealed partial class TerrainCompilerTests
+[TestSuite]
+public sealed class TerrainPadTests
 {
     [TestCase, TestCategory(TestReason.Regression)]
     public void PolygonKioskAnchorsHaveGroundPadsWhilePostsAndRaisedDeckLevelsStaySeparate()
@@ -123,5 +127,4 @@ public sealed partial class TerrainCompilerTests
         var inside = terrain.HeightAt(32.79f, 50); var outside = terrain.HeightAt(32.81f, 50);
         AssertThat(Math.Abs(inside - outside) < TestTolerance.Position).OverrideFailureMessage("Apron edge reset to PadY and made a vertical seam.").IsTrue();
     }
-
 }

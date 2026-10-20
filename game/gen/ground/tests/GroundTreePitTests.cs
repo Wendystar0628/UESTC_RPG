@@ -291,7 +291,7 @@ public sealed class GroundTreePitTests
 
     private static List<GroundMarkings.Quad> Quads(GroundLayout layout)
     {
-        var markings = layout.Markings(Section);
+        var markings = layout.Markings(Section).Markings;
         var quads = new List<GroundMarkings.Quad>();
         for (var z = -2; z <= 2; z++)
             for (var x = -2; x <= 2; x++) quads.AddRange(markings.In(x, z));

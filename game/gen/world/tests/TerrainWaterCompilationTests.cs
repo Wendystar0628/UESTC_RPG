@@ -1,31 +1,18 @@
 using System.Numerics;
 using System.Text.Json;
 using Campus.Contracts;
-using Campus.Tests;
 using Campus.Contracts.Maps;
 using Campus.Gen.Geometry;
+using Campus.Tests;
 using GdUnit4;
 using static GdUnit4.Assertions;
+using static Campus.Gen.World.Tests.TerrainCompilerTestFixture;
 
 namespace Campus.Gen.World.Tests;
 
-public sealed partial class TerrainCompilerTests
+[TestSuite]
+public sealed class TerrainWaterCompilationTests
 {
-    [TestCase, TestCategory(TestReason.Contract)]
-    public void ProjectedSlantedBankHasZeroTangentialDistanceDerivative()
-    {
-        var region = new TerrainRegion([new PolygonRings([new(-436.73f, 40.12f), new(-432.11f, 58.69f),
-            new(-449.31f, 61.93f), new(-453.93f, 43.36f)], [])]);
-        for (var i = 1; i < 100; i++)
-        {
-            var hit = region.NearestBoundary(-431.8, 41 + i * 0.17);
-            var atBank = region.Distance(hit.X, hit.Z);
-            AssertThat(Math.Abs((double)(0) - (double)(atBank.Height)) <= TestTolerance.Position).IsTrue();
-            AssertThat(Math.Abs((double)(0) - (double)(atBank.Dx * hit.Tx + atBank.Dz * hit.Tz)) <= TestTolerance.Position).IsTrue();
-            if (hit.Tx != 0 || hit.Tz != 0) AssertThat(Math.Abs((double)(1) - (double)(atBank.Dx * atBank.Dx + atBank.Dz * atBank.Dz)) <= TestTolerance.Position).IsTrue();
-        }
-    }
-
     [TestCase, TestCategory(TestReason.Contract)]
     public void DrySwaleStaysDryAndOnlyARealNamedCrossingIsAccepted()
     {
@@ -269,4 +256,27 @@ public sealed partial class TerrainCompilerTests
             .OverrideFailureMessage("A shared water level replaced a member's local depth/bank profile.").IsTrue();
     }
 
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void ConnectedNaturalStreamUsesLakeLevelWithoutRenamingOrChangingItsDepth()
+    {
+        var lake = WorldFeatureFixture.Create("fixture:lake", "water", new PolygonGeometry(Box(-10, -10, 10, 10)));
+        var shape = new PolygonGeometry(Box(-4, -25, 4, 0));
+        var stream = new WorldFeature(new("fixture:stream"), new("water"), shape)
+            { Parts = [new("osm:way:9", shape, null, null) { Props = Kind("water") }] };
+        var line = new NetworkLine(new("fixture:source:way:9"), new([new(0, -25), new(0, 0)]), 8)
+            { Props = JsonSerializer.SerializeToElement(new { waterway = "stream" }) };
+        var terrain = TerrainCompiler.Compile(Context([lake, stream]) with { Network = new([], [line], [], [], []) }, []);
+        AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.WaterY(lake.Id)!.Value)) <= TestTolerance.Position).IsTrue(); AssertThat(Math.Abs((double)(-0.5) - (double)(terrain.WaterY(stream.Id)!.Value)) <= TestTolerance.Position).IsTrue();
+        AssertThat(terrain.HeightAt(0, -10) < -0.5).OverrideFailureMessage("Internal lake/stream boundary became a fake shore.").IsTrue();
+        AssertThat(Math.Abs((double)(-1.7) - (double)(terrain.HeightAt(0, -18))) <= TestTolerance.Position).IsTrue();
+        AssertThat(Math.Abs((double)(Compile([], [lake]).HeightAt(0, 0)) - (double)(terrain.HeightAt(0, 0))) <= TestTolerance.Position).IsTrue();
+        var canal = line with { Props = JsonSerializer.SerializeToElement(new { waterway = "canal" }) };
+        var fixedCanal = new TerrainChannelOp("design:terrain:fixed-canal", "explicit incompatible level", stream.Id,
+            1.2, new(TerrainBankKind.Hard, "1:4"), -1.2, []) { Zone = Zone };
+        {
+            WorldDataException? rejection = null;
+            try { TerrainCompiler.Compile(Context([lake, stream]) with { Network = new([], [canal], [], [], []) }, [Source([fixedCanal])]); } catch (WorldDataException error) { rejection = error; }
+            AssertThat(rejection is not null).IsTrue();
+        }
+    }
 }

@@ -217,7 +217,7 @@ public sealed class GroundStadiumTests
     /// <summary>All marking quads in the 64 m cells that touch the square of the given half size around the point.</summary>
     private static List<GroundMarkings.Quad> QuadsNear(GroundLayout layout, float cx, float cz, float half)
     {
-        var markings = layout.Markings(Section);
+        var markings = layout.Markings(Section).Markings;
         var quads = new List<GroundMarkings.Quad>();
         for (var z = (int)MathF.Floor((cz - half) / TileGrid.BaseEdge); z <= (int)MathF.Floor((cz + half) / TileGrid.BaseEdge); z++)
             for (var x = (int)MathF.Floor((cx - half) / TileGrid.BaseEdge); x <= (int)MathF.Floor((cx + half) / TileGrid.BaseEdge); x++)

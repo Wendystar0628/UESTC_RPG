@@ -1,9 +1,9 @@
-using Campus.Gen.Sites.Tests;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Sites;
+using Campus.Gen.Sites.Tests;
 using Campus.Tests;
 using Campus.Gen.World;
 using Campus.Gen.Maps.Qingshuihe.CenterEast.Framework;
@@ -20,8 +20,10 @@ using K = Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastTune.Wenke;
 
 namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Tests;
 using static GdUnit4.Assertions;
+using static Campus.Gen.Maps.Qingshuihe.CenterEast.Tests.CenterEastTestFixture;
 
-public sealed partial class CenterEastModuleTests
+[TestSuite]
+public sealed class CenterEastWindowTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
@@ -120,5 +122,4 @@ public sealed partial class CenterEastModuleTests
             AssertThat(ids.Length > 0 && ids.All(id => ours.Any(a => id >= a.BaseId && id < a.BaseId + a.Count))).OverrideFailureMessage($"{name}: the zone's windows lie in its own grids").IsTrue();
         }
     }
-
 }

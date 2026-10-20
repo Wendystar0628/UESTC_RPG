@@ -3,6 +3,7 @@ using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Gen.Sites;
+using Campus.Gen.Sites.Tests;
 using Campus.Tests;
 using Campus.Gen.World;
 using Campus.Gen.Maps.Qingshuihe.CenterEast.Framework;
@@ -19,8 +20,10 @@ using K = Campus.Gen.Maps.Qingshuihe.CenterEast.CenterEastTune.Wenke;
 
 namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Tests;
 using static GdUnit4.Assertions;
+using static Campus.Gen.Maps.Qingshuihe.CenterEast.Tests.CenterEastTestFixture;
 
-public sealed partial class CenterEastModuleTests
+[TestSuite]
+public sealed class CenterEastSiteTests
 {
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
@@ -147,5 +150,4 @@ public sealed partial class CenterEastModuleTests
         foreach (var (x, y) in new[] { (-F.EmblemRadius, F.EmblemY), (F.EmblemRadius, F.EmblemY), (0f, F.EmblemY - F.EmblemRadius), (0f, F.EmblemY + F.EmblemRadius) })
             AssertThat(F.Stone.OnDressedFace(x, y, 0.03f)).OverrideFailureMessage($"emblem edge ({x}, {y}) is on the dressed face").IsTrue();
     }
-
 }

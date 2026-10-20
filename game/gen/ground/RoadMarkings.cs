@@ -46,7 +46,7 @@ internal static class RoadMarkings
             if (placed.Any(p => Vector2.DistanceSquared(p, centre) < 36f)) continue;
             if (!OnAsphalt(layout, centre, 1f)) continue;
             placed.Add(centre);
-            result.CrossingCentres.Add(centre);
+            result.Crossings.Add(centre);
             AddZebra(result, layout, centre, along, half, length, spec);
         }
         // Centre lines, kept clear of junctions and crossings.
