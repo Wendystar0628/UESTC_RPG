@@ -215,24 +215,15 @@
     },
     {
       "pattern": "scripts/gates/native-render.ps1",
-      "owner": "WP-27",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-27"
     },
     {
       "pattern": "game/kernel/lighting/KeyLightState.cs",
-      "owner": "WP-03",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-03"
     },
     {
       "pattern": "game/kernel/lighting/KeyLightModel.cs",
-      "owner": "WP-03",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-03"
     },
     {
       "pattern": "game/style/shaders/precip_wet.gdshaderinc",
@@ -244,45 +235,27 @@
     },
     {
       "pattern": "game/style/shaders/lamp.gdshaderinc",
-      "owner": "WP-39",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-39"
     },
     {
       "pattern": "game/style/shaders/lamp.gdshaderinc.uid",
-      "owner": "WP-39",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-39"
     },
     {
       "pattern": "game/style/shaders/reflection_lamps.gdshaderinc",
-      "owner": "WP-39",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-39"
     },
     {
       "pattern": "game/style/shaders/reflection_lamps.gdshaderinc.uid",
-      "owner": "WP-39",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-39"
     },
     {
       "pattern": "game/kernel/map/data/GroundCoverTextures.cs",
-      "owner": "WP-15",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-15"
     },
     {
       "pattern": "game/kernel/map/data/GroundCoverTextures.cs.uid",
-      "owner": "WP-15",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-15"
     },
     {
       "pattern": "game/data/maps/qingshuihe/world/center-east.json",
@@ -594,10 +567,7 @@
     },
     {
       "pattern": "game/data/maps/qingshuihe/map.json",
-      "owner": "WP-46",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-46"
     },
     {
       "pattern": "game/data/maps/*/sky.json",
@@ -1066,17 +1036,11 @@
     },
     {
       "pattern": "scripts/gates/check-naming.ps1",
-      "owner": "WP-27",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-27"
     },
     {
       "pattern": "scripts/gates/check-source.ps1",
-      "owner": "WP-27",
-      "maintainers": [
-        "WP-00"
-      ]
+      "owner": "WP-27"
     },
     {
       "pattern": "game/gen/parts/sport/**",
