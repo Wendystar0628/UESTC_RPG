@@ -4,6 +4,8 @@ charset = utf-8
 end_of_line = lf
 insert_final_newline = true
 [*.cs]
+dotnet_diagnostic.IDE0051.severity = error
+dotnet_diagnostic.IDE0052.severity = error
 # PascalCase namespaces follow assembly responsibilities; G1 checks this explicitly.
 # Folder names are intentionally lower-case, and contract groups share the published namespace.
 dotnet_diagnostic.IDE0130.severity = none

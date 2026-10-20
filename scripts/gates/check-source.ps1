@@ -1,6 +1,6 @@
-﻿# 源码与归属检查函数库：列出改动文件，按 ownership.json 核对归属与 UID，并检查新增代码放置、命名及源码边界规则。
-# 产出：无（只读检查源码与归属并返回内存结果）。
-# 用法：由 scripts\gate.ps1 点引用（. scripts\gates\check-source.ps1）后调用 Test-UESTCOwnership、Test-UESTCNewCodeFiles、Test-UESTCSourceBoundaries 等函数，不单独运行
+# Source and ownership checks: list changed files, validate ownership and UIDs against ownership.json, and check new-code placement, naming, and source boundaries.
+# Output: none (read-only source and ownership checks return in-memory results).
+# Usage: dot-source from scripts\gate.ps1 (. scripts\gates\check-source.ps1), then call Test-UESTCOwnership, Test-UESTCNewCodeFiles, Test-UESTCSourceBoundaries, etc.; do not run directly.
 function Get-UESTCFiles {
     param([string]$Root)
     Get-UESTCGitPaths $Root @('ls-files', '-z', '--cached', '--others', '--exclude-standard') | Sort-Object -Unique
@@ -14,6 +14,88 @@ function Get-UESTCChanges {
     $files += @(Get-UESTCGitPaths $Root @('diff', '-z', '--no-renames', '--name-only'))
     $files += @(Get-UESTCGitPaths $Root @('ls-files', '-z', '--others', '--exclude-standard'))
     @($files | Where-Object { $_ } | Sort-Object -Unique)
+}
+
+
+# Validate only changed authored text; deleted files have no current bytes to inspect.
+function Test-UESTCChangedText {
+    param([string]$Root, [string[]]$Changes, [string]$BaseRef)
+    $utf8 = [Text.UTF8Encoding]::new($false, $true)
+    $gbk = [Text.Encoding]::GetEncoding(936, [Text.EncoderExceptionFallback]::new(), [Text.DecoderExceptionFallback]::new())
+    $base = (Invoke-UESTCGit $Root @('merge-base', $BaseRef, 'HEAD')).StdOut.Trim()
+    $basePaths = @(Get-UESTCGitPaths $Root @('ls-tree', '-z', '-r', '--name-only', $base))
+    $checked = 0
+    $failures = [Collections.Generic.List[string]]::new()
+    foreach ($path in $Changes) {
+        if ($path -notmatch '\.(cs|gd|gdshader|gdshaderinc|glsl|glslinc|json|md|txt|ps1|psm1|psd1|py|js|mjs|cjs|ts|jsx|tsx|html|css|svg|xml|yml|yaml|toml|ini|cfg|godot|tscn|tres|uid|csproj|props|targets|sln|slnx|cmd|bat|sh|csv|tsv)$' -and
+            [IO.Path]::GetFileName($path) -notin @('.editorconfig','.gitattributes','.gitignore','.ignore','LICENSE')) { continue }
+        $absolute = Join-Path $Root $path
+        if (-not (Test-Path -LiteralPath $absolute -PathType Leaf)) { continue }
+        $checked++
+        $bytes = [IO.File]::ReadAllBytes($absolute)
+        if ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191) {
+            $failures.Add("${path}: UTF-8 BOM is not allowed")
+        }
+        try { $text = $utf8.GetString($bytes) }
+        catch [Text.DecoderFallbackException] { $failures.Add("${path}: invalid UTF-8"); continue }
+        if ($text.Contains([string][char]0xfffd)) { $failures.Add("${path}: literal Unicode replacement character") }
+        if ($path -notin $basePaths -or $text -notmatch '[^\x00-\x7f]') { continue }
+        $before = (Invoke-UESTCGit $Root @('show', "${base}:$path")).StdOut
+        # Existing Chinese in this same file supplies evidence; ordinary printable Chinese
+        # and private-use icon characters are never classified from a character blacklist.
+        foreach ($span in @([regex]::Matches($before, '\p{IsCJKUnifiedIdeographs}{2,}') | ForEach-Object Value | Sort-Object -Unique)) {
+            try { $misread = $gbk.GetString($utf8.GetBytes($span)) }
+            catch [Text.DecoderFallbackException] { continue }
+            if ($misread -cne $span -and $text.Contains($misread) -and -not $before.Contains($misread)) {
+                $failures.Add("${path}: newly introduced GBK decoding of baseline Chinese text: $misread")
+            }
+        }
+    }
+    if ($failures.Count) { throw ($failures -join "`n") }
+    [pscustomobject]@{ CheckedTextFiles=$checked }
+}
+
+function Test-UESTCScriptSyntax {
+    param([string]$Root)
+    $files = @(Get-UESTCFiles $Root | Where-Object { Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf })
+    $python = @($files | Where-Object { $_ -match '^(dashboard/tools|pipeline|scripts)/.*\.py$' })
+    if ($python.Count) {
+        $code = 'import ast, pathlib, sys; [ast.parse(pathlib.Path(p).read_text(encoding="utf-8"), filename=p) for p in sys.argv[1:]]'
+        $null = Invoke-UESTCProcess python (@('-I','-B','-X','utf8','-c',$code) + $python) $Root -TextEncoding ([Text.Encoding]::UTF8)
+    }
+    $javascript = @($files | Where-Object { $_ -match '^dashboard/app/.*\.(js|mjs|cjs)$' })
+    foreach ($path in $javascript) {
+        $null = Invoke-UESTCProcess node @('--check', (Join-Path $Root $path)) $Root -TextEncoding ([Text.Encoding]::UTF8)
+    }
+    [pscustomobject]@{ PythonFiles=$python.Count; JavaScriptFiles=$javascript.Count }
+}
+
+function Test-UESTCOwnershipRules {
+    param([string]$Root)
+    $ownership = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $Root 'ownership.json') | ConvertFrom-Json
+    $files = @(Get-UESTCFiles $Root | Where-Object { Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf })
+    $unmatched = [Collections.Generic.List[string]]::new()
+    foreach ($rule in $ownership.rules) {
+        $expression = Get-UESTCGlobExpression $rule.pattern
+        if (@($files -match $expression).Count) { continue }
+        # Ignored collaboration tools are real owned files, even though git omits them.
+        $prefix = ($rule.pattern -split '[*?]', 2)[0]
+        if ($prefix -eq $rule.pattern) {
+            $matched = Test-Path -LiteralPath (Join-Path $Root $prefix) -PathType Leaf
+        } else {
+            $directory = if ($prefix.EndsWith('/')) { $prefix.TrimEnd('/') } else { Split-Path $prefix -Parent }
+            $absolute = if ($directory) { Join-Path $Root $directory } else { $Root }
+            $matched = $false
+            if (Test-Path -LiteralPath $absolute -PathType Container) {
+                $matched = @(Get-ChildItem -LiteralPath $absolute -File -Recurse -Force | Where-Object {
+                    ($_.FullName.Substring($Root.Length + 1).Replace('\','/')) -match $expression
+                } | Select-Object -First 1).Count -gt 0
+            }
+        }
+        if (-not $matched) { $unmatched.Add($rule.pattern) }
+    }
+    if ($unmatched.Count) { throw ("Ownership rules match no existing files:`n" + ($unmatched -join "`n")) }
+    [pscustomobject]@{ CheckedRules=@($ownership.rules).Count }
 }
 
 function Test-UESTCCommentOnlyChange {
@@ -38,8 +120,13 @@ function Test-UESTCCommentOnlyChange {
 
 function Test-UESTCGlob {
     param([string]$Path, [string]$Pattern)
+    return $Path -match (Get-UESTCGlobExpression $Pattern)
+}
+
+function Get-UESTCGlobExpression {
+    param([string]$Pattern)
     $patternRegex = [regex]::Escape($Pattern.Replace('\','/')).Replace('\*\*','__DOUBLE_STAR__').Replace('\*','[^/]*').Replace('__DOUBLE_STAR__','.*').Replace('\?','[^/]')
-    return $Path -match ('^' + $patternRegex + '$')
+    return '^' + $patternRegex + '$'
 }
 
 # Resolve deletions against exactly the same baseline used by selection and G3.

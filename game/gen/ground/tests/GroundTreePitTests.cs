@@ -30,7 +30,7 @@ public sealed class GroundTreePitTests
     private static readonly float PitSoil = PitRim - Section.Pits.SoilBelowRim;
     private static readonly float StripRim = Section.PavingY + Section.Pits.StripRimAbovePaving;
     private static readonly float StripSoil = StripRim - Section.Pits.SoilBelowRim;
-    private const float PitKerb = 0.22f, StripKerb = 0.15f;
+    private const float PitKerb = 0.22f;
     private const float AuthoredPitRim = 0.42f, AuthoredStripRim = 0.2f;
 
     [TestCase, TestCategory(TestReason.Contract)]

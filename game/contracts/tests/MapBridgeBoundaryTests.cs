@@ -57,9 +57,4 @@ public sealed class MapBridgeBoundaryTests
             placeToRegion: lookup is null ? default : new ReadOnlyMemory<byte>(lookup), regionsReady: regionsReady);
 
     private static MapRect Rect() => new(Vector2.Zero, new(64, 64));
-    private static MapDescriptor Map() => new(new("fixture"), new("Fixture", "Fixture"), MapKind.Outdoor, 1, 1,
-        new(0, 0, 32648, Vector2.Zero, new(64, 64)), new(32, 32), new(Vector3.Zero, new(64, 64, 64)),
-        Rect(), new(1, 0, 64, 0, 64, 1, 1, 1), new(0, 0), new(0, 0), "start", [],
-        new(MapTimeRule.Shared, new(17.5, Season.Autumn), new("Default", "Default"), false, "fixture"),
-        new("sky.json", "backdrop.json", []), []);
 }

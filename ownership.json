@@ -345,11 +345,6 @@
       "owner": "WP-04"
     },
     {
-      "pattern": "game/data/maps/*/audio/manual_emitters.json",
-      "owner": "WP-53b",
-      "note": "预留: Per-map authored emitters; deferred data-driven emitter implementation is explicitly designed."
-    },
-    {
       "pattern": "game/data/maps/*/world/atlas.json",
       "owner": "WP-48c"
     },
@@ -482,11 +477,6 @@
       "owner": "WP-23"
     },
     {
-      "pattern": "game/data/maps/*/audio/acoustics*.json",
-      "owner": "WP-53c",
-      "note": "预留: Per-map acoustic probes and room/portal data; spatial-acoustics package is explicitly deferred."
-    },
-    {
       "pattern": "game/style/shaders/fx_glow.gdshader",
       "owner": "WP-39"
     },
@@ -497,11 +487,6 @@
     {
       "pattern": "game/style/shaders/toon.gdshaderinc",
       "owner": "WP-04"
-    },
-    {
-      "pattern": "game/data/maps/*/audio/farfield.json",
-      "owner": "WP-53b",
-      "note": "预留: Per-map distant-city bed directions/range derive from this map exterior; reserved for the designed ambience package."
     },
     {
       "pattern": "game/style/shaders/fog.gdshaderinc",
@@ -524,11 +509,6 @@
       "owner": "WP-48a"
     },
     {
-      "pattern": "game/data/audio/foley_banks.json",
-      "owner": "WP-53d",
-      "note": "预留: Global material/speed-based sample banks for the explicitly planned observer-footstep package; no per-map duplicate."
-    },
-    {
       "pattern": "game/systems/vegetation/seasons/**",
       "owner": "WP-38"
     },
@@ -549,23 +529,8 @@
       "owner": "WP-35"
     },
     {
-      "pattern": "game/data/audio/acoustics*.json",
-      "owner": "WP-53c",
-      "note": "预留: Global acoustic-class tuning tables, distinct from the per-map spatial probe data; package is explicitly deferred."
-    },
-    {
-      "pattern": "game/data/maps/*/incidents.json",
-      "owner": "WP-26",
-      "note": "预留: Per-map late-returner route/version data is explicitly designed and its event ID is already enabled in the ruleset."
-    },
-    {
       "pattern": "game/data/maps/*/interiors.json",
       "owner": "WP-00"
-    },
-    {
-      "pattern": "game/data/maps/*/outskirts.json",
-      "owner": "WP-47a",
-      "note": "预留: Explicit map environment input with current contract/loader consumption, although no current map provides it."
     },
     {
       "pattern": "game/data/maps/*/waypoints.json",
@@ -683,16 +648,6 @@
       "owner": "WP-43"
     },
     {
-      "pattern": "game/audio/acoustics/**",
-      "owner": "WP-53c",
-      "note": "预留: Deferred WP-53c service implementation with a current IAcousticEnv contract and explicit design."
-    },
-    {
-      "pattern": "game/data/audio/sets/**",
-      "owner": "WP-53b",
-      "note": "预留: Global SoundSetId catalogue has an exact source contract path; per-map duplicate is removed."
-    },
-    {
       "pattern": "game/data/vegetation/**",
       "owner": "WP-23"
     },
@@ -715,11 +670,6 @@
     {
       "pattern": "game/systems/weather/**",
       "owner": "WP-45a"
-    },
-    {
-      "pattern": "game/audio/ambience/**",
-      "owner": "WP-53b",
-      "note": "预留: WP-53b ambience implementation has an explicit work-package/design allocation, currently represented by service contracts."
     },
     {
       "pattern": "game/gen/parts/core/**",
@@ -860,11 +810,6 @@
     {
       "pattern": "scripts/godot-api/**",
       "owner": "WP-00"
-    },
-    {
-      "pattern": "game/audio/foley/**",
-      "owner": "WP-53d",
-      "note": "预留: WP-53d observer-footstep implementation has an explicit mainline deliverable and work-package allocation."
     },
     {
       "pattern": "game/camera/walk/**",

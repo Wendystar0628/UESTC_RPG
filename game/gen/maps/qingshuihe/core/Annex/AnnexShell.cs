@@ -30,7 +30,6 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
     private readonly IReadOnlyList<Opening> _openings;
     private readonly Block _top;
     private readonly WallPiece? _roofUnitsFace;
-    private Surface _ground = (_, _) => 0f;
 
     private AnnexShell(FeatureId feature, AnnexKind kind, BuildingFrame frame, IReadOnlyList<WallPiece> pieces, WallPiece? door, WallPiece? roofUnitsFace)
     {
@@ -61,7 +60,7 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
             if (pieces.Length == 0) continue;
             yield return new AnnexShell(feature, kind, entry.Frame, pieces, kind == AnnexKind.NorthAnnex
                 ? CoreContours.Wall(world, CoreIds.AnnexDoorFace, pieces.Where(p => p.Y0 <= entry.Frame.WallBaseY + 0.01f && p.Y1 >= entry.Frame.StoreyY(1))) : null,
-                kind == AnnexKind.NorthAnnex ? CoreContours.Wall(world, CoreIds.AnnexDoorFace, pieces.Where(p => p.Top)) : null) { _ground = world.Terrain.HeightAt };
+                kind == AnnexKind.NorthAnnex ? CoreContours.Wall(world, CoreIds.AnnexDoorFace, pieces.Where(p => p.Top)) : null);
         }
     }
 

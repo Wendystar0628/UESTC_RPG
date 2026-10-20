@@ -211,14 +211,6 @@ public sealed class StreetPartsTests
 
     private static Type Contract(Type type) => type.GetInterfaces().Single(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPartDef<>));
 
-    private static (Vector3 Min, Vector3 Max) Extent(Collider collider) => collider switch
-    {
-        PostCollider p => (new(p.C.X - p.R, p.Y0, p.C.Y - p.R), new(p.C.X + p.R, p.Y1, p.C.Y + p.R)),
-        BoxCollider b => (new(b.At.M41 - b.Half.X, b.At.M42 - b.Half.Y, b.At.M43 - b.Half.Z), new(b.At.M41 + b.Half.X, b.At.M42 + b.Half.Y, b.At.M43 + b.Half.Z)),
-        RampCollider r => (Vector3.Min(Vector3.Min(r.P0, r.P1), Vector3.Min(r.P2, r.P3)), Vector3.Max(Vector3.Max(r.P0, r.P1), Vector3.Max(r.P2, r.P3))),
-        _ => throw new InvalidOperationException($"Unexpected collider {collider.GetType().Name}."),
-    };
-
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);
     private static Vector3 N(GeometryBundle m, int i) => new(m.Normal[3 * i], m.Normal[3 * i + 1], m.Normal[3 * i + 2]);
     private static void ClosedClockwise(PartGeometry geometry, string what)

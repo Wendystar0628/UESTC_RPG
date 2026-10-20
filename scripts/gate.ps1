@@ -1,10 +1,10 @@
-﻿# 门禁总入口：按工作包和改动选出要跑的门禁，依次执行并汇报通过、失败或未完成。
-# 产出：output/build/gates/、output/build/test-record.tsv、build/windows/（G7）
-# 用法：powershell scripts\gate.ps1 -Wp WP-xx [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <路径...>] [-BaseRef <基线>] [-Map qingshuihe] [-Frames 300]
-#   默认：G1、受影响模块的 G2 和 G4，再加受影响的启动、行走、存档核心专项（核心专项驱动正式生产舞台）
-#   -Plan 只读，只列出会跑什么；-Full 请求保留的 12 道门，没做完的门返回 NotImplemented
-#   -Full 可与 -Only 组合限定门禁；选中 G2 时跑全量（含 Slow）及 NativeRender
-#   退出码：0 请求范围内已实现的都通过；1 有失败；2 范围未完成
+# Gate entry point: select gates from the work package and changes, run them in order, and report passes, failures, or incomplete results.
+# Output: output/build/gates/, output/build/test-record.tsv, build/windows/ (G7)
+# Usage: powershell scripts\gate.ps1 -Wp WP-xx [-Only G1,G2,... [-Full] | -Smoke | -Full] [-Plan] [-Paths <paths...>] [-BaseRef <base-ref>] [-Map qingshuihe] [-Frames 300]
+#   Default: G1, G2 and G4 for affected modules, plus affected startup, walking, and save core checks (core checks drive the production stage).
+#   -Plan is read-only and lists planned gates; -Full requests all 12 retained gates, with unfinished gates returning NotImplemented.
+#   -Full can combine with -Only to limit gates; selecting G2 runs the full suite (including Slow) and NativeRender.
+#   Exit codes: 0 all implemented gates in the requested scope passed; 1 failures; 2 scope incomplete.
 [CmdletBinding()]
 param([Parameter(Mandatory)][ValidatePattern('^WP-\d{2}[a-z]?$')][string]$Wp,
     [string[]]$Only = @(), [switch]$Smoke, [switch]$Full,
@@ -244,6 +244,7 @@ if (-not ($Full -or $Smoke -or $Only.Count)) {
     })
 }
 $importRequired = $Full -or @($changes | Where-Object { $_ -match '^game/' -and $_ -notmatch '^game/(contracts|gen)/' -and $_ -notmatch '\.(md|txt|csproj|sln|props|lock\.json)$' }).Count -gt 0
+$textOnlyQuick = -not ($Full -or $Smoke -or $Only.Count) -and $changes.Count -gt 0 -and $runtimeChanges.Count -eq 0
 $selected = New-Object 'Collections.Generic.List[string]'
 $gateIds = @('G1','G2','G3','G4','G5','G6','G7','G10','G14','G15','G20','G21')
 if ($Only.Count) { foreach ($id in ($Only -join ',' -split ',')) { if ($id -cnotin $gateIds -and $id -cnotin @('G5Smoke','G15Core','G20Core')) { throw "Unknown gate: $id" }; if (-not $selected.Contains($id)) { $selected.Add($id) } } }
@@ -252,6 +253,7 @@ elseif ($Full) { foreach ($id in $gateIds) { $selected.Add($id) }; foreach ($id 
 elseif ($runtimeChanges.Count) {
     foreach ($id in @('G1','G2','G4')) { $selected.Add($id) }
 }
+elseif ($textOnlyQuick) { foreach ($id in @('G1','G2','G4')) { $selected.Add($id) } }
 # Only changed attributed source files trigger startup; old content covers removals.
 $mainStage = Get-UESTCMainStage $root
 $startupChanges = @()
@@ -275,8 +277,8 @@ $g2Selection = if ($selected.Contains('G2')) { @(Get-UESTCG2ProjectSelection $ro
 $planObject['G2Selection'] = $g2Selection
 $selectionIncomplete = @(
     if ($runtimeChanges.Count -and $selected.Count -eq 0) { 'Runtime changes selected no gates.' }
-    if ($selected.Contains('G2') -and -not @($g2Selection | Where-Object { $_.Selected -and $_.HasCompileFiles }).Count) {
-        'G2 selected no test projects for this scope.'
+    foreach ($selection in @($g2Selection | Where-Object { $_.Selected -and -not $_.HasCompileFiles })) {
+        "G2 selected project has no evaluated Compile items: $($selection.Project)"
     }
 )
 $planObject['SelectionStatus'] = if ($selectionIncomplete.Count) { 'Incomplete' } else { 'Ready' }
@@ -290,6 +292,7 @@ $null = [IO.Directory]::CreateDirectory($work)
 $results = New-Object 'Collections.Generic.List[object]'
 $utf8 = New-Object Text.UTF8Encoding $false
 $g2TrxPaths = New-Object 'Collections.Generic.List[string]'
+$sourcePreflight = $false
 if ($runtimeChanges.Count -and $selected.Count -eq 0) {
     $results.Add([pscustomobject]@{ Gate='Selection'; Status='Incomplete'; Scope=$scope; Detail='Runtime changes selected no gates.' })
 }
@@ -359,6 +362,12 @@ foreach ($id in $selected) {
     try {
         $detail = ''
         $status = 'Passed'
+        if ($id -in @('G1','G3','G4') -and -not $sourcePreflight) {
+            $null = Test-UESTCChangedText $root $changes $BaseRef
+            $null = Test-UESTCScriptSyntax $root
+            $null = Test-UESTCOwnershipRules $root
+            $sourcePreflight = $true
+        }
         switch ($id) {
             'G1' {
                 $naming = Test-UESTCSourceNaming $root
@@ -400,7 +409,10 @@ foreach ($id in $selected) {
                     if ($g2Tests.Count) { Add-UESTCTestRecord $testRecordPath $g2Tests }
                     Write-UESTCSlowTests $g2Tests
                 }
-                if ($runCount -eq 0) { $status = 'Incomplete' }
+                if (-not @($g2Selection | Where-Object { $_.Selected }).Count) {
+                    $status = 'NotRun'
+                    $notes += 'No applicable tests; not run'
+                } elseif ($runCount -eq 0) { $status = 'Incomplete' }
                 if ($Full) {
                     Write-UESTCCutCandidates $testRecordPath
                     $native = & (Join-Path $PSScriptRoot 'gates/native-render.ps1') -Root $root -BuildLease $gateLease

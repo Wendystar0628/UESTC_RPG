@@ -13,8 +13,6 @@ namespace Campus.Gen.Parts.Roof.Tests;
 [TestSuite]
 public sealed class MepPartsTests
 {
-    private const byte InteriorNoShadow = 1 | 8;
-
     /// <summary>Floor-standing variations that must stop the walker; everything else is mounted and visual only.</summary>
     private static bool FloorStanding(string id, int variation) => id switch
     {
