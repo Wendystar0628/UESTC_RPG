@@ -160,7 +160,7 @@ internal sealed class BuildingRoofMesher(BuildingPlan plan, LodLevel lod, Geomet
             if (plant && taken.Any(t => MathF.Abs(t.A - a) < t.HalfA + halfA + margin && MathF.Abs(t.B - bc) < t.HalfB + halfB + margin)) return false;
             Vector2 At(float da, float db) => axis * (a + da) + perp * (bc + db);
             var corners = new[] { At(-halfA, -halfB), At(halfA, -halfB), At(halfA, halfB), At(-halfA, halfB) };
-            if (PlanGeometry.SignedArea(corners) < 0) Array.Reverse(corners);
+            if (PlanRings.SignedArea(corners) < 0) Array.Reverse(corners);
             var ok = corners.Append(At(0f, 0f)).All(q =>
                 PlanRing.InsideFootprint(plan.Outer, plan.Holes, q) && PlanRing.DistanceToEdges(plan.Outer, plan.Holes, q) > margin);
             if (!ok) return false;

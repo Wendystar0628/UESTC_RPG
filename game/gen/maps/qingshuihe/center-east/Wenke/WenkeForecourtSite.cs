@@ -102,19 +102,19 @@ public sealed class WenkeForecourtSite : ZoneSite
         var forecourt = b.Includes(SiteRanges.Bounds(world.Feature(CenterEastIds.Wenke.ForecourtId), K.PavingKerb));
         var walking = b.Includes(SiteRanges.Bounds(world.Feature(CenterEastIds.Wenke.WalkId), K.PavingKerb));
         var g = forecourt ? b.Ground(door.P(mid.X, mid.Y)) : 0f;
-        if (forecourt) b.Add(PartGeometryKernel.BeveledBox(max.X - min.X, K.PavingTop + 0.1f, max.Y - min.Y, bevel, L.Paving), door.At(mid.X, g - 0.1f, mid.Y));
+        if (forecourt) b.Add(PartSolids.BeveledBox(max.X - min.X, K.PavingTop + 0.1f, max.Y - min.Y, bevel, L.Paving), door.At(mid.X, g - 0.1f, mid.Y));
         var (walk, walkLength, walkWidth) = Walk(world);
         var gw = walking ? b.Ground(walk.P(walkLength * 0.5f, 0)) : 0f;
-        if (walking) b.Add(PartGeometryKernel.BeveledBox(walkLength, K.PavingTop + 0.1f, walkWidth, bevel, L.Paving), walk.At(walkLength * 0.5f, gw - 0.1f, 0));
+        if (walking) b.Add(PartSolids.BeveledBox(walkLength, K.PavingTop + 0.1f, walkWidth, bevel, L.Paving), walk.At(walkLength * 0.5f, gw - 0.1f, 0));
         if (b.Detail == SiteDetail.Mass) return;
-        var kerb = PartGeometryKernel.BeveledRectangleProfile(K.PavingKerb, K.PavingTop + 0.12f, 0.015f);
-        if (forecourt) b.Add(PartGeometryKernel.Sweep(kerb, ForecourtRing(world), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.1f, 0));
+        var kerb = PartSweeps.BeveledRectangleProfile(K.PavingKerb, K.PavingTop + 0.12f, 0.015f);
+        if (forecourt) b.Add(PartSweeps.Sweep(kerb, ForecourtRing(world), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.1f, 0));
         // The walk's kerbs run along its two long sides only, so it opens into the forecourt and onto the road.
         foreach (var s in new[] { -1f, 1f }.Where(_ => walking))
         {
             var w = s * (walkWidth * 0.5f - K.PavingKerb * 0.5f);
             Vector2 a = walk.P(0.1f, w), e = walk.P(walkLength, w);
-            b.Add(PartGeometryKernel.Sweep(kerb, [a, e], L.Granite), Matrix4x4.CreateTranslation(0, gw - 0.1f, 0));
+            b.Add(PartSweeps.Sweep(kerb, [a, e], L.Granite), Matrix4x4.CreateTranslation(0, gw - 0.1f, 0));
         }
     }
 

@@ -84,12 +84,12 @@ public static class PocketGreens
         {
             var bearing = bench.From + (bench.To - bench.From) * f;
             var o = Angles.Heading(bearing);
-            Add(output, PartGeometryKernel.BeveledBox(B.PlinthLength, B.PlinthHeight, B.PlinthDepth, lod == LodLevel.L0 ? B.PlinthBevel : 0.01f, L.Granite),
+            Add(output, PartSolids.BeveledBox(B.PlinthLength, B.PlinthHeight, B.PlinthDepth, lod == LodLevel.L0 ? B.PlinthBevel : 0.01f, L.Granite),
                 new PlanFrame(bench.Centre + o * bench.Radius, new(o.Y, -o.X)).At(0, deck, 0));
             if (lod >= LodLevel.L2) continue;
-            Add(output, PartGeometryKernel.BeveledBox(B.CarrierLength, B.CarrierHeight, B.CarrierDepth, 0.005f, L.Steel),
+            Add(output, PartSolids.BeveledBox(B.CarrierLength, B.CarrierHeight, B.CarrierDepth, 0.005f, L.Steel),
                 new PlanFrame(bench.Centre + o * bench.Radius, new(o.Y, -o.X)).At(0, deck + B.PlinthHeight, 0));
-            Add(output, PartGeometryKernel.BeveledBox(B.PostSize, B.BackTop - B.SeatTop + B.SlatThickness, B.PostSize, 0.008f, L.Steel),
+            Add(output, PartSolids.BeveledBox(B.PostSize, B.BackTop - B.SeatTop + B.SlatThickness, B.PostSize, 0.008f, L.Steel),
                 new PlanFrame(bench.Centre + o * (bench.Radius + B.PostOffset), new(o.Y, -o.X)).At(0, deck + B.SeatTop - B.SlatThickness, 0));
         }
         var seatBase = deck + B.SeatTop - B.SlatThickness;
@@ -112,11 +112,11 @@ public static class PocketGreens
     {
         var segments = lod switch { LodLevel.L0 => K.SegmentsL0, LodLevel.L1 => K.SegmentsL1, _ => K.SegmentsL2 };
         var deck = ground(pit.Centre) + GroundLevels.Paving;
-        var kerb = PartGeometryKernel.BeveledRectangleProfile(K.KerbWidth, K.KerbHeight + 0.05f, lod == LodLevel.L0 ? K.KerbBevel : 0f);
+        var kerb = PartSweeps.BeveledRectangleProfile(K.KerbWidth, K.KerbHeight + 0.05f, lod == LodLevel.L0 ? K.KerbBevel : 0f);
         var ring = Shapes.Circle(pit.Centre, pit.Radius - K.KerbWidth * 0.5f, segments);
-        AddWorld(output, PartGeometryKernel.Sweep(kerb, ring, L.Granite, closed: true, baseY: deck - 0.05f));
+        AddWorld(output, PartSweeps.Sweep(kerb, ring, L.Granite, closed: true, baseY: deck - 0.05f));
         var soil = Shapes.Circle(pit.Centre, pit.Radius - K.KerbWidth + 0.01f, segments);
-        AddWorld(output, PartGeometryKernel.Extrude(new PolygonRings(soil), K.KerbHeight - K.SoilBelow + 0.05f, L.Soil, deck - 0.05f));
+        AddWorld(output, PartSolids.Extrude(new PolygonRings(soil), K.KerbHeight - K.SoilBelow + 0.05f, L.Soil, deck - 0.05f));
     }
 
     /// <summary>The paving level under a bench: WP-15's paving over the highest ground under the arc.</summary>
@@ -164,7 +164,7 @@ public static class PocketGreens
     // ---- Writers ----
 
     private static void Sweep(ICollection<GeometryBundle> output, float width, float height, float bevel, ToonSpec material, Vector2[] path, float baseY) =>
-        AddWorld(output, PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(width, height, bevel), path, material, closed: false, baseY: baseY));
+        AddWorld(output, PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(width, height, bevel), path, material, closed: false, baseY: baseY));
 
     private static void AddWorld(ICollection<GeometryBundle> output, PartGeometry geometry)
     {

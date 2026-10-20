@@ -25,8 +25,8 @@ public sealed record WaterBody(
     public bool Contains(Vector2 p)
     {
         if (p.X < Min.X || p.X > Max.X || p.Y < Min.Y || p.Y > Max.Y) return false;
-        var inside = PlanGeometry.InsideByCrossings(Rings.Outer, p);
-        foreach (var hole in Rings.Holes) inside ^= PlanGeometry.InsideByCrossings(hole, p);
+        var inside = PlanRings.InsideByCrossings(Rings.Outer, p);
+        foreach (var hole in Rings.Holes) inside ^= PlanRings.InsideByCrossings(hole, p);
         return inside;
     }
 }
@@ -88,13 +88,13 @@ public static class WaterCatalog
     private static PolygonRings? Clean(PolygonRings rings)
     {
         if (rings.Outer.Any(point => !VectorMath.Finite(point))) return null;
-        var outer = PlanGeometry.DeduplicateRing(rings.Outer);
+        var outer = PlanRings.DeduplicateRing(rings.Outer);
         if (outer.Length < 3) return null;
         var holes = new List<IReadOnlyList<Vector2>>();
         foreach (var hole in rings.Holes)
         {
             if (hole.Any(point => !VectorMath.Finite(point))) continue;
-            var points = PlanGeometry.DeduplicateRing(hole);
+            var points = PlanRings.DeduplicateRing(hole);
             if (points.Length >= 3) holes.Add(points);
         }
         return new(outer, holes.AsReadOnly());
@@ -102,8 +102,8 @@ public static class WaterCatalog
 
     public static float Area(PolygonRings rings)
     {
-        var area = MathF.Abs((float)PlanGeometry.SignedArea(rings.Outer));
-        foreach (var hole in rings.Holes) area -= MathF.Abs((float)PlanGeometry.SignedArea(hole));
+        var area = MathF.Abs((float)PlanRings.SignedArea(rings.Outer));
+        foreach (var hole in rings.Holes) area -= MathF.Abs((float)PlanRings.SignedArea(hole));
         return area;
     }
 

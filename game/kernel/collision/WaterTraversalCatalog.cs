@@ -27,7 +27,7 @@ internal sealed class WaterTraversalCatalog
     public static bool Contains(IReadOnlyList<PolygonRings> polygons, Vector2 point)
     {
         for (int i = 0; i < polygons.Count; i++)
-            if (PlanGeometry.Contains(polygons[i], point)) return true;
+            if (PlanRings.Contains(polygons[i], point)) return true;
         return false;
     }
 
@@ -35,8 +35,8 @@ internal sealed class WaterTraversalCatalog
     {
         var values = WorldFeatureGeometry.PolygonsOf(geometry);
         if (values.Count == 0) throw new JsonException("A swim area needs a nonempty polygon.");
-        var result = values.Select(polygon => new PolygonRings(PlanGeometry.OpenRing(polygon.Outer),
-            polygon.Holes.Select(ring => PlanGeometry.OpenRing(ring, false)).ToArray())).ToArray();
+        var result = values.Select(polygon => new PolygonRings(PlanRings.OpenRing(polygon.Outer),
+            polygon.Holes.Select(ring => PlanRings.OpenRing(ring, false)).ToArray())).ToArray();
         return result;
     }
 }

@@ -37,15 +37,15 @@ public static class TerraceEdge
         // Kernel sweeps take (lateral, up) sections; positive lateral is the upper side.
         var bodyTop = planted ? topY - PlantedBed : topY;
         var body = Profiles.Rect(-Width * 0.5f, Width * 0.5f, 0, bodyTop - lowY + Below, lod == LodLevel.L0 ? S.SlabBevel : 0);
-        mesh.Add(PartGeometryKernel.Sweep(body, line, S.Stone, baseY: lowY - Below), Frame.Identity);
+        mesh.Add(PartSweeps.Sweep(body, line, S.Stone, baseY: lowY - Below), Frame.Identity);
         if (lod <= LodLevel.L2)
         {
             var coping = Profiles.Rect(-Width * 0.5f - CopingOverhang, -Width * 0.5f + CopingWidth, -CopingThickness - (planted ? S.Joint : 0), S.Joint, bevel);
-            mesh.Add(PartGeometryKernel.Sweep(coping, line, S.Trim, baseY: topY), Frame.Identity);
+            mesh.Add(PartSweeps.Sweep(coping, line, S.Trim, baseY: topY), Frame.Identity);
             if (planted)
             {
                 var soil = Profiles.Rect(-Width * 0.5f + CopingWidth - S.Joint, Width * 0.5f, -PlantedBed - S.Joint, -PlantedSoilDrop, 0);
-                mesh.Add(PartGeometryKernel.Sweep(soil, line, S.Soil, baseY: topY), Frame.Identity);
+                mesh.Add(PartSweeps.Sweep(soil, line, S.Soil, baseY: topY), Frame.Identity);
             }
         }
         return mesh.Finish(Bounds(line, lowY, topY));

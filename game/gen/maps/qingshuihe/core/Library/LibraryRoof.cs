@@ -33,8 +33,8 @@ public static class LibraryRoof
         return new(plan.Centre.X + MathF.Cos(a) * radius, y, plan.Centre.Y + MathF.Sin(a) * radius);
     }
 
-    public static float SkylightBaseY(LibraryPlan plan) => plan.RoofY + S.SkylightCurb;
-    public static float SkylightApexY(LibraryPlan plan) => SkylightBaseY(plan) + plan.SkylightRadius * S.SkylightRiseRatio;
+    public static float SkylightBaseY(LibraryPlan plan) => plan.RoofY + LibraryStyle.SkylightCurb;
+    public static float SkylightApexY(LibraryPlan plan) => SkylightBaseY(plan) + plan.SkylightRadius * LibraryStyle.SkylightRiseRatio;
 
     /// <summary>
     /// Curb, glass facets, ribs, grid and hub. Steel goes to <paramref name="steel"/> (its own instance, fog-exempt with
@@ -46,9 +46,9 @@ public static class LibraryRoof
         var y0 = SkylightBaseY(plan);
         var apex = new Vector3(plan.Centre.X, SkylightApexY(plan), plan.Centre.Y);
         Curb(plan, shared, lod);
-        var metal = S.Metal(S.SkylightSteel);
-        var rows = S.SkylightRows(lod);
-        var hub = S.SkylightRingRadius / r;
+        var metal = S.Metal(LibraryStyle.SkylightSteel);
+        var rows = LibraryStyle.SkylightRows(lod);
+        var hub = LibraryStyle.SkylightRingRadius / r;
         for (var k = 0; k < 8; k++)
         {
             var a = Vertex(plan, k, r, y0);
@@ -60,8 +60,8 @@ public static class LibraryRoof
             var prev = Vertex(plan, (k + 7) % 8, r, y0);
             var np = VectorMath.Unit(Vector3.Cross(a - prev, apex - prev), Vector3.UnitY, 1e-8);
             if (np.Y < 0) np = -np;
-            Beam(steel, metal, a, Vector3.Lerp(a, apex, 1f - hub), VectorMath.Unit(n + np, Vector3.UnitY, 1e-8), S.RibWidth, S.RibDepth);
-            Beam(steel, metal, a, b, n, S.EdgeBeam, S.RibDepth * 0.8f);
+            Beam(steel, metal, a, Vector3.Lerp(a, apex, 1f - hub), VectorMath.Unit(n + np, Vector3.UnitY, 1e-8), LibraryStyle.RibWidth, LibraryStyle.RibDepth);
+            Beam(steel, metal, a, b, n, LibraryStyle.EdgeBeam, LibraryStyle.RibDepth * 0.8f);
             if (rows < 2) continue;
             // Triangular grid: G(j, i) is point i of row j, row 0 on the base, rows − j + 1 points per row. Bars on the
             // base and on the two seams are the edge beam and the ribs, so they are skipped here.
@@ -75,23 +75,23 @@ public static class LibraryRoof
             for (var j = 0; j < rows; j++)
                 for (var i = 0; i < rows - j; i++)
                 {
-                    if (j > 0) Beam(steel, metal, G(j, i), G(j, i + 1), n, S.GridBar, S.GridDepth);
-                    if (i > 0) Beam(steel, metal, G(j, i), G(j + 1, i), n, S.GridBar, S.GridDepth);
-                    if (i < rows - j - 1) Beam(steel, metal, G(j, i + 1), G(j + 1, i), n, S.GridBar, S.GridDepth);
+                    if (j > 0) Beam(steel, metal, G(j, i), G(j, i + 1), n, LibraryStyle.GridBar, LibraryStyle.GridDepth);
+                    if (i > 0) Beam(steel, metal, G(j, i), G(j + 1, i), n, LibraryStyle.GridBar, LibraryStyle.GridDepth);
+                    if (i < rows - j - 1) Beam(steel, metal, G(j, i + 1), G(j + 1, i), n, LibraryStyle.GridBar, LibraryStyle.GridDepth);
                 }
         }
         // Central hub ring the ribs run into (小八角环).
         var hubTop = apex.Y + 0.28f;
         var ring = new Vector2[8];
-        for (var k = 0; k < 8; k++) { var v = Vertex(plan, k, S.SkylightRingRadius, 0); ring[k] = new(v.X, v.Z); }
-        Prism(steel, metal, ring, apex.Y - S.SkylightRingRadius * S.SkylightRiseRatio - 0.05f, hubTop);
+        for (var k = 0; k < 8; k++) { var v = Vertex(plan, k, LibraryStyle.SkylightRingRadius, 0); ring[k] = new(v.X, v.Z); }
+        Prism(steel, metal, ring, apex.Y - LibraryStyle.SkylightRingRadius * LibraryStyle.SkylightRiseRatio - 0.05f, hubTop);
     }
 
     /// <summary>The octagonal stone curb the glass sits on: outer and inner faces and the top.</summary>
     private static void Curb(LibraryPlan plan, GeometrySink mesh, LodLevel lod)
     {
-        var trim = S.Trim(S.LibraryTrim);
-        float r0 = plan.SkylightRadius, r1 = r0 + S.SkylightCurbWidth / MathF.Cos(MathF.Tau / 16f);
+        var trim = S.Trim(LibraryStyle.LibraryTrim);
+        float r0 = plan.SkylightRadius, r1 = r0 + LibraryStyle.SkylightCurbWidth / MathF.Cos(MathF.Tau / 16f);
         float y0 = plan.RoofY - (lod == LodLevel.L0 ? 0.02f : 0f), y1 = SkylightBaseY(plan);
         for (var k = 0; k < 8; k++)
         {
@@ -138,7 +138,7 @@ public static class LibraryRoof
     // ------------------------------------------------------------------ ring roof
 
     /// <summary>Radial distance of the curved roofs' inner end and the mechanical box's inner face from the centre.</summary>
-    public static float RingStart(LibraryPlan plan) => plan.SkylightRadius + S.SkylightCurbWidth + 1.6f;
+    public static float RingStart(LibraryPlan plan) => plan.SkylightRadius + LibraryStyle.SkylightCurbWidth + 1.6f;
 
     /// <summary>
     /// Light grey curved metal roofs (浅灰弧形金属小坡顶) on the face axes, alternating with the flat dark roof between them;
@@ -147,25 +147,25 @@ public static class LibraryRoof
     public static void Vaults(LibraryPlan plan, GeometrySink mesh, LodLevel lod)
     {
         var north = NorthFace(plan);
-        var sheet = S.Sheet(S.LibraryVault);
-        var spec = S.Spec(CoreMaterial.Sheet, S.LibraryVault);
+        var sheet = S.Sheet(LibraryStyle.LibraryVault);
+        var spec = S.Spec(CoreMaterial.Sheet, LibraryStyle.LibraryVault);
         var segments = lod switch { LodLevel.L0 => 12, LodLevel.L1 => 8, _ => 4 };
-        var half = S.VaultWidth * 0.5f;
-        var profile = new List<Vector2> { new(-half, 0), new(half, 0), new(half, S.VaultCurb) };
+        var half = LibraryStyle.VaultWidth * 0.5f;
+        var profile = new List<Vector2> { new(-half, 0), new(half, 0), new(half, LibraryStyle.VaultCurb) };
         for (var i = 1; i < segments; i++)
         {
             var t = MathF.Tau * 0.5f * i / segments;
-            profile.Add(new(MathF.Cos(t) * half, S.VaultCurb + MathF.Sin(t) * S.VaultRise));
+            profile.Add(new(MathF.Cos(t) * half, LibraryStyle.VaultCurb + MathF.Sin(t) * LibraryStyle.VaultRise));
         }
-        profile.Add(new(-half, S.VaultCurb));
+        profile.Add(new(-half, LibraryStyle.VaultCurb));
         var section = new SweepProfile(profile);
         var start = RingStart(plan);
         for (var k = 0; k < 8; k++)
         {
             if (k == north) continue;
             var u = FaceDirection(plan, k);
-            var path = new[] { plan.Centre + u * start, plan.Centre + u * (start + S.VaultLength) };
-            mesh.Add(sheet, PartGeometryKernel.Sweep(section, path, spec, false, plan.RoofY - 0.02f), Matrix4x4.Identity);
+            var path = new[] { plan.Centre + u * start, plan.Centre + u * (start + LibraryStyle.VaultLength) };
+            mesh.Add(sheet, PartSweeps.Sweep(section, path, spec, false, plan.RoofY - 0.02f), Matrix4x4.Identity);
         }
     }
 
@@ -176,20 +176,20 @@ public static class LibraryRoof
     public static void Plant(LibraryPlan plan, CoreBuild build)
     {
         var north = NorthFace(plan);
-        float hl = S.PlantLength * 0.5f, hd = S.PlantDepth * 0.5f;
+        float hl = LibraryStyle.PlantLength * 0.5f, hd = LibraryStyle.PlantDepth * 0.5f;
         foreach (var side in new[] { -1.5f, 1.5f })
         {
             var a = plan.FaceAngle + (north + side) * (MathF.Tau / 8f);
             var u = new Vector2(MathF.Cos(a), MathF.Sin(a));
             var t = new Vector2(-u.Y, u.X);
-            var c = plan.Centre + u * S.PlantRadius;
+            var c = plan.Centre + u * LibraryStyle.PlantRadius;
             Vector2[] corners = [c - t * hl - u * hd, c + t * hl - u * hd, c + t * hl + u * hd, c - t * hl + u * hd];
             for (var k = 0; k < 4; k++)
             {
                 Vector2 p = corners[k], q = corners[(k + 1) % 4];
                 var mid = (p + q) * 0.5f;
                 var along = Vector2.Normalize(q - p);
-                var fence = new RailingParams(Vector2.Distance(p, q), S.PlantFence, 0.06f, 1.2f) { Variation = k == 0 ? 1 : 0 };
+                var fence = new RailingParams(Vector2.Distance(p, q), LibraryStyle.PlantFence, 0.06f, 1.2f) { Variation = k == 0 ? 1 : 0 };
                 build.Parts.Add(new PlacedPart(new PartId(PartCatalog.EquipmentFence), fence,
                     CoreShapes.Frame(new(mid.X, plan.RoofY, mid.Y), Vector3.UnitY, new(-along.Y, 0, along.X))));
             }
@@ -207,14 +207,14 @@ public static class LibraryRoof
     {
         var u = FaceDirection(plan, NorthFace(plan));
         var t = new Vector2(-u.Y, u.X);
-        var c = plan.Centre + u * (RingStart(plan) + S.MechDepth * 0.5f);
-        float hl = S.MechLength * 0.5f, hd = S.MechDepth * 0.5f;
+        var c = plan.Centre + u * (RingStart(plan) + LibraryStyle.MechDepth * 0.5f);
+        float hl = LibraryStyle.MechLength * 0.5f, hd = LibraryStyle.MechDepth * 0.5f;
         return
         [
-            new Face(c + u * hd - t * hl, t, u, S.MechLength),
-            new Face(c - u * hd + t * hl, -t, -u, S.MechLength),
-            new Face(c + t * hl + u * hd, -u, t, S.MechDepth),
-            new Face(c - t * hl - u * hd, u, -t, S.MechDepth),
+            new Face(c + u * hd - t * hl, t, u, LibraryStyle.MechLength),
+            new Face(c - u * hd + t * hl, -t, -u, LibraryStyle.MechLength),
+            new Face(c + t * hl + u * hd, -u, t, LibraryStyle.MechDepth),
+            new Face(c - t * hl - u * hd, u, -t, LibraryStyle.MechDepth),
         ];
     }
 
@@ -223,12 +223,12 @@ public static class LibraryRoof
     {
         var faces = MechFaces(plan);
         foreach (var f in faces.Take(2))
-            foreach (var row in new[] { S.MechRow0, S.MechRow1 })
-                for (var i = 0; i < S.MechWindows; i++)
+            foreach (var row in new[] { LibraryStyle.MechRow0, LibraryStyle.MechRow1 })
+                for (var i = 0; i < LibraryStyle.MechWindows; i++)
                 {
-                    var pitch = (S.MechLength - 1.6f) / S.MechWindows;
+                    var pitch = (LibraryStyle.MechLength - 1.6f) / LibraryStyle.MechWindows;
                     var u = 0.8f + pitch * (i + 0.5f);
-                    yield return (f, new Rect(u - S.MechWindow * 0.5f, u + S.MechWindow * 0.5f, plan.RoofY + row, plan.RoofY + row + S.MechWindow * 0.9f));
+                    yield return (f, new Rect(u - LibraryStyle.MechWindow * 0.5f, u + LibraryStyle.MechWindow * 0.5f, plan.RoofY + row, plan.RoofY + row + LibraryStyle.MechWindow * 0.9f));
                 }
     }
 }

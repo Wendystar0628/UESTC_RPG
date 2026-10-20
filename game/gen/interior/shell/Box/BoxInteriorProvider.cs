@@ -94,7 +94,7 @@ public class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurab
                     Wall(cursor,length,floor.FloorY,floor.FloorY+floor.Height);
                     void Wall(float from,float to,float bottom,float top)
                     {
-                        if(to-from<=PlanGeometry.Tolerance || top-bottom<=PlanGeometry.Tolerance) return;
+                        if(to-from<=QuantizedPlan.Tolerance || top-bottom<=QuantizedPlan.Tolerance) return;
                         sink.Wall(a+direction*from,a+direction*to,bottom,top,0.24f,material);
                     }
                 }

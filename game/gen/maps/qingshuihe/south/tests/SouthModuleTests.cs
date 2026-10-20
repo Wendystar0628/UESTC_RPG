@@ -73,7 +73,7 @@ public sealed class SouthModuleTests
             AssertThat(gallery.OccupiedContours.Single().Holes.Count == 1).OverrideFailureMessage("the gallery keeps its open centre").IsTrue();
             var stand = traces.Single(t => t.Feature == new FeatureId(Sports.GrandstandSite.Feature));
             var centre = Sports.GrandstandSite.PlanOf(ctx.World).Centre;
-            AssertThat(stand.OccupiedContours.All(r => !PlanGeometry.InsideByCrossings(r.Outer, centre))).OverrideFailureMessage("stand segments leave the track and the C opening unfilled").IsTrue();
+            AssertThat(stand.OccupiedContours.All(r => !PlanRings.InsideByCrossings(r.Outer, centre))).OverrideFailureMessage("stand segments leave the track and the C opening unfilled").IsTrue();
             AssertThat(traces.Single(t => t.Feature == new FeatureId(Sports.GrandstandSite.LowSeats)).SourceId.EndsWith("/east-seats", StringComparison.Ordinal)).OverrideFailureMessage("east seats use their own real feature").IsTrue();
             var connector = traces.Single(t => t.Feature == new FeatureId(Liren.LirenSite.Connector));
             var connectorPlan = Liren.LirenSite.Rings(ctx.World);

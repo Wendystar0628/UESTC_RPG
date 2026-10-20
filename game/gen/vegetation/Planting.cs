@@ -181,7 +181,7 @@ public static class Planting
                     var offset = neighbour is null ? edge.Group.Offset : Gap(edge, neighbour, onEdge) * 0.5f;
                     var point = onEdge + edge.Normal * offset;
                     if (AtGate(edge, point) || neighbour is not null && AtGate(neighbour, point)) continue;
-                    if (!PlanGeometry.Contains(world.Boundary, point) || occupied.Any(p => Vector2.Distance(p, point) < SameTree)) continue;
+                    if (!PlanRings.Contains(world.Boundary, point) || occupied.Any(p => Vector2.Distance(p, point) < SameTree)) continue;
                     var key = edge.Group.Feature.Id.Value + SportWallKey + edge.Index.ToString(CultureInfo.InvariantCulture) + ":" + index.ToString(CultureInfo.InvariantCulture);
                     occupied.Add(point);
                     yield return (edge.Group.Feature.Id, key, point);

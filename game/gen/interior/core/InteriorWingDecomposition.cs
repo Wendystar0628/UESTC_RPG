@@ -20,10 +20,10 @@ public static class InteriorWingDecomposition
             if(ring.Length==4)
             {
                 for(var i=0;i<4;i++)
-                    if(PlanGeometry.CrossFloat(ring[(i+1)%4]-ring[i],ring[(i+2)%4]-ring[(i+1)%4])<=0) return null;
+                    if(PlanRings.CrossFloat(ring[(i+1)%4]-ring[i],ring[(i+2)%4]-ring[(i+1)%4])<=0) return null;
                 return [new(ring)];
             }
-            var reflex=Enumerable.Range(0,ring.Length).Where(i=>PlanGeometry.CrossFloat(ring[(i+1)%ring.Length]-ring[i],ring[(i+2)%ring.Length]-ring[(i+1)%ring.Length])<0)
+            var reflex=Enumerable.Range(0,ring.Length).Where(i=>PlanRings.CrossFloat(ring[(i+1)%ring.Length]-ring[i],ring[(i+2)%ring.Length]-ring[(i+1)%ring.Length])<0)
                 .Select(i=>(i+1)%ring.Length).ToHashSet();
             var diagonals=(from a in Enumerable.Range(0,ring.Length)
                 from b in Enumerable.Range(a+1,ring.Length-a-1)
@@ -40,8 +40,8 @@ public static class InteriorWingDecomposition
             }
             return null;
         }
-        var result=Divide(PlanGeometry.CanonicalRing(footprint.Outer,true));
+        var result=Divide(QuantizedPlan.CanonicalRing(footprint.Outer,true));
         if(result is null) throw new InvalidDataException($"Interior '{source}' cannot split into convex quadrilateral wings; correct the world footprint.");
-        return result.Select(w=>new PolygonRings(PlanGeometry.CanonicalRing(w.Outer,true))).OrderBy(w=>w.Outer.Min(p=>p.X)).ThenBy(w=>w.Outer.Min(p=>p.Y)).ToArray();
+        return result.Select(w=>new PolygonRings(QuantizedPlan.CanonicalRing(w.Outer,true))).OrderBy(w=>w.Outer.Min(p=>p.X)).ThenBy(w=>w.Outer.Min(p=>p.Y)).ToArray();
     }
 }

@@ -20,13 +20,13 @@ public static class TrainingRoof
             var tp = q - arc[Math.Max(0, i - 1)]; var tq = arc[Math.Min(arc.Count - 1, i + 2)] - p;
             var np = VectorMath.Unit(new Vector2(-tp.Y, tp.X)); var nq = VectorMath.Unit(new Vector2(-tq.Y, tq.X));
             var glazing = MathF.Abs((p.X + q.X) * 0.5f) <= S.SkylightWidth * 0.5f;
-            b.Add(PartGeometryKernel.Sweep(new(strip, [-np, -nq, nq, np]), path, glazing ? S.Glass : S.Silver, baseY: S.Spring));
+            b.Add(PartSweeps.Sweep(new(strip, [-np, -nq, nq, np]), path, glazing ? S.Glass : S.Silver, baseY: S.Spring));
         }
         // End bows are closed glazed extrusions above the annex roof, with silver vertical ribs.
         var bow = arc.Reverse().Select(p => new Vector2(p.X, p.Y + S.Spring)).ToArray();
         foreach (var x in new[] { -length * 0.5f, length * 0.5f })
         {
-            b.Add(PartGeometryKernel.Sweep(new(bow), [new(x - S.Rail, 0), new(x + S.Rail, 0)], S.Glass));
+            b.Add(PartSweeps.Sweep(new(bow), [new(x - S.Rail, 0), new(x + S.Rail, 0)], S.Glass));
             if (!fine) continue;
             for (var i = 1; i + 1 < arc.Count; i += 2)
                 b.AddColumn(x, S.Spring, S.Spring + arc[i].Y, -arc[i].X, S.Rail, 6, S.Silver, VertexFlag.NoShadow);

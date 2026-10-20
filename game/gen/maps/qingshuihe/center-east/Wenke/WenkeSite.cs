@@ -102,7 +102,7 @@ public sealed class WenkeSite : ZoneSite
         // Clipped (set-back) outlines first, then the rounding, which keeps sharp the corners where another block meets.
         var clipped = K.Blocks.Select((b, i) => Enumerable.Range(0, counts[i]).Select(k =>
         {
-            var ring = PlanGeometry.CleanRing(Ring(b.Part), minEdge: 0.05f, collinearTolerance: 1e-4f) ?? throw new InvalidOperationException("Building part has no contour.");
+            var ring = PlanRings.CleanRing(Ring(b.Part), minEdge: 0.05f, collinearTolerance: 1e-4f) ?? throw new InvalidOperationException("Building part has no contour.");
             foreach (var s in setbacks)
                 if (s.Text("part") == b.Part && k >= s.Number("from")) ring = Contour.Clip(ring, s.Pair("at"), s.Pair("toward"), s.Number("keep"));
             return ring;
@@ -147,13 +147,13 @@ public sealed class WenkeSite : ZoneSite
     private static CellKind Kind(string part, int k, Vector2[] path, Vector2[][] others, Vector2 panelStrip)
     {
         var (mid, outward) = Contour.Middle(path);
-        if (others.Any(o => PlanGeometry.InsideByCrossings(o, mid + outward * 0.8f))) return CellKind.Hidden;
+        if (others.Any(o => PlanRings.InsideByCrossings(o, mid + outward * 0.8f))) return CellKind.Hidden;
         if (part == CenterEastIds.Wenke.Tower && k >= K.PanelStripFrom && Vector2.Distance(mid, panelStrip) <= K.PanelStripHalf) return CellKind.Panel;
         return CellKind.Window;
     }
 
     private static bool Near(IReadOnlyList<Vector2> ring, Vector2 p, float distance) =>
-        PlanGeometry.DistanceToRing(p, ring) < distance;
+        PlanRings.DistanceToRing(p, ring) < distance;
 
     // ---- Window grids (contract-29): one per block, columns = the most cells any storey has, rows = storeys ----
 
@@ -182,7 +182,7 @@ public sealed class WenkeSite : ZoneSite
             {
                 Vector2 a = cell.Path[0], b = cell.Path[^1];
                 var mid = (a + b) * 0.5f;
-                var outward = PlanGeometry.RightUnitNormal(a, b);
+                var outward = PlanOffsets.RightUnitNormal(a, b);
                 yield return new(cell.Column, cell.Row, new(mid.X, y + GlassBottom(cell.Row), mid.Y), new(outward.X, 0, outward.Y),
                     Vector2.Distance(a, b), GlassTop(cell.Row) - GlassBottom(cell.Row));
             }
@@ -215,28 +215,28 @@ public sealed class WenkeSite : ZoneSite
             var outline = block.Outlines[k];
             // The band at floor k runs over the storey below (it is that storey's roof edge and this storey's sill).
             if (k == 0)
-                b.Add(Contour.Slab(PlanGeometry.MitreOffset(outline, K.BandOut, closed: true, limit: 2.5f), y - 0.1f, y + K.Plinth, L.DarkGranite, chamfer), Matrix4x4.Identity);
+                b.Add(Contour.Slab(PlanOffsets.MitreOffset(outline, K.BandOut, closed: true, limit: 2.5f), y - 0.1f, y + K.Plinth, L.DarkGranite, chamfer), Matrix4x4.Identity);
             else
             {
                 var below = block.Outlines[k - 1];
-                b.Add(Contour.Slab(PlanGeometry.MitreOffset(below, K.BandOut, closed: true, limit: 2.5f), y + Floor(k) - K.SlabBelow, y + Floor(k) + K.Upstand, L.Wall, chamfer), Matrix4x4.Identity);
+                b.Add(Contour.Slab(PlanOffsets.MitreOffset(below, K.BandOut, closed: true, limit: 2.5f), y + Floor(k) - K.SlabBelow, y + Floor(k) + K.Upstand, L.Wall, chamfer), Matrix4x4.Identity);
                 if (Terraces(plan, block, k).Any())
                 {
-                    b.Add(Contour.Slab(PlanGeometry.MitreOffset(below, K.BandOut - K.TerraceRim, closed: true, limit: 2.5f), y + Floor(k) + K.Upstand, y + Floor(k) + K.Upstand + K.TerraceSoil, L.Bed), Matrix4x4.Identity);
+                    b.Add(Contour.Slab(PlanOffsets.MitreOffset(below, K.BandOut - K.TerraceRim, closed: true, limit: 2.5f), y + Floor(k) + K.Upstand, y + Floor(k) + K.Upstand + K.TerraceSoil, L.Bed), Matrix4x4.Identity);
                     if (detail != SiteDetail.Mass) Rails(b, plan, block, k, y);
                 }
             }
             Glass(b, block, k, y, allocation);
             // A dark core just inside the glass line, so the seams where blocks meet never show through the shell.
-            b.Add(Contour.Slab(PlanGeometry.MitreOffset(outline, -K.CoreInset, closed: true, limit: 2.5f), y + GlassBottom(k) - 0.05f, y + GlassTop(k) + 0.05f, L.DarkFrame, 0f, caps: false), Matrix4x4.Identity);
+            b.Add(Contour.Slab(PlanOffsets.MitreOffset(outline, -K.CoreInset, closed: true, limit: 2.5f), y + GlassBottom(k) - 0.05f, y + GlassTop(k) + 0.05f, L.DarkFrame, 0f, caps: false), Matrix4x4.Identity);
         }
         // Roof: the top band, a parapet ring on it, and the roof inside (planted on the podium, slab on the tower).
-        var top = PlanGeometry.MitreOffset(block.Outlines[n - 1], K.BandOut, closed: true, limit: 2.5f);
+        var top = PlanOffsets.MitreOffset(block.Outlines[n - 1], K.BandOut, closed: true, limit: 2.5f);
         var roof = y + Floor(n);
         b.Add(Contour.Slab(top, roof - K.SlabBelow, roof + K.RoofBand, L.Wall, chamfer), Matrix4x4.Identity);
         if (b.Lod is not (LodLevel.L3 or LodLevel.L4))
             b.Add(Contour.Wall(top, K.ParapetThickness, roof + K.RoofBand, roof + K.Parapet, L.Wall), Matrix4x4.Identity);
-        var inside = PlanGeometry.MitreOffset(block.Outlines[n - 1], K.BandOut - K.ParapetThickness - 0.02f, closed: true, limit: 2.5f);
+        var inside = PlanOffsets.MitreOffset(block.Outlines[n - 1], K.BandOut - K.ParapetThickness - 0.02f, closed: true, limit: 2.5f);
         b.Add(Contour.Slab(inside, roof + K.RoofBand, roof + K.RoofBand + K.TerraceSoil, block.Part == CenterEastIds.Wenke.Tower ? L.RoofSlab : L.Bed), Matrix4x4.Identity);
     }
 
@@ -250,7 +250,7 @@ public sealed class WenkeSite : ZoneSite
             if (cell.Kind == CellKind.Hidden) continue;
             var (mid, outward) = Contour.Middle(cell.Path);
             var inside = mid - outward * 1.2f;
-            if (!PlanGeometry.InsideByCrossings(above, inside) && !others.Any(o => PlanGeometry.InsideByCrossings(o, inside))) yield return cell;
+            if (!PlanRings.InsideByCrossings(above, inside) && !others.Any(o => PlanRings.InsideByCrossings(o, inside))) yield return cell;
         }
     }
 
@@ -261,7 +261,7 @@ public sealed class WenkeSite : ZoneSite
         foreach (var cell in Terraces(plan, block, k))
         {
             Vector2 a = cell.Path[0], e = cell.Path[^1];
-            var outward = PlanGeometry.RightUnitNormal(a, e);
+            var outward = PlanOffsets.RightUnitNormal(a, e);
             var shift = outward * (K.BandOut - 0.15f);
             var length = Vector2.Distance(a, e);
             if (length < 0.3f) continue;
@@ -287,7 +287,7 @@ public sealed class WenkeSite : ZoneSite
                         Vector2 p = cell.Path[i], q = cell.Path[i + 1];
                         var length = Vector2.Distance(p, q);
                         if (length < 0.02f) continue;
-                        b.Add(PartGeometryKernel.BeveledBox(length, h, 0.14f, 0, L.YellowGreen), PlanFrame.Toward(p, q).At(length * 0.5f, y0, 0.05f));
+                        b.Add(PartSolids.BeveledBox(length, h, 0.14f, 0, L.YellowGreen), PlanFrame.Toward(p, q).At(length * 0.5f, y0, 0.05f));
                     }
                     break;
                 case CellKind.Window:
@@ -297,7 +297,7 @@ public sealed class WenkeSite : ZoneSite
                         var length = Vector2.Distance(p, q);
                         if (length < 0.02f) continue;
                         var mid = (p + q) * 0.5f;
-                        var outward = PlanGeometry.RightUnitNormal(p, q);
+                        var outward = PlanOffsets.RightUnitNormal(p, q);
                         var at = OpeningPlacement.Frame(new(mid.X, y0, mid.Y), new(outward.X, 0, outward.Y));
                         if (allocation is { } numbers)
                         {
@@ -320,7 +320,7 @@ public sealed class WenkeSite : ZoneSite
             var path = cells[c].Path;
             var direction = path[^1] - path[0];
             if (direction.LengthSquared() < 1e-6f) continue;
-            b.Add(PartGeometryKernel.BeveledBox(K.MullionWidth, h, K.MullionDepth, 0, L.DarkFrame), PlanFrame.Along(path[0], direction).At(0, y0, 0));
+            b.Add(PartSolids.BeveledBox(K.MullionWidth, h, K.MullionDepth, 0, L.DarkFrame), PlanFrame.Along(path[0], direction).At(0, y0, 0));
         }
 
         static bool Built(Cell c) => c.Kind is CellKind.Window or CellKind.Panel;
@@ -409,8 +409,8 @@ public sealed class WenkeSite : ZoneSite
         var f = atrium.Frame;
         var floor = AtriumBase(y);
         var segments = b.Detail switch { SiteDetail.Full => 64, SiteDetail.Plain => 40, _ => 24 };
-        var curb = PartGeometryKernel.BeveledRectangleProfile(0.5f, K.AtriumCurb, b.Detail == SiteDetail.Full ? 0.04f : 0f);
-        b.Add(PartGeometryKernel.Sweep(curb, Ellipse(atrium, 1f, segments), L.Wall, closed: true), Matrix4x4.CreateTranslation(0, floor, 0));
+        var curb = PartSweeps.BeveledRectangleProfile(0.5f, K.AtriumCurb, b.Detail == SiteDetail.Full ? 0.04f : 0f);
+        b.Add(PartSweeps.Sweep(curb, Ellipse(atrium, 1f, segments), L.Wall, closed: true), Matrix4x4.CreateTranslation(0, floor, 0));
         var spring = floor + K.AtriumCurb;
         b.Add(Solids.Lathe(VaultProfile, segments, ZoneLooks.Glass, atrium.Half.X, atrium.Half.Y), f.At(0, spring, 0));
         if (b.Detail == SiteDetail.Mass) return;
@@ -431,9 +431,9 @@ public sealed class WenkeSite : ZoneSite
             }
         }
         if (b.Detail != SiteDetail.Full) return;
-        var bar = PartGeometryKernel.BeveledRectangleProfile(K.AtriumRib, K.AtriumRib, 0);
+        var bar = PartSweeps.BeveledRectangleProfile(K.AtriumRib, K.AtriumRib, 0);
         foreach (var k in new[] { 2, 4 })
-            b.Add(PartGeometryKernel.Sweep(bar, Ellipse(atrium, profile[k].X + 0.004f, segments), L.Metal, closed: true), Matrix4x4.CreateTranslation(0, spring + profile[k].Y, 0));
+            b.Add(PartSweeps.Sweep(bar, Ellipse(atrium, profile[k].X + 0.004f, segments), L.Metal, closed: true), Matrix4x4.CreateTranslation(0, spring + profile[k].Y, 0));
     }
 
     /// <summary>A square bar between two world points.</summary>
@@ -442,7 +442,7 @@ public sealed class WenkeSite : ZoneSite
         var axis = to - from;
         var length = axis.Length();
         if (length < 0.01f) return;
-        b.Add(PartGeometryKernel.BeveledBox(size, length, size, 0, material), Along(from, axis / length));
+        b.Add(PartSolids.BeveledBox(size, length, size, 0, material), Along(from, axis / length));
     }
 
     /// <summary>Rigid placement whose local Y runs along a unit direction from a point.</summary>
@@ -460,14 +460,14 @@ public sealed class WenkeSite : ZoneSite
     {
         var roof = y + Floor(tower.Storeys) + K.RoofBand + K.TerraceSoil;
         var ring = tower.Outlines[^1];
-        var centre = PlanGeometry.Centroid(ring);
+        var centre = PlanPolygons.Centroid(ring);
         // The penthouse runs along the tower's south face, the plant fenced on its north side.
         // Local +Z of this frame points north, away from the south face and its yellow-green strip.
         var f = PlanFrame.Along(centre, new(-0.932f, -0.362f));
         var size = K.PenthouseSize;
         var bevel = b.Detail == SiteDetail.Full ? 0.04f : 0f;
-        b.Add(PartGeometryKernel.BeveledBox(size.X, size.Y, size.Z, bevel, L.Wall), f.At(0, roof - 0.05f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(size.X + 0.4f, 0.2f, size.Z + 0.4f, bevel * 0.5f, L.LightTrim), f.At(0, roof + size.Y - 0.05f, 0));
+        b.Add(PartSolids.BeveledBox(size.X, size.Y, size.Z, bevel, L.Wall), f.At(0, roof - 0.05f, 0));
+        b.Add(PartSolids.BeveledBox(size.X + 0.4f, 0.2f, size.Z + 0.4f, bevel * 0.5f, L.LightTrim), f.At(0, roof + size.Y - 0.05f, 0));
         if (b.Detail == SiteDetail.Mass) return;
         b.Place(PartCatalog.DoorFire, new DoorParams(1.0f, 2.1f, 0.12f), f.AtReversed(-size.X * 0.3f, roof, size.Z * 0.5f));
         var plant = f.Shift(0, size.Z * 0.5f + 1.2f + K.PlantSize.Y * 0.5f);
@@ -493,7 +493,7 @@ public sealed class WenkeSite : ZoneSite
             foreach (var cell in block.Rows[0].Where(cell => cell.Kind != CellKind.Hidden))
             {
                 Vector2 a = cell.Path[0], e = cell.Path[^1];
-                var shift = PlanGeometry.RightUnitNormal(a, e) * (K.BandOut * 0.5f);
+                var shift = PlanOffsets.RightUnitNormal(a, e) * (K.BandOut * 0.5f);
                 c.Wall(a + shift, e + shift, K.BandOut * 0.5f + 0.1f, y, top, SurfaceTag.Wall, FootMat.Glass);
             }
         }

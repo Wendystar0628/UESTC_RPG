@@ -20,8 +20,8 @@ public sealed class CoveredWalkSite : ZoneSite
         var record = world.Feature(NorthFeatureIds.CoveredWalk);
         var line = Route(record);
         var half = record.Number("width") * .5f;
-        return [SiteRanges.Bounds(PlanGeometry.MitreOffset(line, half, false)
-            .Concat(PlanGeometry.MitreOffset(line, -half, false)).Concat(line), record.Number("post") * MathF.Sqrt(2))];
+        return [SiteRanges.Bounds(PlanOffsets.MitreOffset(line, half, false)
+            .Concat(PlanOffsets.MitreOffset(line, -half, false)).Concat(line), record.Number("post") * MathF.Sqrt(2))];
     }
 
     private static IReadOnlyList<Vector2> Route(WorldFeature record)
@@ -57,8 +57,8 @@ public sealed class CoveredWalkSite : ZoneSite
         var steel = ZoneLooks.S(record.Text("steel"));
         var top = ZoneLooks.S(record.Text("roof"));
         var pitch = record.Number("postPitch");
-        var right = PlanGeometry.MitreOffset(line, width * .5f, false);
-        var left = PlanGeometry.MitreOffset(line, -width * .5f, false);
+        var right = PlanOffsets.MitreOffset(line, width * .5f, false);
+        var left = PlanOffsets.MitreOffset(line, -width * .5f, false);
         for (var i = 0; i + 1 < line.Count; i++)
         {
             if (!b.Includes(SiteRanges.Bounds([left[i], left[i + 1], right[i], right[i + 1]], post))) continue;
@@ -68,7 +68,7 @@ public sealed class CoveredWalkSite : ZoneSite
             var ya = b.Ground(a) + clear; var yz = b.Ground(z) + clear;
             var gradient = (z - a) * ((yz - ya) / (length * length));
             var offset = ya - Vector2.Dot(gradient, a);
-            var prism = PartGeometryKernel.Extrude(new([left[i], left[i + 1], right[i + 1], right[i]]), roof.Height, top);
+            var prism = PartSolids.Extrude(new([left[i], left[i + 1], right[i + 1], right[i]]), roof.Height, top);
             b.Add(ArchedCanopy.WithGrade(prism, gradient, offset), Matrix4x4.Identity);
             var lens = ZoneLooks.S(StreetStyle.Diffuser, line: LineClass.None) with { Emissive = new("lamp.first") };
             var half = length * .5f;
@@ -76,7 +76,7 @@ public sealed class CoveredWalkSite : ZoneSite
             {
                 Vector2[] strip = [new(-half, ya - CirculationStyle.TopRailHeight), new(half, yz - CirculationStyle.TopRailHeight),
                     new(half, yz), new(-half, ya)];
-                b.Add(PartGeometryKernel.WallPanel(new(strip), CirculationStyle.TopRailHeight, lens),
+                b.Add(PartSolids.WallPanel(new(strip), CirculationStyle.TopRailHeight, lens),
                     frame.At(0, 0, side * (width - CirculationStyle.TopRailHeight) * .5f));
             }
         }

@@ -92,7 +92,7 @@ public sealed class LibraryPlan
     public float StoreyY(int k)
     {
         var y = FloorY;
-        for (var i = 0; i < k; i++) y += i < S.LibraryStoreys.Length ? S.LibraryStoreys[i] : S.LibraryStoreys[^1];
+        for (var i = 0; i < k; i++) y += i < LibraryStyle.LibraryStoreys.Length ? LibraryStyle.LibraryStoreys[i] : LibraryStyle.LibraryStoreys[^1];
         return y;
     }
 
@@ -100,16 +100,16 @@ public sealed class LibraryPlan
 
     /// <summary>The front tower's face above the 2F terrace, toward the plaza: the glass slot and the front door are on it.</summary>
     public WallPiece? EntranceFace { get; }
-    public float TerraceY => StoreyY(S.LibraryStoreys.Length - 1);
-    public float RoofY => StoreyY(S.LibraryStoreys.Length);
-    public float SkylightRadius => S.SkylightAcross * 0.5f / MathF.Cos(MathF.Tau / 16f);
+    public float TerraceY => StoreyY(LibraryStyle.LibraryStoreys.Length - 1);
+    public float RoofY => StoreyY(LibraryStyle.LibraryStoreys.Length);
+    public float SkylightRadius => LibraryStyle.SkylightAcross * 0.5f / MathF.Cos(MathF.Tau / 16f);
 
     public static LibraryPlan? From(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
         if (!world.Features.TryGetValue(CoreIds.Library, out var library) || library.Parts.Count == 0) return null;
         var parts = library.Parts.GroupBy(p => p.SourceId, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.SelectMany(p => WorldFeatureGeometry.PolygonsOf(WorldFeatureGeometry.FacadeGeometryOf(p))).Select(r => PlanGeometry.OpenRing(r.Outer)).ToArray(), StringComparer.Ordinal);
+            .ToDictionary(g => g.Key, g => g.SelectMany(p => WorldFeatureGeometry.PolygonsOf(WorldFeatureGeometry.FacadeGeometryOf(p))).Select(r => PlanRings.OpenRing(r.Outer)).ToArray(), StringComparer.Ordinal);
         if (!parts.TryGetValue(CoreIds.LibraryCore, out var cores) || cores.Length != 1) return null;
         var padY = world.Terrain.PadY(CoreIds.Library);
         var floor = padY + FacadeRules.FloorAbovePad;
@@ -117,18 +117,18 @@ public sealed class LibraryPlan
         float Storey(int k)
         {
             var y = floor;
-            for (var i = 0; i < k; i++) y += i < S.LibraryStoreys.Length ? S.LibraryStoreys[i] : S.LibraryStoreys[^1];
+            for (var i = 0; i < k; i++) y += i < LibraryStyle.LibraryStoreys.Length ? LibraryStyle.LibraryStoreys[i] : LibraryStyle.LibraryStoreys[^1];
             return y;
         }
-        float second = Storey(1), terrace = Storey(S.LibraryStoreys.Length - 1), roof = Storey(S.LibraryStoreys.Length);
+        float second = Storey(1), terrace = Storey(LibraryStyle.LibraryStoreys.Length - 1), roof = Storey(LibraryStyle.LibraryStoreys.Length);
 
         var blocks = new List<Block> { new(CoreIds.LibraryCore, BlockKind.Core, cores[0], wallBase, roof) };
         foreach (var (source, kind, top) in new[]
         {
-            (CoreIds.LibraryTowerNe, BlockKind.Tower, roof + S.TowerRise),
-            (CoreIds.LibraryTowerSe, BlockKind.FrontTower, Storey(S.FrontTowerStoreys)),
-            (CoreIds.LibraryTowerNw, BlockKind.Tower, roof + S.TowerRise),
-            (CoreIds.LibraryTowerSw, BlockKind.Tower, roof + S.TowerRise),
+            (CoreIds.LibraryTowerNe, BlockKind.Tower, roof + LibraryStyle.TowerRise),
+            (CoreIds.LibraryTowerSe, BlockKind.FrontTower, Storey(LibraryStyle.FrontTowerStoreys)),
+            (CoreIds.LibraryTowerNw, BlockKind.Tower, roof + LibraryStyle.TowerRise),
+            (CoreIds.LibraryTowerSw, BlockKind.Tower, roof + LibraryStyle.TowerRise),
             (CoreIds.LibraryPodium, BlockKind.Podium, second),
         })
             if (parts.TryGetValue(source, out var rings))
@@ -138,12 +138,12 @@ public sealed class LibraryPlan
             foreach (var wing in wings)
             {
                 var contour = setbacks.Single(arc => wing.Contains(arc[0]) && wing.Contains(arc[^1]));
-                var setback = SetBack(wing, contour, S.TopSetback);
+                var setback = SetBack(wing, contour, LibraryStyle.TopSetback);
                 blocks.Add(new(CoreIds.LibraryWings, BlockKind.Wing, wing, wallBase, setback is null ? roof : terrace));
                 if (setback is not null) blocks.Add(new(CoreIds.LibraryWings, BlockKind.Setback, setback, terrace, roof));
             }
 
-        var centre = PlanGeometry.Centroid([cores[0]]);
+        var centre = PlanPolygons.Centroid([cores[0]]);
         var landing = new List<(Vector2, Vector2)>();
         if (world.Features.TryGetValue(CoreIds.LibraryStair, out var stair))
             foreach (var podium in blocks.Where(b => b.Kind == BlockKind.Podium))
@@ -262,7 +262,7 @@ public sealed class LibraryPlan
             return null;
         try { _ = PolygonTriangulator.Triangulate(new PolygonRings(result)); }
         catch (ArgumentException) { return null; }
-        return PlanGeometry.OpenRing(result);
+        return PlanRings.OpenRing(result);
     }
 
     // ------------------------------------------------------------------ helpers
@@ -277,11 +277,11 @@ public sealed class LibraryPlan
         float length = Vector2.Distance(a, b), other = Vector2.Distance(c, e);
         if (length < Tolerance || other < Tolerance) return null;
         Vector2 d = (b - a) / length, d2 = (e - c) / other;
-        if (MathF.Abs(PlanGeometry.CrossFloat(d, d2)) > 0.05f) return null;
+        if (MathF.Abs(PlanRings.CrossFloat(d, d2)) > 0.05f) return null;
         float tc = Vector2.Dot(c - a, d), te = Vector2.Dot(e - a, d);
         float lo = MathF.Max(0f, MathF.Min(tc, te)), hi = MathF.Min(length, MathF.Max(tc, te));
         if (hi - lo < Tolerance) return null;
-        if (MathF.Abs(PlanGeometry.CrossFloat(d2, a + d * lo - c)) > Tolerance || MathF.Abs(PlanGeometry.CrossFloat(d2, a + d * hi - c)) > Tolerance) return null;
+        if (MathF.Abs(PlanRings.CrossFloat(d2, a + d * lo - c)) > Tolerance || MathF.Abs(PlanRings.CrossFloat(d2, a + d * hi - c)) > Tolerance) return null;
         return (lo, hi);
     }
 

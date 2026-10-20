@@ -48,9 +48,9 @@ public sealed class AoContractTests
         var wall = new PolygonRings(outer, [hole]);
         (PartGeometry Geometry, Vector3 CapNormal)[] examples =
         [
-            (PartGeometryKernel.WallPanel(4, 3, 0.4f, [hole], Material), Vector3.UnitZ),
-            (PartGeometryKernel.WallPanel(wall, 0.4f, Material), Vector3.UnitZ),
-            (PartGeometryKernel.Extrude(wall, 2, Material), Vector3.UnitY),
+            (PartSolids.WallPanel(4, 3, 0.4f, [hole], Material), Vector3.UnitZ),
+            (PartSolids.WallPanel(wall, 0.4f, Material), Vector3.UnitZ),
+            (PartSolids.Extrude(wall, 2, Material), Vector3.UnitY),
         ];
         foreach (var (geometry, capNormal) in examples)
         {
@@ -93,11 +93,11 @@ public sealed class AoContractTests
         var examples = PartGallery.CreateExamples().ToList();
         Vector2[] outer = [new(-2, -2), new(2, -2), new(2, 2), new(-2, 2)];
         Vector2[] hole = [new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)];
-        examples.Add(new("box-without-bevel", "", PartGeometryKernel.BeveledBox(2, 3, 4, 0, Material)));
-        examples.Add(new("wall-without-opening", "", PartGeometryKernel.WallPanel(4, 3, 0.4f, [], Material)));
-        examples.Add(new("courtyard-extrusion", "", PartGeometryKernel.Extrude(new(outer, [hole]), 4, Material)));
-        examples.Add(new("closed-sweep", "", PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(0.4f, 0.3f, 0.04f), outer, Material, closed: true)));
-        examples.Add(new("sweep-without-bevel", "", PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(0.4f, 0.3f, 0), [new(0, 0), new(3, 0)], Material)));
+        examples.Add(new("box-without-bevel", "", PartSolids.BeveledBox(2, 3, 4, 0, Material)));
+        examples.Add(new("wall-without-opening", "", PartSolids.WallPanel(4, 3, 0.4f, [], Material)));
+        examples.Add(new("courtyard-extrusion", "", PartSolids.Extrude(new(outer, [hole]), 4, Material)));
+        examples.Add(new("closed-sweep", "", PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(0.4f, 0.3f, 0.04f), outer, Material, closed: true)));
+        examples.Add(new("sweep-without-bevel", "", PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(0.4f, 0.3f, 0), [new(0, 0), new(3, 0)], Material)));
         return examples;
     }
 

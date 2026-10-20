@@ -7,13 +7,13 @@ namespace Campus.Gen.Parts.Core;
 /// <summary>Counterclockwise section in (lateral, up) metres. Optional vertex normals interpolate across chamfer bands.</summary>
 public sealed record SweepProfile(IReadOnlyList<Vector2> Points, IReadOnlyList<Vector2>? Normals = null);
 
-public static partial class PartGeometryKernel
+public static class PartSweeps
 {
     /// <summary>Closed rectangular section with a single chamfer at each corner and flat principal-face normals.</summary>
     public static SweepProfile BeveledRectangleProfile(float width, float height, float bevel)
     {
         GeometryMath.Positive(width, nameof(width)); GeometryMath.Positive(height, nameof(height));
-        ValidateBevel(bevel, Math.Min(width, height) * 0.5f);
+        PartSolids.ValidateBevel(bevel, Math.Min(width, height) * 0.5f);
         var x = width * 0.5f;
         return bevel == 0
             ? new([new(-x, 0), new(x, 0), new(x, height), new(-x, height)])
@@ -75,7 +75,7 @@ public static partial class PartGeometryKernel
                 var j = (i + 1) % profile.Points.Count; var a = profile.Points[i]; var b = profile.Points[j];
                 if (VectorMath.Dot(Vector3.Subtract(Position(next, a), Position(s, a)), tangents[s]) <= 0)
                     throw new ArgumentException("A sweep segment is too short for the section and adjacent miters.", nameof(path));
-                var edge = PlanGeometry.RightUnitNormal(a, b); var n0 = profile.Normals?[i] ?? edge; var n1 = profile.Normals?[j] ?? edge;
+                var edge = PlanOffsets.RightUnitNormal(a, b); var n0 = profile.Normals?[i] ?? edge; var n1 = profile.Normals?[j] ?? edge;
                 Vector3 Normal(Vector2 n) => new(rights[s].X * n.X, n.Y, rights[s].Z * n.X);
                 var height = (float)Math.Sqrt(((double)b.X - a.X) * (b.X - a.X) + ((double)b.Y - a.Y) * (b.Y - a.Y));
                 writer.Quad(writer.Vertex(Position(s, a), Normal(n0), new(distance, 0)), writer.Vertex(Position(s, b), Normal(n1), new(distance, height)),

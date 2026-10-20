@@ -46,7 +46,7 @@ public sealed class ResearchSteleSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var bevel = b.Detail == SiteDetail.Mass ? 0f : M.SteleBevel;
-        var stone = PartGeometryKernel.BeveledExtrude(M.SteleOutline, M.SteleThickness, bevel, L.WhiteStone, -M.SteleThickness * 0.5f);
+        var stone = PartSolids.BeveledExtrude(M.SteleOutline, M.SteleThickness, bevel, L.WhiteStone, -M.SteleThickness * 0.5f);
         b.Add(stone, SlabAt(b.Context.World, b.Ground(Frame(b.Context.World).Origin) - M.SteleSunk));
     }
 

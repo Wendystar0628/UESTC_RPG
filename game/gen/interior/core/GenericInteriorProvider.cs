@@ -72,7 +72,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
             for(var ea=0;ea<4;ea++) for(var eb=0;eb<4;eb++)
             {
                 var x=wings[a].Footprint.Outer;var y=wings[b].Footprint.Outer;
-                if(Vector2.Distance(x[ea],y[(eb+1)%4])<=PlanGeometry.Tolerance && Vector2.Distance(x[(ea+1)%4],y[eb])<=PlanGeometry.Tolerance)
+                if(Vector2.Distance(x[ea],y[(eb+1)%4])<=QuantizedPlan.Tolerance && Vector2.Distance(x[(ea+1)%4],y[eb])<=QuantizedPlan.Tolerance)
                     joins.Add(new(a,ea,b,eb,x[ea],x[(ea+1)%4]));
             }
         return joins;
@@ -104,7 +104,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
             foreach(var wing in new[]{wings[join.A],wings[join.B]})
             {
                 int edge=wing.Index==join.A?join.EdgeA:join.EdgeB;
-                var a=wing.Footprint.Outer[edge];var b=wing.Footprint.Outer[(edge+1)%4];var direction=PlanGeometry.Unit(b-a);
+                var a=wing.Footprint.Outer[edge];var b=wing.Footprint.Outer[(edge+1)%4];var direction=QuantizedPlan.Unit(b-a);
                 var inward=new Vector2(-direction.Y,direction.X);var centre=(a+b)*0.5f;
                 foreach(var floor in wings[join.A].OpenFloors.Intersect(wings[join.B].OpenFloors).Order())
                 {
@@ -135,7 +135,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
             foreach(var entrance in assignments[wing.Index])
             {
                 var point=new Vector2(entrance.Center.X,entrance.Center.Z);
-                var bay=grid.Bays.Where(b=>PlanGeometry.OnSegment(point,b.A,b.B)).OrderBy(b=>Vector2.DistanceSquared(b.Center,point)).FirstOrDefault();
+                var bay=grid.Bays.Where(b=>QuantizedPlan.OnSegment(point,b.A,b.B)).OrderBy(b=>Vector2.DistanceSquared(b.Center,point)).FirstOrDefault();
                 if(bay is null) throw new InvalidDataException($"Entrance '{entrance.Id}' is outside its wing facade grid.");
                 if(bay.Edge!=frame.Edge && bay.Edge!=(frame.Edge+2)%4) continue;
                 var row=grid.Bays.Where(b=>b.Edge==bay.Edge).OrderBy(b=>frame.U(b.Center)).ToArray();
@@ -144,7 +144,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
                 int floor=wing.Storeys.OrderBy(s=>MathF.Abs(s.FloorY-entrance.Center.Y)).First().Index;
                 rooms[(floor,bay.Index)]=new(floor,bay.Index,"public.entrance",true,ZoneKind.Lobby);
             }
-            var seals=remainingSeals.Where(s=>PlanGeometry.Contains(wing.Footprint,s.A)&&PlanGeometry.Contains(wing.Footprint,s.B)).ToArray();
+            var seals=remainingSeals.Where(s=>PlanRings.Contains(wing.Footprint,s.A)&&PlanRings.Contains(wing.Footprint,s.B)).ToArray();
             foreach(var seal in seals) remainingSeals.Remove(seal);
             plans.Add(InteriorPlanGenerator.Generate(new(feature,wing.Id,context.WorldSeed,wing.Footprint,
                 wing.Storeys.Where(s=>wing.OpenFloors.Contains(s.Index)).ToArray(),assignments[wing.Index],rooms.Values.ToArray(),seals)
@@ -196,7 +196,7 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
         {var node=new NavNode(new(StableHash.Hash32(context.WorldSeed,feature.Value,key)),at,new(feature,checked((short)floor)),key);nodes.Add(node);return node;}
         void Link(NavNode a,NavNode b,NavEdgeKind kind,float width)=>edges.Add(new(a.Id,b.Id,kind,Vector3.Distance(a.P,b.P),width,b.P.Y-a.P.Y,NavFlags.Indoor,"interior.plan"));
         foreach(var zone in building.Layout.Zones.Where(z=>z.Open&&z.Storey==storey).OrderBy(z=>z.Id))
-        {var p=PlanGeometry.Centroid(zone.Ring);var level=building.Plans.Single(plan=>plan.Zones.Any(item=>item.Id==zone.Id)).Storeys.Single(level=>level.Index==storey);zones.Add(zone.Id,Node("zone/"+zone.Id,storey,new(p.X,level.FloorY,p.Y)));}
+        {var p=PlanPolygons.Centroid(zone.Ring);var level=building.Plans.Single(plan=>plan.Zones.Any(item=>item.Id==zone.Id)).Storeys.Single(level=>level.Index==storey);zones.Add(zone.Id,Node("zone/"+zone.Id,storey,new(p.X,level.FloorY,p.Y)));}
         foreach(var portal in building.Layout.Portals.Where(p=>p.Storey==storey&&p.Kind==PortalKind.Door))
         {
             if(!zones.TryGetValue(portal.ZoneA,out var a)||!zones.TryGetValue(portal.ZoneB,out var b)) continue;

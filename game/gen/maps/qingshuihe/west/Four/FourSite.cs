@@ -114,9 +114,9 @@ public sealed class FourSite : ZoneSite
     {
         var (y0, y1) = SeatSpan(line, b.Ground);
         var bevel = b.Detail == SiteDetail.Full ? 0.05f : 0.02f;
-        b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(F.SeatWidth, y1 - F.SeatCap - y0, bevel), line, L.Granite, baseY: y0), Matrix4x4.Identity);
+        b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(F.SeatWidth, y1 - F.SeatCap - y0, bevel), line, L.Granite, baseY: y0), Matrix4x4.Identity);
         if (b.Detail == SiteDetail.Mass) return;
-        b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(F.SeatWidth + 0.08f, F.SeatCap, 0.025f), line, L.WhiteFrame, baseY: y1 - F.SeatCap), Matrix4x4.Identity);
+        b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(F.SeatWidth + 0.08f, F.SeatCap, 0.025f), line, L.WhiteFrame, baseY: y1 - F.SeatCap), Matrix4x4.Identity);
     }
 
     /// <summary>Foot (a little under the lowest ground along the line) and the flat top, SeatHeight over the highest ground.</summary>

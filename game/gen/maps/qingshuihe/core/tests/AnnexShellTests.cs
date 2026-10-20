@@ -61,11 +61,11 @@ public sealed class AnnexShellTests
     {
         var world = Campus.Tests.RealMapFixture.Load().World;
         var garden = CoreSite.Pieces(world).OfType<QuietGarden>().Single();
-        var area = MathF.Abs((float)PlanGeometry.SignedArea(garden.Ring));
+        var area = MathF.Abs((float)PlanRings.SignedArea(garden.Ring));
         Console.WriteLine($"court: {garden.Ring.Count} corners, {area:F1} m², pavilion ({garden.Pavilion.X:F2}, {garden.Pavilion.Y:F2}), planters " +
             string.Join(", ", garden.Planters.Select(p => $"({p.X:F2}, {p.Y:F2})")));
         AssertThat(garden.Colonnade is not null).OverrideFailureMessage("the colonnade stands along the library wall").IsTrue();
-        foreach (var p in garden.Planters.Append(garden.Pavilion)) AssertThat(PlanGeometry.InsideByCrossings(garden.Ring, p)).OverrideFailureMessage("pavilion and planters stand in the court").IsTrue();
+        foreach (var p in garden.Planters.Append(garden.Pavilion)) AssertThat(PlanRings.InsideByCrossings(garden.Ring, p)).OverrideFailureMessage("pavilion and planters stand in the court").IsTrue();
         foreach (var lod in Levels)
         {
             var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };

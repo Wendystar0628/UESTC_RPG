@@ -9,7 +9,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core;
 /// The blocks speak the library's language: the same beige stone, the same floor lines (storey table), plinth band,
 /// string courses, parapet coping and reveals, so they read as one building with it.
 /// </summary>
-public static partial class CoreStyle
+public static class AnnexStyle
 {
     // ---- Storeys: the library's own height table, so every floor line and string course runs on from the ring. The data's
     //      heights (3.5 m a storey, 14 m for 8403) are 4 m lower than this table, so heights are not read from it (D-239);

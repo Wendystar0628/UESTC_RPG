@@ -70,7 +70,7 @@ public sealed class CanalRailSite : ZoneSite
             var base0 = end ? y[k - 1] : MathF.Min(y[k - 1], y[k]);
             b.Box(L.LightSteel, at, u, size, size, base0 - 0.02f, base0 + B.Height - 0.01f);
             if (end && b.Detail == SiteDetail.Full)
-                b.Add(PartGeometryKernel.BeveledBox(size + 0.04f, 0.04f, size + 0.04f, 0.008f, L.LightSteel), PlanFrame.Along(at, u).At(0, base0 + B.Height, 0));
+                b.Add(PartSolids.BeveledBox(size + 0.04f, 0.04f, size + 0.04f, 0.008f, L.LightSteel), PlanFrame.Along(at, u).At(0, base0 + B.Height, 0));
         }
         if (b.Detail == SiteDetail.Mass) return;
         var pitch = b.Detail == SiteDetail.Full ? B.BarPitch : B.BarPitch * 3;

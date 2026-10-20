@@ -32,7 +32,7 @@ public sealed class InteriorGeometry
 
     public void Floor(PolygonRings plan, float top, float thickness, ToonSpec material, FootMat foot)
     {
-        if (Draw) Parts.Add(PartGeometryKernel.Extrude(plan, thickness, material, top - thickness), Matrix4x4.Identity);
+        if (Draw) Parts.Add(PartSolids.Extrude(plan, thickness, material, top - thickness), Matrix4x4.Identity);
         Collision.Floor(plan, top, thickness, foot);
     }
 

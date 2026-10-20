@@ -18,10 +18,10 @@ internal static class SixConnections
     {
         var top = y + S.BaseHeight;
         var plan = new PolygonRings(ring);
-        b.Add(PartGeometryKernel.Extrude(plan, top - S.LinkFascia - y + 0.1f, b.Lod is LodLevel.L3 or LodLevel.L4 ? L.DarkGrey : L.Glass, y - 0.1f), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.Extrude(plan, S.LinkFascia, L.Stone, top - S.LinkFascia), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(plan, top - S.LinkFascia - y + 0.1f, b.Lod is LodLevel.L3 or LodLevel.L4 ? L.DarkGrey : L.Glass, y - 0.1f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(plan, S.LinkFascia, L.Stone, top - S.LinkFascia), Matrix4x4.Identity);
         if (b.Detail == SiteDetail.Mass) return;
-        b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(0.5f, 0.16f, 0.03f), PlanMath.OutsideRight(ring), L.Trim, closed: true, baseY: top), Matrix4x4.Identity);
+        b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(0.5f, 0.16f, 0.03f), PlanMath.OutsideRight(ring), L.Trim, closed: true, baseY: top), Matrix4x4.Identity);
         if (b.Detail != SiteDetail.Full) return;
         foreach (var (e, _, _) in GridFacade.Edges(ring))
         {
@@ -38,8 +38,8 @@ internal static class SixConnections
         var plan = new PolygonRings(ring);
         float deck = y + S.LinkDeck, roof = y + S.BaseHeight;
         var bevel = b.Detail == SiteDetail.Full ? 0.04f : 0f;
-        b.Add(PartGeometryKernel.Extrude(plan, 0.7f, L.Trim, deck - 0.7f), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.Extrude(plan, 0.55f, L.Trim, roof - 0.55f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(plan, 0.7f, L.Trim, deck - 0.7f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(plan, 0.55f, L.Trim, roof - 0.55f), Matrix4x4.Identity);
         foreach (var (e, _, _) in GridFacade.Edges(ring))
         {
             var f = e.Frame;
@@ -75,7 +75,7 @@ internal static class SixConnections
 
     internal static IEnumerable<(Vector2 From, Vector2 To)> Bridges(IWorldModel world)
     {
-        var centre = PlanGeometry.Centroid(Plan(world, S.EntityC, S.LinkBC).Outer);
+        var centre = PlanPolygons.Centroid(Plan(world, S.EntityC, S.LinkBC).Outer);
         var direction = new Vector2(-S.Axis.Y, S.Axis.X);
         foreach (var (start, end) in WestIds.SixBridges)
         {

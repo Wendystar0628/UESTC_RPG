@@ -168,7 +168,7 @@ public static class Understorey
                 if (IntegerNoise.High24(StableHash.Hash32(site.Seed, "border-run", runKey)) >= rule.Share) continue;
                 var hedge = IntegerNoise.High24(StableHash.Hash32(site.Seed, "border-hedge", runKey)) < rule.HedgeShare;
                 var c = p + inward * rule.Inset;
-                if (!PlanGeometry.Contains(parcel.Rings, c) || !Facing(site, c, rule.Reach) || !Clear(site, trunks, c, TrunkGap)) continue;
+                if (!PlanRings.Contains(parcel.Rings, c) || !Facing(site, c, rule.Reach) || !Clear(site, trunks, c, TrunkGap)) continue;
                 var key = "border:" + parcelKey + ":" + index.ToString(CultureInfo.InvariantCulture);
                 var (variant, h) = Pick(site.Seed, key);
                 if (hedge)
@@ -202,7 +202,7 @@ public static class Understorey
 
     /// <summary>Off pavement and roads, clear of buildings, water, courts and car parks, of trunks, on a gentle grade, inside the boundary.</summary>
     private static bool Clear(PlantingSite site, TrunkGrid trunks, Vector2 p, float trunkGap) =>
-        PlanGeometry.Contains(site.World.Boundary, p) && !site.InPit(p) && !site.IsPaved(p, PaveClearance) && !site.OnRoad(p, PaveClearance) &&
+        PlanRings.Contains(site.World.Boundary, p) && !site.InPit(p) && !site.IsPaved(p, PaveClearance) && !site.OnRoad(p, PaveClearance) &&
         !site.Blocked(p, BlockClearance) && !trunks.Near(p, trunkGap) && site.World.Terrain.FactsAt(p.X, p.Y).Grade <= MaxGrade;
 
     private static void Add(PlantingSite site, List<GroundPlant> plants, string key, SpeciesInfo info, int variant, Vector2 p, float lift,
@@ -249,7 +249,7 @@ public static class Understorey
     {
         var ring = parcel.Rings.Outer;
         // Counter-clockwise rings (positive signed area) have the interior on the left of the direction of travel.
-        var left = PlanGeometry.SignedArea(ring) > 0;
+        var left = PlanRings.SignedArea(ring) > 0;
         var length = PlanLines.Length(ring, closed: true);
         for (var station = step * 0.5f; station <= length; station += step)
         {

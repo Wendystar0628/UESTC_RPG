@@ -58,7 +58,7 @@ public sealed class PublicModuleTests
                 var kind = f.Kind.Value;
                 if ((kind is "building" or "water" or "parking" or "sport" or "road") && (f.Geometry is PolygonGeometry or MultiPolygonGeometry))
                     foreach (var ring in f.Polygons().Select(p => p.Outer))
-                        AssertThat(PlanGeometry.DistanceToRing(c, ring) - r > 0.2f && !PlanGeometry.PointInRing(c, ring)).OverrideFailureMessage($"{bench.Id.Value} pad overlaps {f.Id.Value} ({kind})").IsTrue();
+                        AssertThat(PlanRings.DistanceToRing(c, ring) - r > 0.2f && !PlanRings.PointInRing(c, ring)).OverrideFailureMessage($"{bench.Id.Value} pad overlaps {f.Id.Value} ({kind})").IsTrue();
                 if (f.Id.Value.StartsWith("design:", StringComparison.Ordinal) && f.Geometry is PointGeometry p)
                     AssertThat(Vector2.Distance(c, new(p.Position.X, p.Position.Z)) > r + 1f).OverrideFailureMessage($"{bench.Id.Value} pad sits on {f.Id.Value}").IsTrue();
             }
@@ -157,7 +157,7 @@ public sealed class PublicModuleTests
     private static (Vector2 Centre, float Radius) Disc(WorldFeature pad)
     {
         var ring = ((PolygonGeometry)pad.Geometry).Rings.Outer;
-        var c = PlanGeometry.Centroid(ring);
+        var c = PlanPolygons.Centroid(ring);
         return (c, ring.Min(p => Vector2.Distance(p, c)));
     }
 

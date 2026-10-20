@@ -52,7 +52,7 @@ internal static class SportTreeWalls
             if (count < 3) continue;
             var gateEdge = Enumerable.Range(0, count).MinBy(i =>
                 PlanLines.Project(new[] { ring[i], ring[(i + 1) % count] }, group.Gate).Distance);
-            var winding = PlanGeometry.SignedArea(ring) > 0 ? 1f : -1f;
+            var winding = PlanRings.SignedArea(ring) > 0 ? 1f : -1f;
             for (var i = 0; i < count; i++)
             {
                 var delta = ring[(i + 1) % count] - ring[i];

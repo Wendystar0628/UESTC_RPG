@@ -79,9 +79,9 @@ public static class BuildingPlanner
         if (grid is null) return null;
         var outer = PlanRing.FromPoints([.. grid.Footprint.Outer], hole: false);
         var holes = grid.Footprint.Holes.Select(h => PlanRing.FromPoints([.. h], hole: true)).ToList();
-        var area = (float)PlanGeometry.SignedArea(outer.Points) - holes.Sum(h => MathF.Abs((float)PlanGeometry.SignedArea(h.Points)));
+        var area = (float)PlanRings.SignedArea(outer.Points) - holes.Sum(h => MathF.Abs((float)PlanRings.SignedArea(h.Points)));
         if (area < 6f) return null;
-        var centroid = PlanGeometry.Centroid(new PolygonRings(outer.Points, [.. holes.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outer.Points[0]);
+        var centroid = PlanPolygons.Centroid(new PolygonRings(outer.Points, [.. holes.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outer.Points[0]);
 
         var (height, storeys, hs) = Heights(src, profile);
         var small = area < 40f || height < 3.2f;
@@ -145,7 +145,7 @@ public static class BuildingPlanner
         BuildingStyle style, uint worldSeed, IReadOnlyList<FacadeLook>? presets)
     {
         var feature = src.Feature;
-        var centroidClean = PlanGeometry.Centroid(new PolygonRings(outerClean.Points, [.. holesClean.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outerClean.Points[0]);
+        var centroidClean = PlanPolygons.Centroid(new PolygonRings(outerClean.Points, [.. holesClean.Select(h => (IReadOnlyList<Vector2>)h.Points)]), outerClean.Points[0]);
         var cell = new Vector2(MathF.Floor(centroidClean.X / 160f), MathF.Floor(centroidClean.Y / 160f));
         var cluster = StableHash.Hash32(worldSeed, "wp14.cluster",
             cell.X.ToString(CultureInfo.InvariantCulture), cell.Y.ToString(CultureInfo.InvariantCulture));
@@ -194,16 +194,16 @@ public static class BuildingPlanner
     private static bool CleanRings(PolygonRings source, out PlanRing outerClean, out List<PlanRing> holesClean)
     {
         holesClean = [];
-        var cleanPoints = PlanGeometry.CleanRing(source.Outer, minEdge: .35f, collinearTolerance: .12f, minimumArea: 4f, reversalTolerance: .05f, maxPasses: 64, duplicateDistanceSquared: .0025f);
+        var cleanPoints = PlanRings.CleanRing(source.Outer, minEdge: .35f, collinearTolerance: .12f, minimumArea: 4f, reversalTolerance: .05f, maxPasses: 64, duplicateDistanceSquared: .0025f);
         var cleaned = cleanPoints is null ? null : PlanRing.FromPoints(cleanPoints, hole: false);
         outerClean = cleaned!;
         if (cleaned is null) return false;
         foreach (var h in source.Holes)
         {
-            var holePoints = PlanGeometry.CleanRing(h, outer: false, minEdge: .35f, collinearTolerance: .12f, minimumArea: 4f, reversalTolerance: .05f, maxPasses: 64, duplicateDistanceSquared: .0025f);
+            var holePoints = PlanRings.CleanRing(h, outer: false, minEdge: .35f, collinearTolerance: .12f, minimumArea: 4f, reversalTolerance: .05f, maxPasses: 64, duplicateDistanceSquared: .0025f);
             var ring = holePoints is null ? null : PlanRing.FromPoints(holePoints, hole: true);
-            if (ring is null || MathF.Abs((float)PlanGeometry.SignedArea(ring.Points)) < 8f) continue;
-            if (!ring.Points.All(p => PlanGeometry.InsideByCrossings(cleaned.Points, p))) continue;
+            if (ring is null || MathF.Abs((float)PlanRings.SignedArea(ring.Points)) < 8f) continue;
+            if (!ring.Points.All(p => PlanRings.InsideByCrossings(cleaned.Points, p))) continue;
             holesClean.Add(ring);
         }
         return true;
@@ -245,7 +245,7 @@ public static class BuildingPlanner
         {
             if (id == self || !world.Features.TryGetValue(id, out var f)) continue;
             foreach (var src in Sources(f))
-                if (PlanGeometry.InsideByCrossings(src.Rings.Outer, p) && !src.Rings.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p)) &&
+                if (PlanRings.InsideByCrossings(src.Rings.Outer, p) && !src.Rings.Holes.Any(h => PlanRings.InsideByCrossings(h, p)) &&
                     MathF.Abs(PadY(world, f) + TopOf(src) - y) <= EntranceRules.DeckAbove) return id;
         }
         return null;

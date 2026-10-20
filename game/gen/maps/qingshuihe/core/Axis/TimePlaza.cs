@@ -42,7 +42,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
         foreach (var c in ring) rim += terrain.HeightAt(centre.X + c.X * (radius + 0.6f), centre.Y + c.Y * (radius + 0.6f));
         RimTop = rim / ring.Length + GroundLevels.Paving;
         Rise = RimTop - FloorTop;
-        if (Rise >= S.StepMinRise)
+        if (Rise >= PlazaStyle.StepMinRise)
         {
             Risers = TerrainDrop.RiserCount(Rise);
             Riser = Rise / Risers;
@@ -59,8 +59,8 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
         var (centre, radius) = Plan(plaza);
         // The axis points from the plaza centre to the library's grand stair (MAP-QSH-CORE).
         var axis = world.Features.TryGetValue(CoreIds.LibraryStair, out var stair)
-            ? Vector2.Normalize(PlanGeometry.Centroid(WorldFeatureGeometry.PolygonsOf(stair.Parts.Count > 0 ? stair.Parts[0].Geometry : stair.Geometry).Select(r => r.Outer)) - centre)
-            : Angles.Heading(S.AxisBearingFallback);
+            ? Vector2.Normalize(PlanPolygons.Centroid(WorldFeatureGeometry.PolygonsOf(stair.Parts.Count > 0 ? stair.Parts[0].Geometry : stair.Geometry).Select(r => r.Outer)) - centre)
+            : Angles.Heading(PlazaStyle.AxisBearingFallback);
         var benches = world.Features.Values
             .Where(f => f.Id.Value.StartsWith(CoreIds.PlazaBenchPrefix, StringComparison.Ordinal) && f.Geometry is PointGeometry)
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal)
@@ -71,7 +71,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
 
     internal static (Vector2 Centre, float Radius) Plan(WorldFeature plaza)
     {
-        var ring = FeatureReads.Contour(plaza);
+        var ring = FeatureShapes.Contour(plaza);
         var centre = Vector2.Zero;
         foreach (var p in ring) centre += p;
         centre /= ring.Count;
@@ -128,12 +128,12 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
         if (lod == LodLevel.L4) return [];
         var lights = new List<LightEmitter>();
         foreach (var pole in Poles())
-            lights.Add(new(S.FlagLightChannel, new(pole.Foot.X - Axis.X * 0.9f, FloorTop + 0.05f, pole.Foot.Y - Axis.Y * 0.9f), S.LampColor, S.FlagLightEnergy, S.FlagLightRange));
+            lights.Add(new(PlazaStyle.FlagLightChannel, new(pole.Foot.X - Axis.X * 0.9f, FloorTop + 0.05f, pole.Foot.Y - Axis.Y * 0.9f), PlazaStyle.LampColor, PlazaStyle.FlagLightEnergy, PlazaStyle.FlagLightRange));
         if (lod <= LodLevel.L2)
             foreach (var p in LampPositions())
             {
                 var ground = _world.Terrain.HeightAt(p.X, p.Y) + GroundLevels.Lawn;
-                lights.Add(new(S.RimLampChannel, new(p.X, ground + S.RimLampLightY, p.Y), S.LampColor, S.RimLampEnergy, S.RimLampRange));
+                lights.Add(new(PlazaStyle.RimLampChannel, new(p.X, ground + PlazaStyle.RimLampLightY, p.Y), PlazaStyle.LampColor, PlazaStyle.RimLampEnergy, PlazaStyle.RimLampRange));
             }
         return lights;
     }
@@ -151,15 +151,15 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
                     {
                         var a = Station(wall.Radius, wall.Stations[i].Angle); var b = Station(wall.Radius, wall.Stations[i + 1].Angle);
                         var top = MathF.Max(wall.Stations[i].Top, wall.Stations[i + 1].Top);
-                        list.Add(new WallCollider(a, b, S.CheekWidth * 0.5f, FloorTop - S.Sink, top, SurfaceTag.Wall) { Foot = FootMat.StonePaving });
+                        list.Add(new WallCollider(a, b, PlazaStyle.CheekWidth * 0.5f, FloorTop - S.Sink, top, SurfaceTag.Wall) { Foot = FootMat.StonePaving });
                     }
         }
         var plinth = FlagPlinth();
         var plinthAt = Matrix4x4.CreateTranslation(0, (plinth.Y0 + plinth.Y1) * 0.5f, 0) * CoreShapes.Facing(new(plinth.Centre.X, 0, plinth.Centre.Y), Axis);
-        var plinthHalf = new Vector3(S.FlagPlinthLength * 0.5f, (plinth.Y1 - plinth.Y0) * 0.5f, S.FlagPlinthDepth * 0.5f);
+        var plinthHalf = new Vector3(PlazaStyle.FlagPlinthLength * 0.5f, (plinth.Y1 - plinth.Y0) * 0.5f, PlazaStyle.FlagPlinthDepth * 0.5f);
         list.Add(new BoxCollider(plinthAt, plinthHalf, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
         foreach (var pole in Poles())
-            list.Add(new PostCollider(pole.Foot, S.FlagCollar, plinth.Y1, plinth.Y1 + pole.Height, SurfaceTag.Prop) { Foot = FootMat.Metal });
+            list.Add(new PostCollider(pole.Foot, PlazaStyle.FlagCollar, plinth.Y1, plinth.Y1 + pole.Height, SurfaceTag.Prop) { Foot = FootMat.Metal });
         return list;
     }
 
@@ -171,7 +171,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
     {
         var band = S.Inlay(S.BandStone);
         var step = lod == LodLevel.L0 ? 1f : 2f * (1 << (int)lod);
-        foreach (var (inner, outer) in S.Bands)
+        foreach (var (inner, outer) in PlazaStyle.Bands)
             CoreShapes.Annulus(mesh, band, Centre, FootRadius * inner, FootRadius * outer, 0, MathF.Tau, Floor, GroundLevels.Decal, step);
         if (lod <= LodLevel.L1) HourMarks(mesh, lod);
         if (lod <= LodLevel.L2) Emblem(mesh, lod);
@@ -180,20 +180,20 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
     /// <summary>十二时辰 on the outer band: 子 points true north (the sundial's gnomon direction), one mark every 30°.</summary>
     private void HourMarks(GeometrySink mesh, LodLevel lod)
     {
-        var paint = S.Inlay(S.MarkStone);
-        var (inner, outer) = S.Bands[0];
+        var paint = S.Inlay(PlazaStyle.MarkStone);
+        var (inner, outer) = PlazaStyle.Bands[0];
         float r0 = FootRadius * inner, r1 = FootRadius * outer;
         var north = MathF.Atan2(-1f, 0f);
         for (var k = 0; k < 12; k++)
         {
             var a = north + k * (MathF.Tau / 12f);
             var u = new Vector2(MathF.Cos(a), MathF.Sin(a));
-            CoreShapes.FlatStrip(mesh, paint, Centre + u * (r0 + 0.04f), Centre + u * (r1 - 0.04f), S.HourMarkWidth, Floor, GroundLevels.Decal * 1.5f);
+            CoreShapes.FlatStrip(mesh, paint, Centre + u * (r0 + 0.04f), Centre + u * (r1 - 0.04f), PlazaStyle.HourMarkWidth, Floor, GroundLevels.Decal * 1.5f);
             if (lod != LodLevel.L0 || k % 3 != 0) continue;
             // 子、卯、午、酉 get a small diamond just outside the band.
-            var c = Centre + u * (r1 + S.HourDiamond);
+            var c = Centre + u * (r1 + PlazaStyle.HourDiamond);
             var t = new Vector2(-u.Y, u.X);
-            CoreShapes.FlatPolygon(mesh, S.Inlay(S.BandStone), [c - u * S.HourDiamond * 0.7f, c + t * S.HourDiamond * 0.45f, c + u * S.HourDiamond * 0.7f, c - t * S.HourDiamond * 0.45f], Floor, GroundLevels.Decal);
+            CoreShapes.FlatPolygon(mesh, S.Inlay(S.BandStone), [c - u * PlazaStyle.HourDiamond * 0.7f, c + t * PlazaStyle.HourDiamond * 0.45f, c + u * PlazaStyle.HourDiamond * 0.7f, c - t * PlazaStyle.HourDiamond * 0.45f], Floor, GroundLevels.Decal);
         }
     }
 
@@ -203,8 +203,8 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
     /// </summary>
     private void Emblem(GeometrySink mesh, LodLevel lod)
     {
-        var gold = S.Inlay(S.EmblemGold);
-        CoreShapes.Annulus(mesh, gold, Centre, S.EmblemRingInner, S.EmblemRingOuter, 0, MathF.Tau, Floor, GroundLevels.Decal, lod == LodLevel.L0 ? 0.5f : 1.5f);
+        var gold = S.Inlay(PlazaStyle.EmblemGold);
+        CoreShapes.Annulus(mesh, gold, Centre, PlazaStyle.EmblemRingInner, PlazaStyle.EmblemRingOuter, 0, MathF.Tau, Floor, GroundLevels.Decal, lod == LodLevel.L0 ? 0.5f : 1.5f);
         var corners = new Vector2[8];
         for (var k = 0; k < 8; k++)
         {
@@ -212,17 +212,17 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
             corners[k] = new(MathF.Cos(a), MathF.Sin(a));
         }
         for (var k = 0; k < 8; k++)
-            CoreShapes.FlatStrip(mesh, gold, Centre + corners[k] * S.EmblemOctagon, Centre + corners[(k + 1) % 8] * S.EmblemOctagon, S.EmblemLine, Floor, GroundLevels.Decal);
+            CoreShapes.FlatStrip(mesh, gold, Centre + corners[k] * PlazaStyle.EmblemOctagon, Centre + corners[(k + 1) % 8] * PlazaStyle.EmblemOctagon, PlazaStyle.EmblemLine, Floor, GroundLevels.Decal);
         if (lod != LodLevel.L0) return;
         for (var k = 0; k < 8; k++)
         {
             var u = corners[k]; var t = new Vector2(-u.Y, u.X);
-            CoreShapes.FlatStrip(mesh, gold, Centre + u * S.EmblemOctagon, Centre + u * S.EmblemTraceEnd, S.EmblemLine * 0.75f, Floor, GroundLevels.Decal);
-            var c = Centre + u * (S.EmblemTraceEnd + S.EmblemPad * 0.5f);
-            var h = S.EmblemPad * 0.5f;
+            CoreShapes.FlatStrip(mesh, gold, Centre + u * PlazaStyle.EmblemOctagon, Centre + u * PlazaStyle.EmblemTraceEnd, PlazaStyle.EmblemLine * 0.75f, Floor, GroundLevels.Decal);
+            var c = Centre + u * (PlazaStyle.EmblemTraceEnd + PlazaStyle.EmblemPad * 0.5f);
+            var h = PlazaStyle.EmblemPad * 0.5f;
             CoreShapes.FlatPolygon(mesh, gold, [c - u * h - t * h, c + u * h - t * h, c + u * h + t * h, c - u * h + t * h], Floor, GroundLevels.Decal);
         }
-        CoreShapes.Annulus(mesh, gold, Centre, 0.0001f, S.EmblemPad, 0, MathF.Tau, Floor, GroundLevels.Decal, 0.25f);
+        CoreShapes.Annulus(mesh, gold, Centre, 0.0001f, PlazaStyle.EmblemPad, 0, MathF.Tau, Floor, GroundLevels.Decal, 0.25f);
     }
 
     // ------------------------------------------------------------------ steps and ramps
@@ -239,17 +239,17 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
     private IReadOnlyList<Ramp> Ramps()
     {
         if (!Sunken) return [];
-        var runs = Math.Max(1, (int)MathF.Ceiling(Rise / S.RampMaxRunRise - 1e-4f));
-        var drop = Rise / runs; var run = drop / S.RampGrade;
+        var runs = Math.Max(1, (int)MathF.Ceiling(Rise / PlazaStyle.RampMaxRunRise - 1e-4f));
+        var drop = Rise / runs; var run = drop / PlazaStyle.RampGrade;
         var list = new List<(float, float, float, float)>();
         float s = 0, y = RimTop;
         for (var i = 0; i < runs; i++)
         {
             list.Add((s, s + run, y, y - drop));
             s += run; y -= drop;
-            if (i + 1 < runs) { list.Add((s, s + S.RampLanding, y, y)); s += S.RampLanding; }
+            if (i + 1 < runs) { list.Add((s, s + PlazaStyle.RampLanding, y, y)); s += PlazaStyle.RampLanding; }
         }
-        var radius = FootRadius + S.CheekWidth + S.RampWidth * 0.5f;
+        var radius = FootRadius + PlazaStyle.CheekWidth + PlazaStyle.RampWidth * 0.5f;
         var span = s / radius;
         // Toward the library side means toward AxisAngle: on the +90° flank the bottom end is the lower angle.
         return [new(AxisAngle + MathF.Tau / 4f, -1f, span, radius, s, list), new(AxisAngle - MathF.Tau / 4f, 1f, span, radius, s, list)];
@@ -269,7 +269,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
     private IReadOnlyList<IReadOnlyList<Vector2>> StepArcs(LodLevel lod)
     {
         var ramps = Ramps();
-        var gap = ramps.Count == 0 ? 0 : ramps[0].Span * 0.5f + (S.CheekWidth + 0.02f) / FootRadius;
+        var gap = ramps.Count == 0 ? 0 : ramps[0].Span * 0.5f + (PlazaStyle.CheekWidth + 0.02f) / FootRadius;
         var sides = S.CircleSides(lod);
         var arcs = new List<IReadOnlyList<Vector2>>();
         // Library side from −90° + gap to +90° − gap, then the avenue side; angles rise so the steps climb outward.
@@ -295,10 +295,10 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
         {
             var s = ramp.Length * i / count;
             var deck = DeckAt(ramp, s);
-            inner[i] = new(AngleAt(ramp, s), deck + S.CheekCoping);
-            outer[i] = new(AngleAt(ramp, s), MathF.Max(RimTop, deck) + S.CheekCoping);
+            inner[i] = new(AngleAt(ramp, s), deck + PlazaStyle.CheekCoping);
+            outer[i] = new(AngleAt(ramp, s), MathF.Max(RimTop, deck) + PlazaStyle.CheekCoping);
         }
-        var half = S.RampWidth * 0.5f + S.CheekWidth * 0.5f;
+        var half = PlazaStyle.RampWidth * 0.5f + PlazaStyle.CheekWidth * 0.5f;
         return [new(ramp.Radius - half, inner), new(ramp.Radius + half, outer)];
     }
 
@@ -313,15 +313,15 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
             var p = Station(ramp.Radius, AngleAt(ramp, s));
             deck[i] = new(p.X, DeckAt(ramp, s), p.Y);
         }
-        mesh.Add(stone, RampEdges.Build(deck, S.RampWidth, lod, rails: lod <= LodLevel.L1), Matrix4x4.Identity);
+        mesh.Add(stone, RampEdges.Build(deck, PlazaStyle.RampWidth, lod, rails: lod <= LodLevel.L1), Matrix4x4.Identity);
         foreach (var wall in RampWalls(ramp)) CheekWall(mesh, stone, wall, lod);
     }
 
     /// <summary>A curved wall of constant width whose top follows the stations, with chamfered top edges.</summary>
     private void CheekWall(GeometrySink mesh, in Paint paint, Cheek wall, LodLevel lod)
     {
-        var b = lod == LodLevel.L0 ? S.CheekBevel : 0f;
-        float r0 = wall.Radius - S.CheekWidth * 0.5f, r1 = wall.Radius + S.CheekWidth * 0.5f, bottom = FloorTop - S.Sink;
+        var b = lod == LodLevel.L0 ? PlazaStyle.CheekBevel : 0f;
+        float r0 = wall.Radius - PlazaStyle.CheekWidth * 0.5f, r1 = wall.Radius + PlazaStyle.CheekWidth * 0.5f, bottom = FloorTop - S.Sink;
         // Section corners counterclockwise in (radius, height); Top marks heights measured down from the station's top.
         (float R, bool Top, float Y)[] section = b > 0
             ? [(r0, false, bottom), (r1, false, bottom), (r1, true, -b), (r1 - b, true, 0), (r0 + b, true, 0), (r0, true, -b)]
@@ -358,8 +358,8 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
 
     private (Vector2 Centre, float Y0, float Y1) FlagPlinth()
     {
-        var centre = Centre + Axis * (FootRadius - S.FlagSetback);
-        return (centre, FloorTop - S.Sink, FloorTop + S.FlagPlinthHeight);
+        var centre = Centre + Axis * (FootRadius - PlazaStyle.FlagSetback);
+        return (centre, FloorTop - S.Sink, FloorTop + PlazaStyle.FlagPlinthHeight);
     }
 
     /// <summary>National flag in the middle (tallest), blue flag on the left and school flag on the right, facing the library.</summary>
@@ -368,9 +368,9 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
         var c = FlagPlinth().Centre;
         return
         [
-            new(c + Left * S.FlagSpacing, S.FlagSidePoleHeight, S.FlagSideHang, S.FlagBlue),
-            new(c, S.FlagPoleHeight, S.FlagHang, S.FlagRed),
-            new(c - Left * S.FlagSpacing, S.FlagSidePoleHeight, S.FlagSideHang, S.FlagWhite),
+            new(c + Left * PlazaStyle.FlagSpacing, PlazaStyle.FlagSidePoleHeight, PlazaStyle.FlagSideHang, PlazaStyle.FlagBlue),
+            new(c, PlazaStyle.FlagPoleHeight, PlazaStyle.FlagHang, PlazaStyle.FlagRed),
+            new(c - Left * PlazaStyle.FlagSpacing, PlazaStyle.FlagSidePoleHeight, PlazaStyle.FlagSideHang, S.FlagWhite),
         ];
     }
 
@@ -379,7 +379,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
         var mesh = build.Mesh;
         var plinth = FlagPlinth();
         var granite = S.Stone(S.Granite);
-        var box = PartGeometryKernel.BeveledBox(S.FlagPlinthLength, plinth.Y1 - plinth.Y0, S.FlagPlinthDepth, lod == LodLevel.L0 ? S.FlagPlinthBevel : 0f, CoreStyle.Spec(CoreMaterial.Stone, S.Granite));
+        var box = PartSolids.BeveledBox(PlazaStyle.FlagPlinthLength, plinth.Y1 - plinth.Y0, PlazaStyle.FlagPlinthDepth, lod == LodLevel.L0 ? PlazaStyle.FlagPlinthBevel : 0f, CoreStyle.Spec(CoreMaterial.Stone, S.Granite));
         mesh.Add(granite, box, CoreShapes.Facing(new(plinth.Centre.X, plinth.Y0, plinth.Centre.Y), Axis));
         var steel = S.Metal(S.Steel);
         var sides = S.SmallSides(lod);
@@ -387,8 +387,8 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
         {
             var foot = new Vector3(pole.Foot.X, plinth.Y1, pole.Foot.Y);
             var frame = Matrix4x4.CreateTranslation(foot);
-            CoreShapes.Lathe(mesh, granite, frame, CoreShapes.Tier(S.FlagCollar, -0.01f, S.FlagCollarHeight, lod == LodLevel.L0 ? 0.03f : 0f), sides);
-            CoreShapes.Lathe(mesh, steel, frame, [new(0, 0), new(S.FlagPoleBase, 0), new(S.FlagPoleTop, pole.Height), new(0, pole.Height)], sides);
+            CoreShapes.Lathe(mesh, granite, frame, CoreShapes.Tier(PlazaStyle.FlagCollar, -0.01f, PlazaStyle.FlagCollarHeight, lod == LodLevel.L0 ? 0.03f : 0f), sides);
+            CoreShapes.Lathe(mesh, steel, frame, [new(0, 0), new(PlazaStyle.FlagPoleBase, 0), new(PlazaStyle.FlagPoleTop, pole.Height), new(0, pole.Height)], sides);
             if (lod <= LodLevel.L1)
             {
                 // Finial ball on top.
@@ -396,7 +396,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
                 for (var i = 0; i < ball.Length; i++)
                 {
                     var a = -MathF.Tau / 4f + i * (MathF.Tau / 2f) / (ball.Length - 1);
-                    ball[i] = new(MathF.Max(0f, MathF.Cos(a) * S.FlagFinial), pole.Height + S.FlagFinial + MathF.Sin(a) * S.FlagFinial);
+                    ball[i] = new(MathF.Max(0f, MathF.Cos(a) * PlazaStyle.FlagFinial), pole.Height + PlazaStyle.FlagFinial + MathF.Sin(a) * PlazaStyle.FlagFinial);
                 }
                 ball[0] = ball[0] with { X = 0 }; ball[^1] = ball[^1] with { X = 0 };
                 CoreShapes.Lathe(mesh, steel, frame, ball, sides);
@@ -412,12 +412,12 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
     private void Drape(GeometrySink mesh, Pole pole, Vector3 foot, LodLevel lod)
     {
         var paint = S.Cloth(pole.Colour);
-        var folds = lod == LodLevel.L0 ? S.FlagFolds : 2;
+        var folds = lod == LodLevel.L0 ? PlazaStyle.FlagFolds : 2;
         var top = foot.Y + pole.Height - 0.25f;
         var bottom = top - pole.Hang;
-        var width = folds * 2 * S.FlagFoldWidth;
+        var width = folds * 2 * PlazaStyle.FlagFoldWidth;
         var outward = -Axis;
-        var origin = new Vector2(foot.X, foot.Z) + outward * (S.FlagPoleBase + 0.03f);
+        var origin = new Vector2(foot.X, foot.Z) + outward * (PlazaStyle.FlagPoleBase + 0.03f);
         var across = Left;
         var columns = folds * 2 + 1;
         for (var row = 0; row < 2; row++)
@@ -430,7 +430,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
                 Vector3 V(int k, float y, float w)
                 {
                     var x = (k / (float)(columns - 1) - 0.5f) * width * w;
-                    var depth = (k % 2 == 1 ? S.FlagFoldDepth : 0f) * w + (1f - w) * 0.25f;
+                    var depth = (k % 2 == 1 ? PlazaStyle.FlagFoldDepth : 0f) * w + (1f - w) * 0.25f;
                     var p = origin + across * x + outward * (depth + width * 0.5f * w * 0.4f);
                     return new(p.X, y, p.Y);
                 }
@@ -447,15 +447,15 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
     /// <summary>Rim lamp positions: a ring outside the plaza edge, the first half a step off the axis so none stands on it.</summary>
     public IReadOnlyList<Vector2> LampPositions()
     {
-        var list = new Vector2[S.RimLamps];
+        var list = new Vector2[PlazaStyle.RimLamps];
         for (var i = 0; i < list.Length; i++)
-            list[i] = Station(Radius + S.RimLampOffset, AxisAngle + (i + 0.5f) * MathF.Tau / S.RimLamps);
+            list[i] = Station(Radius + PlazaStyle.RimLampOffset, AxisAngle + (i + 0.5f) * MathF.Tau / PlazaStyle.RimLamps);
         return list;
     }
 
     private void Lamps(CoreBuild build)
     {
-        var parameters = new LampParams(S.RimLampWidth, S.RimLampHeight, S.RimLampWidth) { Material = S.PartMaterial(S.LampMetal) };
+        var parameters = new LampParams(PlazaStyle.RimLampWidth, PlazaStyle.RimLampHeight, PlazaStyle.RimLampWidth) { Material = S.PartMaterial(PlazaStyle.LampMetal) };
         foreach (var p in LampPositions())
         {
             var ground = _world.Terrain.HeightAt(p.X, p.Y) + GroundLevels.Lawn;
@@ -469,7 +469,7 @@ public sealed class TimePlaza : ZoneSite, ILightMetadataSource
         }
     }
 
-    internal static FurnitureParams BenchParameters { get; } = new(1.8f, 0.8f, 0.6f) { Material = S.PartMaterial(S.LampMetal) };
+    internal static FurnitureParams BenchParameters { get; } = new(1.8f, 0.8f, 0.6f) { Material = S.PartMaterial(PlazaStyle.LampMetal) };
     public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
         CoreRanges.ForFeature(world, CoreIds.TimePlaza) is { } range ? [range] : [];
 

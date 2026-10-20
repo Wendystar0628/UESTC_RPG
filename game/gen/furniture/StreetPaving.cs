@@ -82,7 +82,7 @@ internal sealed class StreetPaving
             else
             {
                 var rings = paving.Rings!;
-                if (PlanGeometry.Contains(rings, p)) return (0f, p, Vector2.Zero, null);
+                if (PlanRings.Contains(rings, p)) return (0f, p, Vector2.Zero, null);
                 (Vector2 Point, Vector2 Tangent) hit = default;
                 var bestD = float.MaxValue;
                 foreach (var ring in rings.Holes.Prepend(rings.Outer))
@@ -111,7 +111,7 @@ internal sealed class StreetPaving
     public bool OnPlaza(Vector2 p)
     {
         foreach (var paving in _index.Surfaces.AllAround(p))
-            if (paving.Rings is { } rings && PlanGeometry.Contains(rings, p)) return true;
+            if (paving.Rings is { } rings && PlanRings.Contains(rings, p)) return true;
         return false;
     }
 
@@ -123,7 +123,7 @@ internal sealed class StreetPaving
     {
         foreach (var paving in _index.Surfaces.AllAround(p))
         {
-            if (paving.Rings is { } rings) { if (PlanGeometry.Contains(rings, p)) return true; continue; }
+            if (paving.Rings is { } rings) { if (PlanRings.Contains(rings, p)) return true; continue; }
             var line = paving.Line!;
             var q = PlanLines.Project(line, p).Point;
             if (Vector2.DistanceSquared(q, line[0]) < 1e-6f || Vector2.DistanceSquared(q, line[^1]) < 1e-6f) continue;

@@ -96,7 +96,7 @@ public sealed class CourtSites : ZoneSite
                 var side = r.Frame.W.Y >= 0 ? -1 : 1;
                 var a = r.Frame.P(-r.Width * 0.5f, side * r.Depth * 0.5f);
                 var end = r.Frame.P(r.Width * 0.5f, side * r.Depth * 0.5f);
-                b.Add(Campus.Gen.Parts.Core.PartGeometryKernel.BeveledBox(r.Width, wall, S.Slab, S.Bevel, S.Green), PlanFrame.Toward(a, end).At(r.Width * 0.5f, b.Ground(a), 0));
+                b.Add(Campus.Gen.Parts.Core.PartSolids.BeveledBox(r.Width, wall, S.Slab, S.Bevel, S.Green), PlanFrame.Toward(a, end).At(r.Width * 0.5f, b.Ground(a), 0));
             }
         }
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;

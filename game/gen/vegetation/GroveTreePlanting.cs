@@ -29,7 +29,7 @@ internal static class GroveTreePlanting
                 var z = parcel.Min.Y + rng.NextFloat() * (parcel.Max.Y - parcel.Min.Y);
                 var draw = rng.NextFloat();
                 var p = new Vector2(x, z);
-                if (!PlanGeometry.Contains(parcel.Rings, p) || !PlanGeometry.Contains(site.World.Boundary, p)) continue;
+                if (!PlanRings.Contains(parcel.Rings, p) || !PlanRings.Contains(site.World.Boundary, p)) continue;
                 var edge = PlantingSite.Edge(parcel.Rings, p);
                 var cluster = (MathF.Sin(x / 53f + MathF.Cos(z / 47f)) + MathF.Cos(z / 59f - x / 139f) + 2f) / 4f;
                 if (parcel.Area > BigLawn && edge > EdgeKeep && cluster < OpenNoise) continue;

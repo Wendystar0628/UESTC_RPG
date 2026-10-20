@@ -44,7 +44,7 @@ public sealed class StreamSchedulingTests
             .Select(floor => new BakeKey(context.Descriptor.Id, "interior." + providerId,
                 FormattableString.Invariant($"{layout.Feature.Value}/{floor}/{(floor == atriumFloor ? "IF" : "IS")}"))).ToArray();
         var area = world.Interiors.Get(layout.Feature)!.OpenAreas.First(area => area.Index == atriumFloor);
-        var center = Campus.Gen.Geometry.PlanGeometry.Centroid(area.Footprint);
+        var center = Campus.Gen.Geometry.PlanPolygons.Centroid(area.Footprint);
         var destination = new System.Numerics.Vector3(center.X, area.FloorY + WalkRules.StandingEye, center.Y);
         var preloads = new List<BakeKey>();
         stream.Preload(new(layout.Feature, checked((short)atriumFloor)), destination, preloads.Add);
@@ -74,14 +74,14 @@ public sealed class StreamSchedulingTests
         foreach (var source in sources)
         {
             var area = source.Areas[0];
-            var xz = Campus.Gen.Geometry.PlanGeometry.Centroid(area.Footprint);
+            var xz = Campus.Gen.Geometry.PlanPolygons.Centroid(area.Footprint);
             var position = new System.Numerics.Vector3(xz.X, area.FloorY + WalkRules.StandingEye, xz.Y);
             var medium = world.Spatial.MediumAt(position);
             if (!world.Interiors.IsOpen(source.Feature, area.Index, position) || medium.Kind != MediumKind.Air ||
                 world.Interiors.AreaAt(source.Feature, position)?.Kind != InteriorOpenPartKind.OutdoorHighPlace)
                 throw new InvalidOperationException($"Outdoor source lost its access domain: {source.Id}.");
             if (!collision.Items.Any(item => item.Collider is SlabCollider slab && slab.Y == area.FloorY &&
-                slab.Foot != Campus.Contracts.Audio.FootMat.Auto && Campus.Gen.Geometry.PlanGeometry.PointInRing(xz, slab.Ring)))
+                slab.Foot != Campus.Contracts.Audio.FootMat.Auto && Campus.Gen.Geometry.PlanRings.PointInRing(xz, slab.Ring)))
                 throw new InvalidOperationException($"Outdoor source lost its existing site support: {source.Id}.");
             var bake = new InteriorRequests();
             var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false);

@@ -24,7 +24,7 @@ internal sealed class LibraryTerrace
             var maximum = podium.Ring.Aggregate(Vector2.Max);
             var north = new PolygonRings([minimum, new(maximum.X, minimum.Y),
                 new(maximum.X, _plan.Centre.Y), new(minimum.X, _plan.Centre.Y)]);
-            foreach (var ring in PlanGeometry.IntersectionTriangles(new(podium.Ring), north, covers))
+            foreach (var ring in PlanPolygons.IntersectionTriangles(new(podium.Ring), north, covers))
                 areas.Add(new(2, _plan.SecondFloorY, _plan.StoreyY(2) - _plan.SecondFloorY, ring));
         }
         return [new("library.terrace-f", CoreIds.Library, areas.AsReadOnly())];

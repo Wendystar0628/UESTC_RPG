@@ -364,15 +364,15 @@ public sealed class PavementTests
         public bool Within(Pave pave, Vector2 p, float clearance)
         {
             if (pave.Rings is { } rings)
-                return PlanGeometry.Contains(rings, p) ||
-                    rings.Holes.Prepend(rings.Outer).Any(ring => PlanGeometry.DistanceToRing(p, ring) < clearance);
+                return PlanRings.Contains(rings, p) ||
+                    rings.Holes.Prepend(rings.Outer).Any(ring => PlanRings.DistanceToRing(p, ring) < clearance);
             var r = pave.Half + clearance;
             for (var i = 1; i < pave.Line!.Count; i++)
                 if (PlanLines.SegmentDistanceSquared(p, pave.Line[i - 1], pave.Line[i]) < r * r) return true;
             return false;
         }
 
-        public bool InPit(Vector2 p) => Pits.Any(pit => pit.Rings is { } rings ? PlanGeometry.Contains(rings, p) : Vector2.Distance(p, pit.Centre) <= pit.Radius);
+        public bool InPit(Vector2 p) => Pits.Any(pit => pit.Rings is { } rings ? PlanRings.Contains(rings, p) : Vector2.Distance(p, pit.Centre) <= pit.Radius);
 
         /// <summary>A trunk here gives way: on pavement or within the trunk clearance of it, and in no pit.</summary>
         public bool GivesWay(Vector2 p) => !InPit(p) && Paving.Any(pave => Within(pave, p, Planting.TrunkClearance));

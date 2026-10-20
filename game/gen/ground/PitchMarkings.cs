@@ -8,9 +8,9 @@ namespace Campus.Gen.Ground;
 /// layout of a 105 x 68 m pitch is scaled to the rectangle inside the outer line: boundary, halfway line, centre circle
 /// and spot, and at both ends the penalty area, goal area, penalty spot, penalty arc and corner arcs.
 /// </summary>
-internal sealed partial class RoadMarkings
+internal static class PitchMarkings
 {
-    private void AddPitches(GroundLayout layout, GroundSection section)
+    internal static void AddTo(GroundMarkings markings, GroundLayout layout, GroundSection section)
     {
         foreach (var shape in layout.Shapes)
         {
@@ -18,11 +18,11 @@ internal sealed partial class RoadMarkings
             // only for a record that names its sport (Marked), and only on a plain quadrilateral of football proportions
             // (FitPitch): an untagged pitch, even a football-shaped rectangle, a ring or a small field stays plain grass.
             if (shape.Kind != SurfaceKind.Turf || !shape.Marked || SportGround.FitPitch(shape, section.Pitch) is not { } pitch) continue;
-            AddPitch(layout, section, pitch);
+            AddPitch(markings, layout, section, pitch);
         }
     }
 
-    private void AddPitch(GroundLayout layout, GroundSection section, PitchFrame pitch)
+    private static void AddPitch(GroundMarkings markings, GroundLayout layout, GroundSection section, PitchFrame pitch)
     {
         var spec = section.Pitch;
         var width = spec.LineWidth;
@@ -46,20 +46,20 @@ internal sealed partial class RoadMarkings
             var along = b - a;
             if (along.LengthSquared() < 1e-6f) return;
             along = Vector2.Normalize(along) * (width * 0.5f);
-            Strip(layout, a - along, b + along, width, level);
+            Strip(markings, layout, a - along, b + along, width, level);
         }
 
         // A curve through local points, as chords.
         void Curve(List<Vector2> points)
         {
-            for (var k = 0; k + 1 < points.Count; k++) Strip(layout, At(points[k].X, points[k].Y), At(points[k + 1].X, points[k + 1].Y), width, level);
+            for (var k = 0; k + 1 < points.Count; k++) Strip(markings, layout, At(points[k].X, points[k].Y), At(points[k + 1].X, points[k + 1].Y), width, level);
         }
 
         void Spot(float u, float v)
         {
             var half = pitch.Along * (spec.SpotSize * 0.5f);
             var at = At(u, v);
-            Strip(layout, at - half, at + half, spec.SpotSize, level);
+            Strip(markings, layout, at - half, at + half, spec.SpotSize, level);
         }
 
         // Boundary and halfway line.
@@ -71,7 +71,7 @@ internal sealed partial class RoadMarkings
 
         // Centre circle and kick-off spot.
         var radius = spec.CircleRadius * mean;
-        Curve(Arc(0f, 0f, radius, 0f, MathF.Tau, 1f, 1f, spec.Chord));
+        Curve(GroundMarkings.Arc(0f, 0f, radius, 0f, MathF.Tau, 1f, 1f, spec.Chord));
         Spot(0f, 0f);
 
         AddPitchEnds(spec, hl, hw, su, sv, mean, radius, Line, Curve, Spot);
@@ -102,36 +102,20 @@ internal sealed partial class RoadMarkings
             if (reach < 1f)
             {
                 var span = MathF.Acos(reach);
-                Curve(Arc(spotU, 0f, radius, -span, span, -g, 1f, spec.Chord));
+                Curve(GroundMarkings.Arc(spotU, 0f, radius, -span, span, -g, 1f, spec.Chord));
             }
 
             // Corner arcs.
             foreach (var h in new[] { -1f, 1f })
-                Curve(Arc(g * hl, h * hw, spec.CornerRadius * mean, 0f, MathF.PI * 0.5f, -g, -h, spec.Chord));
+                Curve(GroundMarkings.Arc(g * hl, h * hw, spec.CornerRadius * mean, 0f, MathF.PI * 0.5f, -g, -h, spec.Chord));
         }
-    }
-
-    /// <summary>
-    /// Points of the arc of the given radius around local (cu, cv), from angle <paramref name="from"/> to
-    /// <paramref name="to"/>; (<paramref name="ku"/>, <paramref name="kv"/>) mirror the cosine and sine directions.
-    /// </summary>
-    private static List<Vector2> Arc(float cu, float cv, float radius, float from, float to, float ku, float kv, float chord)
-    {
-        var steps = Math.Max(4, (int)MathF.Ceiling(MathF.Abs(to - from) * radius / chord));
-        var points = new List<Vector2>(steps + 1);
-        for (var k = 0; k <= steps; k++)
-        {
-            var angle = from + (to - from) * k / steps;
-            points.Add(new(cu + ku * radius * MathF.Cos(angle), cv + kv * radius * MathF.Sin(angle)));
-        }
-        return points;
     }
 
     /// <summary>One line segment, kept only if it lies wholly on visible turf.</summary>
-    private void Strip(GroundLayout layout, Vector2 a, Vector2 b, float width, float level)
+    private static void Strip(GroundMarkings markings, GroundLayout layout, Vector2 a, Vector2 b, float width, float level)
     {
         if (!OnTurf(layout, (a + b) * 0.5f) || !OnTurf(layout, a) || !OnTurf(layout, b)) return;
-        AddStrip(a, b, width, GroundColor.Marking, level);
+        markings.AddStrip(a, b, width, GroundColor.Marking, level);
     }
 
     /// <summary>Turf is drawn unless a track, water, a carriageway or a car park lies over it.</summary>

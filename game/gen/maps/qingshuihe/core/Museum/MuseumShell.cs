@@ -41,11 +41,11 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
         Frame = frame;
         Body = body;
         var widths = ring.ToArray();
-        Platform = MuseumGeometry.Chamfer(MuseumGeometry.Offset(body, widths), S.MuseumCornerChamfer);
-        ColumnLine = MuseumGeometry.Offset(body, widths.Select(w => w - S.ColumnInset).ToArray());
-        Eave = MuseumGeometry.Chamfer(MuseumGeometry.Offset(body, widths.Select(w => w - S.ColumnInset + S.ColumnSize * 0.5f + S.MuseumEaveOverhang).ToArray()), S.MuseumCornerChamfer);
-        Gallery = MuseumGeometry.Chamfer(body, S.MuseumCornerChamfer);
-        Hall = MuseumGeometry.Chamfer(MuseumGeometry.Scale(body, world.ContourFrame(CoreIds.MuseumSouthFace).U, S.MuseumHallLength, S.MuseumHallWidth), S.MuseumCornerChamfer);
+        Platform = MuseumGeometry.Chamfer(MuseumGeometry.Offset(body, widths), MuseumStyle.MuseumCornerChamfer);
+        ColumnLine = MuseumGeometry.Offset(body, widths.Select(w => w - MuseumStyle.ColumnInset).ToArray());
+        Eave = MuseumGeometry.Chamfer(MuseumGeometry.Offset(body, widths.Select(w => w - MuseumStyle.ColumnInset + MuseumStyle.ColumnSize * 0.5f + MuseumStyle.MuseumEaveOverhang).ToArray()), MuseumStyle.MuseumCornerChamfer);
+        Gallery = MuseumGeometry.Chamfer(body, MuseumStyle.MuseumCornerChamfer);
+        Hall = MuseumGeometry.Chamfer(MuseumGeometry.Scale(body, world.ContourFrame(CoreIds.MuseumSouthFace).U, MuseumStyle.MuseumHallLength, MuseumStyle.MuseumHallWidth), MuseumStyle.MuseumCornerChamfer);
         South = CoreContours.Edge(world, CoreIds.MuseumSouthFace, body);
         West = CoreContours.Edge(world, CoreIds.MuseumWestFace, body);
         North = CoreContours.Edge(world, CoreIds.MuseumNorthFace, body);
@@ -60,34 +60,34 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
             float y0 = frame.FloorY, mid = f.Length * 0.5f;
             if (i == South)
             {
-                var half = S.EntryCells * S.EntryCell * 0.5f;
-                openings.Add(new Opening(f, OpeningKind.Entry, new(mid - half, mid + half, y0, y0 + S.EntryHeight), S.EntryCells, [(y0, y0 + S.EntryHeight, 0)],
-                    Allocate(S.EntryCells, 0), S.CardLecture)
-                { Door = ((S.EntryCells - S.EntryDoorCells) / 2, S.EntryDoorCells, y0 + S.EntryTransom) });
+                var half = MuseumStyle.EntryCells * MuseumStyle.EntryCell * 0.5f;
+                openings.Add(new Opening(f, OpeningKind.Entry, new(mid - half, mid + half, y0, y0 + MuseumStyle.EntryHeight), MuseumStyle.EntryCells, [(y0, y0 + MuseumStyle.EntryHeight, 0)],
+                    Allocate(MuseumStyle.EntryCells, 0), MuseumStyle.CardLecture)
+                { Door = ((MuseumStyle.EntryCells - MuseumStyle.EntryDoorCells) / 2, MuseumStyle.EntryDoorCells, y0 + MuseumStyle.EntryTransom) });
             }
             if (i == West)
             {
-                float u0 = S.LakePier, u1 = f.Length - S.LakePier;
-                var cells = Math.Max(2, (int)MathF.Round((u1 - u0) / S.LakeModule));
+                float u0 = MuseumStyle.LakePier, u1 = f.Length - MuseumStyle.LakePier;
+                var cells = Math.Max(2, (int)MathF.Round((u1 - u0) / MuseumStyle.LakeModule));
                 // The side door's cell counts from the face's north end (smaller z).
-                var fromNorth = (int)MathF.Round(S.LakeDoorAt * (cells - 1));
+                var fromNorth = (int)MathF.Round(MuseumStyle.LakeDoorAt * (cells - 1));
                 var northAtA = f.At(0, 0, 0).Z < f.At(f.Length, 0, 0).Z;
                 var door = northAtA ? fromNorth : cells - 1 - fromNorth;
-                openings.Add(new Opening(f, OpeningKind.Entry, new(u0, u1, y0, y0 + S.EntryHeight), cells, [(y0, y0 + S.EntryHeight, 0)],
-                    Allocate(cells, 0), S.CardLecture)
-                { Door = (door, 1, y0 + S.EntryTransom) });
+                openings.Add(new Opening(f, OpeningKind.Entry, new(u0, u1, y0, y0 + MuseumStyle.EntryHeight), cells, [(y0, y0 + MuseumStyle.EntryHeight, 0)],
+                    Allocate(cells, 0), MuseumStyle.CardLecture)
+                { Door = (door, 1, y0 + MuseumStyle.EntryTransom) });
             }
             if (i == North || i == East || i == South)
             {
-                var clear = i == South ? S.EntryCells * S.EntryCell * 0.5f + 1.5f : -1f;
-                var count = (int)MathF.Floor((f.Length - 2 * S.MuseumSlitMargin) / S.MuseumSlitPitch) + 1;
+                var clear = i == South ? MuseumStyle.EntryCells * MuseumStyle.EntryCell * 0.5f + 1.5f : -1f;
+                var count = (int)MathF.Floor((f.Length - 2 * MuseumStyle.MuseumSlitMargin) / MuseumStyle.MuseumSlitPitch) + 1;
                 for (var k = 0; k < count; k++)
                 {
-                    var u = mid + (k - (count - 1) * 0.5f) * S.MuseumSlitPitch;
+                    var u = mid + (k - (count - 1) * 0.5f) * MuseumStyle.MuseumSlitPitch;
                     if (MathF.Abs(u - mid) < clear) continue;
-                    float a = y0 + S.MuseumSlitSill, b = y0 + S.EntryHeight;
-                    openings.Add(new Opening(f, OpeningKind.Square, new(u - S.MuseumSlitWidth * 0.5f, u + S.MuseumSlitWidth * 0.5f, a, b), 1, [(a, b, 0)],
-                        Allocate(1, 0), S.CardLecture));
+                    float a = y0 + MuseumStyle.MuseumSlitSill, b = y0 + MuseumStyle.EntryHeight;
+                    openings.Add(new Opening(f, OpeningKind.Square, new(u - MuseumStyle.MuseumSlitWidth * 0.5f, u + MuseumStyle.MuseumSlitWidth * 0.5f, a, b), 1, [(a, b, 0)],
+                        Allocate(1, 0), MuseumStyle.CardLecture));
                 }
             }
         }
@@ -96,11 +96,11 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
         for (var i = 0; i < body.Count; i++)
         {
             var f = HallFace(i);
-            if (f.Length < 2 * S.ClerestoryMargin + S.ClerestoryModule) continue;
-            var cells = Math.Max(1, (int)MathF.Round((f.Length - 2 * S.ClerestoryMargin) / S.ClerestoryModule));
-            float a = RoofY + S.ClerestorySill, b = a + S.ClerestoryHeight;
-            clerestory.Add(new Opening(f, OpeningKind.Ribbon, new(S.ClerestoryMargin, f.Length - S.ClerestoryMargin, a, b), cells, [(a, b, 1)],
-                Allocate(cells, 1), S.CardVenue));
+            if (f.Length < 2 * MuseumStyle.ClerestoryMargin + MuseumStyle.ClerestoryModule) continue;
+            var cells = Math.Max(1, (int)MathF.Round((f.Length - 2 * MuseumStyle.ClerestoryMargin) / MuseumStyle.ClerestoryModule));
+            float a = RoofY + MuseumStyle.ClerestorySill, b = a + MuseumStyle.ClerestoryHeight;
+            clerestory.Add(new Opening(f, OpeningKind.Ribbon, new(MuseumStyle.ClerestoryMargin, f.Length - MuseumStyle.ClerestoryMargin, a, b), cells, [(a, b, 1)],
+                Allocate(cells, 1), MuseumStyle.CardVenue));
         }
         _clerestory = clerestory;
         Columns = next.Max();
@@ -115,7 +115,7 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
         if (hall is null) return null;
         var body = WorldFeatureGeometry.PolygonsOf(WorldFeatureGeometry.FacadeGeometryOf(hall)).FirstOrDefault()?.Outer;
         if (body is null || body.Count < 4) return null;
-        body = PlanGeometry.OpenRing(body);
+        body = PlanRings.OpenRing(body);
         var ring = new float[body.Count];
         foreach (var (bodySelection, outerSelection) in CoreIds.MuseumColonnadeEdges)
         {
@@ -123,12 +123,12 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
             var outer = world.ContourSegment(outerSelection);
             ring[i] = Vector2.Dot((outer[0] + outer[^1]) * 0.5f - body[i], MuseumGeometry.Normal(body, i));
         }
-        var frame = BuildingFrame.Of(world, CoreIds.Museum, S.MuseumStoreys);
+        var frame = BuildingFrame.Of(world, CoreIds.Museum, MuseumStyle.MuseumStoreys);
         return new MuseumShell(world, frame, body, ring);
     }
 
     public override string Id => "museum";
-    public Vector2 Anchor => PlanGeometry.Centroid([Body]);
+    public Vector2 Anchor => PlanPolygons.Centroid([Body]);
     public static IReadOnlyList<Claim> DeclaredClaims { get; } = [new FeatureClaim(CoreIds.Museum, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
     public override IReadOnlyList<Claim> Claims => DeclaredClaims;
 
@@ -152,9 +152,9 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
     public int Columns { get; }
 
     public float FloorY => Frame.FloorY;
-    public float SoffitY => FloorY + S.MuseumSoffit;
+    public float SoffitY => FloorY + MuseumStyle.MuseumSoffit;
     public float RoofY => Frame.EavesY;
-    public float HallEavesY => FloorY + S.MuseumHallEaves;
+    public float HallEavesY => FloorY + MuseumStyle.MuseumHallEaves;
 
     /// <summary>Main face of body edge <paramref name="i"/> on a chamfered ring (faces alternate corner, main).</summary>
     private static Face MainFace(IReadOnlyList<Vector2> ring16, int i) => MuseumGeometry.FaceOf(ring16, 2 * i + 1);
@@ -172,7 +172,7 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
     /// </summary>
     public IEnumerable<(string Id, Vector3 Centre, Vector3 Outward, float ClearWidth)> Entrances()
     {
-        foreach (var (id, o, leaves) in new[] { ("museum.main", MainDoor, S.MuseumDoorLeaves), ("museum.lake", LakeDoor, S.LakeDoorLeaves) })
+        foreach (var (id, o, leaves) in new[] { ("museum.main", MainDoor, MuseumStyle.MuseumDoorLeaves), ("museum.lake", LakeDoor, MuseumStyle.LakeDoorLeaves) })
         {
             var (a, b) = DoorSpan(o);
             var open = leaves > 2 ? (b - a) * (leaves - 2) / leaves : b - a;
@@ -202,7 +202,7 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
     public IReadOnlyList<WindowDecl> Windows(WindowNumberingSnapshot numbering)
     {
         var allocation = Allocation(numbering);
-        return Cells().Select(c => new WindowDecl(allocation.IdAt(c.Column, c.Row), allocation.BaseId, Columns, S.MuseumWindowChannel,
+        return Cells().Select(c => new WindowDecl(allocation.IdAt(c.Column, c.Row), allocation.BaseId, Columns, MuseumStyle.MuseumWindowChannel,
             c.Centre, c.Right, c.Up, c.Width, c.Height)).ToArray();
     }
 
@@ -224,9 +224,9 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
     {
         var mesh = build.Mesh;
         int? windowBase = build.WindowNumbering is { } numbering ? Allocation(numbering).BaseId : null;
-        var glass = build.Glass(S.WindowGlass, windowBase, Columns, S.MuseumWindowChannel);
-        var granite = new FacadePaints(S.Wall(S.MuseumGranite), S.Trim(S.MuseumTrim), S.Metal(S.MuseumFrame));
-        var white = new FacadePaints(S.Wall(S.MuseumWhite), S.Trim(S.MuseumTrim), S.Metal(S.MuseumFrame));
+        var glass = build.Glass(S.WindowGlass, windowBase, Columns, MuseumStyle.MuseumWindowChannel);
+        var granite = new FacadePaints(S.Wall(MuseumStyle.MuseumGranite), S.Trim(MuseumStyle.MuseumTrim), S.Metal(MuseumStyle.MuseumFrame));
+        var white = new FacadePaints(S.Wall(MuseumStyle.MuseumWhite), S.Trim(MuseumStyle.MuseumTrim), S.Metal(MuseumStyle.MuseumFrame));
         PlatformTop(mesh);
         GalleryWalls(mesh, lod);
         foreach (var o in _openings) LibraryFacade.Window(mesh, glass, o, lod, granite);
@@ -240,14 +240,14 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
     /// <summary>The colonnade floor: light granite from the gallery wall to a dark curb at the platform edge, its edge face to the ground.</summary>
     private void PlatformTop(GeometrySink mesh)
     {
-        var curb = MuseumGeometry.Offset(Platform, Enumerable.Repeat(-S.MuseumCurb, Platform.Count).ToArray());
-        Ring(mesh, S.Roof(S.MuseumFloor), Gallery, curb, FloorY, Vector3.UnitY);
-        Ring(mesh, S.Roof(S.MuseumDark), curb, Platform, FloorY, Vector3.UnitY);
+        var curb = MuseumGeometry.Offset(Platform, Enumerable.Repeat(-MuseumStyle.MuseumCurb, Platform.Count).ToArray());
+        Ring(mesh, S.Roof(MuseumStyle.MuseumFloor), Gallery, curb, FloorY, Vector3.UnitY);
+        Ring(mesh, S.Roof(MuseumStyle.MuseumDark), curb, Platform, FloorY, Vector3.UnitY);
         var bottom = Frame.PadY - S.Sink;
         for (var k = 0; k < Platform.Count; k++)
         {
             var f = MuseumGeometry.FaceOf(Platform, k);
-            LibraryFacade.Panel(mesh, S.Trim(S.MuseumDark), f, 0f, f.Length, 0f, bottom, FloorY, f.N);
+            LibraryFacade.Panel(mesh, S.Trim(MuseumStyle.MuseumDark), f, 0f, f.Length, 0f, bottom, FloorY, f.N);
         }
     }
 
@@ -264,25 +264,25 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
     /// <summary>Granite gallery walls up to the colonnade ceiling: grooves (L0, L1), plinth band (L0, L1), holes at L0 and L1.</summary>
     private void GalleryWalls(GeometrySink mesh, LodLevel lod)
     {
-        var wall = S.Wall(S.MuseumGranite);
-        var groove = S.Trim(S.MuseumGroove);
-        var plinth = S.Trim(S.MuseumDark);
+        var wall = S.Wall(MuseumStyle.MuseumGranite);
+        var groove = S.Trim(MuseumStyle.MuseumGroove);
+        var plinth = S.Trim(MuseumStyle.MuseumDark);
         for (var k = 0; k < Gallery.Count; k++)
         {
             var f = MuseumGeometry.FaceOf(Gallery, k);
             var holes = lod <= LodLevel.L1 ? _openings.Where(o => o.Face == f).Select(o => o.Hole).ToArray() : [];
-            var grooves = lod <= LodLevel.L1 ? S.MuseumGrooves.Select(g => new Rect(0f, f.Length, FloorY + g - S.GrooveHeight * 0.5f, FloorY + g + S.GrooveHeight * 0.5f)).ToArray() : [];
+            var grooves = lod <= LodLevel.L1 ? MuseumStyle.MuseumGrooves.Select(g => new Rect(0f, f.Length, FloorY + g - MuseumStyle.GrooveHeight * 0.5f, FloorY + g + MuseumStyle.GrooveHeight * 0.5f)).ToArray() : [];
             LibraryFacade.Wall(mesh, wall, f, 0f, f.Length, Frame.WallBaseY, SoffitY, [.. holes, .. grooves]);
             foreach (var g in grooves)
             {
                 var mid = (g.Y0 + g.Y1) * 0.5f;
                 foreach (var (a, b) in Spans(0f, f.Length, holes.Where(h => h.Y0 <= mid && h.Y1 >= mid)))
                 {
-                    LibraryFacade.Panel(mesh, groove, f, a, b, -S.GrooveDepth, g.Y0, g.Y1, f.N);
-                    mesh.Quad(groove, f.At(a, 0f, g.Y1), f.At(b, 0f, g.Y1), f.At(b, -S.GrooveDepth, g.Y1), f.At(a, -S.GrooveDepth, g.Y1), -Vector3.UnitY);
-                    mesh.Quad(groove, f.At(a, 0f, g.Y0), f.At(b, 0f, g.Y0), f.At(b, -S.GrooveDepth, g.Y0), f.At(a, -S.GrooveDepth, g.Y0), Vector3.UnitY);
-                    if (a <= 1e-3f) mesh.Quad(groove, f.At(a, 0f, g.Y0), f.At(a, -S.GrooveDepth, g.Y0), f.At(a, -S.GrooveDepth, g.Y1), f.At(a, 0f, g.Y1), f.T);
-                    if (b >= f.Length - 1e-3f) mesh.Quad(groove, f.At(b, 0f, g.Y0), f.At(b, -S.GrooveDepth, g.Y0), f.At(b, -S.GrooveDepth, g.Y1), f.At(b, 0f, g.Y1), -f.T);
+                    LibraryFacade.Panel(mesh, groove, f, a, b, -MuseumStyle.GrooveDepth, g.Y0, g.Y1, f.N);
+                    mesh.Quad(groove, f.At(a, 0f, g.Y1), f.At(b, 0f, g.Y1), f.At(b, -MuseumStyle.GrooveDepth, g.Y1), f.At(a, -MuseumStyle.GrooveDepth, g.Y1), -Vector3.UnitY);
+                    mesh.Quad(groove, f.At(a, 0f, g.Y0), f.At(b, 0f, g.Y0), f.At(b, -MuseumStyle.GrooveDepth, g.Y0), f.At(a, -MuseumStyle.GrooveDepth, g.Y0), Vector3.UnitY);
+                    if (a <= 1e-3f) mesh.Quad(groove, f.At(a, 0f, g.Y0), f.At(a, -MuseumStyle.GrooveDepth, g.Y0), f.At(a, -MuseumStyle.GrooveDepth, g.Y1), f.At(a, 0f, g.Y1), f.T);
+                    if (b >= f.Length - 1e-3f) mesh.Quad(groove, f.At(b, 0f, g.Y0), f.At(b, -MuseumStyle.GrooveDepth, g.Y0), f.At(b, -MuseumStyle.GrooveDepth, g.Y1), f.At(b, 0f, g.Y1), -f.T);
                 }
             }
             if (lod > LodLevel.L1) continue;
@@ -290,7 +290,7 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
             const float ext = 0.03f;
             var low = holes.Where(h => h.Y0 < Frame.PlinthTopY).ToArray();
             foreach (var (a, b) in Spans(-ext, f.Length + ext, low))
-                LibraryFacade.Box(mesh, plinth, f, a, b, 0f, S.PlinthProject, Frame.WallBaseY, Frame.PlinthTopY);
+                LibraryFacade.Box(mesh, plinth, f, a, b, 0f, LibraryStyle.PlinthProject, Frame.WallBaseY, Frame.PlinthTopY);
         }
     }
 
@@ -309,17 +309,17 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
 
     /// <summary>
     /// The flat roof from the hall out to the eave, its white soffit over the colonnade, and the eave band: a white fascia
-    /// rising <see cref="CoreStyle.MuseumUpstand"/> above the roof with a light coping (L0–L2; L3 and L4 the band only).
+    /// rising <see cref="MuseumStyle.MuseumUpstand"/> above the roof with a light coping (L0–L2; L3 and L4 the band only).
     /// </summary>
     private void RoofRing(GeometrySink mesh, LodLevel lod)
     {
-        var inner = MuseumGeometry.Offset(Eave, Enumerable.Repeat(-S.MuseumFasciaThick, Eave.Count).ToArray());
-        Flat(mesh, S.Roof(S.MuseumFlatRoof), inner, Hall, RoofY, Vector3.UnitY);
-        Flat(mesh, S.Wall(S.MuseumWhite), inner, Gallery, SoffitY, -Vector3.UnitY);
-        var top = RoofY + S.MuseumUpstand;
-        var coping = lod <= LodLevel.L2 ? S.CopingHeight : 0f;
-        Sweep(mesh, S.Wall(S.MuseumWhite), Eave, Box(-S.MuseumFasciaThick, 0f, top - coping - SoffitY), SoffitY);
-        if (coping > 0f) Sweep(mesh, S.Trim(S.MuseumTrim), Eave, Coping(S.MuseumFasciaThick), top - coping);
+        var inner = MuseumGeometry.Offset(Eave, Enumerable.Repeat(-MuseumStyle.MuseumFasciaThick, Eave.Count).ToArray());
+        Flat(mesh, S.Roof(MuseumStyle.MuseumFlatRoof), inner, Hall, RoofY, Vector3.UnitY);
+        Flat(mesh, S.Wall(MuseumStyle.MuseumWhite), inner, Gallery, SoffitY, -Vector3.UnitY);
+        var top = RoofY + MuseumStyle.MuseumUpstand;
+        var coping = lod <= LodLevel.L2 ? LibraryStyle.CopingHeight : 0f;
+        Sweep(mesh, S.Wall(MuseumStyle.MuseumWhite), Eave, Box(-MuseumStyle.MuseumFasciaThick, 0f, top - coping - SoffitY), SoffitY);
+        if (coping > 0f) Sweep(mesh, S.Trim(MuseumStyle.MuseumTrim), Eave, Coping(MuseumStyle.MuseumFasciaThick), top - coping);
     }
 
     /// <summary>A flat polygon between an outer ring and one hole ring at height y.</summary>
@@ -339,7 +339,7 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
 
     private static SweepProfile Coping(float thick)
     {
-        float t = thick, c = S.CopingHeight, o = S.CopingOverhang, b = S.CopingBevel;
+        float t = thick, c = LibraryStyle.CopingHeight, o = LibraryStyle.CopingOverhang, b = LibraryStyle.CopingBevel;
         return new([new(-t - o, 0), new(o, 0), new(o, c - b), new(o - b, c), new(-t - o + b, c), new(-t - o, c - b)]);
     }
 
@@ -356,17 +356,17 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
             var holes = lod <= LodLevel.L1 ? _clerestory.Where(o => o.Face == f).Select(o => o.Hole).ToArray() : [];
             LibraryFacade.Wall(mesh, wall, f, 0f, f.Length, RoofY - 0.02f, HallEavesY, holes);
             if (lod <= LodLevel.L1)
-                LibraryFacade.Box(mesh, S.Trim(S.MuseumDark), f, -0.03f, f.Length + 0.03f, 0f, S.PlinthProject, RoofY - 0.02f, RoofY + S.MuseumHallBase);
+                LibraryFacade.Box(mesh, S.Trim(MuseumStyle.MuseumDark), f, -0.03f, f.Length + 0.03f, 0f, LibraryStyle.PlinthProject, RoofY - 0.02f, RoofY + MuseumStyle.MuseumHallBase);
         }
         foreach (var o in _clerestory) LibraryFacade.Window(mesh, glass, o, lod, paints);
-        var sheet = S.Sheet(S.MuseumRoof);
-        Sweep(mesh, sheet, Hall, Box(-0.3f, S.MuseumHallEaveOut, S.MuseumHallEaveThick), HallEavesY);
+        var sheet = S.Sheet(MuseumStyle.MuseumRoof);
+        Sweep(mesh, sheet, Hall, Box(-0.3f, MuseumStyle.MuseumHallEaveOut, MuseumStyle.MuseumHallEaveThick), HallEavesY);
         // Pyramid faces from the eave slab's outer top edge to the small flat top (planar trapezoids: each top edge is its
         // eave edge scaled about the hall's centre).
-        var eave = MuseumGeometry.Offset(Hall, Enumerable.Repeat(S.MuseumHallEaveOut, Hall.Count).ToArray());
-        var centre = PlanGeometry.Centroid([Hall]);
-        float y0 = HallEavesY + S.MuseumHallEaveThick, y1 = y0 + S.MuseumRoofRise;
-        var apex = eave.Select(p => centre + (p - centre) * S.MuseumApexScale).ToArray();
+        var eave = MuseumGeometry.Offset(Hall, Enumerable.Repeat(MuseumStyle.MuseumHallEaveOut, Hall.Count).ToArray());
+        var centre = PlanPolygons.Centroid([Hall]);
+        float y0 = HallEavesY + MuseumStyle.MuseumHallEaveThick, y1 = y0 + MuseumStyle.MuseumRoofRise;
+        var apex = eave.Select(p => centre + (p - centre) * MuseumStyle.MuseumApexScale).ToArray();
         for (var k = 0; k < eave.Count; k++)
         {
             var j = (k + 1) % eave.Count;
@@ -385,17 +385,17 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
 
     /// <summary>
     /// The portico's head block (门头) over the south colonnade bay: white, from just under the colonnade ceiling to
-    /// <see cref="CoreStyle.PorticoTop"/>, back on the gallery wall and standing proud of the eave band, with a recessed granite
+    /// <see cref="MuseumStyle.PorticoTop"/>, back on the gallery wall and standing proud of the eave band, with a recessed granite
     /// name field on its face (the calligraphy waits for the scene text atlas) and a coping.
     /// </summary>
     private void Portico(GeometrySink mesh, LodLevel lod)
     {
         var f = GalleryFace(South);
         var u = f.Length * 0.5f;
-        float u0 = u - S.PorticoHalf, u1 = u + S.PorticoHalf;
-        var front = EaveDistance(South) + S.PorticoProject;
-        float y0 = SoffitY - 0.03f, y1 = FloorY + S.PorticoTop;
-        var white = S.Wall(S.MuseumWhite);
+        float u0 = u - MuseumStyle.PorticoHalf, u1 = u + MuseumStyle.PorticoHalf;
+        var front = EaveDistance(South) + MuseumStyle.PorticoProject;
+        float y0 = SoffitY - 0.03f, y1 = FloorY + MuseumStyle.PorticoTop;
+        var white = S.Wall(MuseumStyle.MuseumWhite);
         mesh.Quad(white, f.At(u0, 0f, y1), f.At(u1, 0f, y1), f.At(u1, front, y1), f.At(u0, front, y1), Vector3.UnitY);
         mesh.Quad(white, f.At(u0, 0f, y0), f.At(u1, 0f, y0), f.At(u1, front, y0), f.At(u0, front, y0), -Vector3.UnitY);
         mesh.Quad(white, f.At(u0, 0f, y0), f.At(u0, front, y0), f.At(u0, front, y1), f.At(u0, 0f, y1), -f.T);
@@ -404,10 +404,10 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
         var face = new Face(f.A + f.Out * front, f.Along, f.Out, f.Length);
         if (lod <= LodLevel.L1)
         {
-            var field = new Rect(u0 + S.NameSideMargin, u1 - S.NameSideMargin, y0 + S.NameMargin, y1 - S.NameMargin);
+            var field = new Rect(u0 + MuseumStyle.NameSideMargin, u1 - MuseumStyle.NameSideMargin, y0 + MuseumStyle.NameMargin, y1 - MuseumStyle.NameMargin);
             LibraryFacade.Wall(mesh, white, face, u0, u1, y0, y1, [field]);
-            var d = -S.NameDepth;
-            LibraryFacade.Panel(mesh, S.Wall(S.MuseumNameField), face, field.U0, field.U1, d, field.Y0, field.Y1, f.N);
+            var d = -MuseumStyle.NameDepth;
+            LibraryFacade.Panel(mesh, S.Wall(MuseumStyle.MuseumNameField), face, field.U0, field.U1, d, field.Y0, field.Y1, f.N);
             mesh.Quad(white, face.At(field.U0, 0f, field.Y0), face.At(field.U0, d, field.Y0), face.At(field.U0, d, field.Y1), face.At(field.U0, 0f, field.Y1), f.T);
             mesh.Quad(white, face.At(field.U1, 0f, field.Y0), face.At(field.U1, d, field.Y0), face.At(field.U1, d, field.Y1), face.At(field.U1, 0f, field.Y1), -f.T);
             mesh.Quad(white, face.At(field.U0, 0f, field.Y1), face.At(field.U1, 0f, field.Y1), face.At(field.U1, d, field.Y1), face.At(field.U0, d, field.Y1), -Vector3.UnitY);
@@ -417,8 +417,8 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
             LibraryFacade.Panel(mesh, white, face, u0, u1, 0f, y0, y1, f.N);
         if (lod > LodLevel.L2) return;
         const float o = 0.05f;
-        var trim = S.Trim(S.MuseumTrim);
-        var c = S.CopingHeight;
+        var trim = S.Trim(MuseumStyle.MuseumTrim);
+        var c = LibraryStyle.CopingHeight;
         LibraryFacade.Box(mesh, trim, f, u0 - o, u1 + o, -o, front + o, y1, y1 + c);
         LibraryFacade.Panel(mesh, trim, f, u0 - o, u1 + o, -o, y1, y1 + c, -f.N);
     }
@@ -435,7 +435,7 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
 
     /// <summary>
     /// Column positions on the column line: a column on every corner (squared to the corner's bisector) and bays of at
-    /// most <see cref="CoreStyle.ColumnPitch"/> between; on the south edge the four portico columns replace the bays in front
+    /// most <see cref="MuseumStyle.ColumnPitch"/> between; on the south edge the four portico columns replace the bays in front
     /// of the door. Each entry: centre, facing direction, size, base size, portico.
     /// </summary>
     public IEnumerable<(Vector2 C, Vector2 Along, float Size, float Base)> ColumnPositions()
@@ -447,47 +447,47 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
             var length = Vector2.Distance(a, b);
             var along = (b - a) / length;
             var bisector = Vector2.Normalize(along + Vector2.Normalize(a - p));
-            yield return (a, bisector, S.ColumnSize, S.ColumnBase);
+            yield return (a, bisector, MuseumStyle.ColumnSize, MuseumStyle.ColumnBase);
             if (i != South)
             {
-                var bays = Math.Max(1, (int)MathF.Ceiling(length / S.ColumnPitch));
-                for (var k = 1; k < bays; k++) yield return (a + along * (length * k / bays), along, S.ColumnSize, S.ColumnBase);
+                var bays = Math.Max(1, (int)MathF.Ceiling(length / MuseumStyle.ColumnPitch));
+                for (var k = 1; k < bays; k++) yield return (a + along * (length * k / bays), along, MuseumStyle.ColumnSize, MuseumStyle.ColumnBase);
                 continue;
             }
             // The door axis: the gallery face's middle projected onto this edge.
             var f = GalleryFace(i);
             var mid = new Vector2(f.At(f.Length * 0.5f, 0, 0).X, f.At(f.Length * 0.5f, 0, 0).Z);
             var axis = Vector2.Dot(mid - a, along);
-            float left = axis - S.PorticoOuter, right = axis + S.PorticoOuter;
-            var bl = Math.Max(1, (int)MathF.Ceiling(left / S.ColumnPitch));
-            for (var k = 1; k < bl; k++) yield return (a + along * (left * k / bl), along, S.ColumnSize, S.ColumnBase);
-            foreach (var w in new[] { -S.PorticoOuter, -S.PorticoInner, S.PorticoInner, S.PorticoOuter })
-                yield return (a + along * (axis + w), along, S.PorticoColumn, S.PorticoColumnBase);
-            var br = Math.Max(1, (int)MathF.Ceiling((length - right) / S.ColumnPitch));
-            for (var k = 1; k < br; k++) yield return (a + along * (right + (length - right) * k / br), along, S.ColumnSize, S.ColumnBase);
+            float left = axis - MuseumStyle.PorticoOuter, right = axis + MuseumStyle.PorticoOuter;
+            var bl = Math.Max(1, (int)MathF.Ceiling(left / MuseumStyle.ColumnPitch));
+            for (var k = 1; k < bl; k++) yield return (a + along * (left * k / bl), along, MuseumStyle.ColumnSize, MuseumStyle.ColumnBase);
+            foreach (var w in new[] { -MuseumStyle.PorticoOuter, -MuseumStyle.PorticoInner, MuseumStyle.PorticoInner, MuseumStyle.PorticoOuter })
+                yield return (a + along * (axis + w), along, MuseumStyle.PorticoColumn, MuseumStyle.PorticoColumnBase);
+            var br = Math.Max(1, (int)MathF.Ceiling((length - right) / MuseumStyle.ColumnPitch));
+            for (var k = 1; k < br; k++) yield return (a + along * (right + (length - right) * k / br), along, MuseumStyle.ColumnSize, MuseumStyle.ColumnBase);
         }
     }
 
     /// <summary>Square columns from the floor to the colonnade ceiling: L0 base, chamfered shaft and capital; L1 base and shaft; L2 the shaft.</summary>
     private void Colonnade(GeometrySink mesh, LodLevel lod)
     {
-        var white = S.Wall(S.MuseumWhite);
-        var dark = S.Trim(S.MuseumDark);
-        var spec = S.Spec(CoreMaterial.Wall, S.MuseumWhite);
-        float baseH = S.ColumnBaseHeight, capH = S.ColumnCapHeight;
+        var white = S.Wall(MuseumStyle.MuseumWhite);
+        var dark = S.Trim(MuseumStyle.MuseumDark);
+        var spec = S.Spec(CoreMaterial.Wall, MuseumStyle.MuseumWhite);
+        float baseH = MuseumStyle.ColumnBaseHeight, capH = MuseumStyle.ColumnCapHeight;
         foreach (var (c, along, size, plinth) in ColumnPositions())
         {
             Matrix4x4 At(float y) => CoreShapes.Facing(new(c.X, y, c.Y), along);
             var shaftY = lod <= LodLevel.L1 ? FloorY + baseH - 0.01f : FloorY - 0.05f;
             var shaftTop = lod == LodLevel.L0 ? SoffitY - capH + 0.01f : SoffitY + 0.02f;
-            var bevel = lod == LodLevel.L0 ? S.ColumnBevel : 0f;
-            mesh.Add(white, PartGeometryKernel.BeveledBox(size, shaftTop - shaftY, size, bevel, spec), At(shaftY));
+            var bevel = lod == LodLevel.L0 ? MuseumStyle.ColumnBevel : 0f;
+            mesh.Add(white, PartSolids.BeveledBox(size, shaftTop - shaftY, size, bevel, spec), At(shaftY));
             if (lod <= LodLevel.L1)
-                mesh.Add(dark, PartGeometryKernel.BeveledBox(plinth, baseH + 0.05f, plinth, lod == LodLevel.L0 ? 0.02f : 0f, spec), At(FloorY - 0.05f));
+                mesh.Add(dark, PartSolids.BeveledBox(plinth, baseH + 0.05f, plinth, lod == LodLevel.L0 ? 0.02f : 0f, spec), At(FloorY - 0.05f));
             if (lod == LodLevel.L0)
             {
-                var cap = size + (S.ColumnCap - S.ColumnSize);
-                mesh.Add(S.Trim(S.MuseumTrim), PartGeometryKernel.BeveledBox(cap, capH + 0.02f, cap, 0.02f, spec), At(SoffitY - capH));
+                var cap = size + (MuseumStyle.ColumnCap - MuseumStyle.ColumnSize);
+                mesh.Add(S.Trim(MuseumStyle.MuseumTrim), PartSolids.BeveledBox(cap, capH + 0.02f, cap, 0.02f, spec), At(SoffitY - capH));
             }
         }
     }
@@ -497,12 +497,12 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
     /// <summary>WP-10 glass doors in the two bays: the main door's inner two leaves and both lake door leaves fixed open at 90°.</summary>
     private void Doors(CoreBuild build)
     {
-        foreach (var (o, leaves) in new[] { (MainDoor, S.MuseumDoorLeaves), (LakeDoor, S.LakeDoorLeaves) })
+        foreach (var (o, leaves) in new[] { (MainDoor, MuseumStyle.MuseumDoorLeaves), (LakeDoor, MuseumStyle.LakeDoorLeaves) })
         {
             var (a, b) = DoorSpan(o);
             var origin = o.Face.At((a + b) * 0.5f, -o.Depth, o.Hole.Y0);
             build.Parts.Add(new PlacedPart(new PartId(PartCatalog.DoorGlass),
-                new DoorParams(b - a, o.Door!.Value.Top - o.Hole.Y0, S.DoorDepth, S.DoorOpenDeg, leaves) { Foot = FootMat.Glass },
+                new DoorParams(b - a, o.Door!.Value.Top - o.Hole.Y0, EntranceStyle.DoorDepth, EntranceStyle.DoorOpenDeg, leaves) { Foot = FootMat.Glass },
                 OpeningPlacement.Frame(origin, o.Face.N)));
         }
     }
@@ -518,7 +518,7 @@ public sealed class MuseumShell : ZoneSite, IWindowedPiece
     {
         var list = new List<Collider>();
         var top = Frame.PadY + WalkRules.BuildingCollisionHeight;
-        var doors = new[] { (MainDoor, S.MuseumDoorLeaves), (LakeDoor, S.LakeDoorLeaves) };
+        var doors = new[] { (MainDoor, MuseumStyle.MuseumDoorLeaves), (LakeDoor, MuseumStyle.LakeDoorLeaves) };
         for (var k = 0; k < Gallery.Count; k++)
         {
             var f = MuseumGeometry.FaceOf(Gallery, k);

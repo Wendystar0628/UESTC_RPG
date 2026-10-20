@@ -49,10 +49,10 @@ public sealed class RestDeckSite : ZoneSite
         var deck = g + height;
         float hl = length * 0.5f, hw = width * 0.5f, hp = D.Pit * 0.5f;
         // Steel frame from below the ground up to the underside of the boards.
-        b.Add(PartGeometryKernel.BeveledBox(length, height - D.Top + D.Sink, width, 0.02f, L.Steel), f.At(0, g - D.Sink, 0));
+        b.Add(PartSolids.BeveledBox(length, height - D.Top + D.Sink, width, 0.02f, L.Steel), f.At(0, g - D.Sink, 0));
         if (b.Detail == SiteDetail.Mass)
         {
-            b.Add(PartGeometryKernel.BeveledBox(length + 2 * D.Overhang, D.Top, width + 2 * D.Overhang, 0, L.Wood), f.At(0, deck - D.Top, 0));
+            b.Add(PartSolids.BeveledBox(length + 2 * D.Overhang, D.Top, width + 2 * D.Overhang, 0, L.Wood), f.At(0, deck - D.Top, 0));
             return;
         }
         // Four boards round the pit: two full-width ends, two side boards between them; seams leave thin dark lines.
@@ -60,18 +60,18 @@ public sealed class RestDeckSite : ZoneSite
         float endLength = lo - hp - s;
         foreach (var side in new[] { -1f, 1f })
         {
-            b.Add(PartGeometryKernel.BeveledBox(endLength, D.Top, 2 * wo, D.TopBevel, L.Wood), f.At(side * (hp + s + endLength * 0.5f), deck - D.Top, 0));
+            b.Add(PartSolids.BeveledBox(endLength, D.Top, 2 * wo, D.TopBevel, L.Wood), f.At(side * (hp + s + endLength * 0.5f), deck - D.Top, 0));
             var sideDepth = wo - hp - s;
-            b.Add(PartGeometryKernel.BeveledBox(D.Pit - 2 * s, D.Top, sideDepth, D.TopBevel, L.Wood), f.At(0, deck - D.Top, side * (hp + s + sideDepth * 0.5f)));
+            b.Add(PartSolids.BeveledBox(D.Pit - 2 * s, D.Top, sideDepth, D.TopBevel, L.Wood), f.At(0, deck - D.Top, side * (hp + s + sideDepth * 0.5f)));
         }
         // Pit: a steel kerb ring flush with the boards, the shrub rising out of it.
         foreach (var side in new[] { -1f, 1f })
         {
-            b.Add(PartGeometryKernel.BeveledBox(D.Pit, D.Top + 0.01f, D.Kerb, 0.01f, L.Steel), f.At(0, deck - D.Top, side * (hp - D.Kerb * 0.5f)));
-            b.Add(PartGeometryKernel.BeveledBox(D.Kerb, D.Top + 0.01f, D.Pit - 2 * D.Kerb, 0.01f, L.Steel), f.At(side * (hp - D.Kerb * 0.5f), deck - D.Top, 0));
+            b.Add(PartSolids.BeveledBox(D.Pit, D.Top + 0.01f, D.Kerb, 0.01f, L.Steel), f.At(0, deck - D.Top, side * (hp - D.Kerb * 0.5f)));
+            b.Add(PartSolids.BeveledBox(D.Kerb, D.Top + 0.01f, D.Pit - 2 * D.Kerb, 0.01f, L.Steel), f.At(side * (hp - D.Kerb * 0.5f), deck - D.Top, 0));
         }
         var shrub = D.Pit - 2 * D.Kerb - 0.1f;
-        b.Add(PartGeometryKernel.BeveledBox(shrub, D.Shrub + D.Top, shrub, D.ShrubBevel, L.Hedge), f.At(0, deck - D.Top, 0));
+        b.Add(PartSolids.BeveledBox(shrub, D.Shrub + D.Top, shrub, D.ShrubBevel, L.Hedge), f.At(0, deck - D.Top, 0));
     }
 
     /// <summary>One box for the deck, a prop the player could step onto (the cluster is closed, so nobody reaches it on foot).</summary>

@@ -105,7 +105,7 @@ public sealed class BoundaryPlan
     private static Opening? South(IWorldModel world, BoundaryRing ring)
     {
         if (!world.Features.TryGetValue(new(SouthIds.Gate.Entity), out var gate)) return null;
-        Vector2 House(string sourceId) => PlanGeometry.Centroid(gate.Part(sourceId).Contour());
+        Vector2 House(string sourceId) => PlanPolygons.Centroid(gate.Part(sourceId).Contour());
         var (west, east) = (House(SouthIds.WestHouse.Part), House(SouthIds.EastHouse.Part));
         var u = Vector2.Normalize(east - west);
         var reach = gate.Number("guardHouseSize") * 0.5f - 0.05f;
@@ -138,7 +138,7 @@ public sealed class BoundaryPlan
         {
             var p = ring.At(s) + ring.InwardAt(s) * F.Inset;
             foreach (var (outer, min, max) in boxes)
-                if (p.X >= min.X && p.Y >= min.Y && p.X <= max.X && p.Y <= max.Y && PlanGeometry.InsideByCrossings(outer, p)) { hits.Add(s); break; }
+                if (p.X >= min.X && p.Y >= min.Y && p.X <= max.X && p.Y <= max.Y && PlanRings.InsideByCrossings(outer, p)) { hits.Add(s); break; }
         }
         if (hits.Count == 0) yield break;
         hits.Sort();
@@ -378,7 +378,7 @@ public sealed class BoundaryPlan
             foreach (var (outer, min, max) in _areas)
             {
                 if (p.X < min.X || p.Y < min.Y || p.X > max.X || p.Y > max.Y) continue;
-                if (PlanGeometry.InsideByCrossings(outer, p) || PlanGeometry.DistanceToRing(p, outer) < pad) return true;
+                if (PlanRings.InsideByCrossings(outer, p) || PlanRings.DistanceToRing(p, outer) < pad) return true;
             }
             return false;
         }

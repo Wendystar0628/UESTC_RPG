@@ -7,7 +7,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core;
 /// Tunable values of the library shell (16b, MAP-QSH-CORE, MAP-QSH-INTERIORS-LIBRARY). Metres and degrees; values marked
 /// "review" are mainline initial values awaiting the main session's call. Colours are palette names only.
 /// </summary>
-public static partial class CoreStyle
+public static class LibraryStyle
 {
     // ---- Storeys and heights. The 1F floor is the pad + FloorAbovePad, and 1F is 4.95 m so the 2F floor lands on
     //      pad + 5.1 like the stair top and interiors.json's lib.main door (MAP-QSH-INTERIORS-LIBRARY: 5F 18.6, roof 23.1).
@@ -115,31 +115,4 @@ public static partial class CoreStyle
     /// <summary>Skylight ribs and grid: light steel so the eight-petal grid reads against the dark roof.</summary>
     public const string SkylightSteel = "wall.greyWhite";
 
-    private static string BuildingFamily(CoreMaterial material) => material switch
-    {
-        CoreMaterial.Wall => LibraryWall,
-        CoreMaterial.Trim => LibraryTrim,
-        CoreMaterial.Roof => LibraryRoof,
-        CoreMaterial.Sheet => LibraryVault,
-        _ => throw new ArgumentOutOfRangeException(nameof(material), material, "Not a building material."),
-    };
-
-    private static ToonSpec BuildingSpec(CoreMaterial material, ToonSpec spec) => material switch
-    {
-        CoreMaterial.Wall => spec with { Fx = ToonFx.BevelLift },
-        CoreMaterial.Trim => spec with { Fx = ToonFx.BevelLift, Line = LineClass.Fine },
-        CoreMaterial.Roof => spec with { Fx = ToonFx.Mottle, Wet = 0.85f },
-        CoreMaterial.Sheet => spec with { Fx = ToonFx.Rim | ToonFx.AnisoBand, Wet = 0.5f },
-        _ => throw new ArgumentOutOfRangeException(nameof(material), material, "Not a building material."),
-    };
-
-    public static Paint Wall(string family) => new(CoreMaterial.Wall, family);
-    public static Paint Trim(string family) => new(CoreMaterial.Trim, family);
-    public static Paint Roof(string family) => new(CoreMaterial.Roof, family);
-    public static Paint Sheet(string family) => new(CoreMaterial.Sheet, family);
-
-    /// <summary>Window glass (toon_glass with window cards); casts shadow, it closes the hollow shell.</summary>
-    public static ToonSpec WindowGlass => Campus.Gen.Sites.ZoneLooks.Glass;
-    /// <summary>See-through glass of the skylight and the front tower slot (paths P1 and P2, toon_glass clear mode).</summary>
-    public static ToonSpec ClearGlass { get; } = WindowGlass with { Kind = ToonKind.GlassNear };
 }

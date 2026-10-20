@@ -55,7 +55,7 @@ public sealed class PartGeometryTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void BeveledBoxHasDocumentedTopologyAndFlatPrincipalFaces()
     {
-        var geometry = PartGeometryKernel.BeveledBox(2, 3, 4, 0.1f, Material);
+        var geometry = PartSolids.BeveledBox(2, 3, 4, 0.1f, Material);
         var mesh = geometry.Meshes.Single();
         AssertThat(mesh.Position.Length / 3 == 24 && mesh.Index.Length / 3 == 44).OverrideFailureMessage("Beveled box topology changed.").IsTrue();
         AssertThat(geometry.Bounds == new Box3(new(-1, 0, -2), new(1, 3, 2))).OverrideFailureMessage("Box bounds changed.").IsTrue();
@@ -69,7 +69,7 @@ public sealed class PartGeometryTests
     public void OpeningsHaveRevealsAndRemainHolesOnBothSides()
     {
         Vector2[] opening = [new(-0.5f, 0.5f), new(0.5f, 0.5f), new(0.5f, 2), new(-0.5f, 2)];
-        var geometry = PartGeometryKernel.WallPanel(4, 3, 0.4f, [opening], Material);
+        var geometry = PartSolids.WallPanel(4, 3, 0.4f, [opening], Material);
         var mesh = geometry.Meshes.Single(); double frontArea = 0;
         for (var i = 0; i < mesh.Index.Length; i += 3)
         {
@@ -81,26 +81,26 @@ public sealed class PartGeometryTests
         AssertThat(mesh.Ao!.Any(v => v < 1)).OverrideFailureMessage("Reveals have no local occlusion.").IsTrue();
         ClosedClockwise(geometry);
         // A door is represented by a notch that connects to the bottom boundary.
-        ClosedClockwise(PartGeometryKernel.WallPanel(new([new(-2, 0), new(-0.6f, 0), new(-0.6f, 2.1f), new(0.6f, 2.1f), new(0.6f, 0), new(2, 0), new(2, 3), new(-2, 3)]), 0.3f, Material));
+        ClosedClockwise(PartSolids.WallPanel(new([new(-2, 0), new(-0.6f, 0), new(-0.6f, 2.1f), new(0.6f, 2.1f), new(0.6f, 0), new(2, 0), new(2, 3), new(-2, 3)]), 0.3f, Material));
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
     public void ConcaveAndCourtyardExtrusionsAreClosed()
     {
-        ClosedClockwise(PartGeometryKernel.Extrude(new([new(-2, -2), new(2, -2), new(2, 2), new(-2, 2)], [[new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)]]), 4, Material));
-        ClosedClockwise(PartGeometryKernel.Extrude(new([new(0, 0), new(3, 0), new(3, 1), new(1, 1), new(1, 3), new(0, 3)]), 2, Material));
-        ClosedClockwise(PartGeometryKernel.BeveledExtrude([new(-2, -1), new(2, -1), new(2, 1), new(-2, 1)], 1, 0.1f, Material));
+        ClosedClockwise(PartSolids.Extrude(new([new(-2, -2), new(2, -2), new(2, 2), new(-2, 2)], [[new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)]]), 4, Material));
+        ClosedClockwise(PartSolids.Extrude(new([new(0, 0), new(3, 0), new(3, 1), new(1, 1), new(1, 3), new(0, 3)]), 2, Material));
+        ClosedClockwise(PartSolids.BeveledExtrude([new(-2, -1), new(2, -1), new(2, 1), new(-2, 1)], 1, 0.1f, Material));
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
     public void MiterSweepsCloseBothOpenAndLoopPaths()
     {
-        var profile = PartGeometryKernel.BeveledRectangleProfile(0.4f, 0.3f, 0.04f);
-        ClosedClockwise(PartGeometryKernel.Sweep(profile, [new(0, 0), new(3, 0), new(3, 3)], Material));
-        ClosedClockwise(PartGeometryKernel.Sweep(profile, [new(0, 0), new(3, 0), new(3, 3), new(0, 3)], Material, closed: true));
-        AssertThrown(() => PartGeometryKernel.Sweep(profile, [new(0, 0), new(1, 0), new(0, 0)], Material)).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => PartGeometryKernel.Sweep(profile, [new(0, 0), new(0, 0)], Material)).IsInstanceOf<ArgumentException>();
-        AssertThrown(() => PartGeometryKernel.BeveledExtrude([new(-0.1f, -1), new(0.1f, -1), new(0.1f, 1), new(-0.1f, 1)], 2, 0.2f, Material)).IsInstanceOf<ArgumentException>();
+        var profile = PartSweeps.BeveledRectangleProfile(0.4f, 0.3f, 0.04f);
+        ClosedClockwise(PartSweeps.Sweep(profile, [new(0, 0), new(3, 0), new(3, 3)], Material));
+        ClosedClockwise(PartSweeps.Sweep(profile, [new(0, 0), new(3, 0), new(3, 3), new(0, 3)], Material, closed: true));
+        AssertThrown(() => PartSweeps.Sweep(profile, [new(0, 0), new(1, 0), new(0, 0)], Material)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => PartSweeps.Sweep(profile, [new(0, 0), new(0, 0)], Material)).IsInstanceOf<ArgumentException>();
+        AssertThrown(() => PartSolids.BeveledExtrude([new(-0.1f, -1), new(0.1f, -1), new(0.1f, 1), new(-0.1f, 1)], 2, 0.2f, Material)).IsInstanceOf<ArgumentException>();
     }
 
     [TestCase, TestCategory(TestTag.Determinism)]

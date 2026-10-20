@@ -59,10 +59,10 @@ public sealed class AnnexSite
             if (!world.Features.TryGetValue(feature, out var source)) continue;
             // D-239: the storey count is the data's; each storey's height is the library's own table (the data's 3.5 m a storey would break the shared floor lines).
             var count = source.Storeys is > 0 and var n ? n : throw new InvalidOperationException($"北辅楼 {feature.Value} has no storey count in the world model.");
-            var heights = Enumerable.Range(0, count).Select(i => S.LibraryStoreys[Math.Min(i, S.LibraryStoreys.Length - 1)]).ToArray();
+            var heights = Enumerable.Range(0, count).Select(i => LibraryStyle.LibraryStoreys[Math.Min(i, LibraryStyle.LibraryStoreys.Length - 1)]).ToArray();
             var frame = BuildingFrame.Of(world, feature, heights);
             annexes.Add(feature.Value, (kind, frame));
-            blocks.AddRange(frame.Footprints.Select(r => new Block(feature.Value, BlockKind.Annex, PlanGeometry.OpenRing(r.Outer), frame.WallBaseY, frame.EavesY)));
+            blocks.AddRange(frame.Footprints.Select(r => new Block(feature.Value, BlockKind.Annex, PlanRings.OpenRing(r.Outer), frame.WallBaseY, frame.EavesY)));
         }
         if (annexes.Count == 0) return null;
         foreach (var cover in Covers)
@@ -70,7 +70,7 @@ public sealed class AnnexSite
             if (!world.Features.TryGetValue(cover, out var f)) continue;
             var pad = world.Terrain.PadY(cover);
             var height = f.Height is > 0.5f and var h ? h : (f.Storeys ?? 2) * 3.5f;
-            blocks.AddRange(WorldFeatureGeometry.PolygonsOf(f.Geometry).Select(r => new Block(cover.Value, BlockKind.Neighbour, PlanGeometry.OpenRing(r.Outer), pad - FacadeRules.WallBelowPad, pad + height)));
+            blocks.AddRange(WorldFeatureGeometry.PolygonsOf(f.Geometry).Select(r => new Block(cover.Value, BlockKind.Neighbour, PlanRings.OpenRing(r.Outer), pad - FacadeRules.WallBelowPad, pad + height)));
         }
         return new AnnexSite(world, blocks, LibraryPlan.Exterior(blocks), annexes);
     }
@@ -114,7 +114,7 @@ public sealed class AnnexSite
             }
             if (!closed) continue;
             var ring = loop.Select(i => ground[i].A).ToArray();
-            var area = (float)PlanGeometry.SignedArea(ring);
+            var area = (float)PlanRings.SignedArea(ring);
             if (area > -60f) continue;
             if (loop.Any(i => ReferenceEquals(ground[i], selectedWall))) return loop.Select(i => ground[i]).ToArray();
         }

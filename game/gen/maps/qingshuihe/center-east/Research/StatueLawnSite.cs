@@ -61,15 +61,15 @@ public sealed class StatueLawnSite : ZoneSite
     internal static IReadOnlyList<Vector2>? Island(IWorldModel world)
     {
         if (!world.Features.TryGetValue(new(CenterEastIds.Monuments.Plaza), out var plaza) || plaza.Geometry is not PolygonGeometry polygon) return null;
-        return polygon.Rings.Holes.FirstOrDefault(h => PlanGeometry.InsideByCrossings(h, LinFrame(world).Origin));
+        return polygon.Rings.Holes.FirstOrDefault(h => PlanRings.InsideByCrossings(h, LinFrame(world).Origin));
     }
 
     private static void IslandKerb(SiteBuilder b)
     {
         if (b.Detail == SiteDetail.Mass || Island(b.Context.World) is not { } hole) return;
-        var g = b.Ground(PlanGeometry.Centroid(hole));
-        var kerb = PartGeometryKernel.BeveledRectangleProfile(M.IslandKerbWidth, M.IslandKerbTop + 0.05f, 0.02f);
-        b.Add(PartGeometryKernel.Sweep(kerb, hole.ToArray(), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
+        var g = b.Ground(PlanPolygons.Centroid(hole));
+        var kerb = PartSweeps.BeveledRectangleProfile(M.IslandKerbWidth, M.IslandKerbTop + 0.05f, 0.02f);
+        b.Add(PartSweeps.Sweep(kerb, hole.ToArray(), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
     }
 
     internal static float LinPedestalTop => M.LinPlinth + M.LinShaft + M.LinCap - 0.05f;
@@ -84,9 +84,9 @@ public sealed class StatueLawnSite : ZoneSite
         var f = LinFrame(b.Context.World);
         var detail = b.Detail;
         var bevel = detail == SiteDetail.Full ? 0.025f : 0f;
-        b.Add(PartGeometryKernel.BeveledBox(1.1f, M.LinPlinth, 1.1f, bevel, L.DarkStone), f.At(0, y - 0.05f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(0.66f, M.LinShaft, 0.66f, bevel, L.DarkStone), f.At(0, y - 0.05f + M.LinPlinth, 0));
-        b.Add(PartGeometryKernel.BeveledBox(0.8f, M.LinCap, 0.8f, bevel, L.DarkStone), f.At(0, y - 0.05f + M.LinPlinth + M.LinShaft, 0));
+        b.Add(PartSolids.BeveledBox(1.1f, M.LinPlinth, 1.1f, bevel, L.DarkStone), f.At(0, y - 0.05f, 0));
+        b.Add(PartSolids.BeveledBox(0.66f, M.LinShaft, 0.66f, bevel, L.DarkStone), f.At(0, y - 0.05f + M.LinPlinth, 0));
+        b.Add(PartSolids.BeveledBox(0.8f, M.LinCap, 0.8f, bevel, L.DarkStone), f.At(0, y - 0.05f + M.LinPlinth + M.LinShaft, 0));
         var s = M.LinScale;
         var segments = Segments(detail);
         var small = Math.Max(8, segments / 3);
@@ -109,7 +109,7 @@ public sealed class StatueLawnSite : ZoneSite
         if (detail == SiteDetail.Mass) return;
         // Shirt collar and the tie in the lapels' V.
         b.Add(Solids.Lathe([P(0.068f, 0), P(0.075f, 0.03f), P(0.066f, 0.042f)], small * 2, L.Bronze, 1f, 0.9f), At(0, 0.355f, 0.01f));
-        b.Add(PartGeometryKernel.BeveledBox(0.042f * s, 0.2f * s, 0.02f * s, 0, L.Bronze), At(0, 0.14f, 0.118f));
+        b.Add(PartSolids.BeveledBox(0.042f * s, 0.2f * s, 0.02f * s, 0, L.Bronze), At(0, 0.14f, 0.118f));
         if (detail != SiteDetail.Full) return;
         b.Add(Solids.Lathe(Hair, small * 2, L.Bronze, 0.9f, 1f), At(0, 0.565f, -0.006f).Scaled(s));
     }
@@ -148,10 +148,10 @@ public sealed class StatueLawnSite : ZoneSite
         var (min, max) = ApronRect(b.Context.World);
         var mid = (min + max) * 0.5f;
         var g = b.Ground(R.P(mid.X, mid.Y));
-        b.Add(PartGeometryKernel.BeveledBox(max.X - min.X, M.ApronTop + 0.1f, max.Y - min.Y, b.Detail == SiteDetail.Mass ? 0f : 0.01f, L.Paving), R.At(mid.X, g - 0.1f, mid.Y));
+        b.Add(PartSolids.BeveledBox(max.X - min.X, M.ApronTop + 0.1f, max.Y - min.Y, b.Detail == SiteDetail.Mass ? 0f : 0.01f, L.Paving), R.At(mid.X, g - 0.1f, mid.Y));
         if (b.Detail == SiteDetail.Mass) return;
-        var kerb = PartGeometryKernel.BeveledRectangleProfile(M.ApronKerb, M.ApronTop + 0.12f, 0.015f);
-        b.Add(PartGeometryKernel.Sweep(kerb, ApronRing(b.Context.World), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.1f, 0));
+        var kerb = PartSweeps.BeveledRectangleProfile(M.ApronKerb, M.ApronTop + 0.12f, 0.015f);
+        b.Add(PartSweeps.Sweep(kerb, ApronRing(b.Context.World), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.1f, 0));
     }
 
     /// <summary>
@@ -165,9 +165,9 @@ public sealed class StatueLawnSite : ZoneSite
     {
         var detail = b.Detail;
         var bevel = detail == SiteDetail.Full ? 0.03f : 0f;
-        b.Add(PartGeometryKernel.BeveledBox(2.0f, 0.3f, 2.0f, bevel, L.PaleGranite), f.At(0, y - 0.05f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(1.3f, 1.5f, 1.3f, bevel, L.PaleGranite), f.At(0, y + 0.25f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(1.5f, 0.2f, 1.5f, bevel, L.PaleGranite), f.At(0, y + 1.75f, 0));
+        b.Add(PartSolids.BeveledBox(2.0f, 0.3f, 2.0f, bevel, L.PaleGranite), f.At(0, y - 0.05f, 0));
+        b.Add(PartSolids.BeveledBox(1.3f, 1.5f, 1.3f, bevel, L.PaleGranite), f.At(0, y + 0.25f, 0));
+        b.Add(PartSolids.BeveledBox(1.5f, 0.2f, 1.5f, bevel, L.PaleGranite), f.At(0, y + 1.75f, 0));
         var s = M.MaxwellScale;
         var segments = Segments(detail);
         var small = Math.Max(8, segments / 3);
@@ -256,7 +256,7 @@ public sealed class StatueLawnSite : ZoneSite
         b.Add(Solids.Boulder(M.Stone, segments, rings, L.FieldStone), at);
         if (b.Detail == SiteDetail.Mass) return;
         foreach (var (x, line, length) in StoneLines())
-            b.Add(PartGeometryKernel.BeveledBox(length, M.StoneLineHeight, 0.012f, 0, L.Ink), GeometryPlacement.Multiply(M.Stone.FaceAt(x, line), at));
+            b.Add(PartSolids.BeveledBox(length, M.StoneLineHeight, 0.012f, 0, L.Ink), GeometryPlacement.Multiply(M.Stone.FaceAt(x, line), at));
     }
 
     /// <summary>Centre x, bottom y (on the face, from its centre) and length of each inscription line, bottom to top.</summary>

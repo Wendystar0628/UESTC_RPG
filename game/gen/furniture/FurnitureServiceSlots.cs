@@ -37,7 +37,7 @@ internal static class FurnitureServiceSlots
                     for (var v = -1; v <= 1 && outside; v++)
                     {
                         var q = centre + tangent * (u * width * 0.5f) + inward * (v * (depth * 0.5f + front));
-                        if (PlanGeometry.Contains(outline, q) || PlanGeometry.DistanceToRing(q, outline.Outer) < S.GateOutside) outside = false;
+                        if (PlanRings.Contains(outline, q) || PlanRings.DistanceToRing(q, outline.Outer) < S.GateOutside) outside = false;
                     }
                 if (!outside) continue;
             }

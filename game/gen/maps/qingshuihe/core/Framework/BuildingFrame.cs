@@ -33,7 +33,7 @@ public sealed record BuildingFrame(FeatureId Feature, IReadOnlyList<PolygonRings
     }
 
     /// <summary>Area-weighted centroid of all footprints' outer rings (the anchor for the building's tile).</summary>
-    public Vector2 Centroid => PlanGeometry.Centroid(Footprints.Select(f => f.Outer));
+    public Vector2 Centroid => PlanPolygons.Centroid(Footprints.Select(f => f.Outer));
 
     /// <summary>
     /// Frame of a building feature from the world model. The footprints are the facade outlines of its source parts when it has any

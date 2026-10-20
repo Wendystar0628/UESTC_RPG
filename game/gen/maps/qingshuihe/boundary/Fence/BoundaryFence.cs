@@ -100,13 +100,13 @@ public static class BoundaryFence
             b.Box(L.Stone, at, along, size, size, y - 0.05f, y + height + F.CapHeight);
             return;
         }
-        b.Add(PartGeometryKernel.BeveledBox(size + 0.06f, F.BaseHeight + 0.05f, size + 0.06f, 0.015f, L.Granite), f.At(0, y - 0.05f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(size, height - F.BaseHeight, size, 0.02f, L.Stone), f.At(0, y + F.BaseHeight, 0));
+        b.Add(PartSolids.BeveledBox(size + 0.06f, F.BaseHeight + 0.05f, size + 0.06f, 0.015f, L.Granite), f.At(0, y - 0.05f, 0));
+        b.Add(PartSolids.BeveledBox(size, height - F.BaseHeight, size, 0.02f, L.Stone), f.At(0, y + F.BaseHeight, 0));
         var cap = size + (F.CapSize - F.PillarSize);
-        b.Add(PartGeometryKernel.BeveledBox(cap, F.CapHeight, cap, 0.02f, L.StoneTrim), f.At(0, y + height, 0));
+        b.Add(PartSolids.BeveledBox(cap, F.CapHeight, cap, 0.02f, L.StoneTrim), f.At(0, y + height, 0));
         if (b.Detail != SiteDetail.Full) return;
-        b.Add(PartGeometryKernel.BeveledBox(cap - 0.16f, F.CapTop, cap - 0.16f, 0.012f, L.StoneTrim), f.At(0, y + height + F.CapHeight, 0));
-        if (end) b.Add(PartGeometryKernel.BeveledBox(size + 0.02f, 0.05f, size + 0.02f, 0.01f, L.StoneTrim), f.At(0, y + height * 0.62f, 0));
+        b.Add(PartSolids.BeveledBox(cap - 0.16f, F.CapTop, cap - 0.16f, 0.012f, L.StoneTrim), f.At(0, y + height + F.CapHeight, 0));
+        if (end) b.Add(PartSolids.BeveledBox(size + 0.02f, 0.05f, size + 0.02f, 0.01f, L.StoneTrim), f.At(0, y + height * 0.62f, 0));
     }
 
     private static void Hedge(SiteBuilder b, IReadOnlyList<Vector2> line)
@@ -126,7 +126,7 @@ public static class BoundaryFence
             var mid = (p + q) * 0.5f + u * ((tail - lead) * 0.5f);
             var span = length + lead + tail;
             if (b.Detail != SiteDetail.Full) { b.Box(L.Hedge, mid, u, span, F.HedgeWidth, y - 0.05f, y + F.HedgeHeight); continue; }
-            b.Add(PartGeometryKernel.BeveledBox(span, F.HedgeHeight + 0.05f, F.HedgeWidth, F.HedgeBevel, L.Hedge), PlanFrame.Along(mid, u).At(0, y - 0.05f, 0));
+            b.Add(PartSolids.BeveledBox(span, F.HedgeHeight + 0.05f, F.HedgeWidth, F.HedgeBevel, L.Hedge), PlanFrame.Along(mid, u).At(0, y - 0.05f, 0));
         }
     }
 

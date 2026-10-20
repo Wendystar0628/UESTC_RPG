@@ -14,10 +14,10 @@ internal sealed class InteriorWingFrame
     public int Edge { get; }
     private InteriorWingFrame(PolygonRings footprint,Vector2 origin,Vector2 along,Vector2 inward,float length,float depth,int edge)
     { _footprint=footprint;_origin=origin;_along=along;_inward=inward;Length=length;Depth=depth;Edge=edge; }
-    public float U(Vector2 p)=>(float)PlanGeometry.Dot(p-_origin,_along);
-    public float V(Vector2 p)=>(float)PlanGeometry.Dot(p-_origin,_inward);
-    public Vector2 Point(float u,float v)=>PlanGeometry.Quantize(_origin+_along*u+_inward*v);
-    public Vector3 Point3(float u,float y,float v) { var p=Point(u,v);return PlanGeometry.Quantize(new Vector3(p.X,y,p.Y)); }
+    public float U(Vector2 p)=>(float)QuantizedPlan.Dot(p-_origin,_along);
+    public float V(Vector2 p)=>(float)QuantizedPlan.Dot(p-_origin,_inward);
+    public Vector2 Point(float u,float v)=>QuantizedPlan.Quantize(_origin+_along*u+_inward*v);
+    public Vector3 Point3(float u,float y,float v) { var p=Point(u,v);return QuantizedPlan.Quantize(new Vector3(p.X,y,p.Y)); }
     public Vector2[] Ring(float u0,float v0,float u1,float v1)=>[Point(u0,v0),Point(u1,v0),Point(u1,v1),Point(u0,v1)];
     public (float Lower,float Upper) Section(float u)
     {
@@ -25,8 +25,8 @@ internal sealed class InteriorWingFrame
         for(var i=0;i<ring.Count;i++)
         {
             var a=ring[i];var b=ring[(i+1)%ring.Count];float ua=U(a),ub=U(b);
-            if(u<MathF.Min(ua,ub)-PlanGeometry.Tolerance || u>MathF.Max(ua,ub)+PlanGeometry.Tolerance) continue;
-            if(MathF.Abs(ub-ua)<=PlanGeometry.Tolerance) { intersections.Add(V(a));intersections.Add(V(b)); }
+            if(u<MathF.Min(ua,ub)-QuantizedPlan.Tolerance || u>MathF.Max(ua,ub)+QuantizedPlan.Tolerance) continue;
+            if(MathF.Abs(ub-ua)<=QuantizedPlan.Tolerance) { intersections.Add(V(a));intersections.Add(V(b)); }
             else intersections.Add(V(a)+(V(b)-V(a))*(u-ua)/(ub-ua));
         }
         if(intersections.Count<2) throw new ArgumentException("A wing section is outside its convex footprint.");
@@ -48,7 +48,7 @@ internal sealed class InteriorWingFrame
         var box=factory.CreatePolygon(clip.Append(clip[0]).Select(p=>new Coordinate(p.X,p.Y)).ToArray());
         var area=polygon.Intersection(box).Buffer(-inset,1);
         if(area is not Polygon core || core.IsEmpty) throw new ArgumentException("The wing end cannot contain its traffic core.");
-        return PlanGeometry.OpenRing(core.ExteriorRing.Coordinates.Select(c=>PlanGeometry.Quantize(new Vector2((float)c.X,(float)c.Y)))).ToArray();
+        return PlanRings.OpenRing(core.ExteriorRing.Coordinates.Select(c=>QuantizedPlan.Quantize(new Vector2((float)c.X,(float)c.Y)))).ToArray();
     }
     public IReadOnlyList<PolygonRings> FloorRings(IEnumerable<IReadOnlyList<Vector2>> holes)
     {
@@ -60,8 +60,8 @@ internal sealed class InteriorWingFrame
         void Add(NetTopologySuite.Geometries.Geometry geometry)
         {
             if(geometry is Polygon polygon)
-                result.Add(new(PlanGeometry.OpenRing(polygon.ExteriorRing.Coordinates.Select(c=>new Vector2((float)c.X,(float)c.Y))),
-                    Enumerable.Range(0,polygon.NumInteriorRings).Select(i=>PlanGeometry.OpenRing(polygon.GetInteriorRingN(i).Coordinates.Select(c=>new Vector2((float)c.X,(float)c.Y)),false)).ToArray()));
+                result.Add(new(PlanRings.OpenRing(polygon.ExteriorRing.Coordinates.Select(c=>new Vector2((float)c.X,(float)c.Y))),
+                    Enumerable.Range(0,polygon.NumInteriorRings).Select(i=>PlanRings.OpenRing(polygon.GetInteriorRingN(i).Coordinates.Select(c=>new Vector2((float)c.X,(float)c.Y)),false)).ToArray()));
             else if(geometry is GeometryCollection) for(var i=0;i<geometry.NumGeometries;i++) Add(geometry.GetGeometryN(i));
             else throw new ArgumentException("A wing floor subtraction returned a non-area geometry.");
         }
@@ -72,8 +72,8 @@ internal sealed class InteriorWingFrame
         var bays=grid.Bays.Where(b=>b.Ring==0&&b.Edge==Edge).OrderBy(b=>U(b.Center)).ToArray();
         float minimum=2*options.StairFlightWidth+options.StairWellWidth+2*options.ExteriorWallThickness;
         int first=1,end=bays.Length-1;
-        while(first<bays.Length && U(bays[first-1].B)<minimum-PlanGeometry.Tolerance) first++;
-        while(end>=0 && Length-U(bays[end].A)<minimum-PlanGeometry.Tolerance) end--;
+        while(first<bays.Length && U(bays[first-1].B)<minimum-QuantizedPlan.Tolerance) first++;
+        while(end>=0 && Length-U(bays[end].A)<minimum-QuantizedPlan.Tolerance) end--;
         if(first>=end) throw new ArgumentException("The wing has no room band between its normative traffic cores.");
         return(first,end);
     }
@@ -82,13 +82,13 @@ internal sealed class InteriorWingFrame
         var ring=footprint.Outer;
         if(ring.Count!=4 || footprint.Holes.Count!=0) throw new ArgumentException("The plan kernel requires a convex quadrilateral wing.");
         for(var i=0;i<4;i++)
-            if(PlanGeometry.CrossFloat(ring[(i+1)%4]-ring[i],ring[(i+2)%4]-ring[(i+1)%4])<=0)
+            if(PlanRings.CrossFloat(ring[(i+1)%4]-ring[i],ring[(i+2)%4]-ring[(i+1)%4])<=0)
                 throw new ArgumentException("The plan kernel requires a counterclockwise convex quadrilateral.");
         int edge=Enumerable.Range(0,4).OrderByDescending(i=>Vector2.DistanceSquared(ring[i],ring[(i+1)%4])).ThenBy(i=>i).First();
-        var a=PlanGeometry.Unit(ring[(edge+1)%4]-ring[edge]);var opposite=PlanGeometry.Unit(ring[(edge+3)%4]-ring[(edge+2)%4]);
-        var along=PlanGeometry.Unit(a-opposite);var inward=new Vector2(-along.Y,along.X);var origin=ring[edge];
-        float U(Vector2 p)=>(float)PlanGeometry.Dot(p-origin,along);
-        float V(Vector2 p)=>(float)PlanGeometry.Dot(p-origin,inward);
+        var a=QuantizedPlan.Unit(ring[(edge+1)%4]-ring[edge]);var opposite=QuantizedPlan.Unit(ring[(edge+3)%4]-ring[(edge+2)%4]);
+        var along=QuantizedPlan.Unit(a-opposite);var inward=new Vector2(-along.Y,along.X);var origin=ring[edge];
+        float U(Vector2 p)=>(float)QuantizedPlan.Dot(p-origin,along);
+        float V(Vector2 p)=>(float)QuantizedPlan.Dot(p-origin,inward);
         float min=MathF.Max(MathF.Min(U(ring[edge]),U(ring[(edge+1)%4])),MathF.Min(U(ring[(edge+2)%4]),U(ring[(edge+3)%4])));
         float max=MathF.Min(MathF.Max(U(ring[edge]),U(ring[(edge+1)%4])),MathF.Max(U(ring[(edge+2)%4]),U(ring[(edge+3)%4])));
         float lower=MathF.Max(V(ring[edge]),V(ring[(edge+1)%4]));float upper=MathF.Min(V(ring[(edge+2)%4]),V(ring[(edge+3)%4]));

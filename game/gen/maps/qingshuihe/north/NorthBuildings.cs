@@ -18,6 +18,6 @@ internal static class NorthBuildings
         }
         else if (feature.Kind.Value != "building") yield break;
         foreach (var ring in feature.Outers())
-            yield return PlanGeometry.DeduplicateRing(ring, 0.05f * 0.05f);
+            yield return PlanRings.DeduplicateRing(ring, 0.05f * 0.05f);
     }
 }

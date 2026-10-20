@@ -47,8 +47,8 @@ public sealed class Sundial : ZoneSite
     /// <summary>Unit gnomon direction: true north (−z), raised by the latitude.</summary>
     public Vector3 Gnomon { get; }
 
-    private float TiersTop => Base + S.SundialTiers.Sum(t => t.Height);
-    public Vector3 DialCentre => new(Position.X, Base + S.SundialDialCentre, Position.Y);
+    private float TiersTop => Base + PlazaStyle.SundialTiers.Sum(t => t.Height);
+    public Vector3 DialCentre => new(Position.X, Base + PlazaStyle.SundialDialCentre, Position.Y);
 
     public void Build(CoreBuild build, LodLevel lod)
     {
@@ -60,34 +60,34 @@ public sealed class Sundial : ZoneSite
         var at = Matrix4x4.CreateTranslation(Position.X, 0, Position.Y);
         var ground = _world.Terrain.HeightAt(Position.X, Position.Y);
         // Granite pad flush with paving, then the three tiers.
-        CoreShapes.Lathe(mesh, stone, at, CoreShapes.Tier(S.SundialPadRadius, ground - S.Sink, Base, lod == LodLevel.L0 ? 0.02f : 0f), round);
+        CoreShapes.Lathe(mesh, stone, at, CoreShapes.Tier(PlazaStyle.SundialPadRadius, ground - S.Sink, Base, lod == LodLevel.L0 ? 0.02f : 0f), round);
         var y = Base;
-        foreach (var (radius, height) in S.SundialTiers)
+        foreach (var (radius, height) in PlazaStyle.SundialTiers)
         {
-            CoreShapes.Lathe(mesh, stone, at, CoreShapes.Tier(radius, y - 0.01f, y + height, lod == LodLevel.L0 ? S.SundialTierBevel : 0f), round);
+            CoreShapes.Lathe(mesh, stone, at, CoreShapes.Tier(radius, y - 0.01f, y + height, lod == LodLevel.L0 ? PlazaStyle.SundialTierBevel : 0f), round);
             y += height;
         }
         // Pedestal under the dial's low edge.
         var dial = DialCentre;
-        var low = dial.Y - S.SundialDial * MathF.Sqrt(1f - Gnomon.Y * Gnomon.Y);
-        CoreShapes.Lathe(mesh, stone, at, CoreShapes.Tier(S.SundialPedestal, y - 0.01f, MathF.Max(y + 0.05f, low + 0.08f), lod == LodLevel.L0 ? 0.02f : 0f), small);
+        var low = dial.Y - PlazaStyle.SundialDial * MathF.Sqrt(1f - Gnomon.Y * Gnomon.Y);
+        CoreShapes.Lathe(mesh, stone, at, CoreShapes.Tier(PlazaStyle.SundialPedestal, y - 0.01f, MathF.Max(y + 0.05f, low + 0.08f), lod == LodLevel.L0 ? 0.02f : 0f), small);
         // Dial and ring in the plane normal to the gnomon; local +Y is the gnomon.
         var frame = CoreShapes.Frame(dial, Gnomon, Vector3.UnitX);
-        var t = S.SundialDialThick * 0.5f;
-        CoreShapes.Lathe(mesh, S.Metal(S.Bronze), frame, [new(0, -t), new(S.SundialDial, -t), new(S.SundialDial, t), new(0, t)], small * 2);
-        var h = S.SundialRingThick * 0.5f;
+        var t = PlazaStyle.SundialDialThick * 0.5f;
+        CoreShapes.Lathe(mesh, S.Metal(PlazaStyle.Bronze), frame, [new(0, -t), new(PlazaStyle.SundialDial, -t), new(PlazaStyle.SundialDial, t), new(0, t)], small * 2);
+        var h = PlazaStyle.SundialRingThick * 0.5f;
         CoreShapes.Lathe(mesh, S.Metal(S.Steel), frame,
-            [new(S.SundialRingInner, -h), new(S.SundialRingOuter, -h), new(S.SundialRingOuter, h), new(S.SundialRingInner, h), new(S.SundialRingInner, -h)], small * 2);
+            [new(PlazaStyle.SundialRingInner, -h), new(PlazaStyle.SundialRingOuter, -h), new(PlazaStyle.SundialRingOuter, h), new(PlazaStyle.SundialRingInner, h), new(PlazaStyle.SundialRingInner, -h)], small * 2);
         // Gnomon rod through the centre, most of it on the north (sky) side.
         var rod = Matrix4x4.CreateTranslation(0, -0.35f, 0) * frame;
-        CoreShapes.Lathe(mesh, S.Metal(S.Steel), rod, [new(0, 0), new(S.SundialGnomon, 0), new(S.SundialGnomon, S.SundialGnomonLength), new(0, S.SundialGnomonLength)], 8);
+        CoreShapes.Lathe(mesh, S.Metal(S.Steel), rod, [new(0, 0), new(PlazaStyle.SundialGnomon, 0), new(PlazaStyle.SundialGnomon, PlazaStyle.SundialGnomonLength), new(0, PlazaStyle.SundialGnomonLength)], 8);
     }
 
     public IReadOnlyList<Collider> Collide()
     {
         var list = new List<Collider>();
         var y = Base;
-        foreach (var (radius, height) in S.SundialTiers)
+        foreach (var (radius, height) in PlazaStyle.SundialTiers)
         {
             // Two squares turned 45° make the octagon that stands in for each round tier.
             var half = new Vector3(radius * 0.924f, (height + S.Sink) * 0.5f, radius * 0.924f);
@@ -96,7 +96,7 @@ public sealed class Sundial : ZoneSite
             list.Add(new BoxCollider(Matrix4x4.CreateRotationY(MathF.Tau / 8f) * Matrix4x4.CreateTranslation(centre), half, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
             y += height;
         }
-        list.Add(new PostCollider(Position, S.SundialRingOuter, TiersTop, DialCentre.Y + S.SundialRingOuter, SurfaceTag.Prop) { Foot = FootMat.Metal });
+        list.Add(new PostCollider(Position, PlazaStyle.SundialRingOuter, TiersTop, DialCentre.Y + PlazaStyle.SundialRingOuter, SurfaceTag.Prop) { Foot = FootMat.Metal });
         return list;
     }
     public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>

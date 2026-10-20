@@ -50,7 +50,7 @@ public static class InteriorPlanGenerator
             _grid = FacadeGridGenerator.Generate(request.Footprint, _options.Facade);
             _frame = InteriorWingFrame.From(_grid.Footprint);
             _storeys = request.Storeys.OrderBy(s => s.Index).Select(s => new StoreyInfo(s.Index,
-                PlanGeometry.Quantize(s.FloorY), PlanGeometry.Quantize(s.Height), _grid.Footprint.Outer)).ToArray();
+                QuantizedPlan.Quantize(s.FloorY), QuantizedPlan.Quantize(s.Height), _grid.Footprint.Outer)).ToArray();
             _near = _grid.Bays.Where(b => b.Edge == _frame.Edge && b.Ring == 0).ToArray();
             _far = _grid.Bays.Where(b => b.Edge == (_frame.Edge + 2) % 4 && b.Ring == 0)
                 .OrderBy(b => _frame.U(b.Center)).ToArray();
@@ -62,7 +62,7 @@ public static class InteriorPlanGenerator
             _corridorLow = (_frame.Depth - _options.CorridorClearWidth - _options.PartitionThickness) * 0.5f;
             _corridorHigh = (_frame.Depth + _options.CorridorClearWidth + _options.PartitionThickness) * 0.5f;
             float minimumCoreWidth = 2f * _options.StairFlightWidth + _options.StairWellWidth + 2f * _options.ExteriorWallThickness;
-            if (_left < minimumCoreWidth - PlanGeometry.Tolerance || _frame.Length - _right < minimumCoreWidth - PlanGeometry.Tolerance)
+            if (_left < minimumCoreWidth - QuantizedPlan.Tolerance || _frame.Length - _right < minimumCoreWidth - QuantizedPlan.Tolerance)
                 throw new ArgumentException("End bays are too narrow for the specified double-flight stairs.", nameof(request));
             if (_corridorLow - _options.PartitionThickness * 0.5f - _options.ExteriorWallThickness < 3f)
                 throw new ArgumentException("The wing is too shallow for double-loaded rooms.", nameof(request));
@@ -85,11 +85,11 @@ public static class InteriorPlanGenerator
             AddSeals();
             EntranceDecl[] entrances = _request.Entrances.OrderBy(e => e.Id, StringComparer.Ordinal).Select(e => e with
             {
-                Center = PlanGeometry.Quantize(e.Center),
-                Outside = PlanGeometry.Quantize(e.Outside),
-                Inside = PlanGeometry.Quantize(e.Inside),
-                ClearWidth = PlanGeometry.Quantize(e.ClearWidth),
-                YawDeg = PlanGeometry.Quantize(e.YawDeg)
+                Center = QuantizedPlan.Quantize(e.Center),
+                Outside = QuantizedPlan.Quantize(e.Outside),
+                Inside = QuantizedPlan.Quantize(e.Inside),
+                ClearWidth = QuantizedPlan.Quantize(e.ClearWidth),
+                YawDeg = QuantizedPlan.Quantize(e.YawDeg)
             }).ToArray();
             InteriorPlan plan = new(_request.Feature, _request.WingId, _grid, _storeys, _zones.ToArray(),
                 _portals.ToArray(), _doors.ToArray(), entrances,
@@ -197,8 +197,8 @@ public static class InteriorPlanGenerator
             float yaw = MathF.Atan2(-d.Y, d.X) * (180f / float.Pi);
             string id = string.Join('/', _request.WingId, s.Index.ToString(CultureInfo.InvariantCulture), key);
             // ClosedYawDeg rotates the local +X hinge-to-latch axis about +Y.
-            _doors.Add(new(id, s.Index, zoneA, zoneB, At(doorA, s.FloorY), PlanGeometry.Quantize(yaw),
-                90f, PlanGeometry.Quantize(VectorMath.Length(d)), _options.DoorHeight, kind));
+            _doors.Add(new(id, s.Index, zoneA, zoneB, At(doorA, s.FloorY), QuantizedPlan.Quantize(yaw),
+                90f, QuantizedPlan.Quantize(VectorMath.Length(d)), _options.DoorHeight, kind));
         }
 
         private void BuildStair(StoreyInfo lower, StoreyInfo upper, int side)
@@ -220,7 +220,7 @@ public static class InteriorPlanGenerator
             float buryRun = 0.2f * run / halfRise;
             RampCollider flight1 = Ramp(u0, u1, start - buryRun, end, lower.FloorY - 0.2f, middleY, steps, halfRise);
             RampCollider flight2 = Ramp(u2, u3, end + buryRun, start, middleY - 0.2f, upper.FloorY, steps, halfRise);
-            InteriorSlab landing = new(lower.Index, _frame.Ring(u0, end, u3, wellEnd), PlanGeometry.Quantize(middleY), _options.SlabThickness);
+            InteriorSlab landing = new(lower.Index, _frame.Ring(u0, end, u3, wellEnd), QuantizedPlan.Quantize(middleY), _options.SlabThickness);
             Vector2[] opening = _frame.Ring(u0, start, u3, wellEnd);
             int lowerZone = _coreZones[lower.Index][side + 1], upperZone = _coreZones[upper.Index][side + 1];
             _stairs.Add(new(lower.Index, upper.Index, lowerZone, upperZone, flight1, flight2, landing, opening));
@@ -259,29 +259,29 @@ public static class InteriorPlanGenerator
             for (int edge = 0; edge < 4; edge++)
             {
                 Vector2 a = _grid.Footprint.Outer[edge], b = _grid.Footprint.Outer[(edge + 1) % 4];
-                Vector2 tangent = PlanGeometry.Unit(b - a), inward = new(-tangent.Y, tangent.X);
+                Vector2 tangent = QuantizedPlan.Unit(b - a), inward = new(-tangent.Y, tangent.X);
                 float length = VectorMath.Length(b - a);
                 var openings = new List<Opening>();
-                foreach (EntranceDecl entry in _request.Entrances.Where(e => MathF.Abs(e.Center.Y - s.FloorY) <= PlanGeometry.Tolerance)
+                foreach (EntranceDecl entry in _request.Entrances.Where(e => MathF.Abs(e.Center.Y - s.FloorY) <= QuantizedPlan.Tolerance)
                     .OrderBy(e => e.Id, StringComparer.Ordinal))
                 {
                     Vector2 center = new(entry.Center.X, entry.Center.Z);
-                    if (!PlanGeometry.OnSegment(center, a, b)) continue;
-                    float distance = (float)PlanGeometry.Dot(center - a, tangent);
+                    if (!QuantizedPlan.OnSegment(center, a, b)) continue;
+                    float distance = (float)QuantizedPlan.Dot(center - a, tangent);
                     float start = distance - entry.ClearWidth * 0.5f, end = distance + entry.ClearWidth * 0.5f;
                     if (start < 0.05f || end > length - 0.05f) throw new ArgumentException("An entrance crosses a wing corner.");
                     int zone = ZoneAt(s.Index, center + inward * (_options.ExteriorWallThickness + 0.1f));
                     if (entry.Open && !_zones.Single(z => z.Id == zone).Open) throw new ArgumentException("An open entrance leads into a locked room.");
                     float doorHeight = entry.HeadY == 0f ? _options.DoorHeight : entry.HeadY - s.FloorY;
                     openings.Add(new(start, end, 0f, doorHeight, entry.Open ? null : InteriorWallRole.LockedDoor));
-                    _portals.Add(new(s.Index, -1, zone, At(PlanGeometry.Quantize(a + tangent * start), s.FloorY),
-                        At(PlanGeometry.Quantize(a + tangent * end), s.FloorY), doorHeight,
+                    _portals.Add(new(s.Index, -1, zone, At(QuantizedPlan.Quantize(a + tangent * start), s.FloorY),
+                        At(QuantizedPlan.Quantize(a + tangent * end), s.FloorY), doorHeight,
                         entry.Open ? PortalKind.Door : PortalKind.Sealed));
                 }
                 foreach (FacadeBay bay in _grid.Bays.Where(bay => bay.Edge == edge && bay.WindowKind != FacadeWindowKind.Blank && !_request.JoinedEdges.Contains(edge)))
                 {
-                    float start = (float)PlanGeometry.Dot(bay.OpeningA - a, tangent);
-                    float end = (float)PlanGeometry.Dot(bay.OpeningB - a, tangent);
+                    float start = (float)QuantizedPlan.Dot(bay.OpeningA - a, tangent);
+                    float end = (float)QuantizedPlan.Dot(bay.OpeningB - a, tangent);
                     if (openings.Any(o => o.Start < end && o.End > start))
                     {
                         int windowIndex = _windows.FindIndex(w => w.Storey == s.Index && w.FacadeBayIndex == bay.Index);
@@ -297,7 +297,7 @@ public static class InteriorPlanGenerator
                 float cursor = 0f;
                 foreach (Opening opening in openings)
                 {
-                    if (opening.Start < cursor - PlanGeometry.Tolerance) throw new ArgumentException("Exterior openings overlap.");
+                    if (opening.Start < cursor - QuantizedPlan.Tolerance) throw new ArgumentException("Exterior openings overlap.");
                     Exterior(cursor, opening.Start, 0f, s.Height, InteriorWallRole.Exterior);
                     Exterior(opening.Start, opening.End, 0f, opening.Bottom, InteriorWallRole.Exterior);
                     Exterior(opening.Start, opening.End, opening.Top, s.Height, InteriorWallRole.Exterior);
@@ -322,13 +322,13 @@ public static class InteriorPlanGenerator
                 .ThenBy(s => s.B.X).ThenBy(s => s.B.Y).ThenBy(s => s.Kind))
             {
                 StoreyInfo storey = _storeys.Single(s => s.Index == seal.Storey);
-                if (!PlanGeometry.Contains(_grid.Footprint.Outer, seal.A) || !PlanGeometry.Contains(_grid.Footprint.Outer, seal.B))
+                if (!QuantizedPlan.Contains(_grid.Footprint.Outer, seal.A) || !QuantizedPlan.Contains(_grid.Footprint.Outer, seal.B))
                     throw new ArgumentException("A seal is outside its wing.");
                 if (_portals.Any(p => p.Storey == seal.Storey && p.Kind == PortalKind.Door &&
-                    PlanGeometry.SegmentsTouch(seal.A, seal.B, new(p.A.X, p.A.Z), new(p.B.X, p.B.Z))))
+                    QuantizedPlan.SegmentsTouch(seal.A, seal.B, new(p.A.X, p.A.Z), new(p.B.X, p.B.Z))))
                     throw new ArgumentException("A seal intersects a declared open doorway; resolve the opening in the caller configuration.");
                 if (_zones.Any(z => z.Storey == seal.Storey && z.Open &&
-                    new[] { 0.25d, 0.5d, 0.75d }.Any(t => PlanGeometry.Contains(z.Ring, PlanGeometry.Lerp(seal.A, seal.B, t), false))))
+                    new[] { 0.25d, 0.5d, 0.75d }.Any(t => QuantizedPlan.Contains(z.Ring, QuantizedPlan.Lerp(seal.A, seal.B, t), false))))
                     throw new ArgumentException("A seal divides an open zone; split that space in the owning provider rather than claiming false connectivity.");
                 Wall(storey, seal.A, seal.B, storey.FloorY, storey.FloorY + storey.Height, InteriorWallRole.Seal, closure: seal.Kind);
                 _portals.Add(new(storey.Index, -1, -1, At(seal.A, storey.FloorY), At(seal.B, storey.FloorY), storey.Height, PortalKind.Sealed));
@@ -337,24 +337,24 @@ public static class InteriorPlanGenerator
 
         private int ZoneAt(int storey, Vector2 point)
         {
-            ZoneVolume? zone = _zones.FirstOrDefault(z => z.Storey == storey && PlanGeometry.Contains(z.Ring, point));
+            ZoneVolume? zone = _zones.FirstOrDefault(z => z.Storey == storey && QuantizedPlan.Contains(z.Ring, point));
             return zone?.Id ?? throw new ArgumentException("An entrance lands in a wall or outside the generated clear zones.");
         }
 
         private void Wall(StoreyInfo s, Vector2 a, Vector2 b, float bottom, float top, InteriorWallRole role, float? thickness = null,
             SealKind? closure = null, DoorLeafKind? leafKind = null)
         {
-            a = PlanGeometry.Quantize(a); b = PlanGeometry.Quantize(b);
+            a = QuantizedPlan.Quantize(a); b = QuantizedPlan.Quantize(b);
             if (VectorMath.Length(b - a) <= 0.002f || top - bottom <= 0.002f) return;
-            _walls.Add(new(s.Index, a, b, PlanGeometry.Quantize(thickness ?? _options.PartitionThickness),
-                PlanGeometry.Quantize(bottom), PlanGeometry.Quantize(top), role)
+            _walls.Add(new(s.Index, a, b, QuantizedPlan.Quantize(thickness ?? _options.PartitionThickness),
+                QuantizedPlan.Quantize(bottom), QuantizedPlan.Quantize(top), role)
             {
                 Closure = closure,
                 LeafKind = leafKind
             });
         }
 
-        private static Vector3 At(Vector2 point, float y) => PlanGeometry.Quantize(new Vector3(point.X, y, point.Y));
+        private static Vector3 At(Vector2 point, float y) => QuantizedPlan.Quantize(new Vector3(point.X, y, point.Y));
         private sealed record Opening(float Start, float End, float Bottom, float Top, InteriorWallRole? Fill);
     }
 
@@ -387,7 +387,7 @@ public static class InteriorPlanGenerator
                 o.DoorHeight >= s.Height - o.SlabThickness || o.Facade.SillHeight + o.Facade.WindowHeight >= s.Height - o.SlabThickness)
                 throw new ArgumentException("Invalid dormitory floor elevation, height or opening clearance.", nameof(r));
             if (i > 0 && (s.Index != storeys[i - 1].Index + 1 ||
-                MathF.Abs(s.FloorY - storeys[i - 1].FloorY - storeys[i - 1].Height) > PlanGeometry.Tolerance))
+                MathF.Abs(s.FloorY - storeys[i - 1].FloorY - storeys[i - 1].Height) > QuantizedPlan.Tolerance))
                 throw new ArgumentException("The mainline generator only joins consecutive, vertically aligned storeys.", nameof(r));
         }
         if (r.Rooms.Select(room => (room.Storey, room.FacadeBayIndex)).Distinct().Count() != r.Rooms.Count)
@@ -409,7 +409,7 @@ public static class InteriorPlanGenerator
         foreach (EntranceDecl entrance in r.Entrances)
         {
             if (string.IsNullOrWhiteSpace(entrance.Id) || !float.IsFinite(entrance.ClearWidth) || entrance.ClearWidth < 1.1f ||
-                !storeys.Any(s => MathF.Abs(s.FloorY - entrance.Center.Y) <= PlanGeometry.Tolerance))
+                !storeys.Any(s => MathF.Abs(s.FloorY - entrance.Center.Y) <= QuantizedPlan.Tolerance))
                 throw new ArgumentException("Entrances must reference a supplied floor and have at least 1.1 m clearance.", nameof(r));
         }
         if (r.Entrances.Select(e => e.Id).Distinct(StringComparer.Ordinal).Count() != r.Entrances.Count)

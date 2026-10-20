@@ -113,7 +113,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         // Each block overlaps its neighbours a little so mitred corners close without a seam; a soft bevel rounds the clipped edges.
         var y = MathF.Min(b.Ground(p), b.Ground(q));
         if (b.Detail != SiteDetail.Full) { b.Box(L.Hedge, (p + q) * 0.5f, u, length + 0.3f, F.HedgeWidth, y - 0.05f, y + F.HedgeHeight); return; }
-        b.Add(PartGeometryKernel.BeveledBox(length + 0.3f, F.HedgeHeight + 0.05f, F.HedgeWidth, F.HedgeBevel, L.Hedge), PlanFrame.Along((p + q) * 0.5f, u).At(0, y - 0.05f, 0));
+        b.Add(PartSolids.BeveledBox(length + 0.3f, F.HedgeHeight + 0.05f, F.HedgeWidth, F.HedgeBevel, L.Hedge), PlanFrame.Along((p + q) * 0.5f, u).At(0, y - 0.05f, 0));
     }
 
     // ---- Vehicle gate: barrier lane, island, turnstile bank, guard house at the main gate ----
@@ -125,22 +125,22 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         var mass = b.Detail == SiteDetail.Mass;
         // Island between the lane and the bank, carrying the barrier cabinet.
         var islandX = g.LaneHalf + G.IslandWidth * 0.5f;
-        b.Add(PartGeometryKernel.BeveledBox(G.IslandWidth, G.CurbRise + 0.1f, G.CabinetDepth + 0.8f, 0.02f, L.Granite), f.At(islandX, y - 0.1f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(G.BarrierCabinet, G.BarrierHeight, G.BarrierCabinet, 0.02f, L.Stainless), f.At(islandX, y + G.CurbRise, -0.25f));
+        b.Add(PartSolids.BeveledBox(G.IslandWidth, G.CurbRise + 0.1f, G.CabinetDepth + 0.8f, 0.02f, L.Granite), f.At(islandX, y - 0.1f, 0));
+        b.Add(PartSolids.BeveledBox(G.BarrierCabinet, G.BarrierHeight, G.BarrierCabinet, 0.02f, L.Stainless), f.At(islandX, y + G.CurbRise, -0.25f));
         // Barrier arm down across the lane (closed even at the open cluster), its tip resting on a short fork post.
         var tip = -g.LaneHalf + 0.15f;
         var root = islandX - G.BarrierCabinet * 0.5f;
-        b.Add(PartGeometryKernel.BeveledBox(root - tip, G.ArmHeight, G.ArmDepth, 0.012f, L.Steel), f.At((root + tip) * 0.5f, y + G.ArmY, -0.25f));
-        b.Add(PartGeometryKernel.BeveledBox(0.08f, G.ArmY, 0.08f, 0.01f, L.Steel), f.At(tip - 0.1f, y, -0.25f));
+        b.Add(PartSolids.BeveledBox(root - tip, G.ArmHeight, G.ArmDepth, 0.012f, L.Steel), f.At((root + tip) * 0.5f, y + G.ArmY, -0.25f));
+        b.Add(PartSolids.BeveledBox(0.08f, G.ArmY, 0.08f, 0.01f, L.Steel), f.At(tip - 0.1f, y, -0.25f));
         // Lane-side pier where the fence ends at −X.
-        b.Add(PartGeometryKernel.BeveledBox(G.PierSize, F.Height + 0.1f, G.PierSize, 0.02f, L.Granite), f.At(-g.LaneHalf - G.PierSize * 0.5f, y - 0.05f, 0));
-        if (!mass) b.Add(PartGeometryKernel.BeveledBox(G.PierSize + 0.06f, 0.08f, G.PierSize + 0.06f, 0.015f, L.Trim), f.At(-g.LaneHalf - G.PierSize * 0.5f, y + F.Height + 0.05f, 0));
+        b.Add(PartSolids.BeveledBox(G.PierSize, F.Height + 0.1f, G.PierSize, 0.02f, L.Granite), f.At(-g.LaneHalf - G.PierSize * 0.5f, y - 0.05f, 0));
+        if (!mass) b.Add(PartSolids.BeveledBox(G.PierSize + 0.06f, 0.08f, G.PierSize + 0.06f, 0.015f, L.Trim), f.At(-g.LaneHalf - G.PierSize * 0.5f, y + F.Height + 0.05f, 0));
         Turnstiles(b, g, y);
         if (g.Main) GuardHouse(b, g, y);
         else
         {
             var x = g.BankEnd + G.PierSize * 0.5f;
-            b.Add(PartGeometryKernel.BeveledBox(G.PierSize, F.Height + 0.1f, G.PierSize, 0.02f, L.Granite), f.At(x, y - 0.05f, 0));
+            b.Add(PartSolids.BeveledBox(G.PierSize, F.Height + 0.1f, G.PierSize, 0.02f, L.Granite), f.At(x, y - 0.05f, 0));
         }
     }
 
@@ -153,18 +153,18 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         var f = g.Frame;
         var mass = b.Detail == SiteDetail.Mass;
         float start = g.BankStart, end = g.BankEnd;
-        b.Add(PartGeometryKernel.BeveledBox(end - start + 0.3f, 0.06f, G.CabinetDepth + 0.8f, 0.015f, L.Granite), f.At((start + end) * 0.5f, y - 0.03f, 0));
+        b.Add(PartSolids.BeveledBox(end - start + 0.3f, 0.06f, G.CabinetDepth + 0.8f, 0.015f, L.Granite), f.At((start + end) * 0.5f, y - 0.03f, 0));
         var cabinets = g.Cabinets().ToArray();
         foreach (var x in cabinets)
         {
-            b.Add(PartGeometryKernel.BeveledBox(G.CabinetWidth, G.CabinetHeight, G.CabinetDepth, 0.03f, L.Stainless), f.At(x, y, 0));
+            b.Add(PartSolids.BeveledBox(G.CabinetWidth, G.CabinetHeight, G.CabinetDepth, 0.03f, L.Stainless), f.At(x, y, 0));
             if (mass) continue;
-            b.Add(PartGeometryKernel.BeveledBox(G.CabinetWidth - 0.06f, 0.02f, G.CabinetDepth - 0.1f, 0, L.Glass), f.At(x, y + G.CabinetHeight, 0));
+            b.Add(PartSolids.BeveledBox(G.CabinetWidth - 0.06f, 0.02f, G.CabinetDepth - 0.1f, 0, L.Glass), f.At(x, y + G.CabinetHeight, 0));
             if (b.Detail != SiteDetail.Full) continue;
             // End indicators on both faces: green arrow when the lane is open, red cross otherwise.
             var indicator = g.Open ? L.ArrowGreen : L.CrossRed;
             foreach (var side in new[] { -1f, 1f })
-                b.Add(PartGeometryKernel.BeveledBox(G.Indicator, G.Indicator, 0.02f, 0, indicator),
+                b.Add(PartSolids.BeveledBox(G.Indicator, G.Indicator, 0.02f, 0, indicator),
                     f.At(x, y + G.CabinetHeight - G.Indicator - 0.08f, side * (G.CabinetDepth * 0.5f + 0.005f)));
         }
         if (mass) return;
@@ -175,16 +175,16 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
             if (!g.Open)
             {
                 var wing = (x1 - x0 - 0.04f) * 0.5f;
-                b.Add(PartGeometryKernel.BeveledBox(wing, G.WingHeight, 0.02f, 0, L.Glass), f.At(x0 + wing * 0.5f, y + G.WingBase, 0));
-                b.Add(PartGeometryKernel.BeveledBox(wing, G.WingHeight, 0.02f, 0, L.Glass), f.At(x1 - wing * 0.5f, y + G.WingBase, 0));
+                b.Add(PartSolids.BeveledBox(wing, G.WingHeight, 0.02f, 0, L.Glass), f.At(x0 + wing * 0.5f, y + G.WingBase, 0));
+                b.Add(PartSolids.BeveledBox(wing, G.WingHeight, 0.02f, 0, L.Glass), f.At(x1 - wing * 0.5f, y + G.WingBase, 0));
             }
             if (b.Detail != SiteDetail.Full) continue;
             // Face scanner on a stalk at the outer (entry) end of the passage's right-hand cabinet.
             var sx = cabinets[k + 1];
             var sz = G.CabinetDepth * 0.5f - 0.18f;
-            b.Add(PartGeometryKernel.BeveledBox(0.04f, 0.32f, 0.04f, 0, L.Stainless), f.At(sx, y + G.CabinetHeight, sz));
-            b.Add(PartGeometryKernel.BeveledBox(0.17f, 0.24f, 0.03f, 0.005f, L.Stainless), f.At(sx, y + G.CabinetHeight + 0.3f, sz + 0.02f));
-            b.Add(PartGeometryKernel.BeveledBox(0.13f, 0.18f, 0.01f, 0, L.Glass), f.At(sx, y + G.CabinetHeight + 0.33f, sz + 0.04f));
+            b.Add(PartSolids.BeveledBox(0.04f, 0.32f, 0.04f, 0, L.Stainless), f.At(sx, y + G.CabinetHeight, sz));
+            b.Add(PartSolids.BeveledBox(0.17f, 0.24f, 0.03f, 0.005f, L.Stainless), f.At(sx, y + G.CabinetHeight + 0.3f, sz + 0.02f));
+            b.Add(PartSolids.BeveledBox(0.13f, 0.18f, 0.01f, 0, L.Glass), f.At(sx, y + G.CabinetHeight + 0.33f, sz + 0.04f));
         }
     }
 
@@ -195,20 +195,20 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         var cx = (g.HouseStart + g.HouseEnd) * 0.5f;
         var cz = G.HouseOut - G.HouseDepth * 0.5f;
         float w = G.HouseWidth, d = G.HouseDepth, h = G.HouseHeight;
-        b.Add(PartGeometryKernel.BeveledBox(w + 0.1f, G.HousePlinth + 0.1f, d + 0.1f, 0.02f, L.Plinth), f.At(cx, y - 0.1f, cz));
-        b.Add(PartGeometryKernel.BeveledBox(w, h - G.HousePlinth, d, 0.03f, L.HouseWall), f.At(cx, y + G.HousePlinth, cz));
+        b.Add(PartSolids.BeveledBox(w + 0.1f, G.HousePlinth + 0.1f, d + 0.1f, 0.02f, L.Plinth), f.At(cx, y - 0.1f, cz));
+        b.Add(PartSolids.BeveledBox(w, h - G.HousePlinth, d, 0.03f, L.HouseWall), f.At(cx, y + G.HousePlinth, cz));
         var roof = w + 2 * G.HouseEave;
-        b.Add(PartGeometryKernel.BeveledBox(roof, G.HouseRoof, d + 2 * G.HouseEave, 0.03f, L.Trim), f.At(cx, y + h, cz));
+        b.Add(PartSolids.BeveledBox(roof, G.HouseRoof, d + 2 * G.HouseEave, 0.03f, L.Trim), f.At(cx, y + h, cz));
         if (b.Detail == SiteDetail.Mass) return;
-        b.Add(PartGeometryKernel.BeveledBox(roof - 0.4f, 0.04f, d + 2 * G.HouseEave - 0.4f, 0.01f, L.RoofSlab), f.At(cx, y + h + G.HouseRoof, cz));
+        b.Add(PartSolids.BeveledBox(roof - 0.4f, 0.04f, d + 2 * G.HouseEave - 0.4f, 0.01f, L.RoofSlab), f.At(cx, y + h + G.HouseRoof, cz));
         // Watch window on the bank side (−X face) and the outward face (+Z), door on the cluster side (−Z).
         Window(b, f, g.HouseStart, cz, turned: true, outward: -1, 2.0f, y);
         Window(b, f, cx + 0.3f, G.HouseOut, turned: false, outward: 1, 1.8f, y);
         var doorZ = G.HouseOut - d;
-        b.Add(PartGeometryKernel.BeveledBox(0.95f, 2.15f, 0.05f, 0, L.Wood), f.At(cx + 0.6f, y + G.HousePlinth, doorZ - 0.02f));
-        b.Add(PartGeometryKernel.BeveledBox(1.15f, 0.08f, 0.1f, 0.01f, L.Trim), f.At(cx + 0.6f, y + G.HousePlinth + 2.15f, doorZ - 0.05f));
-        b.Add(PartGeometryKernel.BeveledBox(1.4f, 0.12f, 0.9f, 0.015f, L.Trim), f.At(cx + 0.6f, y + G.HousePlinth + 2.45f, doorZ - 0.45f));
-        b.Add(PartGeometryKernel.BeveledBox(1.2f, G.HousePlinth, 0.5f, 0.02f, L.Granite), f.At(cx + 0.6f, y - 0.05f, doorZ - 0.25f));
+        b.Add(PartSolids.BeveledBox(0.95f, 2.15f, 0.05f, 0, L.Wood), f.At(cx + 0.6f, y + G.HousePlinth, doorZ - 0.02f));
+        b.Add(PartSolids.BeveledBox(1.15f, 0.08f, 0.1f, 0.01f, L.Trim), f.At(cx + 0.6f, y + G.HousePlinth + 2.15f, doorZ - 0.05f));
+        b.Add(PartSolids.BeveledBox(1.4f, 0.12f, 0.9f, 0.015f, L.Trim), f.At(cx + 0.6f, y + G.HousePlinth + 2.45f, doorZ - 0.45f));
+        b.Add(PartSolids.BeveledBox(1.2f, G.HousePlinth, 0.5f, 0.02f, L.Granite), f.At(cx + 0.6f, y - 0.05f, doorZ - 0.25f));
     }
 
     /// <summary>A window on a guard-house face: glass in an aluminium surround over a sill with a drip.</summary>
@@ -218,11 +218,11 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         Matrix4x4 At(float along, float yy, float off) => turned
             ? f.AtTurned(x + outward * off, yy, z + along)
             : f.At(x + along, yy, z + outward * off);
-        b.Add(PartGeometryKernel.BeveledBox(width, h, 0.04f, 0, L.Glass), At(0, y0, 0.01f));
-        b.Add(PartGeometryKernel.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Stainless), At(0, y1, 0.04f));
-        b.Add(PartGeometryKernel.BeveledBox(width + 0.3f, 0.07f, 0.18f, 0.015f, L.Trim), At(0, y0 - 0.1f, 0.08f));
+        b.Add(PartSolids.BeveledBox(width, h, 0.04f, 0, L.Glass), At(0, y0, 0.01f));
+        b.Add(PartSolids.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Stainless), At(0, y1, 0.04f));
+        b.Add(PartSolids.BeveledBox(width + 0.3f, 0.07f, 0.18f, 0.015f, L.Trim), At(0, y0 - 0.1f, 0.08f));
         foreach (var u in new[] { -0.5f, 0f, 0.5f })
-            b.Add(PartGeometryKernel.BeveledBox(0.06f, h, 0.08f, 0.01f, L.Stainless), At(u * (width + 0.06f), y0, 0.04f));
+            b.Add(PartSolids.BeveledBox(0.06f, h, 0.08f, 0.01f, L.Stainless), At(u * (width + 0.06f), y0, 0.04f));
     }
 
     // ---- Footway side gate: closed steel bar gate between two piers ----
@@ -239,9 +239,9 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
         foreach (var side in new[] { -1f, 1f })
         {
             var x = side * (p.Width * 0.5f + G.PierSize * 0.5f);
-            b.Add(PartGeometryKernel.BeveledBox(G.PierSize, F.Height + 0.1f, G.PierSize, 0.02f, L.Granite), f.At(x, y - 0.05f, 0));
+            b.Add(PartSolids.BeveledBox(G.PierSize, F.Height + 0.1f, G.PierSize, 0.02f, L.Granite), f.At(x, y - 0.05f, 0));
             if (b.Detail != SiteDetail.Mass)
-                b.Add(PartGeometryKernel.BeveledBox(G.PierSize + 0.06f, 0.08f, G.PierSize + 0.06f, 0.015f, L.Trim), f.At(x, y + F.Height + 0.05f, 0));
+                b.Add(PartSolids.BeveledBox(G.PierSize + 0.06f, 0.08f, G.PierSize + 0.06f, 0.015f, L.Trim), f.At(x, y + F.Height + 0.05f, 0));
         }
     }
 

@@ -64,7 +64,7 @@ public sealed class NatatoriumSite : ZoneSite
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Natatorium {Feature} is missing from the world model.");
         var ring = feature.Contour(Part);
-        var centre = PlanGeometry.Centroid(ring, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(ring, meanIfDegenerate: true);
         // Second moments about the centroid; a filled ellipse has variance (a/2)² and (b/2)² along its axes.
         double area = 0, sxx = 0, szz = 0, sxz = 0;
         for (var i = 0; i < ring.Count; i++)
@@ -143,7 +143,7 @@ public sealed class NatatoriumSite : ZoneSite
         for (var i = 0; i < p.Bays; i++)
         {
             var (f, width) = p.Facet(i);
-            b.Add(PartGeometryKernel.WallPanel(width + 0.02f, S.PoolGlassTop - S.PoolGlassFoot + 0.4f, 0.06f, [], ZoneLooks.Glass), f.At(0, y + S.PoolGlassFoot - 0.3f, -0.03f));
+            b.Add(PartSolids.WallPanel(width + 0.02f, S.PoolGlassTop - S.PoolGlassFoot + 0.4f, 0.06f, [], ZoneLooks.Glass), f.At(0, y + S.PoolGlassFoot - 0.3f, -0.03f));
         }
         if (Allocation(b.Context, p) is { } allocation) WindowNumbers.Panes(b, Openings(p, y), allocation, W.Venue, W.Pool);
         // The crown inside the drum, so the band never shows sky through its back.
@@ -189,7 +189,7 @@ public sealed class NatatoriumSite : ZoneSite
                     return new(at.X, y + q.Y, at.Y);
                 }
                 var (a, e) = (P(profile[j]), P(profile[j + 1]));
-                b.Add(PartGeometryKernel.BeveledBox(0.2f, Vector3.Distance(a, e) + 0.05f, 0.12f, 0, Rib), LandmarkSolids.Along(a, e, new(outward.X, 0.6f, outward.Y)));
+                b.Add(PartSolids.BeveledBox(0.2f, Vector3.Distance(a, e) + 0.05f, 0.12f, 0, Rib), LandmarkSolids.Along(a, e, new(outward.X, 0.6f, outward.Y)));
             }
         }
     }

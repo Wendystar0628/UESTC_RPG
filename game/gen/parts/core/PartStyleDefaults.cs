@@ -22,5 +22,5 @@ public static class PartStyleDefaults
     public const LineClass TrimLine = LineClass.Fine;
 
     public static SweepProfile CorniceProfile(float depth = CorniceMedium, float height = 0.5f) =>
-        PartGeometryKernel.BeveledRectangleProfile(depth, height, TrimEdgeBevel);
+        PartSweeps.BeveledRectangleProfile(depth, height, TrimEdgeBevel);
 }

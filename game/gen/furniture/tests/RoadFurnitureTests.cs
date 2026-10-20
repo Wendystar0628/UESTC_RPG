@@ -39,7 +39,7 @@ public sealed class RoadFurnitureTests
             foreach (var (u, v) in new[] { (-1f, -1f), (1f, -1f), (-1f, 1f), (1f, 1f) })
             {
                 var q = Xf.Point(car.Part.At, new(u * p.Width * 0.5f, 0, v * p.Depth * 0.5f));
-                AssertThat(PlanGeometry.Contains(lot, new(q.X, q.Z))).OverrideFailureMessage($"{car.Key} sticks out of its lot").IsTrue();
+                AssertThat(PlanRings.Contains(lot, new(q.X, q.Z))).OverrideFailureMessage($"{car.Key} sticks out of its lot").IsTrue();
             }
             AssertThat(car.Colliders.Count == 1 && car.Colliders[0].Foot == FootMat.Metal).OverrideFailureMessage($"{car.Key}: one Metal box (WLD-LIFE)").IsTrue();
             AssertThat(StreetStyle.CarBodies.Any(c => p.Material.Lit.Value == c + ".lit")).OverrideFailureMessage($"{car.Key} is not in a car body colour").IsTrue();
@@ -94,7 +94,7 @@ public sealed class RoadFurnitureTests
             var rule = FurnitureStyle.Rule(tier);
             var runs = Groups.Value.Where(g => g.Tier == tier)
                 .SelectMany(g => StreetNetwork.Chains(g.Lines).Select(chain => (g.Key, Chain: chain, Reach: g.Lines.Max(StreetNetwork.HalfWidth) + FurnitureStyle.LampKerbGap + FurnitureStyle.LampMaxShift)))
-                .Where(r => new StreetNetwork.Run(r.Chain).Length >= 3f * rule.LampSpacing && r.Chain.All(p => PlanGeometry.Contains(world.Boundary, p)))
+                .Where(r => new StreetNetwork.Run(r.Chain).Length >= 3f * rule.LampSpacing && r.Chain.All(p => PlanRings.Contains(world.Boundary, p)))
                 .ToList();
             AssertThat(runs.Count > 0).OverrideFailureMessage($"no long {tier} run inside the campus").IsTrue();
             var lit = runs.Count(r => lamps.Any(l => l.Key.StartsWith($"lamp:{r.Key}:", StringComparison.Ordinal) && (float)PlanLines.Project(r.Chain, l.Anchor).Distance <= r.Reach));
@@ -131,8 +131,8 @@ public sealed class RoadFurnitureTests
         foreach (var item in RealLayout.Value.Items.Where(i => i.Kind is FurnitureKind.StreetLamp or FurnitureKind.Bench or FurnitureKind.Bin or FurnitureKind.BusStop))
         {
             var p = item.Anchor;
-            AssertThat(PlanGeometry.Contains(world.Boundary, p)).OverrideFailureMessage($"{item.Key} outside the campus").IsTrue();
-            AssertThat(!outlines.Any(o => PlanGeometry.Contains(o, p))).OverrideFailureMessage($"{item.Key} inside a building or water").IsTrue();
+            AssertThat(PlanRings.Contains(world.Boundary, p)).OverrideFailureMessage($"{item.Key} outside the campus").IsTrue();
+            AssertThat(!outlines.Any(o => PlanRings.Contains(o, p))).OverrideFailureMessage($"{item.Key} inside a building or water").IsTrue();
             foreach (var road in world.Network.Roads)
             {
                 var d = MathF.Sqrt(road.Line.Points.Zip(road.Line.Points.Skip(1), (u, v) => PlanLines.SegmentDistanceSquared(p, u, v)).DefaultIfEmpty(float.MaxValue).Min());

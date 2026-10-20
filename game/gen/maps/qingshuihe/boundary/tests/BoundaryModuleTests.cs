@@ -189,7 +189,7 @@ public sealed class BoundaryModuleTests
         var paving = world.Feature(BoundaryFeatureIds.NorthPlaza).Outer();
         foreach (var bench in P.Benches)
         {
-            AssertThat(PlanGeometry.PointInRing(frame.P(bench.X, bench.Y), paving)).OverrideFailureMessage("bench inside the plaza").IsTrue();
+            AssertThat(PlanRings.PointInRing(frame.P(bench.X, bench.Y), paving)).OverrideFailureMessage("bench inside the plaza").IsTrue();
             AssertThat(bench.Y > P.RailN(world)).OverrideFailureMessage("bench behind the railing").IsTrue();
         }
     }

@@ -29,7 +29,7 @@ public sealed record FacadeBay(int Index, int Ring, int Edge, int Bay,
     float SillHeight, float WindowHeight, FacadeWindowKind WindowKind)
 {
     public string Key => FormattableString.Invariant($"r{Ring}/e{Edge}/b{Bay}");
-    public Vector2 Center => PlanGeometry.Lerp(A, B, 0.5d);
+    public Vector2 Center => QuantizedPlan.Lerp(A, B, 0.5d);
     public float Width => VectorMath.Length(B - A);
     /// <summary>The caller adds its building allocation base; ordinal is zero-based, not a floor label.</summary>
     public int WindowIndex(int storeyOrdinal, int baysPerStorey)
@@ -49,8 +49,8 @@ public static class FacadeGridGenerator
         ArgumentNullException.ThrowIfNull(footprint);
         options ??= new();
         Validate(options);
-        Vector2[] outer = PlanGeometry.CanonicalRing(footprint.Outer, true);
-        var holes = footprint.Holes.Select(h => PlanGeometry.CanonicalRing(h, false))
+        Vector2[] outer = QuantizedPlan.CanonicalRing(footprint.Outer, true);
+        var holes = footprint.Holes.Select(h => QuantizedPlan.CanonicalRing(h, false))
             .OrderBy(h => h[0].X).ThenBy(h => h[0].Y).ToArray();
         ValidateHoles(outer, holes);
         var rings = new List<IReadOnlyList<Vector2>> { outer };
@@ -63,7 +63,7 @@ public static class FacadeGridGenerator
             for (int edge = 0; edge < ring.Count; edge++)
             {
                 Vector2 a = ring[edge], b = ring[(edge + 1) % ring.Count];
-                Vector2 tangent = PlanGeometry.Unit(b - a);
+                Vector2 tangent = QuantizedPlan.Unit(b - a);
                 Vector2 inward = new(-tangent.Y, tangent.X);
                 float length = VectorMath.Length(b - a);
                 bool paired=wing is not null && (edge==wing.Edge || edge==(wing.Edge+2)%4);
@@ -78,17 +78,17 @@ public static class FacadeGridGenerator
                         var axis=wing!;float ua=axis.U(a),ub=axis.U(b); bool forward=ub>ua;
                         float first=forward?(bay==0?ua:axis.Length*bay/count):(bay==0?ua:axis.Length*(count-bay)/count);
                         float last=forward?(bay+1==count?ub:axis.Length*(bay+1)/count):(bay+1==count?ub:axis.Length*(count-bay-1)/count);
-                        start=PlanGeometry.Lerp(a,b,(first-ua)/(ub-ua));end=PlanGeometry.Lerp(a,b,(last-ua)/(ub-ua));
+                        start=QuantizedPlan.Lerp(a,b,(first-ua)/(ub-ua));end=QuantizedPlan.Lerp(a,b,(last-ua)/(ub-ua));
                     }
-                    else { start=PlanGeometry.Lerp(a,b,(double)bay/count);end=PlanGeometry.Lerp(a,b,(double)(bay+1)/count); }
+                    else { start=QuantizedPlan.Lerp(a,b,(double)bay/count);end=QuantizedPlan.Lerp(a,b,(double)(bay+1)/count); }
                     float width = VectorMath.Length(end - start);
                     float openingWidth = MathF.Min(options.WindowWidth, width - 2f * options.JambClearance);
                     bool blank = width < options.MinimumBayWidth || openingWidth < 0.5f;
-                    Vector2 center = PlanGeometry.Lerp(start, end, 0.5d);
+                    Vector2 center = QuantizedPlan.Lerp(start, end, 0.5d);
                     Vector2 halfOpening = tangent * (blank ? 0f : openingWidth * 0.5f);
                     bays.Add(new(bays.Count, ringIndex, edge, bay, start, end,
-                        PlanGeometry.Quantize(center - halfOpening), PlanGeometry.Quantize(center + halfOpening), inward,
-                        PlanGeometry.Quantize(options.SillHeight), PlanGeometry.Quantize(options.WindowHeight),
+                        QuantizedPlan.Quantize(center - halfOpening), QuantizedPlan.Quantize(center + halfOpening), inward,
+                        QuantizedPlan.Quantize(options.SillHeight), QuantizedPlan.Quantize(options.WindowHeight),
                         blank ? FacadeWindowKind.Blank : FacadeWindowKind.Room));
                 }
             }
@@ -97,12 +97,12 @@ public static class FacadeGridGenerator
         foreach (FacadeBay bay in bays)
         {
             hashParts.Add(bay.Key);
-            hashParts.Add(PlanGeometry.Key(bay.A));
-            hashParts.Add(PlanGeometry.Key(bay.B));
-            hashParts.Add(PlanGeometry.Key(bay.OpeningA));
-            hashParts.Add(PlanGeometry.Key(bay.OpeningB));
-            hashParts.Add(PlanGeometry.Mm(bay.SillHeight));
-            hashParts.Add(PlanGeometry.Mm(bay.WindowHeight));
+            hashParts.Add(QuantizedPlan.Key(bay.A));
+            hashParts.Add(QuantizedPlan.Key(bay.B));
+            hashParts.Add(QuantizedPlan.Key(bay.OpeningA));
+            hashParts.Add(QuantizedPlan.Key(bay.OpeningB));
+            hashParts.Add(QuantizedPlan.Mm(bay.SillHeight));
+            hashParts.Add(QuantizedPlan.Mm(bay.WindowHeight));
             hashParts.Add(bay.WindowKind.ToString());
         }
         return new(new(outer, holes), bays.ToArray(), StableHash.Hash32(0, hashParts.ToArray()));
@@ -130,10 +130,10 @@ public static class FacadeGridGenerator
     {
         for (int i = 0; i < holes.Length; i++)
         {
-            if (!PlanGeometry.Contains(outer, holes[i][0], false) || RingsTouch(outer, holes[i]))
+            if (!QuantizedPlan.Contains(outer, holes[i][0], false) || RingsTouch(outer, holes[i]))
                 throw new ArgumentException("A footprint hole must lie strictly inside its outer ring.", nameof(holes));
             for (int j = 0; j < i; j++)
-                if (RingsTouch(holes[i], holes[j]) || PlanGeometry.Contains(holes[i], holes[j][0]) || PlanGeometry.Contains(holes[j], holes[i][0]))
+                if (RingsTouch(holes[i], holes[j]) || QuantizedPlan.Contains(holes[i], holes[j][0]) || QuantizedPlan.Contains(holes[j], holes[i][0]))
                     throw new ArgumentException("Footprint holes may not intersect, touch or nest.", nameof(holes));
         }
     }
@@ -142,7 +142,7 @@ public static class FacadeGridGenerator
     {
         for (int i = 0; i < a.Count; i++)
             for (int j = 0; j < b.Count; j++)
-                if (PlanGeometry.SegmentsTouch(a[i], a[(i + 1) % a.Count], b[j], b[(j + 1) % b.Count])) return true;
+                if (QuantizedPlan.SegmentsTouch(a[i], a[(i + 1) % a.Count], b[j], b[(j + 1) % b.Count])) return true;
         return false;
     }
 }

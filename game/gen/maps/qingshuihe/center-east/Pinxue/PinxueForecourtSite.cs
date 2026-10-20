@@ -57,20 +57,20 @@ public sealed class PinxueForecourtSite : ZoneSite
 
     /// <summary>Centres of the registered tree pits.</summary>
     internal static IEnumerable<Vector2> TreePitCentres(IWorldModel world) =>
-        world.Feature(CenterEastIds.Pinxue.TreePitsId).Polygons().Select(pit => PlanGeometry.Centroid(pit));
+        world.Feature(CenterEastIds.Pinxue.TreePitsId).Polygons().Select(pit => PlanPolygons.Centroid(pit));
 
     private static void TreePits(SiteBuilder b, PlanFrame f)
     {
         float h = (P.TreePitSize - P.TreePitKerb) * 0.5f, inner = P.TreePitSize - 2 * P.TreePitKerb;
-        var kerb = PartGeometryKernel.BeveledRectangleProfile(P.TreePitKerb, P.TreePitHeight + 0.05f, 0.02f);
+        var kerb = PartSweeps.BeveledRectangleProfile(P.TreePitKerb, P.TreePitHeight + 0.05f, 0.02f);
         foreach (var centre in TreePitCentres(b.Context.World).Where(centre => b.Includes(TreeRange(f, centre))))
         {
             var local = f.Local(centre);
             float x = local.X, z = local.Y;
             var g = b.Ground(centre);
             Vector2[] square = [f.P(x - h, z - h), f.P(x + h, z - h), f.P(x + h, z + h), f.P(x - h, z + h)];
-            b.Add(PartGeometryKernel.Sweep(kerb, square, L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
-            b.Add(PartGeometryKernel.BeveledBox(inner + 0.02f, P.TreePitSoil + 0.05f, inner + 0.02f, 0.01f, L.Soil), f.At(x, g - 0.05f, z));
+            b.Add(PartSweeps.Sweep(kerb, square, L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
+            b.Add(PartSolids.BeveledBox(inner + 0.02f, P.TreePitSoil + 0.05f, inner + 0.02f, 0.01f, L.Soil), f.At(x, g - 0.05f, z));
         }
     }
 
@@ -80,7 +80,7 @@ public sealed class PinxueForecourtSite : ZoneSite
     internal static IReadOnlyList<Vector2>? HoleNear(IWorldModel world, Vector2 point)
     {
         if (!world.Features.TryGetValue(new(CenterEastIds.Pinxue.Forecourt), out var court) || court.Geometry is not PolygonGeometry polygon) return null;
-        return polygon.Rings.Holes.SingleOrDefault(hole => PlanGeometry.PointInRing(point, hole));
+        return polygon.Rings.Holes.SingleOrDefault(hole => PlanRings.PointInRing(point, hole));
     }
 
     private static void LawnPanel(SiteBuilder b)
@@ -89,8 +89,8 @@ public sealed class PinxueForecourtSite : ZoneSite
         if (HoleNear(b.Context.World, fountain) is not { } hole) return;
         if (!b.Includes(SiteRanges.Bounds(hole, P.PanelKerbWidth))) return;
         var g = b.Ground(fountain);
-        var kerb = PartGeometryKernel.BeveledRectangleProfile(P.PanelKerbWidth, P.PanelKerbHeight + 0.05f, 0.02f);
-        b.Add(PartGeometryKernel.Sweep(kerb, hole.ToArray(), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
+        var kerb = PartSweeps.BeveledRectangleProfile(P.PanelKerbWidth, P.PanelKerbHeight + 0.05f, 0.02f);
+        b.Add(PartSweeps.Sweep(kerb, hole.ToArray(), L.Granite, closed: true), Matrix4x4.CreateTranslation(0, g - 0.05f, 0));
     }
 
     /// <summary>The cascade's frame: centred on the registered fountain point, X along the bar, +Z toward the forecourt.</summary>
@@ -120,10 +120,10 @@ public sealed class PinxueForecourtSite : ZoneSite
             var floorY = g + water - P.PoolDepth;
             float hx = half.X - coping * 0.5f, hz = half.Y - coping * 0.5f;
             Vector2[] path = [f.P(-hx, -hz), f.P(hx, -hz), f.P(hx, hz), f.P(-hx, hz)];
-            var wall = PartGeometryKernel.BeveledRectangleProfile(coping, g + rim - baseY, b.Detail == SiteDetail.Mass ? 0f : 0.03f);
-            b.Add(PartGeometryKernel.Sweep(wall, path, L.Granite, closed: true), Matrix4x4.CreateTranslation(0, baseY, 0));
+            var wall = PartSweeps.BeveledRectangleProfile(coping, g + rim - baseY, b.Detail == SiteDetail.Mass ? 0f : 0.03f);
+            b.Add(PartSweeps.Sweep(wall, path, L.Granite, closed: true), Matrix4x4.CreateTranslation(0, baseY, 0));
             float ix = 2 * (half.X - coping) + 0.02f, iz = 2 * (half.Y - coping) + 0.02f;
-            b.Add(PartGeometryKernel.BeveledBox(ix, floorY - baseY, iz, 0.01f, L.DarkGranite), f.At(0, baseY, 0));
+            b.Add(PartSolids.BeveledBox(ix, floorY - baseY, iz, 0.01f, L.DarkGranite), f.At(0, baseY, 0));
             baseY = floorY;
         }
     }
@@ -204,11 +204,11 @@ public sealed class PinxueForecourtSite : ZoneSite
         foreach (var (z0, z1, baseY, top) in RampRuns(b.Ground, f, x, wallZ0, wallZ1))
         {
             float len = z1 - z0, zc = (z0 + z1) * 0.5f;
-            b.Add(PartGeometryKernel.BeveledBox(t, top - 0.06f - baseY, len, 0.02f, L.Granite), f.At(x + o * t * 0.5f, baseY, zc));
-            b.Add(PartGeometryKernel.BeveledBox(t + 0.08f, 0.06f, len, 0.015f, L.Trim), f.At(x + o * t * 0.5f, top - 0.06f, zc));
+            b.Add(PartSolids.BeveledBox(t, top - 0.06f - baseY, len, 0.02f, L.Granite), f.At(x + o * t * 0.5f, baseY, zc));
+            b.Add(PartSolids.BeveledBox(t + 0.08f, 0.06f, len, 0.015f, L.Trim), f.At(x + o * t * 0.5f, top - 0.06f, zc));
             if (b.Detail == SiteDetail.Mass) continue;
-            b.Add(PartGeometryKernel.BeveledBox(bed, top - 0.12f - baseY, len, 0.01f, L.Bed), f.At(x + o * (t + bed * 0.5f), baseY, zc));
-            b.Add(PartGeometryKernel.BeveledBox(kerb, top - 0.05f - baseY, len, 0.015f, L.Granite), f.At(x + o * (t + bed + kerb * 0.5f), baseY, zc));
+            b.Add(PartSolids.BeveledBox(bed, top - 0.12f - baseY, len, 0.01f, L.Bed), f.At(x + o * (t + bed * 0.5f), baseY, zc));
+            b.Add(PartSolids.BeveledBox(kerb, top - 0.05f - baseY, len, 0.015f, L.Granite), f.At(x + o * (t + bed + kerb * 0.5f), baseY, zc));
         }
     }
 

@@ -99,12 +99,12 @@ internal sealed class StreetSite
     /// </remarks>
     public string? Blocker(Vector2 p, float radius, NetworkLine? beside = null, bool onBeside = false, float? outlineClear = null, bool walksPass = false)
     {
-        if (!PlanGeometry.Contains(World.Boundary, p)) return "the campus edge";
+        if (!PlanRings.Contains(World.Boundary, p)) return "the campus edge";
         foreach (var o in _index.Outlines.In(p))
         {
             var keep = radius + (o.Kind == "building" && outlineClear is { } wall ? wall : FurnitureStyle.OutlineClear);
             if (p.X < o.Min.X - keep || p.X > o.Max.X + keep || p.Y < o.Min.Y - keep || p.Y > o.Max.Y + keep) continue;
-            if (PlanGeometry.Contains(o.Rings, p) || StreetIndex.Edge(o.Rings, p) < keep) return $"a {o.Kind} outline";
+            if (PlanRings.Contains(o.Rings, p) || StreetIndex.Edge(o.Rings, p) < keep) return $"a {o.Kind} outline";
         }
         foreach (var road in _index.Roads.In(p))
         {
@@ -174,9 +174,9 @@ internal sealed class StreetSite
     {
         foreach (var kind in new[] { "building", "water" })
             foreach (var o in _index.Outlines.In(p))
-                if (o.Kind == kind && p.X >= o.Min.X && p.X <= o.Max.X && p.Y >= o.Min.Y && p.Y <= o.Max.Y && PlanGeometry.Contains(o.Rings, p))
+                if (o.Kind == kind && p.X >= o.Min.X && p.X <= o.Max.X && p.Y >= o.Min.Y && p.Y <= o.Max.Y && PlanRings.Contains(o.Rings, p))
                     return kind == "building" ? Landing.Building : Landing.Water;
-        if (!OffCarriageways(p, 0f, 0f) || _index.Lanes.In(p).Any(rings => PlanGeometry.Contains(rings, p))) return Landing.Carriageway;
+        if (!OffCarriageways(p, 0f, 0f) || _index.Lanes.In(p).Any(rings => PlanRings.Contains(rings, p))) return Landing.Carriageway;
         return Landing.Open;
     }
 }

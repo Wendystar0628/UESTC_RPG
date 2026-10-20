@@ -54,10 +54,10 @@ public sealed class WestLawnSite : ZoneSite
             var seg = PlanFrame.Along((a + e) * 0.5f, e - a);
             var ground = b.Ground(seg.Origin);
             var length = Vector2.Distance(a, e) + 0.03f;
-            b.Add(PartGeometryKernel.BeveledBox(length, wall.Height + 0.02f, wall.Thickness, 0.025f, L.Granite), seg.At(0, ground - 0.12f, 0));
+            b.Add(PartSolids.BeveledBox(length, wall.Height + 0.02f, wall.Thickness, 0.025f, L.Granite), seg.At(0, ground - 0.12f, 0));
             if (b.Detail == SiteDetail.Mass) continue;
             // A slightly proud stone seat slab: the horizontal face that takes the season's leaves, petals and snow.
-            b.Add(PartGeometryKernel.BeveledBox(length, 0.1f, wall.Thickness + 0.08f, 0.02f, L.StoneTrim), seg.At(0, ground + wall.Height - 0.1f, 0));
+            b.Add(PartSolids.BeveledBox(length, 0.1f, wall.Thickness + 0.08f, 0.02f, L.StoneTrim), seg.At(0, ground + wall.Height - 0.1f, 0));
         }
     }
 

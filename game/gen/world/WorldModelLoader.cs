@@ -29,9 +29,9 @@ public sealed class WorldDataException(string file, string entry, string message
 
 /// <summary>Pure parser. The kernel supplies only the active map's relative filenames and bytes.</summary>
 
-public static partial class WorldModelLoader
+public static class WorldModelLoader
 {
-    private static readonly Encoding Utf8 = new UTF8Encoding(false, true);
+    internal static readonly Encoding Utf8 = new UTF8Encoding(false, true);
     private static readonly GeometryFactory Factory = new();
 
     /// <summary>Load a world without terrain; terrain files require the descriptor-based production entry.</summary>
@@ -100,13 +100,13 @@ public static partial class WorldModelLoader
         if (inputs is not null)
             for (var index = 0; index < inputs.Descriptor.Env.ReflectLakes.Count; index++)
                 RequireReference("map.json", map.Value, $"env.reflectLakes[{index}]", inputs.Descriptor.Env.ReflectLakes[index], featureIds);
-        var sources = ReadTerrainSources(map, input);
-        ValidateTerrainReferences(sources, featureIds, roadReferences);
-        var terrainContext = PrepareTerrain(inputs, sources, boundary, frozen, network, prefix);
+        var sources = WorldTerrainInputs.ReadSources(map, input);
+        WorldTerrainInputs.ValidateReferences(sources, featureIds, roadReferences);
+        var terrainContext = WorldTerrainInputs.Prepare(inputs, sources, boundary, frozen, network, prefix);
         if (input.ContainsKey("outskirts.json") && options.Outskirts is null)
             throw new WorldDataException("outskirts.json", "root", "A parsed outskirts model is required until the producer's file contract is available.");
         var outskirts = options.Outskirts;
-        var operations = TerrainOperations(sources);
+        var operations = WorldTerrainInputs.Operations(sources);
         var limitRing = outskirts?.CutLine is { Count: >= 3 } cutLine ? cutLine : boundary.Outer;
         var roam = ReadRoam(map, input);
         var margin = outskirts is null ? roam?.FallbackMargin ?? 0 : 0;
@@ -130,7 +130,7 @@ public static partial class WorldModelLoader
             (terrain, diagnostics, fidelity) =>
             {
                 var world = Snapshot(terrain, Interiors(terrain), new WorldFidelityModel(fidelity));
-                return new(world, geo, PlanGeometry.Centroid(boundary.Outer), bounds, TileGrid.At(bounds.Min), TileGrid.At(bounds.Max)) { Diagnostics = diagnostics };
+                return new(world, geo, PlanPolygons.Centroid(boundary.Outer), bounds, TileGrid.At(bounds.Min), TileGrid.At(bounds.Max)) { Diagnostics = diagnostics };
             }, (world, terrain) => Snapshot(terrain, world.Interiors, world.Fidelity));
 
         void AddLine(NetworkLine line, string kind, string file)
@@ -321,7 +321,7 @@ public static partial class WorldModelLoader
         }
     }
 
-    private static void RequireReference(string file, string source, string field, FeatureId target,
+    internal static void RequireReference(string file, string source, string field, FeatureId target,
         IReadOnlySet<FeatureId> targets)
     {
         if (!targets.Contains(target))
@@ -387,7 +387,7 @@ public static partial class WorldModelLoader
             for (var i = 0; i < collection.NumGeometries; i++) foreach (var item in Polygons(collection.GetGeometryN(i))) yield return item;
     }
 
-    private static void CheckMap(MapId map, MapId? declared, string file)
+    internal static void CheckMap(MapId map, MapId? declared, string file)
     { if (declared is { } id && id != map) throw new WorldDataException(file, "map", "Overlay belongs to a different map."); }
     internal static WorldGeometry Geometry(IReadOnlyList<PolygonRings> polygons) => polygons.Count == 1 ? new PolygonGeometry(polygons[0]) : new MultiPolygonGeometry(polygons);
     internal static Box3 BoundsOf(WorldGeometry geometry, float height)

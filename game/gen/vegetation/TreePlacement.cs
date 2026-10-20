@@ -31,7 +31,7 @@ internal static class TreePlacement
 
     internal static bool Try(PlantingSite site, SpeciesInfo info, Vector2 p, string key, bool wash, PlantSource source, List<PlantedTree> trees, bool crownClear)
     {
-        if (!PlanGeometry.Contains(site.World.Boundary, p)) return false;
+        if (!PlanRings.Contains(site.World.Boundary, p)) return false;
         if (trees.Any(t => t.Source == PlantSource.SportWall && Vector2.Distance(new(t.Position.X, t.Position.Z), p) < SameTree)) return false;
         var probe = Probe(site, info, key);
         var crown = probe.CrownRadius;

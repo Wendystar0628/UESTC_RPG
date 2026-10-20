@@ -6,7 +6,7 @@ using Campus.Gen.World;
 
 namespace Campus.Gen.Sites;
 
-public static partial class FeatureReads
+public static class FeatureContours
 {
 
     /// <summary>
@@ -44,7 +44,7 @@ public static partial class FeatureReads
         foreach (var input in rings)
         {
             IReadOnlyList<Vector2> ring;
-            try { ring = PlanGeometry.OpenRing(input); }
+            try { ring = PlanRings.OpenRing(input); }
             catch (ArgumentException error) { throw ContourError(selectionId, $"Parent {parentId} has an invalid contour: {error.Message}"); }
             var a = Match(ring, line.Line.Points[0], selectionId);
             var b = Match(ring, line.Line.Points[1], selectionId);

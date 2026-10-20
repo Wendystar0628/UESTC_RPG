@@ -7,11 +7,14 @@ using Campus.Gen.Parts.Street;
 namespace Campus.Gen.Ground;
 
 /// <summary>Sidewalk tactile paving, utility covers and parking lines use the existing draped marking stream.</summary>
-internal sealed partial class RoadMarkings
+internal sealed class GroundDetails
 {
+    private readonly GroundMarkings _markings;
     private readonly List<Vector2> _manholes = [];
 
-    private void AddGroundDetails(GroundLayout layout, GroundSection section, List<RoadGraph.Junction> junctions)
+    internal GroundDetails(GroundMarkings markings) => _markings = markings;
+
+    internal void AddTo(GroundLayout layout, GroundSection section, List<RoadGraph.Junction> junctions)
     {
         var mainRoads = layout.Roads.Where(r => r.Carriageway && r.Width >= section.Markings.CentreLineMinWidth).ToArray();
         var spec = section.Details;
@@ -49,8 +52,8 @@ internal sealed partial class RoadMarkings
                     OnWalk(layout, (a + b) * 0.5f, spec.TactileWidth * 0.5f))
                 {
                     // At a road crossing the final 0.6 m is a warning pad; otherwise the three ribs follow travel.
-                    var warning = _crossings.Any(p => Vector2.Distance(p, mid.Point) < main.Width * 0.5f + spec.TactileWarningDepth) ||
-                        NearJunction(junctions, mid.Point, spec.TactileWarningDepth);
+                    var warning = _markings.Crossings.Any(p => Vector2.Distance(p, mid.Point) < main.Width * 0.5f + spec.TactileWarningDepth) ||
+                        RoadMarkings.NearJunction(junctions, mid.Point, spec.TactileWarningDepth);
                     if (warning && layout.SignedDistance(SurfaceKind.Carriageway, a, 16f) <
                         layout.SignedDistance(SurfaceKind.Carriageway, b, 16f)) (a, b) = (b, a);
                     AddTactile(a, b, side, warning, spec, level, section.DecalLift);
@@ -130,7 +133,7 @@ internal sealed partial class RoadMarkings
             a = split;
             length = spec.TactileWarningDepth;
         }
-        AddStrip(a, b, spec.TactileWidth, GroundColor.MarkingYellow, level);
+        _markings.AddStrip(a, b, spec.TactileWidth, GroundColor.MarkingYellow, level);
         var insetLevel = level + lift;
         if (warning)
         {
@@ -140,7 +143,7 @@ internal sealed partial class RoadMarkings
                 for (var row = -1; row <= 1; row++)
                 {
                     var p = a + along * d + side * (row * step);
-                    AddStrip(p - along * (step * 0.15f), p + along * (step * 0.15f), step * 0.3f, GroundColor.UtilityIron, insetLevel);
+                    _markings.AddStrip(p - along * (step * 0.15f), p + along * (step * 0.15f), step * 0.3f, GroundColor.UtilityIron, insetLevel);
                 }
         }
         else
@@ -148,7 +151,7 @@ internal sealed partial class RoadMarkings
             for (var rib = -1; rib <= 1; rib++)
             {
                 var offset = side * (rib * spec.TactileWidth / 3f);
-                AddStrip(a + offset, b + offset, spec.TactileWidth / 15f, GroundColor.UtilityIron, insetLevel);
+                _markings.AddStrip(a + offset, b + offset, spec.TactileWidth / 15f, GroundColor.UtilityIron, insetLevel);
             }
         }
     }
@@ -156,16 +159,16 @@ internal sealed partial class RoadMarkings
     private void AddManhole(Vector2 centre, GroundDetailSpec spec, float level, float lift)
     {
         var radius = spec.ManholeDiameter * 0.5f;
-        var arc = Arc(centre.X, centre.Y, radius, 0f, MathF.Tau, 1f, 1f, spec.ManholeDiameter / 8f);
+        var arc = GroundMarkings.Arc(centre.X, centre.Y, radius, 0f, MathF.Tau, 1f, 1f, spec.ManholeDiameter / 8f);
         for (var k = 0; k + 1 < arc.Count; k++)
-            AddQuad(new(centre, arc[k], arc[k + 1], centre, GroundColor.UtilityIron, level), centre);
+            _markings.AddQuad(new(centre, arc[k], arc[k + 1], centre, GroundColor.UtilityIron, level), centre);
         // A circuit ring and a geometric lightning emblem are original, without reusing the school crest.
-        var inner = Arc(centre.X, centre.Y, radius * 0.8f, 0f, MathF.Tau, 1f, 1f, spec.ManholeDiameter / 8f);
+        var inner = GroundMarkings.Arc(centre.X, centre.Y, radius * 0.8f, 0f, MathF.Tau, 1f, 1f, spec.ManholeDiameter / 8f);
         for (var k = 0; k + 1 < inner.Count; k++)
-            AddStrip(inner[k], inner[k + 1], radius * 0.05f, GroundColor.Concrete, level + lift);
+            _markings.AddStrip(inner[k], inner[k + 1], radius * 0.05f, GroundColor.Concrete, level + lift);
         Vector2[] bolt = [new(-0.05f, -0.20f), new(-0.13f, 0.02f), new(0.08f, -0.02f), new(0.01f, 0.20f)];
         for (var k = 0; k + 1 < bolt.Length; k++)
-            AddStrip(centre + bolt[k] * spec.ManholeDiameter, centre + bolt[k + 1] * spec.ManholeDiameter,
+            _markings.AddStrip(centre + bolt[k] * spec.ManholeDiameter, centre + bolt[k + 1] * spec.ManholeDiameter,
                 radius * 0.08f, GroundColor.Concrete, level + lift);
     }
 
@@ -195,9 +198,9 @@ internal sealed partial class RoadMarkings
                         !OnParking(layout, shape, c, margin) || !OnParking(layout, shape, d, margin) ||
                         !OnParking(layout, shape, (a + b) * 0.5f, margin) || !OnParking(layout, shape, (a + d) * 0.5f, margin) ||
                         !OnParking(layout, shape, (b + c) * 0.5f, margin)) continue;
-                    AddStrip(a, b, spec.ParkingLine, GroundColor.Marking);
-                    AddStrip(a, d, spec.ParkingLine, GroundColor.Marking);
-                    AddStrip(b, c, spec.ParkingLine, GroundColor.Marking);
+                    _markings.AddStrip(a, b, spec.ParkingLine, GroundColor.Marking);
+                    _markings.AddStrip(a, d, spec.ParkingLine, GroundColor.Marking);
+                    _markings.AddStrip(b, c, spec.ParkingLine, GroundColor.Marking);
                 }
             }
         }

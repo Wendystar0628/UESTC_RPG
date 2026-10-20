@@ -41,8 +41,8 @@ internal static class FurnitureCars
             var along = (b - a) / length;
             var inward = new Vector2(-along.Y, along.X);
             var middle = (a + b) * 0.5f;
-            if (!PlanGeometry.Contains(rings, middle + inward)) inward = -inward;
-            if (!PlanGeometry.Contains(rings, middle + inward)) continue;
+            if (!PlanRings.Contains(rings, middle + inward)) inward = -inward;
+            if (!PlanRings.Contains(rings, middle + inward)) continue;
             var slots = (int)MathF.Floor((length - 1f) / S.CarSlot);
             var start = (length - slots * S.CarSlot) * 0.5f;
             var parked = 0;
@@ -60,7 +60,7 @@ internal static class FurnitureCars
                 centre = a + along * (start + (k + 0.5f) * S.CarSlot) + inward * (S.CarNoseIn + car.Depth * 0.5f);
                 var hw = car.Width * 0.5f; var hd = car.Depth * 0.5f;
                 var corners = new[] { centre + along * hw + inward * hd, centre - along * hw + inward * hd, centre + along * hw - inward * hd, centre - along * hw - inward * hd };
-                if (!corners.Append(centre).All(q => PlanGeometry.Contains(rings, q) && rings.Holes.Append(rings.Outer).Min(h => PlanGeometry.DistanceToRing(q, h)) >= S.CarLotMargin)) continue;
+                if (!corners.Append(centre).All(q => PlanRings.Contains(rings, q) && rings.Holes.Append(rings.Outer).Min(h => PlanRings.DistanceToRing(q, h)) >= S.CarLotMargin)) continue;
                 var ends = (centre - inward * (hd - hw), centre + inward * (hd - hw));
                 if (site.Clutter(ends.Item1, hw) is not null || site.Clutter(centre, hw) is not null || site.Clutter(ends.Item2, hw) is not null) continue;
                 var heights = corners.Select(q => terrain.HeightAt(q.X, q.Y)).ToArray();

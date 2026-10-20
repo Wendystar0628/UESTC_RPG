@@ -50,12 +50,12 @@ public sealed partial class TerrainCompilerTests
         AssertThat(Math.Abs((double)(control.HeightAt(-3, 0)) - (double)(terminal.HeightAt(-3, 0))) <= TestTolerance.Position).IsTrue();
         AssertThat(Math.Abs((double)(control.HeightAt(-2.99f, 0)) - (double)(terminal.HeightAt(-2.99f, 0))) <= TestTolerance.Position).IsTrue();
 
-        var touching = swale with { Line = new([new(PlanGeometry.Tolerance / 2, 0), new(20, 0)]) };
+        var touching = swale with { Line = new([new(QuantizedPlan.Tolerance / 2, 0), new(20, 0)]) };
         var path = new TerrainPath(touching.Line!); var roadPath = new TerrainPath(road.Line);
         AssertThat(path.Intersections(roadPath).Count == 0).OverrideFailureMessage("Strict callers admitted a gap.").IsTrue();
         var contactTerrain = TerrainCompiler.Compile(context, [Source([touching])]);
         AssertThat(Math.Abs(contactTerrain.HeightAt(0, 0)) <= TestTolerance.Position && contactTerrain.HeightAt(10, 0) < 0).IsTrue();
-        var separated = touching with { Line = new([new(PlanGeometry.Tolerance * 2, 0), new(20, 0)]) };
+        var separated = touching with { Line = new([new(QuantizedPlan.Tolerance * 2, 0), new(20, 0)]) };
         WorldDataException? separatedRejection = null;
         try { TerrainCompiler.Compile(context, [Source([separated])]); } catch (WorldDataException error) { separatedRejection = error; }
         AssertThat(separatedRejection is not null).OverrideFailureMessage("The at matching radius became a segment-contact tolerance.").IsTrue();

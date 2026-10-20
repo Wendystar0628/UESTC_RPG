@@ -4,66 +4,28 @@ using NetTopologySuite.Geometries;
 
 namespace Campus.Gen.Geometry;
 
-public static partial class PlanGeometry
+/// <summary>Polygon centroids, boundary distances and exact intersections using NTS.</summary>
+public static class PlanPolygons
 {
     private static readonly GeometryFactory Factory = new();
 
-    /// <summary>Drop adjacent and closing duplicates, preserving the first point and traversal direction.</summary>
-    public static Vector2[] DeduplicateRing(IReadOnlyList<Vector2> ring, float distanceSquared = 1e-8f)
-    {
-        var points = new List<Vector2>(ring.Count);
-        foreach (var point in ring)
-            if (points.Count == 0 || Vector2.DistanceSquared(points[^1], point) > distanceSquared) points.Add(point);
-        while (points.Count > 1 && Vector2.DistanceSquared(points[0], points[^1]) <= distanceSquared) points.RemoveAt(points.Count - 1);
-        return points.ToArray();
-    }
 
-    /// <summary>Clean short edges, collinear vertices and reversing spikes, then orient without rotating the start vertex.</summary>
-    public static Vector2[]? CleanRing(IReadOnlyList<Vector2> input, bool outer = true, float minEdge = 0,
-        float collinearTolerance = 0, float duplicateTolerance = 0, float minimumArea = 0, float reversalTolerance = 0,
-        int maxPasses = int.MaxValue, float? duplicateDistanceSquared = null)
+    /// <summary>Area centroid; callers that allow a degenerate ring can retain the scalar-float vertex-mean fallback.</summary>
+    public static Vector2 Centroid(IReadOnlyList<Vector2> ring, bool meanIfDegenerate = false)
     {
-        if (input.Any(point => !VectorMath.Finite(point))) return null;
-        var points = DeduplicateRing(input, duplicateDistanceSquared ?? duplicateTolerance * duplicateTolerance).ToList();
-        var passes = 0;
-        for (var changed = true; changed && points.Count >= 3 && passes++ < maxPasses;)
+        Vector2? fallback = null;
+        if (meanIfDegenerate)
         {
-            changed = false;
-            for (var i = 0; i < points.Count && points.Count >= 3; i++)
-            {
-                var a = points[(i + points.Count - 1) % points.Count];
-                var p = points[i];
-                var b = points[(i + 1) % points.Count];
-                var chord = b - a;
-                var chordLength = chord.Length();
-                var deviation = chordLength > 1e-4f ? MathF.Abs(CrossFloat(chord, p - a)) / chordLength : 0;
-                var reverses = Vector2.Dot(p - a, b - p) < 0 && deviation < reversalTolerance;
-                if (deviation < collinearTolerance && !reverses && chordLength > 1e-4f || reverses)
-                {
-                    points.RemoveAt(i--);
-                    changed = true;
-                }
-                else if (Vector2.Distance(p, b) < minEdge)
-                {
-                    var c = points[(i + 2) % points.Count];
-                    var keepP = MathF.Abs(CrossFloat(c - p, a - p));
-                    var keepB = MathF.Abs(CrossFloat(c - b, a - b));
-                    points.RemoveAt(keepP >= keepB ? (i + 1) % points.Count : i);
-                    i--;
-                    changed = true;
-                }
-            }
+            float x = 0, z = 0;
+            foreach (var point in ring) { x += point.X; z += point.Y; }
+            fallback = new(x / ring.Count, z / ring.Count);
         }
-        if (points.Count < 3) return null;
-        var area = (float)SignedArea(points);
-        if (MathF.Abs(area) < minimumArea || area == 0) return null;
-        if ((area > 0) != outer) points.Reverse();
-        return points.ToArray();
+        return Centroid(new PolygonRings(ring), fallback);
     }
 
     public static Vector2 Centroid(PolygonRings polygon, Vector2? degenerateFallback = null)
     {
-        var area = Math.Abs(SignedArea(polygon.Outer)) - polygon.Holes.Sum(hole => Math.Abs(SignedArea(hole)));
+        var area = Math.Abs(PlanRings.SignedArea(polygon.Outer)) - polygon.Holes.Sum(hole => Math.Abs(PlanRings.SignedArea(hole)));
         if (area < 0.000001)
             return degenerateFallback ?? throw new ArgumentException("Degenerate polygon.", nameof(polygon));
         var shape = Factory.CreatePolygon(Factory.CreateLinearRing(ClosedCoordinates(polygon.Outer)),
@@ -86,8 +48,8 @@ public static partial class PlanGeometry
 
     public static float DistanceToEdges(PolygonRings polygon, Vector2 point)
     {
-        var best = DistanceToRing(point, polygon.Outer);
-        foreach (var hole in polygon.Holes) best = MathF.Min(best, DistanceToRing(point, hole));
+        var best = PlanRings.DistanceToRing(point, polygon.Outer);
+        foreach (var hole in polygon.Holes) best = MathF.Min(best, PlanRings.DistanceToRing(point, hole));
         return best;
     }
 
@@ -104,24 +66,9 @@ public static partial class PlanGeometry
         return best;
     }
 
-    /// <summary>Existing positive-side crossing rule: zero lies on the nonpositive side; adjacent edges are excluded.</summary>
-    public static bool SelfIntersects(IReadOnlyList<Vector2> ring)
-    {
-        for (var i = 0; i < ring.Count; i++)
-            for (var j = i + 2; j < ring.Count; j++)
-            {
-                if (i == 0 && j == ring.Count - 1) continue;
-                var a = ring[i]; var b = ring[(i + 1) % ring.Count];
-                var c = ring[j]; var d = ring[(j + 1) % ring.Count];
-                if ((CrossFloat(b - a, c - a) > 0) != (CrossFloat(b - a, d - a) > 0)
-                    && (CrossFloat(d - c, a - c) > 0) != (CrossFloat(d - c, b - c) > 0)) return true;
-            }
-        return false;
-    }
-
     private static Coordinate[] ClosedCoordinates(IReadOnlyList<Vector2> ring)
     {
-        var points = OpenRing(ring);
+        var points = PlanRings.OpenRing(ring);
         return points.Append(points[0]).Select(point => new Coordinate(point.X, point.Y)).ToArray();
     }
 
@@ -163,6 +110,4 @@ public static partial class PlanGeometry
         }
         return result.OrderBy(interval => interval.Start).ThenBy(interval => interval.End).ToArray();
     }
-
-    public static float CrossFloat(Vector2 a, Vector2 b) => a.X * b.Y - a.Y * b.X;
 }

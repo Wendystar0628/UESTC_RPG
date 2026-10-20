@@ -36,7 +36,7 @@ internal sealed class LibraryOpeningLayout
     {
         var f = Face.Of(piece);
         var length = piece.Length;
-        if (length < S.MinWindowFace) return [];
+        if (length < LibraryStyle.MinWindowFace) return [];
         return piece.Block.Kind switch
         {
             BlockKind.Podium => Podium(piece, f, allocate),
@@ -54,34 +54,34 @@ internal sealed class LibraryOpeningLayout
     {
         var plan = _plan;
         var length = piece.Length;
-        float y0 = plan.FloorY + S.PodiumSill, y1 = y0 + S.PodiumHeight;
-        if (piece.Y0 > plan.FloorY + 0.01f || piece.Y1 < y1 + 0.3f || length < 2 * S.RibbonMargin + S.PodiumModule) yield break;
-        float u0 = S.RibbonMargin, u1 = length - S.RibbonMargin;
+        float y0 = plan.FloorY + LibraryStyle.PodiumSill, y1 = y0 + LibraryStyle.PodiumHeight;
+        if (piece.Y0 > plan.FloorY + 0.01f || piece.Y1 < y1 + 0.3f || length < 2 * LibraryStyle.RibbonMargin + LibraryStyle.PodiumModule) yield break;
+        float u0 = LibraryStyle.RibbonMargin, u1 = length - LibraryStyle.RibbonMargin;
         // lib.cafe (16d): the end of the ribbon at the store front becomes a door bay from the floor up, the door
         // open to the ribbon's transom line, its light above; a pier, then the rest of the ribbon.
-        if (plan.CafeFace is { } cafe && ReferenceEquals(cafe.Piece, piece) && length > 2 * S.RibbonMargin + (S.CafeDoorCells + 2) * S.PodiumModule + S.CafeDoorPier)
+        if (plan.CafeFace is { } cafe && ReferenceEquals(cafe.Piece, piece) && length > 2 * LibraryStyle.RibbonMargin + (LibraryStyle.CafeDoorCells + 2) * LibraryStyle.PodiumModule + LibraryStyle.CafeDoorPier)
         {
-            var width = S.CafeDoorCells * S.PodiumModule;
+            var width = LibraryStyle.CafeDoorCells * LibraryStyle.PodiumModule;
             var bay = cafe.AtA ? new Rect(u0, u0 + width, plan.FloorY, y1) : new Rect(u1 - width, u1, plan.FloorY, y1);
-            yield return new Opening(f, OpeningKind.Entry, bay, S.CafeDoorCells, [(plan.FloorY, y1, 0)], allocate(S.CafeDoorCells, [0]), S.CardReading)
-            { Door = (0, S.CafeDoorCells, y0 + S.PodiumTransom) };
-            if (cafe.AtA) u0 = bay.U1 + S.CafeDoorPier; else u1 = bay.U0 - S.CafeDoorPier;
+            yield return new Opening(f, OpeningKind.Entry, bay, LibraryStyle.CafeDoorCells, [(plan.FloorY, y1, 0)], allocate(LibraryStyle.CafeDoorCells, [0]), LibraryStyle.CardReading)
+            { Door = (0, LibraryStyle.CafeDoorCells, y0 + LibraryStyle.PodiumTransom) };
+            if (cafe.AtA) u0 = bay.U1 + LibraryStyle.CafeDoorPier; else u1 = bay.U0 - LibraryStyle.CafeDoorPier;
         }
-        var cells = Math.Max(1, (int)MathF.Round((u1 - u0) / S.PodiumModule));
-        yield return new(f, OpeningKind.Podium, new(u0, u1, y0, y1), cells, [(y0, y1, 0)], allocate(cells, [0]), S.CardReading);
+        var cells = Math.Max(1, (int)MathF.Round((u1 - u0) / LibraryStyle.PodiumModule));
+        yield return new(f, OpeningKind.Podium, new(u0, u1, y0, y1), cells, [(y0, y1, 0)], allocate(cells, [0]), LibraryStyle.CardReading);
     }
 
     private IEnumerable<Opening> Ribbons(WallPiece piece, Face f, Func<int, IEnumerable<int>, int> allocate)
     {
         var plan = _plan;
         var length = piece.Length;
-        if (length < 2 * S.RibbonMargin + S.RibbonModule) yield break;
-        for (var k = 0; k < S.LibraryStoreys.Length - 1; k++)
+        if (length < 2 * LibraryStyle.RibbonMargin + LibraryStyle.RibbonModule) yield break;
+        for (var k = 0; k < LibraryStyle.LibraryStoreys.Length - 1; k++)
         {
-            float y0 = plan.StoreyY(k) + S.RibbonSill, y1 = y0 + S.RibbonHeight;
+            float y0 = plan.StoreyY(k) + LibraryStyle.RibbonSill, y1 = y0 + LibraryStyle.RibbonHeight;
             if (plan.StoreyY(k) < piece.Y0 - 0.05f || y1 > piece.Y1 - 0.3f) continue;
-            var cells = Math.Max(1, (int)MathF.Round((length - 2 * S.RibbonMargin) / S.RibbonModule));
-            yield return new(f, OpeningKind.Ribbon, new(S.RibbonMargin, length - S.RibbonMargin, y0, y1), cells, [(y0, y1, k)], allocate(cells, [k]), S.CardReading);
+            var cells = Math.Max(1, (int)MathF.Round((length - 2 * LibraryStyle.RibbonMargin) / LibraryStyle.RibbonModule));
+            yield return new(f, OpeningKind.Ribbon, new(LibraryStyle.RibbonMargin, length - LibraryStyle.RibbonMargin, y0, y1), cells, [(y0, y1, k)], allocate(cells, [k]), LibraryStyle.CardReading);
         }
     }
 
@@ -89,13 +89,13 @@ internal sealed class LibraryOpeningLayout
     {
         var plan = _plan;
         var length = piece.Length;
-        var row = S.LibraryStoreys.Length - 1;
-        var count = (int)MathF.Floor((length - 1.8f + (S.SquarePitch - S.SquareSize)) / S.SquarePitch);
-        float y0 = plan.StoreyY(row) + S.SquareSill, y1 = y0 + S.SquareSize;
+        var row = LibraryStyle.LibraryStoreys.Length - 1;
+        var count = (int)MathF.Floor((length - 1.8f + (LibraryStyle.SquarePitch - LibraryStyle.SquareSize)) / LibraryStyle.SquarePitch);
+        float y0 = plan.StoreyY(row) + LibraryStyle.SquareSill, y1 = y0 + LibraryStyle.SquareSize;
         for (var i = 0; i < count; i++)
         {
-            var u = length * 0.5f + (i - (count - 1) * 0.5f) * S.SquarePitch;
-            yield return new(f, OpeningKind.Square, new(u - S.SquareSize * 0.5f, u + S.SquareSize * 0.5f, y0, y1), 1, [(y0, y1, row)], allocate(1, [row]), S.CardReading);
+            var u = length * 0.5f + (i - (count - 1) * 0.5f) * LibraryStyle.SquarePitch;
+            yield return new(f, OpeningKind.Square, new(u - LibraryStyle.SquareSize * 0.5f, u + LibraryStyle.SquareSize * 0.5f, y0, y1), 1, [(y0, y1, row)], allocate(1, [row]), LibraryStyle.CardReading);
         }
     }
 
@@ -103,13 +103,13 @@ internal sealed class LibraryOpeningLayout
     {
         var plan = _plan;
         var length = piece.Length;
-        var count = Math.Min(S.TowerSlits, (int)MathF.Floor((length - 2f) / S.SlitPitch) + 1);
-        float y0 = MathF.Max(piece.Y0, plan.SecondFloorY) + 0.9f, y1 = piece.Y1 - S.SlitTopGap;
+        var count = Math.Min(LibraryStyle.TowerSlits, (int)MathF.Floor((length - 2f) / LibraryStyle.SlitPitch) + 1);
+        float y0 = MathF.Max(piece.Y0, plan.SecondFloorY) + 0.9f, y1 = piece.Y1 - LibraryStyle.SlitTopGap;
         var rows = StoreyRows(y0, y1);
         for (var i = 0; i < count; i++)
         {
-            var u = length * 0.5f + (i - (count - 1) * 0.5f) * S.SlitPitch;
-            yield return new(f, OpeningKind.Slit, new(u - S.SlitWidth * 0.5f, u + S.SlitWidth * 0.5f, y0, y1), 1, rows, allocate(1, rows.Select(r => r.Row)), S.CardStair);
+            var u = length * 0.5f + (i - (count - 1) * 0.5f) * LibraryStyle.SlitPitch;
+            yield return new(f, OpeningKind.Slit, new(u - LibraryStyle.SlitWidth * 0.5f, u + LibraryStyle.SlitWidth * 0.5f, y0, y1), 1, rows, allocate(1, rows.Select(r => r.Row)), LibraryStyle.CardStair);
         }
     }
 
@@ -117,13 +117,13 @@ internal sealed class LibraryOpeningLayout
     {
         var plan = _plan;
         var length = piece.Length;
-        float y0 = MathF.Max(piece.Y0, plan.SecondFloorY), y1 = piece.Y1 - S.SlotTopGap;
+        float y0 = MathF.Max(piece.Y0, plan.SecondFloorY), y1 = piece.Y1 - LibraryStyle.SlotTopGap;
         var rows = StoreyRows(y0, y1);
-        var cells = S.SlotMullions + 1;
+        var cells = LibraryStyle.SlotMullions + 1;
         // The 2F front door (16c) opens the slot's middle cells below the door transom.
-        var door = MathF.Abs(y0 - plan.SecondFloorY) < 0.01f ? ((cells - S.DoorCells) / 2, S.DoorCells, y0 + S.SlotDoorHeight) : ((int, int, float)?)null;
-        var slot = new Opening(f, OpeningKind.Slot, new((length - S.SlotWidth) * 0.5f, (length + S.SlotWidth) * 0.5f, y0, y1), cells, rows,
-            allocate(cells, rows.Select(r => r.Row)), S.CardReading);
+        var door = MathF.Abs(y0 - plan.SecondFloorY) < 0.01f ? ((cells - EntranceStyle.DoorCells) / 2, EntranceStyle.DoorCells, y0 + LibraryStyle.SlotDoorHeight) : ((int, int, float)?)null;
+        var slot = new Opening(f, OpeningKind.Slot, new((length - LibraryStyle.SlotWidth) * 0.5f, (length + LibraryStyle.SlotWidth) * 0.5f, y0, y1), cells, rows,
+            allocate(cells, rows.Select(r => r.Row)), LibraryStyle.CardReading);
         yield return slot with { Door = door };
     }
 

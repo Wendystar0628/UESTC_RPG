@@ -4,19 +4,19 @@ using Campus.Contracts;
 
 namespace Campus.Gen.World;
 
-public static partial class WorldModelLoader
+internal static class WorldTerrainInputs
 {
-    private static IReadOnlyList<TerrainSource> ReadTerrainSources(MapId map, SortedDictionary<string, string> input)
+    internal static IReadOnlyList<TerrainSource> ReadSources(MapId map, SortedDictionary<string, string> input)
     {
         var sources = new List<TerrainSource>();
         foreach (var (file, text) in input.Where(pair => pair.Key.StartsWith("world/", StringComparison.Ordinal)
             && pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal) && pair.Key.Split('/').Length == 2))
         {
             TerrainOverlayFile overlay;
-            try { overlay = TerrainOverlayJson.Parse(Utf8.GetBytes(text)); }
+            try { overlay = TerrainOverlayJson.Parse(WorldModelLoader.Utf8.GetBytes(text)); }
             catch (JsonException error)
             { throw new WorldDataException(file, TerrainErrorEntry(text, error), error.Message, error); }
-            CheckMap(map, overlay.Map, file);
+            WorldModelLoader.CheckMap(map, overlay.Map, file);
             sources.Add(new(file, overlay));
         }
         return sources.AsReadOnly();
@@ -48,7 +48,7 @@ public static partial class WorldModelLoader
         return error.Path ?? "root";
     }
 
-    private static TerrainCompileContext? PrepareTerrain(WorldModelLoadInputs? inputs, IReadOnlyList<TerrainSource> sources,
+    internal static TerrainCompileContext? Prepare(WorldModelLoadInputs? inputs, IReadOnlyList<TerrainSource> sources,
         PolygonRings boundary, IReadOnlyDictionary<FeatureId, WorldFeature> features, WorldNetwork network, string? prefix)
     {
         if (inputs is null)
@@ -74,7 +74,7 @@ public static partial class WorldModelLoader
             features, network, prefix ?? "", automatic, inputs.ZoneBoundaries);
     }
 
-    private static IReadOnlyDictionary<string, TerrainOp> TerrainOperations(IReadOnlyList<TerrainSource> sources)
+    internal static IReadOnlyDictionary<string, TerrainOp> Operations(IReadOnlyList<TerrainSource> sources)
     {
         var operations = new SortedDictionary<string, TerrainOp>(StringComparer.Ordinal);
         foreach (var source in sources)
@@ -83,7 +83,7 @@ public static partial class WorldModelLoader
         return new ReadOnlyDictionary<string, TerrainOp>(operations);
     }
 
-    private static void ValidateTerrainReferences(IReadOnlyList<TerrainSource> sources,
+    internal static void ValidateReferences(IReadOnlyList<TerrainSource> sources,
         IReadOnlySet<FeatureId> features, IReadOnlySet<FeatureId> roads)
     {
         foreach (var source in sources)
@@ -115,7 +115,7 @@ public static partial class WorldModelLoader
                         break;
                 }
                 void Reference(string field, FeatureId target, IReadOnlySet<FeatureId>? targets = null) =>
-                    RequireReference(source.File, op.Id, field, target, targets ?? features);
+                    WorldModelLoader.RequireReference(source.File, op.Id, field, target, targets ?? features);
             }
     }
 }

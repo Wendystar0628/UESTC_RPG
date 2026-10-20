@@ -5,7 +5,7 @@ using Campus.Gen.Geometry;
 namespace Campus.Gen.Parts.Core;
 
 /// <summary>Closed, clockwise geometry in metres. All helpers are pure and safe to call on a bake worker.</summary>
-public static partial class PartGeometryKernel
+public static class PartSolids
 {
     /// <summary>24 vertices / 44 triangles with six flat faces and interpolating bevel strips.</summary>
     public static PartGeometry BeveledBox(float width, float height, float depth, float bevel, ToonSpec material)
@@ -72,12 +72,12 @@ public static partial class PartGeometryKernel
         for (var i = 0; i < ring.Length; i++)
         {
             var p = ring[(i + ring.Length - 1) % ring.Length]; var c = ring[i]; var n = ring[(i + 1) % ring.Length];
-            if (PlanGeometry.Cross(p, c, n) <= 0) throw new ArgumentException("Beveled extrusion currently requires a convex footprint.", nameof(footprint));
+            if (PlanRings.Cross(p, c, n) <= 0) throw new ArgumentException("Beveled extrusion currently requires a convex footprint.", nameof(footprint));
         }
-        var inset = PlanGeometry.MitreInset(ring, bevel);
+        var inset = PlanOffsets.MitreInset(ring, bevel);
         for (var i = 0; i < ring.Length; i++)
             for (var j = 0; j < ring.Length; j++)
-                if (PlanGeometry.Cross(ring[i], ring[(i + 1) % ring.Length], inset[j]) <= 0)
+                if (PlanRings.Cross(ring[i], ring[(i + 1) % ring.Length], inset[j]) <= 0)
                     throw new ArgumentException("Bevel is too large for the footprint.", nameof(bevel));
         var cap = PolygonTriangulator.Triangulate(new(inset));
         // A valid inset must keep correspondence; edge reversals mean the bevel passed the medial axis.
@@ -92,7 +92,7 @@ public static partial class PartGeometryKernel
         AddCap(writer, cap, new(0, baseY, 0), Vector3.UnitX, Vector3.UnitZ, Vector3.UnitY, height, Vector3.UnitY);
         for (var i = 0; i < ring.Length; i++)
         {
-            var j = (i + 1) % ring.Length; var edge = PlanGeometry.RightUnitNormal(ring[i], ring[j]); var normal = new Vector3(edge.X, 0, edge.Y);
+            var j = (i + 1) % ring.Length; var edge = PlanOffsets.RightUnitNormal(ring[i], ring[j]); var normal = new Vector3(edge.X, 0, edge.Y);
             Vector3 P(Vector2 p, float y) => new(p.X, baseY + y, p.Y);
             AddStrip(writer, P(inset[i], 0), P(inset[j], 0), P(ring[j], bevel), P(ring[i], bevel), -Vector3.UnitY, normal, Vector3.Subtract(normal, Vector3.UnitY));
             AddStrip(writer, P(ring[i], bevel), P(ring[j], bevel), P(ring[j], height - bevel), P(ring[i], height - bevel), normal, normal, normal);
@@ -114,7 +114,7 @@ public static partial class PartGeometryKernel
             for (var i = start; i < end; i++)
             {
                 var a = polygon.Vertices[i]; var b = polygon.Vertices[i + 1 < end ? i + 1 : start];
-                var edge = PlanGeometry.RightUnitNormal(a, b); var normal = Vector3.Add(Vector3.Multiply(u, edge.X), Vector3.Multiply(v, edge.Y));
+                var edge = PlanOffsets.RightUnitNormal(a, b); var normal = Vector3.Add(Vector3.Multiply(u, edge.X), Vector3.Multiply(v, edge.Y));
                 var p0 = GeometryMath.Point(a, origin, u, v, axis, 0); var p1 = GeometryMath.Point(b, origin, u, v, axis, 0);
                 var p2 = GeometryMath.Point(b, origin, u, v, axis, depth); var p3 = GeometryMath.Point(a, origin, u, v, axis, depth);
                 // OpeningAo remains the authored occlusion strength; only reveals reduce visibility.
@@ -138,7 +138,7 @@ public static partial class PartGeometryKernel
             writer.Vertex(c, upperNormal, new(length, height), visibility), writer.Vertex(d, upperNormal, new(0, height), visibility), outward);
     }
     private static Vector3 Axis(int axis, float sign) => axis switch { 0 => new(sign, 0, 0), 1 => new(0, sign, 0), 2 => new(0, 0, sign), _ => throw new ArgumentOutOfRangeException(nameof(axis)) };
-    private static void ValidateBevel(float bevel, float limit)
+    internal static void ValidateBevel(float bevel, float limit)
     {
         if (!float.IsFinite(bevel) || bevel < 0 || bevel >= limit) throw new ArgumentOutOfRangeException(nameof(bevel), "Bevel must be nonnegative and less than half the smallest dimension.");
     }

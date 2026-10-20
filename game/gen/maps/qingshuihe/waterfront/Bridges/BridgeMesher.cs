@@ -30,12 +30,12 @@ internal static class BridgeMesher
         var soffit = top - T.SlabDepth;
 
         // Slab, fascia faces at the outer edges.
-        b.Add(PartGeometryKernel.BeveledExtrude(plan.Footprint, slabTop + Joint - soffit, near ? 0.03f : 0f, T.ConcreteSpec, soffit));
+        b.Add(PartSolids.BeveledExtrude(plan.Footprint, slabTop + Joint - soffit, near ? 0.03f : 0f, T.ConcreteSpec, soffit));
         foreach (var band in plan.Bands)
         {
             if (band.Kind == BandKind.Carriage)
             {
-                b.Add(PartGeometryKernel.BeveledExtrude(plan.Strip(band.U0, band.U1), top - slabTop, 0f, T.AsphaltSpec, slabTop));
+                b.Add(PartSolids.BeveledExtrude(plan.Strip(band.U0, band.U1), top - slabTop, 0f, T.AsphaltSpec, slabTop));
                 continue;
             }
             // Walking strip; on a carriage bridge its inner edge is a kerb stone flush with the paving.
@@ -44,10 +44,10 @@ internal static class BridgeMesher
             {
                 var inner = band.U0 < 0 ? band.U1 : band.U0;
                 var k0 = band.U0 < 0 ? inner - T.KerbWidth : inner;
-                b.Add(PartGeometryKernel.BeveledExtrude(plan.Strip(k0, k0 + T.KerbWidth), walk - slabTop, near ? T.KerbBevel : 0f, T.KerbSpec, slabTop));
+                b.Add(PartSolids.BeveledExtrude(plan.Strip(k0, k0 + T.KerbWidth), walk - slabTop, near ? T.KerbBevel : 0f, T.KerbSpec, slabTop));
                 if (band.U0 < 0) u1 -= T.KerbWidth - Joint; else u0 += T.KerbWidth - Joint;
             }
-            b.Add(PartGeometryKernel.BeveledExtrude(plan.Strip(u0, u1), walk - slabTop + Joint, 0f, T.PaverSpec, slabTop - Joint));
+            b.Add(PartSolids.BeveledExtrude(plan.Strip(u0, u1), walk - slabTop + Joint, 0f, T.PaverSpec, slabTop - Joint));
         }
 
         // Parapet bases, overhanging the fascia.
@@ -55,7 +55,7 @@ internal static class BridgeMesher
         foreach (var (inner, outer) in Sides(plan))
         {
             var lo = Math.Min(inner, outer); var hi = Math.Max(inner, outer);
-            b.Add(PartGeometryKernel.BeveledExtrude(plan.Strip(lo, hi), baseTop - slabTop, near ? T.BaseBevel : 0f, T.StoneSpec, slabTop));
+            b.Add(PartSolids.BeveledExtrude(plan.Strip(lo, hi), baseTop - slabTop, near ? T.BaseBevel : 0f, T.StoneSpec, slabTop));
         }
 
         // Posts, head posts and rails.
@@ -78,7 +78,7 @@ internal static class BridgeMesher
 
         // Abutments under the deck ends, from below any bed up into the slab.
         foreach (var a in plan.Abutments)
-            b.Add(PartGeometryKernel.BeveledExtrude(PlanGeometry.OpenRing([a.A, a.B, a.C, a.D]).ToArray(), soffit + Joint * 10f - (plan.RoadY + T.AbutmentBottom), 0f, T.ConcreteSpec, plan.RoadY + T.AbutmentBottom));
+            b.Add(PartSolids.BeveledExtrude(PlanRings.OpenRing([a.A, a.B, a.C, a.D]).ToArray(), soffit + Joint * 10f - (plan.RoadY + T.AbutmentBottom), 0f, T.ConcreteSpec, plan.RoadY + T.AbutmentBottom));
 
         var foot = plan.Footprint;
         float minX = foot.Min(p => p.X) - 1f, maxX = foot.Max(p => p.X) + 1f, minZ = foot.Min(p => p.Y) - 1f, maxZ = foot.Max(p => p.Y) + 1f;
@@ -97,8 +97,8 @@ internal static class BridgeMesher
     {
         var at = new PlanFrame(plan.P(s, u), plan.Axis).At(0, 0, 0);
         var shaft = topY - capHeight + Joint - (bottom - Joint);
-        b.Add(PartGeometryKernel.BeveledBox(size, shaft, size, near ? T.PostBevel : 0f, T.StoneSpec), Xf.Move(0, bottom - Joint, 0).Then(at));
-        b.Add(PartGeometryKernel.BeveledBox(cap, capHeight, cap, near ? T.CapBevel : 0f, T.StoneSpec), Xf.Move(0, topY - capHeight, 0).Then(at));
+        b.Add(PartSolids.BeveledBox(size, shaft, size, near ? T.PostBevel : 0f, T.StoneSpec), Xf.Move(0, bottom - Joint, 0).Then(at));
+        b.Add(PartSolids.BeveledBox(cap, capHeight, cap, near ? T.CapBevel : 0f, T.StoneSpec), Xf.Move(0, topY - capHeight, 0).Then(at));
     }
 
 }

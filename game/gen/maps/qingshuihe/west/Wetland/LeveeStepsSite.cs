@@ -65,7 +65,7 @@ public sealed class LeveeStepsSite : ZoneSite
         var a = line[Math.Max(0, best - 1)];
         var b = line[Math.Min(line.Count - 1, best + 1)];
         var t = Vector2.Normalize(b - a);
-        return MathF.Abs(PlanGeometry.CrossFloat(t, d));
+        return MathF.Abs(PlanRings.CrossFloat(t, d));
     }
 
     public override void Build(SiteBuilder b)

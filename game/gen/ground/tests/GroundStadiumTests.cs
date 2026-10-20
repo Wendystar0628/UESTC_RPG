@@ -215,10 +215,10 @@ public sealed class GroundStadiumTests
     private static bool IsLawn(GroundSurface surface) => GroundPalette.IsLawn(surface);
 
     /// <summary>All marking quads in the 64 m cells that touch the square of the given half size around the point.</summary>
-    private static List<RoadMarkings.Quad> QuadsNear(GroundLayout layout, float cx, float cz, float half)
+    private static List<GroundMarkings.Quad> QuadsNear(GroundLayout layout, float cx, float cz, float half)
     {
         var markings = layout.Markings(Section);
-        var quads = new List<RoadMarkings.Quad>();
+        var quads = new List<GroundMarkings.Quad>();
         for (var z = (int)MathF.Floor((cz - half) / TileGrid.BaseEdge); z <= (int)MathF.Floor((cz + half) / TileGrid.BaseEdge); z++)
             for (var x = (int)MathF.Floor((cx - half) / TileGrid.BaseEdge); x <= (int)MathF.Floor((cx + half) / TileGrid.BaseEdge); x++)
                 quads.AddRange(markings.In(x, z));
@@ -226,7 +226,7 @@ public sealed class GroundStadiumTests
     }
 
     /// <summary>True when the point lies inside one of the quads (they are rectangles, so a projection test is exact).</summary>
-    private static bool Covers(List<RoadMarkings.Quad> quads, Vector2 p)
+    private static bool Covers(List<GroundMarkings.Quad> quads, Vector2 p)
     {
         foreach (var q in quads)
         {

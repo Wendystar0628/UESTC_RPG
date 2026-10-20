@@ -57,7 +57,7 @@ internal static class SportGround
     internal static Vector2[]? Outward(Vector2[] ring, float distance)
     {
         var n = ring.Length;
-        var area = PlanGeometry.SignedArea(ring);
+        var area = PlanRings.SignedArea(ring);
         if (Math.Abs(area) < 5e-4) return null;
         var side = area > 0 ? 1f : -1f;   // +1: counter-clockwise in (x, z); the outside is then on the right of every edge
         var direction = new Vector2[n];

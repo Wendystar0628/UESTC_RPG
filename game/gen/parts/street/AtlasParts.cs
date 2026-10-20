@@ -152,7 +152,7 @@ public sealed class AtlasPostPart : IPartDef<SignParams>
         // low edge) is lateral +c/2. Counterclockwise in (lateral, up): front-top, back-top, back-bottom, front-bottom.
         Vector2[] outline = [new(c * 0.5f, low), new(-c * 0.5f, p.Height), new(-c * 0.5f, low - CapThickness), new(c * 0.5f, low - CapThickness)];
         var section = near ? Chamfered(outline, 0.008f) : new SweepProfile(outline);
-        b.Add(PartGeometryKernel.Sweep(section, [new(-c * 0.5f, 0), new(c * 0.5f, 0)], dark));
+        b.Add(PartSweeps.Sweep(section, [new(-c * 0.5f, 0), new(c * 0.5f, 0)], dark));
         // Plate on the slant: local Y along the slant normal (up and towards the viewer), local Z up the slope.
         var slant = S.PostSlantDeg * Angles.DegreesToRadians;
         var cs = MathF.Cos(slant); var sn = MathF.Sin(slant);

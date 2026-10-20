@@ -44,14 +44,14 @@ public sealed class MottoStoneSite : ZoneSite
         var bed = Kerb - new Vector2(M.KerbWidth * 0.5f);
         Vector2[] dome = [new(1f, 0f), new(0.97f, M.PebbleCrown * 0.45f), new(0.82f, M.PebbleCrown * 0.8f), new(0.5f, M.PebbleCrown * 0.97f), new(0f, M.PebbleCrown)];
         b.Add(Solids.Lathe(dome, around, L.Pebble, bed.X, bed.Y), f.At(0, y - 0.04f, 0));
-        b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(M.KerbWidth, M.KerbHeight + 0.06f, b.Detail == SiteDetail.Mass ? 0f : 0.03f),
+        b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(M.KerbWidth, M.KerbHeight + 0.06f, b.Detail == SiteDetail.Mass ? 0f : 0.03f),
             Oval(f, Kerb, around, -180f, 180f, closed: true), L.Granite, closed: true, baseY: y - 0.06f), Matrix4x4.Identity);
         // A landscape stone of a few big flat planes, low tilted top, one flat dressed face (MottoStone).
         b.Add(MottoStone.Build(L.CreamStone), f.At(0, y - 0.03f, 0));
         if (b.Detail == SiteDetail.Mass) return;
         // Planting crescent round the back and both ends, open toward the face.
         var hedge = Kerb + new Vector2(M.KerbWidth * 0.5f + M.HedgeGap + M.HedgeWidth * 0.5f);
-        b.Add(PartGeometryKernel.Sweep(HedgeProfile(), Oval(f, hedge, around, -90f - M.HedgeSweep, -90f + M.HedgeSweep, closed: false), L.Hedge, baseY: y - 0.05f), Matrix4x4.Identity);
+        b.Add(PartSweeps.Sweep(HedgeProfile(), Oval(f, hedge, around, -90f - M.HedgeSweep, -90f + M.HedgeSweep, closed: false), L.Hedge, baseY: y - 0.05f), Matrix4x4.Identity);
         var tilt = System.Numerics.Matrix4x4.CreateRotationX(-MathF.Atan(.16f));
         foreach (var (text, lineY) in new[] { ("求实求真", 1.3f), ("大气大为", 1.3f - M.LineGap) })
         {

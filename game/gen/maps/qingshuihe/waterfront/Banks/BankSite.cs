@@ -90,6 +90,6 @@ internal sealed class BankSite : ZoneSite
         if (topA <= bottomA && topB <= bottomB) return;
         var profile = new Vector2[] { new(0, bottomA), new(length, bottomB), new(length, topB), new(0, topA) };
         var stand = new Matrix4x4(1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, overhang, 1);
-        builder.Add(PartGeometryKernel.BeveledExtrude(profile, depth, bevel, material), GeometryPlacement.Multiply(stand, frame.At(0, 0, 0)));
+        builder.Add(PartSolids.BeveledExtrude(profile, depth, bevel, material), GeometryPlacement.Multiply(stand, frame.At(0, 0, 0)));
     }
 }

@@ -63,7 +63,7 @@ internal static class AuthoredTreePlanting
     /// <summary>A deliberately placed tree (pit or design): no clearance or pavement test, only the boundary and the terrain.</summary>
     internal static void Place(PlantingSite site, SpeciesInfo info, Vector2 p, string key, PlantSource source, List<PlantedTree> trees, float? scale)
     {
-        if (!PlanGeometry.Contains(site.World.Boundary, p)) return;
+        if (!PlanRings.Contains(site.World.Boundary, p)) return;
         var probe = Probe(site, info, key);
         if (scale is { } height)
         {

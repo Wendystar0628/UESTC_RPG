@@ -72,7 +72,7 @@ public sealed class CourtyardSite : ZoneSite
         }
         Vector2 Edge(Vector2 p) => p + front * (C.PadReach - Vector2.Dot(p - wall.Start, front));
         Vector2[] ring = [.. face, Edge(face[^1]), Edge(face[0])];
-        if (PlanGeometry.SignedArea(ring) < 0) Array.Reverse(ring);
+        if (PlanRings.SignedArea(ring) < 0) Array.Reverse(ring);
         return ring;
     }
 
@@ -85,12 +85,12 @@ public sealed class CourtyardSite : ZoneSite
         var path = Path(wall, b.Detail == SiteDetail.Mass ? C.SeatSegments / 2 : C.SeatSegments);
         var g = Base(b.Ground, path);
         var top = g + GroundLevels.Paving + C.BodyHeight;
-        var body = PartGeometryKernel.BeveledRectangleProfile(C.BodyWidth, top - g + C.Sink, C.BodyBevel);
-        b.Add(PartGeometryKernel.Sweep(body, path, L.Granite, baseY: g - C.Sink), Matrix4x4.Identity);
+        var body = PartSweeps.BeveledRectangleProfile(C.BodyWidth, top - g + C.Sink, C.BodyBevel);
+        b.Add(PartSweeps.Sweep(body, path, L.Granite, baseY: g - C.Sink), Matrix4x4.Identity);
         if (b.Detail == SiteDetail.Mass) return;
-        var seat = PartGeometryKernel.BeveledRectangleProfile(C.SeatWidth, C.SeatThickness, C.SeatBevel);
-        b.Add(PartGeometryKernel.Sweep(seat, Path(wall, C.SeatSegments, C.SeatHoldBack), L.Wood, baseY: top), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.BeveledExtrude(PadOutline(wall), C.PadThickness, 0.01f, C.Pad, g + GroundLevels.Paving + C.PadLift - C.PadThickness), Matrix4x4.Identity);
+        var seat = PartSweeps.BeveledRectangleProfile(C.SeatWidth, C.SeatThickness, C.SeatBevel);
+        b.Add(PartSweeps.Sweep(seat, Path(wall, C.SeatSegments, C.SeatHoldBack), L.Wood, baseY: top), Matrix4x4.Identity);
+        b.Add(PartSolids.BeveledExtrude(PadOutline(wall), C.PadThickness, 0.01f, C.Pad, g + GroundLevels.Paving + C.PadLift - C.PadThickness), Matrix4x4.Identity);
     }
 
     /// <summary>One box per chord, body and seat together: 0.45 m above the pad, a prop the player can step onto.</summary>

@@ -53,11 +53,11 @@ internal sealed record BridgeStone(FeatureId Id, Vector2 Position, float FaceDeg
     public PartGeometry? Build(LodLevel lod)
     {
         if (lod is LodLevel.L3 or LodLevel.L4) return null;
-        var ring = PlanGeometry.OpenRing(Profile.Select(p => new Vector2(p.X * T.StoneLength, p.Y * (T.StoneHeight + 0.05f) - 0.05f))).ToArray();
+        var ring = PlanRings.OpenRing(Profile.Select(p => new Vector2(p.X * T.StoneLength, p.Y * (T.StoneHeight + 0.05f) - 0.05f))).ToArray();
         var b = new PartBuilder();
         // The profile is extruded along local Y, then turned so that it stands in X/Y and runs through the depth along Z.
         var stand = new Matrix4x4(1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, T.StoneDepth * 0.5f, 1);
-        b.Add(PartGeometryKernel.BeveledExtrude(ring, T.StoneDepth, lod == LodLevel.L0 ? T.StoneBevel : 0f, T.StoneSpec), stand.Then(Frame));
+        b.Add(PartSolids.BeveledExtrude(ring, T.StoneDepth, lod == LodLevel.L0 ? T.StoneBevel : 0f, T.StoneSpec), stand.Then(Frame));
         return b.Finish(new(new(Position.X - 2f, GroundY - 0.1f, Position.Y - 2f), new(Position.X + 2f, GroundY + 1f, Position.Y + 2f)));
     }
 

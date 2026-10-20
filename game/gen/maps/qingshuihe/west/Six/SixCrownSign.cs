@@ -40,7 +40,7 @@ internal static class SixCrownSign
             var length = r * 0.38f;
             var mid = r * (0.23f + 0.19f);
             var at = new Matrix4x4(c, 0, s, 0, 0, 1, 0, 0, -s, 0, c, 0, c * mid, 0, s * mid, 1);
-            b.Add(PartGeometryKernel.BeveledBox(length, d, 0.1f, 0, L.Red), GeometryPlacement.Multiply(at, centre));
+            b.Add(PartSolids.BeveledBox(length, d, 0.1f, 0, L.Red), GeometryPlacement.Multiply(at, centre));
             var pad = new Matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, c * r * 0.62f, 0, s * r * 0.62f, 1);
             b.Add(Shapes.Shaft(0.11f, 0.11f, d, 12, L.Red), GeometryPlacement.Multiply(pad, centre));
         }

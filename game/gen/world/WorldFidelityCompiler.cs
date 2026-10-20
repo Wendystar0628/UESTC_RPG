@@ -162,7 +162,7 @@ public static class WorldFidelityCompiler
             foreach (var polygon in WorldFeatureGeometry.FacadePolygonsOf(feature, "building"))
                 foreach (var (source, outer) in new[] { (polygon.Outer, true) }.Concat(polygon.Holes.Select(hole => (hole, false))))
                 {
-                    var ring = PlanGeometry.OpenRing(source, outer);
+                    var ring = PlanRings.OpenRing(source, outer);
                     var edges = new List<FacadeSegment[]>();
                     for (var edge = 0; edge < ring.Count; edge++)
                     {
@@ -223,9 +223,9 @@ public static class WorldFidelityCompiler
                 };
                 var areasHere = areas.In(point);
                 foreach (var area in areasHere)
-                    if (area.Zone == FidelityZone.K4 && zone != FidelityZone.K5 && PlanGeometry.Contains(area.Rings, point)) zone = FidelityZone.K4;
+                    if (area.Zone == FidelityZone.K4 && zone != FidelityZone.K5 && PlanRings.Contains(area.Rings, point)) zone = FidelityZone.K4;
                 foreach (var area in areasHere)
-                    if (area.Zone < zone && PlanGeometry.Contains(area.Rings, point)) zone = area.Zone;
+                    if (area.Zone < zone && PlanRings.Contains(area.Rings, point)) zone = area.Zone;
                 if (heroPaths.In(point).Any(line => PlanLines.SegmentDistanceSquared(point, line.A, line.B) <= line.Radius * line.Radius)) zone = FidelityZone.K1;
                 if (zone != FidelityZone.K5 && stands.Any(stand => Vector2.DistanceSquared(stand, point) <= WaypointReach * WaypointReach)) zone = FidelityZone.K1;
                 groundCells[row * width + column] = (byte)zone;

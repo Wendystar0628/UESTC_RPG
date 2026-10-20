@@ -6,7 +6,7 @@ namespace Campus.Gen.Sites;
 
 public readonly record struct FeatureRectangle(PlanFrame Frame, float Width, float Depth);
 
-public static partial class FeatureReads
+public static class FeatureShapes
 {
     /// <summary>Explicit source part, otherwise the first part, otherwise the feature's own geometry.</summary>
     public static WorldGeometry ContourGeometry(this WorldFeature feature, string? sourceId = null, bool facade = true)

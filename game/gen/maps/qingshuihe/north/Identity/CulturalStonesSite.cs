@@ -29,7 +29,7 @@ public sealed class CulturalStonesSite : ZoneSite
             var frame = PlanFrame.Along(p, System.Numerics.Vector2.UnitX);
             var baseH = new RoofParams().Height;
             NorthIdentityGeometry.Box(b, frame, 0, y - baseH, 0, Stone.Width, baseH * 2, Stone.Depth, NorthTune.Look.Granite);
-            b.Add(PartGeometryKernel.BeveledBox(Stone.Width * .8f, Stone.Height, Stone.Depth * .8f,
+            b.Add(PartSolids.BeveledBox(Stone.Width * .8f, Stone.Height, Stone.Depth * .8f,
                 PartStyleDefaults.WallCornerBevel, NorthTune.Look.Granite), frame.At(0, y + baseH, 0));
         }
     }

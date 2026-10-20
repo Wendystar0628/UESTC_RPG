@@ -93,7 +93,7 @@ internal static class LibraryInteriorStyle
     public static readonly string[] Exhibits = ["panel.paleGold", "band.terracotta", "glass.deep", "curtain.cream"];
 
     /// <summary>The library's light channel (window.library): low by day, full after sunset, off after 22:30.</summary>
-    public static ChannelId LightChannel => CoreStyle.LibraryWindowChannel;
+    public static ChannelId LightChannel => LibraryStyle.LibraryWindowChannel;
 
     /// <summary>VF-A interior bit (GeometryBundle.Flags): interior shade rows, no rain wetting.</summary>
 

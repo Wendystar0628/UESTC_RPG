@@ -45,7 +45,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         private set
         {
             _phase = value;
-            RegistryGateRunner.TraceBootPhase(value);
+            RegistryStageGate.TraceBootPhase(value);
             GD.Print(FormattableString.Invariant($"STARTUP_PHASE {value} {FrameClock.MonotonicMilliseconds:R} frame={Engine.GetProcessFrames()}"));
         }
     }
@@ -61,7 +61,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             var registry = KernelServices.Services;
             registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))));
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
-            if (RegistryGateRunner.TryRun(this)) return;
+            if (RegistryStageGate.TryRun(this)) return;
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
             Compose();
             await StartWorld();

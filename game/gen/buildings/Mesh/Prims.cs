@@ -183,8 +183,8 @@ public static class Prims
     /// <summary>Horizontal cap over the ring outline at offset s (with chamfers), facing up or down; holes optional.</summary>
     public static void Cap(GeometrySink sink, in Face face, PlanRing outer, IReadOnlyList<PlanRing> holes, float s, float c, float y, bool up)
     {
-        var o = PlanGeometry.DeduplicateRing(Outline(outer, s, c));
-        var hs = holes.Select(h => (IReadOnlyList<Vector2>)PlanGeometry.DeduplicateRing(Outline(h, s, c))).ToArray();
+        var o = PlanRings.DeduplicateRing(Outline(outer, s, c));
+        var hs = holes.Select(h => (IReadOnlyList<Vector2>)PlanRings.DeduplicateRing(Outline(h, s, c))).ToArray();
         CapPoints(sink, face, o, hs, y, up);
     }
 

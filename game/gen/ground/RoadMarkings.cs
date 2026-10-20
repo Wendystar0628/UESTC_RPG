@@ -4,60 +4,11 @@ using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Ground;
 
-/// <summary>
-/// Dashed centre lines and zebra crossings derived from the road network (WLD-AMBIENCE 6). Markings are flat decal
-/// quads lying on the asphalt; each quad belongs to the tile that contains its centre, so tiles never duplicate one.
-/// Every quad is checked against the exact carriageway field, so mismatched centre lines never paint over a kerb.
-/// Football pitches get their lines from the same quads (<see cref="AddPitches"/>), on the turf instead of the asphalt.
-/// </summary>
-internal sealed partial class RoadMarkings
+/// <summary>Dashed centre lines and zebra crossings derived from the exact carriageway field.</summary>
+internal static class RoadMarkings
 {
-    /// <summary><paramref name="Level"/> is the height of the surface the quad lies on above the carriageway level.</summary>
-    public readonly record struct Quad(Vector2 A, Vector2 B, Vector2 C, Vector2 D, GroundColor Color, float Level = 0f);
-
-    private readonly Dictionary<long, List<Quad>> _byTile = new();
-
-    public int Count { get; private set; }
-    public IReadOnlyList<Vector2> Crossings => _crossings;
-    private readonly List<Vector2> _crossings = [];
-
-    /// <summary>Quads whose centre lies in the 64 m base cell (x, z).</summary>
-    public IReadOnlyList<Quad> In(int x, int z) =>
-        _byTile.TryGetValue(Key(x, z), out var list) ? list : [];
-
-    /// <summary>Emits every quad whose 64 m base cell lies inside the tile (tiles are multiples of 64 m).</summary>
-    /// <summary>Lines are draped in pieces of at most 1 m so they follow the terrain grid (D-180).</summary>
-    public void Emit(GroundTile tile, GroundSurfaceSink sink, GroundSection section, TerrainGrid terrain)
+    internal static List<RoadGraph.Junction> AddTo(GroundMarkings result, GroundLayout layout, GroundSection section)
     {
-        const byte flags = VertexFlag.Decal | VertexFlag.NoShadow;
-        var first = TileGrid.At(new Vector2(tile.X0, tile.Z0));
-        var x0 = first.X;
-        var z0 = first.Z;
-        var span = Math.Max(1, (int)MathF.Round(tile.Size / TileGrid.BaseEdge));
-        for (var z = z0; z < z0 + span; z++)
-            for (var x = x0; x < x0 + span; x++)
-                foreach (var q in In(x, z))
-                {
-                    var lift = section.RoadY + section.DecalLift + q.Level;
-                    // Lie on the (possibly sloping) road: split long strips into pieces of at most 1 m.
-                    var pieces = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(q.A, q.B)));
-                    for (var k = 0; k < pieces; k++)
-                    {
-                        var t0 = (float)k / pieces;
-                        var t1 = (float)(k + 1) / pieces;
-                        Vector3 P(Vector2 from, Vector2 to, float t)
-                        {
-                            var p = from + (to - from) * t;
-                            return new(p.X, terrain.At(p.X, p.Y) + lift, p.Y);
-                        }
-                        sink.Quad(q.Color, flags, P(q.A, q.B, t0), P(q.A, q.B, t1), P(q.D, q.C, t1), P(q.D, q.C, t0), Vector3.UnitY);
-                    }
-                }
-    }
-
-    public static RoadMarkings Build(GroundLayout layout, GroundSection section)
-    {
-        var result = new RoadMarkings();
         var spec = section.Markings;
         var cars = layout.Roads.Where(r => r.Carriageway).ToList();
         var walks = layout.Roads.Where(r => !r.Carriageway && r.Type != "pedestrian" && r.Type != "steps").ToList();
@@ -95,8 +46,8 @@ internal sealed partial class RoadMarkings
             if (placed.Any(p => Vector2.DistanceSquared(p, centre) < 36f)) continue;
             if (!OnAsphalt(layout, centre, 1f)) continue;
             placed.Add(centre);
-            result._crossings.Add(centre);
-            result.AddZebra(layout, centre, along, half, length, spec);
+            result.CrossingCentres.Add(centre);
+            AddZebra(result, layout, centre, along, half, length, spec);
         }
         // Centre lines, kept clear of junctions and crossings.
         foreach (var road in cars)
@@ -116,13 +67,11 @@ internal sealed partial class RoadMarkings
                 result.AddStrip(p0, p1, spec.CentreLineWidth, GroundColor.Marking);
             }
         }
-        result.AddPitches(layout, section);
-        result.AddGroundDetails(layout, section, junctions);
 
-        return result;
+        return junctions;
     }
 
-    private void AddZebra(GroundLayout layout, Vector2 c, Vector2 along, float halfWidth, float length, MarkingSpec spec)
+    private static void AddZebra(GroundMarkings result, GroundLayout layout, Vector2 c, Vector2 along, float halfWidth, float length, MarkingSpec spec)
     {
         var across = new Vector2(-along.Y, along.X);
         var usable = halfWidth - spec.ZebraMargin;
@@ -137,28 +86,8 @@ internal sealed partial class RoadMarkings
             var a = o - along * (length * 0.5f);
             var b = o + along * (length * 0.5f);
             if (!OnAsphalt(layout, o, spec.ZebraStripe) || !OnAsphalt(layout, a, 0.05f) || !OnAsphalt(layout, b, 0.05f)) continue;
-            AddStrip(a, b, spec.ZebraStripe, GroundColor.Marking);
+            result.AddStrip(a, b, spec.ZebraStripe, GroundColor.Marking);
         }
-    }
-
-    private void AddStrip(Vector2 p0, Vector2 p1, float width, GroundColor color, float level = 0f)
-    {
-        var dir = p1 - p0;
-        if (dir.LengthSquared() < 1e-6f) return;
-        dir = Vector2.Normalize(dir);
-        var side = new Vector2(-dir.Y, dir.X) * (width * 0.5f);
-        var quad = new Quad(p0 - side, p1 - side, p1 + side, p0 + side, color, level);
-        var centre = (p0 + p1) * 0.5f;
-        AddQuad(quad, centre);
-    }
-
-    private void AddQuad(Quad quad, Vector2 centre)
-    {
-        var cell = TileGrid.At(centre);
-        var key = Key(cell.X, cell.Z);
-        if (!_byTile.TryGetValue(key, out var list)) _byTile.Add(key, list = []);
-        list.Add(quad);
-        Count++;
     }
 
     private static bool OnAsphalt(GroundLayout layout, Vector2 p, float inset) =>
@@ -167,7 +96,7 @@ internal sealed partial class RoadMarkings
 
     // ---------------------------------------------------------------- network topology
 
-    private static bool NearJunction(List<RoadGraph.Junction> junctions, Vector2 p, float extra)
+    internal static bool NearJunction(List<RoadGraph.Junction> junctions, Vector2 p, float extra)
     {
         foreach (var j in junctions)
         {
@@ -176,7 +105,4 @@ internal sealed partial class RoadMarkings
         }
         return false;
     }
-
-
-    private static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
 }

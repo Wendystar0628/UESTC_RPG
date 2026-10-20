@@ -14,9 +14,9 @@ internal static class SixTower
     internal static void Build(SiteBuilder b, IReadOnlyList<Vector2> ring, float y)
     {
         var plan = new PolygonRings(ring);
-        b.Add(PartGeometryKernel.Extrude(plan, S.TowerHeight - 0.4f + 0.1f, L.Stone, y - 0.1f), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(0.7f, 0.4f, 0.04f), PlanMath.OutsideRight(ring), L.Trim, closed: true, baseY: y + S.TowerHeight - 0.4f), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(0.3f, 0.7f, 0.03f), PlanMath.OutsideRight(ring), L.DarkGrey, closed: true, baseY: y - 0.1f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(plan, S.TowerHeight - 0.4f + 0.1f, L.Stone, y - 0.1f), Matrix4x4.Identity);
+        b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(0.7f, 0.4f, 0.04f), PlanMath.OutsideRight(ring), L.Trim, closed: true, baseY: y + S.TowerHeight - 0.4f), Matrix4x4.Identity);
+        b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(0.3f, 0.7f, 0.03f), PlanMath.OutsideRight(ring), L.DarkGrey, closed: true, baseY: y - 0.1f), Matrix4x4.Identity);
         if (b.Detail == SiteDetail.Mass) return;
         foreach (var (e, _, _) in GridFacade.Edges(ring))
         {

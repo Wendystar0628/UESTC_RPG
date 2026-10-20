@@ -63,7 +63,7 @@ public sealed class AuditoriumSite : ZoneSite
         b.Add(PartShapes.Lathe(PartShapes.Creased(new(0, 0), new(radius, 0),
             new(radius, thickness), new(0, thickness)), segments, roof), f.At(0, y + height - thickness, 0));
         var backstage = world.Feature(record.Text("backstage"));
-        b.Add(PartGeometryKernel.Extrude(new(backstage.Outer()), backstage.Number("height"),
+        b.Add(PartSolids.Extrude(new(backstage.Outer()), backstage.Number("height"),
             ZoneLooks.S(backstage.Text("wall")), y), Matrix4x4.Identity);
     }
 

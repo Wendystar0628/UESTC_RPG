@@ -74,7 +74,7 @@ public sealed partial class CenterEastModuleTests
         }
         for (var i = 1; i < stepped.Count; i++)
         {
-            AssertThat(MathF.Abs(stepped[i - 1].Z1 - stepped[i].Z0) < 5 * PlanGeometry.Tolerance)
+            AssertThat(MathF.Abs(stepped[i - 1].Z1 - stepped[i].Z0) < 5 * QuantizedPlan.Tolerance)
                 .OverrideFailureMessage("neighbouring runs meet without a gap").IsTrue();
             var expectedDrop = (stepped[i].Z0 - stepped[i - 1].Z0) * slope;
             AssertThat(MathF.Abs(stepped[i - 1].Top - stepped[i].Top - expectedDrop) < TestTolerance.Position)
@@ -90,11 +90,11 @@ public sealed partial class CenterEastModuleTests
         Vector2 Point(string id) => world.Feature(id).Point();
         // The authored record is the monument placement authority.
         AssertThat(Vector2.Distance(Point(CenterEastIds.Layout.LinPlacement), StatueLawnSite.LinFrame(world).Origin) <= TestTolerance.Position).OverrideFailureMessage($"{CenterEastIds.Monuments.Lin} follows its authored point").IsTrue();
-        AssertThat(StatueLawnSite.Island(world) is { } island && PlanGeometry.InsideByCrossings(island, StatueLawnSite.LinFrame(world).Origin)).OverrideFailureMessage("林为干像 stands on the plaza's tree island").IsTrue();
+        AssertThat(StatueLawnSite.Island(world) is { } island && PlanRings.InsideByCrossings(island, StatueLawnSite.LinFrame(world).Origin)).OverrideFailureMessage("林为干像 stands on the plaza's tree island").IsTrue();
         var maxwellAt = StatueLawnSite.MaxwellFrame(world).Origin;
         var stoneAt = StatueLawnSite.StoneFrame(world).Origin;
         foreach (var at in new[] { maxwellAt, stoneAt })
-            AssertThat(PlanGeometry.InsideByCrossings(StatueLawnSite.ApronRing(world), at)).OverrideFailureMessage($"{at} stands on the apron").IsTrue();
+            AssertThat(PlanRings.InsideByCrossings(StatueLawnSite.ApronRing(world), at)).OverrideFailureMessage($"{at} stands on the apron").IsTrue();
         // Every inscription line lies on the dressed face with stone round it.
         foreach (var (x, y, length) in StatueLawnSite.StoneLines())
             foreach (var (fx, fy) in new[] { (x - length * 0.5f, y), (x + length * 0.5f, y), (x - length * 0.5f, y + M.StoneLineHeight), (x + length * 0.5f, y + M.StoneLineHeight) })
@@ -119,7 +119,7 @@ public sealed partial class CenterEastModuleTests
     {
         var ctx = Context();
         var plan = WenkeSite.Footprints(ctx);
-        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs((float)PlanGeometry.SignedArea(ring));
+        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs((float)PlanRings.SignedArea(ring));
         WenkeSite.Block Block(string part) => plan.Blocks.Single(b => b.Part == part);
         AssertThat(Block(CenterEastIds.Wenke.Tower).Storeys == ctx.World.Feature(CenterEastIds.Wenke.Entity).Part(CenterEastIds.Wenke.Tower).Levels().Storeys).OverrideFailureMessage("the tower stands fifteen storeys, about 60 m").IsTrue();
         // The wings step back toward their tips: each top storey is smaller than its ground storey, with planted terraces between.
@@ -142,7 +142,7 @@ public sealed partial class CenterEastModuleTests
             AssertThat(Vector2.Distance(new(box.At.M41, box.At.M43), outside) > 2.5f + box.Half.X + box.Half.Z).OverrideFailureMessage("nothing stands within 2.5 m outside the door").IsTrue();
         foreach (var post in colliders.OfType<PostCollider>())
             AssertThat(Vector2.Distance(post.C, outside) > 2.5f + post.R).OverrideFailureMessage("no stake within 2.5 m outside the door").IsTrue();
-        AssertThat(PlanGeometry.InsideByCrossings(Block(CenterEastIds.Wenke.Hub).Outlines[^1], WenkeSite.AtriumOf(ctx.World).Frame.Origin)).OverrideFailureMessage("the vault stands on the hub").IsTrue();
+        AssertThat(PlanRings.InsideByCrossings(Block(CenterEastIds.Wenke.Hub).Outlines[^1], WenkeSite.AtriumOf(ctx.World).Frame.Origin)).OverrideFailureMessage("the vault stands on the hub").IsTrue();
         // The emblem sits on the stone's dressed face with stone round it.
         foreach (var (x, y) in new[] { (-F.EmblemRadius, F.EmblemY), (F.EmblemRadius, F.EmblemY), (0f, F.EmblemY - F.EmblemRadius), (0f, F.EmblemY + F.EmblemRadius) })
             AssertThat(F.Stone.OnDressedFace(x, y, 0.03f)).OverrideFailureMessage($"emblem edge ({x}, {y}) is on the dressed face").IsTrue();

@@ -26,7 +26,7 @@ internal static class CoreRanges
         if (id == CoreIds.TimePlaza)
         {
             var (centre, radius) = TimePlaza.Plan(feature);
-            var reach = radius + MathF.Max(S.RimLampOffset + S.RimLampWidth, S.RampWidth + 2 * S.CheekWidth);
+            var reach = radius + MathF.Max(PlazaStyle.RimLampOffset + PlazaStyle.RimLampWidth, PlazaStyle.RampWidth + 2 * PlazaStyle.CheekWidth);
             var bounds = SiteRanges.Point(centre, reach);
             var bench = TimePlaza.BenchParameters;
             var benchReach = MathF.Sqrt(bench.Width * bench.Width + bench.Depth * bench.Depth) * 0.5f;
@@ -36,11 +36,11 @@ internal static class CoreRanges
             return Union(benches.Prepend(bounds));
         }
 
-        var padding = id == CoreIds.Sundial ? S.SundialPadRadius
-            : id == CoreIds.Library ? S.CafeApronDepth + S.CafeWalkReach + S.CafeWalkWidth * 0.5f + S.CafeWalkOverlap
-            : id == CoreIds.LibraryStair ? GrandStair.HalfWidth + S.CanopyDepth + S.CopingOverhang
-            : id == CoreIds.Museum ? S.PorticoOuter + S.PorticoProject + S.PorticoColumnBase
-            : S.AnnexCanopyDepth + S.CopingOverhang;
+        var padding = id == CoreIds.Sundial ? PlazaStyle.SundialPadRadius
+            : id == CoreIds.Library ? LibraryStyle.CafeApronDepth + LibraryStyle.CafeWalkReach + LibraryStyle.CafeWalkWidth * 0.5f + LibraryStyle.CafeWalkOverlap
+            : id == CoreIds.LibraryStair ? GrandStair.HalfWidth + EntranceStyle.CanopyDepth + LibraryStyle.CopingOverhang
+            : id == CoreIds.Museum ? MuseumStyle.PorticoOuter + MuseumStyle.PorticoProject + MuseumStyle.PorticoColumnBase
+            : AnnexStyle.AnnexCanopyDepth + LibraryStyle.CopingOverhang;
         return SiteRanges.Bounds(feature, padding);
     }
 
@@ -51,7 +51,7 @@ internal static class CoreRanges
         var ids = AnnexSite.Members.Select(member => member.Feature).Prepend(CoreIds.Library)
             .Append(CoreIds.NorthEastConnector).Append(CoreIds.NorthEastBridge).Append(CoreIds.CafeStore);
         var ranges = ids.Where(world.Features.ContainsKey)
-            .Select(id => SiteRanges.Bounds(world.Features[id], S.PavilionOverhang)).ToArray();
+            .Select(id => SiteRanges.Bounds(world.Features[id], AnnexStyle.PavilionOverhang)).ToArray();
         return ranges.Length == 0 ? null : Union(ranges);
     }
 

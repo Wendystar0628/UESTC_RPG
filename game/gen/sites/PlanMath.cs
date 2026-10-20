@@ -11,7 +11,7 @@ public static class PlanMath
     public static Vector2[] OutsideRight(IReadOnlyList<Vector2> ring)
     {
         var points = ring.ToArray();
-        if (PlanGeometry.SignedArea(points) < 0) Array.Reverse(points);
+        if (PlanRings.SignedArea(points) < 0) Array.Reverse(points);
         return points;
     }
 

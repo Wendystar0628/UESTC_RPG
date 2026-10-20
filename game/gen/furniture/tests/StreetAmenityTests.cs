@@ -135,7 +135,7 @@ public sealed class StreetAmenityTests
                 var rings = Polygons(cluster).Single();
                 foreach (var m in machines)
                     foreach (var corner in Corners(m, FurnitureStyle.ServiceFront))
-                        AssertThat(!PlanGeometry.Contains(rings, corner) && PlanGeometry.DistanceToRing(corner, rings.Outer) >= FurnitureStyle.GateOutside - TestTolerance.Position).OverrideFailureMessage($"{m.Key} is inside its cluster's fence line").IsTrue();
+                        AssertThat(!PlanRings.Contains(rings, corner) && PlanRings.DistanceToRing(corner, rings.Outer) >= FurnitureStyle.GateOutside - TestTolerance.Position).OverrideFailureMessage($"{m.Key} is inside its cluster's fence line").IsTrue();
                 var gate = (PointGeometry)feature.Geometry;
                 AssertThat(Vector2.Distance(centre, new(gate.Position.X, gate.Position.Z)) <= FurnitureStyle.ServiceReach + 2f).OverrideFailureMessage($"{group.Key} strays from its gate").IsTrue();
             }
@@ -194,7 +194,7 @@ public sealed class StreetAmenityTests
         foreach (var m in machines)
         {
             foreach (var corner in Corners(m, FurnitureStyle.ServiceFront))
-                AssertThat(!PlanGeometry.Contains(rings, corner) && PlanGeometry.DistanceToRing(corner, ring) >= FurnitureStyle.GateOutside - TestTolerance.Position).OverrideFailureMessage($"{m.Key} is inside the cluster").IsTrue();
+                AssertThat(!PlanRings.Contains(rings, corner) && PlanRings.DistanceToRing(corner, ring) >= FurnitureStyle.GateOutside - TestTolerance.Position).OverrideFailureMessage($"{m.Key} is inside the cluster").IsTrue();
             var facing = Front(m.Part.At);
             AssertThat(MathF.Abs(facing.X) > 0.99f && Vector2.Dot(facing, new Vector2(spot.X - m.Anchor.X, 0f)) > 0f).OverrideFailureMessage($"{m.Key} does not face the road").IsTrue();
             AssertThat((float)PlanLines.Project(road.Line.Points, m.Anchor).Distance - 2.5f >= FurnitureStyle.ServiceFront + FurnitureStyle.Vending.Depth * 0.5f - TestTolerance.Layout).OverrideFailureMessage($"{m.Key} crowds the road").IsTrue();

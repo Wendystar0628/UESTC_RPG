@@ -41,7 +41,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         var ids = features.Distinct().OrderBy(x => x.Value, StringComparer.Ordinal).ToArray();
         if (ids.Length == 0 || configuration.FloorsFor(CoreIds.Library).Count == 0) throw new ArgumentException("The library interior needs features and open floors.");
         if (!ids.Contains(CoreIds.Library)) throw new ArgumentException("The library interior must include the library entity.", nameof(features));
-        if (configuration.FloorsFor(CoreIds.Library).Any(f => f < 1 || f > CoreStyle.LibraryStoreys.Length))
+        if (configuration.FloorsFor(CoreIds.Library).Any(f => f < 1 || f > LibraryStyle.LibraryStoreys.Length))
             throw new ArgumentOutOfRangeException(nameof(configuration), "Library storeys run from 1 to the shell's storey count.");
         _catalog = new(ids, [], openParts, entrances);
     }
@@ -258,7 +258,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
                 {
                     Vector2 a = ring[i], b = ring[(i + 1) % ring.Count];
                     if (Vector2.Distance(a, b) < 0.1f) continue;
-                    var n = PlanGeometry.RightUnitNormal(a, b);
+                    var n = PlanOffsets.RightUnitNormal(a, b);
                     sink.Shapes.Prism(S.Wall(S.WallWhite), [a - n * S.LiningOut, b - n * S.LiningOut, b - n * S.LiningIn, a - n * S.LiningIn], level.FloorY, top);
                 }
             sink.Shapes.Plate(S.Wall(S.CeilingWhite), part.Footprint, roof ? top : top - S.SlabThick, false);

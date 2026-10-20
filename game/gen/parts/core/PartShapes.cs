@@ -24,7 +24,7 @@ public static class PartShapes
         var size = new Vector3(max.X - min.X, max.Y - min.Y, max.Z - min.Z);
         var limit = Math.Min(size.X, Math.Min(size.Y, size.Z)) * 0.45f;
         at = Xf.Move((min.X + max.X) * 0.5f, min.Y, (min.Z + max.Z) * 0.5f);
-        return PartGeometryKernel.BeveledBox(size.X, size.Y, size.Z, Math.Min(bevel, limit), material);
+        return PartSolids.BeveledBox(size.X, size.Y, size.Z, Math.Min(bevel, limit), material);
     }
 
     /// <summary>Box from its minimum and maximum corners; the chamfer is clamped to stay valid.</summary>
@@ -38,7 +38,7 @@ public static class PartShapes
     public static PartBuilder AddCentredBox(this PartBuilder builder, Vector3 size, Matrix4x4 then, ToonSpec material, float bevel = 0, byte flags = 0)
     {
         var limit = Math.Min(size.X, Math.Min(size.Y, size.Z)) * 0.45f;
-        var piece = PartGeometryKernel.BeveledBox(size.X, size.Y, size.Z, Math.Min(bevel, limit), material);
+        var piece = PartSolids.BeveledBox(size.X, size.Y, size.Z, Math.Min(bevel, limit), material);
         return builder.Add(piece, Xf.Move(0, -size.Y * 0.5f, 0).Then(then), flags);
     }
 
@@ -50,8 +50,8 @@ public static class PartShapes
     {
         // The kernel extrudes a footprint (x, z) up Y; footprint (y, z) extruded up local Y, turned by XUp, runs across −X.
         var ring = profile.Select(p => new Vector2(p.Y, p.X)).ToList();
-        if (PlanGeometry.SignedArea(ring) < 0) ring.Reverse();
-        var piece = PartGeometryKernel.BeveledExtrude(ring, x1 - x0, bevel, material, -x1);
+        if (PlanRings.SignedArea(ring) < 0) ring.Reverse();
+        var piece = PartSolids.BeveledExtrude(ring, x1 - x0, bevel, material, -x1);
         return builder.Add(piece, Xf.XUp, flags);
     }
 
@@ -63,8 +63,8 @@ public static class PartShapes
     {
         // Footprint (x, y) extruded up local Y, turned by RotX(−90): local Z becomes world Y, local Y becomes world −Z.
         var ring = outline.ToList();
-        if (PlanGeometry.SignedArea(ring) < 0) ring.Reverse();
-        var piece = PartGeometryKernel.BeveledExtrude(ring, z1 - z0, bevel, material, -z1);
+        if (PlanRings.SignedArea(ring) < 0) ring.Reverse();
+        var piece = PartSolids.BeveledExtrude(ring, z1 - z0, bevel, material, -z1);
         return builder.Add(piece, Xf.RotX(-90f), flags);
     }
 
@@ -105,7 +105,7 @@ public static class PartShapes
     public static SweepProfile BevelRect(float width, float height, float bevel, float lateralShift, float upShift)
     {
         var limit = Math.Min(width, height) * 0.45f;
-        var source = PartGeometryKernel.BeveledRectangleProfile(width, height, Math.Min(bevel, limit));
+        var source = PartSweeps.BeveledRectangleProfile(width, height, Math.Min(bevel, limit));
         var points = source.Points.Select(p => new Vector2(p.X + lateralShift, p.Y + upShift)).ToArray();
         return new(Array.AsReadOnly(points), source.Normals);
     }
@@ -115,14 +115,14 @@ public static class PartShapes
     {
         var delta = new Vector3(b.X - a.X, b.Y - a.Y, b.Z - a.Z);
         var length = (float)Math.Sqrt((double)delta.X * delta.X + (double)delta.Y * delta.Y + (double)delta.Z * delta.Z);
-        var piece = PartGeometryKernel.Sweep(Circle(radius, segments), [Vector2.Zero, new(length, 0)], material);
+        var piece = PartSweeps.Sweep(Circle(radius, segments), [Vector2.Zero, new(length, 0)], material);
         return builder.Add(piece, Xf.AlongX(delta, a), flags);
     }
 
     /// <summary>Vertical cylinder standing on (x, y0, z).</summary>
     public static PartBuilder AddColumn(this PartBuilder builder, float x, float y0, float y1, float z, float radius, int segments, ToonSpec material, byte flags = 0)
     {
-        var piece = PartGeometryKernel.Sweep(Circle(radius, segments), [Vector2.Zero, new(y1 - y0, 0)], material);
+        var piece = PartSweeps.Sweep(Circle(radius, segments), [Vector2.Zero, new(y1 - y0, 0)], material);
         return builder.Add(piece, Xf.XUp.Then(Xf.Move(x, y0, z)), flags);
     }
 

@@ -64,10 +64,10 @@ public sealed class ForestParkSite : ZoneSite
         float w = P.CageWidth, d = P.CageDepth, h = P.CageWall, curb = 0.3f;
         var bottom = y + curb;
         var top = bottom + h;
-        b.Add(PartGeometryKernel.BeveledBox(w + 0.3f, curb + 0.1f, d + 0.3f, 0.03f, L.Concrete), cage.At(0, y - 0.1f, 0));
+        b.Add(PartSolids.BeveledBox(w + 0.3f, curb + 0.1f, d + 0.3f, 0.03f, L.Concrete), cage.At(0, y - 0.1f, 0));
         // Frame: posts every ~1.5 m, a ring beam at the eaves and a mid rail.
         var posts = Ring(w, d, 1.5f).ToArray();
-        foreach (var p in posts) b.Add(PartGeometryKernel.BeveledBox(0.1f, h, 0.1f, 0.012f, L.WhiteSteel), cage.At(p.X, bottom, p.Y));
+        foreach (var p in posts) b.Add(PartSolids.BeveledBox(0.1f, h, 0.1f, 0.012f, L.WhiteSteel), cage.At(p.X, bottom, p.Y));
         foreach (var (a, e) in Edges(w, d))
         {
             Strut(b, cage, new(a.X, top, a.Y), new(e.X, top, e.Y), 0.12f);
@@ -82,8 +82,8 @@ public sealed class ForestParkSite : ZoneSite
             Strut(b, cage, new(p.X, top, p.Y), apex, 0.07f);
         }
         // Door frame on the south side, facing the woodland path.
-        b.Add(PartGeometryKernel.BeveledBox(0.08f, 2.1f, 0.08f, 0.01f, L.WhiteSteel), cage.At(-0.55f, bottom, d * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(0.08f, 2.1f, 0.08f, 0.01f, L.WhiteSteel), cage.At(0.55f, bottom, d * 0.5f));
+        b.Add(PartSolids.BeveledBox(0.08f, 2.1f, 0.08f, 0.01f, L.WhiteSteel), cage.At(-0.55f, bottom, d * 0.5f));
+        b.Add(PartSolids.BeveledBox(0.08f, 2.1f, 0.08f, 0.01f, L.WhiteSteel), cage.At(0.55f, bottom, d * 0.5f));
         Strut(b, cage, new(-0.55f, bottom + 2.1f, d * 0.5f), new(0.55f, bottom + 2.1f, d * 0.5f), 0.08f);
         if (b.Detail == SiteDetail.Mass) return;
         // Wire mesh: thin rods on a 0.5 m grid (L0), every other rod at L1.
@@ -96,7 +96,7 @@ public sealed class ForestParkSite : ZoneSite
             for (var k = 1; k < n; k++)
             {
                 var p = a + (e - a) * (k / (float)n);
-                b.Add(PartGeometryKernel.BeveledBox(rod, h, rod, 0, L.WhiteWire), cage.At(p.X, bottom, p.Y));
+                b.Add(PartSolids.BeveledBox(rod, h, rod, 0, L.WhiteWire), cage.At(p.X, bottom, p.Y));
             }
             for (var yy = bottom + mesh; yy < top - 0.1f; yy += mesh)
                 if (MathF.Abs(yy - bottom - 1.0f) > 0.1f) Strut(b, cage, new(a.X, yy, a.Y), new(e.X, yy, e.Y), rod, L.WhiteWire);
@@ -110,7 +110,7 @@ public sealed class ForestParkSite : ZoneSite
         }
         // Timber perch inside for the birds' night roost (WLD-LIFE; the peacocks are WP-25's).
         foreach (var x in new[] { -2.2f, 1.8f })
-            b.Add(PartGeometryKernel.BeveledBox(0.12f, 2.3f, 0.12f, 0.015f, L.Wood), cage.At(x, bottom, -1.0f));
+            b.Add(PartSolids.BeveledBox(0.12f, 2.3f, 0.12f, 0.015f, L.Wood), cage.At(x, bottom, -1.0f));
         Strut(b, cage, new(-2.4f, bottom + 2.1f, -1.0f), new(2.0f, bottom + 2.1f, -1.0f), 0.1f, L.Wood);
         Strut(b, cage, new(-2.4f, bottom + 1.3f, -1.0f), new(2.0f, bottom + 1.3f, -1.0f), 0.08f, L.Wood);
     }
@@ -146,7 +146,7 @@ public sealed class ForestParkSite : ZoneSite
         var zv = VectorMath.Cross(x, yv);
         var mid = (a + e) * 0.5f - yv * (size * 0.5f);
         var local = new Matrix4x4(x.X, x.Y, x.Z, 0, yv.X, yv.Y, yv.Z, 0, zv.X, zv.Y, zv.Z, 0, mid.X, mid.Y, mid.Z, 1);
-        b.Add(PartGeometryKernel.BeveledBox(length, size, size, 0, material ?? L.WhiteSteel), GeometryPlacement.Multiply(local, f.At(0, 0, 0)));
+        b.Add(PartSolids.BeveledBox(length, size, size, 0, material ?? L.WhiteSteel), GeometryPlacement.Multiply(local, f.At(0, 0, 0)));
     }
 
     // ---- Hill-top pavilion and seat wall (MAP-QSH-TERRAIN) ----
@@ -155,18 +155,18 @@ public sealed class ForestParkSite : ZoneSite
     {
         var pad = hill.Frame;
         float s = hill.Size, post = P.PavilionPost, eave = P.PavilionEave;
-        b.Add(PartGeometryKernel.BeveledBox(s + 0.8f, 0.4f, s + 0.8f, 0.03f, L.Granite), pad.At(0, y - 0.1f, 0));
+        b.Add(PartSolids.BeveledBox(s + 0.8f, 0.4f, s + 0.8f, 0.03f, L.Granite), pad.At(0, y - 0.1f, 0));
         var floor = y + 0.3f;
         var half = s * 0.5f - post * 0.5f;
         foreach (var x in new[] { -half, half })
             foreach (var z in new[] { -half, half })
             {
-                b.Add(PartGeometryKernel.BeveledBox(post, eave, post, 0.02f, L.Wood), pad.At(x, floor, z));
-                b.Add(PartGeometryKernel.BeveledBox(post + 0.12f, 0.2f, post + 0.12f, 0.015f, L.StoneTrim), pad.At(x, floor, z));
+                b.Add(PartSolids.BeveledBox(post, eave, post, 0.02f, L.Wood), pad.At(x, floor, z));
+                b.Add(PartSolids.BeveledBox(post + 0.12f, 0.2f, post + 0.12f, 0.015f, L.StoneTrim), pad.At(x, floor, z));
             }
         foreach (var (a, e) in Edges(s - post, s - post))
             Strut(b, pad, new(a.X, floor + eave - 0.32f, a.Y), new(e.X, floor + eave - 0.32f, e.Y), 0.3f, L.Wood);
-        b.Add(PartGeometryKernel.BeveledBox(s + 1.2f, 0.12f, s + 1.2f, 0.02f, L.Wood), pad.At(0, floor + eave - 0.02f, 0));
+        b.Add(PartSolids.BeveledBox(s + 1.2f, 0.12f, s + 1.2f, 0.02f, L.Wood), pad.At(0, floor + eave - 0.02f, 0));
         b.Add(Shapes.Hip(s + 1.1f, s + 1.1f, P.PavilionRoofRise, 0, L.RoofSlab), pad.At(0, floor + eave + 0.1f, 0));
         if (b.Detail != SiteDetail.Mass)
             b.Add(Shapes.Shaft(0.1f, 0.03f, 0.35f, 10, L.Metal), pad.At(0, floor + eave + 0.1f + P.PavilionRoofRise - 0.02f, 0));
@@ -176,7 +176,7 @@ public sealed class ForestParkSite : ZoneSite
             if (!b.Includes(SiteRanges.Bounds([a, e], .25f))) continue;
             var seg = PlanFrame.Along((a + e) * 0.5f, e - a);
             var ground = b.Ground(seg.Origin);
-            b.Add(PartGeometryKernel.BeveledBox(Vector2.Distance(a, e) + 0.02f, hill.SeatHeight + 0.1f, 0.42f, 0.025f, L.Granite), seg.At(0, ground - 0.1f, 0));
+            b.Add(PartSolids.BeveledBox(Vector2.Distance(a, e) + 0.02f, hill.SeatHeight + 0.1f, 0.42f, 0.025f, L.Granite), seg.At(0, ground - 0.1f, 0));
         }
     }
 

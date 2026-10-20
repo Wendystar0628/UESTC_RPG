@@ -82,7 +82,7 @@ public sealed class GroundModule : IGroundCoverSource
         if (!GroundLod.HasMarkings(lod)) return new ContentOutput(sink.Finish(), []);
         var markings = layout.Markings(_section);
         markings.Emit(extent, sink, _section, terrain);
-        return new ContentOutput([.. sink.Finish(), .. markings.EmitManholeText(ctx, extent, _section, terrain)], []);
+        return new ContentOutput([.. sink.Finish(), .. markings.Details.EmitManholeText(ctx, extent, _section, terrain)], []);
     }
 
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile) =>

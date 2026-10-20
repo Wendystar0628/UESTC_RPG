@@ -27,7 +27,7 @@ internal sealed record PlantingPave(PolygonRings? Rings, IReadOnlyList<Vector2>?
 internal sealed record PlantingPit(string Key, PolygonRings? Rings, Vector2 Centre, float Radius, Vector2 Axis, float HalfLength, float HalfWidth,
     int PerPit, string? Species, float SoilAbove)
 {
-    public bool Holds(Vector2 p) => Rings is { } rings ? PlanGeometry.Contains(rings, p) : Vector2.Distance(p, Centre) <= Radius;
+    public bool Holds(Vector2 p) => Rings is { } rings ? PlanRings.Contains(rings, p) : Vector2.Distance(p, Centre) <= Radius;
 }
 
 /// <summary>The world as the planter sees it: blocking outlines and roads in a coarse grid, green parcels, occupied crowns.</summary>
@@ -100,7 +100,7 @@ internal sealed class PlantingSite
         foreach (var parcel in _blocking.In(p))
         {
             if (p.X < parcel.Min.X - radius || p.X > parcel.Max.X + radius || p.Y < parcel.Min.Y - radius || p.Y > parcel.Max.Y + radius) continue;
-            if (PlanGeometry.Contains(parcel.Rings, p) || Edge(parcel.Rings, p) < radius) return true;
+            if (PlanRings.Contains(parcel.Rings, p) || Edge(parcel.Rings, p) < radius) return true;
         }
         return false;
     }
@@ -152,7 +152,7 @@ internal sealed class PlantingSite
             {
                 if (p.X < pave.Min.X - clearance || p.X > pave.Max.X + clearance ||
                     p.Y < pave.Min.Y - clearance || p.Y > pave.Max.Y + clearance) continue;
-                if (PlanGeometry.Contains(rings, p) || Edge(rings, p) < clearance) return true;
+                if (PlanRings.Contains(rings, p) || Edge(rings, p) < clearance) return true;
             }
             else
             {
@@ -264,7 +264,7 @@ internal sealed class PlantingSite
             var e1 = outer[2] - outer[1];
             var axis = Vector2.Normalize(e0.LengthSquared() >= e1.LengthSquared() ? e0 : e1);
             var across = new Vector2(-axis.Y, axis.X);
-            var centre = PlanGeometry.Centroid(outer);
+            var centre = PlanPolygons.Centroid(outer);
             float a0 = float.MaxValue, a1 = float.MinValue, b0 = float.MaxValue, b1 = float.MinValue;
             foreach (var q in outer)
             {
@@ -286,7 +286,7 @@ internal sealed class PlantingSite
                 if (rings.Outer.Count < 3) continue;
                 var min = rings.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min);
                 var max = rings.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max);
-                var area = MathF.Abs((float)PlanGeometry.SignedArea(rings.Outer)) - rings.Holes.Sum(h => MathF.Abs((float)PlanGeometry.SignedArea(h)));
+                var area = MathF.Abs((float)PlanRings.SignedArea(rings.Outer)) - rings.Holes.Sum(h => MathF.Abs((float)PlanRings.SignedArea(h)));
                 var id = feature.Id.Value + ":" + part.SourceId + ":" + index.ToString(CultureInfo.InvariantCulture);
                 yield return new PlantingParcel(id, rings, min, max, area);
             }
@@ -309,5 +309,5 @@ internal sealed class PlantingSite
         }
     }
     internal static float Edge(PolygonRings rings, Vector2 p) =>
-        rings.Holes.Aggregate(PlanGeometry.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h)));
+        rings.Holes.Aggregate(PlanRings.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanRings.DistanceToRing(p, h)));
 }

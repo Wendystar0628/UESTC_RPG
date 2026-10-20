@@ -34,7 +34,7 @@ public sealed class PlanRing
         {
             var prev = Dir[(i + n - 1) % n];
             var next = Dir[i];
-            Convex[i] = PlanGeometry.CrossFloat(prev, next) > 0f;
+            Convex[i] = PlanRings.CrossFloat(prev, next) > 0f;
             TurnCos[i] = Vector2.Dot(prev, next);
         }
     }
@@ -66,17 +66,17 @@ public sealed class PlanRing
     /// <summary>Point inside the outer ring and outside every hole.</summary>
     public static bool InsideFootprint(PlanRing outer, IReadOnlyList<PlanRing> holes, Vector2 p)
     {
-        if (!PlanGeometry.InsideByCrossings(outer.Points, p)) return false;
+        if (!PlanRings.InsideByCrossings(outer.Points, p)) return false;
         foreach (var h in holes)
-            if (PlanGeometry.InsideByCrossings(h.Points, p)) return false;
+            if (PlanRings.InsideByCrossings(h.Points, p)) return false;
         return true;
     }
 
     /// <summary>Distance from p to the nearest edge of any ring.</summary>
     public static float DistanceToEdges(PlanRing outer, IReadOnlyList<PlanRing> holes, Vector2 p)
     {
-        var best = PlanGeometry.DistanceToEdges(p, outer.Points, outer.Dir, outer.Length);
-        foreach (var h in holes) best = MathF.Min(best, PlanGeometry.DistanceToEdges(p, h.Points, h.Dir, h.Length));
+        var best = PlanPolygons.DistanceToEdges(p, outer.Points, outer.Dir, outer.Length);
+        foreach (var h in holes) best = MathF.Min(best, PlanPolygons.DistanceToEdges(p, h.Points, h.Dir, h.Length));
         return best;
     }
 
@@ -106,7 +106,7 @@ public sealed class PlanRing
             var e = result[(i + 1) % Count] - result[i];
             if (Vector2.Dot(e, Dir[i]) <= 0.02f) return null;
         }
-        return PlanGeometry.SelfIntersects(result) ? null : result;
+        return PlanRings.SelfIntersects(result) ? null : result;
     }
 
 }

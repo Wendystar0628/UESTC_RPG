@@ -56,7 +56,7 @@ internal sealed class LibraryFrame
     /// <summary>Apothem of the outer edge of every gallery ring: the skylight edge.</summary>
     public float GalleryApothem { get; }
     public float VoidApothem { get; }
-    public int Storeys => CoreStyle.LibraryStoreys.Length;
+    public int Storeys => LibraryStyle.LibraryStoreys.Length;
 
     public static Vector2 Angle(float a) => new(MathF.Cos(a), MathF.Sin(a));
     public Vector2 Dir(float j) => Angle(Front + j * Step);

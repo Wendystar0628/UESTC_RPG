@@ -62,7 +62,7 @@ public sealed class SportsFurnitureSite : ZoneSite
             var f = PlanFrame.Along(sign.Point(), sign.Pair("direction"));
             var width = sign.Number("width"); var height = sign.Number("height"); var depth = sign.Number("depth");
             var board = new PartBuilder();
-            board.Add(PartGeometryKernel.BeveledBox(width, height, depth, S.Bevel, S.Silver));
+            board.Add(PartSolids.BeveledBox(width, height, depth, S.Bevel, S.Silver));
             if (sign.OptionalNumber("standing") == 1) board.AddColumn(0, -sign.Number("base"), 0, 0, S.Post, 6, S.Steel);
             var run = atlas.Layout(sign.RequiredProps().Text("text"));
             Lettering.Write(board, run, b.Context.Catalog.Resolve(S.Silver.Lit), 0, height * 0.5f, -depth * 0.5f, false,

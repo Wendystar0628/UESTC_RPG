@@ -73,9 +73,9 @@ public sealed class HallEntranceSite : ZoneSite
 
         // Landing: granite body from the wall face to the stair head, a coping band and a plinth line.
         float z0 = H.WallFace - 0.1f, z1 = porch.FrontZ, d = z1 - z0, zc = (z0 + z1) * 0.5f;
-        b.Add(PartGeometryKernel.BeveledBox(H.LandingWidth, floor - g + 0.1f - 0.12f, d, 0.02f, L.Granite), f.At(0, g - 0.1f, zc));
-        b.Add(PartGeometryKernel.BeveledBox(H.LandingWidth + 0.06f, 0.12f, d + 0.03f, 0.015f, L.Trim), f.At(0, floor - 0.12f, zc + 0.015f));
-        if (!mass) b.Add(PartGeometryKernel.BeveledBox(H.LandingWidth + 0.08f, 0.35f, d + 0.04f, 0.02f, L.Plinth), f.At(0, g - 0.1f, zc + 0.02f));
+        b.Add(PartSolids.BeveledBox(H.LandingWidth, floor - g + 0.1f - 0.12f, d, 0.02f, L.Granite), f.At(0, g - 0.1f, zc));
+        b.Add(PartSolids.BeveledBox(H.LandingWidth + 0.06f, 0.12f, d + 0.03f, 0.015f, L.Trim), f.At(0, floor - 0.12f, zc + 0.015f));
+        if (!mass) b.Add(PartSolids.BeveledBox(H.LandingWidth + 0.08f, 0.35f, d + 0.04f, 0.02f, L.Plinth), f.At(0, g - 0.1f, zc + 0.02f));
 
         // Steps down to the courtyard; the part climbs toward its +Z, so it is reversed to climb toward the door.
         var flight = porch.Flight;
@@ -89,24 +89,24 @@ public sealed class HallEntranceSite : ZoneSite
             new(-vw, 0), new(-H.DoorWidth * 0.5f, 0), new(-H.DoorWidth * 0.5f, H.DoorHeight), new(H.DoorWidth * 0.5f, H.DoorHeight),
             new(H.DoorWidth * 0.5f, 0), new(vw, 0), new(vw, vh), new(-vw, vh),
         ];
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outer), vd, L.HouseWall), f.At(0, floor, front - vd * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(2 * vw + 0.2f, 0.25f, vd + 0.1f, 0.02f, L.Trim), f.At(0, floor + vh, front - vd * 0.5f + 0.05f));
-        b.Add(PartGeometryKernel.BeveledBox(2 * vw + 0.6f, H.CanopyThickness, H.CanopyDepth, 0.03f, L.Trim),
+        b.Add(PartSolids.WallPanel(new PolygonRings(outer), vd, L.HouseWall), f.At(0, floor, front - vd * 0.5f));
+        b.Add(PartSolids.BeveledBox(2 * vw + 0.2f, 0.25f, vd + 0.1f, 0.02f, L.Trim), f.At(0, floor + vh, front - vd * 0.5f + 0.05f));
+        b.Add(PartSolids.BeveledBox(2 * vw + 0.6f, H.CanopyThickness, H.CanopyDepth, 0.03f, L.Trim),
             f.At(0, floor + H.DoorHeight + 0.45f, front + H.CanopyDepth * 0.5f - 0.05f));
         if (mass) return;
 
         // Door surround, the glass screen at the back of the doorway, and the two leaves held open against the reveals.
-        b.Add(PartGeometryKernel.BeveledBox(H.DoorWidth + 0.24f, 0.12f, 0.08f, 0.01f, L.Stainless), f.At(0, floor + H.DoorHeight, front + 0.02f));
+        b.Add(PartSolids.BeveledBox(H.DoorWidth + 0.24f, 0.12f, 0.08f, 0.01f, L.Stainless), f.At(0, floor + H.DoorHeight, front + 0.02f));
         foreach (var side in new[] { -1f, 1f })
-            b.Add(PartGeometryKernel.BeveledBox(0.12f, H.DoorHeight, 0.08f, 0.01f, L.Stainless), f.At(side * (H.DoorWidth * 0.5f + 0.06f), floor, front + 0.02f));
-        b.Add(PartGeometryKernel.BeveledBox(H.DoorWidth, H.DoorHeight, 0.03f, 0, L.Glass), f.At(0, floor, H.WallFace + 0.02f));
+            b.Add(PartSolids.BeveledBox(0.12f, H.DoorHeight, 0.08f, 0.01f, L.Stainless), f.At(side * (H.DoorWidth * 0.5f + 0.06f), floor, front + 0.02f));
+        b.Add(PartSolids.BeveledBox(H.DoorWidth, H.DoorHeight, 0.03f, 0, L.Glass), f.At(0, floor, H.WallFace + 0.02f));
         var leaf = H.DoorWidth * 0.5f - 0.05f;
         foreach (var side in new[] { -1f, 1f })
         {
             var x = side * (H.DoorWidth * 0.5f - 0.04f);
             var z = front - leaf * 0.5f - 0.05f;
-            b.Add(PartGeometryKernel.BeveledBox(0.05f, H.DoorHeight - 0.1f, leaf, 0.01f, L.Stainless), f.At(x, floor + 0.02f, z));
-            b.Add(PartGeometryKernel.BeveledBox(0.02f, H.DoorHeight - 0.4f, leaf - 0.16f, 0, L.Glass), f.At(x - side * 0.02f, floor + 0.2f, z));
+            b.Add(PartSolids.BeveledBox(0.05f, H.DoorHeight - 0.1f, leaf, 0.01f, L.Stainless), f.At(x, floor + 0.02f, z));
+            b.Add(PartSolids.BeveledBox(0.02f, H.DoorHeight - 0.4f, leaf - 0.16f, 0, L.Glass), f.At(x - side * 0.02f, floor + 0.2f, z));
         }
     }
 

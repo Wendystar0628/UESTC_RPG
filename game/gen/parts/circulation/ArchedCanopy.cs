@@ -24,10 +24,10 @@ public static class ArchedCanopy
         var samples = ArcSection.Sample(p.Span, p.Rise, p.Segments);
         var b = new PartBuilder();
         var glassProfile = Strip(samples, p.StraightHeight, p.GlassThickness);
-        b.Add(PartGeometryKernel.WallPanel(new(glassProfile), p.Length, p.Glass));
+        b.Add(PartSolids.WallPanel(new(glassProfile), p.Length, p.Glass));
         if (p.StraightHeight > 0)
             foreach (var side in new[] { -1f, 1f })
-                b.Add(PartGeometryKernel.BeveledBox(p.GlassThickness, p.StraightHeight, p.Length, 0, p.Glass),
+                b.Add(PartSolids.BeveledBox(p.GlassThickness, p.StraightHeight, p.Length, 0, p.Glass),
                     Xf.Move(side * p.Span * .5f, 0, 0));
         var count = Math.Max(1, (int)MathF.Ceiling(p.Length / p.RibPitch));
         var ribProfile = Strip(samples, p.StraightHeight, p.RibWidth);
@@ -35,14 +35,14 @@ public static class ArchedCanopy
         {
             if (!near && k != 0 && k != count && k % 4 != 0) continue;
             var z = -p.Length * .5f + p.Length * k / count;
-            b.Add(PartGeometryKernel.WallPanel(new(ribProfile), p.RibWidth, p.Frame), Xf.Move(0, 0, z));
+            b.Add(PartSolids.WallPanel(new(ribProfile), p.RibWidth, p.Frame), Xf.Move(0, 0, z));
             if (p.StraightHeight > 0)
                 foreach (var side in new[] { -1f, 1f })
-                    b.Add(PartGeometryKernel.BeveledBox(p.RibWidth, p.StraightHeight, p.RibWidth,
+                    b.Add(PartSolids.BeveledBox(p.RibWidth, p.StraightHeight, p.RibWidth,
                             near ? CirculationStyle.PostBevel : 0, p.Frame), Xf.Move(side * p.Span * .5f, 0, z));
         }
         foreach (var side in new[] { -1f, 1f })
-            b.Add(PartGeometryKernel.BeveledBox(p.RibWidth, p.RibWidth, p.Length,
+            b.Add(PartSolids.BeveledBox(p.RibWidth, p.RibWidth, p.Length,
                     near ? CirculationStyle.RailBevel : 0, p.Frame), Xf.Move(side * p.Span * .5f, p.StraightHeight, 0));
         var measure = b.Measure();
         var geometry = b.Finish(new(measure.Min, measure.Max));

@@ -76,9 +76,9 @@ public sealed class ClusterLayout
         if (!world.Features.TryGetValue(new(NorthFeatureIds.GatePrefix + cluster.Key), out var gateFeature) || gateFeature.Geometry is not PointGeometry gatePoint) return null;
         var mainGate = new Vector2(gatePoint.Position.X, gatePoint.Position.Z);
         var clusterOpen = gateFeature.Props?.GetProperty("open").GetBoolean() == true;
-        IReadOnlyList<Vector2> ring = PlanGeometry.DeduplicateRing(feature.Contour(facade: false), 0.05f * 0.05f);
+        IReadOnlyList<Vector2> ring = PlanRings.DeduplicateRing(feature.Contour(facade: false), 0.05f * 0.05f);
         if (ring.Count < 3) return null;
-        var sign = PlanGeometry.SignedArea(ring) > 0 ? 1f : -1f;
+        var sign = PlanRings.SignedArea(ring) > 0 ? 1f : -1f;
         float minX = ring.Min(p => p.X) - 20, maxX = ring.Max(p => p.X) + 20, minZ = ring.Min(p => p.Y) - 20, maxZ = ring.Max(p => p.Y) + 20;
         bool Near(Vector2 p) => p.X >= minX && p.X <= maxX && p.Y >= minZ && p.Y <= maxZ;
 
@@ -276,7 +276,7 @@ public sealed class ClusterLayout
     {
         var keep = new bool[samples.Count];
         for (var i = 0; i < samples.Count; i++)
-            keep[i] = !spans.Any(sp => InSpan(samples[i].S, sp.From, sp.To, perimeter)) && !buildings.Any(r => PlanGeometry.InsideByCrossings(r, posts[i]));
+            keep[i] = !spans.Any(sp => InSpan(samples[i].S, sp.From, sp.To, perimeter)) && !buildings.Any(r => PlanRings.InsideByCrossings(r, posts[i]));
 
         // Runs of kept samples; a run that meets a gate ends exactly on the gate's end, one into a building ends inside it.
         var runs = new List<FenceRun>();

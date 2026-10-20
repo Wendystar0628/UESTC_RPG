@@ -33,7 +33,7 @@ public sealed class EntranceAxisSite : ZoneSite
         for (var i = 0; i < tiers.Length; i++)
         {
             var h = rises[i] + (i == 0 ? 0.1f : 0f);
-            b.Add(PartGeometryKernel.BeveledBox(tiers[i], h, tiers[i], 0.025f, i == 2 ? L.StoneTrim : L.Granite), frame.At(0, top, 0));
+            b.Add(PartSolids.BeveledBox(tiers[i], h, tiers[i], 0.025f, i == 2 ? L.StoneTrim : L.Granite), frame.At(0, top, 0));
             top += h;
         }
         var segments = b.Detail == SiteDetail.Full ? 20 : 8;

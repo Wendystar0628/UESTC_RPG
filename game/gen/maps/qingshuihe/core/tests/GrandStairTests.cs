@@ -29,9 +29,9 @@ public sealed class GrandStairTests
         AssertThat(stair.Riser is >= 0.12f and <= 0.16f && MathF.Abs(stair.Tread - (0.65f - 2 * stair.Riser)) < TestTolerance.Position).OverrideFailureMessage($"R {stair.Riser}, T {stair.Tread}").IsTrue();
         AssertThat(stair.Flights.All(f => f.Risers * stair.Riser <= WalkRules.OutdoorFlightMaxRise + TestTolerance.Position)).OverrideFailureMessage("every flight rises at most 1.5 m").IsTrue();
         AssertThat(stair.Landings.Count(l => l.Middle) == 1 && stair.Landings.Count == stair.Flights.Count - 1).OverrideFailureMessage("two runs split by one middle landing").IsTrue();
-        AssertThat(stair.Flights[0].Foot == stair.FrontS && MathF.Abs(stair.Flights[^1].Top(stair.Tread) - CoreStyle.TopLandingDepth) < TestTolerance.Position).OverrideFailureMessage("flights run from the foot to the top landing").IsTrue();
+        AssertThat(stair.Flights[0].Foot == stair.FrontS && MathF.Abs(stair.Flights[^1].Top(stair.Tread) - EntranceStyle.TopLandingDepth) < TestTolerance.Position).OverrideFailureMessage("flights run from the foot to the top landing").IsTrue();
         // The data footprint (world/core.json geometry) is the built stair: the same rectangle within 0.15 m.
-        var ring = FeatureReads.Contour(world.Features[CoreIds.LibraryStair]);
+        var ring = FeatureShapes.Contour(world.Features[CoreIds.LibraryStair]);
         var h = GrandStair.HalfWidth;
         Vector2[] corners = [stair.At(0, -h), stair.At(0, h), stair.At(stair.FrontS, h), stair.At(stair.FrontS, -h)];
         Console.WriteLine("stair corners: " + string.Join(", ", corners.Select(c => $"[{c.X:F2}, {c.Y:F2}]")));
@@ -90,12 +90,12 @@ public sealed class GrandStairTests
         var along = points.Select(p => Vector2.Dot(new Vector2(p.X, p.Z) - f.A, f.Along)).ToArray();
         var outward = points.Select(p => Vector2.Dot(new Vector2(p.X, p.Z) - f.A, f.Out)).ToArray();
         AssertThat(along.Min() < TestTolerance.Layout && along.Max() > f.Length - TestTolerance.Layout).OverrideFailureMessage($"the canopy spans the tower face ({along.Min()}…{along.Max()} of {f.Length})").IsTrue();
-        AssertThat(MathF.Abs(outward.Max() - CoreStyle.CanopyDepth) < TestTolerance.Layout && outward.Min() < -bay.Depth + TestTolerance.Layout).OverrideFailureMessage("it projects in front of the face and runs back to the slot glass").IsTrue();
+        AssertThat(MathF.Abs(outward.Max() - EntranceStyle.CanopyDepth) < TestTolerance.Layout && outward.Min() < -bay.Depth + TestTolerance.Layout).OverrideFailureMessage("it projects in front of the face and runs back to the slot glass").IsTrue();
         // Over the door bay the frame is only the canopy, its soffit clear of the door transom; the piers stand on the terrace.
         var overDoor = points.Where(p => MathF.Abs(Vector2.Dot(new Vector2(p.X - bay.Origin.X, p.Z - bay.Origin.Z), f.Along)) < bay.Width).ToArray();
         AssertThat(overDoor.Min(p => p.Y) > bay.Origin.Y + bay.Height + 0.5f).OverrideFailureMessage("the canopy's soffit clears the door transom").IsTrue();
         AssertThat(points.Min(p => p.Y) < bay.Origin.Y).OverrideFailureMessage("the piers stand on the terrace").IsTrue();
-        AssertThat(stair.Collide().OfType<WallCollider>().Count(w => MathF.Abs(w.HalfT - CoreStyle.CanopyPier * 0.5f) < TestTolerance.Position && w.Y0 < bay.Origin.Y) == 2).OverrideFailureMessage("the piers collide").IsTrue();
+        AssertThat(stair.Collide().OfType<WallCollider>().Count(w => MathF.Abs(w.HalfT - EntranceStyle.CanopyPier * 0.5f) < TestTolerance.Position && w.Y0 < bay.Origin.Y) == 2).OverrideFailureMessage("the piers collide").IsTrue();
         foreach (var lod in new[] { LodLevel.L1, LodLevel.L2 })
         {
             var coarse = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
@@ -108,7 +108,7 @@ public sealed class GrandStairTests
         (mesh.Material.Spec with { Lit = CanopySpec.Lit, Shade = CanopySpec.Shade }) == CanopySpec &&
         mesh.ColorIndices?.Contains(Campus.Contracts.Tests.PaletteFixture.Catalog.Resolve(CanopySpec.Lit).Value) == true;
 
-    private static ToonSpec CanopySpec => CoreStyle.Spec(CoreMaterial.Sheet, CoreStyle.CanopyFamily);
+    private static ToonSpec CanopySpec => CoreStyle.Spec(CoreMaterial.Sheet, EntranceStyle.CanopyFamily);
 
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]

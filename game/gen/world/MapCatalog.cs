@@ -218,7 +218,7 @@ public sealed class MapCatalog
             {
                 if (world.Interiors.AreaAt(entry.Feature, pose.Position) is not null) continue;
                 var storey = entry.Storeys.Where(area => pose.Position.Y >= area.FloorY && pose.Position.Y < area.FloorY + area.Height &&
-                    PlanGeometry.PointInRing(new(pose.Position.X, pose.Position.Z), area.Footprint)).OrderBy(area => area.Index).FirstOrDefault();
+                    PlanRings.PointInRing(new(pose.Position.X, pose.Position.Z), area.Footprint)).OrderBy(area => area.Index).FirstOrDefault();
                 if (storey is not null && !world.Interiors.IsOpen(entry.Feature, storey.Index, pose.Position))
                     throw new WorldDataException(file, id,
                         $"Destination is outside the catalog's open interior area: {entry.Feature.Value}/{storey.Index}.");
@@ -277,7 +277,7 @@ public sealed class MapCatalog
         var outer = Ring(boundary.GetProperty("outer"));
         var holes = boundary.GetProperty("holes").EnumerateArray().Select(Ring).ToArray();
         if (outer.Count == 0) throw new InvalidDataException("Map boundary has no outer ring.");
-        try { return PlanGeometry.Centroid(new PolygonRings(outer, holes)); }
+        try { return PlanPolygons.Centroid(new PolygonRings(outer, holes)); }
         catch (ArgumentException error) { throw new InvalidDataException("Invalid map boundary.", error); }
     }
 }

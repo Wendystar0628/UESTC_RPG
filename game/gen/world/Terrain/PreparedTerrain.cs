@@ -92,9 +92,9 @@ internal sealed class PreparedTerrain(TerrainFrozenData data) : IPreparedTerrain
         TerrainWaterBody? first = null;
         foreach (var water in data.Waters)
         {
-            if (!water.Polygons.Any(polygon => PlanGeometry.Contains(polygon, new Vector2(x, z)))) continue;
+            if (!water.Polygons.Any(polygon => PlanRings.Contains(polygon, new Vector2(x, z)))) continue;
             first ??= water;
-            if (water.WadeAreas.Any(polygon => PlanGeometry.Contains(polygon, new Vector2(x, z))))
+            if (water.WadeAreas.Any(polygon => PlanRings.Contains(polygon, new Vector2(x, z))))
                 return (water.Water, _waters[water.Water], true);
         }
         return first is null ? null : (first.Water, _waters[first.Water], false);

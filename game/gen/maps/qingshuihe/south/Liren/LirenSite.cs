@@ -130,7 +130,7 @@ public sealed class LirenSite : ZoneSite
     internal static GridEdge Dress(GridEdgeInfo e, IReadOnlyList<IReadOnlyList<Vector2>> neighbours)
     {
         var probe = (e.A + e.B) * 0.5f + e.Frame.W * 0.8f;
-        if (neighbours.Any(ring => PlanGeometry.InsideByCrossings(ring, probe))) return new(EdgeKind.Hidden);
+        if (neighbours.Any(ring => PlanRings.InsideByCrossings(ring, probe))) return new(EdgeKind.Hidden);
         return new(e.Length < 4f ? EdgeKind.Blank : EdgeKind.Plain);
     }
 
@@ -164,7 +164,7 @@ public sealed class LirenSite : ZoneSite
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
         var f = Rings(ctx.World);
-        var centre = PlanGeometry.Centroid(f.Bridge, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(f.Bridge, meanIfDegenerate: true);
         var y = ctx.World.Terrain.HeightAt(centre.X, centre.Y);
         foreach (var (ring, style, dress, lift, numbering) in Blocks(f))
             GridFacade.Declare(facades, ring, y + lift, style, dress, numbering, WindowNumbers.Required(ctx, numbering.Feature, numbering.Key));
@@ -182,24 +182,24 @@ public sealed class LirenSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);
-        var y = b.Ground(PlanGeometry.Centroid(f.Bridge, meanIfDegenerate: true));
+        var y = b.Ground(PlanPolygons.Centroid(f.Bridge, meanIfDegenerate: true));
         // Piers, the east link and the bridge storey over the void; the soffit slab under it reads the void's ceiling at three storeys.
         foreach (var (ring, style, dress, lift, numbering) in Blocks(f))
             if (b.Includes(BlockRange(ring, style))) GridFacade.Build(b, ring, y + lift, style, dress, numbering);
         var bridge = new PolygonRings(f.Bridge);
         if (b.Includes(BlockRange(f.Bridge, f.BridgeStyle)))
-            b.Add(PartGeometryKernel.Extrude(bridge, T.BridgeFloor - T.Soffit, L.White, y + T.Soffit), Matrix4x4.Identity);
+            b.Add(PartSolids.Extrude(bridge, T.BridgeFloor - T.Soffit, L.White, y + T.Soffit), Matrix4x4.Identity);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
-        if (b.Includes(BlockRange(f.Bridge, f.BridgeStyle))) b.Add(PartGeometryKernel.Extrude(bridge, 0.04f, L.Paving, y - 0.01f), Matrix4x4.Identity);
+        if (b.Includes(BlockRange(f.Bridge, f.BridgeStyle))) b.Add(PartSolids.Extrude(bridge, 0.04f, L.Paving, y - 0.01f), Matrix4x4.Identity);
         var bevel = b.Detail == SiteDetail.Full ? 0.03f : 0f;
         foreach (var at in Columns(f))
         {
             if (!b.Includes(SiteRanges.Point(at.Point, T.ColumnSize + .3f))) continue;
             var col = new PlanFrame(at.Point, at.Along);
-            b.Add(PartGeometryKernel.BeveledBox(T.ColumnSize + 0.3f, 0.45f, T.ColumnSize + 0.3f, bevel, L.GreyPlinth), col.At(0, y - 0.05f, 0));
-            b.Add(PartGeometryKernel.BeveledBox(T.ColumnSize, T.Soffit - 0.4f, T.ColumnSize, bevel, L.White), col.At(0, y + 0.4f, 0));
+            b.Add(PartSolids.BeveledBox(T.ColumnSize + 0.3f, 0.45f, T.ColumnSize + 0.3f, bevel, L.GreyPlinth), col.At(0, y - 0.05f, 0));
+            b.Add(PartSolids.BeveledBox(T.ColumnSize, T.Soffit - 0.4f, T.ColumnSize, bevel, L.White), col.At(0, y + 0.4f, 0));
             if (b.Detail != SiteDetail.Mass)
-                b.Add(PartGeometryKernel.BeveledBox(T.ColumnSize + 0.25f, 0.35f, T.ColumnSize + 0.25f, bevel, L.WhiteTrim), col.At(0, y + T.Soffit - 0.35f, 0));
+                b.Add(PartSolids.BeveledBox(T.ColumnSize + 0.25f, 0.35f, T.ColumnSize + 0.25f, bevel, L.WhiteTrim), col.At(0, y + T.Soffit - 0.35f, 0));
         }
     }
 
@@ -217,7 +217,7 @@ public sealed class LirenSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var f = Rings(c.Context.World);
-        var centre = PlanGeometry.Centroid(f.Bridge, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(f.Bridge, meanIfDegenerate: true);
         var y = c.Ground(centre.X, centre.Y);
         foreach (var pier in f.Piers)
             if (c.Includes(BlockRange(pier, f.PierStyle))) GridFacade.Collide(c, pier, y, f.PierStyle, e => Dress(e, f.PierNeighbours), FootMat.Concrete);

@@ -130,7 +130,7 @@ internal static class Solid
         float bevel = 0f)
     {
         float w = x1 - x0, h = y1 - y0, d = z1 - z0;
-        var geometry = PartGeometryKernel.BeveledBox(w, h, d, Bevel(bevel, Math.Min(w, Math.Min(h, d))), Carrier);
+        var geometry = PartSolids.BeveledBox(w, h, d, Bevel(bevel, Math.Min(w, Math.Min(h, d))), Carrier);
         mesh.Solid(geometry, Place.At((x0 + x1) * 0.5f, y0, (z0 + z1) * 0.5f), spec, flags);
     }
 
@@ -139,7 +139,7 @@ internal static class Solid
         float bevel = 0f)
     {
         float w = x1 - x0, h = y1 - y0, d = z1 - z0;
-        var geometry = PartGeometryKernel.BeveledBox(w, h, d, Bevel(bevel, Math.Min(w, Math.Min(h, d))), Carrier);
+        var geometry = PartSolids.BeveledBox(w, h, d, Bevel(bevel, Math.Min(w, Math.Min(h, d))), Carrier);
         mesh.Solid(geometry, Place.At((x0 + x1) * 0.5f, y0, (z0 + z1) * 0.5f).Then(turn), spec, flags);
     }
 
@@ -149,8 +149,8 @@ internal static class Solid
     {
         var h = face * 0.5f;
         Vector2[] path = [new(x0 + h, y0 + h), new(x1 - h, y0 + h), new(x1 - h, y1 - h), new(x0 + h, y1 - h)];
-        var profile = PartGeometryKernel.BeveledRectangleProfile(face, zBack - zFront, Bevel(bevel, Math.Min(face, zBack - zFront)));
-        var geometry = PartGeometryKernel.Sweep(profile, path, Carrier, closed: true);
+        var profile = PartSweeps.BeveledRectangleProfile(face, zBack - zFront, Bevel(bevel, Math.Min(face, zBack - zFront)));
+        var geometry = PartSweeps.Sweep(profile, path, Carrier, closed: true);
         var at = Place.Facade(zBack);
         mesh.Solid(geometry, turn is { } t ? at.Then(t) : at, spec, flags);
     }
@@ -158,7 +158,7 @@ internal static class Solid
     /// <summary>Prism along X from <paramref name="x0"/> to <paramref name="x1"/> over a convex section given as (z, y) points.</summary>
     public static void Prism(PartMesh mesh, ToonSpec spec, byte flags, IReadOnlyList<Vector2> sectionZY, float x0, float x1)
     {
-        var geometry = PartGeometryKernel.Extrude(new PolygonRings(sectionZY), x1 - x0, Carrier);
+        var geometry = PartSolids.Extrude(new PolygonRings(sectionZY), x1 - x0, Carrier);
         mesh.Solid(geometry, Place.AlongX(x0), spec, flags);
     }
 
@@ -226,7 +226,7 @@ internal static class Solid
     public static void Panel(PartMesh mesh, ToonSpec spec, byte flags, Place turn, float x0, float y0, float x1, float y1, float zMid,
         float thickness, IReadOnlyList<IReadOnlyList<Vector2>> holes)
     {
-        var geometry = PartGeometryKernel.WallPanel(x1 - x0, y1 - y0, thickness, holes, Carrier);
+        var geometry = PartSolids.WallPanel(x1 - x0, y1 - y0, thickness, holes, Carrier);
         mesh.Solid(geometry, Place.At((x0 + x1) * 0.5f, y0, zMid).Then(turn), spec, flags);
     }
 

@@ -57,7 +57,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
 
     /// <summary>
     /// The paved link from the cafe apron to the nearest footway (16d-2, review of 16d): from inside the apron's front edge
-    /// to the walk's edge, <see cref="CoreStyle.CafeWalkWidth"/> wide; null when the apron already meets a walk or none is in reach.
+    /// to the walk's edge, <see cref="LibraryStyle.CafeWalkWidth"/> wide; null when the apron already meets a walk or none is in reach.
     /// </summary>
     public (Vector2 A, Vector2 B)? CafeWalk { get; private set; }
 
@@ -71,16 +71,16 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
         foreach (var road in world.Network.Roads.OrderBy(r => r.Id.Value, StringComparer.Ordinal))
         {
             if (WorldProps.TryText(road.Props, "highway") is not ("footway" or "path" or "pedestrian")) continue;
-            var half = (road.Width > 0f ? road.Width : S.CafeWalkFallbackWidth) * 0.5f;
+            var half = (road.Width > 0f ? road.Width : LibraryStyle.CafeWalkFallbackWidth) * 0.5f;
             var line = road.Line.Points;
             if (line.Count < 2) continue;
             var projection = PlanLines.Project(line, p);
             var gap = (float)projection.Distance - half;
             if (best is null || gap < best.Value.Gap) best = (projection.Point, half, gap);
         }
-        if (best is not { } hit || hit.Gap < 0.3f || hit.Gap > S.CafeWalkReach) return null;
+        if (best is not { } hit || hit.Gap < 0.3f || hit.Gap > LibraryStyle.CafeWalkReach) return null;
         var d = Vector2.Normalize(hit.Q - p);
-        return (p - d * S.CafeWalkInset, hit.Q - d * (hit.Half - S.CafeWalkOverlap));
+        return (p - d * LibraryStyle.CafeWalkInset, hit.Q - d * (hit.Half - LibraryStyle.CafeWalkOverlap));
     }
 
     /// <summary>
@@ -92,16 +92,16 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
         if (CafeWalk is not { } w) return;
         var along = Vector2.Normalize(w.B - w.A);
         var side = new Vector2(-along.Y, along.X);
-        float half = S.CafeWalkWidth * 0.5f, band = S.CafeWalkEdging, lift = GroundLevels.Paving + ApronLift * 0.5f;
-        CoreShapes.FlatStrip(mesh, S.Roof(S.CafeWalkPaving), w.A, w.B, S.CafeWalkWidth - 2 * band, _ground, lift);
+        float half = LibraryStyle.CafeWalkWidth * 0.5f, band = LibraryStyle.CafeWalkEdging, lift = GroundLevels.Paving + ApronLift * 0.5f;
+        CoreShapes.FlatStrip(mesh, S.Roof(LibraryStyle.CafeWalkPaving), w.A, w.B, LibraryStyle.CafeWalkWidth - 2 * band, _ground, lift);
         foreach (var sign in new[] { -1f, 1f })
         {
             var o = side * (sign * (half - band * 0.5f));
-            CoreShapes.FlatStrip(mesh, S.Roof(S.CafeWalkEdge), w.A + o, w.B + o, band, _ground, lift);
+            CoreShapes.FlatStrip(mesh, S.Roof(LibraryStyle.CafeWalkEdge), w.A + o, w.B + o, band, _ground, lift);
             var e = side * (sign * half);
             Vector2 a = w.A + e, b = w.B + e;
             var n = new Vector3(side.X * sign, 0f, side.Y * sign);
-            mesh.Quad(S.Roof(S.CafeWalkEdge), new(a.X, _ground(a.X, a.Y) + GroundLevels.Lawn - 0.02f, a.Y), new(b.X, _ground(b.X, b.Y) + GroundLevels.Lawn - 0.02f, b.Y),
+            mesh.Quad(S.Roof(LibraryStyle.CafeWalkEdge), new(a.X, _ground(a.X, a.Y) + GroundLevels.Lawn - 0.02f, a.Y), new(b.X, _ground(b.X, b.Y) + GroundLevels.Lawn - 0.02f, b.Y),
                 new(b.X, _ground(b.X, b.Y) + lift, b.Y), new(a.X, _ground(a.X, a.Y) + lift, a.Y), n);
         }
     }
@@ -160,7 +160,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     public IReadOnlyList<WindowDecl> Windows(WindowNumberingSnapshot numbering)
     {
         var allocation = Allocation(numbering);
-        return Cells().Select(c => new WindowDecl(allocation.IdAt(c.Column, c.Row), allocation.BaseId, Columns, S.LibraryWindowChannel,
+        return Cells().Select(c => new WindowDecl(allocation.IdAt(c.Column, c.Row), allocation.BaseId, Columns, LibraryStyle.LibraryWindowChannel,
             c.Centre, c.Right, c.Up, c.Width, c.Height)).ToArray();
     }
 
@@ -179,9 +179,9 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
                     yield return (o.Column + c, row, o.Face.At((a + b) * 0.5f, -o.Depth, (g + y1) * 0.5f), -o.Face.T, up, b - a, y1 - g);
                 }
         var sky = (LibraryRoof.SkylightBaseY(Plan) + LibraryRoof.SkylightApexY(Plan)) * 0.5f;
-        yield return (SkylightColumn, 5, new Vector3(Plan.Centre.X, sky, Plan.Centre.Y), Vector3.UnitX, -Vector3.UnitZ, S.SkylightAcross, S.SkylightAcross);
+        yield return (SkylightColumn, 5, new Vector3(Plan.Centre.X, sky, Plan.Centre.Y), Vector3.UnitX, -Vector3.UnitZ, LibraryStyle.SkylightAcross, LibraryStyle.SkylightAcross);
         foreach (var (face, hole, column) in _windowLayout.MechanicalWindows)
-            yield return (column, 5, face.At((hole.U0 + hole.U1) * 0.5f, -S.Reveal, (hole.Y0 + hole.Y1) * 0.5f), -face.T, up, hole.U1 - hole.U0, hole.Y1 - hole.Y0);
+            yield return (column, 5, face.At((hole.U0 + hole.U1) * 0.5f, -LibraryStyle.Reveal, (hole.Y0 + hole.Y1) * 0.5f), -face.T, up, hole.U1 - hole.U0, hole.Y1 - hole.Y0);
     }
 
     // ------------------------------------------------------------------ build
@@ -190,8 +190,8 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     {
         var mesh = build.Mesh;
         int? windowBase = build.WindowNumbering is { } numbering ? Allocation(numbering).BaseId : null;
-        var glass = build.Glass(S.WindowGlass, windowBase, Columns, S.LibraryWindowChannel);
-        var clear = build.Glass(S.ClearGlass, windowBase, Columns, S.LibraryWindowChannel);
+        var glass = build.Glass(S.WindowGlass, windowBase, Columns, LibraryStyle.LibraryWindowChannel);
+        var clear = build.Glass(S.ClearGlass, windowBase, Columns, LibraryStyle.LibraryWindowChannel);
         var landmark = new GeometrySink(build.Palette);
         Walls(mesh, lod);
         foreach (var o in Openings)
@@ -204,12 +204,12 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
         if (lod <= LodLevel.L1) LibraryRoof.Plant(Plan, build);
         if (lod <= LodLevel.L1 && CafeDoor is { } cafe)
             build.Parts.Add(new PlacedPart(new PartId(PartCatalog.DoorGlass),
-                new DoorParams(cafe.Width, cafe.Height, S.DoorDepth, S.DoorOpenDeg, S.DoorLeaves) { Foot = FootMat.Glass },
+                new DoorParams(cafe.Width, cafe.Height, EntranceStyle.DoorDepth, EntranceStyle.DoorOpenDeg, EntranceStyle.DoorLeaves) { Foot = FootMat.Glass },
                 OpeningPlacement.Frame(cafe.Origin, cafe.Outward)));
         if (lod <= LodLevel.L2 && Openings.FirstOrDefault(o => o.Kind == OpeningKind.Entry) is { } entry)
         {
             var (u0, u1, depth) = Apron(entry);
-            LibraryFacade.Box(mesh, S.Roof(S.LibraryTerrace), entry.Face, u0, u1, 0f, depth, Plan.PadY - S.Sink, entry.Hole.Y0 + ApronLift);
+            LibraryFacade.Box(mesh, S.Roof(LibraryStyle.LibraryTerrace), entry.Face, u0, u1, 0f, depth, Plan.PadY - S.Sink, entry.Hole.Y0 + ApronLift);
             CafeWalkMesh(mesh);
         }
         Mech(mesh, glass, lod);
@@ -218,7 +218,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
 
     private void Walls(GeometrySink mesh, LodLevel lod)
     {
-        var wall = S.Wall(S.LibraryWall);
+        var wall = S.Wall(LibraryStyle.LibraryWall);
         var byPiece = Openings.ToLookup(o => o.Face);
         foreach (var piece in Plan.Pieces)
         {
@@ -231,7 +231,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     /// <summary>Plinth band on every ground-standing piece and a string course at each inner floor line of the wings.</summary>
     private void Bands(GeometrySink mesh)
     {
-        var trim = S.Trim(S.LibraryTrim);
+        var trim = S.Trim(LibraryStyle.LibraryTrim);
         foreach (var piece in Plan.Pieces)
         {
             var f = Face.Of(piece);
@@ -242,17 +242,17 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
                 var u = -ext;
                 foreach (var hole in Openings.Where(o => o.Door is not null && o.Face == f && o.Hole.Y0 < Plan.PlinthTopY).Select(o => o.Hole).OrderBy(h => h.U0))
                 {
-                    LibraryFacade.Box(mesh, trim, f, u, hole.U0, 0f, S.PlinthProject, piece.Y0, Plan.PlinthTopY);
+                    LibraryFacade.Box(mesh, trim, f, u, hole.U0, 0f, LibraryStyle.PlinthProject, piece.Y0, Plan.PlinthTopY);
                     u = hole.U1;
                 }
-                LibraryFacade.Box(mesh, trim, f, u, piece.Length + ext, 0f, S.PlinthProject, piece.Y0, Plan.PlinthTopY);
+                LibraryFacade.Box(mesh, trim, f, u, piece.Length + ext, 0f, LibraryStyle.PlinthProject, piece.Y0, Plan.PlinthTopY);
             }
             if (piece.Block.Kind != BlockKind.Wing) continue;
-            for (var k = 1; k < S.LibraryStoreys.Length - 1; k++)
+            for (var k = 1; k < LibraryStyle.LibraryStoreys.Length - 1; k++)
             {
                 var y = Plan.StoreyY(k);
                 if (y < piece.Y0 + 0.3f || y > piece.Y1 - 0.3f) continue;
-                LibraryFacade.Box(mesh, trim, f, -ext, piece.Length + ext, 0f, S.CourseProject, y - S.CourseHeight * 0.5f, y + S.CourseHeight * 0.5f);
+                LibraryFacade.Box(mesh, trim, f, -ext, piece.Length + ext, 0f, LibraryStyle.CourseProject, y - LibraryStyle.CourseHeight * 0.5f, y + LibraryStyle.CourseHeight * 0.5f);
             }
         }
     }
@@ -260,8 +260,8 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     /// <summary>Parapets with copings on the podium, wings and towers; the canted eave on the set-back 5F.</summary>
     private void Tops(GeometrySink mesh)
     {
-        var wall = S.Wall(S.LibraryWall);
-        var trim = S.Trim(S.LibraryTrim);
+        var wall = S.Wall(LibraryStyle.LibraryWall);
+        var trim = S.Trim(LibraryStyle.LibraryTrim);
         foreach (var block in Plan.Blocks)
         {
             var tops = Plan.Pieces.Where(p => ReferenceEquals(p.Block, block) && p.Top).Select(p => (p.A, p.B)).ToList();
@@ -271,13 +271,13 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
             switch (block.Kind)
             {
                 case BlockKind.Setback:
-                    LibraryFacade.Sweep(mesh, S.Sheet(S.LibraryEave), chains, closed, LibraryFacade.Eave(), block.Y1);
+                    LibraryFacade.Sweep(mesh, S.Sheet(LibraryStyle.LibraryEave), chains, closed, LibraryFacade.Eave(), block.Y1);
                     break;
                 case BlockKind.Podium or BlockKind.Wing or BlockKind.Tower or BlockKind.FrontTower:
                     {
-                        var height = block.Kind is BlockKind.Podium or BlockKind.Wing ? S.ParapetHeight : S.TowerCrown;
-                        LibraryFacade.Sweep(mesh, wall, chains, closed, Body(height - S.CopingHeight, S.ParapetThick), block.Y1);
-                        LibraryFacade.Sweep(mesh, trim, chains, closed, Coping(S.ParapetThick), block.Y1 + height - S.CopingHeight);
+                        var height = block.Kind is BlockKind.Podium or BlockKind.Wing ? LibraryStyle.ParapetHeight : LibraryStyle.TowerCrown;
+                        LibraryFacade.Sweep(mesh, wall, chains, closed, Body(height - LibraryStyle.CopingHeight, LibraryStyle.ParapetThick), block.Y1);
+                        LibraryFacade.Sweep(mesh, trim, chains, closed, Coping(LibraryStyle.ParapetThick), block.Y1 + height - LibraryStyle.CopingHeight);
                         break;
                     }
                 case BlockKind.Core:
@@ -294,7 +294,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
 
     private static SweepProfile Coping(float thick)
     {
-        float t = thick, c = S.CopingHeight, o = S.CopingOverhang, b = S.CopingBevel;
+        float t = thick, c = LibraryStyle.CopingHeight, o = LibraryStyle.CopingOverhang, b = LibraryStyle.CopingBevel;
         return new([new(-t - o, 0), new(o, 0), new(o, c - b), new(o - b, c), new(-t - o + b, c), new(-t - o, c - b)]);
     }
 
@@ -321,7 +321,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     {
         foreach (var block in Plan.Blocks)
         {
-            var paint = block.Kind == BlockKind.Podium ? S.Roof(S.LibraryTerrace) : S.Roof(S.LibraryRoof);
+            var paint = block.Kind == BlockKind.Podium ? S.Roof(LibraryStyle.LibraryTerrace) : S.Roof(LibraryStyle.LibraryRoof);
             IReadOnlyList<IReadOnlyList<Vector2>> holes = [];
             if (block.Kind == BlockKind.Core)
             {
@@ -339,18 +339,18 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     /// <summary>The raised mechanical box north of the skylight: walls with two rows of small windows, coping, roof.</summary>
     private void Mech(GeometrySink mesh, GlassSink glass, LodLevel lod)
     {
-        var wall = S.Wall(S.LibraryWall);
-        float y0 = Plan.RoofY - 0.02f, y1 = Plan.RoofY + S.MechHeight;
+        var wall = S.Wall(LibraryStyle.LibraryWall);
+        float y0 = Plan.RoofY - 0.02f, y1 = Plan.RoofY + LibraryStyle.MechHeight;
         var faces = LibraryRoof.MechFaces(Plan);
         var windows = lod <= LodLevel.L2
-            ? _windowLayout.MechanicalWindows.Select(m => new Opening(m.Face, OpeningKind.Mech, m.Hole, 1, [(m.Hole.Y0, m.Hole.Y1, 5)], m.Column, S.CardMech)).ToArray()
+            ? _windowLayout.MechanicalWindows.Select(m => new Opening(m.Face, OpeningKind.Mech, m.Hole, 1, [(m.Hole.Y0, m.Hole.Y1, 5)], m.Column, LibraryStyle.CardMech)).ToArray()
             : [];
         foreach (var f in faces)
             LibraryFacade.Wall(mesh, wall, f, 0f, f.Length, y0, y1, lod <= LodLevel.L1 ? windows.Where(o => o.Face == f).Select(o => o.Hole).ToArray() : []);
         foreach (var o in windows) LibraryFacade.Window(mesh, glass, o, lod);
         var ring = new[] { faces[0].A, faces[0].A + faces[0].Along * faces[0].Length, faces[1].A, faces[1].A + faces[1].Along * faces[1].Length };
-        LibraryFacade.Sweep(mesh, S.Trim(S.LibraryTrim), [ring], [true], Coping(0.25f), y1);
-        mesh.Quad(S.Roof(S.LibraryRoof), new(ring[0].X, y1, ring[0].Y), new(ring[1].X, y1, ring[1].Y), new(ring[2].X, y1, ring[2].Y), new(ring[3].X, y1, ring[3].Y), Vector3.UnitY);
+        LibraryFacade.Sweep(mesh, S.Trim(LibraryStyle.LibraryTrim), [ring], [true], Coping(0.25f), y1);
+        mesh.Quad(S.Roof(LibraryStyle.LibraryRoof), new(ring[0].X, y1, ring[0].Y), new(ring[1].X, y1, ring[1].Y), new(ring[2].X, y1, ring[2].Y), new(ring[3].X, y1, ring[3].Y), Vector3.UnitY);
     }
 
     // ------------------------------------------------------------------ collision
@@ -393,7 +393,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
                 if (CafeWalk is { } w && doors.Any(o => o.Kind == OpeningKind.Entry))
                 {
                     var along = Vector2.Normalize(w.B - w.A);
-                    var side = new Vector2(-along.Y, along.X) * (S.CafeWalkWidth * 0.5f);
+                    var side = new Vector2(-along.Y, along.X) * (LibraryStyle.CafeWalkWidth * 0.5f);
                     var mid = (w.A + w.B) * 0.5f;
                     list.Add(new SlabCollider([w.A - side, w.B - side, w.B + side, w.A + side], _ground(mid.X, mid.Y) + GroundLevels.Paving, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
                 }
@@ -414,7 +414,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
 
     /// <summary>The granite apron in front of the cafe door bay: its span along the face and its depth out from it.</summary>
     private static (float U0, float U1, float Depth) Apron(Opening entry) =>
-        (entry.Hole.U0 - S.CafeApronMargin, entry.Hole.U1 + S.CafeApronMargin, S.CafeApronDepth);
+        (entry.Hole.U0 - LibraryStyle.CafeApronMargin, entry.Hole.U1 + LibraryStyle.CafeApronMargin, LibraryStyle.CafeApronDepth);
 
     /// <summary>The segment a → b of a face line without the holes of its door bays.</summary>
     private static IEnumerable<(Vector2 A, Vector2 B)> Open(Face face, Vector2 a, Vector2 b, IReadOnlyList<Opening> doors)
@@ -438,7 +438,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
         var h = o.Hole;
         float s = -o.Depth, y = h.Y0, doorTop = o.Door!.Value.Top;
         var (d0, d1) = DoorSpan(o);
-        var leaf = (d1 - d0) / S.DoorLeaves;
+        var leaf = (d1 - d0) / EntranceStyle.DoorLeaves;
         Vector2 P(float u, float at) { var p = f.At(u, at, 0f); return new(p.X, p.Z); }
         yield return new SlabCollider([P(h.U0, 0f), P(h.U1, 0f), P(h.U1, s), P(h.U0, s)], y, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving };
         yield return Wall(P(h.U0, 0f), P(h.U0, s), y, top);

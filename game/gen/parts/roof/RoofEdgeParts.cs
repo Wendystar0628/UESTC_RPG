@@ -39,13 +39,13 @@ public sealed class ParapetCapPart : IPartDef<TrimParams>
         var material = PartMaterials.Trim(p.Material);
         var half = p.Depth * 0.5f;
         var builder = new PartBuilder();
-        builder.Add(PartGeometryKernel.Sweep(PartShapes.BevelRect(p.Depth, p.Height, near ? RoofStyle.CopingBevel : 0, 0, 0), path, material, closed));
+        builder.Add(PartSweeps.Sweep(PartShapes.BevelRect(p.Depth, p.Height, near ? RoofStyle.CopingBevel : 0, 0, 0), path, material, closed));
         if (near)
         {
             // Drip lip under the outer edge only: deep enough to cast a clean line on the wall below (ART-MODELING).
             // It sits 2 mm behind the outer face and runs up into the slab, so no edge is shared with the chamfer.
             var d = RoofStyle.CopingDripDepth; var w = Math.Min(RoofStyle.CopingDripWidth, half * 0.4f);
-            builder.Add(PartGeometryKernel.Sweep(PartShapes.Rect(half - w, half - 0.002f, -d, RoofStyle.CopingBevel + 0.01f), path, material, closed));
+            builder.Add(PartSweeps.Sweep(PartShapes.Rect(half - w, half - 0.002f, -d, RoofStyle.CopingBevel + 0.01f), path, material, closed));
         }
         return builder.Finish(bounds ?? PathBounds(path, half, -RoofStyle.CopingDripDepth, p.Height));
     }
@@ -96,7 +96,7 @@ public sealed class LightningStripPart : IPartDef<TrimParams>
         var near = lod == LodLevel.L0;
         var metal = PartMaterials.Metal(RoofStyle.Steel);
         var builder = new PartBuilder();
-        builder.Add(PartGeometryKernel.Sweep(PartShapes.Circle(rod * 0.5f, near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar),
+        builder.Add(PartSweeps.Sweep(PartShapes.Circle(rod * 0.5f, near ? RoofStyle.RoundSegments : RoofStyle.RoundSegmentsFar),
             path, metal, closed, height - rod * 0.5f), VertexFlag.NoShadow);
         if (near)
         {
@@ -171,7 +171,7 @@ public sealed class DownpipePart : IPartDef<ColumnParams>
         var builder = new PartBuilder();
         // Pipe and shoe as one mitred sweep, drawn from the top down in a local frame (local X = down, local Z = world Z).
         Vector2[] path = [new(0, 0), new(top - rise, 0), new(top - (r + 0.01f), -RoofStyle.DownpipeShoeKick)];
-        builder.Add(PartGeometryKernel.Sweep(PartShapes.Circle(r, segments), path, metal), Xf.XDown.Then(Xf.Move(0, top, 0)));
+        builder.Add(PartSweeps.Sweep(PartShapes.Circle(r, segments), path, metal), Xf.XDown.Then(Xf.Move(0, top, 0)));
         // Rain hopper against the wall (condensate drains have none).
         var hw = RoofStyle.DownpipeHopper * 0.5f;
         if (hopper) builder.AddBox(new(-hw, p.Height - hopperH, wall - hopperD), new(hw, p.Height, wall), near ? 0.015f : 0, metal);

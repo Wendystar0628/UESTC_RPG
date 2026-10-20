@@ -29,7 +29,7 @@ public sealed class HydrantPart() : MepPart<EquipmentParams>(new(700, 120))
         var face = -hz + Pull;   // frame front; the pull stands proud of it
         b.AddBox(new(-hx + 0.006f, 0.006f, face + fd - 0.003f), new(hx - 0.006f, p.Height - 0.006f, hz), 0, frame, f);
         Vector2[] opening = [new(-hx + fw, fw), new(hx - fw, fw), new(hx - fw, p.Height - fw), new(-hx + fw, p.Height - fw)];
-        b.Add(PartGeometryKernel.WallPanel(p.Width, p.Height, fd, [opening], frame), Xf.Move(0, 0, face + fd * 0.5f), f);
+        b.Add(PartSolids.WallPanel(p.Width, p.Height, fd, [opening], frame), Xf.Move(0, 0, face + fd * 0.5f), f);
         // Door leaf in the opening, set back from the frame front.
         var pane = face + MepStyle.HydrantGlassRecess;
         Vector3 d0 = new(-hx + fw - 0.004f, fw - 0.004f, pane), d1 = new(hx - fw + 0.004f, p.Height - fw + 0.004f, pane + 0.012f);

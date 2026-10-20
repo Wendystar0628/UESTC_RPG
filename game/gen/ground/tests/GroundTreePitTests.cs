@@ -105,7 +105,7 @@ public sealed class GroundTreePitTests
                 // A flat triangle (a top, not a vertical face) is never at the paving level: nothing is laid over a pit.
                 var flat = MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * b + 1]) < TestTolerance.Position && MathF.Abs(mesh.Position[3 * a + 1] - mesh.Position[3 * c + 1]) < TestTolerance.Position;
                 if (!flat) continue;
-                AssertThat(Math.Abs(cy - Section.PavingY) > Campus.Gen.Geometry.PlanGeometry.Tolerance).OverrideFailureMessage($"A triangle at paving level lies over a pit at ({cx}, {cz}).").IsTrue();
+                AssertThat(Math.Abs(cy - Section.PavingY) > Campus.Gen.Geometry.QuantizedPlan.Tolerance).OverrideFailureMessage($"A triangle at paving level lies over a pit at ({cx}, {cz}).").IsTrue();
                 if (color == earth) tops.Add(cy);
             }
         AssertThat(checkedTriangles > 20).OverrideFailureMessage($"The pits are meshed, got {checkedTriangles} triangles inside them.").IsTrue();
@@ -289,10 +289,10 @@ public sealed class GroundTreePitTests
     private static float HeightAt(GroundMesher mesher, TileField field, float x, float z) =>
         mesher.HeightAt((int)MathF.Round((x - field.X0) / field.Cell), (int)MathF.Round((z - field.Z0) / field.Cell));
 
-    private static List<RoadMarkings.Quad> Quads(GroundLayout layout)
+    private static List<GroundMarkings.Quad> Quads(GroundLayout layout)
     {
         var markings = layout.Markings(Section);
-        var quads = new List<RoadMarkings.Quad>();
+        var quads = new List<GroundMarkings.Quad>();
         for (var z = -2; z <= 2; z++)
             for (var x = -2; x <= 2; x++) quads.AddRange(markings.In(x, z));
         return quads;

@@ -19,10 +19,10 @@ public static class PartGallery
         return Array.AsReadOnly<GalleryExample>(
         [
             new("beveled-box", "单段倒角与平面法线", new BoxPart().Lods[LodLevel.L0](new(2, 2, 2) { Bevel = 0.12f, Material = material })),
-            new("concave-extrusion", "凹多边形挤出", PartGeometryKernel.Extrude(new(concave), 1.2f, material)),
-            new("window-opening", "有厚度的开洞墙板", PartGeometryKernel.WallPanel(3.6f, 3, 0.35f, [window], material)),
-            new("mitered-trim", "转角斜接与倒角扫掠", PartGeometryKernel.Sweep(PartStyleDefaults.CorniceProfile(), [new(-2, 0), new(1, 0), new(1, 2)], trimMaterial)),
-            new("beveled-extrusion", "多边形上下沿倒角", PartGeometryKernel.BeveledExtrude([new(-1, -1), new(1, -1), new(1.4f, 0), new(1, 1), new(-1, 1)], 1, 0.12f, material)),
+            new("concave-extrusion", "凹多边形挤出", PartSolids.Extrude(new(concave), 1.2f, material)),
+            new("window-opening", "有厚度的开洞墙板", PartSolids.WallPanel(3.6f, 3, 0.35f, [window], material)),
+            new("mitered-trim", "转角斜接与倒角扫掠", PartSweeps.Sweep(PartStyleDefaults.CorniceProfile(), [new(-2, 0), new(1, 0), new(1, 2)], trimMaterial)),
+            new("beveled-extrusion", "多边形上下沿倒角", PartSolids.BeveledExtrude([new(-1, -1), new(1, -1), new(1.4f, 0), new(1, 1), new(-1, 1)], 1, 0.12f, material)),
         ]);
     }
 

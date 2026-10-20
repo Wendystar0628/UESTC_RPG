@@ -13,8 +13,8 @@ internal sealed class TerrainRegion
 
     public TerrainRegion(IEnumerable<PolygonRings> polygons)
     {
-        Polygons = polygons.Select(p => new PolygonRings(PlanGeometry.OpenRing(p.Outer),
-            p.Holes.Select(h => PlanGeometry.OpenRing(h, false)).ToArray())).ToArray();
+        Polygons = polygons.Select(p => new PolygonRings(PlanRings.OpenRing(p.Outer),
+            p.Holes.Select(h => PlanRings.OpenRing(h, false)).ToArray())).ToArray();
         if (Polygons.Length == 0) throw new ArgumentException("Terrain region has no area.");
         foreach (var polygon in Polygons) ValidatePolygon(polygon);
         _indices = Polygons.Select(p => (new TerrainRingIndex(p.Outer), p.Holes.Select(h => new TerrainRingIndex(h)).ToArray())).ToArray();

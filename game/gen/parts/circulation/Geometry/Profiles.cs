@@ -38,5 +38,5 @@ internal static class Profiles
 
     /// <summary>Straight horizontal tube or bar along a kernel path (X/Z plane) at height baseY.</summary>
     internal static PartGeometry Bar(SweepProfile profile, IReadOnlyList<Vector2> xzPath, ToonSpec material, float baseY) =>
-        PartGeometryKernel.Sweep(profile, xzPath, material, baseY: baseY);
+        PartSweeps.Sweep(profile, xzPath, material, baseY: baseY);
 }

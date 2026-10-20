@@ -88,7 +88,7 @@ internal static class TerrainDryChannels
             {
                 case TerrainUnderpassCrossing underpass:
                 {
-                    var candidates = path.Intersections(road.Path, PlanGeometry.Tolerance).OrderBy(p => (p.X - underpass.At.X) * (p.X - underpass.At.X)
+                    var candidates = path.Intersections(road.Path, QuantizedPlan.Tolerance).OrderBy(p => (p.X - underpass.At.X) * (p.X - underpass.At.X)
                         + (p.Z - underpass.At.Y) * (p.Z - underpass.At.Y)).ThenBy(p => p.Station).ToArray();
                     var dx = candidates.Length == 0 ? double.PositiveInfinity : candidates[0].X - underpass.At.X;
                     var dz = candidates.Length == 0 ? double.PositiveInfinity : candidates[0].Z - underpass.At.Y;

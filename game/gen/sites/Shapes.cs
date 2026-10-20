@@ -141,7 +141,7 @@ public static class Shapes
 
     /// <summary>A ring wall of rectangular section swept round a circle (basin rims, kerbs), base at y = 0.</summary>
     public static PartGeometry Ring(Vector2 centre, float radius, float width, float height, int segments, ToonSpec material, float bevel = 0.02f) =>
-        PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(width, height, bevel), Circle(centre, radius, segments), material, closed: true);
+        PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(width, height, bevel), Circle(centre, radius, segments), material, closed: true);
 
     private static void Cap(Writer m, float r, float y, int segments, float sign)
     {

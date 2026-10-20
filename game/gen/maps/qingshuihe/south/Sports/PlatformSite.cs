@@ -83,7 +83,7 @@ public sealed class PlatformSite : ZoneSite
     internal static Plan PlanOf(IWorldModel world)
     {
         var p = LayoutOf(world);
-        var centre = PlanGeometry.Centroid(p.Decks[0], meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(p.Decks[0], meanIfDegenerate: true);
         return p with { Y = world.Terrain.HeightAt(centre.X, centre.Y) };
     }
 
@@ -91,7 +91,7 @@ public sealed class PlatformSite : ZoneSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Platform {Feature} is missing from the world model.");
-        var deck = PlanGeometry.OpenRing(feature.Contour(Part)).ToArray();
+        var deck = PlanRings.OpenRing(feature.Contour(Part)).ToArray();
         var decks = new List<Vector2[]> { deck };
         var rise = feature.Height ?? throw new InvalidOperationException($"Platform {Feature} has no height.");
 
@@ -107,7 +107,7 @@ public sealed class PlatformSite : ZoneSite
                 var d = Vector2.Normalize(b - a);
                 var out_ = new Vector2(d.Y, -d.X);
                 var probe = (a + b) * 0.5f + out_ * P.AbutProbe;
-                edges.Add(new(a, b, out_, !closed.Any(r => PlanGeometry.InsideByCrossings(r, probe))));
+                edges.Add(new(a, b, out_, !closed.Any(r => PlanRings.InsideByCrossings(r, probe))));
             }
 
         var stairs = new List<Stair>();
@@ -119,7 +119,7 @@ public sealed class PlatformSite : ZoneSite
 
         stairs.Add(new(new(northTop, new(down.Y, -down.X)), P.NorthStairWidth));
 
-        var core = PlanGeometry.OpenRing(world.Feature(SouthIds.PlatformCore).Outer()).ToArray();
+        var core = PlanRings.OpenRing(world.Feature(SouthIds.PlatformCore).Outer()).ToArray();
         var bays = new List<Bay>();
         for (var i = 0; i < core.Length; i++)
         {
@@ -143,7 +143,7 @@ public sealed class PlatformSite : ZoneSite
             for (var k = 0; k <= n; k++)
             {
                 var c = Vector2.Lerp(e.A, e.B, (P.ColumnEnd + (e.Length - 2f * P.ColumnEnd) * k / n) / e.Length) - e.Out * P.ColumnInset;
-                if (PlanGeometry.InsideByCrossings(core, c) || !decks.Any(r => PlanGeometry.InsideByCrossings(r, c)) || columns.Any(o => Vector2.Distance(o, c) < 3f)) continue;
+                if (PlanRings.InsideByCrossings(core, c) || !decks.Any(r => PlanRings.InsideByCrossings(r, c)) || columns.Any(o => Vector2.Distance(o, c) < 3f)) continue;
                 if (roads.Any(r => MathF.Sqrt(PlanLines.PolylineDistanceSquared(r.Line, c)) < r.HalfWidth + P.ColumnRadius + 0.3f)) continue;
                 if (stairs.Any(s => InStair(s, c, 1.0f))) continue;
                 columns.Add(c);
@@ -232,27 +232,27 @@ public sealed class PlatformSite : ZoneSite
         foreach (var ring in p.Decks)
         {
             if (!b.Includes(SiteRanges.Bounds(ring))) continue;
-            b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), P.Slab - 0.15f, L.White, p.Soffit), Matrix4x4.Identity);
-            b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), 0.15f, L.DeckPaving, p.Top - 0.15f), Matrix4x4.Identity);
+            b.Add(PartSolids.Extrude(new PolygonRings(ring), P.Slab - 0.15f, L.White, p.Soffit), Matrix4x4.Identity);
+            b.Add(PartSolids.Extrude(new PolygonRings(ring), 0.15f, L.DeckPaving, p.Top - 0.15f), Matrix4x4.Identity);
         }
         var bevel = b.Detail == SiteDetail.Full ? 0.03f : 0;
         foreach (var e in p.Edges.Where(e => e.Free))
-            if (b.Includes(EdgeRange(e))) b.Add(PartGeometryKernel.BeveledBox(e.Length + 0.24f, P.Fascia, 0.4f, bevel, L.White), e.Frame.At(0, p.Top - P.Fascia + 0.02f, P.FasciaProud - 0.2f));
+            if (b.Includes(EdgeRange(e))) b.Add(PartSolids.BeveledBox(e.Length + 0.24f, P.Fascia, 0.4f, bevel, L.White), e.Frame.At(0, p.Top - P.Fascia + 0.02f, P.FasciaProud - 0.2f));
     }
 
     /// <summary>The closed shop block under the deck, up to the soffit.</summary>
     private static void Core(SiteBuilder b, Plan p) =>
-        b.Add(PartGeometryKernel.Extrude(new PolygonRings(p.Core), p.Soffit - p.Y + 0.05f, L.Sand, p.Y - 0.1f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(new PolygonRings(p.Core), p.Soffit - p.Y + 0.05f, L.Sand, p.Y - 0.1f), Matrix4x4.Identity);
 
     private static void Column(SiteBuilder b, Plan p, Vector2 c)
     {
         var floor = p.Y + SouthTune.Plaza.PavingTop;
         var full = b.Detail == SiteDetail.Full;
         var at = Matrix4x4.CreateTranslation(c.X, 0, c.Y);
-        b.Add(PartGeometryKernel.BeveledBox(1.0f, 0.4f, 1.0f, full ? 0.03f : 0, L.Granite), at * Matrix4x4.CreateTranslation(0, floor - 0.1f, 0));
+        b.Add(PartSolids.BeveledBox(1.0f, 0.4f, 1.0f, full ? 0.03f : 0, L.Granite), at * Matrix4x4.CreateTranslation(0, floor - 0.1f, 0));
         b.Add(Shapes.Shaft(P.ColumnRadius, P.ColumnRadius * 0.94f, p.Soffit - floor - 0.6f, full ? 20 : 12, L.DomeWhite),
             at * Matrix4x4.CreateTranslation(0, floor + 0.3f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(0.95f, 0.32f, 0.95f, full ? 0.03f : 0, L.StoneTrim), at * Matrix4x4.CreateTranslation(0, p.Soffit - 0.32f, 0));
+        b.Add(PartSolids.BeveledBox(0.95f, 0.32f, 0.95f, full ? 0.03f : 0, L.StoneTrim), at * Matrix4x4.CreateTranslation(0, p.Soffit - 0.32f, 0));
     }
 
     /// <summary>
@@ -351,10 +351,10 @@ public sealed class PlatformSite : ZoneSite
         float d = FlightDepth, half = p.Rise * 0.5f;
         var full = b.Detail == SiteDetail.Full;
         b.Place(PartCatalog.Steps, flight, f.AtReversed(0, p.Y + half, d * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(s.Width, half, d + P.StairLanding, full ? 0.03f : 0, L.Granite), f.At(0, p.Y - 0.1f, (d + P.StairLanding) * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(s.Width, 0.1f, P.StairLanding, full ? 0.02f : 0, L.Granite), f.At(0, p.Y + half - 0.1f, d + P.StairLanding * 0.5f));
+        b.Add(PartSolids.BeveledBox(s.Width, half, d + P.StairLanding, full ? 0.03f : 0, L.Granite), f.At(0, p.Y - 0.1f, (d + P.StairLanding) * 0.5f));
+        b.Add(PartSolids.BeveledBox(s.Width, 0.1f, P.StairLanding, full ? 0.02f : 0, L.Granite), f.At(0, p.Y + half - 0.1f, d + P.StairLanding * 0.5f));
         foreach (var x in new[] { -s.Width * 0.5f + 0.15f, s.Width * 0.5f - 0.15f })
-            b.Add(PartGeometryKernel.BeveledBox(0.3f, half + 1.0f, P.StairLanding, full ? 0.02f : 0, L.StoneTrim), f.At(x, p.Y - 0.1f, d + P.StairLanding * 0.5f));
+            b.Add(PartSolids.BeveledBox(0.3f, half + 1.0f, P.StairLanding, full ? 0.02f : 0, L.StoneTrim), f.At(x, p.Y - 0.1f, d + P.StairLanding * 0.5f));
         b.Place(PartCatalog.Steps, flight, f.AtReversed(0, p.Y, d + P.StairLanding + d * 0.5f));
     }
 
@@ -384,7 +384,7 @@ public sealed class PlatformSite : ZoneSite
                         if (s1 - s0 < 1f) continue;
                         var mid = (s0 + s1) * 0.5f;
                         var at = turned ? new PlanFrame(new(mid, line), new(1, 0)) : new PlanFrame(new(line, mid), new(0, 1));
-                        b.Add(PartGeometryKernel.BeveledBox(s1 - s0, 0.012f, P.JointWidth, 0, L.DeckJoint), at.At(0, p.Top, 0));
+                        b.Add(PartSolids.BeveledBox(s1 - s0, 0.012f, P.JointWidth, 0, L.DeckJoint), at.At(0, p.Top, 0));
                     }
                 }
             }

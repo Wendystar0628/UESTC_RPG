@@ -62,10 +62,10 @@ public sealed class SouthSiteTests
         var door = world.Interiors.Get(new(Xuanbang.XuanbangSite.Feature))!.Entrances.Single(e => e.Id == "xb.clock");
         var outside = new Vector2(door.Outside.X, door.Outside.Z);
         var court = world.Features.Values.Single(feature => feature.Kind.Value == "road" && feature.TryText("highway") == "pedestrian"
-            && feature.Geometry is PolygonGeometry area && PlanGeometry.Contains(area.Rings, outside));
+            && feature.Geometry is PolygonGeometry area && PlanRings.Contains(area.Rings, outside));
         var walk = world.Features.Values.Single(feature => feature.Kind.Value == "road"
             && feature.TryText("highway") == "footway" && feature.Geometry is PolylineGeometry path
-            && PlanGeometry.Contains(((PolygonGeometry)court.Geometry).Rings, path.Line.Points[0]));
+            && PlanRings.Contains(((PolygonGeometry)court.Geometry).Rings, path.Line.Points[0]));
         AssertThat(court.Kind.Value == "road" && court.TryText("highway") == "pedestrian" && walk.TryText("highway") == "footway").OverrideFailureMessage("plaza paving and a footway, drawn by WP-15").IsTrue();
         var yaw = door.YawDeg * MathF.PI / 180f;
         var outward = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
@@ -79,7 +79,7 @@ public sealed class SouthSiteTests
         AssertThat(MathF.Abs(v.Min()) < 0.5f && v.Max() >= 2f).OverrideFailureMessage($"forecourt from the door face ({v.Min():0.00}) out to {v.Max():0.0} m").IsTrue();
         var line = ((PolylineGeometry)walk.Geometry).Line.Points;
         var parking = (PolygonGeometry)world.Features[new(SouthIds.ClockParking.Entity)].Geometry;
-        AssertThat(PlanGeometry.Contains(ring, line[0]) && PlanGeometry.Contains(parking.Rings, line[^1])).OverrideFailureMessage("the walk runs from the forecourt onto the parking by the road").IsTrue();
+        AssertThat(PlanRings.Contains(ring, line[0]) && PlanRings.Contains(parking.Rings, line[^1])).OverrideFailureMessage("the walk runs from the forecourt onto the parking by the road").IsTrue();
         AssertThat(SouthTune.Xuanbang.Threshold == GroundLevels.Paving).OverrideFailureMessage("the threshold is level with WP-15's paving top").IsTrue();
     }
 
@@ -95,19 +95,19 @@ public sealed class SouthSiteTests
         var ring = ((PolygonGeometry)plaza.Geometry).Rings;
         // WP-13's kiosk (2 × 0.8 m) on the A01 anchor (WP-48c's world record): on the paving, at least 3 m from every carriageway edge.
         var a01 = AtlasAnchor(world, "A01");
-        var kioskSpot = PlanGeometry.Centroid(((PolygonGeometry)a01.Geometry).Rings.Outer, meanIfDegenerate: true);
+        var kioskSpot = PlanPolygons.Centroid(((PolygonGeometry)a01.Geometry).Rings.Outer, meanIfDegenerate: true);
         var yaw = a01.Number("yawDeg") * MathF.PI / 180f;
         var face = new Vector2(MathF.Sin(yaw), -MathF.Cos(yaw));
         var side = new Vector2(-face.Y, face.X);
         var corners = new[] { -1f, 1f }.SelectMany(u => new[] { -1f, 1f }.Select(v => kioskSpot + face * (0.4f * u) + side * (1.0f * v))).ToArray();
-        AssertThat(corners.All(p => PlanGeometry.Contains(ring, p))).OverrideFailureMessage("the kiosk stands on the plaza").IsTrue();
+        AssertThat(corners.All(p => PlanRings.Contains(ring, p))).OverrideFailureMessage("the kiosk stands on the plaza").IsTrue();
         var lanes = world.Network.Roads.Where(r => r.Props.TryText("highway") is "residential" or "service" or "tertiary" or "secondary" or "unclassified").ToArray();
         var clearance = corners.Min(p => lanes.Min(r => MathF.Sqrt(PlanLines.PolylineDistanceSquared(r.Line.Points, p)) - r.Width * 0.5f));
         AssertThat(clearance >= 3f).OverrideFailureMessage($"the kiosk stands {clearance:0.00} m from the nearest carriageway edge").IsTrue();
         // The planter and benches stay on the paving and clear of the kiosk and the space in front of its panel.
         var items = ZoneTestCells.Items(new SouthModule(), Context(), LodLevel.L0).Where(i => i.Part?.Part.Value is PartCatalog.Bench or PartCatalog.Planter).ToArray();
         AssertThat(items.Length > 0).OverrideFailureMessage($"the plaza carries its planter and benches ({items.Length})").IsTrue();
-        AssertThat(items.All(i => PlanGeometry.Contains(ring, i.Anchor) && Vector2.Distance(i.Anchor, kioskSpot) > 6f)).OverrideFailureMessage("furniture on the plaza, clear of the kiosk").IsTrue();
+        AssertThat(items.All(i => PlanRings.Contains(ring, i.Anchor) && Vector2.Distance(i.Anchor, kioskSpot) > 6f)).OverrideFailureMessage("furniture on the plaza, clear of the kiosk").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -137,7 +137,7 @@ public sealed class SouthSiteTests
         var f = Liren.LirenSite.Rings(ctx.World);
         var walls = module.Tiles(ctx).SelectMany(t => module.Collide(ctx, t)).Where(c => c.Tag is SurfaceTag.Wall or SurfaceTag.DoorClosed).ToArray();
         var open = GridFacade.Edges(f.Bridge).Select(e => e.Info).First(e => Liren.LirenSite.Dress(e, f.BridgeNeighbours).Kind != EdgeKind.Hidden);
-        var centre = PlanGeometry.Centroid(f.Bridge, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(f.Bridge, meanIfDegenerate: true);
         for (var t = -14f; t <= 14f; t += 0.25f)
         {
             var p = centre + open.Frame.W * t;
@@ -187,13 +187,13 @@ public sealed class SouthSiteTests
         // A06's kiosk (2 × 0.8 m, WP-13's) on the deck between the gym and the natatorium, its panel toward the stadium: every corner
         // on the deck and at least 3 m from the deck's edges and the parapets' inner faces.
         var stadium = Sports.GrandstandSite.PlanOf(ctx.World).Centre;
-        var anchor = PlanGeometry.Centroid(a06.Outer(), meanIfDegenerate: true);
+        var anchor = PlanPolygons.Centroid(a06.Outer(), meanIfDegenerate: true);
         var yaw = a06.Number("yawDeg");
         var a = yaw * MathF.PI / 180f;
         var face = new Vector2(MathF.Sin(a), -MathF.Cos(a));
         var side = new Vector2(-face.Y, face.X);
         var corners = new[] { -1f, 1f }.SelectMany(u => new[] { -1f, 1f }.Select(v => anchor + face * (0.4f * u) + side * (1.0f * v))).ToArray();
-        AssertThat(corners.All(c => PlanGeometry.InsideByCrossings(p.Decks[0], c))).OverrideFailureMessage("A06 stands on the deck").IsTrue();
+        AssertThat(corners.All(c => PlanRings.InsideByCrossings(p.Decks[0], c))).OverrideFailureMessage("A06 stands on the deck").IsTrue();
         var parapet = SouthTune.Platform.ParapetInset + SouthTune.Platform.ParapetDepth * 0.5f;
         var clearance = corners.Min(c => p.Edges.Min(e => MathF.Sqrt(PlanLines.SegmentDistanceSquared(c, e.A, e.B)) - (e.Free ? parapet : 0f)));
         AssertThat(clearance >= 3f).OverrideFailureMessage($"A06 keeps {clearance:0.00} m from the deck edges and parapets").IsTrue();

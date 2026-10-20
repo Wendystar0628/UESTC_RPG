@@ -33,12 +33,12 @@ public sealed class West19cTests
         var path = BoardwalkSite.Path(world);
         // Both mouths meet paving: the A10 plaza in the south, the footway at the 西门车行桥's east head in the north.
         var plaza = ((PolygonGeometry)world.Features[new(WestIds.A10Plaza)].Geometry).Rings.Outer;
-        AssertThat(PlanGeometry.InsideByCrossings(plaza, path.Points[0]) || Distance([.. plaza, plaza[0]], path.Points[0]) < 1.5f).OverrideFailureMessage("the south mouth lands on the A10 plaza").IsTrue();
+        AssertThat(PlanRings.InsideByCrossings(plaza, path.Points[0]) || Distance([.. plaza, plaza[0]], path.Points[0]) < 1.5f).OverrideFailureMessage("the south mouth lands on the A10 plaza").IsTrue();
         var footway = Line(world, WestIds.Way552816780.Source);
         AssertThat(footway.Any(p => Vector2.Distance(p, path.Points[^1]) < 1f)).OverrideFailureMessage("the north mouth lands on the bridgehead footway's end").IsTrue();
         // Inside the low ground (except the last few metres climbing out to the north footway).
         for (var s = 4f; s < path.Length - 8f; s += 2f)
-            AssertThat(PlanGeometry.InsideByCrossings(((TerrainPlatformOp)world.TerrainOperations[WestIds.WetlandLow]).Rings.Outer, path.At(s).P)).OverrideFailureMessage($"boardwalk station {s:0} lies in the wetland low ground").IsTrue();
+            AssertThat(PlanRings.InsideByCrossings(((TerrainPlatformOp)world.TerrainOperations[WestIds.WetlandLow]).Rings.Outer, path.At(s).P)).OverrideFailureMessage($"boardwalk station {s:0} lies in the wetland low ground").IsTrue();
         // Clear of WP-28's bridges (r005: all bridges are WP-28's) and of the stream except at the beach turn.
         foreach (var id in new[] { WestIds.Way692240860.Source, WestIds.Way552816781.Source })
         {

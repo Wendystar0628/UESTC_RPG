@@ -178,8 +178,8 @@ public static class GridFacade
         // Glass core (stone at the coarse levels, where window bands no longer read) and the roof slab inside the parapet;
         // courtyard holes stay open.
         var footprint = plan;
-        b.Add(PartGeometryKernel.Extrude(footprint, s.WallTop + 0.1f, coarse ? s.Wall : s.Glass, y0 - 0.1f), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.Extrude(footprint, 0.25f, s.Roof, y0 + s.WallTop + 0.1f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(footprint, s.WallTop + 0.1f, coarse ? s.Wall : s.Glass, y0 - 0.1f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(footprint, 0.25f, s.Roof, y0 + s.WallTop + 0.1f), Matrix4x4.Identity);
         if (numbering is not null && WindowNumbers.Allocation(b.Context, numbering.Feature, numbering.Key) is { } allocation)
             Panes(b, layout, y0, s, numbering, allocation);
         foreach (var lr in layout.Runs)
@@ -327,7 +327,7 @@ public static class GridFacade
     public static IEnumerable<(GridEdgeInfo Info, bool Convex0, bool Convex1)> Edges(IReadOnlyList<Vector2> ring, bool hole = false)
     {
         var count = ring.Count;
-        var ccw = PlanGeometry.SignedArea(ring) > 0 != hole;
+        var ccw = PlanRings.SignedArea(ring) > 0 != hole;
         bool Convex(int i)
         {
             Vector2 p = ring[(i + count - 1) % count], q = ring[i], r = ring[(i + 1) % count];
@@ -395,7 +395,7 @@ public static class GridFacade
                 if (hole < 0.6f || spring < 0.4f) continue;
                 var arch = Shapes.RoundArch(0, 0.06f, hole, spring - 0.06f, detail == SiteDetail.Full ? 12 : 6);
                 var face = new PolygonRings([new(-width * 0.5f, 0), new(width * 0.5f, 0), new(width * 0.5f, h), new(-width * 0.5f, h)], [arch]);
-                b.Add(PartGeometryKernel.WallPanel(face, s.BandDepth, s.Wall), f.At(xc, y0 + sill, s.BandDepth * 0.5f));
+                b.Add(PartSolids.WallPanel(face, s.BandDepth, s.Wall), f.At(xc, y0 + sill, s.BandDepth * 0.5f));
             }
         }
         if (s.PilasterEvery <= 0) return;
@@ -462,6 +462,6 @@ public static class GridFacade
         float w = x1 - x0, h = y1 - y0, d = z1 - z0;
         if (w < 0.01f || h < 0.01f || d < 0.01f) return;
         bevel = MathF.Min(bevel, MathF.Min(w, MathF.Min(h, d)) * 0.45f);
-        b.Add(PartGeometryKernel.BeveledBox(w, h, d, bevel, material), f.At((x0 + x1) * 0.5f, y0, (z0 + z1) * 0.5f));
+        b.Add(PartSolids.BeveledBox(w, h, d, bevel, material), f.At((x0 + x1) * 0.5f, y0, (z0 + z1) * 0.5f));
     }
 }

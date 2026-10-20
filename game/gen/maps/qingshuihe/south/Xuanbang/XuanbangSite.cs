@@ -145,7 +145,7 @@ public sealed class XuanbangSite : ZoneSite
     internal static GridEdge MainEdge(GridEdgeInfo e, Footprints f)
     {
         var probe = (e.A + e.B) * 0.5f + e.Frame.W;
-        if (PlanGeometry.InsideByCrossings(f.Tower, probe) || PlanGeometry.InsideByCrossings(f.Clock, probe)) return new(EdgeKind.Hidden);
+        if (PlanRings.InsideByCrossings(f.Tower, probe) || PlanRings.InsideByCrossings(f.Clock, probe)) return new(EdgeKind.Hidden);
         if (e.Length < 4f) return new(EdgeKind.Blank);
         if (!f.Fronts.Any(edge => (e.A == edge[0] && e.B == edge[^1]) || (e.B == edge[0] && e.A == edge[^1]))) return new(EdgeKind.Plain);
         if (!f.Porticos.Any(frame => Vector2.DistanceSquared(frame.Origin, (e.A + e.B) * 0.5f) < 1e-4f)) return new(EdgeKind.Front);
@@ -176,12 +176,12 @@ public sealed class XuanbangSite : ZoneSite
     {
         var f = Rings(ctx.World);
         float Ground(Vector2 p) => ctx.World.Terrain.HeightAt(p.X, p.Y);
-        var y0 = Ground(PlanGeometry.Centroid(f.Main, meanIfDegenerate: true));
+        var y0 = Ground(PlanPolygons.Centroid(f.Main, meanIfDegenerate: true));
         GridFacade.Declare(facades, f.Main, y0, f.MainStyle, e => MainEdge(e, f), MainNumbering,
             WindowNumbers.Required(ctx, MainNumbering.Feature, MainKey));
-        GridFacade.Declare(facades, f.Tower, Ground(PlanGeometry.Centroid(f.Tower, meanIfDegenerate: true)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering,
+        GridFacade.Declare(facades, f.Tower, Ground(PlanPolygons.Centroid(f.Tower, meanIfDegenerate: true)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering,
             WindowNumbers.Required(ctx, TowerNumbering.Feature, TowerKey));
-        var y = Ground(PlanGeometry.Centroid(f.Clock, meanIfDegenerate: true));
+        var y = Ground(PlanPolygons.Centroid(f.Clock, meanIfDegenerate: true));
         WindowNumbers.Declare(windows, ClockTower.Slits(f.ClockPlan, y), ClockAllocation(ctx, ShaftKey, true)!.Value, W.Research);
         WindowNumbers.Declare(windows, ClockTower.Portals(f.ClockPlan, y), ClockAllocation(ctx, PortalKey, true)!.Value, W.Research);
         var porticoes = Porticoes(f);
@@ -250,7 +250,7 @@ public sealed class XuanbangSite : ZoneSite
     public override void Build(SiteBuilder b)
     {
         var f = Rings(b.Context.World);
-        float MainY() => b.Ground(PlanGeometry.Centroid(f.Main, meanIfDegenerate: true));
+        float MainY() => b.Ground(PlanPolygons.Centroid(f.Main, meanIfDegenerate: true));
         if (b.Includes(MainRange(f)))
         {
             var y = MainY();
@@ -263,8 +263,8 @@ public sealed class XuanbangSite : ZoneSite
         for (var i = 0; i < porticoes.Count; i++)
             if (b.Includes(PorticoRange(porticoes[i]))) Portico(b, porticoes[i], MainY(), i, hall);
         if (b.Includes(SkylightRange(f))) Skylight(b, f, MainY());
-        if (b.Includes(TowerRange(f))) GridFacade.Build(b, f.Tower, b.Ground(PlanGeometry.Centroid(f.Tower, meanIfDegenerate: true)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering);
-        if (b.Includes(ClockRange(f))) ClockTower.Build(b, f.ClockPlan, f.ClockTop, b.Ground(PlanGeometry.Centroid(f.Clock, meanIfDegenerate: true)));
+        if (b.Includes(TowerRange(f))) GridFacade.Build(b, f.Tower, b.Ground(PlanPolygons.Centroid(f.Tower, meanIfDegenerate: true)), f.TowerStyle, _ => new(EdgeKind.Plain), TowerNumbering);
+        if (b.Includes(ClockRange(f))) ClockTower.Build(b, f.ClockPlan, f.ClockTop, b.Ground(PlanPolygons.Centroid(f.Clock, meanIfDegenerate: true)));
     }
 
     // ---- Pediment portico (§5.6): four round columns, entablature with dentils, pediment with the name panel ----
@@ -274,20 +274,20 @@ public sealed class XuanbangSite : ZoneSite
         float hw = X.PorticoHalfWidth, d = X.PorticoDepth, floor = y + X.PodiumRise;
         var top = floor + X.ColumnHeight;
         // Podium from the facade out past the colonnade, three steps down to the lakeside walk (no per-riser outline).
-        b.Add(PartGeometryKernel.BeveledBox(2 * hw + 1f, X.PodiumRise + 0.1f, d + 0.6f, 0.03f, L.Granite), p.At(0, y - 0.1f, d * 0.5f));
+        b.Add(PartSolids.BeveledBox(2 * hw + 1f, X.PodiumRise + 0.1f, d + 0.6f, 0.03f, L.Granite), p.At(0, y - 0.1f, d * 0.5f));
         var flight = Flight();
         b.Add(Steps.Lods[b.Lod](flight), p.AtReversed(0, y, d + 0.3f + flight.Depth * 0.5f));
         foreach (var x in X.PorticoColumns) Column(b, p, x, d - 1f, floor);
         // Entablature: architrave, frieze, cornice; dentils under the cornice.
-        b.Add(PartGeometryKernel.BeveledBox(2 * hw, 0.8f, d + 0.3f, 0.03f, L.Beige), p.At(0, top, (d - 0.3f) * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(2 * hw, 0.7f, d + 0.15f, 0.02f, L.Beige), p.At(0, top + 0.8f, (d - 0.45f) * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(2 * hw + 0.6f, 0.45f, d + 0.6f, 0.03f, L.BeigeTrim), p.At(0, top + 1.5f, d * 0.5f));
+        b.Add(PartSolids.BeveledBox(2 * hw, 0.8f, d + 0.3f, 0.03f, L.Beige), p.At(0, top, (d - 0.3f) * 0.5f));
+        b.Add(PartSolids.BeveledBox(2 * hw, 0.7f, d + 0.15f, 0.02f, L.Beige), p.At(0, top + 0.8f, (d - 0.45f) * 0.5f));
+        b.Add(PartSolids.BeveledBox(2 * hw + 0.6f, 0.45f, d + 0.6f, 0.03f, L.BeigeTrim), p.At(0, top + 1.5f, d * 0.5f));
         if (b.Detail == SiteDetail.Full)
             for (var x = -hw + 0.35f; x <= hw - 0.3f; x += 0.5f)
-                b.Add(PartGeometryKernel.BeveledBox(0.22f, 0.24f, 0.2f, 0, L.BeigeTrim), p.At(x, top + 1.26f, d - 0.05f));
+                b.Add(PartSolids.BeveledBox(0.22f, 0.24f, 0.2f, 0, L.BeigeTrim), p.At(x, top + 1.26f, d - 0.05f));
         // Pediment: the tympanum sits 0.2 m behind the architrave face inside a proud raking frame.
         var pb = top + X.EntablatureHeight;
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings([new(-hw - 0.3f, 0), new(hw + 0.3f, 0), new(0, X.PedimentRise)]), d - 0.2f + 0.3f, L.Beige),
+        b.Add(PartSolids.WallPanel(new PolygonRings([new(-hw - 0.3f, 0), new(hw + 0.3f, 0), new(0, X.PedimentRise)]), d - 0.2f + 0.3f, L.Beige),
             p.At(0, pb, (d - 0.2f - 0.3f) * 0.5f));
         if (b.Detail != SiteDetail.Mass)
         {
@@ -295,9 +295,9 @@ public sealed class XuanbangSite : ZoneSite
             // The inner edge runs parallel to the outer one, so the raking members keep one thickness up to the apex.
             var slope = (X.PedimentRise + 0.47f) / (hw + 0.6f);
             var inner = new Vector2[] { new(-hw + 1.1f, 0.4f), new(hw - 1.1f, 0.4f), new(0, 0.4f + slope * (hw - 1.1f)) };
-            b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outer, [inner]), 0.6f, L.BeigeTrim), p.At(0, pb, d - 0.1f));
+            b.Add(PartSolids.WallPanel(new PolygonRings(outer, [inner]), 0.6f, L.BeigeTrim), p.At(0, pb, d - 0.1f));
             // Name panel in the tympanum: "宣邦" over "Xuanbang"; the glyphs wait for the scene-text atlas (contract-26).
-            b.Add(PartGeometryKernel.BeveledBox(2.8f, 1.3f, 0.12f, 0.02f, L.BeigeTrim), p.At(0, pb + 1.1f, d - 0.2f + 0.06f));
+            b.Add(PartSolids.BeveledBox(2.8f, 1.3f, 0.12f, 0.02f, L.BeigeTrim), p.At(0, pb + 1.1f, d - 0.2f + 0.06f));
         }
         BackWall(b, p, floor, index, hall);
     }
@@ -309,13 +309,13 @@ public sealed class XuanbangSite : ZoneSite
     {
         var r = X.ColumnRadius;
         var segments = b.Detail switch { SiteDetail.Full => 24, SiteDetail.Plain => 16, _ => 10 };
-        b.Add(PartGeometryKernel.BeveledBox(2 * r + 0.5f, 0.35f, 2 * r + 0.5f, 0.03f, L.BeigeTrim), p.At(x, floor, z));
+        b.Add(PartSolids.BeveledBox(2 * r + 0.5f, 0.35f, 2 * r + 0.5f, 0.03f, L.BeigeTrim), p.At(x, floor, z));
         b.Add(Solids.Lathe([new(r + 0.16f, 0), new(r + 0.16f, 0.12f), new(r + 0.05f, 0.3f), new(r, 0.36f)], segments, L.BeigeTrim), p.At(x, floor + 0.35f, z));
         var shaft = X.ColumnHeight - 0.35f - 0.36f - 0.9f;
         b.Add(Shapes.Shaft(r, r * 0.86f, shaft, segments, L.Beige), p.At(x, floor + 0.71f, z));
         var capital = floor + 0.71f + shaft;
         b.Add(Solids.Lathe([new(r * 0.86f, 0), new(r * 0.95f, 0.15f), new(r + 0.22f, 0.45f), new(r + 0.22f, 0.5f)], segments, L.BeigeTrim), p.At(x, capital, z));
-        b.Add(PartGeometryKernel.BeveledBox(2 * r + 0.6f, 0.4f, 2 * r + 0.6f, 0.03f, L.BeigeTrim), p.At(x, capital + 0.5f, z));
+        b.Add(PartSolids.BeveledBox(2 * r + 0.6f, 0.4f, 2 * r + 0.6f, 0.03f, L.BeigeTrim), p.At(x, capital + 0.5f, z));
     }
 
     /// <summary>
@@ -338,9 +338,9 @@ public sealed class XuanbangSite : ZoneSite
         }
         outer.AddRange([new(hw, 0), new(hw, h), new(-hw, h)]);
         var windows = X.Doors.Select(x => (IReadOnlyList<Vector2>)Shapes.RoundArch(x, X.UpperWindowSill, X.UpperWindowWidth, X.UpperWindowSpring, segments)).ToArray();
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outer, windows), 0.8f, L.Beige), p.At(0, floor, 0.1f));
+        b.Add(PartSolids.WallPanel(new PolygonRings(outer, windows), 0.8f, L.Beige), p.At(0, floor, 0.1f));
         foreach (var x in X.PorticoColumns)
-            b.Add(PartGeometryKernel.BeveledBox(1.3f, h - 0.05f, 0.25f, 0.02f, L.Beige), p.At(x, floor, 0.62f));
+            b.Add(PartSolids.BeveledBox(1.3f, h - 0.05f, 0.25f, 0.02f, L.Beige), p.At(x, floor, 0.62f));
         if (b.Detail == SiteDetail.Mass) return;
         // Glass just proud of the block's glass core (the facade line), frames in front of it: 0.45 m reveals.
         const float glass = PorticoGlassZ, frame = 0.12f;
@@ -349,24 +349,24 @@ public sealed class XuanbangSite : ZoneSite
         foreach (var x in X.Doors)
         {
             if (plain)
-                b.Add(PartGeometryKernel.WallPanel(new PolygonRings(Shapes.RoundArch(x, X.UpperWindowSill, X.UpperWindowWidth, X.UpperWindowSpring, segments)), 0.05f, ZoneLooks.Glass), p.At(0, floor, glass));
-            b.Add(PartGeometryKernel.BeveledBox(X.UpperWindowWidth + 0.3f, 0.12f, 0.3f, 0.02f, L.BeigeTrim), p.At(x, floor + X.UpperWindowSill - 0.12f, 0.6f));
+                b.Add(PartSolids.WallPanel(new PolygonRings(Shapes.RoundArch(x, X.UpperWindowSill, X.UpperWindowWidth, X.UpperWindowSpring, segments)), 0.05f, ZoneLooks.Glass), p.At(0, floor, glass));
+            b.Add(PartSolids.BeveledBox(X.UpperWindowWidth + 0.3f, 0.12f, 0.3f, 0.02f, L.BeigeTrim), p.At(x, floor + X.UpperWindowSill - 0.12f, 0.6f));
             var open = MathF.Abs(x) < 0.01f;
             if (!open)
             {
                 // Closed side doors: glazed, a stile and a transom bar at the springing.
                 if (plain)
-                    b.Add(PartGeometryKernel.WallPanel(new PolygonRings(Shapes.RoundArch(x, 0, X.DoorWidth, X.DoorSpring, segments)), 0.05f, ZoneLooks.Glass), p.At(0, floor, glass));
-                b.Add(PartGeometryKernel.BeveledBox(0.1f, X.DoorSpring, 0.1f, 0, L.DarkFrame), p.At(x, floor, frame));
-                b.Add(PartGeometryKernel.BeveledBox(X.DoorWidth, 0.1f, 0.1f, 0, L.DarkFrame), p.At(x, floor + X.DoorSpring - 0.1f, frame));
+                    b.Add(PartSolids.WallPanel(new PolygonRings(Shapes.RoundArch(x, 0, X.DoorWidth, X.DoorSpring, segments)), 0.05f, ZoneLooks.Glass), p.At(0, floor, glass));
+                b.Add(PartSolids.BeveledBox(0.1f, X.DoorSpring, 0.1f, 0, L.DarkFrame), p.At(x, floor, frame));
+                b.Add(PartSolids.BeveledBox(X.DoorWidth, 0.1f, 0.1f, 0, L.DarkFrame), p.At(x, floor + X.DoorSpring - 0.1f, frame));
                 continue;
             }
             // Open middle door: fanlight glass above the springing, leaves swung out against the reveals (SYS-WALK).
             var fan = Shapes.RoundArch(x, X.DoorSpring - 0.01f, X.DoorWidth, 0.01f, segments);
-            if (plain) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(fan), 0.05f, ZoneLooks.Glass), p.At(0, floor, glass));
-            b.Add(PartGeometryKernel.BeveledBox(X.DoorWidth, 0.12f, 0.12f, 0, L.DarkFrame), p.At(x, floor + X.DoorSpring - 0.06f, frame));
+            if (plain) b.Add(PartSolids.WallPanel(new PolygonRings(fan), 0.05f, ZoneLooks.Glass), p.At(0, floor, glass));
+            b.Add(PartSolids.BeveledBox(X.DoorWidth, 0.12f, 0.12f, 0, L.DarkFrame), p.At(x, floor + X.DoorSpring - 0.06f, frame));
             foreach (var side in new[] { -1f, 1f })
-                b.Add(PartGeometryKernel.BeveledBox(0.06f, X.DoorSpring - 0.1f, 1.5f, 0.012f, L.DarkFrame), p.At(x + side * (X.DoorWidth * 0.5f - 0.05f), floor, 0.55f));
+                b.Add(PartSolids.BeveledBox(0.06f, X.DoorSpring - 0.1f, 1.5f, 0.012f, L.DarkFrame), p.At(x + side * (X.DoorWidth * 0.5f - 0.05f), floor, 0.55f));
             // The mat, open sign and door lamp are WP-13's, placed on the entrance anchor (WLD-INTERIORS).
         }
     }
@@ -378,11 +378,11 @@ public sealed class XuanbangSite : ZoneSite
         var g = e.Frame.Shift(e.Length * 0.5f, 0);
         var baseY = y + s.WallTop + s.Cornice;
         var half = e.Length * 0.5f + 0.2f;
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings([new(-half, 0), new(half, 0), new(0, X.EndGableRise)]), 0.9f, L.Beige), g.At(0, baseY, s.PierDepth - 0.45f));
+        b.Add(PartSolids.WallPanel(new PolygonRings([new(-half, 0), new(half, 0), new(0, X.EndGableRise)]), 0.9f, L.Beige), g.At(0, baseY, s.PierDepth - 0.45f));
         if (b.Detail == SiteDetail.Mass) return;
         var outer = new Vector2[] { new(-half - 0.3f, -0.02f), new(half + 0.3f, -0.02f), new(0, X.EndGableRise + 0.32f) };
         var inner = new Vector2[] { new(-half + 0.75f, 0.3f), new(half - 0.75f, 0.3f), new(0, X.EndGableRise - 0.22f) };
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outer, [inner]), 0.3f, L.BeigeTrim), g.At(0, baseY, s.PierDepth + 0.05f));
+        b.Add(PartSolids.WallPanel(new PolygonRings(outer, [inner]), 0.3f, L.BeigeTrim), g.At(0, baseY, s.PierDepth + 0.05f));
     }
 
     // ---- Atrium skylight on the main wing (WLD-INTERIORS) ----
@@ -392,10 +392,10 @@ public sealed class XuanbangSite : ZoneSite
         var f = PlanFrame.Along(footprints.Skylight, X.SlabAxis);
         var roof = y + footprints.MainStyle.WallTop + 0.35f;
         var size = X.SkylightSize;
-        b.Add(PartGeometryKernel.BeveledBox(size + 0.6f, 0.6f, size + 0.6f, 0.03f, L.BeigeTrim), f.At(0, roof, 0));
+        b.Add(PartSolids.BeveledBox(size + 0.6f, 0.6f, size + 0.6f, 0.03f, L.BeigeTrim), f.At(0, roof, 0));
         b.Add(Shapes.Hip(size, size, X.SkylightRise, 3f, b.Lod is LodLevel.L3 or LodLevel.L4 ? L.RoofSlab : ZoneLooks.Glass), f.At(0, roof + 0.6f, 0));
         if (b.Detail == SiteDetail.Mass) return;
-        b.Add(PartGeometryKernel.BeveledBox(3.2f, 0.16f, 0.3f, 0.02f, L.DarkFrame), f.At(0, roof + 0.6f + X.SkylightRise - 0.04f, 0));
+        b.Add(PartSolids.BeveledBox(3.2f, 0.16f, 0.3f, 0.02f, L.DarkFrame), f.At(0, roof + 0.6f + X.SkylightRise - 0.04f, 0));
     }
 
     // ---- Collision ----
@@ -403,7 +403,7 @@ public sealed class XuanbangSite : ZoneSite
     public override IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context)
     {
         var plan = Rings(context.World);
-        var centre = PlanGeometry.Centroid(plan.Clock, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(plan.Clock, meanIfDegenerate: true);
         var ground = context.World.Terrain.HeightAt(centre.X, centre.Y);
         return [new("xuanbang.lantern-gallery", new(Feature), ClockTower.Lantern(plan.ClockPlan, ground, context.World).Areas)];
     }
@@ -411,13 +411,13 @@ public sealed class XuanbangSite : ZoneSite
     public override void Collide(SiteColliders c)
     {
         var f = Rings(c.Context.World);
-        var centre = PlanGeometry.Centroid(f.Main, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(f.Main, meanIfDegenerate: true);
         if (c.Includes(MainRange(f))) GridFacade.Collide(c, f.Main, c.Ground(centre.X, centre.Y), f.MainStyle, e => MainEdge(e, f), FootMat.StonePaving);
-        var t = PlanGeometry.Centroid(f.Tower, meanIfDegenerate: true);
+        var t = PlanPolygons.Centroid(f.Tower, meanIfDegenerate: true);
         if (c.Includes(TowerRange(f))) GridFacade.Collide(c, f.Tower, c.Ground(t.X, t.Y), f.TowerStyle, _ => new(EdgeKind.Plain), FootMat.StonePaving);
         foreach (var p in Porticoes(f))
             if (c.Includes(PorticoRange(p))) PorticoCollide(c, p, c.Ground(centre.X, centre.Y));
-        var k = PlanGeometry.Centroid(f.Clock, meanIfDegenerate: true);
+        var k = PlanPolygons.Centroid(f.Clock, meanIfDegenerate: true);
         if (c.Includes(ClockRange(f))) ClockTower.Collide(c, f.ClockPlan, c.Ground(k.X, k.Y));
     }
 

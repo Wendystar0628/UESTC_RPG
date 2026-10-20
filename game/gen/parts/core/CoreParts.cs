@@ -40,7 +40,7 @@ public abstract class CoreBoxPart<TParams> : IPartDef<TParams> where TParams : B
     {
         _ = Bounds(p);
         var material = close && p.Bevel > 0 ? p.Material with { Fx = p.Material.Fx | ToonFx.BevelLift } : p.Material;
-        return PartGeometryKernel.BeveledBox(p.Width, p.Height, p.Depth, close ? p.Bevel : 0, material);
+        return PartSolids.BeveledBox(p.Width, p.Height, p.Depth, close ? p.Bevel : 0, material);
     }
 }
 
@@ -69,7 +69,7 @@ public sealed class TrimPart : CoreBoxPart<TrimParams>
     {
         _ = Bounds(p);
         var material = close && p.Bevel > 0 ? p.Material with { Fx = p.Material.Fx | ToonFx.BevelLift } : p.Material;
-        return PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(p.Depth, p.Height, close ? p.Bevel : 0),
+        return PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(p.Depth, p.Height, close ? p.Bevel : 0),
             [new(-p.Width * 0.5f, 0), new(p.Width * 0.5f, 0)], material);
     }
 }

@@ -128,33 +128,33 @@ internal static class ClockTower
         var segments = detail switch { SiteDetail.Full => LanternPlan.Segments, SiteDetail.Plain => 24, _ => 16 };
         var bevel = detail == SiteDetail.Full ? 0.03f : 0f;
         if (coarse)
-            b.Add(PartGeometryKernel.BeveledBox(2 * hx, X.ShaftTop, 2 * hz, 0, L.Beige), f.At(0, y, 0));
+            b.Add(PartSolids.BeveledBox(2 * hx, X.ShaftTop, 2 * hz, 0, L.Beige), f.At(0, y, 0));
         else
         {
             // Floor slab up to the threshold, level with the forecourt paving, so the side door opens straight onto it; the granite
             // base course stands under the quoins and, with the face skirts, either side of each portal.
-            b.Add(PartGeometryKernel.BeveledBox(2 * hx + 0.3f, X.Threshold + 0.1f, 2 * hz + 0.3f, bevel, L.Granite), f.At(0, y - 0.1f, 0));
+            b.Add(PartSolids.BeveledBox(2 * hx + 0.3f, X.Threshold + 0.1f, 2 * hz + 0.3f, bevel, L.Granite), f.At(0, y - 0.1f, 0));
             foreach (var sx in new[] { -1f, 1f })
                 foreach (var sz in new[] { -1f, 1f })
-                    b.Add(PartGeometryKernel.BeveledBox(X.Quoin + 0.3f, 1.3f, X.Quoin + 0.3f, bevel, L.Granite), f.At(sx * hx, y - 0.1f, sz * hz));
+                    b.Add(PartSolids.BeveledBox(X.Quoin + 0.3f, 1.3f, X.Quoin + 0.3f, bevel, L.Granite), f.At(sx * hx, y - 0.1f, sz * hz));
             foreach (var (face, width, door) in Faces(f, hx, hz)) Face(b, face, width, door, y, shaft is null, portals is null);
             foreach (var sx in new[] { -1f, 1f })
                 foreach (var sz in new[] { -1f, 1f })
-                    b.Add(PartGeometryKernel.BeveledBox(X.Quoin, X.ShaftTop - 1.2f, X.Quoin, bevel, L.Beige), f.At(sx * hx, y + 1.2f, sz * hz));
+                    b.Add(PartSolids.BeveledBox(X.Quoin, X.ShaftTop - 1.2f, X.Quoin, bevel, L.Beige), f.At(sx * hx, y + 1.2f, sz * hz));
         }
         // Shaft cornice, then the setback stage with its dials and cornice.
-        b.Add(PartGeometryKernel.BeveledBox(2 * hx + 1.2f, 0.35f, 2 * hz + 1.2f, bevel, L.BeigeTrim), f.At(0, y + X.ShaftTop, 0));
-        b.Add(PartGeometryKernel.BeveledBox(2 * hx + 1.7f, 0.45f, 2 * hz + 1.7f, bevel, L.BeigeTrim), f.At(0, y + X.ShaftTop + 0.35f, 0));
+        b.Add(PartSolids.BeveledBox(2 * hx + 1.2f, 0.35f, 2 * hz + 1.2f, bevel, L.BeigeTrim), f.At(0, y + X.ShaftTop, 0));
+        b.Add(PartSolids.BeveledBox(2 * hx + 1.7f, 0.45f, 2 * hz + 1.7f, bevel, L.BeigeTrim), f.At(0, y + X.ShaftTop + 0.35f, 0));
         float sxh = hx - X.StageInset, szh = hz - X.StageInset, stage0 = y + X.ShaftTop + 0.8f;
-        b.Add(PartGeometryKernel.BeveledBox(2 * sxh, y + X.StageTop - stage0, 2 * szh, bevel, L.Beige), f.At(0, stage0, 0));
+        b.Add(PartSolids.BeveledBox(2 * sxh, y + X.StageTop - stage0, 2 * szh, bevel, L.Beige), f.At(0, stage0, 0));
         if (!coarse)
         {
             foreach (var sx in new[] { -1f, 1f })
                 foreach (var sz in new[] { -1f, 1f })
-                    b.Add(PartGeometryKernel.BeveledBox(1.0f, y + X.StageTop - stage0, 1.0f, bevel, L.Beige), f.At(sx * sxh, stage0, sz * szh));
+                    b.Add(PartSolids.BeveledBox(1.0f, y + X.StageTop - stage0, 1.0f, bevel, L.Beige), f.At(sx * sxh, stage0, sz * szh));
             foreach (var (face, _, _) in Faces(f, sxh, szh)) Dial(b, face, y, segments);
         }
-        b.Add(PartGeometryKernel.BeveledBox(2 * sxh + 1.3f, 0.8f, 2 * szh + 1.3f, bevel, L.BeigeTrim), f.At(0, y + X.StageTop, 0));
+        b.Add(PartSolids.BeveledBox(2 * sxh + 1.3f, 0.8f, 2 * szh + 1.3f, bevel, L.BeigeTrim), f.At(0, y + X.StageTop, 0));
         // Lantern: podium drum, solid core, a ring of slit columns, the entablature disc, the dome and its finial.
         var lantern = Lantern(plan, y, b.Context.World);
         var podium = y + X.StageTop + 0.8f;
@@ -172,7 +172,7 @@ internal static class ClockTower
                 var at = f.P(c * X.LanternRadius, s * X.LanternRadius);
                 var tangent = f.U * -s + f.W * c;
                 var col = PlanFrame.Along(at, tangent);
-                b.Add(PartGeometryKernel.BeveledBox(X.LanternColumn, height, 0.75f, bevel, L.Beige), col.At(0, y + X.LanternFloor, 0));
+                b.Add(PartSolids.BeveledBox(X.LanternColumn, height, 0.75f, bevel, L.Beige), col.At(0, y + X.LanternFloor, 0));
             }
         }
         b.Add(Solids.Lathe([new(X.LanternRadius + 0.6f, 0), new(X.LanternRadius + 0.6f, X.DomeBase - X.LanternTop)], segments, L.BeigeTrim), f.At(0, y + X.LanternTop, 0));
@@ -207,15 +207,15 @@ internal static class ClockTower
                 slits.Add([new(cx - X.SlitWidth * 0.5f, s0), new(cx + X.SlitWidth * 0.5f, s0), new(cx + X.SlitWidth * 0.5f, s0 + X.SlitHeight), new(cx - X.SlitWidth * 0.5f, s0 + X.SlitHeight)]);
             }
         }
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outer, slits), 0.7f, L.Beige), g.At(0, y, 0));
+        b.Add(PartSolids.WallPanel(new PolygonRings(outer, slits), 0.7f, L.Beige), g.At(0, y, 0));
         // Plinth skirt either side of the portal.
         var skirt = width * 0.5f - X.PortalWidth * 0.5f - 0.35f;
         foreach (var side in new[] { -1f, 1f })
-            b.Add(PartGeometryKernel.BeveledBox(skirt, 1.2f, 0.95f, detail == SiteDetail.Full ? 0.03f : 0, L.Granite), g.At(side * (width * 0.5f - skirt * 0.5f), y - 0.1f, 0.12f));
+            b.Add(PartSolids.BeveledBox(skirt, 1.2f, 0.95f, detail == SiteDetail.Full ? 0.03f : 0, L.Granite), g.At(side * (width * 0.5f - skirt * 0.5f), y - 0.1f, 0.12f));
         if (detail == SiteDetail.Mass) return;
         var top = X.SlitFirst + (X.SlitRows - 1) * X.SlitPitch + X.SlitHeight;
         if (slitGlass)
-            b.Add(PartGeometryKernel.BeveledBox(X.SlitGap + 2 * X.SlitWidth + 0.4f, top - X.SlitFirst + 0.4f, 0.05f, 0, ZoneLooks.Glass), g.At(0, y + X.SlitFirst - 0.2f, SlitGlassZ));
+            b.Add(PartSolids.BeveledBox(X.SlitGap + 2 * X.SlitWidth + 0.4f, top - X.SlitFirst + 0.4f, 0.05f, 0, ZoneLooks.Glass), g.At(0, y + X.SlitFirst - 0.2f, SlitGlassZ));
         // Archivolt round the portal and a keystone.
         var ring = Shapes.RoundArch(0, 0, X.PortalWidth + 0.9f, X.PortalSpring, segments);
         var hole = Shapes.RoundArch(0, -0.01f, X.PortalWidth, X.PortalSpring + 0.01f, segments);
@@ -224,27 +224,27 @@ internal static class ClockTower
         band.Add(hole[1]);
         band.Add(ring[1]);
         for (var i = 2; i < ring.Length; i++) band.Add(ring[i]);
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings(band), 0.2f, L.BeigeTrim), g.At(0, y, 0.45f));
+        b.Add(PartSolids.WallPanel(new PolygonRings(band), 0.2f, L.BeigeTrim), g.At(0, y, 0.45f));
         if (detail == SiteDetail.Full)
         {
             for (var r = 0; r < X.SlitRows; r++)
                 foreach (var side in new[] { -1f, 1f })
-                    b.Add(PartGeometryKernel.BeveledBox(X.SlitWidth + 0.24f, 0.1f, 0.22f, 0.015f, L.BeigeTrim),
+                    b.Add(PartSolids.BeveledBox(X.SlitWidth + 0.24f, 0.1f, 0.22f, 0.015f, L.BeigeTrim),
                         g.At(side * (X.SlitGap * 0.5f + X.SlitWidth * 0.5f), y + X.SlitFirst + r * X.SlitPitch - 0.1f, 0.42f));
         }
         // Portal infill: a glazed door, open on the door face (leaves back; mat, sign and lamp are WP-13's), closed elsewhere.
         var arch = Shapes.RoundArch(0, 0, X.PortalWidth, X.PortalSpring, segments);
         if (!door)
         {
-            if (portalGlass) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(arch), 0.05f, ZoneLooks.Glass), g.At(0, y, PortalGlassZ));
-            b.Add(PartGeometryKernel.BeveledBox(0.1f, X.PortalSpring, 0.1f, 0, L.DarkFrame), g.At(0, y, -0.08f));
+            if (portalGlass) b.Add(PartSolids.WallPanel(new PolygonRings(arch), 0.05f, ZoneLooks.Glass), g.At(0, y, PortalGlassZ));
+            b.Add(PartSolids.BeveledBox(0.1f, X.PortalSpring, 0.1f, 0, L.DarkFrame), g.At(0, y, -0.08f));
             return;
         }
         var fan = Shapes.RoundArch(0, X.PortalSpring - 0.01f, X.PortalWidth, 0.01f, segments);
-        if (portalGlass) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(fan), 0.05f, ZoneLooks.Glass), g.At(0, y, PortalGlassZ));
-        b.Add(PartGeometryKernel.BeveledBox(X.PortalWidth, 0.12f, 0.12f, 0, L.DarkFrame), g.At(0, y + X.PortalSpring - 0.06f, -0.08f));
+        if (portalGlass) b.Add(PartSolids.WallPanel(new PolygonRings(fan), 0.05f, ZoneLooks.Glass), g.At(0, y, PortalGlassZ));
+        b.Add(PartSolids.BeveledBox(X.PortalWidth, 0.12f, 0.12f, 0, L.DarkFrame), g.At(0, y + X.PortalSpring - 0.06f, -0.08f));
         foreach (var side in new[] { -1f, 1f })
-            b.Add(PartGeometryKernel.BeveledBox(0.06f, X.PortalSpring - 0.1f, 1.1f, 0.012f, L.Wood), g.At(side * (X.PortalWidth * 0.5f - 0.05f), y, 0.2f));
+            b.Add(PartSolids.BeveledBox(0.06f, X.PortalSpring - 0.1f, 1.1f, 0.012f, L.Wood), g.At(side * (X.PortalWidth * 0.5f - 0.05f), y, 0.2f));
     }
 
     /// <summary>A dial on a stage face: pale disc, dark bezel ring, hour marks and the pivot boss (no hands: WP-26).</summary>
@@ -264,7 +264,7 @@ internal static class ClockTower
             float s = MathF.Sin(a), c = MathF.Cos(a);
             var major = k % 3 == 0;
             var size = major ? 0.42f : 0.24f;
-            b.Add(PartGeometryKernel.BeveledBox(size, size, 0.06f, 0.01f, L.DialRim), g.At(s * r * 0.8f, cy + c * r * 0.8f - size * 0.5f, 0.15f));
+            b.Add(PartSolids.BeveledBox(size, size, 0.06f, 0.01f, L.DialRim), g.At(s * r * 0.8f, cy + c * r * 0.8f - size * 0.5f, 0.15f));
         }
     }
 

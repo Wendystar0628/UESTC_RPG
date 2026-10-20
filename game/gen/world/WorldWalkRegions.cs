@@ -48,7 +48,7 @@ internal sealed class WorldWalkRegions
     public WalkClass At(float x, float z)
     {
         var point = new Vector2(x, z);
-        if (!PlanGeometry.Contains(_boundary, point)) return WalkClass.Outside;
+        if (!PlanRings.Contains(_boundary, point)) return WalkClass.Outside;
         if (Contains(_forbidden, point)) return WalkClass.Forbidden;
         foreach (var line in _seals)
             if (Contains(line, .3f, point)) return WalkClass.Forbidden;
@@ -60,7 +60,7 @@ internal sealed class WorldWalkRegions
     private static bool Contains(PolygonRings[] regions, Vector2 point)
     {
         foreach (var polygon in regions)
-            if (PlanGeometry.Contains(polygon, point)) return true;
+            if (PlanRings.Contains(polygon, point)) return true;
         return false;
     }
 

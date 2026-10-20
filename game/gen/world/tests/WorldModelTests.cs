@@ -121,7 +121,7 @@ public sealed class WorldModelTests
         { Parts = [part, new("first-source", new PolygonGeometry(second), null, null)] };
         var polygons = WorldFeatureGeometry.FacadePolygonsOf(feature);
         AssertThat(polygons.Count == 3 && ReferenceEquals(polygons[0], first) && ReferenceEquals(polygons[1], second) && ReferenceEquals(polygons[2], second)).OverrideFailureMessage("Facade aggregation reordered or rebuilt rings.").IsTrue();
-        AssertThat(PlanGeometry.SignedArea(polygons[0].Outer) < 0 && ReferenceEquals(polygons[0].Holes, first.Holes)).OverrideFailureMessage("Facade helper normalized input direction or holes.").IsTrue();
+        AssertThat(PlanRings.SignedArea(polygons[0].Outer) < 0 && ReferenceEquals(polygons[0].Holes, first.Holes)).OverrideFailureMessage("Facade helper normalized input direction or holes.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -150,10 +150,10 @@ public sealed class WorldModelTests
     [TestCase, TestCategory(TestReason.Contract)]
     public void RingNormalizationKeepsOrientationAndRejectsDegenerateInput()
     {
-        var ring = PlanGeometry.OpenRing([new(0, 0), new(0, 2), new(2, 2), new(2, 0), new(0, 0)]);
-        AssertThat(ring.Count == 4 && PlanGeometry.SignedArea(ring) == 4).OverrideFailureMessage("Ring normalization failed.").IsTrue();
-        AssertThat(PlanGeometry.PointInRing(new(0, 1), ring)).OverrideFailureMessage("Boundary point excluded.").IsTrue();
-        try { PlanGeometry.OpenRing([new(0, 0), new(1, 1), new(2, 2)]); throw new InvalidOperationException("Degenerate ring accepted."); }
+        var ring = PlanRings.OpenRing([new(0, 0), new(0, 2), new(2, 2), new(2, 0), new(0, 0)]);
+        AssertThat(ring.Count == 4 && PlanRings.SignedArea(ring) == 4).OverrideFailureMessage("Ring normalization failed.").IsTrue();
+        AssertThat(PlanRings.PointInRing(new(0, 1), ring)).OverrideFailureMessage("Boundary point excluded.").IsTrue();
+        try { PlanRings.OpenRing([new(0, 0), new(1, 1), new(2, 2)]); throw new InvalidOperationException("Degenerate ring accepted."); }
         catch (ArgumentException) { }
     }
 
@@ -277,7 +277,7 @@ public sealed class WorldModelTests
         {
             var feature = result.World.Features[sample.Id];
             var part = WorldFeatureKinds.Parts(feature, "building").Single(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)
-                .Any(polygon => PlanGeometry.Contains(polygon, new(sample.Point.X, sample.Point.Z))));
+                .Any(polygon => PlanRings.Contains(polygon, new(sample.Point.X, sample.Point.Z))));
             var height = part.Height ?? feature.Height ?? 0;
             var medium = result.World.Spatial.MediumAt(sample.Point);
             AssertThat(medium.Kind == MediumKind.Interior && medium.Feature == sample.Id).OverrideFailureMessage($"Building part {sample.Id.Value} was classified as {medium.Kind}.").IsTrue();

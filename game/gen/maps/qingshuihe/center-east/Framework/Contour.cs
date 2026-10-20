@@ -32,7 +32,7 @@ public static class Contour
             if (da <= 0) output.Add(a);
             if ((da < 0 && db > 0) || (da > 0 && db < 0)) output.Add(a + (b - a) * (da / (da - db)));
         }
-        return PlanGeometry.CleanRing(output, minEdge: 0.05f, collinearTolerance: 1e-4f) ?? throw new InvalidOperationException("Setback leaves no contour.");
+        return PlanRings.CleanRing(output, minEdge: 0.05f, collinearTolerance: 1e-4f) ?? throw new InvalidOperationException("Setback leaves no contour.");
     }
 
     /// <summary>
@@ -52,10 +52,10 @@ public static class Contour
             Vector2 din = q - p, dout = r - q;
             float lin = din.Length(), lout = dout.Length();
             din /= lin; dout /= lout;
-            var turn = MathF.Abs(MathF.Atan2(PlanGeometry.CrossFloat(din, dout), Vector2.Dot(din, dout))) * (180f / MathF.PI);
+            var turn = MathF.Abs(MathF.Atan2(PlanRings.CrossFloat(din, dout), Vector2.Dot(din, dout))) * (180f / MathF.PI);
             if (turn < minTurnDegrees || pinned(q)) { points.Add(q); continue; }
             // Tangent run of a circular fillet: r·tan(θ/2), tan(θ/2) = sinθ / (1 + cosθ).
-            var half = MathF.Abs(PlanGeometry.CrossFloat(din, dout)) / (1f + Vector2.Dot(din, dout));
+            var half = MathF.Abs(PlanRings.CrossFloat(din, dout)) / (1f + Vector2.Dot(din, dout));
             var run = MathF.Min(radius * half, 0.45f * MathF.Min(lin, lout));
             Vector2 s = q - din * run, e = q + dout * run;
             var segments = Math.Max(2, (int)MathF.Ceiling(turn / 12f));
@@ -65,7 +65,7 @@ public static class Contour
                 points.Add(s * ((1 - t) * (1 - t)) + q * (2 * t * (1 - t)) + e * (t * t));
             }
         }
-        return PlanGeometry.CleanRing(points, minEdge: 0.02f, collinearTolerance: 1e-4f) ?? throw new InvalidOperationException("Rounded outline has no contour.");
+        return PlanRings.CleanRing(points, minEdge: 0.02f, collinearTolerance: 1e-4f) ?? throw new InvalidOperationException("Rounded outline has no contour.");
     }
 
     /// <summary>Equal arc-length facade cells, retaining each source vertex inside its cell.</summary>
@@ -102,14 +102,14 @@ public static class Contour
         var m = new Shapes.Writer(material);
         var count = ring.Count;
         chamfer = MathF.Min(chamfer, (y1 - y0) * 0.4f);
-        var top = chamfer > 0 ? PlanGeometry.MitreOffset(ring, -chamfer, closed: true, limit: 2.5f) : [.. ring];
+        var top = chamfer > 0 ? PlanOffsets.MitreOffset(ring, -chamfer, closed: true, limit: 2.5f) : [.. ring];
         var sideTop = y1 - chamfer;
         var up = Vector3.UnitY;
         for (var i = 0; i < count; i++)
         {
             var j = (i + 1) % count;
             Vector2 a = ring[i], b = ring[j];
-            var edge = PlanGeometry.RightUnitNormal(a, b);
+            var edge = PlanOffsets.RightUnitNormal(a, b);
             var outward = new Vector3(edge.X, 0, edge.Y);
             var (na, nb) = (Normal(ring, i, edge), Normal(ring, j, edge));
             m.Quad(m.Vertex(new(a.X, y0, a.Y), na, new(0, 0)), m.Vertex(new(b.X, y0, b.Y), nb, new(1, 0)),
@@ -131,13 +131,13 @@ public static class Contour
     {
         ArgumentNullException.ThrowIfNull(ring);
         var m = new Shapes.Writer(material);
-        var inner = PlanGeometry.MitreOffset(ring, -thickness, closed: true, limit: 2.5f);
+        var inner = PlanOffsets.MitreOffset(ring, -thickness, closed: true, limit: 2.5f);
         var count = ring.Count;
         var up = Vector3.UnitY;
         for (var i = 0; i < count; i++)
         {
             var j = (i + 1) % count;
-            var edge = PlanGeometry.RightUnitNormal(ring[i], ring[j]);
+            var edge = PlanOffsets.RightUnitNormal(ring[i], ring[j]);
             var outward = new Vector3(edge.X, 0, edge.Y);
             var (na, nb) = (Normal(ring, i, edge), Normal(ring, j, edge));
             Vector2 a = ring[i], b = ring[j], c = inner[i], d = inner[j];
@@ -155,7 +155,7 @@ public static class Contour
     private static Vector3 Normal(IReadOnlyList<Vector2> ring, int i, Vector2 edge)
     {
         var count = ring.Count;
-        Vector2 n0 = PlanGeometry.RightUnitNormal(ring[(i + count - 1) % count], ring[i]), n1 = PlanGeometry.RightUnitNormal(ring[i], ring[(i + 1) % count]);
+        Vector2 n0 = PlanOffsets.RightUnitNormal(ring[(i + count - 1) % count], ring[i]), n1 = PlanOffsets.RightUnitNormal(ring[i], ring[(i + 1) % count]);
         var n = Vector2.Dot(n0, n1) >= SmoothCos ? VectorMath.Unit(n0 + n1, Vector2.UnitX) : edge;
         return new(n.X, 0, n.Y);
     }

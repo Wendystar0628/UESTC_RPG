@@ -8,7 +8,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Boundary.Framework;
 /// <summary>
 /// The campus boundary ring (world/geo.json `boundary`, through <see cref="IWorldModel.Boundary"/>) with the plan queries the
 /// gates and fences need: crossings, projections, arc positions and inset slices, sharing geometry queries with
-/// <see cref="PlanGeometry"/>. Index order follows the data; <see cref="Inward"/> gives the interior side of each edge.
+/// <see cref="PlanRings"/>. Index order follows the data; <see cref="Inward"/> gives the interior side of each edge.
 /// </summary>
 public sealed class BoundaryRing
 {
@@ -19,13 +19,13 @@ public sealed class BoundaryRing
     public BoundaryRing(IReadOnlyList<Vector2> outer)
     {
         ArgumentNullException.ThrowIfNull(outer);
-        _p = PlanGeometry.DeduplicateRing(outer, 0.05f * 0.05f);
+        _p = PlanRings.DeduplicateRing(outer, 0.05f * 0.05f);
         if (_p.Length < 3) throw new ArgumentException("The boundary ring needs at least three points.", nameof(outer));
         _arc = new float[_p.Length];
         for (var i = 1; i < _p.Length; i++) _arc[i] = _arc[i - 1] + Length(i - 1);
         Perimeter = _arc[^1] + Length(_p.Length - 1);
         // Winding determines which side of every boundary edge is inside.
-        _side = PlanGeometry.SignedArea(_p) < 0 ? 1f : -1f;
+        _side = PlanRings.SignedArea(_p) < 0 ? 1f : -1f;
     }
 
     public int Count => _p.Length;
@@ -43,7 +43,7 @@ public sealed class BoundaryRing
     }
 
     /// <summary>Even-odd point in ring.</summary>
-    public bool Contains(Vector2 p) => PlanGeometry.InsideByCrossings(_p, p);
+    public bool Contains(Vector2 p) => PlanRings.InsideByCrossings(_p, p);
 
     /// <summary>First crossing of a polyline with the ring: the point, the edge and the edge parameter.</summary>
     public (Vector2 Point, int Edge, float T)? Crossing(IReadOnlyList<Vector2> line)

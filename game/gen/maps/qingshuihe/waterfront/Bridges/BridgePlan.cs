@@ -66,7 +66,7 @@ internal sealed class BridgePlan
     public Vector2 Centre => P((StartS(0) + EndS(0)) * 0.5f, (OuterLeft + OuterRight) * 0.5f);
 
     /// <summary>Corners of a strip from u0 to u1 over the whole deck length, counterclockwise in (X, Z).</summary>
-    public Vector2[] Strip(float u0, float u1) => PlanGeometry.OpenRing([P(StartS(u0), u0), P(StartS(u1), u1), P(EndS(u1), u1), P(EndS(u0), u0)]).ToArray();
+    public Vector2[] Strip(float u0, float u1) => PlanRings.OpenRing([P(StartS(u0), u0), P(StartS(u1), u1), P(EndS(u1), u1), P(EndS(u0), u0)]).ToArray();
 
     /// <summary>The deck footprint, slab faces included (not the base overhang).</summary>
     public Vector2[] Footprint => Strip(OuterLeft, OuterRight);

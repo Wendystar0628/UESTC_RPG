@@ -81,7 +81,7 @@ public sealed class NorthPlazaSite : ZoneSite
             b.Box(L.LightSteel, at, u, size, size, y - 0.02f, y + P.RailHeight - 0.01f);
             // The campus-side end post (k = 0) is shared with WP-20's canal-bank railing, which carries on from it: no cap there.
             if (end && k == panels && b.Detail == SiteDetail.Full)
-                b.Add(PartGeometryKernel.BeveledBox(size + 0.04f, 0.04f, size + 0.04f, 0.008f, L.LightSteel), PlanFrame.Along(at, u).At(0, y + P.RailHeight, 0));
+                b.Add(PartSolids.BeveledBox(size + 0.04f, 0.04f, size + 0.04f, 0.008f, L.LightSteel), PlanFrame.Along(at, u).At(0, y + P.RailHeight, 0));
         }
         if (b.Detail == SiteDetail.Mass) return;
         var pitch = b.Detail == SiteDetail.Full ? P.BarPitch : P.BarPitch * 3;

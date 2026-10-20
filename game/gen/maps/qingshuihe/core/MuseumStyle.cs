@@ -7,7 +7,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core;
 /// the museum floor (the pad + FloorAbovePad) unless noted; values marked "review" are mainline initial values awaiting
 /// the main session's call. Colours are palette names only.
 /// </summary>
-public static partial class CoreStyle
+public static class MuseumStyle
 {
     // ---- Section: one tall gallery storey under a flat roof that runs out over the colonnade ring to the eave, the white
     //      central hall (序厅) rising from its middle under a low pyramid roof (review). ----

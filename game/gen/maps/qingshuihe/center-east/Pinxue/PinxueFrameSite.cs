@@ -177,17 +177,17 @@ public sealed class PinxueFrameSite : ZoneSite
     private static void Passage(SiteBuilder b, Gate g, float y)
     {
         var d = g.Depth;
-        b.Add(PartGeometryKernel.BeveledBox(g.Length, 0.14f, d, 0.01f, L.Paving), g.F.At(g.Axis, y - 0.12f, -d * 0.5f));
+        b.Add(PartSolids.BeveledBox(g.Length, 0.14f, d, 0.01f, L.Paving), g.F.At(g.Axis, y - 0.12f, -d * 0.5f));
     }
 
     private static void Column(SiteBuilder b, Gate g, float x, float y)
     {
         float s = P.ColumnSize, z = -g.Depth * 0.5f;
-        b.Add(PartGeometryKernel.BeveledBox(s + 0.3f, P.ColumnPlinth + 0.1f, s + 0.3f, 0.03f, L.DarkGranite), g.F.At(x, y - 0.1f, z));
+        b.Add(PartSolids.BeveledBox(s + 0.3f, P.ColumnPlinth + 0.1f, s + 0.3f, 0.03f, L.DarkGranite), g.F.At(x, y - 0.1f, z));
         // A shadow joint where the column meets the soffit: the beam reads as carried, not welded on.
         var joint = b.Detail == SiteDetail.Mass ? 0f : 0.12f;
-        b.Add(PartGeometryKernel.BeveledBox(s, g.BeamBottom - P.ColumnPlinth - joint, s, 0.05f, L.Wall), g.F.At(x, y + P.ColumnPlinth, z));
-        if (joint > 0) b.Add(PartGeometryKernel.BeveledBox(s - 0.16f, joint, s - 0.16f, 0.01f, L.Metal), g.F.At(x, y + g.BeamBottom - joint, z));
+        b.Add(PartSolids.BeveledBox(s, g.BeamBottom - P.ColumnPlinth - joint, s, 0.05f, L.Wall), g.F.At(x, y + P.ColumnPlinth, z));
+        if (joint > 0) b.Add(PartSolids.BeveledBox(s - 0.16f, joint, s - 0.16f, 0.01f, L.Metal), g.F.At(x, y + g.BeamBottom - joint, z));
     }
 
     // ---- Beam bridge (storeys 3–4) with the inscription plaque ----
@@ -199,8 +199,8 @@ public sealed class PinxueFrameSite : ZoneSite
         // Plaque: a slightly proud stone panel with a fine frame; the calligraphy "求实求真 大气大为" waits for the
         // scene text atlas (contract-26 follow-up) and is not painted on as a texture here.
         var mid = y + (g.BeamBottom + g.BeamTop) * 0.5f + 0.2f;
-        b.Add(PartGeometryKernel.BeveledBox(P.PlaqueWidth + 0.3f, P.PlaqueHeight + 0.3f, P.PlaqueProud, 0.01f, L.Trim), g.F.At(g.Axis, mid - (P.PlaqueHeight + 0.3f) * 0.5f, P.PlaqueProud * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(P.PlaqueWidth, P.PlaqueHeight, 0.04f, 0.005f, L.Stone), g.F.At(g.Axis, mid - P.PlaqueHeight * 0.5f, P.PlaqueProud + 0.02f));
+        b.Add(PartSolids.BeveledBox(P.PlaqueWidth + 0.3f, P.PlaqueHeight + 0.3f, P.PlaqueProud, 0.01f, L.Trim), g.F.At(g.Axis, mid - (P.PlaqueHeight + 0.3f) * 0.5f, P.PlaqueProud * 0.5f));
+        b.Add(PartSolids.BeveledBox(P.PlaqueWidth, P.PlaqueHeight, 0.04f, 0.005f, L.Stone), g.F.At(g.Axis, mid - P.PlaqueHeight * 0.5f, P.PlaqueProud + 0.02f));
         if (b.Detail != SiteDetail.Full) return;
         // Two rows of soffit downlights over the passage, skipping the columns.
         for (var x = P.DownlightPitch * 0.5f; x < g.Length; x += P.DownlightPitch)
@@ -220,10 +220,10 @@ public sealed class PinxueFrameSite : ZoneSite
         var f = box.Frame;
         float len = box.X1 - box.X0, xc = (box.X0 + box.X1) * 0.5f, depth = box.Z1 - box.Z0, zm = (box.Z0 + box.Z1) * 0.5f;
         float yBottom = y + box.Bottom, yTop = y + box.Top, h = box.Top - box.Bottom - Soffit;
-        b.Add(PartGeometryKernel.BeveledBox(len, Soffit, depth, 0.03f, L.Wall), f.At(xc, yBottom, zm));
-        b.Add(PartGeometryKernel.BeveledBox(len, 0.4f, depth - 2 * BridgeWall, 0.01f, L.RoofSlab), f.At(xc, yTop - 0.4f, zm));
-        b.Add(PartGeometryKernel.BeveledBox(len, 0.35f, depth + 0.2f, 0.03f, L.Trim), f.At(xc, yTop, zm));
-        if (box.FrontSolid) b.Add(PartGeometryKernel.BeveledBox(len, h, BridgeWall, 0.03f, L.Wall), f.At(xc, yBottom + Soffit, box.Z1 - BridgeWall * 0.5f));
+        b.Add(PartSolids.BeveledBox(len, Soffit, depth, 0.03f, L.Wall), f.At(xc, yBottom, zm));
+        b.Add(PartSolids.BeveledBox(len, 0.4f, depth - 2 * BridgeWall, 0.01f, L.RoofSlab), f.At(xc, yTop - 0.4f, zm));
+        b.Add(PartSolids.BeveledBox(len, 0.35f, depth + 0.2f, 0.03f, L.Trim), f.At(xc, yTop, zm));
+        if (box.FrontSolid) b.Add(PartSolids.BeveledBox(len, h, BridgeWall, 0.03f, L.Wall), f.At(xc, yBottom + Soffit, box.Z1 - BridgeWall * 0.5f));
         var (bands, n, _) = Ribbon(box);
         foreach (var (outward, zc) in Faces(box)) WindowWall(b, f, xc, len, zc, yBottom, h, outward, bands, n);
         if (allocation is { } a)
@@ -235,7 +235,7 @@ public sealed class PinxueFrameSite : ZoneSite
         if (b.Detail == SiteDetail.Mass) return;
         // Soffit edge band: a crisp horizontal line under the bridge on both faces.
         foreach (var (z, sign) in new[] { (box.Z1, 1f), (box.Z0, -1f) })
-            b.Add(PartGeometryKernel.BeveledBox(len, 0.18f, 0.12f, 0.01f, L.Trim), f.At(xc, yBottom, z + sign * 0.05f));
+            b.Add(PartSolids.BeveledBox(len, 0.18f, 0.12f, 0.01f, L.Trim), f.At(xc, yBottom, z + sign * 0.05f));
     }
 
     /// <summary>A wall slab with one ribbon window per band; glass set 0.3 m back (at every level, so no band reads as a hole); mullions every cell.</summary>
@@ -245,17 +245,17 @@ public sealed class PinxueFrameSite : ZoneSite
         var half = len * 0.5f - RibbonInset;
         var openings = bands.Select(band => (IReadOnlyList<Vector2>)[new(-half, band.Sill), new(half, band.Sill), new(half, band.Head), new(-half, band.Head)]).ToArray();
         var y = yBottom + Soffit;
-        b.Add(PartGeometryKernel.WallPanel(len, h, BridgeWall, openings, L.Wall), f.At(xc, y, zc));
+        b.Add(PartSolids.WallPanel(len, h, BridgeWall, openings, L.Wall), f.At(xc, y, zc));
         var glassZ = zc - outward * 0.12f;
         foreach (var (sill, head) in bands)
         {
-            b.Add(PartGeometryKernel.BeveledBox(2 * half, head - sill, 0.04f, b.Detail == SiteDetail.Mass ? 0f : 0.005f, ZoneLooks.Glass), f.At(xc, y + sill, glassZ));
+            b.Add(PartSolids.BeveledBox(2 * half, head - sill, 0.04f, b.Detail == SiteDetail.Mass ? 0f : 0.005f, ZoneLooks.Glass), f.At(xc, y + sill, glassZ));
             if (b.Detail == SiteDetail.Mass) continue;
-            b.Add(PartGeometryKernel.BeveledBox(2 * half + 0.1f, 0.08f, 0.32f, 0.01f, L.Trim), f.At(xc, y + sill - 0.08f, zc + outward * 0.12f));
+            b.Add(PartSolids.BeveledBox(2 * half + 0.1f, 0.08f, 0.32f, 0.01f, L.Trim), f.At(xc, y + sill - 0.08f, zc + outward * 0.12f));
             if (b.Detail != SiteDetail.Full) continue;
             for (var i = 1; i < n; i++)
-                b.Add(PartGeometryKernel.BeveledBox(0.08f, head - sill, 0.1f, 0.01f, L.Metal), f.At(xc - half + 2 * half * i / n, y + sill, glassZ + outward * 0.05f));
-            b.Add(PartGeometryKernel.BeveledBox(2 * half, 0.07f, 0.1f, 0.01f, L.Metal), f.At(xc, y + sill + (head - sill) * 0.72f, glassZ + outward * 0.05f));
+                b.Add(PartSolids.BeveledBox(0.08f, head - sill, 0.1f, 0.01f, L.Metal), f.At(xc - half + 2 * half * i / n, y + sill, glassZ + outward * 0.05f));
+            b.Add(PartSolids.BeveledBox(2 * half, 0.07f, 0.1f, 0.01f, L.Metal), f.At(xc, y + sill + (head - sill) * 0.72f, glassZ + outward * 0.05f));
         }
     }
 
@@ -280,7 +280,7 @@ public sealed class PinxueFrameSite : ZoneSite
         var segments = b.Detail == SiteDetail.Full ? 16 : 8;
         foreach (var (x, z) in BridgeColumns(bar))
         {
-            b.Add(PartGeometryKernel.BeveledBox(0.8f, 0.35f, 0.8f, 0.02f, L.DarkGranite), f.At(x, y - 0.1f, z));
+            b.Add(PartSolids.BeveledBox(0.8f, 0.35f, 0.8f, 0.02f, L.DarkGranite), f.At(x, y - 0.1f, z));
             b.Add(Shapes.Shaft(P.BridgeColumnRadius, P.BridgeColumnRadius * 0.9f, g.BridgeBottom - 0.25f, segments, L.Wall), f.At(x, y + 0.25f, z));
         }
     }

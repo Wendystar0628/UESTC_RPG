@@ -160,12 +160,12 @@ public abstract class ResearchSite : ZoneSite
     {
         // Hidden only when the whole face is covered: a link strip touching the middle of a long face leaves it dressed.
         var mid = (e.A + e.B) * 0.5f;
-        if (new[] { 0.1f, 0.5f, 0.9f }.All(t => plan.AllBlocks.Any(r => PlanGeometry.InsideByCrossings(r, Vector2.Lerp(e.A, e.B, t) + e.Frame.W * 0.6f))))
+        if (new[] { 0.1f, 0.5f, 0.9f }.All(t => plan.AllBlocks.Any(r => PlanRings.InsideByCrossings(r, Vector2.Lerp(e.A, e.B, t) + e.Frame.W * 0.6f))))
             return new(EdgeKind.Hidden);
         if (e.Length < 4.5f) return new(EdgeKind.Blank);
         var courtyard = false;
         for (var d = 3f; d <= R.CourtyardReach && !courtyard; d += 3f)
-            courtyard = plan.AllBlocks.Any(r => PlanGeometry.InsideByCrossings(r, mid + e.Frame.W * d));
+            courtyard = plan.AllBlocks.Any(r => PlanRings.InsideByCrossings(r, mid + e.Frame.W * d));
         var kind = e.Length >= R.FrontMin && !courtyard ? EdgeKind.Front : EdgeKind.Plain;
         if (DoorOn(e, plan) is not { } x) return new(kind);
         var half = R.PortalHalfWidth + R.PortalJamb;
@@ -302,8 +302,8 @@ public abstract class ResearchSite : ZoneSite
         var h = HallHeight(plan);
         var glassTop = y + h - R.HallAttic;
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
-        b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), glassTop - y + 0.1f, coarse ? L.LightTrim : ZoneLooks.Glass, y - 0.1f), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.Extrude(new PolygonRings(ring), 0.3f, L.RoofSlab, y + h - 0.3f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(new PolygonRings(ring), glassTop - y + 0.1f, coarse ? L.LightTrim : ZoneLooks.Glass, y - 0.1f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(new PolygonRings(ring), 0.3f, L.RoofSlab, y + h - 0.3f), Matrix4x4.Identity);
         Band(b, ring, Section(-0.4f, 0.08f, R.FloorLevel + 0.1f), L.DarkGranite, y - 0.1f);
         for (var k = 1; k < plan.HallStoreys; k++)
             Band(b, ring, Section(-0.4f, 0.16f, 0.5f), L.LightTrim, y + R.FloorLevel + k * R.HallStorey - 0.25f);
@@ -315,7 +315,7 @@ public abstract class ResearchSite : ZoneSite
     }
 
     private static void Band(SiteBuilder b, Vector2[] ring, SweepProfile section, ToonSpec material, float baseY) =>
-        b.Add(PartGeometryKernel.Sweep(section, ring, material, closed: true), Matrix4x4.CreateTranslation(0, baseY, 0));
+        b.Add(PartSweeps.Sweep(section, ring, material, closed: true), Matrix4x4.CreateTranslation(0, baseY, 0));
 
     /// <summary>Hall edges that are not against a block, as (start, end) with the outside on the right.</summary>
     private static IEnumerable<(Vector2 A, Vector2 B)> HallFaces(Plan plan, Vector2[] ring)
@@ -325,7 +325,7 @@ public abstract class ResearchSite : ZoneSite
             Vector2 a = ring[i], b = ring[(i + 1) % ring.Length];
             var t = Vector2.Normalize(b - a);
             var outward = new Vector2(-t.Y, t.X) * -1f;
-            if (plan.AllBlocks.Any(r => PlanGeometry.InsideByCrossings(r, (a + b) * 0.5f + outward * 0.6f))) continue;
+            if (plan.AllBlocks.Any(r => PlanRings.InsideByCrossings(r, (a + b) * 0.5f + outward * 0.6f))) continue;
             yield return (a, b);
         }
     }
@@ -343,10 +343,10 @@ public abstract class ResearchSite : ZoneSite
             {
                 var x = length * i / n;
                 if (door is { } d && Vector2.Distance(f.P(x, 0), d.Apex) < R.HallDoorWidth * 0.5f + 0.4f) continue;
-                b.Add(PartGeometryKernel.BeveledBox(0.07f, y1 - y0, 0.12f, 0, L.Metal), f.At(x, y0, -0.06f));
+                b.Add(PartSolids.BeveledBox(0.07f, y1 - y0, 0.12f, 0, L.Metal), f.At(x, y0, -0.06f));
             }
             for (var k = 0; k < plan.HallStoreys; k++)
-                b.Add(PartGeometryKernel.BeveledBox(length, 0.07f, 0.1f, 0, L.Metal), f.At(length * 0.5f, y0 + k * R.HallStorey + 3.0f, -0.05f));
+                b.Add(PartSolids.BeveledBox(length, 0.07f, 0.1f, 0, L.Metal), f.At(length * 0.5f, y0 + k * R.HallStorey + 3.0f, -0.05f));
         }
     }
 
@@ -372,8 +372,8 @@ public abstract class ResearchSite : ZoneSite
         var s = R.StairSize;
         var h = R.StairHeight;
         var bevel = b.Detail == SiteDetail.Full ? 0.035f : 0f;
-        b.Add(PartGeometryKernel.BeveledBox(s.X, h + 0.05f, s.Y, bevel, L.Stone), Frame.At(at.X, roof - 0.05f, at.Y));
-        b.Add(PartGeometryKernel.BeveledBox(s.X + 0.3f, 0.18f, s.Y + 0.3f, bevel * 0.5f, L.LightTrim), Frame.At(at.X, roof + h, at.Y));
+        b.Add(PartSolids.BeveledBox(s.X, h + 0.05f, s.Y, bevel, L.Stone), Frame.At(at.X, roof - 0.05f, at.Y));
+        b.Add(PartSolids.BeveledBox(s.X + 0.3f, 0.18f, s.Y + 0.3f, bevel * 0.5f, L.LightTrim), Frame.At(at.X, roof + h, at.Y));
         if (b.Detail == SiteDetail.Mass) return;
         // A shut steel door on the south face; the roof stays closed (MAP-QSH-CENTER-EAST 楼顶).
         b.Place(PartCatalog.DoorFire, new DoorParams(1.0f, 2.1f, 0.12f), Frame.AtReversed(at.X - s.X * 0.25f, roof, at.Y + s.Y * 0.5f));

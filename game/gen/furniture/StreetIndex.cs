@@ -71,7 +71,7 @@ internal sealed class StreetIndex
     internal sealed record Paving(PolygonRings? Rings, IReadOnlyList<Vector2>? Line, float Half, NetworkLine? Road = null);
 
     internal static float Edge(PolygonRings rings, Vector2 p) =>
-        rings.Holes.Aggregate(PlanGeometry.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h)));
+        rings.Holes.Aggregate(PlanRings.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanRings.DistanceToRing(p, h)));
 
     /// <summary>Road areas of a feature, part by part (a part's own kind and props win over its feature's, as WP-15 reads them).</summary>
     private static IEnumerable<(JsonElement? Props, WorldGeometry Geometry)> RoadSources(WorldFeature feature)

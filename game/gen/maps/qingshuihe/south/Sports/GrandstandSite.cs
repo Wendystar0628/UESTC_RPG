@@ -37,7 +37,7 @@ public sealed class GrandstandSite : ZoneSite
     {
         var p = LayoutOf(world);
         return [StationRange(p.Stations), .. (p.Low.Count > 0 ? new[] { StationRange(p.Low) } : []),
-            SiteRanges.Point(p.Centre), SiteRanges.Point(PlanGeometry.Centroid(
+            SiteRanges.Point(p.Centre), SiteRanges.Point(PlanPolygons.Centroid(
                 world.Feature(PlatformSite.Feature).Contour(SouthIds.Platform.Part), meanIfDegenerate: true))];
     }
 
@@ -62,9 +62,9 @@ public sealed class GrandstandSite : ZoneSite
     {
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Stand {Feature} is missing from the world model.");
-        var ring = PlanGeometry.DeduplicateRing(feature.Contour(Part));
+        var ring = PlanRings.DeduplicateRing(feature.Contour(Part));
         var track = world.Features.TryGetValue(new(Track), out var t) ? t.Contour() : null;
-        var centre = PlanGeometry.Centroid(track ?? ring, meanIfDegenerate: true);
+        var centre = PlanPolygons.Centroid(track ?? ring, meanIfDegenerate: true);
         var found = new List<Station>();
         var count = (int)MathF.Round(360f / T.StationStep);
         for (var i = 0; i < count; i++)
@@ -231,8 +231,8 @@ public sealed class GrandstandSite : ZoneSite
             // The cap's plane holds the ray; its local X runs out along the ray, Z across it.
             var across = new Vector2(-s.Out.Y, s.Out.X) * sign;
             var at = new Matrix4x4(s.Out.X, 0, s.Out.Y, 0, 0, 1, 0, 0, across.X, 0, across.Y, 0, s.Front.X, p.Y, s.Front.Y, 1);
-            if (PlanGeometry.SignedArea(face) < 0) Array.Reverse(face);
-            b.Add(PartGeometryKernel.WallPanel(new PolygonRings(face), 0.2f, L.StandConcrete), at);
+            if (PlanRings.SignedArea(face) < 0) Array.Reverse(face);
+            b.Add(PartSolids.WallPanel(new PolygonRings(face), 0.2f, L.StandConcrete), at);
         }
     }
 
@@ -247,8 +247,8 @@ public sealed class GrandstandSite : ZoneSite
             Vector2 a = s0.Back - s0.Out * 0.15f, c = s1.Back - s1.Out * 0.15f;
             var f = PlanFrame.Toward(a, c);
             var length = Vector2.Distance(a, c) + 0.05f;
-            b.Add(PartGeometryKernel.BeveledBox(length, 0.14f, 0.5f, 0.02f, L.StoneTrim), f.At(length * 0.5f, p.Y + top0 + T.Parapet, 0));
-            b.Add(PartGeometryKernel.BeveledBox(length, 0.6f, 0.42f, 0.02f, L.Granite), f.At(length * 0.5f, p.Y - 0.1f, 0.1f * MathF.Sign(Vector2.Dot(f.W, s0.Out))));
+            b.Add(PartSolids.BeveledBox(length, 0.14f, 0.5f, 0.02f, L.StoneTrim), f.At(length * 0.5f, p.Y + top0 + T.Parapet, 0));
+            b.Add(PartSolids.BeveledBox(length, 0.6f, 0.42f, 0.02f, L.Granite), f.At(length * 0.5f, p.Y - 0.1f, 0.1f * MathF.Sign(Vector2.Dot(f.W, s0.Out))));
         }
     }
 
@@ -325,7 +325,7 @@ public sealed class GrandstandSite : ZoneSite
             {
                 var a = rings[i][k] + normals[i][k] * 0.03f;
                 var c = rings[i][k + 1] + normals[i][k + 1] * 0.03f;
-                b.Add(PartGeometryKernel.BeveledBox(0.12f, Vector3.Distance(a, c) + 0.04f, 0.05f, 0, L.DarkFrame), LandmarkSolids.Along(a, c, normals[i][k] + normals[i][k + 1]));
+                b.Add(PartSolids.BeveledBox(0.12f, Vector3.Distance(a, c) + 0.04f, 0.05f, 0, L.DarkFrame), LandmarkSolids.Along(a, c, normals[i][k] + normals[i][k + 1]));
             }
         }
     }
@@ -379,11 +379,11 @@ public sealed class GrandstandSite : ZoneSite
             var head = belly.OrderBy(v => Vector2.Distance(new(v.X, v.Z), new(foot.X, foot.Z))).First();
             var height = head.Y - foot.Y;
             if (height <= 0.5f) continue;
-            b.Add(PartGeometryKernel.BeveledBox(T.Column, height, T.Column, 0.03f, L.DarkFrame), Matrix4x4.CreateTranslation(foot.X, foot.Y, foot.Z));
+            b.Add(PartSolids.BeveledBox(T.Column, height, T.Column, 0.03f, L.DarkFrame), Matrix4x4.CreateTranslation(foot.X, foot.Y, foot.Z));
             var across = new Vector3(-s.Out.Y, 0, s.Out.X);
             var reachPoint = belly[belly.Length / 3];
             var from = foot + new Vector3(0, height * 0.55f, 0);
-            b.Add(PartGeometryKernel.BeveledBox(0.3f, Vector3.Distance(from, reachPoint), 0.3f, 0.02f, L.DarkFrame), LandmarkSolids.Along(from, reachPoint, across));
+            b.Add(PartSolids.BeveledBox(0.3f, Vector3.Distance(from, reachPoint), 0.3f, 0.02f, L.DarkFrame), LandmarkSolids.Along(from, reachPoint, across));
         }
     }
 
@@ -399,7 +399,7 @@ public sealed class GrandstandSite : ZoneSite
             if (previous is { } prev) arc += Vector2.Distance(prev.Back, s.Back);
             previous = s;
             if (arc - last < T.PortalPitch) continue;
-            if (!deck.Decks.Any(r => PlanGeometry.InsideByCrossings(r, s.Back + s.Out * 1.0f))) continue;
+            if (!deck.Decks.Any(r => PlanRings.InsideByCrossings(r, s.Back + s.Out * 1.0f))) continue;
             last = arc;
             if (!b.Includes(StationRange([s]))) continue;
             var f = new PlanFrame(s.Back, new(s.Out.Y, -s.Out.X));

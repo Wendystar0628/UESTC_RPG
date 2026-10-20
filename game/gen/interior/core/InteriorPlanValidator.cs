@@ -15,8 +15,8 @@ public static class InteriorPlanValidator
         if (plan.Zones.Count == 0 || plan.Storeys.Count == 0) throw new ArgumentException("An interior wing cannot be empty.");
         foreach (ZoneVolume zone in plan.Zones)
         {
-            if (!plan.Storeys.Any(s => s.Index == zone.Storey) || Math.Abs(PlanGeometry.SignedArea(zone.Ring)) < 0.5d ||
-                zone.Ring.Any(p => !PlanGeometry.Contains(plan.Facade.Footprint.Outer, p)))
+            if (!plan.Storeys.Any(s => s.Index == zone.Storey) || Math.Abs(PlanRings.SignedArea(zone.Ring)) < 0.5d ||
+                zone.Ring.Any(p => !QuantizedPlan.Contains(plan.Facade.Footprint.Outer, p)))
                 throw new ArgumentException("A room has no valid floor area inside its wing.");
         }
         foreach (PortalDecl portal in plan.Portals)
@@ -49,8 +49,8 @@ public static class InteriorPlanValidator
                 Distance((p.A + p.B) * 0.5f, entrance.Center) <= 0.003f).ToArray();
             if (matching.Length != 1 || entrance.Open != (matching[0].Kind == PortalKind.Door))
                 throw new ArgumentException("An authoritative entrance must match exactly one generated boundary opening.");
-            if (entrance.Open && (!PlanGeometry.Contains(plan.Facade.Footprint.Outer, new(entrance.Inside.X, entrance.Inside.Z)) ||
-                PlanGeometry.Contains(plan.Facade.Footprint.Outer, new(entrance.Outside.X, entrance.Outside.Z))))
+            if (entrance.Open && (!QuantizedPlan.Contains(plan.Facade.Footprint.Outer, new(entrance.Inside.X, entrance.Inside.Z)) ||
+                QuantizedPlan.Contains(plan.Facade.Footprint.Outer, new(entrance.Outside.X, entrance.Outside.Z))))
                 throw new ArgumentException("Entrance landing directions do not cross the wing boundary.");
         }
         foreach (InteriorStair stair in plan.Stairs)
@@ -69,7 +69,7 @@ public static class InteriorPlanValidator
                     throw new ArgumentException("A dormitory flight must stay within 26 to 34 degrees and 3 to 18 steps.");
             }
             Vector2 center = new(stair.FloorOpening.Average(p => p.X), stair.FloorOpening.Average(p => p.Y));
-            if (plan.Slabs.Any(s => s.Storey == upper.Index && PlanGeometry.Contains(s.Ring, center, false)))
+            if (plan.Slabs.Any(s => s.Storey == upper.Index && QuantizedPlan.Contains(s.Ring, center, false)))
                 throw new ArgumentException("The upper floor incorrectly covers its stair opening.");
         }
         foreach (InteriorWallSpan wall in plan.Walls)

@@ -194,12 +194,12 @@ public sealed class PlantingTests
         foreach (var t in layout.Trees)
         {
             var p = new Vector2(t.Position.X, t.Position.Z);
-            if (blocking.Any(r => PlanGeometry.Contains(r, p))) throw new InvalidOperationException($"{t.Key} stands in a building, water, court or car park");
+            if (blocking.Any(r => PlanRings.Contains(r, p))) throw new InvalidOperationException($"{t.Key} stands in a building, water, court or car park");
             foreach (var road in world.Network.Roads)
                 for (var i = 1; i < road.Line.Points.Count; i++)
                     if (PlanLines.SegmentDistanceSquared(p, road.Line.Points[i - 1], road.Line.Points[i]) < road.Width * road.Width * 0.25f)
                         throw new InvalidOperationException($"{t.Key} stands on road {road.Id.Value}");
-            if (!PlanGeometry.Contains(world.Boundary, p)) throw new InvalidOperationException($"{t.Key} outside the campus");
+            if (!PlanRings.Contains(world.Boundary, p)) throw new InvalidOperationException($"{t.Key} outside the campus");
         }
     }
 

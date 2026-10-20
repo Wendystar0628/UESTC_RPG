@@ -104,8 +104,8 @@ internal sealed record SixInteriorPlan(float GroundY, PolygonRings CBase, Polygo
     private static LinearRing Linear(IReadOnlyList<Vector2> ring) => Factory.CreateLinearRing(
         ring.Append(ring[0]).Select(p => new Coordinate(p.X, p.Y)).ToArray());
     private static PolygonRings From(Polygon polygon) => new(
-        PlanGeometry.OpenRing(polygon.ExteriorRing.Coordinates.Select(c => new Vector2((float)c.X, (float)c.Y))),
-        Enumerable.Range(0, polygon.NumInteriorRings).Select(i => PlanGeometry.OpenRing(
+        PlanRings.OpenRing(polygon.ExteriorRing.Coordinates.Select(c => new Vector2((float)c.X, (float)c.Y))),
+        Enumerable.Range(0, polygon.NumInteriorRings).Select(i => PlanRings.OpenRing(
             polygon.GetInteriorRingN(i).Coordinates.Select(c => new Vector2((float)c.X, (float)c.Y)), false)).ToArray());
     private static PolygonRings Clip(PolygonRings source, PolygonRings area) =>
         Polygon(source).Intersection(Polygon(area)) is Polygon polygon ? From(polygon)

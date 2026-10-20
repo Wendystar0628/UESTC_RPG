@@ -19,7 +19,7 @@ internal static class SixGlassBase
         var inner = BasePlan(plan);
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
         GlassSkin(b, entity, inner, y, soffit, volumes, coarse);
-        b.Add(PartGeometryKernel.Extrude(plan, 0.45f, L.Trim, soffit), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(plan, 0.45f, L.Trim, soffit), Matrix4x4.Identity);
         if (coarse) return;
         Paving(b, plan, y, volumes);
         var east = EastDoor(b.Context.World);

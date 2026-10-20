@@ -5,7 +5,7 @@ using Campus.Contracts;
 namespace Campus.Gen.Geometry;
 
 /// <summary>Scalar, millimetre-quantized plan operations shared by the facade and room generators.</summary>
-public static partial class PlanGeometry
+internal static class QuantizedPlan
 {
     internal const float Tolerance = 0.002f;
 
@@ -65,7 +65,7 @@ public static partial class PlanGeometry
             }
         }
         if (points.Count < 3) throw new ArgumentException("A footprint needs at least three distinct non-collinear points.", nameof(source));
-        double area = SignedArea(points);
+        double area = PlanRings.SignedArea(points);
         if (Math.Abs(area) < 0.01d) throw new ArgumentException("A footprint has negligible area.", nameof(source));
         for (int i = 0; i < points.Count; i++)
             for (int j = i + 1; j < points.Count; j++)

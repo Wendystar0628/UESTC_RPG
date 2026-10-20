@@ -124,7 +124,7 @@ public sealed class EastLakeSite : ZoneSite
 
     private static readonly string LakePart = SouthIds.EastLake.Part;
 
-    internal static bool InWater(PolygonRings water, Vector2 p) => PlanGeometry.InsideByCrossings(water.Outer, p) && !water.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p));
+    internal static bool InWater(PolygonRings water, Vector2 p) => PlanRings.InsideByCrossings(water.Outer, p) && !water.Holes.Any(h => PlanRings.InsideByCrossings(h, p));
 
     /// <summary>Hard-bank segments as frames with +Z over the water, x from 0 to the segment length.</summary>
     internal static IEnumerable<(PlanFrame Frame, float Length, int Index)> BankSegments(Shore shore, PolygonRings water)
@@ -211,7 +211,7 @@ public sealed class EastLakeSite : ZoneSite
                     if (detail == SiteDetail.Full)
                         b.Add(Solids.Lathe(Baluster(height), 8, L.Baluster), f.At(x, y + 0.16f, 0));
                     else
-                        b.Add(PartGeometryKernel.BeveledBox(0.11f, height, 0.11f, 0, L.Baluster), f.At(x, y + 0.16f, 0));
+                        b.Add(PartSolids.BeveledBox(0.11f, height, 0.11f, 0, L.Baluster), f.At(x, y + 0.16f, 0));
                 }
             }
         }
@@ -258,7 +258,7 @@ public sealed class EastLakeSite : ZoneSite
             if (b.Detail == SiteDetail.Mass) continue;
             // Thwarts across the hull (the hull's length runs along the frame's −x in the turned placement).
             foreach (var (along, width) in new[] { (-0.7f, K.BoatBeam * 0.84f), (0.6f, K.BoatBeam * 0.8f) })
-                b.Add(PartGeometryKernel.BeveledBox(0.26f, 0.05f, width, 0, L.BoatWood), f.At(x - along, keel + K.BoatDepth * 0.62f, z));
+                b.Add(PartSolids.BeveledBox(0.26f, 0.05f, width, 0, L.BoatWood), f.At(x - along, keel + K.BoatDepth * 0.62f, z));
         }
     }
 
@@ -293,9 +293,9 @@ public sealed class EastLakeSite : ZoneSite
         var f = StatueFrame(shore);
         var detail = b.Detail;
         var bevel = detail == SiteDetail.Full ? 0.03f : 0f;
-        b.Add(PartGeometryKernel.BeveledBox(2.0f, 0.3f, 2.0f, bevel, L.DarkStone), f.At(0, y - 0.05f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(1.3f, 1.5f, 1.3f, bevel, L.DarkStone), f.At(0, y + 0.25f, 0));
-        b.Add(PartGeometryKernel.BeveledBox(1.5f, 0.2f, 1.5f, bevel, L.DarkStone), f.At(0, y + 1.75f, 0));
+        b.Add(PartSolids.BeveledBox(2.0f, 0.3f, 2.0f, bevel, L.DarkStone), f.At(0, y - 0.05f, 0));
+        b.Add(PartSolids.BeveledBox(1.3f, 1.5f, 1.3f, bevel, L.DarkStone), f.At(0, y + 0.25f, 0));
+        b.Add(PartSolids.BeveledBox(1.5f, 0.2f, 1.5f, bevel, L.DarkStone), f.At(0, y + 1.75f, 0));
         var s = K.StatueScale;
         var segments = detail switch { SiteDetail.Full => 48, SiteDetail.Plain => 28, _ => 16 };
         var small = Math.Max(8, segments / 3);
@@ -395,8 +395,8 @@ public sealed class EastLakeSite : ZoneSite
         var detail = b.Detail;
         var bevel = detail == SiteDetail.Full ? 0.02f : 0f;
         var floor = y + K.PavilionFloor;
-        b.Add(PartGeometryKernel.Extrude(new PolygonRings(Hexagon(f, K.PavilionPlatform)), K.PavilionFloor + 0.1f, L.Granite, y - 0.1f), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.Extrude(new PolygonRings(Hexagon(f, K.PavilionPlatform + 0.08f)), 0.08f, L.StoneTrim, floor - 0.08f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(new PolygonRings(Hexagon(f, K.PavilionPlatform)), K.PavilionFloor + 0.1f, L.Granite, y - 0.1f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(new PolygonRings(Hexagon(f, K.PavilionPlatform + 0.08f)), 0.08f, L.StoneTrim, floor - 0.08f), Matrix4x4.Identity);
         var flight = PavilionFlight();
         b.Add(Steps.Lods[b.Lod](flight), f.AtReversed(0, y, Apothem(K.PavilionPlatform) + flight.Depth * 0.5f));
         var segments = detail == SiteDetail.Full ? 16 : 10;
@@ -404,16 +404,16 @@ public sealed class EastLakeSite : ZoneSite
         {
             var c = Corner(f, i, K.PavilionColumns);
             var at = new PlanFrame(c, f.U);
-            b.Add(PartGeometryKernel.BeveledBox(0.42f, 0.22f, 0.42f, bevel, L.StoneTrim), at.At(0, floor, 0));
+            b.Add(PartSolids.BeveledBox(0.42f, 0.22f, 0.42f, bevel, L.StoneTrim), at.At(0, floor, 0));
             b.Add(Shapes.Shaft(0.14f, 0.125f, K.PavilionColumnHeight - 0.22f, segments, L.RedTimber), at.At(0, floor + 0.22f, 0));
             // Ring beam between column heads; bench boards on every side but the entrance (north) one.
             var next = Corner(f, i + 1, K.PavilionColumns);
             var beam = PlanFrame.Toward(c, next);
             var length = Vector2.Distance(c, next);
-            b.Add(PartGeometryKernel.BeveledBox(length + 0.2f, 0.3f, 0.2f, bevel, L.Wood), beam.At(length * 0.5f, floor + K.PavilionColumnHeight - 0.3f, 0));
+            b.Add(PartSolids.BeveledBox(length + 0.2f, 0.3f, 0.2f, bevel, L.Wood), beam.At(length * 0.5f, floor + K.PavilionColumnHeight - 0.3f, 0));
             if (detail == SiteDetail.Mass || IsEntrance(f, c, next)) continue;
-            b.Add(PartGeometryKernel.BeveledBox(length - 0.4f, 0.07f, 0.38f, 0, L.Wood), beam.At(length * 0.5f, floor + 0.42f, -0.2f));
-            b.Add(PartGeometryKernel.BeveledBox(length - 0.4f, 0.42f, 0.06f, 0, L.Wood), beam.At(length * 0.5f, floor, -0.02f));
+            b.Add(PartSolids.BeveledBox(length - 0.4f, 0.07f, 0.38f, 0, L.Wood), beam.At(length * 0.5f, floor + 0.42f, -0.2f));
+            b.Add(PartSolids.BeveledBox(length - 0.4f, 0.42f, 0.06f, 0, L.Wood), beam.At(length * 0.5f, floor, -0.02f));
         }
         // Lower eave: its soffit meets the ring beam at the column circle, so the eave edge hangs below the column heads.
         var head = floor + K.PavilionColumnHeight;
@@ -422,7 +422,7 @@ public sealed class EastLakeSite : ZoneSite
         b.Add(LandmarkSolids.PolyRoof(6, K.LowerEave, K.DrumRadius - 0.05f, K.LowerRise, 0.35f, 0.16f, perSide, Phase, L.Tiles, L.Wood), f.At(0, lower, 0));
         // Drum between the eaves, then the upper roof, its soffit meeting the drum, and the finial.
         var drumTop = lower + K.LowerRise + 0.6f;
-        b.Add(PartGeometryKernel.Extrude(new PolygonRings(Hexagon(f, K.DrumRadius)), drumTop - (lower + K.LowerRise - 0.2f), L.Wood, lower + K.LowerRise - 0.2f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(new PolygonRings(Hexagon(f, K.DrumRadius)), drumTop - (lower + K.LowerRise - 0.2f), L.Wood, lower + K.LowerRise - 0.2f), Matrix4x4.Identity);
         var upper = drumTop + 0.14f - K.UpperRise * (K.UpperEave - K.DrumRadius) / K.UpperEave;
         b.Add(LandmarkSolids.PolyRoof(6, K.UpperEave, 0, K.UpperRise, 0.3f, 0.14f, perSide, Phase, L.Tiles, L.Wood), f.At(0, upper, 0));
         if (detail != SiteDetail.Mass)

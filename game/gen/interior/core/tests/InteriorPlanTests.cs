@@ -223,8 +223,8 @@ public sealed class InteriorPlanTests
         var plan=InteriorPlanGenerator.Generate(request);
         AssertThat(plan.Storeys.All(s=>s.Height==3.2f)&&plan.Storeys[1].FloorY==3.2f).IsTrue();
         AssertThat(plan.Stairs.All(s => s.UpFlight.Stair is { Count: 10 } && s.ReturnFlight.Stair is { Count: 10 })).IsTrue();
-        var floor=plan.Slabs.Where(s=>s.Storey==1).Sum(s=>Math.Abs(Campus.Gen.Geometry.PlanGeometry.SignedArea(s.Ring)));
-        var footprintArea=Math.Abs(Campus.Gen.Geometry.PlanGeometry.SignedArea(footprint.Outer));
+        var floor=plan.Slabs.Where(s=>s.Storey==1).Sum(s=>Math.Abs(Campus.Gen.Geometry.PlanRings.SignedArea(s.Ring)));
+        var footprintArea=Math.Abs(Campus.Gen.Geometry.PlanRings.SignedArea(footprint.Outer));
         AssertThat(Math.Abs(floor-footprintArea)/footprintArea<TestTolerance.FloatRelative).IsTrue();
         AssertThat(plan.Rooms.SelectMany(r=>r.ClearRing).Any(p=>p.Y>13.6f)).IsTrue();
     }
@@ -257,8 +257,8 @@ public sealed class InteriorPlanTests
         var reversed=InteriorWingDecomposition.Split(new(footprint.Outer.Reverse().ToArray()),"fixture:oblique");
         AssertThat(wings.Count==2&&wings.All(w=>w.Outer.Count==4&&w.Outer.All(footprint.Outer.Contains))).IsTrue();
         AssertThat(wings.Zip(reversed).All(pair=>pair.First.Outer.SequenceEqual(pair.Second.Outer))).IsTrue();
-        var footprintArea=Math.Abs(Campus.Gen.Geometry.PlanGeometry.SignedArea(footprint.Outer));
-        AssertThat(Math.Abs(wings.Sum(w=>Math.Abs(Campus.Gen.Geometry.PlanGeometry.SignedArea(w.Outer)))-
+        var footprintArea=Math.Abs(Campus.Gen.Geometry.PlanRings.SignedArea(footprint.Outer));
+        AssertThat(Math.Abs(wings.Sum(w=>Math.Abs(Campus.Gen.Geometry.PlanRings.SignedArea(w.Outer)))-
             footprintArea)/footprintArea<TestTolerance.FloatRelative).IsTrue();
     }
 

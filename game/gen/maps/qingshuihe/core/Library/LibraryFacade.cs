@@ -38,7 +38,7 @@ public enum OpeningKind { Ribbon, Podium, Square, Slit, Slot, Mech, Entry }
 public sealed record Opening(Face Face, OpeningKind Kind, Rect Hole, int Cells, IReadOnlyList<(float Y0, float Y1, int Row)> Rows,
     int Column, byte Card)
 {
-    public float Depth => Kind == OpeningKind.Slot ? S.SlotDepth : S.Reveal;
+    public float Depth => Kind == OpeningKind.Slot ? LibraryStyle.SlotDepth : LibraryStyle.Reveal;
 
     /// <summary>
     /// A door bay (16c front door in the slot, 16d cafe door): cells First … First + Count − 1 of the first row are open
@@ -54,7 +54,7 @@ public sealed record Opening(Face Face, OpeningKind Kind, Rect Hole, int Cells, 
 /// <summary>Paints of a glazed opening: reveal (the wall's), sill (trim) and frame bars.</summary>
 public readonly record struct FacadePaints(Paint Wall, Paint Trim, Paint Frame)
 {
-    public static FacadePaints Library => new(S.Wall(S.LibraryWall), S.Trim(S.LibraryTrim), S.Metal(S.LibraryFrame));
+    public static FacadePaints Library => new(S.Wall(LibraryStyle.LibraryWall), S.Trim(LibraryStyle.LibraryTrim), S.Metal(LibraryStyle.LibraryFrame));
 }
 
 /// <summary>Pure writers for walls, bands and glazed openings on a <see cref="Face"/>.</summary>
@@ -140,7 +140,7 @@ public static class LibraryFacade
         mesh.Quad(wall, f.At(h.U0, 0f, h.Y1), f.At(h.U1, 0f, h.Y1), f.At(h.U1, depth, h.Y1), f.At(h.U0, depth, h.Y1), -Vector3.UnitY);
         mesh.Quad(o.Kind == OpeningKind.Slot ? wall : trim, f.At(h.U0, 0f, h.Y0), f.At(h.U1, 0f, h.Y0), f.At(h.U1, depth, h.Y0), f.At(h.U0, depth, h.Y0), Vector3.UnitY);
         if (o.Kind is OpeningKind.Ribbon or OpeningKind.Podium or OpeningKind.Square)
-            Box(mesh, trim, f, h.U0 - S.SillProject, h.U1 + S.SillProject, 0f, S.SillProject, h.Y0 - S.SillHeight, h.Y0);
+            Box(mesh, trim, f, h.U0 - LibraryStyle.SillProject, h.U1 + LibraryStyle.SillProject, 0f, LibraryStyle.SillProject, h.Y0 - LibraryStyle.SillHeight, h.Y0);
         foreach (var (y0, y1, row) in o.Rows)
             for (var c = 0; c < o.Cells; c++)
             {
@@ -150,7 +150,7 @@ public static class LibraryFacade
         // Frame ring and mullions stand proud of the glass by the frame depth; the door bay has no sill bar and its
         // inner mullions start at the door transom (the door part frames the opening below). L0 builds each bar as a box;
         // L1 (mid range, where a 7 cm bar is an outline stroke) keeps only its front face.
-        float s0 = depth, s1 = depth + S.FrameDepth, w = S.FrameFace, m = S.MullionFace * 0.5f;
+        float s0 = depth, s1 = depth + LibraryStyle.FrameDepth, w = LibraryStyle.FrameFace, m = LibraryStyle.MullionFace * 0.5f;
         float U(int c) => h.U0 + (h.U1 - h.U0) * c / o.Cells;
         void Bar(float u0, float u1, float front, float y0, float y1)
         {
@@ -185,7 +185,7 @@ public static class LibraryFacade
     private static IEnumerable<float> Transoms(Opening o)
     {
         for (var r = 1; r < o.Rows.Count; r++) yield return o.Rows[r].Y0;
-        if (o.Kind == OpeningKind.Podium) yield return o.Hole.Y0 + S.PodiumTransom;
+        if (o.Kind == OpeningKind.Podium) yield return o.Hole.Y0 + LibraryStyle.PodiumTransom;
         if (o.Door is { } door) yield return door.Top;
     }
 
@@ -204,7 +204,7 @@ public static class LibraryFacade
             var path = chains[i];
             try
             {
-                mesh.Add(paint, PartGeometryKernel.Sweep(profile, path, spec, closed[i], baseY), Matrix4x4.Identity);
+                mesh.Add(paint, PartSweeps.Sweep(profile, path, spec, closed[i], baseY), Matrix4x4.Identity);
             }
             catch (ArgumentException)
             {
@@ -213,7 +213,7 @@ public static class LibraryFacade
                 {
                     Vector2 a = path[k], b = path[(k + 1) % path.Count];
                     if (Vector2.Distance(a, b) < 0.02f) continue;
-                    mesh.Add(paint, PartGeometryKernel.Sweep(profile, [a, b], spec, false, baseY), Matrix4x4.Identity);
+                    mesh.Add(paint, PartSweeps.Sweep(profile, [a, b], spec, false, baseY), Matrix4x4.Identity);
                 }
             }
         }
@@ -253,13 +253,13 @@ public static class LibraryFacade
     /// <summary>Parapet with a chamfered, overhanging coping; X = 0 is the wall face, +X outward.</summary>
     public static SweepProfile Parapet(float height, float thick)
     {
-        float t = thick, h = height - S.CopingHeight, c = S.CopingHeight, o = S.CopingOverhang, b = S.CopingBevel;
+        float t = thick, h = height - LibraryStyle.CopingHeight, c = LibraryStyle.CopingHeight, o = LibraryStyle.CopingOverhang, b = LibraryStyle.CopingBevel;
         return new([new(-t, 0), new(0, 0), new(0, h), new(o, h), new(o, h + c - b), new(o - b, h + c), new(-t - o + b, h + c),
             new(-t - o, h + c - b), new(-t - o, h), new(-t, h)]);
     }
 
     /// <summary>The canted metal eave over the set-back wall: low outer edge with a fascia, leaning back up over the roof.</summary>
     public static SweepProfile Eave() =>
-        new([new(S.EaveOverhang, -S.EaveDrop - S.EaveThick), new(S.EaveOverhang, -S.EaveDrop), new(-S.EaveRun, S.EaveRise),
-            new(-S.EaveRun, S.EaveRise - S.EaveThick)]);
+        new([new(LibraryStyle.EaveOverhang, -LibraryStyle.EaveDrop - LibraryStyle.EaveThick), new(LibraryStyle.EaveOverhang, -LibraryStyle.EaveDrop), new(-LibraryStyle.EaveRun, LibraryStyle.EaveRise),
+            new(-LibraryStyle.EaveRun, LibraryStyle.EaveRise - LibraryStyle.EaveThick)]);
 }

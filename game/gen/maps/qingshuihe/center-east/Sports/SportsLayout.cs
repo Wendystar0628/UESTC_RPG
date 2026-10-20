@@ -25,7 +25,7 @@ internal static class SportsLayout
 
     internal static (float Low, float High) FenceGround(IWorldModel world, Vector2 a, Vector2 b)
     {
-        var normal = PlanGeometry.RightUnitNormal(a, b) * Campus.Gen.Parts.Sport.SportsStyle.FenceGroundBand;
+        var normal = PlanOffsets.RightUnitNormal(a, b) * Campus.Gen.Parts.Sport.SportsStyle.FenceGroundBand;
         var heights = new[] { a - normal, a + normal, b - normal, b + normal, (a + b) * 0.5f - normal, (a + b) * 0.5f + normal }
             .Select(p => world.Terrain.HeightAt(p.X, p.Y)).ToArray();
         return (heights.Min(), heights.Max());

@@ -80,7 +80,7 @@ public sealed partial class CenterEastModuleTests
     {
         var world = World();
         IReadOnlyList<Vector2> Outline(string id) => ((PolygonGeometry)world.Features[new(id)].Geometry).Rings.Outer;
-        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs((float)PlanGeometry.SignedArea(ring));
+        static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs((float)PlanRings.SignedArea(ring));
         foreach (var site in CenterEastSites.All.OfType<ResearchSite>())
         {
             var built = Area(site.Footprints(world).Hall);
@@ -106,7 +106,7 @@ public sealed partial class CenterEastModuleTests
             AssertThat(colliders.OfType<WallCollider>().Count(w => w.Tag == SurfaceTag.DoorClosed && Vector2.Distance((w.A + w.B) * 0.5f, door) < 3f) is >= 1 and <= 2).OverrideFailureMessage($"{site.Id} has its shut entrance at the door").IsTrue();
         }
 
-        static bool NearRing(IReadOnlyList<Vector2> ring, Vector2 p) => PlanGeometry.DistanceToRing(p, ring) < 1f;
+        static bool NearRing(IReadOnlyList<Vector2> ring, Vector2 p) => PlanRings.DistanceToRing(p, ring) < 1f;
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

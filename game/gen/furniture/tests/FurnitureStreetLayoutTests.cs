@@ -116,8 +116,8 @@ public sealed class FurnitureStreetLayoutTests
         AssertThat(layout.Diagnostics.Count(d => d.Code == "wp13.anchor.not-placed") == landings.Count(l => l.Landing != Landing.Open)).OverrideFailureMessage("a diagnostic message without a left-out anchor").IsTrue();
         // A building: a placed anchor moved onto a building's centre is left out too, and nothing else changes.
         var building = world.Features.Values.Where(f => f.Kind.Value == "building" && f.Geometry is PolygonGeometry).OrderBy(f => f.Id.Value, StringComparer.Ordinal)
-            .Select(f => (Feature: f, Centre: PlanGeometry.Centroid(((PolygonGeometry)f.Geometry).Rings.Outer)))
-            .First(b => PlanGeometry.Contains(((PolygonGeometry)b.Feature.Geometry).Rings, b.Centre) && PlanGeometry.DistanceToRing(b.Centre, ((PolygonGeometry)b.Feature.Geometry).Rings.Outer) > 3f);
+            .Select(f => (Feature: f, Centre: PlanPolygons.Centroid(((PolygonGeometry)f.Geometry).Rings.Outer)))
+            .First(b => PlanRings.Contains(((PolygonGeometry)b.Feature.Geometry).Rings, b.Centre) && PlanRings.DistanceToRing(b.Centre, ((PolygonGeometry)b.Feature.Geometry).Rings.Outer) > 3f);
         var anchor = landings.First(l => l.Landing == Landing.Open);
         var ring = ((PolygonGeometry)anchor.Feature.Geometry).Rings.Outer;
         var shift = building.Centre - anchor.Centre;
@@ -148,7 +148,7 @@ public sealed class FurnitureStreetLayoutTests
         }
         float Gap(Vector2 q) => MathF.Max(0f, MathF.Min(
             lines.Select(l => (float)PlanLines.Project(l.Line.Points, q).Distance - Half(l)).DefaultIfEmpty(float.MaxValue).Min(),
-            areas.Select(a => PlanGeometry.Contains(a, q) ? 0f : a.Holes.Append(a.Outer).Min(r => PlanGeometry.DistanceToRing(q, r))).DefaultIfEmpty(float.MaxValue).Min()));
+            areas.Select(a => PlanRings.Contains(a, q) ? 0f : a.Holes.Append(a.Outer).Min(r => PlanRings.DistanceToRing(q, r))).DefaultIfEmpty(float.MaxValue).Min()));
         foreach (var item in layout.Items.Where(i => i.Kind is FurnitureKind.AtlasKiosk or FurnitureKind.AtlasPost))
         {
             var feature = world.Features[new(item.Key["anchor:".Length..])];

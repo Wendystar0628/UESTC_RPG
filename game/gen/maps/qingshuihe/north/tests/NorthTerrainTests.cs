@@ -67,7 +67,7 @@ public sealed class NorthTerrainTests
         var corridors = file.Ops.OfType<TerrainCorridorOp>().ToDictionary(c => c.Road);
         var terraces = file.Ops.OfType<TerrainPlatformOp>().Select(p => p.Rings.Outer).ToArray();
         foreach (var road in roads)
-            if (Samples(road.Line.Points).Any(p => terraces.Any(t => PlanGeometry.InsideByCrossings(t, p))))
+            if (Samples(road.Line.Points).Any(p => terraces.Any(t => PlanRings.InsideByCrossings(t, p))))
                 AssertThat(corridors.ContainsKey(road.Id)).OverrideFailureMessage($"{road.Id.Value} runs onto a terrace without corridor anchors").IsTrue();
         foreach (var c in corridors.Values)
             for (var i = 0; i + 1 < c.Anchors.Count; i++)
@@ -115,7 +115,7 @@ public sealed class NorthTerrainTests
         foreach (var terrace in Terrain().Ops.OfType<TerrainPlatformOp>())
         {
             var ring = terrace.Rings.Outer;
-            var inside = footprint.Count(p => PlanGeometry.InsideByCrossings(ring, p));
+            var inside = footprint.Count(p => PlanRings.InsideByCrossings(ring, p));
             AssertThat(inside == 0 || inside == footprint.Count).OverrideFailureMessage($"5561 straddles {terrace.Id}").IsTrue();
             var clear = float.MaxValue;
             for (var i = 0; i < footprint.Count; i++)
@@ -167,7 +167,7 @@ public sealed class NorthTerrainTests
             }
             foreach (var p in Samples(line))
             {
-                var wall = walls.Min(r => PlanGeometry.InsideByCrossings(r, p) ? 0f : PlanGeometry.DistanceToRing(p, r)) - half;
+                var wall = walls.Min(r => PlanRings.InsideByCrossings(r, p) ? 0f : PlanRings.DistanceToRing(p, r)) - half;
                 AssertThat(wall >= wallClear).OverrideFailureMessage($"{add.Id.Value}: surface at {p} is {wall:0.00} m from a wall or water edge").IsTrue();
                 foreach (var water in world.Network.Waterways)
                     AssertThat(MathF.Sqrt(PlanLines.PolylineDistanceSquared(water.Line.Points, p)) - water.Width * 0.5f - half >= wallClear).OverrideFailureMessage($"{add.Id.Value}: {p} keeps off {water.Id.Value}").IsTrue();
@@ -178,7 +178,7 @@ public sealed class NorthTerrainTests
                         case TerrainPlatformOp t:
                             var n = double.Parse(t.Side.Fill.Split(':')[1], System.Globalization.CultureInfo.InvariantCulture);
                             var foot = Math.Abs(t.Y) * n + t.Fillet * 0.5;
-                            AssertThat(!PlanGeometry.InsideByCrossings(t.Rings.Outer, p) && PlanGeometry.DistanceToRing(p, t.Rings.Outer) - half >= foot).OverrideFailureMessage($"{add.Id.Value}: {p} is on {t.Id} or its side slope").IsTrue();
+                            AssertThat(!PlanRings.InsideByCrossings(t.Rings.Outer, p) && PlanRings.DistanceToRing(p, t.Rings.Outer) - half >= foot).OverrideFailureMessage($"{add.Id.Value}: {p} is on {t.Id} or its side slope").IsTrue();
                             break;
                         case TerrainMoundOp or TerrainBasinOp:
                             var e = (TerrainEllipse)(op is TerrainMoundOp m ? m.Shape : ((TerrainBasinOp)op).Shape);
@@ -207,7 +207,7 @@ public sealed class NorthTerrainTests
                 });
                 var joinsArea = world.Features.Values.Where(target => target.Id != add.Id && target.Kind.Value == "road" &&
                     WorldProps.TryText(target.Props, "highway") == "pedestrian").SelectMany(target => WorldFeatureGeometry.PolygonsOf(target.Geometry))
-                    .Any(rings => PlanGeometry.Contains(rings, end) || PlanGeometry.DistanceToRing(end, rings.Outer) <= TestTolerance.Layout);
+                    .Any(rings => PlanRings.Contains(rings, end) || PlanRings.DistanceToRing(end, rings.Outer) <= TestTolerance.Layout);
                 AssertThat(joinsRoad || joinsArea).OverrideFailureMessage($"{add.Id.Value}: endpoint {end} joins existing paving").IsTrue();
             }
 

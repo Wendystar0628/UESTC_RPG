@@ -44,7 +44,7 @@ public sealed class LibraryShellTests
         foreach (var piece in plan.Pieces)
         {
             var mid = (piece.A + piece.B) * 0.5f;
-            AssertThat(!PlanGeometry.InsideByCrossings(piece.Block.Ring, mid + piece.Out * 0.2f) && PlanGeometry.InsideByCrossings(piece.Block.Ring, mid - piece.Out * 0.2f)).OverrideFailureMessage($"{piece.Block.Kind} piece faces out").IsTrue();
+            AssertThat(!PlanRings.InsideByCrossings(piece.Block.Ring, mid + piece.Out * 0.2f) && PlanRings.InsideByCrossings(piece.Block.Ring, mid - piece.Out * 0.2f)).OverrideFailureMessage($"{piece.Block.Kind} piece faces out").IsTrue();
             AssertThat(piece.Y1 > piece.Y0).OverrideFailureMessage("piece has height").IsTrue();
         }
         // No exterior wall is hidden inside another block of the shell.
@@ -52,7 +52,7 @@ public sealed class LibraryShellTests
         {
             var probe = (piece.A + piece.B) * 0.5f + piece.Out * 0.2f;
             var y = (piece.Y0 + piece.Y1) * 0.5f;
-            var buried = plan.Blocks.FirstOrDefault(b => !ReferenceEquals(b, piece.Block) && y > b.Y0 && y < b.Y1 && PlanGeometry.InsideByCrossings(b.Ring, probe));
+            var buried = plan.Blocks.FirstOrDefault(b => !ReferenceEquals(b, piece.Block) && y > b.Y0 && y < b.Y1 && PlanRings.InsideByCrossings(b.Ring, probe));
             AssertThat(buried is null).OverrideFailureMessage($"{piece.Block.Kind} piece {piece.A}-{piece.B} y {piece.Y0}-{piece.Y1} is not buried in {buried?.Kind} {buried?.Source}").IsTrue();
         }
         // The front tower's outer face carries lib.main's door: its centre is on the slot glass 0.75 m in.
@@ -76,7 +76,7 @@ public sealed class LibraryShellTests
                 for (var c = 0; c < o.Cells; c++)
                     AssertThat(ids.Add(row * shell.Columns + o.Column + c)).OverrideFailureMessage("window IDs are unique").IsTrue();
         int Count(OpeningKind kind) => shell.Openings.Count(o => o.Kind == kind);
-        AssertThat(Count(OpeningKind.Slit) == 3 * CoreStyle.TowerSlits).OverrideFailureMessage($"seven slits on each of three towers ({Count(OpeningKind.Slit)})").IsTrue();
+        AssertThat(Count(OpeningKind.Slit) == 3 * LibraryStyle.TowerSlits).OverrideFailureMessage($"seven slits on each of three towers ({Count(OpeningKind.Slit)})").IsTrue();
         AssertThat(Count(OpeningKind.Slot) == 1).OverrideFailureMessage("one glass slot on the front tower").IsTrue();
         AssertThat(Count(OpeningKind.Ribbon) > 0 && Count(OpeningKind.Square) > 0 && Count(OpeningKind.Podium) > 0).OverrideFailureMessage($"ribbons {Count(OpeningKind.Ribbon)}, squares {Count(OpeningKind.Square)}, podium {Count(OpeningKind.Podium)}").IsTrue();
     }
@@ -159,10 +159,10 @@ public sealed class LibraryShellTests
                 if ((int)g.Uv2[2 * v] != allocation.BaseId) continue;
                 glassIds.Add((int)g.Uv2[2 * v] + (int)MathF.Floor(g.Uv![2 * v + 1]) * columns + (int)MathF.Floor(g.Uv[2 * v]));
             }
-        var windows = module.DescribeWindows(ctx).Windows.Where(w => w.Channel == CoreStyle.LibraryWindowChannel && w.BaseId == allocation.BaseId).ToArray();
+        var windows = module.DescribeWindows(ctx).Windows.Where(w => w.Channel == LibraryStyle.LibraryWindowChannel && w.BaseId == allocation.BaseId).ToArray();
         var metaIds = new SortedSet<int>(windows.Select(w => w.Id));
         AssertThat(metaIds.Count == windows.Length).OverrideFailureMessage("one declaration per window").IsTrue();
-        AssertThat(windows.All(w => w.BaseId == allocation.BaseId && w.TotalColumns == shell.Columns && w.Channel == CoreStyle.LibraryWindowChannel)).OverrideFailureMessage("declarations carry the allocation").IsTrue();
+        AssertThat(windows.All(w => w.BaseId == allocation.BaseId && w.TotalColumns == shell.Columns && w.Channel == LibraryStyle.LibraryWindowChannel)).OverrideFailureMessage("declarations carry the allocation").IsTrue();
         AssertThat(metaIds.Min >= allocation.BaseId && metaIds.Max < allocation.BaseId + allocation.Count).OverrideFailureMessage("IDs stay inside the library block").IsTrue();
         AssertThat(glassIds.SetEquals(metaIds)).OverrideFailureMessage($"decoded glass IDs ({glassIds.Count}) equal the declared windows ({metaIds.Count})").IsTrue();
         foreach (var w in windows)
@@ -216,9 +216,9 @@ public sealed class LibraryShellTests
         var cafe = shell.CafeDoor ?? throw new InvalidOperationException("Expected: the 1F cafe door");
         // lib.cafe: on the 1F floor of the podium face that starts at the 品·悦吧 store front, two open leaves clear 1.1 m.
         AssertThat(MathF.Abs(cafe.Origin.Y - plan.FloorY) < TestTolerance.Position && plan.CafeFace is { Piece.Block.Kind: BlockKind.Podium }).OverrideFailureMessage("the cafe door is in the 1F podium").IsTrue();
-        var store = FeatureReads.Contour(world.Features[CoreIds.CafeStore]);
+        var store = FeatureShapes.Contour(world.Features[CoreIds.CafeStore]);
         AssertThat(store.Min(p => Vector2.Distance(p, new(cafe.Origin.X, cafe.Origin.Z))) < 6f).OverrideFailureMessage("the cafe door is beside the store front").IsTrue();
-        AssertThat(cafe.Width / CoreStyle.DoorLeaves * 2 >= 1.1f && cafe.Height >= 2.4f).OverrideFailureMessage($"cafe door {cafe.Width} × {cafe.Height}").IsTrue();
+        AssertThat(cafe.Width / EntranceStyle.DoorLeaves * 2 >= 1.1f && cafe.Height >= 2.4f).OverrideFailureMessage($"cafe door {cafe.Width} × {cafe.Height}").IsTrue();
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         shell.Build(build, LodLevel.L0);
         var output = build.Finish(LodLevel.L0);
@@ -236,7 +236,7 @@ public sealed class LibraryShellTests
                 foreach (var w in colliders.OfType<WallCollider>().Where(w => w.Y0 < bay.Origin.Y + 1.8f && w.Y1 > bay.Origin.Y + 0.3f))
                     AssertThat(SegmentDistance(a, b, w.A, w.B) > w.HalfT).OverrideFailureMessage($"the way through the door at {bay.Origin} crosses a wall {w.A}–{w.B}").IsTrue();
             }
-            AssertThat(colliders.OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - bay.Origin.Y) < TestTolerance.Position && PlanGeometry.InsideByCrossings(s.Ring, o + n * 0.01f))).OverrideFailureMessage("the recess has a floor at the door's level").IsTrue();
+            AssertThat(colliders.OfType<SlabCollider>().Any(s => MathF.Abs(s.Y - bay.Origin.Y) < TestTolerance.Position && PlanRings.InsideByCrossings(s.Ring, o + n * 0.01f))).OverrideFailureMessage("the recess has a floor at the door's level").IsTrue();
             // The face line is closed beside the bay: a wall 1 m to either side of the door's outer leaves.
             foreach (var side in new[] { -1f, 1f })
             {
@@ -266,7 +266,7 @@ public sealed class LibraryShellTests
     {
         var plan = Shell(Campus.Tests.RealMapFixture.Load().World).Plan;
         var across = 2 * plan.SkylightRadius * MathF.Cos(MathF.Tau / 16f);
-        AssertThat(MathF.Abs(across - CoreStyle.SkylightAcross) < TestTolerance.Position).OverrideFailureMessage($"skylight across flats {across}").IsTrue();
+        AssertThat(MathF.Abs(across - LibraryStyle.SkylightAcross) < TestTolerance.Position).OverrideFailureMessage($"skylight across flats {across}").IsTrue();
         AssertThat(LibraryRoof.SkylightApexY(plan) > plan.RoofY + 3f).OverrideFailureMessage("the cone rises above the curb").IsTrue();
         var north = LibraryRoof.FaceDirection(plan, LibraryRoof.NorthFace(plan));
         AssertThat(north.Y < -0.9f).OverrideFailureMessage($"mechanical box on the north axis {north}").IsTrue();
@@ -282,18 +282,18 @@ public sealed class LibraryShellTests
         var cafe = shell.CafeDoor ?? throw new InvalidOperationException("Expected: the cafe door");
         var face = cafe.Face;
         float S(Vector2 p) => Vector2.Dot(p - face.A, face.Out);
-        AssertThat(S(walk.A) > 0f && S(walk.A) < CoreStyle.CafeApronDepth).OverrideFailureMessage($"the link starts inside the apron ({S(walk.A):F2} m out)").IsTrue();
-        AssertThat(S(walk.B) > S(walk.A) && Vector2.Distance(walk.A, walk.B) is > 0.5f and < CoreStyle.CafeWalkReach).OverrideFailureMessage($"the link runs out {Vector2.Distance(walk.A, walk.B):F2} m").IsTrue();
+        AssertThat(S(walk.A) > 0f && S(walk.A) < LibraryStyle.CafeApronDepth).OverrideFailureMessage($"the link starts inside the apron ({S(walk.A):F2} m out)").IsTrue();
+        AssertThat(S(walk.B) > S(walk.A) && Vector2.Distance(walk.A, walk.B) is > 0.5f and < LibraryStyle.CafeWalkReach).OverrideFailureMessage($"the link runs out {Vector2.Distance(walk.A, walk.B):F2} m").IsTrue();
         var walks = world.Network.Roads.Where(r => r.Props is { ValueKind: JsonValueKind.Object } p && p.TryGetProperty("highway", out var h)
             && h.GetString() is "footway" or "path" or "pedestrian").ToArray();
         var reach = walks.Min(r => Enumerable.Range(1, r.Line.Points.Count - 1).Min(k => SegmentDistance(walk.B, walk.B, r.Line.Points[k - 1], r.Line.Points[k])) - (r.Width > 0f ? r.Width : 2f) * 0.5f);
         AssertThat(reach < 0f).OverrideFailureMessage($"the link ends on a footway ({reach:F2})").IsTrue();
-        var slab = shell.Collide().OfType<SlabCollider>().Where(c => c.Ring.Count == 4 && PlanGeometry.InsideByCrossings(c.Ring, (walk.A + walk.B) * 0.5f)).ToArray();
+        var slab = shell.Collide().OfType<SlabCollider>().Where(c => c.Ring.Count == 4 && PlanRings.InsideByCrossings(c.Ring, (walk.A + walk.B) * 0.5f)).ToArray();
         AssertThat(slab.Length >= 1 && slab.All(c => c.Foot == FootMat.StonePaving)).OverrideFailureMessage("the link is walkable stone paving").IsTrue();
         var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
         shell.Build(build, LodLevel.L0);
         var output = build.Finish(LodLevel.L0);
-        AssertThat(output.Meshes.Any(m => m.ColorIndices?.Contains(Campus.Contracts.Tests.PaletteFixture.Catalog.Resolve(new(CoreStyle.CafeWalkPaving + ".lit")).Value) == true)).OverrideFailureMessage("pavers on the link").IsTrue();
+        AssertThat(output.Meshes.Any(m => m.ColorIndices?.Contains(Campus.Contracts.Tests.PaletteFixture.Catalog.Resolve(new(LibraryStyle.CafeWalkPaving + ".lit")).Value) == true)).OverrideFailureMessage("pavers on the link").IsTrue();
     }
 
     // ---------------------------------------------------------------- fixtures

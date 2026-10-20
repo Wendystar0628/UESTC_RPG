@@ -22,10 +22,10 @@ public static class PoolBasin
         {
             var start = stations[band]; var end = stations[band + 1]; var mid = (start + end) * 0.5f;
             var depth = W.DepthAt(mid, length);
-            b.Add(PartGeometryKernel.BeveledBox(end - start, SportsStyle.Slab, width, SportsStyle.Bevel, Tile),
+            b.Add(PartSolids.BeveledBox(end - start, SportsStyle.Slab, width, SportsStyle.Bevel, Tile),
                 Xf.Move(mid, -depth - SportsStyle.Slab, 0));
             foreach (var side in new[] { -1f, 1f })
-                b.Add(PartGeometryKernel.BeveledBox(end - start, depth + W.RimDrop, SportsStyle.Slab, SportsStyle.Bevel, Tile),
+                b.Add(PartSolids.BeveledBox(end - start, depth + W.RimDrop, SportsStyle.Slab, SportsStyle.Bevel, Tile),
                     Xf.Move(mid, -depth, side * width * 0.5f));
             for (var lane = 0; lane < lanes; lane++)
             {
@@ -33,21 +33,21 @@ public static class PoolBasin
                 var lineStart = MathF.Max(start, W.LaneEndInset);
                 var lineEnd = MathF.Min(end, length - W.LaneEndInset);
                 if (lineEnd > lineStart)
-                    b.Add(PartGeometryKernel.BeveledBox(lineEnd - lineStart, StreetStyle.PrintLift, W.LineWidth, 0, Stripe),
+                    b.Add(PartSolids.BeveledBox(lineEnd - lineStart, StreetStyle.PrintLift, W.LineWidth, 0, Stripe),
                         Xf.Move((lineStart + lineEnd) * 0.5f, -depth + StreetStyle.PrintLift, across), VertexFlag.NoShadow);
             }
         }
         foreach (var endBar in new[] { W.LaneEndInset, length - W.LaneEndInset })
             for (var lane = 0; lane < lanes; lane++)
-                b.Add(PartGeometryKernel.BeveledBox(W.LineWidth, StreetStyle.PrintLift, W.LaneEndBarLength, 0, Stripe),
+                b.Add(PartSolids.BeveledBox(W.LineWidth, StreetStyle.PrintLift, W.LaneEndBarLength, 0, Stripe),
                     Xf.Move(endBar, -W.DepthAt(endBar, length) + StreetStyle.PrintLift, W.LaneCenter(lane, lanes)), VertexFlag.NoShadow);
         foreach (var x in new[] { 0f, length })
         {
             var depth = W.DepthAt(x, length);
-            b.Add(PartGeometryKernel.BeveledBox(SportsStyle.Slab, depth + W.RimDrop, width, SportsStyle.Bevel, Tile), Xf.Move(x, -depth, 0));
+            b.Add(PartSolids.BeveledBox(SportsStyle.Slab, depth + W.RimDrop, width, SportsStyle.Bevel, Tile), Xf.Move(x, -depth, 0));
         }
         // The physical 0.6 m change is the same band boundary that terrain and water presentation consume.
-        b.Add(PartGeometryKernel.BeveledBox(SportsStyle.Slab, W.DeepDepth - W.ShallowDepth, width, SportsStyle.Bevel, Tile),
+        b.Add(PartSolids.BeveledBox(SportsStyle.Slab, W.DeepDepth - W.ShallowDepth, width, SportsStyle.Bevel, Tile),
             Xf.Move(length * W.ShallowFraction, -W.DeepDepth, 0));
         var (min, max) = b.Measure();
         return b.Finish(new(min, max));

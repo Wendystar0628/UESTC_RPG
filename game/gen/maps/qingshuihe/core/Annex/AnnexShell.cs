@@ -90,9 +90,9 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
 
     private byte Card => Kind switch
     {
-        AnnexKind.NorthAnnex => S.CardOffice,
-        AnnexKind.CourtWing or AnnexKind.LowBlock => S.CardReading,
-        AnnexKind.Link or AnnexKind.Joint => S.CardCorridor,
+        AnnexKind.NorthAnnex => AnnexStyle.CardOffice,
+        AnnexKind.CourtWing or AnnexKind.LowBlock => LibraryStyle.CardReading,
+        AnnexKind.Link or AnnexKind.Joint => AnnexStyle.CardCorridor,
         _ => throw new InvalidOperationException($"Unknown annex kind {Kind}."),
     };
 
@@ -107,40 +107,40 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
     {
         var f = Face.Of(piece);
         var length = piece.Length;
-        if (length < S.MinWindowFace) yield break;
+        if (length < LibraryStyle.MinWindowFace) yield break;
         for (var k = 0; k < Rows; k++)
         {
             var floor = Frame.StoreyY(k);
             if (floor < piece.Y0 - 0.05f) continue;
             if (Kind == AnnexKind.NorthAnnex)
             {
-                float y0 = floor + (k == 0 ? S.AnnexGroundSill : S.AnnexSill), y1 = y0 + (k == 0 ? S.AnnexGroundHeight : S.AnnexWindowHeight);
+                float y0 = floor + (k == 0 ? AnnexStyle.AnnexGroundSill : AnnexStyle.AnnexSill), y1 = y0 + (k == 0 ? AnnexStyle.AnnexGroundHeight : AnnexStyle.AnnexWindowHeight);
                 if (y1 > piece.Y1 - 0.3f) continue;
-                var bays = (int)MathF.Floor((length - 2 * S.AnnexMargin) / S.AnnexBay);
+                var bays = (int)MathF.Floor((length - 2 * AnnexStyle.AnnexMargin) / AnnexStyle.AnnexBay);
                 if (bays < 1) continue;
                 var doorBay = door && k == 0 ? bays / 2 : -1;
                 for (var i = 0; i < bays; i++)
                 {
-                    var u = length * 0.5f + (i - (bays - 1) * 0.5f) * S.AnnexBay;
+                    var u = length * 0.5f + (i - (bays - 1) * 0.5f) * AnnexStyle.AnnexBay;
                     if (i == doorBay)
                     {
-                        var half = S.AnnexDoorWidth * 0.5f;
-                        float top = floor + S.AnnexDoorHeight;
+                        var half = AnnexStyle.AnnexDoorWidth * 0.5f;
+                        float top = floor + AnnexStyle.AnnexDoorHeight;
                         yield return new Opening(f, OpeningKind.Entry, new(u - half, u + half, floor, top), 2, [(floor, top, k)], allocate(2, k), Card)
-                        { Door = (0, 2, floor + S.AnnexDoorTop) };
+                        { Door = (0, 2, floor + AnnexStyle.AnnexDoorTop) };
                         continue;
                     }
-                    var w = S.AnnexWindow * 0.5f;
+                    var w = AnnexStyle.AnnexWindow * 0.5f;
                     yield return new Opening(f, k == 0 ? OpeningKind.Podium : OpeningKind.Square, new(u - w, u + w, y0, y1), 2, [(y0, y1, k)], allocate(2, k), Card);
                 }
                 continue;
             }
             var ground = k == 0;
-            float sill = ground ? S.PodiumSill : S.RibbonSill, height = ground ? S.PodiumHeight : S.RibbonHeight, module = ground ? S.PodiumModule : S.RibbonModule;
+            float sill = ground ? LibraryStyle.PodiumSill : LibraryStyle.RibbonSill, height = ground ? LibraryStyle.PodiumHeight : LibraryStyle.RibbonHeight, module = ground ? LibraryStyle.PodiumModule : LibraryStyle.RibbonModule;
             float a = floor + sill, b = a + height;
-            if (b > piece.Y1 - 0.3f || length < 2 * S.RibbonMargin + module) continue;
-            var cells = Math.Max(1, (int)MathF.Round((length - 2 * S.RibbonMargin) / module));
-            yield return new Opening(f, ground ? OpeningKind.Podium : OpeningKind.Ribbon, new(S.RibbonMargin, length - S.RibbonMargin, a, b), cells, [(a, b, k)], allocate(cells, k), Card);
+            if (b > piece.Y1 - 0.3f || length < 2 * LibraryStyle.RibbonMargin + module) continue;
+            var cells = Math.Max(1, (int)MathF.Round((length - 2 * LibraryStyle.RibbonMargin) / module));
+            yield return new Opening(f, ground ? OpeningKind.Podium : OpeningKind.Ribbon, new(LibraryStyle.RibbonMargin, length - LibraryStyle.RibbonMargin, a, b), cells, [(a, b, k)], allocate(cells, k), Card);
         }
     }
 
@@ -166,7 +166,7 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
                 for (var c = 0; c < o.Cells; c++)
                 {
                     float a = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * c / o.Cells, b = o.Hole.U0 + (o.Hole.U1 - o.Hole.U0) * (c + 1) / o.Cells, g = o.GlassBottom(c, y0);
-                    list.Add(new WindowDecl(allocation.IdAt(o.Column + c, row), allocation.BaseId, Columns, S.LibraryWindowChannel,
+                    list.Add(new WindowDecl(allocation.IdAt(o.Column + c, row), allocation.BaseId, Columns, LibraryStyle.LibraryWindowChannel,
                         o.Face.At((a + b) * 0.5f, -o.Depth, (g + y1) * 0.5f), -o.Face.T, Vector3.UnitY, b - a, y1 - g));
                 }
         return list;
@@ -178,8 +178,8 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
     {
         var mesh = build.Mesh;
         int? windowBase = build.WindowNumbering is { } numbering ? Allocation(numbering).BaseId : null;
-        var glass = build.Glass(S.WindowGlass, windowBase, Columns, S.LibraryWindowChannel);
-        var wall = S.Wall(S.LibraryWall);
+        var glass = build.Glass(S.WindowGlass, windowBase, Columns, LibraryStyle.LibraryWindowChannel);
+        var wall = S.Wall(LibraryStyle.LibraryWall);
         var byFace = _openings.ToLookup(o => o.Face);
         foreach (var piece in _pieces)
         {
@@ -202,7 +202,7 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
     /// <summary>Plinth band on the ground pieces (broken at the door) and a string course at each floor line, as the library.</summary>
     private void Bands(GeometrySink mesh)
     {
-        var trim = S.Trim(S.LibraryTrim);
+        var trim = S.Trim(LibraryStyle.LibraryTrim);
         const float ext = 0.03f;
         foreach (var piece in _pieces)
         {
@@ -212,16 +212,16 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
                 var u = -ext;
                 foreach (var hole in _openings.Where(o => o.Door is not null && o.Face == f).Select(o => o.Hole).OrderBy(h => h.U0))
                 {
-                    LibraryFacade.Box(mesh, trim, f, u, hole.U0, 0f, S.PlinthProject, piece.Y0, Frame.PlinthTopY);
+                    LibraryFacade.Box(mesh, trim, f, u, hole.U0, 0f, LibraryStyle.PlinthProject, piece.Y0, Frame.PlinthTopY);
                     u = hole.U1;
                 }
-                LibraryFacade.Box(mesh, trim, f, u, piece.Length + ext, 0f, S.PlinthProject, piece.Y0, Frame.PlinthTopY);
+                LibraryFacade.Box(mesh, trim, f, u, piece.Length + ext, 0f, LibraryStyle.PlinthProject, piece.Y0, Frame.PlinthTopY);
             }
             for (var k = 1; k < Rows; k++)
             {
                 var y = Frame.StoreyY(k);
                 if (y < piece.Y0 + 0.3f || y > piece.Y1 - 0.3f) continue;
-                LibraryFacade.Box(mesh, trim, f, -ext, piece.Length + ext, 0f, S.CourseProject, y - S.CourseHeight * 0.5f, y + S.CourseHeight * 0.5f);
+                LibraryFacade.Box(mesh, trim, f, -ext, piece.Length + ext, 0f, LibraryStyle.CourseProject, y - LibraryStyle.CourseHeight * 0.5f, y + LibraryStyle.CourseHeight * 0.5f);
             }
         }
     }
@@ -232,17 +232,17 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
         var tops = _pieces.Where(p => p.Top).Select(p => (p.A, p.B)).ToList();
         if (tops.Count == 0) return;
         var (chains, closed) = LibraryFacade.Chain(tops);
-        float height = S.ParapetHeight, thick = S.ParapetThick;
-        LibraryFacade.Sweep(mesh, S.Wall(S.LibraryWall), chains, closed, new([new(-thick, 0), new(0, 0), new(0, height - S.CopingHeight), new(-thick, height - S.CopingHeight)]), Top);
-        float t = thick, c = S.CopingHeight, o = S.CopingOverhang, b = S.CopingBevel;
-        LibraryFacade.Sweep(mesh, S.Trim(S.LibraryTrim), chains, closed,
-            new([new(-t - o, 0), new(o, 0), new(o, c - b), new(o - b, c), new(-t - o + b, c), new(-t - o, c - b)]), Top + height - S.CopingHeight);
+        float height = LibraryStyle.ParapetHeight, thick = LibraryStyle.ParapetThick;
+        LibraryFacade.Sweep(mesh, S.Wall(LibraryStyle.LibraryWall), chains, closed, new([new(-thick, 0), new(0, 0), new(0, height - LibraryStyle.CopingHeight), new(-thick, height - LibraryStyle.CopingHeight)]), Top);
+        float t = thick, c = LibraryStyle.CopingHeight, o = LibraryStyle.CopingOverhang, b = LibraryStyle.CopingBevel;
+        LibraryFacade.Sweep(mesh, S.Trim(LibraryStyle.LibraryTrim), chains, closed,
+            new([new(-t - o, 0), new(o, 0), new(o, c - b), new(o - b, c), new(-t - o + b, c), new(-t - o, c - b)]), Top + height - LibraryStyle.CopingHeight);
     }
 
     /// <summary>The roof: dark grey flat roof, or the low block's G terrace in the library terrace's light paving.</summary>
     private void Cap(GeometrySink mesh)
     {
-        var paint = Terrace ? S.Roof(S.LibraryTerrace) : S.Roof(S.LibraryRoof);
+        var paint = Terrace ? S.Roof(LibraryStyle.LibraryTerrace) : S.Roof(LibraryStyle.LibraryRoof);
         foreach (var block in RoofBlocks)
         {
             var polygon = PolygonTriangulator.Triangulate(new PolygonRings(block.Ring));
@@ -257,15 +257,15 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
     {
         var f = door.Face;
         var h = door.Hole;
-        var trim = S.Trim(S.LibraryTrim);
-        float mid = (h.U0 + h.U1) * 0.5f, cw = S.AnnexCanopyWidth * 0.5f, y = h.Y1 + S.AnnexCanopyGap;
-        LibraryFacade.Box(build.Mesh, trim, f, mid - cw, mid + cw, 0f, S.AnnexCanopyDepth, y, y + S.AnnexCanopyThick);
+        var trim = S.Trim(LibraryStyle.LibraryTrim);
+        float mid = (h.U0 + h.U1) * 0.5f, cw = AnnexStyle.AnnexCanopyWidth * 0.5f, y = h.Y1 + AnnexStyle.AnnexCanopyGap;
+        LibraryFacade.Box(build.Mesh, trim, f, mid - cw, mid + cw, 0f, AnnexStyle.AnnexCanopyDepth, y, y + AnnexStyle.AnnexCanopyThick);
         if (lod <= LodLevel.L2)
-            LibraryFacade.Box(build.Mesh, S.Roof(S.LibraryTerrace), f, h.U0 - 0.4f, h.U1 + 0.4f, 0f, 1.4f, Frame.PadY - S.Sink, h.Y0 + 0.01f);
+            LibraryFacade.Box(build.Mesh, S.Roof(LibraryStyle.LibraryTerrace), f, h.U0 - 0.4f, h.U1 + 0.4f, 0f, 1.4f, Frame.PadY - S.Sink, h.Y0 + 0.01f);
         if (lod > LodLevel.L1) return;
         var origin = f.At(mid, -door.Depth, h.Y0);
         build.Parts.Add(new PlacedPart(new PartId(PartCatalog.DoorGlass),
-            new DoorParams(h.U1 - h.U0, door.Door!.Value.Top - h.Y0, S.DoorDepth) { Foot = FootMat.Glass },
+            new DoorParams(h.U1 - h.U0, door.Door!.Value.Top - h.Y0, EntranceStyle.DoorDepth) { Foot = FootMat.Glass },
             OpeningPlacement.Frame(origin, f.N)));
     }
 
@@ -275,41 +275,41 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
     /// </summary>
     private void Pilasters(GeometrySink mesh)
     {
-        var wall = S.Wall(S.LibraryWall);
+        var wall = S.Wall(LibraryStyle.LibraryWall);
         foreach (var piece in _pieces.Where(p => p.Y0 <= Frame.WallBaseY + 0.01f && p.Top))
         {
-            var bays = (int)MathF.Floor((piece.Length - 2 * S.AnnexMargin) / S.AnnexBay);
-            if (bays < 2 * S.AnnexPilasterEvery) continue;
+            var bays = (int)MathF.Floor((piece.Length - 2 * AnnexStyle.AnnexMargin) / AnnexStyle.AnnexBay);
+            if (bays < 2 * AnnexStyle.AnnexPilasterEvery) continue;
             var f = Face.Of(piece);
             var door = _openings.FirstOrDefault(o => o.Door is not null && o.Face == f);
             var at = new List<float>();
-            for (var i = S.AnnexPilasterEvery; i < bays; i += S.AnnexPilasterEvery) at.Add(piece.Length * 0.5f + (i - bays * 0.5f) * S.AnnexBay);
+            for (var i = AnnexStyle.AnnexPilasterEvery; i < bays; i += AnnexStyle.AnnexPilasterEvery) at.Add(piece.Length * 0.5f + (i - bays * 0.5f) * AnnexStyle.AnnexBay);
             // The door bay is framed by a pair of its own, so the entrance reads from down the street.
             if (door is not null)
             {
                 var mid = (door.Hole.U0 + door.Hole.U1) * 0.5f;
-                at.RemoveAll(u => MathF.Abs(u - mid) < S.AnnexBay * 1.4f);
-                at.Add(mid - S.AnnexBay * 0.5f);
-                at.Add(mid + S.AnnexBay * 0.5f);
+                at.RemoveAll(u => MathF.Abs(u - mid) < AnnexStyle.AnnexBay * 1.4f);
+                at.Add(mid - AnnexStyle.AnnexBay * 0.5f);
+                at.Add(mid + AnnexStyle.AnnexBay * 0.5f);
             }
-            float h = S.AnnexPilaster * 0.5f;
+            float h = AnnexStyle.AnnexPilaster * 0.5f;
             foreach (var u in at.Order())
-                LibraryFacade.Box(mesh, wall, f, u - h, u + h, 0f, S.AnnexPilasterProject, piece.Y0, Top + S.ParapetHeight - S.CopingHeight);
+                LibraryFacade.Box(mesh, wall, f, u - h, u + h, 0f, AnnexStyle.AnnexPilasterProject, piece.Y0, Top + LibraryStyle.ParapetHeight - LibraryStyle.CopingHeight);
         }
     }
 
     /// <summary>Rainwater pipes at both ends of every long ground face, from the plinth to under the coping (Q5).</summary>
     private void Pipes(GeometrySink mesh)
     {
-        var metal = S.Metal(S.LibraryFrame);
-        foreach (var piece in _pieces.Where(p => p.Y0 <= Frame.WallBaseY + 0.01f && p.Top && p.Length >= S.PipeMinFace))
+        var metal = S.Metal(LibraryStyle.LibraryFrame);
+        foreach (var piece in _pieces.Where(p => p.Y0 <= Frame.WallBaseY + 0.01f && p.Top && p.Length >= AnnexStyle.PipeMinFace))
         {
             var f = Face.Of(piece);
-            foreach (var u in new[] { S.PipeInset, piece.Length - S.PipeInset })
+            foreach (var u in new[] { AnnexStyle.PipeInset, piece.Length - AnnexStyle.PipeInset })
             {
-                float a = u - S.PipeSize * 0.5f, b = u + S.PipeSize * 0.5f;
-                LibraryFacade.Box(mesh, metal, f, a, b, S.PipeOff, S.PipeOff + S.PipeSize, Frame.PlinthTopY, Top + S.ParapetHeight - 0.35f);
-                LibraryFacade.Box(mesh, metal, f, a - 0.03f, b + 0.03f, 0f, S.PipeOff + S.PipeSize + 0.03f, Top + S.ParapetHeight - 0.5f, Top + S.ParapetHeight - 0.3f);
+                float a = u - AnnexStyle.PipeSize * 0.5f, b = u + AnnexStyle.PipeSize * 0.5f;
+                LibraryFacade.Box(mesh, metal, f, a, b, AnnexStyle.PipeOff, AnnexStyle.PipeOff + AnnexStyle.PipeSize, Frame.PlinthTopY, Top + LibraryStyle.ParapetHeight - 0.35f);
+                LibraryFacade.Box(mesh, metal, f, a - 0.03f, b + 0.03f, 0f, AnnexStyle.PipeOff + AnnexStyle.PipeSize + 0.03f, Top + LibraryStyle.ParapetHeight - 0.5f, Top + LibraryStyle.ParapetHeight - 0.3f);
             }
         }
     }
@@ -320,11 +320,11 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
         var face = _roofUnitsFace;
         if (face is null) return;
         var f = Face.Of(face);
-        for (var i = 0; i < S.AnnexRoofUnits; i++)
+        for (var i = 0; i < AnnexStyle.AnnexRoofUnits; i++)
         {
-            var u = face.Length * 0.5f + (i - (S.AnnexRoofUnits - 1) * 0.5f) * (S.AnnexUnitLength + 1.4f);
+            var u = face.Length * 0.5f + (i - (AnnexStyle.AnnexRoofUnits - 1) * 0.5f) * (AnnexStyle.AnnexUnitLength + 1.4f);
             var p = f.At(u, -4.5f, Top);
-            build.Parts.Add(new PlacedPart(new PartId(PartCatalog.HeatPump), new EquipmentParams(S.AnnexUnitLength, S.AnnexUnitDepth, S.AnnexUnitHeight),
+            build.Parts.Add(new PlacedPart(new PartId(PartCatalog.HeatPump), new EquipmentParams(AnnexStyle.AnnexUnitLength, AnnexStyle.AnnexUnitDepth, AnnexStyle.AnnexUnitHeight),
                 CoreShapes.Frame(p, Vector3.UnitY, f.N)));
         }
     }

@@ -102,16 +102,16 @@ public sealed class CoreModuleTests
         var ctx = Context(world);
         var plaza = (TimePlaza)CoreSite.Pieces(world)[0];
         var output = module.Build(ctx, TileGrid.At(Anchor(plaza), LodLevel.L0), LodLevel.L0);
-        AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps).OverrideFailureMessage("sixteen rim lamps").IsTrue();
+        AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == PlazaStyle.RimLamps).OverrideFailureMessage("sixteen rim lamps").IsTrue();
         AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.Bench) == world.Features.Keys.Count(id => id.Value.StartsWith(CoreIds.PlazaBenchPrefix, StringComparison.Ordinal))).OverrideFailureMessage("benches follow their world records").IsTrue();
-        AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.RimLampChannel) == CoreStyle.RimLamps).OverrideFailureMessage("one first-light emitter per lamp").IsTrue();
-        AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.FlagLightChannel) > 0).OverrideFailureMessage("flag uplights").IsTrue();
+        AssertThat(output.Emitters!.Count(e => e.Channel == PlazaStyle.RimLampChannel) == PlazaStyle.RimLamps).OverrideFailureMessage("one first-light emitter per lamp").IsTrue();
+        AssertThat(output.Emitters!.Count(e => e.Channel == PlazaStyle.FlagLightChannel) > 0).OverrideFailureMessage("flag uplights").IsTrue();
         AssertThat(module.DescribeLights(ctx).SequenceEqual(output.Emitters!)).OverrideFailureMessage("light metadata matches the plaza's L0 output").IsTrue();
         AssertThat(output.Meshes.Any(m => m.Flags!.All(f => (f & VertexFlag.Decal) != 0))).OverrideFailureMessage("inlays are decals").IsTrue();
         foreach (var lamp in plaza.LampPositions())
         {
             var off = Vector2.Distance(lamp, plaza.Centre);
-            AssertThat(MathF.Abs(off - plaza.Radius - CoreStyle.RimLampOffset) < TestTolerance.Position).OverrideFailureMessage("lamps on the rim ring").IsTrue();
+            AssertThat(MathF.Abs(off - plaza.Radius - PlazaStyle.RimLampOffset) < TestTolerance.Position).OverrideFailureMessage("lamps on the rim ring").IsTrue();
         }
     }
 
@@ -188,7 +188,7 @@ public sealed class CoreModuleTests
                     AssertThat(part.Part.Value != PartCatalog.Bench).OverrideFailureMessage($"{lod} {tile}: no bench").IsTrue();
                 }
         var far = module.Build(ctx, TileGrid.At(Anchor(plaza), LodLevel.L2), LodLevel.L2);
-        AssertThat(far.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps).OverrideFailureMessage("the rim lamps (L0 to L2) stay at L2").IsTrue();
+        AssertThat(far.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == PlazaStyle.RimLamps).OverrideFailureMessage("the rim lamps (L0 to L2) stay at L2").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
@@ -297,8 +297,8 @@ public sealed class CoreModuleTests
             for (var s = 0f; s <= PlanLines.Length(line); s += 0.5f)
             {
                 var p = PlanLines.Sample(line, s).Point;
-                var wall = outlines.Min(r => PlanGeometry.Contains(r, p) ? 0f
-                    : r.Holes.Aggregate(PlanGeometry.DistanceToRing(p, r.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h))));
+                var wall = outlines.Min(r => PlanRings.Contains(r, p) ? 0f
+                    : r.Holes.Aggregate(PlanRings.DistanceToRing(p, r.Outer), (d, h) => MathF.Min(d, PlanRings.DistanceToRing(p, h))));
                 AssertThat(wall - half >= 3f).OverrideFailureMessage($"{id}: paving {wall - half:0.00} m off a wall or water edge at ({p.X:0.0}, {p.Y:0.0})").IsTrue();
                 var river = world.Network.Waterways.Min(w => MathF.Sqrt(PlanLines.PolylineDistanceSquared(w.Line.Points, p)) - w.Width * 0.5f);
                 AssertThat(river - half >= 3f).OverrideFailureMessage($"{id}: paving {river - half:0.00} m off a waterway at ({p.X:0.0}, {p.Y:0.0})").IsTrue();

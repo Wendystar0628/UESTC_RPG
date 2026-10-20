@@ -75,12 +75,12 @@ public sealed class GymSite : ZoneSite
         if (!world.Features.TryGetValue(new(Feature), out var feature))
             throw new InvalidOperationException($"Gym {Feature} is missing from the world model.");
         var ring = feature.Contour(Part);
-        var radius = MathF.Sqrt((float)Math.Abs(PlanGeometry.SignedArea(ring)) / MathF.PI);
+        var radius = MathF.Sqrt((float)Math.Abs(PlanRings.SignedArea(ring)) / MathF.PI);
         var bays = (int)MathF.Round(2f * MathF.PI * (radius - S.GymGlassInset) / S.GymBay);
         var door = Angles.Heading(S.GymDoorBearing);
         var deckTop = world.Feature(PlatformSite.Feature).Height ?? throw new InvalidOperationException($"Platform {PlatformSite.Feature} has no height.");
         var top = feature.Height ?? throw new InvalidOperationException($"Gym {Feature} has no height.");
-        return new(PlanGeometry.Centroid(ring, meanIfDegenerate: true), radius, MathF.Atan2(door.Y, door.X) - MathF.PI / bays, bays, deckTop, top);
+        return new(PlanPolygons.Centroid(ring, meanIfDegenerate: true), radius, MathF.Atan2(door.Y, door.X) - MathF.PI / bays, bays, deckTop, top);
     }
 
     /// <summary>Row sills and heights of the ring hall's glass, above the ground: the platform storey, then the upper hall over the transom.</summary>
@@ -174,7 +174,7 @@ public sealed class GymSite : ZoneSite
                 ? [new(-half, 0), new(-S.GymDoorWidth * 0.5f, 0), new(-S.GymDoorWidth * 0.5f, 0.3f + S.GymDoorHeight), new(S.GymDoorWidth * 0.5f, 0.3f + S.GymDoorHeight),
                     new(S.GymDoorWidth * 0.5f, 0), new(half, 0), new(half, height), new(-half, height)]
                 : [new(-half, 0), new(half, 0), new(half, height), new(-half, height)];
-            b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outline), 0.06f, L.TeaGlass), f.At(0, y0, -0.03f));
+            b.Add(PartSolids.WallPanel(new PolygonRings(outline), 0.06f, L.TeaGlass), f.At(0, y0, -0.03f));
         }
         if (Allocation(b.Context, p) is { } allocation) WindowNumbers.Panes(b, Openings(p, y), allocation, W.Venue, W.Gym, L.TeaGlass);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
@@ -197,7 +197,7 @@ public sealed class GymSite : ZoneSite
             var n = new Vector3(MathF.Cos(a0 + lean * 0.5f), 0, MathF.Sin(a0 + lean * 0.5f));
             var foot = new Vector3(lo.X, y + p.DeckTop, lo.Y);
             var head = new Vector3(hi.X, y + S.GymGlassTop - 0.1f, hi.Y);
-            b.Add(PartGeometryKernel.BeveledBox(0.14f, Vector3.Distance(foot, head), 0.16f, 0.02f, L.DarkFrame), LandmarkSolids.Along(foot, head, n));
+            b.Add(PartSolids.BeveledBox(0.14f, Vector3.Distance(foot, head), 0.16f, 0.02f, L.DarkFrame), LandmarkSolids.Along(foot, head, n));
         }
     }
 
@@ -226,7 +226,7 @@ public sealed class GymSite : ZoneSite
                 Vector3 P(Vector2 q, float e) => new(p.Centre.X + d.X * (q.X + n.X * e), y + q.Y + n.Y * e, p.Centre.Y + d.Y * (q.X + n.X * e));
                 var (a, c) = (P(q0, lift), P(q1, lift));
                 var normal = new Vector3(d.X * n.X, n.Y, d.Y * n.X);
-                b.Add(PartGeometryKernel.BeveledBox(S.GymRibWidth, Vector3.Distance(a, c) + 0.06f, S.GymRibDepth, bevel, RibFin), LandmarkSolids.Along(a - (c - a) * (0.03f / Vector3.Distance(a, c)), c, normal));
+                b.Add(PartSolids.BeveledBox(S.GymRibWidth, Vector3.Distance(a, c) + 0.06f, S.GymRibDepth, bevel, RibFin), LandmarkSolids.Along(a - (c - a) * (0.03f / Vector3.Distance(a, c)), c, normal));
             }
         }
     }
@@ -258,7 +258,7 @@ public sealed class GymSite : ZoneSite
                     var c = new Vector3(p.Centre.X + d.X * r1, y + Height(r1) + 0.02f, p.Centre.Y + d.Y * r1);
                     var rise = profile[j + 1].Y - profile[j].Y;
                     var up = new Vector3(d.X * rise, profile[j].X - profile[j + 1].X, d.Y * rise);
-                    b.Add(PartGeometryKernel.BeveledBox(0.12f, Vector3.Distance(a, c), 0.1f, 0, L.DarkFrame), LandmarkSolids.Along(a, c, up));
+                    b.Add(PartSolids.BeveledBox(0.12f, Vector3.Distance(a, c), 0.1f, 0, L.DarkFrame), LandmarkSolids.Along(a, c, up));
                 }
             }
         // Vent caps: a short drum under a mushroom hood, the inner ring staggered half a step.

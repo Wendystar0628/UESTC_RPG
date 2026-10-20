@@ -63,7 +63,7 @@ internal static class SixLayout
     internal static IReadOnlyList<PolygonRings> Volumes(IWorldModel world) =>
         [.. Blocks.Select(k => Plan(world, k.Entity, k.Part)), Plan(world, S.EntityC, S.LinkAB), Plan(world, S.EntityC, S.Tower)];
 
-    internal static bool In(PolygonRings plan, Vector2 p) => PlanGeometry.InsideByCrossings(plan.Outer, p) && !plan.Holes.Any(h => PlanGeometry.InsideByCrossings(h, p));
+    internal static bool In(PolygonRings plan, Vector2 p) => PlanRings.InsideByCrossings(plan.Outer, p) && !plan.Holes.Any(h => PlanRings.InsideByCrossings(h, p));
 
     internal static float BaseY(BuildContext ctx, string entity) => ctx.World.Terrain.PadY(new(entity));
 
@@ -95,7 +95,7 @@ internal static class SixLayout
     }
 
     internal static Vector2[] Inset(IReadOnlyList<Vector2> ring, float by, bool hole) =>
-        PlanGeometry.MitreOffset(ring, PlanGeometry.SignedArea(ring) > 0 != hole ? -by : by, closed: true);
+        PlanOffsets.MitreOffset(ring, PlanRings.SignedArea(ring) > 0 != hole ? -by : by, closed: true);
 
     internal static PolygonRings BasePlan(PolygonRings plan) =>
         new(Inset(plan.Outer, S.Recess, false), [.. plan.Holes.Select(h => (IReadOnlyList<Vector2>)Inset(h, S.Recess, true))]);

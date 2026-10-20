@@ -61,7 +61,7 @@ public sealed class PinxueArcEndSite : ZoneSite
         Sweep(b, face, Section(-0.12f, 0.45f, 0.9f), L.Wall, y + height - 0.9f);
         Sweep(b, face, Section(-0.2f, 0.55f, 0.25f), L.Trim, y + height);
         // Roof cap over the bulge, down to the attic band.
-        b.Add(PartGeometryKernel.Extrude(new PolygonRings(face), 0.5f, L.RoofSlab, y + height - 0.4f), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(new PolygonRings(face), 0.5f, L.RoofSlab, y + height - 0.4f), Matrix4x4.Identity);
         if (b.Detail != SiteDetail.Full) return;
         // Mullions at the interior vertices, just outside the glass.
         var centre = Centre(lobby.Start, lobby.End);
@@ -74,13 +74,13 @@ public sealed class PinxueArcEndSite : ZoneSite
             for (var k = 0; k < storeys; k++)
             {
                 float y0 = k == 0 ? y + 0.6f : y + k * storey + 0.25f, y1 = k == storeys - 1 ? y + height - 0.9f : y + (k + 1) * storey - 0.3f;
-                b.Add(PartGeometryKernel.BeveledBox(0.08f, y1 - y0, 0.12f, 0.01f, L.Metal), frame.At(0, y0, 0));
+                b.Add(PartSolids.BeveledBox(0.08f, y1 - y0, 0.12f, 0.01f, L.Metal), frame.At(0, y0, 0));
             }
         }
     }
 
     private static void Sweep(SiteBuilder b, Vector2[] face, SweepProfile section, ToonSpec material, float baseY) =>
-        b.Add(PartGeometryKernel.Sweep(section, face, material), Matrix4x4.CreateTranslation(0, baseY, 0));
+        b.Add(PartSweeps.Sweep(section, face, material), Matrix4x4.CreateTranslation(0, baseY, 0));
 
     /// <summary>Centre of the face's circle (the same construction as <see cref="Shapes.Arc"/>).</summary>
     private static Vector2 Centre(Vector2 start, Vector2 end)

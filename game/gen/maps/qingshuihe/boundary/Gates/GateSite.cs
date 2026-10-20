@@ -159,31 +159,31 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
     {
         float s = G.PierSize, h = G.PierHeight, z = G.PierZ;
         var mass = b.Detail == SiteDetail.Mass;
-        b.Add(PartGeometryKernel.BeveledBox(s + 0.2f, G.PierPlinth + 0.1f, s + 0.2f, 0.03f, L.Granite), g.At(x, y - 0.1f, z));
-        b.Add(PartGeometryKernel.BeveledBox(s, h - G.PierPlinth - G.PierCap, s, 0.03f, L.Stone), g.At(x, y + G.PierPlinth, z));
+        b.Add(PartSolids.BeveledBox(s + 0.2f, G.PierPlinth + 0.1f, s + 0.2f, 0.03f, L.Granite), g.At(x, y - 0.1f, z));
+        b.Add(PartSolids.BeveledBox(s, h - G.PierPlinth - G.PierCap, s, 0.03f, L.Stone), g.At(x, y + G.PierPlinth, z));
         var cap = s + 2 * G.PierCapOver;
-        b.Add(PartGeometryKernel.BeveledBox(cap, G.PierCap, cap, 0.03f, L.StoneTrim), g.At(x, y + h - G.PierCap, z));
+        b.Add(PartSolids.BeveledBox(cap, G.PierCap, cap, 0.03f, L.StoneTrim), g.At(x, y + h - G.PierCap, z));
         if (mass) return;
-        b.Add(PartGeometryKernel.BeveledBox(cap - 0.2f, 0.08f, cap - 0.2f, 0.015f, L.StoneTrim), g.At(x, y + h, z));
+        b.Add(PartSolids.BeveledBox(cap - 0.2f, 0.08f, cap - 0.2f, 0.015f, L.StoneTrim), g.At(x, y + h, z));
         foreach (var k in new[] { 0.42f, 0.78f })
-            b.Add(PartGeometryKernel.BeveledBox(s + 0.04f, 0.05f, s + 0.04f, 0.01f, L.StoneTrim), g.At(x, y + G.PierPlinth + (h - G.PierPlinth - G.PierCap) * k, z));
+            b.Add(PartSolids.BeveledBox(s + 0.04f, 0.05f, s + 0.04f, 0.01f, L.StoneTrim), g.At(x, y + G.PierPlinth + (h - G.PierPlinth - G.PierCap) * k, z));
         if (!plaque) return;
         var face = z + s * 0.5f;
         var y0 = y + G.PierPlinth + G.PlaqueBottom;
         float w = G.PlaqueWidth, ph = G.PlaqueHeight, fr = G.PlaqueFrame;
-        b.Add(PartGeometryKernel.BeveledBox(w, ph, 0.04f, 0.005f, L.PlaqueField), g.At(x, y0, face + 0.02f));
+        b.Add(PartSolids.BeveledBox(w, ph, 0.04f, 0.005f, L.PlaqueField), g.At(x, y0, face + 0.02f));
         if (b.Detail != SiteDetail.Full) return;
-        b.Add(PartGeometryKernel.BeveledBox(w + 2 * fr, fr, 0.07f, 0.01f, L.StoneTrim), g.At(x, y0 - fr, face + 0.035f));
-        b.Add(PartGeometryKernel.BeveledBox(w + 2 * fr, fr, 0.07f, 0.01f, L.StoneTrim), g.At(x, y0 + ph, face + 0.035f));
+        b.Add(PartSolids.BeveledBox(w + 2 * fr, fr, 0.07f, 0.01f, L.StoneTrim), g.At(x, y0 - fr, face + 0.035f));
+        b.Add(PartSolids.BeveledBox(w + 2 * fr, fr, 0.07f, 0.01f, L.StoneTrim), g.At(x, y0 + ph, face + 0.035f));
         foreach (var side in new[] { -1f, 1f })
-            b.Add(PartGeometryKernel.BeveledBox(fr, ph, 0.07f, 0.01f, L.StoneTrim), g.At(x + side * (w + fr) * 0.5f, y0, face + 0.035f));
+            b.Add(PartSolids.BeveledBox(fr, ph, 0.07f, 0.01f, L.StoneTrim), g.At(x + side * (w + fr) * 0.5f, y0, face + 0.035f));
     }
 
     // ---- Island, barrier arm ----
 
     private static void Island(SiteBuilder b, GateLayout g, float y)
     {
-        b.Add(PartGeometryKernel.BeveledBox(G.IslandWidth, G.IslandRise + 0.1f, G.IslandLength, 0.03f, L.Granite), g.At(g.IslandX, y - 0.1f, -G.IslandLength * 0.5f));
+        b.Add(PartSolids.BeveledBox(G.IslandWidth, G.IslandRise + 0.1f, G.IslandLength, 0.03f, L.Granite), g.At(g.IslandX, y - 0.1f, -G.IslandLength * 0.5f));
         Pier(b, g, g.IslandX, y + G.IslandRise, plaque: false);
     }
 
@@ -191,14 +191,14 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
     private static void Barrier(SiteBuilder b, GateLayout g, float y)
     {
         var top = y + G.IslandRise;
-        b.Add(PartGeometryKernel.BeveledBox(G.BarrierCabinet, G.BarrierCabinetHeight, G.BarrierCabinet, 0.02f, L.Stainless), g.At(g.IslandX, top, G.BarrierZ));
+        b.Add(PartSolids.BeveledBox(G.BarrierCabinet, G.BarrierCabinetHeight, G.BarrierCabinet, 0.02f, L.Stainless), g.At(g.IslandX, top, G.BarrierZ));
         if (b.Detail == SiteDetail.Mass) return;
         var root = g.IslandX - G.BarrierCabinet * 0.5f;
         var tip = -g.Carriage + 0.1f;
-        b.Add(PartGeometryKernel.BeveledBox(root - tip, G.ArmHeight, G.ArmDepth, 0.012f, L.LightSteel), g.At((root + tip) * 0.5f, y + G.ArmY, G.BarrierZ));
-        b.Add(PartGeometryKernel.BeveledBox(0.07f, G.ArmY, 0.07f, 0.01f, L.Stainless), g.At(tip + 0.12f, y, G.BarrierZ));
+        b.Add(PartSolids.BeveledBox(root - tip, G.ArmHeight, G.ArmDepth, 0.012f, L.LightSteel), g.At((root + tip) * 0.5f, y + G.ArmY, G.BarrierZ));
+        b.Add(PartSolids.BeveledBox(0.07f, G.ArmY, 0.07f, 0.01f, L.Stainless), g.At(tip + 0.12f, y, G.BarrierZ));
         if (b.Detail == SiteDetail.Full)
-            b.Add(PartGeometryKernel.BeveledBox(G.BarrierCabinet - 0.06f, 0.03f, G.BarrierCabinet - 0.06f, 0, L.Glass), g.At(g.IslandX, top + G.BarrierCabinetHeight, G.BarrierZ));
+            b.Add(PartSolids.BeveledBox(G.BarrierCabinet - 0.06f, 0.03f, G.BarrierCabinet - 0.06f, 0, L.Glass), g.At(g.IslandX, top + G.BarrierCabinetHeight, G.BarrierZ));
     }
 
     // ---- Turnstiles ----
@@ -208,12 +208,12 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
     {
         var cabinets = g.Cabinets(bankStart).ToArray();
         var bankEnd = bankStart + GateLayout.BankWidth;
-        b.Add(PartGeometryKernel.BeveledBox(GateLayout.BankWidth, 0.06f, G.CabinetDepth + 0.6f, 0.015f, L.Granite), g.At((bankStart + bankEnd) * 0.5f, y - 0.03f, G.TurnstileZ));
+        b.Add(PartSolids.BeveledBox(GateLayout.BankWidth, 0.06f, G.CabinetDepth + 0.6f, 0.015f, L.Granite), g.At((bankStart + bankEnd) * 0.5f, y - 0.03f, G.TurnstileZ));
         foreach (var x in cabinets)
         {
-            b.Add(PartGeometryKernel.BeveledBox(G.CabinetWidth, G.CabinetHeight, G.CabinetDepth, 0.03f, L.Stainless), g.At(x, y, G.TurnstileZ));
+            b.Add(PartSolids.BeveledBox(G.CabinetWidth, G.CabinetHeight, G.CabinetDepth, 0.03f, L.Stainless), g.At(x, y, G.TurnstileZ));
             if (b.Detail == SiteDetail.Full)
-                b.Add(PartGeometryKernel.BeveledBox(G.CabinetWidth - 0.04f, 0.02f, 0.5f, 0, L.Glass), g.At(x, y + G.CabinetHeight, G.TurnstileZ + 0.4f));
+                b.Add(PartSolids.BeveledBox(G.CabinetWidth - 0.04f, 0.02f, 0.5f, 0, L.Glass), g.At(x, y + G.CabinetHeight, G.TurnstileZ + 0.4f));
         }
         if (b.Detail == SiteDetail.Mass) return;
         for (var k = 0; k + 1 < cabinets.Length; k++)
@@ -221,8 +221,8 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
             var x0 = cabinets[k] + G.CabinetWidth * 0.5f;
             var x1 = cabinets[k + 1] - G.CabinetWidth * 0.5f;
             var flap = (x1 - x0 - 0.08f) * 0.5f;
-            b.Add(PartGeometryKernel.BeveledBox(flap, G.FlapHeight, 0.02f, 0, L.Glass), g.At(x0 + flap * 0.5f, y + G.FlapBase, G.TurnstileZ));
-            b.Add(PartGeometryKernel.BeveledBox(flap, G.FlapHeight, 0.02f, 0, L.Glass), g.At(x1 - flap * 0.5f, y + G.FlapBase, G.TurnstileZ));
+            b.Add(PartSolids.BeveledBox(flap, G.FlapHeight, 0.02f, 0, L.Glass), g.At(x0 + flap * 0.5f, y + G.FlapBase, G.TurnstileZ));
+            b.Add(PartSolids.BeveledBox(flap, G.FlapHeight, 0.02f, 0, L.Glass), g.At(x1 - flap * 0.5f, y + G.FlapBase, G.TurnstileZ));
         }
     }
 
@@ -234,11 +234,11 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
         var cx = (g.HouseStart + g.HouseEnd) * 0.5f;
         var cz = G.HouseFront - G.HouseDepth * 0.5f;
         float w = G.HouseWidth, d = G.HouseDepth, h = G.HouseHeight, s = g.S;
-        b.Add(PartGeometryKernel.BeveledBox(w + 0.14f, G.HousePlinth + 0.1f, d + 0.14f, 0.02f, L.Granite), g.At(cx, y - 0.1f, cz));
-        b.Add(PartGeometryKernel.BeveledBox(w, h - G.HousePlinth, d, 0.03f, L.Stone), g.At(cx, y + G.HousePlinth, cz));
-        b.Add(PartGeometryKernel.BeveledBox(w + 2 * G.HouseEave, G.HouseRoof, d + 2 * G.HouseEave, 0.03f, L.StoneTrim), g.At(cx, y + h, cz));
+        b.Add(PartSolids.BeveledBox(w + 0.14f, G.HousePlinth + 0.1f, d + 0.14f, 0.02f, L.Granite), g.At(cx, y - 0.1f, cz));
+        b.Add(PartSolids.BeveledBox(w, h - G.HousePlinth, d, 0.03f, L.Stone), g.At(cx, y + G.HousePlinth, cz));
+        b.Add(PartSolids.BeveledBox(w + 2 * G.HouseEave, G.HouseRoof, d + 2 * G.HouseEave, 0.03f, L.StoneTrim), g.At(cx, y + h, cz));
         if (b.Detail == SiteDetail.Mass) return;
-        b.Add(PartGeometryKernel.BeveledBox(w + 2 * G.HouseEave - 0.5f, 0.04f, d + 2 * G.HouseEave - 0.5f, 0.01f, L.RoofSlab), g.At(cx, y + h + G.HouseRoof, cz));
+        b.Add(PartSolids.BeveledBox(w + 2 * G.HouseEave - 0.5f, 0.04f, d + 2 * G.HouseEave - 0.5f, 0.01f, L.RoofSlab), g.At(cx, y + h + G.HouseRoof, cz));
         // Watch windows: toward the turnstiles (the island-side face), toward the street (+Z face), toward the campus beside the door (-Z face).
         var house = g.Frame.Shift(s * cx, cz);
         Window(b, house, -s * w * 0.5f, 0, turned: true, outward: s < 0 ? 1 : -1, 2.2f, y);
@@ -246,9 +246,9 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
         Window(b, house, -s * 0.8f, -d * 0.5f, turned: false, outward: -1, 1.6f, y);
         var doorX = s * 1.05f;
         var doorZ = -d * 0.5f;
-        b.Add(PartGeometryKernel.BeveledBox(0.95f, 2.15f, 0.05f, 0, L.Door), house.At(doorX, y + G.HousePlinth, doorZ - 0.02f));
-        b.Add(PartGeometryKernel.BeveledBox(1.15f, 0.08f, 0.1f, 0.01f, L.StoneTrim), house.At(doorX, y + G.HousePlinth + 2.15f, doorZ - 0.05f));
-        b.Add(PartGeometryKernel.BeveledBox(1.3f, G.HousePlinth, 0.55f, 0.02f, L.Granite), house.At(doorX, y - 0.05f, doorZ - 0.27f));
+        b.Add(PartSolids.BeveledBox(0.95f, 2.15f, 0.05f, 0, L.Door), house.At(doorX, y + G.HousePlinth, doorZ - 0.02f));
+        b.Add(PartSolids.BeveledBox(1.15f, 0.08f, 0.1f, 0.01f, L.StoneTrim), house.At(doorX, y + G.HousePlinth + 2.15f, doorZ - 0.05f));
+        b.Add(PartSolids.BeveledBox(1.3f, G.HousePlinth, 0.55f, 0.02f, L.Granite), house.At(doorX, y - 0.05f, doorZ - 0.27f));
     }
 
     /// <summary>A window on a house face: glass in an aluminium surround over a beige sill. Turned panes sit on +/-X faces.</summary>
@@ -258,12 +258,12 @@ public sealed class GateSite(BoundaryTune.GateSpec spec) : ZoneSite
         Matrix4x4 At(float along, float yy, float off) => turned
             ? f.AtTurned(x + outward * off, yy, z + along)
             : f.At(x + along, yy, z + outward * off);
-        b.Add(PartGeometryKernel.BeveledBox(width, h, 0.04f, 0, L.Glass), At(0, y0, 0.01f));
-        b.Add(PartGeometryKernel.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Stainless), At(0, y1, 0.04f));
-        b.Add(PartGeometryKernel.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Stainless), At(0, y0 - 0.06f, 0.04f));
-        b.Add(PartGeometryKernel.BeveledBox(width + 0.3f, 0.07f, 0.18f, 0.015f, L.StoneTrim), At(0, y0 - 0.13f, 0.08f));
+        b.Add(PartSolids.BeveledBox(width, h, 0.04f, 0, L.Glass), At(0, y0, 0.01f));
+        b.Add(PartSolids.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Stainless), At(0, y1, 0.04f));
+        b.Add(PartSolids.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Stainless), At(0, y0 - 0.06f, 0.04f));
+        b.Add(PartSolids.BeveledBox(width + 0.3f, 0.07f, 0.18f, 0.015f, L.StoneTrim), At(0, y0 - 0.13f, 0.08f));
         foreach (var u in new[] { -0.5f, 0f, 0.5f })
-            b.Add(PartGeometryKernel.BeveledBox(0.06f, h, 0.08f, 0.01f, L.Stainless), At(u * (width + 0.06f), y0, 0.04f));
+            b.Add(PartSolids.BeveledBox(0.06f, h, 0.08f, 0.01f, L.Stainless), At(u * (width + 0.06f), y0, 0.04f));
     }
 
     /// <summary>Bollards along the forecourt's road edge (WP-13's part), standing on WP-15's paving.</summary>

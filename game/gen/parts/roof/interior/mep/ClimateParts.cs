@@ -40,7 +40,7 @@ public sealed class IndoorAirConditionerPart() : MepPart<EquipmentParams>(new(80
             [new(-d * 0.5f + c, 0), new(front - 0.4f * dd, 0), new(front - 0.12f * dd, 0.08f * h), new(front, 0.26f * h),
              new(front, 0.86f * h), new(front - 0.12f * dd, top), new(-d * 0.5f + c, top), new(-d * 0.5f, top - c), new(-d * 0.5f, c)],
             [new(0, -1), new(0, -1), new(0.70710677f, -0.70710677f), new(1, 0), new(1, 0), new(0, 1), new(0, 1), new(-1, 0), new(-1, 0)]);
-        b.Add(PartGeometryKernel.Sweep(section, [new(-hx, 0), new(hx, 0)], PartMaterials.Casing(MepStyle.White)), f);
+        b.Add(PartSweeps.Sweep(section, [new(-hx, 0), new(hx, 0)], PartMaterials.Casing(MepStyle.White)), f);
         var dark = PartMaterials.Grille(MepStyle.Dark);
         // Outlet: a dark block whose front pokes out under the curve.
         b.AddBox(new(-hx + 0.07f, 0.012f, -(front - 0.08f * dd)), new(hx - 0.07f, 0.11f * h, -(front - 0.36f * dd)), 0, dark, f);
@@ -143,7 +143,7 @@ public sealed class CeilingFanPart() : MepPart<EquipmentParams>(new(800, 220))
         var t = MepStyle.FanBladeThickness;
         var yb = hm * 0.42f;
         Vector2[] outline = [new(x0, -w0 * 0.5f), new(x1, -w1 * 0.5f), new(x1, w1 * 0.5f), new(x0, w0 * 0.5f)];
-        var piece = PartGeometryKernel.BeveledExtrude(outline, t, near ? 0.004f : 0, blade, -t * 0.5f);
+        var piece = PartSolids.BeveledExtrude(outline, t, near ? 0.004f : 0, blade, -t * 0.5f);
         var metal = PartMaterials.Metal(MepStyle.Aluminium);
         for (var i = 0; i < blades; i++)
         {

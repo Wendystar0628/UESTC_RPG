@@ -30,9 +30,9 @@ public sealed class MuseumShellTests
         var south = MuseumGeometry.Normal(museum.Body, museum.South);
         var west = MuseumGeometry.Normal(museum.Body, museum.West);
         AssertThat(south.Y > 0.95f && west.X < -0.95f).OverrideFailureMessage($"south {south} faces +z, west {west} faces −x").IsTrue();
-        foreach (var p in museum.Hall) AssertThat(PlanGeometry.InsideByCrossings(museum.Gallery, p)).OverrideFailureMessage("the hall stands inside the gallery").IsTrue();
-        foreach (var p in museum.Gallery) AssertThat(PlanGeometry.InsideByCrossings(museum.Eave, p)).OverrideFailureMessage("the eave is outside the gallery walls").IsTrue();
-        foreach (var p in museum.Eave) AssertThat(PlanGeometry.InsideByCrossings(museum.Platform, p)).OverrideFailureMessage("the eave is inside the platform edge").IsTrue();
+        foreach (var p in museum.Hall) AssertThat(PlanRings.InsideByCrossings(museum.Gallery, p)).OverrideFailureMessage("the hall stands inside the gallery").IsTrue();
+        foreach (var p in museum.Gallery) AssertThat(PlanRings.InsideByCrossings(museum.Eave, p)).OverrideFailureMessage("the eave is outside the gallery walls").IsTrue();
+        foreach (var p in museum.Eave) AssertThat(PlanRings.InsideByCrossings(museum.Platform, p)).OverrideFailureMessage("the eave is inside the platform edge").IsTrue();
         for (var i = 0; i < museum.Body.Count; i++)
         {
             var gallery = museum.GalleryFace(i);
@@ -68,7 +68,7 @@ public sealed class MuseumShellTests
             Console.WriteLine($"{id}: door ({centre.X:F4}, {centre.Y:F2}, {centre.Z:F4}) facing {bearing:F1}° outside ({outside.X:F4}, {outside.Y:F2}, {outside.Z:F4}) inside ({inside.X:F4}, {inside.Y:F2}, {inside.Z:F4}) clear {clear:F2}");
         }
         var columns = museum.ColumnPositions().ToArray();
-        AssertThat(columns.Count(c => c.Size == CoreStyle.PorticoColumn) == 4).OverrideFailureMessage("four portico columns").IsTrue();
+        AssertThat(columns.Count(c => c.Size == MuseumStyle.PorticoColumn) == 4).OverrideFailureMessage("four portico columns").IsTrue();
         AssertThat(columns.Length > 0).OverrideFailureMessage($"{columns.Length} columns round the ring").IsTrue();
         // No column stands in front of either door's clear way.
         foreach (var (_, centre, outward, clear) in entrances)
@@ -118,7 +118,7 @@ public sealed class MuseumShellTests
         }
         var cells = museum.Cells().ToArray();
         AssertThat(cells.Select(c => (c.Column, c.Row)).Distinct().Count() == cells.Length).OverrideFailureMessage("every window cell has its own ID").IsTrue();
-        AssertThat(museum.Windows(numbering).All(w => w.Channel == CoreStyle.MuseumWindowChannel)).OverrideFailureMessage("every window on interior.public").IsTrue();
+        AssertThat(museum.Windows(numbering).All(w => w.Channel == MuseumStyle.MuseumWindowChannel)).OverrideFailureMessage("every window on interior.public").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

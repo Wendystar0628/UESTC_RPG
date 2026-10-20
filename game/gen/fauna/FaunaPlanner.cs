@@ -226,7 +226,7 @@ public static class FaunaPlanner
         var hosts = buildings.Where(b => b.Category is S.Dining or S.Residence).ToArray();
         var trees = world.Network.Trees
             .Select(t => (Tree: t, P: new Vector2(t.Position.X, t.Position.Z)))
-            .Where(t => hosts.Any(b => PlanGeometry.DistanceToRing(t.P, b.Ring) <= S.SparrowTreeReach) && free(t.P))
+            .Where(t => hosts.Any(b => PlanRings.DistanceToRing(t.P, b.Ring) <= S.SparrowTreeReach) && free(t.P))
             .OrderBy(t => StableHash.Hash32(seed, t.Tree.Id.Value, "fauna.sparrow")).ThenBy(t => t.Tree.Id.Value, StringComparer.Ordinal)
             .ToArray();
         var groups = new List<Vector2>();
@@ -293,7 +293,7 @@ public static class FaunaPlanner
             const float y = 0f;
             var elevation = new FaunaElevation(FaunaHeightSource.Water, lake.Feature.Id, centre);
             var rng = new Rng(StableHash.Hash32(seed, lake.Feature.Id.Value, "fauna.swans"));
-            bool Open(Vector2 p, float margin) => Inside(lake, p) && PlanGeometry.DistanceToRing(p, lake.Ring) >= margin && !buildings.Any(b => Inside(b, p));
+            bool Open(Vector2 p, float margin) => Inside(lake, p) && PlanRings.DistanceToRing(p, lake.Ring) >= margin && !buildings.Any(b => Inside(b, p));
             var day = new List<FaunaInstance>();
             for (var attempt = 0; attempt < 400 && day.Count < count; attempt++)
             {
@@ -309,7 +309,7 @@ public static class FaunaPlanner
             }
             // Night and heavy rain: tucked in together near the shore point closest to a building (the swan house on the
             // first lake, a bank on the second), asleep.
-            var anchor = lake.Ring.OrderBy(v => buildings.Length == 0 ? 0 : buildings.Min(b => PlanGeometry.DistanceToRing(v, b.Ring))).ThenBy(v => v.X).First();
+            var anchor = lake.Ring.OrderBy(v => buildings.Length == 0 ? 0 : buildings.Min(b => PlanRings.DistanceToRing(v, b.Ring))).ThenBy(v => v.X).First();
             var inward = VectorMath.Unit(centre - anchor, Vector2.UnitY, 1e-6f);
             var huddle = anchor + inward * S.SwanHuddleOut;
             for (var step = 0; step < 20 && !Open(huddle, 2.5f); step++) huddle += inward * 1.5f;
@@ -423,12 +423,12 @@ public static class FaunaPlanner
             var rings = (f.Parts.Count > 0 ? f.Parts.Select(p => p.Geometry) : [f.Geometry]).SelectMany(Polygons).ToArray();
             if (rings.Length == 0) continue;
             // The largest polygon stands for the feature (doors face its walls); the rest still count as occupied.
-            foreach (var ring in rings.OrderByDescending(r => MathF.Abs((float)PlanGeometry.SignedArea(r.Outer))))
+            foreach (var ring in rings.OrderByDescending(r => MathF.Abs((float)PlanRings.SignedArea(r.Outer))))
             {
                 if (ring.Outer.Count < 3) continue;
                 var min = new Vector2(ring.Outer.Min(p => p.X), ring.Outer.Min(p => p.Y));
                 var max = new Vector2(ring.Outer.Max(p => p.X), ring.Outer.Max(p => p.Y));
-                yield return new(f, ring.Outer, min, max, MathF.Abs((float)PlanGeometry.SignedArea(ring.Outer)), f.TryText("category") ?? "");
+                yield return new(f, ring.Outer, min, max, MathF.Abs((float)PlanRings.SignedArea(ring.Outer)), f.TryText("category") ?? "");
             }
         }
     }
@@ -441,7 +441,7 @@ public static class FaunaPlanner
     };
 
     private static bool Inside(Footprint f, Vector2 p) =>
-        p.X >= f.Min.X && p.X <= f.Max.X && p.Y >= f.Min.Y && p.Y <= f.Max.Y && PlanGeometry.InsideByCrossings(f.Ring, p);
+        p.X >= f.Min.X && p.X <= f.Max.X && p.Y >= f.Min.Y && p.Y <= f.Max.Y && PlanRings.InsideByCrossings(f.Ring, p);
 
     // Sites use the authored vertices' mean; an area centroid would move irregular shoreline placements.
     private static Vector2 VertexMean(IReadOnlyList<Vector2> ring)

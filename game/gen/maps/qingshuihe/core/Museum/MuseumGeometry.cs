@@ -15,7 +15,7 @@ public static class MuseumGeometry
 
     /// <summary>Outward unit normal of edge <paramref name="i"/>.</summary>
     public static Vector2 Normal(IReadOnlyList<Vector2> ring, int i) =>
-        PlanGeometry.RightUnitNormal(ring[i], ring[(i + 1) % ring.Count]);
+        PlanOffsets.RightUnitNormal(ring[i], ring[(i + 1) % ring.Count]);
 
     /// <summary>The wall face of edge <paramref name="i"/>: u from point i, outward normal, length.</summary>
     public static Face FaceOf(IReadOnlyList<Vector2> ring, int i)

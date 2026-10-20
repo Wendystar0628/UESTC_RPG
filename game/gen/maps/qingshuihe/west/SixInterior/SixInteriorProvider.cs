@@ -134,7 +134,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         {
             var bridge = SixOpenings.BridgeDoors(ctx.World).Single(d => d.Entity == S.EntityB);
             var door = Node(S.EntityB, 2, "bridge", bridge.Centre, p.UpperY);
-            Link(door, Node(S.EntityB, 2, "public", PlanGeometry.Centroid(p.PublicB), p.UpperY), NavEdgeKind.Corridor, S.DoorWidth);
+            Link(door, Node(S.EntityB, 2, "public", PlanPolygons.Centroid(p.PublicB), p.UpperY), NavEdgeKind.Corridor, S.DoorWidth);
         }
         else if (storey == 1)
         {
@@ -158,7 +158,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
                     Link(next, Node(S.EntityC, 2, "return.upper", ReturnDoor(p, 2).Centre, p.UpperY), NavEdgeKind.Door, Rules.DoorClearWidth);
             }
             var bridges = SixConnections.Bridges(ctx.World).ToArray();
-            foreach (var point in new[] { bridges[1].From, PlanGeometry.Centroid(SixLayout.Plan(ctx.World, S.EntityC, S.LinkBC)), bridges[0].From })
+            foreach (var point in new[] { bridges[1].From, PlanPolygons.Centroid(SixLayout.Plan(ctx.World, S.EntityC, S.LinkBC)), bridges[0].From })
             {
                 var next = Node(S.EntityC, 2, "bridge." + nodes.Count.ToString(CultureInfo.InvariantCulture), point, p.UpperY);
                 Link(previous, next, NavEdgeKind.Bridge, S.DoorWidth); previous = next;

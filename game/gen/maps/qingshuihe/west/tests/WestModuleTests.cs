@@ -124,8 +124,8 @@ public sealed class WestModuleTests
             var plan = SixLayout.Plan(world, k.Entity, k.Part);
             var inner = SixLayout.BasePlan(plan);
             AssertThat(inner.Outer.Count == plan.Outer.Count && inner.Holes.Count == plan.Holes.Count).OverrideFailureMessage($"{k.Key}: the base keeps the plan's rings").IsTrue();
-            AssertThat(Math.Abs(PlanGeometry.SignedArea(inner.Outer)) < Math.Abs(PlanGeometry.SignedArea(plan.Outer))).OverrideFailureMessage($"{k.Key}: the base glass is set back inside the stone").IsTrue();
-            AssertThat(inner.Outer.All(p => PlanGeometry.InsideByCrossings(plan.Outer, p))).OverrideFailureMessage($"{k.Key}: every base corner lies under the stone").IsTrue();
+            AssertThat(Math.Abs(PlanRings.SignedArea(inner.Outer)) < Math.Abs(PlanRings.SignedArea(plan.Outer))).OverrideFailureMessage($"{k.Key}: the base glass is set back inside the stone").IsTrue();
+            AssertThat(inner.Outer.All(p => PlanRings.InsideByCrossings(plan.Outer, p))).OverrideFailureMessage($"{k.Key}: every base corner lies under the stone").IsTrue();
         }
     }
 
@@ -277,7 +277,7 @@ public sealed class WestModuleTests
         AssertThat(file.Ops.All(o => o.Id.StartsWith(WestIds.TerrainPrefix, StringComparison.Ordinal) && o.Zone.Value == "west")).OverrideFailureMessage("ids and zones").IsTrue();
         var low = file.Ops.OfType<TerrainPlatformOp>().Single(o => o.Id == WestIds.WetlandLow);
         var plaza = ((PolygonGeometry)World().Features[new(WestIds.A10Plaza)].Geometry).Rings.Outer;
-        AssertThat(low.Rings.Holes.Count == 1 && plaza.All(p => PlanGeometry.InsideByCrossings(low.Rings.Holes[0], p))).OverrideFailureMessage("the low ground leaves a dry hole round the plaza").IsTrue();
+        AssertThat(low.Rings.Holes.Count == 1 && plaza.All(p => PlanRings.InsideByCrossings(low.Rings.Holes[0], p))).OverrideFailureMessage("the low ground leaves a dry hole round the plaza").IsTrue();
         var stream = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == WestIds.WetlandStream);
         var canal = file.Ops.OfType<TerrainChannelOp>().Single(o => o.Id == WestIds.HongguangNorth);
         AssertThat(stream.WaterY > canal.WaterY).OverrideFailureMessage("the wetland stream stays above the canal").IsTrue();
@@ -338,7 +338,7 @@ public sealed class WestModuleTests
             var onLine = Enumerable.Range(0, ring.Count).Any(i => Near(ring[i], ring[(i + 1) % ring.Count], box.Door, 0.3f));
             AssertThat(onLine).OverrideFailureMessage($"四号 {box.Key}: the door lies on the block's stone line").IsTrue();
             var out1 = Angles.Heading(box.Facing);
-            AssertThat(!PlanGeometry.InsideByCrossings(ring, box.Door + out1 * 2f) && PlanGeometry.InsideByCrossings(ring, box.Door - out1 * 2f)).OverrideFailureMessage($"四号 {box.Key}: the box faces out of the block").IsTrue();
+            AssertThat(!PlanRings.InsideByCrossings(ring, box.Door + out1 * 2f) && PlanRings.InsideByCrossings(ring, box.Door - out1 * 2f)).OverrideFailureMessage($"四号 {box.Key}: the box faces out of the block").IsTrue();
         }
         var ctx = Context();
         var module = new WestModule();
@@ -361,9 +361,9 @@ public sealed class WestModuleTests
             .Concat(feature.Parts.Select(p => p.Geometry).OfType<MultiPolygonGeometry>().SelectMany(m => m.Polygons.Select(r => r.Outer))).ToArray();
         foreach (var (centre, length) in I.Shafts(world))
         {
-            AssertThat(plans.Any(r => PlanGeometry.InsideByCrossings(r, centre))).OverrideFailureMessage($"shaft {centre} stands on a link of 创新中心").IsTrue();
+            AssertThat(plans.Any(r => PlanRings.InsideByCrossings(r, centre))).OverrideFailureMessage($"shaft {centre} stands on a link of 创新中心").IsTrue();
             var ends = new[] { centre + I.WingAxis * (length * 0.5f + 1.5f), centre - I.WingAxis * (length * 0.5f + 1.5f) };
-            AssertThat(ends.All(e => plans.Any(r => PlanGeometry.InsideByCrossings(r, e)))).OverrideFailureMessage($"shaft {centre} reaches a building at both ends").IsTrue();
+            AssertThat(ends.All(e => plans.Any(r => PlanRings.InsideByCrossings(r, e)))).OverrideFailureMessage($"shaft {centre} reaches a building at both ends").IsTrue();
         }
     }
 

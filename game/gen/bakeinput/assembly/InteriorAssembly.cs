@@ -178,7 +178,7 @@ public static class InteriorAssembly
             {
                 foreach (var storey in layout.Storeys.Where(storey => storey.Index == floor))
                     foreach (var footprint in footprints)
-                        foreach (var ring in PlanGeometry.IntersectionTriangles(new(storey.Footprint), footprint))
+                        foreach (var ring in PlanPolygons.IntersectionTriangles(new(storey.Footprint), footprint))
                             result.Add(new(InteriorOpenPartKind.IndoorFloor, storey.Index, storey.FloorY, storey.Height, ring));
             }
         }
@@ -201,7 +201,7 @@ public static class InteriorAssembly
             var point = cab.Center;
             if (!VectorMath.Finite(cab.Min) || !VectorMath.Finite(cab.Max) ||
                 !areas.Any(area => area.Index == floor && point.Y >= area.FloorY && point.Y < area.FloorY + area.Height &&
-                    PlanGeometry.PointInRing(new(point.X, point.Z), area.Footprint)))
+                    PlanRings.PointInRing(new(point.X, point.Z), area.Footprint)))
                 throw new InvalidDataException($"Elevator stop is outside the catalog's open area: {layout.Feature.Value}/{id}/{floor}.");
         }
     }

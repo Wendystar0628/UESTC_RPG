@@ -8,7 +8,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core;
 /// Metres; values marked "review" are mainline initial values awaiting the main session's call. Colours are palette
 /// names only.
 /// </summary>
-public static partial class CoreStyle
+public static class EntranceStyle
 {
     // ---- Plan across the door axis (w = 0 on the front tower's door, symmetric): main stair, lawn terraces, side stairs,
     //      outer guard walls. The total, 2 × 13.78 m, is the OSM base's 27.7 m width (review); the world/core.json geometry of 8398
@@ -60,7 +60,7 @@ public static partial class CoreStyle
     /// <summary>Drip strip under the fascia's front edge (L0): height and projection.</summary>
     public const float CanopyDrip = 0.05f;
     /// <summary>The frame is the grey metal of the 5F eave (灰色金属), so it stands off the beige stone in shade and at noon.</summary>
-    public const string CanopyFamily = LibraryEave;
+    public const string CanopyFamily = LibraryStyle.LibraryEave;
 
     // ---- Colours ----
     /// <summary>Treads, landings and cheek walls: light granite, the podium terrace's paving.</summary>

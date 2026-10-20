@@ -28,7 +28,7 @@ public sealed class ActivityLobbySite : ZoneSite
         var y = b.Context.World.Terrain.PadY(feature.Id);
         var height = feature.Height!.Value;
         var wall = new Campus.Contracts.Parts.PanelParams().Depth;
-        b.Add(PartGeometryKernel.Extrude(new(ring), wall, NorthTune.Look.Trim, y + height), Matrix4x4.Identity);
+        b.Add(PartSolids.Extrude(new(ring), wall, NorthTune.Look.Trim, y + height), Matrix4x4.Identity);
         for (var i = 0; i < ring.Count; i++)
         {
             var a = ring[i]; var z = ring[(i + 1) % ring.Count];

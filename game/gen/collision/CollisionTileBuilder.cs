@@ -128,7 +128,7 @@ public sealed class CollisionTileBuilder(
         void AddRing(IReadOnlyList<Vector2> ring, bool hole)
         {
             if (ring.Count < 3) return;
-            var area = PlanGeometry.SignedArea(ring);
+            var area = PlanRings.SignedArea(ring);
             for (var i = 0; i < ring.Count; i++)
             {
                 var a = ring[i]; var b = ring[(i + 1) % ring.Count];
@@ -157,7 +157,7 @@ public sealed class CollisionTileBuilder(
                         if (InteriorOpenPart.IsIndoor(access.Kind)) continue;
                         var barrierTop = access.FloorY + WalkRules.BarrierHeight;
                         if (barrierTop >= top) continue;
-                        foreach (var interval in PlanGeometry.SegmentIntervals(a + inward * halfThickness, b + inward * halfThickness, access.Footprint))
+                        foreach (var interval in PlanPolygons.SegmentIntervals(a + inward * halfThickness, b + inward * halfThickness, access.Footprint))
                             cuts.Add(new(interval.Start, interval.End, barrierTop, top, true));
                     }
                 result.AddRange(EntranceWallOpenings.Cut(new WallCollider(a + inward * halfThickness, b + inward * halfThickness,

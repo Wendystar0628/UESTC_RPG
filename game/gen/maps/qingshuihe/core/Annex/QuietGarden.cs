@@ -31,9 +31,9 @@ public sealed class QuietGarden : ZoneSite
         Pergola = CoreContours.Wall(world, CoreIds.GardenPergolaFace, walls.Where(w => w.Block.Source == CoreIds.CourtWing.Value))
             ?? throw new InvalidOperationException("The registered pergola wall is not exposed.");
         Colonnade = CoreContours.Wall(world, CoreIds.GardenColonnadeFace, walls.Where(w => w.Block.Kind is BlockKind.Podium or BlockKind.Wing));
-        Pavilion = Widest([], S.PavilionRadius + S.PavilionOverhang + 0.6f);
-        var first = Widest([(Pavilion, S.PavilionRadius + S.PavilionOverhang + S.PlanterGap)], PlanterReach);
-        var second = Widest([(Pavilion, S.PavilionRadius + S.PavilionOverhang + S.PlanterGap), (first, 2 * PlanterReach + S.PlanterGap)], PlanterReach);
+        Pavilion = Widest([], AnnexStyle.PavilionRadius + AnnexStyle.PavilionOverhang + 0.6f);
+        var first = Widest([(Pavilion, AnnexStyle.PavilionRadius + AnnexStyle.PavilionOverhang + AnnexStyle.PlanterGap)], PlanterReach);
+        var second = Widest([(Pavilion, AnnexStyle.PavilionRadius + AnnexStyle.PavilionOverhang + AnnexStyle.PlanterGap), (first, 2 * PlanterReach + AnnexStyle.PlanterGap)], PlanterReach);
         Planters = [first, second];
     }
 
@@ -54,12 +54,12 @@ public sealed class QuietGarden : ZoneSite
     /// <summary>Centres of the two planters; the palms stand at these points.</summary>
     public IReadOnlyList<Vector2> Planters { get; }
 
-    private static float PlanterReach => MathF.Sqrt(S.PlanterLength * S.PlanterLength + S.PlanterWidth * S.PlanterWidth) * 0.5f;
+    private static float PlanterReach => MathF.Sqrt(AnnexStyle.PlanterLength * AnnexStyle.PlanterLength + AnnexStyle.PlanterWidth * AnnexStyle.PlanterWidth) * 0.5f;
     private Vector2 Along => Pergola.Along;
     private Vector2 Across => Pergola.Out;
 
     public override string Id => "quiet-garden";
-    public Vector2 Anchor => PlanGeometry.Centroid([Ring]);
+    public Vector2 Anchor => PlanPolygons.Centroid([Ring]);
     public static IReadOnlyList<Claim> DeclaredClaims { get; } = [];
     public override IReadOnlyList<Claim> Claims => DeclaredClaims;
 
@@ -72,18 +72,18 @@ public sealed class QuietGarden : ZoneSite
     private Vector2 Widest(IReadOnlyList<(Vector2 P, float R)> keep, float need)
     {
         float x0 = Ring.Min(p => p.X), x1 = Ring.Max(p => p.X), z0 = Ring.Min(p => p.Y), z1 = Ring.Max(p => p.Y);
-        var best = PlanGeometry.Centroid([Ring]);
+        var best = PlanPolygons.Centroid([Ring]);
         var bestClear = float.MinValue;
         for (var x = x0 + 0.25f; x < x1; x += 0.5f)
             for (var z = z0 + 0.25f; z < z1; z += 0.5f)
             {
                 var p = new Vector2(x, z);
-                if (!PlanGeometry.InsideByCrossings(Ring, p)) continue;
+                if (!PlanRings.InsideByCrossings(Ring, p)) continue;
                 var clear = float.MaxValue;
                 foreach (var w in Walls)
                 {
-                    var band = ReferenceEquals(w, Pergola) ? S.PergolaInset + S.PergolaDepth + S.PergolaOverhang
-                        : ReferenceEquals(w, Colonnade) ? S.ColonnadeInset + S.ColonnadeColumn : 0f;
+                    var band = ReferenceEquals(w, Pergola) ? AnnexStyle.PergolaInset + AnnexStyle.PergolaDepth + AnnexStyle.PergolaOverhang
+                        : ReferenceEquals(w, Colonnade) ? AnnexStyle.ColonnadeInset + AnnexStyle.ColonnadeColumn : 0f;
                     clear = MathF.Min(clear, MathF.Sqrt(PlanLines.SegmentDistanceSquared(p, w.A, w.B)) - band);
                 }
                 foreach (var (q, r) in keep) clear = MathF.Min(clear, Vector2.Distance(p, q) - r);
@@ -112,10 +112,10 @@ public sealed class QuietGarden : ZoneSite
         var polygon = PolygonTriangulator.Triangulate(new PolygonRings(Ring));
         var v = polygon.Vertices.Select(p => new Vector3(p.X, Y(p), p.Y)).ToArray();
         for (var i = 0; i < polygon.Indices.Length; i += 3)
-            mesh.Tri(S.Roof(S.CourtPaving), v[polygon.Indices[i]], v[polygon.Indices[i + 1]], v[polygon.Indices[i + 2]], Vector3.UnitY);
+            mesh.Tri(S.Roof(AnnexStyle.CourtPaving), v[polygon.Indices[i]], v[polygon.Indices[i + 1]], v[polygon.Indices[i + 2]], Vector3.UnitY);
         if (lod > LodLevel.L1 || Colonnade is not { } c) return;
-        var from = (c.A + c.B) * 0.5f + c.Out * (S.ColonnadeInset + S.ColonnadeColumn);
-        var to = Pavilion - Vector2.Normalize(Pavilion - from) * (S.PavilionRadius + S.PavilionPlinthOut + 0.2f);
+        var from = (c.A + c.B) * 0.5f + c.Out * (AnnexStyle.ColonnadeInset + AnnexStyle.ColonnadeColumn);
+        var to = Pavilion - Vector2.Normalize(Pavilion - from) * (AnnexStyle.PavilionRadius + AnnexStyle.PavilionPlinthOut + 0.2f);
         var length = Vector2.Distance(from, to);
         if (length < 1f) return;
         var d = (to - from) / length;
@@ -124,7 +124,7 @@ public sealed class QuietGarden : ZoneSite
         {
             var m = from + d * (0.85f * k + 0.45f);
             var side = new Vector2(-d.Y, d.X);
-            CoreShapes.FlatPolygon(mesh, S.Inlay(S.CourtPath), [m - d * 0.28f - side * 0.48f, m + d * 0.28f - side * 0.48f, m + d * 0.28f + side * 0.48f, m - d * 0.28f + side * 0.48f],
+            CoreShapes.FlatPolygon(mesh, S.Inlay(AnnexStyle.CourtPath), [m - d * 0.28f - side * 0.48f, m + d * 0.28f - side * 0.48f, m + d * 0.28f + side * 0.48f, m - d * 0.28f + side * 0.48f],
                 _ground, GroundLevels.Paving + GroundLevels.Decal);
         }
     }
@@ -140,31 +140,31 @@ public sealed class QuietGarden : ZoneSite
     private void PergolaMesh(GeometrySink mesh, LodLevel lod)
     {
         if (lod > LodLevel.L2) return;
-        var red = S.Wall(S.PergolaRed);
+        var red = S.Wall(AnnexStyle.PergolaRed);
         var f = Face.Of(Pergola);
-        var length = MathF.Min(Pergola.Length * S.PergolaShare, 11.5f);
+        var length = MathF.Min(Pergola.Length * AnnexStyle.PergolaShare, 11.5f);
         float u0 = (Pergola.Length - length) * 0.5f, u1 = u0 + length;
-        float y = Y((Pergola.A + Pergola.B) * 0.5f + Across * (S.PergolaInset + S.PergolaDepth * 0.5f));
-        float s0 = S.PergolaInset, s1 = S.PergolaInset + S.PergolaDepth, p = S.PergolaPost * 0.5f, top = y + S.PergolaHeight;
-        var posts = Math.Max(2, (int)MathF.Round(length / S.PergolaPostPitch) + 1);
+        float y = Y((Pergola.A + Pergola.B) * 0.5f + Across * (AnnexStyle.PergolaInset + AnnexStyle.PergolaDepth * 0.5f));
+        float s0 = AnnexStyle.PergolaInset, s1 = AnnexStyle.PergolaInset + AnnexStyle.PergolaDepth, p = AnnexStyle.PergolaPost * 0.5f, top = y + AnnexStyle.PergolaHeight;
+        var posts = Math.Max(2, (int)MathF.Round(length / AnnexStyle.PergolaPostPitch) + 1);
         foreach (var s in new[] { s0 + p, s1 - p })
         {
             for (var i = 0; i < posts; i++)
             {
                 var u = u0 + p + (length - 2 * p) * i / (posts - 1);
-                Member(mesh, red, f, u - p, u + p, s - p, s + p, y - S.Sink, top - S.PergolaBeam);
-                if (lod == LodLevel.L0) Member(mesh, S.Stone(S.ColonnadeGranite), f, u - p - 0.06f, u + p + 0.06f, s - p - 0.06f, s + p + 0.06f, y - S.Sink, y + 0.22f);
+                Member(mesh, red, f, u - p, u + p, s - p, s + p, y - S.Sink, top - AnnexStyle.PergolaBeam);
+                if (lod == LodLevel.L0) Member(mesh, S.Stone(AnnexStyle.ColonnadeGranite), f, u - p - 0.06f, u + p + 0.06f, s - p - 0.06f, s + p + 0.06f, y - S.Sink, y + 0.22f);
             }
-            Member(mesh, red, f, u0 - S.PergolaOverhang * 0.6f, u1 + S.PergolaOverhang * 0.6f, s - p * 0.8f, s + p * 0.8f, top - S.PergolaBeam, top);
+            Member(mesh, red, f, u0 - AnnexStyle.PergolaOverhang * 0.6f, u1 + AnnexStyle.PergolaOverhang * 0.6f, s - p * 0.8f, s + p * 0.8f, top - AnnexStyle.PergolaBeam, top);
         }
         if (lod == LodLevel.L2) return;
-        var pitch = lod == LodLevel.L0 ? S.PergolaRafterPitch : S.PergolaRafterPitch * 2f;
+        var pitch = lod == LodLevel.L0 ? AnnexStyle.PergolaRafterPitch : AnnexStyle.PergolaRafterPitch * 2f;
         var rafters = (int)MathF.Floor(length / pitch) + 1;
-        var r = S.PergolaRafter * 0.5f;
+        var r = AnnexStyle.PergolaRafter * 0.5f;
         for (var i = 0; i < rafters; i++)
         {
             var u = u0 + length * i / (rafters - 1);
-            Member(mesh, red, f, u - r, u + r, s0 - S.PergolaOverhang, s1 + S.PergolaOverhang, top, top + 0.16f);
+            Member(mesh, red, f, u - r, u + r, s0 - AnnexStyle.PergolaOverhang, s1 + AnnexStyle.PergolaOverhang, top, top + 0.16f);
         }
     }
 
@@ -172,23 +172,23 @@ public sealed class QuietGarden : ZoneSite
     private void ColonnadeMesh(GeometrySink mesh, WallPiece wall, LodLevel lod)
     {
         if (lod > LodLevel.L2) return;
-        var stone = S.Stone(S.ColonnadeGranite);
+        var stone = S.Stone(AnnexStyle.ColonnadeGranite);
         var f = Face.Of(wall);
-        float length = wall.Length - 2 * S.ColonnadeMargin;
-        if (length < S.ColonnadePitch) return;
-        var count = (int)MathF.Floor(length / S.ColonnadePitch) + 1;
-        float c = S.ColonnadeColumn * 0.5f, s = S.ColonnadeInset, y = Y((wall.A + wall.B) * 0.5f + wall.Out * s), top = y + S.ColonnadeHeight;
-        float first = (wall.Length - (count - 1) * S.ColonnadePitch) * 0.5f;
+        float length = wall.Length - 2 * AnnexStyle.ColonnadeMargin;
+        if (length < AnnexStyle.ColonnadePitch) return;
+        var count = (int)MathF.Floor(length / AnnexStyle.ColonnadePitch) + 1;
+        float c = AnnexStyle.ColonnadeColumn * 0.5f, s = AnnexStyle.ColonnadeInset, y = Y((wall.A + wall.B) * 0.5f + wall.Out * s), top = y + AnnexStyle.ColonnadeHeight;
+        float first = (wall.Length - (count - 1) * AnnexStyle.ColonnadePitch) * 0.5f;
         for (var i = 0; i < count; i++)
         {
-            var u = first + i * S.ColonnadePitch;
-            Member(mesh, stone, f, u - c - 0.07f, u + c + 0.07f, s - c - 0.07f, s + c + 0.07f, y - S.Sink, y + S.ColonnadePlinth);
-            Member(mesh, stone, f, u - c, u + c, s - c, s + c, y + S.ColonnadePlinth, top - 0.16f);
+            var u = first + i * AnnexStyle.ColonnadePitch;
+            Member(mesh, stone, f, u - c - 0.07f, u + c + 0.07f, s - c - 0.07f, s + c + 0.07f, y - S.Sink, y + AnnexStyle.ColonnadePlinth);
+            Member(mesh, stone, f, u - c, u + c, s - c, s + c, y + AnnexStyle.ColonnadePlinth, top - 0.16f);
             if (lod == LodLevel.L0) Member(mesh, stone, f, u - c - 0.05f, u + c + 0.05f, s - c - 0.05f, s + c + 0.05f, top - 0.16f, top);
-            LibraryFacade.Box(mesh, stone, f, u - 0.14f, u + 0.14f, 0f, s - c, top + 0.05f, top + S.ColonnadeLintel - 0.08f);
+            LibraryFacade.Box(mesh, stone, f, u - 0.14f, u + 0.14f, 0f, s - c, top + 0.05f, top + AnnexStyle.ColonnadeLintel - 0.08f);
         }
-        float e0 = first - c - 0.35f, e1 = first + (count - 1) * S.ColonnadePitch + c + 0.35f;
-        Member(mesh, stone, f, e0, e1, s - c - 0.06f, s + c + 0.06f, top, top + S.ColonnadeLintel);
+        float e0 = first - c - 0.35f, e1 = first + (count - 1) * AnnexStyle.ColonnadePitch + c + 0.35f;
+        Member(mesh, stone, f, e0, e1, s - c - 0.06f, s + c + 0.06f, top, top + AnnexStyle.ColonnadeLintel);
     }
 
     /// <summary>
@@ -201,14 +201,14 @@ public sealed class QuietGarden : ZoneSite
         var y = Y(c);
         var turn = MathF.Atan2(Along.Y, Along.X);
         Vector2 Corner(int k, float r) { var a = turn + MathF.Tau * k / 6f; return c + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r; }
-        var granite = S.Stone(S.ColonnadeGranite);
-        var timber = S.Wall(S.Timber);
-        float rp = S.PavilionRadius + S.PavilionPlinthOut;
-        Prism(mesh, granite, Corner, rp, rp, y - S.Sink, y + S.PavilionPlinth * 0.5f, 0.02f);
-        Prism(mesh, granite, Corner, rp - 0.28f, rp - 0.28f, y + S.PavilionPlinth * 0.5f, y + S.PavilionPlinth, 0.025f);
-        float floor = y + S.PavilionPlinth, eave = y + S.PavilionEave, apex = y + S.PavilionApex, re = S.PavilionRadius + S.PavilionOverhang;
+        var granite = S.Stone(AnnexStyle.ColonnadeGranite);
+        var timber = S.Wall(AnnexStyle.Timber);
+        float rp = AnnexStyle.PavilionRadius + AnnexStyle.PavilionPlinthOut;
+        Prism(mesh, granite, Corner, rp, rp, y - S.Sink, y + AnnexStyle.PavilionPlinth * 0.5f, 0.02f);
+        Prism(mesh, granite, Corner, rp - 0.28f, rp - 0.28f, y + AnnexStyle.PavilionPlinth * 0.5f, y + AnnexStyle.PavilionPlinth, 0.025f);
+        float floor = y + AnnexStyle.PavilionPlinth, eave = y + AnnexStyle.PavilionEave, apex = y + AnnexStyle.PavilionApex, re = AnnexStyle.PavilionRadius + AnnexStyle.PavilionOverhang;
         // Roof: pyramid faces from the eave ring to the apex, fascia below the eave, soffit closing the underside.
-        var tile = S.Roof(S.PavilionRoof);
+        var tile = S.Roof(AnnexStyle.PavilionRoof);
         var top = new Vector3(c.X, apex, c.Y);
         for (var k = 0; k < 6; k++)
         {
@@ -217,24 +217,24 @@ public sealed class QuietGarden : ZoneSite
             if (n.Y < 0) n = -n;
             mesh.Tri(tile, new(a.X, eave, a.Y), new(b.X, eave, b.Y), top, n);
         }
-        Prism(mesh, S.Wall(S.Timber), Corner, re, re, eave - S.PavilionFascia, eave, 0f, soffit: true);
-        Prism(mesh, timber, Corner, S.PavilionRadius + 0.12f, S.PavilionRadius + 0.12f, eave - S.PavilionFascia - S.PavilionBeam, eave - S.PavilionFascia, 0f);
-        Prism(mesh, timber, Corner, 0.09f, 0.05f, apex - 0.05f, apex + S.PavilionFinial, 0f);
+        Prism(mesh, S.Wall(AnnexStyle.Timber), Corner, re, re, eave - AnnexStyle.PavilionFascia, eave, 0f, soffit: true);
+        Prism(mesh, timber, Corner, AnnexStyle.PavilionRadius + 0.12f, AnnexStyle.PavilionRadius + 0.12f, eave - AnnexStyle.PavilionFascia - AnnexStyle.PavilionBeam, eave - AnnexStyle.PavilionFascia, 0f);
+        Prism(mesh, timber, Corner, 0.09f, 0.05f, apex - 0.05f, apex + AnnexStyle.PavilionFinial, 0f);
         if (lod > LodLevel.L2) return;
         var path = Colonnade is { } col ? Vector2.Normalize((col.A + col.B) * 0.5f - c) : -Across;
         var gate = Enumerable.Range(0, 6).MaxBy(k => Vector2.Dot(Vector2.Normalize((Corner(k, 1f) + Corner(k + 1, 1f)) * 0.5f - c), path));
         for (var k = 0; k < 6; k++)
         {
-            var p = Corner(k, S.PavilionRadius);
-            float h = S.PavilionPost * 0.5f;
+            var p = Corner(k, AnnexStyle.PavilionRadius);
+            float h = AnnexStyle.PavilionPost * 0.5f;
             Prism(mesh, timber, i => p + new Vector2(MathF.Cos(turn + MathF.Tau * i / 4f + 0.785398f), MathF.Sin(turn + MathF.Tau * i / 4f + 0.785398f)) * h * 1.414f,
-                1f, 1f, floor - 0.02f, eave - S.PavilionFascia, 0f, sides: 4);
+                1f, 1f, floor - 0.02f, eave - AnnexStyle.PavilionFascia, 0f, sides: 4);
             if (k == gate || lod > LodLevel.L1) continue;
             // Bench rail between this post and the next: a seat board on two short legs.
-            Vector2 a = Corner(k, S.PavilionRadius - 0.05f), b = Corner(k + 1, S.PavilionRadius - 0.05f);
+            Vector2 a = Corner(k, AnnexStyle.PavilionRadius - 0.05f), b = Corner(k + 1, AnnexStyle.PavilionRadius - 0.05f);
             var f = new Face(a, Vector2.Normalize(b - a), Vector2.Normalize(c - (a + b) * 0.5f), Vector2.Distance(a, b));
-            Member(mesh, timber, f, h, f.Length - h, -0.02f, 0.38f, floor + S.PavilionRail - 0.06f, floor + S.PavilionRail);
-            Member(mesh, timber, f, h, f.Length - h, -0.02f, 0.06f, floor + S.PavilionRail + 0.28f, floor + S.PavilionRail + 0.36f);
+            Member(mesh, timber, f, h, f.Length - h, -0.02f, 0.38f, floor + AnnexStyle.PavilionRail - 0.06f, floor + AnnexStyle.PavilionRail);
+            Member(mesh, timber, f, h, f.Length - h, -0.02f, 0.06f, floor + AnnexStyle.PavilionRail + 0.28f, floor + AnnexStyle.PavilionRail + 0.36f);
         }
     }
 
@@ -282,29 +282,29 @@ public sealed class QuietGarden : ZoneSite
     /// <summary>A timber-edged planter: four edge boards with a chamfered cap, dark soil, clipped shrub cushions round the palm.</summary>
     private void PlanterMesh(GeometrySink mesh, Vector2 c, LodLevel lod)
     {
-        float hl = S.PlanterLength * 0.5f, hw = S.PlanterWidth * 0.5f, e = S.PlanterEdge, y = Y(c), top = y + S.PlanterHeight;
-        var f = new Face(c - Along * hl - Across * hw, Along, -Across, S.PlanterLength);
-        var wood = S.Wall(S.Timber);
+        float hl = AnnexStyle.PlanterLength * 0.5f, hw = AnnexStyle.PlanterWidth * 0.5f, e = AnnexStyle.PlanterEdge, y = Y(c), top = y + AnnexStyle.PlanterHeight;
+        var f = new Face(c - Along * hl - Across * hw, Along, -Across, AnnexStyle.PlanterLength);
+        var wood = S.Wall(AnnexStyle.Timber);
         // Edge boards (u along, s across: the face runs along one long side, s = 0 there, the box spans s 0 … −width).
-        Member(mesh, wood, f, 0f, S.PlanterLength, -e, 0f, y - S.Sink, top);
-        Member(mesh, wood, f, 0f, S.PlanterLength, -S.PlanterWidth, -S.PlanterWidth + e, y - S.Sink, top);
-        Member(mesh, wood, f, 0f, e, -S.PlanterWidth + e, -e, y - S.Sink, top);
-        Member(mesh, wood, f, S.PlanterLength - e, S.PlanterLength, -S.PlanterWidth + e, -e, y - S.Sink, top);
+        Member(mesh, wood, f, 0f, AnnexStyle.PlanterLength, -e, 0f, y - S.Sink, top);
+        Member(mesh, wood, f, 0f, AnnexStyle.PlanterLength, -AnnexStyle.PlanterWidth, -AnnexStyle.PlanterWidth + e, y - S.Sink, top);
+        Member(mesh, wood, f, 0f, e, -AnnexStyle.PlanterWidth + e, -e, y - S.Sink, top);
+        Member(mesh, wood, f, AnnexStyle.PlanterLength - e, AnnexStyle.PlanterLength, -AnnexStyle.PlanterWidth + e, -e, y - S.Sink, top);
         if (lod <= LodLevel.L1)
-            foreach (var (s0, s1) in new[] { (-e - 0.02f, 0.02f), (-S.PlanterWidth - 0.02f, -S.PlanterWidth + e + 0.02f) })
-                Member(mesh, wood, f, -0.02f, S.PlanterLength + 0.02f, s0, s1, top, top + 0.04f);
+            foreach (var (s0, s1) in new[] { (-e - 0.02f, 0.02f), (-AnnexStyle.PlanterWidth - 0.02f, -AnnexStyle.PlanterWidth + e + 0.02f) })
+                Member(mesh, wood, f, -0.02f, AnnexStyle.PlanterLength + 0.02f, s0, s1, top, top + 0.04f);
         var soil = top - 0.06f;
         Vector2 sa = c - Along * (hl - e) - Across * (hw - e), sb = c + Along * (hl - e) - Across * (hw - e), sc = c + Along * (hl - e) + Across * (hw - e), sd = c - Along * (hl - e) + Across * (hw - e);
-        mesh.Quad(S.Roof(S.PlanterSoil), new(sa.X, soil, sa.Y), new(sb.X, soil, sb.Y), new(sc.X, soil, sc.Y), new(sd.X, soil, sd.Y), Vector3.UnitY);
+        mesh.Quad(S.Roof(AnnexStyle.PlanterSoil), new(sa.X, soil, sa.Y), new(sb.X, soil, sb.Y), new(sc.X, soil, sc.Y), new(sd.X, soil, sd.Y), Vector3.UnitY);
         if (lod > LodLevel.L2) return;
         int rings = lod == LodLevel.L0 ? 4 : 2, sides = lod == LodLevel.L0 ? 10 : 6;
         // Two clipped rows along the long sides and a low cushion round the palm's foot, so the bed reads full with or without the tree.
-        var hedge = new Paint(CoreMaterial.Foliage, S.BoxHedge);
-        var row = hw - e - S.ShrubWidth * 0.5f - 0.04f;
+        var hedge = new Paint(CoreMaterial.Foliage, EntranceStyle.BoxHedge);
+        var row = hw - e - AnnexStyle.ShrubWidth * 0.5f - 0.04f;
         foreach (var sign in new[] { -1f, 1f })
             CoreShapes.Hedge(mesh, hedge, c - Along * (hl - e - 0.32f) + Across * (sign * row), c + Along * (hl - e - 0.32f) + Across * (sign * row),
-                soil, S.ShrubWidth, S.ShrubHeight, rings, sides);
-        CoreShapes.Cushion(mesh, hedge, new(c.X, soil, c.Y), Along, 0.75f, 0.42f, S.ShrubHeight * 0.6f, rings, sides);
+                soil, AnnexStyle.ShrubWidth, AnnexStyle.ShrubHeight, rings, sides);
+        CoreShapes.Cushion(mesh, hedge, new(c.X, soil, c.Y), Along, 0.75f, 0.42f, AnnexStyle.ShrubHeight * 0.6f, rings, sides);
     }
 
     // ------------------------------------------------------------------ collision
@@ -314,11 +314,11 @@ public sealed class QuietGarden : ZoneSite
     {
         var list = new List<Collider>();
         var y = Y(Pavilion);
-        list.Add(new PostCollider(Pavilion, S.PavilionRadius + S.PavilionPlinthOut, y - S.Sink, y + S.PavilionEave, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
+        list.Add(new PostCollider(Pavilion, AnnexStyle.PavilionRadius + AnnexStyle.PavilionPlinthOut, y - S.Sink, y + AnnexStyle.PavilionEave, SurfaceTag.Prop) { Foot = FootMat.StonePaving });
         foreach (var p in Planters)
         {
-            var at = CoreShapes.Facing(new(p.X, Y(p) + S.PlanterHeight * 0.5f, p.Y), Across);
-            list.Add(new BoxCollider(at, new(S.PlanterLength * 0.5f, S.PlanterHeight * 0.5f, S.PlanterWidth * 0.5f), SurfaceTag.Prop) { Foot = FootMat.WoodDeck });
+            var at = CoreShapes.Facing(new(p.X, Y(p) + AnnexStyle.PlanterHeight * 0.5f, p.Y), Across);
+            list.Add(new BoxCollider(at, new(AnnexStyle.PlanterLength * 0.5f, AnnexStyle.PlanterHeight * 0.5f, AnnexStyle.PlanterWidth * 0.5f), SurfaceTag.Prop) { Foot = FootMat.WoodDeck });
         }
         return list;
     }

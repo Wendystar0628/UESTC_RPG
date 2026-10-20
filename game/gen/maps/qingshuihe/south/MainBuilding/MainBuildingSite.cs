@@ -179,15 +179,15 @@ public sealed class MainBuildingSite : ZoneSite
     private static void Platform(SiteBuilder b, Layout g, float y)
     {
         float z0 = -0.3f, z1 = g.PlatformZ, d = z1 - z0, top = y + M.FloorY;
-        b.Add(PartGeometryKernel.BeveledBox(g.Width, M.FloorY - 0.02f, d, 0.03f, L.Stone), g.F.At(g.Xc, y - 0.1f, z0 + d * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(g.Width + 0.06f, 0.14f, d + 0.03f, 0.02f, L.StoneTrim), g.F.At(g.Xc, top - 0.14f, z0 + d * 0.5f - 0.015f));
+        b.Add(PartSolids.BeveledBox(g.Width, M.FloorY - 0.02f, d, 0.03f, L.Stone), g.F.At(g.Xc, y - 0.1f, z0 + d * 0.5f));
+        b.Add(PartSolids.BeveledBox(g.Width + 0.06f, 0.14f, d + 0.03f, 0.02f, L.StoneTrim), g.F.At(g.Xc, top - 0.14f, z0 + d * 0.5f - 0.015f));
         // A plinth band reads the podium as built stone rather than a bare block.
-        b.Add(PartGeometryKernel.BeveledBox(g.Width + 0.08f, 0.55f, d + 0.04f, 0.02f, L.Granite), g.F.At(g.Xc, y - 0.1f, z0 + d * 0.5f - 0.02f));
+        b.Add(PartSolids.BeveledBox(g.Width + 0.08f, 0.55f, d + 0.04f, 0.02f, L.Granite), g.F.At(g.Xc, y - 0.1f, z0 + d * 0.5f - 0.02f));
         // 1.1 m stone balustrade walls on the two open side edges (drop over 1.0 m, WLD-TERRAIN).
         foreach (var x in new[] { g.StepsX0 + 0.18f, g.StepsX1 - 0.18f })
         {
-            b.Add(PartGeometryKernel.BeveledBox(0.36f, 1.0f, d - 0.3f, 0.02f, L.Stone), g.F.At(x, top, z0 + d * 0.5f - 0.15f));
-            b.Add(PartGeometryKernel.BeveledBox(0.46f, 0.1f, d - 0.25f, 0.015f, L.StoneTrim), g.F.At(x, top + 1.0f, z0 + d * 0.5f - 0.125f));
+            b.Add(PartSolids.BeveledBox(0.36f, 1.0f, d - 0.3f, 0.02f, L.Stone), g.F.At(x, top, z0 + d * 0.5f - 0.15f));
+            b.Add(PartSolids.BeveledBox(0.46f, 0.1f, d - 0.25f, 0.015f, L.StoneTrim), g.F.At(x, top + 1.0f, z0 + d * 0.5f - 0.125f));
         }
     }
 
@@ -203,9 +203,9 @@ public sealed class MainBuildingSite : ZoneSite
         float upperZ = g.PlatformZ + upper.Depth * 0.5f, landing0 = g.PlatformZ + upper.Depth, landing1 = landing0 + M.MidLanding;
         // Parts climb toward their local +Z; reversed, they climb toward the facade.
         b.Add(Steps.Lods[b.Lod](upper), g.F.AtReversed(g.Xc, y + LowerRise, upperZ));
-        b.Add(PartGeometryKernel.BeveledBox(g.Width, LowerRise + 0.1f, M.MidLanding, 0.02f, L.Granite), g.F.At(g.Xc, y - 0.1f, (landing0 + landing1) * 0.5f));
+        b.Add(PartSolids.BeveledBox(g.Width, LowerRise + 0.1f, M.MidLanding, 0.02f, L.Granite), g.F.At(g.Xc, y - 0.1f, (landing0 + landing1) * 0.5f));
         foreach (var x in new[] { g.StepsX0 + 0.15f, g.StepsX1 - 0.15f })
-            b.Add(PartGeometryKernel.BeveledBox(0.3f, LowerRise + 0.25f, M.MidLanding, 0.015f, L.StoneTrim), g.F.At(x, y - 0.1f, (landing0 + landing1) * 0.5f));
+            b.Add(PartSolids.BeveledBox(0.3f, LowerRise + 0.25f, M.MidLanding, 0.015f, L.StoneTrim), g.F.At(x, y - 0.1f, (landing0 + landing1) * 0.5f));
         b.Add(Steps.Lods[b.Lod](lower), g.F.AtReversed(g.Xc, y, landing1 + lower.Depth * 0.5f));
     }
 
@@ -219,23 +219,23 @@ public sealed class MainBuildingSite : ZoneSite
         var hw = M.PorticoHalfWidth;
         var top = floor + M.PorticoHeight;
         float z0 = -0.3f, z1 = M.PorticoFront, d = z1 - z0;
-        b.Add(PartGeometryKernel.BeveledBox(2 * hw, M.EntablatureDepth, d, 0.04f, L.Stone), g.F.At(g.Xc, top, z0 + d * 0.5f));
+        b.Add(PartSolids.BeveledBox(2 * hw, M.EntablatureDepth, d, 0.04f, L.Stone), g.F.At(g.Xc, top, z0 + d * 0.5f));
         // Cornice band and coping: a horizontal shadow line under the roof edge.
-        b.Add(PartGeometryKernel.BeveledBox(2 * hw + 0.5f, 0.3f, d + 0.25f, 0.03f, L.StoneTrim), g.F.At(g.Xc, top + M.EntablatureDepth - 0.3f, z0 + d * 0.5f + 0.125f));
-        b.Add(PartGeometryKernel.BeveledBox(2 * hw + 0.3f, 0.45f, d + 0.1f, 0.03f, L.Stone), g.F.At(g.Xc, top + M.EntablatureDepth, z0 + d * 0.5f + 0.05f));
+        b.Add(PartSolids.BeveledBox(2 * hw + 0.5f, 0.3f, d + 0.25f, 0.03f, L.StoneTrim), g.F.At(g.Xc, top + M.EntablatureDepth - 0.3f, z0 + d * 0.5f + 0.125f));
+        b.Add(PartSolids.BeveledBox(2 * hw + 0.3f, 0.45f, d + 0.1f, 0.03f, L.Stone), g.F.At(g.Xc, top + M.EntablatureDepth, z0 + d * 0.5f + 0.05f));
         if (b.Detail != SiteDetail.Mass)
-            b.Add(PartGeometryKernel.BeveledBox(2 * hw - 0.4f, 0.05f, d - 0.4f, 0.01f, L.RoofSlab), g.F.At(g.Xc, top + M.EntablatureDepth + 0.45f, z0 + d * 0.5f));
+            b.Add(PartSolids.BeveledBox(2 * hw - 0.4f, 0.05f, d - 0.4f, 0.01f, L.RoofSlab), g.F.At(g.Xc, top + M.EntablatureDepth + 0.45f, z0 + d * 0.5f));
         BackWall(b, g, floor);
     }
 
     private static void Column(SiteBuilder b, Layout g, float x, float floor, SiteDetail detail)
     {
         var s = M.ColumnSize;
-        b.Add(PartGeometryKernel.BeveledBox(s + 0.35f, 0.45f, s + 0.35f, 0.03f, L.StoneTrim), g.F.At(x, floor, M.ColumnZ));
-        b.Add(PartGeometryKernel.BeveledBox(s, M.PorticoHeight - 0.45f - 0.6f, s, 0.05f, L.Stone), g.F.At(x, floor + 0.45f, M.ColumnZ));
-        b.Add(PartGeometryKernel.BeveledBox(s + 0.3f, 0.6f, s + 0.3f, 0.03f, L.StoneTrim), g.F.At(x, floor + M.PorticoHeight - 0.6f, M.ColumnZ));
+        b.Add(PartSolids.BeveledBox(s + 0.35f, 0.45f, s + 0.35f, 0.03f, L.StoneTrim), g.F.At(x, floor, M.ColumnZ));
+        b.Add(PartSolids.BeveledBox(s, M.PorticoHeight - 0.45f - 0.6f, s, 0.05f, L.Stone), g.F.At(x, floor + 0.45f, M.ColumnZ));
+        b.Add(PartSolids.BeveledBox(s + 0.3f, 0.6f, s + 0.3f, 0.03f, L.StoneTrim), g.F.At(x, floor + M.PorticoHeight - 0.6f, M.ColumnZ));
         if (detail == SiteDetail.Mass) return;
-        b.Add(PartGeometryKernel.BeveledBox(s + 0.1f, 0.12f, s + 0.1f, 0.02f, L.StoneTrim), g.F.At(x, floor + M.PorticoHeight - 0.85f, M.ColumnZ));
+        b.Add(PartSolids.BeveledBox(s + 0.1f, 0.12f, s + 0.1f, 0.02f, L.StoneTrim), g.F.At(x, floor + M.PorticoHeight - 0.85f, M.ColumnZ));
     }
 
     /// <summary>
@@ -257,7 +257,7 @@ public sealed class MainBuildingSite : ZoneSite
         var holes = M.ArchWindows.Select(x => (IReadOnlyList<Vector2>)Shapes.RoundArch(x, M.ArchSill, M.ArchWidth, M.ArchSpring, 12)).ToArray();
         var face = new PolygonRings(outer, holes);
         var centreZ = M.BackWall - depth * 0.5f;
-        b.Add(PartGeometryKernel.WallPanel(face, depth, L.Stone), g.F.At(g.Xc, floor, centreZ));
+        b.Add(PartSolids.WallPanel(face, depth, L.Stone), g.F.At(g.Xc, floor, centreZ));
         if (b.Detail == SiteDetail.Mass) return;
         var glassZ = FrontGlassZ;
         // Glass: numbered panes once the map's window numbering is in the context, the plain arched glass without one.
@@ -267,19 +267,19 @@ public sealed class MainBuildingSite : ZoneSite
         foreach (var x in M.ArchWindows)
         {
             if (numbered is null)
-                b.Add(PartGeometryKernel.WallPanel(new PolygonRings(Shapes.RoundArch(x, M.ArchSill, M.ArchWidth, M.ArchSpring, 12)), 0.04f, ZoneLooks.Glass), g.F.At(g.Xc, floor, glassZ));
-            b.Add(PartGeometryKernel.BeveledBox(M.ArchWidth + 0.4f, 0.12f, 0.35f, 0.02f, L.StoneTrim), g.F.At(g.Xc + x, floor + M.ArchSill - 0.12f, M.BackWall + 0.1f));
+                b.Add(PartSolids.WallPanel(new PolygonRings(Shapes.RoundArch(x, M.ArchSill, M.ArchWidth, M.ArchSpring, 12)), 0.04f, ZoneLooks.Glass), g.F.At(g.Xc, floor, glassZ));
+            b.Add(PartSolids.BeveledBox(M.ArchWidth + 0.4f, 0.12f, 0.35f, 0.02f, L.StoneTrim), g.F.At(g.Xc + x, floor + M.ArchSill - 0.12f, M.BackWall + 0.1f));
             if (b.Detail != SiteDetail.Full) continue;
             // Mullion, transom at the springing line and two glazing bars: the window reads as a window, not a hole.
-            b.Add(PartGeometryKernel.BeveledBox(0.1f, M.ArchSpring + M.ArchWidth * 0.5f - 0.05f, 0.12f, 0.015f, L.Metal), g.F.At(g.Xc + x, floor + M.ArchSill, glassZ + 0.06f));
+            b.Add(PartSolids.BeveledBox(0.1f, M.ArchSpring + M.ArchWidth * 0.5f - 0.05f, 0.12f, 0.015f, L.Metal), g.F.At(g.Xc + x, floor + M.ArchSill, glassZ + 0.06f));
             foreach (var k in new[] { 0.33f, 0.66f, 1f })
-                b.Add(PartGeometryKernel.BeveledBox(M.ArchWidth, 0.08f, 0.1f, 0.012f, L.Metal), g.F.At(g.Xc + x, floor + M.ArchSill + M.ArchSpring * k - 0.04f, glassZ + 0.06f));
+                b.Add(PartSolids.BeveledBox(M.ArchWidth, 0.08f, 0.1f, 0.012f, L.Metal), g.F.At(g.Xc + x, floor + M.ArchSill + M.ArchSpring * k - 0.04f, glassZ + 0.06f));
         }
         // Door: glass vestibule screen at the back, leaves fixed open against the reveals (SYS-WALK), stone threshold.
-        if (numbered is null) b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, ZoneLooks.Glass), g.F.At(g.Xc, floor, glassZ));
-        b.Add(PartGeometryKernel.BeveledBox(M.DoorWidth + 0.2f, 0.12f, 0.15f, 0.015f, L.Metal), g.F.At(g.Xc, floor + M.DoorSpring, glassZ + 0.08f));
+        if (numbered is null) b.Add(PartSolids.WallPanel(new PolygonRings(door), 0.05f, ZoneLooks.Glass), g.F.At(g.Xc, floor, glassZ));
+        b.Add(PartSolids.BeveledBox(M.DoorWidth + 0.2f, 0.12f, 0.15f, 0.015f, L.Metal), g.F.At(g.Xc, floor + M.DoorSpring, glassZ + 0.08f));
         foreach (var side in new[] { -1f, 1f })
-            b.Add(PartGeometryKernel.BeveledBox(0.06f, M.DoorSpring - 0.1f, 1.5f, 0.012f, L.Wood), g.F.At(g.Xc + side * (M.DoorWidth * 0.5f - 0.05f), floor, glassZ + 0.85f));
+            b.Add(PartSolids.BeveledBox(0.06f, M.DoorSpring - 0.1f, 1.5f, 0.012f, L.Wood), g.F.At(g.Xc + side * (M.DoorWidth * 0.5f - 0.05f), floor, glassZ + 0.85f));
         // The mat, open sign and door lamp are WP-13's, placed on the b2.front entrance anchor (WLD-INTERIORS).
     }
 
@@ -321,9 +321,9 @@ public sealed class MainBuildingSite : ZoneSite
         Ring(b, g, x0 - 0.3f, z0 - 0.3f, x1 + 0.3f, z1 + 0.3f, walk + 0.6f, colTop, M.GalleryFascia, L.Stone);
         Ring(b, g, x0 - 0.4f, z0 - 0.4f, x1 + 0.4f, z1 + 0.4f, walk + 0.8f, colTop + M.GalleryFascia - 0.25f, 0.25f, L.StoneTrim);
         foreach (var p in Perimeter(x0 + c * 0.5f, z0 + c * 0.5f, x1 - c * 0.5f, z1 - c * 0.5f, M.GalleryPitch))
-            b.Add(PartGeometryKernel.BeveledBox(c, colHeight, c, 0.03f, L.Stone), g.F.At(p.X, deck, p.Y));
+            b.Add(PartSolids.BeveledBox(c, colHeight, c, 0.03f, L.Stone), g.F.At(p.X, deck, p.Y));
         foreach (var p in Perimeter(x0 + walk - c * 0.5f, z0 + walk - c * 0.5f, x1 - walk + c * 0.5f, z1 - walk + c * 0.5f, M.GalleryPitch * 2))
-            b.Add(PartGeometryKernel.BeveledBox(c, colHeight, c, 0.03f, L.Stone), g.F.At(p.X, deck, p.Y));
+            b.Add(PartSolids.BeveledBox(c, colHeight, c, 0.03f, L.Stone), g.F.At(p.X, deck, p.Y));
         if (b.Detail == SiteDetail.Mass) return;
         // Railing parapet between outer columns (1.1 m, collision 1.5 m).
         var railing = new RailingPart();
@@ -335,7 +335,7 @@ public sealed class MainBuildingSite : ZoneSite
             var p = new RailingParams(length, 1.1f, 0.1f, 1.2f);
             var at = along ? g.F.At(mid.X, deck, mid.Y) : g.F.AtTurned(mid.X, deck, mid.Y);
             b.Add(railing.Lods[b.Lod](p), at);
-            b.Add(PartGeometryKernel.BeveledBox(length, 0.15f, 0.3f, 0.02f, L.StoneTrim), at);
+            b.Add(PartSolids.BeveledBox(length, 0.15f, 0.3f, 0.02f, L.StoneTrim), at);
         }
         // Plant enclosure inside the ring: 1.8 m perforated aluminium, locked (MAP-QSH-ADDITIONS).
         if (b.Lod != LodLevel.L4)
@@ -350,10 +350,10 @@ public sealed class MainBuildingSite : ZoneSite
     private static void Ring(SiteBuilder b, Layout g, float x0, float z0, float x1, float z1, float width, float y, float height, ToonSpec material)
     {
         float lx = x1 - x0, lz = z1 - z0 - 2 * width;
-        b.Add(PartGeometryKernel.BeveledBox(lx, height, width, 0.03f, material), g.F.At((x0 + x1) * 0.5f, y, z1 - width * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(lx, height, width, 0.03f, material), g.F.At((x0 + x1) * 0.5f, y, z0 + width * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(width, height, lz, 0.03f, material), g.F.At(x0 + width * 0.5f, y, (z0 + z1) * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(width, height, lz, 0.03f, material), g.F.At(x1 - width * 0.5f, y, (z0 + z1) * 0.5f));
+        b.Add(PartSolids.BeveledBox(lx, height, width, 0.03f, material), g.F.At((x0 + x1) * 0.5f, y, z1 - width * 0.5f));
+        b.Add(PartSolids.BeveledBox(lx, height, width, 0.03f, material), g.F.At((x0 + x1) * 0.5f, y, z0 + width * 0.5f));
+        b.Add(PartSolids.BeveledBox(width, height, lz, 0.03f, material), g.F.At(x0 + width * 0.5f, y, (z0 + z1) * 0.5f));
+        b.Add(PartSolids.BeveledBox(width, height, lz, 0.03f, material), g.F.At(x1 - width * 0.5f, y, (z0 + z1) * 0.5f));
     }
 
     /// <summary>Column points around a rectangle (front-frame x, z), corners included, sides divided near the pitch.</summary>
@@ -383,16 +383,16 @@ public sealed class MainBuildingSite : ZoneSite
         // The entrance block spans 7.2 m and stands 2.9 m deep against the facade (z −0.3…2.6).
         const float blockHalf = 3.6f, blockFront = RearBlockFront, blockTop = 4.8f;
         var landingFront = blockFront + ld;
-        b.Add(PartGeometryKernel.BeveledBox(lw, M.FloorY + 0.08f, landingFront + 0.3f, 0.03f, L.Stone), g.R.At(0, y - 0.1f, (landingFront - 0.3f) * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(lw + 0.06f, 0.14f, landingFront + 0.33f, 0.02f, L.StoneTrim), g.R.At(0, floor - 0.14f, (landingFront - 0.3f) * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(lw + 0.08f, 0.55f, landingFront + 0.34f, 0.02f, L.Granite), g.R.At(0, y - 0.1f, (landingFront - 0.3f) * 0.5f));
+        b.Add(PartSolids.BeveledBox(lw, M.FloorY + 0.08f, landingFront + 0.3f, 0.03f, L.Stone), g.R.At(0, y - 0.1f, (landingFront - 0.3f) * 0.5f));
+        b.Add(PartSolids.BeveledBox(lw + 0.06f, 0.14f, landingFront + 0.33f, 0.02f, L.StoneTrim), g.R.At(0, floor - 0.14f, (landingFront - 0.3f) * 0.5f));
+        b.Add(PartSolids.BeveledBox(lw + 0.08f, 0.55f, landingFront + 0.34f, 0.02f, L.Granite), g.R.At(0, y - 0.1f, (landingFront - 0.3f) * 0.5f));
         // Side parapets and the two short front parapets beside the steps.
         var stepsHalf = M.RearStepsWidth * 0.5f;
         foreach (var side in new[] { -1f, 1f })
         {
-            b.Add(PartGeometryKernel.BeveledBox(0.36f, 1.0f, landingFront + 0.3f, 0.02f, L.Stone), g.R.At(side * (lw * 0.5f - 0.18f), floor, (landingFront - 0.3f) * 0.5f));
+            b.Add(PartSolids.BeveledBox(0.36f, 1.0f, landingFront + 0.3f, 0.02f, L.Stone), g.R.At(side * (lw * 0.5f - 0.18f), floor, (landingFront - 0.3f) * 0.5f));
             var frontRun = lw * 0.5f - stepsHalf;
-            b.Add(PartGeometryKernel.BeveledBox(frontRun, 1.0f, 0.36f, 0.02f, L.Stone), g.R.At(side * (stepsHalf + frontRun * 0.5f), floor, landingFront - 0.18f));
+            b.Add(PartSolids.BeveledBox(frontRun, 1.0f, 0.36f, 0.02f, L.Stone), g.R.At(side * (stepsHalf + frontRun * 0.5f), floor, landingFront - 0.18f));
         }
         // Entrance block with the door notch; glass screen near its front buries the generic ground-floor canopy.
         var door = Shapes.RoundArch(0, 0, RearDoorWidth, RearDoorSpring, 14);
@@ -401,32 +401,32 @@ public sealed class MainBuildingSite : ZoneSite
         outer.Add(door[1]);
         outer.AddRange([new(blockHalf, 0), new(blockHalf, blockTop), new(-blockHalf, blockTop)]);
         var blockDepth = blockFront + 0.3f;
-        b.Add(PartGeometryKernel.WallPanel(new PolygonRings(outer), blockDepth, L.Stone), g.R.At(0, floor, blockFront - blockDepth * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(2 * blockHalf + 0.3f, 0.35f, blockDepth + 0.15f, 0.03f, L.StoneTrim), g.R.At(0, floor + blockTop, blockFront - blockDepth * 0.5f + 0.075f));
+        b.Add(PartSolids.WallPanel(new PolygonRings(outer), blockDepth, L.Stone), g.R.At(0, floor, blockFront - blockDepth * 0.5f));
+        b.Add(PartSolids.BeveledBox(2 * blockHalf + 0.3f, 0.35f, blockDepth + 0.15f, 0.03f, L.StoneTrim), g.R.At(0, floor + blockTop, blockFront - blockDepth * 0.5f + 0.075f));
         // Flat canopy on four white round columns over the landing (rear colonnade, §2.4).
         foreach (var x in new[] { -3.3f, -1.15f, 1.15f, 3.3f })
         {
-            b.Add(PartGeometryKernel.BeveledBox(0.7f, 0.3f, 0.7f, 0.02f, L.StoneTrim), g.R.At(x, floor, landingFront - 0.6f));
+            b.Add(PartSolids.BeveledBox(0.7f, 0.3f, 0.7f, 0.02f, L.StoneTrim), g.R.At(x, floor, landingFront - 0.6f));
             b.Add(Shapes.Shaft(M.RearColumnRadius, M.RearColumnRadius * 0.88f, M.RearCanopyY - M.FloorY - 0.6f, b.Detail == SiteDetail.Full ? 20 : 10, L.Stone), g.R.At(x, floor + 0.3f, landingFront - 0.6f));
         }
         var canopyDepth = landingFront - blockFront + 0.2f;
-        b.Add(PartGeometryKernel.BeveledBox(lw - 0.6f, 0.5f, canopyDepth, 0.03f, L.StoneTrim), g.R.At(0, y + M.RearCanopyY - 0.3f, blockFront + canopyDepth * 0.5f - 0.1f));
+        b.Add(PartSolids.BeveledBox(lw - 0.6f, 0.5f, canopyDepth, 0.03f, L.StoneTrim), g.R.At(0, y + M.RearCanopyY - 0.3f, blockFront + canopyDepth * 0.5f - 0.1f));
         // Steps down to the rear plaza.
         var upper = Flight(M.RisersUpper, M.RearStepsWidth, 0) with { Depth = M.RearTread * M.RisersUpper };
         var lower = Flight(M.RisersLower, M.RearStepsWidth, 0) with { Depth = M.RearTread * M.RisersLower };
         float l0 = landingFront + upper.Depth, l1 = l0 + 1.5f;
         b.Add(Steps.Lods[b.Lod](upper), g.R.AtReversed(0, y + LowerRise, landingFront + upper.Depth * 0.5f));
-        b.Add(PartGeometryKernel.BeveledBox(M.RearStepsWidth, LowerRise + 0.1f, 1.5f, 0.02f, L.Granite), g.R.At(0, y - 0.1f, (l0 + l1) * 0.5f));
+        b.Add(PartSolids.BeveledBox(M.RearStepsWidth, LowerRise + 0.1f, 1.5f, 0.02f, L.Granite), g.R.At(0, y - 0.1f, (l0 + l1) * 0.5f));
         foreach (var side in new[] { -1f, 1f })
-            b.Add(PartGeometryKernel.BeveledBox(0.3f, LowerRise + 0.25f, 1.5f, 0.015f, L.StoneTrim), g.R.At(side * (stepsHalf - 0.15f), y - 0.1f, (l0 + l1) * 0.5f));
+            b.Add(PartSolids.BeveledBox(0.3f, LowerRise + 0.25f, 1.5f, 0.015f, L.StoneTrim), g.R.At(side * (stepsHalf - 0.15f), y - 0.1f, (l0 + l1) * 0.5f));
         b.Add(Steps.Lods[b.Lod](lower), g.R.AtReversed(0, y, l1 + lower.Depth * 0.5f));
         if (b.Detail == SiteDetail.Mass) return;
         // Timber double door, leaves swung back flat against the block face; dark glass screen inside the arch.
         var openings = RearOpenings(g, floor);
         if (Allocation(b.Context, RearPorchKey, openings.Length) is { } allocation) WindowNumbers.Panes(b, openings, allocation, W.Hall, W.Corridor);
-        else b.Add(PartGeometryKernel.WallPanel(new PolygonRings(door), 0.05f, ZoneLooks.Glass), g.R.At(0, floor, RearGlassZ));
+        else b.Add(PartSolids.WallPanel(new PolygonRings(door), 0.05f, ZoneLooks.Glass), g.R.At(0, floor, RearGlassZ));
         foreach (var side in new[] { -1f, 1f })
-            b.Add(PartGeometryKernel.BeveledBox(1.15f, 2.65f, 0.07f, 0.015f, L.Wood), g.R.At(side * 1.85f, floor, blockFront + 0.04f));
+            b.Add(PartSolids.BeveledBox(1.15f, 2.65f, 0.07f, 0.015f, L.Wood), g.R.At(side * 1.85f, floor, blockFront + 0.04f));
         // The mat, open sign and door lamp are WP-13's, placed on the b2.rear entrance anchor (WLD-INTERIORS).
     }
 

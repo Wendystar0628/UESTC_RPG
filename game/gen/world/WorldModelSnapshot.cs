@@ -139,7 +139,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
             var area = entry.OpenAreas[index];
             _ = InteriorOpenPart.IsIndoor(area.Kind);
             if (area.Index == storey && position.Y >= area.FloorY && position.Y < area.FloorY + area.Height &&
-                PlanGeometry.PointInRing(point, area.Footprint)) return true;
+                PlanRings.PointInRing(point, area.Footprint)) return true;
         }
         return false;
     }
@@ -152,7 +152,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
         for (var index = 0; index < entry.OpenAreas.Count; index++)
         {
             var area = entry.OpenAreas[index];
-            if (position.Y < area.FloorY || position.Y >= area.FloorY + area.Height || !PlanGeometry.PointInRing(point, area.Footprint)) continue;
+            if (position.Y < area.FloorY || position.Y >= area.FloorY + area.Height || !PlanRings.PointInRing(point, area.Footprint)) continue;
             switch (area.Kind)
             {
                 case InteriorOpenPartKind.IndoorFloor: indoor ??= area; break;
@@ -238,11 +238,11 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
                     {
                         var candidate = storeys[level];
                         if (p.Y >= candidate.FloorY && p.Y < candidate.FloorY + candidate.Height &&
-                            PlanGeometry.PointInRing(point, candidate.Footprint) && (storey is null || candidate.Index < storey.Index)) storey = candidate;
+                            PlanRings.PointInRing(point, candidate.Footprint) && (storey is null || candidate.Index < storey.Index)) storey = candidate;
                     }
                     if (storey is null) continue;
-                    var distance = PlanGeometry.DistanceToRing(point, ring.Outer);
-                    for (var hole = 0; hole < ring.Holes.Count; hole++) distance = MathF.Min(distance, PlanGeometry.DistanceToRing(point, ring.Holes[hole]));
+                    var distance = PlanRings.DistanceToRing(point, ring.Outer);
+                    for (var hole = 0; hole < ring.Holes.Count; hole++) distance = MathF.Min(distance, PlanRings.DistanceToRing(point, ring.Holes[hole]));
                     return new(MediumKind.Interior, id, storey.Index, distance);
                 }
                 if (_terrain is FlatTerrain && p.Y < ground && p.Y >= ground - 6)
@@ -258,9 +258,9 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
 
     private static bool Contains(PolygonRings rings, Vector2 point)
     {
-        if (!PlanGeometry.PointInRing(point, rings.Outer)) return false;
+        if (!PlanRings.PointInRing(point, rings.Outer)) return false;
         for (var index = 0; index < rings.Holes.Count; index++)
-            if (PlanGeometry.PointInRing(point, rings.Holes[index])) return false;
+            if (PlanRings.PointInRing(point, rings.Holes[index])) return false;
         return true;
     }
     public WalkClass WalkClassAt(float x, float z) => _walkRegions.At(x, z);

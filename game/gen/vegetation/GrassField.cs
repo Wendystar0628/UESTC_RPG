@@ -98,7 +98,7 @@ public static class GrassField
                         var u = IntegerNoise.High24(h);
                         var v = IntegerNoise.Low24(h);
                         var p = new Vector2((i + 0.5f + 0.8f * (u - 0.5f)) * step, (j + 0.5f + 0.8f * (v - 0.5f)) * step);
-                        if (TileGrid.At(p) != tile || !PlanGeometry.Contains(polygon, p)) continue;
+                        if (TileGrid.At(p) != tile || !PlanRings.Contains(polygon, p)) continue;
                         if (area.SetbackMeters is { } inset && Edge(polygon, p) < inset) continue;
                         if (style == GrassStyle.Tall && IntegerNoise.Value2D(p.X / TallPatchCell, p.Y / TallPatchCell, patch) < TallOpen) continue;
                         if (Excluded(excludes, p, reach) || !OnLawn(site, trunks, p, reach)) continue;
@@ -135,7 +135,7 @@ public static class GrassField
 
     /// <summary>Lawn ground, clear of every non-lawn surface by the edge rule of each, of tree pits and of trunks.</summary>
     private static bool OnLawn(PlantingSite site, SpatialGrid<Vector2> trunks, Vector2 p, float reach) =>
-        PlanGeometry.Contains(site.World.Boundary, p) && !site.InPit(p) &&
+        PlanRings.Contains(site.World.Boundary, p) && !site.InPit(p) &&
         !site.Blocked(p, reach + CleanGap) &&
         !site.OnRoad(p, reach + CleanGap + KerbWidth, reach + CleanGap, reach - SoftReach, reach + EntranceSetback) &&
         !site.IsPaved(p, reach + CleanGap, reach - SoftReach, reach + EntranceSetback) &&
@@ -148,11 +148,11 @@ public static class GrassField
         {
             var gap = (area.SetbackMeters ?? 0f) + reach;
             foreach (var polygon in area.Polygons)
-                if (PlanGeometry.Contains(polygon, p) || Edge(polygon, p) < gap) return true;
+                if (PlanRings.Contains(polygon, p) || Edge(polygon, p) < gap) return true;
         }
         return false;
     }
 
     private static float Edge(PolygonRings rings, Vector2 p) =>
-        rings.Holes.Aggregate(PlanGeometry.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanGeometry.DistanceToRing(p, h)));
+        rings.Holes.Aggregate(PlanRings.DistanceToRing(p, rings.Outer), (d, h) => MathF.Min(d, PlanRings.DistanceToRing(p, h)));
 }

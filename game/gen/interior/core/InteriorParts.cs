@@ -32,6 +32,6 @@ public sealed class InteriorParts(GeometrySink mesh, InteriorCollision collision
 
     public void Plate(PolygonRings plan, float top, float thickness, ToonSpec material)
     {
-        if (draw) Add(PartGeometryKernel.Extrude(plan, thickness, material, top - thickness), Matrix4x4.Identity);
+        if (draw) Add(PartSolids.Extrude(plan, thickness, material, top - thickness), Matrix4x4.Identity);
     }
 }

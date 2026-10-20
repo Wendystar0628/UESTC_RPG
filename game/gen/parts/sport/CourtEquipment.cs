@@ -13,11 +13,11 @@ public static class CourtEquipment
         var b = new PartBuilder();
         var hl = MathF.Min(length * 0.45f, (tennis ? S.TennisLength : S.BasketballLength) * 0.5f);
         var hw = MathF.Min(width * 0.45f, (tennis ? S.TennisWidth : S.BasketballWidth) * 0.5f);
-        b.Add(PartGeometryKernel.BeveledBox(hl * 2, S.Marking * 0.1f, hw * 2, 0, tennis ? S.PlayBlue : S.Court));
+        b.Add(PartSolids.BeveledBox(hl * 2, S.Marking * 0.1f, hw * 2, 0, tennis ? S.PlayBlue : S.Court));
         void Line(float x0, float z0, float x1, float z1)
         {
             var a = new Vector2(x0, z0); var end = new Vector2(x1, z1);
-            b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(S.Marking, S.Marking * 0.1f, 0), [a, end], S.White, baseY: S.Marking * 0.12f), VertexFlag.NoShadow);
+            b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(S.Marking, S.Marking * 0.1f, 0), [a, end], S.White, baseY: S.Marking * 0.12f), VertexFlag.NoShadow);
         }
         Line(-hl, -hw, hl, -hw); Line(hl, -hw, hl, hw); Line(hl, hw, -hl, hw); Line(-hl, hw, -hl, -hw);
         Line(0, -hw, 0, hw);
@@ -32,7 +32,7 @@ public static class CourtEquipment
             foreach (var side in new[] { -1f, 1f })
             {
                 var keyLength = MathF.Min(5.8f, hl * 0.5f); var keyHalf = MathF.Min(2.45f, hw * 0.5f);
-                b.Add(PartGeometryKernel.BeveledBox(keyLength, S.Marking * 0.1f, keyHalf * 2, 0, S.PlayRed), Xf.Move(side * (hl - keyLength * 0.5f), S.Marking * 0.12f, 0));
+                b.Add(PartSolids.BeveledBox(keyLength, S.Marking * 0.1f, keyHalf * 2, 0, S.PlayRed), Xf.Move(side * (hl - keyLength * 0.5f), S.Marking * 0.12f, 0));
                 Line(side * (hl - keyLength), -keyHalf, side * (hl - keyLength), keyHalf);
                 Line(side * (hl - keyLength), -keyHalf, side * hl, -keyHalf); Line(side * (hl - keyLength), keyHalf, side * hl, keyHalf);
             }
@@ -48,7 +48,7 @@ public static class CourtEquipment
         var b = new PartBuilder();
         b.AddColumn(0, 0, S.HoopHeight, 0, S.Post * 2, 8, S.Green);
         b.AddPipe(new(0, S.HoopHeight, 0), new(S.Cover, S.HoopHeight, 0), S.Post, 8, S.Steel);
-        b.Add(PartGeometryKernel.BeveledBox(S.Rail * 2, S.BoardHeight, S.BoardWidth, S.Bevel, S.White),
+        b.Add(PartSolids.BeveledBox(S.Rail * 2, S.BoardHeight, S.BoardWidth, S.Bevel, S.White),
             Xf.Move(S.Cover, S.HoopHeight, 0));
         if (fine)
         {

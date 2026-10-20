@@ -36,7 +36,7 @@ public sealed class KeASite : ResearchSite
         var size = R.KeATankSize;
         if (b.Detail == SiteDetail.Mass)
         {
-            b.Add(PartGeometryKernel.BeveledBox(size.X, size.Y, size.Z, 0, L.LightTrim), Frame.At(t.X, roof, t.Y));
+            b.Add(PartSolids.BeveledBox(size.X, size.Y, size.Z, 0, L.LightTrim), Frame.At(t.X, roof, t.Y));
             return;
         }
         b.Place(PartCatalog.WaterTank, new EquipmentParams(size.X, size.Y, size.Z) { Variation = 1 }, Frame.At(t.X, roof, t.Y));
@@ -148,7 +148,7 @@ public sealed class KeCSite : ResearchSite
         float midU = (min.X + max.X) * 0.5f, midW = (min.Y + max.Y) * 0.5f, lu = max.X - min.X, lw = max.Y - min.Y;
         if (b.Detail == SiteDetail.Mass)
         {
-            b.Add(PartGeometryKernel.BeveledBox(lu, 0.6f, lw, 0, L.Bed), Frame.At(midU, roof, midW));
+            b.Add(PartSolids.BeveledBox(lu, 0.6f, lw, 0, L.Bed), Frame.At(midU, roof, midW));
             return;
         }
         // Light timber frame: three rows of posts with beams, joists across on top (L0 only).
@@ -158,12 +158,12 @@ public sealed class KeCSite : ResearchSite
         foreach (var w in rows)
         {
             for (var i = 0; i <= n; i++)
-                b.Add(PartGeometryKernel.BeveledBox(0.14f, h, 0.14f, 0.01f, L.Timber), Frame.At(min.X + lu * i / n, roof, w));
-            b.Add(PartGeometryKernel.BeveledBox(lu + 0.4f, 0.2f, 0.12f, 0.01f, L.Timber), Frame.At(midU, roof + h - 0.2f, w));
+                b.Add(PartSolids.BeveledBox(0.14f, h, 0.14f, 0.01f, L.Timber), Frame.At(min.X + lu * i / n, roof, w));
+            b.Add(PartSolids.BeveledBox(lu + 0.4f, 0.2f, 0.12f, 0.01f, L.Timber), Frame.At(midU, roof + h - 0.2f, w));
         }
         if (b.Detail == SiteDetail.Full)
             for (var i = 0; i <= n; i++)
-                b.Add(PartGeometryKernel.BeveledBox(0.08f, 0.14f, rows[^1] - rows[0] + 0.4f, 0.01f, L.Timber), Frame.At(min.X + lu * i / n, roof + h, midW));
+                b.Add(PartSolids.BeveledBox(0.08f, 0.14f, rows[^1] - rows[0] + 0.4f, 0.01f, L.Timber), Frame.At(min.X + lu * i / n, roof + h, midW));
         // Planter boxes between the post rows, shrubs and groundcover alternating, and a rain tank at the east end.
         foreach (var w in new[] { (rows[0] + rows[1]) * 0.5f, (rows[1] + rows[2]) * 0.5f })
             for (var i = 0; i < n; i++)

@@ -16,7 +16,7 @@ internal static class NorthIdentityGeometry
     {
         var bevel = b.Detail == SiteDetail.Mass ? 0 : MathF.Min(PartStyleDefaults.WallCornerBevel,
             MathF.Min(width, MathF.Min(height, depth)) * .25f);
-        b.Add(PartGeometryKernel.BeveledBox(width, height, depth, bevel, material), f.At(x, y, z));
+        b.Add(PartSolids.BeveledBox(width, height, depth, bevel, material), f.At(x, y, z));
     }
 
     internal static void Sign(SiteBuilder b, WorldFeature record)

@@ -79,11 +79,11 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         var detail = b.Detail;
         // Deck: single planks close up, one beveled slab further off.
         if (detail == SiteDetail.Full) Planks(b, path, y);
-        else b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(W.Width, W.Plank, detail == SiteDetail.Mass ? 0f : 0.015f), path.Points, L.Deck, baseY: y - W.Plank), Matrix4x4.Identity);
+        else b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(W.Width, W.Plank, detail == SiteDetail.Mass ? 0f : 0.015f), path.Points, L.Deck, baseY: y - W.Plank), Matrix4x4.Identity);
         // Stringers along both edges: the deck's clean edge line (收边), a step darker.
         foreach (var side in new[] { -1f, 1f })
-            b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(W.StringerWidth, W.StringerDepth, detail == SiteDetail.Mass ? 0f : 0.02f),
-                PlanGeometry.MitreOffset(path.Points, side * (W.Width * 0.5f + W.StringerWidth * 0.5f - 0.02f), closed: false), L.DeckDark, baseY: y - W.StringerDepth + 0.015f), Matrix4x4.Identity);
+            b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(W.StringerWidth, W.StringerDepth, detail == SiteDetail.Mass ? 0f : 0.02f),
+                PlanOffsets.MitreOffset(path.Points, side * (W.Width * 0.5f + W.StringerWidth * 0.5f - 0.02f), closed: false), L.DeckDark, baseY: y - W.StringerDepth + 0.015f), Matrix4x4.Identity);
         // Granite sills at both mouths: the step from the paving onto the planks reads as a finished edge (收边).
         foreach (var (s, sign) in new[] { (0f, -1f), (path.Length, 1f) })
         {
@@ -110,7 +110,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
         const float board = 0.14f, gap = 0.012f;
         var count = (int)MathF.Floor(path.Length / (board + gap));
         var pitch = path.Length / count;
-        var plank = PartGeometryKernel.BeveledBox(W.Width - 0.04f, W.Plank, board, 0.008f, L.Deck);
+        var plank = PartSolids.BeveledBox(W.Width - 0.04f, W.Plank, board, 0.008f, L.Deck);
         for (var i = 0; i < count; i++)
         {
             var (p, t) = path.At((i + 0.5f) * pitch);
@@ -121,7 +121,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
 
     private static void Piles(SiteBuilder b, Route path, float y)
     {
-        var pile = PartGeometryKernel.BeveledBox(W.Width - 0.3f, 0.12f, 0.1f, 0.015f, L.DeckDark);
+        var pile = PartSolids.BeveledBox(W.Width - 0.3f, 0.12f, 0.1f, 0.015f, L.DeckDark);
         for (var s = 1f; s < path.Length - 0.5f; s += W.PilePitch)
         {
             var (p, t) = path.At(s);
@@ -146,15 +146,15 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
     {
         if (s1 - s0 < 0.5f) return;
         var lateral = side * RailLateral;
-        var line = PlanGeometry.MitreOffset(path.Sub(s0, s1), lateral, closed: false);
+        var line = PlanOffsets.MitreOffset(path.Sub(s0, s1), lateral, closed: false);
         if (!b.Includes(SiteRanges.Bounds(line, W.HandrailWidth))) return;
         var bevel = detail == SiteDetail.Full ? 0.025f : 0f;
-        b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(W.HandrailWidth, W.HandrailDepth, bevel), line, L.Deck, baseY: y + W.RailHeight - W.HandrailDepth), Matrix4x4.Identity);
-        b.Add(PartGeometryKernel.Sweep(PartGeometryKernel.BeveledRectangleProfile(W.MidRailSize, W.MidRailSize, detail == SiteDetail.Full ? 0.01f : 0f), line, L.DeckDark, baseY: y + W.MidRail), Matrix4x4.Identity);
+        b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(W.HandrailWidth, W.HandrailDepth, bevel), line, L.Deck, baseY: y + W.RailHeight - W.HandrailDepth), Matrix4x4.Identity);
+        b.Add(PartSweeps.Sweep(PartSweeps.BeveledRectangleProfile(W.MidRailSize, W.MidRailSize, detail == SiteDetail.Full ? 0.01f : 0f), line, L.DeckDark, baseY: y + W.MidRail), Matrix4x4.Identity);
         var count = Math.Max(1, (int)MathF.Round((s1 - s0) / W.PostPitch));
-        var post = PartGeometryKernel.BeveledBox(W.PostSize, W.RailHeight - W.HandrailDepth + 0.02f, W.PostSize, detail == SiteDetail.Full ? 0.012f : 0f, L.DeckDark);
+        var post = PartSolids.BeveledBox(W.PostSize, W.RailHeight - W.HandrailDepth + 0.02f, W.PostSize, detail == SiteDetail.Full ? 0.012f : 0f, L.DeckDark);
         // End posts are a little stouter, with a cap above the handrail: the rail's ends read as finished (收边).
-        var newel = PartGeometryKernel.BeveledBox(W.PostSize * 1.4f, W.RailHeight + 0.05f, W.PostSize * 1.4f, detail == SiteDetail.Full ? 0.02f : 0f, L.DeckDark);
+        var newel = PartSolids.BeveledBox(W.PostSize * 1.4f, W.RailHeight + 0.05f, W.PostSize * 1.4f, detail == SiteDetail.Full ? 0.02f : 0f, L.DeckDark);
         for (var i = 0; i <= count; i++)
         {
             var (p, t) = path.At(s0 + (s1 - s0) * i / count);
@@ -302,7 +302,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
             foreach (var (s0, s1) in RailRuns(world, side))
             {
                 if (s1 - s0 < 0.5f) continue;
-                var line = PlanGeometry.MitreOffset(path.Sub(s0, s1), side * RailLateral, closed: false);
+                var line = PlanOffsets.MitreOffset(path.Sub(s0, s1), side * RailLateral, closed: false);
                 for (var i = 0; i + 1 < line.Length; i++)
                     if (c.Includes(SiteRanges.Bounds([line[i], line[i + 1]], W.PostSize * 0.5f))) c.Wall(line[i], line[i + 1], W.PostSize * 0.5f, y - 0.1f, y + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.WoodDeck);
             }

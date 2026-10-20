@@ -9,9 +9,13 @@ internal static class PublicFunctionIndex
     private const string Scalar = "Campus.Contracts.ScalarMath";
     private const string Vector = "Campus.Contracts.VectorMath";
     private const string Angles = "Campus.Contracts.Angles";
-    private const string Plan = "Campus.Gen.Geometry.PlanGeometry";
+    private const string Rings = "Campus.Gen.Geometry.PlanRings";
+    private const string Polygons = "Campus.Gen.Geometry.PlanPolygons";
+    private const string Quantized = "Campus.Gen.Geometry.QuantizedPlan";
     private const string Lines = "Campus.Contracts.PlanLines";
     private const string Reads = "Campus.Gen.Sites.FeatureReads";
+    private const string Shapes = "Campus.Gen.Sites.FeatureShapes";
+    private const string Contours = "Campus.Gen.Sites.FeatureContours";
     private const string Features = "Campus.Gen.World.WorldFeatureGeometry";
     private const string Props = "Campus.Gen.World.WorldProps";
 
@@ -21,27 +25,40 @@ internal static class PublicFunctionIndex
         new(["Smooth", "SmoothStep", "Smoothstep", "Smootherstep"], [Scalar],
             m => m.Parameters.Length is 1 or 3 && m.Parameters.All(p => IsScalar(p.Type)) && IsScalar(m.ReturnType)),
         new(["Finite"], [Vector], m => m.Parameters.Length == 1 && IsVector(m.Parameters[0].Type)),
-        new(["Unit", "Dot", "Cross"], [Vector, Plan], m => m.Parameters.Length > 0 && IsVector(m.Parameters[0].Type)),
+        new(["Unit", "Dot", "Cross"], [Vector], m => m.Parameters.Length > 0 && IsVector(m.Parameters[0].Type) &&
+            !(SourceModel.Name(m.Parameters[0].Type) == "System.Numerics.Vector2" &&
+                (m.Name is "Unit" or "Dot" || m.Name == "Cross" && m.Parameters.Length is 2 or 3))),
+        new(["Unit", "Dot"], [Vector, Quantized], m => m.Parameters.Length > 0 && SourceModel.Name(m.Parameters[0].Type) == "System.Numerics.Vector2"),
+        new(["Cross"], [Vector, Quantized], m => m.Parameters.Length == 2 && SourceModel.Name(m.Parameters[0].Type) == "System.Numerics.Vector2"),
+        new(["Cross"], [Vector, Rings], m => m.Parameters.Length == 3 && SourceModel.Name(m.Parameters[0].Type) == "System.Numerics.Vector2"),
         // Quantized plan interpolation deliberately differs from scalar and engine vector interpolation.
-        new(["Lerp"], [Plan], m => m.Parameters.Length == 3 && IsVector(m.Parameters[0].Type) && IsVector(m.Parameters[1].Type)),
+        new(["Lerp"], [Quantized], m => m.Parameters.Length == 3 && IsVector(m.Parameters[0].Type) && IsVector(m.Parameters[1].Type)),
         new(["WrapDegrees", "CompassYawToGodotRadians"], [Angles],
             m => m.Parameters.Length == 1 && IsScalar(m.Parameters[0].Type) && IsScalar(m.ReturnType)),
         new(["SignedDelta"], [Angles], m => m.Parameters.Length == 2 && m.Parameters.All(p => IsScalar(p.Type)) && IsScalar(m.ReturnType)),
         new(["Heading"], [Angles], m => m.Parameters.Length == 1 && IsScalar(m.Parameters[0].Type) && SourceModel.Name(m.ReturnType) == "System.Numerics.Vector2"),
         new(["Forward"], [Angles], m => m.Parameters.Length == 2 && m.Parameters.All(p => IsScalar(p.Type)) && SourceModel.Name(m.ReturnType) == "System.Numerics.Vector3"),
         new(["Bearing"], [Angles], m => m.Parameters.Length == 1 && IsVector(m.Parameters[0].Type)),
-        new(["Centroid", "CleanRing", "DeduplicateRing", "OpenRing", "SignedArea", "FanSignedArea", "SelfIntersects"], [Plan],
+        new(["Centroid"], [Polygons], m => m.Parameters.Length > 0 && IsRing(m.Parameters[0].Type)),
+        new(["CleanRing", "DeduplicateRing", "OpenRing", "SignedArea", "FanSignedArea", "SelfIntersects"], [Rings],
             m => m.Parameters.Length > 0 && IsRing(m.Parameters[0].Type)),
         new(["Sample", "Project", "Length", "Subline", "PolylineDistanceSquared", "CleanPath"], [Lines],
             m => m.Parameters.Length > 0 && IsRing(m.Parameters[0].Type)),
-        new(["PointInRing", "InsideByCrossings", "DistanceToRing", "DistanceToEdges"], [Plan],
+        new(["DistanceToEdges"], [Polygons], m => m.Parameters.Length > 1 && (IsVector(m.Parameters[0].Type) || IsRing(m.Parameters[0].Type))),
+        new(["PointInRing", "InsideByCrossings", "DistanceToRing"], [Rings],
             m => m.Parameters.Length > 1 && (IsVector(m.Parameters[0].Type) || IsRing(m.Parameters[0].Type))),
         new(["SegmentDistanceSquared", "ClosestPoint"], [Lines], m => m.Parameters.Length > 1 && IsVector(m.Parameters[0].Type)),
         new(["SegmentDistance"], [Lines], m => m.Parameters.Length == 4 && IsScalar(m.Parameters[0].Type) &&
             IsScalar(m.Parameters[1].Type) && IsVector(m.Parameters[2].Type) && IsVector(m.Parameters[3].Type)),
         new(["LineIntersection", "SegmentIntersection", "SegmentHit", "SegmentContact"], [Lines],
             m => m.Parameters.Length >= 4 && m.Parameters.Take(4).All(p => IsVector(p.Type))),
-        new(["Feature", "Part", "Levels", "Point", "Outer", "Outers", "Line", "Contour", "ContourGeometry", "PointPair", "Rectangle", "ContourSegment", "ContourFrame", "TerrainLine"], [Reads],
+        new(["Feature", "Part", "Levels", "Point", "Outer", "Outers", "Line"], [Reads],
+            m => m.Parameters.Length > 0 && SourceModel.Name(m.Parameters[0].Type) is
+                "Campus.Contracts.WorldFeature" or "Campus.Contracts.WorldFeaturePart" or "Campus.Contracts.IWorldModel"),
+        new(["Contour", "ContourGeometry", "PointPair", "Rectangle", "TerrainLine"], [Shapes],
+            m => m.Parameters.Length > 0 && SourceModel.Name(m.Parameters[0].Type) is
+                "Campus.Contracts.WorldFeature" or "Campus.Contracts.WorldFeaturePart" or "Campus.Contracts.IWorldModel"),
+        new(["ContourSegment", "ContourFrame"], [Contours],
             m => m.Parameters.Length > 0 && SourceModel.Name(m.Parameters[0].Type) is
                 "Campus.Contracts.WorldFeature" or "Campus.Contracts.WorldFeaturePart" or "Campus.Contracts.IWorldModel"),
         new(["Polygons"], [Features], m => m.Parameters.Length == 1 && SourceModel.Name(m.Parameters[0].Type) == "Campus.Contracts.WorldFeature"),

@@ -60,14 +60,14 @@ public sealed class EscalatorSite(string recordId) : ZoneSite
         var thick = CirculationStyle.LandingThickness;
         Vector2[] belt = [new(-half, -thick), new(-half, 0), new(start, 0), new(end, p.Rise),
             new(half, p.Rise), new(half, p.Rise - thick), new(end, p.Rise - thick), new(start, -thick)];
-        b.Add(PartGeometryKernel.WallPanel(new(belt), p.Width, NorthTune.Look.Steel), f.AtTurned(0, p.Base, half));
+        b.Add(PartSolids.WallPanel(new(belt), p.Width, NorthTune.Look.Steel), f.AtTurned(0, p.Base, half));
         Belt(b, p);
         var rail = new RailingParams();
         Vector2[] panel = [new(-half, 0), new(start, 0), new(end, p.Rise), new(half, p.Rise),
             new(half, p.Rise + rail.Height), new(end, p.Rise + rail.Height), new(start, rail.Height), new(-half, rail.Height)];
         foreach (var side in new[] { -1f, 1f })
         {
-            b.Add(PartGeometryKernel.WallPanel(new(panel), rail.Depth, NorthTune.Look.Glass),
+            b.Add(PartSolids.WallPanel(new(panel), rail.Depth, NorthTune.Look.Glass),
                 f.AtTurned(side * p.Width * .5f, p.Base, half));
             if (b.Detail == SiteDetail.Mass) continue;
             var builder = new PartBuilder();

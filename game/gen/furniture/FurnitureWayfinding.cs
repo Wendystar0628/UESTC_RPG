@@ -137,7 +137,7 @@ internal static class FurnitureWayfinding
         if (polygons.Count == 0) return Vector2.Distance(p, Anchor(feature));
         var best = float.MaxValue;
         foreach (var rings in polygons)
-            best = MathF.Min(best, PlanGeometry.Contains(rings, p) ? 0f : PlanGeometry.DistanceToRing(p, rings.Outer));
+            best = MathF.Min(best, PlanRings.Contains(rings, p) ? 0f : PlanRings.DistanceToRing(p, rings.Outer));
         return best;
     }
 }
