@@ -8,6 +8,11 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../../game/contracts/Campus.Contracts.csproj" />
+    <!-- Resolved by MSBuildLocator from the selected SDK, never copied into the host tool. -->
+    <Reference Include="Microsoft.Build">
+      <HintPath>$(MSBuildBinPath)/Microsoft.Build.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="$(_FingerprintRoslynDir)/*.dll" Exclude="$(_FingerprintRoslynDir)/Microsoft.Build.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Framework.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Utilities.Core.dll;$(_FingerprintRoslynDir)/Microsoft.Build.Tasks.Core.dll;$(_FingerprintRoslynDir)/dotnet-format.dll">
       <Private>true</Private>
     </Reference>

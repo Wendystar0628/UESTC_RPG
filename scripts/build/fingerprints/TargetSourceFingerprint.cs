@@ -3,6 +3,7 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -17,9 +18,9 @@ internal static class TargetSourceFingerprint
     private sealed record Root(string Key, string Group);
     private static readonly IReadOnlyDictionary<string, string> Registrations = new Dictionary<string, string>(StringComparer.Ordinal)
     {
-        ["Campus.Contracts.ContentModuleAttribute"] = "Campus.Contracts.IContentModule",
-        ["Campus.Contracts.InteriorProviderAttribute"] = "Campus.Contracts.IInteriorProvider",
-        ["Campus.Contracts.Bake.BakeProducerAttribute"] = "Campus.Contracts.Bake.IBakeProducer"
+        [typeof(ContentModuleAttribute).FullName!] = typeof(IContentModule).FullName!,
+        [typeof(InteriorProviderAttribute).FullName!] = typeof(IInteriorProvider).FullName!,
+        [typeof(BakeProducerAttribute).FullName!] = typeof(IBakeProducer).FullName!
     };
 
     public static async Task<IReadOnlyDictionary<string, string>> Create(Project production, Project tool,
@@ -28,13 +29,14 @@ internal static class TargetSourceFingerprint
         var repository = Directory.GetParent(Path.GetDirectoryName(production.FilePath!)!)!.FullName;
         var projects = await LoadGraph(production);
         var toolGraph = await LoadGraph(tool);
-        var salt = new SortedSet<string>(StringComparer.Ordinal) { "target-source-v1" };
+        var salt = new SortedSet<string>(StringComparer.Ordinal) { "target-source-v2" };
         foreach (var property in properties.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             salt.Add("property:" + property.Key + "=" + PortableValue(property.Value, repository));
         foreach (var assembly in new[] { typeof(Compilation).Assembly, typeof(CSharpCompilation).Assembly,
                      typeof(Workspace).Assembly, typeof(MSBuildWorkspace).Assembly, typeof(Microsoft.Build.Locator.MSBuildLocator).Assembly }.Distinct())
             salt.Add("compiler:" + assembly.GetName().FullName + ":" +
                 assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
+        var sourceAssemblies = projects.Concat(toolGraph).Select(item => item.Compilation.Assembly.Identity).ToHashSet();
         foreach (var (project, compilation) in projects.Concat(toolGraph).DistinctBy(item => item.Project.Id))
         {
             var projectPath = Relative(repository, project.FilePath!);
@@ -45,17 +47,37 @@ internal static class TargetSourceFingerprint
                     project.Solution.GetProject(reference.ProjectId)!.FilePath!));
             foreach (var reference in compilation.References)
             {
-                var identity = compilation.GetAssemblyOrModuleSymbol(reference)?.ToDisplayString()
+                var symbol = compilation.GetAssemblyOrModuleSymbol(reference)
                     ?? throw new InvalidDataException($"Unresolved build reference in {projectPath}.");
-                salt.Add("reference:" + projectPath + ":" + identity + ":" +
-                    (reference is PortableExecutableReference binary ? PortableValue(binary.FilePath!, repository) : "source") +
+                var identity = symbol.ToDisplayString();
+                // A workspace source project remains a source input even if Roslyn uses its reference assembly.
+                var isSource = symbol is IAssemblySymbol assembly && sourceAssemblies.Contains(assembly.Identity);
+                var input = reference is PortableExecutableReference binary && !isSource
+                    ? PortableValue(binary.FilePath!, repository) + ":" + HashFile(binary.FilePath!) : "source";
+                salt.Add("reference:" + projectPath + ":" + identity + ":" + input +
                     ":" + reference.Properties.Kind + ":" + reference.Properties.EmbedInteropTypes + ":" +
                     string.Join(',', reference.Properties.Aliases.Order(StringComparer.Ordinal)));
             }
-            // These compilation-wide directives can affect a selected source file regardless of their source home.
-            foreach (var tree in compilation.SyntaxTrees)
+            // Generator assemblies and their real project inputs are compiler inputs; generated C# is an output.
+            foreach (var reference in project.AnalyzerReferences)
             {
-                var unit = (CompilationUnitSyntax)await tree.GetRootAsync();
+                var path = reference.FullPath
+                    ?? throw new InvalidDataException($"Analyzer reference has no input path in {projectPath}.");
+                salt.Add("analyzer:" + projectPath + ":" + PortableValue(path, repository) + ":" + HashFile(path));
+                foreach (var generator in reference.GetGenerators(project.Language))
+                {
+                    var type = generator.GetGeneratorType();
+                    salt.Add("generator:" + projectPath + ":" + type.Assembly.GetName().FullName + ":" + type.FullName);
+                }
+            }
+            foreach (var document in project.AdditionalDocuments.Concat<TextDocument>(project.AnalyzerConfigDocuments))
+                salt.Add("compiler-input:" + projectPath + ":" + PortableValue(document.FilePath!, repository) + ":" +
+                    Hash((await document.GetTextAsync()).ToString()));
+            // Compilation-wide directives come only from the evaluated Compile inputs.
+            foreach (var document in project.Documents)
+            {
+                var unit = (CompilationUnitSyntax)(await document.GetSyntaxRootAsync()
+                    ?? throw new InvalidDataException($"Compile document has no syntax root: {document.FilePath}."));
                 foreach (var directive in unit.Usings.Where(item => item.GlobalKeyword.RawKind != 0))
                     salt.Add("global-using:" + projectPath + ":" + directive.WithoutTrivia().ToFullString());
             }
@@ -65,23 +87,30 @@ internal static class TargetSourceFingerprint
             var path = Path.Combine(repository, name);
             if (File.Exists(path)) salt.Add("configuration:" + name + ":" + Hash(File.ReadAllText(path)));
         }
-        // The algorithm's own Compile items are the salt; binaries and MVIDs never enter the key.
-        foreach (var (_, compilation) in toolGraph.Where(item => item.Project.Id == tool.Id))
-            foreach (var tree in compilation.SyntaxTrees)
-                salt.Add("tool-source:" + Relative(repository, tree.FilePath) + ":" + Hash((await tree.GetTextAsync()).ToString()));
+        // The algorithm's own Compile items are the salt, independent of its built assembly.
+        foreach (var (project, _) in toolGraph.Where(item => item.Project.Id == tool.Id))
+            foreach (var document in project.Documents)
+                salt.Add("tool-source:" + Relative(repository, document.FilePath!) + ":" + Hash((await document.GetTextAsync()).ToString()));
 
         var sources = new List<Source>();
         var roots = new List<Root>();
+        using var evaluation = new Microsoft.Build.Evaluation.ProjectCollection(new Dictionary<string, string>(properties, StringComparer.OrdinalIgnoreCase));
         foreach (var (project, compilation) in projects)
         {
             var projectPath = Relative(repository, project.FilePath!);
-            foreach (var tree in compilation.SyntaxTrees)
+            var generated = GeneratedSources(repository, evaluation.LoadProject(project.FilePath!));
+            var sourceGroups = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var document in project.Documents)
             {
-                var path = Relative(repository, tree.FilePath);
+                var path = Relative(repository, document.FilePath!);
                 if (path.Split('/').Contains("tests", StringComparer.OrdinalIgnoreCase))
                     throw new InvalidDataException($"Production Compile contains a test source: {path}.");
-                var group = SourceGroup(path, projectPath);
-                if (group.Length != 0) sources.Add(new(path, Hash((await tree.GetTextAsync()).ToString()), group));
+                var group = SourceGroup(path, projectPath, generated);
+                sourceGroups.Add(document.FilePath!, group);
+                if (group.Length != 0)
+                {
+                    sources.Add(new(path, Hash((await document.GetTextAsync()).ToString()), group));
+                }
             }
             foreach (var type in Types(compilation.Assembly.GlobalNamespace))
             {
@@ -92,11 +121,13 @@ internal static class TargetSourceFingerprint
                 if (registrations.Length != 1 || type.IsAbstract || type.IsGenericType ||
                     !type.AllInterfaces.Any(item => item.ToDisplayString() == Registrations[registrations[0].AttributeClass!.ToDisplayString()]))
                     throw new InvalidDataException($"CPU root {key}: registration must describe one concrete, closed CPU contract implementation.");
-                var groups = type.DeclaringSyntaxReferences.Select(declaration =>
-                    SourceGroup(Relative(repository, declaration.SyntaxTree.FilePath), projectPath)).Distinct(StringComparer.Ordinal).ToArray();
+                var declarations = type.DeclaringSyntaxReferences
+                    .Where(declaration => sourceGroups.ContainsKey(declaration.SyntaxTree.FilePath)).ToArray();
+                var groups = declarations.Select(declaration => sourceGroups[declaration.SyntaxTree.FilePath])
+                    .Distinct(StringComparer.Ordinal).ToArray();
                 if (groups.Length != 1 || groups[0].Length == 0)
                     throw new InvalidDataException($"CPU root {key}: source ownership is undefined or spans responsibility directories: " +
-                        string.Join(", ", type.DeclaringSyntaxReferences.Select(item => Relative(repository, item.SyntaxTree.FilePath))));
+                        string.Join(", ", declarations.Select(item => Relative(repository, item.SyntaxTree.FilePath))));
                 roots.Add(new(key, groups[0]));
             }
         }
@@ -120,17 +151,30 @@ internal static class TargetSourceFingerprint
             {
                 BakeCodeChains.Collision => "runtime:kernel/collision",
                 BakeCodeChains.Nightlight => "runtime:systems/nightlight",
-                _ => "shared"
+                BakeCodeChains.Shared => "shared",
+                _ => throw new InvalidDataException($"No source responsibility for CPU chain {chain}.")
             };
-            hashes.Add(BakeCodeManifest.Chain(chain), Hash(sources.Where(item => item.Group == responsibility)
-                .Select(item => "source:" + item.Path + ":" + item.Hash).Append("common:" + common)));
+            hashes.Add(BakeCodeManifest.Chain(chain), responsibility == "shared" ? common :
+                Hash(sources.Where(item => item.Group == responsibility)
+                    .Select(item => "source:" + item.Path + ":" + item.Hash).Append("common:" + common)));
         }
         return hashes;
     }
 
     // The only source-ownership policy. Membership always intersects the actual production Compile graph.
-    private static string SourceGroup(string path, string project)
+    private static string SourceGroup(string path, string project, IReadOnlySet<string> generated)
     {
+        // SDK Compile items are recognized by their evaluated MSBuild paths.
+        if (generated.Contains(path))
+        {
+            if (project is "game/contracts/Campus.Contracts.csproj" or "game/contracts/Runtime/Campus.Contracts.Runtime.csproj" or "game/gen/Campus.Gen.csproj") return "shared";
+            if (project.StartsWith("game/gen/maps/", StringComparison.Ordinal))
+                return "map:" + project["game/gen/maps/".Length..].Split('/')[0] + ":common";
+            if (project == "game/Campus.csproj") return ""; // runtime assembly metadata and build information
+            throw new InvalidDataException($"Generated Compile item belongs to an unknown production project: {project}: {path}.");
+        }
+        if (path.Split('/').Any(part => part is "obj" or "bin" or ".godot"))
+            throw new InvalidDataException($"Unrecognized generated production Compile item: {project}: {path}.");
         if (path.StartsWith("game/contracts/", StringComparison.Ordinal)) return "shared";
         if (path.StartsWith("game/gen/", StringComparison.Ordinal) && !path.StartsWith("game/gen/maps/", StringComparison.Ordinal)) return "shared";
         if (path.StartsWith("pipeline/map/", StringComparison.Ordinal) ||
@@ -144,16 +188,37 @@ internal static class TargetSourceFingerprint
         {
             var parts = path["game/gen/maps/".Length..].Split('/');
             if (parts.Length < 2) return "shared"; // common map-layer Compile items
-            return "map:" + parts[0] + ":" + (parts.Length == 2 || parts[1] is "obj" or "bin" ? "common" : parts[1]);
+            return "map:" + parts[0] + ":" + (parts.Length == 2 ? "common" : parts[1]);
         }
-        // Linked SDK-generated Compile items belong to their source project, never to the whole Campus DLL.
-        if (path.Contains("/obj/", StringComparison.Ordinal))
+        // Explicit non-CPU responsibilities. New homes require a decision here instead of a silent cache hole.
+        foreach (var directory in new[]
         {
-            if (project.StartsWith("game/contracts/", StringComparison.Ordinal) || project == "game/gen/Campus.Gen.csproj") return "shared";
-            if (project.StartsWith("game/gen/maps/", StringComparison.Ordinal))
-                return "map:" + project["game/gen/maps/".Length..].Split('/')[0] + ":common";
+            "game/audio/core/", "game/camera/", "game/flow/", "game/gates/", "game/hud/", "game/stage/",
+            "game/style/palette/", "game/style/shaders/", "game/style/text/",
+            "game/kernel/boot/", "game/kernel/frame/", "game/kernel/inspect/", "game/kernel/instances/",
+            "game/kernel/lighting/", "game/kernel/lod/", "game/kernel/map/", "game/kernel/materials/",
+            "game/kernel/post/", "game/kernel/quality/", "game/kernel/renderer/", "game/kernel/save/",
+            "game/kernel/settings/", "game/kernel/stream/", "game/kernel/world/",
+            "game/systems/atlas/", "game/systems/fauna/", "game/systems/sky/", "game/systems/vegetation/",
+            "game/systems/water/", "game/systems/weather/"
+        })
+            if (path.StartsWith(directory, StringComparison.Ordinal)) return "";
+        if (path is "game/addons/gdUnit4/src/dotnet/GdUnit4CSharpApi.cs" or
+            "game/gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs") return "";
+        throw new InvalidDataException($"Unassigned production Compile item: {project}: {path}. Assign a CPU source group or an explicit non-CPU responsibility.");
+    }
+
+    private static HashSet<string> GeneratedSources(string repository, Microsoft.Build.Evaluation.Project project)
+    {
+        var result = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var property in new[] { "GeneratedAssemblyInfoFile", "TargetFrameworkMonikerAssemblyAttributesPath", "GeneratedGlobalUsingsFile" })
+        {
+            var path = project.GetPropertyValue(property);
+            if (path.Length != 0) result.Add(Relative(repository, Path.GetFullPath(path, project.DirectoryPath)));
         }
-        return "";
+        if (Relative(repository, project.FullPath) == "game/Campus.csproj")
+            result.Add(Relative(repository, Path.GetFullPath(Path.Combine(project.GetPropertyValue("IntermediateOutputPath"), "BuildInfo.g.cs"), project.DirectoryPath)));
+        return result;
     }
 
     private static string MapPrefix(string group) => group[..(group.LastIndexOf(':') + 1)];
@@ -234,6 +299,7 @@ internal static class TargetSourceFingerprint
     }
 
     private static string Hash(string value) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+    private static string HashFile(string path) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
     private static string Hash(IEnumerable<string> values) => Hash(string.Join('\0', values.Order(StringComparer.Ordinal)));
 
 }

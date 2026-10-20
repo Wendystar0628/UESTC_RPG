@@ -154,14 +154,10 @@ public sealed class InteriorProviderScopeTests
     [InteriorProvider("fixture.box", Owner = "WP-00")]
     public sealed class FixtureBoxInterior : BoxInteriorProvider
     {
-        public override BakeInputDependencies BakeInputs => BakeInputDependencies.World;
-        public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
     }
 
     // Deliberately lacks a registration attribute even though its assembly is discovered.
     private sealed class UnregisteredInterior : BoxInteriorProvider
     {
-        public override BakeInputDependencies BakeInputs => BakeInputDependencies.World;
-        public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
     }
 }

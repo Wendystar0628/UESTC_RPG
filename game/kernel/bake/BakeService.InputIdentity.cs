@@ -23,7 +23,7 @@ public sealed partial class BakeService
         BuildInputSnapshot globals, Func<FeatureId, Aspects, WpId?> claimLookup, IReadOnlyList<Producer> producers)
     {
         var hash = new BakeInputHash();
-        hash.Add(new { seed, code = new { resident = _terrain.CodeFingerprints.Chain(BakeCodeChains.Resident), terrain = _terrain.CodeFingerprints.Chain(BakeCodeChains.Terrain) }, map = context.Descriptor,
+        hash.Add(new { seed, code = _terrain.CodeFingerprints.Chain(BakeCodeChains.Shared), map = context.Descriptor,
             producers = producers.OrderBy(producer => producer.Id, StringComparer.Ordinal).Select(producer => new { producer.Id, producer.CodeHash }).ToArray(),
             modules = modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new { pair.Key, pair.Value.CodeHash }).ToArray(),
             interiors = interiors.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new { pair.Key, pair.Value.CodeHash }).ToArray(),
@@ -82,8 +82,7 @@ public sealed partial class BakeService
         var hash = new BakeInputHash();
         hash.Add(new
         {
-            chains = new[] { BakeCodeChains.Geometry, BakeCodeChains.Collision, BakeCodeChains.Map, BakeCodeChains.Vegetation,
-                BakeCodeChains.Fauna, BakeCodeChains.Nightlight, BakeCodeChains.Terrain, BakeCodeChains.InputIndex, BakeCodeChains.Resident }
+            chains = new[] { BakeCodeChains.Shared, BakeCodeChains.Collision, BakeCodeChains.Nightlight }
                 .Select(key => new { key, code = _terrain.CodeFingerprints.Chain(key) }).ToArray(),
             modules = modules.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new { pair.Key, pair.Value.CodeHash }).ToArray(),
             interiors = interiors.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new { pair.Key, pair.Value.CodeHash }).ToArray(),
@@ -94,21 +93,15 @@ public sealed partial class BakeService
 
     private string ProductCode(MapBuild map, BakeKey key)
     {
-        var chain = map.Modules.ContainsKey(key.Module) || map.Interiors.ContainsKey(key.Module) ? BakeCodeChains.Geometry :
+        var chain = map.Modules.ContainsKey(key.Module) || map.Interiors.ContainsKey(key.Module) ? BakeCodeChains.Shared :
             map.Producers.Single(producer => producer.Value.CanBuild(key)).Value.ProductKind switch
             {
                 BakeProductKind.Collision => BakeCodeChains.Collision,
-                BakeProductKind.Map => BakeCodeChains.Map,
-                BakeProductKind.Vegetation => BakeCodeChains.Vegetation,
-                BakeProductKind.Fauna => BakeCodeChains.Fauna,
+                BakeProductKind.Map or BakeProductKind.Vegetation or BakeProductKind.Fauna => BakeCodeChains.Shared,
                 BakeProductKind.Nightlight => BakeCodeChains.Nightlight,
                 _ => throw new InvalidDataException("Unknown fixed bake payload kind.")
             };
-        var hash = new BakeInputHash();
-        hash.Add(new { product = _terrain.CodeFingerprints.Chain(chain),
-            input = _terrain.CodeFingerprints.Chain(BakeCodeChains.InputIndex),
-            terrain = _terrain.CodeFingerprints.Chain(BakeCodeChains.Terrain) });
-        return hash.Finish();
+        return _terrain.CodeFingerprints.Chain(chain);
     }
 
     private static BakeInputDependencies Merge(BakeInputDependencies first, BakeInputDependencies second) => new(

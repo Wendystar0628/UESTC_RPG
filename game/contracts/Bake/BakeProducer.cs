@@ -5,15 +5,9 @@ public enum BakeProductKind { Collision, Map, Vegetation, Fauna, Nightlight }
 
 public static class BakeCodeChains
 {
-    public const string Geometry = "geometry";
+    public const string Shared = "shared";
     public const string Collision = "collision";
-    public const string Map = "map";
-    public const string Vegetation = "vegetation";
-    public const string Fauna = "fauna";
     public const string Nightlight = "nightlight";
-    public const string Terrain = "terrain";
-    public const string InputIndex = "input-index";
-    public const string Resident = "resident";
 }
 
 /// <summary>The single packaged build-time code fingerprint table; no source or IL hashing at runtime.</summary>
@@ -48,5 +42,6 @@ public interface IBakeProducer
     /// <summary>Lists prepared auxiliary keys and influence bounds without generating geometry, instance records or sampling heights.</summary>
     IReadOnlyList<BakeTileEntry> Tiles(BuildContext context);
     bool CanBuild(BakeKey key);
-    object Build(BakeKey key, BuildContext context);
+    /// <summary>Receives the effective product input fingerprint separately from the producer's frozen context.</summary>
+    object Build(BakeKey key, BuildContext context, string inputHash);
 }
