@@ -1,4 +1,4 @@
-/* 观察台通用格式化与小组件：数量级、时刻、链接、h() 建节点、卡片/行/指标块、树、已看标记、待看汇总。
+/* 观察台通用格式化与小组件：确切个数、时刻、链接、h() 建节点、卡片/行/指标块、树、已看标记、待看汇总。
    依赖 core.js 先加载（取 Dash.internal 里的数据仓与数据源）；接口见 dashboard/README.md §3。 */
 (function () {
   'use strict';
@@ -73,18 +73,10 @@
   Dash.h = h;
   Dash.parseTime = parseTime;
 
-  Dash.mag = function (n) {
+  /* 测得到的个数一律写确切值（千位加逗号）；没有数据写 — */
+  Dash.num = function (n) {
     if (n == null || isNaN(n)) return '—';
-    n = Math.floor(n);
-    if (n <= 0) return '无';
-    if (n < 10) return String(n);
-    if (n < 20) return '十几';
-    if (n < 100) return '几十';
-    if (n < 200) return '上百';
-    if (n < 1000) return '几百';
-    if (n < 2000) return '上千';
-    if (n < 10000) return '几千';
-    return '上万';
+    return Math.floor(n).toLocaleString('en-US');
   };
 
   /* 确切时刻：今天写 HH:MM，不是今天写 M-D HH:MM；解析不了写 — */

@@ -1,9 +1,9 @@
-/* 结构页：层 → 目录 → 子目录的可展开树；文件数写确切值，代码行报数量级。数据 structure（10 min 刷新）。 */
+/* 结构页：层 → 目录 → 子目录的可展开树；文件数与代码行都写确切值。数据 structure（10 min 刷新）。 */
 (function () {
   const h = Dash.h;
 
   function filesText(n) { return n ? n + ' 个文件' : '没有文件'; }
-  function rows(n) { return Dash.mag(n) + (n < 10 ? ' 行' : '行'); }   // 代码行是测出来的大数，报数量级
+  function rows(n) { return Dash.num(n) + ' 行'; }
   function locText(n) { return n ? rows(n) : '没有代码'; }
 
   /* 统一成树节点：层（汇总下面的目录）与目录（含递归的 children） */

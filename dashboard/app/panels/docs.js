@@ -37,7 +37,7 @@
     return str;
   }
   function sizeLevel(chars) { return Math.max(1, Math.min(4, Math.ceil((chars || 0) / 3000))); }
-  function charsText(n) { return n ? Dash.mag(n) + (n < 10 ? ' 字' : '字') : ''; }   // 体量是测出来的大数，报数量级
+  function charsText(n) { return n ? Dash.num(n) + ' 字' : ''; }
 
   /* ---------- 文档树：域 → 主文档 → 子文档 → 节 ---------- */
   function sectionNode(sec, docId, path, parentId) {
@@ -220,7 +220,7 @@
         const o = e.a === n ? e.b : e.a;
         const c = h('button', 'dg-nb', o.code);
         c.type = 'button';
-        c.title = o.title + '，引用 ' + Dash.mag(e.n) + ' 次';
+        c.title = o.title + '，引用 ' + Dash.num(e.n) + ' 次';
         c.addEventListener('click', (ev) => { ev.stopPropagation(); view.pinned = o.code; focus(o); });
         list.append(c);
       });
