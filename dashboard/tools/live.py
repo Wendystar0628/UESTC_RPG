@@ -71,7 +71,7 @@ def main():
     dirty, valid, inflight = {}, set(), set()
     app_changes = set()
     refresh = {'sessions', 'worktrees'}
-    checkout_paths, rollout_paths = set(), set()
+    checkout_paths, rollout_paths, gate_roots = set(), set(), set()
     schedules = {}
     common = U.git('rev-parse', '--git-common-dir').strip()
     if not common:
@@ -83,6 +83,9 @@ def main():
     database = {normalized(U.CODEX_DB + suffix) for suffix in ('', '-wal', '-shm')}
     local = normalized(U.COLLAB + '/tools/monitor/local.json')
     guard = normalized(U.COLLAB + '/tools/hooks/log/guard.jsonl')
+    hook_stats = {normalized(U.COLLAB + '/tools/hooks/log/' + name)
+                  for name in ('stats-guard.json', 'stats-steer.json')}
+    code_roots = {normalized(U.REPO + '/' + name) for name in ('game', 'scripts', 'pipeline')}
     queue = normalized(U.COLLAB + '/status/施工状态.md')
     model = normalized(U.REPO + '/docs/workflow/WF-MODEL-模型分工.md')
     # 确切的 WF-MODEL 文件名由启动时索引一次；不在每次事件遍历文档树。
@@ -133,7 +136,7 @@ def main():
                 refresh.add('sessions')
         if path in rollout_paths or path == agent_log or (within(path, claude) and path.endswith(('.jsonl', '.meta.json'))):
             result.add('sessions')
-        if path == guard:
+        if path == guard or path in hook_stats:
             result.add('hooks')
         if path in settings:
             result.add('settings')
@@ -147,13 +150,17 @@ def main():
                 refresh.add('worktrees')
         if path in checkout_paths or (directory and any(within(target, path) for target in checkout_paths)):
             result.add('shots')
+        if any(within(path, root) for root in gate_roots) and (path.endswith('-result.json') or directory):
+            result.add('gates')
+        if any(within(path, root) for root in code_roots) and (path.endswith('.cs') or directory):
+            result.add('code')
         if os.path.dirname(path) in notes and os.path.basename(path).endswith('.md') and '-author-' in os.path.basename(path):
             result.add('letters')
         if path in {normalized(curated + '/audit.js'), normalized(U.STATE + '/dashboard-ack.json')}:
             result.add('attention')
         if path == normalized(curated + '/notices.js'):
             result.add('notices')
-        if within(path, docs) and (path.endswith('.md') or directory):
+        if within(path, docs) and (path.endswith('.md') or path == normalized(docs + '/ROUTES.json') or directory):
             result.add('docs')
         if path == normalized(dashboard + '/index.html') or within(path, normalized(dashboard + '/app')) or within(path, normalized(dashboard + '/vendor')):
             result.add('app')
@@ -161,10 +168,12 @@ def main():
                 app_changes.add(path)
         if any(within(path, root) for root in script_roots):
             # 自动生成状态、来信、数据不是脚本变化，避免自产事件循环。
-            if path.endswith(('.py', '.ps1', '.cmd', '.sh', '.cs')) or os.path.basename(path) == 'readme.md':
+            if path.endswith(('.py', '.js', '.cjs', '.mjs', '.ps1', '.cmd', '.sh', '.cs')) or os.path.basename(path) == 'readme.md':
                 result.add('scripts')
         if os.path.dirname(path) == event_root and path.endswith('.jsonl'):
             result.add('history:' + os.path.basename(path)[:-6])
+        if path == normalized(event_root + '/checkpoint.json'):
+            result.add('history:checkpoint')
         return result
 
     class Changed(FileSystemEventHandler):
@@ -192,7 +201,7 @@ def main():
     handler = Changed()
 
     def configure_watches(update):
-        nonlocal checkout_paths, rollout_paths
+        nonlocal checkout_paths, rollout_paths, gate_roots
         if 'sessions' in update:
             threads = codex.threads(include_archived=False)
             known = {U.MAIN_ID}
@@ -204,13 +213,16 @@ def main():
                 known = expanded
             rollout_paths = {normalized(row['path']) for row in threads if row['id'] in known and row.get('path')}
         if 'worktrees' in update:
+            checkouts = repo.checkouts()
             checkout_paths = {normalized(root + '/output/shots/' + name)
-                              for root in repo.checkouts() for name in ('总览.jpg', 'ui/总览.jpg')}
+                              for root in checkouts for name in ('总览.jpg', 'ui/总览.jpg')}
+            gate_roots = {normalized(root + '/output/build/gates') for root in checkouts}
         # 缺失目标只盯最近父目录，创建通知到达后再缩到实际目录。
         wanted = [(path, recursive) for path, recursive in recorder.watch_paths()]
         wanted += [(U.CLAUDE_PROJ, True), (docs, True), (dashboard + '/app', True), (dashboard + '/vendor', True),
                    (worktrees, True), (event_root, False), (U.COLLAB + '/tools/hooks/log', False)]
         wanted += [(root, True) for root in script_roots if os.path.isdir(root)]
+        wanted += [(root, True) for root in code_roots | gate_roots]
         exact = set(rollout_paths) | checkout_paths | database | git_files | settings | model_paths
         exact.update(root for root in script_roots if not os.path.isdir(root))
         exact.update((queue, local, guard, agent_log, dashboard + '/index.html',

@@ -1,23 +1,25 @@
 # 作者观察台
 
-作者了解项目的唯一入口：一个本地网页，五页回答五件事——要不要我动手、项目推进得怎样（首页）；没做完的活各在哪一段（进展）；两边各在忙什么、用了哪些模型（团队）；这套开发机器由什么组成、是否正常（体系）；查文档、决策和通知（资料）。双击 `打开观察台.cmd`，入口启动 `live.py --loop` 与 `serve.py`，用回环 HTTP 打开页面；"知道了"与留言要求页面由本地服务打开（见 §3.3）。作者过目不挡推进（D-274），工程、架构与排期由两个指挥判断。
+作者了解项目的唯一入口：本地网页分为现在、施工、团队、健康、体系、动态、文档七页，分别回答当前推进、流水线、协作、运行状况、开发结构、最近变化与文档内容。双击 `打开观察台.cmd`，启动唯一实时采集与回环 HTTP 服务。作者过目不挡推进（D-274），工程、架构与排期由两位指挥判断。
 
-**给人看，只放高层信息与统计**：不给原始数据、明细表、日志与牵连关系（关系图、依赖图都不要）；首页一屏放下最重要的几块，下一层每页回答一件事，点开最多再展开一句话；编号对象（队列行、工作包、决策）只写"编号 + 一句话"加作者要知道的状态；快检、截图评审、已推、预烘、收口审计这些内部环节合成"收尾"，完成的只给个数；能用图表达的统计做成小图（趋势小柱、环形占比、条形、面积），图只画统计不画原始数据。数写确切值，时刻写 HH:MM；页面上不出现英文字段名、路径、哈希与原始 JSON。业务判断都在采集侧，浏览器只画。谁更新、更新什么见 WF-COMMS（作者观察台一节），本文件只讲架构与扩展。
+页面展示结构、组合分析与可展开的高层事实；统计口径、业务判断与未知值在采集侧统一。历史不全时照实显示已有事实，缺项保持“未确认”；不公开原始日志或完整会话。结构与明细交互由 §3–§5 约定，数据契约与发布规则见本文件 §1–§2。
 
 ## 1 采集与写入
 
 - `live.py --loop` 是唯一原生采集通知调度，复用 watchdog 的 `WindowsApiObserver`；同一实例接入历史记账。文件变化只标脏，快慢工作分开，正在采集时再变化会接着处理最新输入；无变化不重采整套数据。两位指挥、子代理和运行灯共用同一会话样本。
-- `collect.py [数据名…]` 按现有生产表只算点名的数据，完成一份即发布一份；不另开守护。时间依赖由调度到期唤醒，历史来源与已确认事实复用，不因 SSE 心跳重读来源。
+- `collect.py [数据名…]` 按现有生产表只算点名的数据，按 @依赖顺序计算并回写同轮 context.values，完成一份即发布一份；不另开守护。时间依赖由调度到期唤醒，历史来源与已确认事实复用，不因 SSE 心跳重读来源。
 - `.collab/tools/monitor/read/` 持有真实来源 IO 与解析；`view/` 只做判断和汇总。作者信的唯一全文权威是 Claude inbox 与已送达档；截图只读已登记检出的两种固定机位总览。
 - `attention.py` 独占作者输入事务：输入变更、过目重建、revision 校验、确认和 attention/feedback 发布。`post.py`、采集和 HTTP 入口只调用其操作；先持输入事务锁，再经窄 `publish(kind,name,payload,source=None)` 函数取得发布短锁，不嵌套同一个锁。
 - `datafile.write()` 是唯一文件发布入口：原子替换 `Dash.put` 文件后，在发布短锁内提交内容签名与真实 `checked`。签名不包含 `updated`，数据没变只推进确认时刻；相同数据的 `source` 固定为生产方，执行入口不会制造新版本。内部 `.collab/tools/state/dashboard-publication.json` 只有当前发布快照，不是事件历史；不存在文件版版本索引。
-- `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件、两个同源写入 API 与 `/api/events`。服务自己的原生 Observer 只观察发布元数据；不采集、不持发布锁等待客户端。
+- `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件、两个同源写入 API、`/api/events` 与文档只读 API。服务自己的原生 Observer 只观察发布元数据；不采集、不持发布锁等待客户端。
 
 `dashboard/data/auto/` 是程序结果，`curated/notices.js` 与 `curated/audit.js` 是私有输入，只经 `post.py` 改；通知会汇入公开动态，不直接作为页面数据。界面 `index.html`、`app/`、`vendor/` 的内容签名是 `versions.app`，不再写入 live。
 
 ## 2 数据契约 v3
 
 数据文件仍用 `Dash.put(名字, 数据)` 交付，附 `updated`、固定生产方 `source`、`errors`；时刻是本地 ISO 字符串，时长是分钟。公开名白名单是 live、attention、feedback、progress、flow、collab、team、health、system、hookfeed、feed、docs、now；未生成的份显示缺数据，不读取旧名字。index、stats、records 停产，通知只作为输入。
+
+公开数据名单的唯一运行时权威是 `datafile.AUTO_NAMES`。静态服务直接用它放行，并以 `/api/data-names.js` 提供 `window.DashDataNames`；前端清单从它生成数据项，只保存各项的展示元数据，缺少元数据就明确报错。
 
 每份内容变化才换版本，`updated` 是这版内容的发布时间；来源失败发布该份 `errors`，不把旧值当新结果。缺乏真实事实用 `null`，页面写“未确认”或 —，不改成零、空闲或正常；数量不全不画占比，累计时长只有各项确认后才相加。历史分析带 `coverage: {from}`，记账起点以前不补造；不能覆盖一个时间窗时隐藏对应比较。
 
@@ -66,7 +68,7 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
             kpis: [{key, label, value|null, unit, note, trend: better|worse|same|null, href}]}
 ```
 
-flow 的每日序列保留 30 天；health.rounds 取最近 48 轮，feed 取近 30 天；team.agents 交回项只留近一小时。钩子事件与块名直接给中文，未识别写“未知事件”；决策只给一句结论，不发布提交哈希、路径与原始长文。
+flow 的每日序列保留 30 天；health.rounds 取最近 48 轮，feed 取近 30 天；team.agents.side 只取小写 claude、codex；交回项只留近一小时。钩子事件与块名直接给中文，未识别写“未知事件”；决策只给一句结论，不发布提交哈希、路径与原始长文。
 
 `progress.rows.since` 是进入当前阶段的时刻；`waiting=true` 表示排着且前置未完，或暂停。`flow.blocked` 的 all、claude、codex 三份由采集端按同一 waiting 口径分别提供，页面按筛选取用，不重算。`now.phase.step` 只从状态头部“当前阶段”开头明确写出的 P0–P3 读取，没写为 null。
 
@@ -84,9 +86,9 @@ flow 的每日序列保留 30 天；health.rounds 取最近 48 轮，feed 取近
 | system | 钩子登记、guard.jsonl、脚本目录 | 慢通道；24 小时计数每 10 分钟到期刷新 |
 | docs | 文档头与 SECTIONS.md | 文档事件，慢通道 |
 | feed | queue 删除、pushes、audits、决策登记、私有通知 | 对应原源事件 |
-| now | 状态头与同管线 flow、collab、health | 原源或公开依赖完成 |
+| now | 状态头与同管线 progress、flow、collab | 原源或公开依赖完成 |
 
-历史唯一账位于 `.collab/tools/state/dashboard-events/`，保留 60 天。事件 envelope 的 `at` 是观察时刻，`source` 指真实来源，`sourceAt` 仅填来源明确给出的时刻，否则 null；不靠 mtime、缺行、超时或停止事件补造完成。queue 记行变更、pushes 记真实推送批次、audits 记明确审计字段、letters 只记第一行索引、agents 保留真实 terminal/dispatch 元数据、leads 记 running 三态、patrol 记同轮结构化结果。只有 completed/task_complete 算交回；停止和失败不算。
+历史唯一账位于 `.collab/tools/state/dashboard-events/`，保留 60 天。事件 envelope 的 `at` 是观察时刻，`source` 指真实来源，`sourceAt` 仅填来源明确给出的时刻，否则 null；不靠 mtime、缺行、超时或停止事件补造完成。queue 记行变更、pushes 记真实推送批次、audits 记明确审计字段、letters 只记第一行索引、agents 保留真实 terminal/dispatch 元数据、leads 记 running 三态、patrol 记同轮结构化结果。只有 completed/task_complete 算交回；停止和失败不算。完成行与每日完成只由 `progress.evidence(...).finished` 提供，共用于 flow 与 feed，不把删行计完成。缺历史与缺字段是合法 null，不写入 errors；真实读取、解析或依赖失败才发布 errors。测试代码行数与 0–1 比例只描述代码规模；用例 count 必须来自真实测试批次，静态文件数不算用例。门禁未跑为 null，不能显示通过。
 
 
 ### 2.1 推送与确认时刻
@@ -134,7 +136,7 @@ GET /api/doc/search?q=词  → {ok, items: [{code, title, sec: {n, title, anchor
 失败                      → {ok: false, error}；不存在返回 404
 ```
 
-只认公开 docs 数据列出的编码，不接收路径；搜索最多 30 条，按命中排序。md 是原文，anchor 与阅读器真实渲染标题一致；页面直接使用服务端给出的 anchor。接口与 docs 公开形状由 C261 接入，C256 底座保留同一个 Handler 方法边界。
+只认公开 docs 数据列出的编码，不接收路径；搜索最多 30 条，按命中排序。md 是原文，anchor 与阅读器真实渲染标题一致；页面直接使用服务端给出的 anchor。接口复用同一个 Handler，与 SSE、revision 确认及工作树截图白名单共同运行。
 
 
 ## 3 页面运行时

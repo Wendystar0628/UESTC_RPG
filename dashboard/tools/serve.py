@@ -11,7 +11,7 @@ import sys
 import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.read_directory_changes import WindowsApiObserver
 
@@ -20,7 +20,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', '..', '.collab', 'tools'))
 import datafile
 from monitor.view import attention
-from monitor.read import repo
+from monitor.read import documents, repo
 from monitor import util as U
 
 
@@ -93,6 +93,30 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        url = urlsplit(self.path)
+        if url.path == '/api/data-names.js':
+            body = ('window.DashDataNames = ' + json.dumps(datafile.AUTO_NAMES) + ';\n').encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/javascript; charset=utf-8')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if url.path in ('/api/doc', '/api/doc/search'):
+            key = 'code' if url.path == '/api/doc' else 'q'
+            query = parse_qs(url.query, keep_blank_values=True)
+            if len(query.get(key, [])) != 1:
+                self.answer(400, {'ok': False, 'error': '请提供一个文档编码' if key == 'code' else '请提供一个搜索词'})
+                return
+            try:
+                payload = documents.document(query[key][0]) if key == 'code' else documents.search(query[key][0])
+                self.answer(200, payload)
+            except documents.UnknownDocument:
+                self.answer(404, {'ok': False, 'error': '没有这份文档'})
+            except Exception as error:
+                self.answer(500, {'ok': False, 'error': '读取文档失败：' + ' '.join(str(error).split())})
+            return
         if urlsplit(self.path).path != '/api/events':
             return super().do_GET()
         notifications = self.server.publications
