@@ -306,7 +306,7 @@
 
 ## WLD-INTERIORS-BUILD · 室内制作
 
-`docs/world/WLD-INTERIORS-BUILD-室内制作.md` · 6.2k 字 · 室内制作规则：加载与进楼衔接、平面生成器、风格与光、生活痕迹、楼梯门洞与碰撞
+`docs/world/WLD-INTERIORS-BUILD-室内制作.md` · 6.4k 字 · 室内制作规则：加载与进楼衔接、平面生成器、风格与光、生活痕迹、楼梯门洞与碰撞
 关键词：室内加载、进楼衔接、平面内核、楼型、室内风格、窗光斑、光柱、室内色名、生活痕迹、楼梯碰撞、SlopedWallCollider、门洞、落点
 
 - WLD-INTERIORS-BUILD §0 结论 · L23 · 467
@@ -315,14 +315,14 @@
   - WLD-INTERIORS-BUILD §1.1 整体加载、按层显示 · L39 · 277
   - WLD-INTERIORS-BUILD §1.2 触发 · L45 · 269
   - WLD-INTERIORS-BUILD §1.3 进楼与出楼，以及衔接保证（ENG-PERF-STREAM §1.2 第 6 条） · L52 · 266
-- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 730
-- WLD-INTERIORS-BUILD §3 风格 · L67 · 1.3k
-  - WLD-INTERIORS-BUILD §3.1 明暗与暖影 · L71 · 195
-  - WLD-INTERIORS-BUILD §3.2 窗光斑与光（最重要的室内画面） · L75 · 395
-  - WLD-INTERIORS-BUILD §3.3 色名、识别要素与夜间 · L83 · 599
-- WLD-INTERIORS-BUILD §4 生活痕迹规则 · L89 · 614
-- WLD-INTERIORS-BUILD §5 楼梯、门洞与碰撞 · L98 · 906
-- WLD-INTERIORS-BUILD §6 待验证 · L116 · 254
+- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 943
+- WLD-INTERIORS-BUILD §3 风格 · L68 · 1.3k
+  - WLD-INTERIORS-BUILD §3.1 明暗与暖影 · L72 · 195
+  - WLD-INTERIORS-BUILD §3.2 窗光斑与光（最重要的室内画面） · L76 · 395
+  - WLD-INTERIORS-BUILD §3.3 色名、识别要素与夜间 · L84 · 599
+- WLD-INTERIORS-BUILD §4 生活痕迹规则 · L90 · 614
+- WLD-INTERIORS-BUILD §5 楼梯、门洞与碰撞 · L99 · 906
+- WLD-INTERIORS-BUILD §6 待验证 · L117 · 254
 
 ## WLD-LIFE · 动物、生活痕迹与街道家具
 
@@ -1545,14 +1545,14 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 10.5k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 10.7k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
-- ENG-ARCH §0 结论 · L23 · 1.4k
-  - ★ ENG-ARCH §0.1 接入要点 · L34 · 796
+- ENG-ARCH §0 结论 · L23 · 1.5k
+  - ★ ENG-ARCH §0.1 接入要点 · L34 · 813
 - ENG-ARCH §1 当前架构 · L46 · 1.4k
   - ENG-ARCH 技术栈 · L48 · 174
-  - ENG-ARCH 分层 · L52 · 821
+  - ENG-ARCH 分层 · L52 · 883
   - ENG-ARCH 生产链 · L64 · 267
   - ENG-ARCH 数据流 · L72 · 95
 - ENG-ARCH §2 边界与确定性 · L76 · 2.6k
@@ -2017,7 +2017,7 @@
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
-`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 17.9k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
+`docs/registry/REG-DECISIONS-SYSTEMS-系统与工程决策.md` · 18.0k 字 · 界面、存档、音频、性能与画面设置、工程五个领域的已定决策
 关键词：决策、系统、工程、界面、存档、音频、性能、画面设置、预算、契约
 
 - REG-DECISIONS-SYSTEMS §0 结论 · L23 · 124
@@ -2026,20 +2026,20 @@
 - REG-DECISIONS-SYSTEMS §2 存档 · L62 · 1.5k
 - REG-DECISIONS-SYSTEMS §3 音频 · L81 · 2.1k
 - REG-DECISIONS-SYSTEMS §4 性能与画面设置 · L103 · 3.1k
-- REG-DECISIONS-SYSTEMS §5 工程 · L132 · 3.6k
-- REG-DECISIONS-SYSTEMS §6 地图与行走 · L161 · 989
-- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L172 · 2.3k
+- REG-DECISIONS-SYSTEMS §5 工程 · L132 · 3.7k
+- REG-DECISIONS-SYSTEMS §6 地图与行走 · L162 · 989
+- REG-DECISIONS-SYSTEMS §7 时间、季节、天气 · L173 · 2.3k
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
-`docs/registry/REG-DECISIONS-WORLD-世界与画面决策.md` · 9.5k 字 · 作品、画面、世界、地图四个域的已定决策：作品定位与范围、世界与地图、美术风格
+`docs/registry/REG-DECISIONS-WORLD-世界与画面决策.md` · 9.7k 字 · 作品、画面、世界、地图四个域的已定决策：作品定位与范围、世界与地图、美术风格
 关键词：决策、世界、画面、作品定位、地图、美术风格、视觉精度、翻新、日式街景、不变量
 
 - REG-DECISIONS-WORLD §0 结论 · L23 · 127
   - ★ REG-DECISIONS-WORLD §0.1 接入要点 · L27 · 54
 - REG-DECISIONS-WORLD §1 作品定位与范围 · L31 · 2.2k
-- REG-DECISIONS-WORLD §2 世界与地图 · L52 · 3.9k
-- REG-DECISIONS-WORLD §3 美术风格 · L82 · 2.7k
+- REG-DECISIONS-WORLD §2 世界与地图 · L52 · 4.1k
+- REG-DECISIONS-WORLD §3 美术风格 · L83 · 2.7k
 
 ## REG-GLOSSARY · 术语表
 

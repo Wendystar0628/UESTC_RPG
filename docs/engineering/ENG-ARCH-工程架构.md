@@ -23,7 +23,7 @@ paths: ["game/**/*.cs"]
 ## 0 结论
 
 1. **四层，依赖只朝下**：契约 → 世界与公共几何 → 内容生成 → 运行时；同层的内容包互不引用；程序集只有契约两个、通用生成一个、每张图一个、运行时一个，层间与包间的边界由命名空间规则（G4）守（§1、§2，D-232）。
-2. **生成是纯 .NET 的纯函数**：契约与生成层不引用 Godot；`Build()` 只读冻结的地图输入，不读运行时状态、画面设置和时间（§2）。
+2. **生成是纯 .NET 的纯函数**：生成侧契约 `Campus.Contracts` 与生成层不引用 Godot，只给运行时用的 `Campus.Contracts.Runtime` 可以用 Godot 类型；`Build()` 只读冻结的地图输入，不读运行时状态、画面设置和时间（§2）。
 3. **一条生产链**：正式运行由 `KernelStage` 装配；每类状态一个写入方；原生资源只由所属的内核服务创建（§1、§2）。
 4. **打特性即接入**：模块、部件、服务、节点、存档段靠特性自动发现，不改共享文件；Autoload 只有 `Boot`，`Kernel` 是静态入口（§2）。
 5. **确定性**：随机和哈希只用契约的 `Rng`、`StableHash`；同一台机器上同一输入烘出同样的字节，不要求本机与别的机器逐字节一致（§2，D-232）。
@@ -34,7 +34,7 @@ paths: ["game/**/*.cs"]
 ### 0.1 接入要点
 
 - **新建或修改文件**：只改 `ownership.json` 划给本包的路径；`project.godot`、csproj、`Directory.*.props`、契约、`ownership.json`、`docs/`，以及新的着色器全局参数、着色器文件、项目引用、NuGet 包，向 Codex 主线申请（WF-BUILD §1、§3）。
-- **写契约、生成层或烘焙子任务**：不引用 GodotSharp，不读文件路径和运行时状态，不引用其他内容包的命名空间（§2）。
+- **写 `Campus.Contracts`、生成层或烘焙子任务**：不引用 GodotSharp，不读文件路径和运行时状态，不引用其他内容包的命名空间（§2）。
 - **要显示、用材质或出声**：显示经 `IRenderHost`，材质经 `ToonSpec`，声音经音频服务；不自己创建网格实例、`ShaderMaterial` 和音频播放器（§2）。
 - **接入新模块、节点、服务或存档段**：打对应的特性，不加 Autoload，不改 `main.tscn`（§2）。
 - **写随机、计时或哈希**：用契约的 `Rng`、`StableHash`，遍历字典先排序；禁用写法以各程序集的 `BannedSymbols.txt` 和 G4 为准（§2）。
@@ -53,7 +53,7 @@ paths: ["game/**/*.cs"]
 
 | 层 | 程序集 | 责任 |
 | --- | --- | --- |
-| 契约 | `Campus.Contracts`；`Campus.Contracts.Runtime`（只给运行时用的契约，生成层不引用） | 数据、命令、只读状态与确定性工具；只引用基础类库 |
+| 契约 | `Campus.Contracts`；`Campus.Contracts.Runtime`（只给运行时用的契约，生成层不引用） | 数据、命令、只读状态与确定性工具；`Campus.Contracts` 只引用基础类库，`Campus.Contracts.Runtime` 另可引用 GodotSharp |
 | 世界与公共几何 | `Campus.Gen`（世界、几何、部件内核等通用生成；`pipeline/map` 的 C# 也编进它，命名空间 `Campus.Pipeline.*`） | 解释冻结的地图输入（世界文件、地形、室内索引；路网由世界文件派生），提供权威查询和共享几何 |
 | 内容生成 | 通用内容包在 `Campus.Gen`（建筑、地面、植被、水、碰撞、可行走、外围、声学等，及跨图共用的公共站点 `Campus.Gen.Sites`）；每张图一个 `Campus.Gen.Maps.<图>`，在 `game/gen/maps/<图>/`，各区是它下面的子目录与命名空间 `Campus.Gen.Maps.<图>.<区>` | 按格生成几何、碰撞与声明数据；纯函数，命名空间互不引用 |
 | 运行时 | 主程序集 `Campus`（kernel、stage、flow、camera、medium、systems、style、audio、hud、gates） | 装配、烘焙与流式、世界状态、表现与界面 |
