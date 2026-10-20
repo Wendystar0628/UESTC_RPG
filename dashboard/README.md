@@ -326,7 +326,7 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 **加页面、面板、数据源**：
 - 加页面：manifest 的 `pages` 加一项（`id`、`title`、`ask`、`file`、`filters?`），建 `pages/<页>.js` 与同名 `.css`，用 `Dash.panel` 注册。
 - 加面板：所属页文件里再写一个 `Dash.panel`，写清 `title`、`note`，有统计口径的写 `caliber`。
-- 加数据源：先按 §2 定形状并让采集写出、推送列出，再在 manifest 的 `data` 登记。
+- 加数据源：先按 §2 定形状，在后端 `datafile.AUTO_NAMES` 登记名字与应有间隔并让采集写出；manifest 只给它补展示信息（`label`、`keep`），名单两边对不上页面直接报错。
 - 面板只用 `Dash.*` 与 `style.css` 的通用类（`.card .chip .mark .item .status .empty .fold .btn .id .muted .kpi .lamp .tl .tree .dots .drawer .seg .note-line .cols .col`），自己的样式写进同名 `.css`，只用令牌，不写颜色字面量、阴影与渐变。
 
 ## 5 视觉
