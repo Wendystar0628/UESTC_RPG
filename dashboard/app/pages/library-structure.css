@@ -1,8 +1,0 @@
-/* 资料页 · 结构：树的行内布局。只用令牌。 */
-.st-line { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 0.2rem 0.8rem; flex-wrap: wrap; }
-.st-name { font-family: var(--mono); font-weight: 600; flex: none; }
-.st-name.st-layer { font-family: inherit; font-weight: 700; }
-.st-note { flex: 1 1 12rem; min-width: 0; color: var(--text-2); font-size: var(--fs-sm); }
-.st-files, .st-loc { flex: none; color: var(--text-3); font-size: var(--fs-xs); white-space: nowrap; }
-.st-files { min-width: 5.5em; text-align: right; }
-.st-loc { min-width: 5em; text-align: right; }

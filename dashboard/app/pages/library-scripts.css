@@ -1,9 +1,0 @@
-/* 资料页 · 脚本目录。只用令牌。 */
-.sx-line { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 2px var(--s3); flex-wrap: wrap; }
-.sx-name { flex: none; font-family: var(--mono); font-size: var(--fs-sm); font-weight: 600; overflow-wrap: anywhere; }
-.sx-dir { font-weight: 600; }
-.sx-count { color: var(--text-3); font-size: var(--fs-xs); }
-.sx-purpose { flex: 1 1 16rem; min-width: 0; color: var(--text-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
-.sx-purpose.is-missing { color: var(--text-3); }
-.sx-tags { flex: none; display: inline-flex; flex-wrap: wrap; gap: var(--s1); margin-left: auto; }
-.sx-group + .sx-group { margin-top: var(--s4); }

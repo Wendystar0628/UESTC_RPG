@@ -1,0 +1,31 @@
+/* 资料页。只用令牌。 */
+
+/* 文档目录：一域一行，点开看文档 */
+.lib-domains { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--s5); align-items: start; }
+@media (max-width: 1100px) { .lib-domains { grid-template-columns: minmax(0, 1fr); } }
+.lib-domains > .fold { border-top: 1px solid var(--line-2); padding: 9px 0; }
+.lib-domains > .fold:nth-child(-n+2) { border-top: 0; }
+.lib-dom { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.lib-swatch { flex: none; width: 12px; height: 12px; border-radius: 3px; background: var(--tone); }
+.lib-dom-name { font-size: var(--fs-lg); font-weight: 650; }
+.lib-dom-n { margin-left: auto; font-size: var(--fs-sm); color: var(--text-3); }
+.lib-docs { display: flex; flex-direction: column; padding-left: 26px; }
+.lib-doc { display: grid; grid-template-columns: 11.5em minmax(0, 1fr); gap: 0 var(--s3); padding: 6px 0; border-top: 1px dashed var(--line-2); font-size: var(--fs-sm); }
+.lib-doc:first-child { border-top: 0; }
+.lib-code { grid-row: span 2; font-weight: 650; color: var(--text-2); overflow-wrap: anywhere; }
+.lib-title { font-weight: 600; color: var(--text); }
+.lib-sum { color: var(--text-3); overflow-wrap: anywhere; }
+@media (max-width: 560px) { .lib-doc { grid-template-columns: minmax(0, 1fr); } .lib-code { grid-row: auto; } }
+
+/* 竖时间线（决策、通知） */
+.tl { list-style: none; margin: 0; padding: 0 0 0 18px; border-left: 2px solid var(--line); }
+.tl-item { position: relative; padding: 5px 0; }
+.tl-item::before { content: ""; position: absolute; left: -24px; top: 13px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--tone, var(--muted)); box-shadow: 0 0 0 3px var(--surface); }
+.tl-day { font-size: var(--fs-xs); font-weight: 650; color: var(--accent); margin: 6px 0 2px; }
+.tl-item:first-child .tl-day { margin-top: 0; }
+.tl-row { display: flex; gap: var(--s3); align-items: baseline; }
+.tl-at { flex: none; font-size: var(--fs-xs); color: var(--text-3); width: 3em; }
+.tl-text { flex: 1; min-width: 0; font-size: var(--fs-sm); line-height: 1.55; overflow-wrap: anywhere; }
+.tl-from { font-weight: 650; color: var(--tone); }
+.tl-open { font-size: var(--fs-xs); }
