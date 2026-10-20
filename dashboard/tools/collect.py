@@ -284,7 +284,7 @@ def docs_data():
         docs = [x for c in mains if c not in placed for x in subtree(by_code[c])]
         placed.update(x['code'] for x in docs)
         domains.append({'key': 'd%d' % i, 'name': name, 'docs': docs})
-    loose = [d for d in items if d['code'] not in placed]   # 索引里找不到的（check_docs 会报），单列出来不藏
+    loose = [d for d in items if d['code'] not in placed]   # 索引里找不到的（check-docs 会报），单列出来不藏
     if loose:
         domains.append({'key': 'loose', 'name': '索引里没有', 'docs': loose})
     # 引用关系：正文里出现的其他文档编码，按 from→to 计次
