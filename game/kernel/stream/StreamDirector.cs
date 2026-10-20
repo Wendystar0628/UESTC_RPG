@@ -85,6 +85,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         if (_mount?.Failure is { } failure) RecordFailure(failure);
         if (_interiors?.Failure is { } interior) RecordFailure(interior);
+        _participants?.PollParticipantErrors();
     }
     public int MountedTiles => _residency.MountedTiles;
     public int VisibleTiles => _selection.VisibleTiles;
@@ -190,7 +191,6 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
             _interiors?.Poll(Math.Max(0, _selection.Settings.MaximumPreparations - _preparation.Preparations - _interiors.Preparations));
             if (_interiors?.Failure is { } interiorError) RecordFailure(interiorError);
             _preparation.PollHandles();
-            _participants.PollParticipantErrors();
             if (Failure is not null || _preparation.Catalog is null || _selection.Tree is null) return;
             _selection.Update(delta);
             _preparation.IssueQueued();

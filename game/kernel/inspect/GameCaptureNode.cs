@@ -310,6 +310,8 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
             cancellationToken.ThrowIfCancellationRequested();
             if (rig.Pose != appliedPose || !ReferenceEquals(runtime.Arrival, arrival))
                 throw new OperationCanceledException("Capture destination was replaced.");
+            if (runtime.Failure is { } failure)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
             return contentReady() && producers.IsReady(appliedPose);
         }
 

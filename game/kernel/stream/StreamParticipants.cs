@@ -194,10 +194,9 @@ internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry re
 
     internal void PollParticipantErrors()
     {
-        foreach (var group in _host.Residency.Groups.Values)
-            foreach (var item in group.Participants.Values)
-                if (item.Need == StreamTileNeed.Required && item.Failure is null && item.Participant.Failure is { } error)
-                    FailParticipant(group, item, error);
+        // A producer's failure belongs to the map lifetime, independent of any tile's demand.
+        foreach (var participant in _participants)
+            if (participant.Failure is { } error) _host.RecordFailure(error);
     }
 
     private void FailParticipant(TileGroup group, ParticipantTile item, Exception error)

@@ -3,13 +3,12 @@ using Campus.Contracts.Maps;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
-using Campus.Kernel.Renderer;
 using GdUnit4;
 using static GdUnit4.Assertions;
 using Godot;
-using Campus.Contracts.Bake;
 using Campus.Kernel.Registry;
 using N = System.Numerics;
+using static Campus.Tests.MapRuntimeTestSupport;
 
 namespace Campus.Tests;
 
@@ -77,75 +76,56 @@ public sealed class MapRuntimeRuntimeTests
     [RequireGodotRuntime]
     public void ArrivalRequiresResidentRingsCurrentFloorAndWalkingCollision()
     {
-        var stage = new Node();
-        var runtime = new MapRuntime();
-        var viewCamera = new Camera3D();
-        try
-        {
-            var producer = new MapRuntimeReadinessProducer();
-            stage.AddChild(producer);
-            var stream = new ArrivalStream();
-            var collision = new ArrivalCollision();
-            var camera = new TestCameraRig();
-            var destination = camera.Pose;
-            var registry = new ServiceRegistry();
-            registry.Discover([typeof(ArrivalStream)], _ => "fixture");
-            registry.Add(stream);
-            runtime.Bind(new(registry, stream, new RuntimeBake(), collision, producer,
-                new RuntimePipelines(), camera, new FlowTerrainPreparation(), viewCamera));
-            stage.AddChild(runtime);
-            ((SceneTree)Engine.GetMainLoop()).Root.AddChild(stage);
-            var mount = runtime.Mount(new TestMapContext(BackdropInputsTests.Descriptor()));
-            runtime._Process(0);
-            AssertThat(mount.IsCompleted).IsFalse();
-            stream.ResidentReady = true;
-            runtime._Process(0);
-            AssertThat(mount.IsCompletedSuccessfully && stream.Loaded).IsTrue();
-            stream.ResidentReady = false;
-            var arrival = runtime.Arrive(destination, ViewMode.Walk);
-            runtime._Process(0);
-            AssertThat(arrival.Done.IsCompleted).IsFalse();
-            stream.ResidentReady = true;
-            runtime._Process(0);
-            AssertThat(arrival.Done.IsCompleted).IsFalse();
-            stream.DestinationReady = true;
-            runtime._Process(0);
-            AssertThat(arrival.Done.IsCompleted).IsFalse();
-            producer.ContentReady = true;
-            runtime._Process(0);
-            AssertThat(arrival.Done.IsCompleted).IsFalse();
-            collision.CollisionReady = true;
-            runtime._Process(0);
-            AssertThat(arrival.Done.IsCompletedSuccessfully && arrival.Completed == arrival.Total).IsTrue();
-            var replaced = runtime.Arrive(destination, ViewMode.Fly);
-            var current = runtime.Arrive(destination, ViewMode.Fly);
-            AssertThat(replaced.Done.IsCanceled).IsTrue();
-            runtime._Process(0);
-            AssertThat(current.Done.IsCompletedSuccessfully).IsTrue();
-            var original = new InvalidOperationException("destination failed");
-            stream.Failure = original;
-            var failed = runtime.Arrive(destination, ViewMode.Fly);
-            AssertThat(runtime.Failure is null && !failed.Done.IsCompleted).OverrideFailureMessage("Reading failure advanced runtime collection.").IsTrue();
-            runtime._Process(0);
-            AssertThat(failed.Done.IsFaulted).IsTrue();
-            AssertThat(ReferenceEquals(failed.Done.Exception!.InnerException, original) && ReferenceEquals(runtime.Failure, original)).IsTrue();
-            var rendering = new InvalidDataException("rendering failed");
-            var physical = new InvalidOperationException("collision failed");
-            producer.Failure = rendering; collision.Failure = physical;
-            AssertThat(ReferenceEquals(runtime.Failure, original)).OverrideFailureMessage("Reading failure collected new producer faults.").IsTrue();
-            runtime._Process(0);
-            var collected = runtime.Failure as AggregateException ?? throw new InvalidOperationException("Producer failures were not collected by Update.");
-            AssertThat(collected.Flatten().InnerExceptions.Count == 3 && collected.Flatten().InnerExceptions.Contains(original) &&
-                collected.Flatten().InnerExceptions.Contains(rendering) && collected.Flatten().InnerExceptions.Contains(physical)).IsTrue();
-            runtime._Process(0);
-            AssertThat(ReferenceEquals(runtime.Failure, collected)).OverrideFailureMessage("Unchanged faults were collected twice.").IsTrue();
-        }
-        finally
-        {
-            runtime.StopNewWork();
-            stage.Free();
-            viewCamera.Free();
-        }
+        using var fixture = new MapRuntimeFixture();
+        var runtime = fixture.Runtime;
+        var producer = fixture.Producer;
+        var stream = fixture.Stream;
+        var collision = fixture.Collision;
+        var destination = fixture.Camera.Pose;
+        var mount = fixture.Mount;
+        runtime._Process(0);
+        AssertThat(mount.IsCompleted).IsFalse();
+        stream.ResidentReady = true;
+        runtime._Process(0);
+        AssertThat(mount.IsCompletedSuccessfully && stream.Loaded).IsTrue();
+        stream.ResidentReady = false;
+        var arrival = runtime.Arrive(destination, ViewMode.Walk);
+        runtime._Process(0);
+        AssertThat(arrival.Done.IsCompleted).IsFalse();
+        stream.ResidentReady = true;
+        runtime._Process(0);
+        AssertThat(arrival.Done.IsCompleted).IsFalse();
+        stream.DestinationReady = true;
+        runtime._Process(0);
+        AssertThat(arrival.Done.IsCompleted).IsFalse();
+        producer.ContentReady = true;
+        runtime._Process(0);
+        AssertThat(arrival.Done.IsCompleted).IsFalse();
+        collision.CollisionReady = true;
+        runtime._Process(0);
+        AssertThat(arrival.Done.IsCompletedSuccessfully && arrival.Completed == arrival.Total).IsTrue();
+        var replaced = runtime.Arrive(destination, ViewMode.Fly);
+        var current = runtime.Arrive(destination, ViewMode.Fly);
+        AssertThat(replaced.Done.IsCanceled).IsTrue();
+        runtime._Process(0);
+        AssertThat(current.Done.IsCompletedSuccessfully).IsTrue();
+        var original = new InvalidOperationException("destination failed");
+        stream.Failure = original;
+        var failed = runtime.Arrive(destination, ViewMode.Fly);
+        AssertThat(runtime.Failure is null && !failed.Done.IsCompleted).OverrideFailureMessage("Reading failure advanced runtime collection.").IsTrue();
+        runtime._Process(0);
+        AssertThat(failed.Done.IsFaulted).IsTrue();
+        AssertThat(ReferenceEquals(failed.Done.Exception!.InnerException, original) && ReferenceEquals(runtime.Failure, original)).IsTrue();
+        var rendering = new InvalidDataException("rendering failed");
+        var physical = new InvalidOperationException("collision failed");
+        fixture.Renderer.Failure = rendering; collision.Failure = physical;
+        AssertThat(ReferenceEquals(runtime.Failure, original)).OverrideFailureMessage("Reading failure collected new producer faults.").IsTrue();
+        runtime._Process(0);
+        var collected = runtime.Failure as AggregateException ?? throw new InvalidOperationException("Producer failures were not collected by Update.");
+        AssertThat(collected.Flatten().InnerExceptions.Count == 3 && collected.Flatten().InnerExceptions.Contains(original) &&
+            collected.Flatten().InnerExceptions.Contains(rendering) && collected.Flatten().InnerExceptions.Contains(physical)).IsTrue();
+        runtime._Process(0);
+        AssertThat(ReferenceEquals(runtime.Failure, collected)).OverrideFailureMessage("Unchanged faults were collected twice.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Regression)]
@@ -169,7 +149,7 @@ public sealed class MapRuntimeRuntimeTests
         var registry = new ServiceRegistry();
         registry.Discover([typeof(FirstLifetimeParticipant), typeof(SecondLifetimeParticipant)], _ => "fixture");
         registry.Add(first); registry.Add(second);
-        var renderer = new MapRuntimeReadinessProducer(); stage.AddChild(renderer);
+        var renderer = new RuntimeRenderer();
         runtime.Bind(new(registry, stream, new RuntimeBake(), new ArrivalCollision(), renderer,
             new RuntimePipelines(), new TestCameraRig(), new FlowTerrainPreparation(), viewCamera));
         stage.AddChild(runtime);
@@ -226,20 +206,6 @@ public sealed class MapRuntimeRuntimeTests
     private sealed class SecondLifetimeParticipant(List<string> order)
         : LifetimeParticipant("second", order, Task.CompletedTask) { }
 
-    private sealed class RuntimePipelines : IPipelinePreparation
-    {
-        public Task PrepareAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-    }
-    private sealed class RuntimeBake : IBakeService
-    {
-        public IBakeHandle Ensure(BakeKey key, BakePriority priority) => throw new NotSupportedException();
-        public BakeProgress Progress => default;
-        public Exception? Failure => null;
-        public long CacheBytes => 0;
-        public void Clear() { }
-        public void ClearFailures() { }
-    }
-
     private sealed class DrainStream(List<string> order) : IMapStreamState
     {
         public TaskCompletionSource Entered { get; } = new();
@@ -256,40 +222,11 @@ public sealed class MapRuntimeRuntimeTests
         public Task DrainAsync() { order.Add("stream"); Entered.SetResult(); return Completion.Task; }
     }
 
-    [KernelService(typeof(ArrivalStream), Map = "fixture-map")]
-    private sealed class ArrivalStream : IMapStreamState, IMapAware
-    {
-        public bool Loaded { get; private set; }
-        public void OnMapLoaded(IMapContext context) => Loaded = true;
-        public void OnMapUnloading(MapId from) => Loaded = false;
-        public bool IsUnloaded => !Loaded;
-        public bool ResidentReady { get; set; }
-        public bool DestinationReady { get; set; }
-        public Exception? Failure { get; set; }
-        public Task DrainAsync() => Task.CompletedTask;
-        public MapStreamDestination? Destination { get; private set; }
-        public bool HasPendingDestination => !DestinationReady;
-        public IReadOnlyList<MapStreamDestination> PinnedDestinations { get; private set; } = [];
-        public void SetPinnedDestinations(IReadOnlyList<MapStreamDestination> destinations) => PinnedDestinations = destinations;
-        public void Prefetch(Pose destination, ViewMode mode, NavSpace? space = null) => Destination = new(destination, mode, space);
-    }
-
-    private sealed class ArrivalCollision : ICollisionWorld
-    {
-        public bool CollisionReady { get; set; }
-        public Exception? Failure { get; set; }
-        public bool Ready(N.Vector3 point, float radius) => CollisionReady;
-        public SweepHit? Sweep(N.Vector3 from, N.Vector3 to, float radius, float height) => null;
-        public SupportHit? SupportY(float x, float z, float yHint) => null;
-        public SweepHit? SupportRay(N.Vector3 from, N.Vector3 to) => null;
-        public int NearbyBoundaries(N.Vector3 feet, float radius, float height, Span<BoundaryHit> hits) => 0;
-    }
 }
 
-internal sealed partial class MapRuntimeReadinessProducer : Node, IRenderReadiness, IViewContentReadiness
+internal sealed partial class MapRuntimeReadinessProducer : Node, IViewContentReadiness
 {
     public bool ContentReady { get; set; }
     public bool IsReady(Pose pose) => ContentReady;
     public Exception? Failure { get; set; }
-    public bool Pending => false;
 }

@@ -12,6 +12,8 @@ namespace Campus.Kernel.Boot;
 public sealed class ViewContentReadiness
 {
     private readonly IViewContentReadiness[] _producers;
+    // The lifetime owner polls this same snapshot; readiness queries do not collect failures.
+    internal ReadOnlySpan<IViewContentReadiness> Producers => _producers;
     private ViewContentReadiness(IViewContentReadiness[] producers) => _producers = producers;
 
     public static ViewContentReadiness Capture(Node stage) => new(Descendants(stage).OfType<IViewContentReadiness>().ToArray());
@@ -45,6 +47,8 @@ public sealed class ViewContentReadiness
                 await FrameAwaiter.ProcessAsync(host, lifetime.Token);
                 lifetime.Token.ThrowIfCancellationRequested();
                 if (!host.IsInsideTree()) throw new OperationCanceledException("Stage left the tree during arrival.");
+                if (runtime.Failure is { } failure)
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
                 if (arrival.Done.IsCompleted) await arrival.Done;
                 if (!ReferenceEquals(runtime.Arrival, arrival)) throw new OperationCanceledException("Stage arrival was replaced.");
                 content = contentReady();
@@ -78,11 +82,7 @@ public sealed class ViewContentReadiness
     {
         var ready = true;
         foreach (var producer in _producers)
-        {
-            if (producer.Failure is { } error)
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error).Throw();
             ready &= producer.IsReady(pose);
-        }
         return ready;
     }
 

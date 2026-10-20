@@ -133,6 +133,7 @@ internal static class StreamLifecycleTestSupport
         public ControlledTerrain Terrain { get; } = new();
         public StreamBake Bake { get; }
         public ControlledGeometry Geometry { get; } = new();
+        public FixtureCollisionParticipant CollisionParticipant { get; } = new();
         public StreamMountQueue Mount { get; } = new(() => 0);
         public float Height => Director.GetViewport().GetVisibleRect().Size.Y * Director.GetViewport().Scaling3DScale;
         public StreamFixture(bool geometry = false, bool elevated = false, Task<PreparedBakeTiles>? catalog = null)
@@ -151,7 +152,7 @@ internal static class StreamLifecycleTestSupport
                 modules.Add("fixture.geometry", tiles);
             }
             var registry = new ServiceRegistry(); registry.Discover([typeof(FixtureCollisionParticipant)], _ => "fixture");
-            registry.Add(new FixtureCollisionParticipant());
+            registry.Add(CollisionParticipant);
             var flow = new FlowTestRig();
             Director.Bind(new(registry, new CatalogSource(catalog ?? Task.FromResult(new PreparedBakeTiles(modules, []))), Bake, Mount,
                 Camera, new Observer(Camera), flow.World, new Collision(), new TestMapService(), Terrain, new Reflection(),
@@ -243,14 +244,39 @@ internal static class StreamLifecycleTestSupport
         return new(key, parsed.Tile, parsed.Level, bounds, [BakeSurfacePacker.Pack(source, bounds, Campus.Contracts.Tests.PaletteFixture.Catalog)]);
     }
     [KernelService(typeof(FixtureCollisionParticipant), Map = "stream-fixture")]
-    private sealed class FixtureCollisionParticipant : IStreamTileParticipant
+    internal sealed class FixtureCollisionParticipant : IStreamTileParticipant
     {
+        public StreamTileNeed Need { get; set; }
+        public bool Retained { get; private set; }
+        public HashSet<BakeKey> Mounted { get; } = [];
         public StreamMountKind Kind => StreamMountKind.Collision;
         public bool CanMount(BakeKey key) => BakeRequestKeys.Parse(key).Collision;
-        public StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident) => StreamTileNeed.None;
-        public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) => throw new NotSupportedException();
-        public bool IsReady(BakeKey key) => true; public void Unmount(BakeKey key) { }
-        public Exception? Failure => null;
+        public StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident)
+        {
+            var need = Need switch
+            {
+                StreamTileNeed.None => StreamTileNeed.None,
+                StreamTileNeed.Required => StreamTileNeed.Required,
+                StreamTileNeed.Retain => resident ? StreamTileNeed.Retain : StreamTileNeed.None,
+                _ => throw new ArgumentOutOfRangeException(nameof(Need))
+            };
+            Retained |= need == StreamTileNeed.Retain;
+            return need;
+        }
+        public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) =>
+            new MountWork(this, key, priority, revision);
+        public bool IsReady(BakeKey key) => Mounted.Contains(key);
+        public void Unmount(BakeKey key) => Mounted.Remove(key);
+        public Exception? Failure { get; set; }
+
+        private sealed class MountWork(FixtureCollisionParticipant owner, BakeKey key, BakePriority priority, long revision)
+            : StreamMountWork(key, priority, revision, StreamMountKind.Collision)
+        {
+            protected override bool IsCurrent => true;
+            protected override bool MountStep(double budgetMilliseconds) { owner.Mounted.Add(Key); return true; }
+            protected override void Release() { }
+            protected override void Failed(Exception error) => owner.Failure = error;
+        }
     }
     private sealed class Observer(TestCameraRig camera) : IObserverState { public N.Vector3 Feet => camera.Pose.Position; public N.Vector3 Eye => Feet; public float YawDeg => camera.Pose.YawDeg; public NavSpace? Space => null; public ViewMode Mode => ViewMode.Fly; }
     private sealed class Collision : ICollisionWorld

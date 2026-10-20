@@ -60,6 +60,9 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         if (_bake?.Failure is { } bake) RecordFailure(bake);
         if (_renderer?.Failure is { } rendering) RecordFailure(rendering);
         if (_collision?.Failure is { } collision) RecordFailure(collision);
+        if (_contentReadiness is { } content)
+            foreach (var producer in content.Producers)
+                if (producer.Failure is { } failure) RecordFailure(failure);
     }
 
     private void RecordFailure(Exception error)
