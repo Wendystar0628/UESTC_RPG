@@ -90,10 +90,6 @@
       "owner": "WP-19"
     },
     {
-      "pattern": "game/gen/maps/qingshuihe/interiors/**",
-      "owner": "WP-51b"
-    },
-    {
       "pattern": ".collab/tools/**",
       "owner": "WP-00"
     },
@@ -170,15 +166,7 @@
       "owner": "WP-00"
     },
     {
-      "pattern": "game/kernel/renderer/presentation/**",
-      "owner": "WP-00"
-    },
-    {
       "pattern": "game/kernel/renderer/render-state/**",
-      "owner": "WP-00"
-    },
-    {
-      "pattern": "game/kernel/materials/**",
       "owner": "WP-00"
     },
     {
@@ -1144,10 +1132,6 @@
     {
       "pattern": "game/gen/parts/sport/**",
       "owner": "WP-21"
-    },
-    {
-      "pattern": "**/tests/Support/**",
-      "owner": "WP-00"
     },
     {
       "pattern": "game/data/maps/*/materials.json",
