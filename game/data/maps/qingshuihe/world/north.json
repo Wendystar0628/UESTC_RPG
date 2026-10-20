@@ -310,8 +310,7 @@
       "kind": "road",
       "props": {
         "width": 2.5,
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "note": "设计增补：给丹桂路的休息点落脚，长椅由 WP-13 按步道自动摆（主会话 14:20 不放宽 12 m 规则、补设计步道；几何按 14:26/28 定值与候选）。丹桂路东侧桂花列（距路中 4.5 m）外侧 3 m 的人行步道，中心距路中 7.5 m、宽 2.5 m，铺装与路缘由 WP-15 画。本段约 103 m：南端接 544161582 路口的路缘，北端并入步行路 596973504；途中横过步道 574644711 和后勤物资通道 217855174。再往北由 e2、e3 接着做（北区下台的西缘已在该段退到离路中 ≥14.3 m，见 design:terrain:north-lower-west）。碰到楼或水时在离墙、离水 3 m 处断开；地面在 0 m，不跨台缘（丹桂路沿台脚钉在 0）。默认状态：树下受光、桂花树影；夜间：丹桂路二级路灯光斑下；四季：铺装接落叶、桂花与积雪",
       "geometry": {
@@ -326,8 +325,7 @@
       "kind": "road",
       "props": {
         "width": 2.5,
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "note": "设计增补：丹桂路东侧步道接着 e1 往北（Q-026），给休息点落脚，长椅由 WP-13 按步道自动摆。丹桂路东侧桂花列（距路中 4.5 m）外侧 3 m 的人行步道，中心距路中 7.5 m、宽 2.5 m，铺装与路缘由 WP-15 画。本段约 19 m：南端接 e1 终点（并入步行路 596973504），北端收在步道 851437318 横过丹桂路处，即路中线折点 8（s 127 m）处。再往北 217855069 路口的走廊离丹桂路 12.5 m 内还在抬升（到 0.36 m），步道不在 0 m，且前方硕丰苑楼 217855299 离路中只 4.7 m，按离墙 3 m 断开后两侧没有可接的步道，所以收在这里。碰到楼或水时在离墙、离水 3 m 处断开；地面在 0 m，不跨台缘（丹桂路沿台脚钉在 0，北区下台西缘在此段已退到离路中 ≥14.3 m）。默认状态：树下受光、桂花树影；夜间：丹桂路二级路灯光斑下；四季：铺装接落叶、桂花与积雪",
       "geometry": {
@@ -342,8 +340,7 @@
       "kind": "road",
       "props": {
         "width": 2.5,
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "note": "设计增补：丹桂路东侧步道在硕丰苑三栋贴路楼之后再起一段（Q-026，接 e1、e2 往北，中间被楼隔断），给休息点落脚，长椅由 WP-13 按步道自动摆。丹桂路东侧桂花列（距路中 4.5 m）外侧 3 m 的人行步道，中心距路中 7.5 m、宽 2.5 m，铺装与路缘由 WP-15 画。本段约 88 m：南端接 720157624 路口的路缘，北端接 630914106 路口的路缘，即路中线折点 16 至 17；途中东侧最近的楼是 741650450，离路中 12 m 以上。折点 8–15 之间东侧贴着三栋硕丰苑楼（217855299、217855293、217855292，离路中 4–20 m），7.5 m 的步道穿过楼身，按离墙 3 m 断开后，断口之间各段两端没有可接的步道或人行道（217855069、217855122 两个路口的走廊都在离丹桂路 12.5 m 内抬升），这几段不做。碰到楼或水时在离墙、离水 3 m 处断开；地面在 0 m，不跨台缘（丹桂路沿台脚钉在 0，北区下台西缘在此段已退到离路中 ≥14.3 m）。默认状态：树下受光、桂花树影；夜间：丹桂路二级路灯光斑下；四季：铺装接落叶、桂花与积雪",
       "geometry": {
@@ -358,8 +355,7 @@
       "kind": "road",
       "props": {
         "width": 2.5,
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "note": "设计增补：给丹桂路的休息点落脚，长椅由 WP-13 按步道自动摆（主会话 14:20 不放宽 12 m 规则、补设计步道；几何按 14:26/28 定值与候选）。丹桂路西侧桂花列（距路中 4.5 m）外侧 3 m 的人行步道，中心距路中 7.5 m、宽 2.5 m，铺装与路缘由 WP-15 画。本段约 60 m：南端接 544161582 路口的路缘，过街接对面小路；北端并入西侧已有的步行广场（relation 8376628），广场里不再另铺；途中横过服务路 596904666、217855160。碰到楼或水时在离墙、离水 3 m 处断开；地面在 0 m，不跨台缘（丹桂路沿台脚钉在 0）。默认状态：树下受光、桂花树影；夜间：丹桂路二级路灯光斑下；四季：铺装接落叶、桂花与积雪",
       "geometry": {
@@ -374,8 +370,7 @@
       "kind": "road",
       "props": {
         "width": 2.5,
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "note": "设计增补：给丹桂路的休息点落脚，长椅由 WP-13 按步道自动摆（主会话 14:20 不放宽 12 m 规则、补设计步道；几何按 14:26/28 定值与候选）。丹桂路西侧桂花列（距路中 4.5 m）外侧 3 m 的人行步道，中心距路中 7.5 m、宽 2.5 m，铺装与路缘由 WP-15 画。本段约 222 m：南端从步行广场 8376628 的边上接出，紧挨步行街 570145222；北端收在 630914106 路口的路缘；途中横过小路 552816779、服务路 723349793 与 720157624。再往北硕丰苑 27 栋离线只有 3.2 m，按离墙 3 m 断开后，断口两侧 20 m 内都没有可接的步道或人行道，所以这一段不做，北端收在路口。碰到楼或水时在离墙、离水 3 m 处断开；地面在 0 m，不跨台缘（丹桂路沿台脚钉在 0）。默认状态：树下受光、桂花树影；夜间：丹桂路二级路灯光斑下；四季：铺装接落叶、桂花与积雪",
       "geometry": {
@@ -391,8 +386,7 @@
       "props": {
         "width": 5,
         "cluster": "qsh:way:596904661",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "note": "设计增补：博翰二组团的主入口路。数据里唯一进组团的服务路 949704498 从西侧贴着 8 栋的山墙进来，进门右手就是 8 栋的墙，放不下值班室（主门的值班室在进门右手，主会话 18:26）；组团东北边 8 栋东翼与 7 栋北端之间有一道约 11 m 宽的口子，正对 6 m 校园路 217855186。入口路从 217855186 接出，向西南穿过这道口子，接到中庭里的环路 550365559，5 m 宽、约 27 m，口子里路缘离两栋楼的墙各约 2.9 m，铺装与路缘由 WP-15 画。整段在东翼 +1.5 m 下台的台面上（217855186 这一段钉在 +1.5），不跨台缘、不需走廊锚点。主门（值班室、闸机、抬杆）开在它穿围栏处，关着；西侧原路口照旧是没有值班室的车道门。默认状态：两楼之间一道受光的口子；夜间：值班室窗灯照到门前；四季：路面接季",
       "geometry": {
@@ -408,8 +402,7 @@
       "props": {
         "width": 5,
         "cluster": "qsh:way:848026371",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "note": "设计增补：留学生组团的主入口路（主会话 20:58：主门朝相邻最高等级道路，值班室在进门右手）。数据里唯一进组团的服务路 1047605193 从西北角贴着 4 栋的山墙进来，进门右手就是 4 栋的墙角，放不下值班室；组团东南角在 3 栋东翼南墙与围栏之间有约 6.5 m 的空地，正对 6 m 校园路 630914106，离丹桂路口约 21 m。入口路从 630914106 垂直接出、向内约 7 m，5 m 宽，末端离 3 栋南墙 2.5 m 以上，铺装与路缘由 WP-15 画。地面在 0 m，不在台地上。主门（值班室、闸机、抬杆）开在它穿围栏处，关着；西北原路口照旧是没有值班室的车道门。默认状态：楼脚下一道受光的口子；夜间：值班室窗灯照到门前；四季：路面接季",
       "geometry": {
@@ -425,8 +418,7 @@
       "props": {
         "width": 5,
         "cluster": "qsh:way:1061419119",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "note": "设计增补：硕丰苑十组团的入口路。数据里没有一条路进这个组团；西侧沿河的道路 544161572 正好在 30 栋和 33 栋之间的缺口外断头，入口路从它的尽端接出，向东穿过缺口进中庭，5 m 宽、约 40 m，离两栋楼 6 m 以上，铺装与路缘由 WP-15 画。地面在 0 m，不在台地上。主门（值班室、闸机、抬杆）开在它穿围栏处，关着。默认状态：楼间一道受光的口子；夜间：值班室窗灯照到门前；四季：路面接季",
       "geometry": {
@@ -442,8 +434,7 @@
       "props": {
         "width": 5,
         "cluster": "qsh:way:596904658",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "note": "设计增补：硕丰三组团的入口路。数据里没有一条路进这个组团，组团大门没处开；从西侧道路 217855182 垂直接进 9、11 栋之间的中庭，5 m 宽、约 30 m，离两栋楼都在 9.6 m 以上，铺装与路缘由 WP-15 画。整段在硕丰东翼 +1.5 m 下台的台面上（起点离台缘 3.4 m，217855182 这一段也钉在 +1.5），不跨台缘、不需走廊锚点。主门（值班室、闸机、抬杆）开在它穿围栏处，关着。默认状态：楼影里，门前一片暖光；夜间：值班室窗灯照到门前；四季：路面接季",
       "geometry": {
@@ -1179,8 +1170,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "pedestrian",
-        "walkNetwork": "main"
+        "highway": "pedestrian"
       },
       "parts": [
         {
@@ -1236,8 +1226,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -1260,8 +1249,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -1337,8 +1325,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1363,8 +1350,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1410,8 +1396,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -1434,8 +1419,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -1506,8 +1490,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1530,8 +1513,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1554,8 +1536,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1608,8 +1589,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1632,8 +1612,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1656,8 +1635,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1687,8 +1665,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1711,8 +1688,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -1788,8 +1764,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1819,8 +1794,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -1843,8 +1817,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1867,8 +1840,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -1898,8 +1870,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1922,8 +1893,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -1946,8 +1916,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1972,8 +1941,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -1996,8 +1964,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -2020,8 +1987,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -2044,8 +2010,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -2096,8 +2061,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -2178,8 +2142,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -2202,8 +2165,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -2226,8 +2188,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -2362,8 +2323,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -2386,8 +2346,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -2548,8 +2507,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -2595,8 +2553,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -2649,8 +2606,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -2703,8 +2659,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -2727,8 +2682,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -2843,8 +2797,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -2913,8 +2866,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -2960,8 +2912,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -2984,8 +2935,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -3077,8 +3027,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -3101,8 +3050,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -3132,8 +3080,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -3209,8 +3156,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "path",
-        "walkNetwork": "main"
+        "highway": "path"
       },
       "parts": [
         {
@@ -3286,8 +3232,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "pedestrian",
-        "walkNetwork": "main"
+        "highway": "pedestrian"
       },
       "parts": [
         {
@@ -3340,8 +3285,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -3364,8 +3308,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -3411,8 +3354,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -3458,8 +3400,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -3489,8 +3430,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -3513,8 +3453,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -3537,8 +3476,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -3617,8 +3555,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -3641,8 +3578,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -3767,8 +3703,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "pedestrian",
-        "walkNetwork": "main"
+        "highway": "pedestrian"
       },
       "parts": [
         {
@@ -3799,8 +3734,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -3823,8 +3757,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4005,8 +3938,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -4105,8 +4037,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -4136,8 +4067,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -4188,8 +4118,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "pedestrian",
-        "walkNetwork": "main"
+        "highway": "pedestrian"
       },
       "parts": [
         {
@@ -4326,8 +4255,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4350,8 +4278,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4374,8 +4301,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4398,8 +4324,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4422,8 +4347,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4446,8 +4370,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4470,8 +4393,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4501,8 +4423,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4525,8 +4446,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4549,8 +4469,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4573,8 +4492,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -4666,8 +4584,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -4714,8 +4631,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -4768,8 +4684,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -4838,8 +4753,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "service",
-        "walkNetwork": "main"
+        "highway": "service"
       },
       "parts": [
         {
@@ -5165,8 +5079,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -5189,8 +5102,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -5213,8 +5125,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -5237,8 +5148,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -5261,8 +5171,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -5285,8 +5194,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -5477,8 +5385,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -5501,8 +5408,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -5525,8 +5431,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -5549,8 +5454,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6023,8 +5927,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6194,8 +6097,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6325,8 +6227,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "residential",
-        "walkNetwork": "main"
+        "highway": "residential"
       },
       "parts": [
         {
@@ -6372,8 +6273,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6424,8 +6324,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6448,8 +6347,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6495,8 +6393,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6519,8 +6416,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6543,8 +6439,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6567,8 +6462,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -6675,8 +6569,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "pedestrian",
-        "walkNetwork": "main"
+        "highway": "pedestrian"
       },
       "parts": [
         {
@@ -6763,8 +6656,7 @@
       "props": {
         "kind": "road",
         "category": "unknown",
-        "highway": "footway",
-        "walkNetwork": "main"
+        "highway": "footway"
       },
       "parts": [
         {
@@ -8928,8 +8820,7 @@
         "category": "dining",
         "subcategory": "restaurant",
         "kind": "building",
-        "anchor": [329.79,9.0,-602.35],
-        "fidelity": "K1"
+        "anchor": [329.79,9.0,-602.35]
       },
       "parts": [
         {
@@ -10240,8 +10131,7 @@
           "wall": "panel.pinkSand",
           "trim": "wall.greyWhite",
           "accent": "panel.pinkSand"
-        },
-        "fidelity": "K1"
+        }
       },
       "parts": [
         {
@@ -10587,8 +10477,7 @@
         "category": "transport",
         "subcategory": "road",
         "kind": "road",
-        "anchor": [262.84,0,-333.22],
-        "walkNetwork": "main"
+        "anchor": [262.84,0,-333.22]
       },
       "parts": [
         {
@@ -10616,8 +10505,7 @@
         "category": "transport",
         "subcategory": "road",
         "kind": "road",
-        "anchor": [1.42,0,-671.98],
-        "walkNetwork": "main"
+        "anchor": [1.42,0,-671.98]
       },
       "parts": [
         {
@@ -12585,8 +12473,7 @@
           "wall": "wall.dormYellow",
           "trim": "band.ochre",
           "accent": "band.ochre"
-        },
-        "fidelity": "K1"
+        }
       },
       "parts": [
         {
@@ -12898,8 +12785,7 @@
           -52.71,
           12.6,
           -721.6
-        ],
-        "fidelity": "K1"
+        ]
       },
       "parts": [
         {

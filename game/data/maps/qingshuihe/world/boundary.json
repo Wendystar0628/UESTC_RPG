@@ -5,8 +5,7 @@
       "kind": "road",
       "props": {
         "anchor": "A05",
-        "highway": "pedestrian",
-        "walkNetwork": "main"
+        "highway": "pedestrian"
       },
       "note": "设计增补：北门内水岸小广场，给 A05 落脚（SYS-ATLAS，R4 生活区晚归的头一拍）。原锚点落在红光右支渠的水面上，30 m 内只有车道、水和非机动车道，没有人行硬面。在渠东岸、渠与东侧车道 osm:way:987943170 之间补一块 14 × 8.6 m 的硬质铺装，长边顺渠（朝约 22°），接非机动车道 osm:way:950008623 的端头：这段落在广场里的端头连同它拐向车道的一小段按人车混行处理，铺装连成一片。临水一侧一道 1.1 m 浅色栏杆，栏杆内两张长椅朝渠和北门桥；导览亭离车道边约 5.9 m、离栏杆约 3.6 m，朝 165°（朝校内）。默认状态受光、接季；夜间在导览亭牌面小灯下",
       "geometry": {
@@ -38,8 +37,7 @@
       "id": "design:boundary-north-forecourt",
       "kind": "road",
       "props": {
-        "highway": "pedestrian",
-        "walkNetwork": "main"
+        "highway": "pedestrian"
       },
       "note": "设计增补：北门门前人行区。校界在北门处折了一下：门外道路贴着校界西南侧出校，在门线与天润路之间留下约 8 × 13 m 的一块校内地，正好在闸机和值班室外侧。铺成人行硬地，接天润路人行道（外围 O0），闸机前有排队和回望校门的余地；临门外道路一侧立一排挡车桩，外侧收边由本包的闭合围栏（值班室西南角出发、到天润路转角）完成。默认状态受光、接季；夜间在值班室窗光下",
       "geometry": {
@@ -54,8 +52,7 @@
       "id": "design:boundary-north-gate-apron",
       "kind": "road",
       "props": {
-        "highway": "pedestrian",
-        "walkNetwork": "main"
+        "highway": "pedestrian"
       },
       "note": "设计增补：北门闸机内侧的一小块人行硬地。门内道路没有人行道，闸机背后原是草地；铺一块 L 形硬地，从闸机背后绕过安全岛的校内端接到门内车道边，进门的人不踩草。默认状态受光、接季；夜间在值班室窗光下",
       "geometry": {
