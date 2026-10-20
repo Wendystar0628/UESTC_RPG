@@ -5,7 +5,7 @@
      （同一张图下 *-tbin-N 只留 N 最大的）；
   3. 已删工程留下的 bin/、obj/：所在目录里已经没有 .csproj；
   4. git 已失效的工作树登记（git worktree prune）；还登记着的工作树只列出，不删。
-观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录（作者还要看）。
+观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录（作者还要看）；还在的任务单（.collab/tasks，结案即删）引用的路径不删，引用的是目录就连里面的内容。
 按提交轮次而不按时间算：不开发就没有提交，什么都不会过期。
 
 用法：
@@ -29,6 +29,7 @@ BUILD_ROOTS = ('game', 'scripts', 'pipeline')  # 找已删工程的 bin/obj
 DEPTH = 3
 COMMITS = 20
 FORMAT_DIR = re.compile(r'^(.+)-tbin-(\d+)$')
+TASK_LINK = re.compile(r'output/[\w./-]+', re.ASCII)  # 任务单里写的产物路径；只取 ASCII 段，中文名截在前缀
 START_GAME_KEEP = {os.path.join(OUT, 'start_game', name) for name in
                    ('build.succeeded', 'build.log', 'import.log')}
 
@@ -98,7 +99,7 @@ def orphan_builds():
 
 
 def linked():
-    """观察台未结的审计项与通知引用的 output/ 下文件（绝对路径）：dashboard/data/curated/*.js 是 Dash.put(名, {...}); 的本地数据。"""
+    """在用的引用指向的 output/ 下文件（绝对路径）：观察台未结的审计项与通知（dashboard/data/curated/*.js 是 Dash.put(名, {...}); 的本地数据），以及 .collab/tasks 下还在的任务单（结案即删，单子在就算在用）。"""
     out = set()
     for name in ('audit', 'notices'):
         f = os.path.join(ROOT, 'dashboard', 'data', 'curated', name + '.js')
@@ -112,6 +113,11 @@ def linked():
             link = item.get('link') or ''
             if item.get('status') != 'done' and link.startswith('output/'):
                 out.add(os.path.normpath(os.path.join(ROOT, link)))
+    tasks = os.path.join(ROOT, '.collab', 'tasks')
+    for r, _, fs in os.walk(tasks):
+        for f in (f for f in fs if f.endswith('.md')):
+            for link in TASK_LINK.findall(open(os.path.join(r, f), encoding='utf-8').read()):
+                out.add(os.path.normpath(os.path.join(ROOT, link.rstrip('./'))))
     return out
 
 
@@ -125,7 +131,7 @@ def stale(commits=COMMITS):
         if os.path.isdir(cache):
             out += aged(cache, before, 1, skip=CACHE_KEEP)
     keep = linked()
-    out = [p for p in out if not any(k == os.path.normpath(p) or k.startswith(os.path.normpath(p) + os.sep) for k in keep)]
+    out = [p for p in out if not any(k == os.path.normpath(p) or k.startswith(os.path.normpath(p) + os.sep) or os.path.normpath(p).startswith(k + os.sep) for k in keep)]
     return sorted(set(out))
 
 
