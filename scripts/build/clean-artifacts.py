@@ -5,8 +5,9 @@
      （同一张图下 *-tbin-N 只留 N 最大的）；
   3. 还登记着的工作树（如截图工作树）里的 output/：与主检出的 output/ 同一套规则（1、2 和下面的保护），工作树本身只列出，不删；
   4. build/ 下的导出产物（如 build/windows）：之后主线上已有 N 次提交的，和 output/ 一样；
-     output/.locks/build.lock 被持有（构建、导出在跑）时整个 build/ 不动；
   5. 已删工程留下的 bin/、obj/：所在目录里已经没有 .csproj；git 已失效的工作树登记（git worktree prune）。
+删除时持有构建锁（与构建、导入、门禁、预烘、截图同一把 output/.locks/build.lock），持锁后重算再删；
+锁被持有就本次一项不删，免得删到正在写的产物。只列出时不碰锁。
 保护：观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录里的其余项也不删（作者还要看）；
 还在的任务单（.collab/tasks，结案即删）引用的路径不删，引用的是目录就连里面的内容，只保被引用的这一项，
 它的祖先目录里没被引用且已过期的兄弟照常可删；施工队列里未结行对应的 output/行号目录及其后缀目录也保留（行号可去短横线）。
@@ -18,6 +19,8 @@
   python -I -X utf8 scripts/build/clean-artifacts.py --commits 10   改轮次
 产出：无（列出一次性产物；--delete 删除过期项并清理失效工作树登记）。
 """
+import contextlib
+import ctypes
 import json
 import os
 import re
@@ -25,6 +28,7 @@ import shutil
 import stat
 import subprocess
 import sys
+from ctypes import wintypes
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 OUT = os.path.join(ROOT, 'output')
@@ -181,23 +185,31 @@ def keep_set(out_root, refs):
     return {os.path.normcase(k) for k in keep}
 
 
-def build_lock_free():
-    """构建锁没被持有：锁是独占打开的 build.lock，被持有时本进程打开会共享冲突（PermissionError）。"""
-    if not os.path.exists(BUILD_LOCK):
-        return True
+@contextlib.contextmanager
+def build_lock():
+    """持有构建锁期间执行，给出是否拿到：与 scripts/lib/common.ps1 的 Enter-UESTCBuildLock 同一协议
+    （不共享地打开主检出的 output/.locks/build.lock，所有工作树共用这一把）；被持有时给出 False，不等。"""
+    os.makedirs(os.path.dirname(BUILD_LOCK), exist_ok=True)
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.CreateFileW.restype = wintypes.HANDLE
+    kernel.CreateFileW.argtypes = (wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
+                                   wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE)
+    handle = kernel.CreateFileW(BUILD_LOCK, 0xC0000000, 0, None, 4, 0x80, None)  # 读写、不共享、OPEN_ALWAYS
+    if handle == wintypes.HANDLE(-1).value:
+        error = ctypes.get_last_error()
+        if error not in (32, 33):  # 共享冲突、锁冲突以外的错照报
+            raise ctypes.WinError(error)
+        yield False
+        return
     try:
-        open(BUILD_LOCK, 'rb').close()
-        return True
-    except PermissionError:
-        return False
+        yield True
+    finally:
+        kernel.CloseHandle(handle)
 
 
 def exports(before):
-    """build/ 下之后主线上已有 N 次提交的导出产物；构建锁被持有时一项都不动。"""
+    """build/ 下之后主线上已有 N 次提交的导出产物。"""
     if before is None or not os.path.isdir(EXPORTS):
-        return []
-    if not build_lock_free():
-        print('构建锁被持有（构建或导出在跑），build/ 本次不动')
         return []
     return aged(EXPORTS, before, 1)
 
@@ -269,14 +281,21 @@ def main(argv):
     print('可删 %d 项，共 %.1f MB（output 与 build 按之后主线上已有 %d 次提交算）' % (len(items), mb, commits))
     for t in trees:
         print(('失效的工作树登记（--delete 时 prune）：' if t['prunable'] else '还登记着的工作树（确认不用了再 git worktree remove）：') + t['path'])
-    if '--delete' in argv:
+    if '--delete' not in argv:
+        return 0
+    with build_lock() as held:
+        if not held:
+            print('构建锁被持有（构建、导入、门禁、预烘或截图在跑），本次不删，等锁空了再跑')
+            return 1
+        items = stale(commits, worktrees())  # 持锁后重算：列出之后生产者写进的不会被删
         for p in items:
             remove(p)
         git('worktree', 'prune')
         for r, ds, fs in sorted(os.walk(OUT), key=lambda t: -len(t[0])):  # 删掉清空后的目录
             if r != OUT and not ds and not fs and os.path.relpath(r, OUT).split(os.sep)[0] not in KEEP:
                 os.rmdir(r)
-        print('已删')
+    print('已删 %d 项' % len(items))
+    return 0
 
 
 if __name__ == '__main__':
