@@ -17,7 +17,7 @@ gates: [G14]
 # SYS-ATLAS-UI · 地图界面
 
 > **范围**：本文规定平面地图的界面：底图的来源、内容与上色，外围、校界与箱庭外缘的画法，文字与标注，小地图，大地图的布局、缩放、图层、目录、传送卡。自定义标记与追踪在主线之后（§2 末、§3.5）。
-> **不在本文**：允许与禁止什么、多地图下的数据、存档与设置里存什么（SYS-ATLAS）；标记类型、锚点实体、传送流程与落点、解锁策略（SYS-ATLAS-TRAVEL）；界面令牌、`map.*` 色值与画面布局（UI-VISUAL）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；外围与截面线（WLD-OUTSKIRTS）；底图烘焙与着色器的实现（`pipeline/map/`、`game/hud/map/`）、服务契约（`game/contracts/Atlas/`）。
+> **不在本文**：允许与禁止什么、多地图下的数据、存档与设置里存什么（SYS-ATLAS）；标记类型、锚点实体、传送流程与落点、解锁策略（SYS-ATLAS-TRAVEL）；界面令牌、`map.*` 色值与画面布局（UI-VISUAL）；点位与"飞过去"的跳转过渡（UI-NAV-WAYPOINTS §2）；外围与截面线（WLD-OUTSKIRTS）；底图烘焙与着色器的实现（`game/gen/bakeinput/`、`game/hud/map/`）、服务契约（`game/contracts/Atlas/`）。
 > **查阅**：先读 §0；底图看 §1；小地图看 §2；大地图看 §3
 
 ## 0 结论

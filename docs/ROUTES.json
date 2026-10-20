@@ -295,12 +295,6 @@
    "docs": [
     "STD-CODE"
    ],
-   "glob": "pipeline/**/*.cs"
-  },
-  {
-   "docs": [
-    "STD-CODE"
-   ],
    "glob": "pipeline/**/*.py"
   },
   {

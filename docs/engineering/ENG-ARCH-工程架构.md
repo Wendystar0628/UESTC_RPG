@@ -54,19 +54,20 @@ paths: ["game/**/*.cs"]
 | 层 | 程序集 | 责任 |
 | --- | --- | --- |
 | 契约 | `Campus.Contracts`；`Campus.Contracts`；`Campus.Contracts.Runtime`（运行时边界契约，生成层不引用） | 数据、命令、只读状态与确定性工具；`Campus.Contracts` 只引用基础类库；`Campus.Contracts.Runtime` 可暴露引擎类型并引用 GodotSharp，但不引用 Kernel、系统层或生成实现；跨包运行时能力统一经它发布 |
-| 世界与公共几何 | `Campus.Gen`（世界、几何、部件内核等通用生成；`pipeline/map` 的 C# 也编进它，命名空间 `Campus.Pipeline.*`） | 解释冻结的地图输入（世界文件、地形、室内索引；路网由世界文件派生），提供权威查询和共享几何 |
+| 世界与公共几何 | `Campus.Gen`（世界、几何、部件内核等通用生成，以及 `Campus.Gen.BakeInput` 的冻结输入装配与底图烘焙） | 解释冻结的地图输入（世界文件、地形、室内索引；路网由世界文件派生），提供权威查询和共享几何 |
 | 内容生成 | 通用内容包在 `Campus.Gen`（建筑、地面、植被、水、碰撞、可行走、外围、声学等，及跨图共用的公共站点 `Campus.Gen.Sites`）；每张图一个 `Campus.Gen.Maps.<图>`，在 `game/gen/maps/<图>/`，各区是它下面的子目录与命名空间 `Campus.Gen.Maps.<图>.<区>` | 按格生成几何、碰撞与声明数据；纯函数，命名空间互不引用 |
 | 运行时 | 主程序集 `Campus`（kernel、stage、flow、camera、medium、systems、style、audio、hud、gates） | 装配、烘焙与流式、世界状态、表现与界面 |
 
 - 程序集与目录的对应、归属以仓库本身和 `ownership.json` 为准。程序集只按"契约 / 通用生成 / 每图一个 / 运行时"划分，包与包、层与层之间的边界靠命名空间规则（§2）；加一张图只新增 `game/gen/maps/<图>/`，不改共享清单（SYS-MAPS §6）。
-- 各包的测试放在自己目录的 `tests/`，分别编进 `Campus.Gen.Tests` 和 `Campus.Tests`；公共测试夹具放 `game/testing`，测试命名空间不作为运行时模块。
+- 各包的行为测试放在自己目录的 `tests/`，分别编进 `Campus.Gen.Tests` 和 `Campus.Tests`；测试夹具统一放 `game/testing`，共用夹具在 `Support`，只给生成或运行时宿主的夹具分别在 `Gen`、`Runtime`；测试命名空间不作为运行时模块。
+- 纯 .NET 的 `game/contracts`、`game/gen` 与 `game/testing`、运行时各 `tests` 目录用 `.gdignore` 排除 Godot 资源导入，不登记其中 C# 的 `.uid`；正式运行时资源仍由 Godot 生成并维护 `.uid`。
 - `kernel` 自底向上为 Frame/Registry、Renderer/Materials/Lod/Instances、地图与烘焙流式及状态驱动、Boot/Inspect/Save；各组内部同样按职责有序，完整顺序以 G4 的 `KernelLevel` 声明为准，低层不依赖高层，不留双向依赖或豁免。
 
 ### 生产链
 
 1. `Boot` 解析命令行并注册只读 `BootRunOptions`；`KernelStage` 是唯一的组合根，装配已注册的服务与节点。下层只消费已解析输入，不回读 Boot 实现。
 2. 地图服务加载当前图的冻结输入，发布一份世界模型。
-3. 烘焙服务按格调用内容模块的 `Build()`，产物进缓存（§4）；流式与 LOD 把格包经 `IRenderHost` 挂上。
+3. 烘焙服务按格调用内容模块的 `Build()`，产物进缓存（§4）；流式与 LOD 把格包经 `IRenderHost` 挂上。植被、动物、夜灯与碰撞经同一参与者协议交给流式导演，统一负责请求、完成发布、就绪和退休；挂载工作共用生命周期骨架，各所有者只实现本类内容的有界挂载与资源释放。
 4. 运行时系统（时间、天气、植被、水、灯、动物）读世界状态驱动表现；行走读碰撞与可行走烘焙；界面只读服务发布的展示数据。
 5. 启动、换图、读档、退出都由正式编排入口（应用流程、地图服务、存档服务）驱动，走同一条链。
 
@@ -83,7 +84,7 @@ paths: ["game/**/*.cs"]
 - **门禁与专项驱动在 `game/gates`**：`kernel/registry` 只提供服务注册与查找；`RulesetService`、`GlobalBuildInputs` 是注入的服务，不放在 registry。
 - **几何只经 `gen/geometry/GeometrySink`**：按完整顶点共享，保留材质及可选通道的边界；`VertexFlag`、`GeometryVertexLimits` 只在契约里定义，生成器不自带位置法线数组。
 - **运行时内部**：各命名空间之间只经契约和 Kernel 服务交互；界面除 GodotSharp 外只依赖契约和 `Kernel.Get<T>()`，不用其他包的内部类型。
-- **原生资源各有唯一创建方**：网格与渲染实例只由内核创建，其他包经 `IRenderHost` 申请并按包记账；`ShaderMaterial` 只由 Style 按白名单创建，其余经 `ToonSpec` 取；音频播放器与总线只由 Audio 创建；计时只出现在内核的帧、画质、巡检、存档和门禁里。这样每类资源只有一处记账与释放；逐条硬规则见 ENG-BUDGET-RULES §1。
+- **原生资源各有唯一创建方**：网格与渲染实例只由内核创建，其他包经 `IRenderHost` 申请并按挂载句柄释放；`ShaderMaterial` 只由 Style 按白名单创建，其余经 `ToonSpec` 取；音频播放器与总线只由 Audio 创建；计时只出现在内核的帧、画质、巡检、存档和门禁里。这样每类资源只有一处记账与释放；逐条硬规则见 ENG-BUDGET-RULES §1。
 - **`user://` 每个文件一个读写方**：存档只由内核存档服务读写，本机烘焙缓存只由烘焙服务读写；不用 `ResourceLoader`、`ResourceSaver`，因为 Resource 能嵌入脚本、读入即执行（ENG-BUDGET-RULES §1 第 19、23 条）。
 
 ### 确定性与禁用写法
@@ -100,7 +101,7 @@ paths: ["game/**/*.cs"]
 
 ### 自动发现与模块接入
 
-- 内核按构建时生成的程序集清单逐个加载，清单由 MSBuild 实际构建的项目引用推出、不手改，反射扫描特性，按 ID 排序注册，ID 重复报错。注册种类用 `RegistrationKind`；特性参数与默认寿命以契约源码的 `Registration` 为准，发现、桩替换、按图筛选和构造走同一实现。
+- 内核按构建时生成的程序集清单逐个加载，清单由 MSBuild 实际构建的项目引用推出、不手改，反射扫描特性，按 ID 排序注册，ID 重复报错。注册种类用 `RegistrationKind`；特性参数与默认寿命以契约源码的 `Registration` 为准，发现、桩替换、按图筛选和构造走同一实现。注册记录与反射发现能力统一放在纯契约的 `Campus.Contracts.RegistrationDiscovery`，它通过纯 .NET 元数据识别运行时声明，不引用生成层或运行时程序集。
 - **注册 ID 是运行身份**：`Owner` 只用于诊断归因，由构建期复用生产项目的源类型索引、按特性声明的文件路径查 `ownership.json` 得到，写入同一份构建代码指纹资产，发布版只读该资产；不手写。工作包号不参与运行顺序、缓存身份、实例池键或 claim 裁决，claim 指向内容模块的注册 ID。
 - 加载一张图时只选择"通用 + 当前图"的声明；对象寿命由特性的 `Lifetime` 决定，`Map` 与 `MapScope` 只决定适用地图。内容模块、室内提供者、发声器来源与烘焙生产者默认按图，部件、服务、节点、介质呈现器和存档段默认全局（SYS-MAPS §6）。
 - Autoload 只有 `Boot`；`Kernel` 是纯静态访问入口，新的全局对象一律注册成 Kernel 服务。
@@ -116,7 +117,7 @@ paths: ["game/**/*.cs"]
 - **可写与冻结**：构建阶段可写，进入共享缓存或跨线程发布时冻结；后台任务只持纯数据，主线程接收时核对地图与任务的代际。
 - **谁开谁关，按作用域整体释放**：应用、地图、格、节点与一次操作各自拥有自己的资源、订阅和异步工作；原生资源创建时就登记到所属作用域，作用域结束时整体释放，不在别处单个释放；卸图或退树时终止等待、解除订阅，迟到的结果不再发布。
 - **注册器的所有权**：注册器只拥有自己创建的实例；外部 Add 进来的实例是借用，不纳入拥有列表。按图释放只释放本图作用域；存档段的 `SaveScope` 只决定数据身份，与实例寿命无关。
-- **关闭顺序**：先关图并停止后台工作，再让节点离树（离树时仍能查已有绑定）；随后注册器按创建的逆序释放自己拥有的对象，最后清场，异步释放完成后才退出引擎。关闭期间禁止新建。
+- **关闭顺序**：注册器只有 `ShutdownAsync` 一个关闭入口：先关图并停止后台工作，再让节点离树（离树时仍能查已有绑定）；随后按创建的逆序释放自己拥有的对象，最后清场，异步释放完成后才退出引擎。关闭期间禁止新建。
 - 不另建平行的状态机或全局事件通道；服务可以拆成职责明确的内部组件。
 
 ## 3 契约
@@ -141,9 +142,9 @@ paths: ["game/**/*.cs"]
 - **判鲜**（D-229）：每个生产方（内容模块、室内提供者、烘焙生产方）声明实际用到的数据类别与地图文件或全局文件键。每格只看这些数据输入与该产物实际用到的生成代码改没改，改了只重烘这一格，没改的直接用；代码那一半由构建期生成代码指纹清单（`scripts/build/fingerprints`），在生产源码、构建输入或归属表有变时更新，运行时只读这份清单；诊断归属表独立于 CPU 代码 Roots，不参与产物输入哈希。指纹的输入范围、分组与例外以 `scripts/build/fingerprints` 为准，`Shared` 只纳实际烘焙源码和冻结输入装配，注册器、规则集与纹理上传不因同目录关系进入指纹，室内按楼判鲜，改一栋只重烘这一栋。玩家侧游戏版本一变就清缓存重烘。
 - **窗号**：窗号地址由本图 `window-numbering.json` 持久登记，新网格与扩容追加地址，退役不复用；显式预烘成功后写回登记表，正常启动只读。
 - **构建期做完，运行时只读**（D-256）：能在构建期或收口预烘里算好的不放到运行时。启动路径只读不建：双击启动不编译、不导入，现成构建对不上时才编，收口预烘时一并编好；启动到能走只起引擎与服务、核对缓存、读首视角与出生点要的格；核对只比输入标识，生成只在缓存缺失时发生；全图级的系统随格挂载，不在启动时整图挂。
-- **管线输入**：`pipeline/` 离线生成按图数据。同一台机器上用同一份已提交输入重建，输出逐字节相同；世界文件不由管线生成（D-252）；Python 依赖按 `pipeline/requirements.lock` 锁定。
-- **着色器单一来源**：共用雾函数以 `fog.gdshaderinc` 为唯一源；`scripts/build/generate-style-shaders.py` 读取调色板登记表与 C# 字面规则，生成 `fog.glslinc` 与 `style_consts.gdshaderinc`。两份 include 及其 UID 是本地构建产物，不入库；正式构建生成并登记到构建输出清单，启动复用现成结果，输入或输出不符时沿既有构建与导入链更新。
-- **导入入口**：导入只走 `game/addons/build_import` 的 EditorPlugin，命令行一律传 `--build-import`；不用 `--editor --script`；`project.godot` 只登记该插件。
+- **管线输入**：`pipeline/` 离线生成按图数据。同一台机器上用同一份已提交输入重建，输出逐字节相同；世界文件不由管线生成（D-252）；Python 依赖按 `scripts/requirements.lock`（工程脚本）与 `pipeline/audio/requirements.lock`（离线音频）锁定。
+- **着色器单一来源**：共用雾函数以 `fog.gdshaderinc` 为唯一源；`scripts/build/generate-style-shaders.py` 读取调色板登记表与 C# 字面规则，生成 `fog.glslinc` 与 `style_consts.gdshaderinc`。两份 include 及其 UID 是本地构建产物，不入库；构建时生成，启动复用现成结果。
+- **导入入口**：导入只走 `game/addons/build_import` 的 EditorPlugin，命令行一律传 `--build-import`；`project.godot` 只登记该插件。
 - **贴图与字体**：PNG 源图加 Godot 导入，贴图规则见 ENG-BUDGET-RULES §1 第 5 条；数据纹理在运行时创建；字体见 UI-VISUAL-COMPONENTS §1，音频素材见 SYS-AUDIO §8。
 - **登记与版本**：资源的许可与来源登记、版本号与构建信息、导出内容见 ENG-RELEASE；版本号只有 `version.txt` 一个来源。
 

@@ -1,6 +1,6 @@
 # 小节目录
 
-> 由 `scripts/docs/gen_index.py` 生成，不要手改。每份规范文档的每个小节一行：`编码 §号 标题 · L行号 · 字数`；★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（CORE-INDEX §1）。行号以生成时为准，原文改过以后可能差几行，以标题文字为准。
+> 由 `scripts/docs/gen-index.py` 生成，不要手改。每份规范文档的每个小节一行：`编码 §号 标题 · L行号 · 字数`；★ 标出各文档的接入要点。用法：按关键词或编码 grep 本文件，再按行号只读原文的那一段（CORE-INDEX §1）。行号以生成时为准，原文改过以后可能差几行，以标题文字为准。
 
 ## CORE-INDEX · 《电光年华》开发总纲
 
@@ -293,12 +293,12 @@
 
 ## WLD-INTERIORS-ACCESS · 室内开放
 
-`docs/world/WLD-INTERIORS-ACCESS-室内开放.md` · 5.3k 字 · 精选开放的原则与共用约定、门的开与关（含自动门的设计取向）、关着的楼、开放更多楼的做法
+`docs/world/WLD-INTERIORS-ACCESS-室内开放.md` · 5.4k 字 · 精选开放的原则与共用约定、门的开与关（含自动门的设计取向）、关着的楼、开放更多楼的做法
 关键词：楼内、开放室内、开放清单、interiors.json、开放入口、自动门、封口、门厅卡、窗卡、看进去例外
 
-- WLD-INTERIORS-ACCESS §0 结论 · L23 · 910
-  - ★ WLD-INTERIORS-ACCESS §0.1 接入要点 · L32 · 561
-- WLD-INTERIORS-ACCESS §1 开放原则与共用约定 · L41 · 894
+- WLD-INTERIORS-ACCESS §0 结论 · L23 · 950
+  - ★ WLD-INTERIORS-ACCESS §0.1 接入要点 · L32 · 548
+- WLD-INTERIORS-ACCESS §1 开放原则与共用约定 · L41 · 965
 - WLD-INTERIORS-ACCESS §2 门的区分：开与关 · L55 · 966
   - WLD-INTERIORS-ACCESS §2.1 楼里的门：走近推开，闭门器关上 · L70 · 319
 - WLD-INTERIORS-ACCESS §3 关着的楼：外壳、窗卡、门厅卡与简化室内 · L77 · 732
@@ -315,7 +315,7 @@
   - WLD-INTERIORS-BUILD §1.1 整体加载、按层显示 · L39 · 277
   - WLD-INTERIORS-BUILD §1.2 触发 · L45 · 269
   - WLD-INTERIORS-BUILD §1.3 进楼与出楼，以及衔接保证（ENG-PERF-STREAM §1.2 第 6 条） · L52 · 266
-- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 1.2k
+- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 1.3k
 - WLD-INTERIORS-BUILD §3 风格 · L69 · 1.3k
   - WLD-INTERIORS-BUILD §3.1 明暗与暖影 · L73 · 195
   - WLD-INTERIORS-BUILD §3.2 窗光斑与光（最重要的室内画面） · L77 · 395
@@ -695,9 +695,9 @@
 `docs/maps/qingshuihe/MAP-QSH-INTERIORS-开放楼室内与开放的高处.md` · 5.5k 字 · 清水河开放楼室内的总表：13 栋的开放范围、封口与观景时刻，3 处开放的高处；图书馆与博物馆见子文档
 关键词：开放楼室内、开放楼总表、开放范围要点、封口与限制、观景时刻、学知苑 4 人间、钟楼楼梯、钟室、灯笼观景环、主楼屋顶空廊、电梯关门换位、开放的屋顶与高处、屋顶危险、interiors.json
 
-- MAP-QSH-INTERIORS §0 结论 · L23 · 893
+- MAP-QSH-INTERIORS §0 结论 · L23 · 940
   - ★ MAP-QSH-INTERIORS §0.1 接入要点 · L35 · 380
-- MAP-QSH-INTERIORS §1 南区 · L41 · 876
+- MAP-QSH-INTERIORS §1 南区 · L41 · 903
 - MAP-QSH-INTERIORS §2 西区、中部与东区 · L50 · 1.0k
 - MAP-QSH-INTERIORS §3 北区 · L61 · 933
 - MAP-QSH-INTERIORS §4 开放的屋顶与高处（3 处） · L71 · 660
@@ -1134,7 +1134,7 @@
 
 ## SYS-MAPS · 多地图
 
-`docs/systems/SYS-MAPS-多地图.md` · 11.0k 字 · 按图数据与全局的划分、map.json 约定、归属、map_rect、单图规模；先卸后装的切图运行时在主线之后
+`docs/systems/SYS-MAPS-多地图.md` · 10.9k 字 · 按图数据与全局的划分、map.json 约定、归属、map_rect、单图规模；先卸后装的切图运行时在主线之后
 关键词：多地图、换图、切图、地图服务、按图数据、先卸后装、同图重载、天气按图、单图半径、本机烘焙缓存、IMapService、IMapAware、MapScope、MapDescriptor、map.json、map_rect
 
 - SYS-MAPS §0 结论 · L23 · 1.5k
@@ -1148,10 +1148,10 @@
   - SYS-MAPS §3.2 切图的步骤（切图部分主线之后） · L90 · 1.1k
   - SYS-MAPS §3.3 规则（主线之后） · L104 · 588
   - SYS-MAPS §3.4 入口 · L113 · 313
-  - SYS-MAPS §3.5 同图重载不泄漏（主线之后） · L122 · 280
+  - SYS-MAPS §3.5 同图重载不泄漏（主线之后） · L122 · 234
 - SYS-MAPS §4 世界状态：时间与季节全局，天气按图求值 · L128 · 612
 - SYS-MAPS §5 相机、行走与安全点（主线之后） · L146 · 422
-- SYS-MAPS §6 归属与 `MapScope` · L157 · 871
+- SYS-MAPS §6 归属与 `MapScope` · L157 · 869
 - SYS-MAPS §7 全局参数 `map_rect` · L165 · 700
 - SYS-MAPS §8 内存、包体与单图半径 · L175 · 296
 - SYS-MAPS §9 以后的方向 · L181 · 252
@@ -1380,7 +1380,7 @@
 
 ## SYS-WALK-BOUNDS · 可行走范围、边界与碰撞
 
-`docs/systems/SYS-WALK-BOUNDS-可行走范围、边界与碰撞.md` · 8.7k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯（含自动门运行时）、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪、导航图
+`docs/systems/SYS-WALK-BOUNDS-可行走范围、边界与碰撞.md` · 8.9k 字 · 可行走范围与禁行区、边界收口与隐形墙、楼内的门与电梯（含自动门运行时）、涉水游泳回位与安全点、行走走廊与路线、碰撞生成与就绪、导航图
 关键词：可行走范围、可行走数据、禁行区、高度场地面、边界收口、隐形墙、校界缓停、碰撞顶加高、水平外扩、安全点、回位、涉水、开放泳区、游泳、碰撞就绪、自动门、电梯关门换位、行走走廊、推荐路线、导航图、路线预览、所在空间、碰撞级 C、SurfaceTag、FootMat、WalkClass、Collider、ICollisionWorld
 
 - SYS-WALK-BOUNDS §0 结论 · L23 · 710
@@ -1391,8 +1391,8 @@
 - SYS-WALK-BOUNDS §4 水、游泳、回位与安全点 · L105 · 955
 - SYS-WALK-BOUNDS §5 行走走廊与节奏 · L130 · 188
 - SYS-WALK-BOUNDS §6 推荐路线 · L136 · 238
-- SYS-WALK-BOUNDS §7 碰撞与就绪 · L140 · 1.6k
-- SYS-WALK-BOUNDS §8 导航图 · L169 · 426
+- SYS-WALK-BOUNDS §7 碰撞与就绪 · L140 · 1.7k
+- SYS-WALK-BOUNDS §8 导航图 · L169 · 455
 
 ## SYS-WEATHER · 天气
 
@@ -1545,28 +1545,28 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 11.4k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 11.8k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L23 · 1.5k
   - ★ ENG-ARCH §0.1 接入要点 · L34 · 813
-- ENG-ARCH §1 当前架构 · L46 · 1.7k
+- ENG-ARCH §1 当前架构 · L46 · 2.0k
   - ENG-ARCH 技术栈 · L48 · 174
-  - ENG-ARCH 分层 · L52 · 1.1k
-  - ENG-ARCH 生产链 · L65 · 312
-  - ENG-ARCH 数据流 · L73 · 95
-- ENG-ARCH §2 边界与确定性 · L77 · 2.8k
-  - ENG-ARCH 依赖方向 · L79 · 1.0k
-  - ENG-ARCH 确定性与禁用写法 · L89 · 573
-  - ENG-ARCH 自动发现与模块接入 · L101 · 596
-  - ENG-ARCH 仓库脚本自成一体 · L109 · 101
-  - ENG-ARCH 生命周期与发布 · L113 · 470
-- ENG-ARCH §3 契约 · L122 · 1.2k
-- ENG-ARCH §4 资源与烘焙 · L135 · 2.0k
-- ENG-ARCH §5 未交付能力的占位边界 · L150 · 257
-- ENG-ARCH §6 架构导向 · L158 · 448
-- ENG-ARCH §7 扩展点（RPG） · L166 · 69
-- ENG-ARCH §8 待验证（P0） · L170 · 361
+  - ENG-ARCH 分层 · L52 · 1.3k
+  - ENG-ARCH 生产链 · L66 · 391
+  - ENG-ARCH 数据流 · L74 · 95
+- ENG-ARCH §2 边界与确定性 · L78 · 2.9k
+  - ENG-ARCH 依赖方向 · L80 · 1.0k
+  - ENG-ARCH 确定性与禁用写法 · L90 · 573
+  - ENG-ARCH 自动发现与模块接入 · L102 · 692
+  - ENG-ARCH 仓库脚本自成一体 · L110 · 101
+  - ENG-ARCH 生命周期与发布 · L114 · 496
+- ENG-ARCH §3 契约 · L123 · 1.2k
+- ENG-ARCH §4 资源与烘焙 · L136 · 2.0k
+- ENG-ARCH §5 未交付能力的占位边界 · L151 · 257
+- ENG-ARCH §6 架构导向 · L159 · 448
+- ENG-ARCH §7 扩展点（RPG） · L167 · 69
+- ENG-ARCH §8 待验证（P0） · L171 · 361
 
 ## ENG-BUDGET · 性能预算
 
@@ -1698,7 +1698,7 @@
 - ENG-PERF-STREAM §1 流式加载 · L35 · 1.6k
   - ENG-PERF-STREAM §1.1 本机烘焙、缓存与加载 · L37 · 523
   - ENG-PERF-STREAM §1.2 帧内请求、挂载与六条不变量 · L45 · 557
-  - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L58 · 304
+  - ENG-PERF-STREAM §1.3 碰撞级与室内包 · L58 · 364
   - ENG-PERF-STREAM §1.4 外围与目的地预取 · L62 · 177
 - ENG-PERF-STREAM §2 主线程与 C# · L66 · 315
 - ENG-PERF-STREAM §3 内存与显存 · L72 · 279
@@ -1944,7 +1944,7 @@
 
 ## STD-CONVENTIONS · 坐标单位与命名约定
 
-`docs/standards/STD-CONVENTIONS-坐标单位与命名约定.md` · 9.9k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法，编号体系与命名（地图与实体 ID、色名、枚举纪律、持久化 ID、文件与编号格式）、确定性原则、数据路径
+`docs/standards/STD-CONVENTIONS-坐标单位与命名约定.md` · 10.0k 字 · 跨文档共同约定：坐标与单位、方位角、时间写法，编号体系与命名（地图与实体 ID、色名、枚举纪律、持久化 ID、文件与编号格式）、确定性原则、数据路径
 关键词：约定、坐标系、单位、角度、方位角、时间写法、编号体系、命名、地图 ID、实体 ID、色名、枚举纪律、持久化 ID、文件命名、提交说明格式、确定性、数据路径
 
 - STD-CONVENTIONS §0 结论 · L23 · 808
@@ -1969,7 +1969,7 @@
 ## STD-DOC · 文档写法
 
 `docs/standards/STD-DOC-文档写法.md` · 10.3k 字 · 文档的分层与四级文档树、每份文档的形状（文件头、标题、范围块）、编码与引用、只写什么不写什么、体量上限、冲突层级、新增与维护
-关键词：文档写法、分层、文档树、域总纲、主题文档、子文档、信息地图、渐进式披露、核心准则、接入要点、文件头、范围块、查阅行、简题、编码、文件名、小节编号、引用写法、全局替换、只写现行规则、不写实现、一份权威、体量上限、冲突层级、规则放哪份、新增文档、登记决策、gen_index、check_docs、SECTIONS.md
+关键词：文档写法、分层、文档树、域总纲、主题文档、子文档、信息地图、渐进式披露、核心准则、接入要点、文件头、范围块、查阅行、简题、编码、文件名、小节编号、引用写法、全局替换、只写现行规则、不写实现、一份权威、体量上限、冲突层级、规则放哪份、新增文档、登记决策、gen-index、check-docs、SECTIONS.md
 
 - STD-DOC §0 结论 · L23 · 840
   - ★ STD-DOC §0.1 接入要点 · L32 · 286

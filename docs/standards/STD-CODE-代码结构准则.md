@@ -12,7 +12,7 @@ related: [CORE-INDEX, WF-RULE, ENG-GATES, ENG-BUDGET, SYS-WALK]
 contracts: []
 data: []
 gates: []
-paths: ["game/**/*.cs", "pipeline/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1"]
+paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1"]
 ---
 # STD-CODE · 代码结构准则
 

@@ -189,7 +189,7 @@ gates: [G1, G5]
 | 来信 | `notes/<claude 或 codex>/<年月日-时分秒>-<发件方>-<短词>.md`，发件方写 `claude` 或 `codex` | `20261019-024457-claude-编号统一.md` |
 | 契约申请 | `requests/contract-<队列行号>-<主题>.md` | `contract-Q-003-地形求值.md` |
 | 世界文件 | 区文件 `world/<区>.json`；原点、投影与校界 `world/geo.json` | `world/core.json` |
-| 脚本 | 按语言惯例；开头一句话作用加"用法："（STD-CODE） | `check-naming.ps1`、`clean_artifacts.py` |
+| 脚本 | `scripts/` 的 Python、PowerShell 与命令脚本文件名用小写连字符；C# 工具类型文件遵守 C# 命名。开头一句话作用加"用法："（STD-CODE） | `check-naming.ps1`、`clean-artifacts.py` |
 | 固定机位 | `<昼、夜或雨>-<点位>-<地点>` | `夜-P00-全景` |
 | 临时截图 | `output/render-review/<点位>-<模式>-<年月日>.png` | `P16-旁观-20261019.png` |
 | 临时工作树 | `E:\Project\UESTC_RPG.wt\<队列行号或用途>`（WF-RULE §13） | `Q-015b` |

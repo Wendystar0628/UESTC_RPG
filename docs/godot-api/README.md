@@ -90,7 +90,7 @@ Copy-Item "$R\GodotSharp.xml", "$R\GodotSharpEditor.xml" "$Raw\csharp\"
 dotnet run -c Release --project E:\Project\UESTC_RPG\scripts\godot-api\ApiDump -- "$R\GodotSharp.dll" "$R\GodotSharpEditor.dll" "$Raw\csharp\api.json"
 
 # 3. 生成 Markdown
-python -I E:\Project\UESTC_RPG\scripts\godot-api\gen_api_docs.py
+python -I E:\Project\UESTC_RPG\scripts\godot-api\gen-api-docs.py
 ```
 
-工具源码：`scripts/godot-api/ApiDump/`（C# 反射导出器）、`scripts/godot-api/gen_api_docs.py`（Markdown 生成器）。
+工具源码：`scripts/godot-api/ApiDump/`（C# 反射导出器）、`scripts/godot-api/gen-api-docs.py`（Markdown 生成器）。

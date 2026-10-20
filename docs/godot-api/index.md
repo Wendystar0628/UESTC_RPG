@@ -1,6 +1,6 @@
 # Godot C# API 索引（Godot Engine v4.7.2.stable.mono.official）
 
-由 `scripts/godot-api/gen_api_docs.py` 生成，不要手改。用法和命名规则见 [README](README.md)。共 1151 个顶层类型，33065 个成员签名。
+由 `scripts/godot-api/gen-api-docs.py` 生成，不要手改。用法和命名规则见 [README](README.md)。共 1151 个顶层类型，33065 个成员签名。
 
 ## 本项目常用速查
 

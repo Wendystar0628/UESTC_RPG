@@ -66,7 +66,7 @@ G7 的截图方式：
 
 ### 1.3 固定机位表与审查视角表
 
-主线只用固定机位表，即 `scripts/shots/poses.txt`，由 `fixed_shots.ps1` 一机位一进程出图、拼成缩略总览，看一眼，不做像素比对。点位取自 `waypoints.json`（UI-NAV-WAYPOINTS §1），状态以 `poses.txt` 为准；机位名格式见 STD-CONVENTIONS §3.8。
+主线只用固定机位表，即 `scripts/shots/poses.txt`，由 `fixed-shots.ps1` 一机位一进程出图、拼成缩略总览，看一眼，不做像素比对。点位取自 `waypoints.json`（UI-NAV-WAYPOINTS §1），状态以 `poses.txt` 为准；机位名格式见 STD-CONVENTIONS §3.8。
 
 **主线之后**：下面的 V、E、T 视角表。
 

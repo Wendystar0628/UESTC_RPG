@@ -82,7 +82,7 @@ INV（PRD-INVARIANTS）和作者明确禁止的事是硬约束，其余是默认
 
 **仓库目录**：
 - `game/`：Godot 工程，C# 代码、着色器、契约与按图数据。
-- `pipeline/`：音频等离线脚本；`pipeline/map` 的烘焙输入装配编进 `Campus.Gen`。
+- `pipeline/`：音频等离线脚本；参与 .NET 构建的烘焙输入装配在 `game/gen/bakeinput/`。
 - `scripts/`：构建、门禁、截图、文档索引与清理脚本。
 - `docs/`：规则与设计文档。
 - `.collab/`：协作目录（队列、来信、任务单、调研、协作工具），不进 git。
