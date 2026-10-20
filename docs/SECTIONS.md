@@ -1818,10 +1818,10 @@
 - WF-COMMS §4 来信与消息 · L108 · 1.5k
   - WF-COMMS §4.1 什么时候发 · L110 · 259
   - WF-COMMS §4.2 一条来信一个新文件（D-207） · L119 · 258
-  - WF-COMMS §4.3 三级标记与写法 · L125 · 429
-  - WF-COMMS §4.4 来信、排队消息与引导信箱 · L133 · 518
-- WF-COMMS §5 Codex 会话与引导信箱 · L146 · 268
-- WF-COMMS §6 作者观察台 · L152 · 981
+  - WF-COMMS §4.3 三级标记与写法 · L125 · 432
+  - WF-COMMS §4.4 来信与即时送达 · L133 · 523
+- WF-COMMS §5 Codex 会话与引导信箱 · L147 · 268
+- WF-COMMS §6 作者观察台 · L153 · 981
 
 ## WF-ENTRY · 角色入口卡
 
@@ -2012,12 +2012,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 11.1k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 11.4k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L23 · 127
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L27 · 54
-- REG-DECISIONS-PROCESS §1 流程 · L31 · 10.5k
+- REG-DECISIONS-PROCESS §1 流程 · L31 · 10.7k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 
