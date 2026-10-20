@@ -1269,7 +1269,7 @@
 
 ## SYS-SAVE-FORMAT · 格式、损坏处理与安全
 
-`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.2k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
+`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.3k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
 关键词：存档容器、序列化、格式号、段版本、存档损坏、设置文件、settings.json、存档安全、缩略图、ReadOnlyReason
 
 - SYS-SAVE-FORMAT §0 结论 · L23 · 626
@@ -1279,7 +1279,7 @@
   - SYS-SAVE-FORMAT §1.2 缩略图 · L50 · 152
   - SYS-SAVE-FORMAT §1.3 序列化约定 · L54 · 194
   - SYS-SAVE-FORMAT §1.4 版本 · L60 · 288
-- SYS-SAVE-FORMAT §2 存档损坏 · L67 · 372
+- SYS-SAVE-FORMAT §2 存档损坏 · L67 · 469
 - SYS-SAVE-FORMAT §3 设置文件：唯一的 `settings.json` · L80 · 662
 - SYS-SAVE-FORMAT §4 安全：为什么禁止用 Resource 和 ConfigFile 存读档 · L90 · 533
 
