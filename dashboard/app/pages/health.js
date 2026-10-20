@@ -158,6 +158,8 @@
 
   /* ================= 4 门禁 ================= */
 
+  function scopeText(g) { return g.scope == null ? '—' : Dash.label('gateScope', g.scope); }
+
   function openGate(g) {
     var names = (g.failedNames || []).slice(0, 10);
     var body;
@@ -169,7 +171,7 @@
         g.failed > names.length ? h('div.hl-foot', '共失败 ' + Dash.num(g.failed) + ' 项，这里只列前 ' + names.length + ' 个的名字') : null);
     }
     Dash.drawer({
-      title: (g.checkout || '检出') + ' · ' + (g.pkg || '—'),
+      title: (g.checkout || '检出') + ' · ' + scopeText(g),
       sub: '门禁 ' + Dash.at(g.at) + ' · 执行 ' + Dash.num(g.run) + ' 项 · 失败 ' + Dash.num(g.failed) + ' 项',
       body: body
     });
@@ -183,7 +185,7 @@
       if (!gates.length) { el.appendChild(Dash.empty('还没有门禁报告', '', true)); return; }
       el.appendChild(h('div.gt-list', gates.map(function (g) {
         return h('button.gt-row', { type: 'button', title: '看失败的测试', on: { click: function () { openGate(g); } } },
-          h('span.gt-top', h('b.gt-checkout', g.checkout || '—'), h('span.gt-pkg', g.pkg || '—'), h('span.gt-at', Dash.at(g.at))),
+          h('span.gt-top', h('b.gt-checkout', g.checkout || '—'), h('span.gt-scope', scopeText(g)), h('span.gt-at', Dash.at(g.at))),
           h('span.gt-bottom',
             h('span.gt-caps', (g.gates || []).map(function (x) {
               return Dash.mark('gate', x.ok === true ? 'pass' : x.ok === false ? 'fail' : 'skip', x.name);

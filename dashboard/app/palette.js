@@ -42,6 +42,13 @@
       warn: ['--warn', '要看'],
       bad:  ['--risk', '有问题']
     },
+    /* 门禁范围（契约 health.gates[].scope，取值见 scripts/gate.ps1） */
+    gateScope: {
+      Quick:    ['--muted', '快检'],
+      Core:     ['--muted', '核心专项'],
+      Selected: ['--muted', '指定门禁'],
+      Full:     ['--muted', '全量']
+    },
     /* 等你过目的种类（契约 attention.items[].kind） */
     kind: {
       audit:  ['--author', '观感'],

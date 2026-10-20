@@ -45,7 +45,7 @@
 .gt-row:hover, .gt-row:focus-visible { background: var(--surface-2); }
 .gt-top { display: flex; align-items: baseline; gap: var(--s3); min-width: 0; }
 .gt-checkout { flex: none; }
-.gt-pkg { flex: 1; min-width: 0; color: var(--text-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.gt-scope { flex: 1; min-width: 0; color: var(--text-2); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .gt-at { flex: none; color: var(--text-3); font-size: var(--fs-sm); }
 .gt-bottom { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s2) var(--s3); }
 .gt-caps { display: inline-flex; gap: var(--s1); }
