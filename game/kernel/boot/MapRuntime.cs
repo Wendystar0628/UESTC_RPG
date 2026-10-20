@@ -2,13 +2,15 @@ using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Maps;
-using Campus.Kernel.Bake;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
 using Godot;
-using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Boot;
+
+public sealed record MapRuntimeDependencies(ServiceRegistry Owner, IMapStreamState Stream, IBakeService Bake,
+    ICollisionWorld Collision, IRenderReadiness Renderer, IPipelinePreparation Pipelines,
+    ICameraRig Camera, ITerrainPreparation Terrain, Camera3D ViewCamera);
 
 /// <summary>Scene-side map lifetime. The map service owns transition ordering; this host owns engine nodes.</summary>
 [KernelService(typeof(IMapRuntime))]
@@ -20,7 +22,9 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     private IBakeService? _bake;
     private ICollisionWorld? _collision;
     private IRenderReadiness? _renderer;
-    private PipelineWarmup? _pipelines;
+    private IPipelinePreparation? _pipelines;
+    private ServiceRegistry? _owner;
+    private Camera3D? _viewCamera;
     private readonly CancellationTokenSource _exit = new();
     private MapId? _loaded;
     private Task? _preparing;
@@ -76,16 +80,20 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _failure = _failures.Count == 1 ? error : new AggregateException("Map runtime failed.", _failures);
     }
 
+    public void Bind(MapRuntimeDependencies dependencies)
+    {
+        ArgumentNullException.ThrowIfNull(dependencies);
+        if (IsInsideTree() || _owner is not null) throw new InvalidOperationException("Map runtime binds once before entering the tree.");
+        _owner = dependencies.Owner;
+        _stream = dependencies.Stream; _bake = dependencies.Bake; _collision = dependencies.Collision;
+        _renderer = dependencies.Renderer; _pipelines = dependencies.Pipelines; _camera = dependencies.Camera;
+        _terrain = dependencies.Terrain; _viewCamera = dependencies.ViewCamera;
+    }
+
     public override void _Ready()
     {
+        if (_owner is null) throw new InvalidOperationException("Map runtime dependencies must be bound before entering the tree.");
         ProcessPriority = FramePriority.MapRuntime;
-        _stream = KernelServices.Get<IMapStreamState>();
-        _bake = KernelServices.Get<IBakeService>();
-        _collision = KernelServices.Get<ICollisionWorld>();
-        _renderer = KernelServices.Get<IRenderReadiness>();
-        _pipelines = KernelServices.Get<PipelineWarmup>();
-        _camera = KernelServices.Get<ICameraRig>();
-        _terrain = KernelServices.Get<ITerrainPreparation>();
     }
 
     /// <summary>Stage exit only: stop producers, drain preparation and release every map-owned resource.</summary>
@@ -123,7 +131,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         foreach (var participant in _receivers.OfType<IMapDataParticipant>())
             try { await participant.UnloadAsync(from); }
             catch (Exception error) { RecordFailure(error); }
-        try { await KernelServices.Services.ReleaseMapAsync(from); }
+        try { await _owner!.ReleaseMapAsync(from); }
         catch (Exception error) { RecordFailure(error); }
         finally
         {
@@ -134,6 +142,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
     public Task Mount(IMapContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        if (_owner is null) throw new InvalidOperationException("Map runtime dependencies have not been bound.");
         if (_stopping) throw new InvalidOperationException("The map runtime is shutting down.");
         if (_loaded.HasValue || _preparing is not null)
             throw new InvalidOperationException("The map runtime mounts once at startup.");
@@ -143,7 +152,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         _contentReadiness = null;
         try
         {
-            var camera = KernelServices.Get<Camera3D>();
+            var camera = _viewCamera!;
             camera.Far = BackdropInputs.CameraFar(context.Descriptor, context.SourceInputs, StageCamera.DefaultFarClip, camera.Near);
             _loaded = context.Descriptor.Id;
             _context = context;
@@ -163,7 +172,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         try
         {
             // Snapshot by reference before callbacks; producers prepare first, then consumers see one complete map.
-            var receivers = _receivers = Instances(context.Descriptor.Id).ToArray();
+            var receivers = _receivers = _owner!.RuntimeInstances<object>(context.Descriptor.Id).ToArray();
             foreach (var participant in receivers.OfType<IMapDataParticipant>())
             {
                 await participant.Prepare(context);
@@ -171,8 +180,7 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
             }
             // Bake participants have prepared this map's build-time combination catalogue.
             // Submit it once while the caller's frontispiece/loading screen owns coverage.
-            await _pipelines!.PrepareAsync(BakePipelineCatalog.Read(),
-                TimeSpan.FromSeconds(BootTuning.StalledSeconds), _exit.Token);
+            await _pipelines!.PrepareAsync(_exit.Token);
             if (generation != _mapGeneration) return;
             foreach (var aware in receivers.OfType<IMapAware>())
             {
@@ -356,5 +364,4 @@ public partial class MapRuntime : Node, IMapRuntime, IMapLifetime
         }
     }
 
-    private static IEnumerable<object> Instances(MapId map) => KernelServices.Services.RuntimeInstances<object>(map);
 }

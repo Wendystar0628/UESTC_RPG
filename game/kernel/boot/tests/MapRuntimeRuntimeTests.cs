@@ -7,7 +7,8 @@ using Campus.Kernel.Renderer;
 using GdUnit4;
 using static GdUnit4.Assertions;
 using Godot;
-using System.Reflection;
+using Campus.Contracts.Bake;
+using Campus.Kernel.Registry;
 using N = System.Numerics;
 
 namespace Campus.Tests;
@@ -78,6 +79,7 @@ public sealed class MapRuntimeRuntimeTests
     {
         var stage = new Node();
         var runtime = new MapRuntime();
+        var viewCamera = new Camera3D();
         try
         {
             var producer = new ArrivalRenderer();
@@ -86,16 +88,20 @@ public sealed class MapRuntimeRuntimeTests
             var collision = new ArrivalCollision();
             var camera = new TestCameraRig();
             var destination = camera.Pose;
-            void Set(string name, object value) => typeof(MapRuntime).GetField(name,
-                BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(runtime, value);
-            Set("_mountPrepared", true);
-            Set("_stream", stream);
-            Set("_collision", collision);
-            Set("_renderer", producer);
-            Set("_camera", camera);
-            Set("_terrain", new FlowTerrainPreparation());
-            Set("_context", new TestMapContext(RealMapFixture.Entry().Descriptor));
-            Set("_contentReadiness", ViewContentReadiness.Capture(stage));
+            var registry = new ServiceRegistry();
+            registry.Discover([typeof(ArrivalStream)], _ => "fixture");
+            registry.Add(stream);
+            runtime.Bind(new(registry, stream, new RuntimeBake(), collision, producer,
+                new RuntimePipelines(), camera, new FlowTerrainPreparation(), viewCamera));
+            stage.AddChild(runtime);
+            ((SceneTree)Engine.GetMainLoop()).Root.AddChild(stage);
+            var mount = runtime.Mount(new TestMapContext(BackdropInputsTests.Descriptor()));
+            runtime._Process(0);
+            AssertThat(mount.IsCompleted).IsFalse();
+            stream.ResidentReady = true;
+            runtime._Process(0);
+            AssertThat(mount.IsCompletedSuccessfully && stream.Loaded).IsTrue();
+            stream.ResidentReady = false;
             var arrival = runtime.Arrive(destination, ViewMode.Walk);
             runtime._Process(0);
             AssertThat(arrival.Done.IsCompleted).IsFalse();
@@ -127,7 +133,7 @@ public sealed class MapRuntimeRuntimeTests
         {
             runtime.StopNewWork();
             stage.Free();
-            runtime.Free();
+            viewCamera.Free();
         }
     }
 
@@ -136,6 +142,8 @@ public sealed class MapRuntimeRuntimeTests
     public async Task PreparationFailureStillStopsAllProducersDrainsStreamAndAwaitsEveryDataOwner()
     {
         var runtime = new MapRuntime();
+        var stage = new Node();
+        var viewCamera = new Camera3D();
         var order = new List<string>();
         var preparation = new TaskCompletionSource();
         var stream = new DrainStream(order);
@@ -143,12 +151,19 @@ public sealed class MapRuntimeRuntimeTests
         var stopping = new InvalidOperationException("producer stop failure");
         var draining = new InvalidOperationException("stream cleanup failure");
         var releasing = new InvalidOperationException("data cleanup failure");
-        var first = new LifetimeParticipant("first", order, stopping);
-        var second = new LifetimeParticipant("second", order);
-        var map = new MapId("lifetime-fixture");
-        void Set(string name, object value) => typeof(MapRuntime).GetField(name,
-            BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(runtime, value);
-        Set("_stream", stream); Set("_preparing", preparation.Task); Set("_receivers", new object[] { first, second }); Set("_loaded", map);
+        var first = new FirstLifetimeParticipant(order, preparation.Task, stopping);
+        var second = new SecondLifetimeParticipant(order);
+        var context = new TestMapContext(BackdropInputsTests.Descriptor() with { Id = new("lifetime-fixture") });
+        var map = context.Descriptor.Id;
+        var registry = new ServiceRegistry();
+        registry.Discover([typeof(FirstLifetimeParticipant), typeof(SecondLifetimeParticipant)], _ => "fixture");
+        registry.Add(first); registry.Add(second);
+        var renderer = new ArrivalRenderer(); stage.AddChild(renderer);
+        runtime.Bind(new(registry, stream, new RuntimeBake(), new ArrivalCollision(), renderer,
+            new RuntimePipelines(), new TestCameraRig(), new FlowTerrainPreparation(), viewCamera));
+        stage.AddChild(runtime);
+        ((SceneTree)Engine.GetMainLoop()).Root.AddChild(stage);
+        var mounting = runtime.Mount(context);
         try
         {
             var shutdown = runtime.ShutdownAsync(map);
@@ -170,16 +185,17 @@ public sealed class MapRuntimeRuntimeTests
                 AssertThat(failures.Contains(original) && failures.Contains(stopping) && failures.Contains(draining) && failures.Contains(releasing)).IsTrue();
             }
             AssertThat(order.SequenceEqual(["stop-first", "stop-second", "stream", "data-first", "data-second"])).IsTrue();
-            AssertThat(typeof(MapRuntime).GetField("_loaded", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(runtime) is null).IsTrue();
+            AssertThat(stream.IsUnloaded && !mounting.IsCompletedSuccessfully && ReferenceEquals(runtime.ShutdownAsync(map), shutdown)).IsTrue();
+            try { await mounting; } catch (OperationCanceledException) { }
         }
-        finally { runtime.Free(); }
+        finally { stage.Free(); viewCamera.Free(); }
     }
 
-    private sealed class LifetimeParticipant(string name, List<string> order, Exception? stopping = null) : IMapAware, IMapDataParticipant
+    private class LifetimeParticipant(string name, List<string> order, Task preparation, Exception? stopping = null) : IMapAware, IMapDataParticipant
     {
         public TaskCompletionSource Entered { get; } = new();
         public TaskCompletionSource Completion { get; } = new();
-        public Task Prepare(IMapContext context) => Task.CompletedTask;
+        public Task Prepare(IMapContext context) => preparation;
         public void OnMapLoaded(IMapContext context) { }
         public void OnMapUnloading(MapId from)
         {
@@ -190,6 +206,27 @@ public sealed class MapRuntimeRuntimeTests
         {
             order.Add("data-" + name); Entered.SetResult(); return Completion.Task;
         }
+    }
+
+    [KernelService(typeof(FirstLifetimeParticipant), Map = "lifetime-fixture")]
+    private sealed class FirstLifetimeParticipant(List<string> order, Task preparation, Exception stopping)
+        : LifetimeParticipant("first", order, preparation, stopping) { }
+    [KernelService(typeof(SecondLifetimeParticipant), Map = "lifetime-fixture")]
+    private sealed class SecondLifetimeParticipant(List<string> order)
+        : LifetimeParticipant("second", order, Task.CompletedTask) { }
+
+    private sealed class RuntimePipelines : IPipelinePreparation
+    {
+        public Task PrepareAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+    private sealed class RuntimeBake : IBakeService
+    {
+        public IBakeHandle Ensure(BakeKey key, BakePriority priority) => throw new NotSupportedException();
+        public BakeProgress Progress => default;
+        public Exception? Failure => null;
+        public long CacheBytes => 0;
+        public void Clear() { }
+        public void ClearFailures() { }
     }
 
     private sealed class DrainStream(List<string> order) : IMapStreamState
@@ -208,9 +245,13 @@ public sealed class MapRuntimeRuntimeTests
         public Task DrainAsync() { order.Add("stream"); Entered.SetResult(); return Completion.Task; }
     }
 
-    private sealed class ArrivalStream : IMapStreamState
+    [KernelService(typeof(ArrivalStream), Map = "fixture-map")]
+    private sealed class ArrivalStream : IMapStreamState, IMapAware
     {
-        public bool IsUnloaded => false;
+        public bool Loaded { get; private set; }
+        public void OnMapLoaded(IMapContext context) => Loaded = true;
+        public void OnMapUnloading(MapId from) => Loaded = false;
+        public bool IsUnloaded => !Loaded;
         public bool ResidentReady { get; set; }
         public bool DestinationReady { get; set; }
         public Exception? Failure { get; set; }

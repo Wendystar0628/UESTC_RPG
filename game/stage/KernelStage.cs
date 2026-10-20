@@ -1,4 +1,4 @@
-using Campus.Kernel.Diagnostics;
+﻿using Campus.Kernel.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using Campus.Gates;
@@ -15,6 +15,7 @@ using Campus.Kernel.Frame;
 using Campus.Kernel.Inspect;
 using Campus.Kernel.Registry;
 using Campus.Kernel.Renderer;
+using Campus.Kernel.Stream;
 using Godot;
 using AppBoot = Campus.Kernel.Boot.Boot;
 using KernelServices = Campus.Kernel.Registry.Kernel;
@@ -61,7 +62,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         try
         {
             var registry = KernelServices.Services;
-            registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))));
+            registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))).SelectMany(assembly => assembly.GetTypes()));
             GD.Print($"Kernel registry: {registry.Entries.Count} declarations; build {BuildInfo.Build}");
             if (RegistryStageGate.TryRun(this)) return;
             if (AppBoot.Options.CpuBakeMode) { await RunBakeCommand(); return; }
@@ -78,11 +79,12 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         var view = CreateStagePresentation(registry);
         registry.InstantiateServices();
         BindHudDependencies(registry);
+        BindMapDependencies(registry, view.Camera);
         AttachGlobalNodes(registry);
         BindRuntimeServices(registry, view);
         _statistics = new(GetViewport());
         _statistics.Enable();
-        DisplayServer.WindowSetTitle("电光年华");
+        DisplayServer.WindowSetTitle("鐢靛厜骞村崕");
         GD.Print($"[WP-01][map=-][phase=compose] build={BuildInfo.Build}; global objects={registry.Created.Count}");
     }
 
@@ -138,6 +140,21 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             Saves: registry.Get<ISaveService>(),
             PaletteProbe: registry.Get<IPaletteProbe>(),
             Diagnostics: registry.Get<Campus.Contracts.Diagnostics.IDiagnosticLog>()));
+    }
+
+    private static void BindMapDependencies(ServiceRegistry registry, Camera3D viewCamera)
+    {
+        registry.Get<PipelineWarmup>().Bind(registry.Get<IToonMaterialProvider>(), registry.Get<IShaderMaterialSource>());
+        ((MapRuntime)registry.Create(typeof(MapRuntime))).Bind(new(registry,
+            registry.Get<IMapStreamState>(), registry.Get<IBakeService>(), registry.Get<ICollisionWorld>(),
+            registry.Get<IRenderReadiness>(), registry.Get<IPipelinePreparation>(), registry.Get<ICameraRig>(),
+            registry.Get<ITerrainPreparation>(), viewCamera));
+        ((StreamDirector)registry.Create(typeof(StreamDirector))).Bind(new(registry,
+            registry.Get<IBakeContextSource>(), registry.Get<IBakeService>(), registry.Get<IStreamMountQueue>(),
+            registry.Get<ICameraRig>(), registry.Get<IObserverState>(), registry.Get<IWorldState>(),
+            registry.Get<ICollisionWorld>(), registry.Get<IMapService>(), registry.Get<ITerrainPreparation>(),
+            registry.Get<IReflectionWorld>(), registry.Get<IToonMaterialProvider>(), registry.Get<IShaderMaterialSource>(),
+            viewCamera, AppBoot.Options.CaptureMode, registry.Get<IStreamGeometryPreparation>()));
     }
 
     private void AttachGlobalNodes(ServiceRegistry registry)

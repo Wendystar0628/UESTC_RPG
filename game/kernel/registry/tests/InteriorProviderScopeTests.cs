@@ -149,7 +149,7 @@ public sealed class InteriorProviderScopeTests
     {
         var registry = new ServiceRegistry();
         // The map-independent fixture declaration exercises the production box implementation across distinct test maps.
-        registry.Discover([typeof(FixtureBoxInterior).Assembly], _ => "fixture");
+        registry.Discover([typeof(FixtureBoxInterior), typeof(FixtureFactory), typeof(UnregisteredInterior)], _ => "fixture");
         return registry;
     }
 
@@ -192,7 +192,7 @@ public sealed class InteriorProviderScopeTests
     {
     }
 
-    // Deliberately lacks a registration attribute even though its assembly is discovered.
+    // Deliberately lacks a registration attribute even though its type is discovered.
     private sealed class UnregisteredInterior : BoxInteriorProvider
     {
     }

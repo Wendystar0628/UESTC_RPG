@@ -74,7 +74,7 @@ internal sealed class StreamPreparation(StreamDirector host)
                 _host.Fail(pending.Request.Tile, new InvalidDataException($"Bake returned the wrong product for {pending.Request.Key}."));
                 _pending.RemoveAt(i); continue;
             }
-            _preparing.Add(new(pending.Request.Tile, pending.Revision, RunWorker(() => PreparedTile.Create(bundle)), pending.Group!, pending.GeometryRevision));
+            _preparing.Add(new(pending.Request.Tile, pending.Revision, _host.Geometry.PrepareAsync(bundle), pending.Group!, pending.GeometryRevision));
             _pending.RemoveAt(i);
         }
     }

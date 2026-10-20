@@ -36,7 +36,7 @@ public sealed class CollisionCoreTests
         try
         {
             // Match the production discovery boundary before ReadClaims captures content instances.
-            registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))));
+            registry.Discover(BuildInfo.ModuleAssemblies.Select(name => Assembly.Load(new AssemblyName(name))).SelectMany(assembly => assembly.GetTypes()));
             // These bindings borrow the same terrain/cache session used by world loading and CPU baking.
             registry.Add(terrain);
             registry.Add<ITerrainPreparation>(terrain);

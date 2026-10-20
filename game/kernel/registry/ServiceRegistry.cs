@@ -1,4 +1,3 @@
-using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Godot;
@@ -100,12 +99,12 @@ public sealed class ServiceRegistry
         return provider;
     }
 
-    public void Discover(IEnumerable<Assembly> assemblies, Func<Type, string>? ownerOf = null)
+    public void Discover(IEnumerable<Type> types, Func<Type, string>? ownerOf = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_closing) throw new InvalidOperationException("Registry is shutting down.");
         if (_entries.Count > 0 || _created.Count > 0) throw new InvalidOperationException("Registry discovery runs once.");
-        _entries = RegistrationDiscovery.Discover(assemblies, ownerOf ?? BuildCodeIndex.Shared.Owner);
+        _entries = RegistrationDiscovery.Discover(types, ownerOf ?? BuildCodeIndex.Shared.Owner);
     }
 
     public IReadOnlyList<Registration> ForMap(string map) => RegistrationDiscovery.ForMap(_entries, map);

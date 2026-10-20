@@ -8,13 +8,13 @@ public sealed record Registration(RegistrationKind Kind, string Id, string Owner
 /// <summary>Shared declaration discovery, real-over-stub selection, ordering and constructor path for all hosts.</summary>
 public static class RegistrationDiscovery
 {
-    public static IReadOnlyList<Registration> Discover(IEnumerable<Assembly> assemblies, Func<Type, string> ownerOf)
+    public static IReadOnlyList<Registration> Discover(IEnumerable<Type> types, Func<Type, string> ownerOf)
     {
         ArgumentNullException.ThrowIfNull(ownerOf);
         var entries = new List<Registration>();
-        foreach (var type in assemblies.Distinct().OrderBy(assembly => assembly.FullName, StringComparer.Ordinal)
-            .SelectMany(assembly => assembly.GetTypes()).Where(type => type.IsClass && !type.IsAbstract && !type.ContainsGenericParameters)
-            .OrderBy(type => type.FullName, StringComparer.Ordinal))
+        foreach (var type in types.Distinct().Where(type => type.IsClass && !type.IsAbstract && !type.ContainsGenericParameters)
+            .OrderBy(type => type.FullName, StringComparer.Ordinal)
+            .ThenBy(type => type.Assembly.FullName, StringComparer.Ordinal))
         foreach (var attribute in type.GetCustomAttributes<RegistrationAttribute>(false))
         {
             var owner = ownerOf(type);

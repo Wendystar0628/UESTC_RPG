@@ -1,16 +1,31 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Frame;
+using Campus.Kernel.Bake;
+using Campus.Kernel.Boot;
 using Godot;
-using KernelServices = Campus.Kernel.Registry.Kernel;
 
 namespace Campus.Kernel.Renderer;
+
+/// <summary>The renderer owns packaged pipeline preparation; map lifetime awaits this same task.</summary>
+public interface IPipelinePreparation
+{
+    Task PrepareAsync(CancellationToken cancellationToken = default);
+}
 
 /// <summary>Instantiates the offline combinations once; the engine owns pipeline precompilation and ubershaders.</summary>
 [KernelNode("pipeline-warmup")]
 [KernelService(typeof(PipelineWarmup))]
-public sealed partial class PipelineWarmup : Node
+[KernelService(typeof(IPipelinePreparation))]
+public sealed partial class PipelineWarmup : Node, IPipelinePreparation
 {
+    private IToonMaterialProvider? _toon;
+    private IShaderMaterialSource? _shaders;
+    public void Bind(IToonMaterialProvider toon, IShaderMaterialSource shaders)
+    {
+        if (IsInsideTree() || _toon is not null) throw new InvalidOperationException("Pipeline dependencies bind once before entering the tree.");
+        _toon = toon; _shaders = shaders;
+    }
     private Font? _canvasFont;
     private Task? _preparing;
     private bool _prepared;
@@ -23,8 +38,7 @@ public sealed partial class PipelineWarmup : Node
     }
 
     /// <summary>The first mounted map submits the global packaged catalog; later maps share that completed preparation.</summary>
-    public async Task PrepareAsync(IReadOnlyList<PipelineCombination> combinations, TimeSpan timeout,
-        CancellationToken cancellationToken = default)
+    public async Task PrepareAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (_prepared) return;
@@ -33,7 +47,7 @@ public sealed partial class PipelineWarmup : Node
             await current.WaitAsync(cancellationToken);
             return;
         }
-        var preparation = PrepareCoreAsync(combinations, timeout, cancellationToken);
+        var preparation = PrepareCoreAsync(BakePipelineCatalog.Read(), TimeSpan.FromSeconds(BootTuning.StalledSeconds), cancellationToken);
         _preparing = preparation;
         try
         {
@@ -50,8 +64,8 @@ public sealed partial class PipelineWarmup : Node
         if (!IsInsideTree()) throw new InvalidOperationException("Pipeline preparation requires a mounted renderer.");
         if (OS.GetThreadCallerId() != OS.GetMainThreadId())
             throw new InvalidOperationException("Pipeline instances must be mounted on the main thread.");
-        var toon = KernelServices.Get<IToonMaterialProvider>();
-        var shaders = KernelServices.Get<IShaderMaterialSource>();
+        var toon = _toon ?? throw new InvalidOperationException("Pipeline dependencies have not been bound.");
+        var shaders = _shaders!;
         var materials = new Dictionary<(ToonKind? Kind, ShaderId? Shader), Material>();
         var owned = new List<Resource>();
         var spatial = new Node3D { Name = "PipelineInstances", Visible = false };

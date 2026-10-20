@@ -5,7 +5,6 @@ using Campus.Kernel.Collision;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Renderer;
 using Godot;
-using KernelServices = Campus.Kernel.Registry.Kernel;
 using N = System.Numerics;
 using TileGroup = Campus.Kernel.Stream.StreamResidency.TileGroup;
 using Pending = Campus.Kernel.Stream.StreamPreparation.Pending;
@@ -21,7 +20,7 @@ internal sealed class StreamParticipants(StreamDirector host)
     private Box3[] _demandNearBuffer = [];
     private readonly List<BakeKey> _retiredParticipants = [];
 
-    internal void LoadParticipants(MapId map) => _participants = KernelServices.Services.RuntimeInstances<IStreamTileParticipant>(map).ToArray();
+    internal void LoadParticipants(MapId map) => _participants = _host.Registry.RuntimeInstances<IStreamTileParticipant>(map).ToArray();
 
     private IStreamTileParticipant Participant(BakeKey key)
     {
@@ -69,8 +68,7 @@ internal sealed class StreamParticipants(StreamDirector host)
     internal void SelectParticipants(Pose pose, HashSet<StreamTile> required, bool destination, bool live,
         List<StreamRequest>? preload = null, N.Vector3? walkingCenter = null, N.Vector3? walkingDestination = null)
     {
-        var camera = _host.GetViewport().GetCamera3D()
-            ?? throw new InvalidOperationException("Stream demand requires the existing view camera.");
+        var camera = _host.ViewCamera;
         var projection = camera.GetCameraProjection();
         var transform = camera.GetCameraTransform();
         if (!live)

@@ -82,7 +82,9 @@ namespace Campus.Arch.Tests
         private static ServiceRegistry DiscoverFixtures()
         {
             var registry = new ServiceRegistry();
-            registry.Discover([typeof(ServiceRegistryTests).Assembly], _ => "fixture");
+            registry.Discover([typeof(LifetimeService), typeof(MapLifetimeService), typeof(SharedDependency),
+                typeof(TransientConsumer), typeof(FixtureBakeProducer), typeof(GlobalWeatherSection),
+                typeof(PerMapWeatherSection), typeof(Campus.Kernel.Stubs.Tests.GlobalWeatherStub)], _ => "fixture");
             return registry;
         }
 

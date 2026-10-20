@@ -148,7 +148,7 @@ public sealed class VegetationContextTests
             var assemblies = new[] { "Campus.Gen", "Campus.Gen.Maps.Qingshuihe" }
                 .Select(System.Reflection.Assembly.Load).ToArray();
             var registry = new ServiceRegistry();
-            registry.Discover(assemblies, _ => "fixture");
+            registry.Discover(assemblies.SelectMany(assembly => assembly.GetTypes()), _ => "fixture");
             var claims = MapClaimCapture.Capture(registry, id);
             return new(new MapLoadInput(entry, BuildInputSnapshot.Freeze(all, "fixture")), claims);
         }

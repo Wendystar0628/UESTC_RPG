@@ -1,15 +1,18 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
-using Campus.Contracts.Startup;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Lod;
-using Campus.Kernel.Renderer;
 using Godot;
-using KernelServices = Campus.Kernel.Registry.Kernel;
+using Campus.Kernel.Registry;
 using ParticipantTile = Campus.Kernel.Stream.StreamParticipants.ParticipantTile;
 
 namespace Campus.Kernel.Stream;
+
+public sealed record StreamDirectorDependencies(ServiceRegistry Owner, IBakeContextSource ContextSource,
+    IBakeService Bake, IStreamMountQueue Mount, ICameraRig Camera, IObserverState Observer, IWorldState World,
+    ICollisionWorld Collision, IMapService Maps, ITerrainPreparation Terrain, IReflectionWorld Reflections,
+    IToonMaterialProvider Toon, IShaderMaterialSource Shaders, Camera3D ViewCamera, bool CaptureMode, IStreamGeometryPreparation Geometry);
 
 public interface IStreamVisualFrame
 {
@@ -29,6 +32,11 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     private readonly StreamResidency _residency;
     private readonly StreamParticipants _participants;
     private readonly StreamPins _pins;
+    private ServiceRegistry? _owner;
+    private IBakeContextSource _contextSource = null!;
+    internal ServiceRegistry Registry => _owner!;
+    internal Camera3D ViewCamera { get; private set; } = null!;
+    internal IStreamGeometryPreparation Geometry { get; private set; } = null!;
     private IBakeService _bake = null!;
     private IStreamMountQueue _mount = null!;
     private ICameraRig _camera = null!;
@@ -93,37 +101,40 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     /// <summary>Packed-buffer bytes, not compressed disk bytes or measured VRAM.</summary>
     public long ResidentBytes => _residency.ResidentBytes;
 
+    public void Bind(StreamDirectorDependencies dependencies)
+    {
+        ArgumentNullException.ThrowIfNull(dependencies);
+        if (IsInsideTree() || _owner is not null) throw new InvalidOperationException("Stream dependencies bind once before entering the tree.");
+        Geometry = dependencies.Geometry;
+        _owner = dependencies.Owner; _contextSource = dependencies.ContextSource;
+        _captureMode = dependencies.CaptureMode; _bake = dependencies.Bake; _mount = dependencies.Mount;
+        _camera = dependencies.Camera; _observer = dependencies.Observer; _world = dependencies.World;
+        _collision = dependencies.Collision; _maps = dependencies.Maps; _terrain = dependencies.Terrain;
+        _reflections = dependencies.Reflections; ViewCamera = dependencies.ViewCamera;
+        _residency.InitializeMaterials(dependencies.Toon, dependencies.Shaders);
+        _interiors = new(_bake, _mount, _residency.Materials, _reflections, _residency.QueueRetirement, _captureMode, Geometry);
+    }
+
     public override void _EnterTree()
     {
+        if (_owner is null) throw new InvalidOperationException("Stream dependencies must be bound before entering the tree.");
         _exiting = false;
-        if (_world is not null) _world.InstanceChanged += OnWorldInstanceChanged;
+        _world.InstanceChanged += OnWorldInstanceChanged;
+        _maps.Arrived += _selection.OnMapArrived;
+        _reflections.Changed += _residency.OnReflectionChanged;
         OnWorldInstanceChanged(0);
     }
-    public override void _Ready()
-    {
-        ProcessPriority = FramePriority.Stream;
-        _captureMode = KernelServices.Get<BootRunOptions>().CaptureMode;
-        _bake = KernelServices.Get<IBakeService>(); _mount = KernelServices.Get<IStreamMountQueue>();
-        _camera = KernelServices.Get<ICameraRig>(); _world = KernelServices.Get<IWorldState>();
-        _observer = KernelServices.Get<IObserverState>();
-        _world.InstanceChanged += OnWorldInstanceChanged;
-        _maps = KernelServices.Get<IMapService>();
-        _terrain = KernelServices.Get<ITerrainPreparation>();
-        _maps.Arrived += _selection.OnMapArrived;
-        _collision = KernelServices.Get<ICollisionWorld>();
-        _residency.InitializeMaterials(KernelServices.Get<IToonMaterialProvider>(), KernelServices.Get<IShaderMaterialSource>());
-        _reflections = KernelServices.Get<IReflectionWorld>(); _reflections.Changed += _residency.OnReflectionChanged;
-        _interiors = new(_bake, _mount, _residency.Materials, _reflections, _residency.QueueRetirement, _captureMode);
-    }
+    public override void _Ready() => ProcessPriority = FramePriority.Stream;
     public void OnMapLoaded(IMapContext context)
     {
+        if (_owner is null) throw new InvalidOperationException("Stream dependencies have not been bound.");
         if (!IsUnloaded) throw new InvalidOperationException("Stream map must finish unloading before the next mount.");
         _mapGeneration++;
         _selection.BeginMapChange();
         _context = context; _failure = null; _failures.Clear(); _drain = null;
         _selection.Load(context); _residency.Load();
-        var contextSource = KernelServices.Get<IBakeContextSource>();
-        var firstModule = KernelServices.Services.Query<IContentModule>(RegistrationKind.Content, context.Descriptor.Id).FirstOrDefault();
+        var contextSource = _contextSource;
+        var firstModule = _owner!.Query<IContentModule>(RegistrationKind.Content, context.Descriptor.Id).FirstOrDefault();
         _interiors!.Load(context, firstModule is null ? null : contextSource.GetPreparedContext(context, firstModule.Id));
         _preparation.LoadCatalog(contextSource.GetPreparedModuleTilesAsync(context));
         _participants.LoadParticipants(context.Descriptor.Id);

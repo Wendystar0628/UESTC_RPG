@@ -15,7 +15,8 @@ public sealed class RegistryGateTests
     public void DeclarationValidationDoesNotConstructRegisteredImplementations()
     {
         var registry = new ServiceRegistry();
-        registry.Discover([typeof(ServiceRegistry).Assembly, typeof(ReplacementWorld).Assembly], _ => "fixture");
+        registry.Discover(typeof(ServiceRegistry).Assembly.GetTypes().Concat([typeof(ReplacementWorld), typeof(InteriorFactory)]),
+            _ => "fixture");
         var chosen = registry.Entries.Single(entry => entry.Kind == RegistrationKind.Service && entry.Id == typeof(IWorldModel).FullName);
         if (chosen.Type != typeof(ReplacementWorld) || chosen.IsStub) throw new InvalidOperationException("Real world replacement was not selected.");
         RegistryGateRunner.ValidateConstructorGraph(registry,

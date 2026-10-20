@@ -10,7 +10,7 @@ namespace Campus.Kernel.Stream;
 
 /// <summary>Destination/current-floor IF and adjacent IS use the same bake and mount paths as outdoor tiles.</summary>
 internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount, StreamMaterials materials,
-    IReflectionWorld reflections, Action<PreparedTile> retire, bool captureMode)
+    IReflectionWorld reflections, Action<PreparedTile> retire, bool captureMode, IStreamGeometryPreparation geometry)
 {
     private readonly Dictionary<BakeKey, Layer> _layers = [];
     private readonly List<Layer> _draining = [];
@@ -93,11 +93,7 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             {
                 Fail(layer, new InvalidDataException($"Interior bake returned the wrong product: {layer.Key}.")); continue;
             }
-            layer.Preparing = Task.Factory.StartNew(() =>
-            {
-                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
-                return PreparedTile.Create(bundle);
-            }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            layer.Preparing = geometry.PrepareAsync(bundle);
             availablePreparations--;
         }
     }

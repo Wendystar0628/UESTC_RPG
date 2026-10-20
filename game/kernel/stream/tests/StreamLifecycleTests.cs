@@ -1,206 +1,89 @@
 using Campus.Gen.Tests.Support;
-using System.Reflection;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Kernel.Bake;
+using Campus.Style.Materials;
+using Campus.Kernel.Frame;
 using Campus.Kernel.Lod;
+using Campus.Kernel.Registry;
 using Campus.Kernel.Stream;
 using GdUnit4;
 using Godot;
-
+using N = System.Numerics;
 namespace Campus.Tests;
-
 [TestSuite]
 public sealed class StreamLifecycleTests
 {
-    [TestCase, TestCategory(TestReason.Regression)]
-    [RequireGodotRuntime]
-    public void PendingDestinationCannotQueryTerrainOrInheritAppliedSelection()
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
+    public async Task PendingDestinationCannotQueryTerrainOrInheritAppliedSelection()
     {
-        var director = new StreamDirector();
-        try
-        {
-            var context = new TestMapContext(BackdropInputsTests.Descriptor(), new FakeWorld
-                { Spatial = new FlatSpatial(forbidden: "Terrain has not been prepared.") });
-            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
-            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
-            var interiors = new InteriorStream(null!, null!, null!, null!, _ => { }, false); interiors.Load(context);
-            Set(Field(director, "_preparation")!, "_catalog", catalog); Set(director, "_maps", new TestMapService()); Set(director, "_interiors", interiors);
-            Set(Field(director, "_selection")!, "_destinationConsumed", true); Set(Field(director, "_selection")!, "_destinationPlanned", true); Set(Field(director, "_selection")!, "_selectionApplied", true);
-            if (!director.DestinationReady || director.ViewReady)
-                throw new InvalidOperationException("The consumed arrival inherited readiness from an unrelated unprepared view.");
-            var target = new Pose(new(1, 2, 3), 0, 0);
-            director.Prefetch(target, ViewMode.Fly);
-            // A mount finishing for the old view must not certify this newly registered destination.
-            Set(Field(director, "_selection")!, "_selectionApplied", true);
-            if (director.Destination?.Pose != target || !director.HasPendingDestination || director.DestinationReady || director.ViewReady)
-                throw new InvalidOperationException("A pending unprepared destination inherited the previous view's readiness.");
-            var destination = director.Destination;
-            var pins = new[] { new MapStreamDestination(target, ViewMode.Walk), new MapStreamDestination(target, ViewMode.Fly) };
-            director.SetPinnedDestinations(pins);
-            pins[0] = pins[1];
-            if (director.PinnedDestinations.Count != pins.Length || director.PinnedDestinations[0].Mode != ViewMode.Walk ||
-                !ReferenceEquals(director.Destination, destination) || !director.HasPendingDestination || director.DestinationReady || director.ViewReady)
-                throw new InvalidOperationException("Pinned CPU preloads changed the active arrival or retained the caller's mutable collection.");
-            director.SetPinnedDestinations(Array.Empty<MapStreamDestination>());
-            if (director.PinnedDestinations.Count != 0 || !ReferenceEquals(director.Destination, destination))
-                throw new InvalidOperationException("Clearing CPU preloads replaced the active destination.");
-        }
-        finally { director.Free(); }
+        using var fixture = new StreamFixture();
+        await fixture.Until(() => fixture.Director.ViewReady);
+        var terrain = fixture.Terrain;
+        terrain.Prepared = false;
+        ((FakeWorld)fixture.Context.World).Spatial = new FlatSpatial(forbidden: "Terrain has not been prepared.");
+        var target = fixture.Camera.Pose with { Position = new(1, 2, 3) };
+        fixture.Director.Prefetch(target, ViewMode.Fly);
+        fixture.Tick();
+        Check(!fixture.Director.DestinationReady && !fixture.Director.ViewReady && terrain.Work.Count > 0);
+        var destination = fixture.Director.Destination;
+        var pins = new[] { new MapStreamDestination(target, ViewMode.Walk), new MapStreamDestination(target, ViewMode.Fly) };
+        fixture.Director.SetPinnedDestinations(pins); pins[0] = pins[1];
+        Check(fixture.Director.PinnedDestinations[0].Mode == ViewMode.Walk && ReferenceEquals(destination, fixture.Director.Destination));
+        fixture.Director.SetPinnedDestinations([]);
+        Check(fixture.Director.PinnedDestinations.Count == 0 && ReferenceEquals(destination, fixture.Director.Destination));
+        var drain = fixture.Unload();
+        foreach (var work in terrain.Work) work.SetResult();
+        await drain;
     }
-
-    [TestCase, TestCategory(TestReason.Regression)]
-    [RequireGodotRuntime]
-    public void CurrentViewAndArrivalRequireFineGeometryToReplaceItsCoarseAncestor()
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public async Task CurrentViewAndArrivalRequireFineGeometryToReplaceItsCoarseAncestor()
     {
-        var director = new StreamDirector();
-        try
-        {
-            var context = Context();
-            var pose = new Pose(new(64, 2, 64), 0, 0, 60);
-            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
-            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
-            Set(Field(director, "_preparation")!, "_catalog", catalog); Set(director, "_maps", new TestMapService());
-            Set(director, "_camera", new TestCameraRig(pose: pose));
-            Set(Field(director, "_selection")!, "_plannedContext", context); Set(Field(director, "_selection")!, "_plannedWorld", context.World);
-            Set(Field(director, "_selection")!, "_plannedPose", pose); Set(Field(director, "_selection")!, "_plannedLive", true); Set(Field(director, "_selection")!, "_planReady", true);
-            Set(Field(director, "_selection")!, "_selectionApplied", true); Set(Field(director, "_selection")!, "_destinationPlanned", true);
-            Set(Field(director, "_selection")!, "_destination", pose); Set(Field(director, "_selection")!, "_destinationMode", ViewMode.Fly);
-            var required = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_viewRequired")!;
-            var refined = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_refined")!;
-            var tree = new LodTree(new(new(0, 0, 0), new(128, 10, 128)), new());
-            Set(Field(director, "_selection")!, "_tree", tree);
-            tree.Select(pose.Position, 0, 1080, pose.FovDeg!.Value, LodLevel.L1, required, refined);
-            ((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRequired")!).UnionWith(required);
-            ((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRefined")!).UnionWith(refined);
-            var fine = required.Single(tile => tile.Level == LodLevel.L1);
-            var ready = required.Where(tile => tile != fine).ToHashSet();
-            var getGroup = Field(director, "_residency")!.GetType().GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!;
-            object? fineGroup = null;
-            foreach (var tile in required)
-            {
-                var group = getGroup.Invoke(Field(director, "_residency"), [tile])!;
-                group.GetType().GetField("GeometryRequested")!.SetValue(group, true);
-                group.GetType().GetField("Mounted")!.SetValue(group, ready.Contains(tile));
-                if (tile == fine) fineGroup = group;
-            }
-            var visibility = (TileVisibility)Field(Field(director, "_selection")!, "_visibility")!;
-            var visible = new HashSet<StreamTile>();
-            tree.ResolveVisible(refined, ready.Contains, visible);
-            visibility.Apply(visible, 0, false, (_, _, _) => { });
-            if (director.ViewReady || director.DestinationReady)
-                throw new InvalidOperationException("Coarse coverage certified missing selected fine geometry.");
-            fineGroup!.GetType().GetField("Mounted")!.SetValue(fineGroup, true);
-            if (director.ViewReady || director.DestinationReady)
-                throw new InvalidOperationException("Mounted fine geometry was certified while its ancestor was still presented.");
-            ready.Add(fine); tree.ResolveVisible(refined, ready.Contains, visible);
-            visibility.Apply(visible, 0, false, (_, _, _) => { });
-            if (!director.ViewReady || !director.DestinationReady)
-                throw new InvalidOperationException("Current view and formal arrival did not share complete selected-geometry readiness.");
-
-            var children = tree.Children(fine);
-            foreach (var child in children)
-            {
-                var group = getGroup.Invoke(Field(director, "_residency"), [child])!;
-                group.GetType().GetField("GeometryRequested")!.SetValue(group, true);
-                group.GetType().GetField("Mounted")!.SetValue(group, true);
-            }
-            visibility.Apply(children.Skip(1).ToHashSet(), 0, false, (_, _, _) => { });
-            if (director.ViewReady || director.DestinationReady)
-                throw new InvalidOperationException("Partial descendant coverage certified a missing part of the selected tile.");
-            visibility.Apply(children.ToHashSet(), 0, false, (_, _, _) => { });
-            if (!director.ViewReady || !director.DestinationReady)
-                throw new InvalidOperationException("Complete finer coverage failed because its selected parent was no longer drawn.");
-
-            // Both orderings share the real display frontier: current finer, then destination finer.
-            var destinationRequired = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRequired")!;
-            var destinationRefined = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRefined")!;
-            var resolve = Field(director, "_selection")!.GetType().GetMethod("ResolveVisible", BindingFlags.Instance | BindingFlags.NonPublic)!;
-            foreach (var currentFiner in new[] { true, false })
-            {
-                tree.Select(pose.Position, 0, 1080, pose.FovDeg.Value,
-                    currentFiner ? LodLevel.L0 : LodLevel.L1, required, refined);
-                tree.Select(pose.Position, 0, 1080, pose.FovDeg.Value,
-                    currentFiner ? LodLevel.L1 : LodLevel.L0, destinationRequired, destinationRefined);
-                resolve.Invoke(Field(director, "_selection"), null);
-                var displayed = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_visible")!;
-                visibility.Apply(displayed, 0, false, (_, _, _) => { });
-                if (!displayed.SetEquals(children) || !director.ViewReady || !director.DestinationReady)
-                    throw new InvalidOperationException("An active destination and current eye could not share the finer complete display frontier.");
-            }
-        }
-        finally { director.Free(); }
+        using var fixture = new StreamFixture(geometry: true);
+        fixture.Bake.Hold = key => BakeRequestKeys.Parse(key).Level is LodLevel.L0 or LodLevel.L4;
+        fixture.Director.Prefetch(fixture.Camera.Pose, ViewMode.Fly);
+        await fixture.Until(() => fixture.Bake.Waiting.Any(handle => handle.TileKey.Level == LodLevel.L0));
+        Check(!fixture.Director.ResidentReady && !fixture.Director.ViewReady && !fixture.Director.DestinationReady);
+        fixture.Bake.CompleteLevel(LodLevel.L4);
+        await fixture.Until(() => fixture.Director.ResidentReady);
+        Check(!fixture.Director.ViewReady && !fixture.Director.DestinationReady);
+        fixture.Bake.Release();
+        await fixture.Until(() => fixture.Mount.Pending > 0, mount: false);
+        Check(!fixture.Director.ViewReady && !fixture.Director.DestinationReady);
+        await fixture.Until(() => fixture.Director.ViewReady && fixture.Director.DestinationReady);
+        Check(fixture.Geometry.Prepared.Any(tile => tile.VisibleInstanceCount > 0));
+        await fixture.Unload();
     }
-
-    [TestCase]
-    [TestCategory(TestReason.Regression)]
-    [RequireGodotRuntime]
-    public void ElevatedMixedFrontierNeedsOnlyItsDrawnGeometryAndStillRejectsAHole()
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
+    public async Task ElevatedMixedFrontierNeedsOnlyItsDrawnGeometryAndStillRejectsAHole()
     {
-        var director = new StreamDirector();
-        try
+        using var fixture = new StreamFixture(geometry: true, elevated: true);
+        var tree = new LodTree(fixture.Context.Descriptor.Bounds, new());
+        var required = new HashSet<StreamTile>(); var refined = new HashSet<StreamTile>();
+        tree.Select(fixture.Camera.Pose.Position, 0, fixture.Height, fixture.Camera.Pose.FovDeg!.Value,
+            LodLevel.L0, required, refined);
+        var frontier = required.Where(tile => !refined.Contains(tile)).ToArray();
+        Check(frontier.Select(tile => tile.Level).Distinct().Count() > 1);
+        var missing = frontier.OrderBy(tile => tile.Level).First();
+        fixture.Bake.Hold = key => BakeRequestKeys.Parse(key) is var parsed && parsed.Tile == missing.Tile && parsed.Level == missing.Level;
+        fixture.Director.Prefetch(fixture.Camera.Pose, ViewMode.Fly);
+        await fixture.Until(() => fixture.Director.ResidentReady && fixture.Bake.Waiting.Count > 0);
+        Check(!fixture.Director.ViewReady && !fixture.Director.DestinationReady);
+        fixture.Bake.Release();
+        await fixture.Until(() => fixture.Director.ViewReady && fixture.Director.DestinationReady);
+        var drawn = fixture.Geometry.Prepared.Where(tile => tile.VisibleInstanceCount > 0).Select(tile => BakeRequestKeys.Parse(tile.Key).Level).Distinct();
+        Check(drawn.Count() > 1);
+        foreach (var currentFiner in new[] { true, false })
         {
-            var context = Context();
-            var pose = new Pose(new(-193, 158, 111), 0, -68, 60);
-            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
-            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
-            Set(Field(director, "_preparation")!, "_catalog", catalog); Set(director, "_maps", new TestMapService());
-            Set(director, "_camera", new TestCameraRig(pose: pose));
-            Set(Field(director, "_selection")!, "_plannedContext", context); Set(Field(director, "_selection")!, "_plannedWorld", context.World);
-            Set(Field(director, "_selection")!, "_plannedPose", pose); Set(Field(director, "_selection")!, "_plannedLive", true); Set(Field(director, "_selection")!, "_planReady", true);
-            Set(Field(director, "_selection")!, "_selectionApplied", true); Set(Field(director, "_selection")!, "_destinationPlanned", true);
-            Set(Field(director, "_selection")!, "_destination", pose); Set(Field(director, "_selection")!, "_destinationMode", ViewMode.Fly);
-            var required = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_viewRequired")!;
-            var refined = (HashSet<StreamTile>)Field(Field(director, "_selection")!, "_refined")!;
-            var tree = new LodTree(new(new(-512, 0, -512), new(512, 10, 512)), new());
-            Set(Field(director, "_selection")!, "_tree", tree);
-            tree.Select(pose.Position, 0, 1080, pose.FovDeg!.Value, LodLevel.L0, required, refined);
-            ((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRequired")!).UnionWith(required);
-            ((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_destinationRefined")!).UnionWith(refined);
-            var frontier = required.Where(tile => !refined.Contains(tile)).ToHashSet();
-            if (frontier.Select(tile => tile.Level).Distinct().Count() < 2)
-                throw new InvalidOperationException("The elevated fixture must select a mixed detail frontier.");
-            var getGroup = Field(director, "_residency")!.GetType().GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!;
-            var groups = required.ToDictionary(tile => tile, tile => getGroup.Invoke(Field(director, "_residency"), [tile])!);
-            foreach (var (tile, group) in groups)
-            {
-                group.GetType().GetField("GeometryRequested")!.SetValue(group, true);
-                group.GetType().GetField("Mounted")!.SetValue(group, tile == StreamTile.Root || frontier.Contains(tile));
-            }
-            var resolve = Field(director, "_selection")!.GetType().GetMethod("ResolveVisible", BindingFlags.Instance | BindingFlags.NonPublic)!;
-            var visibility = (TileVisibility)Field(Field(director, "_selection")!, "_visibility")!;
-            void Present()
-            {
-                resolve.Invoke(Field(director, "_selection"), null);
-                visibility.Apply((HashSet<StreamTile>)Field(Field(director, "_selection")!, "_visible")!, 0, false, (_, _, _) => { });
-            }
-            Present();
-            if (!visibility.Drawn.SetEquals(frontier) || !director.ViewReady || !director.DestinationReady)
-                throw new InvalidOperationException("Undrawn ancestors blocked complete ready mixed-detail geometry.");
-            groups[StreamTile.Root].GetType().GetField("Mounted")!.SetValue(groups[StreamTile.Root], false);
-            if (director.ViewReady || director.DestinationReady)
-                throw new InvalidOperationException("Complete finer geometry certified an unmounted resident root.");
-            groups[StreamTile.Root].GetType().GetField("Mounted")!.SetValue(groups[StreamTile.Root], true);
-            var missing = frontier.OrderBy(tile => tile.Level).First();
-            groups[missing].GetType().GetField("Mounted")!.SetValue(groups[missing], false);
-            groups[missing.Parent].GetType().GetField("Mounted")!.SetValue(groups[missing.Parent], true);
-            Present();
-            if (!visibility.Drawn.Contains(missing.Parent) || director.ViewReady || director.DestinationReady)
-                throw new InvalidOperationException("A coarser parent certified a missing selected leaf.");
-            groups[missing.Parent].GetType().GetField("Mounted")!.SetValue(groups[missing.Parent], false);
-            groups[StreamTile.Root].GetType().GetField("Mounted")!.SetValue(groups[StreamTile.Root], false);
-            Present();
-            if (visibility.Drawn.Count != 0 || director.ViewReady || director.DestinationReady)
-                throw new InvalidOperationException("An incomplete frontier was shown without complete coarser coverage.");
+            var pose = fixture.Camera.Pose;
+            fixture.Camera.SetPose(pose with { FovDeg = currentFiner ? 15 : 120 });
+            fixture.Director.Prefetch(pose with { Position = pose.Position + new N.Vector3(20, 0, 0), FovDeg = currentFiner ? 120 : 15 }, ViewMode.Fly);
+            await fixture.Until(() => fixture.Director.ViewReady && fixture.Director.DestinationReady);
         }
-        finally { director.Free(); }
+        await fixture.Unload();
     }
-
-    [TestCase]
-    [TestCategory(TestReason.Regression)]
-    [TestCategory("NativeRender")]
-    [RequireGodotRuntime]
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
     public void ResidentBackdropAppearsEvenWhenReadyChildrenSkipTheCoarseRoot()
     {
         var bounds = new Box3(System.Numerics.Vector3.Zero, System.Numerics.Vector3.One);
@@ -208,7 +91,6 @@ public sealed class StreamLifecycleTests
         var visible = new HashSet<StreamTile>();
         tree.ResolveVisible(new HashSet<StreamTile> { StreamTile.Root }, _ => true, visible);
         if (visible.Contains(StreamTile.Root)) throw new InvalidOperationException("The fixture must skip the ready coarse root.");
-
         var source = new GeometryBundle(new(new ToonSpec(new("wall.lit"), new("wall.shade"))),
             [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2]);
         var palette = Campus.Contracts.Tests.PaletteFixture.Catalog;
@@ -231,136 +113,188 @@ public sealed class StreamLifecycleTests
         }
         finally { RenderingServer.FreeRid(material); RenderingServer.FreeRid(scenario); }
     }
-
-    [TestCase]
-    [TestCategory(TestReason.Contract)]
-    [RequireGodotRuntime]
+    [TestCase, TestCategory(TestReason.Contract), RequireGodotRuntime]
     public async Task ShutdownDrainsTheCatalogAndDeliversLateFailuresWithoutPublication()
     {
         foreach (var fail in new[] { false, true })
         {
-            var director = new StreamDirector();
-            try
-            {
-                var context = Context();
-                var work = new TaskCompletionSource<ModuleTileCatalog>();
-                var original = new InvalidOperationException("Retired catalog failed.");
-                BindUnrenderedCatalog(director, context, work.Task);
-                director.OnMapUnloading(context.Descriptor.Id);
-                var draining = director.DrainAsync();
-                if (director.IsUnloaded || draining.IsCompleted)
-                    throw new InvalidOperationException("Unload abandoned its actual pending catalog.");
-                if (fail) work.SetException(original);
-                else work.SetResult(ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), [])));
-                try { await draining; if (fail) throw new InvalidOperationException("The lifetime lost its original catalog failure."); }
-                catch (Exception error) when (ReferenceEquals(error, original)) { }
-                if (!director.IsUnloaded || director.ResidentReady ||
-                    !ReferenceEquals(director.Failure, fail ? original : null) || Field(Field(director, "_preparation")!, "_catalog") is not null)
-                    throw new InvalidOperationException("A retired catalog published or its failure lost its owning lifetime.");
-                director._ExitTree();
-            }
-            finally { director.Free(); }
+            var work = new TaskCompletionSource<PreparedBakeTiles>();
+            using var fixture = new StreamFixture(catalog: work.Task);
+            var original = new InvalidOperationException("Retired catalog failed.");
+            var draining = fixture.Unload();
+            Check(!draining.IsCompleted && !fixture.Director.IsUnloaded);
+            if (fail) work.SetException(original); else work.SetResult(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
+            try { await draining; Check(!fail); } catch (Exception error) when (ReferenceEquals(error, original)) { }
+            Check(fixture.Director.IsUnloaded && !fixture.Director.ResidentReady && ReferenceEquals(fixture.Director.Failure, fail ? original : null));
         }
     }
-
-    [TestCase, TestCategory(TestReason.Regression)]
-    [RequireGodotRuntime]
+    [TestCase, TestCategory(TestReason.Regression), RequireGodotRuntime]
     public async Task CancelledSelectionAndPinsRetainTheirTasksAndLateFailuresUntilDrain()
     {
-        var director = new StreamDirector();
-        try
-        {
-            var context = Context();
-            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
-            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
-            var terrain = new PendingTerrain();
-            Set(director, "_terrain", terrain);
-            var selection = Field(director, "_selection")!;
-            var pose = new Pose(new(1, 2, 3), 0, 0);
-            selection.GetType().GetMethod("PreparePlanningTerrain", BindingFlags.NonPublic | BindingFlags.Instance)!
-                .Invoke(selection, [pose, true]);
-            director.SetPinnedDestinations([new(pose, ViewMode.Fly)]);
-            var pins = Field(director, "_pins")!;
-            pins.GetType().GetMethod("PollPinnedPreparation", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(pins, null);
-            director.OnMapUnloading(context.Descriptor.Id);
-            var draining = director.DrainAsync();
-            if (terrain.Work.Count != 2 || draining.IsCompleted || director.IsUnloaded || terrain.Tokens.Any(token => !token.IsCancellationRequested))
-                throw new InvalidOperationException("Cancelled planning or pins lost their actual worker lifetime.");
-            var planning = new InvalidDataException("late planning failure");
-            var pinned = new InvalidDataException("late pin failure");
-            terrain.Work[0].SetException(planning); terrain.Work[1].SetException(pinned);
-            try { await draining; throw new InvalidOperationException("Late terrain faults were not delivered."); }
-            catch (AggregateException error)
-            {
-                var failures = error.Flatten().InnerExceptions;
-                if (failures.Count != 2 || !failures.Contains(planning) || !failures.Contains(pinned)) throw;
-            }
-            if (!director.IsUnloaded || director.ResidentReady) throw new InvalidOperationException("Drained terrain republished the retired map.");
-            director._ExitTree();
-        }
-        finally { director.Free(); }
+        using var fixture = new StreamFixture();
+        await fixture.Until(() => fixture.Director.ViewReady);
+        fixture.Terrain.Prepared = false;
+        ((FakeWorld)fixture.Context.World).Spatial = new FlatSpatial(forbidden: "Terrain has not been prepared.");
+        fixture.Director.Prefetch(fixture.Camera.Pose, ViewMode.Fly);
+        fixture.Director.SetPinnedDestinations([new(fixture.Camera.Pose, ViewMode.Fly)]);
+        fixture.Tick();
+        var draining = fixture.Unload();
+        Check(fixture.Terrain.Work.Count == 2 && !draining.IsCompleted && !fixture.Director.IsUnloaded && fixture.Terrain.Tokens.All(token => token.IsCancellationRequested));
+        var planning = new InvalidDataException("late planning failure"); var pinned = new InvalidDataException("late pin failure");
+        fixture.Terrain.Work[0].SetException(planning); fixture.Terrain.Work[1].SetException(pinned);
+        try { await draining; throw new InvalidOperationException("Late terrain faults were lost."); }
+        catch (AggregateException error) { Check(error.Flatten().InnerExceptions.Contains(planning) && error.Flatten().InnerExceptions.Contains(pinned)); }
+        Check(fixture.Director.IsUnloaded && !fixture.Director.ResidentReady);
     }
-
-    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender")]
-    [RequireGodotRuntime]
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("NativeRender"), RequireGodotRuntime]
     public async Task ShutdownAwaitsLateNativePreparationAndReleasesItsActualOwner()
     {
-        var director = new StreamDirector();
-        PreparedTile? prepared = null;
-        try
-        {
-            var context = Context();
-            var catalog = ModuleTileCatalog.Build(new(new Dictionary<string, IReadOnlyList<TileKey>>(), []));
-            BindUnrenderedCatalog(director, context, Task.FromResult(catalog));
-            var preparation = Field(director, "_preparation")!;
-            var residency = Field(director, "_residency")!;
-            var group = residency.GetType().GetMethod("GetGroup", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(residency, [StreamTile.Root])!;
-            var work = new TaskCompletionSource<PreparedTile>();
-            var pendingType = preparation.GetType().GetNestedType("Preparing", BindingFlags.NonPublic)!;
-            var pending = pendingType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                .Single(constructor => constructor.GetParameters().Length == 5).Invoke([StreamTile.Root, 1L, work.Task, group, 0L]);
-            ((System.Collections.IList)Field(preparation, "_preparing")!).Add(pending);
-            director.OnMapUnloading(context.Descriptor.Id);
-            var draining = director.DrainAsync();
-            if (draining.IsCompleted || director.IsUnloaded) throw new InvalidOperationException("Native preparation outlived its stream drain.");
-            var bounds = new Box3(System.Numerics.Vector3.Zero, System.Numerics.Vector3.One);
-            var source = new GeometryBundle(new(new ToonSpec(new("wall.lit"), new("wall.shade"))),
-                [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2]);
-            var bundle = new TileBundle(new(context.Descriptor.Id, "fixture.native", "L4/0/0"), StreamTile.Root.Tile, LodLevel.L4, bounds,
-                [BakeSurfacePacker.Pack(source, bounds, Campus.Contracts.Tests.PaletteFixture.Catalog)]);
-            prepared = PreparedTile.Create(bundle);
-            if (prepared.Draws.Count == 0) throw new InvalidOperationException("Native fixture created no actual mesh resource.");
-            work.SetResult(prepared);
-            await draining;
-            if (!prepared.IsDisposed || !director.IsUnloaded) throw new InvalidOperationException("Late native preparation was not released by the owning drain.");
-            director._ExitTree();
-        }
-        finally { prepared?.Dispose(); director.Free(); }
+        using var fixture = new StreamFixture(geometry: true);
+        fixture.Geometry.Hold = true;
+        await fixture.Until(() => fixture.Geometry.Waiting.Count > 0);
+        var draining = fixture.Unload();
+        Check(!draining.IsCompleted && !fixture.Director.IsUnloaded);
+        fixture.Geometry.Release();
+        await draining;
+        Check(fixture.Geometry.Prepared.Count > 0 && fixture.Geometry.Prepared.All(tile => tile.IsDisposed) && fixture.Director.IsUnloaded);
     }
-
-    private sealed class PendingTerrain : ITerrainPreparation
+    private static void Check(bool condition) { if (!condition) throw new InvalidOperationException("Stream lifecycle contract failed."); }
+    private sealed class StreamFixture : IDisposable
     {
+        private readonly Node3D _stage = new();
+        private readonly Camera3D _view = new() { Current = true };
+        private readonly ShaderMaterial _material = new ShaderMaterialSource().Create(ShaderId.VegTrunk);
+        public StreamDirector Director { get; } = new();
+        public TestCameraRig Camera { get; }
+        public TestMapContext Context { get; }
+        public ControlledTerrain Terrain { get; } = new();
+        public StreamBake Bake { get; }
+        public ControlledGeometry Geometry { get; } = new();
+        public StreamMountQueue Mount { get; } = new(() => 0);
+        public float Height => Director.GetViewport().GetVisibleRect().Size.Y * Director.GetViewport().Scaling3DScale;
+        public StreamFixture(bool geometry = false, bool elevated = false, Task<PreparedBakeTiles>? catalog = null)
+        {
+            var bounds = elevated ? new Box3(new(-512, 0, -512), new(512, 10, 512)) : new Box3(N.Vector3.Zero, new(128, 10, 128));
+            var map = BackdropInputsTests.Descriptor() with { Id = new("stream-fixture"), Bounds = bounds, TileMin = new((int)bounds.Min.X / TileGrid.BaseEdge, (int)bounds.Min.Z / TileGrid.BaseEdge),
+                TileMax = new((int)bounds.Max.X / TileGrid.BaseEdge - 1, (int)bounds.Max.Z / TileGrid.BaseEdge - 1) };
+            Context = new(map, new FakeWorld { Boundary = new([]) });
+            Camera = new(pose: elevated ? new Pose(new(-193, 158, 111), 0, -68, 60) : new Pose(new(64, 2, 64), 0, 0, 60));
+            Bake = new(bounds);
+            var modules = new Dictionary<string, IReadOnlyList<TileKey>>();
+            if (geometry)
+            {
+                var tiles = new List<TileKey>();
+                for (var x = map.TileMin.X; x <= map.TileMax.X; x++) for (var z = map.TileMin.Z; z <= map.TileMax.Z; z++) tiles.Add(new(x, z));
+                modules.Add("fixture.geometry", tiles);
+            }
+            var registry = new ServiceRegistry(); registry.Discover([typeof(FixtureCollisionParticipant)], _ => "fixture");
+            registry.Add(new FixtureCollisionParticipant());
+            var flow = new FlowTestRig();
+            Director.Bind(new(registry, new CatalogSource(catalog ?? Task.FromResult(new PreparedBakeTiles(modules, []))), Bake, Mount,
+                Camera, new Observer(Camera), flow.World, new Collision(), new TestMapService(), Terrain, new Reflection(),
+                new Materials(_material), new Materials(_material), _view, true, Geometry));
+            _stage.AddChild(_view); _stage.AddChild(Director);
+            ((SceneTree)Engine.GetMainLoop()).Root.AddChild(_stage);
+            Director.SetProcess(false); Director.OnMapLoaded(Context);
+        }
+        public void Tick(bool mount = true)
+        {
+            Director._Process(.1);
+            if (mount) Mount.Drain(true, Director.FinishMountFrame, Director.ReleaseRetired, () => Director.CanActivateVisual);
+            else Director.FinishMountFrame(100);
+            if (Director.Failure is { } failure) throw failure;
+        }
+        public async Task Until(Func<bool> ready, bool mount = true)
+        {
+            for (var frame = 0; frame < TestSamples.FrameLoop; frame++)
+            { Tick(mount); if (ready()) return; await FrameAwaiter.ProcessAsync(Director); }
+            throw new TimeoutException("Stream fixture did not reach its public lifecycle condition.");
+        }
+        public Task Unload() { Director.OnMapUnloading(Context.Descriptor.Id); return Director.DrainAsync(); }
+        public void Dispose() { _stage.Free(); _material.Dispose(); }
+    }
+    private sealed class CatalogSource(Task<PreparedBakeTiles> catalog) : IBakeContextSource
+    {
+        public Task<PreparedBakeTiles> GetPreparedModuleTilesAsync(IMapContext context) => catalog;
+        public BuildContext GetPreparedContext(IMapContext context, string moduleId) => throw new NotSupportedException();
+    }
+    private sealed class ControlledTerrain : ITerrainPreparation
+    {
+        public bool Prepared { get; set; } = true;
         public List<TaskCompletionSource> Work { get; } = [];
         public List<CancellationToken> Tokens { get; } = [];
-        public bool IsPrepared(IWorldModel world, System.Numerics.Vector2 point) => false;
-        public Task PreparePoints(IMapContext context, string product, IReadOnlyList<System.Numerics.Vector2> points, CancellationToken cancellation = default)
-        {
-            var work = new TaskCompletionSource(); Work.Add(work); Tokens.Add(cancellation); return work.Task;
-        }
-        public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => throw new NotSupportedException();
+        public bool IsPrepared(IWorldModel world, N.Vector2 point) => Prepared;
+        public Task PreparePoints(IMapContext context, string product, IReadOnlyList<N.Vector2> points, CancellationToken cancellation = default)
+        { if (Prepared) return Task.CompletedTask; var work = new TaskCompletionSource(); Work.Add(work); Tokens.Add(cancellation); return work.Task; }
+        public Task PrepareRegion(IMapContext context, MapRect region, CancellationToken cancellation = default) => Task.CompletedTask;
     }
-
-    private static void BindUnrenderedCatalog(StreamDirector director, IMapContext context, Task<ModuleTileCatalog> task)
+    private sealed class StreamBake(Box3 bounds) : IBakeService
     {
-        // Drive the actual node's CPU lifecycle without constructing a renderer, scene or parallel resident.
-        Set(director, "_context", context); Set(director, "_mapGeneration", 1L); Set(Field(director, "_preparation")!, "_catalogGeneration", 1L);
-        Set(Field(director, "_preparation")!, "_catalogTask", task); Set(director, "_mount", new StreamMountQueue(() => 0));
-        Set(Field(director, "_selection")!, "_visibility", new TileVisibility(.25f)); Set(Field(director, "_residency")!, "_materials", new StreamMaterials(null!, null!));
+        private readonly Dictionary<BakeKey, Handle> _handles = [];
+        public Func<BakeKey, bool> Hold { get; set; } = _ => false;
+        public IReadOnlyList<Handle> Waiting => _handles.Values.Where(handle => !handle.Done.IsCompleted).ToArray();
+        public IBakeHandle Ensure(BakeKey key, BakePriority priority)
+        { if (_handles.TryGetValue(key, out var value)) return value; var handle = new Handle(Bundle(key, bounds)); _handles.Add(key, handle); if (!Hold(key)) handle.Complete(); return handle; }
+        public void CompleteLevel(LodLevel level) { foreach (var handle in Waiting.Where(handle => handle.TileKey.Level == level)) handle.Complete(); }
+        public void Release() { Hold = _ => false; foreach (var handle in Waiting) handle.Complete(); }
+        public BakeProgress Progress => default;
+        public Exception? Failure => null;
+        public long CacheBytes => 0;
+        public void Clear() => _handles.Clear();
+        public void ClearFailures() { }
     }
-    private static object? Field(object target, string name) =>
-        target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(target);
-    private static void Set(object target, string name, object value) =>
-        target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(target, value);
-    private static IMapContext Context() => new TestMapContext(BackdropInputsTests.Descriptor(), new FakeWorld { Boundary = new([]) },
-        BuildInputSnapshot.Freeze(new Dictionary<string, ReadOnlyMemory<byte>>(), "fixture"), "res://fixture/");
+    private sealed class Handle(TileBundle tile) : IBakeHandle
+    {
+        private readonly TaskCompletionSource _done = new();
+        public (TileKey Tile, LodLevel Level, bool Collision) TileKey => BakeRequestKeys.Parse(tile.Key);
+        public BakeState State => Done.IsCompleted ? BakeState.Ready : BakeState.Pending;
+        public object? Product => Done.IsCompleted ? tile : null;
+        public TileBundle? Tile => Product as TileBundle;
+        public Exception? Failure => null;
+        public Task Done => _done.Task;
+        public void Complete() => _done.TrySetResult();
+    }
+    private sealed class ControlledGeometry : IStreamGeometryPreparation
+    {
+        public bool Hold { get; set; }
+        public List<(TileBundle Bundle, TaskCompletionSource<PreparedTile> Done)> Waiting { get; } = [];
+        public List<PreparedTile> Prepared { get; } = [];
+        public Task<PreparedTile> PrepareAsync(TileBundle bundle)
+        { if (Hold) { var done = new TaskCompletionSource<PreparedTile>(); Waiting.Add((bundle, done)); return done.Task; } var tile = PreparedTile.Create(bundle); Prepared.Add(tile); return Task.FromResult(tile); }
+        public void Release() { Hold = false; foreach (var (bundle, done) in Waiting) { var tile = PreparedTile.Create(bundle); Prepared.Add(tile); done.SetResult(tile); } Waiting.Clear(); }
+    }
+    private static TileBundle Bundle(BakeKey key, Box3 bounds)
+    {
+        var parsed = BakeRequestKeys.Parse(key);
+        var source = new GeometryBundle(new(new ToonSpec(new("wall.lit"), new("wall.shade"))),
+            [0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 1, 0], [0, 1, 2]);
+        return new(key, parsed.Tile, parsed.Level, bounds, [BakeSurfacePacker.Pack(source, bounds, Campus.Contracts.Tests.PaletteFixture.Catalog)]);
+    }
+    [KernelService(typeof(FixtureCollisionParticipant), Map = "stream-fixture")]
+    private sealed class FixtureCollisionParticipant : IStreamTileParticipant
+    {
+        public StreamMountKind Kind => StreamMountKind.Collision;
+        public bool CanMount(BakeKey key) => BakeRequestKeys.Parse(key).Collision;
+        public StreamTileNeed Demand(in BakeTileEntry entry, in StreamDemandView view, bool resident) => StreamTileNeed.None;
+        public IStreamMountWork CreateMount(BakeKey key, object product, BakePriority priority, long revision) => throw new NotSupportedException();
+        public bool IsReady(BakeKey key) => true; public void Unmount(BakeKey key) { }
+        public string? Error => null;
+    }
+    private sealed class Observer(TestCameraRig camera) : IObserverState { public N.Vector3 Feet => camera.Pose.Position; public N.Vector3 Eye => Feet; public float YawDeg => camera.Pose.YawDeg; public NavSpace? Space => null; public ViewMode Mode => ViewMode.Fly; }
+    private sealed class Collision : ICollisionWorld
+    {
+        public string? Error => null;
+        public bool Ready(N.Vector3 point, float radius) => true;
+        public SweepHit? Sweep(N.Vector3 from, N.Vector3 to, float radius, float height) => null;
+        public SupportHit? SupportY(float x, float z, float yHint) => null;
+        public SweepHit? SupportRay(N.Vector3 from, N.Vector3 to) => null;
+        public int NearbyBoundaries(N.Vector3 feet, float radius, float height, Span<BoundaryHit> hits) => 0;
+    }
+    private sealed class Materials(Material material) : IToonMaterialProvider, IShaderMaterialSource { public Material Get(ToonSpec spec) => material; public Material CreatePipelineMaterial(ToonKind kind) => throw new NotSupportedException(); public ShaderMaterial Create(ShaderId shader) => throw new NotSupportedException(); }
+    private sealed class Reflection : IReflectionWorld
+    {
+        public Rid Scenario => default; public Material ProxyMaterial => throw new NotSupportedException();
+        public event Action? Changed { add { } remove { } }
+        public bool TryGetDemand(in StreamDemandView source, out StreamDemandView reflected) { reflected = default; return false; }
+    }
 }
