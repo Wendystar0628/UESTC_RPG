@@ -1,8 +1,6 @@
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Kernel.Frame;
-using Campus.Kernel.Bake;
-using Campus.Kernel.Boot;
 using Godot;
 
 namespace Campus.Kernel.Renderer;
@@ -21,10 +19,13 @@ public sealed partial class PipelineWarmup : Node, IPipelinePreparation
 {
     private IToonMaterialProvider? _toon;
     private IShaderMaterialSource? _shaders;
-    public void Bind(IToonMaterialProvider toon, IShaderMaterialSource shaders)
+    private Func<IReadOnlyList<PipelineCombination>>? _readCombinations;
+    private TimeSpan _timeout;
+    public void Bind(IToonMaterialProvider toon, IShaderMaterialSource shaders,
+        Func<IReadOnlyList<PipelineCombination>> readCombinations, TimeSpan timeout)
     {
         if (IsInsideTree() || _toon is not null) throw new InvalidOperationException("Pipeline dependencies bind once before entering the tree.");
-        _toon = toon; _shaders = shaders;
+        _toon = toon; _shaders = shaders; _readCombinations = readCombinations; _timeout = timeout;
     }
     private Font? _canvasFont;
     private Task? _preparing;
@@ -47,7 +48,8 @@ public sealed partial class PipelineWarmup : Node, IPipelinePreparation
             await current.WaitAsync(cancellationToken);
             return;
         }
-        var preparation = PrepareCoreAsync(BakePipelineCatalog.Read(), TimeSpan.FromSeconds(BootTuning.StalledSeconds), cancellationToken);
+        var readCombinations = _readCombinations ?? throw new InvalidOperationException("Pipeline dependencies have not been bound.");
+        var preparation = PrepareCoreAsync(readCombinations(), _timeout, cancellationToken);
         _preparing = preparation;
         try
         {

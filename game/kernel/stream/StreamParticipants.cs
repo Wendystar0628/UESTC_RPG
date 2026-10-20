@@ -4,6 +4,7 @@ using Campus.Kernel.Bake;
 using Campus.Kernel.Collision;
 using Campus.Kernel.Lod;
 using Campus.Kernel.Renderer;
+using Campus.Kernel.Registry;
 using Godot;
 using N = System.Numerics;
 using TileGroup = Campus.Kernel.Stream.StreamResidency.TileGroup;
@@ -11,16 +12,18 @@ using Pending = Campus.Kernel.Stream.StreamPreparation.Pending;
 
 namespace Campus.Kernel.Stream;
 
-internal sealed class StreamParticipants(StreamDirector host)
+internal sealed class StreamParticipants(StreamDirector host, ServiceRegistry registry, Camera3D viewCamera)
 {
     private readonly StreamDirector _host = host;
+    private readonly ServiceRegistry _registry = registry;
+    private readonly Camera3D _viewCamera = viewCamera;
     private IStreamTileParticipant[] _participants = [];
     private ParticipantEntry[] _participantEntries = [];
     private readonly N.Plane[] _demandFrustum = new N.Plane[6];
     private Box3[] _demandNearBuffer = [];
     private readonly List<BakeKey> _retiredParticipants = [];
 
-    internal void LoadParticipants(MapId map) => _participants = _host.Registry.RuntimeInstances<IStreamTileParticipant>(map).ToArray();
+    internal void LoadParticipants(MapId map) => _participants = _registry.RuntimeInstances<IStreamTileParticipant>(map).ToArray();
 
     private IStreamTileParticipant Participant(BakeKey key)
     {
@@ -68,7 +71,7 @@ internal sealed class StreamParticipants(StreamDirector host)
     internal void SelectParticipants(Pose pose, HashSet<StreamTile> required, bool destination, bool live,
         List<StreamRequest>? preload = null, N.Vector3? walkingCenter = null, N.Vector3? walkingDestination = null)
     {
-        var camera = _host.ViewCamera;
+        var camera = _viewCamera;
         var projection = camera.GetCameraProjection();
         var transform = camera.GetCameraTransform();
         if (!live)

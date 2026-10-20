@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Campus.Contracts;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using ArchUnitNET.Domain;
@@ -141,6 +142,8 @@ public sealed class ArchitectureTests
     [TestCategory("Contract")]
     public void KernelNamespacesOnlyDependDownward()
     {
+        // Imports and constant references can disappear from IL; check their bound source symbols too.
+        SourceModel.RequireNoViolations(KernelSourceViolations(SourceModel.Production));
         var owners = Model.Value.Types.Select(type => KernelOwner(type.Namespace.FullName))
             .Where(owner => owner is not null).Select(owner => owner!).Distinct(StringComparer.Ordinal).ToArray();
         foreach (var owner in owners)
@@ -153,6 +156,72 @@ public sealed class ArchitectureTests
                 .Should().NotDependOnAny(Types().That().ResideInNamespaceMatching(string.Join('|', forbidden)))
                 .Because("ENG-ARCH: kernel responsibilities only depend on lower responsibilities")
                 .WithoutRequiringPositiveResults());
+        }
+    }
+
+    private static IEnumerable<string> KernelSourceViolations(IEnumerable<SourceFile> sources)
+    {
+        var files = sources.ToArray();
+        var allOwners = files.SelectMany(file => KernelSourceOwners(file, file.Root)).Distinct(StringComparer.Ordinal).ToArray();
+        foreach (var file in files)
+        foreach (var name in file.Root.DescendantNodes().OfType<NameSyntax>())
+        {
+            // A namespace declaration establishes ownership; it is not a dependency on its parent.
+            if (name.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().Any(space => space.Name.Span.Contains(name.Span))) continue;
+            var symbol = file.Model.GetSymbolInfo(name).Symbol;
+            if (symbol is IAliasSymbol alias) symbol = alias.Target;
+            var spaceName = symbol is INamespaceSymbol spaceSymbol ? spaceSymbol.ToDisplayString() : symbol?.ContainingNamespace?.ToDisplayString();
+            if (KernelOwner(spaceName ?? "") is not { } target) continue;
+            var import = name.Ancestors().OfType<UsingDirectiveSyntax>().FirstOrDefault();
+            var origins = import is null
+                ? new[] { KernelOwner(file.Model.GetEnclosingSymbol(name.SpanStart)?.ContainingNamespace?.ToDisplayString() ?? "") }.OfType<string>()
+                : import.GlobalKeyword.IsKind(SyntaxKind.GlobalKeyword) ? allOwners
+                : KernelSourceOwners(file, (SyntaxNode?)import.Ancestors().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault() ?? file.Root);
+            foreach (var origin in origins)
+                if (KernelLevel(target) > KernelLevel(origin))
+                    yield return file.At(name, $"Kernel source boundary: {origin} -> {target}; kernel responsibilities only depend on the same or lower responsibilities (ENG-ARCH).");
+        }
+    }
+
+    private static IEnumerable<string> KernelSourceOwners(SourceFile file, SyntaxNode scope) =>
+        scope.DescendantNodesAndSelf().OfType<BaseNamespaceDeclarationSyntax>()
+            .Select(space => KernelOwner(file.Model.GetDeclaredSymbol(space)?.ToDisplayString() ?? ""))
+            .OfType<string>().Distinct(StringComparer.Ordinal);
+
+    [TestCase]
+    [TestCategory("Contract")]
+    public void KernelSourceRuleDetectsImportsAndInlinedConstants()
+    {
+        var declarations = CSharpSyntaxTree.ParseText("""
+            namespace Campus.Kernel.Boot { public static class BootTuning { public const double StalledSeconds = 1; } }
+            namespace Campus.Kernel.Renderer { public static class Limits { public const double Seconds = 1; } }
+            namespace Campus.Kernel.Frame { public static class Limits { public const double Seconds = 1; } }
+            namespace Campus.Kernel.Diagnostics { public static class Limits { public const double Seconds = 1; } }
+            """);
+        (string Source, bool Rejected)[] cases =
+        [
+            ("using Campus.Kernel.Boot; namespace Campus.Kernel.Renderer { class Probe { } }", true),
+            ("using Upper = Campus.Kernel.Boot.BootTuning; namespace Campus.Kernel.Renderer { class Probe { } }", true),
+            ("using static Campus.Kernel.Boot.BootTuning; namespace Campus.Kernel.Renderer { class Probe { const double Seconds = StalledSeconds; } }", true),
+            ("using Upper = Campus.Kernel.Boot; namespace Campus.Kernel.Renderer { class Probe { const double Seconds = Upper.BootTuning.StalledSeconds; } }", true),
+            ("namespace Campus.Kernel.Renderer { class Probe { const double Seconds = global::Campus.Kernel.Boot.BootTuning.StalledSeconds; } }", true),
+            ("namespace Campus.Kernel.Renderer { using Campus.Kernel.Boot; class Probe { const double Seconds = BootTuning.StalledSeconds; } }", true),
+            ("using Campus.Kernel.Frame; namespace Campus.Kernel.Renderer { class Probe { const double Seconds = Campus.Kernel.Frame.Limits.Seconds; } }", false),
+            ("namespace Campus.Kernel.Frame { class Probe { const double Seconds = Campus.Kernel.Diagnostics.Limits.Seconds; } }", false),
+            ("namespace Campus.Kernel.Renderer { class Probe { const double Seconds = Limits.Seconds; } }", false),
+            ("namespace Campus.Kernel.Boot { using Campus.Kernel.Renderer; class Probe { } } namespace Campus.Kernel.Frame { class Probe { } }", false),
+            ("global using Campus.Kernel.Boot; namespace Campus.Kernel.Renderer { class Probe { } }", true)
+        ];
+        foreach (var (source, rejected) in cases)
+        {
+            var tree = CSharpSyntaxTree.ParseText(source);
+            var compilation = CSharpCompilation.Create("KernelSourceProbe", [declarations, tree],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)], new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            var errors = compilation.GetDiagnostics().Where(item => item.Severity == DiagnosticSeverity.Error).ToArray();
+            if (errors.Length > 0) throw new InvalidOperationException(string.Join(Environment.NewLine, errors.Select(item => item.ToString())));
+            var violations = KernelSourceViolations([new("KernelSourceProbe.cs", tree, compilation.GetSemanticModel(tree))]).ToArray();
+            if ((violations.Length > 0) != rejected)
+                throw new InvalidOperationException($"Kernel source rule did not preserve the dependency direction for: {source}");
         }
     }
 

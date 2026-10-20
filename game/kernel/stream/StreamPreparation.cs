@@ -8,9 +8,10 @@ using ParticipantTile = Campus.Kernel.Stream.StreamParticipants.ParticipantTile;
 
 namespace Campus.Kernel.Stream;
 
-internal sealed class StreamPreparation(StreamDirector host)
+internal sealed class StreamPreparation(StreamDirector host, IStreamGeometryPreparation geometry)
 {
     private readonly StreamDirector _host = host;
+    private readonly IStreamGeometryPreparation _geometry = geometry;
     private readonly StreamRequestQueue _requests = new();
     private readonly List<Pending> _pending = [];
     private readonly List<Preparing> _preparing = [];
@@ -74,7 +75,7 @@ internal sealed class StreamPreparation(StreamDirector host)
                 _host.Fail(pending.Request.Tile, new InvalidDataException($"Bake returned the wrong product for {pending.Request.Key}."));
                 _pending.RemoveAt(i); continue;
             }
-            _preparing.Add(new(pending.Request.Tile, pending.Revision, _host.Geometry.PrepareAsync(bundle), pending.Group!, pending.GeometryRevision));
+            _preparing.Add(new(pending.Request.Tile, pending.Revision, _geometry.PrepareAsync(bundle), pending.Group!, pending.GeometryRevision));
             _pending.RemoveAt(i);
         }
     }
@@ -114,7 +115,7 @@ internal sealed class StreamPreparation(StreamDirector host)
         return await RunWorker(() => ModuleTileCatalog.Build(index)).ConfigureAwait(false);
     }
 
-    private static Task<T> RunWorker<T>(Func<T> work) => Task.Factory.StartNew(() =>
+    internal static Task<T> RunWorker<T>(Func<T> work) => Task.Factory.StartNew(() =>
     {
         Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
         return work();

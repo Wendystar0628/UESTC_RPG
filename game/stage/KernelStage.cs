@@ -1,4 +1,4 @@
-﻿using Campus.Kernel.Diagnostics;
+using Campus.Kernel.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using Campus.Gates;
@@ -10,6 +10,7 @@ using Campus.Contracts.Quality;
 using Campus.Contracts.Save;
 using Campus.Contracts.Settings;
 using Campus.Contracts.Startup;
+using Campus.Kernel.Bake;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Inspect;
@@ -84,7 +85,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
         BindRuntimeServices(registry, view);
         _statistics = new(GetViewport());
         _statistics.Enable();
-        DisplayServer.WindowSetTitle("鐢靛厜骞村崕");
+        DisplayServer.WindowSetTitle("电光年华");
         GD.Print($"[WP-01][map=-][phase=compose] build={BuildInfo.Build}; global objects={registry.Created.Count}");
     }
 
@@ -144,7 +145,8 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
 
     private static void BindMapDependencies(ServiceRegistry registry, Camera3D viewCamera)
     {
-        registry.Get<PipelineWarmup>().Bind(registry.Get<IToonMaterialProvider>(), registry.Get<IShaderMaterialSource>());
+        registry.Get<PipelineWarmup>().Bind(registry.Get<IToonMaterialProvider>(), registry.Get<IShaderMaterialSource>(),
+            BakePipelineCatalog.Read, TimeSpan.FromSeconds(BootTuning.StalledSeconds));
         ((MapRuntime)registry.Create(typeof(MapRuntime))).Bind(new(registry,
             registry.Get<IMapStreamState>(), registry.Get<IBakeService>(), registry.Get<ICollisionWorld>(),
             registry.Get<IRenderReadiness>(), registry.Get<IPipelinePreparation>(), registry.Get<ICameraRig>(),

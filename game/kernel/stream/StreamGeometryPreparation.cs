@@ -12,9 +12,6 @@ public interface IStreamGeometryPreparation
 [KernelService(typeof(IStreamGeometryPreparation))]
 public sealed class StreamGeometryPreparation : IStreamGeometryPreparation
 {
-    public Task<PreparedTile> PrepareAsync(TileBundle bundle) => Task.Factory.StartNew(() =>
-    {
-        Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
-        return PreparedTile.Create(bundle);
-    }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+    public Task<PreparedTile> PrepareAsync(TileBundle bundle) =>
+        StreamPreparation.RunWorker(() => PreparedTile.Create(bundle));
 }

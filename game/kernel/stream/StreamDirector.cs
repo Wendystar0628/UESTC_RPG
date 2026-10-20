@@ -28,15 +28,12 @@ public interface IStreamVisualFrame
 public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamVisualFrame
 {
     private readonly StreamSelection _selection;
-    private readonly StreamPreparation _preparation;
+    private StreamPreparation _preparation = null!;
     private readonly StreamResidency _residency;
-    private readonly StreamParticipants _participants;
+    private StreamParticipants _participants = null!;
     private readonly StreamPins _pins;
     private ServiceRegistry? _owner;
     private IBakeContextSource _contextSource = null!;
-    internal ServiceRegistry Registry => _owner!;
-    internal Camera3D ViewCamera { get; private set; } = null!;
-    internal IStreamGeometryPreparation Geometry { get; private set; } = null!;
     private IBakeService _bake = null!;
     private IStreamMountQueue _mount = null!;
     private ICameraRig _camera = null!;
@@ -57,8 +54,7 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
 
     public StreamDirector()
     {
-        _selection = new(this); _preparation = new(this); _residency = new(this);
-        _participants = new(this); _pins = new(this);
+        _selection = new(this); _residency = new(this); _pins = new(this);
     }
     internal StreamSelection Selection => _selection;
     internal StreamPreparation Preparation => _preparation;
@@ -105,14 +101,15 @@ public partial class StreamDirector : Node, IMapAware, IMapStreamState, IStreamV
     {
         ArgumentNullException.ThrowIfNull(dependencies);
         if (IsInsideTree() || _owner is not null) throw new InvalidOperationException("Stream dependencies bind once before entering the tree.");
-        Geometry = dependencies.Geometry;
         _owner = dependencies.Owner; _contextSource = dependencies.ContextSource;
         _captureMode = dependencies.CaptureMode; _bake = dependencies.Bake; _mount = dependencies.Mount;
         _camera = dependencies.Camera; _observer = dependencies.Observer; _world = dependencies.World;
         _collision = dependencies.Collision; _maps = dependencies.Maps; _terrain = dependencies.Terrain;
-        _reflections = dependencies.Reflections; ViewCamera = dependencies.ViewCamera;
+        _reflections = dependencies.Reflections;
+        _preparation = new(this, dependencies.Geometry);
+        _participants = new(this, dependencies.Owner, dependencies.ViewCamera);
         _residency.InitializeMaterials(dependencies.Toon, dependencies.Shaders);
-        _interiors = new(_bake, _mount, _residency.Materials, _reflections, _residency.QueueRetirement, _captureMode, Geometry);
+        _interiors = new(_bake, _mount, _residency.Materials, _reflections, _residency.QueueRetirement, _captureMode, dependencies.Geometry);
     }
 
     public override void _EnterTree()
