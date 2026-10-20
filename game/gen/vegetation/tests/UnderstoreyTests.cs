@@ -143,7 +143,7 @@ public sealed class UnderstoreyTests
         // Shrubs and hedge modules are many and small: their mother models are the clipped-ball form.
         var (species, _) = PavementTests.Data;
         foreach (var id in new[] { "photinia", "loropetalum", "boxhedge" })
-            if (!TreeForms.IsBall(species.Get(id).Form)) throw new InvalidOperationException($"{id} is not a ball form");
+            if (TreeForms.Get(species.Get(id).Form).Structure != TreeStructure.StemlessClusters) throw new InvalidOperationException($"{id} is not a ball form");
     }
 
     // ---------------------------------------------------------------------------------------------------------

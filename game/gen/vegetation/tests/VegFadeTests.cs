@@ -35,12 +35,12 @@ public sealed class VegFadeTests
                     throw new InvalidOperationException($"{s.Id}/{v}: crown layout differs from L1");
                 if (wood.Index.Length > 0 && (wood.Material != l1.Wood.Material || (wood.Uv is null) != (l1.Wood.Uv is null)))
                     throw new InvalidOperationException($"{s.Id}/{v}: wood layout differs from L1");
-                if (TreeForms.IsBall(s.Form) != (wood.Index.Length == 0)) throw new InvalidOperationException($"{s.Id}/{v}: wood presence");
+                if ((TreeForms.Get(s.Form).Structure == TreeStructure.StemlessClusters) != (wood.Index.Length == 0)) throw new InvalidOperationException($"{s.Id}/{v}: wood presence");
                 // The stand-in stays within the L1 crown's bulk (the masses are the same lumpy surfaces at a coarser sampling).
                 var (lo, hi) = Extent(crown.Position);
                 var (l1lo, l1hi) = Extent(l1.Crown.Position);
                 // A palm's stand-in is a swollen head ball standing in for the fronds: only its size is checked.
-                if (s.Form != "palm" && (hi.Y > l1hi.Y + TestTolerance.Layout || lo.Y < l1lo.Y - TestTolerance.Layout)) throw new InvalidOperationException($"{s.Id}/{v}: stand-in crown outgrows L1");
+                if (TreeForms.Get(s.Form).Structure != TreeStructure.TerminalHead && (hi.Y > l1hi.Y + TestTolerance.Layout || lo.Y < l1lo.Y - TestTolerance.Layout)) throw new InvalidOperationException($"{s.Id}/{v}: stand-in crown outgrows L1");
                 if (hi.Y < l1hi.Y - 0.25f * (l1hi.Y - l1lo.Y)) throw new InvalidOperationException($"{s.Id}/{v}: stand-in crown much smaller than L1");
             }
         // Near models keep the near tags (wood 0, masses −1).

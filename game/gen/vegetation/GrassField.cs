@@ -68,7 +68,7 @@ public static class GrassField
         var trunks = new SpatialGrid<Vector2>(4f);
         foreach (var tree in trees.Trees)
         {
-            if (TreeForms.IsBall(tree.Species.Form)) continue;
+            if (TreeForms.Get(tree.Species.Form).Structure == TreeStructure.StemlessClusters) continue;
             var at = new Vector2(tree.Position.X, tree.Position.Z);
             trunks.AddPoint(at, at);
         }

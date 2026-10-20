@@ -254,7 +254,7 @@ public sealed class PlantingTests
     [TestCategory("Slow")]
     public void LeavesFallUnderTheCrownsAndCarpetTheAvenue()
     {
-        var (world, _, rules) = Data.Value;
+        var (world, species, rules) = Data.Value;
         var layout = PavementTests.WorldLayout.Value;
         var rect = new MapRect(world.Boundary.Outer.Aggregate(new Vector2(float.MaxValue), Vector2.Min),
             world.Boundary.Outer.Aggregate(new Vector2(float.MinValue), Vector2.Max));
@@ -263,7 +263,7 @@ public sealed class PlantingTests
         var h = (int)MathF.Round((rect.Max.Y - rect.Min.Y) / step);
         var m1 = new byte[w * h * 4];
         var m2 = new byte[w * h * 4];
-        CanopyProjection.Paint(layout, rules, world, rect, step, m1, m2);
+        CanopyProjection.Paint(layout, rules, species, world, rect, step, m1, m2);
         byte At(byte[] m, int channel, float x, float z) => m[(((int)((z - rect.Min.Y) / step)) * w + (int)((x - rect.Min.X) / step)) * 4 + channel];
         var ginkgo = layout.Trees.First(t => t.Source == PlantSource.Road);
         if (At(m1, 0, ginkgo.Position.X, ginkgo.Position.Z) < 200) throw new InvalidOperationException("no ginkgo leaves under an avenue tree");
@@ -271,7 +271,7 @@ public sealed class PlantingTests
         var camphor = layout.Trees.First(t => t.Species.Id == "camphor" && layout.Trees.All(o => o == t || Vector3.Distance(o.Position, t.Position) > o.CrownRadius * 1.2f + 2f));
         if (At(m1, 1, camphor.Position.X, camphor.Position.Z) != 0) throw new InvalidOperationException("an evergreen dropped leaves");
         if (At(m1, 3, camphor.Position.X, camphor.Position.Z) != 0) throw new InvalidOperationException("an evergreen contributed maple potential");
-        var maple = layout.Trees.First(t => t.Species.Deciduous && t.Species.Leaf == "maple");
+        var maple = layout.Trees.First(t => t.Species.Litter == LitterShape.Lobed);
         if (At(m1, 3, maple.Position.X, maple.Position.Z) == 0) throw new InvalidOperationException("no maple potential under a maple crown");
         for (var i = 0; i < m1.Length; i += 4)
             if (m1[i + 3] > m1[i + 1]) throw new InvalidOperationException("maple potential exceeds other leaves");

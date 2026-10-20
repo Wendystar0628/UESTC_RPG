@@ -160,8 +160,8 @@ internal static class CrownCards
         return r;
     }
 
-    /// <summary>Fan-palm fronds radiating from the crown head, upper ones rising, lower ones hanging.</summary>
-    internal static List<Card> PalmFronds(TreePlan plan, int count)
+    /// <summary>Fronds radiating from the crown head, upper ones rising, lower ones hanging.</summary>
+    internal static List<Card> RadialFronds(TreePlan plan, int count)
     {
         var head = plan.Blobs[0];
         var cards = new List<Card>(count);
@@ -211,12 +211,12 @@ internal static class CrownCards
     /// A cluster shares the rank of its first card, so the level bands fold whole clusters away.
     /// </summary>
     internal static float Importance(TreePlan plan, Card card) =>
-        plan.Form.Id == "palm" ? 0f : card.Cluster / (float)Math.Max(1, CardCapacity(plan));
+        plan.Form.Structure == TreeStructure.TerminalHead ? 0f : card.Cluster / (float)Math.Max(1, CardCapacity(plan));
 
     internal static void WriteCard(VegetationPrototypeGeometry w, TreePlan plan, CrownShell shell, Card card, MotherColorIds ids, float importance)
     {
         var first = w.VertexCount;
-        var t0 = Gradient(plan, card.Center, plan.Form.Id == "palm" ? card.Normal : shell.Normal(card.Center));
+        var t0 = Gradient(plan, card.Center, plan.Form.Structure == TreeStructure.TerminalHead ? card.Normal : shell.Normal(card.Center));
         ReadOnlySpan<Vector2> corners = [new(0f, 0f), new(1f, 0f), new(1f, 1f), new(0f, 1f)];
         foreach (var uv in corners)
         {
@@ -229,7 +229,7 @@ internal static class CrownCards
         w.Cards++;
     }
 
-    internal static int CardCapacity(TreePlan plan) => plan.Form.Id == "palm" ? 20 : CardCount(plan.Species.Crown, VegLevel.L0Plus);
+    internal static int CardCapacity(TreePlan plan) => plan.Form.Structure == TreeStructure.TerminalHead ? 20 : CardCount(plan.Species.Crown, VegLevel.L0Plus);
 
     /// <summary>Crown-gradient t0 = 0.36 + 0.26·n.y + 0.30·(height in crown − 0.5) + 0.12·outward (WLD-VEGETATION).</summary>
     internal static byte Gradient(TreePlan plan, Vector3 p, Vector3 n)
@@ -243,9 +243,9 @@ internal static class CrownCards
     internal static (List<Card> Drawn, int UnderCount) Draw(TreePlan plan, CrownShell shell, VegLevel level,
         MotherColorIds ids, VegetationPrototypeGeometry crown)
     {
-        var palm = plan.Species.Form == "palm";
-        var cardTarget = palm ? (level switch { VegLevel.L0Plus => 20, VegLevel.L0 => 16, _ => 10 }) : CardCount(plan.Species.Crown, level);
-        var allCards = palm ? PalmFronds(plan, 20) : PlaceCards(plan, shell, CardCount(plan.Species.Crown, VegLevel.L0Plus));
+        var terminalHead = plan.Form.Structure == TreeStructure.TerminalHead;
+        var cardTarget = terminalHead ? (level switch { VegLevel.L0Plus => 20, VegLevel.L0 => 16, _ => 10 }) : CardCount(plan.Species.Crown, level);
+        var allCards = terminalHead ? RadialFronds(plan, 20) : PlaceCards(plan, shell, CardCount(plan.Species.Crown, VegLevel.L0Plus));
         // Lower levels keep whole clusters: the prefix ends on the cluster that crosses the card target.
         var take = Math.Min(cardTarget, allCards.Count);
         while (take < allCards.Count && take > 0 && allCards[take].Cluster == allCards[take - 1].Cluster) take++;
@@ -253,7 +253,7 @@ internal static class CrownCards
         foreach (var card in drawn) WriteCard(crown, plan, shell, card, ids, Importance(plan, card));
         // The underside layer follows the outline cards: all of it at L0+, a leading share of whole clusters at L0 (card and
         // mixed crowns), none at L1. Its rank is its own (tier 1 or 2 plus the cluster's place in the layer).
-        var under = palm ? new List<Card>() : PlaceUnderCards(plan, shell);
+        var under = terminalHead ? new List<Card>() : PlaceUnderCards(plan, shell);
         var underTier = plan.Species.Crown == CrownType.Cloud ? 2f : 1f;
         var underTake = (level, plan.Species.Crown) switch
         {

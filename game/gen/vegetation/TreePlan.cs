@@ -155,10 +155,10 @@ internal sealed class TreePlan
         TrunkRadius = MathF.Max(0.035f, Form.TrunkRadius * Height * TreeForms.TrunkScale(variant));
         BranchY = Form.ClearTrunk * Height * (variant == 1 ? 1.05f : 1f);
 
-        if (Form.Id == "palm") BuildPalm();
+        if (Form.Structure == TreeStructure.TerminalHead) BuildTerminalHead();
         else
         {
-            if (TreeForms.IsBall(Form.Id)) BuildShrub();
+            if (Form.Structure == TreeStructure.StemlessClusters) BuildStemlessClusters();
             else BuildTree();
             FillCrown();
         }
@@ -384,7 +384,7 @@ internal sealed class TreePlan
         var center = Vector3.Lerp(mainTip, CrownCenter, 0.1f) + Vector3.UnitY * (r * 0.1f);
         AddBall(center, r * 0.8f, mainTip, index, true);
         _clusters.Add((center, r, mainTip));
-        var satellites = Form.Id == "shrub" ? 5 : Math.Clamp((26 - mains * 2) / mains, 4, 8);
+        var satellites = Form.CloudSatellites;
         for (var k = 0; k < satellites; k++)
         {
             var d = Vector3.Normalize(RandomDirection() + outward * 0.55f + Vector3.UnitY * 0.45f);
@@ -407,7 +407,7 @@ internal sealed class TreePlan
         }
     }
 
-    private void BuildPalm()
+    private void BuildTerminalHead()
     {
         var trunk = new Limb(0);
         var top = Height * Form.ClearTrunk;
@@ -423,7 +423,7 @@ internal sealed class TreePlan
         AddBall(trunk.Tip + Vector3.UnitY * 0.15f, TrunkRadius * 2.2f, trunk.Tip, 0, true);
     }
 
-    private void BuildShrub()
+    private void BuildStemlessClusters()
     {
         // A clipped ball: three clusters around a low centre, no visible stem (WLD-VEGETATION shrub balls).
         var trunk = new Limb(0);

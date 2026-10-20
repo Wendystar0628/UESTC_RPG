@@ -14,7 +14,7 @@ namespace Campus.Gen.Vegetation;
 /// CUSTOM1 = (branch-tip anchor, h3 bloom hash); CUSTOM2 = (mass or ball centre, card importance rank in [0, 1) or −1 on
 /// mass vertices, which never shrink with the level bands; underside cards carry 1 + rank when drawn through L0 and
 /// 2 + rank when drawn at L0+ only). NORMAL on the crown is the shell normal; on cards it is the shell normal at the card
-/// centre (palm fronds: the frond's own normal).
+/// centre (terminal-head fronds: the frond's own normal).
 /// </summary>
 public static class MotherModels
 {
@@ -247,7 +247,7 @@ public static class MotherModels
         var ids = IdsOf(species, palette);
         var wood = new VegetationPrototypeGeometry(withUv: false);
         var crown = new VegetationPrototypeGeometry(withUv: true);
-        var limb = TreeForms.IsBall(plan.Form.Id) ? null : plan.Limbs.FirstOrDefault(l => l.Level == 0);
+        var limb = (plan.Form.Structure == TreeStructure.StemlessClusters) ? null : plan.Limbs.FirstOrDefault(l => l.Level == 0);
         if (limb is { Points.Count: >= 2 })
         {
             var top = limb.Points.FindIndex(p => p.Y >= plan.BranchY);
@@ -255,11 +255,11 @@ public static class MotherModels
             WriteTube(wood, [limb.Points[0], limb.Points[top]], [limb.Radii[0], limb.Radii[top]], FarTrunkSides, 0f, 0f,
                 cap: false, ids, FarWoodTag);
         }
-        // A palm's crown is its fronds (cards): the stand-in swells the head mass to about the frond reach instead.
-        var palm = plan.Form.Id == "palm";
+        // A terminal-head crown consists of fronds (cards): the stand-in swells the head mass to about the frond reach instead.
+        var terminalHead = plan.Form.Structure == TreeStructure.TerminalHead;
         foreach (var (blob, index, scale, _) in BlobsFor(plan, VegLevel.L1))
         {
-            var s = palm ? MathF.Max(scale, (blob.Radius * 0.6f + plan.Form.CardSize) * 0.8f / MathF.Max(blob.Radius, 0.1f)) : scale;
+            var s = terminalHead ? MathF.Max(scale, (blob.Radius * 0.6f + plan.Form.CardSize) * 0.8f / MathF.Max(blob.Radius, 0.1f)) : scale;
             WriteBlob(crown, plan, shell, blob, index, s, detail: 0, ids, FarMassTag);
         }
         return (wood.Bundle(WoodSpec(), flags: 0), crown.Bundle(CrownSpec(species), flags: 8),

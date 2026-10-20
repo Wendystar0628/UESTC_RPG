@@ -94,7 +94,7 @@ public sealed class VegetationBuildTests
             var (id, _, pool) = VegetationPrototypes.Parse(prototype.Id);
             var tree = species.Get(id);
             var kinds = new List<ToonKind>();
-            if (pool == VegPool.Shadow || !TreeForms.IsBall(tree.Form)) kinds.Add(ToonKind.VegTrunk);
+            if (pool == VegPool.Shadow || TreeForms.Get(tree.Form).Structure != TreeStructure.StemlessClusters) kinds.Add(ToonKind.VegTrunk);
             if (pool != VegPool.Shadow)
             {
                 kinds.Add(ToonKind.VegCard);

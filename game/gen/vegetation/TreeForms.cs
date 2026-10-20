@@ -1,11 +1,14 @@
 namespace Campus.Gen.Vegetation;
 
+/// <summary>Construction of the woody skeleton and its supporting crown masses, independent of species identity.</summary>
+public enum TreeStructure : byte { Branching, TerminalHead, StemlessClusters }
+
 /// <summary>
 /// Tree shape of a mother model. Lengths are fractions of the tree height H unless named in metres.
 /// All shape tuning for the mothers lives in <see cref="TreeForms"/>; species.json only names the form.
 /// </summary>
 public sealed record TreeForm(
-    string Id,
+    TreeStructure Structure,
     float ClearTrunk,      // first scaffold branch height / H
     float CrownBottom,     // crown envelope bottom / H
     float CrownRadius,     // crown envelope horizontal radius / H
@@ -20,6 +23,7 @@ public sealed record TreeForm(
     float CardSize,        // leaf-card edge in metres (WLD-VEGETATION: 0.4–0.7 m on a 12 m ginkgo)
     float Droop,           // 0 none … 1 secondaries and cards hang (willow)
     float Lumps,           // blob bump amplitude (cloud balls use 0.13, ART-MODELING)
+    int CloudSatellites,   // satellite balls around each cloud cluster
     int Stems = 1);        // multi-stem shrubs and small trees
 
 /// <summary>The mother-model shape table: one place for every tunable tree proportion (WLD-VEGETATION).</summary>
@@ -28,29 +32,26 @@ public static class TreeForms
     private static readonly Dictionary<string, TreeForm> Table = new(StringComparer.Ordinal)
     {
         // Ginkgo: upright ovoid-cone, leader to the top, branches rising steeply (WLD-VEGETATION).
-        ["ginkgo"] = new("ginkgo", 0.26f, 0.30f, 0.27f, 0.45f, true, 5, 7, 42f, 2, 3, 0.022f, 0.55f, 0f, 0.10f),
+        ["ginkgo"] = new(TreeStructure.Branching, 0.26f, 0.30f, 0.27f, 0.45f, true, 5, 7, 42f, 2, 3, 0.022f, 0.55f, 0f, 0.10f, 4),
         // Metasequoia: narrow cone, straight leader, whorled near-horizontal tiers.
-        ["metaseq"] = new("metaseq", 0.10f, 0.12f, 0.17f, 1.00f, true, 8, 10, 8f, 2, 2, 0.020f, 0.50f, 0f, 0.08f),
+        ["metaseq"] = new(TreeStructure.Branching, 0.10f, 0.12f, 0.17f, 1.00f, true, 8, 10, 8f, 2, 2, 0.020f, 0.50f, 0f, 0.08f, 4),
         // Cherry, plum, crabapple, apricot: low, broad and spreading.
-        ["spreading"] = new("spreading", 0.24f, 0.32f, 0.62f, 0.05f, false, 4, 5, 30f, 2, 3, 0.026f, 0.38f, 0f, 0.13f),
+        ["spreading"] = new(TreeStructure.Branching, 0.24f, 0.32f, 0.62f, 0.05f, false, 4, 5, 30f, 2, 3, 0.026f, 0.38f, 0f, 0.13f, 4),
         // Maple, koelreuteria: rounded crown.
-        ["round"] = new("round", 0.28f, 0.30f, 0.44f, 0.15f, false, 4, 6, 38f, 2, 3, 0.024f, 0.45f, 0f, 0.12f),
+        ["round"] = new(TreeStructure.Branching, 0.28f, 0.30f, 0.44f, 0.15f, false, 4, 6, 38f, 2, 3, 0.024f, 0.45f, 0f, 0.12f, 4),
         // Willow: arching scaffold, hanging strands.
-        ["willow"] = new("willow", 0.30f, 0.22f, 0.46f, 0.0f, false, 4, 6, 40f, 3, 4, 0.026f, 0.60f, 1f, 0.08f),
+        ["willow"] = new(TreeStructure.Branching, 0.30f, 0.22f, 0.46f, 0.0f, false, 4, 6, 40f, 3, 4, 0.026f, 0.60f, 1f, 0.08f, 4),
         // Jacaranda, magnolia, nanmu: upright oval.
-        ["upright"] = new("upright", 0.28f, 0.30f, 0.34f, 0.25f, false, 4, 6, 50f, 2, 3, 0.022f, 0.50f, 0f, 0.11f),
+        ["upright"] = new(TreeStructure.Branching, 0.28f, 0.30f, 0.34f, 0.25f, false, 4, 6, 50f, 2, 3, 0.022f, 0.50f, 0f, 0.11f, 4),
         // Camphor, osmanthus: broad dome, the evergreen campus base.
-        ["dome"] = new("dome", 0.25f, 0.26f, 0.52f, 0.10f, false, 5, 6, 34f, 2, 3, 0.028f, 0.55f, 0f, 0.12f),
+        ["dome"] = new(TreeStructure.Branching, 0.25f, 0.26f, 0.52f, 0.10f, false, 5, 6, 34f, 2, 3, 0.028f, 0.55f, 0f, 0.12f, 4),
         // Crape myrtle, hibiscus, wintersweet, red plum: several stems from the ground, vase-shaped.
-        ["vase"] = new("vase", 0.32f, 0.34f, 0.40f, 0.0f, false, 3, 4, 58f, 2, 3, 0.030f, 0.32f, 0f, 0.13f, 3),
+        ["vase"] = new(TreeStructure.Branching, 0.32f, 0.34f, 0.40f, 0.0f, false, 3, 4, 58f, 2, 3, 0.030f, 0.32f, 0f, 0.13f, 4, 3),
         // Fan palm: tall bare stem, a head of fronds.
-        ["palm"] = new("palm", 0.86f, 0.80f, 0.32f, 0.0f, true, 0, 0, 0f, 0, 0, 0.030f, 1.30f, 0.4f, 0.0f),
+        ["palm"] = new(TreeStructure.TerminalHead, 0.86f, 0.80f, 0.32f, 0.0f, true, 0, 0, 0f, 0, 0, 0.030f, 1.30f, 0.4f, 0.0f, 8),
         // Clipped shrub ball: no visible stem.
-        ["shrub"] = new("shrub", 0.05f, 0.0f, 0.62f, 0.0f, false, 3, 3, 30f, 0, 0, 0.040f, 0.22f, 0f, 0.13f),
+        ["shrub"] = new(TreeStructure.StemlessClusters, 0.05f, 0.0f, 0.62f, 0.0f, false, 3, 3, 30f, 0, 0, 0.040f, 0.22f, 0f, 0.13f, 5),
     };
-
-    /// <summary>Stemless forms built as clipped balls (TreePlan.BuildShrub): shrubs; they cast no trunk collider.</summary>
-    public static bool IsBall(string id) => id is "shrub";
 
     public static bool Exists(string id) => Table.ContainsKey(id);
 

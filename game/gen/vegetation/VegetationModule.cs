@@ -113,7 +113,7 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
         }
         var (layout, rules) = Layout(context);
         if (rules is null) return;
-        CanopyProjection.Paint(layout, rules, context.World, grid.Rect, grid.MetersPerPixel, mask1, mask2);
+        CanopyProjection.Paint(layout, rules, VegetationInputs.Species(context), context.World, grid.Rect, grid.MetersPerPixel, mask1, mask2);
     }
 
     /// <summary>Immutable planting derived once for this build context.</summary>

@@ -167,7 +167,7 @@ public sealed class MotherModelTests
     {
         // max-011: cards sit on the outer masses and reach at most 5% of the crown diameter beyond them; no floating bits.
         var table = Data.Value.Table;
-        foreach (var s in table.Species.Where(s => s.Form != "palm"))
+        foreach (var s in table.Species.Where(s => TreeForms.Get(s.Form).Structure != TreeStructure.TerminalHead))
         {
             var model = Mother(s, 0, VegLevel.L0Plus);
             var masses = MassSpheres(model);
@@ -188,7 +188,7 @@ public sealed class MotherModelTests
         // cluster share their rank and h2, and the cluster's first card (its centre) sits inside a crown mass (measured on
         // the L0+ masses, the finest outline; lower levels draw the same masses with fewer vertices).
         var table = Data.Value.Table;
-        foreach (var s in table.Species.Where(s => s.Form != "palm"))
+        foreach (var s in table.Species.Where(s => TreeForms.Get(s.Form).Structure != TreeStructure.TerminalHead))
             foreach (var level in new[] { VegLevel.L0Plus, VegLevel.L0, VegLevel.L1 })
             {
                 var model = Mother(s, 0, level);
@@ -288,10 +288,10 @@ public sealed class MotherModelTests
         foreach (var s in table.Species)
         {
             var m = Mother(s, 0, VegLevel.L0);
-            if (MathF.Abs(m.Bounds.Min.Y + MotherModels.Burial) > TestTolerance.Layout && !TreeForms.IsBall(s.Form))
+            if (MathF.Abs(m.Bounds.Min.Y + MotherModels.Burial) > TestTolerance.Layout && TreeForms.Get(s.Form).Structure != TreeStructure.StemlessClusters)
                 throw new InvalidOperationException($"{s.Id}: trunk not buried {m.Bounds.Min.Y}");
             // Clipped shrub balls sit a little lower than their nominal height (no stem, flattened top cluster).
-            if (m.Bounds.Max.Y < m.Height * (TreeForms.IsBall(s.Form) ? 0.8f : 0.85f) || m.Bounds.Max.Y > m.Height * 1.35f)
+            if (m.Bounds.Max.Y < m.Height * ((TreeForms.Get(s.Form).Structure == TreeStructure.StemlessClusters) ? 0.8f : 0.85f) || m.Bounds.Max.Y > m.Height * 1.35f)
                 throw new InvalidOperationException($"{s.Id}: top {m.Bounds.Max.Y} for height {m.Height}");
             if (m.TrunkRadius <= 0f || m.BranchHeight <= 0f) throw new InvalidOperationException($"{s.Id}: collider data");
         }

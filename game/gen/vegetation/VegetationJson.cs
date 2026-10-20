@@ -18,7 +18,7 @@ internal sealed record SpeciesFile(string Format, IReadOnlyList<SpeciesRowWire> 
     string? Owner = null, string? Doc = null, IReadOnlyList<string>? Notes = null);
 
 internal sealed record SpeciesRowWire(string Id, string Name, int Row, CrownType Crown, string Form, IReadOnlyList<float> Height,
-    string Leaf, string? Bloom, CardShape Card, CardShape BloomCard, bool Deciduous, bool BloomOnBlobs,
+    string Leaf, string? Bloom, CardShape Card, CardShape BloomCard, LitterShape Litter, bool Deciduous, bool BloomOnBlobs,
     IReadOnlyList<float> LeafAmount, IReadOnlyList<float> BloomAmount, float SwayDeg, string Sound);
 
 [JsonSerializable(typeof(SpeciesFile))]

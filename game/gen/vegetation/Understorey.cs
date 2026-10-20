@@ -13,7 +13,7 @@ namespace Campus.Gen.Vegetation;
 public enum UnderKind : byte { PitCover = 0, Shrub = 1, Hedge = 2 }
 
 /// <summary>
-/// One understorey plant: a ball-form mother model (<see cref="TreeForms.IsBall"/>) instanced like a tree, but stretched by
+/// One understorey plant: a ball-form mother model (<see cref="TreeStructure.StemlessClusters"/>) instanced like a tree, but stretched by
 /// Size on its own axes (x along Yaw, y up, z across), so one clipped ball serves as a cushion, a shrub or a hedge module. Position is the foot (on the soil of a pit, else on the terrain). Yaw turns about +Y the way the trees' Yaw does
 /// (local x goes to (cos, 0, −sin)); hedge modules lay their x along the edge. Custom is the INSTANCE_CUSTOM block of
 /// WLD-VEGETATION with the drawn height in w; its appearance variant carries <see cref="Understorey.UnderVariantBit"/>,
@@ -270,7 +270,7 @@ public static class Understorey
         {
             foreach (var t in trees)
             {
-                if (TreeForms.IsBall(t.Species.Form)) continue;
+                if (TreeForms.Get(t.Species.Form).Structure == TreeStructure.StemlessClusters) continue;
                 var p = new Vector2(t.Position.X, t.Position.Z);
                 _cells.AddPoint(p, p);
             }

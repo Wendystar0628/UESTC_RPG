@@ -23,7 +23,7 @@ public static class TreeColliders
         {
             var p = new Vector2(tree.Position.X, tree.Position.Z);
             if (p.X < origin.X || p.Y < origin.Y || p.X >= origin.X + TileGrid.BaseEdge || p.Y >= origin.Y + TileGrid.BaseEdge) continue;
-            if (TreeForms.IsBall(tree.Species.Form)) continue;
+            if (TreeForms.Get(tree.Species.Form).Structure == TreeStructure.StemlessClusters) continue;
             var key = (tree.Species.Id, tree.Variant);
             if (!plans.TryGetValue(key, out var trunk))
             {

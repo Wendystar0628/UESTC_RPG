@@ -51,7 +51,7 @@ internal sealed class CrownShell
         _radii = new Vector3(half.X / MathF.Max(0.2f, widest), half.Y, half.Z / MathF.Max(0.2f, widest));
         Diameter = 2f * MathF.Max(half.X, half.Z);
         _step = MathF.Max(0.02f, Diameter * 0.01f);
-        if (plan.Species.Crown == CrownType.Cloud && plan.Form.Id != "palm")
+        if (plan.Species.Crown == CrownType.Cloud && plan.Form.Structure != TreeStructure.TerminalHead)
         {
             _balls = plan.Blobs.Select(b => (b.Center, b.Radius)).ToArray();
             _smooth = CloudSmooth * plan.Blobs.Average(b => b.Radius);

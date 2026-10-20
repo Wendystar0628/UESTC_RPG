@@ -12,6 +12,9 @@ public enum CrownType : byte { Card = 0, Cloud = 1, Mixed = 2 }
 /// </summary>
 public enum CardShape : byte { Fan = 0, Needle = 1, Strand = 2, Palmate = 3, Ovate = 4, Pinnate = 5, Blossom = 6, Spray = 7, Twig = 8, Frond = 9 }
 
+/// <summary>Fallen-leaf shape routed to the existing ground-mask layers; Lobed also contributes to the broadleaf layer.</summary>
+public enum LitterShape : byte { None, Fan, Broadleaf, Lobed }
+
 /// <summary>One row of game/data/vegetation/species.json (WLD-VEGETATION).</summary>
 public sealed record SpeciesInfo(
     string Id,
@@ -25,6 +28,7 @@ public sealed record SpeciesInfo(
     string? Bloom,
     CardShape Card,
     CardShape BloomCard,
+    LitterShape Litter,
     bool Deciduous,
     bool BloomOnBlobs,
     IReadOnlyList<float> LeafAmount,
@@ -85,7 +89,7 @@ public sealed class SpeciesTable
             if (e.BloomAmount.Count != 4) throw new InvalidDataException($"species.json: {at}.bloomAmount needs 4 values.");
             var info = new SpeciesInfo(
                 Text(e.Id, $"{at}.id"), Text(e.Name, $"{at}.name"), e.Row, e.Crown, Text(e.Form, $"{at}.form"), e.Height[0], e.Height[1],
-                Text(e.Leaf, $"{at}.leaf"), e.Bloom is null ? null : Text(e.Bloom, $"{at}.bloom"), e.Card, e.BloomCard,
+                Text(e.Leaf, $"{at}.leaf"), e.Bloom is null ? null : Text(e.Bloom, $"{at}.bloom"), e.Card, e.BloomCard, e.Litter,
                 e.Deciduous, e.BloomOnBlobs, e.LeafAmount.ToArray(), e.BloomAmount.ToArray(), e.SwayDeg, Text(e.Sound, $"{at}.sound"));
             if (info.Row is < 0 or >= Rows || !rows.Add(info.Row))
                 throw new InvalidDataException($"species.json: '{info.Id}' has an invalid or duplicate row {info.Row}.");

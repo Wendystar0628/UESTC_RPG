@@ -34,11 +34,12 @@ public static class CanopyProjection
     /// <summary>Byte offsets of the channels within one RGBA8 texel.</summary>
     private const int R = 0, G = 1, B = 2, A = 3;
 
-    public static void Paint(PlantingLayout layout, PlantingRules rules, IWorldModel world, MapRect rect, float metersPerPixel,
+    public static void Paint(PlantingLayout layout, PlantingRules rules, SpeciesTable species, IWorldModel world, MapRect rect, float metersPerPixel,
         Span<byte> mask1, Span<byte> mask2)
     {
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(rules);
+        ArgumentNullException.ThrowIfNull(species);
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(rect);
         var width = (int)MathF.Round((rect.Max.X - rect.Min.X) / metersPerPixel);
@@ -51,19 +52,26 @@ public static class CanopyProjection
         {
             var p = new Vector2(tree.Position.X, tree.Position.Z);
             var r = tree.CrownRadius;
-            // Ginkgo leaves go to R; other deciduous trees and spring petals go to G; evergreens drop none.
-            if (tree.Species.Id == "ginkgo") grid.Cone(mask1, R, p, r * LeafReach, 255);
-            else if (tree.Species.Deciduous)
+            switch (tree.Species.Litter)
             {
-                grid.Cone(mask1, G, p, r * LeafReach, 255);
-                // The existing leaf colour family identifies maple potential, with the same projection as its G contribution.
-                if (tree.Species.Leaf == "maple") grid.Cone(mask1, A, p, r * LeafReach, 255);
+                case LitterShape.None:
+                    break;
+                case LitterShape.Fan:
+                    grid.Cone(mask1, R, p, r * LeafReach, 255);
+                    break;
+                case LitterShape.Broadleaf:
+                case LitterShape.Lobed:
+                    grid.Cone(mask1, G, p, r * LeafReach, 255);
+                    if (tree.Species.Litter == LitterShape.Lobed) grid.Cone(mask1, A, p, r * LeafReach, 255);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown litter shape {tree.Species.Litter}.");
             }
             grid.Cone(mask2, B, p, r * ShelterReach, 255);
         }
 
-        // The avenue: the rule whose rows are ginkgo; its carriageway carries the full leaf carpet with two worn tracks.
-        foreach (var rule in rules.Roads.Where(r => r.Species.Contains("ginkgo")))
+        // Fan-leaf road rows carpet their carriageway, with two worn tracks.
+        foreach (var rule in rules.Roads.Where(r => r.Species.Any(id => species.Get(id).Litter == LitterShape.Fan)))
             foreach (var road in world.Network.Roads.Where(l => (l.Props?.OptionalText("name:zh") ?? l.Props?.OptionalText("name")) == rule.Name).OrderBy(l => l.Id.Value, StringComparer.Ordinal))
                 grid.Corridor(mask1, road.Line.Points, road.Width * 0.5f);
     }
