@@ -11,6 +11,7 @@
 - `.collab/tools/monitor/read/` 持有来源 IO 与解析，`view/` 计算业务。巡逻周期唯一经 `read.collab.patrol_interval_seconds()` 读取 `.collab/tools/README.md` 的明确登记；缺失或不明确为 null。health 在 view 计算 late 与私有到期点，调度只按该点重算 health，并监听登记变化。
 - `attention.py` 独占作者输入事务：输入变更、过目重建、revision 校验、确认、attention/feedback 发布。`post.py`、采集与 HTTP 入口只调用它；先持输入事务锁，再经窄发布函数取得短锁。
 - `datafile.write()` 是唯一文件发布入口：原子替换 `Dash.put` 后提交内容签名与确认时刻；签名不含 updated，相同内容只推进确认。失败可发布 errors，不能推进确认。内部 `dashboard-publication.json` 只是当前发布快照，checked 是私有 name→ISO 表，不是历史或公开 SSE 载荷。
+- `failure-types.json` 的精确文件事件与 `history:failures`、既有 Git 引用事件驱动 failures；不新增计时器或巡逻入口。
 - `catalog.DATASETS` 是各份公开与内部结果的唯一登记，集中输入、确认间隔、通道、合批、行与样本需求、周期和到期属性。`datafile.AUTO_NAMES` 由公开项派生；collect 的 PRODUCERS 是唯一实际生产函数绑定，启动核对其输出名字与登记名集，live 按同表调度。`/api/data-names.js` 同次输出 `window.DashDataNames`（公开数据名）与 `window.DashQueueStates`（施工状态有序数组）；状态 key、中文名与顺序只由 `.collab/tools/monitor/queue-states.json` 定义，Python、Node 与前端共用。
 - 登记的 kind 区分公开结果、共享原始事实与界面发布；collect 仅核对实际生产输出与登记的名字集合，不再保存或比较第二份函数绑定。作者事务输出由 attention.BUILDERS 导出；策展输入名单统一在 catalog.CURATED_NAMES。判鲜仅对从未确认的来源返回空，已确认来源的坏时刻或坏间隔直接报错。
 - `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件、同源写入、SSE 与文档只读接口。服务 Observer 只观察发布元数据，不采集、不持发布锁等待客户端。唯一 `health.freshness(checked, intervals, now)` 纯函数算 stale/ratio；HTTP 只包装结果，业务指标不在服务计算。
@@ -19,7 +20,7 @@
 
 ## 2 数据契约 v3
 
-数据文件用 `Dash.put(名字, 数据)` 交付，附 `updated`、固定生产方 `source`、`errors`。时刻为 ISO，时长为分钟；`rate`、`ratio` 为 0–1 口径的小数，freshness.ratio 是经过时长/应有间隔，可大于 1。比例显示用 `Dash.pct(rate, 1)`。公开名字、顺序与间隔由 catalog.DATASETS 派生，未生成显示缺数据。index、stats、records 停产，通知仅作输入。
+数据文件用 `Dash.put(名字, 数据)` 交付，附 `updated`、固定生产方 `source`、`errors`。时刻为 ISO，时长为分钟；`rate`、`ratio` 为 0–1 口径的小数，freshness.ratio 是经过时长/应有间隔，可大于 1。比例显示用 `Dash.pct(rate, 1)`；failures.rate 单独表示每 window.segment 次提交的登记次数。公开名字、顺序与间隔由 catalog.DATASETS 派生，未生成显示缺数据。index、stats、records 停产，通知仅作输入。
 
 内容改变才换版本，updated 是该版内容发布时间。真实读取、解析或依赖失败发布 errors；缺事实、覆盖不足、零分母或无法确认的判断保留 null，不写成零、空闲或正常。历史带 `coverage: {from}`，不补造记账起点以前的事实；后端给出各窗口与列表顺序，前端不再排序、切窗或重算业务。
 
@@ -71,6 +72,15 @@ health:    {coverage, at, level, summary, late: bool|null, counts: {ok, warn, ba
             gates: [{checkout, at, scope, gates: [{name: G1..G5, ok: true|false|null}], run, failed, failedNames}],
             tests: {days: [{day, count, lines, ratio, quickSec}]},
             hooks: {selftest: {ok, total, failed: [一句], level}, errors: [{hook, n, last}]}}
+failures:  {coverage: {from: 记账起点|null},
+            window: {size, segment, commits|null, from: 时刻|null, n|null, rate|null,
+                     unclassified|null, fresh|null, trend: better|worse|same|null, last: {at, minutes}|null},
+            majors: [{key, label, n|null, rate|null, last100|null, recent: [记录id],
+                      subs: [{key, label, note, n|null, rate|null, last100|null,
+                              added|null, fresh: bool|null, recent: [记录id]}]}],
+            segments: [{from: 提交序号, to: 提交序号, commits, n|null, partial: bool,
+                        byMajor: {大类key: 次数|null}, recent: [记录id]}]|null,
+            records: {记录id: {at, major|null, sub, who: claude|codex|null, row|null, note}}, recent: [记录id]}
 system:    {coverage, timings: [{key, label}], hooks: [{id, side, name, timings, purpose, ok}],
             kinds: [{key, label, group: 规则|接入要点|提醒, n24, last}],
             domains: [{key, label, index, docs: [{code, title, parent}]}],
@@ -98,6 +108,9 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
 - team 行字段复制同轮 progress，队列无对应行则为 null。agents 按 stalled、running、unknown、done 排，未交回按开始升序，交回按结束降序；runMin 只用真实开始和在跑时刻或真实交回。leads.agents 与 sides 同源，等于 running+stalled；unknown 单列，doneN 为近一小时真实交回，覆盖不足为 null。停止、失败不算交回。
 - letters.open 是唯一未回信平铺列表，minutes 降序，未知在末尾；cells 只给对应 openN，抽屉按 from/to/mark 筛同一列表。audit.missing 与 unaudited 同一次差集，已知时条数相等，已不在队列的 stage=null；rate=audited/rows，dispatch.rate=ok/n。覆盖或来源不足为 null。
 - health 各组 counts 相加等于总 counts；groups.items 包含全部项，按 bad、warn、unknown、ok 排，正常标题同源。rounds 为最近 48 轮、时间升序；roundsSummary.last 只取同一末轮。钩子自测只在 hooks.selftest，其 level 与巡逻结论同源；at 为真实黑盒完成时刻，同源复用不改时刻，health.at 仍为巡逻确认时刻；无结构化计数则 ok/total=null。late 只由真实巡逻时刻和登记间隔决定，未知不判正常。
+- failures 的窗口大小与段长只读 `monitor/failure-types.json`，读取共用 `read/failures.snapshot()`，不复述数值。窗口按登记时的 origin/main 提交序号取 `(current-size, current]`；起点所在提交的首次登记同样保留，分母为 `min(size, current-start.seq)`。rate=次数÷实际提交数×segment，不足一段为 null；last100 沿契约字段名表示最近一个 segment 的次数。没开始记账时 coverage.from、窗口指标、类别计数与 fresh、segments 均为 null；原始读取或 Git 失败发布 errors。
+- failures.segments 固定覆盖窗口、旧到新，from 不含、to 包含；整体在起点之前 n/byMajor 为 null，跨起点 partial=true，不把未记账写为零。trend 仅在最新段已完整覆盖时与此前完整段次数均值比较，没有前序完整段为 null。未收录子类计入 window.n/unclassified，不进大类。子类别名由原始 reader 唯一解析。fresh 只计真实 added 晚于记账起点、位于已知窗口内的子类，种子 added=null 不算；window.fresh 同源汇总。
+- failures.records 为窗口内全量记录索引；recent、majors[].recent、subs[].recent、segments[].recent 都由 view 排成新到旧且最多 20 条。页面按 fmajor/fsub 选择现成索引，点提交段打开对应抽屉，不排序、切窗或重新统计；不公开 head、src、by 与原始日志路径。窗口内零条显示“窗口内没有登记”，登记数不等于实际失败数。
 - system 的图四层分别为时机、钩子、注入类别、文档域；id 前缀 t:/h:/k:/d:，边与 in/out 引用同一节点 id。次数有未知不把已知部分冒充完整值。collide.total24 与 items 同源，scripts.total 与 groups 同一次扫描；domains 的 key/index/docs 取同轮 docs，不另建目录来源。
 - feed.days 补满含今天的 30 个自然日并升序，每日三个真实 side×六类共 18 格；不增加 side=all 重复统计。完整日覆盖不足或存在对应无日期源项时 n=null，已确认无事件才为 0；items 为同一事件源的近 30 天及无日期项。决策由既有解析器全量取，不按最近 15 条推算。已从私有通知快照删除的通知不伪造历史。
 
@@ -110,12 +123,13 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
 | flow | queue、pushes、audits、progress 与共享 Git 证据 | 慢通道，合并 10 秒内变化 |
 | collab | letters、audits、pushes、agents、leads、queue 历史 | 慢通道，合并 10 秒内变化 |
 | health | patrol 结构化历史、门禁、代码规模、钩子、巡逻周期登记 | 原报告事件、周期登记变化、view 给出的真实到期点；不重跑检查 |
+| failures | 类别清单、失败账本及 origin/main 提交序号 | 登记、新增类别或 Git 引用事件；快通道合批，不进巡逻 |
 | system | 钩子登记、日志、脚本与同轮 docs | 慢通道；24 小时计数每 10 分钟到期刷新 |
 | docs | 文档头与 SECTIONS.md | 文档事件，慢通道 |
 | feed | 真实 Git 完成、回滚、审计、决策、私有通知 | 原源事件 |
 | now | 状态头与同轮 progress、flow、collab | 原源或公开依赖完成 |
 
-历史唯一账位于 `.collab/tools/state/dashboard-events/`，保留 60 天。envelope.at 是观察时刻，sourceAt 只认来源明确时刻，否则 null；不拿 mtime、删行、超时或停止补造完成。完成与每日完成唯一复用 progress.evidence.finished。钩子事件和块名直接给中文；未识别写“未知事件”。决策只给一句结论。测试 count 必须来自真实测试批次，文件数不算用例；代码行数比例只描述规模，缺关联批次的门禁执行数保持 null，门禁未跑不显示通过。now.phase.step 只认状态头“当前阶段”开头明确的 P0–P3。
+历史唯一账位于 `.collab/tools/state/dashboard-events/`，通常保留 60 天；failures 按类别清单的提交窗口修剪，记账起点永久保留。envelope.at 是观察时刻，sourceAt 只认来源明确时刻，否则 null；不拿 mtime、删行、超时或停止补造完成。完成与每日完成唯一复用 progress.evidence.finished。钩子事件和块名直接给中文；未识别写“未知事件”。决策只给一句结论。测试 count 必须来自真实测试批次，文件数不算用例；代码行数比例只描述规模，缺关联批次的门禁执行数保持 null，门禁未跑不显示通过。now.phase.step 只认状态头“当前阶段”开头明确的 P0–P3。
 
 动态条目的预设窗口归属由 view 用同一个 now 计算，滚动区间为 `(now-duration, now]`，无来源时刻的归属为 null。页面只选择窗口标记或 day 字段，不使用浏览器时间重切窗；自然日换日、未来事件进入与已知事件移出都返回真实下一到期点。文档读取与搜索均经 view/docs，检索打分、排序与截断只在 view。
 
@@ -324,12 +338,14 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 | `#now` 现在 | 要不要我过目、推进到哪、机器正不正常 | — | attention、feedback、now、progress、health、team、feed |
 | `#work` 施工 | 活在哪一段、流得顺不顺 | side | progress、flow |
 | `#team` 团队 | 谁在做哪行、两边配合得怎样 | — | team、collab、progress |
-| `#health` 健康 | 这套开发机器正不正常 | — | health；新鲜度用 `Dash.freshness()` |
+| `#health` 健康 | 这套开发机器正不正常，游戏本体最近在哪类失败 | — | health、failures；新鲜度用 `Dash.freshness()` |
 | `#system` 体系 | 钩子与脚本怎么搭起来、在送什么 | side | system、hookfeed、docs |
 | `#feed` 动态 | 最近发生了什么 | range、side、type | feed |
 | `#docs` 文档 | 查文档、读文档 | — | docs、`/api/doc`、`/api/doc/search` |
 
 现在页六块：`now-attention` 等你过目（没点"知道了"的前 3 条，其余折叠；打开、知道了，7 栏）、`now-feedback` 给主会话留言（5 栏）、`now-progress` 推进到哪（P0–P3 四格阶段条、当前阶段与当前优先级两句、流水线比例条，点段到 `#work/work-board?stage=`；阶段号为 null 不画格，8 栏）、`now-pulse` 机器与人（健康灯与要看、有问题的个数 → `#health`；两位指挥的灯与在跑子代理数 → `#team`，4 栏）、`now-kpis` 六张指标卡（点卡到 `kpis[].href`）、`now-feed` 最近 5 条动态（点了到 `#feed`）。1440×900 一屏放下前三排。
+
+健康页在“总体”之后、“各组检查”之前依次增加 `health-fail` 指标卡（12 栏）、`health-fail-types` 大类到子类（5 栏）、`health-fail-trend` 提交段堆叠（7 栏）、`health-fail-recent` 最近登记（12 栏）；fmajor/fsub 保存在路由，筛选可清除。频率未确认显示 —；类别新增签与未收录类别提示共用既有组件与令牌。
 
 **加页面、面板、数据源**：
 - 加页面：manifest 的 `pages` 加一项（`id`、`title`、`ask`、`file`、`filters?`），建 `pages/<页>.js` 与同名 `.css`，用 `Dash.panel` 注册。

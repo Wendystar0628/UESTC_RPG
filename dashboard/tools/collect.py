@@ -14,7 +14,7 @@ import datafile
 from catalog import DATASETS
 from monitor import util as U
 from monitor.read import collab as read_collab, repo
-from monitor.view import attention, progress, flow, collab, team, health, system, hookfeed, people, feed, docs, now
+from monitor.view import attention, progress, flow, collab, team, health, failures, system, hookfeed, people, feed, docs, now
 SOURCE = 'monitor.view'
 _LOCK = threading.RLock()
 _VALUES = {}
@@ -51,7 +51,7 @@ def app_data(context):
 PRODUCERS = {
     'live': live_data, 'hookfeed': hookfeed_data, '_git': git_data, '_app': app_data,
     **{module.__name__.rsplit('.', 1)[-1]: module.build
-       for module in (progress, flow, collab, team, health, system, feed, docs, now)},
+       for module in (progress, flow, collab, team, health, failures, system, feed, docs, now)},
     **{name: attention.refresh for name in attention.BUILDERS},
 }
 if PRODUCERS.keys() != DATASETS.keys():

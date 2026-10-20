@@ -82,6 +82,7 @@ def main():
     claude = normalized(U.CLAUDE_PROJ)
     database = {normalized(U.CODEX_DB + suffix) for suffix in ('', '-wal', '-shm')}
     local = normalized(U.COLLAB + '/tools/monitor/local.json')
+    failure_types = normalized(U.COLLAB + '/tools/monitor/failure-types.json')
     patrol_schedule = normalized(U.COLLAB + '/tools/README.md')
     guard = normalized(U.COLLAB + '/tools/hooks/log/guard.jsonl')
     hook_stats = {normalized(U.COLLAB + '/tools/hooks/log/' + name)
@@ -129,6 +130,8 @@ def main():
         result = set()
         if path == queue:
             result.add('queue')
+        if path == failure_types:
+            result.add('failure-types')
         if path == patrol_schedule:
             result.add('patrol:interval')
         if path == local:
@@ -228,7 +231,7 @@ def main():
         wanted += [(root, True) for root in code_roots | gate_roots]
         exact = set(rollout_paths) | checkout_paths | database | git_files | settings | model_paths
         exact.update(root for root in script_roots if not os.path.isdir(root))
-        exact.update((queue, local, patrol_schedule, guard, agent_log, dashboard + '/index.html',
+        exact.update((queue, local, patrol_schedule, failure_types, guard, agent_log, dashboard + '/index.html',
                       U.STATE + '/dashboard-ack.json'))
         exact.update(curated + '/' + name + '.js' for name in CURATED_NAMES)
         wanted += [(os.path.dirname(path), False) for path in exact]
