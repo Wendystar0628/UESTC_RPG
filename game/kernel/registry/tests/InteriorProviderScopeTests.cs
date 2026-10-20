@@ -27,7 +27,7 @@ public sealed class InteriorProviderScopeTests
         var featureA = new FeatureId("fixture:building:a");
         var featureB = new FeatureId("fixture:building:b");
         var reference = (BoxInteriorProvider)registry.Create(type, new MapId("fixture-global"));
-        reference.Configure(new([referenceFeature], [new(referenceFeature, "", [1])], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
+        reference.Configure(new([referenceFeature], [new(referenceFeature, "", [1], InteriorOpenPartKind.IndoorFloor)], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
         var referenceContext = Context(new("fixture-global"), referenceFeature, -200f,
             new Dictionary<string, IInteriorProvider> { [providerId] = reference });
         var referenceLayout = reference.Layout(referenceContext, referenceFeature);
@@ -127,6 +127,24 @@ public sealed class InteriorProviderScopeTests
         finally { await registry.ShutdownAsync(); }
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void BoxPermissionsRemainScopedToEachFeature()
+    {
+        var first = new FeatureId("fixture:first"); var second = new FeatureId("fixture:second");
+        var provider = new FixtureBoxInterior();
+        var providers = new Dictionary<string, IInteriorProvider> { ["fixture.box"] = provider };
+        var context = Context(new("fixture"), first, 0, providers);
+        var neighbour = Context(new("fixture"), second, 100, providers);
+        ((FakeWorld)context.World).Features = context.World.Features.Concat(neighbour.World.Features).ToDictionary(pair => pair.Key, pair => pair.Value);
+        provider.Configure(new([first, second], [new(first, "", [1], InteriorOpenPartKind.IndoorFloor),
+            new(second, "", [3, 4], InteriorOpenPartKind.IndoorFloor)], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
+        AssertThat(provider.Layout(context, first).OpenStoreys.SequenceEqual([1]) &&
+            provider.Layout(context, second).OpenStoreys.SequenceEqual([3, 4]) &&
+            provider.BuildStorey(context, first, 3, InteriorDetail.Full).Meshes.Count == 0 &&
+            provider.BuildStorey(context, second, 1, InteriorDetail.Full).Meshes.Count == 0)
+            .OverrideFailureMessage("A feature acquired another feature's floor authorization.").IsTrue();
+    }
+
     private static ServiceRegistry ProviderRegistry()
     {
         var registry = new ServiceRegistry();
@@ -140,12 +158,12 @@ public sealed class InteriorProviderScopeTests
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(new
         {
-            version = 2,
-            interiors = new[] { new { providerId, featureIds = new[] { feature.Value }, openParts = new[] { new { featureId = feature.Value, sourceId = "", floors } }, entrances = Array.Empty<object>() } }
+            version = 3,
+            interiors = new[] { new { providerId, featureIds = new[] { feature.Value }, openParts = new[] { new { featureId = feature.Value, sourceId = "", kind = "indoorFloor", floors } }, entrances = Array.Empty<object>() } }
         });
         var bindings = InteriorAssembly.Configure(bytes, providers);
         AssertThat(bindings.Count == 1 && bindings[0].FeatureIds.SequenceEqual([feature]) &&
-            bindings[0].OpenFloors.SequenceEqual(floors)).OverrideFailureMessage("Configure lost catalog feature/floor coverage.").IsTrue();
+            bindings[0].FloorsFor(feature).SequenceEqual(floors)).OverrideFailureMessage("Configure lost catalog feature/floor coverage.").IsTrue();
     }
 
     private static BuildContext Context(MapId map, FeatureId feature, float offset,

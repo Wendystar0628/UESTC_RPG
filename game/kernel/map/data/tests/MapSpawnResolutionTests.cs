@@ -50,7 +50,7 @@ public sealed class MapSpawnResolutionTests
         var entry = Entry([]);
         var feature = new FeatureId("fixture:split-building");
         var ring = new PolygonRings([new(100, 100), new(120, 100), new(120, 120), new(100, 120)]);
-        var allowed = new StoreyInfo(1, 0, 20, [new(100, 100), new(110, 100), new(110, 120), new(100, 120)]);
+        var allowed = new InteriorOpenArea(InteriorOpenPartKind.IndoorFloor, 1, 0, 20, [new(100, 100), new(110, 100), new(110, 120), new(100, 120)]);
         var interior = new InteriorIndexEntry(feature, [new(1, 0, 20, ring.Outer)], [], true, "fixture.provider", [1], [allowed]);
         var world = new FakeWorld { Boundary = ring, Features = new Dictionary<FeatureId, WorldFeature>
             { [feature] = new(feature, new("building"), new PolygonGeometry(ring)) }, Interiors = new FakeInteriors(interior) };

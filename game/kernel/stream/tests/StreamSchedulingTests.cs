@@ -26,16 +26,15 @@ public sealed class StreamSchedulingTests
             .Single(item => item.GetProperty("providerId").GetString() == providerId);
         var features = entry.GetProperty("featureIds").EnumerateArray().Select(item => new FeatureId(item.GetString()!)).ToArray();
         var parts = InteriorEntranceJson.ParseOpenParts(entry);
-        var floors = parts.SelectMany(part => part.Floors).Distinct().Order().ToArray();
         var provider = new LibraryInteriorProvider();
-        provider.Configure(new(features, parts, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
+        provider.Configure(new(features.Where(feature => InteriorOpenPart.IndoorFloorsFor(parts, feature).Count > 0).ToArray(), parts, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
         var context = new TestMapContext(RealMapFixture.Entry().Descriptor, world);
         var layouts = new Dictionary<FeatureId, InteriorLayout>();
         var generation = new BuildContext {
             CodeHash = "fixture", WindowNumbering = new((context.Descriptor).Id, new string('0', 64), []), Map = context.Descriptor, World = world, WorldSeed = 1, InteriorLayouts = layouts,
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             InteriorProviders = new Dictionary<string, IInteriorProvider> { [providerId] = provider } };
-        foreach (var feature in features) layouts.Add(feature, provider.Layout(generation, feature));
+        foreach (var feature in provider.FeatureIds) layouts.Add(feature, provider.Layout(generation, feature));
         var layout = layouts.Values.Single(item => item.AtriumVisibleStoreys.Count > 0);
         var atriumFloor = layout.AtriumVisibleStoreys.Min();
         var bake = new InteriorRequests();
@@ -57,6 +56,63 @@ public sealed class StreamSchedulingTests
         stream.Prefetch(new(layout.Feature, checked((short)atriumFloor)), destination);
         if (bake.Keys.Count != layout.OpenStoreys.Count(floor => Math.Abs(floor - atriumFloor) <= 1))
             throw new InvalidOperationException("Atrium selection leaked into another map load.");
+    }
+
+    [TestCase, TestCategory(TestReason.Regression), TestCategory("Slow")]
+    public void OutdoorHighPlacesKeepTheirRealSiteCollisionWithoutInteriorShellOrStreamKeys()
+    {
+        var world = RealMapFixture.Load().World;
+        var map = RealMapFixture.Entry().Descriptor;
+        var context = new TestMapContext(map, world);
+        var generation = new BuildContext { CodeHash = "outdoor-regression", WindowNumbering = new(map.Id, new string('0', 64), []),
+            Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = map, World = world, WorldSeed = map.Seed };
+        var south = new Campus.Gen.Maps.Qingshuihe.South.SouthModule();
+        var core = new Campus.Gen.Maps.Qingshuihe.Core.CoreModule();
+        var sources = south.DescribeOutdoorAccess(generation).Concat(core.DescribeOutdoorAccess(generation)).ToArray();
+        var collision = new Campus.Gen.Geometry.SiteColliders(generation);
+        foreach (var site in Campus.Gen.Maps.Qingshuihe.South.SouthSites.All.Concat(Campus.Gen.Maps.Qingshuihe.Core.CoreSite.Pieces(world))) site.Collide(collision);
+        foreach (var source in sources)
+        {
+            var area = source.Areas[0];
+            var xz = Campus.Gen.Geometry.PlanGeometry.Centroid(area.Footprint);
+            var position = new System.Numerics.Vector3(xz.X, area.FloorY + WalkRules.StandingEye, xz.Y);
+            var medium = world.Spatial.MediumAt(position);
+            if (!world.Interiors.IsOpen(source.Feature, area.Index, position) || medium.Kind != MediumKind.Air ||
+                world.Interiors.AreaAt(source.Feature, position)?.Kind != InteriorOpenPartKind.OutdoorHighPlace)
+                throw new InvalidOperationException($"Outdoor source lost its access domain: {source.Id}.");
+            if (!collision.Items.Any(item => item.Collider is SlabCollider slab && slab.Y == area.FloorY &&
+                slab.Foot != Campus.Contracts.Audio.FootMat.Auto && Campus.Gen.Geometry.PlanGeometry.PointInRing(xz, slab.Ring)))
+                throw new InvalidOperationException($"Outdoor source lost its existing site support: {source.Id}.");
+            var bake = new InteriorRequests();
+            var stream = new InteriorStream(bake, new StreamMountQueue(() => 0), new StreamMaterials(null!, null!), null!, _ => { }, false);
+            stream.Load(context); stream.Select(medium, position);
+            if (bake.Keys.Count != 0) throw new InvalidOperationException("Outdoor medium requested an interior shell.");
+            stream.Prefetch(new(source.Feature, checked((short)area.Index)), position);
+            if (bake.Keys.Count != 0 || stream.Error is null || stream.DestinationReady)
+                throw new InvalidOperationException("An explicit interior space incorrectly authorized an outdoor area.");
+            stream.Unload();
+        }
+        var points = JsonSerializer.Deserialize<WaypointFile>(RealMapFixture.ReadFiles()["waypoints.json"].Span, ContractJson.Options)!.Waypoints;
+        foreach (var point in points.Where(point => point.Id is "P17" or "P18"))
+            if (world.Spatial.MediumAt(point.Fly.Position).Kind != MediumKind.Air)
+                throw new InvalidOperationException($"The unchanged {point.Id} camera is no longer outdoors.");
+        using var catalog = JsonDocument.Parse(RealMapFixture.ReadFiles()["interiors.json"]);
+        foreach (var item in catalog.RootElement.GetProperty("interiors").EnumerateArray()
+            .Where(item => item.GetProperty("openParts").EnumerateArray().Any(part => part.GetProperty("kind").GetString() == "outdoorHighPlace") &&
+                item.GetProperty("providerId").GetString()!.StartsWith("interior.box.", StringComparison.Ordinal)))
+        {
+            var parts = InteriorEntranceJson.ParseOpenParts(item);
+            var feature = parts[0].FeatureId;
+            var provider = new Campus.Gen.Interior.Shell.Box.BoxInteriorProvider();
+            provider.Configure(new([feature], parts, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>
+                { [feature] = world.Interiors.Get(feature)!.Entrances }, null, []));
+            var outdoor = sources.Single(source => source.Feature == feature);
+            var floor = outdoor.Areas[0].Index;
+            if (provider.Layout(generation, feature).OpenStoreys.Contains(floor) ||
+                provider.BuildStorey(generation, feature, floor, InteriorDetail.Full).Meshes.Count != 0 ||
+                provider.CollisionStorey(generation, feature, floor).Count != 0)
+                throw new InvalidOperationException("A high place still acquired box-interior geometry.");
+        }
     }
 
     [TestCase]

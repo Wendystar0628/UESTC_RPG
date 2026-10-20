@@ -126,11 +126,11 @@ public static partial class PlanGeometry
     }
 
     /// <summary>Intersect real plan areas with NTS, returning hole-free triangles for point-permission storage.</summary>
-    public static IReadOnlyList<IReadOnlyList<Vector2>> IntersectionTriangles(PolygonRings a, PolygonRings b)
+    public static IReadOnlyList<IReadOnlyList<Vector2>> IntersectionTriangles(PolygonRings a, PolygonRings b, IReadOnlyList<PolygonRings>? exclusions = null)
     {
-        Polygon Shape(PolygonRings p) => Factory.CreatePolygon(Factory.CreateLinearRing(ClosedCoordinates(p.Outer)),
-            p.Holes.Select(hole => Factory.CreateLinearRing(ClosedCoordinates(hole))).ToArray());
         var intersection = Shape(a).Intersection(Shape(b));
+        if (exclusions is not null)
+            foreach (var excluded in exclusions) intersection = intersection.Difference(Shape(excluded));
         if (intersection.IsEmpty || intersection.Area == 0) return [];
         var triangles = NetTopologySuite.Triangulate.Polygon.PolygonTriangulator.Triangulate(intersection);
         var result = new List<IReadOnlyList<Vector2>>();
@@ -140,6 +140,28 @@ public static partial class PlanGeometry
             result.Add(polygon.ExteriorRing.Coordinates.Take(3).Select(p => new Vector2((float)p.X, (float)p.Y)).ToArray());
         }
         return result.AsReadOnly();
+    }
+
+    private static Polygon Shape(PolygonRings polygon) => Factory.CreatePolygon(Factory.CreateLinearRing(ClosedCoordinates(polygon.Outer)),
+        polygon.Holes.Select(hole => Factory.CreateLinearRing(ClosedCoordinates(hole))).ToArray());
+
+    /// <summary>Cold-build line/area intersection, measured along the original segment for wall subtraction.</summary>
+    public static IReadOnlyList<(float Start, float End)> SegmentIntervals(Vector2 a, Vector2 b, IReadOnlyList<Vector2> ring)
+    {
+        var direction = Vector2.Normalize(b - a);
+        var line = Factory.CreateLineString([new Coordinate(a.X, a.Y), new Coordinate(b.X, b.Y)]);
+        var intersection = line.Intersection(Shape(new(ring)));
+        var result = new List<(float Start, float End)>();
+        for (var index = 0; index < intersection.NumGeometries; index++)
+        {
+            if (intersection.GetGeometryN(index) is not LineString segment || segment.NumPoints < 2) continue;
+            var first = segment.GetCoordinateN(0); var last = segment.GetCoordinateN(segment.NumPoints - 1);
+            var start = Vector2.Dot(new Vector2((float)first.X, (float)first.Y) - a, direction);
+            var end = Vector2.Dot(new Vector2((float)last.X, (float)last.Y) - a, direction);
+            if (end < start) (start, end) = (end, start);
+            if (end > start) result.Add((start, end));
+        }
+        return result.OrderBy(interval => interval.Start).ThenBy(interval => interval.End).ToArray();
     }
 
     public static float CrossFloat(Vector2 a, Vector2 b) => a.X * b.Y - a.Y * b.X;

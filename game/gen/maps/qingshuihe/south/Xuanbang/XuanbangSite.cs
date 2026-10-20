@@ -400,6 +400,14 @@ public sealed class XuanbangSite : ZoneSite
 
     // ---- Collision ----
 
+    public override IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context)
+    {
+        var plan = Rings(context.World);
+        var centre = PlanGeometry.Centroid(plan.Clock, meanIfDegenerate: true);
+        var ground = context.World.Terrain.HeightAt(centre.X, centre.Y);
+        return [new("xuanbang.lantern-gallery", new(Feature), ClockTower.Lantern(plan.ClockPlan, ground, context.World).Areas)];
+    }
+
     public override void Collide(SiteColliders c)
     {
         var f = Rings(c.Context.World);

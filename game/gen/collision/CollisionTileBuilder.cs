@@ -151,6 +151,15 @@ public sealed class CollisionTileBuilder(
                     var head = door.HeadY != 0f ? door.HeadY : door.Center.Y + WalkRules.UnknownEntranceCollisionHeight;
                     if (end > start) cuts.Add(new(start, end, door.Center.Y, head, EntranceWallOpenings.IsOpen(interior, door)));
                 }
+                if (interior is { Open: true })
+                    foreach (var access in interior.OpenAreas)
+                    {
+                        if (InteriorOpenPart.IsIndoor(access.Kind)) continue;
+                        var barrierTop = access.FloorY + WalkRules.BarrierHeight;
+                        if (barrierTop >= top) continue;
+                        foreach (var interval in PlanGeometry.SegmentIntervals(a + inward * halfThickness, b + inward * halfThickness, access.Footprint))
+                            cuts.Add(new(interval.Start, interval.End, barrierTop, top, true));
+                    }
                 result.AddRange(EntranceWallOpenings.Cut(new WallCollider(a + inward * halfThickness, b + inward * halfThickness,
                     halfThickness, bottom, top, SurfaceTag.Wall) { Foot = FootMat.Concrete }, cuts, halfThickness, halfThickness));
             }

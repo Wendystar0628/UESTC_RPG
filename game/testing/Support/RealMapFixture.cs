@@ -85,9 +85,14 @@ internal static class RealMapFixture
             var context = new BuildContext { World=loaded.World, Map=entry.Descriptor, WorldSeed=entry.Descriptor.Seed,
                 Catalog=Campus.Contracts.Tests.PaletteFixture.Catalog, InteriorProviders=providers, SourceInputs=files,
                 CodeHash="fixture-interior-preparation", WindowNumbering=new(entry.Descriptor.Id,new string('0',64),[]) };
-            var layouts = bindings.SelectMany(binding => binding.FeatureIds.Select(feature =>
+            var modules = RegistrationDiscovery.Query<IContentModule>(registrations, RegistrationKind.Content, id)
+                .Select(entry => (IContentModule)RegistrationDiscovery.Construct(entry.Type,
+                    parameter => parameter.HasDefaultValue ? parameter.DefaultValue : throw new InvalidOperationException("Fixture module has an unresolved dependency.")))
+                .OfType<IOutdoorAccessSource>();
+            var outdoor = InteriorAssembly.CaptureOutdoorAccess(context, bindings, modules);
+            var layouts = bindings.SelectMany(binding => binding.InteriorFeatures.Select(feature =>
                 InteriorAssembly.ValidatedLayout(providers[binding.ProviderId],binding,context,feature))).ToArray();
-            loaded = loaded with { World = WorldModelSnapshot.WithInteriors(loaded.World, InteriorAssembly.IndexEntries(layouts,bindings,providers)) };
+            loaded = loaded with { World = WorldModelSnapshot.WithInteriors(loaded.World, InteriorAssembly.IndexEntries(layouts,bindings,providers,loaded.World,outdoor)) };
         }
         MapCatalog.ValidateDestinations(entry.Descriptor, files, loaded.World);
         return loaded;

@@ -10,6 +10,8 @@ public enum InteriorDetail : byte { Proxy = 0, Shell = 1, Full = 2 }   // I0 兜
 public enum ZoneKind : byte { Room, Corridor, Stair, Atrium, Lobby, Wc, Service, Gallery }
 public enum PortalKind : byte { Door, StairOpening, AtriumOpening, Window, Sealed, ElevatorStop }   // Sealed：封口
 public sealed record StoreyInfo(int Index, float FloorY, float Height, IReadOnlyList<Vector2> Footprint);
+/// <summary>Frozen point permission; spatial storeys themselves do not imply indoor generation or access.</summary>
+public sealed record InteriorOpenArea([property: JsonRequired] InteriorOpenPartKind Kind, int Index, float FloorY, float Height, IReadOnlyList<Vector2> Footprint);
 public sealed record ZoneVolume(int Storey, int Id, ZoneKind Kind, IReadOnlyList<Vector2> Ring,
     ChannelId LightChannel, uint LightHash, bool Open);                     // Open：属于开放范围
 public sealed record PortalDecl(int Storey, int ZoneA, int ZoneB, Vector3 A, Vector3 B, float Height, PortalKind Kind);
@@ -39,7 +41,7 @@ public sealed record InteriorLayout(FeatureId Feature, IReadOnlyList<StoreyInfo>
     Box3 Bounds, uint PlanHash)
 {
     /// <summary>Frozen once by interior input assembly; raw provider layouts have no published access areas.</summary>
-    [JsonRequired] public IReadOnlyList<StoreyInfo> OpenAreas { get; init; } = [];
+    [JsonRequired] public IReadOnlyList<InteriorOpenArea> OpenAreas { get; init; } = [];
     public IReadOnlyList<DoorLeafDecl> Doors { get; init; } = [];          // 会动的门扇
 }
 
@@ -70,11 +72,13 @@ public interface IInteriorProvider           // gen 里实现；加载期配置�
 public sealed record InteriorIndexEntry(FeatureId Feature, IReadOnlyList<StoreyInfo> Storeys,
     IReadOnlyList<EntranceDecl> Entrances, bool Open, string? ProviderId,
     [property: JsonRequired] IReadOnlyList<int> OpenStoreys,
-    [property: JsonRequired] IReadOnlyList<StoreyInfo> OpenAreas);
+    [property: JsonRequired] IReadOnlyList<InteriorOpenArea> OpenAreas);
 public interface IInteriorIndex
 {
     InteriorIndexEntry? Get(FeatureId id);
     /// <summary>Actual point permission; OpenStoreys is only a derived enumeration for bake/stream keys.</summary>
     bool IsOpen(FeatureId id, int storey, Vector3 position);
+    /// <summary>Frozen access domain at the actual point; null means no catalog permission.</summary>
+    InteriorOpenArea? AreaAt(FeatureId id, Vector3 position);
     IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r);       // 入口预取、地图图层（SYS-ATLAS 的"可进入的室内"）、G19
 }

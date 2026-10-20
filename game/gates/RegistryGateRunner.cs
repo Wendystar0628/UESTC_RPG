@@ -82,8 +82,12 @@ public static partial class RegistryGateRunner
             using var interiors = JsonDocument.Parse(read(entry.Dir + "interiors.json"));
             foreach (var interior in interiors.RootElement.GetProperty("interiors").EnumerateArray())
             {
-                var provider = interior.GetProperty("providerId").GetString() ?? throw new InvalidDataException("Missing interior provider ID.");
-                RegistrationDiscovery.ResolveInterior(effective, provider);
+                var openParts = InteriorEntranceJson.ParseOpenParts(interior);
+                if (openParts.Any(part => InteriorOpenPart.IsIndoor(part.Kind)))
+                {
+                    var provider = interior.GetProperty("providerId").GetString() ?? throw new InvalidDataException("Missing interior provider ID.");
+                    RegistrationDiscovery.ResolveInterior(effective, provider);
+                }
                 foreach (var feature in interior.GetProperty("featureIds").EnumerateArray())
                     if (!ids.Contains(feature.GetString()!)) throw new InvalidDataException($"Open interior entity is missing: {entry.Id}/{feature}");
             }

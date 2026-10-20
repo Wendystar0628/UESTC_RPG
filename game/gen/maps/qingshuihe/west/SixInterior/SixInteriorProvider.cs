@@ -23,7 +23,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
     public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     private FeatureId[] _features = [];
-    private int[] _floors = [];
+    private IReadOnlyList<InteriorOpenPart> _openParts = [];
     private IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> _entrances =
         new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>();
     private static readonly DormitoryPlanOptions Rules = new();
@@ -38,11 +38,10 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
     public void Configure(InteriorCatalogConfiguration configuration)
     {
         var (features, openParts, entrances, buildingType, seals) = configuration;
-        var openFloors = configuration.OpenFloors;
         if (buildingType is not null || seals.Count != 0)
             throw new ArgumentException("This authored provider does not consume generated building configuration or catalog seals.", nameof(configuration));
         _features = features.Distinct().OrderBy(f => f.Value, StringComparer.Ordinal).ToArray();
-        _floors = openFloors.Distinct().Order().ToArray();
+        _openParts = openParts;
         _entrances = entrances;
     }
 
@@ -51,7 +50,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         Require(id);
         var p = SixInteriorPlan.Of(ctx);
         var isC = id.Value == S.EntityC;
-        var floors = _floors.Where(f => (f is 1 or 2) && (isC || f == 2)).ToArray();
+        var floors = InteriorOpenPart.IndoorFloorsFor(_openParts, id).Where(f => (f is 1 or 2) && (isC || f == 2)).ToArray();
         var footprint = isC ? p.CBase : p.PublicB;
         var storeys = floors.Select(f => new StoreyInfo(f, f == 1 ? p.FloorY : p.UpperY,
             f == 1 ? p.StairRise : S.BaseStorey, footprint.Outer)).ToArray();
@@ -283,7 +282,7 @@ public abstract class SixInteriorProvider : IInteriorProvider, IInteriorCatalogC
         return (x, p.ReturnFrame.P(x, -p.ReturnDepth * 0.5f),
             p.ReturnFrame.P(x - Rules.DoorClearWidth * 0.5f, -p.ReturnDepth * 0.5f));
     }
-    private bool Open(FeatureId id, int floor) => _floors.Contains(floor) && (floor is 1 or 2) && (id.Value == S.EntityC || floor == 2);
+    private bool Open(FeatureId id, int floor) => InteriorOpenPart.IndoorFloorsFor(_openParts, id).Contains(floor) && (floor is 1 or 2) && (id.Value == S.EntityC || floor == 2);
     private void Require(FeatureId id)
     {
         if (!_features.Contains(id)) throw new ArgumentException("Feature is not assigned to the six interior.", nameof(id));

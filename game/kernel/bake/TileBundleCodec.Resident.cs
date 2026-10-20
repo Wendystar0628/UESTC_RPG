@@ -18,6 +18,14 @@ public static partial class TileBundleCodec
         Records(writer, modules, (w, module) => { Text(w, module.Key); Channel<TileKey>(w, module.Value.ToArray(), key); });
         MetadataRecords(writer, data.Directory.Auxiliary);
         Channel<TileKey>(writer, data.TerrainPoints, key);
+        Records(writer, data.OutdoorAccess, (w, source) =>
+        {
+            Text(w, source.Id); Text(w, source.Feature.Value);
+            Records(w, source.Areas, (areaWriter, area) =>
+            {
+                Json(areaWriter, area with { Footprint = [] }); Channel<Vector2>(areaWriter, area.Footprint.ToArray(), key);
+            });
+        });
     }
 
     private static BakeResidentData Resident(BinaryReader reader, BakeKey key)
@@ -30,7 +38,10 @@ public static partial class TileBundleCodec
         foreach (var module in Records(reader, key, r => new KeyValuePair<string, IReadOnlyList<TileKey>>(Text(r), Channel<TileKey>(r, key))))
             if (!modules.TryAdd(module.Key, module.Value)) throw new InvalidDataException("Duplicate resident module.");
         var directory = new PreparedBakeTiles(modules, MetadataRecords<BakeTileEntry>(reader, key));
-        return new(new(lighting, entrances), windows, coverage, layouts, directory, Channel<TileKey>(reader, key));
+        var terrainPoints = Channel<TileKey>(reader, key);
+        var outdoor = Records(reader, key, sourceReader => new OutdoorAccessArea(Text(sourceReader), new(Text(sourceReader)),
+            Records(sourceReader, key, areaReader => Json<StoreyInfo>(areaReader) with { Footprint = Channel<Vector2>(areaReader, key) })));
+        return new(new(lighting, entrances), windows, coverage, layouts, directory, terrainPoints) { OutdoorAccess = outdoor };
     }
 
     private static void Lighting(BinaryWriter writer, LightInventoryDocument value, BakeKey key)
@@ -96,7 +107,7 @@ public static partial class TileBundleCodec
         return value with
         {
             Storeys = Records(reader, key, r => Json<StoreyInfo>(r) with { Footprint = Channel<Vector2>(r, key) }),
-            OpenAreas = Records(reader, key, r => Json<StoreyInfo>(r) with { Footprint = Channel<Vector2>(r, key) }),
+            OpenAreas = Records(reader, key, r => Json<InteriorOpenArea>(r) with { Footprint = Channel<Vector2>(r, key) }),
             Zones = Records(reader, key, r => Json<ZoneVolume>(r) with { Ring = Channel<Vector2>(r, key) }),
             Portals = MetadataRecords<PortalDecl>(reader, key), Entrances = MetadataRecords<EntranceDecl>(reader, key),
             Elevators = MetadataRecords<ElevatorDecl>(reader, key), OpenStoreys = Channel<int>(reader, key),

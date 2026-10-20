@@ -54,7 +54,8 @@ internal sealed class InteriorStream(IBakeService bake, IStreamMountQueue mount,
             if (blocking) Error = $"Interior destination is not an open registered building: {building.Value}.";
             return;
         }
-        if (!_context.World.Interiors.IsOpen(building, space.Floor, position))
+        var area = _context.World.Interiors.AreaAt(building, position);
+        if (area is null || !InteriorOpenPart.IsIndoor(area.Kind) || area.Index != space.Floor)
         {
             if (blocking) Error = $"Interior destination is outside the open area: {building.Value}/{space.Floor}.";
             return;

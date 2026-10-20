@@ -28,7 +28,7 @@ internal static class CollisionInteriorProviders
             resolved.Add(pair.Key, new(pair.Key, pair.Value, features));
         }
 
-        // A default empty snapshot is valid only when the map has no declared/open interiors.
+        // Only indoor permissions require providers; outdoor access stays with its owning site.
         // Catalog bytes are caller-preloaded inputs, not generator file IO.
         if (context.SourceInputs.TryGetValue("interiors.json", out var catalogBytes))
         {
@@ -38,20 +38,25 @@ internal static class CollisionInteriorProviders
             var catalogProviders = new HashSet<string>(StringComparer.Ordinal);
             foreach (var entry in entries.EnumerateArray())
             {
+                var features = entry.GetProperty("featureIds");
+                if (features.ValueKind != JsonValueKind.Array || features.GetArrayLength() == 0)
+                    throw Failure(context, "An interior catalog entry has no catalog feature bindings.");
+                var openParts = InteriorEntranceJson.ParseOpenParts(entry);
+                var indoorFeatures = new List<FeatureId>();
+                foreach (var featureValue in features.EnumerateArray())
+                {
+                    var id = featureValue.GetString();
+                    if (string.IsNullOrWhiteSpace(id)) throw Failure(context, "An interior catalog entry declares an empty feature ID.");
+                    var feature = new FeatureId(id);
+                    if (InteriorOpenPart.IndoorFloorsFor(openParts, feature).Count > 0) indoorFeatures.Add(feature);
+                }
+                if (indoorFeatures.Count == 0) continue;
                 var providerId = entry.GetProperty("providerId").GetString();
                 if (string.IsNullOrWhiteSpace(providerId)) throw Failure(context, "An interior catalog entry has no provider ID.");
                 catalogProviders.Add(providerId);
                 if (!resolved.ContainsKey(providerId))
                     throw Failure(context, $"Declared provider '{providerId}' is missing from this map's snapshot.");
-                var features = entry.GetProperty("featureIds");
-                if (features.ValueKind != JsonValueKind.Array || features.GetArrayLength() == 0)
-                    throw Failure(context, $"Declared provider '{providerId}' has no catalog feature bindings.");
-                foreach (var featureValue in features.EnumerateArray())
-                {
-                    var id = featureValue.GetString();
-                    if (string.IsNullOrWhiteSpace(id)) throw Failure(context, $"Provider '{providerId}' declares an empty feature ID.");
-                    RequireBinding(providerId, new(id));
-                }
+                foreach (var feature in indoorFeatures) RequireBinding(providerId, feature);
             }
             foreach (var id in resolved.Keys.Order(StringComparer.Ordinal))
                 if (!catalogProviders.Contains(id))
@@ -61,7 +66,7 @@ internal static class CollisionInteriorProviders
         foreach (var feature in context.World.Features.Keys.OrderBy(f => f.Value, StringComparer.Ordinal))
         {
             var indexed = context.World.Interiors.Get(feature);
-            if (indexed is not { Open: true }) continue;
+            if (indexed is not { Open: true } || !indexed.OpenAreas.Any(area => InteriorOpenPart.IsIndoor(area.Kind))) continue;
             if (string.IsNullOrWhiteSpace(indexed.ProviderId))
                 throw Failure(context, $"Open interior '{feature.Value}' has no indexed provider ID.");
             var binding = RequireBinding(indexed.ProviderId, feature);

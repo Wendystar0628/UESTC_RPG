@@ -45,6 +45,22 @@ public sealed class CollisionGeometryTests
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
+    public void OutdoorRoofCutsOnlyItsRealEdgeAboveTheRailing()
+    {
+        var ring = new PolygonRings([new(0, 0), new(10, 0), new(10, 10), new(0, 10)]);
+        var area = new InteriorOpenArea(InteriorOpenPartKind.OutdoorHighPlace, 3, 8, 4,
+            [new(0, 0), new(5, 0), new(5, 2), new(0, 2)]);
+        var entry = new InteriorIndexEntry(new("fixture.roof"), [], [], true, null, [], [area]);
+        var walls = CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), entry);
+        AssertThat(walls.Any(wall => Blocks(wall, new(2.5f, 8.5f, .075f))) &&
+            !walls.Any(wall => Blocks(wall, new(2.5f, 8 + WalkRules.BarrierHeight + 1, .075f))) &&
+            walls.Any(wall => Blocks(wall, new(7.5f, 20, .075f)))).OverrideFailureMessage("Outdoor edge clipping widened into closed segments or removed the actual railing.").IsTrue();
+        foreach (var closed in new[] { entry with { Open = false }, entry with { OpenAreas = [area with { Kind = InteriorOpenPartKind.IndoorFloor }] } })
+            AssertThat(CollisionTileBuilder.BuildingWalls(ring, new FlatSpatial(), closed)
+                .Any(wall => Blocks(wall, new(2.5f, 20, .075f)))).OverrideFailureMessage("Closed or indoor access removed the closed-roof envelope.").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
     public void OpenEntranceCutsOnlyTheDoorwayAndClosedEntranceStaysSolid()
     {
         var ring = new PolygonRings(new Vector2[] { new(0, 0), new(10, 0), new(10, 10), new(0, 10) });

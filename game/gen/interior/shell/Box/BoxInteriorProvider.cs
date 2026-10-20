@@ -22,7 +22,7 @@ public class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurab
         if (_configuration is not null) throw new InvalidOperationException("An interior provider is configured once per map.");
         if (configuration.BuildingType is not null || configuration.Seals.Count != 0)
             throw new ArgumentException("The lightweight shell takes its dimensions from the world; configured rooms and seals require a plan provider.");
-        if (configuration.Features.Count == 0 || configuration.OpenFloors.Count == 0)
+        if (configuration.Features.Count == 0 || configuration.Features.Any(feature => configuration.FloorsFor(feature).Count == 0))
             throw new ArgumentException("Interior catalog requires features and open floors.");
         _configuration=configuration;
     }
@@ -36,13 +36,13 @@ public class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurab
         context.Memo((this,feature),()=>InteriorBuildingSource.Read(context.World,feature,Require(feature).Entrances.GetValueOrDefault(feature) ?? [],Require(feature).OpenParts));
 
     private static IReadOnlyList<int> Floors(InteriorCatalogConfiguration config, FeatureId feature, string source) =>
-        config.OpenParts.SingleOrDefault(part=>part.FeatureId==feature && part.SourceId==source)?.Floors ?? [];
+        config.OpenParts.SingleOrDefault(part=>part.FeatureId==feature && part.SourceId==source && InteriorOpenPart.IsIndoor(part.Kind))?.Floors ?? [];
 
     public InteriorLayout Layout(BuildContext context,FeatureId feature)
     {
         var config=Require(feature); var parts=Parts(context,feature);
         var levels=parts.SelectMany(p=>p.Storeys).ToArray();
-        foreach(var scope in config.OpenParts.Where(scope=>scope.FeatureId==feature))
+        foreach(var scope in config.OpenParts.Where(scope=>scope.FeatureId==feature && InteriorOpenPart.IsIndoor(scope.Kind)))
             if(scope.Floors.Any(f=>!parts.Any(part=>part.SourceId==scope.SourceId && part.Storeys.Any(s=>s.Index==f))))
                 throw new InvalidDataException($"Open floor is outside its world part: {feature.Value}/{scope.SourceId}.");
         var zones=new List<ZoneVolume>();

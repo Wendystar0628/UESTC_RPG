@@ -101,7 +101,8 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
             }
             foreach (var item in document.RootElement.GetProperty("interiors").EnumerateArray())
             {
-                var provider = WorldModelLoader.Text(item, "providerId");
+                var parts = InteriorEntranceJson.ParseOpenParts(item);
+                var provider = parts.Any(part => InteriorOpenPart.IsIndoor(part.Kind)) ? WorldModelLoader.Text(item, "providerId") : null;
                 var openParts = InteriorEntranceJson.ParseOpenParts(item);
                 foreach (var idValue in item.GetProperty("featureIds").EnumerateArray())
                 {
@@ -117,8 +118,9 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
                         { throw new WorldDataException("interiors.json", WorldModelLoader.Text(door, "id"), error.Message, error); }
                         entrances.Add(entrance);
                     }
-                    entries[id] = entry with { Storeys = [], Open = true, ProviderId = provider, Entrances = entrances.AsReadOnly(),
-                        OpenStoreys = Array.AsReadOnly(openParts.Where(part => part.FeatureId == id).SelectMany(part => part.Floors).Distinct().Order().ToArray()),
+                    var indoor = InteriorOpenPart.IndoorFloorsFor(openParts, id).Count > 0;
+                    entries[id] = entry with { Storeys = indoor ? [] : entry.Storeys, Open = true, ProviderId = indoor ? provider : null, Entrances = entrances.AsReadOnly(),
+                        OpenStoreys = InteriorOpenPart.IndoorFloorsFor(openParts, id),
                         OpenAreas = [] };
                 }
             }
@@ -130,15 +132,35 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
     public InteriorIndexEntry? Get(FeatureId id) => _entries.GetValueOrDefault(id);
     public bool IsOpen(FeatureId id, int storey, Vector3 position)
     {
-        if (!_entries.TryGetValue(id, out var entry) || !entry.Open || string.IsNullOrWhiteSpace(entry.ProviderId)) return false;
+        if (!_entries.TryGetValue(id, out var entry) || !entry.Open) return false;
         var point = new Vector2(position.X, position.Z);
         for (var index = 0; index < entry.OpenAreas.Count; index++)
         {
             var area = entry.OpenAreas[index];
+            _ = InteriorOpenPart.IsIndoor(area.Kind);
             if (area.Index == storey && position.Y >= area.FloorY && position.Y < area.FloorY + area.Height &&
                 PlanGeometry.PointInRing(point, area.Footprint)) return true;
         }
         return false;
+    }
+
+    public InteriorOpenArea? AreaAt(FeatureId id, Vector3 position)
+    {
+        if (!_entries.TryGetValue(id, out var entry) || !entry.Open) return null;
+        var point = new Vector2(position.X, position.Z);
+        InteriorOpenArea? indoor = null;
+        for (var index = 0; index < entry.OpenAreas.Count; index++)
+        {
+            var area = entry.OpenAreas[index];
+            if (position.Y < area.FloorY || position.Y >= area.FloorY + area.Height || !PlanGeometry.PointInRing(point, area.Footprint)) continue;
+            switch (area.Kind)
+            {
+                case InteriorOpenPartKind.IndoorFloor: indoor ??= area; break;
+                case InteriorOpenPartKind.OutdoorHighPlace: return area;
+                default: throw new InvalidDataException("Unknown frozen access domain.");
+            }
+        }
+        return indoor;
     }
     public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) => _entries.OrderBy(e => e.Key.Value, StringComparer.Ordinal)
         .SelectMany(e => e.Value.Entrances).Where(e => Vector3.DistanceSquared(e.Center, p) <= r * r).ToArray();
@@ -152,11 +174,18 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
     private readonly IInteriorIndex _interiors;
     private readonly ITerrain _terrain;
     private readonly WorldWalkRegions _walkRegions;
+    private readonly Dictionary<FeatureId, PolygonRings[]> _buildingRings = [];
+    private readonly Dictionary<FeatureId, PolygonRings[]> _waterRings = [];
     public WorldSpatialIndex(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary,
         WorldNetwork network, IInteriorIndex interiors, ITerrain terrain)
     {
         _features = features; _interiors = interiors; _terrain = terrain;
         _walkRegions = new(features.Values, boundary, network);
+        foreach (var feature in features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
+        {
+            _buildingRings.Add(feature.Id, WorldFeatureKinds.Parts(feature, "building").SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
+            _waterRings.Add(feature.Id, WorldFeatureKinds.Parts(feature, "water").SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
+        }
         foreach (var feature in features.Values.OrderBy(f => f.Id.Value, StringComparer.Ordinal))
             for (var z = Cell(feature.Bounds.Min.Z); z <= Cell(feature.Bounds.Max.Z); z++)
                 for (var x = Cell(feature.Bounds.Min.X); x <= Cell(feature.Bounds.Max.X); x++)
@@ -177,43 +206,62 @@ internal sealed class WorldSpatialIndex : ISpatialIndex
         return ids.OrderBy(id => id.Value, StringComparer.Ordinal).ToArray();
     }
     public float GroundY(float x, float z) => _terrain.HeightAt(x, z);
-    private IEnumerable<WorldFeature> At(float x, float z)
-    {
-        if (!_cells.TryGetValue(new(Cell(x), Cell(z)), out var ids)) yield break;
-        var point = new Vector2(x, z);
-        foreach (var id in ids)
-        {
-            var feature = _features[id];
-            if (WorldFeatureGeometry.PolygonsOf(feature.Geometry).Any(p => PlanGeometry.Contains(p, point))) yield return feature;
-        }
-    }
     public CameraMedium MediumAt(Vector3 p)
     {
         var ground = GroundY(p.X, p.Z);
-        if (_terrain is ITerrainWaterSource terrain && terrain.WaterAt(p.X, p.Z) is { } water
-            && p.Y < water.Surface && p.Y >= ground)
+        if (_terrain is ITerrainWaterSource terrain && terrain.WaterAt(p.X, p.Z) is { } water && p.Y < water.Surface && p.Y >= ground)
             return new(MediumKind.Underwater, water.Id, Depth: water.Surface - p.Y);
-        foreach (var feature in At(p.X, p.Z))
+        var point = new Vector2(p.X, p.Z);
+        if (_cells.TryGetValue(new(Cell(p.X), Cell(p.Z)), out var ids))
         {
-            var point = new Vector2(p.X, p.Z);
-            var part = WorldFeatureKinds.Parts(feature, "building").FirstOrDefault(part =>
-                WorldFeatureGeometry.PolygonsOf(part.Geometry).Any(r => PlanGeometry.Contains(r, point)));
-            if (part is not null)
+            // Open high places override their real building's vertical envelope, without becoming interior media.
+            for (var index = 0; index < ids.Count; index++)
+                if (_interiors.AreaAt(ids[index], p) is { } area)
+                    switch (area.Kind)
+                    {
+                        case InteriorOpenPartKind.OutdoorHighPlace: return new(MediumKind.Air);
+                        case InteriorOpenPartKind.IndoorFloor: break;
+                        default: throw new InvalidDataException("Unknown frozen access domain.");
+                    }
+            for (var index = 0; index < ids.Count; index++)
             {
-                var storeys = _interiors.Get(feature.Id)?.Storeys;
-                var storey = storeys?.Where(s => p.Y >= s.FloorY && p.Y < s.FloorY + s.Height && PlanGeometry.PointInRing(point, s.Footprint)).OrderBy(s => s.Index).FirstOrDefault();
-                var distance = WorldFeatureGeometry.PolygonsOf(part.Geometry).Where(r => PlanGeometry.Contains(r, point))
-                    .SelectMany(r => new[] { r.Outer }.Concat(r.Holes)).Min(r => PlanGeometry.DistanceToRing(new(p.X, p.Z), r));
-                if (storeys is null || storeys.Count == 0)
-                    throw new InvalidOperationException($"Interior layout is not prepared: {feature.Id.Value}.");
-                if (storey is null) continue;
-                return new(MediumKind.Interior, feature.Id, storey.Index, distance);
+                var id = ids[index];
+                var rings = _buildingRings[id];
+                for (var ringIndex = 0; ringIndex < rings.Length; ringIndex++)
+                {
+                    var ring = rings[ringIndex];
+                    if (!Contains(ring, point)) continue;
+                    var storeys = _interiors.Get(id)?.Storeys;
+                    if (storeys is null || storeys.Count == 0) throw new InvalidOperationException($"Interior layout is not prepared: {id.Value}.");
+                    StoreyInfo? storey = null;
+                    for (var level = 0; level < storeys.Count; level++)
+                    {
+                        var candidate = storeys[level];
+                        if (p.Y >= candidate.FloorY && p.Y < candidate.FloorY + candidate.Height &&
+                            PlanGeometry.PointInRing(point, candidate.Footprint) && (storey is null || candidate.Index < storey.Index)) storey = candidate;
+                    }
+                    if (storey is null) continue;
+                    var distance = PlanGeometry.DistanceToRing(point, ring.Outer);
+                    for (var hole = 0; hole < ring.Holes.Count; hole++) distance = MathF.Min(distance, PlanGeometry.DistanceToRing(point, ring.Holes[hole]));
+                    return new(MediumKind.Interior, id, storey.Index, distance);
+                }
+                if (_terrain is FlatTerrain && p.Y < ground && p.Y >= ground - 6)
+                {
+                    var waters = _waterRings[id];
+                    for (var ringIndex = 0; ringIndex < waters.Length; ringIndex++)
+                        if (Contains(waters[ringIndex], point)) return new(MediumKind.Underwater, id, Depth: ground - p.Y);
+                }
             }
-            if (_terrain is FlatTerrain && p.Y < ground && p.Y >= ground - 6 && WorldFeatureKinds.Parts(feature, "water")
-                .Any(water => WorldFeatureGeometry.PolygonsOf(water.Geometry).Any(r => PlanGeometry.Contains(r, point))))
-                return new(MediumKind.Underwater, feature.Id, Depth: ground - p.Y);
         }
         return p.Y < ground ? new(MediumKind.Underground, Depth: ground - p.Y) : new(MediumKind.Air);
+    }
+
+    private static bool Contains(PolygonRings rings, Vector2 point)
+    {
+        if (!PlanGeometry.PointInRing(point, rings.Outer)) return false;
+        for (var index = 0; index < rings.Holes.Count; index++)
+            if (PlanGeometry.PointInRing(point, rings.Holes[index])) return false;
+        return true;
     }
     public WalkClass WalkClassAt(float x, float z) => _walkRegions.At(x, z);
 }

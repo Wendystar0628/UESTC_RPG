@@ -22,7 +22,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
     public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
-    private sealed record CatalogState(FeatureId[] Features, int[] Floors, IReadOnlyList<InteriorOpenPart> OpenParts, IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> Entrances);
+    private sealed record CatalogState(FeatureId[] Features, IReadOnlyList<int> Floors, IReadOnlyList<InteriorOpenPart> OpenParts, IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> Entrances);
 
     private CatalogState _catalog = new([], [], [], new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>());
 
@@ -34,19 +34,16 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     public void Configure(InteriorCatalogConfiguration configuration)
     {
         var (features, openParts, entrances, buildingType, seals) = configuration;
-        var openFloors = configuration.OpenFloors;
         if (buildingType is not null || seals.Count != 0)
             throw new ArgumentException("This authored provider does not consume generated building configuration or catalog seals.", nameof(configuration));
         ArgumentNullException.ThrowIfNull(features);
-        ArgumentNullException.ThrowIfNull(openFloors);
         ArgumentNullException.ThrowIfNull(entrances);
         var ids = features.Distinct().OrderBy(x => x.Value, StringComparer.Ordinal).ToArray();
-        var floors = openFloors.Distinct().Order().ToArray();
-        if (ids.Length == 0 || floors.Length == 0) throw new ArgumentException("The library interior needs features and open floors.");
+        if (ids.Length == 0 || configuration.FloorsFor(CoreIds.Library).Count == 0) throw new ArgumentException("The library interior needs features and open floors.");
         if (!ids.Contains(CoreIds.Library)) throw new ArgumentException("The library interior must include the library entity.", nameof(features));
-        if (floors.Any(f => f < 1 || f > CoreStyle.LibraryStoreys.Length))
-            throw new ArgumentOutOfRangeException(nameof(openFloors), "Library storeys run from 1 to the shell's storey count.");
-        _catalog = new(ids, floors, openParts, entrances);
+        if (configuration.FloorsFor(CoreIds.Library).Any(f => f < 1 || f > CoreStyle.LibraryStoreys.Length))
+            throw new ArgumentOutOfRangeException(nameof(configuration), "Library storeys run from 1 to the shell's storey count.");
+        _catalog = new(ids, [], openParts, entrances);
     }
 
     public InteriorLayout Layout(BuildContext ctx, FeatureId id)
@@ -150,7 +147,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         var catalog = _catalog;
         if (!catalog.Features.Contains(id)) throw new ArgumentException("Feature is not assigned to this provider.", nameof(id));
         if (!ctx.World.Features.ContainsKey(id)) throw new KeyNotFoundException(id.Value);
-        return catalog with { Floors = catalog.OpenParts.Where(part => part.FeatureId == id).SelectMany(part => part.Floors).Distinct().Order().ToArray() };
+        return catalog with { Floors = InteriorOpenPart.IndoorFloorsFor(catalog.OpenParts, id) };
     }
 
     private static InteriorLayout LibraryLayout(BuildContext ctx, FeatureId id, CatalogState catalog, IReadOnlyList<EntranceDecl> entrances)
@@ -212,7 +209,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         BuildContext ctx, FeatureId id, CatalogState catalog) =>
         ctx.Memo<IReadOnlyList<(PolygonRings Footprint, IReadOnlyList<StoreyInfo> Storeys)>>((catalog.OpenParts, id), () =>
         {
-            if (catalog.Floors.Length > 0)
+            if (catalog.Floors.Count > 0)
                 return InteriorBuildingSource.Read(ctx.World, id, catalog.Entrances.GetValueOrDefault(id) ?? [], catalog.OpenParts)
                     .Select(part => (part.Footprint, part.Storeys)).ToArray();
 

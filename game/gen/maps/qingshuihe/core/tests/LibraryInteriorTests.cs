@@ -29,14 +29,14 @@ public sealed class LibraryInteriorTests
             .Single(item => item.GetProperty("providerId").GetString() == id);
         var features = entry.GetProperty("featureIds").EnumerateArray().Select(e => new FeatureId(e.GetString()!)).ToArray();
         var parts = InteriorEntranceJson.ParseOpenParts(entry);
-        var floors = parts.SelectMany(part => part.Floors).Distinct().Order().ToArray();
+        var floors = InteriorOpenPart.IndoorFloorsFor(parts, CoreIds.Library);
         var provider = new LibraryInteriorProvider();
-        provider.Configure(new(features, parts, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
+        provider.Configure(new(features.Where(feature => InteriorOpenPart.IndoorFloorsFor(parts, feature).Count > 0).ToArray(), parts, new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));
         var ctx = new BuildContext { CodeHash = "fixture", WindowNumbering = new(new MapId("fixture"), new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
-        foreach (var feature in features)
+        foreach (var feature in provider.FeatureIds)
         {
             var layout = provider.Layout(ctx, feature);
-            var featureFloors = parts.Where(part => part.FeatureId == feature).SelectMany(part => part.Floors).Distinct().Order().ToArray();
+            var featureFloors = InteriorOpenPart.IndoorFloorsFor(parts, feature);
             AssertThat(layout.OpenStoreys.Order().SequenceEqual(featureFloors) && featureFloors.All(f => layout.Storeys.Any(s => s.Index == f)))
                 .OverrideFailureMessage($"{feature.Value} layout covers its open storeys").IsTrue();
             foreach (var storey in featureFloors)
@@ -53,7 +53,7 @@ public sealed class LibraryInteriorTests
             AssertThat(colliders.Count > 0 && colliders.All(c => c.Foot != FootMat.Auto))
                 .OverrideFailureMessage($"library storey {storey} has footed collision").IsTrue();
         }
-        foreach (var feature in features.Where(candidate => candidate != CoreIds.Library))
+        foreach (var feature in provider.FeatureIds.Where(candidate => candidate != CoreIds.Library))
         {
             var actual = provider.Layout(ctx, feature);
             var source = world.Features[feature];
@@ -81,8 +81,8 @@ public sealed class LibraryInteriorTests
             {
                 Features = new Dictionary<FeatureId, WorldFeature> { [feature.Id] = feature }
             };
-            var scopes = new List<InteriorOpenPart> { new(CoreIds.Library, "", [1]) };
-            if (open) scopes.Add(new(feature.Id, "", [1]));
+            var scopes = new List<InteriorOpenPart> { new(CoreIds.Library, "", [1], InteriorOpenPartKind.IndoorFloor) };
+            if (open) scopes.Add(new(feature.Id, "", [1], InteriorOpenPartKind.IndoorFloor));
             var provider = new LibraryInteriorProvider();
             provider.Configure(new([CoreIds.Library, feature.Id], scopes,
                 new Dictionary<FeatureId, IReadOnlyList<EntranceDecl>>(), null, []));

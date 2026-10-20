@@ -26,6 +26,9 @@ public abstract class ZoneSite
     /// <summary>Collision primitives built from the same parameters as the geometry (SYS-WALK).</summary>
     public virtual void Collide(SiteColliders colliders) { }
 
+    /// <summary>Cold-only permission source from the same layout that owns this site's geometry and colliders.</summary>
+    public virtual IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context) => [];
+
     /// <summary>Complete production sources, before the module files their output into cells.</summary>
     public virtual IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
     {

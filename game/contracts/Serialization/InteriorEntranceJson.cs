@@ -25,7 +25,7 @@ public static class InteriorEntranceJson
     public static IReadOnlyDictionary<FeatureId, IReadOnlyList<EntranceDecl>> ParseClosedEntrances(
         JsonElement catalog, ITerrain? terrain = null)
     {
-        if (!catalog.TryGetProperty("version", out var version) || version.ValueKind != JsonValueKind.Number || !version.TryGetInt32(out var value) || value != 2)
+        if (!catalog.TryGetProperty("version", out var version) || version.ValueKind != JsonValueKind.Number || !version.TryGetInt32(out var value) || value != 3)
             throw new JsonException("Unsupported interior catalog version.");
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var openFeatures = new HashSet<FeatureId>();
@@ -133,19 +133,31 @@ public static class InteriorEntranceJson
     /// <summary>Read the only open-range format. The world owner validates each SourceId before provider publication.</summary>
     public static IReadOnlyList<InteriorOpenPart> ParseOpenParts(JsonElement interior)
     {
-        if (interior.TryGetProperty("openFloors", out _)) throw new JsonException("Retired openFloors field; use openParts.");
         var features = interior.GetProperty("featureIds").EnumerateArray().Select(item => new FeatureId(item.GetString()!)).ToHashSet();
         var result = new List<InteriorOpenPart>();
-        var seen = new HashSet<(FeatureId, string)>();
+        var seen = new HashSet<(FeatureId, string, InteriorOpenPartKind)>();
         foreach (var part in interior.GetProperty("openParts").EnumerateArray())
         {
             var feature = new FeatureId(Text(part.GetProperty("featureId").GetString(), "featureId"));
-            var source = part.GetProperty("sourceId").GetString() ?? throw new JsonException("Missing part sourceId.");
-            var floors = part.GetProperty("floors").EnumerateArray().Select(item => item.GetInt32()).Order().ToArray();
-            if (!features.Contains(feature) || !seen.Add((feature, source)) || floors.Length == 0 ||
+            var kind = part.GetProperty("kind").Deserialize<InteriorOpenPartKind>(ContractJson.Options);
+            var source = kind switch
+            {
+                InteriorOpenPartKind.IndoorFloor => part.GetProperty("sourceId").GetString() ?? throw new JsonException("Missing sourceId."),
+                InteriorOpenPartKind.OutdoorHighPlace => Text(part.GetProperty("areaId").GetString(), "areaId"),
+                _ => throw new JsonException("Unknown open-part kind.")
+            };
+            var floors = kind switch
+            {
+                InteriorOpenPartKind.IndoorFloor => part.GetProperty("floors").EnumerateArray().Select(item => item.GetInt32()).Order().ToArray(),
+                InteriorOpenPartKind.OutdoorHighPlace when !part.TryGetProperty("floors", out _) && !string.IsNullOrWhiteSpace(source) => [],
+                InteriorOpenPartKind.OutdoorHighPlace => throw new JsonException("Outdoor high places reference an area ID without floors."),
+                _ => throw new JsonException("Unknown open-part kind.")
+            };
+            if (!features.Contains(feature) || !seen.Add((feature, source, kind)) ||
+                InteriorOpenPart.IsIndoor(kind) && floors.Length == 0 ||
                 floors.Distinct().Count() != floors.Length || floors.Any(floor => floor < short.MinValue || floor > short.MaxValue))
                 throw new JsonException($"Invalid or duplicate open part: {feature.Value}/{source}.");
-            result.Add(new(feature, source, Array.AsReadOnly(floors)));
+            result.Add(new(feature, source, Array.AsReadOnly(floors), kind));
         }
         if (features.Any(feature => !result.Any(part => part.FeatureId == feature)))
             throw new JsonException("Every open feature needs an explicit open part.");

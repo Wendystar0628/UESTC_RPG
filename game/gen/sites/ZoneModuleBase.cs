@@ -4,7 +4,7 @@ using Campus.Gen.Geometry;
 namespace Campus.Gen.Sites;
 
 /// <summary>Range-based routing and metadata assembly for site-based zones.</summary>
-public abstract class ZoneModuleBase : IContentModule
+public abstract class ZoneModuleBase : IContentModule, IOutdoorAccessSource
 {
     private readonly Func<IWorldModel, Func<Campus.Contracts.Maps.MapRect, bool>?, IReadOnlyList<ZoneSite>> _sites;
     private readonly Func<IWorldModel, IReadOnlyList<Campus.Contracts.Maps.MapRect>> _ranges;
@@ -95,6 +95,9 @@ public abstract class ZoneModuleBase : IContentModule
         foreach (var site in _sites(context.World, null)) site.DescribeWindows(context, facades, windows);
         return new(facades, windows);
     }
+
+    public IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context) =>
+        _sites(context.World, null).SelectMany(site => site.DescribeOutdoorAccess(context)).ToArray();
 
     public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context) =>
         _sites(context.World, null).OfType<ILightMetadataSource>().SelectMany(site => site.DescribeLights(context)).ToArray();

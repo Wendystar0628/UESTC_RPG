@@ -129,10 +129,11 @@ public sealed class BakeAuxiliaryCodecTests
         var lighting = new LightInventoryDocument(map, [], windows.Facades, windows.Windows, catalog)
         { WindowNumbering = new(map, new string('a', 64), [new(new("fixture.building"), "fixture.grid", 0, 2, 1)]) };
         var layout = new InteriorLayout(new("fixture.building"), [new(0, .125f, 3, ring.Outer)],
-            [new(0, 1, ZoneKind.Room, ring.Outer, new("window.general"), 123, true)], [], [], [], [0], [0], new(Vector3.Zero, Vector3.One), 321) { OpenAreas = [new(0, .125f, 3, ring.Outer)] };
+            [new(0, 1, ZoneKind.Room, ring.Outer, new("window.general"), 123, true)], [], [], [], [0], [0], new(Vector3.Zero, Vector3.One), 321) { OpenAreas = [new(InteriorOpenPartKind.IndoorFloor, 0, .125f, 3, ring.Outer)] };
         var resident = new BakeResidentData(new(lighting, new(map, [])), windows, [], [layout],
             new(new Dictionary<string, IReadOnlyList<TileKey>> { ["fixture.module"] = [new(1, 2), new(-3, 4)] },
-                [new(new(map, "fixture.module", "L0/1/2"), layout.Bounds)]), [new(1, -2)]);
+                [new(new(map, "fixture.module", "L0/1/2"), layout.Bounds)]), [new(1, -2)])
+        { OutdoorAccess = [new("fixture.terrace", layout.Feature, [new(2, 8, 4, ring.Outer)])] };
         bytes = TileBundleCodec.EncodeCache(BakePayloadClass.Product, key, resident);
         var saved = TileBundleCodec.DecodeCache<BakeResidentData>(BakePayloadClass.Product, bytes, key);
         if (!saved.Metadata.Lighting.Nightlight.LampTable.Span.SequenceEqual(catalog.LampTable.Span) ||
@@ -142,6 +143,9 @@ public sealed class BakeAuxiliaryCodecTests
             !saved.Windows.Facades[0].SillY.SequenceEqual(facade.SillY) || !saved.Windows.Facades[0].Skip.SequenceEqual(facade.Skip) ||
             !saved.Layouts[0].Storeys[0].Footprint.SequenceEqual(ring.Outer) ||
             !saved.Layouts[0].OpenAreas[0].Footprint.SequenceEqual(ring.Outer) ||
+            saved.Layouts[0].OpenAreas[0].Kind != InteriorOpenPartKind.IndoorFloor ||
+            saved.OutdoorAccess.Single().Id != "fixture.terrace" || saved.OutdoorAccess[0].Feature != layout.Feature ||
+            saved.OutdoorAccess[0].Areas[0].FloorY != 8 || !saved.OutdoorAccess[0].Areas[0].Footprint.SequenceEqual(ring.Outer) ||
             saved.Layouts[0].OpenAreas[0].FloorY != .125f || saved.Layouts[0].OpenAreas[0].Height != 3 || !saved.Layouts[0].Zones[0].Ring.SequenceEqual(ring.Outer) ||
             !saved.Directory.Modules["fixture.module"].SequenceEqual(resident.Directory.Modules["fixture.module"]) ||
             !saved.Directory.Auxiliary.SequenceEqual(resident.Directory.Auxiliary) || !saved.TerrainPoints.SequenceEqual(resident.TerrainPoints))

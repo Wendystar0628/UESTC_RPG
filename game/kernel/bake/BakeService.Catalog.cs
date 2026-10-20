@@ -38,7 +38,7 @@ public sealed partial class BakeService
             }
 
             foreach (var binding in map.Data.Value.InteriorBindings.OrderBy(value => value.ProviderId, StringComparer.Ordinal))
-                foreach (var feature in binding.FeatureIds.OrderBy(value => value.Value, StringComparer.Ordinal))
+                foreach (var feature in binding.InteriorFeatures.OrderBy(value => value.Value, StringComparer.Ordinal))
                 {
                     cancellation.ThrowIfCancellationRequested();
                     var entry = context.World.Interiors.Get(feature);

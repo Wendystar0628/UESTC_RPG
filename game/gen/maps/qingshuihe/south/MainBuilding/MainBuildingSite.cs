@@ -285,10 +285,34 @@ public sealed class MainBuildingSite : ZoneSite
 
     // ---- Roof gallery (空廊, §2.3): a covered walkway ring of square columns, railing between the outer columns ----
 
+    private sealed record GalleryPlan(Layout Building, int Storey, float FloorY)
+    {
+        public float X0 => M.GalleryX0;
+        public float X1 => M.GalleryX1;
+        public float Z0 => M.GalleryZ0;
+        public float Z1 => M.GalleryZ1;
+        public float Walk => M.GalleryWalk;
+        public IReadOnlyList<StoreyInfo> Areas =>
+        [
+            Area(X0, Z0, X1, Z0 + Walk), Area(X0, Z1 - Walk, X1, Z1),
+            Area(X0, Z0 + Walk, X0 + Walk, Z1 - Walk), Area(X1 - Walk, Z0 + Walk, X1, Z1 - Walk)
+        ];
+        private StoreyInfo Area(float x0, float z0, float x1, float z1) =>
+            new(Storey, FloorY, M.TopY - Building.RoofY, Building.F.Rect(x0, z0, x1, z1));
+    }
+
+    private static GalleryPlan Gallery(Layout layout, IWorldModel world) => new(layout,
+        world.Features[new(B2)].Storeys ?? throw new InvalidDataException("The main roof needs its authored storey count."),
+        world.Terrain.HeightAt(layout.F.P(36f, -20f).X, layout.F.P(36f, -20f).Y) + layout.RoofY);
+
+    public override IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context) =>
+        [new("main-building.roof-gallery", new(B2), Gallery(LayoutOf(context), context.World).Areas)];
+
     private static void RoofGallery(SiteBuilder b, Layout g, float y)
     {
-        float x0 = M.GalleryX0, x1 = M.GalleryX1, z0 = M.GalleryZ0, z1 = M.GalleryZ1, walk = M.GalleryWalk, c = M.GalleryColumn;
-        var deck = y + g.RoofY;
+        var gallery = Gallery(g, b.Context.World);
+        float x0 = gallery.X0, x1 = gallery.X1, z0 = gallery.Z0, z1 = gallery.Z1, walk = gallery.Walk, c = M.GalleryColumn;
+        var deck = gallery.FloorY;
         var colTop = y + M.TopY - M.GalleryFascia;
         var colHeight = colTop - deck;
         // Walkway deck ring, carried down into the roof so no seam shows against the generic cornice.
@@ -439,8 +463,10 @@ public sealed class MainBuildingSite : ZoneSite
 
     private static void CollideGallery(SiteColliders c, Layout g)
     {
-        // Roof gallery: the railing parapet and the plant enclosure; the walkway floor comes with WP-31a's roof interior.
-        var deck = c.Ground(g.F.P(36f, -20f).X, g.F.P(36f, -20f).Y) + g.RoofY;
+        var gallery = Gallery(g, c.Context.World);
+        var deck = gallery.FloorY;
+        foreach (var area in gallery.Areas)
+            c.Add(new SlabCollider(area.Footprint, area.FloorY, 0.6f, SurfaceTag.Ground) { Foot = FootMat.Concrete });
         var h = M.GalleryColumn * 0.5f;
         Vector2[] rail = [g.F.P(M.GalleryX0 + h, M.GalleryZ1 - h), g.F.P(M.GalleryX1 - h, M.GalleryZ1 - h), g.F.P(M.GalleryX1 - h, M.GalleryZ0 + h), g.F.P(M.GalleryX0 + h, M.GalleryZ0 + h)];
         for (var i = 0; i < 4; i++) c.Wall(rail[i], rail[(i + 1) % 4], 0.08f, deck - 1f, deck + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.Metal);

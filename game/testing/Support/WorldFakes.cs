@@ -110,17 +110,37 @@ internal sealed class FakeInteriors(params InteriorIndexEntry[] entries) : IInte
     public bool IsOpen(FeatureId id, int storey, Vector3 position)
     {
         var entry = Get(id);
-        if (entry is null || !entry.Open || string.IsNullOrWhiteSpace(entry.ProviderId)) return false;
+        if (entry is null || !entry.Open) return false;
         var point = new Vector2(position.X, position.Z);
         for (var index = 0; index < entry.OpenAreas.Count; index++)
         {
             var area = entry.OpenAreas[index];
+            _ = InteriorOpenPart.IsIndoor(area.Kind);
             if (area.Index == storey && position.Y >= area.FloorY && position.Y < area.FloorY + area.Height &&
                 Campus.Gen.Geometry.PlanGeometry.PointInRing(point, area.Footprint)) return true;
         }
         return false;
     }
 
+    public InteriorOpenArea? AreaAt(FeatureId id, Vector3 position)
+    {
+        var entry = Get(id);
+        if (entry is null || !entry.Open) return null;
+        var point = new Vector2(position.X, position.Z);
+        InteriorOpenArea? indoor = null;
+        for (var index = 0; index < entry.OpenAreas.Count; index++)
+        {
+            var area = entry.OpenAreas[index];
+            if (position.Y < area.FloorY || position.Y >= area.FloorY + area.Height || !Campus.Gen.Geometry.PlanGeometry.PointInRing(point, area.Footprint)) continue;
+            switch (area.Kind)
+            {
+                case InteriorOpenPartKind.IndoorFloor: indoor ??= area; break;
+                case InteriorOpenPartKind.OutdoorHighPlace: return area;
+                default: throw new InvalidDataException("Unknown frozen access domain.");
+            }
+        }
+        return indoor;
+    }
     public IReadOnlyList<EntranceDecl> EntrancesNear(Vector3 p, float r) =>
         entries.SelectMany(e => e.Entrances).Where(d => Vector3.Distance(d.Center, p) <= r).ToArray();
 }

@@ -10,7 +10,10 @@ public sealed record EntranceInventoryDocument(MapId Map,
     IReadOnlyList<BakedEntrance> Entrances);
 internal sealed record BakeMapMetadata(LightInventoryDocument Lighting, EntranceInventoryDocument Entrances);
 internal sealed record BakeResidentData(BakeMapMetadata Metadata, WindowMetadata Windows,
-    BakeService.InteriorCoverage[] Coverage, InteriorLayout[] Layouts, PreparedBakeTiles Directory, TileKey[] TerrainPoints);
+    BakeService.InteriorCoverage[] Coverage, InteriorLayout[] Layouts, PreparedBakeTiles Directory, TileKey[] TerrainPoints)
+{
+    public IReadOnlyList<OutdoorAccessArea> OutdoorAccess { get; init; } = [];
+}
 
 /// <summary>Runtime read-only inventory; map preparation publishes all three immutable tables together.</summary>
 [KernelService(typeof(BakeLightInventory))]
@@ -61,13 +64,13 @@ internal static class BakeMapMetadataBuilder
             if (!map.Active) throw new OperationCanceledException("Map unloaded while preparing resident metadata.");
             if (module.Value is ILightMetadataSource source) CollectLights(source, map.CreateAssetContext(module.CodeHash));
         }
-        foreach (var binding in data.InteriorBindings.OrderBy(binding => binding.ProviderId, StringComparer.Ordinal))
+        foreach (var binding in data.InteriorBindings.Where(binding => binding.InteriorFeatures.Count > 0).OrderBy(binding => binding.ProviderId, StringComparer.Ordinal))
         {
             var id = "interior." + binding.ProviderId;
             var interior = map.Interiors[id];
             var context = map.CreateAssetContext(interior.CodeHash);
             if (interior.Value is ILightMetadataSource source) CollectLights(source, context);
-            foreach (var feature in binding.FeatureIds.OrderBy(feature => feature.Value, StringComparer.Ordinal))
+            foreach (var feature in binding.InteriorFeatures.OrderBy(feature => feature.Value, StringComparer.Ordinal))
             {
                 if (!map.Active) throw new OperationCanceledException("Map unloaded while preparing interior metadata.");
                 var layout = map.InteriorLayouts[feature];
@@ -101,7 +104,7 @@ internal static class BakeMapMetadataBuilder
     {
         if (resident.Metadata is null || resident.Metadata.Lighting is null || resident.Metadata.Entrances is null ||
             resident.Metadata.Lighting.Map != map || resident.Metadata.Entrances.Map != map ||
-            resident.Windows?.Facades is null || resident.Windows.Windows is null || resident.Coverage is null || resident.Layouts is null || resident.TerrainPoints is null ||
+            resident.Windows?.Facades is null || resident.Windows.Windows is null || resident.Coverage is null || resident.Layouts is null || resident.OutdoorAccess is null || resident.TerrainPoints is null ||
             resident.Directory?.Modules is null || resident.Directory.Auxiliary is null ||
             resident.Directory.Modules.Count != modules.Count || modules.Keys.Any(id => !resident.Directory.Modules.ContainsKey(id)))
             throw new InvalidDataException("Incomplete resident metadata.");

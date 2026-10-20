@@ -82,6 +82,11 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
 
     private float Top => _top.Y1;
     private bool Terrace => Kind == AnnexKind.LowBlock;
+    private IEnumerable<Block> RoofBlocks => _pieces.Select(piece => piece.Block).Distinct();
+
+    public override IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context) => Terrace
+        ? [new("library.terrace-g", Feature, RoofBlocks.Select(block =>
+            new StoreyInfo(Rows + 1, block.Y1, Frame.StoreyHeights[^1], block.Ring)).ToArray())] : [];
 
     private byte Card => Kind switch
     {
@@ -238,7 +243,7 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
     private void Cap(GeometrySink mesh)
     {
         var paint = Terrace ? S.Roof(S.LibraryTerrace) : S.Roof(S.LibraryRoof);
-        foreach (var block in _pieces.Select(p => p.Block).Distinct())
+        foreach (var block in RoofBlocks)
         {
             var polygon = PolygonTriangulator.Triangulate(new PolygonRings(block.Ring));
             var v = polygon.Vertices.Select(p => new Vector3(p.X, block.Y1, p.Y)).ToArray();
@@ -333,7 +338,7 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
     public IReadOnlyList<Collider> Collide()
     {
         var list = new List<Collider>();
-        var high = Frame.PadY + WalkRules.BuildingCollisionHeight;
+        var high = Terrace ? Top + WalkRules.BarrierHeight : Frame.PadY + WalkRules.BuildingCollisionHeight;
         foreach (var piece in _pieces.Where(p => p.Y0 <= Frame.WallBaseY + 0.01f))
         {
             var f = Face.Of(piece);
@@ -350,7 +355,7 @@ public sealed class AnnexShell : ZoneSite, IWindowedPiece
                 list.Add(Wall(piece.A, piece.B, piece.Y0, high, SurfaceTag.Wall));
         if (Terrace)
         {
-            foreach (var block in _pieces.Select(p => p.Block).Distinct())
+            foreach (var block in RoofBlocks)
                 list.Add(new SlabCollider([.. block.Ring], Top, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
             foreach (var piece in _pieces.Where(p => p.Top))
                 list.Add(Wall(piece.A, piece.B, Top, Top + WalkRules.BarrierHeight, SurfaceTag.Barrier));

@@ -147,10 +147,10 @@ public sealed class BakeInputTests
         world.Features = ((WorldFeature[])[Feature("fixture:local", 10, "校门", "旧说明", "出口"), distant]).ToDictionary(feature => feature.Id);
         if (Hash(Context(world), "furniture") == baseline) throw new InvalidOperationException("Displayed text did not invalidate its cell.");
 
-        string Interiors(int localFloor, int distantFloor) => JsonSerializer.Serialize(new { version = 2, interiors = new[]
+        string Interiors(int localFloor, int distantFloor) => JsonSerializer.Serialize(new { version = 3, interiors = new[]
         {
-            new { providerId = "fixture.local", featureIds = new[] { local.Id.Value }, openParts = new[] { new { featureId = local.Id.Value, sourceId = "", floors = new[] { localFloor } } }, entrances = Array.Empty<object>() },
-            new { providerId = "fixture.distant", featureIds = new[] { distant.Id.Value }, openParts = new[] { new { featureId = distant.Id.Value, sourceId = "", floors = new[] { distantFloor } } }, entrances = Array.Empty<object>() }
+            new { providerId = "fixture.local", featureIds = new[] { local.Id.Value }, openParts = new[] { new { featureId = local.Id.Value, sourceId = "", kind = "indoorFloor", floors = new[] { localFloor } } }, entrances = Array.Empty<object>() },
+            new { providerId = "fixture.distant", featureIds = new[] { distant.Id.Value }, openParts = new[] { new { featureId = distant.Id.Value, sourceId = "", kind = "indoorFloor", floors = new[] { distantFloor } } }, entrances = Array.Empty<object>() }
         } });
         baseline = Hash(Context(world, interiors: Interiors(1, 1)), "furniture");
         if (Hash(Context(world, interiors: Interiors(1, 2)), "furniture") != baseline ||

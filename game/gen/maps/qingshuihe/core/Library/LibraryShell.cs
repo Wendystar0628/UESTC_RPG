@@ -474,6 +474,25 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
     /// over the two open leaves, so the clear way is the open leaves' width (WLD-INTERIORS).
     /// </para>
     /// </summary>
+    private IEnumerable<Block> PodiumDecks => Plan.Blocks.Where(block => block.Kind == BlockKind.Podium);
+
+    public override IReadOnlyList<OutdoorAccessArea> DescribeOutdoorAccess(BuildContext context)
+    {
+        var areas = new List<StoreyInfo>();
+        var covers = Plan.Blocks.Where(block => block.Kind != BlockKind.Podium && block.Y1 > Plan.SecondFloorY)
+            .Select(block => new PolygonRings(block.Ring)).ToArray();
+        foreach (var podium in PodiumDecks)
+        {
+            var minimum = podium.Ring.Aggregate(Vector2.Min);
+            var maximum = podium.Ring.Aggregate(Vector2.Max);
+            var north = new PolygonRings([minimum, new(maximum.X, minimum.Y),
+                new(maximum.X, Plan.Centre.Y), new(minimum.X, Plan.Centre.Y)]);
+            foreach (var ring in PlanGeometry.IntersectionTriangles(new(podium.Ring), north, covers))
+                areas.Add(new(2, Plan.SecondFloorY, Plan.StoreyY(2) - Plan.SecondFloorY, ring));
+        }
+        return [new("library.terrace-f", CoreIds.Library, areas.AsReadOnly())];
+    }
+
     public IReadOnlyList<Collider> Collide()
     {
         var list = new List<Collider>();
@@ -509,7 +528,7 @@ public sealed class LibraryShell : ZoneSite, IWindowedPiece
             foreach (var (p, q) in Open(face, piece.A, piece.B, doors)) list.Add(Wall(p, q, piece.Y0, top));
             foreach (var o in doors) list.AddRange(DoorBay(o, top));
         }
-        foreach (var podium in Plan.Blocks.Where(b => b.Kind == BlockKind.Podium))
+        foreach (var podium in PodiumDecks)
             list.Add(new SlabCollider([.. podium.Ring], Plan.SecondFloorY, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
         return list;
     }

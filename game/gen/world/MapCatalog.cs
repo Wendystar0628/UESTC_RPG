@@ -216,6 +216,7 @@ public sealed class MapCatalog
             ValidatePose(pose);
             foreach (var entry in interiors)
             {
+                if (world.Interiors.AreaAt(entry.Feature, pose.Position) is not null) continue;
                 var storey = entry.Storeys.Where(area => pose.Position.Y >= area.FloorY && pose.Position.Y < area.FloorY + area.Height &&
                     PlanGeometry.PointInRing(new(pose.Position.X, pose.Position.Z), area.Footprint)).OrderBy(area => area.Index).FirstOrDefault();
                 if (storey is not null && !world.Interiors.IsOpen(entry.Feature, storey.Index, pose.Position))

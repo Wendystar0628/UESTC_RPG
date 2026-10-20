@@ -254,6 +254,7 @@ public sealed class AtlasServiceTests
             Features = campus.World.Features,
             Boundary = campus.World.Boundary,
             Spatial = new FlatSpatial(),
+            Interiors = campus.World.Interiors,
         };
         var descriptor = RealMapFixture.Entry().Descriptor;
         var providers = typeof(LibraryInteriorProvider).Assembly.GetTypes()
@@ -262,7 +263,8 @@ public sealed class AtlasServiceTests
             .Where(item => item.Registration is not null)
             .ToDictionary(item => item.Registration!.Id, item => (IInteriorProvider)Activator.CreateInstance(item.Type)!, StringComparer.Ordinal);
         var built = InteriorAssembly.Build(interiorBytes,
-            new BuildContext { CodeHash = "fixture", WindowNumbering = new((descriptor).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = descriptor.Seed }, providers);
+            new BuildContext { CodeHash = "fixture", WindowNumbering = new((descriptor).Id, new string('0', 64), []), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, Map = descriptor, World = world, WorldSeed = descriptor.Seed }, providers,
+            [new Campus.Gen.Maps.Qingshuihe.South.SouthModule(), new Campus.Gen.Maps.Qingshuihe.Core.CoreModule()]);
         world.Interiors = new FakeInteriors(built.Entries.ToArray());
         var doors = built.Entries.SelectMany(entry => entry.Entrances.Where(door => door.Open)
             .Select(door => (Feature: entry.Feature, Door: door))).ToArray();

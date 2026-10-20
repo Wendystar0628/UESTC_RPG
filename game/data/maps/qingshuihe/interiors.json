@@ -1,11 +1,12 @@
 {
-  "version": 2,
+  "version": 3,
   "interiors": [
     {
       "featureIds": [
         "qsh:way:806848396",
         "qsh:way:806848404",
-        "qsh:way:806848407"
+        "qsh:way:806848407",
+        "qsh:way:806848408"
       ],
       "sourceFeatureIds": [
         "osm:way:806848395",
@@ -14,7 +15,8 @@
         "osm:way:806848393",
         "osm:way:806848394",
         "osm:way:806848404",
-        "osm:way:806848407"
+        "osm:way:806848407",
+        "osm:way:806848408"
       ],
       "name": {
         "zh": "图书馆",
@@ -35,7 +37,8 @@
             3,
             4,
             5
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:806848396",
@@ -46,7 +49,8 @@
             3,
             4,
             5
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:806848396",
@@ -57,7 +61,8 @@
             3,
             4,
             5
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:806848396",
@@ -68,7 +73,8 @@
             3,
             4,
             5
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:806848396",
@@ -79,7 +85,8 @@
             3,
             4,
             5
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:806848396",
@@ -90,28 +97,42 @@
             3,
             4,
             5
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:806848396",
           "sourceId": "osm:way:806848397",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:806848404",
           "sourceId": "osm:way:806848404",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:806848407",
           "sourceId": "osm:way:806848407",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
+        },
+        {
+          "featureId": "qsh:way:806848396",
+          "kind": "outdoorHighPlace",
+          "areaId": "library.terrace-f"
+        },
+        {
+          "featureId": "qsh:way:806848408",
+          "kind": "outdoorHighPlace",
+          "areaId": "library.terrace-g"
         }
       ],
       "entrances": [
@@ -185,14 +206,16 @@
           "sourceId": "osm:way:806848401",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:806848402",
           "sourceId": "osm:way:806848402",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [
@@ -266,9 +289,14 @@
           "sourceId": "osm:way:687370085",
           "floors": [
             1,
-            2,
-            8
-          ]
+            2
+          ],
+          "kind": "indoorFloor"
+        },
+        {
+          "featureId": "qsh:way:687370085",
+          "kind": "outdoorHighPlace",
+          "areaId": "main-building.roof-gallery"
         }
       ],
       "entrances": [
@@ -349,9 +377,9 @@
             5,
             6,
             7,
-            8,
-            9
-          ]
+            8
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:844548980",
@@ -359,7 +387,13 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
+        },
+        {
+          "featureId": "qsh:way:844548980",
+          "kind": "outdoorHighPlace",
+          "areaId": "xuanbang.lantern-gallery"
         }
       ],
       "entrances": [
@@ -414,7 +448,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:217855279",
@@ -422,7 +457,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [
@@ -476,7 +512,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:14153711",
@@ -484,7 +521,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:14153711",
@@ -492,7 +530,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:14153711",
@@ -500,7 +539,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [
@@ -553,7 +593,8 @@
           "sourceId": "osm:way:779496169",
           "floors": [
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [],
@@ -582,77 +623,88 @@
           "sourceId": "osm:relation:11031411",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795600225",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795600229",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795600230",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795600232",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795612386",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795612388",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795612389",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795612390",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795612393",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11031411",
           "sourceId": "osm:way:795612395",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [],
@@ -682,7 +734,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [
@@ -752,7 +805,8 @@
             1,
             2,
             3
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:596973487",
@@ -761,7 +815,8 @@
             1,
             2,
             3
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [
@@ -818,28 +873,32 @@
           "sourceId": "osm:way:552816777",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:552816777",
           "sourceId": "osm:way:852606257",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:852606258",
           "sourceId": "osm:way:852606258",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:217855263",
           "sourceId": "osm:way:217855263",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [],
@@ -868,14 +927,16 @@
           "sourceId": "osm:way:603368212",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:603368212",
           "sourceId": "osm:way:723349792",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [],
@@ -907,7 +968,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043352",
@@ -915,7 +977,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043352",
@@ -923,7 +986,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043352",
@@ -931,7 +995,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043352",
@@ -939,7 +1004,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043352",
@@ -947,7 +1013,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043352",
@@ -955,7 +1022,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043354",
@@ -963,7 +1031,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043354",
@@ -971,7 +1040,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043354",
@@ -979,7 +1049,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043354",
@@ -987,7 +1058,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043354",
@@ -995,7 +1067,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:relation:11043354",
@@ -1003,7 +1076,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [
@@ -1056,14 +1130,16 @@
           "sourceId": "osm:way:217855231",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:217855231",
           "sourceId": "osm:way:949704500",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:217855231",
@@ -1071,7 +1147,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:217855231",
@@ -1079,7 +1156,8 @@
           "floors": [
             1,
             2
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [],
@@ -1108,14 +1186,16 @@
           "sourceId": "osm:way:544136506",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         },
         {
           "featureId": "qsh:way:544136506",
           "sourceId": "osm:way:848026389",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [],
@@ -1144,7 +1224,8 @@
           "sourceId": "osm:way:814133732",
           "floors": [
             1
-          ]
+          ],
+          "kind": "indoorFloor"
         }
       ],
       "entrances": [],

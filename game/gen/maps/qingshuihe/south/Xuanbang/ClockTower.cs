@@ -25,6 +25,32 @@ internal static class ClockTower
     internal static (PlanFrame Frame, float HalfX, float HalfZ) FrameOf(FeatureRectangle plan) =>
         (plan.Frame, plan.Width * 0.5f, plan.Depth * 0.5f);
 
+    internal sealed record LanternPlan(PlanFrame Frame, int Storey, float FloorY, float TopY)
+    {
+        public const int Segments = 40;
+        public float OuterRadius => X.LanternRadius + 0.75f;
+        public float InnerRadius => X.CoreRadius;
+        public Vector2[] Ring(float radius) => Enumerable.Range(0, Segments).Select(index =>
+            Frame.P(MathF.Cos(index * MathF.Tau / Segments) * radius, MathF.Sin(index * MathF.Tau / Segments) * radius)).ToArray();
+        public IReadOnlyList<StoreyInfo> Areas
+        {
+            get
+            {
+                var outer = Ring(OuterRadius);
+                var inner = Ring(InnerRadius);
+                return Enumerable.Range(0, outer.Length).Select(index => new StoreyInfo(Storey, FloorY, TopY - FloorY,
+                    new[] { outer[index], outer[(index + 1) % outer.Length], inner[(index + 1) % inner.Length], inner[index] })).ToArray();
+            }
+        }
+    }
+
+    internal static LanternPlan Lantern(FeatureRectangle plan, float ground, IWorldModel world)
+    {
+        var part = world.Feature(XuanbangSite.Feature).Parts.Single(part => part.SourceId == XuanbangSite.ClockPart);
+        var count = part.Storeys ?? throw new InvalidDataException("The clock tower needs its authored storey count.");
+        return new(FrameOf(plan).Frame, count - 1, ground + X.LanternFloor, ground + X.LanternTop);
+    }
+
     /// <summary>Faces as frames at the face centre on the footprint line, +Z outward; index 0 is the south-east (door) face.</summary>
     internal static IEnumerable<(PlanFrame Face, float Width, bool Door)> Faces(PlanFrame f, float hx, float hz)
     {
@@ -99,7 +125,7 @@ internal static class ClockTower
         }
         var detail = b.Detail;
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
-        var segments = detail switch { SiteDetail.Full => 40, SiteDetail.Plain => 24, _ => 16 };
+        var segments = detail switch { SiteDetail.Full => LanternPlan.Segments, SiteDetail.Plain => 24, _ => 16 };
         var bevel = detail == SiteDetail.Full ? 0.03f : 0f;
         if (coarse)
             b.Add(PartGeometryKernel.BeveledBox(2 * hx, X.ShaftTop, 2 * hz, 0, L.Beige), f.At(0, y, 0));
@@ -130,13 +156,14 @@ internal static class ClockTower
         }
         b.Add(PartGeometryKernel.BeveledBox(2 * sxh + 1.3f, 0.8f, 2 * szh + 1.3f, bevel, L.BeigeTrim), f.At(0, y + X.StageTop, 0));
         // Lantern: podium drum, solid core, a ring of slit columns, the entablature disc, the dome and its finial.
+        var lantern = Lantern(plan, y, b.Context.World);
         var podium = y + X.StageTop + 0.8f;
-        b.Add(Solids.Lathe([new(X.LanternRadius + 0.75f, 0), new(X.LanternRadius + 0.75f, y + X.LanternFloor - podium)], segments, L.Beige), f.At(0, podium, 0));
+        b.Add(Solids.Lathe([new(lantern.OuterRadius, 0), new(lantern.OuterRadius, lantern.FloorY - podium)], segments, L.Beige), f.At(0, podium, 0));
         if (!coarse)
         {
             b.Add(Solids.Lathe([new(X.LanternRadius + 0.95f, 0), new(X.LanternRadius + 0.95f, 0.18f), new(X.LanternRadius + 0.8f, 0.3f)], segments, L.BeigeTrim),
                 f.At(0, y + X.LanternFloor - 0.3f, 0));
-            b.Add(Solids.Lathe([new(X.CoreRadius, 0), new(X.CoreRadius, X.DomeBase - X.LanternFloor)], segments / 2, L.Beige), f.At(0, y + X.LanternFloor, 0));
+            b.Add(Solids.Lathe([new(lantern.InnerRadius, 0), new(lantern.InnerRadius, y + X.DomeBase - lantern.FloorY)], segments / 2, L.Beige), f.At(0, y + X.LanternFloor, 0));
             var height = X.LanternTop - X.LanternFloor;
             for (var k = 0; k < X.LanternColumns; k++)
             {
@@ -244,6 +271,19 @@ internal static class ClockTower
     internal static void Collide(SiteColliders c, FeatureRectangle plan, float y)
     {
         var (f, hx, hz) = FrameOf(plan);
+        var lantern = Lantern(plan, y, c.Context.World);
+        var areas = lantern.Areas;
+        foreach (var area in areas)
+            c.Add(new SlabCollider(area.Footprint, area.FloorY, 0.3f, SurfaceTag.Ground) { Foot = FootMat.StonePaving });
+        var outer = lantern.Ring(lantern.OuterRadius);
+        var inner = lantern.Ring(lantern.InnerRadius);
+        for (var index = 0; index < outer.Length; index++)
+        {
+            c.Wall(outer[index], outer[(index + 1) % outer.Length], 0.08f, lantern.FloorY,
+                lantern.FloorY + WalkRules.BarrierHeight, SurfaceTag.Barrier, FootMat.StonePaving);
+            c.Wall(inner[index], inner[(index + 1) % inner.Length], 0.08f, lantern.FloorY,
+                y + X.DomeBase, SurfaceTag.Wall, FootMat.StonePaving);
+        }
         foreach (var (face, width, door) in Faces(f, hx, hz))
         {
             var half = width * 0.5f + 0.35f;

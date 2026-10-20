@@ -18,6 +18,7 @@ public sealed class CollisionInteriorIsolationTests
     private static readonly PaletteCatalog Catalog = new(new PaletteRegistry([]), []);
     private const string ProviderId = "interior.fixture";
     private static readonly FeatureId Feature = new("fixture:shared-building");
+    private static readonly FeatureId OutdoorFeature = new("fixture:outdoor-platform");
 
     [TestCase(Timeout = 10000), TestCategory(TestReason.Regression)]
     public async Task InFlightOldMapUsesItsOwnProviderWhileNewMapBuilds()
@@ -90,6 +91,20 @@ public sealed class CollisionInteriorIsolationTests
         AssertThat(error!).IsInstanceOf<InvalidOperationException>();
     }
 
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void OutdoorCatalogPermissionsDoNotRequireOrInvokeAnInteriorProvider()
+    {
+        foreach (var indoor in new[] { false, true })
+        {
+            var map = new MapId("fixture-outdoor-access");
+            var providers = indoor ? Bind(new FixtureProvider(map, 3, [Feature])) : EmptyBindings();
+            var context = Context(map, providers, open: indoor, catalog: true, outdoor: true, indoor: indoor);
+            var result = new CollisionTileBuilder([], _ => []).Build(context, new(0, 0));
+            AssertThat(result.Count == (indoor ? 1 : 0))
+                .OverrideFailureMessage("Outdoor access must add no provider floor, including beside a bound indoor feature.").IsTrue();
+        }
+    }
+
     [TestCase, TestCategory(TestReason.Contract)]
     public void MapWithoutDeclaredOrOpenInteriorsAllowsLegacyEmptySnapshot()
     {
@@ -145,19 +160,33 @@ public sealed class CollisionInteriorIsolationTests
         }
     }
 
-    private static BuildContext Context(MapId map, IReadOnlyDictionary<string, IInteriorProvider> providers, bool open, bool catalog)
+    private static BuildContext Context(MapId map, IReadOnlyDictionary<string, IInteriorProvider> providers, bool open, bool catalog,
+        bool outdoor = false, bool indoor = true)
     {
         var sources = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
-        if (catalog) sources.Add("interiors.json", JsonSerializer.SerializeToUtf8Bytes(new
+        if (catalog)
         {
-            version = 2,
-            interiors = new[] { new { providerId = ProviderId, featureIds = new[] { Feature.Value }, openParts = new[] { new { featureId = Feature.Value, sourceId = "", floors = new[] { 1 } } } } }
-        }));
+            var parts = new List<object>();
+            var features = new List<string>();
+            if (indoor)
+            {
+                features.Add(Feature.Value);
+                parts.Add(new { featureId = Feature.Value, sourceId = "", kind = "indoorFloor", floors = new[] { 1 } });
+            }
+            if (outdoor)
+            {
+                features.Add(OutdoorFeature.Value);
+                parts.Add(new { featureId = OutdoorFeature.Value, areaId = "fixture.platform", kind = "outdoorHighPlace" });
+            }
+            var entry = new Dictionary<string, object> { ["featureIds"] = features, ["openParts"] = parts };
+            if (indoor) entry.Add("providerId", ProviderId);
+            sources.Add("interiors.json", JsonSerializer.SerializeToUtf8Bytes(new { version = 3, interiors = new[] { entry } }));
+        }
         return new BuildContext
         {
             CodeHash = "fixture", WindowNumbering = new((Descriptor(map)).Id, new string('0', 64), []),
             Map = Descriptor(map),
-            World = FixtureWorld(open),
+            World = FixtureWorld(open, outdoor),
             WorldSeed = 1,
             Catalog = Catalog,
             InteriorProviders = providers,
@@ -176,14 +205,29 @@ public sealed class CollisionInteriorIsolationTests
         new("fixture-sky", "fixture-backdrop", []), []);
 
     // The aggregate is a non-building marker so this fixture isolates the provider's floor, not automatic exterior walls.
-    private static FakeWorld FixtureWorld(bool open) => new()
+    private static FakeWorld FixtureWorld(bool open, bool outdoor = false)
     {
-        Boundary = new([new(0, 0), new(64, 0), new(64, 64), new(0, 64)]),
-        Features = new ReadOnlyDictionary<FeatureId, WorldFeature>(
-            new Dictionary<FeatureId, WorldFeature> { [Feature] = WorldFeatureFixture.Create(Feature.Value, "poi", new PointGeometry(new(2, 0, 2))) }),
-        Spatial = new FlatSpatial(forbidden: "This isolation test must not fabricate ground support."),
-        Interiors = new FakeInteriors(new InteriorIndexEntry(Feature, [], [], open, open ? ProviderId : null, open ? [1] : [], [])),
-    };
+        Vector2[] ring = [new(1, 1), new(3, 1), new(3, 3), new(1, 3)];
+        var features = new Dictionary<FeatureId, WorldFeature>
+            { [Feature] = WorldFeatureFixture.Create(Feature.Value, "poi", new PointGeometry(new(2, 0, 2))) };
+        var entries = new List<InteriorIndexEntry>
+        {
+            new(Feature, [], [], open, open ? ProviderId : null, open ? [1] : [],
+                open ? [new(InteriorOpenPartKind.IndoorFloor, 1, 3, 3, ring)] : [])
+        };
+        if (outdoor)
+        {
+            features.Add(OutdoorFeature, WorldFeatureFixture.Create(OutdoorFeature.Value, "poi", new PointGeometry(new(2, 0, 2))));
+            entries.Add(new(OutdoorFeature, [], [], true, null, [], [new(InteriorOpenPartKind.OutdoorHighPlace, 1, 3, 3, ring)]));
+        }
+        return new()
+        {
+            Boundary = new([new(0, 0), new(64, 0), new(64, 64), new(0, 64)]),
+            Features = new ReadOnlyDictionary<FeatureId, WorldFeature>(features),
+            Spatial = new FlatSpatial(forbidden: "This isolation test must not fabricate ground support."),
+            Interiors = new FakeInteriors(entries.ToArray()),
+        };
+    }
     private sealed class FixtureProvider(MapId map, float height, IReadOnlyList<FeatureId> features, Action? beforeCollision = null) : IInteriorProvider
     {
         private static readonly Vector2[] Ring = [new(1, 1), new(3, 1), new(3, 3), new(1, 3)];
@@ -194,6 +238,7 @@ public sealed class CollisionInteriorIsolationTests
         public InteriorLayout Layout(BuildContext context, FeatureId id)
         {
             CheckMap(context);
+            if (!features.Contains(id)) throw new InvalidOperationException("An unbound feature requested an interior layout.");
             return new(id, [new(1, height, 3, Ring)], [], [], [], [], [1], [], new(new(1, height - 0.2f, 1), new(3, height + 3, 3)), 1);
         }
         public IReadOnlyList<Collider> CollisionStorey(BuildContext context, FeatureId id, int storey)

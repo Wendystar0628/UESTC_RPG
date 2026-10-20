@@ -42,11 +42,11 @@ public sealed class GenericInteriorProvider : IInteriorProvider, IInteriorCatalo
         var entrances=config.Entrances.GetValueOrDefault(feature) ?? [];
         var source=InteriorBuildingSource.Read(context.World,feature,entrances,config.OpenParts);
         var wings=new List<Wing>();
-        foreach(var part in source.Where(part=>config.OpenParts.Any(scope=>scope.FeatureId==feature && scope.SourceId==part.SourceId)))
+        foreach(var part in source.Where(part=>config.OpenParts.Any(scope=>scope.FeatureId==feature && scope.SourceId==part.SourceId && InteriorOpenPart.IsIndoor(scope.Kind))))
             foreach(var polygon in InteriorWingDecomposition.Split(part.Footprint,feature.Value+"/"+part.Key))
                 wings.Add(new(wings.Count,"wing-"+wings.Count.ToString(CultureInfo.InvariantCulture),polygon,
                     part.Storeys.Select(s=>s with { Footprint=polygon.Outer }).ToArray(),
-                    config.OpenParts.Single(scope=>scope.FeatureId==feature && scope.SourceId==part.SourceId).Floors));
+                    config.OpenParts.Single(scope=>scope.FeatureId==feature && scope.SourceId==part.SourceId && InteriorOpenPart.IsIndoor(scope.Kind)).Floors));
         var joins=new List<Junction>();
         for(var a=0;a<wings.Count;a++) for(var b=a+1;b<wings.Count;b++)
             for(var ea=0;ea<4;ea++) for(var eb=0;eb<4;eb++)
