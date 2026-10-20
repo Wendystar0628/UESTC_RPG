@@ -80,8 +80,7 @@
     });
   }
 
-  /* ---------- work-board 任务看板：等前置 → 就绪 → 进行中 → 待集成 四段流水，暂停收成下方书架 ---------- */
-  function byAge(a, b) { return Dash.parseTime(a.since) - Dash.parseTime(b.since); }
+  /* ---------- work-board 任务看板：等前置 → 就绪 → 进行中 → 待集成 四段流水，暂停与状态没认出的行收成下方书架；行序照后端（队列顺序） ---------- */
 
   /* 等 C-xxx：后端给的还没结的前置（waitOn） */
   function waitText(r) {
@@ -98,6 +97,7 @@
         h('span.id', r.id),
         r.jump ? Dash.mark('mark', '插队', '插队') : null,
         r.long ? Dash.mark('level', 'warn', '久') : null,
+        r.stage == null ? Dash.mark('level', 'warn', r.status || '无状态') : null,
         wait ? h('span.wk-card-wait', { title: (r.deps || []).join('、') }, wait) : null),
       h('span.wk-card-title', { title: r.title }, r.title),
       h('span.wk-card-foot',
@@ -112,14 +112,14 @@
       Dash.fold('另 ' + (cards.length - BOARD_ROWS) + ' 行', h('div.wk-cards', cards.slice(BOARD_ROWS)), open));
   }
 
-  function shelf(list, all, hit) {
+  function shelf(list, all, name, tone, hit) {
     var chips = list.slice(0, SHELF_CHIPS).map(function (r) {
       return h('span.wk-chip', { title: r.title }, h('span.id', r.id), h('span.wk-chip-title', r.title));
     });
     var more = list.length - chips.length;
-    var d = h('details.wk-shelf' + (hit ? '.is-hit' : ''), { style: '--tone: var(' + Dash.colorVar('stage', 'paused') + ')' },
+    var d = h('details.wk-shelf' + (hit ? '.is-hit' : ''), { style: '--tone: var(' + tone + ')' },
       h('summary',
-        h('span.wk-shelf-name', Dash.label('stage', 'paused') + ' ' + Dash.num(list.length)),
+        h('span.wk-shelf-name', name + ' ' + Dash.num(list.length)),
         h('span.wk-chips', chips, more > 0 ? h('span.wk-chip-more', '… 另 ' + more + ' 行') : null)),
       h('div.wk-shelf-body', list.map(function (r) { return card(r, all, true); })));
     if (hit) d.open = true;
@@ -128,7 +128,7 @@
 
   Dash.panel({
     id: 'work-board', page: 'work', title: '任务看板', note: '每行活现在在哪一段、待了多久', span: 12, order: 10,
-    caliber: '本段 = 进入当前这一段至今；列头的中位是该列各行本段时长的中位；"久"是本段已超过历史上同段的 P80；暂停的行收在看板下方',
+    caliber: '本段 = 进入当前这一段至今；列头的中位是该列各行本段时长的中位；"久"是本段已超过历史上同段的 P80；暂停与状态没认出的行收在看板下方；各段内按队列顺序',
     needs: ['progress'], uses: ['side', 'params'],
     render: function (el, d, ctx) {
       var all = d.progress.rows || [], dwells = d.progress.dwell || [];
@@ -136,7 +136,7 @@
       if (!rows.length) { el.appendChild(Dash.empty(all.length ? '这一侧没有未结的行' : '队列空了')); return; }
       var flow = Dash.stageKeys.filter(function (k) { return k !== 'paused'; });
       el.appendChild(h('div.wk-cols', flow.map(function (k, i) {
-        var list = rows.filter(function (r) { return r.stage === k; }).sort(byAge);
+        var list = rows.filter(function (r) { return r.stage === k; });
         var hit = ctx.params.stage === k;
         var dw = dwells.filter(function (x) { return x.side === ctx.filters.side && x.stage === k; })[0];
         var cards = list.map(function (r) { return card(r, all, k === 'waiting'); });
@@ -147,8 +147,10 @@
             h('span.wk-col-n', Dash.num(list.length) + ' 行' + (dw && dw.n ? ' \u00b7 中位 ' + Dash.minutes(dw.med) : ''))),
           list.length ? stack(cards, hit) : h('div.wk-none', '没有'));
       })));
-      var paused = rows.filter(function (r) { return r.stage === 'paused'; }).sort(byAge);
-      if (paused.length) el.appendChild(shelf(paused, all, ctx.params.stage === 'paused'));
+      var paused = rows.filter(function (r) { return r.stage === 'paused'; });
+      if (paused.length) el.appendChild(shelf(paused, all, Dash.label('stage', 'paused'), Dash.colorVar('stage', 'paused'), ctx.params.stage === 'paused'));
+      var unknown = rows.filter(function (r) { return r.stage == null; });  // 状态认不出的行照原样露出，不归进任何一段
+      if (unknown.length) el.appendChild(shelf(unknown, all, '状态没认出', Dash.colorVar('level', 'warn'), true));
     }
   });
 
