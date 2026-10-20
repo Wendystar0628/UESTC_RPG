@@ -5,7 +5,7 @@ category: art
 parent: ART-INDEX
 summary: 处处不粗糙、细节按区分级：精度底线 B1–B13、五个精度区、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
 keywords: [视觉精度, 精度区, K1–K5, 判定距离, 底线清单, B1–B13, 不粗糙, 一票否决, 区界规则, 可读规则, 巡检点, 行走走廊, 外围分级]
-owners: [WP-27]
+owners: [WP-27, WP-10, WP-12]
 contributors: [WP-04, WP-07, WP-10, WP-12, WP-14, WP-15, WP-23, WP-24, WP-44, WP-47, WP-51, WP-52]
 depends: [CORE-INDEX, ART-STYLE, ART-MODELING, ENG-BUDGET, SYS-TIME, SYS-WALK, SYS-WEATHER, SYS-GRAPHICS, WLD-OUTSKIRTS, WLD-INTERIORS]
 related: [MAP-QSH-CORE, MAP-QSH-SOUTH, WLD-WATER, SYS-VIEW, ENG-GATES, MAP-QSH-ADDITIONS, ENG-ARCH, PLAN-WP, ENG-PERF, WLD-RENOVATION, WLD-AMBIENCE]

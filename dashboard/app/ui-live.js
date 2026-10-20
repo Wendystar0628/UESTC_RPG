@@ -224,7 +224,8 @@
       line2 = h('div.hk-sub',
         '近 1 小时触发 ' + a.n + ' 次、注入 ' + a.inj + ' 次；近 24 小时触发 ' + b.n + ' 次、注入 ' + b.inj + ' 次；报错 ' + b.err + '、被挤掉 ' + b.dropped + '、取不到 ' + b.miss,
         x.lastInj ? h('div', '最近一次注入 ' + Dash.at(x.lastInj.at) + '：' + (x.lastInj.inj.join('、') || '—') + '（' + x.lastInj.chars + ' 字）') : h('div', '还没有成功注入的记录'),
-        x.note ? h('div', x.note) : null);
+        x.note ? h('div', x.note) : null,
+        x.scope ? h('div.hk-scope', x.scope) : null);
     } else {
       line2 = h('div.hk-sub', '挂的事件：' + x.events.join('、') + '；' + (x.note || ''));
     }
@@ -234,9 +235,11 @@
       x.recent.forEach(function (r) {
         body.appendChild(h('div.hk-rec' + (r.err ? '.is-err' : ''),
           h('span.hk-t', Dash.at(r.at) + ' ' + r.at.slice(17, 19) + '″'),
+          h('span.hk-role', r.role + (r.cls ? ' · ' + r.cls : '')),
           h('span.hk-ev', r.event + (r.tool ? ' ' + r.tool : '')),
           h('span.hk-inj', r.err ? '报错：' + r.err : (r.inj.length ? r.inj.join('、') + '（' + r.chars + ' 字）' : '没有注入')),
-          r.dropped || r.miss ? h('span.hk-warn', (r.dropped ? '挤掉 ' + r.dropped : '') + (r.miss ? ' 取不到 ' + r.miss : '')) : null));
+          (r.dropped.length || r.miss.length || r.cut.length) ? h('span.hk-warn',
+            [r.dropped.length ? '挤掉 ' + r.dropped.join('、') : '', r.miss.length ? '取不到 ' + r.miss.join('、') : '', r.cut.length ? '降级 ' + r.cut.join('、') : ''].filter(Boolean).join('；')) : null));
       });
     }
     var item = h('details.hk-item' + (x.flag ? '.is-flag' : ''), h('summary', line1, x.flag ? h('div.hk-flag', x.flag) : null, line2), body);

@@ -123,7 +123,7 @@ Dash.who(live)                谁在干活：每个会话一块，名下在跑�
 Dash.scripts(live)            构建锁 + 逐个进程列出的后台脚本 + 巡逻（总览与模型页共用）
 Dash.worktrees(live)          临时工作树：每个登记的工作树一行（名字、路径、HEAD 与离 main 的提交数、未提交文件数、在跑什么或闲置多久、最近一次门禁、状态签条：在用 / 闲置 / 不在指定目录 / 失效）（施工页与总览共用）
 Dash.worktreeFold(live)       总览用：一行"临时工作树 N 个"，点开是 Dash.worktrees
-Dash.hooks(live)              钩子卡：每个登记的钩子一行，点开看最近 20 条
+Dash.hooks(live)              钩子卡：每个登记的钩子一行，点开看最近 20 条（含角色与消息类别，不含测试会话；卡上注明列表来自日志、计数来自统计文件）
 Dash.gist(text)               { text 摘要（不长就是全文）, long 是否真长 }，longText 与脚本页共用
 Dash.longText(text)           不长直接全文，真长的先给一句话摘要、点开看全文
 Dash.liveGap(live, key, 块名们, 空时的话)

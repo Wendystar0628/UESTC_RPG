@@ -1972,13 +1972,13 @@
 
 ## STD-DOC · 文档写法
 
-`docs/standards/STD-DOC-文档写法.md` · 10.3k 字 · 文档的分层与四级文档树、每份文档的形状（文件头、标题、范围块）、编码与引用、只写什么不写什么、体量上限、冲突层级、新增与维护
+`docs/standards/STD-DOC-文档写法.md` · 10.4k 字 · 文档的分层与四级文档树、每份文档的形状（文件头、标题、范围块）、编码与引用、只写什么不写什么、体量上限、冲突层级、新增与维护
 关键词：文档写法、分层、文档树、域总纲、主题文档、子文档、信息地图、渐进式披露、顶层规则、接入要点、文件头、范围块、查阅行、简题、编码、文件名、小节编号、引用写法、全局替换、只写现行规则、不写实现、一份权威、体量上限、冲突层级、规则放哪份、新增文档、登记决策、gen-index、check-docs、SECTIONS.md
 
 - STD-DOC §0 结论 · L23 · 840
   - ★ STD-DOC §0.1 接入要点 · L32 · 286
-- STD-DOC §1 分层与文档树 · L40 · 964
-  - STD-DOC §1.1 上下文分层 · L42 · 707
+- STD-DOC §1 分层与文档树 · L40 · 1.1k
+  - STD-DOC §1.1 上下文分层 · L42 · 794
   - STD-DOC §1.2 文档树 · L55 · 244
 - STD-DOC §2 文档形状 · L60 · 1.3k
 - STD-DOC §3 编码、小节编号与引用 · L88 · 1.2k
@@ -2012,12 +2012,12 @@
 
 ## REG-DECISIONS-PROCESS · 协作与流程决策
 
-`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 10.0k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
+`docs/registry/REG-DECISIONS-PROCESS-协作与流程决策.md` · 10.2k 字 · 计划、协作、规范、登记四个域的已定决策：协作、流程、文档与代码规范、门禁流程
 关键词：决策、流程、协作、文档规则、门禁流程、派工、主会话、子代理
 
 - REG-DECISIONS-PROCESS §0 结论 · L23 · 127
   - ★ REG-DECISIONS-PROCESS §0.1 接入要点 · L27 · 54
-- REG-DECISIONS-PROCESS §1 流程 · L31 · 9.3k
+- REG-DECISIONS-PROCESS §1 流程 · L31 · 9.6k
 
 ## REG-DECISIONS-SYSTEMS · 系统与工程决策
 

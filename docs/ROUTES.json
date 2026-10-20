@@ -361,9 +361,18 @@
    "ART-MODELING",
    "ART-MODELING-PROPORTION"
   ],
-  "WP-10": [],
-  "WP-11": [],
-  "WP-12": [],
+  "WP-10": [
+   "ART-FIDELITY",
+   "WLD-INTERIORS"
+  ],
+  "WP-11": [
+   "ART-MODELING",
+   "WLD-INTERIORS"
+  ],
+  "WP-12": [
+   "ART-FIDELITY",
+   "WLD-INTERIORS"
+  ],
   "WP-13": [
    "MAP-QSH-ADDITIONS",
    "MAP-QSH-ADDITIONS-VOCAB",
