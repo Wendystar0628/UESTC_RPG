@@ -176,20 +176,20 @@ ToonCol ground_cover_colors(ToonCtx c, ToonMat m, ToonCol base, float rank, floa
 	vec4 mask = texture(ground_mask, map_uv(c.wpos));
 	vec4 shelter = texture(ground_mask2, map_uv(c.wpos));
 	// 银杏叶在其他落叶/花瓣上，雪在最上；雪下仍能露出金叶。树冠投影下的雪潜势乘 0.6。
-	float ginkgo = ground_cover_edge(mask.r * ground_amt.x, leaf_rank.y, leaf_aa.y);
+	float gold_leaf = ground_cover_edge(mask.r * ground_amt.x, leaf_rank.y, leaf_aa.y);
 	float snow_coverage = ground_snow_coverage(mask.b, ground_amt.z) * mix(1.0, 0.6, shelter.b) * shelter.g;
 	float snow_cover = ground_cover_edge(snow_coverage * clamp(c.n_w.y, 0.0, 1.0), rank, rank_aa);
 	// 春季花瓣只在春季一侧出现，换色按阈值切换，避免粉色与秋叶混色。
 	float spring = 1.0 - step(0.5, min(mod(season.x, 4.0), 4.0 - mod(season.x, 4.0)));
-	float other = ground_cover_edge(mask.g * ground_amt.y, leaf_rank.x, leaf_aa.x);
+	float mixed_leaf = ground_cover_edge(mask.g * ground_amt.y, leaf_rank.x, leaf_aa.x);
 	// A 是 G 中红枫/鸡爪槭的潜势，按实际比重作阈值切色，春季统一为花瓣。
 	float maple_share = mask.g > 0.0 ? clamp(mask.a / mask.g, 0.0, 1.0) : 0.0;
-	int other_cid = spring > 0.5 ? GROUND_PETAL : (maple_share > 1.0 - rank ? GROUND_MAPLE : GROUND_DECIDUOUS);
+	int mixed_leaf_cid = spring > 0.5 ? GROUND_PETAL : (maple_share > 1.0 - rank ? GROUND_MAPLE : GROUND_DECIDUOUS);
 	ToonCol result = base;
 	// 两层分别叠放，银杏边缘的抗锯齿不会吞掉下面的其他落叶。
 	for (int layer = 0; layer < 2; layer++) {
-		int cid = layer == 1 ? GROUND_GINKGO : other_cid;
-		float cover = layer == 1 ? ginkgo : other;
+		int cid = layer == 1 ? GROUND_GINKGO : mixed_leaf_cid;
+		float cover = layer == 1 ? gold_leaf : mixed_leaf;
 		if (cover <= 0.0) {
 			continue;
 		}
@@ -249,8 +249,8 @@ void fragment() {
 		float season_pos = mod(season.x, 4.0);
 		bool petals = min(season_pos, 4.0 - season_pos) < 0.5;
 		float leaf_rank = ground_leaf_rank(tctx.wpos.xz, false, petals, cover_rank);
-		float ginkgo_rank = ground_leaf_rank(tctx.wpos.xz, true, false, 1.0 - cover_rank);
-		vec2 ranks = vec2(leaf_rank, ginkgo_rank);
+		float gold_leaf_rank = ground_leaf_rank(tctx.wpos.xz, true, false, 1.0 - cover_rank);
+		vec2 ranks = vec2(leaf_rank, gold_leaf_rank);
 		vec2 leaf_aa = max(fwidth(ranks), vec2(1e-5));
 		float leaf_px = GROUND_LEAF_CELL / max(length(fwidth(tctx.wpos.xz)), 1e-5);
 		float detail = smoothstep(GROUND_LEAF_RESOLVE_PX.x, GROUND_LEAF_RESOLVE_PX.y, leaf_px);

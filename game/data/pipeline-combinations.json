@@ -135,15 +135,6 @@
     "canvas": "none"
   },
   {
-    "kind": "glass",
-    "format": 34896613407,
-    "primitive": "triangles",
-    "instanced": false,
-    "reflect": false,
-    "shadows": "on",
-    "canvas": "none"
-  },
-  {
     "kind": "glassNear",
     "format": 34359742527,
     "primitive": "triangles",

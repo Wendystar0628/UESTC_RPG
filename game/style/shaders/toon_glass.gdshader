@@ -12,6 +12,9 @@ render_mode blend_mix, depth_prepass_alpha, cull_disabled, diffuse_lambert, spec
 // 窗卡与门厅卡的内容（WP-51b）：按窗位类型字节查 window_cards 表，程序化画出房间
 #include "res://style/shaders/window_card.gdshaderinc"
 
+// GlassNear uses the same reflection values and pipeline, with real geometry visible from either side.
+uniform bool clear_glass = false;
+
 const vec2 GLASS_PANE_M = vec2(1.6, 1.9);   // 窗格的名义尺寸（m），室内视差用
 const float GLASS_STREAK = 0.55;            // 斜条强度（40%–70%）
 const float GLASS_STREAK_SLOPE = 0.75;      // 斜条方向：与竖直约成 37°
@@ -125,7 +128,7 @@ void fragment() {
 	int wid = wbase + pane.y * cols + pane.x;
 	vec4 wov = toon_window_override(wid, (tctx.flags & TOON_F_OUTSKIRT) == 0);
 	// 虚拟房间与窗灯只从外侧看；背面不能把窗卡当成遮住校园的墙。
-	float on = FRONT_FACING ? lamp_window_on(wid, wbase, cols, ch, wov) : 0.0;
+	float on = FRONT_FACING && !clear_glass ? lamp_window_on(wid, wbase, cols, ch, wov) : 0.0;
 	bool cool = lamp_window_cool(wid, wov);
 	// 冷白窗的室内压低一点明度，夜里近看不成白块
 	vec3 lampc = cool ? pal_cur(PAL_WINDOW_COOL) * GLASS_COOL_ROOM : pal_cur(PAL_WINDOW_WARM);
@@ -140,7 +143,7 @@ void fragment() {
 	nv = clamp(FRONT_FACING ? nv : abs(nv), 0.0, 1.0);
 
 	// 0. 窗卡（WLD-INTERIORS，内容归 WP-51b）：有窗格编码的玻璃，关灯时里面也是一间房；导数在统一控制流里取
-	bool carded = FRONT_FACING && cols > 0;
+	bool carded = FRONT_FACING && !clear_glass && cols > 0;
 	float aa_m = max(length(fwidth(UV)) * GLASS_PANE_M.x * 0.7, 1e-4);
 	vec3 rd = vec3(dot(vdir, right), dot(vdir, up), dot(vdir, -n));
 	float night = smoothstep(-0.03, -0.12, sun_dir.y);
@@ -167,7 +170,7 @@ void fragment() {
 	rdir.y = max(rdir.y, 0.0) * (1.0 - GLASS_SKY_LIFT) + GLASS_SKY_LIFT;
 	vec3 sky = fog_sky(rdir);
 	float fres = mix(GLASS_REFLECT_MIN, GLASS_REFLECT_MAX, pow(1.0 - nv, 4.0));
-	if (FRONT_FACING) {
+	if (FRONT_FACING && !clear_glass) {
 		tcol.lit = mix(tcol.lit, sky, fres);
 		tcol.shade = mix(tcol.shade, sky * 0.85, fres);
 	} else {
@@ -240,8 +243,8 @@ void fragment() {
 	tcol.extra += card_glow * (1.0 - fres * 0.5);
 
 	TOON_FRAGMENT_END(tcol)
-	// 正面保持不透明；闭楼的玻璃在阴影预通道照旧封壳，开放楼仍由 TOON_VERTEX 的 NoShadow 控制。
-	ALPHA = (FRONT_FACING || IN_SHADOW_PASS) ? 1.0 : fres;
+	// 普通窗正面封壳；透明玻璃两面透出真实几何。阴影仍由 TOON_VERTEX 的 NoShadow 控制。
+	ALPHA = ((FRONT_FACING && !clear_glass) || IN_SHADOW_PASS) ? 1.0 : fres;
 }
 
 void light() {

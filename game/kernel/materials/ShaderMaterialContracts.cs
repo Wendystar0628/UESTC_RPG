@@ -3,7 +3,7 @@ using Godot;
 
 namespace Campus.Kernel.Materials;
 
-/// <summary>Creates materials backed by the approved non-toon shader whitelist.</summary>
+/// <summary>Creates materials backed by the approved shader whitelist.</summary>
 public interface IShaderMaterialSource
 {
     /// <summary>

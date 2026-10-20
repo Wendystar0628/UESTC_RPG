@@ -17,9 +17,9 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     public const int FirstId = 1;
     public const int LastId = 111;
 
-    private const string ShaderDirectory = "res://style/shaders/";
     private static readonly StringName MatTableGlobal = new(ShaderGlobals.MatTable);
     private static readonly StringName WindowCardsGlobal = new(ShaderGlobals.WindowCards);
+    private static readonly StringName ClearGlassParameter = new("clear_glass");
     private static readonly StringName MatIdParameter = new("mat_id");
     private static readonly StringName PatternLayerParameter = new("pattern_layer");
     private static readonly StringName PatternPeriodParameter = new("pattern_period");
@@ -29,7 +29,6 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private readonly PaletteCatalog _catalog;
     private readonly IShaderMaterialSource _source;
     private readonly Dictionary<MaterialClass, ToonEntry> _byClass = [];
-    private readonly Dictionary<string, Shader> _shaders = new(StringComparer.Ordinal);
     private SceneTextTextures? _sceneTextTextures;
     private readonly byte[] _matBytes = new byte[MatTable.ByteCount];
     private readonly Image _matImage;
@@ -40,7 +39,7 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
     private bool _disposed;
 
     /// <param name="palettes">完整色表来源（WP-04 的正式实现，无 GPU）：ToonSpec 按它校验，含 256–511 的扩展色。</param>
-    /// <param name="source">白名单非卡通着色器的材质来源（veg_* 等由它建）。</param>
+    /// <param name="source">白名单着色器的材质来源。</param>
     /// <param name="textures">全局数据纹理的登记处；mat_table 与 window_cards 登记后释放权归它。</param>
     public ToonLibrary(IPaletteCatalogSource palettes, IShaderMaterialSource source, IGlobalDataTextureRegistry textures)
     {
@@ -155,51 +154,14 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
 
     private ShaderMaterial MaterialFor(ToonKind kind)
     {
-        // 新 Kind 只在末尾追加；这里穷举，没有登记的值直接报错（WF-BUILD）。
-        // 卡通系（toon_*）由本类建；植被与荷（veg_*）的着色器归 WP-23、WP-38，经 IShaderMaterialSource 建。
-        // 主线版：归属的包还没交付时退到同类的已有着色器，交付后自动接上，不改调用方。
-        return kind switch
+        var material = _source.Create(MaterialShaders.ShaderFor(kind));
+        if (kind == ToonKind.GlassNear) material.SetShaderParameter(ClearGlassParameter, true);
+        if (kind == ToonKind.SceneText)
         {
-            ToonKind.Static => Toon("toon_static", "toon_static"),
-            ToonKind.Glass => Toon("toon_glass", "toon_static"),
-            ToonKind.GlassNear => Toon("toon_glass_near", "toon_glass"),
-            ToonKind.Cut => Toon("toon_cut", "toon_static"),
-            ToonKind.VegTrunk => Whitelisted(ShaderId.VegTrunk),
-            ToonKind.VegCard => Whitelisted(ShaderId.VegCard),
-            ToonKind.VegImpostor => Whitelisted(ShaderId.VegImpostor),
-            ToonKind.VegGrass => Whitelisted(ShaderId.VegGrass),
-            ToonKind.Lotus => Whitelisted(ShaderId.VegLotus),
-            ToonKind.SceneText => SceneTextMaterial(),
-            ToonKind.VegTwigMass => Whitelisted(ShaderId.VegTwigMass),
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown ToonKind.")
-        };
-    }
-
-    private ShaderMaterial Whitelisted(ShaderId id) =>
-        ShaderMaterialSource.Exists(id) ? _source.Create(id) : Toon("toon_static", "toon_static");
-
-    private ShaderMaterial SceneTextMaterial()
-    {
-        _sceneTextTextures ??= new SceneTextTextures();
-        var material = Toon("toon_scene_text", "toon_scene_text");
-        _sceneTextTextures.Bind(material);
+            _sceneTextTextures ??= new SceneTextTextures();
+            _sceneTextTextures.Bind(material);
+        }
         return material;
-    }
-
-    private ShaderMaterial Toon(string file, string fallback) => new()
-    {
-        Shader = LoadShader(file) ?? LoadShader(fallback)
-            ?? throw new FileNotFoundException($"Whitelisted shader missing: {ShaderDirectory}{fallback}.gdshader")
-    };
-
-    private Shader? LoadShader(string file)
-    {
-        if (_shaders.TryGetValue(file, out var cached)) return cached;
-        var path = ShaderDirectory + file + ".gdshader";
-        if (!ResourceLoader.Exists(path, "Shader")) return null;
-        var shader = ResourceLoader.Load<Shader>(path);
-        _shaders.Add(file, shader);
-        return shader;
     }
 
     /// <summary>
@@ -215,7 +177,6 @@ public sealed class ToonLibrary : IToonMaterialProvider, IDisposable
             _disposed = true;
             owned = _byClass.Values.Select(entry => entry.Material).Distinct<Material>(ReferenceEqualityComparer.Instance).ToArray();
             _byClass.Clear();
-            _shaders.Clear();
         }
         try
         {

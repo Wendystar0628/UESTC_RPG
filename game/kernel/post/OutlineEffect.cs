@@ -14,7 +14,7 @@ namespace Campus.Kernel.Post;
 public partial class OutlineEffect : CompositorEffect
 {
     internal const string ShaderPath = "res://style/outline/post_outline.glsl";   // every WP-05 kernel is a version of it
-    private const int UboFloats = 92;   // layout of OutlineParams in post_outline.glsl
+    private const int UboFloats = 76;   // layout of OutlineParams in post_outline.glsl
 
     private static readonly StringName Context = "wp05_outline";
     private static readonly StringName MaskName = "line_mask";
@@ -23,8 +23,8 @@ public partial class OutlineEffect : CompositorEffect
     private static readonly StringName MaskVersion = "mask";
     private static readonly StringName CompositeVersion = "composite";
 
-    private readonly RDShaderSpirV? _spirvMask;
-    private readonly RDShaderSpirV? _spirvComposite;
+    private readonly RDShaderSpirV _spirvMask;
+    private readonly RDShaderSpirV _spirvComposite;
     private readonly float[] _ubo = new float[UboFloats];
     private readonly byte[] _uboBytes = new byte[UboFloats * sizeof(float)];
     private readonly RDUniform _uUbo = new() { UniformType = RenderingDevice.UniformType.UniformBuffer, Binding = 0 };
@@ -38,7 +38,11 @@ public partial class OutlineEffect : CompositorEffect
     private readonly Array<RDUniform> _setComposite;
     private RenderingDevice? _rd;
     private Rid _shaderMask, _shaderComposite, _pipelineMask, _pipelineComposite, _sampler, _uniformBuffer;
-    private bool _ready, _failed;
+    private bool _ready, _released;
+    private bool _rendered;
+    private Exception? _error;
+    internal string? Error => Volatile.Read(ref _error)?.GetBaseException().Message;
+    internal bool Rendered => Volatile.Read(ref _rendered);
 
     internal PostFrameBox? Inputs { get; set; }
 
@@ -49,30 +53,25 @@ public partial class OutlineEffect : CompositorEffect
         _setMask = [_uUbo, _uDepth, _uNormal, _uMatTable, _uMask];
         _setComposite = [_uUbo, _uDepth, _uNormal, _uMatTable, _uMask, _uColor, _uPalette];
         // Shader files load on the main thread; GPU objects are created lazily on the render thread.
-        var file = GD.Load<RDShaderFile>(ShaderPath);
-        if (file is null)
-        {
-            GD.PushError($"WP-05 outline: missing {ShaderPath}");
-            _failed = true;
-            return;
-        }
+        var file = GD.Load<RDShaderFile>(ShaderPath)
+            ?? throw new FileNotFoundException($"Missing outline shader: {ShaderPath}", ShaderPath);
         _spirvMask = file.GetSpirV(MaskVersion);
         _spirvComposite = file.GetSpirV(CompositeVersion);
+        if (_spirvMask.CompileErrorCompute.Length > 0 || _spirvComposite.CompileErrorCompute.Length > 0)
+            throw new InvalidDataException("Outline shader compilation failed: " +
+                _spirvMask.CompileErrorCompute + _spirvComposite.CompileErrorCompute);
     }
 
     private bool EnsureResources()
     {
+        if (_released || _error is not null) return false;
         if (_ready) return true;
-        if (_failed || _spirvMask is null || _spirvComposite is null) return false;
-        if (_spirvMask.CompileErrorCompute.Length > 0 || _spirvComposite.CompileErrorCompute.Length > 0)
-        {
-            GD.PushError("WP-05 outline: " + _spirvMask.CompileErrorCompute + _spirvComposite.CompileErrorCompute);
-            _failed = true;
-            return false;
-        }
-        _rd = RenderingServer.GetRenderingDevice();
+        _rd = RenderingServer.GetRenderingDevice()
+            ?? throw new InvalidOperationException("Outline requires a rendering device.");
         _shaderMask = _rd.ShaderCreateFromSpirV(_spirvMask, "post_outline_mask");
         _shaderComposite = _rd.ShaderCreateFromSpirV(_spirvComposite, "post_outline_composite");
+        if (!_shaderMask.IsValid || !_shaderComposite.IsValid)
+            throw new InvalidOperationException("Outline shader creation failed.");
         _pipelineMask = _rd.ComputePipelineCreate(_shaderMask);
         _pipelineComposite = _rd.ComputePipelineCreate(_shaderComposite);
         _sampler = _rd.SamplerCreate(new RDSamplerState
@@ -84,12 +83,8 @@ public partial class OutlineEffect : CompositorEffect
         });
         _uniformBuffer = _rd.UniformBufferCreate((uint)_uboBytes.Length, _uboBytes);
         _uUbo.AddId(_uniformBuffer);
-        _ready = _pipelineMask.IsValid && _pipelineComposite.IsValid && _uniformBuffer.IsValid;
-        if (!_ready)
-        {
-            _failed = true;
-            GD.PushError("WP-05 outline: pipeline creation failed");
-        }
+        _ready = _pipelineMask.IsValid && _pipelineComposite.IsValid && _uniformBuffer.IsValid && _sampler.IsValid;
+        if (!_ready) throw new InvalidOperationException("Outline pipeline creation failed.");
         return _ready;
     }
 
@@ -100,6 +95,10 @@ public partial class OutlineEffect : CompositorEffect
         try
         {
             Render(batch.Frame, renderData, batch.Palette, batch.MatTable);
+        }
+        catch (Exception error)
+        {
+            Interlocked.CompareExchange(ref _error, error, null);
         }
         finally
         {
@@ -112,13 +111,15 @@ public partial class OutlineEffect : CompositorEffect
         GlobalDataTextureLease matTableLease)
     {
         if (!EnsureResources() || _rd is null) return;
-        if (renderData.GetRenderSceneBuffers() is not RenderSceneBuffersRD buffers) return;
+        if (renderData.GetRenderSceneBuffers() is not RenderSceneBuffersRD buffers)
+            throw new InvalidOperationException("Outline requires rendering-device scene buffers.");
         var size = buffers.GetInternalSize();
         if (size.X <= 0 || size.Y <= 0) return;
         // RD RIDs are looked up again every frame: a producer's SetImage may replace the RD texture.
         var matTable = matTableLease.GetRdTextureOnRenderThread(false);
         var palette = paletteLease.GetRdTextureOnRenderThread(true);   // sRGB view: linear on fetch
-        if (!matTable.IsValid || !palette.IsValid) return;
+        if (!matTable.IsValid || !palette.IsValid)
+            throw new InvalidOperationException("Outline palette or material table GPU texture is unavailable.");
 
         // Own intermediate texture: dropped with the context whenever the buffers are reconfigured; size-checked too.
         if (buffers.HasTexture(Context, MaskName) && buffers.GetTextureSliceSize(Context, MaskName, 0) != size)
@@ -131,7 +132,8 @@ public partial class OutlineEffect : CompositorEffect
         }
 
         WriteParams(frame, renderData.GetRenderSceneData(), size);
-        _rd.BufferUpdate(_uniformBuffer, 0, (uint)_uboBytes.Length, _uboBytes);
+        if (_rd.BufferUpdate(_uniformBuffer, 0, (uint)_uboBytes.Length, _uboBytes) != Godot.Error.Ok)
+            throw new InvalidOperationException("Outline parameter upload failed.");
 
         Bind(_uDepth, _sampler, buffers.GetDepthLayer(0));
         Bind(_uNormal, _sampler, buffers.GetTextureSlice(ForwardContext, NormalRoughness, 0, 0, 1, 1));
@@ -143,6 +145,8 @@ public partial class OutlineEffect : CompositorEffect
         _uColor.AddId(buffers.GetColorLayer(0));
         var setMask = UniformSetCacheRD.GetCache(_shaderMask, 0, _setMask);
         var setComposite = UniformSetCacheRD.GetCache(_shaderComposite, 0, _setComposite);
+        if (!setMask.IsValid || !setComposite.IsValid)
+            throw new InvalidOperationException("Outline uniform set creation failed.");
 
         uint groupsX = (uint)((size.X + 7) / 8), groupsY = (uint)((size.Y + 7) / 8);
         var list = _rd.ComputeListBegin();
@@ -154,10 +158,12 @@ public partial class OutlineEffect : CompositorEffect
         _rd.ComputeListBindUniformSet(list, setComposite, 0);
         _rd.ComputeListDispatch(list, groupsX, groupsY, 1);
         _rd.ComputeListEnd();
+        Volatile.Write(ref _rendered, true);
     }
 
     private static void Bind(RDUniform uniform, Rid sampler, Rid texture)
     {
+        if (!texture.IsValid) throw new InvalidOperationException("Outline required scene texture is unavailable.");
         uniform.ClearIds();
         uniform.AddId(sampler);
         uniform.AddId(texture);
@@ -171,27 +177,20 @@ public partial class OutlineEffect : CompositorEffect
         Vector3 bx = cam.Basis.Column0, by = cam.Basis.Column1, bz = cam.Basis.Column2, origin = cam.Origin;
         var key = f.KeyDir.LengthSquared() > 1e-8f ? f.KeyDir.Normalized() : Vector3.Up;
         var keyView = new Vector3(key.Dot(bx), key.Dot(by), key.Dot(bz));
-        var rimDir = new Vector2(keyView.X, -keyView.Y);
-        rimDir = rimDir.LengthSquared() > 1e-8f ? rimDir.Normalized() : Vector2.Zero;
-
         Put(0, inv.X); Put(4, inv.Y); Put(8, inv.Z); Put(12, inv.W);
         Put(16, new Vector4(bx.X, bx.Y, bx.Z, 0)); Put(20, new Vector4(by.X, by.Y, by.Z, 0));
         Put(24, new Vector4(bz.X, bz.Y, bz.Z, 0)); Put(28, new Vector4(origin.X, origin.Y, origin.Z, 1));
         Put(32, new Vector4(size.X, size.Y, 1f / size.X, 1f / size.Y));
-        Put(36, new Vector4(f.LineDarken, size.Y / 1080f, f.TentMix, f.DebugView));
+        Put(36, new Vector4(f.LineDarken, size.Y / 1080f, f.Flash, 0));
         Put(40, new Vector4(keyView.X, keyView.Y, keyView.Z, f.KeyStrength));
-        Put(44, new Vector4(f.RimColor.R, f.RimColor.G, f.RimColor.B, f.RimStrength));
-        Put(48, new Vector4(rimDir.X, rimDir.Y, 0, 0));
-        Put(52, new Vector4(f.FarRain, f.Flash, 0, 0));
-        Put(56, f.Fog);
-        Put(60, f.WeatherFog);
-        Put(64, f.MapRect);
-        Put(68, new Vector4(key.X, key.Y, key.Z, f.EdgeFog));
-        Put(72, f.Medium);
-        Put(76, new Vector4(f.MediumColor.R, f.MediumColor.G, f.MediumColor.B, 0));
-        Put(80, f.FogLow);
-        Put(84, new Vector4(f.SunDir.X, f.SunDir.Y, f.SunDir.Z, f.SeasonAtmosphere));
-        Put(88, new Vector4(f.MoonDir.X, f.MoonDir.Y, f.MoonDir.Z, 0));
+        Put(44, f.Fog);
+        Put(48, f.WeatherFog);
+        Put(52, f.MapRect);
+        Put(56, f.Medium);
+        Put(60, new Vector4(f.MediumColor.R, f.MediumColor.G, f.MediumColor.B, f.EdgeFog));
+        Put(64, f.FogLow);
+        Put(68, new Vector4(f.SunDir.X, f.SunDir.Y, f.SunDir.Z, f.SeasonAtmosphere));
+        Put(72, new Vector4(f.MoonDir.X, f.MoonDir.Y, f.MoonDir.Z, 0));
         System.Buffer.BlockCopy(_ubo, 0, _uboBytes, 0, _uboBytes.Length);
     }
 
@@ -214,6 +213,6 @@ public partial class OutlineEffect : CompositorEffect
         if (_uniformBuffer.IsValid) _rd.FreeRid(_uniformBuffer);
         _shaderMask = _shaderComposite = _pipelineMask = _pipelineComposite = _sampler = _uniformBuffer = default;
         _ready = false;
-        _failed = true;   // released for good: the effect is being torn down
+        _released = true;
     }
 }

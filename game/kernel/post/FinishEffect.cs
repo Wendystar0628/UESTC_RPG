@@ -4,41 +4,37 @@ using Godot.Collections;
 namespace Campus.Kernel.Post;
 
 /// <summary>
-/// The PostTransparent CompositorEffect (ENG-PERF step 6). Every frame it
-/// <list type="number">
-/// <item>re-bakes the runtime colour LUT (version lut of style/outline/post_outline.glsl: CDL ∘ static base table,
-/// 32³) when the CDL moved, so the engine's tonemap pass reads it later in the same frame through
-/// Environment.AdjustmentColorCorrection;</item>
-/// <item>runs the compose dispatch (version tiltshift_comp of the same file): highlight shoulder on the overflow only
-/// (registered lit colours unchanged), vignette, and the tilt-shift blend (amount 0 until the blur passes land).</item>
-/// </list>
-/// The compose dispatch always runs: the shoulder is a style floor (SYS-GRAPHICS).
+/// The PostTransparent CompositorEffect: updates the runtime colour LUT when CDL changes, then applies
+/// the highlight shoulder and vignette before the engine's glow, tonemap and LUT (ENG-PERF).
+/// The finish dispatch always runs because the shoulder is a style floor (SYS-GRAPHICS).
 /// </summary>
 public partial class FinishEffect : CompositorEffect
 {
-    private static readonly StringName ComposeVersion = "tiltshift_comp";
+    private static readonly StringName FinishVersion = "finish";
     private static readonly StringName LutVersion = "lut";
     internal const int LutSize = 32;
     private const float ShoulderStart = 1.0f;     // at or above every registered lit colour (peak 1.0)
     private const float ShoulderHeadroom = 0.5f;
-    private const float TiltMaxBlend = 0.25f;     // ART-STYLE
     private const float BaseSaturation = 1.02f;   // static base table (ART-STYLE)
     private const float SplitToning = 1f;
     internal const float CdlEpsilon = 1e-4f;
 
-    private readonly RDShaderSpirV? _spirvCompose;
-    private readonly RDShaderSpirV? _spirvLut;
+    private readonly RDShaderSpirV _spirvFinish;
+    private readonly RDShaderSpirV _spirvLut;
     private readonly float[] _pc = new float[16];
     private readonly byte[] _pcBytes = new byte[16 * sizeof(float)];
     private readonly RDUniform _uColor = new() { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
-    private readonly RDUniform _uBlur = new() { UniformType = RenderingDevice.UniformType.SamplerWithTexture, Binding = 1 };
-    private readonly Array<RDUniform> _setCompose;
+    private readonly Array<RDUniform> _setFinish;
     private readonly object _lutGate = new();
     private RenderingDevice? _rd;
-    private Rid _shaderCompose, _pipelineCompose, _shaderLut, _pipelineLut, _lutTexture, _lutSet, _sampler, _blurPlaceholder;
+    private Rid _shaderFinish, _pipelineFinish, _shaderLut, _pipelineLut, _lutTexture, _lutSet;
     private Vector3 _bakedSlope = new(float.NaN, 0, 0), _bakedOffset, _bakedPower;
     private float _bakedSaturation;
-    private bool _ready, _failed;
+    private bool _ready, _released;
+    private bool _rendered;
+    private Exception? _error;
+    internal string? Error => Volatile.Read(ref _error)?.GetBaseException().Message;
+    internal bool Rendered => Volatile.Read(ref _rendered);
 
     internal PostFrameBox? Inputs { get; set; }
 
@@ -51,53 +47,28 @@ public partial class FinishEffect : CompositorEffect
     public FinishEffect()
     {
         EffectCallbackType = EffectCallbackTypeEnum.PostTransparent;
-        _setCompose = [_uColor, _uBlur];
-        var file = GD.Load<RDShaderFile>(OutlineEffect.ShaderPath);
-        if (file is null)
-        {
-            GD.PushError($"WP-05 finish: missing {OutlineEffect.ShaderPath}");
-            _failed = true;
-            return;
-        }
-        _spirvCompose = file.GetSpirV(ComposeVersion);
+        _setFinish = [_uColor];
+        var file = GD.Load<RDShaderFile>(OutlineEffect.ShaderPath)
+            ?? throw new FileNotFoundException($"Missing finish shader: {OutlineEffect.ShaderPath}", OutlineEffect.ShaderPath);
+        _spirvFinish = file.GetSpirV(FinishVersion);
         _spirvLut = file.GetSpirV(LutVersion);
+        if (_spirvFinish.CompileErrorCompute.Length > 0 || _spirvLut.CompileErrorCompute.Length > 0)
+            throw new InvalidDataException("Finish shader compilation failed: " +
+                _spirvFinish.CompileErrorCompute + _spirvLut.CompileErrorCompute);
     }
 
     private bool EnsureResources()
     {
+        if (_released || _error is not null) return false;
         if (_ready) return true;
-        if (_failed || _spirvCompose is null || _spirvLut is null) return false;
-        if (_spirvCompose.CompileErrorCompute.Length > 0 || _spirvLut.CompileErrorCompute.Length > 0)
-        {
-            GD.PushError("WP-05 finish: " + _spirvCompose.CompileErrorCompute + _spirvLut.CompileErrorCompute);
-            _failed = true;
-            return false;
-        }
-        _rd = RenderingServer.GetRenderingDevice();
-        _shaderCompose = _rd.ShaderCreateFromSpirV(_spirvCompose, "post_outline_tiltshift_comp");
-        _pipelineCompose = _rd.ComputePipelineCreate(_shaderCompose);
+        _rd = RenderingServer.GetRenderingDevice()
+            ?? throw new InvalidOperationException("Finish requires a rendering device.");
+        _shaderFinish = _rd.ShaderCreateFromSpirV(_spirvFinish, "post_outline_finish");
         _shaderLut = _rd.ShaderCreateFromSpirV(_spirvLut, "post_outline_lut");
+        if (!_shaderFinish.IsValid || !_shaderLut.IsValid)
+            throw new InvalidOperationException("Finish shader creation failed.");
+        _pipelineFinish = _rd.ComputePipelineCreate(_shaderFinish);
         _pipelineLut = _rd.ComputePipelineCreate(_shaderLut);
-        _sampler = _rd.SamplerCreate(new RDSamplerState
-        {
-            MagFilter = RenderingDevice.SamplerFilter.Linear,
-            MinFilter = RenderingDevice.SamplerFilter.Linear,
-            RepeatU = RenderingDevice.SamplerRepeatMode.ClampToEdge,
-            RepeatV = RenderingDevice.SamplerRepeatMode.ClampToEdge,
-        });
-        // Until the tilt-shift blur passes exist the compose shader samples nothing (amount 0), but the binding
-        // must still hold a texture.
-        _blurPlaceholder = _rd.TextureCreate(new RDTextureFormat
-        {
-            Format = RenderingDevice.DataFormat.R16G16B16A16Sfloat,
-            TextureType = RenderingDevice.TextureType.Type2D,
-            Width = 4,
-            Height = 4,
-            Depth = 1,
-            ArrayLayers = 1,
-            Mipmaps = 1,
-            UsageBits = RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanUpdateBit,
-        }, new RDTextureView(), [new byte[4 * 4 * 8]]);
         var lut = _rd.TextureCreate(new RDTextureFormat
         {
             Format = RenderingDevice.DataFormat.R16G16B16A16Sfloat,
@@ -110,18 +81,14 @@ public partial class FinishEffect : CompositorEffect
             UsageBits = RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.StorageBit
                 | RenderingDevice.TextureUsageBits.CanCopyFromBit,
         }, new RDTextureView());
+        lock (_lutGate) _lutTexture = lut;
+        if (!_pipelineFinish.IsValid || !_pipelineLut.IsValid || !lut.IsValid)
+            throw new InvalidOperationException("Finish pipeline or LUT texture creation failed.");
         var image = new RDUniform { UniformType = RenderingDevice.UniformType.Image, Binding = 0 };
         image.AddId(lut);
         _lutSet = _rd.UniformSetCreate([image], _shaderLut, 0);
-        _uBlur.AddId(_sampler);
-        _uBlur.AddId(_blurPlaceholder);
-        lock (_lutGate) _lutTexture = lut;
-        _ready = _pipelineCompose.IsValid && _pipelineLut.IsValid && lut.IsValid && _lutSet.IsValid;
-        if (!_ready)
-        {
-            _failed = true;
-            GD.PushError("WP-05 finish: pipeline creation failed");
-        }
+        _ready = _pipelineFinish.IsValid && _pipelineLut.IsValid && lut.IsValid && _lutSet.IsValid;
+        if (!_ready) throw new InvalidOperationException("Finish LUT uniform set creation failed.");
         return _ready;
     }
 
@@ -129,26 +96,36 @@ public partial class FinishEffect : CompositorEffect
     {
         if (effectCallbackType != (int)EffectCallbackTypeEnum.PostTransparent) return;
         if (Inputs is null || !Inputs.TryTakeFinish(out var frame)) return;
+        try { Render(frame, renderData); }
+        catch (Exception error) { Interlocked.CompareExchange(ref _error, error, null); }
+    }
+
+    private void Render(in PostFrame frame, RenderData renderData)
+    {
         if (!EnsureResources() || _rd is null) return;
         BakeLutIfChanged(frame);
-        if (renderData.GetRenderSceneBuffers() is not RenderSceneBuffersRD buffers) return;
+        if (renderData.GetRenderSceneBuffers() is not RenderSceneBuffersRD buffers)
+            throw new InvalidOperationException("Finish requires rendering-device scene buffers.");
         var size = buffers.GetInternalSize();
         if (size.X <= 0 || size.Y <= 0) return;
 
         Set(0, size.X, size.Y, 1f / size.X, 1f / size.Y);
-        Set(4, frame.TiltAmount, TiltMaxBlend, 0, 0);
-        Set(8, frame.VignetteTint.X, frame.VignetteTint.Y, frame.VignetteTint.Z, frame.VignetteK);
-        Set(12, ShoulderStart, ShoulderHeadroom, 0, 0);
+        Set(4, frame.VignetteTint.X, frame.VignetteTint.Y, frame.VignetteTint.Z, frame.VignetteK);
+        Set(8, ShoulderStart, ShoulderHeadroom, 0, 0);
         System.Buffer.BlockCopy(_pc, 0, _pcBytes, 0, _pcBytes.Length);
         _uColor.ClearIds();
-        _uColor.AddId(buffers.GetColorLayer(0));
-        var set = UniformSetCacheRD.GetCache(_shaderCompose, 0, _setCompose);
+        var color = buffers.GetColorLayer(0);
+        if (!color.IsValid) throw new InvalidOperationException("Finish color buffer is unavailable.");
+        _uColor.AddId(color);
+        var set = UniformSetCacheRD.GetCache(_shaderFinish, 0, _setFinish);
+        if (!set.IsValid) throw new InvalidOperationException("Finish uniform set creation failed.");
         var list = _rd.ComputeListBegin();
-        _rd.ComputeListBindComputePipeline(list, _pipelineCompose);
+        _rd.ComputeListBindComputePipeline(list, _pipelineFinish);
         _rd.ComputeListBindUniformSet(list, set, 0);
-        _rd.ComputeListSetPushConstant(list, _pcBytes, (uint)_pcBytes.Length);
+        _rd.ComputeListSetPushConstant(list, _pcBytes, 12 * sizeof(float));
         _rd.ComputeListDispatch(list, (uint)((size.X + 7) / 8), (uint)((size.Y + 7) / 8), 1);
         _rd.ComputeListEnd();
+        Volatile.Write(ref _rendered, true);
     }
 
     private void BakeLutIfChanged(in PostFrame f)
@@ -195,12 +172,10 @@ public partial class FinishEffect : CompositorEffect
             _lutTexture = default;
         }
         if (lut.IsValid) _rd.FreeRid(lut);   // also frees the LUT uniform set
-        if (_shaderCompose.IsValid) _rd.FreeRid(_shaderCompose);
+        if (_shaderFinish.IsValid) _rd.FreeRid(_shaderFinish);
         if (_shaderLut.IsValid) _rd.FreeRid(_shaderLut);
-        if (_sampler.IsValid) _rd.FreeRid(_sampler);
-        if (_blurPlaceholder.IsValid) _rd.FreeRid(_blurPlaceholder);
-        _shaderCompose = _pipelineCompose = _shaderLut = _pipelineLut = _lutSet = _sampler = _blurPlaceholder = default;
+        _shaderFinish = _pipelineFinish = _shaderLut = _pipelineLut = _lutSet = default;
         _ready = false;
-        _failed = true;
+        _released = true;
     }
 }

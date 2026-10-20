@@ -12,14 +12,9 @@ internal struct PostFrame
 {
     // Outline (post_outline.glsl)
     public float LineDarken;      // IColorScriptFrame.LineDarkness
-    public float TentMix;         // 0 by default (ENG-PERF: lines on the foreground side, tent filter off)
     public float Flash;           // lightning flash 0..1: line_darken x 0.7 at full flash (SYS-WEATHER)
-    public float FarRain;         // far rain band amount (reserved until the rain band lands)
     public Vector3 KeyDir;        // world direction toward the key light (sun by day, moon by night)
     public float KeyStrength;
-    public Color RimColor;        // linear
-    public float RimStrength;     // 0 = screen-space rim off (mainline)
-    public int DebugView;         // 0 = off; 1 mask, 2 ID, 3 normal, 4 world, 5 fog amount
     // Copies of the global shader parameters read by fog.glslinc (same values as the globals)
     public Vector4 Fog;
     public Vector4 FogLow;
@@ -31,8 +26,7 @@ internal struct PostFrame
     public float EdgeFog;
     public Vector3 SunDir;        // sun_dir: real sun direction (sky side of the fog colour)
     public Vector3 MoonDir;       // moon_dir
-    // Finish pass and LUT (versions tiltshift_comp and lut of post_outline.glsl)
-    public float TiltAmount;      // 0 until the tilt-shift blur dispatches land
+    // Finish pass and LUT (versions finish and lut of post_outline.glsl)
     public float VignetteK;       // after the quality fade
     public Vector3 VignetteTint;
     public Vector3 CdlSlope;

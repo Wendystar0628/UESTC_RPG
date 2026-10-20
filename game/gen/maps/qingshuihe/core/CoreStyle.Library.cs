@@ -140,6 +140,6 @@ public static partial class CoreStyle
 
     /// <summary>Window glass (toon_glass with window cards); casts shadow, it closes the hollow shell.</summary>
     public static ToonSpec WindowGlass => Campus.Gen.Sites.ZoneLooks.Glass;
-    /// <summary>See-through glass of the skylight and the front tower slot (paths P1 and P2, toon_glass_near).</summary>
+    /// <summary>See-through glass of the skylight and the front tower slot (paths P1 and P2, toon_glass clear mode).</summary>
     public static ToonSpec ClearGlass { get; } = WindowGlass with { Kind = ToonKind.GlassNear };
 }

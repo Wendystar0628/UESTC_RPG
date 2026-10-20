@@ -3,7 +3,7 @@
 mask = "#define PASS_MASK";
 composite = "#define PASS_COMPOSITE";
 lut = "#define PASS_LUT";
-tiltshift_comp = "#define PASS_TILTSHIFT_COMP";
+finish = "#define PASS_FINISH";
 
 #[compute]
 
@@ -16,16 +16,15 @@ VERSION_DEFINES
 // threads; with a single .glsl file no two shader-file imports ever overlap. Versions:
 //   mask, composite : the outline in CompositorEffect POST_SKY (below),
 //   lut             : the runtime colour-grading LUT (section PASS_LUT),
-//   tiltshift_comp  : the compose dispatch in CompositorEffect POST_TRANSPARENT (section PASS_TILTSHIFT_COMP).
-// Kernels added later (tilt-shift blur, flare, FXAA) become further versions of this file.
+//   finish  : the compose dispatch in CompositorEffect POST_TRANSPARENT (section PASS_FINISH).
 //
 // Outline (ART-STYLE §4.5, ENG-PERF), two dispatches:
 //   mask      : reads depth + normal_roughness (7-bit material ID in alpha) + mat_table row 0, writes a RG8 mask
 //               R = line coverage (sub-pixel widths drawn as coverage),
 //               G = material ID of the side the line takes its colour from (bits 0-6) + convex-lit flag (bit 7).
-//   composite : fragment filter (3x3 count and 5x5 ring, below) and the +-0.5 px tent filter,
+//   composite : fragment filter (3x3 count and 5x5 ring, below),
 //               line colour = own base darkened + warm/cool tint + fog (ART-STYLE §4.2), mixed into the colour
-//               buffer in place; convex bright line on the lit side (ART-STYLE §4.7); screen-space rim (interface).
+//               buffer in place; convex bright line on the lit side (ART-STYLE).
 //
 // Placement: every line is one-sided and takes its colour from its own pixel, so no pixel ever reads a colour
 // that another invocation is writing. Silhouettes sit on the nearer side (inside the foreground object, the
@@ -33,9 +32,7 @@ VERSION_DEFINES
 // the camera (constant along an edge, so they cannot zigzag), parallel faces fall back to the lower material ID.
 //
 // Inputs from C#: inv_proj = RenderSceneData.GetCamProjection().Inverse() as is — that projection is already
-// the device one (y flipped, reverse-Z remapped). Debug views (line_a.w): 1 mask, 2 material ID, 3 normal,
-// 4 reconstructed world position, 5 fog amount, 6 fog colour (both linear, for the parity test against
-// fog.gdshaderinc).
+// the device one (y flipped, reverse-Z remapped).
 //
 // Edge criteria per neighbour (ENG-PERF):
 //   depth  : neighbour farther than the centre's plane predicts by > 1.5 % (plus a normal-quantisation term),
@@ -82,19 +79,15 @@ layout(set = 0, binding = 0, std140) uniform OutlineParams {
 	mat4 inv_proj;      // (ndc.x, ndc.y with image rows top-down, raw reverse-Z depth, 1) -> view space
 	mat4 inv_view;      // view -> world (camera transform)
 	vec4 size;          // internal width, height, 1/width, 1/height
-	vec4 line_a;        // x: line_darken, y: px scale (internal height / 1080), z: tent mix, w: debug view
+	vec4 line_a;        // x: line_darken, y: px scale (internal height / 1080), z: lightning flash, w: padding
 	vec4 key_light;     // xyz: direction toward the key light, view space; w: key_strength
-	vec4 rim_a;         // rgb: rim colour (linear); w: rim strength, 0 = off (screen-space rim interface)
-	vec4 rim_b;         // xy: screen-space direction toward the key light (image space, y down); zw: reserved
-	vec4 weather;       // x: far rain amount (reserved), y: lightning flash 0..1, zw: reserved
 	// Copies of global shader parameters, written by C# from the same state that writes the globals
 	// (compute shaders cannot read globals, ENG-PERF §1.5). Read through the macros below by fog.glslinc.
 	vec4 g_fog;          // fog
 	vec4 g_weather_fog;  // weather_fog
 	vec4 g_map_rect;     // map_rect
-	vec4 g_key_dir;      // xyz: key_dir (unused by the fog since b5348cd), w: edge_fog
 	vec4 g_medium;       // medium
-	vec4 g_medium_color; // medium_color (linear)
+	vec4 g_medium_color; // xyz: medium_color (linear), w: edge_fog
 	vec4 g_fog_low;      // fog_low
 	vec4 g_sun_dir;      // xyz: sun_dir (real sun direction, unquantised), w: season_atmosphere
 	vec4 g_moon_dir;     // xyz: moon_dir
@@ -117,7 +110,7 @@ layout(set = 0, binding = 6) uniform sampler2D palette;   // global palette, sRG
 #define fog_low (P.g_fog_low)
 #define weather_fog (P.g_weather_fog)
 #define map_rect (P.g_map_rect)
-#define edge_fog (P.g_key_dir.w)
+#define edge_fog (P.g_medium_color.w)
 #define sun_dir (P.g_sun_dir.xyz)
 #define season_atmosphere (P.g_sun_dir.w)
 #define moon_dir (P.g_moon_dir.xyz)
@@ -614,10 +607,6 @@ void main() {
 const ivec2 N3[9] = ivec2[9](ivec2(-1, -1), ivec2(0, -1), ivec2(1, -1),
 		ivec2(-1, 0), ivec2(0, 0), ivec2(1, 0),
 		ivec2(-1, 1), ivec2(0, 1), ivec2(1, 1));
-// Separable +-0.5 px tent through bilinear taps: 1D weights (1/8, 3/4, 1/8).
-const float TENT[9] = float[9](1.0 / 64.0, 6.0 / 64.0, 1.0 / 64.0,
-		6.0 / 64.0, 36.0 / 64.0, 6.0 / 64.0,
-		1.0 / 64.0, 6.0 / 64.0, 1.0 / 64.0);
 const float LINE_PIXEL = 0.04;   // a mask value counted as a "line pixel" for speck removal (thin far lines are
                                  // drawn as low coverage and must still count, or they vanish whole)
 
@@ -627,7 +616,7 @@ vec3 line_colour(vec3 base, uint id, ivec2 at) {
 	float bl = dot(base, vec3(0.2126, 0.7152, 0.0722));
 	float warm = smoothstep(-0.01, 0.03, oklab_b(base));   // warm base -> warm brown, cool -> blue-grey
 	vec3 tint = mix(pal_cur(PAL_LINE_COOL), pal_cur(PAL_LINE_WARM), warm);   // line.cool / line.warm
-	float darken = P.line_a.x * (1.0 - 0.3 * P.weather.y);   // lightning flash: line_darken x 0.7 (SYS-WEATHER §5)
+	float darken = P.line_a.x * (1.0 - 0.3 * P.line_a.z);   // lightning flash: line_darken x 0.7 (SYS-WEATHER §5)
 	vec3 lc = mix(base, vec3(bl), 0.35) * darken;
 	lc = mix(lc, tint, l.tint);
 	// Toward the fog with distance, same fog function as the materials (ART-STYLE §4.2).
@@ -636,38 +625,6 @@ vec3 line_colour(vec3 base, uint id, ivec2 at) {
 	vec3 wp = (P.inv_view * vec4(vp, 1.0)).xyz;
 	vec4 f = fog_eval(wp, P.inv_view[3].xyz);
 	return mix(lc, f.rgb, f.a);
-}
-
-// Screen-space rim on the backlit side of silhouettes (ART-STYLE §5.4). Interface for the mainline: off while
-// rim strength is 0; the full rule set (night silver rim, no rim in the shadowless blue hour, x1.3 after rain)
-// is driven entirely by the C# side through rim_a / rim_b.
-vec3 rim_term(ivec2 c, Surf s) {
-	if (P.rim_a.w <= 0.0 || s.sky || s.z >= LINE_FAR) {
-		return vec3(0.0);
-	}
-	float nl = dot(s.nrm, P.key_light.xyz);
-	if (nl >= 0.0) {
-		return vec3(0.0);
-	}
-	// Probe 2.5 px toward the light: the outermost pixel carries the dark contour, the rim sits just inside it.
-	vec2 off = P.rim_b.xy * 2.5 * P.line_a.y;
-	ivec2 q = clamp_px(ivec2(floor(vec2(c) + 0.5 + off)));
-	float dq = texelFetch(depth_tex, q, 0).r;
-	bool far = dq <= 0.0;
-	if (!far) {
-		far = -view_pos(q, dq).z > s.z * 1.5 + 2.0;
-	}
-	if (!far) {
-		return vec3(0.0);
-	}
-	vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
-	float fog_a = fog_eval(wp, P.inv_view[3].xyz).a;
-	return P.rim_a.rgb * P.rim_a.w * smoothstep(0.0, -0.25, nl) * P.key_light.w * (1.0 - fog_a);
-}
-
-vec3 debug_id_colour(uint id) {
-	uint h = id * 2654435761u;
-	return vec3(float((h >> 8) & 255u), float((h >> 16) & 255u), float((h >> 24) & 255u)) / 255.0;
 }
 
 void main() {
@@ -679,21 +636,13 @@ void main() {
 	float m[9];
 	uint g[9];
 	int count = 0;
-	float tent = 0.0;
-	float best = 0.0;
-	int best_k = 4;
 	bool any_flag = false;
 	for (int k = 0; k < 9; k++) {
 		vec2 mv = imageLoad(line_mask, clamp_px(c + N3[k])).rg;
 		m[k] = mv.r;
 		g[k] = uint(round(mv.g * 255.0));
 		count += m[k] > LINE_PIXEL ? 1 : 0;
-		tent += TENT[k] * m[k];
 		any_flag = any_flag || (g[k] & 128u) != 0u;
-		if (k != 4 && m[k] > best) {
-			best = m[k];
-			best_k = k;
-		}
 	}
 	float m0 = m[4];
 
@@ -714,47 +663,12 @@ void main() {
 			}
 		}
 		// The 3x3 rule (fewer than 3 line pixels -> dropped) still takes dotted lines whose dots the ring would see.
-		cov = count >= 3 ? mix(m0, tent, P.line_a.z) * smoothstep(FRAG_RING_LO, FRAG_RING_HI, ring) : 0.0;
-	} else if (count >= 2) {
-		// Skirt pixel next to a line: only the tent's spill, coloured from its own base but fogged and tinted
-		// by the line pixel it spills from.
-		cov = tent * P.line_a.z;
-		src = clamp_px(c + N3[best_k]);
-		src_id = g[best_k] & 127u;
+		cov = count >= 3 ? m0 * smoothstep(FRAG_RING_LO, FRAG_RING_HI, ring) : 0.0;
 	} else {
 		cov = 0.0;
 	}
 
-	int debug_view = int(P.line_a.w + 0.5);
-	if (debug_view != 0) {
-		vec3 dbg;
-		Surf s = fetch_surf(c);
-		if (debug_view == 1) {
-			dbg = mix(vec3(1.0), vec3(0.0), cov);
-			if ((g[4] & 128u) != 0u) {
-				dbg = mix(dbg, vec3(1.0, 0.6, 0.0), 0.8);
-			}
-		} else if (debug_view == 2) {
-			dbg = s.sky ? vec3(0.0) : debug_id_colour(s.id);
-		} else if (debug_view == 3) {
-			dbg = s.sky ? vec3(0.0) : s.nrm * 0.5 + 0.5;
-		} else if (debug_view == 4) {
-			vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
-			dbg = s.sky ? vec3(0.0) : vec3(fract(wp.y + 0.5), fract(wp.x * 0.1), fract(wp.z * 0.1));
-		} else if (debug_view == 5) {
-			vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
-			dbg = s.sky ? vec3(1.0, 0.0, 0.0) : vec3(fog_eval(wp, P.inv_view[3].xyz).a);
-		} else {
-			vec3 wp = (P.inv_view * vec4(s.pos, 1.0)).xyz;
-			dbg = s.sky ? vec3(1.0, 0.0, 0.0) : fog_eval(wp, P.inv_view[3].xyz).rgb;
-		}
-		// Squared so debug colours read roughly as sRGB on screen; the fog view stays linear for parity tests.
-		imageStore(color_image, c, vec4(debug_view >= 5 ? dbg : dbg * dbg, 1.0));
-		return;
-	}
-
-	bool rim_on = P.rim_a.w > 0.0;
-	if (cov < 1.0 / 255.0 && !any_flag && !rim_on) {
+	if (cov < 1.0 / 255.0 && !any_flag) {
 		return;
 	}
 
@@ -804,10 +718,6 @@ void main() {
 				rgb = max(oklab_to_linear(lab), vec3(0.0));
 			}
 		}
-	}
-
-	if (rim_on && m0 < 0.5) {
-		rgb += rim_term(c, fetch_surf(c));
 	}
 
 	if (cov >= 1.0 / 255.0) {
@@ -912,28 +822,17 @@ void main() {
 
 #endif // PASS_LUT
 
-#ifdef PASS_TILTSHIFT_COMP
+#ifdef PASS_FINISH
 
-// ---- version tiltshift_comp. CompositorEffect POST_TRANSPARENT, the compose dispatch of the tilt-shift pair
-// (ART-STYLE §7.2, §7.4, §7.8; ENG-PERF). Runs every frame even when tilt-shift is off, because the
-// highlight shoulder (style floor) and the vignette live here:
-//   1. tilt-shift blend: mix(c, blur, smoothstep(0.66, 1.05, |uv.y - 0.47| * 2) * 0.25 * amount)
-//      (amount 0 when the player turned tilt-shift off; the two blur dispatches are then skipped),
-//   2. highlight shoulder on the overflow only: registered palette colours (lit colours reach 1.0) pass unchanged
-//      (ΔE <= 2 required, here 0); above the start the peak is rolled off into a small headroom and desaturated
-//      toward white with Khronos PBR Neutral's term, so glow (threshold at the start) still blooms only the real
-//      highlights and the final clip falls on near-white instead of shifting hue,
-//   3. vignette: c *= mix(1 - k * (1 - tint), 1, smoothstep(1.15, 0.25, length((uv - 0.5) * vec2(aspect, 1)))).
-// Input and output are the linear HDR colour buffer before the engine's glow / tonemap / LUT.
+// ---- version finish. CompositorEffect POST_TRANSPARENT: highlight shoulder and vignette.
+// Registered palette colours pass unchanged; HDR overflow rolls toward white before engine glow/tonemap/LUT.
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(rgba16f, set = 0, binding = 0) uniform restrict image2D color_image;
-layout(set = 0, binding = 1) uniform sampler2D blur_tex;   // 1/2 or 1/4 resolution blur, bilinear
 
-layout(push_constant, std430) uniform CompParams {
+layout(push_constant, std430) uniform FinishParams {
 	vec4 size;       // internal width, height, 1/width, 1/height
-	vec4 tilt;       // x: tilt-shift amount 0..1 (fades to 0 in 0.5 s when switched off), y: max blend (0.25), zw: reserved
 	vec4 vignette;   // rgb: vignette tint, w: strength k (0.10 day, 0.12 night; 0 when switched off)
 	vec4 misc;       // x: shoulder start (1.0, above every registered lit colour), y: headroom (0.5), zw: reserved
 } pc;
@@ -958,13 +857,6 @@ void main() {
 	vec4 col = imageLoad(color_image, p);
 	vec3 c = col.rgb;
 
-	if (pc.tilt.x > 0.0) {
-		float w = smoothstep(0.66, 1.05, abs(uv.y - 0.47) * 2.0) * pc.tilt.y * pc.tilt.x;
-		if (w > 0.0) {
-			c = mix(c, textureLod(blur_tex, uv, 0.0).rgb, w);
-		}
-	}
-
 	c = highlight_shoulder(max(c, vec3(0.0)), pc.misc.x, max(pc.misc.y, 1e-3));
 
 	if (pc.vignette.w > 0.0) {
@@ -976,4 +868,4 @@ void main() {
 	imageStore(color_image, p, vec4(c, col.a));
 }
 
-#endif // PASS_TILTSHIFT_COMP
+#endif // PASS_FINISH

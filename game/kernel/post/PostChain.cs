@@ -1,6 +1,7 @@
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Quality;
+using Campus.Contracts.Startup;
 using Campus.Kernel.Renderer;
 using Godot;
 using Services = Campus.Kernel.Registry.Kernel;
@@ -13,11 +14,11 @@ namespace Campus.Kernel.Post;
 /// the runtime LUT. Each frame it copies the colour-script keyframe scalars (IColorScriptFrame), the key light,
 /// weather, edge fog and map rect into one <see cref="PostFrame"/> for the render thread, so nothing reads
 /// shader globals back. Quality knobs owned here take effect without pipeline compilation (SYS-GRAPHICS).
-/// Glow runs at the standard level; vignette, tilt-shift, lens flare and light shafts are style defaults and always on.
+/// Glow runs at the standard level; the finish pass applies the highlight shoulder and vignette.
 /// </summary>
 [KernelNode("post.chain", Owner = "WP-05")]
 [QualityResponsive(Owns = [QualityKnob.AntiAliasing], Reads = [QualityKnob.RenderScale])]
-public partial class PostChain : Node, IQualityAware, IMapAware
+public partial class PostChain : Node, IQualityAware, IMapAware, IViewContentReadiness
 {
     private const float FadeSeconds = 0.5f;            // glow level changes fade, never cut
     private const int GlowLevelCount = 2;              // standard glow: two consecutive levels
@@ -42,6 +43,9 @@ public partial class PostChain : Node, IQualityAware, IMapAware
     private Godot.Environment? _environment;
     private Texture3Drd? _lut;
     private Vector4 _mapRect;
+
+    public string? Error => _outline.Error ?? _finish.Error;
+    public bool IsReady(Pose pose) => _outline.Rendered && _finish.Rendered && _lut is not null;
 
     public PostChain()
     {
@@ -131,14 +135,9 @@ public partial class PostChain : Node, IQualityAware, IMapAware
         var frame = new PostFrame
         {
             LineDarken = cs.LineDarkness,
-            TentMix = 0f,
             Flash = Mathf.Clamp(weather.Lightning, 0f, 1f),
-            FarRain = 0f,
             KeyDir = new Vector3(keyDir.X, keyDir.Y, keyDir.Z),
             KeyStrength = _key.KeyStrength,
-            RimColor = Colors.White,
-            RimStrength = 0f,
-            DebugView = 0,
             Fog = new Vector4(cs.Fog.X, cs.Fog.Y, cs.Fog.Z, cs.Fog.W),
             FogLow = new Vector4(cs.FogLow.X, cs.FogLow.Y, cs.FogLow.Z, cs.FogLow.W),
             SeasonAtmosphere = _world.SeasonAtmosphere,
@@ -149,7 +148,6 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             EdgeFog = _rig.EdgeFog,
             SunDir = new Vector3(_world.Sun.Dir.X, _world.Sun.Dir.Y, _world.Sun.Dir.Z),     // same source as sun_dir / moon_dir
             MoonDir = new Vector3(_world.Moon.Dir.X, _world.Moon.Dir.Y, _world.Moon.Dir.Z),
-            TiltAmount = 0f,
             VignetteK = cs.Vignette,
             VignetteTint = new Vector3(cs.VignetteTint.X, cs.VignetteTint.Y, cs.VignetteTint.Z),
             CdlSlope = new Vector3(cs.CdlSlope.X, cs.CdlSlope.Y, cs.CdlSlope.Z),
@@ -162,13 +160,13 @@ public partial class PostChain : Node, IQualityAware, IMapAware
             _textures.TryAcquire(ShaderGlobals.MatTable, out var matTable) ? matTable : null);
 
         if (_environment is null) return;
-        var bloom = cs.Glow + WorldTime.SeasonGlowBoost * frame.SeasonAtmosphere + FlashBloom * frame.Flash;
+        var bloom = cs.Glow + WorldTimeTuning.SeasonGlowBoost * frame.SeasonAtmosphere + FlashBloom * frame.Flash;
         _environment.GlowBloom = Mathf.Max(bloom, 0f);
         _environment.GlowIntensity = cs.GlowIntensity;
         _environment.GlowHdrThreshold = Mathf.Max(cs.GlowHdrThreshold, GlowThresholdFloor);
         _environment.GlowHdrScale = cs.GlowHdrScale;
         _environment.TonemapExposure = Mathf.Pow(2f, cs.Exposure)
-            * (1f + WorldTime.SeasonBrightnessBoost * frame.SeasonAtmosphere);
+            * (1f + WorldTimeTuning.SeasonBrightnessBoost * frame.SeasonAtmosphere);
         UpdateGlowLevels(_world.Sun.AltDeg, step);
         if (_lut is null && _finish.LutTexture.IsValid)
         {

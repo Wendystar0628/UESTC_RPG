@@ -19,34 +19,14 @@ shader_type spatial;
 render_mode cull_disabled, shadows_disabled, ambient_light_disabled, specular_disabled, depth_draw_opaque;
 
 #include "res://style/shaders/globals.gdshaderinc"
-// WP-04 的 toon.gdshaderinc 合入 main 后，在这里加一行
-//     #include "res://style/shaders/toon.gdshaderinc"
-// 它会带进 fog.gdshaderinc（雾函数与色号常量）；下面两段临时实现由守卫宏自动跳过，再删掉即可。
+#include "res://style/shaders/fog.gdshaderinc"
 
-#ifndef CAMPUS_TOON_INCLUDED
-// ---- 临时：与 WP-04 约定的同名接口（toon.gdshaderinc 未合入前用）
-vec3 pal_cur(int col) {
-	return texelFetch(palette, ivec2(col, 0), 0).rgb;      // palette 带 source_color，读出即线性色
-}
 float t12() {
-	return floor(anim_time * step_rate) / step_rate;
+    return floor(anim_time * step_rate) / step_rate;
 }
 float toon_id_rough(int id) {
-	return float(id) / 127.0;
+    return float(id) / 127.0;
 }
-#endif
-
-#ifndef CAMPUS_FOG_INCLUDED
-// ---- 临时：云色色号（WP-04 core.json：sky.cloudLit 25、sky.cloudRim 26、sky.cloudBelly 27、sky.cloudDeep 28），
-//      共用雾函数未合入前不加雾
-const int PAL_SKY_CLOUD_LIT = 25;
-const int PAL_SKY_CLOUD_RIM = 26;
-const int PAL_SKY_CLOUD_BELLY = 27;
-const int PAL_SKY_CLOUD_DEEP = 28;
-vec4 fog_eval(vec3 world_pos, vec3 cam_pos) {
-	return vec4(0.0);
-}
-#endif
 
 // 材质 ID：WP-05 保留的通用"不描"ID（fx.noline）。云卡与镜头云幕都不出描线，剪影也不出（ART-STYLE）
 const int CINE_CLOUD_MAT_ID = 126;

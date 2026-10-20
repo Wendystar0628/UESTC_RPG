@@ -17,7 +17,7 @@ public sealed class PreparedTile : IDisposable
     public sealed record Draw(Rid Base, Rid Mesh, Transform3D At, ToonRef Material,
         bool IgnoreOcclusionCulling, ShaderId? Shader, bool Reflect, bool Resident = false)
     {
-        public bool IsWater => Shader is ShaderId.Water or ShaderId.WaterClear;
+        public bool IsWater => Shader is ShaderId.Water;
         public bool Reflects => Reflect && !IsWater;
     }
     private readonly List<(Rid Rid, bool Multi)> _storage = [];
