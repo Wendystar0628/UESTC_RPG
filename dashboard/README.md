@@ -6,52 +6,107 @@
 
 ## 1 采集与写入
 
-- `collect.py` 每次按真实来源生成 v2 汇总；队列表只读正式 `title`，不把“做什么”长描述当标题。文档域沿用 CORE-INDEX，记录沿用 REG-DECISIONS。
-- `live.py` 每 15 秒写两个指挥是否运行及界面版本；输入变化即以新进程运行 collect，无变化每两分钟刷新。修改采集入口或 monitor 模块后重启循环与服务。
-- `.collab/tools/monitor/view/` 的 attention、progress、team、system、hookfeed、stats 分别负责过目/留言、四段进展、团队汇总、体系摘要、注入摘要、统计；people 提供真实会话读法。底层读取与巡逻共用；`read/collab.py` 持有 `Dash.put` 的唯一解析，不反向调用观察台工具。
-- `datafile.py` 统一写入 `Dash.put` 文件并委托监控读取层解析；原子替换文件，版本索引只登记 v2。`post.py` 只维护通知及审美过目输入，写入有锁。
-- `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件与两个同源写入 API。
+- `live.py --loop` 是唯一原生采集通知调度，复用 watchdog 的 `WindowsApiObserver`；同一实例接入历史记账。文件变化只标脏，快慢工作分开，正在采集时再变化会接着处理最新输入；无变化不重采整套数据。两位指挥、子代理和运行灯共用同一会话样本。
+- `collect.py [数据名…]` 按现有生产表只算点名的数据，完成一份即发布一份；不另开守护。时间依赖由调度到期唤醒，历史来源与已确认事实复用，不因 SSE 心跳重读来源。
+- `.collab/tools/monitor/read/` 持有真实来源 IO 与解析；`view/` 只做判断和汇总。作者信的唯一全文权威是 Claude inbox 与已送达档；截图只读已登记检出的两种固定机位总览。
+- `attention.py` 独占作者输入事务：输入变更、过目重建、revision 校验、确认和 attention/feedback 发布。`post.py`、采集和 HTTP 入口只调用其操作；先持输入事务锁，再经窄 `publish(kind,name,payload,source=None)` 函数取得发布短锁，不嵌套同一个锁。
+- `datafile.write()` 是唯一文件发布入口：原子替换 `Dash.put` 文件后，在发布短锁内提交内容签名与真实 `checked`。签名不包含 `updated`，数据没变只推进确认时刻；相同数据的 `source` 固定为生产方，执行入口不会制造新版本。内部 `.collab/tools/state/dashboard-publication.json` 只有当前发布快照，不是事件历史；不存在文件版版本索引。
+- `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件、两个同源写入 API 与 `/api/events`。服务自己的原生 Observer 只观察发布元数据；不采集、不持发布锁等待客户端。
 
-`dashboard/data/auto/` 是程序结果，`curated/notices.js` 是通知，`curated/audit.js` 只是私有审美输入。源码目录 `app/`、`vendor/`、`index.html` 的版本集合决定 `live.appStamp`。
+`dashboard/data/auto/` 是程序结果，`curated/notices.js` 与 `curated/audit.js` 是私有输入，只经 `post.py` 改；通知会汇入公开动态，不直接作为页面数据。界面 `index.html`、`app/`、`vendor/` 的内容签名是 `versions.app`，不再写入 live。
 
-## 2 数据契约 v2
+## 2 数据契约 v3
 
-每份数据由 `Dash.put(名字, 数据)` 交付，附 `updated`、`source`；时刻是本地 ISO 字符串。来源失败写 `errors`，不会把旧值当作新结果；缺乏真实事实的字段用 `null`，页面显示“未确认”或 —，不改写为零、空闲或正常；数量不全时不画占比，累计时长仅在各项都确认后相加。只有 `notices` 在 curated，其余在 auto。
+数据文件仍用 `Dash.put(名字, 数据)` 交付，附 `updated`、固定生产方 `source`、`errors`；时刻是本地 ISO 字符串，时长是分钟。公开名白名单是 live、attention、feedback、progress、flow、collab、team、health、system、hookfeed、feed、docs、now；未生成的份显示缺数据，不读取旧名字。index、stats、records 停产，通知只作为输入。
+
+每份内容变化才换版本，`updated` 是这版内容的发布时间；来源失败发布该份 `errors`，不把旧值当新结果。缺乏真实事实用 `null`，页面写“未确认”或 —，不改成零、空闲或正常；数量不全不画占比，累计时长只有各项确认后才相加。历史分析带 `coverage: {from}`，记账起点以前不补造；不能覆盖一个时间窗时隐藏对应比较。
 
 ```text
-index: {versions: {名字: 版本串}}
-live: {leads: [{who: Claude|Codex, running: true|false|null}], appStamp}
+live:      {leads: [{who: Claude|Codex, running: true|false|null, since}]}
 attention: {items: [{id, kind: audit|shots|poster|review, title, detail, link, at, revision, acked}]}
-feedback: {items: [{at, text, delivered}]}
-progress: {counts: {queued, doing, finishing, paused}, done: {today, week},
-           rows: [{id, title, who: Claude|Codex|null, stage: queued|doing|finishing|paused, status}]}
-team: {leads: [{who, model, effort, rowCount, row, rowTitle, agents}],
-       usageToday: [{model, count, minutes}], rules: [{model, use}]}
-system: {hooks: [{name, side, purpose, ok: true|false|null}], scripts: [{group, count, purpose}],
-         docs: [{domain, count, summary}], health: {level: ok|warn|bad, summary,
-         counts: {ok: 数值|null, warn: 数值|null, bad: 数值|null}, problems: [一句话]}}
-hookfeed: {lanes: [{role: 主会话|Claude 子代理|Codex 主线|Codex 子代理,
-                   items: [{at, event: 中文事件, blocks: [中文块名], chars}]}]}
-stats: {cards: [{key, label, value: 数值|短文字|null, unit, note,
-        trend?: [连续七天日值], parts?: [{label, value, tone}], level?: ok|warn|bad}]}
-records: {decisions: [{id, at, text: 一句结论约40字内}]}
-docs: {domains: [{name, docs: [{code, title, summary}]}]}
-notices: {items: [{id, at, from, level, text, link, expires, pinned}]}
+feedback:  {items: [{at, text, delivered}]}
+hookfeed:  {lanes: [{role: 主会话|Claude 子代理|Codex 主线|Codex 子代理,
+                    items: [{at, event: 中文事件, blocks: [中文块名], chars}]}]}
+progress:  {counts: {queued, doing, finishing, paused},
+            rows: [{id, title, kind: Q|C|S, who, stage, status, since, waiting: bool, stageP80, long: bool, jump: bool,
+                    deps: [id], waitedBy: [id], history: [{stage, from, to|null}]}]}
+flow:      {coverage, leadTime: [{side: all|claude|codex, kind: all|Q|C, cur: 分布, prev: 分布}],
+            分布 = {n, q: [min, p25, p50, p80, max]|null},
+            wip: {days: [{day, wip, done, byDomain: {领域: 数}}]},
+            stages: [{side, week: cur|prev, n, parts: {queued, doing, finishing, paused}, top: {段: [{id, title, minutes}]}}],
+            blocked: {all: 阻塞, claude: 阻塞, codex: 阻塞},
+            jump: {added, jumped, paused, rows: [{id, title, at, paused: [{id, title}]}]},
+            rework: {pushes: [{at, rows: [id], kind: none|revert|audit, why|null}], items: [{id, title, kind, at}]}}
+阻塞 =      {open, waiting, avgWait, longest: [{id, title, status, minutes, on: [id]}],
+             chains: [{id, title, stage, waitedBy: [{id, title, waitedBy: [{id, title}]}]}]}
+collab:    {coverage, letters: {cells: [{from, to, mark: 需定|待审|知会|插队, n, p50|null, items: [{at, first}]}],
+                                unpaired: n, open: [{at, from, mark, first, minutes}]},
+            audit: {rows: n, audited: n, found: n, newRows: n, missing: [{id, title, at}]},
+            dispatch: {n, ok, rules: [{key: R1..R5, label, bad: n}], bad: [{name, side, model, effort, rules: [key]}],
+                       hints: [{name, side, model, effort, text}], opus: [{name, row, at}]},
+            idle: [{who, minutes, longest: {from, to, rows: [id]}|null}]}
+team:      {leads: [{who, model, effort, running, since, rows: [{id, title}], agents: n}],
+            agents: [{id, name, side, model, effort, row, rowTitle, state: running|stalled|done|unknown,
+                      started, ended|null, quietMin|null}]}
+health:    {at, level, summary, counts: {ok, warn, bad},
+            groups: [{key, label, level, items: [{id, level, title, summary, advice|null}]}],
+            rounds: [{at, warn, bad, flagged: [{group, level, title}]}],
+            gates: [{checkout, at, pkg, gates: [{name: G1..G5, ok: true|false|null}], run, failed, failedNames: [前 10 个]}],
+            tests: {days: [{day, count, lines, ratio, quickSec}]},
+            hooks: {selftest: {ok, total, failed: [一句]}, errors: [{hook, n, last}]}}
+system:    {timings: [{key, label}], hooks: [{id, side, name, timings: [key], purpose, ok}],
+            kinds: [{key, label, group: 规则|接入要点|提醒, n24, last}], domains: [{key, label}],
+            links: [{from, to, n24}],
+            collide: [{key, label, n24}],
+            scripts: [{key, label, note, items: [{name, purpose, usage|null, outputs|null, callers: [一句]}]}]}
+feed:      {coverage, items: [{id, at, type: decision|notice|milestone|done|revert|audit, side|null, title, detail|null,
+                               link: {doc, find}|{path}|null}]}
+docs:      {count, domains: [{key, name, index, docs: [{code, title, summary, keywords: [词], parent|null, updated}]}]}
+now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
+            kpis: [{key, label, value|null, unit, note, trend: better|worse|same|null, href}]}
 ```
 
-`index` 每 15 秒重读并保持心跳；其他汇总随真实变化发版本。`live.leads` 是指挥运行灯的唯一字段；详细会话、进程、用量、依赖与日志都不发布。Codex 不读取或输出 token。`hookfeed` 的事件直接给中文，浏览器不另建对照表；不认识的事件写“未知事件”。决策只给一句短结论，不发布提交哈希、路径与原始长文。
+flow 的每日序列保留 30 天；health.rounds 取最近 48 轮，feed 取近 30 天；team.agents 交回项只留近一小时。钩子事件与块名直接给中文，未识别写“未知事件”；决策只给一句结论，不发布提交哈希、路径与原始长文。
 
-### 2.1 统计边界
+`progress.rows.since` 是进入当前阶段的时刻；`waiting=true` 表示排着且前置未完，或暂停。`flow.blocked` 的 all、claude、codex 三份由采集端按同一 waiting 口径分别提供，页面按筛选取用，不重算。`now.phase.step` 只从状态头部“当前阶段”开头明确写出的 P0–P3 读取，没写为 null。
 
-进展把可派/等前置合成“排着”，进行中是“在做”，待编译/已推待收口等合成“收尾”，暂停单列；只发布当前队列未完成行，不复活已删行。推送只认本地 origin/main reflog 中明确的 push 与完整前后节点，缺源不猜。
+`collab.letters.cells[].items` 给真实信件的时刻和第一行；`feed.items.id` 用 D 号、Q/C/S 行号或来源自身可读短号，没有就空。`system.domains[].key` 与 `docs.domains[].key` 同源，`docs.domains[].index` 是域总纲编码；`health.rounds[].flagged[].group` 与 `health.groups[].key` 同键。测试行数比例 `ratio` 是 0–1；注入类别 group 用中文键“规则、接入要点、提醒”。
 
-完成数取 origin/main 中带队列行号的历史，且该行当前已从队列删除；排除明确回滚，按行号去重，不另存完成账。日期只取本地 reflog 的真实推送范围，不用提交时间代替推送日期。尚未观测到可靠推送时间的历史不补计。今天按本地零点、本周按本地周一零点。
+| 数据 | 来源 | 更新 |
+| --- | --- | --- |
+| live、team | 唯一 people 样本；team 再取 agents 历史 | 会话或相关历史事件 |
+| attention、feedback | 唯一 attention 输入事务与 read 原源 | 输入、作者信归档、真实截图事件 |
+| progress | 队列表与 queue 历史 | 队列事件；快通道，不等 Git 证据或全量文档 |
+| hookfeed | guard.jsonl | 钩子记账事件 |
+| flow | queue、pushes、audits 历史 | 慢通道，合并 10 秒内变化 |
+| collab | letters、audits、pushes、agents、leads、queue 历史 | 慢通道，合并 10 秒内变化 |
+| health | patrol 结构化历史、门禁报告、钩子自测 | 原报告事件，不重跑检查 |
+| system | 钩子登记、guard.jsonl、脚本目录 | 慢通道；24 小时计数每 10 分钟到期刷新 |
+| docs | 文档头与 SECTIONS.md | 文档事件，慢通道 |
+| feed | queue 删除、pushes、audits、决策登记、私有通知 | 对应原源事件 |
+| now | 状态头与同管线 flow、collab、health | 原源或公开依赖完成 |
 
-模型今日个数是今天启动的真实子代理，时长是其今天运行区间的累计分钟数；开始或终止事实不全用 null。多个同时在做的行没有明确当前行证据时，指挥卡的 row/rowTitle 为 null。第三方无记账的钩子 ok 为 null。
+历史唯一账位于 `.collab/tools/state/dashboard-events/`，保留 60 天。事件 envelope 的 `at` 是观察时刻，`source` 指真实来源，`sourceAt` 仅填来源明确给出的时刻，否则 null；不靠 mtime、缺行、超时或停止事件补造完成。queue 记行变更、pushes 记真实推送批次、audits 记明确审计字段、letters 只记第一行索引、agents 保留真实 terminal/dispatch 元数据、leads 记 running 三态、patrol 记同轮结构化结果。只有 completed/task_complete 算交回；停止和失败不算。
 
-`system.health.counts` 与 level 来自整轮巡逻；巡逻把真实记录的 ok/warn/bad 统计写进现有 `patrol.txt`，观察台只读该行，不另跑检查或钩子自测。旧报告未提供分级时三项都为 null，不把“要看”猜成 warn 或 bad。problems 只收确切检查标题标识的数据停止、钩子故障、留言送达与构建运行异常等作者事项；维护清理、审计待派等仍只在巡逻。summary 区分全巡逻提醒数与影响查看或推进的问题数；巡逻超过 20 分钟则明示结论待刷新。连续门禁失败与主线卡住暂无可靠语义来源，不据单次失败或模型合规告警推断。
 
-卡片 note 不超过 12 字；parts 可给环形占比，level 可给健康状态，健康占比使用整轮巡逻 counts。完成行数、推送次数与文档份数三卡的 trend 给最近七天，最早在前；任一天无法确认就省略整条 trend。完成与推送从 Git 真实来源逐日重算，文档只取 `.collab/tools/state/dashboard-stats-daily.json` 中逐日真实快照，缺少的历史不补零；具体来源与完成判定由 progress/stats 统一处理。
+### 2.1 推送与确认时刻
+
+```text
+GET /api/events          text/event-stream; charset=utf-8
+retry: 3000
+
+event: versions
+data: {"at": "本地时刻", "full": true|false,
+       "versions": {"数据名": "内容签名", "app": "界面内容签名"},
+       "checked": {"数据名": "最后真实确认时刻"}}
+
+event: checked
+data: {"at": "心跳时刻", "checked": {"数据名": "最后真实确认时刻"}}
+```
+
+连上及原生重连后，第一条 `versions` 为 `full=true` 的完整映射（含 app），以后 `full=false` 只带签名改变的键；没有 id 或历史回放。尚未完成首次发布时保持流并发等待注释，首次发布完成再发全量；元数据损坏则明报并断开，不取旧快照。浏览器用原生 EventSource 重连，不另拉索引或定时轮询；app 签名改变就整页刷新。
+
+`checked` 每 15 秒发送一次，兼作连接心跳，值来自真实确认；serve 发送的当前时刻只写在事件 `at`，不推进任何数据的新鲜度。只有采集成功、或 live 确认该份来源无脏标记且没有在算，才更新该份 checked；错误发布不能冒充来源确认。页面按 checked 与 manifest 的 stale 判旧，不按内容 updated 或连接是否在线判鲜。
 
 ### 2.2 作者过目与留言
 
@@ -59,7 +114,7 @@ notices: {items: [{id, at, from, level, text, link, expires, pinned}]}
 
 `POST /api/feedback` 收 `{text}`，只写 Claude inbox 的 `<YYYYMMDD-HHMMSS>-author-留言-<随机后缀>.md`，第一行 `【作者】`，返回 `{ok: true, at}`。同秒留言各自独立，排他创建不会覆盖。回显最近十条，只从真实 inbox 与 inbox_wait/delivered 读取；归档时 delivered 才为 true。没有第二份全文权威。C249 的监视与主会话钩子负责即时送达。
 
-模型发布示例：
+发布示例：
 
 通知的显示文字（text 与 from）拦提交哈希、文件名和路径；正文只写高层结论，合法的仓库产物仍通过 `--link` 关联。
 
@@ -68,7 +123,19 @@ python -I -X utf8 dashboard/tools/post.py notice "一句高层通知" --from "Co
 python -I -X utf8 dashboard/tools/post.py audit "海报取向供你过目" --why "请看主视觉观感" --doing "主会话选定的画面方向" --kind poster --link output/poster.jpg --from "主会话"
 ```
 
-版本索引与服务只公开本节的数据。
+服务只公开数据白名单与已登记检出的两种固定机位总览；审美输入不公开。
+
+### 2.3 文档只读接口
+
+```text
+GET /api/doc?code=WF-RULE → {ok, code, title, domain, path, updated, md,
+                            toc: [{level: 2|3, n, title, anchor}]}
+GET /api/doc/search?q=词  → {ok, items: [{code, title, sec: {n, title, anchor}, snippet}]}
+失败                      → {ok: false, error}；不存在返回 404
+```
+
+只认公开 docs 数据列出的编码，不接收路径；搜索最多 30 条，按命中排序。md 是原文，anchor 与阅读器真实渲染标题一致；页面直接使用服务端给出的 anchor。接口与 docs 公开形状由 C261 接入，C256 底座保留同一个 Handler 方法边界。
+
 
 ## 3 页面运行时
 

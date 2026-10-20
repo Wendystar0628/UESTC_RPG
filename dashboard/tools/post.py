@@ -1,5 +1,5 @@
 """观察台发布工具：给作者发通知、维护作者审美过目输入、结项、删过期（规则见 WF-COMMS 作者观察台一节）。
-产出：dashboard/data/curated/notices.js、audit.js（待办与巡逻私有输入）、dashboard/data/auto/attention.js、index.js
+产出：dashboard/data/curated/notices.js、audit.js（私有通知与审美输入）、dashboard/data/auto/attention.js
 用法：
   python -I -X utf8 dashboard/tools/post.py notice "<一句话>" [--from 名] [--level info|attention|decision] [--link 路径] [--days N] [--pin]
   python -I -X utf8 dashboard/tools/post.py audit "<标题>" --why "<请过目的审美取向>" --doing "<主会话当前判断>" [--kind audit|shots|poster|review] [--link 路径] [--from 名]
@@ -17,13 +17,13 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from datafile import read, write  # noqa: E402
-from datafile import refresh_index  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MAX_TEXT, MAX_WHY = 120, 200
-DONE_KEEP_DAYS = 7
 FMT = '%Y-%m-%dT%H:%M:%S'
-LOCK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'curated', '.post.lock')
+sys.path.insert(0, os.path.join(REPO, '.collab', 'tools'))
+from monitor.view import attention
+DONE_KEEP_DAYS = attention.DONE_KEEP_DAYS
 
 
 class Reject(Exception):
@@ -36,10 +36,6 @@ def now():
 
 def plus_days(days):
     return time.strftime(FMT, time.localtime(time.time() + days * 86400))
-
-
-def age_days(iso):
-    return (time.time() - time.mktime(time.strptime(iso, FMT))) / 86400
 
 
 def item_id(prefix, text):
@@ -78,42 +74,8 @@ def sender(args):
     return name
 
 
-class locked:
-    """两个会话同时发时排队：独占创建锁文件，最多等 5 秒，超过 30 秒的旧锁直接清掉。"""
-
-    def __enter__(self):
-        os.makedirs(os.path.dirname(LOCK), exist_ok=True)
-        for _ in range(100):
-            try:
-                os.close(os.open(LOCK, os.O_CREAT | os.O_EXCL))
-                return self
-            except FileExistsError:
-                try:
-                    if time.time() - os.path.getmtime(LOCK) > 30:
-                        os.remove(LOCK)
-                except OSError:
-                    pass
-                time.sleep(0.05)
-        raise Reject('数据文件被占用，稍后再试')
-
-    def __exit__(self, *_):
-        try:
-            os.remove(LOCK)
-        except OSError:
-            pass
-
-
 def load(name):
     return (read('curated', name) or {}).get('items', [])
-
-
-def save(name, items, who):
-    write('curated', name, {'items': items}, source='post.py:' + who)
-    if name == 'audit':
-        sys.path.insert(0, os.path.join(REPO, '.collab', 'tools'))
-        from monitor.view import attention
-        write('auto', 'attention', attention.build(), source='post.py:' + who)
-    refresh_index()
 
 
 def cmd_notice(args):
@@ -125,9 +87,8 @@ def cmd_notice(args):
     nid = item_id('n', text)
     note = {'id': nid, 'at': now(), 'from': who, 'level': args.level, 'text': text, 'link': link,
             'expires': None if args.pin else plus_days(args.days), 'pinned': bool(args.pin)}
-    with locked():
-        items = [i for i in load('notices') if i['id'] != nid]
-        save('notices', [note] + items, who)
+    attention.change_inputs(lambda inputs: {'notices': [note] + [i for i in inputs['notices'] if i['id'] != nid]},
+                            write, source='post.py')
     return f'通知 {nid} 已发（{args.level}，' + ('置顶' if args.pin else f'{args.days} 天后过期') + '）'
 
 
@@ -144,27 +105,25 @@ def cmd_audit(args):
     aid = item_id('a', title)
     item = {'id': aid, 'at': now(), 'from': who, 'title': title, 'why': why, 'link': link, 'status': 'open',
             'scope': 'aesthetic', 'kind': args.kind, 'doing': args.doing.strip()}
-    with locked():
-        items = [i for i in load('audit') if i['id'] != aid]
-        save('audit', [item] + items, who)
+    attention.change_inputs(lambda inputs: {'audit': [item] + [i for i in inputs['audit'] if i['id'] != aid]},
+                            write, source='post.py')
     return f'审计项 {aid} 已挂'
 
 
 def cmd_done(args):
-    who = os.environ.get('DASH_FROM') or 'post.py'
-    with locked():
-        audits, notes = load('audit'), load('notices')
+    def finish(inputs):
+        audits, notes = inputs['audit'], inputs['notices']
         hit_a = [i for i in audits if i['id'] == args.id]
         hit_n = [i for i in notes if i['id'] == args.id]
         if not hit_a and not hit_n:
             raise Reject(f'找不到 {args.id}：用 list 看现有的 id')
         if hit_a:
-            for i in hit_a:
-                i['status'], i['done_at'] = 'done', now()
-            save('audit', audits, who)
-            return f'审计项 {args.id} 已结项'
-        save('notices', [i for i in notes if i['id'] != args.id], who)
-        return f'通知 {args.id} 已删除'
+            for item in hit_a:
+                item['status'], item['done_at'] = 'done', now()
+            return {'audit': audits}
+        return {'notices': [i for i in notes if i['id'] != args.id]}
+    changed = attention.change_inputs(finish, write, source='post.py')
+    return f'审计项 {args.id} 已结项' if 'audit' in changed else f'通知 {args.id} 已删除'
 
 
 def cmd_list(_args):
@@ -178,16 +137,8 @@ def cmd_list(_args):
 
 
 def prune_all():
-    """删过期通知与结项超过 7 天的审计项；返回 (删通知数, 删审计项数)。collect.py 也可调用。"""
-    with locked():
-        notes, audits = load('notices'), load('audit')
-        keep_n = [i for i in notes if i.get('pinned') or not i.get('expires') or i['expires'] > now()]
-        keep_a = [i for i in audits if not (i['status'] == 'done' and age_days(i.get('done_at') or i['at']) > DONE_KEEP_DAYS)]
-        if len(keep_n) != len(notes):
-            save('notices', keep_n, 'post.py')
-        if len(keep_a) != len(audits):
-            save('audit', keep_a, 'post.py')
-    return len(notes) - len(keep_n), len(audits) - len(keep_a)
+    """沿用唯一输入事务，collect 可调用，不自建锁或发布序列。"""
+    return attention.prune(write, source='post.py')
 
 
 def cmd_prune(_args):
@@ -218,7 +169,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     try:
         print({'notice': cmd_notice, 'audit': cmd_audit, 'done': cmd_done, 'list': cmd_list, 'prune': cmd_prune}[args.cmd](args))
-    except Reject as e:
+    except (Reject, ValueError, TimeoutError) as e:
         print('拒绝：' + str(e), file=sys.stderr)
         return 1
     return 0

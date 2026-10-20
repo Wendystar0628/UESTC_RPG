@@ -923,7 +923,7 @@
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
       "lockfile": "scripts/requirements.lock",
       "lockfileOwner": "WP-08",
-      "lockfileSha256": "47197fd43016d7da2d3bb6bee35dff457e65ced0d593d6e29e00c99c63ae07be",
+      "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "pillow-12.3.0.dist-info/METADATA",
         "declaration": "MIT-CMU",
@@ -1039,7 +1039,7 @@
       "hashStatus": "VERIFIED_LOCAL_WHEEL_MATCHES_REQUIREMENTS_LOCK",
       "lockfile": "scripts/requirements.lock",
       "lockfileOwner": "WP-08",
-      "lockfileSha256": "47197fd43016d7da2d3bb6bee35dff457e65ced0d593d6e29e00c99c63ae07be",
+      "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "pyyaml-6.0.3.dist-info/METADATA",
         "declaration": "MIT",
@@ -1126,7 +1126,7 @@
       "hashStatus": "VERIFIED_PYPI_WHEEL_DOWNLOAD_MATCHES_REQUIREMENTS_LOCK_AND_PYPI",
       "lockfile": "scripts/requirements.lock",
       "lockfileOwner": "WP-00",
-      "lockfileSha256": "47197fd43016d7da2d3bb6bee35dff457e65ced0d593d6e29e00c99c63ae07be",
+      "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "tree_sitter-0.25.2.dist-info/METADATA",
         "declaration": "License :: OSI Approved :: MIT License",
@@ -1164,7 +1164,7 @@
       "hashStatus": "VERIFIED_PYPI_WHEEL_DOWNLOAD_MATCHES_REQUIREMENTS_LOCK_AND_PYPI",
       "lockfile": "scripts/requirements.lock",
       "lockfileOwner": "WP-00",
-      "lockfileSha256": "47197fd43016d7da2d3bb6bee35dff457e65ced0d593d6e29e00c99c63ae07be",
+      "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
       "licenseEvidence": {
         "metadata": "tree_sitter_javascript-0.25.0.dist-info/METADATA",
         "declaration": "MIT",
@@ -1203,6 +1203,44 @@
       "modified": false,
       "exported": false,
       "scope": "Author dashboard charts (dashboard/app); loaded by dashboard/index.html, not part of the game build."
+    },
+    {
+      "name": "watchdog",
+      "version": "6.0.0",
+      "kind": "python-wheel",
+      "managedBy": "manual",
+      "provider": "C-260",
+      "license": "Apache-2.0",
+      "source": "https://github.com/gorakhargosh/watchdog",
+      "packageIndex": "https://pypi.org/project/watchdog/6.0.0/",
+      "sourceStatus": "VERIFIED_OFFICIAL_PYPI_METADATA_AND_WHEEL_DOWNLOAD",
+      "archive": "https://files.pythonhosted.org/packages/db/d9/c495884c6e548fce18a8f40568ff120bc3a4b7b99813081c8ac0c936fa64/watchdog-6.0.0-py3-none-win_amd64.whl",
+      "bytes": 79070,
+      "sha256": "cbafb470cf848d93b5d013e2ecb245d4aa1c8fd0504e863ccefa32445359d680",
+      "hashStatus": "VERIFIED_PYPI_WHEEL_DOWNLOAD_MATCHES_REQUIREMENTS_LOCK_AND_PYPI",
+      "lockfile": "scripts/requirements.lock",
+      "lockfileOwner": "C-260",
+      "lockfileSha256": "47367ea6344735ff4ec0cd9ebf62765aa214b5acdb3ca036f580e08df56341d8",
+      "licenseEvidence": {
+        "metadata": "watchdog-6.0.0.dist-info/METADATA",
+        "declaration": "Apache-2.0",
+        "files": [
+          {
+            "member": "watchdog-6.0.0.dist-info/LICENSE",
+            "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+            "bytes": 11358
+          }
+        ],
+        "declaredLicenseFilesMissing": []
+      },
+      "developmentOnly": true,
+      "exported": false,
+      "vendored": false,
+      "scope": "C-260 author dashboard document filesystem event watcher only; not part of the game export or vendored project source.",
+      "licenseReview": {
+        "status": "ALLOWLIST_DECLARATION_VERIFIED",
+        "scope": "Pinned Windows amd64 wheel and its bundled license only."
+      }
     }
   ],
   "nugetClosure": {

@@ -1,131 +1,326 @@
-"""实时页眉与历史入口：一个单实例 live、一个 Windows 原生 Observer。
-用法：python -I -X utf8 dashboard/tools/live.py [--loop]；已有循环则退出。
-产出：live.js、index.js；来源变动触发 collect.py；历史在同行程线程记账。
+"""原生文件通知驱动按份采集；唯一 Observer 与历史 Recorder 共用此进程。
+用法：python -I -X utf8 dashboard/tools/live.py [--loop]。
+产出：各份 v3 数据与 dashboard-publication.json；仅由文件通知触发采集。
 """
 import os
 import sys
-import time
-import subprocess
 import threading
-from contextlib import nullcontext
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', '..', '.collab', 'tools'))
-from datafile import write, refresh_index, app_stamp
+import collect
+import datafile
 from monitor import history, util as U
-from monitor.read import collab
-from monitor.view import team
+from monitor.read import codex, repo
 
-EVERY_S = 15
-COLLECT_INTERVAL_S = 120
 LOCK_FILE = U.REPO + '/output/.locks/live.lock'
-WATCH_DIRS = [U.COLLAB + d for d in ('/status', '/notes', '/tasks', '/tools/monitor', '/tools/state/inbox_wait/delivered')] + [U.REPO + '/docs', U.REPO + '/scripts', U.REPO + '/dashboard/tools', U.REPO + '/dashboard/data/curated']
-WATCH_FILES = [U.REPO + '/.git/HEAD', U.REPO + '/.git/index', U.REPO + '/.git/refs/heads/main', U.REPO + '/.git/logs/refs/remotes/origin/main', U.STATE + '/patrol.txt']
+MERGE_S = .1
+CHECK_S = 15
 
 
-def write_once(recorder=None):
-    with recorder.source_lock if recorder is not None else nullcontext():
-        sessions, _ = team.sample(collab.queue_rows(), minutes=U.RECENT_MIN)
-    result = []
-    for side, who in (('claude', 'Claude'), ('codex', 'Codex')):
-        session = next((s for s in sessions if s['side'] == side), {})
-        state = session.get('state')
-        result.append({'who': who, 'running': True if state == 'running' else False if state == 'idle' else None})
-    if recorder is not None:
-        recorder.capture_leads(result)
-    path = write('auto', 'live', {'leads': result, 'appStamp': app_stamp()}, source='live.py', force=True)
-    refresh_index()
+def normalized(path):
+    return os.path.normcase(os.path.abspath(path))
+
+
+def within(path, root):
+    return path == root or path.startswith(root + os.sep)
+
+
+def existing_parent(path):
+    path = os.path.abspath(path)
+    while not os.path.isdir(path):
+        parent = os.path.dirname(path)
+        if parent == path:
+            raise FileNotFoundError(path)
+        path = parent
     return path
 
 
 def single_instance():
-    """持有第一个字节的独占锁，进程退出自动释放。"""
+    """持有第一个字节的独占锁，退出自动释放。"""
     import msvcrt
     os.makedirs(os.path.dirname(LOCK_FILE), exist_ok=True)
-    f = open(LOCK_FILE, 'a+b')
+    stream = open(LOCK_FILE, 'a+b')
     try:
-        f.seek(0)
-        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+        stream.seek(0)
+        msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
     except OSError:
-        f.close()
+        stream.close()
         return None
-    return f
+    return stream
 
 
 def main():
     if '--loop' not in sys.argv:
-        write_once()
+        datafile.publish_app()
+        collect.run({'live'})
         return
     lock = single_instance()
     if lock is None:
         print('live.py --loop 已经在跑，退出')
         return
-    # 明确选择官方 Windows 通知实现；不能静默切成 PollingObserver。
     from watchdog.events import FileSystemEventHandler
     from watchdog.observers.read_directory_changes import WindowsApiObserver
 
     recorder = history.Recorder()
-    changed, collect_dirty, stop = threading.Event(), threading.Event(), threading.Event()
-    collect_dirty.set()
-    directories = [os.path.normcase(os.path.abspath(p)) for p in WATCH_DIRS]
-    files = {os.path.normcase(os.path.abspath(p)) for p in WATCH_FILES}
+    changed, stop = threading.Event(), threading.Event()
+    mutex = threading.Lock()
+    dirty, valid, inflight = {}, set(), set()
+    app_changes = set()
+    refresh = {'sessions', 'worktrees'}
+    checkout_paths, rollout_paths = set(), set()
+    schedules = {}
+    common = U.git('rev-parse', '--git-common-dir').strip()
+    if not common:
+        raise ValueError('无法定位 Git common-dir')
+    common = normalized(os.path.join(U.REPO, common))
+    dashboard = normalized(os.path.dirname(HERE))
+    docs = normalized(U.REPO + '/docs')
+    claude = normalized(U.CLAUDE_PROJ)
+    database = {normalized(U.CODEX_DB + suffix) for suffix in ('', '-wal', '-shm')}
+    local = normalized(U.COLLAB + '/tools/monitor/local.json')
+    guard = normalized(U.COLLAB + '/tools/hooks/log/guard.jsonl')
+    queue = normalized(U.COLLAB + '/status/施工状态.md')
+    model = normalized(U.REPO + '/docs/workflow/WF-MODEL-模型分工.md')
+    # 确切的 WF-MODEL 文件名由启动时索引一次；不在每次事件遍历文档树。
+    import glob
+    model_paths = {normalized(path) for path in glob.glob(U.REPO + '/docs/workflow/WF-MODEL-*.md')}
+    model_paths.add(model)
+    settings = {normalized(os.path.expanduser(U.LOCAL[side][key]))
+                for side, key in (('codex', 'hooks'), ('claude', 'settings'))}
+    notes = {normalized(U.COLLAB + '/notes/claude'), normalized(U.STATE + '/inbox_wait/delivered')}
+    agent_log = normalized(U.STATE + '/agents/claude.jsonl')
+    curated = normalized(dashboard + '/data/curated')
+    event_root = normalized(U.STATE + '/dashboard-events')
+    git_files = {normalized(os.path.join(common, tail)) for tail in
+                 ('refs/remotes/origin/main', 'logs/refs/remotes/origin/main', 'packed-refs')}
+    worktrees = normalized(os.path.join(common, 'worktrees'))
+    script_roots = [normalized(U.REPO + '/' + row['path']) for row in U.LOCAL['scriptRoots']]
+    excluded = {'__pycache__', 'godot-api'}
+
+    def mark(names):
+        now = time.monotonic()
+        names = set(names)
+        while True:
+            expanded = names | {name for name, inputs in collect.INPUTS.items()
+                                if inputs & {'@' + source for source in names}}
+            if expanded == names:
+                break
+            names = expanded
+        with mutex:
+            for name in names:
+                # 已有首个事件的截止时间不后移，密集写入也只合并约100ms。
+                dirty.setdefault(name, now + (10 if name in ('flow', 'collab') else MERGE_S))
+                valid.discard(name)
+        changed.set()
+
+    def sources(path, directory=False):
+        path = normalized(path)
+        parts = set(path.split(os.sep))
+        if parts & excluded:
+            return set()
+        result = set()
+        if path == queue:
+            result.add('queue')
+        if path == local:
+            result.update(('local', 'sessions', 'settings'))
+        if path in database:
+            result.add('sessions')
+            with mutex:
+                refresh.add('sessions')
+        if path in rollout_paths or path == agent_log or (within(path, claude) and path.endswith(('.jsonl', '.meta.json'))):
+            result.add('sessions')
+        if path == guard:
+            result.add('hooks')
+        if path in settings:
+            result.add('settings')
+        if path in model_paths:
+            result.add('model')
+        if path in git_files:
+            result.add('git')
+        if within(path, worktrees):
+            result.add('worktrees')
+            with mutex:
+                refresh.add('worktrees')
+        if path in checkout_paths or (directory and any(within(target, path) for target in checkout_paths)):
+            result.add('shots')
+        if os.path.dirname(path) in notes and os.path.basename(path).endswith('.md') and '-author-' in os.path.basename(path):
+            result.add('letters')
+        if path in {normalized(curated + '/audit.js'), normalized(U.STATE + '/dashboard-ack.json')}:
+            result.add('attention')
+        if path == normalized(curated + '/notices.js'):
+            result.add('notices')
+        if within(path, docs) and (path.endswith('.md') or directory):
+            result.add('docs')
+        if path == normalized(dashboard + '/index.html') or within(path, normalized(dashboard + '/app')) or within(path, normalized(dashboard + '/vendor')):
+            result.add('app')
+            with mutex:
+                app_changes.add(path)
+        if any(within(path, root) for root in script_roots):
+            # 自动生成状态、来信、数据不是脚本变化，避免自产事件循环。
+            if path.endswith(('.py', '.ps1', '.cmd', '.sh', '.cs')) or os.path.basename(path) == 'readme.md':
+                result.add('scripts')
+        if os.path.dirname(path) == event_root and path.endswith('.jsonl'):
+            result.add('history:' + os.path.basename(path)[:-6])
+        return result
 
     class Changed(FileSystemEventHandler):
         def on_any_event(self, event):
             if event.event_type not in ('created', 'deleted', 'modified', 'moved'):
                 return
+            if event.is_directory and event.event_type == 'modified':
+                return
             for path in (event.src_path, getattr(event, 'dest_path', None)):
                 if not path:
                     continue
-                recorder.mark_dirty(path)  # 只标脏；不在 Observer 回调读文件、git 或会话
-                normalized = os.path.normcase(os.path.abspath(path))
-                if normalized in files or any(normalized == d or normalized.startswith(d + os.sep) for d in directories):
-                    collect_dirty.set()
+                historical = recorder.mark_dirty(path)
+                touched = sources(path, event.is_directory and event.event_type != 'modified')
+                names = {name for name, inputs in collect.INPUTS.items() if inputs & touched}
+                if names:
+                    mark(names)
+                # 父目录被创建/替换后重设最小可用盯点，原子替换仍精确匹配src/dest。
+                if event.is_directory and event.event_type != 'modified':
+                    with mutex:
+                        refresh.add('watches')
+                if historical or touched or event.is_directory:
                     changed.set()
 
-    observer = WindowsApiObserver()  # C256 复用此实例与 Changed 回调，不能再创建第二个
-    roots = [p for p, _ in recorder.watch_paths()]
-    roots += [p for p in WATCH_DIRS if os.path.isdir(p)]
-    roots += [os.path.dirname(p) for p in WATCH_FILES if os.path.isdir(os.path.dirname(p))]
-    scheduled = []
-    for path in sorted(set(os.path.abspath(p) for p in roots), key=lambda p: (len(p), p)):
-        if any(os.path.normcase(path) == os.path.normcase(p) or os.path.normcase(path).startswith(os.path.normcase(p) + os.sep) for p in scheduled):
-            continue
-        observer.schedule(Changed(), path, recursive=True)
-        scheduled.append(path)
-    worker = threading.Thread(target=recorder.run, args=(stop,), name='dashboard-history', daemon=True)
+    observer = WindowsApiObserver()  # 与 Recorder 共用唯一的原生通知实例。
+    handler = Changed()
+
+    def configure_watches(update):
+        nonlocal checkout_paths, rollout_paths
+        if 'sessions' in update:
+            threads = codex.threads(include_archived=False)
+            known = {U.MAIN_ID}
+            while True:
+                descendants = {row['id'] for row in threads if row['parent'] in known}
+                expanded = known | descendants
+                if expanded == known:
+                    break
+                known = expanded
+            rollout_paths = {normalized(row['path']) for row in threads if row['id'] in known and row.get('path')}
+        if 'worktrees' in update:
+            checkout_paths = {normalized(root + '/output/shots/' + name)
+                              for root in repo.checkouts() for name in ('总览.jpg', 'ui/总览.jpg')}
+        # 缺失目标只盯最近父目录，创建通知到达后再缩到实际目录。
+        wanted = [(path, recursive) for path, recursive in recorder.watch_paths()]
+        wanted += [(U.CLAUDE_PROJ, True), (docs, True), (dashboard + '/app', True), (dashboard + '/vendor', True),
+                   (worktrees, True), (event_root, False), (U.COLLAB + '/tools/hooks/log', False)]
+        wanted += [(root, True) for root in script_roots if os.path.isdir(root)]
+        exact = set(rollout_paths) | checkout_paths | database | git_files | settings | model_paths
+        exact.update(root for root in script_roots if not os.path.isdir(root))
+        exact.update((queue, local, guard, agent_log, dashboard + '/index.html',
+                      curated + '/audit.js', curated + '/notices.js', U.STATE + '/dashboard-ack.json'))
+        wanted += [(os.path.dirname(path), False) for path in exact]
+        wanted += [(path, False) for path in notes]
+        roots = {}
+        for path, recursive in wanted:
+            existing = normalized(existing_parent(path))
+            # 缺失的多级父路径必须递归监听创建，成功后马上缩回指定范围。
+            recursive = recursive or existing != normalized(path)
+            roots[existing] = roots.get(existing, False) or recursive
+        minimum = {}
+        for path in sorted(roots, key=lambda item: (len(item), item)):
+            if not any(recursive and within(path, parent) for parent, recursive in minimum.items()):
+                minimum[path] = roots[path]
+        for path, recursive in list(schedules):
+            if minimum.get(path) != recursive:
+                observer.unschedule(schedules.pop((path, recursive)))
+        for path, recursive in minimum.items():
+            if (path, recursive) not in schedules:
+                schedules[path, recursive] = observer.schedule(handler, path, recursive=recursive)
+
+    workers = {lane: ThreadPoolExecutor(max_workers=1, thread_name_prefix='dashboard-' + lane)
+               for lane in ('fast', 'slow')}
+    jobs = {}
+    recorder_thread = threading.Thread(target=recorder.run, args=(stop,), name='dashboard-history', daemon=True)
     try:
+        configure_watches(refresh)
+        refresh.clear()
         observer.start()
-        worker.start()
-        last_live, last_collect = 0.0, 0.0
+        recorder_thread.start()
+        datafile.publish_app()
+        mark(set(collect.INPUTS) - {'_app'})
+        next_check = time.monotonic() + CHECK_S
+        # 时间依赖只在真实到期点安排一次采样；不是文件轮询。
+        next_expiry, next_system = None, time.monotonic() + 600
         while True:
             changed.clear()
-            t = time.time()
-            if t - last_live >= EVERY_S:
-                last_live = t
+            with mutex:
+                updates = set(refresh)
+                refresh.clear()
+            if updates:
+                configure_watches(updates)
+            for lane, (future, names) in list(jobs.items()):
+                if not future.done():
+                    continue
+                del jobs[lane]
                 try:
-                    write_once(recorder)
+                    done, failed = future.result()
                 except Exception as error:
-                    print(f'{U.iso(t)} 写 live.js 失败：{type(error).__name__} {error}', file=sys.stderr)
-            if collect_dirty.is_set() or t - last_collect >= COLLECT_INTERVAL_S:
-                collect_dirty.clear()
-                last_collect = t
-                try:
-                    result = subprocess.run([sys.executable, '-I', '-X', 'utf8', os.path.join(HERE, 'collect.py')], check=False)
-                    if result.returncode:
-                        print(f'{U.iso(t)} 项目采集退出码 {result.returncode}', file=sys.stderr)
-                except Exception as error:
-                    print(f'{U.iso(t)} 项目采集失败：{type(error).__name__} {error}', file=sys.stderr)
-            changed.wait(timeout=max(.1, EVERY_S - (time.time() - last_live)))
+                    done, failed = set(), set(names)
+                    print(f'{U.iso(time.time())} {lane}采集失败：{type(error).__name__}: {error}', file=sys.stderr)
+                with mutex:
+                    inflight.difference_update(names)
+                    valid.update(done - set(dirty))
+                    valid.difference_update(failed)
+                dependencies = {'@' + name for name in done | failed}
+                mark({name for name, inputs in collect.INPUTS.items() if inputs & dependencies})
+                if 'team' in done or 'live' in done:
+                    # 下一次过时/离线阈值从同一份已采事实导出，不补采第二份。
+                    next_expiry = collect.next_expiry()
+            now = time.monotonic()
+            if next_expiry is not None and time.time() >= next_expiry:
+                mark({name for name, inputs in collect.INPUTS.items() if 'sessions' in inputs})
+                next_expiry = None
+            if now >= next_system:
+                mark({'system'} & set(collect.INPUTS))
+                next_system = now + 600
+            if now >= next_check:
+                with mutex:
+                    confirmed = valid - set(dirty) - inflight
+                datafile.check(confirmed)
+                next_check = now + CHECK_S
+            for lane in ('fast', 'slow'):
+                if lane in jobs:
+                    continue
+                with mutex:
+                    names = {name for name, due in dirty.items() if due <= now and (name in collect.SLOW_NAMES) == (lane == 'slow')
+                             and not any(dependency[1:] in dirty or dependency[1:] in inflight
+                                         for dependency in collect.INPUTS[name] if dependency.startswith('@'))}
+                    for name in names:
+                        del dirty[name]
+                    inflight.update(names)
+                    paths = set(app_changes) if '_app' in names else set()
+                    if '_app' in names:
+                        app_changes.clear()
+                if names:
+                    future = workers[lane].submit(collect.run, names, recorder, paths)
+                    future.add_done_callback(lambda _: changed.set())
+                    jobs[lane] = future, names
+            with mutex:
+                deadlines = [due for name, due in dirty.items()
+                             if ('slow' if name in collect.SLOW_NAMES else 'fast') not in jobs
+                             and not any(dependency[1:] in dirty or dependency[1:] in inflight
+                                         for dependency in collect.INPUTS[name] if dependency.startswith('@'))]
+            deadline = min([next_check, next_system] + deadlines)
+            if next_expiry is not None:
+                deadline = min(deadline, time.monotonic() + max(0, next_expiry - time.time()))
+            changed.wait(max(.01, deadline - time.monotonic()))
     finally:
         stop.set()
         recorder.wake()
         observer.stop()
         if observer.is_alive():
             observer.join()
-        if worker.is_alive():
-            worker.join(timeout=5)
+        for worker in workers.values():
+            worker.shutdown(wait=True, cancel_futures=True)
+        if recorder_thread.is_alive():
+            recorder_thread.join(timeout=5)
         lock.close()
 
 
