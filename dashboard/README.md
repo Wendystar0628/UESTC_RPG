@@ -95,7 +95,7 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
 - blocked.rate=waiting/open；jump.rate=jumped/added，others=added-jumped，jump 覆盖不足保留 rate=null。链每一级含 stage。rework.pushes 是滚动近 30 天全部真实推送，时间升序；summary 同源，revert 优先于 audit，rate=(revert+audit)/n，完整历史或分母不足时为 null。none 只表示没有显式返工证据，不表示已审计。
 - team 行字段复制同轮 progress，队列无对应行则为 null。agents 按 stalled、running、unknown、done 排，未交回按开始升序，交回按结束降序；runMin 只用真实开始和在跑时刻或真实交回。leads.agents 与 sides 同源，等于 running+stalled；unknown 单列，doneN 为近一小时真实交回，覆盖不足为 null。停止、失败不算交回。
 - letters.open 是唯一未回信平铺列表，minutes 降序，未知在末尾；cells 只给对应 openN，抽屉按 from/to/mark 筛同一列表。audit.missing 与 unaudited 同一次差集，已知时条数相等，已不在队列的 stage=null；rate=audited/rows，dispatch.rate=ok/n。覆盖或来源不足为 null。
-- health 各组 counts 相加等于总 counts；groups.items 包含全部项，按 bad、warn、unknown、ok 排，正常标题同源。rounds 为最近 48 轮、时间升序；roundsSummary.last 只取同一末轮。钩子自测只在 hooks.selftest，其 level 与巡逻结论同源；无结构化计数则 ok/total=null。late 只由真实巡逻时刻和登记间隔决定，未知不判正常。
+- health 各组 counts 相加等于总 counts；groups.items 包含全部项，按 bad、warn、unknown、ok 排，正常标题同源。rounds 为最近 48 轮、时间升序；roundsSummary.last 只取同一末轮。钩子自测只在 hooks.selftest，其 level 与巡逻结论同源；at 为真实黑盒完成时刻，同源复用不改时刻，health.at 仍为巡逻确认时刻；无结构化计数则 ok/total=null。late 只由真实巡逻时刻和登记间隔决定，未知不判正常。
 - system 的图四层分别为时机、钩子、注入类别、文档域；id 前缀 t:/h:/k:/d:，边与 in/out 引用同一节点 id。次数有未知不把已知部分冒充完整值。collide.total24 与 items 同源，scripts.total 与 groups 同一次扫描；domains 的 key/index/docs 取同轮 docs，不另建目录来源。
 - feed.days 补满含今天的 30 个自然日并升序，每日三个真实 side×六类共 18 格；不增加 side=all 重复统计。完整日覆盖不足或存在对应无日期源项时 n=null，已确认无事件才为 0；items 为同一事件源的近 30 天及无日期项。决策由既有解析器全量取，不按最近 15 条推算。已从私有通知快照删除的通知不伪造历史。
 
