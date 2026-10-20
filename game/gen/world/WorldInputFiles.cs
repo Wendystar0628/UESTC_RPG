@@ -25,7 +25,7 @@ public static class WorldInputFiles
             ["world/geo.json"] = Required(source, "world/geo.json")
         };
         ReadJsonDirectory(source, "world/", files);
-        foreach (var name in new[] { "map.json", "interiors.json", "fidelity.json" })
+        foreach (var name in new[] { "map.json", "interiors.json", "waypoints.json" })
             AddOptional(source, name, files);
         if (map.Env.Outskirts is { } outskirts)
         {
@@ -58,12 +58,14 @@ public static class WorldInputFiles
         foreach (var name in source.Files(relative).Order(StringComparer.Ordinal))
         {
             ValidateRelative(name);
+            if (relative.Length == 0 && name == "fidelity.json") continue;
             if (name.EndsWith(".json", StringComparison.Ordinal) && !output.ContainsKey(relative + name))
                 output[relative + name] = Required(source, relative + name);
         }
         foreach (var name in source.Directories(relative).Order(StringComparer.Ordinal))
         {
             ValidateRelative(name);
+            if (relative == "overlay/" && name == "fidelity") continue;
             ReadJsonDirectory(source, relative + name + '/', output);
         }
     }

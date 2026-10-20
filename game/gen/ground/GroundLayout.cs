@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Geometry;
 
@@ -12,7 +11,6 @@ namespace Campus.Gen.Ground;
 internal sealed class GroundLayout
 {
     private const float BinMargin = 32f;
-    private static readonly ConditionalWeakTable<IWorldModel, GroundLayout> Cache = new();
 
     private readonly Dictionary<long, int[]> _bins;
     private readonly object _markLock = new();
@@ -56,8 +54,10 @@ internal sealed class GroundLayout
     public static GroundLayout Of(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        return Cache.GetValue(world, Create);
+        return Create(world);
     }
+
+    public static GroundLayout Of(BuildContext context) => context.Memo(typeof(GroundLayout), () => Create(context.World));
 
     /// <summary>Markings are derived from the network once per world; they need exact distance queries.</summary>
     public RoadMarkings Markings(GroundSection section)

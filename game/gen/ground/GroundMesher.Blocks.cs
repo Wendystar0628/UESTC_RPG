@@ -52,8 +52,8 @@ internal sealed partial class GroundMesher
         else return;
         var drop = new Vector3(0f, SkirtDepth, 0f);
         var color = GroundPalette.ColorOf(surface);
-        _sink.Triangle(color, GroundPalette.FlagNoShadow, a, b, b - drop, Up, Up, Up, outward, new(surface, GroundFaceRole.Skirt, _sourceContext));
-        _sink.Triangle(color, GroundPalette.FlagNoShadow, a, b - drop, a - drop, Up, Up, Up, outward, new(surface, GroundFaceRole.Skirt, _sourceContext));
+        _sink.Triangle(color, VertexFlag.NoShadow, a, b, b - drop, Up, Up, Up, outward, new(surface, GroundFaceRole.Skirt, _sourceContext));
+        _sink.Triangle(color, VertexFlag.NoShadow, a, b - drop, a - drop, Up, Up, Up, outward, new(surface, GroundFaceRole.Skirt, _sourceContext));
     }
 
     private const float SkirtDepth = 0.3f;
@@ -75,7 +75,7 @@ internal sealed partial class GroundMesher
                 if (GroundShadingRule.For(surface, slope) == GroundShading.Faceted) na = nb = nc = n;
             }
         }
-        _sink.Triangle(GroundPalette.ColorOf(surface), GroundPalette.FlagNoShadow, a, b, c, na, nb, nc, Up,
+        _sink.Triangle(GroundPalette.ColorOf(surface), VertexFlag.NoShadow, a, b, c, na, nb, nc, Up,
             new(surface, GroundFaceRole.Top, _sourceContext));
     }
 

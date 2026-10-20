@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using NetTopologySuite.Geometries;
@@ -17,7 +18,6 @@ public sealed record WorldLoadOptions
 {
     public IInteriorIndex? Interiors { get; init; }
     public IOutskirtsModel? Outskirts { get; init; }
-    public IFidelityModel? Fidelity { get; init; }
 }
 
 public sealed class WorldDataException(string file, string entry, string message, Exception? inner = null)
@@ -77,6 +77,8 @@ public static partial class WorldModelLoader
             var key = pair.Key.Replace('\\', '/');
             if (key.StartsWith('/') || key.Contains(':') || key.Split('/').Any(s => s is ".." or "." or ""))
                 throw new WorldDataException(pair.Key, "path", "Expected a relative path within the current map.");
+            if (key == "fidelity.json" || key.StartsWith("overlay/fidelity/", StringComparison.Ordinal))
+                throw new WorldDataException(key, "path", "Retired fidelity overlay input; precision is compiled from the authored world.");
             if (key.StartsWith("overlay/", StringComparison.Ordinal) && key["overlay/".Length..].Split('/')[0].EndsWith(".d", StringComparison.Ordinal))
                 throw new WorldDataException(key, "path", "Retired feature overlay input; edit world/<zone>.json.");
             if (!input.TryAdd(key, pair.Value)) throw new WorldDataException(key, "path", "Duplicate normalized path.");
@@ -130,7 +132,8 @@ public static partial class WorldModelLoader
                             };
                             parts.Add(part);
                             if (line is not null)
-                                AddLine(new(new(WorldFeatureIds.FromPart(prefix, partId).Source), line, width) { Props = part.Props }, kind.Value, file);
+                                AddLine(new(new(WorldFeatureIds.FromPart(prefix, partId).Source), line, width)
+                                    { Props = NetworkPrecisionProps(part.Props, Props(raw)) }, kind.Value, file);
                         }
                     var combined = parts.Count == 0 ? Value<WorldGeometry>(raw.GetProperty("geometry"))
                         : Geometry(parts.SelectMany(part => WorldFeatureGeometry.PolygonsOf(part.Geometry)).ToArray());
@@ -166,8 +169,17 @@ public static partial class WorldModelLoader
             orderedWater.Where(line => line.Props.TryText("tunnel") == "culvert").ToArray(),
             OrderNetwork(trees, tree => tree.Id, prefix).ToArray());
         var frozen = new ReadOnlyDictionary<FeatureId, WorldFeature>(features.Values.ToDictionary(f => f.Id));
+        var featureIds = frozen.Keys.ToHashSet();
+        var roadIds = orderedRoads.Select(road => road.Id).ToHashSet();
+        var roadReferences = roadIds.Concat(frozen.Values.Where(feature => WorldFeatureKinds.Parts(feature, "road").Any())
+            .Select(feature => feature.Id)).ToHashSet();
+        ValidateFeatureReferences(frozen, featureIds, roadIds, roadReferences);
+        if (inputs is not null)
+            for (var index = 0; index < inputs.Descriptor.Env.ReflectLakes.Count; index++)
+                RequireReference("map.json", map.Value, $"env.reflectLakes[{index}]", inputs.Descriptor.Env.ReflectLakes[index], featureIds);
         var interiorOverlays = ReadInteriorOverlays(map, input, frozen);
         var sources = ReadTerrainSources(map, input);
+        ValidateTerrainReferences(sources, featureIds, roadReferences);
         var terrainContext = PrepareTerrain(inputs, sources, boundary, frozen, network, prefix);
         if (input.ContainsKey("outskirts.json") && options.Outskirts is null)
             throw new WorldDataException("outskirts.json", "root", "A parsed outskirts model is required until the producer's file contract is available.");
@@ -178,16 +190,26 @@ public static partial class WorldModelLoader
         var margin = outskirts is null ? roam?.FallbackMargin ?? 0 : 0;
         var bounds = new Box3(new(limitRing.Min(p => p.X) - margin, roam?.FloorY ?? 0, limitRing.Min(p => p.Y) - margin),
             new(limitRing.Max(p => p.X) + margin, roam?.CeilY ?? Math.Max(1, frozen.Count > 0 ? frozen.Values.Max(f => f.Bounds.Max.Y) : 0), limitRing.Max(p => p.Y) + margin));
-        WorldModelSnapshot Snapshot(ITerrain terrain, IInteriorIndex interiors) =>
-            new(frozen, boundary, network, interiors, outskirts, interiorOverlays, options, operations, terrain);
+        var waypoints = input.TryGetValue("waypoints.json", out var waypointText)
+            ? Deserialize<WaypointFile>("waypoints.json", waypointText).Waypoints : [];
+        IInteriorIndex Interiors(ITerrain terrain) => options.Interiors ??
+            new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"), inputs is null ? null : terrain);
+        WorldModelSnapshot Snapshot(ITerrain terrain, IInteriorIndex interiors, IFidelityModel fidelity) =>
+            new(frozen, boundary, network, interiors, outskirts, interiorOverlays, fidelity, operations, terrain);
+        var fidelitySourceStamp = Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            world = input.Where(pair => pair.Key.StartsWith("world/", StringComparison.Ordinal) && !pair.Key.EndsWith(".terrain.json", StringComparison.Ordinal)).ToArray(),
+            waypoints, interiors = input.GetValueOrDefault("interiors.json"), outskirts = outskirts?.Blocks
+        }, ContractJson.Options)));
         return new(terrainContext is null ? FlatTerrain.Default.SourceInputs : TerrainSourceInputs.Prepare(terrainContext, sources),
             terrainContext is null ? null : () => TerrainCompiler.Compile(terrainContext, sources),
-            (terrain, diagnostics) =>
+            fidelitySourceStamp,
+            terrain => WorldFidelityCompiler.Compile(frozen, boundary, network, Interiors(terrain), outskirts, waypoints),
+            (terrain, diagnostics, fidelity) =>
             {
-                var interiors = options.Interiors ?? new WorldInteriorIndex(frozen.Values, input.GetValueOrDefault("interiors.json"), inputs is null ? null : terrain);
-                var world = Snapshot(terrain, interiors);
+                var world = Snapshot(terrain, Interiors(terrain), new WorldFidelityModel(fidelity));
                 return new(world, geo, PlanGeometry.Centroid(boundary.Outer), bounds, TileGrid.At(bounds.Min), TileGrid.At(bounds.Max)) { Diagnostics = diagnostics };
-            }, (world, terrain) => Snapshot(terrain, world.Interiors));
+            }, (world, terrain) => Snapshot(terrain, world.Interiors, world.Fidelity));
 
         void AddLine(NetworkLine line, string kind, string file)
         {
@@ -205,6 +227,89 @@ public static partial class WorldModelLoader
         .ThenBy(item => WorldFeatureIds.TryFromSource(prefix, id(item).Value, out _) ? long.Parse(id(item).Value.Split(':')[^1], CultureInfo.InvariantCulture) : 0)
         .ThenBy(item => id(item).Value, StringComparer.Ordinal);
 
+    /// <summary>Validate declared world links after every zone and derived network source has been assembled.</summary>
+    private static void ValidateFeatureReferences(IReadOnlyDictionary<FeatureId, WorldFeature> features,
+        IReadOnlySet<FeatureId> featureIds, IReadOnlySet<FeatureId> roadIds, IReadOnlySet<FeatureId> roadReferences)
+    {
+        foreach (var feature in features.Values.OrderBy(feature => feature.Id.Value, StringComparer.Ordinal))
+        {
+            Read(feature, feature.Props, feature.Kind.Value, "props");
+            foreach (var part in feature.Parts)
+                Read(feature, part.Props, part.Props.TryText("kind") ?? feature.Kind.Value, $"parts[{part.SourceId}].props");
+        }
+
+        void Read(WorldFeature feature, JsonElement? source, string kind, string field)
+        {
+            if (source is not { ValueKind: JsonValueKind.Object } props) return;
+            var file = $"world/{feature.Zone!.Value.Value}.json";
+            try
+            {
+                Text("cluster");
+                switch (kind)
+                {
+                    case "contourSegment" or "layout": Text("parent"); break;
+                    case "bridge-deck":
+                        Reference("axis", props.OptionalText("axis"), roadIds);
+                        Text("banks", "start"); Text("banks", "end"); Many("walks", roadIds);
+                        break;
+                    case "bridge-stone": Text("bridge"); break;
+                    case "escalator": Text("building"); break;
+                    case "buildingDetail": Text("backstage"); break;
+                    case "steps": Reference("road", props.OptionalText("road"), roadReferences); break;
+                    case "sport": Text("sportGroup"); break;
+                    case "sportGroup": Many("members", featureIds); break;
+                    case "bank":
+                        Text("water");
+                        if (props.TryGetProperty("openings", out var openings) && openings.ValueKind != JsonValueKind.Null)
+                        {
+                            var index = 0;
+                            foreach (var opening in openings.EnumerateArray())
+                            {
+                                Reference($"openings[{index}].edge", opening.OptionalText("edge"));
+                                Reference($"openings[{index++}].widthFrom", opening.OptionalText("widthFrom"));
+                            }
+                        }
+                        break;
+                }
+            }
+            catch (Exception error) when (error is JsonException or InvalidOperationException)
+            { throw new WorldDataException(file, feature.Id.Value, $"Invalid reference in {field}: {error.Message}", error); }
+
+            void Text(params string[] path) => Reference(string.Join('.', path), props.OptionalText(path));
+            void Many(string key, IReadOnlySet<FeatureId> targets)
+            {
+                if (!props.TryGetProperty(key, out var values) || values.ValueKind == JsonValueKind.Null) return;
+                var index = 0;
+                foreach (var value in values.EnumerateArray()) Reference($"{key}[{index++}]", value.GetString(), targets);
+            }
+            void Reference(string path, string? target, IReadOnlySet<FeatureId>? targets = null)
+            {
+                if (target is not null) RequireReference(file, feature.Id.Value, field + '.' + path, new(target), targets ?? featureIds);
+            }
+        }
+    }
+
+    private static void RequireReference(string file, string source, string field, FeatureId target,
+        IReadOnlySet<FeatureId> targets)
+    {
+        if (!targets.Contains(target))
+            throw new WorldDataException(file, source, $"{field} references nonexistent world ID '{target.Value}'.");
+    }
+
+    /// <summary>Entity precision metadata applies to its source lines; a member may explicitly refine it.</summary>
+    private static JsonElement? NetworkPrecisionProps(JsonElement? member, JsonElement? entity)
+    {
+        if (entity is not { ValueKind: JsonValueKind.Object } parent) return member;
+        var keys = new[] { "fidelity", "walkNetwork" };
+        if (!keys.Any(key => parent.TryGetProperty(key, out _))) return member;
+        var values = member is { ValueKind: JsonValueKind.Object } props
+            ? props.EnumerateObject().ToDictionary(property => property.Name, property => property.Value, StringComparer.Ordinal)
+            : new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        foreach (var key in keys)
+            if (!values.ContainsKey(key) && parent.TryGetProperty(key, out var value)) values.Add(key, value);
+        return JsonSerializer.SerializeToElement(values, ContractJson.Options);
+    }
+
     private static IReadOnlyList<InteriorOverlayFile> ReadInteriorOverlays(MapId map, SortedDictionary<string, string> input,
         IReadOnlyDictionary<FeatureId, WorldFeature> features)
     {
@@ -217,7 +322,7 @@ public static partial class WorldModelLoader
             foreach (var op in overlay.Ops)
             {
                 var id = op switch { SealOp seal => seal.Building, InteriorConfigOp config => config.Building, _ => throw new WorldDataException(file, "op", "Unknown interior operation.") };
-                if (!features.ContainsKey(id)) throw new WorldDataException(file, id.Value, "Target feature does not exist.");
+                if (!features.ContainsKey(id)) throw new WorldDataException(file, id.Value, $"building references nonexistent world ID '{id.Value}'.");
             }
             overlays.Add(overlay);
         }

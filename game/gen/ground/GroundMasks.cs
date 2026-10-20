@@ -146,7 +146,7 @@ public static class GroundMasks
         section ??= GroundSection.Default;
         var rect = ctx.Map.DataRect;
         var set = new GroundMaskSet(rect, metersPerPixel);
-        var layout = GroundLayout.Of(ctx.World);
+        var layout = GroundLayout.Of(ctx);
         PaintSurfaces(set, layout, section);
         PaintBuildings(set, layout);
         var grid = new GroundMaskGrid(rect, set.Width, set.Height, set.MetersPerPixel);

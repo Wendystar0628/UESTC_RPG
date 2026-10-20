@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
@@ -79,10 +78,10 @@ public sealed class GroundTests
         {
             mesh.ValidateVertexData();
             AssertThat(mesh.Position.Length / 3 <= 65536).OverrideFailureMessage("Bundle exceeds 16-bit indices.").IsTrue();
-            AssertThat(mesh.Flags is not null && mesh.Flags.All(f => (f & GroundPalette.FlagNoShadow) != 0)).OverrideFailureMessage("Ground must not cast shadows.").IsTrue();
+            AssertThat(mesh.Flags is not null && mesh.Flags.All(f => (f & VertexFlag.NoShadow) != 0)).OverrideFailureMessage("Ground must not cast shadows.").IsTrue();
         }
         var marking = output.Meshes.Where(m => m.Material.Spec.Lit.Value == "ground.marking.lit").ToArray();
-        AssertThat(marking.All(m => m.Flags!.All(f => (f & GroundPalette.FlagDecal) != 0))).OverrideFailureMessage("Markings are decals.").IsTrue();
+        AssertThat(marking.All(m => m.Flags!.All(f => (f & VertexFlag.Decal) != 0))).OverrideFailureMessage("Markings are decals.").IsTrue();
         AssertThat(marking.All(m => m.Material.Spec.Line == LineClass.None)).OverrideFailureMessage("Markings are not outlined.").IsTrue();
         var triangles = output.Meshes.Sum(m => m.Index.Length / 3);
         AssertThat(triangles < new GroundModule().Budget.TrianglesL0).OverrideFailureMessage($"Over L0 budget: {triangles}.").IsTrue();
@@ -297,23 +296,21 @@ public sealed class GroundTests
 internal static class TestWorld
 {
 
-    private static readonly ConditionalWeakTable<IWorldModel, Dictionary<TileKey, GroundMesher>> Meshers = new();
 
     public static FakeWorld Empty() => Of([]);
 
     /// <summary>Final ground surface at a point, classified on a 0.25 m lattice of the L0 tile that holds it (one tile field per world and tile, shared by the probes).</summary>
-    public static GroundSurface SurfaceAt(IWorldModel world, float x, float z)
+    public static GroundSurface SurfaceAt(BuildContext context, float x, float z)
     {
         var key = TileGrid.At(new Vector2(x, z));
         var tile = new GroundTile(key.X * TileGrid.BaseEdge, key.Z * TileGrid.BaseEdge, TileGrid.BaseEdge, TileGrid.BaseEdge / 256f);
-        var byTile = Meshers.GetOrCreateValue(world);
-        if (!byTile.TryGetValue(key, out var mesher))
+        var mesher = context.Memo((typeof(TestWorld), key), () =>
         {
-            var layout = GroundLayout.Of(world);
+            var layout = GroundLayout.Of(context);
             var grid = TerrainGrid.For(FlatTerrain.Default, key, LodLevel.L0, tile);
             var field = TileField.Build(layout, tile, GroundSection.Default, grid);
-            byTile[key] = mesher = new GroundMesher(field, GroundSection.Default, LodLevel.L0, layout, grid, new MeshSink());
-        }
+            return new GroundMesher(field, GroundSection.Default, LodLevel.L0, layout, grid, new MeshSink());
+        });
         return mesher.SurfaceAt((int)MathF.Round((x - tile.X0) / tile.Cell), (int)MathF.Round((z - tile.Z0) / tile.Cell));
     }
 

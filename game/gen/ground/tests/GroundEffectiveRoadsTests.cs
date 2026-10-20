@@ -89,14 +89,16 @@ public sealed class GroundEffectiveRoadsTests
         };
         var network = new List<NetworkLine> { Road("osm:way:1", [new(-100f, 0f), new(100f, 0f)], 6f, "residential") };
         var bare = TestWorld.Of(street, new WorldNetwork(network, [], [], [], []));
+        var bareContext = TestWorld.Context(bare);
         var withWalk = TestWorld.Of([.. street, WorldFeatureFixture.Create("design:t-walk", "road", new PolylineGeometry(new Polyline(walk)), RoadProps("footway", 2.5f))], new WorldNetwork([.. network, Road("design:t-walk", walk, 2.5f)], [], [], [], []));
+        var withWalkContext = TestWorld.Context(withWalk);
         var networkOnly = TestWorld.Of(street, new WorldNetwork([.. network, Road("design:t-walk", walk, 2.5f)], [], [], [], []));
 
         // The walk and the sidewalk are one paved surface: no kerb, edging or step across the join, and none beside it.
         for (var z = 5.0f; z <= 30f; z += 0.5f)
             foreach (var x in new[] { 29.3f, 30f, 30.7f })
-                AssertThat(TestWorld.SurfaceAt(withWalk, x, z) == GroundSurface.Paver).OverrideFailureMessage($"({x}, {z}) is {TestWorld.SurfaceAt(withWalk, x, z)}, not plain paving.").IsTrue();
-        AssertThat(TestWorld.SurfaceAt(bare, 30f, 20f) != GroundSurface.Paver).OverrideFailureMessage("Without the walk that ground is lawn.").IsTrue();
+                AssertThat(TestWorld.SurfaceAt(withWalkContext, x, z) == GroundSurface.Paver).OverrideFailureMessage($"({x}, {z}) is {TestWorld.SurfaceAt(withWalkContext, x, z)}, not plain paving.").IsTrue();
+        AssertThat(TestWorld.SurfaceAt(bareContext, 30f, 20f) != GroundSurface.Paver).OverrideFailureMessage("Without the walk that ground is lawn.").IsTrue();
 
         // The carriageway has no fillet or kerb of its own from a footway, and the footway's crossing sits where it meets the road.
         AssertThat(RoadGraph.Fillets(GroundSources.Read(withWalk).Roads).Count == 0).OverrideFailureMessage("A footway never rounds a carriageway corner.").IsTrue();

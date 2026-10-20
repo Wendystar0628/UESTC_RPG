@@ -26,6 +26,7 @@ public static partial class TileBundleCodec
     private const byte TerrainCacheKind = 1;
     private const byte ResidentCacheKind = 2;
     private const byte SourcesCacheKind = 3;
+    private const byte FidelityCacheKind = 4;
     private const uint Magic = 0x4E494254;
     private const int MaximumItems = 4096;
     private const int MaximumCollisionShapes = 16384;

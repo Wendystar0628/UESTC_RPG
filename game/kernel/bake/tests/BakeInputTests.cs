@@ -69,7 +69,7 @@ public sealed class BakeInputTests
     public void MapBuildSourceIndexIsSharedWithoutTerrainQueriesOrCrossingWorlds()
     {
         var field = new CountingFingerprintField(1);
-        var context = Context(new FakeWorld { Boundary = new([]), Terrain = field, Fidelity = field });
+        var context = Context(new FakeWorld { Boundary = new([]), Terrain = field });
         var map = Map(context);
         using var lifetime = map.Lifetime;
         var keys = new[]
@@ -79,7 +79,7 @@ public sealed class BakeInputTests
             BakeRequestKeys.Tile(context.Map.Id, "ground", default, LodLevel.L0)
         };
         var referenceField = new CountingFingerprintField(1);
-        var reference = Context(new FakeWorld { Boundary = new([]), Terrain = referenceField, Fidelity = referenceField });
+        var reference = Context(new FakeWorld { Boundary = new([]), Terrain = referenceField });
         var expected = keys.Select(key => BakeInputFingerprint.Compute(reference, key, "runtime-code", new(reference), BakeInputDependencies.World)).ToArray();
         var actual = new string[keys.Length];
         Parallel.For(0, keys.Length, index => actual[index] =
@@ -89,7 +89,7 @@ public sealed class BakeInputTests
             throw new InvalidOperationException("Concurrent keys changed source stamps, queried terrain, or rebuilt the map index.");
 
         var changedField = new CountingFingerprintField(2);
-        var changed = Context(new FakeWorld { Boundary = new([]), Terrain = changedField, Fidelity = changedField });
+        var changed = Context(new FakeWorld { Boundary = new([]), Terrain = changedField });
         var nextMap = Map(changed);
         using var nextLifetime = nextMap.Lifetime;
         var next = BakeInputFingerprint.Compute(changed, keys[0], "runtime-code", sources: nextMap.SourceIndex(changed), dependencies: BakeInputDependencies.World);
@@ -228,7 +228,7 @@ public sealed class BakeInputTests
     public void WindowContextForwardsTheFrozenResourcesAndCapabilities()
     {
         var original = Context(new FakeWorld { Boundary = new([]) });
-        var forwarded = BakeWindowPreparation.Context(original, "cell-input", "module-code", null);
+        var forwarded = BakeWindowPreparation.Context(original, "module-code", null);
         if (!ReferenceEquals(original.SourceInputs, forwarded.SourceInputs) || !ReferenceEquals(original.GlobalInputs, forwarded.GlobalInputs) ||
             !ReferenceEquals(original.GroundMaskContributors, forwarded.GroundMaskContributors) || !ReferenceEquals(original.PartLods, forwarded.PartLods) ||
             !ReferenceEquals(original.Catalog, forwarded.Catalog))
@@ -280,14 +280,14 @@ public sealed class BakeInputTests
     [TestCategory(TestReason.Contract)]
     public void BuildCodeManifestRejectsMissingOrDuplicateRoots()
     {
-        var key = BakeCodeManifest.Chain(BakeCodeChains.Geometry);
-        var table = new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema, new Dictionary<string, string> { [key] = "geometry-code" }));
-        if (table.Chain(BakeCodeChains.Geometry) != "geometry-code") throw new InvalidOperationException("Build root lookup changed its stored hash.");
-        ExpectInvalid(() => table.Chain(BakeCodeChains.Map));
-        var duplicate = Encoding.UTF8.GetBytes("{\"schema\":1,\"roots\":{\"chain:geometry\":\"a\",\"chain:geometry\":\"b\"}}");
+        var key = BakeCodeManifest.Chain(BakeCodeChains.Shared);
+        var table = new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema, new Dictionary<string, string> { [key] = "shared-code" }));
+        if (table.Chain(BakeCodeChains.Shared) != "shared-code") throw new InvalidOperationException("Build root lookup changed its stored hash.");
+        ExpectInvalid(() => table.Chain(BakeCodeChains.Collision));
+        var duplicate = Encoding.UTF8.GetBytes("{\"schema\":1,\"roots\":{\"chain:shared\":\"a\",\"chain:shared\":\"b\"}}");
         ExpectInvalid(() => BakeCodeFingerprints.Parse(duplicate));
         ExpectInvalid(() => new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema + 1,
-            new Dictionary<string, string> { [key] = "geometry-code" })));
+            new Dictionary<string, string> { [key] = "shared-code" })));
 
         static void ExpectInvalid(Action action)
         {
@@ -307,7 +307,7 @@ public sealed class BakeInputTests
         var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-code-index-" + Guid.NewGuid().ToString("N"));
         var options = new BakeOptions(directory, false, false, false, false, 1, null);
         var table = new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema,
-            new Dictionary<string, string> { [BakeCodeManifest.Chain(BakeCodeChains.InputIndex)] = "index-code" }));
+            new Dictionary<string, string> { [BakeCodeManifest.Chain(BakeCodeChains.Shared)] = "index-code" }));
         var resident = new string('a', 32);
         var key = BakeRequestKeys.Tile(context.Map.Id, "ground", default, LodLevel.L0);
         var index = new BakeSourceIndex(context);

@@ -26,17 +26,17 @@ public sealed class WorldModelSnapshot : IWorldModel
     public ISpatialIndex Spatial { get; }
     public IInteriorIndex Interiors { get; }
     public IOutskirtsModel? Outskirts { get; }
-    public IFidelityModel? Fidelity { get; }
+    public IFidelityModel Fidelity { get; }
     public IReadOnlyList<InteriorOverlayFile> InteriorOverlays { get; }
     public ITerrain Terrain { get; }
 
     internal WorldModelSnapshot(IReadOnlyDictionary<FeatureId, WorldFeature> features, PolygonRings boundary,
         WorldNetwork network, IInteriorIndex interiors, IOutskirtsModel? outskirts,
-        IReadOnlyList<InteriorOverlayFile> interiorOverlays, WorldLoadOptions options,
+        IReadOnlyList<InteriorOverlayFile> interiorOverlays, IFidelityModel fidelity,
         IReadOnlyDictionary<string, TerrainOp> terrainOperations, ITerrain terrain)
     {
         Features = features; Boundary = boundary; Network = network; Interiors = interiors;
-        Outskirts = outskirts; Fidelity = options.Fidelity; InteriorOverlays = interiorOverlays;
+        Outskirts = outskirts; Fidelity = fidelity; InteriorOverlays = interiorOverlays;
         Terrain = terrain;
         TerrainOperations = terrainOperations;
         Spatial = new WorldSpatialIndex(features, boundary, network, interiors, Terrain);
@@ -92,7 +92,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
             foreach (var pair in closed.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal))
             {
                 if (!entries.TryGetValue(pair.Key, out var building))
-                    throw new WorldDataException("interiors.json", pair.Value[0].Id, $"Closed entrance feature '{pair.Key.Value}' has no building footprint.");
+                    throw new WorldDataException("interiors.json", pair.Value[0].Id, $"featureId references '{pair.Key.Value}', which has no building footprint.");
                 entries[pair.Key] = building with { Entrances = pair.Value };
             }
             foreach (var item in document.RootElement.GetProperty("interiors").EnumerateArray())
@@ -102,7 +102,7 @@ internal sealed class WorldInteriorIndex : IInteriorIndex
                 foreach (var idValue in item.GetProperty("featureIds").EnumerateArray())
                 {
                     var id = new FeatureId(idValue.GetString()!);
-                    if (!entries.TryGetValue(id, out var entry)) throw new WorldDataException("interiors.json", id.Value, "Open interior has no building footprint.");
+                    if (!entries.TryGetValue(id, out var entry)) throw new WorldDataException("interiors.json", id.Value, $"featureIds references '{id.Value}', which has no building footprint.");
                     var entrances = new List<EntranceDecl>();
                     foreach (var door in item.GetProperty("entrances").EnumerateArray())
                     {

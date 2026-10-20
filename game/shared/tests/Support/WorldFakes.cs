@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.World;
 
 namespace Campus.Gen.Tests.Support;
 
@@ -26,13 +27,18 @@ internal class FakeWorld : IWorldModel
 
     public ITerrain Terrain { get; set; } = FlatTerrain.Default;
     public PolygonRings Boundary { get; set; } = new([new(-1000f, -1000f), new(1000f, -1000f), new(1000f, 1000f), new(-1000f, 1000f)]);
-    public IReadOnlyDictionary<FeatureId, WorldFeature> Features { get; set; } = new Dictionary<FeatureId, WorldFeature>();
+    private IReadOnlyDictionary<FeatureId, WorldFeature> _features = new Dictionary<FeatureId, WorldFeature>();
+    public IReadOnlyDictionary<FeatureId, WorldFeature> Features
+    {
+        get => _features;
+        set { _features = value; Fidelity = FidelityFixture.Create(value.Values); }
+    }
     public IReadOnlyDictionary<string, TerrainOp> TerrainOperations { get; set; } = new Dictionary<string, TerrainOp>(StringComparer.Ordinal);
     public WorldNetwork Network { get; set; } = WorldNetwork.Empty;
     public ISpatialIndex Spatial { get; set; } = new FlatSpatial();
     public IInteriorIndex Interiors { get; set; } = new FakeInteriors();
     public IOutskirtsModel? Outskirts { get; set; }
-    public IFidelityModel? Fidelity { get; set; }
+    public IFidelityModel Fidelity { get; set; } = FidelityFixture.Plain;
 
     /// <summary>The world with every multi-source entity's Geometry replaced by its parts' bounding rectangle.</summary>
     public static FakeWorld Enveloped(IWorldModel inner) => new(inner)
@@ -105,19 +111,47 @@ internal sealed class FakeInteriors(params InteriorIndexEntry[] entries) : IInte
         entries.SelectMany(e => e.Entrances).Where(d => Vector3.Distance(d.Center, p) <= r).ToArray();
 }
 
-/// <summary>
-/// A fidelity model with fixed answers. <paramref name="facades"/> gives each building's segments (none by default),
-/// <paramref name="groundAt"/> the ground zone at (x, z) (K3 by default).
-/// </summary>
-internal sealed class FakeFidelity(
-    Func<FeatureId, IReadOnlyList<FacadeSegment>>? facades = null,
-    FidelityZone roof = FidelityZone.K3,
-    Func<float, float, FidelityZone>? groundAt = null,
-    float walkDistance = 0f) : IFidelityModel
+/// <summary>Explicit frozen test data consumed by the production fidelity reader.</summary>
+internal static class FidelityFixture
 {
-    public string InputHash => "test";
-    public IReadOnlyList<FacadeSegment> Facades(FeatureId building) => facades?.Invoke(building) ?? Array.Empty<FacadeSegment>();
-    public RoofZone Roof(FeatureId building) => new(building, roof);
-    public FidelityZone GroundAt(float x, float z) => groundAt?.Invoke(x, z) ?? FidelityZone.K3;
-    public float WalkDistanceAt(float x, float z) => walkDistance;
+    public static IFidelityModel Plain { get; } = Create([]);
+
+    public static IFidelityModel Create(IEnumerable<WorldFeature> source,
+        FidelityZone zone = FidelityZone.K3, FidelityZone ground = FidelityZone.K3,
+        FidelityZone roof = FidelityZone.K4, Func<float, float, FidelityZone>? groundAt = null)
+    {
+        var features = source.OrderBy(feature => feature.Id.Value, StringComparer.Ordinal).ToArray();
+        var segments = new List<FacadeSegment>();
+        foreach (var feature in features)
+        {
+            var index = 0;
+            foreach (var polygon in BuildingPolygons(feature))
+                foreach (var ring in new[] { polygon.Outer }.Concat(polygon.Holes))
+                    for (var i = 0; i < ring.Count; i++)
+                        segments.Add(new(feature.Id, index++, ring[i], ring[(i + 1) % ring.Count], zone, ground));
+        }
+        const int side = 1000;
+        var cells = new byte[side * side];
+        if (groundAt is null) Array.Fill(cells, (byte)ground);
+        else
+            for (var z = 0; z < side; z++)
+                for (var x = 0; x < side; x++)
+                    cells[z * side + x] = (byte)groundAt(-1000 + (x + .5f) * WorldFidelityCompiler.GroundCell,
+                        -1000 + (z + .5f) * WorldFidelityCompiler.GroundCell);
+        var roofs = features.Where(feature => BuildingPolygons(feature).Any())
+            .Select(feature => new RoofZone(feature.Id, roof)).ToArray();
+        return new WorldFidelityModel(new(new(-1000, -1000), side, side, cells, segments, roofs, new Dictionary<FeatureId, FidelityZone>(), "fixture"));
+    }
+
+    // Unknown test geometries belong to the consumer's rejection path, not automatic fidelity setup.
+    private static IEnumerable<PolygonRings> BuildingPolygons(WorldFeature feature)
+    {
+        if (feature.Parts.Count == 0)
+            return Known(feature.Geometry) ? WorldFeatureGeometry.FacadePolygonsOf(feature, "building") : [];
+        return feature.Parts.Where(part => Known(WorldFeatureGeometry.FacadeGeometryOf(part)))
+            .SelectMany(part => WorldFeatureGeometry.FacadePolygonsOf(feature with { Parts = [part] }, "building"));
+
+        static bool Known(WorldGeometry geometry) =>
+            geometry is PolygonGeometry or MultiPolygonGeometry or PolylineGeometry or PointGeometry;
+    }
 }

@@ -28,6 +28,55 @@ public sealed class WorldModelTests
         """;
 
     [TestCase, TestCategory(TestReason.Contract)]
+    public void ExplicitPointAndWidthlessLinePrecisionSurvivesFreezingWithoutPromotingGround()
+    {
+        var path = new Polyline([new(-10, 1), new(10, 1)]);
+        WorldFeature[] features =
+        [
+            new(new("fixture:point"), new("bridge-deck"), new PointGeometry(new(-7, 0, -7)))
+                { Props = JsonSerializer.SerializeToElement(new { fidelity = "K1", axis = "fixture:wide", walks = new[] { "fixture:wide" } }) },
+            new(new("fixture:line"), new("road"), new PolylineGeometry(path))
+                { Props = JsonSerializer.SerializeToElement(new { fidelity = "K1" }) },
+            new(new("fixture:area"), new("plaza"), new PolygonGeometry(new PolygonRings([new(12, 12), new(18, 12), new(18, 18), new(12, 18)])))
+                { Props = JsonSerializer.SerializeToElement(new { fidelity = "K2" }) }
+        ];
+        var world = new Campus.Gen.Tests.Support.FakeWorld
+        {
+            Boundary = new([new(-20, -20), new(20, -20), new(20, 20), new(-20, 20)]),
+            Features = features.ToDictionary(feature => feature.Id),
+            Network = new([new(new("fixture:line"), path) { Props = features[1].Props },
+                new(new("fixture:wide"), new([new(-10, -7), new(10, -7)]), 4)], [], [], [], [])
+        };
+        var frozen = WorldFidelityCompiler.Compile(world);
+        var restored = JsonSerializer.Deserialize<FidelityFrozenData>(JsonSerializer.Serialize(frozen, ContractJson.Options), ContractJson.Options)!;
+        var fidelity = new WorldFidelityModel(restored);
+        AssertThat(fidelity.Declared(features[0].Id) == FidelityZone.K1 && fidelity.Declared(features[1].Id) == FidelityZone.K1
+            && fidelity.Declared(features[2].Id) == FidelityZone.K2 && fidelity.Declared(new("fixture:wide")) is null)
+            .OverrideFailureMessage("Explicit feature marks were lost or inferred from bridge references.").IsTrue();
+        AssertThat(fidelity.GroundAt(1, 1) == FidelityZone.K3 && fidelity.GroundAt(-7, -7) == FidelityZone.K3
+            && fidelity.GroundAt(15, 15) == FidelityZone.K2)
+            .OverrideFailureMessage("A point/widthless line promoted ground, or a marked polygon stopped promoting its area.").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
+    public void ExplicitWideRoadPrecisionRemainsConfinedToItsAuthoredWidth()
+    {
+        var path = new Polyline([new(-10, 1), new(10, 1)]);
+        var feature = new WorldFeature(new("fixture:road"), new("road"), new PolylineGeometry(path))
+            { Props = JsonSerializer.SerializeToElement(new { fidelity = "K1" }) };
+        var world = new Campus.Gen.Tests.Support.FakeWorld
+        {
+            Boundary = new([new(-20, -20), new(20, -20), new(20, 20), new(-20, 20)]),
+            Features = new Dictionary<FeatureId, WorldFeature> { [feature.Id] = feature },
+            Network = new([new(feature.Id, path, 4) { Props = feature.Props }], [], [], [], [])
+        };
+        var fidelity = new WorldFidelityModel(WorldFidelityCompiler.Compile(world));
+        AssertThat(fidelity.Declared(feature.Id) == FidelityZone.K1 && fidelity.GroundAt(1, 1) == FidelityZone.K1
+            && fidelity.GroundAt(1, 5) == FidelityZone.K3)
+            .OverrideFailureMessage("A wide road lost its explicit precision or promoted ground outside its authored width.").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Contract)]
     public void FacadeFootprintsUseTheSameRingConversionAndKeepPhysicalGeometry()
     {
         var root = System.Text.Json.Nodes.JsonNode.Parse(Features)!;

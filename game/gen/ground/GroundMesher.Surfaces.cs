@@ -91,8 +91,8 @@ internal sealed partial class GroundMesher
         var pu1 = new Vector3((float)u.X, hu, (float)u.Z);
         var pw0 = new Vector3((float)w.X, lw, (float)w.Z);
         var pw1 = new Vector3((float)w.X, hw, (float)w.Z);
-        _sink.Triangle(color, GroundPalette.FlagNoShadow, pu0, pw0, pw1, nu, nw, nw, outward, new(surface, GroundFaceRole.Vertical, _sourceContext));
-        _sink.Triangle(color, GroundPalette.FlagNoShadow, pu0, pw1, pu1, nu, nw, nu, outward, new(surface, GroundFaceRole.Vertical, _sourceContext));
+        _sink.Triangle(color, VertexFlag.NoShadow, pu0, pw0, pw1, nu, nw, nw, outward, new(surface, GroundFaceRole.Vertical, _sourceContext));
+        _sink.Triangle(color, VertexFlag.NoShadow, pu0, pw1, pu1, nu, nw, nu, outward, new(surface, GroundFaceRole.Vertical, _sourceContext));
     }
 
     private Vector3 Point(Vert v, GroundSurface surface) =>

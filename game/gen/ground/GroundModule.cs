@@ -74,7 +74,7 @@ public sealed class GroundModule : IGroundCoverSource
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        var layout = GroundLayout.Of(ctx.World);
+        var layout = GroundLayout.Of(ctx);
         var extent = GroundLod.Tile(tile, lod, ctx.Map.DataRect);
         // Surfaces are classified on the flat plan, then draped: every vertex takes the terrain grid's height (D-180).
         var terrain = TerrainGrid.For(ctx.World.Terrain, tile, lod, extent);

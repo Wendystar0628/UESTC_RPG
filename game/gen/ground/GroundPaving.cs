@@ -33,7 +33,7 @@ internal sealed record PavingFrame(byte Profile, Vector2 Origin, Vector2 U, Vect
 /// field, no jagged material seam along the triangulation.
 /// </para>
 /// Precision zone: read from the exported fidelity data (<see cref="IFidelityModel.GroundAt"/>); K4 and K5 switch the
-/// pattern off. Without a fidelity model the D0 stub reading (K3 everywhere) applies until WP-02's export lands.
+/// pattern off. The published world always carries its build-time classification.
 /// </summary>
 internal sealed class GroundPaving
 {
@@ -114,10 +114,9 @@ internal sealed class GroundPaving
     /// <summary>UV2 of a patterned face: (gate, K). Gate 1 only in K1–K3; K4/K5 keep the averaged plain face.</summary>
     public (float Gate, float Zone) GateAt(Vector2 p)
     {
-        if (_fidelity is null) return (1, 3);
+        if (_fidelity is null) throw new InvalidOperationException("Empty paving has no fidelity model.");
         var zone = _fidelity.GroundAt(p.X, p.Y);
         var k = (byte)zone;
-        if (k == 0) return (0, 0);
         if (k is < 1 or > 5) throw new InvalidDataException($"Fidelity zone {k} at ({p.X}, {p.Y}) is outside K1–K5.");
         return (k <= 3 ? 1f : 0f, k);
     }

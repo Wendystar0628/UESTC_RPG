@@ -5,12 +5,11 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Gen.Vegetation;
+using Campus.Gen.World;
 
 namespace Campus.Kernel.Bake;
 
 /// <summary>One immutable source index per MapBuild; product keys only combine prepared source-cell stamps.</summary>
-
-
 internal sealed class BakeSourceIndex
 {
     private readonly BuildContext _context;
@@ -32,8 +31,6 @@ internal sealed class BakeSourceIndex
     private readonly ConcurrentDictionary<string, string> _files = new(StringComparer.Ordinal);
     public string CommonStamp { get; }
     public string PaletteStamp { get; }
-
-    internal static BakeSourceIndex Create(BuildContext context, BakeSourceIndexCache? cache = null) => new(context, cache);
 
     public BakeSourceIndex(BuildContext context, BakeSourceIndexCache? cache = null)
     {
@@ -58,7 +55,9 @@ internal sealed class BakeSourceIndex
         {
             var stamp = Hash(new { feature, claims = Enum.GetValues<Aspects>().Select(aspect =>
                 new { aspect, owner = context.ClaimedBy(feature.Id, aspect) }).ToArray(),
-                interior = interiors.GetValueOrDefault(feature.Id) });
+                interior = interiors.GetValueOrDefault(feature.Id),
+                fidelity = WorldFeatureGeometry.FacadePolygonsOf(feature, "building").Any() ? new
+                { facades = context.World.Fidelity.Facades(feature.Id), roof = context.World.Fidelity.Roof(feature.Id) } : null });
             var box = VegetationBounds(feature, 0);
             Add(cells, box, stamp);
             if (context.WindowNumbering is { } numbering)
@@ -74,10 +73,20 @@ internal sealed class BakeSourceIndex
             if (!cells.TryGetValue(cell.Cell, out var stamps)) cells.Add(cell.Cell, stamps = []);
             stamps.Add(cell.Stamp);
         }
+        foreach (var cell in Cells(context.Map.DataRect))
+        {
+            if (!cells.TryGetValue(cell, out var stamps)) cells.Add(cell, stamps = []);
+            var side = (int)(TileGrid.BaseEdge / WorldFidelityCompiler.GroundCell);
+            var zones = new byte[side * side];
+            for (var z = 0; z < side; z++)
+                for (var x = 0; x < side; x++)
+                    zones[z * side + x] = (byte)context.World.Fidelity.GroundAt(cell.X * TileGrid.BaseEdge + (x + .5f) * WorldFidelityCompiler.GroundCell,
+                        cell.Z * TileGrid.BaseEdge + (z + .5f) * WorldFidelityCompiler.GroundCell);
+            stamps.Add(Hash(zones));
+        }
         foreach (var pair in cells) _cells.Add(pair.Key, Hash(pair.Value.Order(StringComparer.Ordinal).ToArray()));
         foreach (var pair in windows) _windows.Add(pair.Key, Hash(pair.Value.Order(StringComparer.Ordinal).ToArray()));
-        CommonStamp = Hash(new { terrain.CommonStamp, context.World.Boundary, context.Map.TerrainDefaults,
-            fidelity = FileStamp("fidelity.json") });
+        CommonStamp = Hash(new { terrain.CommonStamp, context.World.Boundary, context.Map.TerrainDefaults });
         PaletteStamp = Hash(new { PaletteLayout.EncodingVersion, PaletteLayout.LayoutId,
             entries = context.Catalog.Entries.OrderBy(entry => entry.Index.Value).ToArray() });
 

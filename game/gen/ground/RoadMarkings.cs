@@ -29,7 +29,7 @@ internal sealed partial class RoadMarkings
     /// <summary>Lines are draped in pieces of at most 1 m so they follow the terrain grid (D-180).</summary>
     public void Emit(GroundTile tile, MeshSink sink, GroundSection section, TerrainGrid terrain)
     {
-        const byte flags = GroundPalette.FlagDecal | GroundPalette.FlagNoShadow;
+        const byte flags = VertexFlag.Decal | VertexFlag.NoShadow;
         var first = TileGrid.At(new Vector2(tile.X0, tile.Z0));
         var x0 = first.X;
         var z0 = first.Z;

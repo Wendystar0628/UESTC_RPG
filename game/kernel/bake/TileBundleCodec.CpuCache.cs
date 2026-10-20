@@ -14,6 +14,7 @@ public static partial class TileBundleCodec
         CacheHeader(writer, key);
         switch (product)
         {
+            case FidelityFrozenData fidelity: writer.Write(FidelityCacheKind); Fidelity(writer, fidelity, key); break;
             case TerrainFrozenData terrain: writer.Write(TerrainCacheKind); Terrain(writer, terrain, key); break;
             case BakeResidentData resident: writer.Write(ResidentCacheKind); Resident(writer, resident, key); break;
             case BakeSourceIndexData sources: writer.Write(SourcesCacheKind); Sources(writer, sources, key); break;
@@ -32,6 +33,7 @@ public static partial class TileBundleCodec
             CacheHeader(reader, key);
             object product = reader.ReadByte() switch
             {
+                FidelityCacheKind when typeof(T) == typeof(FidelityFrozenData) => Fidelity(reader, key),
                 TerrainCacheKind when typeof(T) == typeof(TerrainFrozenData) => Terrain(reader, key),
                 ResidentCacheKind when typeof(T) == typeof(BakeResidentData) => Resident(reader, key),
                 SourcesCacheKind when typeof(T) == typeof(BakeSourceIndexData) => Sources(reader, key),
@@ -80,4 +82,21 @@ public static partial class TileBundleCodec
         Cells = SourceCells(reader, key), Windows = SourceCells(reader, key), Vegetation = SourceCells(reader, key), Furniture = SourceCells(reader, key),
         Products = Records(reader, key, r => new BakeProductInput(Key(r), Text(r, 128)))
     };
+
+    private static void Fidelity(BinaryWriter writer, FidelityFrozenData data, BakeKey key)
+    {
+        Json(writer, data.Min); writer.Write(data.Width); writer.Write(data.Height);
+        Channel<byte>(writer, data.Ground, key); Text(writer, data.InputHash);
+        MetadataRecords(writer, data.Facades); MetadataRecords(writer, data.Roofs);
+        Json(writer, data.FeatureZones.OrderBy(pair => pair.Key.Value, StringComparer.Ordinal).ToDictionary(pair => pair.Key, pair => pair.Value));
+    }
+
+    private static FidelityFrozenData Fidelity(BinaryReader reader, BakeKey key)
+    {
+        var min = Json<System.Numerics.Vector2>(reader);
+        var width = reader.ReadInt32(); var height = reader.ReadInt32();
+        var ground = Channel<byte>(reader, key); var hash = Text(reader, 128);
+        return new(min, width, height, ground, MetadataRecords<FacadeSegment>(reader, key), MetadataRecords<RoofZone>(reader, key),
+            Json<Dictionary<FeatureId, FidelityZone>>(reader), hash);
+    }
 }

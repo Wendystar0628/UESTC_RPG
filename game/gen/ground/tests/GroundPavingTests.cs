@@ -42,7 +42,7 @@ public sealed class GroundPavingTests
                 // Frame: V along the axis from the plaza edge (x = 10), U across it with U = 0 on the axis line (z = 0).
                 AssertThat(Math.Abs((double)(z) - (double)(mesh.Uv![2 * v])) <= TestTolerance.Position).OverrideFailureMessage($"U is the signed distance from the entrance axis: expected {z}, got {mesh.Uv![2 * v]}.").IsTrue();
                 AssertThat(Math.Abs((double)(x - 10f) - (double)(mesh.Uv[2 * v + 1])) <= TestTolerance.Position).OverrideFailureMessage($"V starts at the plaza edge on the axis: expected {x - 10f}, got {mesh.Uv[2 * v + 1]}.").IsTrue();
-                AssertThat(mesh.Uv2![2 * v] == 1f && mesh.Uv2[2 * v + 1] == 3f).OverrideFailureMessage("Without a fidelity model the D0 reading K3 applies.").IsTrue();
+                AssertThat(mesh.Uv2![2 * v] == 1f && mesh.Uv2[2 * v + 1] == 3f).OverrideFailureMessage("The explicit frozen ground fixture is K3.").IsTrue();
             }
             for (var i = 0; i < mesh.Index.Length; i += 3)
                 AssertThat(Centre(mesh, i).Y < 25f).OverrideFailureMessage("The neighbouring plaza off the axis is not patterned.").IsTrue();
@@ -77,7 +77,8 @@ public sealed class GroundPavingTests
             {
                 var c = Centre(mesh, i);
                 var v = mesh.Index[i] * 2;
-                var expected = c.X > 25f ? (0f, 4f) : (1f, 1f);
+                var zone = world.Fidelity.GroundAt(c.X, c.Y);
+                var expected = (zone <= FidelityZone.K3 ? 1f : 0f, (float)zone);
                 AssertThat((mesh.Uv2![v], mesh.Uv2[v + 1]) == expected).OverrideFailureMessage($"Gate/K at {c} must follow the exported zone.").IsTrue();
             }
     }
@@ -128,7 +129,7 @@ public sealed class GroundPavingTests
                 Boundary = new([new(-200f, -200f), new(200f, -200f), new(200f, 200f), new(-200f, 200f)]),
                 Features = features.ToDictionary(f => f.Id),
                 Interiors = new FakeInteriors(new InteriorIndexEntry(building.Id, [], entrances, true, null, [1])),
-                Fidelity = zone is { } zoneAt ? new FakeFidelity(groundAt: (x, _) => zoneAt(x), walkDistance: 15f) : null,
+                Fidelity = FidelityFixture.Create(features, groundAt: zone is { } zoneAt ? (x, _) => zoneAt(x) : null),
             };
         }
 

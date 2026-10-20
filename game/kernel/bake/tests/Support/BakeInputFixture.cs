@@ -15,8 +15,7 @@ internal static class BakeInputFixture
 {
     internal static TerrainCacheService CreateTerrainCache(BakeOptions options) => new(options,
         new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema,
-            new[] { BakeCodeChains.Geometry, BakeCodeChains.Collision, BakeCodeChains.Map, BakeCodeChains.Vegetation,
-                BakeCodeChains.Fauna, BakeCodeChains.Nightlight, BakeCodeChains.Terrain, BakeCodeChains.InputIndex, BakeCodeChains.Resident }
+            new[] { BakeCodeChains.Shared, BakeCodeChains.Collision, BakeCodeChains.Nightlight }
                 .ToDictionary(BakeCodeManifest.Chain, chain => "fixture-code/" + chain, StringComparer.Ordinal))));
 
     internal static WorldFeature Feature(string id, float x, string name, string note, string text) =>
@@ -42,7 +41,7 @@ internal static class BakeInputFixture
         PartLods = new PartLodCatalog([new(new PartId("fixture.part"), new BakeFixturePart())])
     };
 
-    internal sealed class CountingFingerprintField(float height) : ITerrain, IFidelityModel
+    internal sealed class CountingFingerprintField(float height) : ITerrain
     {
         public TerrainInputSummary SourceInputs { get; } = new("fixture-height/" + height.ToString(System.Globalization.CultureInfo.InvariantCulture), []);
         public ConcurrentDictionary<(string Kind, int X, int Z), int> PointReads { get; } = new();
@@ -65,11 +64,7 @@ internal static class BakeInputFixture
         public float PadY(FeatureId feature) { Read("pad", 0, 0); throw new KeyNotFoundException(); }
         public bool TryGetPadY(FeatureId feature, out float y) { Read("pad", 0, 0); y = 0; return false; }
         public float? WaterY(FeatureId water) { Read("water", 0, 0); return null; }
-        public IReadOnlyList<FacadeSegment> Facades(FeatureId building) => [];
-        public RoofZone Roof(FeatureId building) => new(building, FidelityZone.K3);
-        public FidelityZone GroundAt(float x, float z) { Read("ground", x, z); return FidelityZone.K3; }
-        public float WalkDistanceAt(float x, float z) { Read("walk", x, z); return 0; }
-        public string InputHash => "fixture";
+
     }
 }
 internal sealed class BakeFixturePart : IPartDef

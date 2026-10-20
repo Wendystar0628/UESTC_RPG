@@ -83,7 +83,7 @@ public interface IWorldModel
     ISpatialIndex Spatial { get; }
     IInteriorIndex Interiors { get; }
     IOutskirtsModel? Outskirts { get; }
-    IFidelityModel? Fidelity { get; }
+    IFidelityModel Fidelity { get; }
 }
 public interface ISpatialIndex
 {

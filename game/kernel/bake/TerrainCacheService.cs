@@ -42,8 +42,11 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     {
         var key = new BakeKey(map, "terrain", "meta");
         var identity = TerrainStamp(preparation.SourceInputs);
+        var fidelityKey = new BakeKey(map, "terrain", "fidelity");
+        var fidelityIdentity = Stamp(new { BakeOptions.Abi, code = CodeFingerprints.Chain(BakeCodeChains.Shared), preparation.FidelitySourceStamp });
+        var fidelity = ReadProduct<FidelityFrozenData>(fidelityKey, fidelityIdentity);
         WorldModelLoadResult? loaded = null;
-        var data = ReadProduct<TerrainFrozenData>(key, identity, value => loaded = preparation.Complete(value));
+        var data = ReadProduct<TerrainFrozenData>(key, identity, value => loaded = preparation.Complete(value, ResolveFidelity));
         ITerrainAssetBuilder? builder = null;
         if (data is null)
         {
@@ -52,11 +55,20 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
             data = builder.Freeze();
             WriteProduct(key, identity, data);
         }
-        loaded ??= preparation.Complete(data);
+        loaded ??= preparation.Complete(data, ResolveFidelity);
         var terrain = (IPreparedTerrain)loaded.World.Terrain;
         builder?.Attach(terrain);
         _sessions[terrain] = new(map, preparation, data, terrain) { Assets = builder };
         return loaded;
+
+        FidelityFrozenData ResolveFidelity(ITerrain source)
+        {
+            if (fidelity is not null) return fidelity;
+            RequireMiss(fidelityKey);
+            fidelity = preparation.CreateFidelityAssets(source);
+            WriteProduct(fidelityKey, fidelityIdentity, fidelity);
+            return fidelity;
+        }
     }
 
     public bool IsPrepared(IWorldModel world, Vector2 point) => world.Terrain is not IPreparedTerrain prepared || prepared.IsPrepared(point);
@@ -181,7 +193,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     internal static string Stamp<T>(T value) => Convert.ToHexStringLower(XxHash128.Hash(JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options)));
     private string TerrainStamp(TerrainInputSummary inputs, MapRect? area = null) => Stamp(new
     {
-        BakeOptions.Abi, code = CodeFingerprints.Chain(BakeCodeChains.Terrain), inputs.CommonStamp,
+        BakeOptions.Abi, code = CodeFingerprints.Chain(BakeCodeChains.Shared), inputs.CommonStamp,
         cells = inputs.Cells.Where(cell => area is null || (cell.Cell.X + 1) * TileGrid.BaseEdge >= area.Min.X && cell.Cell.X * TileGrid.BaseEdge <= area.Max.X &&
             (cell.Cell.Z + 1) * TileGrid.BaseEdge >= area.Min.Y && cell.Cell.Z * TileGrid.BaseEdge <= area.Max.Y).ToArray()
     });

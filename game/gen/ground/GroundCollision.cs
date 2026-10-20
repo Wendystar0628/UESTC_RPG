@@ -16,7 +16,7 @@ public static class GroundCollision
 
     internal static HeightFieldCollider Build(BuildContext context, TileKey tile, GroundSection section)
     {
-        var layout = GroundLayout.Of(context.World);
+        var layout = GroundLayout.Of(context);
         var extent = GroundLod.Tile(tile, LodLevel.L0, context.Map.DataRect);
         var terrain = TerrainGrid.For(context.World.Terrain, tile, LodLevel.L0, extent);
         var field = TileField.Build(layout, extent, section, terrain);

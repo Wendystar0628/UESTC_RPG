@@ -160,6 +160,4 @@ public static class GroundPalette
     private static ToonSpec Pair(GroundColor color) => new(Lit(color), Shade(color));
 
     /// <summary>VF-A flag bits (WP-04 registry): 4 decal, 8 no shadow. The ground never casts shadows.</summary>
-    public const byte FlagNoShadow = 8;
-    public const byte FlagDecal = 4;
 }
