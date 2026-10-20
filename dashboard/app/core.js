@@ -46,9 +46,8 @@
     if (!srcs[name]) return;
     var m = meta[name] || (meta[name] = {});
     var errs = data && Array.isArray(data.errors) ? data.errors : [];
-    m.errors = errs.length ? errs : null;   // 后端发布的 errors 载荷是采集失败，不是业务数据
-    if (m.errors) delete store[name]; else store[name] = data;
-    m.got = true;   // 走到这里才算交付；文件执行出错时 loadData 不记新版本
+    // 只暂存在本次请求里，下载确认完成时才一次交付；后端发布的 errors 载荷是采集失败，不是业务数据
+    m.pending = { errors: errs.length ? errs : null, data: data };
   };
 
   /* 能画的数据：最近一次读取失败的不给（不显示旧值） */
@@ -62,17 +61,22 @@
     if (m.loading) return;
     m.loading = true;
     m.reqVer = remote[s.name];
-    m.got = false;
-    m.errors = null;
+    m.pending = null;   // 已交付的版本、失败状态与数据在 done 之前不动
     var el = document.createElement('script');
     el.src = s.path + '?v=' + encodeURIComponent(m.reqVer || Date.now());
     function done(ok) {
       m.loading = false;
       el.remove();
       var before = m.fail;
-      var delivered = ok && m.got;
-      if (delivered) { m.ver = m.reqVer; m.fail = m.errors ? 'errors' : null; }   // errors 载荷也是真实版本：记下，等后端发下一版
-      else {
+      var got = m.pending;
+      m.pending = null;
+      var delivered = ok && !!got;   // 文件执行出错或没调 Dash.put：不记新版本
+      if (delivered) {   // 一次交付：版本、失败状态、errors 与数据同时换成这一版；errors 载荷也是真实版本，等后端发下一版
+        m.ver = m.reqVer;
+        m.errors = got.errors;
+        m.fail = got.errors ? 'errors' : null;
+        if (got.errors) delete store[s.name]; else store[s.name] = got.data;
+      } else {
         m.fail = ok ? 'run' : 'fetch';
         console.warn('[Dash] 数据 ' + s.name + (ok ? ' 的文件执行出错或没有调用 Dash.put' : ' 下载失败'));
       }
