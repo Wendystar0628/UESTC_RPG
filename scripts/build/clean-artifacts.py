@@ -44,11 +44,16 @@ def cutoff(commits):
     return float(out[-1]) if len(out) >= commits else None
 
 
+def stamp(p):
+    """最后写入或复制进来的时刻：复制会保留旧的修改时间，Windows 的 ctime 是在本机建立的时刻。"""
+    return max(os.path.getmtime(p), os.path.getctime(p))
+
+
 def newest(p):
     if os.path.isfile(p):
-        return os.path.getmtime(p)
-    times = [os.path.getmtime(os.path.join(r, f)) for r, _, fs in os.walk(p) for f in fs]
-    return max(times) if times else os.path.getmtime(p)
+        return stamp(p)
+    times = [stamp(os.path.join(r, f)) for r, _, fs in os.walk(p) for f in fs]
+    return max(times) if times else stamp(p)
 
 
 def size(p):
