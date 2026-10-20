@@ -1269,14 +1269,14 @@
 
 ## SYS-SAVE-FORMAT · 格式、损坏处理与安全
 
-`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.1k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
+`docs/systems/SYS-SAVE-FORMAT-格式、损坏处理与安全.md` · 4.2k 字 · 存档容器与序列化、格式号与段版本、坏档退回上一代、唯一的设置文件 settings.json、读档输入的安全
 关键词：存档容器、序列化、格式号、段版本、存档损坏、设置文件、settings.json、存档安全、缩略图、ReadOnlyReason
 
 - SYS-SAVE-FORMAT §0 结论 · L23 · 626
   - ★ SYS-SAVE-FORMAT §0.1 接入要点 · L31 · 264
-- SYS-SAVE-FORMAT §1 格式与版本 · L38 · 980
+- SYS-SAVE-FORMAT §1 格式与版本 · L38 · 1.0k
   - SYS-SAVE-FORMAT §1.1 容器 · L40 · 378
-  - SYS-SAVE-FORMAT §1.2 缩略图 · L50 · 108
+  - SYS-SAVE-FORMAT §1.2 缩略图 · L50 · 152
   - SYS-SAVE-FORMAT §1.3 序列化约定 · L54 · 194
   - SYS-SAVE-FORMAT §1.4 版本 · L60 · 288
 - SYS-SAVE-FORMAT §2 存档损坏 · L67 · 372
@@ -1459,7 +1459,7 @@
   - UI-NAV §3.7 天气签条 · L115 · 506
 - UI-NAV §4 输入 · L125 · 1.4k
   - UI-NAV §4.1 Esc 与单键快捷键 · L127 · 283
-  - UI-NAV §4.2 关键键位 · L133 · 606
+  - UI-NAV §4.2 关键键位 · L133 · 619
   - UI-NAV §4.3 输入优先级 · L152 · 511
 - UI-NAV §5 无障碍与语言 · L166 · 825
 - UI-NAV §6 待验证 · L179 · 99
@@ -1549,28 +1549,28 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 11.6k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 11.7k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L23 · 1.5k
   - ★ ENG-ARCH §0.1 接入要点 · L34 · 813
-- ENG-ARCH §1 当前架构 · L46 · 1.5k
+- ENG-ARCH §1 当前架构 · L46 · 1.6k
   - ENG-ARCH 技术栈 · L48 · 174
   - ENG-ARCH 分层 · L52 · 845
-  - ENG-ARCH 生产链 · L63 · 391
-  - ENG-ARCH 数据流 · L71 · 95
-- ENG-ARCH §2 边界与确定性 · L75 · 3.1k
-  - ENG-ARCH 依赖方向 · L77 · 1.2k
-  - ENG-ARCH 确定性与禁用写法 · L88 · 573
-  - ENG-ARCH 自动发现与模块接入 · L100 · 692
-  - ENG-ARCH 仓库脚本自成一体 · L108 · 101
-  - ENG-ARCH 生命周期与发布 · L112 · 496
-- ENG-ARCH §3 契约 · L121 · 1.2k
-- ENG-ARCH §4 资源与烘焙 · L134 · 2.0k
-- ENG-ARCH §5 未交付能力的占位边界 · L150 · 257
-- ENG-ARCH §6 架构导向 · L158 · 524
-- ENG-ARCH §7 扩展点（RPG） · L166 · 69
-- ENG-ARCH §8 待验证（P0） · L170 · 361
+  - ENG-ARCH 生产链 · L63 · 487
+  - ENG-ARCH 数据流 · L72 · 95
+- ENG-ARCH §2 边界与确定性 · L76 · 3.1k
+  - ENG-ARCH 依赖方向 · L78 · 1.2k
+  - ENG-ARCH 确定性与禁用写法 · L89 · 573
+  - ENG-ARCH 自动发现与模块接入 · L101 · 692
+  - ENG-ARCH 仓库脚本自成一体 · L109 · 101
+  - ENG-ARCH 生命周期与发布 · L113 · 496
+- ENG-ARCH §3 契约 · L122 · 1.2k
+- ENG-ARCH §4 资源与烘焙 · L135 · 2.0k
+- ENG-ARCH §5 未交付能力的占位边界 · L151 · 257
+- ENG-ARCH §6 架构导向 · L159 · 524
+- ENG-ARCH §7 扩展点（RPG） · L167 · 69
+- ENG-ARCH §8 待验证（P0） · L171 · 361
 
 ## ENG-BUDGET · 性能预算
 
@@ -1625,14 +1625,14 @@
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
-`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 5.7k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
+`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 6.0k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
 关键词：审查视角、截图默认串、命令行规则、截图方式、截图就绪、流式屏障、录像、视角表、V1、E1、T0、飞行路线、压力路线、点位 P00–P23、行走路线 W1–W14、时季抽样、巡检点轮换、review.json
 
-- ENG-GATES-SHOTS §0 结论 · L22 · 579
-  - ★ ENG-GATES-SHOTS §0.1 接入要点 · L30 · 278
-- ENG-GATES-SHOTS §1 审查视角 · L36 · 4.2k
+- ENG-GATES-SHOTS §0 结论 · L22 · 625
+  - ★ ENG-GATES-SHOTS §0.1 接入要点 · L30 · 306
+- ENG-GATES-SHOTS §1 审查视角 · L36 · 4.6k
   - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L40 · 721
-  - ENG-GATES-SHOTS §1.2 截图方式 · L55 · 503
+  - ENG-GATES-SHOTS §1.2 截图方式 · L55 · 842
   - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L67 · 1.8k
   - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L99 · 744
   - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L109 · 368
