@@ -1943,7 +1943,7 @@
 - STD-CODE §2 规则值与数据各一份 · L55 · 576
 - STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.3k
 - STD-CODE §4 不留死代码 · L79 · 427
-- STD-CODE §5 规模 · L87 · 226
+- STD-CODE §5 规模 · L87 · 269
 - STD-CODE §6 测试代码怎么写 · L93 · 767
 
 ## STD-CONVENTIONS · 坐标单位与命名约定
