@@ -301,6 +301,14 @@
     return isNaN(from) ? Date.now() - WINDOW_MS[view.filters.range] : from;
   }
 
+  /* 记账起点同一页只说一次：这一页上记账起点相同、且起点晚于各自时间窗的面板里，按 order 第一块的卡底写 */
+  function coverageOwner(p, cov) {
+    var t = Dash.parseTime(cov);
+    return Object.keys(panels).map(function (id) { return panels[id]; })
+      .filter(function (q) { return q.page === p.page && coverageOf(q) === cov && t > windowStart(q); })
+      .sort(function (a, b) { return a.order - b.order || (a.id < b.id ? -1 : 1); })[0] || null;
+  }
+
   function renderPanel(p) {
     var data = {}, missing = [], waiting = false, failed = [];
     p.needs.forEach(function (n) {
@@ -349,7 +357,7 @@
     } finally { current = null; }
     var ds = inner.querySelectorAll('details');
     if (ds.length === opens.length) Array.prototype.forEach.call(ds, function (d, i) { if (opens[i]) d.open = true; });
-    if (ctx.coverage && Dash.parseTime(ctx.coverage) > windowStart(p)) {
+    if (ctx.coverage && coverageOwner(p, ctx.coverage) === p) {
       p.footEl.hidden = false;
       p.footEl.textContent = '记账从 ' + Dash.day(ctx.coverage) + ' ' + Dash.at(ctx.coverage).slice(-5) + ' 起，之前的不全';
     }

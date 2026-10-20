@@ -139,7 +139,7 @@
     caliber: '各卡的口径写在它所在页那块的 ⓘ 里',
     order: 50, needs: ['now'],
     render: function (el, d) {
-      el.appendChild(h('div.np-kpis', (d.now.kpis || []).map(Dash.kpi)));
+      el.appendChild(h('div.np-kpis', (d.now.kpis || []).map(function (k) { return Dash.kpi(Object.assign({ vs: '比前 7 天' }, k)); })));
     }
   });
 

@@ -123,7 +123,7 @@
       if (!r) return null;
       var s = subs[r.sub];
       return {
-        at: r.at, tone: s ? ['seq', s.idx] : ['side', 'muted'], tag: s ? s.label : (r.sub || '未收录类别'),
+        at: r.at, tone: s ? ['cat', s.idx] : ['side', 'muted'], tag: s ? s.label : (r.sub || '未收录类别'),
         side: r.who || null, title: r.note || '（没写说明）', sub: r.row ? '行号 ' + r.row : null
       };
     }).filter(Boolean);
@@ -139,11 +139,9 @@
       if (blank) { el.appendChild(blank); return; }
       var seg = Dash.num(w.segment);
       var freq = Dash.kpi({
-        label: '每 ' + seg + ' 次提交', value: w.rate, unit: '次', trend: w.trend,
+        label: '每 ' + seg + ' 次提交', value: w.rate, unit: '次', trend: w.trend, vs: '最新一段与此前各满段的均值相比',
         note: w.rate == null ? '不足 ' + seg + ' 次提交，不算频率' : '窗口内的平均频率'
       });
-      var tr = freq.querySelector('.kpi-trend');
-      if (tr) tr.title = '最新一段与此前各满段的均值相比';
       el.appendChild(h('div.hf-kpis',
         Dash.kpi({ label: '窗口内登记', value: w.n, unit: '次', note: '最近 ' + Dash.num(w.size) + ' 次提交' }),
         freq,
@@ -151,10 +149,9 @@
         Dash.kpi({ label: '新增类别', value: w.fresh, unit: '个', note: '记账起点之后新增、窗口内的子类' })));
       var zero = failZero(fd);
       if (zero) el.appendChild(zero);
-      var from = fd.coverage.from;
       el.appendChild(h('div.note-line',
         '窗口是最近 ' + Dash.num(w.size) + ' 次提交' + (w.commits != null ? '（现有 ' + Dash.num(w.commits) + ' 次）' : '') +
-        '，每 ' + seg + ' 次一段；记账从 ' + Dash.day(from) + ' ' + Dash.at(from).slice(-5) + ' 起'));
+        '，每 ' + seg + ' 次一段'));
     }
   });
 
@@ -162,7 +159,7 @@
   function failBarRow(o) {
     return h('button.fb-row' + (o.on ? '.is-on' : ''), {
       type: 'button', 'aria-pressed': String(!!o.on), dataset: { tip: o.tip },
-      style: '--tone: var(' + Dash.colorVar('seq', o.tone) + ')', on: { click: o.click }
+      style: '--tone: var(' + Dash.colorVar('cat', o.tone) + ')', on: { click: o.click }
     },
       h('span.fb-name', o.label, o.fresh ? Dash.mark('level', 'warn', '新增 ' + shortDay(o.fresh)) : null),
       h('span.fb-track', h('span.fb-fill', { style: 'width:' + o.pct + '%' })),
@@ -240,7 +237,7 @@
       var cats = segs.map(function (s) { return (s.from + 1) + '–' + s.to + (s.partial ? '\n记账中途开始' : ''); });
       var series = (fd.majors || []).map(function (m, i) {
         return {
-          key: m.key, label: m.label, tone: ['seq', i],
+          key: m.key, label: m.label, tone: ['cat', i],
           values: segs.map(function (s) { var v = s.byMajor ? s.byMajor[m.key] : null; return v == null ? null : v; })
         };
       });
@@ -248,10 +245,17 @@
         height: 280, label: '每段提交里各大类的登记次数', unit: '次', caliber: CAL.failTrend,
         onClick: function (p) { if (segs[p.index]) openFailSegment(fd, segs[p.index], cats[p.index]); }
       }));
+      /* 每段一个入口，不靠柱：只有未收录类别登记的段没有柱可点 */
+      el.appendChild(h('div.hf-segs', h('span.muted', '看一段的登记：'), segs.map(function (s, i) {
+        return h('button.btn', {
+          type: 'button', disabled: s.n == null, title: s.n == null ? '整段在记账起点之前' : null,
+          on: { click: function () { openFailSegment(fd, s, cats[i]); } }
+        }, (s.from + 1) + '–' + s.to);
+      })));
       var partial = segs.some(function (s) { return s.partial; });
       var skipped = segs.some(function (s) { return s.n == null; });
       el.appendChild(h('div.note-line',
-        '横轴是提交序号区间，左旧右新，每段 ' + Dash.num(fd.window.segment) + ' 次提交；点一段看那段的登记' +
+        '横轴是提交序号区间，左旧右新，每段 ' + Dash.num(fd.window.segment) + ' 次提交；点柱或下方段签看那段的登记' +
         (partial ? '；标"记账中途开始"的段只含起点之后的登记' : '') + (skipped ? '；整段在记账起点之前的不画' : '') +
         (fd.window.unclassified > 0 ? '；未收录类别的登记不在图里' : '')));
     }

@@ -239,7 +239,7 @@ ctx = { filters: {side, range, type: [键]}, params: {路由参数}, stale: bool
 | 读过但没有这份 | "还没有数据" + 缺哪份（中文名） |
 | 读取失败 | "没读到" + 一句原因（下载失败、文件有误，或来源发布了 `errors`），不显示旧值 |
 | 旧了 | 卡头"更新 HH:MM · 旧了"橙字，正文 60% 不透明，照样能交互 |
-| 记账不够一个时间窗 | 卡底一行"记账从 M 月 D 日 HH:MM 起，之前的不全"；窗口取面板的 `window`（不写按 `'range'`：筛选条的 range，地址里拖选了 `from` 就从那天起）；"前 7 天"对比由面板按 `ctx.coverage` 自己隐藏 |
+| 记账不够一个时间窗 | 卡底一行"记账从 M 月 D 日 HH:MM 起，之前的不全"，同一页记账起点相同的面板只在 order 最小的那块写一次；窗口取面板的 `window`（不写按 `'range'`：筛选条的 range，地址里拖选了 `from` 就从那天起）；"前 7 天"对比由面板按 `ctx.coverage` 自己隐藏 |
 | 口径 | 有 `caliber` 的卡头带 ⓘ，悬停显示；图的悬停框末行也带这句（图的 `opts.caliber`） |
 
 ### 3.3 路由、筛选与写回
@@ -276,7 +276,7 @@ Dash.item(id, title, side?)       编号 + 一句话 + 右侧签
 Dash.flowbar(counts, link?)       流水线五种状态比例条；link(段) 给跳转地址；Dash.stageKeys 五种状态的键
 Dash.sideKey(who)  Dash.modelName(m)  Dash.effortName(e)
 Dash.lamp(level)                  ok|warn|bad 的灯，null 空心"未确认"
-Dash.kpi({label, value, unit, note, trend, href})   指标卡；trend better 绿"↑ 变好"、worse 橙"↓ 变坏"、same"→ 持平"、null 不画
+Dash.kpi({label, value, unit, note, trend, vs, href})   指标卡；trend better 绿"↑ 变好"、worse 橙"↓ 变坏"、same"→ 持平"、null 不画；vs 是趋势的比较口径（如"比前 7 天"），悬停显示，不传不写
 Dash.timeline(items, {compact?, onClick?})   items [{at, tone: [组, 键], tag, side?, title, sub?, body?}]；按天分组（compact 不分组）；side 画侧签；有 body 的点开展开；onClick(条目, 下标)
 Dash.tree(nodes, {onClick?, filter?})        nodes [{key, label, sub?, tone?, count?, kids?, open?, current?}]；onClick(节点)；
                                              返回的节点有 .filter(文字)：按 opts.filter(节点, 文字) → bool（缺省比 label、sub、key）过滤并展开命中路径；current 高亮
@@ -306,6 +306,7 @@ Dash.reader(el, {code, sec?, find?, docs})   文档阅读器（reader.js）；do
 | `inject` | `规则`、`接入要点`、`提醒`（键用后端给的类别名） |
 | `gate` | `pass` 过、`fail` 没过、`skip` 没跑 |
 | `seq`、`timing` | 一组蓝，键是下标 |
+| `cat` | 十二色分类色，键是下标；系列多、要彼此分开时用（如健康页失败大类） |
 
 ```
 Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组, 键)  Dash.mark(组, 键, 字?)  Dash.modelKey(型号)

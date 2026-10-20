@@ -37,6 +37,9 @@
   --m-sol: #078a7e;   --m-luna: #4cbcae;    --m-astra: #1b6b86;
   /* 分组色块：一组由深到浅的蓝 */
   --seq-1: #1f5596;  --seq-2: #2f70bd;  --seq-3: #4b8bd4;  --seq-4: #6aa2dd;  --seq-5: #3f7fa8;  --seq-6: #5b8fc4;
+  /* 分类色：十二档低饱和、明度相近的色相，冷暖相间排，相邻两档分得开；给类别多的图（失败大类） */
+  --cat-1: #4a7fc1;  --cat-2: #c39545;  --cat-3: #3d9b90;  --cat-4: #c46f86;  --cat-5: #829c4c;  --cat-6: #8a6cc0;
+  --cat-7: #4fa6d0;  --cat-8: #c47c5a;  --cat-9: #6aad8c;  --cat-10: #5d6cc4; --cat-11: #ad80b0; --cat-12: #8494a8;
 
   /* 字号阶：给人看，偏大 */
   --fs-xs: 12.5px;
@@ -91,6 +94,8 @@
     --m-opus: #9d84ff;  --m-sonnet: #bcaaff;  --m-haiku: #d9cffd;
     --m-sol: #3fcfbe;   --m-luna: #8ee0d4;    --m-astra: #3aa0c4;
     --seq-1: #3070ba;  --seq-2: #4688cf;  --seq-3: #62a0dc;  --seq-4: #80b5e6;  --seq-5: #4f93bd;  --seq-6: #6ea4d8;
+    --cat-1: #6f9fe0;  --cat-2: #d8ae63;  --cat-3: #5bbcaf;  --cat-4: #df8ca2;  --cat-5: #a3bb6c;  --cat-6: #a68be0;
+    --cat-7: #74c2e8;  --cat-8: #de9a7a;  --cat-9: #8ccaab;  --cat-10: #8391e2; --cat-11: #c9a0cc; --cat-12: #9dafc4;
   }
 }
 
@@ -322,6 +327,15 @@ button, textarea { font: inherit; color: inherit; }
 
 /* ---------- 图 ---------- */
 .chart { width: 100%; min-width: 0; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); margin-bottom: var(--s2); }
+.chart-key {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: var(--fs-xs); color: var(--text-2); line-height: 1.6;
+}
+.chart-key-dot { flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--tone); }
+.chart-key:hover { color: var(--text); }
+.chart-key.is-off { color: var(--text-3); }
+.chart-key.is-off .chart-key-dot { background: var(--line); }
 
 /* ---------- 共用：编号对象一行（编号 + 一句话 + 状态） ---------- */
 .item { display: flex; align-items: baseline; gap: var(--s3); padding: 9px 0; border-top: 1px solid var(--line-2); min-width: 0; }

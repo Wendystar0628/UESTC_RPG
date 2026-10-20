@@ -59,10 +59,12 @@
     return (d.getMonth() + 1) + '-' + d.getDate();
   }
 
-  /* ECharts 宿主：等进到可见页面、有了宽度才初始化；toP 把 ECharts 的点击参数换成 p */
-  function host(kind, build, opts, toP) {
+  /* ECharts 宿主：等进到可见页面、有了宽度才初始化；toP 把 ECharts 的点击参数换成 p。
+     legend [{label, tone}] 画成图上方的 HTML 图例，折几行就占几行、不压绘图区；点一项显隐那个系列，悬停高亮它 */
+  function host(kind, build, opts, toP, legend) {
     var el = h('div.chart.chart-' + kind, { style: 'height:' + Math.round(opts.height) + 'px', role: 'img', 'aria-label': opts.label || '' });
     var rec = { el: el, inst: null, ro: null };
+    var out = legend ? h('div.chart-wrap', legendOf(legend, rec), el) : el;
     rec.ro = new ResizeObserver(function () {
       if (!el.clientWidth) return;
       if (rec.inst) { rec.inst.resize(); return; }
@@ -78,8 +80,24 @@
     });
     rec.ro.observe(el);
     live.push(rec);
-    return el;
+    return out;
   }
+
+  function legendOf(items, rec) {
+    return h('div.chart-legend', items.map(function (x) {
+      var b = h('button.chart-key', { type: 'button', 'aria-pressed': 'true', style: '--tone: ' + toneVar(x.tone) }, h('span.chart-key-dot'), x.label);
+      b.addEventListener('click', function () {
+        if (!rec.inst) return;
+        rec.inst.dispatchAction({ type: 'legendToggleSelect', name: x.label });
+        b.setAttribute('aria-pressed', String(b.classList.toggle('is-off') === false));
+      });
+      b.addEventListener('mouseenter', function () { if (rec.inst) rec.inst.dispatchAction({ type: 'highlight', seriesName: x.label }); });
+      b.addEventListener('mouseleave', function () { if (rec.inst) rec.inst.dispatchAction({ type: 'downplay', seriesName: x.label }); });
+      return b;
+    }));
+  }
+  /* 图例由 legendOf 画；ECharts 只留一个不显示的图例组件管系列显隐 */
+  function hiddenLegend() { return { show: false }; }
 
   /* 自绘宿主：有了宽度就调 draw(宽)，变宽变窄重画 */
   function own(kind, draw, opts) {
@@ -288,8 +306,8 @@
         catAx.axisLabel = Object.assign({}, ax.axisLabel, { color: css('--text'), fontSize: 13, width: opts.labelWidth || 120, overflow: 'break', lineHeight: 16 });
       }
       return {
-        grid: { left: 8, right: 12, top: 30, bottom: 8, containLabel: true },
-        legend: { top: 0, left: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: css('--text-2'), fontSize: 12 } },
+        grid: { left: 8, right: 12, top: 10, bottom: 8, containLabel: true },
+        legend: hiddenLegend(),
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: function (ps) {
           return tip(cats[ps[0].dataIndex], ps.map(function (p) { return p.seriesName + ' ' + Dash.num(p.value) + unitOf(opts); }), opts.caliber);
         } },
@@ -303,7 +321,7 @@
     }, opts, function (e) {
       var s = series[e.seriesIndex];
       return { index: e.dataIndex, key: s.key, label: cats[e.dataIndex], value: e.value, series: s.key };
-    });
+    }, series);
   };
 
   /* ---------- 柱线组合：days [日期]；bars [{key, label, tone, values}]（多条就堆叠）；line {key?, label, tone, values}；opts.tips 每天一段补充 ---------- */
@@ -317,8 +335,8 @@
       if (line) series.push({ name: line.label, type: 'line', data: line.values, symbol: 'circle', symbolSize: 5,
         lineStyle: { width: 2, color: tone(line.tone) }, itemStyle: { color: tone(line.tone) }, z: 5 });
       return {
-        grid: { left: 8, right: 12, top: 30, bottom: 8, containLabel: true },
-        legend: { top: 0, left: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: css('--text-2'), fontSize: 12 } },
+        grid: { left: 8, right: 12, top: 10, bottom: 8, containLabel: true },
+        legend: hiddenLegend(),
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: function (ps) {
           var i = ps[0].dataIndex;
           return tip(Dash.day(days[i]), ps.filter(function (p) { return p.value; }).map(function (p) { return p.seriesName + ' ' + Dash.num(p.value) + unitOf(opts); })
@@ -331,7 +349,7 @@
     }, opts, function (e) {
       var s = e.seriesIndex < bars.length ? bars[e.seriesIndex] : line;
       return { index: e.dataIndex, key: days[e.dataIndex], label: Dash.day(days[e.dataIndex]), value: e.value, series: s.key == null ? s.label : s.key };
-    });
+    }, line ? bars.concat([line]) : bars);
   };
 
   /* ---------- 热力：rows、cols 是标签数组；cells [{r, c, value, text?}]（r、c 是下标，text 是格内小字）；p.index 是 cells 下标 ---------- */
@@ -376,8 +394,8 @@
       var yAx = [Object.assign({}, ax, { type: 'value', min: 0, name: units[0] || '', nameTextStyle: { color: css('--text-3') } })];
       if (two) yAx.push(Object.assign({}, ax, { type: 'value', min: 0, name: units[1] || '', splitLine: { show: false }, nameTextStyle: { color: css('--text-3') } }));
       return {
-        grid: { left: 8, right: 8, top: 34, bottom: 8, containLabel: true },
-        legend: { top: 0, left: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10, textStyle: { color: css('--text-2'), fontSize: 12 } },
+        grid: { left: 8, right: 8, top: 22, bottom: 8, containLabel: true },
+        legend: hiddenLegend(),
         tooltip: { trigger: 'axis', formatter: function (ps) {
           var i = ps[0].dataIndex;
           return tip(isNaN(Dash.parseTime(xs[i])) ? String(xs[i]) : Dash.day(xs[i]),
@@ -394,7 +412,7 @@
     }, opts, function (e) {
       var s = series[e.seriesIndex];
       return { index: e.dataIndex, key: xs[e.dataIndex], label: String(xs[e.dataIndex]), value: e.value, series: s.key == null ? s.label : s.key };
-    });
+    }, series);
   };
 
   /* ---------- 桑基（SVG）：nodes [{id, label, tone, depth, value, note?}]，id 全图唯一；links [{from, to, value}]；

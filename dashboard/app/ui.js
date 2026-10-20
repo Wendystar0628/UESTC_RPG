@@ -185,7 +185,7 @@
     return h('span.lamp' + (t ? '.t-' + t : '.is-unknown'), { title: t ? Dash.label('level', level) : '未确认', role: 'img', 'aria-label': t ? Dash.label('level', level) : '未确认' });
   };
 
-  /* 指标卡：数、单位、一句 note、与前 7 天比的箭头；点了去 href */
+  /* 指标卡：数、单位、一句 note、趋势箭头；vs 是箭头比的是什么（悬停显示），不传就不写；点了去 href */
   var TREND = { better: ['ok', '↑ 变好'], worse: ['warn', '↓ 变坏'], same: ['muted', '→ 持平'] };
   Dash.kpi = function (k) {
     var tr = TREND[k.trend];
@@ -193,7 +193,7 @@
     return h(k.href ? 'a.kpi' : 'div.kpi', { href: k.href || null, title: k.value == null ? '未确认' : null },
       h('div.kpi-label', k.label),
       h('div.kpi-value', v, k.unit && k.value != null ? h('span.kpi-unit', k.unit) : null),
-      h('div.kpi-foot', k.note ? h('span.kpi-note', k.note) : null, tr ? h('span.kpi-trend.t-' + tr[0], { title: '比前 7 天' }, tr[1]) : null));
+      h('div.kpi-foot', k.note ? h('span.kpi-note', k.note) : null, tr ? h('span.kpi-trend.t-' + tr[0], { title: k.vs || null }, tr[1]) : null));
   };
 
   /* 时间线：items [{at, tone: [组, 键], tag, side?, title, sub?, body?}]；按天分组（compact 不分组、更紧）；有 body 的点开展开 */
