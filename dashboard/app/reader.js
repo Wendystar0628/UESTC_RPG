@@ -1,4 +1,4 @@
-/* 文档阅读器：Dash.reader(el, {code, sec?, find?}) 调 /api/doc 取 Markdown 原文，用 marked（vendor/marked.min.js）渲染。
+/* 文档阅读器：Dash.reader(el, {code, sec?, find?, docs}) 调 /api/doc 取 Markdown 原文，用 marked（vendor/marked.min.js）渲染。
    左边小节目录（可折叠，当前节随滚动高亮），右边正文；正文里的"编码 §n"变成链接；sec 认小节的 anchor，也认小节号 n；
    find 先到 sec 那一节（没给 sec 就全文）再找第一处，高亮并滚过去；读不到时写"这份文档没读到：原因"。接口见 README §3。 */
 (function () {
@@ -14,14 +14,14 @@
     renderer: { html: function (t) { return Dash.esc(t.text || t.raw || ''); } }   // 文档里的原始 HTML 当文字显示
   });
 
-  function docsList() {
-    var d = Dash.internal.store.docs, out = {};
+  function docsList(d) {
+    var out = {};
     (d && d.domains || []).forEach(function (dm) { (dm.docs || []).forEach(function (x) { out[x.code] = x; }); });
     return out;
   }
 
-  function fetchDoc(code) {
-    var info = docsList()[code];
+  function fetchDoc(code, docs) {
+    var info = docsList(docs)[code];
     var key = code + '@' + (info ? info.updated : '');
     if (!cache[key]) {
       cache[key] = fetch('/api/doc?code=' + encodeURIComponent(code))
@@ -59,8 +59,8 @@
 
   /* 正文里的"编码 §n"、单独的"§n"（归前面最近的编码，没有就是本文）变成链接；代码与已有链接里不动 */
   var REF = /([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)(?:\s*§\s*(\d+(?:\.\d+)*))?|§\s*(\d+(?:\.\d+)*)/g;
-  function linkRefs(body, self) {
-    var codes = docsList();
+  function linkRefs(body, self, docs) {
+    var codes = docsList(docs);
     var walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
       acceptNode: function (n) { return n.parentElement.closest('code, pre, a') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }
     });
@@ -132,7 +132,7 @@
     var body = h('article.reader-body.md');
     body.innerHTML = md.parse(String(doc.md || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, ''));   // 文件头的元数据不显示
     anchorHeadings(body, toc);
-    linkRefs(body, doc.code);
+    linkRefs(body, doc.code, o.docs);
     fixLinks(body, doc.path || '');
 
     var items = toc.map(function (t) {
@@ -147,7 +147,7 @@
       } } }, '目录'),
       h('div.toc-list', items.length ? items : h('div.muted', '这份没有小节')));
     var wrap = h('div.reader-wrap' + (tocOpen ? '' : '.is-toc-closed'), tocEl, body);
-    var info = docsList()[doc.code];
+    var info = docsList(o.docs)[doc.code];
     el.replaceChildren(h('div.reader',
       h('header.reader-head',
         h('div.reader-title', h('span.chip.reader-code', doc.code), h('span', doc.title)),
@@ -181,7 +181,7 @@
     o = o || {};
     if (!o.code) { el.replaceChildren(Dash.empty('从左边点一份文档', '', true)); return; }
     el.replaceChildren(h('div.skeleton.is-tall'));
-    fetchDoc(o.code).then(function (doc) {
+    fetchDoc(o.code, o.docs).then(function (doc) {
       if (el.isConnected) render(el, doc, o);
     }, function (e) {
       if (el.isConnected) el.replaceChildren(Dash.empty('这份文档没读到：' + e.message, '', true));

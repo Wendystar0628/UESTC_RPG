@@ -22,7 +22,7 @@
   }
 
   var store = {};      // 数据名 -> 数据
-  var meta = {};       // 数据名 -> { ver 已交付的版本, loading, reqVer, got 本次请求执行了 Dash.put, fail 'fetch'|'run'|null }
+  var meta = {};       // 数据名 -> { ver 已交付的版本, loading, reqVer, got 本次请求执行了 Dash.put, errors 这版载荷里后端写的失败原因, fail 'fetch'|'run'|'errors'|null }
   var remote = {};     // 数据名 -> 推送来的最新版本
   var checked = {};    // 数据名 -> { at 采集最后一次确认它仍是现状的时刻, stale 旧了吗 true|false|null, ratio 已用掉旧期限的比例 }；全部由后端在推送里给
   var srcs = {};       // 数据名 -> manifest 条目
@@ -44,8 +44,10 @@
 
   Dash.put = function (name, data) {
     if (!srcs[name]) return;
-    store[name] = data;
     var m = meta[name] || (meta[name] = {});
+    var errs = data && Array.isArray(data.errors) ? data.errors : [];
+    m.errors = errs.length ? errs : null;   // 后端发布的 errors 载荷是采集失败，不是业务数据
+    if (m.errors) delete store[name]; else store[name] = data;
     m.got = true;   // 走到这里才算交付；文件执行出错时 loadData 不记新版本
   };
 
@@ -61,19 +63,21 @@
     m.loading = true;
     m.reqVer = remote[s.name];
     m.got = false;
+    m.errors = null;
     var el = document.createElement('script');
     el.src = s.path + '?v=' + encodeURIComponent(m.reqVer || Date.now());
     function done(ok) {
       m.loading = false;
       el.remove();
       var before = m.fail;
-      if (ok && m.got) { m.ver = m.reqVer; m.fail = null; }
+      var delivered = ok && m.got;
+      if (delivered) { m.ver = m.reqVer; m.fail = m.errors ? 'errors' : null; }   // errors 载荷也是真实版本：记下，等后端发下一版
       else {
         m.fail = ok ? 'run' : 'fetch';
         console.warn('[Dash] 数据 ' + s.name + (ok ? ' 的文件执行出错或没有调用 Dash.put' : ' 下载失败'));
       }
-      if (m.ver !== remote[s.name] && !m.fail) { loadData(s); return; }   // 加载期间又推来新版本
-      if (!m.fail || !before) dependents(s.name).forEach(schedule);
+      if (delivered && m.ver !== remote[s.name]) { loadData(s); return; }   // 加载期间又推来新版本
+      if (!m.fail || m.fail === 'errors' || !before) dependents(s.name).forEach(schedule);
       afterData();
     }
     el.onload = function () { done(true); };
@@ -96,7 +100,7 @@
     M.data.forEach(function (s) {
       var m = meta[s.name] || {};
       if (!(s.name in remote) || !wanted(s.name) || m.loading) return;
-      if (m.fail ? retry : m.ver !== remote[s.name]) loadData(s);
+      if (m.fail === 'fetch' || m.fail === 'run' ? retry : m.ver !== remote[s.name]) loadData(s);
     });
   }
 
@@ -162,7 +166,9 @@
   };
 
   function failReason(name) {
-    return (meta[name] || {}).fail === 'fetch' ? '下载没成功，下一次推送时再试' : '数据文件有误，没有交出数据';
+    var m = meta[name] || {};
+    if (m.fail === 'errors') return '来源没读到：' + m.errors.join('；');
+    return m.fail === 'fetch' ? '下载没成功，下一次推送时再试' : '数据文件有误，没有交出数据';
   }
 
   Dash.checkedAt = function (name) { return (checked[name] || {}).at || null; };
@@ -174,7 +180,7 @@
   }
   function isStale(name) { return freshOf(name).stale === true; }
 
-  Dash.internal = { srcs: srcs, store: store, freshOf: freshOf, beginFresh: function () { if (current) current.fresh = true; } };
+  Dash.internal = { srcs: srcs, freshOf: freshOf, beginFresh: function () { if (current) current.fresh = true; } };
 
   /* ================= 写回：本地服务 serve.py ================= */
 
@@ -327,6 +333,7 @@
     body.replaceChildren(inner);
     current = p;
     p.fresh = false;
+    p.drawn = { params: ctx.params, filters: ctx.filters };
     try {
       p.render(inner, data, ctx);
     } catch (e) {
@@ -375,10 +382,12 @@
       return h('span.lead-pill.t-' + Dash.sideKey(x.who), { title: x.who + ' ' + state + (x.since ? '，自 ' + Dash.at(x.since) : '') },
         h('span.dot' + (x.running === true ? '.is-on' : x.running === false ? '.is-off' : '.is-unknown')), x.who + ' ' + state);
     }));
-    var n = M.data.filter(function (s) { return isStale(s.name); }).length;
+    var old = M.data.filter(function (s) { return isStale(s.name); }).length;
+    var unknown = M.data.filter(function (s) { return freshOf(s.name).stale == null; }).length;   // 后端不判断的不算新
     var btn = document.getElementById('fresh');
-    btn.className = 'fresh t-' + (n ? 'warn' : 'ok');
-    document.getElementById('fresh-text').textContent = n ? n + ' 份旧了' : '数据都新';
+    btn.className = 'fresh' + (push.full ? ' t-' + (old ? 'warn' : unknown ? 'muted' : 'ok') : '');
+    document.getElementById('fresh-text').textContent = !push.full ? '等数据'
+      : old ? old + ' 份旧了' : unknown ? unknown + ' 份未确认' : '数据都新';
   }
 
   function updateBadges() {
@@ -479,16 +488,16 @@
     var pg = pageOf(r.page);
     document.title = pg.title + ' · 作者观察台';
     filterBar(pg);
-    if (!pageChanged) {
-      Object.keys(panels).forEach(function (id) {
-        var p = panels[id];
-        if (p.page !== r.page) return;
-        var hit = p.uses.some(function (u) {
-          return u === 'params' ? !same(prev.params, r.params) : !same(prev.filters[u], r.filters[u]);
-        });
-        if (hit) schedule(p);
+    /* 与每块上次实际画出时的参数比（不与上一个路由比）：离开又回来的页，筛选和参数也对得上地址 */
+    Object.keys(panels).forEach(function (id) {
+      var p = panels[id];
+      if (p.page !== r.page || !p.drawn) return;
+      var hit = p.uses.some(function (u) {
+        return u === 'params' ? !same(p.drawn.params, r.params) : !same(p.drawn.filters[u], r.filters[u]);
       });
-    } else {
+      if (hit) schedule(p);
+    });
+    if (pageChanged) {
       window.scrollTo(0, 0);
       Dash.drawer.close();
       if (!flushTimer) flushTimer = setTimeout(flush, 0);

@@ -249,16 +249,19 @@
     span: 6, order: 41, needs: [],
     render: function (el) {
       var list = Dash.freshness();
-      var old = list.filter(function (f) { return f.stale; }).length;
+      var old = list.filter(function (f) { return f.stale === true; }).length;
+      var unknown = list.filter(function (f) { return f.stale == null; }).length;
       el.appendChild(Dash.charts.bars(list.map(function (f) {
         var known = f.ratio != null && isFinite(f.ratio);
         return {
-          key: f.name, label: f.label, value: known ? f.ratio : 0, tone: f.stale ? ['level', 'warn'] : ['seq', 2],
+          key: f.name, label: f.label, value: known ? f.ratio : 0,
+          tone: f.stale === true ? ['level', 'warn'] : f.stale === false ? ['seq', 2] : ['side', 'muted'],
           text: f.checked ? Dash.at(f.checked) + ' 确认' : '未确认',
           note: known ? '距上次确认已用掉旧期限的 ' + pctText(f.ratio) : '没有确认时刻，不判断旧不旧'
         };
       }), { height: list.length * 30 + 8, max: FRESH_SCALE, labelWidth: 96, textWidth: 118, label: '每份数据距上次确认已用掉多少旧期限', caliber: CAL.fresh }));
-      el.appendChild(h('div.hl-foot', old ? old + ' 份旧了' : '全部在期限内'));
+      el.appendChild(h('div.hl-foot', old || unknown
+        ? [old ? old + ' 份旧了' : '', unknown ? unknown + ' 份未确认' : ''].filter(Boolean).join('，') : '全部在期限内'));
     }
   });
 })();

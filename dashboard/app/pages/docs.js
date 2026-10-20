@@ -120,10 +120,10 @@
   });
 
   Dash.panel({
-    id: 'docs-reader', page: 'docs', title: '阅读', note: '左边的小节目录随滚动高亮；正文里的「编码 §n」可以直接点', span: 8, order: 20, needs: [],
+    id: 'docs-reader', page: 'docs', title: '阅读', note: '左边的小节目录随滚动高亮；正文里的「编码 §n」可以直接点', span: 8, order: 20, needs: ['docs'],
     uses: ['params'],
     render: function (el, d, ctx) {
-      Dash.reader(el, { code: ctx.params.code, sec: ctx.params.sec, find: ctx.params.find });
+      Dash.reader(el, { code: ctx.params.code, sec: ctx.params.sec, find: ctx.params.find, docs: d.docs });
     }
   });
 })();

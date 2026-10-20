@@ -309,7 +309,7 @@
     Dash.internal.beginFresh();
     return window.DashManifest.data.map(function (s) {
       var f = Dash.internal.freshOf(s.name);
-      return { name: s.name, label: s.label, checked: Dash.checkedAt(s.name), stale: f.stale === true, ratio: f.ratio };
+      return { name: s.name, label: s.label, checked: Dash.checkedAt(s.name), stale: f.stale, ratio: f.ratio };
     });
   };
 

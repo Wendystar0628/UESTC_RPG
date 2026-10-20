@@ -158,16 +158,17 @@
       (side === 'all' ? ['claude', 'codex'] : [side]).forEach(function (s) {
         ['cur', 'prev'].forEach(function (w) {
           var e = stages.filter(function (x) { return Dash.sideKey(x.side) === s && x.week === w; })[0] || null;
-          if (w === 'prev' && e.parts === null) return;
+          if (w === 'prev' && e && e.parts === null) return;
           ents.push(e);
-          cats.push(SIDE_NAME[s] + (w === 'cur' ? ' 近 7 天' : ' 前 7 天') + ' · ' + (e ? e.n : 0) + ' 行');
+          cats.push(SIDE_NAME[s] + (w === 'cur' ? ' 近 7 天' : ' 前 7 天') + ' · ' + (e && e.n != null ? e.n + ' 行' : '行数未确认'));
         });
       });
+      if (ents.every(function (e) { return !e || e.n == null; })) { el.appendChild(Dash.empty('近 7 天推送删行的数量未确认', '后台记账够了就在这里画')); return; }
       if (ents.every(function (e) { return !e || !e.n; })) { el.appendChild(Dash.empty('近 7 天还没有推送删行', '有了就在这里画')); return; }
       var series = Dash.stageKeys.map(function (k) {
         return {
           key: k, label: Dash.label('stage', k), tone: ['stage', k],
-          values: ents.map(function (e) { return e && e.parts && e.parts[k] != null ? e.parts[k] : 0; })
+          values: ents.map(function (e) { return e && e.parts ? e.parts[k] : null; })
         };
       });
       el.appendChild(Dash.charts.stack(cats, series, {
@@ -207,7 +208,7 @@
           };
         });
       } else {
-        bars = [{ key: 'done', label: '完成', tone: ['seq', 3], values: days.map(function (x) { return x.done || 0; }) }];
+        bars = [{ key: 'done', label: '完成', tone: ['seq', 3], values: days.map(function (x) { return x.done; }) }];
         tips = win.byDomain && days.map(function (x) {
           var dm = win.byDomain.filter(function (g) { return x.byDomain && x.byDomain[g.key]; });
           return dm.length ? '领域：' + dm.map(function (g) { return g.label + ' ' + x.byDomain[g.key]; }).join('、') : '';
@@ -268,17 +269,17 @@
     caliber: CAL.jump, window: '7d',
     needs: ['flow'],
     render: function (el, d) {
-      var j = d.flow.jump || {}, added = j.added || 0, jumped = j.jumped || 0;
+      var j = d.flow.jump || {}, count = function (v) { return v == null ? '未确认' : Dash.num(v); };
       el.appendChild(h('div.wk-ringrow',
         h('div.wk-ring', Dash.charts.ring([
-          { label: '插队', value: jumped, tone: ['mark', '插队'] },
-          { label: '其余新增', value: j.others || 0, tone: ['side', 'muted'] }
+          { label: '插队', value: j.jumped, tone: ['mark', '插队'] },
+          { label: '其余新增', value: j.others, tone: ['side', 'muted'] }
         ], { height: 112, unit: '行', center: Dash.pct(j.rate, 1), label: '近 7 天新增里插队的占比', caliber: CAL.jump })),
         h('div.wk-ringtext',
-          h('div.wk-lead', '近 7 天新增 ', h('b', Dash.num(added)), ' 行，插队 ', h('b', Dash.num(jumped)), ' 行'),
-          h('div.muted', '让 ' + Dash.num(j.paused || 0) + ' 行暂停'))));
+          h('div.wk-lead', '近 7 天新增 ', h('b', count(j.added)), ' 行，插队 ', h('b', count(j.jumped)), ' 行'),
+          h('div.muted', '让 ' + count(j.paused) + ' 行暂停'))));
       var rows = j.rows || [];
-      if (!rows.length) { el.appendChild(h('div.note-line', '近 7 天没有插队')); return; }
+      if (!rows.length) { el.appendChild(h('div.note-line', j.jumped == null ? '近 7 天有没有插队未确认' : '近 7 天没有插队')); return; }
       el.appendChild(h('div.wk-list', rows.map(function (r) {
         return h('button.wk-jrow', {
           type: 'button',

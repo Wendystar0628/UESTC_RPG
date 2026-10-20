@@ -136,15 +136,16 @@
     }, opts, function (e) { return { index: e.dataIndex, key: e.dataIndex, label: dayText(e.dataIndex, n), value: e.value, series: null }; });
   };
 
-  /* ---------- 环：parts [{label, value, tone, key?}]；opts.center 环心的字 ---------- */
+  /* ---------- 环：parts [{label, value, tone, key?}]（value 为 null 是未确认）；opts.center 环心的字（占比由调用方带后端给的数，这里不算） ---------- */
   C.ring = function (parts, opts) {
     opts = Object.assign({ height: 76 }, opts);
+    var unknown = parts.some(function (p) { return p.value == null; });
     var total = parts.reduce(function (s, p) { return s + (p.value || 0); }, 0);
     return host('ring', function () {
       return {
         tooltip: { trigger: 'item', formatter: function (p) {
-          if (!total) return tip('没有', null, opts.caliber);
-          return tip(p.name, Dash.num(p.value) + unitOf(opts) + '，占 ' + Math.round(p.value * 100 / total) + '%', opts.caliber);
+          if (unknown || !total) return tip(unknown ? '未确认' : '没有', null, opts.caliber);
+          return tip(p.name, Dash.num(p.value) + unitOf(opts), opts.caliber);
         } },
         title: opts.center == null ? undefined : { text: String(opts.center), left: 'center', top: 'middle',
           textStyle: { fontSize: 14, fontWeight: 650, color: css('--text'), fontFamily: css('--font') } },
@@ -152,12 +153,12 @@
           type: 'pie', radius: ['64%', '92%'], center: ['50%', '50%'], avoidLabelOverlap: false,
           label: { show: false }, labelLine: { show: false }, emphasis: { scale: false },
           itemStyle: { borderColor: css('--surface'), borderWidth: 2 },
-          data: total ? parts.map(function (p) { return { name: p.label, value: p.value, itemStyle: { color: tone(p.tone) } }; })
+          data: total && !unknown ? parts.map(function (p) { return { name: p.label, value: p.value, itemStyle: { color: tone(p.tone) } }; })
             : [{ name: '没有', value: 1, itemStyle: { color: css('--line') } }]
         }]
       };
     }, opts, function (e) {
-      if (!total) return null;
+      if (!total || unknown) return null;
       var x = parts[e.dataIndex];
       return { index: e.dataIndex, key: x.key == null ? x.label : x.key, label: x.label, value: x.value, series: null };
     });
@@ -343,7 +344,7 @@
         grid: { left: opts.labelWidth || 120, right: 8, top: 26, bottom: 4 },
         tooltip: { trigger: 'item', formatter: function (p) {
           var x = cells[p.data.i];
-          return tip(rows[x.r] + ' · ' + cols[x.c], [Dash.num(x.value) + unitOf(opts), x.text], opts.caliber);
+          return tip(rows[x.r] + ' · ' + cols[x.c], [x.value == null ? '未确认' : Dash.num(x.value) + unitOf(opts), x.text], opts.caliber);
         } },
         xAxis: Object.assign({}, ax, { type: 'category', position: 'top', data: cols, axisLine: { show: false }, splitLine: { show: false },
           axisLabel: Object.assign({}, ax.axisLabel, { color: css('--text-2'), fontSize: 13 }) }),
@@ -354,9 +355,9 @@
           type: 'heatmap', itemStyle: { borderColor: css('--surface'), borderWidth: 3, borderRadius: 6 },
           label: { show: true, fontSize: 13, lineHeight: 16, formatter: function (p) {
             var x = cells[p.data.i];
-            return '{v|' + Dash.num(x.value) + '}' + (x.text ? '\n{t|' + x.text + '}' : '');
+            return '{v|' + (x.value == null ? '未确认' : Dash.num(x.value)) + '}' + (x.text && x.value != null ? '\n{t|' + x.text + '}' : '');
           }, rich: { v: { fontSize: 15, fontWeight: 700, color: css('--text'), align: 'center' }, t: { fontSize: 11, color: css('--text-2'), align: 'center' } } },
-          data: cells.map(function (x, i) { return { value: [x.c, x.r, x.value], i: i }; })
+          data: cells.map(function (x, i) { return { value: [x.c, x.r, x.value == null ? 0 : x.value], i: i }; })   // null 只按最浅色画，字上写未确认
         }]
       };
     }, opts, function (e) {
@@ -396,8 +397,9 @@
     });
   };
 
-  /* ---------- 桑基（SVG）：nodes [{id, label, tone, depth, note?}]，id 全图唯一；links [{from, to, value}]；
-     值为 0 的连线画细灰虚线（结构还在）；p.key 是节点 id，p.series 是 'node' 或 'link' ---------- */
+  /* ---------- 桑基（SVG）：nodes [{id, label, tone, depth, value, note?}]，id 全图唯一；links [{from, to, value}]；
+     节点与连线的值都是调用方带来的业务数（null 是未确认），图里只把连线值用作宽度和节点高度，不求和当标签；
+     值为 0 或 null 的连线画细灰虚线（结构还在）；p.key 是节点 id，p.series 是 'node' 或 'link' ---------- */
   var SVG = 'http://www.w3.org/2000/svg';
   function s(tag, attrs) {
     var el = document.createElementNS(SVG, tag);
@@ -442,7 +444,7 @@
       links.forEach(function (l, li) {
         var a = byId[l.from], b = byId[l.to];
         if (!a || !b) return;
-        var w = (l.value || 0) * scale, y0, y1;
+        var w = (l.value || 0) * scale, y0, y1;   // 宽度只是几何量
         if (l.value) { y0 = a.outY + w / 2; a.outY += w; y1 = b.inY + w / 2; b.inY += w; }
         else { y0 = a.y + a.h / 2; y1 = b.y + b.h / 2; }
         var x0 = a.x + nodeW, x1 = b.x, xm = (x0 + x1) / 2;
@@ -451,20 +453,20 @@
           class: 'sankey-link' + (l.value ? '' : ' is-zero'),
           style: l.value ? 'stroke:' + toneVar(a.n.tone) + ';stroke-width:' + Math.max(1, w) + 'px' : null
         });
-        path.addEventListener('mousemove', function (e) { show(e, [a.n.label + ' → ' + b.n.label, '近 24 小时 ' + Dash.num(l.value) + unitOf(opts)]); });
+        path.addEventListener('mousemove', function (e) { show(e, [a.n.label + ' → ' + b.n.label, '近 24 小时 ' + (l.value == null ? '未确认' : Dash.num(l.value) + unitOf(opts))]); });
         path.addEventListener('mouseleave', Dash.tip.hide);
         if (opts.onClick) path.addEventListener('click', function () { opts.onClick({ index: li, key: l.from + '→' + l.to, label: a.n.label + ' → ' + b.n.label, value: l.value, series: 'link' }); });
         linkEls.push({ el: path, l: l });
         gl.appendChild(path);
       });
       nodes.forEach(function (n) {
-        var r = byId[n.id], v = Math.max(r.inV, r.outV), last = (n.depth || 0) === depths - 1;
+        var r = byId[n.id], v = n.value, last = (n.depth || 0) === depths - 1;
         var g = s('g', { class: 'sankey-node' + (opts.onClick ? ' is-click' : '') });
         g.appendChild(s('rect', { x: r.x, y: r.y, width: nodeW, height: Math.max(1, r.h), rx: 3, style: 'fill:' + toneVar(n.tone) }));
         var t = s('text', { x: last ? r.x - labelPad : r.x + nodeW + labelPad, y: r.y + r.h / 2, 'text-anchor': last ? 'end' : 'start', 'dominant-baseline': 'middle' });
-        t.textContent = n.label + ' ' + Dash.num(v);
+        t.textContent = n.label + ' ' + (v == null ? '未确认' : Dash.num(v));
         g.appendChild(t);
-        g.addEventListener('mousemove', function (e) { show(e, [n.label, '近 24 小时 ' + Dash.num(v) + unitOf(opts), n.note]); });
+        g.addEventListener('mousemove', function (e) { show(e, [n.label, '近 24 小时 ' + (v == null ? '未确认' : Dash.num(v) + unitOf(opts)), n.note]); });
         g.addEventListener('mouseenter', function () {
           svg.classList.add('is-focus');
           linkEls.forEach(function (x) { x.el.classList.toggle('is-on', x.l.from === n.id || x.l.to === n.id); });

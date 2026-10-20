@@ -1,6 +1,6 @@
 /* 动态页：近 30 天发生过什么。
    块（面板 id）：feed-strip 30 天密度条（只做导航：拖选一段时间，点一格选那一天；类型在页头筛选条里选）；
-                  feed-timeline 按天分组的竖时间线，点开一条看详情和链接。
+                  feed-timeline 按天分组的竖时间线，点开一条看详情和链接；没有发生时刻的事实列在最后的“时刻未确认”下。
    数据：feed。时间范围取地址里的 from、to（日期，拖选写入），没有就取筛选条的 range；
    侧与类型筛选对两块都生效，密度条不受时间范围影响（它是用来选时间的）。 */
 (function () {
@@ -90,10 +90,11 @@
 
   function timeline(el, d, ctx) {
     var win = windowOf(ctx);
+    /* 顺序是后端给的（新的在前，没有时刻的排在最后）；没有时刻的放不进任何时间窗，一律列在末尾的"时刻未确认"下 */
     var rows = byFilters(d.feed.items || [], ctx).filter(function (it) {
       var t = Dash.parseTime(it.at);
-      return !isNaN(t) && t >= win.start && t < win.end;
-    }).sort(function (a, b) { return Dash.parseTime(b.at) - Dash.parseTime(a.at); });
+      return isNaN(t) || (t >= win.start && t < win.end);
+    });
 
     if (!rows.length) { el.appendChild(Dash.empty('这段时间没有这类动态', '', true)); return; }
     el.appendChild(Dash.timeline(rows.map(function (it) {

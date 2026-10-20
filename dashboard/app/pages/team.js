@@ -194,10 +194,11 @@
   function letterDrawer(dir, mark, cell, open) {
     var mine = open.filter(function (x) { return sameCell(x, dir, mark); });
     var body = [kv([
-      ['近 7 天', Dash.num(cell ? cell.n : 0) + ' 封'],
-      NEED_REPLY[mark] ? ['响应时间中位数', cell && cell.p50 != null ? dur(cell.p50) : '没有可配对的回信'] : null
+      ['近 7 天', cell && cell.n != null ? Dash.num(cell.n) + ' 封' : '未确认'],
+      NEED_REPLY[mark] ? ['响应时间中位数', cell && cell.p50 != null ? dur(cell.p50) : cell && cell.n != null ? '没有可配对的回信' : '未确认'] : null
     ])];
     if (!NEED_REPLY[mark]) body.push(emptyLine('这一类不要求回信，不统计响应时间'));
+    else if (!cell || cell.openN == null) body.push(emptyLine('这一格没回的信数未确认'));
     else if (!mine.length) body.push(emptyLine('这一格没有没回的信'));
     else body.push(h('div.tm-sub', '没回的 ' + mine.length + ' 封，最久的在前'), mine.map(function (x) { return openLetter(mark, x); }));
     Dash.drawer({ title: dir.text + ' · ' + mark, body: h('div.tm-drawer', body) });
@@ -216,10 +217,11 @@
         MARKS.forEach(function (mark, c) {
           var x = src.filter(function (y) { return Dash.sideKey(y.from) === dir.from && Dash.sideKey(y.to) === dir.to && y.mark === mark; })[0];
           var parts = [];
+          if (!x || x.n == null) parts.push('未确认');
           if (NEED_REPLY[mark] && x && x.p50 != null) parts.push('中位 ' + dur(x.p50));
           if (x && x.openN) parts.push('未回 ' + x.openN);
           cells.push({
-            r: r, c: c, value: x && x.n != null ? x.n : 0,
+            r: r, c: c, value: x ? x.n : null,
             text: parts.length ? parts.join(' · ') : undefined,
             _dir: dir, _mark: mark, _cell: x
           });
@@ -234,7 +236,8 @@
       }));
       if (L.unpaired) el.appendChild(h('div.note-line', '另有 ' + Dash.num(L.unpaired) + ' 封没写行号，无法配对，不算响应时间'));
       var open = L.open || [];
-      el.appendChild(h('div.tm-sub', L.openN ? '没回的 ' + Dash.num(L.openN) + ' 封，最久没回的在前；点上面带“未回”的格子看全部' : '需定与待审都有回信'));
+      el.appendChild(h('div.tm-sub', L.openN == null ? '没回的信数未确认'
+        : L.openN ? '没回的 ' + Dash.num(L.openN) + ' 封，最久没回的在前；点上面带“未回”的格子看全部' : '需定与待审都有回信'));
       if (open.length) {
         el.appendChild(h('div.tm-list', lines(open.map(function (x) {
           return h('div.tm-letter', sideMark(x.from), h('span.muted', '→'), sideMark(x.to), openLetter(x.mark, x));
@@ -252,18 +255,19 @@
     render: function (el, d) {
       var A = d.collab.audit;
       if (!A) { el.appendChild(Dash.empty('还没有审计数据', '', true)); return; }
+      if (A.rows == null) { el.appendChild(Dash.empty('近 7 天推了几行未确认', '', true)); return; }
       if (!A.rows) { el.appendChild(Dash.empty('近 7 天没有推送的行', '', true)); return; }
       var missing = A.missing || [];
       el.appendChild(h('div.tm-audit',
         h('div.tm-ring', Dash.charts.ring([
-          { label: '已审', value: A.audited || 0, tone: ['level', 'ok'] },
-          { label: '未审', value: A.unaudited || 0, tone: ['level', 'warn'] }
+          { label: '已审', value: A.audited, tone: ['level', 'ok'] },
+          { label: '未审', value: A.unaudited, tone: ['level', 'warn'] }
         ], { height: 124, unit: '行', center: Dash.pct(A.rate, 1), label: '收口审计覆盖率' })),
         h('div.tm-stats',
           h('div.tm-stat', h('b', Dash.num(A.audited) + ' / ' + Dash.num(A.rows)), '行已审'),
           h('div.tm-stat', h('b', Dash.num(A.found)), '条查实'),
           h('div.tm-stat', h('b', Dash.num(A.newRows)), '条转成了队列行'))));
-      el.appendChild(h('div.tm-sub', A.unaudited ? '没审的 ' + Dash.num(A.unaudited) + ' 行' : '推上去的行都审过了'));
+      el.appendChild(h('div.tm-sub', A.unaudited == null ? '没审的行数未确认' : A.unaudited ? '没审的 ' + Dash.num(A.unaudited) + ' 行' : '推上去的行都审过了'));
       if (missing.length) {
         el.appendChild(h('div.tm-list', lines(missing.map(function (r) {
           return rowButton(r, [['推送时刻', Dash.at(r.at)], ['审计', '近 7 天没有对方侧的审计记录']]);
@@ -292,6 +296,7 @@
     render: function (el, d) {
       var D = d.collab.dispatch;
       if (!D) { el.appendChild(Dash.empty('还没有派单数据', '', true)); return; }
+      if (D.n == null) { el.appendChild(Dash.empty('近 7 天派了几个子代理未确认', '', true)); return; }
       if (!D.n) { el.appendChild(Dash.empty('近 7 天没有派过子代理', '', true)); return; }
       var rules = D.rules || [];
       var bad = D.bad || [];
@@ -300,7 +305,7 @@
       if (ruleFilter && !rules.some(function (r) { return r.key === ruleFilter; })) ruleFilter = null;
       if (rules.length) {
         el.appendChild(Dash.charts.bars(rules.map(function (r) {
-          return { key: r.key, label: r.key + ' ' + r.label, value: r.bad || 0, tone: ['level', r.bad ? 'bad' : 'ok'] };
+          return { key: r.key, label: r.key + ' ' + r.label, value: r.bad, tone: r.bad == null ? ['side', 'muted'] : ['level', r.bad ? 'bad' : 'ok'] };
         }), {
           label: '各条派单规则的违规个数', unit: '个违规', labelWidth: 200, textWidth: 90,
           onClick: function (p) { ruleFilter = ruleFilter === p.key ? null : p.key; Dash.redraw('team-dispatch'); }
@@ -312,6 +317,7 @@
           h('button.btn', { type: 'button', on: { click: function () { ruleFilter = null; Dash.redraw('team-dispatch'); } } }, '清除')));
       }
       el.appendChild(h('div.tm-viols', rows.length ? rows.map(violation)
+        : D.bad == null ? h('div.tm-ok', Dash.status('违规名单未确认', 'muted'))
         : h('div.tm-ok', Dash.status(ruleFilter ? '没有违反 ' + ruleFilter + ' 的' : '没有违规', 'ok'))));
       var hints = D.hints || [];
       var opus = D.opus || [];
@@ -336,11 +342,12 @@
       el.appendChild(Dash.charts.bars(idle.map(function (x) {
         var g = x.longest;
         return {
-          key: x.who, label: x.who, value: x.minutes || 0, text: x.minutes == null ? '未确认' : Dash.minutes(x.minutes), tone: ['side', Dash.sideKey(x.who)],
+          key: x.who, label: x.who, value: x.minutes, text: x.minutes == null ? '未确认' : Dash.minutes(x.minutes), tone: ['side', Dash.sideKey(x.who)],
           note: g ? '最长一段 ' + Dash.at(g.from) + ' – ' + Dash.at(g.to) + '，当时可派 ' + ((g.rows || []).length ? g.rows.join('、') : '行号未确认') : null
         };
       }), { label: '近 24 小时有活却空闲的分钟数', labelWidth: 70, textWidth: 100 }));
-      if (!idle.some(function (x) { return x.minutes; })) el.appendChild(h('div.note-line', '近 24 小时没有出现有活却空着的时段'));
+      if (idle.some(function (x) { return x.minutes == null; })) el.appendChild(h('div.note-line', '有的指挥这段时长未确认'));
+      else if (!idle.some(function (x) { return x.minutes; })) el.appendChild(h('div.note-line', '近 24 小时没有出现有活却空着的时段'));
     }
   });
 })();

@@ -190,11 +190,11 @@ dashboard/
 有哪些数据只在后端一处：serve 的 `/api/data-names.js` 给出 `window.DashDataNames`（来自 `AUTO_NAMES`）与各份的应有间隔；`manifest.js` 的 `data` 由这份名单生成，只给每份补展示信息 `label`（提示里的中文名）与 `keep`（为真时不管在哪页都保持最新：`live` 给页眉，`attention` 给角标），名单与展示信息对不上就直接报错。其余数据只在当前页有面板 `needs` 它时才拉。
 
 - 页面订阅 `GET /api/events`（§2 推送）。`versions` 事件里某份数据的版本和已交付的不同、且此刻要它，就重拉那份文件，只重画 `needs` 它的面板；此刻不要的先丢掉缓存，切过去时显示骨架再拉，不先画旧的。全量（`full`）里没列的数据按"还没有数据"。
-- 版本只在这次请求的文件真的执行了 `Dash.put` 后才记下；下载或执行失败的这份按"没读到"，下一次推送（版本或 15 s 心跳）再试。
+- 版本只在这次请求的文件真的执行了 `Dash.put` 后才记下；下载或执行失败的这份按"没读到"，下一次推送（版本或 15 s 心跳）再试。载荷里 `errors` 非空是来源采集失败：这一版照样记下，不当数据交给面板，按"没读到"写后端给的原因，等后端发下一版。
 - `versions.app` 变了整页刷新。连接断开时右下角写"推送断开，正在重连"，3 s 后重连（服务返回错误时浏览器不会自己重连，由 core 重建）；连上后服务端先发全量，页面按它对一遍。
 - 旧了：由后端判，推送的 `checked[名字]` 带 `stale` 与 `ratio`，页面只照着画，不写阈值；`stale` 为 null 不判断。页面没有按秒轮询，"旧了"随推送的 15 s 心跳更新。
 
-**页眉**：两位指挥的状态签（`live.leads`：在跑实心、空闲空心、未确认灰）；右侧按钮写"数据都新"或"N 份旧了"，点了到 `#health/health-fresh`。导航角标：现在页是 `attention` 里没点"知道了"的条数。
+**页眉**：两位指挥的状态签（`live.leads`：在跑实心、空闲空心、未确认灰）；右侧按钮写"数据都新"、"N 份旧了"，或有不判断的（`stale` 为 null）时写"N 份未确认"，点了到 `#health/health-fresh`。导航角标：现在页是 `attention` 里没点"知道了"的条数。
 
 ### 3.2 面板与各种状态
 
@@ -204,7 +204,7 @@ Dash.panel({ id, page, title, note, caliber?, span: 12|8|7|6|5|4, order, needs: 
 ctx = { filters: {side, range, type: [键]}, params: {路由参数}, stale: bool, coverage: 时刻|null }
 ```
 
-- `needs` 里任一份推来新版本就重画；`uses` 里的筛选或路由参数变了也重画；`needs: []` 的面板照常画。面板不自己订阅、不自己拉数据；面板内部状态变了（块内开关、搜索词）调 `Dash.redraw(id)`。
+- `needs` 里任一份推来新版本就重画；`uses` 里的筛选或路由参数与这块上次画出时不同也重画（换页回来同样对一遍）；`needs: []` 的面板照常画。面板不自己订阅、不自己拉数据；面板内部状态变了（块内开关、搜索词）调 `Dash.redraw(id)`。
 - render 只在数据到齐时调用；`partial` 时到一份就画，没到的那份是 null。render 抛异常时这块写"这块出错了"，细节进浏览器控制台，不影响别的面板。
 - `fixed(el)` 只在面板建立时画一次，重画只换正文，不清掉它（输入框、搜索框放这里）。
 - 重绘时 `<details>` 的开合在个数不变时保持。只画当前页的面板，别的页记着脏，切过去再画。
@@ -215,7 +215,7 @@ ctx = { filters: {side, range, type: [键]}, params: {路由参数}, stale: bool
 | --- | --- |
 | 读取中 | 骨架 |
 | 读过但没有这份 | "还没有数据" + 缺哪份（中文名） |
-| 读取失败 | "没读到" + 一句原因，不显示旧值 |
+| 读取失败 | "没读到" + 一句原因（下载失败、文件有误，或来源发布了 `errors`），不显示旧值 |
 | 旧了 | 卡头"更新 HH:MM · 旧了"橙字，正文 60% 不透明，照样能交互 |
 | 记账不够一个时间窗 | 卡底一行"记账从 M 月 D 日 HH:MM 起，之前的不全"；窗口取面板的 `window`（不写按 `'range'`：筛选条的 range，地址里拖选了 `from` 就从那天起）；"前 7 天"对比由面板按 `ctx.coverage` 自己隐藏 |
 | 口径 | 有 `caliber` 的卡头带 ⓘ，悬停显示；图的悬停框末行也带这句（图的 `opts.caliber`） |
@@ -260,9 +260,9 @@ Dash.tree(nodes, {onClick?, filter?})        nodes [{key, label, sub?, tone?, co
                                              返回的节点有 .filter(文字)：按 opts.filter(节点, 文字) → bool（缺省比 label、sub、key）过滤并展开命中路径；current 高亮
 Dash.dots(cells, {onHover?})      cells [{tone, tip}] 点阵，悬停显示 tip
 Dash.chips(options, value, onChange, {multi?})   options [{key, label, tone?}]；单选 onChange(键)，多选 onChange(键数组)
-Dash.freshness()                  [{name, label, checked, stale: bool, ratio}]；调用它的面板随推送心跳重画
+Dash.freshness()                  [{name, label, checked, stale: bool|null, ratio}]；null 是后端不判断，不算新；调用它的面板随推送心跳重画
 Dash.tip.show(行数组, x, y) / Dash.tip.hide()    悬停框；带 data-tip 的元素自动用它（多行用换行分隔）
-Dash.reader(el, {code, sec?, find?})   文档阅读器（reader.js）
+Dash.reader(el, {code, sec?, find?, docs})   文档阅读器（reader.js）；docs 是同轮 `docs` 数据，阅读面板 needs 它
 ```
 
 **文档阅读器**：调 `GET /api/doc?code=`（§2），用 marked 渲染原文（文件头元数据不显示，原始 HTML 当文字）。左边小节目录（`toc` 的 2、3 级，可折叠，当前节随滚动高亮），右边正文；头部写编码、标题、所在域、更新时刻。小节标题的 id 用服务端给的 `anchor`；`sec` 认 `anchor`，也认小节号 `n`。正文里文档目录里有的"编码 §n"、紧跟其后的单独"§n"变成 `#docs?code=&sec=` 链接；文档里的相对链接按文档位置解析、新标签页打开，页内锚点只滚动。`find` 先到 `sec` 那一节（没给就全文）找第一处，高亮并滚过去。读不到时写"这份文档没读到：原因"。同一份文档按 `docs` 里的更新时刻缓存。
@@ -296,7 +296,7 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 | `Dash.charts.` | 数据 | 说明 |
 | --- | --- | --- |
 | `spark(values, opts)` | 数组，最右是今天 | 近 N 天小柱 |
-| `ring(parts, opts)` | `[{label, value, tone, key?}]` | 环形占比；`opts.center` 环心字 |
+| `ring(parts, opts)` | `[{label, value, tone, key?}]` | 环形占比；`opts.center` 环心字（占比由调用方带后端给的数，图不算）；任一 value 为 null 画未确认 |
 | `bars(items, opts)` | `[{label, value, text?, note?, tone, key?}]` | 横向条形；条尾写 text；悬停写 label、值与单位、note；`opts.max` 定满格；标签过长折行（`opts.labelWidth`） |
 | `treemap(items, opts)` | `[{label, value, note?, tone, key?}]` | 面积图 |
 | `box(groups, opts)` | `[{key, label, tone, cur: 分布, prev: 分布|null}]`，分布 `{n, q: [min, p25, p50, p80, max]|null}` | 箱线，值是分钟；本 7 天实色、前 7 天浅色虚线；样本少于 3 的组只画点并标"样本少"；`p.series` 是 cur 或 prev |
@@ -304,7 +304,7 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 | `combo(days, bars, line, opts)` | `bars [{key, label, tone, values}]`（多条堆叠）、`line {key?, label, tone, values}` | 柱线组合；`opts.tips` 每天一段补充，悬停附上 |
 | `heat(rows, cols, cells, opts)` | rows、cols 是标签数组；`cells [{r, c, value, text?}]` | 热力；text 是格内小字；`p.index` 是 cells 下标 |
 | `trend(xs, series, opts)` | `series [{key?, label, tone, values, axis: 0|1}]` | 折线，axis 1 用右轴；`opts.units` 两轴单位；`opts.notes` 每点一句 |
-| `sankey(nodes, links, opts)` | `nodes [{id, label, tone, depth, note?}]`（id 全图唯一）；`links [{from, to, value}]` | 自绘 SVG；值为 0 的连线画细灰虚线；悬停节点高亮相连的线并写 note；`p.key` 是节点 id，`p.series` 是 node 或 link |
+| `sankey(nodes, links, opts)` | `nodes [{id, label, tone, depth, value, note?}]`（id 全图唯一，value 是后端给的节点数，null 写未确认）；`links [{from, to, value}]` | 自绘 SVG；值为 0 或 null 的连线画细灰虚线；悬停节点高亮相连的线并写 note；`p.key` 是节点 id，`p.series` 是 node 或 link |
 | `strip(days, opts)` | `[{day, value}]` | 密度条，一天一格，深浅按数；`opts.coverage` 之前的格画虚线框；拖选 → `opts.onBrush({from, to})`，点一格 → `onClick`；`opts.selected {from, to}` 高亮 |
 
 ## 4 页面与面板
