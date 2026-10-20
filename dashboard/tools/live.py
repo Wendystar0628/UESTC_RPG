@@ -13,11 +13,11 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', '..', '.collab', 'tools'))
 import collect
 import datafile
+from catalog import DATASETS
 from monitor import history, util as U
 from monitor.read import codex, repo
 
 LOCK_FILE = U.REPO + '/output/.locks/live.lock'
-MERGE_S = .1
 CHECK_S = 15
 
 
@@ -109,15 +109,15 @@ def main():
         now = time.monotonic()
         names = set(names)
         while True:
-            expanded = names | {name for name, inputs in collect.INPUTS.items()
-                                if inputs & {'@' + source for source in names}}
+            expanded = names | {name for name, spec in DATASETS.items()
+                                if spec.inputs & {'@' + source for source in names}}
             if expanded == names:
                 break
             names = expanded
         with mutex:
             for name in names:
-                # 已有首个事件的截止时间不后移，密集写入也只合并约100ms。
-                dirty.setdefault(name, now + (10 if name in ('flow', 'collab') else MERGE_S))
+                # 已有首个事件的截止时间不后移；合批间隔只认每份数据的登记。
+                dirty.setdefault(name, now + DATASETS[name].batch_s)
                 valid.discard(name)
         changed.set()
 
@@ -190,7 +190,7 @@ def main():
                     continue
                 historical = recorder.mark_dirty(path)
                 touched = sources(path, event.is_directory and event.event_type != 'modified')
-                names = {name for name, inputs in collect.INPUTS.items() if inputs & touched}
+                names = {name for name, spec in DATASETS.items() if spec.inputs & touched}
                 if names:
                     mark(names)
                 # 父目录被创建/替换后重设最小可用盯点，原子替换仍精确匹配src/dest。
@@ -249,8 +249,9 @@ def main():
             if (path, recursive) not in schedules:
                 schedules[path, recursive] = observer.schedule(handler, path, recursive=recursive)
 
+    lanes = tuple(dict.fromkeys(spec.lane for spec in DATASETS.values()))
     workers = {lane: ThreadPoolExecutor(max_workers=1, thread_name_prefix='dashboard-' + lane)
-               for lane in ('fast', 'slow')}
+               for lane in lanes}
     jobs = {}
     recorder_thread = threading.Thread(target=recorder.run, args=(stop,), name='dashboard-history', daemon=True)
     try:
@@ -259,10 +260,12 @@ def main():
         observer.start()
         recorder_thread.start()
         datafile.publish_app()
-        mark(set(collect.INPUTS) - {'_app'})
+        mark(DATASETS.keys() - {'_app'})
         next_check = time.monotonic() + CHECK_S
         # 时间依赖只在真实到期点安排一次采样；不是文件轮询。
-        next_expiry, next_system = {}, time.monotonic() + 600
+        next_expiry = {}
+        periodic = {name: time.monotonic() + spec.refresh_s for name, spec in DATASETS.items()
+                    if spec.refresh_s is not None}
         while True:
             changed.clear()
             with mutex:
@@ -284,31 +287,32 @@ def main():
                     valid.update(done - set(dirty))
                     valid.difference_update(failed)
                 dependencies = {'@' + name for name in done | failed}
-                mark({name for name, inputs in collect.INPUTS.items() if inputs & dependencies})
-                if (done | failed) & {'team', 'live', 'health'}:
+                mark({name for name, spec in DATASETS.items() if spec.inputs & dependencies})
+                if any(DATASETS[name].sample or DATASETS[name].expiry for name in done | failed):
                     # 下一次过时/离线阈值从同一份已采事实导出，不补采第二份。
                     next_expiry = collect.next_expiry()
             now = time.monotonic()
             expired = {name for name, due in next_expiry.items() if time.time() >= due}
             if expired:
-                mark(({name for name, inputs in collect.INPUTS.items() if 'sessions' in inputs}
+                mark(({name for name, spec in DATASETS.items() if 'sessions' in spec.inputs}
                       if 'sessions' in expired else set()) | (expired - {'sessions'}))
                 next_expiry = {name: due for name, due in next_expiry.items() if name not in expired}
-            if now >= next_system:
-                mark({'system'} & set(collect.INPUTS))
-                next_system = now + 600
+            for name, due in periodic.items():
+                if now >= due:
+                    mark({name})
+                    periodic[name] = now + DATASETS[name].refresh_s
             if now >= next_check:
                 with mutex:
                     confirmed = valid - set(dirty) - inflight
                 datafile.check(confirmed)
                 next_check = now + CHECK_S
-            for lane in ('fast', 'slow'):
+            for lane in lanes:
                 if lane in jobs:
                     continue
                 with mutex:
-                    names = {name for name, due in dirty.items() if due <= now and (name in collect.SLOW_NAMES) == (lane == 'slow')
+                    names = {name for name, due in dirty.items() if due <= now and DATASETS[name].lane == lane
                              and not any(dependency[1:] in dirty or dependency[1:] in inflight
-                                         for dependency in collect.INPUTS[name] if dependency.startswith('@'))}
+                                         for dependency in DATASETS[name].inputs if dependency.startswith('@'))}
                     for name in names:
                         del dirty[name]
                     inflight.update(names)
@@ -321,10 +325,10 @@ def main():
                     jobs[lane] = future, names
             with mutex:
                 deadlines = [due for name, due in dirty.items()
-                             if ('slow' if name in collect.SLOW_NAMES else 'fast') not in jobs
+                             if DATASETS[name].lane not in jobs
                              and not any(dependency[1:] in dirty or dependency[1:] in inflight
-                                         for dependency in collect.INPUTS[name] if dependency.startswith('@'))]
-            deadline = min([next_check, next_system] + deadlines)
+                                         for dependency in DATASETS[name].inputs if dependency.startswith('@'))]
+            deadline = min([next_check] + list(periodic.values()) + deadlines)
             if next_expiry:
                 deadline = min(deadline, time.monotonic() + max(0, min(next_expiry.values()) - time.time()))
             changed.wait(max(.01, deadline - time.monotonic()))

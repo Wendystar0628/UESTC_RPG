@@ -6,19 +6,8 @@
 (function () {
   var h = Dash.h;
 
-  var DAY = 86400000;
-  var RANGE_MS = { '24h': DAY, '7d': 7 * DAY, '30d': 30 * DAY };
   var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-  function pad2(n) { return (n < 10 ? '0' : '') + n; }
-  function dateKey(ms) {
-    var d = new Date(ms);
-    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
-  }
-  function dayStart(key) {
-    var p = key.split('-');
-    return new Date(+p[0], +p[1] - 1, +p[2]).getTime();
-  }
   function short(key) { return +key.slice(5, 7) + '-' + +key.slice(8, 10); }
 
   /* 类型空数组即全选 */
@@ -30,14 +19,14 @@
   }
 
   /* 时间窗：地址有 from、to 就按日期取（含两端那天，custom）；否则按筛选条的 range。from、to 是日期串，给密度条标已选 */
-  function windowOf(ctx) {
+  function windowOf(ctx, feed) {
     var p = ctx.params;
     if (DATE_RE.test(p.from || '') && DATE_RE.test(p.to || '')) {
       var a = p.from <= p.to ? p.from : p.to, b = p.from <= p.to ? p.to : p.from;
-      return { start: dayStart(a), end: dayStart(b) + DAY, from: a, to: b, custom: true };
+      return { from: a, to: b, custom: true };
     }
-    var now = Date.now(), start = now - RANGE_MS[ctx.filters.range];
-    return { start: start, end: Infinity, from: dateKey(start), to: dateKey(now), custom: false };
+    var span = feed.windows[ctx.filters.range];
+    return { from: span.from, to: span.to, custom: false };
   }
 
   /* 不带 from、to 就是回到页头的时间范围；筛选由 Dash.go 自己保留 */
@@ -48,7 +37,7 @@
   /* ---------- feed-strip ---------- */
 
   function strip(el, d, ctx) {
-    var win = windowOf(ctx), side = ctx.filters.side, types = ctx.filters.type;
+    var win = windowOf(ctx, d.feed), side = ctx.filters.side, types = ctx.filters.type;
     var days = d.feed.days.map(function (day) {  // 所选格子里有一格覆盖不足（n 为 null），这一天就是未确认
       var picked = day.cells.filter(function (c) { return (!types.length || types.indexOf(c.type) >= 0) && (side === 'all' || c.side === side); });
       var unknown = picked.some(function (c) { return c.n == null; });
@@ -89,11 +78,12 @@
   }
 
   function timeline(el, d, ctx) {
-    var win = windowOf(ctx);
+    var win = windowOf(ctx, d.feed);
     /* 顺序是后端给的（新的在前，没有时刻的排在最后）；没有时刻的放不进任何时间窗，一律列在末尾的"时刻未确认"下 */
     var rows = byFilters(d.feed.items || [], ctx).filter(function (it) {
-      var t = Dash.parseTime(it.at);
-      return isNaN(t) || (t >= win.start && t < win.end);
+      if (win.custom) return it.day === null || (it.day >= win.from && it.day <= win.to);
+      var member = it.windows[ctx.filters.range];
+      return member === null || member === true;
     });
 
     if (!rows.length) { el.appendChild(Dash.empty('这段时间没有这类动态', '', true)); return; }

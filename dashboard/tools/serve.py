@@ -6,7 +6,6 @@ import argparse
 import functools
 import json
 import os
-import posixpath
 import sys
 import threading
 import time
@@ -19,8 +18,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', '..', '.collab', 'tools'))
 import datafile
-from monitor.view import attention, health
-from monitor.read import documents, repo
+from monitor.view import attention, docs, health
+from monitor.read import repo
 from monitor import util as U
 
 
@@ -66,27 +65,14 @@ class Publications(FileSystemEventHandler):
 
 class Handler(SimpleHTTPRequestHandler):
     def translate_path(self, path):
-        raw = urlsplit(path).path
-        if raw.startswith('/worktree-shots/'):
-            root, separator, name = unquote(raw[len('/worktree-shots/'):]).rpartition('/output/shots/')
-            if separator and root in repo.checkouts():
-                full = repo.overview_file(root, name)
-                if full:
-                    return full
-            return os.path.join(datafile.ROOT, '.not-published')
-        # 页内仍使用仓库相对链接；这些权威资料根按仓库路径公开给本机作者。
-        rel = posixpath.normpath(unquote(urlsplit(path).path)).lstrip('/')
+        rel = unquote(urlsplit(path).path).lstrip('/') or 'index.html'
+        denied = os.path.join(datafile.ROOT, '.not-published')
         if rel.startswith('data/'):
             parts = rel.split('/')
             allowed = len(parts) == 3 and parts[1] == 'auto' and parts[2] in {n + '.js' for n in datafile.AUTO_NAMES}
-            if not allowed:
-                return os.path.join(datafile.ROOT, '.not-published')
-        if rel.split('/', 1)[0] in ('docs', 'output', '.collab', 'game', 'scripts', 'pipeline'):
-            root = os.path.abspath(os.path.join(datafile.ROOT, '..'))
-            full = os.path.abspath(os.path.join(root, rel))
-            if os.path.commonpath([root, full]) == root:
-                return full
-        return super().translate_path(path)
+            return datafile.path('auto', parts[2][:-3]) if allowed else denied
+        # 文档、明确的总览别名、观察台公共资源共用 post 的文件解析；不映射整棵仓库目录。
+        return repo.dashboard_file(rel) or repo.dashboard_file('dashboard/' + rel) or denied
 
     def end_headers(self):
         self.send_header('Cache-Control', 'no-cache')
@@ -103,8 +89,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         url = urlsplit(self.path)
         if url.path == '/api/data-names.js':
-            body = ('window.DashDataNames = ' + json.dumps(list(datafile.AUTO_NAMES)) + ';\n'
-                    + 'window.DashDataIntervals = ' + json.dumps(datafile.AUTO_NAMES) + ';\n').encode('utf-8')
+            body = ('window.DashDataNames = ' + json.dumps(list(datafile.AUTO_NAMES)) + ';\n').encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/javascript; charset=utf-8')
             self.send_header('Cache-Control', 'no-store')
@@ -119,9 +104,9 @@ class Handler(SimpleHTTPRequestHandler):
                 self.answer(400, {'ok': False, 'error': '请提供一个文档编码' if key == 'code' else '请提供一个搜索词'})
                 return
             try:
-                payload = documents.document(query[key][0]) if key == 'code' else documents.search(query[key][0])
+                payload = docs.document(query[key][0]) if key == 'code' else docs.search(query[key][0])
                 self.answer(200, payload)
-            except documents.UnknownDocument:
+            except docs.UnknownDocument:
                 self.answer(404, {'ok': False, 'error': '没有这份文档'})
             except Exception as error:
                 self.answer(500, {'ok': False, 'error': '读取文档失败：' + ' '.join(str(error).split())})

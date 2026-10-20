@@ -7,18 +7,18 @@
 ## 1 采集与写入
 
 - `live.py --loop` 是唯一采集调度，使用一个 watchdog `WindowsApiObserver`，与历史 Recorder 共用原生文件通知。输入变化只标脏，快慢工作分开；采集期间再次变化会接着处理最新输入，无变化不重采整套数据。
-- `collect.py [数据名…]` 按现有生产表只算点名数据，按 `@` 依赖顺序回写同轮 `context.values`，完成一份即发布一份。两位指挥、子代理与运行灯共用 people 样本；team 同轮依赖 progress。时间变化复用现有 `next_expiry` 到期调度，不做周期全扫、不因 SSE 心跳重读来源。
+- `collect.py [数据名…]` 按现有生产表只算点名数据，按 `@` 依赖顺序回写同轮 `context.values`，完成一份即发布一份。两位指挥、子代理与运行灯共用 people 样本；team 同轮依赖 progress。时间变化复用现有 `next_expiry` 到期调度，不做周期全扫、不因 SSE 心跳重读来源。 有真实到期点的 view 显式返回 `(payload, expiry)`；采集器保存到期，调度只重算对应份，不经 context 隐式回写。
 - `.collab/tools/monitor/read/` 持有来源 IO 与解析，`view/` 计算业务。巡逻周期唯一经 `read.collab.patrol_interval_seconds()` 读取 `.collab/tools/README.md` 的明确登记；缺失或不明确为 null。health 在 view 计算 late 与私有到期点，调度只按该点重算 health，并监听登记变化。
 - `attention.py` 独占作者输入事务：输入变更、过目重建、revision 校验、确认、attention/feedback 发布。`post.py`、采集与 HTTP 入口只调用它；先持输入事务锁，再经窄发布函数取得短锁。
 - `datafile.write()` 是唯一文件发布入口：原子替换 `Dash.put` 后提交内容签名与确认时刻；签名不含 updated，相同内容只推进确认。失败可发布 errors，不能推进确认。内部 `dashboard-publication.json` 只是当前发布快照，checked 是私有 name→ISO 表，不是历史或公开 SSE 载荷。
-- `datafile.AUTO_NAMES` 是唯一有序 name→确认间隔秒表；现有间隔从原前端真实值迁入，页面与 manifest 不再保存阈值。`/api/data-names.js` 同次响应给 `window.DashDataNames` 字符串数组和 `window.DashDataIntervals` 对象，均从此表生成；前端依名单生成数据项，只补展示元数据，不复制名单。
+- `catalog.DATASETS` 是各份公开与内部结果的唯一登记，集中生产方、输入、确认间隔、通道、合批、行与样本需求、周期和到期属性。`datafile.AUTO_NAMES` 由公开项派生；collect 启动核对登记接合，live 按同表调度。`/api/data-names.js` 只输出实际消费的 `window.DashDataNames`，前端依名单补展示元数据。
 - `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件、同源写入、SSE 与文档只读接口。服务 Observer 只观察发布元数据，不采集、不持发布锁等待客户端。唯一 `health.freshness(checked, intervals, now)` 纯函数算 stale/ratio；HTTP 只包装结果，业务指标不在服务计算。
 
 `dashboard/data/auto/` 是程序结果；`curated/notices.js` 与 `curated/audit.js` 是私有输入，只经 post.py 改，通知汇入公开 feed。作者信全文只从真实 inbox 与已送达档读取，截图只来自已登记检出的两种固定机位总览。index、app、vendor 内容签名发布为 versions.app。
 
 ## 2 数据契约 v3
 
-数据文件用 `Dash.put(名字, 数据)` 交付，附 `updated`、固定生产方 `source`、`errors`。时刻为 ISO，时长为分钟；`rate`、`ratio` 为 0–1 口径的小数，freshness.ratio 是经过时长/应有间隔，可大于 1。比例显示用 `Dash.pct(rate, 1)`。公开名字与顺序以 AUTO_NAMES 为准：live、attention、feedback、progress、flow、collab、team、health、system、hookfeed、feed、docs、now；未生成显示缺数据。index、stats、records 停产，通知仅作输入。
+数据文件用 `Dash.put(名字, 数据)` 交付，附 `updated`、固定生产方 `source`、`errors`。时刻为 ISO，时长为分钟；`rate`、`ratio` 为 0–1 口径的小数，freshness.ratio 是经过时长/应有间隔，可大于 1。比例显示用 `Dash.pct(rate, 1)`。公开名字、顺序与间隔由 catalog.DATASETS 派生，未生成显示缺数据。index、stats、records 停产，通知仅作输入。
 
 内容改变才换版本，updated 是该版内容发布时间。真实读取、解析或依赖失败发布 errors；缺事实、覆盖不足、零分母或无法确认的判断保留 null，不写成零、空闲或正常。历史带 `coverage: {from}`，不补造记账起点以前的事实；后端给出各窗口与列表顺序，前端不再排序、切窗或重算业务。
 
@@ -81,7 +81,8 @@ system:    {coverage, timings: [{key, label}], hooks: [{id, side, name, timings,
              links: [{layer: 0|1|2, from: 节点id, to: 节点id, n24}]}
 feed:      {coverage, days: [{day, cells: [{side: null|claude|codex, type, n}]}],
             items: [{id, at, type: decision|notice|milestone|done|revert|audit, side|null, title, detail|null,
-                     link: {doc, find}|{path}|null}]}
+                     day: 本地日期|null, windows: {24h: bool|null, 7d: bool|null, 30d: bool|null},
+                     link: {doc, find}|{path}|null}], windows: {24h|7d|30d: {from: 日期, to: 日期}}}
 docs:      {count, domains: [{key, name, index, docs: [{code, title, summary, keywords, parent|null, updated}]}]}
 now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
             kpis: [{key, label, value|null, unit, note, trend: better|worse|same|null, href}]}
@@ -113,12 +114,14 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
 
 历史唯一账位于 `.collab/tools/state/dashboard-events/`，保留 60 天。envelope.at 是观察时刻，sourceAt 只认来源明确时刻，否则 null；不拿 mtime、删行、超时或停止补造完成。完成与每日完成唯一复用 progress.evidence.finished。钩子事件和块名直接给中文；未识别写“未知事件”。决策只给一句结论。测试 count 必须来自真实测试批次，文件数不算用例；代码行数比例只描述规模，缺关联批次的门禁执行数保持 null，门禁未跑不显示通过。now.phase.step 只认状态头“当前阶段”开头明确的 P0–P3。
 
+动态条目的预设窗口归属由 view 用同一个 now 计算，滚动区间为 `(now-duration, now]`，无来源时刻的归属为 null。页面只选择窗口标记或 day 字段，不使用浏览器时间重切窗；自然日换日、未来事件进入与已知事件移出都返回真实下一到期点。文档读取与搜索均经 view/docs，检索打分、排序与截断只在 view。
+
 ### 2.1 推送与确认时刻
 
 ```text
 GET /api/data-names.js   text/javascript; charset=utf-8
-window.DashDataNames = [按 AUTO_NAMES 键顺序的字符串];
-window.DashDataIntervals = {数据名: 应有确认间隔秒};
+window.DashDataNames = [按 catalog.DATASETS 公开项顺序的字符串];
+
 
 GET /api/events          text/event-stream; charset=utf-8
 retry: 3000
@@ -146,10 +149,10 @@ checked 心跳每 15 秒一次。事件 at 是发送时间，checked[name].at �
 
 ```powershell
 python -I -X utf8 dashboard/tools/post.py notice "一句高层通知" --from "Codex 主线"
-python -I -X utf8 dashboard/tools/post.py audit "海报取向供你过目" --why "请看主视觉观感" --doing "主会话选定的画面方向" --kind poster --link output/poster.jpg --from "主会话"
+python -I -X utf8 dashboard/tools/post.py list
 ```
 
-静态服务按 AUTO_NAMES 放行公开数据与已登记检出的固定机位总览，审美私有输入不公开。
+静态服务只放行派生名单中的公开数据、文档、已登记总览和观察台公共资源的真实文件；不开放目录列表、内部脚本、策展输入或任意 output/.collab 文件。serve 与 post 共用 read.repo.dashboard_file 的文件范围。
 
 ### 2.3 文档只读接口
 
@@ -173,7 +176,7 @@ dashboard/
     echarts.min.js      Apache ECharts；许可在同目录 echarts-LICENSE.txt、echarts-NOTICE.txt
     marked.min.js       marked（Markdown 渲染）；许可在同目录 marked-LICENSE.txt
   app/
-    manifest.js         页面与筛选的清单，以及每份数据的展示信息；有哪些数据只由后端名单（§1 AUTO_NAMES）定
+    manifest.js         页面与筛选的清单，以及每份数据的展示信息；有哪些数据只由后端名单（§1 catalog.DATASETS）定
     core.js             运行时：推送订阅与按需加载、路由与筛选、面板注册与渲染（各种状态）、页眉与角标、写回
     ui.js               格式化与小组件、抽屉、悬停框
     palette.js          色表：语义（组, 键）→ CSS 变量与中文名；签条
@@ -187,7 +190,7 @@ dashboard/
 
 ### 3.1 推送与加载
 
-有哪些数据只在后端一处：serve 的 `/api/data-names.js` 给出 `window.DashDataNames`（来自 `AUTO_NAMES`）与各份的应有间隔；`manifest.js` 的 `data` 由这份名单生成，只给每份补展示信息 `label`（提示里的中文名）与 `keep`（为真时不管在哪页都保持最新：`live` 给页眉，`attention` 给角标），名单与展示信息对不上就直接报错。其余数据只在当前页有面板 `needs` 它时才拉。
+有哪些数据只在后端一处：serve 的 `/api/data-names.js` 给出 `window.DashDataNames`（从 `catalog.DATASETS` 派生）；`manifest.js` 的 `data` 由这份名单生成，只给每份补展示信息 `label`（提示里的中文名）与 `keep`（为真时不管在哪页都保持最新：`live` 给页眉，`attention` 给角标），名单与展示信息对不上就直接报错。其余数据只在当前页有面板 `needs` 它时才拉。
 
 - 页面订阅 `GET /api/events`（§2 推送）。`versions` 事件里某份数据的版本和已交付的不同、且此刻要它，就重拉那份文件，只重画 `needs` 它的面板；此刻不要的先丢掉缓存，切过去时显示骨架再拉，不先画旧的。全量（`full`）里没列的数据按"还没有数据"。
 - 版本只在这次请求的文件真的执行了 `Dash.put` 后才记下；下载或执行失败的这份按"没读到"，下一次推送（版本或 15 s 心跳）再试。载荷里 `errors` 非空是来源采集失败：这一版照样记下，不当数据交给面板，按"没读到"写后端给的原因，等后端发下一版。
@@ -326,7 +329,7 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 **加页面、面板、数据源**：
 - 加页面：manifest 的 `pages` 加一项（`id`、`title`、`ask`、`file`、`filters?`），建 `pages/<页>.js` 与同名 `.css`，用 `Dash.panel` 注册。
 - 加面板：所属页文件里再写一个 `Dash.panel`，写清 `title`、`note`，有统计口径的写 `caliber`。
-- 加数据源：先按 §2 定形状，在后端 `datafile.AUTO_NAMES` 登记名字与应有间隔并让采集写出；manifest 只给它补展示信息（`label`、`keep`），名单两边对不上页面直接报错。
+- 加数据源：先按 §2 定形状，在 `catalog.DATASETS` 登记生产方与实际属性；公开名单和调度属性自动派生。manifest 只补展示信息，启动核对接合。
 - 面板只用 `Dash.*` 与 `style.css` 的通用类（`.card .chip .mark .item .status .empty .fold .btn .id .muted .kpi .lamp .tl .tree .dots .drawer .seg .note-line .cols .col`），自己的样式写进同名 `.css`，只用令牌，不写颜色字面量、阴影与渐变。
 
 ## 5 视觉

@@ -11,6 +11,7 @@ ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(ROOT, '.collab', 'tools'))
 import datafile
+from catalog import DATASETS
 from monitor import util as U
 from monitor.read import collab as read_collab, repo
 from monitor.view import attention, progress, flow, collab, team, health, system, hookfeed, people, feed, docs, now
@@ -22,35 +23,9 @@ _SAMPLE = None
 _ROWS = None
 _EXPIRIES = {}
 
-# inputs 是原生通知来源名或 @公开结果；内部 _git 只供共享完成证据。
-PRODUCERS = {
-    'live': lambda context: live_data(context['sample']),
-    'attention': lambda context: attention.refresh(datafile.write, names=('attention',))['attention'],
-    'feedback': lambda context: attention.refresh(datafile.write, names=('feedback',))['feedback'],
-    'progress': progress.build, 'flow': flow.build, 'collab': collab.build,
-    'team': team.build, 'health': health.build, 'system': system.build,
-    'hookfeed': lambda context: hookfeed.build(),
-    'feed': feed.build, 'docs': docs.build, 'now': now.build,
-}
-INPUTS = {
-    'live': {'sessions', 'queue'},
-    'attention': {'attention', 'shots', 'worktrees'}, 'feedback': {'letters'},
-    'progress': {'queue', 'history:queue'},
-    'flow': {'queue', 'history:queue', 'history:pushes', 'history:audits', 'history:checkpoint', '@progress', '@_git'},
-    'collab': {'queue', 'history:letters', 'history:audits', 'history:pushes', 'history:agents', 'history:leads', 'history:queue', 'history:checkpoint'},
-    'team': {'sessions', 'queue', 'history:agents', '@progress'},
-    'health': {'history:patrol', 'history:checkpoint', 'gates', 'code', 'worktrees', 'hooks', 'patrol:interval'},
-    'system': {'scripts', 'settings', 'hooks', 'local', '@docs'},
-    'hookfeed': {'hooks', 'local'}, 'docs': {'docs'},
-    'feed': {'queue', 'history:queue', 'history:pushes', 'history:audits', 'history:checkpoint', 'docs', 'notices', '@_git'},
-    'now': {'queue', '@progress', '@flow', '@collab'},
-    '_git': {'git', 'history:pushes'}, '_app': {'app'},
-}
-SLOW_NAMES = {'docs', 'system', '_git', '_app', 'flow', 'collab'}
-ROW_NAMES = {'live', 'team', 'progress', 'flow', 'collab', 'feed'}
 
-
-def live_data(sample):
+def live_data(context):
+    sample = context['sample']
     leads = []
     for side, who in (('claude', 'Claude'), ('codex', 'Codex')):
         session = next((item for item in sample['sessions'] if item['side'] == side), {})
@@ -60,20 +35,57 @@ def live_data(sample):
     return {'leads': leads}
 
 
-def context(names, recorder=None):
+def hookfeed_data(context):
+    return hookfeed.build()
+
+
+def git_data(context):
+    global _RAW
+    raw = repo.progress_facts()
+    with _LOCK:
+        _RAW = raw
+    context['raw'] = raw
+    return raw
+
+
+def app_data(context):
+    datafile.publish_app(context['app_paths'])
+
+
+def producer(spec):
+    """只绑定本文件显式导入的模块或本地适配函数；缺生产方直接报错。"""
+    module, dot, function = spec.producer.partition('.')
+    try:
+        result = getattr(globals()[module], function) if dot else globals()[module]
+    except (KeyError, AttributeError) as error:
+        raise ValueError('未接入生产方：' + spec.producer) from error
+    if not callable(result):
+        raise ValueError('生产方不可调用：' + spec.producer)
+    return result
+
+
+# 只检查登记接合，入口启动时即发现公开名单或实际生产方遗漏。
+assert tuple(datafile.AUTO_NAMES.items()) == tuple((name, spec.interval) for name, spec in DATASETS.items()
+                                                 if spec.interval is not None), \
+    '公开采集登记与 AUTO_NAMES 不一致'
+for _spec in DATASETS.values():
+    producer(_spec)
+
+
+def context(names):
     global _ROWS
     with _LOCK:
         rows, sampled = _ROWS, _SAMPLE
         values = dict(_VALUES)
     rows_error, sample_error = None, None
-    if names & ROW_NAMES:
+    if any(DATASETS[name].rows for name in names):
         try:
             rows = read_collab.queue_rows()
             with _LOCK:
                 _ROWS = rows
         except Exception as error:
             rows_error = error
-    if names & {'live', 'team'}:
+    if any(DATASETS[name].sample for name in names):
         sampled = None
         try:
             if rows_error is not None:
@@ -84,65 +96,61 @@ def context(names, recorder=None):
     with _LOCK:
         raw = _RAW
     return {'rows': rows, 'sample': sampled, 'values': values, 'rows_error': rows_error, 'sample_error': sample_error,
-            'expiries': {}, 'raw': raw if raw is not None else {'errors': ['Git 来源尚未完成首次采集']}}
+            'raw': raw if raw is not None else {'errors': ['Git 来源尚未完成首次采集']}}
 
 
 def run(names, recorder=None, app_paths=()):
     """仅重算点名项，完成一份即发布；返回成功/失败，不吞真实错误体。"""
     global _RAW, _SAMPLE
     names = set(names)
+    unknown = names - DATASETS.keys()
+    if unknown:
+        raise ValueError('未接入数据：' + ', '.join(sorted(unknown)))
     done, failed = set(), set()
-    shared = context(names, recorder)
-    if names & {'live', 'team'} and shared['sample'] is not None:
+    shared = context(names)
+    shared['app_paths'] = app_paths
+    if any(DATASETS[name].sample for name in names) and shared['sample'] is not None:
         with _LOCK:
             _SAMPLE = shared['sample']
         if recorder is not None:
             recorder.observe_sample(shared['sample'])
-    if '_git' in names:
-        try:
-            raw = repo.progress_facts()
-            with _LOCK:
-                _RAW = raw
-            shared['raw'] = raw
-            done.add('_git')
-        except Exception as error:
-            failed.add('_git')
-            with _LOCK:
-                _RAW = {'errors': [f'{type(error).__name__}: {error}']}
-                shared['raw'] = _RAW
-            print(f'collect：Git来源采集失败（{type(error).__name__}: {error}）', file=sys.stderr)
-    if '_app' in names:
-        datafile.publish_app(app_paths)
-        done.add('_app')
-    pending = names - {'_git', '_app', 'attention', 'feedback'}
+    selected = {name for name in names if producer(DATASETS[name]) is attention.refresh}
+    pending = names - selected
     while pending:
         ready = sorted((name for name in pending if not any(
-            source[1:] in pending for source in INPUTS.get(name, ()) if source.startswith('@'))),
-            key=lambda item: (item not in ('live', 'progress'), item))
+            source[1:] in pending for source in DATASETS[name].inputs if source.startswith('@'))),
+            key=lambda item: (DATASETS[item].priority, item))
         if not ready:
             raise ValueError('采集生产方存在循环依赖：' + ', '.join(sorted(pending)))
         name = ready[0]
         pending.remove(name)
+        spec = DATASETS[name]
+        expiry = None
         try:
-            if name not in PRODUCERS:
-                raise ValueError('未接入生产方：' + name)
-            if name in ROW_NAMES and shared['rows_error'] is not None:
+            if spec.rows and shared['rows_error'] is not None:
                 raise shared['rows_error']
-            if name in ('live', 'team') and shared['sample_error'] is not None:
+            if spec.sample and shared['sample_error'] is not None:
                 raise shared['sample_error']
-            data = PRODUCERS[name](shared)
+            result = producer(spec)(shared)
+            data, expiry = result if spec.expiry else (result, None)
         except Exception as error:
             message = f'{type(error).__name__}: {error}'
             print(f'collect：{name} 采集失败（{message}）', file=sys.stderr)
             data = {'errors': [message]}
+        if spec.interval is None:
+            if name == '_git' and data.get('errors'):
+                with _LOCK:
+                    _RAW = data
+                shared['raw'] = data
+            (failed if data and data.get('errors') else done).add(name)
+            continue
         datafile.write('auto', name, data, source=SOURCE + '.' + name)
         with _LOCK:
             _VALUES[name] = data
-            if name == 'health':
-                _EXPIRIES[name] = shared['expiries'].get(name) if not data.get('errors') else None
+            if spec.expiry:
+                _EXPIRIES[name] = expiry if not data.get('errors') else None
         shared['values'][name] = data
         (failed if data.get('errors') else done).add(name)
-    selected = names & {'attention', 'feedback'}
     if selected:
         result = attention.refresh(datafile.write, names=tuple(sorted(selected)))
         for name, data in result.items():
@@ -175,12 +183,12 @@ def next_expiry():
 
 
 def main():
-    names = set(sys.argv[1:] or INPUTS)
-    unknown = names - set(INPUTS)
+    names = set(sys.argv[1:] or DATASETS)
+    unknown = names - DATASETS.keys()
     if unknown:
         raise ValueError('未接入数据：' + ', '.join(sorted(unknown)))
     while True:
-        expanded = names | {source[1:] for name in names for source in INPUTS[name] if source.startswith('@')}
+        expanded = names | {source[1:] for name in names for source in DATASETS[name].inputs if source.startswith('@')}
         if expanded == names:
             break
         names = expanded

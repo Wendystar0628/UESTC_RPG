@@ -14,6 +14,7 @@ import os
 import re
 import sys
 import time
+from urllib.parse import unquote, urlsplit
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from datafile import read, write  # noqa: E402
@@ -23,6 +24,7 @@ MAX_TEXT, MAX_WHY = 120, 200
 FMT = '%Y-%m-%dT%H:%M:%S'
 sys.path.insert(0, os.path.join(REPO, '.collab', 'tools'))
 from monitor.view import attention
+from monitor.read import repo
 DONE_KEEP_DAYS = attention.DONE_KEEP_DAYS
 
 
@@ -61,9 +63,9 @@ def check_link(link):
     if not link:
         return None
     rel = link.replace('\\', '/')
-    full = os.path.normpath(os.path.join(REPO, rel))
-    if os.path.isabs(rel) or rel.startswith('..') or not full.startswith(os.path.normpath(REPO)) or not os.path.exists(full):
-        raise Reject(f'link 必须是存在的仓库相对路径：{link}')
+    url = urlsplit(rel)
+    if url.scheme or url.netloc or not repo.dashboard_file(unquote(url.path)):
+        raise Reject('link 只接受现有公开文档、登记总览、观察台公共文件：' + link)
     return rel
 
 
