@@ -1,13 +1,9 @@
-﻿# Only via isolated-launch.py from run.ps1, which owns the shared build lease.
-# 用法：由 isolated-launch.py 在私有桌面传入 -Output、-Mode、-TitleDwellSeconds 与可选 -ProjectRoot。
+﻿# Only via isolated-launch.py from a run entry point, which owns the shared build lease.
+# 用法：由 isolated-launch.py 在私有桌面传入 -Output、-Mode、-TitleDwellSeconds。
 param([Parameter(Mandatory)][string]$Output, [ValidateSet('title','immediate','dwell')][string]$Mode,
-    [ValidateRange(1,120)][double]$TitleDwellSeconds = 10,
-    [string]$ProjectRoot)
+    [ValidateRange(1,120)][double]$TitleDwellSeconds = 10)
 $ErrorActionPreference = 'Stop'
 $toolRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
-if ($ProjectRoot) {
-    $ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
-} else { $ProjectRoot = $toolRoot }
 . "$toolRoot\scripts\lib\common.ps1"
 $trace = $null
 $gameProcess = $null
@@ -133,10 +129,10 @@ try {
     $save = Join-Path $Output 'save'
     $gameArgs = @("--save-dir=$save", '--title=1')
     # All three conditions use normal production defaults; no gate/shots/frames CaptureMode.
-    $arguments = @('--path', "$ProjectRoot\game", '--log-file', $log, '--') + $gameArgs
+    $arguments = @('--path', "$toolRoot\game", '--log-file', $log, '--') + $gameArgs
     $line = ($arguments | ForEach-Object { ConvertTo-UESTCProcessArgument $_ }) -join ' '
     $env:UESTC_STARTUP_PROFILE = '1' # root-approved opt-in, only this private worker/game process tree
-    $launched = [C215Launch]::Start($window, $line, $ProjectRoot)
+    $launched = [C215Launch]::Start($window, $line, $toolRoot)
     $gameProcess = [Diagnostics.Process]::GetProcessById($launched[0])
     $mainThreadId = $launched[1]
     # Attach immediately to this new PID; OS/process/log metadata is recorded afterwards.
@@ -230,7 +226,7 @@ try {
         attachRequestedUtc=$attachRequestedUtc; collectorPid=$trace.Id; collectorStopRequestedUtc=$stopRequestedUtc;
         collectorStoppedWhileTargetAlive=$true; collectorFinishedUtc=[DateTime]::UtcNow.ToString('O');
         phaseObservations=$anchors.ToArray(); cpuSnapshots=$snapshots.ToArray(); phasePollingMilliseconds=20;
-        baseline=(git -C $ProjectRoot rev-parse HEAD); captureMode=$false; cpuFunctionShare='NOT_MEASURED';
+        baseline=(git -C $toolRoot rev-parse HEAD); captureMode=$false; cpuFunctionShare='NOT_MEASURED';
         frameTelemetryEnvironment='UESTC_STARTUP_PROFILE=1';
         input=[ordered]@{method='PID-directed private-desktop WM_KEYDOWN/UP Enter; normal TitleMenu NewGame focus';
             requestedUtc=$inputRequestedUtc; targetWindowHandle=$inputWindowHandle; titleReadyFrame=$titleReadyFrame;

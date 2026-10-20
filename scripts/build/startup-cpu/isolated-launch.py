@@ -1,6 +1,6 @@
 """Private-desktop launcher for startup CPU sampling; never switches desktops.
 
-用法：python -I isolated-launch.py <output> <title|immediate|dwell> <dwell-seconds> [project-root]
+用法：python -I isolated-launch.py <output> <title|immediate|dwell> <dwell-seconds>
 """
 import base64
 import ctypes as c
@@ -40,7 +40,6 @@ mode = sys.argv[2]
 if mode not in ("title", "immediate", "dwell"):
     raise ValueError("Expected title, immediate or dwell")
 dwell_seconds = float(sys.argv[3])
-project_root = Path(sys.argv[4]).resolve() if len(sys.argv) > 4 else None
 out.mkdir(parents=True, exist_ok=False)
 desktop_name = "UESTC_C215_" + str(time.time_ns())
 desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x01FF, None)
@@ -61,8 +60,6 @@ try:
     capture_arguments = ["&", ps_literal(Path(__file__).with_name("capture.ps1")),
         "-Output", ps_literal(out), "-Mode", ps_literal(mode),
         "-TitleDwellSeconds", ps_literal(dwell_seconds)]
-    if project_root is not None:
-        capture_arguments.extend(["-ProjectRoot", ps_literal(project_root)])
     stdout = ps_literal(out / "worker.stdout.txt")
     stderr = ps_literal(out / "worker.stderr.txt")
     script = ("$ErrorActionPreference = 'Stop'\ntry {\n    " + " ".join(capture_arguments) +
