@@ -1545,7 +1545,7 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 10.0k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 10.1k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L23 · 1.4k
@@ -1583,11 +1583,11 @@
 
 ## ENG-BUDGET-LOD · 细节级别、速度律与渲染参数
 
-`docs/engineering/ENG-BUDGET-LOD-细节级别、速度律与渲染参数.md` · 4.3k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
+`docs/engineering/ENG-BUDGET-LOD-细节级别、速度律与渲染参数.md` · 4.4k 字 · 细节级别 L0+–L4 与 64 m 分块、旁观速度律与目的地预取、深度与近裁剪面、阴影后期倒影灯光的预算参数
 关键词：细节级别、L0+、L4、分块、四叉树、屏幕误差、速度律、目的地预取、到达保证、近裁剪面、远裁剪面、反向 Z、坐标精度、PSSM、光柱数量、倒影分辨率、灯盏数
 
-- ENG-BUDGET-LOD §0 结论 · L22 · 602
-  - ★ ENG-BUDGET-LOD §0.1 接入要点 · L29 · 271
+- ENG-BUDGET-LOD §0 结论 · L22 · 632
+  - ★ ENG-BUDGET-LOD §0.1 接入要点 · L29 · 301
 - ENG-BUDGET-LOD §1 细节级别与分块 · L35 · 1.4k
 - ENG-BUDGET-LOD §2 流式加载与速度 · L59 · 465
 - ENG-BUDGET-LOD §3 深度与近裁剪面 · L66 · 360
