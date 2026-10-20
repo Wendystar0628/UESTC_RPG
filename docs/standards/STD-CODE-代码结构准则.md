@@ -41,7 +41,7 @@ paths: ["game/**/*.cs", "pipeline/**/*.py", "scripts/**/*.py", "scripts/**/*.ps1
 - **写日志时**：只经 `Campus.Kernel.Diagnostics`；本机路径写成 `user://`、`res://`，不写 Windows 用户名。
 - **写测试前**：读 §6，测多少见 WF-RULE §9。
 - **注释或数据里提到文档时**：只写文档编码，不写节号（STD-DOC §3）。
-- **写或改脚本时**（`scripts/`、`dashboard/tools/`、`pipeline/`、`.collab/tools/` 与双击入口）：开头第一段写一句话作用（Python 用模块文档字符串，其余用开头注释），怎么跑另起一行"用法："；观察台脚本页读这两处。
+- **写或改脚本时**（`scripts/`、`dashboard/tools/`、`pipeline/`、`.collab/tools/` 与双击入口）：开头第一段写一句话作用（Python 用模块文档字符串，其余用开头注释），怎么跑另起一行"用法："；观察台读这两处。
 
 ## 1 依赖方向
 

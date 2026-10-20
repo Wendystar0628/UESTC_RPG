@@ -39,7 +39,7 @@ gates: []
 
 **信息在哪**：
 - **钩子注入**：开工时送来本文 §0、§2–§5、本节和自己的入口卡（WF-ENTRY），作者每条消息再送一遍 §0、§2–§5；读改某个路径、派工、看截图时送来管它的文档的接入要点；没送到就手动读。
-- **钩子与脚本**：钩子在 `.collab/tools/hooks/`（Claude 登记在 `~/.claude/settings.json`，Codex 在 `~/.codex/hooks.json`），协作与巡逻工具在 `.collab/tools/`，两者的作用与用法见 `.collab/tools/README.md`；工程脚本在 `scripts/`，观察台采集在 `dashboard/tools/`，全部脚本的作用与用法列在观察台的脚本页。
+- **钩子与脚本**：钩子在 `.collab/tools/hooks/`（Claude 登记在 `~/.claude/settings.json`，Codex 在 `~/.codex/hooks.json`），协作与巡逻工具在 `.collab/tools/`，两者的作用与用法见 `.collab/tools/README.md`；工程脚本在 `scripts/`，观察台采集在 `dashboard/tools/`，全部脚本的作用与用法列在观察台资料页的脚本目录，谁调用、读写什么在体系页。
 - **规则、设计目标与导向**：`docs/`，按下面的域找到域总纲，小节用 `docs/SECTIONS.md` 定位。
 - **实现**：代码，签名与契约以源码为准。
 - **数值、坐标、ID 与清单**：数据文件（按图数据在 `game/data/`）。
