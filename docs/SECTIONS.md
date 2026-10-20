@@ -138,7 +138,7 @@
   - ★ ART-MODELING-PROPORTION §0.1 接入要点 · L30 · 286
 - ART-MODELING-PROPORTION §1 先定身份，再放开 · L38 · 279
 - ART-MODELING-PROPORTION §2 现代混凝土和石材楼的比例规则 · L44 · 887
-- ART-MODELING-PROPORTION §3 植被与地表 · L65 · 605
+- ART-MODELING-PROPORTION §3 植被与地表 · L65 · 600
 - ART-MODELING-PROPORTION §4 道具与小物件 · L73 · 607
 - ART-MODELING-PROPORTION §5 颜色 · L84 · 302
 - ART-MODELING-PROPORTION §6 让 20 多个建模者风格一致 · L91 · 722
@@ -297,12 +297,12 @@
 
 ## WLD-INTERIORS-ACCESS · 室内开放
 
-`docs/world/WLD-INTERIORS-ACCESS-室内开放.md` · 5.4k 字 · 精选开放的原则与共用约定、门的开与关（含自动门的设计取向）、关着的楼、开放更多楼的做法
+`docs/world/WLD-INTERIORS-ACCESS-室内开放.md` · 5.5k 字 · 精选开放的原则与共用约定、门的开与关（含自动门的设计取向）、关着的楼、开放更多楼的做法
 关键词：楼内、开放室内、开放清单、interiors.json、开放入口、自动门、封口、门厅卡、窗卡、看进去例外
 
-- WLD-INTERIORS-ACCESS §0 结论 · L23 · 950
+- WLD-INTERIORS-ACCESS §0 结论 · L23 · 967
   - ★ WLD-INTERIORS-ACCESS §0.1 接入要点 · L32 · 548
-- WLD-INTERIORS-ACCESS §1 开放原则与共用约定 · L41 · 965
+- WLD-INTERIORS-ACCESS §1 开放原则与共用约定 · L41 · 1.1k
 - WLD-INTERIORS-ACCESS §2 门的区分：开与关 · L55 · 966
   - WLD-INTERIORS-ACCESS §2.1 楼里的门：走近推开，闭门器关上 · L70 · 319
 - WLD-INTERIORS-ACCESS §3 关着的楼：外壳、窗卡、门厅卡与简化室内 · L77 · 732
@@ -310,7 +310,7 @@
 
 ## WLD-INTERIORS-BUILD · 室内制作
 
-`docs/world/WLD-INTERIORS-BUILD-室内制作.md` · 6.7k 字 · 室内制作规则：加载与进楼衔接、平面生成器、风格与光、生活痕迹、楼梯门洞与碰撞
+`docs/world/WLD-INTERIORS-BUILD-室内制作.md` · 6.9k 字 · 室内制作规则：加载与进楼衔接、平面生成器、风格与光、生活痕迹、楼梯门洞与碰撞
 关键词：室内加载、进楼衔接、平面内核、楼型、室内风格、窗光斑、光柱、室内色名、生活痕迹、楼梯碰撞、SlopedWallCollider、门洞、落点
 
 - WLD-INTERIORS-BUILD §0 结论 · L23 · 467
@@ -319,7 +319,7 @@
   - WLD-INTERIORS-BUILD §1.1 整体加载、按层显示 · L39 · 277
   - WLD-INTERIORS-BUILD §1.2 触发 · L45 · 269
   - WLD-INTERIORS-BUILD §1.3 进楼与出楼，以及衔接保证（ENG-PERF-STREAM §1.2 第 6 条） · L52 · 266
-- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 1.3k
+- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 1.4k
 - WLD-INTERIORS-BUILD §3 风格 · L69 · 1.3k
   - WLD-INTERIORS-BUILD §3.1 明暗与暖影 · L73 · 195
   - WLD-INTERIORS-BUILD §3.2 窗光斑与光（最重要的室内画面） · L77 · 395
@@ -696,15 +696,15 @@
 
 ## MAP-QSH-INTERIORS · 开放楼室内与开放的高处
 
-`docs/maps/qingshuihe/MAP-QSH-INTERIORS-开放楼室内与开放的高处.md` · 5.5k 字 · 清水河开放楼室内的总表：13 栋的开放范围、封口与观景时刻，3 处开放的高处；图书馆与博物馆见子文档
+`docs/maps/qingshuihe/MAP-QSH-INTERIORS-开放楼室内与开放的高处.md` · 5.6k 字 · 清水河开放楼室内的总表：13 栋的开放范围、封口与观景时刻，3 处开放的高处；图书馆与博物馆见子文档
 关键词：开放楼室内、开放楼总表、开放范围要点、封口与限制、观景时刻、学知苑 4 人间、钟楼楼梯、钟室、灯笼观景环、主楼屋顶空廊、电梯关门换位、开放的屋顶与高处、屋顶危险、interiors.json
 
-- MAP-QSH-INTERIORS §0 结论 · L23 · 940
+- MAP-QSH-INTERIORS §0 结论 · L23 · 974
   - ★ MAP-QSH-INTERIORS §0.1 接入要点 · L35 · 380
 - MAP-QSH-INTERIORS §1 南区 · L41 · 903
 - MAP-QSH-INTERIORS §2 西区、中部与东区 · L50 · 1.0k
 - MAP-QSH-INTERIORS §3 北区 · L61 · 933
-- MAP-QSH-INTERIORS §4 开放的屋顶与高处（3 处） · L71 · 660
+- MAP-QSH-INTERIORS §4 开放的屋顶与高处（3 处） · L71 · 731
 
 ## MAP-QSH-INTERIORS-LIBRARY · 图书馆与博物馆室内
 
@@ -1345,7 +1345,7 @@
 
 - SYS-VIEW-MEDIUM §0 结论 · L23 · 547
   - ★ SYS-VIEW-MEDIUM §0.1 接入要点 · L31 · 220
-- SYS-VIEW-MEDIUM §1 判定、仲裁与渲染原则 · L37 · 636
+- SYS-VIEW-MEDIUM §1 判定、仲裁与渲染原则 · L37 · 659
 - SYS-VIEW-MEDIUM §2 楼里 · L47 · 721
 - SYS-VIEW-MEDIUM §3 地下 · L57 · 277
 - SYS-VIEW-MEDIUM §4 水下 · L65 · 539
@@ -1549,7 +1549,7 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 11.5k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 11.6k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L23 · 1.5k
@@ -1567,10 +1567,10 @@
   - ENG-ARCH 生命周期与发布 · L112 · 496
 - ENG-ARCH §3 契约 · L121 · 1.2k
 - ENG-ARCH §4 资源与烘焙 · L134 · 2.0k
-- ENG-ARCH §5 未交付能力的占位边界 · L149 · 257
-- ENG-ARCH §6 架构导向 · L157 · 448
-- ENG-ARCH §7 扩展点（RPG） · L165 · 69
-- ENG-ARCH §8 待验证（P0） · L169 · 361
+- ENG-ARCH §5 未交付能力的占位边界 · L150 · 257
+- ENG-ARCH §6 架构导向 · L158 · 524
+- ENG-ARCH §7 扩展点（RPG） · L166 · 69
+- ENG-ARCH §8 待验证（P0） · L170 · 361
 
 ## ENG-BUDGET · 性能预算
 
@@ -1617,9 +1617,9 @@
 
 - ENG-GATES §0 结论 · L22 · 787
   - ★ ENG-GATES §0.1 接入要点 · L35 · 255
-- ENG-GATES §1 门禁与测试节奏 · L41 · 2.8k
+- ENG-GATES §1 门禁与测试节奏 · L41 · 2.9k
   - ENG-GATES §1.1 测试三档 · L45 · 1.3k
-  - ENG-GATES §1.2 门禁表 · L67 · 1.2k
+  - ENG-GATES §1.2 门禁表 · L67 · 1.3k
   - ENG-GATES §1.3 入口与交付分工 · L86 · 220
 - ENG-GATES §2 待验证（P0） · L92 · 178
 
@@ -1934,7 +1934,7 @@
 
 ## STD-CODE · 代码结构准则
 
-`docs/standards/STD-CODE-代码结构准则.md` · 5.5k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
+`docs/standards/STD-CODE-代码结构准则.md` · 5.6k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
 关键词：代码结构准则、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、signatures.txt、Godot API、GDScript
 
 - STD-CODE §0 结论 · L23 · 1.2k
@@ -1943,7 +1943,7 @@
 - STD-CODE §2 规则值与数据各一份 · L55 · 576
 - STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.3k
 - STD-CODE §4 不留死代码 · L79 · 209
-- STD-CODE §5 规模 · L86 · 160
+- STD-CODE §5 规模 · L86 · 226
 - STD-CODE §6 测试代码怎么写 · L92 · 767
 
 ## STD-CONVENTIONS · 坐标单位与命名约定
