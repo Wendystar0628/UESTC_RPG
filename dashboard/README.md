@@ -11,8 +11,8 @@
 - `.collab/tools/monitor/read/` 持有来源 IO 与解析，`view/` 计算业务。巡逻周期唯一经 `read.collab.patrol_interval_seconds()` 读取 `.collab/tools/README.md` 的明确登记；缺失或不明确为 null。health 在 view 计算 late 与私有到期点，调度只按该点重算 health，并监听登记变化。
 - `attention.py` 独占作者输入事务：输入变更、过目重建、revision 校验、确认、attention/feedback 发布。`post.py`、采集与 HTTP 入口只调用它；先持输入事务锁，再经窄发布函数取得短锁。
 - `datafile.write()` 是唯一文件发布入口：原子替换 `Dash.put` 后提交内容签名与确认时刻；签名不含 updated，相同内容只推进确认。失败可发布 errors，不能推进确认。内部 `dashboard-publication.json` 只是当前发布快照，checked 是私有 name→ISO 表，不是历史或公开 SSE 载荷。
-- `catalog.DATASETS` 是各份公开与内部结果的唯一登记，集中生产方、输入、确认间隔、通道、合批、行与样本需求、周期和到期属性。`datafile.AUTO_NAMES` 由公开项派生；collect 启动核对登记接合，live 按同表调度。`/api/data-names.js` 同次输出 `window.DashDataNames`（公开数据名）与 `window.DashQueueStates`（施工状态有序数组）；状态 key、中文名与顺序只由 `.collab/tools/monitor/queue-states.json` 定义，Python、Node 与前端共用。
-- 登记的 kind 区分公开结果、共享原始事实与界面发布；collect 把实际生产函数导出与登记名集及函数绑定相互核对。作者事务输出由 attention.BUILDERS 导出；策展输入名单统一在 catalog.CURATED_NAMES。判鲜仅对从未确认的来源返回空，已确认来源的坏时刻或坏间隔直接报错。
+- `catalog.DATASETS` 是各份公开与内部结果的唯一登记，集中输入、确认间隔、通道、合批、行与样本需求、周期和到期属性。`datafile.AUTO_NAMES` 由公开项派生；collect 的 PRODUCERS 是唯一实际生产函数绑定，启动核对其输出名字与登记名集，live 按同表调度。`/api/data-names.js` 同次输出 `window.DashDataNames`（公开数据名）与 `window.DashQueueStates`（施工状态有序数组）；状态 key、中文名与顺序只由 `.collab/tools/monitor/queue-states.json` 定义，Python、Node 与前端共用。
+- 登记的 kind 区分公开结果、共享原始事实与界面发布；collect 仅核对实际生产输出与登记的名字集合，不再保存或比较第二份函数绑定。作者事务输出由 attention.BUILDERS 导出；策展输入名单统一在 catalog.CURATED_NAMES。判鲜仅对从未确认的来源返回空，已确认来源的坏时刻或坏间隔直接报错。
 - `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件、同源写入、SSE 与文档只读接口。服务 Observer 只观察发布元数据，不采集、不持发布锁等待客户端。唯一 `health.freshness(checked, intervals, now)` 纯函数算 stale/ratio；HTTP 只包装结果，业务指标不在服务计算。
 
 `dashboard/data/auto/` 是程序结果；`curated/notices.js` 与 `curated/audit.js` 是私有输入，只经 post.py 改，通知汇入公开 feed。作者信全文只从真实 inbox 与已送达档读取，截图只来自已登记检出的两种固定机位总览。index、app、vendor 内容签名发布为 versions.app。
@@ -332,7 +332,7 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 **加页面、面板、数据源**：
 - 加页面：manifest 的 `pages` 加一项（`id`、`title`、`ask`、`file`、`filters?`），建 `pages/<页>.js` 与同名 `.css`，用 `Dash.panel` 注册。
 - 加面板：所属页文件里再写一个 `Dash.panel`，写清 `title`、`note`，有统计口径的写 `caliber`。
-- 加数据源：先按 §2 定形状，在 `catalog.DATASETS` 登记生产方与实际属性；公开名单和调度属性自动派生。manifest 只补展示信息，启动核对接合。
+- 加数据源：先按 §2 定形状，在 `catalog.DATASETS` 登记名字与调度属性，并在 collect.PRODUCERS 的实际导出中接入唯一生产函数；公开名单和调度属性自动派生。manifest 只补展示信息，启动核对接合。
 - 面板只用 `Dash.*` 与 `style.css` 的通用类（`.card .chip .mark .item .status .empty .fold .btn .id .muted .kpi .lamp .tl .tree .dots .drawer .seg .note-line .cols .col`），自己的样式写进同名 `.css`，只用令牌，不写颜色字面量、阴影与渐变。
 
 ## 5 视觉

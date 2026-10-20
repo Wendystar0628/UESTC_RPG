@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Dataset:
-    producer: str
     inputs: frozenset[str]
     interval: int | None = None
     lane: str = 'fast'
@@ -22,31 +21,31 @@ class Dataset:
 
 # inputs 是原生通知来源或 @结果；interval=None 的结果不公开为数据文件。
 DATASETS = {
-    'live': Dataset('live_data', frozenset({'sessions', 'queue'}), 90,
+    'live': Dataset(frozenset({'sessions', 'queue'}), 90,
                     rows=True, sample=True, priority=0),
-    'attention': Dataset('attention.refresh', frozenset({'attention', 'shots', 'worktrees'}), 300),
-    'feedback': Dataset('attention.refresh', frozenset({'letters'}), 300),
-    'progress': Dataset('progress.build', frozenset({'queue', 'history:queue'}), 300,
+    'attention': Dataset(frozenset({'attention', 'shots', 'worktrees'}), 300),
+    'feedback': Dataset(frozenset({'letters'}), 300),
+    'progress': Dataset(frozenset({'queue', 'history:queue'}), 300,
                         rows=True, priority=0),
-    'flow': Dataset('flow.build', frozenset({'queue', 'history:queue', 'history:pushes', 'history:audits',
+    'flow': Dataset(frozenset({'queue', 'history:queue', 'history:pushes', 'history:audits',
                                          'history:checkpoint', '@progress', '@_git'}), 600,
                     lane='slow', batch_s=10, rows=True),
-    'collab': Dataset('collab.build', frozenset({'queue', 'history:letters', 'history:audits', 'history:pushes',
+    'collab': Dataset(frozenset({'queue', 'history:letters', 'history:audits', 'history:pushes',
                                              'history:agents', 'history:leads', 'history:queue', 'history:checkpoint'}),
                       600, lane='slow', batch_s=10, rows=True),
-    'team': Dataset('team.build', frozenset({'sessions', 'queue', 'history:agents', '@progress'}), 300,
+    'team': Dataset(frozenset({'sessions', 'queue', 'history:agents', '@progress'}), 300,
                     rows=True, sample=True),
-    'health': Dataset('health.build', frozenset({'history:patrol', 'history:checkpoint', 'gates', 'code',
+    'health': Dataset(frozenset({'history:patrol', 'history:checkpoint', 'gates', 'code',
                                              'worktrees', 'hooks', 'patrol:interval'}), 1800, expiry=True),
-    'system': Dataset('system.build', frozenset({'scripts', 'settings', 'hooks', 'local', '@docs'}), 1800,
+    'system': Dataset(frozenset({'scripts', 'settings', 'hooks', 'local', '@docs'}), 1800,
                       lane='slow', refresh_s=600),
-    'hookfeed': Dataset('hookfeed_data', frozenset({'hooks', 'local'}), 300),
-    'feed': Dataset('feed.build', frozenset({'queue', 'history:queue', 'history:pushes', 'history:audits',
+    'hookfeed': Dataset(frozenset({'hooks', 'local'}), 300),
+    'feed': Dataset(frozenset({'queue', 'history:queue', 'history:pushes', 'history:audits',
                                          'history:checkpoint', 'docs', 'notices', '@_git'}), 600, rows=True, expiry=True),
-    'docs': Dataset('docs.build', frozenset({'docs'}), 3600, lane='slow'),
-    'now': Dataset('now.build', frozenset({'queue', '@progress', '@flow', '@collab'}), 600),
-    '_git': Dataset('git_data', frozenset({'git', 'history:pushes'}), lane='slow', kind='raw'),
-    '_app': Dataset('app_data', frozenset({'app'}), lane='slow', kind='app'),
+    'docs': Dataset(frozenset({'docs'}), 3600, lane='slow'),
+    'now': Dataset(frozenset({'queue', '@progress', '@flow', '@collab'}), 600),
+    '_git': Dataset(frozenset({'git', 'history:pushes'}), lane='slow', kind='raw'),
+    '_app': Dataset(frozenset({'app'}), lane='slow', kind='app'),
 }
 
 # 策展输入只登记在这里；不参与自动采集调度。

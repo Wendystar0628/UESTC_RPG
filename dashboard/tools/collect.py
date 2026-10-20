@@ -47,18 +47,6 @@ def app_data(context):
     datafile.publish_app(context['app_paths'])
 
 
-def producer(spec):
-    """只绑定本文件显式导入的模块或本地适配函数；缺生产方直接报错。"""
-    module, dot, function = spec.producer.partition('.')
-    try:
-        result = getattr(globals()[module], function) if dot else globals()[module]
-    except (KeyError, AttributeError) as error:
-        raise ValueError('未接入生产方：' + spec.producer) from error
-    if not callable(result):
-        raise ValueError('生产方不可调用：' + spec.producer)
-    return result
-
-
 # 此表是实际调度绑定；普通 view 用模块实际导出的 build，作者事务用其输出表。
 PRODUCERS = {
     'live': live_data, 'hookfeed': hookfeed_data, '_git': git_data, '_app': app_data,
@@ -69,12 +57,6 @@ PRODUCERS = {
 if PRODUCERS.keys() != DATASETS.keys():
     raise ValueError('生产方实际输出与数据登记不一致：未登记 ' + ', '.join(sorted(PRODUCERS.keys() - DATASETS.keys()))
                      + '；未导出 ' + ', '.join(sorted(DATASETS.keys() - PRODUCERS.keys())))
-_attention_names = {name for name, spec in DATASETS.items() if producer(spec) is attention.refresh}
-if _attention_names != attention.BUILDERS.keys():
-    raise ValueError('作者事务实际输出与数据登记不一致')
-for _name, _spec in DATASETS.items():
-    if producer(_spec) is not PRODUCERS[_name]:
-        raise ValueError('登记生产方与实际绑定不一致：' + _name)
 
 
 def context(names):
