@@ -55,7 +55,7 @@
 
 ## ART-COLORSCRIPT · 色彩脚本、四季与灯光时刻表
 
-`docs/art/ART-COLORSCRIPT-色彩脚本、四季与灯光时刻表.md` · 6.1k 字 · 色彩脚本的组织与情绪、四季修正与英雄帧、四季内容的通用取向与阈值生长、灯光与生活痕迹的时刻表设计意图
+`docs/art/ART-COLORSCRIPT-色彩脚本、四季与灯光时刻表.md` · 6.2k 字 · 色彩脚本的组织与情绪、四季修正与英雄帧、四季内容的通用取向与阈值生长、灯光与生活痕迹的时刻表设计意图
 关键词：色彩脚本、关键帧、英雄帧、四季内容、阈值生长、四季修正、难看时段、灯光时刻表、有效太阳高度、初灯组、生活痕迹
 
 - ART-COLORSCRIPT §0 结论 · L23 · 469
@@ -65,7 +65,7 @@
   - ART-COLORSCRIPT §1.2 秋季基准关键帧的情绪 · L48 · 624
   - ART-COLORSCRIPT §1.3 四季修正与专属覆盖 · L69 · 374
   - ART-COLORSCRIPT §1.4 难看时段的改造 · L84 · 254
-  - ART-COLORSCRIPT §1.5 英雄帧 · L92 · 438
+  - ART-COLORSCRIPT §1.5 英雄帧 · L92 · 446
 - ART-COLORSCRIPT §2 四季内容 · L109 · 1.2k
 - ART-COLORSCRIPT §3 灯光与生活痕迹的时刻表 · L135 · 1.2k
 
@@ -1410,7 +1410,7 @@
 - SYS-WEATHER §3 雨的可读性规则 · L92 · 583
 - SYS-WEATHER §4 与四季、昼夜的配合 · L104 · 178
 - SYS-WEATHER §5 闪电与彩虹 · L111 · 467
-- SYS-WEATHER §6 湿润、积水与降水的规则 · L122 · 896
+- SYS-WEATHER §6 湿润、积水与降水的规则 · L122 · 928
 - SYS-WEATHER §7 质量底线 · L136 · 375
 - SYS-WEATHER §8 待验证 · L146 · 72
 
@@ -2036,14 +2036,14 @@
 
 ## REG-DECISIONS-WORLD · 世界与画面决策
 
-`docs/registry/REG-DECISIONS-WORLD-世界与画面决策.md` · 9.7k 字 · 作品、画面、世界、地图四个域的已定决策：作品定位与范围、世界与地图、美术风格
+`docs/registry/REG-DECISIONS-WORLD-世界与画面决策.md` · 9.8k 字 · 作品、画面、世界、地图四个域的已定决策：作品定位与范围、世界与地图、美术风格
 关键词：决策、世界、画面、作品定位、地图、美术风格、视觉精度、翻新、日式街景、不变量
 
 - REG-DECISIONS-WORLD §0 结论 · L23 · 127
   - ★ REG-DECISIONS-WORLD §0.1 接入要点 · L27 · 54
 - REG-DECISIONS-WORLD §1 作品定位与范围 · L31 · 2.2k
 - REG-DECISIONS-WORLD §2 世界与地图 · L52 · 4.1k
-- REG-DECISIONS-WORLD §3 美术风格 · L83 · 2.7k
+- REG-DECISIONS-WORLD §3 美术风格 · L83 · 2.8k
 
 ## REG-GLOSSARY · 术语表
 
