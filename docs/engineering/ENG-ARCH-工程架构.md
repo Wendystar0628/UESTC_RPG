@@ -78,7 +78,7 @@ paths: ["game/**/*.cs"]
 ### 依赖方向
 
 - 上层可以引用下层，反过来不行；同层的内容包、归属不同地图的程序集互不引用；通用生成不引用任何 `Campus.Gen.Maps.*`，每图程序集只引用契约和 `Campus.Gen`（SYS-MAPS §6）。程序集并少之后，这些边界由 `scripts/gates/arch/` 的命名空间架构规则（G4）挡，不靠多建程序集；增删规则要 Codex 主线批准。
-- **kernel 内部**：自底向上为 Frame/Registry、Renderer/Materials/Lod/Instances、地图与烘焙流式及状态驱动、Boot/Inspect/Save；完整顺序以 G4 的 `KernelLevel` 声明为准，低层不依赖高层，不留双向依赖或豁免。
+- **kernel 内部**：自底向上为 Diagnostics/Frame/Registry、Renderer/Materials/Lod/Instances、地图与烘焙流式及状态驱动、Boot/Save/Inspect（Diagnostics 是唯一的诊断输出入口，在最底层；Inspect 是最高层的拍摄与检视）；完整顺序以 G4 的 `KernelLevel` 声明为准，低层不依赖高层，不留双向依赖或豁免。
 - **生成层看不到运行时**：`BuildContext` 里没有世界状态、画面设置和规则集。`BuildContext` 的 `Memo` 跟随实例的世界范围：同一世界复用，换世界新建作用域。随时间、季节和天气变化的东西，只能通过调色板、灯光通道、变体掩码和全局着色器参数表达（ENG-BUDGET-RULES §1）。
 - **门禁与专项驱动在 `game/gates`**：`kernel/registry` 只提供服务注册与查找；`RulesetService`、`GlobalBuildInputs` 是注入的服务，不放在 registry。
 - **几何只经 `gen/geometry/GeometrySink`**：普通表面按完整顶点共享，保留材质及可选通道的边界；Indexed 保持已给定的顶点、索引、法线和自定义通道顺序，Positions 装配尚未分格的点集；`VertexFlag`、`GeometryVertexLimits` 只在契约里定义，生成器不自带位置法线数组。
