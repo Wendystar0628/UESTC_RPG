@@ -180,8 +180,8 @@ public static class GridFacade
         var footprint = plan;
         b.Add(PartSolids.Extrude(footprint, s.WallTop + 0.1f, coarse ? s.Wall : s.Glass, y0 - 0.1f), Matrix4x4.Identity);
         b.Add(PartSolids.Extrude(footprint, 0.25f, s.Roof, y0 + s.WallTop + 0.1f), Matrix4x4.Identity);
-        if (numbering is not null && WindowNumbers.Allocation(b.Context, numbering.Feature, numbering.Key) is { } allocation)
-            Panes(b, layout, y0, s, numbering, allocation);
+        if (numbering is not null)
+            Panes(b, layout, y0, s, numbering, WindowNumbers.Allocation(b.Context, numbering.Feature, numbering.Key));
         foreach (var lr in layout.Runs)
         {
             var (info, edge) = (lr.Info, lr.Edge);

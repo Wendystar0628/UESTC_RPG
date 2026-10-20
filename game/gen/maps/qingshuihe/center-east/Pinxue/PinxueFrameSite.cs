@@ -96,7 +96,7 @@ public sealed class PinxueFrameSite : ZoneSite
         var y = BaseY(ctx);
         foreach (var box in Bridges(ctx.World))
         {
-            var allocation = WindowNumbers.Required(ctx, new(CenterEastIds.Pinxue.Complex), box.Key);
+            var allocation = WindowNumbers.Allocation(ctx, new(CenterEastIds.Pinxue.Complex), box.Key);
             var (bands, bays, faces) = Ribbon(box);
             WindowNumbers.Fit(bays * faces, bands.Count, new(CenterEastIds.Pinxue.Complex), box.Key, allocation);
             WindowNumbers.Declare(windows, Openings(box, y), allocation, W.Teaching);
@@ -213,9 +213,9 @@ public sealed class PinxueFrameSite : ZoneSite
 
     /// <summary>
     /// A bridge box: soffit, walls 0.45 m thick, roof and coping. Each windowed face carries one ribbon window per storey
-    /// with aluminium mullions; with a window allocation every mullion cell gets its numbered pane in front of the glass.
+    /// with aluminium mullions; every mullion cell gets its numbered pane in front of the glass.
     /// </summary>
-    private static void Bridge(SiteBuilder b, BridgeBox box, float y, WindowAllocation? allocation)
+    private static void Bridge(SiteBuilder b, BridgeBox box, float y, WindowAllocation allocation)
     {
         var f = box.Frame;
         float len = box.X1 - box.X0, xc = (box.X0 + box.X1) * 0.5f, depth = box.Z1 - box.Z0, zm = (box.Z0 + box.Z1) * 0.5f;
@@ -226,12 +226,9 @@ public sealed class PinxueFrameSite : ZoneSite
         if (box.FrontSolid) b.Add(PartSolids.BeveledBox(len, h, BridgeWall, 0.03f, L.Wall), f.At(xc, yBottom + Soffit, box.Z1 - BridgeWall * 0.5f));
         var (bands, n, _) = Ribbon(box);
         foreach (var (outward, zc) in Faces(box)) WindowWall(b, f, xc, len, zc, yBottom, h, outward, bands, n);
-        if (allocation is { } a)
-        {
-            var (_, bays, faces) = Ribbon(box);
-            WindowNumbers.Fit(bays * faces, bands.Count, new(CenterEastIds.Pinxue.Complex), box.Key, a);
-            WindowNumbers.Panes(b, Openings(box, y), a, W.Teaching, W.Corridor);
-        }
+        var (_, bays, faces) = Ribbon(box);
+        WindowNumbers.Fit(bays * faces, bands.Count, new(CenterEastIds.Pinxue.Complex), box.Key, allocation);
+        WindowNumbers.Panes(b, Openings(box, y), allocation, W.Teaching, W.Corridor);
         if (b.Detail == SiteDetail.Mass) return;
         // Soffit edge band: a crisp horizontal line under the bridge on both faces.
         foreach (var (z, sign) in new[] { (box.Z1, 1f), (box.Z0, -1f) })

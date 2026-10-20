@@ -102,7 +102,7 @@ public sealed class PoolRoomsSite : ZoneSite
         foreach (var id in Entities)
         {
             var f = ctx.World.Feature(id);
-            GridFacade.Declare(facades, f.Contour(), ctx.World.Terrain.PadY(f.Id), Style(f), Dress, Numbering(id), WindowNumbers.Required(ctx, f.Id, "service"));
+            GridFacade.Declare(facades, f.Contour(), ctx.World.Terrain.PadY(f.Id), Style(f), Dress, Numbering(id), WindowNumbers.Allocation(ctx, f.Id, "service"));
         }
     }
     public override void Build(SiteBuilder b) { foreach (var id in Entities.Where(id => b.Includes(SiteRanges.Bounds(b.Context.World.Feature(id), S.Cover + S.Slab)))) BuildRoom(b, id); }

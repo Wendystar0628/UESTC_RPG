@@ -32,12 +32,12 @@ internal static class FurnitureAnchors
             var centre = ring.Aggregate(Vector2.Zero, (a, p) => a + p) / ring.Count;
             var width = Extent(ring, right);
             var depth = Extent(ring, facing);
-            if (!float.IsFinite(width) || width < (form == "kiosk" ? 1.4f : 0.16f))
-                throw new WorldDataException(file, feature.Id.Value, "Anchor polygon width is missing or below the form's minimum size.");
-            if (!float.IsFinite(depth) || depth < (form == "kiosk" ? 0.4f : 0.16f))
-                throw new WorldDataException(file, feature.Id.Value, "Anchor polygon depth is missing or below the form's minimum size.");
-            if (feature.Height is not { } height || !float.IsFinite(height) || height < (form == "kiosk" ? 2.2f : 0.6f))
-                throw new WorldDataException(file, feature.Id.Value, "Required height is missing or below the form's minimum size.");
+            if (!float.IsFinite(width) || width <= 0f)
+                throw new WorldDataException(file, feature.Id.Value, "Anchor polygon width must be finite and positive.");
+            if (!float.IsFinite(depth) || depth <= 0f)
+                throw new WorldDataException(file, feature.Id.Value, "Anchor polygon depth must be finite and positive.");
+            if (feature.Height is not { } height || !float.IsFinite(height) || height <= 0f)
+                throw new WorldDataException(file, feature.Id.Value, "Required finite positive height is missing.");
             var key = "anchor:" + feature.Id.Value;
             var ground = terrain.HeightAt(centre.X, centre.Y);
             var deck = form == "kiosk" && WorldProps.TryNumber(feature.Props, "groundY") is { } groundY && groundY > ground + S.DeckAbove

@@ -86,7 +86,7 @@ public sealed class ShoppingStreetSite : ZoneSite
             if (GridFacade.Layout(block.Rings, style, Dress).Columns == 0) continue;
             var feature = new FeatureId(NorthFeatureIds.Shopping.Entity);
             GridFacade.Declare(facades, block.Rings, ctx.World.Terrain.PadY(feature), style, Dress,
-                Numbering(ctx.World, block), WindowNumbers.Required(ctx, feature, block.Key));
+                Numbering(ctx.World, block), WindowNumbers.Allocation(ctx, feature, block.Key));
         }
     }
 

@@ -168,7 +168,7 @@ public sealed class WenkeSite : ZoneSite
         var y = BaseY(ctx);
         foreach (var block in Footprints(ctx).Blocks.Where(b => b.Windowed))
         {
-            var allocation = WindowNumbers.Required(ctx, new(CenterEastIds.Wenke.Entity), block.Key);
+            var allocation = WindowNumbers.Allocation(ctx, new(CenterEastIds.Wenke.Entity), block.Key);
             WindowNumbers.Fit(block.Columns, block.Storeys, new(CenterEastIds.Wenke.Entity), block.Key, allocation);
             WindowNumbers.Declare(windows, Openings(block, y), allocation, W.Teaching);
         }
@@ -208,8 +208,6 @@ public sealed class WenkeSite : ZoneSite
         var detail = b.Detail;
         var chamfer = detail == SiteDetail.Full ? K.BandChamfer : 0f;
         var n = block.Storeys;
-        var allocation = block.Windowed ? WindowNumbers.Allocation(b.Context, new(CenterEastIds.Wenke.Entity), block.Key) : null;
-        if (allocation is { } fit) WindowNumbers.Fit(block.Columns, block.Storeys, new(CenterEastIds.Wenke.Entity), block.Key, fit);
         for (var k = 0; k < n; k++)
         {
             var outline = block.Outlines[k];
@@ -226,7 +224,7 @@ public sealed class WenkeSite : ZoneSite
                     if (detail != SiteDetail.Mass) Rails(b, plan, block, k, y);
                 }
             }
-            Glass(b, block, k, y, allocation);
+            Glass(b, block, k, y);
             // A dark core just inside the glass line, so the seams where blocks meet never show through the shell.
             b.Add(Contour.Slab(PlanOffsets.MitreOffset(outline, -K.CoreInset, closed: true, limit: 2.5f), y + GlassBottom(k) - 0.05f, y + GlassTop(k) + 0.05f, L.DarkFrame, 0f, caps: false), Matrix4x4.Identity);
         }
@@ -270,8 +268,8 @@ public sealed class WenkeSite : ZoneSite
         }
     }
 
-    /// <summary>Storey k's ribbon: numbered glass (or plain glass without a numbering), yellow-green panels, and mullions at L0.</summary>
-    private static void Glass(SiteBuilder b, Block block, int k, float y, WindowAllocation? allocation)
+    /// <summary>Storey k's ribbon: numbered glass, yellow-green panels, and mullions at L0.</summary>
+    private static void Glass(SiteBuilder b, Block block, int k, float y)
     {
         float y0 = y + GlassBottom(k), y1 = y + GlassTop(k), h = y1 - y0;
         var cells = block.Rows[k];
@@ -291,6 +289,8 @@ public sealed class WenkeSite : ZoneSite
                     }
                     break;
                 case CellKind.Window:
+                    var numbers = WindowNumbers.Allocation(b.Context, new(CenterEastIds.Wenke.Entity), block.Key);
+                    WindowNumbers.Fit(block.Columns, block.Storeys, new(CenterEastIds.Wenke.Entity), block.Key, numbers);
                     for (var i = 0; i + 1 < cell.Path.Length; i++)
                     {
                         Vector2 p = cell.Path[i], q = cell.Path[i + 1];
@@ -299,12 +299,8 @@ public sealed class WenkeSite : ZoneSite
                         var mid = (p + q) * 0.5f;
                         var outward = PlanOffsets.RightUnitNormal(p, q);
                         var at = OpeningPlacement.Frame(new(mid.X, y0, mid.Y), new(outward.X, 0, outward.Y));
-                        if (allocation is { } numbers)
-                        {
-                            var id = numbers.IdAt(cell.Column, cell.Row);
-                            b.Add(OpeningGlass.Grid(length, h, 1, 1, numbers.BaseId, cell.Column, cell.Row, numbers.Columns, W.Teaching, CardOf(id)), at);
-                        }
-                        else b.Add(Pane(length, h), at);
+                        var id = numbers.IdAt(cell.Column, cell.Row);
+                        b.Add(OpeningGlass.Grid(length, h, 1, 1, numbers.BaseId, cell.Column, cell.Row, numbers.Columns, W.Teaching, CardOf(id)), at);
                     }
                     break;
                 default:
@@ -324,20 +320,6 @@ public sealed class WenkeSite : ZoneSite
         }
 
         static bool Built(Cell c) => c.Kind is CellKind.Window or CellKind.Panel;
-    }
-
-    /// <summary>
-    /// A one-sided glass quad in the opening frame (plane z = 0, facing −Z) for builds without a window numbering, its UV one
-    /// window cell like a numbered pane's.
-    /// </summary>
-    private static GeometryBundle Pane(float width, float height)
-    {
-        var m = new Shapes.Writer(ZoneLooks.Glass);
-        var n = -Vector3.UnitZ;
-        const float e = 0.002f;
-        m.Quad(m.Vertex(new(-width * 0.5f, 0, 0), n, new(e, e)), m.Vertex(new(width * 0.5f, 0, 0), n, new(1 - e, e)),
-            m.Vertex(new(width * 0.5f, height, 0), n, new(1 - e, 1 - e)), m.Vertex(new(-width * 0.5f, height, 0), n, new(e, 1 - e)), n);
-        return m.Finish().Meshes[0];
     }
 
     // ---- The atrium porch (closed entrance) ----

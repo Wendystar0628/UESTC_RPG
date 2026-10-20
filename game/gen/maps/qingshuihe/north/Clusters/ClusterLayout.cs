@@ -95,21 +95,24 @@ public sealed class ClusterLayout
     private static IReadOnlyList<Road> NearbyRoads(IWorldModel world, NorthTune.Cluster cluster, Func<Vector2, bool> near)
     {
         var roads = new List<Road>();
-        void AddRoad(IReadOnlyList<Vector2> pts, float width)
+        void AddRoad(FeatureId source, IReadOnlyList<Vector2> pts, float width)
         {
-            var half = (width > 0 ? width : F.DefaultRoadWidth) * 0.5f;
+            if (!float.IsFinite(width) || width <= 0)
+                throw new InvalidOperationException($"Cluster {cluster.Id}: road {source.Value} requires a positive width.");
+            var half = width * 0.5f;
             for (var i = 0; i + 1 < pts.Count; i++)
                 if (near(pts[i]) || near(pts[i + 1]))
                 {
                     var dir = VectorMath.Unit(pts[i + 1] - pts[i], 1e-9);
-                    if (dir != Vector2.Zero) roads.Add(new(pts[i], pts[i + 1], dir, half));
+                    roads.Add(new(pts[i], pts[i + 1], dir, half));
                 }
         }
-        foreach (var line in world.Network.Roads) AddRoad(line.Line.Points, line.Width);
+        foreach (var line in world.Network.Roads) AddRoad(line.Id, line.Line.Points, line.Width);
         // A cluster no network road enters gets a design drive in the overlay, tagged with the cluster (props.cluster).
         foreach (var drive in world.Features.Values.Where(f => f.Kind.Value == "road" && f.Geometry is PolylineGeometry && f.TryText("cluster") == cluster.Id)
             .OrderBy(f => f.Id.Value, StringComparer.Ordinal))
-            AddRoad(((PolylineGeometry)drive.Geometry).Line.Points, drive.TryNumber("width") ?? 0f);
+            AddRoad(drive.Id, ((PolylineGeometry)drive.Geometry).Line.Points, drive.TryNumber("width")
+                ?? throw new InvalidOperationException($"Cluster {cluster.Id}: road {drive.Id.Value} is missing width."));
 
         return roads;
     }
@@ -135,7 +138,7 @@ public sealed class ClusterLayout
                     var prevInward = new Vector2(-prev.Y, prev.X) * sign;
                     var mid = VectorMath.Unit(prevInward + inward, 1e-9);
                     var cos = Vector2.Dot(mid, inward);
-                    normal = mid == Vector2.Zero ? inward : mid / MathF.Max(cos, 0.5f);
+                    normal = mid / MathF.Max(cos, 0.5f);
                 }
                 samples.Add(new(perimeter + length * k / n, a + (b - a) * ((float)k / n), normal, t));
             }

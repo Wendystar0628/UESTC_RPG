@@ -117,11 +117,11 @@ internal static class ClockTower
         var (f, hx, hz) = FrameOf(plan);
         var shaft = XuanbangSite.ClockAllocation(b.Context, XuanbangSite.ShaftKey);
         var portals = XuanbangSite.ClockAllocation(b.Context, XuanbangSite.PortalKey);
-        // Numbered panes once the map's window numbering is in the context; without one the faces keep their plain glass.
+        // Each pane uses the map's authoritative numbering.
         if (b.Detail != SiteDetail.Mass)
         {
-            if (shaft is { } s) WindowNumbers.Panes(b, Slits(plan, y), s, W.Research, W.Stair);
-            if (portals is { } p) WindowNumbers.Panes(b, Portals(plan, y), p, W.Research, W.Corridor);
+            WindowNumbers.Panes(b, Slits(plan, y), shaft, W.Research, W.Stair);
+            WindowNumbers.Panes(b, Portals(plan, y), portals, W.Research, W.Corridor);
         }
         var detail = b.Detail;
         var coarse = b.Lod is LodLevel.L3 or LodLevel.L4;
@@ -137,7 +137,7 @@ internal static class ClockTower
             foreach (var sx in new[] { -1f, 1f })
                 foreach (var sz in new[] { -1f, 1f })
                     b.Add(PartSolids.BeveledBox(X.Quoin + 0.3f, 1.3f, X.Quoin + 0.3f, bevel, L.Granite), f.At(sx * hx, y - 0.1f, sz * hz));
-            foreach (var (face, width, door) in Faces(f, hx, hz)) Face(b, face, width, door, y, shaft is null, portals is null);
+            foreach (var (face, width, door) in Faces(f, hx, hz)) Face(b, face, width, door, y);
             foreach (var sx in new[] { -1f, 1f })
                 foreach (var sz in new[] { -1f, 1f })
                     b.Add(PartSolids.BeveledBox(X.Quoin, X.ShaftTop - 1.2f, X.Quoin, bevel, L.Beige), f.At(sx * hx, y + 1.2f, sz * hz));
@@ -187,7 +187,7 @@ internal static class ClockTower
     /// One shaft face: a stone wall (centred on the footprint line, 0.7 m) with the arched portal notched into its foot and a
     /// pair of slit windows per storey; glass sits 0.55 m back; sills under the slits; an archivolt round the portal.
     /// </summary>
-    private static void Face(SiteBuilder b, PlanFrame g, float width, bool door, float y, bool slitGlass, bool portalGlass)
+    private static void Face(SiteBuilder b, PlanFrame g, float width, bool door, float y)
     {
         var detail = b.Detail;
         var segments = detail == SiteDetail.Full ? 16 : 8;
@@ -213,9 +213,6 @@ internal static class ClockTower
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartSolids.BeveledBox(skirt, 1.2f, 0.95f, detail == SiteDetail.Full ? 0.03f : 0, L.Granite), g.At(side * (width * 0.5f - skirt * 0.5f), y - 0.1f, 0.12f));
         if (detail == SiteDetail.Mass) return;
-        var top = X.SlitFirst + (X.SlitRows - 1) * X.SlitPitch + X.SlitHeight;
-        if (slitGlass)
-            b.Add(PartSolids.BeveledBox(X.SlitGap + 2 * X.SlitWidth + 0.4f, top - X.SlitFirst + 0.4f, 0.05f, 0, ZoneLooks.Glass), g.At(0, y + X.SlitFirst - 0.2f, SlitGlassZ));
         // Archivolt round the portal and a keystone.
         var ring = Shapes.RoundArch(0, 0, X.PortalWidth + 0.9f, X.PortalSpring, segments);
         var hole = Shapes.RoundArch(0, -0.01f, X.PortalWidth, X.PortalSpring + 0.01f, segments);
@@ -233,15 +230,11 @@ internal static class ClockTower
                         g.At(side * (X.SlitGap * 0.5f + X.SlitWidth * 0.5f), y + X.SlitFirst + r * X.SlitPitch - 0.1f, 0.42f));
         }
         // Portal infill: a glazed door, open on the door face (leaves back; mat, sign and lamp are WP-13's), closed elsewhere.
-        var arch = Shapes.RoundArch(0, 0, X.PortalWidth, X.PortalSpring, segments);
         if (!door)
         {
-            if (portalGlass) b.Add(PartSolids.WallPanel(new PolygonRings(arch), 0.05f, ZoneLooks.Glass), g.At(0, y, PortalGlassZ));
             b.Add(PartSolids.BeveledBox(0.1f, X.PortalSpring, 0.1f, 0, L.DarkFrame), g.At(0, y, -0.08f));
             return;
         }
-        var fan = Shapes.RoundArch(0, X.PortalSpring - 0.01f, X.PortalWidth, 0.01f, segments);
-        if (portalGlass) b.Add(PartSolids.WallPanel(new PolygonRings(fan), 0.05f, ZoneLooks.Glass), g.At(0, y, PortalGlassZ));
         b.Add(PartSolids.BeveledBox(X.PortalWidth, 0.12f, 0.12f, 0, L.DarkFrame), g.At(0, y + X.PortalSpring - 0.06f, -0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartSolids.BeveledBox(0.06f, X.PortalSpring - 0.1f, 1.1f, 0.012f, L.Wood), g.At(side * (X.PortalWidth * 0.5f - 0.05f), y, 0.2f));

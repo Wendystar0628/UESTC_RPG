@@ -211,7 +211,7 @@ public abstract class ResearchSite : ZoneSite
         foreach (var (key, ring, style, lift, dress) in GridBlocks(Footprints(ctx.World)))
         {
             if (GridFacade.Layout(ring, style, dress).Columns == 0) continue;
-            GridFacade.Declare(facades, ring, y + lift, style, dress, Numbering(key), WindowNumbers.Required(ctx, new(Entity), key));
+            GridFacade.Declare(facades, ring, y + lift, style, dress, Numbering(key), WindowNumbers.Allocation(ctx, new(Entity), key));
         }
     }
 

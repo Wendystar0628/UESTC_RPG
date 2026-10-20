@@ -98,7 +98,6 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
             var y = b.Ground(p);
             // Square posts turn with the run: along the chord of their two neighbours.
             var u = VectorMath.Unit(posts[Math.Min(j + 1, posts.Count - 1)] - posts[Math.Max(j - 1, 0)], 1e-9);
-            if (u == Vector2.Zero) u = Vector2.UnitX;
             b.Box(L.Steel, p, u, F.PostSize, F.PostSize, y - 0.05f, y + F.Height);
             if (b.Detail == SiteDetail.Full) b.Box(L.Steel, p, u, F.PostSize + 0.04f, F.PostSize + 0.04f, y + F.Height, y + F.Height + 0.04f);
         }

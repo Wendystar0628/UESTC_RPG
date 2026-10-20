@@ -30,7 +30,7 @@ internal static class SixWindows
             var style = Style(k.Upper(ctx.World));
             if (GridFacade.Layout(plan, style, e => Dress(e, volumes)).Columns == 0) continue;
             GridFacade.Declare(facades, plan, BaseY(ctx, k.Entity) + S.BaseHeight, style, e => Dress(e, volumes), Numbering(k),
-                WindowNumbers.Required(ctx, new(k.Entity), k.Key));
+                WindowNumbers.Allocation(ctx, new(k.Entity), k.Key));
         }
     }
 }

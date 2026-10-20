@@ -62,7 +62,7 @@ public sealed class TrainingHallSite : ZoneSite
         var y = ctx.World.Terrain.PadY(new(CenterEastIds.Sports.Training.Entity));
         foreach (var (part, ring, key) in Annexes(ctx.World))
             if (GridFacade.Layout(ring, Style(part), e => Dress(part, ring, e)).Columns > 0)
-                GridFacade.Declare(facades, ring, y, Style(part), e => Dress(part, ring, e), Numbering(key), WindowNumbers.Required(ctx, new(CenterEastIds.Sports.Training.Entity), key));
+                GridFacade.Declare(facades, ring, y, Style(part), e => Dress(part, ring, e), Numbering(key), WindowNumbers.Allocation(ctx, new(CenterEastIds.Sports.Training.Entity), key));
     }
 
     public override void Build(SiteBuilder b)

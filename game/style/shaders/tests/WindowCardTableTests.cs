@@ -12,15 +12,10 @@ public sealed class WindowCardTableTests
 {
     [TestCase]
     [TestCategory(TestReason.Contract)]
-    public void EveryVfbCardTypeAndTheLobbyHaveARow()
+    public void TableHasTheDeclaredDimensions()
     {
         var data = WindowCardTable.Pack();
         AssertThat(data.Length == WindowCardTable.Width * WindowCardTable.Rows * 4).OverrideFailureMessage("Table size changed.").IsTrue();
-        for (var kind = 1; kind <= (int)WindowCardKind.Lobby; kind++)
-            AssertThat(Texel(data, kind, 5)[3] == WindowCardTable.Tag).OverrideFailureMessage($"Card {(WindowCardKind)kind} lacks its tag.").IsTrue();
-        AssertThat(Texel(data, 0, 5)[3] == 0f).OverrideFailureMessage("Row 0 (unspecified glass) must stay untagged.").IsTrue();
-        for (var row = (int)WindowCardKind.Lobby + 1; row < WindowCardTable.Rows; row++)
-            AssertThat(Texel(data, row, 5)[3] == 0f).OverrideFailureMessage($"Unused row {row} carries a tag.").IsTrue();
     }
 
     [TestCase]

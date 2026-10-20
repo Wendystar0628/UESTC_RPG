@@ -99,7 +99,6 @@ public static class NorthTune
         public const float BottomRail = 0.12f, TopRail = 2.04f;
         public const float HedgeOffset = 0.75f, HedgeHeight = 1.2f, HedgeWidth = 0.8f, HedgeBevel = 0.1f;
         /// <summary>Road width when the network has none (service road 5 m in this zone's data).</summary>
-        public const float DefaultRoadWidth = 4f;
     }
 
     /// <summary>

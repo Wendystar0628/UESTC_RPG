@@ -114,10 +114,10 @@ public sealed class SouthGateSite : ZoneSite
         if (b.Detail != SiteDetail.Mass)
             b.Add(PartSolids.BeveledBox(roof - 0.5f, 0.04f, roof - 0.5f, 0.01f, L.RoofSlab), f.At(0, y + h + T.HouseRoof, 0));
         if (b.Detail == SiteDetail.Mass) return;
-        // Glass: numbered panes once the map's window numbering is in the context (lit all night), plain glass without one.
+        // The guard-house panes use the map's authoritative numbering and stay lit all night.
         var numbered = Allocation(b.Context);
-        foreach (var pane in Panes(g, side)) Pane(b, f, pane, y, numbered is null);
-        if (numbered is { } allocation) WindowNumbers.Panes(b, Openings(g, y).Where(o => o.Row == (side < 0 ? 0 : 1)), allocation, W.AllNight, W.Office);
+        foreach (var pane in Panes(g, side)) Pane(b, f, pane, y);
+        WindowNumbers.Panes(b, Openings(g, y).Where(o => o.Row == (side < 0 ? 0 : 1)), numbered, W.AllNight, W.Office);
         Door(b, f, -side * 1.6f, -g.HouseSize * 0.5f, y);
     }
 
@@ -147,15 +147,15 @@ public sealed class SouthGateSite : ZoneSite
         })),
     ];
 
-    /// <summary>Numbered panes stand this far in front of the stone face; the plain glass box sits between them and the wall.</summary>
+    /// <summary>Numbered panes stand this far in front of the stone face.</summary>
     private const float PaneZ = 0.03f;
 
-    /// <summary>The guard-house grid's allocation (null without a snapshot), checked against its six windows.</summary>
-    private static WindowAllocation? Allocation(BuildContext ctx, bool required = false)
+    /// <summary>The guard-house grid's allocation checked against its six windows.</summary>
+    private static WindowAllocation Allocation(BuildContext ctx)
     {
         var feature = new FeatureId(Feature);
-        var allocation = required ? WindowNumbers.Required(ctx, feature, HouseKey) : WindowNumbers.Allocation(ctx, feature, HouseKey);
-        if (allocation is { } a) WindowNumbers.Fit(HouseColumns, 2, feature, HouseKey, a);
+        var allocation = WindowNumbers.Allocation(ctx, feature, HouseKey);
+        WindowNumbers.Fit(HouseColumns, 2, feature, HouseKey, allocation);
         return allocation;
     }
 
@@ -164,11 +164,11 @@ public sealed class SouthGateSite : ZoneSite
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
         var g = LayoutOf(ctx);
-        WindowNumbers.Declare(windows, Openings(g, ctx.World.Terrain.HeightAt(g.Frame.Origin.X, g.Frame.Origin.Y)), Allocation(ctx, true)!.Value, W.AllNight);
+        WindowNumbers.Declare(windows, Openings(g, ctx.World.Terrain.HeightAt(g.Frame.Origin.X, g.Frame.Origin.Y)), Allocation(ctx), W.AllNight);
     }
 
     /// <summary>A window on a house face: dark glass in an aluminium surround over a stone sill. Turned panes sit on ±X faces.</summary>
-    private static void Pane(SiteBuilder b, PlanFrame f, (float X, float Z, bool Turned, float Width) pane, float y, bool glass)
+    private static void Pane(SiteBuilder b, PlanFrame f, (float X, float Z, bool Turned, float Width) pane, float y)
     {
         var (x, z, turned, width) = pane;
         float y0 = y + T.HouseWindowSill, y1 = y + T.HouseWindowHead, h = y1 - y0;
@@ -176,7 +176,6 @@ public sealed class SouthGateSite : ZoneSite
         Matrix4x4 At(float along, float yy, float off) => turned
             ? f.AtTurned(x + outward * off, yy, z + along)
             : f.At(x + along, yy, z + outward * off);
-        if (glass) b.Add(PartSolids.BeveledBox(width, h, 0.04f, 0, ZoneLooks.Glass), At(0, y0, 0.01f));
         b.Add(PartSolids.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Metal), At(0, y1, 0.04f));
         b.Add(PartSolids.BeveledBox(width + 0.12f, 0.06f, 0.1f, 0.01f, L.Metal), At(0, y0 - 0.06f, 0.04f));
         b.Add(PartSolids.BeveledBox(width + 0.3f, 0.07f, 0.18f, 0.015f, L.StoneTrim), At(0, y0 - 0.13f, 0.08f));

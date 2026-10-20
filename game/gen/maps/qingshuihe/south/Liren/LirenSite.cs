@@ -167,7 +167,7 @@ public sealed class LirenSite : ZoneSite
         var centre = PlanPolygons.Centroid(f.Bridge);
         var y = ctx.World.Terrain.HeightAt(centre.X, centre.Y);
         foreach (var (ring, style, dress, lift, numbering) in Blocks(f))
-            GridFacade.Declare(facades, ring, y + lift, style, dress, numbering, WindowNumbers.Required(ctx, numbering.Feature, numbering.Key));
+            GridFacade.Declare(facades, ring, y + lift, style, dress, numbering, WindowNumbers.Allocation(ctx, numbering.Feature, numbering.Key));
     }
 
     protected override IReadOnlyList<PolygonRings> OccupiedContours(IWorldModel world, LodLevel lod)

@@ -108,14 +108,14 @@ public sealed class NatatoriumSite : ZoneSite
     {
         var p = PlanOf(ctx.World);
         var c = p.Frame.Origin;
-        WindowNumbers.Declare(windows, Openings(p, ctx.World.Terrain.HeightAt(c.X, c.Y)), Allocation(ctx, p, true)!.Value, W.Venue);
+        WindowNumbers.Declare(windows, Openings(p, ctx.World.Terrain.HeightAt(c.X, c.Y)), Allocation(ctx, p), W.Venue);
     }
 
-    private static WindowAllocation? Allocation(BuildContext ctx, Plan p, bool required = false)
+    private static WindowAllocation Allocation(BuildContext ctx, Plan p)
     {
         var feature = new FeatureId(Feature);
-        var allocation = required ? WindowNumbers.Required(ctx, feature, GlassKey) : WindowNumbers.Allocation(ctx, feature, GlassKey);
-        if (allocation is { } a) WindowNumbers.Fit(p.Bays, 1, feature, GlassKey, a);
+        var allocation = WindowNumbers.Allocation(ctx, feature, GlassKey);
+        WindowNumbers.Fit(p.Bays, 1, feature, GlassKey, allocation);
         return allocation;
     }
 
@@ -145,7 +145,7 @@ public sealed class NatatoriumSite : ZoneSite
             var (f, width) = p.Facet(i);
             b.Add(PartSolids.WallPanel(width + 0.02f, S.PoolGlassTop - S.PoolGlassFoot + 0.4f, 0.06f, [], ZoneLooks.Glass), f.At(0, y + S.PoolGlassFoot - 0.3f, -0.03f));
         }
-        if (Allocation(b.Context, p) is { } allocation) WindowNumbers.Panes(b, Openings(p, y), allocation, W.Venue, W.Pool);
+        WindowNumbers.Panes(b, Openings(p, y), Allocation(b.Context, p), W.Venue, W.Pool);
         // The crown inside the drum, so the band never shows sky through its back.
         b.Add(Solids.Lathe([new(S.PoolDrum, S.PoolGlassFoot - 0.2f), new(S.PoolDrum * 0.6f, S.PoolGlassFoot + 0.2f), new(0, S.PoolGlassFoot + 0.3f)], segments / 2, L.DomeWhite, p.A, p.B, capBottom: false), at);
         if (b.Detail == SiteDetail.Mass) return;

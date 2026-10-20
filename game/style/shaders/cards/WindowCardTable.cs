@@ -11,7 +11,7 @@ namespace Campus.Style.Shaders.Cards;
 /// <item>x2 (screen, screen chance, coverage min, coverage max)</item>
 /// <item>x3 (day luminance, night gain, ceiling, accent)</item>
 /// <item>x4 (sill drop m, ceiling rise m, cool share, layer base)</item>
-/// <item>x5 (layer count, 0, 0, <see cref="Tag"/>): identifies authored card rows</item>
+/// <item>x5 (layer count, 0, 0, 0)</item>
 /// </list>
 /// Enum fields are stored as their numeric values; the build generates shader constants from WindowCardKinds.cs.
 /// </summary>
@@ -19,7 +19,6 @@ public static class WindowCardTable
 {
     public const int Width = 6;
     public const int Rows = 32;
-    public const float Tag = 51f;
 
     public static float[] Pack() => Pack(WindowCardCatalog.All);
 
@@ -41,7 +40,7 @@ public static class WindowCardTable
             Put(data, row, 2, (float)c.Screen, c.ScreenChance, c.CoverMin, c.CoverMax);
             Put(data, row, 3, c.DayLum, c.NightGain, (float)c.Ceiling, (float)c.Accent);
             Put(data, row, 4, c.SillDrop, c.CeilingRise, c.CoolShare, c.LayerBase);
-            Put(data, row, 5, c.LayerCount, 0f, 0f, Tag);
+            Put(data, row, 5, c.LayerCount, 0f, 0f, 0f);
         }
         foreach (var card in WindowCardCatalog.All)
             if (!seen[(int)card.Kind]) throw new ArgumentException($"Missing window-card row {card.Kind}.", nameof(cards));

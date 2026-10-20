@@ -16,7 +16,7 @@ public static class WindowNumbers
     /// The grid's allocation from the explicitly supplied snapshot (ENG-ARCH).
     /// A snapshot of another map, or one without this grid, is an error.
     /// </summary>
-    public static WindowAllocation? Allocation(BuildContext ctx, FeatureId feature, string key)
+    public static WindowAllocation Allocation(BuildContext ctx, FeatureId feature, string key)
     {
         ArgumentNullException.ThrowIfNull(ctx);
         var snapshot = ctx.WindowNumbering ?? throw new InvalidOperationException("An explicit window-numbering snapshot is required.");
@@ -24,10 +24,6 @@ public static class WindowNumbers
             throw new InvalidOperationException($"Window numbering for map {snapshot.Map.Value} handed to a build of {ctx.Map.Id.Value}.");
         return snapshot.Get(feature, key);
     }
-
-    /// <summary>The allocation window positions need: the kernel assigns the snapshot before it asks for them.</summary>
-    public static WindowAllocation Required(BuildContext ctx, FeatureId feature, string key) =>
-        Allocation(ctx, feature, key) ?? throw new InvalidOperationException("Window positions are described only after BuildContext.WindowNumbering is assigned.");
 
     /// <summary>Fails when a block's layout does not fit the grid it was declared into.</summary>
     public static void Fit(GridLayout layout, GridNumbering numbering, WindowAllocation allocation)

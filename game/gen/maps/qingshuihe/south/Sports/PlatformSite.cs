@@ -191,14 +191,14 @@ public sealed class PlatformSite : ZoneSite
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
         var p = PlanOf(ctx.World);
-        WindowNumbers.Declare(windows, Openings(p), Allocation(ctx, p, true)!.Value, W.General);
+        WindowNumbers.Declare(windows, Openings(p), Allocation(ctx, p), W.General);
     }
 
-    private static WindowAllocation? Allocation(BuildContext ctx, Plan p, bool required = false)
+    private static WindowAllocation Allocation(BuildContext ctx, Plan p)
     {
         var feature = new FeatureId(Feature);
-        var allocation = required ? WindowNumbers.Required(ctx, feature, ShopKey) : WindowNumbers.Allocation(ctx, feature, ShopKey);
-        if (allocation is { } a) WindowNumbers.Fit(p.Bays.Count, 1, feature, ShopKey, a);
+        var allocation = WindowNumbers.Allocation(ctx, feature, ShopKey);
+        WindowNumbers.Fit(p.Bays.Count, 1, feature, ShopKey, allocation);
         return allocation;
     }
 
@@ -300,8 +300,8 @@ public sealed class PlatformSite : ZoneSite
             if (!b.Includes(SiteRanges.Point(c, .43f))) continue;
             GridFacade.Box(b, new(c, new(1, 0)), -0.3f, 0.3f, floor - 0.1f, p.Soffit, -0.3f, 0.3f, L.Sand, full ? 0.02f : 0);
         }
-        if (b.Includes(SiteRanges.Bounds(p.Core, .5f)) && Allocation(b.Context, p) is { } allocation)
-            WindowNumbers.Panes(b, Openings(p), allocation, W.General, W.Office);
+        if (b.Includes(SiteRanges.Bounds(p.Core, .5f)))
+            WindowNumbers.Panes(b, Openings(p), Allocation(b.Context, p), W.General, W.Office);
     }
 
     /// <summary>Parapet panels (PartCatalog.Railing, solid infill) along a free edge, open where a stair lands.</summary>

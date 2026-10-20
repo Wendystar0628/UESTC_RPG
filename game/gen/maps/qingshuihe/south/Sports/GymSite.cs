@@ -111,14 +111,14 @@ public sealed class GymSite : ZoneSite
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
         var p = PlanOf(ctx.World);
-        WindowNumbers.Declare(windows, Openings(p, ctx.World.Terrain.HeightAt(p.Centre.X, p.Centre.Y)), Allocation(ctx, p, true)!.Value, W.Venue);
+        WindowNumbers.Declare(windows, Openings(p, ctx.World.Terrain.HeightAt(p.Centre.X, p.Centre.Y)), Allocation(ctx, p), W.Venue);
     }
 
-    private static WindowAllocation? Allocation(BuildContext ctx, Plan p, bool required = false)
+    private static WindowAllocation Allocation(BuildContext ctx, Plan p)
     {
         var feature = new FeatureId(Feature);
-        var allocation = required ? WindowNumbers.Required(ctx, feature, GlassKey) : WindowNumbers.Allocation(ctx, feature, GlassKey);
-        if (allocation is { } a) WindowNumbers.Fit(p.Bays, RowCount, feature, GlassKey, a);
+        var allocation = WindowNumbers.Allocation(ctx, feature, GlassKey);
+        WindowNumbers.Fit(p.Bays, RowCount, feature, GlassKey, allocation);
         return allocation;
     }
 
@@ -176,7 +176,7 @@ public sealed class GymSite : ZoneSite
                 : [new(-half, 0), new(half, 0), new(half, height), new(-half, height)];
             b.Add(PartSolids.WallPanel(new PolygonRings(outline), 0.06f, L.TeaGlass), f.At(0, y0, -0.03f));
         }
-        if (Allocation(b.Context, p) is { } allocation) WindowNumbers.Panes(b, Openings(p, y), allocation, W.Venue, W.Gym, L.TeaGlass);
+        WindowNumbers.Panes(b, Openings(p, y), Allocation(b.Context, p), W.Venue, W.Gym, L.TeaGlass);
         if (b.Lod is LodLevel.L3 or LodLevel.L4) return;
         var rg = p.GlassRadius;
         // Transom and head: dark rings just proud of the glass.

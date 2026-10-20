@@ -105,8 +105,8 @@ public sealed class MainBuildingSite : ZoneSite
         var terrain = ctx.World.Terrain;
         var front = FrontOpenings(g, terrain.HeightAt(g.F.P(g.Xc, g.StepsZ).X, g.F.P(g.Xc, g.StepsZ).Y) + M.FloorY);
         var rear = RearOpenings(g, terrain.HeightAt(g.R.Origin.X, g.R.Origin.Y) + M.FloorY);
-        WindowNumbers.Declare(windows, front, Allocation(ctx, FrontPorchKey, front.Length, true)!.Value, W.Hall);
-        WindowNumbers.Declare(windows, rear, Allocation(ctx, RearPorchKey, rear.Length, true)!.Value, W.Hall);
+        WindowNumbers.Declare(windows, front, Allocation(ctx, FrontPorchKey, front.Length), W.Hall);
+        WindowNumbers.Declare(windows, rear, Allocation(ctx, RearPorchKey, rear.Length), W.Hall);
     }
 
     /// <summary>
@@ -134,12 +134,12 @@ public sealed class MainBuildingSite : ZoneSite
         return [new(0, 0, new(p.X, floor, p.Y), new(g.R.W.X, 0, g.R.W.Y), RearDoorWidth, RearDoorSpring + RearDoorWidth * 0.5f)];
     }
 
-    /// <summary>A porch grid's allocation (null without a snapshot), checked against its opening count.</summary>
-    private static WindowAllocation? Allocation(BuildContext ctx, string key, int columns, bool required = false)
+    /// <summary>A porch grid's allocation checked against its opening count.</summary>
+    private static WindowAllocation Allocation(BuildContext ctx, string key, int columns)
     {
         var feature = new FeatureId(FrontSteps);
-        var allocation = required ? WindowNumbers.Required(ctx, feature, key) : WindowNumbers.Allocation(ctx, feature, key);
-        if (allocation is { } a) WindowNumbers.Fit(columns, 1, feature, key, a);
+        var allocation = WindowNumbers.Allocation(ctx, feature, key);
+        WindowNumbers.Fit(columns, 1, feature, key, allocation);
         return allocation;
     }
 
@@ -260,14 +260,12 @@ public sealed class MainBuildingSite : ZoneSite
         b.Add(PartSolids.WallPanel(face, depth, L.Stone), g.F.At(g.Xc, floor, centreZ));
         if (b.Detail == SiteDetail.Mass) return;
         var glassZ = FrontGlassZ;
-        // Glass: numbered panes once the map's window numbering is in the context, the plain arched glass without one.
+        // Glass uses the map's authoritative numbering.
         var openings = FrontOpenings(g, floor);
         var numbered = Allocation(b.Context, FrontPorchKey, openings.Length);
-        if (numbered is { } allocation) WindowNumbers.Panes(b, openings, allocation, W.Hall, W.Corridor);
+        WindowNumbers.Panes(b, openings, numbered, W.Hall, W.Corridor);
         foreach (var x in M.ArchWindows)
         {
-            if (numbered is null)
-                b.Add(PartSolids.WallPanel(new PolygonRings(Shapes.RoundArch(x, M.ArchSill, M.ArchWidth, M.ArchSpring, 12)), 0.04f, ZoneLooks.Glass), g.F.At(g.Xc, floor, glassZ));
             b.Add(PartSolids.BeveledBox(M.ArchWidth + 0.4f, 0.12f, 0.35f, 0.02f, L.StoneTrim), g.F.At(g.Xc + x, floor + M.ArchSill - 0.12f, M.BackWall + 0.1f));
             if (b.Detail != SiteDetail.Full) continue;
             // Mullion, transom at the springing line and two glazing bars: the window reads as a window, not a hole.
@@ -276,7 +274,6 @@ public sealed class MainBuildingSite : ZoneSite
                 b.Add(PartSolids.BeveledBox(M.ArchWidth, 0.08f, 0.1f, 0.012f, L.Metal), g.F.At(g.Xc + x, floor + M.ArchSill + M.ArchSpring * k - 0.04f, glassZ + 0.06f));
         }
         // Door: glass vestibule screen at the back, leaves fixed open against the reveals (SYS-WALK), stone threshold.
-        if (numbered is null) b.Add(PartSolids.WallPanel(new PolygonRings(door), 0.05f, ZoneLooks.Glass), g.F.At(g.Xc, floor, glassZ));
         b.Add(PartSolids.BeveledBox(M.DoorWidth + 0.2f, 0.12f, 0.15f, 0.015f, L.Metal), g.F.At(g.Xc, floor + M.DoorSpring, glassZ + 0.08f));
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartSolids.BeveledBox(0.06f, M.DoorSpring - 0.1f, 1.5f, 0.012f, L.Wood), g.F.At(g.Xc + side * (M.DoorWidth * 0.5f - 0.05f), floor, glassZ + 0.85f));
@@ -423,8 +420,7 @@ public sealed class MainBuildingSite : ZoneSite
         if (b.Detail == SiteDetail.Mass) return;
         // Timber double door, leaves swung back flat against the block face; dark glass screen inside the arch.
         var openings = RearOpenings(g, floor);
-        if (Allocation(b.Context, RearPorchKey, openings.Length) is { } allocation) WindowNumbers.Panes(b, openings, allocation, W.Hall, W.Corridor);
-        else b.Add(PartSolids.WallPanel(new PolygonRings(door), 0.05f, ZoneLooks.Glass), g.R.At(0, floor, RearGlassZ));
+        WindowNumbers.Panes(b, openings, Allocation(b.Context, RearPorchKey, openings.Length), W.Hall, W.Corridor);
         foreach (var side in new[] { -1f, 1f })
             b.Add(PartSolids.BeveledBox(1.15f, 2.65f, 0.07f, 0.015f, L.Wood), g.R.At(side * 1.85f, floor, blockFront + 0.04f));
         // The mat, open sign and door lamp are WP-13's, placed on the b2.rear entrance anchor (WLD-INTERIORS).
