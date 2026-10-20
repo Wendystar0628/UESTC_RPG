@@ -5,7 +5,7 @@ using static Campus.Style.Palette.Keys.FrameLayout;
 namespace Campus.Style.Palette.Keys;
 
 /// <summary>The evaluated colour script for one world state: blended frame plus what derivation needs.</summary>
-public sealed record WorldFrame(FrameVector Frame, double X, double SunAltDeg, Season SeasonA, Season SeasonB, double SeasonT, double VegChromaMul);
+public sealed record WorldFrame(FrameVector Frame, double X, double SunAltDeg, Season SeasonA, Season SeasonB, double SeasonT, double VegChromaMul, Vector3 SeasonSurface);
 
 /// <summary>Colour script runtime (SYS-TIME): season sets, day curves, weather layer and derivation. Pure .NET.</summary>
 public sealed class ColorScript
@@ -27,6 +27,19 @@ public sealed class ColorScript
             _curves[(int)s] = new DayCurve(data.Keys, frames);
         }
         Vegetation = new VegetationSet(data, Deriver, seasonKeys);
+    }
+
+    // Keep the original surface curve's float arithmetic, independently of colour interpolation.
+    private Vector3 SurfaceAt(double season)
+    {
+        var x = season % 4.0;
+        if (x < 0) x += 4.0;
+        var i = (int)Math.Floor(x);
+        var f = (float)(x - i);
+        var t = f * f * f * (f * (f * 6f - 15f) + 10f);
+        var a = Data.Seasons.Seasons.For((Season)i).Surface.Amount;
+        var b = Data.Seasons.Seasons.For((Season)((i + 1) % 4)).Surface.Amount;
+        return new Vector3(a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t, a.Z + (b.Z - a.Z) * t);
     }
 
     public FrameVector Evaluate(Season season, double clock) => _curves[(int)season].Evaluate(ArtSun.PhaseAt(clock, season));
@@ -51,7 +64,7 @@ public sealed class ColorScript
         if (t > 1e-9) f = DayCurve.Blend(f, EvaluateAt(b, h, ArtSun.Altitude(clock, b).Side), t);
         WeatherCorrection.Apply(Data.Weather, f, weather, h);
         return new WorldFrame(f, ArtSun.ToAutumnX(h, a), h, a, b, t,
-            f.V[VegChroma] * WeatherCorrection.VegetationChromaMul(Data.Weather, weather));
+            f.V[VegChroma] * WeatherCorrection.VegetationChromaMul(Data.Weather, weather), SurfaceAt(seasonPos));
     }
 
     /// <summary>IPaletteProbe: 24 whole-hour horizon colours, average of the sun-side and anti-sun horizon bands.</summary>
@@ -314,6 +327,7 @@ public sealed class PaletteComposer
             VignetteTint: tint,
             Fog: new Vector4((float)v[FogDensity], (float)v[HazeDeg], (float)v[FogStart], (float)v[FogSilhouette]))
         {
+            SeasonSurface = w.SeasonSurface,
             LampPoolGain = (float)v[LampPoolGain],
             FogSun = LinearRgb(w.Frame.Color(FogSun)),
             FogAnti = LinearRgb(w.Frame.Color(FogAnti))

@@ -42,6 +42,9 @@ public sealed class UiColors
         return ToColor(_palette.Resolve(reference));
     }
 
+    public Color Map(string theme, string token, params string[] components) =>
+        ToColor(_palette.ResolveMap(theme, token, components));
+
     /// <summary>ui_panel 的色表：按 <see cref="UiTokens.PanelRoles"/> 的顺序排，长度补到 64。</summary>
     public Color[] RoleTable(UiTokens tokens, string theme)
     {

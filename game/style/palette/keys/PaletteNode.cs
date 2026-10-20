@@ -40,7 +40,6 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
     private WeatherVec _lastWeather;
     private WorldFrame _frame;
     private int _seasonalPending;
-    private int _frames;
     private PaletteInspector? _inspector;
 
     public ColorScriptSnapshot Current { get; private set; }
@@ -143,7 +142,6 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
             _image.SetData(PaletteComposer.Width, PaletteComposer.Height, false, Image.Format.Rgba8, _composer.Pixels);
             _texture.Update(_image);
         }
-        if (_inspector is not null && ++_frames == 30) PrintParity(_frame, clock, season);
     }
 
     private void OnWorldInstanceChanged(long _) => _worldReset = true;
@@ -173,7 +171,7 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
     public void SampleHorizon(Season season, WeatherVec weather, Span<N.Vector3> srgb24) =>
         _script.SampleHorizon(season, weather, srgb24);
 
-    /// <summary>Hex of a registry column in row 0 (debug and parity output only).</summary>
+    /// <summary>Hex of a registry column in row 0 (live inspector only).</summary>
     public string HexOf(string token, int row = 0)
     {
         if (!_catalog.TryGet(new PaletteToken(token), out var e)) return "-";
@@ -181,14 +179,5 @@ public partial class PaletteNode : Node, IColorScriptFrame, IPaletteProbe, IMapA
         var i = (texelRow * PaletteComposer.Width + col) * 4;
         var p = _composer.Pixels;
         return string.Create(CultureInfo.InvariantCulture, $"#{p[i]:X2}{p[i + 1]:X2}{p[i + 2]:X2}");
-    }
-
-    private void PrintParity(WorldFrame w, double clock, double season)
-    {
-        string[] tokens = ["sun.light", "shadow.1", "wall.lit", "wall.shade", "stone.beige.shade", "brick.shade", "ginkgo.lit",
-            "ginkgo.shade", "grass.lit", "grass.shade", "sky.sun.0", "sky.sun.4", "sky.anti.0", "fog.sun"];
-        var parts = string.Join(" ", tokens.Select(t => $"{t}={HexOf(t)}"));
-        GD.Print(string.Create(CultureInfo.InvariantCulture,
-            $"WP37_PALETTE season={season:F2} clock={clock:F3} alt={w.SunAltDeg:F3} r={w.Frame.V[FrameLayout.R]:F4} catalog={CatalogSource} {parts} wall.shade.in={HexOf("wall.lit", 2)}"));
     }
 }

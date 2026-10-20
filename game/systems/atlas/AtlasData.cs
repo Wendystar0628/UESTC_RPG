@@ -33,20 +33,17 @@ internal static class AtlasData
     {
         var root = context.DataRoot.TrimEnd('/') + "/";
         var markerPath = root + "atlas/markers.json";
-        var markers = Godot.FileAccess.FileExists(markerPath)
-            ? JsonSerializer.Deserialize(Godot.FileAccess.GetFileAsBytes(markerPath), AtlasJsonContext.Contract.AtlasMarkerFile)
-                ?? throw new JsonException("Atlas markers are null.")
-            : new AtlasMarkerFile(1, context.Descriptor.DataRect, []);
+        if (!Godot.FileAccess.FileExists(markerPath)) throw new FileNotFoundException("Required markers data is missing.", markerPath);
+        var markers = JsonSerializer.Deserialize(Godot.FileAccess.GetFileAsBytes(markerPath), AtlasJsonContext.Contract.AtlasMarkerFile)
+            ?? throw new JsonException("Atlas markers are null.");
         var labelPath = root + "atlas/labels.json";
-        var labels = Godot.FileAccess.FileExists(labelPath)
-            ? JsonSerializer.Deserialize(Godot.FileAccess.GetFileAsBytes(labelPath), AtlasJsonContext.Contract.AtlasLabelFile)
-                ?? throw new JsonException("Atlas labels are null.")
-            : new AtlasLabelFile(1, [], []);
+        if (!Godot.FileAccess.FileExists(labelPath)) throw new FileNotFoundException("Required labels data is missing.", labelPath);
+        var labels = JsonSerializer.Deserialize(Godot.FileAccess.GetFileAsBytes(labelPath), AtlasJsonContext.Contract.AtlasLabelFile)
+            ?? throw new JsonException("Atlas labels are null.");
         var waypointPath = root + "waypoints.json";
-        var waypoints = Godot.FileAccess.FileExists(waypointPath)
-            ? JsonSerializer.Deserialize(Godot.FileAccess.GetFileAsBytes(waypointPath), AtlasJsonContext.Contract.WaypointFile)
-                ?? throw new JsonException("Waypoints are null.")
-            : new WaypointFile(1, []);
+        if (!Godot.FileAccess.FileExists(waypointPath)) throw new FileNotFoundException("Required waypoints data is missing.", waypointPath);
+        var waypoints = JsonSerializer.Deserialize(Godot.FileAccess.GetFileAsBytes(waypointPath), AtlasJsonContext.Contract.WaypointFile)
+            ?? throw new JsonException("Waypoints are null.");
         service.LoadMap(context, markers, labels, waypoints);
     }
 }

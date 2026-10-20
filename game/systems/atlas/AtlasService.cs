@@ -31,7 +31,6 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     private IAppFlow? _flow;
     private IAudioService? _audio;
     private IViewControl? _view;
-    private Action<string, MarkerId, TravelStyle, string?, ViewMode>? _traceTravel;
     private ITransitHandle? _transit;
     private IDisposable? _transitInput;
     private MarkerId? _destination;
@@ -54,10 +53,9 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
     public JsonTypeInfo<AtlasSave> TypeInfo => AtlasJsonContext.Contract.AtlasSave;
 
     // Runtime-only services are connected after discovery to avoid Save -> Atlas -> Save cycles.
-    public void Connect(IMapService maps, IAppFlow flow, IAudioService audio, IViewControl? view = null,
-        Action<string, MarkerId, TravelStyle, string?, ViewMode>? traceTravel = null)
+    public void Connect(IMapService maps, IAppFlow flow, IAudioService audio, IViewControl? view = null)
     {
-        _maps = maps; _flow = flow; _audio = audio; _view = view; _traceTravel = traceTravel;
+        _maps = maps; _flow = flow; _audio = audio; _view = view;
     }
 
     public void OnMapLoaded(IMapContext context)
@@ -219,7 +217,6 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
                 _ => throw new ArgumentOutOfRangeException(nameof(style)),
             },
         };
-        _traceTravel?.Invoke("start", id, style, null, observer.Mode);
         // The loading screen retains input exclusion until the destination is ready.
         var input = style switch
         {
@@ -251,11 +248,6 @@ public sealed class AtlasService(ICameraRig camera, IObserverState observer, IRu
             var destination = _destination;
             var style = _travelStyle;
             ReleaseTransit();
-            if (destination is { } released)
-            {
-                var result = handle.Done.IsCompletedSuccessfully ? handle.Done.Result.ToString() : "Failed";
-                _traceTravel?.Invoke("input-released", released, style, result, observer.Mode);
-            }
             if (arrived)
             {
                 if (destination is { } id && Find(id) is { Kind: MarkerKind.Anchor } anchor)

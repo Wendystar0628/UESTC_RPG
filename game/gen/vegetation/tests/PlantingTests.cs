@@ -43,12 +43,19 @@ public sealed class PlantingTests
                 throw new InvalidOperationException("sport wall is not on terrain");
         }
 
-        static string Group(string id, float west, float east) => JsonSerializer.Serialize(new
+        static string Group(string id, float west, float east)
         {
-            id = "design:fixture-group-" + id, kind = "sportGroup",
-            props = new { members = new[] { "fixture-court-" + id }, gate = Rotate((west + east) * 0.5f, -60f), gateGap = 3, treePitch = 3, treeOffset = 1.5, sharedGapBelow = 8 },
-            geometry = new { type = "polygon", rings = new { outer = new[] { Rotate(west, -60f), Rotate(east, -60f), Rotate(east, -30f), Rotate(west, -30f) }, holes = Array.Empty<float[][]>() } }
-        });
+            var courtId = "design:fixture-court-" + id;
+            var groupId = "design:fixture-group-" + id;
+            var geometry = new { type = "polygon", rings = new { outer = new[] { Rotate(west, -60f), Rotate(east, -60f), Rotate(east, -30f), Rotate(west, -30f) }, holes = Array.Empty<float[][]>() } };
+            return JsonSerializer.Serialize(new { id = courtId, kind = "sport", props = new { sportGroup = groupId }, geometry }) + "," +
+                JsonSerializer.Serialize(new
+                {
+                    id = groupId, kind = "sportGroup",
+                    props = new { members = new[] { courtId }, gate = Rotate((west + east) * 0.5f, -60f), gateGap = 3, treePitch = 3, treeOffset = 1.5, sharedGapBelow = 8 },
+                    geometry
+                });
+        }
         static float[] Rotate(float x, float z)
         {
             var point = Vector2.Transform(new(x, z), Matrix3x2.CreateRotation(0.3f));
@@ -61,10 +68,14 @@ public sealed class PlantingTests
     {
         const string group = """
             {"id":"design:fixture-wall-group","kind":"sportGroup",
-             "props":{"members":["fixture-court"],"gate":[-65,-60],"gateGap":3,"treePitch":3,"treeOffset":1.5,"sharedGapBelow":8},
+             "props":{"members":["design:fixture-court"],"gate":[-65,-60],"gateGap":3,"treePitch":3,"treeOffset":1.5,"sharedGapBelow":8},
              "geometry":{"type":"polygon","rings":{"outer":[[-80,-60],[-50,-60],[-50,-30],[-80,-30]],"holes":[]}}}
             """;
-        var baseline = PavementTests.PlantFixture(PavementTests.Fixture(group)).Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
+        const string court = """
+            {"id":"design:fixture-court","kind":"sport","props":{"sportGroup":"design:fixture-wall-group"},
+             "geometry":{"type":"polygon","rings":{"outer":[[-80,-60],[-50,-60],[-50,-30],[-80,-30]],"holes":[]}}}
+            """;
+        var baseline = PavementTests.PlantFixture(PavementTests.Fixture(group, court)).Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
         var target = baseline.First();
         var x = target.Position.X;
         var z = target.Position.Z;
@@ -81,7 +92,7 @@ public sealed class PlantingTests
                 id = "fixture:source:way:4", kind = "road", props = new { highway = "residential", width = 2 },
                 geometry = new { type = "polyline", line = new { points = new[] { new[] { x - 5, z }, new[] { x + 5, z } } } }
             });
-            var layout = PavementTests.PlantFixture(PavementTests.Fixture(group, obstacle));
+            var layout = PavementTests.PlantFixture(PavementTests.Fixture(group, court, obstacle));
             var kept = layout.Trees.Where(t => t.Source == PlantSource.SportWall).ToArray();
             var keys = kept.Select(t => t.Key).ToHashSet(StringComparer.Ordinal);
             if (keys.Contains(target.Key))

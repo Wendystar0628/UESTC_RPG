@@ -9,8 +9,6 @@ public static class WorldTime
     public const double InitialAnimTime = AnimLoopSeconds / 2d;
     public const int DefaultStepRate = 12;
     public const int ThirtyFpsStepRate = 15;
-    public const float SeasonGlowBoost = .1f;
-    public const float SeasonBrightnessBoost = .25f;
 
     public static bool IsStepRate(int rate) => rate is DefaultStepRate or ThirtyFpsStepRate;
 
@@ -32,4 +30,29 @@ public static class WorldTime
         }
         return string.Create(CultureInfo.InvariantCulture, $"{hour:00}:{minute:00}");
     }
+}
+
+/// <summary>World-control transition timings and presentation rules (SYS-TIME, SYS-MOTION).</summary>
+public static class WorldTimeTuning
+{
+    public const double SeasonSingleSeconds = 4;
+    public const double SeasonMultipleSeconds = 5.5;
+    public const double SeasonFogStart = .6;
+    public const double SeasonFogPeak = 2;
+    public const double SeasonFogRelease = 2.6;
+    public const float SeasonGlowBoost = .1f;
+    public const float SeasonBrightnessBoost = .25f;
+    public const double ReducedTransitionSeconds = .5;
+    public const double MaxFrameSeconds = .1;
+    public const double DragIdleSeconds = 1;
+    public const double ClockDamping = 2 * .6931471805599453 / .15;
+    public const double CompletionEpsilon = 1e-10;
+    public const float AngularSpeedSunAltitude = -7f;
+    public const double JumpMaxSeconds = 3;
+    public const double JumpBaseSeconds = .6;
+    public const double JumpSecondsPerHour = .18;
+    public const double WeatherPinBeforeHours = .5;
+    public const double WeatherPinAfterHours = 2;
+    public const double HeroBeforeHours = 8 / 60d;
+    public const double HeroAfterHours = 10 / 60d;
 }

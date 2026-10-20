@@ -1,3 +1,5 @@
+using Campus.Contracts;
+
 namespace Campus.Style.Palette.Keys;
 
 public enum KeySide : byte { Nadir, Dawn, Noon, Dusk }

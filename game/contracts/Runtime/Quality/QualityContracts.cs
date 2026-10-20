@@ -4,6 +4,8 @@ public enum QualityPreset : byte { Balanced, Fine, Ultra, Custom }              
 public enum ApplyClass : byte { Immediate, Amortized, UnderLoading, Restart }       // 即时、即时（分帧）、加载界面、重启（SYS-GRAPHICS），由轻到重
 public enum KnobKind : byte { Floor, StyleDefault, Performance }                 // 风格底线（有最差值）、风格默认（可关）、性能项（SYS-GRAPHICS）
 
+public enum KnobUnit : byte { Number, Scale, Metres, Percent }
+
 public enum QualityKnob : byte                      // 共 11 项，连续序号（QualityChange.Knobs 按序号置位）；--quality-set 用它的 snake_case
 {
     DisplayMode, WindowSize, VSync, FrameCap,
@@ -14,7 +16,7 @@ public enum QualityKnob : byte                      // 共 11 项，连续序号
 
 public sealed record KnobSpec(QualityKnob Knob, string OwnerWp, ApplyClass Apply, KnobKind Kind,
     float Min, float Max, float Step, float WorstAllowed, bool HigherIsBetter,
-    string LabelKey)                               // 界面按它自动生成控件；枚举类的项按序号编码成 float
+    string LabelKey, string Group, KnobUnit Unit)                               // 界面按它自动生成控件；枚举类的项按序号编码成 float
 {
     /// <summary>When present, only these discrete values are selectable and valid.</summary>
     public IReadOnlyList<float>? Values { get; init; }

@@ -30,7 +30,7 @@ public partial class SettingsCard
             SyncKnobs();
         };
         yield return null;
-        foreach (var group in quality.Knobs.GroupBy(spec => GraphicsGroup(spec.Knob)))
+        foreach (var group in quality.Knobs.GroupBy(spec => spec.Group))
         {
             var content = _kit.Layout.SettingGroup(page, UiKit.T("quality.group." + group.Key));
             foreach (var spec in group)
@@ -53,16 +53,6 @@ public partial class SettingsCard
         _apply.Off = true;
         if (_planned is { } planned) ShowPlan(quality.Plan(planned));
     }
-
-    private static string GraphicsGroup(QualityKnob knob) => knob switch
-    {
-        QualityKnob.DisplayMode or QualityKnob.WindowSize or QualityKnob.VSync or QualityKnob.FrameCap => "display",
-        QualityKnob.RenderScale or QualityKnob.AntiAliasing => "clarity",
-        QualityKnob.ShadowQuality or QualityKnob.ShadowDistance => "lighting",
-        QualityKnob.FoliageDensity => "scene",
-        QualityKnob.ReflectionInterval or QualityKnob.ParticleDensity => "effects",
-        _ => throw new ArgumentOutOfRangeException(nameof(knob)),
-    };
 
     private void KnobControl(Control parent, KnobSpec spec, float value)
     {
@@ -121,12 +111,13 @@ public partial class SettingsCard
         return (int)MathF.Floor(code == 2 ? rate / 2 : rate);
     }
 
-    private static string FormatKnob(KnobSpec spec, float value) => spec.Knob switch
+    private static string FormatKnob(KnobSpec spec, float value) => spec.Unit switch
     {
-        QualityKnob.RenderScale => $"{value:0.00}×",
-        QualityKnob.ShadowDistance => $"{value:0} m",
-        QualityKnob.FoliageDensity or QualityKnob.ParticleDensity => $"{value * 100:0}%",
-        _ => $"{value:0.##}",
+        KnobUnit.Scale => $"{value:0.00}×",
+        KnobUnit.Metres => $"{value:0} m",
+        KnobUnit.Percent => $"{value * 100:0}%",
+        KnobUnit.Number => $"{value:0.##}",
+        _ => throw new ArgumentOutOfRangeException(nameof(spec), "Unknown knob unit."),
     };
 
     private void Change(QualityKnob knob, float value)

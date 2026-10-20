@@ -32,11 +32,11 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
     private Task<CloudNoise.Result>? _noiseJob;
     private ImageTexture? _noiseTexture;
     private float[]? _thresholds;
-    private SkyMapData _map = SkyMapData.Fallback;
+    private SkyMapData? _map;
     private float _sentCover = -1f;
     private float _sentThr = -1f;
     public string? Error { get; private set; }
-    public bool IsReady(Pose pose) => Error is null && _material is not null &&
+    public bool IsReady(Pose pose) => Error is null && _map is not null && _material is not null &&
         _environment is not null && _noiseTexture is not null && _thresholds is not null;
 
     public override void _Ready()
@@ -45,34 +45,26 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         _world = Services.Get<IWorldState>();
         _script = Services.Get<IColorScriptFrame>();
         _material = CreateMaterial();
-        if (_material is not null)
+        _sky = new Godot.Sky
         {
-            _sky = new Godot.Sky
-            {
-                SkyMaterial = _material,
-                RadianceSize = Godot.Sky.RadianceSizeEnum.Size32,
-                ProcessMode = Godot.Sky.ProcessModeEnum.Incremental,
-            };
-        }
+            SkyMaterial = _material,
+            RadianceSize = Godot.Sky.RadianceSizeEnum.Size32,
+            ProcessMode = Godot.Sky.ProcessModeEnum.Incremental,
+        };
         // cloud_noise 只算一次，放在工作线程里；做完以后在主线程上传（ENG-PERF：静态全局纹理）
         var seed = StableHash.Hash32(0u, "sky", "cloud_noise");
         _noiseJob = Task.Run(() => CloudNoise.Generate(seed));
         TryAttach();
     }
 
-    public void OnMapUnloading(MapId from) => _map = SkyMapData.Fallback;
+    public void OnMapUnloading(MapId from) => _map = null;
 
     public void OnMapLoaded(IMapContext ctx)
     {
         ArgumentNullException.ThrowIfNull(ctx);
         var path = ctx.DataRoot + SkyMapData.FileName;
         var bytes = Godot.FileAccess.GetFileAsBytes(path);
-        if (bytes.Length == 0)
-        {
-            GD.PushWarning($"WP-40: {path} is missing; using the fallback cloud drift.");
-            _map = SkyMapData.Fallback;
-            return;
-        }
+        if (bytes.Length == 0) throw new FileNotFoundException("Required sky data is missing or empty.", path);
         _map = SkyMapData.Parse(bytes);
     }
 
@@ -89,7 +81,7 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
 
     private void UpdateContent()
     {
-        if (_world is null || _script is null) return;
+        if (_world is null || _script is null || _map is null) return;
         if (_environment is null) TryAttach();
         UploadNoiseWhenReady();
 
@@ -145,17 +137,13 @@ public partial class SkyNode : Node, IMapAware, IViewContentReadiness
         return w < 0 ? w + SkyTuning.DriftWrapMeters : w;
     }
 
-    private ShaderMaterial? CreateMaterial()
+    private ShaderMaterial CreateMaterial()
     {
-        try
-        {
-            return Services.Get<IShaderMaterialSource>().Create(ShaderId.Sky);
-        }
-        catch (InvalidOperationException error)
+        try { return Services.Get<IShaderMaterialSource>().Create(ShaderId.Sky); }
+        catch (Exception error)
         {
             Error = "Sky material source unavailable: " + error.GetBaseException().Message;
-            GD.PushError("WP-40: " + Error);
-            return null;
+            throw;
         }
     }
 

@@ -131,7 +131,7 @@ public sealed record ScopeJson(Dictionary<string, double>? Weights)
 public sealed record SeasonLimitsJson(Dictionary<string, double> RMax, Dictionary<string, double>? ZenithMinC = null);
 
 public sealed record SeasonDeltaJson(SeasonSkyJson Sky, KeyOpJson[] Key, SeasonShadeJson Shade, SeasonFogJson Fog,
-    SeasonPostJson Post, SeasonOverrideJson[] Overrides, string? Name = null, double LampPoolGain = 1.0);
+    SeasonPostJson Post, SeasonSurfaceJson Surface, SeasonOverrideJson[] Overrides, string? Name = null, double LampPoolGain = 1.0);
 
 public sealed record SeasonSkyJson(ZenithDeltaJson Zenith, string Scope);
 
@@ -152,6 +152,12 @@ public sealed record SeasonFogJson(Lab? Toward, double AbAmount, [property: Json
     double VisibilityMul, double HazeMul, string Scope);
 
 public sealed record SeasonPostJson(double GlowIntensityMul);
+
+/// <summary>Seasonal surface anchors: gold-leaf channel, mixed leaves/petals and baseline snow.</summary>
+public sealed record SeasonSurfaceJson(float GoldLeaf, float MixedLeaf, float Snow)
+{
+    public System.Numerics.Vector3 Amount => new(GoldLeaf, MixedLeaf, Snow);
+}
 
 /// <summary>Hand-tuned colours for the listed keyframes (colour names as in FrameLayout.ColorTokens).</summary>
 public sealed record SeasonOverrideJson(string[] Keys, string? What = null, Dictionary<string, Lab>? Colors = null,
@@ -302,6 +308,10 @@ internal static class ColorScriptJson
         {
             var s = seasons.Seasons.For(season);
             var at = $"$.seasons.{season.ToString().ToLowerInvariant()}";
+            if (s.Surface is null || !float.IsFinite(s.Surface.GoldLeaf) || !float.IsFinite(s.Surface.MixedLeaf) ||
+                !float.IsFinite(s.Surface.Snow) || s.Surface.GoldLeaf is < 0 or > 1 ||
+                s.Surface.MixedLeaf is < 0 or > 1 || s.Surface.Snow is < 0 or > 1)
+                throw new InvalidDataException($"seasons.json: {at}.surface needs finite anchors in [0, 1].");
             Scope(seasons, $"{at}.sky.scope", s.Sky.Scope);
             Scope(seasons, $"{at}.shade.scope", s.Shade.Scope);
             Scope(seasons, $"{at}.fog.scope", s.Fog.Scope);

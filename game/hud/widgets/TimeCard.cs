@@ -179,7 +179,14 @@ public partial class TimeCard : PanelContainer
         Span<N.Vector3> samples = stackalloc N.Vector3[24];
         _probe.SampleHorizon(_model.World.SeasonTarget, _model.World.WeatherNow, samples);
         var colors = new Color[24];
-        for (var i = 0; i < 24; i++) colors[i] = Oklab.ScaleChroma(new Color(samples[i].X, samples[i].Y, samples[i].Z), 0.7f);
+        for (var i = 0; i < 24; i++)
+        {
+            var lab = Oklab.FromSrgb(samples[i].X, samples[i].Y, samples[i].Z);
+            var (r, g, b) = Oklab.ToLinear(new Lab(lab.L, lab.A * 0.7f, lab.B * 0.7f));
+            // The spectrum clips the result, preserving its existing saturation rule.
+            colors[i] = new Color((float)Oklab.LinearToSrgb(Math.Clamp(r, 0, 1)),
+                (float)Oklab.LinearToSrgb(Math.Clamp(g, 0, 1)), (float)Oklab.LinearToSrgb(Math.Clamp(b, 0, 1)));
+        }
         _spectrum.Samples = colors;
         _spectrum.QueueRedraw();
     }

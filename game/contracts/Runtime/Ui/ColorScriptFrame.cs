@@ -51,6 +51,9 @@ public readonly record struct ColorScriptSnapshot(
     Vector3 VignetteTint,
     Vector4 Fog)
 {
+    /// <summary>Evaluated seasonal gold-leaf and mixed-leaf/petal amounts, and baseline snow, before weather accumulation.</summary>
+    public Vector3 SeasonSurface { get; init; }
+
     /// <summary>Streetlamp light-pool gain, written by WP-37 and read by WP-39/WP-03: 1.5 on winter nights, otherwise 1.</summary>
     public float LampPoolGain { get; init; } = 1f;
 

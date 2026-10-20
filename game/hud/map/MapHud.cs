@@ -18,7 +18,7 @@ namespace Campus.Hud.Map;
 [KernelNode("hud-map", Owner = "WP-48b")]
 public partial class MapHud : Node, IMapAware, IBootParticipant
 {
-    private MapStyle? _style;
+    private MapStyle _style = null!;
     private MapHudServices? _services;
     private MapHudContext _ctx = null!;
     private ShaderMaterial _material = null!;
@@ -39,7 +39,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     // 两个控制共用的状态与依赖
     internal MapHudServices Services => _services!;
     internal HudRoot Hud => _services!.Hud;
-    internal MapStyle Style => _style!;
+    internal MapStyle Style => _style;
     internal MapHudContext Ctx => _ctx;
     internal MapDescriptor? Map => _map;
     internal MapGeo? Geo => _geo;
@@ -58,8 +58,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     {
         ProcessPriority = FramePriority.Hud;
         _services = new MapHudServices();
-        _style = MapStyle.TryLoad(Hud.Ui);
-        if (_style is null) { SetProcess(false); return; }
+        _style = MapStyle.Load(Hud.Ui);
         var atlas = _services.Atlas;
 
         _ctx = new MapHudContext(_style, Hud.Ui);
@@ -84,7 +83,6 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
 
     public override void _ExitTree()
     {
-        if (_style is null) return;
         _atlasCtl.Dispose();
         _services!.Surfaces.Report(UiSurface.Minimap, false);
         _base?.Dispose();
@@ -103,7 +101,6 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     {
         _map = null;
         _geo = null;
-        if (_style is null) return;
         _base!.Clear();
         _atlasCtl.Unload();
         _entries = [];
@@ -115,7 +112,6 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
     {
         _map = ctx.Descriptor;
         _geo = new MapGeo(ctx.Descriptor.Geo);
-        if (_style is null) return;
         _atlasCtl.SetTitle(ctx.Descriptor.Name.Zh, ctx.Descriptor.Name.En.ToUpperInvariant());
         _base!.Clear();
         var page = _services!.Atlas.PageRect;   // IAtlasService 先于本节点收到 OnMapLoaded（按 ID 顺序）
@@ -190,7 +186,7 @@ public partial class MapHud : Node, IMapAware, IBootParticipant
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (_style is null || !_services!.Flow.IsPlaying) return;
+        if (!_services!.Flow.IsPlaying) return;
         if (_atlasCtl.IsOpen) { _atlasCtl.HandleInput(e); return; }
         if (e.IsActionPressed("map")) { _atlasCtl.Open(AtlasTab.Layers); Handled(); }
         else if (e.IsActionPressed("atlas_index")) { _atlasCtl.Open(AtlasTab.Index); Handled(); }

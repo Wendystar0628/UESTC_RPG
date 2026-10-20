@@ -1,5 +1,3 @@
-using System.Text.Json;
-using Campus.Contracts;
 using Campus.Hud.Style;
 using Campus.Hud.Widgets;
 using Godot;
@@ -11,8 +9,6 @@ namespace Campus.Hud.Map;
 /// </summary>
 public sealed class MapStyle
 {
-    public const string PalettePath = "res://style/palette/ext/ui.json";
-
     /// <summary>map_base 色表的顺序：与 map_base.gdshader 的 C_* 常量一一对应，只在末尾追加。</summary>
     public static readonly (string Token, string? Part)[] Roles =
     [
@@ -38,34 +34,23 @@ public sealed class MapStyle
     public MapFonts Fonts { get; }
     public MapTone Tone(bool night) => night ? Night : Day;
 
-    /// <summary>读不到令牌时返回 null：界面整体不显示，只记一条警告，不挡主线（PLAN-WP）。</summary>
-    public static MapStyle? TryLoad(UiKit ui)
+    public static MapStyle Load(UiKit ui)
     {
-        if (!Godot.FileAccess.FileExists(PalettePath))
-        {
-            GD.PushWarning($"WP-48b: UI palette missing ({PalettePath}); map HUD stays hidden.");
-            return null;
-        }
-        var document = JsonSerializer.Deserialize<UiPaletteDocument>(Godot.FileAccess.GetFileAsBytes(PalettePath), ContractJson.Options)
-            ?? throw new InvalidDataException("ui.json is empty.");
-        // 地图界面与其他消费者使用同一份完整场景目录。
-        var palette = new UiPalette(document, Campus.Kernel.Registry.Kernel.Get<IPaletteCatalogSource>().Catalog);
+        var palette = ui.Colors;
         return new MapStyle(MapTone.From(palette, "light", false), MapTone.From(palette, "dark", true),
             MapTable(palette, "light"), MapTable(palette, "dark"), MapMetrics.From(ui.Tokens), new MapFonts(ui.Theme));
     }
 
-    private static Color[] MapTable(UiPalette palette, string theme)
+    private static Color[] MapTable(UiColors palette, string theme)
     {
         var table = new Color[ShaderPaletteSize];
         for (var i = 0; i < Roles.Length; i++)
         {
             var (token, part) = Roles[i];
-            table[i] = ToColor(part is null ? palette.ResolveMap(theme, token) : palette.ResolveMap(theme, token, part));
+            table[i] = part is null ? palette.Map(theme, token) : palette.Map(theme, token, part);
         }
         return table;
     }
-
-    internal static Color ToColor(System.Numerics.Vector4 v) => new(v.X, v.Y, v.Z, v.W);
 }
 
 /// <summary>一套主题（晶白或深屏）下地图界面要用的语义色。</summary>
@@ -116,10 +101,10 @@ public sealed class MapTone
     public Color PlayerLine { get; private init; }
     public Color PlayerCone { get; private init; }
 
-    internal static MapTone From(UiPalette p, string theme, bool night)
+    internal static MapTone From(UiColors p, string theme, bool night)
     {
-        Color T(string token) => MapStyle.ToColor(p.ResolveTheme(theme, token));
-        Color M(string token, params string[] parts) => MapStyle.ToColor(p.ResolveMap(theme, token, parts));
+        Color T(string token) => p.Theme(theme, token);
+        Color M(string token, params string[] parts) => p.Map(theme, token, parts);
         return new MapTone
         {
             IsNight = night,

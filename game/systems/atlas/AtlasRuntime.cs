@@ -4,7 +4,6 @@ using Campus.Contracts.Atlas;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
-using Campus.Kernel.Frame;
 
 namespace Campus.Systems.Atlas;
 
@@ -25,14 +24,7 @@ public partial class AtlasRuntime : Godot.Node, IMapAware, IMapDataParticipant
         _bake = bake;
         _baseSource = baseSource;
         _terrain = terrain;
-        _atlas.Connect(maps, flow, audio, view, TraceTravel);
-    }
-
-    private static void TraceTravel(string phase, MarkerId id, TravelStyle style, string? result, ViewMode mode)
-    {
-        var at = FrameClock.MonotonicMilliseconds;
-        var completion = result is null ? "" : $" result={result} mode={mode}";
-        Godot.GD.Print(FormattableString.Invariant($"ATLAS_TRAVEL_PHASE {phase} {id.Value} {style} {at:R}{completion}"));
+        _atlas.Connect(maps, flow, audio, view);
     }
 
     public Task Prepare(IMapContext context)

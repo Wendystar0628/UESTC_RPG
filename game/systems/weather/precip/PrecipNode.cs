@@ -18,8 +18,9 @@ namespace Campus.Systems.Weather.Precip;
 /// 降水池由内核建（ENG-ARCH，IInstancePoolHost）：启动时就挂上、整块写一次实例缓冲，运行时只改可见数与 instance uniform。
 /// </summary>
 [KernelNode("systems.weather.precip", Owner = "WP-45b")]
+[KernelService(typeof(IWeatherRenderState), Owner = "WP-45b")]
 [QualityResponsive(Owns = [QualityKnob.ParticleDensity])]
-public partial class PrecipNode : Node, IQualityAware, IMapAware
+public partial class PrecipNode : Node, IQualityAware, IMapAware, IWeatherRenderState
 {
     private static readonly StringName _shaderInstancePrecipD = InstanceShaderParameters.PrecipD;
     private static readonly StringName _shaderInstancePrecipK = InstanceShaderParameters.PrecipK;
@@ -45,6 +46,8 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
 
     /// <summary>本帧的降水池输出（可见数与 instance uniform 的值）。</summary>
     public PrecipFrame Frame { get; private set; }
+
+    public System.Numerics.Vector4 WeatherFog { get; private set; } = WeatherGlobalsMap.Fog(default);
 
     /// <summary>本图降水池的 CustomAabb（可达范围"中心 ± 3 km"）；没有地图时罩住原点 ± 3 km。</summary>
     public Box3 PoolBounds { get; private set; } = PrecipModel.PoolBounds(System.Numerics.Vector2.Zero, 3000f, -100f, 2000f);
@@ -83,7 +86,8 @@ public partial class PrecipNode : Node, IQualityAware, IMapAware
         var w = _world.WeatherNow;
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalWeatherA, ToGodot(WeatherGlobalsMap.A(w)));
         RenderingServer.GlobalShaderParameterSet(_shaderGlobalWeatherB, ToGodot(WeatherGlobalsMap.B(w)));
-        RenderingServer.GlobalShaderParameterSet(_shaderGlobalWeatherFog, ToGodot(WeatherGlobalsMap.Fog(w)));
+        WeatherFog = WeatherGlobalsMap.Fog(w);
+        RenderingServer.GlobalShaderParameterSet(_shaderGlobalWeatherFog, ToGodot(WeatherFog));
         var eye = _camera.Pose.Position;
         var gust = _wind.Sample(eye.X, eye.Z, _world.AnimTime).Gust;
         Frame = _model.Step(w, _world.Step12, gust, _density, _stepRate);

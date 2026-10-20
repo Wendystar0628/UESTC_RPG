@@ -9,9 +9,6 @@ public sealed record SkyMapData(CloudDrift CloudDrift)
 {
     public const string FileName = "sky.json";
 
-    /// <summary>Used when a map ships no sky.json: a slow eastward drift.</summary>
-    public static SkyMapData Fallback { get; } = new(new CloudDrift(90f, 6f));
-
     public static SkyMapData Parse(ReadOnlySpan<byte> json)
     {
         var data = JsonSerializer.Deserialize<SkyMapData>(json, ContractJson.Options)

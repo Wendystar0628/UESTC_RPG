@@ -82,4 +82,40 @@ public static partial class WorldModelLoader
                 if (!operations.TryAdd(op.Id, op)) throw new WorldDataException(source.File, op.Id, "Duplicate terrain operation ID.");
         return new ReadOnlyDictionary<string, TerrainOp>(operations);
     }
+
+    private static void ValidateTerrainReferences(IReadOnlyList<TerrainSource> sources,
+        IReadOnlySet<FeatureId> features, IReadOnlySet<FeatureId> roads)
+    {
+        foreach (var source in sources)
+            foreach (var op in source.Data.Ops)
+            {
+                switch (op)
+                {
+                    case TerrainPadOp pad:
+                        Reference("feature", pad.Feature);
+                        if (pad.Edge is { } edge) Reference("edge.structureId", new(edge.StructureId));
+                        break;
+                    case TerrainLakeOp lake: Reference("water", lake.Water); break;
+                    case TerrainCorridorOp corridor:
+                        Reference("road", corridor.Road, roads);
+                        for (var index = 0; index < corridor.Steps.Count; index++)
+                            Reference($"steps[{index}].structure", corridor.Steps[index].Structure);
+                        break;
+                    case TerrainChannelOp channel:
+                        if (channel.Water is { } water) Reference("water", water);
+                        for (var index = 0; index < channel.Weirs.Count; index++)
+                        {
+                            var weir = channel.Weirs[index];
+                            Reference($"weirs[{index}].structure", weir.Structure);
+                            Reference($"weirs[{index}].upstream", weir.Upstream);
+                            Reference($"weirs[{index}].downstream", weir.Downstream);
+                        }
+                        for (var index = 0; index < channel.Crossings.Count; index++)
+                            Reference($"crossings[{index}].road", channel.Crossings[index].Road, roads);
+                        break;
+                }
+                void Reference(string field, FeatureId target, IReadOnlySet<FeatureId>? targets = null) =>
+                    RequireReference(source.File, op.Id, field, target, targets ?? features);
+            }
+    }
 }
