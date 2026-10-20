@@ -162,7 +162,7 @@ public sealed class ArchitectureTests
     // These are concrete responsibility homes, including order within each broad architecture layer.
     private static int KernelLevel(string owner) => owner switch
     {
-        "Frame" => 0, "Registry" => 1,
+        "Diagnostics" => 0, "Frame" => 0, "Registry" => 1,
         "Materials" => 2, "Lod" => 3, "Renderer" => 4, "Instances" => 5,
         "Settings" => 6, "Stubs" => 7, "Collision" => 8, "Maps" => 9,
         "Quality" => 10, "Lighting" => 11, "Post" => 12, "World" => 13,

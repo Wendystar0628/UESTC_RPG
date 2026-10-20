@@ -734,6 +734,10 @@
       "owner": "WP-23"
     },
     {
+      "pattern": "game/kernel/diagnostics/**",
+      "owner": "WP-01"
+    },
+    {
       "pattern": "game/kernel/inspect/**",
       "owner": "WP-01"
     },

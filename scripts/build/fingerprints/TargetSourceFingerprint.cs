@@ -247,7 +247,7 @@ internal static class TargetSourceFingerprint
         {
             "game/audio/core/", "game/camera/", "game/flow/", "game/gates/", "game/hud/", "game/stage/",
             "game/style/palette/", "game/style/shaders/", "game/style/text/",
-            "game/kernel/boot/", "game/kernel/frame/", "game/kernel/inspect/", "game/kernel/instances/",
+            "game/kernel/boot/", "game/kernel/diagnostics/", "game/kernel/frame/", "game/kernel/inspect/", "game/kernel/instances/",
             "game/kernel/lighting/", "game/kernel/lod/", "game/kernel/map/", "game/kernel/materials/",
             "game/kernel/post/", "game/kernel/quality/", "game/kernel/renderer/", "game/kernel/save/",
             "game/kernel/settings/", "game/kernel/stream/", "game/kernel/world/",
