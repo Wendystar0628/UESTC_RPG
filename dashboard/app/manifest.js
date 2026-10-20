@@ -25,7 +25,7 @@ window.DashManifest = {
   ],
   data: [
     { name: 'live',       label: '运行状态',   path: 'data/auto/live.js',       poll: true, every: 15, stale: 90 },
-    { name: 'index',      label: '数据索引',   path: 'data/auto/index.js',      poll: true, every: 15, stale: 120 },
+    { name: 'index',      label: '数据索引',   path: 'data/auto/index.js',      poll: true, every: 15, stale: 300 },
     { name: 'attention',  label: '需要你',     path: 'data/auto/attention.js',  keep: true, every: 60, stale: 900 },
     { name: 'health',     label: '健康检查',   path: 'data/auto/health.js',     keep: true, every: 60, stale: 900 },
     { name: 'queue',      label: '施工队列',   path: 'data/auto/queue.js',      keep: true, every: 60, stale: 900 },

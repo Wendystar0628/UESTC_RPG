@@ -95,6 +95,9 @@
   Dash.isStale = function (name) {
     var s = srcs[name];
     if (DEMO || !store[name] || !s || s.stale == null) return false;
+    // 版本索引在管的数据：内容没变后端不重写，updated 是"上次变化"；索引按时刷新就说明这份是最新的
+    var versions = store.index && store.index.versions;
+    if (!s.poll && Dash.internal.indexState() === 'ready' && versions && name in versions) return false;
     return Dash.stale(store[name], s.stale);
   };
 

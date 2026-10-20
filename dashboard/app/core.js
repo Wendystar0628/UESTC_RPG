@@ -21,7 +21,7 @@
   var index = { state: 'wait', versions: null };   // wait | ready | missing | stale
 
   M.data.forEach(function (s) { srcs[s.name] = s; });
-  Dash.internal = { store: store, srcs: srcs };
+  Dash.internal = { store: store, srcs: srcs, indexState: function () { return index.state; } };
 
   function h() { return Dash.h.apply(null, arguments); }
   function parseTime(iso) { return Dash.parseTime(iso); }
