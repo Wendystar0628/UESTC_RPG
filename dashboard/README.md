@@ -2,7 +2,7 @@
 
 作者了解项目的唯一入口：现在、施工、团队、健康、体系、动态、文档七页，回答当前推进、流水线、协作、运行状况、开发结构、最近变化与文档内容。双击 `打开观察台.cmd`，启动唯一实时采集与回环 HTTP 服务。作者过目不挡推进（D-274），工程、架构与排期由两位指挥判断。
 
-统计口径、时间窗口、排序与未知判断统一在 `monitor/view/`；页面展示现成结果，保留按方向筛抽屉、按 parent 展开文档树、拼编号和用 `Dash.since` 显示经过时长等展示行为。历史不全照实显示已有事实，缺项保留“未确认”；不公开原始日志或完整会话。数据契约见 §1–§2，页面与交互见 §3–§5。
+统计口径、时间窗口、排序与未知判断统一在 `monitor/view/`，失败登记的提交窗口由 writer、list 与 view 共用 `monitor/read/failures.window_records()` 纯函数；页面展示现成结果，保留按方向筛抽屉、按 parent 展开文档树、拼编号和用 `Dash.since` 显示经过时长等展示行为。历史不全照实显示已有事实，缺项保留“未确认”；不公开原始日志或完整会话。数据契约见 §1–§2，页面与交互见 §3–§5。
 
 ## 1 采集与写入
 
@@ -75,8 +75,8 @@ health:    {coverage, at, level, summary, late: bool|null, counts: {ok, warn, ba
 failures:  {coverage: {from: 记账起点|null},
             window: {size, segment, commits|null, from: 时刻|null, n|null, rate|null,
                      unclassified|null, fresh|null, trend: better|worse|same|null, last: {at, minutes}|null},
-            majors: [{key, label, n|null, rate|null, last100|null, recent: [记录id],
-                      subs: [{key, label, note, n|null, rate|null, last100|null,
+            majors: [{key, label, n|null, rate|null, lastSegment|null, recent: [记录id],
+                      subs: [{key, label, note, n|null, rate|null, lastSegment|null,
                               added|null, fresh: bool|null, recent: [记录id]}]}],
             segments: [{from: 提交序号, to: 提交序号, commits, n|null, partial: bool,
                         byMajor: {大类key: 次数|null}, recent: [记录id]}]|null,
@@ -108,7 +108,7 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
 - team 行字段复制同轮 progress，队列无对应行则为 null。agents 按 stalled、running、unknown、done 排，未交回按开始升序，交回按结束降序；runMin 只用真实开始和在跑时刻或真实交回。leads.agents 与 sides 同源，等于 running+stalled；unknown 单列，doneN 为近一小时真实交回，覆盖不足为 null。停止、失败不算交回。
 - letters.open 是唯一未回信平铺列表，minutes 降序，未知在末尾；cells 只给对应 openN，抽屉按 from/to/mark 筛同一列表。audit.missing 与 unaudited 同一次差集，已知时条数相等，已不在队列的 stage=null；rate=audited/rows，dispatch.rate=ok/n。覆盖或来源不足为 null。
 - health 各组 counts 相加等于总 counts；groups.items 包含全部项，按 bad、warn、unknown、ok 排，正常标题同源。rounds 为最近 48 轮、时间升序；roundsSummary.last 只取同一末轮。钩子自测只在 hooks.selftest，其 level 与巡逻结论同源；at 为真实黑盒完成时刻，同源复用不改时刻，health.at 仍为巡逻确认时刻；无结构化计数则 ok/total=null。late 只由真实巡逻时刻和登记间隔决定，未知不判正常。
-- failures 的窗口大小与段长只读 `monitor/failure-types.json`，读取共用 `read/failures.snapshot()`，不复述数值。窗口按登记时的 origin/main 提交序号取 `(current-size, current]`；起点所在提交的首次登记同样保留，分母为 `min(size, current-start.seq)`。rate=次数÷实际提交数×segment，不足一段为 null；last100 沿契约字段名表示最近一个 segment 的次数。没开始记账时 coverage.from、窗口指标、类别计数与 fresh、segments 均为 null；原始读取或 Git 失败发布 errors。
+- failures 的窗口大小与段长只读 `monitor/failure-types.json`，读取共用 `read/failures.snapshot()`，不复述数值。窗口按登记时的 origin/main 提交序号取 `(current-size, current]`；起点所在提交的首次登记同样保留，分母为 `min(size, current-start.seq)`。rate=次数÷实际提交数×segment，不足一段为 null；majors 与 subs 的 lastSegment 表示最近一个 segment 的次数，段长同源取 window.segment，不输出旧字段。没开始记账时 coverage.from、窗口指标、类别计数与 fresh、segments 均为 null；原始读取或 Git 失败发布 errors。
 - failures.segments 固定覆盖窗口、旧到新，from 不含、to 包含；整体在起点之前 n/byMajor 为 null，跨起点 partial=true，不把未记账写为零。trend 仅在最新段已完整覆盖时与此前完整段次数均值比较，没有前序完整段为 null。未收录子类计入 window.n/unclassified，不进大类。子类别名由原始 reader 唯一解析。fresh 只计真实 added 晚于记账起点、位于已知窗口内的子类，种子 added=null 不算；window.fresh 同源汇总。
 - failures.records 为窗口内全量记录索引；recent、majors[].recent、subs[].recent、segments[].recent 都由 view 排成新到旧且最多 20 条。页面按 fmajor/fsub 选择现成索引，点提交段打开对应抽屉，不排序、切窗或重新统计；不公开 head、src、by 与原始日志路径。窗口内零条显示“窗口内没有登记”，登记数不等于实际失败数。
 - system 的图四层分别为时机、钩子、注入类别、文档域；id 前缀 t:/h:/k:/d:，边与 in/out 引用同一节点 id。次数有未知不把已知部分冒充完整值。collide.total24 与 items 同源，scripts.total 与 groups 同一次扫描；domains 的 key/index/docs 取同轮 docs，不另建目录来源。
