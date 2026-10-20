@@ -1,5 +1,6 @@
 """把一个目录里的截图拼成一张缩略总览（每行 4 张，图下标名字），存成同目录的 总览.jpg。
 用法：python -I -X utf8 contact-sheet.py <截图目录>
+产出：第一个命令行参数指定的截图目录内的 总览.jpg（父目录由调用方传入）。
 """
 import os
 import sys

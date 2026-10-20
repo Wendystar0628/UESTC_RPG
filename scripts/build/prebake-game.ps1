@@ -1,4 +1,5 @@
 ﻿# 收口预烘：照正式启动入口编译、导入，再后台全图烘进同一份本机 CPU 缓存，全程持构建锁。
+# 产出：output/prebake_game/、本机CPU烘焙缓存
 # 用法：powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build\prebake-game.ps1
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path

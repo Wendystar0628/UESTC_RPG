@@ -1,6 +1,7 @@
 """Private-desktop launcher for startup CPU sampling; never switches desktops.
 
 用法：python -I isolated-launch.py <output> <title|immediate|dwell> <dwell-seconds>
+产出：第一个参数指定目录（采样子进程日志与记录；父目录由调用方传入）。
 """
 import base64
 import ctypes as c

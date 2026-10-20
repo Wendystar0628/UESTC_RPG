@@ -8,6 +8,7 @@
   index.md、classes/<类型>.md、signatures.txt
 
 用法：python -I scripts/godot-api/gen-api-docs.py
+产出：docs/godot-api/classes/；docs/godot-api/signatures.txt；docs/godot-api/index.md。
 """
 import json
 import os

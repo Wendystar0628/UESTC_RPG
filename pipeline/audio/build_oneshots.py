@@ -5,6 +5,7 @@
 - "step"：按瞬态峰值切（脚步、碰撞）；
 - "phrase"：按“安静间隙”切（鸟叫、乌鸦、蛙），一段乐句为一条。
 用法: python build_oneshots.py --raw-dir <原料> --out-dir <game/assets/audio> --recipes oneshots.json --report <json> [--only set,set]
+产出：--out-dir 指定的音频父目录；--report 指定的 JSON 文件（父目录由调用方传入）。
 """
 import argparse, hashlib, json, os
 import numpy as np

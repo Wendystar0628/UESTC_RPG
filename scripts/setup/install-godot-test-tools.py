@@ -2,6 +2,7 @@
 
 用法：python scripts/setup/install-godot-test-tools.py
 压缩包与校验记录留在被忽略的 output/downloads 目录。
+产出：output/downloads/；game/addons/gdUnit4/；E:/Tools/Godot/Godot_v4.7.2-stable_mono_win64/editor_data/export_templates/4.7.2.stable.mono/。
 """
 
 import hashlib

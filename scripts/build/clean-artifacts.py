@@ -12,6 +12,7 @@
   python -I -X utf8 scripts/build/clean-artifacts.py                列出可删的项和大小
   python -I -X utf8 scripts/build/clean-artifacts.py --delete       删掉它们
   python -I -X utf8 scripts/build/clean-artifacts.py --commits 10   改轮次
+产出：无（列出一次性产物；--delete 删除过期项并清理失效工作树登记）。
 """
 import json
 import os

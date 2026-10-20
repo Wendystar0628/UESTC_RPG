@@ -7,6 +7,7 @@
   music/broadcast_melody_mid.ogg   过喇叭频带（300 Hz–4 kHz）+ 很轻的房间感，“中”档
   music/broadcast_melody_far.ogg   更窄的频带 + 距离混响尾，“远”档
   bells/bell_strike_01.ogg         单音铜钟（低沉、余音 7 s），干声
+产出：--out-dir 指定目录内的 music/、bells/（父目录由调用方传入）。
 """
 import argparse, os
 import numpy as np

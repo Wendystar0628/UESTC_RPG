@@ -1,112 +1,74 @@
 # 作者观察台
 
-作者了解项目的唯一入口：一个本地网页，像后台控制面板一样回答七件事——要不要作者动手、每件活走到哪一步、两个指挥说了什么、谁在用什么模型、钩子脚本文档检查怎么相互作用、哪里不健康、资料在哪。双击 `打开观察台.cmd`（或直接用浏览器打开 `index.html`）即可；"知道了"这类写回操作要求页面由本地服务打开（见 §3.3 `Dash.ack`）。
+作者通过五页了解项目：首页、进展、团队、体系、资料。只给高层信息、统计和可回应的审美取向；编号对象显示“编号 + 一句话标题”，完成项只计数。作者过目不挡推进（D-274），工程、架构与排期由两个指挥判断。
 
-**只放高层信息**。作者注意力有限：每块先给一句状态和要紧的数字，细节放在点开或展开里；一条信息不长（约 120 字以内）就直接全文，真长的才给"一句话摘要 + 展开全文"，不靠省略号硬截；测得到的数一律写确切值，不报数量级。业务判断都在采集侧，浏览器只画。谁更新、更新什么见 WF-COMMS（作者观察台一节），本文件只讲架构与扩展。
+双击 `打开观察台.cmd`，入口启动 `live.py --loop` 与 `serve.py`，用回环 HTTP 打开页面。纯文件预览无法执行留言或“知道了”。业务判断集中在采集侧，浏览器只画。
 
-## 1 目录
+## 1 采集与写入
 
-```
-dashboard/
-  index.html            外壳：页眉、导航、页面容器、右下角提示条；按序加载 vendor/echarts、manifest、core、ui、palette、charts、charts-flow、charts-layered、charts-stats、ui-live
-  打开观察台.cmd         启动实时采集（没在跑时）、跑一次项目采集、用默认浏览器打开 index.html
-  vendor/
-    echarts.min.js      Apache ECharts 单文件；许可文本在同目录 echarts-LICENSE.txt、echarts-NOTICE.txt
-  app/
-    manifest.js         页面（含资料页子标签）与数据源的唯一清单；加页面、子标签、数据源只改这里
-    core.js             Dash 运行时：数据按需加载与版本索引、路由、面板注册与渲染、页内选中状态、页眉与导航角标
-    ui.js               格式化与小组件：确切个数与时刻、h()、签条、状态条、折叠、行、表格、树、状态灯、分段开关
-    palette.js          色表：语义（组、键）→ CSS 变量与中文名；签条、图例
-    charts.js           共用图组件的底座（基于 ECharts）：主题色、尺寸自适应、空数据、加载占位、释放；建 Dash.charts，并经 Dash.internal.chartKit 把共用函数交给下面三份
-    charts-flow.js      swimlane 泳道矩阵、dag 依赖图、timeline 时间线
-    charts-layered.js   layered 分层关系图
-    charts-stats.js     heatmap 热力矩阵、treemap 矩形树图、bars 条形图
-    ui-live.js          实时数据的共用渲染：时长、长文字、空状态原因、子代理签条、后台脚本、临时工作树
-    style.css           令牌（颜色、字号、间距、字体，浅色与深色各一份）与通用组件样式
-    pages/<页>.js|css   一页一个文件（可带同名 .css）；资料页每个子标签一个：library-<子标签>.js|css；只经 Dash 读数据
-  data/                 本地状态，不进 git（.gitignore）
-    auto/<名字>.js      采集脚本生成，任何人不手改
-    curated/<名字>.js   只经 tools/post.py 改
-    demo/<名字>.js      演示数据（?demo），与 manifest 的数据源一一对应
-  tools/
-    datafile.py         数据文件读写（唯一入口）
-    collect.py          项目采集：读权威来源，写 data/auto 下的项目数据；live.py --loop 每 10 分钟跑一次
-    live.py             实时采集：只组装监控库 view/ 的结果，写 live.js 与 catalog.js；--loop 每 15 s 写一次 live.js、每 60 s 写一次 catalog.js
-    post.py             给模型用的发布工具：发通知、挂审计项、结项、删过期
-```
+- `collect.py` 每次按真实来源生成 v2 汇总；队列表只读正式 `title`，不把“做什么”长描述当标题。文档域沿用 CORE-INDEX，记录沿用 REG-DECISIONS。
+- `live.py` 每 15 秒写两个指挥是否运行及界面版本；输入变化即以新进程运行 collect，无变化每两分钟刷新。修改采集入口或 monitor 模块后重启循环与服务。
+- `.collab/tools/monitor/view/` 的 attention、progress、team、system、hookfeed、stats 分别负责过目/留言、四段进展、团队汇总、体系摘要、注入摘要、统计；people 继续提供真实会话读法。底层读取与巡逻共用，不保留 v1 页面视图。
+- `datafile.py` 是 `Dash.put` 文件的唯一读写入口；原子替换文件，版本索引只登记 v2。`post.py` 只维护通知及审美过目输入，写入有锁。
+- `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件与两个同源写入 API。
 
-**数据从哪来**：观察台的健康、在做、谁在干活、后台脚本、临时工作树、钩子、脚本目录这几项都由监控库 `.collab/tools/monitor/`（本机 `.collab` 工具，与巡逻共用，只读；分层与各文件职责见 `.collab/tools/README.md` 的 monitor/ 表）读出，观察台不另写一份读法或检查：`collect.py` 经 `monitor.check.run_all` 取健康检查、经 `monitor.read.collab` 读队列与来信与调研；`live.py` 经 `monitor.view` 取 `people`（谁在干活）、`work`（在做的工作）、`running`（后台脚本）、`trees`（临时工作树）、`hooks`（钩子卡）、`catalog`（脚本目录，读 `monitor.read.scriptfiles`），临时工作树里"最近一次门禁"的一句话取自 `monitor.check.build.gate_brief`（门禁结果只有那一份实现）。这是仓库代码引用 `.collab` 的唯一例外（本机协作数据不进仓库）。模型写的只有 `post.py` 的通知与审计项；其余都是程序从权威来源读出，模型把这些结构化位置写对即可：施工队列表与状态头部的"当前阶段""当前优先级"、子代理名开头的队列行号、任务单开头的行号、来信第一行的标记（WF-COMMS §6）。
+`dashboard/data/auto/` 是程序结果，`curated/notices.js` 是通知，`curated/audit.js` 只是私有审美输入，`data/demo/` 由前端维护。源码目录 `app/`、`vendor/`、`index.html` 的版本集合决定 `live.appStamp`。
 
-## 2 数据文件
+## 2 数据契约 v2
 
-每个数据文件只有一行：`Dash.put("<名字>", <JSON>);`。页面用 `<script>` 加载，所以 `file://` 下也能读；定时重载时换一个带时间戳的 `<script>`。读写一律经 `tools/datafile.py`（写入先写临时文件再改名）。每份数据都带 `updated`（ISO 时刻）和 `source`（哪个脚本或哪个会话写的），页面据此显示"更新 HH:MM"，过期变灰。**数据存全文**，不在采集里截断。
+每份数据由 `Dash.put(名字, 数据)` 交付，附 `updated`、`source`；时刻是本地 ISO 字符串。来源失败写 `errors`，不会把旧值当作新结果；缺乏真实事实的字段用 `null`。只有 `notices` 在 curated，其余在 auto。
 
-| 名字 | 种类 | 写的人 | 刷新 | 内容 |
-| --- | --- | --- | --- | --- |
-| `live` | auto | live.py | 15 s | 会话、子代理（型号与推理强度）、在做的工作、后台脚本、构建锁与引擎进程、临时工作树、钩子与生效记录 |
-| `queue` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 施工队列各状态的行、当前阶段与优先级 |
-| `structure` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 项目分层与主要目录，目录可嵌套子目录（文件数、代码行、测试代码行） |
-| `docs` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 文档清单，结构与 AI 读的一致：顶层 CORE-INDEX，其下按 CORE-INDEX §1 的域与主文档顺序，子文档按文件头 `parent` 挂在主文档下（编码、标题、路径、一句话说明、体量、节目录）；另有互相引用关系 |
-| `decisions` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 最近的决策（编号、一句话、状态）与总数 |
-| `health` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 健康检查记录（测试与门禁、代码与文档、工作区与推送、协作流程、后台与钩子、会话与子代理） |
-| `audit-auto` | auto | collect.py | 输入一变就采，不变时 2 min 兜底；页面 15 s 重读 | 自动发现的待审项：新截图、新海报与报告页、待审调研、【需定】来信 |
-| `catalog` | auto | live.py | 60 s | 所有脚本与作用：按组、按子目录成树，每个脚本的作用、用法、开头说明、语言、行数、修改时刻、进不进 git、现在是否在跑 |
-| `notices` | curated | post.py | 30 s | 给作者的通知 |
-| `audit` | curated | post.py | 30 s | 模型挂给作者审的事 |
-
-### 2.1 各数据的形状（字段可以加，不能改名或改义）
-
-```
-live:      { sessions: [{ id, name, side: "claude"|"codex", model, effort, state: "running"|"idle", since, task }],
-             agents:   [{ id, parent, name, side, model, effort, state: "running"|"done", started, last, task, row, stalled }],
-             scripts:  [{ id, name, kind: "watch"|"cron"|"gate"|"engine"|"build"|"other", state: "running"|"stopped", since, where, cmd, note,
-                          stage?, testing? }],
-             build:    { lock: "free"|"held", holder, engines, builds, editors: [{ pid, since, cmd }] },   # editors：不是命令行任务的 Godot 进程，命令行读不到时 cmd 是空串
-             work:     { items: [{ row, what, dirs, state, who, sheet, agents: [{ id, side, name, model, effort, state, started, last, task }],
-                                   changes: { files, dirs: [{ path, files }] }, flags: [一句话],
-                                   pending?: { by, files: { count, list: [路径] },
-                                               tree: null | { path, name, state, dirty, ahead, behind, touched,
-                                                              running: [{ name, kind, cmd, stage, testing, since }], gate, gateOk,
-                                                              shots: { count, at } },
-                                               waiting: { since, estimated, basis } } }],
-                         loose:  [agent...],
-                         mains:  [{ name, model, effort, state, since, task }] },
-             worktrees: { root: 指定的工作树目录,
-                          items: [{ path, name, short, branch, detached, ahead, behind, dirty, touched, idleMin, locked, prunable, inRoot,
-                                    running: [{ kind, n, since }], gate, gateOk, state: "using"|"idle"|"invalid", flags: [一句话] }] },
-             hooks:    [{ id, side: "claude"|"codex", name, desc, script, events, tracked,
-                          last, h1, h24, lastInj, recent, flag, note }],
-             errors:   [采集这一块失败的原文："块名：异常类型 原文"] }
-queue:     { stage, priority, counts: { "进行中": n, "待编译": n, "等前置": n, "可派": n, "暂停": n },
-             rows: [{ id, title, status, who, dirs, pre, fix }] }   # fix：可派、等前置该怎么改（monitor/check/flow.queue_fixes，与巡逻同一份），没有是 null
-structure: { layers: [{ name, note, dirs: [{ path, files, loc, testLoc, note, children }] }] }
-             # children 是子目录数组，形状同 dirs 的元素，递归；没有就是叶子；files 是该目录（含子目录）的文件数
-docs:      { domains: [{ key, name, docs: [{ code, title, path, summary, chars, parent, sections }] }],
-             edges: [{ from, to, n }] }            # from/to 是文档编码，n 是引用次数；path 相对仓库根
-             # parent 是子文档的主文档编码（主文档为 null）；
-             # sections: [{ id, title, chars, children }]，id 如 "§8"、"§8.1"，children 是下一级节，递归
-decisions: { total, recent: [{ id, text, status, scope }] }
-catalog:   { total, missing, groups: [{ label, note, roots, count, missing, dirs: [目录...], scripts: [脚本...] }] }
-             # 组按 monitor/local.json 的 scriptRoots（脚本放在哪只写那一处；同名标签并成一组）；目录 { name, path, count, dirs, scripts } 递归；
-             # 脚本 { path, name, lang, lines, mtime, tracked, purpose, usage, intro, running }：purpose 是作用（Python 取模块文档字符串、其余取开头注释块的第一段，
-             # 没写是空串，计入 missing），usage 是“用法：”开头那一行及其缩进续行，intro 是开头说明全文，running 是 null 或 { n 个进程, since }
-health:    { checks: [{ id, group, title, level: "ok"|"warn"|"bad", summary, details: [{ text, link?, meta? }], tip, link? }] }
-audit-auto:{ items: [{ id, kind: "shots"|"poster"|"report"|"research"|"decision", title, path, since }] }
-notices:   { items: [{ id, at, from, level: "info"|"attention"|"decision", text, link, expires, pinned }] }
-audit:     { items: [{ id, at, from, title, why, link, status: "open"|"done" }] }
+```text
+index: {versions: {名字: 版本串}}
+live: {leads: [{who: Claude|Codex, running: true|false|null}], appStamp}
+attention: {items: [{id, kind: audit|shots|poster|review, title, detail, link, at, acked}]}
+feedback: {items: [{at, text, delivered}]}
+progress: {counts: {queued, doing, finishing, paused}, done: {today, week},
+           rows: [{id, title, who: Claude|Codex|null, stage: queued|doing|finishing|paused, status}]}
+team: {leads: [{who, model, effort, row, rowTitle, agents}],
+       usageToday: [{model, count, minutes}], rules: [{model, use}]}
+system: {hooks: [{name, side, purpose, ok: true|false|null}], scripts: [{group, count, purpose}],
+         docs: [{domain, count, summary}], health: {level: ok|warn|bad, summary,
+         counts: {ok: 数值|null, warn: 数值|null, bad: 数值|null}, problems: [一句话]}}
+hookfeed: {lanes: [{role: 主会话|Claude 子代理|Codex 主线|Codex 子代理,
+                   items: [{at, event: 中文事件, blocks: [中文块名], chars}]}]}
+stats: {cards: [{key, label, value: 数值|短文字|null, unit, note,
+        trend?: [连续七天日值], parts?: [{label, value, tone}], level?: ok|warn|bad}]}
+records: {decisions: [{id, at, text: 一句结论约40字内}]}
+docs: {domains: [{name, docs: [{code, title, summary}]}]}
+notices: {items: [{id, at, from, level, text, link, expires, pinned}]}
 ```
 
-- `live.sessions`、`live.agents`：Claude 与 Codex 两侧；`agents[].row` 是子代理名开头对上的队列行号（Claude 看 `description`，Codex 看 `task_name`；没有行号的是调研、核查一类，`row` 为空）；`stalled` 是"记录没收尾却 20 分钟没写"。`since`：会话当前状态从何时起（Codex 取会话记录里最近一次开始或结束；Claude 在忙时取这一轮开始的那条消息，空闲时取记录最后写入）。Claude 子代理的 `effort` 派单时传的优先，没传取记录里实际用的推理强度，都没有写"默认"。`task`：Codex 主线最近一句话（全文）。
-- `live.scripts`：逐个进程列出，同一脚本的外壳与子进程合并成一项；`where` 是"主检出"或临时工作树的路径（命令行路径对上 git 登记的工作树）；`cmd` 是命令摘要（`gate.ps1 -Wp WP-00`、`fixed-shots.ps1 -Only …`、`dotnet test Campus.Gen.Tests --filter …`、Godot 的 `--shots=P02 clear/autumn/17.5` 等）；门禁另有 `stage`（走到哪一门：G1 编译、G1 资源导入、G2 测试 <项目>、G4 架构规则……，读该检出 `output/build/gates` 下的日志）与 `testing`（正在跑的测试项目）。没在跑也要露面的来信监视、实时采集和巡逻（定时任务，进程里看不到，看 `state/patrol.last`）带 `state: "stopped"`。
-- `live.work`：`items` 是施工队列里进行中、待编译的行（再加有子代理在跑的行），`agents` 是按行号对上的最近 30 分钟有动静的子代理，`changes` 是工作区里落在这行"目录"列的路径或工作包下的未提交文件数与目录（文件归哪个包按 `ownership.json` 最具体的一条，与门禁同一判法），`sheet` 是任务单路径或 null；`flags` 是程序算出的不一致（子代理在跑但行不是进行中；进行中却 3 小时没改动也没子代理；待编译但工作区里已没有改动）。`loose` 是在跑或刚交回、却对不上队列行的子代理；`mains` 是两个主会话现在在干什么。
-  待编译的行另带 `pending`（没有的写明没有）：`by` 谁编（谁一列写 Claude 的是"主会话统一编译"，写 Codex 的是"Codex 主线编译"）；`files` 是主检出里落在这行"目录"列的路径或工作包下还没提交的文件，数量加全部清单；`tree` 是按行号对上的同名临时工作树（开在 `worktreeRoot/<队列行号>`，WF-RULE §13，`C-176` 与 `c176` 同一行），没有就是 `null`，对上了给路径、状态、未提交数、`running`（在里面跑的脚本，来自 `live.scripts`：门禁的 `stage` 走到哪一门与 `testing`，Godot 的 `cmd` 里带 `--shots=机位`）、`gate`/`gateOk`（最近一次门禁的一句话，来自 `check/build.gate_brief`，没跑过是 `null`）、`shots`（这个检出 `output/shots` 的截图张数与这一轮的时刻）；`waiting` 是等了多久：队列没有记"改成待编译"的时刻，文件修改时间也不能代表交回时间，所以 `since` 为 `null`、`estimated` 为假，`basis` 写明拿不到的原因。临时工作树与后台脚本由 `live.py` 取好传给 `monitor.view.work`，视图不另读进程表。
-- `live.worktrees`：git 登记着的每个工作树（主检出除外）。`ahead` / `behind` 是领先、落后本地 main 的提交数，`dirty` 是未提交的文件数，`touched` 是最后动过的时刻（改动文件、检出目录里最新的），`inRoot` 是否在 `root`（`monitor/local.json` 的 `worktreeRoot`）下，`running` 是命令行里带这个路径的进程按类（门禁、截图、Godot、dotnet 测试、dotnet 编译、其他）分组，`gate` 是最近一次门禁的一句话（没有报告是 null）。`state`：`using`（里面有进程在跑）、`idle`、`invalid`（目录没了，登记失效）；`flags` 是要看的理由与处理办法（不在指定目录、失效、没进程且超过 90 分钟没动）。
-- `live.hooks`：登记的每个钩子（读 `~/.claude/settings.json` 与 `~/.codex/hooks.json`）。有我们自己记账的（`tracked: true`）带 `last`（最后触发）、`h1`/`h24`（近 1 小时、24 小时的 `n` 触发、`inj` 成功注入、`err` 报错、`dropped` 被挤掉、`miss` 取不到）、`lastInj`（最近一次注入：时刻、哪几类、字数）、`recent`（最近 20 条：时刻、事件、工具、注入类、字数、报错、挤掉与取不到个数、降级 `cut`）、`flag`（要看的理由：登记了但一次都没触发、触发了但没有一次成功注入、只有报错）；第三方钩子 `tracked: false`，只有登记信息，写明无记账。
-- `live.errors`：采集某一块失败时的原文（哪个文件读不到会写在里面）；页面据此区分三种空状态：数据里没有这个字段（采集脚本是旧版本）、读源失败（显示 errors 原文）、有字段但确实为空。
-- `health.checks`：每项 `level` 为 `ok`、`warn`（要看）、`bad`（要作者动手）；`summary` 是一句话带确切数字，`details` 带全文，`tip` 是建议原文（多条用换行连接）。检查的实现与分组见 `.collab/tools/README.md` 的 monitor/ 表，观察台与巡逻共用。
-- 时刻一律 ISO 字符串；`path`、`link` 相对仓库根，页面换算成相对 `dashboard/` 的链接（如 `../docs/...`），点开就是那份文件。
-- 字段存全文。通知与审计项是模型写的：标题与通知一两句、120 字内，`why` 200 字内（`post.py` 会拒绝超长）。
-- 不放会话号、本机绝对路径之外的隐私信息；会话号只在 `id` 里给页面去重用，不显示。
+`index` 每 15 秒重读并保持心跳；其他汇总随真实变化发版本。`live.leads` 是指挥运行灯的唯一字段；详细会话、进程、用量、依赖与日志都不发布。Codex 不读取或输出 token。`hookfeed` 的事件直接给中文，浏览器不另建对照表；不认识的事件写“未知事件”。决策只给一句短结论，不发布提交哈希、路径与原始长文。
+
+### 2.1 统计边界
+
+进展把可派/等前置合成“排着”，进行中是“在做”，待编译/已推待收口等合成“收尾”，暂停单列；只发布当前队列未完成行，不复活已删行。推送只认本地 origin/main reflog 中明确的 push 与完整前后节点，缺源不猜。
+
+完成数取 origin/main 中带队列行号的历史，且该行当前已从队列删除；排除明确回滚，按行号去重，不另存完成账。日期只取本地 reflog 的真实推送范围，不用提交时间代替推送日期。尚未观测到可靠推送时间的历史不补计。今天按本地零点、本周按本地周一零点。
+
+模型今日个数是今天启动的真实子代理，时长是其今天运行区间的累计分钟数；开始或终止事实不全用 null。多个同时在做的行没有明确当前行证据时，指挥卡的 row/rowTitle 为 null。第三方无记账的钩子 ok 为 null。
+
+`system.health.counts` 与 level 来自整轮巡逻；巡逻把真实记录的 ok/warn/bad 统计写进现有 `patrol.txt`，观察台只读该行，不另跑检查或钩子自测。旧报告未提供分级时三项都为 null，不把“要看”猜成 warn 或 bad。problems 只收确切检查标题标识的数据停止、钩子故障、留言送达与构建运行异常等作者事项；维护清理、审计待派等仍只在巡逻。summary 区分全巡逻提醒数与影响查看或推进的问题数；巡逻超过 20 分钟则明示结论待刷新。连续门禁失败与主线卡住暂无可靠语义来源，不据单次失败或模型合规告警推断。
+
+卡片 note 不超过 12 字；parts 可给环形占比，level 可给健康状态，健康占比使用整轮巡逻 counts。完成行数、推送次数与文档份数三卡的 trend 给最近七天，最早在前；任一天无法确认就省略整条 trend。完成与推送从 Git 真实来源逐日重算，文档只取 `.collab/tools/state/dashboard-stats-daily.json` 中逐日真实快照，缺少的历史不补零；具体来源与完成判定由 progress/stats 统一处理。
+
+### 2.2 作者过目与留言
+
+过目项只收明确 `scope=aesthetic` 且带当前判断的 post 输入，以及固定机位截图总览。detail 必须说明“已按什么在做”；指挥来信不进入作者事项。`POST /api/attention/ack` 收 `{id, revision?}`，按实际内容版本确认；内容变了重新过目。
+
+`POST /api/feedback` 收 `{text}`，只写 Claude inbox 的 `<YYYYMMDD-HHMMSS>-author-留言-<随机后缀>.md`，第一行 `【作者】`，返回 `{ok: true, at}`。同秒留言各自独立，排他创建不会覆盖。回显最近十条，只从真实 inbox 与 inbox_wait/delivered 读取；归档时 delivered 才为 true。没有第二份全文权威。C249 的监视与主会话钩子负责即时送达。
+
+模型发布示例：
+
+通知的显示文字（text 与 from）拦提交哈希、文件名和路径；正文只写高层结论，合法的仓库产物仍通过 `--link` 关联。
+
+```powershell
+python -I -X utf8 dashboard/tools/post.py notice "一句高层通知" --from "Codex 主线"
+python -I -X utf8 dashboard/tools/post.py audit "海报取向供你过目" --why "请看主视觉观感" --doing "主会话选定的画面方向" --kind poster --link output/poster.jpg --from "主会话"
+```
+
+v1 数据与页面明细停产；collect 删除明确退役文件，版本索引与服务均只公开 v2 数据。旧前端章节以下暂保留到 C248 同批交付，以本节 v2 数据契约为准。
 
 ## 3 页面运行时
 

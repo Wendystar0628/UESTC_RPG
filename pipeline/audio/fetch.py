@@ -6,6 +6,7 @@
 - 预览是 Freesound 提供的 48 kHz Ogg Vorbis（约 192 kbps）；原始无损文件要登录才能下，
   登录由作者完成后可替换（见 licenses.json 的 `source_kind`）。
 - 每条写 snap-dir/<id>.json：标题、作者、许可链接、URL、下载日期、SHA-256。
+产出：--raw-dir 指定的原料目录；--snap-dir 指定的页面快照目录（父目录由调用方传入）。
 """
 import argparse, datetime, hashlib, html, json, os, re, sys, time, urllib.request
 

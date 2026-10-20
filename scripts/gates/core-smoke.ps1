@@ -1,4 +1,5 @@
 ﻿# 核心冒烟：正式场景从标题经新游戏、行走、返回标题与继续，再关闭存档和重启恢复，拒绝引擎错误/泄漏，报告实例参数需求与容量，供 G5 与 G20 核心共用。
+# 产出：output/build/gates/；output/render-review/（核心专项日志、测试结果、隔离存档与截图）。
 # 用法：由 scripts\gate.ps1 点引用（. scripts\gates\core-smoke.ps1）后调用 Invoke-UESTCMainlineSmoke 与 Invoke-UESTCSaveCore，不单独运行
 if (-not (Get-Variable UESTCCoreSmokeResults -Scope Script -ErrorAction SilentlyContinue)) {
     $script:UESTCCoreSmokeResults = @{}

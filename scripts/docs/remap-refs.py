@@ -13,6 +13,7 @@
   strip [--map M…] [--files F…]  game/、pipeline/ 里的文档引用去掉节号（STD-CODE §0.1），并按映射改整份改名的编码
   simplify                       最后：各文档里"本文编码 §n"去掉编码
 没给 --files 时跳过别人改了还没提交的文件（docs/ 除外），列出来，提交后再用 --files 补。
+产出：docs/、scripts/、game/、pipeline/ 及仓库根目录说明文件（原地改写；--files 可指定其他文件）。
 """
 import glob
 import os

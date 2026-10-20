@@ -1,5 +1,6 @@
 """校验 docs（不含 godot-api）：小节引用、文件头的 depends/related、相对链接、工作包与门禁编号、导航树（没有孤儿文档）。
 
+产出：无（仅标准输出文档一致性问题）
 用法：python -I scripts/docs/check-docs.py
 依赖：PyYAML。有问题时退出码为 1。
 """

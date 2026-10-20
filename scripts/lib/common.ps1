@@ -1,5 +1,6 @@
 ﻿# 公共函数库：仓库与锁目录布局、路径越界检查、构建锁、子进程与 git 调用、Godot 路径查找；兼容 Windows PowerShell 5.1。
 # 用法：由其他脚本点引用（. scripts\lib\common.ps1），不单独运行
+# 产出：output/.locks/build.lock（主检出构建锁）；调用方 -Log 指定的日志文件（父目录由调用方传入）。
 Set-StrictMode -Version Latest
 
 function Assert-UESTCCleanGodotLog {

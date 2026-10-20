@@ -1,5 +1,6 @@
 ﻿# Only via isolated-launch.py from a run entry point, which owns the shared build lease.
 # 用法：由 isolated-launch.py 在私有桌面传入 -Output、-Mode、-TitleDwellSeconds。
+# 产出：-Output 指定目录（采样日志、跟踪、JSON 记录与隔离存档；父目录由调用方传入）。
 param([Parameter(Mandatory)][string]$Output, [ValidateSet('title','immediate','dwell')][string]$Mode,
     [ValidateRange(1,120)][double]$TitleDwellSeconds = 10)
 $ErrorActionPreference = 'Stop'

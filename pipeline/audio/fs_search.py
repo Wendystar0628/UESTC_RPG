@@ -3,6 +3,7 @@
 
 用法: python fs_search.py "query" [--min 20] [--max 600] [--pages 1] [--sort downloads]
 输出: id | 用户 | 时长 | 采样率 | 下载数 | 标题
+产出：无（读取公开搜索页并打印结果）。
 """
 import argparse, html, re, sys, time, urllib.parse, urllib.request
 

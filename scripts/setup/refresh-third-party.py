@@ -2,6 +2,7 @@
 
 用法：python scripts/setup/refresh-third-party.py；先跑 dotnet tool restore 并还原各项目，脚本自己不还原也不编译。
 非 NuGet 条目及其已有的许可审查仍是手工清单，刷新不会批准待审的条目。
+产出：`third_party.json`；系统临时目录（nuget-license 输入清单，结束清理）。
 """
 
 import json

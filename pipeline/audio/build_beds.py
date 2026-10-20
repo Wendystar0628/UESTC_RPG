@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """床（长循环）入库：选最干净的一段 → 滤波 → 等功率首尾交叉 → 标到 -30 LUFS → Ogg。
 
-用法: python build_beds.py --raw-dir <原料> --out-dir <game/assets/audio> --recipes <beds.json> [--only id,id]
+用法: python build_beds.py --raw-dir <原料> --out-dir <game/assets/audio> --recipes <beds.json> --report <json> [--only id,id]
 配方字段见 beds.json；每条产出 <out>/beds/<id>.ogg 与一行体检记录（写入 --report）。
+产出：--out-dir 指定目录内的 beds/；--report 指定的 JSON 文件（父目录由调用方传入）。
 """
 import argparse, hashlib, json, os, sys
 import numpy as np

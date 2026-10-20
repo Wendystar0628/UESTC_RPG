@@ -1,7 +1,8 @@
-"""观察台发布工具：给作者发通知、挂审计项、结项、删过期（规则见 WF-COMMS 作者观察台一节）。
+"""观察台发布工具：给作者发通知、维护作者审美过目输入、结项、删过期（规则见 WF-COMMS 作者观察台一节）。
+产出：dashboard/data/curated/notices.js、audit.js（待办与巡逻私有输入）、dashboard/data/auto/attention.js、index.js
 用法：
   python -I -X utf8 dashboard/tools/post.py notice "<一句话>" [--from 名] [--level info|attention|decision] [--link 路径] [--days N] [--pin]
-  python -I -X utf8 dashboard/tools/post.py audit "<标题>" --why "<为什么要作者看>" [--link 路径] [--from 名]
+  python -I -X utf8 dashboard/tools/post.py audit "<标题>" --why "<请过目的审美取向>" --doing "<主会话当前判断>" [--kind audit|shots|poster|review] [--link 路径] [--from 名]
   python -I -X utf8 dashboard/tools/post.py done <id>      审计项改 done，通知删除
   python -I -X utf8 dashboard/tools/post.py list           列出未结项
   python -I -X utf8 dashboard/tools/post.py prune          删过期通知、结项超过 7 天的审计项
@@ -10,11 +11,13 @@
 import argparse
 import hashlib
 import os
+import re
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from datafile import read, write  # noqa: E402
+from datafile import refresh_index  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MAX_TEXT, MAX_WHY = 120, 200
@@ -46,6 +49,16 @@ def item_id(prefix, text):
 def check_len(label, text, limit):
     if len(text) > limit:
         raise Reject(f'{label}太长（{len(text)} 字，上限 {limit}）：改成一句话再发')
+
+
+def check_notice_text(text):
+    hashes = re.findall(r'(?<![A-Za-z0-9])[0-9a-fA-F]{7,40}(?![A-Za-z0-9])', text)
+    if hashes:
+        raise Reject('通知显示文字不写提交哈希：只写项目结论')
+    if (re.search(r'[A-Za-z]:[\\/]|(?:[^\s，。；：、“”「」（）()<>/\\]+[\\/])+[^\s，。；：、“”「」（）()<>/\\]+', text)
+            or re.search(r'(?<![\w.-])[\w.-]+\.[A-Za-z][A-Za-z0-9]{0,9}(?![\w.-])', text)
+            or re.search(r'(?:^|[\s`（(])[.\\/]+(?:$|[\s`）)])', text)):
+        raise Reject('通知显示文字不写路径：产物用 --link 关联')
 
 
 def check_link(link):
@@ -96,11 +109,18 @@ def load(name):
 
 def save(name, items, who):
     write('curated', name, {'items': items}, source='post.py:' + who)
+    if name == 'audit':
+        sys.path.insert(0, os.path.join(REPO, '.collab', 'tools'))
+        from monitor.view import attention
+        write('auto', 'attention', attention.build(), source='post.py:' + who)
+    refresh_index()
 
 
 def cmd_notice(args):
     who, text = sender(args), args.text.strip()
     check_len('通知', text, MAX_TEXT)
+    check_notice_text(text)
+    check_notice_text(who)
     link = check_link(args.link)
     nid = item_id('n', text)
     note = {'id': nid, 'at': now(), 'from': who, 'level': args.level, 'text': text, 'link': link,
@@ -113,13 +133,17 @@ def cmd_notice(args):
 
 def cmd_audit(args):
     who, title, why = sender(args), args.title.strip(), (args.why or '').strip()
-    if not why:
-        raise Reject('审计项必须写 --why：为什么要作者看')
+    if not why or not args.doing or not args.doing.strip():
+        raise Reject('过目项必须写 --why（审美取向）及 --doing（已按什么判断推进）')
+    if any(word in title + why for word in ('拍板', '要你定', '需作者决定')):
+        raise Reject('作者只过目审美取向；工程与排期交指挥判断')
+    check_len('当前判断', args.doing.strip(), MAX_WHY)
     check_len('标题', title, MAX_TEXT)
     check_len('why', why, MAX_WHY)
     link = check_link(args.link)
     aid = item_id('a', title)
-    item = {'id': aid, 'at': now(), 'from': who, 'title': title, 'why': why, 'link': link, 'status': 'open'}
+    item = {'id': aid, 'at': now(), 'from': who, 'title': title, 'why': why, 'link': link, 'status': 'open',
+            'scope': 'aesthetic', 'kind': args.kind, 'doing': args.doing.strip()}
     with locked():
         items = [i for i in load('audit') if i['id'] != aid]
         save('audit', [item] + items, who)
@@ -181,7 +205,9 @@ def main(argv=None):
     n.add_argument('--pin', action='store_true')
     a = sub.add_parser('audit')
     a.add_argument('title')
-    a.add_argument('--why')
+    a.add_argument('--why', required=True)
+    a.add_argument('--doing', required=True, help='主会话已采用的审美判断，不带“已按…在做”外壳')
+    a.add_argument('--kind', choices=('audit', 'shots', 'poster', 'review'), default='review')
     for p in (n, a):
         p.add_argument('--from', dest='sender')
         p.add_argument('--link')

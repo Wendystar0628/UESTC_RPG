@@ -1,4 +1,5 @@
 """G4 手写脚本与着色器检查：只检查声明和注释。
+产出：无（只读脚本与着色器，向标准输出返回 JSON 检查结果）。
 用法：由 SourcePolicyGateTests 通过标准输入传入 JSON，不单独运行。
 """
 import ast

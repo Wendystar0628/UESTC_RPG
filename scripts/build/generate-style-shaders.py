@@ -1,5 +1,6 @@
 """从登记表、C# 规则值及共用雾源生成构建期着色器 include。
 用法：python scripts/build/generate-style-shaders.py [--root 仓库根目录]
+产出：game/style/shaders/style_consts.gdshaderinc；game/style/outline/fog.glslinc。
 """
 from pathlib import Path
 import argparse

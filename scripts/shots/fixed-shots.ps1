@@ -1,4 +1,5 @@
 ﻿# 启动游戏内统一拍摄服务；录像每机位独立进程，保留 Godot 原生文件，以服务元数据说明有效区间。
+# 产出：output/shots/、output/movies/
 # 用法：powershell -NoProfile -File fixed-shots.ps1 [-Only 名字,名字] [-Build] [-Poses 机位文件] [-MovieFrames 600] [-MovieEvents '60:season=winter;90:season=spring']
 #   -Build：按共享 Directory.Build.props 编译优化 Debug 并导入（代码改过、还没编译时用）
 #   -Poses：换一份机位表（格式同 poses.txt），临时加拍的机位放仓库外，不改 poses.txt

@@ -2,6 +2,8 @@
 """音频入库用到的底层函数：解码、BS.1770 响度、真峰值、循环交叉、切段、编码。
 
 只依赖 numpy、scipy 与 ffmpeg（SYS-AUDIO）。全部在开发机上运行，不进游戏。
+用法：import audiolib as A；A.write_wav(path, x, bits=16)；A.write_ogg(path, x, quality)。
+产出：调用方传入路径的 WAV 或 Ogg 文件（父目录由调用方传入）。
 """
 import json, subprocess, shutil, os
 import numpy as np

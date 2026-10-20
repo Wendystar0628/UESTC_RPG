@@ -6,6 +6,7 @@
 用法: python build_all.py --raw-dir <原料目录，不进 git> --repo <仓库根> [--skip-fetch]
 Godot 导入（生成 .import、给床写循环）由 register.py 之后手动跑：
   Godot --headless --path game --import   （两遍：第一遍生成，register 改循环参数，第二遍应用）
+产出：game/assets/audio/；game/data/audio/licenses.json；output/audio-build/（均相对 --repo）；pipeline/audio/snapshots/；--raw-dir 指定的原料目录。
 """
 import argparse, json, os, subprocess, sys
 

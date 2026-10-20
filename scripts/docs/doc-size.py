@@ -1,5 +1,6 @@
 """统计 docs/ 里每份文档的字数，列出超体量上限的（上限只写在 STD-DOC §5 的表里，这里每次从表里读）。
 
+产出：无（仅标准输出文档体量）
 用法：
   python -I -X utf8 scripts/docs/doc-size.py            每份文档一行，从大到小，超限的标 ✗
   python -I -X utf8 scripts/docs/doc-size.py --over     只列超限项；有超限时退出码为 1

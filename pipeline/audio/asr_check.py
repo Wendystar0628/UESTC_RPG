@@ -2,8 +2,9 @@
 """语音识别体检（G21a：入库和成品都过语音识别，不许听出人声）。仅开发机使用。
 
 需要 faster-whisper（在独立 venv 里装，不进仓库依赖）与本机已缓存的模型：
-  python asr_check.py --assets <game/assets/audio> --model <模型目录> [--only beds,animals] --out <json>
+用法：python asr_check.py --assets <game/assets/audio> --model <模型目录> [--only beds,animals] --out <json>
 Whisper 在纯噪声上会幻觉出短语，所以只作“可疑清单”：输出每个有识别结果的文件、文本、no_speech_prob 与 avg_logprob，由人复核。
+产出：--out 指定的 JSON 文件（父目录由调用方传入）。
 """
 import argparse, json, os, subprocess, sys, time
 import numpy as np

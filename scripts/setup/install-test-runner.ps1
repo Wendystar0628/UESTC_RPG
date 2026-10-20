@@ -1,5 +1,6 @@
 ﻿# 在 game/gdunit4_testadapter_v5 预装 gdUnit4 的测试运行桥（GdUnit4TestRunnerScene.cs），让游戏和测试两个程序集能一起被加载。
 # 用法：powershell scripts\setup\install-test-runner.ps1 -Root <仓库根>；平时由 game\Campus.csproj 和 scripts\gates\native-render.ps1 调用
+# 产出：game/gdunit4_testadapter_v5/GdUnit4TestRunnerScene.cs。
 param([Parameter(Mandatory)][string]$Root)
 $ErrorActionPreference = 'Stop'
 $rootPath = [IO.Path]::GetFullPath($Root)

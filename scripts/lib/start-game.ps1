@@ -1,6 +1,6 @@
 ﻿# 正式启动的内部共用步骤：按已有构建与导入记录判鲜，在同一构建锁内更新并创建游戏进程。
 # 用法：点引用 common.ps1 与本文件，再 Invoke-UESTCStartGame -Root <仓库> -Godot <引擎> [-BuildLease <已持有的锁>]。
-
+# 产出：output/start_game/；output/.locks/build.lock（按需构建与导入后启动游戏）。
 function Get-UESTCLaunchFiles {
     param([string]$Directory, [switch]$Import)
     foreach ($entry in [IO.Directory]::EnumerateFileSystemEntries($Directory)) {

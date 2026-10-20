@@ -1,5 +1,6 @@
 """由文档文件头生成 docs/ 的小节目录 SECTIONS.md 和钩子路线表 ROUTES.json（文档地图是手写的 README §1）。
 
+产出：docs/SECTIONS.md、docs/ROUTES.json
 用法：python -I scripts/docs/gen-index.py；README.md 为手写入口，不由脚本改写。
 依赖：PyYAML。
 """

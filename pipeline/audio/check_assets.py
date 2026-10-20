@@ -3,6 +3,7 @@
 
 用法: python check_assets.py --assets <game/assets/audio> --licenses <licenses.json> [--out report.json]
 退出码：有失败项则为 1。
+产出：--out 指定的 JSON 文件（可选，父目录由调用方传入；未指定时只读检查）。
 """
 import argparse, hashlib, json, os, sys
 import numpy as np

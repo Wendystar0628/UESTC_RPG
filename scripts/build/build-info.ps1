@@ -1,5 +1,6 @@
 ﻿# 生成构建信息源码 BuildInfo.g.cs（版本号、提交、构建种类 dev 或 export、模块程序集名单），并更新 game/data/build-commit.txt。
 # 用法：powershell scripts\build\build-info.ps1 -Root <仓库根> -Output <BuildInfo.g.cs 路径> [-Configuration Debug|Release] -ModuleAssemblies <MSBuild resolved assembly names separated by semicolons>；平时由 game\Campus.csproj 在编译时调用
+# 产出：game/data/build-commit.txt；-Output 指定的源码文件（父目录由调用方传入）。
 param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$Output,[string]$Configuration='Debug',[Parameter(Mandatory)][string]$ModuleAssemblies)
 $ErrorActionPreference='Stop'
 . (Join-Path $Root 'scripts/lib/common.ps1')

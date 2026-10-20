@@ -1,5 +1,6 @@
 ﻿# Root only, after screenshot AND prebake release. Uses existing game/parser binaries verbatim.
 # 用法：powershell -File scripts/build/startup-cpu/run-existing-immediate.ps1 -Output <新目录> -BuiltRevision <构建提交>
+# 产出：output/start_game/C215-profile/；output/.locks/build.lock。
 param([Parameter(Mandatory)][string]$Output,
     [Parameter(Mandatory)][string]$BuiltRevision)
 $ErrorActionPreference = 'Stop'

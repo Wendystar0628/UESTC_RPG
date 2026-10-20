@@ -4,6 +4,7 @@
 
 用法: python register.py --assets <game/assets/audio> --licenses-out <licenses.json> --snap-dir <快照目录>
       --beds-rep <json> --beds-recipes <json> --os-rep <json> --os-recipes <json> [--synth-rep <json>]
+产出：--licenses-out 指定的 JSON 文件；--assets 指定目录内的 index.json 与已有音频 .import（父目录由调用方传入）。
 """
 import argparse, datetime, hashlib, json, os, re
 import audiolib as A
