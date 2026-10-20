@@ -51,7 +51,7 @@ gates: []
 | WP-11 | 栏杆、楼梯、阳台部件 | ART-MODELING、WLD-INTERIORS | WP-09 | Claude 侧 | 栏杆、楼梯、台阶、阳台有几何和碰撞，行走能上下台阶、翻不出栏杆 |
 | WP-12 | 屋顶与设备部件 | ART-FIDELITY、WLD-INTERIORS | WP-09 | Claude 侧 | 屋顶有女儿墙压顶、水箱、外机等设备，室内金样有开水器等室内设备 |
 | WP-13 | 街道家具 | WLD-LIFE、MAP-QSH-ADDITIONS、WLD-AMBIENCE | WP-09、WP-08 | Claude 侧 | 沿路网摆好路灯、长椅、垃圾箱、站牌，导览亭与导览桩立在锚点上 |
-| WP-14 | 通用建筑生成器 | WLD-RENOVATION、MAP-QSH-RENOVATION | 部件、世界文件、WP-51 | Claude 侧 | 没被认领的楼都按立面规则有体量、层数和开间，夜里按窗号亮灯，开放入口处开门；翻新只用通用预设加十来条身份特征例外，逐栋条目主线之后 |
+| WP-14 | 通用建筑生成器 | WLD-RENOVATION、MAP-QSH-RENOVATION | 部件、世界文件、WP-51 | Claude 侧 | 没被认领的楼都按立面规则有体量、层数和开间，夜里按稳定哈希亮灯，开放入口处开门；翻新只用通用预设加十来条身份特征例外，逐栋条目主线之后 |
 | WP-15 | 地表、道路、铺装 | WLD-TERRAIN | WP-08、部件 | Claude 侧 | 地形、道路、路缘、铺装、斑马线成形，行走踩在与画面一致的地面上，起伏处台缘带、台阶、坡道接通 |
 | WP-16 | 核心区 | MAP-QSH-CORE、MAP-QSH-TERRAIN | 契约 | Claude 侧 | 图书馆与核心区主要楼宇体量和屋顶轮廓认得出，本区能飞能走 |
 | WP-17 | 图书馆与博物馆室内 | MAP-QSH-INTERIORS-LIBRARY、WLD-INTERIORS | 室内提供者接口、WP-51、WP-52 | Claude 侧 | 按层提供者替换方块桩，开放范围用体块走通 |

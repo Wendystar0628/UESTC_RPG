@@ -51,7 +51,7 @@
 
 ## ART-COLORSCRIPT · 色彩脚本、四季与灯光时刻表
 
-`docs/art/ART-COLORSCRIPT-色彩脚本、四季与灯光时刻表.md` · 6.0k 字 · 色彩脚本的组织与情绪、四季修正与英雄帧、四季内容的通用取向与阈值生长、灯光与生活痕迹的时刻表设计意图
+`docs/art/ART-COLORSCRIPT-色彩脚本、四季与灯光时刻表.md` · 6.1k 字 · 色彩脚本的组织与情绪、四季修正与英雄帧、四季内容的通用取向与阈值生长、灯光与生活痕迹的时刻表设计意图
 关键词：色彩脚本、关键帧、英雄帧、四季内容、阈值生长、四季修正、难看时段、灯光时刻表、有效太阳高度、初灯组、生活痕迹
 
 - ART-COLORSCRIPT §0 结论 · L23 · 469
@@ -67,16 +67,16 @@
 
 ## ART-FIDELITY · 视觉精度标准
 
-`docs/art/ART-FIDELITY-视觉精度标准.md` · 7.0k 字 · 处处不粗糙、细节按区分级：精度底线 B1–B13、五个精度区、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
+`docs/art/ART-FIDELITY-视觉精度标准.md` · 7.2k 字 · 处处不粗糙、细节按区分级：精度底线 B1–B13、五个精度区、一票否决、巡检点、行走走廊加密与外围分级；细节做法在子文档
 关键词：视觉精度、精度区、K1–K5、判定距离、底线清单、B1–B13、不粗糙、一票否决、区界规则、可读规则、巡检点、行走走廊、外围分级
 
-- ART-FIDELITY §0 结论 · L22 · 1.1k
-  - ★ ART-FIDELITY §0.1 接入要点 · L38 · 445
-- ART-FIDELITY §1 精度区与换算基准 · L47 · 2.0k
+- ART-FIDELITY §0 结论 · L22 · 1.2k
+  - ★ ART-FIDELITY §0.1 接入要点 · L38 · 527
+- ART-FIDELITY §1 精度区与换算基准 · L47 · 2.1k
   - ART-FIDELITY §1.1 五个精度区 · L49 · 773
   - ART-FIDELITY §1.2 区界规则 · L61 · 138
   - ART-FIDELITY §1.3 细节项在各区的取用 · L67 · 442
-  - ART-FIDELITY §1.4 划分与数据 · L79 · 237
+  - ART-FIDELITY §1.4 划分与数据 · L79 · 376
   - ART-FIDELITY §1.5 换算基准 · L84 · 403
 - ART-FIDELITY §2 底线 · L90 · 1.1k
   - ART-FIDELITY §2.0 底线清单（B1–B13） · L94 · 1.1k
@@ -1545,7 +1545,7 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 9.3k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 10.0k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L23 · 1.4k
@@ -1555,18 +1555,18 @@
   - ENG-ARCH 分层 · L52 · 821
   - ENG-ARCH 生产链 · L64 · 267
   - ENG-ARCH 数据流 · L72 · 95
-- ENG-ARCH §2 边界与确定性 · L76 · 2.0k
-  - ENG-ARCH 依赖方向 · L78 · 741
-  - ENG-ARCH 确定性与禁用写法 · L86 · 573
-  - ENG-ARCH 自动发现与模块接入 · L98 · 315
-  - ENG-ARCH 仓库脚本自成一体 · L105 · 101
-  - ENG-ARCH 生命周期与发布 · L109 · 281
-- ENG-ARCH §3 契约 · L116 · 842
-- ENG-ARCH §4 资源与烘焙 · L127 · 1.5k
-- ENG-ARCH §5 未交付能力的占位边界 · L139 · 257
-- ENG-ARCH §6 架构导向 · L147 · 448
-- ENG-ARCH §7 扩展点（RPG） · L155 · 69
-- ENG-ARCH §8 待验证（P0） · L159 · 363
+- ENG-ARCH §2 边界与确定性 · L76 · 2.3k
+  - ENG-ARCH 依赖方向 · L78 · 1.0k
+  - ENG-ARCH 确定性与禁用写法 · L88 · 573
+  - ENG-ARCH 自动发现与模块接入 · L100 · 315
+  - ENG-ARCH 仓库脚本自成一体 · L107 · 101
+  - ENG-ARCH 生命周期与发布 · L111 · 281
+- ENG-ARCH §3 契约 · L118 · 842
+- ENG-ARCH §4 资源与烘焙 · L129 · 1.9k
+- ENG-ARCH §5 未交付能力的占位边界 · L142 · 257
+- ENG-ARCH §6 架构导向 · L150 · 448
+- ENG-ARCH §7 扩展点（RPG） · L158 · 69
+- ENG-ARCH §8 待验证（P0） · L162 · 363
 
 ## ENG-BUDGET · 性能预算
 
@@ -1684,7 +1684,7 @@
 - ENG-PERF-LIGHT §2 阴影、光照与后期 · L43 · 1.8k
   - ENG-PERF-LIGHT §2.1 阴影 · L45 · 664
   - ENG-PERF-LIGHT §2.2 后期链 · L56 · 579
-  - ENG-PERF-LIGHT §2.3 窗灯与路灯 · L64 · 336
+  - ENG-PERF-LIGHT §2.3 窗灯与路灯 · L64 · 398
   - ENG-PERF-LIGHT §2.4 倒影 · L70 · 165
 - ENG-PERF-LIGHT §3 待验证（P0） · L74 · 128
 
