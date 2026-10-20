@@ -1625,14 +1625,14 @@
 
 ## ENG-GATES-SHOTS · 审查视角与截图
 
-`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 6.0k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
+`docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md` · 6.2k 字 · 命令行规则与截图默认串、截图方式、固定机位表；V/E/T 视角表、飞行与行走路线、时季抽样与巡检点轮换（主线之后）
 关键词：审查视角、截图默认串、命令行规则、截图方式、截图就绪、流式屏障、录像、视角表、V1、E1、T0、飞行路线、压力路线、点位 P00–P23、行走路线 W1–W14、时季抽样、巡检点轮换、review.json
 
 - ENG-GATES-SHOTS §0 结论 · L22 · 625
   - ★ ENG-GATES-SHOTS §0.1 接入要点 · L30 · 306
-- ENG-GATES-SHOTS §1 审查视角 · L36 · 4.6k
+- ENG-GATES-SHOTS §1 审查视角 · L36 · 4.7k
   - ENG-GATES-SHOTS §1.1 命令行规则与截图默认串 · L40 · 721
-  - ENG-GATES-SHOTS §1.2 截图方式 · L55 · 842
+  - ENG-GATES-SHOTS §1.2 截图方式 · L55 · 990
   - ENG-GATES-SHOTS §1.3 固定机位表与审查视角表 · L67 · 1.8k
   - ENG-GATES-SHOTS §1.4 路线与点位（主线之后） · L99 · 744
   - ENG-GATES-SHOTS §1.5 时季抽样（主线之后） · L109 · 368
