@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
@@ -39,7 +40,7 @@ public static class LibraryRoof
     /// Curb, glass facets, ribs, grid and hub. Steel goes to <paramref name="steel"/> (its own instance, fog-exempt with
     /// the glass, MAP-QSH-CORE), the stone curb to the shared sink.
     /// </summary>
-    public static void Skylight(LibraryPlan plan, CoreMesh shared, CoreMesh steel, GlassSink glass, int column, LodLevel lod)
+    public static void Skylight(LibraryPlan plan, GeometrySink shared, GeometrySink steel, GlassSink glass, int column, LodLevel lod)
     {
         var r = plan.SkylightRadius;
         var y0 = SkylightBaseY(plan);
@@ -87,7 +88,7 @@ public static class LibraryRoof
     }
 
     /// <summary>The octagonal stone curb the glass sits on: outer and inner faces and the top.</summary>
-    private static void Curb(LibraryPlan plan, CoreMesh mesh, LodLevel lod)
+    private static void Curb(LibraryPlan plan, GeometrySink mesh, LodLevel lod)
     {
         var trim = S.Trim(S.LibraryTrim);
         float r0 = plan.SkylightRadius, r1 = r0 + S.SkylightCurbWidth / MathF.Cos(MathF.Tau / 16f);
@@ -104,7 +105,7 @@ public static class LibraryRoof
     }
 
     /// <summary>A rectangular bar from a to b lying on a plane with normal <paramref name="up"/>: top and two sides.</summary>
-    public static void Beam(CoreMesh mesh, in Paint paint, Vector3 a, Vector3 b, Vector3 up, float width, float depth)
+    public static void Beam(GeometrySink mesh, in Paint paint, Vector3 a, Vector3 b, Vector3 up, float width, float depth)
     {
         var t = b - a;
         if (t.LengthSquared() < 1e-6f) return;
@@ -118,7 +119,7 @@ public static class LibraryRoof
     }
 
     /// <summary>A vertical prism over a convex plan ring, with its top.</summary>
-    public static void Prism(CoreMesh mesh, in Paint paint, IReadOnlyList<Vector2> ring, float y0, float y1)
+    public static void Prism(GeometrySink mesh, in Paint paint, IReadOnlyList<Vector2> ring, float y0, float y1)
     {
         var c = Vector2.Zero;
         foreach (var p in ring) c += p;
@@ -143,7 +144,7 @@ public static class LibraryRoof
     /// Light grey curved metal roofs (浅灰弧形金属小坡顶) on the face axes, alternating with the flat dark roof between them;
     /// the north axis carries the mechanical box instead.
     /// </summary>
-    public static void Vaults(LibraryPlan plan, CoreMesh mesh, LodLevel lod)
+    public static void Vaults(LibraryPlan plan, GeometrySink mesh, LodLevel lod)
     {
         var north = NorthFace(plan);
         var sheet = S.Sheet(S.LibraryVault);

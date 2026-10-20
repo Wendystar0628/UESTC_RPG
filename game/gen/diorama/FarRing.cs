@@ -23,7 +23,7 @@ public static class FarRing
     private const float GullySnow = 0.12f;          // extra snow potential in the gullies between spurs
     private const float FootBlurDeg = 5f;           // profile averaging width at the foot (degrees either side)
 
-    public static GeometryBundle Build(FarRingData far, SnowData snow, Vector2 centre, uint seed)
+    public static IReadOnlyList<GeometryBundle> Build(FarRingData far, SnowData snow, Vector2 centre, uint seed)
     {
         var columns = Columns(far);
         var rows = far.Rows;
@@ -79,7 +79,7 @@ public static class FarRing
             for (var r = 0; r < rows - 1; r++)
                 mesh.Quad(index[i, r], index[j, r], index[j, r + 1], index[i, r + 1]);
         }
-        return mesh.Bundle(DioramaPalette.Far);
+        return mesh.Bundles(DioramaPalette.Far);
     }
 
     /// <summary>Mean crest over ±radius degrees (box window over the non-uniform columns, wrapping round the ring).</summary>

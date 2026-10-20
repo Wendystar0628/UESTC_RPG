@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Globalization;
 using System.Numerics;
 using Campus.Contracts;
@@ -20,12 +21,12 @@ public sealed class FacadeOpenings
     private readonly BuildingPlan _p;
     private readonly WindowBlock _block;
     private readonly LodLevel _lod;
-    private readonly MeshSink _sink;
+    private readonly GeometrySink _sink;
     private readonly ChannelId _channel;
     // Looked up, never enumerated: the openings of a building share a few part shapes.
     private readonly Dictionary<(string Part, object Params, LodLevel Level), PartGeometry> _parts = [];
 
-    public FacadeOpenings(BuildingPlan plan, WindowBlock block, LodLevel lod, MeshSink sink)
+    public FacadeOpenings(BuildingPlan plan, WindowBlock block, LodLevel lod, GeometrySink sink)
     {
         _p = plan;
         _block = block;
@@ -182,7 +183,7 @@ public sealed class FacadeOpenings
         }
     }
 
-    private static readonly Face SimpleMetal = new(MaterialKind.Metal, Families.FrameAlu, VertexFlags.NoShadow);
+    private static readonly Face SimpleMetal = new(MaterialKind.Metal, Families.FrameAlu, VertexFlag.NoShadow);
 
     /// <summary>L2/L3: the glass alone, just proud of the wall plane (same numbers and cards as near).</summary>
     public void FlatGlass(EdgeFrame f, FacadeLayout layout, Opening o, float s) =>

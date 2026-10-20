@@ -73,7 +73,7 @@ internal static class BridgeMesher
                 Post(b, plan, h0 + run * i / count, u, T.PostSize, baseTop, walk + T.PostTop, T.CapSize, T.CapHeight, near);
             if (!near) continue;
             foreach (var y in new[] { walk + T.RailLow, walk + T.RailHigh })
-                b.AddPipe(plan.P(h0, u, y), plan.P(h1, u, y), T.RailRadius, T.RailSegments, T.RailSpec, T.NoShadow);
+                b.AddPipe(plan.P(h0, u, y), plan.P(h1, u, y), T.RailRadius, T.RailSegments, T.RailSpec, VertexFlag.NoShadow);
         }
 
         // Abutments under the deck ends, from below any bed up into the slab.

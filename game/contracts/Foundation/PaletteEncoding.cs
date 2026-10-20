@@ -35,7 +35,6 @@ public static class PaletteLayout
 public static class PaletteEncoding
 {
     public const byte SemanticFlagsMask = 15;
-    public const byte DecalFlag = 4;
     public const byte ColorBankFlag = 16;
     public const byte DecalBaseBankFlag = 32;
     public const byte PackedFlagsMask = 63;
@@ -53,7 +52,7 @@ public static class PaletteEncoding
     {
         if ((flags & ~SemanticFlagsMask) != 0)
             throw new ArgumentException("Input flags may only use the existing low four semantic bits.", nameof(flags));
-        if (decalBase.HasValue && ((flags & DecalFlag) == 0 || reserved != 0))
+        if (decalBase.HasValue && ((flags & VertexFlag.Decal) == 0 || reserved != 0))
             throw new ArgumentException("A full decal base index requires a decal and no competing reserved byte.", nameof(decalBase));
         var packedFlags = flags | ((color.Value >> 8) * ColorBankFlag);
         if (decalBase is { } background) packedFlags |= (background.Value >> 8) * DecalBaseBankFlag;
@@ -70,7 +69,7 @@ public static class PaletteEncoding
     public static PaletteIndex DecodeDecalBase(byte reserved, byte packedFlags)
     {
         ValidatePackedFlags(packedFlags);
-        if ((packedFlags & DecalFlag) == 0) throw new ArgumentException("Reserved is not a colour index on a non-decal.", nameof(packedFlags));
+        if ((packedFlags & VertexFlag.Decal) == 0) throw new ArgumentException("Reserved is not a colour index on a non-decal.", nameof(packedFlags));
         return new(reserved + ((packedFlags & DecalBaseBankFlag) != 0 ? PaletteLayout.LegacyCapacity : 0));
     }
 
@@ -81,7 +80,7 @@ public static class PaletteEncoding
     public static void ValidatePackedFlags(byte packedFlags)
     {
         if ((packedFlags & ~PackedFlagsMask) != 0 ||
-            ((packedFlags & DecalBaseBankFlag) != 0 && (packedFlags & DecalFlag) == 0))
+            ((packedFlags & DecalBaseBankFlag) != 0 && (packedFlags & VertexFlag.Decal) == 0))
             throw new ArgumentException("Invalid packed palette flag bits.", nameof(packedFlags));
     }
 

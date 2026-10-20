@@ -35,6 +35,7 @@ internal static class NorthTestSupport
             Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
             World = world,
             Map = RealMapFixture.Entry().Descriptor,
+            SourceInputs = RealMapFixture.WindowInputs(RealMapFixture.Entry().Descriptor.Id),
             WorldSeed = 1,
             GlobalInputs = inputs,
             ClaimedBy = (feature, _) => claims.Contains(feature) ? new WpId("WP-20") : null,

@@ -1,12 +1,12 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Interior.Shell.Box;
 
 internal sealed class BoxInteriorMeshBuilder
 {
-    private readonly List<float> _positions = [];
-    private readonly List<float> _normals = [];
+    private readonly List<GeometryVertex> _vertices = [];
     private readonly List<int> _indices = [];
 
     public void AddSteps(RampCollider ramp)
@@ -58,16 +58,17 @@ internal sealed class BoxInteriorMeshBuilder
 
     private void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
     {
-        int start = _positions.Count / 3;
+        int start = _vertices.Count;
         Vector3 normal = Vector3.Normalize(Vector3.Cross(b - a, c - a));
         foreach (var p in new[] { a, b, c, d })
-        {
-            _positions.AddRange([p.X, p.Y, p.Z]);
-            _normals.AddRange([normal.X, normal.Y, normal.Z]);
-        }
+            _vertices.Add(new(p, normal));
         _indices.AddRange([start, start + 2, start + 1, start, start + 3, start + 2]);
     }
 
-    public GeometryBundle Build(ToonRef material) => new(material, _positions.ToArray(), _normals.ToArray(), _indices.ToArray())
-    { IgnoreOcclusionCulling = true };
+    public IReadOnlyList<GeometryBundle> Build(ToonRef material)
+    {
+        var sink = new GeometrySink();
+        sink.Polygon(material.Spec, _vertices, _indices);
+        return sink.Finish().Select(mesh => mesh with { IgnoreOcclusionCulling = true }).ToArray();
+    }
 }

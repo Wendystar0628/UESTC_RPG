@@ -59,7 +59,7 @@ public sealed class NorthModuleTests
         var colliders = ZoneTestCells.Colliders(module, ctx).ToArray();
         foreach (var cluster in NorthTune.Clusters)
         {
-            var layout = ClusterLayout.Of(ctx.World, cluster)!;
+            var layout = ClusterLayout.Of(ctx, cluster)!;
             foreach (var gate in layout.Gates.Where(g => g.Kind == GateKind.Vehicle))
             {
                 var f = gate.Frame;

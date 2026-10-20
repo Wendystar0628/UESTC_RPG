@@ -89,14 +89,13 @@ public sealed class VegetationContextTests
             WorldSeed = 77,
             SourceInputs = map.SourceInputs.Entries,
             ClaimedBy = (_, _) => new WpId("WP-99"),
-            DataHash = "data",
             CodeHash = "code"
         };
         var source = new PreparedSource(prepared);
         var context = VegetationContext.Resolve(map, Module, source);
         AssertThat(source.Module == Module && ReferenceEquals(source.Context, map)).OverrideFailureMessage("The prepared query used another map or module.").IsTrue();
         AssertThat(ReferenceEquals(context.World, prepared.World) && ReferenceEquals(context.SourceInputs, prepared.SourceInputs) &&
-              ReferenceEquals(context.ClaimedBy, prepared.ClaimedBy) && context.WorldSeed == 77 && context.DataHash == "data" &&
+              ReferenceEquals(context.ClaimedBy, prepared.ClaimedBy) && context.WorldSeed == 77 &&
               context.CodeHash == "code" && ReferenceEquals(context.Catalog, prepared.Catalog)).OverrideFailureMessage("The prepared context lost a field or replaced the palette snapshot.").IsTrue();
         var own = new BuildContext { World = prepared.World, Map = prepared.Map, WorldSeed = 1, Catalog = palette };
         AssertThat(ReferenceEquals(VegetationContext.Resolve(map, Module, new PreparedSource(own)), own)).OverrideFailureMessage("A context with a palette must be returned as is.").IsTrue();

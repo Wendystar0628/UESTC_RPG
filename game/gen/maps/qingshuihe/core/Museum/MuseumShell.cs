@@ -28,7 +28,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Museum;
 /// on the public-interior channel.
 /// </para>
 /// </summary>
-public sealed class MuseumShell : ICorePiece, IWindowedPiece
+public sealed class MuseumShell : ZoneSite, IWindowedPiece
 {
     public const string WindowKey = "museum-shell";
     public const int Rows = 2;
@@ -127,9 +127,10 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
         return new MuseumShell(world, frame, body, ring);
     }
 
-    public string Id => "museum";
+    public override string Id => "museum";
     public Vector2 Anchor => PlanGeometry.Centroid([Body]);
-    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreIds.Museum, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public static IReadOnlyList<Claim> DeclaredClaims { get; } = [new FeatureClaim(CoreIds.Museum, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public override IReadOnlyList<Claim> Claims => DeclaredClaims;
 
     public BuildingFrame Frame { get; }
     /// <summary>The hall body octagon (8401), counterclockwise in (x, z) so each edge's outward side is (dz, −dx).</summary>
@@ -237,7 +238,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>The colonnade floor: light granite from the gallery wall to a dark curb at the platform edge, its edge face to the ground.</summary>
-    private void PlatformTop(CoreMesh mesh)
+    private void PlatformTop(GeometrySink mesh)
     {
         var curb = MuseumGeometry.Offset(Platform, Enumerable.Repeat(-S.MuseumCurb, Platform.Count).ToArray());
         Ring(mesh, S.Roof(S.MuseumFloor), Gallery, curb, FloorY, Vector3.UnitY);
@@ -251,7 +252,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>A flat band between two corresponding rings (same vertex count) at height y, one quad per side.</summary>
-    private static void Ring(CoreMesh mesh, in Paint paint, IReadOnlyList<Vector2> inner, IReadOnlyList<Vector2> outer, float y, Vector3 normal)
+    private static void Ring(GeometrySink mesh, in Paint paint, IReadOnlyList<Vector2> inner, IReadOnlyList<Vector2> outer, float y, Vector3 normal)
     {
         for (var k = 0; k < inner.Count; k++)
         {
@@ -261,7 +262,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>Granite gallery walls up to the colonnade ceiling: grooves (L0, L1), plinth band (L0, L1), holes at L0 and L1.</summary>
-    private void GalleryWalls(CoreMesh mesh, LodLevel lod)
+    private void GalleryWalls(GeometrySink mesh, LodLevel lod)
     {
         var wall = S.Wall(S.MuseumGranite);
         var groove = S.Trim(S.MuseumGroove);
@@ -310,7 +311,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     /// The flat roof from the hall out to the eave, its white soffit over the colonnade, and the eave band: a white fascia
     /// rising <see cref="CoreStyle.MuseumUpstand"/> above the roof with a light coping (L0–L2; L3 and L4 the band only).
     /// </summary>
-    private void RoofRing(CoreMesh mesh, LodLevel lod)
+    private void RoofRing(GeometrySink mesh, LodLevel lod)
     {
         var inner = MuseumGeometry.Offset(Eave, Enumerable.Repeat(-S.MuseumFasciaThick, Eave.Count).ToArray());
         Flat(mesh, S.Roof(S.MuseumFlatRoof), inner, Hall, RoofY, Vector3.UnitY);
@@ -322,7 +323,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>A flat polygon between an outer ring and one hole ring at height y.</summary>
-    private static void Flat(CoreMesh mesh, in Paint paint, IReadOnlyList<Vector2> outer, IReadOnlyList<Vector2> hole, float y, Vector3 normal)
+    private static void Flat(GeometrySink mesh, in Paint paint, IReadOnlyList<Vector2> outer, IReadOnlyList<Vector2> hole, float y, Vector3 normal)
     {
         var polygon = PolygonTriangulator.Triangulate(new PolygonRings(outer, [hole.Reverse().ToArray()]));
         var v = polygon.Vertices.Select(p => new Vector3(p.X, y, p.Y)).ToArray();
@@ -330,7 +331,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
             mesh.Tri(paint, v[polygon.Indices[i]], v[polygon.Indices[i + 1]], v[polygon.Indices[i + 2]], normal);
     }
 
-    private static void Sweep(CoreMesh mesh, in Paint paint, IReadOnlyList<Vector2> ring, SweepProfile profile, float baseY) =>
+    private static void Sweep(GeometrySink mesh, in Paint paint, IReadOnlyList<Vector2> ring, SweepProfile profile, float baseY) =>
         LibraryFacade.Sweep(mesh, paint, [ring], [true], profile, baseY);
 
     /// <summary>A rectangle section from lateral x0 to x1 (+x outward), 0 to h up.</summary>
@@ -346,7 +347,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     /// The white central hall: walls from the flat roof to the eaves with the clerestory ribbon (L0, L1 holes and frames;
     /// L2 on proud glass), a dark base band where it rises from the roof, the eave slab and the low pyramid roof.
     /// </summary>
-    private void HallBody(CoreMesh mesh, GlassSink glass, in FacadePaints paints, LodLevel lod)
+    private void HallBody(GeometrySink mesh, GlassSink glass, in FacadePaints paints, LodLevel lod)
     {
         var wall = paints.Wall;
         for (var k = 0; k < Hall.Count; k++)
@@ -387,7 +388,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     /// <see cref="CoreStyle.PorticoTop"/>, back on the gallery wall and standing proud of the eave band, with a recessed granite
     /// name field on its face (the calligraphy waits for the scene text atlas) and a coping.
     /// </summary>
-    private void Portico(CoreMesh mesh, LodLevel lod)
+    private void Portico(GeometrySink mesh, LodLevel lod)
     {
         var f = GalleryFace(South);
         var u = f.Length * 0.5f;
@@ -468,7 +469,7 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>Square columns from the floor to the colonnade ceiling: L0 base, chamfered shaft and capital; L1 base and shaft; L2 the shaft.</summary>
-    private void Colonnade(CoreMesh mesh, LodLevel lod)
+    private void Colonnade(GeometrySink mesh, LodLevel lod)
     {
         var white = S.Wall(S.MuseumWhite);
         var dark = S.Trim(S.MuseumDark);
@@ -555,4 +556,39 @@ public sealed class MuseumShell : ICorePiece, IWindowedPiece
         if (h.U1 - (d1 - fixedLeaf) > 0.05f) yield return W(P(d1 - fixedLeaf, s), P(h.U1, s), y);
         yield return W(P(d0 + fixedLeaf, s), P(d1 - fixedLeaf, s), doorTop);
     }
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        CoreRanges.ForFeature(world, CoreIds.Museum) is { } range ? [range] : [];
+
+    public override void Build(SiteBuilder builder)
+    {
+        if (!builder.Includes(Anchor)) return;
+        var build = CoreBuild.For(builder.Context);
+        Build(build, builder.Lod);
+        var output = build.Finish(builder.Lod);
+        foreach (var mesh in output.Meshes) builder.Add(mesh, System.Numerics.Matrix4x4.Identity, Anchor);
+        foreach (var part in output.Parts) builder.Place(part, Anchor);
+        foreach (var emitter in output.Emitters ?? []) builder.Light(emitter, Anchor);
+    }
+
+    public override void Collide(SiteColliders colliders)
+    {
+        if (!colliders.Includes(Anchor)) return;
+        foreach (var collider in Collide()) colliders.Add(collider, Anchor);
+    }
+
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
+    {
+        var build = CoreBuild.For(context);
+        Build(build, lod);
+        yield return new($"core/{Id}", CoreIds.Museum, build.Finish(lod), Collide(), []);
+    }
+
+    public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world) =>
+        WindowLayout.Grids.Select(grid => (WindowLayout.Feature, grid));
+
+    public override void DescribeWindows(BuildContext context, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
+    {
+        foreach (var window in Windows(context.WindowNumbering!)) windows.Add(window);
+    }
+
 }

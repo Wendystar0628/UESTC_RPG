@@ -205,7 +205,7 @@ public sealed class StairDoublePart() : CirculationPart<StairParams>(new(1200, 9
         {
             var profile = Profiles.Circle(S.HandrailRadius, detail == Detail.Full ? S.HandrailSegments : 8);
             var y = l.H * 0.5f + S.HandrailHeight; var z = l.LandingZ + turn;
-            mesh.Add(Profiles.Bar(profile, [new(Math.Min(x1, x2), z), new(Math.Max(x1, x2), z)], S.MetalTube, y), Frame.Identity, MeshBuilder.NoShadow);
+            mesh.Add(Profiles.Bar(profile, [new(Math.Min(x1, x2), z), new(Math.Max(x1, x2), z)], S.MetalTube, y), Frame.Identity, VertexFlag.NoShadow);
         }
         RailKit.Balusters(mesh, rail1, x1, one.BalusterStations(), detail, Frame.Identity);
         RailKit.Balusters(mesh, rail2, x2, two.BalusterStations(), detail, Frame.Identity);

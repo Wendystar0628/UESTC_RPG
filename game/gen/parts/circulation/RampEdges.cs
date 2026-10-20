@@ -33,7 +33,7 @@ public static class RampEdges
         {
             var (lat0, lat1) = side < 0 ? (-half, -half + curb) : (half - curb, half);
             var (points, chamfer) = Section(lat0, lat1, -0.2f, S.RampCurbRise, bevel);
-            mesh.SweepPath(S.Trim, points, chamfer, null, deckLine, false, Frame.Identity, MeshBuilder.NoShadow);
+            mesh.SweepPath(S.Trim, points, chamfer, null, deckLine, false, Frame.Identity, VertexFlag.NoShadow);
         }
         if (rails && detail != Detail.Mass)
         {
@@ -44,10 +44,10 @@ public static class RampEdges
             {
                 var centre = side * (half - curb * 0.5f);
                 var tube = circle.Select(p => new Vector2(p.X + centre, p.Y + S.HandrailHeight)).ToList();
-                mesh.SweepPath(S.MetalTube, tube, null, null, path, false, Frame.Identity, MeshBuilder.NoShadow, smooth: true);
+                mesh.SweepPath(S.MetalTube, tube, null, null, path, false, Frame.Identity, VertexFlag.NoShadow, smooth: true);
                 if (detail == Detail.Coarse) continue;
                 foreach (var (point, lateral, _) in new[] { Station(path, 0), Station(path, float.MaxValue) })
-                    mesh.Ellipsoid(S.MetalTube, Offset(point, lateral, centre, S.HandrailHeight), knob, 3, 8, Frame.Identity, MeshBuilder.NoShadow);
+                    mesh.Ellipsoid(S.MetalTube, Offset(point, lateral, centre, S.HandrailHeight), knob, 3, 8, Frame.Identity, VertexFlag.NoShadow);
                 var total = PlanLength(path);
                 var count = Math.Max(2, (int)Math.Ceiling(total / S.HandrailPostPitch - 1e-4) + 1);
                 var size = S.HandrailPostSize * 0.5f;
@@ -57,7 +57,7 @@ public static class RampEdges
                     var foot = Offset(point, lateral, centre, 0);
                     var frame = Frame.Along(new(foot.X, 0, foot.Z), tangent);
                     mesh.Box(S.Metal, new(-size, point.Y + S.RampCurbRise - S.Joint, -size), new(size, point.Y + S.HandrailHeight, size),
-                        detail == Detail.Full ? 0.008f : 0, frame, MeshBuilder.NoShadow);
+                        detail == Detail.Full ? 0.008f : 0, frame, VertexFlag.NoShadow);
                 }
             }
         }

@@ -42,7 +42,7 @@ public sealed class CollisionBakeProducer : IBakeProducer, IBakeContentConsumer
 
     public void Prepare(Lazy<IReadOnlyList<PreparedContentModule>> modules, LightInventoryDocument lighting) => _modules = modules;
 
-    public object Build(BakeKey key, BuildContext context)
+    public object Build(BakeKey key, BuildContext context, string inputHash)
     {
         if (key.Map != context.Map.Id || !CanBuild(key)) throw new ArgumentException("Collision bake key does not match its map.");
         var tile = ParseTile(key.Detail);

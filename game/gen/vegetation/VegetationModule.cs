@@ -21,9 +21,6 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Vegetation, [], [VegetationInputs.SpeciesKey]);
     public BakeInputDependencies CollisionInputs => BakeInputs;
 
-    private readonly object _gate = new();
-    private Cache? _cache;
-
     public string Id => "vegetation";
 
     public GroundMaskChannels Channels => GroundMaskChannels.GinkgoLeaves | GroundMaskChannels.OtherLeaves | GroundMaskChannels.CanopyShelter | GroundMaskChannels.MapleLeaves;
@@ -124,24 +121,9 @@ public sealed class VegetationModule : IVegetationRuntimeSource, IGroundMaskCont
         CanopyProjection.Paint(layout, rules, context.World, grid.Rect, grid.MetersPerPixel, mask1, mask2);
     }
 
-    /// <summary>One layout per world, seed and input bytes (the frozen snapshots are shared, so the memory compares by reference).</summary>
-    private (PlantingLayout Layout, PlantingRules? Rules) Layout(BuildContext ctx)
-    {
-        ArgumentNullException.ThrowIfNull(ctx);
-        var species = ctx.GlobalInputs.Require(VegetationInputs.SpeciesKey);
-        var planting = ctx.SourceInputs.TryGetValue(VegetationInputs.PlantingKey, out var bytes) ? bytes : ReadOnlyMemory<byte>.Empty;
-        lock (_gate)
-        {
-            if (_cache is { } c && ReferenceEquals(c.World, ctx.World) && c.Seed == ctx.WorldSeed && c.Species.Equals(species) && c.Planting.Equals(planting))
-                return (c.Layout, c.Rules);
-            var (layout, rules) = VegetationInputs.Layout(ctx);
-            _cache = new Cache(ctx.World, ctx.WorldSeed, species, planting, layout, rules);
-            return (layout, rules);
-        }
-    }
-
-    private sealed record Cache(IWorldModel World, uint Seed, ReadOnlyMemory<byte> Species, ReadOnlyMemory<byte> Planting,
-        PlantingLayout Layout, PlantingRules? Rules);
+    /// <summary>Immutable planting derived once for this build context.</summary>
+    private static (PlantingLayout Layout, PlantingRules? Rules) Layout(BuildContext ctx) =>
+        ctx.Memo(typeof(VegetationModule), () => VegetationInputs.Layout(ctx));
 
     /// <summary>Every selected geometry level covers the far segment, including leaf cells and coarse ancestors.</summary>
     private static VegPool PoolOf(LodLevel lod) => lod switch

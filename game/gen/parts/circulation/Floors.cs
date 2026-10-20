@@ -47,7 +47,7 @@ public sealed class RaisedFloorPart() : CirculationPart<PanelParams>(new(420, 90
             for (var i = 1; i < count; i++)
             {
                 var x = -w + i * p.Width / count;
-                mesh.Box(line, new(x - half, top - 0.002f, -d), new(x + half, h, d), 0, Frame.Identity, MeshBuilder.NoShadow);
+                mesh.Box(line, new(x - half, top - 0.002f, -d), new(x + half, h, d), 0, Frame.Identity, VertexFlag.NoShadow);
             }
             return;
         }
@@ -55,12 +55,12 @@ public sealed class RaisedFloorPart() : CirculationPart<PanelParams>(new(420, 90
         for (var i = 1; i < nx; i++)
         {
             var x = -w + i * p.Width / nx;
-            mesh.Box(line, new(x - half, top - 0.002f, -d), new(x + half, h, d), 0, Frame.Identity, MeshBuilder.NoShadow);
+            mesh.Box(line, new(x - half, top - 0.002f, -d), new(x + half, h, d), 0, Frame.Identity, VertexFlag.NoShadow);
         }
         for (var i = 1; i < nz; i++)
         {
             var z = -d + i * p.Depth / nz;
-            mesh.Box(line, new(-w, top - 0.002f, z - half), new(w, h, z + half), 0, Frame.Identity, MeshBuilder.NoShadow);
+            mesh.Box(line, new(-w, top - 0.002f, z - half), new(w, h, z + half), 0, Frame.Identity, VertexFlag.NoShadow);
         }
     }
 }

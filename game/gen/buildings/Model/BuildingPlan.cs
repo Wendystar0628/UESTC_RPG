@@ -72,13 +72,13 @@ public sealed class BuildingPlan
     public required IReadOnlyList<Opening[]> Openings { get; init; }
     /// <summary>
     /// Precision zone of each opening (parallel to Openings), read from the exported fidelity data (IFidelityModel):
-    /// the ground-floor row takes its facade segment's ground band. Empty without fidelity data: everything is K3.
+    /// the ground-floor row takes its facade segment's ground band.
     /// </summary>
-    public IReadOnlyList<FidelityZone[]> OpeningZones { get; init; } = [];
-    /// <summary>The exported facade segments of this building (IFidelityModel.Facades), for the zone of a wall panel; empty without fidelity data.</summary>
-    public IReadOnlyList<FacadeSegment> FacadeSegments { get; init; } = [];
-    /// <summary>Precision zone of the roof from the fidelity data (IFidelityModel.Roof); without data the default K4 (a).</summary>
-    public FidelityZone RoofZone { get; init; } = FidelityZone.K4;
+    public required IReadOnlyList<FidelityZone[]> OpeningZones { get; init; }
+    /// <summary>The exported facade segments of this building (IFidelityModel.Facades), for the zone of a wall panel.</summary>
+    public required IReadOnlyList<FacadeSegment> FacadeSegments { get; init; }
+    /// <summary>Precision zone of the roof from the compiled fidelity data (IFidelityModel.Roof).</summary>
+    public required FidelityZone RoofZone { get; init; }
     /// <summary>Columns of the building window grid (all bays of all rings, blank ones included).</summary>
     public required int TotalColumns { get; init; }
     public required Vector2 Axis { get; init; }
@@ -94,14 +94,15 @@ public sealed class BuildingPlan
     public TileKey Tile(LodLevel lod) => TileGrid.At(Centroid, lod);
 
     public FidelityZone ZoneOf(int facade, int opening) =>
-        facade < OpeningZones.Count ? OpeningZones[facade][opening] : FidelityZone.K3;
+        OpeningZones[facade][opening];
 
-    /// <summary>Precision zone of the wall at skin u of a facade (the segment's ground band for the ground-floor row); no segment: K3.</summary>
+    /// <summary>Precision zone of the wall at skin u of a facade (the segment's ground band for the ground-floor row); missing classification fails.</summary>
     public FidelityZone WallZoneAt(int facade, float uSkin, bool groundRow)
     {
         var f = Facades[facade];
-        var segment = FacadeSegments.Count == 0 ? null : PlanFacades.SegmentAt(FacadeSegments, FootAt(f.Ring), f, uSkin);
-        return segment is null ? FidelityZone.K3 : groundRow ? segment.GroundBand : segment.Zone;
+        var segment = PlanFacades.SegmentAt(FacadeSegments, FootAt(f.Ring), f, uSkin)
+            ?? throw new InvalidOperationException("Wall point has no compiled fidelity segment.");
+        return groundRow ? segment.GroundBand : segment.Zone;
     }
 
     public PlanRing SkinAt(int ring) => ring == 0 ? SkinOuter : SkinHoles[ring - 1];

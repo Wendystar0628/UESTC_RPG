@@ -24,7 +24,7 @@ public sealed partial class BuildingMesher
 
     private readonly BuildingPlan _p;
     private readonly LodLevel _lod;
-    private readonly MeshSink _sink;
+    private readonly GeometrySink _sink;
     private readonly FacadeProfile _prof;
     private readonly FacadeOpenings _openings;
     private readonly RoofParts _roofParts;
@@ -32,7 +32,7 @@ public sealed partial class BuildingMesher
     private readonly bool _parapetOk;
     private readonly Face _wall, _trim, _plinth, _roof, _metal, _accent, _stone;
 
-    public BuildingMesher(BuildingPlan plan, WindowBlock block, LodLevel lod, MeshSink sink)
+    public BuildingMesher(BuildingPlan plan, WindowBlock block, LodLevel lod, GeometrySink sink)
     {
         _p = plan;
         _lod = lod;
@@ -50,7 +50,7 @@ public sealed partial class BuildingMesher
         _plinth = new Face(MaterialKind.Trim, _prof.Plinth);
         _stone = new Face(MaterialKind.Trim, Families.StoneBeige);
         _roof = new Face(MaterialKind.Roof, _prof.Roof);
-        _metal = new Face(MaterialKind.Metal, Families.FrameAlu, VertexFlags.NoShadow);
+        _metal = new Face(MaterialKind.Metal, Families.FrameAlu, VertexFlag.NoShadow);
         _parapetOk = plan.SkinRings.All(r => r.Offset(ParapetInner - 0.06f) is not null);
     }
 

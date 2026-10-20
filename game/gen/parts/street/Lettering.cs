@@ -34,7 +34,7 @@ public static class Lettering
             {
                 Uv = [uv.X, uv.Y, uv.Z, uv.Y, uv.Z, uv.W, uv.X, uv.W],
                 Uv2 = [glyph.Page, 0, glyph.Page, 0, glyph.Page, 0, glyph.Page, 0],
-                Flags = [PaletteEncoding.DecalFlag, PaletteEncoding.DecalFlag, PaletteEncoding.DecalFlag, PaletteEncoding.DecalFlag],
+                Flags = [VertexFlag.Decal, VertexFlag.Decal, VertexFlag.Decal, VertexFlag.Decal],
                 DecalBaseColorIndices = [background.Value, background.Value, background.Value, background.Value]
             };
             builder.Add(new PartGeometry([mesh], quad.Bounds), VertexFlag.NoShadow);

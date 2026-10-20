@@ -60,9 +60,10 @@ public static class Solids
     /// A lathe whose radius also varies round the axis: radius(angle, y) = profile radius × (1 + <paramref name="fold"/>(angle, y)),
     /// for cloth that hangs in folds or opens at the front. Angle is in radians from local +X towards +Z (the figure's front
     /// is +Z, angle π/2). Normals come from the surface grid itself (central differences), so folds shade as soft ridges;
-    /// both ends are capped flat.
+    /// both ends are capped flat. Set profileUv for UVs in undeformed profile metres; otherwise U is the angular fraction
+    /// times 2π and V follows the first surface column.
     /// </summary>
-    public static PartGeometry Draped(IReadOnlyList<Vector2> profile, int segments, ToonSpec material, float sx, float sz, Func<float, float, float> fold)
+    public static PartGeometry Draped(IReadOnlyList<Vector2> profile, int segments, ToonSpec material, float sx, float sz, Func<float, float, float> fold, bool profileUv = false)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(fold);
@@ -76,7 +77,7 @@ public static class Solids
                 var r = profile[k].X * (1f + fold(a, profile[k].Y));
                 p[k, i] = new(MathF.Cos(a) * r * sx, profile[k].Y, MathF.Sin(a) * r * sz);
             }
-        return Grid(p, [.. profile.Select(q => new Vector3(0, q.Y, 0))], material);
+        return Grid(p, [.. profile.Select(q => new Vector3(0, q.Y, 0))], material, profileUv ? profile : null);
     }
 
     /// <summary>
@@ -103,7 +104,7 @@ public static class Solids
     /// Mesh of a closed grid of rings (bottom to top, each ring counter-clockwise from +X toward +Z) round the given ring
     /// centres. A ring whose points all meet its centre closes the end to a point; any other end ring gets a flat cap.
     /// </summary>
-    private static PartGeometry Grid(Vector3[,] p, Vector3[] centres, ToonSpec material)
+    private static PartGeometry Grid(Vector3[,] p, Vector3[] centres, ToonSpec material, IReadOnlyList<Vector2>? uvProfile = null)
     {
         int n = p.GetLength(0), segments = p.GetLength(1);
         var m = new Shapes.Writer(material);
@@ -111,7 +112,7 @@ public static class Solids
         var arc = 0f;
         for (var k = 0; k < n; k++)
         {
-            if (k > 0) arc += Vector3.Distance(p[k, 0], p[k - 1, 0]);
+            if (k > 0) arc += uvProfile is null ? Vector3.Distance(p[k, 0], p[k - 1, 0]) : Vector2.Distance(uvProfile[k], uvProfile[k - 1]);
             rings[k] = new int[segments + 1];
             for (var i = 0; i <= segments; i++)
             {
@@ -122,7 +123,7 @@ public static class Solids
                 var radial = p[k, j] - centres[k];
                 if (normal.X * radial.X + normal.Z * radial.Z < 0) normal = -normal;
                 if (Pole(p, centres, k)) normal = new(0, k == 0 ? -1 : 1, 0);
-                rings[k][i] = m.Vertex(p[k, j], normal, new(2f * MathF.PI * i / segments, arc));
+                rings[k][i] = m.Vertex(p[k, j], normal, new(2f * MathF.PI * (uvProfile is null ? 1f : uvProfile[k].X) * i / segments, arc));
             }
         }
         for (var k = 0; k + 1 < n; k++)

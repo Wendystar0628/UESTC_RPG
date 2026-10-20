@@ -33,9 +33,9 @@ public static class ShaderGlobals
     public const string RetreatY = "retreat_y";
     /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string Wind = "wind";
-    /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonGlobalsNode.</summary>
+    /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonalSurfaceNode.</summary>
     public const string Snow = "snow";
-    /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonGlobalsNode; ginkgo, other leaves/petals, ground snow divided by 1.5, reserved zero.</summary>
+    /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonalSurfaceNode; gold-leaf channel, mixed leaves/petals, ground snow divided by 1.5, reserved zero.</summary>
     public const string GroundAmt = "ground_amt";
     /// <summary>Sole writer: Campus.Systems.Sky.SkyNode.</summary>
     public const string Stars = "stars";
@@ -77,7 +77,7 @@ public static class ShaderGlobals
     public const string MapRect = "map_rect";
     /// <summary>Sole writer: Campus.Camera.ObserverCamera.</summary>
     public const string EdgeFog = "edge_fog";
-    /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
+    /// <summary>Sole writer: Campus.Kernel.Lighting.KeyLightDirector.</summary>
     public const string Shaft = "shaft";
     /// <summary>Reserved: project.godot default only; no runtime writer.</summary>
     public const string InteriorLight = "interior_light";
@@ -88,10 +88,12 @@ public static class ShaderGlobals
     /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
     public const string WindowOverride = "window_override";
     /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
+    public const string WindowThresholds = "window_thresholds";
+    /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
     public const string LampGrid = "lamp_grid";
     /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode.</summary>
     public const string LampTable = "lamp_table";
-    /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonGlobalsNode.</summary>
+    /// <summary>Sole writer: Campus.Systems.Vegetation.SeasonalSurfaceNode.</summary>
     public const string TreeSpecies = "tree_species";
     /// <summary>Sole writer: Campus.Style.Materials.ToonLibrary.</summary>
     public const string MatTable = "mat_table";
@@ -107,7 +109,7 @@ public static class ShaderGlobals
     public const string CloudNoise = "cloud_noise";
     /// <summary>Sole writer: Campus.Systems.Weather.Precip.PrecipNode.</summary>
     public const string PrecipOcc = "precip_occ";
-    /// <summary>Sole writer: Campus.Systems.Nightlight.NightlightNode; shared lamp/window reflection references.</summary>
+    /// <summary>Sole writer: Campus.Systems.Nightlight.Lamps.NightlightReflections; shared lamp/window reflection references.</summary>
     public const string ReflLamps = "refl_lamps";
     /// <summary>Sole writer: Campus.Kernel.Maps.GroundCoverTextures.</summary>
     public const string GroundMask2 = "ground_mask2";

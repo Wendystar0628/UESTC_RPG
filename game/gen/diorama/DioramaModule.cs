@@ -21,9 +21,6 @@ public sealed class DioramaModule : IContentModule
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.Backdrop, [], []);
     public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
-    private readonly object _gate = new();
-    private (IWorldModel World, MapId Map, IReadOnlyList<GeometryBundle> Meshes)? _cache;
-
     public IReadOnlyList<Claim> Claims => [];
 
     // ENG-BUDGET "diorama": 3 % of main triangles (75 k fine), 2 % of draw calls (30); no shadow casting at all.
@@ -56,16 +53,8 @@ public sealed class DioramaModule : IContentModule
     /// <summary>Centre of the rings and of the parallax: the data rectangle's centre, the same point the shader takes from map_rect.</summary>
     public static Vector2 Centre(BuildContext ctx) => (ctx.Map.DataRect.Min + ctx.Map.DataRect.Max) * 0.5f;
 
-    private IReadOnlyList<GeometryBundle> Meshes(BuildContext ctx)
-    {
-        lock (_gate)
-        {
-            if (_cache is { } c && ReferenceEquals(c.World, ctx.World) && c.Map == ctx.Map.Id) return c.Meshes;
-            var meshes = Generate(ctx);
-            _cache = (ctx.World, ctx.Map.Id, meshes);
-            return meshes;
-        }
-    }
+    private static IReadOnlyList<GeometryBundle> Meshes(BuildContext ctx) =>
+        ctx.Memo(typeof(DioramaModule), () => Generate(ctx));
 
     private static IReadOnlyList<GeometryBundle> Generate(BuildContext ctx)
     {
@@ -75,9 +64,9 @@ public sealed class DioramaModule : IContentModule
         var seed = StableHash.Hash32(ctx.WorldSeed, "diorama", ctx.Map.Id.Value);
         var rect = new MapRectLike(ctx.Map.DataRect.Min, ctx.Map.DataRect.Max);
         var cut = ctx.World.Outskirts?.CutLine;
-        var meshes = new List<GeometryBundle> { FogSea.Build(data.FogSea, centre, cut, rect, seed) };
-        for (var i = 0; i < data.CityRings.Count; i++) meshes.Add(CityRing.Build(data, data.CityRings[i], i, centre, seed));
-        meshes.Add(FarRing.Build(data.FarRing, data.Snow, centre, seed));
+        var meshes = new List<GeometryBundle>(FogSea.Build(data.FogSea, centre, cut, rect, seed));
+        for (var i = 0; i < data.CityRings.Count; i++) meshes.AddRange(CityRing.Build(data, data.CityRings[i], i, centre, seed));
+        meshes.AddRange(FarRing.Build(data.FarRing, data.Snow, centre, seed));
         return meshes;
     }
 }

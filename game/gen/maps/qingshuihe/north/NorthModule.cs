@@ -13,11 +13,9 @@ namespace Campus.Gen.Maps.Qingshuihe.North;
 /// identity parts. Pure .NET: reads the world model, the interior index and the terrain only.
 /// </summary>
 
-
 [ContentModule("zone.north", Owner = "WP-20")]
 public sealed class NorthModule : ZoneModuleBase, IWindowMetadataSource, IContentSourceTraceProvider
 {
-    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], [SceneTextInputs.AtlasKey]);
 

@@ -97,7 +97,7 @@ public sealed class CollisionInteriorIsolationTests
         var context = new BuildContext { Map = Descriptor(map), World = FixtureWorld(open: false), WorldSeed = 1, Catalog = Catalog };
         var moduleContext = new BuildContext
         {
-            Map = context.Map, World = FixtureWorld(open: false), WorldSeed = 2, Catalog = Catalog,
+            Map = context.Map, World = context.World, WorldSeed = 2, Catalog = Catalog,
             SourceInputs = new ReadOnlyDictionary<string, ReadOnlyMemory<byte>>(
                 new Dictionary<string, ReadOnlyMemory<byte>> { ["module.json"] = new byte[] { 1 } }),
             ClaimedBy = (_, _) => null,
@@ -134,7 +134,7 @@ public sealed class CollisionInteriorIsolationTests
         }
         private void CheckContext(BuildContext context)
         {
-            if (!ReferenceEquals(context.World, assetWorld))
+            if (!ReferenceEquals(context, prepared) || !ReferenceEquals(context.World, assetWorld))
                 throw new InvalidOperationException("Module generation and collision must use this job's cold asset world.");
             if (context.Map != prepared.Map || context.WorldSeed != prepared.WorldSeed
                 || !ReferenceEquals(context.Catalog, prepared.Catalog)

@@ -48,7 +48,7 @@ public sealed class FoldingGatePart() : CirculationPart<DoorParams>(new(1300, 45
         if (detail == Detail.Coarse)
         {
             // One panel stands for the lattice.
-            mesh.Box(metal with { Line = LineClass.Fine }, new(-xi, y0 - j, -S.FoldBarThick * 0.5f), new(xi, y1 + j, S.FoldBarThick * 0.5f), 0, Frame.Identity, MeshBuilder.NoShadow);
+            mesh.Box(metal with { Line = LineClass.Fine }, new(-xi, y0 - j, -S.FoldBarThick * 0.5f), new(xi, y1 + j, S.FoldBarThick * 0.5f), 0, Frame.Identity, VertexFlag.NoShadow);
             return;
         }
         // The pantograph: every leaf is a field of cells, two crossing bars each; the plain level takes cells twice as big.
@@ -83,7 +83,7 @@ public sealed class FoldingGatePart() : CirculationPart<DoorParams>(new(1300, 45
         var dir = d / length;
         var frame = new Frame(new((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f, 0), new(dir.X, dir.Y, 0), new(-dir.Y, dir.X, 0), Vector3.UnitZ);
         var half = (length + 0.02f) * 0.5f;
-        mesh.Box(material, new(-half, -S.FoldBar * 0.5f, -S.FoldBarThick * 0.5f), new(half, S.FoldBar * 0.5f, S.FoldBarThick * 0.5f), 0, frame, MeshBuilder.NoShadow);
+        mesh.Box(material, new(-half, -S.FoldBar * 0.5f, -S.FoldBarThick * 0.5f), new(half, S.FoldBar * 0.5f, S.FoldBarThick * 0.5f), 0, frame, VertexFlag.NoShadow);
     }
 }
 
@@ -135,11 +135,11 @@ public sealed class ElevatorDoorPart() : CirculationPart<DoorParams>(new(520, 20
         if (detail == Detail.Coarse) return;
         // Floor indicator window in the head; the call plate on the jamb on the viewer's right (-X seen from the front), two buttons on it.
         var dark = S.Insert;
-        mesh.Box(dark, new(-0.14f, h - head + 0.04f, -hz), new(0.14f, h - head + 0.14f, front + j), 0, Frame.Identity, MeshBuilder.NoShadow);
+        mesh.Box(dark, new(-0.14f, h - head + 0.04f, -hz), new(0.14f, h - head + 0.14f, front + j), 0, Frame.Identity, VertexFlag.NoShadow);
         if (!full) return;
         var px = -w + jamb * 0.5f;
-        mesh.Box(S.GateDark, new(px - 0.04f, 1.0f, -hz + 0.004f), new(px + 0.04f, 1.24f, front + j), 0.003f, Frame.Identity, MeshBuilder.NoShadow);
+        mesh.Box(S.GateDark, new(px - 0.04f, 1.0f, -hz + 0.004f), new(px + 0.04f, 1.24f, front + j), 0.003f, Frame.Identity, VertexFlag.NoShadow);
         foreach (var y in new[] { 1.19f, 1.08f })
-            mesh.Box(steel, new(px - 0.015f, y - 0.015f, -hz), new(px + 0.015f, y + 0.015f, front + 0.008f), 0.003f, Frame.Identity, MeshBuilder.NoShadow);
+            mesh.Box(steel, new(px - 0.015f, y - 0.015f, -hz), new(px + 0.015f, y + 0.015f, front + 0.008f), 0.003f, Frame.Identity, VertexFlag.NoShadow);
     }
 }

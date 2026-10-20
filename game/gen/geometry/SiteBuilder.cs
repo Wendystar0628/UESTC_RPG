@@ -54,7 +54,7 @@ public sealed class SiteBuilder
         get
         {
             var all = new List<SiteItem>(_items);
-            foreach (var key in _batchKeys) all.Add(_batches[key].Finish());
+            foreach (var key in _batchKeys) all.AddRange(_batches[key].Finish());
             return all.AsReadOnly();
         }
     }
@@ -104,11 +104,9 @@ public sealed class SiteBuilder
         ArgumentNullException.ThrowIfNull(material);
         var size = 64f * (1 << (int)Lod);
         var key = ((int)MathF.Floor(c.X / size), (int)MathF.Floor(c.Y / size), material, noShadow);
-        if (!_batches.TryGetValue(key, out var batch) || batch.Vertices > BoxBatch.MaxVertices)
+        if (!_batches.TryGetValue(key, out var batch))
         {
-            // A full batch is sealed into the item list and a fresh one takes its key.
-            if (batch is not null) _items.Add(batch.Finish());
-            else _batchKeys.Add(key);
+            _batchKeys.Add(key);
             batch = new BoxBatch(material, noShadow, new((key.Item1 + 0.5f) * size, (key.Item2 + 0.5f) * size));
             _batches[key] = batch;
         }
@@ -127,13 +125,8 @@ public sealed class SiteBuilder
     /// <summary>World-space box faces of one material and cell, written with the kernel's winding (clockwise from outside).</summary>
     private sealed class BoxBatch(ToonSpec material, bool noShadow, Vector2 anchor)
     {
-        /// <summary>Sealed past this many vertices so a bundle stays under the 65,536-vertex limit.</summary>
-        public const int MaxVertices = 60000;
-
-        private readonly List<float> _p = [], _n = [], _uv = [];
-        private readonly List<int> _i = [];
-
-        public int Vertices => _p.Count / 3;
+        private readonly GeometrySink _sink = new();
+        private readonly List<GeometryVertex> _face = [];
 
         public void Box(Vector2 c, Vector2 u, float hx, float hz, float y0, float y1, bool caps)
         {
@@ -172,48 +165,18 @@ public sealed class SiteBuilder
 
         private int Vertex(Vector3 p, Vector3 n, Vector2 uv)
         {
-            _p.Add(p.X); _p.Add(p.Y); _p.Add(p.Z);
-            _n.Add(n.X); _n.Add(n.Y); _n.Add(n.Z);
-            _uv.Add(uv.X); _uv.Add(uv.Y);
-            return _p.Count / 3 - 1;
+            _face.Add(new(p, n, uv, Ao: 1f, Flags: noShadow ? VertexFlag.NoShadow : null));
+            return _face.Count - 1;
         }
 
         private void Quad(int a, int b, int c, int d, Vector3 outward)
         {
-            Triangle(a, b, c, outward);
-            Triangle(a, c, d, outward);
+            _sink.Quad(material, _face[a], _face[b], _face[c], _face[d]);
+            _face.Clear();
         }
 
-        private void Triangle(int a, int b, int c, Vector3 outward)
-        {
-            var pa = Pos(a);
-            var e1 = Pos(b) - pa;
-            var e2 = Pos(c) - pa;
-            var cross = new Vector3(e1.Y * e2.Z - e1.Z * e2.Y, e1.Z * e2.X - e1.X * e2.Z, e1.X * e2.Y - e1.Y * e2.X);
-            var dot = (double)cross.X * outward.X + (double)cross.Y * outward.Y + (double)cross.Z * outward.Z;
-            if (dot == 0) return;
-            _i.Add(a);
-            _i.Add(dot < 0 ? b : c);
-            _i.Add(dot < 0 ? c : b);
-        }
-
-        private Vector3 Pos(int i) => new(_p[3 * i], _p[3 * i + 1], _p[3 * i + 2]);
-
-        public SiteItem Finish()
-        {
-            var count = _p.Count / 3;
-            var ao = new float[count];
-            Array.Fill(ao, 1f);
-            var mesh = new GeometryBundle(new(material), _p.ToArray(), _n.ToArray(), _i.ToArray(), ao, _uv.ToArray());
-            if (noShadow)
-            {
-                var flags = new byte[count];
-                Array.Fill(flags, (byte)8);
-                mesh = mesh with { Flags = flags };
-            }
-            mesh.ValidateVertexData();
-            return new(anchor, GeometryBuffer.Freeze(mesh), null);
-        }
+        public IReadOnlyList<SiteItem> Finish() => _sink.Finish()
+            .Select(mesh => new SiteItem(anchor, GeometryBuffer.Freeze(mesh), null)).ToArray();
     }
 }
 

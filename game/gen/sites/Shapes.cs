@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Sites;
 
@@ -112,42 +113,30 @@ public static class Shapes
     public static PartGeometry Faceted(PartGeometry geometry)
     {
         ArgumentNullException.ThrowIfNull(geometry);
-        var meshes = new List<GeometryBundle>();
+        var sink = new GeometrySink();
         foreach (var mesh in geometry.Meshes)
-        {
-            var count = mesh.Index.Length;
-            float[] position = new float[count * 3], normal = new float[count * 3], ao = new float[count], uv = new float[count * 2];
-            var index = new int[count];
-            for (var t = 0; t < count; t += 3)
+            for (var t = 0; t < mesh.Index.Length; t += 3)
             {
-                var p = new Vector3[3];
+                var vertices = new GeometryVertex[3];
                 var smooth = Vector3.Zero;
                 for (var k = 0; k < 3; k++)
                 {
                     var v = mesh.Index[t + k];
-                    p[k] = new(mesh.Position[3 * v], mesh.Position[3 * v + 1], mesh.Position[3 * v + 2]);
-                    smooth += new Vector3(mesh.Normal[3 * v], mesh.Normal[3 * v + 1], mesh.Normal[3 * v + 2]);
+                    var p = new Vector3(mesh.Position[3 * v], mesh.Position[3 * v + 1], mesh.Position[3 * v + 2]);
+                    var n = new Vector3(mesh.Normal[3 * v], mesh.Normal[3 * v + 1], mesh.Normal[3 * v + 2]);
+                    smooth += n;
+                    vertices[k] = new(p, n, mesh.Uv is { } uv ? new Vector2(uv[2 * v], uv[2 * v + 1]) : null,
+                        mesh.Uv2 is { } uv2 ? new Vector2(uv2[2 * v], uv2[2 * v + 1]) : null,
+                        mesh.Ao?[v], mesh.ColorIndices?[v], mesh.Flags?[v], mesh.Reserved?[v],
+                        mesh.DecalBaseColorIndices?[v]);
                 }
-                Vector3 e1 = p[1] - p[0], e2 = p[2] - p[0];
-                var n = new Vector3(e1.Y * e2.Z - e1.Z * e2.Y, e1.Z * e2.X - e1.X * e2.Z, e1.X * e2.Y - e1.Y * e2.X);
-                if (n.X * smooth.X + n.Y * smooth.Y + n.Z * smooth.Z < 0) n = -n;
-                n = Normalize(n.LengthSquared() > 1e-20f ? n : smooth);
-                for (var k = 0; k < 3; k++)
-                {
-                    var v = mesh.Index[t + k];
-                    var o = t + k;
-                    position[3 * o] = p[k].X; position[3 * o + 1] = p[k].Y; position[3 * o + 2] = p[k].Z;
-                    normal[3 * o] = n.X; normal[3 * o + 1] = n.Y; normal[3 * o + 2] = n.Z;
-                    ao[o] = mesh.Ao?[v] ?? 1f;
-                    uv[2 * o] = mesh.Uv?[2 * v] ?? 0f; uv[2 * o + 1] = mesh.Uv?[2 * v + 1] ?? 0f;
-                    index[o] = o;
-                }
+                var normal = Vector3.Cross(vertices[1].Position - vertices[0].Position, vertices[2].Position - vertices[0].Position);
+                if (Vector3.Dot(normal, smooth) < 0) normal = -normal;
+                normal = Normalize(normal.LengthSquared() > 1e-20f ? normal : smooth);
+                sink.Tri(mesh.Material.Spec, vertices[0] with { Normal = normal },
+                    vertices[1] with { Normal = normal }, vertices[2] with { Normal = normal });
             }
-            var flat = new GeometryBundle(mesh.Material, position, normal, index, ao, uv);
-            flat.ValidateVertexData();
-            meshes.Add(flat);
-        }
-        return new(meshes, geometry.Bounds);
+        return new(sink.Finish(), geometry.Bounds);
     }
 
     /// <summary>A ring wall of rectangular section swept round a circle (basin rims, kerbs), base at y = 0.</summary>
@@ -190,57 +179,14 @@ public static class Shapes
         return new(v.X / length, v.Y / length, v.Z / length);
     }
 
-    /// <summary>Minimal writer with the kernel's winding rule: front faces clockwise seen from outside.</summary>
+    /// <summary>Site-facing indexed construction uses the shared part mesh publication path.</summary>
     public sealed class Writer(ToonSpec material)
     {
-        private readonly List<float> _p = [], _n = [], _uv = [], _ao = [];
-        private readonly List<int> _i = [];
-
-        public int Vertex(Vector3 p, Vector3 n, Vector2 uv)
-        {
-            _p.Add(p.X); _p.Add(p.Y); _p.Add(p.Z);
-            _n.Add(n.X); _n.Add(n.Y); _n.Add(n.Z);
-            _uv.Add(uv.X); _uv.Add(uv.Y);
-            _ao.Add(1f);
-            return _ao.Count - 1;
-        }
-
-        public Vector3 Normal(int i) => new(_n[3 * i], _n[3 * i + 1], _n[3 * i + 2]);
-
-        private Vector3 Pos(int i) => new(_p[3 * i], _p[3 * i + 1], _p[3 * i + 2]);
-
-        public void Triangle(int a, int b, int c, Vector3 outward)
-        {
-            var pa = Pos(a);
-            var e1 = Pos(b) - pa;
-            var e2 = Pos(c) - pa;
-            var cross = new Vector3(e1.Y * e2.Z - e1.Z * e2.Y, e1.Z * e2.X - e1.X * e2.Z, e1.X * e2.Y - e1.Y * e2.X);
-            var dot = (double)cross.X * outward.X + (double)cross.Y * outward.Y + (double)cross.Z * outward.Z;
-            if (dot == 0) return;
-            _i.Add(a);
-            _i.Add(dot < 0 ? b : c);
-            _i.Add(dot < 0 ? c : b);
-        }
-
-        public void Quad(int a, int b, int c, int d, Vector3 outward)
-        {
-            Triangle(a, b, c, outward);
-            Triangle(a, c, d, outward);
-        }
-
-        public PartGeometry Finish()
-        {
-            var position = _p.ToArray();
-            var min = new Vector3(float.MaxValue);
-            var max = new Vector3(float.MinValue);
-            for (var i = 0; i < position.Length; i += 3)
-            {
-                min = new(Math.Min(min.X, position[i]), Math.Min(min.Y, position[i + 1]), Math.Min(min.Z, position[i + 2]));
-                max = new(Math.Max(max.X, position[i]), Math.Max(max.Y, position[i + 1]), Math.Max(max.Z, position[i + 2]));
-            }
-            var mesh = new GeometryBundle(new(material), position, _n.ToArray(), _i.ToArray(), _ao.ToArray(), _uv.ToArray());
-            mesh.ValidateVertexData();
-            return new([mesh], new(min, max));
-        }
+        private readonly MeshWriter _mesh = new(material);
+        public int Vertex(Vector3 p, Vector3 n, Vector2 uv) => _mesh.Vertex(p, n, uv);
+        public Vector3 Normal(int i) => _mesh.Normal(i);
+        public void Triangle(int a, int b, int c, Vector3 outward) => _mesh.Triangle(a, b, c, outward);
+        public void Quad(int a, int b, int c, int d, Vector3 outward) => _mesh.Quad(a, b, c, d, outward);
+        public PartGeometry Finish() => _mesh.Finish();
     }
 }

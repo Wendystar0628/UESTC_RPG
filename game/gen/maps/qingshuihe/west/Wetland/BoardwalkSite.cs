@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -27,9 +26,10 @@ namespace Campus.Gen.Maps.Qingshuihe.West.Wetland;
 public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
 {
     private static readonly StepsPart Steps = new();
-    private static readonly ConditionalWeakTable<IWorldModel, Route> Lines = new();
 
-    internal static Route Path(IWorldModel world) => Lines.GetValue(world, value => new(Route.Smooth(W.Route(value), 2)));
+    internal static Route Path(IWorldModel world) => new(Route.Smooth(W.Route(world), 2));
+
+    internal static Route Path(BuildContext context) => context.Memo(typeof(Route), () => Path(context.World));
 
     public override string Id => "19c.boardwalk";
 
@@ -64,7 +64,8 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
     internal static float[] LampStations(IWorldModel world)
     {
         var list = new List<float>();
-        for (var s = W.LampStart; s < Path(world).Length - 2f; s += W.LampPitch) list.Add(s);
+        var length = Path(world).Length;
+        for (var s = W.LampStart; s < length - 2f; s += W.LampPitch) list.Add(s);
         return [.. list];
     }
 
@@ -74,7 +75,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
     {
         var world = b.Context.World;
         var y = DeckTop(b.Context.World, b.Ground);
-        var path = Path(world);
+        var path = Path(b.Context);
         var detail = b.Detail;
         // Deck: single planks close up, one beveled slab further off.
         if (detail == SiteDetail.Full) Planks(b, path, y);
@@ -169,7 +170,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
     {
         ArgumentNullException.ThrowIfNull(context);
         var y = DeckTop(context.World, context.World.Terrain.HeightAt);
-        return LampStations(context.World).Select(s => LampLayout(Path(context.World), y, s, -Beach(context.World).Side).Emitter).ToArray();
+        return LampStations(context.World).Select(s => LampLayout(Path(context), y, s, -Beach(context.World).Side).Emitter).ToArray();
     }
 
     private static (Vector2 Foot, LightEmitter Emitter) LampLayout(Route path, float y, float s, float side)
@@ -285,7 +286,7 @@ public sealed class BoardwalkSite : ZoneSite, ILightMetadataSource
     public override void Collide(SiteColliders c)
     {
         var world = c.Context.World;
-        var path = Path(world);
+        var path = Path(c.Context);
         var y = DeckTop(c.Context.World, c.Ground);
         // Deck: 2 m slabs, each a box whose top is the deck (SYS-WALK), timber underfoot.
         var slabs = Math.Max(1, (int)MathF.Ceiling(path.Length / W.SlabLength));

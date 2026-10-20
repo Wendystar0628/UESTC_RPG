@@ -21,7 +21,7 @@ public static class CityRing
     private const float YawJitterDeg = 9f;
     private const float SectorBlendDeg = 7f;
 
-    public static GeometryBundle Build(BackdropData data, CityRingData ring, int ringIndex, Vector2 centre, uint seed)
+    public static IReadOnlyList<GeometryBundle> Build(BackdropData data, CityRingData ring, int ringIndex, Vector2 centre, uint seed)
     {
         var mesh = new MeshWriter(DioramaVertex.KindCity);
         for (var row = 0; row < ring.Rows; row++)
@@ -77,7 +77,7 @@ public static class CityRing
                 az += (width + gap) / radial * (180f / MathF.PI);
             }
         }
-        return mesh.Bundle(DioramaPalette.City);
+        return mesh.Bundles(DioramaPalette.City);
     }
 
     private readonly record struct BoxFrame(Vector3 Centre, Vector3 Side, Vector3 Inward);

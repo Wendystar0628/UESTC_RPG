@@ -56,7 +56,8 @@ public static class BakeSurfacePacker
     {
         catalog.Validate(mesh.Material.Spec);
         var count = mesh.Position.Length / 3;
-        if (count is <= 0 or > 65536) throw new InvalidDataException("A packed surface needs 1..65,536 vertices.");
+        GeometryVertexLimits.Require(count);
+        if (count == 0) throw new InvalidDataException("A packed surface needs vertices.");
         var size = bounds.Size;
         if (!float.IsFinite(size.X) || !float.IsFinite(size.Y) || !float.IsFinite(size.Z) || size.X < 0 || size.Y < 0 || size.Z < 0)
             throw new InvalidDataException("Quantization bounds must be finite and ordered.");

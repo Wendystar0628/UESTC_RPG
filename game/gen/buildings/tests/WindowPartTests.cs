@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
@@ -38,7 +39,7 @@ public sealed class WindowPartTests
                     var frame = Mesh.EdgeFrame.Of(plan.SkinAt(layout.Ring), layout.Edge);
                     foreach (var opening in plan.Openings[fi].Where(o => o.Kind != BayKind.Door))
                     {
-                        var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
+                        var sink = new GeometrySink(Campus.Contracts.Tests.PaletteFixture.Catalog);
                         var openings = new FacadeOpenings(plan, set.Blocks[0], lod, sink);
                         if (lod <= LodLevel.L1) openings.Fill(frame, layout, opening, zone);
                         else openings.FlatGlass(frame, layout, opening, -plan.Reveal);

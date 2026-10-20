@@ -11,9 +11,6 @@ namespace Campus.Gen.Parts.Openings;
 /// </summary>
 public abstract class OpeningPart<TParams> : IPartDef<TParams> where TParams : BoxPartParams
 {
-    /// <summary>Vertex flag: collapsed in the shadow pass (ART-MODELING "small parts cast no shadow").</summary>
-    internal const byte NoShadow = 8;
-
     protected OpeningPart(PartBudget budget)
     {
         Budget = budget;

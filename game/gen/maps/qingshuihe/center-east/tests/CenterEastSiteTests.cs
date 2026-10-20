@@ -82,7 +82,6 @@ public sealed partial class CenterEastModuleTests
         }
     }
 
-
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
     public void MonumentsStandAtTheirPointsAndLeaveTheDoorsClear()
@@ -119,7 +118,7 @@ public sealed partial class CenterEastModuleTests
     public void WenkeStandsTerracedWithOneShutDoorAndAClearForecourt()
     {
         var ctx = Context();
-        var plan = WenkeSite.Footprints(ctx.World);
+        var plan = WenkeSite.Footprints(ctx);
         static float Area(IReadOnlyList<Vector2> ring) => MathF.Abs((float)PlanGeometry.SignedArea(ring));
         WenkeSite.Block Block(string part) => plan.Blocks.Single(b => b.Part == part);
         AssertThat(Block(CenterEastIds.Wenke.Tower).Storeys == ctx.World.Feature(CenterEastIds.Wenke.Entity).Part(CenterEastIds.Wenke.Tower).Levels().Storeys).OverrideFailureMessage("the tower stands fifteen storeys, about 60 m").IsTrue();

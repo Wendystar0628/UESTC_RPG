@@ -169,7 +169,7 @@ internal static class PlanFacades
     /// <summary>
     /// Zone of each opening from the facade segments of the exported fidelity data (ENG-ARCH: one or more segments
     /// per footprint edge, A → B along the ring). An opening takes the segment its centre lies on (parallel, within
-    /// OpeningRules.ZoneMatchDistance of the footprint line); row 0 takes the segment's ground band. No segment: K3.
+    /// OpeningRules.ZoneMatchDistance of the footprint line); row 0 takes the segment's ground band. Every classified wall point must resolve to a segment.
     /// </summary>
     public static FidelityZone[][] Zones(IReadOnlyList<FacadeSegment> segments, IReadOnlyList<PlanRing> rings,
         IReadOnlyList<FacadeLayout> facades, IReadOnlyList<Opening[]> openings)
@@ -182,8 +182,9 @@ internal static class PlanFacades
             for (var k = 0; k < openings[fi].Length; k++)
             {
                 var o = openings[fi][k];
-                var best = SegmentAt(segments, rings[f.Ring], f, (o.U0 + o.U1) * 0.5f);
-                zones[fi][k] = best is null ? FidelityZone.K3 : o.Row == 0 ? best.GroundBand : best.Zone;
+                var best = SegmentAt(segments, rings[f.Ring], f, (o.U0 + o.U1) * 0.5f)
+                    ?? throw new InvalidOperationException("Opening has no compiled fidelity segment.");
+                zones[fi][k] = o.Row == 0 ? best.GroundBand : best.Zone;
             }
         }
         return zones;

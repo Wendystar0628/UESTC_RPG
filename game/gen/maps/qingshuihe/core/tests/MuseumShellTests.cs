@@ -141,7 +141,7 @@ public sealed class MuseumShellTests
             var glass = output.Meshes.Where(m => m.Material.Spec.Kind == ToonKind.Glass).ToArray();
             AssertThat(glass.Length == 1).OverrideFailureMessage($"{lod}: one shared window-glass bundle ({glass.Length})").IsTrue();
             var bases = Enumerable.Range(0, glass[0].Uv2!.Length / 2).Select(i => glass[0].Uv2![2 * i]).Distinct().Order().ToArray();
-            var here = pieces.Where(p => p is IWindowedPiece && TileGrid.At(p.Anchor, lod) == TileGrid.At(museum.Anchor, lod)).Select(p => ((IWindowedPiece)p).WindowLayout.Feature).ToHashSet();
+            var here = pieces.Where(p => p is IWindowedPiece && TileGrid.At(CoreModuleTests.Anchor(p), lod) == TileGrid.At(museum.Anchor, lod)).Select(p => ((IWindowedPiece)p).WindowLayout.Feature).ToHashSet();
             AssertThat(bases.SequenceEqual(numbering.Allocations.Where(a => here.Contains(a.Feature)).Select(a => (float)a.BaseId).Order())).OverrideFailureMessage($"{lod}: the shared bundle keeps each building's window base ({string.Join(", ", bases)})").IsTrue();
         }
     }

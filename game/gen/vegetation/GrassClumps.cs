@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 using Campus.Contracts.Vegetation;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.World;
@@ -122,6 +123,7 @@ public static class GrassClumps
             index.AddRange([first, first + 1, first + 2, first + 1, first + 3, first + 2, first + 2, first + 3, first + 4]);
         }
         var count = position.Count / 3;
+        GeometryVertexLimits.Require(count);
         var normal = Enumerable.Range(0, count).SelectMany(_ => new[] { 0f, 1f, 0f }).ToArray();
         var bundle = new GeometryBundle(new ToonRef(Spec()), [.. position], normal, [.. index], Enumerable.Repeat(1f, count).ToArray(), [.. uv])
         {

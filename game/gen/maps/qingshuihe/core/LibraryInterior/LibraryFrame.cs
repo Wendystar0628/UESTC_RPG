@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Maps.Qingshuihe.Core.Library;
 using S = Campus.Gen.Maps.Qingshuihe.Core.LibraryInterior.LibraryInteriorStyle;
@@ -16,7 +15,6 @@ internal sealed class LibraryFrame
 {
     public const float Step = MathF.PI / 4f;
     private static readonly float HalfTan = MathF.Tan(Step * 0.5f);
-    private static readonly ConditionalWeakTable<IWorldModel, LibraryFrame> Cache = new();
 
     private LibraryFrame(LibraryShell shell)
     {
@@ -41,9 +39,11 @@ internal sealed class LibraryFrame
     public static LibraryFrame Of(IWorldModel world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        return Cache.GetValue(world, w => new LibraryFrame(LibraryShell.From(w)
-            ?? throw new InvalidOperationException("The library interior needs the library shell (MAP-QSH-CORE) in this world.")));
+        return new LibraryFrame(LibraryShell.From(world)
+            ?? throw new InvalidOperationException("The library interior needs the library shell (MAP-QSH-CORE) in this world."));
     }
+
+    public static LibraryFrame Of(BuildContext context) => context.Memo(typeof(LibraryFrame), () => Of(context.World));
 
     public LibraryShell Shell { get; }
     public LibraryPlan Plan { get; }

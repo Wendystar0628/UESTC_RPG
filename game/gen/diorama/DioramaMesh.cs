@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Diorama;
 
@@ -19,7 +20,6 @@ public static class DioramaVertex
     public const byte KindFogSea = 0;
     public const byte KindCity = 1;
     public const byte KindFar = 2;
-    public const byte FlagNoShadow = 8;
 
     /// <summary>Largest value stored in one 6-bit season field.</summary>
     public const int SeasonQuantizationMax = 63;
@@ -37,60 +37,34 @@ public static class DioramaVertex
     public static float UnpackSeason(float word, int season) => (((int)word >> (6 * season)) & SeasonQuantizationMax) / (float)SeasonQuantizationMax;
 }
 
-/// <summary>Growable vertex and index lists for one diorama surface.</summary>
+/// <summary>Indexed diorama construction with shader metadata applied after shared surface publication.</summary>
 internal sealed class MeshWriter(byte kind)
 {
-    private readonly List<float> _position = [];
-    private readonly List<float> _normal = [];
-    private readonly List<float> _uv = [];
-    private readonly List<float> _uv2 = [];
-    private readonly List<byte> _ao = [];
+    private readonly List<GeometryVertex> _vertices = [];
     private readonly List<int> _index = [];
-
-    public int VertexCount => _position.Count / 3;
+    public int VertexCount => _vertices.Count;
     public int TriangleCount => _index.Count / 3;
 
     public int Vertex(Vector3 p, Vector3 n, Vector2 uv, Vector2 uv2, byte ao = 255)
     {
-        _position.Add(p.X); _position.Add(p.Y); _position.Add(p.Z);
-        _normal.Add(n.X); _normal.Add(n.Y); _normal.Add(n.Z);
-        _uv.Add(uv.X); _uv.Add(uv.Y);
-        _uv2.Add(uv2.X); _uv2.Add(uv2.Y);
-        _ao.Add(ao);
+        _vertices.Add(new(p, n, uv, uv2, ao / 255f, Flags: VertexFlag.NoShadow, Reserved: kind));
         return VertexCount - 1;
     }
 
     public void Triangle(int a, int b, int c)
-    {
-        _index.Add(a); _index.Add(b); _index.Add(c);
-    }
+    { _index.Add(a); _index.Add(b); _index.Add(c); }
 
-    /// <summary>Quad a-b-c-d in order; both sides draw (cull_disabled), so winding only matters for consistency.</summary>
     public void Quad(int a, int b, int c, int d)
-    {
-        Triangle(a, b, c);
-        Triangle(a, c, d);
-    }
+    { Triangle(a, b, c); Triangle(a, c, d); }
 
-    public GeometryBundle Bundle(ToonSpec spec)
+    public IReadOnlyList<GeometryBundle> Bundles(ToonSpec spec)
     {
-        if (VertexCount > 65536) throw new InvalidOperationException($"Diorama surface kind {kind} has {VertexCount} vertices; the limit is 65 536 (ENG-PERF).");
-        var count = VertexCount;
-        var flags = new byte[count];
-        Array.Fill(flags, DioramaVertex.FlagNoShadow);
-        var reserved = new byte[count];
-        Array.Fill(reserved, kind);
-        var ao = new float[count];
-        for (var i = 0; i < count; i++) ao[i] = _ao[i] / 255f;
-        var bundle = new GeometryBundle(new ToonRef(spec), _position.ToArray(), _normal.ToArray(), _index.ToArray(),
-            Ao: ao, Uv: _uv.ToArray(), Uv2: _uv2.ToArray())
+        var sink = new GeometrySink(withUv2: true);
+        sink.Polygon(spec, _vertices, _index);
+        return sink.Finish().Select(bundle => bundle with
         {
             Shader = ShaderId.DioramaFar,
             IgnoreOcclusionCulling = true,
-            Flags = flags,
-            Reserved = reserved,
-        };
-        bundle.ValidateVertexData();
-        return bundle;
+        }).ToArray();
     }
 }

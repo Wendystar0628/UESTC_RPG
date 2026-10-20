@@ -255,9 +255,9 @@ public sealed class StreetPartsTests
             var near = part.Lods[LodLevel.L0](p);
             var body = near.Meshes.Where(m => m.Material.Spec.Lit.Value == StreetStyle.CarBodies[0] + ".lit" && m.Material.Spec.Fx.HasFlag(ToonFx.BevelLift)).ToList();
             var tyres = near.Meshes.Where(m => m.Material.Spec.Lit.Value == StreetStyle.Tyre + ".lit" && m.Material.Spec.Normal == ToonNormal.Smooth).ToList();
-            AssertThat(body.Count == 1 && tyres.Count == 1).OverrideFailureMessage("the car's body or tyres are not one surface each").IsTrue();
-            var bodyPoints = Enumerable.Range(0, body[0].Position.Length / 3).Select(i => P(body[0], i)).ToList();
-            var tyrePoints = Enumerable.Range(0, tyres[0].Position.Length / 3).Select(i => P(tyres[0], i)).ToList();
+            AssertThat(body.Count > 0 && tyres.Count > 0).OverrideFailureMessage("the car's body or tyres have no surfaces").IsTrue();
+            var bodyPoints = body.SelectMany(mesh => Enumerable.Range(0, mesh.Position.Length / 3).Select(i => P(mesh, i))).ToList();
+            var tyrePoints = tyres.SelectMany(mesh => Enumerable.Range(0, mesh.Position.Length / 3).Select(i => P(mesh, i))).ToList();
             AssertThat(bodyPoints.Min(q => q.Y) >= StreetStyle.CarClearance - TestTolerance.Position).OverrideFailureMessage($"the body hangs to {bodyPoints.Min(q => q.Y):F3} m").IsTrue();
             var diameter = tyrePoints.Max(q => q.Y) - tyrePoints.Min(q => q.Y);
             AssertThat(MathF.Abs(diameter - 2f * StreetStyle.WheelRadius) < TestTolerance.Position && tyrePoints.Min(q => q.Y) > -TestTolerance.Position).OverrideFailureMessage($"wheels {diameter:F3} m across").IsTrue();

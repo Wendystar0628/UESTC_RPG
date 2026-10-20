@@ -1,6 +1,7 @@
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Parts.Openings;
 
@@ -79,76 +80,42 @@ internal sealed class PartMesh
 
     public PartGeometry Finish(Box3 bounds)
     {
-        var meshes = new List<GeometryBundle>(_layers.Count);
-        foreach (var layer in _layers)
-            if (layer.TriangleCount > 0) meshes.Add(layer.Bundle());
-        return new(meshes.AsReadOnly(), bounds);
+        var sink = new GeometrySink();
+        foreach (var layer in _layers) layer.Write(sink);
+        return new(sink.Finish(), bounds);
     }
 
     internal sealed class Layer(ToonSpec spec, byte flags)
     {
-        private readonly List<float> _position = [];
-        private readonly List<float> _normal = [];
-        private readonly List<float> _uv = [];
-        private readonly List<float> _uv2 = [];
-        private readonly List<float> _ao = [];
-        private readonly List<byte> _reserved = [];
+        private readonly List<GeometryVertex> _vertices = [];
         private readonly List<int> _index = [];
-        private bool _glassData;
-
         public ToonSpec Spec { get; } = spec;
         public byte Flags { get; } = flags;
-        public int Count => _position.Count / 3;
-        public int TriangleCount => _index.Count / 3;
+        public int Count => _vertices.Count;
 
         public int Vertex(Vector3 p, Vector3 n, Vector2 uv, float ao = 1f, Vector2 uv2 = default, byte reserved = 0)
         {
-            if (Count >= 65536) throw new InvalidOperationException("An opening part surface exceeds 65,536 vertices.");
-            if (uv2 != Vector2.Zero || reserved != 0) _glassData = true;
-            _position.Add(p.X); _position.Add(p.Y); _position.Add(p.Z);
             var length = (float)Math.Sqrt((double)n.X * n.X + (double)n.Y * n.Y + (double)n.Z * n.Z);
             if (!(length > 1e-12f)) throw new ArgumentException("A vertex normal must be nonzero.", nameof(n));
-            _normal.Add(n.X / length); _normal.Add(n.Y / length); _normal.Add(n.Z / length);
-            _uv.Add(uv.X); _uv.Add(uv.Y);
-            _uv2.Add(uv2.X); _uv2.Add(uv2.Y);
-            _ao.Add(ao);
-            _reserved.Add(reserved);
+            var glass = Spec.Kind == ToonKind.Glass;
+            _vertices.Add(new(p, n / length, uv, glass ? uv2 : null, ao, Flags: Flags, Reserved: glass ? reserved : null));
             return Count - 1;
         }
 
         public void RawIndex(int index) => _index.Add(index);
 
-        /// <summary>Godot front faces are clockwise seen from outside; the winding follows <paramref name="outward"/>.</summary>
         public void Triangle(int a, int b, int c, Vector3 outward)
         {
-            var pa = P(a); var ab = P(b) - pa; var ac = P(c) - pa;
-            var cross = new Vector3(ab.Y * ac.Z - ab.Z * ac.Y, ab.Z * ac.X - ab.X * ac.Z, ab.X * ac.Y - ab.Y * ac.X);
-            var direction = (double)cross.X * outward.X + (double)cross.Y * outward.Y + (double)cross.Z * outward.Z;
-            if (!double.IsFinite(direction) || direction == 0) throw new ArgumentException("A face is degenerate.");
-            _index.Add(a); _index.Add(direction < 0 ? b : c); _index.Add(direction < 0 ? c : b);
+            var flip = GeometryWinding.Flip(_vertices[a].Position, _vertices[b].Position, _vertices[c].Position, outward);
+            _index.Add(a); _index.Add(flip ? c : b); _index.Add(flip ? b : c);
         }
 
         public void Quad(int a, int b, int c, int d, Vector3 outward)
-        {
-            Triangle(a, b, c, outward);
-            Triangle(a, c, d, outward);
-        }
+        { Triangle(a, b, c, outward); Triangle(a, c, d, outward); }
 
-        private Vector3 P(int i) => new(_position[3 * i], _position[3 * i + 1], _position[3 * i + 2]);
-
-        public GeometryBundle Bundle()
+        public void Write(GeometrySink sink)
         {
-            var count = Count;
-            var flagBytes = new byte[count];
-            Array.Fill(flagBytes, Flags);
-            var bundle = new GeometryBundle(new(Spec), [.. _position], [.. _normal], [.. _index], [.. _ao], [.. _uv],
-                _glassData ? [.. _uv2] : null)
-            {
-                Flags = flagBytes,
-                Reserved = _glassData ? [.. _reserved] : null,
-            };
-            bundle.ValidateVertexData();
-            return bundle;
+            if (_index.Count > 0) sink.Polygon(Spec, _vertices, _index);
         }
     }
 }

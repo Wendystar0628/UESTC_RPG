@@ -144,7 +144,7 @@ public static partial class CoreStyle
     }
 
     public static Paint Stone(string family) => new(CoreMaterial.Stone, family);
-    public static Paint Inlay(string family) => new(CoreMaterial.Inlay, family, (byte)(VertexFlags.Decal | VertexFlags.NoShadow));
+    public static Paint Inlay(string family) => new(CoreMaterial.Inlay, family, (byte)(VertexFlag.Decal | VertexFlag.NoShadow));
     public static Paint Metal(string family) => new(CoreMaterial.Metal, family);
     public static Paint Cloth(string family) => new(CoreMaterial.Cloth, family);
 

@@ -134,7 +134,7 @@ public sealed class BoundaryModuleTests
     public void NothingWalksOutAnywhereAlongTheRing()
     {
         var ctx = Context();
-        var plan = BoundaryPlan.Of(ctx.World)!;
+        var plan = BoundaryPlan.Of(ctx)!;
         var ring = plan.Ring;
         var colliders = ZoneTestCells.Colliders(new BoundaryModule(), ctx).Where(c => c.Tag == SurfaceTag.Boundary).ToArray();
         // Bucket the colliders by 8 m cells of their plan extent.

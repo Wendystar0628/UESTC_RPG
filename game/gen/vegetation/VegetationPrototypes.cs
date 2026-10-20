@@ -1,7 +1,5 @@
-using System.Collections.Concurrent;
 using System.Globalization;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Contracts.Vegetation;
 
@@ -21,8 +19,6 @@ public static class VegetationPrototypes
 
     /// <summary>Crown sway and card flutter reach (m) around the model bounds (veg_* wind, WLD-VEGETATION CustomAabb).</summary>
     public const float SwayPad = 0.6f;
-
-    private static readonly ConditionalWeakTable<BuildInputSnapshot, ConcurrentDictionary<(PaletteCatalog, string, int, VegPool), Lazy<GeometryPrototype>>> Cache = new();
 
     /// <summary>Prototype ID: vegetation/{species}/{variant}/{pool}.</summary>
     public static string Id(SpeciesInfo species, int variant, VegPool pool)
@@ -55,10 +51,8 @@ public static class VegetationPrototypes
         ArgumentNullException.ThrowIfNull(species);
         ArgumentNullException.ThrowIfNull(context);
         _ = Name(pool);
-        // SpeciesInfo contains seasonal arrays: parsing the same frozen input gives new references, not a new mother.
-        var table = Cache.GetValue(context.GlobalInputs, _ => new());
-        return table.GetOrAdd((context.Catalog, species.Id, variant, pool), _ => new Lazy<GeometryPrototype>(
-            () => Create(species, variant, pool, context), LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+        return context.Memo((typeof(VegetationPrototypes), species.Id, variant, pool),
+            () => Create(species, variant, pool, context));
     }
 
     /// <summary>Local → world: uniform scale, yaw about the trunk, then the trunk foot (row-vector order).</summary>

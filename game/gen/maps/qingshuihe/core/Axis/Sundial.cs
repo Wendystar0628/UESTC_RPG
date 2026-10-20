@@ -1,3 +1,5 @@
+using Campus.Gen.Geometry;
+using Campus.Gen.Sites;
 using Campus.Gen.World;
 using System.Numerics;
 using Campus.Contracts;
@@ -14,7 +16,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Axis;
 /// The dial is perpendicular to the gnomon, so its face normal has y = sin(latitude) ≈ 0.51 and never holds snow.
 /// Its position is the overlay point <c>design:core-sundial</c> (the real sundial is not in OSM).
 /// </summary>
-public sealed class Sundial : ICorePiece
+public sealed class Sundial : ZoneSite
 {
     private readonly IWorldModel _world;
 
@@ -34,9 +36,10 @@ public sealed class Sundial : ICorePiece
         return new Sundial(world, new(point.Position.X, point.Position.Z), f.Number("gnomonElevationDeg"));
     }
 
-    public string Id => "sundial";
+    public override string Id => "sundial";
     public Vector2 Anchor => Position;
-    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreIds.Sundial, Aspects.Massing | Aspects.Props)];
+    public static IReadOnlyList<Claim> DeclaredClaims { get; } = [new FeatureClaim(CoreIds.Sundial, Aspects.Massing | Aspects.Props)];
+    public override IReadOnlyList<Claim> Claims => DeclaredClaims;
 
     public Vector2 Position { get; }
     /// <summary>Top of the granite pad the tiers stand on.</summary>
@@ -96,4 +99,31 @@ public sealed class Sundial : ICorePiece
         list.Add(new PostCollider(Position, S.SundialRingOuter, TiersTop, DialCentre.Y + S.SundialRingOuter, SurfaceTag.Prop) { Foot = FootMat.Metal });
         return list;
     }
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        CoreRanges.ForFeature(world, CoreIds.Sundial) is { } range ? [range] : [];
+
+    public override void Build(SiteBuilder builder)
+    {
+        if (!builder.Includes(Anchor)) return;
+        var build = CoreBuild.For(builder.Context);
+        Build(build, builder.Lod);
+        var output = build.Finish(builder.Lod);
+        foreach (var mesh in output.Meshes) builder.Add(mesh, System.Numerics.Matrix4x4.Identity, Anchor);
+        foreach (var part in output.Parts) builder.Place(part, Anchor);
+        foreach (var emitter in output.Emitters ?? []) builder.Light(emitter, Anchor);
+    }
+
+    public override void Collide(SiteColliders colliders)
+    {
+        if (!colliders.Includes(Anchor)) return;
+        foreach (var collider in Collide()) colliders.Add(collider, Anchor);
+    }
+
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
+    {
+        var build = CoreBuild.For(context);
+        Build(build, lod);
+        yield return new($"core/{Id}", CoreIds.Sundial, build.Finish(lod), Collide(), []);
+    }
+
 }

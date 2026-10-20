@@ -77,7 +77,7 @@ public sealed class DryingRailPart() : CirculationPart<RailingParams>(new(150, 6
             var z = count == 1 ? 0 : -p.Depth * 0.5f + bar * 0.5f + (p.Depth - bar) * i / (count - 1);
             // A bar runs along kernel X with its section centred at height y.
             mesh.Add(Profiles.Bar(section, [new(x0 - S.Joint, z), new(x1 + S.Joint, z)], S.MetalFine with { Lit = metal.Lit, Shade = metal.Shade }, y),
-                Frame.Identity, MeshBuilder.NoShadow);
+                Frame.Identity, VertexFlag.NoShadow);
         }
         if (detail == Detail.Mass) return;
         foreach (var side in new[] { -1f, 1f })
@@ -127,7 +127,7 @@ public sealed class IronGatePart() : CirculationPart<DoorParams>(new(540, 300))
             var x = start + i * S.GateBarPitch;
             if (stiles.Any(s => Math.Abs(s - x) < (f + bar) * 0.5f + 0.01f)) continue;
             mesh.Box(metal with { Line = LineClass.Fine }, new(x - bar * 0.5f, 0.06f + rail - S.Joint, -bar * 0.5f), new(x + bar * 0.5f, p.Height - rail + S.Joint, bar * 0.5f),
-                0, Frame.Identity, MeshBuilder.NoShadow);
+                0, Frame.Identity, VertexFlag.NoShadow);
         }
         // Lock box on the latch side at hand height.
         var lx = leaves == 2 ? f * 0.5f + 0.06f : w - f - 0.06f;

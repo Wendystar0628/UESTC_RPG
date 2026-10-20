@@ -1,7 +1,6 @@
 using Campus.Gen.World;
 using Campus.Contracts.Bake;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
 using Campus.Gen.Parts.Street;
@@ -17,15 +16,11 @@ namespace Campus.Gen.Furniture;
 /// Pure .NET; the layout is built once per world model and claims query and shared by every tile and level.
 /// </summary>
 
-
 [ContentModule("furniture", Owner = "WP-13")]
 public sealed class FurnitureModule : IContentModule, ILightMetadataSource
 {
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Furniture, [], [SceneTextInputs.AtlasKey]);
     public BakeInputDependencies CollisionInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Furniture, [], []);
-
-    private static readonly ConditionalWeakTable<IWorldModel, List<(Func<FeatureId, Aspects, WpId?> Claims, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs, BuildInputSnapshot Globals, PaletteCatalog Catalog, FurnitureLayout Layout)>> Cache = new();
-    private static readonly object Sync = new();
 
     public IReadOnlyList<Claim> Claims { get; } = [];
 
@@ -78,20 +73,8 @@ public sealed class FurnitureModule : IContentModule, ILightMetadataSource
     }
 
     /// <summary>The map's layout for this context's world and claims, built once and shared.</summary>
-    public static FurnitureLayout Layout(BuildContext ctx)
-    {
-        ArgumentNullException.ThrowIfNull(ctx);
-        lock (Sync)
-        {
-            var built = Cache.GetValue(ctx.World, _ => []);
-            foreach (var (claims, inputs, globals, catalog, layout) in built)
-                if (ReferenceEquals(claims, ctx.ClaimedBy) && ReferenceEquals(inputs, ctx.SourceInputs)
-                    && ReferenceEquals(globals, ctx.GlobalInputs) && ReferenceEquals(catalog, ctx.Catalog)) return layout;
-            var fresh = FurniturePlanner.Build(ctx.GlobalInputs, ctx.Catalog, ctx.World, ctx.ClaimedBy, ctx.SourceInputs);
-            built.Add((ctx.ClaimedBy, ctx.SourceInputs, ctx.GlobalInputs, ctx.Catalog, fresh));
-            return fresh;
-        }
-    }
+    public static FurnitureLayout Layout(BuildContext ctx) =>
+        ctx.Memo(typeof(FurnitureLayout), () => FurniturePlanner.Build(ctx.GlobalInputs, ctx.Catalog, ctx.World, ctx.ClaimedBy, ctx.SourceInputs));
 
     /// <summary>The coarsest level a kind still shows at: the parts that carry an L2 (lamps, kiosks, stops, cars) stay to L2.</summary>
     private static LodLevel Deepest(FurnitureKind kind) => kind switch

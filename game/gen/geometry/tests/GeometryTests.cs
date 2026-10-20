@@ -52,40 +52,67 @@ public sealed class GeometryTests
     {
         var source = Surface();
         var passthrough = source with { Custom0 = new float[12], Lods = [new(.5f, [2, 1, 0])] };
-        foreach (var policy in Enum.GetValues<GeometryMergePolicy>())
-            foreach (var input in new[] { source, passthrough })
-            {
-                var result = GeometryBatch.Merge([input], policy).Single();
-                result.Position[0] = 99;
-                result.Index[0] = 99;
-                if (result.Custom0 is not null) result.Custom0[0] = 99;
-                if (result.Lods is not null) result.Lods[0].Index[0] = 99;
-                AssertThat(input.Position[0] == 0 && input.Index[0] == 0 && (input.Custom0 is null || input.Custom0[0] == 0) &&
-                    (input.Lods is null || input.Lods[0].Index[0] == 2)).OverrideFailureMessage($"{policy} singleton or passthrough kept mutable input storage").IsTrue();
-            }
+        foreach (var input in new[] { source, passthrough })
+        {
+            var result = GeometryBatch.Merge([input]).Single();
+            result.Position[0] = 99;
+            result.Index[0] = 99;
+            if (result.Custom0 is not null) result.Custom0[0] = 99;
+            if (result.Lods is not null) result.Lods[0].Index[0] = 99;
+            AssertThat(input.Position[0] == 0 && input.Index[0] == 0 && (input.Custom0 is null || input.Custom0[0] == 0) &&
+                (input.Lods is null || input.Lods[0].Index[0] == 2)).OverrideFailureMessage("singleton or passthrough kept mutable input storage").IsTrue();
+        }
         var builder = new SiteBuilder(new BuildContext { World = null!, Map = null!, Catalog = null!, WorldSeed = 1 }, LodLevel.L0, SiteDetail.Full);
         builder.Add(source with { Lods = [] }, Matrix4x4.Identity);
         var item = builder.Items.Single();
         var restored = GeometryPublication.Publish(item.Mesh!, item.HasLodChannel);
         AssertThat(restored.Lods is { Count: 0 }).OverrideFailureMessage("an explicitly empty LOD channel became null").IsTrue();
-        AssertThat(GeometryBatch.Merge([restored, source], GeometryMergePolicy.Plain).Count == 2).OverrideFailureMessage("an explicitly empty LOD channel changed merge eligibility").IsTrue();
+        AssertThat(GeometryBatch.Merge([restored, source]).Count == 2).OverrideFailureMessage("an explicitly empty LOD channel changed merge eligibility").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]
-    public void MergePoliciesRetainBucketOrderAndNumberedWindowIndices()
+    public void SharedMergePreservesNumberedWindowsAndCustomSurfaces()
     {
-        var a = Surface();
-        var b = Surface() with { Material = new(new ToonSpec(new("other.lit"), new("other.shade"))) };
-        var special = a with { Custom0 = new float[12] };
-        var plain = GeometryBatch.Merge([a, b, special, a], GeometryMergePolicy.Plain);
-        AssertThat(plain.Count == 3 && plain[0].Custom0 is not null && plain[1].Index.SequenceEqual(new[] { 0, 1, 2, 3, 4, 5 }) && plain[2].Material == b.Material).OverrideFailureMessage("streaming passthrough or first-use bucket order changed").IsTrue();
-        var grouped = GeometryBatch.Merge([a, b, special, a], GeometryMergePolicy.MaterialGroups);
-        AssertThat(grouped.Count == 4 && grouped[0].Custom0 is null && grouped[1].Custom0 is not null && grouped[3].Material == b.Material).OverrideFailureMessage("public-space grouping must passthrough the entire special group and retain group order").IsTrue();
-        var window = a with { Uv2 = [65537, 32, 65537, 32, 65537, 32], ColorIndices = [1, 2, 3], Flags = [0, 0, 0], Reserved = [1, 2, 3] };
-        var merged = GeometryBatch.Merge([window, window], GeometryMergePolicy.WindowChannels).Single();
-        AssertThat(merged.Index.SequenceEqual(new[] { 0, 1, 2, 3, 4, 5 }) && merged.Uv2!.SequenceEqual(window.Uv2!.Concat(window.Uv2)) &&
-            merged.ColorIndices!.SequenceEqual(new ushort[] { 1, 2, 3, 1, 2, 3 }) && merged.Reserved!.SequenceEqual(new byte[] { 1, 2, 3, 1, 2, 3 })).OverrideFailureMessage("numbered window channels or index offsets changed").IsTrue();
-        AssertThat(GeometryBatch.Merge([window, window], GeometryMergePolicy.Plain).Count == 2).OverrideFailureMessage("plain regions changed their window merge policy").IsTrue();
+        var surface = Surface();
+        var special = surface with { Custom0 = new float[12] };
+        var window = surface with { Uv2 = [65537, 32, 65537, 32, 65537, 32],
+            ColorIndices = [1, 1, 1], Flags = [0, 0, 0], Reserved = [1, 2, 3] };
+        var output = GeometryBatch.Merge([window, special, window]);
+        var merged = output.Single(mesh => mesh.Custom0 is null);
+        AssertThat(output.Count == 2 && output.Single(mesh => mesh.Custom0 is not null).Custom0!.SequenceEqual(special.Custom0!))
+            .OverrideFailureMessage("Custom vertex formats must pass through unchanged.").IsTrue();
+        var expected = new[] { 0, 2, 1, 0, 2, 1 };
+        AssertThat(merged.Index.Length == expected.Length && Enumerable.Range(0, expected.Length).All(i =>
+            merged.Uv2![2 * merged.Index[i]] == window.Uv2![2 * expected[i]] &&
+            merged.Uv2[2 * merged.Index[i] + 1] == window.Uv2[2 * expected[i] + 1] &&
+            merged.ColorIndices![merged.Index[i]] == window.ColorIndices![expected[i]] &&
+            merged.Reserved![merged.Index[i]] == window.Reserved![expected[i]] &&
+            Enumerable.Range(0, 3).All(axis => merged.Position[3 * merged.Index[i] + axis] == window.Position[3 * expected[i] + axis])))
+            .OverrideFailureMessage("Shared merging must keep window channels and clockwise winding.").IsTrue();
+    }
+
+    [TestCase, TestCategory(TestReason.Regression)]
+    public void SharedWriterReusesCompleteVerticesAcrossTrianglesQuadsAndAppends()
+    {
+        var source = Surface();
+        var sink = new GeometrySink();
+        var a = new GeometryVertex(Vector3.Zero, Vector3.UnitZ, Vector2.Zero, Ao: .25f);
+        var b = new GeometryVertex(Vector3.UnitX, Vector3.UnitZ, Vector2.UnitX, Ao: .5f);
+        var c = new GeometryVertex(Vector3.UnitY, Vector3.UnitZ, Vector2.UnitY, Ao: 1f);
+        var d = new GeometryVertex(new(1, 1, 0), Vector3.UnitZ, Vector2.One, Ao: .75f);
+        sink.Tri(source.Material.Spec, a, b, c);
+        sink.Quad(source.Material.Spec, a, b, d, c);
+        sink.Append(source, Matrix4x4.Identity);
+        var mesh = sink.Finish().Single();
+        AssertThat(mesh.Position.Length / 3 == 4 && mesh.Index.Length == 12 && sink.Triangles == 4)
+            .OverrideFailureMessage("Repeated triangle corners must reuse their full vertex record across writer entry points.").IsTrue();
+
+        var seams = new GeometrySink();
+        seams.Tri(source.Material.Spec, a, b, c);
+        seams.Tri(source.Material.Spec, a with { Ao = .5f }, b, c);
+        seams.Tri(source.Material.Spec, a with { Uv = Vector2.One }, b, c);
+        AssertThat(seams.Finish().Single().Position.Length / 3 == 5)
+            .OverrideFailureMessage("Coincident vertices with different authored attributes must retain their seams.").IsTrue();
     }
 
     [TestCase, TestCategory(TestReason.Contract)]

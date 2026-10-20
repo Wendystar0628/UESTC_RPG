@@ -37,9 +37,9 @@ public sealed class CoreModuleTests
             AssertThat(traces.Where(t => t.Feature is { } feature && buildings.Contains(feature)).Select(t => t.Feature!.Value).ToHashSet().SetEquals(buildings)).OverrideFailureMessage("every claimed building has its own actual source").IsTrue();
             foreach (var trace in traces.Where(t => t.Feature is { } feature && buildings.Contains(feature)))
                 AssertThat(trace.Output.Meshes.Count > 0).OverrideFailureMessage($"{trace.SourceId}: actual generated building geometry").IsTrue();
-            foreach (var tile in pieces.Select(p => TileGrid.At(p.Anchor, lod)).Distinct())
+            foreach (var tile in pieces.Select(p => TileGrid.At(Anchor(p), lod)).Distinct())
             {
-                var sources = traces.Zip(pieces).Where(pair => TileGrid.At(pair.Second.Anchor, lod) == tile).Select(pair => pair.First).ToArray();
+                var sources = traces.Zip(pieces).Where(pair => TileGrid.At(Anchor(pair.Second), lod) == tile).Select(pair => pair.First).ToArray();
                 var output = module.Build(context, tile, lod);
                 var expected = Triangles([output]);
                 var actual = Triangles(sources.Select(t => t.Output));
@@ -49,7 +49,7 @@ public sealed class CoreModuleTests
             }
             foreach (var tile in module.Tiles(context))
             {
-                var sources = traces.Zip(pieces).Where(pair => TileGrid.At(pair.Second.Anchor, LodLevel.L0) == tile).Select(pair => pair.First);
+                var sources = traces.Zip(pieces).Where(pair => TileGrid.At(Anchor(pair.Second), LodLevel.L0) == tile).Select(pair => pair.First);
                 AssertThat(JsonSerializer.Serialize(module.Collide(context, tile), ContractJson.Options) == JsonSerializer.Serialize(sources.SelectMany(t => t.Colliders).ToArray(), ContractJson.Options)).OverrideFailureMessage($"{tile}: whole sources restore production collisions").IsTrue();
             }
         }
@@ -101,13 +101,13 @@ public sealed class CoreModuleTests
         var module = new CoreModule();
         var ctx = Context(world);
         var plaza = (TimePlaza)CoreSite.Pieces(world)[0];
-        var output = module.Build(ctx, TileGrid.At(plaza.Anchor, LodLevel.L0), LodLevel.L0);
+        var output = module.Build(ctx, TileGrid.At(Anchor(plaza), LodLevel.L0), LodLevel.L0);
         AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps).OverrideFailureMessage("sixteen rim lamps").IsTrue();
         AssertThat(output.Parts.Count(p => p.Part.Value == PartCatalog.Bench) == world.Features.Keys.Count(id => id.Value.StartsWith(CoreIds.PlazaBenchPrefix, StringComparison.Ordinal))).OverrideFailureMessage("benches follow their world records").IsTrue();
         AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.RimLampChannel) == CoreStyle.RimLamps).OverrideFailureMessage("one first-light emitter per lamp").IsTrue();
         AssertThat(output.Emitters!.Count(e => e.Channel == CoreStyle.FlagLightChannel) > 0).OverrideFailureMessage("flag uplights").IsTrue();
         AssertThat(module.DescribeLights(ctx).SequenceEqual(output.Emitters!)).OverrideFailureMessage("light metadata matches the plaza's L0 output").IsTrue();
-        AssertThat(output.Meshes.Any(m => m.Flags!.All(f => (f & VertexFlags.Decal) != 0))).OverrideFailureMessage("inlays are decals").IsTrue();
+        AssertThat(output.Meshes.Any(m => m.Flags!.All(f => (f & VertexFlag.Decal) != 0))).OverrideFailureMessage("inlays are decals").IsTrue();
         foreach (var lamp in plaza.LampPositions())
         {
             var off = Vector2.Distance(lamp, plaza.Centre);
@@ -146,7 +146,7 @@ public sealed class CoreModuleTests
         var module = new CoreModule();
         var ctx = Context(world, palette);
         foreach (var lod in Levels)
-            foreach (var tile in CoreSite.Pieces(world).Select(p => TileGrid.At(p.Anchor, lod)).Distinct())
+            foreach (var tile in CoreSite.Pieces(world).Select(p => TileGrid.At(Anchor(p), lod)).Distinct())
             {
                 var output = module.Build(ctx, tile, lod);
                 CheckBundles(output.Meshes);
@@ -156,8 +156,8 @@ public sealed class CoreModuleTests
                     palette.Validate(m.Material.Spec);
                 }
             }
-        var first = module.Build(ctx, TileGrid.At(CoreSite.Pieces(world)[0].Anchor, LodLevel.L0), LodLevel.L0);
-        var second = new CoreModule().Build(Context(Campus.Tests.RealMapFixture.Load().World, palette), TileGrid.At(CoreSite.Pieces(world)[0].Anchor, LodLevel.L0), LodLevel.L0);
+        var first = module.Build(ctx, TileGrid.At(Anchor(CoreSite.Pieces(world)[0]), LodLevel.L0), LodLevel.L0);
+        var second = new CoreModule().Build(Context(Campus.Tests.RealMapFixture.Load().World, palette), TileGrid.At(Anchor(CoreSite.Pieces(world)[0]), LodLevel.L0), LodLevel.L0);
         AssertThat(first.Meshes.Count == second.Meshes.Count && first.Meshes.Zip(second.Meshes).All(p => p.First.Position.SequenceEqual(p.Second.Position))).OverrideFailureMessage("deterministic").IsTrue();
     }
 
@@ -176,18 +176,18 @@ public sealed class CoreModuleTests
         AssertThat(catalog.Supports(new PartId(PartCatalog.StreetLamp), LodLevel.L2)).OverrideFailureMessage("the street lamp builds at L2").IsTrue();
 
         var plaza = CoreSite.Pieces(world)[0];
-        var near = module.Build(ctx, TileGrid.At(plaza.Anchor, LodLevel.L0), LodLevel.L0);
+        var near = module.Build(ctx, TileGrid.At(Anchor(plaza), LodLevel.L0), LodLevel.L0);
         AssertThat(near.Parts.Any(p => p.Part.Value == PartCatalog.Bench)).OverrideFailureMessage("the plaza cell still seats its benches at L0").IsTrue();
-        var l2Tiles = CoreSite.Pieces(world).Select(p => TileGrid.At(p.Anchor, LodLevel.L2)).Distinct().ToArray();
+        var l2Tiles = CoreSite.Pieces(world).Select(p => TileGrid.At(Anchor(p), LodLevel.L2)).Distinct().ToArray();
         AssertThat(l2Tiles.Length > 0).OverrideFailureMessage("the zone has L2 cells").IsTrue();
         foreach (var lod in new[] { LodLevel.L2, LodLevel.L3, LodLevel.L4 })
-            foreach (var tile in CoreSite.Pieces(world).Select(p => TileGrid.At(p.Anchor, lod)).Distinct())
+            foreach (var tile in CoreSite.Pieces(world).Select(p => TileGrid.At(Anchor(p), lod)).Distinct())
                 foreach (var part in module.Build(ctx, tile, lod).Parts)
                 {
                     AssertThat(catalog.Supports(part.Part, lod)).OverrideFailureMessage($"{lod} {tile}: {part.Part.Value} has no {lod} builder").IsTrue();
                     AssertThat(part.Part.Value != PartCatalog.Bench).OverrideFailureMessage($"{lod} {tile}: no bench").IsTrue();
                 }
-        var far = module.Build(ctx, TileGrid.At(plaza.Anchor, LodLevel.L2), LodLevel.L2);
+        var far = module.Build(ctx, TileGrid.At(Anchor(plaza), LodLevel.L2), LodLevel.L2);
         AssertThat(far.Parts.Count(p => p.Part.Value == PartCatalog.StreetLamp) == CoreStyle.RimLamps).OverrideFailureMessage("the rim lamps (L0 to L2) stay at L2").IsTrue();
     }
 
@@ -198,7 +198,7 @@ public sealed class CoreModuleTests
         // contract-36: a missing catalogue is "not supplied" and an unknown part is an error; neither passes the part through.
         var world = Campus.Tests.RealMapFixture.Load().World;
         var plaza = CoreSite.Pieces(world)[0];
-        var tile = TileGrid.At(plaza.Anchor, LodLevel.L0);
+        var tile = TileGrid.At(Anchor(plaza), LodLevel.L0);
         var module = new CoreModule();
         _ = module.Build(Context(world), tile, LodLevel.L0);
         var bare = new BuildContext { Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = null!, WorldSeed = 1u };
@@ -252,7 +252,6 @@ public sealed class CoreModuleTests
             foreach (var id in references) AssertThat(Exists(id)).OverrideFailureMessage($"{op.Id} references the real entity {id.Value}").IsTrue();
         }
     }
-
 
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
@@ -367,4 +366,16 @@ public sealed class CoreModuleTests
     /// <summary>A sunken disc at <paramref name="floor"/> out to <paramref name="radius"/>, rising at <paramref name="grade"/> back to 0.</summary>
     private static FormulaTerrain BowlTerrain(Vector2 centre, float radius, float floor, float grade) =>
         new((x, z) => MathF.Min(0f, floor + grade * MathF.Max(0f, Vector2.Distance(new(x, z), centre) - radius)));
+    internal static Vector2 Anchor(Campus.Gen.Sites.ZoneSite site) => site switch
+    {
+        TimePlaza value => value.Anchor,
+        Sundial value => value.Anchor,
+        Library.LibraryShell value => value.Anchor,
+        Entrance.GrandStair value => value.Anchor,
+        Museum.MuseumShell value => value.Anchor,
+        Annex.AnnexShell value => value.Anchor,
+        Annex.QuietGarden value => value.Anchor,
+        _ => throw new ArgumentOutOfRangeException(nameof(site)),
+    };
+
 }

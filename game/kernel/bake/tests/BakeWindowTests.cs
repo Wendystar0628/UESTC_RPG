@@ -2,6 +2,7 @@ using Campus.Gen.Tests.Support;
 using Campus.Tests;
 using Campus.Pipeline.Map;
 using System.Numerics;
+using System.Runtime.ExceptionServices;
 using Campus.Contracts;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
@@ -161,7 +162,6 @@ public sealed class BakeWindowTests
             Map = baseline.Map,
             WorldSeed = baseline.WorldSeed,
             ClaimedBy = baseline.ClaimedBy,
-            DataHash = baseline.DataHash,
             SourceInputs = inputs.Entries,
             GlobalInputs = globals,
             GroundMaskContributors = contributors,
@@ -186,7 +186,7 @@ public sealed class BakeWindowTests
         if (reads != 0) throw new InvalidOperationException("Reading an unprepared context triggered lazy IO.");
         var loaded = data.Value;
         _ = claims.Value;
-        var producer = map.CreateBuildContext("producer-code", "atlas-input");
+        var producer = map.CreateBuildContext("producer-code");
         AssertThrown(() => map.GetPreparedContext(mapContext, "source")).IsInstanceOf<InvalidOperationException>();
         var lighting = new LightInventoryDocument(context.Map.Id, [], [], [], EmptyNightlight()) { WindowNumbering = loaded.Windows.Snapshot };
         // Metadata still cannot enumerate cells; the explicit cold-resident directory phase can.
@@ -198,11 +198,11 @@ public sealed class BakeWindowTests
         var b = map.GetPreparedContext(mapContext, "provider");
         if (!ReferenceEquals(a, map.GetPreparedContext(mapContext, "source")) || !ReferenceEquals(a.WindowNumbering, b.WindowNumbering) ||
             !ReferenceEquals(a.World, context.World) || !ReferenceEquals(a.SourceInputs, context.SourceInputs) ||
-            !ReferenceEquals(a.ClaimedBy, b.ClaimedBy) || !ReferenceEquals(a.ClaimedBy, claimLookup) || a.DataHash != "" ||
+            !ReferenceEquals(a.ClaimedBy, b.ClaimedBy) || !ReferenceEquals(a.ClaimedBy, claimLookup) ||
             !ReferenceEquals(a.ClaimedBy, producer.ClaimedBy) || !ReferenceEquals(a.Catalog, producer.Catalog) ||
             !ReferenceEquals(a.SourceInputs, producer.SourceInputs) || !ReferenceEquals(a.WindowNumbering, producer.WindowNumbering) ||
             !ReferenceEquals(a.GlobalInputs, producer.GlobalInputs) || !ReferenceEquals(a.GroundMaskContributors, producer.GroundMaskContributors) ||
-            !ReferenceEquals(a.PartLods, producer.PartLods) || producer.CodeHash != "producer-code" || producer.DataHash != "atlas-input" ||
+            !ReferenceEquals(a.PartLods, producer.PartLods) || producer.CodeHash != "producer-code" ||
             a.CodeHash != "source-code" || b.CodeHash != "provider-code" || a.ClaimedBy(Feature, Aspects.Facade) != Owner ||
             !ReferenceEquals(a.GlobalInputs, globals) || !ReferenceEquals(b.GlobalInputs, globals) ||
             !ReferenceEquals(a.GroundMaskContributors, contributors) || !ReferenceEquals(b.GroundMaskContributors, contributors) ||
@@ -276,6 +276,7 @@ public sealed class BakeWindowTests
         var snapshot = BuildInputSnapshot.Freeze(context.SourceInputs, "fixture");
         var mapContext = new Campus.Kernel.Maps.MapContext(context.Map, context.World, "fixture", snapshot);
         using var started = new ManualResetEventSlim();
+        using var failed = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var producer = new PausedProducer(started, release);
         var map = new BakeService.MapBuild(mapContext, new Dictionary<string, ContentModuleInput>(),
@@ -283,21 +284,28 @@ public sealed class BakeWindowTests
             new(() => new(context.World, [])), (_, _) => null, new(() => new(9, snapshot.Entries, [],
                 new Dictionary<string, IInteriorProvider>(), new(null, new([], [])))),
             context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog);
+        var lighting = new LightInventoryDocument(context.Map.Id, [], [], [], EmptyNightlight())
+            { WindowNumbering = map.Data.Value.Windows.Snapshot };
+        var metadata = new BakeMapMetadata(lighting, new(context.Map.Id, []));
+        map.PrepareDirectory(metadata);
+        map.CompletePreparation(metadata);
         var cache = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cancel-" + Guid.NewGuid().ToString("N"));
         var options = new BakeOptions(cache, true, false, false, false, 1, null);
         using var terrain = BakeInputFixture.CreateTerrainCache(options);
-        using var service = new BakeService(options, terrain);
+        using var service = new BakeService(options, terrain, snapshot);
         var queue = new BakeQueue(1, static () => { });
         Exception? stopped = null;
         try
         {
-            var key = new BakeKey(context.Map.Id, "cancelled", "fixture");
+            var key = BakeRequestKeys.Tile(context.Map.Id, "cancelled", default, LodLevel.L0);
             var handle = queue.Ensure(key, BakePriority.Background, () =>
             {
                 try { return service.Build(map, key); }
-                catch (Exception error) { stopped = error; throw; }
+                catch (Exception error) { stopped = error; failed.Set(); throw; }
             });
-            if (!started.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Build did not start.");
+            var signal = WaitHandle.WaitAny([started.WaitHandle, failed.WaitHandle], TimeSpan.FromSeconds(5));
+            if (signal == 1) ExceptionDispatchInfo.Capture(stopped!).Throw();
+            if (signal == WaitHandle.WaitTimeout) throw new TimeoutException("Build did not start.");
             map.Active = false;
             queue.ForgetMap(key.Map);
             map.Lifetime.Cancel();
@@ -337,7 +345,7 @@ public sealed class BakeWindowTests
             DirectoryCalls++;
             return [new(BakeRequestKeys.Tile(context.Map.Id, BakeModuleIds.VegetationGrass, default, LodLevel.L0), context.Map.Bounds)];
         }
-        public object Build(BakeKey key, BuildContext context) => throw new InvalidOperationException("Directory preparation generated a payload.");
+        public object Build(BakeKey key, BuildContext context, string inputHash) => throw new InvalidOperationException("Directory preparation generated a payload.");
     }
 
     private sealed class PausedProducer(ManualResetEventSlim started, ManualResetEventSlim release) : IBakeProducer
@@ -346,9 +354,10 @@ public sealed class BakeWindowTests
         public BakeProductKind ProductKind => BakeProductKind.Fauna;
         public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
         public bool UsesModule(IContentModule module) => false;
-        public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];
+        public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) =>
+            [new(BakeRequestKeys.Tile(context.Map.Id, "cancelled", default, LodLevel.L0), context.Map.Bounds)];
         public bool CanBuild(BakeKey key) => key.Module == "cancelled";
-        public object Build(BakeKey key, BuildContext context)
+        public object Build(BakeKey key, BuildContext context, string inputHash)
         {
             started.Set();
             if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Build was not released.");
@@ -372,7 +381,6 @@ public sealed class BakeWindowTests
         World = World([new(Feature, new("poi"), new PointGeometry(Vector3.Zero))]),
         Map = Map(),
         WorldSeed = 9,
-        DataHash = "base-input",
         ClaimedBy = (feature, aspect) =>
             claimed && feature == Feature && aspect == Aspects.Facade ? owner ?? Owner : null
     };

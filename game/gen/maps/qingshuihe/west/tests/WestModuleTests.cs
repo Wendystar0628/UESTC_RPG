@@ -258,7 +258,7 @@ public sealed class WestModuleTests
         var module = new WestModule();
         var claimed = module.Claims.OfType<FeatureClaim>().Where(c => (c.Aspects & Aspects.Facade) != 0).Select(c => c.Feature).ToHashSet();
         WpId? Owner(FeatureId f, Aspects a) => claimed.Contains(f) ? new WpId("WP-19") : null;
-        var prepass = new BuildContext { GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner };
+        var prepass = new BuildContext { SourceInputs = RealMapFixture.WindowInputs(RealMapFixture.Entry().Descriptor.Id), GlobalInputs = TextInputs(), Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, World = world, Map = RealMapFixture.Entry().Descriptor, WorldSeed = 1, ClaimedBy = Owner };
         var layouts = module.DescribeWindowLayouts(world, 1);
         var snapshot = new global::Campus.Gen.Buildings.BuildingsModule().PrepareWindowNumbering(prepass, layouts);
         var ours = snapshot.Allocations.Where(a => claimed.Contains(a.Feature)).ToArray();

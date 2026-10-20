@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text.Json;
 using Campus.Contracts;
 
 namespace Campus.Pipeline.Map;
@@ -59,19 +57,9 @@ public static class BakeWindowPreparation
             throw new InvalidDataException($"Map {prepass.Map.Id.Value} needs exactly one window numbering provider; found {providers.Length}: {string.Join(", ", providers.Select(pair => pair.Key))}.");
 
         var provider = providers[0];
-        // Include registration identity and all resolved facade owners before provider hashing. Never feed the final
-        // window-dependent DataHash back into allocation, and never duplicate the provider's sorting/allocation rule.
-        var resolvedHash = Hash(new
-        {
-            input = prepass.DataHash,
-            modules = ordered.Select(pair => new { id = pair.Key, owner = pair.Value.Owner.Value, code = pair.Value.CodeHash }).ToArray(),
-            claims = prepass.World.Features.Keys.OrderBy(feature => feature.Value, StringComparer.Ordinal)
-                .Where(feature => prepass.ClaimedBy(feature, Aspects.Facade) is not null)
-                .Select(feature => new { feature = feature.Value, owner = prepass.ClaimedBy(feature, Aspects.Facade)!.Value.Value }).ToArray(),
-            declarations = declarations.Values.Select(layout => new { module = origins[layout.Feature.Value], layout }).ToArray()
-        });
+        // The provider fingerprints its resolved allocation; the frozen context carries no per-product identity.
         var snapshot = ((IWindowNumberingProvider)provider.Value.Value).PrepareWindowNumbering(
-            Context(prepass, resolvedHash, provider.Value.CodeHash, null), Array.AsReadOnly(declarations.Values.ToArray()))
+            Context(prepass, provider.Value.CodeHash, null), Array.AsReadOnly(declarations.Values.ToArray()))
             ?? throw new InvalidDataException($"Window provider {provider.Key} returned no snapshot.");
         if (snapshot.Map != prepass.Map.Id) throw new InvalidDataException("Window provider returned another map's snapshot.");
         foreach (var allocation in snapshot.Allocations)
@@ -90,7 +78,7 @@ public static class BakeWindowPreparation
         foreach (var (id, module) in ordered)
         {
             if (module.Value is not IWindowMetadataSource source) continue;
-            var metadata = source.DescribeWindows(Context(prepass, prepass.DataHash, module.CodeHash, snapshot))
+            var metadata = source.DescribeWindows(Context(prepass, module.CodeHash, snapshot))
                 ?? throw new InvalidDataException($"Window metadata is null: {id}.");
             if (metadata.Facades is null || metadata.Windows is null) throw new InvalidDataException($"Window metadata lists are null: {id}.");
             foreach (var facade in metadata.Facades)
@@ -105,7 +93,7 @@ public static class BakeWindowPreparation
         return new(snapshot, result);
     }
 
-    public static BuildContext Context(BuildContext input, string dataHash, string codeHash, WindowNumberingSnapshot? snapshot, IWorldModel? world = null) => new()
+    public static BuildContext Context(BuildContext input, string codeHash, WindowNumberingSnapshot? snapshot, IWorldModel? world = null) => new()
     {
         World = world ?? input.World,
         Map = input.Map,
@@ -117,12 +105,9 @@ public static class BakeWindowPreparation
         GlobalInputs = input.GlobalInputs,
         GroundMaskContributors = input.GroundMaskContributors,
         PartLods = input.PartLods,
-        DataHash = dataHash,
         CodeHash = codeHash,
         WindowNumbering = snapshot
     };
-
-    private static string Hash<T>(T value) => Convert.ToHexStringLower(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options)));
 
     /// <summary>Validate logical cells, including duplicates between regular facades and individual windows.</summary>
     public static void ValidateMetadata(WindowMetadata metadata, WindowNumberingSnapshot? snapshot)

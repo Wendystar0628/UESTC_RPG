@@ -16,7 +16,6 @@ namespace Campus.Kernel.Bake;
 /// </remarks>
 internal static class PackedSurfaceBatcher
 {
-    private const int MaximumVertices = 65536;
     private const Format Required = Format.FlagFormatVersion2 | Format.FormatVertex | Format.FormatNormal |
         Format.FormatTangent | Format.FormatColor | Format.FormatTexUV | Format.FormatIndex;
     private readonly record struct Layout(int PositionStride, int NormalStride, int AttributeStride);
@@ -33,7 +32,7 @@ internal static class PackedSurfaceBatcher
             {
                 Flush(); output.Add(surface); continue;
             }
-            if (batch.Count != 0 && (!SameKey(batch[0], surface) || vertices + surface.VertexCount > MaximumVertices)) Flush();
+            if (batch.Count != 0 && (!SameKey(batch[0], surface) || vertices + surface.VertexCount > GeometryVertexLimits.Maximum)) Flush();
             if (batch.Count == 0) layout = nextLayout;
             batch.Add(surface); vertices += surface.VertexCount;
         }

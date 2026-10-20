@@ -6,7 +6,7 @@ namespace Campus.Gen.Vegetation;
 /// WP-23's read entry at the build-input boundary (contract-32). The species table is a global input relative to
 /// game/data, frozen once by the kernel's asset manifest and shared by every map (<see cref="BuildContext.GlobalInputs"/>);
 /// a map's planting rules are a map input relative to its DataRoot, i.e. game/data/maps/&lt;map&gt;/vegetation/planting.json
-/// (<see cref="BuildContext.SourceInputs"/>). The loader reads the bytes and folds them into the DataHash; this class
+/// (<see cref="BuildContext.SourceInputs"/>). The kernel fingerprints these frozen bytes per product; this class
 /// never performs IO. A map without a planting file has no trees.
 /// </summary>
 public static class VegetationInputs

@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -50,9 +49,9 @@ public sealed class MainBuildingSite : ZoneSite
         public float PlatformZ => StepsZ - (M.RisersLower + M.RisersUpper) * M.Tread - M.MidLanding;
     }
 
-    private static readonly ConditionalWeakTable<IWorldModel, Layout> Layouts = new();
+    internal static Layout LayoutOf(IWorldModel world) => Read(world);
 
-    internal static Layout LayoutOf(IWorldModel world) => Layouts.GetValue(world, Read);
+    internal static Layout LayoutOf(BuildContext context) => context.Memo(typeof(Layout), () => LayoutOf(context.World));
 
     private static Layout Read(IWorldModel world)
     {
@@ -109,7 +108,7 @@ public sealed class MainBuildingSite : ZoneSite
 
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
-        var g = LayoutOf(ctx.World);
+        var g = LayoutOf(ctx);
         var terrain = ctx.World.Terrain;
         var front = FrontOpenings(g, terrain.HeightAt(g.F.P(g.Xc, g.StepsZ).X, g.F.P(g.Xc, g.StepsZ).Y) + M.FloorY);
         var rear = RearOpenings(g, terrain.HeightAt(g.R.Origin.X, g.R.Origin.Y) + M.FloorY);
@@ -153,7 +152,7 @@ public sealed class MainBuildingSite : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        var g = LayoutOf(b.Context.World);
+        var g = LayoutOf(b.Context);
         if (b.Includes(FrontRange(g))) Front(b, g);
         if (b.Includes(GalleryRange(g))) RoofGallery(b, g, b.Ground(g.F.P(36f, -20f)));
         if (b.Includes(RearRange(g))) RearPorch(b, g, b.Ground(g.R.Origin));
@@ -169,7 +168,7 @@ public sealed class MainBuildingSite : ZoneSite
 
     public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext ctx, LodLevel lod)
     {
-        var g = LayoutOf(ctx.World);
+        var g = LayoutOf(ctx);
         yield return SiteSourceTrace.Build(ctx, lod, Id + "/front", new(FrontSteps), b => Front(b, g), c => CollideFront(c, g),
             [new(g.F.Rect(g.StepsX0, -0.3f, g.StepsX1, g.StepsZ))]);
         yield return SiteSourceTrace.Build(ctx, lod, Id + "/roof-gallery", new(B2),
@@ -416,7 +415,7 @@ public sealed class MainBuildingSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        var g = LayoutOf(c.Context.World);
+        var g = LayoutOf(c.Context);
         if (c.Includes(FrontRange(g))) CollideFront(c, g);
         if (c.Includes(GalleryRange(g))) CollideGallery(c, g);
         if (c.Includes(RearRange(g))) CollideRear(c, g);

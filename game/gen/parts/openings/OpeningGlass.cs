@@ -59,7 +59,7 @@ public static class OpeningGlass
                 var e = layer.Vertex(new(x0, y1, 0), n, new(u0, v1), 1f, uv2, card);
                 layer.Quad(a, b, d, e, n);
             }
-        return mesh.Finish(new(new(-width * 0.5f, 0, 0), new(width * 0.5f, height, 0))).Meshes[0];
+        return mesh.Finish(new(new(-width * 0.5f, 0, 0), new(width * 0.5f, height, 0))).Meshes.Single();
     }
 
     private static int Slot(ChannelId channel)

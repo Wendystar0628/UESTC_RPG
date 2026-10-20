@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -46,7 +45,7 @@ internal sealed class BakePipelineCatalog
 
         void AddSurface(BakedSurface surface, bool instanced)
         {
-            var shadows = surface.Shader is ShaderId.Water or ShaderId.WaterClear ||
+            var shadows = surface.Shader is ShaderId.Water ||
                 bundle.Level == LodLevel.L4 && surface.Shader == ShaderId.DioramaFar
                 ? PipelineShadowMode.Off : PipelineShadowMode.On;
             result.Add(new(surface.Shader is null ? surface.Material.Spec.Kind : null, surface.Shader,
@@ -147,37 +146,9 @@ internal sealed class BakePipelineCatalog
             throw new InvalidDataException("Pipeline vertex format does not match its shader draw type.");
     }
 
-    private static string ShaderPath(PipelineCombination value)
-    {
-        var file = value.Shader is { } shader ? Snake(shader.ToString()) : value.Kind switch
-        {
-            ToonKind.Static => "toon_static",
-            ToonKind.Glass => "toon_glass",
-            ToonKind.GlassNear => "toon_glass_near",
-            ToonKind.Cut => "toon_cut",
-            ToonKind.VegTrunk => "veg_trunk",
-            ToonKind.VegCard => "veg_card",
-            ToonKind.VegImpostor => "veg_impostor",
-            ToonKind.VegGrass => "veg_grass",
-            ToonKind.Lotus => "veg_lotus",
-            ToonKind.Figure => "toon_figure",
-            ToonKind.SceneText => "toon_scene_text",
-            ToonKind.VegTwigMass => "veg_twig_mass",
-            _ => throw new InvalidDataException("Unknown pipeline shader family.")
-        };
-        return "game/style/shaders/" + file + ".gdshader";
-    }
-
-    private static string Snake(string value)
-    {
-        var result = new StringBuilder();
-        for (var i = 0; i < value.Length; i++)
-        {
-            if (i > 0 && char.IsUpper(value[i])) result.Append('_');
-            result.Append(char.ToLowerInvariant(value[i]));
-        }
-        return result.ToString();
-    }
+    private static string ShaderPath(PipelineCombination value) =>
+        "game/" + MaterialShaders.FileOf(value.Shader ?? MaterialShaders.ShaderFor(value.Kind
+            ?? throw new InvalidDataException("Pipeline has no shader family.")));
 
     internal static IReadOnlySet<string> ReadWhitelist(string projectRoot)
     {

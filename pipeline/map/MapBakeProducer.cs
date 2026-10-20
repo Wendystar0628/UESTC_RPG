@@ -26,7 +26,7 @@ public sealed class MapBakeProducer : IBakeProducer
 
     public bool CanBuild(BakeKey key) => key.Module == MapBaker.Module && key.Detail == MapBaker.Detail;
 
-    public object Build(BakeKey key, BuildContext context)
+    public object Build(BakeKey key, BuildContext context, string inputHash)
     {
         if (!CanBuild(key) || key.Map != context.Map.Id) throw new ArgumentException("Map bake key does not match its context.");
         var labels = AtlasLabelData.Parse(Required(context, LabelsFile).Span);
@@ -34,7 +34,7 @@ public sealed class MapBakeProducer : IBakeProducer
         if (!markers.RootElement.TryGetProperty("atlasRect", out var rectJson)) throw new InvalidDataException("Atlas page rectangle is missing.");
         var atlasRect = rectJson.Deserialize<MapRect>(AtlasLabelData.JsonOptions)
             ?? throw new InvalidDataException("Invalid atlas page rectangle.");
-        var input = new MapBakeInput(context.World, context.Map, atlasRect, labels, context.DataHash, context.CodeHash, LabelHash(context));
+        var input = new MapBakeInput(context.World, context.Map, atlasRect, labels, inputHash, context.CodeHash, LabelHash(context));
         // No authoritative region polygons exist in the current world contract/source schema.
         // Leave RegionAreas empty: unknown is preferable to invented regional boundaries.
         return MapBaker.Build(input);

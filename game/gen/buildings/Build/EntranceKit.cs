@@ -98,7 +98,7 @@ public static class EntranceKit
     }
 
     /// <summary>The pieces' surfaces at a part level, appended to the building's streams.</summary>
-    public static void Build(MeshSink sink, IReadOnlyList<Piece> pieces, LodLevel lod)
+    public static void Build(GeometrySink sink, IReadOnlyList<Piece> pieces, LodLevel lod)
     {
         foreach (var piece in pieces)
             foreach (var mesh in Geometry(piece, lod).Meshes) sink.Append(mesh, piece.At);

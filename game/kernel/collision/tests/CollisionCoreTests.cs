@@ -42,7 +42,7 @@ public sealed class CollisionCoreTests
         using var terrain = new TerrainCacheService(options);
         var loaded = await Task.Run(() => MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), input, claims));
         var context = MapWorldLoading.CreateContext(entry, loaded, input.SourceInputs);
-        using var bake = new BakeService(options, terrain);
+        using var bake = new BakeService(options, terrain, new GlobalBuildInputs().Snapshot);
         var map = bake.Mount(context);
         await bake.PrepareMapData(context);
         using var native = new World3D();

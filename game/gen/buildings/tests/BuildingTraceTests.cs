@@ -103,7 +103,7 @@ public sealed class BuildingTraceTests
     {
         var cell = $"{lod} cell ({tile.X}, {tile.Z})";
         var built = module.Build(ctx, tile, lod);
-        var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
+        var set = BuildingSet.For(ctx);
         var plans = set.Plans.Where(p => BuildingsModule.Unclaimed(ctx, p) && p.Tile(lod) == tile).ToArray();
         var ids = plans.Select(p => $"building/{p.Id.Value}/{p.Key}").ToHashSet(StringComparer.Ordinal);
         IReadOnlyList<ContentSourceTrace> traces = (allSources ?? module.TraceSources(ctx, lod).ToArray()).Where(t => ids.Contains(t.SourceId)).ToArray();

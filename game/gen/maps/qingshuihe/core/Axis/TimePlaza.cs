@@ -22,7 +22,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Axis;
 /// evaluator applies <c>core.terrain.json</c> (floor −0.9) the six risers and the ramps appear without code changes.
 /// </para>
 /// </summary>
-public sealed class TimePlaza : ICorePiece
+public sealed class TimePlaza : ZoneSite, ILightMetadataSource
 {
     private readonly IWorldModel _world;
     private readonly IReadOnlyList<Vector2> _benches;
@@ -81,10 +81,10 @@ public sealed class TimePlaza : ICorePiece
         return (centre, radius);
     }
 
-    public string Id => "time-plaza";
+    public override string Id => "time-plaza";
     public Vector2 Anchor => Centre;
-    public IReadOnlyList<Claim> Claims { get; } =
-        [new FeatureClaim(CoreIds.TimePlaza, Aspects.Props), new FeatureClaim(CoreIds.PlazaRingSteps, Aspects.Massing)];
+    public static IReadOnlyList<Claim> DeclaredClaims { get; } = [new FeatureClaim(CoreIds.TimePlaza, Aspects.Props), new FeatureClaim(CoreIds.PlazaRingSteps, Aspects.Massing)];
+    public override IReadOnlyList<Claim> Claims => DeclaredClaims;
 
     public Vector2 Centre { get; }
     /// <summary>Plaza edge: the mean radius of the OSM circle (about 27 m).</summary>
@@ -167,7 +167,7 @@ public sealed class TimePlaza : ICorePiece
 
     private float Floor(float x, float z) => _world.Terrain.HeightAt(x, z) + GroundLevels.Paving;
 
-    private void Inlays(CoreMesh mesh, LodLevel lod)
+    private void Inlays(GeometrySink mesh, LodLevel lod)
     {
         var band = S.Inlay(S.BandStone);
         var step = lod == LodLevel.L0 ? 1f : 2f * (1 << (int)lod);
@@ -178,7 +178,7 @@ public sealed class TimePlaza : ICorePiece
     }
 
     /// <summary>十二时辰 on the outer band: 子 points true north (the sundial's gnomon direction), one mark every 30°.</summary>
-    private void HourMarks(CoreMesh mesh, LodLevel lod)
+    private void HourMarks(GeometrySink mesh, LodLevel lod)
     {
         var paint = S.Inlay(S.MarkStone);
         var (inner, outer) = S.Bands[0];
@@ -201,7 +201,7 @@ public sealed class TimePlaza : ICorePiece
     /// The original emblem (ART-STYLE) as a single-colour gold inlay: a thin outer ring, an octagon whose corner
     /// points along the library axis, and eight circuit traces from its corners ending in square pads.
     /// </summary>
-    private void Emblem(CoreMesh mesh, LodLevel lod)
+    private void Emblem(GeometrySink mesh, LodLevel lod)
     {
         var gold = S.Inlay(S.EmblemGold);
         CoreShapes.Annulus(mesh, gold, Centre, S.EmblemRingInner, S.EmblemRingOuter, 0, MathF.Tau, Floor, GroundLevels.Decal, lod == LodLevel.L0 ? 0.5f : 1.5f);
@@ -302,7 +302,7 @@ public sealed class TimePlaza : ICorePiece
         return [new(ramp.Radius - half, inner), new(ramp.Radius + half, outer)];
     }
 
-    private void BuildRamp(CoreMesh mesh, Ramp ramp, LodLevel lod)
+    private void BuildRamp(GeometrySink mesh, Ramp ramp, LodLevel lod)
     {
         var stone = S.Stone(S.Granite);
         var count = Math.Max(8, (int)MathF.Ceiling(ramp.Length / 0.5f));
@@ -318,7 +318,7 @@ public sealed class TimePlaza : ICorePiece
     }
 
     /// <summary>A curved wall of constant width whose top follows the stations, with chamfered top edges.</summary>
-    private void CheekWall(CoreMesh mesh, in Paint paint, Cheek wall, LodLevel lod)
+    private void CheekWall(GeometrySink mesh, in Paint paint, Cheek wall, LodLevel lod)
     {
         var b = lod == LodLevel.L0 ? S.CheekBevel : 0f;
         float r0 = wall.Radius - S.CheekWidth * 0.5f, r1 = wall.Radius + S.CheekWidth * 0.5f, bottom = FloorTop - S.Sink;
@@ -409,7 +409,7 @@ public sealed class TimePlaza : ICorePiece
     /// A flag at rest: the cloth hangs from the top of the pole in a few vertical folds, on the plaza side so it reads
     /// from P02. Both faces are emitted (thin cloth is seen from both sides).
     /// </summary>
-    private void Drape(CoreMesh mesh, Pole pole, Vector3 foot, LodLevel lod)
+    private void Drape(GeometrySink mesh, Pole pole, Vector3 foot, LodLevel lod)
     {
         var paint = S.Cloth(pole.Colour);
         var folds = lod == LodLevel.L0 ? S.FlagFolds : 2;
@@ -470,4 +470,33 @@ public sealed class TimePlaza : ICorePiece
     }
 
     internal static FurnitureParams BenchParameters { get; } = new(1.8f, 0.8f, 0.6f) { Material = S.PartMaterial(S.LampMetal) };
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        CoreRanges.ForFeature(world, CoreIds.TimePlaza) is { } range ? [range] : [];
+
+    public override void Build(SiteBuilder builder)
+    {
+        if (!builder.Includes(Anchor)) return;
+        var build = CoreBuild.For(builder.Context);
+        Build(build, builder.Lod);
+        var output = build.Finish(builder.Lod);
+        foreach (var mesh in output.Meshes) builder.Add(mesh, System.Numerics.Matrix4x4.Identity, Anchor);
+        foreach (var part in output.Parts) builder.Place(part, Anchor);
+        foreach (var emitter in output.Emitters ?? []) builder.Light(emitter, Anchor);
+    }
+
+    public override void Collide(SiteColliders colliders)
+    {
+        if (!colliders.Includes(Anchor)) return;
+        foreach (var collider in Collide()) colliders.Add(collider, Anchor);
+    }
+
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
+    {
+        var build = CoreBuild.For(context);
+        Build(build, lod);
+        yield return new($"core/{Id}", CoreIds.TimePlaza, build.Finish(lod), Collide(), []);
+    }
+
+    public IReadOnlyList<LightEmitter> DescribeLights(BuildContext context) => Lights(LodLevel.L0);
+
 }

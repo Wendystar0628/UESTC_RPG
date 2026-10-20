@@ -13,12 +13,10 @@ namespace Campus.Gen.Maps.Qingshuihe.Public;
 public sealed class PublicModule : ZoneModuleBase
 {
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
-    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     private static readonly IReadOnlyList<ZoneSite> Sites = [new PocketGreenSite()];
 
-    public PublicModule() : base(Sites, new(TrianglesL0: 12_000, TrianglesL1: 6_000, DrawCalls: 4),
-        GeometryMergePolicy.MaterialGroups) { }
+    public PublicModule() : base(Sites, new(TrianglesL0: 12_000, TrianglesL1: 6_000, DrawCalls: 4)) { }
 
     public override ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod)
     {

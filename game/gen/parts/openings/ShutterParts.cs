@@ -71,7 +71,7 @@ public sealed class RollerShutterPart() : OpeningPart<DoorParams>(new(1100, 80))
         Solid.Box(mesh, dark, cast, -w + rail - ins, y0, -0.03f, w - rail + ins, y0 + bar, 0.03f);
         if (lod == LodLevel.L0)
             foreach (var x in new[] { -w * 0.5f, w * 0.5f })
-                Solid.Box(mesh, dark, NoShadow, x - 0.05f, y0 + 0.018f, -0.042f, x + 0.05f, y0 + 0.05f, -0.03f + ins);
+                Solid.Box(mesh, dark, VertexFlag.NoShadow, x - 0.05f, y0 + 0.018f, -0.042f, x + 0.05f, y0 + 0.05f, -0.03f + ins);
     }
 
     /// <summary>
@@ -175,7 +175,7 @@ public sealed class LouvrePart() : OpeningPart<PanelParams>(new(420, 160))
     private static void Blind(PartMesh mesh, PanelParams p, LodLevel lod)
     {
         if (lod >= LodLevel.L2) return;
-        const byte flags = NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var spec = Pick(p, OpeningStyle.Blind);
         var ins = OpeningStyle.Insert;
         var w = p.Width * 0.5f;

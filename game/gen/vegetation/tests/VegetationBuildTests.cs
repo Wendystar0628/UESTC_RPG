@@ -194,7 +194,7 @@ public sealed class VegetationBuildTests
         var key = new BakeKey(source.Map.Id, BakeModuleIds.VegetationTrees, FormattableString.Invariant($"L0/{tile.X}/{tile.Z}"));
         // Deliberately incomplete request inputs: the producer must use the original source context.
         var request = new BuildContext { Map = source.Map, World = source.World, WorldSeed = source.WorldSeed + 1, Catalog = source.Catalog };
-        var result = (VegetationTileContent)producer.Build(key, request);
+        var result = (VegetationTileContent)producer.Build(key, request, "fixture-input");
         var expected = Module.PrepareTrees(source, tile);
         AssertThat(result.Key == key && result.Tile == tile && result.Mothers.Count == expected.Count).IsTrue();
         for (var m = 0; m < result.Mothers.Count; m++)

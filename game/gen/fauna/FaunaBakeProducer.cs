@@ -8,7 +8,6 @@ namespace Campus.Gen.Fauna;
 
 /// <summary>Produces only the requested owner tile from the registered source's frozen inputs.</summary>
 
-
 [BakeProducer(BakeModuleIds.FaunaRuntime, Owner = "WP-25")]
 public sealed class FaunaBakeProducer : IBakeProducer, IBakeContentConsumer
 {
@@ -36,13 +35,13 @@ public sealed class FaunaBakeProducer : IBakeProducer, IBakeContentConsumer
             .Select(pair => new BakeTileEntry(Key(context.Map.Id, pair.Key), pair.Value)).ToArray();
     }
 
-    public object Build(BakeKey key, BuildContext context)
+    public object Build(BakeKey key, BuildContext context, string inputHash)
     {
         if (!CanBuild(key) || key.Map != context.Map.Id) throw new ArgumentException("Invalid fauna bake key.");
         var tile = Tile(key);
         var source = Source;
         if (source.Context.Map.Id != key.Map) throw new ArgumentException("Fauna source map mismatch.");
-        var content = ((IFaunaContentSource)source.Module).PrepareFauna(source.Context.WithWorld(context.World), tile);
+        var content = ((IFaunaContentSource)source.Module).PrepareFauna(source.Context, tile);
         return new FaunaTileContent(key, tile, content);
     }
 

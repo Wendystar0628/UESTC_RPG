@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 
 namespace Campus.Gen.Vegetation;
 
@@ -55,6 +56,7 @@ public static partial class MotherModels
 
         public GeometryBundle Bundle(ToonSpec spec, byte flags)
         {
+            GeometryVertexLimits.Require(VertexCount);
             var bundle = new GeometryBundle(new ToonRef(spec), [.. _position], [.. _normal], [.. _index], [.. _ao], withUv ? [.. _uv] : null)
             {
                 ColorIndices = [.. _color],

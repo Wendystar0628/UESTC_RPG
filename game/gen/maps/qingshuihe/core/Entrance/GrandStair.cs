@@ -41,7 +41,7 @@ public readonly record struct StairLanding(float S0, float S1, float Y, bool Mid
 /// foot plus the paving lift, so the flat stub and WP-08's terrain both work without code changes.
 /// </para>
 /// </summary>
-public sealed class GrandStair : ICorePiece
+public sealed class GrandStair : ZoneSite
 {
     private static readonly StepsPart Steps = new();
     private readonly IWorldModel _world;
@@ -101,9 +101,10 @@ public sealed class GrandStair : ICorePiece
         return new GrandStair(world, shell, a + along * Vector2.Dot(doorPlan - a, along), outward);
     }
 
-    public string Id => "library-entrance";
+    public override string Id => "library-entrance";
     public Vector2 Anchor => At(FrontS * 0.5f, 0f);
-    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreIds.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public static IReadOnlyList<Claim> DeclaredClaims { get; } = [new FeatureClaim(CoreIds.LibraryStair, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public override IReadOnlyList<Claim> Claims => DeclaredClaims;
 
     /// <summary>On the door axis at the podium edge.</summary>
     public Vector2 Origin { get; }
@@ -205,7 +206,7 @@ public sealed class GrandStair : ICorePiece
         : spec == CirculationStyle.Trim ? S.Trim(S.StairTrim)
         : S.Stone(S.StairStone);
 
-    private void TopLanding(CoreMesh mesh)
+    private void TopLanding(GeometrySink mesh)
     {
         var paving = S.Roof(S.LibraryTerrace);
         var h = HalfWidth - S.GuardWallWidth;
@@ -213,7 +214,7 @@ public sealed class GrandStair : ICorePiece
     }
 
     /// <summary>A landing across one stair: paving between the cheeks, and the cheeks carried level at the flights' top height.</summary>
-    private void Landing(CoreMesh mesh, StairLanding l, float w, float width, LodLevel lod)
+    private void Landing(GeometrySink mesh, StairLanding l, float w, float width, LodLevel lod)
     {
         var stone = S.Stone(S.StairStone);
         float half = width * 0.5f, cheek = CirculationStyle.CheekWidth, inner = half - cheek;
@@ -234,7 +235,7 @@ public sealed class GrandStair : ICorePiece
     private enum Faces { None = 0, Top = 1, MinusS = 2, PlusS = 4, MinusW = 8, PlusW = 16, All = 31 }
 
     /// <summary>An axis-aligned block in (s, w, y) with the chosen faces.</summary>
-    private void Block(CoreMesh mesh, in Paint paint, float s0, float s1, float w0, float w1, float y0, float y1, Faces open)
+    private void Block(GeometrySink mesh, in Paint paint, float s0, float s1, float w0, float w1, float y0, float y1, Faces open)
     {
         if ((open & Faces.Top) != 0) mesh.Quad(paint, At(s0, w0, y1), At(s0, w1, y1), At(s1, w1, y1), At(s1, w0, y1), Vector3.UnitY);
         if ((open & Faces.PlusS) != 0) mesh.Quad(paint, At(s1, w0, y0), At(s1, w1, y0), At(s1, w1, y1), At(s1, w0, y1), Out3);
@@ -251,7 +252,7 @@ public sealed class GrandStair : ICorePiece
     }
 
     /// <summary>One tier of a lawn terrace: stone retaining faces, a coping round the open edges, the lawn and its hedge ring.</summary>
-    private void Terrace(CoreMesh mesh, (float S0, float S1, float Y, bool Lower) tier, float side, LodLevel lod)
+    private void Terrace(GeometrySink mesh, (float S0, float S1, float Y, bool Lower) tier, float side, LodLevel lod)
     {
         var (w0, w1) = TerraceSpan(side);
         var wall = S.Wall(S.StairWall);
@@ -304,7 +305,7 @@ public sealed class GrandStair : ICorePiece
     }
 
     /// <summary>The solid stone guard wall outside one side stair, with a coping following its top line.</summary>
-    private void Guard(CoreMesh mesh, float side, LodLevel lod)
+    private void Guard(GeometrySink mesh, float side, LodLevel lod)
     {
         float w1 = side * HalfWidth, w0 = side * (HalfWidth - S.GuardWallWidth);
         var top = GuardTop();
@@ -348,7 +349,7 @@ public sealed class GrandStair : ICorePiece
     }
 
     /// <summary>A prism over a simple section in (s, y) between w0 and w1: both side faces and every edge face.</summary>
-    private void Prism(CoreMesh mesh, in Paint paint, IReadOnlyList<Vector2> section, float w0, float w1)
+    private void Prism(GeometrySink mesh, in Paint paint, IReadOnlyList<Vector2> section, float w0, float w1)
     {
         var ring = section;
         var sign = PlanGeometry.SignedArea(ring) >= 0 ? 1f : -1f;
@@ -390,7 +391,7 @@ public sealed class GrandStair : ICorePiece
     /// canopy runs back into the recess to the glass (top and soffit only; the slot's reveals close its ends). L0 adds a
     /// metal drip strip under the fascia.
     /// </summary>
-    private void Canopy(CoreMesh mesh, LodLevel lod)
+    private void Canopy(GeometrySink mesh, LodLevel lod)
     {
         if (_door is not { } d) return;
         var f = d.Face;
@@ -488,4 +489,31 @@ public sealed class GrandStair : ICorePiece
         var frame = CoreShapes.Facing(new(c.X, (y + bottom) * 0.5f, c.Y), Out);
         return new BoxCollider(frame, new(MathF.Abs(w1 - w0) * 0.5f, (y - bottom) * 0.5f, MathF.Abs(s1 - s0) * 0.5f), tag) { Foot = foot };
     }
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        CoreRanges.ForFeature(world, CoreIds.LibraryStair) is { } range ? [range] : [];
+
+    public override void Build(SiteBuilder builder)
+    {
+        if (!builder.Includes(Anchor)) return;
+        var build = CoreBuild.For(builder.Context);
+        Build(build, builder.Lod);
+        var output = build.Finish(builder.Lod);
+        foreach (var mesh in output.Meshes) builder.Add(mesh, System.Numerics.Matrix4x4.Identity, Anchor);
+        foreach (var part in output.Parts) builder.Place(part, Anchor);
+        foreach (var emitter in output.Emitters ?? []) builder.Light(emitter, Anchor);
+    }
+
+    public override void Collide(SiteColliders colliders)
+    {
+        if (!colliders.Includes(Anchor)) return;
+        foreach (var collider in Collide()) colliders.Add(collider, Anchor);
+    }
+
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
+    {
+        var build = CoreBuild.For(context);
+        Build(build, lod);
+        yield return new($"core/{Id}", CoreIds.LibraryStair, build.Finish(lod), Collide(), []);
+    }
+
 }

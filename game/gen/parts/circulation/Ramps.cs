@@ -54,8 +54,8 @@ public sealed class RampPart() : CirculationPart<RampParams>(new(900, 400))
         var section = Profiles.Rect(0, c + 0.2f, 0, S.RampCurbWidth - S.FaceInset, bevel);
         // Curbs stand 0.1 m proud: under 0.25 m nothing casts a shadow (ART-MODELING), which also spares the
         // deck a saw-toothed grazing shadow at low sun.
-        mesh.VerticalSweep(S.Trim, section, curb, -w + S.FaceInset, Frame.Identity, MeshBuilder.NoShadow);
-        mesh.VerticalSweep(S.Trim, section, curb, w - S.RampCurbWidth, Frame.Identity, MeshBuilder.NoShadow);
+        mesh.VerticalSweep(S.Trim, section, curb, -w + S.FaceInset, Frame.Identity, VertexFlag.NoShadow);
+        mesh.VerticalSweep(S.Trim, section, curb, w - S.RampCurbWidth, Frame.Identity, VertexFlag.NoShadow);
         if (p.Variation == 1 || detail == Detail.Mass) return;
         List<Vector2> rail = [new(-d + 0.08f, Deck(-d + 0.08f) + S.HandrailHeight), new(d - 0.08f, Deck(d - 0.08f) + S.HandrailHeight)];
         foreach (var side in new[] { -1f, 1f })

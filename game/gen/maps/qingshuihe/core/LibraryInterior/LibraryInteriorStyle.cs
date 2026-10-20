@@ -95,12 +95,11 @@ internal static class LibraryInteriorStyle
     public static ChannelId LightChannel => CoreStyle.LibraryWindowChannel;
 
     /// <summary>VF-A interior bit (GeometryBundle.Flags): interior shade rows, no rain wetting.</summary>
-    public const byte InteriorFlag = 1;
 
-    public static Paint Wall(string family) => new(CoreMaterial.Wall, family, InteriorFlag);
-    public static Paint Trim(string family) => new(CoreMaterial.Trim, family, InteriorFlag);
-    public static Paint Metal(string family) => new(CoreMaterial.Metal, family, InteriorFlag);
-    public static Paint Stone(string family) => new(CoreMaterial.Stone, family, InteriorFlag);
-    public static Paint Inlay(string family) => new(CoreMaterial.Inlay, family, (byte)(InteriorFlag | VertexFlags.Decal | VertexFlags.NoShadow));
+    public static Paint Wall(string family) => new(CoreMaterial.Wall, family, VertexFlag.Interior);
+    public static Paint Trim(string family) => new(CoreMaterial.Trim, family, VertexFlag.Interior);
+    public static Paint Metal(string family) => new(CoreMaterial.Metal, family, VertexFlag.Interior);
+    public static Paint Stone(string family) => new(CoreMaterial.Stone, family, VertexFlag.Interior);
+    public static Paint Inlay(string family) => new(CoreMaterial.Inlay, family, (byte)(VertexFlag.Interior | VertexFlag.Decal | VertexFlag.NoShadow));
     public static ToonSpec Glow(string family) => ZoneLooks.S(family, line: LineClass.Fine, wet: 0f) with { Emissive = LightChannel };
 }

@@ -9,6 +9,13 @@ namespace Campus.Tests;
 /// <summary>Real authored maps through the production catalogue parser and input capture.</summary>
 internal static class RealMapFixture
 {
+    internal static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> WindowInputs(MapId map,
+        WindowNumberingSnapshot? previous = null) => new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal)
+        {
+            [WindowNumberingRegistry.FileName] = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+                previous is null ? new WindowNumberingRegistry(map, 0, []) : WindowNumberingRegistry.FromSnapshot(previous), ContractJson.Options)
+        };
+
     public static MapCatalogEntry Entry(MapId? map = null)
     {
         var index = MapCatalog.ReadIndex(File.ReadAllBytes(RepositoryFixture.FilePath("game", "data", "maps", "index.json")));

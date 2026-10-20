@@ -140,7 +140,7 @@ public sealed class RoofPartsTests
                 // Fire red is the small saturated identity colour (WLD-INTERIORS) and is exempt.
                 if (token.GetString()!.StartsWith("equip.fireRed.", StringComparison.Ordinal)) continue;
                 var albedo = entry.GetProperty("albedo").EnumerateArray().Select(v => v.GetDouble()).ToArray();
-                AssertThat(OklabChroma(albedo[0], albedo[1], albedo[2]) <= 0.05).OverrideFailureMessage($"{token.GetString()} has intrinsic chroma above 0.05.").IsTrue();
+                AssertThat(Oklab.FromSrgb(albedo[0], albedo[1], albedo[2]).Chroma <= 0.05).OverrideFailureMessage($"{token.GetString()} has intrinsic chroma above 0.05.").IsTrue();
             }
         }
         foreach (var example in RoofGallery.CreateExamples())
@@ -159,19 +159,6 @@ public sealed class RoofPartsTests
             AssertThat(grille ? reduced.Length > 0 : reduced.Length == 0).OverrideFailureMessage($"{example.Id} has the wrong occlusion layout.").IsTrue();
             AssertThat(reduced.All(v => v is >= 0.45f and <= 0.88f)).OverrideFailureMessage($"{example.Id} has a reveal visibility outside 0.45–0.88.").IsTrue();
         }
-    }
-
-    /// <summary>OKLCH chroma of an sRGB colour (Ottosson's matrices, as WP-37's Oklab).</summary>
-    private static double OklabChroma(double r, double g, double b)
-    {
-        static double Linear(double c) => c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
-        double lr = Linear(r), lg = Linear(g), lb = Linear(b);
-        var l = Math.Cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
-        var m = Math.Cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
-        var s = Math.Cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
-        var a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
-        var bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
-        return Math.Sqrt(a * a + bb * bb);
     }
 
     private static Vector3 P(GeometryBundle m, int i) => new(m.Position[3 * i], m.Position[3 * i + 1], m.Position[3 * i + 2]);

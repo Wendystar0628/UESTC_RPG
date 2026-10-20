@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
@@ -19,7 +20,7 @@ public readonly record struct GrilleSlot(float U0, float U1, int Row, float Y0, 
 /// A part's +X runs along the facade and its −Z out of the building (OpeningPlacement.Frame), the wall at its back.
 /// Slots and drains are decided here once per facade, so the downpipes and the niches never meet (FittingRules).
 /// </summary>
-public sealed class FacadeFittings(BuildingPlan plan, LodLevel lod, MeshSink sink)
+public sealed class FacadeFittings(BuildingPlan plan, LodLevel lod, GeometrySink sink)
 {
     private static readonly EquipmentGrillePart Cage = new();
     private static readonly AirConditionerPart Unit = new();

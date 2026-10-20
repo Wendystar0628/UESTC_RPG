@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 
@@ -19,7 +20,7 @@ public static class CoreShapes
     /// outward normal is (dy, −dr). Sides are smooth around the axis and flat along the profile, which keeps the toon
     /// bands crisp on chamfers while rounds read round.
     /// </summary>
-    public static void Lathe(CoreMesh mesh, in Paint paint, Matrix4x4 frame, IReadOnlyList<Vector2> profile, int sides)
+    public static void Lathe(GeometrySink mesh, in Paint paint, Matrix4x4 frame, IReadOnlyList<Vector2> profile, int sides)
     {
         ArgumentNullException.ThrowIfNull(profile);
         if (profile.Count < 2) throw new ArgumentException("A lathe profile needs two points.", nameof(profile));
@@ -55,7 +56,7 @@ public static class CoreShapes
     /// split into pieces of at most <paramref name="step"/> metres along the arc so it follows the terrain grid
     /// (WLD-TERRAIN); the surface height comes from <paramref name="surface"/> plus <paramref name="lift"/>.
     /// </summary>
-    public static void Annulus(CoreMesh mesh, in Paint paint, Vector2 centre, float r0, float r1, float a0, float a1,
+    public static void Annulus(GeometrySink mesh, in Paint paint, Vector2 centre, float r0, float r1, float a0, float a1,
         Surface surface, float lift, float step = 1f)
     {
         if (!(r1 > r0) || r0 < 0f) throw new ArgumentOutOfRangeException(nameof(r1));
@@ -73,7 +74,7 @@ public static class CoreShapes
     }
 
     /// <summary>A flat convex polygon (plan points, any winding) lying on a surface; fanned from its first point.</summary>
-    public static void FlatPolygon(CoreMesh mesh, in Paint paint, IReadOnlyList<Vector2> ring, Surface surface, float lift)
+    public static void FlatPolygon(GeometrySink mesh, in Paint paint, IReadOnlyList<Vector2> ring, Surface surface, float lift)
     {
         for (var i = 1; i + 1 < ring.Count; i++)
             mesh.Tri(paint, On(ring[0]), On(ring[i]), On(ring[i + 1]), Vector3.UnitY);
@@ -82,7 +83,7 @@ public static class CoreShapes
     }
 
     /// <summary>A flat strip of width <paramref name="width"/> along the plan segment a → b, lying on a surface.</summary>
-    public static void FlatStrip(CoreMesh mesh, in Paint paint, Vector2 a, Vector2 b, float width, Surface surface, float lift)
+    public static void FlatStrip(GeometrySink mesh, in Paint paint, Vector2 a, Vector2 b, float width, Surface surface, float lift)
     {
         var d = b - a; var len = d.Length();
         if (len < 1e-4f) return;
@@ -95,7 +96,7 @@ public static class CoreShapes
     /// (half ellipsoids about 1.1 m apart and well overlapped, the loropetalum's cloud crown): smooth normals, soft vegetation shading, no
     /// long extruded box. Each cushion starts <see cref="CoreStyle.Sink"/> below its base so it never floats.
     /// </summary>
-    public static void Hedge(CoreMesh mesh, in Paint paint, Vector2 a, Vector2 b, float y, float width, float height, int rings, int sides)
+    public static void Hedge(GeometrySink mesh, in Paint paint, Vector2 a, Vector2 b, float y, float width, float height, int rings, int sides)
     {
         var d = b - a; var length = d.Length();
         if (length < 0.05f) return;
@@ -113,7 +114,7 @@ public static class CoreShapes
     /// A half ellipsoid with semi-axes <paramref name="ra"/> along <paramref name="along"/>, <paramref name="rb"/> across
     /// and <paramref name="h"/> up from its base centre, with a short vertical skirt below the base.
     /// </summary>
-    public static void Cushion(CoreMesh mesh, in Paint paint, Vector3 centre, Vector2 along, float ra, float rb, float h, int rings, int sides)
+    public static void Cushion(GeometrySink mesh, in Paint paint, Vector3 centre, Vector2 along, float ra, float rb, float h, int rings, int sides)
     {
         var u = new Vector3(along.X, 0, along.Y);
         var v = new Vector3(-along.Y, 0, along.X);

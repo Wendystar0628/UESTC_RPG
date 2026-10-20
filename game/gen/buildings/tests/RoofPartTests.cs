@@ -37,7 +37,7 @@ public sealed class RoofPartTests
         for (var i = 0; i < plain.Plans.Count; i++)
         {
             var (simple, full) = (plain.Plans[i], hero.Plans[i]);
-            AssertThat(simple.RoofZone == FidelityZone.K4 && full.RoofZone == FidelityZone.K1).OverrideFailureMessage("Expected: " + ("roof zone from the fidelity data, K4 without it")).IsTrue();
+            AssertThat(simple.RoofZone == FidelityZone.K4 && full.RoofZone == FidelityZone.K1).OverrideFailureMessage("Expected: " + ("roof zone from frozen fidelity data, default roofs K4")).IsTrue();
             var near = module.BuildOne(simple, plain.Blocks[i], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
             var nearFull = module.BuildOne(full, hero.Blocks[i], LodLevel.L0, Campus.Contracts.Tests.PaletteFixture.Catalog);
             AssertThat(near.Any(Fence) && near.Any(Pump) && near.Any(Strip)).OverrideFailureMessage("Expected: " + ($"{simple.Key}: fenced plant and lightning strip")).IsTrue();

@@ -60,8 +60,8 @@ public sealed class DioramaModuleTests
             foreach (var mesh in output.Meshes)
             {
                 AssertThat(mesh.Shader != ShaderId.DioramaFar).OverrideFailureMessage("every backdrop surface uses diorama_far").IsFalse();
-                AssertThat(mesh.Flags is not { } flags || flags.Any(f => (f & 8) == 0)).OverrideFailureMessage("the backdrop never casts shadows").IsFalse();
-                AssertThat(mesh.Position.Length / 3 > 65536).OverrideFailureMessage("surface over 65 536 vertices").IsFalse();
+                AssertThat(mesh.Flags is not { } flags || flags.Any(f => (f & VertexFlag.NoShadow) == 0)).OverrideFailureMessage("the backdrop never casts shadows").IsFalse();
+                AssertThat(mesh.Position.Length / 3 > GeometryVertexLimits.Batch).OverrideFailureMessage("surface exceeds shared geometry batch capacity").IsFalse();
                 AssertThat(mesh.Position.Any(v => !float.IsFinite(v)) || mesh.Normal.Any(v => !float.IsFinite(v))).OverrideFailureMessage("non-finite vertex data").IsFalse();
             }
             AssertThat(module.Build(ctx, new TileKey(0, 0), LodLevel.L0).Meshes.Count != 0 || module.Build(ctx, new TileKey(1, 0), LodLevel.L4).Meshes.Count != 0).OverrideFailureMessage("only L4 tile (0, 0) carries the backdrop").IsFalse();

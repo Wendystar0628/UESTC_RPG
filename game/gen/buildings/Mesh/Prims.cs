@@ -93,7 +93,7 @@ public static class Prims
     /// interpolate from the incoming to the outgoing edge normal. Segments of zero length or flipped edges are skipped.
     /// <paramref name="gaps"/> leave spans of edges open (non-overlapping), each closed by end caps.
     /// </summary>
-    public static void Sweep(MeshSink sink, in Face faceIn, PlanRing ring, Profile profile, IReadOnlyList<SweepGap>? gaps = null, Vector2? capClosure = null)
+    public static void Sweep(GeometrySink sink, in Face faceIn, PlanRing ring, Profile profile, IReadOnlyList<SweepGap>? gaps = null, Vector2? capClosure = null)
     {
         var face = faceIn;
         var pts = profile.Points;
@@ -168,7 +168,7 @@ public static class Prims
     }
 
     /// <summary>End caps of a swept section at a gap: the section polygon (plus an optional closing point on the wall).</summary>
-    private static void GapCaps(MeshSink sink, in Face face, PlanRing ring, Profile profile, SweepGap g, Vector2? closure)
+    private static void GapCaps(GeometrySink sink, in Face face, PlanRing ring, Profile profile, SweepGap g, Vector2? closure)
     {
         var poly = profile.Points.Select(p => new Vector2(p.S, p.Y)).ToList();
         if (closure is { } c) poly.Add(c);
@@ -181,14 +181,14 @@ public static class Prims
     }
 
     /// <summary>Horizontal cap over the ring outline at offset s (with chamfers), facing up or down; holes optional.</summary>
-    public static void Cap(MeshSink sink, in Face face, PlanRing outer, IReadOnlyList<PlanRing> holes, float s, float c, float y, bool up)
+    public static void Cap(GeometrySink sink, in Face face, PlanRing outer, IReadOnlyList<PlanRing> holes, float s, float c, float y, bool up)
     {
         var o = PlanGeometry.DeduplicateRing(Outline(outer, s, c));
         var hs = holes.Select(h => (IReadOnlyList<Vector2>)PlanGeometry.DeduplicateRing(Outline(h, s, c))).ToArray();
         CapPoints(sink, face, o, hs, y, up);
     }
 
-    public static void CapPoints(MeshSink sink, in Face face, IReadOnlyList<Vector2> outer, IReadOnlyList<IReadOnlyList<Vector2>> holes, float y, bool up)
+    public static void CapPoints(GeometrySink sink, in Face face, IReadOnlyList<Vector2> outer, IReadOnlyList<IReadOnlyList<Vector2>> holes, float y, bool up)
     {
         var (points, tris) = Triangulate(outer, holes);
         if (tris.Length == 0) return;
@@ -239,7 +239,7 @@ public sealed class EdgeFrame(Vector2 origin, Vector2 dir, Vector2 normal)
     public Vector3 At(float u, float s, float y) => new(Origin.X + Dir.X * u + Normal.X * s, y, Origin.Y + Dir.Y * u + Normal.Y * s);
 
     /// <summary>Axis-aligned box in the frame. The back face (s0) is omitted when it sits inside the wall.</summary>
-    public void Box(MeshSink sink, in Face face, float u0, float u1, float s0, float s1, float y0, float y1,
+    public void Box(GeometrySink sink, in Face face, float u0, float u1, float s0, float s1, float y0, float y1,
         bool back = false, bool bottom = true, float aoBottom = 0f)
     {
         if (u1 - u0 < 1e-4f || s1 - s0 < 1e-4f || y1 - y0 < 1e-4f) return;
@@ -262,7 +262,7 @@ public sealed class EdgeFrame(Vector2 origin, Vector2 dir, Vector2 normal)
     /// Sweeps an open section (s, y) along u from u0 to u1, with flat end caps (the section polygon closed
     /// along its back). Used for sills, canopies and short bands.
     /// </summary>
-    public void Bar(MeshSink sink, in Face face, float u0, float u1, Profile section, bool caps = true)
+    public void Bar(GeometrySink sink, in Face face, float u0, float u1, Profile section, bool caps = true)
     {
         if (u1 - u0 < 1e-4f) return;
         var pts = section.Points;
@@ -290,7 +290,7 @@ public sealed class EdgeFrame(Vector2 origin, Vector2 dir, Vector2 normal)
     }
 
     /// <summary>Vertical planar quad in the frame at offset s.</summary>
-    public void Panel(MeshSink sink, in Face face, float u0, float u1, float s, float y0, float y1, Vector3 normal,
+    public void Panel(GeometrySink sink, in Face face, float u0, float u1, float s, float y0, float y1, Vector3 normal,
         Vector2 uv0, Vector2 uv1, float ao = 0f)
     {
         if (u1 - u0 < 1e-4f || y1 - y0 < 1e-4f) return;

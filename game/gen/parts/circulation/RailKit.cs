@@ -55,7 +55,7 @@ internal static class RailKit
                 {
                     var x = start + i * S.BalusterPitch;
                     if (centres.Any(c => Math.Abs(c - x) < (post + size) * 0.5f + 0.02f)) continue;
-                    mesh.Box(fine, new(x - size * 0.5f, lowTop - S.Joint, z - size * 0.5f), new(x + size * 0.5f, railBottom + S.Joint, z + size * 0.5f), 0, frame, MeshBuilder.NoShadow);
+                    mesh.Box(fine, new(x - size * 0.5f, lowTop - S.Joint, z - size * 0.5f), new(x + size * 0.5f, railBottom + S.Joint, z + size * 0.5f), 0, frame, VertexFlag.NoShadow);
                 }
                 break;
             case Infill.Panel:
@@ -67,7 +67,7 @@ internal static class RailKit
                 for (var i = 1; i <= S.HorizontalBars; i++)
                 {
                     var y = lowTop + (railBottom - lowTop) * i / (S.HorizontalBars + 1);
-                    mesh.Box(fine, new(inner0, y - bar * 0.5f, z - bar * 0.5f), new(inner1, y + bar * 0.5f, z + bar * 0.5f), 0, frame, MeshBuilder.NoShadow);
+                    mesh.Box(fine, new(inner0, y - bar * 0.5f, z - bar * 0.5f), new(inner1, y + bar * 0.5f, z + bar * 0.5f), 0, frame, VertexFlag.NoShadow);
                 }
                 break;
             default:
@@ -98,13 +98,13 @@ internal static class RailKit
             _ => Profiles.Rect(-S.HandrailRadius, S.HandrailRadius, -S.HandrailRadius, S.HandrailRadius, 0),
         };
         // Handrails are thin linear items: they stay out of the shadow pass, where they would only speckle (ART-MODELING).
-        mesh.VerticalSweep(CirculationStyle.MetalTube, profile, path, x, frame, MeshBuilder.NoShadow);
+        mesh.VerticalSweep(CirculationStyle.MetalTube, profile, path, x, frame, VertexFlag.NoShadow);
         if (detail == Detail.Coarse) return;
         // Round end knobs instead of bare tube cuts (ART-MODELING "端头圆帽").
         var knob = new Vector3(S.HandrailKnob, S.HandrailKnob, S.HandrailKnob);
         var (rings, segments) = detail == Detail.Full ? (3, 8) : (3, 6);
-        if (capFirst) mesh.Ellipsoid(CirculationStyle.MetalTube, new(x, path[0].Y, path[0].X), knob, rings, segments, frame, MeshBuilder.NoShadow);
-        if (capLast) mesh.Ellipsoid(CirculationStyle.MetalTube, new(x, path[^1].Y, path[^1].X), knob, rings, segments, frame, MeshBuilder.NoShadow);
+        if (capFirst) mesh.Ellipsoid(CirculationStyle.MetalTube, new(x, path[0].Y, path[0].X), knob, rings, segments, frame, VertexFlag.NoShadow);
+        if (capLast) mesh.Ellipsoid(CirculationStyle.MetalTube, new(x, path[^1].Y, path[^1].X), knob, rings, segments, frame, VertexFlag.NoShadow);
         if (!posts) return;
         var z0 = path[0].X; var z1 = path[^1].X;
         var length = Math.Abs(z1 - z0);
@@ -117,7 +117,7 @@ internal static class RailKit
             var foot = footAt(z) - S.Joint;
             var head = HeightAt(path, z);
             if (!(head - foot > 0.2f)) continue;
-            mesh.Box(CirculationStyle.Metal, new(x - size * 0.5f, foot, z - size * 0.5f), new(x + size * 0.5f, head, z + size * 0.5f), bevel, frame, MeshBuilder.NoShadow);
+            mesh.Box(CirculationStyle.Metal, new(x - size * 0.5f, foot, z - size * 0.5f), new(x + size * 0.5f, head, z + size * 0.5f), bevel, frame, VertexFlag.NoShadow);
         }
     }
 
@@ -130,7 +130,7 @@ internal static class RailKit
         {
             var head = HeightAt(rail, z);
             if (!(head - foot > 0.2f)) continue;
-            mesh.Box(CirculationStyle.MetalFine, new(x - size * 0.5f, foot - S.Joint, z - size * 0.5f), new(x + size * 0.5f, head, z + size * 0.5f), 0, frame, MeshBuilder.NoShadow);
+            mesh.Box(CirculationStyle.MetalFine, new(x - size * 0.5f, foot - S.Joint, z - size * 0.5f), new(x + size * 0.5f, head, z + size * 0.5f), 0, frame, VertexFlag.NoShadow);
         }
     }
 

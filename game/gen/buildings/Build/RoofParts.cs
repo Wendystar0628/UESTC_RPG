@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using Campus.Gen.Parts.Core;
 using System.Numerics;
 using Campus.Contracts;
@@ -18,7 +19,7 @@ namespace Campus.Gen.Buildings.Build;
 /// A unit's +X runs along the building axis; everything stands on the roof slab and is visual only (roofs cannot be
 /// reached, MAP-QSH-ADDITIONS).
 /// </summary>
-public sealed class RoofParts(BuildingPlan plan, LodLevel lod, MeshSink sink)
+public sealed class RoofParts(BuildingPlan plan, LodLevel lod, GeometrySink sink)
 {
     private static readonly WaterTankPart Tank = new();
     private static readonly HeatPumpPart HeatPump = new();
@@ -117,7 +118,7 @@ public sealed class RoofParts(BuildingPlan plan, LodLevel lod, MeshSink sink)
         }
     }
 
-    private static readonly Face FrameFace = new(MaterialKind.Metal, Families.FrameAlu, VertexFlags.NoShadow);
+    private static readonly Face FrameFace = new(MaterialKind.Metal, Families.FrameAlu, VertexFlag.NoShadow);
     private static readonly Face LeafFace = new(MaterialKind.Trim, RoofRules.DoorLeaf);
 
     /// <summary>

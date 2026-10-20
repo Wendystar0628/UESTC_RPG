@@ -7,8 +7,8 @@ namespace Campus.Gen.Interior.Shell.Box;
 /// <summary>Demo box interior: one rectangular plan, an open entry and straight stairs per registered building.</summary>
 public abstract class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogConfigurable
 {
-    public abstract BakeInputDependencies BakeInputs { get; }
-    public abstract BakeInputDependencies CollisionInputs { get; }
+    public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
+    public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     private FeatureId[] _features = [];
     private int[] _floors = [1];
@@ -111,7 +111,7 @@ public abstract class BoxInteriorProvider : IInteriorProvider, IInteriorCatalogC
             if (collider is RampCollider ramp) builder.AddSteps(ramp);
             else builder.Add(collider);
         }
-        return new([builder.Build(ctx.Toon(new(new("wall.lit"), new("wall.shade"))))], []);
+        return new(builder.Build(ctx.Toon(new(new("wall.lit"), new("wall.shade")))), []);
     }
 
     public NavFloorGraph Nav(BuildContext ctx, FeatureId id, int storey)

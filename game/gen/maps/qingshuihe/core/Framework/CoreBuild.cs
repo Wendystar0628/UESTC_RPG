@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Parts;
@@ -5,41 +6,16 @@ using Campus.Gen.Maps.Qingshuihe.Core.Library;
 
 namespace Campus.Gen.Maps.Qingshuihe.Core.Framework;
 
-/// <summary>
-/// One built object or group of the core zone: the time plaza, the sundial, later the library shell and each
-/// surrounding block, the museum and the West Lake structures. A piece is a pure function of the world model and
-/// its own style constants; it never reads files or world state (ENG-ARCH).
-/// <para>
-/// Each piece lives in exactly one 64 m L0 cell (its <see cref="Anchor"/>), so a level-l tile is
-/// floor(anchor / (64 · 2^l)) and L4 is the whole-map tile (0, 0). Geometry may extend past the cell; the baker
-/// merges by tile, not by clipping.
-/// </para>
-/// </summary>
-public interface ICorePiece
-{
-    /// <summary>Stable lowercase identifier, used for ordering, seeds and test output.</summary>
-    string Id { get; }
-
-    /// <summary>Plan point that decides the piece's tile at every level.</summary>
-    Vector2 Anchor { get; }
-
-    /// <summary>Features and aspects this piece generates instead of the generic modules (SYS-MAPS).</summary>
-    IReadOnlyList<Claim> Claims { get; }
-
-    /// <summary>Visible geometry, placed catalogue parts and light emitters at one level.</summary>
-    void Build(CoreBuild build, LodLevel lod);
-
-    /// <summary>Collision primitives with the same parameters as the geometry (SYS-WALK); Foot always filled.</summary>
-    IReadOnlyList<Collider> Collide();
-
-    /// <summary>Close-range inspection probes of this piece (ART-FIDELITY); most pieces have none.</summary>
-    IReadOnlyList<InspectionProbe> Probes => [];
-}
-
 /// <summary>Output of one tile build: shared mesh sink plus placed parts and emitters, in piece order.</summary>
 public sealed class CoreBuild(PaletteCatalog palette)
 {
-    public CoreMesh Mesh { get; } = new(palette);
+    public static CoreBuild For(BuildContext context) => new(context.Catalog)
+    {
+        WindowNumbering = context.WindowNumbering,
+        PartLods = context.PartLods,
+    };
+
+    public GeometrySink Mesh { get; } = new(palette);
     public List<PlacedPart> Parts { get; } = [];
     public List<LightEmitter> Emitters { get; } = [];
     /// <summary>Bundles a piece writes itself (VF-B glass, landmark parts kept as their own instances), after the shared sink's.</summary>

@@ -106,7 +106,7 @@ internal static class WindowBuilder
     public static void Build(PartMesh mesh, WindowParams p, WindowType type, ToonSpec frameSpec, LodLevel lod)
     {
         if (lod >= LodLevel.L2) return;
-        const byte flags = OpeningPart<WindowParams>.NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var e = OpeningStyle.PressIn;
         var ins = OpeningStyle.Insert;
         var d = FrameDepth(p, type) * 0.5f;
@@ -156,7 +156,7 @@ internal static class WindowBuilder
     /// <summary>Fixed light: a glazing bead one level behind the frame face, then the dark gasket line.</summary>
     private static void Bead(PartMesh mesh, ToonSpec spec, Light l, float d)
     {
-        const byte flags = OpeningPart<WindowParams>.NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var front = Math.Max(-OpeningStyle.BeadDepth, -d + OpeningStyle.SashStep) - OpeningStyle.GlassClear;
         Solid.Ring(mesh, spec, flags, l.X0 - Lap, l.Y0 - Lap, l.X1 + Lap, l.Y1 + Lap, OpeningStyle.BeadFace + Lap,
             front, -OpeningStyle.GlassClear);
@@ -166,7 +166,7 @@ internal static class WindowBuilder
     /// <summary>Opening sash: its face one step behind the frame, straddling the glass plane, with a lever handle.</summary>
     private static void Sash(PartMesh mesh, ToonSpec spec, Light l, float d)
     {
-        const byte flags = OpeningPart<WindowParams>.NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var front = -d + OpeningStyle.SashStep;
         var back = Math.Min(front + OpeningStyle.SashDepth, d - 0.002f);
         if (back - front < 0.01f) { Bead(mesh, spec, l, d); return; }
@@ -182,7 +182,7 @@ internal static class WindowBuilder
     /// <summary>Sliding pair: front-track sash on the left, back-track sash on the right, overlapping at the meeting stiles.</summary>
     private static void Sliding(PartMesh mesh, ToonSpec spec, Light l, float d)
     {
-        const byte flags = OpeningPart<WindowParams>.NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var sf = OpeningStyle.SashFace;
         var mid = (l.X0 + l.X1) * 0.5f;
         var lap = OpeningStyle.SlideOverlap * 0.5f;
@@ -206,14 +206,14 @@ internal static class WindowBuilder
     {
         const float under = 0.002f;
         if (x1 - x0 < 0.05f || y1 - y0 < 0.05f) return;
-        Solid.Ring(mesh, OpeningStyle.Gasket, OpeningPart<WindowParams>.NoShadow, x0 - under, y0 - under, x1 + under, y1 + under,
+        Solid.Ring(mesh, OpeningStyle.Gasket, VertexFlag.NoShadow, x0 - under, y0 - under, x1 + under, y1 + under,
             OpeningStyle.GasketWidth + under, -OpeningStyle.GasketDepth - OpeningStyle.GlassClear, -OpeningStyle.GlassClear);
     }
 
     /// <summary>Lever handle: rose on the sash face, short spindle, lever hanging down (closed position).</summary>
     internal static void Handle(PartMesh mesh, ToonSpec spec, float hx, float hy, float faceFront, float faceBack, float lever)
     {
-        const byte flags = OpeningPart<WindowParams>.NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var ins = OpeningStyle.Insert;
         float rw = OpeningStyle.RoseWidth * 0.5f, rh = OpeningStyle.RoseHeight * 0.5f;
         var top = hy + rh - 0.005f;

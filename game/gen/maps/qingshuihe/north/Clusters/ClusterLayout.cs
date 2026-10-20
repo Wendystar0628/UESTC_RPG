@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Sites;
 using Campus.Gen.World;
@@ -44,8 +43,6 @@ public sealed record FenceRun(IReadOnlyList<Vector2> Posts, IReadOnlyList<Vector
 /// </summary>
 public sealed class ClusterLayout
 {
-    private static readonly ConditionalWeakTable<IWorldModel, Dictionary<string, ClusterLayout?>> Cache = new();
-    private static readonly object Sync = new();
 
     private ClusterLayout(NorthTune.Cluster cluster, IReadOnlyList<GateSpot> gates, IReadOnlyList<FenceRun> runs)
     {
@@ -60,16 +57,10 @@ public sealed class ClusterLayout
     public GateSpot? MainGate => Gates.FirstOrDefault(g => g.Main);
 
     /// <summary>The layout of a cluster, or null when the world has no such polygon (a test world, another map).</summary>
-    public static ClusterLayout? Of(IWorldModel world, NorthTune.Cluster cluster)
-    {
-        ArgumentNullException.ThrowIfNull(world);
-        lock (Sync)
-        {
-            var byKey = Cache.GetValue(world, _ => []);
-            if (!byKey.TryGetValue(cluster.Key, out var layout)) byKey[cluster.Key] = layout = Compute(world, cluster);
-            return layout;
-        }
-    }
+    public static ClusterLayout? Of(IWorldModel world, NorthTune.Cluster cluster) => Compute(world, cluster);
+
+    public static ClusterLayout? Of(BuildContext context, NorthTune.Cluster cluster) =>
+        context.Memo((typeof(ClusterLayout), cluster.Key), () => Of(context.World, cluster));
 
     private readonly record struct Road(Vector2 A, Vector2 B, Vector2 Dir, float Half);
     /// <summary>Width is the stretch of fence line the road covers (wider than the road when it crosses skewed).</summary>

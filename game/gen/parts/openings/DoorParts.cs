@@ -164,7 +164,7 @@ internal static class DoorBuilder
         Solid.Glass(mesh, shadow, Place.Identity, -p.Width * 0.5f + face - 0.01f, top - 0.01f, -0.006f, p.Width * 0.5f - face + 0.01f,
             glassTop + 0.01f, 0.006f, OpeningStyle.DoorCard, DoorUv2);
         if (lod == LodLevel.L0)
-            Solid.Ring(mesh, OpeningStyle.Metal, OpeningPart<DoorParams>.NoShadow, -p.Width * 0.5f + face - 0.008f, top - 0.008f,
+            Solid.Ring(mesh, OpeningStyle.Metal, VertexFlag.NoShadow, -p.Width * 0.5f + face - 0.008f, top - 0.008f,
                 p.Width * 0.5f - face + 0.008f, glassTop + 0.008f, OpeningStyle.BeadFace + 0.008f, -0.006f - OpeningStyle.BeadDepth, -0.006f + 0.002f);
     }
 
@@ -185,7 +185,7 @@ internal static class DoorBuilder
         var t = Thickness(s) * 0.5f;
         var ins = OpeningStyle.Insert;
         const byte cast = 0;
-        const byte small = OpeningPart<DoorParams>.NoShadow;
+        const byte small = VertexFlag.NoShadow;
         var full = lod == LodLevel.L0;
         var lockX = hingeLeft ? b : a;
         var toHinge = hingeLeft ? -1f : 1f;
@@ -286,14 +286,14 @@ internal static class DoorBuilder
         var t = Thickness(s) * 0.5f;
         var w = OpeningStyle.SeamWidth * 0.5f;
         var ins = OpeningStyle.Insert;
-        Solid.Box(mesh, OpeningStyle.Gasket, OpeningPart<DoorParams>.NoShadow, turn, x - w, y0 + 0.01f, -t - OpeningStyle.SeamProud, x + w, y1 - 0.01f, -t + ins);
-        Solid.Box(mesh, OpeningStyle.Gasket, OpeningPart<DoorParams>.NoShadow, turn, x - w, y0 + 0.01f, t - ins, x + w, y1 - 0.01f, t + OpeningStyle.SeamProud);
+        Solid.Box(mesh, OpeningStyle.Gasket, VertexFlag.NoShadow, turn, x - w, y0 + 0.01f, -t - OpeningStyle.SeamProud, x + w, y1 - 0.01f, -t + ins);
+        Solid.Box(mesh, OpeningStyle.Gasket, VertexFlag.NoShadow, turn, x - w, y0 + 0.01f, t - ins, x + w, y1 - 0.01f, t + OpeningStyle.SeamProud);
     }
 
     /// <summary>Vertical pull bars on both faces, on two stand-offs each.</summary>
     private static void PullPair(PartMesh mesh, Place turn, float x, float yMin, float yMax, float t, float length)
     {
-        const byte flags = OpeningPart<DoorParams>.NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var ins = OpeningStyle.Insert;
         var cy = Math.Clamp(OpeningStyle.PullCentreY, yMin + length * 0.5f, Math.Max(yMin + length * 0.5f, yMax - length * 0.5f));
         var half = Math.Min(length, yMax - yMin) * 0.5f;
@@ -316,7 +316,7 @@ internal static class DoorBuilder
     /// <summary>Horizontal lever on a back plate; <paramref name="side"/> −1 is the front face, +1 the back face.</summary>
     private static void Lever(PartMesh mesh, Place turn, float x, float y, float face, float side, float toHinge)
     {
-        const byte flags = OpeningPart<DoorParams>.NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var ins = OpeningStyle.Insert;
         float Z(float outward) => face + side * outward;
         void Span(float x0, float y0, float x1, float y1, float o0, float o1)
@@ -332,7 +332,7 @@ internal static class DoorBuilder
     /// <summary>Push bar across the leaf on its back (+Z) face, with end brackets.</summary>
     private static void PanicBar(PartMesh mesh, Place turn, float a, float b, float t)
     {
-        const byte flags = OpeningPart<DoorParams>.NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var y = OpeningStyle.PanicBarY;
         var s = OpeningStyle.PanicBarSize * 0.5f;
         var off = OpeningStyle.PanicStandOff;

@@ -37,7 +37,7 @@ public sealed class RingFenceSite : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        if (BoundaryPlan.Of(b.Context.World) is not { } plan) return;
+        if (BoundaryPlan.Of(b.Context) is not { } plan) return;
         foreach (var run in plan.Runs)
             if (b.Includes(SiteRanges.Bounds(run.Line.Concat(run.Hedges.SelectMany(line => line)), F.HedgeWidth)))
                 BoundaryFence.Build(b, run);
@@ -56,7 +56,7 @@ public sealed class RingFenceSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        if (BoundaryPlan.Of(c.Context.World) is not { } plan) return;
+        if (BoundaryPlan.Of(c.Context) is not { } plan) return;
         foreach (var run in plan.Runs)
             if (c.Includes(SiteRanges.Bounds(run.Line.Concat(run.Hedges.SelectMany(line => line)), F.HedgeWidth)))
                 BoundaryFence.Collide(c, run);

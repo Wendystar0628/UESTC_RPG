@@ -26,7 +26,7 @@ public sealed class CurtainWallPart() : OpeningPart<WindowParams>(new(900, 200))
     private protected override void Build(PartMesh mesh, WindowParams p, LodLevel lod)
     {
         if (lod >= LodLevel.L2) return;
-        const byte flags = NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var spec = Pick(p, OpeningStyle.Metal);
         var ins = OpeningStyle.Insert;
         var clear = OpeningStyle.GlassClear;

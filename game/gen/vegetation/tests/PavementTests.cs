@@ -96,8 +96,6 @@ public sealed class PavementTests
         Console.WriteLine($"pavement (avenue walk): {more} more trees give way, {string.Join(", ", layout.Avoided.Select(a => a.Tree.Key).Except(bare.Avoided.Select(a => a.Tree.Key)))}");
     }
 
-
-
     [TestCase, TestCategory(TestReason.Contract)]
     public void ADesignWalkFiledAsFeatureAndAsNetworkLineIsPavedOnce()
     {
@@ -126,7 +124,6 @@ public sealed class PavementTests
             if (Off(walk, new(t.Position.X, t.Position.Z)) < walk.Width * 0.5f + Planting.TrunkClearance)
                 throw new InvalidOperationException($"{t.Key} stands on the walk filed as a network line");
     }
-
 
     [TestCase, TestCategory(TestReason.Contract)]
     [TestCategory("Slow")]
@@ -294,7 +291,6 @@ public sealed class PavementTests
         "}},\"props\":{\"highway\":\"" + type + "\",\"width\":" + F(width) + "},\"note\":\"Fixture: a design walk.\"}";
 
     internal static string F(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);
-
 
     /// <summary>
     /// The hard pavement and tree pits of a world, read again from its features and network the way WP-15 paves them: the

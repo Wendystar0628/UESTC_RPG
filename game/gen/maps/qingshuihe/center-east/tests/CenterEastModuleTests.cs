@@ -55,7 +55,7 @@ public sealed partial class CenterEastModuleTests
                     contours.Count == site.GridBlocks(own).Count() + 1).OverrideFailureMessage("research sources use their generated blocks and hall, excluding neighbours").IsTrue();
             }
             var wenke = traces.Single(t => t.Feature == new FeatureId(CenterEastIds.Wenke.Entity));
-            AssertThat(wenke.OccupiedContours.Select(r => r.Outer).SequenceEqual(WenkeSite.Footprints(ctx.World).Blocks.SelectMany(b => b.Outlines))).OverrideFailureMessage("Wenke keeps the actual clipped and rounded storeys").IsTrue();
+            AssertThat(wenke.OccupiedContours.Select(r => r.Outer).SequenceEqual(WenkeSite.Footprints(ctx).Blocks.SelectMany(b => b.Outlines))).OverrideFailureMessage("Wenke keeps the actual clipped and rounded storeys").IsTrue();
             var frame = traces.Single(t => t.Feature == new FeatureId(CenterEastIds.Pinxue.Complex));
             foreach (var box in PinxueFrameSite.Bridges(ctx.World))
                 AssertThat(frame.OccupiedContours.Any(r => r.Outer.SequenceEqual(box.Frame.Rect(box.X0, box.Z0, box.X1, box.Z1)))).OverrideFailureMessage("the frame uses its actual bridge plans").IsTrue();

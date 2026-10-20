@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -72,9 +71,9 @@ public sealed class EastLakeSite : ZoneSite
             index == WadeSegment ? [(length * 0.5f - WadeWidth * 0.5f, length * 0.5f + WadeWidth * 0.5f)] : [];
     }
 
-    private static readonly ConditionalWeakTable<IWorldModel, Shore> Shores = new();
+    internal static Shore ShoreOf(IWorldModel world) => ReadShore(world);
 
-    internal static Shore ShoreOf(IWorldModel world) => Shores.GetValue(world, ReadShore);
+    internal static Shore ShoreOf(BuildContext context) => context.Memo(typeof(Shore), () => ShoreOf(context.World));
 
     private static Shore ReadShore(IWorldModel world)
     {
@@ -92,7 +91,7 @@ public sealed class EastLakeSite : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        var shore = ShoreOf(b.Context.World);
+        var shore = ShoreOf(b.Context);
         var water = Water(b.Context.World);
         var segments = BankSegments(shore, water).ToArray();
         var rail = RailLine(shore, segments);
@@ -320,7 +319,7 @@ public sealed class EastLakeSite : ZoneSite
             var depth = 0.16f * Math.Clamp((0.95f * s - h) / (0.65f * s), 0f, 1f);
             return depth * (0.6f * MathF.Cos(6f * a) + 0.4f * MathF.Cos(10f * a + 1.3f));
         }
-        b.Add(LandmarkSolids.Draped(coat, segments, L.Bronze, 1f, 0.66f, detail == SiteDetail.Mass ? (_, _) => 0f : Fold), At(0, 0, 0));
+        b.Add(Solids.Draped(coat, segments, L.Bronze, 1f, 0.66f, detail == SiteDetail.Mass ? (_, _) => 0f : Fold, profileUv: true), At(0, 0, 0));
         // Head on its neck: ovoid wider front to back than side to side.
         b.Add(Shapes.Shaft(0.056f * s, 0.05f * s, 0.12f * s, small, L.Bronze), At(0, 1.55f, 0.012f));
         b.Add(Solids.Lathe([P(0, 0), P(0.045f, 0.01f), P(0.075f, 0.05f), P(0.088f, 0.1f), P(0.092f, 0.15f), P(0.088f, 0.19f), P(0.07f, 0.225f),
@@ -450,7 +449,7 @@ public sealed class EastLakeSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        var shore = ShoreOf(c.Context.World);
+        var shore = ShoreOf(c.Context);
         var water = Water(c.Context.World);
         var segments = BankSegments(shore, water).ToArray();
         var rail = RailLine(shore, segments);

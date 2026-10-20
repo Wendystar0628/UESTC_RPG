@@ -81,7 +81,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
     {
         var catalog = Require(ctx, id);
         if (id != CoreIds.Library || !catalog.Floors.Contains(storey)) return NavFloorGraph.Empty(id, storey);
-        var f = LibraryFrame.Of(ctx.World);
+        var f = LibraryFrame.Of(ctx);
         var nodes = new List<NavNode>();
         var edges = new List<NavEdge>();
         NavNode Node(int floor, string role, Vector2 p)
@@ -132,7 +132,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
 
     private static void Compose(BuildContext ctx, FeatureId id, int storey, InteriorSink sink)
     {
-        var f = LibraryFrame.Of(ctx.World);
+        var f = LibraryFrame.Of(ctx);
         var rng = new Rng(StableHash.Hash32(ctx.WorldSeed, id.Value, "library.interior", storey.ToString(CultureInfo.InvariantCulture)));
         ShellInterior.Build(f, storey, sink);
         Atrium.Build(f, storey, sink, ref rng);
@@ -151,7 +151,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
 
     private static InteriorLayout LibraryLayout(BuildContext ctx, FeatureId id, CatalogState catalog, IReadOnlyList<EntranceDecl> entrances)
     {
-        var f = LibraryFrame.Of(ctx.World);
+        var f = LibraryFrame.Of(ctx);
         var storeys = Enumerable.Range(1, f.Storeys).Select(k => new StoreyInfo(k, f.FloorY(k), f.TopY(k) - f.FloorY(k), f.Core.Ring)).ToArray();
         var zones = new List<ZoneVolume>();
         ZoneVolume Zone(int storey, int index, ZoneKind kind, IReadOnlyList<Vector2> ring) => new(storey, storey * 100 + index, kind, ring,
@@ -212,7 +212,7 @@ public sealed class LibraryInteriorProvider : IInteriorProvider, IInteriorCatalo
         var levels = Math.Max(1, feature.Storeys ?? feature.Parts.Select(p => p.Storeys ?? 0).DefaultIfEmpty(0).Max());
         var height = feature.Height ?? feature.Parts.Select(p => p.Height ?? 0f).DefaultIfEmpty(0f).Max();
         if (height <= 0f) height = levels * WorldModelLoader.DefaultStoreyHeight;
-        var plan = LibraryFrame.Of(ctx.World).Plan;
+        var plan = LibraryFrame.Of(ctx).Plan;
         var pad = ctx.World.Terrain.PadY(id);
         return (rings, height / levels, pad + (plan.FloorY - plan.PadY), pad + height, levels);
     }

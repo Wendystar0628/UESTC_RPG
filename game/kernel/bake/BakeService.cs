@@ -36,6 +36,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     private readonly BakeQueue _queue;
     private readonly BakeCacheStore _cache;
     private readonly TerrainCacheService _terrain;
+    private readonly BuildInputSnapshot _globalInputs;
     private readonly Dictionary<MapId, MapBuild> _contexts = [];
     private readonly object _sync = new();
     private readonly object _inputIdentitySync = new();
@@ -45,16 +46,18 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     private bool _exiting;
     private AppState _phase;
 
-    public BakeService(IMapService maps, IAppFlow flow, TerrainCacheService terrain) : this(BakeOptions.FromApplication(), terrain)
+    public BakeService(IMapService maps, IAppFlow flow, TerrainCacheService terrain, GlobalBuildInputs globalInputs)
+        : this(BakeOptions.FromApplication(), terrain, globalInputs.Snapshot)
     {
         _maps = maps; _flow = flow;
         ApplyPhase(flow.State);
         flow.Changed += PhaseChanged;
     }
 
-    internal BakeService(BakeOptions options, TerrainCacheService terrain)
+    internal BakeService(BakeOptions options, TerrainCacheService terrain, BuildInputSnapshot globalInputs)
     {
         _options = options;
+        _globalInputs = globalInputs;
         _queue = new(_options.MaximumWorkers, FlushInputIdentities);
         _terrain = terrain;
         _cache = terrain.Store;
@@ -131,7 +134,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                 e => new Interior(e.Id, e.IsStub, registry.CreateInteriorProvider(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type), new WpId(e.Owner)), StringComparer.Ordinal);
             // Capture one immutable source snapshot per MapBuild; never load extensions on a worker.
             var catalog = registry.Get<IPaletteCatalogSource>().Catalog;
-            var globalInputs = Campus.Kernel.Registry.Kernel.GlobalBuildInputs;
+            var globalInputs = _globalInputs;
             var groundContributors = GenerationInputCapture.CaptureGroundMaskContributors(registry, context.Descriptor.Id);
             var partLods = GenerationInputCapture.CapturePartLods(registry, context.Descriptor.Id);
             var geometry = new BakeGeometryBuilder(catalog, registry, context.Descriptor.Id);
@@ -227,9 +230,9 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         if (matches.Length > 1 || (module is not null || interior is not null) && matches.Length != 0)
             throw new InvalidDataException("More than one producer claims this bake key.");
         if (module is null && interior is null && matches.Length == 0) throw new InvalidDataException("No bake producer is registered for this key.");
-        var codeHash = module?.CodeHash ?? interior?.CodeHash ?? matches[0].CodeHash;
         var payloadClass = module is not null || interior is not null ? BakePayloadClass.Tile : matches[0].Value.PayloadClass;
-        var context = module is not null ? map.GetPreparedContext(map.Context, key.Module) : map.CreateBuildContext(codeHash);
+        var context = map.GetPreparedBuildContext(module is not null ? module.Value :
+            interior is not null ? interior.Value : matches[0].Value);
         var sources = map.SourceIndex(context);
         var inputHash = sources.TryProduct(key, out var preparedHash) ? preparedHash : ProductInputHash(map, context, key);
         sources.RememberProduct(key, inputHash);
@@ -251,9 +254,9 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             }
             if (_options.Strict) throw new InvalidDataException($"Strict cache miss: {identity}");
         }
-        var buildContext = (module is not null ? context : map.CreateBuildContext(codeHash, inputHash)).WithWorld(_terrain.AssetWorld(context.World));
+        var buildContext = context;
         var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics)) :
-            interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext);
+            interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext, inputHash);
         cancellation.ThrowIfCancellationRequested();
         var bytes = Encode(payloadClass, identity, built);
         cancellation.ThrowIfCancellationRequested();
@@ -455,7 +458,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         internal BakeSourceIndex SourceIndex(BuildContext context)
         {
             lock (_sourceIndexLock)
-                return _sourceIndex ??= BakeSourceIndex.Create(context, SourceCache);
+                return _sourceIndex ??= new BakeSourceIndex(context, SourceCache);
         }
         internal void PersistInputIdentities() => Volatile.Read(ref _sourceIndex)?.Persist();
         internal ConcurrentQueue<CollectedDiagnostic> Diagnostics { get; } = new();
@@ -478,8 +481,9 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         public IReadOnlyList<InteriorCoverage> InteriorCoverage { get; set; } = [];
         internal Dictionary<FeatureId, InteriorLayout> InteriorLayouts { get; } = [];
         private IReadOnlyDictionary<string, BuildContext>? _preparedContexts;
+        private IReadOnlyDictionary<object, BuildContext>? _preparedBuildContexts;
 
-        internal BuildContext CreateBuildContext(string codeHash, string dataHash = "")
+        internal BuildContext CreateBuildContext(string codeHash)
         {
             var data = Data.Value;
             return new()
@@ -490,7 +494,6 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
                 Catalog = Catalog,
                 ClaimedBy = ClaimLookup,
                 SourceInputs = data.Inputs,
-                DataHash = dataHash,
                 CodeHash = codeHash,
                 InteriorProviders = data.InteriorProviders,
                 WindowNumbering = data.Windows.Snapshot,
@@ -516,8 +519,23 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         {
             if (!Active || !Data.IsValueCreated || !ReferenceEquals(metadata.Lighting.WindowNumbering, Data.Value.Windows.Snapshot))
                 throw new InvalidOperationException("Map preparation inputs are not ready.");
+            var contexts = new Dictionary<object, BuildContext>(ReferenceEqualityComparer.Instance);
+            foreach (var module in Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                contexts.Add(module.Value.Value, CreateAssetContext(module.Value.CodeHash));
+            foreach (var interior in Interiors.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                contexts.Add(interior.Value.Value, CreateAssetContext(interior.Value.CodeHash));
+            foreach (var producer in Producers.OrderBy(producer => producer.Id, StringComparer.Ordinal))
+                contexts.Add(producer.Value, CreateAssetContext(producer.CodeHash));
+            _preparedBuildContexts = new ReadOnlyDictionary<object, BuildContext>(contexts);
             _preparedContexts = new ReadOnlyDictionary<string, BuildContext>(Modules.OrderBy(pair => pair.Key, StringComparer.Ordinal)
-                .ToDictionary(pair => pair.Key, pair => CreateBuildContext(pair.Value.CodeHash), StringComparer.Ordinal));
+                .ToDictionary(pair => pair.Key, pair => contexts[pair.Value.Value], StringComparer.Ordinal));
+        }
+
+        internal BuildContext GetPreparedBuildContext(object producer)
+        {
+            if (!Active || _preparedBuildContexts is null || !_preparedBuildContexts.TryGetValue(producer, out var context))
+                throw new InvalidOperationException("The producer has no frozen build context.");
+            return context;
         }
 
         internal BuildContext GetPreparedContext(IMapContext context, string moduleId)

@@ -1,3 +1,5 @@
+using Campus.Gen.Geometry;
+using Campus.Gen.Sites;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -20,7 +22,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Annex;
 /// block's roof is the 3F G terrace (MAP-QSH-INTERIORS-LIBRARY), paved like the library's 2F terrace.
 /// <para>Windows: one grid <see cref="WindowKey"/> per block, <see cref="Columns"/> × storeys, on the library's channel.</para>
 /// </summary>
-public sealed class AnnexShell : ICorePiece, IWindowedPiece
+public sealed class AnnexShell : ZoneSite, IWindowedPiece
 {
     public const string WindowKey = "annex-shell";
 
@@ -71,9 +73,12 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     public IReadOnlyList<WallPiece> Pieces => _pieces;
     public IReadOnlyList<Opening> Openings => _openings;
 
-    public string Id => "annex-" + Kind.ToString().ToLowerInvariant();
+    public override string Id => "annex-" + Kind.ToString().ToLowerInvariant();
     public Vector2 Anchor => Frame.Centroid;
-    public IReadOnlyList<Claim> Claims => [new FeatureClaim(Feature, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public static IReadOnlyList<Claim> DeclaredClaims { get; } = AnnexSite.Members
+        .Select(member => (Claim)new FeatureClaim(member.Feature, Aspects.Massing | Aspects.Facade | Aspects.Roof)).ToArray();
+
+    public override IReadOnlyList<Claim> Claims => [new FeatureClaim(Feature, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
 
     private float Top => _top.Y1;
     private bool Terrace => Kind == AnnexKind.LowBlock;
@@ -190,7 +195,7 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>Plinth band on the ground pieces (broken at the door) and a string course at each floor line, as the library.</summary>
-    private void Bands(CoreMesh mesh)
+    private void Bands(GeometrySink mesh)
     {
         var trim = S.Trim(S.LibraryTrim);
         const float ext = 0.03f;
@@ -217,7 +222,7 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>Parapet with the library's chamfered coping along every top edge no other block stands against.</summary>
-    private void Tops(CoreMesh mesh)
+    private void Tops(GeometrySink mesh)
     {
         var tops = _pieces.Where(p => p.Top).Select(p => (p.A, p.B)).ToList();
         if (tops.Count == 0) return;
@@ -230,7 +235,7 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>The roof: dark grey flat roof, or the low block's G terrace in the library terrace's light paving.</summary>
-    private void Cap(CoreMesh mesh)
+    private void Cap(GeometrySink mesh)
     {
         var paint = Terrace ? S.Roof(S.LibraryTerrace) : S.Roof(S.LibraryRoof);
         foreach (var block in _pieces.Select(p => p.Block).Distinct())
@@ -263,7 +268,7 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     /// Stone pilasters every few bays on the full-height faces of the north annex: they cut its long street fronts into
     /// library-scaled bays (the ring's corner towers read the same way), the string courses dying into them.
     /// </summary>
-    private void Pilasters(CoreMesh mesh)
+    private void Pilasters(GeometrySink mesh)
     {
         var wall = S.Wall(S.LibraryWall);
         foreach (var piece in _pieces.Where(p => p.Y0 <= Frame.WallBaseY + 0.01f && p.Top))
@@ -289,7 +294,7 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>Rainwater pipes at both ends of every long ground face, from the plinth to under the coping (Q5).</summary>
-    private void Pipes(CoreMesh mesh)
+    private void Pipes(GeometrySink mesh)
     {
         var metal = S.Metal(S.LibraryFrame);
         foreach (var piece in _pieces.Where(p => p.Y0 <= Frame.WallBaseY + 0.01f && p.Top && p.Length >= S.PipeMinFace))
@@ -354,4 +359,39 @@ public sealed class AnnexShell : ICorePiece, IWindowedPiece
     }
 
     private static WallCollider Wall(Vector2 a, Vector2 b, float y0, float y1, SurfaceTag tag) => new(a, b, 0.15f, y0, y1, tag) { Foot = FootMat.StonePaving };
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        CoreRanges.ForFeature(world, Feature) is { } range ? [range] : [];
+
+    public override void Build(SiteBuilder builder)
+    {
+        if (!builder.Includes(Anchor)) return;
+        var build = CoreBuild.For(builder.Context);
+        Build(build, builder.Lod);
+        var output = build.Finish(builder.Lod);
+        foreach (var mesh in output.Meshes) builder.Add(mesh, System.Numerics.Matrix4x4.Identity, Anchor);
+        foreach (var part in output.Parts) builder.Place(part, Anchor);
+        foreach (var emitter in output.Emitters ?? []) builder.Light(emitter, Anchor);
+    }
+
+    public override void Collide(SiteColliders colliders)
+    {
+        if (!colliders.Includes(Anchor)) return;
+        foreach (var collider in Collide()) colliders.Add(collider, Anchor);
+    }
+
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
+    {
+        var build = CoreBuild.For(context);
+        Build(build, lod);
+        yield return new($"core/{Id}", Feature, build.Finish(lod), Collide(), []);
+    }
+
+    public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world) =>
+        WindowLayout.Grids.Select(grid => (WindowLayout.Feature, grid));
+
+    public override void DescribeWindows(BuildContext context, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
+    {
+        foreach (var window in Windows(context.WindowNumbering!)) windows.Add(window);
+    }
+
 }

@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
@@ -17,7 +18,7 @@ internal sealed class InteriorSink(PaletteCatalog palette)
 {
     private readonly SortedDictionary<string, MeshWriter> _glow = new(StringComparer.Ordinal);
 
-    public CoreMesh Mesh { get; } = new(palette);
+    public GeometrySink Mesh { get; } = new(palette);
     public List<Collider> Colliders { get; } = [];
     public bool Draw { get; init; } = true;
     public bool Full { get; init; } = true;
@@ -222,11 +223,11 @@ internal sealed class InteriorSink(PaletteCatalog palette)
     {
         var meshes = new List<GeometryBundle>();
         foreach (var bundle in Mesh.Finish()) meshes.Add(bundle with { IgnoreOcclusionCulling = true });
-        foreach (var writer in _glow.Values)
+        foreach (var writer in _glow.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value))
+        foreach (var bundle in writer.Finish().Meshes)
         {
-            var bundle = writer.Finish().Meshes[0];
             var flags = new byte[bundle.Position.Length / 3];
-            Array.Fill(flags, (byte)(S.InteriorFlag | VertexFlags.NoShadow));
+            Array.Fill(flags, (byte)(VertexFlag.Interior | VertexFlag.NoShadow));
             var lit = bundle with { Flags = flags, IgnoreOcclusionCulling = true };
             lit.ValidateVertexData();
             meshes.Add(lit);

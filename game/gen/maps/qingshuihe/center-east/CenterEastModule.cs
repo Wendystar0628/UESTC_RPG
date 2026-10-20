@@ -10,11 +10,9 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast;
 
 /// <summary>Center-east sites share zone routing, geometry publication and window metadata.</summary>
 
-
 [ContentModule("zone.center-east", Owner = "WP-21")]
 public sealed class CenterEastModule : ZoneModuleBase, IWindowMetadataSource, IContentSourceTraceProvider
 {
-    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], [SceneTextInputs.AtlasKey]);
 

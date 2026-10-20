@@ -13,12 +13,10 @@ namespace Campus.Gen.Maps.Qingshuihe.Waterfront;
 
 /// <summary>WP-28 registered bridges and hard-bank structures, resolved against the compiled terrain.</summary>
 
-
 [ContentModule("zone.waterfront", Owner = "WP-28")]
 public sealed class WaterfrontModule : ZoneModuleBase
 {
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
-    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     private static readonly IReadOnlyList<ZoneSite> Sites = [new BridgeSite(), new BankSite()];
 

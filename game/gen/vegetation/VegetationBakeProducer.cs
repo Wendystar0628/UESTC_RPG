@@ -9,7 +9,6 @@ namespace Campus.Gen.Vegetation;
 
 /// <summary>Fixed tile payloads from the original source and its exact prepared context.</summary>
 
-
 [BakeProducer("vegetation.runtime", Owner = "WP-23")]
 public sealed class VegetationBakeProducer : IBakeProducer, IBakeContentConsumer
 {
@@ -47,15 +46,14 @@ public sealed class VegetationBakeProducer : IBakeProducer, IBakeContentConsumer
         return entries.AsReadOnly();
     }
 
-    public object Build(BakeKey key, BuildContext context)
+    public object Build(BakeKey key, BuildContext context, string inputHash)
     {
         if (!CanBuild(key) || key.Map != context.Map.Id) throw new ArgumentException("Invalid vegetation key.");
         var tile = Tile(key);
         var source = Source;
         if (source.Context.Map.Id != key.Map) throw new InvalidOperationException("Vegetation source map mismatch.");
         var producer = (IVegetationRuntimeSource)source.Module;
-        // Same immutable source identity; only terrain access uses the bake worker's prepared asset world.
-        var prepared = source.Context.WithWorld(context.World);
+        var prepared = source.Context;
         var mothers = key.Module == BakeModuleIds.VegetationTrees
             ? producer.PrepareTrees(prepared, tile) : producer.PrepareGrass(prepared, tile);
         return new VegetationTileContent(key, tile, mothers);

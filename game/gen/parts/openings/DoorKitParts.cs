@@ -73,7 +73,7 @@ public sealed class DoorCloserPart() : OpeningPart<EquipmentParams>(new(140, 12)
     private protected override void Build(PartMesh mesh, EquipmentParams p, LodLevel lod)
     {
         if (lod >= LodLevel.L2) return;
-        const byte flags = NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var spec = Pick(p, OpeningStyle.DarkMetal);
         float w = p.Width * 0.5f, d = p.Depth * 0.5f;
         Solid.Box(mesh, spec, flags, -w, 0, -d, w, p.Height, d);
@@ -95,7 +95,7 @@ public sealed class DoorStopPart() : OpeningPart<EquipmentParams>(new(100, 24))
     private protected override void Build(PartMesh mesh, EquipmentParams p, LodLevel lod)
     {
         if (lod >= LodLevel.L2) return;
-        const byte flags = NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var spec = Pick(p, OpeningStyle.Metal);
         float w = p.Width * 0.5f, d = p.Depth * 0.5f, ins = OpeningStyle.Insert;
         var cap = Math.Min(0.025f, p.Height * 0.4f);
@@ -120,7 +120,7 @@ public sealed class DoorVisionPanelPart() : OpeningPart<WindowParams>(new(80, 40
     {
         if (lod >= LodLevel.L2) return;
         float w = p.Width * 0.5f, d = p.Depth * 0.5f;
-        Solid.Ring(mesh, Pick(p, OpeningStyle.Metal), NoShadow, -w - Bead, -Bead, w + Bead, p.Height + Bead, Bead + 0.008f, -d - Proud, d + Proud);
+        Solid.Ring(mesh, Pick(p, OpeningStyle.Metal), VertexFlag.NoShadow, -w - Bead, -Bead, w + Bead, p.Height + Bead, Bead + 0.008f, -d - Proud, d + Proud);
         var g = Math.Min(0.004f, d * 0.5f);
         Solid.Glass(mesh, 0, Place.Identity, -w - 0.004f, -0.004f, -g, w + 0.004f, p.Height + 0.004f, g, OpeningStyle.DoorCard, new Vector2(0, 32));
     }

@@ -14,12 +14,10 @@ namespace Campus.Gen.Maps.Qingshuihe.Boundary;
 /// is tagged <see cref="SurfaceTag.Boundary"/>. Pure .NET: reads the world model and the terrain only.
 /// </summary>
 
-
 [ContentModule("zone.boundary", Owner = "WP-30")]
 public sealed class BoundaryModule : ZoneModuleBase
 {
     public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.Windows, [], []);
-    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
     public BoundaryModule() : this(BoundarySites.All) { }
 

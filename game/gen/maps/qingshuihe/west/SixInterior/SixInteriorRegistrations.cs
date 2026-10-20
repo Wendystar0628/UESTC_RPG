@@ -8,20 +8,12 @@ using Campus.Contracts;
 
 namespace Campus.Gen.Maps.Qingshuihe.West.SixInterior;
 
-
-
 [InteriorProvider("interior.research-six", Owner = "WP-31b")]
 public sealed class SixCInteriorProvider : SixInteriorProvider
 {
-    public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World, [], [SceneTextInputs.AtlasKey]);
-    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 }
-
-
 
 [InteriorProvider("interior.research-six.b", Owner = "WP-31b")]
 public sealed class SixBInteriorProvider : SixInteriorProvider
 {
-    public override BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World, [], [SceneTextInputs.AtlasKey]);
-    public override BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 }

@@ -19,7 +19,7 @@ public static class FogSea
     private const float BankCrestAt = -0.35f;     // crest position, share of the inside width
     private static readonly float[] FarSteps = [1.6f, 2.6f, 4.2f, 6.5f];
 
-    public static GeometryBundle Build(FogSeaData fog, Vector2 centre, IReadOnlyList<Vector2>? cutLine, MapRectLike rect, uint seed)
+    public static IReadOnlyList<GeometryBundle> Build(FogSeaData fog, Vector2 centre, IReadOnlyList<Vector2>? cutLine, MapRectLike rect, uint seed)
     {
         var mesh = new MeshWriter(DioramaVertex.KindFogSea);
         var segments = fog.Segments;
@@ -66,7 +66,7 @@ public static class FogSea
             for (var k = count - 1; k < a.Length - 1; k++) mesh.Triangle(a[k], b[count - 1], a[k + 1]);
             for (var k = count - 1; k < b.Length - 1; k++) mesh.Triangle(a[count - 1], b[k + 1], b[k]);
         }
-        return mesh.Bundle(DioramaPalette.FogSea);
+        return mesh.Bundles(DioramaPalette.FogSea);
     }
 
     /// <summary>The bank profile across the edge: a mound rising out of the ground inside, its crest, then down to the sea top.</summary>

@@ -353,5 +353,4 @@ public static partial class MotherModels
 
     private readonly record struct Ids(ushort Leaf, ushort Bark);
 
-
 }

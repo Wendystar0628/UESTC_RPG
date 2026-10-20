@@ -20,9 +20,6 @@ public sealed class WaterModule : IWaterContentSource
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.ReflectLakes, [], []);
     public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
-    private readonly object _gate = new();
-    private (IWorldModel World, MapId Map, WaterSurfaces Surfaces)? _cache;
-
     public IReadOnlyList<Claim> Claims => [];
 
     // ENG-BUDGET water budget: 50 k main triangles, 45 draw calls, no shadow casting.
@@ -37,15 +34,6 @@ public sealed class WaterModule : IWaterContentSource
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod) =>
         Surfaces(ctx).Bundle(tile, lod) is { } bundle ? new([bundle], []) : ContentOutput.Empty;
 
-    private WaterSurfaces Surfaces(BuildContext ctx)
-    {
-        ArgumentNullException.ThrowIfNull(ctx);
-        lock (_gate)
-        {
-            if (_cache is { } c && ReferenceEquals(c.World, ctx.World) && c.Map == ctx.Map.Id) return c.Surfaces;
-            var surfaces = new WaterSurfaces(ctx.World, ctx.Map);
-            _cache = (ctx.World, ctx.Map.Id, surfaces);
-            return surfaces;
-        }
-    }
+    private static WaterSurfaces Surfaces(BuildContext ctx) =>
+        ctx.Memo(typeof(WaterModule), () => new WaterSurfaces(ctx.World, ctx.Map));
 }

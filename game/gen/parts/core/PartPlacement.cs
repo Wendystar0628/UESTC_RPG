@@ -63,7 +63,7 @@ public static class PartPlacement
     }
     private static void Count(int count)
     {
-        if (count < 0 || count > 65536) throw new ArgumentOutOfRangeException(nameof(count));
+        GeometryVertexLimits.Require(count);
     }
     private static void ValidateMatrix(Matrix4x4 m)
     {

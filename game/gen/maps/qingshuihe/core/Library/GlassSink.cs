@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 using Campus.Gen.Parts.Openings;
 
 namespace Campus.Gen.Maps.Qingshuihe.Core.Library;
@@ -12,75 +13,25 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Library;
 /// </summary>
 public sealed class GlassBatch(ToonSpec spec, PaletteCatalog palette, bool numbered)
 {
-    private const int MaxVertices = 65000;
-
-    private readonly List<float> _position = [], _normal = [], _uv = [], _uv2 = [];
-    private readonly List<byte> _card = [];
-    private readonly List<int> _index = [];
-    private readonly List<GeometryBundle> _done = [];
-
+    private readonly GeometrySink _sink = new(palette);
     public ToonSpec Spec { get; } = spec;
 
-    /// <summary>The batch's glass carries window numbering (UV, UV2); fixtures without a snapshot carry neither.</summary>
+    /// <summary>Only numbered windows carry UV and UV2; fixtures omit both channels.</summary>
     public bool Numbered { get; } = numbered;
 
-    public IReadOnlyList<GeometryBundle> Finish()
-    {
-        Flush();
-        return _done;
-    }
+    public IReadOnlyList<GeometryBundle> Finish() => _sink.Finish()
+        .Select(mesh => Numbered ? mesh : mesh with { Uv = null, Uv2 = null }).ToArray();
 
-    /// <summary>A cell bundle placed by <paramref name="frame"/> (a rigid row-vector placement keeps the winding).</summary>
-    internal void Append(GeometryBundle cell, Matrix4x4 frame)
-    {
-        var count = cell.Position.Length / 3;
-        if (_position.Count / 3 + count > MaxVertices) Flush();
-        var first = _position.Count / 3;
-        for (var k = 0; k < count; k++)
-        {
-            var p = Vector3.Transform(new(cell.Position[3 * k], cell.Position[3 * k + 1], cell.Position[3 * k + 2]), frame);
-            var n = Vector3.TransformNormal(new(cell.Normal[3 * k], cell.Normal[3 * k + 1], cell.Normal[3 * k + 2]), frame);
-            Vertex(p, n, new(cell.Uv![2 * k], cell.Uv[2 * k + 1]), new(cell.Uv2![2 * k], cell.Uv2[2 * k + 1]), cell.Reserved![k]);
-        }
-        foreach (var index in cell.Index) _index.Add(first + index);
-    }
+    internal void Append(GeometryBundle cell, Matrix4x4 frame) =>
+        _sink.Append(cell with { Material = new ToonRef(Spec) }, frame);
 
-    /// <summary>One triangle with its own UVs, wound to face <paramref name="outward"/>.</summary>
-    internal void Triangle(Vector3 a, Vector3 b, Vector3 c, Vector3 outward, Vector2 uva, Vector2 uvb, Vector2 uvc, Vector2 uv2, byte card)
+    internal void Triangle(Vector3 a, Vector3 b, Vector3 c, Vector3 outward,
+        Vector2 uva, Vector2 uvb, Vector2 uvc, Vector2 uv2, byte card)
     {
-        if (_position.Count / 3 + 3 > MaxVertices) Flush();
-        var i = _position.Count / 3;
-        Vertex(a, outward, uva, uv2, card);
-        Vertex(b, outward, uvb, uv2, card);
-        Vertex(c, outward, uvc, uv2, card);
-        int ib = i + 1, ic = i + 2;
-        if (Vector3.Dot(Vector3.Cross(b - a, c - a), outward) > 0f) (ib, ic) = (ic, ib);
-        _index.Add(i); _index.Add(ib); _index.Add(ic);
-    }
-
-    private void Vertex(Vector3 p, Vector3 n, Vector2 uv, Vector2 uv2, byte card)
-    {
-        _position.Add(p.X); _position.Add(p.Y); _position.Add(p.Z);
-        _normal.Add(n.X); _normal.Add(n.Y); _normal.Add(n.Z);
-        _uv.Add(uv.X); _uv.Add(uv.Y);
-        _uv2.Add(uv2.X); _uv2.Add(uv2.Y);
-        _card.Add(card);
-    }
-
-    private void Flush()
-    {
-        if (_index.Count == 0) return;
-        var count = _position.Count / 3;
-        var colour = palette.Resolve(Spec.Lit).Value;
-        var bundle = new GeometryBundle(new ToonRef(Spec), [.. _position], [.. _normal], [.. _index], Uv: Numbered ? [.. _uv] : null, Uv2: Numbered ? [.. _uv2] : null)
-        {
-            ColorIndices = Enumerable.Repeat(colour, count).ToArray(),
-            Flags = new byte[count],
-            Reserved = [.. _card],
-        };
-        bundle.ValidateVertexData();
-        _done.Add(bundle);
-        _position.Clear(); _normal.Clear(); _uv.Clear(); _uv2.Clear(); _card.Clear(); _index.Clear();
+        var color = _sink.ColorIndex(Spec.Lit);
+        _sink.Tri(Spec, new(a, outward, uva, uv2, ColorIndex: color, Reserved: card),
+            new(b, outward, uvb, uv2, ColorIndex: color, Reserved: card),
+            new(c, outward, uvc, uv2, ColorIndex: color, Reserved: card));
     }
 }
 

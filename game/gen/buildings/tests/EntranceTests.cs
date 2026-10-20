@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using Campus.Tests;
 using System.Numerics;
 using System.Text.Json;
@@ -169,7 +170,7 @@ public sealed class EntranceTests
         AssertThat(steps.Select(p => p.Part).SequenceEqual([PartCatalog.Platform, PartCatalog.Railing, PartCatalog.Railing, PartCatalog.Steps])).OverrideFailureMessage("Expected: " + ("landing, guard railings on its sides (over 1.0 m) and one flight")).IsTrue();
         var flight = (StairParams)steps[3].Params;
         AssertThat(MathF.Abs(flight.Height - 1.05f) < TestTolerance.Position && flight.Steps == 7 && flight.Variation == 0).OverrideFailureMessage("Expected: " + ($"1.05 m in 7 risers with cheek walls ({flight.Steps})")).IsTrue();
-        var sink = new Mesh.MeshSink(Campus.Contracts.Tests.PaletteFixture.Catalog);
+        var sink = new GeometrySink(Campus.Contracts.Tests.PaletteFixture.Catalog);
         EntranceKit.Build(sink, steps, LodLevel.L0);
         AssertThat(sink.Finish().Any(b => b.Material.Spec.Normal == ToonNormal.Smooth && b.Material.Spec.Lit.Value == "frame.alu.lit")).OverrideFailureMessage("Expected: " + ("handrails from 0.6 m (WP-11)")).IsTrue();
         foreach (var lod in Levels) foreach (var b in new BuildingsModule().BuildOne(dorm, set.Blocks[0], lod, Campus.Contracts.Tests.PaletteFixture.Catalog)) b.ValidateVertexData();

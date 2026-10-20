@@ -48,7 +48,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        if (ClusterLayout.Of(b.Context.World, Cluster) is not { } layout) return;
+        if (ClusterLayout.Of(b.Context, Cluster) is not { } layout) return;
         foreach (var run in layout.Runs) Fence(b, run);
         foreach (var gate in layout.Gates)
         {
@@ -258,7 +258,7 @@ public sealed class ClusterSite(NorthTune.Cluster cluster) : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        if (ClusterLayout.Of(c.Context.World, Cluster) is not { } layout) return;
+        if (ClusterLayout.Of(c.Context, Cluster) is not { } layout) return;
         foreach (var run in layout.Runs)
             for (var i = 0; i + 1 < run.Posts.Count; i++)
             {

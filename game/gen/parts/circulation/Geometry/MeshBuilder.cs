@@ -11,8 +11,6 @@ namespace Campus.Gen.Parts.Circulation.Geometry;
 /// </summary>
 internal sealed class MeshBuilder
 {
-    /// <summary>Vertex flag byte (contract VF-A): 8 = no shadow, for balusters, bars and other thin repeated items.</summary>
-    internal const byte NoShadow = 8;
     private const float BoundsTolerance = 0.01f;
 
     private sealed class Layer(ToonSpec material, byte flags)
@@ -46,7 +44,7 @@ internal sealed class MeshBuilder
             var layer = For(mesh.Material.Spec, flags);
             var offset = layer.Count;
             var count = mesh.Position.Length / 3;
-            if (offset + count > 65536) throw new ArgumentException("A part surface exceeds 65,536 vertices.");
+
             for (var i = 0; i < count; i++)
             {
                 var p = frame.Point(new(mesh.Position[3 * i], mesh.Position[3 * i + 1], mesh.Position[3 * i + 2]));
@@ -78,7 +76,7 @@ internal sealed class MeshBuilder
     {
         if (rings < 3 || segments < 6 || !(radii.X > 0 && radii.Y > 0 && radii.Z > 0)) throw new ArgumentException("An ellipsoid needs 3 rings, 6 segments and positive radii.");
         var layer = For(material, flags);
-        if (layer.Count + (rings - 1) * segments + 2 > 65536) throw new ArgumentException("A part surface exceeds 65,536 vertices.");
+
         Vector3 Normal(Vector3 unit) => VectorMath.Unit(new Vector3(unit.X / radii.X, unit.Y / radii.Y, unit.Z / radii.Z));
         Vector3 At(Vector3 unit) => new(centre.X + radii.X * unit.X, centre.Y + radii.Y * unit.Y, centre.Z + radii.Z * unit.Z);
         var top = Vertex(layer, frame, At(Vector3.UnitY), Vector3.UnitY, Vector2.Zero);
@@ -157,7 +155,7 @@ internal sealed class MeshBuilder
         Vector3 Pos(int i, Vector2 p) => new(path[i].X + miter[i].X * p.X, path[i].Y + p.Y, path[i].Z + miter[i].Z * p.X);
         Vector3 Lift(Vector3 lateral, Vector2 n2) => new(lateral.X * n2.X, n2.Y, lateral.Z * n2.X);
         var layer = For(material, flags);
-        if (layer.Count + segments * n * 4 + 2 * n > 65536) throw new ArgumentException("A part surface exceeds 65,536 vertices.");
+
         float along = 0;
         for (var s = 0; s < segments; s++)
         {
@@ -247,7 +245,7 @@ internal sealed class MeshBuilder
         }
         var layer = For(material, flags);
         var start = layer.Count;
-        if (start + 4 * n + 2 * n > 65536) throw new ArgumentException("A part surface exceeds 65,536 vertices.");
+
         float along = 0;
         for (var i = 0; i < n; i++)
         {
@@ -320,12 +318,8 @@ internal sealed class MeshBuilder
 
     private static void Triangle(Layer layer, int a, int b, int c, Vector3 outward)
     {
-        var pa = P(layer, a);
-        var direction = VectorMath.Dot(VectorMath.Cross(Vector3.Subtract(P(layer, b), pa), Vector3.Subtract(P(layer, c), pa)), outward);
-        if (!double.IsFinite(direction) || direction == 0)
-            throw new ArgumentException($"A face is degenerate: {pa} {P(layer, b)} {P(layer, c)} toward {outward}.");
-        // Godot's front face is clockwise seen from outside, i.e. the triangle's right-hand normal points inward.
-        layer.Index.Add(a); layer.Index.Add(direction < 0 ? b : c); layer.Index.Add(direction < 0 ? c : b);
+        var flip = GeometryWinding.Flip(P(layer, a), P(layer, b), P(layer, c), outward);
+        layer.Index.Add(a); layer.Index.Add(flip ? c : b); layer.Index.Add(flip ? b : c);
     }
 
     private static void Quad(Layer layer, int a, int b, int c, int d, Vector3 outward)
@@ -342,7 +336,7 @@ internal sealed class MeshBuilder
     internal PartGeometry Finish(Box3 bounds)
     {
         if (_layers.Count == 0) throw new InvalidOperationException("A part must contain geometry.");
-        var meshes = new List<GeometryBundle>(_layers.Count);
+        var sink = new GeometrySink();
         foreach (var layer in _layers)
         {
             var position = layer.Position.ToArray();
@@ -355,12 +349,13 @@ internal sealed class MeshBuilder
                     throw new InvalidOperationException($"Part geometry leaves its bounds on axis {axis}: {position[i]} not in [{lo}, {hi}].");
                 position[i] = Math.Clamp(position[i], lo, hi);
             }
-            var flags = layer.Flags == 0 ? null : Enumerable.Repeat(layer.Flags, layer.Count).ToArray();
-            var mesh = new GeometryBundle(new(layer.Material), position, layer.Normal.ToArray(), layer.Index.ToArray(), layer.Ao.ToArray(), layer.Uv.ToArray())
-            { Flags = flags };
-            mesh.ValidateVertexData();
-            meshes.Add(mesh);
+            var vertices = new GeometryVertex[layer.Count];
+            for (var i = 0; i < vertices.Length; i++)
+                vertices[i] = new(new(position[3 * i], position[3 * i + 1], position[3 * i + 2]),
+                    new(layer.Normal[3 * i], layer.Normal[3 * i + 1], layer.Normal[3 * i + 2]),
+                    new Vector2(layer.Uv[2 * i], layer.Uv[2 * i + 1]), Ao: layer.Ao[i], Flags: layer.Flags == 0 ? null : layer.Flags);
+            sink.Polygon(layer.Material, vertices, layer.Index);
         }
-        return new(meshes, bounds);
+        return new(sink.Finish(), bounds);
     }
 }

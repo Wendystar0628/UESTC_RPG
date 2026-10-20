@@ -40,7 +40,7 @@ public sealed class BakedSurface
         ArgumentNullException.ThrowIfNull(material.Spec);
         material.Spec.ValidateSurfacePattern();
         if (!Enum.IsDefined(primitive)) throw new ArgumentOutOfRangeException(nameof(primitive));
-        if (vertexCount is < 0 or > 65536) throw new ArgumentOutOfRangeException(nameof(vertexCount));
+        GeometryVertexLimits.Require(vertexCount);
         if (vertexCount > 0 && vertexData.IsEmpty) throw new ArgumentException("A non-empty surface needs vertex bytes.", nameof(vertexData));
         BakeData.ValidateIndexLength(indexCount, indexData.Length);
         BakeData.ValidateIndices(indexData.Span, vertexCount);

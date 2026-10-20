@@ -58,6 +58,26 @@ public interface IContentModule
 
 public sealed class BuildContext
 {
+    private readonly Dictionary<(Type Type, object Key), Lazy<object?>> _memo = [];
+
+    /// <summary>Remembers a pure derived value for this frozen context; factories execute once, including null results.</summary>
+    public T Memo<T>(object key, Func<T> create)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(create);
+        Lazy<object?> value;
+        lock (_memo)
+        {
+            var entry = (typeof(T), key);
+            if (!_memo.TryGetValue(entry, out value!))
+            {
+                value = new Lazy<object?>(() => create(), LazyThreadSafetyMode.ExecutionAndPublication);
+                _memo.Add(entry, value);
+            }
+        }
+        return (T)value.Value!;
+    }
+
     public required IWorldModel World { get; init; }
     public required MapDescriptor Map { get; init; }
     public required uint WorldSeed { get; init; }
@@ -106,17 +126,15 @@ public sealed class BuildContext
     public BuildInputSnapshot GlobalInputs { get; init; } = BuildInputSnapshot.Empty;
     /// <summary>Read-only map-filtered optional content capabilities. The caller validates exclusive channel claims before any painting.</summary>
     public IReadOnlyList<IGroundMaskContributor> GroundMaskContributors { get; init; } = [];
-    /// <summary>Fingerprint of inputs affecting this build, computed by the caller. Empty only for development fixtures.</summary>
-    public string DataHash { get; init; } = "";
     /// <summary>Fingerprint of this producer and its shared generation dependencies, computed by the caller.</summary>
     public string CodeHash { get; init; } = "";
     /// <summary>Retains this producer's frozen inputs while using its prepared cold-asset world.</summary>
-    public BuildContext WithWorld(IWorldModel world) => new()
+    public BuildContext WithWorld(IWorldModel world) => ReferenceEquals(World, world) ? this : new()
     {
         World = world, Map = Map, WorldSeed = WorldSeed, WindowNumbering = WindowNumbering, InteriorLayouts = InteriorLayouts,
         PartLods = PartLods, InteriorProviders = InteriorProviders, Catalog = Catalog, ClaimedBy = ClaimedBy,
         SourceInputs = SourceInputs, GlobalInputs = GlobalInputs, GroundMaskContributors = GroundMaskContributors,
-        DataHash = DataHash, CodeHash = CodeHash
+        CodeHash = CodeHash
     };
     public Rng Seeded(FeatureId feature, PartId part, string purpose) =>
         new(StableHash.Hash32(WorldSeed, feature.Value, part.Value, purpose));
@@ -155,6 +173,27 @@ public sealed record MeshLod(float Error, int[] Index)
         if (count < 0 || count > index.Length || count % 3 != 0)
             throw new ArgumentOutOfRangeException(nameof(count), "Index prefix must contain complete triangles.");
         return new(error, index[..count]);
+    }
+}
+
+/// <summary>Input VF-A bits; packed colour-bank bits are owned by the encoder.</summary>
+public static class VertexFlag
+{
+    public const byte Interior = 1;
+    public const byte Outskirts = 2;
+    public const byte Decal = 4;
+    public const byte NoShadow = 8;
+}
+
+/// <summary>Unsigned-16-bit surface capacity and the generator's smaller batch target.</summary>
+public static class GeometryVertexLimits
+{
+    public const int Maximum = ushort.MaxValue + 1;
+    public const int Batch = 65000;
+
+    public static void Require(int count)
+    {
+        if (count < 0 || count > Maximum) throw new ArgumentOutOfRangeException(nameof(count));
     }
 }
 
@@ -224,6 +263,7 @@ public sealed record GeometryBundle(
         ArgumentNullException.ThrowIfNull(Index);
         if (Position.Length % 3 != 0) throw new ArgumentException("Position must have 3 floats per vertex.", nameof(Position));
         var count = Position.Length / 3;
+        GeometryVertexLimits.Require(count);
         RequireLength(Normal, Position.Length, nameof(Normal));
         RequireLength(Ao, count, nameof(Ao));
         RequireLength(Uv, checked(count * 2), nameof(Uv));
@@ -250,7 +290,7 @@ public sealed record GeometryBundle(
             throw new ArgumentException("ColorIndices must be in [0, 511].", nameof(ColorIndices));
         if (DecalBaseColorIndices is not null)
         {
-            if (Reserved is not null || Flags is null || Flags.Any(value => (value & PaletteEncoding.DecalFlag) == 0))
+            if (Reserved is not null || Flags is null || Flags.Any(value => (value & VertexFlag.Decal) == 0))
                 throw new ArgumentException("DecalBaseColorIndices requires an all-decal surface and Reserved=null.", nameof(DecalBaseColorIndices));
             if (DecalBaseColorIndices.Any(value => value >= PaletteLayout.Capacity))
                 throw new ArgumentException("DecalBaseColorIndices must be in [0, 511].", nameof(DecalBaseColorIndices));
@@ -272,9 +312,7 @@ public sealed record GeometryBundle(
         if (Shader is not null || Variant is not null ||
             Custom0 is not null || Custom1 is not null || Custom2 is not null || DecalBaseColorIndices is not null)
             throw new ArgumentException("Surface patterns cannot reinterpret shader, variant, decal or custom payloads.");
-        // Existing VF-A semantic bits: interior=1 (above), decal=PaletteEncoding.DecalFlag.
-        const byte interiorFlag = 1;
-        if (Flags is not null && Flags.Any(value => (value & (interiorFlag | PaletteEncoding.DecalFlag)) != 0))
+        if (Flags is not null && Flags.Any(value => (value & (VertexFlag.Interior | VertexFlag.Decal)) != 0))
             throw new ArgumentException("Surface patterns require ordinary outdoor, non-decal faces.", nameof(Flags));
         if (Uv is null || Uv2 is null)
             throw new ArgumentException("Surface patterns require metre UV and explicit gate/K UV2 on every vertex.");

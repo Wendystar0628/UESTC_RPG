@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using Campus.Gen.Parts.Roof;
 using Campus.Gen.Parts.Openings;
 using Campus.Gen.Parts.Circulation;
@@ -52,7 +53,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
 
     public IEnumerable<TileKey> Tiles(BuildContext ctx)
     {
-        var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
+        var set = BuildingSet.For(ctx);
         return set.Plans.Where(p => Unclaimed(ctx, p)).Select(p => p.Tile(LodLevel.L0)).Distinct()
             .OrderBy(t => t.X).ThenBy(t => t.Z).ToArray();
     }
@@ -60,7 +61,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     public ContentOutput Build(BuildContext ctx, TileKey tile, LodLevel lod)
     {
         ArgumentNullException.ThrowIfNull(ctx);
-        var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
+        var set = BuildingSet.For(ctx);
         WindowNumberingSnapshot? numbering = null;
         var meshes = new List<GeometryBundle>();
         var windows = new List<WindowDecl>();
@@ -133,7 +134,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
         ArgumentNullException.ThrowIfNull(context);
         var numbering = WindowNumbering.For(context);
         var windows = new List<WindowDecl>();
-        foreach (var plan in BuildingSet.For(context.World, context.WorldSeed).Plans)
+        foreach (var plan in BuildingSet.For(context).Plans)
             if (Unclaimed(context, plan)) windows.AddRange(FacadeOpenings.Declarations(plan, WindowNumbering.BlockOf(numbering, plan)));
         return new WindowMetadata([], windows);
     }
@@ -141,7 +142,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     /// <summary>One building at one level, as its own bundles (the baker merges per material and block).</summary>
     public IReadOnlyList<GeometryBundle> BuildOne(BuildingPlan plan, WindowBlock block, LodLevel lod, PaletteCatalog catalog)
     {
-        var sink = new MeshSink(catalog);
+        var sink = new GeometrySink(catalog);
         new BuildingMesher(plan, block, lod, sink).Build();
         return sink.Finish();
     }
@@ -153,7 +154,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     /// </summary>
     public IReadOnlyList<Collider> Collide(BuildContext ctx, TileKey tile)
     {
-        var set = BuildingSet.For(ctx.World, ctx.WorldSeed);
+        var set = BuildingSet.For(ctx);
         return set.Plans.Where(plan => Unclaimed(ctx, plan) && plan.Tile(LodLevel.L0) == tile)
             .SelectMany(plan => CollideOne(ctx, plan)).ToList();
     }
@@ -194,7 +195,7 @@ public sealed class BuildingsModule : IContentModule, IWindowNumberingProvider, 
     public IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel level)
     {
         ArgumentNullException.ThrowIfNull(context);
-        var set = BuildingSet.For(context.World, context.WorldSeed);
+        var set = BuildingSet.For(context);
         WindowNumberingSnapshot? numbering = null;
         foreach (var plan in set.Plans)
         {

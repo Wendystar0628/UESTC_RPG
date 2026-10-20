@@ -1,3 +1,4 @@
+using Campus.Gen.Sites;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using System.Text.Json;
@@ -27,7 +28,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Library;
 /// the map's allocation of that grid; nothing here numbers windows itself.
 /// </para>
 /// </summary>
-public sealed class LibraryShell : ICorePiece, IWindowedPiece
+public sealed class LibraryShell : ZoneSite, IWindowedPiece
 {
     /// <summary>Key of the library's single window grid in the map's WindowNumberingSnapshot.</summary>
     public const string WindowKey = "library-shell";
@@ -99,7 +100,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     /// The cafe walk as WP-15 paves a footway: pavers at the paving level (terrain + 0.15, 5 cm over the lawn), a granite
     /// edging band along each side and the 5 cm edge face down to the lawn.
     /// </summary>
-    private void CafeWalkMesh(CoreMesh mesh)
+    private void CafeWalkMesh(GeometrySink mesh)
     {
         if (CafeWalk is not { } w) return;
         var along = Vector2.Normalize(w.B - w.A);
@@ -118,9 +119,10 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
         }
     }
 
-    public string Id => "library-shell";
+    public override string Id => "library-shell";
     public Vector2 Anchor => Plan.Centre;
-    public IReadOnlyList<Claim> Claims { get; } = [new FeatureClaim(CoreIds.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public static IReadOnlyList<Claim> DeclaredClaims { get; } = [new FeatureClaim(CoreIds.Library, Aspects.Massing | Aspects.Facade | Aspects.Roof)];
+    public override IReadOnlyList<Claim> Claims => DeclaredClaims;
 
     public LibraryPlan Plan { get; }
     public IReadOnlyList<Opening> Openings => _openings;
@@ -299,7 +301,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
         int? windowBase = build.WindowNumbering is { } numbering ? Allocation(numbering).BaseId : null;
         var glass = build.Glass(S.WindowGlass, windowBase, Columns, S.LibraryWindowChannel);
         var clear = build.Glass(S.ClearGlass, windowBase, Columns, S.LibraryWindowChannel);
-        var landmark = new CoreMesh(build.Palette);
+        var landmark = new GeometrySink(build.Palette);
         Walls(mesh, lod);
         foreach (var o in _openings)
             LibraryFacade.Window(o.Kind == OpeningKind.Slot ? landmark : mesh, o.Kind == OpeningKind.Slot ? clear : glass, o, lod);
@@ -323,7 +325,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
         build.Bundles.AddRange(landmark.Finish());
     }
 
-    private void Walls(CoreMesh mesh, LodLevel lod)
+    private void Walls(GeometrySink mesh, LodLevel lod)
     {
         var wall = S.Wall(S.LibraryWall);
         var byPiece = _openings.ToLookup(o => o.Face);
@@ -336,7 +338,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>Plinth band on every ground-standing piece and a string course at each inner floor line of the wings.</summary>
-    private void Bands(CoreMesh mesh)
+    private void Bands(GeometrySink mesh)
     {
         var trim = S.Trim(S.LibraryTrim);
         foreach (var piece in Plan.Pieces)
@@ -365,7 +367,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>Parapets with copings on the podium, wings and towers; the canted eave on the set-back 5F.</summary>
-    private void Tops(CoreMesh mesh)
+    private void Tops(GeometrySink mesh)
     {
         var wall = S.Wall(S.LibraryWall);
         var trim = S.Trim(S.LibraryTrim);
@@ -424,7 +426,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>Top surfaces: the podium terrace in light paving, every other roof dark grey, the core open over the atrium.</summary>
-    private void Caps(CoreMesh mesh)
+    private void Caps(GeometrySink mesh)
     {
         foreach (var block in Plan.Blocks)
         {
@@ -444,7 +446,7 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
     }
 
     /// <summary>The raised mechanical box north of the skylight: walls with two rows of small windows, coping, roof.</summary>
-    private void Mech(CoreMesh mesh, GlassSink glass, LodLevel lod)
+    private void Mech(GeometrySink mesh, GlassSink glass, LodLevel lod)
     {
         var wall = S.Wall(S.LibraryWall);
         float y0 = Plan.RoofY - 0.02f, y1 = Plan.RoofY + S.MechHeight;
@@ -551,6 +553,41 @@ public sealed class LibraryShell : ICorePiece, IWindowedPiece
         yield return Wall(P(h.U0, s), P(d0 + leaf, s), y, top);
         yield return Wall(P(d1 - leaf, s), P(h.U1, s), y, top);
         yield return Wall(P(d0 + leaf, s), P(d1 - leaf, s), doorTop, top);
+    }
+
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        CoreRanges.ForFeature(world, CoreIds.Library) is { } range ? [range] : [];
+
+    public override void Build(SiteBuilder builder)
+    {
+        if (!builder.Includes(Anchor)) return;
+        var build = CoreBuild.For(builder.Context);
+        Build(build, builder.Lod);
+        var output = build.Finish(builder.Lod);
+        foreach (var mesh in output.Meshes) builder.Add(mesh, System.Numerics.Matrix4x4.Identity, Anchor);
+        foreach (var part in output.Parts) builder.Place(part, Anchor);
+        foreach (var emitter in output.Emitters ?? []) builder.Light(emitter, Anchor);
+    }
+
+    public override void Collide(SiteColliders colliders)
+    {
+        if (!colliders.Includes(Anchor)) return;
+        foreach (var collider in Collide()) colliders.Add(collider, Anchor);
+    }
+
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
+    {
+        var build = CoreBuild.For(context);
+        Build(build, lod);
+        yield return new($"core/{Id}", CoreIds.Library, build.Finish(lod), Collide(), []);
+    }
+
+    public override IEnumerable<(FeatureId Feature, WindowGridSpec Grid)> WindowGrids(IWorldModel world) =>
+        WindowLayout.Grids.Select(grid => (WindowLayout.Feature, grid));
+
+    public override void DescribeWindows(BuildContext context, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
+    {
+        foreach (var window in Windows(context.WindowNumbering!)) windows.Add(window);
     }
 
 }

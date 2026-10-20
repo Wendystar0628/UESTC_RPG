@@ -44,7 +44,6 @@ public sealed record FenceRun(IReadOnlyList<Vector2> Line, RunEnd Start, RunEnd 
         return posts;
     }
 
-
 }
 
 public static class BoundaryFence

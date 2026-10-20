@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -50,9 +49,9 @@ public sealed class SouthGateSite : ZoneSite
             : (IslandEastX + IslandWidth * 0.5f, HouseX - HouseSize * 0.5f);
     }
 
-    private static readonly ConditionalWeakTable<IWorldModel, Layout> Layouts = new();
+    internal static Layout LayoutOf(IWorldModel world) => Read(world);
 
-    internal static Layout LayoutOf(IWorldModel world) => Layouts.GetValue(world, Read);
+    internal static Layout LayoutOf(BuildContext context) => context.Memo(typeof(Layout), () => LayoutOf(context.World));
 
     private static Layout Read(IWorldModel world)
     {
@@ -98,7 +97,7 @@ public sealed class SouthGateSite : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        var g = LayoutOf(b.Context.World);
+        var g = LayoutOf(b.Context);
         var y = b.Ground(g.Frame.Origin);
         foreach (var side in new[] { -1, 1 }) GuardHouse(b, g, side, y);
         foreach (var x in new[] { g.IslandWestX, g.IslandEastX }) Island(b, g, x, y);
@@ -168,7 +167,7 @@ public sealed class SouthGateSite : ZoneSite
 
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
-        var g = LayoutOf(ctx.World);
+        var g = LayoutOf(ctx);
         WindowNumbers.Declare(windows, Openings(g, ctx.World.Terrain.HeightAt(g.Frame.Origin.X, g.Frame.Origin.Y)), Allocation(ctx, true)!.Value, W.AllNight);
     }
 
@@ -330,7 +329,7 @@ public sealed class SouthGateSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        var g = LayoutOf(c.Context.World);
+        var g = LayoutOf(c.Context);
         var y = c.Ground(g.Frame.Origin.X, g.Frame.Origin.Y);
         // Guard houses: their four walls are part of the closure.
         foreach (var side in new[] { -1, 1 })

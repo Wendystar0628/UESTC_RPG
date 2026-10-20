@@ -13,7 +13,7 @@ public static partial class PartGeometryKernel
         GeometryMath.Positive(width, nameof(width)); GeometryMath.Positive(height, nameof(height)); GeometryMath.Positive(depth, nameof(depth));
         ValidateBevel(bevel, Math.Min(width, Math.Min(height, depth)) * 0.5f);
         if (bevel == 0) return Extrude(new PolygonRings([new(-width / 2, -depth / 2), new(width / 2, -depth / 2), new(width / 2, depth / 2), new(-width / 2, depth / 2)]), height, material);
-        var writer = new GeometryWriter(material);
+        var writer = new MeshWriter(material);
         float[] half = [width * 0.5f, height * 0.5f, depth * 0.5f];
         var lookup = new int[3, 8];
         for (var axis = 0; axis < 3; axis++)
@@ -87,7 +87,7 @@ public static partial class PartGeometryKernel
             if (((double)inset[j].X - inset[i].X) * (ring[j].X - ring[i].X) + ((double)inset[j].Y - inset[i].Y) * (ring[j].Y - ring[i].Y) <= 0)
                 throw new ArgumentException("Bevel collapses an edge.", nameof(bevel));
         }
-        var writer = new GeometryWriter(material);
+        var writer = new MeshWriter(material);
         AddCap(writer, cap, new(0, baseY, 0), Vector3.UnitX, Vector3.UnitZ, Vector3.UnitY, 0, -Vector3.UnitY);
         AddCap(writer, cap, new(0, baseY, 0), Vector3.UnitX, Vector3.UnitZ, Vector3.UnitY, height, Vector3.UnitY);
         for (var i = 0; i < ring.Length; i++)
@@ -105,7 +105,7 @@ public static partial class PartGeometryKernel
     {
         GeometryMath.Positive(depth, nameof(depth));
         if (!VectorMath.Finite(origin)) throw new ArgumentException("Coordinates must be finite.", nameof(origin));
-        var polygon = PolygonTriangulator.Triangulate(rings); var writer = new GeometryWriter(material);
+        var polygon = PolygonTriangulator.Triangulate(rings); var writer = new MeshWriter(material);
         AddCap(writer, polygon, origin, u, v, axis, 0, Vector3.Multiply(axis, -1));
         AddCap(writer, polygon, origin, u, v, axis, depth, axis);
         for (var r = 0; r < polygon.RingStarts.Length; r++)
@@ -124,13 +124,13 @@ public static partial class PartGeometryKernel
         }
         return writer.Finish();
     }
-    private static void AddCap(GeometryWriter writer, TriangulatedPolygon polygon, Vector3 origin, Vector3 u, Vector3 v, Vector3 axis, float depth, Vector3 normal)
+    private static void AddCap(MeshWriter writer, TriangulatedPolygon polygon, Vector3 origin, Vector3 u, Vector3 v, Vector3 axis, float depth, Vector3 normal)
     {
         var vertices = new int[polygon.Vertices.Length];
         for (var i = 0; i < vertices.Length; i++) vertices[i] = writer.Vertex(GeometryMath.Point(polygon.Vertices[i], origin, u, v, axis, depth), normal, polygon.Vertices[i]);
         for (var i = 0; i < polygon.Indices.Length; i += 3) writer.Triangle(vertices[polygon.Indices[i]], vertices[polygon.Indices[i + 1]], vertices[polygon.Indices[i + 2]], normal);
     }
-    private static void AddStrip(GeometryWriter writer, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 lowerNormal, Vector3 upperNormal, Vector3 outward, float visibility = 1)
+    private static void AddStrip(MeshWriter writer, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 lowerNormal, Vector3 upperNormal, Vector3 outward, float visibility = 1)
     {
         var length = (float)Math.Sqrt(VectorMath.Dot(Vector3.Subtract(b, a), Vector3.Subtract(b, a)));
         var height = (float)Math.Sqrt(VectorMath.Dot(Vector3.Subtract(d, a), Vector3.Subtract(d, a)));

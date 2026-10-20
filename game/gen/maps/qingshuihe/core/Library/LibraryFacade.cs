@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Gen.Parts.Core;
@@ -60,14 +61,14 @@ public readonly record struct FacadePaints(Paint Wall, Paint Trim, Paint Frame)
 public static class LibraryFacade
 {
     /// <summary>A vertical quad in the plane s, facing <paramref name="normal"/>.</summary>
-    public static void Panel(CoreMesh mesh, in Paint paint, Face f, float u0, float u1, float s, float y0, float y1, Vector3 normal)
+    public static void Panel(GeometrySink mesh, in Paint paint, Face f, float u0, float u1, float s, float y0, float y1, Vector3 normal)
     {
         if (u1 - u0 < 1e-4f || y1 - y0 < 1e-4f) return;
         mesh.Quad(paint, f.At(u0, s, y0), f.At(u1, s, y0), f.At(u1, s, y1), f.At(u0, s, y1), normal);
     }
 
     /// <summary>A box in face coordinates: front, top, bottom and the two ends (the back stands against the wall).</summary>
-    public static void Box(CoreMesh mesh, in Paint paint, Face f, float u0, float u1, float s0, float s1, float y0, float y1)
+    public static void Box(GeometrySink mesh, in Paint paint, Face f, float u0, float u1, float s0, float s1, float y0, float y1)
     {
         if (u1 - u0 < 1e-4f || s1 - s0 < 1e-4f || y1 - y0 < 1e-4f) return;
         Panel(mesh, paint, f, u0, u1, s1, y0, y1, f.N);
@@ -81,7 +82,7 @@ public static class LibraryFacade
     /// The wall face from u0 to u1 and y0 to y1 with rectangular holes: cut into horizontal bands at every hole edge,
     /// each band filled between the holes that span it.
     /// </summary>
-    public static void Wall(CoreMesh mesh, in Paint paint, Face f, float u0, float u1, float y0, float y1, IReadOnlyList<Rect> holes)
+    public static void Wall(GeometrySink mesh, in Paint paint, Face f, float u0, float u1, float y0, float y1, IReadOnlyList<Rect> holes)
     {
         var ys = new List<float> { y0, y1 };
         foreach (var h in holes)
@@ -110,10 +111,10 @@ public static class LibraryFacade
     /// mullions between the cells and transoms between the rows; L1 the frame ring and mullions. L2 and coarser: the
     /// wall stays closed and the glass lies a little proud of it, one pane per cell (L2) or per row (L3, L4).
     /// </summary>
-    public static void Window(CoreMesh mesh, GlassSink glass, Opening o, LodLevel lod) => Window(mesh, glass, o, lod, FacadePaints.Library);
+    public static void Window(GeometrySink mesh, GlassSink glass, Opening o, LodLevel lod) => Window(mesh, glass, o, lod, FacadePaints.Library);
 
     /// <summary>The same opening in another building's paints (16d-2: the museum's granite reveals and dark frames).</summary>
-    public static void Window(CoreMesh mesh, GlassSink glass, Opening o, LodLevel lod, in FacadePaints paints)
+    public static void Window(GeometrySink mesh, GlassSink glass, Opening o, LodLevel lod, in FacadePaints paints)
     {
         var f = o.Face;
         var h = o.Hole;
@@ -194,7 +195,7 @@ public static class LibraryFacade
     /// Sweeps a section along chained wall pieces (each chain one polyline, closed when it comes back to its start);
     /// lateral +X of the section is the pieces' outward side. A chain the kernel cannot miter is swept piece by piece.
     /// </summary>
-    public static void Sweep(CoreMesh mesh, in Paint paint, IReadOnlyList<IReadOnlyList<Vector2>> chains, IReadOnlyList<bool> closed,
+    public static void Sweep(GeometrySink mesh, in Paint paint, IReadOnlyList<IReadOnlyList<Vector2>> chains, IReadOnlyList<bool> closed,
         SweepProfile profile, float baseY)
     {
         var spec = S.Spec(paint.Material, paint.Family);

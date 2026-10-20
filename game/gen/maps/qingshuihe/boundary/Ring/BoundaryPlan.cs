@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Gen.Maps.Qingshuihe.Boundary.Fence;
 using Campus.Gen.Maps.Qingshuihe.Boundary.Framework;
@@ -32,8 +31,6 @@ public sealed record Opening(string Key, OpeningKind Kind, float Start, float Le
 /// </summary>
 public sealed class BoundaryPlan
 {
-    private static readonly ConditionalWeakTable<IWorldModel, BoundaryPlan> Cache = new();
-    private static readonly object Sync = new();
 
     private BoundaryPlan(BoundaryRing ring, IReadOnlyList<Opening> openings, IReadOnlyList<FenceRun> runs, IReadOnlyList<GateLayout> gates,
         IReadOnlyList<(float Start, float Length, IReadOnlyList<Vector2> Line)> detours)
@@ -61,18 +58,10 @@ public sealed class BoundaryPlan
     /// <summary>Inset plan points of an opening's two ends (on the fence line).</summary>
     public (Vector2 A, Vector2 B) Ends(Opening o) => (Ring.Slice(o.Start, 0f, F.Inset)[0], Ring.Slice(o.Start + o.Length, 0f, F.Inset)[0]);
 
-    public static BoundaryPlan? Of(IWorldModel world)
-    {
-        ArgumentNullException.ThrowIfNull(world);
-        if (world.Boundary.Outer.Count < 3) return null;
-        lock (Sync)
-        {
-            if (Cache.TryGetValue(world, out var found)) return found;
-            var plan = Build(world);
-            Cache.AddOrUpdate(world, plan);
-            return plan;
-        }
-    }
+    public static BoundaryPlan? Of(IWorldModel world) => world.Boundary.Outer.Count < 3 ? null : Build(world);
+
+    public static BoundaryPlan? Of(BuildContext context) =>
+        context.Memo(typeof(BoundaryPlan), () => Of(context.World));
 
     private static BoundaryPlan Build(IWorldModel world)
     {

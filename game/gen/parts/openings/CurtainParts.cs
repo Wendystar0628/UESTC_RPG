@@ -40,7 +40,7 @@ public sealed class CurtainPart() : OpeningPart<PanelParams>(new(900, 300))
     private protected override void Build(PartMesh mesh, PanelParams p, LodLevel lod)
     {
         if (lod >= LodLevel.L2) return;
-        const byte flags = NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var fabric = Pick(p, OpeningStyle.Fabric);
         var rail = OpeningStyle.CurtainRail;
         var w = p.Width * 0.5f;
@@ -77,7 +77,7 @@ public sealed class PvcCurtainPart() : OpeningPart<PanelParams>(new(160, 100))
     private protected override void Build(PartMesh mesh, PanelParams p, LodLevel lod)
     {
         if (lod >= LodLevel.L2) return;
-        const byte flags = NoShadow;
+        const byte flags = VertexFlag.NoShadow;
         var w = p.Width * 0.5f;
         var rail = 0.05f;
         Solid.Box(mesh, OpeningStyle.Metal, flags, -w, p.Height - rail, -0.025f, w, p.Height, 0.025f);

@@ -1,6 +1,5 @@
 using Campus.Gen.Geometry;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Campus.Contracts;
 using Campus.Contracts.Audio;
 using Campus.Contracts.Parts;
@@ -27,8 +26,6 @@ namespace Campus.Gen.Maps.Qingshuihe.CenterEast.Wenke;
 /// </summary>
 public sealed class WenkeSite : ZoneSite
 {
-    private static readonly ConditionalWeakTable<IWorldModel, Plan> Plans = new();
-    private static readonly object Sync = new();
 
     public override string Id => "21c.wenke";
 
@@ -88,16 +85,10 @@ public sealed class WenkeSite : ZoneSite
         return PlanMath.Facing(props.Pair("door"), props.Number("doorFacing"));
     }
 
-    internal static Plan Footprints(IWorldModel world)
-    {
-        lock (Sync)
-        {
-            if (Plans.TryGetValue(world, out var cached)) return cached;
-            var plan = Compute(world);
-            Plans.AddOrUpdate(world, plan);
-            return plan;
-        }
-    }
+    internal static Plan Footprints(IWorldModel world) => Compute(world);
+
+    internal static Plan Footprints(BuildContext context) =>
+        context.Memo(typeof(Plan), () => Footprints(context.World));
 
     private static Plan Compute(IWorldModel world)
     {
@@ -175,7 +166,7 @@ public sealed class WenkeSite : ZoneSite
     public override void DescribeWindows(BuildContext ctx, ICollection<WindowFacadeDecl> facades, ICollection<WindowDecl> windows)
     {
         var y = BaseY(ctx);
-        foreach (var block in Footprints(ctx.World).Blocks.Where(b => b.Windowed))
+        foreach (var block in Footprints(ctx).Blocks.Where(b => b.Windowed))
         {
             var allocation = WindowNumbers.Required(ctx, new(CenterEastIds.Wenke.Entity), block.Key);
             WindowNumbers.Fit(block.Columns, block.Storeys, new(CenterEastIds.Wenke.Entity), block.Key, allocation);
@@ -204,7 +195,7 @@ public sealed class WenkeSite : ZoneSite
 
     public override void Build(SiteBuilder b)
     {
-        var plan = Footprints(b.Context.World);
+        var plan = Footprints(b.Context);
         var y = BaseY(b.Context);
         foreach (var block in plan.Blocks.Where(block => b.Includes(BlockRange(b.Context.World, block.Part)))) BuildBlock(b, plan, block, y);
         if (b.Includes(PorchRange(b.Context.World))) Porch(b, Door(b.Context.World), y);
@@ -494,7 +485,7 @@ public sealed class WenkeSite : ZoneSite
 
     public override void Collide(SiteColliders c)
     {
-        var plan = Footprints(c.Context.World);
+        var plan = Footprints(c.Context);
         var y = BaseY(c.Context);
         foreach (var block in plan.Blocks.Where(block => c.Includes(BlockRange(c.Context.World, block.Part))))
         {

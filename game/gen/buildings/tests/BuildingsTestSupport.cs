@@ -95,6 +95,7 @@ internal static class BuildingsTestSupport
         Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
         World = world,
         Map = TestMap,
+        SourceInputs = Campus.Tests.RealMapFixture.WindowInputs(TestMap.Id),
         WorldSeed = seed,
         WindowNumbering = numbering,
         ClaimedBy = (feature, aspect) => aspect == Aspects.Facade && claims?.Contains(feature.Value) == true ? new WpId("WP-18") : null,
@@ -106,6 +107,7 @@ internal static class BuildingsTestSupport
         Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog,
         World = ctx.World,
         Map = ctx.Map,
+        SourceInputs = ctx.SourceInputs,
         WorldSeed = ctx.WorldSeed,
         ClaimedBy = ctx.ClaimedBy,
         WindowNumbering = new BuildingsModule().PrepareWindowNumbering(ctx, []),
@@ -157,12 +159,7 @@ internal static class BuildingsTestSupport
 
     internal static FakeWorld World(ZonedFidelity zones, params WorldFeature[] features)
     {
-        var map = features.ToDictionary(f => f.Id);
-        return Of(features, fidelity: new FakeFidelity(building =>
-        {
-            var ring = ((PolygonGeometry)map[building].Geometry).Rings.Outer;
-            return [.. ring.Select((a, i) => new FacadeSegment(building, i, a, ring[(i + 1) % ring.Count], zones.Zone, zones.Ground))];
-        }, zones.Roof));
+        return Of(features, fidelity: FidelityFixture.Create(features, zones.Zone, zones.Ground, zones.Roof));
     }
 
     /// <summary>Every footprint edge one segment: Zone above the ground band, Ground within it; roofs in Roof.</summary>
@@ -189,7 +186,7 @@ internal static class BuildingsTestSupport
             Spatial = new FlatSpatial(candidates: map),
             Interiors = interiors ?? new FakeInteriors(),
             Terrain = terrain ?? FlatTerrain.Default,
-            Fidelity = fidelity,
+            Fidelity = fidelity ?? FidelityFixture.Create(features),
         };
     }
 }

@@ -13,7 +13,6 @@ public sealed class FaunaModule : IFaunaContentSource
     public BakeInputDependencies BakeInputs { get; } = new(BakeInputKinds.World | BakeInputKinds.ReflectLakes, [], []);
     public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
 
-    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<BuildContext, FaunaLayout> _layouts = new();
     public IReadOnlyList<Claim> Claims => [];
 
     // Animals are mounted from their prepared states, with no static streamed tile geometry.
@@ -21,8 +20,8 @@ public sealed class FaunaModule : IFaunaContentSource
     public IEnumerable<TileKey> Tiles(BuildContext context) => [];
     public ContentOutput Build(BuildContext context, TileKey tile, LodLevel lod) => ContentOutput.Empty;
 
-    private FaunaLayout Layout(BuildContext context) => _layouts.GetValue(context,
-        ctx => FaunaPlanner.Plan(ctx.World, ctx.WorldSeed, ctx.Map.Env.ReflectLakes));
+    private static FaunaLayout Layout(BuildContext context) => context.Memo(typeof(FaunaLayout),
+        () => FaunaPlanner.Plan(context.World, context.WorldSeed, context.Map.Env.ReflectLakes));
 
     public IReadOnlyDictionary<TileKey, Box3> FaunaTiles(BuildContext context)
     {

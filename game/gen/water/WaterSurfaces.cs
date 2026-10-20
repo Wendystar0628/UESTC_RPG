@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Water;
 
@@ -94,10 +95,11 @@ public sealed class WaterSurfaces
         }
         if (index.Count == 0) return null;
         var count = position.Count / 3;
+        GeometryVertexLimits.Require(count);
         var normal = new float[count * 3];
         for (var i = 0; i < count; i++) normal[3 * i + 1] = 1f;
         var flags = new byte[count];
-        Array.Fill(flags, (byte)8);   // no shadow: the water never casts (WLD-WATER)
+        Array.Fill(flags, VertexFlag.NoShadow);   // no shadow: the water never casts (WLD-WATER)
         var bundle = new GeometryBundle(new ToonRef(WaterPalette.Surface), position.ToArray(), normal, index.ToArray(),
             Uv: uv.ToArray(), Uv2: uv2.ToArray())
         {

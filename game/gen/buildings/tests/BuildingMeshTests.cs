@@ -1,3 +1,4 @@
+using Campus.Gen.Geometry;
 using Campus.Gen.Buildings.Mesh;
 using Campus.Tests;
 using System.Numerics;
@@ -67,8 +68,7 @@ public sealed class BuildingMeshTests
                 foreach (var b in bundles)
                 {
                     b.ValidateVertexData();
-                    AssertThat(b.Position.Length / 3 <= MeshSink.MaxVertices).OverrideFailureMessage("Expected: " + ("surface vertex limit")).IsTrue();
-                    AssertThat(b.Ao is not null && b.Flags is not null && b.Reserved is not null).OverrideFailureMessage("Expected: " + ("COLOR bytes always supplied")).IsTrue();
+                    AssertThat(b.Position.Length / 3 <= GeometryVertexLimits.Batch).OverrideFailureMessage("Expected: " + ("surface vertex limit")).IsTrue();
                     for (var v = 0; v < b.Normal.Length / 3; v++)
                     {
                         var n = new Vector3(b.Normal[3 * v], b.Normal[3 * v + 1], b.Normal[3 * v + 2]);

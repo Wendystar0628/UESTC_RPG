@@ -1,5 +1,6 @@
 using System.Numerics;
 using Campus.Contracts;
+using Campus.Gen.Geometry;
 using Campus.Contracts.Fauna;
 
 namespace Campus.Gen.Fauna;
@@ -29,39 +30,28 @@ public sealed class FaunaScene(PaletteCatalog catalog)
         {
             var group = animals.Where(a => (a.Model.Kind == FaunaKind.Cat) == cats).ToArray();
             if (group.Length == 0) continue;
-            meshes.Add(Bundle(spec, group));
+            meshes.AddRange(Bundles(spec, group));
         }
         return new ContentOutput(meshes, []);
     }
 
     public int Triangles(IReadOnlyList<FaunaInstance> animals) => animals.Sum(a => Model(a.Model).Triangles);
 
-    private GeometryBundle Bundle(ToonSpec spec, IReadOnlyList<FaunaInstance> animals)
+    private IReadOnlyList<GeometryBundle> Bundles(ToonSpec spec, IReadOnlyList<FaunaInstance> animals)
     {
-        var vertexCount = animals.Sum(a => Model(a.Model).Positions.Length);
-        var position = new float[vertexCount * 3];
-        var normal = new float[vertexCount * 3];
-        var ids = new ushort[vertexCount];
-        var index = new List<int>(animals.Sum(a => Model(a.Model).Index.Length));
-        var at = 0;
+        var sink = new GeometrySink(_catalog);
         foreach (var animal in animals)
         {
             var model = Model(animal.Model);
             var rotation = Matrix4x4.CreateRotationY(animal.Yaw);
             var world = Matrix4x4.CreateScale(animal.Scale) * rotation * Matrix4x4.CreateTranslation(animal.Position);
-            for (var i = 0; i < model.Positions.Length; i++)
-            {
-                var p = Vector3.Transform(model.Positions[i], world);
-                var n = Vector3.Normalize(Vector3.TransformNormal(model.Normals[i], rotation));
-                position[(at + i) * 3] = p.X; position[(at + i) * 3 + 1] = p.Y; position[(at + i) * 3 + 2] = p.Z;
-                normal[(at + i) * 3] = n.X; normal[(at + i) * 3 + 1] = n.Y; normal[(at + i) * 3 + 2] = n.Z;
-                ids[at + i] = _catalog.Resolve(model.Colors[i]).Value;
-            }
-            foreach (var k in model.Index) index.Add(at + k);
-            at += model.Positions.Length;
+            var vertices = new GeometryVertex[model.Positions.Length];
+            for (var i = 0; i < vertices.Length; i++)
+                vertices[i] = new(Vector3.Transform(model.Positions[i], world),
+                    Vector3.Normalize(Vector3.TransformNormal(model.Normals[i], rotation)),
+                    ColorIndex: _catalog.Resolve(model.Colors[i]).Value);
+            sink.Polygon(spec, vertices, model.Index);
         }
-        var bundle = new GeometryBundle(new ToonRef(spec), position, normal, [.. index]) { ColorIndices = ids };
-        bundle.ValidateVertexData();
-        return bundle;
+        return sink.Finish();
     }
 }

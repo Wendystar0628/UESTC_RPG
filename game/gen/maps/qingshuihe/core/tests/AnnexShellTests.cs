@@ -93,13 +93,14 @@ public sealed class AnnexShellTests
         }
     }
 
-    private static ContentOutput Build(ICorePiece piece, LodLevel lod)
+    private static ContentOutput Build(Campus.Gen.Sites.ZoneSite piece, LodLevel lod)
     {
-        var build = new CoreBuild(Campus.Contracts.Tests.PaletteFixture.Catalog) { PartLods = PartLodFixture.Catalog };
-        piece.Build(build, lod);
-        return build.Finish(lod);
+        var context = new BuildContext
+        {
+            Catalog = Campus.Contracts.Tests.PaletteFixture.Catalog, PartLods = PartLodFixture.Catalog,
+            World = null!, Map = null!, WorldSeed = 1u,
+        };
+        return piece.TraceSources(context, lod).Single().Output;
     }
-
-
 
 }

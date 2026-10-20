@@ -1,3 +1,4 @@
+using Campus.Gen.Sites;
 using Campus.Gen.Geometry;
 using System.Numerics;
 using Campus.Contracts;
@@ -18,7 +19,7 @@ namespace Campus.Gen.Maps.Qingshuihe.Core.Annex;
 /// widest free spot and two timber-edged planters with clipped shrubs, each holding a palm (棕榈, planted by WP-23 from
 /// world/core.json). Everything is laid out from the court's own walls, so it follows the data, not coordinates.
 /// </summary>
-public sealed class QuietGarden : ICorePiece
+public sealed class QuietGarden : ZoneSite
 {
     private readonly Surface _ground;
 
@@ -57,9 +58,10 @@ public sealed class QuietGarden : ICorePiece
     private Vector2 Along => Pergola.Along;
     private Vector2 Across => Pergola.Out;
 
-    public string Id => "quiet-garden";
+    public override string Id => "quiet-garden";
     public Vector2 Anchor => PlanGeometry.Centroid([Ring]);
-    public IReadOnlyList<Claim> Claims => [];
+    public static IReadOnlyList<Claim> DeclaredClaims { get; } = [];
+    public override IReadOnlyList<Claim> Claims => DeclaredClaims;
 
     // ------------------------------------------------------------------ layout
 
@@ -105,7 +107,7 @@ public sealed class QuietGarden : ICorePiece
     }
 
     /// <summary>The cut-granite court and, from the colonnade to the pavilion, a stepping path of lighter slabs.</summary>
-    private void Court(CoreMesh mesh, LodLevel lod)
+    private void Court(GeometrySink mesh, LodLevel lod)
     {
         var polygon = PolygonTriangulator.Triangulate(new PolygonRings(Ring));
         var v = polygon.Vertices.Select(p => new Vector3(p.X, Y(p), p.Y)).ToArray();
@@ -128,14 +130,14 @@ public sealed class QuietGarden : ICorePiece
     }
 
     /// <summary>A free-standing timber member in pergola coordinates (u along the wing wall, s out from it).</summary>
-    private static void Member(CoreMesh mesh, in Paint paint, Face f, float u0, float u1, float s0, float s1, float y0, float y1)
+    private static void Member(GeometrySink mesh, in Paint paint, Face f, float u0, float u1, float s0, float s1, float y0, float y1)
     {
         LibraryFacade.Box(mesh, paint, f, u0, u1, s0, s1, y0, y1);
         LibraryFacade.Panel(mesh, paint, f, u0, u1, s0, y0, y1, -f.N);
     }
 
     /// <summary>Red timber pergola: two rows of posts, a beam on each row, rafters across with overhanging ends.</summary>
-    private void PergolaMesh(CoreMesh mesh, LodLevel lod)
+    private void PergolaMesh(GeometrySink mesh, LodLevel lod)
     {
         if (lod > LodLevel.L2) return;
         var red = S.Wall(S.PergolaRed);
@@ -167,7 +169,7 @@ public sealed class QuietGarden : ICorePiece
     }
 
     /// <summary>Grey granite colonnade: square columns on plinths, capitals, a continuous lintel and tie beams to the wall.</summary>
-    private void ColonnadeMesh(CoreMesh mesh, WallPiece wall, LodLevel lod)
+    private void ColonnadeMesh(GeometrySink mesh, WallPiece wall, LodLevel lod)
     {
         if (lod > LodLevel.L2) return;
         var stone = S.Stone(S.ColonnadeGranite);
@@ -193,7 +195,7 @@ public sealed class QuietGarden : ICorePiece
     /// Hexagonal timber pavilion: a two-step granite plinth, six posts with a ring beam and a low bench rail (open on the
     /// stepping path's side), a dark tile pyramid roof with a fascia and a closed soffit, and a timber finial.
     /// </summary>
-    private void PavilionMesh(CoreMesh mesh, LodLevel lod)
+    private void PavilionMesh(GeometrySink mesh, LodLevel lod)
     {
         var c = Pavilion;
         var y = Y(c);
@@ -240,17 +242,17 @@ public sealed class QuietGarden : ICorePiece
     /// A flat-shaded prism on the corner function (k = 0 … sides − 1), corners scaled from r0 at y0 to r1 at y1 about the
     /// pavilion centre; a top chamfer of <paramref name="bevel"/>; optionally its underside (soffit) closed.
     /// </summary>
-    private void Prism(CoreMesh mesh, in Paint paint, Func<int, float, Vector2> corner, float r0, float r1, float y0, float y1, float bevel, bool soffit = false)
+    private void Prism(GeometrySink mesh, in Paint paint, Func<int, float, Vector2> corner, float r0, float r1, float y0, float y1, float bevel, bool soffit = false)
     {
         Prism(mesh, paint, k => corner(k, r0), r1 / MathF.Max(r0, 1e-4f), y0, y1, bevel, soffit, 6);
     }
 
-    private void Prism(CoreMesh mesh, in Paint paint, Func<int, Vector2> corner, float scale, float scaleTop, float y0, float y1, float bevel, int sides)
+    private void Prism(GeometrySink mesh, in Paint paint, Func<int, Vector2> corner, float scale, float scaleTop, float y0, float y1, float bevel, int sides)
     {
         Prism(mesh, paint, corner, scaleTop / MathF.Max(scale, 1e-4f), y0, y1, bevel, false, sides);
     }
 
-    private static void Prism(CoreMesh mesh, in Paint paint, Func<int, Vector2> corner, float topScale, float y0, float y1, float bevel, bool soffit, int sides)
+    private static void Prism(GeometrySink mesh, in Paint paint, Func<int, Vector2> corner, float topScale, float y0, float y1, float bevel, bool soffit, int sides)
     {
         var bottom = Enumerable.Range(0, sides).Select(corner).ToArray();
         var centre = bottom.Aggregate(Vector2.Zero, (s, p) => s + p) / sides;
@@ -278,7 +280,7 @@ public sealed class QuietGarden : ICorePiece
     }
 
     /// <summary>A timber-edged planter: four edge boards with a chamfered cap, dark soil, clipped shrub cushions round the palm.</summary>
-    private void PlanterMesh(CoreMesh mesh, Vector2 c, LodLevel lod)
+    private void PlanterMesh(GeometrySink mesh, Vector2 c, LodLevel lod)
     {
         float hl = S.PlanterLength * 0.5f, hw = S.PlanterWidth * 0.5f, e = S.PlanterEdge, y = Y(c), top = y + S.PlanterHeight;
         var f = new Face(c - Along * hl - Across * hw, Along, -Across, S.PlanterLength);
@@ -320,4 +322,31 @@ public sealed class QuietGarden : ICorePiece
         }
         return list;
     }
+    public override IReadOnlyList<Campus.Contracts.Maps.MapRect> Ranges(IWorldModel world) =>
+        CoreRanges.Garden(world) is { } range ? [range] : [];
+
+    public override void Build(SiteBuilder builder)
+    {
+        if (!builder.Includes(Anchor)) return;
+        var build = CoreBuild.For(builder.Context);
+        Build(build, builder.Lod);
+        var output = build.Finish(builder.Lod);
+        foreach (var mesh in output.Meshes) builder.Add(mesh, System.Numerics.Matrix4x4.Identity, Anchor);
+        foreach (var part in output.Parts) builder.Place(part, Anchor);
+        foreach (var emitter in output.Emitters ?? []) builder.Light(emitter, Anchor);
+    }
+
+    public override void Collide(SiteColliders colliders)
+    {
+        if (!colliders.Includes(Anchor)) return;
+        foreach (var collider in Collide()) colliders.Add(collider, Anchor);
+    }
+
+    public override IEnumerable<ContentSourceTrace> TraceSources(BuildContext context, LodLevel lod)
+    {
+        var build = CoreBuild.For(context);
+        Build(build, lod);
+        yield return new($"core/{Id}", (FeatureId?)null, build.Finish(lod), Collide(), []);
+    }
+
 }
