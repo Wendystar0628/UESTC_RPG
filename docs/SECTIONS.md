@@ -1545,28 +1545,28 @@
 
 ## ENG-ARCH · 工程架构
 
-`docs/engineering/ENG-ARCH-工程架构.md` · 11.8k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
+`docs/engineering/ENG-ARCH-工程架构.md` · 11.5k 字 · 当前分层、依赖方向与唯一生产链，边界、确定性、契约、烘焙与桩的架构准则与后续导向；实现细节以代码为准
 关键词：工程架构、分层、依赖方向、命名空间边界、程序集、唯一生产链、KernelStage、组合根、数据流、自动发现、特性注册、Autoload、原生资源创建方、确定性、同机同输入同输出、StableHash、Rng、BannedApiAnalyzers、生命周期、契约、契约申请、契约分批冻结、枚举穷举、本机烘焙、.tbin、英雄资产、桩、架构导向、net10.0、技术栈
 
 - ENG-ARCH §0 结论 · L23 · 1.5k
   - ★ ENG-ARCH §0.1 接入要点 · L34 · 813
-- ENG-ARCH §1 当前架构 · L46 · 2.0k
+- ENG-ARCH §1 当前架构 · L46 · 1.5k
   - ENG-ARCH 技术栈 · L48 · 174
-  - ENG-ARCH 分层 · L52 · 1.3k
-  - ENG-ARCH 生产链 · L66 · 391
-  - ENG-ARCH 数据流 · L74 · 95
-- ENG-ARCH §2 边界与确定性 · L78 · 2.9k
-  - ENG-ARCH 依赖方向 · L80 · 1.0k
-  - ENG-ARCH 确定性与禁用写法 · L90 · 573
-  - ENG-ARCH 自动发现与模块接入 · L102 · 692
-  - ENG-ARCH 仓库脚本自成一体 · L110 · 101
-  - ENG-ARCH 生命周期与发布 · L114 · 496
-- ENG-ARCH §3 契约 · L123 · 1.2k
-- ENG-ARCH §4 资源与烘焙 · L136 · 2.0k
-- ENG-ARCH §5 未交付能力的占位边界 · L151 · 257
-- ENG-ARCH §6 架构导向 · L159 · 448
-- ENG-ARCH §7 扩展点（RPG） · L167 · 69
-- ENG-ARCH §8 待验证（P0） · L171 · 361
+  - ENG-ARCH 分层 · L52 · 845
+  - ENG-ARCH 生产链 · L63 · 391
+  - ENG-ARCH 数据流 · L71 · 95
+- ENG-ARCH §2 边界与确定性 · L75 · 3.1k
+  - ENG-ARCH 依赖方向 · L77 · 1.2k
+  - ENG-ARCH 确定性与禁用写法 · L88 · 573
+  - ENG-ARCH 自动发现与模块接入 · L100 · 692
+  - ENG-ARCH 仓库脚本自成一体 · L108 · 101
+  - ENG-ARCH 生命周期与发布 · L112 · 496
+- ENG-ARCH §3 契约 · L121 · 1.2k
+- ENG-ARCH §4 资源与烘焙 · L134 · 2.0k
+- ENG-ARCH §5 未交付能力的占位边界 · L149 · 257
+- ENG-ARCH §6 架构导向 · L157 · 448
+- ENG-ARCH §7 扩展点（RPG） · L165 · 69
+- ENG-ARCH §8 待验证（P0） · L169 · 361
 
 ## ENG-BUDGET · 性能预算
 
@@ -1930,17 +1930,17 @@
 
 ## STD-CODE · 代码结构准则
 
-`docs/standards/STD-CODE-代码结构准则.md` · 5.2k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
+`docs/standards/STD-CODE-代码结构准则.md` · 5.5k 字 · 写代码时的结构规矩：依赖方向落地、规则值与数据各一份、先复用、不留死代码、控制规模、测试代码写法，以及 Godot API 先查签名
 关键词：代码结构准则、依赖方向、内核引用系统、生成层实现类、点名模块、单一来源、规则值、规则类、数据与代码分离、Tune 只放规则值、实体 ID 写数据、复用、公共层、死代码、死桩、诊断残留、单实现接口、吞错、兜底、文件规模、构造参数、清单文件、程序集过碎、测试写法、测试夹具、假实现、性质断言、signatures.txt、Godot API、GDScript
 
 - STD-CODE §0 结论 · L23 · 1.2k
   - ★ STD-CODE §0.1 接入要点 · L32 · 913
 - STD-CODE §1 依赖方向 · L46 · 351
 - STD-CODE §2 规则值与数据各一份 · L55 · 576
-- STD-CODE §3 先用现成，再复用，不复制 · L65 · 949
-- STD-CODE §4 不留死代码 · L77 · 209
-- STD-CODE §5 规模 · L84 · 160
-- STD-CODE §6 测试代码怎么写 · L90 · 767
+- STD-CODE §3 先用现成，再复用，不复制 · L65 · 1.3k
+- STD-CODE §4 不留死代码 · L79 · 209
+- STD-CODE §5 规模 · L86 · 160
+- STD-CODE §6 测试代码怎么写 · L92 · 767
 
 ## STD-CONVENTIONS · 坐标单位与命名约定
 

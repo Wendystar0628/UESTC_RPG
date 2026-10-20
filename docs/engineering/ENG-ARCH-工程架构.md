@@ -53,15 +53,12 @@ paths: ["game/**/*.cs"]
 
 | 层 | 程序集 | 责任 |
 | --- | --- | --- |
-| 契约 | `Campus.Contracts`；`Campus.Contracts`；`Campus.Contracts.Runtime`（运行时边界契约，生成层不引用） | 数据、命令、只读状态与确定性工具；`Campus.Contracts` 只引用基础类库；`Campus.Contracts.Runtime` 可暴露引擎类型并引用 GodotSharp，但不引用 Kernel、系统层或生成实现；跨包运行时能力统一经它发布 |
+| 契约 | `Campus.Contracts`；`Campus.Contracts.Runtime`（运行时边界契约，生成层不引用） | 数据、命令、只读状态与确定性工具；`Campus.Contracts` 只引用基础类库；`Campus.Contracts.Runtime` 可暴露引擎类型并引用 GodotSharp，但不引用 Kernel、系统层或生成实现；跨包运行时能力统一经它发布 |
 | 世界与公共几何 | `Campus.Gen`（世界、几何、部件内核等通用生成，以及 `Campus.Gen.BakeInput` 的冻结输入装配与底图烘焙） | 解释冻结的地图输入（世界文件、地形、室内索引；路网由世界文件派生），提供权威查询和共享几何 |
 | 内容生成 | 通用内容包在 `Campus.Gen`（建筑、地面、植被、水、碰撞、可行走、外围、声学等，及跨图共用的公共站点 `Campus.Gen.Sites`）；每张图一个 `Campus.Gen.Maps.<图>`，在 `game/gen/maps/<图>/`，各区是它下面的子目录与命名空间 `Campus.Gen.Maps.<图>.<区>` | 按格生成几何、碰撞与声明数据；纯函数，命名空间互不引用 |
 | 运行时 | 主程序集 `Campus`（kernel、stage、flow、camera、medium、systems、style、audio、hud、gates） | 装配、烘焙与流式、世界状态、表现与界面 |
 
 - 程序集与目录的对应、归属以仓库本身和 `ownership.json` 为准。程序集只按"契约 / 通用生成 / 每图一个 / 运行时"划分，包与包、层与层之间的边界靠命名空间规则（§2）；加一张图只新增 `game/gen/maps/<图>/`，不改共享清单（SYS-MAPS §6）。
-- 各包的行为测试放在自己目录的 `tests/`，分别编进 `Campus.Gen.Tests` 和 `Campus.Tests`；测试夹具统一放 `game/testing`，共用夹具在 `Support`，只给生成或运行时宿主的夹具分别在 `Gen`、`Runtime`；测试命名空间不作为运行时模块。
-- 纯 .NET 的 `game/contracts`、`game/gen` 与 `game/testing`、运行时各 `tests` 目录用 `.gdignore` 排除 Godot 资源导入，不登记其中 C# 的 `.uid`；正式运行时资源仍由 Godot 生成并维护 `.uid`。
-- `kernel` 自底向上为 Frame/Registry、Renderer/Materials/Lod/Instances、地图与烘焙流式及状态驱动、Boot/Inspect/Save；各组内部同样按职责有序，完整顺序以 G4 的 `KernelLevel` 声明为准，低层不依赖高层，不留双向依赖或豁免。
 
 ### 生产链
 
@@ -80,6 +77,7 @@ paths: ["game/**/*.cs"]
 ### 依赖方向
 
 - 上层可以引用下层，反过来不行；同层的内容包、归属不同地图的程序集互不引用；通用生成不引用任何 `Campus.Gen.Maps.*`，每图程序集只引用契约和 `Campus.Gen`（SYS-MAPS §6）。程序集并少之后，这些边界由 `scripts/gates/arch/` 的命名空间架构规则（G4）挡，不靠多建程序集；增删规则要 Codex 主线批准。
+- **kernel 内部**：自底向上为 Frame/Registry、Renderer/Materials/Lod/Instances、地图与烘焙流式及状态驱动、Boot/Inspect/Save；完整顺序以 G4 的 `KernelLevel` 声明为准，低层不依赖高层，不留双向依赖或豁免。
 - **生成层看不到运行时**：`BuildContext` 里没有世界状态、画面设置和规则集。`BuildContext` 的 `Memo` 跟随实例的世界范围：同一世界复用，换世界新建作用域。随时间、季节和天气变化的东西，只能通过调色板、灯光通道、变体掩码和全局着色器参数表达（ENG-BUDGET-RULES §1）。
 - **门禁与专项驱动在 `game/gates`**：`kernel/registry` 只提供服务注册与查找；`RulesetService`、`GlobalBuildInputs` 是注入的服务，不放在 registry。
 - **几何只经 `gen/geometry/GeometrySink`**：按完整顶点共享，保留材质及可选通道的边界；`VertexFlag`、`GeometryVertexLimits` 只在契约里定义，生成器不自带位置法线数组。
