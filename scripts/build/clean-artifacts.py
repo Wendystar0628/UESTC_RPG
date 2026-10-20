@@ -5,7 +5,7 @@
      （同一张图下 *-tbin-N 只留 N 最大的）；
   3. 已删工程留下的 bin/、obj/：所在目录里已经没有 .csproj；
   4. git 已失效的工作树登记（git worktree prune）；还登记着的工作树只列出，不删。
-观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录（作者还要看）；还在的任务单（.collab/tasks，结案即删）引用的路径不删，引用的是目录就连里面的内容。
+观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录（作者还要看）；还在的任务单（.collab/tasks，结案即删）引用的路径不删，引用的是目录就连里面的内容；施工队列里未结行对应的 output/行号目录及其后缀目录也保留（行号可去短横线）。
 按提交轮次而不按时间算：不开发就没有提交，什么都不会过期。
 
 用法：
@@ -105,7 +105,7 @@ def orphan_builds():
 
 
 def linked():
-    """在用的引用指向的 output/ 下文件（绝对路径）：观察台未结的审计项与通知（dashboard/data/curated/*.js 是 Dash.put(名, {...}); 的本地数据），以及 .collab/tasks 下还在的任务单（结案即删，单子在就算在用）。"""
+    """在用的引用指向的 output/ 下文件（绝对路径）：观察台未结的审计项与通知（dashboard/data/curated/*.js 是 Dash.put(名, {...}); 的本地数据），以及 .collab/tasks 下还在的任务单与施工队列未结行的交付目录（结案即删，单子或队列行在就算在用）。"""
     out = set()
     for name in ('audit', 'notices'):
         f = os.path.join(ROOT, 'dashboard', 'data', 'curated', name + '.js')
@@ -119,6 +119,30 @@ def linked():
             link = item.get('link') or ''
             if item.get('status') != 'done' and link.startswith('output/'):
                 out.add(os.path.normpath(os.path.join(ROOT, link)))
+    queue = os.path.join(ROOT, '.collab', 'status', '施工状态.md')
+    text = open(queue, encoding='utf-8').read()
+    if '## 施工队列' in text and os.path.isdir(OUT):
+        part = text.split('## 施工队列', 1)[1].split('\n## ', 1)[0]
+        columns = {}
+        ids = set()
+        for line in part.splitlines():
+            if not line.strip().startswith('|'):
+                continue
+            cells = [cell.strip() for cell in line.strip().strip('|').split('|')]
+            if cells[0] == '号':
+                columns = {name: i for i, name in enumerate(cells)}
+                continue
+            if '号' not in columns or columns['号'] >= len(cells):
+                continue
+            row_id = cells[columns['号']]
+            if re.fullmatch(r'[A-Z]-\d+[a-z]?', row_id):
+                ids.update((row_id, row_id.replace('-', '')))
+        if ids:
+            pattern = re.compile(r'^(?:' + '|'.join(re.escape(i) for i in sorted(ids)) + r')(?=$|[^A-Za-z0-9])')
+            for name in os.listdir(OUT):
+                path = os.path.join(OUT, name)
+                if pattern.match(name) and os.path.isdir(path):
+                    out.add(path)
     tasks = os.path.join(ROOT, '.collab', 'tasks')
     for r, _, fs in os.walk(tasks):
         for f in (f for f in fs if f.endswith('.md')):
