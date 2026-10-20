@@ -130,7 +130,7 @@ public partial class KernelStage : Node3D, IAppExit, IStageGateHost
             ThemeClock: registry.Get<Campus.Hud.Style.UiThemeClock>(),
             InputRouter: registry.Get<IInputRouter>(),
             ViewControl: registry.Get<IViewControl>(),
-            PhotoExport: registry.Get<IPhotoExport>(),
+            Capture: registry.Get<IGameCapture>(),
             Maps: registry.Get<IMapService>(),
             WorldState: registry.Get<IWorldState>(),
             Saves: registry.Get<ISaveService>(),

@@ -7,7 +7,6 @@ using Campus.Contracts.Save;
 using Campus.Contracts.Startup;
 using Campus.Kernel.Registry;
 using RuntimeKernel = Campus.Kernel.Registry.Kernel;
-using Campus.Kernel.Renderer;
 using Campus.Kernel.Save.Format;
 using Godot;
 
@@ -21,9 +20,7 @@ public partial class SaveNode : Node, IBootParticipant
     private IAppLoadingPresentation? _loading;
     private bool PresentedCover => _loading?.IsCovered == true;
     private readonly CancellationTokenSource _exit = new();
-    private TaskCompletionSource<byte[]?>? _capture;
-    private IDisposable? _hiddenHud;
-    private ulong _frame, _readbackAt, _drawFrame;
+    private ulong _frame, _drawFrame;
     private bool _drawCovered, _exiting;
     public string Id => "save";
     public int Order => 50;
@@ -66,54 +63,18 @@ public partial class SaveNode : Node, IBootParticipant
     {
         _frame++;
         _save.Tick(delta);
-        if (_capture is null || _frame < _readbackAt) return;
-        var completion = _capture; _capture = null;
-        Image? image = null;
-        try
-        {
-            if (DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Minimized)
-                image = GetViewport().GetTexture().GetImage();
-        }
-        catch (Exception) { /* Thumbnail failure must never prevent saving state. */ }
-        finally { _hiddenHud?.Dispose(); _hiddenHud = null; }
-        if (image is null) { completion.TrySetResult(null); return; }
-        _ = EncodeThumbnail(image, completion);
     }
 
-    private Task<byte[]?> CaptureThumbnail()
+    private async Task<byte[]?> CaptureThumbnail()
     {
         // A loading-covered save must never hide its cover for a thumbnail readback.
-        if (_loading?.Active == true) return Task.FromResult<byte[]?>(null);
-        if (DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Minimized) return Task.FromResult<byte[]?>(null);
-        if (_capture is not null) return _capture.Task;
-        _capture = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        _hiddenHud = CapturePresentation.HideHud();
-        _readbackAt = _frame + 1;
-        return _capture.Task;
-    }
-
-    private static async Task EncodeThumbnail(Image image, TaskCompletionSource<byte[]?> completion)
-    {
+        if (_loading?.Active == true) return null;
         try
         {
-            var result = await Task.Run(() =>
-            {
-                using (image)
-                {
-                    var width = image.GetWidth(); var height = image.GetHeight();
-                    if (width < 1 || height < 1) return null;
-                    var cropWidth = Math.Min(width, height * 16 / 9);
-                    var cropHeight = Math.Min(height, width * 9 / 16);
-                    using var cropped = image.GetRegion(new Rect2I((width - cropWidth) / 2, (height - cropHeight) / 2, cropWidth, cropHeight));
-                    while (cropped.GetWidth() > 768) cropped.ShrinkX2();
-                    cropped.Resize(384, 216, Image.Interpolation.Lanczos);
-                    var bytes = cropped.SaveWebpToBuffer(true, .8f);
-                    return SaveContainer.ValidateThumbnail(bytes) ? bytes : null;
-                }
-            }).ConfigureAwait(false);
-            completion.TrySetResult(result);
+            var bytes = await RuntimeKernel.Get<IGameCapture>().CaptureThumbnailAsync(_exit.Token);
+            return bytes is not null && SaveContainer.ValidateThumbnail(bytes) ? bytes : null;
         }
-        catch (Exception) { completion.TrySetResult(null); }
+        catch (Exception) { return null; } // Optional evidence never prevents a state save.
     }
 
     private async Task WaitDestination(Pose pose, NavSpace? space, ViewMode mode)
@@ -187,7 +148,6 @@ public partial class SaveNode : Node, IBootParticipant
         _exiting = true;
         RenderingServer.FramePostDraw -= OnFramePostDraw;
         _exit.Cancel();
-        _hiddenHud?.Dispose(); _capture?.TrySetResult(null);
         _exit.Dispose();
     }
 }

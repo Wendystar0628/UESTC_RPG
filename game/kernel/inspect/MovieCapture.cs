@@ -9,16 +9,28 @@ namespace Campus.Kernel.Inspect;
 /// <summary>Schedules world controls on Movie Maker's fixed engine frames; Godot owns all recording.</summary>
 internal static class MovieCapture
 {
-    internal static void RequireMovieMaker()
+    internal sealed record Segment(ulong First, int Count, int Fps, string Pattern, string NativePath);
+
+    internal static int RequireMovieMaker()
     {
         if (string.IsNullOrWhiteSpace(Engine.GetWriteMoviePath()))
             throw new ArgumentException("--movie-frames requires Godot --write-movie and --fixed-fps before --.");
+        var arguments = OS.GetCmdlineArgs();
+        var index = Array.IndexOf(arguments, "--fixed-fps");
+        if (index < 0 || index + 1 >= arguments.Length ||
+            !int.TryParse(arguments[index + 1], System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out var fps) || fps <= 0)
+            throw new ArgumentException("--movie-frames requires a positive Godot --fixed-fps before --.");
+        return fps;
     }
 
-    internal static async Task RunAsync(Node host, CaptureBootOptions options, Pose pose,
-        Func<bool> contentReady, CancellationToken cancellationToken)
+    internal static async Task<Segment> RunAsync(Node host, CaptureBootOptions options, Pose pose,
+        Func<bool> contentReady, string diagnosticId, CancellationToken cancellationToken)
     {
-        RequireMovieMaker();
+        var fps = RequireMovieMaker();
+        var nativePath = Engine.GetWriteMoviePath();
+        var pattern = Path.GetExtension(nativePath).Equals(".png", StringComparison.OrdinalIgnoreCase)
+            ? Path.GetFileNameWithoutExtension(nativePath) + "%08d.png" : Path.GetFileName(nativePath);
         var limit = options.MovieFrames ?? throw new ArgumentException("Movie capture requires --movie-frames.");
         var tree = host.GetTree();
         var rig = KernelServices.Get<ICameraRig>();
@@ -28,13 +40,13 @@ internal static class MovieCapture
         var control = KernelServices.Get<IWorldControl>();
         var world = KernelServices.Get<IWorldState>();
         var arrival = runtime.Arrival ?? throw new InvalidOperationException("Movie capture requires a prepared destination.");
-        var completion = new TaskCompletionSource();
+        var completion = new TaskCompletionSource<Segment>();
         ulong? firstFrame = null;
         var nextEvent = 0;
         tree.ProcessFrame += BeforeProcess;
         host.TreeExiting += OnExit;
         using var cancellation = cancellationToken.Register(() => completion.TrySetCanceled(cancellationToken));
-        try { await completion.Task; }
+        try { return await completion.Task; }
         finally
         {
             if (GodotObject.IsInstanceValid(tree)) tree.ProcessFrame -= BeforeProcess;
@@ -55,8 +67,8 @@ internal static class MovieCapture
                 var engineFrame = Engine.GetProcessFrames();
                 if (firstFrame is { } first && engineFrame - first >= (ulong)limit)
                 {
-                    GD.Print($"[WP-01][phase=movie-complete] firstMovieFrame={first} frames={limit}");
-                    completion.TrySetResult();
+                    GD.Print($"[{diagnosticId}][phase=movie-complete] firstMovieFrame={first} frames={limit}");
+                    completion.TrySetResult(new(first, limit, fps, pattern, nativePath));
                     return;
                 }
                 if (!host.IsInsideTree() || rig.Pose != pose || !ReferenceEquals(runtime.Arrival, arrival))
@@ -69,8 +81,8 @@ internal static class MovieCapture
                 {
                     firstFrame = engineFrame;
                     // The native writer starts at frame zero and writes once at each engine iteration's end.
-                    // The script removes this many loading frames before naming the delivered first frame zero.
-                    GD.Print($"[WP-01][phase=movie-start] firstMovieFrame={engineFrame} frames={limit}");
+                    // Metadata retains this native offset; event frames below remain zero-based in the clip.
+                    GD.Print($"[{diagnosticId}][phase=movie-start] firstMovieFrame={engineFrame} frames={limit}");
                 }
                 var frame = checked((int)(engineFrame - firstFrame.Value));
                 if (nextEvent >= options.MovieEvents.Count || options.MovieEvents[nextEvent].Frame != frame) return;
@@ -84,7 +96,7 @@ internal static class MovieCapture
                         throw new ArgumentException($"Movie event weather {weather} is unavailable in {world.SeasonTarget}.");
                     control.SetWeather(weather, change.Intensity);
                 }
-                GD.Print(FormattableString.Invariant($"[WP-01][phase=movie-event] frame={frame} movieFrame={engineFrame} season={change.Season} clock={change.Clock} weather={(change.AutomaticWeather ? "auto" : change.Weather?.ToString())} intensity={change.Intensity}"));
+                GD.Print(FormattableString.Invariant($"[{diagnosticId}][phase=movie-event] frame={frame} movieFrame={engineFrame} season={change.Season} clock={change.Clock} weather={(change.AutomaticWeather ? "auto" : change.Weather?.ToString())} intensity={change.Intensity}"));
             }
             catch (Exception error) { completion.TrySetException(error); }
         }

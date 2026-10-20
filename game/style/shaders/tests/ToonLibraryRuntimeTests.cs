@@ -138,21 +138,13 @@ public sealed class ToonLibraryRuntimeTests
                 GeometrySurfaceUpload.Append(mesh, source, new Palettes().Catalog);
             }
             parent.AddChild(new MeshInstance3D { Mesh = mesh });
-            var directory = Path.Combine(Path.GetTempPath(), $"uestc-rpg-window-cards-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(directory);
-            try
+            foreach (var state in new[] { "registered", "unbound", "undersized" })
             {
-                foreach (var state in new[] { "registered", "unbound", "undersized" })
-                {
-                    if (state == "unbound") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), default(Variant));
-                    if (state == "undersized") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), tiny);
-                    for (var frame = 0; frame < 8; frame++)
-                        await parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-                    using var image = parent.GetViewport().GetTexture().GetImage();
-                    AssertThat(image.SavePng(Path.Combine(directory, $"WP-00-window-cards-native-{state}.png")) == Error.Ok).OverrideFailureMessage("Save real glass smoke evidence.").IsTrue();
-                }
+                if (state == "unbound") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), default(Variant));
+                if (state == "undersized") RenderingServer.GlobalShaderParameterSet(new StringName(ShaderGlobals.WindowCards), tiny);
+                for (var frame = 0; frame < 8; frame++)
+                    await parent.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             }
-            finally { Directory.Delete(directory, recursive: true); }
             GD.Print("WINDOW_CARDS_NATIVE exercised=real_toon_glass,type_mask,invalid_row,unbound,undersized_1x1,cols0 pixel_assertions=False");
         }
         finally

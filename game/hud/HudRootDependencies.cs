@@ -21,7 +21,7 @@ public sealed record HudRootDependencies(
     UiThemeClock ThemeClock,
     IInputRouter InputRouter,
     IViewControl ViewControl,
-    IPhotoExport PhotoExport,
+    IGameCapture Capture,
     IMapService Maps,
     IWorldState WorldState,
     ISaveService Saves,

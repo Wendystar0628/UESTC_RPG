@@ -95,7 +95,7 @@ public sealed class HudLifetimeTests
                 ThemeClock: new UiThemeClock(world, settings, motion),
                 InputRouter: router,
                 ViewControl: view,
-                PhotoExport: new UnusedPhotoExport(),
+                Capture: new UnusedCapture(),
                 Maps: new TestMapService(),
                 WorldState: world,
                 Saves: new UnusedSaveService(),
@@ -161,9 +161,10 @@ public sealed class HudLifetimeTests
             srgb24.Fill(System.Numerics.Vector3.Zero);
     }
 
-    private sealed class UnusedPhotoExport : IPhotoExport
+    private sealed class UnusedCapture : IGameCapture
     {
-        public Task<PhotoExportResult> ExportCurrentAsync() => throw new NotSupportedException();
+        public Task<CaptureResult> CaptureAsync(CaptureRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<byte[]?> CaptureThumbnailAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class UnusedSaveService : ISaveService

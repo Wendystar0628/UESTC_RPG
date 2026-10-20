@@ -40,6 +40,7 @@ internal sealed class HudInput
     public void Exit()
     {
         _entry++;
+        _photoCancellation?.Cancel();
         UnbindHostInput();
         _dependencies.InputRouter.InterfaceModeChanged -= OnInterfaceModeChanged;
         foreach (var layer in _layers) layer.Dispose();
@@ -87,6 +88,8 @@ internal sealed class HudInput
     // 引擎递归禁用保留每个控件自身的 FocusMode/MouseFilter，重新启用时无需恢复镜像。
     public void SyncHostInput()
     {
+        if (_photoCancellation is { IsCancellationRequested: false } photo && (!_dependencies.Flow.IsPlaying || _loading()))
+            photo.Cancel();
         if (!_hostInputBound) return;
         var dialog = HasVisibleContent(_view.DialogHost);
         var page = HasVisibleContent(_view.PageHost);
@@ -269,29 +272,46 @@ internal sealed class HudInput
     }
 
     private bool _photoPending;
+    private CancellationTokenSource? _photoCancellation;
 
     // 照片导出（UI-NAV）：后端忙、不可用时不提示；成功或失败各出一条临时提示
     private async Task ExportPhoto()
     {
-        if (_photoPending) return;
+        if (_photoPending || !_dependencies.Flow.IsPlaying || _loading()) return;
         _photoPending = true;
         var entry = _entry;
+        using var cancellation = new CancellationTokenSource();
+        _photoCancellation = cancellation;
+        void OnFlowChanged(AppState previous, AppState next)
+        {
+            if (next != AppState.Playing) cancellation.Cancel();
+        }
+        _dependencies.Flow.Changed += OnFlowChanged;
         try
         {
-            var result = await _dependencies.PhotoExport.ExportCurrentAsync();
+            var result = await _dependencies.Capture.CaptureAsync(new(HideUi: true), cancellation.Token);
             if (entry != _entry || !GodotObject.IsInstanceValid(_owner) || !_owner.IsInsideTree()) return;
             switch (result.Status)
             {
-                case PhotoExportStatus.Saved:
+                case CaptureStatus.Saved:
                     var folder = result.Path is { Length: > 0 } path ? System.IO.Path.GetDirectoryName(path) ?? path : "";
                     _pages.Toast.Show(UiKit.T("toast.photo.saved", ("folder", folder)));
                     break;
-                case PhotoExportStatus.Failed:
+                case CaptureStatus.Failed:
                     _pages.Toast.Show(UiKit.T("toast.photo.failed"), bar: "warning.fill");
                     break;
+                case CaptureStatus.Busy:
+                case CaptureStatus.Unavailable:
+                    break;
+                default: throw new ArgumentOutOfRangeException(nameof(result.Status));
             }
         }
-        finally { _photoPending = false; }
+        finally
+        {
+            _dependencies.Flow.Changed -= OnFlowChanged;
+            _photoCancellation = null;
+            _photoPending = false;
+        }
     }
 
     private void Handled() => _owner.GetViewport().SetInputAsHandled();

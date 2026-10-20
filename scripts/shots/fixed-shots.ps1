@@ -1,9 +1,9 @@
-﻿# 固定机位截图或 Movie Maker 录像：截图沿既有队列，录像每机位独立进程，去掉加载前导帧后从零编号。
+﻿# 启动游戏内统一拍摄服务；录像每机位独立进程，保留 Godot 原生文件，以服务元数据说明有效区间。
 # 用法：powershell -NoProfile -File fixed-shots.ps1 [-Only 名字,名字] [-Build] [-Poses 机位文件] [-MovieFrames 600] [-MovieEvents '60:season=winter;90:season=spring']
 #   -Build：按共享 Directory.Build.props 编译优化 Debug 并导入（代码改过、还没编译时用）
 #   -Poses：换一份机位表（格式同 poses.txt），临时加拍的机位放仓库外，不改 poses.txt
 # 事件也可写在机位表第三列 --movie-events=...；帧号零起始，60 fps，第 60 帧即第 1 秒。
-# 整轮持有构建锁（WF-BUILD），不开声音；截图 output/shots/、总览 总览.jpg；录像 output/movies/机位名/frame00000000.png。
+# 整轮持有构建锁（WF-BUILD），不开声音；截图 output/shots/、总览 总览.jpg；录像 output/movies/机位名/，有效区间见 movie-segment.json。
 param([string[]]$Only = @(), [switch]$Build, [string]$Poses = '',
     [ValidateRange(0, 2147483647)][int]$MovieFrames = 0, [string]$MovieEvents = '')
 $ErrorActionPreference = 'Stop'
@@ -50,31 +50,8 @@ try {
                 '--quality=fine', '--map=qingshuihe', '--title=0', '--save=off', '--audio=off')
             if ($MovieEvents) { $movieArguments += "--movie-events=$MovieEvents" }
             $log = Join-Path $movieOut 'capture.log'
-            $result = Invoke-UESTCProcess $godot $movieArguments $repo $log -Visible -TimeoutSeconds 900
-            $start = [regex]::Match($result.StdOut, '\[phase=movie-start\] firstMovieFrame=(\d+) frames=(\d+)')
-            $finish = [regex]::Match($result.StdOut, '\[phase=movie-complete\] firstMovieFrame=(\d+) frames=(\d+)')
-            if (-not $start.Success -or -not $finish.Success -or $start.Groups[1].Value -ne $finish.Groups[1].Value -or
-                [int]$start.Groups[2].Value -ne $MovieFrames -or [int]$finish.Groups[2].Value -ne $MovieFrames) {
-                throw "录像没有完整结束：$name，见 $log"
-            }
-            $first = [long]$start.Groups[1].Value
-            $nativeFrames = @{}
-            foreach ($file in Get-ChildItem -LiteralPath $movieOut -Filter 'movie*.png' -File) {
-                if ($file.Name -match '^movie(\d+)\.png$') { $nativeFrames[[long]$Matches[1]] = $file.FullName }
-            }
-            for ($frame = 0; $frame -lt $MovieFrames; $frame++) {
-                if (-not $nativeFrames.ContainsKey($first + $frame)) { throw "缺少 Movie Maker 帧 $($first + $frame)：$name" }
-            }
-            for ($frame = 0; $frame -lt $MovieFrames; $frame++) {
-                Move-Item -LiteralPath $nativeFrames[$first + $frame] -Destination (Join-Path $movieOut ('frame{0:D8}.png' -f $frame))
-            }
-            # 仅删除已知原生前导/收尾帧与无声 WAV；最终图片仍是 Godot 原生写出的字节。
-            foreach ($path in $nativeFrames.Values) { if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Force } }
-            $wave = Join-Path $movieOut 'movie.wav'
-            if (Test-Path -LiteralPath $wave) { Remove-Item -LiteralPath $wave -Force }
-            [ordered]@{ Fps = 60; Frames = $MovieFrames; MovieMakerFirstFrame = $first; Pattern = 'frame%08d.png' } |
-                ConvertTo-Json | Set-Content -LiteralPath (Join-Path $movieOut 'frames.json') -Encoding UTF8
-            "{0}：录像 {1} 帧，60 fps；frame00000000.png 对应原生第 {2} 帧" -f $name, $MovieFrames, $first
+            Invoke-UESTCProcess $godot $movieArguments $repo $log -Visible -TimeoutSeconds 900 | Out-Null
+            "{0}：Godot 原生录像；有效区间见 movie-segment.json，事件帧从区间起点零起算" -f $name
         }
         return
     }

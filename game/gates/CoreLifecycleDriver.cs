@@ -119,11 +119,9 @@ internal sealed class CoreLifecycleDriver(IStageGateHost host)
         }, host.Lifetime);
         var output = AppBoot.Options.Capture.Output ?? "";
         Directory.CreateDirectory(output);
-        using (var image = stage.GetViewport().GetTexture().GetImage())
-        {
-            if (image.IsEmpty() || image.SavePng(Path.Combine(output, gate + ".png")) != Error.Ok)
-                throw new IOException("Core lifecycle screenshot failed.");
-        }
+        var capture = await KernelServices.Get<IGameCapture>().CaptureAsync(
+            new(Path.Combine(output, gate + ".png"), HideUi: false), host.Lifetime);
+        if (capture.Status != CaptureStatus.Saved) throw new IOException("Core lifecycle screenshot failed: " + capture.Status);
         var snapshot = CoreRuntimeSnapshot.Capture();
         var baseline = Path.Combine(output, "save-close-state.json");
         if (gate == "save-close") File.WriteAllText(baseline, snapshot);

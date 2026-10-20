@@ -14,7 +14,7 @@ internal static class StageCapture
         try
         {
             if (AppBoot.Options.Capture.Shots.Count > 0)
-                await CaptureSequence.RunAsync(host.Stage, host.Readiness, AppBoot.Options, host.SyncView, () =>
+                await KernelServices.Get<GameCaptureNode>().RunSequenceAsync(host.Stage, host.Readiness, AppBoot.Options, host.SyncView, () =>
                 {
                     host.CheckActive();
                     return host.Ready;
