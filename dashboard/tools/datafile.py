@@ -1,4 +1,4 @@
-"""观察台数据文件的读写：每个数据文件是一行 `Dash.put("名字", <JSON>);`，页面用 <script> 直接加载（file:// 下也能用）。
+"""观察台数据文件的读写：每个数据文件是一行 `Dash.put("名字", <JSON>);`，页面用 <script> 直接加载。
 产出：dashboard/data/auto/*.js、dashboard/data/curated/*.js、.collab/tools/state/dashboard-app.json
 采集脚本、发布工具都经这里读写，不手写数据文件。写入先写临时文件再改名，页面不会读到半个文件。
 
@@ -9,11 +9,14 @@
 """
 import json
 import os
+import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # dashboard/
 DATA = os.path.join(ROOT, 'data')
 KINDS = ('auto', 'curated')
+sys.path.insert(0, os.path.join(ROOT, '..', '.collab', 'tools'))
+from monitor.read.collab import dashboard_data
 
 
 def path(kind, name):
@@ -22,14 +25,7 @@ def path(kind, name):
 
 
 def read(kind, name):
-    p = path(kind, name)
-    if not os.path.isfile(p):
-        return None
-    text = open(p, encoding='utf-8').read().strip()
-    head = f'Dash.put({json.dumps(name)}, '
-    if not (text.startswith(head) and text.endswith(');')):
-        raise ValueError(f'{p} 不是观察台数据文件')
-    return json.loads(text[len(head):-2])
+    return dashboard_data(kind, name)
 
 
 def write(kind, name, payload, source=None, force=False):
@@ -74,15 +70,6 @@ def app_stamp():
 
 
 AUTO_NAMES = ('live', 'attention', 'feedback', 'progress', 'team', 'system', 'hookfeed', 'stats', 'records', 'docs')
-RETIRED = ('pipeline', 'rowhistory', 'letters', 'audits', 'relations', 'docrefs', 'models', 'history',
-           'catalog', 'catalogdetail', 'queue', 'structure', 'health', 'decisions', 'audit-auto')
-
-
-def remove_retired():
-    for name in RETIRED:
-        target = path('auto', name)
-        if os.path.isfile(target):
-            os.remove(target)
 
 
 def refresh_index():

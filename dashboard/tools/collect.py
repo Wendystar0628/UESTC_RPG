@@ -121,27 +121,32 @@ def decision_text(text):
     return text or '结论尚无可公开的文字摘要'
 
 
-def decisions_data():
-    # 时刻只取 git 中首次新增该编号的登记证据；未提交的新编号没有可证时刻。
-    registered, at = {}, None
-    log = U.git('log', '--reverse', '-p', '--format=%x1e%ct', '--unified=0', '--', ':(glob)docs/**/*DECISIONS*.md')
-    for line in log.split("\n"):
-        if line.startswith('\x1e'):
-            stamp = line[1:].strip()
-            at = U.iso(float(stamp)) if stamp.isdigit() else None
-        else:
-            found = re.match(r'^\+\|\s*(D-\d+)\s*\|', line)
-            if found and at:
-                registered.setdefault(found[1], at)
+def decisions_data(limit=15):
+    """只整理资料页要展示的最近结论；时刻取编号首次进入 Git 的真实新增。"""
     rows = []
     for p in sorted(glob.glob(os.path.join(ROOT, 'docs', 'registry', 'REG-DECISIONS-*.md'))):
-        for l in read_text(rel(p)).splitlines():
-            c = cells(l)
-            if len(c) >= 5 and re.match(r'^D-\d+$', c[0]):
-                rows.append((int(c[0][2:]), {'id': c[0], 'text': decision_text(c[1]), 'status': re.split(r'[（(]', c[-1], 1)[0].strip(),
-                                         'scope': c[2], 'at': registered.get(c[0])}))
-    rows.sort(key=lambda r: -r[0])
-    return {'total': len(rows), 'recent': [r for _, r in rows]}
+        for line in read_text(rel(p)).splitlines():
+            values = cells(line)
+            if len(values) >= 5 and re.fullmatch(r'D-\d+', values[0]):
+                rows.append({'id': values[0], 'text': decision_text(values[1])})
+    rows = sorted(rows, key=lambda row: -int(row['id'][2:]))[:limit]
+    selected = {row['id'] for row in rows}
+    registered, at = {}, None
+    if selected:
+        pattern = r'^\|\s*(' + '|'.join(sorted(selected)) + r')\s*\|'
+        log = U.git('log', '--reverse', '-p', '--format=%x1e%ct', '--unified=0', '-G', pattern,
+                    '--', ':(glob)docs/**/*DECISIONS*.md')
+        for line in log.split("\n"):
+            if line.startswith('\x1e'):
+                stamp = line[1:].strip()
+                at = U.iso(float(stamp)) if stamp.isdigit() else None
+            else:
+                found = re.match(r'^\+\|\s*(D-\d+)\s*\|', line)
+                if found and found[1] in selected and at:
+                    registered.setdefault(found[1], at)
+                    if len(registered) == len(selected):
+                        break
+    return {'decisions': [{**row, 'at': registered.get(row['id'])} for row in rows]}
 
 
 def main():
@@ -188,7 +193,7 @@ def main():
         return system.build(datasets['docs'])
     take('system', system_data)
     take('hookfeed', hookfeed.build)
-    take('records', lambda: {'decisions': [{k: x[k] for k in ('id', 'at', 'text')} for x in decisions_data()['recent'][:15]]})
+    take('records', decisions_data)
     def statistics():
         require('progress', 'team', 'system', 'docs')
         return stats.build(datasets['progress'], datasets['team'], datasets['system'], datasets['docs'],
@@ -201,8 +206,6 @@ def main():
     with locked():
         for name, fn in (('attention', attention.build), ('feedback', attention.feedback)):
             datafile.write('auto', name, take(name, fn), source=SOURCE)
-    # 只清明确退役的数据文件；作者通知与私有审美输入仍保留。
-    datafile.remove_retired()
     from post import prune_all
     prune_all()
     progress.save('dashboard-collect.json', {'at': U.iso(time.time()), 'errors': failed})

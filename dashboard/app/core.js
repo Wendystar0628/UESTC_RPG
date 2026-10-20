@@ -5,8 +5,7 @@
   'use strict';
 
   var M = window.DashManifest || { pages: [], data: [] };
-  var DEMO = /[?&]demo(?:[=&]|$)/.test(location.search);
-  var Dash = window.Dash = { demo: DEMO };
+  var Dash = window.Dash = {};
 
   var store = {};      // 数据名 -> 数据
   var meta = {};       // 数据名 -> { sig, tried, loading, at, ver, reqVer, got, fail }；got 本次请求的文件执行了 Dash.put，fail 最近一次读取失败的原因（fetch 下载失败 / run 执行出错 / null）
@@ -59,11 +58,9 @@
   function readIndex(data) {
     var ok = data && data.versions && typeof data.versions === 'object';
     index.versions = ok ? data.versions : null;
-    index.state = !ok ? 'missing' : (!DEMO && Dash.stale(data, srcs.index.stale) ? 'stale' : 'ready');
+    index.state = !ok ? 'missing' : (Dash.stale(data, srcs.index.stale) ? 'stale' : 'ready');
     sync();
   }
-
-  function srcPath(s) { return DEMO ? 'data/demo/' + s.name + '.js' : s.path; }
 
   function loadData(s, ver) {
     var m = meta[s.name] || (meta[s.name] = {});
@@ -75,7 +72,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('script[data-dash="' + s.name + '"]'), function (e) { e.remove(); });
     var el = document.createElement('script');
     el.dataset.dash = s.name;
-    el.src = srcPath(s) + '?t=' + Date.now();
+    el.src = s.path + '?t=' + Date.now();
     /* 只有这次请求的文件真的执行了 Dash.put 才算交付：版本在此时才记，失败不推进版本 */
     function done(ok) {
       m.loading = 0;
@@ -83,7 +80,7 @@
       if (delivered) { m.ver = m.reqVer; m.fail = null; }
       else {
         m.fail = ok ? 'run' : 'fetch';
-        console.warn('[Dash] 数据 ' + s.name + (ok ? ' 的文件执行出错或没有调用 Dash.put：' : ' 下载失败：') + srcPath(s));
+        console.warn('[Dash] 数据 ' + s.name + (ok ? ' 的文件执行出错或没有调用 Dash.put：' : ' 下载失败：') + s.path);
       }
       if (!m.tried) m.tried = true;
       if (!delivered || before) dependents(s.name).forEach(schedule);   // 第一次读完仍没有、读取失败、从失败恢复：重画面板
@@ -135,7 +132,7 @@
       var m = meta[s.name] || {};
       if (!m.at || Date.now() - m.at >= Math.max(5, s.every || 15) * 1000 - 500) loadData(s, null);
     });
-    if (index.state === 'ready' && store.index && Dash.stale(store.index, srcs.index.stale) && !DEMO) index.state = 'stale';
+    if (index.state === 'ready' && store.index && Dash.stale(store.index, srcs.index.stale)) index.state = 'stale';
     sync();
   }
 
@@ -163,16 +160,14 @@
       });
   }
 
-  /* "知道了"：POST /api/attention/ack {id} → {ok: true}；成功后马上重读 attention 与索引。失败时 Promise 带原因，面板写出来；不存浏览器 */
-  Dash.ack = function (id) {
-    if (DEMO) return Promise.reject(new Error('演示数据，不写回'));
-    return post('/api/attention/ack', { id: id })
+  /* "知道了"：POST /api/attention/ack {id, revision} → {ok: true}；成功后马上重读 attention 与索引。失败时 Promise 带原因，面板写出来；不存浏览器 */
+  Dash.ack = function (id, revision) {
+    return post('/api/attention/ack', { id: id, revision: revision })
       .then(function (j) { loadData(srcs.attention, null); loadData(srcs.index, null); return j; });
   };
 
   /* 给主会话留言：POST /api/feedback {text} → {ok: true, at}；成功后重读 feedback 与索引 */
   Dash.feedback = function (text) {
-    if (DEMO) return Promise.reject(new Error('演示数据，留言没有发出'));
     return post('/api/feedback', { text: text })
       .then(function (j) { loadData(srcs.feedback, null); loadData(srcs.index, null); return j; });
   };
@@ -318,8 +313,9 @@
     var l = have('live');
     box.replaceChildren.apply(box, (l && l.leads || []).map(function (x) {
       var side = Dash.sideKey(x.who);
-      return h('span.lead-pill.t-' + side, { title: x.who + (x.running ? ' 在跑' : ' 空闲') },
-        h('span.dot.' + (x.running ? 'is-on' : 'is-off')), x.who + (x.running ? ' 在跑' : ' 空闲'));
+      var state = x.running === true ? ' 在跑' : x.running === false ? ' 空闲' : ' 未确认';
+      return h('span.lead-pill.t-' + side, { title: x.who + state },
+        x.running == null ? null : h('span.dot.' + (x.running ? 'is-on' : 'is-off')), x.who + state);
     }));
   }
 
@@ -331,7 +327,7 @@
     if (!dot || !txt) return;
     var l = have('live'), stale = Dash.isStale('live'), bad = Dash.dataState('live') === 'error';
     dot.className = 'dot t-' + (bad ? 'risk' : !l ? 'muted' : stale ? 'warn' : 'ok');
-    txt.textContent = DEMO ? '演示数据' : bad ? '实时数据没读到' : !l ? '等数据' : (stale ? '实时数据旧了 · ' : '实时 ') + Dash.at(l.updated);
+    txt.textContent = bad ? '实时数据没读到' : !l ? '等数据' : (stale ? '实时数据旧了 · ' : '实时 ') + Dash.at(l.updated);
     var pop = document.getElementById('fresh-pop');
     if (pop && !pop.hidden) fillPop(pop);
   }
@@ -345,7 +341,7 @@
       else { tone = 'ok'; text = Dash.at(d.updated); }
       return h('div.pop-row.t-' + tone, h('span.dot'), h('span.grow', s.label), h('span.ago', text));
     });
-    pop.replaceChildren(h('div.pop-title', DEMO ? '正在看演示数据' : '各份数据的更新时刻'), rows);
+    pop.replaceChildren(h('div.pop-title', '各份数据的更新时刻'), rows);
   }
 
   function updateCorner() {

@@ -1,6 +1,6 @@
 /* 观察台清单：页面、页面文件、数据源的唯一登记处。加页面、数据源只改这里。
    pages  导航顺序即页面顺序。ask 是页顶那句"这页回答什么"；file 是这页的面板文件（路径相对 app/），同名 .css 一并加载。
-   data   数据源（数据契约见 dashboard/README.md §2）。path 相对 dashboard/（?demo 时改读 data/demo/<name>.js）。
+   data   数据源（数据契约见 dashboard/README.md §2）。path 相对 dashboard/。
           poll   true：不看版本索引，每 every 秒拉一次（live 与 index 本身）。
           keep   true：页眉与导航要用，不管在哪一页都保持最新。
           其余数据只在当前页的面板用到时才拉，之后版本索引里它的版本变了才重拉；

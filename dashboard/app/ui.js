@@ -6,7 +6,6 @@
   var Dash = window.Dash;
   var store = Dash.internal.store;
   var srcs = Dash.internal.srcs;
-  var DEMO = Dash.demo;
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -89,10 +88,10 @@
     return (Date.now() - t) / 1000 > seconds;
   };
 
-  /* 按 manifest 里这份数据的期限判断；没有数据、演示模式、期限为 null 都返回 false */
+  /* 按 manifest 里这份数据的期限判断；没有数据、期限为 null 都返回 false */
   Dash.isStale = function (name) {
     var s = srcs[name];
-    if (DEMO || !store[name] || !s || s.stale == null) return false;
+    if (!store[name] || !s || s.stale == null) return false;
     // 版本索引在管的数据：内容没变后端不重写，updated 是"上次变化"；索引按时刷新就说明这份是最新的
     var versions = store.index && store.index.versions;
     if (!s.poll && Dash.internal.indexState() === 'ready' && versions && name in versions) return false;
@@ -153,9 +152,10 @@
   var STAGES = ['queued', 'doing', 'finishing', 'paused'];
   Dash.stageKeys = STAGES;
   Dash.flowbar = function (counts, link) {
-    return h('div.flowbar', { role: 'img', 'aria-label': STAGES.map(function (k) { return Dash.label('stage', k) + ' ' + (counts[k] || 0); }).join('，') },
+    if (!STAGES.every(function (k) { return typeof counts[k] === 'number' && isFinite(counts[k]); })) return Dash.empty('进展数量未确认', '', true);
+    return h('div.flowbar', { role: 'img', 'aria-label': STAGES.map(function (k) { return Dash.label('stage', k) + ' ' + counts[k]; }).join('，') },
       STAGES.map(function (k) {
-        var n = counts[k] || 0;
+        var n = counts[k];
         return h((link ? 'a' : 'div') + '.flowbar-seg' + (n ? '' : '.is-zero') + (k === 'paused' || k === 'queued' ? '.is-light' : ''),
           { href: link ? link(k) : null, style: '--n:' + Math.max(n, 1) + '; --tone: var(' + Dash.colorVar('stage', k) + ')' },
           h('span.flowbar-name', Dash.label('stage', k)), h('span.flowbar-n', Dash.num(n)));
@@ -169,7 +169,8 @@
 
   /* 分钟数写成"45 分钟""2 小时 5 分钟" */
   Dash.minutes = function (m) {
-    m = Math.round(m || 0);
+    if (m == null || !isFinite(m)) return '—';
+    m = Math.round(m);
     return m < 60 ? m + ' 分钟' : Math.floor(m / 60) + ' 小时' + (m % 60 ? ' ' + (m % 60) + ' 分钟' : '');
   };
 })();

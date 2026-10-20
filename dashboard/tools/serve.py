@@ -17,15 +17,24 @@ sys.path.insert(0, os.path.join(HERE, '..', '..', '.collab', 'tools'))
 import datafile
 from post import locked
 from monitor.view import attention
+from monitor.read import repo
 
 
 class Handler(SimpleHTTPRequestHandler):
     def translate_path(self, path):
+        raw = urlsplit(path).path
+        if raw.startswith('/worktree-shots/'):
+            root, separator, name = unquote(raw[len('/worktree-shots/'):]).rpartition('/output/shots/')
+            if separator and root in repo.checkouts():
+                full = attention.overview_file(root, name)
+                if full:
+                    return full
+            return os.path.join(datafile.ROOT, '.not-published')
         # 页内仍使用仓库相对链接；这些权威资料根按仓库路径公开给本机作者。
         rel = posixpath.normpath(unquote(urlsplit(path).path)).lstrip('/')
         if rel.startswith('data/'):
             parts = rel.split('/')
-            allowed = len(parts) == 3 and ((parts[1] == 'auto' and parts[2] in {n + '.js' for n in (*datafile.AUTO_NAMES, 'index')}) or (parts[1] == 'curated' and parts[2] == 'notices.js') or parts[1] == 'demo')
+            allowed = len(parts) == 3 and ((parts[1] == 'auto' and parts[2] in {n + '.js' for n in (*datafile.AUTO_NAMES, 'index')}) or (parts[1] == 'curated' and parts[2] == 'notices.js'))
             if not allowed:
                 return os.path.join(datafile.ROOT, '.not-published')
         if rel.split('/', 1)[0] in ('docs', 'output', '.collab', 'game', 'scripts', 'pipeline'):
@@ -74,7 +83,7 @@ class Handler(SimpleHTTPRequestHandler):
                 if item is None:
                     self.answer(404, {'ok': False, 'error': '过目项已不存在'})
                     return
-                if request.get('revision') and request['revision'] != attention.revision(item):
+                if request.get('revision') != item['revision']:
                     self.answer(409, {'ok': False, 'error': '内容已变化，请刷新'})
                     return
                 attention.acknowledge(item)

@@ -8,24 +8,24 @@
 
 - `collect.py` 每次按真实来源生成 v2 汇总；队列表只读正式 `title`，不把“做什么”长描述当标题。文档域沿用 CORE-INDEX，记录沿用 REG-DECISIONS。
 - `live.py` 每 15 秒写两个指挥是否运行及界面版本；输入变化即以新进程运行 collect，无变化每两分钟刷新。修改采集入口或 monitor 模块后重启循环与服务。
-- `.collab/tools/monitor/view/` 的 attention、progress、team、system、hookfeed、stats 分别负责过目/留言、四段进展、团队汇总、体系摘要、注入摘要、统计；people 继续提供真实会话读法。底层读取与巡逻共用，不保留 v1 页面视图。
-- `datafile.py` 是 `Dash.put` 文件的唯一读写入口；原子替换文件，版本索引只登记 v2。`post.py` 只维护通知及审美过目输入，写入有锁。
+- `.collab/tools/monitor/view/` 的 attention、progress、team、system、hookfeed、stats 分别负责过目/留言、四段进展、团队汇总、体系摘要、注入摘要、统计；people 提供真实会话读法。底层读取与巡逻共用；`read/collab.py` 持有 `Dash.put` 的唯一解析，不反向调用观察台工具。
+- `datafile.py` 统一写入 `Dash.put` 文件并委托监控读取层解析；原子替换文件，版本索引只登记 v2。`post.py` 只维护通知及审美过目输入，写入有锁。
 - `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件与两个同源写入 API。
 
-`dashboard/data/auto/` 是程序结果，`curated/notices.js` 是通知，`curated/audit.js` 只是私有审美输入，`data/demo/` 由前端维护。源码目录 `app/`、`vendor/`、`index.html` 的版本集合决定 `live.appStamp`。
+`dashboard/data/auto/` 是程序结果，`curated/notices.js` 是通知，`curated/audit.js` 只是私有审美输入。源码目录 `app/`、`vendor/`、`index.html` 的版本集合决定 `live.appStamp`。
 
 ## 2 数据契约 v2
 
-每份数据由 `Dash.put(名字, 数据)` 交付，附 `updated`、`source`；时刻是本地 ISO 字符串。来源失败写 `errors`，不会把旧值当作新结果；缺乏真实事实的字段用 `null`。只有 `notices` 在 curated，其余在 auto。
+每份数据由 `Dash.put(名字, 数据)` 交付，附 `updated`、`source`；时刻是本地 ISO 字符串。来源失败写 `errors`，不会把旧值当作新结果；缺乏真实事实的字段用 `null`，页面显示“未确认”或 —，不改写为零、空闲或正常；数量不全时不画占比，累计时长仅在各项都确认后相加。只有 `notices` 在 curated，其余在 auto。
 
 ```text
 index: {versions: {名字: 版本串}}
 live: {leads: [{who: Claude|Codex, running: true|false|null}], appStamp}
-attention: {items: [{id, kind: audit|shots|poster|review, title, detail, link, at, acked}]}
+attention: {items: [{id, kind: audit|shots|poster|review, title, detail, link, at, revision, acked}]}
 feedback: {items: [{at, text, delivered}]}
 progress: {counts: {queued, doing, finishing, paused}, done: {today, week},
            rows: [{id, title, who: Claude|Codex|null, stage: queued|doing|finishing|paused, status}]}
-team: {leads: [{who, model, effort, row, rowTitle, agents}],
+team: {leads: [{who, model, effort, rowCount, row, rowTitle, agents}],
        usageToday: [{model, count, minutes}], rules: [{model, use}]}
 system: {hooks: [{name, side, purpose, ok: true|false|null}], scripts: [{group, count, purpose}],
          docs: [{domain, count, summary}], health: {level: ok|warn|bad, summary,
@@ -55,7 +55,7 @@ notices: {items: [{id, at, from, level, text, link, expires, pinned}]}
 
 ### 2.2 作者过目与留言
 
-过目项只收明确 `scope=aesthetic` 且带当前判断的 post 输入，以及固定机位截图总览。detail 必须说明“已按什么在做”；指挥来信不进入作者事项。`POST /api/attention/ack` 收 `{id, revision?}`，按实际内容版本确认；内容变了重新过目。
+过目项只收明确 `scope=aesthetic` 且带当前判断的 post 输入，以及固定机位截图总览。detail 必须说明“已按什么在做”；指挥来信不进入作者事项。`POST /api/attention/ack` 收 `{id, revision}`，只确认作者实际看到的版本；缺少版本或内容变了返回 409，刷新后重新过目。
 
 `POST /api/feedback` 收 `{text}`，只写 Claude inbox 的 `<YYYYMMDD-HHMMSS>-author-留言-<随机后缀>.md`，第一行 `【作者】`，返回 `{ok: true, at}`。同秒留言各自独立，排他创建不会覆盖。回显最近十条，只从真实 inbox 与 inbox_wait/delivered 读取；归档时 delivered 才为 true。没有第二份全文权威。C249 的监视与主会话钩子负责即时送达。
 
@@ -68,7 +68,7 @@ python -I -X utf8 dashboard/tools/post.py notice "一句高层通知" --from "Co
 python -I -X utf8 dashboard/tools/post.py audit "海报取向供你过目" --why "请看主视觉观感" --doing "主会话选定的画面方向" --kind poster --link output/poster.jpg --from "主会话"
 ```
 
-collect 删除明确退役的数据文件，版本索引与服务只公开本节的数据。
+版本索引与服务只公开本节的数据。
 
 ## 3 页面运行时
 
@@ -91,7 +91,6 @@ dashboard/
   data/                 本地状态，不进 git（.gitignore）
     auto/<名字>.js      采集脚本生成，任何人不手改
     curated/<名字>.js   只经 tools/post.py 改
-    demo/<名字>.js      演示数据（?demo），与 manifest 的数据源一一对应
 ```
 
 ### 3.1 数据与加载
@@ -105,8 +104,6 @@ dashboard/
 **版本索引**：`index` 是 `{ versions: { 名字: 版本串 } }`，每 15 s 拉一次；某份数据在索引里的版本变了才重拉；版本只在这次请求的文件真的执行了 `Dash.put` 之后才记下，下载失败或文件执行出错不推进版本、隔 15 s 再试，期间这份数据按没读到处理（面板写"没读到"），旧缓存不冒充新数据。索引没到、没有 `versions`、旧了，或索引里没列这份数据时，这份数据按自己的 `every` 定时拉，右下角提示条写明。第一次读完索引之前不拉非 `poll` 数据。
 
 **整页刷新**：`live` 带 `appStamp`（界面代码最后改动时刻），变了就 `location.reload()`，开着的页面不跑旧代码。
-
-**`?demo`**：地址带 `?demo` 时所有数据改读 `data/demo/<名字>.js`（同一格式），不判旧，页眉写"演示数据"，"知道了"与留言直接失败并写明是演示数据；用来在采集没跑时开发和预览。
 
 **页眉**：一句总述（在做、收尾几行，今天完成几行，取 `progress`）；两位指挥的状态签（`live.leads`：在跑实心灯、空闲空心灯）；右侧数据时刻按钮，点开列每份数据的更新时刻与旧不旧。导航角标：首页是 `attention` 里没点"知道了"的条数。
 
@@ -135,11 +132,10 @@ Dash.panel({ id, page, title?, note?, span?, order?, needs?, partial?, fixed?(el
 Dash.put(name, data)            数据文件调用（§2）
 Dash.dataState(name)            "wait" 读取中 / "missing" 读过但没有 / "error" 没读到 / "ok"
 Dash.redraw(id) / redrawAll()   重画一个面板（本地交互改了显示）/ 全部（主题切换时图按新色重建）
-Dash.ack(id)                    "知道了"：POST /api/attention/ack {id} → {ok: true}；成功后重读 attention 与 index
+Dash.ack(id, revision)                    "知道了"：POST /api/attention/ack {id, revision} → {ok: true}；成功后重读 attention 与 index
 Dash.feedback(text)             留言：POST /api/feedback {text} → {ok: true, at}；成功后重读 feedback 与 index
-Dash.isStale(name)              按 manifest 的 stale 判断；没有数据、演示、stale 为 null 都是 false
+Dash.isStale(name)              按 manifest 的 stale 判断；没有数据、stale 为 null 都是 false
 Dash.stale(data, seconds)       按数据自带的 updated 判断
-Dash.demo                       是否 ?demo
 ```
 
 写回只经本地服务 `tools/serve.py`，不存浏览器。失败时 Promise 带一句人话原因，面板照写：页面是直接打开的文件（没经本地服务）、本地服务没在运行、本地服务不认这个操作（旧版服务，返回非 JSON）、服务给的 `error`。留言框：空文本发不出，发送中按钮置灰，成功后清空并写"已送到主会话 HH:MM"，失败保留原文并写原因；Ctrl + Enter 也能发。
@@ -154,7 +150,7 @@ Dash.esc(s)                       转义 HTML
 Dash.num(n)                       千位加逗号，小数留一位（12,345、19.9）；没有数据写 —
 Dash.at(iso)                      今天 "HH:MM"，不是今天 "M-D HH:MM"；解析不了写 —
 Dash.day(iso)                     "M 月 D 日"
-Dash.minutes(m)                   "45 分钟""2 小时 5 分钟"
+Dash.minutes(m)                   "45 分钟""2 小时 5 分钟"；缺事实写 —
 Dash.parseTime(iso)               解析为毫秒数
 Dash.status(text, tone)           一句状态；tone：ok warn risk claude codex author auto muted
 Dash.open(path, text?, cls?)      打开仓库里的产物（新标签页），只写动作不露路径；path 相对仓库根
@@ -207,14 +203,14 @@ Dash.modelKey(型号)       型号 → 色表键：claude-opus-5-5 → opus；gp
 | --- | --- | --- |
 | `#home` 首页 | 要不要我动手、项目推进得怎样 | `home-attention` 等你过目（没点"知道了"的前 3 条，其余折叠；种类签、一句标题、一句"已按 X 在做"、时刻、"打开""知道了"，`attention`，7 栏）；`home-feedback` 给主会话留言（输入框、发送、送达结果，下面最近 3 条与主会话读没读，`feedback`，5 栏）；`home-progress` 进展一览（流水线比例条、今天与本周完成数、在做的前 5 行，`progress`，7 栏）；`home-milestones` 最近里程碑（最近 3 条通知的竖时间线，`notices`，5 栏）；`home-stats` 关键统计（约 6 张卡，一个数一句说明，带趋势小柱或环形占比，`stats`）。1440×900 一屏放得下这 5 块 |
 | `#progress` 进展 | 还没做完的活各在哪一段 | `progress-board` 任务流水线（比例条加今天、本周完成数；四列卡片：排着 → 在做 → 收尾 → 暂停，列头写行数，卡片是编号 + 标题、谁、一句状态，`progress`） |
-| `#team` 团队 | 两边各在忙什么、用了哪些模型 | `team-leads` 两位指挥（头像卡带在跑灯：模型与推理档、正在做的行、在跑子代理数，`team`、`live`）；`team-usage` 今天各模型做了多少（条长是累计时长，条尾写个数与时长，`team`，7 栏）；`team-rules` 模型分工（模型 → 做什么，`team`，5 栏） |
+| `#team` 团队 | 两边各在忙什么、用了哪些模型 | `team-leads` 两位指挥（头像卡带在跑灯：模型与推理档、在做行数与单行编号标题、在跑子代理数，`team`、`live`）；`team-usage` 今天各模型做了多少（条长是累计时长，条尾写个数与时长，`team`，7 栏）；`team-rules` 模型分工（模型 → 做什么，`team`，5 栏） |
 | `#system` 体系 | 这套开发机器由什么组成、是否正常 | `system-health` 健康（正常 / 要看 / 有问题的环形占比、一句结论、要看的问题，`system`）；`system-hooks` 钩子（按负责方分组色块，每个一盏灯、一句作用，`system`，5 栏）；`system-scripts` 脚本（按个数分段的色带、分组色块：组名、个数、一句作用，`system`，7 栏）；`system-hookfeed` 最近注入了什么（主会话、Claude 子代理、Codex 主线、Codex 子代理四道，每道最近 10 次：时刻、事件、注入了哪几块、字数，不展示正文，`hookfeed`）；`system-docs` 文档（按域的面积图与各域一句话，`system`） |
 | `#library` 资料 | 查文档、决策和通知 | `library-docs` 文档目录（一域一行，点开看编码、简题、一句话摘要，`docs`）；`library-decisions` 最近决策（最近 15 条的竖时间线，D 编号加一句结论，`records`，7 栏）；`library-notices` 通知（竖时间线，`notices`，5 栏） |
 
 **加页面、面板、数据源**：
 - 加页面：在 `manifest.js` 的 `pages` 加一项（`id`、`title`、`ask`、`file`），建 `pages/<页>.js` 与同名 `.css`，用 `Dash.panel` 注册。
 - 加面板：在所属页文件里再写一个 `Dash.panel`，写清 `title` 与 `note`。
-- 加数据源：先按 §2 在契约里定形状并让采集写出、版本索引列出，再在 `manifest.js` 的 `data` 登记，并在 `data/demo/` 放一份同格式演示数据。
+- 加数据源：先按 §2 在契约里定形状并让采集写出、版本索引列出，再在 `manifest.js` 的 `data` 登记。
 - 面板只用 `Dash.*` 与 `style.css` 的通用类，自己的样式写进同名 `.css`，只用令牌，不写颜色字面量。
 
 ## 5 视觉
@@ -222,10 +218,10 @@ Dash.modelKey(型号)       型号 → 色表键：claude-opus-5-5 → opus；gp
 - **颜色有固定语义**（§3.5），与协作方法海报一致：玫红＝作者，紫＝Claude 侧，青绿＝Codex 侧，琥珀＝自动机制，红＝有问题，橙＝要看，绿＝正常；流水线四段各一色；结构、文字、分隔一律用中性蓝灰。浅蓝主色只给当前页、今天与主按钮，不为装饰换色。
 - **一眼读懂**：字号偏大（正文 15 px、块标题 17 px、关键数 26–36 px），留白够；每块先给一个数或一句结论，再给小图；红色只给有问题的事；时刻写具体时间。
 - 浅色为主，跟随系统深色（`prefers-color-scheme`，`style.css` 令牌各一份）；字体用系统中文无衬线，数字等宽；统计图统一用 ECharts，流水线比例条、色带、时间线这类简单图形用 HTML 与 CSS。窄屏（390 px）单列、不横向溢出。
-- **本地预览**：`python -I -m http.server <端口> --bind 127.0.0.1 --directory dashboard`，打开 `http://127.0.0.1:<端口>/?demo`；写回要用 `tools/serve.py` 起的服务。
+- **本地预览**：`python -I -X utf8 dashboard/tools/serve.py`，打开 `http://127.0.0.1:8765/`，读取采集的真实数据；已在运行时直接打开该地址。
 
 ## 6 采集与维护
 
-- `collect.py`：由 `live.py --loop` 每 10 分钟跑一次（也可手动 `python -I -X utf8 dashboard/tools/collect.py`），读权威来源：`docs/`（各文档头部与 `docs/SECTIONS.md`）、`docs/registry/REG-DECISIONS-*`、`output/shots`、`output/posters`、`output/reports`，以及经监控库读的本机协作数据与健康检查（见第 1 节）。顺手删掉过期的通知。
+- `collect.py`：由 `live.py --loop` 在输入变化时运行，无变化每两分钟刷新（也可手动 `python -I -X utf8 dashboard/tools/collect.py`），读权威来源：`docs/`（各文档头部与 `docs/SECTIONS.md`）、`docs/registry/REG-DECISIONS-*`、固定机位总览，以及经监控库读的本机协作数据与巡逻摘要（见第 1 节）。顺手删掉过期的通知。
 - `live.py --loop`：主会话开局与重启后在后台起（来信监视同一套做法），巡逻发现没在跑会提醒；`打开观察台.cmd` 也会在它没跑时起一个。改了 `live.py` 或监控库以后要重启它。
 - `post.py`：所有会话与子代理改了高层信息时用它发布或结项，规则见 WF-COMMS。

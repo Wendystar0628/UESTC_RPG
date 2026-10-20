@@ -9,10 +9,10 @@
   var acking = {};    // id -> true：正在写回
   var ackErr = {};    // id -> 失败原因
 
-  function ack(id) {
+  function ack(id, revision) {
     acking[id] = true; delete ackErr[id];
     Dash.redraw('home-attention');
-    Dash.ack(id).catch(function (e) { ackErr[id] = e.message; })
+    Dash.ack(id, revision).catch(function (e) { ackErr[id] = e.message; })
       .then(function () { delete acking[id]; Dash.redraw('home-attention'); });
   }
 
@@ -25,7 +25,7 @@
         ackErr[x.id] ? h('div.att-err', '没记下：' + ackErr[x.id]) : null),
       h('div.att-act',
         x.link ? Dash.open(x.link, '打开') : null,
-        h('button.btn.btn-primary', { type: 'button', disabled: acking[x.id] || null, on: { click: function () { ack(x.id); } } },
+        h('button.btn.btn-primary', { type: 'button', disabled: acking[x.id] || null, on: { click: function () { ack(x.id, x.revision); } } },
           acking[x.id] ? '记下中' : '知道了')));
   }
 
@@ -122,14 +122,14 @@
   /* ---------- 关键统计 ---------- */
   function statTile(c) {
     var vis = null;
-    if (c.trend && c.trend.length) vis = Dash.charts.spark(c.trend, { height: 46, unit: c.unit, label: c.label + '近 ' + c.trend.length + ' 天' });
-    else if (c.parts && c.parts.length) {
+    if (c.trend && c.trend.length && c.trend.every(function (v) { return typeof v === 'number' && isFinite(v); })) vis = Dash.charts.spark(c.trend, { height: 46, unit: c.unit, label: c.label + '近 ' + c.trend.length + ' 天' });
+    else if (c.parts && c.parts.length && c.parts.every(function (p) { return typeof p.value === 'number' && isFinite(p.value); })) {
       vis = Dash.charts.ring(c.parts.map(function (p, i) { return { label: p.label, value: p.value, tone: p.tone || ['seq', i] }; }), { label: c.label, unit: c.unit, height: 60 });
     }
     return h('div.stat' + (c.level ? '.t-' + ({ ok: 'ok', warn: 'warn', bad: 'risk' }[c.level]) : ''),
       h('div.stat-text',
         h('div.stat-label', c.level ? h('span.dot') : null, c.label),
-        h('div.stat-value', typeof c.value === 'number' ? Dash.num(c.value) : c.value, c.unit ? h('span.stat-unit', c.unit) : null),
+        h('div.stat-value', c.value == null ? '—' : typeof c.value === 'number' ? Dash.num(c.value) : c.value, c.unit ? h('span.stat-unit', c.unit) : null),
         c.note ? h('div.stat-note', c.note) : null),
       vis ? h('div.stat-vis' + (c.trend ? '.is-spark' : '.is-ring'), vis) : null);
   }

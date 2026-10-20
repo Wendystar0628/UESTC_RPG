@@ -24,7 +24,7 @@
       el.appendChild(h('div.pb-cols', Dash.stageKeys.map(function (k) {
         var list = rows.filter(function (r) { return r.stage === k; });
         return h('section.pb-col', { style: '--tone: var(' + Dash.colorVar('stage', k) + ')' },
-          h('header.pb-col-head', h('span.pb-col-name', Dash.label('stage', k)), h('span.pb-col-n', Dash.num(c[k] != null ? c[k] : list.length) + ' 行')),
+          h('header.pb-col-head', h('span.pb-col-name', Dash.label('stage', k)), h('span.pb-col-n', Dash.num(c[k]) + ' 行')),
           h('div.pb-col-note', COL_NOTE[k]),
           list.length ? h('div.pb-cards', list.map(card)) : h('div.pb-none', '没有'));
       })));

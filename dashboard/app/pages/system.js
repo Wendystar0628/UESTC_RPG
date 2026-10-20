@@ -9,20 +9,21 @@
     id: 'system-health', page: 'system', title: '健康', note: '巡逻查下来正不正常、要看的有哪几件', order: 10, needs: ['system'],
     render: function (el, d) {
       var g = d.system.health || {}, n = g.counts || null, probs = g.problems || [];
-      var ring = n ? Dash.charts.ring([
-        { label: '正常', value: n.ok || 0, tone: ['level', 'ok'] },
-        { label: '要看', value: n.warn || 0, tone: ['level', 'warn'] },
-        { label: '有问题', value: n.bad || 0, tone: ['level', 'bad'] }
-      ], { label: '健康检查', unit: '项', height: 96, center: Dash.num(n.ok || 0) + '/' + Dash.num((n.ok || 0) + (n.warn || 0) + (n.bad || 0)) }) : null;
+      var countsKnown = n && ['ok', 'warn', 'bad'].every(function (key) { return typeof n[key] === 'number' && isFinite(n[key]); });
+      var ring = countsKnown ? Dash.charts.ring([
+        { label: '正常', value: n.ok, tone: ['level', 'ok'] },
+        { label: '要看', value: n.warn, tone: ['level', 'warn'] },
+        { label: '有问题', value: n.bad, tone: ['level', 'bad'] }
+      ], { label: '健康检查', unit: '项', height: 96, center: Dash.num(n.ok) + '/' + Dash.num(n.ok + n.warn + n.bad) }) : null;
       el.appendChild(h('div.health',
         ring ? h('div.health-ring', ring) : null,
         h('div.health-main',
           Dash.status(g.summary || '还没有结论', LEVEL_TONE[g.level] || 'muted'),
           n ? h('div.health-counts',
-            h('span.t-ok', h('span.dot'), '正常 ' + Dash.num(n.ok || 0) + ' 项'),
-            h('span.t-warn', h('span.dot'), '要看 ' + Dash.num(n.warn || 0) + ' 项'),
-            h('span.t-risk', h('span.dot'), '有问题 ' + Dash.num(n.bad || 0) + ' 项')) : null,
-          probs.length ? h('ul.health-probs', probs.map(function (p) { return h('li', p); })) : h('div.muted', '没有要看的问题'))));
+            h('span.t-ok', h('span.dot'), '正常 ' + Dash.num(n.ok) + ' 项'),
+            h('span.t-warn', h('span.dot'), '要看 ' + Dash.num(n.warn) + ' 项'),
+            h('span.t-risk', h('span.dot'), '有问题 ' + Dash.num(n.bad) + ' 项')) : h('div.muted', '巡逻分级数量未确认'),
+          probs.length ? h('ul.health-probs', probs.map(function (p) { return h('li', p); })) : h('div.muted', g.level ? '没有要看的问题' : '巡逻结论未确认'))));
     }
   });
 
@@ -37,10 +38,11 @@
         el.appendChild(h('div.hook-group.t-' + side,
           h('div.hook-group-name', Dash.label('side', side) + ' 侧 · ' + list.length + ' 个'),
           list.map(function (x) {
-            return h('div.hook' + (x.ok ? '' : '.is-bad'),
-              h('span.hook-light'),
+            var unknown = x.ok !== true && x.ok !== false;
+            return h('div.hook' + (x.ok === false ? '.is-bad' : ''),
+              h('span.hook-light', { style: unknown ? 'background: var(--muted); box-shadow: 0 0 0 4px var(--muted-bg)' : null }),
               h('div.hook-main', h('div.hook-purpose', x.purpose || x.name), h('div.hook-name', x.name)),
-              h('span.hook-state', x.ok ? '正常' : '要看'));
+              h('span.hook-state', { style: unknown ? 'color: var(--muted)' : null }, unknown ? '未确认' : x.ok ? '正常' : '要看'));
           })));
       });
     }
@@ -51,9 +53,9 @@
     render: function (el, d) {
       var groups = d.system.scripts || [];
       if (!groups.length) { el.appendChild(Dash.empty('没有脚本分组', '', true)); return; }
-      var total = groups.reduce(function (s, g) { return s + (g.count || 0); }, 0);
+      var total = groups.every(function (g) { return g.count != null; }) ? groups.reduce(function (s, g) { return s + g.count; }, 0) : null;
       el.appendChild(h('div.sc-total', '一共 ', h('b', Dash.num(total)), ' 个脚本'));
-      el.appendChild(h('div.sc-strip', groups.map(function (g, i) {
+      if (total != null) el.appendChild(h('div.sc-strip', groups.map(function (g, i) {
         return h('i.sc-seg', { title: g.group + ' ' + g.count + ' 个', style: 'flex:' + Math.max(g.count, 1) + ' 1 0; background: var(' + Dash.colorVar('seq', i) + ')' });
       })));
       el.appendChild(h('div.sc-groups', groups.map(function (g, i) {
@@ -69,9 +71,9 @@
     render: function (el, d) {
       var docs = d.system.docs || [];
       if (!docs.length) { el.appendChild(Dash.empty('没有文档清单', '', true)); return; }
-      var total = docs.reduce(function (s, x) { return s + (x.count || 0); }, 0);
+      var total = docs.every(function (x) { return x.count != null; }) ? docs.reduce(function (s, x) { return s + x.count; }, 0) : null;
       el.appendChild(h('div.sc-total', '一共 ', h('b', Dash.num(total)), ' 份，分 ', h('b', Dash.num(docs.length)), ' 个域'));
-      el.appendChild(Dash.charts.treemap(docs.map(function (x, i) {
+      if (total != null) el.appendChild(Dash.charts.treemap(docs.map(function (x, i) {
         return { label: x.domain, value: x.count, note: x.summary, tone: ['seq', i] };
       }), { label: '文档按域的份数', unit: '份', height: 230 }));
       el.appendChild(h('div.dom-list', docs.map(function (x, i) {
@@ -88,7 +90,6 @@
     { role: 'Codex 主线', side: 'codex', main: true },
     { role: 'Codex 子代理', side: 'codex', main: false }
   ];
-  var EVENT = { UserPromptSubmit: '作者发消息', SessionStart: '会话开始', SubagentStart: '子代理开工', PostToolUse: '工具用完', PreToolUse: '工具用前', Stop: '一轮结束' };
 
   Dash.panel({
     id: 'system-hookfeed', page: 'system', title: '最近注入了什么', note: '钩子最近往四方的对话里送了哪几块规则或提醒，每道最近 10 次；不展示正文', order: 35, needs: ['hookfeed'],
@@ -101,7 +102,7 @@
           h('header.feed-head', h('span.feed-role', lane.role), h('span.feed-n', items.length ? '最近 ' + items.length + ' 次' : '')),
           items.length ? h('div.feed-items', items.map(function (x) {
             return h('div.feed-item',
-              h('div.feed-meta', h('span.feed-at', Dash.at(x.at)), h('span.feed-ev', EVENT[x.event] || x.event), h('span.feed-chars', Dash.num(x.chars) + ' 字')),
+              h('div.feed-meta', h('span.feed-at', Dash.at(x.at)), h('span.feed-ev', x.event), h('span.feed-chars', Dash.num(x.chars) + ' 字')),
               h('div.feed-blocks', (x.blocks || []).map(function (b) { return h('span.feed-block', b); })));
           })) : h('div.feed-none', '最近没有注入'));
       })));
