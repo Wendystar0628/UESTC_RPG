@@ -14,7 +14,8 @@
     jump: '新增时就标了插队；暂停按前置里写的行号认',
     rework: '一格一次推送；红是回滚，橙是审计查实开了行'
   };
-  var BOARD_ROWS = 8;   // 看板每列先露几行，其余折叠
+  var BOARD_ROWS = 4;   // 看板每列先露几行，其余折叠
+  var SHELF_CHIPS = 4;  // 暂停书架收起时露几张签
 
   /* ---------- 小工具 ---------- */
   function inSide(who, side) { return side === 'all' || Dash.sideKey(who) === side; }
@@ -79,42 +80,75 @@
     });
   }
 
-  /* ---------- work-board 任务看板 ---------- */
-  function card(r, rows) {
+  /* ---------- work-board 任务看板：等前置 → 就绪 → 进行中 → 待集成 四段流水，暂停收成下方书架 ---------- */
+  function byAge(a, b) { return Dash.parseTime(a.since) - Dash.parseTime(b.since); }
+
+  /* 等 C-xxx：后端给的还没结的前置（waitOn） */
+  function waitText(r) {
+    var ids = r.waitOn || [];
+    if (!ids.length) return null;
+    return '等 ' + ids.slice(0, 2).join('、') + (ids.length > 2 ? ' 等 ' + ids.length + ' 行' : '');
+  }
+
+  /* 三行：编号与签 / 标题 / 谁与本段已多久 */
+  function card(r, rows, showWait) {
+    var wait = showWait ? waitText(r) : null;
     return h('button.wk-card' + (r.long ? '.is-long' : ''), { type: 'button', on: { click: function () { openRow(rows, r.id); } } },
       h('span.wk-card-head',
         h('span.id', r.id),
-        r.long ? Dash.mark('level', 'warn', '久') : null,
         r.jump ? Dash.mark('mark', '插队', '插队') : null,
-        h('span.wk-card-side', Dash.mark('side', Dash.sideKey(r.who), r.who || '未定'))),
-      h('span.wk-card-title', r.title),
-      h('span.wk-card-time', '本段' + Dash.since(r.since)));
+        r.long ? Dash.mark('level', 'warn', '久') : null,
+        wait ? h('span.wk-card-wait', { title: (r.deps || []).join('、') }, wait) : null),
+      h('span.wk-card-title', { title: r.title }, r.title),
+      h('span.wk-card-foot',
+        Dash.mark('side', Dash.sideKey(r.who), r.who || '未定'),
+        h('span.wk-card-time', r.since == null ? '本段未确认' : '本段' + Dash.since(r.since))));
+  }
+
+  /* 超过 BOARD_ROWS 张折成"另 N 行" */
+  function stack(cards, open) {
+    if (cards.length <= BOARD_ROWS) return h('div.wk-cards', cards);
+    return h('div.wk-cards', cards.slice(0, BOARD_ROWS),
+      Dash.fold('另 ' + (cards.length - BOARD_ROWS) + ' 行', h('div.wk-cards', cards.slice(BOARD_ROWS)), open));
+  }
+
+  function shelf(list, all, hit) {
+    var chips = list.slice(0, SHELF_CHIPS).map(function (r) {
+      return h('span.wk-chip', { title: r.title }, h('span.id', r.id), h('span.wk-chip-title', r.title));
+    });
+    var more = list.length - chips.length;
+    var d = h('details.wk-shelf' + (hit ? '.is-hit' : ''), { style: '--tone: var(' + Dash.colorVar('stage', 'paused') + ')' },
+      h('summary',
+        h('span.wk-shelf-name', Dash.label('stage', 'paused') + ' ' + Dash.num(list.length)),
+        h('span.wk-chips', chips, more > 0 ? h('span.wk-chip-more', '… 另 ' + more + ' 行') : null)),
+      h('div.wk-shelf-body', list.map(function (r) { return card(r, all, true); })));
+    if (hit) d.open = true;
+    return d;
   }
 
   Dash.panel({
     id: 'work-board', page: 'work', title: '任务看板', note: '每行活现在在哪一段、待了多久', span: 12, order: 10,
-    caliber: '本段 = 进入当前这一段至今；列头的中位是该列各行本段时长的中位；"久"是本段已超过历史上同段的 P80',
+    caliber: '本段 = 进入当前这一段至今；列头的中位是该列各行本段时长的中位；"久"是本段已超过历史上同段的 P80；暂停的行收在看板下方',
     needs: ['progress'], uses: ['side', 'params'],
     render: function (el, d, ctx) {
       var all = d.progress.rows || [], dwells = d.progress.dwell || [];
       var rows = all.filter(function (r) { return inSide(r.who, ctx.filters.side); });
       if (!rows.length) { el.appendChild(Dash.empty(all.length ? '这一侧没有未结的行' : '队列空了')); return; }
-      el.appendChild(h('div.wk-cols', Dash.stageKeys.map(function (k) {
-        var list = rows.filter(function (r) { return r.stage === k; })
-          .sort(function (a, b) { return Dash.parseTime(a.since) - Dash.parseTime(b.since); });
+      var flow = Dash.stageKeys.filter(function (k) { return k !== 'paused'; });
+      el.appendChild(h('div.wk-cols', flow.map(function (k, i) {
+        var list = rows.filter(function (r) { return r.stage === k; }).sort(byAge);
         var hit = ctx.params.stage === k;
-        var cards = list.map(function (r) { return card(r, all); });
         var dw = dwells.filter(function (x) { return x.side === ctx.filters.side && x.stage === k; })[0];
-        var body = !list.length ? h('div.wk-none', '没有')
-          : list.length <= BOARD_ROWS ? h('div.wk-cards', cards)
-          : h('div.wk-cards', cards.slice(0, BOARD_ROWS), Dash.fold('另 ' + (list.length - BOARD_ROWS) + ' 行', h('div.wk-cards', cards.slice(BOARD_ROWS)), hit));
-        return h('section.wk-col' + (hit ? '.is-hit' : ''), { style: '--tone: var(' + Dash.colorVar('stage', k) + ')' },
+        var cards = list.map(function (r) { return card(r, all, k === 'waiting'); });
+        return h('section.wk-col' + (k === 'waiting' ? '.is-wait' : '') + (hit ? '.is-hit' : ''),
+          { style: '--tone: var(' + Dash.colorVar('stage', k) + ')' },
           h('header.wk-col-head',
-            h('span.wk-col-name', Dash.label('stage', k)),
-            h('span.wk-col-n', Dash.num(list.length) + ' 行')),
-          h('div.wk-col-med', dw && dw.n ? '本段中位 ' + Dash.minutes(dw.med) : ' '),
-          body);
+            h('span.wk-col-name', i ? h('span.wk-arrow', { 'aria-hidden': 'true' }, '\u203a') : null, Dash.label('stage', k)),
+            h('span.wk-col-n', Dash.num(list.length) + ' 行' + (dw && dw.n ? ' \u00b7 中位 ' + Dash.minutes(dw.med) : ''))),
+          list.length ? stack(cards, hit) : h('div.wk-none', '没有'));
       })));
+      var paused = rows.filter(function (r) { return r.stage === 'paused'; }).sort(byAge);
+      if (paused.length) el.appendChild(shelf(paused, all, ctx.params.stage === 'paused'));
     }
   });
 

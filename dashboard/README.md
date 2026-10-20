@@ -32,7 +32,7 @@ hookfeed:  {lanes: [{role: 主会话|Claude 子代理|Codex 主线|Codex 子代�
 progress:  {counts: {waiting, ready, active, integration, paused},
             dwell: [{side: all|claude|codex, stage, n, med}],
             rows: [{id, title, kind: Q|C|S, who, stage, status, since, waiting, stageP80, long, jump,
-                    deps: [id], waitedBy: [id], history: [{stage, from, to|null, min}]}]}
+                    deps: [id], waitOn: [还没结的前置 id], waitedBy: [id], history: [{stage, from, to|null, min}]}]}
 flow:      {coverage, leadTime: [{side: all|claude|codex, kind: all|Q|C, cur: 分布, prev: 分布|null}],
             wip: {days: [日], windows: {"14": 窗口, "30": 窗口}},
             stages: [{side, week: cur|prev, n, parts: {waiting, ready, active, integration, paused}|null,
