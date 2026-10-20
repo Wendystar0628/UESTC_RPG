@@ -306,7 +306,7 @@
 
 ## WLD-INTERIORS-BUILD · 室内制作
 
-`docs/world/WLD-INTERIORS-BUILD-室内制作.md` · 6.4k 字 · 室内制作规则：加载与进楼衔接、平面生成器、风格与光、生活痕迹、楼梯门洞与碰撞
+`docs/world/WLD-INTERIORS-BUILD-室内制作.md` · 6.5k 字 · 室内制作规则：加载与进楼衔接、平面生成器、风格与光、生活痕迹、楼梯门洞与碰撞
 关键词：室内加载、进楼衔接、平面内核、楼型、室内风格、窗光斑、光柱、室内色名、生活痕迹、楼梯碰撞、SlopedWallCollider、门洞、落点
 
 - WLD-INTERIORS-BUILD §0 结论 · L23 · 467
@@ -315,7 +315,7 @@
   - WLD-INTERIORS-BUILD §1.1 整体加载、按层显示 · L39 · 277
   - WLD-INTERIORS-BUILD §1.2 触发 · L45 · 269
   - WLD-INTERIORS-BUILD §1.3 进楼与出楼，以及衔接保证（ENG-PERF-STREAM §1.2 第 6 条） · L52 · 266
-- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 943
+- WLD-INTERIORS-BUILD §2 平面生成器与类型库 · L58 · 1.0k
 - WLD-INTERIORS-BUILD §3 风格 · L68 · 1.3k
   - WLD-INTERIORS-BUILD §3.1 明暗与暖影 · L72 · 195
   - WLD-INTERIORS-BUILD §3.2 窗光斑与光（最重要的室内画面） · L76 · 395
