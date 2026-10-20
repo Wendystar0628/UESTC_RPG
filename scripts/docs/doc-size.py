@@ -85,7 +85,7 @@ def check(path):
         if total > cap:
             over.append(('全文', total, cap))
     for title, n in secs:
-        if title.startswith('0 '):
+        if title.startswith('0 ') or (code == 'CORE-INDEX' and title.startswith('0.2 ')):   # 核心准则两块同一上限
             cap = LIMIT['core0'] if code == 'CORE-INDEX' else LIMIT['s0']
         elif '接入要点' in title:
             cap = LIMIT['hooks']
