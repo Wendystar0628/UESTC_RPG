@@ -1,11 +1,15 @@
-"""清理仓库这边的一次性产物（WF-RULE §13），默认只列出，加 --delete 才删。覆盖四类：
+"""清理仓库这边的一次性产物（WF-RULE §13），默认只列出，加 --delete 才删。覆盖五类：
   1. output/ 里之后主线上已有 N 次提交（默认 20）的项：整项过期整项删，没过期的目录逐层往里查（最多 3 层），
      所以常被写的 output/build/ 里旧的日志、测试结果、核心专项目录也能清掉；
   2. output/cache/ 里烘焙缓存之外的目录（一次性的缓存副本，同样按提交轮次），以及烘焙缓存的旧格式目录
      （同一张图下 *-tbin-N 只留 N 最大的）；
-  3. 已删工程留下的 bin/、obj/：所在目录里已经没有 .csproj；
-  4. git 已失效的工作树登记（git worktree prune）；还登记着的工作树只列出，不删。
-观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录（作者还要看）；还在的任务单（.collab/tasks，结案即删）引用的路径不删，引用的是目录就连里面的内容；施工队列里未结行对应的 output/行号目录及其后缀目录也保留（行号可去短横线）。
+  3. 还登记着的工作树（如截图工作树）里的 output/：与主检出的 output/ 同一套规则（1、2 和下面的保护），工作树本身只列出，不删；
+  4. build/ 下的导出产物（如 build/windows）：之后主线上已有 N 次提交的，和 output/ 一样；
+     output/.locks/build.lock 被持有（构建、导出在跑）时整个 build/ 不动；
+  5. 已删工程留下的 bin/、obj/：所在目录里已经没有 .csproj；git 已失效的工作树登记（git worktree prune）。
+保护：观察台里未结的审计项和通知引用的 output/ 文件不删，连同它们所在的目录里的其余项也不删（作者还要看）；
+还在的任务单（.collab/tasks，结案即删）引用的路径不删，引用的是目录就连里面的内容，只保被引用的这一项，
+它的祖先目录里没被引用且已过期的兄弟照常可删；施工队列里未结行对应的 output/行号目录及其后缀目录也保留（行号可去短横线）。
 按提交轮次而不按时间算：不开发就没有提交，什么都不会过期。
 
 用法：
@@ -24,6 +28,8 @@ import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 OUT = os.path.join(ROOT, 'output')
+EXPORTS = os.path.join(ROOT, 'build')  # 导出产物（build/windows 等）
+BUILD_LOCK = os.path.join(OUT, '.locks', 'build.lock')
 KEEP = {'.locks', 'cache', 'shots', 'pipeline-wheels', 'posters', 'tools', 'prebake_game'}  # 构建锁、缓存（下面单独查）、固定机位截图、管线安装包、交给作者的海报、本机诊断工具（dotnet-trace 等）、收口预烘日志（巡逻据它判上次预烘）
 CACHE_KEEP = {'bake'}  # output/cache 下长期保留的只有烘焙缓存
 BUILD_ROOTS = ('game', 'scripts', 'pipeline')  # 找已删工程的 bin/obj
@@ -31,8 +37,7 @@ DEPTH = 3
 COMMITS = 20
 FORMAT_DIR = re.compile(r'^(.+)-tbin-(\d+)$')
 TASK_LINK = re.compile(r'output/[\w./-]+', re.ASCII)  # 任务单里写的产物路径；只取 ASCII 段，中文名截在前缀
-START_GAME_KEEP = {os.path.join(OUT, 'start_game', name) for name in
-                   ('build.succeeded', 'build.log', 'import.log')}
+START_GAME_KEEP = tuple(os.path.join('start_game', name) for name in ('build.succeeded', 'build.log', 'import.log'))
 
 
 def git(*args):
@@ -63,25 +68,34 @@ def size(p):
     return sum(os.path.getsize(os.path.join(r, f)) for r, _, fs in os.walk(p) for f in fs)
 
 
+def guard(p, keep):
+    """p 与受保护路径的关系：(整项受保护, 是受保护路径的祖先容器)。keep 里是 normcase 后的绝对路径。"""
+    n = os.path.normcase(p)
+    return (any(n == k or n.startswith(k + os.sep) for k in keep),
+            any(k.startswith(n + os.sep) for k in keep))
+
+
 def aged(directory, before, depth, skip=(), keep=()):
-    """directory 下过期的项：整项过期就整项算，否则是目录就往里再查一层。"""
+    """directory 下过期的项：整项过期就整项算，否则是目录就往里再查一层。
+    被引用的路径（及其里面）整项不动；含被引用路径的祖先目录只当容器、不整项算，往里查它没被引用的兄弟。"""
     out = []
     for name in sorted(os.listdir(directory)):
         p = os.path.join(directory, name)
         if name in skip:
             continue
-        protected = any(os.path.normcase(k) == os.path.normcase(p) or
-                        os.path.normcase(k).startswith(os.path.normcase(p) + os.sep) for k in keep)
-        if newest(p) < before and not protected:
+        full, container = guard(p, keep)
+        if full:
+            continue
+        if newest(p) < before and not container:
             out.append(p)
         elif os.path.isdir(p) and depth > 1:
             out += aged(p, before, depth - 1, keep=keep)
     return out
 
 
-def old_formats():
-    """烘焙缓存里同一张图下的旧格式目录：*-tbin-N 只留 N 最大的。"""
-    bake = os.path.join(OUT, 'cache', 'bake')
+def old_formats(out_root):
+    """out_root 烘焙缓存里同一张图下的旧格式目录：*-tbin-N 只留 N 最大的。"""
+    bake = os.path.join(out_root, 'cache', 'bake')
     out = []
     maps = [m for m in sorted(os.listdir(bake)) if os.path.isdir(os.path.join(bake, m))] if os.path.isdir(bake) else []
     for m in maps:
@@ -104,9 +118,12 @@ def orphan_builds():
     return out
 
 
-def linked():
-    """在用的引用指向的 output/ 下文件（绝对路径）：观察台未结的审计项与通知（dashboard/data/curated/*.js 是 Dash.put(名, {...}); 的本地数据），以及 .collab/tasks 下还在的任务单与施工队列未结行的交付目录（结案即删，单子或队列行在就算在用）。"""
-    out = set()
+def references():
+    """在用的引用（output/ 开头的相对路径，对每个 output 根各自解析）：
+    (观察台未结的审计项与通知的链接, 任务单里写的路径, 施工队列未结行的行号匹配式或 None)。
+    观察台数据是 dashboard/data/curated/*.js 里 Dash.put(名, {...}); 的本地数据；
+    任务单在 .collab/tasks，结案即删，单子或队列行在就算在用。"""
+    audit = []
     for name in ('audit', 'notices'):
         f = os.path.join(ROOT, 'dashboard', 'data', 'curated', name + '.js')
         if not os.path.isfile(f):
@@ -118,10 +135,11 @@ def linked():
         for item in json.loads(text[start:end + 1]).get('items', []):
             link = item.get('link') or ''
             if item.get('status') != 'done' and link.startswith('output/'):
-                out.add(os.path.normpath(os.path.join(ROOT, link)))
+                audit.append(link)
+    pattern = None
     queue = os.path.join(ROOT, '.collab', 'status', '施工状态.md')
     text = open(queue, encoding='utf-8').read()
-    if '## 施工队列' in text and os.path.isdir(OUT):
+    if '## 施工队列' in text:
         part = text.split('## 施工队列', 1)[1].split('\n## ', 1)[0]
         columns = {}
         ids = set()
@@ -139,29 +157,66 @@ def linked():
                 ids.update((row_id, row_id.replace('-', '')))
         if ids:
             pattern = re.compile(r'^(?:' + '|'.join(re.escape(i) for i in sorted(ids)) + r')(?=$|[^A-Za-z0-9])')
-            for name in os.listdir(OUT):
-                path = os.path.join(OUT, name)
-                if pattern.match(name) and os.path.isdir(path):
-                    out.add(path)
-    tasks = os.path.join(ROOT, '.collab', 'tasks')
-    for r, _, fs in os.walk(tasks):
+    tasks = []
+    for r, _, fs in os.walk(os.path.join(ROOT, '.collab', 'tasks')):
         for f in (f for f in fs if f.endswith('.md')):
-            for link in TASK_LINK.findall(open(os.path.join(r, f), encoding='utf-8').read()):
-                out.add(os.path.normpath(os.path.join(ROOT, link.rstrip('./'))))
-    return out
+            tasks += [link.rstrip('./') for link in TASK_LINK.findall(open(os.path.join(r, f), encoding='utf-8').read())]
+    return audit, tasks, pattern
 
 
-def stale(commits=COMMITS):
-    """返回可删的绝对路径（四类合在一起），去掉观察台还引用着的。"""
-    out = old_formats() + orphan_builds()
+def keep_set(out_root, refs):
+    """out_root 里受保护的路径（normcase 后的绝对路径）：被引用的路径本身及其里面；审计项与通知引用的文件连同所在目录。"""
+    audit, tasks, pattern = refs
+    base = os.path.dirname(out_root)  # 引用以 output/ 开头，相对 output 根的上一级
+    keep = {os.path.join(out_root, name) for name in START_GAME_KEEP}
+    for link in audit:
+        path = os.path.normpath(os.path.join(base, link))
+        keep.add(path)
+        if os.path.dirname(path) != out_root:
+            keep.add(os.path.dirname(path))
+    keep.update(os.path.normpath(os.path.join(base, link)) for link in tasks)
+    if pattern:
+        keep.update(os.path.join(out_root, name) for name in os.listdir(out_root)
+                    if pattern.match(name) and os.path.isdir(os.path.join(out_root, name)))
+    return {os.path.normcase(k) for k in keep}
+
+
+def build_lock_free():
+    """构建锁没被持有：锁是独占打开的 build.lock，被持有时本进程打开会共享冲突（PermissionError）。"""
+    if not os.path.exists(BUILD_LOCK):
+        return True
+    try:
+        open(BUILD_LOCK, 'rb').close()
+        return True
+    except PermissionError:
+        return False
+
+
+def exports(before):
+    """build/ 下之后主线上已有 N 次提交的导出产物；构建锁被持有时一项都不动。"""
+    if before is None or not os.path.isdir(EXPORTS):
+        return []
+    if not build_lock_free():
+        print('构建锁被持有（构建或导出在跑），build/ 本次不动')
+        return []
+    return aged(EXPORTS, before, 1)
+
+
+def stale(commits, trees):
+    """返回可删的绝对路径：主检出与登记着的工作树里的 output/，加 build/ 旧导出与已删工程的 bin/obj，去掉在用的引用。"""
+    refs = references()
     before = cutoff(commits)
-    if before is not None and os.path.isdir(OUT):
-        out += aged(OUT, before, DEPTH, skip=KEEP, keep=START_GAME_KEEP)
-        cache = os.path.join(OUT, 'cache')
+    out = orphan_builds() + exports(before)
+    roots = [OUT] + [os.path.join(t['path'], 'output') for t in trees if not t['prunable']]
+    for root in (r for r in roots if os.path.isdir(r)):
+        keep = keep_set(root, refs)
+        out += [p for p in old_formats(root) if guard(p, keep) == (False, False)]
+        if before is None:
+            continue
+        out += aged(root, before, DEPTH, skip=KEEP, keep=keep)
+        cache = os.path.join(root, 'cache')
         if os.path.isdir(cache):
-            out += aged(cache, before, 1, skip=CACHE_KEEP)
-    keep = linked()
-    out = [p for p in out if not any(k == os.path.normpath(p) or k.startswith(os.path.normpath(p) + os.sep) or os.path.normpath(p).startswith(k + os.sep) for k in keep)]
+            out += aged(cache, before, 1, skip=CACHE_KEEP, keep=keep)
     return sorted(set(out))
 
 
@@ -205,12 +260,14 @@ def remove(p):
 
 def main(argv):
     commits = int(argv[argv.index('--commits') + 1]) if '--commits' in argv else COMMITS
-    items = stale(commits)
+    trees = worktrees()
+    items = stale(commits, trees)
     mb = sum(size(p) for p in items) / 1024 / 1024
     for p in items:
-        print(os.path.relpath(p, ROOT).replace(chr(92), '/'))
-    print('可删 %d 项，共 %.1f MB（output 按之后主线上已有 %d 次提交算）' % (len(items), mb, commits))
-    for t in worktrees():
+        inside = os.path.normcase(p).startswith(os.path.normcase(ROOT) + os.sep)
+        print((os.path.relpath(p, ROOT) if inside else p).replace(chr(92), '/'))
+    print('可删 %d 项，共 %.1f MB（output 与 build 按之后主线上已有 %d 次提交算）' % (len(items), mb, commits))
+    for t in trees:
         print(('失效的工作树登记（--delete 时 prune）：' if t['prunable'] else '还登记着的工作树（确认不用了再 git worktree remove）：') + t['path'])
     if '--delete' in argv:
         for p in items:
