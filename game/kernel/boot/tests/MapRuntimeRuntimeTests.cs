@@ -4,6 +4,7 @@ using Campus.Contracts.Startup;
 using Campus.Kernel.Boot;
 using Campus.Kernel.Frame;
 using Campus.Kernel.Inspect;
+using Campus.Kernel.World;
 using GdUnit4;
 using static GdUnit4.Assertions;
 using Godot;
@@ -16,6 +17,49 @@ namespace Campus.Tests;
 [TestSuite]
 public sealed class MapRuntimeRuntimeTests
 {
+    [TestCase, TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    public void FlyCaptureBindsEachPreparedWorldAndRejectsThePreviousWorld()
+    {
+        var context = new TestMapContext(BackdropInputsTests.Descriptor());
+        using var fixture = new MapRuntimeFixture(context: context);
+        var world = new WorldStateService(new TestWeatherProcess());
+        var rig = fixture.Camera;
+        rig.Mode = ViewMode.Fly;
+        fixture.Stream.ResidentReady = fixture.Stream.DestinationReady = fixture.Producer.ContentReady = true;
+        fixture.Runtime._Process(0);
+        GameCaptureNode.CaptureDestination? previous = null;
+        for (var row = 0; row < 2; row++)
+        {
+            var before = world.Instance;
+            var preset = context.Descriptor.World.Default;
+            world.Restore(new(preset.Clock, 0, (int)preset.Season, preset.Season, 0, 1, WorldTime.InitialAnimTime),
+                new() { Map = context.Descriptor.Id, FromVersion = 1, Missing = false });
+            world.CompleteRestore();
+            AssertThat(world.Instance != before).IsTrue();
+            if (previous is not null)
+            {
+                // The old arrival remains current here: the world change alone must invalidate it.
+                AssertThat(ReferenceEquals(fixture.Runtime.Arrival, previous.Arrival)).IsTrue();
+                try
+                {
+                    previous.ReadCurrentPose(context, world.Instance, rig, fixture.Runtime, default);
+                    throw new InvalidOperationException("The previous world's capture remained current.");
+                }
+                catch (OperationCanceledException) { }
+            }
+            var pose = rig.Pose with { Position = rig.Pose.Position + N.Vector3.UnitX };
+            rig.SetPose(pose);
+            var arrival = fixture.Runtime.Arrive(pose, rig.Mode);
+            var capture = new GameCaptureNode.CaptureDestination(nameof(FlyCaptureBindsEachPreparedWorldAndRejectsThePreviousWorld),
+                rig.Mode, context, world.Instance, arrival, pose);
+            fixture.Runtime._Process(0);
+            AssertThat(arrival.Done.IsCompletedSuccessfully).IsTrue();
+            AssertThat(capture.ReadCurrentPose(context, world.Instance, rig, fixture.Runtime, default) == pose).IsTrue();
+            previous = capture;
+        }
+    }
+
     [TestCase, TestCategory(TestReason.Regression)]
     [RequireGodotRuntime]
     public void CaptureKeepsArrivalIdentityWhileWalkingViewChanges()

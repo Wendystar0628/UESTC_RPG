@@ -295,6 +295,34 @@ public sealed class SaveFormatTests
     }
 
     [TestCase]
+    [TestCategory(TestReason.Regression)]
+    public void UnreadableSlotMetadataStaysCorruptDuringSaveOffScan()
+    {
+        using var temp = new TempSaveDirectory();
+        using (var writer = new SaveRepository(temp.Path, true, Sections())) writer.Write(Document());
+        var invalid = SaveContainer.Encode(Document(2));
+        var metaLength = (int)BinaryPrimitives.ReadUInt32LittleEndian(invalid.AsSpan(12));
+        using var meta = JsonDocument.Parse(invalid.AsMemory(SaveContainer.HeaderSize, metaLength));
+        var slot = Encoding.UTF8.GetBytes(meta.RootElement.GetProperty("slot").GetRawText());
+        var key = "\"slot\":"u8;
+        var metadata = invalid.AsSpan(SaveContainer.HeaderSize, metaLength);
+        var offset = metadata.IndexOf(key) + key.Length;
+        metadata.Slice(offset, slot.Length).Fill((byte)' ');
+        metadata[offset] = (byte)'0';
+        Rehash(invalid);
+        var latest = Path.Combine(temp.Path, "s1", "g000002.sav");
+        var previous = Path.Combine(temp.Path, "s1", "g000001.sav");
+        var previousBytes = File.ReadAllBytes(previous);
+        File.WriteAllBytes(latest, invalid);
+        using var reader = new SaveRepository(temp.Path, false, Sections());
+        var snapshot = reader.Scan(new("s1"));
+        AssertThat(!reader.Enabled && snapshot.Info.Health == SlotHealth.Corrupt && snapshot.Info.Meta is null &&
+            snapshot.Save is null && snapshot.MaxGeneration == 2).IsTrue();
+        AssertThat(File.ReadAllBytes(latest).SequenceEqual(invalid) && File.ReadAllBytes(previous).SequenceEqual(previousBytes))
+            .OverrideFailureMessage("Unreadable slot metadata changed files or crossed an unknown world line.").IsTrue();
+    }
+
+    [TestCase]
     [TestCategory(TestReason.Contract)]
     public void NewerGenerationUsesPreviousGenerationAndUnreadableNewLineCannotBeWrittenOver()
     {

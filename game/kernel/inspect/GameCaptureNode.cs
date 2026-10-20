@@ -287,14 +287,14 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
                 MovieCapture.RequireMovieMaker();
             }
             foreach (var shot in shots)
-                await CaptureShotAsync(host, producers, shot, destination, context, worldInstance,
+                worldInstance = await CaptureShotAsync(host, producers, shot, destination, context, worldInstance,
                     AppBoot.FixedShots.Count == 0 && shots.Count == 1 ? startupCapture : null,
                     syncCamera, contentReady, validatePose, lifetime.Token);
         }
         finally { EndCapture(); }
     }
 
-    private async Task CaptureShotAsync(Node host, ViewContentReadiness producers, FixedShot shot,
+    private async Task<long> CaptureShotAsync(Node host, ViewContentReadiness producers, FixedShot shot,
         string destination, IMapContext context, long worldInstance, CaptureDestination? startupCapture,
         Action syncCamera, Func<bool> contentReady,
         Action<Pose>? validatePose, CancellationToken cancellationToken)
@@ -326,7 +326,8 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         if (capture is null)
         {
             var appliedPose = ApplyPose(pose, shot.Options, context, rig, syncCamera);
-            capture = new(shot.Pose, mode, context, worldInstance, BeginArrival(context, appliedPose, runtime, rig), appliedPose);
+            // Fixed rows commit a fresh world; bind the destination to that completed preparation.
+            capture = new(shot.Pose, mode, context, world.Instance, BeginArrival(context, appliedPose, runtime, rig), appliedPose);
         }
         // A startup handoff already placed the real body; each capture prepares only its current view.
         producers.PrepareCapture(ValidateDestination());
@@ -348,6 +349,7 @@ public partial class GameCaptureNode : Node, IGameCapture, IRegistryExitParticip
         finally { arrival.ProgressChanged -= ReportProgress; }
         cancellationToken.ThrowIfCancellationRequested();
         await CaptureOutputAsync(shot, destination, ReadyForShot, ValidateDestination, LogPhase, cancellationToken);
+        return capture.WorldInstance;
 
         bool ReadyForShot()
         {
