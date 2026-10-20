@@ -160,15 +160,15 @@
   var EFFORT = { low: '低', medium: '中', high: '高', xhigh: '很高', max: '最高' };
   Dash.effortName = function (e) { return EFFORT[e] || e || '默认'; };
 
-  /* 任务流水线比例条：counts 是 progress.counts；link(段) 给每段的跳转地址 */
-  var STAGES = ['queued', 'doing', 'finishing', 'paused'];
+  /* 施工阶段顺序与名称均来自服务元数据；counts 是 progress.counts */
+  var STAGES = window.DashQueueStates.map(function (x) { return x.key; });
   Dash.stageKeys = STAGES;
   Dash.flowbar = function (counts, link) {
     if (!counts || !STAGES.every(function (k) { return typeof counts[k] === 'number' && isFinite(counts[k]); })) return Dash.empty('流水线各段的行数未确认', '', true);
     return h('div.flowbar', { role: 'img', 'aria-label': STAGES.map(function (k) { return Dash.label('stage', k) + ' ' + counts[k]; }).join('，') },
       STAGES.map(function (k) {
         var n = counts[k];
-        return h((link ? 'a' : 'div') + '.flowbar-seg' + (n ? '' : '.is-zero') + (k === 'paused' || k === 'queued' ? '.is-light' : ''),
+        return h((link ? 'a' : 'div') + '.flowbar-seg' + (n ? '' : '.is-zero') + (k === 'paused' || k === 'waiting' || k === 'ready' ? '.is-light' : ''),
           { href: link ? link(k) : null, style: '--n:' + Math.max(n, 1) + '; --tone: var(' + Dash.colorVar('stage', k) + ')' },
           h('span.flowbar-name', Dash.label('stage', k)), h('span.flowbar-n', Dash.num(n)));
       }));

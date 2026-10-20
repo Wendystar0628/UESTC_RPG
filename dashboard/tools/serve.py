@@ -21,6 +21,7 @@ import datafile
 from monitor.view import attention, docs, health
 from monitor.read import repo
 from monitor import util as U
+from monitor.queue_states import QUEUE_STATES
 
 
 def checked_payload(publication):
@@ -89,7 +90,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         url = urlsplit(self.path)
         if url.path == '/api/data-names.js':
-            body = ('window.DashDataNames = ' + json.dumps(list(datafile.AUTO_NAMES)) + ';\n').encode('utf-8')
+            body = ('window.DashDataNames = ' + json.dumps(list(datafile.AUTO_NAMES)) + ';\n'
+                    + 'window.DashQueueStates = ' + json.dumps(QUEUE_STATES, ensure_ascii=False) + ';\n').encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/javascript; charset=utf-8')
             self.send_header('Cache-Control', 'no-store')

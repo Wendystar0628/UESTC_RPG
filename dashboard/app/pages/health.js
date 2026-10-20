@@ -206,7 +206,7 @@
         days.map(function (x) { return shortDay(x.day); }),
         [
           { label: '测试个数', tone: ['seq', 1], axis: 0, values: days.map(function (x) { return x.count; }) },
-          { label: '快检耗时', tone: ['stage', 'finishing'], axis: 1, values: days.map(function (x) { return x.quickSec; }) }
+          { label: '快检耗时', tone: ['stage', 'integration'], axis: 1, values: days.map(function (x) { return x.quickSec; }) }
         ],
         { height: 220, label: '近 ' + days.length + ' 天测试个数与快检耗时', caliber: CAL.tests, units: ['个', '秒'],
           // 悬停时每个点多写一句行数与占比

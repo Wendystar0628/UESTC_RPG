@@ -11,7 +11,7 @@
 - `.collab/tools/monitor/read/` 持有来源 IO 与解析，`view/` 计算业务。巡逻周期唯一经 `read.collab.patrol_interval_seconds()` 读取 `.collab/tools/README.md` 的明确登记；缺失或不明确为 null。health 在 view 计算 late 与私有到期点，调度只按该点重算 health，并监听登记变化。
 - `attention.py` 独占作者输入事务：输入变更、过目重建、revision 校验、确认、attention/feedback 发布。`post.py`、采集与 HTTP 入口只调用它；先持输入事务锁，再经窄发布函数取得短锁。
 - `datafile.write()` 是唯一文件发布入口：原子替换 `Dash.put` 后提交内容签名与确认时刻；签名不含 updated，相同内容只推进确认。失败可发布 errors，不能推进确认。内部 `dashboard-publication.json` 只是当前发布快照，checked 是私有 name→ISO 表，不是历史或公开 SSE 载荷。
-- `catalog.DATASETS` 是各份公开与内部结果的唯一登记，集中生产方、输入、确认间隔、通道、合批、行与样本需求、周期和到期属性。`datafile.AUTO_NAMES` 由公开项派生；collect 启动核对登记接合，live 按同表调度。`/api/data-names.js` 只输出实际消费的 `window.DashDataNames`，前端依名单补展示元数据。
+- `catalog.DATASETS` 是各份公开与内部结果的唯一登记，集中生产方、输入、确认间隔、通道、合批、行与样本需求、周期和到期属性。`datafile.AUTO_NAMES` 由公开项派生；collect 启动核对登记接合，live 按同表调度。`/api/data-names.js` 同次输出 `window.DashDataNames`（公开数据名）与 `window.DashQueueStates`（施工状态有序数组）；状态 key、中文名与顺序只由 `.collab/tools/monitor/queue-states.json` 定义，Python、Node 与前端共用。
 - `serve.py` 只绑定 `127.0.0.1:8765`，提供静态文件、同源写入、SSE 与文档只读接口。服务 Observer 只观察发布元数据，不采集、不持发布锁等待客户端。唯一 `health.freshness(checked, intervals, now)` 纯函数算 stale/ratio；HTTP 只包装结果，业务指标不在服务计算。
 
 `dashboard/data/auto/` 是程序结果；`curated/notices.js` 与 `curated/audit.js` 是私有输入，只经 post.py 改，通知汇入公开 feed。作者信全文只从真实 inbox 与已送达档读取，截图只来自已登记检出的两种固定机位总览。index、app、vendor 内容签名发布为 versions.app。
@@ -28,13 +28,13 @@ attention: {open, items: [{id, kind: audit|shots|poster|review, title, detail, l
 feedback:  {items: [{at, text, delivered}]}
 hookfeed:  {lanes: [{role: 主会话|Claude 子代理|Codex 主线|Codex 子代理,
                     items: [{at, event: 中文事件, blocks: [中文块名], chars}]}]}
-progress:  {counts: {queued, doing, finishing, paused},
+progress:  {counts: {waiting, ready, active, integration, paused},
             dwell: [{side: all|claude|codex, stage, n, med}],
             rows: [{id, title, kind: Q|C|S, who, stage, status, since, waiting, stageP80, long, jump,
                     deps: [id], waitedBy: [id], history: [{stage, from, to|null, min}]}]}
 flow:      {coverage, leadTime: [{side: all|claude|codex, kind: all|Q|C, cur: 分布, prev: 分布|null}],
             wip: {days: [日], windows: {"14": 窗口, "30": 窗口}},
-            stages: [{side, week: cur|prev, n, parts: {queued, doing, finishing, paused}|null,
+            stages: [{side, week: cur|prev, n, parts: {waiting, ready, active, integration, paused}|null,
                       top: {段: [{id, title, minutes}]}|null}],
             blocked: {all: 阻塞, claude: 阻塞, codex: 阻塞},
             jump: {added, jumped, others, rate, paused, rows: [{id, title, at, paused: [{id, title}]}]},
@@ -89,7 +89,7 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
 ```
 
 - attention 仅公开当前 revision 未过目的 items，按 at 降序，未知在末尾；open 等于其条数。
-- progress.dwell 为三侧×四阶段固定 12 项，当前已知起点的样本数为 n，med 为相同 min 的中位数。未结束 history 段 to=null；stageP80 只用同阶段真实结束段。since 是进入当前阶段的真实时刻。waiting 表示排着且前置未完，或暂停。
+- progress.dwell 为三侧×五状态固定 15 项，当前已知起点的样本数为 n，med 为相同 min 的中位数。未结束 history 段 to=null；stageP80 只用同状态真实结束段。since 是进入当前状态的真实时刻。waiting 表示等前置或就绪且前置未完，或暂停。
 - flow.wip.days 固定含今天的 30 个自然日，升序；windows 的 days 分别给最近 14/30 日，done 从相同 days 汇总，任一天未知则总数 null。当前队列只有技术目录，没有可靠中文领域，所有 byDomain 保留 null，不按目录猜领域；有明确来源才使用所列数组形状。前 7 天覆盖不足时 leadTime.prev=null，stages 对应条目保留且 parts=null。
 - blocked.rate=waiting/open；jump.rate=jumped/added，others=added-jumped，jump 覆盖不足保留 rate=null。链每一级含 stage。rework.pushes 是滚动近 30 天全部真实推送，时间升序；summary 同源，revert 优先于 audit，rate=(revert+audit)/n，完整历史或分母不足时为 null。none 只表示没有显式返工证据，不表示已审计。
 - team 行字段复制同轮 progress，队列无对应行则为 null。agents 按 stalled、running、unknown、done 排，未交回按开始升序，交回按结束降序；runMin 只用真实开始和在跑时刻或真实交回。leads.agents 与 sides 同源，等于 running+stalled；unknown 单列，doneN 为近一小时真实交回，覆盖不足为 null。停止、失败不算交回。
@@ -115,6 +115,8 @@ now:       {phase: {step: P0|P1|P2|P3|null, text, priority},
 历史唯一账位于 `.collab/tools/state/dashboard-events/`，保留 60 天。envelope.at 是观察时刻，sourceAt 只认来源明确时刻，否则 null；不拿 mtime、删行、超时或停止补造完成。完成与每日完成唯一复用 progress.evidence.finished。钩子事件和块名直接给中文；未识别写“未知事件”。决策只给一句结论。测试 count 必须来自真实测试批次，文件数不算用例；代码行数比例只描述规模，缺关联批次的门禁执行数保持 null，门禁未跑不显示通过。now.phase.step 只认状态头“当前阶段”开头明确的 P0–P3。
 
 动态条目的预设窗口归属由 view 用同一个 now 计算，滚动区间为 `(now-duration, now]`，无来源时刻的归属为 null。页面只选择窗口标记或 day 字段，不使用浏览器时间重切窗；自然日换日、未来事件进入与已知事件移出都返回真实下一到期点。文档读取与搜索均经 view/docs，检索打分、排序与截断只在 view。
+
+施工状态 key 为 waiting、ready、active、integration、paused，未知为 null；中文名与顺序从同次 DashQueueStates 读取，色板只按 key 保存样式。progress.dwell 固定三侧×五状态 15 项；无法识别状态时 stage/waiting=null，涉及未知状态的 WIP/阻塞全量指标保留 null。
 
 ### 2.1 推送与确认时刻
 
@@ -254,7 +256,7 @@ Dash.pct(a, b)                    "37%"；b 是 0 或 null 写 —
 Dash.status(text, tone)  Dash.empty(title, sub?, compact?)  Dash.fold(summary, content, open?)
 Dash.open(path, text?, cls?)      新标签页打开仓库里的产物，只写动作不露路径
 Dash.item(id, title, side?)       编号 + 一句话 + 右侧签
-Dash.flowbar(counts, link?)       流水线四段比例条；link(段) 给跳转地址；Dash.stageKeys 四段的键
+Dash.flowbar(counts, link?)       流水线五种状态比例条；link(段) 给跳转地址；Dash.stageKeys 五种状态的键
 Dash.sideKey(who)  Dash.modelName(m)  Dash.effortName(e)
 Dash.lamp(level)                  ok|warn|bad 的灯，null 空心"未确认"
 Dash.kpi({label, value, unit, note, trend, href})   指标卡；trend better 绿"↑ 变好"、worse 橙"↓ 变坏"、same"→ 持平"、null 不画
@@ -276,7 +278,7 @@ Dash.reader(el, {code, sec?, find?, docs})   文档阅读器（reader.js）；do
 
 | 组 | 键 |
 | --- | --- |
-| `stage` | `queued` 排着、`doing` 在做、`finishing` 收尾、`paused` 暂停 |
+| `stage` | `waiting` 等前置、`ready` 就绪、`active` 进行中、`integration` 待集成、`paused` 暂停；名称与顺序由 DashQueueStates 提供 |
 | `side` | `claude` `codex` `author` `muted` |
 | `model` | `opus` `sonnet` `haiku` `gpt-6.1-sol` `gpt-6-luna` `gpt-6-astra` `other` |
 | `level` | `ok` 正常、`warn` 要看、`bad` 有问题 |
@@ -334,7 +336,7 @@ Dash.colorVar(组, 键)  Dash.color(组, 键)  Dash.cssVar(name)  Dash.label(组
 
 ## 5 视觉
 
-- **颜色有固定语义**（§3.5），与协作方法海报一致：玫红＝作者，紫＝Claude 侧，青绿＝Codex 侧，琥珀＝自动机制，红＝有问题，橙＝要看，绿＝正常；流水线四段各一色；结构、文字、分隔一律用中性蓝灰。浅蓝主色只给当前页、当前项、今天与主按钮，不为装饰换色。
+- **颜色有固定语义**（§3.5），与协作方法海报一致：玫红＝作者，紫＝Claude 侧，青绿＝Codex 侧，琥珀＝自动机制，红＝有问题，橙＝要看，绿＝正常；流水线五种状态各一色；结构、文字、分隔一律用中性蓝灰。浅蓝主色只给当前页、当前项、今天与主按钮，不为装饰换色。
 - **一眼读懂**：字号偏大（正文 15 px、块标题 17 px、关键数 26–36 px），留白够；每块先给一个数或一句结论，再给图；红色只给有问题的事；时刻写具体时间。页面上不出现英文字段名、路径、哈希与原始 JSON。
 - 浅色为主，跟随系统深色（`prefers-color-scheme`，令牌各一份）；字体用系统中文无衬线，数字等宽；统计图统一经 charts.js，比例条、时间线、点阵这类简单图形用 HTML 与 CSS。窄屏（390 px）单列、不横向溢出。
 - **本地预览**：`python -I -X utf8 dashboard/tools/serve.py`，打开 `http://127.0.0.1:8765/`；已在运行时直接打开该地址。

@@ -30,8 +30,8 @@
   --warn: #c0560e;     --warn-bg: #fdebd8;     /* 要看：橙 */
   --muted: #5d6e82;    --muted-bg: #e9eef4;    /* 其余：蓝灰 */
 
-  /* 任务流水线四段 */
-  --st-queued: #9db4d2;  --st-doing: #2f7be0;  --st-finishing: #2e9a8a;  --st-paused: #c3ccd8;
+  /* 施工阶段色值；等前置与就绪共用蓝灰色 */
+  --st-waiting: #9db4d2;  --st-ready: #9db4d2;  --st-active: #2f7be0;  --st-integration: #2e9a8a;  --st-paused: #c3ccd8;
   /* 型号：Claude 一族紫，Codex 一族青 */
   --m-opus: #6243d6;  --m-sonnet: #9a83ec;  --m-haiku: #c5b8f6;
   --m-sol: #078a7e;   --m-luna: #4cbcae;    --m-astra: #1b6b86;
@@ -87,7 +87,7 @@
     --warn: #f29a52;     --warn-bg: rgba(242, 154, 82, .14);
     --muted: #97a6b9;    --muted-bg: rgba(151, 166, 185, .14);
 
-    --st-queued: #5d7392;  --st-doing: #5ea2f5;  --st-finishing: #4fc7b4;  --st-paused: #3e4b5b;
+    --st-waiting: #5d7392;  --st-ready: #5d7392;  --st-active: #5ea2f5;  --st-integration: #4fc7b4;  --st-paused: #3e4b5b;
     --m-opus: #9d84ff;  --m-sonnet: #bcaaff;  --m-haiku: #d9cffd;
     --m-sol: #3fcfbe;   --m-luna: #8ee0d4;    --m-astra: #3aa0c4;
     --seq-1: #3070ba;  --seq-2: #4688cf;  --seq-3: #62a0dc;  --seq-4: #80b5e6;  --seq-5: #4f93bd;  --seq-6: #6ea4d8;

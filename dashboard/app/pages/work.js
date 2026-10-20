@@ -8,8 +8,8 @@
   var KIND_TONE = { Q: ['seq', 0], C: ['seq', 2] };
   var CAL = {
     lead: '从入队到推送删行；箱体是 25%–80%，横线是中位',
-    stage: '近 7 天删除的行在各段停留的中位；四段相加不等于流转中位',
-    wip: '在制是日终在做 + 收尾的行，完成是当天推送删掉的行',
+    stage: '近 7 天删除的行在各段停留的中位；五段相加不等于流转中位',
+    wip: '在制是日终进行中 + 待集成的行，完成是当天推送删掉的行',
     blocked: '等前置与暂停占未结行的比例',
     jump: '新增时就标了插队；暂停按前置里写的行号认',
     rework: '一格一次推送；红是回滚，橙是审计查实开了行'
@@ -215,7 +215,7 @@
         });
       }
       el.appendChild(Dash.charts.combo(days.map(function (x) { return x.day; }), bars,
-        { key: 'wip', label: '在制', tone: ['stage', 'doing'], values: days.map(function (x) { return x.wip; }) },
+        { key: 'wip', label: '在制', tone: ['stage', 'active'], values: days.map(function (x) { return x.wip; }) },
         { height: 260, unit: '行', label: '每日在制与完成', caliber: CAL.wip, tips: tips }));
       el.appendChild(h('div.note-line', '近 ' + days.length + ' 天完成 ' + Dash.num(win.done) + ' 行；最近一天在制 ' + Dash.num(days[days.length - 1].wip) + ' 行'));
     }

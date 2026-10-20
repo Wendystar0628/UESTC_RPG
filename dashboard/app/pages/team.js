@@ -333,8 +333,8 @@
   /* ---------- team-idle ---------- */
 
   Dash.panel({
-    id: 'team-idle', page: 'team', title: '有活却空闲', note: '近 24 小时指挥空着、队列里却有能接的可派行，累计多少分钟',
-    caliber: '指挥空闲且有能接的可派行的时长', window: '24h',
+    id: 'team-idle', page: 'team', title: '有活却空闲', note: '近 24 小时指挥空着、队列里却有能接的就绪行，累计多少分钟',
+    caliber: '指挥空闲且有能接的就绪行的时长', window: '24h',
     span: 5, order: 60, needs: ['collab'],
     render: function (el, d) {
       var idle = d.collab.idle;
@@ -343,7 +343,7 @@
         var g = x.longest;
         return {
           key: x.who, label: x.who, value: x.minutes, text: x.minutes == null ? '未确认' : Dash.minutes(x.minutes), tone: ['side', Dash.sideKey(x.who)],
-          note: g ? '最长一段 ' + Dash.at(g.from) + ' – ' + Dash.at(g.to) + '，当时可派 ' + ((g.rows || []).length ? g.rows.join('、') : '行号未确认') : null
+          note: g ? '最长一段 ' + Dash.at(g.from) + ' – ' + Dash.at(g.to) + '，当时就绪 ' + ((g.rows || []).length ? g.rows.join('、') : '行号未确认') : null
         };
       }), { label: '近 24 小时有活却空闲的分钟数', labelWidth: 70, textWidth: 100 }));
       if (idle.some(function (x) { return x.minutes == null; })) el.appendChild(h('div.note-line', '有的指挥这段时长未确认'));

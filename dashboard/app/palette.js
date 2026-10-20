@@ -11,12 +11,13 @@
   var h = Dash.h;
 
   var P = Dash.palette = {
-    /* 任务流水线四段（契约 progress.rows[].stage） */
+    /* 施工阶段只登记样式；名称与顺序来自 /api/data-names.js 的 DashQueueStates */
     stage: {
-      queued:    ['--st-queued', '排着'],
-      doing:     ['--st-doing', '在做'],
-      finishing: ['--st-finishing', '收尾'],
-      paused:    ['--st-paused', '暂停']
+      waiting:     ['--st-waiting'],
+      ready:       ['--st-ready'],
+      active:      ['--st-active'],
+      integration: ['--st-integration'],
+      paused:      ['--st-paused']
     },
     /* 负责方 */
     side: {
@@ -113,6 +114,10 @@
   };
   Dash.color = function (group, key) { return Dash.cssVar(Dash.colorVar(group, key)); };
   Dash.label = function (group, key) {
+    if (group === 'stage') {
+      var state = window.DashQueueStates.filter(function (x) { return x.key === key; })[0];
+      return state ? state.label : String(key == null ? '—' : key);
+    }
     var e = entry(group, key);
     return e ? e[1] : String(key == null ? '—' : key);
   };
