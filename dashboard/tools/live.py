@@ -51,6 +51,12 @@ def part(errors, name, fn, default):
         return default
 
 
+def app_stamp():
+    """观察台界面代码（app/ 与 index.html）最后改动的时刻；页面发现它变了就整页刷新，开着的页面不会一直跑旧代码。"""
+    files = [os.path.join(r, f) for r, _, fs in os.walk(os.path.join(HERE, "..", "app")) for f in fs] + [os.path.join(HERE, "..", "index.html")]
+    return int(max(os.path.getmtime(f) for f in files if os.path.exists(f)))
+
+
 def collect():
     errors = []
     rows = part(errors, "施工队列", collab.queue_rows, [])
@@ -67,7 +73,8 @@ def collect():
     changes = part(errors, "工作区改动", repo.changes, [])
     worktrees = part(errors, "临时工作树", lambda: worktree_block(procs), None)
     done = part(errors, "在做的工作", lambda: work.build(rows, agents, sessions, changes, worktrees, out_scripts), None)
-    live = {"sessions": sessions, "agents": agents, "scripts": out_scripts, "build": build, "work": done, "worktrees": worktrees, "hooks": hook_cards, "errors": errors}
+    live = {"sessions": sessions, "agents": agents, "scripts": out_scripts, "build": build, "work": done, "worktrees": worktrees, "hooks": hook_cards, "errors": errors,
+            "appStamp": app_stamp()}
     return live, procs
 
 
@@ -139,6 +146,10 @@ def reload_monitor():
     order = ("monitor.util", "monitor.record", "monitor.read", "monitor.check", "monitor.view")
     names = sorted((n for n in sys.modules if n.startswith("monitor.") and n != "monitor"), key=lambda n: next((i for i, p in enumerate(order) if n.startswith(p)), 99))
     for n in names:
+        f = getattr(sys.modules[n], "__file__", None)
+        if f and not os.path.exists(f):   # 源文件删了或挪走了：从缓存里去掉，不再重载
+            del sys.modules[n]
+            continue
         importlib.reload(sys.modules[n])
     if "collect" in sys.modules:
         importlib.reload(sys.modules["collect"])

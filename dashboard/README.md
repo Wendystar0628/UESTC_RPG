@@ -104,12 +104,11 @@ audit:     { items: [{ id, at, from, title, why, link, status: "open"|"done" }] 
 ## 3 页面运行时（app/core.js、ui.js、ui-live.js 提供）
 
 ```
-Dash.put(name, data)          数据文件调用；存下并重绘依赖它的面板
+Dash.put(name, data)          数据文件调用；存下并重绘依赖它的面板；live 带来的 appStamp（界面代码最后改动时刻）变了就整页刷新
 Dash.get(name)                取当前数据（没有返回 null）
 Dash.panel({ id, page, title, order, needs: [名字...], render(el, data) })
                               面板注册；data 是 { 名字: 数据 }；needs 里任一数据变了就重绘
 Dash.num(n)                   测得到的个数一律用它：确切值，千位加逗号（12,345）；没有数据写 —
-                              1000–1999 "上千"，2000–9999 "几千"，10000+ "上万"
 Dash.at(iso)                  确切时刻：今天 "HH:MM"，不是今天 "M-D HH:MM"；解析不了写 "—"
 Dash.atAgo(iso)               确切时刻后面带一个灰色的"多久前"（节点）
 Dash.ago(iso)                 "多久前"：只作 Dash.at 后面的灰色补充

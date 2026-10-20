@@ -31,7 +31,12 @@
     } catch (e) { return String(Math.random()); }
   }
 
+  var appStamp = null;   // 界面代码的时刻（live.js 带来）：变了就整页刷新，开着的页面不跑旧代码
   Dash.put = function (name, data) {
+    if (name === 'live' && data && data.appStamp) {
+      if (appStamp === null) appStamp = data.appStamp;
+      else if (data.appStamp !== appStamp) { location.reload(); return; }
+    }
     var m = meta[name] || (meta[name] = {});
     var sig = signature(data);
     var changed = m.sig !== sig;
