@@ -44,6 +44,7 @@ gates: []
 - ENG-GATES 验收与门禁
   - ENG-GATES-SHOTS 审查视角与截图
   - ENG-GATES-VETO 一票否决与收尾清单
+- ENG-FAILS 游戏失败观测
 - ENG-PERF 性能工程
   - ENG-PERF-ADAPT 自适应与测量
   - ENG-PERF-LIGHT 植被、阴影、后期与灯光

@@ -16,6 +16,7 @@
   "ENG-BUDGET": "docs/engineering/ENG-BUDGET-性能预算.md",
   "ENG-BUDGET-LOD": "docs/engineering/ENG-BUDGET-LOD-细节级别、速度律与渲染参数.md",
   "ENG-BUDGET-RULES": "docs/engineering/ENG-BUDGET-RULES-硬规则与工程设置.md",
+  "ENG-FAILS": "docs/engineering/ENG-FAILS-游戏失败观测.md",
   "ENG-GATES": "docs/engineering/ENG-GATES-验收与门禁.md",
   "ENG-GATES-SHOTS": "docs/engineering/ENG-GATES-SHOTS-审查视角与截图.md",
   "ENG-GATES-VETO": "docs/engineering/ENG-GATES-VETO-一票否决与收尾清单.md",
@@ -155,6 +156,18 @@
     "WF-MODEL"
    ],
    "glob": ".collab/tasks/**"
+  },
+  {
+   "docs": [
+    "ENG-FAILS"
+   ],
+   "glob": ".collab/tools/fail.py"
+  },
+  {
+   "docs": [
+    "ENG-FAILS"
+   ],
+   "glob": ".collab/tools/monitor/failure-types.json"
   },
   {
    "docs": [
