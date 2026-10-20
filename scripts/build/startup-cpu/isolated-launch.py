@@ -1,4 +1,8 @@
-"""Private-desktop launcher for startup CPU sampling; never switches desktops."""
+"""Private-desktop launcher for startup CPU sampling; never switches desktops.
+
+用法：python -I isolated-launch.py <output> <title|immediate|dwell> <dwell-seconds> [project-root]
+"""
+import base64
 import ctypes as c
 from ctypes import wintypes as w
 from pathlib import Path
@@ -36,6 +40,7 @@ mode = sys.argv[2]
 if mode not in ("title", "immediate", "dwell"):
     raise ValueError("Expected title, immediate or dwell")
 dwell_seconds = float(sys.argv[3])
+project_root = Path(sys.argv[4]).resolve() if len(sys.argv) > 4 else None
 out.mkdir(parents=True, exist_ok=False)
 desktop_name = "UESTC_C215_" + str(time.time_ns())
 desktop = user.CreateDesktopW(desktop_name, None, None, 0, 0x01FF, None)
@@ -48,9 +53,24 @@ try:
     startup.lpDesktop = desktop_name
     startup.dwFlags = 0x00000001  # STARTF_USESHOWWINDOW
     startup.wShowWindow = 0  # SW_HIDE; console remains on the private desktop
-    command = subprocess.list2cmdline(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
-        "-File", str(Path(__file__).with_name("capture.ps1")), "-Output", str(out), "-Mode", mode,
-        "-TitleDwellSeconds", str(dwell_seconds)])
+    # Redirect PowerShell streams, leaving the private console's real stdin intact
+    # for dotnet-trace Stop. EncodedCommand avoids shell/path interpolation.
+    def ps_literal(value):
+        return "'" + str(value).replace("'", "''") + "'"
+
+    capture_arguments = ["&", ps_literal(Path(__file__).with_name("capture.ps1")),
+        "-Output", ps_literal(out), "-Mode", ps_literal(mode),
+        "-TitleDwellSeconds", ps_literal(dwell_seconds)]
+    if project_root is not None:
+        capture_arguments.extend(["-ProjectRoot", ps_literal(project_root)])
+    stdout = ps_literal(out / "worker.stdout.txt")
+    stderr = ps_literal(out / "worker.stderr.txt")
+    script = ("$ErrorActionPreference = 'Stop'\ntry {\n    " + " ".join(capture_arguments) +
+        " 1> " + stdout + " 2> " + stderr + "\n} catch {\n    " +
+        "$_ | Out-String | Add-Content -LiteralPath " + stderr + "\n    exit 1\n}")
+    arguments = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+        "-EncodedCommand", base64.b64encode(script.encode("utf-16-le")).decode("ascii")]
+    command = subprocess.list2cmdline(arguments)
     if not kernel.CreateProcessW(None, c.create_unicode_buffer(command), None, None, False,
             0x00000010, None, str(Path(__file__).resolve().parents[3]), c.byref(startup), c.byref(process)):
         raise c.WinError(c.get_last_error())

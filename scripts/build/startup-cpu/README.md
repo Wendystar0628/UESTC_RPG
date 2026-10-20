@@ -2,7 +2,7 @@
 
 两个入口都把样本、日志、JSON 与 `.nettrace` 写入 `output/start_game/C215-profile`。`run.ps1` 在固定机位截图和预烘完成后使用：要求全新输出目录，取得共享构建锁并做现有启动判鲜，只构建独立 `CpuParse`，再串行采集 `title`、`immediate`、`dwell`。`-TitleDwellSeconds` 默认 10 秒、范围 1–120 秒。解析器的 `bin/obj` 留在 output。
 
-`run-existing-immediate.ps1` 只用现有游戏与解析器二进制；缺少任一二进制就报错。它跳过启动初始化、编译、导入和预烘，结果记录 `compileImportPrebakeInvoked=false`。
+`run-existing-immediate.ps1` 只用现有游戏与解析器二进制；缺少任一二进制就报错。它跳过启动初始化、编译、导入和预烘，结果记录 `compileImportPrebakeInvoked=false`。可用 `-ProjectRoot` 指定另一干净检出的现成游戏；游戏路径与默认缓存跟随该检出，工具、解析器、输出及共享构建锁仍来自当前仓库。子进程早期错误写入样本目录的 `worker.stderr.txt`。
 
 三轮使用正常产品默认值和隔离 save/log，不带 gate、shots、frames 或 CaptureMode。`title` 到 realtime 结束；`immediate` 在观察到 title-ready 后等真实后续 process frame 发定向 Enter，再跨下一 process frame 释放；`dwell` 先停留指定秒数再执行同样输入。immediate 的 Enter 若 15 秒内未到 new-game-enter，该轮失败。dwell 时长不保证后台世界已就绪；title-ready、world-ready、realtime 与首次 Walk 是不同边界。日志按名义 20 ms 轮询，边界观测有延迟，不插值。
 

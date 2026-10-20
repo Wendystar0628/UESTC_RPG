@@ -8,9 +8,10 @@
   <ItemGroup>
     <PackageReference Remove="Microsoft.CodeAnalysis.BannedApiAnalyzers" />
     <Compile Include="CpuParse.cs" />
-    <Reference Include="Microsoft.Diagnostics.Tracing.TraceEvent"><HintPath>$(TraceToolDir)\Microsoft.Diagnostics.Tracing.TraceEvent.dll</HintPath></Reference>
-    <Reference Include="Microsoft.Diagnostics.FastSerialization"><HintPath>$(TraceToolDir)\Microsoft.Diagnostics.FastSerialization.dll</HintPath></Reference>
-    <Reference Include="Microsoft.Diagnostics.NETCore.Client"><HintPath>$(TraceToolDir)\Microsoft.Diagnostics.NETCore.Client.dll</HintPath></Reference>
+    <!-- These tool-store assemblies are runtime dependencies of this standalone executable. -->
+    <Reference Include="Microsoft.Diagnostics.Tracing.TraceEvent"><HintPath>$(TraceToolDir)\Microsoft.Diagnostics.Tracing.TraceEvent.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="Microsoft.Diagnostics.FastSerialization"><HintPath>$(TraceToolDir)\Microsoft.Diagnostics.FastSerialization.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="Microsoft.Diagnostics.NETCore.Client"><HintPath>$(TraceToolDir)\Microsoft.Diagnostics.NETCore.Client.dll</HintPath><Private>true</Private></Reference>
   </ItemGroup>
 </Project>
 
