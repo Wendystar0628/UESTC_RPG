@@ -122,6 +122,8 @@ public sealed class InteriorEntranceHeightReferenceTests
     private sealed class CountingProvider(IInteriorProvider inner) : IInteriorProvider
     {
         public int Calls { get; set; }
+        public BakeInputDependencies BakeInputs => inner.BakeInputs;
+        public BakeInputDependencies CollisionInputs => inner.CollisionInputs;
         public IReadOnlyList<FeatureId> FeatureIds => inner.FeatureIds;
         public int Priority => inner.Priority;
         public InteriorLayout Layout(BuildContext ctx, FeatureId id) { Calls++; return inner.Layout(ctx, id); }

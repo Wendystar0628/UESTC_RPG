@@ -64,9 +64,9 @@ public sealed class BakeInstanceTests
             throw new InvalidOperationException("Surface material slots, shader or occlusion policy were lost.");
         CompareSurface(bundle.MultiMeshes[0].Surface, BakeSurfacePacker.Pack(frozenFirst, PrototypeBounds(), Palette()));
         CompareSurface(bundle.MultiMeshes[1].Surface, BakeSurfacePacker.Pack(frozenSecond, PrototypeBounds(), Palette()));
-        var bytes = TileBundleCodec.Encode("fixture/instances", bundle);
-        var restored = (TileBundle)TileBundleCodec.Decode("fixture/instances", key, bytes);
-        if (!bytes.SequenceEqual(TileBundleCodec.Encode("fixture/instances", restored)))
+        var bytes = TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/instances", bundle);
+        var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/instances", key, bytes);
+        if (!bytes.SequenceEqual(TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/instances", restored)))
             throw new InvalidOperationException("Multi-surface instance cache bytes changed in a round trip.");
         for (var i = 0; i < restored.MultiMeshes.Count; i++)
         {

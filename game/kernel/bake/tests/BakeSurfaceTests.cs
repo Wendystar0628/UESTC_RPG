@@ -37,7 +37,7 @@ public sealed class BakeSurfaceTests
                     IgnoreOcclusionCulling = true
                 };
                 var result = builder.BuildOutput(key, context, new([first, second], []), new(0, 0), level, _ => { });
-                var restored = (TileBundle)TileBundleCodec.Decode("fixture/height", key, TileBundleCodec.Encode("fixture/height", result));
+                var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/height", key, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/height", result));
                 var expectedBounds = new Box3(new(level == LodLevel.L4 ? -128 : -.5f, 0, level == LodLevel.L4 ? -256 : 0),
                     new(level == LodLevel.L4 ? 128 : 64.5f, planar ? .001f : 2.35f, level == LodLevel.L4 ? 256 : 64));
                 if (restored.Bounds != expectedBounds || restored.Surfaces.Count != 2 || restored.Surfaces.Any(s => s.Bounds != expectedBounds))
@@ -151,7 +151,7 @@ public sealed class BakeSurfaceTests
                 throw new InvalidOperationException("Tint changed geometry/normal bytes.");
             var key = BakeRequestKeys.Tile(new("fixture"), "fixture.tint", new(0, 0), LodLevel.L0);
             var bundle = new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [after]);
-            var restored = ((TileBundle)TileBundleCodec.Decode("fixture/tint", key, TileBundleCodec.Encode("fixture/tint", bundle))).Surfaces.Single();
+            var restored = ((TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/tint", key, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/tint", bundle))).Surfaces.Single();
             if (!restored.AttributeData.Span.SequenceEqual(after.AttributeData.Span) || restored.Material != after.Material)
                 throw new InvalidOperationException("Tint semantics changed during cache round trip.");
         }
@@ -171,12 +171,12 @@ public sealed class BakeSurfaceTests
         CheckUvBits(packed, uv2);
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.surface", new(0, 0), LodLevel.L0);
         var bundle = new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [packed]);
-        var bytes = TileBundleCodec.Encode("fixture/surface", bundle);
-        var restored = ((TileBundle)TileBundleCodec.Decode("fixture/surface", key, bytes)).Surfaces.Single();
+        var bytes = TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/surface", bundle);
+        var restored = ((TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/surface", key, bytes)).Surfaces.Single();
         CheckUvBits(restored, uv2);
         if (restored.Shader != ShaderId.Water || !restored.Reflect)
             throw new InvalidOperationException("Shader/reflection metadata was lost.");
-        if (!bytes.SequenceEqual(TileBundleCodec.Encode("fixture/surface", new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [restored]))))
+        if (!bytes.SequenceEqual(TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/surface", new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [restored]))))
             throw new InvalidOperationException("Surface cache bytes are not stable.");
     }
 
@@ -210,11 +210,11 @@ public sealed class BakeSurfaceTests
         }
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.pattern", new(0, 0), LodLevel.L0);
         var bundle = new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [merged]);
-        var bytes = TileBundleCodec.Encode("fixture/pattern", bundle);
-        var restored = (TileBundle)TileBundleCodec.Decode("fixture/pattern", key, bytes);
+        var bytes = TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/pattern", bundle);
+        var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/pattern", key, bytes);
         var surface = restored.Surfaces.Single();
         if (surface.Material != source.Material || !surface.AttributeData.Span.SequenceEqual(merged.AttributeData.Span) ||
-            !bytes.SequenceEqual(TileBundleCodec.Encode("fixture/pattern", restored)))
+            !bytes.SequenceEqual(TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/pattern", restored)))
             throw new InvalidOperationException("Pattern profile, metre UV, gate/K, colour or cache representation changed in transit.");
         for (var vertex = 0; vertex < 6; vertex++)
         {

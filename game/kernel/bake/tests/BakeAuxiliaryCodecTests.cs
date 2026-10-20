@@ -25,13 +25,13 @@ public sealed class BakeAuxiliaryCodecTests
         var key = BakeRequestKeys.Tile(new("fixture"), BakeModuleIds.VegetationTrees, default, LodLevel.L0);
         var trees = new VegetationTileContent(key, default,
             [new("fixture.mother", new("WP-23"), record, [prototype, prototype, prototype, prototype], [bounds])]);
-        var bytes = BakeProductCodec.Encode("fixture", trees);
-        var decoded = (VegetationTileContent)BakeProductCodec.Decode("fixture", key, bytes);
+        var bytes = BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", trees);
+        var decoded = (VegetationTileContent)BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", key, bytes);
         var mother = decoded.Mothers.Single();
         if (!mother.Records.Span.SequenceEqual(record) || mother.Owner != trees.Mothers[0].Owner || mother.Bounds.Single() != bounds)
             throw new InvalidOperationException("Vegetation lost frozen mother data.");
         Verify(mother.Prototypes[3].Surfaces.Single());
-        if (!bytes.SequenceEqual(BakeProductCodec.Encode("fixture", decoded)))
+        if (!bytes.SequenceEqual(BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", decoded)))
             throw new InvalidOperationException("Vegetation round trip changed canonical bytes.");
 
         key = key with { Module = BakeModuleIds.FaunaRuntime };
@@ -46,8 +46,8 @@ public sealed class BakeAuxiliaryCodecTests
         };
         var fauna = new FaunaTileContent(key, default, new(
             [new("fixture.site", FaunaKind.Cat, bounds, [output, ContentOutput.Empty, output])], ["fixture log"]));
-        bytes = BakeProductCodec.Encode("fixture", fauna);
-        var animals = (FaunaTileContent)BakeProductCodec.Decode("fixture", key, bytes);
+        bytes = BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", fauna);
+        var animals = (FaunaTileContent)BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", key, bytes);
         var site = animals.Content.Sites.Single();
         if (site.Bounds != bounds || site.Sets.Count != 3 || site.Sets[1].Meshes.Count != 0 ||
             !site.Sets[2].Instances.Single().Data.Span.SequenceEqual(record))
@@ -59,7 +59,7 @@ public sealed class BakeAuxiliaryCodecTests
             !site.Sets[0].Occupancy![0].Rings.Holes[0].SequenceEqual(ring.Holes[0]) ||
             !site.Sets[0].Windows[0].SillY.SequenceEqual(output.Windows[0].SillY) || !site.Sets[0].Windows[0].Skip.SequenceEqual(output.Windows[0].Skip))
             throw new InvalidOperationException("Content output lost typed part parameters, placement or nested numeric channels.");
-        if (!bytes.SequenceEqual(BakeProductCodec.Encode("fixture", animals)))
+        if (!bytes.SequenceEqual(BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", animals)))
             throw new InvalidOperationException("Fauna round trip changed canonical bytes.");
     }
 
@@ -71,28 +71,30 @@ public sealed class BakeAuxiliaryCodecTests
         var data = new float[GlowSet.Stride];
         InstanceStreamLayout.Write(data, Matrix4x4.Identity, new(321, .2f, 0, 0));
         var lamps = new NightlightTileContent(key, default, [321], new(GlowKind.Lamp, 1, data, new(Vector3.Zero, Vector3.One)), []);
-        var bytes = BakeProductCodec.Encode("fixture", lamps);
-        var decoded = (NightlightTileContent)BakeProductCodec.Decode("fixture", key, bytes);
+        var bytes = BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", lamps);
+        var decoded = (NightlightTileContent)BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", key, bytes);
         if (decoded.LampIds.Single() != 321 || decoded.Glow.Buffer[12] != 321 || decoded.ReflectionWindowIndices.Count != 0)
             throw new InvalidOperationException("Lamp IDs were renumbered by the tile codec.");
         var windows = new NightlightTileContent(key with { Module = BakeModuleIds.NightlightWindows }, default, [],
             lamps.Glow with { Kind = GlowKind.Window }, [0]);
-        bytes = BakeProductCodec.Encode("fixture", windows);
-        var restored = (NightlightTileContent)BakeProductCodec.Decode("fixture", windows.Key, bytes);
+        bytes = BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", windows);
+        var restored = (NightlightTileContent)BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", windows.Key, bytes);
         if (restored.ReflectionWindowIndices.Single() != 0 || restored.LampIds.Count != 0)
             throw new InvalidOperationException("Window reflections lost their local buffer index.");
-        Reject(() => BakeProductCodec.Encode("fixture", windows with { ReflectionWindowIndices = [1] }));
-        Reject(() => BakeProductCodec.Encode("fixture", lamps with { LampIds = [320] }));
-        Reject(() => BakeProductCodec.Decode("fixture", windows.Key, bytes[..^1]));
-        Reject(() => BakeProductCodec.Decode("fixture", windows.Key, bytes.Concat(new byte[] { 0 }).ToArray()));
+        Reject(() => BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", windows with { ReflectionWindowIndices = [1] }));
+        Reject(() => BakeProductCodec.Encode(BakePayloadClass.Product, "fixture", lamps with { LampIds = [320] }));
+        Reject(() => BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", windows.Key, bytes[..^1]));
+        Reject(() => BakeProductCodec.Decode(BakePayloadClass.Product, "fixture", windows.Key, bytes.Concat(new byte[] { 0 }).ToArray()));
         var count = BakeCacheStore.MaximumPayloadBytes / (GlowSet.Stride * sizeof(float)) + 1;
         var large = windows with { Glow = windows.Glow with { Count = count, Buffer = new float[count * GlowSet.Stride] }, ReflectionWindowIndices = [] };
-        var largeBytes = BakeProductCodec.Encode("fixture/large", large);
+        var largeBytes = BakeProductCodec.Encode(BakePayloadClass.Product, "fixture/large", large);
         if (largeBytes.Length <= BakeCacheStore.MaximumPayloadBytes ||
-            ((NightlightTileContent)BakeProductCodec.Decode("fixture/large", windows.Key, largeBytes)).Glow.Count != count)
+            ((NightlightTileContent)BakeProductCodec.Decode(BakePayloadClass.Product, "fixture/large", windows.Key, largeBytes)).Glow.Count != count)
             throw new InvalidOperationException("CPU channels or containers still use the single-render-upload boundary.");
-        Reject(() => BakeProductCodec.Decode("fixture/large", key with { Module = "fixture.render" }, largeBytes));
-        Reject(() => BakeProductCodec.Decode("fixture/large", key with { Module = "collision.world", Detail = "C/0/0" }, largeBytes));
+        Reject(() => BakeProductCodec.Encode(BakePayloadClass.Tile, "fixture/large", large));
+        Reject(() => BakeProductCodec.Decode(BakePayloadClass.Tile, "fixture/large", windows.Key, largeBytes));
+        Reject(() => BakeProductCodec.Decode(BakePayloadClass.Product, "fixture/large", key with { Module = "fixture.render" }, largeBytes));
+        Reject(() => BakeProductCodec.Decode(BakePayloadClass.Product, "fixture/large", key with { Module = "collision.world", Detail = "C/0/0" }, largeBytes));
     }
 
     [TestCase]
@@ -108,15 +110,15 @@ public sealed class BakeAuxiliaryCodecTests
             [new(new("fixture.pad"), .125f)], [new(new("fixture.water"), .375f)], [new(new("fixture.water"), [ring], [ring])],
             [new(span, stations, [short.MinValue, 1, short.MaxValue])], [new(Vector2.Zero, Vector2.One)],
             Enumerable.Range(0, 600_000).Select(i => (short)(i % short.MaxValue)).ToArray(), ["fixture diagnostic"]);
-        var bytes = TileBundleCodec.EncodeCache(key, terrain);
-        var restored = TileBundleCodec.DecodeCache<TerrainFrozenData>(bytes, key);
+        var bytes = TileBundleCodec.EncodeCache(BakePayloadClass.Product, key, terrain);
+        var restored = TileBundleCodec.DecodeCache<TerrainFrozenData>(BakePayloadClass.Product, bytes, key);
         if (!restored.DistantHeights.SequenceEqual(terrain.DistantHeights) || !restored.Banks[0].Stations.SequenceEqual(stations) ||
             !restored.Banks[0].Heights.SequenceEqual(terrain.Banks[0].Heights) || !restored.Pads.SequenceEqual(terrain.Pads) ||
             !restored.WaterLevels.SequenceEqual(terrain.WaterLevels) || !restored.Supports.SequenceEqual(terrain.Supports) ||
             !restored.Waters[0].WadeAreas[0].Outer.SequenceEqual(ring.Outer) || !restored.Diagnostics.SequenceEqual(terrain.Diagnostics))
             throw new InvalidOperationException("Terrain cache lost frozen numeric data.");
-        Reject(() => TileBundleCodec.DecodeCache<TerrainFrozenData>(bytes[..^1], key));
-        Reject(() => TileBundleCodec.DecodeCache<TerrainFrozenData>([.. bytes, 0], key));
+        Reject(() => TileBundleCodec.DecodeCache<TerrainFrozenData>(BakePayloadClass.Product, bytes[..^1], key));
+        Reject(() => TileBundleCodec.DecodeCache<TerrainFrozenData>(BakePayloadClass.Product, [.. bytes, 0], key));
 
         key = key with { Module = "resident" };
         var facade = new WindowFacadeDecl(0, 2, new("window.general"), 0, 2, 1, Vector3.One, Vector3.UnitX, Vector3.UnitY,
@@ -131,8 +133,8 @@ public sealed class BakeAuxiliaryCodecTests
         var resident = new BakeResidentData(new(lighting, new(map, [])), windows, [], [layout],
             new(new Dictionary<string, IReadOnlyList<TileKey>> { ["fixture.module"] = [new(1, 2), new(-3, 4)] },
                 [new(new(map, "fixture.module", "L0/1/2"), layout.Bounds)]), [new(1, -2)]);
-        bytes = TileBundleCodec.EncodeCache(key, resident);
-        var saved = TileBundleCodec.DecodeCache<BakeResidentData>(bytes, key);
+        bytes = TileBundleCodec.EncodeCache(BakePayloadClass.Product, key, resident);
+        var saved = TileBundleCodec.DecodeCache<BakeResidentData>(BakePayloadClass.Product, bytes, key);
         if (!saved.Metadata.Lighting.Nightlight.LampTable.Span.SequenceEqual(catalog.LampTable.Span) ||
             !saved.Metadata.Lighting.Nightlight.LampGrid.Span.SequenceEqual(catalog.LampGrid.Span) ||
             !saved.Metadata.Lighting.Nightlight.Lamps.SequenceEqual(catalog.Lamps) ||
@@ -142,7 +144,7 @@ public sealed class BakeAuxiliaryCodecTests
             !saved.Directory.Modules["fixture.module"].SequenceEqual(resident.Directory.Modules["fixture.module"]) ||
             !saved.Directory.Auxiliary.SequenceEqual(resident.Directory.Auxiliary) || !saved.TerrainPoints.SequenceEqual(resident.TerrainPoints))
             throw new InvalidOperationException("Resident cache lost lamp, window, interior or directory data.");
-        Reject(() => TileBundleCodec.DecodeCache<BakeResidentData>(bytes, key with { Detail = "source-index" }));
+        Reject(() => TileBundleCodec.DecodeCache<BakeResidentData>(BakePayloadClass.Product, bytes, key with { Detail = "source-index" }));
     }
 
     private static void Reject(Action action)

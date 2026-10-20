@@ -1,3 +1,4 @@
+using Campus.Pipeline.Map;
 using Campus.Contracts;
 using Campus.Contracts.AppFlow;
 using Campus.Contracts.Bake;
@@ -59,7 +60,7 @@ public sealed partial class BakeService
                 }
         }
         cancellation.ThrowIfCancellationRequested();
-        var mapKey = new BakeKey(context.Descriptor.Id, "map", "base");
+        var mapKey = new BakeKey(context.Descriptor.Id, MapBaker.Module, MapBaker.Detail);
         if (map.Producers.Any(producer => producer.Value.CanBuild(mapKey))) yield return mapKey;
     }
 
@@ -72,7 +73,7 @@ public sealed partial class BakeService
     {
         var map = Mount(context);
         if (!_options.MapOnly && !_options.Background) return;
-        var mapKey = new BakeKey(context.Descriptor.Id, "map", "base");
+        var mapKey = new BakeKey(context.Descriptor.Id, MapBaker.Module, MapBaker.Detail);
         if (map.Producers.Any(producer => producer.Value.CanBuild(mapKey))) Schedule(map, mapKey, BakePriority.Normal);
         StartBackgroundCatalog(map);
     }

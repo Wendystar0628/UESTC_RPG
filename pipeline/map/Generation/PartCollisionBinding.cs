@@ -1,9 +1,11 @@
 using System.Reflection;
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 
 namespace Campus.Pipeline.Map;
 
 /// <summary>Frozen registered part definitions, shared by walking preparation and collision tile production.</summary>
+
 public sealed class PartCollisionBinding(IEnumerable<KeyValuePair<PartId, IPartDef>> definitions)
 {
     private readonly IReadOnlyDictionary<string, IPartDef> _parts = definitions.ToDictionary(

@@ -8,15 +8,11 @@ namespace Campus.Kernel.Maps;
 /// <summary>Capture registered CPU objects on the engine thread before publishing worker input.</summary>
 public static class GenerationInputCapture
 {
-    public static MapGenerationInputs Capture(ServiceRegistry registry, MapId map, PaletteCatalog catalog,
-        BuildInputSnapshot globalInputs) => GenerationInputAssembly.Capture(map, Registrations(registry), registry.Create,
-            type => registry.CreateInteriorProvider(type, map), GenerationInputAssembly.CodeVersion, catalog, globalInputs);
-
     public static PartLodCatalog CapturePartLods(ServiceRegistry registry, MapId map) =>
-        GenerationInputAssembly.CapturePartLods(RegistrationDiscovery.ForMap(Registrations(registry), entry => entry.Map, map.Value), registry.Create);
+        BuildInputAssembly.CapturePartLods(RegistrationDiscovery.ForMap(Registrations(registry), entry => entry.Map, map.Value), registry.Create);
 
     public static IReadOnlyList<IGroundMaskContributor> CaptureGroundMaskContributors(ServiceRegistry registry, MapId map) =>
-        GenerationInputAssembly.CaptureGroundMaskContributors(RegistrationDiscovery.ForMap(Registrations(registry), entry => entry.Map, map.Value), registry.Create);
+        BuildInputAssembly.CaptureGroundMaskContributors(RegistrationDiscovery.ForMap(Registrations(registry), entry => entry.Map, map.Value), registry.Create);
 
     private static IReadOnlyList<GenerationRegistration> Registrations(ServiceRegistry registry) => registry.Entries
         .Where(entry => entry.Kind is "content" or "part" or "interior")

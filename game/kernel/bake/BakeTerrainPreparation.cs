@@ -1,3 +1,4 @@
+using Campus.Gen.Ground;
 using System.Numerics;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
@@ -21,7 +22,7 @@ public sealed partial class BakeService
         var request = BakeRequestKeys.Parse(key);
         // Cold entities and sites sample AssetWorld's metre nodes. Only a ready walking
         // height field or L0 ground tile publishes a runtime raster footprint here.
-        if (!request.Collision && !(key.Module == "ground" && request.Level == LodLevel.L0)) return;
+        if (!request.Collision && !(key.Module == GroundModule.Module && request.Level == LodLevel.L0)) return;
         var origin = TileGrid.Origin(request.Tile, LodLevel.L0);
         _terrain.PrepareRegion(map.Context, new(origin, origin + new Vector2(TileGrid.BaseEdge)), map.Lifetime.Token)
             .GetAwaiter().GetResult();

@@ -84,6 +84,8 @@ public sealed class BuildInputAssemblyTests
     private sealed class Contributor(string id, GroundMaskChannels channels) : IContentModule, IGroundMaskContributor
     {
         public string Id => id;
+        public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
+        public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
         GroundMaskChannels IGroundMaskContributor.Channels => channels;
         public int PaintCalls { get; private set; }
         public IReadOnlyList<Claim> Claims => [];

@@ -1,8 +1,10 @@
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 
 namespace Campus.Kernel.Bake;
 
 /// <summary>Fixed terrain payloads inside the existing compressed local product store.</summary>
+
 internal static class TerrainCacheCodec
 {
     public static byte[] EncodeBlock(TerrainRasterBlock block)

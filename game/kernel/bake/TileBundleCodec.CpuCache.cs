@@ -7,35 +7,34 @@ namespace Campus.Kernel.Bake;
 
 public static partial class TileBundleCodec
 {
-    internal static byte[] EncodeCache<T>(BakeKey key, T product) where T : class
+    internal static byte[] EncodeCache<T>(BakePayloadClass payloadClass, BakeKey key, T product) where T : class
     {
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream, new UTF8Encoding(false, true), true);
-        writer.Write(0x55504342); writer.Write(1); Key(writer, key);
+        CacheHeader(writer, key);
         switch (product)
         {
-            case TerrainFrozenData terrain: writer.Write((byte)1); Terrain(writer, terrain, key); break;
-            case BakeResidentData resident: writer.Write((byte)2); Resident(writer, resident, key); break;
-            case BakeSourceIndexData sources: writer.Write((byte)3); Sources(writer, sources, key); break;
+            case TerrainFrozenData terrain: writer.Write(TerrainCacheKind); Terrain(writer, terrain, key); break;
+            case BakeResidentData resident: writer.Write(ResidentCacheKind); Resident(writer, resident, key); break;
+            case BakeSourceIndexData sources: writer.Write(SourcesCacheKind); Sources(writer, sources, key); break;
             default: throw new NotSupportedException($"Unsupported CPU cache: {typeof(T).Name}");
         }
-        if (stream.Length > BakeCacheStore.MaximumProductBytes) throw new InvalidDataException("CPU cache exceeds its product limit.");
+        if (stream.Length > BakeCacheStore.MaximumPayload(payloadClass)) throw new InvalidDataException("CPU cache exceeds its product limit.");
         return stream.ToArray();
     }
 
-    internal static T DecodeCache<T>(byte[] bytes, BakeKey key) where T : class
+    internal static T DecodeCache<T>(BakePayloadClass payloadClass, byte[] bytes, BakeKey key) where T : class
     {
-        if (bytes.Length > BakeCacheStore.MaximumProductBytes) throw new InvalidDataException("CPU cache exceeds its product limit.");
+        if (bytes.Length > BakeCacheStore.MaximumPayload(payloadClass)) throw new InvalidDataException("CPU cache exceeds its product limit.");
         using var reader = new BinaryReader(new MemoryStream(bytes, false), new UTF8Encoding(false, true));
         try
         {
-            if (reader.ReadInt32() != 0x55504342 || reader.ReadInt32() != 1 || Key(reader) != key)
-                throw new InvalidDataException("CPU cache header/key mismatch.");
+            CacheHeader(reader, key);
             object product = reader.ReadByte() switch
             {
-                1 when typeof(T) == typeof(TerrainFrozenData) => Terrain(reader, key),
-                2 when typeof(T) == typeof(BakeResidentData) => Resident(reader, key),
-                3 when typeof(T) == typeof(BakeSourceIndexData) => Sources(reader, key),
+                TerrainCacheKind when typeof(T) == typeof(TerrainFrozenData) => Terrain(reader, key),
+                ResidentCacheKind when typeof(T) == typeof(BakeResidentData) => Resident(reader, key),
+                SourcesCacheKind when typeof(T) == typeof(BakeSourceIndexData) => Sources(reader, key),
                 _ => throw new InvalidDataException("CPU cache kind mismatch.")
             };
             if (reader.BaseStream.Position != reader.BaseStream.Length) throw new InvalidDataException("Trailing CPU cache bytes.");
@@ -43,6 +42,15 @@ public static partial class TileBundleCodec
         }
         catch (Exception error) when (error is EndOfStreamException or JsonException or ArgumentException or OverflowException)
         { throw new InvalidDataException("Invalid CPU cache payload.", error); }
+    }
+
+    private static void CacheHeader(BinaryWriter writer, BakeKey key)
+    { writer.Write(0x55504342); writer.Write(1); Key(writer, key); }
+
+    private static void CacheHeader(BinaryReader reader, BakeKey key)
+    {
+        if (reader.ReadInt32() != 0x55504342 || reader.ReadInt32() != 1 || Key(reader) != key)
+            throw new InvalidDataException("CPU cache header/key mismatch.");
     }
 
     private static void SourceCells(BinaryWriter writer, IReadOnlyList<BakeSourceCell> cells, BakeKey key)

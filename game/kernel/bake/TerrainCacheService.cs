@@ -6,13 +6,15 @@ using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Gen.World;
-using Campus.Pipeline.Map;
 
 namespace Campus.Kernel.Bake;
 
 /// <summary>Owns layered product reads and local writes, preparing terrain before pure readers receive it.</summary>
 [KernelService(typeof(TerrainCacheService), Owner = "WP-02a")]
 [KernelService(typeof(ITerrainPreparation), Owner = "WP-02a")]
+
+
+
 public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
 {
     private sealed class Session(MapId map, WorldModelPreparation preparation, TerrainFrozenData data, IPreparedTerrain terrain)
@@ -30,8 +32,11 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     private readonly ConcurrentDictionary<(ITerrain Terrain, TileKey Block), Lazy<Task>> _preparing = new();
     private readonly BakeOptions _options;
     internal BakeCacheStore Store { get; }
+    internal BakeCodeFingerprints CodeFingerprints { get; }
     public TerrainCacheService() : this(BakeOptions.FromApplication()) { }
-    internal TerrainCacheService(BakeOptions options) { _options = options; Store = new(options.CacheRoot, packagedRoot: options.PackagedCacheRoot); }
+    internal TerrainCacheService(BakeOptions options) : this(options, BakeCodeFingerprints.Load()) { }
+    internal TerrainCacheService(BakeOptions options, BakeCodeFingerprints codeFingerprints)
+    { _options = options; CodeFingerprints = codeFingerprints; Store = new(options.CacheRoot, packagedRoot: options.PackagedCacheRoot); }
 
     internal WorldModelLoadResult Load(MapId map, WorldModelPreparation preparation)
     {
@@ -73,13 +78,13 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
                     var stamp = TerrainStamp(session.Data.SourceInputs, new(new(block.X * TerrainRasterBlock.Edge, block.Z * TerrainRasterBlock.Edge),
                         new((block.X + 1) * TerrainRasterBlock.Edge, (block.Z + 1) * TerrainRasterBlock.Edge)));
                     TerrainRasterBlock value;
-                    var cached = Read(key, stamp, TerrainCacheCodec.DecodeBlock);
+                    var cached = Read(key, stamp, TerrainCacheCodec.DecodeBlock, BakePayloadClass.Tile);
                     if (cached is not null) value = cached;
                     else
                     {
                         RequireMiss(key);
                         lock (session.Sync) value = Assets(session).BuildBlock(block, prepared);
-                        Write(key, stamp, TerrainCacheCodec.EncodeBlock(value));
+                        Write(key, stamp, TerrainCacheCodec.EncodeBlock(value), BakePayloadClass.Tile);
                     }
                     lock (session.Sync)
                     {
@@ -102,13 +107,13 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
             var key = new BakeKey(session.Map, "terrain", "points/" + product);
             var stamp = Stamp(new { terrain = TerrainStamp(session.Data.SourceInputs), points = snapshot });
             TerrainRasterPoint[] values;
-            var cached = Read(key, stamp, TerrainCacheCodec.DecodePoints);
+            var cached = Read(key, stamp, TerrainCacheCodec.DecodePoints, BakePayloadClass.Tile);
             if (cached is not null) values = cached;
             else
             {
                 RequireMiss(key);
                 lock (session.Sync) values = Assets(session).BuildPoints(snapshot);
-                Write(key, stamp, TerrainCacheCodec.EncodePoints(values));
+                Write(key, stamp, TerrainCacheCodec.EncodePoints(values), BakePayloadClass.Tile);
             }
             cancellation.ThrowIfCancellationRequested();
             lock (session.Sync)
@@ -133,7 +138,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
         lock (session.Sync) points = Assets(session).SnapshotPoints();
         var groups = points.GroupBy(point => new TileKey(Block(point.X), Block(point.Z))).OrderBy(group => group.Key.X).ThenBy(group => group.Key.Z).ToArray();
         foreach (var group in groups)
-            Write(new(session.Map, "terrain", $"points/resident/{group.Key.X}/{group.Key.Z}"), stamp, TerrainCacheCodec.EncodePoints(group.ToArray()));
+            Write(new(session.Map, "terrain", $"points/resident/{group.Key.X}/{group.Key.Z}"), stamp, TerrainCacheCodec.EncodePoints(group.ToArray()), BakePayloadClass.Tile);
         lock (session.Sync)
         {
             prepared.Publish(points);
@@ -148,7 +153,7 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
         foreach (var block in blocks)
         {
             var key = new BakeKey(session.Map, "terrain", $"points/resident/{block.X}/{block.Z}");
-            var points = Read(key, stamp, TerrainCacheCodec.DecodePoints);
+            var points = Read(key, stamp, TerrainCacheCodec.DecodePoints, BakePayloadClass.Tile);
             if (points is null) return false;
             lock (session.Sync)
             {
@@ -174,10 +179,9 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     }
     private static int Block(float coordinate) => checked((int)MathF.Floor(coordinate / TerrainRasterBlock.Edge));
     internal static string Stamp<T>(T value) => Convert.ToHexStringLower(XxHash128.Hash(JsonSerializer.SerializeToUtf8Bytes(value, ContractJson.Options)));
-    private static string TerrainStamp(TerrainInputSummary inputs, MapRect? area = null) => Stamp(new
+    private string TerrainStamp(TerrainInputSummary inputs, MapRect? area = null) => Stamp(new
     {
-        BakeOptions.Abi, code = GenerationInputAssembly.CodeVersion(typeof(WorldModelLoader)),
-        runtime = typeof(TerrainCacheService).Module.ModuleVersionId, inputs.CommonStamp,
+        BakeOptions.Abi, code = CodeFingerprints.Chain(BakeCodeChains.Terrain), inputs.CommonStamp,
         cells = inputs.Cells.Where(cell => area is null || (cell.Cell.X + 1) * TileGrid.BaseEdge >= area.Min.X && cell.Cell.X * TileGrid.BaseEdge <= area.Max.X &&
             (cell.Cell.Z + 1) * TileGrid.BaseEdge >= area.Min.Y && cell.Cell.Z * TileGrid.BaseEdge <= area.Max.Y).ToArray()
     });
@@ -191,8 +195,8 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
         foreach (var value in Store.ReadCandidates(key, BakePayloadClass.Product, bytes => Decode(bytes, identity, payload => DecodeProduct(payload, key, validate))))
             yield return value;
     }
-    internal void WriteProduct<T>(BakeKey key, string identity, T value) where T : class => Write(key, identity, TileBundleCodec.EncodeCache(key, value), BakePayloadClass.Product);
-    private T? Read<T>(BakeKey key, string identity, Func<byte[], T> decode, BakePayloadClass payload = BakePayloadClass.Tile) where T : class
+    internal void WriteProduct<T>(BakeKey key, string identity, T value) where T : class => Write(key, identity, TileBundleCodec.EncodeCache(BakePayloadClass.Product, key, value), BakePayloadClass.Product);
+    private T? Read<T>(BakeKey key, string identity, Func<byte[], T> decode, BakePayloadClass payload) where T : class
     {
         if (_options.Live) return null;
         return Store.TryRead(key, payload, bytes => Decode(bytes, identity, decode));
@@ -205,11 +209,11 @@ public sealed class TerrainCacheService : ITerrainPreparation, IDisposable
     }
     private static T DecodeProduct<T>(byte[] bytes, BakeKey key, Action<T>? validate = null) where T : class
     {
-        var value = TileBundleCodec.DecodeCache<T>(bytes, key);
+        var value = TileBundleCodec.DecodeCache<T>(BakePayloadClass.Product, bytes, key);
         validate?.Invoke(value);
         return value;
     }
-    private void Write(BakeKey key, string identity, byte[] bytes, BakePayloadClass payload = BakePayloadClass.Tile)
+    private void Write(BakeKey key, string identity, byte[] bytes, BakePayloadClass payload)
     {
         if (_options.Live) return;
         using var stream = new MemoryStream();

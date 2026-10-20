@@ -238,13 +238,15 @@ public sealed class BakeInputTests
     [TestCase]
     [TestCategory(TestReason.Regression)]
     [RequireGodotRuntime]
+    [TestCategory("NativeRender")]
     public void PartialLocalSourceIndexKeepsPackagedStampsWithoutRecomputingSources()
     {
         var context = Context(new FakeWorld { Boundary = new([]) });
         var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-source-index-" + Guid.NewGuid().ToString("N"));
         var options = new BakeOptions(Path.Combine(directory, "packaged"), false, false, false, false, 1, null);
         var key = new BakeKey(context.Map.Id, "resident", "source-index");
-        var identity = BakeOptions.Abi + "/source-index-2";
+        const string codeIdentity = "current-code";
+        var identity = BakeSourceIndexCache.Identity(codeIdentity);
         var stamp = new string('a', 32);
         var source = new BakeSourceIndex(context);
         var product = BakeRequestKeys.Tile(context.Map.Id, "ground", default, LodLevel.L0);
@@ -254,12 +256,12 @@ public sealed class BakeInputTests
         { Cells = Enumerable.Range(0, 16384).Select(i => new BakeSourceCell(new(i, -i), stamp)).ToArray() };
         try
         {
-            using var packaged = new TerrainCacheService(options);
+            using var packaged = CreateTerrainCache(options);
             packaged.WriteProduct(key, identity, saved);
-            using var local = new TerrainCacheService(options with { CacheRoot = Path.Combine(directory, "local"), PackagedCacheRoot = options.CacheRoot });
+            using var local = CreateTerrainCache(options with { CacheRoot = Path.Combine(directory, "local"), PackagedCacheRoot = options.CacheRoot });
             var own = saved.Products[0] with { Stamp = new string('d', 32) };
             local.WriteProduct(key, identity, saved with { SourceVersion = "older", Products = [own] });
-            var cache = new BakeSourceIndexCache(local, context.Map.Id, "current");
+            var cache = new BakeSourceIndexCache(local, context.Map.Id, "current", codeIdentity);
             if (cache.ResolveResidentStamp(() => throw new InvalidOperationException("Warm source inputs were expanded.")) != stamp)
                 throw new InvalidOperationException("The matching packaged source version was ignored.");
             var restored = new BakeSourceIndex(context, cache);
@@ -270,6 +272,54 @@ public sealed class BakeInputTests
             var persisted = local.ReadProduct<BakeSourceIndexData>(key, identity)!;
             if (persisted.SourceVersion != saved.SourceVersion || persisted.Products.Length != saved.Products.Length || !persisted.Cells.SequenceEqual(saved.Cells))
                 throw new InvalidOperationException("Merged product stamps were not persisted for the next startup.");
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Contract)]
+    public void BuildCodeManifestRejectsMissingOrDuplicateRoots()
+    {
+        var key = BakeCodeManifest.Chain(BakeCodeChains.Geometry);
+        var table = new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema, new Dictionary<string, string> { [key] = "geometry-code" }));
+        if (table.Chain(BakeCodeChains.Geometry) != "geometry-code") throw new InvalidOperationException("Build root lookup changed its stored hash.");
+        ExpectInvalid(() => table.Chain(BakeCodeChains.Map));
+        var duplicate = Encoding.UTF8.GetBytes("{\"schema\":1,\"roots\":{\"chain:geometry\":\"a\",\"chain:geometry\":\"b\"}}");
+        ExpectInvalid(() => BakeCodeFingerprints.Parse(duplicate));
+        ExpectInvalid(() => new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema + 1,
+            new Dictionary<string, string> { [key] = "geometry-code" })));
+
+        static void ExpectInvalid(Action action)
+        {
+            try { action(); }
+            catch (InvalidDataException) { return; }
+            throw new InvalidOperationException("An invalid build code manifest was accepted.");
+        }
+    }
+
+    [TestCase]
+    [TestCategory(TestReason.Regression)]
+    [RequireGodotRuntime]
+    [TestCategory("NativeRender")]
+    public void ChangedBuildCodeCannotRestoreSavedProductStamps()
+    {
+        var context = Context(new FakeWorld { Boundary = new([]) });
+        var directory = Path.Combine(Path.GetTempPath(), "uestc-rpg-code-index-" + Guid.NewGuid().ToString("N"));
+        var options = new BakeOptions(directory, false, false, false, false, 1, null);
+        var table = new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema,
+            new Dictionary<string, string> { [BakeCodeManifest.Chain(BakeCodeChains.InputIndex)] = "index-code" }));
+        var resident = new string('a', 32);
+        var key = BakeRequestKeys.Tile(context.Map.Id, "ground", default, LodLevel.L0);
+        var index = new BakeSourceIndex(context);
+        index.RememberProduct(key, new string('b', 32));
+        try
+        {
+            using var terrain = new TerrainCacheService(options, table);
+            terrain.WriteProduct(new(context.Map.Id, "resident", "source-index"), BakeSourceIndexCache.Identity("before"), index.Snapshot("inputs", resident));
+            var cache = new BakeSourceIndexCache(terrain, context.Map.Id, "inputs", "after");
+            var recomputed = false;
+            if (cache.ResolveResidentStamp(() => { recomputed = true; return resident; }) != resident || !recomputed || cache.Read() is not null)
+                throw new InvalidOperationException("Changed build code reused saved product input stamps.");
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
     }

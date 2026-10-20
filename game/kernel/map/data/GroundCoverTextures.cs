@@ -1,3 +1,4 @@
+using Campus.Gen.Ground;
 using Campus.Contracts;
 using Campus.Contracts.Bake;
 using Campus.Contracts.Content;
@@ -18,8 +19,8 @@ public sealed partial class GroundCoverTextures(IMapContentSource content, IBake
 
     public async Task Prepare(IMapContext context)
     {
-        var source = content.GetModule<IGroundCoverSource>(context, "ground");
-        var build = builds.GetPreparedContext(context, "ground");
+        var source = content.GetModule<IGroundCoverSource>(context, GroundModule.Module);
+        var build = builds.GetPreparedContext(context, GroundModule.Module);
         _data = await Task.Run(() => source.PrepareGroundCover(build));
     }
 

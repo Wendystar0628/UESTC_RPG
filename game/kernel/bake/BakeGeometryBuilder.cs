@@ -8,6 +8,9 @@ using N = System.Numerics;
 namespace Campus.Kernel.Bake;
 
 /// <summary>Expands registered parts and packs surfaces on a bake worker; never touches the scene tree.</summary>
+
+
+
 internal sealed class BakeGeometryBuilder
 {
     private readonly PaletteCatalog _catalog;

@@ -8,8 +8,24 @@ using Campus.Contracts.Bake;
 namespace Campus.Kernel.Bake;
 
 /// <summary>TBIN v2 preserves shader/reflection metadata and full-precision UV2 without executable type metadata.</summary>
+
+
+
+
+
+
+
+
 public static partial class TileBundleCodec
 {
+    private const byte GeometryKind = 1;
+    private const byte CollisionKind = 2;
+    private const byte VegetationKind = 3;
+    private const byte FaunaKind = 4;
+    private const byte NightlightKind = 5;
+    private const byte TerrainCacheKind = 1;
+    private const byte ResidentCacheKind = 2;
+    private const byte SourcesCacheKind = 3;
     private const uint Magic = 0x4E494254;
     private const int MaximumItems = 4096;
     private const int MaximumCollisionShapes = 16384;
@@ -25,7 +41,7 @@ public static partial class TileBundleCodec
         return options;
     }
 
-    public static byte[] Encode(string identity, object product)
+    public static byte[] Encode(BakePayloadClass payloadClass, string identity, object product)
     {
         var productKey = product switch
         {
@@ -36,40 +52,22 @@ public static partial class TileBundleCodec
             NightlightTileContent nightlight => nightlight.Key,
             _ => throw new NotSupportedException($"Unsupported bake payload: {product.GetType().FullName}")
         };
-        var maximum = product is TileBundle or CollisionTile ? BakeCacheStore.MaximumPayloadBytes : BakeCacheStore.MaximumProductBytes;
+        var maximum = BakeCacheStore.MaximumPayload(payloadClass);
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream, new UTF8Encoding(false, true), true);
-        writer.Write(Magic); writer.Write(2);
-        Text(writer, identity);
+        Header(writer, identity);
         switch (product)
         {
-            case TileBundle tile:
-                if (tile.Stats.Bytes > BakeCacheStore.MaximumTileUploadBytes)
-                    throw new InvalidDataException($"Raw surface upload {tile.Key.Map.Value}/{tile.Key.Module}/{tile.Key.Detail}: {tile.Stats.Bytes} bytes exceeds limit {BakeCacheStore.MaximumTileUploadBytes}.");
-                writer.Write((byte)1); Key(writer, tile.Key); Json(writer, tile.Tile); writer.Write((byte)tile.Level); Json(writer, tile.Bounds);
-                writer.Write(tile.Surfaces.Count);
-                foreach (var surface in tile.Surfaces) Surface(writer, surface);
-                writer.Write(tile.MultiMeshes.Count);
-                foreach (var multi in tile.MultiMeshes)
-                {
-                    Surface(writer, multi.Surface); writer.Write(multi.InstanceCount); Bytes(writer, multi.InstanceData); Json(writer, multi.Bounds);
-                }
-                Text(writer, tile.StatisticsJson);
-                break;
-            case CollisionTile collision:
-                if (collision.Colliders.Count > MaximumCollisionShapes)
-                    throw new InvalidDataException($"Too many collision shapes in tile {collision.Tile}: {collision.Colliders.Count} > {MaximumCollisionShapes}.");
-                writer.Write((byte)2); Key(writer, collision.Key); Json(writer, collision.Tile); Json(writer, collision.Bounds);
-                Records(writer, collision.Colliders, (w, collider) => CollisionShape(w, collider, collision.Key)); Text(writer, collision.StatisticsJson);
-                break;
+            case TileBundle tile: RenderTile(writer, tile); break;
+            case CollisionTile collision: Collision(writer, collision); break;
             case Campus.Contracts.Vegetation.VegetationTileContent vegetation:
-                writer.Write((byte)3); Key(writer, vegetation.Key); Vegetation(writer, vegetation);
+                writer.Write(VegetationKind); Key(writer, vegetation.Key); Vegetation(writer, vegetation);
                 break;
             case Campus.Contracts.Fauna.FaunaTileContent fauna:
-                writer.Write((byte)4); Key(writer, fauna.Key); Fauna(writer, fauna);
+                writer.Write(FaunaKind); Key(writer, fauna.Key); Fauna(writer, fauna);
                 break;
             case NightlightTileContent nightlight:
-                writer.Write((byte)5); Key(writer, nightlight.Key); Nightlight(writer, nightlight);
+                writer.Write(NightlightKind); Key(writer, nightlight.Key); Nightlight(writer, nightlight);
                 break;
             default: throw new NotSupportedException($"Unsupported bake payload: {product.GetType().FullName}");
         }
@@ -77,48 +75,27 @@ public static partial class TileBundleCodec
         return stream.ToArray();
     }
 
-    public static object Decode(string identity, BakeKey expectedKey, byte[] bytes)
+    public static object Decode(BakePayloadClass payloadClass, string identity, BakeKey expectedKey, byte[] bytes)
     {
-        var maximum = BakeCacheStore.MaximumProductBytes;
+        var maximum = BakeCacheStore.MaximumPayload(payloadClass);
         if (bytes.Length <= 0 || bytes.Length > maximum)
             throw new InvalidDataException($"Bake container {expectedKey.Map.Value}/{expectedKey.Module}/{expectedKey.Detail}: {bytes.Length} bytes exceeds limit {maximum}.");
         using var stream = new MemoryStream(bytes, false);
         using var reader = new BinaryReader(stream, new UTF8Encoding(false, true));
         try
         {
-            if (reader.ReadUInt32() != Magic || reader.ReadInt32() != 2 || Text(reader, 2048) != identity)
-                throw new InvalidDataException("Tile header/key mismatch.");
+            Header(reader, identity);
             var kind = reader.ReadByte();
             var key = Key(reader);
             if (key != expectedKey) throw new InvalidDataException("Tile request key mismatch.");
-            if (kind is 1 or 2 && bytes.Length > BakeCacheStore.MaximumPayloadBytes)
-                throw new InvalidDataException($"Render/collision container {key.Map.Value}/{key.Module}/{key.Detail}: {bytes.Length} bytes exceeds limit {BakeCacheStore.MaximumPayloadBytes}.");
             object result;
             switch (kind)
             {
-                case 1:
-                    var tile = Json<TileKey>(reader);
-                    var level = (LodLevel)reader.ReadByte();
-                    if (!Enum.IsDefined(level)) throw new InvalidDataException("Unknown tile LOD.");
-                    var bounds = Json<Box3>(reader);
-                    var surfaces = new BakedSurface[Count(reader)];
-                    for (var i = 0; i < surfaces.Length; i++) surfaces[i] = Surface(reader);
-                    var multis = new BakedMultiMesh[Count(reader)];
-                    for (var i = 0; i < multis.Length; i++)
-                    {
-                        var surface = Surface(reader); var count = reader.ReadInt32(); var data = Bytes(reader); var box = Json<Box3>(reader);
-                        multis[i] = new(surface, count, data, box);
-                    }
-                    result = new TileBundle(key, tile, level, bounds, surfaces, multis, Statistics(reader));
-                    break;
-                case 2:
-                    var collisionTile = Json<TileKey>(reader); var collisionBounds = Json<Box3>(reader);
-                    var colliders = Records(reader, key, r => CollisionShape(r, key), MaximumCollisionShapes);
-                    result = new CollisionTile(key, collisionTile, collisionBounds, colliders, Statistics(reader));
-                    break;
-                case 3: result = Vegetation(reader, key); break;
-                case 4: result = Fauna(reader, key); break;
-                case 5: result = Nightlight(reader, key); break;
+                case GeometryKind: result = RenderTile(reader, key); break;
+                case CollisionKind: result = Collision(reader, key); break;
+                case VegetationKind: result = Vegetation(reader, key); break;
+                case FaunaKind: result = Fauna(reader, key); break;
+                case NightlightKind: result = Nightlight(reader, key); break;
                 default: throw new InvalidDataException("Unknown tile payload kind.");
             }
             if (stream.Position != stream.Length) throw new InvalidDataException("Trailing bytes in tile payload.");
@@ -128,6 +105,62 @@ public static partial class TileBundleCodec
         }
         catch (Exception error) when (error is EndOfStreamException or JsonException or ArgumentException or OverflowException)
         { throw new InvalidDataException("Invalid tile payload: " + error.Message, error); }
+    }
+
+    private static void Header(BinaryWriter writer, string identity)
+    { writer.Write(Magic); writer.Write(2); Text(writer, identity); }
+
+    private static void Header(BinaryReader reader, string identity)
+    {
+        if (reader.ReadUInt32() != Magic || reader.ReadInt32() != 2 || Text(reader, 2048) != identity)
+            throw new InvalidDataException("Tile header/key mismatch.");
+    }
+
+    private static void RenderTile(BinaryWriter writer, TileBundle tile)
+    {
+        if (tile.Stats.Bytes > BakeCacheStore.MaximumTileUploadBytes)
+            throw new InvalidDataException($"Raw surface upload {tile.Key.Map.Value}/{tile.Key.Module}/{tile.Key.Detail}: {tile.Stats.Bytes} bytes exceeds limit {BakeCacheStore.MaximumTileUploadBytes}.");
+        writer.Write(GeometryKind); Key(writer, tile.Key); Json(writer, tile.Tile); writer.Write((byte)tile.Level); Json(writer, tile.Bounds);
+        writer.Write(tile.Surfaces.Count);
+        foreach (var surface in tile.Surfaces) Surface(writer, surface);
+        writer.Write(tile.MultiMeshes.Count);
+        foreach (var multi in tile.MultiMeshes)
+        {
+            Surface(writer, multi.Surface); writer.Write(multi.InstanceCount); Bytes(writer, multi.InstanceData); Json(writer, multi.Bounds);
+        }
+        Text(writer, tile.StatisticsJson);
+    }
+
+    private static TileBundle RenderTile(BinaryReader reader, BakeKey key)
+    {
+        var tile = Json<TileKey>(reader);
+        var level = (LodLevel)reader.ReadByte();
+        if (!Enum.IsDefined(level)) throw new InvalidDataException("Unknown tile LOD.");
+        var bounds = Json<Box3>(reader);
+        var surfaces = new BakedSurface[Count(reader)];
+        for (var i = 0; i < surfaces.Length; i++) surfaces[i] = Surface(reader);
+        var multis = new BakedMultiMesh[Count(reader)];
+        for (var i = 0; i < multis.Length; i++)
+        {
+            var surface = Surface(reader); var count = reader.ReadInt32(); var data = Bytes(reader); var box = Json<Box3>(reader);
+            multis[i] = new(surface, count, data, box);
+        }
+        return new(key, tile, level, bounds, surfaces, multis, Statistics(reader));
+    }
+
+    private static void Collision(BinaryWriter writer, CollisionTile collision)
+    {
+        if (collision.Colliders.Count > MaximumCollisionShapes)
+            throw new InvalidDataException($"Too many collision shapes in tile {collision.Tile}: {collision.Colliders.Count} > {MaximumCollisionShapes}.");
+        writer.Write(CollisionKind); Key(writer, collision.Key); Json(writer, collision.Tile); Json(writer, collision.Bounds);
+        Records(writer, collision.Colliders, (w, collider) => CollisionShape(w, collider, collision.Key)); Text(writer, collision.StatisticsJson);
+    }
+
+    private static CollisionTile Collision(BinaryReader reader, BakeKey key)
+    {
+        var tile = Json<TileKey>(reader); var bounds = Json<Box3>(reader);
+        var colliders = Records(reader, key, r => CollisionShape(r, key), MaximumCollisionShapes);
+        return new(key, tile, bounds, colliders, Statistics(reader));
     }
 
     private static void Surface(BinaryWriter writer, BakedSurface surface)

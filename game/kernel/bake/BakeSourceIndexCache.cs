@@ -4,10 +4,11 @@ using Campus.Contracts.Bake;
 namespace Campus.Kernel.Bake;
 
 /// <summary>The sole persisted source index, including final product stamps and its captured input version.</summary>
-internal sealed class BakeSourceIndexCache(TerrainCacheService terrain, MapId map, string sourceVersion)
+internal sealed class BakeSourceIndexCache(TerrainCacheService terrain, MapId map, string sourceVersion, string codeIdentity)
 {
     private readonly BakeKey _key = new(map, "resident", "source-index");
-    private readonly string _identity = BakeOptions.Abi + "/source-index-2";
+    private readonly string _identity = Identity(codeIdentity);
+    internal static string Identity(string codeIdentity) => BakeOptions.Abi + "/source-index-2/" + codeIdentity;
     private readonly object _sync = new();
     private BakeSourceIndexData? _saved;
     private string _residentStamp = "";

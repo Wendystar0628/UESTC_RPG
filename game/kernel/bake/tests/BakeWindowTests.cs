@@ -284,7 +284,9 @@ public sealed class BakeWindowTests
                 new Dictionary<string, IInteriorProvider>(), new(null, new([], [])))),
             context.GlobalInputs, context.GroundMaskContributors, new PartLodCatalog([]), context.Catalog);
         var cache = Path.Combine(Path.GetTempPath(), "uestc-rpg-bake-cancel-" + Guid.NewGuid().ToString("N"));
-        using var service = new BakeService(new(cache, true, false, false, false, 1, null));
+        var options = new BakeOptions(cache, true, false, false, false, 1, null);
+        using var terrain = BakeInputFixture.CreateTerrainCache(options);
+        using var service = new BakeService(options, terrain);
         var queue = new BakeQueue(1, static () => { });
         Exception? stopped = null;
         try
@@ -317,6 +319,7 @@ public sealed class BakeWindowTests
         public BakePayloadClass PayloadClass => BakePayloadClass.Product;
         public BakeProductKind ProductKind => BakeProductKind.Vegetation;
         public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
+        public bool UsesModule(IContentModule module) => false;
         public int PrepareCalls;
         public int DirectoryCalls;
         private bool _prepared;
@@ -342,6 +345,7 @@ public sealed class BakeWindowTests
         public BakePayloadClass PayloadClass => BakePayloadClass.Product;
         public BakeProductKind ProductKind => BakeProductKind.Fauna;
         public BakeInputDependencies Inputs(BakeKey key) => BakeInputDependencies.World;
+        public bool UsesModule(IContentModule module) => false;
         public IReadOnlyList<BakeTileEntry> Tiles(BuildContext context) => [];
         public bool CanBuild(BakeKey key) => key.Module == "cancelled";
         public object Build(BakeKey key, BuildContext context)
@@ -379,6 +383,8 @@ public sealed class BakeWindowTests
         new("sky.json", "backdrop.json", []), []);
     private class Module : IContentModule
     {
+        public BakeInputDependencies BakeInputs => BakeInputDependencies.World;
+        public BakeInputDependencies CollisionInputs => BakeInputDependencies.World;
         public bool PreparingDirectory { get; set; }
         public int TileCalls { get; private set; }
         public IReadOnlyList<Claim> Claims => [];

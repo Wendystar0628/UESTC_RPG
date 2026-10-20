@@ -6,17 +6,22 @@ using Campus.Pipeline.Map;
 
 namespace Campus.Kernel.Bake;
 
+
 internal static class BakeProductCodec
 {
     private const uint MapMagic = 0x3150414D;
-    public static byte[] Encode(string identity, object product)
+    public static byte[] Encode(BakePayloadClass payloadClass, string identity, object product)
     {
-        if (product is not MapBakeProduct map) return TileBundleCodec.Encode(identity, product);
+        if (product is not MapBakeProduct map) return TileBundleCodec.Encode(payloadClass, identity, product);
+        return EncodeMap(payloadClass, identity, map);
+    }
+    private static byte[] EncodeMap(BakePayloadClass payloadClass, string identity, MapBakeProduct map)
+    {
         var key = Encoding.UTF8.GetBytes(identity);
         var payload = MapBakeCodec.Serialize(map);
         var request = new BakeKey(new(map.Manifest.Map), MapBaker.Module, MapBaker.Detail);
         var length = checked(8 + key.Length + payload.Length);
-        var maximum = BakeCacheStore.MaximumProductBytes;
+        var maximum = BakeCacheStore.MaximumPayload(payloadClass);
         if (length > maximum) throw new InvalidDataException($"Bake container {request.Map.Value}/{request.Module}/{request.Detail}: {length} bytes exceeds limit {maximum}.");
         var result = new byte[length];
         BinaryPrimitives.WriteUInt32LittleEndian(result, MapMagic);
@@ -24,10 +29,14 @@ internal static class BakeProductCodec
         key.CopyTo(result, 8); payload.CopyTo(result, 8 + key.Length);
         return result;
     }
-    public static object Decode(string identity, BakeKey key, byte[] bytes)
+    public static object Decode(BakePayloadClass payloadClass, string identity, BakeKey key, byte[] bytes)
     {
-        if (key.Module != MapBaker.Module) return TileBundleCodec.Decode(identity, key, bytes);
-        var maximum = BakeCacheStore.MaximumProductBytes;
+        if (key.Module != MapBaker.Module) return TileBundleCodec.Decode(payloadClass, identity, key, bytes);
+        return DecodeMap(payloadClass, identity, key, bytes);
+    }
+    private static MapBakeProduct DecodeMap(BakePayloadClass payloadClass, string identity, BakeKey key, byte[] bytes)
+    {
+        var maximum = BakeCacheStore.MaximumPayload(payloadClass);
         if (bytes.Length > maximum) throw new InvalidDataException($"Bake container {key.Map.Value}/{key.Module}/{key.Detail}: {bytes.Length} bytes exceeds limit {maximum}.");
         if (bytes.Length < 8 || BinaryPrimitives.ReadUInt32LittleEndian(bytes) != MapMagic) throw new InvalidDataException("Invalid map bake wrapper.");
         var length = BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4));

@@ -9,6 +9,8 @@ using Campus.Gen.Vegetation;
 namespace Campus.Kernel.Bake;
 
 /// <summary>One immutable source index per MapBuild; product keys only combine prepared source-cell stamps.</summary>
+
+
 internal sealed class BakeSourceIndex
 {
     private readonly BuildContext _context;
@@ -30,6 +32,8 @@ internal sealed class BakeSourceIndex
     private readonly ConcurrentDictionary<string, string> _files = new(StringComparer.Ordinal);
     public string CommonStamp { get; }
     public string PaletteStamp { get; }
+
+    internal static BakeSourceIndex Create(BuildContext context, BakeSourceIndexCache? cache = null) => new(context, cache);
 
     public BakeSourceIndex(BuildContext context, BakeSourceIndexCache? cache = null)
     {

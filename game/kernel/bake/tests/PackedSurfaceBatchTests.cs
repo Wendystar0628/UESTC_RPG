@@ -28,10 +28,10 @@ public sealed class PackedSurfaceBatchTests
                     before.Stats.Triangles != after.Stats.Triangles || before.Stats.Bytes != after.Stats.Bytes)
                     throw new InvalidOperationException("Batching changed vertex/triangle/raw-byte statistics or kept the old surface count.");
                 var identity = BakeOptions.Abi + "/fixture/batch";
-                var encoded = TileBundleCodec.Encode(identity, after);
-                var restored = (TileBundle)TileBundleCodec.Decode(identity, key, encoded);
+                var encoded = TileBundleCodec.Encode(BakePayloadClass.Tile, identity, after);
+                var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, identity, key, encoded);
                 VerifySources(sources, restored.Surfaces.Single(), uv2 ? 12 : 8, uv2 ? 8 : 4);
-                if (!encoded.SequenceEqual(TileBundleCodec.Encode(identity, restored)))
+                if (!encoded.SequenceEqual(TileBundleCodec.Encode(BakePayloadClass.Tile, identity, restored)))
                     throw new InvalidOperationException("Batched cache round-trip bytes changed.");
             }
     }

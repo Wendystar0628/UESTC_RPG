@@ -6,6 +6,9 @@ using Campus.Contracts.Maps;
 namespace Campus.Kernel.Bake;
 
 /// <summary>One input stamp for the effective world and resources read by a requested product.</summary>
+
+
+
 internal static class BakeInputFingerprint
 {
     public static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> ReadInputs(IMapContext map)

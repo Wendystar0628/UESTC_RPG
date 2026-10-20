@@ -28,7 +28,7 @@ public sealed class VegetationContextTests
     public void PreparedSourcePreservesTheAuthoredWorldAndClaims()
     {
         var fixture = Fixture.Load();
-        using var terrain = new TerrainCacheService(new(Path.GetTempPath(), Live: true, Strict: false, Background: false,
+        using var terrain = Campus.Kernel.Bake.Tests.BakeInputFixture.CreateTerrainCache(new(Path.GetTempPath(), Live: true, Strict: false, Background: false,
             MapOnly: false, LogicalProcessors: 1, SeedOverride: null));
         var loaded = MapWorldLoading.LoadPrepared(new WorldModelLoaderAdapter(terrain), fixture.Input, fixture.Claims);
         var map = MapWorldLoading.CreateContext(fixture.Input.Entry, loaded, fixture.Input.SourceInputs);

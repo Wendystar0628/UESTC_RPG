@@ -17,6 +17,17 @@ namespace Campus.Kernel.Bake;
 [KernelService(typeof(BakeService), Owner = "WP-02a")]
 [KernelService(typeof(IBakeService), Owner = "WP-02a")]
 [KernelService(typeof(IBakeContextSource), Owner = "WP-02a")]
+
+
+
+
+
+
+
+
+
+
+
 public sealed partial class BakeService : IBakeService, IBakeContextSource, IDisposable
 {
     private readonly IMapService? _maps;
@@ -25,7 +36,6 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     private readonly BakeQueue _queue;
     private readonly BakeCacheStore _cache;
     private readonly TerrainCacheService _terrain;
-    private readonly bool _ownsTerrain;
     private readonly Dictionary<MapId, MapBuild> _contexts = [];
     private readonly object _sync = new();
     private readonly object _inputIdentitySync = new();
@@ -41,8 +51,6 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         ApplyPhase(flow.State);
         flow.Changed += PhaseChanged;
     }
-
-    internal BakeService(BakeOptions options) : this(options, new TerrainCacheService(options)) { _ownsTerrain = true; }
 
     internal BakeService(BakeOptions options, TerrainCacheService terrain)
     {
@@ -116,11 +124,11 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             var entries = registry.ForMap(context.Descriptor.Id.Value);
             // Instantiate all generators on the main thread. Their Build methods receive only a captured pure context.
             var modules = entries.Where(e => e.Kind == "content").ToDictionary(e => e.Id,
-                e => new ContentModuleInput((IContentModule)registry.Create(e.Type), CodeHash(e.Type), new WpId(e.Owner), e.Map is null), StringComparer.Ordinal);
+                e => new ContentModuleInput((IContentModule)registry.Create(e.Type), _terrain.CodeFingerprints.Type(e.Type), new WpId(e.Owner), e.Map is null), StringComparer.Ordinal);
             var producers = entries.Where(e => e.Kind == "bake").Select(e =>
-                new Producer(e.Id, (IBakeProducer)registry.Create(e.Type), CodeHash(e.Type))).ToArray();
+                new Producer(e.Id, (IBakeProducer)registry.Create(e.Type), _terrain.CodeFingerprints.Type(e.Type))).ToArray();
             var interiors = entries.Where(e => e.Kind == "interior").ToDictionary(e => "interior." + e.Id,
-                e => new Interior(e.Id, e.IsStub, registry.CreateInteriorProvider(e.Type, context.Descriptor.Id), CodeHash(e.Type), new WpId(e.Owner)), StringComparer.Ordinal);
+                e => new Interior(e.Id, e.IsStub, registry.CreateInteriorProvider(e.Type, context.Descriptor.Id), _terrain.CodeFingerprints.Type(e.Type), new WpId(e.Owner)), StringComparer.Ordinal);
             // Capture one immutable source snapshot per MapBuild; never load extensions on a worker.
             var catalog = registry.Get<IPaletteCatalogSource>().Catalog;
             var globalInputs = Campus.Kernel.Registry.Kernel.GlobalBuildInputs;
@@ -132,7 +140,8 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             var ledger = new Lazy<MapClaimLedger>(() => claims.Build(context.World), LazyThreadSafetyMode.ExecutionAndPublication);
             Func<FeatureId, Aspects, WpId?> claimLookup = (feature, aspects) => ledger.Value.ClaimedBy(feature, aspects);
             var sourceCache = new BakeSourceIndexCache(_terrain, context.Descriptor.Id,
-                SourceVersion(context, seed, globalInputs, modules, interiors, producers));
+                SourceVersion(context, seed, globalInputs, modules, interiors, producers),
+                IndexCode(modules, interiors, producers));
             var map = new MapBuild(context, modules, interiors, producers, geometry,
                 ledger, claimLookup, new(() => Load(context, seed, catalog, interiors, modules, claimLookup, globalInputs,
                     groundContributors, partLods, sourceCache, producers), LazyThreadSafetyMode.ExecutionAndPublication),
@@ -230,7 +239,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         {
             var cached = _cache.TryRead(key, payloadClass, payload =>
             {
-                var product = Decode(identity, key, payload);
+                var product = Decode(payloadClass, identity, key, payload);
                 RequireInteriorProduct(map, key, product);
                 RequireAuxiliaryProduct(map, key, product);
                 return product;
@@ -246,10 +255,10 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         var built = module is not null ? map.Geometry!.Build(key, buildContext, module.Value, diagnostics => map.Collect(key.Module, "geometry", diagnostics)) :
             interior is not null ? BuildInterior(map, key, buildContext, interior.Value) : matches[0].Value.Build(key, buildContext);
         cancellation.ThrowIfCancellationRequested();
-        var bytes = Encode(identity, built);
+        var bytes = Encode(payloadClass, identity, built);
         cancellation.ThrowIfCancellationRequested();
         // Validate exactly the bytes about to be written before publishing Ready; malformed producer output is terminal.
-        var validated = Decode(identity, key, bytes);
+        var validated = Decode(payloadClass, identity, key, bytes);
         cancellation.ThrowIfCancellationRequested();
         RequireInteriorProduct(map, key, validated);
         RequireAuxiliaryProduct(map, key, validated);
@@ -311,16 +320,13 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         return new(seed, inputs, bindings, activeInteriors, windows, null, residentStamp);
     }
 
-    private static byte[] Encode(string identity, object product) => BakeProductCodec.Encode(identity, product);
-    private static object Decode(string identity, BakeKey key, byte[] bytes) => BakeProductCodec.Decode(identity, key, bytes);
+    private static byte[] Encode(BakePayloadClass payloadClass, string identity, object product) => BakeProductCodec.Encode(payloadClass, identity, product);
+    private static object Decode(BakePayloadClass payloadClass, string identity, BakeKey key, byte[] bytes) => BakeProductCodec.Decode(payloadClass, identity, key, bytes);
     private static void RequireInteriorProduct(MapBuild map, BakeKey key, object product)
     {
         if (map.Interiors.ContainsKey(key.Module) && (product is not TileBundle tile || tile.Stats.Surfaces == 0 || tile.Stats.Triangles == 0))
             throw new InvalidDataException($"Open interior product is empty: {key.Map.Value}/{key.Module}/{key.Detail}.");
     }
-    private static string RuntimeCodeHash() => typeof(BakeService).Module.ModuleVersionId.ToString("N") + ":" +
-        typeof(GenerationInputAssembly).Module.ModuleVersionId.ToString("N");
-    private static string CodeHash(Type type) => GenerationInputAssembly.CodeVersion(type);
     private static TileBundle BuildInterior(MapBuild map, BakeKey key, BuildContext context, IInteriorProvider provider)
     {
         var fields = key.Detail.Split('/');
@@ -421,7 +427,6 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
             _queue.Dispose();
             PersistInputIdentities(_contexts.Values.ToArray());
         }
-        if (_ownsTerrain) _terrain.Dispose();
     }
 
     internal sealed record Producer(string Id, IBakeProducer Value, string CodeHash);
@@ -432,6 +437,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
     internal sealed record LoadedMap(uint Seed, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Inputs,
         IReadOnlyList<InteriorProviderBinding> InteriorBindings, IReadOnlyDictionary<string, IInteriorProvider> InteriorProviders,
         BakeWindowPreparation.Result Windows, BakeResidentData? Resident = null, string ResidentStamp = "");
+
     internal sealed partial record MapBuild(IMapContext Context, IReadOnlyDictionary<string, ContentModuleInput> Modules, IReadOnlyDictionary<string, Interior> Interiors, Producer[] Producers,
         BakeGeometryBuilder Geometry, Lazy<MapClaimLedger> Claims, Func<FeatureId, Aspects, WpId?> ClaimLookup, Lazy<LoadedMap> Data,
         BuildInputSnapshot GlobalInputs, IReadOnlyList<IGroundMaskContributor> GroundMaskContributors, PartLodCatalog PartLods, PaletteCatalog Catalog)
@@ -449,7 +455,7 @@ public sealed partial class BakeService : IBakeService, IBakeContextSource, IDis
         internal BakeSourceIndex SourceIndex(BuildContext context)
         {
             lock (_sourceIndexLock)
-                return _sourceIndex ??= new(context, SourceCache);
+                return _sourceIndex ??= BakeSourceIndex.Create(context, SourceCache);
         }
         internal void PersistInputIdentities() => Volatile.Read(ref _sourceIndex)?.Persist();
         internal ConcurrentQueue<CollectedDiagnostic> Diagnostics { get; } = new();

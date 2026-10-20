@@ -35,6 +35,14 @@ public sealed class BakeLightInventory : ILightInventory
     internal void Clear() => Publish(new(default, [], [], [], new([], ReadOnlyMemory<float>.Empty, ReadOnlyMemory<float>.Empty, 0, 0)));
 }
 
+
+
+
+
+
+
+
+
 internal static class BakeMapMetadataBuilder
 {
     public static BakeMapMetadata Build(BakeService.MapBuild map)

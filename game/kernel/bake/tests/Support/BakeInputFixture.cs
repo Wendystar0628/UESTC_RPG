@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using Campus.Contracts;
+using Campus.Contracts.Bake;
 using Campus.Contracts.Maps;
 using Campus.Contracts.Parts;
 
@@ -12,6 +13,12 @@ namespace Campus.Kernel.Bake.Tests;
 
 internal static class BakeInputFixture
 {
+    internal static TerrainCacheService CreateTerrainCache(BakeOptions options) => new(options,
+        new BakeCodeFingerprints(new(BakeCodeManifest.CurrentSchema,
+            new[] { BakeCodeChains.Geometry, BakeCodeChains.Collision, BakeCodeChains.Map, BakeCodeChains.Vegetation,
+                BakeCodeChains.Fauna, BakeCodeChains.Nightlight, BakeCodeChains.Terrain, BakeCodeChains.InputIndex, BakeCodeChains.Resident }
+                .ToDictionary(BakeCodeManifest.Chain, chain => "fixture-code/" + chain, StringComparer.Ordinal))));
+
     internal static WorldFeature Feature(string id, float x, string name, string note, string text) =>
         WorldFeatureFixture.Create(id, "prop", new PointGeometry(new(x, 0, 10))) with
         {

@@ -81,7 +81,7 @@ public sealed class ToonLibraryRuntimeTests
         var key = BakeRequestKeys.Tile(new("fixture"), "fixture.pattern", new(0, 0), LodLevel.L0);
         var bundle = new TileBundle(key, new(0, 0), LodLevel.L0, bounds,
             [BakeSurfacePacker.Pack(source, bounds, new Palettes().Catalog)]);
-        var restored = (TileBundle)TileBundleCodec.Decode("fixture/pattern", key, TileBundleCodec.Encode("fixture/pattern", bundle));
+        var restored = (TileBundle)TileBundleCodec.Decode(BakePayloadClass.Tile, "fixture/pattern", key, TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture/pattern", bundle));
         var scenario = RenderingServer.ScenarioCreate();
         try
         {

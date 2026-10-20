@@ -31,7 +31,7 @@ public sealed class BakePaletteV2Tests
         var result = builder.BuildOutput(key, context, new([source], []) { Diagnostics = [warning] }, new(0, 0), LodLevel.L0, diagnostics.AddRange);
         AssertThat(diagnostics.SequenceEqual([warning])).OverrideFailureMessage("BuildOutput dropped or changed producer diagnostics.").IsTrue();
         var quiet = builder.BuildOutput(key, context, new([source], []), new(0, 0), LodLevel.L0, diagnostics.AddRange);
-        AssertThat(TileBundleCodec.Encode("fixture", result).SequenceEqual(TileBundleCodec.Encode("fixture", quiet))).OverrideFailureMessage("Diagnostics changed serialized geometry.").IsTrue();
+        AssertThat(TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture", result).SequenceEqual(TileBundleCodec.Encode(BakePayloadClass.Tile, "fixture", quiet))).OverrideFailureMessage("Diagnostics changed serialized geometry.").IsTrue();
         AssertThat(result.Surfaces.Single().AttributeData.Span[10] == 16).OverrideFailureMessage("The ordinary geometry path rejected or narrowed bank 1 before the packer.").IsTrue();
         var other = new BuildContext { World = null!, Map = descriptor, WorldSeed = 1, Catalog = Catalog() };
         AssertThrown(() => builder.BuildOutput(key, other, new([source], []), new(0, 0), LodLevel.L0, _ => { })).IsInstanceOf<InvalidOperationException>();
@@ -74,7 +74,7 @@ public sealed class BakePaletteV2Tests
                 var key = BakeRequestKeys.Tile(new("fixture"), "fixture.palette", new(0, 0), LodLevel.L0);
                 var before = new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [old]);
                 var after = new TileBundle(key, new(0, 0), LodLevel.L0, Bounds(), [next]);
-                AssertThat(TileBundleCodec.Encode("same-fixture-identity", before).SequenceEqual(TileBundleCodec.Encode("same-fixture-identity", after))).OverrideFailureMessage("An equal surface no longer has equal TBIN payload bytes at the same identity.").IsTrue();
+                AssertThat(TileBundleCodec.Encode(BakePayloadClass.Tile, "same-fixture-identity", before).SequenceEqual(TileBundleCodec.Encode(BakePayloadClass.Tile, "same-fixture-identity", after))).OverrideFailureMessage("An equal surface no longer has equal TBIN payload bytes at the same identity.").IsTrue();
             }
         }
     }
