@@ -265,8 +265,12 @@ public sealed class BakeCacheStore
         segments.AddRange(detail.Select(Segment));
         var path = Path.Combine(segments.ToArray()) + ".tbin";
         for (var current = path; current != root; current = Path.GetDirectoryName(current)!)
-            if ((File.Exists(current) || Directory.Exists(current)) && IsLink(current))
+        {
+            // Exists refreshes FileInfo's attributes; reuse them for the reparse check.
+            var entry = new FileInfo(current);
+            if ((entry.Exists || Directory.Exists(current)) && (entry.Attributes & FileAttributes.ReparsePoint) != 0)
                 throw new IOException("Cache paths must not be reparse points.");
+        }
         return path;
     }
 
